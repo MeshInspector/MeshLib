@@ -4,6 +4,7 @@
 #include "MRMesh/MRLinesLoad.h"
 #include "MRMesh/MRPointsLoad.h"
 #include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRGltfSerializer.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRStringConvert.h"
@@ -79,6 +80,10 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
         {
             return filter.extension == "*.*";
         } );
+#else
+#ifndef MRMESH_NO_VOXEL
+        filters_ = filters_ | VoxelsLoad::Filters;
+#endif
 #endif
     } );
 }
@@ -204,106 +209,16 @@ OpenDirectoryMenuItem::OpenDirectoryMenuItem() :
 {
 }
 
-bool OpenDirectoryMenuItem::action()
+#if !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
+void sOpenDICOMs( const std::filesystem::path & directory, const std::string & simpleError )
 {
-    auto directory = openFolderDialog();
-    if ( !directory.empty() )
-    {
-        bool isAnySupportedFiles = isSupportedFileInSubfolders( directory );
-        if ( isAnySupportedFiles )
-        {
-            ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [directory] ()->std::function<void()>
-            {
-                auto loadRes = makeObjectTreeFromFolder( directory, ProgressBar::callBackSetProgress );
-                if ( loadRes.has_value() )
-                {
-                    auto obj = std::make_shared<Object>( std::move( *loadRes ) );
-                    return[obj]
-                    {
-                        sSelectRecursive( *obj );
-                        AppendHistory<ChangeSceneAction>( "Open directory", obj, ChangeSceneAction::Type::AddObject );
-                        SceneRoot::get().addChild( obj );
-                        getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
-                    };
-                }
-                else
-                    return[error = loadRes.error()]
-                    {
-                        auto menu = getViewerInstance().getMenuPlugin();
-                        if ( menu )
-                            menu->showErrorModal( error );
-                    };
-            } );
-        }
-        else
-        {
-            ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [directory, viewer = Viewer::instance()] () -> std::function<void()>
-            {
-                ProgressBar::setTaskCount( 3 );
-                ProgressBar::nextTask( "Load DICOM Folder" );
-                auto loadRes = VoxelsLoad::loadDCMFolder( directory, 4, ProgressBar::callBackSetProgress );
-                if ( loadRes.has_value() && !ProgressBar::isCanceled() )
-                {
-                    std::shared_ptr<ObjectVoxels> voxelsObject = std::make_shared<ObjectVoxels>();
-                    voxelsObject->setName( loadRes->name );
-                    ProgressBar::nextTask( "Construct ObjectVoxels" );
-                    voxelsObject->construct( loadRes->vdbVolume, ProgressBar::callBackSetProgress );
-                    if ( ProgressBar::isCanceled() )
-                        return [directory]
-                    {
-                        auto menu = getViewerInstance().getMenuPlugin();
-                        if ( menu )
-                            menu->showErrorModal( getCancelMessage( directory ) );
-                    };
-                    auto bins = voxelsObject->histogram().getBins();
-                    auto minMax = voxelsObject->histogram().getBinMinMax( bins.size() / 3 );
-
-                    ProgressBar::nextTask( "Create ISO surface" );
-                    auto isoRes = voxelsObject->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
-                    if ( !isoRes.has_value() )
-                        return[viewer, error = isoRes.error()]
-                    {
-                        auto menu = viewer->getMenuPlugin();
-                        if ( menu )
-                            menu->showErrorModal( error );
-                    };
-
-                    voxelsObject->select( true );
-                    return [viewer, voxelsObject] ()
-                    {
-                        AppendHistory<ChangeSceneAction>( "Open Voxels", voxelsObject, ChangeSceneAction::Type::AddObject );
-                        SceneRoot::get().addChild( voxelsObject );
-                        viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
-                    };
-                }
-                return [viewer, directory]()
-                {
-                    auto menu = viewer->getMenuPlugin();
-                    if ( menu )
-                        menu->showErrorModal( ( "No supported files can be open from the directory:\n" + utf8string( directory ) ).c_str() );
-                };
-            }, 3 );
-        }
-    }
-    return false;
-}
-
-OpenDICOMsMenuItem::OpenDICOMsMenuItem() :
-    RibbonMenuItem( "Open DICOMs" )
-{
-}
-
-bool OpenDICOMsMenuItem::action()
-{
-    auto directory = openFolderDialog();
-    if ( directory.empty() )
-        return false;
-    ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [directory, viewer = Viewer::instance()] () -> std::function<void()>
+    ProgressBar::orderWithMainThreadPostProcessing( "Open DICOMs", [directory, simpleError, viewer = Viewer::instance()] () -> std::function<void()>
     {
         ProgressBar::nextTask( "Load DICOM Folder" );
         auto loadRes = VoxelsLoad::loadDCMFolderTree( directory, 4, ProgressBar::callBackSetProgress );
         if ( !loadRes.empty() )
         {
+            bool anySuccess = std::any_of( loadRes.begin(), loadRes.end(), []( const auto & r ) { return r.has_value(); } );
             std::vector<std::shared_ptr<ObjectVoxels>> voxelObjects;
             ProgressBar::setTaskCount( (int)loadRes.size() * 2 + 1 );
             std::string errors;
@@ -317,7 +232,7 @@ bool OpenDICOMsMenuItem::action()
                     obj->construct( res->vdbVolume, ProgressBar::callBackSetProgress );
                     if ( ProgressBar::isCanceled() )
                     {
-                        errors += ( !errors.empty() ? "\n" : "" ) + getCancelMessage( directory );
+                        errors = getCancelMessage( directory );
                         break;
                     }
 
@@ -327,7 +242,7 @@ bool OpenDICOMsMenuItem::action()
                     auto isoRes = obj->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
                     if ( ProgressBar::isCanceled() )
                     {
-                        errors += ( !errors.empty() ? "\n" : "" ) + getCancelMessage( directory );
+                        errors = getCancelMessage( directory );
                         break;
                     }
                     else if ( !isoRes.has_value() )
@@ -337,24 +252,28 @@ bool OpenDICOMsMenuItem::action()
                     }
                     
                     obj->select( true );
+                    obj->setXf( res->xf );
                     voxelObjects.push_back( obj );
                 }
                 else if ( ProgressBar::isCanceled() )
                 {
-                    errors += ( !errors.empty() ? "\n" : "" ) + getCancelMessage( directory );
+                    errors = getCancelMessage( directory );
                     break;
                 }
-                else
+                else if ( !anySuccess )
                 {
-                    errors += res.error();
+                    if ( simpleError.empty() )
+                        errors += ( !errors.empty() ? "\n" : "" ) + res.error();
+                    else
+                        errors = simpleError;
                 }
             }
             return [viewer, voxelObjects, errors] ()
             {
-                SCOPED_HISTORY( "Open Voxels" );
+                SCOPED_HISTORY( "Open DICOMs" );
                 for ( auto & obj : voxelObjects )
                 {
-                    AppendHistory<ChangeSceneAction>( "Open Voxels", obj, ChangeSceneAction::Type::AddObject );
+                    AppendHistory<ChangeSceneAction>( "Open DICOMs", obj, ChangeSceneAction::Type::AddObject );
                     SceneRoot::get().addChild( obj );
                 }
                 viewer->viewport().preciseFitDataToScreenBorder( { 0.9f }  );
@@ -373,9 +292,66 @@ bool OpenDICOMsMenuItem::action()
             if ( menu )
                 menu->showErrorModal( "Cannot open given folder, find more in log." );
         };
-    }, 2 );
+    }, 3 );
+}
+#endif
+
+bool OpenDirectoryMenuItem::action()
+{
+    auto directory = openFolderDialog();
+    if ( !directory.empty() )
+    {
+        bool isAnySupportedFiles = isSupportedFileInSubfolders( directory );
+        if ( isAnySupportedFiles )
+        {
+            ProgressBar::orderWithMainThreadPostProcessing( "Open Directory", [directory] ()->std::function<void()>
+            {
+                auto loadRes = makeObjectTreeFromFolder( directory, ProgressBar::callBackSetProgress );
+                if ( loadRes.has_value() )
+                {
+                    auto obj = std::make_shared<Object>( std::move( *loadRes ) );
+                    return[obj]
+                    {
+                        sSelectRecursive( *obj );
+                        AppendHistory<ChangeSceneAction>( "Open Directory", obj, ChangeSceneAction::Type::AddObject );
+                        SceneRoot::get().addChild( obj );
+                        getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
+                    };
+                }
+                else
+                    return[error = loadRes.error()]
+                    {
+                        auto menu = getViewerInstance().getMenuPlugin();
+                        if ( menu )
+                            menu->showErrorModal( error );
+                    };
+            } );
+        }
+#if !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
+        else
+        {
+            sOpenDICOMs( directory, "No supported files can be open from the directory:\n" + utf8string( directory ) );
+        }
+#endif
+    }
     return false;
 }
+
+#if !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
+OpenDICOMsMenuItem::OpenDICOMsMenuItem() :
+    RibbonMenuItem( "Open DICOMs" )
+{
+}
+
+bool OpenDICOMsMenuItem::action()
+{
+    auto directory = openFolderDialog();
+    if ( directory.empty() )
+        return false;
+    sOpenDICOMs( directory, "No DICOM files can be open from the directory:\n" + utf8string( directory ) );
+    return false;
+}
+#endif
 #endif
 
 SaveObjectMenuItem::SaveObjectMenuItem() :
@@ -415,7 +391,7 @@ bool SaveObjectMenuItem::action()
             updateFilters( ObjType::Points, PointsSave::Filters );
         if ( std::dynamic_pointer_cast< ObjectDistanceMap >( obj ) )
             updateFilters( ObjType::DistanceMap, DistanceMapSave::Filters );
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
         if ( std::dynamic_pointer_cast< ObjectVoxels >( obj ) )
             updateFilters( ObjType::Voxels, VoxelsSave::Filters );
 #endif
@@ -430,7 +406,7 @@ bool SaveObjectMenuItem::action()
             sortedFilters = PointsSave::Filters;
         if ( std::dynamic_pointer_cast< ObjectDistanceMap >( obj ) )
             sortedFilters = DistanceMapSave::Filters;
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
         if ( std::dynamic_pointer_cast< ObjectVoxels >( obj ) )
             sortedFilters = VoxelsSave::Filters;
 #endif
@@ -461,12 +437,14 @@ bool SaveObjectMenuItem::action()
             if ( std::filesystem::is_regular_file( savePath, ec ) )
             {
                 copyPath = savePath.string() + copySuffix;
+                spdlog::info( "copy file {} into {}", utf8string( savePath ), utf8string( copyPath.value() ) );
                 std::filesystem::copy_file( savePath, copyPath.value(), ec );
+                if ( ec )
+                    spdlog::error( "copy file {} into {} failed: {}", utf8string( savePath ), utf8string( copyPath.value() ), systemToUtf8( ec.message() ) );
             }
-            if ( ec )
-                spdlog::error( ec.message() );
 
             auto obj = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected )[0];
+            spdlog::info( "save object to file {}", utf8string( savePath ) );
             auto res = saveObjectToFile( *obj, savePath, ProgressBar::callBackSetProgress );
 
             std::function<void()> fnRes = [savePath]
@@ -475,17 +453,20 @@ bool SaveObjectMenuItem::action()
             };
             if ( !res.has_value() )
             {
+                spdlog::error( "save object to file {} failed: {}", utf8string( savePath ), res.error() );
                 fnRes = [error = res.error(), savePath, copyPath]
                 {
                     std::error_code ec;
+                    spdlog::info( "remove file {}", utf8string( savePath ) );
                     std::filesystem::remove( savePath, ec );
                     if ( ec )
-                        spdlog::error( ec.message() );
+                        spdlog::error( "remove file {} failed: {}", utf8string( savePath ), systemToUtf8( ec.message() ) );
                     if ( copyPath.has_value() )
                     {
+                        spdlog::info( "rename file {} into {}", utf8string( copyPath.value() ), utf8string( savePath ) );
                         std::filesystem::rename( copyPath.value(), savePath, ec );
                         if ( ec )
-                            spdlog::error( ec.message() );
+                            spdlog::error( "rename file {} into {} failed: {}", utf8string( copyPath.value() ), utf8string( savePath ), systemToUtf8( ec.message() ) );
                     }
                     if ( auto menu = getViewerInstance().getMenuPlugin() )
                         menu->showErrorModal( error );
@@ -496,9 +477,10 @@ bool SaveObjectMenuItem::action()
                 fnRes = [copyPathValue = copyPath.value(), savePath]
                 {
                     std::error_code ec;
+                    spdlog::info( "remove file {}", utf8string( copyPathValue ) );
                     std::filesystem::remove( copyPathValue, ec );
                     if ( ec )
-                        spdlog::error( ec.message() );
+                        spdlog::error( "remove file {} failed: {}", utf8string( copyPathValue ), systemToUtf8( ec.message() ) );
 
                     getViewerInstance().recentFilesStore.storeFile( savePath );
                 };
@@ -609,7 +591,8 @@ void SaveSceneAsMenuItem::saveScene_( const std::filesystem::path& savePath )
 {
     ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [savePath, &root = SceneRoot::get()]()->std::function<void()>
     {
-        auto res = serializeObjectTree( root, savePath, ProgressBar::callBackSetProgress );
+        auto res = savePath.extension() == u8".mru" ? serializeObjectTree( root, savePath, ProgressBar::callBackSetProgress ) :
+            serializeObjectTreeToGltf( root, savePath, ProgressBar::callBackSetProgress );
 
         return[savePath, res]()
         {
@@ -855,7 +838,9 @@ MR_REGISTER_RIBBON_ITEM( SaveSceneAsMenuItem )
 
 MR_REGISTER_RIBBON_ITEM( OpenDirectoryMenuItem )
 
+#if !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
 MR_REGISTER_RIBBON_ITEM( OpenDICOMsMenuItem )
+#endif
 
 MR_REGISTER_RIBBON_ITEM( SaveSelectedMenuItem )
 

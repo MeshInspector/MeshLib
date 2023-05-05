@@ -1,5 +1,6 @@
 #include "MRCommandLoop.h"
 #include "MRViewer.h"
+#include "MRPch/MRSpdlog.h"
 #include <GLFW/glfw3.h>
 #include <assert.h>
 
@@ -13,28 +14,28 @@ void CommandLoop::setMainThreadId( const std::thread::id& id )
     inst.mainThreadId_ = id;
 }
 
-void CommandLoop::setWindowAppeared()
+void CommandLoop::setState( StartPosition state )
 {
     auto& inst = instance_();
     std::unique_lock<std::mutex> lock( inst.mutex_ );
-    inst.windowAppeared_ = true;
+    if ( state < inst.state_ )
+    {
+        spdlog::warn( "Downgrade CommandLoop state is not possible" );
+        return;
+    }
+    inst.state_ = state;
 }
 
-void CommandLoop::appendCommand( CommandFunc func )
+void CommandLoop::appendCommand( CommandFunc func, StartPosition pos )
 {
-    addCommand_( func, false, false );
-}
-
-void CommandLoop::appendCommandAfterWindowAppear( CommandFunc func )
-{
-    addCommand_( func, false, true );
+    addCommand_( func, false, pos );
 }
 
 void CommandLoop::runCommandFromGUIThread( CommandFunc func )
 {
     bool blockThread = instance_().mainThreadId_ != std::this_thread::get_id();
     if ( blockThread )
-        return addCommand_( func, true, false );
+        return addCommand_( func, true, StartPosition::AfterSplash );
     else
         return func();
 }
@@ -49,7 +50,7 @@ void CommandLoop::processCommands()
         if ( inst.commands_.empty() )
             break;
         auto cmd = inst.commands_.front();
-        if ( !inst.windowAppeared_ && cmd->afterAppear )
+        if ( inst.state_ < cmd->state )
         {
             if ( refCommand == cmd )
                 break;
@@ -75,11 +76,11 @@ CommandLoop& CommandLoop::instance_()
     return commadLoop_;
 }
 
-void CommandLoop::addCommand_( CommandFunc func, bool blockThread, bool afterAppear )
+void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition state )
 {
     auto& inst = instance_();
     std::shared_ptr<Command> cmd = std::make_shared<Command>();
-    cmd->afterAppear = afterAppear;
+    cmd->state = state;
     cmd->func = func;
     cmd->threadId = std::this_thread::get_id();
     std::unique_lock<std::mutex> lock( inst.mutex_ );

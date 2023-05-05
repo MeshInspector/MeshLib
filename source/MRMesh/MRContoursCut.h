@@ -154,6 +154,7 @@ MRMESH_API CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, c
   * \note This function changes input mesh
   * \return New edges that correspond to given contours, find more \ref MR::CutMeshResult
   */
+[[deprecated( "use trimWithPlane(...) instead" )]]
 MRMESH_API std::vector<EdgePath> cutMeshWithPlane( Mesh& mesh, const Plane3f& plane, FaceMap* mapNew2Old = nullptr );
 
 } //namespace MR

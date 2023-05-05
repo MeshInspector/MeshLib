@@ -10,10 +10,11 @@
 #include "MRViewportId.h"
 #include "MRSceneSettings.h"
 #include "MRHeapBytes.h"
+#include "MRStringConvert.h"
+#include "MRTimer.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
-#include "MRStringConvert.h"
 #include <filesystem>
 
 namespace MR
@@ -56,7 +57,7 @@ tl::expected<std::future<void>, std::string> ObjectMeshHolder::serializeModel_( 
         MR::MeshSave::toCtm( *mesh, filename, {}, vertsColorMap_.empty() ? nullptr : &vertsColorMap_ );
     };
 #else
-    auto save = [mesh = mesh_, filename = utf8string( path ) + ".mrmesh", this]()
+    auto save = [mesh = mesh_, filename = utf8string( path ) + ".mrmesh"]()
     {
         MR::MeshSave::toMrmesh( *mesh, filename );
     };
@@ -69,15 +70,20 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
 {
     VisualObject::serializeFields_( root );
 
+    root["ShowTexture"] = showTexture_.value();
     root["ShowFaces"] = showFaces_.value();
     root["ShowLines"] = showEdges_.value();
     root["ShowBordersHighlight"] = showBordersHighlight_.value();
     root["ShowSelectedEdges"] = showSelectedEdges_.value();
     root["ShowSelectedFaces"] = showSelectedFaces_.value();
     root["OnlyOddFragments"] = onlyOddFragments_.value();
+    root["ShadingEnabled"] = shadingEnabled_.value();
     root["FaceBased"] = !flatShading_.empty();
     root["ColoringType"] = ( coloringType_ == ColoringType::VertsColorMap ) ? "PerVertex" : "Solid";
 
+    // texture
+    serializeToJson( texture_, root["Texture"] );
+    serializeToJson( uvCoordinates_.vec_, root["UVCoordinates"] );
     // edges
     serializeToJson( Vector4f( edgesColor_.get() ), root["Colors"]["Edges"] );
     // borders
@@ -86,8 +92,16 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     serializeToJson( Vector4f( faceSelectionColor_.get() ), root["Colors"]["Selection"]["Diffuse"] );
 
     serializeToJson( selectedTriangles_, root["SelectionFaceBitSet"] );
-    serializeToJson( selectedEdges_, root["SelectionEdgeBitSet"] );
-    serializeToJson( creases_, root["MeshCreasesUndirEdgeBitSet"] );
+    if ( mesh_ )
+    {
+        serializeViaVerticesToJson( selectedEdges_, mesh_->topology, root["SelectionEdgeBitSet"] );
+        serializeViaVerticesToJson( creases_, mesh_->topology, root["MeshCreasesUndirEdgeBitSet"] );
+    }
+    else
+    {
+        serializeToJson( selectedEdges_, root["SelectionEdgeBitSet"] );
+        serializeToJson( creases_, root["MeshCreasesUndirEdgeBitSet"] );
+    }
 
     root["Type"].append( ObjectMeshHolder::TypeName() );
 }
@@ -97,6 +111,8 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     VisualObject::deserializeFields_( root );
     const auto& selectionColor = root["Colors"]["Selection"];
 
+    if ( root["ShowTexture"].isUInt() )
+        showTexture_ = ViewportMask{ root["ShowTexture"].asUInt() };
     if ( root["ShowFaces"].isUInt() )
         showFaces_ = ViewportMask{ root["ShowFaces"].asUInt() };
     if ( root["ShowLines"].isUInt() )
@@ -109,6 +125,8 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
         showSelectedFaces_ = ViewportMask{ root["ShowSelectedFaces"].asUInt() };
     if ( root["OnlyOddFragments"].isUInt() )
         onlyOddFragments_ = ViewportMask{ root["OnlyOddFragments"].asUInt() };
+    if ( root["ShadingEnabled"].isUInt() )
+        shadingEnabled_ = ViewportMask{ root["ShadingEnabled"].asUInt() };
     if ( root["FaceBased"].isBool() ) // Support old versions
         flatShading_ = root["FaceBased"].asBool() ? ViewportMask::all() : ViewportMask{};
     if ( root["ColoringType"].isString() )
@@ -121,6 +139,11 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     Vector4f resVec;
     deserializeFromJson( selectionColor["Diffuse"], resVec );
     faceSelectionColor_.set( Color( resVec ) );
+    // texture
+    if ( root["Texture"].isObject() )
+        deserializeFromJson( root["Texture"], texture_ );
+    if ( root["UVCoordinates"].isObject() )
+        deserializeFromJson( root["UVCoordinates"], uvCoordinates_.vec_ );
     // edges
     deserializeFromJson( root["Colors"]["Edges"], resVec );
     edgesColor_.set( Color( resVec ) );
@@ -129,11 +152,26 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     bordersColor_.set( Color( resVec ) );
 
     deserializeFromJson( root["SelectionFaceBitSet"], selectedTriangles_ );
-    deserializeFromJson( root["SelectionEdgeBitSet"], selectedEdges_ );
-    deserializeFromJson( root["MeshCreasesUndirEdgeBitSet"], creases_ );
+
+    if ( mesh_ )
+    {
+        selectedTriangles_ &= mesh_->topology.getValidFaces();
+
+        const auto notLoneEdges = mesh_->topology.findNotLoneUndirectedEdges();
+        deserializeViaVerticesFromJson( root["SelectionEdgeBitSet"], selectedEdges_, mesh_->topology );
+        selectedEdges_ &= notLoneEdges;
+
+        deserializeViaVerticesFromJson( root["MeshCreasesUndirEdgeBitSet"], creases_, mesh_->topology );
+        creases_ &= notLoneEdges;
+    }
+    else
+    {
+        deserializeFromJson( root["SelectionEdgeBitSet"], selectedEdges_ );
+        deserializeFromJson( root["MeshCreasesUndirEdgeBitSet"], creases_ );
+    }
 }
 
-tl::expected<void, std::string> ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
+VoidOrErrStr ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     vertsColorMap_.clear();
 #ifndef MRMESH_NO_OPENCTM
@@ -161,10 +199,14 @@ const ViewportMask& ObjectMeshHolder::getVisualizePropertyMask( unsigned type ) 
     {
     case MR::MeshVisualizePropertyType::Faces:
         return showFaces_;
+    case MR::MeshVisualizePropertyType::Texture:
+        return showTexture_;
     case MR::MeshVisualizePropertyType::Edges:
         return showEdges_;
     case MR::MeshVisualizePropertyType::FlatShading:
         return flatShading_;
+    case MR::MeshVisualizePropertyType::EnableShading:
+        return shadingEnabled_;
     case MR::MeshVisualizePropertyType::OnlyOddFragments:
         return onlyOddFragments_;
     case MR::MeshVisualizePropertyType::BordersHighlight:
@@ -208,6 +250,7 @@ void ObjectMeshHolder::setDefaultColors_()
 ObjectMeshHolder::ObjectMeshHolder( const ObjectMeshHolder& other ) :
     VisualObject( other )
 {
+    showTexture_ = other.showTexture_;
     selectedTriangles_ = other.selectedTriangles_;
     selectedEdges_ = other.selectedEdges_;
     creases_ = other.creases_;
@@ -218,6 +261,7 @@ ObjectMeshHolder::ObjectMeshHolder( const ObjectMeshHolder& other ) :
     showSelectedFaces_ = other.showSelectedFaces_;
     showBordersHighlight_ = other.showBordersHighlight_;
     flatShading_ = other.flatShading_;
+    shadingEnabled_ = other.shadingEnabled_;
     onlyOddFragments_ = other.onlyOddFragments_;
     
     edgesColor_ = other.edgesColor_;
@@ -227,12 +271,49 @@ ObjectMeshHolder::ObjectMeshHolder( const ObjectMeshHolder& other ) :
 
     facesColorMap_ = other.facesColorMap_;
     edgeWidth_ = other.edgeWidth_;
+
+    texture_ = other.texture_;
+    uvCoordinates_ = other.uvCoordinates_;
 }
 
 ObjectMeshHolder::ObjectMeshHolder()
 {
     setDefaultColors_();
     setFlatShading( SceneSettings::get( SceneSettings::Type::MeshFlatShading ) );
+}
+
+void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc )
+{
+    MR_TIMER
+
+    setColoringType( src.getColoringType() );
+    setTexture( src.getTexture() );
+
+    const auto& srcUVCoords = src.getUVCoords();
+    const auto& srcColorMap = src.getVertsColorMap();
+    const auto lastVert = src.mesh()->topology.lastValidVert();
+    const bool updateUV = lastVert < srcUVCoords.size();
+    const bool updateColorMap = lastVert < srcColorMap.size();
+
+    if ( !updateUV && !updateColorMap )
+        return;
+
+    VertUVCoords uvCoords( thisToSrc.size() );
+    VertColors colorMap( thisToSrc.size() );
+
+    tbb::parallel_for( tbb::blocked_range<VertId>( VertId( 0 ), VertId( uvCoords.size() ) ), [&uvCoords, &srcUVCoords, &thisToSrc, &colorMap, &srcColorMap, updateUV, updateColorMap] ( const tbb::blocked_range<VertId>& range )
+    {
+        for ( VertId id = range.begin(); id < range.end(); ++id )
+        {
+            if ( updateUV )
+                uvCoords[id] = srcUVCoords[thisToSrc[id]];
+            if ( updateColorMap )
+                colorMap[id] = srcColorMap[thisToSrc[id]];
+        }
+    } );
+
+    setUVCoords( std::move( uvCoords ) );
+    setVertsColorMap( std::move( colorMap ) );
 }
 
 uint32_t ObjectMeshHolder::getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const
@@ -314,6 +395,7 @@ void ObjectMeshHolder::selectFaces( FaceBitSet newSelection )
 {
     selectedTriangles_ = std::move( newSelection );
     numSelectedFaces_.reset();
+    faceSelectionChangedSignal();
     dirty_ |= DIRTY_SELECTION;
 }
 
@@ -351,7 +433,13 @@ Box3f ObjectMeshHolder::getWorldBox( ViewportId id ) const
 size_t ObjectMeshHolder::numSelectedFaces() const
 {
     if ( !numSelectedFaces_ )
+    {
         numSelectedFaces_ = selectedTriangles_.count();
+#ifndef NDEBUG
+        // check that there are no selected invalid faces
+        assert( !mesh_ || !( selectedTriangles_ - mesh_->topology.getValidFaces() ).any() );
+#endif
+    }
 
     return *numSelectedFaces_;
 }
@@ -359,7 +447,13 @@ size_t ObjectMeshHolder::numSelectedFaces() const
 size_t ObjectMeshHolder::numSelectedEdges() const
 {
     if ( !numSelectedEdges_ )
+    {
         numSelectedEdges_ = selectedEdges_.count();
+#ifndef NDEBUG
+        // check that there are no selected invalid edges
+        assert( !mesh_ || !( selectedEdges_ - mesh_->topology.findNotLoneUndirectedEdges() ).any() );
+#endif
+    }
 
     return *numSelectedEdges_;
 }
@@ -367,7 +461,13 @@ size_t ObjectMeshHolder::numSelectedEdges() const
 size_t ObjectMeshHolder::numCreaseEdges() const
 {
     if ( !numCreaseEdges_ )
+    {
         numCreaseEdges_ = creases_.count();
+#ifndef NDEBUG
+        // check that there are no invalid edges among creases
+        assert( !mesh_ || !( creases_ - mesh_->topology.findNotLoneUndirectedEdges() ).any() );
+#endif
+    }
 
     return *numCreaseEdges_;
 }
@@ -386,6 +486,10 @@ size_t ObjectMeshHolder::heapBytes() const
         + selectedTriangles_.heapBytes()
         + selectedEdges_.heapBytes()
         + creases_.heapBytes()
+        + texture_.heapBytes()
+        + ancillaryTexture_.heapBytes()
+        + uvCoordinates_.heapBytes()
+        + ancillaryUVCoordinates_.heapBytes()
         + facesColorMap_.heapBytes()
         + MR::heapBytes( mesh_ );
 }
@@ -394,6 +498,21 @@ size_t ObjectMeshHolder::numHoles() const
 {
     updateMeshStat_();
     return meshStat_->numHoles;
+}
+
+size_t ObjectMeshHolder::numComponents() const
+{
+    updateMeshStat_();
+    return meshStat_->numComponents;
+}
+
+size_t ObjectMeshHolder::numHandles() const
+{
+    if ( !mesh_ )
+        return 0;
+    updateMeshStat_();
+    int EulerCharacteristic = mesh_->topology.numValidFaces() + (int)meshStat_->numHoles + mesh_->topology.numValidVerts() - (int)meshStat_->numUndirectedEdges;
+    return meshStat_->numComponents - EulerCharacteristic / 2;
 }
 
 void ObjectMeshHolder::setDirtyFlags( uint32_t mask )
@@ -445,6 +564,15 @@ void ObjectMeshHolder::swapBase_( Object& other )
         assert( false );
 }
 
+void ObjectMeshHolder::swapSignals_( Object& other )
+{
+    VisualObject::swapSignals_( other );
+    if ( auto otherMesh = other.asType<ObjectMeshHolder>() )
+        std::swap( faceSelectionChangedSignal, otherMesh->faceSelectionChangedSignal );
+    else
+        assert( false );
+}
+
 AllVisualizeProperties ObjectMeshHolder::getAllVisualizeProperties() const
 {
     AllVisualizeProperties res;
@@ -452,6 +580,46 @@ AllVisualizeProperties ObjectMeshHolder::getAllVisualizeProperties() const
     for ( int i = 0; i < res.size(); ++i )
         res[i] = getVisualizePropertyMask( unsigned( i ) );
     return res;
+}
+
+const ViewportProperty<Color>& ObjectMeshHolder::getSelectedEdgesColorsForAllViewports() const
+{
+    return edgeSelectionColor_;
+}
+
+void ObjectMeshHolder::setSelectedEdgesColorsForAllViewports( ViewportProperty<Color> val )
+{
+    edgeSelectionColor_ = std::move( val );
+}
+
+const ViewportProperty<Color>& ObjectMeshHolder::getSelectedFacesColorsForAllViewports() const
+{
+    return faceSelectionColor_;
+}
+
+void ObjectMeshHolder::setSelectedFacesColorsForAllViewports( ViewportProperty<Color> val )
+{
+    faceSelectionColor_ = std::move( val );
+}
+
+const ViewportProperty<Color>& ObjectMeshHolder::getBordersColorsForAllViewports() const
+{
+    return bordersColor_;
+}
+
+void ObjectMeshHolder::setBordersColorsForAllViewports( ViewportProperty<Color> val )
+{
+    bordersColor_ = std::move( val );
+}
+
+const ViewportProperty<Color>& ObjectMeshHolder::getEdgesColorsForAllViewports() const
+{
+    return edgesColor_;
+}
+
+void ObjectMeshHolder::setEdgesColorsForAllViewports( ViewportProperty<Color> val )
+{
+    edgesColor_ = std::move( val );
 }
 
 } //namespace MR

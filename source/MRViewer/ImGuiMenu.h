@@ -232,14 +232,19 @@ public:
   void make_color_selector( std::vector<std::shared_ptr<ObjectT>> selectedVisualObjs, const char* label,
                             std::function<Vector4f( const ObjectT* )> getter,
                             std::function<void( ObjectT*, const Vector4f& )> setter );
+  template<typename ObjType>
   void make_width( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
-                   std::function<float( const ObjectLinesHolder* )> getter,
-                   std::function<void( ObjectLinesHolder*, const float& )> setter,
+                   std::function<float( const ObjType* )> getter,
+                   std::function<void( ObjType*, const float& )> setter,
                    bool lineWidth = false );
 
   void make_light_strength( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
     std::function<float( const VisualObject* )> getter,
     std::function<void( VisualObject*, const float& )> setter);
+
+  void make_uint8_slider( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
+    std::function<uint8_t( const VisualObject* )> getter,
+    std::function<void( VisualObject*, uint8_t )> setter );
 
   MRVIEWER_API void draw_custom_plugins();
 

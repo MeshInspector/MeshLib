@@ -57,8 +57,8 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, Remembe
         for ( auto e : orgRing( mesh_.topology, v ) )
         {
             double w = 1;
-            if ( weights == EdgeWeights::Cotan ) 
-                w = mesh_.cotan( e );
+            if ( weights == EdgeWeights::Cotan || weights == EdgeWeights::CotanWithAreaEqWeight ) 
+                w = std::clamp( mesh_.cotan( e ), -1.0f, 10.0f ); // cotan() can be arbitrary high for degenerate edges
             else if ( weights == EdgeWeights::CotanTimesLength ) 
                 w = mesh_.edgeLength( e ) * mesh_.cotan( e );
             auto d = mesh_.topology.dest( e );
@@ -66,14 +66,18 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, Remembe
             sumWPos -= w * Vector3d( mesh_.points[d] );
             sumW += w;
         }
-        const double rSumW = 1 / sumW;
+        double a = 1;
+        if ( weights == EdgeWeights::CotanWithAreaEqWeight )
+            if ( auto d = mesh_.dblArea( v ); d > 0 )
+                a =  1 / std::sqrt( d );
+        const double rSumW = a / sumW;
         for ( auto el : rowElements )
         {
             el.coeff *= rSumW;
             nonZeroElements_.push_back( el );
         }
-        eq.rhs = ( rem == RememberShape::Yes ) ? sumWPos * rSumW + Vector3d( mesh_.points[v] ) : Vector3d();
-        eq.centerCoeff = 1;
+        eq.rhs = ( rem == RememberShape::Yes ) ? sumWPos * rSumW + a * Vector3d( mesh_.points[v] ) : Vector3d();
+        eq.centerCoeff = a;
         equations_.push_back( eq );
     }
     Equation eq;
@@ -148,7 +152,7 @@ void Laplacian::updateSolver_()
         ++n;
     }
 
-    // equations for fixed neighbors of free vertices
+    // equations for free neighbors of fixed vertices
     for ( auto v : firstLayerFixedVerts_ )
     {
         int eqN = regionVert2id_[v];
@@ -194,7 +198,7 @@ void Laplacian::prepareRhs_( I && iniRhs, G && g, S && s )
         ++n;
     }
 
-    // equations for fixed neighbors of free vertices
+    // equations for free neighbors of fixed vertices
     for ( auto v : firstLayerFixedVerts_ )
     {
         int eqN = regionVert2id_[v];

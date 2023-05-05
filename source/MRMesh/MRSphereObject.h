@@ -49,7 +49,7 @@ protected:
     virtual tl::expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& ) const override 
     { return {}; }
 
-    virtual tl::expected<void, std::string> deserializeModel_( const std::filesystem::path&, ProgressCallback ) override
+    virtual VoidOrErrStr deserializeModel_( const std::filesystem::path&, ProgressCallback ) override
     { return {}; }
 
 private:

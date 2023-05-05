@@ -205,4 +205,10 @@ void SurfacePointWidget::updatePositionAndRadius_()
     pickSphere_->setRadius( radius );
 }
 
+void SurfacePointWidget::updateCurrentPosition( MeshTriPoint& pos )
+{
+    std::swap( currentPos_, pos );
+    updatePositionAndRadius_();
+}
+
 }

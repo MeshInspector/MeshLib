@@ -62,6 +62,14 @@ public:
     // adds item to static holder (needed to be independent of construction time)
     // returns false if item with such name is already present
     MRVIEWER_API static bool addItem( std::shared_ptr<RibbonMenuItem> item );
+
+    // struct to hold information for search result presentation
+    struct SearchResult
+    {
+        int tabIndex{ -1 }; // -1 is default value if item has no tab
+        const MenuItemInfo* item{ nullptr }; // item info to show correct caption
+    };
+    MRVIEWER_API static std::vector<SearchResult> search( const std::string& searchStr );
 private:
     RibbonSchemaHolder() = default;
 };

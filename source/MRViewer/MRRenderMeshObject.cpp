@@ -11,6 +11,7 @@
 #include "MRMeshViewer.h"
 #include "MRGladGlfw.h"
 #include "MRPch/MRTBB.h"
+#include "MRMesh/MRRegionBoundary.h"
 
 namespace MR
 {
@@ -71,13 +72,18 @@ void RenderMeshObject::render( const RenderParams& renderParams )
 
     auto shader = renderParams.alphaSort ? GLStaticHolder::getShaderId( GLStaticHolder::TransparentMesh ) : GLStaticHolder::getShaderId( GLStaticHolder::DrawMesh );
     // Send transformations to the GPU
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrixPtr ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrixPtr ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrixPtr ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "normal_matrix" ), 1, GL_TRUE, renderParams.normMatrixPtr ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrix.data() ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrix.data() ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrix.data() ) );
+    if ( renderParams.normMatrixPtr )
+    {
+        GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "normal_matrix" ), 1, GL_TRUE, renderParams.normMatrixPtr->data() ) );
+    }
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "onlyOddFragments" ), objMesh_->getVisualizeProperty( MeshVisualizePropertyType::OnlyOddFragments, renderParams.viewportId ) ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "invertNormals" ), objMesh_->getVisualizeProperty( VisualizeMaskType::InvertedNormals, renderParams.viewportId ) ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "mirrored" ), renderParams.modelMatrix.det() < 0.0f ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "enableShading" ), objMesh_->getVisualizeProperty( MeshVisualizePropertyType::EnableShading, renderParams.viewportId ) ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "flatShading" ), objMesh_->getVisualizeProperty( MeshVisualizePropertyType::FlatShading, renderParams.viewportId ) ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perVertColoring" ), objMesh_->getColoringType() == ColoringType::VertsColorMap ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perFaceColoring" ), objMesh_->getColoringType() == ColoringType::FacesColorMap ) );
@@ -91,6 +97,7 @@ void RenderMeshObject::render( const RenderParams& renderParams )
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specExp" ), objMesh_->getShininess() ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specularStrength" ), objMesh_->getSpecularStrength() ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), objMesh_->getAmbientStrength() ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "globalAlpha" ), objMesh_->getGlobalAlpha( renderParams.viewportId ) / 255.0f ) );
     GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &renderParams.lightPos.x ) );
     GL_EXEC( glUniform4f( fixed_colori, 0.0, 0.0, 0.0, 0.0 ) );
 
@@ -110,18 +117,12 @@ void RenderMeshObject::render( const RenderParams& renderParams )
 
         // Texture
         GL_EXEC( auto useTexture = glGetUniformLocation( shader, "useTexture" ) );
-        GL_EXEC( glUniform1i( useTexture, objMesh_->getVisualizeProperty( VisualizeMaskType::Texture, renderParams.viewportId ) ) );
+        GL_EXEC( glUniform1i( useTexture, objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, renderParams.viewportId ) || 
+            objMesh_->hasAncillaryTexture() ) );
 
-        if ( renderParams.forceZBuffer )
-        {
-            GL_EXEC( glDepthFunc( GL_ALWAYS ) );
-        }
-        else
-        {
-            GL_EXEC( glDepthFunc( GL_LESS ) );
-        }
-
+        GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
         drawMesh_( true, renderParams.viewportId );
+        GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
     }
     // Render wireframe
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Edges, renderParams.viewportId ) )
@@ -155,9 +156,9 @@ void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigne
 
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Picker );
 
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, parameters.modelMatrixPtr ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, parameters.viewMatrixPtr ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, parameters.projMatrixPtr ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, parameters.modelMatrix.data() ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, parameters.viewMatrix.data() ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, parameters.projMatrix.data() ) );
 
     GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "primBucketSize" ), 3 ) );
 
@@ -166,7 +167,9 @@ void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigne
         parameters.clipPlane.n.x, parameters.clipPlane.n.y, parameters.clipPlane.n.z, parameters.clipPlane.d ) );
     GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "uniGeomId" ), geomId ) );
 
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( parameters.depthFunction ) ) );
     drawMesh_( true, parameters.viewportId, true );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
 }
 
 size_t RenderMeshObject::heapBytes() const
@@ -227,9 +230,9 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
 
     GL_EXEC( glUseProgram( shader ) );
 
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrixPtr ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrixPtr ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrixPtr ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrix.data() ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrix.data() ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrix.data() ) );
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objMesh_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),
@@ -240,6 +243,8 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "uniformColor" ),
         color[0], color[1], color[2], color[3] ) );
 
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "globalAlpha" ), objMesh_->getGlobalAlpha( renderParams.viewportId ) / 255.0f ) );
+
     // positions
     bindVertexAttribArray( shader, "position", vbo, buffer, 3, buffer.dirty(), true );
 
@@ -247,7 +252,10 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
 
     GLfloat width = objMesh_->getEdgeWidth() * 5;
     GL_EXEC( glLineWidth( GLfloat( width ) ) );
+    
+    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawArrays( GL_LINES, 0, int( buffer.glSize() ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
 }
 
 void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )
@@ -261,9 +269,9 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )
 
     GL_EXEC( glUseProgram( shader ) );
 
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrixPtr ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrixPtr ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrixPtr ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrix.data() ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrix.data() ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrix.data() ) );
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objMesh_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),
@@ -273,6 +281,8 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )
     auto color = Vector4f( objMesh_->getEdgesColor( renderParams.viewportId ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "uniformColor" ),
         color[0], color[1], color[2], color[3] ) );
+
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "globalAlpha" ), objMesh_->getGlobalAlpha( renderParams.viewportId ) / 255.0f ) );
 
     // positions
     auto positions = loadVertPosBuffer_();
@@ -285,7 +295,9 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, edgeIndicesSize_ );
 
     GL_EXEC( glLineWidth( GLfloat( objMesh_->getEdgeWidth() ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_LINES, int( 2 * edgeIndicesSize_ ), GL_UNSIGNED_INT, nullptr ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
 }
 
 void RenderMeshObject::bindMesh_( bool alphaSort )
@@ -309,7 +321,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
     auto faces = loadFaceIndicesBuffer_();
     facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, faces.dirty(), faces );
 
-    const auto& texture = objMesh_->getTexture();
+    const auto& texture = objMesh_->hasAncillaryTexture() ? objMesh_->getAncillaryTexture() : objMesh_->getTexture();
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
     texture_.loadDataOpt( dirty_ & DIRTY_TEXTURE,
         { 
@@ -418,7 +430,7 @@ void RenderMeshObject::initBuffers_()
     GL_EXEC( glGetIntegerv( GL_MAX_TEXTURE_SIZE, &maxTexSize_ ) );
     assert( maxTexSize_ > 0 );
 
-    dirty_ = DIRTY_ALL;
+    dirty_ = DIRTY_ALL - DIRTY_CORNERS_RENDER_NORMAL - DIRTY_VERTS_RENDER_NORMAL;
 }
 
 void RenderMeshObject::freeBuffers_()
@@ -496,7 +508,31 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
     const auto& topology = mesh->topology;
     auto numF = topology.lastValidFace() + 1;
 
-    if ( dirty_ & DIRTY_VERTS_RENDER_NORMAL )
+    if ( dirty_ & DIRTY_CORNERS_RENDER_NORMAL )
+    {
+        MR_NAMED_TIMER( "dirty_corners_normals" )
+
+        auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
+
+        const auto& creases = objMesh_->creases();
+
+        const auto cornerNormals = computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
+        tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId{ numF } ), [&] ( const tbb::blocked_range<FaceId>& range )
+        {
+            for ( FaceId f = range.begin(); f < range.end(); ++f )
+            {
+                if ( !mesh->topology.hasFace( f ) )
+                    continue;
+                auto ind = 3 * f;
+                const auto& cornerN = getAt( cornerNormals, f );
+                for ( int i = 0; i < 3; ++i )
+                    buffer[ind + i] = cornerN[i];
+            }
+        } );
+
+        return buffer;
+    }
+    else if ( dirty_ & DIRTY_VERTS_RENDER_NORMAL )
     {
         MR_NAMED_TIMER( "dirty_vertices_normals" )
 
@@ -514,32 +550,9 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
                 topology.getTriVerts( f, v );
                 for ( int i = 0; i < 3; ++i )
                 {
-                    const auto &norm = vertNormals[v[i]];
+                    const auto &norm = getAt( vertNormals, v[i] );
                     buffer[ind + i] = norm;
                 }
-            }
-        } );
-
-        return buffer;
-    }
-    else if ( dirty_ & DIRTY_CORNERS_RENDER_NORMAL )
-    {
-        MR_NAMED_TIMER( "dirty_corners_normals" )
-
-        auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
-
-        const auto& creases = objMesh_->creases();
-        const auto cornerNormals = computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
-        tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId{ numF } ), [&] ( const tbb::blocked_range<FaceId>& range )
-        {
-            for ( FaceId f = range.begin(); f < range.end(); ++f )
-            {
-                if ( !mesh->topology.hasFace( f ) )
-                    continue;
-                auto ind = 3 * f;
-                const auto& cornerN = cornerNormals[f];
-                for ( int i = 0; i < 3; ++i )
-                    buffer[ind + i] = cornerN[i];
             }
         } );
 
@@ -575,7 +588,7 @@ RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
             VertId v[3];
             topology.getTriVerts( f, v );
             for ( int i = 0; i < 3; ++i )
-                buffer[ind + i] = vertsColorMap[v[i]];
+                buffer[ind + i] = getAt( vertsColorMap, v[i] );
         }
     } );
 
@@ -593,8 +606,8 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
     auto numF = topology.lastValidFace() + 1;
     auto numV = topology.lastValidVert() + 1;
 
-    const auto& uvCoords = objMesh_->getUVCoords();
-    if ( objMesh_->getVisualizeProperty( VisualizeMaskType::Texture, ViewportMask::any() ) )
+    const auto& uvCoords = objMesh_->hasAncillaryTexture() ? objMesh_->getAncillaryUVCoords() : objMesh_->getUVCoords();
+    if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, ViewportMask::any() ) )
     {
         assert( uvCoords.size() >= numV );
     }
@@ -612,7 +625,7 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
                 VertId v[3];
                 topology.getTriVerts( f, v );
                 for ( int i = 0; i < 3; ++i )
-                    buffer[ind + i] = uvCoords[v[i]];
+                    buffer[ind + i] = getAt( uvCoords, v[i] );
             }
         } );
 
@@ -745,7 +758,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadBorderHighlightPointsBuffer_()
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
-    auto boundary = topology.findBoundary();
+    auto boundary = findRightBoundary( topology );
     borderHighlightPointsSize_ = 0;
     for ( const auto& b : boundary )
         borderHighlightPointsSize_ += 2 * (int)b.size();

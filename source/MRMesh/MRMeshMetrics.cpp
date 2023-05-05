@@ -6,6 +6,7 @@
 #include "MRPlane3.h"
 #include "MRBestFit.h"
 #include "MRConstants.h"
+#include "MRTimer.h"
 
 namespace 
 {
@@ -17,6 +18,40 @@ namespace MR
 {
 
 const double BadTriangulationMetric = 1e10;
+
+double calcCombinedFillMetric( const Mesh & mesh, const FaceBitSet & filledRegion, const FillHoleMetric & metric )
+{
+    MR_TIMER
+    auto cm = metric.combineMetric;
+    if ( !cm )
+        cm = [] ( double a, double b ) { return a + b; };
+
+    double res = 0;
+    for ( auto t : filledRegion )
+    {
+        VertId vs[3];
+        mesh.topology.getTriVerts( t, vs );
+        res = cm( res, metric.triangleMetric( vs[0], vs[1], vs[2] ) );
+        if ( !metric.edgeMetric )
+            continue;
+        EdgeId es[3];
+        mesh.topology.getTriEdges( t, es );
+        for ( int i = 0; i < 3; ++i )
+        {
+            const auto e = es[i];
+            assert( t == mesh.topology.left( e ) );
+            const auto rt = mesh.topology.right( e );
+            if ( !rt || ( rt > t && filledRegion.test( rt ) ) )
+                continue; // do not examine edge twice
+            const auto a = mesh.topology.org( e );
+            const auto b = mesh.topology.dest( e );
+            const auto l = mesh.topology.dest( mesh.topology.next( e ) );
+            const auto r = mesh.topology.dest( mesh.topology.prev( e ) );
+            res = cm( res, metric.edgeMetric( a, b, l, r ) );
+        }
+    }
+    return res;
+}
 
 FillHoleMetric getCircumscribedMetric( const Mesh& mesh )
 {
@@ -253,7 +288,8 @@ FillHoleMetric getUniversalMetric( const Mesh& mesh )
         auto ab = bP - aP;
         auto normL = cross( lP - aP, ab ); //it is ok not to normalize for dihedralAngle call
         auto normR = cross( ab, rP - aP );
-        return ab.length() * std::exp( 10 * ( std::abs( dihedralAngle( normL, normR, ab ) ) ) );
+        // exp(10* angle) - was too big and broke even double precision
+        return ab.length() * std::exp( 5 * ( std::abs( dihedralAngle( normL, normR, ab ) ) ) );
     };
     return metric;
 }
@@ -269,31 +305,16 @@ FillHoleMetric getMinTriAngleMetric( const Mesh& mesh )
     return metric;
 }
 
-// This simple metric penalizes for large triangle area and large triangle aspect ratio
-FillHoleMetric getSimpleAreaMetric( const Mesh& mesh, EdgeId e0 )
+FillHoleMetric getMinAreaMetric( const Mesh& mesh )
 {
-    assert( !mesh.topology.left( e0 ) );
-    auto norm = Vector3d();
-    for ( auto e : leftRing( mesh.topology, e0 ) )
-    {
-        norm += cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) );
-    }
-    auto holeDblArea = norm.length();
-    auto aspectDenom = 1e-2 / sqrt( std::numeric_limits<double>::max() );
     FillHoleMetric metric;
-    metric.triangleMetric = [&mesh, holeDblArea, aspectDenom] ( VertId a, VertId b, VertId c )
+    metric.triangleMetric = [&mesh] ( VertId a, VertId b, VertId c )
     {
         Vector3d aP = Vector3d( mesh.points[a] );
         Vector3d bP = Vector3d( mesh.points[b] );
         Vector3d cP = Vector3d( mesh.points[c] );
 
-        auto faceNorm = cross( bP - aP, cP - aP );
-        auto faceDblArea = faceNorm.length();
-        auto areaRatio = faceDblArea / holeDblArea; // [0;1]
-        // sqrt because `triangleAspectRatio` grows very fast
-        auto aspectRatio = sqrt( triangleAspectRatio( aP, bP, cP ) - 1.0 ) * aspectDenom; // [0;0.01]
-
-        return areaRatio + aspectRatio;
+        return dblArea( aP, bP, cP );
     };
     return metric;
 }

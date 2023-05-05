@@ -50,6 +50,7 @@ const char* RibbonIcons::sizeSubFolder_( Sizes sz )
     constexpr std::array<const char*, size_t( Sizes::Count )> folders =
     {
         "X0_5",
+        "X0_75",
         "X1",
         "X3"
     };

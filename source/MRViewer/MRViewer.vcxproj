@@ -21,6 +21,10 @@
     <ClCompile Include="MRCreateShader.cpp" />
     <ClCompile Include="MRGetSystemInfoJson.cpp" />
     <ClCompile Include="MRMouseController.cpp" />
+    <ClCompile Include="MRRenderVolumeObject.cpp" />
+    <ClCompile Include="MRSceneSelectionChange.cpp" />
+    <ClCompile Include="MRShaderBlocks.cpp" />
+    <ClCompile Include="MRToolbar.cpp" />
     <ClCompile Include="MRTouchesHandler.cpp" />
     <ClCompile Include="MRTouchesController.cpp" />
     <ClCompile Include="MRObjectMeshHistory.cpp" />
@@ -48,6 +52,7 @@
     <ClCompile Include="MRImmediateGL.cpp" />
     <ClCompile Include="MRStatePluginAutoClose.cpp" />
     <ClCompile Include="MRSurfacePointPicker.cpp" />
+    <ClCompile Include="MRUIStyle.cpp" />
     <ClCompile Include="MRViewerInstance.cpp" />
     <ClCompile Include="MRViewerIO.cpp" />
     <ClCompile Include="MRViewportCamera.cpp" />
@@ -68,6 +73,8 @@
     <ClCompile Include="MRViewerEventsListener.cpp" />
     <ClCompile Include="MRViewerSettingsManager.cpp" />
     <ClCompile Include="MRViewportGL.cpp" />
+    <ClCompile Include="MRVolumeShader.cpp" />
+    <ClCompile Include="MRWebRequest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -85,6 +92,10 @@
     <ClInclude Include="MRGladGlfw.h" />
     <ClInclude Include="MRMouse.h" />
     <ClInclude Include="MRMouseController.h" />
+    <ClInclude Include="MRRenderVolumeObject.h" />
+    <ClInclude Include="MRSceneSelectionChange.h" />
+    <ClInclude Include="MRShaderBlocks.h" />
+    <ClInclude Include="MRToolbar.h" />
     <ClInclude Include="MRTouchesController.h" />
     <ClInclude Include="MRObjectMeshHistory.h" />
     <ClInclude Include="MRObjectTransformWidget.h" />
@@ -129,6 +140,7 @@
     <ClInclude Include="MRStatePluginAutoClose.h" />
     <ClInclude Include="MRSurfacePointPicker.h" />
     <ClInclude Include="MRSwapRootAction.h" />
+    <ClInclude Include="MRUIStyle.h" />
     <ClInclude Include="MRViewer.h" />
     <ClInclude Include="MRViewerFwd.h" />
     <ClInclude Include="MRViewerInstance.h" />
@@ -141,6 +153,8 @@
     <ClInclude Include="MRViewerEventsListener.h" />
     <ClInclude Include="MRViewerSettingsManager.h" />
     <ClInclude Include="MRViewportGL.h" />
+    <ClInclude Include="MRVolumeShader.h" />
+    <ClInclude Include="MRWebRequest.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />
@@ -156,6 +170,9 @@
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-Regular.ttf">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSansMono-Regular.ttf">
       <FileType>Document</FileType>
     </CopyFileToFolders>
     <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSansSC-Regular.otf">
@@ -221,16 +238,15 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
+  <Import Project="$(ProjectDir)\..\platform.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>

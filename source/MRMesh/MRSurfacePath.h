@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include <vector>
+#include <string>
 #include <tl/expected.hpp>
 
 namespace MR
@@ -16,6 +17,16 @@ enum class PathError
     StartEndNotConnected, ///< no path can be found from start to end, because they are not from the same connected component
     InternalError         ///< report to developers for investigation
 };
+
+inline std::string toString(PathError error)
+{
+    switch (error)
+    {
+        case PathError::StartEndNotConnected:   return "No path can be found from start to end, because they are not from the same connected component";
+        case PathError::InternalError:          return "Report to developers for further investigations";
+        default:                                return "Unknown error. Please, report to developers for further investigations";
+    }
+}
 
 /// returns intermediate points of the geodesic path from start to end, where it crosses mesh edges;
 /// the path can be limited to given region: in face-format inside mp, or in vert-format in vertRegion argument.

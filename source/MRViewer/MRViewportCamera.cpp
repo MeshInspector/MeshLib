@@ -8,6 +8,7 @@
 #include "MRMesh/MRObjectLinesHolder.h"
 #include "MRMesh/MRObjectLabel.h"
 #include "MRMesh/MRObjectPoints.h"
+#include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRLine3.h"
 #include "MRMesh/MRRegionBoundary.h"
 #include "MRPch/MRTBB.h"
@@ -34,7 +35,7 @@ AffineXf3f Viewport::getViewXf_() const
 
 Vector3f Viewport::getCameraPoint() const
 {
-    AffineXf3f xfInv = AffineXf3f( viewM ).inverse();
+    AffineXf3f xfInv = AffineXf3f( viewM_ ).inverse();
     return xfInv.b;
 }
 
@@ -45,15 +46,15 @@ void Viewport::setCameraPoint( const Vector3f& cameraWorldPos )
     needRedraw_ = true;
 }
 
-void Viewport::setupViewMatrix() const
+void Viewport::setupViewMatrix_()
 {
-    viewM = getViewXf_();
+    viewM_ = getViewXf_();
 
     if ( rotation_ )
         rotateView_();
 }
 
-void Viewport::setupProjMatrix() const
+void Viewport::setupProjMatrix_()
 {
     if ( params_.orthographic )
     {
@@ -61,12 +62,12 @@ void Viewport::setupProjMatrix() const
         float angle = 0.5f * params_.cameraViewAngle / 180.0f * PI_F;
         float h = tan( angle );
         float d = h * width( viewportRect_ ) / height( viewportRect_ );
-        projM( 0, 0 ) = 1.f / d; projM( 0, 1 ) = 0.f; projM( 0, 2 ) = 0.f; projM( 0, 3 ) = 0.f;
-        projM( 1, 0 ) = 0.f; projM( 1, 1 ) = 1.f / h; projM( 1, 2 ) = 0.f; projM( 1, 3 ) = 0.f;
-        projM( 2, 0 ) = 0.f; projM( 2, 1 ) = 0.f;
-        projM( 2, 2 ) = -2.f / ( params_.cameraDfar - params_.cameraDnear );
-        projM( 2, 3 ) = -( params_.cameraDfar + params_.cameraDnear ) / ( params_.cameraDfar - params_.cameraDnear );
-        projM( 3, 0 ) = 0.f; projM( 3, 1 ) = 0.f; projM( 3, 2 ) = 0.f; projM( 3, 3 ) = 1.f;
+        projM_( 0, 0 ) = 1.f / d; projM_( 0, 1 ) = 0.f; projM_( 0, 2 ) = 0.f; projM_( 0, 3 ) = 0.f;
+        projM_( 1, 0 ) = 0.f; projM_( 1, 1 ) = 1.f / h; projM_( 1, 2 ) = 0.f; projM_( 1, 3 ) = 0.f;
+        projM_( 2, 0 ) = 0.f; projM_( 2, 1 ) = 0.f;
+        projM_( 2, 2 ) = -2.f / ( params_.cameraDfar - params_.cameraDnear );
+        projM_( 2, 3 ) = -( params_.cameraDfar + params_.cameraDnear ) / ( params_.cameraDfar - params_.cameraDnear );
+        projM_( 3, 0 ) = 0.f; projM_( 3, 1 ) = 0.f; projM_( 3, 2 ) = 0.f; projM_( 3, 3 ) = 1.f;
     }
     else
     {
@@ -74,25 +75,25 @@ void Viewport::setupProjMatrix() const
         float angle = 0.5f * params_.cameraViewAngle / 180.0f * PI_F;
         float h = tan( angle ) * params_.cameraDnear;
         float d = h * width( viewportRect_ ) / height( viewportRect_ );
-        projM( 0, 0 ) = params_.cameraDnear / d; projM( 0, 1 ) = 0.f; projM( 0, 2 ) = 0.f; projM( 0, 3 ) = 0.f;
-        projM( 1, 0 ) = 0.f; projM( 1, 1 ) = params_.cameraDnear / h; projM( 1, 2 ) = 0.f; projM( 1, 3 ) = 0.f;
-        projM( 2, 0 ) = 0.f; projM( 2, 1 ) = 0.f;
-        projM( 2, 2 ) = ( params_.cameraDfar + params_.cameraDnear ) / ( params_.cameraDnear - params_.cameraDfar );
-        projM( 2, 3 ) = -2.f * ( params_.cameraDfar * params_.cameraDnear ) / ( params_.cameraDfar - params_.cameraDnear );
-        projM( 3, 0 ) = 0.f; projM( 3, 1 ) = 0.f; projM( 3, 2 ) = -1.f; projM( 3, 3 ) = 0.f;
+        projM_( 0, 0 ) = params_.cameraDnear / d; projM_( 0, 1 ) = 0.f; projM_( 0, 2 ) = 0.f; projM_( 0, 3 ) = 0.f;
+        projM_( 1, 0 ) = 0.f; projM_( 1, 1 ) = params_.cameraDnear / h; projM_( 1, 2 ) = 0.f; projM_( 1, 3 ) = 0.f;
+        projM_( 2, 0 ) = 0.f; projM_( 2, 1 ) = 0.f;
+        projM_( 2, 2 ) = ( params_.cameraDfar + params_.cameraDnear ) / ( params_.cameraDnear - params_.cameraDfar );
+        projM_( 2, 3 ) = -2.f * ( params_.cameraDfar * params_.cameraDnear ) / ( params_.cameraDfar - params_.cameraDnear );
+        projM_( 3, 0 ) = 0.f; projM_( 3, 1 ) = 0.f; projM_( 3, 2 ) = -1.f; projM_( 3, 3 ) = 0.f;
     }
 }
 
-void Viewport::setupStaticProjMatrix() const
+void Viewport::setupStaticProjMatrix_()
 {
     float h = (cameraEye - cameraCenter).length();
     float d = h * width( viewportRect_ ) / height( viewportRect_ );
-    staticProj( 0, 0 ) = 1.f / d; staticProj( 0, 1 ) = 0.f; staticProj( 0, 2 ) = 0.f; staticProj( 0, 3 ) = 0.f;
-    staticProj( 1, 0 ) = 0.f; staticProj( 1, 1 ) = 1.f / h; staticProj( 1, 2 ) = 0.f; staticProj( 1, 3 ) = 0.f;
-    staticProj( 2, 0 ) = 0.f; staticProj( 2, 1 ) = 0.f;
-    staticProj( 2, 2 ) = -2.f / (params_.cameraDfar - params_.cameraDnear);
-    staticProj( 2, 3 ) = -(params_.cameraDfar + params_.cameraDnear) / (params_.cameraDfar - params_.cameraDnear);
-    staticProj( 3, 0 ) = 0.f; staticProj( 3, 1 ) = 0.f; staticProj( 3, 2 ) = 0.f; staticProj( 3, 3 ) = 1.f;
+    staticProj_( 0, 0 ) = 1.f / d; staticProj_( 0, 1 ) = 0.f; staticProj_( 0, 2 ) = 0.f; staticProj_( 0, 3 ) = 0.f;
+    staticProj_( 1, 0 ) = 0.f; staticProj_( 1, 1 ) = 1.f / h; staticProj_( 1, 2 ) = 0.f; staticProj_( 1, 3 ) = 0.f;
+    staticProj_( 2, 0 ) = 0.f; staticProj_( 2, 1 ) = 0.f;
+    staticProj_( 2, 2 ) = -2.f / (params_.cameraDfar - params_.cameraDnear);
+    staticProj_( 2, 3 ) = -(params_.cameraDfar + params_.cameraDnear) / (params_.cameraDfar - params_.cameraDnear);
+    staticProj_( 3, 0 ) = 0.f; staticProj_( 3, 1 ) = 0.f; staticProj_( 3, 2 ) = 0.f; staticProj_( 3, 3 ) = 1.f;
 }
 
 // ================================================================
@@ -139,12 +140,12 @@ void Viewport::setRotation( bool state )
     static_point_ = worldToCameraSpace( rotationPivot_ );
 }
 
-void Viewport::rotateView_() const
+void Viewport::rotateView_()
 {
     // TODO: try to simplify
-    AffineXf3f xf(viewM);
+    AffineXf3f xf(viewM_);
     Vector3f shift = static_point_ - xf.A * rotationPivot_;
-    viewM.setTranslation( shift );
+    viewM_.setTranslation( shift );
 
     auto line = unprojectPixelRay( static_viewport_point );
     line.d = line.d.normalized();
@@ -164,11 +165,9 @@ void Viewport::rotateView_() const
 
     // changing translation should not really be here, so const cast is OK
     // meanwhile it is because we need to keep distance(camera, scene center) static
-    Vector3f* transConstCasted = const_cast<Vector3f*>( &params_.cameraTranslation );
-    *transConstCasted = Matrix3f( params_.cameraTrackballAngle.inverse() ) * (shift + cameraEye);
-    *transConstCasted = params_.cameraTranslation / params_.cameraZoom;
-    assert( !std::isnan( transConstCasted->x ) );
-    viewM.setTranslation( shift );
+    params_.cameraTranslation = Matrix3f( params_.cameraTrackballAngle.inverse() ) * ( shift + cameraEye ) / params_.cameraZoom;
+    assert( !std::isnan( params_.cameraTranslation.x ) );
+    viewM_.setTranslation( shift );
 }
 
 void Viewport::transformView( const AffineXf3f & xf )
@@ -203,51 +202,35 @@ void Viewport::setRotationPivot_( const Vector3f& point )
 // ================================================================
 // projection part
 
-const Matrix4f& Viewport::getViewMatrix() const
-{
-    return viewM;
-}
-
 AffineXf3f Viewport::getUnscaledViewXf() const
 {
     // TODO. Try to find better normalize way
-    AffineXf3f res( viewM );
+    AffineXf3f res( viewM_ );
     res.A.x = res.A.x.normalized();
     res.A.y = res.A.y.normalized();
     res.A.z = res.A.z.normalized();
     return res;
 }
 
-AffineXf3f Viewport::getViewXf() const
-{
-    return AffineXf3f( viewM );
-}
-const Matrix4f& Viewport::getProjMatrix() const
-{
-    return projM;
-}
-Matrix4f Viewport::getFullViewportMatrix() const
-{
-    return projM * viewM;
-}
 Matrix4f Viewport::getFullViewportInversedMatrix() const
 {
-    return (projM * viewM).inverse();
+    // compute inverse in double precision to avoid NaN for very small scales
+    return Matrix4f( ( Matrix4d( projM_ ) * Matrix4d( viewM_ ) ).inverse() );
 }
 
 Vector3f Viewport::getUpDirection() const
 {
-    Vector3f res = Vector3f( viewM.y.x, viewM.y.y, viewM.y.z ).normalized();
+    Vector3f res = Vector3f( viewM_.y.x, viewM_.y.y, viewM_.y.z ).normalized();
     return res;
 }
 Vector3f Viewport::getRightDirection() const
 {
-    Vector3f res = Vector3f( viewM.x.x, viewM.x.y, viewM.x.z ).normalized();
+    Vector3f res = Vector3f( viewM_.x.x, viewM_.x.y, viewM_.x.z ).normalized();
     return res;
 }
 Vector3f Viewport::getBackwardDirection() const
 {
-    Vector3f res = Vector3f( viewM.z.x, viewM.z.y, viewM.z.z ).normalized();
+    Vector3f res = Vector3f( viewM_.z.x, viewM_.z.y, viewM_.z.z ).normalized();
     return res;
 }
 
@@ -259,12 +242,13 @@ Line3f Viewport::unprojectPixelRay( const Vector2f& viewportPoint ) const
     clipFar.z = 1.0f;
     auto p = M( clipNear );
     auto d = M( clipFar ) - p;
+    assert ( !std::isnan( d.x ) );
     return Line3f( p, d );
 }
 
 Vector3f Viewport::worldToCameraSpace( const Vector3f& p ) const
 {
-    return viewM(p);
+    return viewM_(p);
 }
 
 std::vector<Vector3f> Viewport::worldToCameraSpace( const std::vector<Vector3f>& points ) const
@@ -383,15 +367,38 @@ std::vector<Vector3f> Viewport::viewportSpaceToClipSpace( const std::vector<Vect
 // ================================================================
 // fit data part
 
+void Viewport::preciseFitBoxToScreenBorder( const FitBoxParams& fitParams )
+{
+    preciseFitToScreenBorder_( [&] ( bool zoomFov )
+    {
+        Space space = Space::CameraOrthographic;
+        if ( !params_.orthographic )
+        {
+            space = zoomFov ? Space::CameraPerspective : Space::World;
+        }
+        if ( space == Space::World )
+            return fitParams.worldBox;
+        else if ( space == Space::CameraOrthographic )
+            return transformed( fitParams.worldBox, getViewXf_() );
+        else
+        {
+            assert( space == Space::CameraPerspective );
+            auto xf = getViewXf_();
+            Box3f res;
+            for ( const auto& p : getCorners( fitParams.worldBox ) )
+            {
+                auto v = xf( p );
+                if ( v.z == 0 )
+                    continue;
+                res.include( Vector3f( v.x / v.z, v.y / v.z, v.z ) );
+            }
+            return res;
+        }
+    }, fitParams );
+}
+
 void Viewport::preciseFitDataToScreenBorder( const FitDataParams& fitParams )
 {
-    if ( fitParams.snapView )
-        params_.cameraTrackballAngle = getClosestCanonicalQuaternion( params_.cameraTrackballAngle );
-
-    const auto safeZoom = params_.cameraZoom;
-    params_.cameraZoom = 1;
-
-
     std::vector<std::shared_ptr<VisualObject>> allObj;
     if ( fitParams.mode == FitMode::CustomObjectsList )
         allObj = fitParams.objsList;
@@ -401,7 +408,26 @@ void Viewport::preciseFitDataToScreenBorder( const FitDataParams& fitParams )
         allObj = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), type );
     }
 
-    Box3f box = calcBox_( allObj, params_.orthographic ? Space::CameraOrthographic : Space::World, fitParams.mode == FitMode::SelectedPrimitives );
+    preciseFitToScreenBorder_( [&] ( bool zoomFov )
+    {
+        Space space = Space::CameraOrthographic;
+        if ( !params_.orthographic )
+        {
+            space = zoomFov ? Space::CameraPerspective : Space::World;
+        }
+        return calcBox_( allObj, space, fitParams.mode == FitMode::SelectedPrimitives );
+    }, fitParams );
+}
+
+void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV )> getBoxFn, const BaseFitParams& fitParams )
+{
+    if ( fitParams.snapView )
+        params_.cameraTrackballAngle = getClosestCanonicalQuaternion( params_.cameraTrackballAngle );
+
+    const auto safeZoom = params_.cameraZoom;
+    params_.cameraZoom = 1;
+
+    Box3f box = getBoxFn( false );
     if ( !box.valid() )
     {
         params_.cameraZoom = safeZoom;
@@ -418,7 +444,7 @@ void Viewport::preciseFitDataToScreenBorder( const FitDataParams& fitParams )
     {
         sceneBox_ = box;
     }
-    Vector3f sceneCenter = params_.orthographic ? 
+    Vector3f sceneCenter = params_.orthographic ?
         getViewXf_().inverse()( box.center() ) : box.center();
     setRotationPivot_( sceneCenter );
 
@@ -430,8 +456,8 @@ void Viewport::preciseFitDataToScreenBorder( const FitDataParams& fitParams )
 
     if ( params_.orthographic )
     {
-        auto factor = 1.f / (cameraEye - cameraCenter).length();
-        auto tanFOV = tan(0.5f * params_.cameraViewAngle / 180.f * PI_F);
+        auto factor = 1.f / ( cameraEye - cameraCenter ).length();
+        auto tanFOV = tan( 0.5f * params_.cameraViewAngle / 180.f * PI_F );
         params_.cameraZoom = factor / ( params_.objectScale * tanFOV );
 
         const auto winRatio = getRatio();
@@ -442,14 +468,17 @@ void Viewport::preciseFitDataToScreenBorder( const FitDataParams& fitParams )
         if ( maxD == 0.0f )
             maxD = 1.0f;
 
-        params_.cameraViewAngle = (2.f * atan2( maxD * params_.cameraZoom, params_.cameraDnear )) / PI_F * 180.f / fitParams.factor;
+        params_.cameraViewAngle = ( 2.f * atan2( maxD * params_.cameraZoom, params_.cameraDnear ) ) / PI_F * 180.f / fitParams.factor;
     }
     else
     {
-        auto tanFOV = tan(0.5f * params_.cameraViewAngle / 180.f * PI_F);
+        auto tanFOV = tan( 0.5f * params_.cameraViewAngle / 180.f * PI_F );
         params_.cameraZoom = 1 / ( params_.objectScale * tanFOV );
 
-        auto res = getZoomFOVtoScreen_( allObj, fitParams.mode == FitMode::SelectedPrimitives, nullptr );
+        auto res = getZoomFOVtoScreen_( [&] ()
+        {
+            return getBoxFn( true );
+        } );
         if ( res.first == 0.0f )
             res.first = 1.0f;
         params_.cameraViewAngle = res.first / fitParams.factor;
@@ -490,7 +519,10 @@ private:
 
 bool Viewport::allModelsInsideViewportRectangle() const
 {
-    auto res = getZoomFOVtoScreen_( getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Any ) );
+    auto res = getZoomFOVtoScreen_( [&] ()
+    {
+        return calcBox_( getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Any ), params_.orthographic ? Space::CameraOrthographic : Space::CameraPerspective );
+    } );
     return res.second && params_.cameraViewAngle > res.first;
 }
 
@@ -511,7 +543,40 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
             const VertCoords* coords = nullptr;
             const VertBitSet* selectedVerts = nullptr;
             auto objMesh = obj->asType<ObjectMeshHolder>();
-            if ( objMesh )
+#ifndef __EMSCRIPTEN__
+            VertCoords tempVertCoords;
+            VertBitSet tempSelected;
+            auto objVox = obj->asType<ObjectVoxels>();
+            if ( objVox && objVox->isVolumeRenderingEnabled() )
+            {
+                if ( !objVox->grid() )
+                    continue;
+                const auto& vdbVolume = objVox->vdbVolume();
+                Box3f voxBox;
+                voxBox.include( Vector3f() );
+                voxBox.include( mult( Vector3f( vdbVolume.dims ), vdbVolume.voxelSize ) );
+
+                tempVertCoords.resize( 8 );
+                for ( int i = 0; i < 8; ++i )
+                {
+                    Vector3i maxCoord;
+                    maxCoord.x = int( bool( i & 1 ) );
+                    maxCoord.y = int( bool( i & 2 ) );
+                    maxCoord.z = int( bool( i & 4 ) );
+                    Vector3i minCoord = Vector3i::diagonal( 1 ) - maxCoord;
+                    tempVertCoords[VertId( i )] = 
+                        mult( Vector3f( minCoord ), voxBox.min ) + 
+                        mult( Vector3f( maxCoord ), voxBox.max );
+                }
+                lastValidVert = 7_v;
+                tempSelected.resize( 8 );
+                tempSelected.flip();
+                coords = &tempVertCoords;
+                selectedVerts = &tempSelected;
+            }
+            else 
+#endif
+                if ( objMesh )
             {
                 if ( !objMesh->mesh() )
                     continue;
@@ -590,10 +655,10 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
     return box;
 }
 
-std::pair<float, bool> Viewport::getZoomFOVtoScreen_( const std::vector<std::shared_ptr<VisualObject>>& objs,
-    bool selectedPrimitives /*= false*/, Vector3f* cameraShift /*= nullptr*/ ) const
+std::pair<float, bool> Viewport::getZoomFOVtoScreen_( std::function<Box3f()> getBoxFn, Vector3f* cameraShift /*= nullptr*/ ) const
 {
-    const auto box = calcBox_( objs, params_.orthographic ? Space::CameraOrthographic : Space::CameraPerspective, selectedPrimitives );
+    //const auto box = calcBox_( objs, params_.orthographic ? Space::CameraOrthographic : Space::CameraPerspective, selectedPrimitives );
+    const auto box = getBoxFn();
     if ( !box.valid() )
         return std::make_pair( params_.cameraViewAngle, true );
 

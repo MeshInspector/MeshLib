@@ -43,6 +43,8 @@ struct DecimateSettings
     /// the algorithm will ignore dihedral angle check if one of triangles had aspect ratio equal or more than this value;
     /// and the algorithm will permit temporary increase in aspect ratio after collapse, if before collapse one of the triangles had larger aspect ratio
     float criticalTriAspectRatio = FLT_MAX;
+    /// edges not longer than this value will be collapsed ignoring normals and aspect ratio checks
+    float tinyEdgeLength = -1;
     /// Small stabilizer is important to achieve good results on completely planar mesh parts,
     /// if your mesh is not-planer everywhere, then you can set it to zero
     float stabilizer = 0.001f;
@@ -55,6 +57,8 @@ struct DecimateSettings
     int maxDeletedFaces = INT_MAX;
     /// Region on mesh to be decimated, it is updated during the operation
     FaceBitSet * region = nullptr;
+    /// If pointer is not null, then only edges from here can be collapsed (and some nearby edges can disappear)
+    const UndirectedEdgeBitSet * edgesToCollapse = nullptr;
     /// Whether to allow collapsing edges having at least one vertex on (region) boundary
     bool touchBdVertices = true;
     /// if touchBdVertices=false then the algorithm needs to know about all boundary vertices;
@@ -148,6 +152,8 @@ struct ResolveMeshDegenSettings
     int maxIters = 1;
     /// maximum permitted deviation from the original surface
     float maxDeviation = 0;
+    /// edges not longer than this value will be collapsed ignoring normals and aspect ratio checks
+    float tinyEdgeLength = 0;
     /// Permit edge flips if it does change dihedral angle more than on this value
     float maxAngleChange = PI_F / 3;
     /// the algorithm will ignore dihedral angle check if one of triangles had aspect ratio equal or more than this value;
@@ -191,6 +197,13 @@ struct RemeshSettings
     bool packMesh = false;
     /// this function is called each time edge (e) is split into (e1->e), but before the ring is made Delone
     std::function<void(EdgeId e1, EdgeId e)> onEdgeSplit;
+    /**
+     * \brief The user can provide this optional callback that is invoked immediately before edge collapse;
+     * \details It receives the edge being collapsed: its destination vertex will disappear,
+     * and its origin vertex will get new position (provided as the second argument) after collapse;
+     * If the callback returns false, then the collapse is prohibited
+     */
+    std::function<bool( EdgeId edgeToCollapse, const Vector3f& newEdgeOrgPos )> preCollapse;
     /// callback to report algorithm progress and cancel it by user request
     ProgressCallback progressCallback;
 };

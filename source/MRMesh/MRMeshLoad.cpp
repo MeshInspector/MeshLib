@@ -132,7 +132,7 @@ tl::expected<Mesh, std::string> fromObj( std::istream& in, Vector<Color, VertId>
 {
     MR_TIMER
 
-    auto objs = fromSceneObjFile( in, true, callback );
+    auto objs = fromSceneObjFile( in, true, {}, callback );
     if ( !objs.has_value() )
         return tl::make_unexpected( objs.error() );
     if ( objs->size() != 1 )
@@ -189,7 +189,7 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, Vector<Color, V
     in.seekg( 0, std::ios_base::end );
     auto posEnd = in.tellg();
     in.seekg( posCur );
-    if ( posEnd - posCur < 50 * numTris )
+    if ( posEnd - posCur < 50 * std::istream::pos_type( numTris ) )
         return tl::make_unexpected( std::string( "Binary STL-file is too short" ) );
 
     MeshBuilder::VertexIdentifier vi;
@@ -207,7 +207,7 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, Vector<Color, V
 
     const auto itemsInBuffer = std::min( numTris, 32768u );
     std::vector<StlTriangle> buffer( itemsInBuffer ), nextBuffer( itemsInBuffer );
-    std::vector<MeshBuilder::ThreePoints> chunk( itemsInBuffer );
+    std::vector<ThreePoints> chunk( itemsInBuffer );
 
     // first chunk
     in.read( (char*)buffer.data(), sizeof(StlTriangle) * itemsInBuffer );

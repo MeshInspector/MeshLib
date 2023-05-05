@@ -60,6 +60,53 @@ private:
     std::string name_;
 };
 
+/// Undo action for ObjectMesh uvCoords change
+class ChangeMeshUVCoordsAction : public HistoryAction
+{
+public:
+    using Obj = ObjectMesh;
+
+    /// use this constructor to remember object's mesh before making any changes in it
+    ChangeMeshUVCoordsAction( std::string name, const std::shared_ptr<ObjectMesh>& obj ) :
+        objMesh_{ obj },
+        name_{ std::move( name ) }
+    {
+        if ( obj )
+        {
+            uvCoords_ = obj->getUVCoords();
+        }
+    }
+
+    virtual std::string name() const override
+    {
+        return name_;
+    }
+
+    virtual void action( HistoryAction::Type ) override
+    {
+        if ( !objMesh_ )
+            return;
+
+        objMesh_->updateUVCoords( uvCoords_ );
+    }
+
+    static void setObjectDirty( const std::shared_ptr<ObjectMesh>& obj )
+    {
+        if ( obj )
+            obj->setDirtyFlags( DIRTY_UV );
+    }
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity() + uvCoords_.heapBytes();
+    }
+
+private:
+    Vector<UVCoord, VertId> uvCoords_;
+    std::shared_ptr<ObjectMesh> objMesh_;
+    std::string name_;
+};
+
 /// Undo action for ObjectMesh points only (not topology) change
 class ChangeMeshPointsAction : public HistoryAction
 {

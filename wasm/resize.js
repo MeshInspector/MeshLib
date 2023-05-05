@@ -6,7 +6,7 @@ var resizeCallBack = function () {
   // calc twice (for instant update)
   var rect = window.document.body.getBoundingClientRect();
   Module.ccall('resizeEmsCanvas', 'number', ['number', 'number'], [rect.width, rect.height]);
-  document.getElementById("canvas").setAttribute('style', 'width: 100%;height: 100%;');
+  document.getElementById("canvas").setAttribute('style', 'width: 100%;height: 100%; visibility: visible');
 }
 
 var registerResize = function () {

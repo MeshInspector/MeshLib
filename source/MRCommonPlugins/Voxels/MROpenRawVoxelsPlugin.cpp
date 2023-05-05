@@ -1,4 +1,4 @@
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MROpenRawVoxelsPlugin.h"
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRRibbonConstants.h"
@@ -9,10 +9,11 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRMesh/MRChangeSceneAction.h"
+#include "MRViewer/MRUIStyle.h"
 
 namespace
 {
-constexpr std::array<const char*, size_t( MR::VoxelsLoad::RawParameters::ScalarType::Count )> cScalarTypeNames =
+const std::vector<std::string> cScalarTypeNames =
 {
     "UInt8",
     "Int8",
@@ -44,9 +45,9 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { cDefaultItemSpacing * menuScaling, cDefaultItemSpacing * menuScaling } );
 
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * menuScaling, cCheckboxPadding * menuScaling } );
-    RibbonButtonDrawer::GradientCheckbox( "Auto parameters", &autoMode_ );
+    UI::checkbox( "Auto parameters", &autoMode_ );
     ImGui::PopStyleVar();
-    ImGui::SetTooltipIfHovered( "Use this flag to parse RAW parameters from filename.", menuScaling );
+    UI::setTooltipIfHovered( "Use this flag to parse RAW parameters from filename.", menuScaling );
     ImGui::Separator();
 
     if ( !autoMode_ )
@@ -58,9 +59,9 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         ImGui::PopItemWidth();
         ImGui::Separator();
         ImGui::PopStyleVar();
-        RibbonButtonDrawer::CustomCombo( "Scalar Type", ( int* )&parameters_.scalarType, MenuItemsList( std::begin( cScalarTypeNames ), std::end( cScalarTypeNames ) ) );
+        UI::combo( "Scalar Type", ( int* )&parameters_.scalarType, cScalarTypeNames );
     }
-    if ( RibbonButtonDrawer::GradientButton( "Open file", ImVec2( -1, 0 ) ) )
+    if ( UI::button( "Open file", Vector2f( -1, 0 ) ) )
     {
         auto path = openFileDialog( { {},{},{{"RAW File","*.raw"}} } );
         if ( !path.empty() )
@@ -82,9 +83,9 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
                 
                 if ( autoMode )
-                    res = VoxelsLoad::loadRaw( path, ProgressBar::callBackSetProgress );
+                    res = VoxelsLoad::fromRaw( path, ProgressBar::callBackSetProgress );
                 else
-                    res = VoxelsLoad::loadRaw( path, params, ProgressBar::callBackSetProgress );
+                    res = VoxelsLoad::fromRaw( path, params, ProgressBar::callBackSetProgress );
 
                 if ( ProgressBar::isCanceled() )
                 {

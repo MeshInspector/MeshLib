@@ -12,4 +12,8 @@ MRMESH_API void positionVertsSmoothly( Mesh& mesh, const VertBitSet& verts,
     Laplacian::EdgeWeights egdeWeightsType = Laplacian::EdgeWeights::Cotan,
     const VertBitSet * fixedSharpVertices = nullptr );
 
-}
+/// Puts given vertices in such positions to make smooth surface inside verts-region, but sharp on its boundary;
+/// \param verts must not include all vertices of a mesh connected component
+MRMESH_API void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts );
+
+} //namespace MR

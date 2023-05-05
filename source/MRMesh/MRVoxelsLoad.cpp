@@ -1,4 +1,4 @@
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM )
+#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRVoxelsLoad.h"
 #include "MRTimer.h"
 #include "MRSimpleVolume.h"
@@ -6,17 +6,59 @@
 #include "MRVDBConversions.h"
 #include "MRStringConvert.h"
 #include "MRFloatGrid.h"
+#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRTBB.h"
+#include "MRStringConvert.h"
+#include <compare>
+#include <filesystem>
+#include <fstream>
+
+#ifndef MRMESH_NO_DICOM
 #include <gdcmImageHelper.h>
 #include <gdcmImageReader.h>
 #include <gdcmTagKeywords.h>
-#include "MRPch/MRSpdlog.h"
-#include "MRPch/MRTBB.h"
-#include <compare>
-#include <filesystem>
+#endif // MRMESH_NO_DICOM
 
+#include <MRPch/MROpenvdb.h>
+#include <openvdb/tools/GridTransformer.h>
+#include <openvdb/tools/Interpolation.h>
+#include <MRPch/MRTBB.h>
 #ifndef MRMESH_NO_TIFF
 #include <tiffio.h>
-#endif
+#endif // MRMESH_NO_TIFF
+
+#include "MROpenVDBHelper.h"
+namespace
+{
+    using namespace MR::VoxelsLoad;
+
+#ifndef MRMESH_NO_DICOM
+    RawParameters::ScalarType convertToScalarType( const gdcm::PixelFormat& format )
+    {
+        switch ( gdcm::PixelFormat::ScalarType( format ) )
+        {
+        case gdcm::PixelFormat::UINT8:
+            return RawParameters::ScalarType::UInt8;
+        case gdcm::PixelFormat::INT8:
+            return RawParameters::ScalarType::Int8;
+        case gdcm::PixelFormat::UINT16:
+            return RawParameters::ScalarType::UInt16;
+        case gdcm::PixelFormat::INT16:
+            return RawParameters::ScalarType::Int16;
+        case gdcm::PixelFormat::UINT32:
+            return RawParameters::ScalarType::UInt32;
+        case gdcm::PixelFormat::INT32:
+            return RawParameters::ScalarType::Int32;
+        case gdcm::PixelFormat::UINT64:
+            return RawParameters::ScalarType::UInt64;
+        case gdcm::PixelFormat::INT64:
+            return RawParameters::ScalarType::Int64;
+        default:
+            return RawParameters::ScalarType::Unknown;
+        }
+    }
+#endif // MRMESH_NO_DICOM
+}
 
 namespace MR
 {
@@ -26,7 +68,9 @@ namespace VoxelsLoad
 
 const IOFilters Filters =
 {
-    {"Raw (.raw)","*.raw"}
+    {"Raw (.raw)","*.raw"},
+    {"OpenVDB (.vdb)","*.vdb"},
+    {"Micro CT (.gav)","*.gav"},
 };
 
 struct SliceInfoBase
@@ -84,66 +128,68 @@ void sortFilesByName( std::vector<std::filesystem::path>& scans )
     sortByOrder( scans, zOrder );
 }
 
-std::function<float( char* )> getTypeConverter( const gdcm::PixelFormat& format, const uint64_t& range, const int64_t& min )
+std::function<float( char* )> getTypeConverter( const RawParameters::ScalarType& scalarType, const uint64_t& range, const int64_t& min )
 {
-    switch ( gdcm::PixelFormat::ScalarType( format ) )
+    switch ( scalarType )
     {
-    case gdcm::PixelFormat::UINT8:
+    case RawParameters::ScalarType::UInt8:
         return [range, min]( char* c )
         {
             return float( *(uint8_t*) (c) -min ) / float( range );
         };
-    case gdcm::PixelFormat::UINT16:
+    case RawParameters::ScalarType::UInt16:
         return [range, min]( char* c )
         {
             return float( *(uint16_t*) (c) -min ) / float( range );
         };
-    case gdcm::PixelFormat::INT8:
+    case RawParameters::ScalarType::Int8:
         return [range, min]( char* c )
         {
             return float( *(int8_t*) (c) -min ) / float( range );
         };
-    case gdcm::PixelFormat::INT16:
+    case RawParameters::ScalarType::Int16:
         return [range, min]( char* c )
         {
             return float( *(int16_t*) (c) -min ) / float( range );
         };
-    case gdcm::PixelFormat::INT32:
+    case RawParameters::ScalarType::Int32:
         return [range, min]( char* c )
         {
             return float( *(int32_t*) (c) -min ) / float( range );
         };
-    case gdcm::PixelFormat::UINT32:
+    case RawParameters::ScalarType::UInt32:
         return [range, min]( char* c )
         {
             return float( *(uint32_t*) (c) -min ) / float( range );
         };
-    case gdcm::PixelFormat::UINT64:
+    case RawParameters::ScalarType::UInt64:
         return [range, min]( char* c )
         {
             return float( *(uint64_t*) (c) -min ) / float( range );
         };
-    case gdcm::PixelFormat::INT64:
+    case RawParameters::ScalarType::Int64:
         return [range, min]( char* c )
         {
             return float( *(int64_t*) (c) -min ) / float( range );
         };
-    case gdcm::PixelFormat::FLOAT32:
+    case RawParameters::ScalarType::Float32:
         return []( char* c )
         {
             return *(float*) ( c );
         };
-    case gdcm::PixelFormat::FLOAT64:
+    case RawParameters::ScalarType::Float64:
         return []( char* c )
         {
             return float( *(double*) ( c ) );
         };
-    default:
+    case RawParameters::ScalarType::Unknown:
+    case RawParameters::ScalarType::Count:
         break;
     }
     return {};
 }
 
+#ifndef MRMESH_NO_DICOM
 bool isDICOMFile( const std::filesystem::path& path )
 {
     gdcm::ImageReader ir;
@@ -155,22 +201,44 @@ bool isDICOMFile( const std::filesystem::path& path )
     auto tags = {
         gdcm::Tag( 0x0002, 0x0002 ), // media storage
         gdcm::Tag( 0x0008, 0x0016 ), // media storage
-        gdcm::Tag( 0x0028, 0x0004 ),// is for PhotometricInterpretation
+        gdcm::Keywords::PhotometricInterpretation::GetTag(),
         gdcm::Keywords::ImagePositionPatient::GetTag(), // is for image origin in mm
         gdcm::Tag( 0x0028, 0x0010 ),gdcm::Tag( 0x0028, 0x0011 ),gdcm::Tag( 0x0028, 0x0008 )}; // is for dimensions
     if ( !ir.ReadSelectedTags( tags ) )
         return false;
     gdcm::MediaStorage ms;
-    //spdlog::info( "File {}: ms={}", utf8string( path ), (int)ms );
     ms.SetFromFile( ir.GetFile() );
-    if ( ms == gdcm::MediaStorage::MediaStorageDirectoryStorage || ms == gdcm::MediaStorage::SecondaryCaptureImageStorage )
+
+    // skip unsupported media storage
+    if ( ms == gdcm::MediaStorage::MediaStorageDirectoryStorage || ms == gdcm::MediaStorage::SecondaryCaptureImageStorage
+        || ms == gdcm::MediaStorage::BasicTextSR )
+    {
+        spdlog::warn( "DICOM file {} has unsupported media storage {}", utf8string( path ), (int)ms );
         return false;
+    }
+
+    // unfortunatly gdcm::ImageHelper::GetPhotometricInterpretationValue returns something even if no data in the file
+    if ( !gdcm::ImageHelper::GetPointerFromElement( gdcm::Keywords::PhotometricInterpretation::GetTag(), ir.GetFile() ) )
+    {
+        spdlog::warn( "DICOM file {} does not have Photometric Interpretation", utf8string( path ) );
+        return false;
+    }
+
     auto photometric = gdcm::ImageHelper::GetPhotometricInterpretationValue( ir.GetFile() );
     if ( photometric != gdcm::PhotometricInterpretation::MONOCHROME2 &&
          photometric != gdcm::PhotometricInterpretation::MONOCHROME1 )
+    {
+        spdlog::warn( "DICOM file {} has Photometric Interpretation other than Monochrome", utf8string( path ) );
         return false;
+    }
+
     auto dims = gdcm::ImageHelper::GetDimensionsValue( ir.GetFile() );
-    assert( dims.size() == 3 );
+    if ( dims.size() != 3 )
+    {
+        spdlog::warn( "DICOM file {} has Dimensions Value other than 3", utf8string( path ) );
+        return false;
+    }
+
     return true;
 }
 
@@ -180,6 +248,7 @@ struct DCMFileLoadResult
     float min = FLT_MAX;
     float max = -FLT_MAX;
     std::string seriesDescription;
+    AffineXf3f xf;
 };
 
 DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolume& data, size_t offset )
@@ -193,7 +262,7 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
 
     if ( !ir.Read() )
     {
-        spdlog::error( "loadSingle: cannot read file: {}", utf8string( path ) );
+        spdlog::error( "Cannot read image from DICOM file {}", utf8string( path ) );
         return res;
     }
 
@@ -206,6 +275,27 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
         auto descVal = desc.GetValue();
         res.seriesDescription = descVal;
     }
+
+    gdcm::DataElement dePosition = ds.GetDataElement( gdcm::Keywords::ImagePositionPatient::GetTag() );
+    gdcm::Keywords::ImagePositionPatient atPos;
+    atPos.SetFromDataElement( dePosition );
+    for (int i = 0; i < 3; ++i) {
+        res.xf.b[i] = float( atPos.GetValue( i ) );
+    }
+    res.xf.b /= 1000.0f;
+
+    gdcm::DataElement deOri = ds.GetDataElement( gdcm::Keywords::ImageOrientationPatient::GetTag() );
+    gdcm::Keywords::ImageOrientationPatient atOri;
+    atOri.SetFromDataElement( deOri );
+    for (int i = 0; i < 3; ++i)
+        res.xf.A.x[i] = float( atOri.GetValue( i ) );
+    for (int i = 0; i < 3; ++i)
+        res.xf.A.y[i] = float( atOri.GetValue( 3 + i ) );
+
+    res.xf.A.x.normalized();
+    res.xf.A.y.normalized();
+    res.xf.A.z = cross( res.xf.A.x, res.xf.A.y );
+    res.xf.A = res.xf.A.transposed();
 
     const auto& gimage = ir.GetImage();
     auto dimsNum = gimage.GetNumberOfDimensions();
@@ -282,7 +372,8 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
     auto min = gimage.GetPixelFormat().GetMin();
     auto max = gimage.GetPixelFormat().GetMax();
     auto pixelSize = gimage.GetPixelFormat().GetPixelSize();
-    auto caster = getTypeConverter( gimage.GetPixelFormat(), max - min, min );
+    auto scalarType = convertToScalarType( gimage.GetPixelFormat() );
+    auto caster = getTypeConverter( scalarType, max - min, min );
     if ( !caster )
     {
         spdlog::error( "loadSingle: cannot make type converter, file: {}", utf8string( path ) );
@@ -481,6 +572,8 @@ tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::p
         res.name = utf8string( files.front().stem() );
     else
         res.name = firstRes.seriesDescription;
+
+    res.xf = firstRes.xf;
     return res;
 }
 
@@ -488,24 +581,11 @@ std::vector<tl::expected<LoadDCMResult, std::string>> loadDCMFolderTree( const s
 {
     MR_TIMER;
     std::vector<tl::expected<LoadDCMResult, std::string>> res;
-    bool anySuccessLoad{ false };
     auto tryLoadDir = [&]( const std::filesystem::path& dir )
     {
-        auto loadRes = loadDCMFolder( dir, maxNumThreads, cb );
-        if ( loadRes.has_value() )
-        {
-            res.push_back( *loadRes );
-            anySuccessLoad = true;
-        }
-        else
-        {
-            const std::string str = "loadDCMFolder: there is no dcm file in folder:";
-            if ( anySuccessLoad && loadRes.error().substr( 0, str.size() ) == str )
-                return true;
-            res.push_back( loadRes );
-            if ( loadRes.error() == "Loading canceled" )
-                return false;
-        }
+        res.push_back( loadDCMFolder( dir, maxNumThreads, cb ) );
+        if ( !res.back().has_value() && res.back().error() == "Loading canceled" )
+            return false;
         return true;
     };
     if ( !tryLoadDir( path ) )
@@ -548,8 +628,9 @@ tl::expected<LoadDCMResult, std::string> loadDCMFile( const std::filesystem::pat
     res.name = utf8string( path.stem() );
     return res;
 }
+#endif // MRMESH_NO_DICOM
 
-tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
+tl::expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& path,
     const ProgressCallback& cb )
 {
     MR_TIMER;
@@ -614,6 +695,15 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
     auto xvString = filename.substr( sEndChar + 2, xvEndChar - ( sEndChar + 2 ) );
     outParams.voxelSize.x = float(std::atof( xvString.c_str() ) / 1000); // convert mm to meters
 
+    if ( filename[xvEndChar + 1] == 'G' )
+    {
+        auto gtEndChar = filename.find( "_", xvEndChar + 1 );
+        if ( gtEndChar != std::string::npos )
+        {
+            auto gtString = filename.substr( xvEndChar + 2, gtEndChar - ( xvEndChar + 2 ) );
+            outParams.gridLevelSet = gtString == "1"; // convert mm to meters
+        }
+    }
     if ( filename[xvEndChar + 1] == 'F' ) // end of prefix
     {
         outParams.voxelSize.y = outParams.voxelSize.z = outParams.voxelSize.x;
@@ -635,13 +725,106 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
         auto gtEndChar = filename.find( "_", zvEndChar + 1 );
         if ( gtEndChar != std::string::npos )
         {
-            auto gtString = filename.substr( zvEndChar + 1, gtEndChar - ( zvEndChar + 1 ) );
+            auto gtString = filename.substr( zvEndChar + 2, gtEndChar - ( zvEndChar + 2 ) );
             outParams.gridLevelSet = gtString == "1"; // convert mm to meters
         }
     }
     outParams.scalarType = RawParameters::ScalarType::Float32;
 
-    return loadRaw( filepathToOpen, outParams, cb );
+    return fromRaw( filepathToOpen, outParams, cb );
+}
+
+tl::expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
+{
+    if ( cb && !cb( 0.f ) )
+        return tl::make_unexpected( getCancelMessage( path ) );
+    openvdb::io::File file( path.string() );
+    openvdb::initialize();
+    file.open();
+    std::vector<VdbVolume> res;
+    auto grids = file.getGrids();
+    file.close();
+    if ( grids )
+    {
+        auto& gridsRef = *grids;
+        if ( grids->size() == 0 )
+            tl::make_unexpected( std::string( "Nothing to load" ) );
+
+        bool anyLoaded = false;
+        int size = int( gridsRef.size() );
+        int i = 0;
+        ProgressCallback scaledCb;
+        if ( cb )
+            scaledCb = [cb, &i, size] ( float v ) { return cb( ( i + v ) / size ); };
+        for ( i = 0; i < size; ++i )
+        {
+            if ( !gridsRef[i] )
+                continue;
+
+            OpenVdbFloatGrid ovfg( std::move( *std::dynamic_pointer_cast< openvdb::FloatGrid >( gridsRef[i] ) ) );
+            VdbVolume vdbVolume;
+            vdbVolume.data = std::make_shared<OpenVdbFloatGrid>( std::move( ovfg ) );
+
+            if ( !vdbVolume.data )
+                continue;
+
+            const auto dims = vdbVolume.data->evalActiveVoxelDim();
+            const auto voxelSize = vdbVolume.data->voxelSize();
+            for ( int j = 0; j < 3; ++j )
+            {
+                vdbVolume.dims[j] = dims[j];
+                vdbVolume.voxelSize[j] = float( voxelSize[j] );
+            }
+            evalGridMinMax( vdbVolume.data, vdbVolume.min, vdbVolume.max );
+
+            if ( scaledCb && !scaledCb( 0.1f ) )
+                return tl::make_unexpected( getCancelMessage( path ) );
+
+            openvdb::math::Transform::Ptr transformPtr = std::make_shared<openvdb::math::Transform>();
+            vdbVolume.data->setTransform( transformPtr );
+
+            translateToZero( *vdbVolume.data );
+
+            if ( cb && !cb( (1.f + i ) / size ) )
+                return tl::make_unexpected( getCancelMessage( path ) );
+
+            res.emplace_back( std::move( vdbVolume ) );
+
+            anyLoaded = true;
+        }
+        if ( !anyLoaded )
+            tl::make_unexpected( std::string( "No loaded grids" ) );
+    }
+    else
+        tl::make_unexpected( std::string( "Nothing to read" ) );
+
+    if ( cb )
+        cb( 1.f );
+
+    return res;
+}
+
+inline tl::expected<std::vector<VdbVolume>, std::string> toSingleElementVector( tl::expected<VdbVolume, std::string> v )
+{
+    if ( !v.has_value() )
+        return tl::make_unexpected( std::move( v.error() ) );
+    return std::vector<VdbVolume>{ std::move( v.value() ) };
+}
+
+tl::expected<std::vector<VdbVolume>, std::string> fromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
+{
+    auto ext = utf8string( path.extension() );
+    for ( auto& c : ext )
+        c = ( char )tolower( c );
+
+    if ( ext == ".raw" )
+        return toSingleElementVector( fromRaw( path, cb ) );
+    if ( ext == ".vdb" )
+        return fromVdb( path, cb );
+    if ( ext == ".gav" )
+        return toSingleElementVector( fromGav( path, cb ) );
+
+    return tl::make_unexpected( std::string( "Unsupported file extension" ) );
 }
 
 struct TiffParams
@@ -692,7 +875,6 @@ bool isTIFFFile( const std::filesystem::path& path )
     TIFFClose( tif );
     return true;
 }
-#endif
 
 template<typename SampleType>
 bool ReadVoxels( SimpleVolume& outVolume, size_t layerIndex, TIFF* tif, const TiffParams& tp, float& min, float& max )
@@ -741,7 +923,6 @@ bool ReadVoxels( SimpleVolume& outVolume, size_t layerIndex, TIFF* tif, const Ti
     return true;
 }
 
-#ifndef MRMESH_NO_TIFF
 tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& settings )
 {
     std::error_code ec;
@@ -838,67 +1019,66 @@ tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& set
     
     return res;
 }
-#endif
+#endif // MRMESH_NO_TIFF
 
-tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path, const RawParameters& params,
+tl::expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& file, const RawParameters& params,
     const ProgressCallback& cb )
 {
-    if ( params.dimensions.x <= 0 || params.dimensions.y <= 0 || params.dimensions.z <= 0 ||
-        params.voxelSize.x == 0.0f || params.voxelSize.y == 0.0f || params.voxelSize.z == 0.0f )
-        return tl::make_unexpected( "Bad parameters for reading " + utf8string( path.filename() ) );
-    SimpleVolume outVolume;
-    outVolume.dims = params.dimensions;
-    outVolume.voxelSize = params.voxelSize;
+    std::ifstream in( file, std::ios::binary );
+    if ( !in )
+        return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+    return addFileNameInError( fromRaw( in, params, cb ), file );
+}
+
+tl::expected<VdbVolume, std::string> fromRaw( std::istream& in, const RawParameters& params,  const ProgressCallback& cb )
+{
+    if ( params.dimensions.x <= 0 || params.dimensions.y <= 0 || params.dimensions.z <= 0 )
+        return tl::make_unexpected( "Wrong volume dimension parameter value" );
+
+    if ( params.voxelSize.x <= 0 || params.voxelSize.y <= 0 || params.voxelSize.z <= 0 )
+        return tl::make_unexpected( "Wrong voxel size parameter value" );
 
     int unitSize = 0;
-    gdcm::PixelFormat format = gdcm::PixelFormat::FLOAT32;
     switch ( params.scalarType )
     {
     case RawParameters::ScalarType::UInt8:
-        format = gdcm::PixelFormat::UINT8;
         unitSize = 1;
         break;
     case RawParameters::ScalarType::Int8:
-        format = gdcm::PixelFormat::INT8;
         unitSize = 1;
         break;
     case RawParameters::ScalarType::UInt16:
-        format = gdcm::PixelFormat::UINT16;
         unitSize = 2;
         break;
     case RawParameters::ScalarType::Int16:
-        format = gdcm::PixelFormat::INT16;
         unitSize = 2;
         break;
     case RawParameters::ScalarType::UInt32:
-        format = gdcm::PixelFormat::UINT32;
         unitSize = 4;
         break;
     case RawParameters::ScalarType::Int32:
-        format = gdcm::PixelFormat::INT32;
         unitSize = 4;
         break;
     case RawParameters::ScalarType::Float32:
-        format = gdcm::PixelFormat::FLOAT32;
         unitSize = 4;
     break; 
     case RawParameters::ScalarType::UInt64:
-        format = gdcm::PixelFormat::UINT64;
         unitSize = 8;
         break;
     case RawParameters::ScalarType::Int64:
-        format = gdcm::PixelFormat::INT64;
         unitSize = 8;
         break;
     case RawParameters::ScalarType::Float64:
-        format = gdcm::PixelFormat::FLOAT64;
         unitSize = 8;
         break;
     default:
         assert( false );
-        return tl::make_unexpected( "Bad parameters for reading " + utf8string( path.filename() ) );
+        return tl::make_unexpected( "Wrong scalar type parameter value" );
     }
 
+    SimpleVolume outVolume;
+    outVolume.dims = params.dimensions;
+    outVolume.voxelSize = params.voxelSize;
     outVolume.data.resize( size_t( outVolume.dims.x ) * outVolume.dims.y * outVolume.dims.z );
     char* outPointer{ nullptr };
     std::vector<char> data;
@@ -909,13 +1089,13 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
         data.resize( outVolume.data.size() * unitSize );
         outPointer = data.data();
     }
-    std::ifstream infile( path, std::ios::binary );
-    int xyDimsUnit = params.dimensions.x * params.dimensions.y * unitSize;
+
+    size_t xyDimsUnit = size_t( params.dimensions.x ) * params.dimensions.y * unitSize;
     for ( int z = 0; z < params.dimensions.z; ++z )
     {
-        int shift = xyDimsUnit * z;
-        if ( !infile.read( outPointer + shift, xyDimsUnit ) )
-            return tl::make_unexpected( "Cannot read file: " + utf8string( path ) );
+        size_t shift = xyDimsUnit * z;
+        if ( !in.read( outPointer + shift, xyDimsUnit ) )
+            return tl::make_unexpected( "Read error" );
         if ( cb )
             cb( ( z + 1.0f ) / float( params.dimensions.z ) );
     }
@@ -952,8 +1132,8 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
             max = std::numeric_limits<uint32_t>::max();
         else if ( params.scalarType == RawParameters::ScalarType::UInt64 )
             max = std::numeric_limits<uint64_t>::max();
-        auto converter = getTypeConverter( format, max - min, min );
-        for ( int i = 0; i < outVolume.data.size(); ++i )
+        auto converter = getTypeConverter( params.scalarType, max - min, min );
+        for ( size_t i = 0; i < outVolume.data.size(); ++i )
         {
             float value = converter( &outPointer[i * unitSize] );
             outVolume.data[i] = value;
@@ -971,7 +1151,10 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
     VdbVolume res;
     res.data = simpleVolumeToDenseGrid( outVolume );
     if ( params.gridLevelSet )
+    {
+        openvdb::tools::changeBackground( res.data->tree(), outVolume.max );
         res.data->setGridClass( openvdb::GRID_LEVEL_SET );
+    }
     res.dims = outVolume.dims;
     res.voxelSize = outVolume.voxelSize;
     res.min = outVolume.min;
@@ -981,4 +1164,4 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
 
 }
 }
-#endif
+#endif // !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXELS )

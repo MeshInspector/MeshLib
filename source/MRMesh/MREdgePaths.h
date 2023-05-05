@@ -1,9 +1,9 @@
 #pragma once
 
 #include "MRId.h"
+#include "MREdgeMetric.h"
 #include "MRProgressCallback.h"
 #include <cfloat>
-#include <functional>
 #include <vector>
 
 namespace MR
@@ -14,8 +14,6 @@ namespace MR
 /// \defgroup EdgePathsGroup Edge Paths
 /// \ingroup SurfacePathGroup
 /// \{
-
-using EdgeMetric = std::function<float( EdgeId )>;
 
 /// returns true if every next edge starts where previous edge ends
 [[nodiscard]] MRMESH_API bool isEdgePath( const MeshTopology & topology, const std::vector<EdgeId> & edges );
@@ -28,20 +26,6 @@ using EdgeMetric = std::function<float( EdgeId )>;
 MRMESH_API void reverse( EdgePath & path );
 /// reverse every path in the vector
 MRMESH_API void reverse( std::vector<EdgePath> & paths );
-
-/// metric returning 1 for every edge
-[[nodiscard]] MRMESH_API EdgeMetric identityMetric();
-
-/// returns edge's length as a metric
-[[nodiscard]] MRMESH_API EdgeMetric edgeLengthMetric( const Mesh & mesh );
-
-/// returns edge's metric that depends both on edge's length and on the angle between its left and right faces
-/// \param angleSinFactor multiplier before dihedral angle sine in edge metric calculation (positive to prefer concave angles, negative - convex)
-/// \param angleSinForBoundary consider this dihedral angle sine for boundary edges
-[[nodiscard]] MRMESH_API EdgeMetric edgeCurvMetric( const Mesh & mesh, float angleSinFactor = 2, float angleSinForBoundary = 0 );
-
-/// pre-computes the metric for all mesh edges to quickly return it later for any edge
-[[nodiscard]] MRMESH_API EdgeMetric edgeTableMetric( const MeshTopology & topology, const EdgeMetric & metric );
 
 /// computes summed metric of all edges in the path
 [[nodiscard]] MRMESH_API double calcPathMetric( const EdgePath & path, EdgeMetric metric );

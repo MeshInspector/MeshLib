@@ -11,14 +11,16 @@ gdcm-devel
 glfw-devel
 gtest-devel
 gtkmm30-devel
+hidapi-devel
 ilmbase-devel
 jsoncpp-devel
 libtiff-devel
 libzip-devel
 libzstd-devel
+openvdb-devel
 pkg-config
 podofo-devel
-python3.9
+python3
 spdlog-devel
 tbb-devel
 time

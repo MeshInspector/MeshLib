@@ -1,4 +1,4 @@
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_TIFF) && !defined(MRMESH_NO_VOXEL)
 
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRRibbonConstants.h"
@@ -10,6 +10,7 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRMesh/MRChangeSceneAction.h"
+#include "MRViewer/MRUIStyle.h"
 
 namespace MR
 {
@@ -46,10 +47,10 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
     ImGui::DragFloatValid3( "Voxel Size", &voxelSize_.x, 1e-3f, 1e-3f, 1000 );
 
-    RibbonButtonDrawer::GradientCheckbox( "Invert Surface Orientation", &invertSurfaceOrientation_ );
-    ImGui::SetTooltipIfHovered( "By default result voxels has iso-surfaces oriented from bigger value to smaller which represents dense volume," 
+    UI::checkbox( "Invert Surface Orientation", &invertSurfaceOrientation_ );
+    UI::setTooltipIfHovered( "By default result voxels has iso-surfaces oriented from bigger value to smaller which represents dense volume," 
                                 "invert to have iso-surface oriented from smaller value to bigger to represent distances volume", menuScaling );
-    if ( RibbonButtonDrawer::GradientButton( "Open Directory", { -1, 0 } ) )
+    if ( UI::button( "Open Directory", { -1, 0 } ) )
     {
         auto directory = openFolderDialog();
         if ( directory.empty() )

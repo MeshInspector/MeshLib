@@ -5,7 +5,9 @@
 #include "MRMesh/MRVector3.h"
 #include "MRViewer.h"
 #include "MRMesh/MRHistoryAction.h"
+#include "MRMesh/MRViewportProperty.h"
 #include <boost/signals2/signal.hpp>
+#include <array>
 #include <functional>
 #include <string>
 
@@ -25,7 +27,29 @@ public:
         RotZ = 0x4,
         MoveX = 0x8,
         MoveY = 0x10,
-        MoveZ = 0x20
+        MoveZ = 0x20,
+        FullMask = 0x3f
+    };
+    struct Params
+    {
+        float radius{ -1.0f };
+        float width{ -1.0f };
+        // by default - center of given box
+        // updated in create function
+        Vector3f center;
+        /// the product of this factor and width gives cone radius of the arrows
+        float coneRadiusFactor{ 1.35f };
+        /// the product of this factor and width gives cone size of the arrows
+        float coneSizeFactor{ 2.2f };
+        /// extension of the translation line in the negative direction relative to the radius
+        float negativeLineExtension{ 1.15f };
+        /// extension of the translation line in the positive direction relative to the radius
+        float positiveLineExtension{ 1.3f };
+        /// colors of widget
+        std::array<Color, size_t( Axis::Count )> rotationColors{ Color::red(),Color::green(),Color::blue() };
+        std::array<Color, size_t( Axis::Count )> translationColors{ Color::red(),Color::green(),Color::blue() };
+        Color helperLineColor{ Color::black() };
+        Color activeLineColor{ Color::white() };
     };
     // Creates transform widget around given box and applies given xf
     // subscribes to viewer events
@@ -36,20 +60,28 @@ public:
 
     // get current width of widget controls
     // negative value means that controls are not setup
-    float getWidth() const { return width_; }
+    float getWidth() const { return params_.width; }
     // get current radius of widget controls
     // negative value means that controls are not setup
-    float getRadius() const { return radius_; }
+    float getRadius() const { return params_.radius; }
+    // get center of the widget in local space
+    const Vector3f& getCenter() const { return params_.center; }
+    // gets current parameters of this widget
+    const Params & getParams() const { return params_; }
 
     // set width for this widget
     MRVIEWER_API void setWidth( float width );
     // set radius for this widget
     MRVIEWER_API void setRadius( float radius );
+    // set center in local space for this widget
+    MRVIEWER_API void setCenter( const Vector3f& center );
+    // set current parameters of this widget
+    MRVIEWER_API void setParams( const Params & );
 
     // Returns current transform mode mask
-    uint8_t getTransformModeMask() const { return transformModeMask_; }
+    uint8_t getTransformModeMask( ViewportId id = {} ) const { return transformModeMask_.get( id ); }
     // Sets transform mode mask (enabling or disabling corresponding widget controls)
-    MRVIEWER_API void setTransformMode( uint8_t mask );
+    MRVIEWER_API void setTransformMode( uint8_t mask, ViewportId id = {} );
 
     // Enables or disables pick through mode, in this mode controls will be picked even if they are occluded by other objects
     void setPickThrough( bool on ) { pickThrough_ = on; }
@@ -79,10 +111,13 @@ public:
     MRVIEWER_API void setControlsXf( const AffineXf3f& xf, ViewportId id = {} );
     MRVIEWER_API AffineXf3f getControlsXf( ViewportId id = {} ) const;
 
-    // Returns threshold dot value (this value is duty for hiding widget controls that have small projection on screen)
-    float getThresholdDot() const { return thresholdDot_; }
-    // Sets threshold dot value (this value is duty for hiding widget controls that have small projection on screen)
-    void setThresholdDot( float thresholdDot ) { thresholdDot_ = thresholdDot; }
+    // This lambda is called in each frame, and returns transform mode mask for this frame in given viewport
+    // if not set, full mask is return
+    using ModesValidator = std::function<uint8_t( const ObjectTransformWidget&, ViewportId )>;
+    void setTransformModesValidator( ModesValidator validator ) { modesValidator_ = validator; }
+
+    // returns ModesValidator by threshold dot value (this value is duty for hiding widget controls that have small projection on screen)
+    MRVIEWER_API static ModesValidator ThresholdDotValidator( float thresholdDot );
 
     // Subscribes to object visibility, and behave like its child
     // if obj argument is null, stop following
@@ -147,7 +182,38 @@ public:
         ViewportProperty<AffineXf3f> scaledXf_;
         std::string name_;
     };
+    class ChangeParamsAction : public HistoryAction
+    {
+    public:
+        ChangeParamsAction( const std::string& name, ObjectTransformWidget& widget ) :
+            widget_{ widget },
+            name_{ name }
+        {
+            params_ = widget_.getParams();
+        }
 
+        virtual std::string name() const override
+        {
+            return name_;
+        }
+
+        virtual void action( HistoryAction::Type ) override
+        {
+            auto params = widget_.getParams();
+            widget_.setParams( params_ );
+            params_ = params;
+        }
+
+        [[nodiscard]] virtual size_t heapBytes() const override
+        {
+            return name_.capacity();
+        }
+
+    private:
+        ObjectTransformWidget& widget_;
+        Params params_;
+        std::string name_;
+    };
 private:
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;
@@ -179,8 +245,7 @@ private:
 
     void makeControls_();
 
-    float radius_{ -1.0f };
-    float width_{ -1.0f };
+    Params params_;
 
     // main object that holds all other controls
     std::shared_ptr<Object> controlsRoot_;
@@ -191,8 +256,6 @@ private:
     std::shared_ptr<ObjectLines> activeLine_;
     std::array<std::shared_ptr<ObjectLines>, size_t( Axis::Count )> translateLines_;
     std::array<std::shared_ptr<ObjectLines>, size_t( Axis::Count )> rotateLines_;
-
-    Vector3f center_;
 
     AxisTransformMode axisTransformMode_{ AxisTranslation };
 
@@ -220,10 +283,12 @@ private:
     float startAngle_ = 0;
     float accumAngle_ = 0;
 
-    uint8_t transformModeMask_ = 0x3f;
+    ViewportProperty<uint8_t> transformModeMask_{ FullMask };
     float thresholdDot_{ 0.0f };
     bool picked_{ false };
     bool pickThrough_{ false };
+
+    ModesValidator modesValidator_;
 
     std::function<void( float )> scaleTooltipCallback_;
     std::function<void( float )> translateTooltipCallback_;

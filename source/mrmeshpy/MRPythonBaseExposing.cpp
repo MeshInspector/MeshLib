@@ -19,8 +19,9 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRLineSegm.h"
 #include "MRMesh/MRIntersection.h"
+#include "MRMesh/MR2DContoursTriangulation.h"
 #include "MRMesh/MRPointOnFace.h"
-#include <tl/expected.hpp>
+#include "MRMesh/MRExpected.h"
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
 
@@ -30,7 +31,7 @@ MR_ADD_PYTHON_VEC( mrmeshpy, vectorFloat, float )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ExpectedVoid, []( pybind11::module_& m )\
 {
-    using expectedType = tl::expected<void, std::string>;
+    using expectedType = MR::VoidOrErrStr;
     pybind11::class_<expectedType>( m, "ExpectedVoid" ).
         def( "has_value", &expectedType::has_value ).
         def( "error", ( const std::string& ( expectedType::* )( )const& )& expectedType::error );
@@ -493,6 +494,8 @@ MR_ADD_PYTHON_VEC( mrmeshpy, vectorUndirectedEdges, MR::UndirectedEdgeId )
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorEdges, MR::EdgeId )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorVerts, MR::VertId )
+
+MR_ADD_PYTHON_VEC( mrmeshpy, HolesVertIds, MR::PlanarTriangulation::HoleVertIds )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaces, MR::FaceId )
 

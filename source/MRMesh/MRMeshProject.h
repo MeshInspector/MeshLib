@@ -46,10 +46,11 @@ struct SignedDistanceToMeshResult
 /**
  * \brief computes the closest point on mesh (or its region) to given point,
  * and finds the distance with sign to it (positive - outside, negative - inside the mesh)
- * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exits returning nullopt
+ * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger then the function exits returning nullopt
+ * \param loDistLimitSq low limit on the distance in question, if the real distance smaller then the function exits returning nullopt
  */
 MRMESH_API std::optional<SignedDistanceToMeshResult> findSignedDistance( const Vector3f & pt, const MeshPart & mp,
-    float upDistLimitSq = FLT_MAX );
+    float upDistLimitSq = FLT_MAX, float loDistLimitSq = 0 );
 
 /// \}
 

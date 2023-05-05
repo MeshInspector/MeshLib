@@ -14,6 +14,7 @@
 #include "MRVector3.h"
 #include "MRTimer.h"
 #include "MRPointCloudTriangulationHelpers.h"
+#include "MRRegionBoundary.h"
 #include <parallel_hashmap/phmap.h>
 
 namespace MR
@@ -169,7 +170,7 @@ std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progr
 
     // fill small holes
     const auto bigLength = params_.critHoleLength >= 0.0f ? params_.critHoleLength : pointCloud_.getBoundingBox().diagonal() * 0.7f;
-    auto boundaries = mesh.topology.findBoundary();
+    auto boundaries = findRightBoundary( mesh.topology );
     for ( int i = 0; i < boundaries.size(); ++i )
     {
         const auto& boundary = boundaries[i];

@@ -113,8 +113,7 @@ static CTMint _ctmCheckMeshIntegrity(_CTMcontext * self)
   _CTMfloatmap * map;
 
   // Check that we have all the mandatory data
-  if(!self->mVertices || !self->mIndices || (self->mVertexCount < 1) ||
-     (self->mTriangleCount < 1))
+  if( ( self->mVertexCount && !self->mVertices ) || ( self->mTriangleCount && !self->mIndices ) )
   {
     return CTM_FALSE;
   }
@@ -957,7 +956,7 @@ CTMEXPORT void CTMCALL ctmDefineMesh(CTMcontext aContext,
   }
 
   // Check arguments
-  if(!aVertices || !aIndices || !aVertexCount || !aTriangleCount)
+  if( ( aVertexCount && !aVertices ) || ( aTriangleCount && !aIndices) )
   {
     self->mError = CTM_INVALID_ARGUMENT;
     return;
@@ -1230,17 +1229,7 @@ CTMEXPORT void CTMCALL ctmLoadCustom(CTMcontext aContext, CTMreadfn aReadFn,
     return;
   }
   self->mVertexCount = _ctmStreamReadUINT(self);
-  if(self->mVertexCount == 0)
-  {
-    self->mError = CTM_BAD_FORMAT;
-    return;
-  }
   self->mTriangleCount = _ctmStreamReadUINT(self);
-  if(self->mTriangleCount == 0)
-  {
-    self->mError = CTM_BAD_FORMAT;
-    return;
-  }
   self->mUVMapCount = _ctmStreamReadUINT(self);
   self->mAttribMapCount = _ctmStreamReadUINT(self);
   flags = _ctmStreamReadUINT(self);

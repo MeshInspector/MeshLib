@@ -2,8 +2,8 @@
 
 Build image with
 ```
-$ docker build -f ./docker/fedoraDockerfile -t meshrus/fedora-build-server .
-$ docker build -f ./docker/ubuntuDockerfile -t meshrus/ubuntu-build-server .
+$ docker build -f ./docker/fedoraDockerfile -t meshlib/fedora-build-server .
+$ docker build -f ./docker/ubuntuDockerfile -t meshlib/ubuntu-build-server .
 ```
 
 [Start container](https://docs.docker.com/engine/reference/commandline/container_start/) and "Attach STDOUT/STDERR and forward signals" (-a), "Attach container's STDIN" (-i):

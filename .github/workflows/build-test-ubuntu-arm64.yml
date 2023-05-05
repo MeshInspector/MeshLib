@@ -1,0 +1,93 @@
+name: Build and test on arm64 ubuntu20 and ubuntu22
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+      UPLOAD_ARTIFACTS:
+        required: true
+        type: boolean
+
+jobs:
+  ubuntu-arm-build-test:
+    timeout-minutes: 40
+    runs-on: [self-hosted, linux-arm64]
+    container:
+      image: ${{ matrix.docker-image }}
+    strategy:
+      matrix:
+        os: [ ubuntu20, ubuntu22 ]
+        config: [ Release ]
+        compiler: [ clang ]
+        include:
+          - os: ubuntu20
+            docker-image: meshlib/meshlib-ubuntu-arm64:${{inputs.image_tag}}
+            cxx-compiler: /usr/bin/clang++-11
+            c-compiler: /usr/bin/clang-11
+          - os: ubuntu22
+            docker-image: meshlib/meshlib-ubuntu22-arm64:${{inputs.image_tag}}
+            cxx-compiler: /usr/bin/clang++-14
+            c-compiler: /usr/bin/clang-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install thirdparty libs
+        run: |
+          ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
+          ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
+
+      - name: Build
+        run: ./scripts/build_source.sh
+        env:
+          MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
+          MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
+          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          # not realy needed
+          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
+          MR_VERSION: ${{ inputs.version }}
+
+      - name: Collect Timings
+        run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}}-arm64 ${{matrix.config}} "${{matrix.compiler}}"
+
+      #Save timing in artifact
+      - name: Upload Timings
+        uses: actions/upload-artifact@v3
+        with:
+          name: Timing_Logs
+          path: time_log/
+
+      - name: Run Tests
+        run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
+
+      - name: Unit Tests
+        run: ./build/${{ matrix.config }}/bin/MRTest
+
+      - name: Python Tests
+        working-directory: ./build/${{ matrix.config }}/bin
+        run: python3 ./../../../scripts/run_python_test_script.py
+
+      - name: Create Deb
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler }}
+        env:
+          MESHLIB_BUILD_RELEASE: ON
+          MESHLIB_BUILD_DEBUG: OFF
+        run: |
+          ./scripts/distribution.sh ${{inputs.version}}
+          mv ./distr/meshlib-dev.deb meshlib-${{matrix.os}}-arm64-dev.deb
+
+      - name: Upload Ubuntu Developer Distribution
+        if: ${{ inputs.UPLOAD_ARTIFACTS }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: Distributives
+          path: meshlib-${{matrix.os}}-arm64-dev.deb
+          retention-days: 1

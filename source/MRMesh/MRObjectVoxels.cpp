@@ -10,12 +10,15 @@
 #include "MRSerializer.h"
 #include "MRMeshNormals.h"
 #include "MRTimer.h"
-#include "MRPch/MRJson.h"
 #include "MRSceneColors.h"
 #include "MRStringConvert.h"
+#include "MROpenVDBHelper.h"
 #include "MRPch/MRTBB.h"
+#include "MRPch/MRJson.h"
 #include "MRPch/MRAsyncLaunchType.h"
+#include "MRPch/MRSpdlog.h"
 #include <filesystem>
+#include <thread>
 
 namespace MR
 {
@@ -34,6 +37,8 @@ void ObjectVoxels::construct( const SimpleVolume& volume, ProgressCallback cb )
     activeBox_ = Box3i( Vector3i(), vdbVolume_.dims );
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
     updateHistogram_( volume.min, volume.max );
+    if ( volumeRendering_ )
+        dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE );
 }
 
 void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, ProgressCallback cb )
@@ -50,6 +55,8 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
 
     updateHistogramAndSurface( cb );
+    if ( volumeRendering_ )
+        dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE );
 }
 
 void ObjectVoxels::construct( const VdbVolume& volume, ProgressCallback cb )
@@ -65,12 +72,17 @@ void ObjectVoxels::updateHistogramAndSurface( ProgressCallback cb )
     float min{0.0f}, max{0.0f};
 
     evalGridMinMax( vdbVolume_.data, min, max );
-    updateHistogram_( min, max );
 
+    const float progressTo = ( mesh_ && cb ) ? 0.5f : 1.f;
+    updateHistogram_( min, max, subprogress( cb, 0.f, progressTo ) );
+    vdbVolume_.min = min;
+    vdbVolume_.max = max;
     if ( mesh_ )
     {
         mesh_.reset();
-        setIsoValue( isoValue_, cb );
+
+        const float progressFrom = cb ? 0.5f : 0.f;
+        setIsoValue( isoValue_, subprogress( cb, progressFrom, 1.f ) );
     }
 }
 
@@ -89,6 +101,8 @@ tl::expected<bool, std::string> ObjectVoxels::setIsoValue( float iso, ProgressCa
             return tl::make_unexpected( recRes.error() );
         updateIsoSurface( *recRes );
     }
+    if ( volumeRendering_ )
+        dirty_ |= DIRTY_TEXTURE;
     return updateSurface;
 }
 
@@ -121,9 +135,11 @@ Histogram ObjectVoxels::updateHistogram( Histogram histogram )
 
 tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( float iso, ProgressCallback cb /*= {} */ )
 {
+    MR_TIMER
     if ( !vdbVolume_.data )
         return tl::make_unexpected("No VdbVolume available");
-    auto meshRes = gridToMesh( vdbVolume_.data, vdbVolume_.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
+    auto voxelSize = vdbVolume_.voxelSize;
+    auto meshRes = gridToMesh( vdbVolume_.data, voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
     if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
         return tl::make_unexpected( meshRes.error() );
 
@@ -131,8 +147,9 @@ tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSur
     while ( !meshRes.has_value() )
     {
         downsampledGrid = resampled( downsampledGrid, 2.0f );
-        meshRes = gridToMesh( std::move( downsampledGrid ), 2.0f * vdbVolume_.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
-        if ( !meshRes.has_value() )
+        voxelSize *= 2.0f;
+        meshRes = gridToMesh( downsampledGrid, voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
+        if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
             return tl::make_unexpected( meshRes.error() );
     }
     return std::make_shared<Mesh>( std::move( meshRes.value() ) );
@@ -148,7 +165,7 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
     activeBox_ = activeBox;
     auto accessor = vdbVolume_.data->getAccessor();
 
-    int counter = 0;
+    size_t counter = 0;
     float volume = float( vdbVolume_.dims.x ) * vdbVolume_.dims.y * vdbVolume_.dims.z;
     float cbModifier = updateSurface ? 0.5f : 1.0f;
 
@@ -191,6 +208,83 @@ Vector3i ObjectVoxels::getCoordinateByVoxelId( VoxelId id ) const
     return indexer_.toPos( id );
 }
 
+bool ObjectVoxels::prepareDataForVolumeRendering( ProgressCallback cb /*= {} */ ) const
+{
+    if ( !vdbVolume_.data )
+        return false;
+    volumeRenderingData_ = std::make_unique<SimpleVolumeU8>();
+    auto& res = *volumeRenderingData_;
+    res.max = vdbVolume_.max;
+    res.min = vdbVolume_.min;
+    res.voxelSize = vdbVolume_.voxelSize;
+    auto activeBox = vdbVolume_.data->evalActiveVoxelBoundingBox();
+    res.dims = Vector3i( activeBox.dim().x(), activeBox.dim().y(), activeBox.dim().z() );
+    VolumeIndexer indexer( res.dims );
+    res.data.resize( indexer.size() );
+
+    const auto mainThreadId = std::this_thread::get_id();
+    std::atomic<bool> cancelled{ false };
+    std::atomic<size_t> finishedVoxels{ 0 };
+
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+    {
+        auto accessor = vdbVolume_.data->getConstAccessor();
+        for ( size_t i = range.begin(); i < range.end(); ++i )
+        {
+            if ( cb && cancelled.load( std::memory_order_relaxed ) )
+                return;
+            auto coord = indexer.toPos( VoxelId( i ) );
+            auto vdbCoord = openvdb::Coord( coord.x + activeBox.min().x(), coord.y + activeBox.min().y(), coord.z + activeBox.min().z() );
+            res.data[i] = uint8_t( std::clamp( ( accessor.getValue( vdbCoord ) - res.min ) / ( res.max - res.min ), 0.0f, 1.0f ) * 255.0f );
+        }
+        if ( cb )
+        {
+            finishedVoxels.fetch_add( range.size(), std::memory_order_relaxed );
+            if ( std::this_thread::get_id() == mainThreadId &&
+                !cb( float( finishedVoxels.load( std::memory_order_relaxed ) / float( indexer.size() ) ) ) )
+                cancelled.store( true, std::memory_order_relaxed );
+        }
+    } );
+    if ( !cancelled )
+        return true;
+    volumeRenderingData_.reset();
+    return false;
+}
+
+void ObjectVoxels::enableVolumeRendering( bool on )
+{
+    if ( volumeRendering_ == on )
+        return;
+    volumeRendering_ = on;
+    if ( volumeRendering_ )
+    {
+        if ( !volumeRenderingData_ )
+            prepareDataForVolumeRendering();
+        renderObj_ = createRenderObject<ObjectVoxels>( *this );
+    }
+    else
+    {
+        renderObj_ = createRenderObject<ObjectMeshHolder>( *this );
+    }
+    setDirtyFlags( DIRTY_ALL );
+}
+
+void ObjectVoxels::setVolumeRenderingParams( const VolumeRenderingParams& params )
+{
+    if ( params == volumeRenderingParams_ )
+        return;
+    volumeRenderingParams_ = params;
+    if ( isVolumeRenderingEnabled() )
+        dirty_ |= DIRTY_TEXTURE;
+}
+
+bool ObjectVoxels::hasVisualRepresentation() const
+{
+    if ( isVolumeRenderingEnabled() )
+        return false;
+    return bool( mesh_ );
+}
+
 void ObjectVoxels::setMaxSurfaceTriangles( int maxFaces )
 {
     if ( maxFaces == maxSurfaceTriangles_ )
@@ -224,7 +318,7 @@ std::shared_ptr<Object> ObjectVoxels::shallowClone() const
 
 void ObjectVoxels::setDirtyFlags( uint32_t mask )
 {
-    VisualObject::setDirtyFlags( mask );
+    ObjectMeshHolder::setDirtyFlags( mask );
 
     if ( ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && mesh_ )
         mesh_->invalidateCaches();
@@ -233,8 +327,9 @@ void ObjectVoxels::setDirtyFlags( uint32_t mask )
 size_t ObjectVoxels::heapBytes() const
 {
     return ObjectMeshHolder::heapBytes()
-        + ( vdbVolume_.data ? sizeof( *vdbVolume_.data ) + vdbVolume_.data->memUsage() : 0 )
-        + histogram_.heapBytes();
+        + vdbVolume_.heapBytes()
+        + histogram_.heapBytes()
+        + MR::heapBytes( volumeRenderingData_ );
 }
 
 void ObjectVoxels::swapBase_( Object& other )
@@ -254,46 +349,81 @@ void ObjectVoxels::swapSignals_( Object& other )
         assert( false );
 }
 
-class HistogramCalc
+/// @brief class to parallel reduce histogram calculation
+template<typename TreeT>
+class HistogramCalcProc
 {
 public:
-    HistogramCalc( const ObjectVoxels& obj, float min, float max ) :
-        hist{Histogram( min,max,cVoxelsHistogramBinsNumber )}, grid_{obj.grid()}, indexer_{obj.getVolumeIndexer()}
-    {
-    }
-    HistogramCalc( HistogramCalc& x, tbb::split ) : 
-        hist{Histogram( x.hist.getMin(),x.hist.getMax(),cVoxelsHistogramBinsNumber )}, grid_{x.grid_}, indexer_{x.indexer_}
-    {
-    }
-    void join( const HistogramCalc& y )
-    {
-        hist.addHistogram( y.hist );
-    }
+    using ValueT = typename TreeT::ValueType;
+    using TreeAccessor = openvdb::tree::ValueAccessor<const TreeT>;
+    using LeafIterT = typename TreeT::LeafCIter;
+    using TileIterT = typename TreeT::ValueAllCIter;
 
-    void operator()( const tbb::blocked_range<VoxelId>& r )
+    HistogramCalcProc( float min, float max ) :
+        hist( min, max, cVoxelsHistogramBinsNumber )
+    {}
+
+    HistogramCalcProc( const HistogramCalcProc& other ) :
+        hist( Histogram( other.hist.getMin(), other.hist.getMax(), cVoxelsHistogramBinsNumber ) )
+    {}
+
+    void action( const LeafIterT&, const TreeAccessor& treeAcc, const openvdb::math::CoordBBox& bbox )
     {
-        auto accessor = grid_->getConstAccessor();
-        for ( VoxelId v = r.begin(); v < r.end(); ++v )
+        for ( auto it = bbox.begin(); it != bbox.end(); ++it )
         {
-            auto pos = indexer_.toPos( v );
-            hist.addSample( accessor.getValue( {pos.x,pos.y,pos.z} ) );
+            ValueT value = ValueT();
+            if ( treeAcc.probeValue( *it, value ) )
+                hist.addSample( value );
         }
     }
 
+    void action( const TileIterT& iter, const TreeAccessor&, const openvdb::math::CoordBBox& bbox )
+    {
+        ValueT value = iter.getValue();
+        const size_t count = size_t( bbox.volume() );
+        hist.addSample( value, count );
+    }
+
+    void join( const HistogramCalcProc& other )
+    {
+        hist.addHistogram( other.hist );
+    }
+
     Histogram hist;
-private:
-    const FloatGrid& grid_;
-    const VolumeIndexer& indexer_;
 };
 
-void ObjectVoxels::updateHistogram_( float min, float max )
+
+void ObjectVoxels::updateHistogram_( float min, float max, ProgressCallback cb /*= {}*/ )
 {
     MR_TIMER;
-    auto size = indexer_.sizeXY()* vdbVolume_.dims.z;
 
-    HistogramCalc calc( *this, min, max );
-    parallel_reduce( tbb::blocked_range<VoxelId>( VoxelId( 0 ), VoxelId( size ) ), calc );
-    histogram_ = std::move( calc.hist );
+    RangeSize size = calculateRangeSize( *vdbVolume_.data );
+    
+    using HistogramCalcProcFT = HistogramCalcProc<openvdb::FloatTree>;
+    HistogramCalcProcFT histCalcProc( min, max );
+    using HistRangeProcessorOne = RangeProcessorSingle<openvdb::FloatTree, HistogramCalcProcFT>;
+    HistRangeProcessorOne calc( vdbVolume_.data->evalActiveVoxelBoundingBox(), vdbVolume_.data->tree(), histCalcProc );
+    
+
+    if ( size.tile > 0 )
+    {
+        typename HistRangeProcessorOne::TileIterT tileIterMain = vdbVolume_.data->tree().cbeginValueAll();
+        tileIterMain.setMaxDepth( tileIterMain.getLeafDepth() - 1 ); // skip leaf nodes
+        typename HistRangeProcessorOne::TileRange tileRangeMain( tileIterMain );
+        auto sb = size.leaf > 0 ? subprogress( cb, 0.0f, 0.5f ) : cb;
+        calc.setProgressHolder( std::make_shared<RangeProgress>( sb, size.tile, RangeProgress::Mode::Tiles ) );
+        tbb::parallel_reduce( tileRangeMain, calc );
+    }
+
+    if ( size.leaf > 0 )
+    {
+        typename HistRangeProcessorOne::LeafRange leafRangeMain( vdbVolume_.data->tree().cbeginLeaf() );
+        auto sb = size.tile > 0 ? subprogress( cb, 0.5f, 1.0f ) : cb;
+        calc.setProgressHolder( std::make_shared<RangeProgress>( sb, size.leaf, RangeProgress::Mode::Leaves ) );
+        tbb::parallel_reduce( leafRangeMain, calc );
+    }
+
+    histogram_ = std::move( calc.mProc.hist );
 }
 
 void ObjectVoxels::setDefaultColors_()
@@ -347,7 +477,7 @@ tl::expected<std::future<void>, std::string> ObjectVoxels::serializeModel_( cons
         return {};
 
     return std::async( getAsyncLaunchType(),
-        [this, filename = utf8string( path ) + ".raw"]() { MR::VoxelsSave::saveRaw( filename, vdbVolume_ ); } );
+        [this, filename = utf8string( path ) + ".raw"]() { MR::VoxelsSave::toRawAutoname( vdbVolume_, filename ); } );
 }
 
 void ObjectVoxels::deserializeFields_( const Json::Value& root )
@@ -379,9 +509,9 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
 }
 
 #ifndef MRMESH_NO_DICOM
-tl::expected<void, std::string> ObjectVoxels::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
+VoidOrErrStr ObjectVoxels::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
-    auto res = VoxelsLoad::loadRaw( utf8string( path ) + ".raw", progressCb );
+    auto res = VoxelsLoad::fromRaw( utf8string( path ) + ".raw", progressCb );
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
     
@@ -396,9 +526,15 @@ tl::expected<void, std::string> ObjectVoxels::deserializeModel_( const std::file
 std::vector<std::string> ObjectVoxels::getInfoLines() const
 {
     std::vector<std::string> res = ObjectMeshHolder::getInfoLines();
-    res.push_back( "dims: (" + std::to_string( vdbVolume_.dims.x ) + ", " + std::to_string( vdbVolume_.dims.y ) + ", " + std::to_string( vdbVolume_.dims.z ) + ")" );
-    res.push_back( "voxel size: (" + std::to_string( vdbVolume_.voxelSize.x ) + ", " + std::to_string( vdbVolume_.voxelSize.y ) + ", " + std::to_string( vdbVolume_.voxelSize.z ) + ")" );
-    res.push_back( "iso-value: " + std::to_string( isoValue_ ) );
+    res.push_back( fmt::format( "dims: ({}, {}, {})", vdbVolume_.dims.x, vdbVolume_.dims.y, vdbVolume_.dims.z ) );
+    res.push_back( fmt::format( "voxel size: ({:.3}, {:.3}, {:.3})", vdbVolume_.voxelSize.x, vdbVolume_.voxelSize.y, vdbVolume_.voxelSize.z ) );
+    res.push_back( fmt::format( "volume: ({:.3}, {:.3}, {:.3})", 
+        vdbVolume_.dims.x * vdbVolume_.voxelSize.x,
+        vdbVolume_.dims.y * vdbVolume_.voxelSize.y,
+        vdbVolume_.dims.z * vdbVolume_.voxelSize.z ) );
+    res.push_back( fmt::format( "min-value: {:.3}", vdbVolume_.min ) );
+    res.push_back( fmt::format( "iso-value: {:.3}", isoValue_ ) );
+    res.push_back( fmt::format( "max-value: {:.3}", vdbVolume_.max ) );
     return res;
 }
 

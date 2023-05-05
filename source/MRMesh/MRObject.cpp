@@ -365,7 +365,7 @@ void Object::serializeFields_( Json::Value& root ) const
     root["Type"].append( Object::TypeName() ); // will be appended in derived calls
 }
 
-tl::expected<void, std::string> Object::deserializeModel_( const std::filesystem::path&, ProgressCallback progressCb )
+VoidOrErrStr Object::deserializeModel_( const std::filesystem::path&, ProgressCallback progressCb )
 {
     if ( progressCb && !progressCb( 1.f ) )
         return tl::make_unexpected( std::string( "Loading canceled" ) );
@@ -454,15 +454,6 @@ tl::expected<std::vector<std::future<void>>, std::string> Object::serializeRecur
 
     std::vector<std::future<void>> res;
 
-    auto replaceProhibitedChars = []( const std::string & s )
-    {
-        auto res = s;
-        for ( auto & c : res )
-            if ( c == '?' || c == '*' || c == '/' || c == '\\' || c == '"' )
-                c = '_';
-        return res;
-    };
-
     // the key must be unique among all children of same parent
     std::string key = std::to_string( childId ) + "_" + replaceProhibitedChars( name_ );
 
@@ -497,7 +488,7 @@ tl::expected<std::vector<std::future<void>>, std::string> Object::serializeRecur
     return res;
 }
 
-tl::expected<void, std::string> Object::deserializeRecursive( const std::filesystem::path& path, const Json::Value& root,
+VoidOrErrStr Object::deserializeRecursive( const std::filesystem::path& path, const Json::Value& root,
         ProgressCallback progressCb, int* objCounter )
 {
     std::string key = root["Key"].isString() ? root["Key"].asString() : root["Name"].asString();

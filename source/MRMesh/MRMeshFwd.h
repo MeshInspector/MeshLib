@@ -3,7 +3,7 @@
 // Not zero _ITERATOR_DEBUG_LEVEL in Microsoft STL greatly reduce the performance of STL containers.
 // So we change its value to zero by default. A huge restriction with this is that 
 // all other linked DLL's and LIBS' also need to define this symbol to remove STL debugging, see
-// 1) vcpkg/triplets/x64-windows-meshrus.cmake and
+// 1) vcpkg/triplets/x64-windows-meshlib.cmake and
 // 2) MeshLib/source/common.props
 // If you would like not-zero _ITERATOR_DEBUG_LEVEL and
 // you know what you are doing (up to 100x slowdown),
@@ -253,6 +253,10 @@ template <typename T> struct IntersectionPrecomputes;
 
 template <typename I> struct IteratorRange;
 
+/// Coordinates on texture 
+/// \param x,y should be in range [0..1], otherwise result depends on wrap type of texture (no need to clamp it, it is done on GPU if wrap type is "Clamp" )
+using UVCoord = Vector2f;
+
 using FaceMap = Vector<FaceId, FaceId>;
 using VertMap = Vector<VertId, VertId>;
 using EdgeMap = Vector<EdgeId, EdgeId>;
@@ -261,6 +265,8 @@ using UndirectedEdgeMap = Vector<UndirectedEdgeId, UndirectedEdgeId>;
 using WholeEdgeMap = Vector<EdgeId, UndirectedEdgeId>;
 using VertCoords = Vector<Vector3f, VertId>;
 using VertNormals = Vector<Vector3f, VertId>;
+using VertColors = Vector<Color, VertId>;
+using VertUVCoords = Vector<UVCoord, VertId>;
 using FaceNormals = Vector<Vector3f, FaceId>;
 
 template <typename T, typename I> struct MRMESH_CLASS BMap;
@@ -301,6 +307,9 @@ struct MRMESH_CLASS PointCloud;
 class MRMESH_CLASS AABBTree;
 class MRMESH_CLASS AABBTreePoints;
 struct MRMESH_CLASS PartMapping;
+struct MeshTexture;
+struct GridSettings;
+
 template<typename T> class UniqueThreadSafeOwner;
 
 class PolylineTopology;
@@ -342,9 +351,12 @@ class CircleObject;
 class PlaneObject;
 class SphereObject;
 
+struct Image;
+
 template <typename T>
 struct VoxelsVolume;
 using SimpleVolume = VoxelsVolume<std::vector<float>>;
+using SimpleVolumeU8 = VoxelsVolume<std::vector<uint8_t>>;
 
 #ifndef MRMESH_NO_VOXEL
 class ObjectVoxels;
@@ -396,6 +408,8 @@ constexpr inline int sgn( T x ) noexcept { return x > 0 ? 1 : ( x < 0 ? -1 : 0 )
 
 template<typename...> 
 inline constexpr bool dependent_false = false;
+
+class IFastWindingNumber;
 
 namespace MeshBuilder
 {

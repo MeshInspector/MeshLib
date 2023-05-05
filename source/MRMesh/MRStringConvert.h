@@ -14,11 +14,11 @@ namespace MR
 /// converts UTF8-encoded string into UTF16-encoded string
 MRMESH_API std::wstring utf8ToWide( const char* utf8 );
 /// converts system encoded string to UTF8-encoded string
-MRMESH_API std::u8string systemToUtf8( const char* system );
+MRMESH_API std::string systemToUtf8( const std::string & system );
 
 #ifdef _WIN32
 /// converts UTF16-encoded string string to UTF8-encoded string
-MRMESH_API std::u8string Utf16ToUtf8( const std::wstring_view & utf16 );
+MRMESH_API std::string Utf16ToUtf8( const std::wstring_view & utf16 );
 #endif
 
 #if defined __cpp_lib_char8_t
@@ -67,6 +67,12 @@ inline std::string utf8string( const std::filesystem::path & path )
 /// [1024*1024,1024*1024*1024) -> nnn.nn Mb
 /// ...
 MRMESH_API std::string bytesString( size_t size );
+
+/// returns true if line contains any of OS prohibited chars ('?', '*', '/', '\', '"', '<', '>')
+MRMESH_API bool hasProhibitedChars( const std::string& line );
+
+/// replace OS prohibited chars ('?', '*', '/', '\', '"', '<', '>') with `replacement` char
+MRMESH_API std::string replaceProhibitedChars( const std::string& line, char replacement = '_' );
 
 /// if (v) contains an error, then appends given file name to that error
 template<typename T>

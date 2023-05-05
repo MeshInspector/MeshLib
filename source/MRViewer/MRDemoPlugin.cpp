@@ -4,7 +4,9 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRMesh.h"
 #include "MRRibbonButtonDrawer.h"
+#include "MRMesh/MRIRenderObject.h"
 #include "ImGuiHelpers.h"
+#include "MRUIStyle.h"
 #include <GLFW/glfw3.h>
 
 namespace MR
@@ -12,7 +14,7 @@ namespace MR
 
 void DemoPlugin::draw_()
 {
-    viewer->viewport().draw( *demoSphere_, demoSphere_->xf(), true );
+    viewer->viewport().draw( *demoSphere_, demoSphere_->xf(), DepthFuncion::Always );
     viewer->viewport().draw( *demoSphere_, demoSphere_->xf() );
 }
 
@@ -42,14 +44,14 @@ void DemoPlugin::preDraw_()
 
         float w = ImGui::GetContentRegionAvail().x;
         float p = ImGui::GetStyle().FramePadding.x;
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Ok", ImVec2( ( w - p ) / 2.f, 0 ), ImGuiKey_Enter ) )
+        if ( UI::buttonCommonSize( "Ok", Vector2f( ( w - p ) / 2.f, 0 ), ImGuiKey_Enter ) )
         {
             glfwSetWindowShouldClose( Viewer::instance()->window, true );
             shouldClose_ = true;
             showCloseModal_ = false;
         }
         ImGui::SameLine( 0, p );
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ), ImGuiKey_Escape ) )
+        if ( UI::buttonCommonSize( "Cancel", Vector2f( ( w - p ) / 2.f, 0 ), ImGuiKey_Escape ) )
             showCloseModal_ = false;
 
         if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )

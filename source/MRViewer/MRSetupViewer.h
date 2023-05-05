@@ -21,7 +21,8 @@ public:
     // Sets start configuration for viewer
     // use to override default configuration of viewer
     MRVIEWER_API virtual void setupConfiguration( Viewer* viewer ) const;
-    // use to load additional libraries with plugins. See pluginLibraryList.json
+    // use to load additional libraries with plugins.
+    // all libraries are taken from GetResourcesDirectory() *.ui.json files
     MRVIEWER_API virtual void setupExtendedLibraries() const;
 };
 }

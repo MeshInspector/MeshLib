@@ -21,6 +21,7 @@ public:
         Big,
         BigSemiBold,
         Headline,
+        Monospace,
         Count
     };
 

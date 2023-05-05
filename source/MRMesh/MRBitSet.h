@@ -34,6 +34,8 @@ public:
     MRMESH_API BitSet & operator |= ( const BitSet & b );
     MRMESH_API BitSet & operator ^= ( const BitSet & b );
     MRMESH_API BitSet & operator -= ( const BitSet & b );
+    /// subtracts b from this, considering that bits in b are shifted right on bShiftInBlocks*bits_per_block
+    MRMESH_API BitSet & subtract( const BitSet & b, int bShiftInBlocks );
 
     /// return the highest index i such as bit i is set, or npos if *this has no on bits. 
     [[nodiscard]] MRMESH_API IndexType find_last() const;
@@ -109,6 +111,8 @@ public:
     TaggedBitSet & operator |= ( const TaggedBitSet & b ) { base::operator |= ( b ); return * this; }
     TaggedBitSet & operator ^= ( const TaggedBitSet & b ) { base::operator ^= ( b ); return * this; }
     TaggedBitSet & operator -= ( const TaggedBitSet & b ) { base::operator -= ( b ); return * this; }
+    /// subtracts b from this, considering that bits in b are shifted right on bShiftInBlocks*bits_per_block
+    TaggedBitSet & subtract( const TaggedBitSet & b, int bShiftInBlocks ) { base::subtract( b, bShiftInBlocks ); return * this; }
 
     void autoResizeSet( IndexType pos, size_type len, bool val = true ) { base::autoResizeSet( pos, len, val ); }
     void autoResizeSet( IndexType pos, bool val = true ) { base::autoResizeSet( pos, val ); }
@@ -186,7 +190,7 @@ public:
 
 private:
     const T * bitset_ = nullptr;
-    IndexType index_ = IndexType(-1);
+    IndexType index_ = IndexType( ~size_t( 0 ) );
 };
 
 template <typename T>
@@ -223,7 +227,10 @@ template <typename T>
 template <typename T>
 [[nodiscard]] TaggedBitSet<T> TaggedBitSet<T>::getMapping( const BMap<IndexType, IndexType> & map ) const
 {
-    TaggedBitSet<T> res( map.tsize );
+    TaggedBitSet<T> res;
+    if ( !any() )
+        return res;
+    res.resize( map.tsize );
     for ( auto b : *this )
         if ( auto mapped = map.b[b] )
             res.set( mapped );
@@ -243,7 +250,10 @@ template <typename T>
 template <typename T>
 [[nodiscard]] TaggedBitSet<T> TaggedBitSet<T>::getMapping( const Vector<IndexType, IndexType> & map, size_t resSize ) const
 {
-    TaggedBitSet<T> res( resSize );
+    TaggedBitSet<T> res;
+    if ( !any() )
+        return res;
+    res.resize( resSize );
     for ( auto b : *this )
         if ( auto mapped = map[b] )
             res.set( mapped );
@@ -253,7 +263,10 @@ template <typename T>
 template <typename T>
 [[nodiscard]] TaggedBitSet<T> TaggedBitSet<T>::getMapping( const HashMap<IndexType, IndexType> & map, size_t resSize ) const
 {
-    TaggedBitSet<T> res( resSize );
+    TaggedBitSet<T> res;
+    if ( !any() )
+        return res;
+    res.resize( resSize );
     for ( auto b : *this )
         if ( auto mapped = getAt( map, b ) )
             res.set( mapped );

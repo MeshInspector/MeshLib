@@ -17,15 +17,13 @@ public:
 
     virtual bool blocking() const override { return false; }
 
+    // call this function if you save/delete color theme, or change current theme outside of this plugin
+    void updateThemes();
 private:
     virtual bool onEnable_() override;
     virtual bool onDisable_() override;
 
     void drawMouseSceneControlsSettings_( float menuScaling );
-
-    void drawDialogQuickAccessSettings_( float menuScaling );
-
-    void drawQuickAccessList_();
 
     void drawSpaceMouseSettings_( float menuScaling );
 
@@ -35,15 +33,13 @@ private:
     int storedSamples_{ 0 };
     int maxSamples_{ 0 };
     bool needReset_{ false };
+    bool gpuOverridesMSAA_{ false };
 
     Vector4f backgroundColor_;
 
     int selectedUserPreset_{ 0 };
     std::vector<std::string> userThemesPresets_;
 
-    const RibbonSchema* schema_ = nullptr;
-    MenuItemsList* quickAccessList_ = nullptr;
-    int maxQuickAccessSize_{ 0 };
     RibbonMenu* ribbonMenu_ = nullptr;
 
     Vector4f shadowColor4f_;

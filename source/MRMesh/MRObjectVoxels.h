@@ -98,6 +98,46 @@ public:
     /// Returns indexer with more options
     const VolumeIndexer& getVolumeIndexer() const { return indexer_; }
 
+    // prepare data for volume rendering
+    // returns false if canceled
+    MRMESH_API bool prepareDataForVolumeRendering( ProgressCallback cb = {} ) const;
+
+    bool isVolumeRenderingEnabled() const { return volumeRendering_; }
+    // this function should only be called from GUI thread because it changes rendering object,
+    // it can take some time to prepare data, so you can prepare data with progress callback
+    // by calling `prepareDataForVolumeRendering(cb)` function before calling this one
+    MRMESH_API void enableVolumeRendering( bool on );
+    // move volume rendering data to caller: basically used in RenderVolumeObject 
+    [[nodiscard]] std::unique_ptr<SimpleVolumeU8> getVolumeRenderingData() const { return std::move( volumeRenderingData_ ); }
+
+    // struct to control volume rendering texture
+    struct VolumeRenderingParams
+    {
+        // coloring type
+        enum class LutType
+        {
+            GrayShades,
+            Rainbow
+        } lutType{ LutType::Rainbow };
+        // minimum colored value (voxels with lower values are transparent)
+        float min{ 0.0f };
+        // maximum colored value (voxels with higher values are transparent)
+        float max{ 0.0f };
+        // type of alpha function on texture
+        enum class AlphaType
+        {
+            Constant,
+            LinearIncreasing,
+            LinearDecreasing
+        } alphaType{ AlphaType::Constant };
+        uint8_t alphaLimit{ 10 };
+        bool operator==( const VolumeRenderingParams& )const = default;
+    };
+    const VolumeRenderingParams& getVolumeRenderingParams() const { return volumeRenderingParams_; }
+    MRMESH_API void setVolumeRenderingParams( const VolumeRenderingParams& params );
+
+    MRMESH_API virtual bool hasVisualRepresentation() const override;
+
     MRMESH_API void setMaxSurfaceTriangles( int maxFaces );
     int getMaxSurfaceTriangles() const { return maxSurfaceTriangles_; }
 
@@ -117,6 +157,9 @@ public:
     IsoChangedSignal isoSurfaceChangedSignal;
 
 private:
+    VolumeRenderingParams volumeRenderingParams_;
+    mutable std::unique_ptr<SimpleVolumeU8> volumeRenderingData_;
+
     int maxSurfaceTriangles_{ 10000000 };
     VdbVolume vdbVolume_;
     float isoValue_{0.0f};
@@ -127,7 +170,7 @@ private:
     VolumeIndexer indexer_ = VolumeIndexer( vdbVolume_.dims );
     Vector3f reverseVoxelSize_;
 
-    void updateHistogram_( float min, float max );
+    void updateHistogram_( float min, float max, ProgressCallback cb = {} );
 
 
     /// this is private function to set default colors of this type (ObjectVoxels) in constructor only
@@ -137,6 +180,7 @@ protected:
     VoxelBitSet selectedVoxels_;
 
     MRMESH_API ObjectVoxels( const ObjectVoxels& other );
+    bool volumeRendering_{ false };
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
@@ -149,7 +193,7 @@ protected:
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
 #ifndef MRMESH_NO_DICOM
-    MRMESH_API tl::expected<void, std::string> deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
+    MRMESH_API VoidOrErrStr deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
 #endif
 
     MRMESH_API virtual tl::expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const override;

@@ -14,6 +14,29 @@ namespace MR
 constexpr float cAxesScale = 93.62f; // experemental coefficient to scale raw axes data to range [-1 ; 1]
 constexpr float cAxesThreshold = 1.e-2f / cAxesScale; // axis threshold to send signals spacemouse move
 
+struct DeviceInfo
+{
+    DWORD vendorId{ 0 };
+    DWORD deviceId{ 0 };
+    std::string deviceName;
+};
+
+constexpr DWORD logitechId = 0x46D;
+constexpr DWORD connexionId = 0x256F;
+
+const DeviceInfo connexionDevices[] = {
+    { connexionId, 0xC62E, "SpaceMouse Wireless (cabled)" },
+    { connexionId, 0xC62F, "SpaceMouse Wireless Receiver" },
+    { connexionId, 0xC631, "SpaceMouse Pro Wireless (cabled)" },
+    { connexionId, 0xC632, "SpaceMouse Pro Wireless Receiver" },
+    { connexionId, 0xC633, "SpaceMouse Enterprise" },
+    { connexionId, 0xC635, "SpaceMouse Compact" },
+//     { connexionId, 0xC651, "CadMouse Wireless" },
+    { connexionId, 0xC652, "Universal Receiver" },
+//     { connexionId, 0xC654, "CadMouse Pro Wireless" },
+//     { connexionId, 0xC657, "CadMouse Pro Wireless Left" }
+};
+
 constexpr int mapButtonsCompact[2] = {
     SMB_CUSTOM_1, SMB_CUSTOM_2
 };
@@ -33,9 +56,6 @@ constexpr int mapButtonsEnterprise[31] = {
     SMB_CUSTOM_7, SMB_CUSTOM_8, SMB_CUSTOM_9, SMB_CUSTOM_10, SMB_CUSTOM_11, SMB_CUSTOM_12,
     SMB_ESC, SMB_ENTER, SMB_ALT, SMB_SHIFT, SMB_CTRL, SMB_TAB, SMB_SPACE, SMB_DELETE
 };
-
-constexpr DWORD logitechId = 0x46d;
-constexpr DWORD connexionId = 0x256f;
 
 // Array of input device examples to register
 RAWINPUTDEVICE inputDevices[] = {
@@ -134,12 +154,25 @@ void SpaceMouseHandlerWindows::handle()
 
     auto& viewer = getViewerInstance();
     int count;
-    std::array<float, 6> axesDiff = axesDiff_;
-    if ( std::any_of( axesDiff.begin(), axesDiff.end(), [] ( const float& v ) { return std::fabs( v ) > cAxesThreshold; } ) )
+    std::array<float, 6> axes = {0, 0, 0, 0, 0, 0};
+    if ( isUniversalReceiver_ )
+    {
+        const float* axesNew = glfwGetJoystickAxes( joystickIndex_, &count );
+        if ( count == 6 )
+            for ( int i = 0; i < 6; ++i )
+                axes[i] = axesNew[i];
+    }
+    else
+    {
+        axes = axesDiff_;
+        for ( auto& v : axes )
+            v *= cAxesScale;
+    }
+    if ( std::any_of( axes.begin(), axes.end(), [] ( const float& v ) { return std::fabs( v ) > cAxesThreshold; } ) )
     {
         axesDiff_ = { 0, 0, 0, 0, 0, 0 };
-        Vector3f translate( axesDiff[0], axesDiff[1], axesDiff[2] );
-        Vector3f rotate( axesDiff[3], axesDiff[4], axesDiff[5] );
+        Vector3f translate( axes[0], axes[1], axes[2] );
+        Vector3f rotate( axes[3], axes[4], axes[5] );
 
         float newHandleTime = float( glfwGetTime() );
         if ( handleTime_ == 0.f )
@@ -149,8 +182,8 @@ void SpaceMouseHandlerWindows::handle()
             float timeScale = std::clamp( ( newHandleTime - handleTime_ ), 0.f, 0.5f ) * 60.f;
             handleTime_ = newHandleTime;
 
-            translate *= cAxesScale * timeScale;
-            rotate *= cAxesScale * timeScale;
+            translate *= timeScale;
+            rotate *= timeScale;
 
             if ( active_ )
                 viewer.spaceMouseMove( translate, rotate );
@@ -207,7 +240,7 @@ void SpaceMouseHandlerWindows::postFocusSignal_( bool focused )
 
 void SpaceMouseHandlerWindows::updateConnected_()
 {
-
+    isUniversalReceiver_ = false;
     int newJoystickIndex = -1;
     for ( int i = GLFW_JOYSTICK_1; i <= GLFW_JOYSTICK_LAST; ++i )
     {
@@ -219,6 +252,14 @@ void SpaceMouseHandlerWindows::updateConnected_()
         auto findRes = str.find( "SpaceMouse" );
         if ( findRes != std::string_view::npos )
         {
+            newJoystickIndex = i;
+            break;
+        }
+
+        findRes = str.find( "3Dconnexion Universal Receiver" );
+        if ( findRes != std::string_view::npos )
+        {
+            isUniversalReceiver_ = true;
             newJoystickIndex = i;
             break;
         }
@@ -244,7 +285,7 @@ void SpaceMouseHandlerWindows::updateConnected_()
 
     joystickIndex_ = newJoystickIndex;
 
-    if ( joystickIndex_ != -1 )
+    if ( joystickIndex_ != -1 && !isUniversalReceiver_ )
     {
         int count;
         const float* axesNew = glfwGetJoystickAxes( joystickIndex_, &count );

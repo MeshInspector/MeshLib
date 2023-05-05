@@ -23,6 +23,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRGTest.h"
 #include "MRPch/MRJson.h"
+#include "MRMeshTexture.h"
 
 #if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)
 #pragma clang diagnostic push
@@ -49,7 +50,7 @@ UniqueTemporaryFolder::UniqueTemporaryFolder( FolderCallback onPreTempFolderDele
     const auto tmp = std::filesystem::temp_directory_path( ec );
     if ( ec )
     {
-        spdlog::error( "Cannot get temporary directory: {}", ec.message() );
+        spdlog::error( "Cannot get temporary directory: {}", systemToUtf8( ec.message() ) );
         return;
     }
 
@@ -82,14 +83,18 @@ UniqueTemporaryFolder::~UniqueTemporaryFolder()
     std::error_code ec;
     if ( !std::filesystem::remove_all( folder_, ec ) )
     {
-        spdlog::error( "Failed to remove folder: {}", ec.message() );
+        spdlog::error( "Failed to remove folder: {}", systemToUtf8( ec.message() ) );
         return;
     }
 }
 
 const IOFilters SceneFileFilters =
 {
-    {"MeshInspector scene (.mru)","*.mru"}
+    {"MeshInspector scene (.mru)","*.mru"},
+#ifndef MRMESH_NO_GLTF
+    {"glTF JSON scene (.gltf)","*.gltf"},
+    {"glTF binary scene (.glb)","*.glb"}
+#endif
 };
 
 tl::expected<Json::Value, std::string> deserializeJsonValue( const std::filesystem::path& path )
@@ -120,7 +125,7 @@ tl::expected<Json::Value, std::string> deserializeJsonValue( const std::filesyst
 }
 
 // path of item in filesystem, base - base path of scene root (%temp%/MeshInspectorScene)
-tl::expected<void, std::string> compressOneItem( zip_t* archive, const std::filesystem::path& path, const std::filesystem::path& base,
+VoidOrErrStr compressOneItem( zip_t* archive, const std::filesystem::path& path, const std::filesystem::path& base,
     const std::vector<std::filesystem::path>& excludeFiles, const char * password )
 {
     std::error_code ec;
@@ -202,7 +207,7 @@ private:
     zip_t * handle_ = nullptr;
 };
 
-tl::expected<void, std::string> compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder,
+VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder,
     const std::vector<std::filesystem::path>& excludeFiles, const char * password )
 {
     MR_TIMER
@@ -226,7 +231,7 @@ tl::expected<void, std::string> compressZip( const std::filesystem::path& zipFil
     return res;
 }
 
-tl::expected<void, std::string> serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection /*= nullptr */ )
+VoidOrErrStr serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection /*= nullptr */ )
 {
     ObjectMesh obj;
     obj.setMesh( std::make_shared<Mesh>( mesh ) );
@@ -236,7 +241,7 @@ tl::expected<void, std::string> serializeMesh( const Mesh& mesh, const std::file
     return serializeObjectTree( obj, path );
 }
 
-tl::expected<void, std::string> decompressZip( const std::filesystem::path& zipFile, const std::filesystem::path& targetFolder, const char * password )
+VoidOrErrStr decompressZip( const std::filesystem::path& zipFile, const std::filesystem::path& targetFolder, const char * password )
 {
     std::error_code ec;
     if ( !std::filesystem::is_directory( targetFolder, ec ) )
@@ -299,7 +304,7 @@ tl::expected<void, std::string> decompressZip( const std::filesystem::path& zipF
     return {};
 }
 
-tl::expected<void, std::string> serializeObjectTree( const Object& object, const std::filesystem::path& path, 
+VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::path& path, 
     ProgressCallback progressCb, FolderCallback preCompress )
 {
     MR_TIMER;
@@ -535,7 +540,93 @@ void serializeToJson( const BitSet& bitset, Json::Value& root )
     root["bits"] = encode64( (const std::uint8_t*) bitset.m_bits.data(), bitset.num_blocks() * sizeof( BitSet::block_type ) );
 }
 
-tl::expected<void, std::string> serializeToJson( const Mesh& mesh, Json::Value& root )
+void serializeToJson( const MeshTexture& texture, Json::Value& root )
+{
+    switch ( texture.filter )
+    {
+    case FilterType::Linear:
+        root["FilterType"] = "Linear";
+        break;
+    case FilterType::Discrete:
+        root["FilterType"] = "Discrete";
+        break;
+    default:
+        assert( false );
+        root["FilterType"] = "Unknown";
+        break;
+    }
+
+    switch ( texture.wrap )
+    {
+    case WrapType::Clamp:
+        root["WrapType"] = "Clamp";
+        break;
+    case WrapType::Mirror :
+        root["WrapType"] = "Mirror";
+        break;
+    case WrapType::Repeat:
+        root["WrapType"] = "Repeat";
+        break;
+    default:
+        assert( false );
+        root["WrapType"] = "Unknown";
+        break;
+    }
+
+    serializeToJson( texture.resolution, root["Resolution"] );
+    root["Data"] = encode64( ( const uint8_t* )texture.pixels.data(), texture.pixels.size() * sizeof( Color ) );
+}
+
+void serializeToJson( const std::vector<UVCoord>& uvCoords, Json::Value& root )
+{
+    root["Size"] = int( uvCoords.size() );
+    root["Data"] = encode64( ( const uint8_t* )uvCoords.data(), uvCoords.size() * sizeof( UVCoord ) );
+}
+
+void serializeViaVerticesToJson( const UndirectedEdgeBitSet& edges, const MeshTopology & topology, Json::Value& root )
+{
+    std::vector<VertId> verts;
+    verts.reserve( edges.count() * 2 );
+    for ( EdgeId e : edges )
+    {
+        auto o = topology.org( e );
+        auto d = topology.dest( e );
+        if ( o && d )
+        {
+            verts.push_back( o );
+            verts.push_back( d );
+        }
+    }
+    static_assert( sizeof( VertId ) == 4 );
+    root["size"] = Json::UInt( edges.size() );
+    root["vertpairs"] = encode64( (const std::uint8_t*) verts.data(), verts.size() * 4 );
+}
+
+void deserializeViaVerticesFromJson( const Json::Value& root, UndirectedEdgeBitSet& edges, const MeshTopology & topology )
+{
+    if ( !root.isObject() || !root["size"].isNumeric() || !root["vertpairs"].isString() )
+    {
+        deserializeFromJson( root, edges ); // deserialize from old format
+        return;
+    }
+
+    edges.clear();
+    edges.resize( root["size"].asInt() );
+    auto bin = decode64( root["vertpairs"].asString() );
+
+    for ( size_t i = 0; i + 8 < bin.size(); i += 8 )
+    {
+        VertId o, d;
+        static_assert( sizeof( VertId ) == 4 );
+        memcpy( &o, bin.data() + i, 4 );
+        memcpy( &d, bin.data() + i + 4, 4 );
+        auto e = topology.findEdge( o, d );
+        if ( e && e.undirected() < edges.size() )
+            edges.set( e.undirected() );
+    }
+}
+
+VoidOrErrStr serializeToJson( const Mesh& mesh, Json::Value& root )
 {
     std::ostringstream out;
     auto res = MeshSave::toPly( mesh, out );
@@ -730,6 +821,46 @@ tl::expected<Mesh, std::string> deserializeFromJson( const Json::Value& root, Ve
     auto bin = decode64( root["ply"].asString() );
     std::istringstream in( std::string( (const char *)bin.data(), bin.size() ) );
     return MeshLoad::fromPly( in, colors );
+}
+
+void deserializeFromJson( const Json::Value& root, MeshTexture& texture )
+{
+    if ( root["FilterType"].isString() )
+    {
+        auto filterName = root["FilterType"].asString();
+        if ( filterName == "Linear" )
+            texture.filter = FilterType::Linear;
+        else if ( filterName == "Discrete" )
+            texture.filter = FilterType::Discrete;
+    }
+
+    if ( root["WrapType"].isString() )
+    {
+        auto wrapName = root["WrapType"].asString();
+        if ( wrapName == "Clamp" )
+            texture.wrap = WrapType::Clamp;
+        else if ( wrapName == "Mirror" )
+            texture.wrap = WrapType::Mirror;
+        else if ( wrapName == "Repeat" )
+            texture.wrap = WrapType::Repeat;
+    }
+    deserializeFromJson( root["Resolution"], texture.resolution );
+    if ( root["Data"].isString() )
+    {
+        texture.pixels.resize( texture.resolution.x * texture.resolution.y );
+        auto bin = decode64( root["Data"].asString() );
+        std::copy( ( Color* )bin.data(), ( Color* )( bin.data() ) + texture.pixels.size(), texture.pixels.data() );
+    }
+}
+
+void deserializeFromJson( const Json::Value& root, std::vector<UVCoord>& uvCoords )
+{
+    if ( root["Data"].isString() && root["Size"].isInt() )
+    {
+        uvCoords.resize( root["Size"].asInt() );
+        auto bin = decode64( root["Data"].asString() );
+        std::copy( ( UVCoord* )bin.data(), ( UVCoord* )( bin.data() ) + uvCoords.size(), uvCoords.data() );
+    }
 }
 
 TEST( MRMesh, MeshToJson )

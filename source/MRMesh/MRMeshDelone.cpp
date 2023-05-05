@@ -12,19 +12,10 @@
 namespace MR
 {
 
-inline auto dir( const auto& p, const auto& q, const auto& r )
+bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float maxAngleChange )
 {
-    return cross( q - p, r - p );
-}
-inline auto area( const auto& p, const auto& q, const auto& r )
-{
-    return dir( p, q, r ).length();
-}
-
-bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange, double criticalTriAspectRatio )
-{
-    const auto dirABD = dir( a, b, d );
-    const auto dirDBC = dir( d, b, c );
+    const auto dirABD = dirDblArea( a, b, d );
+    const auto dirDBC = dirDblArea( d, b, c );
 
     if ( dot( dirABD, dirDBC ) < 0 )
         return true; // flipping of given edge will create two faces with opposite normals
@@ -32,34 +23,17 @@ bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d
     if ( maxAngleChange < NoAngleChangeLimit )
     {
         const auto oldAngle = dihedralAngle( dirABD, dirDBC, d - b );
-        const auto dirABC = dir( a, b, c );
-        const auto dirACD = dir( a, c, d );
+        const auto dirABC = dirDblArea( a, b, c );
+        const auto dirACD = dirDblArea( a, c, d );
         const auto newAngle = dihedralAngle( dirABC, dirACD, a - c );
         const auto angleChange = std::abs( oldAngle - newAngle );
         if ( angleChange > maxAngleChange )
-        {
-            if ( criticalTriAspectRatio < FLT_MAX )
-            {
-                const auto maxAspect = std::max( {
-                    triangleAspectRatio( a, c, d ), triangleAspectRatio( c, a, b ),
-                    triangleAspectRatio( b, d, a ), triangleAspectRatio( d, b, c ) } );
-                if ( maxAspect <= criticalTriAspectRatio )
-                    return true;
-                // otherwise the angle between degenerate triangles cannot be trusted
-            }
-            else
-                return true;
-        }
+            return true;
     }
 
     auto metricAC = std::max( circumcircleDiameterSq( a, c, d ), circumcircleDiameterSq( c, a, b ) );
     auto metricBD = std::max( circumcircleDiameterSq( b, d, a ), circumcircleDiameterSq( d, b, c ) );
     return metricAC <= metricBD;
-}
-
-bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float maxAngleChange, float criticalTriAspectRatio )
-{
-    return checkDeloneQuadrangle( Vector3d{a}, Vector3d{b}, Vector3d{c}, Vector3d{d}, maxAngleChange, criticalTriAspectRatio );
 }
 
 bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings, float * deviationSqAfterFlip )
@@ -87,16 +61,7 @@ bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSe
         }
     }
 
-    bool flipEdgeWillBeMultiple = false;
-    for ( auto e : orgRing( mesh.topology, mesh.topology.next( edge ).sym()  ) )
-    {
-        assert( mesh.topology.org( e ) == d );
-        if ( mesh.topology.dest( e ) == b )
-        {
-            flipEdgeWillBeMultiple = true;
-            break;
-        }
-    }
+    bool flipEdgeWillBeMultiple = mesh.topology.findEdge( b, d ).valid();
 
     if ( edgeIsMultiple && !flipEdgeWillBeMultiple )
         return false;
@@ -108,13 +73,26 @@ bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSe
     auto cp = mesh.points[c];
     auto dp = mesh.points[d];
 
+    bool degenInputTris = false; // whether triangles ACD and ABC are degenerate based on their aspect ratio
+    if ( settings.criticalTriAspectRatio < FLT_MAX &&
+         ( deviationSqAfterFlip || settings.maxDeviationAfterFlip < FLT_MAX || settings.maxAngleChange < NoAngleChangeLimit ) )
+    {
+        const auto maxAspect = std::max( triangleAspectRatio( ap, cp, dp ), triangleAspectRatio( cp, ap, bp ) );
+        if ( maxAspect > settings.criticalTriAspectRatio )
+            degenInputTris = true;
+    }
+
     if ( deviationSqAfterFlip || settings.maxDeviationAfterFlip < FLT_MAX )
     {
-        Vector3f vec, closestOnAC, closestOnBD;
-        SegPoints( vec, closestOnAC, closestOnBD,
-            ap, cp - ap,   // first diagonal segment
-            bp, dp - bp ); // second diagonal segment
-        float distSq = ( closestOnAC - closestOnBD ).lengthSq();
+        float distSq = 0;
+        if ( !degenInputTris )
+        {
+            Vector3f vec, closestOnAC, closestOnBD;
+            SegPoints( vec, closestOnAC, closestOnBD,
+                ap, cp - ap,   // first diagonal segment
+                bp, dp - bp ); // second diagonal segment
+            distSq = ( closestOnAC - closestOnBD ).lengthSq();
+        }
         if ( deviationSqAfterFlip )
             *deviationSqAfterFlip = distSq;
         if ( distSq > sqr( settings.maxDeviationAfterFlip ) )
@@ -124,7 +102,7 @@ bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSe
     if ( !isUnfoldQuadrangleConvex( ap, bp, cp, dp ) )
         return true; // cannot flip because 2d quadrangle is concave
 
-    return checkDeloneQuadrangle( ap, bp, cp, dp, settings.maxAngleChange, settings.criticalTriAspectRatio );
+    return checkDeloneQuadrangle( ap, bp, cp, dp, degenInputTris ? NoAngleChangeLimit : settings.maxAngleChange );
 }
 
 int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIters, ProgressCallback progressCallback )
@@ -136,6 +114,8 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
 
     UndirectedEdgeBitSet flipCandidates;
     flipCandidates.resize( mesh.topology.undirectedEdgeSize() );
+    UndirectedEdgeBitSet nextFlipCandidates;
+    nextFlipCandidates.resize( mesh.topology.undirectedEdgeSize(), true );
 
     int flipsDone = 0;
     for ( int iter = 0; iter < numIters; ++iter )
@@ -143,10 +123,13 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
         if ( progressCallback && !progressCallback( float( iter ) / numIters ) )
             return flipsDone;
 
-        BitSetParallelForAll( flipCandidates, [&] ( UndirectedEdgeId e )
+        flipCandidates.reset();
+        BitSetParallelFor( nextFlipCandidates, [&] ( UndirectedEdgeId e )
         {
-            flipCandidates.set( e, !checkDeloneQuadrangleInMesh( mesh, e, settings ) );
+            if ( !checkDeloneQuadrangleInMesh( mesh, e, settings ) )
+                flipCandidates.set( e );
         } );
+        nextFlipCandidates.reset();
         int flipsDoneBeforeThisIter = flipsDone;
         for ( UndirectedEdgeId e : flipCandidates )
         {
@@ -154,10 +137,14 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
                 continue;
 
             mesh.topology.flipEdge( e );
+            nextFlipCandidates.set( mesh.topology.next( EdgeId( e ) ).undirected() );
+            nextFlipCandidates.set( mesh.topology.prev( EdgeId( e ) ).undirected() );
+            nextFlipCandidates.set( mesh.topology.next( EdgeId( e ).sym() ).undirected() );
+            nextFlipCandidates.set( mesh.topology.prev( EdgeId( e ).sym() ).undirected() );
             ++flipsDone;
         }
         if ( flipsDoneBeforeThisIter == flipsDone )
-            break; 
+            break;
     }
     return flipsDone;
 }
@@ -165,7 +152,7 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
 void makeDeloneOriginRing( Mesh & mesh, EdgeId e, const DeloneSettings& settings )
 {
     MR_WRITER( mesh );
-    mesh.topology.flipEdgesAround( e, [&]( EdgeId testEdge )
+    mesh.topology.flipEdgesIn( e, [&]( EdgeId testEdge )
     {
         return !checkDeloneQuadrangleInMesh( mesh, testEdge, settings );
     } );

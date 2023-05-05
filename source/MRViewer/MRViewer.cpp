@@ -41,6 +41,7 @@
 #include "MRGetSystemInfoJson.h"
 #include "MRSpaceMouseHandler.h"
 #include "MRSpaceMouseHandlerWindows.h"
+#include "MRSpaceMouseHandlerHidapi.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRSerializer.h"
 
@@ -76,6 +77,7 @@ EMSCRIPTEN_KEEPALIVE int resizeEmsCanvas( float width, float height )
     float newWidth = width * pixelRatio;
     float newHeight = height * pixelRatio;
     glfwSetWindowSize( MR::getViewerInstance().window, int( newWidth ), int( newHeight ) );
+    MR::getViewerInstance().incrementForceRedrawFrames( MR::getViewerInstance().forceRedrawMinimumIncrementAfterEvents, false );
     return 1;
 }
 
@@ -112,7 +114,7 @@ static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, in
 
 static void glfw_error_callback( int /*error*/, const char* description )
 {
-    spdlog::error( description );
+    spdlog::error( "glfw_error_callback: {}", description );
 }
 
 static void glfw_char_mods_callback( GLFWwindow* /*window*/, unsigned int codepoint )
@@ -191,9 +193,8 @@ static void glfw_window_scale( GLFWwindow* /*window*/, float xscale, float yscal
 
 #if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
 static constexpr int minEmsSleep = 3; // ms - more then 300 fps possible
-static EM_BOOL emsStaticDraw( double, void* ptr )
+static EM_BOOL emsEmptyCallback( double, void* )
 {
-    MR::getViewerInstance().emsDraw( bool( ptr ) );
     return EM_TRUE;
 }
 #endif
@@ -367,8 +368,6 @@ void Viewer::parseLaunchParams( LaunchParams& params )
 void Viewer::emsMainInfiniteLoop()
 {
     auto& viewer = getViewerInstance();
-    while ( viewer.forceRedrawFramesWithoutSwap_ > 0 )
-        viewer.draw( true );
     viewer.draw( true );
     viewer.eventQueue.execute();
     CommandLoop::processCommands();
@@ -418,6 +417,7 @@ int Viewer::launch( const LaunchParams& params )
     if ( res != EXIT_SUCCESS )
         return res;
 
+    CommandLoop::setState( CommandLoop::StartPosition::AfterSplash );
     CommandLoop::processCommands(); // execute pre init commands before first draw
     focusRedrawReady_ = true;
 
@@ -426,7 +426,7 @@ int Viewer::launch( const LaunchParams& params )
 
     parseCommandLine_( params.argc, params.argv );
 
-    CommandLoop::setWindowAppeared();
+    CommandLoop::setState( CommandLoop::StartPosition::AfterWindowAppear );
 
     if ( params.startEventLoop )
     {
@@ -490,8 +490,10 @@ int Viewer::launchInit_( const LaunchParams& params )
     glfwSetErrorCallback( glfw_error_callback );
     if ( !glfwInit() )
     {
+        spdlog::error( "glfwInit failed" );
         return EXIT_FAILURE;
     }
+    spdlog::info( "glfwInit succeeded" );
 #if defined(__APPLE__)
     //Setting window properties
     glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -624,6 +626,9 @@ int Viewer::launchInit_( const LaunchParams& params )
     // give it name of app to store in right place
     recentFilesStore = RecentFilesStore( params.name );
 
+    CommandLoop::setState( CommandLoop::StartPosition::AfterPluginInit );
+    CommandLoop::processCommands();
+
     if ( windowMode && params.windowMode != LaunchParams::Hide && params.splashWindow )
     {
         splashMinTimer.get();
@@ -681,7 +686,8 @@ void Viewer::launchShut()
         spdlog::error( "Viewer is not launched!" );
         return;
     }
-    glfwHideWindow( window );
+    if ( window )
+        glfwHideWindow( window );
 
     if ( settingsMng_ )
     {
@@ -752,9 +758,9 @@ void Viewer::shutdownPlugins_()
         menuPlugin_->shutdown();
 }
 
-void Viewer::parseCommandLine_( int argc, char** argv )
+void Viewer::parseCommandLine_( [[maybe_unused]] int argc, [[maybe_unused]] char** argv )
 {
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_PYTHON)
     std::vector<std::filesystem::path> supportedFiles;
     for ( int i = 1; i < argc; ++i )
     {
@@ -784,6 +790,7 @@ void Viewer::parseCommandLine_( int argc, char** argv )
 
 void Viewer::EventQueue::emplace( NamedEvent event, bool skipable )
 {
+    std::unique_lock lock( mutex_ );
     if ( queue_.empty() || !skipable || !lastSkipable_ )
         queue_.emplace( std::move( event ) );
     else
@@ -793,6 +800,7 @@ void Viewer::EventQueue::emplace( NamedEvent event, bool skipable )
 
 void Viewer::EventQueue::execute()
 {
+    std::unique_lock lock( mutex_ );
     while ( !queue_.empty() )
     {
         if ( queue_.front().cb )
@@ -803,11 +811,13 @@ void Viewer::EventQueue::execute()
 
 bool Viewer::EventQueue::empty() const
 {
+    std::unique_lock lock( mutex_ );
     return queue_.empty();
 }
 
 void Viewer::EventQueue::popByName( const std::string& name )
 {
+    std::unique_lock lock( mutex_ );
     while ( !queue_.empty() && queue_.front().name == name )
         queue_.pop();
 }
@@ -862,7 +872,7 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
         if ( filter.extension.find( ext ) != std::string::npos )
             return true;
     }
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM )
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM ) && !defined(MRMESH_NO_VOXEL)
     for ( auto& filter : VoxelsLoad::Filters )
     {
         if ( filter.extension.find( ext ) != std::string::npos )
@@ -1196,7 +1206,7 @@ bool Viewer::needRedraw_() const
     return getRedrawFlagRecursive( SceneRoot::get(), presentViewportsMask_ );
 }
 
-void Viewer::resetRedraw_() const
+void Viewer::resetRedraw_()
 {
     for ( auto& viewport : viewport_list )
         viewport.resetRedrawFlag();
@@ -1211,8 +1221,16 @@ MR::Viewer::VisualObjectRenderType Viewer::getObjRenderType_( const VisualObject
 
     if ( !obj->getVisualizeProperty( VisualizeMaskType::DepthTest, viewportId ) )
         return VisualObjectRenderType::NoDepthTest;
-
-    if ( obj->getBackColor( viewportId ).a < 255 || obj->getFrontColor( obj->isSelected(), viewportId ).a < 255 )
+#ifndef __EMSCRIPTEN__
+    if ( auto voxObj = obj->asType<ObjectVoxels>() )
+    {
+        if ( voxObj->isVolumeRenderingEnabled() )
+            return  VisualObjectRenderType::VolumeRendering;
+    }
+#endif
+    if ( obj->getGlobalAlpha( viewportId ) < 255 ||
+        obj->getFrontColor( obj->isSelected(), viewportId ).a < 255 ||
+        obj->getBackColor( viewportId ).a < 255 )
         return VisualObjectRenderType::Transparent;
 
     return VisualObjectRenderType::Opaque;
@@ -1227,7 +1245,7 @@ void Viewer::recursiveDraw_( const Viewport& vp, const Object& obj, const Affine
     if ( visObj && ( renderType == getObjRenderType_( visObj, vp.id ) ) )
     {
         bool alphaNeed = renderType == VisualObjectRenderType::Transparent && alphaSortEnabled_;
-        vp.draw( *visObj, xfCopy, false, alphaNeed );
+        vp.draw( *visObj, xfCopy, DepthFuncion::Default, alphaNeed );
         if ( numDraws )
             ++( *numDraws );
     }
@@ -1235,32 +1253,27 @@ void Viewer::recursiveDraw_( const Viewport& vp, const Object& obj, const Affine
         recursiveDraw_( vp, *child, xfCopy, renderType, numDraws );
 }
 
-#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
-void Viewer::emsDraw( bool force )
-{
-    draw_( force );
-}
-#endif
-
 void Viewer::draw( bool force )
 {
-#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
-    if ( forceRedrawFramesWithoutSwap_ == 0 )
+#ifdef __EMSCRIPTEN__
+#ifdef MR_EMSCRIPTEN_ASYNCIFY
+    if ( draw_( true ) )
     {
-        emscripten_request_animation_frame( emsStaticDraw, force ? ( void* ) 1 : nullptr ); // call with swap
+        emscripten_request_animation_frame( emsEmptyCallback, nullptr ); // call with swap
         emscripten_sleep( minEmsSleep );
     }
-    else
-        draw_( true );
+#else
+    while ( !draw_( true ) );
+#endif
 #else
     draw_( force );
 #endif
 }
 
-void Viewer::draw_( bool force )
+bool Viewer::draw_( bool force )
 {
     if ( !force && !needRedraw_() )
-        return;
+        return false;
 
     if ( !isInDraw_ )
         isInDraw_ = true;
@@ -1269,7 +1282,7 @@ void Viewer::draw_( bool force )
         spdlog::error( "Recursive draw call is not allowed" );
         assert( false );
         // if this happens try to use CommandLoop instead of in draw call
-        return;
+        return false;
     }
 
     frameCounter_.startDraw();
@@ -1297,15 +1310,16 @@ void Viewer::draw_( bool force )
         glfwSwapBuffers( window );
     frameCounter_.endDraw( swapped );
     isInDraw_ = false;
+    return ( window && swapped );
 }
 
-void Viewer::drawScene() const
+void Viewer::drawScene()
 {
     if ( alphaSortEnabled_ )
         alphaSorter_->clearTransparencyTextures();
 
     int numTransparent = 0;
-    for ( const auto& viewport : viewport_list )
+    for ( auto& viewport : viewport_list )
         viewport.preDraw();
 
     preDrawPostViewportSignal();
@@ -1313,6 +1327,9 @@ void Viewer::drawScene() const
     for ( const auto& viewport : viewport_list )
     {
         recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), VisualObjectRenderType::Opaque );
+#ifndef __EMSCRIPTEN__
+        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), VisualObjectRenderType::VolumeRendering );
+#endif
         recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), VisualObjectRenderType::Transparent, &numTransparent );
     }
 
@@ -1335,9 +1352,9 @@ void Viewer::drawScene() const
     resetRedraw_();
 }
 
-void Viewer::setupScene() const
+void Viewer::setupScene()
 {
-    for ( const auto& viewport : viewport_list )
+    for ( auto& viewport : viewport_list )
     {
         viewport.setupView();
         viewport.clear_framebuffers();
@@ -1392,11 +1409,11 @@ void Viewer::postResize( int w, int h )
 
     if ( alphaSorter_ )
         alphaSorter_->updateTransparencyTexturesSize( window_width, window_height );
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) || defined(MR_EMSCRIPTEN_ASYNCIFY)
     if ( isLaunched_ )
     {
         incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, true );
-        do draw( true ); while ( !isCurrentFrameSwapping() );
+        while ( !draw_( true ) );
     }
 #endif
 }
@@ -1540,7 +1557,11 @@ void Viewer::initSpaceMouseHandler_()
 #ifdef _WIN32
     spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerWindows>();
 #else
-    spaceMouseHandler_ = std::make_unique<SpaceMouseHandler>();
+    #if defined(__APPLE__) || defined(__EMSCRIPTEN__)
+        spaceMouseHandler_ = std::make_unique<SpaceMouseHandler>();
+    #else
+        spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerHidapi>();
+    #endif
 #endif
 
     spaceMouseHandler_->initialize();

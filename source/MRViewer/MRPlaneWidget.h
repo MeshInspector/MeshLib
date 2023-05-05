@@ -14,6 +14,10 @@ class MRVIEWER_CLASS PlaneWidget : public MultiListener<MouseDownListener, Mouse
     Box3f box_;
     Vector3f cameraUp3Old_;
     
+    // if in this mode - newly setup plane always has 0.0 shift
+    bool localMode_{ false };
+    float localShift_{ 0.0f };
+
     using OnPlaneUpdateCallback = std::function<void()>;
     OnPlaneUpdateCallback onPlaneUpdate_;
 
@@ -36,6 +40,13 @@ public:
     MRVIEWER_API void definePlane();
     // undefines plane, removes PlaneObject from scene
     MRVIEWER_API void undefinePlane();
+
+    // if local mode is active UI shows local shift
+    // which is 0.0 for each newly setup plane
+    MRVIEWER_API void setLocalMode( bool on );
+    bool isInLocalMode() const { return localMode_; }
+    void setLocalShift( float shift ) { localShift_ = shift; }
+    float getLocalShift() const { return localShift_; }
 
     // returns plane
     MRVIEWER_API const Plane3f& getPlane() const;

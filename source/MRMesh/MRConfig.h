@@ -85,7 +85,4 @@ private:
     std::shared_ptr<spdlog::logger> loggerHandle_ = Logger::instance().getSpdLogger();
 };
 
-// returns the list of libraries with plugins for application. See Json file from the executable directory for details.
-MRMESH_API std::optional<std::vector<std::filesystem::path>> getPluginLibraryList();
-
 } // namespace MR

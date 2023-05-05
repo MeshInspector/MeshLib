@@ -27,7 +27,7 @@ const IOFilters Filters =
 #endif
 };
 
-tl::expected<void, std::string> toMrmesh( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback )
+VoidOrErrStr toMrmesh( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -36,7 +36,7 @@ tl::expected<void, std::string> toMrmesh( const Mesh & mesh, const std::filesyst
     return toMrmesh( mesh, out, callback );
 }
 
-tl::expected<void, std::string> toMrmesh( const Mesh & mesh, std::ostream & out, ProgressCallback callback )
+VoidOrErrStr toMrmesh( const Mesh & mesh, std::ostream & out, ProgressCallback callback )
 {
     MR_TIMER
     mesh.topology.write( out );
@@ -57,7 +57,7 @@ tl::expected<void, std::string> toMrmesh( const Mesh & mesh, std::ostream & out,
     return {};
 }
 
-tl::expected<void, std::string> toOff( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback )
+VoidOrErrStr toOff( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback )
 {
     std::ofstream out( file );
     if ( !out )
@@ -66,7 +66,7 @@ tl::expected<void, std::string> toOff( const Mesh & mesh, const std::filesystem:
     return toOff( mesh, out, callback );
 }
 
-tl::expected<void, std::string> toOff( const Mesh& mesh, std::ostream& out, ProgressCallback callback )
+VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, ProgressCallback callback )
 {
     MR_TIMER
         VertId maxPoints = mesh.topology.lastValidVert() + 1;
@@ -107,7 +107,7 @@ tl::expected<void, std::string> toOff( const Mesh& mesh, std::ostream& out, Prog
 }
 
 
-tl::expected<void, std::string> toObj( const Mesh & mesh, const std::filesystem::path & file, const AffineXf3f & xf, int firstVertId,
+VoidOrErrStr toObj( const Mesh & mesh, const std::filesystem::path & file, const AffineXf3f & xf, int firstVertId,
                                        ProgressCallback callback )
 {
     std::ofstream out( file );
@@ -117,7 +117,7 @@ tl::expected<void, std::string> toObj( const Mesh & mesh, const std::filesystem:
     return toObj( mesh, out, xf, firstVertId, callback );
 }
 
-tl::expected<void, std::string> toObj( const Mesh & mesh, std::ostream & out, const AffineXf3f & xf, int firstVertId,
+VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const AffineXf3f & xf, int firstVertId,
                                        ProgressCallback callback )
 {
     MR_TIMER
@@ -157,7 +157,7 @@ tl::expected<void, std::string> toObj( const Mesh & mesh, std::ostream & out, co
     return {};
 }
 
-tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback )
+VoidOrErrStr toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -166,7 +166,7 @@ tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, const std::files
     return toBinaryStl( mesh, out, callback );
 }
 
-tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, std::ostream & out, ProgressCallback callback )
+VoidOrErrStr toBinaryStl( const Mesh & mesh, std::ostream & out, ProgressCallback callback )
 {
     MR_TIMER
 
@@ -221,7 +221,7 @@ tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, std::ostream & o
     return {};
 }
 
-tl::expected<void, std::string> toPly( const Mesh & mesh, const std::filesystem::path & file, const Vector<Color, VertId>* colors, ProgressCallback callback )
+VoidOrErrStr toPly( const Mesh & mesh, const std::filesystem::path & file, const Vector<Color, VertId>* colors, ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -230,7 +230,7 @@ tl::expected<void, std::string> toPly( const Mesh & mesh, const std::filesystem:
     return toPly( mesh, out, colors, callback );
 }
 
-tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, const Vector<Color, VertId>* colors, ProgressCallback callback )
+VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const Vector<Color, VertId>* colors, ProgressCallback callback )
 {
     MR_TIMER
 
@@ -301,7 +301,7 @@ tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, co
 }
 
 #ifndef MRMESH_NO_OPENCTM
-tl::expected<void, std::string> toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options, const Vector<Color, VertId>* colors,
+VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options, const Vector<Color, VertId>* colors,
                                        ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
@@ -311,7 +311,7 @@ tl::expected<void, std::string> toCtm( const Mesh & mesh, const std::filesystem:
     return toCtm( mesh, out, options, colors, callback );
 }
 
-tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options, const Vector<Color, VertId>* colors,
+VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options, const Vector<Color, VertId>* colors,
                                        ProgressCallback callback )
 {
     MR_TIMER
@@ -462,14 +462,14 @@ tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, co
 }
 #endif
 
-tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path& file, const Vector<Color, VertId>* colors,
+VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path& file, const Vector<Color, VertId>* colors,
                                                       ProgressCallback callback )
 {
     auto ext = utf8string( file.extension() );
     for ( auto & c : ext )
         c = (char) tolower( c );
 
-    tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    VoidOrErrStr res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".off" )
         res = MR::MeshSave::toOff( mesh, file, callback );
     else if ( ext == ".obj" )
@@ -487,14 +487,14 @@ tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, const st
     return res;
 }
 
-tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension,
+VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension,
                                                       const Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    VoidOrErrStr res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".off" )
         res = MR::MeshSave::toOff( mesh, out, callback );
     else if ( ext == ".obj" )

@@ -74,7 +74,7 @@ TEST(MRMesh, BuildQuadDelete)
     FaceBitSet faces( 2 );
     faces.set( FaceId( 0 ) );
     EXPECT_EQ( getIncidentVerts( topology, faces ).count(), 3 );
-    EXPECT_EQ( getInnerVerts( topology, faces ).count(), 1 );
+    EXPECT_EQ( getInnerVerts( topology, faces ).count(), 0 );
 
     FaceBitSet fs = faces;
     expand( topology, fs );

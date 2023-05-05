@@ -124,18 +124,13 @@ bool doTrianglesIntersectExt(
         !doesEdgeXySeparate( f, d, e, a, b, c, dir );
 }
 
-/// checks whether triangle ABC and segment DE intersect
+/// checks whether triangle ABC and infinite line DE intersect
 template <typename T> 
-bool doTriangleSegmentIntersect(
+bool doTriangleLineIntersect(
     const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c,
     const Vector3<T> & d, const Vector3<T> & e
 )
 {
-    const auto abcd = mixed( a - d, b - d, c - d );
-    const auto abce = mixed( a - e, b - e, c - e );
-    if ( abcd * abce >= 0 )
-        return false; // segment DE is located at one side of the plane ABC
-
     const auto dabe = mixed( d - e, a - e, b - e );
     const auto dbce = mixed( d - e, b - e, c - e );
     if ( dabe * dbce <= 0 )
@@ -149,6 +144,20 @@ bool doTriangleSegmentIntersect(
         return false; // segment BC is located at one side of the plane DEA
 
     return true;
+}
+
+/// checks whether triangle ABC and segment DE intersect
+template <typename T> 
+bool doTriangleSegmentIntersect(
+    const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c,
+    const Vector3<T> & d, const Vector3<T> & e
+)
+{
+    const auto abcd = mixed( a - d, b - d, c - d );
+    const auto abce = mixed( a - e, b - e, c - e );
+    if ( abcd * abce >= 0 )
+        return false; // segment DE is located at one side of the plane ABC
+    return doTriangleLineIntersect( a, b, c, d, e );
 }
 
 /// this function input should have intersection
@@ -179,14 +188,17 @@ std::optional<TriIntersectResult> rayTriangleIntersect_( const Vector3<T>& oriA,
     const T Cx = oriC[prec.idxX] - Sx * oriC[prec.maxDimIdxZ];
     const T Cy = oriC[prec.idxY] - Sy * oriC[prec.maxDimIdxZ];
 
+    // due to fused multiply-add (FMA): (A*B-A*B) can be different from zero, so we need epsilon
+    const T eps = std::numeric_limits<T>::epsilon() * std::max( { Ax, Bx, Cx, Ay, By, Cy } );
     T U = Cx * By - Cy * Bx;
     T V = Ax * Cy - Ay * Cx;
     T W = Bx * Ay - By * Ax;
 
-    if( U < T( 0 ) || V < T( 0 ) || W < T( 0 ) )
+    if( U < -eps || V < -eps || W < -eps )
     {
-        if( U > T( 0 ) || V > T( 0 ) || W > T( 0 ) )
+        if( U > eps || V > eps || W > eps )
         {
+            // U,V,W have clearly different signs, so the ray misses the triangle
             return std::nullopt;
         }
     }

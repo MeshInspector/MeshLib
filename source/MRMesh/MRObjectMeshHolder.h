@@ -12,9 +12,11 @@ struct MeshVisualizePropertyType : VisualizeMaskType
     enum Type : unsigned
     {
         Faces = VisualizeMaskType::VisualizePropsCount,
+        Texture,
         Edges,
         SelectedFaces,
         SelectedEdges,
+        EnableShading,
         FlatShading,
         OnlyOddFragments,
         BordersHighlight,
@@ -65,6 +67,18 @@ public:
     /// sets colors of selected edges
     MRMESH_API virtual void setSelectedEdgesColor( const Color& color, ViewportId id = {} );
 
+    MRMESH_API const ViewportProperty<Color>& getSelectedEdgesColorsForAllViewports() const;
+    MRMESH_API virtual void setSelectedEdgesColorsForAllViewports( ViewportProperty<Color> val );
+
+    MRMESH_API const ViewportProperty<Color>& getSelectedFacesColorsForAllViewports() const;
+    MRMESH_API virtual void setSelectedFacesColorsForAllViewports( ViewportProperty<Color> val );
+
+    MRMESH_API const ViewportProperty<Color>& getEdgesColorsForAllViewports() const;
+    MRMESH_API virtual void setEdgesColorsForAllViewports( ViewportProperty<Color> val );
+
+    MRMESH_API const ViewportProperty<Color>& getBordersColorsForAllViewports() const;
+    MRMESH_API virtual void setBordersColorsForAllViewports( ViewportProperty<Color> val );
+
     /// Edges on mesh, that will have sharp visualization even with smooth shading
     const UndirectedEdgeBitSet& creases() const { return creases_; }
     MRMESH_API virtual void setCreases( UndirectedEdgeBitSet creases );
@@ -100,6 +114,27 @@ public:
     ObjectMeshHolder( ProtectedStruct, const ObjectMeshHolder& obj ) : ObjectMeshHolder( obj )
     {}
 
+    const MeshTexture& getTexture() const { return texture_; }
+    virtual void setTexture( MeshTexture texture ) { texture_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
+
+    const Vector<UVCoord, VertId>& getUVCoords() const { return uvCoordinates_; }
+    virtual void setUVCoords( Vector<UVCoord, VertId> uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
+    void updateUVCoords( Vector<UVCoord, VertId>& updated ) { std::swap( uvCoordinates_, updated ); dirty_ |= DIRTY_UV; }
+
+    /// copies texture, UV-coordinates and vertex colors from given source object \param src using given map \param thisToSrc
+    MRMESH_API virtual void copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc );
+
+    // ancillary texture can be used to have custom features visualization without affecting real one
+    const MeshTexture& getAncillaryTexture() const { return ancillaryTexture_; }
+    virtual void setAncillaryTexture( MeshTexture texture ) { ancillaryTexture_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
+
+    const Vector<UVCoord, VertId>& getAncillaryUVCoords() const { return ancillaryUVCoordinates_; }
+    virtual void setAncillaryUVCoords( Vector<UVCoord, VertId> uvCoordinates ) { ancillaryUVCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
+    void updateAncillaryUVCoords( Vector<UVCoord, VertId>& updated ) { std::swap( ancillaryUVCoordinates_, updated ); dirty_ |= DIRTY_UV; }
+    
+    bool hasAncillaryTexture() const { return !ancillaryUVCoordinates_.empty() && !ancillaryTexture_.pixels.empty(); }
+    void clearAncillaryTexture() { setAncillaryTexture( {} ); setAncillaryUVCoords( {} ); }
+
     /// returns dirty flag of currently using normal type if they are dirty in render representation
     MRMESH_API uint32_t getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const;
 
@@ -127,11 +162,25 @@ public:
 
     /// returns cached information about the number of holes in the mesh
     MRMESH_API size_t numHoles() const;
+    /// returns cached information about the number of components in the mesh
+    MRMESH_API size_t numComponents() const;
+    /// returns cached information about the number of handles in the mesh
+    MRMESH_API size_t numHandles() const;
 
+    /// signal about face selection changing, triggered in selectFaces
+    using FaceSelectionChangedSignal = boost::signals2::signal<void()>;
+    FaceSelectionChangedSignal faceSelectionChangedSignal;
 protected:
     FaceBitSet selectedTriangles_;
     UndirectedEdgeBitSet selectedEdges_;
     UndirectedEdgeBitSet creases_;
+
+    /// Texture options
+    MeshTexture texture_;
+    VertUVCoords uvCoordinates_; ///< vertices coordinates in texture
+
+    MeshTexture ancillaryTexture_;
+    VertUVCoords ancillaryUVCoordinates_; ///< vertices coordinates in ancillary texture
 
     struct MeshStat
     {
@@ -149,6 +198,9 @@ protected:
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
+    /// swaps signals, used in `swap` function to return back signals after `swapBase_`
+    /// pls call Parent::swapSignals_ first when overriding this function
+    MRMESH_API virtual void swapSignals_( Object& other ) override;
 
     MRMESH_API virtual tl::expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const override;
 
@@ -156,7 +208,7 @@ protected:
 
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
-    MRMESH_API tl::expected<void, std::string> deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
+    MRMESH_API VoidOrErrStr deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
 
     MRMESH_API virtual Box3f computeBoundingBox_() const override;
 
@@ -164,12 +216,18 @@ protected:
 
     MRMESH_API virtual void updateMeshStat_() const;
 
+    ViewportMask showTexture_;
     ViewportMask showFaces_ = ViewportMask::all();
     ViewportMask showEdges_;
     ViewportMask showSelectedEdges_ = ViewportMask::all();
     ViewportMask showSelectedFaces_ = ViewportMask::all();
     ViewportMask showBordersHighlight_;
     ViewportMask flatShading_; ///< toggle per-face or per-vertex properties
+
+    // really it shoud be one enum Shading {None, Flat, Smooth, Crease} 
+    // but for back capability it is easier to add global flag
+    ViewportMask shadingEnabled_ = ViewportMask::all();
+
     ViewportMask onlyOddFragments_;
 
     ViewportProperty<Color> edgesColor_;

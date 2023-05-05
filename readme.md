@@ -132,6 +132,7 @@ pip install --upgrade pip
 pip install meshlib
 ```
 
+See Python Basic Examples [here](https://meshinspector.github.io/MeshLib/html/HowToBasic.html) or search for more complex ones on [stackoverflow.com](https://stackoverflow.com/).
 
 # Build
 ## Build with VS2019 on Windows
@@ -143,6 +144,9 @@ cd ..
 ```
 ### Preparing Third Parties
 Some third parties are taken from vcpkg, while others (missing in vcpkg) are configured as git submodules.
+
+### Cuda
+Please install CUDA v11.4 from [official site](https://developer.nvidia.com/cuda-toolkit-archive)
 
 ### Vcpkg
 1. Please install vcpkg, and integrate it into Visual Studio (note that vcpkg requires English language pack in Visual Studio, and vcpkg cannot be installed on FAT volumes, only on NTFS):
@@ -164,6 +168,10 @@ Some third parties are taken from vcpkg, while others (missing in vcpkg) are con
     ```
 3. Open solution file MeshInspector/source/MeshLib.sln in Visual Studio 2019. Build it and run.
 
+## Build with VS2022 on Windows
+
+The steps are the same as for VS2019 above. The only exception is that you need to change `PlatformToolset` from `v142` to `v143` in `MeshLib/source/platform.props` after cloning MeshLib.
+
 ## Build with CMake on Linux
 This installation was checked on Ubuntu 20.04.4.
 
@@ -178,14 +186,14 @@ sudo ./scripts/build_thirdparty.sh # need sudo to check and install dependencies
 ./scripts/install_thirdparty.sh
 ./scripts/build_sources.sh
 ./scripts/distribution.sh
-sudo apt install ./distr/meshrus-dev.deb
+sudo apt install ./distr/meshlib-dev.deb
 ```
 
 > **_NOTE:_** `./scripts/install*.sh` scripts could be used as well, but apt install is preferable.
 
 > **_NOTE:_** `./scripts/install*.sh` scripts copy MR files directly to `/usr/local/lib`. Remove this directory manually if exists before apt install deb package.
 
-> **_NOTE:_** You could specify build type to Debug by `export MESHRUS_BUILD_TYPE=Debug`. Release is default.
+> **_NOTE:_** You could specify build type to Debug by `export MESHLIB_BUILD_TYPE=Debug`. Release is default.
 
 ## Build with Emscripten on Linux
 This installation was checked on Ubuntu 20.04.4 with emscripten 3.1.23.
@@ -245,7 +253,7 @@ Project settings:
 2. `Linker -> General -> Additional Library Directories` add `distribution\install\app\$(Configuration);`
 3. `Linker -> Input -> Additional Dependencies` add `distribution\install\lib\$(Configuration)\*.lib;`
 4. Debug: `C/C++ -> Preprocessor -> Preprocessor Defenitions` add `_ITERATOR_DEBUG_LEVEL=0;`
-5. `vcpkg -> Triplet` set `x64-windows-meshrus`
+5. `vcpkg -> Triplet` set `x64-windows-meshlib`
 
 Make sure you copy all dlls from `distribution\install\app\$(Configuration);` to your `$(TargetDir)`
 > **_NOTE:_** MeshLib distribution has x64 build only

@@ -49,12 +49,12 @@ std::vector<EdgeId> sMakeDisclosedEdgeLoop( Mesh& mesh, const std::vector<Vector
 
 Mesh Mesh::fromTriangles(
     VertCoords vertexCoordinates,
-    const Triangulation & t, const MeshBuilder::BuildSettings & settings )
+    const Triangulation& t, const MeshBuilder::BuildSettings& settings, ProgressCallback cb /*= {}*/ )
 {
     MR_TIMER
     Mesh res;
     res.points = std::move( vertexCoordinates );
-    res.topology = MeshBuilder::fromTriangles( t, settings );
+    res.topology = MeshBuilder::fromTriangles( t, settings, cb );
     return res;
 }
 
@@ -125,6 +125,11 @@ MeshTriPoint Mesh::toTriPoint( const PointOnFace & p ) const
     return toTriPoint( p.face, p.point );
 }
 
+MeshTriPoint Mesh::toTriPoint( VertId v ) const
+{
+    return MeshTriPoint( topology, v );
+}
+
 MeshEdgePoint Mesh::toEdgePoint( EdgeId e, const Vector3f & p ) const
 {
     const auto & po = points[ topology.org( e ) ];
@@ -136,6 +141,11 @@ MeshEdgePoint Mesh::toEdgePoint( EdgeId e, const Vector3f & p ) const
     if ( dt >= edgeLenSq )
         return { e, 1 };
     return { e, dt / edgeLenSq };
+}
+
+MeshEdgePoint Mesh::toEdgePoint( VertId v ) const
+{
+    return MeshEdgePoint( topology, v );
 }
 
 VertId Mesh::getClosestVertex( const PointOnFace & p ) const
@@ -224,7 +234,7 @@ double Mesh::area( const FaceBitSet & fs ) const
     [&] ( const auto & range, double curr )
     {
         for ( FaceId f = range.begin(); f < range.end(); ++f )
-            if ( fs.test( f ) )
+            if ( fs.test( f ) && topology.hasFace( f ) )
                 curr += dblArea( f );
         return curr;
     },
@@ -322,8 +332,9 @@ Vector3f Mesh::pseudonormal( VertId v, const FaceBitSet * region ) const
     return sum.normalized();
 }
 
-Vector3f Mesh::pseudonormal( EdgeId e, const FaceBitSet * region ) const
+Vector3f Mesh::pseudonormal( UndirectedEdgeId ue, const FaceBitSet * region ) const
 {
+    EdgeId e{ ue };
     auto l = topology.left( e );
     auto r = topology.right( e );
     if ( !l || ( region && !region->test( l ) ) )
@@ -350,7 +361,7 @@ Vector3f Mesh::pseudonormal( const MeshTriPoint & p, const FaceBitSet * region )
     if ( auto v = p.inVertex( topology ) )
         return pseudonormal( v, region );
     if ( auto e = p.onEdge( topology ) )
-        return pseudonormal( e->e, region );
+        return pseudonormal( e->e.undirected(), region );
     assert( !region || region->test( topology.left( p.e ) ) );
     auto n = leftNormal( p.e );
     assert( n.lengthSq() > 0.0f );
@@ -402,36 +413,44 @@ float Mesh::sumAngles( VertId v, bool * outBoundaryVert ) const
     return sum;
 }
 
-VertBitSet Mesh::findSpikeVertices( float minSumAngle, const VertBitSet * region ) const
+tl::expected<VertBitSet, std::string> Mesh::findSpikeVertices( float minSumAngle, const VertBitSet * region, ProgressCallback cb ) const
 {
+    MR_TIMER
     const VertBitSet & testVerts = topology.getVertIds( region );
     VertBitSet res( testVerts.size() );
-    BitSetParallelFor( testVerts, [&]( VertId v )
+    auto completed = BitSetParallelFor( testVerts, [&]( VertId v )
     {
         bool boundaryVert = false;
         auto a = sumAngles( v, &boundaryVert );
         if ( !boundaryVert && a < minSumAngle )
             res.set( v );
-    } );
+    }, cb );
+
+    if ( !completed )
+        return tl::make_unexpected( "Operation was canceled" );
+
     return res;
 }
 
-float Mesh::dihedralAngleSin( EdgeId e ) const
+float Mesh::dihedralAngleSin( UndirectedEdgeId ue ) const
 {
+    EdgeId e{ ue };
     if ( topology.isBdEdge( e ) )
         return 0;
     return MR::dihedralAngleSin( leftNormal( e ), leftNormal( e.sym() ), edgeVector( e ) );
 }
 
-float Mesh::dihedralAngleCos( EdgeId e ) const
+float Mesh::dihedralAngleCos( UndirectedEdgeId ue ) const
 {
+    EdgeId e{ ue };
     if ( topology.isBdEdge( e ) )
         return 1;
     return MR::dihedralAngleCos( leftNormal( e ), leftNormal( e.sym() ) );
 }
 
-float Mesh::dihedralAngle( EdgeId e ) const
+float Mesh::dihedralAngle( UndirectedEdgeId ue ) const
 {
+    EdgeId e{ ue };
     if ( topology.isBdEdge( e ) )
         return 0;
     return MR::dihedralAngle( leftNormal( e ), leftNormal( e.sym() ), edgeVector( e ) );
@@ -447,11 +466,23 @@ float Mesh::discreteMeanCurvature( VertId v ) const
         if ( !l )
             continue; // area( l ) is not defined and dihedralAngle( e ) = 0
         sumArea += area( l );
-        sumAngLen += dihedralAngle( e ) * edgeLength( e );
+        sumAngLen += dihedralAngle( e.undirected() ) * edgeLength( e.undirected() );
     }
     // sumAngLen / (2*2) because of mean curvature definition * each edge has 2 vertices,
     // sumArea / 3 because each triangle has 3 vertices
     return ( sumArea > 0 ) ? 0.75f * sumAngLen / sumArea : 0;
+}
+
+float Mesh::discreteMeanCurvature( UndirectedEdgeId ue ) const
+{
+    EdgeId e = ue;
+    if ( topology.isBdEdge( e ) )
+        return 0;
+    float sumArea = area( topology.left( e ) ) + area( topology.right( e ) );
+    float sumAngLen = dihedralAngle( e.undirected() ) * edgeLength( e.undirected() );
+    // sumAngLen / 2 because of mean curvature definition,
+    // sumArea / 3 because each triangle has 3 edges
+    return ( sumArea > 0 ) ? 1.5f * sumAngLen / sumArea : 0;
 }
 
 class CreaseEdgesCalc 
@@ -486,6 +517,7 @@ private:
 
 UndirectedEdgeBitSet Mesh::findCreaseEdges( float angleFromPlanar ) const
 {
+    MR_TIMER
     assert( angleFromPlanar > 0 && angleFromPlanar < PI );
     const float critCos = std::cos( angleFromPlanar );
     CreaseEdgesCalc calc( *this, critCos );
@@ -879,43 +911,68 @@ size_t Mesh::heapBytes() const
         + AABBTreeOwner_.heapBytes();
 }
 
+void Mesh::shrinkToFit()
+{
+    MR_TIMER
+    topology.shrinkToFit();
+    points.vec_.shrink_to_fit();
+}
+
 Vector3f Mesh::findCenterFromPoints() const
 {
-    Vector3f res;
-    int count = 0;
-    const auto & validPoints = topology.edgePerVertex();
-    for (auto edge : validPoints)
+    MR_TIMER
+    if ( topology.numValidVerts() <= 0 )
     {
-        if(edge.valid())
-        {
-            res += points[topology.org(edge)];
-            count++;
-        }
+        assert( false );
+        return {};
     }
-    assert(count > 0);
-    return res / float(count);
+    auto sumPos = parallel_deterministic_reduce( tbb::blocked_range( 0_v, VertId{ topology.vertSize() }, 1024 ), Vector3d{},
+    [&] ( const auto & range, Vector3d curr )
+    {
+        for ( VertId v = range.begin(); v < range.end(); ++v )
+            if ( topology.hasVert( v ) )
+                curr += Vector3d{ points[v] };
+        return curr;
+    },
+    [] ( auto a, auto b ) { return a + b; } );
+    return Vector3f{ sumPos / (double)topology.numValidVerts() };
 }
 
 Vector3f Mesh::findCenterFromFaces() const
 {
-    Vector3f acc(0., 0., 0.);
-    auto &edgePerFaces = topology.edgePerFace();
-    float triAreaAcc = 0;
-    for (auto edge : edgePerFaces)
+    MR_TIMER
+    struct Acc
     {
-        if (edge.valid())
+        Vector3d areaPos;
+        double area = 0;
+        Acc operator +( const Acc & b ) const
         {
-            VertId v0, v1, v2;
-            topology.getLeftTriVerts(edge, v0, v1, v2);
-            //area of triangle corresponds to the weight of each point
-            float triArea = leftDirDblArea(edge).length();
-            Vector3f center = points[v0] + points[v1] + points[v2];
-            acc += center * triArea;
-            triAreaAcc += triArea;
+            return {
+                .areaPos = areaPos + b.areaPos,
+                .area = area + b.area
+            };
         }
+    };
+    auto acc = parallel_deterministic_reduce( tbb::blocked_range( 0_f, FaceId{ topology.faceSize() }, 1024 ), Acc{},
+    [&] ( const auto & range, Acc curr )
+    {
+        for ( FaceId f = range.begin(); f < range.end(); ++f )
+            if ( topology.hasFace( f ) )
+            {
+                double triArea = area( f );
+                Vector3d center( triCenter( f ) );
+                curr.area += triArea;
+                curr.areaPos += center * triArea;
+            }
+        return curr;
+    },
+    [] ( auto a, auto b ) { return a + b; } );
+    if ( acc.area <= 0 )
+    {
+        assert( false );
+        return {};
     }
-    assert(triAreaAcc > 0.f);
-    return acc / triAreaAcc / 3.f;
+    return Vector3f{ acc.areaPos / acc.area };
 }
 
 Vector3f Mesh::findCenterFromBBox() const
@@ -925,6 +982,7 @@ Vector3f Mesh::findCenterFromBBox() const
 
 void Mesh::mirror( const Plane3f& plane )
 {
+    MR_TIMER
     for ( auto& p : points )
     {
         p += 2.0f * ( plane.project( p ) - p );

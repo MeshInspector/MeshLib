@@ -6,11 +6,11 @@
 namespace MR
 {
 
-namespace MeshBuilder
-{
-
 /// three vector3-coordinates describing a triangle geometry
 using ThreePoints = std::array<Vector3f, 3>;
+
+namespace MeshBuilder
+{
 
 /// mesh triangle represented by its three vertices and by its face ID
 struct Triangle

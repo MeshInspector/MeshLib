@@ -79,7 +79,7 @@ bool EmbeddedPython::runString( const std::string& pythonString )
         // Execute code
         python::exec( pythonString.c_str() );
     }
-    catch ( std::runtime_error& e )
+    catch ( std::exception& e )
     {
         success = false;
         spdlog::error( e.what() );

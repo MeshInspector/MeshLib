@@ -88,7 +88,7 @@ tl::expected<std::future<void>, std::string> ObjectLabel::serializeModel_( const
         MR::MeshSave::toMrmesh( *mesh, filename );
     };
 #else
-    auto save = [mesh = mesh_, filename = utf8string( path ) + ".mrmesh", this]()
+    auto save = [mesh = mesh_, filename = utf8string( path ) + ".mrmesh"]()
     {
         MR::MeshSave::toMrmesh( *mesh, filename );
     };
@@ -97,7 +97,7 @@ tl::expected<std::future<void>, std::string> ObjectLabel::serializeModel_( const
     return std::async( getAsyncLaunchType(), save );
 }
 
-tl::expected<void, std::string> ObjectLabel::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
+VoidOrErrStr ObjectLabel::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
 #ifndef MRMESH_NO_OPENCTM
     auto res = MeshLoad::fromCtm( utf8string( path ) + ".ctm", &vertsColorMap_, progressCb );
@@ -328,6 +328,36 @@ void ObjectLabel::setContourColor( const Color& color, ViewportId id )
         return;
 
     contourColor_.set( color, id );
+}
+
+const ViewportProperty<Color>& ObjectLabel::getSourcePointColorsForAllViewports() const
+{
+    return sourcePointColor_;
+}
+
+void ObjectLabel::setSourcePointColorsForAllViewports( ViewportProperty<Color> val )
+{
+    sourcePointColor_ = std::move( val );
+}
+
+const ViewportProperty<Color>& ObjectLabel::getLeaderLineColorsForAllViewports() const
+{
+    return leaderLineColor_;
+}
+
+void ObjectLabel::setLeaderLineColorsForAllViewports( ViewportProperty<Color> val )
+{
+    leaderLineColor_ = std::move( val );
+}
+
+const ViewportProperty<Color>& ObjectLabel::getContourColorsForAllViewports() const
+{
+    return contourColor_;
+}
+
+void ObjectLabel::setContourColorsForAllViewports( ViewportProperty<Color> val )
+{
+    contourColor_ = std::move( val );
 }
 
 }

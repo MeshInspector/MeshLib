@@ -38,7 +38,7 @@ void ImGuiImage::bind_()
         texture_.pixels );
 }
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 MarkedVoxelSlice::MarkedVoxelSlice( const ObjectVoxels& voxels )
 {
     grid_ = voxels.grid();
@@ -52,7 +52,7 @@ void MarkedVoxelSlice::forceUpdate()
         return;
 
     auto dimX = dims_.x;
-    auto dimXY = dimX * dims_.y;
+    auto dimXY = dimX * size_t( dims_.y );
 
     auto activeDims = params_.activeBox.size();
 

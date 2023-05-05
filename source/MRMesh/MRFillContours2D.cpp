@@ -1,5 +1,4 @@
 #include "MRFillContours2D.h"
-#include <limits>
 #include "MRMesh.h"
 #include "MRVector2.h"
 #include "MR2DContoursTriangulation.h"
@@ -8,20 +7,74 @@
 #include "MRAffineXf3.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRTimer.h"
+#include "MRRegionBoundary.h"
+#include "MRUVSphere.h"
+#include "MRMeshTrimWithPlane.h"
+#include "MRPlane3.h"
+#include "MRGTest.h"
+#include <limits>
 
 namespace MR
 {
 
-bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
+class FromOxyPlaneCalculator
+{
+public:
+    void addLineSegm( const Vector3d & a, const Vector3d & b )
+    {
+        sumPts_ += a;
+        sumPts_ += b;
+        numPts_ += 2;
+        sumCross_ += cross( a, b );
+    }
+    void addLineSegm( const Vector3f & a, const Vector3f & b )
+    {
+        addLineSegm( Vector3d( a ), Vector3d( b ) );
+    }
+    AffineXf3d getXf() const
+    {
+        if ( numPts_ <= 0 )
+            return {};
+        auto planeNormal = sumCross_.normalized();
+        auto center = sumPts_ / double( numPts_ );
+        return { Matrix3d::rotation( Vector3d::plusZ(), planeNormal ), center };
+    }
+
+private:
+    Vector3d sumPts_;
+    Vector3d sumCross_;
+    int numPts_ = 0;
+};
+
+AffineXf3f getXfFromOxyPlane( const Mesh& mesh, const std::vector<EdgePath>& paths )
+{
+    FromOxyPlaneCalculator c;
+    for ( const auto& path : paths )
+    {
+        for ( const auto& edge : path )
+            c.addLineSegm( mesh.orgPnt( edge ), mesh.destPnt( edge ) );
+    }
+    return AffineXf3f( c.getXf() );
+}
+
+AffineXf3f getXfFromOxyPlane( const Contours3f& contours )
+{
+    FromOxyPlaneCalculator c;
+    for ( const auto& contour : contours )
+    {
+        for ( int i = 0; i + 1 < contour.size(); ++i )
+            c.addLineSegm( contour[i], contour[i + 1] );
+    }
+    return AffineXf3f( c.getXf() );
+}
+
+VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
 {
     MR_TIMER
     // check input
     assert( !holeRepresentativeEdges.empty() );
     if ( holeRepresentativeEdges.empty() )
-    {
-        spdlog::warn( "fillContours2D: No hole edges are given" );
-        return false;
-    }
+        return tl::make_unexpected( "No hole edges are given" );
 
     // reorder to make edges ring with hole on left side
     bool badEdge = false;
@@ -36,50 +89,41 @@ bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEd
     }
     assert( !badEdge );
     if ( badEdge )
-    {
-        spdlog::warn( "fillContours2D: Some hole edges have left face" );
-        return false;
-    }
+        return tl::make_unexpected( "Some hole edges have left face" );
 
     // make border rings
-    const auto paths = meshTopology.getLeftRings( holeRepresentativeEdges );
-
-    // calculate plane normal
-    Vector3f planeNormal;
-    for ( const auto& path : paths )
-    {
-        for ( const auto& edge : path )
-            planeNormal += cross( mesh.orgPnt( edge ), mesh.destPnt( edge ) );
-    }
-    planeNormal = planeNormal.normalized();
+    std::vector<EdgeLoop> paths( holeRepresentativeEdges.size() );
+    for ( int i = 0; i < paths.size(); ++i )
+        paths[i] = trackRightBoundaryLoop( meshTopology, holeRepresentativeEdges[i] );
 
     // find transformation from world to plane space and back
-    const auto planeXf = AffineXf3f( Matrix3f::rotation( Vector3f::plusZ(), planeNormal ), mesh.orgPnt( paths[0][0] ) );
+    const auto planeXf = getXfFromOxyPlane( mesh, paths );
     const auto planeXfInv = planeXf.inverse();
 
     // make contours2D (on plane) from border rings (in world)
     Contours2f contours2f;
+    contours2f.reserve( paths.size() );
     for ( const auto& path : paths )
     {
-        Contour2f contour;
+        contours2f.emplace_back();
+        auto& contour = contours2f.back();
+        contour.reserve( path.size() + 1 );
         for ( const auto& edge : path )
         {
             const auto localPoint = planeXfInv( mesh.orgPnt( edge ) );
-            contour.push_back( Vector2f( localPoint.x, localPoint.y ) );
+            contour.emplace_back( Vector2f( localPoint.x, localPoint.y ) );
         }
-        contour.push_back( contour[0] );
-        contours2f.push_back( contour );
+        contour.emplace_back( contour.front() );
     }
 
+    auto holeVertIds = std::make_unique<PlanarTriangulation::HolesVertIds>(
+        PlanarTriangulation::findHoleVertIdsByHoleEdges( mesh.topology, paths ) );
     // make patch surface
-    auto fillResult = PlanarTriangulation::triangulateDisjointContours( contours2f, false );
+    auto fillResult = PlanarTriangulation::triangulateDisjointContours( contours2f, holeVertIds.get() );
+    holeVertIds.reset();
     if ( !fillResult )
-    {
-        spdlog::warn( "fillContours2D: Cant triangulate contours" );
-        return false;
-    }
+        return tl::make_unexpected( "Cannot triangulate contours with self-intersections" );
     Mesh& patchMesh = *fillResult;
-    const auto holes = patchMesh.topology.findHoleRepresentiveEdges();
 
     // transform patch surface from plane to world space
     auto& patchMeshPoints = patchMesh.points;
@@ -87,35 +131,21 @@ bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEd
         point = planeXf( point );
 
     // make 
-    std::vector<EdgePath> newPaths( holes.size() );
-    for ( int i = 0; i < newPaths.size(); ++i )
-        newPaths[i] = patchMesh.topology.getLeftRing( holes[i] );
+    auto newPaths = findLeftBoundary( patchMesh.topology );
 
     // check that patch surface borders size equal original mesh borders size
     if ( paths.size() != newPaths.size() )
-    {
-        spdlog::warn( "fillContours2D: Patch surface borders size different from original mesh borders size" );
-        return false;
-    }
+        return tl::make_unexpected( "Patch surface borders size different from original mesh borders size" );
+
+    // need to rotate to min edge to be consistent with original paths (for addPartByMask)
+    for ( auto& newPath : newPaths )
+        std::rotate( newPath.begin(), std::min_element( newPath.begin(), newPath.end() ), newPath.end() );
+    std::sort( newPaths.begin(), newPaths.end(), [] ( const EdgeLoop& l, const EdgeLoop& r ) { return l[0] < r[0]; } );
+
     for ( int i = 0; i < paths.size(); ++i )
     {
         if ( paths[i].size() != newPaths[i].size() )
-        {
-            spdlog::warn( "fillContours2D: Patch surface borders size different from original mesh borders size" );
-            return false;
-        }
-    }
-
-    // reorder to make edges ring with hole on right side
-    for ( int i = 0; i < newPaths.size(); ++i )
-    {
-        auto& newPath = newPaths[i];
-        if ( !patchMesh.topology.right( newPath[0] ) )
-            continue;
-        
-        newPath.push_back( newPath[0] );
-        reverse( newPath );
-        newPath.pop_back();
+            return tl::make_unexpected( "Patch surface borders size different from original mesh borders size" );
     }
 
     // move patch surface border points to original position (according original mesh)
@@ -131,7 +161,26 @@ bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEd
     
     // add patch surface to original mesh
     mesh.addPartByMask( patchMesh, patchMesh.topology.getValidFaces(), false, paths, newPaths );
-    return true;
+    return {};
+}
+
+TEST( MRMesh, fillContours2D )
+{
+    Mesh sphereBig = makeUVSphere( 1.0f, 32, 32 );
+    Mesh sphereSmall = makeUVSphere( 0.7f, 16, 16 );
+
+    sphereSmall.topology.flipOrientation();
+    sphereBig.addPart( std::move( sphereSmall ) );
+
+    trimWithPlane( sphereBig, Plane3f::fromDirAndPt( Vector3f::plusZ(), Vector3f() ) );
+    sphereBig.pack();
+
+    auto firstNewFace = sphereBig.topology.lastValidFace() + 1;
+    fillContours2D( sphereBig, sphereBig.topology.findHoleRepresentiveEdges() );
+    for ( FaceId f = firstNewFace; f <= sphereBig.topology.lastValidFace(); ++f )
+    {   
+        EXPECT_TRUE( std::abs( dot( sphereBig.dirDblArea( f ).normalized(), Vector3f::minusZ() ) - 1.0f ) < std::numeric_limits<float>::epsilon() );
+    }
 }
 
 }

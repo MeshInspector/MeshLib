@@ -13,6 +13,8 @@
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRMesh/MRSystem.h"
 #include "MRViewer/MRSpaceMouseHandlerWindows.h"
+#include "MRPch/MRSpdlog.h"
+#include "MRViewer/MRUIStyle.h"
 
 namespace MR
 {
@@ -32,7 +34,7 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
         }
     } );
 #ifndef __EMSCRIPTEN__
-    CommandLoop::appendCommandAfterWindowAppear( [] ()
+    CommandLoop::appendCommand( [&] ()
     {
         auto& viewer = getViewerInstance();
         int samples = 0;
@@ -42,35 +44,37 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
         {
             int realSamples;
             GL_EXEC( glGetIntegerv( GL_SAMPLES, &realSamples ) );
-            if ( realSamples != samples )
-            {
-                if ( auto menu = getViewerInstance().getMenuPlugin() )
-                    menu->showErrorModal( "GPU multisampling settings override application value." );
-            }
+            gpuOverridesMSAA_ = ( realSamples != samples );
         }
-    } );
+    }, CommandLoop::StartPosition::AfterWindowAppear );
 #endif
 }
 
 void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 {
-    auto menuWidth = 300.0f * menuScaling;
+    auto menuWidth = 380.0f * menuScaling;
     if ( !ImGui::BeginCustomStatePlugin( plugin_name.c_str(), &dialogIsOpen_, { .collapsed = &dialogIsCollapsed_, .width = menuWidth, .menuScaling = menuScaling } ) )
         return;
 
-    if ( RibbonButtonDrawer::GradientButton( "Toolbar Customize", ImVec2( -1, 0 ) ) )
-        ImGui::OpenPopup( "Toolbar Customize" );
-    drawDialogQuickAccessSettings_( menuScaling );
 
-    if ( RibbonButtonDrawer::GradientButton( "Scene Mouse Controls", ImVec2( -1, 0 ) ) )
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, MR::StyleConsts::pluginItemSpacing );
+
+    auto& style = ImGui::GetStyle();
+    const float btnHalfSizeX = ( menuWidth - style.WindowPadding.x * 2 - style.ItemSpacing.x ) / 2.f;
+
+    if ( UI::button( "Toolbar Customize", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu_ )
+        ribbonMenu_->openToolbarCustomize();
+
+    ImGui::SameLine();
+    if ( UI::button( "Scene Mouse Controls", Vector2f( btnHalfSizeX, 0 ) ) )
         ImGui::OpenPopup( "Scene Mouse Controls" );
     drawMouseSceneControlsSettings_( menuScaling );
 
-    if ( RibbonButtonDrawer::GradientButton( "Show Hotkeys", ImVec2( -1, 0 ) ) && ribbonMenu_ )
-    {
+    if ( UI::button( "Show Hotkeys", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu_ )
         ribbonMenu_->setShowShortcuts( true );
-    }
-    if ( RibbonButtonDrawer::GradientButton( "Spacemouse Settings", ImVec2( -1, 0 ) ) )
+
+    ImGui::SameLine();
+    if ( UI::button( "Spacemouse Settings", Vector2f( btnHalfSizeX, 0 ) ) )
     {
         auto& viewerRef = getViewerInstance();
         spaceMouseParams_ = viewerRef.spaceMouseController.getParams();
@@ -88,36 +92,40 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
     const auto& viewportParameters = viewer->viewport().getParameters();
     // Viewing options
-    if ( RibbonButtonDrawer::CustomCollapsingHeader( "Current viewport options", ImGuiTreeNodeFlags_DefaultOpen ) )
+    if ( RibbonButtonDrawer::CustomCollapsingHeader( "Current Viewport Options", ImGuiTreeNodeFlags_DefaultOpen ) )
     {
-        ImGui::Text( "Current viewport: %d", viewer->viewport().id.value() );
-
-        ImGui::PushItemWidth( 80 * menuScaling );
-        bool showGlobalBasis = viewer->globalBasisAxes->isVisible( viewer->viewport().id );
-        RibbonButtonDrawer::GradientCheckbox( "Show Global Basis", &showGlobalBasis );
-        viewer->viewport().showGlobalBasis( showGlobalBasis );
-
-        bool showRotCenter = viewer->rotationSphere->isVisible( viewer->viewport().id );
-        RibbonButtonDrawer::GradientCheckbox( "Show rotation center", &showRotCenter );
-        viewer->viewport().showRotationCenter( showRotCenter );
+        //ImGui::Text( "Current viewport: %d", viewer->viewport().id.value() );
 
         ImGui::SetNextItemWidth( 140.0f * menuScaling );
         auto rotMode = viewportParameters.rotationMode;
-        RibbonButtonDrawer::CustomCombo( "Rotation Mode", ( int* )&rotMode, { "Scene Center", "Pick / Scene Center", "Pick" } );
+        UI::combo( "Rotation Mode", ( int* )&rotMode, { "Scene Center", "Pick / Scene Center", "Pick" } );
         viewer->viewport().rotationCenterMode( rotMode );
 
+        ImGui::PushItemWidth( 80 * menuScaling );
+
         bool showAxes = viewer->basisAxes->isVisible( viewer->viewport().id );
-        RibbonButtonDrawer::GradientCheckbox( "Show axes", &showAxes );
+        UI::checkbox( "Show Axes", &showAxes );
         viewer->viewport().showAxes( showAxes );
+
+        bool showGlobalBasis = viewer->globalBasisAxes->isVisible( viewer->viewport().id );
+        UI::checkbox( "Show Global Basis", &showGlobalBasis );
+        viewer->viewport().showGlobalBasis( showGlobalBasis );
+
+        bool showRotCenter = viewer->rotationSphere->isVisible( viewer->viewport().id );
+        UI::checkbox( "Show Rotation Center", &showRotCenter );
+        viewer->viewport().showRotationCenter( showRotCenter );
+
         ImGui::PopItemWidth();
 
-
+        
         bool needUpdateBackup = backgroundColor_.w == -1.0f;
         if ( needUpdateBackup )
             backgroundColor_ = Vector4f( viewportParameters.backgroundColor );
 
         auto backgroundColor = backgroundColor_;
-        if ( ImGui::ColorEdit4( "Background", &backgroundColor.x,
+
+        ImGui::SameLine( menuWidth * 0.5f );
+        if ( UI::colorEdit4( "Background Color", backgroundColor,
             ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel ) )
             backgroundColor_ = backgroundColor;
         else if ( !ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) )
@@ -125,7 +133,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         viewer->viewport().setBackgroundColor( Color( backgroundColor ) );
 
         if ( viewer->isDeveloperFeaturesEnabled() &&
-            RibbonButtonDrawer::CustomCollapsingHeader( "Clipping plane" ) )
+            RibbonButtonDrawer::CustomCollapsingHeader( "Clipping Plane" ) )
         {
             auto plane = viewportParameters.clippingPlane;
             auto showPlane = viewer->clippingPlaneObject->isVisible( viewer->viewport().id );
@@ -136,18 +144,17 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             ImGui::SetNextItemWidth( w / 2.0f );
             ImGui::DragFloatValid( "##ClippingPlaneD", &plane.d, 1e-3f );
             ImGui::SameLine();
-            RibbonButtonDrawer::GradientCheckbox( "Show##ClippingPlane", &showPlane );
+            UI::checkbox( "Show##ClippingPlane", &showPlane );
             viewer->viewport().setClippingPlane( plane );
             viewer->viewport().showClippingPlane( showPlane );
         }
     }
     ImGui::Separator();
-    if ( RibbonButtonDrawer::CustomCollapsingHeader( "Viewer options", ImGuiTreeNodeFlags_DefaultOpen ) )
+    if ( RibbonButtonDrawer::CustomCollapsingHeader( "Viewer Options", ImGuiTreeNodeFlags_DefaultOpen ) )
     {
-        ImGui::Separator();
-        ImGui::SetNextItemWidth( 125.0f * menuScaling );
+        ImGui::SetNextItemWidth( menuWidth * 0.5f );
         int selectedUserIdxBackup = selectedUserPreset_;
-        RibbonButtonDrawer::CustomCombo( "Color theme", &selectedUserPreset_, userThemesPresets_ );
+        UI::combo( "Color theme", &selectedUserPreset_, userThemesPresets_ );
         if ( selectedUserPreset_ != selectedUserIdxBackup )
         {
             if ( selectedUserPreset_ == 0 )
@@ -175,33 +182,31 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         auto item = RibbonSchemaHolder::schema().items.find( "Add custom theme" );
         if ( item != RibbonSchemaHolder::schema().items.end() )
         {
-            ImGui::SameLine();
-            if ( RibbonButtonDrawer::GradientButtonValid( "Add",
-                item->second.item->isAvailable(
-                    getAllObjectsInTree<const Object>( &SceneRoot::get(),
-                        ObjectSelectivityType::Selected ) ).empty(),
-                ImVec2( -1, ImGui::GetFrameHeight() ) ) )
+            ImGui::SameLine( menuWidth * 0.75f );
+            if ( UI::button( "Add",
+                item->second.item->isAvailable( getAllObjectsInTree<const Object>( &SceneRoot::get(), ObjectSelectivityType::Selected ) ).empty(),
+                Vector2f( menuWidth * 0.20f, 0 ) ) )
             {
                 item->second.item->action();
             }
-            ImGui::SetTooltipIfHovered( item->second.tooltip, menuScaling );
+            UI::setTooltipIfHovered( item->second.tooltip, menuScaling );
         }
 
         ImGui::Separator();
 
         if ( ribbonMenu_ )
         {
-            RibbonButtonDrawer::GradientCheckbox( "Make visible on select",
+            UI::checkbox( "Make Visible on Select",
                                                   std::bind( &RibbonMenu::getShowNewSelectedObjects, ribbonMenu_ ),
                                                   std::bind( &RibbonMenu::setShowNewSelectedObjects, ribbonMenu_, std::placeholders::_1 ) );
-            RibbonButtonDrawer::GradientCheckbox( "Deselect on hide",
+            UI::checkbox( "Deselect on Hide",
                                                   std::bind( &RibbonMenu::getDeselectNewHiddenObjects, ribbonMenu_ ),
                                                   std::bind( &RibbonMenu::setDeselectNewHiddenObjects, ribbonMenu_, std::placeholders::_1 ) );
         }
 
         bool flatShading = SceneSettings::get( SceneSettings::Type::MeshFlatShading );
         bool flatShadingBackup = flatShading;
-        RibbonButtonDrawer::GradientCheckbox( "Default shading flat", &flatShading );
+        UI::checkbox( "Default Shading Flat", &flatShading );
         if ( flatShadingBackup != flatShading )
             SceneSettings::set( SceneSettings::Type::MeshFlatShading, flatShading );
 
@@ -209,7 +214,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         {
             bool alphaSortBackUp = viewer->isAlphaSortEnabled();
             bool alphaBoxVal = alphaSortBackUp;
-            RibbonButtonDrawer::GradientCheckbox( "Alpha Sort", &alphaBoxVal );
+            UI::checkbox( "Alpha Sort", &alphaBoxVal );
             if ( alphaBoxVal != alphaSortBackUp )
                 viewer->enableAlphaSort( alphaBoxVal );
         }
@@ -218,23 +223,24 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             if ( maxSamples_ > 1 )
             {
                 auto backUpSamples = storedSamples_;
+                ImGui::Separator();
                 ImGui::Text( "Multisample anti-aliasing (MSAA):" );
-                ImGui::SetTooltipIfHovered( "The number of samples per pixel: more samples - better render quality but worse performance.", menuScaling );
+                UI::setTooltipIfHovered( "The number of samples per pixel: more samples - better render quality but worse performance.", menuScaling );
                 int counter = 0;
                 for ( int i = 0; i <= maxSamples_; i <<= 1 )
                 {
                     if ( i == 0 )
                     {
-                        RibbonButtonDrawer::GradientRadioButton( "Off", &storedSamples_, i );
+                        UI::radioButton( "Off", &storedSamples_, i );
                         ++i;
                     }
                     else
                     {
                         std::string label = 'x' + std::to_string( i );
-                        RibbonButtonDrawer::GradientRadioButton( label.c_str(), &storedSamples_, i );
+                        UI::radioButton( label.c_str(), &storedSamples_, i );
                     }
-                    if ( i << 1 <= maxSamples_ && ( ++counter ) % 3 != 0 )
-                        ImGui::SameLine( ( counter % 3 ) * menuScaling * 80.0f );
+                    if ( i << 1 <= maxSamples_ )
+                        ImGui::SameLine( ( ( ++counter ) * 70.f + style.WindowPadding.x ) * menuScaling );
                 }
                 if ( backUpSamples != storedSamples_ )
                 {
@@ -243,14 +249,16 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     
                     needReset_ = storedSamples_ != curSamples_;
                 }
+                if ( gpuOverridesMSAA_ )
+                    UI::transparentTextWrapped( "GPU multisampling settings override application value." );
                 if ( needReset_ )
-                    ImGui::TransparentTextWrapped( "Application requires restart to apply this change" );
+                    UI::transparentTextWrapped( "Application requires restart to apply this change" );
             }
         }
         if ( shadowGl_ && RibbonButtonDrawer::CustomCollapsingHeader( "Shadows" ) )
         {
             bool isEnableShadows = shadowGl_->isEnabled();
-            RibbonButtonDrawer::GradientCheckbox( "Enabled", &isEnableShadows );
+            UI::checkbox( "Enabled", &isEnableShadows );
             if ( isEnableShadows != shadowGl_->isEnabled() )
             {
                 CommandLoop::appendCommand( [shadowGl = shadowGl_.get(), isEnableShadows] ()
@@ -258,21 +266,27 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     shadowGl->enable( isEnableShadows );
                 } );
             }
-            ImGui::ColorEdit4( "Color", &shadowGl_->shadowColor.x,
+            ImGui::SameLine( menuWidth * 0.25f + style.WindowPadding.x + 2 * menuScaling );
+            UI::colorEdit4( "Shadow Color", shadowGl_->shadowColor,
                 ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel );
             
             const char* tooltipsShift[2] = {
                 "Shift along Ox-axis to the left",
                 "Shift along Oy-axis to the top"
             };
+            ImGui::PushItemWidth( menuWidth * 0.5f );
             ImGui::DragFloatValid2( "Shift", &shadowGl_->shadowShift.x, 0.4f, -200.0f, 200.0f, "%.3f px", 0, &tooltipsShift );
-            ImGui::DragFloatValid( "Blur radius", &shadowGl_->blurRadius, 0.2f, 0, 200, "%.3f px" );
+            ImGui::DragFloatValid( "Blur Radius", &shadowGl_->blurRadius, 0.2f, 0, 200, "%.3f px" );
             float quality = shadowGl_->getQuality();
             ImGui::DragFloatValid( "Quality", &quality, 0.001f, 0.0625f, 1.0f );
-            ImGui::SetTooltipIfHovered( "Blur texture downscaling coefficient", menuScaling );
+            ImGui::PopItemWidth();
+            UI::setTooltipIfHovered( "Blur texture downscaling coefficient", menuScaling );
             shadowGl_->setQuality( quality );
         }
     }
+
+    ImGui::PopStyleVar();
+
     ImGui::EndCustomStatePlugin();
 }
 
@@ -281,14 +295,22 @@ bool ViewerSettingsPlugin::onEnable_()
     backgroundColor_.w = -1.0f;
 
     ribbonMenu_ = getViewerInstance().getMenuPluginAs<RibbonMenu>().get();
-    if ( ribbonMenu_ )
-    {
-        schema_ = &RibbonSchemaHolder::schema();
-        quickAccessList_ = &ribbonMenu_->getQuickAccessList();
-        maxQuickAccessSize_ = ribbonMenu_->getQuickAccessMaxSize();
-    }
+    updateThemes();
 
+    return true;
+}
+
+bool ViewerSettingsPlugin::onDisable_()
+{
+    userThemesPresets_.clear();
+    ribbonMenu_ = nullptr;
+    return true;
+}
+
+void ViewerSettingsPlugin::updateThemes()
+{
     selectedUserPreset_ = -1;
+    userThemesPresets_.clear();
     userThemesPresets_.push_back( "Dark" );
     userThemesPresets_.push_back( "Light" );
     auto colorThemeType = ColorTheme::getThemeType();
@@ -312,7 +334,7 @@ bool ViewerSettingsPlugin::onEnable_()
             {
                 auto ext = entry.path().extension().u8string();
                 for ( auto& c : ext )
-                    c = ( char ) tolower( c );
+                    c = ( char )tolower( c );
 
                 if ( ext != u8".json" )
                     break;
@@ -324,19 +346,7 @@ bool ViewerSettingsPlugin::onEnable_()
             }
         }
     }
-
-    return true;
 }
-
-bool ViewerSettingsPlugin::onDisable_()
-{
-    userThemesPresets_.clear();
-    schema_ = nullptr;
-    quickAccessList_ = nullptr;
-    ribbonMenu_ = nullptr;
-    return true;
-}
-
 
 void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
 {
@@ -376,13 +386,13 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
         ImGui::SetCursorPosY( posY + cGradientButtonFramePadding * scaling / 2.f );
         ImGui::Text( "%s", modeName.c_str() );
         ImGui::SameLine();
-        ImGui::SetCursorPosX( windowSize.x * 0.5f - 50.0f );
+        ImGui::SetCursorPosX( windowSize.x * 0.5f - 50.0f * scaling );
         ImGui::Text( "%s", ctrlStr.c_str() );
         ImGui::SameLine();
-        ImGui::SetCursorPosX( windowSize.x - 150.0f );
+        ImGui::SetCursorPosX( windowSize.x - 150.0f * scaling );
 
 		ImGui::SetCursorPosY( posY );
-        RibbonButtonDrawer::GradientButton( "Set other", ImVec2( -1, buttonHeight ) );
+        UI::button( "Set other", Vector2f( -1, buttonHeight ) );
         if ( ImGui::IsItemHovered() )
         {
             ImGui::BeginTooltip();
@@ -414,120 +424,6 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
     ImGui::DragFloatValid( "Scroll modifier", &viewer->scrollForce, 0.01f, 0.2f, 3.0f );
 
     ImGui::EndPopup();
-}
-
-void ViewerSettingsPlugin::drawDialogQuickAccessSettings_( float scaling )
-{
-    ImVec2 windowSize( 500 * scaling, 420 * scaling );
-    ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-    ImGui::SetNextWindowPos( center, ImGuiCond_Appearing, ImVec2( 0.5f, 0.5f ) );
-    ImGui::SetNextWindowSizeConstraints( ImVec2( windowSize.x, -1 ), ImVec2( windowSize.x, 0 ) );
-
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 3 * MR::cDefaultItemSpacing * scaling, 3 * MR::cDefaultItemSpacing * scaling ) );
-    if ( !ImGui::BeginModalNoAnimation( "Toolbar Customize", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
-    {
-        ImGui::PopStyleVar();
-        return;
-    }
-
-    if ( ImGui::ModalBigTitle( "Toolbar Customize", scaling ) )
-        ImGui::CloseCurrentPopup();
-
-    ImGui::Text( "%s", "Select icons to show in Toolbar" );
-
-    ImGui::SameLine();
-    auto& style = ImGui::GetStyle();
-    float textPosX = windowSize.x - ImGui::CalcTextSize( "Icons in Toolbar : 00/00" ).x - style.WindowPadding.x;
-    ImGui::SetCursorPosX( textPosX );
-    ImGui::Text( "Icons in Toolbar : %02d/%02d", int( quickAccessList_->size() ), maxQuickAccessSize_ );
-    
-    const float buttonHeight = cGradientButtonFramePadding * scaling + ImGui::CalcTextSize( "Reset to default" ).y;
-    const float height = ImGui::GetStyle().ItemSpacing.y + buttonHeight;
-
-    ImGui::BeginChild( "##QuickAccessSettingsList", ImVec2( -1, -height ), true );
-
-    drawQuickAccessList_();
-
-    ImGui::EndChild();
-
-    if ( RibbonButtonDrawer::GradientButton( "Reset to default", ImVec2( 0, buttonHeight ) ) )
-    {
-        auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
-        if ( ribbonMenu )
-            ribbonMenu->resetQuickAccessList();
-    }
-
-    ImGui::PopStyleVar();
-    ImGui::EndPopup();
-}
-
-void ViewerSettingsPlugin::drawQuickAccessList_()
-{
-    auto& tabsOrder = schema_->tabsOrder;
-    auto& tabsMap = schema_->tabsMap;
-    auto& groupsMap = schema_->groupsMap;
-    auto& quickAccessList = *quickAccessList_;
-
-    bool canAdd = int( quickAccessList.size() ) < maxQuickAccessSize_;
-
-    int quickAccessListIndex = 0;
-    for ( const auto& [tabName, tabPriority]  : tabsOrder )
-    {
-        if ( !ImGui::TreeNodeEx( tabName.c_str(), ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_DefaultOpen ) )
-            continue;
-        auto tabIt = tabsMap.find( tabName );
-        if ( tabIt == tabsMap.end() )
-            continue;
-        auto& tab = tabIt->second;
-        for ( auto& group : tab )
-        {
-            if ( !ImGui::TreeNodeEx( group.c_str(), ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_DefaultOpen ) )
-                continue;
-            auto itemsIt = groupsMap.find( tabName + group );
-            if ( itemsIt == groupsMap.end() )
-                continue;
-            auto& items = itemsIt->second;
-            for ( auto& item : items )
-            {
-                if ( item == "Quick Access Settings" )
-                    continue;
-                if ( quickAccessListIndex < quickAccessList.size() && quickAccessList[quickAccessListIndex] == item )
-                    ++quickAccessListIndex;
-
-                auto itemIt = std::find( quickAccessList.begin(), quickAccessList.end(), item );
-                bool itemInQA = itemIt != quickAccessList.end();
-
-                bool disabled = !canAdd && !itemInQA;
-                if ( disabled )
-                {
-                    ImGui::PushStyleColor( ImGuiCol_Text, Color::gray().getUInt32() );
-                    ImGui::PushStyleColor( ImGuiCol_FrameBgActive, ImGui::GetColorU32( ImGuiCol_FrameBg ) );
-                    ImGui::PushStyleColor( ImGuiCol_FrameBgHovered, ImGui::GetColorU32( ImGuiCol_FrameBg ) );
-                }
-
-                if ( RibbonButtonDrawer::GradientCheckbox( item.c_str(), &itemInQA ) )
-                {
-                    if ( itemInQA )
-                    {
-                        if ( canAdd )
-                            quickAccessList.emplace( quickAccessList.begin() + quickAccessListIndex, item );
-                        else
-                            itemInQA = false;
-                    }
-                    else
-                        quickAccessList.erase( itemIt );
-                }
-
-                if ( disabled )
-                    ImGui::PopStyleColor( 3 );
-
-
-            }
-            ImGui::TreePop();
-        }
-        ImGui::TreePop();
-    }
 }
 
 void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
@@ -567,7 +463,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
         ImGui::SameLine( windowSize.x * 0.78f );
         const float cursorPosY = ImGui::GetCursorPosY();
         ImGui::SetCursorPosY( cursorPosY + 3 );
-        changed = RibbonButtonDrawer::GradientCheckbox( ( std::string( "Inverse##" ) + label ).c_str(), &inverse ) || changed;
+        changed = UI::checkbox( ( std::string( "Inverse##" ) + label ).c_str(), &inverse ) || changed;
         if ( changed )
             value = valueAbs * ( inverse ? -1.f : 1.f );
         anyChanged = anyChanged || changed;
@@ -589,7 +485,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
 
 #ifdef _WIN32
     ImGui::NewLine();
-    if ( RibbonButtonDrawer::GradientCheckbox( "Zoom by mouse wheel", &activeMouseScrollZoom_ ) )
+    if ( UI::checkbox( "Zoom by mouse wheel", &activeMouseScrollZoom_ ) )
     {
         if ( auto spaceMouseHandler = getViewerInstance().getSpaceMouseHandler() )
         {
@@ -600,7 +496,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
             }
         }
     }
-    ImGui::SetTooltipIfHovered( "This mode is NOT recommended if you have 3Dconnexion driver installed, which sends mouse wheel fake events resulting in double reaction on SpaceMouse movement and camera tremble.", scaling );
+    UI::setTooltipIfHovered( "This mode is NOT recommended if you have 3Dconnexion driver installed, which sends mouse wheel fake events resulting in double reaction on SpaceMouse movement and camera tremble.", scaling );
 #endif
 
     if ( anyChanged )
@@ -622,7 +518,7 @@ void ViewerSettingsPlugin::drawModalExitButton_( float scaling )
     font->Scale = 0.6f;
     ImGui::PushFont( font );
     const float btnSize = 20 * scaling;
-    if ( RibbonButtonDrawer::GradientButton( "\xef\x80\x8d", ImVec2( btnSize , btnSize ) ) )
+    if ( UI::button( "\xef\x80\x8d", Vector2f( btnSize , btnSize ) ) )
         ImGui::CloseCurrentPopup();
     ImGui::PopFont();
     ImGui::SetCursorPos( oldCursorPos );

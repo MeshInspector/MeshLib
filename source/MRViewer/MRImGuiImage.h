@@ -42,7 +42,7 @@ private:
     void bind_();
 };
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 // Class for easy controlling slice with seeds marks
 class MarkedVoxelSlice : public ImGuiImage
 {
@@ -96,8 +96,8 @@ public:
 
 
     // Active plane (YZ, ZX or XY) controls, setters update texture
-    SlicePlain getActivePlane() const { return params_.activePlane; }
-    void setActivePlane( SlicePlain plane ) { params_.activePlane = plane; forceUpdate(); }
+    SlicePlane getActivePlane() const { return params_.activePlane; }
+    void setActivePlane( SlicePlane plane ) { params_.activePlane = plane; forceUpdate(); }
 
     const Vector3i& getActiveVoxel() const { return params_.activeVoxel; }
     void setActiveVoxel( const Vector3i& voxel ) { params_.activeVoxel = voxel; forceUpdate(); }
@@ -129,7 +129,7 @@ public:
         // Maximum dense to show white
         float max{0.0f};
         // Slice plane
-        SlicePlain activePlane{XY};
+        SlicePlane activePlane{XY};
     };
 
     // Get all parameters as one structure

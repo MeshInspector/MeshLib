@@ -15,7 +15,7 @@
 #include <windows.h>
 #endif
 
-#else
+#else //not Windows
 
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
@@ -25,10 +25,12 @@
 #else
 #include "MRPch/MRWasm.h"
 #ifndef __EMSCRIPTEN__
-#include <cpuid.h>
-#ifndef MRMESH_NO_CLIPBOARD
-#include <clip/clip.h>
-#endif
+  #ifndef __ARM_CPU__
+    #include <cpuid.h>
+  #endif
+  #ifndef MRMESH_NO_CLIPBOARD
+    #include <clip/clip.h>
+  #endif
 #endif
 #endif
 #include <pthread.h>
@@ -208,14 +210,14 @@ std::filesystem::path getUserConfigDir()
 #endif
     filepath /= std::string( Config::instance().getAppName() );
     std::error_code ec;
-    if ( !std::filesystem::is_directory( filepath, ec ) )
+    if ( !std::filesystem::is_directory( filepath, ec ) || ec )
     {
         if ( ec )
-            spdlog::warn( "{} {}", MR::asString( MR::systemToUtf8( ec.message().c_str() ) ), utf8string( filepath ) );
+            spdlog::warn( "is {} a directory failed: {}", utf8string( filepath ), systemToUtf8( ec.message() ) );
         std::filesystem::create_directories( filepath, ec );
+        if ( ec )
+            spdlog::error( "create directories {} failed: {}", utf8string( filepath ), systemToUtf8( ec.message() ) );
     }
-    if ( ec )
-        spdlog::error( "{} {}", MR::asString( MR::systemToUtf8( ec.message().c_str() ) ), utf8string( filepath ) );
     return filepath;
 }
 
@@ -267,7 +269,7 @@ std::string GetClipboardText()
     // Try opening the clipboard
     if ( !OpenClipboard( nullptr ) )
     {
-        spdlog::error( "Could not open clipboard" );
+        spdlog::warn( "Could not open clipboard" );
         return "";
     }
 
@@ -275,7 +277,7 @@ std::string GetClipboardText()
     HANDLE hData = GetClipboardData( CF_TEXT );
     if ( !hData )
     {
-        spdlog::error( "Could not open clipboard" );
+        // no text data
         CloseClipboard();
         return "";
     }
@@ -284,7 +286,6 @@ std::string GetClipboardText()
     char* pszText = static_cast< char* >( GlobalLock( hData ) );
     if ( !pszText )
     {
-        spdlog::error( "Could not open clipboard" );
         CloseClipboard();
         return "";
     }
@@ -377,7 +378,7 @@ void OpenLink( const std::string& url )
 #ifdef __EMSCRIPTEN__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
-    EM_ASM( window.open( UTF8ToString( $0 ) ), url.c_str() );
+    EM_ASM( open_link( UTF8ToString( $0 ) ), url.c_str() );
 #pragma clang diagnostic pop
 #else
 #ifdef __APPLE__
@@ -407,15 +408,18 @@ std::string GetCpuId()
 {
 #ifdef __EMSCRIPTEN__
     return "Web Browser";
-#else
+#elif defined(__APPLE__)
     char CPUBrandString[0x40] = {};
-#if defined(__APPLE__)
     size_t size = sizeof(CPUBrandString);
     if (sysctlbyname("machdep.cpu.brand_string", &CPUBrandString, &size, NULL, 0) < 0)
         spdlog::error("Apple sysctlbyname failed!");
     return CPUBrandString;
+#elif defined(__ARM_CPU__)
+    // TODO: https://stackoverflow.com/questions/64864035/any-cpuid-like-instruction-in-armv8
+    return "ARM CPU";
 #else
     // https://stackoverflow.com/questions/850774/how-to-determine-the-hardware-cpu-and-ram-on-a-machine
+    char CPUBrandString[0x40] = {};
     int CPUInfo[4] = {-1};
     unsigned   nExIds, i = 0;
     // Get the information associated with each extended ID.
@@ -440,10 +444,29 @@ std::string GetCpuId()
         else if ( i == 0x80000004 )
             std::memcpy( CPUBrandString + 32, CPUInfo, sizeof( CPUInfo ) );
     }
-#endif
     auto res = std::string( CPUBrandString );
     return res.substr( res.find_first_not_of(' ') );
 #endif
+}
+
+std::string getOSNoSpaces()
+{
+    #ifdef _WIN32
+    return "Windows";
+    #else
+    #ifdef __EMSCRIPTEN__
+    return "Wasm";
+    #else
+    // get platform from cmake variables
+    #ifdef MR_PLATFORM
+    std::string platform = MR_PLATFORM;
+    std::replace(platform.begin(), platform.end(), ' ', '_');
+    return platform;
+    #else
+    return "UNKNOWN";
+    #endif
+    #endif
+    #endif
 }
 
 } //namespace MR

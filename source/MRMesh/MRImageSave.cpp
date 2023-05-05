@@ -4,8 +4,6 @@
 #include "MRStringConvert.h"
 #include <fstream>
 #include <filesystem>
-#include <tl/expected.hpp>
-#include <string>
 
 #ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_PNG
@@ -64,7 +62,7 @@ struct BMPHeader
 };
 #pragma pack(pop)
 
-tl::expected<void, std::string> toBmp( const Image& image, const std::filesystem::path& file )
+VoidOrErrStr toBmp( const Image& image, const std::filesystem::path& file )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -94,7 +92,7 @@ tl::expected<void, std::string> toBmp( const Image& image, const std::filesystem
 #ifndef __EMSCRIPTEN__
 
 #ifndef MRMESH_NO_PNG
-tl::expected<void, std::string> toPng( const Image& image, const std::filesystem::path& file )
+VoidOrErrStr toPng( const Image& image, const std::filesystem::path& file )
 {
     std::ofstream fp( file, std::ios::binary );
     if ( !fp )
@@ -134,7 +132,7 @@ static void flush_png( png_structp png_ptr )
     stream->flush();
 }
 
-tl::expected<void, std::string> toPng( const Image& image, std::ostream& os )
+VoidOrErrStr toPng( const Image& image, std::ostream& os )
 {
     WritePng png;
     if ( !png.pngPtr )
@@ -186,7 +184,7 @@ struct JpegWriter
     tjhandle tjInstance{ nullptr };
 };
 
-tl::expected<void, std::string> toJpeg( const Image& image, const std::filesystem::path& path )
+VoidOrErrStr toJpeg( const Image& image, const std::filesystem::path& path )
 {
     unsigned long jpegSize = 0;
     JpegWriter writer;
@@ -210,7 +208,7 @@ tl::expected<void, std::string> toJpeg( const Image& image, const std::filesyste
 #endif
 
 #ifndef MRMESH_NO_TIFF
-tl::expected<void, std::string> toTiff( const Image& image, const std::filesystem::path& path )
+VoidOrErrStr toTiff( const Image& image, const std::filesystem::path& path )
 {
     TIFF* tif = TIFFOpen( MR::utf8string( path ).c_str(), "w" );
     if ( !tif )
@@ -234,13 +232,13 @@ tl::expected<void, std::string> toTiff( const Image& image, const std::filesyste
 
 
 
-tl::expected<void, std::string> toAnySupportedFormat( const Image& image, const std::filesystem::path& file )
+VoidOrErrStr toAnySupportedFormat( const Image& image, const std::filesystem::path& file )
 {
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
 
-    tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    VoidOrErrStr res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".bmp" )
         res = MR::ImageSave::toBmp( image, file );
 #ifndef __EMSCRIPTEN__

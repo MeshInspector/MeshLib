@@ -115,6 +115,15 @@ public:
         return contourColor_.get( id );
     }
 
+    MRMESH_API const ViewportProperty<Color>& getSourcePointColorsForAllViewports() const;
+    MRMESH_API virtual void setSourcePointColorsForAllViewports( ViewportProperty<Color> val );
+
+    MRMESH_API const ViewportProperty<Color>& getLeaderLineColorsForAllViewports() const;
+    MRMESH_API virtual void setLeaderLineColorsForAllViewports( ViewportProperty<Color> val );
+
+    MRMESH_API const ViewportProperty<Color>& getContourColorsForAllViewports() const;
+    MRMESH_API virtual void setContourColorsForAllViewports( ViewportProperty<Color> val );
+
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectLabel( ProtectedStruct, const ObjectLabel& obj ) : ObjectLabel( obj )
     {}
@@ -167,7 +176,7 @@ protected:
 
     MRMESH_API virtual tl::expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const override;
 
-    MRMESH_API virtual tl::expected<void, std::string> deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
+    MRMESH_API virtual VoidOrErrStr deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 

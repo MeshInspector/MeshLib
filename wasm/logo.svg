@@ -1,0 +1,26 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <defs>
+        <path id="df7qpum39a" d="M0 6.942 13.75 0v38.183L0 45.125z"/>
+        <path id="jikkk7isjb" d="M48.75 0 62.5 6.942v38.183l-13.75-6.942z"/>
+        <path d="M13.75 0v2.138c0 9.564 7.89 17.257 17.509 17.257 9.522 0 17.337-7.55 17.491-16.982V0l13.5 6.816C59.982 21.814 46.974 33.25 31.259 33.25S2.519 21.814.25 6.816L13.75 0z" id="8zci8922xc"/>
+        <linearGradient x1="0%" y1="50%" x2="100%" y2="50%" id="cg41ejix1d">
+            <stop stop-color="#1B83FF" offset="0%"/>
+            <stop stop-color="#003779" offset="100%"/>
+        </linearGradient>
+    </defs>
+    <g fill="none" fill-rule="evenodd">
+        <g transform="translate(.75 9.5)">
+            <use fill="#1B83FF" xlink:href="#df7qpum39a"/>
+            <use fill="#2777D6" xlink:href="#df7qpum39a"/>
+        </g>
+        <g transform="translate(.75 9.5)">
+            <use fill="#1B83FF" xlink:href="#jikkk7isjb"/>
+            <use fill="#2777D6" xlink:href="#jikkk7isjb"/>
+        </g>
+        <path d="m49.5 9.5 13.421 6.778c-.794 9.726-5.824 19.328-13.421 24.472v-7.625h-35v7.625C6.974 35.612 1.939 25.867 1.113 16.261L14.5 9.5l-.003.248v3.758c0 9.577 8.08 17.496 17.628 17.496 9.452 0 17.132-7.61 17.284-17.055l.091-.47V9.5z" fill-opacity=".3" fill="#000" fill-rule="nonzero"/>
+        <g transform="translate(.75 9.5)">
+            <use fill="#1B83FF" xlink:href="#8zci8922xc"/>
+            <use fill="url(#cg41ejix1d)" xlink:href="#8zci8922xc"/>
+        </g>
+    </g>
+</svg>

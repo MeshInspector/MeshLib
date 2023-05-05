@@ -33,9 +33,8 @@ struct DeloneSettings
 /// if dihedral angles
 ///   1) between triangles ABD and DBC and
 ///   2) between triangles ABC and ACD
-/// differ more than on maxAngleChange (and triangles aspect ratio is no more than critical value) then also returns true to prevent flipping from 1) to 2)
-MRMESH_API bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange = NoAngleChangeLimit, double criticalTriAspectRatio = DBL_MAX );
-MRMESH_API bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float maxAngleChange = NoAngleChangeLimit, float criticalTriAspectRatio = FLT_MAX );
+/// differ more than on maxAngleChange then also returns true to prevent flipping from 1) to 2)
+MRMESH_API bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float maxAngleChange = NoAngleChangeLimit );
 
 /// consider quadrangle formed by left and right triangles of given edge, and
 /// checks whether this edge satisfies Delone's condition in the quadrangle;

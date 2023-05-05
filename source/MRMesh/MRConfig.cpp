@@ -58,15 +58,14 @@ void Config::reset( const std::filesystem::path& filePath )
         else
         {
             config_ = std::move( readRes.value() );
-            filePath_ = filePath;
         }
     }
     else
     {
         if ( loggerHandle_ )
             loggerHandle_->warn( "Failed to open json config file " + utf8string( Config::filePath_ ) );
-        filePath_ = filePath;
     }
+    filePath_ = filePath;
 }
 
 Config& Config::instance()
@@ -91,7 +90,7 @@ bool Config::getBool( const std::string& key, bool defaultValue ) const
         return config_[key].asBool();
     }
     if ( loggerHandle_ )
-        loggerHandle_->warn( "Key does not exist. False returned" );
+        loggerHandle_->warn( "Key {} does not exist, default value \"{}\" returned", key, defaultValue );
     return defaultValue;
 }
 void Config::setBool( const std::string& key, bool keyValue )
@@ -115,7 +114,8 @@ Color Config::getColor( const std::string& key, const Color& defaultValue ) cons
         return res;
     }
     if ( loggerHandle_ )
-        loggerHandle_->warn( "Key does not exist. False returned" );
+        loggerHandle_->warn( "Key {} does not exist, default value \"r:{} g:{} b:{} a:{}\" returned", key, 
+            defaultValue.r, defaultValue.g, defaultValue.b, defaultValue.a );
     return defaultValue;
 }
 void Config::setColor( const std::string& key, const Color& keyValue )
@@ -140,7 +140,7 @@ FileNamesStack Config::getFileStack( const std::string& key, const FileNamesStac
         return res;
     }
     if ( loggerHandle_ )
-        loggerHandle_->warn( "Key does not exist. False returned" );
+        loggerHandle_->warn( "Key {} does not exist, default value returned", key );
     return defaultValue;
 }
 void Config::setFileStack( const std::string& key, const FileNamesStack& keyValue )
@@ -184,58 +184,6 @@ Json::Value Config::getJsonValue( const std::string& key, const Json::Value& def
 void Config::setJsonValue( const std::string& key, const Json::Value& keyValue )
 {
     config_[key] = keyValue;
-}
-
-std::optional<std::vector<std::filesystem::path>> getPluginLibraryList()
-{
-    auto resDir = GetResourcesDirectory();
-    auto libsDir = GetLibsDirectory();
-    auto pluginLibraryList = resDir / "pluginLibraryList.json";
-    Json::Value pluginLibraryListJson;
-    std::error_code ec;
-    if ( std::filesystem::exists( pluginLibraryList, ec ) )
-    {
-        auto readRes = deserializeJsonValue( pluginLibraryList );
-        if ( !readRes.has_value() )
-            spdlog::error( readRes.error() );
-        else
-            pluginLibraryListJson = readRes.value();
-#if _WIN32
-        if ( pluginLibraryListJson["Windows"].isArray() )
-            pluginLibraryListJson = pluginLibraryListJson["Windows"];
-#else
-        if ( pluginLibraryListJson["Linux"].isArray() )
-            pluginLibraryListJson = pluginLibraryListJson["Linux"];
-#endif
-        else
-        {
-            spdlog::error( "Json has no Value for current OS!" );
-            return std::nullopt;
-        }
-    }
-    else
-        spdlog::warn( "Failed to open json config file " + utf8string( pluginLibraryList ) + " with " + ec.message() );
-
-    if ( pluginLibraryListJson.isArray() )
-    {
-        std::vector<std::filesystem::path> res;
-        for ( auto& v : pluginLibraryListJson )
-        {
-#if _WIN32
-            res.push_back( libsDir / ( v.asString() + ".dll" ) );
-#elif defined __APPLE__
-            res.push_back( libsDir / ( "lib" + v.asString() + ".dylib" ) );
-#else
-            res.push_back( libsDir / ( "lib" + v.asString() + ".so" ) );
-#endif
-        }
-        return res;
-    }
-    else
-    {
-        spdlog::warn( "Json file with viewer plugin library list was not found or corrupted. Empty list returned." );
-        return {};
-    }
 }
 
 } //namespace MR

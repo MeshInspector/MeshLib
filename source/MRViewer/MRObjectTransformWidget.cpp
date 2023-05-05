@@ -44,7 +44,7 @@ float findAngleDegOfPick( const Vector3f& center, const Vector3f& zeroPoint, con
     Plane3f plane2 = Plane3f::fromDirAndPt( cross( ray.d, center - ray.p ), center ).normalized();
     auto centerVp = vp.projectToViewportSpace( center );
     auto centerRay = vp.unprojectPixelRay( to2dim( centerVp ) );
-    bool parallel = std::abs( dot( centerRay.d.normalized(), norm.normalized() ) ) < 0.05f;
+    bool parallel = std::abs( dot( centerRay.d.normalized(), norm.normalized() ) ) < 0.25f;
     auto planeIntersectionLine = intersection( plane1, plane2 );
     auto radiusVec = ( zeroPoint - center );
     if ( parallel || !planeIntersectionLine )
@@ -104,12 +104,12 @@ void ObjectTransformWidget::create( const Box3f& box, const AffineXf3f& worldXf 
     if ( controlsRoot_ )
         reset();
 
-    center_ = box.center();
+    params_.center = box.center();
     boxDiagonal_ = box.size();
-    if ( radius_ < 0.0f )
-        radius_ = boxDiagonal_.length() * 0.5f;
-    if ( width_ < 0.0f )
-        width_ = radius_ / 40.0f;
+    if ( params_.radius < 0.0f )
+        params_.radius = boxDiagonal_.length() * 0.5f;
+    if ( params_.width < 0.0f )
+        params_.width = params_.radius / 40.0f;
     // make x - arrow
     controlsRoot_ = std::make_shared<Object>();
     controlsRoot_->setAncillary( true );
@@ -119,7 +119,7 @@ void ObjectTransformWidget::create( const Box3f& box, const AffineXf3f& worldXf 
     activeLine_ = std::make_shared<ObjectLines>();
     activeLine_->setVisible( false );
     activeLine_->setAncillary( true );
-    activeLine_->setFrontColor( Color::white(), false );
+    activeLine_->setFrontColor( params_.activeLineColor, false );
     activeLine_->setLineWidth( 3.0f );
     activeLine_->setVisualizeProperty( false, VisualizeMaskType::DepthTest, ViewportMask::all() );
 
@@ -151,6 +151,7 @@ void ObjectTransformWidget::reset()
     disconnect();
     xfValidatorConnection_.disconnect();
 
+    modesValidator_ = {};
     startModifyCallback_ = {};
     stopModifyCallback_ = {};
     addXfCallback_ = {};
@@ -204,8 +205,8 @@ void ObjectTransformWidget::reset()
 
     visibilityParent_.reset();
 
-    width_ = -1.0f;
-    radius_ = -1.0f;
+    params_.width = -1.0f;
+    params_.radius = -1.0f;
 
     axisTransformMode_ = AxisTranslation;
 
@@ -214,34 +215,42 @@ void ObjectTransformWidget::reset()
 
 void ObjectTransformWidget::setWidth( float width )
 {
-    if ( width_ == width )
+    if ( params_.width == width )
         return;
-    width_ = width;
-    if ( radius_ > 0.0f )
-        makeControls_();
+    params_.width = width;
+    makeControls_();
 }
 
 void ObjectTransformWidget::setRadius( float radius )
 {
-    if ( radius == radius_ )
+    if ( radius == params_.radius )
         return;
-    radius_ = radius;
-    if ( width_ > 0.0f )
-        makeControls_();
+    params_.radius = radius;
+    makeControls_();
 }
 
-void ObjectTransformWidget::setTransformMode( uint8_t mask )
+void ObjectTransformWidget::setCenter( const Vector3f& center )
+{
+    params_.center = center;
+    makeControls_();
+}
+
+void ObjectTransformWidget::setParams( const Params & params )
+{
+    params_ = params;
+    makeControls_();
+}
+
+void ObjectTransformWidget::setTransformMode( uint8_t mask, ViewportId vpId )
 {
     if ( !controlsRoot_ )
         return;
-    if ( transformModeMask_ == mask )
+    if ( transformModeMask_.get( vpId ) == mask )
         return;
 
-    transformModeMask_ = mask;
+    transformModeMask_.set( mask, vpId );
 
-    auto visMask = controlsRoot_->visibilityMask();
-    
-    updateVisualTransformMode_( transformModeMask_, visMask );
+    updateVisualTransformMode_( mask, vpId ? vpId : controlsRoot_->visibilityMask() );    
 }
 
 void ObjectTransformWidget::setControlsXf( const AffineXf3f& xf, ViewportId id )
@@ -252,6 +261,41 @@ void ObjectTransformWidget::setControlsXf( const AffineXf3f& xf, ViewportId id )
 AffineXf3f ObjectTransformWidget::getControlsXf( ViewportId id ) const
 {
     return controlsRoot_->xf( id );
+}
+
+ObjectTransformWidget::ModesValidator ObjectTransformWidget::ThresholdDotValidator( float thresholdDot )
+{
+    if ( thresholdDot <= 0.0f )
+        return {};
+    return [thresholdDot] ( const ObjectTransformWidget& widget, ViewportId vpId )
+    {
+        const auto& xf = widget.getControlsXf( vpId );
+        auto transformedCenter = xf( widget.getCenter() );
+        auto vpPoint = getViewerInstance().viewport( vpId ).projectToViewportSpace( transformedCenter );
+        auto ray = getViewerInstance().viewport( vpId ).unprojectPixelRay( Vector2f( vpPoint.x, vpPoint.y ) ).d.normalized();
+
+        uint8_t showMask = FullMask;
+
+        bool xHide = std::abs( dot( xf.A.col( 0 ).normalized(), ray ) ) < thresholdDot;
+        bool yHide = std::abs( dot( xf.A.col( 1 ).normalized(), ray ) ) < thresholdDot;
+        bool zHide = std::abs( dot( xf.A.col( 2 ).normalized(), ray ) ) < thresholdDot;
+
+        if ( xHide )
+            showMask &= ~RotX;
+        if ( yHide )
+            showMask &= ~RotY;
+        if ( zHide )
+            showMask &= ~RotZ;
+
+        if ( xHide && yHide )
+            showMask &= ~MoveZ;
+        if ( xHide && zHide )
+            showMask &= ~MoveY;
+        if ( yHide && zHide )
+            showMask &= ~MoveX;
+
+        return showMask;
+    };
 }
 
 void ObjectTransformWidget::followObjVisibility( const std::weak_ptr<Object>& obj )
@@ -315,33 +359,9 @@ void ObjectTransformWidget::preDraw_()
     auto vpmask = controlsRoot_->visibilityMask() & getViewerInstance().getPresentViewports();
     for ( auto vpId : vpmask )
     {
-        auto showMask = transformModeMask_;
-
-        if ( thresholdDot_ > 0.0f )
-        {
-            const auto& xf = controlsRoot_->xf( vpId );
-            auto transformedCenter = xf( center_ );
-            auto vpPoint = getViewerInstance().viewport( vpId ).projectToViewportSpace( transformedCenter );
-            auto ray = getViewerInstance().viewport( vpId ).unprojectPixelRay( Vector2f( vpPoint.x, vpPoint.y ) ).d.normalized();
-
-            bool xHide = std::abs( dot( xf.A.col( 0 ).normalized(), ray ) ) < thresholdDot_;
-            bool yHide = std::abs( dot( xf.A.col( 1 ).normalized(), ray ) ) < thresholdDot_;
-            bool zHide = std::abs( dot( xf.A.col( 2 ).normalized(), ray ) ) < thresholdDot_;
-
-            if ( xHide )
-                showMask &= ~RotX;
-            if ( yHide )
-                showMask &= ~RotY;
-            if ( zHide )
-                showMask &= ~RotZ;
-
-            if ( xHide && yHide )
-                showMask &= ~MoveZ;
-            if ( xHide && zHide )
-                showMask &= ~MoveY;
-            if ( yHide && zHide )
-                showMask &= ~MoveX;
-        }
+        auto showMask = transformModeMask_.get( vpId );
+        if ( modesValidator_ )
+            showMask &= modesValidator_( *this, vpId );
         updateVisualTransformMode_( showMask, vpId );
     }
 }
@@ -406,13 +426,16 @@ void ObjectTransformWidget::makeControls_()
     if ( !controlsRoot_ )
         return;
 
+    if ( params_.radius <= 0 || params_.width <= 0 )
+        return;
+
     for ( int i = Axis::X; i < Axis::Count; ++i )
     {
         if ( !translateControls_[i] )
         {
             translateControls_[i] = std::make_shared<ObjectMesh>();
             translateControls_[i]->setAncillary( true );
-            translateControls_[i]->setFrontColor( Color( baseAxis[i] ), false );
+            translateControls_[i]->setFrontColor( params_.translationColors[i], false );
             translateControls_[i]->setFlatShading( true );
             controlsRoot_->addChild( translateControls_[i] );
         }
@@ -420,26 +443,30 @@ void ObjectTransformWidget::makeControls_()
         {
             translateLines_[i] = std::make_shared<ObjectLines>();
             translateLines_[i]->setAncillary( true );
-            translateLines_[i]->setFrontColor( Color::black(), false );
+            translateLines_[i]->setFrontColor( params_.helperLineColor, false );
             translateLines_[i]->setVisualizeProperty( false, VisualizeMaskType::DepthTest, ViewportMask::all() );
             translateControls_[i]->addChild( translateLines_[i] );
         }
         auto transPolyline = std::make_shared<Polyline3>();
-        std::vector<Vector3f> translationPoints = { center_ - radius_ * 1.15f * baseAxis[i],center_ + radius_ * 1.3f * baseAxis[i] };
+        std::vector<Vector3f> translationPoints = 
+        { 
+            params_.center - params_.radius * params_.negativeLineExtension * baseAxis[i],
+            params_.center + params_.radius * params_.positiveLineExtension * baseAxis[i]
+        };
         transPolyline->addFromPoints( translationPoints.data(), translationPoints.size() );
         translateLines_[i]->setPolyline( transPolyline );
 
         translateControls_[i]->setMesh( std::make_shared<Mesh>(
-            makeArrow( translationPoints[0], translationPoints[1], width_, 1.35f * width_, 2.2f * width_ ) ) );
+            makeArrow( translationPoints[0], translationPoints[1], params_.width, params_.coneRadiusFactor * params_.width, params_.coneSizeFactor * params_.width ) ) );
 
-        auto xf = AffineXf3f::translation( center_ ) *
+        auto xf = AffineXf3f::translation( params_.center ) *
             AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), baseAxis[i] ) );
 
         if ( !rotateControls_[i] )
         {
             rotateControls_[i] = std::make_shared<ObjectMesh>();
             rotateControls_[i]->setAncillary( true );
-            rotateControls_[i]->setFrontColor( Color( baseAxis[i] ), false );
+            rotateControls_[i]->setFrontColor( params_.rotationColors[i], false );
             rotateControls_[i]->setFlatShading( true );
             controlsRoot_->addChild( rotateControls_[i] );
         }
@@ -447,13 +474,13 @@ void ObjectTransformWidget::makeControls_()
         {
             rotateLines_[i] = std::make_shared<ObjectLines>();
             rotateLines_[i]->setAncillary( true );
-            rotateLines_[i]->setFrontColor( Color::black(), false );
+            rotateLines_[i]->setFrontColor( params_.helperLineColor, false );
             rotateLines_[i]->setVisualizeProperty( false, VisualizeMaskType::DepthTest, ViewportMask::all() );
             rotateControls_[i]->addChild( rotateLines_[i] );
         }
         auto rotPolyline = std::make_shared<Polyline3>();
         std::vector<Vector3f> rotatePoints;
-        auto rotMesh = makeTorus( radius_, width_, 128, 32, &rotatePoints );
+        auto rotMesh = makeTorus( params_.radius, params_.width, 128, 32, &rotatePoints );
         for ( auto& p : rotatePoints )
             p = xf( p );
         rotPolyline->addFromPoints( rotatePoints.data(), rotatePoints.size(), true );
@@ -478,7 +505,7 @@ void ObjectTransformWidget::passiveMove_()
             auto color = currentObj_->getFrontColor( true );
             currentObj_->setFrontColor( color, false );
             assert( currentIndex >= 0 );
-            linesArray[currentIndex]->setFrontColor( Color::black(), false );
+            linesArray[currentIndex]->setFrontColor( params_.helperLineColor, false );
             linesArray[currentIndex]->setLineWidth( 1.0f );
         }
         currentObj_.reset();
@@ -608,7 +635,7 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
         xf( translateLines_[int( ax )]->polyline()->points.vec_[1] ),
         line.p, line.p + line.d
     );
-    auto centerTransformed = xf( center_ );
+    auto centerTransformed = xf( params_.center );
 
     if ( press )
     {
@@ -630,7 +657,7 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
     {
         auto scale = Vector3f::diagonal( 1.f );
         scale[int( ax )] = scaleFactor;
-        auto addXf = xf * AffineXf3f::xfAround( Matrix3f::scale( scale ), center_ ) * xf.inverse();
+        auto addXf = xf * AffineXf3f::xfAround( Matrix3f::scale( scale ), params_.center ) * xf.inverse();
         addXf_( addXf );
     }
     else
@@ -674,7 +701,7 @@ void ObjectTransformWidget::processRotation_( Axis ax, bool press )
     auto prevXf = controlsRoot_->xf( viewport.id );
     auto zeroPoint = prevXf( rotateLines_[int( ax )]->polyline()->points.vec_[0] );
     auto norm = prevXf.A * translateLines_[int( ax )]->polyline()->edgeVector( 0_e );
-    auto centerTransformed = prevXf( center_ );
+    auto centerTransformed = prevXf( params_.center );
     auto angle = findAngleDegOfPick( centerTransformed, zeroPoint, norm, line, viewport, viewportPoint );
 
     if ( press )
@@ -702,7 +729,7 @@ void ObjectTransformWidget::processRotation_( Axis ax, bool press )
     if ( accumAngle_ < 0.0f )
         step = -1;
 
-    auto radius = ( rotateLines_[0]->polyline()->points.vec_[0] - center_ ).length();
+    auto radius = ( rotateLines_[0]->polyline()->points.vec_[0] - params_.center ).length();
     Vector3f basisXTransfomed;
     Vector3f basisYTransfomed;
     if ( ax == X )
@@ -751,7 +778,7 @@ void ObjectTransformWidget::setControlsXf_( const AffineXf3f& xf, bool updateSca
     Vector3f invScaling{ 1.f / scaling.x.x, 1.f / scaling.y.y, 1.f / scaling.z.z };
 
     approvedChange_ = true;
-    controlsRoot_->setXf( scaledXf_.get( id ) * AffineXf3f::xfAround( Matrix3f::scale( invScaling ) * Matrix3f::scale( uniformScaling ), center_ ), id );
+    controlsRoot_->setXf( scaledXf_.get( id ) * AffineXf3f::xfAround( Matrix3f::scale( invScaling ) * Matrix3f::scale( uniformScaling ), params_.center ), id );
     approvedChange_ = false;
 }
 
@@ -777,11 +804,13 @@ void ObjectTransformWidget::setActiveLineFromPoints_( const std::vector<Vector3f
     activeLine_->setVisible( true, getViewerInstance().viewport().id );
     auto disableBlackLinesIfNeeded = [&] ( auto& obj )
     {
-        if ( !pickThrough_ || obj->getFrontColor( false ) == Color::black() )
+        if ( !pickThrough_ || obj->getFrontColor( false ) == params_.helperLineColor )
             obj->setVisible( false );
         else
         {
-            obj->setFrontColor( Color::gray(), false );
+            auto color = 0.5f * params_.helperLineColor + 0.5f * params_.activeLineColor;
+            color.a = 255;
+            obj->setFrontColor( color, false );
             obj->setLineWidth( 1.0f );
         }
     };

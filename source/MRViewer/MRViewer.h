@@ -21,6 +21,7 @@
 #include <boost/signals2/signal.hpp>
 #include <chrono>
 #include <cstdint>
+#include <mutex>
 #include <queue>
 
 struct GLFWwindow;
@@ -149,13 +150,10 @@ public:
 
     // Draw everything
     MRVIEWER_API void draw( bool force = false );
-#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
-    MRVIEWER_API void emsDraw( bool force = false );
-#endif
     // Draw 3d scene without UI
-    MRVIEWER_API void drawScene() const;
+    MRVIEWER_API void drawScene();
     // Setup viewports views
-    MRVIEWER_API void setupScene() const;
+    MRVIEWER_API void setupScene();
     // OpenGL context resize
     MRVIEWER_API void resize( int w, int h ); // explicitly set window size
     MRVIEWER_API void postResize( int w, int h ); // external resize due to user interaction
@@ -549,7 +547,7 @@ public:
             EventCallback cb;
         };
         // emplace event at the end of the queue
-        // replace last skipabl with new skipable
+        // replace last skipable with new skipable
         MRVIEWER_API void emplace( NamedEvent event, bool skipable = false );
         // execute all events in queue
         MRVIEWER_API void execute();
@@ -557,6 +555,8 @@ public:
         MRVIEWER_API void popByName( const std::string& name );
         MRVIEWER_API bool empty() const;
     private:
+        // important for wasm to be recursive
+        mutable std::recursive_mutex mutex_;
         std::queue<NamedEvent> queue_;
         bool lastSkipable_{false};
     } eventQueue;
@@ -583,7 +583,8 @@ private:
     static void emsMainInfiniteLoop();
 #endif
 #endif
-    void draw_( bool force );
+    // returns true if was swapped
+    bool draw_( bool force );
 
     // the minimum number of frames to be rendered even if the scene is unchanged
     int forceRedrawFrames_{ 0 };
@@ -628,12 +629,15 @@ private:
     bool tryCreateWindow_( bool fullscreen, int& width, int& height, const std::string& name, int major, int minor );
 
     bool needRedraw_() const;
-    void resetRedraw_() const;
+    void resetRedraw_();
 
     enum class VisualObjectRenderType
     {
         Opaque,
         Transparent,
+#ifndef __EMSCRIPTEN__
+        VolumeRendering,
+#endif
         NoDepthTest
     };
 

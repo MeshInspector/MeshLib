@@ -15,6 +15,7 @@ option(MRMESH_NO_JPEG "Disable JPEG support" OFF)
 option(MRMESH_NO_PNG "Disable PNG support" OFF)
 option(MRMESH_NO_TIFF "Disable TIFF support" OFF)
 option(MRMESH_NO_VOXEL "Disable voxel support" OFF)
+option(MRMESH_NO_GLTF "Disable glTF support" OFF)
 
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
@@ -101,6 +102,12 @@ IF(NOT MR_EMSCRIPTEN)
 		ELSE()
 			list(APPEND MRMESH_OPTIONAL_DEPENDENCIES openvdb)
 		ENDIF()
+	ENDIF()
+
+	IF(MRMESH_NO_GLTF)
+		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_GLTF)
+	ELSE()
+		# header-only library
 	ENDIF()
 ELSE()
 	target_compile_definitions(${PROJECT_NAME}

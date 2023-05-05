@@ -28,13 +28,11 @@ private:
     int vertPosSize_{ 0 };
     int vertNormalsSize_{ 0 };
     int vertColorsSize_{ 0 };
-    int vertUVSize_{ 0 };
     int lineIndicesSize_{ 0 };
 
     RenderBufferRef<Vector3f> loadVertPosBuffer_();
     RenderBufferRef<Vector3f> loadVertNormalsBuffer_();
     RenderBufferRef<Color> loadVertColorsBuffer_();
-    RenderBufferRef<UVCoord> loadVertUVBuffer_();
     RenderBufferRef<Vector2i> loadLineIndicesBuffer_();
 
     typedef unsigned int GLuint;
@@ -43,12 +41,10 @@ private:
     GLuint linesPickerArrayObjId_{ 0 };
 
     GlBuffer vertPosBuffer_;
-    GlBuffer vertUVBuffer_;
     GlBuffer vertNormalsBuffer_;
     GlBuffer vertColorsBuffer_;
     GlBuffer lineIndicesBuffer_;
 
-    GlTexture2 texture_;
     GlTexture2 pointsSelectionTex_;
     GlTexture2 lineColorsTex_;
 

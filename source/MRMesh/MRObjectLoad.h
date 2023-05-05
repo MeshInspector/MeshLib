@@ -23,6 +23,11 @@ MRMESH_API tl::expected<ObjectPoints, std::string> makeObjectPointsFromFile( con
 /// loads distance map from given file in new object
 MRMESH_API tl::expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
 
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+/// loads voxels from given file in new object
+MRMESH_API tl::expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
+#endif
+
 /**
  * \brief load object (mesh, lines, points, voxels or scene) from file
  * \param callback - callback function to set progress (for progress bar)
@@ -36,6 +41,9 @@ MRMESH_API bool isSupportedFileInSubfolders( const std::filesystem::path& folder
 
 /// loads meshes from given folder in new container object
 MRMESH_API tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::path& folder, ProgressCallback callback = {} );
+
+//tries to load scene from every format listed in SceneFormatFilters
+MRMESH_API tl::expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, ProgressCallback callback = {} );
 
 /// \}
 

@@ -316,7 +316,7 @@ FaceBitSet BooleanResultMapper::newFaces() const
     {
         for ( FaceId newF = 0_f; newF < map.cut2origin.size(); ++newF )
         {
-            if ( newF == map.cut2origin[newF] )
+            if ( newF == map.cut2origin[newF] || !map.cut2origin[newF].valid() )
                 continue;
             if ( auto resF = map.cut2newFaces[newF] )
                 res.autoResizeSet( resF );

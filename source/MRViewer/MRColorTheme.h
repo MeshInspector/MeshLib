@@ -87,6 +87,8 @@ public:
         ToolbarHovered,
         ToolbarClicked,
 
+        ToolbarCustomizeBg,
+
         Text,
         TextEnabled,
         TextDisabled,
@@ -108,6 +110,16 @@ public:
 
         GradientStart,
         GradientEnd,
+
+        GradBtnStart,
+        GradBtnHoverStart,
+        GradBtnActiveStart,
+        GradBtnDisableStart,
+        GradBtnEnd,
+        GradBtnHoverEnd,
+        GradBtnActiveEnd,
+        GradBtnDisableEnd,
+        GradBtnText,
 
         Count
     };

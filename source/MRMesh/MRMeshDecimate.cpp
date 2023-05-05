@@ -213,7 +213,9 @@ bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & sett
     {
         .maxError = settings.maxDeviation,
         .criticalTriAspectRatio = settings.criticalAspectRatio,
+        .tinyEdgeLength = settings.tinyEdgeLength,
         .stabilizer = settings.stabilizer,
+        .optimizeVertexPos = false, // this decreases probability of normal inversion near mesh degenerations
         .region = settings.region,
         .maxAngleChange = settings.maxAngleChange
     };
@@ -251,6 +253,8 @@ bool MeshDecimator::initializeQueue_()
     {
         // all region edges
         regionEdges_ = getIncidentEdges( mesh_.topology, *settings_.region );
+        if ( settings_.edgesToCollapse )
+            regionEdges_ &= *settings_.edgesToCollapse;
         if ( !settings_.touchBdVertices )
         {
             // exclude edges touching boundary
@@ -270,12 +274,15 @@ bool MeshDecimator::initializeQueue_()
         // exclude lone edges and edges touching boundary
         BitSetParallelForAll( regionEdges_, [&]( UndirectedEdgeId ue )
         {
-            if ( mesh_.topology.isLoneEdge( ue ) ||
+            if ( ( settings_.edgesToCollapse && !settings_.edgesToCollapse->test( ue ) ) ||
+                 mesh_.topology.isLoneEdge( ue ) ||
                  pBdVerts_->test( mesh_.topology.org( ue ) ) ||
                  pBdVerts_->test( mesh_.topology.dest( ue ) ) )
                 regionEdges_.reset( ue );
         } );
     }
+    else if ( settings_.edgesToCollapse )
+        regionEdges_ = *settings_.edgesToCollapse;
 
     EdgeMetricCalc calc( *this );
     parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( UndirectedEdgeId{0}, UndirectedEdgeId{mesh_.topology.undirectedEdgeSize()} ), calc );
@@ -366,21 +373,29 @@ void MeshDecimator::addInQueueIfMissing_( UndirectedEdgeId ue )
 {
     if ( !regionEdges_.empty() && !regionEdges_.test( ue ) )
         return;
-    if ( presentInQueue_.test_set( ue ) )
+    if ( presentInQueue_.test( ue ) )
         return;
     if ( auto qe = computeQueueElement_( ue ) )
+    {
         queue_.push( *qe );
+        presentInQueue_.set( ue );
+    }
 }
 
 VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos )
 {
     auto & topology = mesh_.topology;
-    // cannot collapse edge if its left and right faces share another edge
-    if ( auto pe = topology.prev( edgeToCollapse ); pe != edgeToCollapse && pe == topology.next( edgeToCollapse ) )
-        return {};
-    if ( auto pe = topology.prev( edgeToCollapse.sym() ); pe != edgeToCollapse.sym() && pe == topology.next( edgeToCollapse.sym() ) )
-        return {};
+    auto vl = topology.left( edgeToCollapse ).valid()  ? topology.dest( topology.next( edgeToCollapse ) ) : VertId{};
+    auto vr = topology.right( edgeToCollapse ).valid() ? topology.dest( topology.prev( edgeToCollapse ) ) : VertId{};
 
+    // cannot collapse internal edge if its left and right faces share another edge
+    if ( vl && vr )
+    {
+        if ( auto pe = topology.prev( edgeToCollapse ); pe != edgeToCollapse && pe == topology.next( edgeToCollapse ) )
+            return {};
+        if ( auto pe = topology.prev( edgeToCollapse.sym() ); pe != edgeToCollapse.sym() && pe == topology.next( edgeToCollapse.sym() ) )
+            return {};
+    }
     auto vo = topology.org( edgeToCollapse );
     auto vd = topology.dest( edgeToCollapse );
     auto po = mesh_.points[vo];
@@ -390,14 +405,15 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         // reverse the edge to have its origin in remaining fixed vertex
         edgeToCollapse = edgeToCollapse.sym();
         std::swap( vo, vd );
+        std::swap( vl, vr );
         std::swap( po, pd );
     }
-    auto vl = topology.left( edgeToCollapse ).valid()  ? topology.dest( topology.next( edgeToCollapse ) ) : VertId{};
-    auto vr = topology.right( edgeToCollapse ).valid() ? topology.dest( topology.prev( edgeToCollapse ) ) : VertId{};
 
     float maxOldAspectRatio = settings_.maxTriangleAspectRatio;
     float maxNewAspectRatio = 0;
-    float maxOldEdgeLenSq = std::max( sqr( settings_.maxEdgeLen ), ( po - pd ).lengthSq() );
+    const float edgeLenSq = ( po - pd ).lengthSq();
+    const bool tinyEdge = ( settings_.tinyEdgeLength >= 0 ) ? edgeLenSq <= sqr( settings_.tinyEdgeLength ) : false;
+    float maxOldEdgeLenSq = std::max( sqr( settings_.maxEdgeLen ), edgeLenSq );
     float maxNewEdgeLenSq = 0;
 
     originNeis_.clear();
@@ -459,14 +475,14 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( pd, pDest, pDest2 ) );
     }
 
-    if ( maxNewAspectRatio > maxOldAspectRatio && maxOldAspectRatio <= settings_.criticalTriAspectRatio )
+    if ( !tinyEdge && maxNewAspectRatio > maxOldAspectRatio && maxOldAspectRatio <= settings_.criticalTriAspectRatio )
         return {}; // new triangle aspect ratio would be larger than all of old triangle aspect ratios and larger than allowed in settings
 
     if ( maxNewEdgeLenSq > maxOldEdgeLenSq )
         return {}; // new edge would be longer than all of old edges and longer than allowed in settings
 
     // checks that all new normals are consistent (do not check for degenerate edges)
-    if ( ( po != pd ) || ( po != collapsePos ) )
+    if ( !tinyEdge && ( ( po != pd ) || ( po != collapsePos ) ) )
     {
         auto n = Vector3f{ sumDblArea_.normalized() };
         for ( const auto da : triDblAreas_ )
@@ -556,6 +572,7 @@ DecimateResult MeshDecimator::run()
             continue;
         }
 
+        presentInQueue_.reset( topQE.uedgeId() );
         if ( qe->x.flip )
         {
             EdgeId e = topQE.uedgeId();
@@ -571,7 +588,6 @@ DecimateResult MeshDecimator::run()
         else
         {
             // edge collapse
-            presentInQueue_.reset( topQE.uedgeId() );
             VertId collapseVert = collapse_( topQE.uedgeId(), collapsePos );
             if ( !collapseVert )
                 continue;
@@ -724,13 +740,22 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
             subSeqSettings.bdVerts = &parts[i].bdVerts;
             FaceBitSet myRegion = parts[i].faces;
             if ( settings.region )
+            {
                 myRegion &= *settings.region;
+                for ( auto f : myRegion )
+                    settings.region->reset( f );
+            }
             subSeqSettings.region = &myRegion;
             if ( reportProgressFromThisThread )
                 subSeqSettings.progressCallback = [reportThreadProgress]( float p ) { return reportThreadProgress( p ); };
             else if ( settings.progressCallback )
                 subSeqSettings.progressCallback = [&cancelled]( float ) { return !cancelled.load( std::memory_order_relaxed ); };
             parts[i].decimRes = decimateMeshSerial( mesh, subSeqSettings );
+            if ( settings.region )
+            {
+                for ( auto f : myRegion )
+                    settings.region->set( f );
+            }
 
             if ( parts[i].decimRes.cancelled || !reportThreadProgress( 1 ) )
                 break;
@@ -738,12 +763,10 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         }
     } );
 
-    if ( cancelled.load( std::memory_order_relaxed ) || ( settings.progressCallback && !settings.progressCallback( 0.85f ) ) )
-        return res;
-
+    // restore valids computation before return even if the operation was canceled
     mesh.topology.computeValidsFromEdges();
 
-    if ( settings.progressCallback && !settings.progressCallback( 0.9f ) )
+    if ( cancelled.load( std::memory_order_relaxed ) || ( settings.progressCallback && !settings.progressCallback( 0.9f ) ) )
         return res;
 
     DecimateSettings seqSettings = settings;
@@ -798,6 +821,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     decs.region = settings.region;
     decs.packMesh = settings.packMesh;
     decs.progressCallback = subprogress( settings.progressCallback, 0.5f, 1.0f );
+    decs.preCollapse = settings.preCollapse;
     decimateMesh( mesh, decs );
 
     if ( settings.progressCallback && !settings.progressCallback( 1.0f ) )

@@ -30,7 +30,6 @@ struct VisualizeMaskType
     enum Type : unsigned
     {
         Visibility,
-        Texture,
         InvertedNormals,
         Name,
         Labels,
@@ -104,31 +103,66 @@ public:
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
     bool showLabels() const { return getVisualizeProperty( unsigned( VisualizeMaskType::Labels ), ViewportMask::any() ); }
 
-    /// shows/hides name
+    /// shows/hides object name in all viewports
     void showName( bool on ) { return setVisualizeProperty( on, unsigned( VisualizeMaskType::Name ), ViewportMask::all() ); }
+    /// returns whether object name is shown in any viewport
     bool showName() const { return getVisualizeProperty( unsigned( VisualizeMaskType::Name ), ViewportMask::any() ); }
 
-    /// if selected returns color of object when it is selected
-    /// otherwise returns color of object when it is not selected
+    /// returns color of object when it is selected/not-selected (depending on argument) in given viewport
     MRMESH_API const Color& getFrontColor( bool selected = true, ViewportId viewportId = {} ) const;
-    /// if selected sets color of object when it is selected
-    /// otherwise sets color of object when it is not selected
+    /// sets color of object when it is selected/not-selected (depending on argument) in given viewport
     MRMESH_API virtual void setFrontColor( const Color& color, bool selected, ViewportId viewportId = {} );
 
+    /// returns color of object when it is selected/not-selected (depending on argument) in all viewports
+    MRMESH_API const ViewportProperty<Color>& getFrontColorsForAllViewports( bool selected = true ) const;
+    /// sets color of object when it is selected/not-selected (depending on argument) in all viewports
+    MRMESH_API virtual void setFrontColorsForAllViewports( ViewportProperty<Color> val, bool selected = true );
+
+    /// returns backward color of object in all viewports
+    MRMESH_API const ViewportProperty<Color>& getBackColorsForAllViewports() const;
+    /// sets backward color of object in all viewports
+    MRMESH_API virtual void setBackColorsForAllViewports( ViewportProperty<Color> val );
+
+    /// returns backward color of object in given viewport
     MRMESH_API const Color& getBackColor( ViewportId viewportId = {} ) const;
+    /// sets backward color of object in given viewport
     MRMESH_API virtual void setBackColor( const Color& color, ViewportId viewportId = {} );
+
+    /// returns global transparency alpha of object in given viewport
+    MRMESH_API const uint8_t& getGlobalAlpha( ViewportId viewportId = {} ) const;
+    /// sets global transparency alpha of object in given viewport
+    MRMESH_API virtual void setGlobalAlpha( uint8_t alpha, ViewportId viewportId = {} );
+
+    /// returns global transparency alpha of object in all viewports
+    MRMESH_API const ViewportProperty<uint8_t>& getGlobalAlphaForAllViewports() const;
+    /// sets global transparency alpha of object in all viewports
+    MRMESH_API virtual void setGlobalAlphaForAllViewports( ViewportProperty<uint8_t> val );
+
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
     MRMESH_API const Color& getLabelsColor( ViewportId viewportId = {} ) const;
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
     MRMESH_API virtual void setLabelsColor( const Color& color, ViewportId viewportId = {} );
 
-    MRMESH_API virtual void setDirtyFlags( uint32_t mask );
-    MRMESH_API const uint32_t& getDirtyFlags() const;
+    [[deprecated( "please use ObjectLabel mechanism instead" )]]
+    MRMESH_API const ViewportProperty<Color>& getLabelsColorsForAllViewports() const;
 
+    [[deprecated( "please use ObjectLabel mechanism instead" )]]
+    MRMESH_API virtual void setLabelsColorsForAllViewports( ViewportProperty<Color> val );
+
+    /// sets some dirty flags for the object (to force its visual update)
+    /// \param mask is a union of DirtyFlags flags
+    MRMESH_API virtual void setDirtyFlags( uint32_t mask );
+    /// returns current dirty flags for the object
+    MRMESH_API const uint32_t& getDirtyFlags() const;
+    /// resets all dirty flags (except for cache flags that will be reset automatically on cache update)
     MRMESH_API void resetDirty() const;
 
+    /// returns bounding box of this object in local coordinates
     MRMESH_API Box3f getBoundingBox() const;
-
+    /// returns bounding box of this object in given viewport in world coordinates,
+    /// to get world bounding box of the object with all child objects, please call Object::getWorldTreeBox method
+    MRMESH_API virtual Box3f getWorldBox( ViewportId = {} ) const override;
+    /// returns true if the object must be redrawn (due to dirty flags) in one of specified viewports
     virtual bool getRedrawFlag( ViewportMask viewportMask ) const override 
     {
         return Object::getRedrawFlag( viewportMask ) || 
@@ -136,26 +170,26 @@ public:
               ( dirty_ & ( ~( DIRTY_CACHES ) ) ) );
     }
 
-    /// Is object pickable by gl
-    bool isPickable( ViewportMask viewportMask = ViewportMask::all() ) const{return !(pickable_ & viewportMask).empty();}
-
-    /// Set object pickability by gl
+    /// whether the object can be picked (by mouse) in any of given viewports
+    bool isPickable( ViewportMask viewportMask = ViewportMask::any() ) const{return !(pickable_ & viewportMask).empty();}
+    /// sets the object as can/cannot be picked (by mouse) in all of given viewports
     MRMESH_API virtual void setPickable( bool on, ViewportMask viewportMask = ViewportMask::all() );
 
-    const MeshTexture& getTexture() const { return texture_; }
-    virtual void setTexture( MeshTexture texture ) { texture_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
-
-    const Vector<UVCoord, VertId>& getUVCoords() const { return uvCoordinates_; }
-    virtual void setUVCoords( Vector<UVCoord, VertId> uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
-
+    /// returns per-vertex colors of the object
     const Vector<Color, VertId>& getVertsColorMap() const { return vertsColorMap_; }
-
+    /// sets per-vertex colors of the object
     virtual void setVertsColorMap( Vector<Color, VertId> vertsColorMap ) { vertsColorMap_ = std::move( vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
+    /// swaps per-vertex colors of the object with given argument
+    virtual void updateVertsColorMap( Vector<Color, VertId>& vertsColorMap ) { std::swap( vertsColorMap_, vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
 
+    /// returns the current coloring mode of the object
     ColoringType getColoringType() const { return coloringType_; }
+    /// sets coloring mode of the object with given argument
     MRMESH_API virtual void setColoringType( ColoringType coloringType );
 
+    /// returns the current shininess visual value
     float getShininess() const { return shininess_; }
+    /// sets shininess visual value of the object with given argument
     virtual void setShininess( float shininess ) { shininess_ = shininess; needRedraw_ = true; }
 
     /// returns intensity of reflections
@@ -173,27 +207,30 @@ public:
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
     virtual void setLabels( std::vector<PositionedText> labels ) { labels_ = std::move( labels ); needRedraw_ = true; }
 
+    /// clones this object only, without its children,
+    /// making new object the owner of all copied resources
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
+    /// clones this object only, without its children,
+    /// making new object to share resources with this object
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
+    /// draws this object for visualization
     MRMESH_API virtual void render( const RenderParams& ) const;
+    /// draws this object for picking
     MRMESH_API virtual void renderForPicker( const BaseRenderParams&, unsigned ) const;
     // Binds all graphical data to GPU and allows to clear this object CPU representation to free memory
     // note that object without CPU model is not really valid and the model will be lost on serialization, also some caches will lost with CPU model
     MRMESH_API virtual void bindAllVisualization() const;
 
-    /// is object has visual representation (faces, edges, etc.)
+    /// is object has any visual representation (faces, edges, etc.)
     virtual bool hasVisualRepresentation() const { return false; }
-
-    /// returns bounding box of this object in world coordinates;
-    /// if you need bounding box in local coordinates please call getBoundingBox()
-    MRMESH_API virtual Box3f getWorldBox( ViewportId = {} ) const override;
 
     /// this ctor is public only for std::make_shared used inside clone()
     VisualObject( ProtectedStruct, const VisualObject& obj ) : VisualObject( obj ) {}
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
+    /// return several info lines that can better describe the object in the UI
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
 
 protected:
@@ -211,7 +248,6 @@ protected:
     /// Visualization options
     /// Each option is a binary mask specifying on which viewport each option is set.
     /// When using a single viewport, standard boolean can still be used for simplicity.
-    ViewportMask showTexture_;
     ViewportMask clipByPlane_;
     ViewportMask showLabels_;
     ViewportMask showName_;
@@ -232,10 +268,7 @@ protected:
     ViewportProperty<Color> selectedColor_;
     ViewportProperty<Color> unselectedColor_;
     ViewportProperty<Color> backFacesColor_;
-
-    /// Texture options
-    MeshTexture texture_;
-    Vector<UVCoord, VertId> uvCoordinates_; ///< vertices coordinates in texture
+    ViewportProperty<uint8_t> globalAlpha_{ 255 };
 
     std::vector<PositionedText> labels_;
 

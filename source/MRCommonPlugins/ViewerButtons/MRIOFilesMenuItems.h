@@ -17,7 +17,6 @@ public:
 private:
     virtual bool dragDrop_( const std::vector<std::filesystem::path>& paths ) override;
     void setupListUpdate_();
-    void loadFiles_( const std::vector<std::filesystem::path>& paths );
     bool checkPaths_( const std::vector<std::filesystem::path>& paths );
 
     boost::signals2::scoped_connection recentStoreConnection_;
@@ -32,12 +31,14 @@ public:
     virtual bool action() override;
 };
 
+#ifndef MRMESH_NO_DICOM
 class OpenDICOMsMenuItem : public RibbonMenuItem
 {
 public:
     OpenDICOMsMenuItem();
     virtual bool action() override;
 };
+#endif
 
 class SaveObjectMenuItem : public RibbonMenuItem, 
     public SceneStateOrCheck< 
@@ -45,8 +46,8 @@ class SaveObjectMenuItem : public RibbonMenuItem,
     , SceneStateExactCheck<1, ObjectLines>
     , SceneStateExactCheck<1, ObjectPoints>
     , SceneStateExactCheck<1, ObjectDistanceMap>
-#ifndef __EMSCRIPTEN__
-    , SceneStateExactCheck<1, ObjectVoxels> 
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+    , SceneStateExactCheck<1, ObjectVoxels, NoVisualRepresentationCheck>
 #endif
     >
 {

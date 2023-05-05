@@ -31,16 +31,24 @@ jobs:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   windows-build-test:
-    needs: [ prepare-image, versioning-and-release-url ]
+    needs: [ versioning-and-release-url ]
     uses: ./.github/workflows/build-test-windows.yml
     with:
-      image_tag: ${{needs.prepare-image.outputs.windows_image_tag}}
       version: ${{needs.versioning-and-release-url.outputs.version_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    secrets: inherit
 
   ubuntu20-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-ubuntu20.yml
+    with:
+      image_tag: ${{needs.prepare-image.outputs.image_tag}}
+      version: ${{needs.versioning-and-release-url.outputs.version_tag}}
+      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+
+  ubuntu-arm64-build-test:
+    needs: [ prepare-image, versioning-and-release-url ]
+    uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
       version: ${{needs.versioning-and-release-url.outputs.version_tag}}
@@ -54,9 +62,9 @@ jobs:
       version: ${{needs.versioning-and-release-url.outputs.version_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
-  fedora35-build-test:
+  fedora37-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
-    uses: ./.github/workflows/build-test-fedora35.yml
+    uses: ./.github/workflows/build-test-fedora37.yml
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
       version: ${{needs.versioning-and-release-url.outputs.version_tag}}
@@ -115,7 +123,8 @@ jobs:
     needs:
       - ubuntu20-build-test
       - ubuntu22-build-test
-      - fedora35-build-test
+      - ubuntu-arm64-build-test
+      - fedora37-build-test
       - macos-build-test
     uses: ./.github/workflows/test-distribution.yml
 
@@ -127,7 +136,8 @@ jobs:
       - update-win-version
       - ubuntu20-build-test
       - ubuntu22-build-test
-      - fedora35-build-test
+      - ubuntu-arm64-build-test
+      - fedora37-build-test
       - emscripten-build-test
       - macos-build-test
       - versioning-and-release-url
@@ -145,23 +155,28 @@ jobs:
 
       - name: Rename Distributives
         run: |
-          mv MeshLibDist.zip MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip
-          mv meshlib-ubuntu20-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu20-dev.deb
-          mv meshlib-ubuntu22-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu22-dev.deb
-          mv meshlib-dev.rpm meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm
-          mv meshlib_x64.pkg meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_x64.pkg
-          mv meshlib_arm.pkg meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_arm.pkg
+          mv MeshLibDist.zip MeshLibDist_${{needs.versioning-and-release-url.outputs.short_version}}.zip
+          mv meshlib-ubuntu20-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu20-dev.deb
+          mv meshlib-ubuntu22-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-dev.deb
+          mv meshlib-ubuntu20-arm64-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu20-arm64-dev.deb
+          mv meshlib-ubuntu22-arm64-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-arm64-dev.deb
+          mv meshlib-dev.rpm meshlib_${{needs.versioning-and-release-url.outputs.short_version}}-dev.rpm
+          mv meshlib_x64.pkg meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_x64.pkg
+        # mv meshlib_arm.pkg meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_arm.pkg
 
       - name: Upload Distributives
         run: |
           echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
           gh release upload ${{needs.versioning-and-release-url.outputs.version}} \
-                            MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip \
-                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu20-dev.deb \
-                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu22-dev.deb \
-                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm \
-                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_x64.pkg \
-                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_arm.pkg
+                            MeshLibDist_${{needs.versioning-and-release-url.outputs.short_version}}.zip \
+                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu20-dev.deb \
+                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-dev.deb \
+                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu20-arm64-dev.deb \
+                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-arm64-dev.deb \
+                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}-dev.rpm \
+                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_x64.pkg
+
+        # meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_arm.pkg
 
   update-artifacts:
     timeout-minutes: 15

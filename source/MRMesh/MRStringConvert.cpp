@@ -16,7 +16,7 @@ std::wstring utf8ToWide( const char* utf8 )
 }
 
 #ifdef _WIN32
-std::u8string Utf16ToUtf8( const std::wstring_view & utf16 )
+std::string Utf16ToUtf8( const std::wstring_view & utf16 )
 {
     std::string u8msg;
     u8msg.resize( 2 * utf16.size() + 1 );
@@ -27,16 +27,15 @@ std::u8string Utf16ToUtf8( const std::wstring_view & utf16 )
         return {};
     }
     u8msg.resize( res );
-    return asU8String( u8msg );
+    return u8msg;
 }
 #endif
 
-std::u8string systemToUtf8( const char* system )
+std::string systemToUtf8( const std::string & msg )
 {
-    if ( !system )
-        return {};
+    if ( msg.empty() )
+        return msg;
 #ifdef _WIN32
-    std::string msg = system;
     std::wstring wmsg;
     wmsg.resize( msg.size() + 1 );
     auto res = MultiByteToWideChar( CP_ACP, MB_PRECOMPOSED, msg.c_str(), -1, wmsg.data(), int( wmsg.size() ) );
@@ -47,7 +46,7 @@ std::u8string systemToUtf8( const char* system )
     }
     return Utf16ToUtf8( wmsg );
 #else
-    return asU8String( system );
+    return msg;
 #endif
 }
 
@@ -62,13 +61,30 @@ std::string bytesString( size_t size )
     return fmt::format( "{:.2f} Gb", size / float(1024*1024*1024) );
 }
 
+bool hasProhibitedChars( const std::string& line )
+{
+    for ( const auto& c : line )
+        if ( c == '?' || c == '*' || c == '/' || c == '\\' || c == '"' || c == '<' || c == '>' )
+            return true;
+    return false;
+}
+
+std::string replaceProhibitedChars( const std::string& line, char replacement /*= '_' */ )
+{
+    auto res = line;
+    for ( auto& c : res )
+        if ( c == '?' || c == '*' || c == '/' || c == '\\' || c == '"' || c == '<' || c == '>' )
+            c = replacement;
+    return res;
+}
+
 char * formatNoTrailingZeros( char * fmt, double v, int digitsAfterPoint, int precision )
 {
     assert( precision > 0 );
     assert( digitsAfterPoint >= 0 && digitsAfterPoint <= 9 );
     double cmp = 1;
     int digitsBeforePoint = 0;
-    while ( digitsBeforePoint < precision && v >= cmp )
+    while ( digitsBeforePoint < precision && std::abs( v ) >= cmp )
     {
         cmp *= 10;
         ++digitsBeforePoint;

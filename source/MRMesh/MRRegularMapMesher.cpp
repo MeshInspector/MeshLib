@@ -5,7 +5,7 @@
 namespace MR
 {
 
-tl::expected<void, std::string> RegularMapMesher::loadSurfacePC( const std::filesystem::path& path )
+VoidOrErrStr RegularMapMesher::loadSurfacePC( const std::filesystem::path& path )
 {
     auto res = PointsLoad::fromAnySupportedFormat( path );
     if ( !res.has_value() )
@@ -20,7 +20,7 @@ void RegularMapMesher::setSurfacePC( const std::shared_ptr<PointCloud>& surfaceP
     surfacePC_ = surfacePC;
 }
 
-tl::expected<void, std::string> RegularMapMesher::loadDirectionsPC( const std::filesystem::path& path )
+VoidOrErrStr RegularMapMesher::loadDirectionsPC( const std::filesystem::path& path )
 {
     auto res = PointsLoad::fromAnySupportedFormat( path );
     if ( !res.has_value() )
@@ -35,7 +35,7 @@ void RegularMapMesher::setDirectionsPC( const std::shared_ptr<PointCloud>& direc
     directionsPC_ = directionsPC;
 }
 
-tl::expected<void, std::string> RegularMapMesher::loadDistances( int width, int height, const std::filesystem::path& path )
+VoidOrErrStr RegularMapMesher::loadDistances( int width, int height, const std::filesystem::path& path )
 {
     width_ = width;
     height_ = height;

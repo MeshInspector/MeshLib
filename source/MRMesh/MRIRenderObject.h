@@ -9,21 +9,34 @@
 namespace MR
 {
 
+enum class DepthFuncion
+{
+    Never = 0,
+    Less = 1,
+    Equal = 2,
+    Greater = 4,
+    LessOrEqual = Less | Equal,
+    GreaterOrEqual = Greater | Equal,
+    NotEqual = Less | Greater,
+    Always = Less | Equal | Greater,
+    Default = 8 // usually "Less" but may differ for different object types
+};
+
 struct BaseRenderParams
 {
-    const float* viewMatrixPtr{ nullptr };  // pointer to view matrix
-    const float* modelMatrixPtr{ nullptr }; // pointer to model matrix
-    const float* projMatrixPtr{ nullptr };  // pointer to projection matrix
-    const float* normMatrixPtr{ nullptr };  // pointer to norm matrix (this is used to simplify lighting calculations)
+    const Matrix4f& viewMatrix;
+    const Matrix4f& modelMatrix;
+    const Matrix4f& projMatrix;
+    const Matrix4f* normMatrixPtr{ nullptr }; // optional normal matrix
     ViewportId viewportId;       // id of current viewport
     const Plane3f& clipPlane;    // viewport clip plane (it is not applied while object does not have clipping flag set)
     Vector4i viewport;           // viewport x0, y0, width, height
+    DepthFuncion depthFunction = DepthFuncion::Default;
 };
 
 struct RenderParams : BaseRenderParams
 {
     const Vector3f& lightPos; // position of light source
-    bool forceZBuffer{ false }; // if this flag is set, rewrite Z buffer anyway
     bool alphaSort{ false };    // if this flag is true shader for alpha sorting is used
 };
 

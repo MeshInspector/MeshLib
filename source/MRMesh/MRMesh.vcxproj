@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRChangeVertsColorMapAction.h" />
     <ClInclude Include="MRBooleanOperation.h" />
     <ClInclude Include="MRBuffer.h" />
     <ClInclude Include="MRChangePointCloudNormalsAction.h" />
@@ -51,14 +52,18 @@
     <ClInclude Include="MRDistanceMapLoad.h" />
     <ClInclude Include="MRDistanceMapParams.h" />
     <ClInclude Include="MRDistanceMapSave.h" />
+    <ClInclude Include="MREdgeMetric.h" />
     <ClInclude Include="MREdgePathsBuilder.h" />
     <ClInclude Include="MREmbeddedPython.h" />
+    <ClInclude Include="MRExpected.h" />
+    <ClInclude Include="MRFastWindingNumber.h" />
     <ClInclude Include="MRFile.h" />
     <ClInclude Include="MRFillContour.h" />
     <ClInclude Include="MRFaceFace.h" />
     <ClInclude Include="MRFillContourByGraphCut.h" />
     <ClInclude Include="MRFillContours2D.h" />
     <ClInclude Include="MRFloatGridComponents.h" />
+    <ClInclude Include="MRGridSettings.h" />
     <ClInclude Include="MRGTest.h" />
     <ClInclude Include="MRHash.h" />
     <ClInclude Include="MRHeapBytes.h" />
@@ -68,6 +73,7 @@
     <ClInclude Include="MRImage.h" />
     <ClInclude Include="MRImageLoad.h" />
     <ClInclude Include="MRImageSave.h" />
+    <ClInclude Include="MRPointsToMeshProjector.h" />
     <ClInclude Include="MRIntersection.h" />
     <ClInclude Include="MRIntersectionContour.h" />
     <ClInclude Include="MRIntersectionPrecomputes.h" />
@@ -79,6 +85,7 @@
     <ClInclude Include="MRLineObject.h" />
     <ClInclude Include="MRLineSegm.h" />
     <ClInclude Include="MRLineSegm3.h" />
+    <ClInclude Include="MRGltfSerializer.h" />
     <ClInclude Include="MRLog.h" />
     <ClInclude Include="MRMakeRigidXf.h" />
     <ClInclude Include="MRMatrix.h" />
@@ -98,6 +105,7 @@
     <ClInclude Include="MRObjectMeshHolder.h" />
     <ClInclude Include="MRMeshLoadObj.h" />
     <ClInclude Include="MRObjectPointsHolder.h" />
+    <ClInclude Include="MROpenVDBHelper.h" />
     <ClInclude Include="MROrder.h" />
     <ClInclude Include="MRPartialOffset.h" />
     <ClInclude Include="MRPartMapping.h" />
@@ -127,6 +135,8 @@
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
     <ClInclude Include="MRSceneSettings.h" />
+    <ClInclude Include="MRSharpenMarchingCubesMesh.h" />
+    <ClInclude Include="MRSignDetectionMode.h" />
     <ClInclude Include="MRSphere.h" />
     <ClInclude Include="MRSphereObject.h" />
     <ClInclude Include="MRString.h" />
@@ -228,6 +238,7 @@
     <ClInclude Include="MRVoxelPath.h" />
     <ClInclude Include="MRVisualObject.h" />
     <ClInclude Include="MRVolumeSegment.h" />
+    <ClInclude Include="MRVoxelsConversions.h" />
     <ClInclude Include="MRVoxelsLoad.h" />
     <ClInclude Include="MRMatrix3.h" />
     <ClInclude Include="MRMesh.h" />
@@ -277,6 +288,7 @@
     <ClInclude Include="MRRelaxParams.h" />
     <ClInclude Include="MRMatrix3Decompose.h" />
     <ClInclude Include="MRNoDefInit.h" />
+    <ClInclude Include="MRParallelFor.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -319,12 +331,14 @@
     <ClCompile Include="MRDistanceMapParams.cpp" />
     <ClCompile Include="MRDistanceMapSave.cpp" />
     <ClCompile Include="MRDistanceMapTests.cpp" />
+    <ClCompile Include="MREdgeMetric.cpp" />
     <ClCompile Include="MREdgePaths.cpp" />
     <ClCompile Include="MREmbeddedPython.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />
     <ClCompile Include="MRExpandShrink.cpp" />
     <ClCompile Include="MRExtractIsolines.cpp" />
     <ClCompile Include="MRExtractIsolinesTests.cpp" />
+    <ClCompile Include="MRFastWindingNumber.cpp" />
     <ClCompile Include="MRFile.cpp" />
     <ClCompile Include="MRFillContour.cpp" />
     <ClCompile Include="MRFillContourByGraphCut.cpp" />
@@ -343,11 +357,13 @@
     <ClCompile Include="MRIRenderObject.cpp" />
     <ClCompile Include="MRLine3.cpp" />
     <ClCompile Include="MRLineObject.cpp" />
+    <ClCompile Include="MRGltfSerializer.cpp" />
     <ClCompile Include="MRLog.cpp" />
     <ClCompile Include="MRMakeRigidXf.cpp" />
     <ClCompile Include="MRMeshBoolean.cpp" />
     <ClCompile Include="MRMeshBooleanFacade.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
+    <ClCompile Include="MRPointsToMeshProjector.cpp" />
     <ClCompile Include="MRMeshTrimWithPlane.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
     <ClCompile Include="MRMeshDecimateParallel.cpp" />
@@ -414,6 +430,7 @@
     <ClCompile Include="MRRestoringStreamsSink.cpp" />
     <ClCompile Include="MRSceneRoot.cpp" />
     <ClCompile Include="MRSceneSettings.cpp" />
+    <ClCompile Include="MRSharpenMarchingCubesMesh.cpp" />
     <ClCompile Include="MRSphere.cpp" />
     <ClCompile Include="MRSphereObject.cpp" />
     <ClCompile Include="MRString.cpp" />
@@ -446,6 +463,7 @@
     <ClCompile Include="MRSerializer.cpp" />
     <ClCompile Include="MRVisualObject.cpp" />
     <ClCompile Include="MRVolumeSegment.cpp" />
+    <ClCompile Include="MRVoxelsConversions.cpp" />
     <ClCompile Include="MRVoxelsLoad.cpp" />
     <ClCompile Include="MRMesh.cpp" />
     <ClCompile Include="MRAligningTransform.cpp" />
@@ -467,6 +485,7 @@
     <ClCompile Include="MRObject.cpp" />
     <ClCompile Include="MRObjectLoad.cpp" />
     <ClCompile Include="MRObjectVoxels.cpp" />
+    <ClCompile Include="MRVoxelsLoadGav.cpp" />
     <ClCompile Include="MRVoxelsSave.cpp" />
     <ClCompile Include="MRSymbolMesh.cpp" />
     <ClCompile Include="MRSystem.cpp" />
@@ -501,16 +520,15 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
+  <Import Project="$(ProjectDir)\..\platform.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>

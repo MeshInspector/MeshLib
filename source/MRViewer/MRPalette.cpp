@@ -218,7 +218,7 @@ void Palette::setZeroCentredLabels_()
         // push intermediate values
         while ( value < max )
         {
-            const float pos = 1.f - getUVcoord( value ).v;
+            const float pos = 1.f - getUVcoord( value ).y;
             if ( pos >= posMin && pos <= posMax )
                 labels_.push_back( Label( pos, getStringValue( value ) ) );
             value += step;
@@ -528,7 +528,7 @@ void Palette::updateCustomLabels_()
     labels_ = customLabels_;
     for ( auto& label : labels_ )
     {
-        label.value = 1.f - getUVcoord( label.value ).v;
+        label.value = 1.f - getUVcoord( label.value ).y;
     }
     sortLabels_();
 }
@@ -558,7 +558,7 @@ std::string Palette::getStringValue( float value )
     if ( needExp )
     {
         auto rangeDiff = std::abs( parameters_.ranges.back() - parameters_.ranges.front() );
-        needExp = rangeDiff > 1e4f || rangeDiff < 1e-2f;
+        needExp = rangeDiff != 0.0f && ( rangeDiff > 1e4f || rangeDiff < 1e-2f );
     }
     if ( needExp )
         return fmt::format( "{0: .2e}", value );
@@ -595,16 +595,16 @@ bool PalettePresets::loadPreset( const std::string& name, Palette& palette )
     {
         spdlog::warn( "PalettePresets: directory \"{}\" not found!", utf8string( path ) );
         if ( ec )
-            spdlog::warn( "PalettePresets: error: \"{}\"", ec.message() );
+            spdlog::warn( "PalettePresets: error: \"{}\"", systemToUtf8( ec.message() ) );
         return false;
     }
 
-    path /= name + ".json";
+    path /= asU8String( name ) + u8".json";
     if ( !std::filesystem::is_regular_file( path, ec ) )
     {
         spdlog::error( "PalettePresets: file \"{}\" not found!", utf8string( path ) );
         if ( ec )
-            spdlog::warn( "PalettePresets: error: \"{}\"", ec.message() );
+            spdlog::warn( "PalettePresets: error: \"{}\"", systemToUtf8( ec.message() ) );
         return false;
     }
 
@@ -618,7 +618,7 @@ bool PalettePresets::loadPreset( const std::string& name, Palette& palette )
     return palette.loadFromJson( res.value() );
 }
 
-void PalettePresets::savePreset( const std::string& name, const Palette& palette )
+VoidOrErrStr PalettePresets::savePreset( const std::string& name, const Palette& palette )
 {
     Json::Value root;
     palette.saveCurrentToJson( root );
@@ -629,22 +629,21 @@ void PalettePresets::savePreset( const std::string& name, const Palette& palette
     {
         spdlog::error( "PalettePresets: directory \"{}\" does not exist and cannot be created", utf8string( path ) );
         if ( ec )
-            spdlog::warn( "PalettePresets: error: \"{}\"", ec.message() );
-        return;
+            spdlog::warn( "PalettePresets: error: \"{}\"", systemToUtf8( ec.message() ) );
+        return tl::make_unexpected( "Cannot save preset with name: \"" + name + "\"" );
     }
 
-    path /= name + ".json";
+    path /= asU8String( name ) + u8".json";
 
     std::ofstream ofs( path );
     Json::StreamWriterBuilder builder;
     std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
     if ( !ofs || writer->write( root, &ofs ) != 0 )
-    {
-        spdlog::error( "PalettePresets: can't write file {}", utf8string( path ) );
-    }
+        return tl::make_unexpected( "Cannot save preset with name: \"" + name + "\"" );
     ofs.close();
 
     instance_().update_();
+    return {};
 }
 
 
@@ -669,7 +668,7 @@ void PalettePresets::update_()
     {
         spdlog::warn( "PalettePresets: directory \"{}\" not found", utf8string( userPalettesDir ) );
         if ( ec )
-            spdlog::warn( "PalettePresets: error: \"{}\"", ec.message() );
+            spdlog::warn( "PalettePresets: error: \"{}\"", systemToUtf8( ec.message() ) );
         return;
     }
 
@@ -688,7 +687,7 @@ void PalettePresets::update_()
         }
     }
     if ( ec )
-        spdlog::warn( "PalettePresets: error: \"{}\"", ec.message() );
+        spdlog::warn( "PalettePresets: error: \"{}\"", systemToUtf8( ec.message() ) );
 }
 
 PalettePresets& PalettePresets::instance_()

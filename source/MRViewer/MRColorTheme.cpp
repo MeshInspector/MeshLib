@@ -15,6 +15,7 @@
 #include "MRPch/MRWasm.h"
 #include "MRPch/MRSuppressWarning.h"
 #include "ImGuiMenu.h"
+#include "MRUIStyle.h"
 #include <imgui.h>
 #include <assert.h>
 #include <fstream>
@@ -185,6 +186,7 @@ void ColorTheme::apply()
         SceneColors::set( SceneColors::Type( i ), instance.sceneColors_[i] );
 
     RibbonButtonDrawer::InitGradientTexture();
+    UI::init();
 
     CommandLoop::appendCommand( [&] ()
     {
@@ -292,7 +294,7 @@ void ColorTheme::setupUserTheme( const std::string& themeName )
     spdlog::info( "Setup user color theme: {}", themeName );
     instance_().type_ = Type::User;
     instance_().themeName_ = themeName;
-    setupFromFile( getUserThemesDirectory() / ( themeName + ".json" ) );
+    setupFromFile( getUserThemesDirectory() / ( asU8String( themeName ) + u8".json" ) );
 }
 
 ColorTheme& ColorTheme::instance_()
@@ -324,6 +326,8 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
         "ToolbarHovered",
         "ToolbarClicked",
 
+        "ToolbarCustomizeBg",
+
         "Text",
         "TextEnabled",
         "TextDisabled",
@@ -341,7 +345,17 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
         "SelectedObjectText",
         "SelectedObjectFrame",
         "GradientStart",
-        "GradientEnd"
+        "GradientEnd",
+
+        "GradBtnStart",
+        "GradBtnHoverStart",
+        "GradBtnActiveStart",
+        "GradBtnDisableStart",
+        "GradBtnEnd",
+        "GradBtnHoverEnd",
+        "GradBtnActiveEnd",
+        "GradBtnDisableEnd",
+        "GradBtnText"
     };
     return colorNames[int( type )];
 }
@@ -406,8 +420,12 @@ void ColorTheme::resetImGuiStyle()
     style.Colors[ImGuiCol_FrameBg] = ImVec4( frameBg.x, frameBg.y, frameBg.z, frameBg.w );
     style.Colors[ImGuiCol_Header] = ImVec4( headerBg.x, headerBg.y, headerBg.z, headerBg.w );
     style.Colors[ImGuiCol_TextSelectedBg] = ImVec4( textSelBg.x, textSelBg.y, textSelBg.z, textSelBg.w );
+    style.Colors[ImGuiCol_ScrollbarBg] = ImVec4( 0, 0, 0, 0 );
 
+    style.ScrollbarSize = 8.0f;
+    style.ScrollbarRounding = 4.0f;
     style.FrameRounding = 5.0f;
+    style.GrabRounding = style.FrameRounding;
     style.FramePadding.y = 5.0f;
     style.ItemSpacing.y = 6.0f;
 

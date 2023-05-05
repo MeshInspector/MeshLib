@@ -24,7 +24,7 @@ const IOFilters Filters =
 #endif
 };
 
-tl::expected<void, std::string> toPly( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr*/, ProgressCallback callback )
+VoidOrErrStr toPly( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr*/, ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -33,7 +33,7 @@ tl::expected<void, std::string> toPly( const PointCloud& points, const std::file
     return toPly( points, out, colors, callback );
 }
 
-tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& out, const Vector<Color, VertId>* colors /*= nullptr*/, ProgressCallback callback )
+VoidOrErrStr toPly( const PointCloud& points, std::ostream& out, const Vector<Color, VertId>* colors /*= nullptr*/, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -86,7 +86,7 @@ tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& o
 }
 
 #ifndef MRMESH_NO_OPENCTM
-tl::expected<void, std::string> toCtm( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr */,
+VoidOrErrStr toCtm( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr */,
                                                   const CtmSavePointsOptions& options /*= {}*/, ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
@@ -96,7 +96,7 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, const std::file
     return toCtm( points, out, colors, options, callback );
 }
 
-tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& out, const Vector<Color, VertId>* colors /*= nullptr */,
+VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const Vector<Color, VertId>* colors /*= nullptr */,
                                                   const CtmSavePointsOptions& options /*= {}*/, ProgressCallback callback )
 {
     MR_TIMER;
@@ -209,14 +209,14 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& o
 }
 #endif
 
-tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr */,
+VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr */,
                                                       ProgressCallback callback )
 {
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
 
-    tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    VoidOrErrStr res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".ply" )
         res = MR::PointsSave::toPly( points, file, colors, callback );
 #ifndef MRMESH_NO_OPENCTM
@@ -225,14 +225,14 @@ tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, 
 #endif
     return res;
 }
-tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const Vector<Color, VertId>* colors /*= nullptr */,
+VoidOrErrStr toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const Vector<Color, VertId>* colors /*= nullptr */,
                                                       ProgressCallback callback )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    VoidOrErrStr res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".ply" )
         res = MR::PointsSave::toPly( points, out, colors, callback );
 #ifndef MRMESH_NO_OPENCTM

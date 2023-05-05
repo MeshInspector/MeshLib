@@ -5,6 +5,7 @@
 #include "MRMesh/MRMeshTexture.h"
 #include "MRMesh/MRColor.h"
 #include "MRPch/MRJson.h"
+#include "MRMesh/MRExpected.h"
 #include <imgui.h>
 #include <filesystem>
 
@@ -160,7 +161,7 @@ public:
     /// returns true if load was succeed
     MRVIEWER_API static bool loadPreset( const std::string& name, Palette& palette );
     /// saves given palette to preset with given name
-    MRVIEWER_API static void savePreset( const std::string& name, const Palette& palette );
+    MRVIEWER_API static VoidOrErrStr savePreset( const std::string& name, const Palette& palette );
     /// returns path to presets folder
     MRVIEWER_API static std::filesystem::path getPalettePresetsFolder();
 private:

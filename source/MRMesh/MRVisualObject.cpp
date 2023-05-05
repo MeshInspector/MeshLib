@@ -25,7 +25,6 @@ VisualObject::VisualObject()
 VisualObject::VisualObject( const VisualObject& other ):
     Object( other )
 {
-    showTexture_ = other.showTexture_;
     clipByPlane_ = other.clipByPlane_;
     showLabels_ = other.showLabels_;
     showName_ = other.showName_;
@@ -43,8 +42,6 @@ VisualObject::VisualObject( const VisualObject& other ):
     unselectedColor_ = other.unselectedColor_;
     backFacesColor_ = other.backFacesColor_;
     depthTest_ = other.depthTest_;
-    texture_ = other.texture_;
-    uvCoordinates_ = other.uvCoordinates_;
     labels_ = other.labels_;
 }
 
@@ -110,6 +107,26 @@ void VisualObject::setFrontColor( const Color& color, bool selected, ViewportId 
     }
 }
 
+const ViewportProperty<Color>& VisualObject::getFrontColorsForAllViewports( bool selected ) const
+{
+    return selected ? selectedColor_ : unselectedColor_;
+}
+
+void VisualObject::setFrontColorsForAllViewports( ViewportProperty<Color> val, bool selected )
+{
+    selected ? selectedColor_ = std::move( val ) : unselectedColor_ = std::move( val );
+}
+
+const ViewportProperty<Color>& VisualObject::getBackColorsForAllViewports() const
+{
+    return backFacesColor_;
+}
+
+void VisualObject::setBackColorsForAllViewports( ViewportProperty<Color> val )
+{
+    backFacesColor_ = std::move( val );
+}
+
 const Color& VisualObject::getBackColor( ViewportId viewportId ) const
 {
     return backFacesColor_.get( viewportId );
@@ -123,6 +140,26 @@ void VisualObject::setBackColor( const Color& color, ViewportId viewportId )
     dirty_ |= DIRTY_BACK_FACES;
 }
 
+const uint8_t& VisualObject::getGlobalAlpha( ViewportId viewportId /*= {} */ ) const
+{
+    return globalAlpha_.get( viewportId );
+}
+
+void VisualObject::setGlobalAlpha( uint8_t alpha, ViewportId viewportId /*= {} */ )
+{
+    globalAlpha_.set( alpha, viewportId );
+}
+
+const ViewportProperty<uint8_t>& VisualObject::getGlobalAlphaForAllViewports() const
+{
+    return globalAlpha_;
+}
+
+void VisualObject::setGlobalAlphaForAllViewports( ViewportProperty<uint8_t> val )
+{
+    globalAlpha_ = std::move( val );
+}
+
 const Color& VisualObject::getLabelsColor( ViewportId viewportId ) const
 {
     return labelsColor_.get( viewportId );
@@ -134,13 +171,24 @@ void VisualObject::setLabelsColor( const Color& color, ViewportId viewportId )
     needRedraw_ = true;
 }
 
+const ViewportProperty<Color>& VisualObject::getLabelsColorsForAllViewports() const
+{
+    return labelsColor_;
+}
+
+void VisualObject::setLabelsColorsForAllViewports( ViewportProperty<Color> val )
+{
+    labelsColor_ = val;
+}
+
 void VisualObject::setDirtyFlags( uint32_t mask )
 {
     if ( mask & DIRTY_POSITION )
         mask |= DIRTY_RENDER_NORMALS | DIRTY_BOUNDING_BOX | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION;
     if ( mask & DIRTY_FACE )
-        mask |= DIRTY_RENDER_NORMALS | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION | DIRTY_POSITION;
+        mask |= DIRTY_RENDER_NORMALS | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION | DIRTY_POSITION | DIRTY_UV | DIRTY_VERTS_COLORMAP;
     // DIRTY_POSITION because we use corner rendering and need to update render verts
+    // DIRTY_UV because we need to update UV coordinates
 
     dirty_ |= mask;
 }
@@ -251,8 +299,6 @@ const ViewportMask& VisualObject::getVisualizePropertyMask( unsigned type ) cons
     {
     case MR::VisualizeMaskType::Visibility:
         return visibilityMask_;
-    case MR::VisualizeMaskType::Texture:
-        return showTexture_;
     case MR::VisualizeMaskType::InvertedNormals:
         return invertNormals_;
     case MR::VisualizeMaskType::Labels:
@@ -289,6 +335,8 @@ MR_SUPPRESS_WARNING_POP
     writeColors( "UnselectedMode", unselectedColor_.get() );
     writeColors( "BackFaces", backFacesColor_.get() );
 
+    root["Colors"]["GlobalAlpha"] = globalAlpha_.get();
+
     // labels
     serializeToJson( Vector4f( labelsColor_.get() ), root["Colors"]["Labels"] );
 
@@ -318,6 +366,9 @@ MR_SUPPRESS_WARNING_POP
     readColors( "UnselectedMode", unselectedColor_.get() );
     readColors( "BackFaces", backFacesColor_.get() );
 
+    if ( root["Colors"]["GlobalAlpha"].isUInt() )
+        globalAlpha_.get() = uint8_t( root["Colors"]["GlobalAlpha"].asUInt() );
+
     Vector4f resVec;
     // labels
     deserializeFromJson( root["Colors"]["Labels"], resVec );
@@ -335,8 +386,6 @@ size_t VisualObject::heapBytes() const
 {
     return Object::heapBytes()
         + vertsColorMap_.heapBytes()
-        + texture_.heapBytes()
-        + uvCoordinates_.heapBytes()
         + MR::heapBytes( labels_ )
         + MR::heapBytes( renderObj_ );
 }

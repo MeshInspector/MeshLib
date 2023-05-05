@@ -99,6 +99,8 @@ std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( VertId v ) const
         const auto d = mesh_.topology.dest( e );
         const auto pd = mesh_.points[d] - pv;
         const auto pdSq = pd.lengthSq();
+        if ( field_[d] == FLT_MAX )
+            continue;
         const auto vd = field_[d] - vv;
         if ( vd < 0 )
         {

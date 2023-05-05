@@ -6,8 +6,8 @@
 #include "MRPartMapping.h"
 #include "MRMeshTriPoint.h"
 #include "MRProgressCallback.h"
+#include "MRExpected.h"
 #include <fstream>
-#include <tl/expected.hpp>
 
 namespace MR
 {
@@ -25,6 +25,8 @@ public:
     [[nodiscard]] MRMESH_API EdgeId lastNotLoneEdge() const;
     /// remove all lone edges from given set
     MRMESH_API void excludeLoneEdges( UndirectedEdgeBitSet & edges ) const;
+    /// allows to copy edges data when necessary
+    [[nodiscard]] const auto& edges() const { return edges_; }
     /// returns the number of half-edge records including lone ones
     [[nodiscard]] size_t edgeSize() const { return edges_.size(); }
     /// returns the number of allocated edge records
@@ -35,12 +37,16 @@ public:
     [[nodiscard]] size_t undirectedEdgeCapacity() const { return edges_.capacity() >> 1; }
     /// computes the number of not-lone (valid) undirected edges
     [[nodiscard]] MRMESH_API size_t computeNotLoneUndirectedEdges() const;
+    /// finds and returns all not-lone (valid) undirected edges
+    [[nodiscard]] MRMESH_API UndirectedEdgeBitSet findNotLoneUndirectedEdges() const;
     /// sets the capacity of half-edges vector
     void edgeReserve( size_t newCapacity ) { edges_.reserve( newCapacity ); }
     /// returns true if given edge is within valid range and not-lone
     [[nodiscard]] bool hasEdge( EdgeId e ) const { assert( e.valid() ); return e < (int)edgeSize() && !isLoneEdge( e ); }
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const;
+    /// requests the removal of unused capacity
+    MRMESH_API void shrinkToFit();
 
     /// given two half edges do either of two:
     /// 1) if a and b were from distinct rings, puts them in one ring;
@@ -88,8 +94,11 @@ public:
     void getTriVerts( FaceId f, VertId & v0, VertId & v1, VertId & v2 ) const { getLeftTriVerts( edgeWithLeft( f ), v0, v1, v2 ); }
     void getTriVerts( FaceId f, VertId (&v)[3] ) const { getTriVerts( f, v[0], v[1], v[2] ); }
     void getTriVerts( FaceId f, ThreeVertIds & v ) const { getTriVerts( f, v[0], v[1], v[2] ); }
-    /// returns all valid triangle vertices
+    /// returns three vertex ids for valid triangles, invalid triangles are skipped
     [[nodiscard]] MRMESH_API std::vector<ThreeVertIds> getAllTriVerts() const;
+    /// returns three vertex ids for valid triangles (which can be accessed by FaceId),
+    /// vertex ids for invalid triangles are undefined, and shall not be read
+    [[nodiscard]] MRMESH_API Triangulation getTriangulation() const;
     /// gets 3 vertices of the left face ( face-id may not exist, but the shape must be triangular)
     /// the vertices are returned in counter-clockwise order if look from mesh outside
     MRMESH_API void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
@@ -203,9 +212,11 @@ public:
     /// returns closed loop of boundary edges starting from given boundary edge, 
     /// which has region face to the right and does not have valid or in-region left face;
     /// unlike MR::trackRegionBoundaryLoop this method returns loops in opposite orientation
+    [[deprecated( "use trackRightBoundaryLoop(...) instead" )]]
     [[nodiscard]] MRMESH_API EdgeLoop trackBoundaryLoop( EdgeId e0, const FaceBitSet * region = nullptr ) const;
     /// returns all boundary loops, where each edge has region face to the right and does not have valid or in-region left face;
     /// unlike MR::findRegionBoundary this method returns loops in opposite orientation
+    [[deprecated( "use findRightBoundary(...) instead" )]]
     [[nodiscard]] MRMESH_API std::vector<EdgeLoop> findBoundary( const FaceBitSet * region = nullptr ) const;
     /// returns one edge with no valid left face for every boundary in the mesh
     [[nodiscard]] MRMESH_API std::vector<EdgeId> findHoleRepresentiveEdges() const;
@@ -236,11 +247,19 @@ public:
     /// tests all edges e having valid left and right faces and org(e0) == dest(next(e));
     /// if the test has passed, then flips the edge so increasing the degree of org(e0)
     template<typename T>
-    void flipEdgesAround( EdgeId e0, T && flipNeeded );
+    void flipEdgesIn( EdgeId e0, T && flipNeeded );
     /// tests all edges e having valid left and right faces and v == dest(next(e));
     /// if the test has passed, then flips the edge so increasing the degree of vertex v
     template<typename T>
-    void flipEdgesAround( VertId v, T && flipNeeded ) { flipEdgesAround( edgeWithOrg( v ), std::forward<T>( flipNeeded ) ); }
+    void flipEdgesIn( VertId v, T && flipNeeded ) { flipEdgesIn( edgeWithOrg( v ), std::forward<T>( flipNeeded ) ); }
+    /// tests all edges e having valid left and right faces and org(e0) == org(e);
+    /// if the test has passed, then flips the edge so decreasing the degree of org(e0)
+    template<typename T>
+    void flipEdgesOut( EdgeId e0, T && flipNeeded );
+    /// tests all edges e having valid left and right faces and v == org(e);
+    /// if the test has passed, then flips the edge so decreasing the degree of vertex v
+    template<typename T>
+    void flipEdgesOut( VertId v, T && flipNeeded ) { flipEdgesOut( edgeWithOrg( v ), std::forward<T>( flipNeeded ) ); }
 
     /// split given edge on two parts:
     /// dest(returned-edge) = org(e) - newly created vertex,
@@ -305,7 +324,7 @@ public:
     MRMESH_API void write( std::ostream & s ) const;
     /// loads from binary stream
     /// \return text of error if any
-    MRMESH_API tl::expected<void, std::string> read( std::istream& s, ProgressCallback callback = {} );
+    MRMESH_API VoidOrErrStr read( std::istream& s, ProgressCallback callback = {} );
 
     /// compare that two topologies are exactly the same
     [[nodiscard]] MRMESH_API bool operator ==( const MeshTopology & b ) const;
@@ -332,6 +351,9 @@ public:
     /// this is important in parallel algorithms where other edges may change but stable ones will survive
     MRMESH_API void preferEdges( const UndirectedEdgeBitSet & stableEdges );
 
+    // constructs triangular grid mesh topology in parallel
+    MRMESH_API void buildGridMesh( const GridSettings & settings );
+
     /// verifies that all internal data structures are valid
     MRMESH_API bool checkValidity() const;
 
@@ -356,7 +378,10 @@ private:
         VertId org;  ///< vertex at the origin of the edge
         FaceId left; ///< face at the left of the edge
 
-        bool operator ==( const HalfEdgeRecord & b ) const = default;
+        bool operator ==( const HalfEdgeRecord& b ) const
+        {
+            return next == b.next && prev == b.prev && org == b.org && left == b.left;
+        }
         HalfEdgeRecord() noexcept = default;
         explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
     };
@@ -409,7 +434,7 @@ void MeshTopology::forEachVertex( const MeshTriPoint & p, T && callback ) const
 }
 
 template<typename T>
-void MeshTopology::flipEdgesAround( const EdgeId e0, T && flipNeeded )
+void MeshTopology::flipEdgesIn( const EdgeId e0, T && flipNeeded )
 {
     EdgeId e = e0;
     for (;;)
@@ -417,6 +442,27 @@ void MeshTopology::flipEdgesAround( const EdgeId e0, T && flipNeeded )
         auto testEdge = prev( e.sym() );
         if ( left( testEdge ) && right( testEdge ) && flipNeeded( testEdge ) )
             flipEdge( testEdge );
+        else
+        {
+            e = next( e );
+            if ( e == e0 )
+                break; // full ring has been inspected
+        }
+    } 
+}
+
+template<typename T>
+void MeshTopology::flipEdgesOut( EdgeId e0, T && flipNeeded )
+{
+    EdgeId e = e0;
+    for (;;)
+    {
+        if ( left( e ) && right( e ) && flipNeeded( e ) )
+        {
+            e0 = next( e );
+            flipEdge( e );
+            e = e0;
+        }
         else
         {
             e = next( e );
@@ -445,6 +491,24 @@ inline EdgeId mapEdge( const WholeEdgeHashMap & map, EdgeId src )
             res = res.sym();
     }
     return res;
+}
+
+// rearrange vector values by map (old.id -> new.id)
+template<typename T, typename I>
+[[nodiscard]] Vector<T, I> rearrangeVectorByMap( const Vector<T, I>& oldVector, const BMap<I, I>& map )
+{
+    Vector<T, I> newVector;
+    newVector.resize( map.tsize );
+
+    const auto& mData = map.b.data();
+    const auto sz = std::min( oldVector.size(), map.b.size() );
+    for ( I i = I(0); i < sz; ++i)
+    {
+        I newV = mData[i];
+        if ( newV.valid() )
+            newVector[newV] = oldVector[i];
+    }
+    return newVector;
 }
 
 MRMESH_API void loadMeshDll();

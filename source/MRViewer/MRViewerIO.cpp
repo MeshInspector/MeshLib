@@ -26,12 +26,12 @@
 namespace MR
 {
 
-tl::expected<void, std::string> saveObjectToFile( const Object& obj, const std::filesystem::path& filename, ProgressCallback callback )
+VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& filename, ProgressCallback callback )
 {
     if ( callback && !callback( 0.f ) )
         return tl::make_unexpected( std::string( "Saving canceled" ) );
 
-    tl::expected<void, std::string> result;
+    VoidOrErrStr result;
 
     if ( auto objPoints = obj.asType<ObjectPoints>() )
     {
@@ -77,17 +77,14 @@ tl::expected<void, std::string> saveObjectToFile( const Object& obj, const std::
             result = tl::make_unexpected( std::string( "ObjectDistanceMap has no DistanceMap in it" ) );
         }
     }
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
     else if ( auto objVoxels = obj.asType<ObjectVoxels>() )
     {
         auto ext = filename.extension().u8string();
         for ( auto& c : ext )
             c = ( char )tolower( c );
 
-        if ( ext == u8".raw" )
-        {
-            result = VoxelsSave::saveRaw( filename, objVoxels->vdbVolume(), callback );
-        }
+        result = VoxelsSave::toAnySupportedFormat( objVoxels->vdbVolume(), filename, callback );
     }
 #endif
 

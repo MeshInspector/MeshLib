@@ -13,6 +13,8 @@
 #include "MRViewer/MRProgressBar.h"
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRViewer/MRRibbonConstants.h"
+#include "MRViewer/MRUIStyle.h"
 #include <array>
 
 namespace
@@ -84,15 +86,36 @@ void ResetSceneMenuItem::preDraw_()
         openPopup_ = false;
     }
 
-    ImGui::SetNextWindowSize( ImVec2( 300 * menuInstance->menu_scaling(), -1 ), ImGuiCond_Always );
+    const ImVec2 windowSize{ cModalWindowWidth * scaling, -1 };
+    ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     popupId_ = ImGui::GetID( "New scene##new scene" );
-    if ( ImGui::BeginModalNoAnimation( "New scene##new scene", nullptr, ImGuiWindowFlags_NoResize ) )
-    {
-        ImGui::TextWrapped( "Do you want to save changes?" );
 
-        float w = ImGui::GetContentRegionAvail().x;
-        float p = ImGui::GetStyle().FramePadding.x;
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Save", ImVec2( ( w - p ) / 3.f, 0 ), ImGuiKey_Enter ) )
+    
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * scaling, 3.0f * cDefaultItemSpacing * scaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * scaling, cModalWindowPaddingY * scaling } );
+    if ( ImGui::BeginModalNoAnimation( "New scene##new scene", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
+    {
+        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
+        if ( headerFont )
+            ImGui::PushFont( headerFont );
+
+        const auto headerWidth = ImGui::CalcTextSize( "New Scene" ).x;
+        ImGui::SetCursorPosX( ( windowSize.x - headerWidth ) * 0.5f );
+        ImGui::Text( "New Scene" );
+
+        if ( headerFont )
+            ImGui::PopFont();
+
+        const char* text = "Save your changes?";
+        ImGui::SetCursorPosX( ( windowSize.x - ImGui::CalcTextSize( text ).x ) * 0.5f );
+        ImGui::Text( "%s", text );
+
+        const auto style = ImGui::GetStyle();
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * scaling } );
+
+        const float p = ImGui::GetStyle().ItemSpacing.x;
+        const Vector2f btnSize{ ( ImGui::GetContentRegionAvail().x - p * 2 ) / 3.f, 0 };
+        if ( UI::button( "Save", btnSize, ImGuiKey_Enter ) )
         {
             auto savePath = SceneRoot::getScenePath();
             if ( savePath.empty() )
@@ -112,26 +135,27 @@ void ResetSceneMenuItem::preDraw_()
                 };
             } );
         }
-        ImGui::SetTooltipIfHovered( "Save current scene and then remove all objects", scaling );
 
-        ImGui::SameLine( 0, p );
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Don't Save", ImVec2( ( w - p ) / 3.f, 0 ) ) )
+        UI::setTooltipIfHovered( "Save current scene and then remove all objects", scaling );
+        ImGui::SameLine();
+        if ( UI::buttonCommonSize( "Don't Save", btnSize ) )
         {
             ImGui::CloseCurrentPopup();
             resetScene_();
         }
-        ImGui::SetTooltipIfHovered( "Remove all objects without saving and ability to restore them", scaling );
-
-        ImGui::SameLine( 0, p );
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", ImVec2( ( w - p ) / 3.f, 0 ), ImGuiKey_Escape ) )
+        UI::setTooltipIfHovered( "Remove all objects without saving and ability to restore them", scaling );
+        ImGui::SameLine();
+        if ( UI::buttonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
             ImGui::CloseCurrentPopup();
-        ImGui::SetTooltipIfHovered( "Do not remove any objects, return back", scaling );
+
+        UI::setTooltipIfHovered( "Do not remove any objects, return back", scaling );
 
         if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
             ImGui::CloseCurrentPopup();
-
+        ImGui::PopStyleVar();
         ImGui::EndPopup();
     }
+    ImGui::PopStyleVar( 2 );
 }
 
 void ResetSceneMenuItem::resetScene_()

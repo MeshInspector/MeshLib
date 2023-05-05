@@ -19,7 +19,8 @@
 #include "MRMesh/MRMeshNormals.h"
 #include "MRMesh/MRSphere.h"
 #include "MRMesh/MRUVSphere.h"
-
+#include <pybind11/functional.h>
+#include <tl/expected.hpp>
 using namespace MR;
 
 Mesh pythonGetSelectedMesh()
@@ -64,9 +65,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& m )
         def( "findBoundaryEdges", &MR::MeshTopology::findBoundaryEdges, "returns all boundary edges, where each edge does not have valid left face" ).
         def( "findBoundaryVerts", &MR::MeshTopology::findBoundaryVerts, "returns all boundary vertices, incident to at least one boundary edge" ).
         def( "deleteFaces", &MR::MeshTopology::deleteFaces, pybind11::arg( "fs" ), "deletes multiple given faces" ).
-        def( "findBoundary", &MR::MeshTopology::findBoundary, pybind11::arg( "region" ) = nullptr,
-            "returns all boundary loops, where each edge has region face to the right and does not have valid or in-region left face;\n"
-            "unlike findRegionBoundary this method returns loops in opposite orientation" ).
         def( "findHoleRepresentiveEdges", &MR::MeshTopology::findHoleRepresentiveEdges, "returns one edge with no valid left face for every boundary in the mesh" ).
         def( "getTriVerts", ( void( MR::MeshTopology::* )( FaceId, VertId&, VertId&, VertId& )const )& MR::MeshTopology::getTriVerts,
             pybind11::arg("f"), pybind11::arg( "v0" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ), 
@@ -176,7 +174,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
         def( "pack", &MR::Mesh::pack, pybind11::arg( "outFmap" ) = nullptr, pybind11::arg( "outVmap" ) = nullptr, pybind11::arg( "outEmap" ) = nullptr, pybind11::arg( "rearrangeTriangles" ) = false,
             "tightly packs all arrays eliminating lone edges and invalid face, verts and points,\n"
             "optionally returns mappings: old.id -> new.id" ).
-        def( "discreteMeanCurvature", &MR::Mesh::discreteMeanCurvature, pybind11::arg( "v" ),
+        def( "discreteMeanCurvature", ( float( MR::Mesh::* )( VertId ) const ) &MR::Mesh::discreteMeanCurvature, pybind11::arg( "v" ),
             "computes discrete mean curvature in given vertex measures in length^-1;\n"
             "0 for planar regions, positive for convex surface, negative for concave surface" ).
         def_readwrite( "topology", &MR::Mesh::topology ).
@@ -189,8 +187,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
 
     m.def( "copyMesh", &pythonCopyMeshFunction, pybind11::arg( "mesh" ), "returns copy of input mesh" );
 } )
-
-MR_ADD_PYTHON_EXPECTED( mrmeshpy, ExpectedMesh, MR::Mesh, std::string )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPart, [] ( pybind11::module_& m )
 {
@@ -206,6 +202,16 @@ MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaceBitSet, MR::FaceBitSet )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, RegionBoundary, [] ( pybind11::module_& m )
 {
+    m.def( "findLeftBoundary", ( std::vector<MR::EdgeLoop>( * )( const MR::MeshTopology&, const MR::FaceBitSet* ) )& MR::findLeftBoundary,
+        pybind11::arg( "topology" ), pybind11::arg( "region" ) = nullptr,
+        "returns all region boundary loops;\n"
+        "every loop has region faces on the left, and not-region faces or holes on the right" );
+
+    m.def( "findRightBoundary", ( std::vector<MR::EdgeLoop>( * )( const MR::MeshTopology&, const MR::FaceBitSet* ) )& MR::findRightBoundary,
+        pybind11::arg( "topology" ), pybind11::arg( "region" ) = nullptr,
+        "returns all region boundary loops;\n"
+        "every loop has region faces on the right, and not-region faces or holes on the left" );
+
     m.def( "getIncidentVerts", ( MR::VertBitSet( * )( const MR::MeshTopology&, const MR::FaceBitSet& ) )& MR::getIncidentVerts,
         pybind11::arg( "topology" ), pybind11::arg( "faces" ), "composes the set of all vertices incident to given faces" );
     m.def( "getInnerVerts", ( MR::VertBitSet( * )( const MR::MeshTopology&, const MR::FaceBitSet& ) )& MR::getInnerVerts,
@@ -431,9 +437,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
         def_readwrite( "aFace", &MR::FaceFace::aFace ).
         def_readwrite( "bFace", &MR::FaceFace::bFace );
 
-    m.def( "findSelfCollidingTriangles", &MR::findSelfCollidingTriangles, pybind11::arg( "mp" ), "finds all pairs of colliding triangles from one mesh or a region" );
+    m.def( "findSelfCollidingTriangles", MR::decorateExpected( &MR::findSelfCollidingTriangles ), pybind11::arg( "mp" ), pybind11::arg( "cb" ) = ProgressCallback{}, "finds all pairs of colliding triangles from one mesh or a region" );
 
-    m.def( "findSelfCollidingTrianglesBS", &MR::findSelfCollidingTrianglesBS, pybind11::arg( "mp" ), "finds union of all self-intersecting faces" );
+    m.def( "findSelfCollidingTrianglesBS", MR::decorateExpected( &MR::findSelfCollidingTrianglesBS ), pybind11::arg( "mp" ), pybind11::arg( "cb" ) = ProgressCallback{}, "finds union of all self-intersecting faces" );
 
     m.def( "findCollidingTriangles", &MR::findCollidingTriangles, 
         pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg( "rigidB2A" ) = nullptr, pybind11::arg( "firstIntersectionOnly" ) = false, 

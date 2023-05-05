@@ -22,7 +22,7 @@ extern "C" int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance
         argv.reserve( argc );
         for ( int i = 0; i < argc; ++i )
         {
-            arguments.push_back( MR::asString( MR::Utf16ToUtf8( argvW[i] ) ) );
+            arguments.push_back( MR::Utf16ToUtf8( argvW[i] ) );
             argv.push_back( arguments.back().data() );
         }
     }
@@ -56,6 +56,10 @@ int main( int argc, char** argv )
     launchParams.argv = argv;
 
     MR::Viewer::parseLaunchParams( launchParams );
+
+    #if defined(__APPLE__)
+    setenv("XDG_DATA_DIRS", "/Library/Frameworks/MeshLib.framework/Versions/Current/share", 1);
+    #endif
 
     return MR::launchDefaultViewer( launchParams, MR::ViewerSetup() );
 }

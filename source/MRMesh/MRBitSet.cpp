@@ -30,9 +30,18 @@ BitSet & BitSet::operator ^= ( const BitSet & rhs )
 
 BitSet & BitSet::operator -= ( const BitSet & rhs )
 {
-    resize( std::max( size(), rhs.size() ) );
-    for ( size_type i = 0; i < rhs.num_blocks(); ++i )
+    const auto endBlock = std::min( num_blocks(), rhs.num_blocks() );
+    for ( size_type i = 0; i < endBlock; ++i )
         m_bits[i] &= ~rhs.m_bits[i];
+    return *this;
+}
+
+BitSet & BitSet::subtract( const BitSet & b, int bShiftInBlocks )
+{
+    const auto beginBlock = std::max( 0, bShiftInBlocks );
+    const auto endBlock = std::clamp( b.num_blocks() + bShiftInBlocks, size_t(0), num_blocks() );
+    for ( size_type i = beginBlock; i < endBlock; ++i )
+        m_bits[i] &= ~b.m_bits[i - bShiftInBlocks];
     return *this;
 }
 
@@ -41,14 +50,17 @@ bool operator == ( const BitSet & a, const BitSet & b )
     if ( a.size() == b.size() )
         return static_cast<const BitSet::base &>( a ) == static_cast<const BitSet::base &>( b );
 
-    auto ai = begin( a );
-    auto bi = begin( b );
-    const auto ae = end( a );
-    const auto be = end( b );
-    for ( ; ai != ae && bi != be; ++ai, ++bi )
-        if ( *ai != *bi )
+    auto aBlocksNum = a.num_blocks();
+    auto bBlocksNum = b.num_blocks();
+    auto minBlocksNum = std::min( aBlocksNum, bBlocksNum );
+    for ( size_t i = 0; i < std::min( aBlocksNum, bBlocksNum ); ++i )
+        if ( a.m_bits[i] != b.m_bits[i] )
             return false;
-    return ai == ae && bi == be;
+    const auto& maxBitSet = aBlocksNum > bBlocksNum ? a : b;
+    for ( size_t i = minBlocksNum; i < maxBitSet.num_blocks(); ++i )
+        if ( maxBitSet.m_bits[i] != 0 )
+            return false;
+    return true;
 }
 
 BitSet::IndexType BitSet::find_last() const

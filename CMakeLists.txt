@@ -32,6 +32,7 @@ ENDIF() # NOT MR_EMSCRIPTEN
 project (MeshLib CXX)
 add_compile_definitions(MR_PROJECT_NAME=\"MeshLib\")
 add_compile_definitions(MR_FRAMEWORK)
+add_compile_definitions(IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
 
 # all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -61,13 +62,22 @@ find_package(PkgConfig REQUIRED)
 SET(MR_UBUNTU FALSE) # any Ubuntu version
 SET(MR_UBUNTU22 FALSE) # Ubuntu 22.*
 SET(MR_FEDORA FALSE)
-# Python
-IF(NOT MR_EMSCRIPTEN)
+SET(MR_PLATFORM "UNKNOWN")
+
+IF(NOT APPLE AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
+    add_compile_definitions(__ARM_CPU__)
+    message("ARM cpu detected")
+ENDIF()
+
+IF(MR_EMSCRIPTEN)
+ SET(MR_PLATFORM "WASM")
+ELSE()
 IF(APPLE)
  include_directories(${HOMEBREW_PREFIX}/include)
   # need to hardcode some path to fix wheel (no option to pass path)
   set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/..;@loader_path/../lib;@loader_path/../lib/lib;@loader_path/meshlib;${THIRDPARTY_LIB_DIR};${CMAKE_BINARY_DIR}/bin")
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+  SET(MR_PLATFORM "APPLE_${CMAKE_HOST_SYSTEM_PROCESSOR}")
 ELSE()
  # set platform dependent flags
  file(STRINGS /etc/os-release distro REGEX "^NAME=")
@@ -79,6 +89,7 @@ ELSE()
  string(FIND ${version_id} "." dot-pos)
  string(SUBSTRING ${version_id} 0 ${dot-pos} version_id)
  message("using ${distro} ${version_id}")
+ SET(MR_PLATFORM "${distro}_${version_id}")
 
  IF( ${distro} STREQUAL "Ubuntu")
   SET(MR_UBUNTU TRUE)
@@ -91,11 +102,15 @@ ELSE()
   SET(MR_FEDORA TRUE)
  ENDIF() # Fedora
 ENDIF() # APPLE
+add_definitions( -DMR_PLATFORM="${MR_PLATFORM}" )
+message("platform: ${MR_PLATFORM}")
 
 IF(${MR_UBUNTU22} OR APPLE)
  SET(MR_PYTHON_VERSION 3.10)
 ELSEIF(${MR_UBUNTU})
  SET(MR_PYTHON_VERSION 3.8)
+ELSEIF(${MR_FEDORA})
+    SET(MR_PYTHON_VERSION 3.11)
 ELSE()
  SET(MR_PYTHON_VERSION 3.9)
 ENDIF()
@@ -133,6 +148,7 @@ IF(MR_EMSCRIPTEN)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --preload-file ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets@/")
   IF(NOT MR_DISABLE_EMSCRIPTEN_ASYNCIFY)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -sASYNCIFY -Wno-limited-postlink-optimizations")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -sASYNCIFY_IGNORE_INDIRECT -sASYNCIFY_ADD=@${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/wasm_async_func_list.txt")
     add_compile_definitions(MR_EMSCRIPTEN_ASYNCIFY)
   ENDIF() # NOT MR_DISABLE_EMSCRIPTEN_ASYNCIFY
 ENDIF() # MR_EMSCRIPTEN
@@ -192,6 +208,9 @@ IF(NOT MR_EMSCRIPTEN)
   add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshnumpy ./mrmeshnumpy)
   add_subdirectory(${PROJECT_SOURCE_DIR}/mrviewerpy ./mrviewerpy)
   add_subdirectory(${PROJECT_SOURCE_DIR}/meshconv ./meshconv)
+  IF(NOT APPLE)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/MRCuda ./MRCuda)
+  ENDIF()
 ENDIF() # NOT MR_EMSCRIPTEN
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewerApp ./MRViewerApp)

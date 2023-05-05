@@ -2,9 +2,11 @@
 #include "MRViewerFwd.h"
 #include "MRViewerEventsListener.h"
 #include "MRMesh/MRVector2.h"
+#include "MRMesh/MRAffineXf3.h"
 #include "MRMouse.h"
 #include <vector>
 #include <optional>
+#include <functional>
 
 namespace MR
 {
@@ -14,6 +16,9 @@ class MRVIEWER_CLASS TouchesController : public MultiListener<TouchStartListener
 {
 public:
     MR_ADD_CTOR_DELETE_MOVE( TouchesController );
+
+    // set callback to modify view transform before it is applied to viewport
+    void setTrasformModifierCb( std::function<void( AffineXf3f& )> cb ) { transformModifierCb_ = cb; }
 
     // bit meaning for mode mask
     enum ModeBit
@@ -60,6 +65,8 @@ private:
     MultiInfo multiPrevInfo_;
     bool mouseMode_{ false };
     unsigned char touchModeMask_{ ModeBit::All };
+
+    std::function<void( AffineXf3f& )> transformModifierCb_;
 };
 
 }

@@ -8,6 +8,9 @@ namespace MR
 namespace PolylineComponents
 {
 
+/// returns the number of connected components in polyline
+[[nodiscard]] MRMESH_API size_t getNumComponents( const PolylineTopology& topology);
+
 /// returns one connected component containing given undirected edge id, 
 /// not effective to call more than once, if several components are needed use getAllComponents
 /// \ingroup ComponentsGroup

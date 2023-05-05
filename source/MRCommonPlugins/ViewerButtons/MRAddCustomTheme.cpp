@@ -11,6 +11,9 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRSuppressWarning.h"
 #include "MRViewer/MRRibbonButtonDrawer.h"
+#include "MRViewer/MRRibbonConstants.h"
+#include "MRViewerSettingsPlugin.h"
+#include "MRViewer/MRUIStyle.h"
 
 namespace MR
 {
@@ -28,7 +31,13 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
     if ( !ImGui::BeginCustomStatePlugin( plugin_name.c_str(), &dialogIsOpen_, { .collapsed = &dialogIsCollapsed_, .width = menuWidth,.height = menuHeight, .menuScaling = menuScaling } ) )
         return;
 
+    int selectedUserIdxBackup = selectedUserPreset_;
     ImGui::PushItemWidth( 220.0f * menuScaling );
+    UI::combo( "Ribbon theme preset", &selectedUserPreset_, userThemesPresets_ );
+    if ( selectedUserPreset_ != selectedUserIdxBackup )
+        update_();
+    ImGui::Separator();
+
     ImGui::Text( "Scene colors:" );
     for ( int i = 0; i < sceneColors_.size(); ++i )
         ImGui::ColorEdit4( SceneColors::getName( SceneColors::Type( i ) ), &sceneColors_[i].x );
@@ -50,18 +59,19 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
 
     ImGui::Separator();
     ImGui::Text( "ImGui preset:" );
-    RibbonButtonDrawer::GradientRadioButton( "Dark", ( int* ) &preset_, int( ColorTheme::Preset::Dark ) );
+    UI::radioButton( "Dark", ( int* ) &preset_, int( ColorTheme::Preset::Dark ) );
     ImGui::SameLine();
-    RibbonButtonDrawer::GradientRadioButton( "Light", ( int* ) &preset_, int( ColorTheme::Preset::Light ) );
+    UI::radioButton( "Light", ( int* ) &preset_, int( ColorTheme::Preset::Light ) );
 
     ImGui::Separator();
-    RibbonButtonDrawer::GradientCheckbox( "Apply to new objects only", &applyToNewObjectsOnly_ );
+    UI::checkbox( "Apply to new objects only", &applyToNewObjectsOnly_ );
     ImGui::SetNextItemWidth( 150.0f * menuScaling );
     ImGui::InputText( "Theme name", themeName_ );
-    if ( RibbonButtonDrawer::GradientButton( "Apply & Save", ImVec2( -1, 0 ) ) )
+    bool valid = !themeName_.empty() && !hasProhibitedChars( themeName_ );
+    if ( UI::button( "Apply & Save", valid, Vector2f( -1, 0 ) ) )
     {
         std::error_code ec;
-        auto saveDir = ColorTheme::getUserThemesDirectory() / ( themeName_ + ".json" );
+        auto saveDir = ColorTheme::getUserThemesDirectory() / ( asU8String( themeName_ ) + u8".json" );
         if ( std::filesystem::is_regular_file( saveDir, ec ) )
         {
             ImGui::OpenPopup( "File already exists" );
@@ -69,29 +79,78 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
         }
         else
         {
-            save_();
+            auto error = save_();
+            if ( !error.empty() )
+                if ( auto menu = getViewerInstance().getMenuPlugin() )
+                    menu->showErrorModal( error );
         }
     }
-
-    if ( ImGui::BeginModalNoAnimation( "File already exists", nullptr,
-                                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize ) )
+    if ( !valid )
     {
+        UI::setTooltipIfHovered( themeName_.empty() ?
+            "Cannot save theme with empty name" :
+            "Please do not any of these symbols: \? * / \\ \" < >", menuScaling );
+    }
 
-        ImGui::Text( "Theme with name %s already exists, override it?", themeName_.c_str() );
-        float w = ImGui::GetContentRegionAvail().x;
-        float p = ImGui::GetStyle().FramePadding.x;
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Save", ImVec2( ( w - p ) / 2.f, 0 ), ImGuiKey_Enter ) )
+    const ImVec2 windowSize{ MR::cModalWindowWidth * menuScaling, -1 };
+    ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling } );
+    if ( ImGui::BeginModalNoAnimation( "File already exists", nullptr,
+                                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar ) )
+    {
+        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
+        if ( headerFont )
+            ImGui::PushFont( headerFont );
+
+        const auto headerWidth = ImGui::CalcTextSize( "File already exists" ).x;
+
+        ImGui::SetCursorPosX( ( windowSize.x - headerWidth ) * 0.5f );
+        ImGui::Text( "File already exists" );
+
+        if ( headerFont )
+            ImGui::PopFont();
+
+        std::string text = "Theme with name " + themeName_ + " already exists, override it?";
+        const float textWidth = ImGui::CalcTextSize( text.c_str() ).x;
+
+        if ( textWidth < windowSize.x )
         {
-            save_();
-            ImGui::CloseCurrentPopup();
+            ImGui::SetCursorPosX( ( windowSize.x - textWidth ) * 0.5f );
+            ImGui::Text( "%s", text.c_str() );
+        }
+        else
+        {
+            ImGui::TextWrapped( "%s", text.c_str() );
+        }
+
+        const auto style = ImGui::GetStyle();
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
+
+        const float p = ImGui::GetStyle().ItemSpacing.x;
+        const Vector2f btnSize{ ( ImGui::GetContentRegionAvail().x - p  ) / 2.f, 0 };
+
+        if ( UI::buttonCommonSize( "Save", btnSize, ImGuiKey_Enter ) )
+        {
+            auto error = save_();
+            if ( error.empty() )
+                ImGui::CloseCurrentPopup();
+            else
+            {
+                if ( auto menu = getViewerInstance().getMenuPlugin() )
+                    menu->showErrorModal( error );
+            }
         }
         ImGui::SameLine( 0, p );
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ), ImGuiKey_Escape ) )
+        if ( UI::buttonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }
+
+        ImGui::PopStyleVar();
         ImGui::EndPopup();
     }
+    ImGui::PopStyleVar( 2 );
 
     ImGui::PopItemWidth();
     ImGui::EndCustomStatePlugin();
@@ -106,7 +165,7 @@ std::string AddCustomThemePlugin::isAvailable( const std::vector<std::shared_ptr
 
 bool AddCustomThemePlugin::onEnable_()
 {
-    update_();
+    updateThemeNames_();
     themeName_ = "CustomTheme1";
     return true;
 }
@@ -117,6 +176,58 @@ bool AddCustomThemePlugin::onDisable_()
     sceneColors_.clear();
     ribbonColors_.clear();
     return true;
+}
+
+void AddCustomThemePlugin::updateThemeNames_()
+{
+    selectedUserPreset_ = -1;
+    userThemesPresets_.clear();
+    userThemesPresets_.push_back( "Dark" );
+    userThemesPresets_.push_back( "Light" );
+    auto colorThemeType = ColorTheme::getThemeType();
+    auto colorThemeName = ColorTheme::getThemeName();
+    if ( colorThemeType == ColorTheme::Type::Default )
+    {
+        if ( colorThemeName == ColorTheme::getPresetName( ColorTheme::Preset::Light ) )
+            selectedUserPreset_ = 1;
+        else
+            selectedUserPreset_ = 0;
+    }
+
+    auto userThemesDir = ColorTheme::getUserThemesDirectory();
+    int i = int( userThemesPresets_.size() );
+    std::error_code ec;
+    if ( std::filesystem::is_directory( userThemesDir, ec ) )
+    {
+        for ( const auto& entry : std::filesystem::directory_iterator( userThemesDir, ec ) )
+        {
+            if ( entry.is_regular_file( ec ) )
+            {
+                auto ext = entry.path().extension().u8string();
+                for ( auto& c : ext )
+                    c = ( char )tolower( c );
+
+                if ( ext != u8".json" )
+                    break;
+                std::string themeName = utf8string( entry.path().stem() );
+                userThemesPresets_.push_back( themeName );
+                if ( selectedUserPreset_ == -1 && themeName == ColorTheme::getThemeName() )
+                    selectedUserPreset_ = i;
+                ++i;
+            }
+        }
+    }
+
+    auto itemId = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
+    if ( itemId != RibbonSchemaHolder::schema().items.end() )
+    {
+        if ( auto viewerSettingsPlugin = std::dynamic_pointer_cast< ViewerSettingsPlugin >( itemId->second.item ) )
+        {
+            if ( viewerSettingsPlugin->isActive() )
+                viewerSettingsPlugin->updateThemes();
+        }
+    }
+    update_();
 }
 
 Json::Value AddCustomThemePlugin::makeJson_()
@@ -141,6 +252,16 @@ Json::Value AddCustomThemePlugin::makeJson_()
 
 void AddCustomThemePlugin::update_()
 {
+    Json::Value backupTheme;
+    ColorTheme::serializeCurrentToJson( backupTheme );
+
+    if ( selectedUserPreset_ == 0 )
+        ColorTheme::setupDefaultDark();
+    else if ( selectedUserPreset_ == 1 )
+        ColorTheme::setupDefaultLight();
+    else
+        ColorTheme::setupUserTheme( userThemesPresets_[selectedUserPreset_] );
+
     sceneColors_.resize( SceneColors::Count );
     for ( int i = 0; i < SceneColors::Count; ++i )
         sceneColors_[i] = Vector4f( SceneColors::get( SceneColors::Type( i ) ) );
@@ -154,13 +275,15 @@ void AddCustomThemePlugin::update_()
     ribbonColors_.resize( int( ColorTheme::RibbonColorsType::Count ) );
     for ( int i = 0; i<int( ColorTheme::RibbonColorsType::Count ); ++i )
         ribbonColors_[i] = Vector4f( ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType( i ) ) );
+
+    ColorTheme::setupFromJson( backupTheme );
 }
 
-void AddCustomThemePlugin::save_()
+std::string AddCustomThemePlugin::save_()
 {
     {
         std::error_code ec;
-        auto saveDir = ColorTheme::getUserThemesDirectory() / ( themeName_ + ".json" );
+        auto saveDir = ColorTheme::getUserThemesDirectory() / ( asU8String( themeName_ ) + u8".json" );
         std::filesystem::create_directories( saveDir.parent_path(), ec );
 
         auto json = makeJson_();
@@ -170,7 +293,7 @@ void AddCustomThemePlugin::save_()
         if ( !ofs || writer->write( json, &ofs ) != 0 )
         {
             spdlog::error( "Color theme serialization failed: cannot write file {}", utf8string( saveDir ) );
-            return;
+            return "Cannot save theme with name: \"" + themeName_ + "\"";
         }
     }
 
@@ -187,7 +310,7 @@ void AddCustomThemePlugin::save_()
 MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
             obj->setLabelsColor( SceneColors::get( SceneColors::Labels ) );
 MR_SUPPRESS_WARNING_POP
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
             if ( auto objVoxels = std::dynamic_pointer_cast< ObjectVoxels >( obj ) )
             {
                 objVoxels->setFrontColor( SceneColors::get( SceneColors::SelectedObjectVoxels ), true );
@@ -220,6 +343,8 @@ MR_SUPPRESS_WARNING_POP
             }
         }
     }
+    updateThemeNames_();
+    return {};
 }
 
 MR_REGISTER_RIBBON_ITEM( AddCustomThemePlugin )

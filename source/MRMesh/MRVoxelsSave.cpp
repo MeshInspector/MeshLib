@@ -1,25 +1,20 @@
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRVoxelsSave.h"
+#include "MRMeshFwd.h"
 #include "MRImageSave.h"
 #include "MRFloatGrid.h"
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
 #include "MRColor.h"
 #include "MRMeshTexture.h"
+#include "MRTimer.h"
+#include "MRPch/MROpenvdb.h"
+#include "MRPch/MRJson.h"
+#include "MRPch/MRSpdlog.h"
+#include <openvdb/io/File.h>
 #include <fstream>
 #include <filesystem>
-
-#if FMT_VERSION < 80000
-    const std::string & runtime( const std::string & str )
-{
-    return str;
-}
-#else
-auto runtime( const std::string & str )
-{
-    return fmt::runtime( str );
-}
-#endif
+#include <sstream>
 
 namespace MR
 {
@@ -28,66 +23,17 @@ namespace VoxelsSave
 {
 const IOFilters Filters = 
 {
-    {"Raw (.raw)","*.raw"}
+    {"Raw (.raw)","*.raw"},
+    {"OpenVDB (.vdb)","*.vdb"},
+    {"Micro CT (.gav)","*.gav"}
 };
 
-tl::expected<void, std::string> saveRaw( const std::filesystem::path& path, const VdbVolume& vdbVolume, ProgressCallback callback )
+VoidOrErrStr toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback )
 {
-    if ( path.empty() )
-    {
-        return tl::make_unexpected( "Path is empty" );
-    }
-
-    auto ext = utf8string( path.extension() );
-    for ( auto & c : ext )
-        c = (char) tolower( c );
-
-    if ( ext != ".raw" )
-    {
-        std::stringstream ss;
-        ss << "Extension is not correct, expected \".raw\" current \"" << ext << "\"" << std::endl;
-        return tl::make_unexpected( ss.str() );
-    }
-
-    const auto& dims = vdbVolume.dims;
-    if ( dims.x == 0 || dims.y == 0 || dims.z == 0 )
-    {
-        return tl::make_unexpected(  "VdbVolume is empty" );
-    }
-
-    auto parentPath = path.parent_path();
-    std::error_code ec;
-    if ( !std::filesystem::is_directory( parentPath, ec ) )
-    {
-        ec.clear();
-        if ( !std::filesystem::create_directories( parentPath, ec ) )
-        {
-            std::stringstream ss;
-            ss << "Cannot create directories: " << utf8string( parentPath ) << std::endl;
-            ss << "Error: " << ec.value() << " Message: " << ec.message() << std::endl;
-            return tl::make_unexpected( ss.str() );
-        }
-    }
-
-    std::stringstream prefix;
-    prefix.precision( 3 );
-    prefix << "W" << dims.x << "_H" << dims.y << "_S" << dims.z;    // dims
-    const auto& voxSize = vdbVolume.voxelSize;
-    prefix << "_V" << voxSize.x * 1000.0f << "_" << voxSize.y * 1000.0f << "_" << voxSize.z * 1000.0f; // voxel size "_F" for float
-    prefix << "_G" << ( vdbVolume.data->getGridClass() == openvdb::GRID_LEVEL_SET ? "1" : "0" ) << "_F ";
-    prefix << utf8string( path.filename() );                        // name
-
-    std::filesystem::path outPath = parentPath / prefix.str();
-    std::ofstream outFile( outPath, std::ios::binary );
-    if ( !outFile )
-    {
-        std::stringstream ss;
-        ss << "Cannot write file: " << utf8string( outPath ) << std::endl;
-        return tl::make_unexpected( ss.str() );
-    }
-
+    MR_TIMER
     const auto& grid = vdbVolume.data;
     auto accessor = grid->getConstAccessor();
+    const auto& dims = vdbVolume.dims;
 
     // this coping block allow us to write data to disk faster
     std::vector<float> buffer( size_t( dims.x )*dims.y*dims.z );
@@ -104,21 +50,153 @@ tl::expected<void, std::string> saveRaw( const std::filesystem::path& path, cons
         }
     }
 
-    if ( !writeByBlocks( outFile, (const char*) buffer.data(), buffer.size() * sizeof( float ), callback ) )
+    if ( !writeByBlocks( out, (const char*) buffer.data(), buffer.size() * sizeof( float ), callback ) )
         return tl::make_unexpected( std::string( "Saving canceled" ) );
-    if ( !outFile )
-    {
-        std::stringstream ss;
-        ss << "Cannot write file: " << utf8string( outPath ) << std::endl;
-        return tl::make_unexpected( ss.str() );
-    }
+    if ( !out )
+        return tl::make_unexpected( std::string( "Stream write error" ) );
 
-    if ( callback )
-        callback( 1.f );
     return {};
 }
 
-tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlain& slicePlain, int sliceNumber, ProgressCallback callback )
+VoidOrErrStr toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback )
+{
+    MR_TIMER
+    if ( file.empty() )
+    {
+        return tl::make_unexpected( "Filename is empty" );
+    }
+
+    auto ext = utf8string( file.extension() );
+    for ( auto & c : ext )
+        c = (char) tolower( c );
+
+    if ( ext != ".raw" )
+    {
+        std::stringstream ss;
+        ss << "Extension is not correct, expected \".raw\" current \"" << ext << "\"" << std::endl;
+        return tl::make_unexpected( ss.str() );
+    }
+
+    const auto& dims = vdbVolume.dims;
+    if ( dims.x == 0 || dims.y == 0 || dims.z == 0 )
+    {
+        return tl::make_unexpected( "VdbVolume is empty" );
+    }
+
+    auto parentPath = file.parent_path();
+    std::error_code ec;
+    if ( !std::filesystem::is_directory( parentPath, ec ) )
+    {
+        ec.clear();
+        if ( !std::filesystem::create_directories( parentPath, ec ) )
+        {
+            std::stringstream ss;
+            ss << "Cannot create directories: " << utf8string( parentPath ) << std::endl;
+            ss << "Error: " << ec.value() << " Message: " << systemToUtf8( ec.message() ) << std::endl;
+            return tl::make_unexpected( ss.str() );
+        }
+    }
+
+    std::stringstream prefix;
+    prefix.precision( 3 );
+    prefix << "W" << dims.x << "_H" << dims.y << "_S" << dims.z;    // dims
+    const auto& voxSize = vdbVolume.voxelSize;
+    prefix << "_V" << voxSize.x * 1000.0f << "_" << voxSize.y * 1000.0f << "_" << voxSize.z * 1000.0f; // voxel size "_F" for float
+    prefix << "_G" << ( vdbVolume.data->getGridClass() == openvdb::GRID_LEVEL_SET ? "1" : "0" ) << "_F ";
+    prefix << utf8string( file.filename() );                        // name
+
+    std::filesystem::path outPath = parentPath / prefix.str();
+    std::ofstream out( outPath, std::ios::binary );
+    if ( !out )
+        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( outPath ) );
+
+    return addFileNameInError( toRawFloat( vdbVolume, out, callback ), outPath );
+}
+
+VoidOrErrStr toGav( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback )
+{
+    MR_TIMER
+    std::ofstream out( file, std::ofstream::binary );
+    if ( !out )
+        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+
+    return addFileNameInError( toGav( vdbVolume, out, callback ), file );
+}
+
+VoidOrErrStr toGav( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback )
+{
+    MR_TIMER
+    Json::Value headerJson;
+    headerJson["ValueType"] = "Float";
+
+    Json::Value dimsJson;
+    dimsJson["X"] = vdbVolume.dims.x;
+    dimsJson["Y"] = vdbVolume.dims.y;
+    dimsJson["Z"] = vdbVolume.dims.z;
+    headerJson["Dimensions"] = dimsJson;
+
+    Json::Value voxJson;
+    voxJson["X"] = vdbVolume.voxelSize.x;
+    voxJson["Y"] = vdbVolume.voxelSize.y;
+    voxJson["Z"] = vdbVolume.voxelSize.z;
+    headerJson["VoxelSize"] = voxJson;
+
+    Json::Value rangeJson;
+    rangeJson["Min"] = vdbVolume.min;
+    rangeJson["Max"] = vdbVolume.max;
+    headerJson["Range"] = rangeJson;
+
+    std::ostringstream oss;
+    Json::StreamWriterBuilder builder;
+    std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
+    if ( writer->write( headerJson, &oss ) != 0 || !oss )
+        return tl::make_unexpected( "Header composition error" );
+
+    const auto header = oss.str();
+    const auto headerLen = uint32_t( header.size() );
+    out.write( (const char*)&headerLen, sizeof( headerLen ) );
+    out.write( header.data(), headerLen );
+    if ( !out )
+        return tl::make_unexpected( "Header write error" );
+    
+    return toRawFloat( vdbVolume, out, callback );
+}
+
+VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& filename, ProgressCallback /*callback*/ )
+{
+    MR_TIMER
+    openvdb::io::File file( utf8string( filename ) );
+    openvdb::FloatGrid::Ptr gridPtr = std::make_shared<openvdb::FloatGrid>();
+    gridPtr->setTree( vdbVolume.data->treePtr() );
+    gridPtr->setGridClass( vdbVolume.data->getGridClass() );
+    openvdb::math::Transform::Ptr transform = std::make_shared<openvdb::math::Transform>();
+    transform->preScale( { vdbVolume.voxelSize.x, vdbVolume.voxelSize.y, vdbVolume.voxelSize.z } );
+    gridPtr->setTransform( transform );
+    file.write( { gridPtr } );
+    file.close();
+    return {};
+}
+
+VoidOrErrStr toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesystem::path& file,
+                                   ProgressCallback callback /*= {} */ )
+{
+    auto ext = utf8string( file.extension() );
+    for ( auto& c : ext )
+        c = ( char )tolower( c );
+
+    if ( ext == ".raw" )
+        return toRawAutoname( vdbVolume, file, callback );
+    else if ( ext == ".gav" )
+        return toGav( vdbVolume, file, callback );
+    else if ( ext == ".vdb" )
+        return toVdb( vdbVolume, file, callback );
+    else
+        return tl::make_unexpected( std::string( "unsupported file extension" ) );
+}
+
+
+
+VoidOrErrStr saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlane& slicePlain, int sliceNumber, ProgressCallback callback )
 {
     const auto& dims = vdbVolume.dims;
     const int textureWidth = dims[( slicePlain + 1 ) % 3];
@@ -128,26 +206,26 @@ tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& p
     Vector3i activeVoxel;
     switch ( slicePlain )
     {
-    case SlicePlain::XY:
+    case SlicePlane::XY:
         if ( sliceNumber > dims.z )
-            return  tl::make_unexpected( "Slice number exceeds voxel object borders" );
+            return tl::make_unexpected( "Slice number exceeds voxel object borders" );
 
         activeVoxel = { 0, 0, sliceNumber };
         break;
-    case SlicePlain::YZ:
+    case SlicePlane::YZ:
         if ( sliceNumber > dims.x )
-            return  tl::make_unexpected( "Slice number exceeds voxel object borders" );
+            return tl::make_unexpected( "Slice number exceeds voxel object borders" );
 
         activeVoxel = { sliceNumber, 0, 0 };
         break;
-    case SlicePlain::ZX:
+    case SlicePlane::ZX:
         if ( sliceNumber > dims.y )
-            return  tl::make_unexpected( "Slice number exceeds voxel object borders" );
+            return tl::make_unexpected( "Slice number exceeds voxel object borders" );
 
         activeVoxel = { 0, sliceNumber, 0 };
         break;
     default:
-        return  tl::make_unexpected( "Slice plain is invalid" );
+        return tl::make_unexpected( "Slice plain is invalid" );
     }
  
     const auto& grid = vdbVolume.data;
@@ -179,56 +257,33 @@ tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& p
     return {};
 }
 
-
-
-tl::expected<void, std::string> saveAllSlicesToImage( const SavingSettings& settings )
+VoidOrErrStr saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSettings& settings )
 {
-    switch ( settings.slicePlain )
+    int numSlices{ 0 };
+    switch ( settings.slicePlane )
     {
-    case SlicePlain::XY:
-    {
-        const size_t maxNumChars = std::to_string( settings.vdbVolume.dims.z ).size();
-        for ( int z = 0; z < settings.vdbVolume.dims.z; ++z )
-        {
-            const auto res = saveSliceToImage( settings.path / fmt::format( runtime( settings.format ), z, maxNumChars ), settings.vdbVolume, settings.slicePlain, z );
-            if ( !res )
-                return res;
-
-            if ( settings.cb && !settings.cb( float( z ) / settings.vdbVolume.dims.z ) )
-                return tl::make_unexpected( "Operation was canceled" );
-        }
+    case SlicePlane::XY:
+        numSlices = vdbVolume.dims.z;
         break;
-    }
-    case SlicePlain::YZ:
-    {
-        const size_t maxNumChars = std::to_string( settings.vdbVolume.dims.x ).size();
-        for ( int x = 0; x < settings.vdbVolume.dims.x; ++x )
-        {
-            const auto res = saveSliceToImage( settings.path / fmt::format( runtime( settings.format ), x, maxNumChars ), settings.vdbVolume, settings.slicePlain, x );
-            if ( !res )
-                return res;
-
-            if ( settings.cb && !settings.cb( float( x ) / settings.vdbVolume.dims.x ) )
-                return tl::make_unexpected( "Operation was canceled" );
-        }
+    case SlicePlane::YZ:
+        numSlices = vdbVolume.dims.x;
         break;
-    }
-    case SlicePlain::ZX:
-    {
-        const size_t maxNumChars = std::to_string( settings.vdbVolume.dims.y ).size();
-        for ( int y = 0; y < settings.vdbVolume.dims.y; ++y )
-        {
-            const auto res = saveSliceToImage( settings.path / fmt::format( runtime( settings.format ), y, maxNumChars ), settings.vdbVolume, settings.slicePlain, y );
-            if ( !res )
-                return res;
-
-            if ( settings.cb && !settings.cb( float( y ) / settings.vdbVolume.dims.y ) )
-                return tl::make_unexpected( "Operation was canceled" );
-        }
+    case SlicePlane::ZX:
+        numSlices = vdbVolume.dims.y;
         break;
-    }
     default:
-        return  tl::make_unexpected( "Slice plain is invalid" );
+        return tl::make_unexpected( "Slice plane is invalid" );
+    }
+
+    const size_t maxNumChars = std::to_string( numSlices ).size();
+    for ( int i = 0; i < numSlices; ++i )
+    {
+        const auto res = saveSliceToImage( settings.path / fmt::format( runtimeFmt( settings.format ), i, maxNumChars ), vdbVolume, settings.slicePlane, i );
+        if ( !res )
+            return res;
+
+        if ( settings.cb && !settings.cb( float( i ) / numSlices ) )
+            return tl::make_unexpected( "Operation was canceled." );
     }
 
     if ( settings.cb )

@@ -20,7 +20,7 @@ const IOFilters Filters =
     {"Drawing exchange format (.dxf)", "*.dxf"}
 };
 
-tl::expected<void, std::string> toMrLines( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback )
+VoidOrErrStr toMrLines( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -29,7 +29,7 @@ tl::expected<void, std::string> toMrLines( const Polyline3& polyline, const std:
     return toMrLines( polyline, out, callback );
 }
 
-tl::expected<void, std::string> toMrLines( const Polyline3& polyline, std::ostream& out, ProgressCallback callback )
+VoidOrErrStr toMrLines( const Polyline3& polyline, std::ostream& out, ProgressCallback callback )
 {
     MR_TIMER;
     polyline.topology.write( out );
@@ -52,7 +52,7 @@ tl::expected<void, std::string> toMrLines( const Polyline3& polyline, std::ostre
     return {};
 }
 
-tl::expected<void, std::string> toPts( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback )
+VoidOrErrStr toPts( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -61,7 +61,7 @@ tl::expected<void, std::string> toPts( const Polyline3& polyline, const std::fil
     return toPts( polyline, out, callback );
 }
 
-tl::expected<void, std::string> toPts( const Polyline3& polyline, std::ostream& out, ProgressCallback callback )
+VoidOrErrStr toPts( const Polyline3& polyline, std::ostream& out, ProgressCallback callback )
 {
     float pointsNum{ 0.f };
     auto contours = polyline.contours();
@@ -90,7 +90,7 @@ tl::expected<void, std::string> toPts( const Polyline3& polyline, std::ostream& 
     return {};
 }
 
-tl::expected<void, std::string> toDxf( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback )
+VoidOrErrStr toDxf( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -99,7 +99,7 @@ tl::expected<void, std::string> toDxf( const Polyline3& polyline, const std::fil
     return toDxf( polyline, out, callback );
 }
 
-tl::expected<void, std::string> toDxf( const Polyline3& polyline, std::ostream& out, ProgressCallback callback )
+VoidOrErrStr toDxf( const Polyline3& polyline, std::ostream& out, ProgressCallback callback )
 {
     out << "0\nSECTION\n";
     out << "2\nENTITIES\n";
@@ -143,13 +143,13 @@ tl::expected<void, std::string> toDxf( const Polyline3& polyline, std::ostream& 
     return {};
 }
 
-tl::expected<void, std::string> toAnySupportedFormat( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback )
+VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback )
 {
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
 
-    tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    VoidOrErrStr res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".mrlines" )
         res = toMrLines( polyline, file, callback );
     if ( ext == ".pts" )
@@ -159,13 +159,13 @@ tl::expected<void, std::string> toAnySupportedFormat( const Polyline3& polyline,
     return res;
 }
 
-tl::expected<void, std::string> toAnySupportedFormat( const Polyline3& polyline, std::ostream& out, const std::string& extension, ProgressCallback callback )
+VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, std::ostream& out, const std::string& extension, ProgressCallback callback )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    VoidOrErrStr res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".mrlines" )
         res = toMrLines( polyline, out, callback );
     if ( ext == ".pts" )

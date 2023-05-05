@@ -7,6 +7,7 @@ namespace MR
 
 /// Offsets mesh part by converting it to voxels and back
 /// and unite it with original mesh (via boolean)
+/// note: only OffsetParameters::Type::Shell will work in this function
 MRMESH_API tl::expected<Mesh, std::string> partialOffsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params = {} );
 
 } //namespace MR

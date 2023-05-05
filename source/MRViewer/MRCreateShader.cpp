@@ -123,8 +123,15 @@ void createShader( [[maybe_unused]]const std::string& shader_name,
                 spdlog::warn( line );
             else
             {
-                int warnCode = std::atoi( line.substr( warnPos + 9, 4 ).c_str() );
-                if ( std::find( suppressedWarns.begin(), suppressedWarns.end(), warnCode ) == suppressedWarns.end() )
+                auto findPredicate = [&line] ( const ShaderWarning& warnInfo )
+                {
+                    if ( line.find( "warning C" + std::to_string( warnInfo.number ) + ":" ) != std::string::npos )
+                        return true;
+                    if ( line.find( warnInfo.line ) != std::string::npos )
+                        return true;
+                    return false;
+                };
+                if ( std::find_if( suppressedWarns.begin(), suppressedWarns.end(), findPredicate ) == suppressedWarns.end() )
                     spdlog::warn( line );
             }
         }

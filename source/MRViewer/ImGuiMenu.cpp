@@ -74,8 +74,11 @@
 #include "MRMesh/MRSceneSettings.h"
 #include "imgui_internal.h"
 #include "MRRibbonConstants.h"
+#include "MRRibbonFontManager.h"
+#include "MRUIStyle.h"
 
 #ifndef __EMSCRIPTEN__
+#include "MRMesh/MRObjectVoxels.h"
 #include <fmt/chrono.h>
 #endif
 
@@ -634,11 +637,11 @@ void ImGuiMenu::draw_helpers()
         ImGui::Text( "Swapped frames: %zu", viewer->getSwappedFrames() );
         ImGui::Text( "FPS: %zu", viewer->getFPS() );
 
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Reset", ImVec2( -1, 0 ) ) )
+        if ( UI::buttonCommonSize( "Reset", Vector2f( -1, 0 ) ) )
         {
             viewer->resetAllCounters();
         }
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Print time to log", ImVec2( -1, 0 ) ) )
+        if ( UI::buttonCommonSize( "Print time to log", Vector2f( -1, 0 ) ) )
         {
             printTimingTreeAndStop();
         }
@@ -652,9 +655,27 @@ void ImGuiMenu::draw_helpers()
         popUpRenameBuffer_ = renameBuffer_;
     }
 
+    const auto menuScaling = menu_scaling();
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { 2.0f * cDefaultInnerSpacing * menuScaling, cDefaultInnerSpacing * menuScaling } );
+    
+    ImVec2 windowSize( cModalWindowWidth * menuScaling, 0.0f );
+    ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
+
     if ( ImGui::BeginModalNoAnimation( "Rename object", nullptr,
-        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize ) )
+        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
+        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
+        if ( headerFont )
+            ImGui::PushFont( headerFont );
+
+        ImGui::SetCursorPosX( ( windowSize.x - ImGui::CalcTextSize( "Rename Object" ).x ) * 0.5f );
+        ImGui::Text( "Rename Object" );
+
+        if ( headerFont )
+            ImGui::PopFont();
+
         auto obj = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected ).front();
         if ( !obj )
         {
@@ -662,22 +683,28 @@ void ImGuiMenu::draw_helpers()
         }
         if ( ImGui::IsWindowAppearing() )
             ImGui::SetKeyboardFocusHere();
-        ImGui::InputText( "Name", popUpRenameBuffer_, ImGuiInputTextFlags_AutoSelectAll );
 
-        float w = ImGui::GetContentRegionAvail().x;
-        float p = ImGui::GetStyle().FramePadding.x;
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Ok", ImVec2( ( w - p ) / 2.f, 0 ), ImGuiKey_Enter ) )
+        const auto& style = ImGui::GetStyle();
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * menuScaling } );
+        ImGui::SetNextItemWidth( windowSize.x - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - ImGui::CalcTextSize( "Name" ).x );
+        ImGui::InputText( "Name", popUpRenameBuffer_, ImGuiInputTextFlags_AutoSelectAll );
+        ImGui::PopStyleVar();
+
+        const float btnWidth = cModalButtonWidth * menuScaling;
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
+        if ( UI::button( "Ok", Vector2f( btnWidth, 0 ), ImGuiKey_Enter ) )
         {
             AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", obj ) );
             obj->setName( popUpRenameBuffer_ );
             ImGui::CloseCurrentPopup();
         }
-        ImGui::SameLine( 0, p );
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ), ImGuiKey_Escape ) )
+        ImGui::SameLine();
+        ImGui::SetCursorPosX( windowSize.x - btnWidth - style.WindowPadding.x );
+        if ( UI::button( "Cancel", Vector2f( btnWidth, 0 ), ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }
-
+        ImGui::PopStyleVar();
         if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
         {
             ImGui::CloseCurrentPopup();
@@ -685,6 +712,7 @@ void ImGuiMenu::draw_helpers()
 
         ImGui::EndPopup();
     }
+    ImGui::PopStyleVar( 3 );
 
     ImGui::PushStyleColor( ImGuiCol_ModalWindowDimBg, ImVec4( 1, 0.125f, 0.125f, ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg].w ) );
 
@@ -692,23 +720,49 @@ void ImGuiMenu::draw_helpers()
     {        
         ImGui::OpenPopup( " Error##modal" );
     }
-    
-    if ( ImGui::BeginModalNoAnimation( " Error##modal", nullptr,
-        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize ) )
-    {
-        ImGui::Text( "%s", storedError_.c_str() );
 
-        ImGui::Spacing();
-        ImGui::SameLine( ImGui::GetContentRegionAvail().x * 0.5f - 40.0f, ImGui::GetStyle().FramePadding.x );
-        if ( ImGui::Button( "Okay", ImVec2( 80.0f, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Enter ) ||
+    const ImVec2 errorWindowSize{ MR::cModalWindowWidth * menuScaling, -1 };
+    ImGui::SetNextWindowSize( errorWindowSize, ImGuiCond_Always );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling } );
+    if ( ImGui::BeginModalNoAnimation( " Error##modal", nullptr,
+        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar ) )
+    {
+        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
+        if ( headerFont )
+            ImGui::PushFont( headerFont );
+
+        const auto headerWidth = ImGui::CalcTextSize( "Error" ).x;
+
+        ImGui::SetCursorPosX( ( errorWindowSize.x - headerWidth ) * 0.5f );
+        ImGui::Text( "Error" );
+
+        if ( headerFont )
+            ImGui::PopFont();
+
+        const float textWidth = ImGui::CalcTextSize( storedError_.c_str() ).x;
+
+        if ( textWidth < errorWindowSize.x )
+        {
+            ImGui::SetCursorPosX( ( errorWindowSize.x - textWidth ) * 0.5f );
+            ImGui::Text( "%s", storedError_.c_str() );
+        }
+        else
+        {
+            ImGui::TextWrapped( "%s", storedError_.c_str() );
+        }
+        const auto style = ImGui::GetStyle();
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
+        if ( UI::button( "Okay", Vector2f( -1, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Enter ) ||
            ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) ) )
         {
             storedError_.clear();            
             ImGui::CloseCurrentPopup();
         }
-        
+        ImGui::PopStyleVar();
         ImGui::EndPopup();
     }
+    ImGui::PopStyleVar( 2 );
     ImGui::PopStyleColor();
 }
 
@@ -903,7 +957,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
             assert( window );
             auto diff = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * menu_scaling();
             ImGui::SetCursorPosY( ImGui::GetCursorPosY() + diff );
-            if ( RibbonButtonDrawer::GradientCheckbox( ( "##VisibilityCheckbox" + uniqueStr ).c_str(), &isVisible ) )
+            if ( UI::checkbox( ( "##VisibilityCheckbox" + uniqueStr ).c_str(), &isVisible ) )
             {
                 object.setVisible( isVisible, viewer->viewport().id );
                 if ( deselectNewHiddenObjects_ && !object.isVisible( viewer->getPresentViewports() ) )
@@ -1008,13 +1062,14 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
         {
             auto itemSpacing = ImGui::GetStyle().ItemSpacing;
             auto framePadding = ImGui::GetStyle().FramePadding;
-            framePadding.y = 2.0f;
-            itemSpacing.y = 2.0f;
+            auto scaling = menu_scaling();
+            framePadding.y = 2.0f * scaling;
+            itemSpacing.y = 2.0f * scaling;
             ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( 0, 0, 0, 0 ) );
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
             ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
-            ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, cItemInfoIndent * menu_scaling() );
+            ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, cItemInfoIndent * scaling );
             ImGui::Indent();
 
             for ( const auto& str : lines )
@@ -1044,194 +1099,231 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
 
 float ImGuiMenu::drawSelectionInformation_()
 {
-    const auto selectedVisualObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+    const auto selectedObjs = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
 
     auto& style = ImGui::GetStyle();
 
     float resultHeight = ImGui::GetTextLineHeight() + style.FramePadding.y * 2 + style.ItemSpacing.y;
-    if ( drawCollapsingHeader_( "Information", ImGuiTreeNodeFlags_DefaultOpen ) )
-    {
-        ImGui::PushStyleVar( ImGuiStyleVar_ScrollbarSize, 12.0f );
-        int fieldCount = 6;
+    if ( !drawCollapsingHeader_( "Information", ImGuiTreeNodeFlags_DefaultOpen ) )
+        return resultHeight;
 
-        size_t totalPoints = 0;
-        size_t totalSelectedPoints = 0;
-        for ( auto pObj : getAllObjectsInTree<ObjectPoints>( &SceneRoot::get(), ObjectSelectivityType::Selected ) )
+    int fieldCount = 6;
+    // Points info
+    size_t totalPoints = 0;
+    size_t totalSelectedPoints = 0;
+    // Meshes and lines info
+    size_t totalFaces = 0;
+    size_t totalSelectedFaces = 0;
+    size_t totalVerts = 0;
+#ifndef __EMSCRIPTEN__
+    // Voxels info
+    Vector3i dimensions;
+#endif
+    // Scene info
+    Vector3f bsize;
+    Vector3f wbsize;
+    std::string bsizeStr;
+    std::string wbsizeStr;
+    selectionBbox_ = Box3f{};
+    selectionWorldBox_ = {};
+
+    for ( auto obj : selectedObjs )
+    {
+        // Scene info update
+        if ( auto vObj = obj->asType<VisualObject>() )
+        {
+            selectionBbox_.include( vObj->getBoundingBox() );
+            selectionWorldBox_.include( vObj->getWorldBox() );
+        }
+
+        // Typed info
+        if ( auto pObj = obj->asType<ObjectPoints>() )
         {
             totalPoints += pObj->numValidPoints();
             totalSelectedPoints += pObj->numSelectedPoints();
         }
-        if ( totalPoints )
-            ++fieldCount;
-
-        selectionBbox_ = Box3f{};
-        selectionWorldBox_ = {};
-        for ( auto pObj : selectedVisualObjs )
+        else if ( auto mObj = obj->asType<ObjectMesh>() )
         {
-            selectionBbox_.include( pObj->getBoundingBox() );
-            selectionWorldBox_.include( pObj->getWorldBox() );
-        }
-        
-        Vector3f bsize;
-        Vector3f wbsize;
-        std::string bsizeStr;
-        std::string wbsizeStr;        
-
-        if ( selectionWorldBox_.valid() )
-        {
-            bsize = selectionBbox_.size();
-            bsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", bsize.x, bsize.y, bsize.z );
-            wbsize = selectionWorldBox_.size();
-            wbsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", wbsize.x, wbsize.y, wbsize.z );
-            if ( bsizeStr != wbsizeStr )
-                ++fieldCount;
-        }            
-
-        const float smallItemSpacingY = 0.25f * cDefaultItemSpacing * menu_scaling();
-        const float infoHeight = ImGui::GetTextLineHeight() * fieldCount +
-            style.FramePadding.y * fieldCount * 2 +
-            style.ItemSpacing.y * 2 + smallItemSpacingY * (fieldCount - 3);
-        resultHeight += infoHeight + style.ItemSpacing.y;
-
-        ImGui::BeginChild( "SceneInformation", ImVec2( 0, infoHeight ), false, ImGuiWindowFlags_HorizontalScrollbar );
-        // Compute total faces/verts in selected objects
-        size_t totalFaces = 0;
-        size_t totalSelectedFaces = 0;
-        size_t totalVerts = 0;
-        for ( auto pObj : getAllObjectsInTree<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Selected ) )
-        {
-            if ( auto mesh = pObj->mesh() )
+            if ( auto mesh = mObj->mesh() )
             {
                 totalFaces += mesh->topology.numValidFaces();
-                totalSelectedFaces += pObj->numSelectedFaces();
+                totalSelectedFaces += mObj->numSelectedFaces();
                 totalVerts += mesh->topology.numValidVerts();
             }
         }
-        for ( auto pObj : getAllObjectsInTree<ObjectLines>( &SceneRoot::get(), ObjectSelectivityType::Selected ) )
+        else if ( auto lObj = obj->asType<ObjectLines>() )
         {
-            if ( auto polyline = pObj->polyline() )
+            if ( auto polyline = lObj->polyline() )
             {
                 totalVerts += polyline->topology.numValidVerts();
             }
-        }        
-
-        auto drawPrimitivesInfo = [this] ( std::string title, size_t value, size_t selected = 0 )
-        {
-            if ( value )
-            {
-                std::string valueStr;
-                std::string labelStr;
-                if ( selected )
-                {
-                    valueStr = std::to_string( selected ) + " / ";
-                    labelStr = "Selected / ";
-                }
-                valueStr += std::to_string( value );
-                labelStr += title;
-
-                ImGui::InputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x * menu_scaling() );
-            }
-        };
-
-        if ( selectedVisualObjs.size() > 1 )
-        {
-            drawPrimitivesInfo( "Objects", selectedVisualObjs.size() );
         }
-        else if ( auto pObj = getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selected ) )
+#ifndef __EMSCRIPTEN__
+        else if ( auto vObj = obj->asType<ObjectVoxels>() )
         {
-            auto lastRenameObj = lastRenameObj_.lock();
-            if ( lastRenameObj != pObj )
+            auto newDims = vObj->dimensions();
+            if ( dimensions == Vector3i() )
             {
-                renameBuffer_ = pObj->name();
-                lastRenameObj_ = pObj;
+                dimensions = newDims;
             }
-            if ( !ImGui::InputTextCentered( "Object Name", renameBuffer_, getSceneInfoItemWidth_(), ImGuiInputTextFlags_AutoSelectAll ) )
+            else if ( dimensions != newDims )
             {
-                if ( renameBuffer_ == pObj->name() )
-                {
-                    // clear the pointer to reload the name on next frame (if it was changed from outside)
-                    lastRenameObj_.reset();
-                }
+                dimensions = Vector3i::diagonal( -1 );
             }
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
+        }
+#endif
+    }
+    if ( totalPoints )
+        ++fieldCount;
+    if ( selectionWorldBox_.valid() )
+    {
+        bsize = selectionBbox_.size();
+        bsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", bsize.x, bsize.y, bsize.z );
+        wbsize = selectionWorldBox_.size();
+        wbsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", wbsize.x, wbsize.y, wbsize.z );
+        if ( bsizeStr != wbsizeStr )
+            ++fieldCount;
+    }
+#ifndef __EMSCRIPTEN__
+    if ( dimensions.x > 0 && dimensions.y > 0 && dimensions.z > 0 )
+    {
+        ++fieldCount;
+    }
+#endif
+
+    ImGui::PushStyleVar( ImGuiStyleVar_ScrollbarSize, 12.0f );
+    const float smallItemSpacingY = 0.25f * cDefaultItemSpacing * menu_scaling();
+    const float infoHeight = ImGui::GetTextLineHeight() * fieldCount +
+        style.FramePadding.y * fieldCount * 2 +
+        style.ItemSpacing.y +
+        smallItemSpacingY * ( fieldCount + 1 );
+    resultHeight += infoHeight + style.ItemSpacing.y;
+
+    ImGui::BeginChild( "SceneInformation", ImVec2( 0, infoHeight ), false, ImGuiWindowFlags_HorizontalScrollbar );
+
+    auto drawPrimitivesInfo = [this] ( std::string title, size_t value, size_t selected = 0 )
+    {
+        if ( value )
+        {
+            std::string valueStr;
+            std::string labelStr;
+            if ( selected )
             {
-                AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", pObj ) );
-                pObj->setName( renameBuffer_ );
+                valueStr = std::to_string( selected ) + " / ";
+                labelStr = "Selected / ";
+            }
+            valueStr += std::to_string( value );
+            labelStr += title;
+
+            UI::inputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x * menu_scaling() );
+        }
+    };
+
+    if ( selectedObjs.size() > 1 )
+    {
+        drawPrimitivesInfo( "Objects", selectedObjs.size() );
+    }
+    else if ( !selectedObjs.empty() )
+    {
+        auto pObj = selectedObjs.front();
+        auto lastRenameObj = lastRenameObj_.lock();
+        if ( lastRenameObj != pObj )
+        {
+            renameBuffer_ = pObj->name();
+            lastRenameObj_ = pObj;
+        }
+        if ( !UI::inputTextCentered( "Object Name", renameBuffer_, getSceneInfoItemWidth_(), ImGuiInputTextFlags_AutoSelectAll ) )
+        {
+            if ( renameBuffer_ == pObj->name() )
+            {
+                // clear the pointer to reload the name on next frame (if it was changed from outside)
                 lastRenameObj_.reset();
             }
-
-            if ( auto pObjLabel = std::dynamic_pointer_cast<ObjectLabel>( pObj ) )
-            {
-                if ( pObjLabel != oldLabelParams_.obj )
-                {
-                    oldLabelParams_.obj = pObjLabel;
-                    const auto& positionedText = pObjLabel->getLabel();
-                    oldLabelParams_.lastLabel = positionedText.text;
-                    oldLabelParams_.labelBuffer = oldLabelParams_.lastLabel;
-                }
-
-                if ( ImGui::InputText( "Label", oldLabelParams_.labelBuffer, ImGuiInputTextFlags_AutoSelectAll ) )
-                    pObjLabel->setLabel( { oldLabelParams_.labelBuffer, pObjLabel->getLabel().position } );
-                if ( ImGui::IsItemDeactivatedAfterEdit() && oldLabelParams_.labelBuffer != oldLabelParams_.lastLabel )
-                {
-                    pObjLabel->setLabel( { oldLabelParams_.lastLabel, pObjLabel->getLabel().position } );
-                    AppendHistory( std::make_shared<ChangeLabelAction>( "Change label", pObjLabel ) );
-                    pObjLabel->setLabel( { oldLabelParams_.labelBuffer, pObjLabel->getLabel().position } );
-                    oldLabelParams_.lastLabel = oldLabelParams_.labelBuffer;
-                } else if ( !ImGui::IsItemActive() )
-                {
-                    const auto& positionedText = pObjLabel->getLabel();
-                    oldLabelParams_.lastLabel = positionedText.text;
-                    oldLabelParams_.labelBuffer = oldLabelParams_.lastLabel;
-                }
-            }
-            else if ( oldLabelParams_.obj )
-            {
-                oldLabelParams_.obj.reset();
-            }
         }
-        else
-            lastRenameObj_.reset();
-
-        ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, MR::cDefaultItemSpacing * 0.25f * menu_scaling() } );
-
-        drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces );
-        drawPrimitivesInfo( "Vertices", totalVerts );
-        drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints );
-
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 0.5f * MR::cDefaultItemSpacing * menu_scaling() );
-
-        if ( selectionBbox_.valid() )
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
-            auto drawVec3 = [&style] ( std::string title, Vector3f& value, float width )
-            {
-                ImGui::InputTextCenteredReadOnly( ( "##" + title + "_x" ).c_str(), fmt::format("{:.3f}", value.x), width);
-                ImGui::SameLine();
-                ImGui::InputTextCenteredReadOnly( ( "##" + title + "_y" ).c_str(), fmt::format( "{:.3f}", value.y ), width );
-                ImGui::SameLine();
-                ImGui::InputTextCenteredReadOnly( ( "##" + title + "_z" ).c_str(), fmt::format( "{:.3f}", value.z ), width );
-
-                ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-                ImGui::Text( "%s", title.c_str() );
-            };
-
-            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemInnerSpacing.x, style.ItemSpacing.y } );
-            const float fieldWidth = getSceneInfoItemWidth_( 3 );
-            drawVec3( "Box min", selectionBbox_.min, fieldWidth );
-            drawVec3( "Box max", selectionBbox_.max, fieldWidth );
-            drawVec3( "Box size", bsize, fieldWidth );
-
-            if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
-                drawVec3( "World box size", wbsize, fieldWidth );
-
-            ImGui::PopStyleVar();
+            AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", pObj ) );
+            pObj->setName( renameBuffer_ );
+            lastRenameObj_.reset();
         }
 
-        ImGui::PopStyleVar();
-        ImGui::Dummy( ImVec2( 0, 0 ) );
-        ImGui::EndChild();
-        ImGui::PopStyleVar();
+        if ( auto pObjLabel = std::dynamic_pointer_cast< ObjectLabel >( pObj ) )
+        {
+            if ( pObjLabel != oldLabelParams_.obj )
+            {
+                oldLabelParams_.obj = pObjLabel;
+                const auto& positionedText = pObjLabel->getLabel();
+                oldLabelParams_.lastLabel = positionedText.text;
+                oldLabelParams_.labelBuffer = oldLabelParams_.lastLabel;
+            }
+
+            if ( ImGui::InputText( "Label", oldLabelParams_.labelBuffer, ImGuiInputTextFlags_AutoSelectAll ) )
+                pObjLabel->setLabel( { oldLabelParams_.labelBuffer, pObjLabel->getLabel().position } );
+            if ( ImGui::IsItemDeactivatedAfterEdit() && oldLabelParams_.labelBuffer != oldLabelParams_.lastLabel )
+            {
+                pObjLabel->setLabel( { oldLabelParams_.lastLabel, pObjLabel->getLabel().position } );
+                AppendHistory( std::make_shared<ChangeLabelAction>( "Change label", pObjLabel ) );
+                pObjLabel->setLabel( { oldLabelParams_.labelBuffer, pObjLabel->getLabel().position } );
+                oldLabelParams_.lastLabel = oldLabelParams_.labelBuffer;
+            }
+            else if ( !ImGui::IsItemActive() )
+            {
+                const auto& positionedText = pObjLabel->getLabel();
+                oldLabelParams_.lastLabel = positionedText.text;
+                oldLabelParams_.labelBuffer = oldLabelParams_.lastLabel;
+            }
+        }
+        else if ( oldLabelParams_.obj )
+        {
+            oldLabelParams_.obj.reset();
+        }
     }
+    else
+        lastRenameObj_.reset();
+
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, smallItemSpacingY } );
+
+    drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces );
+    drawPrimitivesInfo( "Vertices", totalVerts );
+    drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints );
+
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 2 * smallItemSpacingY );
+
+    auto drawVec3 = [&style] ( std::string title, auto& value, float width, const char* formatStr )
+    {
+        UI::inputTextCenteredReadOnly( ( "##" + title + "_x" ).c_str(), fmt::format( runtimeFmt( formatStr ), value.x ), width );
+        ImGui::SameLine();
+        UI::inputTextCenteredReadOnly( ( "##" + title + "_y" ).c_str(), fmt::format( runtimeFmt( formatStr ), value.y ), width );
+        ImGui::SameLine();
+        UI::inputTextCenteredReadOnly( ( "##" + title + "_z" ).c_str(), fmt::format( runtimeFmt( formatStr ), value.z ), width );
+
+        ImGui::SameLine( 0, style.ItemInnerSpacing.x );
+        ImGui::Text( "%s", title.c_str() );
+    };
+
+    const float fieldWidth = getSceneInfoItemWidth_( 3 );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemInnerSpacing.x, style.ItemSpacing.y } );
+#ifndef __EMSCRIPTEN__
+    if ( dimensions.x > 0 && dimensions.y > 0 && dimensions.z > 0 )
+    {
+        drawVec3( "Dimensions", dimensions, fieldWidth,"{}" );
+    }
+#endif
+    if ( selectionBbox_.valid() )
+    {
+        drawVec3( "Box min", selectionBbox_.min, fieldWidth, "{:.3f}" );
+        drawVec3( "Box max", selectionBbox_.max, fieldWidth, "{:.3f}" );
+        drawVec3( "Box size", bsize, fieldWidth, "{:.3f}" );
+
+        if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
+            drawVec3( "World box size", wbsize, fieldWidth, "{:.3f}" );
+    }
+    ImGui::PopStyleVar();
+
+    ImGui::PopStyleVar();
+    ImGui::Dummy( ImVec2( 0, 0 ) );
+    ImGui::EndChild();
+    ImGui::PopStyleVar();
 
     return resultHeight;
 }
@@ -1263,7 +1355,7 @@ bool ImGuiMenu::drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>&
     }
     const bool mixedLocking = hasLocked && hasUnlocked;
     bool checked = hasLocked;
-    someChanges |= RibbonButtonDrawer::GradientCheckboxMixed( "Lock Transform", &checked, mixedLocking );
+    someChanges |= UI::checkboxMixed( "Lock Transform", &checked, mixedLocking );
     if ( checked != hasLocked )
         for ( const auto& s : selectedObjs )
             s->setLocked( checked );
@@ -1329,7 +1421,7 @@ bool ImGuiMenu::drawRemoveButton_( const std::vector<std::shared_ptr<Object>>& s
         ImGui::GetStyle().Colors[ImGuiCol_ButtonActive] = colorDis;
     }
     bool clicked = allowRemoval_ ?
-        RibbonButtonDrawer::GradientButton( "Remove", ImVec2( -1, 0 ) ) :
+        UI::button( "Remove", Vector2f( -1, 0 ) ) :
         ImGui::Button( "Remove", ImVec2( -1, 0 ) );
     if ( clicked )
     {
@@ -1387,6 +1479,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
 
     if ( allIsObjMesh )
     {
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Shading", MeshVisualizePropertyType::EnableShading, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Flat Shading", MeshVisualizePropertyType::FlatShading, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Edges", MeshVisualizePropertyType::Edges, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Selected Edges", MeshVisualizePropertyType::SelectedEdges, viewportid );
@@ -1394,19 +1487,31 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Borders", MeshVisualizePropertyType::BordersHighlight, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Faces", MeshVisualizePropertyType::Faces, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Only Odd Fragments", MeshVisualizePropertyType::OnlyOddFragments, viewportid );
+        bool allHaveTexture = true;
+        for ( const auto& visObj : selectedVisualObjs )
+        {
+            auto meshObj = visObj->asType<ObjectMeshHolder>();
+            assert( meshObj );
+            allHaveTexture = allHaveTexture && 
+                ( !meshObj->getTexture().pixels.empty() && !meshObj->getUVCoords().empty() );
+            if ( !allHaveTexture )
+                break;
+        }
+        if ( allHaveTexture )
+            someChanges |= make_visualize_checkbox( selectedVisualObjs, "Texture", MeshVisualizePropertyType::Texture, viewportid );
     }
     if ( allIsObjLines )
     {
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Points", LinesVisualizePropertyType::Points, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Smooth corners", LinesVisualizePropertyType::Smooth, viewportid );
-        make_width( selectedVisualObjs, "Line width", [&] ( const ObjectLinesHolder* objLines )
+        make_width<ObjectLinesHolder>( selectedVisualObjs, "Line width", [&] ( const ObjectLinesHolder* objLines )
         {
             return objLines->getLineWidth();
         }, [&] ( ObjectLinesHolder* objLines, float value )
         {
             objLines->setLineWidth( value );
         }, true );
-        make_width( selectedVisualObjs, "Point size", [&] ( const ObjectLinesHolder* objLines )
+        make_width<ObjectLinesHolder>( selectedVisualObjs, "Point size", [&] ( const ObjectLinesHolder* objLines )
         {
             return objLines->getPointSize();
         }, [&] ( ObjectLinesHolder* objLines, float value )
@@ -1417,6 +1522,13 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
     if ( allIsObjPoints )
     {
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Selected Points", PointsVisualizePropertyType::SelectedVertices, viewportid );
+        make_width<ObjectPointsHolder>( selectedVisualObjs, "Point size", [&] ( const ObjectPointsHolder* objPoints )
+        {
+            return objPoints->getPointSize();
+        }, [&] ( ObjectPointsHolder* objPoints, float value )
+        {
+            objPoints->setPointSize( value );
+        } );
     }
     if ( allIsObjLabels )
     {
@@ -1564,6 +1676,17 @@ MR_SUPPRESS_WARNING_POP
         } );
     }
 
+    if ( !selectedVisualObjs.empty() )
+    {
+        make_uint8_slider( selectedVisualObjs, "Alpha", [&] ( const VisualObject* data )
+        {
+            return data->getGlobalAlpha( selectedViewport_ );
+        }, [&] ( VisualObject* data, uint8_t alpha )
+        {
+            data->setGlobalAlpha( alpha, selectedViewport_ );
+        } );
+    }
+
     return someChanges;
 }
 
@@ -1609,6 +1732,7 @@ float ImGuiMenu::drawTransform_()
             if ( uniformScale_ )
             {
                 float midScale = ( scale.x + scale.y + scale.z ) / 3.0f;
+                ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
                 inputChanged = ImGui::DragFloatValid( "##scaleX", &midScale, midScale * 0.01f, 1e-3f, 1e+6f, "%.3f" );
                 if ( inputChanged )
                     scale.x = scale.y = scale.z = midScale;
@@ -1634,9 +1758,9 @@ float ImGuiMenu::drawTransform_()
             assert( window );
             auto diff = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * menu_scaling();
             ImGui::SetCursorPosY( ImGui::GetCursorPosY() + diff );
-            RibbonButtonDrawer::GradientCheckbox( "Uni-scale", &uniformScale_ );
+            UI::checkbox( "Uni-scale", &uniformScale_ );
             window->DC.CursorPosPrevLine.y -= diff;
-            ImGui::SetTooltipIfHovered( "Selects between uniform scaling or separate scaling along each axis", scaling );
+            UI::setTooltipIfHovered( "Selects between uniform scaling or separate scaling along each axis", scaling );
             ImGui::PopItemWidth();
 
             const char* tooltipsRotation[3] = {
@@ -1655,10 +1779,10 @@ float ImGuiMenu::drawTransform_()
                 ImGui::EndTooltip();
             }
 
+            constexpr float cZenithEps = 0.01f;
             if ( resultRotation.valueChanged && ImGui::IsMouseDragging( ImGuiMouseButton_Left ) )
             {
                 // resolve singularity
-                constexpr float cZenithEps = 0.01f;
                 if ( std::fabs( euler.y ) > 90.f - cZenithEps )
                 {
                     euler.x = euler.x > 0.f ? euler.x - 180.f : euler.x + 180.f;
@@ -1671,7 +1795,7 @@ float ImGuiMenu::drawTransform_()
             {
                 invertedRotation_ = false;
             }
-
+            euler.y = std::clamp( euler.y, -90.0f + 2.0f * cZenithEps, 90.0f - 2.0f * cZenithEps );
             if ( inputChanged )
                 xf.A = Matrix3f::rotationFromEuler( ( PI_F / 180 ) * euler ) * Matrix3f::scale( scale );
 
@@ -1769,7 +1893,7 @@ bool ImGuiMenu::make_visualize_checkbox( std::vector<std::shared_ptr<VisualObjec
 {
     auto realRes = getRealValue( selectedVisualObjs, type, viewportid, invert );
     bool checked = realRes.first;
-    const bool res = RibbonButtonDrawer::GradientCheckboxMixed( label, &checked, !realRes.second && realRes.first );
+    const bool res = UI::checkboxMixed( label, &checked, !realRes.second && realRes.first );
     if ( checked != realRes.first )
     {
         if ( invert )
@@ -1855,16 +1979,52 @@ void ImGuiMenu::make_light_strength( std::vector<std::shared_ptr<VisualObject>> 
             setter( data.get(), value );
 }
 
+
+void ImGuiMenu::make_uint8_slider( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, 
+    std::function<uint8_t( const VisualObject* )> getter, std::function<void( VisualObject*, uint8_t )> setter )
+{
+    if ( selectedVisualObjs.empty() )
+        return;
+
+    auto obj = selectedVisualObjs[0];
+    auto value = int( getter( obj.get() ) );
+    bool isAllTheSame = true;
+    for ( int i = 1; i < selectedVisualObjs.size(); ++i )
+        if ( getter( selectedVisualObjs[i].get() ) != value )
+        {
+            isAllTheSame = false;
+            break;
+        }
+
+    auto backUpTextColor = ImGui::GetStyle().Colors[ImGuiCol_Text];
+    if ( !isAllTheSame )
+    {
+        value = 255;
+        ImGui::GetStyle().Colors[ImGuiCol_Text] = undefined;
+    }
+    const auto valueConstForComparation = value;
+
+    ImGui::PushItemWidth( 100 * menu_scaling() );
+    ImGui::SliderInt( label, &value, 0, 255, "%d", ImGuiSliderFlags_AlwaysClamp );
+
+    ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
+    ImGui::PopItemWidth();
+    if ( value != valueConstForComparation )
+        for ( const auto& data : selectedVisualObjs )
+            setter( data.get(), uint8_t( value ) );
+}
+
+template<typename ObjType>
 void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, 
-    std::function<float( const ObjectLinesHolder* )> getter, 
-    std::function<void( ObjectLinesHolder*, const float& )> setter,
+    std::function<float( const ObjType* )> getter,
+    std::function<void( ObjType*, const float& )> setter,
     bool lineWidth )
 {
-    auto objLines = selectedVisualObjs[0]->asType<ObjectLinesHolder>();
+    auto objLines = selectedVisualObjs[0]->asType<ObjType>();
     auto value = getter( objLines );
     bool isAllTheSame = true;
     for ( int i = 1; i < selectedVisualObjs.size(); ++i )
-        if ( getter( selectedVisualObjs[i]->asType<ObjectLinesHolder>() ) != value )
+        if ( getter( selectedVisualObjs[i]->asType<ObjType>() ) != value )
         {
             isAllTheSame = false;
             break;
@@ -1886,7 +2046,7 @@ void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedV
     ImGui::PopItemWidth();
     if ( value != valueConstForComparation )
         for ( const auto& data : selectedVisualObjs )
-            setter( data->asType<ObjectLinesHolder>(), value );
+            setter( data->asType<ObjType>(), value );
 }
 
 void ImGuiMenu::reorderSceneIfNeeded_()
@@ -2239,7 +2399,7 @@ void ImGuiMenu::draw_mr_menu()
                     SceneRoot::get().addChild( obj );
                     viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
                 }
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
                 else
                 {
                     ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [directory, viewer = viewer] () -> std::function<void()>
@@ -2282,7 +2442,7 @@ void ImGuiMenu::draw_mr_menu()
         if ( ImGui::Button( "Save##Main", ImVec2( ( w - p ) / 2.f, 0 ) ) )
         {
             auto filters = MeshSave::Filters | LinesSave::Filters | PointsSave::Filters;
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
             filters = filters | VoxelsSave::Filters;
 #endif
             auto savePath = saveFileDialog( { {}, {}, filters } );

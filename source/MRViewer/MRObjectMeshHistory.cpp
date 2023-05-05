@@ -64,7 +64,10 @@ void excludeAllEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh )
 
 [[nodiscard]] static UndirectedEdgeBitSet getMapping( const UndirectedEdgeBitSet & src, const UndirectedEdgeBMap & map )
 {
-    UndirectedEdgeBitSet res( map.tsize );
+    UndirectedEdgeBitSet res;
+    if ( !src.any() )
+        return res;
+    res.resize( map.tsize );
     for ( auto b : src )
         if ( auto mapped = getAt( map.b, b ) )
             res.set( mapped );

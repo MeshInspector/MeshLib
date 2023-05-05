@@ -7,7 +7,7 @@
 #include "MRPolyline.h"
 #include "MRHeapBytes.h"
 #include "MRImage.h"
-#include <tl/expected.hpp>
+#include "MRExpected.h"
 #include <filesystem>
 #include <vector>
 
@@ -104,6 +104,8 @@ public:
     MRMESH_API void set( size_t x, size_t y, float val );
     /// sets value in index element
     MRMESH_API void set( size_t i, float val );
+    /// sets all values at one time
+    MRMESH_API void set( std::vector<float> data );
     /// invalidates value in (X,Y) element
     MRMESH_API void unset( size_t x, size_t y );
     /// invalidates value in index element
@@ -201,6 +203,10 @@ struct [[nodiscard]] ContoursDistanceMapOptions
     const PixelBitSet* region{ nullptr };
     /// optional output vector of closest polyline edge per each pixel of distance map
     std::vector<UndirectedEdgeId>* outClosestEdges{ nullptr };
+    /// minimum value (or absolute value if offsetParameters == nullptr) in a pixel of distance map (lower values can be present but they are not precise)
+    float minDist{ 0 };
+    /// maximum value (or absolute value if offsetParameters == nullptr) in a pixel of distance map (larger values cannot be present)
+    float maxDist{ FLT_MAX };
 };
 
 /**
@@ -229,6 +235,9 @@ struct [[nodiscard]] ContoursDistanceMapOptions
 [[nodiscard]] MRMESH_API std::pair<Polyline2, AffineXf3f> distanceMapTo2DIsoPolyline( const DistanceMap& distMap,
     const DistanceMapToWorld& params, float isoValue, bool useDepth = false );
 [[nodiscard]] MRMESH_API Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float pixelSize, float isoValue );
+
+/// constructs an offset contour for given polyline
+[[nodiscard]] MRMESH_API Polyline2 polylineOffset( const Polyline2& polyline, float pixelSize, float offset );
 
 /**
  * \brief computes the union of the shapes bounded by input 2d contours
@@ -268,7 +277,7 @@ struct [[nodiscard]] ContoursDistanceMapOptions
 /// minimum (close): 1.0 (white)
 /// maximum (far): threshold
 /// invalid (infinity): 0.0 (black)
-MRMESH_API tl::expected<void, std::string> saveDistanceMapToImage( const DistanceMap& distMap, const std::filesystem::path& filename, float threshold = 1.f / 255 );
+MRMESH_API VoidOrErrStr saveDistanceMapToImage( const DistanceMap& distMap, const std::filesystem::path& filename, float threshold = 1.f / 255 );
 
 /// load distance map from monochrome image in scales of gray:
 /// \param threshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid

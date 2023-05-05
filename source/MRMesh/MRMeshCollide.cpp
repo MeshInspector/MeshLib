@@ -6,6 +6,7 @@
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
 #include <atomic>
+#include <thread>
 
 namespace MR
 {
@@ -169,112 +170,186 @@ inline std::pair<int, int> sharedVertex( const VertId av[3], const VertId bv[3] 
     return { -1, -1 };
 }
 
-std::vector<FaceFace> findSelfCollidingTriangles( const MeshPart & mp )
+static void processSelfSubtasks( const AABBTree & tree,
+    std::vector<NodeNode> & subtasks,
+    std::vector<NodeNode> & nextSubtasks, // may be same as subtasks
+    std::function<void(const NodeNode&)> processLeaf )
 {
-    MR_TIMER;
+        while( !subtasks.empty() )
+        {
+            const auto s = subtasks.back();
+            subtasks.pop_back();
+            const auto & aNode = tree[s.aNode];
+            const auto & bNode = tree[s.bNode];
 
+            if ( s.aNode == s.bNode )
+            {
+                if ( !aNode.leaf() )
+                {
+                    nextSubtasks.emplace_back( aNode.l, aNode.l );
+                    nextSubtasks.emplace_back( aNode.r, aNode.r );
+                    nextSubtasks.emplace_back( aNode.l, aNode.r );
+                }
+                continue;
+            }
+
+            const auto overlap = aNode.box.intersection( bNode.box );
+            if ( !overlap.valid() )
+                continue;
+
+            if ( aNode.leaf() && bNode.leaf() )
+            {
+                processLeaf( s );
+                continue;
+            }
+        
+            if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
+            {
+                // split aNode
+                nextSubtasks.emplace_back( aNode.l, s.bNode );
+                nextSubtasks.emplace_back( aNode.r, s.bNode );
+            }
+            else
+            {
+                assert( !bNode.leaf() );
+                // split bNode
+                nextSubtasks.emplace_back( s.aNode, bNode.l );
+                nextSubtasks.emplace_back( s.aNode, bNode.r );
+            }
+        }
+}
+
+tl::expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( const MeshPart & mp, ProgressCallback cb )
+{
+    MR_TIMER
     std::vector<FaceFace> res;
     const AABBTree & tree = mp.mesh.getAABBTree();
     if ( tree.nodes().empty() )
         return res;
 
-    std::vector<NodeNode> subtasks{ { AABBTree::NodeId{ 0 }, AABBTree::NodeId{ 0 } } };
+    auto sb = subprogress( cb, 0, 0.08f );
 
-    while( !subtasks.empty() )
+    // sequentially subdivide full task on smaller subtasks;
+    // they shall be not too many for this subdivision not to take too long;
+    // and they shall be not too few for enough parallelism later
+    std::vector<NodeNode> subtasks{ { AABBTree::NodeId{ 0 }, AABBTree::NodeId{ 0 } } }, nextSubtasks, leafTasks;
+    for( int i = 0; i < 16 && !subtasks.empty(); ++i ) // 16 -> will produce at most 2^16 subtasks
     {
-        const auto s = subtasks.back();
-        subtasks.pop_back();
-        const auto & aNode = tree[s.aNode];
-        const auto & bNode = tree[s.bNode];
+        processSelfSubtasks( tree, subtasks, nextSubtasks,
+            [&leafTasks]( const NodeNode & s ) { leafTasks.push_back( s ); } );
+        subtasks.swap( nextSubtasks );
 
-        if ( s.aNode == s.bNode )
-        {
-            if ( !aNode.leaf() )
-            {
-                subtasks.emplace_back( aNode.l, aNode.l );
-                subtasks.emplace_back( aNode.r, aNode.r );
-                subtasks.emplace_back( aNode.l, aNode.r );
-            }
-            continue;
-        }
-
-        const auto overlap = aNode.box.intersection( bNode.box );
-        if ( !overlap.valid() )
-            continue;
-
-        if ( aNode.leaf() && bNode.leaf() )
-        {
-            const auto aFace = aNode.leafId();
-            if ( mp.region && !mp.region->test( aFace ) )
-                continue;
-            const auto bFace = bNode.leafId();
-            if ( mp.region && !mp.region->test( bFace ) )
-                continue;
-            if ( !mp.mesh.topology.sharedEdge( aFace, bFace ) )
-                res.emplace_back( aFace, bFace );
-            continue;
-        }
-        
-        if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
-        {
-            // split aNode
-            subtasks.emplace_back( aNode.l, s.bNode );
-            subtasks.emplace_back( aNode.r, s.bNode );
-        }
-        else
-        {
-            assert( !bNode.leaf() );
-            // split bNode
-            subtasks.emplace_back( s.aNode, bNode.l );
-            subtasks.emplace_back( s.aNode, bNode.r );
-        }
+        if ( !reportProgress( sb, i / 16.0f ) )
+            return tl::make_unexpected( "Operation was canceled" );
     }
+    subtasks.insert( subtasks.end(), leafTasks.begin(), leafTasks.end() );
 
-    tbb::parallel_for( tbb::blocked_range<int>( 0, (int)res.size() ),
-        [&]( const tbb::blocked_range<int>& range )
+    sb = subprogress( cb, 0.08f, 0.92f );
+
+    std::vector<std::vector<FaceFace>> subtaskRes( subtasks.size() );
+
+    auto mainThreadId = std::this_thread::get_id();
+    std::atomic<bool> keepGoing{ true };
+    std::atomic<size_t> numDone;
+    // checks subtasks in parallel
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, subtasks.size() ),
+        [&]( const tbb::blocked_range<size_t>& range )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
+        std::vector<NodeNode> mySubtasks;
+        for ( auto is = range.begin(); is < range.end(); ++is )
         {
-            VertId av[3], bv[3];
-            mp.mesh.topology.getTriVerts( res[i].aFace, av[0], av[1], av[2] );
-            mp.mesh.topology.getTriVerts( res[i].bFace, bv[0], bv[1], bv[2] );
+            if ( sb && !keepGoing.load( std::memory_order_relaxed ) )
+                break;
 
-            Vector3d ap[3], bp[3];
-            for ( int j = 0; j < 3; ++j )
-            {
-                ap[j] = Vector3d{ mp.mesh.points[av[j]] };
-                bp[j] = Vector3d{ mp.mesh.points[bv[j]] };
-            }
+            mySubtasks.push_back( subtasks[is] );
+            std::vector<FaceFace> myRes;
+            processSelfSubtasks( tree, mySubtasks, mySubtasks,
+                [&tree, &mp, &myRes]( const NodeNode & s )
+                {
+                    const auto & aNode = tree[s.aNode];
+                    const auto & bNode = tree[s.bNode];
+                    const auto aFace = aNode.leafId();
+                    if ( mp.region && !mp.region->test( aFace ) )
+                        return;
+                    const auto bFace = bNode.leafId();
+                    if ( mp.region && !mp.region->test( bFace ) )
+                        return;
+                    if ( mp.mesh.topology.sharedEdge( aFace, bFace ) )
+                        return;
 
-            auto sv = sharedVertex( av, bv );
-            if ( sv.first >= 0 )
-            {
-                // shared vertex
-                const int j = sv.first;
-                const int k = sv.second;
-                if ( !doTriangleSegmentIntersect( ap[0], ap[1], ap[2], bp[ ( k + 1 ) % 3 ], bp[ ( k + 2 ) % 3 ] ) &&
-                     !doTriangleSegmentIntersect( bp[0], bp[1], bp[2], ap[ ( j + 1 ) % 3 ], ap[ ( j + 2 ) % 3 ] ) )
-                    res[i].aFace = FaceId{}; //invalidate
-            }
-            else if ( !doTrianglesIntersectExt( ap[0], ap[1], ap[2], bp[0], bp[1], bp[2] ) )
-                res[i].aFace = FaceId{}; //invalidate
+                    VertId av[3], bv[3];
+                    mp.mesh.topology.getTriVerts( aFace, av[0], av[1], av[2] );
+                    mp.mesh.topology.getTriVerts( bFace, bv[0], bv[1], bv[2] );
+
+                    Vector3d ap[3], bp[3];
+                    for ( int j = 0; j < 3; ++j )
+                    {
+                        ap[j] = Vector3d{ mp.mesh.points[av[j]] };
+                        bp[j] = Vector3d{ mp.mesh.points[bv[j]] };
+                    }
+
+                    auto sv = sharedVertex( av, bv );
+                    if ( sv.first >= 0 )
+                    {
+                        // shared vertex
+                        const int j = sv.first;
+                        const int k = sv.second;
+                        if ( !doTriangleSegmentIntersect( ap[0], ap[1], ap[2], bp[ ( k + 1 ) % 3 ], bp[ ( k + 2 ) % 3 ] ) &&
+                             !doTriangleSegmentIntersect( bp[0], bp[1], bp[2], ap[ ( j + 1 ) % 3 ], ap[ ( j + 2 ) % 3 ] ) )
+                            return;
+                    }
+                    else if ( !doTrianglesIntersectExt( ap[0], ap[1], ap[2], bp[0], bp[1], bp[2] ) )
+                        return;
+                    myRes.emplace_back( aFace, bFace );
+
+                }
+            );
+
+            subtaskRes[is] = std::move( myRes );
+        }
+
+        if ( cb )
+            numDone += range.size();
+
+        if ( sb && std::this_thread::get_id() == mainThreadId )
+        {
+            if ( !reportProgress( sb, float( numDone ) / subtasks.size() ) )
+                keepGoing.store( false, std::memory_order_relaxed );
         }
     } );
 
-    res.erase( std::remove_if( res.begin(), res.end(), []( const FaceFace & ff ) { return !ff.aFace.valid(); } ), res.end() );
+    if ( !keepGoing.load( std::memory_order_relaxed ) || !reportProgress( sb, 1.0f ) )
+        return tl::make_unexpected( "Operation was canceled" );
+
+    // unite results from sub-trees into final vector
+    size_t cols = 0;
+    for ( const auto & s : subtaskRes )
+        cols += s.size();
+    res.reserve( cols );
+    for ( const auto & s : subtaskRes )
+        res.insert( res.end(), s.begin(), s.end() );
+
+    if ( !reportProgress( cb, 1.0f ) )
+        return tl::make_unexpected( "Operation was canceled" );
 
     return res;
 }
 
-FaceBitSet findSelfCollidingTrianglesBS( const MeshPart & mp )
+tl::expected<FaceBitSet, std::string> findSelfCollidingTrianglesBS( const MeshPart & mp, ProgressCallback cb )
 {
-    auto ffs = findSelfCollidingTriangles( mp );
+    MR_TIMER
+    
+    auto ffs = findSelfCollidingTriangles( mp, cb );
+    if ( !ffs.has_value() )
+        return tl::make_unexpected( ffs.error() );
+
     FaceBitSet res;
-    for ( const auto & ff : ffs )
+    for ( const auto & ff : ffs.value() )
     {
         res.autoResizeSet( ff.aFace );
         res.autoResizeSet( ff.bFace );
     }
+
     return res;
 }
 

@@ -7,6 +7,7 @@
 #include "MRUniqueThreadSafeOwner.h"
 #include "MRWriter.h"
 #include "MRConstants.h"
+#include "MRProgressCallback.h"
 #include <cfloat>
 
 namespace MR
@@ -25,7 +26,7 @@ struct [[nodiscard]] Mesh
     /// if skippedTris is given then it receives all input triangles not added in the resulting topology due to conflicts
     [[nodiscard]] MRMESH_API static Mesh fromTriangles(
         VertCoords vertexCoordinates,
-        const Triangulation & t, const MeshBuilder::BuildSettings & settings = {} );
+        const Triangulation& t, const MeshBuilder::BuildSettings& settings = {}, ProgressCallback cb = {} );
     /// construct mesh from vertex coordinates and a set of triangles with given ids;
     /// unlike simple fromTriangles() it tries to resolve non-manifold vertices by creating duplicate vertices
     [[nodiscard]] MRMESH_API static Mesh fromTrianglesDuplicatingNonManifoldVertices(
@@ -44,20 +45,26 @@ struct [[nodiscard]] Mesh
     // returns a point on the edge: origin point for f=0 and destination point for f=1
     [[nodiscard]] Vector3f edgePoint( EdgeId e, float f ) const { return f * destPnt( e ) + ( 1 - f ) * orgPnt( e ); }
     [[nodiscard]] Vector3f edgePoint( const MeshEdgePoint & ep ) const { return edgePoint( ep.e, ep.a ); }
-    [[nodiscard]] Vector3f edgeCenter( EdgeId e ) const { return edgePoint( e, 0.5f ); }
+    [[nodiscard]] Vector3f edgeCenter( UndirectedEdgeId e ) const { return edgePoint( e, 0.5f ); }
     // returns three points of left face of e
     MRMESH_API void getLeftTriPoints( EdgeId e, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const;
     void getLeftTriPoints( EdgeId e, Vector3f (&v)[3] ) const { getLeftTriPoints( e, v[0], v[1], v[2] ); }
+    [[nodiscard]] ThreePoints getLeftTriPoints( EdgeId e ) const { ThreePoints res; getLeftTriPoints( e, res[0], res[1], res[2] ); return res; }
+    // returns three points of given face
     void getTriPoints( FaceId f, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const { getLeftTriPoints( topology.edgeWithLeft( f ), v0, v1, v2 ); }
     void getTriPoints( FaceId f, Vector3f (&v)[3] ) const { getTriPoints( f, v[0], v[1], v[2] ); }
+    [[nodiscard]] ThreePoints getTriPoints( FaceId f ) const { ThreePoints res; getTriPoints( f, res[0], res[1], res[2] ); return res; }
+
     // returns interpolated coordinates of given point
     [[nodiscard]] MRMESH_API Vector3f triPoint( const MeshTriPoint & p ) const;
     // returns the centroid of given triangle
     [[nodiscard]] MRMESH_API Vector3f triCenter( FaceId f ) const;
 
     // converts face id and 3d point into barycentric representation
+    [[nodiscard]] MRMESH_API MeshTriPoint toTriPoint( VertId v ) const;
     [[nodiscard]] MRMESH_API MeshTriPoint toTriPoint( FaceId f, const Vector3f & p ) const;
-    [[nodiscard]] MRMESH_API MeshTriPoint toTriPoint( const PointOnFace & p ) const;
+    [[nodiscard]] MRMESH_API MeshTriPoint toTriPoint( const PointOnFace& p ) const;
+    [[nodiscard]] MRMESH_API MeshEdgePoint toEdgePoint( VertId v ) const;
     [[nodiscard]] MRMESH_API MeshEdgePoint toEdgePoint( EdgeId e, const Vector3f & p ) const;
 
     // returns one of three face vertices, closest to given point
@@ -70,9 +77,9 @@ struct [[nodiscard]] Mesh
     // returns vector equal to edge destination point minus edge origin point
     [[nodiscard]] Vector3f edgeVector( EdgeId e ) const { return destPnt( e ) - orgPnt( e ); }
     // returns Euclidean length of the edge
-    [[nodiscard]] float edgeLength( EdgeId e ) const { return edgeVector( e ).length(); }
+    [[nodiscard]] float edgeLength( UndirectedEdgeId e ) const { return edgeVector( e ).length(); }
     // returns squared Euclidean length of the edge (faster to compute than length)
-    [[nodiscard]] float edgeLengthSq( EdgeId e ) const { return edgeVector( e ).lengthSq(); }
+    [[nodiscard]] float edgeLengthSq( UndirectedEdgeId e ) const { return edgeVector( e ).lengthSq(); }
 
     // computes directed double area for a triangular face from its vertices
     [[nodiscard]] MRMESH_API Vector3f leftDirDblArea( EdgeId e ) const;
@@ -106,7 +113,7 @@ struct [[nodiscard]] Mesh
     // at vertex, only region faces will be considered
     [[nodiscard]] MRMESH_API Vector3f pseudonormal( VertId v, const FaceBitSet * region = nullptr ) const;
     // at edge (middle of two face normals)
-    [[nodiscard]] MRMESH_API Vector3f pseudonormal( EdgeId e, const FaceBitSet * region = nullptr ) const;
+    [[nodiscard]] MRMESH_API Vector3f pseudonormal( UndirectedEdgeId e, const FaceBitSet * region = nullptr ) const;
     // returns pseudonormal in corresponding face/edge/vertex;
     // unlike normal( const MeshTriPoint & p ), this is not a smooth function
     [[nodiscard]] MRMESH_API Vector3f pseudonormal( const MeshTriPoint & p, const FaceBitSet * region = nullptr ) const;
@@ -121,28 +128,31 @@ struct [[nodiscard]] Mesh
     // computes the sum of triangle angles at given vertex; optionally returns whether the vertex is on boundary
     [[nodiscard]] MRMESH_API float sumAngles( VertId v, bool * outBoundaryVert = nullptr ) const;
     // returns vertices where the sum of triangle angles is below given threshold
-    [[nodiscard]] MRMESH_API VertBitSet findSpikeVertices( float minSumAngle, const VertBitSet * region = nullptr ) const;
+    [[nodiscard]] MRMESH_API tl::expected<VertBitSet, std::string> findSpikeVertices( float minSumAngle, const VertBitSet* region = nullptr, ProgressCallback cb = {} ) const;
 
     // given an edge between two triangular faces, computes sine of dihedral angle between them:
     // 0 if both faces are in the same plane,
     // positive if the faces form convex surface,
     // negative if the faces form concave surface
-    [[nodiscard]] MRMESH_API float dihedralAngleSin( EdgeId e ) const;
+    [[nodiscard]] MRMESH_API float dihedralAngleSin( UndirectedEdgeId e ) const;
     // given an edge between two triangular faces, computes cosine of dihedral angle between them:
     // 1 if both faces are in the same plane,
     // 0 if the surface makes right angle turn at the edge,
     // -1 if the faces overlap one another
-    [[nodiscard]] MRMESH_API float dihedralAngleCos( EdgeId e ) const;
+    [[nodiscard]] MRMESH_API float dihedralAngleCos( UndirectedEdgeId e ) const;
     // given an edge between two triangular faces, computes the dihedral angle between them:
     // 0 if both faces are in the same plane,
     // positive if the faces form convex surface,
     // negative if the faces form concave surface;
     // please consider the usage of faster dihedralAngleSin(e) and dihedralAngleCos(e)
-    [[nodiscard]] MRMESH_API float dihedralAngle( EdgeId e ) const;
+    [[nodiscard]] MRMESH_API float dihedralAngle( UndirectedEdgeId e ) const;
 
-    // computes discrete mean curvature in given vertex measures in length^-1;
+    // computes discrete mean curvature in given vertex, measures in length^-1;
     // 0 for planar regions, positive for convex surface, negative for concave surface
     [[nodiscard]] MRMESH_API float discreteMeanCurvature( VertId v ) const;
+    // computes discrete mean curvature in given edge, measures in length^-1;
+    // 0 for planar regions, positive for convex surface, negative for concave surface
+    [[nodiscard]] MRMESH_API float discreteMeanCurvature( UndirectedEdgeId e ) const;
     // computes discrete Gaussian curvature (or angle defect) at given vertex,
     // which 0 in inner vertices on planar mesh parts and reaches 2*pi on needle's tip, see http://math.uchicago.edu/~may/REU2015/REUPapers/Upadhyay.pdf
     // optionally returns whether the vertex is on boundary
@@ -154,7 +164,7 @@ struct [[nodiscard]] Mesh
     // computes cotangent of the angle in the left( e ) triangle opposite to e,
     // and returns 0 if left face does not exist
     [[nodiscard]] MRMESH_API float leftCotan( EdgeId e ) const;
-    [[nodiscard]] float cotan( EdgeId e ) const { return leftCotan( e ) + leftCotan( e.sym() ); }
+    [[nodiscard]] float cotan( UndirectedEdgeId ue ) const { EdgeId e{ ue }; return leftCotan( e ) + leftCotan( e.sym() ); }
 
     // computes quadratic form in the vertex as the sum of squared distances from
     // 1) planes of adjacent triangles
@@ -173,9 +183,11 @@ struct [[nodiscard]] Mesh
     // computes average length of an edge in this mesh
     [[nodiscard]] MRMESH_API float averageEdgeLength() const;
 
-    // find center location of the mesh by different means
+    // computes average position of all valid mesh vertices
     [[nodiscard]] MRMESH_API Vector3f findCenterFromPoints() const;
+    // computes center of mass considering that density of all triangles is the same
     [[nodiscard]] MRMESH_API Vector3f findCenterFromFaces() const;
+    // computes bounding box and returns its center
     [[nodiscard]] MRMESH_API Vector3f findCenterFromBBox() const;
 
     // for all points not in topology.getValidVerts() sets coordinates to (0,0,0)
@@ -265,6 +277,8 @@ struct [[nodiscard]] Mesh
 
     // returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const;
+    /// requests the removal of unused capacity
+    MRMESH_API void shrinkToFit();
 
     /// reflects the mesh from a given plane
     MRMESH_API void mirror( const Plane3f& plane );

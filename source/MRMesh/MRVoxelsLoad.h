@@ -1,5 +1,5 @@
 #pragma once
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM )
+#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
 #include "MRObject.h"
@@ -24,16 +24,15 @@ MRMESH_API extern const IOFilters Filters;
 /// usually needed for scans
 MRMESH_API void sortFilesByName( std::vector<std::filesystem::path>& scans );
 
+#if !defined(MRMESH_NO_DICOM)
 struct LoadDCMResult
 {
     VdbVolume vdbVolume;
     std::string name;
+    AffineXf3f xf;
 };
 
-/// Loads data from DICOM file(s) to SimpleVolume
-/// SimpleVolume dimensions: x,y equals to x,y dimensions of DICOM picture,
-///                          z - number of pictures loaded
-/// Files in folder are sorted by names
+/// Loads data from DICOM file(s)
 MRMESH_API tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::path& path,
                                                         unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 
@@ -43,6 +42,7 @@ MRMESH_API std::vector<tl::expected<LoadDCMResult, std::string>> loadDCMFolderTr
 
 /// Load single DCM file as Object Voxels
 MRMESH_API tl::expected<LoadDCMResult, std::string> loadDCMFile( const std::filesystem::path& path, const ProgressCallback& cb = {} );
+#endif // MRMESH_NO_DICOM
 
 struct RawParameters
 {
@@ -61,16 +61,35 @@ struct RawParameters
         Int64,
         Float32,
         Float64,
+        Unknown,
         Count
     } scalarType{ ScalarType::Float32 };
 };
-/// Load raw voxels file with provided parameters
-MRMESH_API tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path, const RawParameters& params,
+/// Load raw voxels from file with provided parameters
+MRMESH_API tl::expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& file, const RawParameters& params,
+                                                         const ProgressCallback& cb = {} );
+/// Load raw voxels from stream with provided parameters;
+/// important on Windows: in stream must be open in binary mode
+MRMESH_API tl::expected<VdbVolume, std::string> fromRaw( std::istream& in, const RawParameters& params,
                                                          const ProgressCallback& cb = {} );
 
 /// Load raw voxels file, parsing parameters from name 
-MRMESH_API tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
+MRMESH_API tl::expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& file,
                                                          const ProgressCallback& cb = {} );
+
+/// Load raw voxels OpenVDB file
+MRMESH_API tl::expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem::path& file,
+                                                         const ProgressCallback& cb = {} );
+
+/// Load voxel from Gav-file with micro CT reconstruction
+MRMESH_API tl::expected<VdbVolume, std::string> fromGav( const std::filesystem::path& file, const ProgressCallback& cb = {} );
+/// Load voxel from Gav-stream with micro CT reconstruction
+MRMESH_API tl::expected<VdbVolume, std::string> fromGav( std::istream& in, const ProgressCallback& cb = {} );
+
+
+/// Detects the format from file extension and loads voxels from it
+MRMESH_API tl::expected<std::vector<VdbVolume>, std::string> fromAnySupportedFormat( const std::filesystem::path& file,
+                                                                        const ProgressCallback& cb = {} );
 
 /// \}
 
@@ -93,8 +112,8 @@ struct LoadingTiffSettings
 };
 /// Load voxels from a set of TIFF files
 MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& settings );
-#endif
+#endif // MRMESH_NO_TIFF
 }
 
 }
-#endif
+#endif // !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXELS )

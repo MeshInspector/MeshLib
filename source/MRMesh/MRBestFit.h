@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMatrix3.h"
+#include "MRSymMatrix3.h"
 #include "MRPlane3.h"
 #include "MRLine3.h"
 #include "MRAffineXf3.h"
@@ -49,5 +50,25 @@ private:
 MRMESH_API void accumulateFaceCenters( PointAccumulator& accum, const MeshPart& mp, const AffineXf3f* xf = nullptr );
 
 /// \}
+
+/// Class to accumulate planes to find then their crossing point
+class PlaneAccumulator
+{
+public:
+    MRMESH_API void addPlane( const Plane3d & pl );
+    void addPlane( const Plane3f& pl ) { addPlane( Plane3d( pl ) ); }
+
+    /// computes the point that minimizes the sum of squared distances to accumulated planes;
+    /// if such point is not unique then returns the one closest to p0
+    /// \param tol relative epsilon-tolerance for too small number detection
+    /// \param rank optional output for solution matrix rank according to given tolerance
+    /// \param space rank=1: unit normal to solution plane, rank=2: unit direction of solution line, rank=3: zero vector
+    MRMESH_API Vector3d findBestCrossPoint( const Vector3d & p0, double tol, int * rank = nullptr, Vector3d * space = nullptr ) const;
+    MRMESH_API Vector3f findBestCrossPoint( const Vector3f & p0, float tol, int * rank = nullptr, Vector3f * space = nullptr ) const;
+
+private:
+    SymMatrix3d mat_;
+    Vector3d rhs_;
+};
 
 } // namespace MR

@@ -16,6 +16,7 @@
 #include "MRPch/MRSuppressWarning.h"
 #include "MRPch/MRTBB.h"
 #include "MRMesh/MR2to3.h"
+#include "MRMesh/MRObjectVoxels.h"
 
 using VisualObjectTreeDataVector = std::vector<MR::VisualObject*>;
 namespace
@@ -45,12 +46,12 @@ Viewport::~Viewport()
 
 void Viewport::init()
 {
-    viewportGL_ = ViewportGL();  
+    viewportGL_ = ViewportGL();
     init_axes();
     updateSceneBox_();
     setRotationPivot_( sceneBox_.valid() ? sceneBox_.center() : Vector3f() );
-    setupProjMatrix();
-    setupStaticProjMatrix();
+    setupProjMatrix_();
+    setupStaticProjMatrix_();
 }
 
 void Viewport::shut()
@@ -61,10 +62,18 @@ void Viewport::shut()
 // ================================================================
 // draw functions part
 
-void Viewport::draw(const VisualObject& obj, const AffineXf3f& xf, bool forceZBuffer, bool alphaSort ) const
+
+void Viewport::draw(const VisualObject& obj, const AffineXf3f& xf, 
+     DepthFuncion depthFunc, bool alphaSort ) const
+{
+    draw( obj, xf, projM_, depthFunc, alphaSort );
+}
+
+void Viewport::draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f& projM,
+     DepthFuncion depthFunc, bool alphaSort ) const
 {
     auto modelTemp = Matrix4f( xf );
-    auto normTemp = viewM * modelTemp;
+    auto normTemp = viewM_ * modelTemp;
     if ( normTemp.det() == 0 )
     {
         auto norm = normTemp.norm();
@@ -83,9 +92,9 @@ void Viewport::draw(const VisualObject& obj, const AffineXf3f& xf, bool forceZBu
 
     RenderParams params
     {
-        {viewM.data(), modelTemp.data(), projM.data(), normM.data(),
-        id, params_.clippingPlane, toVec4<int>( viewportRect_ )},
-        params_.lightPosition, forceZBuffer, alphaSort
+        {viewM_, modelTemp, projM, &normM,
+        id, params_.clippingPlane, toVec4<int>( viewportRect_ ),depthFunc},
+        params_.lightPosition, alphaSort
     };
     obj.render( params );
 }
@@ -133,7 +142,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
     std::vector<Vector2i> picks( viewportPoints.size() );
     ViewportGL::PickParameters params{
         renderVector,
-        {viewM.data(),projM.data(),toVec4<int>( viewportRect_ )},
+        {viewM_,projM_,toVec4<int>( viewportRect_ )},
         params_.clippingPlane,id};
 
     for ( int i = 0; i < viewportPoints.size(); ++i )
@@ -153,6 +162,16 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
 
         PointOnFace res;
         res.face = FaceId( int( pickRes.primId ) );
+#ifndef __EMSCRIPTEN__
+        auto voxObj = renderVector[pickRes.geomId]->asType<ObjectVoxels>();
+        if ( voxObj && voxObj->isVolumeRenderingEnabled() )
+        {
+            res.point = renderVector[pickRes.geomId]->worldXf( id ).inverse()( 
+                unprojectFromViewportSpace( Vector3f( viewportPoints[i].x, viewportPoints[i].y, pickRes.zBuffer ) ) );
+            // TODO: support VoxelId (PointOnFace is old class that requires rework)
+        }
+        else
+#endif
         if ( auto pointObj = renderVector[pickRes.geomId]->asType<ObjectPointsHolder>() )
         {
             if ( auto pc = pointObj->pointCloud() )
@@ -223,7 +242,7 @@ std::vector<std::shared_ptr<MR::VisualObject>> Viewport::findObjectsInRect( cons
 
     ViewportGL::PickParameters params{
         renderVector,
-        {viewM.data(),projM.data(),toVec4<int>( viewportRect_ )},
+        {viewM_,projM_,toVec4<int>( viewportRect_ )},
         params_.clippingPlane,id };
 
     auto viewportRect = Box2i( Vector2i( 0, 0 ), Vector2i( int( width( viewportRect_ ) ), int( height( viewportRect_ ) ) ) );
@@ -292,14 +311,14 @@ void Viewport::setLinesWithColors( const ViewportLinesWithColors& linesWithColor
     viewportGL_.setLinesWithColors( linesWithColors );
 }
 
-void Viewport::setupView() const
+void Viewport::setupView()
 {
-    setupViewMatrix();
-    setupProjMatrix();
-    setupStaticProjMatrix();
+    setupViewMatrix_();
+    setupProjMatrix_();
+    setupStaticProjMatrix_();
 }
 
-void Viewport::preDraw() const 
+void Viewport::preDraw()
 {
     if ( !viewportGL_.checkInit() )
         viewportGL_.init();
@@ -473,21 +492,19 @@ void Viewport::draw_axes() const
 {
     if ( Viewer::constInstance()->basisAxes->isVisible( id ) )
     {
-        auto fullInversedM = (staticProj * viewM).inverse();
+        auto fullInversedM = (staticProj_ * viewM_).inverse();
         auto transBase = fullInversedM( viewportSpaceToClipSpace( relPoseBase ) );
         auto transSide = fullInversedM( viewportSpaceToClipSpace( relPoseSide ) );
 
         float scale = (transSide - transBase).length();
-        params_.basisAxesXf = AffineXf3f( Matrix3f::scale( scale ), transBase );
-        std::swap( staticProj, projM );
-        draw( *Viewer::constInstance()->basisAxes, params_.basisAxesXf, true );
-        draw( *Viewer::constInstance()->basisAxes, params_.basisAxesXf );
+        const auto basisAxesXf = AffineXf3f( Matrix3f::scale( scale ), transBase );
+        draw( *Viewer::constInstance()->basisAxes, basisAxesXf, staticProj_, DepthFuncion::Always );
+        draw( *Viewer::constInstance()->basisAxes, basisAxesXf, staticProj_ );
         for ( const auto& child : getViewerInstance().basisAxes->children() )
         {
             if ( auto visualChild = child->asType<VisualObject>() )
-                draw( *visualChild, params_.basisAxesXf );
+                draw( *visualChild, basisAxesXf, staticProj_ );
         }
-        std::swap( staticProj, projM );
     }
 }
 
@@ -508,8 +525,7 @@ void Viewport::draw_global_basis() const
     if ( !Viewer::instance()->globalBasisAxes->isVisible( id ) )
         return;
 
-    params_.globalBasisAxesXf = AffineXf3f::linear( Matrix3f::scale( params_.objectScale * 0.5f ) );
-    draw( *Viewer::constInstance()->globalBasisAxes, params_.globalBasisAxesXf );
+    draw( *Viewer::constInstance()->globalBasisAxes, params_.globalBasisAxesXf() );
 }
 
 void Viewport::draw_lines( void ) const

@@ -8,6 +8,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
 #include "MRRibbonConstants.h"
+#include "MRUIStyle.h"
 #include <GLFW/glfw3.h>
 
 #ifdef _WIN32
@@ -46,6 +47,8 @@ void ProgressBar::setup( float scaling )
     instance.setupId_ = ImGui::GetID( buf );
     if ( ImGui::BeginModalNoAnimation( buf, nullptr, ImGuiWindowFlags_AlwaysAutoResize ) )
     {
+        instance.frameRequest_.reset();
+
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
         if ( instance.taskCount_ > 1 )
         {
@@ -58,7 +61,7 @@ void ProgressBar::setup( float scaling )
         ImGui::ProgressBar( progress, ImVec2( 250.0f * scaling, 0.0f ), buf );
         // this is needed to prevent events race and redraw after progress bar is finished
         if ( progress >= 1.0f )
-            getViewerInstance().incrementForceRedrawFrames();
+            instance.frameRequest_.requestFrame();
         ImGui::Separator();
 
         if ( instance.allowCancel_ )
@@ -67,7 +70,7 @@ void ProgressBar::setup( float scaling )
             {
                 ImGui::SetCursorPosX( ( ImGui::GetWindowWidth() + ImGui::GetContentRegionAvail().x ) * 0.5f - 75.0f * scaling );
 				const float btnHeight = ImGui::CalcTextSize( "SDC" ).y + cGradientButtonFramePadding * scaling;
-                if ( RibbonButtonDrawer::GradientButton( "Cancel", ImVec2( 75.0f * scaling, btnHeight ), ImGuiKey_Escape ) )
+                if ( UI::button( "Cancel", Vector2f( 75.0f * scaling, btnHeight ), ImGuiKey_Escape ) )
                     instance.canceled_ = true;
             }
             else
@@ -79,7 +82,7 @@ void ProgressBar::setup( float scaling )
 #else
         ImGui::Text( "Operation is in progress, please wait..." );
         if ( instance.progress_ >= 1.0f )
-            getViewerInstance().incrementForceRedrawFrames();
+            instance.frameRequest_.requestFrame();
 #endif
         if ( instance.finished_ )
         {
@@ -89,6 +92,7 @@ void ProgressBar::setup( float scaling )
                 instance.onFinish_ = {};
             }
             ImGui::CloseCurrentPopup();
+            getViewerInstance().incrementForceRedrawFrames( 2, true );
         }
         ImGui::EndPopup();
     }
@@ -149,7 +153,7 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
         instance.title_ = nameStr;
 
         ImGui::OpenPopup( instance.setupId_ );
-        instance.lastPostEvent_ = std::chrono::system_clock::now();
+        instance.frameRequest_.reset();
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
         instance.thread_ = std::thread( [&instance] ()
         {
@@ -187,15 +191,16 @@ float ProgressBar::getProgress()
 
 bool ProgressBar::setProgress( float p )
 {
-    instance_().progress_ = p;
-    instance_().postEvent_();
-    return !instance_().canceled_;
-}
+    auto& instance = instance_();
+    assert( instance.thread_.get_id() == std::this_thread::get_id() );
+    int newPercents = int( p * 100.0f );
+    int percents = instance.percents_;
+    if ( percents != newPercents && instance.percents_.compare_exchange_strong( percents, newPercents ) )
+        spdlog::info( "Operation progress: \"{}\" - {}%", instance.title_, newPercents );
 
-void ProgressBar::addProgress( float p )
-{
-    instance_().progress_ += p;
-    instance_().postEvent_();
+    instance.progress_ = p;
+    instance.frameRequest_.requestFrame();
+    return !instance.canceled_;
 }
 
 void ProgressBar::setTaskCount( int n )
@@ -227,29 +232,12 @@ bool ProgressBar::callBackSetProgress( float p )
     return !instance.canceled_;
 }
 
-bool ProgressBar::callBackAddProgress( float p )
-{
-    auto& instance = instance_();
-    instance.allowCancel_ = true;
-    instance.addProgress( p );
-    return !instance.canceled_;
-}
-
 bool ProgressBar::simpleCallBackSetProgress( float p )
 {
     auto& instance = instance_();
     instance.allowCancel_ = false;
     instance.setProgress( ( p + float( instance.currentTask_ - 1 ) ) / instance.taskCount_ );
     return true; // no cancel
-}
-
-bool ProgressBar::simpleCallBackAddProgress( float p )
-{
-    auto& instance = instance_();
-    instance.allowCancel_ = false;
-    instance.addProgress( p );
-    return true; // no cancel
-
 }
 
 ProgressBar& ProgressBar::ProgressBar::instance_()
@@ -323,21 +311,40 @@ void ProgressBar::tryRunTaskWithSehHandler_()
     finish_();
 }
 
-void ProgressBar::postEvent_()
+void ProgressBar::FrameRedrawRequest::requestFrame()
 {
     // do not do it too frequently not to overload the renderer
-    auto now = std::chrono::system_clock::now();
-    const auto minInterval = std::chrono::milliseconds( 100 );
-    if ( lastPostEvent_ + minInterval > now )
-        return;
-    lastPostEvent_ = now;
-    getViewerInstance().postEmptyEvent();
+    constexpr auto minInterval = std::chrono::milliseconds( 100 );
+    // make request
+#ifdef __EMSCRIPTEN__
+    bool testFrameOrder = false;
+    if ( frameRequested_.compare_exchange_strong( testFrameOrder, true ) )
+    {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
+        MAIN_THREAD_EM_ASM( postEmptyEvent( $0, 2 ), int( minInterval.count() ) );
+#pragma clang diagnostic pop
+    }
+#else
+    asyncRequest_.requestIfNotSet( std::chrono::system_clock::now() + minInterval, [] ()
+    {
+        getViewerInstance().postEmptyEvent();
+    } );
+#endif
 }
 
 void ProgressBar::finish_()
 {
     finished_ = true;
-    getViewerInstance().postEmptyEvent();
+    frameRequest_.requestFrame();
+}
+
+void ProgressBar::FrameRedrawRequest::reset()
+{
+#ifdef __EMSCRIPTEN__
+    bool testFrameOrder = true;
+    frameRequested_.compare_exchange_strong( testFrameOrder, false );
+#endif
 }
 
 }

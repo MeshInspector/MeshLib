@@ -52,6 +52,8 @@ const ShortcutManager::ShortcutList& ShortcutManager::getShortcutList() const
 
 bool ShortcutManager::processShortcut( const ShortcutKey& key, Reason reason ) const
 {
+    if ( !enabled_ )
+        return false;
     auto it = map_.find( mapKeyFromKeyAndMod( key ) );
     if ( it != map_.end() && ( reason == Reason::KeyDown || it->second.repeatable ) )
     {

@@ -41,6 +41,7 @@ private:
     enum class Sizes
     {
         X0_5,
+        X0_75,
         X1,
         X3,
         Count,

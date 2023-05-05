@@ -62,6 +62,7 @@ public:
     
     // returns stored position of this widget
     const MeshTriPoint& getCurrentPosition() const { return currentPos_; }
+    MRVIEWER_API void updateCurrentPosition( MeshTriPoint& pos );
 
     // this callback is called when modification starts if it is set
     void setStartMoveCallback( std::function<void( const MeshTriPoint& )> startMove ) { startMove_ = startMove; }
@@ -69,6 +70,8 @@ public:
     void setOnMoveCallback( std::function<void( const MeshTriPoint& )> onMove ) { onMove_ = onMove; }
     // this callback is called when modification ends if it is set
     void setEndMoveCallback( std::function<void( const MeshTriPoint& )> endMove ) { endMove_ = endMove; }
+
+    std::shared_ptr<ObjectMesh> getBaseSurface() { return baseSurface_; }
 
 private:
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;

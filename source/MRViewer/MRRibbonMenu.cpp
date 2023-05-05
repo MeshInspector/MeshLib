@@ -19,6 +19,7 @@
 #include "MRImGuiImage.h"
 #include "MRFileDialog.h"
 #include "MRMesh/MRChangeXfAction.h"
+#include "MRUIStyle.h"
 #include <imgui_internal.h> // needed here to fix items dialogs windows positions
 #include <misc/freetype/imgui_freetype.h> // for proper font loading
 
@@ -92,31 +93,6 @@ void changeSelection( bool selectNext, int mod )
     }
 }
 
-RibbonMenu::RibbonMenu()
-{
-#ifndef __EMSCRIPTEN__
-    timerThread_ = std::thread( [this] ()
-    {
-        MR::SetCurrentThreadName( "RibbonMenu timer thread" );
-        while ( asyncTimer_.waitBlocking() != AsyncTimer::Event::Terminate )
-        {
-            CommandLoop::appendCommand( [] ()
-            {
-                getViewerInstance().incrementForceRedrawFrames();
-            } );
-        }
-    } );
-#endif
-}
-
-RibbonMenu::~RibbonMenu()
-{
-    asyncTimer_.terminate();
-#ifndef __EMSCRIPTEN__
-    timerThread_.join();
-#endif
-}
-
 void RibbonMenu::init( MR::Viewer* _viewer )
 {
     ImGuiMenu::init( _viewer );
@@ -132,13 +108,16 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     // Draw additional windows
     callback_draw_custom_window = [&] ()
     {
+        prevFrameObjectsCache_ = selectedObjectsCache_;
         selectedObjectsCache_ = getAllObjectsInTree<const Object>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+
         drawTopPanel_();
 
         drawActiveBlockingDialog_();
         drawActiveNonBlockingDialogs_();
 
-        drawQuickAccessMenu_();
+        toolbar_.drawToolbar();
+        toolbar_.drawCustomize();
         drawRibbonSceneList_();
         drawRibbonViewportsLabels_();
 
@@ -156,6 +135,8 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     {
         return getRequirements_( item );
     } );
+
+    toolbar_.setRibbonMenu( this );
 }
 
 void RibbonMenu::shutdown()
@@ -168,6 +149,11 @@ void RibbonMenu::shutdown()
     fontManager_.initFontManagerInstance( nullptr );
     ImGuiMenu::shutdown();
     RibbonIcons::free();
+}
+
+void RibbonMenu::openToolbarCustomize()
+{
+    toolbar_.openCustomize();
 }
 
 // we use design preset font size
@@ -198,12 +184,12 @@ bool RibbonMenu::isTopPannelPinned() const
 
 void RibbonMenu::readQuickAccessList( const Json::Value& root )
 {
-    RibbonSchemaLoader::readMenuItemsList( root, quickAccessList_ );
+    toolbar_.readItemsList( root );
 }
 
 void RibbonMenu::resetQuickAccessList()
 {
-    quickAccessList_ = RibbonSchemaHolder::schema().defaultQuickAccessList;
+    toolbar_.resetItemsList();
 }
 
 void RibbonMenu::setSceneSize( const Vector2i& size )
@@ -342,7 +328,7 @@ void RibbonMenu::drawSearchButton_()
         float minSearchSize = 300.0f * scaling;
         ImGui::SetNextItemWidth( minSearchSize );
         if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
-            searchResult_ = search_();
+            searchResult_ = RibbonSchemaHolder::search( searchLine_ );
 
         ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Small ) );
         auto ySize = ( cSmallIconSize + 2 * cRibbonButtonWindowPaddingY ) * scaling;
@@ -416,7 +402,9 @@ void RibbonMenu::drawCollapseButton_()
             collapseState_ = CollapseState::Opened;
             fixViewportsSize_( Viewer::instanceRef().window_width, Viewer::instanceRef().window_height );
             openedTimer_ = openedMaxSecs_;
-            asyncTimer_.resetTime();
+#ifndef __EMSCRIPTEN__
+            asyncRequest_.reset();
+#endif
         }
         ImGui::PopFont();
         if ( ImGui::IsItemHovered() )
@@ -454,7 +442,9 @@ void RibbonMenu::drawCollapseButton_()
             ImGuiHoveredFlags_AllowWhenBlockedByActiveItem );
         if ( hovered && openedTimer_ <= openedMaxSecs_ )
         {
-            asyncTimer_.resetTime();
+#ifndef __EMSCRIPTEN__
+            asyncRequest_.reset();
+#endif
             openedTimer_ = openedMaxSecs_;
             collapseState_ = CollapseState::Opened;
         }
@@ -466,8 +456,17 @@ void RibbonMenu::drawCollapseButton_()
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
             EM_ASM( postEmptyEvent( $0, 2 ), int( openedTimer_ * 1000 ) );
 #pragma clang diagnostic pop
+#else
+            asyncRequest_.requestIfNotSet(
+                std::chrono::system_clock::now() + std::chrono::milliseconds( std::llround( openedTimer_ * 1000 ) ),
+                [] ()
+            {
+                CommandLoop::appendCommand( [] ()
+                {
+                    getViewerInstance().incrementForceRedrawFrames();
+                } );
+            } );
 #endif
-            asyncTimer_.setTimeIfNotSet( std::chrono::system_clock::now() + std::chrono::milliseconds( std::llround( openedTimer_ * 1000 ) ) );
             if ( openedTimer_ <= 0.0f )
                 collapseState_ = CollapseState::Closed;
         }
@@ -658,7 +657,8 @@ void RibbonMenu::drawHeaderPannel_()
             ImGui::TabItemBackground( window->DrawList, tabRect, 0, tabRectColor.getUInt32() );
         }
         ImGui::SetCursorPosX( basePos.x + ( tabWidth - textSizes[i] ) * 0.5f );
-        ImGui::SetCursorPosY( 2 * cTabYOffset * menuScaling );
+        // "4.0f * scaling" eliminates shift of the font
+        ImGui::SetCursorPosY( 2 * cTabYOffset * menuScaling + 4.0f * menuScaling );
 
         if ( activeTabIndex_ == i )
             ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActiveText ).getUInt32() );
@@ -772,7 +772,7 @@ void RibbonMenu::drawActiveListButton_( const ImVec2& basePos, float btnSize, fl
     ImGui::PopFont();
     const char* text = "Active";
     ImGui::SetCursorPosX( xPos + ( btnSize - textSize ) * 0.5f );
-    ImGui::SetCursorPosY( 2 * cTabYOffset * scaling );
+    ImGui::SetCursorPosY( 2 * cTabYOffset * scaling + 4.0f * menu_scaling() );
     ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActiveText ).getUInt32() );
     ImGui::RenderText( ImGui::GetCursorPos(), text, text + 6, false );
     ImGui::PopStyleVar( 2 );
@@ -796,7 +796,7 @@ bool RibbonMenu::drawGroupUngroupButton_( const std::vector<std::shared_ptr<Obje
         }
     }
 
-    if ( canGroup && RibbonButtonDrawer::GradientButton( "Group", ImVec2( -1, 0 ) ) )
+    if ( canGroup && UI::button( "Group", Vector2f( -1, 0 ) ) )
     {
         someChanges |= true;
         std::shared_ptr<Object> group = std::make_shared<Object>();
@@ -832,7 +832,7 @@ bool RibbonMenu::drawGroupUngroupButton_( const std::vector<std::shared_ptr<Obje
         }
     }
         canUngroup = !selected[0]->children().empty();
-    if ( canUngroup && RibbonButtonDrawer::GradientButton( "Ungroup", ImVec2( -1, 0 ) ) )
+    if ( canUngroup && UI::button( "Ungroup", Vector2f( -1, 0 ) ) )
     {
         someChanges |= true;
         auto children = selected[0]->children();
@@ -871,7 +871,7 @@ void RibbonMenu::drawBigButtonItem_( const MenuItemInfo& item )
 
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + availReg.y * 0.5f - itemSize.y * 0.5f - ImGui::GetStyle().CellPadding.y * 0.5f );
 
-    buttonDrawer_.drawButtonItem( item, { DrawButtonParams::SizeType::Big,itemSize,fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons ) } );
+    buttonDrawer_.drawButtonItem( item, { DrawButtonParams::SizeType::Big,itemSize,cBigIconSize } );
 }
 
 void RibbonMenu::drawSmallButtonsSet_( const std::vector<std::string>& group, int setFrontIndex, int setLength, bool withText )
@@ -938,7 +938,7 @@ RibbonMenu::DrawTabConfig RibbonMenu::setupItemsGroupConfig_( const std::vector<
     DrawTabConfig res( groupsInTab.size() );
     const auto& style = ImGui::GetStyle();
     const float screenWidth = float( getViewerInstance().window_width ) - ImGui::GetCursorScreenPos().x -
-        float( groupsInTab.size() ) - 1.0f;
+        ( float( groupsInTab.size() ) + 1.0f ) * menu_scaling();
     std::vector<float> groupWidths( groupsInTab.size() );
     float sumWidth = 0.0f;
 
@@ -1109,8 +1109,17 @@ void RibbonMenu::drawItemsGroup_( const std::string& tabName, const std::string&
 
 void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool available )
 {
-    if ( item->isActive() || available )
-        item->action();
+    bool wasActive = item->isActive();
+    if ( !wasActive && !available )
+        return;
+    ImGui::CloseCurrentPopup();
+    // take name before, because item can become invalid during `action`
+    auto name = item->name();
+    bool stateChanged = item->action();
+    if ( !stateChanged )
+        spdlog::info( "Action item: \"{}\"", name );
+    else
+        spdlog::info( "{} item: \"{}\"", wasActive ? std::string( "Deactivated" ) : std::string( "Activated" ), name );
 }
 
 void RibbonMenu::changeTab_( int newTab )
@@ -1146,7 +1155,7 @@ void RibbonMenu::drawSceneListButtons_()
     const float size = ( cMiddleIconSize + 8.f ) * menuScaling;
     const ImVec2 smallItemSize = { size, size };
 
-    const DrawButtonParams params{ DrawButtonParams::SizeType::Small, smallItemSize, cMiddleIconSize };
+    const DrawButtonParams params{ DrawButtonParams::SizeType::Small, smallItemSize, cMiddleIconSize,DrawButtonParams::RootType::Toolbar };
 
     auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Small );
     //font->Scale = 0.75f;
@@ -1173,98 +1182,11 @@ void RibbonMenu::drawSceneListButtons_()
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ImGui::GetStyle().ItemSpacing.y + 1.0f );
 }
 
-std::vector<RibbonMenu::SearchResult> RibbonMenu::search_()
-{
-    std::vector<SearchResult> res;
-    if ( searchLine_.empty() )
-        return res;
-    std::vector<std::pair<float, SearchResult>> resultListForSort;
-    auto checkItem = [&] ( const MenuItemInfo& item, int t )
-    {
-        const auto& caption = item.caption.empty() ? item.item->name() : item.caption;
-        const auto& tooltip = item.tooltip;
-        float res = 0.0f;
-        auto captionRes = findSubstringCaseInsensitive( caption, searchLine_ );
-        auto tooltipRes = findSubstringCaseInsensitive( tooltip, searchLine_ );
-        if ( captionRes == std::string::npos && tooltipRes == std::string::npos )
-            return;
-        if ( captionRes != std::string::npos )
-            res += ( 1.0f - float( captionRes ) / float( caption.size() ) );
-        if ( tooltipRes != std::string::npos )
-            res += 0.5f * ( 1.0f - float( tooltipRes ) / float( tooltip.size() ) );
-        resultListForSort.push_back( { res, SearchResult{t,&item} } );
-    };
-    const auto& schema = RibbonSchemaHolder::schema();
-    auto lookUpMenuItemList = [&] ( const MenuItemsList& list, int t )
-    {
-        for ( int i = 0; i < list.size(); ++i )
-        {
-            auto item = schema.items.find( list[i] );
-            if ( item == schema.items.end() )
-                continue;
-            if ( !item->second.item )
-                continue;
-            checkItem( item->second, t );
-            if ( item->second.item->type() == RibbonItemType::ButtonWithDrop )
-            {
-                for ( const auto& dropRibItem : item->second.item->dropItems() )
-                {
-                    if ( !dropRibItem )
-                        continue;
-                    if ( std::dynamic_pointer_cast< LambdaRibbonItem >( dropRibItem ) )
-                        continue;
-                    auto dropItem = schema.items.find( dropRibItem->name() );
-                    if ( dropItem == schema.items.end() )
-                        continue;
-                    checkItem( dropItem->second, t );
-                }
-            }
-        }
-    };
-    for ( int t = 0; t < schema.tabsOrder.size(); ++t )
-    {
-        auto tabItem = schema.tabsMap.find( schema.tabsOrder[t].name );
-        if ( tabItem == schema.tabsMap.end() )
-            continue;
-        for ( int g = 0; g < tabItem->second.size(); ++g )
-        {
-            auto groupItem = schema.groupsMap.find( schema.tabsOrder[t].name + tabItem->second[g] );
-            if ( groupItem == schema.groupsMap.end() )
-                continue;
-            lookUpMenuItemList( groupItem->second, t );
-        }
-    }
-    lookUpMenuItemList( schema.headerQuickAccessList, -1 );
-    lookUpMenuItemList( schema.sceneButtonsList, -1 );
-
-    std::sort( resultListForSort.begin(), resultListForSort.end(), [] ( const auto& a, const auto& b )
-    {
-        return intptr_t( a.second.item ) < intptr_t( b.second.item );
-    } );
-    resultListForSort.erase( 
-        std::unique( resultListForSort.begin(), resultListForSort.end(), 
-                     [] ( const auto& a, const auto& b )
-    {
-        return a.second.item == b.second.item;
-    } ),
-        resultListForSort.end() );
-
-    std::sort( resultListForSort.begin(), resultListForSort.end(), [] ( const auto& a, const auto& b )
-    {
-        return a.first > b.first;
-    } );
-    res.reserve( resultListForSort.size() );
-    for ( const auto& sortedRes : resultListForSort )
-        res.push_back( sortedRes.second );
-
-    return res;
-}
-
 void RibbonMenu::readMenuItemsStructure_()
 {
     RibbonSchemaLoader loader;
     loader.loadSchema();
-    quickAccessList_ = RibbonSchemaHolder::schema().defaultQuickAccessList;
+    toolbar_.resetItemsList();
 }
 
 void RibbonMenu::postResize_( int width, int height )
@@ -1277,6 +1199,7 @@ void RibbonMenu::postRescale_( float x, float y )
 {
     ImGuiMenu::postRescale_( x, y );
     buttonDrawer_.setScaling( menu_scaling() );
+    toolbar_.setScaling( menu_scaling() );
     fixViewportsSize_( Viewer::instanceRef().window_width, Viewer::instanceRef().window_height );
 
     RibbonSchemaLoader loader;
@@ -1299,15 +1222,15 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
                 // viewer->window_width here because ImGui use screen space
                 if ( window )
                 {
-                    ImVec2 pos = ImVec2( viewer->window_width - window->Size.x, float( topPanelOpenedHeight_ ) * menu_scaling() );
+                    ImVec2 pos = ImVec2( viewer->window_width - window->Size.x, float( topPanelOpenedHeight_ - 1.0f ) * menu_scaling() );
                     ImGui::SetWindowPos( window, pos, ImGuiCond_Always );
                 }
             }
 
             if ( !statePlugin->dialogIsOpen() )
-            {
-                itemPtr.item->action();
-            }
+                itemPressed_( itemPtr.item, true );
+            else if ( prevFrameObjectsCache_ != selectedObjectsCache_ )
+                statePlugin->updateSelection( selectedObjectsCache_ );
         }
     }
 }
@@ -1322,7 +1245,7 @@ void RibbonMenu::drawRibbonSceneList_()
     auto& viewerRef = Viewer::instanceRef();
     ImGui::SetWindowPos( "RibbonScene", ImVec2( 0.f, float( currentTopPanelHeight_ ) * scaling - 1 ), ImGuiCond_Always );
     sceneSize_.x = std::round( std::min( sceneSize_.x, viewerRef.window_width - 100 * scaling ) );
-    sceneSize_.y = std::round( viewerRef.window_height + 2.0f - float( currentTopPanelHeight_ ) * scaling );
+    sceneSize_.y = std::round( viewerRef.window_height - float( currentTopPanelHeight_ - 2.0f ) * scaling );
     ImGui::SetWindowSize( "RibbonScene", sceneSize_, ImGuiCond_Always );
     ImGui::SetNextWindowSizeConstraints( ImVec2( 100 * scaling, -1.f ), ImVec2( viewerRef.window_width / 2.f, -1.f ) ); // TODO take out limits to special place
     ImGui::PushStyleVar( ImGuiStyleVar_Alpha, 1.f );
@@ -1333,18 +1256,22 @@ void RibbonMenu::drawRibbonSceneList_()
     ImGui::Begin(
         "RibbonScene", nullptr,
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse
+        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoResize
     );
     drawRibbonSceneListContent_( selectedObjs, allObj );
     drawRibbonSceneInformation_( selectedObjs );
 
-    const auto newSize = ImGui::GetWindowSize();
-    if ( newSize.x != sceneSize_.x || newSize.y != sceneSize_.y )
+    const auto newSize = drawRibbonSceneResizeLine_();// ImGui::GetWindowSize();
+    static bool firstTime = true;
+    if ( firstTime )
+    {
+        firstTime = false; // this is needed because GetWindowSize() lag in one frame
+    }
+    else if ( newSize.x != sceneSize_.x || newSize.y != sceneSize_.y )
     {
         sceneSize_ = newSize;
         fixViewportsSize_( viewerRef.window_width, viewerRef.window_height );
     }
-
     ImGui::End();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
@@ -1376,6 +1303,53 @@ void RibbonMenu::drawRibbonSceneListContent_( std::vector<std::shared_ptr<Object
     reorderSceneIfNeeded_();
 }
 
+Vector2f RibbonMenu::drawRibbonSceneResizeLine_()
+{
+    auto size = sceneSize_;
+
+    auto* window = ImGui::GetCurrentWindow();
+    if ( !window )
+        return size;
+
+    auto scaling = menu_scaling();
+    auto minX = 100.0f * scaling;
+    auto maxX = getViewerInstance().window_width * 0.5f;
+
+    ImRect rectHover;
+    ImRect rectDraw;
+    rectHover.Min = ImGui::GetWindowPos();
+    rectHover.Max = rectHover.Min;
+    rectHover.Min.x += size.x - 3.5f * scaling;
+    rectHover.Max.x += size.x + 3.5f * scaling;
+    rectHover.Max.y += size.y;
+    
+    rectDraw = rectHover;
+    rectDraw.Min.x += 1.5f * scaling;
+    rectDraw.Max.x -= 1.5f * scaling;
+
+    auto backupClipRect = window->ClipRect;
+    window->ClipRect = rectHover;
+    auto resizeId = window->GetID( "##resizePanel" );
+    ImGui::ItemAdd( rectHover, resizeId, nullptr, ImGuiItemFlags_NoNav );
+    bool hovered{ false }, held{ false };
+    ImGui::ButtonBehavior( rectHover, resizeId, &hovered, &held,
+        ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_NoNavFocus );
+    window->ClipRect = backupClipRect;
+
+    if ( hovered || held )
+    {
+        ImGui::SetMouseCursor( ImGuiMouseCursor_ResizeEW );
+        auto color = held ? ImGui::GetColorU32( ImGuiCol_ResizeGripActive ) : ImGui::GetColorU32( ImGuiCol_ResizeGripHovered );
+        if ( held )
+            size.x = std::clamp( ImGui::GetMousePos().x, minX, maxX );
+
+        window->DrawList->PushClipRect( ImVec2( 0, 0 ), ImGui::GetMainViewport()->Size );
+        window->DrawList->AddRectFilled( rectDraw.Min, rectDraw.Max, color );
+        window->DrawList->PopClipRect();
+    }
+    return size;
+}
+
 void RibbonMenu::drawRibbonViewportsLabels_()
 {
     const auto scaling = menu_scaling();
@@ -1383,17 +1357,21 @@ void RibbonMenu::drawRibbonViewportsLabels_()
     ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::SemiBold ) );
     for ( const auto& vp : viewer->viewport_list )
     {
-        std::string windowName = "##ProjectionMode" + std::to_string( vp.id.value() );
-        auto pos = viewer->viewportToScreen( Vector3f( 0.0f, height( vp.getViewportRect() ) - 50.0f * scaling, 0.0f ), vp.id );
-        ImGui::SetNextWindowPos( ImVec2( pos.x, pos.y ) );
         constexpr std::array<const char*, 2> cProjModeString = { "Orthographic" , "Perspective" };
+        std::string windowName = "##ProjectionMode" + std::to_string( vp.id.value() );
+        std::string text;
+        if ( viewer->viewport_list.size() > 1 )
+            text = fmt::format( "Viewport Id: {}, {}", vp.id.value(), cProjModeString[int( !vp.getParameters().orthographic )] );
+        else
+            text = fmt::format( "{}", cProjModeString[int( !vp.getParameters().orthographic )] );
+        auto textSize = ImGui::CalcTextSize( text.c_str() );
+        auto pos = viewer->viewportToScreen( Vector3f( width( vp.getViewportRect() ) - textSize.x - 25.0f * scaling,
+            height( vp.getViewportRect() ) - textSize.y - 25.0f * scaling, 0.0f ), vp.id );
+        ImGui::SetNextWindowPos( ImVec2( pos.x, pos.y ) );
         ImGui::Begin( windowName.c_str(), nullptr,
                       ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize |
                       ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoBringToFrontOnFocus );
-        if ( viewer->viewport_list.size() > 1 )
-            ImGui::Text( "Viewport Id: %d, %s", vp.id.value(), cProjModeString[int( !vp.getParameters().orthographic )] );
-        else
-            ImGui::Text( "%s", cProjModeString[int( !vp.getParameters().orthographic )] );
+        ImGui::Text( "%s", text.c_str() );
         ImGui::End();
     }
     ImGui::PopFont();
@@ -1470,27 +1448,29 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
 
     const auto& startXf = selected->xf();
 #if !defined( __EMSCRIPTEN__ )
-    if ( RibbonButtonDrawer::GradientButton( "Copy", ImVec2( buttonSize, 0 ) ) )
+    if ( UI::button( "Copy", Vector2f( buttonSize, 0 ) ) )
     {
         Json::Value root;
         serializeTransform( root, { startXf, uniformScale_ } );
-        SetClipboardText( root.toStyledString() );
+        transformClipboardText_ = root.toStyledString();
+        SetClipboardText( transformClipboardText_ );
         ImGui::CloseCurrentPopup();
     }
 #endif
-    auto clipboardText = GetClipboardText();
+    if ( ImGui::IsWindowAppearing() )
+        transformClipboardText_ = GetClipboardText();
 
-    if ( !clipboardText.empty() )
+    if ( !transformClipboardText_.empty() )
     {
         Json::Value root;
         Json::CharReaderBuilder readerBuilder;
         std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
         std::string error;
-        if ( reader->parse( clipboardText.data(), clipboardText.data() + clipboardText.size(), &root, &error ) )
+        if ( reader->parse( transformClipboardText_.data(), transformClipboardText_.data() + transformClipboardText_.size(), &root, &error ) )
         {
             if ( auto tr = deserializeTransform( root ))
             {
-                if ( RibbonButtonDrawer::GradientButton( "Paste", ImVec2( buttonSize, 0 ) ) )
+                if ( UI::button( "Paste", Vector2f( buttonSize, 0 ) ) )
                 {
                     AppendHistory<ChangeXfAction>( "Change XF", selected );
                     selected->setXf( tr->xf );
@@ -1501,7 +1481,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         }
     }
 
-    if ( RibbonButtonDrawer::GradientButton( "Save to file", ImVec2( buttonSize, 0 ) ) )
+    if ( UI::button( "Save to file", Vector2f( buttonSize, 0 ) ) )
     {
         auto filename = saveFileDialog( { "Transform", {}, { {"JSON (.json)", "*.json"} } } );
         if ( !filename.empty() )
@@ -1518,7 +1498,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         ImGui::CloseCurrentPopup();
     }
 
-    if ( RibbonButtonDrawer::GradientButton( "Load from file", ImVec2( buttonSize, 0 ) ) )
+    if ( UI::button( "Load from file", Vector2f( buttonSize, 0 ) ) )
     {
         auto filename = openFileDialog( { "", {}, { {"JSON (.json)", "*.json"} } } );
         if ( !filename.empty() )
@@ -1562,20 +1542,20 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
         if ( item != RibbonSchemaHolder::schema().items.end() &&
             item->second.item->isAvailable( selectedObjectsCache_ ).empty() &&
-            RibbonButtonDrawer::GradientButton( "Apply", ImVec2( buttonSize, 0 ) ) )
+            UI::button( "Apply", Vector2f( buttonSize, 0 ) ) )
         {
             item->second.item->action();
             ImGui::CloseCurrentPopup();
         }
-        ImGui::SetTooltipIfHovered( "Transforms object and resets transform value to identity.", menu_scaling() );
+        UI::setTooltipIfHovered( "Transforms object and resets transform value to identity.", menu_scaling() );
 
-        if ( RibbonButtonDrawer::GradientButton( "Reset", ImVec2( buttonSize, 0 ) ) )
+        if ( UI::button( "Reset", Vector2f( buttonSize, 0 ) ) )
         {
             AppendHistory<ChangeXfAction>( "Reset XF", selected );
             selected->setXf( AffineXf3f() );
             ImGui::CloseCurrentPopup();
         }
-        ImGui::SetTooltipIfHovered( "Resets transform value to identity.", menu_scaling() );
+        UI::setTooltipIfHovered( "Resets transform value to identity.", menu_scaling() );
     }
     ImGui::EndPopup();
     return true;
@@ -1585,7 +1565,7 @@ const char* RibbonMenu::getSceneItemIconByTypeName_( const std::string& typeName
 {
     if ( typeName == ObjectMesh::TypeName() )
         return "\xef\x82\xac";
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
     if ( typeName == ObjectVoxels::TypeName() )
         return "\xef\x86\xb3";
 #endif
@@ -1598,76 +1578,6 @@ const char* RibbonMenu::getSceneItemIconByTypeName_( const std::string& typeName
     if ( typeName == ObjectLabel::TypeName() )
         return "\xef\x81\xb5";
     return "\xef\x88\xad";
-}
-
-void RibbonMenu::drawQuickAccessMenu_()
-{
-    auto menuScaling = menu_scaling();
-    auto windowPadding = ImVec2( 12 * menuScaling, 4 * menuScaling );
-    auto itemSpacing = ImVec2( 12 * menuScaling, 0 );
-    const ImVec2 smallItemSize = { cQuickAccessBarHeight * menuScaling - 2.0f * windowPadding.y, cQuickAccessBarHeight * menuScaling - 2.0f * windowPadding.y };
-
-    int itemCount = 0;
-    int droppedItemCount = 0;
-    //TODO calc if list changes
-    for ( const auto& item : quickAccessList_ )
-    {
-        auto it = RibbonSchemaHolder::schema().items.find( item );
-        if ( it == RibbonSchemaHolder::schema().items.end() )
-            continue;
-        ++itemCount;
-        if ( it->second.item->type() == RibbonItemType::ButtonWithDrop )
-            ++droppedItemCount;
-    }
-
-    if ( !itemCount ) return;
-
-    const float windowWidth = windowPadding.x * 2
-        + smallItemSize.x * itemCount
-        + smallItemSize.x * cSmallItemDropSizeModifier * droppedItemCount
-        + itemSpacing.x * ( itemCount - 1 );
-
-    if ( windowWidth >= getViewerInstance().window_width - sceneSize_.x )
-        return; // dont show quick panel if window is too small
-
-    const float windowPosX = std::max( getViewerInstance().window_width / 2.f - windowWidth / 2.f, sceneSize_.x - 1.0f );
-
-    ImGui::SetNextWindowPos( ImVec2( windowPosX, float( currentTopPanelHeight_ ) * menuScaling - 1 ) );
-    ImGui::SetNextWindowSize( ImVec2( windowWidth, cQuickAccessBarHeight * menuScaling ), ImGuiCond_Always );
-
-    ImGui::PushStyleColor( ImGuiCol_WindowBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::QuickAccessBackground ).getUInt32() );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, windowPadding );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 1.0f );
-    ImGui::Begin(
-        "QuickAccess", nullptr,
-        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
-        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoFocusOnAppearing
-    );
-    ImGui::PopStyleVar( 2 );
-    ImGui::PopStyleColor();
-
-    DrawButtonParams params{ DrawButtonParams::SizeType::Small, smallItemSize, cMiddleIconSize,DrawButtonParams::RootType::Toolbar };
-
-    ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Small ) );
-    for ( const auto& item : quickAccessList_ )
-    {
-        auto it = RibbonSchemaHolder::schema().items.find( item );
-        if ( it == RibbonSchemaHolder::schema().items.end() )
-        {
-#ifndef __EMSCRIPTEN__
-            spdlog::warn( "Plugin \"{}\" not found!", item ); // TODO don't flood same message
-#endif
-            continue;
-        }
-
-        buttonDrawer_.drawButtonItem( it->second, params );
-        ImGui::SameLine();
-    }
-
-    ImGui::PopStyleVar();
-    ImGui::PopFont();
-    ImGui::End();
 }
 
 void RibbonMenu::drawCustomObjectPrefixInScene_( const Object& obj )
@@ -1914,7 +1824,7 @@ void RibbonMenu::drawShortcutsWindow_()
             {
                 // draw category line
                 ImGui::PushFont( fontManager_.getFontByType( MR::RibbonFontManager::FontType::BigSemiBold ) );
-                ImGui::Separator( scaling, ShortcutManager::categoryNames[int( category )].c_str() );
+                UI::separator( scaling, ShortcutManager::categoryNames[int( category )].c_str() );
                 ImGui::PopFont();
                 lastCategory = category;
             }

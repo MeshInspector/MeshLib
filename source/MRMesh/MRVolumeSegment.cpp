@@ -58,7 +58,7 @@ std::tuple<SimpleVolume, VoxelBitSet, Vector3i> simpleVolumeFromVoxelsMask( cons
     auto partIndexer = VolumeIndexer( volumePart.dims );
     VoxelBitSet volumePartMask( volumePart.data.size() );
     auto accessor = volume.data->getConstAccessor();
-    for ( VoxelId i = VoxelId( 0 ); i < volumePart.data.size(); ++i )
+    for ( VoxelId i = VoxelId( size_t( 0 ) ); i < volumePart.data.size(); ++i )
     {
         auto pos = partIndexer.toPos( i ) + partBox.min;
         if ( mask.test( indexer.toVoxelId( pos ) ) )
@@ -80,7 +80,7 @@ void prepareVolumePart( SimpleVolume& volumePart, const VoxelBitSet& mask, Volum
 {
     if ( mode == VolumeMaskMeshingMode::Simple )
     {
-        for ( VoxelId i = VoxelId( 0 ); i < volumePart.data.size(); ++i )
+        for ( VoxelId i = VoxelId( size_t( 0 ) ); i < volumePart.data.size(); ++i )
         {
             volumePart.data[i] = mask.test( i ) ? 1.0f : 0.0f;
         }
@@ -89,7 +89,7 @@ void prepareVolumePart( SimpleVolume& volumePart, const VoxelBitSet& mask, Volum
     // else: mode == VolumeMaskMeshingMode::Smooth
     double insideAvg = 0.0;
     double outsideAvg = 0.0;
-    for ( VoxelId i = VoxelId( 0 ); i < volumePart.data.size(); ++i )
+    for ( VoxelId i = VoxelId( size_t( 0 ) ); i < volumePart.data.size(); ++i )
     {
         if ( mask.test( i ) )
             insideAvg += volumePart.data[i];
@@ -105,7 +105,7 @@ void prepareVolumePart( SimpleVolume& volumePart, const VoxelBitSet& mask, Volum
     auto smallShrMask = mask;
     expandVoxelsMask( smallExpMask, partIndexer, 3 );
     shrinkVoxelsMask( smallShrMask, partIndexer, 3 );
-    for ( VoxelId i = VoxelId( 0 ); i < volumePart.data.size(); ++i )
+    for ( VoxelId i = VoxelId( size_t( 0 ) ); i < volumePart.data.size(); ++i )
     {
         if ( smallShrMask.test( i ) )
             volumePart.data[i] = 1.0f;
@@ -172,7 +172,7 @@ void VolumeSegmenter::addPathSeeds( const VoxelMetricParameters& metricParameter
     VolumeIndexer indexer( volume_.dims );
     for ( int p = 0; p < path.size(); ++p )
     {
-        curSeeds[shift + p] = indexer.toPos( VoxelId( int( path[p] ) ) );
+        curSeeds[shift + p] = indexer.toPos( VoxelId( path[p] ) );
     }
     seedsChanged_ = true;
 }

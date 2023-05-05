@@ -43,6 +43,9 @@ printf "lib copy done\n"
 cp build/Release/bin/mr.version "${MR_INSTALL_RES_DIR}"
 printf "MR version copy done\n"
 
+mkdir -p "${RPM_BUILD_ROOT}/etc/udev/rules.d/"
+cp "./scripts/70-space-mouse-meshlib.rules" "${RPM_BUILD_ROOT}/etc/udev/rules.d/"
+
 cd "${RPM_BUILD_ROOT}"
 exit
 
@@ -52,6 +55,7 @@ exit
 /usr/local/lib/MeshLib/
 /usr/local/etc/MeshLib/
 /usr/local/share/fonts/
+/etc/udev/rules.d/70-space-mouse-meshlib.rules
 
 %post
 # This script adds MR libs symbolic links to python3
@@ -61,18 +65,21 @@ exit
 set -eo pipefail
 
 #TODO: handle 'home' python installations (conda, ...)
-if [ -d /usr/lib/python3.9 ]; then
- printf "\rPython3 was found                       \n"
+if [ -d /usr/lib/python3.11 ]; then
+ printf "\rPython3.11 was found                       \n"
  if [ "$EUID" -ne 0 ]; then
   printf "Root access required!\n"
   RUN_AS_ROOT="NO"
  fi
- sudo mkdir -p /usr/lib/python3.9/site-packages/meshlib/
- sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrmeshpy.so /usr/lib/python3.9/site-packages/meshlib/mrmeshpy.so
- sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrmeshnumpy.so /usr/lib/python3.9/site-packages/meshlib/mrmeshnumpy.so
- sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrviewerpy.so /usr/lib/python3.9/site-packages/meshlib/mrviewerpy.so
+ sudo mkdir -p /usr/lib/python3.11/site-packages/meshlib/
+ sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrmeshpy.so /usr/lib/python3.11/site-packages/meshlib/mrmeshpy.so
+ sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrmeshnumpy.so /usr/lib/python3.11/site-packages/meshlib/mrmeshnumpy.so
+ sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrviewerpy.so /usr/lib/python3.11/site-packages/meshlib/mrviewerpy.so
  printf "Python3 has symlink to MR libs. Run 'sudo ln -sf /usr/local/lib/MeshLib/mr<lib_name>py.so /<pathToPython>/site-packages/meshlib/mr<lib_name>py.so' for custom python installations\n"
 fi
+
+printf "Updating udevadm control rules\n"
+sudo udevadm control --reload-rules && sudo udevadm trigger
 
 printf "Updating ldconfig for '/usr/local/lib/MeshLib'\n"
 echo "/usr/local/lib/MeshLib" | sudo tee /etc/ld.so.conf.d/meshlib_libs.conf

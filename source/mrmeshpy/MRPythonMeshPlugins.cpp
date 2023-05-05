@@ -82,14 +82,16 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, VoxelBooleanBlock, [] ( pybind11::module_& m
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::module_& m )
 {
-    m.def( "detectTunnelFaces", &MR::detectTunnelFaces, pybind11::arg( "mp" ), pybind11::arg( "maxTunnelLength" ), 
+    m.def( "detectTunnelFaces", []( const MeshPart & mp, float maxTunnelLength ) { return MR::detectTunnelFaces( mp, maxTunnelLength ).value(); },
+        pybind11::arg( "mp" ), pybind11::arg( "maxTunnelLength" ), 
         "returns tunnels as a number of faces;\n"
         "if you remove these faces and patch every boundary with disk, then the surface will be topology equivalent to sphere" );
 
-    m.def( "detectBasisTunnels", &MR::detectBasisTunnels, pybind11::arg( "mp" ), "detects all not-contractible-in-point and not-equivalent tunnel loops on the mesh" );
+    m.def( "detectBasisTunnels", []( const MeshPart & mp ) { return MR::detectBasisTunnels( mp ).value(); },
+        pybind11::arg( "mp" ), "detects all not-contractible-in-point and not-equivalent tunnel loops on the mesh" );
 
-    m.def( "findDegenerateFaces", &MR::findDegenerateFaces, 
-        pybind11::arg( "mp" ), pybind11::arg( "criticalAspectRatio" ) = FLT_MAX,
+    m.def( "findDegenerateFaces", MR::decorateExpected( &MR::findDegenerateFaces ),
+        pybind11::arg( "mp" ), pybind11::arg( "criticalAspectRatio" ) = FLT_MAX, pybind11::arg( "cb" ) = ProgressCallback{},
         "finds faces which aspect ratio >= criticalAspectRatio" );
 
     m.def( "fixMultipleEdges", ( void( * )( MR::Mesh& ) )& MR::fixMultipleEdges,
@@ -127,19 +129,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::modul
         "\nif voxelSize == 0.0f it will be counted automaticly" );
 } )
 
-
-Mesh createTextOnMesh( Mesh& mesh, const AffineXf3f& xf, TextMeshAlignParams params )
-{
-    if ( params.pathToFontFile.empty() )
-        params.pathToFontFile = GetFontsDirectory().append( "Karla-Regular.ttf" );
-    auto res = alignTextToMesh( mesh, xf, params );
-    if ( res )
-        return res.value();
-    else
-        // failed to align
-        return {};
-}
-
 // Text Mesh
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m )
 {
@@ -148,26 +137,23 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m 
         def_readwrite( "text", &SymbolMeshParams::text, "Text that will be made mesh" ).
         def_readwrite( "fontDetalization", &SymbolMeshParams::fontDetalization, "Detailization of Bezier curves on font glyphs" ).
         def_readwrite( "symbolsDistanceAdditionalOffset", &SymbolMeshParams::symbolsDistanceAdditionalOffset,
-            "Additional offset between symbols (in symbol size: 1.0f adds one \"space\", 0.5 adds half \"space\")\n"
-            "should be >= 0.0f" ).
+            "Additional offset between symbols\n"
+            "X: In symbol size: 1.0f adds one \"space\", 0.5 adds half \"space\". Should be >= 0.0f\n"
+            "Y: In symbol size: 1.0f adds one base height, 0.5 adds half base height" ).
         def_readwrite( "pathToFontFile", &TextMeshAlignParams::pathToFontFile, "Path to font file" );
 
     m.def( "createSymbolsMesh", &MR::createSymbolsMesh, pybind11::arg( "params" ), "converts text string into Z-facing symbol mesh" );
 
-    pybind11::class_<EdgeIdAndCoord>( m, "EdgeIdAndCoord", "This structure represents point on mesh, by EdgeId (point should be in left triangle of this edge) and coordinate" ).
-        def( pybind11::init<>() ).
-        def_readwrite( "id", &EdgeIdAndCoord::id ).
-        def_readwrite( "coord", &EdgeIdAndCoord::coord );
-
     pybind11::class_<TextMeshAlignParams, SymbolMeshParams>( m, "TextAlignParams" ).
         def( pybind11::init<>() ).
         def_readwrite( "startPoint", &TextMeshAlignParams::startPoint, "Start coordinate on mesh, represent lowest left corner of text" ).
+        def_readwrite( "pivotPoint", &TextMeshAlignParams::pivotPoint, "Position of the startPoint in a text bounding box" ).
         def_readwrite( "direction", &TextMeshAlignParams::direction, "Direction of text" ).
         def_readwrite( "fontHeight", &TextMeshAlignParams::fontHeight, "Font height, meters" ).
         def_readwrite( "surfaceOffset", &TextMeshAlignParams::surfaceOffset, "Text mesh inside and outside offset of input mesh" ).
         def_readwrite( "textMaximumMovement", &TextMeshAlignParams::textMaximumMovement, "Maximum possible movement of text mesh alignment, meters" );
 
-    m.def( "alignTextToMesh", &createTextOnMesh, pybind11::arg( "mesh" ), pybind11::arg( "xf" ), pybind11::arg( "params" ),
+    m.def( "alignTextToMesh", &alignTextToMesh, pybind11::arg( "mesh" ), pybind11::arg( "params" ),
         "create text on mesh" );
 } )
 
@@ -311,7 +297,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
     m.def( "distanceMapToMesh", &MR::distanceMapToMesh, pybind11::arg( "mp" ), pybind11::arg( "params" ),
         "converts distance map back to the mesh fragment with presented params" );
     
-    m.def( "saveDistanceMapToImage", &MR::saveDistanceMapToImage,
+    m.def( "saveDistanceMapToImage",
+        MR::decorateExpected( &MR::saveDistanceMapToImage ),
         pybind11::arg( "distMap" ), pybind11::arg( "filename" ), pybind11::arg( "threshold" ) = 1.0f / 255.0f,
         "saves distance map to monochrome image in scales of gray:\n"
         "\tthreshold - threshold of maximum values [0.; 1.]. invalid pixel set as 0. (black)\n"
@@ -319,7 +306,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         "maximum (far): threshold\n"
         "invalid (infinity): 0.0 (black)" );
 
-    m.def( "loadDistanceMapFromImage", &loadDistanceMapFromImage,
+    m.def( "loadDistanceMapFromImage",
+        MR::decorateExpected( &loadDistanceMapFromImage ),
         pybind11::arg( "filename" ), pybind11::arg( "threshold" ) = 1.0f / 255.0f,
         "load distance map from monochrome image file\n"
         "\tthreshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid" );
@@ -336,8 +324,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         "Return: pair contours in OXY & transformation from plane OXY to real contours plane" );
 
 } )
-
-MR_ADD_PYTHON_EXPECTED( mrmeshpy, ExpectedDistanceMap, DistanceMap, std::string )
 
 // Position Verts Smooth
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::module_& m )
@@ -369,7 +355,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
             "note: it does not work good, better use common decimation after offsetting" ).
         def_readwrite( "type", &MR::OffsetParameters::type, "Type of offsetting" );
 
-    m.def( "offsetMesh", &MR::offsetMesh,
+    m.def( "offsetMesh",
+        MR::decorateExpected( &MR::offsetMesh ),
         pybind11::arg( "mp" ), pybind11::arg( "offset" ), pybind11::arg( "params" ) = MR::OffsetParameters{},
         "Offsets mesh by converting it to voxels and back\n"
         "use Shell type for non closed meshes\n"
@@ -382,13 +369,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, GeodesicPath, [] ( pybind11::module_& m )
     pybind11::enum_<MR::GeodesicPathApprox>( m, "GeodesicPathApprox", "Method of approximation" ).
         value( "DijkstraBiDir", MR::GeodesicPathApprox::DijkstraBiDir, "Bidirectional Dijkstra algorithm" ).
         value( "DijkstraAStar", MR::GeodesicPathApprox::DijkstraAStar, "Dijkstra algorithm with A* modification" ).
-        value( "FastMarching", MR::GeodesicPathApprox::FastMarching, "Fast marching algorithm" );  
+        value( "FastMarching", MR::GeodesicPathApprox::FastMarching, "Fast marching algorithm" );
 
-    pybind11::enum_<MR::PathError>( m, "PathError" ).
-        value( "StartEndNotConnected", MR::PathError::StartEndNotConnected, "no path can be found from start to end, because they are not from the same connected component" ).
-        value( "InternalError", MR::PathError::InternalError, "report to developers for investigation" );
-
-    m.def( "computeGeodesicPath", &MR::computeGeodesicPath,
+    m.def( "computeGeodesicPath",
+        MR::decorateExpected( &MR::computeGeodesicPath ),
         pybind11::arg( "mesh" ), pybind11::arg( "start" ), pybind11::arg( "end" ), pybind11::arg( "atype" ), pybind11::arg( "maxGeodesicIters") = 100,
         "Returns intermediate points of the geodesic path from start to end, where it crosses mesh edges"
     );
@@ -412,4 +396,3 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, GeodesicPath, [] ( pybind11::module_& m )
     );
 })
 
-MR_ADD_PYTHON_EXPECTED( mrmeshpy, ExpectedGeodesicPath, MR::SurfacePath, MR::PathError )

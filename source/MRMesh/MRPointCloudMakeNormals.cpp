@@ -59,11 +59,14 @@ VertCoords makeNormals( const PointCloud& pointCloud, int avgNeighborhoodSize )
     auto enweight = [&]( VertId base, VertId candidate )
     {
         Vector3f cb = pointCloud.points[base] - pointCloud.points[candidate];
-        return 0.1f * cb.lengthSq() + sqr( dot( cb, normals[base] ) ) + sqr( dot( cb, normals[candidate] ) );
+        return 0.01f * cb.lengthSq() + sqr( dot( cb, normals[base] ) ) + sqr( dot( cb, normals[candidate] ) );
     };
+
+    VertBitSet notVisited = pointCloud.validPoints;
 
     auto enqueueNeighbors = [&]( VertId base )
     {
+        notVisited.reset( base );
         findPointsInBall( pointCloud, pointCloud.points[base], firstLeafRadius,
                           [&]( VertId v, const Vector3f& )
         {
@@ -80,13 +83,26 @@ VertCoords makeNormals( const PointCloud& pointCloud, int avgNeighborhoodSize )
 
     auto findFirst = [&]()->VertId
     {
-        for ( auto v : pointCloud.validPoints )
-            if ( minWeights[v] == FLT_MAX )
+        MR_TIMER;
+        VertId xMostVert = {};
+        float maxX = -FLT_MAX;
+        for ( auto v : notVisited )
+        {
+            assert( minWeights[v] == FLT_MAX );
+            auto xDot = dot( pointCloud.points[v], Vector3f::plusX() );
+            if ( xDot > maxX )
             {
-                minWeights[v] = 0.0f;
-                return v;
+                xMostVert = v;
+                maxX = xDot;
             }
-        return VertId{};
+        }
+        if ( xMostVert )
+        {
+            minWeights[xMostVert] = 0.0f;
+            if ( dot( normals[xMostVert], Vector3f::plusX() ) < 0.0f )
+                normals[xMostVert] = -normals[xMostVert];
+        }
+        return xMostVert;
     };
 
     NormalCandidate current;

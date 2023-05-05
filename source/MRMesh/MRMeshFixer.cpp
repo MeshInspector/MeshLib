@@ -68,17 +68,24 @@ int duplicateMultiHoleVertices( Mesh & mesh )
     return duplicates;
 }
 
-std::vector<MultipleEdge> findMultipleEdges( const MeshTopology & topology )
+tl::expected<std::vector<MultipleEdge>, std::string> findMultipleEdges( const MeshTopology& topology, ProgressCallback cb )
 {
     MR_TIMER
     tbb::enumerable_thread_specific<std::vector<MultipleEdge>> threadData;
     const VertId lastValidVert = topology.lastValidVert();
-    tbb::parallel_for( tbb::blocked_range<VertId>( VertId{0}, lastValidVert + 1 ), [&]( const tbb::blocked_range<VertId> & range )
+    
+    auto mainThreadId = std::this_thread::get_id();
+    std::atomic<bool> keepGoing{ true };
+    std::atomic<size_t> numDone{ 0 };
+    tbb::parallel_for( tbb::blocked_range<size_t>( size_t{ 0 },  size_t( lastValidVert ) + 1 ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         auto & tls = threadData.local();
         std::vector<VertId> neis;
-        for ( VertId v = range.begin(); v < range.end(); ++v )
+        for ( VertId v = VertId( range.begin() ); v < VertId( range.end() ); ++v )
         {
+            if ( cb && !keepGoing.load( std::memory_order_relaxed ) )
+                break;
+
             if ( !topology.hasVert( v ) )
                 continue;
             neis.clear();
@@ -105,7 +112,19 @@ std::vector<MultipleEdge> findMultipleEdges( const MeshTopology & topology )
                     break;
             }
         }
+
+        if ( cb )
+            numDone += range.size();
+
+        if ( cb && std::this_thread::get_id() == mainThreadId )
+        {
+            if ( !cb( float( numDone ) / float( lastValidVert + 1 ) ) )
+                keepGoing.store( false, std::memory_order_relaxed );
+        }
     } );
+
+    if ( !keepGoing.load( std::memory_order_relaxed ) || ( cb && !cb( 1.0f ) ) )
+        return tl::make_unexpected( "Operation was canceled" );
 
     std::vector<MultipleEdge> res;
     for ( const auto & ns : threadData )
@@ -163,35 +182,43 @@ void fixMultipleEdges( Mesh & mesh, const std::vector<MultipleEdge> & multipleEd
 
 void fixMultipleEdges( Mesh & mesh )
 {
-    fixMultipleEdges( mesh, findMultipleEdges( mesh.topology ) );
+    fixMultipleEdges( mesh, findMultipleEdges( mesh.topology ).value() );
 }
 
-FaceBitSet findDegenerateFaces( const MeshPart& mp, float criticalAspectRatio /*= FLT_MAX */ )
+tl::expected<FaceBitSet, std::string> findDegenerateFaces( const MeshPart& mp, float criticalAspectRatio, ProgressCallback cb )
 {
     MR_TIMER
     FaceBitSet res( mp.mesh.topology.faceSize() );
-    BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&] ( FaceId f )
+    auto completed = BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&] ( FaceId f )
     {
         if ( !mp.mesh.topology.hasFace( f ) )
             return;
         if ( mp.mesh.triangleAspectRatio( f ) >= criticalAspectRatio )
             res.set( f );
-    } );
+    }, cb );
+
+    if ( !completed )
+        return tl::make_unexpected( "Operation was canceled" );
+
     return res;
 }
 
-UndirectedEdgeBitSet findShortEdges( const MeshPart& mp, float criticalLength )
+tl::expected<UndirectedEdgeBitSet, std::string> findShortEdges( const MeshPart& mp, float criticalLength, ProgressCallback cb )
 {
     MR_TIMER
     const auto criticalLengthSq = sqr( criticalLength );
     UndirectedEdgeBitSet res( mp.mesh.topology.undirectedEdgeSize() );
-    BitSetParallelForAll( res, [&] ( UndirectedEdgeId ue )
+    auto completed = BitSetParallelForAll( res, [&] ( UndirectedEdgeId ue )
     {
         if ( !mp.mesh.topology.isInnerOrBdEdge( ue, mp.region ) )
             return;
-        if ( mp.mesh.edgeLength( ue ) <= criticalLengthSq )
+        if ( mp.mesh.edgeLengthSq( ue ) <= criticalLengthSq )
             res.set( ue );
-    } );
+    }, cb );    
+
+    if ( !completed )
+        return tl::make_unexpected( "Operation was canceled" );
+
     return res;
 }
 
@@ -201,7 +228,7 @@ bool isEdgeBetweenDoubleTris( const MeshTopology& topology, EdgeId e )
         topology.isLeftTri( e ) && topology.isLeftTri( e.sym() );
 }
 
-EdgeId eliminateDoubleTris( MeshTopology& topology, EdgeId e )
+EdgeId eliminateDoubleTris( MeshTopology& topology, EdgeId e, FaceBitSet * region )
 {
     const auto ex = topology.next( e.sym() );
     const EdgeId ep = topology.prev( e );
@@ -209,8 +236,18 @@ EdgeId eliminateDoubleTris( MeshTopology& topology, EdgeId e )
     if ( ex != topology.prev( e.sym() ) || ep == en || !topology.isLeftTri( e ) || !topology.isLeftTri( e.sym() ) )
         return {};
     // left( e ) and right( e ) are double triangles
-    topology.setLeft( e, {} );
-    topology.setLeft( e.sym(), {} );
+    if ( auto f = topology.left( e ) )
+    {
+        if ( region )
+            region->reset( f );
+        topology.setLeft( e, {} );
+    }
+    if ( auto f = topology.left( e.sym() ) )
+    {
+        if ( region )
+            region->reset( f );
+        topology.setLeft( e.sym(), {} );
+    }
     topology.setOrg( e.sym(), {} );
     topology.splice( e.sym(), ex );
     topology.splice( ep, e );
@@ -223,13 +260,13 @@ EdgeId eliminateDoubleTris( MeshTopology& topology, EdgeId e )
     return ep;
 }
 
-void eliminateDoubleTrisAround( MeshTopology & topology, VertId v )
+void eliminateDoubleTrisAround( MeshTopology & topology, VertId v, FaceBitSet * region )
 {
     EdgeId e = topology.edgeWithOrg( v );
     EdgeId e0 = e;
     for (;;)
     {
-        if ( auto ep = eliminateDoubleTris( topology, e ) )
+        if ( auto ep = eliminateDoubleTris( topology, e, region ) )
             e0 = e = ep;
         else
         {
@@ -239,6 +276,57 @@ void eliminateDoubleTrisAround( MeshTopology & topology, VertId v )
             continue;
         }
     } 
+}
+
+bool isDegree3Dest( const MeshTopology& topology, EdgeId e )
+{
+    const EdgeId ex = topology.next( e.sym() );
+    const EdgeId ey = topology.prev( e.sym() );
+    return topology.next( ex ) == ey &&
+        topology.isLeftTri( e ) && topology.isLeftTri( e.sym() ) && topology.isLeftTri( ex );
+}
+
+EdgeId eliminateDegree3Dest( MeshTopology& topology, EdgeId e, FaceBitSet * region )
+{
+    const EdgeId ex = topology.next( e.sym() );
+    const EdgeId ey = topology.prev( e.sym() );
+    const EdgeId ep = topology.prev( e );
+    const EdgeId en = topology.next( e );
+    if ( ep == en || topology.next( ex ) != ey ||
+        !topology.isLeftTri( e ) || !topology.isLeftTri( e.sym() ) || !topology.isLeftTri( ex ) )
+        return {};
+    topology.flipEdge( ex );
+    auto res = eliminateDoubleTris( topology, e, region );
+    assert( res == ex );
+    return res;
+}
+
+int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & region, FaceBitSet * fs )
+{
+    MR_TIMER
+    auto candidates = region;
+    int res = 0;
+    for (;;)
+    {
+        const int x = res;
+        for ( auto v : candidates )
+        {
+            candidates.reset( v );
+            const auto e0 = topology.edgeWithOrg( v );
+            if ( !isDegree3Dest( topology, e0.sym() ) )
+                continue;
+            ++res;
+            region.reset( v );
+            for ( auto e : orgRing( topology, e0 ) )
+                if ( auto vn = topology.dest( e ); region.test( vn ) )
+                    candidates.autoResizeSet( vn );
+            [[maybe_unused]] auto ep = eliminateDegree3Dest( topology, e0.sym(), fs );
+            assert( ep );
+        }
+        if ( res == x )
+            break;
+    }
+    return res;
 }
 
 } //namespace MR

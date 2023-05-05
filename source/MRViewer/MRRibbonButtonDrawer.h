@@ -36,47 +36,36 @@ class MRVIEWER_CLASS RibbonButtonDrawer
 public:
     // Creates GL texture for gradient UI (called on theme apply)
     MRVIEWER_API static void InitGradientTexture();
-    MRVIEWER_API static std::unique_ptr<ImGuiImage>& GetGradientTexture();
-
-    /// draw gradient button
-    /// returns true if button is clicked in this frame, or key is pressed (optional)
-    MRVIEWER_API static bool GradientButton( const char* label, const ImVec2& size = ImVec2( 0, 0 ), ImGuiKey key = ImGuiKey_None );
-    /// draw gradient button with the ordinary button size
-    /// returns true if button is clicked in this frame, or key is pressed (optional)
-    MRVIEWER_API static bool GradientButtonCommonSize( const char* label, const ImVec2& size = ImVec2( 0, 0 ), ImGuiKey key = ImGuiKey_None );
-    /// draw gradient button, which can be disabled (valid = false)
-    MRVIEWER_API static bool GradientButtonValid( const char* label, bool valid, const ImVec2& size = ImVec2( 0, 0 ) );
-    /// draw gradient checkbox
-    MRVIEWER_API static bool GradientCheckbox( const char* label, bool* value );
-    /// draw gradient checkbox with mixed state
-    MRVIEWER_API static bool GradientCheckboxMixed( const char* label, bool* value, bool mixed );
-    /// draw gradient checkbox
-    template<typename Getter, typename Setter>
-    static bool GradientCheckbox( const char* label, Getter get, Setter set )
+    enum class TextureType
     {
-        bool value = get();
-        bool ret = GradientCheckbox( label, &value );
-        set( value );
-        return ret;
-    }
-    /// draw gradient radio button
-    MRVIEWER_API static bool GradientRadioButton( const char* label, int* v, int valButton );
+        Mono,
+        Gradient,
+        RainbowRect,
+        Count
+    };
+    MRVIEWER_API static std::unique_ptr<ImGuiImage>& GetTexture( TextureType type );
 
-    /// draw custom combo box
-    MRVIEWER_API static bool CustomCombo( const char* label, int* v, const std::vector<std::string>& options, bool showPreview = true, const std::vector<std::string>& tooltips = {} );
+
+    /// draw gradient checkbox with icon (for menu item)
+    MRVIEWER_API bool GradientCheckboxItem( const MenuItemInfo& item, bool* value ) const;
+
 
     /// draw custom collapsing header
-    MRVIEWER_API static bool CustomCollapsingHeader( const char* label, ImGuiTreeNodeFlags flags = 0 );
+    /// if issueCount is greater than zero, so many red dots will be displayed after text
+    MRVIEWER_API static bool CustomCollapsingHeader( const char* label, ImGuiTreeNodeFlags flags = 0, int issueCount = 0 );
 
     struct ButtonItemWidth
     {
         float baseWidth{ 0.0f };
         float additionalWidth{ 0.0f }; // for small drop buttons
     };
-    MRVIEWER_API ButtonItemWidth calcItemWidth( const MenuItemInfo& item, DrawButtonParams::SizeType sizeType );
+    MRVIEWER_API ButtonItemWidth calcItemWidth( const MenuItemInfo& item, DrawButtonParams::SizeType sizeType ) const;
 
     /// draw item button
-    MRVIEWER_API void drawButtonItem( const MenuItemInfo& item, const DrawButtonParams& params );
+    MRVIEWER_API void drawButtonItem( const MenuItemInfo& item, const DrawButtonParams& params ) const;
+
+    /// draw item button icon
+    MRVIEWER_API void drawButtonIcon( const MenuItemInfo& item, const DrawButtonParams& params ) const;
 
     /// draw custom styled button
     MRVIEWER_API bool drawCustomStyledButton( const char* icon, const ImVec2& size, float iconSize );
@@ -91,9 +80,9 @@ public:
     void setScaling( float scaling ) { scaling_ = scaling; };
 
 private:
-    void drawButtonDropItem_( const MenuItemInfo& item, const DrawButtonParams& params );
-    void drawDropList_( const std::shared_ptr<RibbonMenuItem>& baseDropItem );
-    void drawTooltip_( const MenuItemInfo& item, const std::string& requirements );
+    void drawButtonDropItem_( const MenuItemInfo& item, const DrawButtonParams& params ) const;
+    void drawDropList_( const std::shared_ptr<RibbonMenuItem>& baseDropItem ) const;
+    void drawTooltip_( const MenuItemInfo& item, const std::string& requirements ) const;
 
     // returns num of pushed colors
     int pushRibbonButtonColors_( bool enabled, bool active, DrawButtonParams::RootType rootType ) const;
@@ -102,7 +91,9 @@ private:
     std::function<std::string( std::shared_ptr<RibbonMenuItem> )> getRequirements_ = []( std::shared_ptr<RibbonMenuItem> ) { return std::string(); };
     RibbonMenu* menu_ = nullptr;
     const ShortcutManager* shortcutManager_ = nullptr;
+
     float scaling_ = 1.f;
+    static std::vector<std::unique_ptr<MR::ImGuiImage>> textures_;
 };
 
 }

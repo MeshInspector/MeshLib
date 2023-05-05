@@ -1,5 +1,5 @@
 #pragma once
-
+#include "MRMesh/MRIRenderObject.h"
 #include "MRGladGlfw.h"
 #include "exports.h"
 #include "MRMesh/MRColor.h"
@@ -121,6 +121,69 @@ private:
     size_t size_ = 0;
 };
 
+// represents OpenGL 3D texture owner, and allows uploading data in it remembering texture size
+class GlTexture3
+{
+    constexpr static GLuint NO_TEX = 0;
+public:
+    GlTexture3() = default;
+    GlTexture3( const GlTexture3& ) = delete;
+    GlTexture3( GlTexture3&& r ) : textureID_( r.textureID_ ), size_( r.size_ ) { r.detach_(); }
+    ~GlTexture3() { del(); }
+
+    GlTexture3& operator =( const GlTexture3& ) = delete;
+    GlTexture3& operator =( GlTexture3&& r ) { del(); textureID_ = r.textureID_; size_ = r.size_; r.detach_(); return * this; }
+
+    auto getId() const { return textureID_; }
+    bool valid() const { return textureID_ != NO_TEX; }
+    size_t size() const { return size_; }
+
+    // generates new texture
+    MRVIEWER_API void gen();
+
+    // deletes the texture
+    MRVIEWER_API void del();
+
+    // binds current texture to OpenGL context
+    MRVIEWER_API void bind();
+
+    struct Settings
+    {
+        Vector3i resolution;
+        size_t size() const { return size_t( resolution.x ) * resolution.y * resolution.z; }
+
+        GLint internalFormat = GL_RGBA;
+        GLint format = GL_RGBA;
+        GLint type = GL_UNSIGNED_BYTE;
+        WrapType wrap = WrapType::Mirror;
+        FilterType filter = FilterType::Discrete;
+    };
+
+    // creates GL data texture using given data and binds it
+    MRVIEWER_API void loadData( const Settings & settings, const char * arr );
+    template<typename C>
+    void loadData( const Settings & settings, const C & cont ) {
+        assert( cont.size() >= settings.size() );
+        loadData( settings, (const char *)cont.data() ); 
+    }
+
+    // binds current texture to OpenGL context, optionally refreshing its data
+    MRVIEWER_API void loadDataOpt( bool refresh, const Settings & settings, const char * arr );
+    template<typename C>
+    void loadDataOpt( bool refresh, const Settings & settings, const C & cont ) {
+        assert( !refresh || cont.size() >= settings.size() );
+        loadDataOpt( refresh, settings, (const char *)cont.data() );
+    }
+
+private:
+    /// another object takes control over the GL texture
+    void detach_() { textureID_ = NO_TEX; size_ = 0; }
+
+private:
+    GLuint textureID_ = NO_TEX;
+    size_t size_ = 0;
+};
+
 struct BindVertexAttribArraySettings
 {
     GLuint program_shader = 0;
@@ -184,6 +247,43 @@ inline GLint bindVertexAttribArray(
         .isColor = std::is_same_v<Color, T>
     };
     return bindVertexAttribArray( settings );
+}
+
+// return real GL value for DepthFuncion
+// default is less
+inline int getDepthFunctionLess( DepthFuncion funcType )
+{
+    switch ( funcType )
+    {
+    case DepthFuncion::Default:
+    case DepthFuncion::Less:
+        return GL_LESS;
+    case DepthFuncion::Never:
+        return GL_NEVER;
+    case DepthFuncion::LessOrEqual:
+        return GL_LEQUAL;
+    case DepthFuncion::Equal:
+        return GL_EQUAL;
+    case DepthFuncion::GreaterOrEqual:
+        return GL_GEQUAL;
+    case DepthFuncion::Greater:
+        return GL_GREATER;
+    case DepthFuncion::Always:
+        return GL_ALWAYS;
+    case DepthFuncion::NotEqual:
+        return GL_NOTEQUAL;
+    default:
+        return 0;
+    }
+}
+
+// return real GL value for DepthFuncion
+// default is less or equal
+inline int getDepthFunctionLEqual( DepthFuncion funcType )
+{
+    if ( funcType == DepthFuncion::Default )
+        return GL_LEQUAL;
+    return getDepthFunctionLess( funcType );
 }
 
 } //namespace MR

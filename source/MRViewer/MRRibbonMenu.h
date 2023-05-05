@@ -6,6 +6,7 @@
 #include "MRAsyncTimer.h"
 #include "MRRibbonSchema.h"
 #include "MRShortcutManager.h"
+#include "MRToolbar.h"
 #include <boost/signals2/signal.hpp>
 #include <type_traits>
 #include <array>
@@ -22,25 +23,14 @@ class Object;
 class MRVIEWER_CLASS RibbonMenu : public ImGuiMenu
 {
 public:
-    MRVIEWER_API RibbonMenu();
-    MRVIEWER_API virtual ~RibbonMenu();
-
     MRVIEWER_API virtual void init( MR::Viewer* _viewer ) override;
 
     MRVIEWER_API virtual void shutdown() override;
 
-    // get access to quick access menu items list
-    MenuItemsList& getQuickAccessList() { return quickAccessList_; };
-
-    /// get maximum items in quick access menu
-    int getQuickAccessMaxSize() const { return 14; };
+    /// open Toolbar Customize modal popup
+    MRVIEWER_API void openToolbarCustomize();
 
     MRVIEWER_API virtual void load_font( int font_size = 13 ) override;
-
-    int getTopPanelHeight() const
-    {
-        return currentTopPanelHeight_;
-    };
 
     MRVIEWER_API virtual std::filesystem::path getMenuFontPath() const override;
 
@@ -70,6 +60,9 @@ public:
     /// set Scene List window size
     MRVIEWER_API void setSceneSize( const Vector2i& size );
 
+    /// returns true if any blocking plugin is now active
+    bool hasActiveBlockingItem() const { return bool( activeBlockingItem_.item ); }
+
     /// updates status of item if it was changed outside of menu
     MRVIEWER_API void updateItemStatus( const std::string& itemName );
 
@@ -79,6 +72,9 @@ public:
     using TabChangedSignal = boost::signals2::signal<void( int prevTabId, int newTabId )>;
     /// this signal is called when active tab changes
     TabChangedSignal tabChangedSignal;
+
+    const RibbonButtonDrawer& getRibbonButtonDrawer() { return buttonDrawer_; }
+    Toolbar& getToolbar() { return toolbar_; }
 
 protected:
 
@@ -126,6 +122,9 @@ protected:
     MRVIEWER_API virtual void drawRibbonSceneList_();
     // Draw scene list content only
     MRVIEWER_API virtual void drawRibbonSceneListContent_( std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all );
+    // Draw vertical line at the right border of scene to enable resize of scene list
+    // returns size of scene window
+    MRVIEWER_API virtual Vector2f drawRibbonSceneResizeLine_();
     // Draw viewport id and projection type for all viewporrts
     MRVIEWER_API virtual void drawRibbonViewportsLabels_();
 
@@ -133,8 +132,6 @@ protected:
 
     MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected ) override;
     MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& selected ) override;
-
-    MRVIEWER_API virtual void drawQuickAccessMenu_();
 
     // return icon (now it is symbol in icons font) based on typename
     MRVIEWER_API virtual const char* getSceneItemIconByTypeName_( const std::string& typeName ) const;
@@ -149,6 +146,7 @@ protected:
     // reads files with panel description
     MRVIEWER_API virtual void readMenuItemsStructure_();
 
+    std::vector<std::shared_ptr<const Object>> prevFrameObjectsCache_;
     std::vector<std::shared_ptr<const Object>> selectedObjectsCache_;
 
     MRVIEWER_API virtual bool drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags flags = 0 ) override;
@@ -161,16 +159,9 @@ private:
     // draw scene list buttons
     void drawSceneListButtons_();
 
-    // struct to hold information for search result presentation
-    struct SearchResult
-    {
-        int tabIndex{ -1 }; // -1 is default value if item has no tab
-        const MenuItemInfo* item{ nullptr }; // item info to show correct caption
-    };
     // does look up in ribbon schema for `searchLine_`
-    std::vector<SearchResult> search_();
     std::string searchLine_;
-    std::vector<SearchResult> searchResult_;
+    std::vector<RibbonSchemaHolder::SearchResult> searchResult_;
     void drawSearchButton_();
     void drawCollapseButton_();
 
@@ -188,6 +179,8 @@ private:
     void drawTopPanelOpened_();
 
     void fixViewportsSize_( int w, int h );
+
+    std::string transformClipboardText_;
 
     int currentTopPanelHeight_ = 111;
     int topPanelOpenedHeight_ = 111;
@@ -211,12 +204,13 @@ private:
     float openedTimer_{ openedMaxSecs_ };
 
     int activeTabIndex_{ 0 };
-    MenuItemsList quickAccessList_;
     RibbonFontManager fontManager_;
     RibbonButtonDrawer buttonDrawer_;
 
-    AsyncTimer asyncTimer_;
-    std::thread timerThread_;
+    Toolbar toolbar_;
+#ifndef __EMSCRIPTEN__
+    AsyncRequest asyncRequest_;
+#endif // !__EMSCRIPTEN__
 };
 
 template<typename T>

@@ -199,6 +199,8 @@ bool MeshICP::p2ptIter_()
 bool MeshICP::p2plIter_()
 {
     MR_TIMER;
+    if ( vertPairs_.empty() )
+        return false;
     const VertCoords& points = meshPart_.mesh.points;
     Vector3f centroidRef;
     for (auto& vp : vertPairs_)

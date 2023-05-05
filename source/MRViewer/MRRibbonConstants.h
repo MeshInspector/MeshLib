@@ -1,4 +1,6 @@
 #pragma once
+#include "MRMesh/MRMeshFwd.h"
+#include "MRMesh/MRVector2.h"
 
 namespace MR
 {
@@ -50,5 +52,26 @@ constexpr int cHeadlineFontSize = 24;
 constexpr float cPaletteDiscretizationScaling = 5.0f / 18.0f;
 
 constexpr float cRadioButtonSize = 20.0f;
+
+constexpr float cModalWindowWidth = 368.0f;
+constexpr float cModalWindowPaddingX = 28.0f;
+constexpr float cModalWindowPaddingY = 20.0f;
+constexpr float cModalButtonWidth = 104.0f;
+
+const float cRadioInnerSpacingX = 12.f;
+
+namespace StyleConsts
+{
+
+constexpr Vector2f pluginItemSpacing{ 8, 10 };
+
+namespace CustomCombo
+{
+
+constexpr Vector2f framePadding{ 13, 8 };
+
+} // CustomCombo
+
+} // MRStyle
 
 }

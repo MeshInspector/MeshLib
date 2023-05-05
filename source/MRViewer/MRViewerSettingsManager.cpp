@@ -271,7 +271,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
 
     if ( ribbonMenu )
     {
-        auto& quickAccessList = ribbonMenu->getQuickAccessList();
+        auto& quickAccessList = ribbonMenu->getToolbar().getItemsList();
         Json::Value qaList = Json::arrayValue;
         qaList.resize( int( quickAccessList.size() ) );
         for ( int i = 0; i < quickAccessList.size(); ++i )

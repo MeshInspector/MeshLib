@@ -41,35 +41,38 @@ public:
         VertMap* outVmap = nullptr, EdgeMap* outEmap = nullptr );
 
     /// returns coordinates of the edge origin
-    V orgPnt( EdgeId e ) const { return points[ topology.org( e ) ]; }
+    [[nodiscard]] V orgPnt( EdgeId e ) const { return points[ topology.org( e ) ]; }
     /// returns coordinates of the edge destination
-    V destPnt( EdgeId e ) const { return points[ topology.dest( e ) ]; }
+    [[nodiscard]] V destPnt( EdgeId e ) const { return points[ topology.dest( e ) ]; }
     /// returns a point on the edge: origin point for f=0 and destination point for f=1
-    V edgePoint( EdgeId e, float f ) const { return f * destPnt( e ) + ( 1 - f ) * orgPnt( e ); }
+    [[nodiscard]] V edgePoint( EdgeId e, float f ) const { return f * destPnt( e ) + ( 1 - f ) * orgPnt( e ); }
     /// returns edge's centroid
-    V edgeCenter( EdgeId e ) const { return edgePoint( e, 0.5f ); }
+    [[nodiscard]] V edgeCenter( EdgeId e ) const { return edgePoint( e, 0.5f ); }
 
     /// returns vector equal to edge destination point minus edge origin point
-    V edgeVector( EdgeId e ) const { return destPnt( e ) - orgPnt( e ); }
+    [[nodiscard]] V edgeVector( EdgeId e ) const { return destPnt( e ) - orgPnt( e ); }
     /// returns line segment of given edge
-    LineSegm<V> edgeSegment( EdgeId e ) const { return LineSegm<V>( orgPnt( e ), destPnt( e ) ); }
+    [[nodiscard]] LineSegm<V> edgeSegment( EdgeId e ) const { return LineSegm<V>( orgPnt( e ), destPnt( e ) ); }
     /// returns Euclidean length of the edge
-    float edgeLength( EdgeId e ) const { return edgeVector( e ).length(); }
+    [[nodiscard]] float edgeLength( EdgeId e ) const { return edgeVector( e ).length(); }
     /// returns squared Euclidean length of the edge (faster to compute than length)
-    float edgeLengthSq( EdgeId e ) const { return edgeVector( e ).lengthSq(); }
+    [[nodiscard]] float edgeLengthSq( EdgeId e ) const { return edgeVector( e ).lengthSq(); }
     /// returns total length of the polyline
-    MRMESH_API float totalLength() const;
+    [[nodiscard]] MRMESH_API float totalLength() const;
 
     /// returns cached aabb-tree for this polyline, creating it if it did not exist in a thread-safe manner
     MRMESH_API const AABBTreePolyline<V>& getAABBTree() const;
     /// returns cached aabb-tree for this polyline, but does not create it if it did not exist
-    const AABBTreePolyline<V> * getAABBTreeNotCreate() const { return AABBTreeOwner_.get(); }
+    [[nodiscard]] const AABBTreePolyline<V> * getAABBTreeNotCreate() const { return AABBTreeOwner_.get(); }
 
     /// returns the minimal bounding box containing all valid vertices (implemented via getAABBTree())
-    MRMESH_API Box<V> getBoundingBox() const;
+    [[nodiscard]] MRMESH_API Box<V> getBoundingBox() const;
     /// passes through all valid points and finds the minimal bounding box containing all of them
     /// \details if toWorld transformation is given then returns minimal bounding box in world space
-    MRMESH_API Box<V> computeBoundingBox( const AffineXf<V> * toWorld = nullptr ) const;
+    [[nodiscard]] MRMESH_API Box<V> computeBoundingBox( const AffineXf<V> * toWorld = nullptr ) const;
+
+    // computes average position of all valid polyline vertices
+    [[nodiscard]] MRMESH_API V findCenterFromPoints() const;
 
     /// applies given transformation to all valid polyline vertices
     MRMESH_API void transform( const AffineXf<V> & xf );
@@ -87,15 +90,15 @@ public:
 
     /// convert Polyline to simple contour structures with vector of points inside
     /// \details if all even edges are consistently oriented, then the output contours will be oriented the same
-    MRMESH_API Contours<V> contours() const;
+    [[nodiscard]] MRMESH_API Contours<V> contours() const;
 
     /// convert Polyline to simple 2D contour structures with vector of points inside
     /// \details if all even edges are consistently oriented, then the output contours will be oriented the same
-    MRMESH_API Contours2f contours2() const;
+    [[nodiscard]] MRMESH_API Contours2f contours2() const;
 
     /// convert Polyline3 to Polyline2 or vice versa
     template<typename U>
-    Polyline<U> toPolyline() const;
+    [[nodiscard]] Polyline<U> toPolyline() const;
 
     /// adds path to this polyline
     /// \return the edge from first new to second new vertex
@@ -108,8 +111,8 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const;
     /// reflects the polyline from a given plane. Enabled only for Polyline3f
-    template < class Q = V>
-    typename std::enable_if_t< std::is_same_v<Q, Vector3f> > mirror( const Plane3f& plane )
+    template <class Q = V>
+    [[nodiscard]] typename std::enable_if_t< std::is_same_v<Q, Vector3f> > mirror( const Plane3f& plane )
     {
         for ( auto& p : points )
         {

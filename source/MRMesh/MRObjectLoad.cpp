@@ -5,8 +5,10 @@
 #include "MRMesh.h"
 #include "MRTimer.h"
 #include "MRDistanceMapLoad.h"
+#include "MRImageLoad.h"
 #include "MRPointsLoad.h"
 #include "MRVoxelsLoad.h"
+#include "MRObjectVoxels.h"
 #include "MRObjectLines.h"
 #include "MRObjectPoints.h"
 #include "MRDistanceMap.h"
@@ -17,12 +19,16 @@
 #include "MRSerializer.h"
 #include "MRPch/MRSpdlog.h"
 
+#ifndef MRMESH_NO_GLTF
+#include "MRGltfSerializer.h"
+#endif
+
 namespace MR
 {
 
 const IOFilters allFilters = SceneFileFilters
                              | MeshLoad::getFilters()
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM )
+#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
                              | VoxelsLoad::Filters
 #endif
                              | LinesLoad::Filters
@@ -109,6 +115,49 @@ tl::expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( cons
     return objectDistanceMap;
 }
 
+#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+tl::expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+{
+    MR_TIMER;
+
+    auto cb = callback;
+    if ( cb )
+        cb = [callback] ( float v ) { return callback( v / 3.f ); };
+    auto loadRes = VoxelsLoad::fromAnySupportedFormat( file, cb );
+    if ( !loadRes.has_value() )
+    {
+        return tl::make_unexpected( loadRes.error() );
+    }
+    auto& loadResRef = *loadRes;
+    std::vector<std::shared_ptr<ObjectVoxels>> res;
+    int size = int( loadResRef.size() );
+    for ( int i = 0; i < size; ++i )
+    {
+        std::shared_ptr<ObjectVoxels> obj = std::make_shared<ObjectVoxels>();
+        const std::string name = i > 1 ? fmt::format( "{} {}", utf8string(file.stem()), i) : utf8string(file.stem());
+        obj->setName( name );
+        int step = 0;
+        bool callbackRes = true;
+        if ( cb )
+            cb = [callback, &i, &step, size, &callbackRes] ( float v )
+        {
+            callbackRes = callback( ( 1.f + 2 * ( i + ( step + v ) / 2.f ) / size ) / 3.f );
+            return callbackRes;
+        };
+
+        obj->construct( loadResRef[i], cb );
+        if ( cb && !callbackRes )
+            return tl::make_unexpected( getCancelMessage( file ) );
+        step = 1;
+        obj->setIsoValue( ( loadResRef[i].min + loadResRef[i].max ) / 2.f, cb );
+        if ( cb && !callbackRes )
+            return tl::make_unexpected( getCancelMessage( file ) );
+        res.emplace_back( obj );
+    }
+    
+    return res;
+}
+#endif
 
 tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFile( const std::filesystem::path& filename,
                                                                                         ProgressCallback callback )
@@ -118,12 +167,11 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
 
     tl::expected<std::vector<std::shared_ptr<Object>>, std::string> result;
 
-    auto ext = filename.extension().u8string();
+    auto ext = std::string( "*" ) + utf8string( filename.extension().u8string() );
     for ( auto& c : ext )
-        c = ( char )tolower( c );
-
-
-    if ( ext == u8".obj" )
+        c = ( char )tolower( c );   
+    
+    if ( ext == "*.obj" )
     {
         auto res = MeshLoad::fromSceneObjFile( filename, false, callback );
         if ( res.has_value() )
@@ -139,6 +187,17 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                     objectMesh->setName( std::move( resValue[i].name ) );
                 objectMesh->select( true );
                 objectMesh->setMesh( std::make_shared<Mesh>( std::move( resValue[i].mesh ) ) );
+                if ( resValue[i].diffuseColor )
+                    objectMesh->setFrontColor( *resValue[i].diffuseColor, false );
+
+                auto image = ImageLoad::fromAnySupportedFormat( resValue[i].pathToTexture );
+                if ( image.has_value() )
+                {
+                    objectMesh->setUVCoords( std::move( resValue[i].uvCoords ) );
+                    objectMesh->setTexture( { image.value(), FilterType::Linear } );
+                    objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
+                }
+
                 objects[i] = std::dynamic_pointer_cast< Object >( objectMesh );
             }
             result = objects;
@@ -146,16 +205,14 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
         else
             result = tl::make_unexpected( res.error() );
     }
-    else if ( !SceneFileFilters.empty() && filename.extension() == SceneFileFilters.front().extension.substr( 1 ) )
+    else if ( std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const auto& filter ) { return filter.extension == ext;     } ) != SceneFileFilters.end() )
     {
-        auto res = deserializeObjectTree( filename, {}, callback );
-        if ( res.has_value() )
-        {
-            result = std::vector( { *res } );
-            ( *result )[0]->setName( utf8string( filename.stem() ) );
-        }
-        else
-            result = tl::make_unexpected( res.error() );
+        const auto objTree = loadSceneFromAnySupportedFormat( filename, callback );
+        if ( !objTree.has_value() )
+            return tl::make_unexpected( objTree.error() );
+        
+        result = std::vector( { *objTree } );
+        ( *result )[0]->setName( utf8string( filename.stem() ) );
     }
     else
     {
@@ -203,8 +260,28 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                         auto obj = std::make_shared<ObjectDistanceMap>( std::move( objectDistanceMap.value() ) );
                         result = { obj };
                     }
-                    else
+                    else if ( result.error() == "unsupported file extension" )
+                    {
                         result = tl::make_unexpected( objectDistanceMap.error() );
+
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+                        auto objsVoxels = makeObjectVoxelsFromFile( filename, callback );
+                        std::vector<std::shared_ptr<Object>> resObjs;
+                        if ( objsVoxels.has_value() )
+                        {
+                            auto& objsVoxelsRef = *objsVoxels;
+                            for ( auto& objPtr : objsVoxelsRef )
+                            {
+                                objPtr->select( true );
+                                resObjs.emplace_back( std::dynamic_pointer_cast< Object >( objPtr ) );
+                            }
+                            result = resObjs;
+                        }
+                        else
+                            result = tl::make_unexpected( objsVoxels.error() );
+#endif
+
+                    }
                 }
             }
         }
@@ -359,7 +436,7 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
 
     // processing of results
     bool atLeastOneLoaded = false;
-    std::string allErrors;
+    std::unordered_map<std::string, int> allErrors;
     const float taskCount = float( loadTasks.size() );
     int finishedTaskCount = 0;
     std::chrono::system_clock::time_point afterSecond = std::chrono::system_clock::now();
@@ -385,21 +462,61 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
             }
             else
             {
-                allErrors += ( allErrors.empty() ? "" : "\n" ) + res.error();
+                ++allErrors[res.error()];
             }
             ++finishedTaskCount;
             if ( callback && !callback( finishedTaskCount / taskCount ) )
                 loadingCanceled = true;
         }
     }
-    if ( !allErrors.empty() )
-        spdlog::warn( "Load folder error:\n{}", allErrors );
+
+    std::string errorString;
+    for ( const auto& error : allErrors )
+    {
+        errorString += ( errorString.empty() ? "" : "\n" ) + error.first;
+        if ( error.second > 1 )
+        {
+            errorString += std::string( " (" ) + std::to_string( error.second ) + std::string( ")" );
+        }
+    }
+
+    if ( !errorString.empty() )
+        spdlog::warn( "Load folder error:\n{}", errorString );
     if ( loadingCanceled )
         return tl::make_unexpected( getCancelMessage( folder ) );
     if ( !atLeastOneLoaded )
-        return tl::make_unexpected( allErrors );
+        return tl::make_unexpected( errorString );
 
     return result;
+}
+
+tl::expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, ProgressCallback callback )
+{
+    auto ext = std::string( "*" ) + utf8string( path.extension().u8string() );
+    for ( auto& c : ext )
+        c = ( char )tolower( c );
+
+    auto res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+
+    auto itF = std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const IOFilter& filter )
+    {
+        return filter.extension == ext;
+    } );
+    if ( itF == SceneFileFilters.end() )
+        return res;
+
+    if ( itF->extension == "*.mru" )
+    {
+        return deserializeObjectTree( path, {}, callback );
+    }
+#ifndef MRMESH_NO_GLTF
+    else if ( itF->extension == "*.gltf" || itF->extension == "*.glb" )
+    {
+        return deserializeObjectTreeFromGltf( path, callback );
+    }
+#endif
+
+    return res;
 }
 
 } //namespace MR

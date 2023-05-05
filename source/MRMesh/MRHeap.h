@@ -27,11 +27,11 @@ public:
     };
 
     /// constructs heap for given number of elements, assigning given default value to each element
-    explicit Heap( int size, T def = {}, P pred = {} );
+    explicit Heap( size_t size, T def = {}, P pred = {} );
     /// returns the size of the heap
-    int size() const { return (int)heap_.size(); }
+    size_t size() const { return heap_.size(); }
     /// increases the size of the heap by adding elements at the end
-    void resize( int size, T def = {} );
+    void resize( size_t size, T def = {} );
     /// returns the value associated with given element
     const T & value( I elemId ) const { return heap_[ id2PosInHeap_[ elemId ] ].val; }
     /// returns the element with the largest value
@@ -48,23 +48,23 @@ public:
 
 private:
     /// tests whether heap element at posA is less than posB
-    bool less_( int posA, int posB ) const;
+    bool less_( size_t posA, size_t posB ) const;
     /// lifts the element in the queue according to its value
-    void lift_( int pos, I elemId );
+    void lift_( size_t pos, I elemId );
 
 private:
     std::vector<Element> heap_;
-    Vector<int, I> id2PosInHeap_;
+    Vector<size_t, I> id2PosInHeap_;
     P pred_;
 };
 
 template <typename T, typename I, typename P>
-Heap<T, I, P>::Heap( int size, T def, P pred )
+Heap<T, I, P>::Heap( size_t size, T def, P pred )
     : heap_ ( size, { I(), def } )
     , id2PosInHeap_( size )
     , pred_( pred )
 {
-    for ( I i{0}; i < size; ++i )
+    for ( I i{ size_t( 0 ) }; i < size; ++i )
     {
         heap_[i].id = i;
         id2PosInHeap_[i] = i;
@@ -72,7 +72,7 @@ Heap<T, I, P>::Heap( int size, T def, P pred )
 }
 
 template <typename T, typename I, typename P>
-void Heap<T, I, P>::resize( int size, T def )
+void Heap<T, I, P>::resize( size_t size, T def )
 {
     assert ( heap_.size() == id2PosInHeap_.size() );
     while ( heap_.size() < size )
@@ -88,7 +88,7 @@ void Heap<T, I, P>::resize( int size, T def )
 template <typename T, typename I, typename P>
 void Heap<T, I, P>::setValue( I elemId, const T & newVal )
 {
-    int pos = id2PosInHeap_[ elemId ];
+    size_t pos = id2PosInHeap_[ elemId ];
     assert( heap_[pos].id == elemId );
     if ( pred_( newVal, heap_[pos].val ) )
         setSmallerValue( elemId, newVal );
@@ -99,7 +99,7 @@ void Heap<T, I, P>::setValue( I elemId, const T & newVal )
 template <typename T, typename I, typename P>
 void Heap<T, I, P>::setLargerValue( I elemId, const T & newVal )
 {
-    int pos = id2PosInHeap_[ elemId ];
+    size_t pos = id2PosInHeap_[ elemId ];
     assert( heap_[pos].id == elemId );
     assert( !( pred_( newVal, heap_[pos].val ) ) );
     heap_[pos].val = newVal;
@@ -107,11 +107,11 @@ void Heap<T, I, P>::setLargerValue( I elemId, const T & newVal )
 }
 
 template <typename T, typename I, typename P>
-void Heap<T, I, P>::lift_( int pos, I elemId )
+void Heap<T, I, P>::lift_( size_t pos, I elemId )
 {
     while ( pos > 0 )
     {
-        int parentPos = ( pos - 1 ) / 2;
+        size_t parentPos = ( pos - 1 ) / 2;
         if ( !( less_( parentPos, pos ) ) )
             break;
         auto parentId = heap_[parentPos].id;
@@ -126,17 +126,17 @@ void Heap<T, I, P>::lift_( int pos, I elemId )
 template <typename T, typename I, typename P>
 void Heap<T, I, P>::setSmallerValue( I elemId, const T & newVal )
 {
-    int pos = id2PosInHeap_[ elemId ];
+    size_t pos = id2PosInHeap_[ elemId ];
     assert( heap_[pos].id == elemId );
     assert( !( pred_( heap_[pos].val, newVal ) ) );
     heap_[pos].val = newVal;
     for (;;)
     {
-        int child1Pos = 2 * pos + 1;
+        size_t child1Pos = 2 * pos + 1;
         if ( child1Pos >= heap_.size() )
             break;
         auto child1Id = heap_[child1Pos].id;
-        int child2Pos = 2 * pos + 2;
+        size_t child2Pos = 2 * pos + 2;
         if ( child2Pos >= heap_.size() )
         {
             assert( id2PosInHeap_[child1Id] == child1Pos );
@@ -173,7 +173,7 @@ void Heap<T, I, P>::setSmallerValue( I elemId, const T & newVal )
 }
 
 template <typename T, typename I, typename P>
-inline bool Heap<T, I, P>::less_( int posA, int posB ) const
+inline bool Heap<T, I, P>::less_( size_t posA, size_t posB ) const
 {
     const auto & a = heap_[posA];
     const auto & b = heap_[posB];

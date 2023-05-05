@@ -55,6 +55,18 @@ std::vector<std::string> ObjectPoints::getInfoLines() const
     return res;
 }
 
+void ObjectPoints::setDirtyFlags( uint32_t mask )
+{
+    ObjectPointsHolder::setDirtyFlags( mask );
+    if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
+    {
+        if ( points_ )
+        {
+            pointsChangedSignal( mask );
+        }
+    }
+}
+
 std::shared_ptr<Object> ObjectPoints::clone() const
 {
     auto res = std::make_shared<ObjectPoints>( ProtectedStruct{}, *this );
@@ -83,6 +95,15 @@ void ObjectPoints::swapBase_( Object& other )
 {
     if ( auto otherPoints = other.asType<ObjectPoints>() )
         std::swap( *this, *otherPoints );
+    else
+        assert( false );
+}
+
+void ObjectPoints::swapSignals_( Object& other )
+{
+    ObjectPointsHolder::swapSignals_( other );
+    if ( auto otherPoints = other.asType<ObjectPoints>() )
+        std::swap( pointsChangedSignal, otherPoints->pointsChangedSignal );
     else
         assert( false );
 }

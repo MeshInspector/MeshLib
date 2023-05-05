@@ -7,6 +7,7 @@
 #include "MRPch/MRJson.h"
 #include "MRViewer/MRViewer.h"
 #include "MRRibbonMenu.h"
+#include "MRMesh/MRString.h"
 #include "imgui.h"
 
 namespace MR
@@ -28,6 +29,93 @@ bool RibbonSchemaHolder::addItem( std::shared_ptr<RibbonMenuItem> item )
 
     staticMap[item->name()] = { item };
     return true;
+}
+
+std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const std::string& searchStr )
+{
+    std::vector<SearchResult> res;
+    if ( searchStr.empty() )
+        return res;
+    std::vector<std::pair<float, SearchResult>> resultListForSort;
+    auto checkItem = [&] ( const MenuItemInfo& item, int t )
+    {
+        const auto& caption = item.caption.empty() ? item.item->name() : item.caption;
+        const auto& tooltip = item.tooltip;
+        float res = 0.0f;
+        auto captionRes = findSubstringCaseInsensitive( caption, searchStr );
+        auto tooltipRes = findSubstringCaseInsensitive( tooltip, searchStr );
+        if ( captionRes == std::string::npos && tooltipRes == std::string::npos )
+            return;
+        if ( captionRes != std::string::npos )
+            res += ( 1.0f - float( captionRes ) / float( caption.size() ) );
+        if ( tooltipRes != std::string::npos )
+            res += 0.5f * ( 1.0f - float( tooltipRes ) / float( tooltip.size() ) );
+        resultListForSort.push_back( { res, SearchResult{t,&item} } );
+    };
+    const auto& schema = RibbonSchemaHolder::schema();
+    auto lookUpMenuItemList = [&] ( const MenuItemsList& list, int t )
+    {
+        for ( int i = 0; i < list.size(); ++i )
+        {
+            auto item = schema.items.find( list[i] );
+            if ( item == schema.items.end() )
+                continue;
+            if ( !item->second.item )
+                continue;
+            checkItem( item->second, t );
+            if ( item->second.item->type() == RibbonItemType::ButtonWithDrop )
+            {
+                for ( const auto& dropRibItem : item->second.item->dropItems() )
+                {
+                    if ( !dropRibItem )
+                        continue;
+                    if ( std::dynamic_pointer_cast< LambdaRibbonItem >( dropRibItem ) )
+                        continue;
+                    auto dropItem = schema.items.find( dropRibItem->name() );
+                    if ( dropItem == schema.items.end() )
+                        continue;
+                    checkItem( dropItem->second, t );
+                }
+            }
+        }
+    };
+    for ( int t = 0; t < schema.tabsOrder.size(); ++t )
+    {
+        auto tabItem = schema.tabsMap.find( schema.tabsOrder[t].name );
+        if ( tabItem == schema.tabsMap.end() )
+            continue;
+        for ( int g = 0; g < tabItem->second.size(); ++g )
+        {
+            auto groupItem = schema.groupsMap.find( schema.tabsOrder[t].name + tabItem->second[g] );
+            if ( groupItem == schema.groupsMap.end() )
+                continue;
+            lookUpMenuItemList( groupItem->second, t );
+        }
+    }
+    lookUpMenuItemList( schema.headerQuickAccessList, -1 );
+    lookUpMenuItemList( schema.sceneButtonsList, -1 );
+
+    std::sort( resultListForSort.begin(), resultListForSort.end(), [] ( const auto& a, const auto& b )
+    {
+        return intptr_t( a.second.item ) < intptr_t( b.second.item );
+    } );
+    resultListForSort.erase(
+        std::unique( resultListForSort.begin(), resultListForSort.end(),
+            [] ( const auto& a, const auto& b )
+    {
+        return a.second.item == b.second.item;
+    } ),
+        resultListForSort.end() );
+
+    std::sort( resultListForSort.begin(), resultListForSort.end(), [] ( const auto& a, const auto& b )
+    {
+        return a.first > b.first;
+    } );
+    res.reserve( resultListForSort.size() );
+    for ( const auto& sortedRes : resultListForSort )
+        res.push_back( sortedRes.second );
+
+    return res;
 }
 
 void RibbonSchemaLoader::loadSchema() const

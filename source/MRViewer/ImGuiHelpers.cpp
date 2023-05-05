@@ -107,7 +107,7 @@ void PlotCustomHistogram( const char* str_id,
                                  std::function<void( int idx )> on_click,
                                  int values_count, int values_offset,
                                  float scale_min, float scale_max,
-                                 ImVec2 frame_size, int selectedBarId )
+                                 ImVec2 frame_size, int selectedBarId, int hoveredBarId )
 {
     if ( frame_size.y < 0.0f )
         return;
@@ -168,7 +168,8 @@ void PlotCustomHistogram( const char* str_id,
     }
 
     constexpr int bar_halfthickness = 1;
-    int idx_hovered = -bar_halfthickness;
+    if ( hoveredBarId < 0 )
+        hoveredBarId = -bar_halfthickness;
     constexpr int values_count_min = 1;
     if ( values_count >= values_count_min )
     {
@@ -184,7 +185,7 @@ void PlotCustomHistogram( const char* str_id,
             IM_ASSERT( v_idx >= 0 && v_idx < values_count );
 
             tooltip( ( v_idx + values_offset ) % values_count );
-            idx_hovered = v_idx;
+            hoveredBarId = v_idx;
             if (GetIO().MouseClicked[0])
             {
                 on_click((v_idx + values_offset) % values_count);
@@ -219,14 +220,14 @@ void PlotCustomHistogram( const char* str_id,
             {
                 if ( pos1.x >= pos0.x + 2.0f )
                     pos1.x -= 1.0f;
-                if ( abs(v1_idx - idx_hovered) < bar_halfthickness )
+                if ( abs(v1_idx - hoveredBarId) < bar_halfthickness )
                     drawList->AddRectFilled( ImVec2( pos0.x, innerMin.y ), ImVec2( pos1.x, pos0.y ), col_hovered_top );
                 if ( encolorSelected && abs(v1_idx - selectedBarId) < bar_halfthickness )
                     drawList->AddRectFilled( ImVec2( pos0.x, innerMin.y ), ImVec2( pos1.x, pos0.y ), col_selected_top );
 
                 auto getBarColor = [&](const int v1_idx)
                 {
-                 if ( abs(v1_idx - idx_hovered) < bar_halfthickness )
+                 if ( abs(v1_idx - hoveredBarId) < bar_halfthickness )
                         return col_hovered;
                  if ( encolorSelected && abs(v1_idx - selectedBarId) < bar_halfthickness )
                         return col_selected;

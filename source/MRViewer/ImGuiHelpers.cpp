@@ -167,7 +167,7 @@ void PlotCustomHistogram( const char* str_id,
         drawList->AddRect( rect.Min, rect.Max, GetColorU32( ImGuiCol_Border ), style.FrameRounding, ImDrawFlags_RoundCornersAll, border_size );
     }
 
-    constexpr int bar_halfthickness = 2;
+    constexpr int bar_halfthickness = 1;
     int idx_hovered = -bar_halfthickness;
     constexpr int values_count_min = 1;
     if ( values_count >= values_count_min )
@@ -199,8 +199,10 @@ void PlotCustomHistogram( const char* str_id,
 
         const ImU32 col_base = GetColorU32( ImGuiCol_PlotHistogram );
         const ImU32 col_hovered = GetColorU32(ImGuiCol_PlotHistogramHovered);
+        const ImU32 col_hovered_top = GetColorU32(ImGuiCol_TabHovered);
         ImVec4 col{ 1.0f, 0.2f, 0.2f, 1.0f };
         const ImU32 col_selected = GetColorU32(col);
+        const ImU32 col_selected_top = GetColorU32(ImGuiCol_TabActive);
 
         for ( int n = 0; n < res_w; n++ )
         {
@@ -217,11 +219,16 @@ void PlotCustomHistogram( const char* str_id,
             {
                 if ( pos1.x >= pos0.x + 2.0f )
                     pos1.x -= 1.0f;
+                if ( abs(v1_idx - idx_hovered) < bar_halfthickness )
+                    drawList->AddRectFilled( ImVec2( pos0.x, innerMin.y ), ImVec2( pos1.x, pos0.y ), col_hovered_top );
+                if ( encolorSelected && abs(v1_idx - selectedBarId) < bar_halfthickness )
+                    drawList->AddRectFilled( ImVec2( pos0.x, innerMin.y ), ImVec2( pos1.x, pos0.y ), col_selected_top );
+
                 auto getBarColor = [&](const int v1_idx)
                 {
-                    if (abs(v1_idx - idx_hovered) < bar_halfthickness)
+                 if ( abs(v1_idx - idx_hovered) < bar_halfthickness )
                         return col_hovered;
-                    if ( encolorSelected && abs(v1_idx - selectedBarId) < bar_halfthickness)
+                 if ( encolorSelected && abs(v1_idx - selectedBarId) < bar_halfthickness )
                         return col_selected;
                     return col_base;
                 };

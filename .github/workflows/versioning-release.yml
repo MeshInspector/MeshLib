@@ -38,6 +38,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          ref: master
 
       - name: Versioning
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
@@ -58,7 +59,8 @@ jobs:
           echo "version_tag=${version_tag}" >> $GITHUB_OUTPUT
 
       - name: Create Release
-        if: ${{ inputs.UPLOAD_ARTIFACTS }}
+        if: ${{ false }}
+        #if: ${{ inputs.UPLOAD_ARTIFACTS }}
         id: create_release
         uses: softprops/action-gh-release@v1
         env:

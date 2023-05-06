@@ -66,7 +66,7 @@ std::vector<std::shared_ptr<ObjectT>> getTopmostVisibleObjects( Object* root, co
         const auto & children = root->children();
         for ( const auto& child : children )
         {
-            if ( !child || !child->isVisible() || child->isAncillary() )
+            if ( !child || !child->isVisible() )
                 continue;
             if ( auto visObj = asSelectivityType<ObjectT>( child, type ) )
                 res.push_back( std::move( visObj ) );
@@ -92,18 +92,12 @@ std::shared_ptr<ObjectT> getDepthFirstObject( Object* root, const ObjectSelectiv
         todo.pop();
         const auto & children = root->children();
         for ( const auto& child : children )
-        {
-            if ( !child || child->isAncillary() )
-                continue;
             if ( auto visObj = asSelectivityType<ObjectT>( child, type ) )
                 return visObj;
-        }
         for ( auto it = children.rbegin(); it != children.rend(); ++it )
         {
-            auto * child = it->get();
-            if ( !child || child->isAncillary() )
-                continue;
-            todo.push( child );
+            if ( auto * child = it->get() )
+                todo.push( child );
         }
     }
     return {};

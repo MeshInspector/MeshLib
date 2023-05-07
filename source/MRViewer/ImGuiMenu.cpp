@@ -1556,7 +1556,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
         allDual = allDual && atLeastOneDual;
 
         bool checked = atLeastOneDual;
-        const bool res = UI::checkboxMixed( "Dual Marching Cubes", &checked, !allDual && atLeastOneDual );
+        someChanges |= UI::checkboxMixed( "Dual Marching Cubes", &checked, !allDual && atLeastOneDual );
         if ( checked != atLeastOneDual )
         {
             for ( const auto& data : selectedVisualObjs )

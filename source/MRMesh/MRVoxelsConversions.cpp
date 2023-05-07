@@ -980,6 +980,7 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
     if ( params.cb && !params.cb( 1.0f ) )
         return {};
 
+    result.transform( AffineXf3f::linear( Matrix3f::scale( volume.voxelSize ) ) );
     return result;
 }
 
@@ -989,10 +990,7 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Volume
 }
 std::optional<Mesh> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params /*= {} */ )
 {
-    auto res = volumeToMesh( volume, params );
-    if ( res )
-        res->transform( AffineXf3f::linear( Matrix3f::scale( volume.voxelSize ) ) );
-    return res;
+    return volumeToMesh( volume, params );
 }
 
 }

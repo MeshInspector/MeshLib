@@ -980,7 +980,6 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
     if ( params.cb && !params.cb( 1.0f ) )
         return {};
 
-    result.transform( AffineXf3f::linear( Matrix3f::scale( volume.voxelSize ) ) );
     return result;
 }
 

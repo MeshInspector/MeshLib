@@ -62,9 +62,7 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
 {
     MR_TIMER
     SimpleVolume res;
-    auto transposedBasis = params.basis.A.transposed();
-    for ( int i = 0; i < 3; ++i )
-        res.voxelSize[i] = transposedBasis[i].length();
+    res.voxelSize = params.voxelSize;
     res.dims = params.dimensions;
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size() );
@@ -78,8 +76,10 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
         if ( !fwn )
             fwn = std::make_shared<FastWindingNumber>( mesh );
 
+        auto basis = AffineXf3f::linear( Matrix3f::scale( params.voxelSize ) );
+        basis.b = params.origin;
         constexpr float beta = 2;
-        fwn->calcFromGridWithDistances( res.data, res.dims, Vector3f::diagonal( 0.5f ), Vector3f::diagonal( 1.0f ), params.basis, beta, params.maxDistSq, params.minDistSq );
+        fwn->calcFromGridWithDistances( res.data, res.dims, Vector3f::diagonal( 0.5f ), Vector3f::diagonal( 1.0f ), basis, beta, params.maxDistSq, params.minDistSq );
         MinMaxCalc minMaxCalc( res.data );
         tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, res.data.size() ), minMaxCalc );
         res.min = minMaxCalc.min();
@@ -99,7 +99,7 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
                 break;
 
             auto coord = Vector3f( indexer.toPos( VoxelId( i ) ) ) + Vector3f::diagonal( 0.5f );
-            auto voxelCenter = params.basis.b + params.basis.A * coord;
+            auto voxelCenter = params.origin + mult( params.voxelSize, coord );
             float dist{ 0.0f };
             if ( params.signMode != SignDetectionMode::ProjectionNormal )
                 dist = std::sqrt( findProjection( voxelCenter, mesh, params.maxDistSq, nullptr, params.minDistSq ).distSq );
@@ -507,8 +507,8 @@ SeparationPoint findSeparationPoint( const VdbVolume& volume, const ConstAccesso
     SeparationPoint res;
     Vector3f coordF = Vector3f( float( coord.x() ), float( coord.y() ), float( coord.z() ) );
     Vector3f nextCoordF = Vector3f( float( nextCoord.x() ), float( nextCoord.y() ), float( nextCoord.z() ) );
-    auto bPos = params.basis.b + params.basis.A * coordF;
-    auto dPos = params.basis.b + params.basis.A * nextCoordF;
+    auto bPos = params.origin + mult( volume.voxelSize, coordF );
+    auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
     res.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
     res.vid = VertId{ 0 };
     return res;
@@ -535,8 +535,8 @@ SeparationPoint findSeparationPoint( const SimpleVolume& volume,
     SeparationPoint res;
     Vector3f coordF = Vector3f( basePos ) + Vector3f::diagonal( 0.5f );
     Vector3f nextCoordF = Vector3f( nextPos ) + Vector3f::diagonal( 0.5f );
-    auto bPos = params.basis.b + params.basis.A * coordF;
-    auto dPos = params.basis.b + params.basis.A * nextCoordF;
+    auto bPos = params.origin + mult( volume.voxelSize, coordF );
+    auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
     res.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
     res.vid = VertId{ 0 };
     return res;

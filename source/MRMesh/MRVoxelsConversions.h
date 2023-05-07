@@ -12,12 +12,15 @@ namespace MR
 
 struct BaseVolumeConversionParams
 {
-    AffineXf3f basis; // position of lowest left voxel, and axes vectors (A.transposed().x == x axis of volume)
+    // origin point of voxels box
+    Vector3f origin;
     ProgressCallback cb{}; // progress callback
 };
 
-struct MeshToSimpleVolumeParams : BaseVolumeConversionParams
+struct MeshToSimpleVolumeParams : public BaseVolumeConversionParams
 {
+    /// size of voxel on each axis
+    Vector3f voxelSize{ 1.0f,1.0f,1.0f };
     /// num voxels along each axis
     Vector3i dimensions{ 100,100,100 };
     /// minimum squared value in a voxel
@@ -37,7 +40,7 @@ using VoxelPointPositioner = std::function<Vector3f( const Vector3f&, const Vect
 // linear interpolation positioner
 MRMESH_API Vector3f voxelPositionerLinear( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso );
 
-struct VolumeToMeshParams : BaseVolumeConversionParams
+struct VolumeToMeshParams : public BaseVolumeConversionParams
 {
     float iso{ 0.0f };
     bool lessInside{ false }; // should be false for dense volumes, and true for distance volume

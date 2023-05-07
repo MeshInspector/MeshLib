@@ -109,9 +109,9 @@ tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
             return tl::make_unexpected( "Operation was canceled." );
 
         VdbVolume volume = floatGridToVdbVolume( voxelRes );
+        volume.voxelSize = Vector3f::diagonal( params.voxelSize );
 
         VolumeToMeshParams vmParams;
-        vmParams.basis.A = Matrix3f::scale( params.voxelSize );
         vmParams.iso = offsetInVoxels;
         vmParams.lessInside = true;
         vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
@@ -129,9 +129,9 @@ tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         auto box = mesh.getBoundingBox();
         auto absOffset = std::abs( offset );
         auto expansion = 3.0f * Vector3f::diagonal( params.voxelSize ) + 2.0f * Vector3f::diagonal( absOffset );
-        msParams.basis.b = box.min - expansion;
-        msParams.basis.A = Matrix3f::scale( params.voxelSize );
-        msParams.dimensions = Vector3i( ( box.max + expansion - msParams.basis.b ) / params.voxelSize ) + Vector3i::diagonal( 1 );
+        msParams.origin = box.min - expansion;
+        msParams.voxelSize = Vector3f::diagonal( params.voxelSize );
+        msParams.dimensions = Vector3i( ( box.max + expansion - msParams.origin ) / params.voxelSize ) + Vector3i::diagonal( 1 );
         msParams.signMode = *params.simpleVolumeSignMode;
         msParams.maxDistSq = sqr( absOffset + params.voxelSize );
         msParams.minDistSq = sqr( std::max( absOffset - params.voxelSize, 0.0f ) );
@@ -142,7 +142,7 @@ tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
             return tl::make_unexpected( "Operation was canceled." );
 
         VolumeToMeshParams vmParams;
-        vmParams.basis = msParams.basis;
+        vmParams.origin = msParams.origin;
         vmParams.iso = offset;
         vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
         vmParams.lessInside = true;

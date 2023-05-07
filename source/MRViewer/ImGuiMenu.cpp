@@ -1474,11 +1474,6 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
     {
         return obj && obj->asType<ObjectLabel>();
     } );
-    bool allIsObjVoxels = !selectedVisualObjs.empty() &&
-        std::all_of( selectedVisualObjs.cbegin(), selectedVisualObjs.cend(), [] ( const std::shared_ptr<VisualObject>& obj )
-    {
-        return obj && obj->asType<ObjectVoxels>();
-    } );
 
     const auto& viewportid = viewer->viewport().id;
 
@@ -1542,27 +1537,6 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Background", LabelVisualizePropertyType::Background, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Contour", LabelVisualizePropertyType::Contour, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Leader line", LabelVisualizePropertyType::LeaderLine, viewportid );
-    }
-    if ( allIsObjVoxels )
-    {
-        bool atLeastOneDual = false;
-        bool allDual = true;
-        for ( const auto& data : selectedVisualObjs )
-        {
-            bool isThisDual = data && static_cast<ObjectVoxels*>( data.get() )->getDualMarchingCubes();
-            atLeastOneDual = atLeastOneDual || isThisDual;
-            allDual = allDual && isThisDual;
-        }
-        allDual = allDual && atLeastOneDual;
-
-        bool checked = atLeastOneDual;
-        someChanges |= UI::checkboxMixed( "Dual Marching Cubes", &checked, !allDual && atLeastOneDual );
-        if ( checked != atLeastOneDual )
-        {
-            for ( const auto& data : selectedVisualObjs )
-                if ( data )
-                    static_cast<ObjectVoxels*>( data.get() )->setDualMarchingCubes( checked );
-        }
     }
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Invert Normals", VisualizeMaskType::InvertedNormals, viewportid );
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Name", VisualizeMaskType::Name, viewportid );

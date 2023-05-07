@@ -13,6 +13,7 @@
 #include "MRSceneColors.h"
 #include "MRStringConvert.h"
 #include "MROpenVDBHelper.h"
+#include "MRVoxelsConversions.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRAsyncLaunchType.h"
@@ -133,26 +134,54 @@ Histogram ObjectVoxels::updateHistogram( Histogram histogram )
     return oldHistogram;
 }
 
-tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( float iso, ProgressCallback cb /*= {} */ )
+tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( float iso, ProgressCallback cb /*= {} */ ) const
 {
     MR_TIMER
     if ( !vdbVolume_.data )
         return tl::make_unexpected("No VdbVolume available");
-    auto voxelSize = vdbVolume_.voxelSize;
-    auto meshRes = gridToMesh( vdbVolume_.data, voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
-    if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
-        return tl::make_unexpected( meshRes.error() );
 
-    FloatGrid downsampledGrid = vdbVolume_.data;
-    while ( !meshRes.has_value() )
+    if ( dualMarchingCubes_ )
     {
-        downsampledGrid = resampled( downsampledGrid, 2.0f );
-        voxelSize *= 2.0f;
-        meshRes = gridToMesh( downsampledGrid, voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
-        if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
-            return tl::make_unexpected( meshRes.error() );
+        auto voxelSize = vdbVolume_.voxelSize;
+        FloatGrid grid = vdbVolume_.data;
+        for (;;)
+        {
+            auto meshRes = gridToMesh( grid, voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
+            if ( meshRes.has_value() )
+                return std::make_shared<Mesh>( std::move( meshRes.value() ) );
+            if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
+                return tl::make_unexpected( meshRes.error() );
+            grid = resampled( grid, 2.0f );
+            voxelSize *= 2.0f;
+        }
     }
-    return std::make_shared<Mesh>( std::move( meshRes.value() ) );
+    else
+    {
+        VolumeToMeshParams vparams;
+        vparams.iso = iso;
+        vparams.cb = cb;
+        for (;;)
+        {
+            auto meshRes = vdbVolumeToMesh( vdbVolume_, vparams );
+            if ( !meshRes )
+                return tl::make_unexpected( "Operation was canceled." );
+            if ( meshRes->topology.numValidFaces() <= maxSurfaceTriangles_ )
+                return std::make_shared<Mesh>( std::move( *meshRes ) );
+            ++vparams.neighborVoxExp;
+        }
+    }
+}
+
+void ObjectVoxels::setDualMarchingCubes( bool on, bool updateSurface, ProgressCallback cb )
+{
+    MR_TIMER
+    dualMarchingCubes_ = on;
+    if ( updateSurface )
+    {
+        auto recRes = recalculateIsoSurface( isoValue_, cb );
+        if ( recRes.has_value() )
+            updateIsoSurface( *recRes );
+    }
 }
 
 void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb, bool updateSurface )
@@ -437,6 +466,7 @@ ObjectVoxels::ObjectVoxels( const ObjectVoxels& other ) :
 {
     vdbVolume_.dims = other.vdbVolume_.dims;
     isoValue_ = other.isoValue_;
+    dualMarchingCubes_ = other.dualMarchingCubes_;
     histogram_ = other.histogram_;
     vdbVolume_.voxelSize = other.vdbVolume_.voxelSize;
     activeBox_ = other.activeBox_;
@@ -468,6 +498,7 @@ void ObjectVoxels::serializeFields_( Json::Value& root ) const
     serializeToJson( selectedVoxels_, root["SelectionVoxels"] );
 
     root["IsoValue"] = isoValue_;
+    root["DualMarchingCubes"] = dualMarchingCubes_;
     root["Type"].append( ObjectVoxels::TypeName() );
 }
 
@@ -498,6 +529,9 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
 
     if ( root["IsoValue"].isNumeric() )
         isoValue_ = root["IsoValue"].asFloat();
+
+    if ( root["DualMarchingCubes"].isBool() )
+        dualMarchingCubes_ = root["DualMarchingCubes"].asBool();
 
     if ( !activeBox_.valid() )
         activeBox_ = Box3i( Vector3i(), vdbVolume_.dims );

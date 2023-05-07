@@ -989,7 +989,10 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Volume
 }
 std::optional<Mesh> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params /*= {} */ )
 {
-    return volumeToMesh( volume, params );
+    auto res = volumeToMesh( volume, params );
+    if ( res )
+        res->transform( AffineXf3f::linear( Matrix3f::scale( volume.voxelSize ) ) );
+    return res;
 }
 
 }

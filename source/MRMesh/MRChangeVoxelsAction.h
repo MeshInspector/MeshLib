@@ -13,7 +13,7 @@ namespace MR
 /// \defgroup HistoryGroup History group
 /// \{
 
-/// Undo action for ObjectVoxels iso change
+/// Undo action for ObjectVoxels iso-value change
 class ChangeIsoAction : public HistoryAction
 {
 public:
@@ -56,6 +56,61 @@ public:
 private:
     std::shared_ptr<ObjectVoxels> objVoxels_;
     float storedIso_{ 0.0f };
+
+    std::string name_;
+};
+
+/// Undo action for ObjectVoxels dual/standard marching cubes change
+class ChangeDualMarchingCubesAction : public HistoryAction
+{
+public:
+    using Obj = ObjectVoxels;
+    /// use this constructor to remember object's dual-value before making any changes in it
+    ChangeDualMarchingCubesAction( std::string name, const std::shared_ptr<ObjectVoxels>& obj ) :
+        objVoxels_{ obj },
+        name_{ std::move( name ) }
+    {
+        if ( obj )
+        {
+            storedDual_ = obj->getDualMarchingCubes();
+        }
+    }
+
+    /// use this constructor to remember given dual-value (and not the current value in the object)
+    ChangeDualMarchingCubesAction( std::string name, const std::shared_ptr<ObjectVoxels>& obj, bool storeDual ) :
+        objVoxels_{ obj },
+        storedDual_( storeDual ),
+        name_{ std::move( name ) }
+    {
+    }
+
+    virtual std::string name() const override
+    {
+        return name_;
+    }
+
+    virtual void action( HistoryAction::Type ) override
+    {
+        if ( !objVoxels_ )
+            return;
+
+        auto newDual = objVoxels_->getDualMarchingCubes();
+        objVoxels_->setDualMarchingCubes( storedDual_, false );
+        storedDual_ = newDual;
+    }
+
+    static void setObjectDirty( const std::shared_ptr<Obj>& )
+    {
+    }
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity();
+    }
+
+private:
+    std::shared_ptr<ObjectVoxels> objVoxels_;
+    bool storedDual_{ true };
 
     std::string name_;
 };

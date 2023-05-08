@@ -73,9 +73,13 @@ public:
     /// Sets external histogram for this object
    /// and returns back previous histogram of this
     MRMESH_API Histogram updateHistogram( Histogram histogram );
-    /// Calculates and return new mesh
-    /// returns empty pointer if no volume is present
-    MRMESH_API tl::expected<std::shared_ptr<Mesh>, std::string> recalculateIsoSurface( float iso, ProgressCallback cb = {} );
+    /// Calculates and return new mesh or error message
+    MRMESH_API tl::expected<std::shared_ptr<Mesh>, std::string> recalculateIsoSurface( float iso, ProgressCallback cb = {} ) const;
+    /// returns true if the iso-surface is built using Dual Marching Cubes algorithm or false if using Standard Marching Cubes
+    bool getDualMarchingCubes() const { return dualMarchingCubes_; }
+    /// sets whether to use Dual Marching Cubes algorithm for visualization (true) or Standard Marching Cubes (false);
+    /// \param updateSurface forces immediate update
+    MRMESH_API virtual void setDualMarchingCubes( bool on, bool updateSurface = true, ProgressCallback cb = {} );
 
     /// Sets active bounds for some simplifications (max excluded)
     /// active bounds is box in voxel coordinates, note that voxels under (0,0,0) and voxels over (dimensions) are empty 
@@ -152,9 +156,9 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
-    /// signal about ISO changing, triggered in when iso surface updates (setIsoValue, updateIsoSurface)
-    using IsoChangedSignal = boost::signals2::signal<void()>;
-    IsoChangedSignal isoSurfaceChangedSignal;
+    /// signal about Iso-surface changes (from updateIsoSurface)
+    using IsoSurfaceChangedSignal = boost::signals2::signal<void()>;
+    IsoSurfaceChangedSignal isoSurfaceChangedSignal;
 
 private:
     VolumeRenderingParams volumeRenderingParams_;
@@ -163,6 +167,7 @@ private:
     int maxSurfaceTriangles_{ 10000000 };
     VdbVolume vdbVolume_;
     float isoValue_{0.0f};
+    bool dualMarchingCubes_{true};
     Histogram histogram_;
     Box3i activeBox_;
 

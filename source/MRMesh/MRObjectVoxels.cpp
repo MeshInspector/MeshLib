@@ -569,6 +569,7 @@ std::vector<std::string> ObjectVoxels::getInfoLines() const
     res.push_back( fmt::format( "min-value: {:.3}", vdbVolume_.min ) );
     res.push_back( fmt::format( "iso-value: {:.3}", isoValue_ ) );
     res.push_back( fmt::format( "max-value: {:.3}", vdbVolume_.max ) );
+    res.push_back( dualMarchingCubes_ ? "visual: dual marching cubes" : "visual: standard marching cubes" );
     return res;
 }
 

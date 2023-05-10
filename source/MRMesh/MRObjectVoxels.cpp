@@ -140,9 +140,21 @@ tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSur
     if ( !vdbVolume_.data )
         return tl::make_unexpected("No VdbVolume available");
 
+    float startProgress = 0;   // where the current iteration has started
+    float reachedProgress = 0; // maximum progress reached so far
+    ProgressCallback myCb;
+    if ( cb )
+        myCb = [&startProgress, &reachedProgress, cb]( float p )
+        {
+            reachedProgress = startProgress + ( 1 - startProgress ) * p;
+            return cb( reachedProgress );
+        };
+
     auto vdbVolume = vdbVolume_;
     for (;;)
     {
+        // continue progress bar from the value where it stopped on the previous iteration
+        startProgress = reachedProgress;
         tl::expected<Mesh, std::string> meshRes;
         if ( dualMarchingCubes_ )
         {
@@ -150,7 +162,7 @@ tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSur
                 .voxelSize = vdbVolume.voxelSize,
                 .isoValue = iso,
                 .maxVertices = maxSurfaceVertices_,
-                .cb = cb
+                .cb = myCb
             } );
         }
         else
@@ -158,7 +170,7 @@ tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSur
             VolumeToMeshParams vparams;
             vparams.iso = iso;
             vparams.maxVertices = maxSurfaceVertices_;
-            vparams.cb = cb;
+            vparams.cb = myCb;
             meshRes = vdbVolumeToMesh( vdbVolume, vparams );
         }
         if ( meshRes.has_value() )

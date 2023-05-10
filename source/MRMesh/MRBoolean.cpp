@@ -18,7 +18,12 @@ FloatGrid MeshVoxelsConverter::operator() ( const ObjectMesh & obj ) const
 
 Mesh MeshVoxelsConverter::operator() ( const FloatGrid & grid ) const
 { 
-    auto res = gridToMesh( grid, Vector3f::diagonal( voxelSize ), offsetVoxels, adaptivity, callBack );
+    auto res = gridToMesh( grid, GridToMeshSettings{
+        .voxelSize = Vector3f::diagonal( voxelSize ),
+        .isoValue = offsetVoxels,
+        .adaptivity = adaptivity,
+        .cb = callBack
+    } );
     if ( !res.has_value() )
     {
         spdlog::error( res.error() );

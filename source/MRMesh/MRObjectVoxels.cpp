@@ -145,7 +145,12 @@ tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSur
     {
         if ( dualMarchingCubes_ )
         {
-            auto meshRes = gridToMesh( vdbVolume.data, vdbVolume.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
+            auto meshRes = gridToMesh( vdbVolume.data, GridToMeshSettings{
+                .voxelSize = vdbVolume.voxelSize,
+                .isoValue = iso,
+                .maxFaces = maxSurfaceTriangles_,
+                .cb = cb
+            } );
             if ( meshRes.has_value() )
                 return std::make_shared<Mesh>( std::move( meshRes.value() ) );
             if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )

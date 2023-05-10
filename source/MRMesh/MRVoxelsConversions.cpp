@@ -490,13 +490,12 @@ SeparationPoint findSeparationPoint( const VdbVolume& volume, const ConstAccesso
     const VolumeIndexer& indexer, VoxelId base, NeighborDir dir, const VolumeToMeshParams& params )
 {
     auto basePos = indexer.toPos( base );
-    auto shift = ( 1 << params.neighborVoxExp );
-    if ( basePos[int( dir )] + shift >= volume.dims[int( dir )] )
+    if ( basePos[int( dir )] + 1 >= volume.dims[int( dir )] )
         return {};
     auto coord = openvdb::Coord{ basePos.x + minCoord.x(),basePos.y + minCoord.y(),basePos.z + minCoord.z() };
     const auto& valueB = acc.getValue( coord );// volume.data[base];
     auto nextCoord = coord;
-    nextCoord[int( dir )] += shift;
+    nextCoord[int( dir )] += 1;
     const auto& valueD = acc.getValue( nextCoord );// volume.data[nextId];
     bool bLower = valueB < params.iso;
     bool dLower = valueD < params.iso;
@@ -519,7 +518,7 @@ SeparationPoint findSeparationPoint( const SimpleVolume& volume,
 {
     auto basePos = indexer.toPos( base );
     auto nextPos = basePos;
-    nextPos[int( dir )] += ( 1 << params.neighborVoxExp );
+    nextPos[int( dir )] += 1;
     if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
         return {};
     const auto& valueB = volume.data[base];
@@ -567,7 +566,6 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
 
     SeparationPointMap hmap;
     const auto subcnt = hmap.subcnt();
-    auto voxShift = ( 1 << params.neighborVoxExp );
     // find all separate points
     // fill map in parallel
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
@@ -580,15 +578,6 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
         {
             if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
                 break;
-
-            if ( voxShift > 1 )
-            {
-                auto pos = indexer.toPos( VoxelId( i ) );
-                if ( ( pos.x % voxShift ) != 0 || 
-                    ( pos.y % voxShift ) != 0 ||
-                    ( pos.z % voxShift ) != 0 )
-                    continue;
-            }
 
             auto hashval = hmap.hash( i );
             if ( hmap.subidx( hashval ) != range.begin() )
@@ -792,20 +781,15 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
             if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
                 break;
             Vector3i basePos = indexer.toPos( VoxelId( ind ) );
-            if ( basePos.x + voxShift >= volume.dims.x ||
-                basePos.y + voxShift >= volume.dims.y ||
-                basePos.z + voxShift >= volume.dims.z )
-                continue;
-
-            if ( ( basePos.x % voxShift ) != 0 ||
-                ( basePos.y % voxShift ) != 0 ||
-                ( basePos.z % voxShift ) != 0 )
+            if ( basePos.x + 1 >= volume.dims.x ||
+                basePos.y + 1 >= volume.dims.y ||
+                basePos.z + 1 >= volume.dims.z )
                 continue;
 
             bool voxelValid = false;
             for ( int i = 0; i < iters.size(); ++i )
             {
-                iters[i] = hmap.find( size_t( indexer.toVoxelId( basePos + voxShift * cVoxelNeighbors[i] ) ) );
+                iters[i] = hmap.find( size_t( indexer.toVoxelId( basePos + cVoxelNeighbors[i] ) ) );
                 iterStatus[i] = checkIter( iters[i], i );
                 if ( !voxelValid && iterStatus[i] )
                     voxelValid = true;
@@ -823,7 +807,7 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
             [[maybe_unused]] bool atLeastOneNan = false;
             for ( int i = 0; i < cVoxelNeighbors.size(); ++i )
             {
-                auto pos = basePos + voxShift * cVoxelNeighbors[i];
+                auto pos = basePos + cVoxelNeighbors[i];
                 float value{ 0.0f };
                 if constexpr ( std::is_same_v<V, VdbVolume> )
                     value = acc->getValue( { pos.x + minCoord.x(),pos.y + minCoord.y(),pos.z + minCoord.z() } );
@@ -850,7 +834,7 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
                             int sign = 1;
                             if ( cVoxelNeighbors[i][posCoord] == 1 )
                                 sign = -1;
-                            neighPos[posCoord] += ( sign * voxShift *
+                            neighPos[posCoord] += ( sign * 
                                 ( ( cNeighborsOrder[neighIndex] & ( 1 << posCoord ) ) >> posCoord ) );
                         }
                         value = volume.data[indexer.toVoxelId( neighPos ).get()];

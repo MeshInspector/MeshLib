@@ -48,11 +48,6 @@ struct VolumeToMeshParams : public BaseVolumeConversionParams
     // function to calculate position of result mesh points
     // note: this function is called in parallel from different threads
     VoxelPointPositioner positioner = &voxelPositionerLinear;
-    // exponent for finding neighbor voxel
-    // 2^0 - 1 (each voxel)
-    // 2^1 - 2 (each second voxel)
-    // 2^2 - 4 (each fourth voxel)
-    uint8_t neighborVoxExp{ 0 };
 };
 
 // makes SimpleVolume from Mesh with given params

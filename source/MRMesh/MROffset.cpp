@@ -75,8 +75,12 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
     }
 
     // Make offset mesh
-    auto newMesh = gridToMesh( std::move( grid ), voxelSizeVector, offsetInVoxels, params.adaptivity, 
-        subprogress( params.callBack, signPostprocess ? 0.66f : 0.5f, 1.0f ) );
+    auto newMesh = gridToMesh( std::move( grid ), GridToMeshSettings{
+        .voxelSize = voxelSizeVector,
+        .isoValue = offsetInVoxels,
+        .adaptivity = params.adaptivity,
+        .cb = subprogress( params.callBack, signPostprocess ? 0.66f : 0.5f, 1.0f )
+    } );
 
     if ( !newMesh.has_value() )
         return tl::make_unexpected( "Operation was canceled." );

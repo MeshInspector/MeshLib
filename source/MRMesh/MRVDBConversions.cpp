@@ -301,25 +301,63 @@ VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, ProgressCal
     return res;
 }
 
-tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
-    int maxFaces, float offsetVoxels, float adaptivity, ProgressCallback cb )
+tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const GridToMeshSettings & settings )
 {
     MR_TIMER;
-    if ( cb && !cb( 0.0f ) )
+    if ( !reportProgress( settings.cb, 0.0f ) )
         return tl::make_unexpected( "Operation was canceled." );
 
     VertCoords pts;
     Triangulation t;
-    gridToPointsAndTris( *grid, voxelSize, pts, t, offsetVoxels, adaptivity, true );
+    gridToPointsAndTris( *grid, settings.voxelSize, pts, t, settings.isoValue, settings.adaptivity, true );
 
-    if ( t.size() > maxFaces )
+    if ( pts.size() > settings.maxVertices )
+        return tl::make_unexpected( "Vertices number limit exceeded." );
+    if ( t.size() > settings.maxFaces )
         return tl::make_unexpected( "Triangles number limit exceeded." );
     
-    if ( cb && !cb( 0.2f ) )
+    if ( !reportProgress( settings.cb, 0.2f ) )
         return tl::make_unexpected( "Operation was canceled." );
 
-    Mesh res = Mesh::fromTriangles( std::move( pts ), t, {}, subprogress( cb, 0.2f, 0.8f ) );
-    if ( cb && !cb( 1.0f ) )
+    Mesh res = Mesh::fromTriangles( std::move( pts ), t, {}, subprogress( settings.cb, 0.2f, 1.0f ) );
+    if ( !reportProgress( settings.cb, 1.0f ) )
+        return tl::make_unexpected( "Operation was canceled." );
+    return res;
+}
+
+tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
+    int maxFaces, float offsetVoxels, float adaptivity, ProgressCallback cb )
+{
+    return gridToMesh( grid, GridToMeshSettings{
+        .voxelSize = voxelSize,
+        .isoValue = offsetVoxels,
+        .adaptivity = adaptivity,
+        .maxFaces = maxFaces,
+        .cb = cb
+    } );
+}
+
+tl::expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const GridToMeshSettings & settings )
+{
+    MR_TIMER;
+    if ( !reportProgress( settings.cb, 0.0f ) )
+        return tl::make_unexpected( "Operation was canceled." );
+
+    VertCoords pts;
+    Triangulation t;
+    gridToPointsAndTris( *grid, settings.voxelSize, pts, t, settings.isoValue, settings.adaptivity, true );
+    grid.reset(); // free grid's memory
+
+    if ( pts.size() > settings.maxVertices )
+        return tl::make_unexpected( "Vertices number limit exceeded." );
+    if ( t.size() > settings.maxFaces )
+        return tl::make_unexpected( "Triangles number limit exceeded." );
+    
+    if ( !reportProgress( settings.cb, 0.2f ) )
+        return tl::make_unexpected( "Operation was canceled." );
+
+    Mesh res = Mesh::fromTriangles( std::move( pts ), t, {}, subprogress( settings.cb, 0.2f, 1.0f ) );
+    if ( !reportProgress( settings.cb, 1.0f ) )
         return tl::make_unexpected( "Operation was canceled." );
     return res;
 }
@@ -327,60 +365,81 @@ tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3
 tl::expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const Vector3f& voxelSize,
     int maxFaces, float offsetVoxels, float adaptivity, ProgressCallback cb )
 {
-    MR_TIMER;
-    if ( cb && !cb( 0.0f ) )
-        return tl::make_unexpected( "Operation was canceled." );
-
-    VertCoords pts;
-    Triangulation t;
-    gridToPointsAndTris( *grid, voxelSize, pts, t, offsetVoxels, adaptivity, true );
-    grid.reset(); // free grid's memory
-
-    if ( t.size() > maxFaces )
-        return tl::make_unexpected( "Triangles number limit exceeded." );
-    
-    if ( cb && !cb( 0.2f ) )
-        return tl::make_unexpected( "Operation was canceled." );
-
-    Mesh res = Mesh::fromTriangles( std::move( pts ), t );
-    cb && !cb( 1.0f );
-    return res;
+    return gridToMesh( std::move( grid ), GridToMeshSettings{
+        .voxelSize = voxelSize,
+        .isoValue = offsetVoxels,
+        .adaptivity = adaptivity,
+        .maxFaces = maxFaces,
+        .cb = cb
+    } );
 }
 
 tl::expected<MR::Mesh, std::string> gridToMesh( const VdbVolume& vdbVolume, int maxFaces,
     float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
 {
-    return gridToMesh( vdbVolume.data, vdbVolume.voxelSize, maxFaces, isoValue, adaptivity, cb );
+    return gridToMesh( vdbVolume.data, GridToMeshSettings{
+        .voxelSize = vdbVolume.voxelSize,
+        .isoValue = isoValue,
+        .adaptivity = adaptivity,
+        .maxFaces = maxFaces,
+        .cb = cb
+    } );
 }
 
 tl::expected<MR::Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume, int maxFaces,
     float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
 {
-    return gridToMesh( std::move( vdbVolume.data ), vdbVolume.voxelSize, maxFaces, isoValue, adaptivity, cb );
+    return gridToMesh( std::move( vdbVolume.data ), GridToMeshSettings{
+        .voxelSize = vdbVolume.voxelSize,
+        .isoValue = isoValue,
+        .adaptivity = adaptivity,
+        .maxFaces = maxFaces,
+        .cb = cb
+    } );
 }
 
 tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
     float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
 {
-    return gridToMesh( grid, voxelSize, INT_MAX, isoValue, adaptivity, cb );
+    return gridToMesh( grid, GridToMeshSettings{
+        .voxelSize = voxelSize,
+        .isoValue = isoValue,
+        .adaptivity = adaptivity,
+        .cb = cb
+    } );
 }
 
 tl::expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const Vector3f& voxelSize,
     float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
 {
-    return gridToMesh( std::move( grid ), voxelSize, INT_MAX, isoValue, adaptivity, cb );
+    return gridToMesh( std::move( grid ), GridToMeshSettings{
+        .voxelSize = voxelSize,
+        .isoValue = isoValue,
+        .adaptivity = adaptivity,
+        .cb = cb
+    } );
 }
 
 tl::expected<MR::Mesh, std::string> gridToMesh( const VdbVolume& vdbVolume,
     float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
 {
-    return gridToMesh( vdbVolume.data, vdbVolume.voxelSize, isoValue, adaptivity, cb );
+    return gridToMesh( vdbVolume.data, GridToMeshSettings{
+        .voxelSize = vdbVolume.voxelSize,
+        .isoValue = isoValue,
+        .adaptivity = adaptivity,
+        .cb = cb
+    } );
 }
 
 tl::expected<MR::Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume,
     float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
 {
-    return gridToMesh( std::move( vdbVolume.data ), vdbVolume.voxelSize, isoValue, adaptivity, cb );
+    return gridToMesh( std::move( vdbVolume.data ), GridToMeshSettings{
+        .voxelSize = vdbVolume.voxelSize,
+        .isoValue = isoValue,
+        .adaptivity = adaptivity,
+        .cb = cb
+    } );
 }
 
 VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh, const AffineXf3f& meshToGridXf, std::shared_ptr<IFastWindingNumber> fwn, ProgressCallback cb /*= {} */ )

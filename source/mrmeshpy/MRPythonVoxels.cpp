@@ -51,15 +51,32 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         "Grid can be used to make iso-surface later with gridToMesh function." );
 
     m.def( "gridToMesh",
-        MR::decorateExpected( ( tl::expected<MR::Mesh, std::string>( * )( const MR::FloatGrid&, const MR::Vector3f&, float, float, MR::ProgressCallback ) )& MR::gridToMesh ),
+        MR::decorateExpected( []( const MR::FloatGrid& grid, const MR::Vector3f& voxelSize, float isoValue, float adaptivity, MR::ProgressCallback cb )
+        {
+            return gridToMesh( grid, MR::GridToMeshSettings{
+                .voxelSize = voxelSize,
+                .isoValue = isoValue,
+                .adaptivity = adaptivity,
+                .cb = cb
+            } );
+        } ),
         pybind11::arg( "grid" ), pybind11::arg( "voxelSize" ), pybind11::arg( "isoValue" ) = 0.f, pybind11::arg( "adaptivity" ) = 0.f, pybind11::arg("cb") = MR::ProgressCallback{},
         "Make mesh from FloatGrid.\n"
         "isoValue - layer of grid with this value would be converted in mesh.\n"
         "isoValue can be negative only in level set grids.\n"
         "adaptivity - [0.0;1.0] Ratio of combining small triangles into bigger ones.\n"
         "(Curvature can be lost on high values.)" );
+
     m.def( "gridToMesh",
-        MR::decorateExpected( ( tl::expected<MR::Mesh, std::string>( * )( const MR::VdbVolume&, float, float, MR::ProgressCallback ) )& MR::gridToMesh ),
+        MR::decorateExpected( []( const MR::VdbVolume& vdbVolume, float isoValue, float adaptivity, MR::ProgressCallback cb )
+        {
+            return gridToMesh( vdbVolume.data, MR::GridToMeshSettings{
+                .voxelSize = vdbVolume.voxelSize,
+                .isoValue = isoValue,
+                .adaptivity = adaptivity,
+                .cb = cb
+            } );
+        } ),
         pybind11::arg( "vdbVolume" ), pybind11::arg( "isoValue" ) = 0.f, pybind11::arg( "adaptivity" ) = 0.f, pybind11::arg( "cb" ) = MR::ProgressCallback{},
         "Make mesh from VdbVolume.\n"
         "isoValue - layer of grid with this value would be converted in mesh.\n"
@@ -68,7 +85,16 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         "(Curvature can be lost on high values.)" );
 
     m.def( "gridToMesh",
-        MR::decorateExpected( ( tl::expected<MR::Mesh, std::string>( * )( const MR::FloatGrid&, const MR::Vector3f&, int, float, float, MR::ProgressCallback ) )& MR::gridToMesh ),
+        MR::decorateExpected( []( const MR::FloatGrid& grid, const MR::Vector3f& voxelSize, int maxFaces, float isoValue, float adaptivity, MR::ProgressCallback cb )
+        {
+            return gridToMesh( grid, MR::GridToMeshSettings{
+                .voxelSize = voxelSize,
+                .isoValue = isoValue,
+                .adaptivity = adaptivity,
+                .maxFaces = maxFaces,
+                .cb = cb
+            } );
+        } ),
         pybind11::arg( "grid" ), pybind11::arg( "voxelSize" ), pybind11::arg( "maxFaces"), pybind11::arg( "isoValue" ) = 0.f, pybind11::arg( "adaptivity" ) = 0.f, pybind11::arg( "cb" ) = MR::ProgressCallback{},
         "Make mesh from FloatGrid.\n"
         "maxFaces - If mesh faces exceed this value error returns.\n"
@@ -76,8 +102,18 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         "isoValue can be negative only in level set grids.\n"
         "adaptivity - [0.0;1.0] Ratio of combining small triangles into bigger ones.\n"
         "(Curvature can be lost on high values.)" );
+
     m.def( "gridToMesh",
-        MR::decorateExpected( ( tl::expected<MR::Mesh, std::string>( * )( const MR::VdbVolume&, int, float, float, MR::ProgressCallback ) )& MR::gridToMesh ),
+        MR::decorateExpected( []( const MR::VdbVolume& vdbVolume, int maxFaces, float isoValue, float adaptivity, MR::ProgressCallback cb )
+        {
+            return gridToMesh( vdbVolume.data, MR::GridToMeshSettings{
+                .voxelSize = vdbVolume.voxelSize,
+                .isoValue = isoValue,
+                .adaptivity = adaptivity,
+                .maxFaces = maxFaces,
+                .cb = cb
+            } );
+        } ),
         pybind11::arg( "vdbVolume" ), pybind11::arg( "maxFaces" ), pybind11::arg( "isoValue" ) = 0.f, pybind11::arg( "adaptivity" ) = 0.f, pybind11::arg( "cb" ) = MR::ProgressCallback{},
         "Make mesh from VdbVolume.\n" 
         "maxFaces - If mesh faces exceed this value error returns.\n"

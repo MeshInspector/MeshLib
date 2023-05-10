@@ -581,11 +581,14 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
             if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
                 break;
 
-            auto pos = indexer.toPos( VoxelId( i ) );
-            if ( ( pos.x % voxShift ) != 0 || 
-                ( pos.y % voxShift ) != 0 ||
-                ( pos.z % voxShift ) != 0 )
-                continue;
+            if ( voxShift > 1 )
+            {
+                auto pos = indexer.toPos( VoxelId( i ) );
+                if ( ( pos.x % voxShift ) != 0 || 
+                    ( pos.y % voxShift ) != 0 ||
+                    ( pos.z % voxShift ) != 0 )
+                    continue;
+            }
 
             auto hashval = hmap.hash( i );
             if ( hmap.subidx( hashval ) != range.begin() )

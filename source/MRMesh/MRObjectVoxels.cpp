@@ -140,35 +140,32 @@ tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSur
     if ( !vdbVolume_.data )
         return tl::make_unexpected("No VdbVolume available");
 
-    if ( dualMarchingCubes_ )
+    auto vdbVolume = vdbVolume_;
+    for (;;)
     {
-        auto voxelSize = vdbVolume_.voxelSize;
-        FloatGrid grid = vdbVolume_.data;
-        for (;;)
+        if ( dualMarchingCubes_ )
         {
-            auto meshRes = gridToMesh( grid, voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
+            auto meshRes = gridToMesh( vdbVolume.data, vdbVolume.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
             if ( meshRes.has_value() )
                 return std::make_shared<Mesh>( std::move( meshRes.value() ) );
             if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
                 return tl::make_unexpected( meshRes.error() );
-            grid = resampled( grid, 2.0f );
-            voxelSize *= 2.0f;
         }
-    }
-    else
-    {
-        VolumeToMeshParams vparams;
-        vparams.iso = iso;
-        vparams.cb = cb;
-        for (;;)
+        else
         {
-            auto meshRes = vdbVolumeToMesh( vdbVolume_, vparams );
+            VolumeToMeshParams vparams;
+            vparams.iso = iso;
+            vparams.cb = cb;
+            auto meshRes = vdbVolumeToMesh( vdbVolume, vparams );
             if ( !meshRes )
                 return tl::make_unexpected( "Operation was canceled." );
             if ( meshRes->topology.numValidFaces() <= maxSurfaceTriangles_ )
                 return std::make_shared<Mesh>( std::move( *meshRes ) );
-            ++vparams.neighborVoxExp;
         }
+        vdbVolume.data = resampled( vdbVolume.data, 2.0f );
+        vdbVolume.voxelSize *= 2.0f;
+        auto vdbDims = vdbVolume.data->evalActiveVoxelDim();
+        vdbVolume.dims = {vdbDims.x(),vdbDims.y(),vdbDims.z()};
     }
 }
 

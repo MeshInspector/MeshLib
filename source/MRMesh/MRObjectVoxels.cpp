@@ -143,30 +143,28 @@ tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSur
     auto vdbVolume = vdbVolume_;
     for (;;)
     {
+        tl::expected<Mesh, std::string> meshRes;
         if ( dualMarchingCubes_ )
         {
-            auto meshRes = gridToMesh( vdbVolume.data, GridToMeshSettings{
+            meshRes = gridToMesh( vdbVolume.data, GridToMeshSettings{
                 .voxelSize = vdbVolume.voxelSize,
                 .isoValue = iso,
-                .maxFaces = maxSurfaceTriangles_,
+                .maxVertices = maxSurfaceVertices_,
                 .cb = cb
             } );
-            if ( meshRes.has_value() )
-                return std::make_shared<Mesh>( std::move( meshRes.value() ) );
-            if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
-                return tl::make_unexpected( meshRes.error() );
         }
         else
         {
             VolumeToMeshParams vparams;
             vparams.iso = iso;
+            vparams.maxVertices = maxSurfaceVertices_;
             vparams.cb = cb;
-            auto meshRes = vdbVolumeToMesh( vdbVolume, vparams );
-            if ( !meshRes )
-                return tl::make_unexpected( "Operation was canceled." );
-            if ( meshRes->topology.numValidFaces() <= maxSurfaceTriangles_ )
-                return std::make_shared<Mesh>( std::move( *meshRes ) );
+            meshRes = vdbVolumeToMesh( vdbVolume, vparams );
         }
+        if ( meshRes.has_value() )
+            return std::make_shared<Mesh>( std::move( meshRes.value() ) );
+        if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
+            return tl::make_unexpected( meshRes.error() );
         vdbVolume.data = resampled( vdbVolume.data, 2.0f );
         vdbVolume.voxelSize *= 2.0f;
         auto vdbDims = vdbVolume.data->evalActiveVoxelDim();
@@ -316,12 +314,12 @@ bool ObjectVoxels::hasVisualRepresentation() const
     return bool( mesh_ );
 }
 
-void ObjectVoxels::setMaxSurfaceTriangles( int maxFaces )
+void ObjectVoxels::setMaxSurfaceVertices( int maxVerts )
 {
-    if ( maxFaces == maxSurfaceTriangles_ )
+    if ( maxVerts == maxSurfaceVertices_ )
         return;
-    maxSurfaceTriangles_ = maxFaces;
-    if ( !mesh_ || mesh_->topology.numValidFaces() <= maxSurfaceTriangles_ )
+    maxSurfaceVertices_ = maxVerts;
+    if ( !mesh_ || mesh_->topology.numValidVerts() <= maxSurfaceVertices_ )
         return;
     mesh_.reset();
     setIsoValue( isoValue_ );

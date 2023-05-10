@@ -48,6 +48,8 @@ struct VolumeToMeshParams : public BaseVolumeConversionParams
     // function to calculate position of result mesh points
     // note: this function is called in parallel from different threads
     VoxelPointPositioner positioner = &voxelPositionerLinear;
+    /// if the mesh exceeds this number of vertices, an error returns
+    int maxVertices = INT_MAX;
 };
 
 // makes SimpleVolume from Mesh with given params
@@ -57,12 +59,12 @@ MRMESH_API std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, con
 // makes Mesh from SimpleVolume with given params
 // using marching cubes algorithm
 // returns nullopt if operation was canceled
-MRMESH_API std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params = {} );
+MRMESH_API tl::expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params = {} );
 
 // makes Mesh from VdbVolume with given params
 // using marching cubes algorithm
 // returns nullopt if operation was canceled
-MRMESH_API std::optional<Mesh> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params = {} );
+MRMESH_API tl::expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params = {} );
 
 }
 #endif

@@ -78,18 +78,24 @@ void convertToVDMMesh( const MeshPart& mp, const AffineXf3f& xf, const Vector3f&
 }
 
 template<typename GridType>
-inline typename std::enable_if<std::is_scalar<typename GridType::ValueType>::value, void>::type
-gridToPointsAndTris(
-    const GridType& grid, const Vector3f& voxelSize,
+VoidOrErrStr gridToPointsAndTris(
+    const GridType& grid,
     VertCoords & points, Triangulation & t,
-    double isovalue,
-    double adaptivity,
-    bool relaxDisorientedTriangles )
+    const GridToMeshSettings & settings )
 {
     MR_TIMER
 
-    openvdb::tools::VolumeToMesh mesher(isovalue, adaptivity, relaxDisorientedTriangles);
+    if ( !reportProgress( settings.cb, 0.0f ) )
+        return tl::make_unexpected( "Operation was canceled." );
+
+    openvdb::tools::VolumeToMesh mesher( settings.isoValue, settings.adaptivity, settings.relaxDisorientedTriangles );
     mesher(grid);
+
+    if ( !reportProgress( settings.cb, 0.7f ) )
+        return tl::make_unexpected( "Operation was canceled." );
+
+    if ( mesher.pointListSize() > settings.maxVertices )
+        return tl::make_unexpected( "Vertices number limit exceeded." );
 
     // Preallocate the point list
     points.clear();
@@ -103,12 +109,15 @@ gridToPointsAndTris(
         {
             auto inPt = inPts[i];
             points[ VertId{ i } ] = Vector3f{
-                inPt.x() * voxelSize.x,
-                inPt.y() * voxelSize.y,
-                inPt.z() * voxelSize.z };
+                inPt.x() * settings.voxelSize.x,
+                inPt.y() * settings.voxelSize.y,
+                inPt.z() * settings.voxelSize.z };
         }
     } );
     inPts.reset(nullptr);
+
+    if ( !reportProgress( settings.cb, 0.8f ) )
+        return tl::make_unexpected( "Operation was canceled." );
 
     auto& polygonPoolList = mesher.polygonPoolList();
 
@@ -121,6 +130,10 @@ gridToPointsAndTris(
     }
 
     const size_t tNum = numTriangles + 2 * numQuads;
+
+    if ( tNum > settings.maxFaces )
+        return tl::make_unexpected( "Triangles number limit exceeded." );
+
     t.clear();
     t.reserve( tNum );
 
@@ -163,6 +176,11 @@ gridToPointsAndTris(
             t.push_back( newTri );
         }
     }
+
+    if ( !reportProgress( settings.cb, 1.0f ) )
+        return tl::make_unexpected( "Operation was canceled." );
+
+    return {};
 }
 
 FloatGrid meshToLevelSet( const MeshPart& mp, const AffineXf3f& xf,
@@ -309,13 +327,13 @@ tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const GridToM
 
     VertCoords pts;
     Triangulation t;
-    gridToPointsAndTris( *grid, settings.voxelSize, pts, t, settings.isoValue, settings.adaptivity, true );
+    {
+        auto s = settings;
+        s.cb = subprogress( settings.cb, 0.0f, 0.2f );
+        if ( auto x = gridToPointsAndTris( *grid, pts, t, s ); !x )
+            return tl::make_unexpected( std::move( x.error() ) );
+    }
 
-    if ( pts.size() > settings.maxVertices )
-        return tl::make_unexpected( "Vertices number limit exceeded." );
-    if ( t.size() > settings.maxFaces )
-        return tl::make_unexpected( "Triangles number limit exceeded." );
-    
     if ( !reportProgress( settings.cb, 0.2f ) )
         return tl::make_unexpected( "Operation was canceled." );
 
@@ -345,14 +363,14 @@ tl::expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const GridToMeshSe
 
     VertCoords pts;
     Triangulation t;
-    gridToPointsAndTris( *grid, settings.voxelSize, pts, t, settings.isoValue, settings.adaptivity, true );
+    {
+        auto s = settings;
+        s.cb = subprogress( settings.cb, 0.0f, 0.2f );
+        if ( auto x = gridToPointsAndTris( *grid, pts, t, s ); !x )
+            return tl::make_unexpected( std::move( x.error() ) );
+    }
     grid.reset(); // free grid's memory
 
-    if ( pts.size() > settings.maxVertices )
-        return tl::make_unexpected( "Vertices number limit exceeded." );
-    if ( t.size() > settings.maxFaces )
-        return tl::make_unexpected( "Triangles number limit exceeded." );
-    
     if ( !reportProgress( settings.cb, 0.2f ) )
         return tl::make_unexpected( "Operation was canceled." );
 
@@ -560,7 +578,13 @@ tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, co
 
     VertCoords pts;
     Triangulation t;
-    gridToPointsAndTris( *grid, Vector3f::diagonal( voxelSize ), pts, t, offsetInVoxelsB, adaptivity, true );
+    if ( auto x = gridToPointsAndTris( *grid, pts, t, GridToMeshSettings{
+        .voxelSize = Vector3f::diagonal( voxelSize ),
+        .isoValue = offsetInVoxelsB,
+        .adaptivity = adaptivity,
+        .cb = subprogress( cb, 0.9f, 0.95f )
+    } ); !x )
+        return tl::make_unexpected( std::move( x.error() ) );
 
     Mesh res = Mesh::fromTriangles( std::move( pts ), t );
     cb && !cb( 1.0f );

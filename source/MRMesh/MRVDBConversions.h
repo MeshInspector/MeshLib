@@ -70,6 +70,7 @@ struct GridToMeshSettings
     int maxFaces = INT_MAX;
     /// if the mesh exceeds this number of vertices, an error returns
     int maxVertices = INT_MAX;
+    bool relaxDisorientedTriangles = true;
     /// to receive progress and request cancellation
     ProgressCallback cb;
 };

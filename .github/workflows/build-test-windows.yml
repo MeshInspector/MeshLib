@@ -50,9 +50,6 @@ jobs:
           nuget install vcpkg-export-20230329-153927 -Source "meshlib/meshlib-vcpkg"
           Xcopy C:\vcpkg\vcpkg-export-20230329-153927.1.0.0 C:\vcpkg /E/H/C/I/y
 
-      - name: Check dependencies
-        run: .\thirdparty\install.bat
-
       - name: Vcpkg integrate install
         working-directory: C:\vcpkg
         run: C:\vcpkg\vcpkg.exe integrate install
@@ -81,6 +78,9 @@ jobs:
         uses: actions/checkout@v3
         with:
           submodules: recursive
+
+      - name: Update thirdparty
+        run: thirdparty\install.bat
 
       - name: Setup python
         run: |

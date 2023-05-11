@@ -265,6 +265,12 @@
     <ClCompile Include="MRShaderBlocks.cpp">
       <Filter>Render\Shaders</Filter>
     </ClCompile>
+    <ClCompile Include="MRMeshShader.cpp">
+      <Filter>Render\Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="MRLinesShader.cpp">
+      <Filter>Render\Shaders</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -495,6 +501,12 @@
       <Filter>UIStyle</Filter>
     </ClInclude>
     <ClInclude Include="MRShaderBlocks.h">
+      <Filter>Render\Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshShader.h">
+      <Filter>Render\Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="MRLinesShader.h">
       <Filter>Render\Shaders</Filter>
     </ClInclude>
   </ItemGroup>

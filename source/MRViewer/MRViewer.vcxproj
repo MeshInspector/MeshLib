@@ -20,6 +20,8 @@
     <ClCompile Include="MRCommandLoop.cpp" />
     <ClCompile Include="MRCreateShader.cpp" />
     <ClCompile Include="MRGetSystemInfoJson.cpp" />
+    <ClCompile Include="MRLinesShader.cpp" />
+    <ClCompile Include="MRMeshShader.cpp" />
     <ClCompile Include="MRMouseController.cpp" />
     <ClCompile Include="MRRenderVolumeObject.cpp" />
     <ClCompile Include="MRSceneSelectionChange.cpp" />
@@ -90,6 +92,8 @@
     <ClInclude Include="MRCreateShader.h" />
     <ClInclude Include="MRGetSystemInfoJson.h" />
     <ClInclude Include="MRGladGlfw.h" />
+    <ClInclude Include="MRLinesShader.h" />
+    <ClInclude Include="MRMeshShader.h" />
     <ClInclude Include="MRMouse.h" />
     <ClInclude Include="MRMouseController.h" />
     <ClInclude Include="MRRenderVolumeObject.h" />

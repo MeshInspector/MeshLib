@@ -3,6 +3,8 @@
 #include "MRGLMacro.h"
 #include "MRGladGlfw.h"
 #include "MRVolumeShader.h"
+#include "MRMeshShader.h"
+#include "MRLinesShader.h"
 #include "MRShaderBlocks.h"
 
 namespace
@@ -18,6 +20,9 @@ std::string getShaderName( MR::GLStaticHolder::ShaderType type )
         "Alpha-sort mesh border shader",
         "Points shader",
         "Lines shader",
+        "Lines joint shader",
+        "Lines picker shader",
+        "Lines joint picker shader",
         "Labels shader",
         "Viewport lines shader",
         "Viewport points shader",
@@ -111,6 +116,27 @@ void GLStaticHolder::createShader_( ShaderType type )
         
         fragmentShader = getMeshFragmentShader( gl4, alphaSort );
     }
+    else if ( type == DrawLines || type == DrawLinesJoint )
+    {
+        if ( type == DrawLines )
+        {
+            vertexShader = getLinesVertexShader();
+            fragmentShader = getLinesFragmentShader();
+        }
+        else
+        {
+            vertexShader = getLinesJointVertexShader();
+            fragmentShader = getLinesJointFragmentShader();
+        }
+    }
+    else if ( type == LinesPicker || type == LinesJointPicker )
+    {
+        if ( type == LinesPicker )
+            vertexShader = getLinesPickerVertexShader();
+        else
+            vertexShader = getLinesJointPickerVertexShader();
+        fragmentShader = getPickerFragmentShader( type == LinesJointPicker );
+    }
     else if ( type == Picker )
     {
         vertexShader =
@@ -140,36 +166,9 @@ void GLStaticHolder::createShader_( ShaderType type )
   }
 )";
 
-        fragmentShader =
-            MR_GLSL_VERSION_LINE R"(
-            precision highp float;
-            precision highp int;
-  uniform bool useClippingPlane;
-  uniform vec4 clippingPlane;
-  uniform uint uniGeomId;
-
-  in vec3 world_pos;
-  
-  in float primitiveIdf0;
-  in float primitiveIdf1;
-
-  out highp uvec4 color;
-
-  void main()
-  {
-    if (useClippingPlane && dot(world_pos,vec3(clippingPlane))>clippingPlane.w)
-      discard;
-
-    uint primitiveId = ( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
-    color.r = primitiveId;
-
-    color.g = uniGeomId;
-
-    color.a = uint(gl_FragCoord.z * 4294967295.0);
-  }
-)";
+        fragmentShader = getPickerFragmentShader( false );
     }
-    else if ( type == DrawPoints || type == DrawLines )
+    else if ( type == DrawPoints )
     {
         vertexShader =
             MR_GLSL_VERSION_LINE R"(
@@ -208,10 +207,8 @@ void GLStaticHolder::createShader_( ShaderType type )
     primitiveIdf0 = float( primId % uint( 1u << 20u ) ) + 0.5;
   }
 )";
-        if ( type == DrawPoints )
-        {
-            fragmentShader =
-                MR_GLSL_VERSION_LINE R"(
+        fragmentShader =
+            MR_GLSL_VERSION_LINE R"(
                 precision highp float;
             precision highp int;
   uniform mat4 model;
@@ -319,103 +316,6 @@ void GLStaticHolder::createShader_( ShaderType type )
       discard;
   }
 )";
-        }
-        else // DrawLines
-        {
-            fragmentShader =
-                MR_GLSL_VERSION_LINE R"(
-                precision highp float;
-            precision highp int;
-  uniform mat4 model;
-  uniform mat4 view;
-  uniform mat4 proj;
-  uniform mat4 normal_matrix;
-
-  uniform sampler2D lineColors;  // (in from base) line color
-  uniform bool perLineColoring;      // (in from base) use lines colormap is true
-  uniform bool perVertColoring;      // (in from base) linear interpolate colors if true
-  uniform bool hasNormals;           // (in from base) dont use normals if they are not
- 
-  uniform vec4 mainColor;            // (in from base) color if colormap is off
-  uniform vec4 backColor;            // (in from base) back face color
-  uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true
-  uniform vec4 clippingPlane;        // (in from base) clipping plane
-  uniform bool invertNormals;        // (in from base) invert normals if true
-
-  uniform float specExp;   // (in from base) lighting parameter 
-  uniform vec3 ligthPosEye;   // (in from base) light position transformed by view only (not proj)
-  
-  in float primitiveIdf0;
-  in float primitiveIdf1;
-                                     
-  uniform float ambientStrength;    // (in from base) non-directional lighting
-  uniform float specularStrength;   // (in from base) reflection intensity
-  uniform float globalAlpha;        // (in from base) global transparency multiplier
-                                     
-  in vec3 position_eye;              // (in from vertex shader) vert position transformed by model and view (not proj)
-  in vec3 normal_eye;                // (in from vertex shader) vert normal transformed by model and view (not proj)
-  in vec4 Ki;                        // (in from vertex shader) vert color
-  in vec3 world_pos;                 // (in from vertex shader) vert transformed position
-                                     
-  out vec4 outColor;                 // (out to render) fragment color
-
-  void main()
-  {
-    if (useClippingPlane && dot(world_pos,vec3(clippingPlane))>clippingPlane.w)
-      discard;
-
-    vec3 normEyeCpy = normal_eye;
-    
-    vec3 vector_to_light_eye = ligthPosEye - position_eye;
-    vec3 direction_to_light_eye = normalize (vector_to_light_eye);
-    if (!hasNormals)
-      normEyeCpy = direction_to_light_eye;
-
-    float dot_prod = dot (direction_to_light_eye, normalize(normEyeCpy));
-      
-    uint primitiveId = ( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
-    vec4 colorCpy = mainColor;
-    if ( perVertColoring )
-    {
-      colorCpy = Ki;      
-    }
-    if ( perLineColoring )
-    {
-      ivec2 texSize = textureSize( lineColors, 0 );
-      colorCpy = texelFetch(lineColors, ivec2( primitiveId % uint(texSize.x), primitiveId / uint(texSize.x) ), 0 );
-    }
-    bool frontFacing = dot_prod >= 0.0;
-    if ( frontFacing == invertNormals )
-    {
-       colorCpy = backColor;
-    }
-    if (!frontFacing)
-      dot_prod = -dot_prod;
-
-    if (dot_prod < 0.0)
-      dot_prod = 0.0;
-
-    vec3 reflection_eye = reflect (-direction_to_light_eye, normalize(normEyeCpy));
-    vec3 surface_to_viewer_eye = normalize (-position_eye);
-    float dot_prod_specular = dot (reflection_eye, surface_to_viewer_eye);
-    if (dot_prod_specular < 0.0)
-      dot_prod_specular = 0.0;
-    float specular_factor = pow (dot_prod_specular, specExp);
-
-    vec3 ligthColor = vec3(1.0,1.0,1.0);
-    vec3 color = vec3(colorCpy);
-
-    vec3 ambient = ambientStrength * ligthColor;
-    vec3 diffuse = dot_prod * ligthColor;
-    vec3 specular = specular_factor * specularStrength * ligthColor;
-    
-    vec3 res = ( ambient + diffuse + specular ) * color;
-    outColor = vec4(res,colorCpy.a * globalAlpha);
-    if (outColor.a == 0.0)
-      discard;
-  }
-)";
-        }
     }
     else if ( type == MeshBorder || type == TransparentMeshBorder )
     {

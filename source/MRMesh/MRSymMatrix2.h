@@ -49,6 +49,8 @@ struct SymMatrix2
     Vector2<T> eigens( Matrix2<T> * eigenvectors = nullptr ) const;
     /// computes not-unit eigenvector corresponding to a not-repeating eigenvalue
     Vector2<T> eigenvector( T eigenvalue ) const;
+    /// computes not-unit eigenvector corresponding to maximum eigenvalue
+    Vector2<T> maxEigenvector() const;
 
     /// solves the equation M*x = b and returns x;
     /// if M is degenerate then returns the solution closest to origin point
@@ -162,6 +164,21 @@ Vector2<T> SymMatrix2<T>::eigenvector( T eigenvalue ) const
     const T lsq0 = row0.lengthSq();
     const T lsq1 = row1.lengthSq();
     return lsq0 >= lsq1 ? row0.perpendicular() : row1.perpendicular();
+}
+
+template <typename T> 
+Vector2<T> SymMatrix2<T>::maxEigenvector() const
+{
+    const auto tr = trace();
+    const auto q = tr / 2;
+    const auto p = std::sqrt( std::max( T(0), sqr( tr ) - 4 * det() ) ) / 2;
+    Vector2<T> eig;
+    if ( p <= std::abs( q ) * std::numeric_limits<T>::epsilon() )
+    {
+        // this is proportional to identity matrix
+        return Vector2<T>( T(1), T(0) );
+    }
+    return eigenvector( q + p );
 }
 
 template <typename T> 

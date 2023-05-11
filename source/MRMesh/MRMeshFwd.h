@@ -230,6 +230,11 @@ template <typename T> struct Quaternion;
 using Quaternionf = Quaternion<float>;
 using Quaterniond = Quaternion<double>;
 
+template <typename T> using Triangle3 = std::array<Vector3<T>, 3>;
+using Triangle3i = Triangle3<int>;
+using Triangle3f = Triangle3<float>;
+using Triangle3d = Triangle3<double>;
+
 class PointAccumulator;
 
 struct EdgePoint;

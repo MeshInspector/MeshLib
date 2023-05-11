@@ -123,6 +123,42 @@ template<typename T>
     return dblArea( p, q, r ) / 2;
 }
 
+/// project given triangle on a plane passing via its centroid and having normal (n);
+/// if after projection triangle normal turns out to be inversed, then collapses the triangle into degenerate line segment
+template <typename T>
+[[nodiscard]] Triangle3<T> triangleWithNormal( const Triangle3<T> & t, const Vector3<T> & n )
+{
+    const auto c = ( t[0] + t[1] + t[2] ) / 3;
+    Triangle3<T> res;
+    for ( int i = 0; i < 3; ++i )
+    {
+        const auto x = t[i] - c;
+        res[i] = x - n * dot( n, x );
+    }
+    if ( dot( n, cross( res[0], res[1] ) ) < 0 )
+    {
+        // projected triangle has inversed normal
+        int longest = 0;
+        T longestSq = 0;
+        for ( int i = 0; i < 3; ++i )
+        {
+            const auto sq = res[i].lengthSq();
+            if ( longestSq >= sq )
+                continue;
+            longest = i;
+            longestSq = sq;
+        }
+        const auto d = res[longest].normalized();
+        // project triangle the line (0, d)
+        for ( int i = 0; i < 3; ++i )
+            res[i] = d * dot( d, res[i] );
+    }
+    
+    for ( int i = 0; i < 3; ++i )
+        res[i] += c;
+    return res;
+}
+
 /// given an edge direction between two faces with given normals, computes sine of dihedral angle between the faces:
 /// 0 if both faces are in the same plane,
 /// positive if the faces form convex surface,

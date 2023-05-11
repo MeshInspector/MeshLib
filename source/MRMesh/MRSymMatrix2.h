@@ -172,7 +172,6 @@ Vector2<T> SymMatrix2<T>::maxEigenvector() const
     const auto tr = trace();
     const auto q = tr / 2;
     const auto p = std::sqrt( std::max( T(0), sqr( tr ) - 4 * det() ) ) / 2;
-    Vector2<T> eig;
     if ( p <= std::abs( q ) * std::numeric_limits<T>::epsilon() )
     {
         // this is proportional to identity matrix

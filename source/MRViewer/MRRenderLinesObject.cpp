@@ -86,8 +86,7 @@ size_t RenderLinesObject::heapBytes() const
 size_t RenderLinesObject::glBytes() const
 {
     return
-        pointsSelectionTex_.size()
-        + positionsTex_.size()
+        positionsTex_.size()
         + vertColorsTex_.size()
         + lineColorsTex_.size();
 }

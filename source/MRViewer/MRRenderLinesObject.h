@@ -23,10 +23,6 @@ public:
 
 private:
     const ObjectLinesHolder* objLines_ = nullptr;
-
-    int vertPosSize_{ 0 };
-    int vertNormalsSize_{ 0 };
-    int vertColorsSize_{ 0 };
     int lineIndicesSize_{ 0 };
 
     typedef unsigned int GLuint;
@@ -34,7 +30,6 @@ private:
     GLuint linesArrayObjId_{ 0 };
     GLuint linesPickerArrayObjId_{ 0 };
 
-    GlTexture2 pointsSelectionTex_;
     GlTexture2 positionsTex_;
     GlTexture2 vertColorsTex_;
     GlTexture2 lineColorsTex_;

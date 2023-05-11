@@ -50,7 +50,6 @@ void SpaceMouseHandlerHidapi::initialize()
 
 bool SpaceMouseHandlerHidapi::findAndAttachDevice_() {
     bool isDeviceFound = false;
-    //int cnt = 0;
     for ( const auto& [vendorId, supportedDevicesId] : vendor2device_ )
     {
         // search through supported vendors
@@ -61,8 +60,6 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_() {
             {
                 if (  deviceId == localDevicesIt->product_id && localDevicesIt->usage == 8 && localDevicesIt->usage_page == 1 )
                 {
-                    //++cnt;
-                    //if ( cnt != 4 ) continue;
                     device_ = hid_open_path( localDevicesIt->path );
                     if ( device_ )
                     {

@@ -1555,7 +1555,7 @@ void Viewer::initRotationCenterObject_()
 void Viewer::initSpaceMouseHandler_()
 {
 #ifdef _WIN32
-    spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerWindows>();
+    spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerHidapi>();
 #else
     #if defined(__APPLE__) || defined(__EMSCRIPTEN__)
         spaceMouseHandler_ = std::make_unique<SpaceMouseHandler>();

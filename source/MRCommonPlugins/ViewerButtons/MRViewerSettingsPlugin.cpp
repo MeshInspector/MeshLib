@@ -427,6 +427,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
     ImGui::EndPopup();
 }
 
+/*
 void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
 {
     ImVec2 windowSize = ImVec2( 450 * scaling, 0);
@@ -506,6 +507,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
     ImGui::PopStyleVar();
     ImGui::EndPopup();
 }
+*/
 
 void ViewerSettingsPlugin::drawModalExitButton_( float scaling )
 {

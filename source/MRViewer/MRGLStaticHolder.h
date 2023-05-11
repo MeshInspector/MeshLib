@@ -21,7 +21,11 @@ public:
         TransparentMeshBorder,
 
         DrawPoints,
+
         DrawLines,
+        DrawLinesJoint,
+        LinesPicker,
+        LinesJointPicker,
 
         Labels,
 

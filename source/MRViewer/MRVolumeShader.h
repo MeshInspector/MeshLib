@@ -1,15 +1,16 @@
 #pragma once
+#include "exports.h"
 #include <string>
 
 namespace MR
 {
 // simple quad vertex shader
-std::string getTrivialVertexShader();
+MRVIEWER_API std::string getTrivialVertexShader();
 
 // shader with raytracing over volume
-std::string getVolumeFragmentShader();
+MRVIEWER_API std::string getVolumeFragmentShader();
 
 // shader with raytracing over volume
-std::string getVolumePickerFragmentShader();
+MRVIEWER_API std::string getVolumePickerFragmentShader();
 
 }

@@ -264,6 +264,11 @@
     </ClCompile>
     <ClCompile Include="MRSpaceMouseHandlerHidapi.cpp">
       <Filter>SpaceMouse</Filter>
+    <ClCompile Include="MRMeshShader.cpp">
+      <Filter>Render\Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="MRLinesShader.cpp">
+      <Filter>Render\Shaders</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -496,6 +501,11 @@
     </ClInclude>
     <ClInclude Include="MRSpaceMouseHandlerHidapi.h">
       <Filter>SpaceMouse</Filter>
+    <ClInclude Include="MRMeshShader.h">
+      <Filter>Render\Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="MRLinesShader.h">
+      <Filter>Render\Shaders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

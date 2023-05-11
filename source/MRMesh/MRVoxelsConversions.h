@@ -5,6 +5,7 @@
 #include "MRSimpleVolume.h"
 #include "MRProgressCallback.h"
 #include "MRSignDetectionMode.h"
+#include "MRExpected.h"
 #include <climits>
 #include <optional>
 

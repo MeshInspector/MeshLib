@@ -542,15 +542,16 @@ SeparationPoint findSeparationPoint( const SimpleVolume& volume,
 }
 
 template<typename V>
-std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& params /*= {} */ )
+tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshParams& params /*= {} */ )
 {
     if constexpr ( std::is_same_v<V, VdbVolume> )
         if ( !volume.data )
-            return {};
+            return tl::make_unexpected( "No volume data." );
 
+    Mesh result;
     if ( params.iso <= volume.min || params.iso >= volume.max ||
         volume.dims.x <= 0 || volume.dims.y <= 0 || volume.dims.z <= 0 )
-        return Mesh();
+        return result;
 
     MR_TIMER
 
@@ -617,7 +618,7 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
     } );
 
     if ( params.cb && !keepGoing )
-        return {};
+        return tl::make_unexpected( "Operation was canceled." );
 
     // numerate verts in parallel (to have packed mesh as result, determined numeration independent of thread number)
     struct VertsNumeration
@@ -649,20 +650,20 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
 
     // organize vert numeration
     std::vector<VertsNumeration> resultVertNumeration;
+    size_t totalVertices = 0;
     for ( auto& perThreadNum : perThreadVertNumeration )
     {
-        // remove empty
-        perThreadNum.erase( std::remove_if( perThreadNum.begin(), perThreadNum.end(),
-            [] ( const auto& obj )
+        for ( auto & obj : perThreadNum )
         {
-            return obj.numVerts == 0;
-        } ), perThreadNum.end() );
-        if ( perThreadNum.empty() )
-            continue;
-        // accum not empty
-        resultVertNumeration.insert( resultVertNumeration.end(),
-            std::make_move_iterator( perThreadNum.begin() ), std::make_move_iterator( perThreadNum.end() ) );
+            totalVertices += obj.numVerts;
+            if ( obj.numVerts > 0 )
+                resultVertNumeration.push_back( std::move( obj ) );
+        }
+        perThreadNum.clear();
     }
+    if ( totalVertices > params.maxVertices )
+        return tl::make_unexpected( "Vertices number limit exceeded." );
+
     // sort by voxel index
     std::sort( resultVertNumeration.begin(), resultVertNumeration.end(), [] ( const auto& l, const auto& r )
     {
@@ -700,7 +701,7 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
 
 
     if ( params.cb && !params.cb( 0.5f ) )
-        return {};
+        return tl::make_unexpected( "Operation was canceled." );
 
     // check neighbor iterator valid
     auto checkIter = [&] ( const auto& iter, int mode ) -> bool
@@ -906,7 +907,7 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
     }, tbb::static_partitioner() );
 
     if ( params.cb && !keepGoing )
-        return {};
+        return tl::make_unexpected( "Operation was canceled." );
 
     // organize per thread triangulation
     std::vector<TriangulationData> resTriangulatoinData;
@@ -931,7 +932,6 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
     } );
 
     // create result triangulation
-    Mesh result;
     Triangulation resTriangulation;
     if ( params.outVoxelPerFaceMap )
         params.outVoxelPerFaceMap->clear();
@@ -945,9 +945,10 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
     }
     result.topology = MeshBuilder::fromTriangles( std::move( resTriangulation ) );
     result.points.resize( result.topology.lastValidVert() + 1 );
+    assert( result.points.size() == totalVertices );
 
     if ( params.cb && !params.cb( 0.95f ) )
-        return {};
+        return tl::make_unexpected( "Operation was canceled." );
 
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ),
         [&] ( const tbb::blocked_range<size_t>& range )
@@ -965,16 +966,16 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
     } );
 
     if ( params.cb && !params.cb( 1.0f ) )
-        return {};
+        return tl::make_unexpected( "Operation was canceled." );
 
     return result;
 }
 
-std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params /*= {} */ )
+tl::expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params /*= {} */ )
 {
     return volumeToMesh( volume, params );
 }
-std::optional<Mesh> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params /*= {} */ )
+tl::expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params /*= {} */ )
 {
     return volumeToMesh( volume, params );
 }

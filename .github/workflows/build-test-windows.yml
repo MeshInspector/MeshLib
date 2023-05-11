@@ -51,7 +51,7 @@ jobs:
           Xcopy C:\vcpkg\vcpkg-export-20230329-153927.1.0.0 C:\vcpkg /E/H/C/I/y
 
       - name: Check dependencies
-        run: thirdparty\install.bat
+        run: .\thirdparty\install.bat
 
       - name: Vcpkg integrate install
         working-directory: C:\vcpkg

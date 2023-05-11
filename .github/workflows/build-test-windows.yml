@@ -42,13 +42,16 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Install dependenices
+      - name: Install dependencies
         if: steps.vcpkg-cache.outputs.cache-hit != 'true'
         working-directory: C:\vcpkg
         run: |
           aws codeartifact login --tool dotnet --repository meshlib-vcpkg --domain meshlib --domain-owner 259351611210 --region us-east-1
           nuget install vcpkg-export-20230329-153927 -Source "meshlib/meshlib-vcpkg"
           Xcopy C:\vcpkg\vcpkg-export-20230329-153927.1.0.0 C:\vcpkg /E/H/C/I/y
+
+      - name: Check dependencies
+        run: thirdparty\install.bat
 
       - name: Vcpkg integrate install
         working-directory: C:\vcpkg

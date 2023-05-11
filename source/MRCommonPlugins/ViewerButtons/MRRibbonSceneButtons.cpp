@@ -85,7 +85,7 @@ RibbonSceneSortByName::RibbonSceneSortByName() :
 
 std::string RibbonSceneSortByName::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
-    if ( SceneRoot::get().children().empty() )
+    if ( !getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
         return "At least one objects should be in scene";
     return "";
 }
@@ -110,6 +110,13 @@ void RibbonSceneSortByName::sortObjectsRecursive_( std::shared_ptr<Object> objec
 RibbonSceneSelectAll::RibbonSceneSelectAll() :
     RibbonMenuItem("Ribbon Scene Select all")
 {
+}
+
+std::string RibbonSceneSelectAll::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
+{
+    if ( !getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
+        return "At least one objects should be in scene";
+    return "";
 }
 
 bool RibbonSceneSelectAll::action()
@@ -143,7 +150,7 @@ RibbonSceneShowOnlyPrev::RibbonSceneShowOnlyPrev() :
 
 std::string RibbonSceneShowOnlyPrev::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
-    if ( SceneRoot::get().children().empty() )
+    if ( !getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
         return "At least one objects should be in scene";
     return "";
 }
@@ -161,7 +168,7 @@ RibbonSceneShowOnlyNext::RibbonSceneShowOnlyNext() :
 
 std::string RibbonSceneShowOnlyNext::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
-    if ( SceneRoot::get().children().empty() )
+    if ( !getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
         return "At least one objects should be in scene";
     return "";
 }

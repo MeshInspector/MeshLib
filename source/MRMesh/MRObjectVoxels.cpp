@@ -140,35 +140,47 @@ tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSur
     if ( !vdbVolume_.data )
         return tl::make_unexpected("No VdbVolume available");
 
-    if ( dualMarchingCubes_ )
-    {
-        auto voxelSize = vdbVolume_.voxelSize;
-        FloatGrid grid = vdbVolume_.data;
-        for (;;)
+    float startProgress = 0;   // where the current iteration has started
+    float reachedProgress = 0; // maximum progress reached so far
+    ProgressCallback myCb;
+    if ( cb )
+        myCb = [&startProgress, &reachedProgress, cb]( float p )
         {
-            auto meshRes = gridToMesh( grid, voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
-            if ( meshRes.has_value() )
-                return std::make_shared<Mesh>( std::move( meshRes.value() ) );
-            if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
-                return tl::make_unexpected( meshRes.error() );
-            grid = resampled( grid, 2.0f );
-            voxelSize *= 2.0f;
-        }
-    }
-    else
+            reachedProgress = startProgress + ( 1 - startProgress ) * p;
+            return cb( reachedProgress );
+        };
+
+    auto vdbVolume = vdbVolume_;
+    for (;;)
     {
-        VolumeToMeshParams vparams;
-        vparams.iso = iso;
-        vparams.cb = cb;
-        for (;;)
+        // continue progress bar from the value where it stopped on the previous iteration
+        startProgress = reachedProgress;
+        tl::expected<Mesh, std::string> meshRes;
+        if ( dualMarchingCubes_ )
         {
-            auto meshRes = vdbVolumeToMesh( vdbVolume_, vparams );
-            if ( !meshRes )
-                return tl::make_unexpected( "Operation was canceled." );
-            if ( meshRes->topology.numValidFaces() <= maxSurfaceTriangles_ )
-                return std::make_shared<Mesh>( std::move( *meshRes ) );
-            ++vparams.neighborVoxExp;
+            meshRes = gridToMesh( vdbVolume.data, GridToMeshSettings{
+                .voxelSize = vdbVolume.voxelSize,
+                .isoValue = iso,
+                .maxVertices = maxSurfaceVertices_,
+                .cb = myCb
+            } );
         }
+        else
+        {
+            VolumeToMeshParams vparams;
+            vparams.iso = iso;
+            vparams.maxVertices = maxSurfaceVertices_;
+            vparams.cb = myCb;
+            meshRes = vdbVolumeToMesh( vdbVolume, vparams );
+        }
+        if ( meshRes.has_value() )
+            return std::make_shared<Mesh>( std::move( meshRes.value() ) );
+        if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
+            return tl::make_unexpected( meshRes.error() );
+        vdbVolume.data = resampled( vdbVolume.data, 2.0f );
+        vdbVolume.voxelSize *= 2.0f;
+        auto vdbDims = vdbVolume.data->evalActiveVoxelDim();
+        vdbVolume.dims = {vdbDims.x(),vdbDims.y(),vdbDims.z()};
     }
 }
 
@@ -314,12 +326,12 @@ bool ObjectVoxels::hasVisualRepresentation() const
     return bool( mesh_ );
 }
 
-void ObjectVoxels::setMaxSurfaceTriangles( int maxFaces )
+void ObjectVoxels::setMaxSurfaceVertices( int maxVerts )
 {
-    if ( maxFaces == maxSurfaceTriangles_ )
+    if ( maxVerts == maxSurfaceVertices_ )
         return;
-    maxSurfaceTriangles_ = maxFaces;
-    if ( !mesh_ || mesh_->topology.numValidFaces() <= maxSurfaceTriangles_ )
+    maxSurfaceVertices_ = maxVerts;
+    if ( !mesh_ || mesh_->topology.numValidVerts() <= maxSurfaceVertices_ )
         return;
     mesh_.reset();
     setIsoValue( isoValue_ );

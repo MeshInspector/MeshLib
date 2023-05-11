@@ -80,7 +80,7 @@ jobs:
           submodules: recursive
 
       - name: Update thirdparty
-        run: vcpkg install hidapi:x64-windows-meshlib
+        run: vcpkg install --recurse --binarysource=clear --overlay-triplets thirdparty\vcpkg\triplets  hidapi:x64-windows-meshlib
 
       - name: Setup python
         run: |

@@ -3,6 +3,7 @@
 #include <MRMesh/MRIRenderObject.h>
 #include <MRMesh/MRMeshTexture.h>
 #include <MRMesh/MRId.h>
+#include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
 
@@ -19,8 +20,6 @@ public:
     virtual size_t heapBytes() const override;
     virtual size_t glBytes() const override;
     virtual void forceBindAll() override;
-    // requested line width clamped to the range of hardware supported values
-    float actualLineWidth() const;
 
 private:
     const ObjectLinesHolder* objLines_ = nullptr;
@@ -30,28 +29,23 @@ private:
     int vertColorsSize_{ 0 };
     int lineIndicesSize_{ 0 };
 
-    RenderBufferRef<Vector3f> loadVertPosBuffer_();
-    RenderBufferRef<Vector3f> loadVertNormalsBuffer_();
-    RenderBufferRef<Color> loadVertColorsBuffer_();
-    RenderBufferRef<Vector2i> loadLineIndicesBuffer_();
-
     typedef unsigned int GLuint;
 
     GLuint linesArrayObjId_{ 0 };
     GLuint linesPickerArrayObjId_{ 0 };
 
-    GlBuffer vertPosBuffer_;
-    GlBuffer vertNormalsBuffer_;
-    GlBuffer vertColorsBuffer_;
-    GlBuffer lineIndicesBuffer_;
-
     GlTexture2 pointsSelectionTex_;
+    GlTexture2 positionsTex_;
+    GlTexture2 vertColorsTex_;
     GlTexture2 lineColorsTex_;
 
-    void bindLines_();
-    void bindLinesPicker_();
+    void render_( const RenderParams& params, bool points );
+    void renderPicker_( const BaseRenderParams& params, unsigned geomId, bool points );
 
-    void drawPoints_( const RenderParams& params );
+    void bindPositions_( GLuint shaderId );
+
+    void bindLines_( GLStaticHolder::ShaderType shaderType );
+    void bindLinesPicker_( GLStaticHolder::ShaderType shaderType );
 
     // Create a new set of OpenGL buffer objects
     void initBuffers_();

@@ -12,7 +12,6 @@
 #include "MRViewer/MRGladGlfw.h"
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRMesh/MRSystem.h"
-#include "MRViewer/MRSpaceMouseHandlerWindows.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer/MRUIStyle.h"
 
@@ -73,6 +72,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     if ( UI::button( "Show Hotkeys", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu_ )
         ribbonMenu_->setShowShortcuts( true );
 
+    /*
     ImGui::SameLine();
     if ( UI::button( "Spacemouse Settings", Vector2f( btnHalfSizeX, 0 ) ) )
     {
@@ -89,6 +89,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         ImGui::OpenPopup( "Spacemouse Settings" );
     }
     drawSpaceMouseSettings_( menuScaling );
+    */
 
     const auto& viewportParameters = viewer->viewport().getParameters();
     // Viewing options

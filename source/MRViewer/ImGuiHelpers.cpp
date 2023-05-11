@@ -107,7 +107,7 @@ void PlotCustomHistogram( const char* str_id,
                                  std::function<void( int idx )> on_click,
                                  int values_count, int values_offset,
                                  float scale_min, float scale_max,
-                                 ImVec2 frame_size, int selectedBarId )
+                                 ImVec2 frame_size, int selectedBarId, int hoveredBarId )
 {
     if ( frame_size.y < 0.0f )
         return;
@@ -167,9 +167,10 @@ void PlotCustomHistogram( const char* str_id,
         drawList->AddRect( rect.Min, rect.Max, GetColorU32( ImGuiCol_Border ), style.FrameRounding, ImDrawFlags_RoundCornersAll, border_size );
     }
 
-    const int values_count_min = 1;
-    // -1 is not allowed because of marking [0] bar
-    int idx_hovered = std::numeric_limits<int>::min();
+    constexpr int bar_halfthickness = 1;
+    if ( hoveredBarId < 0 )
+        hoveredBarId = -bar_halfthickness;
+    constexpr int values_count_min = 1;
     if ( values_count >= values_count_min )
     {
         int res_w = std::min( (int) frame_size.x, values_count );
@@ -184,7 +185,7 @@ void PlotCustomHistogram( const char* str_id,
             IM_ASSERT( v_idx >= 0 && v_idx < values_count );
 
             tooltip( ( v_idx + values_offset ) % values_count );
-            idx_hovered = v_idx;
+            hoveredBarId = v_idx;
             if (GetIO().MouseClicked[0])
             {
                 on_click((v_idx + values_offset) % values_count);
@@ -194,36 +195,41 @@ void PlotCustomHistogram( const char* str_id,
         const float t_step = 1.0f / (float) res_w;
         const float inv_scale = ( scale_min == scale_max ) ? 0.0f : ( 1.0f / ( scale_max - scale_min ) );
 
-        float v0 = values_getter(( 0 + values_offset ) % values_count );
         float t0 = 0.0f;
-        ImVec2 tp0 = ImVec2( t0, 1.0f - std::clamp( ( v0 - scale_min ) * inv_scale, 0.0f, 1.0f ) );                       // Point in the normalized space of our target rectangle
         float histogram_zero_line_t = ( scale_min * scale_max < 0.0f ) ? ( -scale_min * inv_scale ) : ( scale_min < 0.0f ? 0.0f : 1.0f );   // Where does the zero line stands
 
         const ImU32 col_base = GetColorU32( ImGuiCol_PlotHistogram );
         const ImU32 col_hovered = GetColorU32(ImGuiCol_PlotHistogramHovered);
+        const ImU32 col_hovered_top = GetColorU32(ImGuiCol_TabHovered);
         ImVec4 col{ 1.0f, 0.2f, 0.2f, 1.0f };
         const ImU32 col_selected = GetColorU32(col);
+        const ImU32 col_selected_top = GetColorU32(ImGuiCol_TabActive);
 
         for ( int n = 0; n < res_w; n++ )
         {
             const float t1 = t0 + t_step;
             const int v1_idx = (int) ( t0 * item_count + 0.5f );
             IM_ASSERT( v1_idx >= 0 && v1_idx < values_count );
-            const float v1 = values_getter( ( v1_idx + values_offset + 1 ) % values_count );
-            const ImVec2 tp1 = ImVec2( t1, 1.0f - std::clamp( ( v1 - scale_min ) * inv_scale, 0.0f, 1.0f ) );
+
+            float val = values_getter( v1_idx + values_offset );
+            float top = 1.0f - std::clamp( ( val - scale_min ) * inv_scale, 0.0f, 1.0f );
 
             // NB: Draw calls are merged together by the DrawList system. Still, we should render our batch are lower level to save a bit of CPU.
-            ImVec2 pos0 = ImVec2( innerMin.x + ( innerMax.x - innerMin.x ) * tp0.x, innerMin.y + ( innerMax.y - innerMin.y ) * tp0.y );
-            ImVec2 pos1 = ImVec2( innerMin.x + ( innerMax.x - innerMin.x ) * tp1.x, innerMin.y + ( innerMax.y - innerMin.y ) * histogram_zero_line_t );
+            ImVec2 pos0 = ImVec2( innerMin.x + ( innerMax.x - innerMin.x ) * t0, innerMin.y + ( innerMax.y - innerMin.y ) * top );
+            ImVec2 pos1 = ImVec2( innerMin.x + ( innerMax.x - innerMin.x ) * t1, innerMin.y + ( innerMax.y - innerMin.y ) * histogram_zero_line_t );
             {
                 if ( pos1.x >= pos0.x + 2.0f )
                     pos1.x -= 1.0f;
-                const int bar_halfthickness = 2;
+                if ( abs(v1_idx - hoveredBarId) < bar_halfthickness )
+                    drawList->AddRectFilled( ImVec2( pos0.x, innerMin.y ), ImVec2( pos1.x, pos0.y ), col_hovered_top );
+                if ( encolorSelected && abs(v1_idx - selectedBarId) < bar_halfthickness )
+                    drawList->AddRectFilled( ImVec2( pos0.x, innerMin.y ), ImVec2( pos1.x, pos0.y ), col_selected_top );
+
                 auto getBarColor = [&](const int v1_idx)
                 {
-                    if (abs(v1_idx - idx_hovered) < bar_halfthickness)
+                 if ( abs(v1_idx - hoveredBarId) < bar_halfthickness )
                         return col_hovered;
-                    if ( encolorSelected && abs(v1_idx - selectedBarId) < bar_halfthickness)
+                 if ( encolorSelected && abs(v1_idx - selectedBarId) < bar_halfthickness )
                         return col_selected;
                     return col_base;
                 };
@@ -231,7 +237,6 @@ void PlotCustomHistogram( const char* str_id,
             }
 
             t0 = t1;
-            tp0 = tp1;
         }
     }
 }

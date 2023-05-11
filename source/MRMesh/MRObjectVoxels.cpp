@@ -13,6 +13,7 @@
 #include "MRSceneColors.h"
 #include "MRStringConvert.h"
 #include "MROpenVDBHelper.h"
+#include "MRVoxelsConversions.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRAsyncLaunchType.h"
@@ -133,23 +134,66 @@ Histogram ObjectVoxels::updateHistogram( Histogram histogram )
     return oldHistogram;
 }
 
-tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( float iso, ProgressCallback cb /*= {} */ )
+tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( float iso, ProgressCallback cb /*= {} */ ) const
 {
+    MR_TIMER
     if ( !vdbVolume_.data )
         return tl::make_unexpected("No VdbVolume available");
-    auto meshRes = gridToMesh( vdbVolume_.data, vdbVolume_.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
-    if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
-        return tl::make_unexpected( meshRes.error() );
 
-    FloatGrid downsampledGrid = vdbVolume_.data;
-    while ( !meshRes.has_value() )
+    float startProgress = 0;   // where the current iteration has started
+    float reachedProgress = 0; // maximum progress reached so far
+    ProgressCallback myCb;
+    if ( cb )
+        myCb = [&startProgress, &reachedProgress, cb]( float p )
+        {
+            reachedProgress = startProgress + ( 1 - startProgress ) * p;
+            return cb( reachedProgress );
+        };
+
+    auto vdbVolume = vdbVolume_;
+    for (;;)
     {
-        downsampledGrid = resampled( downsampledGrid, 2.0f );
-        meshRes = gridToMesh( downsampledGrid, 2.0f * vdbVolume_.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
+        // continue progress bar from the value where it stopped on the previous iteration
+        startProgress = reachedProgress;
+        tl::expected<Mesh, std::string> meshRes;
+        if ( dualMarchingCubes_ )
+        {
+            meshRes = gridToMesh( vdbVolume.data, GridToMeshSettings{
+                .voxelSize = vdbVolume.voxelSize,
+                .isoValue = iso,
+                .maxVertices = maxSurfaceVertices_,
+                .cb = myCb
+            } );
+        }
+        else
+        {
+            VolumeToMeshParams vparams;
+            vparams.iso = iso;
+            vparams.maxVertices = maxSurfaceVertices_;
+            vparams.cb = myCb;
+            meshRes = vdbVolumeToMesh( vdbVolume, vparams );
+        }
+        if ( meshRes.has_value() )
+            return std::make_shared<Mesh>( std::move( meshRes.value() ) );
         if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
             return tl::make_unexpected( meshRes.error() );
+        vdbVolume.data = resampled( vdbVolume.data, 2.0f );
+        vdbVolume.voxelSize *= 2.0f;
+        auto vdbDims = vdbVolume.data->evalActiveVoxelDim();
+        vdbVolume.dims = {vdbDims.x(),vdbDims.y(),vdbDims.z()};
     }
-    return std::make_shared<Mesh>( std::move( meshRes.value() ) );
+}
+
+void ObjectVoxels::setDualMarchingCubes( bool on, bool updateSurface, ProgressCallback cb )
+{
+    MR_TIMER
+    dualMarchingCubes_ = on;
+    if ( updateSurface )
+    {
+        auto recRes = recalculateIsoSurface( isoValue_, cb );
+        if ( recRes.has_value() )
+            updateIsoSurface( *recRes );
+    }
 }
 
 void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb, bool updateSurface )
@@ -282,12 +326,12 @@ bool ObjectVoxels::hasVisualRepresentation() const
     return bool( mesh_ );
 }
 
-void ObjectVoxels::setMaxSurfaceTriangles( int maxFaces )
+void ObjectVoxels::setMaxSurfaceVertices( int maxVerts )
 {
-    if ( maxFaces == maxSurfaceTriangles_ )
+    if ( maxVerts == maxSurfaceVertices_ )
         return;
-    maxSurfaceTriangles_ = maxFaces;
-    if ( !mesh_ || mesh_->topology.numValidFaces() <= maxSurfaceTriangles_ )
+    maxSurfaceVertices_ = maxVerts;
+    if ( !mesh_ || mesh_->topology.numValidVerts() <= maxSurfaceVertices_ )
         return;
     mesh_.reset();
     setIsoValue( isoValue_ );
@@ -402,53 +446,21 @@ void ObjectVoxels::updateHistogram_( float min, float max, ProgressCallback cb /
     HistRangeProcessorOne calc( vdbVolume_.data->evalActiveVoxelBoundingBox(), vdbVolume_.data->tree(), histCalcProc );
     
 
-    std::function<bool( size_t, size_t )> progressFn;
-    if ( size.tile )
+    if ( size.tile > 0 )
     {
         typename HistRangeProcessorOne::TileIterT tileIterMain = vdbVolume_.data->tree().cbeginValueAll();
         tileIterMain.setMaxDepth( tileIterMain.getLeafDepth() - 1 ); // skip leaf nodes
         typename HistRangeProcessorOne::TileRange tileRangeMain( tileIterMain );
-
-        std::atomic<size_t> tileDone = 0;
-        if ( cb )
-        {
-            if ( !size.leaf )
-                progressFn = [cb, tileSize = size.tile, &tileDone]( size_t, size_t t )
-                {
-                    tileDone += t;
-                    return !cb( float( tileDone ) / tileSize );
-                };
-            else
-                progressFn = [cb, tileSize = size.tile, &tileDone]( size_t, size_t t )
-                {
-                    tileDone += t;
-                    return !cb( float( tileDone ) / tileSize / 2.f );
-                };
-            calc.setProgressFn( progressFn );
-        }
+        auto sb = size.leaf > 0 ? subprogress( cb, 0.0f, 0.5f ) : cb;
+        calc.setProgressHolder( std::make_shared<RangeProgress>( sb, size.tile, RangeProgress::Mode::Tiles ) );
         tbb::parallel_reduce( tileRangeMain, calc );
     }
 
-    if ( size.leaf )
+    if ( size.leaf > 0 )
     {
         typename HistRangeProcessorOne::LeafRange leafRangeMain( vdbVolume_.data->tree().cbeginLeaf() );
-        std::atomic<size_t> leafDone = 0;
-        if ( cb )
-        {
-            if ( !size.tile )
-                progressFn = [cb, leafSize = size.leaf, &leafDone]( size_t l, size_t )
-                {
-                    leafDone += l;
-                    return !cb( float( leafDone ) / leafSize );
-                };
-            else
-                progressFn = [cb, leafSize = size.leaf, &leafDone]( size_t l, size_t )
-                {
-                    leafDone += l;
-                    return !cb( float( leafDone ) / leafSize / 2.f + 0.5f );
-                };
-            calc.setProgressFn( progressFn );
-        }
+        auto sb = size.tile > 0 ? subprogress( cb, 0.5f, 1.0f ) : cb;
+        calc.setProgressHolder( std::make_shared<RangeProgress>( sb, size.leaf, RangeProgress::Mode::Leaves ) );
         tbb::parallel_reduce( leafRangeMain, calc );
     }
 
@@ -466,6 +478,7 @@ ObjectVoxels::ObjectVoxels( const ObjectVoxels& other ) :
 {
     vdbVolume_.dims = other.vdbVolume_.dims;
     isoValue_ = other.isoValue_;
+    dualMarchingCubes_ = other.dualMarchingCubes_;
     histogram_ = other.histogram_;
     vdbVolume_.voxelSize = other.vdbVolume_.voxelSize;
     activeBox_ = other.activeBox_;
@@ -497,6 +510,7 @@ void ObjectVoxels::serializeFields_( Json::Value& root ) const
     serializeToJson( selectedVoxels_, root["SelectionVoxels"] );
 
     root["IsoValue"] = isoValue_;
+    root["DualMarchingCubes"] = dualMarchingCubes_;
     root["Type"].append( ObjectVoxels::TypeName() );
 }
 
@@ -527,6 +541,9 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
 
     if ( root["IsoValue"].isNumeric() )
         isoValue_ = root["IsoValue"].asFloat();
+
+    if ( root["DualMarchingCubes"].isBool() )
+        dualMarchingCubes_ = root["DualMarchingCubes"].asBool();
 
     if ( !activeBox_.valid() )
         activeBox_ = Box3i( Vector3i(), vdbVolume_.dims );
@@ -564,6 +581,7 @@ std::vector<std::string> ObjectVoxels::getInfoLines() const
     res.push_back( fmt::format( "min-value: {:.3}", vdbVolume_.min ) );
     res.push_back( fmt::format( "iso-value: {:.3}", isoValue_ ) );
     res.push_back( fmt::format( "max-value: {:.3}", vdbVolume_.max ) );
+    res.push_back( dualMarchingCubes_ ? "visual: dual marching cubes" : "visual: standard marching cubes" );
     return res;
 }
 

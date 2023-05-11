@@ -6,13 +6,15 @@
 #include "MRMesh/MRChangeSceneObjectsOrder.h"
 #include "MRMesh/MRChangeSceneAction.h"
 
+namespace MR
+{
+
 namespace
 {
 
 // select and show only neighborhood. If `selectNext` true - select next, otherwise select prev
 void selectAndShowOnlyNeighborhood( bool selectNext = true )
 {
-    using namespace MR;
     const auto selected = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
     auto currentObjs = getTopmostVisibleObjects( &SceneRoot::get(), ObjectSelectivityType::Selectable );
     currentObjs.insert( currentObjs.begin(), selected.begin(), selected.end() );
@@ -22,37 +24,42 @@ void selectAndShowOnlyNeighborhood( bool selectNext = true )
         // nothing is selected or visible, just select and show the first object
         first = getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable );
     }
+    if ( !first )
+        return;
     Object* newSelection = first.get();
-    if ( first )
+    // chose a sibling object of first
+    if ( const auto firstParent = first->parent() )
     {
-        // chose a sibling object of first
-        if ( const auto firstParent = first->parent() )
+        const auto& firstParentChildren = firstParent->children();
+        if ( firstParentChildren.size() > 1 )
         {
-            const auto& firstParentChildren = firstParent->children();
-            if ( firstParentChildren.size() > 1 )
+            // include all siblings in currentObjs to hide and de-select them
+            currentObjs.insert( currentObjs.end(), firstParentChildren.begin(), firstParentChildren.end() );
+            bool found = false;
+            if ( !selectNext )
             {
-                // include all siblings in currentObjs to hide and de-select them
-                currentObjs.insert( currentObjs.end(), firstParentChildren.begin(), firstParentChildren.end() );
-                if ( !selectNext )
+                for ( const auto& child : firstParentChildren )
                 {
-                    newSelection = firstParentChildren.back().get();
-                    for ( const auto& child : firstParentChildren )
-                    {
-                        if ( child == first )
-                            break;
-                        newSelection = child.get();
-                    }
+                    if ( found && child == first )
+                        break;
+                    if ( !child || child->isAncillary() )
+                        continue;
+                    newSelection = child.get();
+                    found = true;
                 }
-                else
+            }
+            else
+            {
+                // select previous
+                for ( auto it = firstParentChildren.rbegin(); it != firstParentChildren.rend(); ++it )
                 {
-                    // select previous
-                    newSelection = firstParentChildren.front().get();
-                    for ( auto it = firstParentChildren.rbegin(); it != firstParentChildren.rend(); ++it )
-                    {
-                        if ( *it == first )
-                            break;
-                        newSelection = it->get();
-                    }
+                    if ( found && *it == first )
+                        break;
+                    auto * child = it->get();
+                    if ( !child || child->isAncillary() )
+                        continue;
+                    newSelection = child;
+                    found = true;
                 }
             }
         }
@@ -69,10 +76,7 @@ void selectAndShowOnlyNeighborhood( bool selectNext = true )
     }
 }
 
-}
-
-namespace MR
-{
+} // anonymous namespace
 
 RibbonSceneSortByName::RibbonSceneSortByName() :
     RibbonMenuItem( "Ribbon Scene Sort by name" )
@@ -81,7 +85,7 @@ RibbonSceneSortByName::RibbonSceneSortByName() :
 
 std::string RibbonSceneSortByName::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
-    if ( SceneRoot::get().children().empty() )
+    if ( !getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
         return "At least one objects should be in scene";
     return "";
 }
@@ -106,6 +110,13 @@ void RibbonSceneSortByName::sortObjectsRecursive_( std::shared_ptr<Object> objec
 RibbonSceneSelectAll::RibbonSceneSelectAll() :
     RibbonMenuItem("Ribbon Scene Select all")
 {
+}
+
+std::string RibbonSceneSelectAll::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
+{
+    if ( !getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
+        return "At least one objects should be in scene";
+    return "";
 }
 
 bool RibbonSceneSelectAll::action()
@@ -139,7 +150,7 @@ RibbonSceneShowOnlyPrev::RibbonSceneShowOnlyPrev() :
 
 std::string RibbonSceneShowOnlyPrev::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
-    if ( SceneRoot::get().children().empty() )
+    if ( !getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
         return "At least one objects should be in scene";
     return "";
 }
@@ -157,7 +168,7 @@ RibbonSceneShowOnlyNext::RibbonSceneShowOnlyNext() :
 
 std::string RibbonSceneShowOnlyNext::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
-    if ( SceneRoot::get().children().empty() )
+    if ( !getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
         return "At least one objects should be in scene";
     return "";
 }

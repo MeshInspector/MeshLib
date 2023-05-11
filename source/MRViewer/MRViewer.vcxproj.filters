@@ -262,6 +262,9 @@
     <ClCompile Include="MRUIStyle.cpp">
       <Filter>UIStyle</Filter>
     </ClCompile>
+    <ClCompile Include="MRShaderBlocks.cpp">
+      <Filter>Render\Shaders</Filter>
+    </ClCompile>
     <ClCompile Include="MRSpaceMouseHandlerHidapi.cpp">
       <Filter>SpaceMouse</Filter>
     </ClCompile>
@@ -493,6 +496,9 @@
     </ClInclude>
     <ClInclude Include="MRUIStyle.h">
       <Filter>UIStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="MRShaderBlocks.h">
+      <Filter>Render\Shaders</Filter>
     </ClInclude>
     <ClInclude Include="MRSpaceMouseHandlerHidapi.h">
       <Filter>SpaceMouse</Filter>

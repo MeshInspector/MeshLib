@@ -40,8 +40,8 @@ void drawPoints( const std::vector<Vector3f>& points, const std::vector<Vector4f
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::AdditionalPoints );
     GL_EXEC( glUseProgram( shader ) );
 
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, params.viewMatrixPtr ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, params.projMatrixPtr ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, params.viewMatrix.data() ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, params.projMatrix.data() ) );
 
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "offset" ), 0.0f ) );
 
@@ -95,8 +95,8 @@ void drawLines( const std::vector<LineSegm3f>& lines, const std::vector<SegmEndC
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::AdditionalLines );
     GL_EXEC( glUseProgram( shader ) );
 
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, params.viewMatrixPtr ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, params.projMatrixPtr ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, params.viewMatrix.data() ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, params.projMatrix.data() ) );
 
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "offset" ), 0.0f ) );
 
@@ -146,8 +146,8 @@ void drawTris( const std::vector<Tri>& tris, const std::vector<TriCornerColors>&
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::AdditionalQuad );
     GL_EXEC( glUseProgram( shader ) );
 
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, params.viewMatrixPtr ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, params.projMatrixPtr ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, params.viewMatrix.data() ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, params.projMatrix.data() ) );
     GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &params.lightPos.x ) );
 
     GL_EXEC( GLint colorsId = glGetAttribLocation( shader, "color" ) );

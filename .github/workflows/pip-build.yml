@@ -26,7 +26,7 @@ jobs:
 
   manylinux-pip-build:
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 40
     runs-on: ${{ matrix.runner }}
     container:
       image: ${{ matrix.docker-image }}
@@ -535,7 +535,7 @@ jobs:
 
   upload-to-release:
     needs: [manylinux-pip-test, windows-pip-test, macos-pip-test]
-    timeout-minutes: 10
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
       - name: Download Wheels Artifacts

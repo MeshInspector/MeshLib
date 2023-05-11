@@ -85,8 +85,146 @@ MR::Mesh fromFV( const pybind11::buffer& faces, const pybind11::buffer& verts )
     return res;
 }
 
-MR_ADD_PYTHON_FUNCTION( mrmeshnumpy, meshFromFacesVerts, &fromFV, "constructs mesh from given numpy ndarrays of faces (N VertId x3, FaceId x1), verts (M vec3 x3)" )
+MR::Mesh fromUVPoints( const pybind11::buffer& xArray, const pybind11::buffer& yArray, const pybind11::buffer& zArray )
+{
+    pybind11::buffer_info xInfo = xArray.request();
+    pybind11::buffer_info yInfo = yArray.request();
+    pybind11::buffer_info zInfo = zArray.request();
 
+    MR::Vector2i shape;
+    int format = -1; // 0 - float, 1 - double
+    auto checkArray = [&] ( const pybind11::buffer_info& info, const std::string& arrayName )->bool
+    {
+        if ( info.ndim != 2 )
+        {
+            std::string error = arrayName + " should be 2D";
+            PyErr_SetString( PyExc_RuntimeError, error.c_str() );
+            return false;
+        }
+        MR::Vector2i thisShape;
+        thisShape.x = int( info.shape[0] );
+        thisShape.y = int( info.shape[1] );
+        if ( shape == MR::Vector2i() )
+            shape = thisShape;
+        else if ( shape != thisShape )
+        {
+            std::string error = "Input arrays shapes should be same";
+            PyErr_SetString( PyExc_RuntimeError, error.c_str() );
+            return false;
+        }
+        int thisFormat = -1;
+        if ( info.format == pybind11::format_descriptor<float>::format() )
+            thisFormat = 0;
+        else if ( info.format == pybind11::format_descriptor<double>::format() )
+            thisFormat = 1;
+
+        if ( format == -1 )
+            format = thisFormat;
+
+        if ( format == -1 )
+        {
+            std::string error = arrayName + " dtype should be float32 or float64";
+            PyErr_SetString( PyExc_RuntimeError, error.c_str() );
+            return false;
+        }
+        if ( format != thisFormat )
+        {
+            std::string error = "Arrays should have same dtype";
+            PyErr_SetString( PyExc_RuntimeError, error.c_str() );
+            return false;
+        }
+        return true;
+    };
+
+    if ( !checkArray( xInfo, "X" ) || !checkArray( yInfo, "Y" ) || !checkArray( zInfo, "Z" ) )
+        return {};
+
+    assert( format != -1 );
+    float* fDataPtr[3];
+    double* dDataPtr[3];
+    std::function<float( int coord, int i )> getter;
+    if ( format == 0 )
+    {
+        fDataPtr[0] = reinterpret_cast< float* >( xInfo.ptr );
+        fDataPtr[1] = reinterpret_cast< float* >( yInfo.ptr );
+        fDataPtr[2] = reinterpret_cast< float* >( zInfo.ptr );
+        getter = [&] ( int coord, int i )->float
+        {
+            int u = i % shape.x;
+            int v = i / shape.x;
+            int ind = u * shape.y + v;
+            return fDataPtr[coord][ind];
+        };
+    }
+    else
+    {
+        dDataPtr[0] = reinterpret_cast< double* >( xInfo.ptr );
+        dDataPtr[1] = reinterpret_cast< double* >( yInfo.ptr );
+        dDataPtr[2] = reinterpret_cast< double* >( zInfo.ptr );
+        getter = [&] ( int coord, int i )->float
+        {
+            int u = i % shape.x;
+            int v = i / shape.x;
+            int ind = u * shape.y + v;
+            return float( dDataPtr[coord][ind] );
+        };
+    }
+
+    MR::Mesh res;
+    res.points.resize( shape.x * shape.y );
+    tbb::parallel_for( tbb::blocked_range<int>( 0, int( res.points.size() ) ),
+        [&] ( const tbb::blocked_range<int>& range )
+    {
+        for ( int i = range.begin(); i < range.end(); ++i )
+        {
+            res.points[MR::VertId( i )] = MR::Vector3f( getter( 0, i ), getter( 1, i ), getter( 2, i ) );
+        }
+    } );
+
+    int triangleCount = 2 * int( res.points.size() ) - 2 * shape.x;
+    MR::Triangulation t;
+    t.reserve( triangleCount );
+
+    for ( int i = 0; i < shape.y; ++i )
+    {
+        for ( int j = 0; j < shape.x; ++j )
+        {
+            if ( i + 1 < shape.y && j + 1 < shape.x )
+            {
+                t.push_back( {
+                    MR::VertId( i * shape.x + j ),
+                    MR::VertId( i * shape.x + ( j + 1 ) ),
+                    MR::VertId( ( i + 1 ) * shape.x + j ) } );
+            }
+            if ( i > 0 && j > 0 )
+            {
+                t.push_back( {
+                    MR::VertId( i * shape.x + j ),
+                    MR::VertId( i * shape.x + ( j - 1 ) ),
+                    MR::VertId( ( i - 1 ) * shape.x + j ) } );
+            }
+        }
+    }
+
+    res.topology = MR::MeshBuilder::fromTriangles( t );
+
+    MR::MeshBuilder::uniteCloseVertices( res, std::numeric_limits<float>::epsilon() );
+
+    if ( res.volume() < 0.0f )
+        res.topology.flipOrientation();
+
+    res.pack();
+
+    return res;
+}
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyMesh, [] ( pybind11::module_& m )
+{
+    m.def( "meshFromFacesVerts", &fromFV, pybind11::arg( "faces" ), pybind11::arg( "verts" ),
+            "constructs mesh from given numpy ndarrays of faces (N VertId x3, FaceId x1), verts (M vec3 x3)" );
+    m.def( "meshFromUVPoints", &fromUVPoints, pybind11::arg( "xArray" ), pybind11::arg( "yArray" ), pybind11::arg( "zArray" ),
+            "constructs mesh from three 2d numpy ndarrays with x,y,z positions of mesh" );
+} )
 
 MR::PointCloud pointCloudFromNP( const pybind11::buffer& points, const pybind11::buffer& normals )
 {
@@ -178,7 +316,7 @@ MR::Polyline2 polyline2FromNP( const pybind11::buffer& points )
             assert( false );
         }
     };
-    
+
     // verts to points part
     MR::Contour2f inputContour;
     fillFloatVec( inputContour, infoPoints );
@@ -196,20 +334,25 @@ pybind11::array_t<int> getNumpyFaces( const MR::MeshTopology& topology )
     // Allocate and initialize some data;
     const int size = numFaces * 3;
     int* data = new int[size];
-    BitSetParallelForAll( validFaces, [&] ( FaceId f )
+    tbb::parallel_for( tbb::blocked_range<int>( 0, numFaces ),
+    [&] ( const tbb::blocked_range<int>& range )
     {
-        auto ind = f * 3;
-        if ( validFaces.test( f ) )
+        for ( int i = range.begin(); i < range.end(); ++i )
         {
-            VertId v[3];
-            topology.getTriVerts( f, v );
-            for ( int vi = 0; vi < 3; ++vi )
-                data[ind + vi] = v[vi];
-        }
-        else
-        {
-            for ( int vi = 0; vi < 3; ++vi )
-                data[ind + vi] = 0;
+            FaceId f = FaceId( i );
+            int ind = 3 * i;
+            if ( validFaces.test( f ) )
+            {
+                VertId v[3];
+                topology.getTriVerts( f, v );
+                for ( int vi = 0; vi < 3; ++vi )
+                    data[ind + vi] = v[vi];
+            }
+            else
+            {
+                for ( int vi = 0; vi < 3; ++vi )
+                    data[ind + vi] = 0;
+            }
         }
     } );
 
@@ -222,7 +365,7 @@ pybind11::array_t<int> getNumpyFaces( const MR::MeshTopology& topology )
     } );
 
     return pybind11::array_t<int>(
-        { numFaces, 3}, // shape
+        { numFaces, 3 }, // shape
         { 3 * sizeof( int ), sizeof( int ) }, // C-style contiguous strides for int
         data, // the data pointer
         freeWhenDone ); // numpy array references this parent
@@ -377,8 +520,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyMeshData, [] ( pybind11::module_& m 
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, PointCloudFromPoints, [] ( pybind11::module_& m )
 {
-    m.def( "pointCloudFromPoints", &pointCloudFromNP, 
-        pybind11::arg( "points" ), pybind11::arg( "normals" ) = pybind11::array{}, 
+    m.def( "pointCloudFromPoints", &pointCloudFromNP,
+        pybind11::arg( "points" ), pybind11::arg( "normals" ) = pybind11::array{},
         "creates point cloud object from numpy arrays, first arg - points, second optional arg - normals" );
 } )
 

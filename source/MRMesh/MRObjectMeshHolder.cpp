@@ -77,6 +77,7 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     root["ShowSelectedEdges"] = showSelectedEdges_.value();
     root["ShowSelectedFaces"] = showSelectedFaces_.value();
     root["OnlyOddFragments"] = onlyOddFragments_.value();
+    root["ShadingEnabled"] = shadingEnabled_.value();
     root["FaceBased"] = !flatShading_.empty();
     root["ColoringType"] = ( coloringType_ == ColoringType::VertsColorMap ) ? "PerVertex" : "Solid";
 
@@ -124,6 +125,8 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
         showSelectedFaces_ = ViewportMask{ root["ShowSelectedFaces"].asUInt() };
     if ( root["OnlyOddFragments"].isUInt() )
         onlyOddFragments_ = ViewportMask{ root["OnlyOddFragments"].asUInt() };
+    if ( root["ShadingEnabled"].isUInt() )
+        shadingEnabled_ = ViewportMask{ root["ShadingEnabled"].asUInt() };
     if ( root["FaceBased"].isBool() ) // Support old versions
         flatShading_ = root["FaceBased"].asBool() ? ViewportMask::all() : ViewportMask{};
     if ( root["ColoringType"].isString() )
@@ -202,6 +205,8 @@ const ViewportMask& ObjectMeshHolder::getVisualizePropertyMask( unsigned type ) 
         return showEdges_;
     case MR::MeshVisualizePropertyType::FlatShading:
         return flatShading_;
+    case MR::MeshVisualizePropertyType::EnableShading:
+        return shadingEnabled_;
     case MR::MeshVisualizePropertyType::OnlyOddFragments:
         return onlyOddFragments_;
     case MR::MeshVisualizePropertyType::BordersHighlight:
@@ -256,6 +261,7 @@ ObjectMeshHolder::ObjectMeshHolder( const ObjectMeshHolder& other ) :
     showSelectedFaces_ = other.showSelectedFaces_;
     showBordersHighlight_ = other.showBordersHighlight_;
     flatShading_ = other.flatShading_;
+    shadingEnabled_ = other.shadingEnabled_;
     onlyOddFragments_ = other.onlyOddFragments_;
     
     edgesColor_ = other.edgesColor_;

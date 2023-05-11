@@ -17,7 +17,10 @@ namespace MR
 tl::expected<MR::Mesh, std::string> meshFromSimpleVolume( const SimpleVolume& volumePart, const Vector3i& shift )
 {
     auto grid = simpleVolumeToDenseGrid( volumePart );
-    auto mesh = gridToMesh( std::move( grid ), volumePart.voxelSize, 0.5f ).value(); // no callback so cannot be stopped
+    auto mesh = gridToMesh( std::move( grid ), GridToMeshSettings{
+        .voxelSize = volumePart.voxelSize,
+        .isoValue = 0.5f,
+    } ).value(); // no callback so cannot be stopped
 
     auto minCorner = mult( Vector3f( shift ), volumePart.voxelSize );
     for ( auto& p : mesh.points )

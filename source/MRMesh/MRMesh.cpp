@@ -125,6 +125,11 @@ MeshTriPoint Mesh::toTriPoint( const PointOnFace & p ) const
     return toTriPoint( p.face, p.point );
 }
 
+MeshTriPoint Mesh::toTriPoint( VertId v ) const
+{
+    return MeshTriPoint( topology, v );
+}
+
 MeshEdgePoint Mesh::toEdgePoint( EdgeId e, const Vector3f & p ) const
 {
     const auto & po = points[ topology.org( e ) ];
@@ -136,6 +141,11 @@ MeshEdgePoint Mesh::toEdgePoint( EdgeId e, const Vector3f & p ) const
     if ( dt >= edgeLenSq )
         return { e, 1 };
     return { e, dt / edgeLenSq };
+}
+
+MeshEdgePoint Mesh::toEdgePoint( VertId v ) const
+{
+    return MeshEdgePoint( topology, v );
 }
 
 VertId Mesh::getClosestVertex( const PointOnFace & p ) const

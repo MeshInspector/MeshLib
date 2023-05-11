@@ -1,4 +1,5 @@
 name: Versioning and relese URL
+
 on:
   workflow_call:
     secrets:
@@ -44,12 +45,13 @@ jobs:
 
       - name: Versioning
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
-        uses: paulhatch/semantic-version@v4.0.3
+        uses: paulhatch/semantic-version@v5.0.3
         id: version
         with:
-          format: "v${major}.${minor}.${patch}.${increment}"
-          short_tags: false
+          tag_prefix: "v"
+          version_format: "v${major}.${minor}.${patch}.${increment}"
           bump_each_commit: false
+          search_commit_body: true
           namespace: ${{inputs.version-namespace}}
 
       - name: Set version tag
@@ -67,10 +69,10 @@ jobs:
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
-          RELEASE_PATH: https://github.com/${{github.repository}}/releases/download/${{steps.version.outputs.version}}
+          RELEASE_PATH: https://github.com/${{github.repository}}/releases/download/${{steps.version-tag.outputs.short_version}}
         with:
           name: Release ${{steps.version-tag.outputs.short_version}}
-          tag_name: ${{steps.version.outputs.version }}
+          tag_name: ${{steps.version.outputs.version}}
           draft: true
           prerelease: false
           body: |

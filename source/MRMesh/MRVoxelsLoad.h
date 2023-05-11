@@ -25,22 +25,34 @@ MRMESH_API extern const IOFilters Filters;
 MRMESH_API void sortFilesByName( std::vector<std::filesystem::path>& scans );
 
 #if !defined(MRMESH_NO_DICOM)
+struct DicomVolume
+{
+    SimpleVolume vol;
+    std::string name;
+    AffineXf3f xf;
+};
+
 struct LoadDCMResult
 {
     VdbVolume vdbVolume;
     std::string name;
+    AffineXf3f xf;
 };
 
-/// Loads data from DICOM file(s)
+/// Loads 3D volumetric data from all DICOM file in a folder
 MRMESH_API tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::path& path,
                                                         unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
+/// Loads 3D volumetric data from all DICOM file in a folder
+MRMESH_API tl::expected<DicomVolume, std::string> loadDicomFolder( const std::filesystem::path& path,
+                                                        unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
+
 
 /// Loads every subfolder with DICOM volume as new object
 MRMESH_API std::vector<tl::expected<LoadDCMResult, std::string>> loadDCMFolderTree( const std::filesystem::path& path,
                                                         unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 
-/// Load single DCM file as Object Voxels
-MRMESH_API tl::expected<LoadDCMResult, std::string> loadDCMFile( const std::filesystem::path& path, const ProgressCallback& cb = {} );
+/// Loads 3D volumetric data from a single DICOM file
+MRMESH_API tl::expected<DicomVolume, std::string> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb = {} );
 #endif // MRMESH_NO_DICOM
 
 struct RawParameters

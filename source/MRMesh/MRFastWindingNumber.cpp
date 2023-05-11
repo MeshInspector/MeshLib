@@ -2,7 +2,10 @@
 #include "MRMesh.h"
 #include "MRTimer.h"
 #include "MRGTest.h"
-#include "MRPch/MRTBB.h"
+#include "MRParallelFor.h"
+#include "MRBitSetParallelFor.h"
+#include "MRVolumeIndexer.h"
+#include "MRMeshProject.h"
 
 namespace MR
 {
@@ -19,42 +22,38 @@ static float distToFarthestCornerSq( const Box3f & box, const Vector3f & pos )
     return res;
 }
 
-FastWindingNumber::FastWindingNumber( const Mesh & mesh ) : mesh_( mesh ), tree_( mesh.getAABBTree() )
+void IFastWindingNumber::calcDipoles( Dipoles& dipoles, const AABBTree& tree_, const Mesh& mesh )
 {
     MR_TIMER
-    dipoles_.resize( tree_.nodes().size() );
+    dipoles.resize( tree_.nodes().size() );
 
     // compute dipole data for tree leaves
-    tbb::parallel_for( tbb::blocked_range<NodeId>( NodeId{ 0 }, dipoles_.endId() ),
-        [&]( const tbb::blocked_range<NodeId>& range )
+    ParallelFor( dipoles, [&]( NodeId i )
     {
-        for ( NodeId i = range.begin(); i < range.end(); ++i )
+        const auto& node = tree_[i];
+        if ( !node.leaf() )
+            return;
+        const FaceId f = node.leafId();
+        const auto da = 0.5f * mesh.dirDblArea( f );
+        const auto a = da.length();
+        const auto ap = a * mesh.triCenter( f );
+        dipoles[i] = Dipole
         {
-            const auto & node = tree_[ i ];
-            if ( !node.leaf() )
-                continue;
-            const FaceId f = node.leafId();
-            const auto da = 0.5f * mesh.dirDblArea( f );
-            const auto a = da.length();
-            const auto ap = a * mesh.triCenter( f );
-            dipoles_[ i ] = Dipole
-            {
-                .areaPos = ap,
-                .area = a,
-                .dirArea = da
-            };
-        }
+            .areaPos = ap,
+            .area = a,
+            .dirArea = da
+        };
     } );
 
     // compute dipole data for not-leaf tree nodes
-    for ( NodeId i = dipoles_.backId(); i; --i )
+    for ( NodeId i = dipoles.backId(); i; --i )
     {
-        const auto & node = tree_[ i ];
+        const auto& node = tree_[i];
         if ( node.leaf() )
             continue;
-        const auto & dl = dipoles_[ node.l ];
-        const auto & dr = dipoles_[ node.r ];
-        dipoles_[ i ] = Dipole
+        const auto& dl = dipoles[node.l];
+        const auto& dr = dipoles[node.r];
+        dipoles[i] = Dipole
         {
             .areaPos = dl.areaPos + dr.areaPos,
             .area = dl.area + dr.area,
@@ -63,16 +62,19 @@ FastWindingNumber::FastWindingNumber( const Mesh & mesh ) : mesh_( mesh ), tree_
     }
 
     // compute distance to farthest corner for all nodes
-    tbb::parallel_for( tbb::blocked_range<NodeId>( NodeId{ 0 }, dipoles_.endId() ),
-        [&]( const tbb::blocked_range<NodeId>& range )
+    ParallelFor( dipoles, [&]( NodeId i )
     {
-        for ( NodeId i = range.begin(); i < range.end(); ++i )
-        {
-            const auto & node = tree_[ i ];
-            auto & d = dipoles_[ i ];
-            d.rr = distToFarthestCornerSq( node.box, d.pos() );
-        }
+        const auto& node = tree_[i];
+        auto& d = dipoles[i];
+        d.rr = distToFarthestCornerSq( node.box, d.pos() );
     } );
+}
+
+FastWindingNumber::FastWindingNumber( const Mesh & mesh ) : 
+IFastWindingNumber( mesh ), 
+tree_( mesh.getAABBTree() )
+{
+    calcDipoles( dipoles_, tree_, mesh_ );
 }
 
 constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
@@ -133,6 +135,72 @@ float FastWindingNumber::calc( const Vector3f & q, float beta, FaceId skipFace )
             res += INV_4PI * triangleSolidAngle( q, mesh_.getTriPoints( node.leafId() ) );
     }
     return res;
+}
+
+void FastWindingNumber::calcFromVector( std::vector<float>& res, const std::vector<Vector3f>& points, float beta, FaceId skipFace )
+{
+    res.resize( points.size() );
+    ParallelFor( points, [&]( size_t i )
+    {
+        res[i] = calc( points[i], beta, skipFace );
+    } );
+}
+
+void FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta )
+{
+    res.resize( mesh_.topology.faceSize() );
+    BitSetParallelFor( mesh_.topology.getValidFaces(), [&] ( FaceId f )
+    {
+        auto wn = calc( mesh_.triCenter( f ), beta, f );
+        if ( wn < 0 || wn > 1 )
+            res.set( f );
+    } );
+}
+
+void FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta )
+{
+    MR_TIMER
+
+    const size_t size = dims.x * dims.y * dims.z;
+    res.resize( size );
+    VolumeIndexer indexer( dims );
+    ParallelFor( size_t( 0 ), size, [&]( size_t i )
+    {
+        auto pos = indexer.toPos( VoxelId( i ) );
+        auto coord = minCoord;
+        for ( int j = 0; j < 3; ++j )
+            coord[j] += pos[j];
+
+        auto coord3i = Vector3i( int( coord.x ), int( coord.y ), int( coord.z ) );
+        auto pointInSpace = mult( voxelSize, Vector3f( coord3i ) );
+        res[i] = calc( gridToMeshXf( pointInSpace ), beta );
+    } );
+}
+
+void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq )
+{
+    MR_TIMER
+
+    const size_t size = dims.x * dims.y * dims.z;
+    res.resize( size );
+    VolumeIndexer indexer( dims );
+
+    MeshPart mp( mesh_ );
+
+    ParallelFor( size_t( 0 ), size, [&]( size_t i )
+    {
+        auto pos = indexer.toPos( VoxelId( i ) );
+        auto coord = minCoord;
+        for ( int j = 0; j < 3; ++j )
+            coord[j] += pos[j];
+
+        //auto coord3i = Vector3i( int( coord.x ), int( coord.y ), int( coord.z ) );
+        const auto pointInSpace = mult( voxelSize, coord );
+        const auto transformedPoint = gridToMeshXf( pointInSpace );
+        res[i] = sqrt( findProjection( transformedPoint, mp, maxDistSq, nullptr, minDistSq ).distSq );
+        if ( calc( transformedPoint, beta ) > 0.5f )
+            res[i] = -res[i];
+    } );
 }
 
 TEST(MRMesh, TriangleSolidAngle) 

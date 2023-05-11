@@ -61,8 +61,10 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] MRMESH_API Vector3f triCenter( FaceId f ) const;
 
     // converts face id and 3d point into barycentric representation
+    [[nodiscard]] MRMESH_API MeshTriPoint toTriPoint( VertId v ) const;
     [[nodiscard]] MRMESH_API MeshTriPoint toTriPoint( FaceId f, const Vector3f & p ) const;
-    [[nodiscard]] MRMESH_API MeshTriPoint toTriPoint( const PointOnFace & p ) const;
+    [[nodiscard]] MRMESH_API MeshTriPoint toTriPoint( const PointOnFace& p ) const;
+    [[nodiscard]] MRMESH_API MeshEdgePoint toEdgePoint( VertId v ) const;
     [[nodiscard]] MRMESH_API MeshEdgePoint toEdgePoint( EdgeId e, const Vector3f & p ) const;
 
     // returns one of three face vertices, closest to given point

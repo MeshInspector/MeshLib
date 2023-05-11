@@ -119,6 +119,9 @@ var open_files = function (e) {
         }
         _free(filenames);
       }
+      // enforce several frames to toggle animation when popup closed
+      for (var i = 0; i < 500; i += 100)
+        setTimeout(function () { Module.ccall('emsPostEmptyEvent', 'void', ['number'], [1]); }, i);
     };
     reader.readAsArrayBuffer(file);
     var filename = allocateUTF8(path);

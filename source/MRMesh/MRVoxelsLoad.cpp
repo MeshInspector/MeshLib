@@ -23,7 +23,6 @@
 #include <openvdb/tools/GridTransformer.h>
 #include <openvdb/tools/Interpolation.h>
 #include <MRPch/MRTBB.h>
-
 #ifndef MRMESH_NO_TIFF
 #include <tiffio.h>
 #endif // MRMESH_NO_TIFF
@@ -249,6 +248,7 @@ struct DCMFileLoadResult
     float min = FLT_MAX;
     float max = -FLT_MAX;
     std::string seriesDescription;
+    AffineXf3f xf;
 };
 
 DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolume& data, size_t offset )
@@ -275,6 +275,33 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
         auto descVal = desc.GetValue();
         res.seriesDescription = descVal;
     }
+
+    if( ds.FindDataElement( gdcm::Keywords::ImagePositionPatient::GetTag() ) )
+    {
+        gdcm::DataElement dePosition = ds.GetDataElement( gdcm::Keywords::ImagePositionPatient::GetTag() );
+        gdcm::Keywords::ImagePositionPatient atPos;
+        atPos.SetFromDataElement( dePosition );
+        for (int i = 0; i < 3; ++i) {
+            res.xf.b[i] = float( atPos.GetValue( i ) );
+        }
+        res.xf.b /= 1000.0f;
+    }
+
+    if( ds.FindDataElement( gdcm::Keywords::ImageOrientationPatient::GetTag() ) )
+    {
+        gdcm::DataElement deOri = ds.GetDataElement( gdcm::Keywords::ImageOrientationPatient::GetTag() );
+        gdcm::Keywords::ImageOrientationPatient atOri;
+        atOri.SetFromDataElement( deOri );
+        for (int i = 0; i < 3; ++i)
+            res.xf.A.x[i] = float( atOri.GetValue( i ) );
+        for (int i = 0; i < 3; ++i)
+            res.xf.A.y[i] = float( atOri.GetValue( 3 + i ) );
+    }
+
+    res.xf.A.x.normalized();
+    res.xf.A.y.normalized();
+    res.xf.A.z = cross( res.xf.A.x, res.xf.A.y );
+    res.xf.A = res.xf.A.transposed();
 
     const auto& gimage = ir.GetImage();
     auto dimsNum = gimage.GetNumberOfDimensions();
@@ -452,14 +479,11 @@ void sortDICOMFiles( std::vector<std::filesystem::path>& files, unsigned maxNumT
     }
 }
 
-tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::path& path,
-                                                    unsigned maxNumThreads, const ProgressCallback& cb )
+tl::expected<DicomVolume, std::string> loadDicomFolder( const std::filesystem::path& path,
+                                                        unsigned maxNumThreads, const ProgressCallback& cb )
 {
-    MR_TIMER;
-    ProgressCallback newCb{};
-    if ( cb )
-        newCb = [&cb](float f) { return cb( 0.5f * f ); };
-    if ( newCb && !newCb( 0.0f ) )
+    MR_TIMER
+    if ( !reportProgress( cb, 0.0f ) )
         return tl::make_unexpected( "Loading canceled" );
 
     SimpleVolume data;
@@ -485,7 +509,7 @@ tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::p
         auto filePath = it->path();
         if ( it->is_regular_file( ec ) && isDICOMFile( filePath ) )
             files.push_back( filePath );
-        if ( newCb && !newCb( 0.3f * float( fCounter ) / float( filesNum ) ) )
+        if ( !reportProgress( cb, 0.3f * float( fCounter ) / float( filesNum ) ) )
             tl::make_unexpected( "Loading canceled" );
     }
     if ( files.empty() )
@@ -493,12 +517,7 @@ tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::p
         return tl::make_unexpected( "loadDCMFolder: there is no dcm file in folder: " + utf8string( path ) );
     }
     if ( files.size() == 1 )
-    {
-        ProgressCallback localCb{};
-        if ( newCb )
-            localCb = [&newCb]( float f ) { return newCb( 0.3f + 0.7f * f ); };
-        return loadDCMFile( files[0], localCb );
-    }
+        return loadDicomFile( files[0], subprogress( cb, 0.3f, 1.0f ) );
     sortDICOMFiles( files, maxNumThreads, data.voxelSize );
     data.dims.z = (int) files.size();
 
@@ -509,7 +528,7 @@ tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::p
     data.max = firstRes.max;
     size_t dimXY = data.dims.x * data.dims.y;
 
-    if ( newCb && !newCb( 0.4f ) )
+    if ( !reportProgress( cb, 0.4f ) )
         return tl::make_unexpected( "Loading canceled" );
 
     // other slices
@@ -527,8 +546,8 @@ tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::p
             {
                 slicesRes[i] = loadSingleFile( files[i + 1], data, ( i + 1 ) * dimXY );
                 ++numLoadedSlices;
-                if ( newCb && std::this_thread::get_id() == mainThreadId )
-                    cancelCalled = !newCb( 0.4f + 0.6f * ( float( numLoadedSlices ) / float( slicesRes.size() ) ) );
+                if ( cb && std::this_thread::get_id() == mainThreadId )
+                    cancelCalled = !cb( 0.4f + 0.6f * ( float( numLoadedSlices ) / float( slicesRes.size() ) ) );
             }
         } );
     } );
@@ -543,14 +562,28 @@ tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::p
         data.max = std::max( sliceRes.max, data.max );
     }
 
-    if ( cb )
-        newCb = [&cb] ( float f ) { return cb( 0.5f + 0.5f * f ); };
-    LoadDCMResult res;
-    res.vdbVolume = simpleVolumeToVdbVolume( data, newCb );
+    DicomVolume res;
+    res.vol = std::move( data );
     if ( firstRes.seriesDescription.empty() )
-        res.name = utf8string( files.front().stem() );
+         res.name = utf8string( files.front().parent_path().stem() );
     else
-        res.name = firstRes.seriesDescription;
+         res.name = firstRes.seriesDescription;
+    res.xf = firstRes.xf;
+    return res;
+}
+
+tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::path& path,
+                                                     unsigned maxNumThreads, const ProgressCallback& cb )
+{
+    auto simple = loadDicomFolder( path, maxNumThreads, subprogress( cb, 0, 0.5f ) );
+    if ( !simple.has_value() )
+        return tl::make_unexpected( std::move( simple.error() ) );
+
+    LoadDCMResult res;
+    res.vdbVolume = simpleVolumeToVdbVolume( simple->vol, subprogress( cb, 0.5f, 1.0f ) );
+    res.name = std::move( simple->name );
+    res.xf = std::move( simple->xf );
+
     return res;
 }
 
@@ -578,13 +611,10 @@ std::vector<tl::expected<LoadDCMResult, std::string>> loadDCMFolderTree( const s
     return res;
 }
 
-tl::expected<LoadDCMResult, std::string> loadDCMFile( const std::filesystem::path& path, const ProgressCallback& cb )
+tl::expected<DicomVolume, std::string> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb )
 {
-    MR_TIMER;
-    ProgressCallback newCb{};
-    if ( cb )
-        newCb = [&cb]( float f ) { return 0.5f * cb( f ); };
-    if ( newCb && !newCb( 0.0f ) )
+    MR_TIMER
+    if ( !reportProgress( cb, 0.0f ) )
         return tl::make_unexpected( "Loading canceled" );
 
     SimpleVolume simpleVolume;
@@ -593,18 +623,15 @@ tl::expected<LoadDCMResult, std::string> loadDCMFile( const std::filesystem::pat
     auto fileRes = loadSingleFile( path, simpleVolume, 0 );
     if ( !fileRes.success )
         return tl::make_unexpected( "loadDCMFile: error load file: " + utf8string( path ) );
-    if ( newCb && !newCb( 0.5f ) )
-        return tl::make_unexpected( "Loading canceled" );
     simpleVolume.max = fileRes.max;
     simpleVolume.min = fileRes.min;
     
-    if ( cb )
-        newCb = [&cb] ( float f ) { return cb( 0.5f + 0.5f * f ); };
-    LoadDCMResult res;
-    res.vdbVolume = simpleVolumeToVdbVolume( simpleVolume, newCb );
+    DicomVolume res;
+    res.vol = std::move( simpleVolume );
     res.name = utf8string( path.stem() );
     return res;
 }
+
 #endif // MRMESH_NO_DICOM
 
 tl::expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& path,

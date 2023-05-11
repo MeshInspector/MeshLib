@@ -18,22 +18,74 @@
 namespace MR
 {
 
+class MinMaxCalc
+{
+public:
+    MinMaxCalc( const std::vector<float>& vec )
+    : vec_( vec )
+    {}
+
+    MinMaxCalc(const MinMaxCalc& other, tbb::split)
+    : min_(other.min_)
+    , max_(other.max_)
+    ,vec_( other.vec_)
+    {}
+
+    void operator()( const tbb::blocked_range<size_t>& r )
+    {
+        for ( auto i = r.begin(); i < r.end(); ++i )
+        {
+            if ( vec_[i] < min_ )
+                min_ = vec_[i];
+
+            if ( vec_[i] > max_ )
+                max_ = vec_[i];
+        }
+    }
+
+    void join( const MinMaxCalc& other )
+    {
+        min_ = std::min( min_, other.min_ );
+        max_ = std::max( max_, other.max_ );
+    }
+
+    float min() { return min_; }
+    float max() { return max_; }
+
+private:
+    float min_{ FLT_MAX };
+    float max_{ -FLT_MAX };
+    const std::vector<float>& vec_;
+};
+
 std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSimpleVolumeParams& params /*= {} */ )
 {
     MR_TIMER
     SimpleVolume res;
-    auto transposedBasis = params.basis.A.transposed();
-    for ( int i = 0; i < 3; ++i )
-        res.voxelSize[i] = transposedBasis[i].length();
+    res.voxelSize = params.voxelSize;
     res.dims = params.dimensions;
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size() );
 
     // used in Winding rule mode
     const IntersectionPrecomputes<double> precomputedInter( Vector3d::plusX() );
-    std::optional<FastWindingNumber> fwn;
+    
     if ( params.signMode == SignDetectionMode::HoleWindingRule )
-        fwn.emplace( mesh );
+    {
+        auto fwn = params.fwn;
+        if ( !fwn )
+            fwn = std::make_shared<FastWindingNumber>( mesh );
+
+        auto basis = AffineXf3f::linear( Matrix3f::scale( params.voxelSize ) );
+        basis.b = params.origin;
+        constexpr float beta = 2;
+        fwn->calcFromGridWithDistances( res.data, res.dims, Vector3f::diagonal( 0.5f ), Vector3f::diagonal( 1.0f ), basis, beta, params.maxDistSq, params.minDistSq );
+        MinMaxCalc minMaxCalc( res.data );
+        tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, res.data.size() ), minMaxCalc );
+        res.min = minMaxCalc.min();
+        res.max = minMaxCalc.max();
+        return res;
+    }
 
     std::atomic<bool> keepGoing{ true };
     auto mainThreadId = std::this_thread::get_id();
@@ -47,7 +99,7 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
                 break;
 
             auto coord = Vector3f( indexer.toPos( VoxelId( i ) ) ) + Vector3f::diagonal( 0.5f );
-            auto voxelCenter = params.basis.b + params.basis.A * coord;
+            auto voxelCenter = params.origin + mult( params.voxelSize, coord );
             float dist{ 0.0f };
             if ( params.signMode != SignDetectionMode::ProjectionNormal )
                 dist = std::sqrt( findProjection( voxelCenter, mesh, params.maxDistSq, nullptr, params.minDistSq ).distSq );
@@ -71,11 +123,6 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
                     } );
                     changeSign = numInters % 2 == 1; // inside
                 }
-                else if ( params.signMode == SignDetectionMode::HoleWindingRule )
-                {
-                    constexpr float beta = 2;
-                    changeSign = fwn->calc( voxelCenter, beta ) > 0.5f; // inside
-                }
                 if ( changeSign )
                     dist = -dist;
                 auto& localMinMax = minMax.local();
@@ -85,7 +132,7 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
                     localMinMax.second = dist;
             }
             res.data[i] = dist;
-            if ( params.cb && std::this_thread::get_id() == mainThreadId )
+            if ( params.cb && ( ( i % 1024 ) == 0 ) && std::this_thread::get_id() == mainThreadId )
             {
                 if ( !params.cb( float( i ) / float( range.size() ) ) )
                     keepGoing.store( false, std::memory_order_relaxed );
@@ -443,13 +490,12 @@ SeparationPoint findSeparationPoint( const VdbVolume& volume, const ConstAccesso
     const VolumeIndexer& indexer, VoxelId base, NeighborDir dir, const VolumeToMeshParams& params )
 {
     auto basePos = indexer.toPos( base );
-    auto shift = ( 1 << params.neighborVoxExp );
-    if ( basePos[int( dir )] + shift >= volume.dims[int( dir )] )
+    if ( basePos[int( dir )] + 1 >= volume.dims[int( dir )] )
         return {};
     auto coord = openvdb::Coord{ basePos.x + minCoord.x(),basePos.y + minCoord.y(),basePos.z + minCoord.z() };
     const auto& valueB = acc.getValue( coord );// volume.data[base];
     auto nextCoord = coord;
-    nextCoord[int( dir )] += shift;
+    nextCoord[int( dir )] += 1;
     const auto& valueD = acc.getValue( nextCoord );// volume.data[nextId];
     bool bLower = valueB < params.iso;
     bool dLower = valueD < params.iso;
@@ -460,8 +506,8 @@ SeparationPoint findSeparationPoint( const VdbVolume& volume, const ConstAccesso
     SeparationPoint res;
     Vector3f coordF = Vector3f( float( coord.x() ), float( coord.y() ), float( coord.z() ) );
     Vector3f nextCoordF = Vector3f( float( nextCoord.x() ), float( nextCoord.y() ), float( nextCoord.z() ) );
-    auto bPos = params.basis.b + params.basis.A * coordF;
-    auto dPos = params.basis.b + params.basis.A * nextCoordF;
+    auto bPos = params.origin + mult( volume.voxelSize, coordF );
+    auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
     res.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
     res.vid = VertId{ 0 };
     return res;
@@ -472,7 +518,7 @@ SeparationPoint findSeparationPoint( const SimpleVolume& volume,
 {
     auto basePos = indexer.toPos( base );
     auto nextPos = basePos;
-    nextPos[int( dir )] += ( 1 << params.neighborVoxExp );
+    nextPos[int( dir )] += 1;
     if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
         return {};
     const auto& valueB = volume.data[base];
@@ -488,23 +534,24 @@ SeparationPoint findSeparationPoint( const SimpleVolume& volume,
     SeparationPoint res;
     Vector3f coordF = Vector3f( basePos ) + Vector3f::diagonal( 0.5f );
     Vector3f nextCoordF = Vector3f( nextPos ) + Vector3f::diagonal( 0.5f );
-    auto bPos = params.basis.b + params.basis.A * coordF;
-    auto dPos = params.basis.b + params.basis.A * nextCoordF;
+    auto bPos = params.origin + mult( volume.voxelSize, coordF );
+    auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
     res.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
     res.vid = VertId{ 0 };
     return res;
 }
 
 template<typename V>
-std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& params /*= {} */ )
+tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshParams& params /*= {} */ )
 {
     if constexpr ( std::is_same_v<V, VdbVolume> )
         if ( !volume.data )
-            return {};
+            return tl::make_unexpected( "No volume data." );
 
+    Mesh result;
     if ( params.iso <= volume.min || params.iso >= volume.max ||
         volume.dims.x <= 0 || volume.dims.y <= 0 || volume.dims.z <= 0 )
-        return Mesh();
+        return result;
 
     MR_TIMER
 
@@ -520,7 +567,6 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
 
     SeparationPointMap hmap;
     const auto subcnt = hmap.subcnt();
-    auto voxShift = ( 1 << params.neighborVoxExp );
     // find all separate points
     // fill map in parallel
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
@@ -533,12 +579,6 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
         {
             if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
                 break;
-
-            auto pos = indexer.toPos( VoxelId( i ) );
-            if ( ( pos.x % voxShift ) != 0 || 
-                ( pos.y % voxShift ) != 0 ||
-                ( pos.z % voxShift ) != 0 )
-                continue;
 
             auto hashval = hmap.hash( i );
             if ( hmap.subidx( hashval ) != range.begin() )
@@ -561,7 +601,7 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
                 }
             }
 
-            if ( params.cb && std::this_thread::get_id() == mainThreadId &&
+            if ( params.cb && ( ( i % 1024 ) == 0 ) && std::this_thread::get_id() == mainThreadId &&
                 ( lastSubMap == -1 || lastSubMap == range.begin() ) )
             {
                 if ( lastSubMap == -1 )
@@ -578,7 +618,7 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
     } );
 
     if ( params.cb && !keepGoing )
-        return {};
+        return tl::make_unexpected( "Operation was canceled." );
 
     // numerate verts in parallel (to have packed mesh as result, determined numeration independent of thread number)
     struct VertsNumeration
@@ -610,20 +650,20 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
 
     // organize vert numeration
     std::vector<VertsNumeration> resultVertNumeration;
+    size_t totalVertices = 0;
     for ( auto& perThreadNum : perThreadVertNumeration )
     {
-        // remove empty
-        perThreadNum.erase( std::remove_if( perThreadNum.begin(), perThreadNum.end(),
-            [] ( const auto& obj )
+        for ( auto & obj : perThreadNum )
         {
-            return obj.numVerts == 0;
-        } ), perThreadNum.end() );
-        if ( perThreadNum.empty() )
-            continue;
-        // accum not empty
-        resultVertNumeration.insert( resultVertNumeration.end(),
-            std::make_move_iterator( perThreadNum.begin() ), std::make_move_iterator( perThreadNum.end() ) );
+            totalVertices += obj.numVerts;
+            if ( obj.numVerts > 0 )
+                resultVertNumeration.push_back( std::move( obj ) );
+        }
+        perThreadNum.clear();
     }
+    if ( totalVertices > params.maxVertices )
+        return tl::make_unexpected( "Vertices number limit exceeded." );
+
     // sort by voxel index
     std::sort( resultVertNumeration.begin(), resultVertNumeration.end(), [] ( const auto& l, const auto& r )
     {
@@ -661,7 +701,7 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
 
 
     if ( params.cb && !params.cb( 0.5f ) )
-        return {};
+        return tl::make_unexpected( "Operation was canceled." );
 
     // check neighbor iterator valid
     auto checkIter = [&] ( const auto& iter, int mode ) -> bool
@@ -742,26 +782,21 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
             if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
                 break;
             Vector3i basePos = indexer.toPos( VoxelId( ind ) );
-            if ( basePos.x + voxShift >= volume.dims.x ||
-                basePos.y + voxShift >= volume.dims.y ||
-                basePos.z + voxShift >= volume.dims.z )
-                continue;
-
-            if ( ( basePos.x % voxShift ) != 0 ||
-                ( basePos.y % voxShift ) != 0 ||
-                ( basePos.z % voxShift ) != 0 )
+            if ( basePos.x + 1 >= volume.dims.x ||
+                basePos.y + 1 >= volume.dims.y ||
+                basePos.z + 1 >= volume.dims.z )
                 continue;
 
             bool voxelValid = false;
             for ( int i = 0; i < iters.size(); ++i )
             {
-                iters[i] = hmap.find( size_t( indexer.toVoxelId( basePos + voxShift * cVoxelNeighbors[i] ) ) );
+                iters[i] = hmap.find( size_t( indexer.toVoxelId( basePos + cVoxelNeighbors[i] ) ) );
                 iterStatus[i] = checkIter( iters[i], i );
                 if ( !voxelValid && iterStatus[i] )
                     voxelValid = true;
             }
 
-            if ( params.cb && std::this_thread::get_id() == mainThreadId )
+            if ( params.cb && ( ( ind % 1024 ) == 0 ) && std::this_thread::get_id() == mainThreadId )
             {
                 if ( !params.cb( 0.5f + 0.35f * float( ind ) / float( range.size() ) ) )
                     keepGoing.store( false, std::memory_order_relaxed );
@@ -773,7 +808,7 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
             [[maybe_unused]] bool atLeastOneNan = false;
             for ( int i = 0; i < cVoxelNeighbors.size(); ++i )
             {
-                auto pos = basePos + voxShift * cVoxelNeighbors[i];
+                auto pos = basePos + cVoxelNeighbors[i];
                 float value{ 0.0f };
                 if constexpr ( std::is_same_v<V, VdbVolume> )
                     value = acc->getValue( { pos.x + minCoord.x(),pos.y + minCoord.y(),pos.z + minCoord.z() } );
@@ -800,7 +835,7 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
                             int sign = 1;
                             if ( cVoxelNeighbors[i][posCoord] == 1 )
                                 sign = -1;
-                            neighPos[posCoord] += ( sign * voxShift *
+                            neighPos[posCoord] += ( sign * 
                                 ( ( cNeighborsOrder[neighIndex] & ( 1 << posCoord ) ) >> posCoord ) );
                         }
                         value = volume.data[indexer.toVoxelId( neighPos ).get()];
@@ -872,7 +907,7 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
     }, tbb::static_partitioner() );
 
     if ( params.cb && !keepGoing )
-        return {};
+        return tl::make_unexpected( "Operation was canceled." );
 
     // organize per thread triangulation
     std::vector<TriangulationData> resTriangulatoinData;
@@ -897,7 +932,6 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
     } );
 
     // create result triangulation
-    Mesh result;
     Triangulation resTriangulation;
     if ( params.outVoxelPerFaceMap )
         params.outVoxelPerFaceMap->clear();
@@ -911,9 +945,10 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
     }
     result.topology = MeshBuilder::fromTriangles( std::move( resTriangulation ) );
     result.points.resize( result.topology.lastValidVert() + 1 );
+    assert( result.points.size() == totalVertices );
 
     if ( params.cb && !params.cb( 0.95f ) )
-        return {};
+        return tl::make_unexpected( "Operation was canceled." );
 
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ),
         [&] ( const tbb::blocked_range<size_t>& range )
@@ -931,16 +966,16 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
     } );
 
     if ( params.cb && !params.cb( 1.0f ) )
-        return {};
+        return tl::make_unexpected( "Operation was canceled." );
 
     return result;
 }
 
-std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params /*= {} */ )
+tl::expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params /*= {} */ )
 {
     return volumeToMesh( volume, params );
 }
-std::optional<Mesh> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params /*= {} */ )
+tl::expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params /*= {} */ )
 {
     return volumeToMesh( volume, params );
 }

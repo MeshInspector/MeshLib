@@ -33,8 +33,6 @@ public:
     // sets the current progress and returns false if the user has pressed Cancel button
     MRVIEWER_API static bool setProgress(float p);
 
-    MRVIEWER_API static void addProgress(float p);
-
     MRVIEWER_API static void nextTask();
     MRVIEWER_API static void nextTask(const char * s);
 
@@ -42,10 +40,8 @@ public:
 
     // these callbacks allow canceling
     MRVIEWER_API static bool callBackSetProgress(float p);
-    MRVIEWER_API static bool callBackAddProgress(float p);
     // these callbacks do not allow canceling
     MRVIEWER_API static bool simpleCallBackSetProgress( float p );
-    MRVIEWER_API static bool simpleCallBackAddProgress( float p );
 private:
     static ProgressBar& instance_();
 
@@ -68,14 +64,17 @@ private:
         void reset();
         void requestFrame();
     private:
-        std::atomic<bool> frameRequested_{ false };
-        std::atomic < std::chrono::time_point<std::chrono::system_clock>> lastDrawnTime_;
-#ifndef __EMSCRIPTEN__
+#ifdef __EMSCRIPTEN__
+        std::atomic<bool> frameRequested_{ false }; // not to order too often
+#else
         AsyncRequest asyncRequest_;
 #endif
     };
 
     FrameRedrawRequest frameRequest_;
+
+    // parameter is needed for logging progress
+    std::atomic<int> percents_;
 
     std::thread thread_;
     TaskWithMainThreadPostProcessing task_;

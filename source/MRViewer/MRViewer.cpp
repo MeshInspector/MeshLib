@@ -1245,7 +1245,7 @@ void Viewer::recursiveDraw_( const Viewport& vp, const Object& obj, const Affine
     if ( visObj && ( renderType == getObjRenderType_( visObj, vp.id ) ) )
     {
         bool alphaNeed = renderType == VisualObjectRenderType::Transparent && alphaSortEnabled_;
-        vp.draw( *visObj, xfCopy, false, alphaNeed );
+        vp.draw( *visObj, xfCopy, DepthFuncion::Default, alphaNeed );
         if ( numDraws )
             ++( *numDraws );
     }

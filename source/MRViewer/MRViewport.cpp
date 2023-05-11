@@ -63,12 +63,14 @@ void Viewport::shut()
 // draw functions part
 
 
-void Viewport::draw(const VisualObject& obj, const AffineXf3f& xf, bool forceZBuffer, bool alphaSort ) const
+void Viewport::draw(const VisualObject& obj, const AffineXf3f& xf, 
+     DepthFuncion depthFunc, bool alphaSort ) const
 {
-    draw( obj, xf, projM_, forceZBuffer, alphaSort );
+    draw( obj, xf, projM_, depthFunc, alphaSort );
 }
 
-void Viewport::draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f & projM, bool forceZBuffer, bool alphaSort ) const
+void Viewport::draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f& projM,
+     DepthFuncion depthFunc, bool alphaSort ) const
 {
     auto modelTemp = Matrix4f( xf );
     auto normTemp = viewM_ * modelTemp;
@@ -90,9 +92,9 @@ void Viewport::draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix
 
     RenderParams params
     {
-        {viewM_.data(), modelTemp.data(), projM.data(), normM.data(),
-        id, params_.clippingPlane, toVec4<int>( viewportRect_ )},
-        params_.lightPosition, forceZBuffer, alphaSort
+        {viewM_, modelTemp, projM, &normM,
+        id, params_.clippingPlane, toVec4<int>( viewportRect_ ),depthFunc},
+        params_.lightPosition, alphaSort
     };
     obj.render( params );
 }
@@ -140,7 +142,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
     std::vector<Vector2i> picks( viewportPoints.size() );
     ViewportGL::PickParameters params{
         renderVector,
-        {viewM_.data(),projM_.data(),toVec4<int>( viewportRect_ )},
+        {viewM_,projM_,toVec4<int>( viewportRect_ )},
         params_.clippingPlane,id};
 
     for ( int i = 0; i < viewportPoints.size(); ++i )
@@ -240,7 +242,7 @@ std::vector<std::shared_ptr<MR::VisualObject>> Viewport::findObjectsInRect( cons
 
     ViewportGL::PickParameters params{
         renderVector,
-        {viewM_.data(),projM_.data(),toVec4<int>( viewportRect_ )},
+        {viewM_,projM_,toVec4<int>( viewportRect_ )},
         params_.clippingPlane,id };
 
     auto viewportRect = Box2i( Vector2i( 0, 0 ), Vector2i( int( width( viewportRect_ ) ), int( height( viewportRect_ ) ) ) );
@@ -496,7 +498,7 @@ void Viewport::draw_axes() const
 
         float scale = (transSide - transBase).length();
         const auto basisAxesXf = AffineXf3f( Matrix3f::scale( scale ), transBase );
-        draw( *Viewer::constInstance()->basisAxes, basisAxesXf, staticProj_, true );
+        draw( *Viewer::constInstance()->basisAxes, basisAxesXf, staticProj_, DepthFuncion::Always );
         draw( *Viewer::constInstance()->basisAxes, basisAxesXf, staticProj_ );
         for ( const auto& child : getViewerInstance().basisAxes->children() )
         {

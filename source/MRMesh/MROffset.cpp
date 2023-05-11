@@ -69,14 +69,18 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
     {
         // Compute signs for initially unsigned distance field
         auto sp = subprogress( params.callBack, 0.33f, 0.66f );
-        auto signRes = makeSignedWithFastWinding( grid, Vector3f::diagonal( voxelSize ), mp.mesh, {}, sp );
+        auto signRes = makeSignedWithFastWinding( grid, Vector3f::diagonal( voxelSize ), mp.mesh, {}, params.fwn, sp );
         if ( !signRes.has_value() )
             return tl::make_unexpected( signRes.error() );
     }
 
     // Make offset mesh
-    auto newMesh = gridToMesh( std::move( grid ), voxelSizeVector, offsetInVoxels, params.adaptivity, 
-        subprogress( params.callBack, signPostprocess ? 0.66f : 0.5f, 1.0f ) );
+    auto newMesh = gridToMesh( std::move( grid ), GridToMeshSettings{
+        .voxelSize = voxelSizeVector,
+        .isoValue = offsetInVoxels,
+        .adaptivity = params.adaptivity,
+        .cb = subprogress( params.callBack, signPostprocess ? 0.66f : 0.5f, 1.0f )
+    } );
 
     if ( !newMesh.has_value() )
         return tl::make_unexpected( "Operation was canceled." );
@@ -91,7 +95,7 @@ tl::expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offs
     {
         spdlog::warn( "Cannot use shell for double offset, using offset mode instead." );
     }
-    return levelSetDoubleConvertion( mp, AffineXf3f(), params.voxelSize, offsetA, offsetB, params.adaptivity, params.callBack );
+    return levelSetDoubleConvertion( mp, AffineXf3f(), params.voxelSize, offsetA, offsetB, params.adaptivity, params.fwn, params.callBack );
 }
 
 tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, 
@@ -109,9 +113,9 @@ tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
             return tl::make_unexpected( "Operation was canceled." );
 
         VdbVolume volume = floatGridToVdbVolume( voxelRes );
+        volume.voxelSize = Vector3f::diagonal( params.voxelSize );
 
         VolumeToMeshParams vmParams;
-        vmParams.basis.A = Matrix3f::scale( params.voxelSize );
         vmParams.iso = offsetInVoxels;
         vmParams.lessInside = true;
         vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
@@ -129,19 +133,20 @@ tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         auto box = mesh.getBoundingBox();
         auto absOffset = std::abs( offset );
         auto expansion = 3.0f * Vector3f::diagonal( params.voxelSize ) + 2.0f * Vector3f::diagonal( absOffset );
-        msParams.basis.b = box.min - expansion;
-        msParams.basis.A = Matrix3f::scale( params.voxelSize );
-        msParams.dimensions = Vector3i( ( box.max + expansion - msParams.basis.b ) / params.voxelSize ) + Vector3i::diagonal( 1 );
+        msParams.origin = box.min - expansion;
+        msParams.voxelSize = Vector3f::diagonal( params.voxelSize );
+        msParams.dimensions = Vector3i( ( box.max + expansion - msParams.origin ) / params.voxelSize ) + Vector3i::diagonal( 1 );
         msParams.signMode = *params.simpleVolumeSignMode;
         msParams.maxDistSq = sqr( absOffset + params.voxelSize );
         msParams.minDistSq = sqr( std::max( absOffset - params.voxelSize, 0.0f ) );
+        msParams.fwn = params.fwn;
         
         auto volume = meshToSimpleVolume( mesh, msParams );
         if ( !volume )
             return tl::make_unexpected( "Operation was canceled." );
 
         VolumeToMeshParams vmParams;
-        vmParams.basis = msParams.basis;
+        vmParams.origin = msParams.origin;
         vmParams.iso = offset;
         vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
         vmParams.lessInside = true;

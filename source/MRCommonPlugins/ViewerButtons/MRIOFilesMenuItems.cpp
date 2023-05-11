@@ -252,6 +252,7 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
                     }
                     
                     obj->select( true );
+                    obj->setXf( res->xf );
                     voxelObjects.push_back( obj );
                 }
                 else if ( ProgressBar::isCanceled() )
@@ -291,7 +292,7 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
             if ( menu )
                 menu->showErrorModal( "Cannot open given folder, find more in log." );
         };
-    }, 2 );
+    }, 3 );
 }
 #endif
 

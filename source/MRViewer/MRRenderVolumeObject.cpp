@@ -88,9 +88,9 @@ void RenderVolumeObject::render_( const BaseRenderParams& renderParams, unsigned
     auto shader = picker ? GLStaticHolder::getShaderId( GLStaticHolder::VolumePicker ) :
         GLStaticHolder::getShaderId( GLStaticHolder::Volume );
 
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrixPtr ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrixPtr ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrixPtr ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrix.data() ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrix.data() ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrix.data() ) );
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ),
         objVoxels_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) ) );
@@ -156,7 +156,12 @@ void RenderVolumeObject::render_( const BaseRenderParams& renderParams, unsigned
     GL_EXEC( glDisable( GL_MULTISAMPLE ) );
     GL_EXEC( glEnable( GL_CULL_FACE ) );
     GL_EXEC( glCullFace( GL_BACK ) );
+
+    // currently only less supported for volume rendering
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Less ) ) );
     GL_EXEC( glDrawElements( GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
+
     GL_EXEC( glDisable( GL_CULL_FACE ) );
     GL_EXEC( glEnable( GL_MULTISAMPLE ) );
 }

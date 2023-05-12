@@ -4,22 +4,29 @@
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRRingIterator.h"
+#include "MRMesh/MRObjectLines.h"
+#include "MRMesh/MRPolyline.h"
+#include "MRMesh/MRPolylineEdgeIterator.h"
 #include "MRViewer.h"
 
 namespace MR
 {
 
 // check that we see point (projected mouse position) on edge
-bool isOnTheScreen( const std::shared_ptr<ObjectMesh>& objMesh, const Vector3f& projPoint, const FaceId& faceId )
+bool isOnTheScreen( const std::shared_ptr<Object>& obj, const Vector3f& projPoint, const FaceId& faceId )
 {
     Viewport& viewport = Viewer::instanceRef().viewport();
 
     Vector2f projPoint2f = Vector2f( projPoint.x, projPoint.y );
     auto pick = viewport.pick_render_object( projPoint2f );
-    if ( pick.first && pick.first != objMesh )
+    if ( pick.first && pick.first != obj )
         return false;
     auto clipPick = viewport.projectToViewportSpace( pick.second.point );
     return ( !pick.second.face.valid() ) || pick.second.face == faceId || ( clipPick.z - projPoint.z >= 0.f );
+}
+bool isOnTheScreen( const std::shared_ptr<Object>& obj, const Vector3f& projPoint, const UndirectedEdgeId& edgeId )
+{
+    return isOnTheScreen( obj, projPoint, FaceId( int( edgeId ) ) );
 }
 
 // find squared distance from point Q to line segment Segm
@@ -111,6 +118,42 @@ HoleEdgePoint findClosestToMouseHoleEdge( const Vector2i& mousePos, const std::s
     return result;
 }
 
+HoleEdgePoint findClosestToMouseEdge( const Vector2i& mousePos, const std::vector<std::shared_ptr<ObjectLines>>& objsLines, float accuracy /*= 5.5f */ )
+{
+    Viewer& viewerRef = getViewerInstance();
+    Viewport& viewport = viewerRef.viewport();
 
+    auto mousePix = Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f );
+    mousePix = viewerRef.screenToViewport( mousePix, viewport.id );
+
+    Vector3f projPointOut;
+    float posOnEdge = 0.f;
+    float minDistEdge = accuracy * accuracy;
+
+    HoleEdgePoint result;
+
+    for ( int i = 0; i < objsLines.size(); ++i )
+    {
+        const auto& objLines = objsLines[i];
+        const Polyline3& polyline = *objLines->polyline();
+        auto xf = objLines->worldXf();
+        for ( auto ue : undirectedEdges( polyline.topology ) )
+        {
+            EdgeId e = ue;
+            auto pOrg = xf( polyline.orgPnt( e ) );
+            auto orgPix = viewport.projectToViewportSpace( pOrg );
+            auto pDest = xf( polyline.destPnt( e ) );
+            auto destPix = viewport.projectToViewportSpace( pDest );
+            auto dist = findPixelDistSq( mousePix, { orgPix, destPix }, projPointOut, posOnEdge );
+            if ( dist < minDistEdge && isOnTheScreen( objLines, projPointOut, ue ) )
+            {
+                minDistEdge = dist;
+                result = { i, { EdgeId(size_t(ue)), posOnEdge } };
+            }
+        }
+    }
+
+    return result;
+}
 
 }

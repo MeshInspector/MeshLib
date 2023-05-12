@@ -94,13 +94,13 @@ size_t RenderLinesObject::glBytes() const
 void RenderLinesObject::forceBindAll()
 {
     update_();
-    bindLines_( GLStaticHolder::DrawLines );
-    bindLines_( GLStaticHolder::DrawLinesJoint );
+    bindLines_( GLStaticHolder::Lines );
+    bindLines_( GLStaticHolder::LinesJoint );
 }
 
 void RenderLinesObject::render_( const RenderParams& renderParams, bool points )
 {
-    auto shaderType = points ? GLStaticHolder::DrawLinesJoint : GLStaticHolder::DrawLines;
+    auto shaderType = points ? GLStaticHolder::LinesJoint : GLStaticHolder::Lines;
     bindLines_( shaderType );
     auto shader = GLStaticHolder::getShaderId( shaderType );
 
@@ -222,9 +222,9 @@ void RenderLinesObject::bindPositions_( GLuint shaderId )
         {
             const auto& polyline = objLines_->polyline();
             const auto& topology = polyline->topology;
-            auto numL = topology.lastNotLoneEdge() + 1;
+            auto numL = topology.lastNotLoneEdge().undirected() + 1;
             positions.resize( 2 * numL );
-            lineIndicesSize_ = numL >> 1;
+            lineIndicesSize_ = numL;
             auto lastValidVert = topology.lastValidVert() - 1;
             tbb::parallel_for( tbb::blocked_range<int>( 0, lineIndicesSize_ ), [&] ( const tbb::blocked_range<int>& range )
             {
@@ -280,9 +280,9 @@ void RenderLinesObject::bindLines_( GLStaticHolder::ShaderType shaderType )
         {
             const auto& polyline = objLines_->polyline();
             const auto& topology = polyline->topology;
-            auto numL = topology.lastNotLoneEdge() + 1;
+            auto numL = topology.lastNotLoneEdge().undirected() + 1;
             textVertColorMap.resize( 2 * numL );
-            auto undirEdgesSize = numL >> 1;
+            auto undirEdgesSize = numL;
             const auto& vertsColorMap = objLines_->getVertsColorMap();
             auto lastValidVert = topology.lastValidVert() - 1;
             tbb::parallel_for( tbb::blocked_range<int>( 0, undirEdgesSize ), [&] ( const tbb::blocked_range<int>& range )

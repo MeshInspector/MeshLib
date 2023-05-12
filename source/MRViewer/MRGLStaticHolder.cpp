@@ -16,14 +16,18 @@ std::string getShaderName( MR::GLStaticHolder::ShaderType type )
         "Mesh shader",
         "Picker shader",
         "Alpha-sort mesh shader",
-        "Mesh border shader",
-        "Alpha-sort mesh border shader",
+
         "Points shader",
+
         "Lines shader",
         "Lines joint shader",
         "Lines picker shader",
         "Lines joint picker shader",
+
+        "Alpha-sort lines shader",
+
         "Labels shader",
+
         "Viewport lines shader",
         "Viewport points shader",
         "Viewport points shader (no offset)",
@@ -32,6 +36,7 @@ std::string getShaderName( MR::GLStaticHolder::ShaderType type )
         "Alpha-sort overlay shader",
         "Shadow overlay shader",
         "Simple overlay shader",
+
         "Volume shader",
         "Volume picker shader"
     };
@@ -102,7 +107,7 @@ void GLStaticHolder::createShader_( ShaderType type )
         else
             fragmentShader = getVolumePickerFragmentShader();
     }
-    else if ( type == DrawMesh || type == TransparentMesh )
+    else if ( type == Mesh || type == TransparentMesh )
     {
         vertexShader = getMeshVerticesShader();
 
@@ -116,12 +121,12 @@ void GLStaticHolder::createShader_( ShaderType type )
         
         fragmentShader = getMeshFragmentShader( gl4, alphaSort );
     }
-    else if ( type == DrawLines || type == DrawLinesJoint )
+    else if ( type == Lines || type == LinesJoint || type == TransparentLines )
     {
-        if ( type == DrawLines )
+        if ( type == Lines || type == TransparentLines )
         {
             vertexShader = getLinesVertexShader();
-            fragmentShader = getLinesFragmentShader();
+            fragmentShader = getLinesFragmentShader( type == TransparentLines );
         }
         else
         {
@@ -316,102 +321,6 @@ void GLStaticHolder::createShader_( ShaderType type )
       discard;
   }
 )";
-    }
-    else if ( type == MeshBorder || type == TransparentMeshBorder )
-    {
-        vertexShader =
-            MR_GLSL_VERSION_LINE R"(
-            precision highp float;
-            precision highp int;
-  uniform mat4 view;
-  uniform mat4 proj;
-  uniform mat4 model;
-  uniform vec4 uniformColor;
-
-  in vec3 position;
-  out vec4 color_frag;
-  out vec3 world_pos;    // (out to fragment shader) vert transformed position
-
-  void main()
-  {
-    world_pos = vec3(model*vec4 (position, 1.0));
-    gl_Position = proj * view * vec4(world_pos, 1.0);
-    color_frag = uniformColor;
-  }
-)";
-        if ( type == MeshBorder )
-        {
-            fragmentShader =
-                MR_GLSL_VERSION_LINE R"(
-                precision highp float;
-            precision highp int;
-  uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true
-  uniform vec4 clippingPlane;        // (in from base) clipping plane
-  uniform float globalAlpha;        // (in from base) global transparency multiplier
-
-  in vec3 world_pos;                 // (in from vertex shader) vert transformed position
-  in vec4 color_frag;
-  out vec4 outColor;
-  void main()
-  {
-    if (useClippingPlane && dot(world_pos,vec3(clippingPlane))>clippingPlane.w)
-      discard;
-    outColor = color_frag;
-    outColor.a = outColor.a * globalAlpha;
-    if (outColor.a == 0.0)
-      discard;
-  }
-)";
-        }
-        else
-        {
-            fragmentShader =
-                R"(#version 430 core
-  layout (early_fragment_tests) in;
-
-  struct Node 
-  {
-    vec4 color;
-    float depth;
-    uint next;
-  };
-
-  layout (binding = 0, r32ui)      uniform uimage2D    heads;
-  layout (binding = 0, offset = 0) uniform atomic_uint numNodes;
-
-  layout (binding = 0, std430 ) buffer Lists
-  {
-    Node nodes [];
-  };
-
-  uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true
-  uniform vec4 clippingPlane;        // (in from base) clipping plane
-  uniform float globalAlpha;        // (in from base) global transparency multiplier
-
-  in vec3 world_pos;                 // (in from vertex shader) vert transformed position
-  in vec4 color_frag;
-  out vec4 outColor;
-  void main()
-  {
-    if (useClippingPlane && dot(world_pos,vec3(clippingPlane))>clippingPlane.w)
-      discard;
-    outColor = color_frag;
-    outColor.a = outColor.a * globalAlpha;
-
-    uint nodeIndex = atomicCounterIncrement ( numNodes );
-    
-    // is there any space ?
-    {
-        uint prev = imageAtomicExchange ( heads, ivec2 ( gl_FragCoord.xy ), nodeIndex );
-
-        nodes [nodeIndex].color = outColor;
-        nodes [nodeIndex].depth = gl_FragCoord.z;
-        nodes [nodeIndex].next  = prev;
-    }
-    discard;
-  }
-)";
-        }
     }
     else if ( type == Labels )
     {

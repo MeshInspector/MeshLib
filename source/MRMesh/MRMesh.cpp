@@ -547,7 +547,12 @@ QuadraticForm3f Mesh::quadraticForm( VertId v, const FaceBitSet * region ) const
     for ( EdgeId e : orgRing( topology, v ) )
     {
         if ( topology.isBdEdge( e, region ) )
-            qf.addDistToLine( edgeVector( e ).normalized() );
+        {
+            const auto vec = edgeVector( e );
+            const auto len = vec.length();
+            if ( len > 0 )
+                qf.addDistToLine( ( 1 / len ) * vec );
+        }
         if ( topology.isLeftInRegion( e, region ) )
             qf.addDistToPlane( leftNormal( e ) );
     }

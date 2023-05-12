@@ -547,9 +547,17 @@ QuadraticForm3f Mesh::quadraticForm( VertId v, const FaceBitSet * region ) const
     for ( EdgeId e : orgRing( topology, v ) )
     {
         if ( topology.isBdEdge( e, region ) )
+        {
+            // zero-length boundary edge is treated as uniform stabilizer: all shift directions are equally penalized,
+            // otherwise it penalizes the shift proportionally to the distance from the line containing the edge
             qf.addDistToLine( edgeVector( e ).normalized() );
+        }
         if ( topology.isLeftInRegion( e, region ) )
+        {
+            // zero-area triangle is treated as no triangle with no penalty at all,
+            // otherwise it penalizes the shift proportionally to the distance from the plane containing the triangle
             qf.addDistToPlane( leftNormal( e ) );
+        }
     }
     return qf;
 }

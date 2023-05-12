@@ -942,6 +942,9 @@
     <ClInclude Include="MRParallelFor.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRToolPath.h">
+      <Filter>Source Files\SurfacePath</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1564,6 +1567,9 @@
     </ClCompile>
     <ClCompile Include="MRGltfSerializer.cpp">
       <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRToolPath.cpp">
+      <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

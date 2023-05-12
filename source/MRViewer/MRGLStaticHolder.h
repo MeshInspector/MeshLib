@@ -14,18 +14,18 @@ public:
     typedef unsigned int GLuint;
     enum ShaderType
     {
-        DrawMesh,
+        Mesh,
         Picker,
         TransparentMesh,
-        MeshBorder,
-        TransparentMeshBorder,
 
         DrawPoints,
 
-        DrawLines,
-        DrawLinesJoint,
+        Lines,
+        LinesJoint,
         LinesPicker,
         LinesJointPicker,
+
+        TransparentLines,
 
         Labels,
 

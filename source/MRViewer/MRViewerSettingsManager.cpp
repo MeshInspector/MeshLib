@@ -26,6 +26,7 @@ const std::string cMainWindowMaximized = "mainWindowMaximized";
 const std::string cRibbonLeftWindowSize = "ribbonLeftWindowSize";
 const std::string cShowSelectedObjects = "showSelectedObjects";
 const std::string lastExtextentionsParamKey = "lastExtextentions";
+const std::string cSpaceMouseSettings = "spaceMouseSettings";
 const std::string cMSAA = "multisampleAntiAliasing";
 }
 
@@ -208,7 +209,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
                 lastExtentionNums_[i] = 0;
         }
     }
-/*
+
     if ( cfg.hasJsonValue( cSpaceMouseSettings ) )
     {
         const auto& paramsJson = cfg.getJsonValue( cSpaceMouseSettings );
@@ -218,23 +219,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         if ( paramsJson.isMember( "rotateScale" ) )
             deserializeFromJson( paramsJson["rotateScale"], spaceMouseParams.rotateScale );
         viewer.spaceMouseController.setParams( spaceMouseParams );
-
-#ifdef _WIN32
-        if ( paramsJson.isMember( "activeMouseScrollZoom" ) && paramsJson["activeMouseScrollZoom"].isBool() )
-        {
-            if ( auto spaceMouseHandler =  viewer.getSpaceMouseHandler() )
-            {
-                auto winHandler = std::dynamic_pointer_cast< SpaceMouseHandlerWindows >( spaceMouseHandler );
-                if ( winHandler )
-                {
-                    const bool activeMouseScrollZoom = paramsJson["activeMouseScrollZoom"].asBool();
-                    winHandler->activateMouseScrollZoom( activeMouseScrollZoom );
-                }
-            }
-        }
-#endif
     }
-    */
 }
 
 void ViewerSettingsManager::saveSettings( const Viewer& viewer )
@@ -296,6 +281,11 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     {
         cfg.setBool( cShowSelectedObjects, ribbonMenu->getShowNewSelectedObjects() );
     }
+    Json::Value spaceMouseParamsJson;
+    SpaceMouseController::Params spaceMouseParams = viewer.spaceMouseController.getParams();
+    serializeToJson( spaceMouseParams.translateScale, spaceMouseParamsJson["translateScale"] );
+    serializeToJson( spaceMouseParams.rotateScale, spaceMouseParamsJson["rotateScale"] );
+    cfg.setJsonValue( cSpaceMouseSettings, spaceMouseParamsJson );
 }
 
 int ViewerSettingsManager::getLastExtentionNum( ObjType objType )

@@ -19,7 +19,7 @@
 
 namespace MR
 {
-class SpaceMouseHandlerHidapi : public SpaceMouseHandler, public MultiListener<PostFocusListener>
+class SpaceMouseHandlerHidapi : public SpaceMouseHandler, public PostFocusListener
 {
     typedef std::array<unsigned char, 13> DataPacketRaw;
     typedef short unsigned int VendorId;

@@ -72,24 +72,14 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     if ( UI::button( "Show Hotkeys", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu_ )
         ribbonMenu_->setShowShortcuts( true );
 
-    /*
     ImGui::SameLine();
     if ( UI::button( "Spacemouse Settings", Vector2f( btnHalfSizeX, 0 ) ) )
     {
         auto& viewerRef = getViewerInstance();
         spaceMouseParams_ = viewerRef.spaceMouseController.getParams();
-#ifdef _WIN32
-        if ( auto spaceMouseHandler = viewerRef.getSpaceMouseHandler() )
-        {
-            auto winHandler = std::dynamic_pointer_cast<SpaceMouseHandlerWindows>( spaceMouseHandler );
-            if ( winHandler )
-                activeMouseScrollZoom_ = winHandler->isMouseScrollZoomActive();
-        }
-#endif
         ImGui::OpenPopup( "Spacemouse Settings" );
     }
     drawSpaceMouseSettings_( menuScaling );
-    */
 
     const auto& viewportParameters = viewer->viewport().getParameters();
     // Viewing options
@@ -427,7 +417,6 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
     ImGui::EndPopup();
 }
 
-/*
 void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
 {
     ImVec2 windowSize = ImVec2( 450 * scaling, 0);
@@ -485,29 +474,12 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
     drawSlider( "Oy##rotate", spaceMouseParams_.rotateScale[1] );
     drawSlider( "Oz##rotate", spaceMouseParams_.rotateScale[2] );
 
-#ifdef _WIN32
-    ImGui::NewLine();
-    if ( UI::checkbox( "Zoom by mouse wheel", &activeMouseScrollZoom_ ) )
-    {
-        if ( auto spaceMouseHandler = getViewerInstance().getSpaceMouseHandler() )
-        {
-            auto winHandler = std::dynamic_pointer_cast< SpaceMouseHandlerWindows >( spaceMouseHandler );
-            if ( winHandler )
-            {
-                winHandler->activateMouseScrollZoom( activeMouseScrollZoom_ );
-            }
-        }
-    }
-    UI::setTooltipIfHovered( "This mode is NOT recommended if you have 3Dconnexion driver installed, which sends mouse wheel fake events resulting in double reaction on SpaceMouse movement and camera tremble.", scaling );
-#endif
-
     if ( anyChanged )
         getViewerInstance().spaceMouseController.setParams( spaceMouseParams_ );
 
     ImGui::PopStyleVar();
     ImGui::EndPopup();
 }
-*/
 
 void ViewerSettingsPlugin::drawModalExitButton_( float scaling )
 {

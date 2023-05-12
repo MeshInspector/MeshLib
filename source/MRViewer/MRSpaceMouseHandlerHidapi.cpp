@@ -13,7 +13,7 @@ SpaceMouseHandlerHidapi::SpaceMouseHandlerHidapi()
         , dataPacket_({0})
         , packetLength_(0)
 {
-    connect( &getViewerInstance() );
+    connect( &getViewerInstance(), 0, boost::signals2::connect_position::at_back );
 }
 
 SpaceMouseHandlerHidapi::~SpaceMouseHandlerHidapi()

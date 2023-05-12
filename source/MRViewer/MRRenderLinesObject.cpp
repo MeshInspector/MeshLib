@@ -222,7 +222,8 @@ void RenderLinesObject::bindPositions_( GLuint shaderId )
         {
             const auto& polyline = objLines_->polyline();
             const auto& topology = polyline->topology;
-            auto numL = topology.lastNotLoneEdge().undirected() + 1;
+            auto lastValid = topology.lastNotLoneEdge();
+            auto numL = lastValid.valid() ? lastValid.undirected() + 1 : 0;
             positions.resize( 2 * numL );
             lineIndicesSize_ = numL;
             auto lastValidVert = topology.lastValidVert() - 1;
@@ -280,7 +281,8 @@ void RenderLinesObject::bindLines_( GLStaticHolder::ShaderType shaderType )
         {
             const auto& polyline = objLines_->polyline();
             const auto& topology = polyline->topology;
-            auto numL = topology.lastNotLoneEdge().undirected() + 1;
+            auto lastValid = topology.lastNotLoneEdge();
+            auto numL = lastValid.valid() ? lastValid.undirected() + 1 : 0;
             textVertColorMap.resize( 2 * numL );
             auto undirEdgesSize = numL;
             const auto& vertsColorMap = objLines_->getVertsColorMap();

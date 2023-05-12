@@ -410,7 +410,8 @@ void RenderMeshObject::bindEdges_()
     {
         const auto& mesh = *objMesh_->mesh();
         const auto& topology = mesh.topology;
-        edgeSize_ = topology.lastNotLoneEdge().undirected() + 1;
+        auto lastValid = topology.lastNotLoneEdge();
+        edgeSize_ = lastValid.valid() ? lastValid.undirected() + 1 : 0;
         auto lastE = UndirectedEdgeId( edgeSize_ - 1 );
         positions.resize( edgeSize_ * 2 );
         tbb::parallel_for( tbb::blocked_range<int>( 0, int( edgeSize_ ) ), [&] ( const tbb::blocked_range<int>& range )

@@ -190,15 +190,15 @@ std::string getLinesVertexShader()
         getFragmentShaderEndBlock( false );
 }
 
-std::string getLinesFragmentShader()
+std::string getLinesFragmentShader( bool alphaSort )
 {
     return
-        getLinesShaderHeaderBlock() +
+        getFragmentShaderHeaderBlock( alphaSort, alphaSort ) +
         getLinesFragmentShaderArgumentsBlock() +
         getShaderMainBeginBlock() +
         getFragmentShaderClippingBlock() +
         getLinesFragmentShaderColoringBlock() +
-        getFragmentShaderEndBlock( false );
+        getFragmentShaderEndBlock( alphaSort );
 }
 
 std::string getLinesJointVertexShader()

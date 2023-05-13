@@ -33,7 +33,10 @@ bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f
 
     auto metricAC = std::max( circumcircleDiameterSq( a, c, d ), circumcircleDiameterSq( c, a, b ) );
     auto metricBD = std::max( circumcircleDiameterSq( b, d, a ), circumcircleDiameterSq( d, b, c ) );
-    return metricAC <= metricBD;
+
+    // there should be significant difference in metrics (above floating point error) to return false
+    constexpr float eps = 1e-5f;
+    return ( metricAC - metricBD ) <= eps * ( metricAC + metricBD );
 }
 
 bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings, float * deviationSqAfterFlip )

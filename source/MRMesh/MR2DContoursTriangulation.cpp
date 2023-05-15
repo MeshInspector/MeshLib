@@ -35,6 +35,7 @@ public:
 private:
     Mesh mesh_;
     bool abortWhenIntersect_ = false;
+    // this flag is set true if triangulation requires merging of two points that is forbidden
     bool incompleteMerge_ = false;
 
     struct EdgeWindingInfo

@@ -437,6 +437,7 @@ void RenderMeshObject::bindEdges_()
     edgesTexture_.loadData(
         { .resolution = res, .internalFormat = GL_RGB32UI, .format = GL_RGB_INTEGER, .type = GL_UNSIGNED_INT },
         positions );
+    dirtyEdges_ = false;
 }
 
 void RenderMeshObject::bindBorders_()

@@ -85,8 +85,6 @@ FaceBMap getOptimalFaceOrdering( const Mesh & mesh )
 
     FaceBMap res;
     const auto numFaces = mesh.topology.numValidFaces();
-    if ( numFaces <= 0 )
-        return res;
 
     res.b.resize( mesh.topology.faceSize() );
     res.tsize = numFaces;
@@ -168,7 +166,7 @@ VertBMap getVertexOrdering( const FaceBMap & faceMap, const MeshTopology & topol
     /// mapping: new vertex id -> old vertex id in v-field
     using VertexOrdering = Buffer<OrderedVertex, VertId>;
 
-    assert( topology.lastValidFace() < faceMap.b.size() );
+    assert( topology.lastValidFace() < (int)faceMap.b.size() );
     VertexOrdering ord( topology.vertSize() );
 
     Timer t( "fill" );
@@ -219,7 +217,7 @@ UndirectedEdgeBMap getEdgeOrdering( const FaceBMap & faceMap, const MeshTopology
     /// mapping: new vertex id -> old vertex id in v-field
     using EdgeOrdering = Buffer<OrderedEdge, UndirectedEdgeId>;
 
-    assert( topology.lastValidFace() < faceMap.b.size() );
+    assert( topology.lastValidFace() < (int)faceMap.b.size() );
     EdgeOrdering ord( topology.undirectedEdgeSize() );
 
     Timer t( "fill" );

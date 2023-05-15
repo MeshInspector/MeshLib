@@ -35,6 +35,7 @@ public:
 private:
     Mesh mesh_;
     bool abortWhenIntersect_ = false;
+    bool incompleteMerge_ = false;
 
     struct EdgeWindingInfo
     {
@@ -110,6 +111,8 @@ PlanarTriangulator::PlanarTriangulator( const Contours2d& contours, const HolesV
 std::optional<Mesh> PlanarTriangulator::run()
 {
     MR_TIMER;
+    if ( incompleteMerge_ )
+        return {};
     // process queue
     while ( !queue_.empty() )
     {
@@ -182,7 +185,6 @@ void PlanarTriangulator::initMeshByContours_( const Contours2d& contours )
 void PlanarTriangulator::mergeSamePoints_( const HolesVertIds* holesVertId )
 {
     MR_TIMER;
-
     auto findRealVertId = [&] ( VertId patchId )
     {
         int holeId = 0;
@@ -222,6 +224,8 @@ void PlanarTriangulator::mergeSamePoints_( const HolesVertIds* holesVertId )
         // if same coords
         if ( !holesVertId || findRealVertId( sortedPoints[prevUnique].id ) == findRealVertId( sortedPoints[i].id ) )
             mergeSinglePare_( sortedPoints[prevUnique].id, sortedPoints[i].id );
+        else
+            incompleteMerge_ = true;
     }
 
     removeMultipleAfterMerge_();
@@ -492,7 +496,7 @@ bool PlanarTriangulator::processOneVert_( VertId v )
     // find lowest rightGoingEdge (for correct insertion right edges into active sweep edges)
     auto findAngle = [&] ( const Vector3f& target, const Vector3f& baseVec )->float
     {
-        auto edgeVec = ( target - mesh_.points[v] ).normalized();
+        auto edgeVec = ( target - activePoint ).normalized();
         auto crossRes = cross( baseVec, edgeVec );
         float ang = std::atan2( std::copysign( crossRes.length(), crossRes.z ), dot( baseVec, edgeVec ) );
         if ( ang < 0.0f )
@@ -555,7 +559,7 @@ bool PlanarTriangulator::processOneVert_( VertId v )
         {
             const auto& orgPt = mesh_.orgPnt( loneInfo.id );
 
-            Vector3f baseVec = ( orgPt - mesh_.points[v] ).normalized();
+            Vector3f baseVec = ( orgPt - activePoint ).normalized();
             float maxDiffAng = -FLT_MAX;
             EdgeId maxDiffE;
             for ( auto e : orgRing( mesh_.topology, v ) )
@@ -574,8 +578,12 @@ bool PlanarTriangulator::processOneVert_( VertId v )
 
             windingInfo_.resize( newE.undirected() + 1 );
             windingInfo_[newE.undirected()].winding = 1; // mark inside
-            if ( maxDiffE == lowestLeftEdge && activePoint.y > orgPt.y )
-                lowestLeftEdge = newE.sym();
+            if ( maxDiffE == lowestLeftEdge )
+            {
+                const auto& p = mesh_.destPnt( lowestLeftEdge );
+                if ( cross( to2dim( p - activePoint ), to2dim( baseVec ) ) > 0.0f )
+                    lowestLeftEdge = newE.sym();
+            }
         };
         if ( activeVPosition != -1 && !activeSweepEdges_.empty() )
         {

@@ -230,7 +230,7 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
         break;
     }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "vertices" ), 0 ) );
-
+    bindEmptyTextures_( shader );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrix.data() ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrix.data() ) );
@@ -279,7 +279,7 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
     bindEdges_();
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "vertices" ), 0 ) );
-
+    bindEmptyTextures_( shader );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrix.data() ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrix.data() ) );
@@ -502,6 +502,24 @@ void RenderMeshObject::bindSelectedEdges_()
     selEdgesTexture_.loadData(
         { .resolution = res, .internalFormat = GL_RGB32UI, .format = GL_RGB_INTEGER, .type = GL_UNSIGNED_INT },
         positions );
+}
+
+void RenderMeshObject::bindEmptyTextures_(GLuint shaderId)
+{
+    // VertColors
+    GL_EXEC( glActiveTexture( GL_TEXTURE1 ) );
+    if ( !emptyVertsColorTexture_.valid() )
+        emptyVertsColorTexture_.gen();
+    emptyVertsColorTexture_.bind();
+    GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "vertColors" ), 1 ) );
+
+    // LineColors
+    GL_EXEC( glActiveTexture( GL_TEXTURE2 ) );
+    // bind empty texture
+    if ( !emptyLinesColorTexture_.valid() )
+        emptyLinesColorTexture_.gen();
+    emptyLinesColorTexture_.bind();
+    GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "lineColors" ), 2 ) );
 }
 
 void RenderMeshObject::drawMesh_( bool /*solid*/, ViewportId viewportId, bool picker ) const

@@ -73,4 +73,10 @@ void Solver::prepare( const MeshTopology & topology )
 
 } //anonymous namespace
 
+void NormalsToPoints::prepare( const MeshTopology & topology )
+{
+    solver_ = std::make_unique<Solver>();
+    solver_->prepare( topology );
+}
+
 } //namespace MR

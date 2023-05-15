@@ -124,18 +124,21 @@ FaceBMap getOptimalFaceOrdering( const Mesh & mesh )
         }
     } );
 
-    // to equally balance the load on threads, subdivide the task on
-    // a power of two subtasks, which is at least twice the hardware concurrency
-    int numThreads = 1;
-    int target = (int)tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism );
-    if ( target > 1 )
-        numThreads *= 2;
-    while ( target > 1 )
+    if ( facePoints.size() > 1 )
     {
-        numThreads *= 2;
-        target = ( target + 1 ) / 2;
+        // to equally balance the load on threads, subdivide the task on
+        // a power of two subtasks, which is at least twice the hardware concurrency
+        int numThreads = 1;
+        int target = (int)tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism );
+        if ( target > 1 )
+            numThreads *= 2;
+        while ( target > 1 )
+        {
+            numThreads *= 2;
+            target = ( target + 1 ) / 2;
+        }
+        orderFacePoints( { begin( facePoints ), end( facePoints ) }, numThreads );
     }
-    orderFacePoints( { begin( facePoints ), end( facePoints ) }, numThreads );
 
     tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, facePoints.endId() ),
         [&]( const tbb::blocked_range<FaceId>& range )

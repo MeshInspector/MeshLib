@@ -208,8 +208,8 @@ void SpaceMouseHandlerHidapi::printDevices_( struct hid_device_info *cur_dev ) {
     {
         if ( vendor2device_.find( cur_dev->vendor_id) != vendor2device_.end() )
         {
-            spdlog::info( "Device Found: type: {} {} path: {} ", cur_dev->vendor_id, cur_dev->product_id, cur_dev->path );
-            spdlog::info( "{} {}", cur_dev->usage, cur_dev->usage_page );
+            spdlog::debug( "Device Found: type: {} {} path: {} ", cur_dev->vendor_id, cur_dev->product_id, cur_dev->path );
+            spdlog::debug( "{} {}", cur_dev->usage, cur_dev->usage_page );
         }
         cur_dev = cur_dev->next;
     }

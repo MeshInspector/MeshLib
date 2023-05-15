@@ -68,6 +68,8 @@ protected:
     GlTexture2 edgesTexture_;
     GlTexture2 selEdgesTexture_;
     GlTexture2 borderTexture_;
+    GlTexture2 emptyVertsColorTexture_;
+    GlTexture2 emptyLinesColorTexture_;
 
     int maxTexSize_{ 0 };
 
@@ -82,6 +84,7 @@ protected:
     MRVIEWER_API virtual void bindEdges_();
     MRVIEWER_API virtual void bindBorders_();
     MRVIEWER_API virtual void bindSelectedEdges_();
+    MRVIEWER_API virtual void bindEmptyTextures_( GLuint shaderId );
 
     MRVIEWER_API virtual void drawMesh_( bool solid, ViewportId viewportId, bool picker = false ) const;
 

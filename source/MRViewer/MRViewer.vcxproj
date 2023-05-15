@@ -26,6 +26,7 @@
     <ClCompile Include="MRRenderVolumeObject.cpp" />
     <ClCompile Include="MRSceneSelectionChange.cpp" />
     <ClCompile Include="MRShaderBlocks.cpp" />
+    <ClCompile Include="MRSpaceMouseHandlerHidapi.cpp" />
     <ClCompile Include="MRToolbar.cpp" />
     <ClCompile Include="MRTouchesHandler.cpp" />
     <ClCompile Include="MRTouchesController.cpp" />
@@ -47,7 +48,6 @@
     <ClCompile Include="MRShadowsGL.cpp" />
     <ClCompile Include="MRShortcutManager.cpp" />
     <ClCompile Include="MRSpaceMouseController.cpp" />
-    <ClCompile Include="MRSpaceMouseHandlerWindows.cpp" />
     <ClCompile Include="MRSplashWindow.cpp" />
     <ClCompile Include="MRStatePlugin.cpp" />
     <ClCompile Include="MRDemoPlugin.cpp" />
@@ -99,6 +99,7 @@
     <ClInclude Include="MRRenderVolumeObject.h" />
     <ClInclude Include="MRSceneSelectionChange.h" />
     <ClInclude Include="MRShaderBlocks.h" />
+    <ClInclude Include="MRSpaceMouseHandlerHidapi.h" />
     <ClInclude Include="MRToolbar.h" />
     <ClInclude Include="MRTouchesController.h" />
     <ClInclude Include="MRObjectMeshHistory.h" />
@@ -121,7 +122,6 @@
     <ClInclude Include="MRShortcutManager.h" />
     <ClInclude Include="MRSpaceMouseController.h" />
     <ClInclude Include="MRSpaceMouseHandler.h" />
-    <ClInclude Include="MRSpaceMouseHandlerWindows.h" />
     <ClInclude Include="MRSplashWindow.h" />
     <ClInclude Include="MRStatePlugin.h" />
     <ClInclude Include="MRDemoPlugin.h" />

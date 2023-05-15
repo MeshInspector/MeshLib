@@ -238,9 +238,6 @@
     <ClCompile Include="MRShadowsGL.cpp">
       <Filter>Render</Filter>
     </ClCompile>
-    <ClCompile Include="MRSpaceMouseHandlerWindows.cpp">
-      <Filter>SpaceMouse</Filter>
-    </ClCompile>
     <ClCompile Include="MRSpaceMouseController.cpp">
       <Filter>ShortcutManager</Filter>
     </ClCompile>
@@ -265,6 +262,8 @@
     <ClCompile Include="MRShaderBlocks.cpp">
       <Filter>Render\Shaders</Filter>
     </ClCompile>
+    <ClCompile Include="MRSpaceMouseHandlerHidapi.cpp">
+      <Filter>SpaceMouse</Filter>
     <ClCompile Include="MRMeshShader.cpp">
       <Filter>Render\Shaders</Filter>
     </ClCompile>
@@ -476,9 +475,6 @@
     <ClInclude Include="MRSpaceMouseHandler.h">
       <Filter>SpaceMouse</Filter>
     </ClInclude>
-    <ClInclude Include="MRSpaceMouseHandlerWindows.h">
-      <Filter>SpaceMouse</Filter>
-    </ClInclude>
     <ClInclude Include="MRSpaceMouseController.h">
       <Filter>ShortcutManager</Filter>
     </ClInclude>
@@ -503,6 +499,8 @@
     <ClInclude Include="MRShaderBlocks.h">
       <Filter>Render\Shaders</Filter>
     </ClInclude>
+    <ClInclude Include="MRSpaceMouseHandlerHidapi.h">
+      <Filter>SpaceMouse</Filter>
     <ClInclude Include="MRMeshShader.h">
       <Filter>Render\Shaders</Filter>
     </ClInclude>

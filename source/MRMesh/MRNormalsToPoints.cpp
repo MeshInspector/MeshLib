@@ -10,6 +10,7 @@
 #pragma clang diagnostic ignored "-Wunknown-warning-option" // for next one
 #pragma clang diagnostic ignored "-Wunused-but-set-variable" // for newer clang
 #include <Eigen/SparseCore>
+#include <Eigen/SparseCholesky>
 #pragma clang diagnostic pop
 #pragma warning(pop)
 

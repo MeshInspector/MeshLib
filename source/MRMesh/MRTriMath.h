@@ -128,7 +128,7 @@ template<typename T>
 template <typename T>
 [[nodiscard]] Triangle3<T> triangleWithNormal( const Triangle3<T> & t, const Vector3<T> & n )
 {
-    const auto c = ( t[0] + t[1] + t[2] ) / 3;
+    const auto c = ( t[0] + t[1] + t[2] ) / T(3);
     Triangle3<T> res;
     for ( int i = 0; i < 3; ++i )
     {

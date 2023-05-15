@@ -14,6 +14,7 @@ eigen3
 freetype
 gdcm
 gtest
+hidapi
 jsoncpp
 libzip
 openvdb

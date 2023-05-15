@@ -40,7 +40,6 @@
 #include "MRPch/MRWasm.h"
 #include "MRGetSystemInfoJson.h"
 #include "MRSpaceMouseHandler.h"
-#include "MRSpaceMouseHandlerWindows.h"
 #include "MRSpaceMouseHandlerHidapi.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRSerializer.h"
@@ -1554,14 +1553,10 @@ void Viewer::initRotationCenterObject_()
 
 void Viewer::initSpaceMouseHandler_()
 {
-#ifdef _WIN32
-    spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerWindows>();
+#ifdef __EMSCRIPTEN__
+    spaceMouseHandler_ = std::make_unique<SpaceMouseHandler>();
 #else
-    #if defined(__APPLE__) || defined(__EMSCRIPTEN__)
-        spaceMouseHandler_ = std::make_unique<SpaceMouseHandler>();
-    #else
-        spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerHidapi>();
-    #endif
+    spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerHidapi>();
 #endif
 
     spaceMouseHandler_->initialize();

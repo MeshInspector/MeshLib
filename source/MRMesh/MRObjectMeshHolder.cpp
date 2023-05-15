@@ -521,8 +521,6 @@ void ObjectMeshHolder::setDirtyFlags( uint32_t mask )
     // which set dirty flags appropriately
     mask &= ~( DIRTY_SELECTION | DIRTY_EDGES_SELECTION );
 
-    VisualObject::setDirtyFlags( mask );
-
     if ( mask & DIRTY_FACE )
     {
         meshStat_.reset();
@@ -531,12 +529,15 @@ void ObjectMeshHolder::setDirtyFlags( uint32_t mask )
 
     if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
     {
+        mask |= DIRTY_BOUNDING_BOX;
         worldBox_.reset();
         worldBox_.get().reset();
         totalArea_.reset();
         if ( mesh_ )
             mesh_->invalidateCaches();
     }
+
+    VisualObject::setDirtyFlags( mask );
 }
 
 void ObjectMeshHolder::setCreases( UndirectedEdgeBitSet creases )

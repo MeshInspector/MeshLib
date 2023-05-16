@@ -69,11 +69,11 @@ AsyncRequest::AsyncRequest()
         MR::SetCurrentThreadName( "AsyncRequest timer thread" );
         while ( timer_.waitBlocking() != AsyncTimer::Event::Terminate )
         {
-            auto cmd = loadCommand_();
-            if ( cmd )
+            std::unique_lock lock( cmdMutex_ );
+            if ( command_ )
             {
-                cmd();
-                storeCommand_( {} );
+                command_();
+                command_ = {};
             }
         }
     } );

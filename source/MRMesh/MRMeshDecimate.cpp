@@ -603,6 +603,9 @@ DecimateResult MeshDecimator::run()
         }
     }
 
+    if ( settings_.progressCallback && !settings_.progressCallback( 1.0f ) )
+        return res_;
+
     if ( settings_.packMesh )
     {
         FaceMap fmap;

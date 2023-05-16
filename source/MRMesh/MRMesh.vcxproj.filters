@@ -945,6 +945,9 @@
     <ClInclude Include="MRNormalsToPoints.h">
       <Filter>Source Files\LinearSystem</Filter>
     </ClInclude>
+    <ClInclude Include="MRNormalDenoising.h">
+      <Filter>Source Files\LinearSystem</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1569,6 +1572,9 @@
       <Filter>Source Files\LinearSystem</Filter>
     </ClCompile>
     <ClCompile Include="MRNormalsToPoints.cpp">
+      <Filter>Source Files\LinearSystem</Filter>
+    </ClCompile>
+    <ClCompile Include="MRNormalDenoising.cpp">
       <Filter>Source Files\LinearSystem</Filter>
     </ClCompile>
   </ItemGroup>

@@ -73,6 +73,7 @@
     <ClInclude Include="MRImage.h" />
     <ClInclude Include="MRImageLoad.h" />
     <ClInclude Include="MRImageSave.h" />
+    <ClInclude Include="MRNormalDenoising.h" />
     <ClInclude Include="MRNormalsToPoints.h" />
     <ClInclude Include="MRPointsToMeshProjector.h" />
     <ClInclude Include="MRIntersection.h" />
@@ -364,6 +365,7 @@
     <ClCompile Include="MRMeshBoolean.cpp" />
     <ClCompile Include="MRMeshBooleanFacade.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
+    <ClCompile Include="MRNormalDenoising.cpp" />
     <ClCompile Include="MRNormalsToPoints.cpp" />
     <ClCompile Include="MRPointsToMeshProjector.cpp" />
     <ClCompile Include="MRMeshTrimWithPlane.cpp" />

@@ -604,7 +604,7 @@ void RenderMeshObject::update_( ViewportMask mask )
     if ( objMesh_->getColoringType() != ColoringType::VertsColorMap )
         dirty_ &= ~DIRTY_VERTS_COLORMAP;
 
-    if ( dirty_ & DIRTY_FACE )
+    if ( dirty_ & DIRTY_FACE || dirty_ & DIRTY_POSITION )
         dirtyEdges_ = true;
 
     objMesh_->resetDirtyExeptMask( DIRTY_RENDER_NORMALS - dirtyNormalFlag );

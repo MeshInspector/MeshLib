@@ -29,7 +29,7 @@ public:
     virtual void run( const VertCoords & guide, const FaceNormals & normals, VertCoords & points ) override;
 
 private:
-    constexpr static double guideWeight = 0.001;
+    constexpr static double guideWeight = 0.03; // sqr(guideWeight) \approx 0.001
     const MeshTopology * topology_ = nullptr;
     using SparseMatrix = Eigen::SparseMatrix<double,Eigen::RowMajor>;
     Vector<int, FaceId> face2row_;

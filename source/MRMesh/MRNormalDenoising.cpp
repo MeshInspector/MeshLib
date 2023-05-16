@@ -130,14 +130,14 @@ void updateIndicator( const Mesh & mesh, Vector<float, UndirectedEdgeId> & v, co
                 {
                     const auto a = mesh.topology.next( e );
                     const auto lenL = ( c - mesh.orgPnt( e ) ).length();
-                    const auto x = lenL / lenE;
+                    const auto x = k * lenL / lenE;
                     centralWeight += x;
                     mTriplets.emplace_back( ue, a.undirected(), -x );
                 }
                 {
                     const auto b = mesh.topology.prev( e.sym() );
                     const auto lenL = ( c - mesh.destPnt( e ) ).length();
-                    const auto x = lenL / lenE;
+                    const auto x = k * lenL / lenE;
                     centralWeight += x;
                     mTriplets.emplace_back( ue, b.undirected(), -x );
                 }
@@ -148,14 +148,14 @@ void updateIndicator( const Mesh & mesh, Vector<float, UndirectedEdgeId> & v, co
                 {
                     const auto a = mesh.topology.prev( e );
                     const auto lenL = ( c - mesh.orgPnt( e ) ).length();
-                    const auto x = lenL / lenE;
+                    const auto x = k * lenL / lenE;
                     centralWeight += x;
                     mTriplets.emplace_back( ue, a.undirected(), -x );
                 }
                 {
                     const auto b = mesh.topology.next( e.sym() );
                     const auto lenL = ( c - mesh.destPnt( e ) ).length();
-                    const auto x = lenL / lenE;
+                    const auto x = k * lenL / lenE;
                     centralWeight += x;
                     mTriplets.emplace_back( ue, b.undirected(), -x );
                 }

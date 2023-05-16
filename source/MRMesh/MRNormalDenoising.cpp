@@ -97,4 +97,88 @@ void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<floa
     } );
 }
 
+void updateIndicator( const Mesh & mesh, Vector<float, UndirectedEdgeId> & v, const FaceNormals & normals, float beta, float gamma )
+{
+    MR_TIMER
+
+    const auto sz = v.size();
+    assert( sz == mesh.topology.undirectedEdgeSize() );
+    assert( normals.size() == mesh.topology.faceSize() );
+    if ( sz <= 0 )
+        return;
+
+    std::vector< Eigen::Triplet<double> > mTriplets;
+    Eigen::VectorXd rhs;
+    rhs.resize( sz );
+    constexpr float eps = 0.001f;
+    const float rh = beta / ( 2 * eps );
+    const float k = 2 * beta * eps;
+    for ( auto ue = 0_ue; ue < sz; ++ue )
+    {
+        const EdgeId e = ue;
+        float centralWeight = rh;
+        const auto l = mesh.topology.left( e );
+        const auto r = mesh.topology.right( e );
+        if ( l && r )
+            centralWeight += 2 * gamma * ( normals[l] - normals[r] ).lengthSq();
+        const auto lenE = mesh.edgeLength( e );
+        if ( lenE > 0 )
+        {
+            if ( l )
+            {
+                const auto c = mesh.triCenter( l );
+                {
+                    const auto a = mesh.topology.next( e );
+                    const auto lenL = ( c - mesh.orgPnt( e ) ).length();
+                    const auto x = lenL / lenE;
+                    centralWeight += x;
+                    mTriplets.emplace_back( ue, a.undirected(), -x );
+                }
+                {
+                    const auto b = mesh.topology.prev( e.sym() );
+                    const auto lenL = ( c - mesh.destPnt( e ) ).length();
+                    const auto x = lenL / lenE;
+                    centralWeight += x;
+                    mTriplets.emplace_back( ue, b.undirected(), -x );
+                }
+            }
+            if ( r )
+            {
+                const auto c = mesh.triCenter( r );
+                {
+                    const auto a = mesh.topology.prev( e );
+                    const auto lenL = ( c - mesh.orgPnt( e ) ).length();
+                    const auto x = lenL / lenE;
+                    centralWeight += x;
+                    mTriplets.emplace_back( ue, a.undirected(), -x );
+                }
+                {
+                    const auto b = mesh.topology.next( e.sym() );
+                    const auto lenL = ( c - mesh.destPnt( e ) ).length();
+                    const auto x = lenL / lenE;
+                    centralWeight += x;
+                    mTriplets.emplace_back( ue, b.undirected(), -x );
+                }
+            }
+        }
+        mTriplets.emplace_back( ue, ue, centralWeight );
+        rhs[ue] = rh;
+    }
+
+    using SparseMatrix = Eigen::SparseMatrix<double,Eigen::RowMajor>;
+    SparseMatrix A;
+    A.resize( sz, sz );
+    A.setFromTriplets( mTriplets.begin(), mTriplets.end() );
+    Eigen::SimplicialLDLT<SparseMatrix> solver;
+    solver.compute( A );
+
+    Eigen::VectorXd sol = solver.solve( rhs );
+
+    // copy solution back into v
+    ParallelFor( v, [&]( UndirectedEdgeId ue )
+    {
+        v[ue] = (float) sol[ue];
+    } );
+}
+
 } //namespace MR

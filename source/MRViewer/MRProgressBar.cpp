@@ -153,6 +153,7 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
             instance.currentTask_ = 1;
         instance.taskCount_ = taskCount;
 
+        instance.closeDialogNextFrame_ = false;
         instance.canceled_ = false;
         instance.finished_ = false;
 

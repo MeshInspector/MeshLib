@@ -13,7 +13,9 @@ class NormalsToPoints
 public:
     /// builds linear system and prepares a solver for it;
     /// please call it only once for mesh, and then run as many times as you like
-    MRMESH_API void prepare( const MeshTopology & topology );
+    /// \param guideWeight how much resulting points must be attracted to initial points, must be > 0
+    MRMESH_API void prepare( const MeshTopology & topology, float guideWeight = 1 );
+
     /// performs one iteration consisting of projection of all triangles on planes with given normals and finding best points from them
     /// \param guide target vertex positions to avoid under-determined system
     /// \param normal target face normals
@@ -25,7 +27,7 @@ public:
     {
     public:
         virtual ~ISolver() = default;
-        virtual void prepare( const MeshTopology & topology ) = 0;
+        virtual void prepare( const MeshTopology & topology, float guideWeight ) = 0;
         virtual void run( const VertCoords & guide, const FaceNormals & normals, VertCoords & points ) = 0;
     };
 private:

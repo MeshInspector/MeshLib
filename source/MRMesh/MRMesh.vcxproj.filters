@@ -22,9 +22,6 @@
     <Filter Include="Source Files\SymbolMesh">
       <UniqueIdentifier>{dd69ed88-89d4-4c22-92e5-3d01c7126046}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\EmbreeScene">
-      <UniqueIdentifier>{509de63f-6842-445b-8648-05da25feb213}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\System">
       <UniqueIdentifier>{9ea2ed18-2ae5-4809-b738-03a166627a32}</UniqueIdentifier>
     </Filter>
@@ -103,6 +100,9 @@
     <Filter Include="Source Files\Voxels">
       <UniqueIdentifier>{cfca1a51-70d1-46de-ad9f-c8662f2b85c8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\LinearSystem">
+      <UniqueIdentifier>{77366470-1db8-45b3-9971-1b5af90c1eac}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRMeshFwd.h">
@@ -162,9 +162,6 @@
     <ClInclude Include="MREdgeIterator.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="MRPositionVertsSmoothly.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="MRBitSet.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
@@ -183,14 +180,8 @@
     <ClInclude Include="MRTorus.h">
       <Filter>Source Files\Primitives</Filter>
     </ClInclude>
-    <ClInclude Include="MRClosestPointInTriangle.h">
-      <Filter>Source Files\EmbreeScene</Filter>
-    </ClInclude>
     <ClInclude Include="MRUVSphere.h">
       <Filter>Source Files\Primitives</Filter>
-    </ClInclude>
-    <ClInclude Include="MRLaplacian.h">
-      <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="MRConstants.h">
       <Filter>Source Files\Math</Filter>
@@ -284,9 +275,6 @@
     </ClInclude>
     <ClInclude Include="MRQuadraticForm.h">
       <Filter>Source Files\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="MRFreeFormDeformer.h">
-      <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="MRQuaternion.h">
       <Filter>Source Files\Math</Filter>
@@ -945,6 +933,21 @@
     <ClInclude Include="MRToolPath.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
+    <ClInclude Include="MRLaplacian.h">
+      <Filter>Source Files\LinearSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPositionVertsSmoothly.h">
+      <Filter>Source Files\LinearSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="MRClosestPointInTriangle.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRNormalsToPoints.h">
+      <Filter>Source Files\LinearSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="MRNormalDenoising.h">
+      <Filter>Source Files\LinearSystem</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -980,9 +983,6 @@
     <ClCompile Include="MRCube.cpp">
       <Filter>Source Files\Primitives</Filter>
     </ClCompile>
-    <ClCompile Include="MRPositionVertsSmoothly.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MRVDBConversions.cpp">
       <Filter>Source Files\VDBConversions</Filter>
     </ClCompile>
@@ -997,9 +997,6 @@
     </ClCompile>
     <ClCompile Include="MRUVSphere.cpp">
       <Filter>Source Files\Primitives</Filter>
-    </ClCompile>
-    <ClCompile Include="MRLaplacian.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRHistogram.cpp">
       <Filter>Source Files\Math</Filter>
@@ -1066,9 +1063,6 @@
     </ClCompile>
     <ClCompile Include="MRQuadraticForm.cpp">
       <Filter>Source Files\Math</Filter>
-    </ClCompile>
-    <ClCompile Include="MRFreeFormDeformer.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRVolumeSegment.cpp">
       <Filter>Source Files\Voxels</Filter>
@@ -1570,6 +1564,20 @@
     </ClCompile>
     <ClCompile Include="MRToolPath.cpp">
       <Filter>Source Files\SurfacePath</Filter>
+    <ClCompile Include="MRFreeFormDeformer.cpp">
+      <Filter>Source Files\LinearSystem</Filter>
+    </ClCompile>
+    <ClCompile Include="MRLaplacian.cpp">
+      <Filter>Source Files\LinearSystem</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPositionVertsSmoothly.cpp">
+      <Filter>Source Files\LinearSystem</Filter>
+    </ClCompile>
+    <ClCompile Include="MRNormalsToPoints.cpp">
+      <Filter>Source Files\LinearSystem</Filter>
+    </ClCompile>
+    <ClCompile Include="MRNormalDenoising.cpp">
+      <Filter>Source Files\LinearSystem</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

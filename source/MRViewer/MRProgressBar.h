@@ -89,6 +89,8 @@ private:
     ImGuiID setupId_ = ImGuiID( -1 );
 
     bool isInit_{ false };
+    // this is needed to show full progress before closing
+    bool closeDialogNextFrame_{ false };
 };
 
 }

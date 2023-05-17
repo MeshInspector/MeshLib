@@ -105,8 +105,8 @@ void ObjectTransformWidget::create( const Box3f& box, const AffineXf3f& worldXf,
         reset();
     
     boxDiagonal_ = box.size();
-
-    if ( !controls )
+    controls_ = controls;
+    if ( !controls_ )
     {
         auto thisControls = std::make_shared<TransformControls>();
         TransformControls::VisualParams params;

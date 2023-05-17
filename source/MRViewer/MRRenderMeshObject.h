@@ -27,25 +27,23 @@ protected:
     int vertColorsSize_{ 0 };
     int vertUVSize_{ 0 };
     int faceIndicesSize_{ 0 };
-    int edgeIndicesSize_{ 0 };
+    int edgeSize_{ 0 };
+    int selEdgeSize_{ 0 };
+    int bordersSize_{ 0 };
     Vector2i faceSelectionTextureSize_;
     Vector2i faceNormalsTextureSize_;
-    int borderHighlightPointsSize_{ 0 };
-    int selectedEdgePointsSize_{ 0 };
 
     MRVIEWER_API RenderBufferRef<Vector3f> loadVertPosBuffer_();
     MRVIEWER_API RenderBufferRef<Vector3f> loadVertNormalsBuffer_();
     MRVIEWER_API RenderBufferRef<Color> loadVertColorsBuffer_();
     MRVIEWER_API RenderBufferRef<UVCoord> loadVertUVBuffer_();
     MRVIEWER_API RenderBufferRef<Vector3i> loadFaceIndicesBuffer_();
-    MRVIEWER_API RenderBufferRef<Vector2i> loadEdgeIndicesBuffer_();
     MRVIEWER_API RenderBufferRef<unsigned> loadFaceSelectionTextureBuffer_();
     MRVIEWER_API RenderBufferRef<Vector4f> loadFaceNormalsTextureBuffer_();
-    MRVIEWER_API RenderBufferRef<Vector3f> loadBorderHighlightPointsBuffer_();
-    MRVIEWER_API RenderBufferRef<Vector3f> loadSelectedEdgePointsBuffer_();
 
     typedef unsigned int GLuint;
 
+    GLuint edgesArrayObjId_{ 0 };
     GLuint borderArrayObjId_{ 0 };
     GlBuffer borderBuffer_;
 
@@ -61,22 +59,32 @@ protected:
     GlBuffer vertColorsBuffer_;
 
     GlBuffer facesIndicesBuffer_;
-    GlBuffer edgesIndicesBuffer_;
 
     GlTexture2 texture_;
     GlTexture2 faceSelectionTex_;
     GlTexture2 faceColorsTex_;
     GlTexture2 facesNormalsTex_;
 
+    GlTexture2 edgesTexture_;
+    GlTexture2 selEdgesTexture_;
+    GlTexture2 borderTexture_;
+    GlTexture2 emptyVertsColorTexture_;
+    GlTexture2 emptyLinesColorTexture_;
+
     int maxTexSize_{ 0 };
 
-    MRVIEWER_API virtual void renderEdges_( const RenderParams& parameters, GLuint vao, GlBuffer & vbo, const Color& color, uint32_t dirtyFlag );
+    MRVIEWER_API virtual void renderEdges_( const RenderParams& parameters, GLuint vao, const Color& color, uint32_t dirtyFlag );
 
     MRVIEWER_API virtual void renderMeshEdges_( const RenderParams& parameters );
 
     MRVIEWER_API virtual void bindMesh_( bool alphaSort );
     
     MRVIEWER_API virtual void bindMeshPicker_();
+
+    MRVIEWER_API virtual void bindEdges_();
+    MRVIEWER_API virtual void bindBorders_();
+    MRVIEWER_API virtual void bindSelectedEdges_();
+    MRVIEWER_API virtual void bindEmptyTextures_( GLuint shaderId );
 
     MRVIEWER_API virtual void drawMesh_( bool solid, ViewportId viewportId, bool picker = false ) const;
 

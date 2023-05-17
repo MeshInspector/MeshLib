@@ -1,0 +1,35 @@
+#pragma once
+
+#include "MRMeshFwd.h"
+#include <memory>
+
+namespace MR
+{
+
+/// The purpose of this class is to update vertex positions given target triangle normals;
+/// see the article "Static/Dynamic Filtering for Mesh Geometry"
+class NormalsToPoints
+{
+public:
+    /// builds linear system and prepares a solver for it;
+    /// please call it only once for mesh, and then run as many times as you like
+    MRMESH_API void prepare( const MeshTopology & topology );
+    /// performs one iteration consisting of projection of all triangles on planes with given normals and finding best points from them
+    /// \param guide target vertex positions to avoid under-determined system
+    /// \param normal target face normals
+    /// \param points initial approximation on input, updated approximation on output
+    MRMESH_API void run( const VertCoords & guide, const FaceNormals & normals, VertCoords & points );
+
+    // pImpl
+    class ISolver
+    {
+    public:
+        virtual ~ISolver() = default;
+        virtual void prepare( const MeshTopology & topology ) = 0;
+        virtual void run( const VertCoords & guide, const FaceNormals & normals, VertCoords & points ) = 0;
+    };
+private:
+    std::unique_ptr<ISolver> solver_;
+};
+
+} //namespace MR

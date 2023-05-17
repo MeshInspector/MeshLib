@@ -84,6 +84,12 @@ void ProgressBar::setup( float scaling )
         if ( instance.progress_ >= 1.0f )
             instance.frameRequest_.requestFrame();
 #endif
+        if ( instance.closeDialogNextFrame_ )
+        {
+            instance.closeDialogNextFrame_ = false;
+            ImGui::CloseCurrentPopup();
+            getViewerInstance().incrementForceRedrawFrames( 1, true );
+        }
         if ( instance.finished_ )
         {
             if ( instance.onFinish_ )
@@ -91,8 +97,8 @@ void ProgressBar::setup( float scaling )
                 instance.onFinish_();
                 instance.onFinish_ = {};
             }
-            ImGui::CloseCurrentPopup();
-            getViewerInstance().incrementForceRedrawFrames( 2, true );
+            instance.closeDialogNextFrame_ = true;
+            getViewerInstance().incrementForceRedrawFrames();
         }
         ImGui::EndPopup();
     }
@@ -147,6 +153,7 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
             instance.currentTask_ = 1;
         instance.taskCount_ = taskCount;
 
+        instance.closeDialogNextFrame_ = false;
         instance.canceled_ = false;
         instance.finished_ = false;
 

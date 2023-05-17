@@ -8,7 +8,15 @@
 namespace MR
 {
 
-MRMESH_API std::shared_ptr<Polyline3> getToolPath( Mesh& mesh, float millRadius, float voxelSize, float sectionStep, float critLength = 0.1f );
+struct ToolPathResult
+{
+    std::shared_ptr<Polyline3> toolPath;
+    std::string gcode;
+};
+
+MRMESH_API ToolPathResult getToolPath( Mesh& mesh, float millRadius, float voxelSize, float sectionStep, float critLength = 0.1f,
+    float plungeLength = 0.1f, float retractLength = 0.1f,
+    float plungeFeed = 500.0f, float retractFeed = 500.0f );
 
 }
 #endif

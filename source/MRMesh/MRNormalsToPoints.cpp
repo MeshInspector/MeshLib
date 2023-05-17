@@ -25,12 +25,12 @@ namespace
 class Solver : public NormalsToPoints::ISolver
 {
 public:
-    virtual void prepare( const MeshTopology & topology ) override;
+    virtual void prepare( const MeshTopology & topology, float guideWeight ) override;
     virtual void run( const VertCoords & guide, const FaceNormals & normals, VertCoords & points ) override;
 
 private:
-    constexpr static double guideWeight = 0.03; // sqr(guideWeight) \approx 0.001
     const MeshTopology * topology_ = nullptr;
+    float guideWeight_ = 0;
     using SparseMatrix = Eigen::SparseMatrix<double,Eigen::RowMajor>;
     Vector<int, FaceId> face2row_;
     SparseMatrix mat_;
@@ -39,10 +39,11 @@ private:
     Eigen::SimplicialLDLT<SparseMatrixColMajor> ldlt_;
 };
 
-void Solver::prepare( const MeshTopology & topology )
+void Solver::prepare( const MeshTopology & topology, float guideWeight )
 {
     MR_TIMER
     topology_ = &topology;
+    guideWeight_ = guideWeight;
     std::vector< Eigen::Triplet<double> > mTriplets;
     const int nVerts = (int)topology.vertSize();
     mTriplets.reserve( nVerts + 6 * topology.numValidFaces() );
@@ -98,7 +99,7 @@ void Solver::run( const VertCoords & guide, const FaceNormals & normals, VertCoo
         for ( VertId v = range.begin(); v < range.end(); ++v )
         {
             for ( int i = 0; i < 3; ++i )
-                rhs_[i][v] = guideWeight * guide[v][i];
+                rhs_[i][v] = guideWeight_ * guide[v][i];
         }
     } );
 
@@ -139,10 +140,10 @@ void Solver::run( const VertCoords & guide, const FaceNormals & normals, VertCoo
 
 } //anonymous namespace
 
-void NormalsToPoints::prepare( const MeshTopology & topology )
+void NormalsToPoints::prepare( const MeshTopology & topology, float guideWeight )
 {
     solver_ = std::make_unique<Solver>();
-    solver_->prepare( topology );
+    solver_->prepare( topology, guideWeight );
 }
 
 void NormalsToPoints::run( const VertCoords & guide, const FaceNormals & normals, VertCoords & points )

@@ -232,7 +232,7 @@ VoidOrErrStr meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings
 
     const auto guide = mesh.points;
     NormalsToPoints n2p;
-    n2p.prepare( mesh.topology );
+    n2p.prepare( mesh.topology, settings.guideWeight );
     for ( int i = 0; i < settings.pointIters; ++i )
         n2p.run( guide, fnormals, mesh.points );
 

@@ -34,6 +34,8 @@ struct DenoiseViaNormalsSettings
     int normalIters = 10;
     /// the number of iterations to update vertex coordinates from found normals; the more the better quality, but longer computation
     int pointIters = 20;
+    /// how much resulting points must be attracted to initial points (e.g. to avoid general shrinkage), must be > 0
+    float guideWeight = 0.03f;
     /// optionally returns creases found during smoothing
     UndirectedEdgeBitSet * outCreases = nullptr;
     /// to get the progress and optionally cancel

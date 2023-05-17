@@ -38,7 +38,7 @@ public:
     MRMESH_API AffineXf3d getBasicXf() const;
     AffineXf3f getBasicXf3f() const { return AffineXf3f( getBasicXf() ); }
 
-    bool valid() { return sumWeight_ > 0; };
+    bool valid() const { return sumWeight_ > 0; };
 
 private:
     double sumWeight_ = 0;

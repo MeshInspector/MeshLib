@@ -114,6 +114,8 @@ void accumulateFaceCenters( PointAccumulator& accum, const MeshPart& mp, const A
     const auto& faceIds = topology.getFaceIds( mp.region );
     for ( auto f : faceIds )
     {
+        if ( mp.region && !topology.hasFace( f ) )
+            continue; // skip region-faces, which does not actually exist
         auto edge = edgePerFaces[f];
         if ( edge.valid() )
         {

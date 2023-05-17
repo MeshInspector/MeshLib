@@ -11,12 +11,10 @@ namespace MR
 class NormalsToPoints
 {
 public:
-    constexpr static float defGuideWeight = 0.03f; // sqr(guideWeight) \approx 0.001
-
     /// builds linear system and prepares a solver for it;
     /// please call it only once for mesh, and then run as many times as you like
     /// \param guideWeight how much resulting points must be attracted to initial points, must be > 0
-    MRMESH_API void prepare( const MeshTopology & topology, float guideWeight = defGuideWeight );
+    MRMESH_API void prepare( const MeshTopology & topology, float guideWeight = 1 );
 
     /// performs one iteration consisting of projection of all triangles on planes with given normals and finding best points from them
     /// \param guide target vertex positions to avoid under-determined system

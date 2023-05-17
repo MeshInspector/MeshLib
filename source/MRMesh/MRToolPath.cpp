@@ -11,26 +11,30 @@
 
 namespace MR
 {
-ToolPathResult getToolPath( Mesh& mesh, float millRadius, float voxelSize, float sectionsStep, float critLength,
-    float plungeLength, float retractLength,
-    float plungeFeed, float retractFeed )
+ToolPathResult getToolPath( const Mesh& inputMesh, const AffineXf3f& xf, const ToolPathParams& params )
 {
     const Vector3f normal = Vector3f::plusZ();
-    FixUndercuts::fixUndercuts( mesh, normal, voxelSize );
+
+    Mesh meshCopy( inputMesh );
+    meshCopy.transform( xf );
+    FixUndercuts::fixUndercuts( meshCopy, normal, params.voxelSize );
 
     OffsetParameters offsetParams;
-    offsetParams.voxelSize = voxelSize;
+    offsetParams.voxelSize = params.voxelSize;
 
-    auto resMesh = offsetMesh( mesh, millRadius, offsetParams );
+    auto resMesh = offsetMesh( meshCopy, params.millRadius, offsetParams );
     if ( !resMesh.has_value() )
         return {};
 
-    const auto box = mesh.getBoundingBox();
-    const float safeZ = box.max.z + millRadius;
+    ToolPathResult  res{ .modifiedMesh = std::make_shared<Mesh>( *resMesh ) };
+    const auto& mesh = *res.modifiedMesh;
 
-    const float dragSpeed = millRadius * 0.001f;
+    const auto box = mesh.getBoundingBox();
+    const float safeZ = box.max.z + params.millRadius;
+
+    const float dragSpeed = params.millRadius * 0.001f;
     const auto plane = MR::Plane3f::fromDirAndPt( normal, box.max );
-    const int steps = int( std::floor( ( plane.d - box.min.z ) / sectionsStep ) );
+    const int steps = int( std::floor( ( plane.d - box.min.z ) / params.sectionStep ) );
 
     Contour3f toolPath{ { 0, 0, safeZ } };
     std::ostringstream gcode;
@@ -38,10 +42,10 @@ ToolPathResult getToolPath( Mesh& mesh, float millRadius, float voxelSize, float
 
     MeshEdgePoint prevEdgePoint;
 
-    const float critLengthSq = critLength * critLength;
+    const float critTransitionLengthSq = params.critTransitionLength * params.critTransitionLength;
     for ( int step = 0; step < steps; ++step )
     {        
-        for ( const auto& section : extractPlaneSections( mesh, Plane3f{ plane.n, plane.d - sectionsStep * step } ) )
+        for ( const auto& section : extractPlaneSections( mesh, Plane3f{ plane.n, plane.d - params.sectionStep * step } ) )
         {
             Polyline3 polyline;
             polyline.addFromSurfacePath( mesh, section );
@@ -64,57 +68,57 @@ ToolPathResult getToolPath( Mesh& mesh, float millRadius, float voxelSize, float
                 }
             }
             auto nextEdgePointIt = nearestPointIt;
-
+            const float sectionStepSq = params.sectionStep * params.sectionStep;
             do
             {
                 std::next( nextEdgePointIt ) != section.end() ? ++nextEdgePointIt : nextEdgePointIt = section.begin();
             } 
-            while ( nextEdgePointIt != nearestPointIt && ( mesh.edgePoint( *nextEdgePointIt ) - mesh.edgePoint( *nearestPointIt ) ).lengthSq() < sectionsStep * sectionsStep );
+            while ( nextEdgePointIt != nearestPointIt && ( mesh.edgePoint( *nextEdgePointIt ) - mesh.edgePoint( *nearestPointIt ) ).lengthSq() < sectionStepSq );
 
             const auto pivotIt = contours.begin() + std::distance( section.begin(), nextEdgePointIt );
             
-            if ( !prevEdgePoint.e.valid() || minDistSq > critLengthSq )
+            if ( !prevEdgePoint.e.valid() || minDistSq > critTransitionLengthSq )
             {
                 const auto lastPoint = toolPath.back();
                 if ( lastPoint.z < safeZ )
                 {
-                    if ( safeZ - lastPoint.z > retractLength )
+                    if ( safeZ - lastPoint.z > params.retractLength )
                     {
-                        const float zRetract = lastPoint.z + retractLength;
+                        const float zRetract = lastPoint.z + params.retractLength;
                         toolPath.push_back( { toolPath.back().x, toolPath.back().y, zRetract } );
-                        gcode << "G1 Z" << zRetract << " F" << retractFeed << "\t(retract)" << std::endl;
+                        gcode << "G1 Z" << zRetract << " F" << params.retractFeed << "\t(retract)" << std::endl;
                         toolPath.push_back( { toolPath.back().x, toolPath.back().y, safeZ } );
                         gcode << "G0 Z" << safeZ << "\t(rapid up to safe height)" << std::endl;
                     }
                     else
                     {
                         toolPath.push_back( { toolPath.back().x, toolPath.back().y, safeZ } );
-                        gcode << "G1 Z" << safeZ << " F" << retractFeed << "\t(retract)" << std::endl;
+                        gcode << "G1 Z" << safeZ << " F" << params.retractFeed << "\t(retract)" << std::endl;
                     }
                 }
 
                 toolPath.push_back( { pivotIt->x, pivotIt->y, safeZ } );
                 gcode << "G0 X" << pivotIt->x << " Y" << pivotIt->y << std::endl;
 
-                if ( safeZ - pivotIt->z > plungeLength )
+                if ( safeZ - pivotIt->z > params.plungeLength )
                 {
-                    const float zPlunge = pivotIt->z + plungeLength;
+                    const float zPlunge = pivotIt->z + params.plungeLength;
                     toolPath.push_back( { toolPath.back().x, toolPath.back().y, zPlunge } );
                     gcode << "G0 Z" << zPlunge << "\t(rapid down)" << std::endl;
                     toolPath.push_back( { toolPath.back().x, toolPath.back().y, pivotIt->z } );
-                    gcode << "G1 Z" << pivotIt->z << " F" << plungeFeed << "\t(plunge)" << std::endl;
+                    gcode << "G1 Z" << pivotIt->z << " F" << params.plungeFeed << "\t(plunge)" << std::endl;
                 }
                 else
                 {
                     toolPath.push_back( { toolPath.back().x, toolPath.back().y, pivotIt->z } );
-                    gcode << "G1 Z" << pivotIt->z << " F" << plungeFeed << "\t(plunge)" << std::endl;
+                    gcode << "G1 Z" << pivotIt->z << " F" << params.plungeFeed << "\t(plunge)" << std::endl;
                 }
             }
             else
             {
                 Polyline3 transit;
                 const auto sp = computeSurfacePath( mesh, prevEdgePoint, *nextEdgePointIt );
-                if ( sp.has_value() )
+                if ( sp.has_value() && !sp->empty() )
                 {
                     if ( sp->size() == 1 )
                     {
@@ -148,7 +152,9 @@ ToolPathResult getToolPath( Mesh& mesh, float millRadius, float voxelSize, float
         }        
     }
 
-    return { .toolPath = std::make_shared<Polyline3>( Contours3f{ toolPath } ), .gcode = gcode.str() };
+    res.toolPath = std::make_shared<Polyline3>( Contours3f{ toolPath } );
+    res.gcode = gcode.str();
+    return res;
 }
 }
 #endif

@@ -331,7 +331,12 @@ void ProgressBar::FrameRedrawRequest::requestFrame()
     }
 #else
     // do not request frame from gui thread with this mechanism
-    assert( std::this_thread::get_id() != CommandLoop::getMainThreadId() );
+    if ( std::this_thread::get_id() == CommandLoop::getMainThreadId() )
+    {
+        spdlog::warn( "Async requesting frame for progress bar from GUI thread!" );
+        assert( false );
+        return;
+    }
     asyncRequest_.requestIfNotSet( std::chrono::system_clock::now() + minInterval, [] ()
     {
         getViewerInstance().postEmptyEvent();

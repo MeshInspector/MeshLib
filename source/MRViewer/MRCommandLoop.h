@@ -25,6 +25,7 @@ public:
 
     // This function setups main thread id, it should be called before any command
     MRVIEWER_API static void setMainThreadId( const std::thread::id& id );
+    MRVIEWER_API static std::thread::id getMainThreadId();
     // Update state of command loop, only can rise
     MRVIEWER_API static void setState( StartPosition state );
 

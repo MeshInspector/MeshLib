@@ -1,6 +1,8 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRProgressCallback.h"
+#include "MRExpected.h"
 
 namespace MR
 {
@@ -10,7 +12,7 @@ namespace MR
 /// \param normals input noisy normals and output smooth normals
 /// \param v edge indicator function (1 - smooth edge, 0 - crease edge)
 /// \param gamma the amount of smoothing: 0 - no smoothing, 1 - average smoothing, ...
-/// see the article "Mesh Denoising via a Novel Mumford-Shah Framework"
+/// see the article "Mesh Denoising via a Novel Mumford-Shah Framework", equation (19)
 MRMESH_API void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma );
 
 /// Update edge indicator function (1 - smooth edge, 0 - crease edge), given
@@ -19,7 +21,27 @@ MRMESH_API void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const 
 /// \param normals per-face normals
 /// \param beta 0.001 - sharp edges, 0.01 - moderate edges, 0.1 - smooth edges
 /// \param gamma the amount of smoothing: 0 - no smoothing, 1 - average smoothing, ...
-/// see the article "Mesh Denoising via a Novel Mumford-Shah Framework"
+/// see the article "Mesh Denoising via a Novel Mumford-Shah Framework", equation (20)
 MRMESH_API void updateIndicator( const Mesh & mesh, Vector<float, UndirectedEdgeId> & v, const FaceNormals & normals, float beta, float gamma );
+
+struct DenoiseViaNormalsSettings
+{
+    /// 0.001 - sharp edges, 0.01 - moderate edges, 0.1 - smooth edges
+    float beta = 0.001f;
+    /// the amount of smoothing: 0 - no smoothing, 1 - average smoothing, ...
+    float gamma = 5.f;
+    /// the number of iterations to smooth normals and find creases; the more the better quality, but longer computation
+    int normalIters = 10;
+    /// the number of iterations to update vertex coordinates from found normals; the more the better quality, but longer computation
+    int pointIters = 20;
+    /// optionally returns creases found during smoothing
+    UndirectedEdgeBitSet * outCreases = nullptr;
+    /// to get the progress and optionally cancel
+    ProgressCallback cb = {};
+};
+
+/// Reduces noise in given mesh,
+/// see the article "Mesh Denoising via a Novel Mumford-Shah Framework"
+MRMESH_API VoidOrErrStr meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings = {} );
 
 } //namespace MR

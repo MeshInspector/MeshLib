@@ -2,6 +2,9 @@
 #include "MRMesh.h"
 #include "MRParallelFor.h"
 #include "MRRingIterator.h"
+#include "MRMeshNormals.h"
+#include "MRNormalsToPoints.h"
+#include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 
 #pragma warning(push)
@@ -179,6 +182,62 @@ void updateIndicator( const Mesh & mesh, Vector<float, UndirectedEdgeId> & v, co
     {
         v[ue] = (float) sol[ue];
     } );
+}
+
+VoidOrErrStr meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings )
+{
+    MR_TIMER
+    if ( settings.normalIters <= 0 || settings.pointIters <= 0 )
+    {
+        assert( false );
+        return tl::make_unexpected( "Bad parameters" );
+    }
+
+    if ( !reportProgress( settings.cb, 0.0f ) )
+        return tl::make_unexpected( "Operation was canceled" );
+
+    auto fnormals0 = computePerFaceNormals( mesh );
+    Vector<float, UndirectedEdgeId> v( mesh.topology.undirectedEdgeSize(), 1 );
+
+    if ( !reportProgress( settings.cb, 0.05f ) )
+        return tl::make_unexpected( "Operation was canceled" );
+
+    auto sp = subprogress( settings.cb, 0.05f, 0.95f );
+    FaceNormals fnormals;
+    for ( int i = 0; i < settings.normalIters; ++i )
+    {
+        fnormals = fnormals0;
+        denoiseNormals( mesh, fnormals, v, settings.gamma );
+        if ( !reportProgress( sp, float( 2 * i ) / ( 2 * settings.normalIters ) ) )
+            return tl::make_unexpected( "Operation was canceled" );
+
+        updateIndicator( mesh, v, fnormals, settings.beta, settings.gamma );
+        if ( !reportProgress( sp, float( 2 * i + 1 ) / ( 2 * settings.normalIters ) ) )
+            return tl::make_unexpected( "Operation was canceled" );
+    }
+
+    if ( settings.outCreases )
+    {
+        settings.outCreases->clear();
+        settings.outCreases->resize( mesh.topology.undirectedEdgeSize() );
+        BitSetParallelForAll( *settings.outCreases, [&]( UndirectedEdgeId ue )
+        {
+            if ( v[ue] < 0.5f )
+                settings.outCreases->set( ue );
+        } );
+    }
+
+    if ( !reportProgress( settings.cb, 0.95f ) )
+        return tl::make_unexpected( "Operation was canceled" );
+
+    const auto guide = mesh.points;
+    NormalsToPoints n2p;
+    n2p.prepare( mesh.topology );
+    for ( int i = 0; i < settings.pointIters; ++i )
+        n2p.run( guide, fnormals, mesh.points );
+
+    reportProgress( settings.cb, 1.0f );
+    return {};
 }
 
 } //namespace MR

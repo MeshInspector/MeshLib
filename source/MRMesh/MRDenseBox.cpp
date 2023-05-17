@@ -12,6 +12,8 @@ DenseBox::DenseBox( const MeshPart& meshPart, const AffineXf3f* xf )
 void DenseBox::include( const MeshPart& meshPart, const AffineXf3f* xf /*= nullptr */ )
 {
     accumulateFaceCenters( accum_, meshPart, xf );
+    if ( !accum_.valid() )
+        return;
     basisXf_ = AffineXf3f( accum_.getBasicXf() );
     basisXfInv_ = basisXf_.inverse();
     auto tempXf = basisXfInv_;

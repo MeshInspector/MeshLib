@@ -50,7 +50,7 @@ private:
     std::vector<boost::signals2::scoped_connection> meshChangedConnections_;
 };
 
-// Helper class to update plugin if any of active object meshes or selected faces has changed
+// Helper class to update plugin if any of active object meshes or selected faces have changed
 // note that events only marks plugin dirty and update happens before drawDialog function
 // inherit your plugin from it
 class MRVIEWER_CLASS PluginUpdateOnChangeMeshPart : public virtual IPluginUpdate

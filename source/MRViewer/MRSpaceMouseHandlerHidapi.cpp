@@ -93,11 +93,10 @@ void SpaceMouseHandlerHidapi::handle()
         return;
     }
 
-    auto &viewer = getViewerInstance();
     // process saved data packet
-    Vector3f translate, rotate;
-    convertInput_( dataPacket_, packetLength_, translate, rotate );
-    viewer.spaceMouseMove( translate, rotate );
+    Vector3f init_translate, init_rotate;
+    convertInput_( dataPacket_, packetLength_, init_translate, init_rotate );
+    addActionToQueue( init_translate, init_rotate, false );
     packetLength_ = 0;
 
     if ( !device_ )
@@ -107,13 +106,24 @@ void SpaceMouseHandlerHidapi::handle()
     }
 
     int packetLen = 0;
+    Vector3f translate, rotate;
     // set the device handle to be non-blocking
     hid_set_nonblocking( device_, 1 );
     do {
         DataPacketRaw packet = {0};
         packetLen = hid_read( device_, packet.data(), packet.size() );
         convertInput_( packet, packetLen, translate, rotate );
-        viewer.spaceMouseMove( translate, rotate );
+        bool isSkippable = true;
+        for (int i = 0; i < 3; ++i)
+        {
+            if ( ( translate[i] != 0.0f && init_translate[i] != 0.0f ) ||
+                ( rotate[i] != 0.0f && init_rotate[i] != 0.0f ) )
+                {
+                    isSkippable = false;
+                    break;
+                }
+        }
+        addActionToQueue( translate, rotate, isSkippable );
     } while ( packetLen > 0 );
 
     syncThreadLock.unlock();
@@ -139,13 +149,11 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
                 syncThreadLock.lock();
             }
 
-
             // to read all data packets during inactive state
             while ( !active_ )
             {
                 packetLength_ = hid_read_timeout( device_, dataPacket_.data(), dataPacket_.size(), 500 );
             }
-
 
             // set the device handle to be blocking
             hid_set_nonblocking( device_, 0 );
@@ -170,12 +178,20 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
     });
 }
 
+void SpaceMouseHandlerHidapi::addActionToQueue(const Vector3f& translate, const Vector3f& rotate, bool isSkippable) {
+    auto* viewer = &MR::getViewerInstance();
+    auto eventCall = [translate, rotate, viewer] ()
+    {
+        viewer->spaceMouseMove( translate, rotate );
+    };
+    viewer->eventQueue.emplace( { "SpaceMouse move", eventCall }, isSkippable );
+}
+
 void SpaceMouseHandlerHidapi::postFocusSignal_( bool focused )
 {
     active_ = focused;
     cv_.notify_one();
 }
-
 
 float SpaceMouseHandlerHidapi::convertCoord_( int coord_byte_low, int coord_byte_high )
 {

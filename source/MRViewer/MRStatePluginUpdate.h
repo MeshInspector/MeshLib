@@ -61,7 +61,9 @@ public:
     void setUpdateFunc( UpdateFunc func ) { func_ = func; }
     MRVIEWER_API virtual void preDrawUpdate() override;
 protected:
+    // sets dirty initially for first update, so no need to call UpdateFunc manually
     MRVIEWER_API virtual void onPluginEnable_() override;
+    // clears connections and UpdateFunc
     MRVIEWER_API virtual void onPluginDisable_() override;
 private:
     bool dirty_{ false };

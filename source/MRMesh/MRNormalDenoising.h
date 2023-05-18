@@ -27,7 +27,7 @@ MRMESH_API void updateIndicator( const Mesh & mesh, Vector<float, UndirectedEdge
 struct DenoiseViaNormalsSettings
 {
     /// 0.001 - sharp edges, 0.01 - moderate edges, 0.1 - smooth edges
-    float beta = 0.001f;
+    float beta = 0.01f;
     /// the amount of smoothing: 0 - no smoothing, 1 - average smoothing, ...
     float gamma = 5.f;
     /// the number of iterations to smooth normals and find creases; the more the better quality, but longer computation

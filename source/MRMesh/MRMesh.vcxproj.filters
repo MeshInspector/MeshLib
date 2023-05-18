@@ -930,6 +930,9 @@
     <ClInclude Include="MRParallelFor.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRFreeFormDeformer.h">
+      <Filter>Source Files\LinearSystem</Filter>
+    </ClInclude>
     <ClInclude Include="MRToolPath.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
@@ -1564,6 +1567,7 @@
     </ClCompile>
     <ClCompile Include="MRToolPath.cpp">
       <Filter>Source Files\SurfacePath</Filter>
+    </ClCompile>
     <ClCompile Include="MRFreeFormDeformer.cpp">
       <Filter>Source Files\LinearSystem</Filter>
     </ClCompile>

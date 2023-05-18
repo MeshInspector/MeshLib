@@ -66,11 +66,12 @@ ToolPathResult constantZToolPath( const Mesh& inputMesh, const AffineXf3f& xf, c
             }
             auto nextEdgePointIt = nearestPointIt;
             const float sectionStepSq = params.sectionStep * params.sectionStep;
+            const auto nearestPoint = mesh.edgePoint( *nearestPointIt );
             do
             {
                 std::next( nextEdgePointIt ) != section.end() ? ++nextEdgePointIt : nextEdgePointIt = section.begin();
             } 
-            while ( nextEdgePointIt != nearestPointIt && ( mesh.edgePoint( *nextEdgePointIt ) - mesh.edgePoint( *nearestPointIt ) ).lengthSq() < sectionStepSq );
+            while ( nextEdgePointIt != nearestPointIt && ( mesh.edgePoint( *nextEdgePointIt ) - nearestPoint ).lengthSq() < sectionStepSq );
 
             const auto pivotIt = contours.begin() + std::distance( section.begin(), nextEdgePointIt );
             
@@ -140,7 +141,7 @@ ToolPathResult constantZToolPath( const Mesh& inputMesh, const AffineXf3f& xf, c
         }        
     }
 
-    res.toolPath = std::make_shared<Polyline3>( Contours3f{ toolPath } );
+    res.toolPath = Polyline3( Contours3f{ toolPath } );
     return res;
 }
 

@@ -13,18 +13,18 @@ struct ToolPathParams
     float millRadius = {};
     // size of voxel needed to offset mesh
     float voxelSize = {};
-    // distance between sections
+    // distance between sections built along Z axis
     float sectionStep = {};
     // if distance to the next section is smaller than it, transition will be performed along the surface
-    // Otherwise transition will be through the safe plane
+    // otherwise transition will be through the safe plane
     float critTransitionLength = {};
-    //When the mill is moving down, it will be slowed down in this distance from mesh
+    // when the mill is moving down, it will be slowed down in this distance from mesh
     float plungeLength = {};
-    //When the mill is moving up, it will be slowed down in this distance from mesh
+    // when the mill is moving up, it will be slowed down in this distance from mesh
     float retractLength = {};
-    //Speed of slow movement down
+    // speed of slow movement down
     float plungeFeed = {};
-    //Speed of slow movement up
+    // speed of slow movement up
     float retractFeed = {};
 };
 
@@ -41,7 +41,7 @@ struct ToolPathResult
     // mesh after fixing undercuts and offset
     Mesh modifiedMesh;
     // path of the milling tool
-    std::shared_ptr<Polyline3> toolPath;
+    Polyline3 toolPath;
     // constains type of movement and its feed
     std::vector<GCommand> commands;
 };

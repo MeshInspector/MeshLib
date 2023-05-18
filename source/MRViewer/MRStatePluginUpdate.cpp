@@ -59,7 +59,7 @@ void PluginUpdateOnChangeMeshPart::preDrawUpdate()
 
 void PluginUpdateOnChangeMeshPart::onPluginEnable_()
 {
-    dirty_ = false;
+    dirty_ = true;
     auto meshes = getAllObjectsInTree<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     connections_.reserve( meshes.size() );
     for ( auto& mesh : meshes )

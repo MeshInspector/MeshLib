@@ -69,7 +69,8 @@ private:
     std::vector<boost::signals2::scoped_connection> connections_;
 };
 
-// checks that at least one of argument checks is true
+// Runs all preDrawUpdate and all shouldClose_ checks
+// shouldClose_ returns true if at least on of checks was ture 
 template<typename ...Updates>
 class PluginUpdateOr : virtual public Updates...
 {

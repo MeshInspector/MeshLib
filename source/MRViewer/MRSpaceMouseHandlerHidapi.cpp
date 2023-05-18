@@ -5,8 +5,6 @@
 #include "MRViewer.h"
 #include "MRGladGlfw.h"
 
-#include "iostream"
-
 namespace MR
 {
 SpaceMouseHandlerHidapi::SpaceMouseHandlerHidapi()
@@ -191,10 +189,6 @@ float SpaceMouseHandlerHidapi::convertCoord_( int coord_byte_low, int coord_byte
 
 void SpaceMouseHandlerHidapi::convertInput_( const DataPacketRaw& packet, int packet_length, Vector3f& translate, Vector3f& rotate )
 {
-    for ( int i = 0; i < 13; ++i)
-        std::cout << int(packet[i]) << " ";
-    std::cout << std::endl;
-
     Vector3f matrix1 = {0.0f, 0.0f, 0.0f};
     Vector3f matrix2 = {0.0f, 0.0f, 0.0f};
     if ( packet_length >= 7 ) {

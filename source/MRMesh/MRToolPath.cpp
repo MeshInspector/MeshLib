@@ -31,7 +31,6 @@ ToolPathResult constantZToolPath( const Mesh& inputMesh, const AffineXf3f& xf, c
     const auto box = mesh.getBoundingBox();
     const float safeZ = box.max.z + params.millRadius;
 
-    const float dragSpeed = params.millRadius * 0.001f;
     const auto plane = MR::Plane3f::fromDirAndPt( normal, box.max );
     const int steps = int( std::floor( ( plane.d - box.min.z ) / params.sectionStep ) );
 

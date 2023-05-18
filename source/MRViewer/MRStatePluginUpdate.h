@@ -7,11 +7,13 @@
 namespace MR
 {
 
-// Interface for automatically close StatePlugins
-class IPluginCloseCheck
+// Interface for automatically update StatePlugins internal data
+class IPluginUpdate
 {
 public:
-    virtual ~IPluginCloseCheck() = default;
+    virtual ~IPluginUpdate() = default;
+    // called each frame in before drawDialog
+    virtual void preDrawUpdate() {}
 protected:
     // called when plugin started
     virtual void onPluginEnable_() { }
@@ -23,7 +25,7 @@ protected:
 
 // Helper class to close plugin if any of active objects was removed from scene
 // inherit your plugin from it
-class MRVIEWER_CLASS PluginCloseOnSelectedObjectRemove : public virtual IPluginCloseCheck
+class MRVIEWER_CLASS PluginCloseOnSelectedObjectRemove : public virtual IPluginUpdate
 {
 protected:
     MRVIEWER_API virtual void onPluginEnable_() override;
@@ -35,7 +37,7 @@ private:
 
 // Helper class to close plugin if any of active object meshes was changed
 // inherit your plugin from it
-class MRVIEWER_CLASS PluginCloseOnChangeMesh : public virtual IPluginCloseCheck
+class MRVIEWER_CLASS PluginCloseOnChangeMesh : public virtual IPluginUpdate
 {
 protected:
     MRVIEWER_API virtual void onPluginEnable_() override;
@@ -48,22 +50,46 @@ private:
     std::vector<boost::signals2::scoped_connection> meshChangedConnections_;
 };
 
-// checks that at least one of argument checks is true
-template<typename ...Checks>
-class PluginCloseOrCheck : virtual public Checks...
+// Helper class to update plugin if any of active object meshes or selected faces has changed
+// note that events only marks plugin dirty and update happens before drawDialog function
+// inherit your plugin from it
+class MRVIEWER_CLASS PluginUpdateOnChangeMeshPart : public virtual IPluginUpdate
 {
+public:
+    using UpdateFunc = std::function<void()>;
+    // setup your update function that will be called if plugin is dirty in this frame
+    void setUpdateFunc( UpdateFunc func ) { func_ = func; }
+    MRVIEWER_API virtual void preDrawUpdate() override;
+protected:
+    MRVIEWER_API virtual void onPluginEnable_() override;
+    MRVIEWER_API virtual void onPluginDisable_() override;
+private:
+    bool dirty_{ false };
+    UpdateFunc func_;
+    std::vector<boost::signals2::scoped_connection> connections_;
+};
+
+// checks that at least one of argument checks is true
+template<typename ...Updates>
+class PluginUpdateOr : virtual public Updates...
+{
+public:
+    virtual void preDrawUpdate() override
+    {
+        ( Updates::preDrawUpdate(), ... );
+    }
 protected:
     virtual void onPluginEnable_() override
     {
-        ( Checks::onPluginEnable_(), ... );
+        ( Updates::onPluginEnable_(), ... );
     }
     virtual void onPluginDisable_() override
     {
-        ( ..., Checks::onPluginDisable_() );
+        ( ..., Updates::onPluginDisable_() );
     }
     virtual bool shouldClose_() const override
     {
-        return ( Checks::shouldClose_() || ... );
+        return ( Updates::shouldClose_() || ... );
     }
 };
 

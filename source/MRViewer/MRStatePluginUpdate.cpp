@@ -1,4 +1,4 @@
-#include "MRStatePluginAutoClose.h"
+#include "MRStatePluginUpdate.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRObject.h"
@@ -47,6 +47,33 @@ void PluginCloseOnChangeMesh::onPluginDisable_()
 bool PluginCloseOnChangeMesh::shouldClose_() const
 {
     return meshChanged_;
+}
+
+void PluginUpdateOnChangeMeshPart::preDrawUpdate()
+{
+    if ( !dirty_ || !func_ )
+        return;
+    func_();
+    dirty_ = false;
+}
+
+void PluginUpdateOnChangeMeshPart::onPluginEnable_()
+{
+    dirty_ = false;
+    auto meshes = getAllObjectsInTree<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+    connections_.reserve( meshes.size() );
+    for ( auto& mesh : meshes )
+    {
+        connections_.emplace_back( mesh->meshChangedSignal.connect( [&] ( uint32_t ) { dirty_ = true; } ) );
+        connections_.emplace_back( mesh->faceSelectionChangedSignal.connect( [&] () { dirty_ = true; } ) );
+    }
+}
+
+void PluginUpdateOnChangeMeshPart::onPluginDisable_()
+{
+    dirty_ = false;
+    func_ = {};
+    connections_.clear();
 }
 
 }

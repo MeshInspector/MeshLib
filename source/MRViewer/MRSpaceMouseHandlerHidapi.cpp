@@ -87,44 +87,30 @@ void SpaceMouseHandlerHidapi::handle()
     if ( !syncThreadLock.try_lock() )
         return;
 
-    if ( packetLength_ <= 0 )
+    if ( packetLength_ <= 0 || !device_ )
     {
         cv_.notify_one();
         return;
     }
 
-    // process saved data packet
-    Vector3f init_translate, init_rotate;
-    convertInput_( dataPacket_, packetLength_, init_translate, init_rotate );
-    addActionToQueue( init_translate, init_rotate, false );
-    packetLength_ = 0;
-
-    if ( !device_ )
-    {
-        cv_.notify_one();
-        return;
-    }
-
-    int packetLen = 0;
-    Vector3f translate, rotate;
     // set the device handle to be non-blocking
     hid_set_nonblocking( device_, 1 );
+
+    int packetLengthTmp = 0;
     do {
-        DataPacketRaw packet = {0};
-        packetLen = hid_read( device_, packet.data(), packet.size() );
-        convertInput_( packet, packetLen, translate, rotate );
-        bool isSkippable = true;
-        for (int i = 0; i < 3; ++i)
-        {
-            if ( ( translate[i] != 0.0f && init_translate[i] != 0.0f ) ||
-                ( rotate[i] != 0.0f && init_rotate[i] != 0.0f ) )
-                {
-                    isSkippable = false;
-                    break;
-                }
+        DataPacketRaw dataPacketTmp;
+        packetLengthTmp = hid_read( device_, dataPacketTmp.data(), dataPacketTmp.size() );
+        if ( packetLengthTmp > 0) {
+            dataPacket_ = dataPacketTmp;
+            packetLength_ = packetLengthTmp;
         }
-        addActionToQueue( translate, rotate, isSkippable );
-    } while ( packetLen > 0 );
+    } while ( packetLengthTmp > 0 );
+
+    Vector3f translate, rotate;
+    convertInput_( dataPacket_, packetLength_, translate, rotate );
+
+    auto& viewer = MR::getViewerInstance();
+    viewer.spaceMouseMove( translate, rotate );
 
     syncThreadLock.unlock();
     cv_.notify_one();
@@ -159,7 +145,7 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
             hid_set_nonblocking( device_, 0 );
             // hid_read_timeout() waits until there is data to read before returning or 1000ms passed (to help with thread shutdown)
             packetLength_ = hid_read_timeout( device_, dataPacket_.data(), dataPacket_.size(), 1000 );
-            // packetLength_ = hid_read( device_, dataPacket_.data(), dataPacket_.size() );
+
             // device connection lost
             if ( packetLength_ < 0)
             {

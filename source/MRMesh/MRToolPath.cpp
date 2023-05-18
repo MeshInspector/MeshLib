@@ -10,12 +10,14 @@
 
 namespace MR
 {
-ToolPathResult constantZToolPath( const Mesh& inputMesh, const AffineXf3f& xf, const ToolPathParams& params )
+ToolPathResult constantZToolPath( const Mesh& inputMesh, const ToolPathParams& params, const AffineXf3f* xf )
 {
     const Vector3f normal = Vector3f::plusZ();
 
     Mesh meshCopy( inputMesh );
-    meshCopy.transform( xf );
+    if ( xf )
+        meshCopy.transform( *xf );
+
     FixUndercuts::fixUndercuts( meshCopy, normal, params.voxelSize );
 
     OffsetParameters offsetParams;

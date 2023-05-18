@@ -48,7 +48,7 @@ struct ToolPathResult
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down )
 // mesh can be transformed using xf parameter
-MRMESH_API ToolPathResult constantZToolPath( const Mesh& mesh, const AffineXf3f& xf, const ToolPathParams& params );
+MRMESH_API ToolPathResult constantZToolPath( const Mesh& mesh, const ToolPathParams& params, const AffineXf3f* xf );
 
 // generates G-Code for milling tool
 MRMESH_API std::string exportToolPathToGCode( const Polyline3& toolPath, const std::vector<GCommand>& commands );

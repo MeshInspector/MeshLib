@@ -4,14 +4,13 @@
 #include "MRSurfacePath.h"
 #include "MRFixUndercuts.h"
 #include "MROffset.h"
-#include "MRMesh.h"
 #include "MRBox.h"
 #include "MRMesh/MRExtractIsolines.h"
 #include <sstream>
 
 namespace MR
 {
-ToolPathResult getToolPath( const Mesh& inputMesh, const AffineXf3f& xf, const ToolPathParams& params )
+ToolPathResult constantZToolPath( const Mesh& inputMesh, const AffineXf3f& xf, const ToolPathParams& params )
 {
     const Vector3f normal = Vector3f::plusZ();
 
@@ -26,8 +25,8 @@ ToolPathResult getToolPath( const Mesh& inputMesh, const AffineXf3f& xf, const T
     if ( !resMesh.has_value() )
         return {};
 
-    ToolPathResult  res{ .modifiedMesh = std::make_shared<Mesh>( *resMesh ) };
-    const auto& mesh = *res.modifiedMesh;
+    ToolPathResult  res{ .modifiedMesh = *resMesh };
+    const auto& mesh = res.modifiedMesh;
 
     const auto box = mesh.getBoundingBox();
     const float safeZ = box.max.z + params.millRadius;
@@ -37,8 +36,7 @@ ToolPathResult getToolPath( const Mesh& inputMesh, const AffineXf3f& xf, const T
     const int steps = int( std::floor( ( plane.d - box.min.z ) / params.sectionStep ) );
 
     Contour3f toolPath{ { 0, 0, safeZ } };
-    std::ostringstream gcode;
-    gcode << "G0 Z" << safeZ << "\t(rapid down to safe height)" << std::endl;
+    res.commands.push_back( { 0, 0 } );
 
     MeshEdgePoint prevEdgePoint;
 
@@ -86,33 +84,29 @@ ToolPathResult getToolPath( const Mesh& inputMesh, const AffineXf3f& xf, const T
                     {
                         const float zRetract = lastPoint.z + params.retractLength;
                         toolPath.push_back( { toolPath.back().x, toolPath.back().y, zRetract } );
-                        gcode << "G1 Z" << zRetract << " F" << params.retractFeed << "\t(retract)" << std::endl;
+                        res.commands.push_back( { 1, params.retractFeed } );
                         toolPath.push_back( { toolPath.back().x, toolPath.back().y, safeZ } );
-                        gcode << "G0 Z" << safeZ << "\t(rapid up to safe height)" << std::endl;
+                        res.commands.push_back( { 0, 0 } );
                     }
                     else
                     {
                         toolPath.push_back( { toolPath.back().x, toolPath.back().y, safeZ } );
-                        gcode << "G1 Z" << safeZ << " F" << params.retractFeed << "\t(retract)" << std::endl;
+                        res.commands.push_back( { 1, params.retractFeed } );
                     }
                 }
 
                 toolPath.push_back( { pivotIt->x, pivotIt->y, safeZ } );
-                gcode << "G0 X" << pivotIt->x << " Y" << pivotIt->y << std::endl;
+                res.commands.push_back( { 0, 0 } );
 
                 if ( safeZ - pivotIt->z > params.plungeLength )
                 {
                     const float zPlunge = pivotIt->z + params.plungeLength;
-                    toolPath.push_back( { toolPath.back().x, toolPath.back().y, zPlunge } );
-                    gcode << "G0 Z" << zPlunge << "\t(rapid down)" << std::endl;
-                    toolPath.push_back( { toolPath.back().x, toolPath.back().y, pivotIt->z } );
-                    gcode << "G1 Z" << pivotIt->z << " F" << params.plungeFeed << "\t(plunge)" << std::endl;
+                    toolPath.push_back( { pivotIt->x, pivotIt->y, zPlunge } );
+                    res.commands.push_back( { 0, 0 } );
                 }
-                else
-                {
-                    toolPath.push_back( { toolPath.back().x, toolPath.back().y, pivotIt->z } );
-                    gcode << "G1 Z" << pivotIt->z << " F" << params.plungeFeed << "\t(plunge)" << std::endl;
-                }
+                 
+                toolPath.push_back( *pivotIt );
+                res.commands.push_back( { 1, params.plungeFeed } );                
             }
             else
             {
@@ -124,37 +118,65 @@ ToolPathResult getToolPath( const Mesh& inputMesh, const AffineXf3f& xf, const T
                     {
                         const auto p = mesh.edgePoint( sp->front() );
                         toolPath.push_back( p );
-                        gcode << "G1 X" << p.x << " Y" << p.y << " Z" << p.z << "\t(transit)" << std::endl;
+                        res.commands.push_back( {} );
                     }
                     else
                     {
                         transit.addFromSurfacePath( mesh, *sp );
                         const auto transitContours = transit.contours().front();
                         toolPath.insert( toolPath.end(), transitContours.begin(), transitContours.end() );
-
-                        for ( const auto& p : transitContours )
-                            gcode << "G1 X" << p.x << " Y" << p.y << " Z" << p.z << "\t(transit)" << std::endl;
+                        res.commands.insert( res.commands.end(), transitContours.size(), {} );
                     }
                 }
 
-                gcode << "G1 X" << pivotIt->x << " Y" << pivotIt->y << " Z" << pivotIt->z << "\t(transit)" << std::endl;
+                toolPath.push_back( *pivotIt );
+                res.commands.push_back( {} );
             }
             
-            toolPath.insert( toolPath.end(),  pivotIt, contours.end() );
-            for ( auto it = pivotIt + 1; it < contours.end(); ++it )
-                gcode << "G1 X" << it->x << " Y" << it->y << std::endl;
-
-            toolPath.insert( toolPath.end(), contours.begin(), pivotIt + 1 );
-            for ( auto it = contours.begin(); it < pivotIt + 1; ++it )
-                gcode << "G1 X" << it->x << " Y" << it->y << std::endl;
+            toolPath.insert( toolPath.end(),  pivotIt + 1, contours.end() );
+            toolPath.insert( toolPath.end(), contours.begin() + 1, pivotIt + 1 );
+            res.commands.insert( res.commands.end(), contours.size() - 1, {} );
 
             prevEdgePoint = *nextEdgePointIt;
         }        
     }
 
     res.toolPath = std::make_shared<Polyline3>( Contours3f{ toolPath } );
-    res.gcode = gcode.str();
     return res;
+}
+
+std::string exportToolPathToGCode( const Polyline3& toolPath, const std::vector<GCommand>& commands )
+{
+    const auto contours = toolPath.contours();
+    if ( contours.empty() )
+        return {};
+
+    const auto& contour = contours.front();
+    assert( contour.size() == commands.size() );
+
+    std::ostringstream gcode;    
+
+    for ( size_t i = 0; i < contour.size(); ++i )
+    {
+        const auto& p = contour[i];
+        const Vector3f prev = ( i > 0 ) ? contour[i - 1] : Vector3f{};
+        
+        gcode << "G" << commands[i].type;
+
+        if ( p.x != prev.x )
+            gcode << " X" << p.x;
+        if ( p.y != prev.y )
+            gcode << " Y" << p.y;
+        if ( p.z != prev.z )
+            gcode << " Z" << p.z;
+
+        if ( commands[i].feed != 0 )
+            gcode << " F" << commands[i].feed;
+
+        gcode << std::endl;
+    }
+
+    return gcode.str();
 }
 }
 #endif

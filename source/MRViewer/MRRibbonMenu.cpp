@@ -1213,6 +1213,7 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
         auto statePlugin = std::dynamic_pointer_cast< StateBasePlugin >( itemPtr.item );
         if ( statePlugin && statePlugin->isEnabled() )
         {
+            statePlugin->preDrawUpdate();
             statePlugin->drawDialog( menu_scaling(), ImGui::GetCurrentContext() );
 
             if ( !itemPtr.dialogPositionFixed )

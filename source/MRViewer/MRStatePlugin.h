@@ -2,7 +2,7 @@
 
 #include "MRViewerPlugin.h"
 #include "MRSceneStateCheck.h"
-#include "MRStatePluginAutoClose.h"
+#include "MRStatePluginUpdate.h"
 #include "MRSceneSelectionChange.h"
 #include "MRViewerEventsListener.h"
 #include "MRRibbonMenuItem.h"
@@ -28,7 +28,7 @@ Inheritance diagram:
    SSC Block - Block of SceneStateCheck (this block can have different topology)
                implements `isAvailable` function from ISSC, that is called from Menu's SBP* 
                (leads to: warning C4250: 'EP': inherits 'SSC' via dominance, OK on clang and gcc)
-   IPCC      - IPluginCloseCheck virtual
+   IPU      - IPluginUpdate virtual
    PCC       - Block of PluginCloseCheck (this block can have different topology)
                implements `shouldClose_` `onPluginEnable_` and `onPluginDisable_`
                functions from IPCC, that is called from Menu's SBP*
@@ -42,11 +42,11 @@ Inheritance diagram:
     |  |  |  VP  /              |
 Con .  .  .  .  .RMI            |
      \ | /   | /                |
-      \|/    |/   IPCC          | 
+      \|/    |/   IPU           | 
     ML . SBP .--. (virt)     __/
         \   /  /          __/
          \ /  /        __/
-      SLP .  . PCC  __. SSC Block
+      SLP .  . PU   __. SSC Block
            \ |   __/
             \|__/
              . EP
@@ -72,7 +72,7 @@ class Object;
 class MRVIEWER_CLASS StateBasePlugin : 
     public ViewerPlugin, 
     public RibbonMenuItem, 
-    public virtual IPluginCloseCheck,
+    public virtual IPluginUpdate,
     public virtual ISceneSelectionChange
 {
 public:

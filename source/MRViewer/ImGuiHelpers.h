@@ -7,10 +7,9 @@
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "MRMesh/MRMeshFwd.h"
-#include "MRMesh/MRVector2.h"
 #include "exports.h"
 #include "ImGuiTraits.h"
+#include "MRMesh/MRVector2.h"
 #include "MRMesh/MRColor.h"
 #include <algorithm>
 #include <functional>
@@ -268,5 +267,8 @@ MRVIEWER_API bool ModalBigTitle( const char* title, float scaling );
 /// draw exit button with close cross (i.e. for settings modal popup )
 MRVIEWER_API bool ModalExitButton( float scaling );
 
+/// get exponential speed for this value
+inline float getExpSpeed( float val, float frac = 0.01f, float min = 1e-5f )
+    { return std::max( val * frac, min ); }
 
 } // namespace ImGui

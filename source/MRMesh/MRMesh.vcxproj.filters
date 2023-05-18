@@ -933,6 +933,9 @@
     <ClInclude Include="MRFreeFormDeformer.h">
       <Filter>Source Files\LinearSystem</Filter>
     </ClInclude>
+    <ClInclude Include="MRToolPath.h">
+      <Filter>Source Files\SurfacePath</Filter>
+    </ClInclude>
     <ClInclude Include="MRLaplacian.h">
       <Filter>Source Files\LinearSystem</Filter>
     </ClInclude>
@@ -1561,6 +1564,9 @@
     </ClCompile>
     <ClCompile Include="MRGltfSerializer.cpp">
       <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRToolPath.cpp">
+      <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRFreeFormDeformer.cpp">
       <Filter>Source Files\LinearSystem</Filter>

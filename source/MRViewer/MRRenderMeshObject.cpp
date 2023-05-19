@@ -412,7 +412,6 @@ void RenderMeshObject::bindEdges_()
         const auto& topology = mesh.topology;
         auto lastValid = topology.lastNotLoneEdge();
         edgeSize_ = lastValid.valid() ? lastValid.undirected() + 1 : 0;
-        auto lastE = UndirectedEdgeId( edgeSize_ - 1 );
         positions.resize( edgeSize_ * 2 );
         tbb::parallel_for( tbb::blocked_range<int>( 0, int( edgeSize_ ) ), [&] ( const tbb::blocked_range<int>& range )
         {
@@ -426,8 +425,8 @@ void RenderMeshObject::bindEdges_()
                 }
                 else
                 {
-                    positions[2 * ue] = mesh.orgPnt( lastE );
-                    positions[2 * ue + 1] = mesh.destPnt( lastE );
+                    // important to be the same point so renderer does not rasterize these edges
+                    positions[2 * ue] = positions[2 * ue + 1] = Vector3f();
                 }
             }
         } );

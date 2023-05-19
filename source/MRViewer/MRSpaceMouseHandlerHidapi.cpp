@@ -94,20 +94,22 @@ void SpaceMouseHandlerHidapi::handle()
     }
 
     // set the device handle to be non-blocking
+    Vector3f translate, rotate;
     hid_set_nonblocking( device_, 1 );
+    convertInput_( dataPacket_, packetLength_, translate, rotate );
 
+    int counter = 1;
     int packetLengthTmp = 0;
     do {
         DataPacketRaw dataPacketTmp;
         packetLengthTmp = hid_read( device_, dataPacketTmp.data(), dataPacketTmp.size() );
+        convertInput_( dataPacketTmp, packetLengthTmp, translate, rotate );
         if ( packetLengthTmp > 0) {
             dataPacket_ = dataPacketTmp;
             packetLength_ = packetLengthTmp;
+            ++counter;
         }
     } while ( packetLengthTmp > 0 );
-
-    Vector3f translate, rotate;
-    convertInput_( dataPacket_, packetLength_, translate, rotate );
 
     auto& viewer = MR::getViewerInstance();
     viewer.spaceMouseMove( translate, rotate );
@@ -191,31 +193,27 @@ float SpaceMouseHandlerHidapi::convertCoord_( int coord_byte_low, int coord_byte
 
 void SpaceMouseHandlerHidapi::convertInput_( const DataPacketRaw& packet, int packet_length, Vector3f& translate, Vector3f& rotate )
 {
+    if ( !packet_length )
+        return;
+
     Vector3f matrix1 = {0.0f, 0.0f, 0.0f};
     Vector3f matrix2 = {0.0f, 0.0f, 0.0f};
-    if ( packet_length >= 7 ) {
+    if ( packet_length == 7 ) {
         matrix1 = {convertCoord_( packet[1], packet[2] ),
                    convertCoord_( packet[3], packet[4] ),
                    convertCoord_( packet[5], packet[6] )};
+        if ( packet[0] == 1 )
+            translate = matrix1;
+        else if ( packet[0] == 2 )
+            rotate = matrix1;
     }
-    if ( packet_length >= 13 ) {
+    if ( packet_length == 13 ) {
         matrix2 = {convertCoord_( packet[7], packet[8] ),
                    convertCoord_( packet[9], packet[10] ),
                    convertCoord_( packet[11], packet[12] )};
-    }
 
-    int signal_type = int(packet[0]);
-    switch (signal_type) {
-        case 1:
-            translate = matrix1;
-            rotate = matrix2;
-            break;
-        case 2:
-            translate = {0.0f, 0.0f, 0.0f};
-            rotate = matrix1;
-            break;
-        default:
-            break;
+        translate = matrix1;
+        rotate = matrix2;
     }
 }
 

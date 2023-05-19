@@ -150,7 +150,7 @@ void RenderLinesObject::render_( const RenderParams& renderParams, bool points )
 #endif
         getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::PointArraySize, 2 * lineIndicesSize_ );
 
-        GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
+        GL_EXEC( glDepthFunc( getDepthFunctionLEqual( renderParams.depthFunction ) ) );
         GL_EXEC( glDrawArrays( GL_POINTS, 0, lineIndicesSize_ * 2 ) );
         GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
     }
@@ -226,7 +226,9 @@ void RenderLinesObject::bindPositions_( GLuint shaderId )
             auto numL = lastValid.valid() ? lastValid.undirected() + 1 : 0;
             positions.resize( 2 * numL );
             lineIndicesSize_ = numL;
-            auto lastValidVert = topology.lastValidVert() - 1;
+            // important to be last edge org for points picker,
+            // real last point will overlap invalid points so picker will return correct id
+            auto lastValidEdgeOrg = lastValid.valid() ? topology.org( lastValid ) : VertId();
             tbb::parallel_for( tbb::blocked_range<int>( 0, lineIndicesSize_ ), [&] ( const tbb::blocked_range<int>& range )
             {
                 for ( int ue = range.begin(); ue < range.end(); ++ue )
@@ -235,8 +237,8 @@ void RenderLinesObject::bindPositions_( GLuint shaderId )
                     auto d = topology.dest( UndirectedEdgeId( ue ) );
                     if ( !o || !d )
                     {
-                        positions[2 * ue] = polyline->points[lastValidVert];
-                        positions[2 * ue + 1] = polyline->points[lastValidVert];
+                        positions[2 * ue] = polyline->points[lastValidEdgeOrg];
+                        positions[2 * ue + 1] = polyline->points[lastValidEdgeOrg];
                     }
                     else
                     {

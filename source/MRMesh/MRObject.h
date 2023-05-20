@@ -127,7 +127,7 @@ public:
     MRMESH_API void setGlobalVisibilty( bool on, ViewportMask viewportMask = ViewportMask::any() );
 
     /// object properties lock for UI
-    const bool isLocked() const { return locked_; }
+    bool isLocked() const { return locked_; }
     virtual void setLocked( bool on ) { locked_ = on; }
 
     /// returns parent object in the tree

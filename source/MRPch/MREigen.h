@@ -4,9 +4,12 @@
 
 #pragma warning(push)
 #pragma warning(disable:4127)  //
-#pragma warning(disable:4459)  //declaration of 'last' hides global declaration (compiling source file MRLaplacian.cpp)
+#pragma warning(disable:4459)  //declaration of 'last' hides global declaration
 #pragma warning(disable:4464)  //relative include path contains '..'
 #pragma warning(disable:5054)  //operator '&': deprecated between enumerations of different types
+#if _MSC_VER >= 1936 // Visual Studio 2022 version 17.6
+#pragma warning(disable:5266)  // 'const' qualifier on return type has no effect
+#endif
 #pragma warning(disable:6011)  //Dereferencing NULL pointer 'newOuterIndex'. 
 #pragma warning(disable:6255)  //_alloca indicates failure by raising a stack overflow exception.  Consider using _malloca instead.
 #pragma warning(disable:6294)  //Ill-defined for-loop:  initial condition does not satisfy test.  Loop body not executed.

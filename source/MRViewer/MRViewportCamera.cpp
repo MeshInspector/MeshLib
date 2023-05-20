@@ -183,7 +183,7 @@ void Viewport::transformView( const AffineXf3f & xf )
     needRedraw_ = true;
 }
 
-const float Viewport::getPixelSize() const
+float Viewport::getPixelSize() const
 {
     return ( tan( params_.cameraViewAngle * MR::PI_F / 360.0f ) * params_.cameraDnear * 2.0f ) / ( height( viewportRect_ ) * params_.cameraZoom );
 }

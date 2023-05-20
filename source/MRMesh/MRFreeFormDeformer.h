@@ -29,7 +29,7 @@ public:
     MRMESH_API Vector3i getCoord( int index ) const;
 
     const std::vector<Vector3f>& getAllRefGridPositions() const { return refPointsGrid_; }
-    const void setAllRefGridPositions( const std::vector<Vector3f>& refPoints ) { refPointsGrid_ = refPoints; }
+    void setAllRefGridPositions( const std::vector<Vector3f>& refPoints ) { refPointsGrid_ = refPoints; }
     const Vector3i& getResolution() const { return resolution_; }
 private:
     Mesh& mesh_;

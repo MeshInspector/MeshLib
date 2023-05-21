@@ -24,13 +24,33 @@ VertMap findSmallestCloseVertices( const VertCoords & points, const VertBitSet &
             {
                 if ( cv == v )
                     return;
-                if ( res[cv] != cv )
-                    return; // cv vertex is removed by itself
                 smallestCloseVert = std::min( smallestCloseVert, cv );
             } );
         }
         res[v] = smallestCloseVert;
     } );
+    // after parallel pass, some close vertices can be mapped further
+
+    for ( VertId v : valid )
+    {
+        VertId smallestCloseVert = res[v];
+        if ( smallestCloseVert == v )
+            continue; // v is the smallest closest by itself
+        if ( res[smallestCloseVert] == smallestCloseVert )
+            continue; // smallestCloseVert is not mapped further
+
+        // find another closest
+        smallestCloseVert = v;
+        findPointsInBall( tree, points[v], closeDist, [&]( VertId cv, const Vector3f& )
+        {
+            if ( cv == v )
+                return;
+            if ( res[cv] != cv )
+                return; // cv vertex is removed by itself
+            smallestCloseVert = std::min( smallestCloseVert, cv );
+        } );
+        res[v] = smallestCloseVert;
+    }
 
     return res;
 }

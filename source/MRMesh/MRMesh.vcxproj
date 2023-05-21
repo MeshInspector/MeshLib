@@ -20,6 +20,7 @@
     <ClInclude Include="MRChangePointCloudAction.h" />
     <ClInclude Include="MRChangePolylineAction.h" />
     <ClInclude Include="MRChangeVoxelSelectionAction.h" />
+    <ClInclude Include="MRCloseVertices.h" />
     <ClInclude Include="MRColorMapAggregator.h" />
     <ClInclude Include="MR2to3.h" />
     <ClInclude Include="MRAABBTreePolyline.h" />
@@ -310,6 +311,7 @@
     <ClCompile Include="MRBooleanOperation.cpp" />
     <ClCompile Include="MRChangeSceneAction.cpp" />
     <ClCompile Include="MRCircleObject.cpp" />
+    <ClCompile Include="MRCloseVertices.cpp" />
     <ClCompile Include="MRColorMapAggregator.cpp" />
     <ClCompile Include="MRCombinedHistoryAction.cpp" />
     <ClCompile Include="MRComputeBoundingBox.cpp" />

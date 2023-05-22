@@ -62,4 +62,26 @@ VertMap findSmallestCloseVertices( const Mesh & mesh, float closeDist )
     return findSmallestCloseVertices( mesh.points, closeDist, &mesh.topology.getValidVerts() );
 }
 
+VertBitSet findCloseVertices( const VertCoords & points, float closeDist, const VertBitSet * valid )
+{
+    MR_TIMER
+    VertBitSet res;
+    const auto map = findSmallestCloseVertices( points, closeDist, valid );
+    for ( auto v = 0_v; v < points.size(); ++v )
+    {
+        if ( const auto m = map[v]; m != v )
+        {
+            res.autoResizeSet( v );
+            assert( m < v );
+            res.autoResizeSet( m );
+        }
+    }
+    return res;
+}
+
+VertBitSet findCloseVertices( const Mesh & mesh, float closeDist )
+{
+    return findCloseVertices( mesh.points, closeDist, &mesh.topology.getValidVerts() );
+}
+
 } //namespace MR

@@ -3,6 +3,8 @@
 #include "MRAABBTreePoints.h"
 #include "MRPointsInBall.h"
 #include "MRParallelFor.h"
+#include "MRphmap.h"
+#include "MRRingIterator.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -62,14 +64,13 @@ VertMap findSmallestCloseVertices( const Mesh & mesh, float closeDist )
     return findSmallestCloseVertices( mesh.points, closeDist, &mesh.topology.getValidVerts() );
 }
 
-VertBitSet findCloseVertices( const VertCoords & points, float closeDist, const VertBitSet * valid )
+VertBitSet findCloseVertices( const VertMap & smallestMap )
 {
     MR_TIMER
     VertBitSet res;
-    const auto map = findSmallestCloseVertices( points, closeDist, valid );
-    for ( auto v = 0_v; v < points.size(); ++v )
+    for ( auto v = 0_v; v < smallestMap.size(); ++v )
     {
-        if ( const auto m = map[v]; m != v )
+        if ( const auto m = smallestMap[v]; m != v )
         {
             res.autoResizeSet( v );
             assert( m < v );
@@ -79,9 +80,77 @@ VertBitSet findCloseVertices( const VertCoords & points, float closeDist, const 
     return res;
 }
 
+VertBitSet findCloseVertices( const VertCoords & points, float closeDist, const VertBitSet * valid )
+{
+    return findCloseVertices( findSmallestCloseVertices( points, closeDist, valid ) );
+}
+
 VertBitSet findCloseVertices( const Mesh & mesh, float closeDist )
 {
     return findCloseVertices( mesh.points, closeDist, &mesh.topology.getValidVerts() );
+}
+
+struct VertPair
+{
+    VertId a, b;
+    friend bool operator ==( const VertPair &, const VertPair & ) = default;
+};
+
+} // namespace MR
+
+namespace std
+{
+
+template<> 
+struct hash<MR::VertPair> 
+{
+    size_t operator()( MR::VertPair const& p ) const noexcept
+    {
+        return size_t( p.a ) ^ ( size_t( p.b ) << 16 );
+    }
+};
+
+} // namespace std
+
+namespace MR
+{
+
+EdgeBitSet findTwinEdges( const Mesh & mesh, float closeDist )
+{
+    MR_TIMER
+    EdgeBitSet res;
+
+    const auto map = findSmallestCloseVertices( mesh, closeDist );
+    VertBitSet closeVerts = findCloseVertices( map );
+
+    HashMap<VertPair, EdgeId> hmap;
+    for ( auto v : closeVerts )
+    {
+        const auto vm = map[v];
+        for ( auto e : orgRing( mesh.topology, v ) )
+        {
+            assert( mesh.topology.org( e ) == v );
+            VertPair vp{ vm, map[mesh.topology.dest( e )] };
+            auto [it, inserted] = hmap.insert( { vp, e } );
+            if ( !inserted )
+            {
+                res.autoResizeSet( e );
+                res.autoResizeSet( it->second );
+            }
+        }
+    }
+
+    return res;
+}
+
+UndirectedEdgeBitSet findTwinUndirectedEdges( const Mesh & mesh, float closeDist )
+{
+    MR_TIMER
+    UndirectedEdgeBitSet res;
+    for ( auto e : findTwinEdges( mesh, closeDist ) )
+        res.autoResizeSet( e.undirected() );
+
+    return res;
 }
 
 } //namespace MR

@@ -48,7 +48,9 @@ public:
     /// creates tree for vertices of given mesh
     MRMESH_API AABBTreePoints( const Mesh& mesh );
     /// creates tree from given valid points
-    MRMESH_API AABBTreePoints( const VertCoords & points, const VertBitSet & validPoints );
+    MRMESH_API AABBTreePoints( const VertCoords & points, const VertBitSet * validPoints = nullptr );
+    /// creates tree from given valid points
+    AABBTreePoints( const VertCoords & points, const VertBitSet & validPoints ) : AABBTreePoints( points, &validPoints ) {}
 
     /// maximum number of points in leaf node of tree (all of leafs should have this number of points except last one)
     constexpr static int MaxNumPointsInLeaf = 16;

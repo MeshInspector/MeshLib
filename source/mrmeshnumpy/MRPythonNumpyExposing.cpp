@@ -8,6 +8,7 @@
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRVertexAttributeGradient.h"
 #include "MRMesh/MRPolyline.h"
+#include "MRMesh/MRCloseVertices.h"
 
 MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
 {
@@ -206,9 +207,15 @@ MR::Mesh fromUVPoints( const pybind11::buffer& xArray, const pybind11::buffer& y
         }
     }
 
-    res.topology = MR::MeshBuilder::fromTriangles( t );
+    // unite close vertices
+    const auto vertOldToNew = findSmallestCloseVertices( res.points, std::numeric_limits<float>::epsilon() );
+    for ( auto & tri : t )
+    {
+        for ( int i = 0; i < 3; ++i )
+            tri[i] = vertOldToNew[tri[i]];
+    }
 
-    MR::MeshBuilder::uniteCloseVertices( res, std::numeric_limits<float>::epsilon() );
+    res.topology = MR::MeshBuilder::fromTriangles( t );
 
     if ( res.volume() < 0.0f )
         res.topology.flipOrientation();

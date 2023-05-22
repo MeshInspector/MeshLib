@@ -2,23 +2,23 @@
 #include "MRMesh.h"
 #include "MRAABBTreePoints.h"
 #include "MRPointsInBall.h"
-#include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRTimer.h"
 
 namespace MR
 {
 
-VertMap findSmallestCloseVertices( const VertCoords & points, const VertBitSet & valid, float closeDist )
+VertMap findSmallestCloseVertices( const VertCoords & points, float closeDist, const VertBitSet * valid )
 {
     MR_TIMER
 
     AABBTreePoints tree( points, valid );
     VertMap res;
     res.resizeNoInit( points.size() );
-    BitSetParallelForAll( valid, [&]( VertId v )
+    ParallelFor( points, [&]( VertId v )
     {
         VertId smallestCloseVert = v;
-        if ( valid.test( v ) )
+        if ( !valid || valid->test( v ) )
         {
             findPointsInBall( tree, points[v], closeDist, [&]( VertId cv, const Vector3f& )
             {
@@ -31,8 +31,10 @@ VertMap findSmallestCloseVertices( const VertCoords & points, const VertBitSet &
     } );
     // after parallel pass, some close vertices can be mapped further
 
-    for ( VertId v : valid )
+    for ( auto v = 0_v; v < points.size(); ++v )
     {
+        if ( valid && !valid->test( v ) )
+            continue;
         VertId smallestCloseVert = res[v];
         if ( smallestCloseVert == v )
             continue; // v is the smallest closest by itself
@@ -57,7 +59,7 @@ VertMap findSmallestCloseVertices( const VertCoords & points, const VertBitSet &
 
 VertMap findSmallestCloseVertices( const Mesh & mesh, float closeDist )
 {
-    return findSmallestCloseVertices( mesh.points, mesh.topology.getValidVerts(), closeDist );
+    return findSmallestCloseVertices( mesh.points, closeDist, &mesh.topology.getValidVerts() );
 }
 
 } //namespace MR

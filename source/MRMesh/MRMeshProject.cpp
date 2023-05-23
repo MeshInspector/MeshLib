@@ -6,7 +6,7 @@
 namespace MR
 {
 
-MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq )
+MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq, FaceId skipFace )
 {
     const AABBTree & tree = mp.mesh.getAABBTree();
 
@@ -57,6 +57,8 @@ MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, f
         if ( node.leaf() )
         {
             const auto face = node.leafId();
+            if ( face == skipFace )
+                continue;
             if ( mp.region && !mp.region->test( face ) )
                 continue;
             Vector3f a, b, c;

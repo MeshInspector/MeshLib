@@ -34,7 +34,7 @@ struct ArcInterpolationParams
 {
     // maximal deviation of arc from given path
     float eps = {};
-    // maximal radius of the rac
+    // maximal radius of the arc
     float maxRadius = {};
 };
 

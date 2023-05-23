@@ -200,7 +200,7 @@ ToolPathResult constantZToolPath( const Mesh& inputMesh, const ToolPathParams& p
     return res;
 }
 
-std::vector<GCommand> interpolateSegment( const std::span<GCommand>& path, float eps, float maxRadius )
+std::vector<GCommand> replaceLineSegmentsWithCircularArcs( const std::span<GCommand>& path, float eps, float maxRadius )
 {
     if ( path.size() < 5 )
         return {};
@@ -323,7 +323,7 @@ void interpolateArcs( std::vector<GCommand>& commands, const ArcInterpolationPar
             ++endIndex;
 
         const size_t segmentSize = endIndex - startIndex;
-        auto interpolatedSegment = interpolateSegment( std::span<GCommand>( &commands[startIndex], segmentSize ), params.eps, params.maxRadius );
+        auto interpolatedSegment = replaceLineSegmentsWithCircularArcs( std::span<GCommand>( &commands[startIndex], segmentSize ), params.eps, params.maxRadius );
         if ( interpolatedSegment.empty() )
         {
             startIndex = endIndex;

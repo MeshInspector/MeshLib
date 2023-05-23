@@ -61,7 +61,7 @@ MRMESH_API MeshTopology fromVertexTriples( const std::vector<VertId>& vertTriple
 
 // construct mesh from point triples;
 // all coinciding points are given the same VertId in the result
-MRMESH_API Mesh fromPointTriples( const std::vector<ThreePoints> & posTriples );
+MRMESH_API Mesh fromPointTriples( const std::vector<Triangle3f> & posTriples );
 
 // a part of a whole mesh to be constructed
 struct MeshPiece

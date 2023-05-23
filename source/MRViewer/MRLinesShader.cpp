@@ -121,14 +121,19 @@ std::string getLinesVertexShaderPositionBlock()
 
     vec4 projBasePos = proj * vec4( posEye, 1.0 );
     vec4 projOtherPos = proj * vec4( otherPosEye, 1.0 );
-    vec2 projDir = normalize( projOtherPos.xy - projBasePos.xy );
-    projDir.xy = projDir.yx;
-    if ( left )
-        projDir.x = -projDir.x;
-    else
-        projDir.y = -projDir.y;
+    vec2 basePix = viewport.xy + viewport.zw * ( vec2(1.0,1.0) + projBasePos.xy / projBasePos.w ) * 0.5;
+    vec2 otherPix = viewport.xy + viewport.zw * ( vec2(1.0,1.0) + projOtherPos.xy / projOtherPos.w ) * 0.5;
 
-    projBasePos.xy = projBasePos.xy + projDir*width*projBasePos.w/viewport.zw;
+    vec2 dir = normalize( otherPix - basePix );
+    dir.xy = dir.yx;
+    if ( left )
+        dir.x = -dir.x;
+    else
+        dir.y = -dir.y;
+
+    basePix = basePix + dir * 0.5 * width;
+
+    projBasePos.xy = ( 2.0 * (basePix - viewport.xy) / (viewport.zw) - vec2(1.0,1.0) ) * projBasePos.w;
     
     gl_Position = projBasePos;
 

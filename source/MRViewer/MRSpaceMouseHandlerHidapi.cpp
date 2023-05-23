@@ -94,21 +94,16 @@ void SpaceMouseHandlerHidapi::handle()
     }
 
     // set the device handle to be non-blocking
-    Vector3f translate, rotate;
     hid_set_nonblocking( device_, 1 );
+
+    Vector3f translate, rotate;
     convertInput_( dataPacket_, packetLength_, translate, rotate );
 
-    int counter = 1;
     int packetLengthTmp = 0;
     do {
         DataPacketRaw dataPacketTmp;
         packetLengthTmp = hid_read( device_, dataPacketTmp.data(), dataPacketTmp.size() );
         convertInput_( dataPacketTmp, packetLengthTmp, translate, rotate );
-        if ( packetLengthTmp > 0) {
-            dataPacket_ = dataPacketTmp;
-            packetLength_ = packetLengthTmp;
-            ++counter;
-        }
     } while ( packetLengthTmp > 0 );
 
     auto& viewer = MR::getViewerInstance();
@@ -166,15 +161,6 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
     });
 }
 
-void SpaceMouseHandlerHidapi::addActionToQueue(const Vector3f& translate, const Vector3f& rotate, bool isSkippable) {
-    auto* viewer = &MR::getViewerInstance();
-    auto eventCall = [translate, rotate, viewer] ()
-    {
-        viewer->spaceMouseMove( translate, rotate );
-    };
-    viewer->eventQueue.emplace( { "SpaceMouse move", eventCall }, isSkippable );
-}
-
 void SpaceMouseHandlerHidapi::postFocusSignal_( bool focused )
 {
     active_ = focused;
@@ -198,7 +184,7 @@ void SpaceMouseHandlerHidapi::convertInput_( const DataPacketRaw& packet, int pa
 
     Vector3f matrix1 = {0.0f, 0.0f, 0.0f};
     Vector3f matrix2 = {0.0f, 0.0f, 0.0f};
-    if ( packet_length == 7 ) {
+    if ( packet_length >= 7 ) {
         matrix1 = {convertCoord_( packet[1], packet[2] ),
                    convertCoord_( packet[3], packet[4] ),
                    convertCoord_( packet[5], packet[6] )};

@@ -88,35 +88,41 @@ private:
             }}
     };
 
+    /*         |   <--- packet values --->
+     *   #byte |   1          2
+     *   ------+--------------------------
+     *       0 |   -          -
+     *       1 |   custom_1   custom_2
+     */
     std::vector<std::vector<SpaceMouseButtons>> buttonMapCompact = {
         {  }, // 0th byte (unused)
-        { SMB_CUSTOM_1,     SMB_CUSTOM_2}
+        { SMB_CUSTOM_1, SMB_CUSTOM_2} // 1st byte
     };
-    /*
-       	        1		2		3		4		5		6
-       128				4		alt
-       64				3		esc
-       32		F		2
-       16		R		1
-       8
-       4		T						lock
-       2		fit						ctrl
-       1		menu	rot				shift
+
+    /*         |  <--- packet values --->
+     *   #byte |    1      2       4       8     16      32      64      126
+     *   ------+------------------------------------------------------------------
+     *       1 |  menu   fit     T               R       F
+     *       2 |  rot                            1       2       3        4
+     *       3 |                                                 esc      alt
+     *       4 |  shift  ctrl    lock
+     *
      */
     std::vector<std::vector<SpaceMouseButtons>> buttonMapPro = {
         {  }, // 0th byte (unused)
         //1             2             4             8             16            32            64            128
         { SMB_MENU,     SMB_FIT,      SMB_TOP,      SMB_NO,       SMB_RIGHT,    SMB_FRONT,    SMB_NO,       SMB_NO },      // 1st byte
-        { SMB_ROLL_CW,  SMB_NO,       SMB_NO,       SMB_NO,       SMB_CUSTOM_1, SMB_CUSTOM_2, SMB_CUSTOM_3, SMB_CUSTOM_1}, // 2nd byte
+        { SMB_ROLL_CW,  SMB_NO,       SMB_NO,       SMB_NO,       SMB_CUSTOM_1, SMB_CUSTOM_2, SMB_CUSTOM_3, SMB_CUSTOM_4}, // 2nd byte
         { SMB_NO,       SMB_NO,       SMB_NO,       SMB_NO,       SMB_NO,       SMB_NO,       SMB_ESC,      SMB_ALT},      // 3rd byte
         { SMB_SHIFT,    SMB_CTRL,     SMB_LOCK_ROT, SMB_NO,       SMB_NO,       SMB_NO,       SMB_NO,       SMB_NO,},      // 4th byte
     };
 
+    // @TODO !!! NOT TESTED !!!
     std::vector<std::vector<SpaceMouseButtons>> buttonMapEnterprise = {
         {  }, // 0th byte (unused)
         { SMB_CUSTOM_1,     SMB_CUSTOM_2}
     };
-    /* TODO !!! NOT TESTED !!!
+    /* @TODO !!! NOT TESTED !!!
     static constexpr int mapButtonsEnterprise[31] = {
         SMB_MENU, SMB_FIT,
         SMB_TOP, SMB_RIGHT, SMB_FRONT, SMB_ROLL_CW, SMB_LOCK_ROT,

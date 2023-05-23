@@ -223,18 +223,6 @@ void SpaceMouseHandlerHidapi::updateActionWithInput_( const DataPacketRaw& packe
                     action.buttons.set((*buttonsMapPtr_)[column][i]);
             }
         }
-        if ( action.buttons.none())
-        {
-            spdlog::debug("SpaceMouse buttons result - all up" );
-        }
-        else
-        {
-            for (int i = 0; i < SMB_BUTTON_COUNT; ++i)
-            {
-                if (action.buttons.test(i))
-                    spdlog::debug("SpaceMouse buttons result - {}", i);
-            }
-        }
         return;
     }
 
@@ -269,9 +257,15 @@ void SpaceMouseHandlerHidapi::processAction_(const SpaceMouseAction& action)
         for (int btn = 0; btn < SMB_BUTTON_COUNT; ++btn)
         {
             if ( new_unpressed.test( btn ) )
+            {
+                spdlog::debug("SpaceMouse button up   - {}", btn);
                 viewer.spaceMouseUp( btn );
+            }
             if ( new_pressed.test( btn ) )
+            {
+                spdlog::debug("SpaceMouse button down - {}", btn);
                 viewer.spaceMouseDown( btn );
+            }
         }
         buttonsState_ = action.buttons;
     }

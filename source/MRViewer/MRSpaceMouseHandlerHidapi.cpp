@@ -12,6 +12,7 @@ SpaceMouseHandlerHidapi::SpaceMouseHandlerHidapi()
         , terminateListenerThread_(false)
         , dataPacket_({0})
         , packetLength_(0)
+        , active_(true)
 {
     connect( &getViewerInstance(), 0, boost::signals2::connect_position::at_back );
 }
@@ -137,14 +138,12 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
             // wait for active state and read all data packets during inactive state
             if ( !active_ )
             {
-                if ( terminateListenerThread_ )
-                    return;
-
-                cv_.wait( syncThreadLock );
                 do
                 {
-                    packetLength_ = hid_read_timeout( device_, dataPacket_.data(), dataPacket_.size(), 500 );
-                } while ( packetLength_ > 0 );
+                    packetLength_ = hid_read_timeout( device_, dataPacket_.data(), dataPacket_.size(), 200 );
+                } while ( packetLength_ > 0 && !active_ && !terminateListenerThread_ );
+                if ( terminateListenerThread_ )
+                    return;
             }
             else
             {

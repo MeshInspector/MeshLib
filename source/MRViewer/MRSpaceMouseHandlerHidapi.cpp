@@ -9,6 +9,7 @@ namespace MR
 {
 SpaceMouseHandlerHidapi::SpaceMouseHandlerHidapi()
         : device_(nullptr)
+        , buttonsMap_(nullptr)
         , terminateListenerThread_(false)
         , dataPacket_({0})
         , packetLength_(0)
@@ -65,6 +66,26 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_() {
                     {
                         isDeviceFound = true;
                         spdlog::info( "SpaceMouse Found: type: {} {} path: {} ", vendorId, deviceId, localDevicesIt->path );
+                        // setup buttons logger
+                        buttonsState_.clear();
+                        if ( vendorId == 0x256f )
+                        {
+                            if ( deviceId == 0xc635 || deviceId == 0xc652 ) // spacemouse compact
+                            {
+                                buttonsMap_ = mapButtonsCompact;
+                                buttonsState_.resize(2, 0);
+                            }
+                            else if ( deviceId == 0xc631 || deviceId == 0xc632 ) //  spacemouse pro
+                            {
+                                buttonsMap_ = mapButtonsPro;
+                                buttonsState_.resize(16, 0);
+                            }
+                            else if ( deviceId == 0xc633  ) // spacemouse enterprise
+                            {
+                                buttonsMap_ = mapButtonsEnterprise;
+                                buttonsState_.resize(32, 0);
+                            }
+                        }
                         break;
                     }
                     else
@@ -96,18 +117,17 @@ void SpaceMouseHandlerHidapi::handle()
     // set the device handle to be non-blocking
     hid_set_nonblocking( device_, 1 );
 
-    Vector3f translate, rotate;
-    convertInput_( dataPacket_, packetLength_, translate, rotate );
+    SpaceMouseAction action;
+    updateActionWithInput_( dataPacket_, packetLength_, action);
 
     int packetLengthTmp = 0;
     do {
         DataPacketRaw dataPacketTmp;
         packetLengthTmp = hid_read( device_, dataPacketTmp.data(), dataPacketTmp.size() );
-        convertInput_( dataPacketTmp, packetLengthTmp, translate, rotate );
+        updateActionWithInput_( dataPacketTmp, packetLengthTmp, action );
     } while ( packetLengthTmp > 0 );
 
-    auto& viewer = MR::getViewerInstance();
-    viewer.spaceMouseMove( translate, rotate );
+    processAction_(action);
 
     syncThreadLock.unlock();
     cv_.notify_one();
@@ -148,6 +168,8 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
             {
                 hid_close( device_ );
                 device_ = nullptr;
+                buttonsMap_ = nullptr;
+                buttonsState_.clear();
                 spdlog::error( "HID API: device lost" );
             }
             else if ( packetLength_ > 0)
@@ -177,33 +199,62 @@ float SpaceMouseHandlerHidapi::convertCoord_( int coord_byte_low, int coord_byte
     return (std::abs(ret) > 0.01f) ? ret : 0.0f;
 }
 
-void SpaceMouseHandlerHidapi::convertInput_( const DataPacketRaw& packet, int packet_length, Vector3f& translate, Vector3f& rotate )
+void SpaceMouseHandlerHidapi::updateActionWithInput_( const DataPacketRaw& packet, int packet_length, SpaceMouseAction& action )
 {
-    if ( !packet_length )
+    // button update package
+    if ( packet[0] == 3 )
+    {
+        spdlog::debug("SpaceMouse button raw packet value: {}", int(packet[1]) );
+        action.button = int(packet[1]);
         return;
+    }
 
-    Vector3f matrix1 = {0.0f, 0.0f, 0.0f};
-    Vector3f matrix2 = {0.0f, 0.0f, 0.0f};
+    Vector3f matrix = {0.0f, 0.0f, 0.0f};
     if ( packet_length >= 7 ) {
-        matrix1 = {convertCoord_( packet[1], packet[2] ),
-                   convertCoord_( packet[3], packet[4] ),
-                   convertCoord_( packet[5], packet[6] )};
+        matrix = {convertCoord_( packet[1], packet[2] ),
+                  convertCoord_( packet[3], packet[4] ),
+                  convertCoord_( packet[5], packet[6] )};
+
         if ( packet[0] == 1 )
-            translate = matrix1;
+            action.translate = matrix;
         else if ( packet[0] == 2 )
-            rotate = matrix1;
+            action.rotate = matrix;
     }
     if ( packet_length == 13 ) {
-        matrix2 = {convertCoord_( packet[7], packet[8] ),
-                   convertCoord_( packet[9], packet[10] ),
-                   convertCoord_( packet[11], packet[12] )};
-
-        translate = matrix1;
-        rotate = matrix2;
+        action.translate = matrix;
+        action.rotate = {convertCoord_( packet[7], packet[8] ),
+                         convertCoord_( packet[9], packet[10] ),
+                         convertCoord_( packet[11], packet[12] )};
     }
 }
 
-void SpaceMouseHandlerHidapi::printDevices_( struct hid_device_info *cur_dev ) {
+void SpaceMouseHandlerHidapi::processAction_(const SpaceMouseAction& mouse_action)
+{
+    auto &viewer = getViewerInstance();
+    viewer.spaceMouseMove( mouse_action.translate, mouse_action.rotate );
+
+    // all buttons up
+    if ( mouse_action.button == 0 )
+    {
+        for ( int i = 0; i < buttonsState_.size(); ++i)
+        {
+            if ( buttonsState_[i] != 0 )
+            {
+                viewer.spaceMouseUp( buttonsMap_[i] );
+                buttonsState_[i] = 0;
+            }
+        }
+    }
+    else if ( mouse_action.button > 0 )
+    {
+        viewer.spaceMouseDown( buttonsMap_[ mouse_action.button - 1 ] );
+        buttonsState_[ mouse_action.button - 1 ] = 1;
+    }
+
+}
+
+void SpaceMouseHandlerHidapi::printDevices_( struct hid_device_info *cur_dev )
+{
     while ( cur_dev )
     {
         if ( vendor2device_.find( cur_dev->vendor_id) != vendor2device_.end() )

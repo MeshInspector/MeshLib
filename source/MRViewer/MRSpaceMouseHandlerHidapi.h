@@ -24,6 +24,11 @@ class SpaceMouseHandlerHidapi : public SpaceMouseHandler, public PostFocusListen
     typedef std::array<unsigned char, 13> DataPacketRaw;
     typedef short unsigned int VendorId;
     typedef short unsigned int ProductId;
+    struct SpaceMouseAction {
+        int button = -1; // -1 - no update, 0 - all up, 1-32 - button pressed
+        Vector3f translate = {0.0f, 0.0f, 0.0f};
+        Vector3f rotate = {0.0f, 0.0f, 0.0f};
+    };
 public:
     SpaceMouseHandlerHidapi();
     ~SpaceMouseHandlerHidapi();
@@ -35,14 +40,19 @@ private:
     void initListenerThread_();
     virtual void postFocusSignal_( bool focused ) override;
 
+    void processAction_(const SpaceMouseAction& action);
     float convertCoord_( int coord_byte_low, int coord_byte_high );
-    void convertInput_( const DataPacketRaw& packet, int packet_length, Vector3f& translate, Vector3f& rotate );
+
+    // update (rewrite its data) SpaceMouseAction if DataPacketRaw is not empty
+    void updateActionWithInput_( const DataPacketRaw& packet, int packet_length, SpaceMouseAction& action);
 
     bool findAndAttachDevice_();
     void printDevices_( struct hid_device_info *cur_dev );
 
 private:
     hid_device *device_;
+    const int* buttonsMap_{};
+    std::vector<int> buttonsState_;
     std::thread listenerThread_;
     std::atomic_bool terminateListenerThread_;
     std::mutex syncThreadMutex_; // which thread reads and handles SpaceMouse data
@@ -54,27 +64,48 @@ private:
     // if you change this value, do not forget to update MeshLib/scripts/70-space-mouse-meshlib.rules
     const std::unordered_map<VendorId, std::vector<ProductId>> vendor2device_ = {
             { 0x046d, { 0xc603,    // spacemouse plus XT
-                              0xc605,    // cadman
-                              0xc606,    // spacemouse classic
-                              0xc621,    // spaceball 5000
-                              0xc623,    // space traveller
-                              0xc625,    // space pilot
-                              0xc626,    // space navigator
-                              0xc627,    // space explorer
-                              0xc628,    // space navigator for notebooks
-                              0xc629,    // space pilot pro
-                              0xc62b,    // space mouse pro
-                              0xc640     // nulooq
-                            }},
+                        0xc605,    // cadman
+                        0xc606,    // spacemouse classic
+                        0xc621,    // spaceball 5000
+                        0xc623,    // space traveller
+                        0xc625,    // space pilot
+                        0xc626,    // space navigator
+                        0xc627,    // space explorer
+                        0xc628,    // space navigator for notebooks
+                        0xc629,    // space pilot pro
+                        0xc62b,    // space mouse pro
+                        0xc640     // nulooq
+            }},
             { 0x256f, { 0xc62e,    // spacemouse wireless (USB cable)
-                              0xc62f,    // spacemouse wireless receiver
-                              0xc631,    // spacemouse pro wireless
-                              0xc632,    // spacemouse pro wireless receiver
-                              0xc633,    // spacemouse enterprise
-                              0xc635,    // spacemouse compact
-                              0xc652     // 3Dconnexion universal receiver
-                            }}
+                        0xc62f,    // spacemouse wireless receiver
+                        0xc631,    // spacemouse pro wireless
+                        0xc632,    // spacemouse pro wireless receiver
+                        0xc633,    // spacemouse enterprise
+                        0xc635,    // spacemouse compact
+                        0xc652     // 3Dconnexion universal receiver
+            }}
     };
+
+    static constexpr int mapButtonsCompact[2] = {
+        SMB_CUSTOM_1, SMB_CUSTOM_2
+    };
+    static constexpr int mapButtonsPro[15] = {
+        SMB_MENU, SMB_FIT,
+        SMB_TOP, SMB_RIGHT, SMB_FRONT, SMB_ROLL_CW,
+        SMB_CUSTOM_1, SMB_CUSTOM_2, SMB_CUSTOM_3, SMB_CUSTOM_4,
+        SMB_ESC, SMB_ALT, SMB_SHIFT, SMB_CTRL,
+        SMB_LOCK_ROT
+    };
+    // TODO !!! NOT TESTED !!!
+    static constexpr int mapButtonsEnterprise[31] = {
+        SMB_MENU, SMB_FIT,
+        SMB_TOP, SMB_RIGHT, SMB_FRONT, SMB_ROLL_CW, SMB_LOCK_ROT,
+        SMB_ISO1, SMB_BTN_V1, SMB_BTN_V2, SMB_BTN_V3,
+        SMB_CUSTOM_1, SMB_CUSTOM_2, SMB_CUSTOM_3, SMB_CUSTOM_4, SMB_CUSTOM_5, SMB_CUSTOM_6,
+        SMB_CUSTOM_7, SMB_CUSTOM_8, SMB_CUSTOM_9, SMB_CUSTOM_10, SMB_CUSTOM_11, SMB_CUSTOM_12,
+        SMB_ESC, SMB_ENTER, SMB_ALT, SMB_SHIFT, SMB_CTRL, SMB_TAB, SMB_SPACE, SMB_DELETE
+    };
+
 };
 
 }

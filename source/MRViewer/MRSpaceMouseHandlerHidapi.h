@@ -61,7 +61,7 @@ private:
     std::condition_variable cv_; // notify on thread change
     DataPacketRaw dataPacket_;    // packet from listener thread
     int packetLength_;
-    bool active_{ true };
+    std::atomic_bool active_;
 
     // if you change this value, do not forget to update MeshLib/scripts/70-space-mouse-meshlib.rules
     const std::unordered_map<VendorId, std::vector<ProductId>> vendor2device_ = {

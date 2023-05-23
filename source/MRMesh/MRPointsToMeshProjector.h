@@ -6,18 +6,21 @@
 
 namespace MR
 {
-/// Abstract class, computes the closest point on mesh to each of given points. Pure virtual finctions must be implemented
+/// Abstract class, computes the closest point on mesh to each of given points. Pure virtual functions must be implemented
 class IPointsToMeshProjector
 {
 protected:
 public:
     virtual ~IPointsToMeshProjector() = default;    
-    /// update all data related to the referencing mesh
+    /// Updates all data related to the referencing mesh
     virtual void updateMeshData( std::shared_ptr<const Mesh> mesh ) = 0;
     /// Computes the closest point on mesh to each of given points
     virtual void findProjections( std::vector<MeshProjectionResult>& result, const std::vector<Vector3f>& points, 
                                   const AffineXf3f& worldXf, const AffineXf3f& worldRefXf, 
                                   float upDistLimitSq, float loDistLimitSq ) = 0;
+
+    /// Returns amount of memory needed to compute projections
+    virtual size_t projectionsHeapBytes( size_t numProjections ) const = 0;
 };
 /// Computes the closest point on mesh to each of given points on CPU
 class MRMESH_CLASS PointsToMeshProjector : public IPointsToMeshProjector
@@ -41,6 +44,9 @@ public:
     MRMESH_API virtual void findProjections( std::vector<MeshProjectionResult>& result, const std::vector<Vector3f>& points, 
                                              const AffineXf3f& objXf, const AffineXf3f& refObjXf, 
                                              float upDistLimitSq, float loDistLimitSq ) override;
+
+    /// Returns amount of additional memory needed to compute projections
+    MRMESH_API virtual size_t projectionsHeapBytes( size_t numProjections ) const override;
 };
 
 }

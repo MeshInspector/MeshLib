@@ -203,6 +203,21 @@ void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, cons
     } );
 }
 
+size_t FastWindingNumber::fromVectorHeapBytes( size_t ) const
+{
+    return 0;
+}
+
+size_t FastWindingNumber::selfIntersectionsHeapBytes( const Mesh& ) const
+{
+    return 0;
+}
+
+size_t FastWindingNumber::fromGridHeapBytes( const Vector3i& ) const
+{
+    return 0;
+}
+
 TEST(MRMesh, TriangleSolidAngle) 
 {
     const ThreePoints tri =

@@ -28,5 +28,9 @@ void PointsToMeshProjector::findProjections( std::vector<MeshProjectionResult>& 
     } );
 }
 
+size_t PointsToMeshProjector::projectionsHeapBytes( size_t ) const
+{
+    return 0;
+}
 
 }

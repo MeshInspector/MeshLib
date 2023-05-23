@@ -103,6 +103,20 @@ void PointsToMeshProjector::findProjections(
     } );
 }
 
+size_t PointsToMeshProjector::projectionsHeapBytes( size_t numProjections ) const
+{
+    size_t currentSize = 0;
+    if ( meshData_ )
+    {
+        currentSize += meshData_->cudaPoints.size() * sizeof( float3 );
+        currentSize += meshData_->cudaResult.size() * sizeof( MeshProjectionResult );
+    }
+    size_t newSize = numProjections * ( sizeof( float3 ) + sizeof( MeshProjectionResult ) );
+    if ( newSize <= currentSize )
+        return 0;
+    return newSize - currentSize;
+}
+
 }
 
 }

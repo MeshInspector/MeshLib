@@ -214,7 +214,7 @@
     <ClCompile Include="MRPalette.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="MRStatePluginAutoClose.cpp">
+    <ClCompile Include="MRStatePluginUpdate.cpp">
       <Filter>StatePlugins</Filter>
     </ClCompile>
     <ClCompile Include="MRAppendHistory.cpp">
@@ -264,6 +264,7 @@
     </ClCompile>
     <ClCompile Include="MRSpaceMouseHandlerHidapi.cpp">
       <Filter>SpaceMouse</Filter>
+    </ClCompile>
     <ClCompile Include="MRMeshShader.cpp">
       <Filter>Render\Shaders</Filter>
     </ClCompile>
@@ -451,7 +452,7 @@
     <ClInclude Include="MRPalette.h">
       <Filter>Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="MRStatePluginAutoClose.h">
+    <ClInclude Include="MRStatePluginUpdate.h">
       <Filter>StatePlugins</Filter>
     </ClInclude>
     <ClInclude Include="MRAppendHistory.h">
@@ -501,6 +502,7 @@
     </ClInclude>
     <ClInclude Include="MRSpaceMouseHandlerHidapi.h">
       <Filter>SpaceMouse</Filter>
+    </ClInclude>
     <ClInclude Include="MRMeshShader.h">
       <Filter>Render\Shaders</Filter>
     </ClInclude>

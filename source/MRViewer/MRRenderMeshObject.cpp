@@ -117,7 +117,7 @@ void RenderMeshObject::render( const RenderParams& renderParams )
 
         // Texture
         GL_EXEC( auto useTexture = glGetUniformLocation( shader, "useTexture" ) );
-        GL_EXEC( glUniform1i( useTexture, objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, renderParams.viewportId ) || 
+        GL_EXEC( glUniform1i( useTexture, objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, renderParams.viewportId ) ||
             objMesh_->hasAncillaryTexture() ) );
 
         GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
@@ -198,7 +198,7 @@ size_t RenderMeshObject::glBytes() const
 void RenderMeshObject::forceBindAll()
 {
     update_( ViewportMask::all() );
-    bindMesh_( false ); 
+    bindMesh_( false );
     bindEdges_();
     bindSelectedEdges_();
     bindBorders_();
@@ -335,7 +335,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
     const auto& texture = objMesh_->hasAncillaryTexture() ? objMesh_->getAncillaryTexture() : objMesh_->getTexture();
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
     texture_.loadDataOpt( dirty_ & DIRTY_TEXTURE,
-        { 
+        {
             .resolution = texture.resolution,
             .internalFormat = GL_RGBA,
             .format = GL_RGBA,
@@ -354,8 +354,8 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
         auto facesColorMap = objMesh_->getFacesColorMap();
         auto res = calcTextureRes( int( facesColorMap.size() ), maxTexSize_ );
         facesColorMap.resize( res.x * res.y );
-        faceColorsTex_.loadData( 
-            { .resolution = res, .internalFormat = GL_RGBA8, .format = GL_RGBA, .type= GL_UNSIGNED_BYTE },
+        faceColorsTex_.loadData(
+            { .resolution = res, .internalFormat = GL_RGBA8, .format = GL_RGBA, .type = GL_UNSIGNED_BYTE },
             facesColorMap );
     }
     else
@@ -366,7 +366,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
     auto faceNormals = loadFaceNormalsTextureBuffer_();
     GL_EXEC( glActiveTexture( GL_TEXTURE2 ) );
     facesNormalsTex_.loadDataOpt( faceNormals.dirty(),
-        { .resolution = faceNormalsTextureSize_, .internalFormat = GL_RGBA32F, .format = GL_RGBA, .type= GL_FLOAT },
+        { .resolution = faceNormalsTextureSize_, .internalFormat = GL_RGBA32F, .format = GL_RGBA, .type = GL_FLOAT },
         faceNormals );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "faceNormals" ), 2 ) );
 
@@ -374,7 +374,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
     auto faceSelection = loadFaceSelectionTextureBuffer_();
     GL_EXEC( glActiveTexture( GL_TEXTURE3 ) );
     faceSelectionTex_.loadDataOpt( faceSelection.dirty(),
-        { .resolution = faceSelectionTextureSize_, .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type= GL_UNSIGNED_INT },
+        { .resolution = faceSelectionTextureSize_, .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type = GL_UNSIGNED_INT },
         faceSelection );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 3 ) );
 
@@ -400,40 +400,35 @@ void RenderMeshObject::bindMeshPicker_()
 
 void RenderMeshObject::bindEdges_()
 {
-    if ( !dirtyEdges_ )
+    if ( !dirtyEdges_ || !objMesh_->mesh() )
     {
         edgesTexture_.bind();
         return;
     }
-    std::vector<Vector3f> positions;
-    if ( objMesh_->mesh() )
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
+    const auto& mesh = *objMesh_->mesh();
+    const auto& topology = mesh.topology;
+    auto lastValid = topology.lastNotLoneEdge();
+    edgeSize_ = lastValid.valid() ? lastValid.undirected() + 1 : 0;
+    auto res = calcTextureRes( int( edgeSize_ * 2 ), maxTexSize_ );
+    auto positions = glBuffer.prepareBuffer<Vector3f>( res.x * res.y );
+    tbb::parallel_for( tbb::blocked_range<int>( 0, int( edgeSize_ ) ), [&] ( const tbb::blocked_range<int>& range )
     {
-        const auto& mesh = *objMesh_->mesh();
-        const auto& topology = mesh.topology;
-        auto lastValid = topology.lastNotLoneEdge();
-        edgeSize_ = lastValid.valid() ? lastValid.undirected() + 1 : 0;
-        auto lastE = UndirectedEdgeId( edgeSize_ - 1 );
-        positions.resize( edgeSize_ * 2 );
-        tbb::parallel_for( tbb::blocked_range<int>( 0, int( edgeSize_ ) ), [&] ( const tbb::blocked_range<int>& range )
+        for ( int ue = range.begin(); ue < range.end(); ++ue )
         {
-            for ( int ue = range.begin(); ue < range.end(); ++ue )
+            auto uEId = UndirectedEdgeId( ue );
+            if ( topology.hasEdge( uEId ) )
             {
-                auto uEId = UndirectedEdgeId( ue );
-                if ( topology.hasEdge( uEId ) )
-                {
-                    positions[2 * ue] = mesh.orgPnt( uEId );
-                    positions[2 * ue + 1] = mesh.destPnt( uEId );
-                }
-                else
-                {
-                    positions[2 * ue] = mesh.orgPnt( lastE );
-                    positions[2 * ue + 1] = mesh.destPnt( lastE );
-                }
+                positions[2 * ue] = mesh.orgPnt( uEId );
+                positions[2 * ue + 1] = mesh.destPnt( uEId );
             }
-        } );
-    }
-    auto res = calcTextureRes( int( positions.size() ), maxTexSize_ );
-    positions.resize( res.x * res.y );
+            else
+            {
+                // important to be the same point so renderer does not rasterize these edges
+                positions[2 * ue] = positions[2 * ue + 1] = Vector3f();
+            }
+        }
+    } );
     edgesTexture_.loadData(
         { .resolution = res, .internalFormat = GL_RGB32UI, .format = GL_RGB_INTEGER, .type = GL_UNSIGNED_INT },
         positions );
@@ -447,28 +442,25 @@ void RenderMeshObject::bindBorders_()
         borderTexture_.bind();
         return;
     }
-    std::vector<Vector3f> positions;
-    if ( objMesh_->mesh() )
-    {
-        const auto& mesh = objMesh_->mesh();
-        const auto& topology = mesh->topology;
-        auto boundary = findRightBoundary( topology );
-        bordersSize_ = 0;
-        for ( const auto& b : boundary )
-            bordersSize_ += ( int )b.size();
-        positions.reserve( 2 * bordersSize_ );
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
+    const auto& mesh = objMesh_->mesh();
+    const auto& topology = mesh->topology;
+    auto boundary = findRightBoundary( topology );
+    bordersSize_ = 0;
+    for ( const auto& b : boundary )
+        bordersSize_ += ( int )b.size();
+    auto res = calcTextureRes( 2 * bordersSize_, maxTexSize_ );
+    auto positions = glBuffer.prepareBuffer<Vector3f>( res.x * res.y );
 
-        for ( const auto& b : boundary )
+    int i = 0;
+    for ( const auto& b : boundary )
+    {
+        for ( auto e : b )
         {
-            for ( auto e : b )
-            {
-                positions.emplace_back( mesh->orgPnt( e ) );
-                positions.emplace_back( mesh->destPnt( e ) );
-            }
+            positions[i++] = mesh->orgPnt( e );
+            positions[i++] = mesh->destPnt( e );
         }
     }
-    auto res = calcTextureRes( int( positions.size() ), maxTexSize_ );
-    positions.resize( res.x * res.y );
     borderTexture_.loadData(
         { .resolution = res, .internalFormat = GL_RGB32UI, .format = GL_RGB_INTEGER, .type = GL_UNSIGNED_INT },
         positions );
@@ -481,25 +473,22 @@ void RenderMeshObject::bindSelectedEdges_()
         selEdgesTexture_.bind();
         return;
     }
-    std::vector<Vector3f> positions;
-    if ( objMesh_->mesh() )
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
+    const auto& mesh = objMesh_->mesh();
+    const auto& topology = mesh->topology;
+    auto selectedEdges = objMesh_->getSelectedEdges();
+    for ( auto e : selectedEdges )
+        if ( !topology.hasEdge( e ) )
+            selectedEdges.reset( e );
+    selEdgeSize_ = int( selectedEdges.count() );
+    auto res = calcTextureRes( 2 * selEdgeSize_, maxTexSize_ );
+    auto positions = glBuffer.prepareBuffer<Vector3f>( res.x * res.y );
+    int i = 0;
+    for ( auto e : selectedEdges )
     {
-        const auto& mesh = objMesh_->mesh();
-        const auto& topology = mesh->topology;
-        auto selectedEdges = objMesh_->getSelectedEdges();
-        for ( auto e : selectedEdges )
-            if ( !topology.hasEdge( e ) )
-                selectedEdges.reset( e );
-        selEdgeSize_ = int( selectedEdges.count() );
-        positions.reserve( selEdgeSize_ * 2 );
-        for ( auto e : selectedEdges )
-        {
-            positions.emplace_back( mesh->orgPnt( e ) );
-            positions.emplace_back( mesh->destPnt( e ) );
-        }
+        positions[i++] = mesh->orgPnt( e );
+        positions[i++] = mesh->destPnt( e );
     }
-    auto res = calcTextureRes( int( positions.size() ), maxTexSize_ );
-    positions.resize( res.x * res.y );
     selEdgesTexture_.loadData(
         { .resolution = res, .internalFormat = GL_RGB32UI, .format = GL_RGB_INTEGER, .type = GL_UNSIGNED_INT },
         positions );

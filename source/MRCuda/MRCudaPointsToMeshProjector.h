@@ -26,6 +26,9 @@ public:
     /// <param name="loDistLimitSq">minimal squared distance from point to mesh</param>
     /// <returns></returns>
     MRCUDA_API virtual void findProjections( std::vector<MR::MeshProjectionResult>& res, const std::vector<Vector3f>& points, const AffineXf3f& objXf, const AffineXf3f& refObjXf, float upDistLimitSq, float loDistLimitSq ) override;
+
+    /// Returns amount of additional memory needed to compute projections
+    MRCUDA_API virtual size_t projectionsHeapBytes( size_t numProjections ) const override;
 };
 
 

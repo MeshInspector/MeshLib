@@ -34,6 +34,9 @@ MRVIEWER_API bool buttonCommonSize( const char* label, const Vector2f& size = Ve
 
 /// draw gradient checkbox
 MRVIEWER_API bool checkbox( const char* label, bool* value );
+/// draw gradient checkbox
+/// if valid is false checkbox is disabled
+MRVIEWER_API bool checkboxValid( const char* label, bool* value, bool valid );
 /// draw gradient checkbox with mixed state
 MRVIEWER_API bool checkboxMixed( const char* label, bool* value, bool mixed );
 /// draw gradient checkbox

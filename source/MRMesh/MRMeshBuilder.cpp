@@ -1,8 +1,7 @@
 #include "MRMeshBuilder.h"
 #include "MRIdentifyVertices.h"
 #include "MRRingIterator.h"
-#include "MRAABBTreePoints.h"
-#include "MRPointsInBall.h"
+#include "MRCloseVertices.h"
 #include "MRBuffer.h"
 #include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
@@ -811,27 +810,12 @@ int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd, VertMap 
     if ( uniteOnlyBd )
         bdVerts = mesh.topology.findBoundaryVerts();
 
-    AABBTreePoints tree( mesh.points, uniteOnlyBd ? bdVerts : mesh.topology.getValidVerts() );
-    VertMap vertOldToNew( mesh.topology.vertSize() );
+    const auto & valid = uniteOnlyBd ? bdVerts : mesh.topology.getValidVerts();
+    const VertMap vertOldToNew = findSmallestCloseVertices( mesh.points, closeDist, &valid );
     int numChanged = 0;
-    for ( VertId v : mesh.topology.getValidVerts() )
-    {
-        VertId smallestCloseVert = v;
-        if ( !uniteOnlyBd || bdVerts.test( v ) )
-        {
-            findPointsInBall( tree, mesh.points[v], closeDist, [&]( VertId cv, const Vector3f& )
-            {
-                if ( cv == v )
-                    return;
-                if ( vertOldToNew[cv] != cv )
-                    return; // cv vertex is removed by itself
-                smallestCloseVert = std::min( smallestCloseVert, cv );
-            } );
-        }
-        vertOldToNew[v] = smallestCloseVert;
-        if ( v != smallestCloseVert )
+    for ( auto v = 0_v; v < vertOldToNew.size(); ++v )
+        if ( v != vertOldToNew[v] )
             ++numChanged;
-    }
     if ( numChanged <= 0 )
         return numChanged;
 

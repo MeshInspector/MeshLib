@@ -9,6 +9,8 @@
 #include "MRPch/MRWasm.h"
 #include "MRRibbonConstants.h"
 #include "MRUIStyle.h"
+#include "MRCommandLoop.h"
+#include <thread>
 #include <GLFW/glfw3.h>
 
 #ifdef _WIN32
@@ -59,9 +61,6 @@ void ProgressBar::setup( float scaling )
         snprintf( buf, bufSize, "%d%%", ( int )( instance.progress_ * 100 ) );
         auto progress = instance.progress_;
         ImGui::ProgressBar( progress, ImVec2( 250.0f * scaling, 0.0f ), buf );
-        // this is needed to prevent events race and redraw after progress bar is finished
-        if ( progress >= 1.0f )
-            instance.frameRequest_.requestFrame();
         ImGui::Separator();
 
         if ( instance.allowCancel_ )
@@ -81,8 +80,6 @@ void ProgressBar::setup( float scaling )
         }
 #else
         ImGui::Text( "Operation is in progress, please wait..." );
-        if ( instance.progress_ >= 1.0f )
-            instance.frameRequest_.requestFrame();
 #endif
         if ( instance.closeDialogNextFrame_ )
         {
@@ -333,6 +330,13 @@ void ProgressBar::FrameRedrawRequest::requestFrame()
 #pragma clang diagnostic pop
     }
 #else
+    // do not request frame from gui thread with this mechanism
+    if ( std::this_thread::get_id() == CommandLoop::getMainThreadId() )
+    {
+        spdlog::warn( "Async requesting frame for progress bar from GUI thread!" );
+        assert( false );
+        return;
+    }
     asyncRequest_.requestIfNotSet( std::chrono::system_clock::now() + minInterval, [] ()
     {
         getViewerInstance().postEmptyEvent();

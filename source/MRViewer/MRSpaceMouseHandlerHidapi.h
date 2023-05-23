@@ -4,7 +4,6 @@
 #include "MRViewerEventsListener.h"
 #include "MRMesh/MRVector.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRMesh/MRMeshFwd.h"
 #include <hidapi/hidapi.h>
 #include <thread>
 #include <mutex>              // std::mutex, std::unique_lock

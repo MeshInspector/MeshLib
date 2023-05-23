@@ -113,12 +113,14 @@ std::string getLinesVertexShaderPositionBlock()
     vec3 basePos = uintBitsToFloat( uBasePos );
     vec3 otherPos = uintBitsToFloat( uOtherPos );
 
-    mat4 projViewM = proj * view;
-    mat4 fullM = projViewM * model;
-    mat4 inverseProjViewM = inverse( projViewM );
+    world_pos = vec3( model * vec4 ( basePos, 1.0 ) );
+    vec3 otherWorldPos = vec3( model * vec4 ( otherPos, 1.0 ) );
+    
+    vec3 posEye = vec3( view * vec4( world_pos, 1.0 ) );
+    vec3 otherPosEye = vec3( view * vec4( otherWorldPos, 1.0 ) );
 
-    vec4 projBasePos = fullM * vec4( basePos, 1.0 );
-    vec4 projOtherPos = fullM * vec4( otherPos, 1.0 );
+    vec4 projBasePos = proj * vec4( posEye, 1.0 );
+    vec4 projOtherPos = proj * vec4( otherPosEye, 1.0 );
     vec2 basePix = viewport.xy + viewport.zw * ( vec2(1.0,1.0) + projBasePos.xy / projBasePos.w ) * 0.5;
     vec2 otherPix = viewport.xy + viewport.zw * ( vec2(1.0,1.0) + projOtherPos.xy / projOtherPos.w ) * 0.5;
 
@@ -134,7 +136,6 @@ std::string getLinesVertexShaderPositionBlock()
     projBasePos.xy = ( 2.0 * (basePix - viewport.xy) / (viewport.zw) - vec2(1.0,1.0) ) * projBasePos.w;
     
     gl_Position = projBasePos;
-    world_pos = vec3( inverseProjViewM * projBasePos );
 
     primitiveIdf1 = float( uint( baseLineId >> 20u ) ) + 0.5;
     primitiveIdf0 = float( baseLineId % uint( 1u << 20u ) ) + 0.5;

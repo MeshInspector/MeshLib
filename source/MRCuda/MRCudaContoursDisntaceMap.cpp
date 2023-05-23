@@ -43,6 +43,16 @@ DistanceMap distanceMapFromContours( const MR::Polyline2& polyline, const Contou
     return res;
 }
 
+size_t distanceMapFromContoursHeapBytes( const MR::Polyline2& polyline, const ContourToDistanceMapParams& params )
+{
+    /// cannot use polyline.heapBytes here because it has extra fields in topology and does not create AABBTree if it is not present
+    return 
+        polyline.points.heapBytes() + 
+        polyline.getAABBTree().nodes().heapBytes() + 
+        polyline.topology.edges().heapBytes() + 
+        size_t( params.resolution.x ) * params.resolution.y * sizeof( float );
+}
+
 }
 
 }

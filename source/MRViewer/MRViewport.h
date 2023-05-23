@@ -260,7 +260,7 @@ public:
     MRVIEWER_API const ViewportRectangle& getViewportRect() const;
 
     // finds length between near pixels on zNear plane
-    MRVIEWER_API const float getPixelSize() const;
+    MRVIEWER_API float getPixelSize() const;
 
     // Sets position and size of viewport:
     // rect is given as OpenGL coordinates: (0,0) is lower left corner

@@ -20,6 +20,7 @@
     <ClInclude Include="MRChangePointCloudAction.h" />
     <ClInclude Include="MRChangePolylineAction.h" />
     <ClInclude Include="MRChangeVoxelSelectionAction.h" />
+    <ClInclude Include="MRCloseVertices.h" />
     <ClInclude Include="MRColorMapAggregator.h" />
     <ClInclude Include="MR2to3.h" />
     <ClInclude Include="MRAABBTreePolyline.h" />
@@ -75,6 +76,7 @@
     <ClInclude Include="MRImageSave.h" />
     <ClInclude Include="MRNormalDenoising.h" />
     <ClInclude Include="MRNormalsToPoints.h" />
+    <ClInclude Include="MROverlappingTris.h" />
     <ClInclude Include="MRPointsToMeshProjector.h" />
     <ClInclude Include="MRIntersection.h" />
     <ClInclude Include="MRIntersectionContour.h" />
@@ -146,6 +148,7 @@
     <ClInclude Include="MRSurroundingContour.h" />
     <ClInclude Include="MRSymMatrix2.h" />
     <ClInclude Include="MRTimeRecord.h" />
+    <ClInclude Include="MRToolPath.h" />
     <ClInclude Include="MRTunnelDetector.h" />
     <ClInclude Include="MRMeshDirMax.h" />
     <ClInclude Include="MRMeshIntersect.h" />
@@ -309,6 +312,7 @@
     <ClCompile Include="MRBooleanOperation.cpp" />
     <ClCompile Include="MRChangeSceneAction.cpp" />
     <ClCompile Include="MRCircleObject.cpp" />
+    <ClCompile Include="MRCloseVertices.cpp" />
     <ClCompile Include="MRColorMapAggregator.cpp" />
     <ClCompile Include="MRCombinedHistoryAction.cpp" />
     <ClCompile Include="MRComputeBoundingBox.cpp" />
@@ -367,6 +371,7 @@
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
     <ClCompile Include="MRNormalDenoising.cpp" />
     <ClCompile Include="MRNormalsToPoints.cpp" />
+    <ClCompile Include="MROverlappingTris.cpp" />
     <ClCompile Include="MRPointsToMeshProjector.cpp" />
     <ClCompile Include="MRMeshTrimWithPlane.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
@@ -440,6 +445,7 @@
     <ClCompile Include="MRString.cpp" />
     <ClCompile Include="MRSurfaceDistanceBuilder.cpp" />
     <ClCompile Include="MRSurroundingContour.cpp" />
+    <ClCompile Include="MRToolPath.cpp" />
     <ClCompile Include="MRTriMath.cpp" />
     <ClCompile Include="MRTunnelDetector.cpp" />
     <ClCompile Include="MRTupleBindings.cpp" />

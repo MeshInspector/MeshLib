@@ -14,6 +14,11 @@ void CommandLoop::setMainThreadId( const std::thread::id& id )
     inst.mainThreadId_ = id;
 }
 
+std::thread::id CommandLoop::getMainThreadId()
+{
+    return instance_().mainThreadId_;
+}
+
 void CommandLoop::setState( StartPosition state )
 {
     auto& inst = instance_();

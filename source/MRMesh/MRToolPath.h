@@ -30,6 +30,14 @@ struct ToolPathParams
     float baseFeed = {};
 };
 
+struct ArcInterpolationParams
+{
+    // maximal deviation of arc from given path
+    float eps = {};
+    // maximal radius of the rac
+    float maxRadius = {};
+};
+
 enum class MoveType
 {
     FastLinear = 0,
@@ -70,8 +78,8 @@ MRMESH_API ToolPathResult constantZToolPath( const Mesh& mesh, const ToolPathPar
 
 // generates G-Code for milling tool
 MRMESH_API std::string exportToolPathToGCode( const std::vector<GCommand>& commands );
-
-MRMESH_API void interpolateArcs( std::vector<GCommand>& commands, float eps, float maxRadius );
+// interpolates given path with arcs
+MRMESH_API void interpolateArcs( std::vector<GCommand>& commands, const ArcInterpolationParams& params );
 
 }
 #endif

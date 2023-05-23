@@ -306,7 +306,7 @@ std::vector<GCommand> interpolateSegment( const std::span<GCommand>& path, float
     return res;
 }
 
-void interpolateArcs( std::vector<GCommand>& commands, float eps, float maxRadius )
+void interpolateArcs( std::vector<GCommand>& commands, const ArcInterpolationParams& params )
 {
     size_t startIndex = 0u;
     
@@ -323,7 +323,7 @@ void interpolateArcs( std::vector<GCommand>& commands, float eps, float maxRadiu
             ++endIndex;
 
         const size_t segmentSize = endIndex - startIndex;
-        auto interpolatedSegment = interpolateSegment( std::span<GCommand>( &commands[startIndex], segmentSize ), eps, maxRadius );
+        auto interpolatedSegment = interpolateSegment( std::span<GCommand>( &commands[startIndex], segmentSize ), params.eps, params.maxRadius );
         if ( interpolatedSegment.empty() )
         {
             startIndex = endIndex;

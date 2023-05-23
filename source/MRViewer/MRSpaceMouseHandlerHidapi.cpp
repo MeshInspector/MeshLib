@@ -157,7 +157,7 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
             // set the device handle to be blocking
             hid_set_nonblocking( device_, 0 );
             // wait for active state and read all data packets during inactive state
-            if ( !active_ )
+            while ( !active_ )
             {
                 do
                 {
@@ -166,11 +166,9 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
                 if ( terminateListenerThread_ )
                     return;
             }
-            else
-            {
-                // hid_read_timeout() waits until there is data to read before returning or 1000ms passed (to help with thread shutdown)
-                packetLength_ = hid_read_timeout( device_, dataPacket_.data(), dataPacket_.size(), 1000 );
-            }
+
+            // hid_read_timeout() waits until there is data to read before returning or 1000ms passed (to help with thread shutdown)
+            packetLength_ = hid_read_timeout( device_, dataPacket_.data(), dataPacket_.size(), 1000 );
 
             // device connection lost
             if ( packetLength_ < 0)

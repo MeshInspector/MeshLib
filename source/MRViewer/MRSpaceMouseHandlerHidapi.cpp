@@ -9,7 +9,7 @@ namespace MR
 {
 SpaceMouseHandlerHidapi::SpaceMouseHandlerHidapi()
         : device_(nullptr)
-        , buttonsMap_(nullptr)
+        , buttonsMapPtr_(nullptr)
         , terminateListenerThread_(false)
         , dataPacket_({0})
         , packetLength_(0)
@@ -67,25 +67,8 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_() {
                         isDeviceFound = true;
                         spdlog::info( "SpaceMouse Found: type: {} {} path: {} ", vendorId, deviceId, localDevicesIt->path );
                         // setup buttons logger
-                        buttonsState_.clear();
-                        if ( vendorId == 0x256f )
-                        {
-                            if ( deviceId == 0xc635 || deviceId == 0xc652 ) // spacemouse compact
-                            {
-                                buttonsMap_ = mapButtonsCompact;
-                                buttonsState_.resize(2, 0);
-                            }
-                            else if ( deviceId == 0xc631 || deviceId == 0xc632 ) //  spacemouse pro
-                            {
-                                buttonsMap_ = mapButtonsPro;
-                                buttonsState_.resize(16, 0);
-                            }
-                            else if ( deviceId == 0xc633  ) // spacemouse enterprise
-                            {
-                                buttonsMap_ = mapButtonsEnterprise;
-                                buttonsState_.resize(32, 0);
-                            }
-                        }
+                        buttonsState_ = 0;
+                        setButtonsMap_(vendorId, deviceId);
                         break;
                     }
                     else
@@ -99,6 +82,24 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_() {
         hid_free_enumeration( localDevicesIt );
     }
     return isDeviceFound;
+}
+
+
+void SpaceMouseHandlerHidapi::setButtonsMap_(VendorId vendorId, ProductId productId) {
+    if ( vendorId == 0x256f )
+    {
+        if ( productId == 0xc635 || productId == 0xc652 ) // spacemouse compact
+            buttonsMapPtr_ = &buttonMapCompact;
+        else if ( productId == 0xc631 || productId == 0xc632 ) //  spacemouse pro
+            buttonsMapPtr_ = &buttonMapPro;
+        else if ( productId == 0xc633  ) // spacemouse enterprise
+            buttonsMapPtr_ = &buttonMapEnterprise;
+    }
+    else if ( vendorId == 0x046d )
+    {
+        if ( productId == 0xc62b ) //  spacemouse pro
+            buttonsMapPtr_ = &buttonMapPro;
+    }
 }
 
 void SpaceMouseHandlerHidapi::handle()
@@ -177,8 +178,8 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
             {
                 hid_close( device_ );
                 device_ = nullptr;
-                buttonsMap_ = nullptr;
-                buttonsState_.clear();
+                buttonsMapPtr_ = nullptr;
+                buttonsState_ = 0;
                 spdlog::error( "HID API: device lost" );
             }
             else if ( packetLength_ > 0)
@@ -211,10 +212,30 @@ float SpaceMouseHandlerHidapi::convertCoord_( int coord_byte_low, int coord_byte
 void SpaceMouseHandlerHidapi::updateActionWithInput_( const DataPacketRaw& packet, int packet_length, SpaceMouseAction& action )
 {
     // button update package
-    if ( packet[0] == 3 )
+    if ( packet[0] == 3 && buttonsMapPtr_ != nullptr)
     {
-        spdlog::debug("SpaceMouse button raw packet value: {}", int(packet[1]) );
-        action.button = int(packet[1]);
+        action.isButtonStateChanged = true;
+        // for all bytes in packet
+        for ( int column = 1; column < buttonsMapPtr_->size(); ++column)
+        {
+            for (int i = 0; i < (*buttonsMapPtr_)[column].size(); ++i)
+            {
+                if (packet[column] & (1 << i) )
+                    action.buttons.set((*buttonsMapPtr_)[column][i]);
+            }
+        }
+        if ( action.buttons.none())
+        {
+            spdlog::debug("SpaceMouse buttons result - all up" );
+        }
+        else
+        {
+            for (int i = 0; i < SMB_BUTTON_COUNT; ++i)
+            {
+                if (action.buttons.test(i))
+                    spdlog::debug("SpaceMouse buttons result - {}", i);
+            }
+        }
         return;
     }
 
@@ -237,29 +258,24 @@ void SpaceMouseHandlerHidapi::updateActionWithInput_( const DataPacketRaw& packe
     }
 }
 
-void SpaceMouseHandlerHidapi::processAction_(const SpaceMouseAction& mouse_action)
+void SpaceMouseHandlerHidapi::processAction_(const SpaceMouseAction& action)
 {
     auto &viewer = getViewerInstance();
-    viewer.spaceMouseMove( mouse_action.translate, mouse_action.rotate );
+    viewer.spaceMouseMove( action.translate, action.rotate );
 
-    // all buttons up
-    if ( mouse_action.button == 0 )
+    if ( action.isButtonStateChanged  )
     {
-        for ( int i = 0; i < buttonsState_.size(); ++i)
+        std::bitset<SMB_BUTTON_COUNT> new_pressed = action.buttons & ~buttonsState_;
+        std::bitset<SMB_BUTTON_COUNT> new_unpressed = buttonsState_ & ~action.buttons;
+        for (int btn = 0; btn < SMB_BUTTON_COUNT; ++btn)
         {
-            if ( buttonsState_[i] != 0 )
-            {
-                viewer.spaceMouseUp( buttonsMap_[i] );
-                buttonsState_[i] = 0;
-            }
+            if ( new_unpressed.test( btn ) )
+                viewer.spaceMouseUp( btn );
+            if ( new_pressed.test( btn ) )
+                viewer.spaceMouseDown( btn );
         }
+        buttonsState_ = action.buttons;
     }
-    else if ( mouse_action.button > 0 )
-    {
-        viewer.spaceMouseDown( buttonsMap_[ mouse_action.button - 1 ] );
-        buttonsState_[ mouse_action.button - 1 ] = 1;
-    }
-
 }
 
 void SpaceMouseHandlerHidapi::printDevices_( struct hid_device_info *cur_dev )

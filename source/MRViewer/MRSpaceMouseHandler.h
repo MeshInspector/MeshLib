@@ -9,6 +9,7 @@ namespace MR
 /// enumeration all spacemouse buttons
 enum SpaceMouseButtons : int
 {
+    SMB_NO = -1,
     SMB_MENU,
 
     SMB_ESC,

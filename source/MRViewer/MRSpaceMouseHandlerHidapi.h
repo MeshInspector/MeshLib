@@ -25,7 +25,8 @@ class SpaceMouseHandlerHidapi : public SpaceMouseHandler, public PostFocusListen
     typedef short unsigned int VendorId;
     typedef short unsigned int ProductId;
     struct SpaceMouseAction {
-        int button = -1; // -1 - no update, 0 - all up, 1-32 - button pressed
+        bool isButtonStateChanged = false;
+        std::bitset<SMB_BUTTON_COUNT> buttons = 0;
         Vector3f translate = {0.0f, 0.0f, 0.0f};
         Vector3f rotate = {0.0f, 0.0f, 0.0f};
     };
@@ -38,6 +39,7 @@ public:
 
 private:
     void initListenerThread_();
+    void setButtonsMap_(VendorId vendorId, ProductId productId);
     virtual void postFocusSignal_( bool focused ) override;
 
     void processAction_(const SpaceMouseAction& action);
@@ -51,8 +53,8 @@ private:
 
 private:
     hid_device *device_;
-    const int* buttonsMap_{};
-    std::vector<int> buttonsState_;
+    const std::vector<std::vector<SpaceMouseButtons>> *buttonsMapPtr_;
+    std::bitset<SMB_BUTTON_COUNT> buttonsState_;
     std::thread listenerThread_;
     std::atomic_bool terminateListenerThread_;
     std::mutex syncThreadMutex_; // which thread reads and handles SpaceMouse data
@@ -86,17 +88,35 @@ private:
             }}
     };
 
-    static constexpr int mapButtonsCompact[2] = {
-        SMB_CUSTOM_1, SMB_CUSTOM_2
+    std::vector<std::vector<SpaceMouseButtons>> buttonMapCompact = {
+        {  }, // 0th byte (unused)
+        { SMB_CUSTOM_1,     SMB_CUSTOM_2}
     };
-    static constexpr int mapButtonsPro[15] = {
-        SMB_MENU, SMB_FIT,
-        SMB_TOP, SMB_RIGHT, SMB_FRONT, SMB_ROLL_CW,
-        SMB_CUSTOM_1, SMB_CUSTOM_2, SMB_CUSTOM_3, SMB_CUSTOM_4,
-        SMB_ESC, SMB_ALT, SMB_SHIFT, SMB_CTRL,
-        SMB_LOCK_ROT
+    /*
+       	        1		2		3		4		5		6
+       128				4		alt
+       64				3		esc
+       32		F		2
+       16		R		1
+       8
+       4		T						lock
+       2		fit						ctrl
+       1		menu	rot				shift
+     */
+    std::vector<std::vector<SpaceMouseButtons>> buttonMapPro = {
+        {  }, // 0th byte (unused)
+        //1             2             4             8             16            32            64            128
+        { SMB_MENU,     SMB_FIT,      SMB_TOP,      SMB_NO,       SMB_RIGHT,    SMB_FRONT,    SMB_NO,       SMB_NO },      // 1st byte
+        { SMB_ROLL_CW,  SMB_NO,       SMB_NO,       SMB_NO,       SMB_CUSTOM_1, SMB_CUSTOM_2, SMB_CUSTOM_3, SMB_CUSTOM_1}, // 2nd byte
+        { SMB_NO,       SMB_NO,       SMB_NO,       SMB_NO,       SMB_NO,       SMB_NO,       SMB_ESC,      SMB_ALT},      // 3rd byte
+        { SMB_SHIFT,    SMB_CTRL,     SMB_LOCK_ROT, SMB_NO,       SMB_NO,       SMB_NO,       SMB_NO,       SMB_NO,},      // 4th byte
     };
-    // TODO !!! NOT TESTED !!!
+
+    std::vector<std::vector<SpaceMouseButtons>> buttonMapEnterprise = {
+        {  }, // 0th byte (unused)
+        { SMB_CUSTOM_1,     SMB_CUSTOM_2}
+    };
+    /* TODO !!! NOT TESTED !!!
     static constexpr int mapButtonsEnterprise[31] = {
         SMB_MENU, SMB_FIT,
         SMB_TOP, SMB_RIGHT, SMB_FRONT, SMB_ROLL_CW, SMB_LOCK_ROT,
@@ -105,7 +125,7 @@ private:
         SMB_CUSTOM_7, SMB_CUSTOM_8, SMB_CUSTOM_9, SMB_CUSTOM_10, SMB_CUSTOM_11, SMB_CUSTOM_12,
         SMB_ESC, SMB_ENTER, SMB_ALT, SMB_SHIFT, SMB_CTRL, SMB_TAB, SMB_SPACE, SMB_DELETE
     };
-
+    */
 };
 
 }

@@ -37,6 +37,7 @@ private:
 
     float convertCoord_( int coord_byte_low, int coord_byte_high );
     void convertInput_( const DataPacketRaw& packet, int packet_length, Vector3f& translate, Vector3f& rotate );
+    void addActionToQueue(const Vector3f& translate, const Vector3f& rotate, bool isSkippable);
 
     bool findAndAttachDevice_();
     void printDevices_( struct hid_device_info *cur_dev );

@@ -217,14 +217,18 @@ void RenderLinesObject::bindPositions_( GLuint shaderId )
         int maxTexSize = 0;
         GL_EXEC( glGetIntegerv( GL_MAX_TEXTURE_SIZE, &maxTexSize ) );
         assert( maxTexSize > 0 );
-        std::vector<Vector3f> positions;
+        RenderBufferRef<Vector3f> positions;
+        Vector2i res;
         if ( objLines_->polyline() )
         {
             const auto& polyline = objLines_->polyline();
             const auto& topology = polyline->topology;
             auto lastValid = topology.lastNotLoneEdge();
             auto numL = lastValid.valid() ? lastValid.undirected() + 1 : 0;
-            positions.resize( 2 * numL );
+
+            auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
+            res = calcTextureRes( int( 2 * numL ), maxTexSize );
+            positions = glBuffer.prepareBuffer<Vector3f>( res.x * res.y );
             lineIndicesSize_ = numL;
             // important to be last edge org for points picker,
             // real last point will overlap invalid points so picker will return correct id
@@ -248,8 +252,6 @@ void RenderLinesObject::bindPositions_( GLuint shaderId )
                 }
             } );
         }
-        auto res = calcTextureRes( int( positions.size() ), maxTexSize );
-        positions.resize( res.x * res.y );
         positionsTex_.loadData(
             { .resolution = res, .internalFormat = GL_RGB32UI, .format = GL_RGB_INTEGER, .type = GL_UNSIGNED_INT },
             positions );
@@ -278,14 +280,17 @@ void RenderLinesObject::bindLines_( GLStaticHolder::ShaderType shaderType )
         assert( maxTexSize > 0 );
 
         bool useColorMap = objLines_->getColoringType() == ColoringType::VertsColorMap;
-        std::vector<Color> textVertColorMap;
+        RenderBufferRef<Color> textVertColorMap;
+        Vector2i res;
         if ( useColorMap && objLines_->polyline() )
         {
+            auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
             const auto& polyline = objLines_->polyline();
             const auto& topology = polyline->topology;
             auto lastValid = topology.lastNotLoneEdge();
             auto numL = lastValid.valid() ? lastValid.undirected() + 1 : 0;
-            textVertColorMap.resize( 2 * numL );
+            res = calcTextureRes( int( 2 * numL ), maxTexSize );
+            textVertColorMap = glBuffer.prepareBuffer<Color>( res.x * res.y );
             auto undirEdgesSize = numL;
             const auto& vertsColorMap = objLines_->getVertsColorMap();
             auto lastValidVert = topology.lastValidVert() - 1;
@@ -308,8 +313,6 @@ void RenderLinesObject::bindLines_( GLStaticHolder::ShaderType shaderType )
                 }
             } );
         }
-        auto res = calcTextureRes( int( textVertColorMap.size() ), maxTexSize );
-        textVertColorMap.resize( res.x * res.y );
         vertColorsTex_.loadData(
             { .resolution = res, .internalFormat = GL_RGBA8, .format = GL_RGBA, .type = GL_UNSIGNED_BYTE },
             textVertColorMap );

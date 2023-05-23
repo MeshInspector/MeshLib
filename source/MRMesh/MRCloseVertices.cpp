@@ -115,10 +115,10 @@ struct hash<MR::VertPair>
 namespace MR
 {
 
-EdgeBitSet findTwinEdges( const Mesh & mesh, float closeDist )
+EdgeHashMap findTwinEdgeHashMap( const Mesh & mesh, float closeDist )
 {
     MR_TIMER
-    EdgeBitSet res;
+    EdgeHashMap res;
 
     const auto map = findSmallestCloseVertices( mesh, closeDist );
     VertBitSet closeVerts = findCloseVertices( map );
@@ -134,8 +134,8 @@ EdgeBitSet findTwinEdges( const Mesh & mesh, float closeDist )
             auto [it, inserted] = hmap.insert( { vp, e } );
             if ( !inserted )
             {
-                res.autoResizeSet( e );
-                res.autoResizeSet( it->second );
+                res[e] = it->second;
+                it->second = e;
             }
         }
     }
@@ -143,14 +143,40 @@ EdgeBitSet findTwinEdges( const Mesh & mesh, float closeDist )
     return res;
 }
 
-UndirectedEdgeBitSet findTwinUndirectedEdges( const Mesh & mesh, float closeDist )
+EdgeBitSet findTwinEdges( const EdgeHashMap & emap )
+{
+    MR_TIMER
+    EdgeBitSet res;
+    for ( const auto & [e1, e2] : emap )
+    {
+        res.autoResizeSet( e1 );
+        res.autoResizeSet( e2 );
+    }
+
+    return res;
+}
+
+EdgeBitSet findTwinEdges( const Mesh & mesh, float closeDist )
+{
+    return findTwinEdges( findTwinEdgeHashMap( mesh, closeDist ) );
+}
+
+UndirectedEdgeBitSet findTwinUndirectedEdges( const EdgeHashMap & emap )
 {
     MR_TIMER
     UndirectedEdgeBitSet res;
-    for ( auto e : findTwinEdges( mesh, closeDist ) )
-        res.autoResizeSet( e.undirected() );
+    for ( const auto & [e1, e2] : emap )
+    {
+        res.autoResizeSet( e1.undirected() );
+        res.autoResizeSet( e2.undirected() );
+    }
 
     return res;
+}
+
+UndirectedEdgeBitSet findTwinUndirectedEdges( const Mesh & mesh, float closeDist )
+{
+    return findTwinUndirectedEdges( findTwinEdgeHashMap( mesh, closeDist ) );
 }
 
 } //namespace MR

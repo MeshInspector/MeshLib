@@ -123,5 +123,41 @@ void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, cons
     data_->cudaResult.toVector( res );
 }
 
+size_t FastWindingNumber::fromVectorHeapBytes( size_t inputSize ) const
+{
+    size_t currentSize = 0;
+    if ( data_ )
+    {
+        currentSize += data_->cudaPoints.size() * sizeof( float3 );
+        currentSize += data_->cudaResult.size() * sizeof( float );
+    }
+    size_t newSize = inputSize * ( sizeof( float3 ) + sizeof( float ) );
+    if ( newSize <= currentSize )
+        return 0;
+    return newSize - currentSize;
+}
+
+size_t FastWindingNumber::selfIntersectionsHeapBytes( const Mesh& mesh ) const
+{
+    size_t currentSize = 0;
+    if ( data_ )
+        currentSize += data_->cudaResult.size() * sizeof( float );
+    size_t newSize = mesh.topology.faceSize() * sizeof( float );
+    if ( newSize <= currentSize )
+        return 0;
+    return newSize - currentSize;
+}
+
+size_t FastWindingNumber::fromGridHeapBytes( const Vector3i& dims ) const
+{
+    size_t currentSize = 0;
+    if ( data_ )
+        currentSize += data_->cudaResult.size() * sizeof( float );
+    size_t newSize = size_t( dims.x ) * dims.y * dims.z * sizeof( float );
+    if ( newSize <= currentSize )
+        return 0;
+    return newSize - currentSize;
+}
+
 }
 }

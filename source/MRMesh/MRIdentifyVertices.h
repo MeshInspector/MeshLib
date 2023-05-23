@@ -32,7 +32,7 @@ public:
     /// prepare identification of vertices from given this number of triangles
     MRMESH_API void reserve( size_t numTris );
     /// identifies vertices from a chunk of triangles
-    MRMESH_API void addTriangles( const std::vector<ThreePoints> & buffer );
+    MRMESH_API void addTriangles( const std::vector<Triangle3f> & buffer );
     /// returns the number of triangles added so far
     size_t numTris() const { return t_.size(); }
     /// obtains triangulation with vertex ids

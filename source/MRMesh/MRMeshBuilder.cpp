@@ -791,7 +791,7 @@ MeshTopology fromVertexTriples( const std::vector<VertId> & vertTriples, Progres
     return fromTriangles( t, {},  progressCb );
 }
 
-Mesh fromPointTriples( const std::vector<ThreePoints> & posTriples )
+Mesh fromPointTriples( const std::vector<Triangle3f> & posTriples )
 {
     MR_TIMER
     VertexIdentifier vi;

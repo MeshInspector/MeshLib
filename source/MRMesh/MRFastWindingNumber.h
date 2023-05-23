@@ -111,7 +111,7 @@ public:
     static MRMESH_API void calcDipoles( Dipoles& dipoles, const AABBTree& tree, const Mesh& mesh );
 };
 /// three vector3-coordinates describing a triangle geometry
-using ThreePoints = std::array<Vector3f, 3>;
+using ThreePoints [[deprecated]] = Triangle3f;
 
 /// the class for fast approximate computation of winding number for a mesh (using its AABB tree)
 /// \ingroup AABBTreeGroup

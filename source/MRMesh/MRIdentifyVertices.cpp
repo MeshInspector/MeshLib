@@ -14,7 +14,7 @@ void VertexIdentifier::reserve( size_t numTris )
     t_.reserve( numTris );
 }
 
-void VertexIdentifier::addTriangles( const std::vector<ThreePoints> & buffer )
+void VertexIdentifier::addTriangles( const std::vector<Triangle3f> & buffer )
 {
     MR_TIMER
     assert ( t_.size() + buffer.size() <= t_.capacity() );

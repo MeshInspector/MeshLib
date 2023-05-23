@@ -87,7 +87,7 @@ float FastWindingNumber::Dipole::w( const Vector3f & q ) const
 }
 
 /// see (6) in https://users.cs.utah.edu/~ladislav/jacobson13robust/jacobson13robust.pdf
-static float triangleSolidAngle( const Vector3f & p, const ThreePoints & tri )
+static float triangleSolidAngle( const Vector3f & p, const Triangle3f & tri )
 {
     Matrix3f m;
     m.x = tri[0] - p;
@@ -220,7 +220,7 @@ size_t FastWindingNumber::fromGridHeapBytes( const Vector3i& ) const
 
 TEST(MRMesh, TriangleSolidAngle) 
 {
-    const ThreePoints tri =
+    const Triangle3f tri =
     {
         Vector3f{ 0.0f, 0.0f, 0.0f },
         Vector3f{ 1.0f, 0.0f, 0.0f },

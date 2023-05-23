@@ -357,6 +357,19 @@ bool checkbox( const char* label, bool* value )
     return res;
 }
 
+bool checkboxValid( const char* label, bool* value, bool valid )
+{
+    if ( valid )
+        return checkbox( label, value );
+
+    StyleParamHolder sh;
+    const auto disColor = ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled );
+    sh.addColor( ImGuiCol_Text, Color( disColor.x, disColor.y, disColor.z, disColor.w ) );
+    bool falseVal = false;
+    checkbox( label, &falseVal );
+    return false;
+}
+
 bool checkboxMixed( const char* label, bool* value, bool mixed )
 {
     if ( mixed )

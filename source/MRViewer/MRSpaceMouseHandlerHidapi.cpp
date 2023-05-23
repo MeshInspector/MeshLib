@@ -152,16 +152,25 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
                 syncThreadLock.lock();
             }
 
-            // to read all data packets during inactive state
-            while ( !active_ )
-            {
-                packetLength_ = hid_read_timeout( device_, dataPacket_.data(), dataPacket_.size(), 500 );
-            }
-
             // set the device handle to be blocking
             hid_set_nonblocking( device_, 0 );
-            // hid_read_timeout() waits until there is data to read before returning or 1000ms passed (to help with thread shutdown)
-            packetLength_ = hid_read_timeout( device_, dataPacket_.data(), dataPacket_.size(), 1000 );
+            // wait for active state and read all data packets during inactive state
+            if ( !active_ )
+            {
+                if ( terminateListenerThread_ )
+                    return;
+
+                cv_.wait( syncThreadLock );
+                do
+                {
+                    packetLength_ = hid_read_timeout( device_, dataPacket_.data(), dataPacket_.size(), 500 );
+                } while ( packetLength_ > 0 );
+            }
+            else
+            {
+                // hid_read_timeout() waits until there is data to read before returning or 1000ms passed (to help with thread shutdown)
+                packetLength_ = hid_read_timeout( device_, dataPacket_.data(), dataPacket_.size(), 1000 );
+            }
 
             // device connection lost
             if ( packetLength_ < 0)

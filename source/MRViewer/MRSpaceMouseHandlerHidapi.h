@@ -42,11 +42,12 @@ private:
     void setButtonsMap_(VendorId vendorId, ProductId productId);
     virtual void postFocusSignal_( bool focused ) override;
 
-    void processAction_(const SpaceMouseAction& action);
+    static void processAction_(const SpaceMouseAction& action);
     float convertCoord_( int coord_byte_low, int coord_byte_high );
 
     // update (rewrite its data) SpaceMouseAction if DataPacketRaw is not empty
     void updateActionWithInput_( const DataPacketRaw& packet, int packet_length, SpaceMouseAction& action);
+    void addActionToQueue(const SpaceMouseAction& action, bool isSkippable=true);
 
     bool findAndAttachDevice_();
     void printDevices_( struct hid_device_info *cur_dev );

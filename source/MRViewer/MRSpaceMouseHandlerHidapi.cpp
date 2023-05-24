@@ -105,6 +105,7 @@ void SpaceMouseHandlerHidapi::setButtonsMap_(VendorId vendorId, ProductId produc
 
 void SpaceMouseHandlerHidapi::handle()
 {
+    return;
     // works in pair with SpaceMouseHandlerHidapi::startListenerThread_()
     std::unique_lock<std::mutex> syncThreadLock( syncThreadMutex_, std::defer_lock );
     if ( !syncThreadLock.try_lock() )
@@ -181,19 +182,32 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
             }
             else if ( packetLength_ > 0)
             {
+                SpaceMouseAction action;
+                updateActionWithInput_(dataPacket_, packetLength_, action);
+                addActionToQueue(action, false);
                 // trigger main rendering loop and wait for main thread to read and process all SpaceMouse packets
                 glfwPostEmptyEvent();
-                cv_.wait( syncThreadLock );
+                //cv_.wait( syncThreadLock );
             }
             // nothing to do with packet_length == 0
         } while ( !terminateListenerThread_ );
     });
 }
 
+void SpaceMouseHandlerHidapi::addActionToQueue(const SpaceMouseAction& action, bool isSkippable) {
+    auto &viewer = getViewerInstance();
+    auto eventCall = [action] ()
+    {
+        processAction_(action);
+    };
+    viewer.eventQueue.emplace( { "SpaceMouse move", eventCall }, isSkippable );
+}
+
 void SpaceMouseHandlerHidapi::postFocusSignal_( bool focused )
 {
     active_ = focused;
     cv_.notify_one();
+    spdlog::debug("state - {}", focused);
 }
 
 float SpaceMouseHandlerHidapi::convertCoord_( int coord_byte_low, int coord_byte_high )
@@ -248,7 +262,7 @@ void SpaceMouseHandlerHidapi::processAction_(const SpaceMouseAction& action)
     auto &viewer = getViewerInstance();
     viewer.spaceMouseMove( action.translate, action.rotate );
 
-    if ( action.isButtonStateChanged  )
+   /* if ( action.isButtonStateChanged  )
     {
         std::bitset<SMB_BUTTON_COUNT> new_pressed = action.buttons & ~buttonsState_;
         std::bitset<SMB_BUTTON_COUNT> new_unpressed = buttonsState_ & ~action.buttons;
@@ -266,7 +280,7 @@ void SpaceMouseHandlerHidapi::processAction_(const SpaceMouseAction& action)
             }
         }
         buttonsState_ = action.buttons;
-    }
+    }*/
 }
 
 void SpaceMouseHandlerHidapi::printDevices_( struct hid_device_info *cur_dev )

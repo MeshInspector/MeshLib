@@ -79,9 +79,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Update thirdparty
-        run: vcpkg install --recurse --binarysource=clear --overlay-triplets thirdparty\vcpkg\triplets  hidapi:x64-windows-meshlib
-
       - name: Setup python
         run: |
           py -3.10 -m ensurepip --upgrade

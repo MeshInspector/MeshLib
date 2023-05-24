@@ -1,4 +1,5 @@
 #pragma once
+#ifndef _WIN32
 #ifndef __EMSCRIPTEN__
 #include "MRSpaceMouseHandler.h"
 #include "MRViewerEventsListener.h"
@@ -11,14 +12,11 @@
 #ifdef __APPLE__
 #include <hidapi/hidapi_darwin.h>
 #endif
-#ifdef _WIN32
-#include <windows.h>
-#include <hidapi/hidapi_winapi.h>
-#endif
+
 
 namespace MR
 {
-class SpaceMouseHandlerHidapi : public SpaceMouseHandler, public PostFocusListener
+class SpaceMouseHandlerHidapi : public SpaceMouseHandler
 {
     typedef std::array<unsigned char, 13> DataPacketRaw;
     typedef short unsigned int VendorId;
@@ -32,7 +30,6 @@ public:
 
 private:
     void initListenerThread_();
-    virtual void postFocusSignal_( bool focused ) override;
 
     float convertCoord_( int coord_byte_low, int coord_byte_high );
     void convertInput_( const DataPacketRaw& packet, int packet_length, Vector3f& translate, Vector3f& rotate );
@@ -48,7 +45,6 @@ private:
     std::condition_variable cv_; // notify on thread change
     DataPacketRaw dataPacket_;    // packet from listener thread
     int packetLength_;
-    bool active_{ true };
 
     // if you change this value, do not forget to update MeshLib/scripts/70-space-mouse-meshlib.rules
     const std::unordered_map<VendorId, std::vector<ProductId>> vendor2device_ = {
@@ -77,4 +73,5 @@ private:
 };
 
 }
+#endif
 #endif

@@ -70,11 +70,13 @@ MRMESH_API tl::expected<Mesh, std::string> fromCtm( std::istream& in, Vector<Col
                                                     ProgressCallback callback = {} );
 #endif
 
+#ifndef __EMSCRIPTEN__
 /// loads from .model 3MF file
 MRMESH_API tl::expected<Mesh, std::string> from3mfModel( const std::filesystem::path& file, Vector<Color, VertId>* colors = nullptr,
                                                     ProgressCallback callback = {} );
 MRMESH_API tl::expected<Mesh, std::string> from3mfModel( std::istream& in, Vector<Color, VertId>* colors = nullptr,
                                                     ProgressCallback callback = {} );
+#endif
 
 /// detects the format from file extension and loads mesh from it
 MRMESH_API tl::expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path& file, Vector<Color, VertId>* colors = nullptr,

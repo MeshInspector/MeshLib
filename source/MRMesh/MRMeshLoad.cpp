@@ -11,7 +11,9 @@
 #include "MRColor.h"
 #include "MRPch/MRTBB.h"
 #include "MRProgressReadWrite.h"
+#ifndef __EMSCRIPTEN__
 #include <tinyxml2.h>
+#endif
 #include <array>
 #include <future>
 
@@ -566,6 +568,7 @@ tl::expected<Mesh, std::string> fromCtm( std::istream & in, Vector<Color, VertId
 }
 #endif
 
+#ifndef __EMSCRIPTEN__
 tl::expected<Mesh, std::string> from3mfModel( const std::filesystem::path& file, Vector<Color, VertId>* colors, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
@@ -651,6 +654,7 @@ tl::expected<Mesh, std::string> from3mfModel( std::istream& in, Vector<Color, Ve
 
     return Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( vertexCoordinates ), tris );
 }
+#endif
 
 tl::expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path & file, Vector<Color, VertId>* colors, ProgressCallback callback )
 {
@@ -709,7 +713,9 @@ MR_ADD_MESH_LOADER( IOFilter( "Polygon File Format (.ply)", "*.ply" ), fromPly )
 #ifndef MRMESH_NO_OPENCTM
 MR_ADD_MESH_LOADER( IOFilter( "Compact triangle-based mesh (.ctm)", "*.ctm" ), fromCtm )
 #endif
+#ifndef __EMSCRIPTEN__
 MR_ADD_MESH_LOADER( IOFilter( "3D Manufacturing Format (.model)", "*.model" ), from3mfModel )
+#endif
 
 } //namespace MeshLoad
 

@@ -156,7 +156,7 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
             {
                 SpaceMouseAction action;
                 updateActionWithInput_(dataPacket_, packetLength_, action);
-                addActionToQueue(action, false);
+                addActionToQueue(action, true);
                 // trigger main rendering loop and wait for main thread to read and process all SpaceMouse packets
                 glfwPostEmptyEvent();
                 //cv_.wait( syncThreadLock );
@@ -233,6 +233,7 @@ void SpaceMouseHandlerHidapi::processAction_(const SpaceMouseAction& action)
 {
     auto &viewer = getViewerInstance();
     viewer.spaceMouseMove( action.translate, action.rotate );
+    glfwPostEmptyEvent();
 
    /* if ( action.isButtonStateChanged  )
     {

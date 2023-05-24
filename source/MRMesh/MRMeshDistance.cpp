@@ -361,7 +361,7 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
             const float distSq = TriDist( p, q, t.data(), leafTriangle.data() );
             if ( distSq > rangeSq )
                 continue;
-            if ( call( p, face, q, distSq ) )
+            if ( call( p, face, q, distSq ) == ProcessOneResult::ContinueProcessing )
                 continue;
             break;
         }

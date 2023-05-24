@@ -58,13 +58,19 @@ MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, 
  */
 MRMESH_API float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A = nullptr, float maxDistanceSq = FLT_MAX );
 
+enum class ProcessOneResult : bool
+{
+    StopProcessing = false,
+    ContinueProcessing = true
+};
+
 /// this callback is invoked for every triangle in range, where
 /// \param p closest point on original triangle
 /// \param f triangle id in question
 /// \param q closest point on f-triangle
 /// \param distSq squared distance in between p and q
-/// \return true to continue processing, false to stop processing
-using TriangleCallback = std::function<bool( const Vector3f & p, FaceId f, const Vector3f & q, float distSq )>;
+/// \return whether to continue or to stop processing other triangles
+using TriangleCallback = std::function<ProcessOneResult( const Vector3f & p, FaceId f, const Vector3f & q, float distSq )>;
 
 /// invokes given callback for all triangles from given mesh part located not further than
 /// given squared distance from t-triangle

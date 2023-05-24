@@ -105,34 +105,6 @@ void SpaceMouseHandlerHidapi::setButtonsMap_(VendorId vendorId, ProductId produc
 
 void SpaceMouseHandlerHidapi::handle()
 {
-    return;
-    // works in pair with SpaceMouseHandlerHidapi::startListenerThread_()
-    std::unique_lock<std::mutex> syncThreadLock( syncThreadMutex_, std::defer_lock );
-    if ( !syncThreadLock.try_lock() )
-        return;
-
-    if ( packetLength_ <= 0 || !device_ )
-    {
-        cv_.notify_one();
-        return;
-    }
-
-    // set the device handle to be non-blocking
-    hid_set_nonblocking( device_, 1 );
-
-    SpaceMouseAction action;
-    updateActionWithInput_( dataPacket_, packetLength_, action);
-
-    int packetLengthTmp = 0;
-    do {
-        DataPacketRaw dataPacketTmp;
-        packetLengthTmp = hid_read( device_, dataPacketTmp.data(), dataPacketTmp.size() );
-        updateActionWithInput_( dataPacketTmp, packetLengthTmp, action );
-    } while ( packetLengthTmp > 0 );
-
-    processAction_(action);
-
-    syncThreadLock.unlock();
     cv_.notify_one();
 }
 

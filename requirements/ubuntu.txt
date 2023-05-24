@@ -20,6 +20,7 @@ libpython3.8-dev
 libspdlog-dev
 libtbb-dev
 libtiff-dev
+libtinyxml2-dev
 libturbojpeg0-dev
 libzip-dev
 libzstd-dev

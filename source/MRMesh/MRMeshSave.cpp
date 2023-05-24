@@ -221,7 +221,7 @@ VoidOrErrStr toBinaryStl( const Mesh & mesh, std::ostream & out, ProgressCallbac
     return {};
 }
 
-VoidOrErrStr toPly( const Mesh & mesh, const std::filesystem::path & file, const Vector<Color, VertId>* colors, ProgressCallback callback )
+VoidOrErrStr toPly( const Mesh & mesh, const std::filesystem::path & file, const VertColors* colors, ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -230,7 +230,7 @@ VoidOrErrStr toPly( const Mesh & mesh, const std::filesystem::path & file, const
     return toPly( mesh, out, colors, callback );
 }
 
-VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const Vector<Color, VertId>* colors, ProgressCallback callback )
+VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const VertColors* colors, ProgressCallback callback )
 {
     MR_TIMER
 
@@ -301,7 +301,7 @@ VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const Vector<Color, V
 }
 
 #ifndef MRMESH_NO_OPENCTM
-VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options, const Vector<Color, VertId>* colors,
+VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options, const VertColors* colors,
                                        ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
@@ -311,7 +311,7 @@ VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const
     return toCtm( mesh, out, options, colors, callback );
 }
 
-VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options, const Vector<Color, VertId>* colors,
+VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options, const VertColors* colors,
                                        ProgressCallback callback )
 {
     MR_TIMER
@@ -462,7 +462,7 @@ VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions 
 }
 #endif
 
-VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path& file, const Vector<Color, VertId>* colors,
+VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path& file, const VertColors* colors,
                                                       ProgressCallback callback )
 {
     auto ext = utf8string( file.extension() );
@@ -488,7 +488,7 @@ VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path
 }
 
 VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension,
-                                                      const Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
+                                                      const VertColors* colors /*= nullptr */, ProgressCallback callback )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )

@@ -176,11 +176,11 @@ public:
     MRMESH_API virtual void setPickable( bool on, ViewportMask viewportMask = ViewportMask::all() );
 
     /// returns per-vertex colors of the object
-    const Vector<Color, VertId>& getVertsColorMap() const { return vertsColorMap_; }
+    const VertColors& getVertsColorMap() const { return vertsColorMap_; }
     /// sets per-vertex colors of the object
-    virtual void setVertsColorMap( Vector<Color, VertId> vertsColorMap ) { vertsColorMap_ = std::move( vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
+    virtual void setVertsColorMap( VertColors vertsColorMap ) { vertsColorMap_ = std::move( vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
     /// swaps per-vertex colors of the object with given argument
-    virtual void updateVertsColorMap( Vector<Color, VertId>& vertsColorMap ) { std::swap( vertsColorMap_, vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
+    virtual void updateVertsColorMap( VertColors& vertsColorMap ) { std::swap( vertsColorMap_, vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
 
     /// returns the current coloring mode of the object
     ColoringType getColoringType() const { return coloringType_; }
@@ -264,7 +264,7 @@ protected:
 
     /// Main coloring options
     ColoringType coloringType_{ColoringType::SolidColor};
-    Vector<Color, VertId> vertsColorMap_;
+    VertColors vertsColorMap_;
     ViewportProperty<Color> selectedColor_;
     ViewportProperty<Color> unselectedColor_;
     ViewportProperty<Color> backFacesColor_;

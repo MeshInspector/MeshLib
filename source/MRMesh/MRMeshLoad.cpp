@@ -11,6 +11,7 @@
 #include "MRColor.h"
 #include "MRPch/MRTBB.h"
 #include "MRProgressReadWrite.h"
+#include <tinyxml2.h>
 #include <array>
 #include <future>
 
@@ -565,6 +566,92 @@ tl::expected<Mesh, std::string> fromCtm( std::istream & in, Vector<Color, VertId
 }
 #endif
 
+tl::expected<Mesh, std::string> from3mfModel( const std::filesystem::path& file, Vector<Color, VertId>* colors, ProgressCallback callback )
+{
+    std::ifstream in( file, std::ifstream::binary );
+    if ( !in )
+        return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+
+    return addFileNameInError( from3mfModel( in, colors, callback ), file );
+}
+
+tl::expected<Mesh, std::string> from3mfModel( std::istream& in, Vector<Color, VertId>*, ProgressCallback callback )
+{
+    MR_TIMER
+
+    // find size
+    in.seekg( 0, std::ios_base::end );
+    size_t size = in.tellg();
+    in.seekg( 0 );
+    // read to char vector
+    std::vector<char> docStr( size + 1 );
+    in.read( docStr.data(), size );
+    if ( in.fail() || in.bad() )
+        return tl::make_unexpected( std::string( "3DF model file read error" ) );
+
+    tinyxml2::XMLDocument doc;
+    if ( tinyxml2::XML_SUCCESS != doc.Parse( docStr.data(), docStr.size() ) )
+        return tl::make_unexpected( std::string( "3DF model file parse error" ) );
+
+    auto rootNode = doc.FirstChildElement();
+    if ( !rootNode || std::string( rootNode->Name() ) != "model" )
+        return tl::make_unexpected( std::string( "3DF model root node is not 'model' but '" ) + std::string( rootNode->Name() ) + "'" );
+
+    auto resourcesNode = rootNode->FirstChildElement( "resources" );
+    if ( !resourcesNode )
+        return tl::make_unexpected( std::string( "3DF model 'resources' node not found" ) );
+
+    auto objectNode = resourcesNode->FirstChildElement( "object" );
+    if ( !resourcesNode )
+        return tl::make_unexpected( std::string( "3DF model 'object' node not found" ) );
+
+    auto meshNode = objectNode->FirstChildElement( "mesh" );
+    if ( !objectNode )
+        return tl::make_unexpected( std::string( "3DF model 'mesh' node not found" ) );
+
+    auto verticesNode = meshNode->FirstChildElement( "vertices" );
+    if ( !verticesNode )
+        return tl::make_unexpected( std::string( "3DF model 'vertices' node not found" ) );
+
+    VertCoords vertexCoordinates;
+    for ( auto vertexNode = verticesNode->FirstChildElement( "vertex" ); vertexNode; vertexNode = vertexNode->NextSiblingElement( "vertex" ) )
+    {
+        Vector3f p;
+        if ( tinyxml2::XML_SUCCESS != vertexNode->QueryFloatAttribute( "x", &p.x ) )
+            return tl::make_unexpected( std::string( "3DF model vertex node does not have 'x' attribute" ) );
+        if ( tinyxml2::XML_SUCCESS != vertexNode->QueryFloatAttribute( "y", &p.y ) )
+            return tl::make_unexpected( std::string( "3DF model vertex node does not have 'y' attribute" ) );
+        if ( tinyxml2::XML_SUCCESS != vertexNode->QueryFloatAttribute( "z", &p.z ) )
+            return tl::make_unexpected( std::string( "3DF model vertex node does not have 'z' attribute" ) );
+        vertexCoordinates.push_back( p );
+    }
+
+    if ( !reportProgress( callback, 0.25f ) )
+        return tl::make_unexpected( std::string( "Loading canceled" ) );
+
+    auto trianglesNode = meshNode->FirstChildElement( "triangles" );
+    if ( !trianglesNode )
+        return tl::make_unexpected( std::string( "3DF model 'triangles' node not found" ) );
+
+    Triangulation tris;
+    for ( auto triangleNode = trianglesNode->FirstChildElement( "triangle" ); triangleNode; triangleNode = triangleNode->NextSiblingElement( "triangle" ) )
+    {
+        int vs[3];
+        if ( tinyxml2::XML_SUCCESS != triangleNode->QueryIntAttribute( "v1", &vs[0] ) )
+            return tl::make_unexpected( std::string( "3DF model triangle node does not have 'v1' attribute" ) );
+        if ( tinyxml2::XML_SUCCESS != triangleNode->QueryIntAttribute( "v2", &vs[1] ) )
+            return tl::make_unexpected( std::string( "3DF model triangle node does not have 'v2' attribute" ) );
+        if ( tinyxml2::XML_SUCCESS != triangleNode->QueryIntAttribute( "v3", &vs[2] ) )
+            return tl::make_unexpected( std::string( "3DF model triangle node does not have 'v3' attribute" ) );
+        tris.push_back( { VertId( vs[0] ), VertId( vs[1] ), VertId( vs[2] ) } );
+    }
+
+    if ( !reportProgress( callback, 0.5f ) )
+        return tl::make_unexpected( std::string( "Loading canceled" ) );
+
+    return Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( vertexCoordinates ), tris );
+}
+
 tl::expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path & file, Vector<Color, VertId>* colors, ProgressCallback callback )
 {
     auto ext = utf8string( file.extension() );
@@ -622,6 +709,7 @@ MR_ADD_MESH_LOADER( IOFilter( "Polygon File Format (.ply)", "*.ply" ), fromPly )
 #ifndef MRMESH_NO_OPENCTM
 MR_ADD_MESH_LOADER( IOFilter( "Compact triangle-based mesh (.ctm)", "*.ctm" ), fromCtm )
 #endif
+MR_ADD_MESH_LOADER( IOFilter( "3D Manufacturing Format (.model)", "*.model" ), from3mfModel )
 
 } //namespace MeshLoad
 

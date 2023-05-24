@@ -195,7 +195,4 @@ void SpaceMouseHandlerHidapi::printDevices_( struct hid_device_info *cur_dev ) {
 
 }
 #endif
-<<<<<<< HEAD
-=======
 #endif
->>>>>>> parent of 02012e34 (Spacemouse: enable on all platforms (#1217))

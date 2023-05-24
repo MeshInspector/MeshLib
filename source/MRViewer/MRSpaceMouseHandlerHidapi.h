@@ -5,9 +5,10 @@
 #include "MRMesh/MRVector.h"
 #include "MRPch/MRSpdlog.h"
 #include <hidapi/hidapi.h>
+#include <bitset>
+#include <condition_variable>
+#include <mutex>
 #include <thread>
-#include <mutex>              // std::mutex, std::unique_lock
-#include <condition_variable> // std::condition_variable
 #ifdef __APPLE__
 #include <hidapi/hidapi_darwin.h>
 #endif

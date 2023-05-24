@@ -1,3 +1,4 @@
+#ifndef _WIN32
 #ifndef __EMSCRIPTEN__
 #include "MRSpaceMouseHandlerHidapi.h"
 
@@ -12,9 +13,7 @@ SpaceMouseHandlerHidapi::SpaceMouseHandlerHidapi()
         , terminateListenerThread_(false)
         , dataPacket_({0})
         , packetLength_(0)
-{
-    connect( &getViewerInstance(), 0, boost::signals2::connect_position::at_back );
-}
+{}
 
 SpaceMouseHandlerHidapi::~SpaceMouseHandlerHidapi()
 {
@@ -58,9 +57,9 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_() {
         {
             for ( ProductId deviceId: supportedDevicesId )
             {
-                if (  deviceId == localDevicesIt->product_id && localDevicesIt->usage == 8 && localDevicesIt->usage_page == 1 )
+                if (  deviceId == localDevicesIt->product_id )
                 {
-                    device_ = hid_open_path( localDevicesIt->path );
+                    device_ = hid_open( vendorId, deviceId, NULL );
                     if ( device_ )
                     {
                         isDeviceFound = true;
@@ -88,10 +87,7 @@ void SpaceMouseHandlerHidapi::handle()
         return;
 
     if ( packetLength_ <= 0 )
-    {
-        cv_.notify_one();
         return;
-    }
 
     auto &viewer = getViewerInstance();
     // process saved data packet
@@ -101,10 +97,7 @@ void SpaceMouseHandlerHidapi::handle()
     packetLength_ = 0;
 
     if ( !device_ )
-    {
-        cv_.notify_one();
         return;
-    }
 
     int packetLen = 0;
     // set the device handle to be non-blocking
@@ -139,19 +132,10 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
                 syncThreadLock.lock();
             }
 
-
-            // to read all data packets during inactive state
-            while ( !active_ )
-            {
-                packetLength_ = hid_read_timeout( device_, dataPacket_.data(), dataPacket_.size(), 500 );
-            }
-
-
             // set the device handle to be blocking
             hid_set_nonblocking( device_, 0 );
             // hid_read_timeout() waits until there is data to read before returning or 1000ms passed (to help with thread shutdown)
             packetLength_ = hid_read_timeout( device_, dataPacket_.data(), dataPacket_.size(), 1000 );
-            // packetLength_ = hid_read( device_, dataPacket_.data(), dataPacket_.size() );
             // device connection lost
             if ( packetLength_ < 0)
             {
@@ -170,21 +154,14 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
     });
 }
 
-void SpaceMouseHandlerHidapi::postFocusSignal_( bool focused )
-{
-    active_ = focused;
-    cv_.notify_one();
-}
-
-
 float SpaceMouseHandlerHidapi::convertCoord_( int coord_byte_low, int coord_byte_high )
 {
     int value = coord_byte_low | (coord_byte_high << 8);
     if ( value > SHRT_MAX ) {
         value = value - 65536;
     }
-    float ret = (float)value / 350.0f;
-    return (std::abs(ret) > 0.01f) ? ret : 0.0f;
+    float ret = (float)value / 350.0;
+    return (std::abs(ret) > 0.01) ? ret : 0.0;
 }
 
 void SpaceMouseHandlerHidapi::convertInput_( const DataPacketRaw& packet, int packet_length, Vector3f& translate, Vector3f& rotate )
@@ -217,4 +194,5 @@ void SpaceMouseHandlerHidapi::printDevices_( struct hid_device_info *cur_dev ) {
 }
 
 }
+#endif
 #endif

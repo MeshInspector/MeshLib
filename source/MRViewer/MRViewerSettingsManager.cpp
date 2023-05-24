@@ -11,6 +11,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer/MRGLMacro.h"
 #include "MRViewer/MRGladGlfw.h"
+#include "MRSpaceMouseHandlerWindows.h"
 
 namespace
 {
@@ -219,6 +220,21 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         if ( paramsJson.isMember( "rotateScale" ) )
             deserializeFromJson( paramsJson["rotateScale"], spaceMouseParams.rotateScale );
         viewer.spaceMouseController.setParams( spaceMouseParams );
+
+#ifdef _WIN32
+        if ( paramsJson.isMember( "activeMouseScrollZoom" ) && paramsJson["activeMouseScrollZoom"].isBool() )
+        {
+            if ( auto spaceMouseHandler =  viewer.getSpaceMouseHandler() )
+            {
+                auto winHandler = std::dynamic_pointer_cast< SpaceMouseHandlerWindows >( spaceMouseHandler );
+                if ( winHandler )
+                {
+                    const bool activeMouseScrollZoom = paramsJson["activeMouseScrollZoom"].asBool();
+                    winHandler->activateMouseScrollZoom( activeMouseScrollZoom );
+                }
+            }
+        }
+#endif
     }
 }
 
@@ -281,10 +297,21 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     {
         cfg.setBool( cShowSelectedObjects, ribbonMenu->getShowNewSelectedObjects() );
     }
+
     Json::Value spaceMouseParamsJson;
     SpaceMouseController::Params spaceMouseParams = viewer.spaceMouseController.getParams();
     serializeToJson( spaceMouseParams.translateScale, spaceMouseParamsJson["translateScale"] );
     serializeToJson( spaceMouseParams.rotateScale, spaceMouseParamsJson["rotateScale"] );
+#ifdef _WIN32
+    if ( auto spaceMouseHandler = viewer.getSpaceMouseHandler() )
+    {
+        auto winHandler = std::dynamic_pointer_cast< SpaceMouseHandlerWindows >( spaceMouseHandler );
+        if ( winHandler )
+        {
+            spaceMouseParamsJson["activeMouseScrollZoom"] = winHandler->isMouseScrollZoomActive();
+        }
+    }
+#endif
     cfg.setJsonValue( cSpaceMouseSettings, spaceMouseParamsJson );
 }
 

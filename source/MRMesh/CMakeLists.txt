@@ -176,7 +176,7 @@ ELSE()
 		tl::expected
 		fmt
 		spdlog
-
+        tinyxml2
 		gtest gtest_main
 		zip
 		pthread

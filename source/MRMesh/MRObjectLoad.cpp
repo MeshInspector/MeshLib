@@ -38,7 +38,7 @@ tl::expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesys
 {
     MR_TIMER;
 
-    Vector<Color, VertId> colors;
+    VertColors colors;
     auto mesh = MeshLoad::fromAnySupportedFormat( file, &colors, callback );
     if ( !mesh.has_value() )
     {
@@ -78,7 +78,7 @@ tl::expected<ObjectPoints, std::string> makeObjectPointsFromFile( const std::fil
 {
     MR_TIMER;
 
-    Vector<Color, VertId> colors;
+    VertColors colors;
     auto pointsCloud = PointsLoad::fromAnySupportedFormat( file, &colors, callback );
     if ( !pointsCloud.has_value() )
     {

@@ -15,8 +15,8 @@ namespace MeshLoad
 /// \ingroup IOGroup
 /// \{
 
-using MeshLoader = tl::expected<MR::Mesh, std::string>( * )( const std::filesystem::path&, Vector<Color, VertId>*, ProgressCallback );
-using MeshStreamLoader = tl::expected<MR::Mesh, std::string>( * )( std::istream&, Vector<Color, VertId>*, ProgressCallback );
+using MeshLoader = tl::expected<MR::Mesh, std::string>( * )( const std::filesystem::path&, VertColors*, ProgressCallback );
+using MeshStreamLoader = tl::expected<MR::Mesh, std::string>( * )( std::istream&, VertColors*, ProgressCallback );
 
 struct NamedMeshLoader
 {

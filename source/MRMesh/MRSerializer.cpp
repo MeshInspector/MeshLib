@@ -810,7 +810,7 @@ void deserializeFromJson( const Json::Value& root, BitSet& bitset )
     }
 }
 
-tl::expected<Mesh, std::string> deserializeFromJson( const Json::Value& root, Vector<Color, VertId>* colors )
+tl::expected<Mesh, std::string> deserializeFromJson( const Json::Value& root, VertColors* colors )
 {
     if ( !root.isObject() )
         return tl::unexpected( std::string{ "deserialize mesh: json value is not an object" } );

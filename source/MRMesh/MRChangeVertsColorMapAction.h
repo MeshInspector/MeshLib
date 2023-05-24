@@ -46,7 +46,7 @@ public:
 
 private:
     std::shared_ptr<VisualObject> obj_;
-    Vector<Color, VertId> vertsColorMap_;
+    VertColors vertsColorMap_;
     std::string name_;
 };
 

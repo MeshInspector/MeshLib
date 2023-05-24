@@ -22,16 +22,16 @@ MRMESH_API extern const IOFilters Filters;
 
 #ifndef MRMESH_NO_OPENCTM
 /// loads from .ctm file
-MRMESH_API tl::expected<PointCloud, std::string> fromCtm( const std::filesystem::path& file, Vector<Color, VertId>* colors = nullptr,
+MRMESH_API tl::expected<PointCloud, std::string> fromCtm( const std::filesystem::path& file, VertColors* colors = nullptr,
                                                           ProgressCallback callback = {} );
-MRMESH_API tl::expected<PointCloud, std::string> fromCtm( std::istream& in, Vector<Color, VertId>* colors = nullptr,
+MRMESH_API tl::expected<PointCloud, std::string> fromCtm( std::istream& in, VertColors* colors = nullptr,
                                                           ProgressCallback callback = {} );
 #endif
 
 /// loads from .ply file
-MRMESH_API tl::expected<PointCloud, std::string> fromPly( const std::filesystem::path& file, Vector<Color, VertId>* colors = nullptr,
+MRMESH_API tl::expected<PointCloud, std::string> fromPly( const std::filesystem::path& file, VertColors* colors = nullptr,
                                                           ProgressCallback callback = {} );
-MRMESH_API tl::expected<PointCloud, std::string> fromPly( std::istream& in, Vector<Color, VertId>* colors = nullptr,
+MRMESH_API tl::expected<PointCloud, std::string> fromPly( std::istream& in, VertColors* colors = nullptr,
                                                           ProgressCallback callback = {} );
 
 /// loads from .obj file
@@ -43,10 +43,10 @@ MRMESH_API tl::expected<PointCloud, std::string> fromAsc( const std::filesystem:
 MRMESH_API tl::expected<PointCloud, std::string> fromAsc( std::istream& in, ProgressCallback callback = {} );
 
 /// detects the format from file extension and loads points from it
-MRMESH_API tl::expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, Vector<Color, VertId>* colors = nullptr,
+MRMESH_API tl::expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, VertColors* colors = nullptr,
                                                                          ProgressCallback callback = {} );
 /// extension in `*.ext` format
-MRMESH_API tl::expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, Vector<Color, VertId>* colors = nullptr,
+MRMESH_API tl::expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, VertColors* colors = nullptr,
                                                                          ProgressCallback callback = {} );
 
 /// \}

@@ -114,9 +114,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def_readwrite( "vec", &MR::Vector<Vector2f, VertId>::vec_ );
 
-    pybind11::class_<MR::Vector<Color, VertId>>( m, "VertColorMap" ).
+    pybind11::class_<MR::VertColors>( m, "VertColorMap" ).
         def( pybind11::init<>() ).
-        def_readwrite( "vec", &MR::Vector<Color, VertId>::vec_ );
+        def_readwrite( "vec", &MR::VertColors::vec_ );
 } )
 
 MR::MeshTopology topologyFromTriangles( const Triangulation& t, const MeshBuilder::BuildSettings& s )

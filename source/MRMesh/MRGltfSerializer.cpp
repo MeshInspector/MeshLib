@@ -36,7 +36,7 @@ using namespace MR;
 struct MeshData
 {
     std::shared_ptr<Mesh> mesh;
-    Vector<Color, VertId> vertsColorMap;
+    VertColors vertsColorMap;
     Vector<UVCoord, VertId> uvCoords;
     int materialIndex = -1;
 };
@@ -119,7 +119,7 @@ tl::expected<int, std::string> readVertCoords( VertCoords& vertexCoordinates, co
     return int( accessor.count );
 }
 
-void fillVertsColorMap( Vector<Color, VertId>& vertsColorMap, int vertexCount, const std::vector<Material>& materials, int materialIndex )
+void fillVertsColorMap( VertColors& vertsColorMap, int vertexCount, const std::vector<Material>& materials, int materialIndex )
 {
     const auto startPos = vertsColorMap.size();
     vertsColorMap.resize( vertsColorMap.size() + vertexCount );

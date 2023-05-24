@@ -140,7 +140,7 @@ MRMESH_API void deserializeFromJson( const Json::Value& root, Color& col );
 MRMESH_API void deserializeFromJson( const Json::Value& root, Matrix3f& matrix );
 MRMESH_API void deserializeFromJson( const Json::Value& root, AffineXf3f& xf );
 MRMESH_API void deserializeFromJson( const Json::Value& root, BitSet& bitset );
-MRMESH_API tl::expected<Mesh, std::string> deserializeFromJson( const Json::Value& root, Vector<Color, VertId>* colors = nullptr );
+MRMESH_API tl::expected<Mesh, std::string> deserializeFromJson( const Json::Value& root, VertColors* colors = nullptr );
 MRMESH_API void deserializeFromJson( const Json::Value& root, Plane3f& plane );
 MRMESH_API void deserializeFromJson( const Json::Value& root, TriPointf& tp );
 MRMESH_API void deserializeFromJson( const Json::Value& root, MeshTexture& texture );

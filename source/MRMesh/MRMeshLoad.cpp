@@ -24,7 +24,7 @@ namespace MR
 namespace MeshLoad
 {
 
-tl::expected<Mesh, std::string> fromMrmesh( const std::filesystem::path& file, Vector<Color, VertId>*, ProgressCallback callback )
+tl::expected<Mesh, std::string> fromMrmesh( const std::filesystem::path& file, VertColors*, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -33,7 +33,7 @@ tl::expected<Mesh, std::string> fromMrmesh( const std::filesystem::path& file, V
     return addFileNameInError( fromMrmesh( in, nullptr, callback ), file );
 }
 
-tl::expected<Mesh, std::string> fromMrmesh( std::istream& in, Vector<Color, VertId>*, ProgressCallback callback )
+tl::expected<Mesh, std::string> fromMrmesh( std::istream& in, VertColors*, ProgressCallback callback )
 {
     MR_TIMER
 
@@ -66,7 +66,7 @@ tl::expected<Mesh, std::string> fromMrmesh( std::istream& in, Vector<Color, Vert
     return std::move( mesh );
 }
 
-tl::expected<Mesh, std::string> fromOff( const std::filesystem::path & file, Vector<Color, VertId>*, ProgressCallback callback )
+tl::expected<Mesh, std::string> fromOff( const std::filesystem::path & file, VertColors*, ProgressCallback callback )
 {
     std::ifstream in( file );
     if ( !in )
@@ -75,7 +75,7 @@ tl::expected<Mesh, std::string> fromOff( const std::filesystem::path & file, Vec
     return addFileNameInError( fromOff( in, nullptr, callback ), file );
 }
 
-tl::expected<Mesh, std::string> fromOff( std::istream& in, Vector<Color, VertId>*, ProgressCallback callback )
+tl::expected<Mesh, std::string> fromOff( std::istream& in, VertColors*, ProgressCallback callback )
 {
     MR_TIMER
     std::string header;
@@ -119,7 +119,7 @@ tl::expected<Mesh, std::string> fromOff( std::istream& in, Vector<Color, VertId>
     return Mesh::fromTriangles( std::move( points ), t );
 }
 
-tl::expected<Mesh, std::string> fromObj( const std::filesystem::path & file, Vector<Color, VertId>*, ProgressCallback callback )
+tl::expected<Mesh, std::string> fromObj( const std::filesystem::path & file, VertColors*, ProgressCallback callback )
 {
     std::ifstream in( file, std::ios::binary );
     if ( !in )
@@ -128,7 +128,7 @@ tl::expected<Mesh, std::string> fromObj( const std::filesystem::path & file, Vec
     return addFileNameInError( fromObj( in, nullptr, callback ), file );
 }
 
-tl::expected<Mesh, std::string> fromObj( std::istream& in, Vector<Color, VertId>*, ProgressCallback callback )
+tl::expected<Mesh, std::string> fromObj( std::istream& in, VertColors*, ProgressCallback callback )
 {
     MR_TIMER
 
@@ -141,7 +141,7 @@ tl::expected<Mesh, std::string> fromObj( std::istream& in, Vector<Color, VertId>
     return std::move( (*objs)[0].mesh );
 }
 
-tl::expected<MR::Mesh, std::string> fromAnyStl( const std::filesystem::path& file, Vector<Color, VertId>*, ProgressCallback callback )
+tl::expected<MR::Mesh, std::string> fromAnyStl( const std::filesystem::path& file, VertColors*, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -150,7 +150,7 @@ tl::expected<MR::Mesh, std::string> fromAnyStl( const std::filesystem::path& fil
     return addFileNameInError( fromAnyStl( in, nullptr, callback ), file );
 }
 
-tl::expected<MR::Mesh, std::string> fromAnyStl( std::istream& in, Vector<Color, VertId>*, ProgressCallback callback )
+tl::expected<MR::Mesh, std::string> fromAnyStl( std::istream& in, VertColors*, ProgressCallback callback )
 {
     auto pos = in.tellg();
     auto resBin = fromBinaryStl( in, nullptr, callback );
@@ -164,7 +164,7 @@ tl::expected<MR::Mesh, std::string> fromAnyStl( std::istream& in, Vector<Color, 
     return tl::make_unexpected( resBin.error() + '\n' + resAsc.error() );
 }
 
-tl::expected<Mesh, std::string> fromBinaryStl( const std::filesystem::path & file, Vector<Color, VertId>*, ProgressCallback callback )
+tl::expected<Mesh, std::string> fromBinaryStl( const std::filesystem::path & file, VertColors*, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -173,7 +173,7 @@ tl::expected<Mesh, std::string> fromBinaryStl( const std::filesystem::path & fil
     return addFileNameInError( fromBinaryStl( in, nullptr, callback ), file );
 }
 
-tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, Vector<Color, VertId>*, ProgressCallback callback )
+tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, VertColors*, ProgressCallback callback )
 {
     MR_TIMER
 
@@ -263,7 +263,7 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, Vector<Color, V
     return Mesh::fromTrianglesDuplicatingNonManifoldVertices( vi.takePoints(), t );
 }
 
-tl::expected<Mesh, std::string> fromASCIIStl( const std::filesystem::path& file, Vector<Color, VertId>*, ProgressCallback callback )
+tl::expected<Mesh, std::string> fromASCIIStl( const std::filesystem::path& file, VertColors*, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -272,7 +272,7 @@ tl::expected<Mesh, std::string> fromASCIIStl( const std::filesystem::path& file,
     return addFileNameInError( fromASCIIStl( in, nullptr, callback ), file );
 }
 
-tl::expected<Mesh, std::string> fromASCIIStl( std::istream& in, Vector<Color, VertId>*, ProgressCallback callback )
+tl::expected<Mesh, std::string> fromASCIIStl( std::istream& in, VertColors*, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -349,7 +349,7 @@ tl::expected<Mesh, std::string> fromASCIIStl( std::istream& in, Vector<Color, Ve
     return Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), t );
 }
 
-tl::expected<Mesh, std::string> fromPly( const std::filesystem::path& file, Vector<Color, VertId>* colors, ProgressCallback callback )
+tl::expected<Mesh, std::string> fromPly( const std::filesystem::path& file, VertColors* colors, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -358,7 +358,7 @@ tl::expected<Mesh, std::string> fromPly( const std::filesystem::path& file, Vect
     return addFileNameInError( fromPly( in, colors, callback ), file );
 }
 
-tl::expected<Mesh, std::string> fromPly( std::istream& in, Vector<Color, VertId>* colors, ProgressCallback callback )
+tl::expected<Mesh, std::string> fromPly( std::istream& in, VertColors* colors, ProgressCallback callback )
 {
     MR_TIMER
 
@@ -466,7 +466,7 @@ tl::expected<Mesh, std::string> fromPly( std::istream& in, Vector<Color, VertId>
 }
 
 #ifndef MRMESH_NO_OPENCTM
-tl::expected<Mesh, std::string> fromCtm( const std::filesystem::path & file, Vector<Color, VertId>* colors, ProgressCallback callback )
+tl::expected<Mesh, std::string> fromCtm( const std::filesystem::path & file, VertColors* colors, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -475,7 +475,7 @@ tl::expected<Mesh, std::string> fromCtm( const std::filesystem::path & file, Vec
     return addFileNameInError( fromCtm( in, colors, callback ), file );
 }
 
-tl::expected<Mesh, std::string> fromCtm( std::istream & in, Vector<Color, VertId>* colors, ProgressCallback callback )
+tl::expected<Mesh, std::string> fromCtm( std::istream & in, VertColors* colors, ProgressCallback callback )
 {
     MR_TIMER
 
@@ -565,7 +565,7 @@ tl::expected<Mesh, std::string> fromCtm( std::istream & in, Vector<Color, VertId
 }
 #endif
 
-tl::expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path & file, Vector<Color, VertId>* colors, ProgressCallback callback )
+tl::expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path & file, VertColors* colors, ProgressCallback callback )
 {
     auto ext = utf8string( file.extension() );
     for ( auto & c : ext )
@@ -588,7 +588,7 @@ tl::expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::p
     return loader( file, colors, callback );
 }
 
-tl::expected<Mesh, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, Vector<Color, VertId>* colors, ProgressCallback callback )
+tl::expected<Mesh, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, VertColors* colors, ProgressCallback callback )
 {
     auto ext = extension;
     for ( auto& c : ext )
@@ -611,7 +611,7 @@ tl::expected<Mesh, std::string> fromAnySupportedFormat( std::istream& in, const 
 }
 
 /*
-MeshLoaderAdder __meshLoaderAdder( NamedMeshLoader{IOFilter( "MrMesh (.mrmesh)", "*.mrmesh" ),MeshLoader{static_cast<tl::expected<MR::Mesh, std::string>(*)(const std::filesystem::path&,Vector<Color, VertId>*)>(fromMrmesh)}} );
+MeshLoaderAdder __meshLoaderAdder( NamedMeshLoader{IOFilter( "MrMesh (.mrmesh)", "*.mrmesh" ),MeshLoader{static_cast<tl::expected<MR::Mesh, std::string>(*)(const std::filesystem::path&,VertColors*)>(fromMrmesh)}} );
 */
 
 MR_ADD_MESH_LOADER( IOFilter( "MeshInspector (.mrmesh)", "*.mrmesh" ), fromMrmesh )

@@ -30,7 +30,7 @@ const IOFilters Filters =
 };
 
 #ifndef MRMESH_NO_OPENCTM
-tl::expected<MR::PointCloud, std::string> fromCtm( const std::filesystem::path& file, Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
+tl::expected<MR::PointCloud, std::string> fromCtm( const std::filesystem::path& file, VertColors* colors /*= nullptr */, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -39,7 +39,7 @@ tl::expected<MR::PointCloud, std::string> fromCtm( const std::filesystem::path& 
     return addFileNameInError( fromCtm( in, colors, callback ), file );
 }
 
-tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
+tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, VertColors* colors /*= nullptr */, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -130,7 +130,7 @@ tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, Vector<Colo
 }
 #endif
 
-tl::expected<MR::PointCloud, std::string> fromPly( const std::filesystem::path& file, Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
+tl::expected<MR::PointCloud, std::string> fromPly( const std::filesystem::path& file, VertColors* colors /*= nullptr */, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -139,7 +139,7 @@ tl::expected<MR::PointCloud, std::string> fromPly( const std::filesystem::path& 
     return addFileNameInError( fromPly( in, colors, callback ), file );
 }
 
-tl::expected<MR::PointCloud, std::string> fromPly( std::istream& in, Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
+tl::expected<MR::PointCloud, std::string> fromPly( std::istream& in, VertColors* colors /*= nullptr */, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -318,7 +318,7 @@ tl::expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCal
     return std::move( cloud );
 }
 
-tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, Vector<Color, VertId>* colors /*= nullptr */,
+tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, VertColors* colors /*= nullptr */,
                                                                   ProgressCallback callback )
 {
     auto ext = utf8string( file.extension() );
@@ -339,7 +339,7 @@ tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::fil
     return res;
 }
 
-tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, Vector<Color, VertId>* colors /*= nullptr */,
+tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, VertColors* colors /*= nullptr */,
                                                                   ProgressCallback callback )
 {
     auto ext = extension.substr( 1 );

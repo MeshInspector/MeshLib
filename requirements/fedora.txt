@@ -15,6 +15,7 @@ hidapi-devel
 ilmbase-devel
 jsoncpp-devel
 libtiff-devel
+tinyxml2-devel
 libzip-devel
 libzstd-devel
 openvdb-devel

@@ -21,7 +21,8 @@ bool isEdgePath( const MeshTopology & topology, const std::vector<EdgeId> & edge
 
 bool isEdgeLoop( const MeshTopology & topology, const std::vector<EdgeId> & edges )
 {
-    return isEdgePath( topology, edges ) && topology.org( edges.front() ) == topology.dest( edges.back() );
+    return isEdgePath( topology, edges ) && !edges.empty()
+        && topology.org( edges.front() ) == topology.dest( edges.back() );
 }
 
 void reverse( EdgePath & path )

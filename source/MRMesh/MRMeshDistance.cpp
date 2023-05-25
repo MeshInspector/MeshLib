@@ -297,10 +297,78 @@ MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, 
     );
 }
 
-MRMESH_API float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
+float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
 {
     std::unique_ptr<AffineXf3f> rigidA2B = rigidB2A ? std::make_unique<AffineXf3f>( rigidB2A->inverse() ) : nullptr;
     return std::max( findMaxDistanceSqOneWay( a, b, rigidB2A, maxDistanceSq ), findMaxDistanceSqOneWay( b, a, rigidA2B.get(), maxDistanceSq ) );
+}
+
+void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rangeSq, const TriangleCallback & call )
+{
+    assert( call );
+    if ( !call )
+        return;
+
+    const AABBTree & tree = mp.mesh.getAABBTree();
+    if ( tree.nodes().empty() )
+        return;
+
+    Box3f tbox;
+    for ( const auto & p : t )
+        tbox.include( p );
+
+    struct SubTask
+    {
+        AABBTree::NodeId n;
+        float distSq = 0;
+        SubTask() = default;
+        SubTask( AABBTree::NodeId n, float dd ) : n( n ), distSq( dd ) { }
+    };
+
+    constexpr int MaxStackSize = 32; // to avoid allocations
+    SubTask subtasks[MaxStackSize];
+    int stackSize = 0;
+
+    auto addSubTask = [&]( const SubTask & s )
+    {
+        if ( s.distSq < rangeSq )
+        {
+            assert( stackSize < MaxStackSize );
+            subtasks[stackSize++] = s;
+        }
+    };
+
+    auto getSubTask = [&]( AABBTree::NodeId n )
+    {
+        float distSq = tree.nodes()[n].box.getDistanceSq( tbox );
+        return SubTask( n, distSq );
+    };
+
+    addSubTask( getSubTask( tree.rootNodeId() ) );
+
+    while( stackSize > 0 )
+    {
+        const auto s = subtasks[--stackSize];
+        const auto & node = tree[s.n];
+
+        if ( node.leaf() )
+        {
+            const auto face = node.leafId();
+            if ( mp.region && !mp.region->test( face ) )
+                continue;
+            const auto leafTriangle = mp.mesh.getTriPoints( face );
+            Vector3f p, q;
+            const float distSq = TriDist( p, q, t.data(), leafTriangle.data() );
+            if ( distSq > rangeSq )
+                continue;
+            if ( call( p, face, q, distSq ) == ProcessOneResult::ContinueProcessing )
+                continue;
+            break;
+        }
+        
+        addSubTask( getSubTask( node.r ) ); // right to look later
+        addSubTask( getSubTask( node.l ) ); // left to look first
+    }
 }
 
 TEST(MRMesh, MeshDistance) 

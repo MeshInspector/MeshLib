@@ -1,6 +1,7 @@
 #include "MROverlappingTris.h"
-#include "MRMeshProject.h"
+#include "MRMeshDistance.h"
 #include "MRMesh.h"
+#include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -9,18 +10,34 @@ namespace MR
 FaceBitSet findOverlappingTris( const MeshPart & mp, const FindOverlappingSettings & settings )
 {
     MR_TIMER
-    FaceBitSet res;
-    for ( auto f : mp.mesh.topology.getFaceIds( mp.region ) )
+    FaceBitSet res( mp.mesh.topology.faceSize() );
+    BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&]( FaceId f )
     {
-        const auto proj = findProjection( mp.mesh.triCenter( f ), mp, settings.maxDistSq, nullptr, 0, f );
-        if ( !proj.proj.face || proj.mtp.bary.onEdge() >= 0 )
-            continue;
-        const auto normDot = dot( mp.mesh.normal( f ), mp.mesh.normal( proj.proj.face ) );
-        if ( normDot > settings.maxNormalDot )
-            continue;
-        res.autoResizeSet( f );
-        res.autoResizeSet( proj.proj.face );
-    }
+        const auto fDirDblArea = mp.mesh.dirDblArea( f );
+        const auto fDblArea = fDirDblArea.length();
+        const auto fnormal = fDirDblArea.normalized();
+        const auto tri = mp.mesh.getTriPoints( f );
+        bool overlapping = false;
+        auto onNeiTriangle = [&]( const Vector3f &, FaceId f1, const Vector3f &, float /*distSq*/ )
+        {
+            if ( f == f1 )
+                return ProcessOneResult::ContinueProcessing;
+
+            const auto f1DirDblArea = mp.mesh.dirDblArea( f1 );
+            const auto f1DblArea = f1DirDblArea.length();
+            const auto f1normal = f1DirDblArea.normalized();
+            if ( fDblArea * settings.minAreaFraction > f1DblArea )
+                return ProcessOneResult::ContinueProcessing;
+
+            if ( dot( fnormal, f1normal ) > settings.maxNormalDot )
+                return ProcessOneResult::ContinueProcessing;
+            overlapping = true;
+            return ProcessOneResult::StopProcessing;
+        };
+        processCloseTriangles( mp, tri, settings.maxDistSq, onNeiTriangle );
+        if ( overlapping )
+            res.set( f );
+    } );
 
     return res;
 }

@@ -23,17 +23,28 @@ using ContinuousContours = std::vector<ContinuousContour>;
 MRMESH_API ContinuousContours orderIntersectionContours( const MeshTopology& topologyA, const MeshTopology& topologyB, const PreciseCollisionResult& intersections );
 
 // Detects contours that fully lay inside one triangle
-// returns they indices in contours
-MRMESH_API std::vector<int> detectLoneContours( const ContinuousContours& contours );
+// returns their indices in contours
+MRMESH_API BitSet detectLoneContours( const ContinuousContours& contours );
 
-// Removes contours with zero area (do not remove if contour is handle on topology)
-// edgesTopology - topology on which contours are represented with edges
+// Detects contours degenerated to single point among contourIds
 // faceContours - lone contours represented by faces (all intersections are in same mesh A face)
-// edgeContours - lone contours represented by edges (all intersections are in mesh B edges, edgesTopology: meshB.topology)
-MRMESH_API void removeLoneDegeneratedContours( const MeshTopology& edgesTopology, 
-    OneMeshContours& faceContours, OneMeshContours& edgeContours );
+// returns their indices in contours
+MRMESH_API BitSet detectSingularContours( const OneMeshContours& faceContours, const BitSet& contourIds );
 
-// Removes contours that fully lay inside one triangle from the contours
-MRMESH_API void removeLoneContours( ContinuousContours& contours );
+// Detects contours with zero area among contourIds
+// faceContours - lone contours represented by faces (all intersections are in same mesh A face)
+// returns their indices in contours
+MRMESH_API BitSet detectDegeneratedContours( const OneMeshContours& faceContours, const BitSet& contourIds );
+
+// Detects contours which are handles on surface among contourIds
+// tpA - topology on mesh A
+// tpB - topology on mesh B
+MRMESH_API BitSet detectNonTrivialContours( const MeshTopology& tpA, const MeshTopology& tpB, const ContinuousContours& contours, const BitSet& contourIds );
+
+// Removes contours by contourIds from faceContours and edgeContours
+// faceContours - lone contours represented by faces (all intersections are in same mesh A face)
+MRMESH_API void removeContours( OneMeshContours& contours, const BitSet& contourIds );
+// Removes contours by contourIds from contours
+MRMESH_API void removeContours( ContinuousContours& contours, const BitSet& contourIds );
 
 }

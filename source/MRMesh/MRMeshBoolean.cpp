@@ -126,6 +126,7 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
                        const AffineXf3f* rigidB2A /*= nullptr */, BooleanResultMapper* mapper /*= nullptr */ )
 {
     MR_TIMER;
+    BooleanResult result;
     CoordinateConverters converters;
     PreciseCollisionResult intersections;
     ContinuousContours contours;
@@ -137,8 +138,12 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
 
     FaceMap new2orgSubdivideMapA;
     FaceMap new2orgSubdivideMapB;
-    std::vector<int> prevLoneContoursIds;
-    for ( ;;)
+    int fixedLone = -1;
+    bool hasUnresolvableLoneContours = false;
+    int iterationCounter{ 0 };
+    const int cMaxIterations{ 1000 };
+    BitSet prevLoneInters;
+    for ( ; iterationCounter < cMaxIterations; ++iterationCounter )
     {
         // find intersections
         intersections = findCollidingEdgeTrisPrecise( meshA, meshB, converters.toInt, rigidB2A );
@@ -146,30 +151,31 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
         contours = orderIntersectionContours( meshA.topology, meshB.topology, intersections );
         // find lone
         auto loneContoursIds = detectLoneContours( contours );
+        
+        // no lone contours no preprocessing
+        if ( loneContoursIds.none() )
+            break;
 
-        if ( !loneContoursIds.empty() && loneContoursIds == prevLoneContoursIds )
+        if ( fixedLone == 0 || prevLoneInters == loneContoursIds )
         {
-            // in some rare cases there are lone contours with zero area that cannot be resolved
-            // they lead to infinite loop, so just try to remove them
-            removeLoneContours( contours );
+            // remove lone contours which are degenerate
+            removeContours( contours, loneContoursIds );
             break;
         }
-
-        prevLoneContoursIds = loneContoursIds;
-
+        prevLoneInters = loneContoursIds;
+        fixedLone = 0;
         // separate A lone from B lone
         ContinuousContours loneA;
         ContinuousContours loneB;
-        for ( int i = 0; i < loneContoursIds.size(); ++i )
+        for ( auto i : loneContoursIds )
         {
-            const auto& contour = contours[loneContoursIds[i]];
+            const auto& contour = contours[i];
             if ( contour[0].isEdgeATriB )
                 loneB.push_back( contour );
             else
                 loneA.push_back( contour );
         }
-        if ( loneContoursIds.empty() ||
-            ( loneA.empty() && !needCutMeshB ) ||
+        if ( ( loneA.empty() && !needCutMeshB ) ||
             ( loneB.empty() && !needCutMeshA ) )
             break;
         // subdivide owners of lone
@@ -177,7 +183,19 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
         {
             auto loneIntsA = getOneMeshIntersectionContours( meshA, meshB, loneA, true, converters, rigidB2A );
             auto loneIntsAonB = getOneMeshIntersectionContours( meshA, meshB, loneA, false, converters, rigidB2A );
-            removeLoneDegeneratedContours( meshB.topology, loneIntsA, loneIntsAonB );
+            BitSet loneABs( loneIntsA.size() );
+            loneABs.flip();
+            
+            auto degenerateABs = detectDegeneratedContours( loneIntsA, loneABs );
+            if ( detectNonTrivialContours( meshA.topology, meshB.topology, loneA, degenerateABs ).any() )
+            {
+                hasUnresolvableLoneContours = true;
+                break;
+            }
+            removeContours( loneIntsA, loneABs - degenerateABs );
+            fixedLone += int( ( loneABs - degenerateABs ).count() );
+
+            // try resolve the rest
             FaceMap new2orgLocalMap;
             FaceMap* mapPointer = mapper ? &new2orgLocalMap : nullptr;
             subdivideLoneContours( meshA, loneIntsA, mapPointer );
@@ -201,7 +219,20 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
         {
             auto loneIntsB = getOneMeshIntersectionContours( meshA, meshB, loneB, false, converters, rigidB2A );
             auto loneIntsBonA = getOneMeshIntersectionContours( meshA, meshB, loneB, true, converters, rigidB2A );
-            removeLoneDegeneratedContours( meshA.topology, loneIntsB, loneIntsBonA );
+
+            BitSet loneBBs( loneIntsB.size() );
+            loneBBs.flip();
+
+            auto degenerateBBs = detectDegeneratedContours( loneIntsB, loneBBs );
+            if ( detectNonTrivialContours( meshA.topology, meshB.topology, loneB, degenerateBBs ).any() )
+            {
+                hasUnresolvableLoneContours = true;
+                break;
+            }
+            removeContours( loneIntsB, loneBBs - degenerateBBs );
+            fixedLone += int( ( loneBBs - degenerateBBs ).count() );
+
+            // try resolve the rest
             FaceMap new2orgLocalMap;
             FaceMap* mapPointer = mapper ? &new2orgLocalMap : nullptr;
             subdivideLoneContours( meshB, loneIntsB, mapPointer );
@@ -222,11 +253,22 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
             } );
         }
     }
+    if ( hasUnresolvableLoneContours )
+    {
+        result.errorString = "Has lone non-trivial intersection contours, that cannot be resolved.";
+        return result;
+    }
+    if ( iterationCounter >= cMaxIterations )
+    {
+        assert( false );
+        result.errorString = "Lone contours resolve iteration limit has been reached.";
+        return result;
+    }
+
     // clear intersections
     intersections = {};
 
     std::vector<EdgePath> cutA, cutB;
-    BooleanResult result;
     OneMeshContours meshAContours;
     OneMeshContours meshBContours;
     // prepare it before as far as MeshA will be changed after cut

@@ -19,14 +19,25 @@ float calcLoneContourAreaSq( const OneMeshContour& contour )
     return dblDirArea.lengthSq();
 }
 
-bool isClosedContourTrivial( const MeshTopology& topology, const OneMeshContour& contour )
+bool isLoneContourSingular( const OneMeshContour& contour )
 {
-    assert( contour.closed );
-    FaceBitSet fbs( topology.faceSize() );
-    for ( const auto& inter : contour.intersections )
+    if ( contour.intersections.size() < 2 )
+        return true;
+    const auto& first = contour.intersections.front();
+    for ( int i = 1; i < contour.intersections.size(); ++i )
     {
-        assert( inter.primitiveId.index() == OneMeshIntersection::Edge );
-        auto eid = std::get<EdgeId>( inter.primitiveId );
+        if ( contour.intersections[i].coordinate != first.coordinate )
+            return false;
+    }
+    return true;
+}
+
+bool isClosedContourTrivial( const MeshTopology& topology, const ContinuousContour& contour )
+{
+    FaceBitSet fbs( topology.faceSize() );
+    for ( const auto& inter : contour )
+    {
+        auto eid = inter.edge;
         if ( auto l = topology.left( eid ) )
             fbs.set( l );
     }
@@ -197,9 +208,9 @@ ContinuousContours orderIntersectionContours( const MeshTopology& topologyA, con
     return res;
 }
 
-std::vector<int> detectLoneContours( const ContinuousContours& contours )
+BitSet detectLoneContours( const ContinuousContours& contours )
 {
-    std::vector<int> res;
+    BitSet res( contours.size() );
     for ( int i = 0; i < contours.size(); ++i )
     {
         auto& contour = contours[i];
@@ -216,29 +227,64 @@ std::vector<int> detectLoneContours( const ContinuousContours& contours )
             }
         }
         if ( isLone )
-            res.push_back( i );
+            res.set( i );
     }
     return res;
 }
 
-void removeLoneDegeneratedContours( const MeshTopology& edgesTopology, OneMeshContours& faceContours, OneMeshContours& edgeContours )
+BitSet detectSingularContours( const OneMeshContours& faceContours, const BitSet& contourIds )
 {
-    for ( int i = int( faceContours.size() ) - 1; i >= 0; --i )
+    BitSet res( contourIds.size() );
+    for ( auto i : contourIds )
     {
-        if ( faceContours[i].closed && calcLoneContourAreaSq( faceContours[i] ) == 0.0f && isClosedContourTrivial( edgesTopology, edgeContours[i] ) )
-        {
-            faceContours.erase( faceContours.begin() + i );
-            edgeContours.erase( edgeContours.begin() + i );
-        }
+        if ( isLoneContourSingular( faceContours[i] ) )
+            res.set( i );
+    }
+    return res;
+}
+
+BitSet detectDegeneratedContours( const OneMeshContours& faceContours, const BitSet& contourIds )
+{
+    BitSet res( contourIds.size() );
+    for ( auto i : contourIds )
+    {
+        if ( calcLoneContourAreaSq( faceContours[i] ) == 0.0f )
+            res.set( i );
+    }
+    return res;
+}
+
+BitSet detectNonTrivialContours( const MeshTopology& tpA, const MeshTopology& tpB, const ContinuousContours& contours, const BitSet& contourIds )
+{
+    BitSet res( contourIds.size() );
+    for ( auto i : contourIds )
+    {
+        if ( contours[i].empty() )
+            continue;
+        bool edgeATriB = contours[i].front().isEdgeATriB;
+        if ( isClosedContourTrivial( edgeATriB ? tpA : tpB, contours[i] ) )
+            res.set( i );
+    }
+    return res;
+}
+
+void removeContours( OneMeshContours& faceContours, const BitSet& contourIds )
+{
+    int counter = 0;
+    for ( auto i : contourIds )
+    {
+        faceContours.erase( faceContours.begin() + i - counter );
+        ++counter;
     }
 }
 
-void removeLoneContours( ContinuousContours& contours )
+void removeContours( ContinuousContours& contours, const BitSet& contourIds )
 {
-    auto loneContours = detectLoneContours( contours );
-    for ( int i = int( loneContours.size() ) - 1; i >= 0; --i )
+    int counter = 0;
+    for ( auto i : contourIds )
     {
-        contours.erase( contours.begin() + loneContours[i] );
+        contours.erase( contours.begin() + i - counter );
+        ++counter;
     }
 }
 

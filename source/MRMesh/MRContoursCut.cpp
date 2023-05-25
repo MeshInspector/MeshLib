@@ -1559,7 +1559,7 @@ void debugSortingInfo( EdgeId baseE,
         {
             if ( !edgeInfoPrinted )
             {
-                spdlog::info( "Edge {}", baseE );
+                spdlog::info( "Edge {}", (int)baseE );
                 edgeInfoPrinted = true;
             }
             if ( sortData )
@@ -1569,7 +1569,7 @@ void debugSortingInfo( EdgeId baseE,
 
                 auto sharedEdge = sortData->otherMesh.topology.sharedEdge( f1, f2 );
                 spdlog::info( "  {}", dotProds[res[i + 1]] - dotProds[res[i]] );
-                spdlog::info( "   shared: ", sharedEdge );
+                spdlog::info( "   shared: ", (int)sharedEdge );
             }
         }
     }

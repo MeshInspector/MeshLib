@@ -4,7 +4,7 @@
 namespace MR
 {
 
-void stitchContours( MeshTopology & topology, const std::vector<EdgeId> & c0, const std::vector<EdgeId> & c1 )
+void stitchContours( MeshTopology & topology, const EdgePath & c0, const EdgePath & c1 )
 {
     assert( c0.size() == c1.size() );
     const auto sz = c0.size();

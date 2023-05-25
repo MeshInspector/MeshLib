@@ -119,7 +119,7 @@ EdgePath buildSmallestMetricPath( const MeshTopology& topology, const EdgeMetric
     return buildSmallestMetricPath( start, b, maxPathMetric );
 }
 
-std::vector<EdgeId> buildSmallestMetricPath(
+EdgePath buildSmallestMetricPath(
     const MeshTopology & topology, const EdgeMetric & metric,
     VertId start, VertId finish, float maxPathMetric )
 {
@@ -130,7 +130,7 @@ std::vector<EdgeId> buildSmallestMetricPath(
     return buildSmallestMetricPath( start, b, maxPathMetric );
 }
 
-std::vector<EdgeId> buildSmallestMetricPathBiDir(
+EdgePath buildSmallestMetricPathBiDir(
     const MeshTopology & topology, const EdgeMetric & metric,
     VertId start, VertId finish, float maxPathMetric )
 {
@@ -205,7 +205,7 @@ EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const Edge
         }
     }
 
-    std::vector<EdgeId> res;
+    EdgePath res;
     if ( join )
     {
         res = bs.getPathBack( join );

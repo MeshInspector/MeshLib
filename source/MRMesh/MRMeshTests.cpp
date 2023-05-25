@@ -127,8 +127,8 @@ TEST(MRMesh, AddPartByMaskAndStitch)
     auto topology1 = topology0;
 
     // stitch along open contour
-    std::vector<std::vector<EdgeId>> c0 = { { topology0.findEdge( 1_v, 0_v ) } };
-    std::vector<std::vector<EdgeId>> c1 = { { topology1.findEdge( 0_v, 1_v ) } };
+    std::vector<EdgePath> c0 = { { topology0.findEdge( 1_v, 0_v ) } };
+    std::vector<EdgePath> c1 = { { topology1.findEdge( 0_v, 1_v ) } };
     auto topologyRes = topology0;
     topologyRes.addPartByMask( topology1, topology1.getValidFaces(), false, c0, c1 );
     EXPECT_TRUE( topologyRes.checkValidity() );

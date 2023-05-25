@@ -73,7 +73,7 @@ public:
     const VertPathInfo * getVertInfo( VertId v ) const;
 
     // returns the path in the forest from given vertex to one of start vertices
-    std::vector<EdgeId> getPathBack( VertId backpathStart ) const;
+    EdgePath getPathBack( VertId backpathStart ) const;
 
 protected:
     [[no_unique_address]] MetricToPenalty metricToPenalty_;
@@ -139,9 +139,9 @@ const VertPathInfo * EdgePathsBuilderT<MetricToPenalty>::getVertInfo( VertId v )
 }
 
 template<class MetricToPenalty>
-std::vector<EdgeId> EdgePathsBuilderT<MetricToPenalty>::getPathBack( VertId v ) const
+EdgePath EdgePathsBuilderT<MetricToPenalty>::getPathBack( VertId v ) const
 {
-    std::vector<EdgeId> res;
+    EdgePath res;
     for (;;)
     {
         auto it = vertPathInfoMap_.find( v );

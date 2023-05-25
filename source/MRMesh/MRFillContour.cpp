@@ -11,7 +11,7 @@ class ContourLeftFiller
 {
 public:
     ContourLeftFiller( const MeshTopology & topology );
-    void addContour( const std::vector<EdgeId> & contour );
+    void addContour( const EdgePath & contour );
     const FaceBitSet& fill();
 
 private:
@@ -28,7 +28,7 @@ ContourLeftFiller::ContourLeftFiller( const MeshTopology & topology ) : topology
     filledFaces_.resize( topology.lastValidFace() + 1 );
 }
 
-void ContourLeftFiller::addContour( const std::vector<EdgeId> & contour )
+void ContourLeftFiller::addContour( const EdgePath & contour )
 {
     for ( auto e : contour )
         currentFacesBd_.push_back( e );

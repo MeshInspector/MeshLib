@@ -4,6 +4,7 @@
 #include "MRPch/MRTBB.h"
 #include "MRProgressCallback.h"
 #include <atomic>
+#include <memory>
 #include <thread>
 
 namespace MR
@@ -69,7 +70,10 @@ bool BitSetParallelForAll( const BS& bs, F f, ProgressCallback progressCb, size_
     const size_t endBlock = ( bs.size() + BS::bits_per_block - 1 ) / BS::bits_per_block;
     auto mainThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };
-    std::atomic<size_t> processedBits{0};
+    
+    // allocate it on heap to avoid false sharing with other local variables
+    auto processedBits = std::make_unique<std::atomic<size_t>>(0);
+
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, endBlock ),
         [&] ( const tbb::blocked_range<size_t>& range )
     {
@@ -85,17 +89,17 @@ bool BitSetParallelForAll( const BS& bs, F f, ProgressCallback progressCb, size_
             {
                 if ( std::this_thread::get_id() == mainThreadId )
                 {
-                    if ( !progressCb( float( myProcessedBits + processedBits.load( std::memory_order_relaxed ) ) / bs.size() ) )
+                    if ( !progressCb( float( myProcessedBits + processedBits->load( std::memory_order_relaxed ) ) / bs.size() ) )
                         keepGoing.store( false, std::memory_order_relaxed );
                 }
                 else
                 {
-                    processedBits.fetch_add( myProcessedBits, std::memory_order_relaxed );
+                    processedBits->fetch_add( myProcessedBits, std::memory_order_relaxed );
                     myProcessedBits = 0;
                 }
             }
         }
-        processedBits.fetch_add( myProcessedBits, std::memory_order_relaxed );
+        processedBits->fetch_add( myProcessedBits, std::memory_order_relaxed );
     } );
     return keepGoing.load( std::memory_order_relaxed );
 }

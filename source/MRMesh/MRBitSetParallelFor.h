@@ -52,11 +52,11 @@ void BitSetParallelForAll( const BS & bs, F f )
 }
 
 /// executes given function f for each bit in bs in parallel threads;
-/// it is guaranteed that every individual block in bit-set is processed by one thread only
-/// uses tbb::static_partitioner for uniform distribution of ids;
+/// it is guaranteed that every individual block in bit-set is processed by one thread only;
+/// reports progress from calling thread only;
 /// \return false if the processing was canceled by progressCb
 template <typename BS, typename F>
-bool BitSetParallelForAll( const BS& bs, F f, ProgressCallback progressCb )
+bool BitSetParallelForAll( const BS& bs, F f, ProgressCallback progressCb, size_t reportProgressEveryBit = 1024 )
 {
     if ( !progressCb )
     {
@@ -69,25 +69,34 @@ bool BitSetParallelForAll( const BS& bs, F f, ProgressCallback progressCb )
     const size_t endBlock = ( bs.size() + BS::bits_per_block - 1 ) / BS::bits_per_block;
     auto mainThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };
+    std::atomic<size_t> processedBits{0};
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, endBlock ),
         [&] ( const tbb::blocked_range<size_t>& range )
     {
         IndexType id{ range.begin() * BS::bits_per_block };
         const IndexType idEnd{ range.end() < endBlock ? range.end() * BS::bits_per_block : bs.size() };
-        auto idBegin = size_t( id );
-        auto idRange = float( size_t( idEnd ) - idBegin );
+        size_t myProcessedBits = 0;
         for ( ; id < idEnd; ++id )
         {
             if ( !keepGoing.load( std::memory_order_relaxed ) )
                 break;
             f( id );
-            if ( std::this_thread::get_id() == mainThreadId )
+            if ( ++myProcessedBits % reportProgressEveryBit == 0 )
             {
-                if ( !progressCb( float( size_t( id ) - idBegin ) / idRange ) )
-                    keepGoing.store( false, std::memory_order_relaxed );
+                if ( std::this_thread::get_id() == mainThreadId )
+                {
+                    if ( !progressCb( float( myProcessedBits + processedBits.load( std::memory_order_relaxed ) ) / bs.size() ) )
+                        keepGoing.store( false, std::memory_order_relaxed );
+                }
+                else
+                {
+                    processedBits.fetch_add( myProcessedBits, std::memory_order_relaxed );
+                    myProcessedBits = 0;
+                }
             }
         }
-    }, tbb::static_partitioner() ); // static partitioner is needed to uniform distribution of ids
+        processedBits.fetch_add( myProcessedBits, std::memory_order_relaxed );
+    } );
     return keepGoing.load( std::memory_order_relaxed );
 }
 

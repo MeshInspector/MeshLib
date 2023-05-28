@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "MRExpected.h"
 #include "MRProgressCallback.h"
 
 namespace MR
@@ -19,6 +19,6 @@ struct FindOverlappingSettings
 };
 
 /// finds all triangles that have oppositely oriented close triangle in the mesh
-[[nodiscard]] MRMESH_API FaceBitSet findOverlappingTris( const MeshPart & mp, const FindOverlappingSettings & settings );
+[[nodiscard]] MRMESH_API tl::expected<FaceBitSet, std::string> findOverlappingTris( const MeshPart & mp, const FindOverlappingSettings & settings );
 
 } //namespace MR

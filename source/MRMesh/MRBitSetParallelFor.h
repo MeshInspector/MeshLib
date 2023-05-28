@@ -68,7 +68,7 @@ bool BitSetParallelForAll( const BS& bs, F f, ProgressCallback progressCb, size_
     using IndexType = typename BS::IndexType;
 
     const size_t endBlock = ( bs.size() + BS::bits_per_block - 1 ) / BS::bits_per_block;
-    auto mainThreadId = std::this_thread::get_id();
+    auto callingThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };
     
     // allocate it on heap to avoid false sharing with other local variables
@@ -80,14 +80,15 @@ bool BitSetParallelForAll( const BS& bs, F f, ProgressCallback progressCb, size_
         IndexType id{ range.begin() * BS::bits_per_block };
         const IndexType idEnd{ range.end() < endBlock ? range.end() * BS::bits_per_block : bs.size() };
         size_t myProcessedBits = 0;
+        const bool report = std::this_thread::get_id() == callingThreadId;
         for ( ; id < idEnd; ++id )
         {
             if ( !keepGoing.load( std::memory_order_relaxed ) )
                 break;
             f( id );
-            if ( ++myProcessedBits % reportProgressEveryBit == 0 )
+            if ( ( ++myProcessedBits % reportProgressEveryBit ) == 0 )
             {
-                if ( std::this_thread::get_id() == mainThreadId )
+                if ( report )
                 {
                     if ( !progressCb( float( myProcessedBits + processedBits->load( std::memory_order_relaxed ) ) / bs.size() ) )
                         keepGoing.store( false, std::memory_order_relaxed );
@@ -99,7 +100,9 @@ bool BitSetParallelForAll( const BS& bs, F f, ProgressCallback progressCb, size_
                 }
             }
         }
-        processedBits->fetch_add( myProcessedBits, std::memory_order_relaxed );
+        const auto total = processedBits->fetch_add( myProcessedBits, std::memory_order_relaxed );
+        if ( report && !progressCb( float( total ) / bs.size() ) )
+            keepGoing.store( false, std::memory_order_relaxed );
     } );
     return keepGoing.load( std::memory_order_relaxed );
 }

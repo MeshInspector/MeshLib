@@ -7,11 +7,11 @@
 namespace MR
 {
 
-FaceBitSet findOverlappingTris( const MeshPart & mp, const FindOverlappingSettings & settings )
+tl::expected<FaceBitSet, std::string> findOverlappingTris( const MeshPart & mp, const FindOverlappingSettings & settings )
 {
     MR_TIMER
     FaceBitSet res( mp.mesh.topology.faceSize() );
-    BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&]( FaceId f )
+    if ( BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&]( FaceId f )
     {
         const auto fDirDblArea = mp.mesh.dirDblArea( f );
         const auto fDblArea = fDirDblArea.length();
@@ -37,9 +37,9 @@ FaceBitSet findOverlappingTris( const MeshPart & mp, const FindOverlappingSettin
         processCloseTriangles( mp, tri, settings.maxDistSq, onNeiTriangle );
         if ( overlapping )
             res.set( f );
-    }, settings.cb );
-
-    return res;
+    }, settings.cb ) )
+        return res;
+    return tl::make_unexpected( "Operation was canceled" );
 }
 
 } //namespace MR

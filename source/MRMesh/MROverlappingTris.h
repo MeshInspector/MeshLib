@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRProgressCallback.h"
 
 namespace MR
 {
@@ -13,6 +14,8 @@ struct FindOverlappingSettings
     float maxNormalDot = -0.99f;
     /// consider triangle as overlapping only if the area of the oppositely oriented triangle is at least given fraction of the triangle's area
     float minAreaFraction = 1e-5f;
+    /// for reporting current progress and allowing the user to cancel the algorithm
+    ProgressCallback cb;
 };
 
 /// finds all triangles that have oppositely oriented close triangle in the mesh

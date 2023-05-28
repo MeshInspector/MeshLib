@@ -37,7 +37,7 @@ FaceBitSet findOverlappingTris( const MeshPart & mp, const FindOverlappingSettin
         processCloseTriangles( mp, tri, settings.maxDistSq, onNeiTriangle );
         if ( overlapping )
             res.set( f );
-    } );
+    }, settings.cb );
 
     return res;
 }

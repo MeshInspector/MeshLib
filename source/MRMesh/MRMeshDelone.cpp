@@ -36,7 +36,7 @@ bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f
 
     // there should be significant difference in metrics (above floating point error) to return false
     constexpr float eps = 1e-5f;
-    return ( metricAC - metricBD ) <= eps * ( metricAC + metricBD );
+    return metricAC <= metricBD + eps * ( metricAC + metricBD ); // this shall work even if metricAC and metricBD are infinities, unlike ( metricAC - metricBD ), which becomes NaN
 }
 
 bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings, float * deviationSqAfterFlip )

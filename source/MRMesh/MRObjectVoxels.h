@@ -121,8 +121,11 @@ public:
         enum class LutType
         {
             GrayShades,
-            Rainbow
+            Rainbow,
+            OneColor
         } lutType{ LutType::Rainbow };
+        // color that is used for OneColor mode
+        Color oneColor{ Color::white() };
         // minimum colored value (voxels with lower values are transparent)
         float min{ 0.0f };
         // maximum colored value (voxels with higher values are transparent)

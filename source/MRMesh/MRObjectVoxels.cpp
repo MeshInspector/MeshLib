@@ -208,7 +208,12 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
 
     size_t counter = 0;
     float volume = float( vdbVolume_.dims.x ) * vdbVolume_.dims.y * vdbVolume_.dims.z;
-    float cbModifier = updateSurface ? 0.5f : 1.0f;
+    float cbModifier = 1.0f;
+    if ( updateSurface && volumeRendering_ )
+        cbModifier = 1.0f / 3.0f;
+    else if ( updateSurface || volumeRendering_ )
+        cbModifier = 1.0f / 2.0f;
+    float lastProgress = 0.0f;
 
     bool insideX = false;
     bool insideY = false;
@@ -223,14 +228,21 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
         accessor.setActiveState( {x,y,z}, insideX && insideY && insideZ );
         reportProgress( cb, [&]{ return cbModifier * float( counter ) / volume; }, ++counter, 256 );
     }
+    lastProgress = cbModifier;
     if ( updateSurface )
     {
-        ProgressCallback isoProgressCallback = subprogress( cb, cbModifier, 1.0f );
+        ProgressCallback isoProgressCallback = subprogress( cb, lastProgress, 2.0f * cbModifier );
+        lastProgress = 2.0f * cbModifier;
         auto recRes = recalculateIsoSurface( isoValue_, isoProgressCallback );
         std::shared_ptr<Mesh> recMesh;
         if ( recRes.has_value() )
             recMesh = *recRes;
         updateIsoSurface( recMesh );
+    }
+    if ( volumeRendering_ )
+    {
+        prepareDataForVolumeRendering( subprogress( cb, lastProgress, 1.0f ) );
+        setDirtyFlags( DIRTY_PRIMITIVES );
     }
 }
 

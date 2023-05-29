@@ -117,6 +117,8 @@ void RenderVolumeObject::render_( const BaseRenderParams& renderParams, unsigned
     }
 
     const auto& voxelSize = objVoxels_->vdbVolume().voxelSize;
+    const auto& minCorner = objVoxels_->getActiveBounds();
+    GL_EXEC( glUniform3f( glGetUniformLocation( shader, "minCorner" ), float( minCorner.min.x ), float( minCorner.min.y ), float( minCorner.min.z ) ) );
     GL_EXEC( glUniform3f( glGetUniformLocation( shader, "voxelSize" ), voxelSize.x, voxelSize.y, voxelSize.z ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "step" ), std::min( { voxelSize.x, voxelSize.y, voxelSize.z } ) ) );
 
@@ -224,7 +226,7 @@ void RenderVolumeObject::bindVolume_( bool picker )
                 denseMap[i] = Color( color, color, color, zeroAlpha ? 0 : getAlpha( ratio ) );
             }
         }
-        else
+        else if ( params.lutType == ObjectVoxels::VolumeRenderingParams::LutType::Rainbow )
         {
             constexpr std::array<Color, 7> rainbow{
                 Color::red(),
@@ -251,6 +253,16 @@ void RenderVolumeObject::bindVolume_( bool picker )
 
                 denseMap[i] = startColor * ( 1.0f - colorRatio ) + stopColor * colorRatio;
                 denseMap[i].a = getAlpha( ratio );
+            }
+        }
+        else
+        {
+            for ( int i = 0; i < denseMap.size(); ++i )
+            {
+                bool zeroAlpha = i < minIndex || i > maxIndex;
+                float ratio = std::clamp( float( i - minIndex ) / float( diff ), 0.0f, 1.0f );
+                denseMap[i] = params.oneColor;
+                denseMap[i].a = zeroAlpha ? 0 : getAlpha( ratio );
             }
         }
         denseMap_.loadData(

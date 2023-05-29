@@ -14,12 +14,13 @@ std::string getTrivialVertexShader()
   uniform mat4 proj;
   uniform sampler3D volume;
   uniform vec3 voxelSize;
+  uniform vec3 minCorner;
   in vec3 position;
 
   void main()
   {
     vec3 dims = vec3( textureSize( volume, 0 ) );
-    gl_Position = proj * view * model * vec4( voxelSize * dims * position, 1.0 );
+    gl_Position = proj * view * model * vec4( voxelSize * dims * position + voxelSize * minCorner, 1.0 );
   }
 )";
 }
@@ -36,6 +37,7 @@ std::string getVolumeFragmentShader()
 
   uniform vec4 viewport;
   uniform vec3 voxelSize;
+  uniform vec3 minCorner;
   uniform float step;
 
   uniform sampler3D volume;
@@ -65,8 +67,8 @@ std::string getVolumeFragmentShader()
     vec3 normRayDir = normalize( rayEnd - rayStart );
 
     vec3 dims = vec3( textureSize( volume, 0 ) );
-    vec3 minPoint = vec3( 0.0, 0.0, 0.0 );
-    vec3 maxPoint = vec3( dims.x * voxelSize.x, dims.y * voxelSize.y, dims.z * voxelSize.z );
+    vec3 minPoint = voxelSize * minCorner;
+    vec3 maxPoint = minPoint + vec3( dims.x * voxelSize.x, dims.y * voxelSize.y, dims.z * voxelSize.z );
     
     bool firstFound = false;
     vec3 firstOpaque = vec3(0.0,0.0,0.0);
@@ -123,6 +125,7 @@ std::string getVolumePickerFragmentShader()
 
   uniform vec4 viewport;
   uniform vec3 voxelSize;
+  uniform vec3 minCorner;
 
   uniform sampler3D volume;
   uniform sampler2D denseMap;
@@ -152,8 +155,8 @@ std::string getVolumePickerFragmentShader()
     vec3 normRayDir = normalize( rayEnd - rayStart );
 
     vec3 dims = vec3( textureSize( volume, 0 ) );
-    vec3 minPoint = vec3( 0.0, 0.0, 0.0 );
-    vec3 maxPoint = vec3( dims.x * voxelSize.x, dims.y * voxelSize.y, dims.z * voxelSize.z );
+    vec3 minPoint = voxelSize * minCorner;
+    vec3 maxPoint = minPoint + vec3( dims.x * voxelSize.x, dims.y * voxelSize.y, dims.z * voxelSize.z );
     
     bool firstFound = false;
     vec3 textCoord = vec3(0.0,0.0,0.0);

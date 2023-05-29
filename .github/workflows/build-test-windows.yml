@@ -52,9 +52,7 @@ jobs:
 
       - name: Vcpkg integrate install
         working-directory: C:\vcpkg
-        run: |
-          C:\vcpkg\vcpkg.exe install hidapi
-          C:\vcpkg\vcpkg.exe integrate install
+        run: C:\vcpkg\vcpkg.exe integrate install
 
       - name: Restore CUDA Cache
         uses: actions/cache@v3
@@ -87,6 +85,9 @@ jobs:
           py -3.10 -m pip install --upgrade pip
           py -3.10 -m pip install -r .\requirements\python.txt
 
+      - name: Update thirdparty
+        run: vcpkg install --recurse --binarysource=clear --overlay-triplets thirdparty\vcpkg\triplets  hidapi:x64-windows-meshlib
+        
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.3
 

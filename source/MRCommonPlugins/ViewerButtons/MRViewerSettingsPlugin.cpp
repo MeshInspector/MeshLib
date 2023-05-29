@@ -16,6 +16,8 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer/MRUIStyle.h"
 
+#include <memory>
+
 namespace MR
 {
 
@@ -79,12 +81,14 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         auto& viewerRef = getViewerInstance();
         spaceMouseParams_ = viewerRef.spaceMouseController.getParams();
 
+#ifdef _WIN32
         if ( auto spaceMouseHandler = viewerRef.getSpaceMouseHandler() )
         {
-            auto hidapiHandler = std::dynamic_pointer_cast<SpaceMouseHandlerHidapi>( spaceMouseHandler );
+            auto hidapiHandler = std::dynamic_pointer_cast<MR::SpaceMouseHandlerHidapi>( spaceMouseHandler );
             if ( hidapiHandler )
                 activeMouseScrollZoom_ = hidapiHandler->isMouseScrollZoomActive();
         }
+#endif
         ImGui::OpenPopup( "Spacemouse Settings" );
     }
     drawSpaceMouseSettings_( menuScaling );
@@ -485,6 +489,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
     ImGui::NewLine();
     if ( UI::checkbox( "Zoom by mouse wheel", &activeMouseScrollZoom_ ) )
     {
+#ifdef _WIN32
         if ( auto spaceMouseHandler = getViewerInstance().getSpaceMouseHandler() )
         {
             auto mouseHandler = std::dynamic_pointer_cast< SpaceMouseHandlerHidapi >( spaceMouseHandler );
@@ -493,6 +498,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
                 mouseHandler->activateMouseScrollZoom( activeMouseScrollZoom_ );
             }
         }
+#endif
     }
     UI::setTooltipIfHovered( "This mode is NOT recommended if you have 3Dconnexion driver installed, which sends mouse wheel fake events resulting in double reaction on SpaceMouse movement and camera tremble.", scaling );
 

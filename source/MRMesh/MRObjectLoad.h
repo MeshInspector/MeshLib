@@ -23,6 +23,9 @@ MRMESH_API tl::expected<ObjectPoints, std::string> makeObjectPointsFromFile( con
 /// loads distance map from given file in new object
 MRMESH_API tl::expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
 
+/// loads gcode from given file in new object
+MRMESH_API tl::expected<ObjectGcode, std::string> makeObjectGcodeFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
+
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 /// loads voxels from given file in new object
 MRMESH_API tl::expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );

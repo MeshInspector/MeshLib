@@ -103,6 +103,9 @@
     <Filter Include="Source Files\LinearSystem">
       <UniqueIdentifier>{77366470-1db8-45b3-9971-1b5af90c1eac}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Gcode">
+      <UniqueIdentifier>{b00cbb7d-8f55-486d-9a3f-834bc49c40f3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRMeshFwd.h">
@@ -957,6 +960,15 @@
     <ClInclude Include="MROverlappingTris.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRObjectGcode.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
+    <ClInclude Include="MRGcodeExecutor.h">
+      <Filter>Source Files\Gcode</Filter>
+    </ClInclude>
+    <ClInclude Include="MRGcodeLoad.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1594,6 +1606,15 @@
     </ClCompile>
     <ClCompile Include="MROverlappingTris.cpp">
       <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRObjectGcode.cpp">
+      <Filter>Source Files\DataModel</Filter>
+    </ClCompile>
+    <ClCompile Include="MRGcodeExecutor.cpp">
+      <Filter>Source Files\Gcode</Filter>
+    </ClCompile>
+    <ClCompile Include="MRGcodeLoad.cpp">
+      <Filter>Source Files\IO</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

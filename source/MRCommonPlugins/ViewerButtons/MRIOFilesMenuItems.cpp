@@ -17,6 +17,7 @@
 #include "MRMesh/MRVoxelsSave.h"
 #include "MRMesh/MRDistanceMapSave.h"
 #include "MRMesh/MRDistanceMapLoad.h"
+#include "MRMesh/MRGcodeLoad.h"
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRViewer.h"
 #include "MRMesh/MRImageSave.h"
@@ -74,7 +75,7 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
         setupListUpdate_();
         connect( &getViewerInstance() );
         // required to be deferred, for valid emscripten static constructors oreder 
-        filters_ = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | SceneFileFilters | DistanceMapLoad::Filters;
+        filters_ = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | SceneFileFilters | DistanceMapLoad::Filters | GcodeLoad::Filters;
 #ifdef __EMSCRIPTEN__
         std::erase_if( filters_, [] ( const auto& filter )
         {

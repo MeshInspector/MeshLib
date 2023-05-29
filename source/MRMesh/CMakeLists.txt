@@ -155,6 +155,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		    jsoncpp
 		    fmt
 		    tbb
+		    tinyxml2
 			${MRMESH_OPTIONAL_DEPENDENCIES}
 			${COCOA_LIBRARY}
 		)
@@ -175,6 +176,7 @@ ELSE()
 		tl::expected
 		fmt
 		spdlog
+        tinyxml2
 		gtest gtest_main
 		zip
 		pthread

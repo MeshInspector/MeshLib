@@ -195,7 +195,7 @@ tl::expected<PointCloud, std::string> pythonLoadPointCloudFromAnyFormat( pybind1
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveMesh, [] ( pybind11::module_& m )
 {
     m.def( "saveMesh",
-        MR::decorateExpected( ( VoidOrErrStr( * )( const MR::Mesh&, const std::filesystem::path&, const Vector<Color, VertId>*, ProgressCallback ) )& MR::MeshSave::toAnySupportedFormat ),
+        MR::decorateExpected( ( VoidOrErrStr( * )( const MR::Mesh&, const std::filesystem::path&, const VertColors*, ProgressCallback ) )& MR::MeshSave::toAnySupportedFormat ),
         pybind11::arg( "mesh" ), pybind11::arg( "path" ), pybind11::arg( "colors" ) = nullptr, pybind11::arg( "callback" ) = ProgressCallback{}, 
         "detects the format from file extension and save mesh to it" );
     m.def( "saveMesh",
@@ -205,7 +205,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveMesh, [] ( pybind11::module_& m )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadMesh, [] ( pybind11::module_& m )
 {
     m.def( "loadMesh",
-        MR::decorateExpected( ( tl::expected<MR::Mesh, std::string>( * )( const std::filesystem::path&, Vector<Color, VertId>*, ProgressCallback ) )& MR::MeshLoad::fromAnySupportedFormat),
+        MR::decorateExpected( ( tl::expected<MR::Mesh, std::string>( * )( const std::filesystem::path&, VertColors*, ProgressCallback ) )& MR::MeshLoad::fromAnySupportedFormat),
         pybind11::arg( "path" ), pybind11::arg( "colors" ) = nullptr, pybind11::arg( "callback" ) = ProgressCallback{},
         "detects the format from file extension and loads mesh from it" );
     m.def( "loadMesh",
@@ -236,7 +236,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadLines, [] ( pybind11::module_& m )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SavePoints, [] ( pybind11::module_& m )
 {
     m.def( "savePoints",
-        MR::decorateExpected( ( VoidOrErrStr( * )( const MR::PointCloud&, const std::filesystem::path&, const Vector<Color, VertId>*, ProgressCallback ) )& MR::PointsSave::toAnySupportedFormat ),
+        MR::decorateExpected( ( VoidOrErrStr( * )( const MR::PointCloud&, const std::filesystem::path&, const VertColors*, ProgressCallback ) )& MR::PointsSave::toAnySupportedFormat ),
         pybind11::arg( "pointCloud" ), pybind11::arg( "path" ), pybind11::arg( "colors" ) = nullptr, pybind11::arg( "callback" ) = ProgressCallback{},
         "detects the format from file extension and save points to it" );
     m.def( "savePoints",
@@ -246,7 +246,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SavePoints, [] ( pybind11::module_& m )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadPoints, [] ( pybind11::module_& m )
 {
     m.def( "loadPoints",
-        MR::decorateExpected( ( tl::expected<PointCloud, std::string>( * )( const std::filesystem::path&, Vector<Color, VertId>*, ProgressCallback ) )& MR::PointsLoad::fromAnySupportedFormat ),
+        MR::decorateExpected( ( tl::expected<PointCloud, std::string>( * )( const std::filesystem::path&, VertColors*, ProgressCallback ) )& MR::PointsLoad::fromAnySupportedFormat ),
         pybind11::arg( "path" ), pybind11::arg( "colors" ) = nullptr, pybind11::arg( "callback" ) = ProgressCallback{},
         "detects the format from file extension and loads points from it" );
     m.def( "loadPoints",

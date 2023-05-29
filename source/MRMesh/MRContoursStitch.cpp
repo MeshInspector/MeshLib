@@ -1,10 +1,14 @@
 #include "MRContoursStitch.h"
-#include "MRMeshTopology.h"
+#include "MRMesh.h"
+#include "MREdgePaths.h"
+#include "MRCube.h"
+#include "MRRingIterator.h"
+#include "MRGTest.h"
 
 namespace MR
 {
 
-void stitchContours( MeshTopology & topology, const std::vector<EdgeId> & c0, const std::vector<EdgeId> & c1 )
+void stitchContours( MeshTopology & topology, const EdgePath & c0, const EdgePath & c1 )
 {
     assert( c0.size() == c1.size() );
     const auto sz = c0.size();
@@ -44,6 +48,73 @@ void stitchContours( MeshTopology & topology, const std::vector<EdgeId> & c0, co
 
         assert( topology.isLoneEdge( e1 ) );
     }
+}
+
+EdgeLoop cutAlongEdgeLoop( MeshTopology & topology, const EdgeLoop & c0 )
+{
+    EdgePath c1;
+    if ( !isEdgeLoop( topology, c0 ) )
+    {
+        assert( false );
+        return c1;
+    }
+    const auto sz = c0.size();
+    c1.reserve( sz );
+
+    EdgeId last0 = c0.back().sym();
+
+    // introduce multiple edge for each edge from c0
+    for ( size_t i = 0; i < sz; ++i )
+    {
+        const auto e0 = c0[i];
+        const auto e1 = topology.makeEdge();
+        c1.push_back( e1 );
+        topology.splice( e0, e1 );
+        topology.splice( topology.prev( e0.sym() ), e1.sym() );
+        assert( topology.fromSameOriginRing( e0, e1 ) );
+        assert( topology.fromSameOriginRing( e0.sym(), e1.sym() ) );
+        assert( !topology.left( e0 ) );
+        assert( !topology.right( e1 ) );
+    }
+
+    // split vertices
+    for ( size_t i = 0; i < sz; ++i )
+    {
+        auto e0 = c0[i];
+        assert( !topology.left( e0 ) );
+        auto e1 = c1[i];
+        assert( !topology.right( e1 ) );
+        assert( e0 != e1 );
+
+        assert( topology.fromSameOriginRing( e0, e1 ) );
+        assert( topology.fromSameOriginRing( e0, last0 ) );
+        topology.splice( e0, topology.prev( last0 ) );
+        assert( !topology.fromSameOriginRing( e0, e1 ) );
+        if ( topology.org( e0 ) )
+            topology.setOrg( e1, topology.addVertId() );
+        last0 = e0.sym();
+    }
+
+    assert( isEdgePath( topology, c1 ) );
+    return c1;
+}
+
+TEST(MRMesh, cutAlongEdgeLoop)
+{
+    Mesh mesh = makeCube();
+    auto & topology = mesh.topology;
+    const auto ueCntA = topology.computeNotLoneUndirectedEdges();
+
+    EdgeLoop c0;
+    for ( auto e : leftRing( mesh.topology, 0_f ) )
+        c0.push_back( e );
+    auto c1 = cutAlongEdgeLoop( mesh.topology, c0 );
+    const auto ueCntB = topology.computeNotLoneUndirectedEdges();
+    ASSERT_EQ( ueCntB, ueCntA + 3 );
+
+    stitchContours( mesh.topology, c0, c1 );
+    const auto ueCntC = topology.computeNotLoneUndirectedEdges();
+    ASSERT_EQ( ueCntC, ueCntA );
 }
 
 } //namespace MR

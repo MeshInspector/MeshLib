@@ -294,17 +294,17 @@ public:
     /// \param thisContours contours on this mesh (no left face) that have to be stitched with
     /// \param fromContours contours on from mesh during addition (no left face if flipOrientation otherwise no right face)
     MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
-        const std::vector<std::vector<EdgeId>> & thisContours = {}, const std::vector<std::vector<EdgeId>> & fromContours = {},
+        const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {},
         const PartMapping & map = {} );
     /// fromFaces contains mapping from this-topology (considering it is empty) to from-topology
     MRMESH_API void addPartByFaceMap( const MeshTopology & from, const FaceMap & fromFaces, bool flipOrientation = false,
-        const std::vector<std::vector<EdgeId>> & thisContours = {}, const std::vector<std::vector<EdgeId>> & fromContours = {},
+        const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {},
         const PartMapping & map = {} );
     /// both addPartByMask and addPartByFaceMap call this general implementation
     template<typename I>
     MRMESH_API void addPartBy( const MeshTopology & from, I fbegin, I fend, size_t fcount, bool flipOrientation = false,
-        const std::vector<std::vector<EdgeId>> & thisContours = {},
-        const std::vector<std::vector<EdgeId>> & fromContours = {},
+        const std::vector<EdgePath> & thisContours = {},
+        const std::vector<EdgePath> & fromContours = {},
         const PartMapping & map = {} );
 
     /// tightly packs all arrays eliminating lone edges and invalid faces and vertices

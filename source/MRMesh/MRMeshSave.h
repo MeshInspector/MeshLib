@@ -44,9 +44,9 @@ MRMESH_API VoidOrErrStr toBinaryStl( const Mesh & mesh, const std::filesystem::p
 MRMESH_API VoidOrErrStr toBinaryStl( const Mesh & mesh, std::ostream & out, ProgressCallback callback = {} );
 
 /// saves in .ply file
-MRMESH_API VoidOrErrStr toPly( const Mesh& mesh, const std::filesystem::path& file, const Vector<Color, VertId>* colors = nullptr,
+MRMESH_API VoidOrErrStr toPly( const Mesh& mesh, const std::filesystem::path& file, const VertColors* colors = nullptr,
                                                   ProgressCallback callback = {} );
-MRMESH_API VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const Vector<Color, VertId>* colors = nullptr,
+MRMESH_API VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const VertColors* colors = nullptr,
                                                   ProgressCallback callback = {} );
 
 struct CtmSaveOptions
@@ -71,17 +71,17 @@ struct CtmSaveOptions
 
 #ifndef MRMESH_NO_OPENCTM
 /// saves in .ctm file
-MRMESH_API VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options = {}, const Vector<Color, VertId>* colors = nullptr,
+MRMESH_API VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options = {}, const VertColors* colors = nullptr,
                                                   ProgressCallback callback = {} );
-MRMESH_API VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options = {}, const Vector<Color, VertId>* colors = nullptr,
+MRMESH_API VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options = {}, const VertColors* colors = nullptr,
                                                   ProgressCallback callback = {} );
 #endif
 
 /// detects the format from file extension and save mesh to it
-MRMESH_API VoidOrErrStr toAnySupportedFormat( const Mesh & mesh, const std::filesystem::path & file, const Vector<Color, VertId>* colors = nullptr,
+MRMESH_API VoidOrErrStr toAnySupportedFormat( const Mesh & mesh, const std::filesystem::path & file, const VertColors* colors = nullptr,
                                                                  ProgressCallback callback = {} );
 /// extension in `*.ext` format
-MRMESH_API VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension, const Vector<Color, VertId>* colors = nullptr,
+MRMESH_API VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension, const VertColors* colors = nullptr,
                                                                  ProgressCallback callback = {} );
 
 /// \}

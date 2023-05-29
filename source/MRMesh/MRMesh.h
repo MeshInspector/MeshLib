@@ -49,11 +49,11 @@ struct [[nodiscard]] Mesh
     // returns three points of left face of e
     MRMESH_API void getLeftTriPoints( EdgeId e, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const;
     void getLeftTriPoints( EdgeId e, Vector3f (&v)[3] ) const { getLeftTriPoints( e, v[0], v[1], v[2] ); }
-    [[nodiscard]] ThreePoints getLeftTriPoints( EdgeId e ) const { ThreePoints res; getLeftTriPoints( e, res[0], res[1], res[2] ); return res; }
+    [[nodiscard]] Triangle3f getLeftTriPoints( EdgeId e ) const { Triangle3f res; getLeftTriPoints( e, res[0], res[1], res[2] ); return res; }
     // returns three points of given face
     void getTriPoints( FaceId f, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const { getLeftTriPoints( topology.edgeWithLeft( f ), v0, v1, v2 ); }
     void getTriPoints( FaceId f, Vector3f (&v)[3] ) const { getTriPoints( f, v[0], v[1], v[2] ); }
-    [[nodiscard]] ThreePoints getTriPoints( FaceId f ) const { ThreePoints res; getTriPoints( f, res[0], res[1], res[2] ); return res; }
+    [[nodiscard]] Triangle3f getTriPoints( FaceId f ) const { Triangle3f res; getTriPoints( f, res[0], res[1], res[2] ); return res; }
 
     // returns interpolated coordinates of given point
     [[nodiscard]] MRMESH_API Vector3f triPoint( const MeshTriPoint & p ) const;
@@ -234,21 +234,21 @@ struct [[nodiscard]] Mesh
     // this version has more parameters:
     //   if flipOrientation then every from triangle is inverted before adding
     MRMESH_API void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
-        const std::vector<std::vector<EdgeId>> & thisContours = {}, // contours on this mesh that have to be stitched with
-        const std::vector<std::vector<EdgeId>> & fromContours = {}, // contours on from mesh during addition
+        const std::vector<EdgePath> & thisContours = {}, // contours on this mesh that have to be stitched with
+        const std::vector<EdgePath> & fromContours = {}, // contours on from mesh during addition
         // optionally returns mappings: from.id -> this.id
         const PartMapping & map = {} );
     /// fromFaces contains mapping from this-mesh (considering it is empty) to from-mesh
     MRMESH_API void addPartByFaceMap( const Mesh & from, const FaceMap & fromFaces, bool flipOrientation = false,
-        const std::vector<std::vector<EdgeId>> & thisContours = {}, // contours on this mesh that have to be stitched with
-        const std::vector<std::vector<EdgeId>> & fromContours = {}, // contours on from mesh during addition
+        const std::vector<EdgePath> & thisContours = {}, // contours on this mesh that have to be stitched with
+        const std::vector<EdgePath> & fromContours = {}, // contours on from mesh during addition
         // optionally returns mappings: from.id -> this.id
         const PartMapping & map = {} );
     /// both addPartByMask and addPartByFaceMap call this general implementation
     template<typename I>
     MRMESH_API void addPartBy( const Mesh & from, I fbegin, I fend, size_t fcount, bool flipOrientation = false,
-        const std::vector<std::vector<EdgeId>> & thisContours = {},
-        const std::vector<std::vector<EdgeId>> & fromContours = {},
+        const std::vector<EdgePath> & thisContours = {},
+        const std::vector<EdgePath> & fromContours = {},
         PartMapping map = {} );
     /// creates new mesh from given triangles of this mesh
     MRMESH_API Mesh cloneRegion( const FaceBitSet & region, bool flipOrientation = false, const PartMapping & map = {} ) const;

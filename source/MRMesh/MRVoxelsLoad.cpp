@@ -372,7 +372,7 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
          gimage.GetPhotometricInterpretation() != gdcm::PhotometricInterpretation::MONOCHROME1 )
     {
         spdlog::error( "loadSingle: unexpected PhotometricInterpretation, file: {}", utf8string( path ) );
-        spdlog::error( "PhotometricInterpretation: {}", gimage.GetPhotometricInterpretation() );
+        spdlog::error( "PhotometricInterpretation: {}", (int)gimage.GetPhotometricInterpretation() );
         return res;
     }
     auto min = gimage.GetPixelFormat().GetMin();
@@ -383,7 +383,7 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
     if ( !caster )
     {
         spdlog::error( "loadSingle: cannot make type converter, file: {}", utf8string( path ) );
-        spdlog::error( "Type: {}", gimage.GetPixelFormat() );
+        spdlog::error( "Type: {}", (int)gimage.GetPixelFormat() );
         return res;
     }
     std::vector<char> cacheBuffer( gimage.GetBufferLength() );

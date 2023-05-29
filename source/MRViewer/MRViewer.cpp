@@ -1553,11 +1553,13 @@ void Viewer::initRotationCenterObject_()
 
 void Viewer::initSpaceMouseHandler_()
 {
-#ifdef __EMSCRIPTEN__
-    spaceMouseHandler_ = std::make_unique<SpaceMouseHandler>();
-#else
-    spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerHidapi>();
-#endif
+    
+
+    #if defined(__EMSCRIPTEN__)
+        spaceMouseHandler_ = std::make_unique<SpaceMouseHandler>();
+    #else
+        spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerHidapi>();
+    #endif
 
     spaceMouseHandler_->initialize();
 }

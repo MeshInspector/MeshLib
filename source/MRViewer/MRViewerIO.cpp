@@ -57,7 +57,7 @@ VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& f
     {
         if ( objMesh->mesh() )
         {
-            const Vector<Color, VertId>* colors{ nullptr };
+            const VertColors* colors{ nullptr };
             if ( objMesh->getColoringType() == ColoringType::VertsColorMap )
                 colors = &objMesh->getVertsColorMap();
 

@@ -126,6 +126,7 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
                        const AffineXf3f* rigidB2A /*= nullptr */, BooleanResultMapper* mapper /*= nullptr */ )
 {
     MR_TIMER;
+    BooleanResult result;
     CoordinateConverters converters;
     PreciseCollisionResult intersections;
     ContinuousContours contours;
@@ -138,7 +139,9 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
     FaceMap new2orgSubdivideMapA;
     FaceMap new2orgSubdivideMapB;
     std::vector<int> prevLoneContoursIds;
-    for ( ;;)
+    int iters = 0;
+    const int cMaxFixLoneIterations = 100;
+    for ( ;; iters++ )
     {
         // find intersections
         intersections = findCollidingEdgeTrisPrecise( meshA, meshB, converters.toInt, rigidB2A );
@@ -147,7 +150,7 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
         // find lone
         auto loneContoursIds = detectLoneContours( contours );
 
-        if ( !loneContoursIds.empty() && loneContoursIds == prevLoneContoursIds )
+        if ( !loneContoursIds.empty() && ( loneContoursIds == prevLoneContoursIds || iters == cMaxFixLoneIterations ) )
         {
             // in some rare cases there are lone contours with zero area that cannot be resolved
             // they lead to infinite loop, so just try to remove them
@@ -222,11 +225,16 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
             } );
         }
     }
+    if ( iters == cMaxFixLoneIterations )
+    {
+        spdlog::warn( "Boolean: fix lone contours iteration limit reached." );
+        result.errorString = "Fix lone contours iteration limit reached.";
+        return result;
+    }
     // clear intersections
     intersections = {};
 
     std::vector<EdgePath> cutA, cutB;
-    BooleanResult result;
     OneMeshContours meshAContours;
     OneMeshContours meshBContours;
     // prepare it before as far as MeshA will be changed after cut

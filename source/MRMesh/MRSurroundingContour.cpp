@@ -70,7 +70,7 @@ static EdgePath positivePath(
     return res;
 }
 
-std::vector<EdgeId> surroundingContour(
+EdgeLoop surroundingContour(
     const Mesh & mesh,
     std::vector<EdgeId> includeEdges,
     const EdgeMetric & edgeMetric,
@@ -94,7 +94,7 @@ std::vector<EdgeId> surroundingContour(
         }
     }
 
-    std::vector<EdgeId> res;
+    EdgeLoop res;
     for ( int i = 0; i + 1 < includeEdges.size(); ++i )
         append( res, positivePath( mesh, includeEdges[i], includeEdges[i + 1], edgeMetric, dir ) );
     append( res, positivePath( mesh, includeEdges.back(), includeEdges[0], edgeMetric, dir ) );

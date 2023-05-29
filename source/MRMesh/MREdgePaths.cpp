@@ -21,7 +21,8 @@ bool isEdgePath( const MeshTopology & topology, const std::vector<EdgeId> & edge
 
 bool isEdgeLoop( const MeshTopology & topology, const std::vector<EdgeId> & edges )
 {
-    return isEdgePath( topology, edges ) && topology.org( edges.front() ) == topology.dest( edges.back() );
+    return isEdgePath( topology, edges ) && !edges.empty()
+        && topology.org( edges.front() ) == topology.dest( edges.back() );
 }
 
 void reverse( EdgePath & path )
@@ -119,7 +120,7 @@ EdgePath buildSmallestMetricPath( const MeshTopology& topology, const EdgeMetric
     return buildSmallestMetricPath( start, b, maxPathMetric );
 }
 
-std::vector<EdgeId> buildSmallestMetricPath(
+EdgePath buildSmallestMetricPath(
     const MeshTopology & topology, const EdgeMetric & metric,
     VertId start, VertId finish, float maxPathMetric )
 {
@@ -130,7 +131,7 @@ std::vector<EdgeId> buildSmallestMetricPath(
     return buildSmallestMetricPath( start, b, maxPathMetric );
 }
 
-std::vector<EdgeId> buildSmallestMetricPathBiDir(
+EdgePath buildSmallestMetricPathBiDir(
     const MeshTopology & topology, const EdgeMetric & metric,
     VertId start, VertId finish, float maxPathMetric )
 {
@@ -205,7 +206,7 @@ EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const Edge
         }
     }
 
-    std::vector<EdgeId> res;
+    EdgePath res;
     if ( join )
     {
         res = bs.getPathBack( join );

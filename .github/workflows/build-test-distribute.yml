@@ -180,9 +180,7 @@ jobs:
   update-artifacts:
     timeout-minutes: 15
     runs-on: ubuntu-20.04
-    needs:
-      - upload-distributions
-      - test-distribution
+    needs: [ upload-distributions, test-distribution ]
     if: always()
     steps:
         # all Windows

@@ -14,7 +14,7 @@ namespace MR
  * \param edgeMetric returned loop will minimize this metric
  * \param dir direction approximately orthogonal to the loop
  */
-MRMESH_API std::vector<EdgeId> surroundingContour(
+MRMESH_API EdgeLoop surroundingContour(
     const Mesh & mesh,
     const std::vector<EdgeId> includeEdges,
     const EdgeMetric & edgeMetric,

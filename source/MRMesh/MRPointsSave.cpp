@@ -24,7 +24,7 @@ const IOFilters Filters =
 #endif
 };
 
-VoidOrErrStr toPly( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr*/, ProgressCallback callback )
+VoidOrErrStr toPly( const PointCloud& points, const std::filesystem::path& file, const VertColors* colors /*= nullptr*/, ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -33,7 +33,7 @@ VoidOrErrStr toPly( const PointCloud& points, const std::filesystem::path& file,
     return toPly( points, out, colors, callback );
 }
 
-VoidOrErrStr toPly( const PointCloud& points, std::ostream& out, const Vector<Color, VertId>* colors /*= nullptr*/, ProgressCallback callback )
+VoidOrErrStr toPly( const PointCloud& points, std::ostream& out, const VertColors* colors /*= nullptr*/, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -86,7 +86,7 @@ VoidOrErrStr toPly( const PointCloud& points, std::ostream& out, const Vector<Co
 }
 
 #ifndef MRMESH_NO_OPENCTM
-VoidOrErrStr toCtm( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr */,
+VoidOrErrStr toCtm( const PointCloud& points, const std::filesystem::path& file, const VertColors* colors /*= nullptr */,
                                                   const CtmSavePointsOptions& options /*= {}*/, ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
@@ -96,7 +96,7 @@ VoidOrErrStr toCtm( const PointCloud& points, const std::filesystem::path& file,
     return toCtm( points, out, colors, options, callback );
 }
 
-VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const Vector<Color, VertId>* colors /*= nullptr */,
+VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const VertColors* colors /*= nullptr */,
                                                   const CtmSavePointsOptions& options /*= {}*/, ProgressCallback callback )
 {
     MR_TIMER;
@@ -209,7 +209,7 @@ VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const Vector<Co
 }
 #endif
 
-VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr */,
+VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const VertColors* colors /*= nullptr */,
                                                       ProgressCallback callback )
 {
     auto ext = utf8string( file.extension() );
@@ -225,7 +225,7 @@ VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesyst
 #endif
     return res;
 }
-VoidOrErrStr toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const Vector<Color, VertId>* colors /*= nullptr */,
+VoidOrErrStr toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const VertColors* colors /*= nullptr */,
                                                       ProgressCallback callback )
 {
     auto ext = extension.substr( 1 );

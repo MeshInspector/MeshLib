@@ -19,7 +19,7 @@ class GraphCut
 {
 public:
     GraphCut( const MeshTopology & topology, const EdgeMetric & metric );
-    void addContour( const std::vector<EdgeId> & contour );
+    void addContour( const EdgePath & contour );
     void addFaces( const FaceBitSet& source, const FaceBitSet& sink );
     FaceBitSet fill();
 
@@ -57,7 +57,7 @@ GraphCut::GraphCut( const MeshTopology & topology, const EdgeMetric & metric ) :
         capacity_[e] = capacity_[e.sym()] = metric( e );
 }
 
-void GraphCut::addContour( const std::vector<EdgeId> & contour )
+void GraphCut::addContour( const EdgePath & contour )
 {
     MR_TIMER
 

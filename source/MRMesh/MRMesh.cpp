@@ -29,10 +29,10 @@ namespace MR
 namespace
 {
 
-// makes edge loop from points, all connected but not first with last edge
-std::vector<EdgeId> sMakeDisclosedEdgeLoop( Mesh& mesh, const std::vector<Vector3f>& contourPoints )
+// makes edge path connecting all points, but not the first with the last
+EdgePath sMakeEdgePath( Mesh& mesh, const std::vector<Vector3f>& contourPoints )
 {
-    std::vector<EdgeId> newEdges( contourPoints.size() );
+    EdgePath newEdges( contourPoints.size() );
     for ( int i = 0; i < contourPoints.size(); ++i )
     {
         auto newVert = mesh.addPoint( contourPoints[i] );
@@ -41,7 +41,7 @@ std::vector<EdgeId> sMakeDisclosedEdgeLoop( Mesh& mesh, const std::vector<Vector
     }
     for ( int i = 0; i + 1 < newEdges.size(); ++i )
     {
-        mesh.topology.splice( newEdges[( i + 1 ) % newEdges.size()], newEdges[i].sym() );
+        mesh.topology.splice( newEdges[i + 1], newEdges[i].sym() );
     }
     return newEdges;
 }
@@ -670,7 +670,7 @@ EdgeId Mesh::addSeparateEdgeLoop( const std::vector<Vector3f>& contourPoints )
     if ( contourPoints.size() < 3 )
         return {};
 
-    std::vector<EdgeId> newEdges = sMakeDisclosedEdgeLoop( *this, contourPoints);
+    auto newEdges = sMakeEdgePath( *this, contourPoints);
     // close loop
     topology.splice( newEdges.front(), newEdges.back().sym() );
 
@@ -689,7 +689,7 @@ void Mesh::attachEdgeLoopPart( EdgeId first, EdgeId last, const std::vector<Vect
     if ( contourPoints.empty() )
         return;
 
-    std::vector<EdgeId> newEdges = sMakeDisclosedEdgeLoop( *this, contourPoints );
+    auto newEdges = sMakeEdgePath( *this, contourPoints );
 
     // connect with mesh
     auto firstConnectorEdge = topology.makeEdge();
@@ -744,8 +744,8 @@ void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, const
 }
 
 void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool flipOrientation,
-    const std::vector<std::vector<EdgeId>> & thisContours,
-    const std::vector<std::vector<EdgeId>> & fromContours,
+    const std::vector<EdgePath> & thisContours,
+    const std::vector<EdgePath> & fromContours,
     const PartMapping & map )
 {
     MR_TIMER
@@ -753,8 +753,8 @@ void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool 
 }
 
 void Mesh::addPartByFaceMap( const Mesh & from, const FaceMap & fromFaces, bool flipOrientation,
-    const std::vector<std::vector<EdgeId>> & thisContours,
-    const std::vector<std::vector<EdgeId>> & fromContours,
+    const std::vector<EdgePath> & thisContours,
+    const std::vector<EdgePath> & fromContours,
     const PartMapping & map )
 {
     MR_TIMER
@@ -763,8 +763,8 @@ void Mesh::addPartByFaceMap( const Mesh & from, const FaceMap & fromFaces, bool 
 
 template<typename I>
 void Mesh::addPartBy( const Mesh & from, I fbegin, I fend, size_t fcount, bool flipOrientation,
-    const std::vector<std::vector<EdgeId>> & thisContours,
-    const std::vector<std::vector<EdgeId>> & fromContours,
+    const std::vector<EdgePath> & thisContours,
+    const std::vector<EdgePath> & fromContours,
     PartMapping map )
 {
     MR_TIMER
@@ -785,13 +785,13 @@ void Mesh::addPartBy( const Mesh & from, I fbegin, I fend, size_t fcount, bool f
 
 template MRMESH_API void Mesh::addPartBy( const Mesh & from,
     SetBitIteratorT<FaceBitSet> fbegin, SetBitIteratorT<FaceBitSet> fend, size_t fcount, bool flipOrientation,
-    const std::vector<std::vector<EdgeId>> & thisContours,
-    const std::vector<std::vector<EdgeId>> & fromContours,
+    const std::vector<EdgePath> & thisContours,
+    const std::vector<EdgePath> & fromContours,
     PartMapping map );
 template MRMESH_API void Mesh::addPartBy( const Mesh & from,
     FaceMap::iterator fbegin, FaceMap::iterator fend, size_t fcount, bool flipOrientation,
-    const std::vector<std::vector<EdgeId>> & thisContours,
-    const std::vector<std::vector<EdgeId>> & fromContours,
+    const std::vector<EdgePath> & thisContours,
+    const std::vector<EdgePath> & fromContours,
     PartMapping map );
 
 Mesh Mesh::cloneRegion( const FaceBitSet & region, bool flipOrientation, const PartMapping & map ) const

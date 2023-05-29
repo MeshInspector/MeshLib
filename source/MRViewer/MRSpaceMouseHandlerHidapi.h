@@ -27,8 +27,8 @@ class SpaceMouseHandlerHidapi : public SpaceMouseHandler, public PostFocusListen
     struct SpaceMouseAction {
         bool isButtonStateChanged = false;
         std::bitset<SMB_BUTTON_COUNT> buttons = 0;
-        Vector3f translate = {0.0f, 0.0f, 0.0f};
-        Vector3f rotate = {0.0f, 0.0f, 0.0f};
+        Vector3f translate = { 0.0f, 0.0f, 0.0f };
+        Vector3f rotate = { 0.0f, 0.0f, 0.0f };
     };
 public:
     SpaceMouseHandlerHidapi();
@@ -37,24 +37,31 @@ public:
     virtual void initialize() override;
     virtual void handle() override;
 
+    // set state of zoom by mouse scroll (to fix scroll signal from spacemouse driver)
+    MRVIEWER_API void activateMouseScrollZoom( bool activeMouseScrollZoom );
+    // get state of zoom by mouse scroll
+    MRVIEWER_API bool isMouseScrollZoomActive()
+    {
+        return activeMouseScrollZoom_;
+    }
+
 private:
     void initListenerThread_();
-    void setButtonsMap_(VendorId vendorId, ProductId productId);
+    void setButtonsMap_( VendorId vendorId, ProductId productId );
     virtual void postFocusSignal_( bool focused ) override;
 
-    static void processAction_(const SpaceMouseAction& action);
+    void processAction_( const SpaceMouseAction& action );
     float convertCoord_( int coord_byte_low, int coord_byte_high );
 
     // update (rewrite its data) SpaceMouseAction if DataPacketRaw is not empty
-    void updateActionWithInput_( const DataPacketRaw& packet, int packet_length, SpaceMouseAction& action);
-    void addActionToQueue(const SpaceMouseAction& action, bool isSkippable=true);
+    void updateActionWithInput_( const DataPacketRaw& packet, int packet_length, SpaceMouseAction& action );
 
     bool findAndAttachDevice_();
-    void printDevices_( struct hid_device_info *cur_dev );
+    void printDevices_( struct hid_device_info* cur_dev );
 
 private:
-    hid_device *device_;
-    const std::vector<std::vector<SpaceMouseButtons>> *buttonsMapPtr_;
+    hid_device* device_;
+    const std::vector<std::vector<SpaceMouseButtons>>* buttonsMapPtr_;
     std::bitset<SMB_BUTTON_COUNT> buttonsState_;
     std::thread listenerThread_;
     std::atomic_bool terminateListenerThread_;
@@ -63,6 +70,7 @@ private:
     DataPacketRaw dataPacket_;    // packet from listener thread
     int packetLength_;
     std::atomic_bool active_;
+    bool activeMouseScrollZoom_;
 
     // if you change this value, do not forget to update MeshLib/scripts/70-space-mouse-meshlib.rules
     const std::unordered_map<VendorId, std::vector<ProductId>> vendor2device_ = {

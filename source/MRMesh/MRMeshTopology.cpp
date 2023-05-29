@@ -1459,8 +1459,8 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & 
 }
 
 void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, bool flipOrientation,
-    const std::vector<std::vector<EdgeId>> & thisContours,
-    const std::vector<std::vector<EdgeId>> & fromContours,
+    const std::vector<EdgePath> & thisContours,
+    const std::vector<EdgePath> & fromContours,
     const PartMapping & map )
 {
     MR_TIMER
@@ -1468,7 +1468,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & 
 }
 
 void MeshTopology::addPartByFaceMap( const MeshTopology & from, const FaceMap & fromFaces, bool flipOrientation,
-    const std::vector<std::vector<EdgeId>> & thisContours, const std::vector<std::vector<EdgeId>> & fromContours,
+    const std::vector<EdgePath> & thisContours, const std::vector<EdgePath> & fromContours,
     const PartMapping & map )
 {
     MR_TIMER
@@ -1477,8 +1477,8 @@ void MeshTopology::addPartByFaceMap( const MeshTopology & from, const FaceMap & 
 
 template<typename I>
 void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_t fcount, bool flipOrientation,
-    const std::vector<std::vector<EdgeId>> & thisContours,
-    const std::vector<std::vector<EdgeId>> & fromContours,
+    const std::vector<EdgePath> & thisContours,
+    const std::vector<EdgePath> & fromContours,
     const PartMapping & map )
 {
     MR_TIMER
@@ -1681,13 +1681,13 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
 
 template MRMESH_API void MeshTopology::addPartBy( const MeshTopology & from,
     SetBitIteratorT<FaceBitSet> fbegin, SetBitIteratorT<FaceBitSet> fend, size_t fcount, bool flipOrientation,
-    const std::vector<std::vector<EdgeId>> & thisContours,
-    const std::vector<std::vector<EdgeId>> & fromContours,
+    const std::vector<EdgePath> & thisContours,
+    const std::vector<EdgePath> & fromContours,
     const PartMapping & map );
 template MRMESH_API void MeshTopology::addPartBy( const MeshTopology & from,
     FaceMap::iterator fbegin, FaceMap::iterator fend, size_t fcount, bool flipOrientation,
-    const std::vector<std::vector<EdgeId>> & thisContours,
-    const std::vector<std::vector<EdgeId>> & fromContours,
+    const std::vector<EdgePath> & thisContours,
+    const std::vector<EdgePath> & fromContours,
     const PartMapping & map );
 
 void MeshTopology::rotateTriangles()

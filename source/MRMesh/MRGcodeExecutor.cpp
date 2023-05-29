@@ -1,6 +1,7 @@
 #include "MRGcodeExecutor.h"
 #include "MRVector2.h"
 #include "MRMatrix2.h"
+#include <cassert>
 
 namespace MR
 {
@@ -18,35 +19,35 @@ void GcodeExecutor::reset()
     absoluteCoordinates_ = true;
     scaling_ = Vector3f::diagonal( 1.f );
     inches_ = false;
-    frameList_.clear();
+    gcodeSource_.clear();
 }
 
-void GcodeExecutor::setFrameList( const GcodeSource& frameList )
+void GcodeExecutor::setGcodeSource( const GcodeSource& gcodeSource )
 {
     reset();
-    frameList_.resize( frameList.size() );
-    for ( int i = 0; i < frameList.size(); ++i )
-        frameList_[i] = frameList[i];
+    gcodeSource_.resize( gcodeSource.size() );
+    for ( int i = 0; i < gcodeSource.size(); ++i )
+        gcodeSource_[i] = gcodeSource[i];
 }
 
 std::vector<MR::GcodeExecutor::MoveAction> GcodeExecutor::executeProgram()
 {
-    if ( frameList_.empty() )
+    if ( gcodeSource_.empty() )
         return {};
 
-    std::vector<MoveAction> res( frameList_.size() );
-    for ( int i = 0; i < frameList_.size(); ++i )
-        res[i] = executeFrame( frameList_[i] );
+    std::vector<MoveAction> res( gcodeSource_.size() );
+    for ( int i = 0; i < gcodeSource_.size(); ++i )
+        res[i] = executeLine( gcodeSource_[i] );
 
     return res;
 }
 
-GcodeExecutor::MoveAction GcodeExecutor::executeFrame( const std::string_view& frame )
+GcodeExecutor::MoveAction GcodeExecutor::executeLine( const std::string_view& line )
 {
-    if ( frame.empty() )
+    if ( line.empty() )
         return {};
 
-    auto commands = parseFrame_( frame );
+    auto commands = parseFrame_( line );
     if ( commands.empty() )
         return {};
 

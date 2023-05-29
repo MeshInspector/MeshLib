@@ -14,6 +14,7 @@ namespace MR
 class MRMESH_CLASS GcodeExecutor
 {
 public:
+    // structure that stores information about the movement of the tool, specified by some string of commands
     struct MoveAction
     {
         std::vector<Vector3f> path;
@@ -25,9 +26,12 @@ public:
     // reset internal states
     MRMESH_API void reset();
 
-    MRMESH_API void setFrameList( const GcodeSource& frameList );
+    // set g-code source
+    MRMESH_API void setGcodeSource( const GcodeSource& gcodeSource );
+    // execute all lines g-code source and generate
     MRMESH_API std::vector<MoveAction> executeProgram();
-    MRMESH_API MoveAction executeFrame( const std::string_view& frame );
+    // execute one line
+    MRMESH_API MoveAction executeLine( const std::string_view& line );
 
 private:
 
@@ -107,7 +111,7 @@ private:
     std::optional<float> radius_;
     std::optional<Vector3f> arcCenter_;
 
-    std::vector<std::string_view> frameList_; // string list with sets of command (frames)
+    std::vector<std::string_view> gcodeSource_; // string list with sets of command (frames)
 };
 
 }

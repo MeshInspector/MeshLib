@@ -45,7 +45,7 @@ void ObjectGcode::setGcodeSource( const std::shared_ptr<GcodeSource>& gcodeSourc
 
     gcodeSource_ = gcodeSource;
     GcodeExecutor executor;
-    executor.setFrameList( *gcodeSource );
+    executor.setGcodeSource( *gcodeSource );
     actionList_ = executor.executeProgram();
 
     maxFeedrate_ = 0.f;
@@ -103,26 +103,19 @@ std::vector<std::string> ObjectGcode::getInfoLines() const
 
 void ObjectGcode::setFeedrateGradient( bool feedrateGradient )
 {
-    if ( feedrateGradient_ == feedrateGradient )
+    if ( feedrateGradientEnabled_ == feedrateGradient )
         return;
-    feedrateGradient_ = feedrateGradient;
+    feedrateGradientEnabled_ = feedrateGradient;
     updateColors_();
 }
 
-void ObjectGcode::setColor( Color color, bool work /*= true */ )
+void ObjectGcode::setColor( const Color& color, bool work /*= true */ )
 {
-    if ( work )
-    {
-        if ( workColor_ == color )
-            return;
-        workColor_ = color;
-    }
-    else
-    {
-        if ( idleColor_ == color )
-            return;
-        idleColor_ = color;
-    }
+    auto& colorRef = work ? workColor_ : idleColor_;
+    if ( colorRef == color )
+        return;
+    colorRef = color;
+
     updateColors_();
 }
 
@@ -152,7 +145,7 @@ void ObjectGcode::serializeFields_( Json::Value& root ) const
 {
     ObjectLinesHolder::serializeFields_( root );
     root["Type"].append( ObjectGcode::TypeName() );
-    root["FeedrateGradient"] = feedrateGradient_;
+    root["FeedrateGradient"] = feedrateGradientEnabled_;
     root["MaxFeedrate"] = maxFeedrate_;
     serializeToJson( workColor_, root["WorkColor"] );
     serializeToJson( idleColor_, root["IdleColor"] );
@@ -173,7 +166,7 @@ void ObjectGcode::deserializeFields_( const Json::Value& root )
     deserializeFromJson( root["IdleColor"], idleColor_ );
 
     if ( root["FeedrateGradient"].isBool() )
-        feedrateGradient_ = root["FeedrateGradient"].asBool();
+        feedrateGradientEnabled_ = root["FeedrateGradient"].asBool();
     if ( root["MaxFeedrate"].isDouble() )
         maxFeedrate_ = float( root["MaxFeedrate"].asDouble() );
 
@@ -189,7 +182,7 @@ void ObjectGcode::deserializeFields_( const Json::Value& root )
     }
 
     GcodeExecutor executor;
-    executor.setFrameList( gcodeSource );
+    executor.setGcodeSource( gcodeSource );
     actionList_ = executor.executeProgram();
 
     updateColors_();
@@ -208,7 +201,7 @@ void ObjectGcode::updateColors_()
         Color color = idleColor_;
         if ( !part.idle )
         {
-            if ( feedrateGradient_ && feedrateValid )
+            if ( feedrateGradientEnabled_ && feedrateValid )
             {
                 color = workColor * ( 0.3f + 0.7f * part.feedrate / maxFeedrate_ );
                 color.a = 255;

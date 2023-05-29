@@ -26,7 +26,7 @@ public:
 
     MRMESH_API virtual void setGcodeSource( const std::shared_ptr<GcodeSource>& gcodeSource );
 
-    virtual const std::shared_ptr<GcodeSource>& gcodeSource() { return gcodeSource_; }
+    virtual const std::shared_ptr<GcodeSource>& gcodeSource() const { return gcodeSource_; }
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask ) override;
 
@@ -38,10 +38,10 @@ public:
 
     // set drawing feedrate as gradient of brightness
     MRMESH_API void setFeedrateGradient( bool feedrateGradient );
-    bool getFeedrateGradient() { return feedrateGradient_; }
+    bool getFeedrateGradient() const { return feedrateGradientEnabled_; }
 
-    MRMESH_API void setColor( Color color, bool work = true );
-    Color getColor( bool work = true ) { return work ? workColor_ : idleColor_; }
+    MRMESH_API void setColor( const Color& color, bool work = true );
+    const Color& getColor( bool work = true ) const { return work ? workColor_ : idleColor_; }
 
     /// signal about gcode changing, triggered in setDirtyFlag
     using GcodeChangedSignal = boost::signals2::signal<void( uint32_t mask )>;
@@ -66,7 +66,7 @@ private:
     Color idleColor_ = Color(0.3f, 0.3f, 0.3f);
     Color workColor_ = Color( 0.f, 0.f, 1.f );
     float maxFeedrate_ = 0.f;
-    bool feedrateGradient_ = true;
+    bool feedrateGradientEnabled_ = true;
 
     void updateColors_();
 

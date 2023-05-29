@@ -119,6 +119,14 @@ void ObjectGcode::setColor( const Color& color, bool work /*= true */ )
     updateColors_();
 }
 
+bool ObjectGcode::select( bool isSelected )
+{
+    if ( !ObjectLinesHolder::select( isSelected ) )
+        return false;
+    setColoringType( isSelected ? ColoringType::VertsColorMap : ColoringType::SolidColor );
+    return true;
+}
+
 ObjectGcode::ObjectGcode( const ObjectGcode& other ) :
     ObjectLinesHolder( other )
 {

@@ -47,6 +47,8 @@ public:
     using GcodeChangedSignal = boost::signals2::signal<void( uint32_t mask )>;
     GcodeChangedSignal gcodeChangedSignal;
 
+    MRMESH_API virtual bool select( bool isSelected ) override;
+
 protected:
     MRMESH_API ObjectGcode( const ObjectGcode& other );
 

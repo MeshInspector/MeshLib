@@ -52,7 +52,9 @@ jobs:
 
       - name: Vcpkg integrate install
         working-directory: C:\vcpkg
-        run: C:\vcpkg\vcpkg.exe integrate install
+        run: |
+          C:\vcpkg\vcpkg.exe install hidapi
+          C:\vcpkg\vcpkg.exe integrate install
 
       - name: Restore CUDA Cache
         uses: actions/cache@v3

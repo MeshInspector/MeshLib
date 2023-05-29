@@ -345,8 +345,8 @@ std::vector<EdgeTri> findCollidingEdgeTrisPrecise(
         const auto & avc = faceACoords[i];
         for ( int j = 0; j < edgesB.size(); ++j )
         {
-            EdgeId eB = edgesB[i];
-            const auto & bvc = edgeBCoords[i];
+            EdgeId eB = edgesB[j];
+            const auto & bvc = edgeBCoords[j];
             auto isect = doTriangleSegmentIntersect( { avc[0], avc[1], avc[2], bvc[0], bvc[1] } );
             if ( !isect )
                 continue;

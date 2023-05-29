@@ -40,14 +40,15 @@ public:
     MRMESH_API void setFeedrateGradient( bool feedrateGradient );
     bool getFeedrateGradient() const { return feedrateGradientEnabled_; }
 
-    MRMESH_API void setColor( const Color& color, bool work = true );
-    const Color& getColor( bool work = true ) const { return work ? workColor_ : idleColor_; }
+    MRMESH_API void setIdleColor( const Color& color );
+    const Color& getIdleColor() const { return idleColor_; }
 
     /// signal about gcode changing, triggered in setDirtyFlag
     using GcodeChangedSignal = boost::signals2::signal<void( uint32_t mask )>;
     GcodeChangedSignal gcodeChangedSignal;
 
     MRMESH_API virtual bool select( bool isSelected ) override;
+    MRMESH_API virtual void setFrontColor( const Color& color, bool selected, ViewportId viewportId = {} );
 
 protected:
     MRMESH_API ObjectGcode( const ObjectGcode& other );
@@ -66,7 +67,6 @@ private:
     std::shared_ptr<GcodeSource> gcodeSource_;
     std::vector<GcodeExecutor::MoveAction> actionList_;
     Color idleColor_ = Color(0.3f, 0.3f, 0.3f);
-    Color workColor_ = Color( 0.f, 0.f, 1.f );
     float maxFeedrate_ = 0.f;
     bool feedrateGradientEnabled_ = true;
 

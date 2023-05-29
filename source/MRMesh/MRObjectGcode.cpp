@@ -13,7 +13,6 @@ ObjectGcode::ObjectGcode()
 {
     setVisualizeProperty( true, LinesVisualizePropertyType::Smooth, ViewportMask::all() );
     setColoringType( ColoringType::VertsColorMap );
-    workColor_ = getFrontColor( false );
 }
 
 
@@ -109,12 +108,11 @@ void ObjectGcode::setFeedrateGradient( bool feedrateGradient )
     updateColors_();
 }
 
-void ObjectGcode::setColor( const Color& color, bool work /*= true */ )
+void ObjectGcode::setIdleColor( const Color& color )
 {
-    auto& colorRef = work ? workColor_ : idleColor_;
-    if ( colorRef == color )
+    if ( idleColor_ == color )
         return;
-    colorRef = color;
+    idleColor_ = color;
 
     updateColors_();
 }
@@ -125,6 +123,13 @@ bool ObjectGcode::select( bool isSelected )
         return false;
     setColoringType( isSelected ? ColoringType::VertsColorMap : ColoringType::SolidColor );
     return true;
+}
+
+void ObjectGcode::setFrontColor( const Color& color, bool selected, ViewportId viewportId /*= {} */ )
+{
+    ObjectLinesHolder::setFrontColor( color, selected, viewportId );
+    if ( selected )
+        updateColors_();
 }
 
 ObjectGcode::ObjectGcode( const ObjectGcode& other ) :
@@ -155,7 +160,6 @@ void ObjectGcode::serializeFields_( Json::Value& root ) const
     root["Type"].append( ObjectGcode::TypeName() );
     root["FeedrateGradient"] = feedrateGradientEnabled_;
     root["MaxFeedrate"] = maxFeedrate_;
-    serializeToJson( workColor_, root["WorkColor"] );
     serializeToJson( idleColor_, root["IdleColor"] );
 
     auto& gcodeSource = root["GcodeSource"];
@@ -170,7 +174,6 @@ void ObjectGcode::serializeFields_( Json::Value& root ) const
 void ObjectGcode::deserializeFields_( const Json::Value& root )
 {
     ObjectLinesHolder::deserializeFields_( root );
-    deserializeFromJson( root["WorkColor"], workColor_ );
     deserializeFromJson( root["IdleColor"], idleColor_ );
 
     if ( root["FeedrateGradient"].isBool() )
@@ -200,7 +203,7 @@ void ObjectGcode::updateColors_()
 {
     const bool feedrateValid = maxFeedrate_ > 0.f;
     VertColors colors;
-    const Color workColor = getFrontColor( false );
+    const Color workColor = getFrontColor( true );
     for ( int i = 0; i < actionList_.size(); ++i )
     {
         const auto& part = actionList_[i];

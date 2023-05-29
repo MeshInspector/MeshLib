@@ -1,6 +1,7 @@
 #include "MRGcodeLoad.h"
 #include "MRStringConvert.h"
 #include <fstream>
+#include <sstream>
 
 namespace MR
 {

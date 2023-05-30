@@ -1,6 +1,7 @@
 #include "MRMesh/MRPython.h"
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRMeshBoolean.h"
+#include <pybind11/functional.h>
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, BooleanExposing, [] ( pybind11::module_& m )
 {

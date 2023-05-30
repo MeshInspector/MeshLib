@@ -16,7 +16,6 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer/MRUIStyle.h"
 
-#include <memory>
 
 namespace MR
 {
@@ -80,7 +79,6 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     {
         auto& viewerRef = getViewerInstance();
         spaceMouseParams_ = viewerRef.spaceMouseController.getParams();
-
 #ifdef _WIN32
         if ( auto spaceMouseHandler = viewerRef.getSpaceMouseHandler() )
         {
@@ -492,16 +490,15 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
 #ifdef _WIN32
         if ( auto spaceMouseHandler = getViewerInstance().getSpaceMouseHandler() )
         {
-            auto mouseHandler = std::dynamic_pointer_cast< SpaceMouseHandlerHidapi >( spaceMouseHandler );
-            if ( mouseHandler )
+            auto hidapiHandler = std::dynamic_pointer_cast< SpaceMouseHandlerHidapi >( spaceMouseHandler );
+            if ( hidapiHandler )
             {
-                mouseHandler->activateMouseScrollZoom( activeMouseScrollZoom_ );
+                hidapiHandler->activateMouseScrollZoom( activeMouseScrollZoom_ );
             }
         }
-#endif
     }
     UI::setTooltipIfHovered( "This mode is NOT recommended if you have 3Dconnexion driver installed, which sends mouse wheel fake events resulting in double reaction on SpaceMouse movement and camera tremble.", scaling );
-
+#endif
     if ( anyChanged )
         getViewerInstance().spaceMouseController.setParams( spaceMouseParams_ );
 

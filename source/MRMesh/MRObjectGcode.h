@@ -37,8 +37,8 @@ public:
     virtual std::string getClassName() const override { return "G-code"; }
 
     // set drawing feedrate as gradient of brightness
-    MRMESH_API void setFeedrateGradient( bool feedrateGradient );
-    bool getFeedrateGradient() const { return feedrateGradientEnabled_; }
+    MRMESH_API void switchFeedrateGradient( bool isFeedrateGradientEnabled );
+    bool isFeedrateGradient() const { return feedrateGradientEnabled_; }
 
     MRMESH_API void setIdleColor( const Color& color );
     const Color& getIdleColor() const { return idleColor_; }

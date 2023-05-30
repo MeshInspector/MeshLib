@@ -100,11 +100,11 @@ std::vector<std::string> ObjectGcode::getInfoLines() const
     return res;
 }
 
-void ObjectGcode::setFeedrateGradient( bool feedrateGradient )
+void ObjectGcode::switchFeedrateGradient( bool isFeedrateGradientEnabled )
 {
-    if ( feedrateGradientEnabled_ == feedrateGradient )
+    if ( feedrateGradientEnabled_ == isFeedrateGradientEnabled )
         return;
-    feedrateGradientEnabled_ = feedrateGradient;
+    feedrateGradientEnabled_ = isFeedrateGradientEnabled;
     updateColors_();
 }
 
@@ -158,7 +158,7 @@ void ObjectGcode::serializeFields_( Json::Value& root ) const
 {
     ObjectLinesHolder::serializeFields_( root );
     root["Type"].append( ObjectGcode::TypeName() );
-    root["FeedrateGradient"] = feedrateGradientEnabled_;
+    root["FeedrateGradientEnable"] = feedrateGradientEnabled_;
     root["MaxFeedrate"] = maxFeedrate_;
     serializeToJson( idleColor_, root["IdleColor"] );
 
@@ -176,8 +176,8 @@ void ObjectGcode::deserializeFields_( const Json::Value& root )
     ObjectLinesHolder::deserializeFields_( root );
     deserializeFromJson( root["IdleColor"], idleColor_ );
 
-    if ( root["FeedrateGradient"].isBool() )
-        feedrateGradientEnabled_ = root["FeedrateGradient"].asBool();
+    if ( root["FeedrateGradientEnable"].isBool() )
+        feedrateGradientEnabled_ = root["FeedrateGradientEnable"].asBool();
     if ( root["MaxFeedrate"].isDouble() )
         maxFeedrate_ = float( root["MaxFeedrate"].asDouble() );
 

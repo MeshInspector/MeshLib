@@ -28,9 +28,9 @@ public:
 
     // set g-code source
     MRMESH_API void setGcodeSource( const GcodeSource& gcodeSource );
-    // execute all lines g-code source and generate
+    // process all lines g-code source and generate corresponding move actions
     MRMESH_API std::vector<MoveAction> executeProgram();
-    // execute one line
+    // execute all commands from one line g-code source and generate corresponding move action
     MRMESH_API MoveAction executeLine( const std::string_view& line );
 
 private:

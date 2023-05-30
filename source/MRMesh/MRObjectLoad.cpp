@@ -13,6 +13,8 @@
 #include "MRObjectPoints.h"
 #include "MRDistanceMap.h"
 #include "MRObjectDistanceMap.h"
+#include "MRObjectGcode.h"
+#include "MRGcodeLoad.h"
 #include "MRStringConvert.h"
 #include "MRIOFormatsRegistry.h"
 #include "MRMeshLoadObj.h"
@@ -113,6 +115,23 @@ tl::expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( cons
     objectDistanceMap.setDistanceMap( std::make_shared<MR::DistanceMap>( std::move( distanceMap.value() ) ), params );
 
     return objectDistanceMap;
+}
+
+tl::expected<ObjectGcode, std::string> makeObjectGcodeFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+{
+    MR_TIMER;
+
+    auto gcodeSource = GcodeLoad::fromAnySupportedFormat( file, callback );
+    if ( !gcodeSource.has_value() )
+    {
+        return tl::make_unexpected( gcodeSource.error() );
+    }
+
+    ObjectGcode objectGcode;
+    objectGcode.setName( utf8string( file.stem() ) );
+    objectGcode.setGcodeSource( std::make_shared<GcodeSource>( *gcodeSource ) );
+
+    return objectGcode;
 }
 
 #if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
@@ -264,23 +283,34 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                     {
                         result = tl::make_unexpected( objectDistanceMap.error() );
 
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-                        auto objsVoxels = makeObjectVoxelsFromFile( filename, callback );
-                        std::vector<std::shared_ptr<Object>> resObjs;
-                        if ( objsVoxels.has_value() )
+                        auto objectGcode = makeObjectGcodeFromFile( filename, callback );
+                        if ( objectGcode.has_value() )
                         {
-                            auto& objsVoxelsRef = *objsVoxels;
-                            for ( auto& objPtr : objsVoxelsRef )
-                            {
-                                objPtr->select( true );
-                                resObjs.emplace_back( std::dynamic_pointer_cast< Object >( objPtr ) );
-                            }
-                            result = resObjs;
+                            objectGcode->select( true );
+                            auto obj = std::make_shared<ObjectGcode>( std::move( objectGcode.value() ) );
+                            result = { obj };
                         }
-                        else
-                            result = tl::make_unexpected( objsVoxels.error() );
-#endif
+                        else if ( result.error() == "unsupported file extension" )
+                        {
+                            result = tl::make_unexpected( objectDistanceMap.error() );
 
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+                            auto objsVoxels = makeObjectVoxelsFromFile( filename, callback );
+                            std::vector<std::shared_ptr<Object>> resObjs;
+                            if ( objsVoxels.has_value() )
+                            {
+                                auto& objsVoxelsRef = *objsVoxels;
+                                for ( auto& objPtr : objsVoxelsRef )
+                                {
+                                    objPtr->select( true );
+                                    resObjs.emplace_back( std::dynamic_pointer_cast< Object >( objPtr ) );
+                                }
+                                result = resObjs;
+                            }
+                            else
+                                result = tl::make_unexpected( objsVoxels.error() );
+#endif
+                        }
                     }
                 }
             }

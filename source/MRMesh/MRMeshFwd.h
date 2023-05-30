@@ -22,6 +22,7 @@
 
 #include <array>
 #include <vector>
+#include <string>
 #include <parallel_hashmap/phmap_fwd_decl.h>
 
 #ifdef _WIN32
@@ -340,6 +341,8 @@ using PolylineProjectionWithOffsetResult3 = PolylineProjectionWithOffsetResult<V
 
 class DistanceMap;
 
+using GcodeSource = std::vector<std::string>;
+
 class Object;
 class VisualObject;
 class ObjectMeshHolder;
@@ -350,6 +353,7 @@ class ObjectLinesHolder;
 class ObjectLines;
 class ObjectDistanceMap;
 class ObjectLabel;
+class ObjectGcode;
 class PointObject;
 class LineObject;
 class CircleObject;

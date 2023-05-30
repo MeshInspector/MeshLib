@@ -64,6 +64,8 @@
     <ClInclude Include="MRFillContourByGraphCut.h" />
     <ClInclude Include="MRFillContours2D.h" />
     <ClInclude Include="MRFloatGridComponents.h" />
+    <ClInclude Include="MRGcodeProcessor.h" />
+    <ClInclude Include="MRGcodeLoad.h" />
     <ClInclude Include="MRGridSettings.h" />
     <ClInclude Include="MRGTest.h" />
     <ClInclude Include="MRHash.h" />
@@ -77,6 +79,7 @@
     <ClInclude Include="MRNormalDenoising.h" />
     <ClInclude Include="MRNormalsToPoints.h" />
     <ClInclude Include="MROverlappingTris.h" />
+    <ClInclude Include="MRObjectGcode.h" />
     <ClInclude Include="MRPointsToMeshProjector.h" />
     <ClInclude Include="MRIntersection.h" />
     <ClInclude Include="MRIntersectionContour.h" />
@@ -352,6 +355,8 @@
     <ClCompile Include="MRFixUndercuts.cpp" />
     <ClCompile Include="MRFloatGrid.cpp" />
     <ClCompile Include="MRFloatGridComponents.cpp" />
+    <ClCompile Include="MRGcodeProcessor.cpp" />
+    <ClCompile Include="MRGcodeLoad.cpp" />
     <ClCompile Include="MRGridSampling.cpp" />
     <ClCompile Include="MRHistoryStore.cpp" />
     <ClCompile Include="MRIdentifyVertices.cpp" />
@@ -372,6 +377,7 @@
     <ClCompile Include="MRNormalDenoising.cpp" />
     <ClCompile Include="MRNormalsToPoints.cpp" />
     <ClCompile Include="MROverlappingTris.cpp" />
+    <ClCompile Include="MRObjectGcode.cpp" />
     <ClCompile Include="MRPointsToMeshProjector.cpp" />
     <ClCompile Include="MRMeshTrimWithPlane.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />

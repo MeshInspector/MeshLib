@@ -70,7 +70,10 @@ void ProgressBar::setup( float scaling )
                 ImGui::SetCursorPosX( ( ImGui::GetWindowWidth() + ImGui::GetContentRegionAvail().x ) * 0.5f - 75.0f * scaling );
 				const float btnHeight = ImGui::CalcTextSize( "SDC" ).y + cGradientButtonFramePadding * scaling;
                 if ( UI::button( "Cancel", Vector2f( 75.0f * scaling, btnHeight ), ImGuiKey_Escape ) )
+                {
+                    spdlog::info( "Operation progress: \"{}\" - Canceling", instance.title_ );
                     instance.canceled_ = true;
+                }
             }
             else
             {

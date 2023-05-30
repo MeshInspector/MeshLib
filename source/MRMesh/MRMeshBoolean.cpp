@@ -103,7 +103,7 @@ namespace MR
 {
 
 BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
-                       const AffineXf3f* rigidB2A /*= nullptr */, BooleanResultMapper* mapper /*= nullptr */ )
+                       const AffineXf3f* rigidB2A /*= nullptr */, BooleanResultMapper* mapper /*= nullptr */, ProgressCallback cb )
 {
     bool needCutMeshA = operation != BooleanOperation::InsideB && operation != BooleanOperation::OutsideB;
     bool needCutMeshB = operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA;
@@ -119,11 +119,11 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
         // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
         meshB.getAABBTree();
     }
-    return boolean( Mesh( meshA ), Mesh( meshB ), operation, rigidB2A, mapper );
+    return boolean( Mesh( meshA ), Mesh( meshB ), operation, rigidB2A, mapper, cb );
 }
 
 BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
-                       const AffineXf3f* rigidB2A /*= nullptr */, BooleanResultMapper* mapper /*= nullptr */ )
+                       const AffineXf3f* rigidB2A /*= nullptr */, BooleanResultMapper* mapper /*= nullptr */, ProgressCallback cb )
 {
     MR_TIMER;
     BooleanResult result;
@@ -135,6 +135,8 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
     bool needCutMeshB = operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA;
 
     converters = getVectorConverters( meshA, meshB, rigidB2A );
+
+    auto loneCb = subprogress( cb, 0.0f, 0.8f );
 
     FaceMap new2orgSubdivideMapA;
     FaceMap new2orgSubdivideMapB;
@@ -149,6 +151,9 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
         contours = orderIntersectionContours( meshA.topology, meshB.topology, intersections );
         // find lone
         auto loneContoursIds = detectLoneContours( contours );
+
+        if ( loneCb && !loneCb( ( std::log10( float( iters + 1 ) * 0.1f ) + 2.0f ) / 3.0f ) )
+            return { .errorString = "Operation was canceled." };
 
         if ( !loneContoursIds.empty() && ( loneContoursIds == prevLoneContoursIds || iters == cMaxFixLoneIterations ) )
         {
@@ -234,6 +239,11 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
     // clear intersections
     intersections = {};
 
+
+    auto mainCb = subprogress( cb, 0.8f, 1.0f );
+    if ( mainCb && !mainCb( 0.0f ) )
+        return { .errorString = "Operation was canceled." };
+
     std::vector<EdgePath> cutA, cutB;
     OneMeshContours meshAContours;
     OneMeshContours meshBContours;
@@ -263,6 +273,9 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
         else
             meshBContours = getOneMeshIntersectionContours( meshA, meshB, contours, false, converters, rigidB2A );
     }
+
+    if ( mainCb && !mainCb( 0.33f ) )
+        return { .errorString = "Operation was canceled." };
 
     if ( needCutMeshA )
     {
@@ -334,8 +347,14 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
         }
         cutB = std::move( res.resultCut );
     }
+    if ( mainCb && !mainCb( 0.66f ) )
+        return { .errorString = "Operation was canceled." };
     // do operation
     auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), cutA, cutB, operation, rigidB2A, mapper );
+
+    if ( mainCb && !mainCb( 1.0f ) )
+        return { .errorString = "Operation was canceled." };
+
     if ( res.has_value() )
         result.mesh = std::move( res.value() );
     else

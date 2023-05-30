@@ -55,9 +55,9 @@ struct BooleanResult
   * \note If meshes are not closed in intersecting zone some boolean operations are not allowed (as far as input meshes interior and exterior cannot be determined)
   */
 MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
-                                  const AffineXf3f* rigidB2A = nullptr, BooleanResultMapper* mapper = nullptr );
+                                  const AffineXf3f* rigidB2A = nullptr, BooleanResultMapper* mapper = nullptr, ProgressCallback cb = {} );
 MRMESH_API BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
-                                  const AffineXf3f* rigidB2A = nullptr, BooleanResultMapper* mapper = nullptr );
+                                  const AffineXf3f* rigidB2A = nullptr, BooleanResultMapper* mapper = nullptr, ProgressCallback cb = {} );
 
 /// vertices and points representing mesh intersection result
 struct BooleanResultPoints

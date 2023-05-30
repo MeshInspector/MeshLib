@@ -36,9 +36,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, BooleanExposing, [] ( pybind11::module_& m )
         def( "map", ( MR::FaceBitSet( MR::BooleanResultMapper::* )( const MR::FaceBitSet&, MR::BooleanResultMapper::MapObject )const )& MR::BooleanResultMapper::map,
             pybind11::arg( "oldBS" ), pybind11::arg( "obj" ), "Returns faces bitset of result mesh corresponding input one" );
 
-    m.def( "boolean", ( MR::BooleanResult( * )( const MR::Mesh&, const MR::Mesh&, MR::BooleanOperation, const MR::AffineXf3f*, MR::BooleanResultMapper* ) )MR::boolean,
+    m.def( "boolean", ( MR::BooleanResult( * )( const MR::Mesh&, const MR::Mesh&, MR::BooleanOperation, const MR::AffineXf3f*, MR::BooleanResultMapper*, MR::ProgressCallback ) )MR::boolean,
         pybind11::arg("meshA"), pybind11::arg( "meshB" ), pybind11::arg( "operation" ),
-        pybind11::arg("rigidB2A") = nullptr, pybind11::arg( "mapper" ) = nullptr,
+        pybind11::arg( "rigidB2A" ) = nullptr, pybind11::arg( "mapper" ) = nullptr, pybind11::arg( "cb" ) = MR::ProgressCallback{},
         "Makes new mesh - result of boolean operation on mesh `A` and mesh `B`\n"
         "\tmeshA - Input mesh `A`\n"
         "\tmeshB - Input mesh `B`\n"

@@ -10,8 +10,8 @@
 namespace MR
 {
 
-// class to parse g-code commands and generate toolpath
-class MRMESH_CLASS GcodeExecutor
+// class to process g-code source and generate toolpath
+class MRMESH_CLASS GcodeProcessor
 {
 public:
     // structure that stores information about the movement of the tool, specified by some string of commands

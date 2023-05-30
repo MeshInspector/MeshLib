@@ -43,7 +43,7 @@ void ObjectGcode::setGcodeSource( const std::shared_ptr<GcodeSource>& gcodeSourc
     }
 
     gcodeSource_ = gcodeSource;
-    GcodeExecutor executor;
+    GcodeProcessor executor;
     executor.setGcodeSource( *gcodeSource );
     actionList_ = executor.processSource();
 
@@ -192,7 +192,7 @@ void ObjectGcode::deserializeFields_( const Json::Value& root )
             gcodeSource[i] = gcodeSourceRoot[i].asString();
     }
 
-    GcodeExecutor executor;
+    GcodeProcessor executor;
     executor.setGcodeSource( gcodeSource );
     actionList_ = executor.processSource();
 

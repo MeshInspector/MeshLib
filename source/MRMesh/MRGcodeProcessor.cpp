@@ -1,4 +1,4 @@
-#include "MRGcodeExecutor.h"
+#include "MRGcodeProcessor.h"
 #include "MRVector2.h"
 #include "MRMatrix2.h"
 #include <cassert>
@@ -11,7 +11,7 @@ constexpr float cInch = 2.54f;
 //////////////////////////////////////////////////////////////////////////
 // GcodeExecutor
 
-void GcodeExecutor::reset()
+void GcodeProcessor::reset()
 {
     workPlane_ = WorkPlane::xy;
     toWorkPlaneXf_ = Matrix3f();
@@ -22,7 +22,7 @@ void GcodeExecutor::reset()
     gcodeSource_.clear();
 }
 
-void GcodeExecutor::setGcodeSource( const GcodeSource& gcodeSource )
+void GcodeProcessor::setGcodeSource( const GcodeSource& gcodeSource )
 {
     reset();
     gcodeSource_.resize( gcodeSource.size() );
@@ -30,7 +30,7 @@ void GcodeExecutor::setGcodeSource( const GcodeSource& gcodeSource )
         gcodeSource_[i] = gcodeSource[i];
 }
 
-std::vector<MR::GcodeExecutor::MoveAction> GcodeExecutor::processSource()
+std::vector<MR::GcodeProcessor::MoveAction> GcodeProcessor::processSource()
 {
     if ( gcodeSource_.empty() )
         return {};
@@ -42,7 +42,7 @@ std::vector<MR::GcodeExecutor::MoveAction> GcodeExecutor::processSource()
     return res;
 }
 
-GcodeExecutor::MoveAction GcodeExecutor::processLine( const std::string_view& line )
+GcodeProcessor::MoveAction GcodeProcessor::processLine( const std::string_view& line )
 {
     if ( line.empty() )
         return {};
@@ -68,7 +68,7 @@ GcodeExecutor::MoveAction GcodeExecutor::processLine( const std::string_view& li
     return {};
 }
 
-std::vector<GcodeExecutor::Command> GcodeExecutor::parseFrame_( const std::string_view& frame )
+std::vector<GcodeProcessor::Command> GcodeProcessor::parseFrame_( const std::string_view& frame )
 {
     std::vector<Command> commands;
     size_t it = 0;
@@ -108,7 +108,7 @@ std::vector<GcodeExecutor::Command> GcodeExecutor::parseFrame_( const std::strin
     return commands;
 }
 
-void GcodeExecutor::applyCommand_( const Command& command )
+void GcodeProcessor::applyCommand_( const Command& command )
 {
     if ( command.key == 'g' )
     {
@@ -134,7 +134,7 @@ void GcodeExecutor::applyCommand_( const Command& command )
     }
 }
 
-void GcodeExecutor::applyCommandG_( const Command& command )
+void GcodeProcessor::applyCommandG_( const Command& command )
 {
     int gValue = int( command.value );
     switch ( gValue )
@@ -174,7 +174,7 @@ void GcodeExecutor::applyCommandG_( const Command& command )
     }
 }
 
-GcodeExecutor::MoveAction GcodeExecutor::applyMove_()
+GcodeProcessor::MoveAction GcodeProcessor::applyMove_()
 {
     MoveAction res;
     res.idle = true;
@@ -195,7 +195,7 @@ GcodeExecutor::MoveAction GcodeExecutor::applyMove_()
     return res;
 }
 
-void GcodeExecutor::resetTemporaryStates_()
+void GcodeProcessor::resetTemporaryStates_()
 {
     inputCoords_ = {};
     inputCoordsReaded_ = Vector3<bool>( false, false, false );
@@ -203,7 +203,7 @@ void GcodeExecutor::resetTemporaryStates_()
     arcCenter_ = {};
 }
 
-GcodeExecutor::MoveAction GcodeExecutor::moveLine_( const Vector3f& newPoint, bool idle )
+GcodeProcessor::MoveAction GcodeProcessor::moveLine_( const Vector3f& newPoint, bool idle )
 {
     // MoveAction res({ basePoint_, newPoint }, idle); //fatal error C1001: Internal compiler error.
     MoveAction res;
@@ -212,7 +212,7 @@ GcodeExecutor::MoveAction GcodeExecutor::moveLine_( const Vector3f& newPoint, bo
     return res;
 }
 
-GcodeExecutor::MoveAction GcodeExecutor::moveArc_( const Vector3f& newPoint, bool clockwise )
+GcodeProcessor::MoveAction GcodeProcessor::moveArc_( const Vector3f& newPoint, bool clockwise )
 {
     MoveAction res;
     if ( radius_ )
@@ -230,7 +230,7 @@ GcodeExecutor::MoveAction GcodeExecutor::moveArc_( const Vector3f& newPoint, boo
     return res;
 }
 
-void GcodeExecutor::updateWorkPlane_( WorkPlane wp )
+void GcodeProcessor::updateWorkPlane_( WorkPlane wp )
 {
     workPlane_ = wp;
     constexpr float pi2 = PI2_F;
@@ -242,7 +242,7 @@ void GcodeExecutor::updateWorkPlane_( WorkPlane wp )
         toWorkPlaneXf_ = Matrix3f();
 }
 
-void GcodeExecutor::updateScaling_()
+void GcodeProcessor::updateScaling_()
 {
     for ( int i = 0; i < 3; ++i )
     {
@@ -251,7 +251,7 @@ void GcodeExecutor::updateScaling_()
     }
 }
 
-std::vector<Vector2f> GcodeExecutor::getArcPoints2_( const Vector2f& beginPoint, const Vector2f& endPoint, bool clockwise )
+std::vector<Vector2f> GcodeProcessor::getArcPoints2_( const Vector2f& beginPoint, const Vector2f& endPoint, bool clockwise )
 {
     if ( std::fabs( beginPoint.lengthSq() - endPoint.lengthSq() ) >= 1.e-2f ) // equalityAccuracy_**2 ?
     {
@@ -282,7 +282,7 @@ std::vector<Vector2f> GcodeExecutor::getArcPoints2_( const Vector2f& beginPoint,
     return res;
 }
 
-std::vector<Vector3f> GcodeExecutor::getArcPoints3_( const Vector3f& center, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise )
+std::vector<Vector3f> GcodeProcessor::getArcPoints3_( const Vector3f& center, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise )
 {
     const Vector3f c3 = toWorkPlaneXf_ * center;
 
@@ -305,7 +305,7 @@ std::vector<Vector3f> GcodeExecutor::getArcPoints3_( const Vector3f& center, con
     return res3;
 }
 
-std::vector<MR::Vector3f> GcodeExecutor::getArcPoints3_( float r, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise )
+std::vector<MR::Vector3f> GcodeProcessor::getArcPoints3_( float r, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise )
 {
     assert( r != 0 );
     if ( r == 0.f )
@@ -338,7 +338,7 @@ std::vector<MR::Vector3f> GcodeExecutor::getArcPoints3_( float r, const Vector3f
     return res3;
 }
 
-MR::Vector3f GcodeExecutor::calcRealNewCoord_()
+MR::Vector3f GcodeProcessor::calcRealNewCoord_()
 {
     Vector3f res = mult( inputCoords_, scaling_ );
     if ( inches_ )

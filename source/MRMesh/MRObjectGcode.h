@@ -1,6 +1,6 @@
 #pragma once
 #include "MRObjectLinesHolder.h"
-#include "MRGcodeExecutor.h"
+#include "MRGcodeProcessor.h"
 #include "MRColor.h"
 
 namespace MR
@@ -65,7 +65,7 @@ protected:
 
 private:
     std::shared_ptr<GcodeSource> gcodeSource_;
-    std::vector<GcodeExecutor::MoveAction> actionList_;
+    std::vector<GcodeProcessor::MoveAction> actionList_;
     Color idleColor_ = Color(0.3f, 0.3f, 0.3f);
     float maxFeedrate_ = 0.f;
     bool feedrateGradientEnabled_ = true;

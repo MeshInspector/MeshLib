@@ -64,7 +64,7 @@
     <ClInclude Include="MRFillContourByGraphCut.h" />
     <ClInclude Include="MRFillContours2D.h" />
     <ClInclude Include="MRFloatGridComponents.h" />
-    <ClInclude Include="MRGcodeExecutor.h" />
+    <ClInclude Include="MRGcodeProcessor.h" />
     <ClInclude Include="MRGcodeLoad.h" />
     <ClInclude Include="MRGridSettings.h" />
     <ClInclude Include="MRGTest.h" />
@@ -355,7 +355,7 @@
     <ClCompile Include="MRFixUndercuts.cpp" />
     <ClCompile Include="MRFloatGrid.cpp" />
     <ClCompile Include="MRFloatGridComponents.cpp" />
-    <ClCompile Include="MRGcodeExecutor.cpp" />
+    <ClCompile Include="MRGcodeProcessor.cpp" />
     <ClCompile Include="MRGcodeLoad.cpp" />
     <ClCompile Include="MRGridSampling.cpp" />
     <ClCompile Include="MRHistoryStore.cpp" />

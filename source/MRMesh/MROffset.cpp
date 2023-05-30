@@ -88,6 +88,27 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
     return newMesh;
 }
 
+tl::expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const OffsetParameters& params )
+{
+    MR_TIMER
+    auto res = offsetMesh( mesh, offset, params );
+    if ( !res )
+        return res;
+
+    auto & resMesh = res.value();
+
+    if ( offset >= 0 )
+        resMesh.addPartByMask( mesh, mesh.topology.getValidFaces(), true ); // true = with flipping
+    else
+    {
+        resMesh.topology.flipOrientation();
+        resMesh.addPart( mesh );
+    }
+
+    resMesh.invalidateCaches();
+    return res;
+}
+
 tl::expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER

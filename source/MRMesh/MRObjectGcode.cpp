@@ -45,7 +45,7 @@ void ObjectGcode::setGcodeSource( const std::shared_ptr<GcodeSource>& gcodeSourc
     gcodeSource_ = gcodeSource;
     GcodeExecutor executor;
     executor.setGcodeSource( *gcodeSource );
-    actionList_ = executor.executeProgram();
+    actionList_ = executor.processSource();
 
     maxFeedrate_ = 0.f;
     std::shared_ptr<Polyline3> polyline = std::make_shared<Polyline3>();
@@ -194,7 +194,7 @@ void ObjectGcode::deserializeFields_( const Json::Value& root )
 
     GcodeExecutor executor;
     executor.setGcodeSource( gcodeSource );
-    actionList_ = executor.executeProgram();
+    actionList_ = executor.processSource();
 
     updateColors_();
 }

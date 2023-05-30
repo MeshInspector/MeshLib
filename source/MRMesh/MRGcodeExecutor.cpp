@@ -30,19 +30,19 @@ void GcodeExecutor::setGcodeSource( const GcodeSource& gcodeSource )
         gcodeSource_[i] = gcodeSource[i];
 }
 
-std::vector<MR::GcodeExecutor::MoveAction> GcodeExecutor::executeProgram()
+std::vector<MR::GcodeExecutor::MoveAction> GcodeExecutor::processSource()
 {
     if ( gcodeSource_.empty() )
         return {};
 
     std::vector<MoveAction> res( gcodeSource_.size() );
     for ( int i = 0; i < gcodeSource_.size(); ++i )
-        res[i] = executeLine( gcodeSource_[i] );
+        res[i] = processLine( gcodeSource_[i] );
 
     return res;
 }
 
-GcodeExecutor::MoveAction GcodeExecutor::executeLine( const std::string_view& line )
+GcodeExecutor::MoveAction GcodeExecutor::processLine( const std::string_view& line )
 {
     if ( line.empty() )
         return {};

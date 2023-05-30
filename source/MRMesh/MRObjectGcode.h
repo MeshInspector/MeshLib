@@ -48,7 +48,7 @@ public:
     GcodeChangedSignal gcodeChangedSignal;
 
     MRMESH_API virtual bool select( bool isSelected ) override;
-    MRMESH_API virtual void setFrontColor( const Color& color, bool selected, ViewportId viewportId = {} );
+    MRMESH_API virtual void setFrontColor( const Color& color, bool selected, ViewportId viewportId = {} ) override;
 
 protected:
     MRMESH_API ObjectGcode( const ObjectGcode& other );

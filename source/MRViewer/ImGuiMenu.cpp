@@ -218,6 +218,7 @@ std::pair<bool, bool> getRealValue( const std::vector<std::shared_ptr<MR::Visual
 void ImGuiMenu::addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const
 {
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesCyrillic() );
+    builder.AddChar( 0x2116 ); // number sign
 #ifndef __EMSCRIPTEN__
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesChineseSimplifiedCommon() );
 #endif
@@ -987,7 +988,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
 
         ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
 
-        isOpen = drawCollapsingHeader_( ( object.name() + "##" + uniqueStr ).c_str(),
+        isOpen = drawCollapsingHeader_( ( object.name() + " ##" + uniqueStr ).c_str(),
                                     ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) |
                                     ImGuiTreeNodeFlags_OpenOnArrow |
                                     ImGuiTreeNodeFlags_SpanAvailWidth |

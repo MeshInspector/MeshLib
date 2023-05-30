@@ -9,6 +9,7 @@
 #include "MRGTest.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -76,7 +77,8 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
             res.back() += " / " + std::to_string( mesh_->topology.vertCapacity() ) + " capacity";
 
         res.push_back( "faces: " + std::to_string( mesh_->topology.numValidFaces() ) );
-        if( auto nFacesSelected = numSelectedFaces() )
+        const auto nFacesSelected = numSelectedFaces();
+        if( nFacesSelected )
             res.back() += " / " + std::to_string( nFacesSelected ) + " selected";
         if( mesh_->topology.numValidFaces() < mesh_->topology.faceSize() )
             res.back() += " / " + std::to_string( mesh_->topology.faceSize() ) + " size";
@@ -95,7 +97,9 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
 
         res.push_back( "holes: " + std::to_string( meshStat_->numHoles ) );
 
-        res.push_back( "area: " + std::to_string( totalArea() ) );
+        res.push_back( fmt::format( "area: {:.6}", totalArea() ) );
+        if( nFacesSelected )
+            res.back() += fmt::format( " / {:.6} selected", selectedArea() );
 
         if ( !texture_.pixels.empty() )
             res.push_back( "texture: " + std::to_string( texture_.resolution.x ) + " x " + std::to_string( texture_.resolution.y ) );

@@ -156,6 +156,8 @@ public:
     MRMESH_API size_t numCreaseEdges() const;
     /// returns cached summed area of mesh triangles
     MRMESH_API double totalArea() const;
+    /// returns cached area of selected triangles
+    MRMESH_API double selectedArea() const;
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
@@ -191,7 +193,7 @@ protected:
     mutable std::optional<MeshStat> meshStat_;
     mutable std::optional<bool> meshIsClosed_;
     mutable std::optional<size_t> numSelectedFaces_, numSelectedEdges_, numCreaseEdges_;
-    mutable std::optional<double> totalArea_;
+    mutable std::optional<double> totalArea_, selectedArea_;
     mutable ViewportProperty<XfBasedCache<Box3f>> worldBox_;
 
     MRMESH_API ObjectMeshHolder( const ObjectMeshHolder& other );

@@ -395,6 +395,7 @@ void ObjectMeshHolder::selectFaces( FaceBitSet newSelection )
 {
     selectedTriangles_ = std::move( newSelection );
     numSelectedFaces_.reset();
+    selectedArea_.reset();
     faceSelectionChangedSignal();
     dirty_ |= DIRTY_SELECTION;
 }
@@ -480,6 +481,14 @@ double ObjectMeshHolder::totalArea() const
     return *totalArea_;
 }
 
+double ObjectMeshHolder::selectedArea() const
+{
+    if ( !selectedArea_ )
+        selectedArea_ = mesh_ ? mesh_->area( &selectedTriangles_ ) : 0.0;
+
+    return *selectedArea_;
+}
+
 size_t ObjectMeshHolder::heapBytes() const
 {
     return VisualObject::heapBytes()
@@ -534,6 +543,7 @@ void ObjectMeshHolder::setDirtyFlags( uint32_t mask )
         worldBox_.reset();
         worldBox_.get().reset();
         totalArea_.reset();
+        selectedArea_.reset();
         if ( mesh_ )
             mesh_->invalidateCaches();
     }

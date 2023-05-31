@@ -243,7 +243,7 @@ VoidOrErrStr saveSliceToImage( const std::filesystem::path& path, const VdbVolum
         texture[i] = Color( Vector3f::diagonal( normedValue ) );
 
         if ( !reportProgress( callback, [&]{ return float( i ) / texture.size(); }, i, 128 ) )
-            return tl::make_unexpected( "Operation was canceled" );
+            return unexpectedOperationCanceled();
     }
 
     MeshTexture meshTexture( { { std::move( texture ), {textureWidth, textureHeight} } } );
@@ -283,7 +283,7 @@ VoidOrErrStr saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSetti
             return res;
 
         if ( settings.cb && !settings.cb( float( i ) / numSlices ) )
-            return tl::make_unexpected( "Operation was canceled." );
+            return unexpectedOperationCanceled();
     }
 
     if ( settings.cb )

@@ -81,8 +81,7 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
         {
             auto error = save_();
             if ( !error.empty() )
-                if ( auto menu = getViewerInstance().getMenuPlugin() )
-                    menu->showErrorModal( error );
+                showError( error );
         }
     }
     if ( !valid )
@@ -136,10 +135,7 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
             if ( error.empty() )
                 ImGui::CloseCurrentPopup();
             else
-            {
-                if ( auto menu = getViewerInstance().getMenuPlugin() )
-                    menu->showErrorModal( error );
-            }
+                showError( error );
         }
         ImGui::SameLine( 0, p );
         if ( UI::buttonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )

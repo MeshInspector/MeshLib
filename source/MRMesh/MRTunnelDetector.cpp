@@ -61,7 +61,7 @@ VoidOrErrStr BasisTunnelsDetector::prepare( ProgressCallback cb )
     }
 
     if ( !reportProgress( cb, 0.25f ) )
-        return tl::make_unexpected( "Operation was canceled" );
+        return unexpectedOperationCanceled();
 
     // collect all mesh inner edges
     innerEdges_.clear();
@@ -75,7 +75,7 @@ VoidOrErrStr BasisTunnelsDetector::prepare( ProgressCallback cb )
     assert( innerEdges_.size() == numInnerEdges );
 
     if ( !reportProgress( cb, 0.5f ) )
-        return tl::make_unexpected( "Operation was canceled" );
+        return unexpectedOperationCanceled();
 
     // compute curvature for every collected edge
     tbb::parallel_for(tbb::blocked_range<size_t>( 0, innerEdges_.size() ), [&](const tbb::blocked_range<size_t> & range)
@@ -87,7 +87,7 @@ VoidOrErrStr BasisTunnelsDetector::prepare( ProgressCallback cb )
     });
 
     if ( !reportProgress( cb, 0.75f ) )
-        return tl::make_unexpected( "Operation was canceled" );
+        return unexpectedOperationCanceled();
 
     // sort edges from most curved to least curved
     tbb::parallel_sort( innerEdges_.begin(), innerEdges_.end() );
@@ -99,7 +99,7 @@ tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( P
     MR_TIMER
 
     if ( !reportProgress( cb, 0.0f ) )
-        return tl::make_unexpected( "Operation was canceled" );
+        return unexpectedOperationCanceled();
 
     // construct maximal tree from the primary mesh edges
     primaryTree_.clear();
@@ -130,7 +130,7 @@ tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( P
     }
 
     if ( !reportProgress( cb, 0.25f ) )
-        return tl::make_unexpected( "Operation was canceled" );
+        return unexpectedOperationCanceled();
 
     // construct maximal co-tree from the dual mesh edges
     cotreeConnectedFace_.reset( mp_.mesh.topology.lastValidFace() + 1 );
@@ -157,7 +157,7 @@ tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( P
     }
 
     if ( !reportProgress( cb, 0.5f ) )
-        return tl::make_unexpected( "Operation was canceled" );
+        return unexpectedOperationCanceled();
 
     std::vector<EdgeId> joinEdges;
     // check all edges not from primary tree, and build co-tree
@@ -180,7 +180,7 @@ tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( P
     }
 
     if ( !reportProgress( cb, 0.75f ) )
-        return tl::make_unexpected( "Operation was canceled" );
+        return unexpectedOperationCanceled();
 
     std::vector<EdgeLoop> res( joinEdges.size() );
     const float numEdges = float( mp_.mesh.topology.undirectedEdgeSize() ); // a value larger than any loop length in edges
@@ -287,7 +287,7 @@ tl::expected<FaceBitSet, std::string> detectTunnelFaces( const MeshPart & mp, fl
         activeRegion -= tunnelFaces; // reduce region
         assert( numSelectedTunnels > 0 );
         if ( progressCallback && !progressCallback( targetProgress + 0.01f ) )
-            return tl::make_unexpected( "Operation was canceled" );
+            return unexpectedOperationCanceled();
 
         initialProgress = targetProgress + 0.01f;
         targetProgress = ( ( initialProgress  + 1.0f ) * 0.5f ) - 0.01f;

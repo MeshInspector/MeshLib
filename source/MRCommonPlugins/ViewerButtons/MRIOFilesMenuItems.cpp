@@ -112,8 +112,7 @@ bool OpenFilesMenuItem::action()
             return;
         if ( !checkPaths_( filenames ) )
         {
-            if ( auto menu = getViewerInstance().getMenuPlugin() )
-                menu->showErrorModal( "Unsupported file extension" );
+            showError( "Unsupported file extension" );
             return;
         }
         getViewerInstance().loadFiles( filenames );
@@ -133,8 +132,7 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
 
     if ( !checkPaths_( paths ) )
     {
-        if ( auto menu = getViewerInstance().getMenuPlugin() )
-            menu->showErrorModal( "Unsupported file extension" );
+        showError( "Unsupported file extension" );
         return false;
     }
 
@@ -309,18 +307,12 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
                     getViewerInstance().recentFilesStore.storeFile( directory );
 
                 if ( !errors.empty() )
-                {
-                    auto menu = viewer->getMenuPlugin();
-                    if ( menu )
-                        menu->showErrorModal( errors );
-                }
+                    showError( errors );
             };
         }
-        return [viewer]()
+        return [] ()
         {
-            auto menu = viewer->getMenuPlugin();
-            if ( menu )
-                menu->showErrorModal( "Cannot open given folder, find more in log." );
+            showError( "Cannot open given folder, find more in log." );
         };
     }, 3 );
 }
@@ -357,9 +349,7 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
                 else
                     return[error = loadRes.error()]
                 {
-                    auto menu = getViewerInstance().getMenuPlugin();
-                    if ( menu )
-                        menu->showErrorModal( error );
+                    showError( error );
                 };
             } );
         }
@@ -503,8 +493,7 @@ bool SaveObjectMenuItem::action()
                         if ( ec )
                             spdlog::error( "rename file {} into {} failed: {}", utf8string( copyPath.value() ), utf8string( savePath ), systemToUtf8( ec.message() ) );
                     }
-                    if ( auto menu = getViewerInstance().getMenuPlugin() )
-                        menu->showErrorModal( error );
+                    showError( error );
                 };
             }
             else if ( copyPath.has_value() )
@@ -591,8 +580,7 @@ bool SaveSelectedMenuItem::action()
                     viewer->recentFilesStore.storeFile( savePath );
                 else
                 {
-                    if ( auto menu = getViewerInstance().getMenuPlugin() )
-                        menu->showErrorModal( "Error saving in MRU-format" );
+                    showError( "Error saving in MRU-format" );
                     spdlog::error( res.error() );
                 }
             };
@@ -607,8 +595,7 @@ bool SaveSelectedMenuItem::action()
         auto res = MeshSave::sceneToObj( objs, savePath );
         if ( !res.has_value() )
         {
-            if ( auto menu = getViewerInstance().getMenuPlugin() )
-                menu->showErrorModal( res.error() );
+            showError( res.error() );
             spdlog::error( res.error() );
         }
         else
@@ -636,8 +623,7 @@ void SaveSceneAsMenuItem::saveScene_( const std::filesystem::path& savePath )
             else
             {
                 spdlog::error( res.error() );
-                if ( auto menu = getViewerInstance().getMenuPlugin() )
-                    menu->showErrorModal( "Error saving in MRU-format" );
+                showError( "Error saving in MRU-format" );
             }
         };
     } );
@@ -688,8 +674,7 @@ bool CaptureScreenshotMenuItem::action()
         if ( !res.has_value() )
         {
             spdlog::warn( "Error saving screenshot: {}", res.error() );
-            if ( auto menu = getViewerInstance().getMenuPlugin() )
-                menu->showErrorModal( res.error() );
+            showError( res.error() );
         }
     }
     return false;
@@ -715,8 +700,7 @@ bool CaptureUIScreenshotMenuItem::action()
             if ( !res.has_value() )
             {
                 spdlog::warn( "Error saving screenshot: {}", res.error() );
-                if ( auto menu = getViewerInstance().getMenuPlugin() )
-                    menu->showErrorModal( res.error() );
+                showError( res.error() );
             }
         }
     } );

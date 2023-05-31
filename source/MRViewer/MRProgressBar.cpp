@@ -280,8 +280,7 @@ void ProgressBar::tryRunTask_()
         onFinish_ = [msg = std::string( badAllocE.what() )]()
         {
             spdlog::error( msg );
-            if ( auto menu = getViewerInstance().getMenuPlugin() )
-                menu->showErrorModal( "Device ran out of memory during this operation." );
+            showError( "Device ran out of memory during this operation." );
         };
     }
     catch ( const std::exception& e )
@@ -289,8 +288,7 @@ void ProgressBar::tryRunTask_()
         onFinish_ = [msg = std::string( e.what() )]()
         {
             spdlog::error( msg );
-            if ( auto menu = getViewerInstance().getMenuPlugin() )
-                menu->showErrorModal( msg );
+            showError( msg );
         };
     }
 #endif
@@ -310,8 +308,7 @@ void ProgressBar::tryRunTaskWithSehHandler_()
         onFinish_ = []()
         {
             spdlog::error( "Unknown exception occurred" );
-            if ( auto menu = getViewerInstance().getMenuPlugin() )
-                menu->showErrorModal( "Unknown exception occurred" );
+            showError( "Unknown exception occurred" );
         };
     }
 #endif

@@ -124,7 +124,7 @@ tl::expected<std::vector<MultipleEdge>, std::string> findMultipleEdges( const Me
     } );
 
     if ( !keepGoing.load( std::memory_order_relaxed ) || ( cb && !cb( 1.0f ) ) )
-        return tl::make_unexpected( "Operation was canceled" );
+        return unexpectedOperationCanceled();
 
     std::vector<MultipleEdge> res;
     for ( const auto & ns : threadData )
@@ -198,7 +198,7 @@ tl::expected<FaceBitSet, std::string> findDegenerateFaces( const MeshPart& mp, f
     }, cb );
 
     if ( !completed )
-        return tl::make_unexpected( "Operation was canceled" );
+        return unexpectedOperationCanceled();
 
     return res;
 }
@@ -217,7 +217,7 @@ tl::expected<UndirectedEdgeBitSet, std::string> findShortEdges( const MeshPart& 
     }, cb );    
 
     if ( !completed )
-        return tl::make_unexpected( "Operation was canceled" );
+        return unexpectedOperationCanceled();
 
     return res;
 }

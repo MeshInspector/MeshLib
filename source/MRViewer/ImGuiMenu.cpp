@@ -2429,11 +2429,9 @@ void ImGuiMenu::draw_mr_menu()
                         }
                         else
                             return [error = loadRes.error()] ()
-                            {
-                                auto menu = getViewerInstance().getMenuPlugin();
-                                if ( menu )
-                                    menu->showErrorModal( error );
-                            };
+                        {
+                            showError( error );
+                        };
                     }, 2 );
                 }
 #endif
@@ -2890,6 +2888,12 @@ StateBasePlugin* ImGuiMenu::PluginsCache::findEnabled() const
 const std::vector<StateBasePlugin*>& ImGuiMenu::PluginsCache::getTabPlugins( StatePluginTabs tab ) const
 {
     return sortedCustomPlufins_[int( tab )];
+}
+
+void showError( const std::string& error )
+{
+    if ( auto menu = getViewerInstance().getMenuPlugin() )
+        menu->showErrorModal( error );
 }
 
 } // end namespace

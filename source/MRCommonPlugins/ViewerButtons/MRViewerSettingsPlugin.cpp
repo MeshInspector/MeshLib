@@ -174,8 +174,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     ColorTheme::setupUserTheme( userThemesPresets_[selectedUserIdxBackup] );
                 selectedUserPreset_ = selectedUserIdxBackup;
 
-                if ( auto menu = getViewerInstance().getMenuPlugin() )
-                    menu->showErrorModal( "This theme is not valid." );
+                showError( "This theme is not valid." );
             }
             backgroundColor_ = Vector4f( ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::Background ) );
             ColorTheme::apply();

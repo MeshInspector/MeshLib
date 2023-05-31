@@ -624,7 +624,7 @@ VoidOrErrStr VoxelGraphCut::segment( Context & context )
     
     float progress = 1.0f / 16;
     if ( !reportProgress( context.cb, progress ) )
-        return tl::make_unexpected( "Operation was canceled" );
+        return unexpectedOperationCanceled();
     const float targetProgress = 1.0f;
     
     for ( size_t i = 0;; ++i )
@@ -634,7 +634,7 @@ VoidOrErrStr VoxelGraphCut::segment( Context & context )
         {
             progress += ( targetProgress - progress ) * 0.5f;
             if ( !context.cb( progress ) )
-                return tl::make_unexpected( "Operation was canceled" );
+                return unexpectedOperationCanceled();
         }
         bool anyActive = false;
         for ( auto p : context.active )
@@ -1116,20 +1116,20 @@ tl::expected<VoxelBitSet, std::string> segmentVolumeByGraphCut( const SimpleVolu
     MR_TIMER
 
     if ( !reportProgress( cb, 0.0f ) )
-        return tl::make_unexpected( "Operation was canceled" );
+        return unexpectedOperationCanceled();
 
     VoxelGraphCut vgc( densityVolume.dims );
     vgc.resize( sourceSeeds, sinkSeeds );
     if ( !reportProgress( cb, 2.0f / 16 ) )
-        return tl::make_unexpected( "Operation was canceled" );
+        return unexpectedOperationCanceled();
 
     vgc.setupCapacities( densityVolume, k, sourceSeeds, sinkSeeds );
     if ( !reportProgress( cb, 3.0f / 16 ) )
-        return tl::make_unexpected( "Operation was canceled" );
+        return unexpectedOperationCanceled();
 
     vgc.setupNeighbors();
     if ( !reportProgress( cb, 4.0f / 16 ) )
-        return tl::make_unexpected( "Operation was canceled" );
+        return unexpectedOperationCanceled();
 
     auto parts = vgc.getSubtasks();
     // parallel threads shall be able to safely modify elements in bit-sets
@@ -1184,7 +1184,7 @@ tl::expected<VoxelBitSet, std::string> segmentVolumeByGraphCut( const SimpleVolu
         total.log( fmt::format( " after {} parts", parts.size() ) );
         parts.resize( parts.size() / 2 );
         if ( !reportProgress( cb, 1.0f / ( power + 1 ) ) )
-            return tl::make_unexpected( "Operation was canceled" );
+            return unexpectedOperationCanceled();
     }
     //auto cflow = vgc.computeFlow();
     //spdlog::info( "VoxelGraphCut: flow-exiting-sources={}, flow-entering-sinks={}", cflow.outSource, cflow.inSink );

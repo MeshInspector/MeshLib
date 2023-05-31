@@ -280,7 +280,7 @@ TrianglesSortRes sortPropagateContour(
             if ( !closed && ( nextIndex < 0 || nextIndex >= size ) )
                 return {}; // reached end of non closed contour
             nextL = IntersectionId( ( nextIndex + size ) % size );
-            if ( closed && nextL + step == size )
+            if ( closed && nextL + 1 == size )
                 continue;
             if ( nextL == stopInter )
                 return {}; // reached stop intersection in the contour

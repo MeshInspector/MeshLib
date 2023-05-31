@@ -81,11 +81,15 @@ std::vector<std::string> ObjectLines::getInfoLines() const
 {
     std::vector<std::string> res = ObjectLinesHolder::getInfoLines();
 
-    std::stringstream ss;
     if ( polyline_ )
     {
-        ss << "vertices : " << polyline_->topology.numValidVerts();
-        res.push_back( ss.str() );
+        res.push_back( "components: " + std::to_string( numComponents() ) );
+
+        res.push_back( "vertices: " + std::to_string( polyline_->topology.numValidVerts() ) );
+        if( polyline_->topology.numValidVerts() < polyline_->topology.vertSize() )
+            res.back() += " / " + std::to_string( polyline_->topology.vertSize() ) + " size";
+        if( polyline_->topology.vertSize() < polyline_->topology.vertCapacity() )
+            res.back() += " / " + std::to_string( polyline_->topology.vertCapacity() ) + " capacity";
 
         if ( !totalLength_ )
             totalLength_ = polyline_->totalLength();

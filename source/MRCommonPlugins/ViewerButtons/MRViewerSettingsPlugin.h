@@ -46,7 +46,9 @@ private:
     std::unique_ptr<ShadowsGL> shadowGl_;
 
     SpaceMouseController::Params spaceMouseParams_;
+#ifdef _WIN32
     bool activeMouseScrollZoom_{ false };
+#endif
 };
 
 }

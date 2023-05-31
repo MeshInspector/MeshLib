@@ -205,7 +205,6 @@ void SpaceMouseHandlerHidapi::postFocusSignal_( bool focused )
 {
     active_ = focused;
     cv_.notify_one();
-    spdlog::debug( "state - {}", focused );
 }
 
 void SpaceMouseHandlerHidapi::activateMouseScrollZoom( bool activeMouseScrollZoom )
@@ -278,15 +277,9 @@ void SpaceMouseHandlerHidapi::processAction_( const SpaceMouseAction& action )
          for (int btn = 0; btn < SMB_BUTTON_COUNT; ++btn)
          {
              if ( new_unpressed.test( btn ) )
-             {
-                 spdlog::debug("SpaceMouse button up   - {}", btn);
                  viewer.spaceMouseUp( btn );
-             }
              if ( new_pressed.test( btn ) )
-             {
-                 spdlog::debug("SpaceMouse button down - {}", btn);
                  viewer.spaceMouseDown( btn );
-             }
          }
          buttonsState_ = action.buttons;
      }

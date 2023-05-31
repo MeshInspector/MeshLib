@@ -79,7 +79,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     {
         auto& viewerRef = getViewerInstance();
         spaceMouseParams_ = viewerRef.spaceMouseController.getParams();
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__)
         if ( auto spaceMouseHandler = viewerRef.getSpaceMouseHandler() )
         {
             auto hidapiHandler = std::dynamic_pointer_cast<MR::SpaceMouseHandlerHidapi>( spaceMouseHandler );
@@ -483,7 +483,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
     drawSlider( "Ox##rotate", spaceMouseParams_.rotateScale[0] );
     drawSlider( "Oy##rotate", spaceMouseParams_.rotateScale[1] );
     drawSlider( "Oz##rotate", spaceMouseParams_.rotateScale[2] );
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__)
     ImGui::NewLine();
     if ( UI::checkbox( "Zoom by mouse wheel", &activeMouseScrollZoom_ ) )
     {

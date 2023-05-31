@@ -11,7 +11,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer/MRGLMacro.h"
 #include "MRViewer/MRGladGlfw.h"
-#include "MRSpaceMouseHandlerWindows.h"
+#include "MRSpaceMouseHandlerHidapi.h"
 
 namespace
 {
@@ -226,11 +226,11 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         {
             if ( auto spaceMouseHandler =  viewer.getSpaceMouseHandler() )
             {
-                auto winHandler = std::dynamic_pointer_cast< SpaceMouseHandlerWindows >( spaceMouseHandler );
-                if ( winHandler )
+                auto hidapiHandler = std::dynamic_pointer_cast< SpaceMouseHandlerHidapi >( spaceMouseHandler );
+                if ( hidapiHandler )
                 {
                     const bool activeMouseScrollZoom = paramsJson["activeMouseScrollZoom"].asBool();
-                    winHandler->activateMouseScrollZoom( activeMouseScrollZoom );
+                    hidapiHandler->activateMouseScrollZoom( activeMouseScrollZoom );
                 }
             }
         }
@@ -305,10 +305,10 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
 #ifdef _WIN32
     if ( auto spaceMouseHandler = viewer.getSpaceMouseHandler() )
     {
-        auto winHandler = std::dynamic_pointer_cast< SpaceMouseHandlerWindows >( spaceMouseHandler );
-        if ( winHandler )
+        auto hidapinHandler = std::dynamic_pointer_cast< SpaceMouseHandlerHidapi >( spaceMouseHandler );
+        if ( hidapinHandler )
         {
-            spaceMouseParamsJson["activeMouseScrollZoom"] = winHandler->isMouseScrollZoomActive();
+            spaceMouseParamsJson["activeMouseScrollZoom"] = hidapinHandler->isMouseScrollZoomActive();
         }
     }
 #endif

@@ -85,6 +85,9 @@ jobs:
           py -3.10 -m pip install --upgrade pip
           py -3.10 -m pip install -r .\requirements\python.txt
 
+      - name: Update thirdparty
+        run: vcpkg install --recurse --binarysource=clear --overlay-triplets thirdparty\vcpkg\triplets  hidapi:x64-windows-meshlib
+        
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.3
 

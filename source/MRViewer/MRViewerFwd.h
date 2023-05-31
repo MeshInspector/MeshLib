@@ -18,6 +18,7 @@ class Palette;
 class RecentFilesStore;
 class ScopeHistory;
 class SelectScreenLasso;
+class SpaceMouseHandlerHidapi;
 class SplashWindow;
 class StateBasePlugin;
 class ViewerPlugin;

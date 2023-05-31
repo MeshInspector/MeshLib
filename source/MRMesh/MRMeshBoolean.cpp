@@ -15,6 +15,8 @@
 #include "MRRegionBoundary.h"
 #include "MRMeshComponents.h"
 #include "MRMeshCollide.h"
+#include "MRCube.h"
+#include "MRMeshBuilder.h"
 
 namespace
 {
@@ -523,10 +525,58 @@ TEST( MRMesh, MeshBoolean )
                     xf = AffineXf3f::translation( shiftVec ) * AffineXf3f::linear( rotation );
 
                     EXPECT_TRUE( boolean( meshA, meshB, BooleanOperation::Union, &xf ).valid() );
-                    EXPECT_TRUE( boolean( meshA, meshB, BooleanOperation::Intersection, &xf ).valid() );
+                    EXPECT_TRUE( boolean( meshB, meshA, BooleanOperation::Intersection, &xf ).valid() );
                 }
             }
         }
+    }
+}
+
+
+TEST( MRMesh, BooleanMultipleEdgePropogationSort )
+{
+    Mesh meshA;
+    meshA.points = std::vector<Vector3f>
+    {
+        {0.0f,0.0f,0.0f},
+        {-0.5f,1.0f,0.0f},
+        {0.5f,1.0f,0.0f},
+
+
+        {0.0f,1.5f,0.5f},
+        //{0.0f,1.5f,-0.5f},
+
+
+        {-1.0f,1.5f,0.0f},
+        {1.0f,1.5f,0.0f}
+    };
+    Triangulation tA =
+    {
+        { 0_v, 2_v, 1_v },
+        { 1_v, 2_v, 3_v },
+        { 3_v, 4_v, 1_v },
+        { 2_v, 5_v, 3_v },
+        { 3_v, 5_v, 4_v }
+    };
+    meshA.topology = MeshBuilder::fromTriangles( tA );
+    {
+        Mesh meshASup = meshA;
+        meshASup.points[3_v] = { 0.0f,1.5f,-0.5f };
+
+
+        auto border = trackRightBoundaryLoop( meshA.topology, meshA.topology.findHoleRepresentiveEdges()[0] );
+
+        meshA.addPartByMask( meshASup, meshASup.topology.getValidFaces(), true, { border }, { border } );
+    }
+
+    auto meshB = makeCube( Vector3f::diagonal( 2.0f ) );
+    meshB.transform( AffineXf3f::translation( Vector3f( -1.5f, -0.2f, -0.5f ) ) );
+
+
+    for ( int i = 0; i<int( BooleanOperation::Count ); ++i )
+    {
+        EXPECT_TRUE( boolean( meshA, meshB, BooleanOperation( i ) ).valid() );
+        EXPECT_TRUE( boolean( meshB, meshA, BooleanOperation( i ) ).valid() );
     }
 }
 

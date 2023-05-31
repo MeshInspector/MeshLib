@@ -1,10 +1,19 @@
 #pragma once
 #include "MRViewer/MRRibbonMenuItem.h"
 #include "MRMesh/MRIOFilters.h"
+#include <filesystem>
 
 namespace MR
 {
 using FileNamesStack = std::vector<std::filesystem::path>;
+
+class OpenDirectoryMenuItem : public RibbonMenuItem
+{
+public:
+    OpenDirectoryMenuItem();
+    virtual bool action() override;
+    void openDirectory( const std::filesystem::path& directory ) const;
+};
 
 class OpenFilesMenuItem : public RibbonMenuItem, public MultiListener<DragDropListener>
 {
@@ -22,13 +31,7 @@ private:
     boost::signals2::scoped_connection recentStoreConnection_;
     FileNamesStack recentPathsCache_;
     IOFilters filters_;
-};
-
-class OpenDirectoryMenuItem : public RibbonMenuItem
-{
-public:
-    OpenDirectoryMenuItem();
-    virtual bool action() override;
+    std::shared_ptr<OpenDirectoryMenuItem> openDirectoryItem_;
 };
 
 #ifndef MRMESH_NO_DICOM

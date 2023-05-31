@@ -72,6 +72,9 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
     // required to be deferred, resent items store to be initialized
     CommandLoop::appendCommand( [&] ()
     {
+        auto openDirIt = RibbonSchemaHolder::schema().items.find( "Open directory" );
+        if ( openDirIt != RibbonSchemaHolder::schema().items.end() )
+            openDirectoryItem_ = std::dynamic_pointer_cast<OpenDirectoryMenuItem>( openDirIt->second.item );
         setupListUpdate_();
         connect( &getViewerInstance() );
         // required to be deferred, for valid emscripten static constructors oreder 
@@ -160,7 +163,7 @@ void OpenFilesMenuItem::setupListUpdate_()
 
     const auto cutLongFileNames = [this]
     {
-        static constexpr size_t fileNameLimit = 50;
+        static constexpr size_t fileNameLimit = 75;
 
         for ( int i = 0; i < dropList_.size(); ++i )
         {
@@ -170,9 +173,18 @@ void OpenFilesMenuItem::setupListUpdate_()
                 pathStr = pathStr.substr( 0, fileNameLimit / 2 ) + " ... " + pathStr.substr( size - fileNameLimit / 2 );
 
             auto filesystemPath = recentPathsCache_[i];
-            dropList_[i] = std::make_shared<LambdaRibbonItem>( pathStr + "##" + std::to_string( i ), [filesystemPath] ()
+            dropList_[i] = std::make_shared<LambdaRibbonItem>( pathStr + "##" + std::to_string( i ), [this, filesystemPath] ()
             {
-                getViewerInstance().loadFiles( { filesystemPath } );
+                std::error_code ec;
+                if ( std::filesystem::is_directory( filesystemPath, ec ) )
+                {
+                    if ( openDirectoryItem_ )
+                        openDirectoryItem_->openDirectory( filesystemPath );
+                }
+                else
+                {
+                    getViewerInstance().loadFiles( { filesystemPath } );
+                }
             } );
         }
     };
@@ -269,7 +281,7 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
                         errors = simpleError;
                 }
             }
-            return [viewer, voxelObjects, errors] ()
+            return [viewer, voxelObjects, errors, directory] ()
             {
                 SCOPED_HISTORY( "Open DICOMs" );
                 for ( auto & obj : voxelObjects )
@@ -278,6 +290,9 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
                     SceneRoot::get().addChild( obj );
                 }
                 viewer->viewport().preciseFitDataToScreenBorder( { 0.9f }  );
+
+                if ( !voxelObjects.empty() )
+                    getViewerInstance().recentFilesStore.storeFile( directory );
 
                 if ( !errors.empty() )
                 {
@@ -299,7 +314,12 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
 
 bool OpenDirectoryMenuItem::action()
 {
-    auto directory = openFolderDialog();
+    openDirectory( openFolderDialog() );
+    return false;
+}
+
+void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& directory ) const
+{
     if ( !directory.empty() )
     {
         bool isAnySupportedFiles = isSupportedFileInSubfolders( directory );
@@ -311,21 +331,22 @@ bool OpenDirectoryMenuItem::action()
                 if ( loadRes.has_value() )
                 {
                     auto obj = std::make_shared<Object>( std::move( *loadRes ) );
-                    return[obj]
+                    return[obj, directory]
                     {
                         sSelectRecursive( *obj );
                         AppendHistory<ChangeSceneAction>( "Open Directory", obj, ChangeSceneAction::Type::AddObject );
                         SceneRoot::get().addChild( obj );
                         getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
+                        getViewerInstance().recentFilesStore.storeFile( directory );
                     };
                 }
                 else
                     return[error = loadRes.error()]
-                    {
-                        auto menu = getViewerInstance().getMenuPlugin();
-                        if ( menu )
-                            menu->showErrorModal( error );
-                    };
+                {
+                    auto menu = getViewerInstance().getMenuPlugin();
+                    if ( menu )
+                        menu->showErrorModal( error );
+                };
             } );
         }
 #if !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
@@ -335,7 +356,6 @@ bool OpenDirectoryMenuItem::action()
         }
 #endif
     }
-    return false;
 }
 
 #if !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)

@@ -80,7 +80,7 @@ enum class TrianglesSortRes
     Right         // second triangle is form right side of oriented ABC
 };
 
-void preparePreciseVerts( const SortIntersectionsData& sortData, VertId* verts, PreciseVertCoords* preciseVerts, int n )
+void preparePreciseVerts( const SortIntersectionsData& sortData, const VertId* verts, PreciseVertCoords* preciseVerts, int n )
 {
     if ( sortData.isOtherA )
     {
@@ -113,6 +113,9 @@ TrianglesSortRes sortTrianglesSharedEdge( const SortIntersectionsData& sortData,
     verts[2] = topology.dest( sharedEdge );
     verts[3] = topology.dest( topology.prev( sharedEdge ) );
 
+    if ( verts[0] == verts[3] )
+        return TrianglesSortRes::Undetermined;
+
     preparePreciseVerts( sortData, verts.data(), preciseVerts.data(), 4 );
 
     if ( orient3d( preciseVerts ) )
@@ -135,6 +138,23 @@ TrianglesSortRes sortTrianglesSharedVert( const SortIntersectionsData& sortData,
     verts[3] = topology.dest( sharedVertOrg );
     verts[4] = topology.dest( topology.next( sharedVertOrg ) );
 
+    // check multiple case
+    bool multiple3 = verts[3] == verts[0] || verts[3] == verts[1] || verts[3] == verts[2];
+    bool multiple4 = verts[4] == verts[0] || verts[4] == verts[1] || verts[4] == verts[2];
+    if ( multiple3 && multiple4 )
+        return TrianglesSortRes::Undetermined;
+    if ( multiple3 )
+        std::swap( preciseVerts[3], preciseVerts[4] );
+    if ( multiple3 || multiple4 )
+    {
+        preparePreciseVerts( sortData, verts.data(), preciseVerts.data(), 4 );
+        if ( orient3d( preciseVerts.data() ) )
+            return TrianglesSortRes::Left;
+        else
+            return TrianglesSortRes::Right;
+    }
+
+    // common non-multiple case
     preparePreciseVerts( sortData, verts.data(), preciseVerts.data(), 5 );
 
     bool oneRes = orient3d( preciseVerts.data() );
@@ -256,9 +276,12 @@ TrianglesSortRes sortPropagateContour(
         for ( ;;)
         {
             int nextIndex = nextL + step;
-            if ( !isClosed( contour ) && ( nextIndex < 0 || nextIndex >= size ) )
+            bool closed = isClosed( contour );
+            if ( !closed && ( nextIndex < 0 || nextIndex >= size ) )
                 return {}; // reached end of non closed contour
             nextL = IntersectionId( ( nextIndex + size ) % size );
+            if ( closed && nextL + 1 == size )
+                continue;
             if ( nextL == stopInter )
                 return {}; // reached stop intersection in the contour
             if ( contour[nextL].isEdgeATriB == edgeATriB )

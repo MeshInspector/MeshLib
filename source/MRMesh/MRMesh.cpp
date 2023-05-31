@@ -427,7 +427,7 @@ tl::expected<VertBitSet, std::string> Mesh::findSpikeVertices( float minSumAngle
     }, cb );
 
     if ( !completed )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     return res;
 }

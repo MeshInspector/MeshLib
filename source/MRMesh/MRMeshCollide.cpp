@@ -241,7 +241,7 @@ tl::expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( co
         subtasks.swap( nextSubtasks );
 
         if ( !reportProgress( sb, i / 16.0f ) )
-            return tlOperationCanceled();
+            return unexpectedOperationCanceled();
     }
     subtasks.insert( subtasks.end(), leafTasks.begin(), leafTasks.end() );
 
@@ -320,7 +320,7 @@ tl::expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( co
     } );
 
     if ( !keepGoing.load( std::memory_order_relaxed ) || !reportProgress( sb, 1.0f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     // unite results from sub-trees into final vector
     size_t cols = 0;
@@ -331,7 +331,7 @@ tl::expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( co
         res.insert( res.end(), s.begin(), s.end() );
 
     if ( !reportProgress( cb, 1.0f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     return res;
 }

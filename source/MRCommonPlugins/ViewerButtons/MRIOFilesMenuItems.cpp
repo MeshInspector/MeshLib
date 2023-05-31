@@ -310,7 +310,7 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
                     showError( errors );
             };
         }
-        return [viewer]()
+        return [] ()
         {
             showError( "Cannot open given folder, find more in log." );
         };

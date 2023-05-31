@@ -63,7 +63,7 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
     }
 
     if ( !grid )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     if ( signPostprocess )
     {
@@ -83,7 +83,7 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
     } );
 
     if ( !newMesh.has_value() )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     return newMesh;
 }
@@ -131,7 +131,7 @@ tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
             Vector3f::diagonal( params.voxelSize ),
             std::abs( offsetInVoxels ) + 2, meshToLSCb );
         if ( !voxelRes )
-            return tlOperationCanceled();
+            return unexpectedOperationCanceled();
 
         VdbVolume volume = floatGridToVdbVolume( voxelRes );
         volume.voxelSize = Vector3f::diagonal( params.voxelSize );
@@ -143,7 +143,7 @@ tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         vmParams.outVoxelPerFaceMap = outMap;
         auto meshRes = vdbVolumeToMesh( volume, vmParams );
         if ( !meshRes )
-            return tlOperationCanceled();
+            return unexpectedOperationCanceled();
 
         return std::move( *meshRes );
     }
@@ -164,7 +164,7 @@ tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         
         auto volume = meshToSimpleVolume( mesh, msParams );
         if ( !volume )
-            return tlOperationCanceled();
+            return unexpectedOperationCanceled();
 
         VolumeToMeshParams vmParams;
         vmParams.origin = msParams.origin;
@@ -174,7 +174,7 @@ tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         vmParams.outVoxelPerFaceMap = outMap;
         auto meshRes = simpleVolumeToMesh( std::move( *volume ), vmParams );
         if ( !meshRes )
-            return tlOperationCanceled();
+            return unexpectedOperationCanceled();
         return std::move( *meshRes );
     }
 }
@@ -199,7 +199,7 @@ tl::expected<MR::Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float off
 
     sharpenMarchingCubesMesh( mesh, res.value(), map, sharpenParams );
     if ( !reportProgress( params.callBack, 0.99f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     return res;
 }

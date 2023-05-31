@@ -39,7 +39,7 @@ tl::expected<FaceBitSet, std::string> findOverlappingTris( const MeshPart & mp, 
             res.set( f );
     }, settings.cb ) )
         return res;
-    return tlOperationCanceled();
+    return unexpectedOperationCanceled();
 }
 
 } //namespace MR

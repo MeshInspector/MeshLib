@@ -86,13 +86,13 @@ VoidOrErrStr gridToPointsAndTris(
     MR_TIMER
 
     if ( !reportProgress( settings.cb, 0.0f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     openvdb::tools::VolumeToMesh mesher( settings.isoValue, settings.adaptivity, settings.relaxDisorientedTriangles );
     mesher(grid);
 
     if ( !reportProgress( settings.cb, 0.7f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     if ( mesher.pointListSize() > settings.maxVertices )
         return tl::make_unexpected( "Vertices number limit exceeded." );
@@ -117,7 +117,7 @@ VoidOrErrStr gridToPointsAndTris(
     inPts.reset(nullptr);
 
     if ( !reportProgress( settings.cb, 0.8f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     auto& polygonPoolList = mesher.polygonPoolList();
 
@@ -178,7 +178,7 @@ VoidOrErrStr gridToPointsAndTris(
     }
 
     if ( !reportProgress( settings.cb, 1.0f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     return {};
 }
@@ -323,7 +323,7 @@ tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const GridToM
 {
     MR_TIMER;
     if ( !reportProgress( settings.cb, 0.0f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     VertCoords pts;
     Triangulation t;
@@ -335,11 +335,11 @@ tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const GridToM
     }
 
     if ( !reportProgress( settings.cb, 0.2f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     Mesh res = Mesh::fromTriangles( std::move( pts ), t, {}, subprogress( settings.cb, 0.2f, 1.0f ) );
     if ( !reportProgress( settings.cb, 1.0f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
     return res;
 }
 
@@ -359,7 +359,7 @@ tl::expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const GridToMeshSe
 {
     MR_TIMER;
     if ( !reportProgress( settings.cb, 0.0f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     VertCoords pts;
     Triangulation t;
@@ -372,11 +372,11 @@ tl::expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const GridToMeshSe
     grid.reset(); // free grid's memory
 
     if ( !reportProgress( settings.cb, 0.2f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     Mesh res = Mesh::fromTriangles( std::move( pts ), t, {}, subprogress( settings.cb, 0.2f, 1.0f ) );
     if ( !reportProgress( settings.cb, 1.0f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
     return res;
 }
 
@@ -516,7 +516,7 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
         }
     }, tbb::static_partitioner() );
     if ( !keepGoing )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
     grid->pruneGrid( 0.0f );
     return {};
 }
@@ -530,7 +530,7 @@ tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, co
     auto offsetInVoxelsB = offsetB / voxelSize;
 
     if ( cb && !cb( 0.0f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     std::vector<openvdb::Vec3s> points;
     std::vector<openvdb::Vec3I> tris;
@@ -538,7 +538,7 @@ tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, co
     convertToVDMMesh( mp, xf, Vector3f::diagonal( voxelSize ), points, tris );
 
     if (cb && !cb( 0.1f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     bool needSignUpdate = !findLeftBoundary( mp.mesh.topology, mp.region ).empty();
 
@@ -553,7 +553,7 @@ tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, co
         ( interrupter1, *xform, points, tris, std::abs( offsetInVoxelsA ) + 1 ) );
 
     if ( interrupter1.getWasInterrupted() )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     if ( needSignUpdate )
     {
@@ -566,7 +566,7 @@ tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, co
     openvdb::tools::volumeToMesh( *grid, points, tris, quads, offsetInVoxelsA, adaptivity );
 
     if ( cb && !cb( 0.5f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
     sp = subprogress( cb, 0.5f, 0.7f );
 
     Interrupter interrupter2( sp );
@@ -574,7 +574,7 @@ tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, co
         ( interrupter2, *xform, points, tris, quads, std::abs( offsetInVoxelsB ) + 1 ) );
 
     if ( interrupter2.getWasInterrupted() || ( cb && !cb( 0.9f ) ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     VertCoords pts;
     Triangulation t;
@@ -584,7 +584,7 @@ tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, co
         .adaptivity = adaptivity,
         .cb = subprogress( cb, 0.9f, 0.95f )
     } ); !x )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     Mesh res = Mesh::fromTriangles( std::move( pts ), t );
     cb && !cb( 1.0f );

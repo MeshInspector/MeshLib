@@ -618,7 +618,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
     } );
 
     if ( params.cb && !keepGoing )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     // numerate verts in parallel (to have packed mesh as result, determined numeration independent of thread number)
     struct VertsNumeration
@@ -701,7 +701,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
 
 
     if ( params.cb && !params.cb( 0.5f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     // check neighbor iterator valid
     auto checkIter = [&] ( const auto& iter, int mode ) -> bool
@@ -907,7 +907,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
     }, tbb::static_partitioner() );
 
     if ( params.cb && !keepGoing )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     // organize per thread triangulation
     std::vector<TriangulationData> resTriangulatoinData;
@@ -948,7 +948,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
     assert( result.points.size() == totalVertices );
 
     if ( params.cb && !params.cb( 0.95f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ),
         [&] ( const tbb::blocked_range<size_t>& range )
@@ -966,7 +966,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
     } );
 
     if ( params.cb && !params.cb( 1.0f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     return result;
 }

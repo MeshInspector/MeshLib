@@ -175,8 +175,8 @@ tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSur
         }
         if ( meshRes.has_value() )
             return std::make_shared<Mesh>( std::move( meshRes.value() ) );
-        if ( !meshRes.has_value() && meshRes.error() == operationCanceledLine() )
-            return tlOperationCanceled();
+        if ( !meshRes.has_value() && meshRes.error() == stringOperationCanceled() )
+            return unexpectedOperationCanceled();
         vdbVolume.data = resampled( vdbVolume.data, 2.0f );
         vdbVolume.voxelSize *= 2.0f;
         auto vdbDims = vdbVolume.data->evalActiveVoxelDim();

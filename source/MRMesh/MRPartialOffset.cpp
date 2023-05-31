@@ -14,12 +14,12 @@ tl::expected<Mesh, std::string> partialOffsetMesh( const MeshPart& mp, float off
     realParams.callBack = subprogress( params.callBack, 0.0f, 0.5f );
     auto offsetPart = offsetMesh( mp, offset, realParams );
     if ( params.callBack && !params.callBack( 0.5f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
     if ( !offsetPart.has_value() )
         return offsetPart;
     auto res = boolean( mp.mesh, *offsetPart, BooleanOperation::Union, nullptr, nullptr, subprogress( params.callBack, 0.5f, 1.0f ) );
-    if ( res.errorString == operationCanceledLine() )
-        return tlOperationCanceled();
+    if ( res.errorString == stringOperationCanceled() )
+        return unexpectedOperationCanceled();
     if ( !res.valid() )
         return tl::make_unexpected("Partial offset failed: " + res.errorString );
     return std::move( res.mesh );

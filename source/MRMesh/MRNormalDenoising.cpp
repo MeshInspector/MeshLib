@@ -194,13 +194,13 @@ VoidOrErrStr meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings
     }
 
     if ( !reportProgress( settings.cb, 0.0f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     auto fnormals0 = computePerFaceNormals( mesh );
     Vector<float, UndirectedEdgeId> v( mesh.topology.undirectedEdgeSize(), 1 );
 
     if ( !reportProgress( settings.cb, 0.05f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     auto sp = subprogress( settings.cb, 0.05f, 0.95f );
     FaceNormals fnormals;
@@ -209,11 +209,11 @@ VoidOrErrStr meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings
         fnormals = fnormals0;
         denoiseNormals( mesh, fnormals, v, settings.gamma );
         if ( !reportProgress( sp, float( 2 * i ) / ( 2 * settings.normalIters ) ) )
-            return tlOperationCanceled();
+            return unexpectedOperationCanceled();
 
         updateIndicator( mesh, v, fnormals, settings.beta, settings.gamma );
         if ( !reportProgress( sp, float( 2 * i + 1 ) / ( 2 * settings.normalIters ) ) )
-            return tlOperationCanceled();
+            return unexpectedOperationCanceled();
     }
 
     if ( settings.outCreases )
@@ -228,7 +228,7 @@ VoidOrErrStr meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings
     }
 
     if ( !reportProgress( settings.cb, 0.95f ) )
-        return tlOperationCanceled();
+        return unexpectedOperationCanceled();
 
     const auto guide = mesh.points;
     NormalsToPoints n2p;

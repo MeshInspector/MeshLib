@@ -180,8 +180,14 @@ void OpenFilesMenuItem::setupListUpdate_()
                 pathStr = pathStr.substr( 0, fileNameLimit / 2 ) + " ... " + pathStr.substr( size - fileNameLimit / 2 );
 
             auto filesystemPath = recentPathsCache_[i];
-            dropList_[i] = std::make_shared<LambdaRibbonItem>( pathStr + "##" + std::to_string( i ), [this, filesystemPath] ()
+            dropList_[i] = std::make_shared<LambdaRibbonItem>( pathStr + "##" + std::to_string( i ), 
+#ifndef __EMSCRIPTEN__
+                [this, filesystemPath] ()
+#else
+                [filesystemPath] ()
+#endif
             {
+#ifndef __EMSCRIPTEN__
                 std::error_code ec;
                 if ( std::filesystem::is_directory( filesystemPath, ec ) )
                 {
@@ -189,6 +195,7 @@ void OpenFilesMenuItem::setupListUpdate_()
                         openDirectoryItem_->openDirectory( filesystemPath );
                 }
                 else
+#endif
                 {
                     getViewerInstance().loadFiles( { filesystemPath } );
                 }

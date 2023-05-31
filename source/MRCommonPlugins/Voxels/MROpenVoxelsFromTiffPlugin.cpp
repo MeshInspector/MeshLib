@@ -74,17 +74,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
             const auto returnError = [directory, loadRes]() -> void
             {
-                auto menu = getViewerInstance().getMenuPlugin();
-                if ( !menu )
-                    return;
-
-                if ( ProgressBar::isCanceled() )
-                {
-                    menu->showErrorModal( getCancelMessage( directory ) );
-                    return;
-                }
-
-                menu->showErrorModal( loadRes.error() );
+                showError( ProgressBar::isCanceled() ? getCancelMessage( directory ) : loadRes.error() );
             };            
 
             if ( ProgressBar::isCanceled() || !loadRes.has_value() )

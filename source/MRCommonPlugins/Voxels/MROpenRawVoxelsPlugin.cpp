@@ -74,11 +74,8 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
                 const auto showError = [error] () -> void
                 {
-                    auto menu = getViewerInstance().getMenuPlugin();
-                    if ( !menu || !error)
-                        return;
-
-                    menu->showErrorModal( *error );
+                    if ( error )
+                        MR::showError( *error );
                 };
 
                 

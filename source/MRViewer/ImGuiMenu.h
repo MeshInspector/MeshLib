@@ -342,4 +342,8 @@ protected:
     MRVIEWER_API float getSceneInfoItemWidth_( size_t itemCount  = 1 );
 };
 
+
+// Check if menu is available and if it is, shows error
+MRVIEWER_API void showError( const std::string& error );
+
 } // end namespace

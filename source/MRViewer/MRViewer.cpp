@@ -969,13 +969,12 @@ bool Viewer::loadFiles( const std::vector< std::filesystem::path>& filesList )
                 }
                 getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
             }
-            auto menu = getViewerInstance().getMenuPlugin();
-            if ( menu && !errorList.empty() )
+            if ( !errorList.empty() )
             {
                 std::string errorAll;
                 for ( auto& error : errorList )
                     errorAll += "\n" + error;
-                menu->showErrorModal( errorAll.substr( 1 ) );
+                showError( errorAll.substr( 1 ) );
             }
         };
     } );

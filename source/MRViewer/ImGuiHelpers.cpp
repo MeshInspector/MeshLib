@@ -886,8 +886,8 @@ PaletteChanges Palette(
             {
                 if ( PalettePresets::loadPreset( presets[presetIndex], palette ) )
                     presetName = presets[presetIndex];
-                else if ( auto menu = getViewerInstance().getMenuPlugin() )
-                    menu->showErrorModal( "Cannot load preset with name: \"" + presets[presetIndex] + "\"" );
+                else
+                    showError( "Cannot load preset with name: \"" + presets[presetIndex] + "\"" );
             }
 
             if ( fixZero )
@@ -1103,8 +1103,7 @@ PaletteChanges Palette(
             }
             else
             {
-                if ( auto menu = getViewerInstance().getMenuPlugin() )
-                    menu->showErrorModal( res.error() );
+                showError( res.error() );
             }
         }
     }
@@ -1134,8 +1133,7 @@ PaletteChanges Palette(
             }
             else
             {
-                if ( auto menu = getViewerInstance().getMenuPlugin() )
-                    menu->showErrorModal( res.error() );
+                showError( res.error() );
             }
         }
         ImGui::SameLine( 0, p );

@@ -153,7 +153,7 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
         auto loneContoursIds = detectLoneContours( contours );
 
         if ( loneCb && !loneCb( ( std::log10( float( iters + 1 ) * 0.1f ) + 2.0f ) / 3.0f ) )
-            return { .errorString = "Operation was canceled." };
+            return { .errorString = operationCanceledLine() };
 
         if ( !loneContoursIds.empty() && ( loneContoursIds == prevLoneContoursIds || iters == cMaxFixLoneIterations ) )
         {
@@ -242,7 +242,7 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
 
     auto mainCb = subprogress( cb, 0.8f, 1.0f );
     if ( mainCb && !mainCb( 0.0f ) )
-        return { .errorString = "Operation was canceled." };
+        return { .errorString = operationCanceledLine() };
 
     std::vector<EdgePath> cutA, cutB;
     OneMeshContours meshAContours;
@@ -275,7 +275,7 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
     }
 
     if ( mainCb && !mainCb( 0.33f ) )
-        return { .errorString = "Operation was canceled." };
+        return { .errorString = operationCanceledLine() };
 
     if ( needCutMeshA )
     {
@@ -348,12 +348,12 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
         cutB = std::move( res.resultCut );
     }
     if ( mainCb && !mainCb( 0.66f ) )
-        return { .errorString = "Operation was canceled." };
+        return { .errorString = operationCanceledLine() };
     // do operation
     auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), cutA, cutB, operation, rigidB2A, mapper );
 
     if ( mainCb && !mainCb( 1.0f ) )
-        return { .errorString = "Operation was canceled." };
+        return { .errorString = operationCanceledLine() };
 
     if ( res.has_value() )
         result.mesh = std::move( res.value() );

@@ -5,6 +5,7 @@
 #include "MRTimer.h"
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
+#include "MRExpected.h"
 #include <atomic>
 #include <thread>
 
@@ -240,7 +241,7 @@ tl::expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( co
         subtasks.swap( nextSubtasks );
 
         if ( !reportProgress( sb, i / 16.0f ) )
-            return tl::make_unexpected( "Operation was canceled" );
+            return tlOperationCanceled();
     }
     subtasks.insert( subtasks.end(), leafTasks.begin(), leafTasks.end() );
 
@@ -319,7 +320,7 @@ tl::expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( co
     } );
 
     if ( !keepGoing.load( std::memory_order_relaxed ) || !reportProgress( sb, 1.0f ) )
-        return tl::make_unexpected( "Operation was canceled" );
+        return tlOperationCanceled();
 
     // unite results from sub-trees into final vector
     size_t cols = 0;
@@ -330,7 +331,7 @@ tl::expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( co
         res.insert( res.end(), s.begin(), s.end() );
 
     if ( !reportProgress( cb, 1.0f ) )
-        return tl::make_unexpected( "Operation was canceled" );
+        return tlOperationCanceled();
 
     return res;
 }

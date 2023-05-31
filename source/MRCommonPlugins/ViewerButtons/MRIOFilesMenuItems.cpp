@@ -182,7 +182,6 @@ void OpenFilesMenuItem::setupListUpdate_()
             auto filesystemPath = recentPathsCache_[i];
             dropList_[i] = std::make_shared<LambdaRibbonItem>( pathStr + "##" + std::to_string( i ), [this, filesystemPath] ()
             {
-#ifndef __EMSCRIPTEN__
                 std::error_code ec;
                 if ( std::filesystem::is_directory( filesystemPath, ec ) )
                 {
@@ -190,7 +189,6 @@ void OpenFilesMenuItem::setupListUpdate_()
                         openDirectoryItem_->openDirectory( filesystemPath );
                 }
                 else
-#endif
                 {
                     getViewerInstance().loadFiles( { filesystemPath } );
                 }

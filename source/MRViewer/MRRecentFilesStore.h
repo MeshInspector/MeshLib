@@ -19,7 +19,7 @@ public:
     RecentFilesStore() = default;
     // Capacity is maximum stored filenames,
     // it needs app name to store data to correct place in system storage
-    RecentFilesStore( std::string appName, int capacity = 5 ) :
+    RecentFilesStore( std::string appName, int capacity = 10 ) :
         appName_{std::move(appName)}, capacity_{capacity} {}
 
     // Saves filename on top of recently opened stack,

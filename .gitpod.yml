@@ -7,4 +7,6 @@ image:
 
 tasks:
   - name: Install thirdparty libs
-    init: ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
+    init: |
+      ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
+      ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include

@@ -1730,7 +1730,6 @@ void cutEdgesIntoPieces( Mesh& mesh,
 {
     MR_TIMER;
     // sort each edge intersections in parallel
-    tbb::global_control c( tbb::global_control::max_allowed_parallelism, 1 );
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, edgeData.subcnt(), 1 ),
         [&] ( const tbb::blocked_range<size_t>& range )
     {

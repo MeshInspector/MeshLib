@@ -492,7 +492,8 @@ void Viewport::draw_axes() const
 {
     if ( Viewer::constInstance()->basisAxes->isVisible( id ) )
     {
-        auto fullInversedM = (staticProj_ * viewM_).inverse();
+        // compute inverse in double precision to avoid NaN for very small scales
+        auto fullInversedM = Matrix4f( ( Matrix4d( staticProj_ ) * Matrix4d( viewM_ ) ).inverse() );
         auto transBase = fullInversedM( viewportSpaceToClipSpace( relPoseBase ) );
         auto transSide = fullInversedM( viewportSpaceToClipSpace( relPoseSide ) );
 

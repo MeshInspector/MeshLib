@@ -86,7 +86,7 @@ void Viewport::setupProjMatrix_()
 
 void Viewport::setupStaticProjMatrix_()
 {
-    float h = (cameraEye - cameraCenter).length();
+    float h = 1.0f;// ( cameraEye - cameraCenter ).length();
     float d = h * width( viewportRect_ ) / height( viewportRect_ );
     staticProj_( 0, 0 ) = 1.f / d; staticProj_( 0, 1 ) = 0.f; staticProj_( 0, 2 ) = 0.f; staticProj_( 0, 3 ) = 0.f;
     staticProj_( 1, 0 ) = 0.f; staticProj_( 1, 1 ) = 1.f / h; staticProj_( 1, 2 ) = 0.f; staticProj_( 1, 3 ) = 0.f;

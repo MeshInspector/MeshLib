@@ -118,10 +118,11 @@ std::optional<SignedDistanceToMeshResult> findSignedDistance( const Vector3f & p
     return res;
 }
 
-VertBitSet findInnerShellVerts( const Mesh & mesh, const Mesh & shell, float side )
+VertBitSet findInnerShellVerts( const Mesh & mesh, const Mesh & shell, Side side )
 {
     MR_TIMER
     VertBitSet res( shell.topology.vertSize() );
+    const float k = ( side == Side::Positive ) ? 1.0f : -1.0f;
     BitSetParallelFor( shell.topology.getValidVerts(), [&]( VertId v )
     {
         auto sd = findSignedDistance( shell.points[v], mesh );
@@ -130,7 +131,7 @@ VertBitSet findInnerShellVerts( const Mesh & mesh, const Mesh & shell, float sid
             return;
         if ( sd->mtp.isBd( mesh.topology ) )
             return;
-        if ( sd->dist * side <= 0 )
+        if ( sd->dist * k <= 0 )
             return;
         res.set( v );
     } );

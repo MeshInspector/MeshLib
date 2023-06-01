@@ -2,6 +2,8 @@
 #include "MRAABBTree.h"
 #include "MRMesh.h"
 #include "MRClosestPointInTriangle.h"
+#include "MRBitSetParallelFor.h"
+#include "MRTimer.h"
 
 namespace MR
 {
@@ -113,6 +115,25 @@ std::optional<SignedDistanceToMeshResult> findSignedDistance( const Vector3f & p
     res->proj = projRes.proj;
     res->mtp = projRes.mtp;
     res->dist = mp.mesh.signedDistance( pt, projRes.mtp, mp.region );
+    return res;
+}
+
+VertBitSet findInnerShellVerts( const Mesh & mesh, const Mesh & shell, float side )
+{
+    MR_TIMER
+    VertBitSet res( shell.topology.vertSize() );
+    BitSetParallelFor( shell.topology.getValidVerts(), [&]( VertId v )
+    {
+        auto sd = findSignedDistance( shell.points[v], mesh );
+        assert( sd );
+        if ( !sd )
+            return;
+        if ( sd->mtp.isBd( mesh.topology ) )
+            return;
+        if ( sd->dist * side <= 0 )
+            return;
+        res.set( v );
+    } );
     return res;
 }
 

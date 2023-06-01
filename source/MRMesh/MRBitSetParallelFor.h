@@ -4,7 +4,6 @@
 #include "MRPch/MRTBB.h"
 #include "MRProgressCallback.h"
 #include <atomic>
-#include <memory>
 #include <thread>
 
 namespace MR
@@ -71,8 +70,15 @@ bool BitSetParallelForAll( const BS& bs, F f, ProgressCallback progressCb, size_
     auto callingThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };
     
-    // allocate it on heap to avoid false sharing with other local variables
-    auto processedBits = std::make_unique<std::atomic<size_t>>(0);
+    // avoid false sharing with other local variables
+    // by putting processedBits in its own cache line
+    constexpr int hardware_destructive_interference_size = 64;
+    struct alignas(hardware_destructive_interference_size) S
+    {
+        std::atomic<size_t> processedBits{ 0 };
+    } s;
+    static_assert( alignof(S) == hardware_destructive_interference_size );
+    static_assert( sizeof(S) == hardware_destructive_interference_size );
 
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, endBlock ),
         [&] ( const tbb::blocked_range<size_t>& range )
@@ -90,17 +96,17 @@ bool BitSetParallelForAll( const BS& bs, F f, ProgressCallback progressCb, size_
             {
                 if ( report )
                 {
-                    if ( !progressCb( float( myProcessedBits + processedBits->load( std::memory_order_relaxed ) ) / bs.size() ) )
+                    if ( !progressCb( float( myProcessedBits + s.processedBits.load( std::memory_order_relaxed ) ) / bs.size() ) )
                         keepGoing.store( false, std::memory_order_relaxed );
                 }
                 else
                 {
-                    processedBits->fetch_add( myProcessedBits, std::memory_order_relaxed );
+                    s.processedBits.fetch_add( myProcessedBits, std::memory_order_relaxed );
                     myProcessedBits = 0;
                 }
             }
         }
-        const auto total = processedBits->fetch_add( myProcessedBits, std::memory_order_relaxed );
+        const auto total = s.processedBits.fetch_add( myProcessedBits, std::memory_order_relaxed );
         if ( report && !progressCb( float( total ) / bs.size() ) )
             keepGoing.store( false, std::memory_order_relaxed );
     } );

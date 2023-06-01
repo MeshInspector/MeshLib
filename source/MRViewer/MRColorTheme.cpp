@@ -340,6 +340,7 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
         "RibbonButtonActiveClicked",
 
         "ThirdpartyBackground",
+        "ProgressBarBackground",
         "FrameBackground",
         "CollapseHeaderBackground",
         "SelectedObjectText",

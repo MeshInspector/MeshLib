@@ -991,6 +991,54 @@ void separator( float scaling, const std::string& text /*= ""*/, int issueCount 
     }
 }
 
+void progressBar( float scaling, float fraction, const Vector2f& sizeArg /*= Vector2f( -1, 0 ) */ )
+{
+    auto& textureG = getTexture( TextureType::Gradient );
+    if ( !textureG )
+        return ImGui::ProgressBar( fraction, sizeArg );
+    auto* context = ImGui::GetCurrentContext();
+    if ( !context )
+        return;
+    ImGuiWindow* window = context->CurrentWindow;
+    if ( !window || window->SkipItems )
+        return;
+
+    auto* drawList = window->DrawList;
+    if ( !drawList )
+        return;
+
+    const ImGuiStyle& style = context->Style;
+
+    ImVec2 pos = window->DC.CursorPos;
+    ImVec2 size = ImGui::CalcItemSize( sizeArg, ImGui::CalcItemWidth(), ImGui::GetFrameHeight() );
+    ImRect bb( pos, pos + size );
+    ImGui::ItemSize( size, style.FramePadding.y );
+    if ( !ImGui::ItemAdd( bb, 0 ) )
+        return;
+
+    auto textWidth = ImGui::CalcTextSize( "65%" ).x; // text given for reference in design
+
+    auto pgWidth = size.x - textWidth - StyleConsts::ProgressBar::internalSpacing * scaling;
+
+    const auto& bgColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ProgressBarBackground );
+    drawList->AddRectFilled( bb.Min, ImVec2( bb.Min.x + pgWidth, bb.Max.y ), bgColor.getUInt32(), StyleConsts::ProgressBar::rounding * scaling );
+    if ( fraction > 0.0f )
+    {
+        drawList->AddImageRounded(
+            textureG->getImTextureId(),
+            bb.Min,
+            ImVec2( bb.Min.x + pgWidth * std::clamp( fraction, 0.0f, 1.0f ), bb.Max.y ),
+            ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
+            Color::white().getUInt32(), StyleConsts::ProgressBar::rounding * scaling );
+    }
+    // Default displaying the fraction as percentage string, but user can override it
+    char textBuf[8];
+    ImFormatString( textBuf, IM_ARRAYSIZE( textBuf ), "%d%%", int( fraction * 100 ) );
+    ImVec2 realTextSize = ImGui::CalcTextSize( textBuf );
+
+    ImGui::RenderText( ImVec2( bb.Max.x - realTextSize.x, bb.Min.y + ( size.y - realTextSize.y ) * 0.5f ), textBuf );
+}
+
 } // namespace UI
 
 }

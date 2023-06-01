@@ -181,6 +181,12 @@
 			"g": 0,
 			"r": 0
 		},
+		"ProgressBarBackground": {
+			"a": 255,
+			"b": 0,
+			"g": 0,
+			"r": 0
+		},
 		"CollapseHeaderBackground": {
 			"a": 255,
 			"b": 71,

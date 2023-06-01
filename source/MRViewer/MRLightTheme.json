@@ -175,6 +175,12 @@
 			"g": 240,
 			"r": 239
 		},
+		"ProgressBarBackground": {
+			"a": 255,
+			"b": 229,
+			"g": 221,
+			"r": 219
+		},
 		"FrameBackground": {
 			"a": 255,
 			"b": 249,

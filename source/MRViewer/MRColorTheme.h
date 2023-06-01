@@ -101,7 +101,7 @@ public:
         RibbonButtonActiveClicked,
 
         ThirdpartyBackground,
-
+        ProgressBarBackground,
         FrameBackground,
         CollapseHeaderBackground,
 

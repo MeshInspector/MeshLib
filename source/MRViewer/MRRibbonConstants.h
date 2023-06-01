@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRVector2.h"
+#include "MRMesh/MRColor.h"
 
 namespace MR
 {
@@ -64,6 +65,16 @@ namespace StyleConsts
 {
 
 constexpr Vector2f pluginItemSpacing{ 8, 10 };
+
+namespace ProgressBar
+{
+
+constexpr float internalSpacing = 16.0f;
+constexpr float rounding = 8.0f;
+
+constexpr Color textColor = Color( 117, 125, 136 );
+
+}
 
 namespace CustomCombo
 {

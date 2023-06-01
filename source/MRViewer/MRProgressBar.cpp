@@ -10,6 +10,8 @@
 #include "MRRibbonConstants.h"
 #include "MRUIStyle.h"
 #include "MRCommandLoop.h"
+#include "MRColorTheme.h"
+#include "MRRibbonFontManager.h"
 #include <thread>
 #include <GLFW/glfw3.h>
 
@@ -47,29 +49,44 @@ void ProgressBar::setup( float scaling )
 
     snprintf( buf, bufSize, "%s###GlobalProgressBarPopup", instance.title_.c_str() );
     instance.setupId_ = ImGui::GetID( buf );
-    if ( ImGui::BeginModalNoAnimation( buf, nullptr, ImGuiWindowFlags_AlwaysAutoResize ) )
+    ImGui::PushStyleColor( ImGuiCol_PopupBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TopPanelBackground ).getUInt32() );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 0.0f );
+    const Vector2f windowSize( 440.0f * scaling, 144.0f * scaling );
+    ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
+    if ( ImGui::BeginModalNoAnimation( buf, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
         instance.frameRequest_.reset();
 
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
-        if ( instance.taskCount_ > 1 )
+        auto smallFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Small );
+        if ( smallFont )
+            ImGui::PushFont( smallFont );
+        ImGui::PushStyleColor( ImGuiCol_Text, StyleConsts::ProgressBar::textColor.getUInt32() );
+        ImGui::SetCursorPos( ImVec2( 32.0f * scaling, 20.0f * scaling ) );
+        if ( instance.taskCount_ <= 1 )
+            ImGui::Text( "%s", instance.title_.c_str() );
+        else
         {
+            ImGui::Text( "%s :", instance.title_.c_str() );
+            ImGui::SameLine();
             snprintf( buf, bufSize, "%s (%d/%d)\n", instance.taskName_.c_str(), instance.currentTask_, instance.taskCount_ );
             ImGui::Text( "%s", buf );
         }
+        ImGui::PopStyleColor();
+        if ( smallFont )
+            ImGui::PopFont();
 
-        snprintf( buf, bufSize, "%d%%", ( int )( instance.progress_ * 100 ) );
         auto progress = instance.progress_;
-        ImGui::ProgressBar( progress, ImVec2( 250.0f * scaling, 0.0f ), buf );
-        ImGui::Separator();
+        ImGui::SetCursorPos( ImVec2( 32.0f * scaling, 56.0f * scaling ) );
+        UI::progressBar( scaling, progress, ImVec2( 380.0f * scaling, 12.0f * scaling ) );
 
         if ( instance.allowCancel_ )
         {
+            ImVec2 btnSize = ImVec2( 90.0f * scaling, 28.0f * scaling );
+            ImGui::SetCursorPos( ImVec2( ( windowSize.x - btnSize.x ) * 0.5f, 92.0f * scaling ) );
             if ( !instance.canceled_ )
             {
-                ImGui::SetCursorPosX( ( ImGui::GetWindowWidth() + ImGui::GetContentRegionAvail().x ) * 0.5f - 75.0f * scaling );
-				const float btnHeight = ImGui::CalcTextSize( "SDC" ).y + cGradientButtonFramePadding * scaling;
-                if ( UI::button( "Cancel", Vector2f( 75.0f * scaling, btnHeight ), ImGuiKey_Escape ) )
+                if ( UI::button( "Cancel", btnSize, ImGuiKey_Escape ) )
                 {
                     spdlog::info( "Operation progress: \"{}\" - Canceling", instance.title_ );
                     instance.canceled_ = true;
@@ -77,11 +94,12 @@ void ProgressBar::setup( float scaling )
             }
             else
             {
-                ImGui::AlignTextToFramePadding();
                 ImGui::Text( "Canceling..." );
             }
         }
 #else
+        auto textSize = ImGui::CalcTextSize( "Operation is in progress, please wait..." );
+        ImGui::SetCursorPos( 0.5f * ( windowSize - Vector2f( textSize ) ) );
         ImGui::Text( "Operation is in progress, please wait..." );
 #endif
         if ( instance.closeDialogNextFrame_ )
@@ -102,6 +120,8 @@ void ProgressBar::setup( float scaling )
         }
         ImGui::EndPopup();
     }
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar();
     instance.isInit_ = true;
 }
 

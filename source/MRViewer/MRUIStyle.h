@@ -74,18 +74,20 @@ MRVIEWER_API void transparentText( const char* fmt, ... );
 /// similar to ImGui::TextWrapped but use current text color with alpha channel = 0.5
 MRVIEWER_API void transparentTextWrapped( const char* fmt, ... );
 
-
-
-
 /// draw tooltip only if current item is hovered
 MRVIEWER_API void setTooltipIfHovered( const std::string& text, float scaling );
 
-///add text with separator line 
+/// add text with separator line 
 /// if issueCount is greater than zero, this number will be displayed in red color after the text. 
 /// If it equals zero - in green color
 /// Otherwise it will not be displayed
 MRVIEWER_API void separator( float scaling, const std::string& text = "", int issueCount = -1 );
 
+/// draws progress bar
+/// note that even while scaling is given by argument size should still respect it
+/// size: x(y)  < 0 - take all available width(height)
+///       x(y) == 0 - use default width(height)
+MRVIEWER_API void progressBar( float scaling, float fraction, const Vector2f& size = Vector2f( -1, 0 ) );
 
 } // namespace UI
 

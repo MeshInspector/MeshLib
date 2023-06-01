@@ -253,7 +253,7 @@ void GcodeProcessor::updateScaling_()
 
 std::vector<Vector2f> GcodeProcessor::getArcPoints2_( const Vector2f& beginPoint, const Vector2f& endPoint, bool clockwise )
 {
-    if ( std::fabs( beginPoint.lengthSq() - endPoint.lengthSq() ) >= 1.e-2f ) // equalityAccuracy_**2 ?
+    if ( std::fabs( beginPoint.lengthSq() - endPoint.lengthSq() ) >= 1.e-6f ) // equalityAccuracy_**2 ?
     {
         return {};
     }
@@ -287,20 +287,19 @@ std::vector<Vector3f> GcodeProcessor::getArcPoints3_( const Vector3f& center, co
     const Vector3f c3 = toWorkPlaneXf_ * center;
 
     const Vector3f b3 = toWorkPlaneXf_ * beginPoint - c3;
-    if ( std::abs( b3.z ) > 1.e-3f )
-        return {};
     const Vector2f b2 = { b3.x, b3.y };
 
     const Vector3f e3 = toWorkPlaneXf_ * endPoint - c3;
-    if ( std::abs( e3.z ) > 1.e-3f )
-        return {};
     const Vector2f e2 = { e3.x, e3.y };
+
+    const bool helical = std::fabs( b3.z - e3.z ) > 1.e-3f;
 
     const Matrix3f toWorldXf = toWorkPlaneXf_.inverse();
     auto res2 = getArcPoints2_( b2, e2, clockwise );
     std::vector<Vector3f> res3( res2.size() );
+    const float zStep = res2.size() > 1 ? ( e3.z - b3.z ) / ( res2.size() - 1 ) : 0.f;
     for ( int i = 0; i < res2.size(); ++i )
-        res3[i] = toWorldXf * ( Vector3f( res2[i].x, res2[i].y, 0.f ) + c3 );
+        res3[i] = toWorldXf * ( Vector3f( res2[i].x, res2[i].y, helical ? b3.z + zStep * i : b3.z ) + c3 );
 
     return res3;
 }

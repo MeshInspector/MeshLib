@@ -9,6 +9,7 @@
 #include "ImGuiHelpers.h"
 #include "ImGuiMenu.h"
 #include "imgui_internal.h"
+#include "MRMesh/MRVector4.h"
 
 
 ImVec2 operator+( const ImVec2& a, const ImVec2& b )
@@ -777,6 +778,14 @@ bool colorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags /
         MarkItemEdited( g.LastItemData.ID );
 
     return value_changed;
+}
+
+bool colorEdit4( const char* label, Color& color, ImGuiColorEditFlags flags /*= ImGuiColorEditFlags_None */ )
+{
+    Vector4f color4f( color );
+    const bool res = colorEdit4( label, color4f, flags );
+    color = Color( color4f );
+    return res;
 }
 
 void DrawCustomArrow( ImDrawList* drawList, const ImVec2& startPoint, const ImVec2& midPoint, const ImVec2& endPoint, ImU32 col, float thickness )

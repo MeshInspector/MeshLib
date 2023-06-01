@@ -25,7 +25,15 @@ MRVIEWER_API HoleEdgePoint findClosestToMouseHoleEdge( const Vector2i& mousePos,
 /// \mousePos mouse position in screen
 /// \param accuracy maximum distances from mouse position to line in viewport (screen) space
 /// \return pair closest edge and according index of polyline
-MRVIEWER_API HoleEdgePoint findClosestToMouseEdge( const Vector2i& mousePos, const std::vector<std::shared_ptr<ObjectLines>>& objsLines,
-                                               float accuracy = 5.5f );
+MRVIEWER_API HoleEdgePoint findClosestToMouseEdge( const Vector2i& mousePos, const std::vector<std::shared_ptr<ObjectLinesHolder>>& objsLines,
+                                                   float accuracy = 5.5f );
+inline HoleEdgePoint findClosestToMouseEdge( const Vector2i& mousePos, const std::vector<std::shared_ptr<ObjectLines>>& objsLines,
+                                      float accuracy = 5.5f )
+{
+    std::vector<std::shared_ptr<ObjectLinesHolder>> objs(objsLines.size());
+    for ( int i = 0; i < objsLines.size(); ++i )
+        objs[i] = std::dynamic_pointer_cast<ObjectLinesHolder>( objsLines[i] );
+    return findClosestToMouseEdge( mousePos, objs, accuracy );
+}
 
 }

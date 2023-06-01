@@ -85,8 +85,8 @@ MRVIEWER_API void separator( float scaling, const std::string& text = "", int is
 
 /// draws progress bar
 /// note that even while scaling is given by argument size should still respect it
-/// size: x <= 0 - take all available width
-///       y <= 0 - frame height
+/// size: x(y)  < 0 - take all available width(height)
+///       x(y) == 0 - use default width(height)
 MRVIEWER_API void progressBar( float scaling, float fraction, const Vector2f& size = Vector2f( -1, 0 ) );
 
 } // namespace UI

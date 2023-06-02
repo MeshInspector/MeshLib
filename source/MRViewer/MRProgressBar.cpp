@@ -49,8 +49,6 @@ void ProgressBar::setup( float scaling )
 
     snprintf( buf, bufSize, "%s###GlobalProgressBarPopup", instance.title_.c_str() );
     instance.setupId_ = ImGui::GetID( buf );
-    ImGui::PushStyleColor( ImGuiCol_PopupBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TopPanelBackground ).getUInt32() );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 0.0f );
     const Vector2f windowSize( 440.0f * scaling, 144.0f * scaling );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     if ( ImGui::BeginModalNoAnimation( buf, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
@@ -120,8 +118,6 @@ void ProgressBar::setup( float scaling )
         }
         ImGui::EndPopup();
     }
-    ImGui::PopStyleColor();
-    ImGui::PopStyleVar();
     instance.isInit_ = true;
 }
 

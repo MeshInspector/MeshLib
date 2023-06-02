@@ -414,6 +414,7 @@ void ColorTheme::resetImGuiStyle()
     Vector4f frameBg = Vector4f( getRibbonColor( RibbonColorsType::FrameBackground ) );
     Vector4f headerBg = Vector4f( getRibbonColor( RibbonColorsType::CollapseHeaderBackground ) );
     Vector4f textSelBg = Vector4f( getRibbonColor( RibbonColorsType::TextSelectedBg ) );
+    Vector4f popupBg = Vector4f( getRibbonColor( RibbonColorsType::TopPanelBackground ) );
 
     style.Colors[ImGuiCol_WindowBg] = ImVec4( bg.x, bg.y, bg.z, bg.w );
     style.Colors[ImGuiCol_Text] = ImVec4( text.x, text.y, text.z, text.w );
@@ -422,8 +423,8 @@ void ColorTheme::resetImGuiStyle()
     style.Colors[ImGuiCol_Header] = ImVec4( headerBg.x, headerBg.y, headerBg.z, headerBg.w );
     style.Colors[ImGuiCol_TextSelectedBg] = ImVec4( textSelBg.x, textSelBg.y, textSelBg.z, textSelBg.w );
     style.Colors[ImGuiCol_ScrollbarBg] = ImVec4( 0, 0, 0, 0 );
+    style.Colors[ImGuiCol_PopupBg] = ImVec4( popupBg.x, popupBg.y, popupBg.z, popupBg.w );
 
-    style.ScrollbarSize = 8.0f;
     style.ScrollbarRounding = 4.0f;
     style.FrameRounding = 5.0f;
     style.GrabRounding = style.FrameRounding;
@@ -436,7 +437,11 @@ void ColorTheme::resetImGuiStyle()
     style.WindowBorderSize = 1.0f;
     
     if ( auto menu = getViewerInstance().getMenuPlugin() )
-        ImGui::GetStyle().ScaleAllSizes( menu->menu_scaling() );
+    {
+        auto scaling = menu->menu_scaling();
+        ImGui::GetStyle().ScaleAllSizes( scaling );
+        style.ScrollbarSize = 4.0f * scaling + 6.0f; // 6 - is scroll background area, independent of scaling
+    }
 }
 
 }

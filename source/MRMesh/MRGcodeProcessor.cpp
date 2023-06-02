@@ -232,9 +232,9 @@ void GcodeProcessor::updateWorkPlane_( WorkPlane wp )
     workPlane_ = wp;
     constexpr float pi2 = PI2_F;
     if ( workPlane_ == WorkPlane::zx )
-        toWorkPlaneXf_ = Matrix3f::rotation( Vector3f::plusZ(), pi2 ) * Matrix3f::rotation( Vector3f::plusX(), pi2 );
+        toWorkPlaneXf_ = Matrix3f( { 0, 0, 1 }, { 1, 0, 0 }, { 0, 1, 0 } );
     else if ( workPlane_ == WorkPlane::yz )
-        toWorkPlaneXf_ = Matrix3f::rotation( Vector3f::plusY(), -pi2 ) * Matrix3f::rotation( Vector3f::plusX(), -pi2 );
+        toWorkPlaneXf_ = Matrix3f( { 0, 1, 0 }, { 0, 0, 1 }, { 1, 0, 0 } );
     else
         toWorkPlaneXf_ = Matrix3f();
 }
@@ -250,9 +250,12 @@ void GcodeProcessor::updateScaling_()
 
 std::vector<Vector2f> GcodeProcessor::getArcPoints2_( const Vector2f& beginPoint, const Vector2f& endPoint, bool clockwise, std::string& errorText )
 {
-    const float deltaR2 = std::fabs( beginPoint.lengthSq() - endPoint.lengthSq() );
-    if ( deltaR2 >= ( accuracy_ * accuracy_ ) )
-        errorText = "Begin and end radius are different: diff = " + std::to_string( std::sqrt( deltaR2 ) );
+    const float beginLengthSq = beginPoint.lengthSq();
+    const float endLengthSq = endPoint.lengthSq();
+    const float maxLengthSq = std::max( beginLengthSq, endLengthSq );
+    const float deltaLength2 = std::fabs( beginPoint.lengthSq() - endPoint.lengthSq() );
+    if ( deltaLength2 >= ( 2.5f * accuracy_ * maxLengthSq ) )
+        errorText = "Begin and end radius are different: diff = " + std::to_string( std::sqrt( deltaLength2 ) );
 
     const Vector2f v1 = beginPoint / beginPoint.length();
     const Vector2f v2 = endPoint / endPoint.length();
@@ -269,7 +272,7 @@ std::vector<Vector2f> GcodeProcessor::getArcPoints2_( const Vector2f& beginPoint
     res.push_back( beginPoint );
     for ( int i = 0; i < stepCount; ++i )
     {
-        const auto arcPoint = Matrix2f::rotation( angleStep * ( i - 1 ) ) * beginPoint;
+        const auto arcPoint = Matrix2f::rotation( angleStep * ( i + 1 ) ) * beginPoint;
         res.push_back( arcPoint );
     }
 

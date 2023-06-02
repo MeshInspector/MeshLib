@@ -61,8 +61,10 @@ struct SharpOffsetParameters : BaseOffsetParameters
 [[nodiscard]] MRMESH_API tl::expected<Mesh, std::string> offsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params = {} );
 
 /// in case of positive offset, returns the mesh consisting of offset mesh merged with inversed original mesh (thickening mode);
-/// in case of negative offset, returns the mesh consisting of inversed offset mesh merged with original mesh (hollowing mode)
-[[nodiscard]] MRMESH_API tl::expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const OffsetParameters& params = {} );
+/// in case of negative offset, returns the mesh consisting of inversed offset mesh merged with original mesh (hollowing mode);
+/// if your input mesh is closed then please specify params.type == Offset, and you will get closed mesh on output;
+/// if your input mesh is open then please specify params.type == Shell, and you will get open mesh on output
+[[nodiscard]] MRMESH_API tl::expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const OffsetParameters & params = {} );
 
 /// Offsets mesh by converting it to voxels and back two times
 /// only closed meshes allowed (only Offset mode)

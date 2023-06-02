@@ -1730,7 +1730,7 @@ void RibbonMenu::drawShortcutsWindow_()
 
     const auto& shortcutList = shortcutManager_->getShortcutList();
     // header size
-    float windowHeight = ( 6 * cDefaultItemSpacing + fontManager_.getFontSizeByType( RibbonFontManager::FontType::Headline ) + style.CellPadding.y  + 2 * style.WindowPadding.y ) * scaling;
+    float windowHeight = ( 6 * cDefaultItemSpacing + fontManager_.getFontSizeByType( RibbonFontManager::FontType::Headline ) + style.CellPadding.y + StyleConsts::Modal::bigTitlePadding ) * scaling;
     // find max column size
     int leftNumCategories = 0;
     int rightNumCategories = 0;
@@ -1757,26 +1757,29 @@ void RibbonMenu::drawShortcutsWindow_()
     // calc window size for better positioning
     windowHeight += std::max( leftSize, rightSize );
 
+    const float minHeight = 200.0f * scaling;
+    windowHeight = std::clamp( windowHeight, minHeight, float( getViewerInstance().window_height ) - 100.0f * scaling );
+
     ImVec2 windowPos;
-    windowPos.x = ( Viewer::instanceRef().window_width - windowWidth ) * 0.5f;
-    windowPos.y = ( Viewer::instanceRef().window_height - windowHeight ) * 0.5f;
+    windowPos.x = ( getViewerInstance().window_width - windowWidth ) * 0.5f;
+    windowPos.y = ( getViewerInstance().window_height - windowHeight ) * 0.5f;
 
     ImGui::SetNextWindowPos( windowPos, ImGuiCond_Appearing );
-    ImGui::SetNextWindowSize( ImVec2( windowWidth, windowHeight ), ImGuiCond_Appearing );
-    ImGui::SetNextWindowSizeConstraints( ImVec2( windowWidth, -1 ), ImVec2( windowWidth, 0 ) );
+    ImGui::SetNextWindowSize( ImVec2( windowWidth, windowHeight ), ImGuiCond_Always );
 
     if ( !ImGui::IsPopupOpen( "HotKeys" ) )
         ImGui::OpenPopup( "HotKeys" );
 
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 3 * MR::cDefaultItemSpacing * scaling, 3 * MR::cDefaultItemSpacing * scaling ) );
-    if ( !ImGui::BeginModalNoAnimation( "HotKeys", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar ) )
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( StyleConsts::Modal::bigTitlePadding * scaling, 0.0f ) );
+    if ( !ImGui::BeginModalNoAnimation( "HotKeys", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
         ImGui::PopStyleVar();
         return;
     }
     ImGui::PopStyleVar();
 
-    if ( ImGui::ModalBigTitle( "HotKeys", scaling ) )
+    ImGui::SetCursorPosY( StyleConsts::Modal::bigTitlePadding * scaling );
+    if ( ImGui::ModalBigTitle( "Hotkeys", scaling ) )
     {
         ImGui::CloseCurrentPopup();
         showShortcuts_ = false;
@@ -1803,6 +1806,7 @@ void RibbonMenu::drawShortcutsWindow_()
     
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cDefaultItemSpacing * scaling );
 
+    ImGui::BeginChild( "##Hotkeys_table_chalid" );
     if ( ImGui::BeginTable( "HotKeysTable", 2, ImGuiTableFlags_SizingStretchSame ) )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cButtonPadding * scaling, style.FramePadding.y } );
@@ -1891,7 +1895,7 @@ void RibbonMenu::drawShortcutsWindow_()
         ImGui::PopStyleVar();
         ImGui::EndTable();
     }
-
+    ImGui::EndChild();
     ImGui::PopStyleVar();
     ImGui::EndPopup();
 }

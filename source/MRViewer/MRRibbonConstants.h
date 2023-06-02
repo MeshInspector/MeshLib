@@ -48,7 +48,7 @@ constexpr float cBigIconSize = 20.0f;
 constexpr int cSmallFontSize = 11;
 constexpr int cDefaultFontSize = 13;
 constexpr int cBigFontSize = 15;
-constexpr int cHeadlineFontSize = 24;
+constexpr int cHeadlineFontSize = 20;
 
 constexpr float cPaletteDiscretizationScaling = 5.0f / 18.0f;
 
@@ -65,6 +65,14 @@ namespace StyleConsts
 {
 
 constexpr Vector2f pluginItemSpacing{ 8, 10 };
+
+namespace Modal
+{
+
+constexpr float bigTitlePadding = 22.0f;
+constexpr float exitBtnSize = 24.0f;
+
+}
 
 namespace ProgressBar
 {

@@ -676,17 +676,59 @@ bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWi
     const auto color = MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::FrameBackground ).getUInt32();
     ImGui::PushStyleColor( ImGuiCol_TitleBgActive, color );
     ImGui::PushStyleColor( ImGuiCol_Text, 0 );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 0.0f );
 
-    if ( !BeginPopupModal( label, open, flags ) )
+    auto context = ImGui::GetCurrentContext();
+    ImGuiWindow* window = FindWindowByName( label );
+    // needed for manual scrollbar 
+    bool hasPrevData = false;
+    float prevCursorMaxPos = FLT_MAX;
+    if ( window )
     {
+        hasPrevData = true;
+        prevCursorMaxPos = window->DC.CursorMaxPos.y;
+    }
+    if ( !BeginPopupModal( label, open, flags | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) )
+    {
+        ImGui::PopStyleVar();
         ImGui::PopStyleColor( 2 );
         return false;
     }
 
+    window = context->CurrentWindow;
+    const auto& style = GetStyle();
+    // Manually draw Y scroll bar if window cannot be big enough
+    if ( window->SizeFull.y < window->ContentSizeIdeal.y + 2 * style.WindowPadding.y )
+    {
+        // Set scrollbar size
+        window->ScrollbarSizes[ImGuiAxis_Y ^ 1] = style.ScrollbarSize;
+        // Prevent "tremor" on holding scrollbar near bottom 
+        // (if skip this code window->ContentSize change beacuse of outside scrollbar)
+        auto backUpContSizeY = window->ContentSize.y;
+        if ( hasPrevData )
+        {
+            window->ContentSize.y = ( ( window->ContentSize.y - window->ContentSizeIdeal.y ) +
+                prevCursorMaxPos - window->DC.CursorStartPos.y );
+        }
+        // Determine scrollbar position
+        window->InnerRect.Max.x -= window->ScrollbarSizes.x;
+        // Needed for ImGui::GetAvailableContent functuions
+        window->WorkRect.Max.x -= window->ScrollbarSizes.x;
+        window->ContentRegionRect.Max.x -= window->ScrollbarSizes.x;
+        // Enable scroll by mouse if manual scrollbar
+        window->Flags &= ~ImGuiWindowFlags_NoScrollWithMouse;
+        // Draw scrollbar
+        window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
+        Scrollbar( ImGuiAxis_Y );
+        window->DrawList->PopClipRect();
+        // Reset old values
+        window->ContentSize.y = backUpContSizeY;
+    }
+
+    ImGui::PopStyleVar();
     ImGui::PopStyleColor( 2 );
     GetCurrentContext()->DimBgRatio = 1.0f;
 
-    auto window = FindWindowByName( label );
     if ( !window || ( flags & ImGuiWindowFlags_NoTitleBar ) )
         return true;
 
@@ -1325,23 +1367,9 @@ bool ModalBigTitle( const char* title, float scaling )
     if ( font )
         ImGui::PopFont();
 
-    const float exitButtonSize = 30.0f * scaling;
+    const float exitButtonSize = MR::StyleConsts::Modal::exitBtnSize * scaling;
     ImGui::SameLine( ImGui::GetWindowContentRegionMax().x - exitButtonSize );
-
-    std::string closeBtnTxt = "x";
-    ImGui::SetCursorPosY( 2 * MR::cDefaultWindowPaddingY * scaling );
-    ImGui::PushStyleColor( ImGuiCol_Button, MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::Background ).getUInt32() );
-    ImGui::PushStyleColor( ImGuiCol_Border, MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::Background ).getUInt32() );
-    font = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Icons );
-    if ( font )
-    {
-        ImGui::PushFont( font );
-        closeBtnTxt = "\xef\x80\x8d";
-    }
-    const bool shoudClose = ImGui::Button( closeBtnTxt.c_str(), ImVec2( 30.0f * scaling, 30.0f * scaling ) ) || ImGui::IsKeyPressed( ImGuiKey_Escape );
-    if ( font )
-        ImGui::PopFont();
-    ImGui::PopStyleColor( 2 );
+    const bool shoudClose = ModalExitButton( scaling );
     ImGui::NewLine();
 
     return shoudClose;
@@ -1349,26 +1377,31 @@ bool ModalBigTitle( const char* title, float scaling )
 
 bool ModalExitButton( float scaling )
 {
-    ImGui::SetCursorPosY( ImGui::GetStyle().WindowPadding.y - ImGui::GetTextLineHeight() * 0.5f + 4.5f * scaling );
     const uint32_t crossColor = MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::TabClicked ).getUInt32();
     ImGui::PushStyleColor( ImGuiCol_Button, 0 );
     ImGui::PushStyleColor( ImGuiCol_Border, 0 );
+    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, 0x80808080 );
+    ImGui::PushStyleColor( ImGuiCol_ButtonActive, 0x80808080 );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 3.0f * scaling );
 
     auto drawList = ImGui::GetWindowDrawList();
     const auto pos = ImGui::GetCursorScreenPos();
-    const float buttonSize = 24.0f * scaling;
+    const float buttonSize = MR::StyleConsts::Modal::exitBtnSize * scaling;
 
     if ( ImGui::Button( "##ExitButton", ImVec2( buttonSize, buttonSize ) ) || ImGui::IsKeyPressed( ImGuiKey_Escape ) )
     {
         ImGui::CloseCurrentPopup();
-        ImGui::PopStyleColor( 2 );
+        ImGui::PopStyleColor( 4 );
+        ImGui::PopStyleVar();
         return true;
     }
+    const float crossSize = 10.0f * scaling;
+    auto shift = ( buttonSize - crossSize ) * 0.5f;
+    drawList->AddLine( { pos.x + shift, pos.y + shift }, { pos.x + buttonSize - shift - scaling, pos.y + buttonSize - shift - scaling }, crossColor, 2.0f * scaling );
+    drawList->AddLine( { pos.x + shift, pos.y + buttonSize - shift - scaling }, { pos.x + buttonSize - shift - scaling, pos.y + shift }, crossColor, 2.0f * scaling );
 
-    drawList->AddLine( { pos.x + 0.3f * buttonSize, pos.y + 0.3f * buttonSize }, { pos.x + 0.7f * buttonSize, pos.y + 0.7f * buttonSize }, crossColor, 2.0f * scaling );
-    drawList->AddLine( { pos.x + 0.3f * buttonSize, pos.y + 0.7f * buttonSize }, { pos.x + 0.7f * buttonSize, pos.y + 0.3f * buttonSize }, crossColor, 2.0f * scaling );
-
-    ImGui::PopStyleColor( 2 );
+    ImGui::PopStyleColor( 4 );
+    ImGui::PopStyleVar();
     return false;
 }
 

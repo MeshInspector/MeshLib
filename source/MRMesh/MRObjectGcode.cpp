@@ -123,7 +123,19 @@ bool ObjectGcode::select( bool isSelected )
 {
     if ( !ObjectLinesHolder::select( isSelected ) )
         return false;
-    setColoringType( isSelected ? ColoringType::VertsColorMap : ColoringType::SolidColor );
+    float width = getLineWidth();
+    if ( isSelected )
+        width += std::clamp( width, 3.f, 6.f );
+    else
+    {
+        if ( width < 6.f )
+            width = std::max( width - 3.f, 0.5f );
+        else if ( width < 12.f )
+            width /= 2.f;
+        else
+            width -= 6.f;
+    }
+    setLineWidth( width );
     return true;
 }
 

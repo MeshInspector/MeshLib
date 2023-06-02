@@ -21,6 +21,7 @@ public:
         bool idle = false;
         bool valid = true;
         float feedrate = 100.f;
+        std::string errorText;
     };
 
     // reset internal states
@@ -51,7 +52,7 @@ private:
     std::vector<Command> parseFrame_( const std::string_view& frame );
     void applyCommand_( const Command& command );
     void applyCommandG_( const Command& command );
-    MoveAction applyMove_();
+    MoveAction generateMoveAction_();
     void resetTemporaryStates_();
 
     // g-command actions
@@ -69,13 +70,13 @@ private:
     // g-command helper methods
 
     // sample arc points in 2d by begin point, end point and center in (0, 0)
-    std::vector<MR::Vector2f> getArcPoints2_( const Vector2f& beginPoint, const Vector2f& endPoint, bool clockwise );
+    std::vector<MR::Vector2f> getArcPoints2_(const Vector2f& beginPoint, const Vector2f& endPoint, bool clockwise, std::string& errorText );
     // sample arc points in 3d by begin point, end point and center
-    std::vector<MR::Vector3f> getArcPoints3_( const Vector3f& center, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise );
+    std::vector<MR::Vector3f> getArcPoints3_( const Vector3f& center, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise, std::string& errorText );
     // sample arc points in 3d by begin point, end point and radius
     // r > 0 : angle - [0, 180]
     // r < 0 : angle - (0, 360)
-    std::vector<MR::Vector3f> getArcPoints3_( float r, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise );
+    std::vector<MR::Vector3f> getArcPoints3_( float r, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise, std::string& errorText );
 
     Vector3f calcRealNewCoord_();
 
@@ -112,6 +113,9 @@ private:
     std::optional<Vector3f> arcCenter_;
 
     std::vector<std::string_view> gcodeSource_; // string list with sets of command (frames)
+
+    // internal settings
+    float accuracy_ = 1.e-3f;
 };
 
 }

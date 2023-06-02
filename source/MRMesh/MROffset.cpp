@@ -13,6 +13,7 @@
 #include "MRSharpenMarchingCubesMesh.h"
 #include "MRFastWindingNumber.h"
 #include "MRVolumeIndexer.h"
+#include "MRMeshBoundary.h"
 #include <thread>
 
 namespace
@@ -91,17 +92,30 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
 tl::expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const OffsetParameters& params )
 {
     MR_TIMER
-    auto res = offsetMesh( mesh, offset, params );
+    const bool unsignedOffset = params.type == OffsetParameters::Type::Shell;
+    auto res = offsetMesh( mesh, unsignedOffset ? std::abs( offset ) : offset, params );
     if ( !res )
         return res;
 
     auto & resMesh = res.value();
 
+    if ( unsignedOffset )
+    {
+        // for open input mesh, let us find only necessary portion on the shell
+        auto innerFaces = getInnerFaces( resMesh.topology, findInnerShellVerts( mesh, resMesh, offset > 0 ? Side::Positive : Side::Negative ) );
+        resMesh.topology.deleteFaces( resMesh.topology.getValidFaces() - innerFaces );
+        resMesh.invalidateCaches();
+        for ( auto bd : resMesh.topology.findHoleRepresentiveEdges() )
+            straightenBoundary( resMesh, bd, 0.5f, 10.0f );
+        resMesh.pack();
+    }
+
     if ( offset >= 0 )
         resMesh.addPartByMask( mesh, mesh.topology.getValidFaces(), true ); // true = with flipping
     else
     {
-        resMesh.topology.flipOrientation();
+        if ( !unsignedOffset )
+            resMesh.topology.flipOrientation();
         resMesh.addPart( mesh );
     }
 

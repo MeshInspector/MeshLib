@@ -206,7 +206,7 @@ GcodeProcessor::MoveAction GcodeProcessor::moveLine_( const Vector3f& newPoint, 
     // MoveAction res({ basePoint_, newPoint }, idle); //fatal error C1001: Internal compiler error.
     MoveAction res;
     res.idle = idle;
-    if ( (newPoint - basePoint_).lengthSq() > (accuracy_ * accuracy_) )
+    if ( (newPoint - basePoint_).lengthSq() > (2.5f * accuracy_) )
         res.path = { basePoint_, newPoint };
     return res;
 }

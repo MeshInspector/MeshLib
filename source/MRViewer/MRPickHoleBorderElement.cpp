@@ -118,7 +118,7 @@ HoleEdgePoint findClosestToMouseHoleEdge( const Vector2i& mousePos, const std::s
     return result;
 }
 
-HoleEdgePoint findClosestToMouseEdge( const Vector2i& mousePos, const std::vector<std::shared_ptr<ObjectLines>>& objsLines, float accuracy /*= 5.5f */ )
+HoleEdgePoint findClosestToMouseEdge( const Vector2i& mousePos, const std::vector<std::shared_ptr<ObjectLinesHolder>>& objsLines, float accuracy /*= 5.5f */ )
 {
     Viewer& viewerRef = getViewerInstance();
     Viewport& viewport = viewerRef.viewport();

@@ -13,6 +13,7 @@ ObjectGcode::ObjectGcode()
 {
     setVisualizeProperty( true, LinesVisualizePropertyType::Smooth, ViewportMask::all() );
     setColoringType( ColoringType::VertsColorMap );
+    setLineWidth( 3.f );
 }
 
 
@@ -55,6 +56,7 @@ void ObjectGcode::setGcodeSource( const std::shared_ptr<GcodeSource>& gcodeSourc
         if ( part.path.empty() )
             continue;
         polyline->addFromPoints( part.path.data(), part.path.size() );
+        segmentToSourceLineMap_.insert( segmentToSourceLineMap_.end(), part.path.size() - 1, i );
         if ( part.feedrate > maxFeedrate_ )
             maxFeedrate_ = part.feedrate;
     }
@@ -162,12 +164,20 @@ void ObjectGcode::serializeFields_( Json::Value& root ) const
     root["MaxFeedrate"] = maxFeedrate_;
     serializeToJson( idleColor_, root["IdleColor"] );
 
-    auto& gcodeSource = root["GcodeSource"];
+    auto& gcodeSourceRoot = root["GcodeSource"];
     for ( const auto& str : *gcodeSource_ )
     {
         Json::Value val;
         val = str;
-        gcodeSource.append( val );
+        gcodeSourceRoot.append( val );
+    }
+
+    auto& mapRoot = root["SegmentToSourceLineMap"];
+    for ( const auto& v : segmentToSourceLineMap_ )
+    {
+        Json::Value val;
+        val = v;
+        mapRoot.append( val );
     }
 }
 
@@ -184,12 +194,21 @@ void ObjectGcode::deserializeFields_( const Json::Value& root )
     const auto& gcodeSourceRoot = root["GcodeSource"];
     if ( !gcodeSourceRoot.isArray() )
         return;
-
     GcodeSource gcodeSource( gcodeSourceRoot.size() );
     for ( int i = 0; i < gcodeSource.size(); ++i )
     {
         if ( gcodeSourceRoot[i].isString() )
             gcodeSource[i] = gcodeSourceRoot[i].asString();
+    }
+
+    const auto& mapRoot = root["SegmentToSourceLineMap"];
+    if ( !mapRoot.isArray() )
+        return;
+    std::vector<int> map( mapRoot.size() );
+    for ( int i = 0; i < map.size(); ++i )
+    {
+        if ( mapRoot[i].isInt() )
+            map[i] = mapRoot[i].asInt();
     }
 
     GcodeProcessor executor;

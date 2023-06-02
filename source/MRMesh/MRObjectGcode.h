@@ -25,8 +25,11 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     MRMESH_API virtual void setGcodeSource( const std::shared_ptr<GcodeSource>& gcodeSource );
-
     virtual const std::shared_ptr<GcodeSource>& gcodeSource() const { return gcodeSource_; }
+    // get action list (produced from g-code source)
+    virtual const std::vector<GcodeProcessor::MoveAction>& actionList() const { return actionList_; }
+    // get mapping of tool path polyline segment id to source line number of g-code source
+    virtual const std::vector<int>& segmentToSourceLineMap() const { return segmentToSourceLineMap_; }
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask ) override;
 
@@ -66,6 +69,7 @@ protected:
 private:
     std::shared_ptr<GcodeSource> gcodeSource_;
     std::vector<GcodeProcessor::MoveAction> actionList_;
+    std::vector<int> segmentToSourceLineMap_;
     Color idleColor_ = Color(0.3f, 0.3f, 0.3f);
     float maxFeedrate_ = 0.f;
     bool feedrateGradientEnabled_ = true;

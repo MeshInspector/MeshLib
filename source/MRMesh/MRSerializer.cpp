@@ -124,33 +124,6 @@ tl::expected<Json::Value, std::string> deserializeJsonValue( const std::filesyst
     return root;
 }
 
-static int countAllFilesInTree( const std::filesystem::path& path, const std::vector<std::filesystem::path>& excludeFiles )
-{
-    std::error_code ec;
-    if ( std::filesystem::is_regular_file( path, ec ) )
-        return 1;
-
-    int res = 0;
-    const std::filesystem::recursive_directory_iterator dirEnd;
-    for ( auto entry = std::filesystem::recursive_directory_iterator( path, ec ); !ec && entry != dirEnd; entry.increment( ec ) )
-    {
-        if ( !entry->is_regular_file( ec ) )
-            continue;
-        if ( !excludeFiles.empty() )
-        {
-            const auto entryPath = entry->path();
-            const auto excluded = std::find_if( excludeFiles.begin(), excludeFiles.end(), [&] ( const auto& a )
-            {
-                return std::filesystem::equivalent( a, entryPath, ec );
-            } );
-            if ( excluded != excludeFiles.end() )
-                continue;
-        }
-        ++res;
-    }
-    return res;
-}
-
 // this object stores a handle on open zip-archive, and automatically closes it in the destructor
 class AutoCloseZip
 {
@@ -195,10 +168,20 @@ VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::files
     if ( !zip )
         return tl::make_unexpected( "Cannot create zip, error code: " + std::to_string( err ) );
 
-    const int totalFiles = cb ? countAllFilesInTree( sourceFolder, excludeFiles ) : 0;
-    int compressedFiles = 0;
+    auto goodFile = [&]( const std::filesystem::path & path )
+    {
+        if ( !is_regular_file( path, ec ) )
+            return false;
+        auto excluded = std::find_if( excludeFiles.begin(), excludeFiles.end(), [&] ( const auto& a )
+        {
+            return std::filesystem::equivalent( a, path, ec );
+        } );
+        return excluded == excludeFiles.end();
+    };
 
     const std::filesystem::recursive_directory_iterator dirEnd;
+    // pass #1: add directories in the archive and count the files
+    int totalFiles = 0;
     for ( auto entry = std::filesystem::recursive_directory_iterator( sourceFolder, ec ); !ec && entry != dirEnd; entry.increment( ec ) )
     {
         const auto path = entry->path();
@@ -212,14 +195,16 @@ VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::files
             continue;
         }
 
-        if ( !entry->is_regular_file( ec ) )
-            continue;
+        if ( goodFile( path ) )
+            ++totalFiles;
+    }
 
-        auto excluded = std::find_if( excludeFiles.begin(), excludeFiles.end(), [&] ( const auto& a )
-        {
-            return std::filesystem::equivalent( a, path, ec );
-        } );
-        if ( excluded != excludeFiles.end() )
+    // pass #2: add files in the archive
+    int compressedFiles = 0;
+    for ( auto entry = std::filesystem::recursive_directory_iterator( sourceFolder, ec ); !ec && entry != dirEnd; entry.increment( ec ) )
+    {
+        const auto path = entry->path();
+        if ( !goodFile( path ) )
             continue;
 
         auto fileSource = zip_source_file( zip, utf8string( path ).c_str(), 0, 0 );

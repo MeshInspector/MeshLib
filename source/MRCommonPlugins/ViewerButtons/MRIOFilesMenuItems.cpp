@@ -580,8 +580,9 @@ bool SaveSelectedMenuItem::action()
                     viewer->recentFilesStore.storeFile( savePath );
                 else
                 {
-                    showError( "Error saving in MRU-format" );
-                    spdlog::error( res.error() );
+                    const auto errStr = "Error saving in MRU-format: " + res.error();
+                    spdlog::error( errStr );
+                    showError( errStr );
                 }
             };
         } );
@@ -622,8 +623,9 @@ void SaveSceneAsMenuItem::saveScene_( const std::filesystem::path& savePath )
                 getViewerInstance().onSceneSaved( savePath );
             else
             {
-                spdlog::error( res.error() );
-                showError( "Error saving in MRU-format" );
+                const auto errStr = "Error saving in MRU-format: " + res.error();
+                spdlog::error( errStr );
+                showError( errStr );
             }
         };
     } );

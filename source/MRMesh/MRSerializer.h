@@ -99,9 +99,11 @@ MRMESH_API VoidOrErrStr decompressZip( const std::filesystem::path& zipFile, con
  * \brief compresses given folder in given zip-file
  * \param excludeFiles files that should not be included to result zip 
  * \param password if password is given then the archive will be encrypted
+ * \param cb an option to get progress notifications and cancel the operation
  */
 MRMESH_API VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder, 
-    const std::vector<std::filesystem::path>& excludeFiles = {}, const char * password = nullptr );
+    const std::vector<std::filesystem::path>& excludeFiles = {}, const char * password = nullptr, ProgressCallback cb = {} );
+
 /// saves mesh with optional selection to mru format
 MRMESH_API VoidOrErrStr serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection = nullptr );
 

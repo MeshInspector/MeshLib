@@ -124,61 +124,31 @@ tl::expected<Json::Value, std::string> deserializeJsonValue( const std::filesyst
     return root;
 }
 
-// path of item in filesystem, base - base path of scene root (%temp%/MeshInspectorScene)
-VoidOrErrStr compressOneItem( zip_t* archive, const std::filesystem::path& path, const std::filesystem::path& base,
-    const std::vector<std::filesystem::path>& excludeFiles, const char * password )
+static int countAllFilesInTree( const std::filesystem::path& path, const std::vector<std::filesystem::path>& excludeFiles )
 {
     std::error_code ec;
     if ( std::filesystem::is_regular_file( path, ec ) )
-    {
-        auto excluded = std::find_if( excludeFiles.begin(), excludeFiles.end(), [&] ( const auto& a )
-        {
-            return std::filesystem::equivalent( a, path, ec );
-        } );
-        if ( excluded == excludeFiles.end() )
-        {
-            auto fileSource = zip_source_file( archive, utf8string( path ).c_str(), 0, 0 );
-            if ( !fileSource )
-                return tl::make_unexpected( "Cannot open file " + utf8string( path ) + " for reading" );
+        return 1;
 
-            auto archiveFilePath = utf8string( std::filesystem::relative( path, base, ec ) );
-            // convert folder separators in Linux style for the latest 7-zip to open archive correctly
-            std::replace( archiveFilePath.begin(), archiveFilePath.end(), '\\', '/' );
-            const auto index = zip_file_add( archive, archiveFilePath.c_str(), fileSource, ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8 );
-            if ( index < 0 )
-            {
-                zip_source_free( fileSource );
-                return tl::make_unexpected( "Cannot add file " + archiveFilePath + " to archive" );
-            }
-
-            if ( password )
-            {
-                if ( zip_file_set_encryption( archive, index, ZIP_EM_AES_256, password ) )
-                    return tl::make_unexpected( "Cannot encrypt file " + archiveFilePath + " in archive" );
-            }
-        }
-    }
-    else
+    int res = 0;
+    const std::filesystem::recursive_directory_iterator dirEnd;
+    for ( auto entry = std::filesystem::recursive_directory_iterator( path, ec ); !ec && entry != dirEnd; entry.increment( ec ) )
     {
-        if ( !std::filesystem::is_directory( path, ec ) )
-            return tl::make_unexpected( utf8string( path ) + " - is not file or directory." );
-        if ( path != base )
+        if ( !entry->is_regular_file( ec ) )
+            continue;
+        if ( !excludeFiles.empty() )
         {
-            auto archiveDirPath = utf8string( std::filesystem::relative( path, base, ec ) );
-            // convert folder separators in Linux style for the latest 7-zip to open archive correctly
-            std::replace( archiveDirPath.begin(), archiveDirPath.end(), '\\', '/' );
-            if ( zip_dir_add( archive, archiveDirPath.c_str(), ZIP_FL_ENC_UTF_8 ) == -1 )
-                return tl::make_unexpected( "Cannot add directory " + archiveDirPath + " to archive" );
+            const auto entryPath = entry->path();
+            const auto excluded = std::find_if( excludeFiles.begin(), excludeFiles.end(), [&] ( const auto& a )
+            {
+                return std::filesystem::equivalent( a, entryPath, ec );
+            } );
+            if ( excluded != excludeFiles.end() )
+                continue;
         }
-        const std::filesystem::directory_iterator dirEnd;
-        for ( auto entry = std::filesystem::directory_iterator( path, ec ); !ec && entry != dirEnd; entry.increment( ec ) )
-        {
-            auto res = compressOneItem( archive, entry->path(), base, excludeFiles, password );
-            if ( !res.has_value() )
-                return res;
-        }
+        ++res;
     }
-    return {};
+    return res;
 }
 
 // this object stores a handle on open zip-archive, and automatically closes it in the destructor
@@ -209,9 +179,12 @@ private:
 };
 
 VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder,
-    const std::vector<std::filesystem::path>& excludeFiles, const char * password )
+    const std::vector<std::filesystem::path>& excludeFiles, const char * password, ProgressCallback cb )
 {
     MR_TIMER
+
+    if ( !reportProgress( cb, 0.0f ) )
+        return unexpectedOperationCanceled();
 
     std::error_code ec;
     if ( !std::filesystem::is_directory( sourceFolder, ec ) )
@@ -222,14 +195,65 @@ VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::files
     if ( !zip )
         return tl::make_unexpected( "Cannot create zip, error code: " + std::to_string( err ) );
 
-    auto res = compressOneItem( zip, sourceFolder, sourceFolder, excludeFiles, password );
-    if ( !res.has_value() )
-        return res;
+    const int totalFiles = cb ? countAllFilesInTree( sourceFolder, excludeFiles ) : 0;
+    int compressedFiles = 0;
+
+    const std::filesystem::recursive_directory_iterator dirEnd;
+    for ( auto entry = std::filesystem::recursive_directory_iterator( sourceFolder, ec ); !ec && entry != dirEnd; entry.increment( ec ) )
+    {
+        const auto path = entry->path();
+        if ( entry->is_directory( ec ) && path != sourceFolder )
+        {
+            auto archiveDirPath = utf8string( std::filesystem::relative( path, sourceFolder, ec ) );
+            // convert folder separators in Linux style for the latest 7-zip to open archive correctly
+            std::replace( archiveDirPath.begin(), archiveDirPath.end(), '\\', '/' );
+            if ( zip_dir_add( zip, archiveDirPath.c_str(), ZIP_FL_ENC_UTF_8 ) == -1 )
+                return tl::make_unexpected( "Cannot add directory " + archiveDirPath + " to archive" );
+            continue;
+        }
+
+        if ( !entry->is_regular_file( ec ) )
+            continue;
+
+        auto excluded = std::find_if( excludeFiles.begin(), excludeFiles.end(), [&] ( const auto& a )
+        {
+            return std::filesystem::equivalent( a, path, ec );
+        } );
+        if ( excluded != excludeFiles.end() )
+            continue;
+
+        auto fileSource = zip_source_file( zip, utf8string( path ).c_str(), 0, 0 );
+        if ( !fileSource )
+            return tl::make_unexpected( "Cannot open file " + utf8string( path ) + " for reading" );
+
+        auto archiveFilePath = utf8string( std::filesystem::relative( path, sourceFolder, ec ) );
+        // convert folder separators in Linux style for the latest 7-zip to open archive correctly
+        std::replace( archiveFilePath.begin(), archiveFilePath.end(), '\\', '/' );
+        const auto index = zip_file_add( zip, archiveFilePath.c_str(), fileSource, ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8 );
+        if ( index < 0 )
+        {
+            zip_source_free( fileSource );
+            return tl::make_unexpected( "Cannot add file " + archiveFilePath + " to archive" );
+        }
+
+        if ( password )
+        {
+            if ( zip_file_set_encryption( zip, index, ZIP_EM_AES_256, password ) )
+                return tl::make_unexpected( "Cannot encrypt file " + archiveFilePath + " in archive" );
+        }
+
+        ++compressedFiles;
+        if ( !reportProgress( cb, std::min( float( compressedFiles ) / totalFiles, 1.0f ) ) )
+            return unexpectedOperationCanceled();
+    }
 
     if ( zip.close() == -1 )
         return tl::make_unexpected( "Cannot close zip" );
 
-    return res;
+    if ( !reportProgress( cb, 1.0f ) )
+        return unexpectedOperationCanceled();
+
+    return {};
 }
 
 VoidOrErrStr serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection /*= nullptr */ )
@@ -365,19 +389,14 @@ VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::p
         }
     }
 
-    if ( progressCb && !progressCb( 0.9f ) )
-    {
-        return tl::make_unexpected( "Canceled" );
-    }
+    if ( !reportProgress( progressCb, 0.9f ) )
+        return unexpectedOperationCanceled();
+
 #endif
     if ( preCompress )
         preCompress( scenePath );
 
-    auto res = compressZip( path, scenePath );
-
-    reportProgress( progressCb, 1.0f );
-
-    return res;
+    return compressZip( path, scenePath, {}, nullptr, subprogress( progressCb, 0.9f, 1.0f ) );
 }
 
 tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTree( const std::filesystem::path& path, FolderCallback postDecompress,

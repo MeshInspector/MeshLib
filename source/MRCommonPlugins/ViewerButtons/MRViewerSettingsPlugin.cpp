@@ -328,17 +328,18 @@ void ViewerSettingsPlugin::updateThemes()
     std::error_code ec;
     if ( std::filesystem::is_directory( userThemesDir, ec ) )
     {
-        for ( const auto& entry : std::filesystem::directory_iterator( userThemesDir, ec ) )
+        const std::filesystem::directory_iterator dirEnd;
+        for ( auto entry = std::filesystem::directory_iterator( userThemesDir, ec ); !ec && entry != dirEnd; entry.increment( ec ) )
         {
-            if ( entry.is_regular_file( ec ) )
+            if ( entry->is_regular_file( ec ) )
             {
-                auto ext = entry.path().extension().u8string();
+                auto ext = entry->path().extension().u8string();
                 for ( auto& c : ext )
                     c = ( char )tolower( c );
 
                 if ( ext != u8".json" )
                     break;
-                std::string themeName = utf8string( entry.path().stem() );
+                std::string themeName = utf8string( entry->path().stem() );
                 userThemesPresets_.push_back( themeName );
                 if ( selectedUserPreset_ == -1 && themeName == ColorTheme::getThemeName() )
                     selectedUserPreset_ = i;

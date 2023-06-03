@@ -774,6 +774,7 @@ void ImGuiMenu::setDrawTimeMillisecThreshold( long long maxGoodTimeMillisec )
 
 void ImGuiMenu::showErrorModal( const std::string& error )
 {
+    spdlog::error( "Error Modal Dialog: {}", error );
     showRenameModal_ = false;
     ImGui::CloseCurrentPopup();
     storedError_ = error;
@@ -2894,6 +2895,8 @@ void showError( const std::string& error )
 {
     if ( auto menu = getViewerInstance().getMenuPlugin() )
         menu->showErrorModal( error );
+    else
+        spdlog::error( "Show Error: {}", error );
 }
 
 } // end namespace

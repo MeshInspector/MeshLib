@@ -303,7 +303,6 @@ void ProgressBar::tryRunTask_()
     {
         onFinish_ = [msg = std::string( e.what() )]()
         {
-            spdlog::error( msg );
             showError( msg );
         };
     }
@@ -323,7 +322,6 @@ void ProgressBar::tryRunTaskWithSehHandler_()
     {
         onFinish_ = []()
         {
-            spdlog::error( "Unknown exception occurred" );
             showError( "Unknown exception occurred" );
         };
     }

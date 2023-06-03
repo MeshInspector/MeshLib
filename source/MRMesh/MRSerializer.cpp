@@ -170,9 +170,10 @@ VoidOrErrStr compressOneItem( zip_t* archive, const std::filesystem::path& path,
             if ( zip_dir_add( archive, archiveDirPath.c_str(), ZIP_FL_ENC_UTF_8 ) == -1 )
                 return tl::make_unexpected( "Cannot add directory " + archiveDirPath + " to archive" );
         }
-        for ( const auto& entry : std::filesystem::directory_iterator( path, ec ) )
+        const std::filesystem::directory_iterator dirEnd;
+        for ( auto entry = std::filesystem::directory_iterator( path, ec ); !ec && entry != dirEnd; entry.increment( ec ) )
         {
-            auto res = compressOneItem( archive, entry.path(), base, excludeFiles, password );
+            auto res = compressOneItem( archive, entry->path(), base, excludeFiles, password );
             if ( !res.has_value() )
                 return res;
         }
@@ -400,11 +401,12 @@ tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromFold
 
     std::error_code ec;
     std::filesystem::path jsonFile;
-    for ( const auto& entry : std::filesystem::directory_iterator( folder, ec ) )
+    const std::filesystem::directory_iterator dirEnd;
+    for ( auto entry = std::filesystem::directory_iterator( folder, ec ); !ec && entry != dirEnd; entry.increment( ec ) )
     {
-        if ( entry.path().extension() == ".json" )
+        if ( entry->path().extension() == ".json" )
         {
-            jsonFile = entry.path();
+            jsonFile = entry->path();
             break;
         }
     }

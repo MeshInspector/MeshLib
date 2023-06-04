@@ -471,9 +471,6 @@
     <ClInclude Include="MRConfig.h">
       <Filter>Source Files\System</Filter>
     </ClInclude>
-    <ClInclude Include="MRFile.h">
-      <Filter>Source Files\Basic</Filter>
-    </ClInclude>
     <ClInclude Include="MRDenseBox.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -969,6 +966,12 @@
     <ClInclude Include="MRGcodeLoad.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRFile.h">
+      <Filter>Source Files\System</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDirectory.h">
+      <Filter>Source Files\System</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1216,9 +1219,6 @@
     </ClCompile>
     <ClCompile Include="MRConfig.cpp">
       <Filter>Source Files\System</Filter>
-    </ClCompile>
-    <ClCompile Include="MRFile.cpp">
-      <Filter>Source Files\Basic</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshTests.cpp">
       <Filter>Source Files\Tests</Filter>
@@ -1615,6 +1615,9 @@
     </ClCompile>
     <ClCompile Include="MRGcodeLoad.cpp">
       <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFile.cpp">
+      <Filter>Source Files\System</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

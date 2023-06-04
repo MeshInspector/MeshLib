@@ -7,9 +7,6 @@
 namespace MR
 {
 
-/// \addtogroup BasicGroup
-/// \{
-
 /// this version of fopen unlike std::fopen supports unicode file names on Windows
 MRMESH_API FILE * fopen( const std::filesystem::path & filename, const char * mode );
 
@@ -39,7 +36,5 @@ public:
 private:
     FILE * handle_ = nullptr;
 };
-
-/// \}
 
 } // namespace MR

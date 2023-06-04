@@ -49,6 +49,7 @@
     <ClInclude Include="MRContoursStitch.h" />
     <ClInclude Include="MRConvexHull.h" />
     <ClInclude Include="MRDenseBox.h" />
+    <ClInclude Include="MRDirectory.h" />
     <ClInclude Include="MRDistanceMap.h" />
     <ClInclude Include="MRDistanceMapLoad.h" />
     <ClInclude Include="MRDistanceMapParams.h" />

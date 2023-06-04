@@ -16,6 +16,7 @@
 #endif
 
 #ifndef __EMSCRIPTEN__
+#include "MRDirectory.h"
 #include <fmt/chrono.h>
 #endif
 #include <sstream>
@@ -33,10 +34,9 @@ void removeOldLogs( const std::filesystem::path& dir, int hours = 24 )
     auto now = std::chrono::system_clock::now();
     std::time_t nowSinceEpoch = std::chrono::system_clock::to_time_t( now );
 
-    const std::filesystem::directory_iterator dirEnd;
-    for ( auto entry = std::filesystem::directory_iterator( dir, ec ); !ec && entry != dirEnd; entry.increment( ec ) )
+    for ( auto entry : MR::Directory{ dir, ec } )
     {
-        auto fileName = MR::utf8string( entry->path().filename() );
+        auto fileName = MR::utf8string( entry.path().filename() );
         auto prefixOffset = fileName.find( "MRLog_" );
         if ( prefixOffset == std::string::npos )
             continue; // not log file
@@ -49,7 +49,7 @@ void removeOldLogs( const std::filesystem::path& dir, int hours = 24 )
         auto diffHours = ( nowSinceEpoch - fileDateSinceEpoch ) / 3600;
         if ( diffHours < hours )
             continue; // "young" file
-        std::filesystem::remove( entry->path(), ec );
+        std::filesystem::remove( entry.path(), ec );
     }
 }
 

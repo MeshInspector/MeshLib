@@ -19,11 +19,12 @@
 #include "MRCube.h"
 #include "MRObjectMesh.h"
 #include "MRStringConvert.h"
-#include <filesystem>
-#include "MRPch/MRSpdlog.h"
 #include "MRGTest.h"
-#include "MRPch/MRJson.h"
 #include "MRMeshTexture.h"
+#include "MRDirectory.h"
+#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRJson.h"
+#include <filesystem>
 
 #if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)
 #pragma clang diagnostic push
@@ -405,12 +406,11 @@ tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromFold
 
     std::error_code ec;
     std::filesystem::path jsonFile;
-    const std::filesystem::directory_iterator dirEnd;
-    for ( auto entry = std::filesystem::directory_iterator( folder, ec ); !ec && entry != dirEnd; entry.increment( ec ) )
+    for ( auto entry : Directory{ folder, ec } )
     {
-        if ( entry->path().extension() == ".json" )
+        if ( entry.path().extension() == ".json" )
         {
-            jsonFile = entry->path();
+            jsonFile = entry.path();
             break;
         }
     }

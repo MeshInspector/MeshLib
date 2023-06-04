@@ -1,11 +1,12 @@
 #include "MRSetupViewer.h"
-#include "MRMesh/MRConfig.h"
-#include "MRMesh/MRStringConvert.h"
-#include "MRMesh/MRSystem.h"
 #include "MRRibbonMenu.h"
 #include "MRViewer.h"
 #include "MRViewerSettingsManager.h"
+#include "MRMesh/MRConfig.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRSystem.h"
 #include "MRMesh/MRHistoryStore.h"
+#include "MRMesh/MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
 #if _WIN32
@@ -66,20 +67,20 @@ void ViewerSetup::setupExtendedLibraries() const
     // get library names and their loading priority from *.ui.json files
     std::vector<std::pair<std::string, int>> lib2priority;
     std::error_code ec;
-    for ( auto it = std::filesystem::directory_iterator( GetResourcesDirectory(), ec ); !ec && it != std::filesystem::end( it ); it.increment( ec ) )
+    for ( auto entry : Directory{ GetResourcesDirectory(), ec } )
     {
-        if ( it->path().u8string().ends_with( asU8String( ".ui.json" ) ) )
+        if ( entry.path().u8string().ends_with( asU8String( ".ui.json" ) ) )
         {
-            auto fileJson = deserializeJsonValue( it->path() );
+            auto fileJson = deserializeJsonValue( entry.path() );
             if ( !fileJson  )
             {
-                spdlog::error( "JSON ({}) deserialize error: {}", utf8string( it->path().filename() ), fileJson.error() );
+                spdlog::error( "JSON ({}) deserialize error: {}", utf8string( entry.path().filename() ), fileJson.error() );
                 assert( false );
                 continue;
             }
             if ( !fileJson.value()["LibName"].isString() || !fileJson.value()["Order"].isInt())
             {
-                spdlog::info( "JSON ({}) format error. Please, check the values of 'LibName' and/or 'Order' fields.", utf8string( it->path().filename() ), fileJson.error() );
+                spdlog::info( "JSON ({}) format error. Please, check the values of 'LibName' and/or 'Order' fields.", utf8string( entry.path().filename() ), fileJson.error() );
                 assert( false );
                 continue;
             }

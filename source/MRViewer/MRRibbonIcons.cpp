@@ -1,9 +1,10 @@
 #include "MRRibbonIcons.h"
-#include "MRMesh/MRImageLoad.h"
 #include "MRImGuiImage.h"
+#include "MRViewer.h"
+#include "MRMesh/MRImageLoad.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
-#include "MRViewer.h"
+#include "MRMesh/MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
 #include <filesystem>
@@ -108,17 +109,16 @@ void RibbonIcons::load_( IconType type )
             continue;
         }
 
-        const std::filesystem::directory_iterator dirEnd;
-        for ( auto it = std::filesystem::directory_iterator( dirPath, ec ); !ec && it != dirEnd; it.increment( ec ) )
+        for ( auto entry : Directory{ dirPath, ec } )
         {
-            if ( !it->is_regular_file( ec ) )
+            if ( !entry.is_regular_file( ec ) )
                 continue;
-            auto ext = it->path().extension().u8string();
+            auto ext = entry.path().extension().u8string();
             for ( auto& c : ext )
                 c = ( char ) tolower( c );
             if ( ext != u8".png" )
                 continue;
-            auto image = ImageLoad::fromPng( it->path() );
+            auto image = ImageLoad::fromPng( entry.path() );
             if ( !image.has_value() )
                 continue;
             Icons icons;
@@ -149,7 +149,7 @@ void RibbonIcons::load_( IconType type )
                 loadedSizes[sz] = whiteTexture.resolution.x;
 
             icons.white->update( std::move( whiteTexture ) );
-            map[utf8string( it->path().stem() )][sz] = std::move( icons );
+            map[utf8string( entry.path().stem() )][sz] = std::move( icons );
         }
     }
 }

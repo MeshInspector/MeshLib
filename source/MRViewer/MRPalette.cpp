@@ -1,12 +1,13 @@
 #include "MRPalette.h"
-#include "MRMesh/MRSerializer.h"
-#include "MRMesh/MRSceneColors.h"
-#include "MRPch/MRSpdlog.h"
-#include "MRMesh/MRSystem.h"
-#include "MRMesh/MRStringConvert.h"
 #include "MRViewer.h"
 #include "ImGuiMenu.h"
 #include "imgui_internal.h"
+#include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRSceneColors.h"
+#include "MRMesh/MRSystem.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRDirectory.h"
+#include "MRPch/MRSpdlog.h"
 #include <string>
 #include <fstream>
 
@@ -672,18 +673,17 @@ void PalettePresets::update_()
         return;
     }
 
-    const std::filesystem::directory_iterator dirEnd;
-    for ( auto dirIt = std::filesystem::directory_iterator( userPalettesDir, ec ); !ec && dirIt != dirEnd; dirIt.increment( ec ) )
+    for ( auto entry : Directory{ userPalettesDir, ec } )
     {
-        if ( dirIt->is_regular_file( ec ) )
+        if ( entry.is_regular_file( ec ) )
         {
-            auto ext = dirIt->path().extension().u8string();
+            auto ext = entry.path().extension().u8string();
             for ( auto& c : ext )
                 c = ( char ) tolower( c );
 
             if ( ext != u8".json" )
                 break;
-            names_.push_back( utf8string( dirIt->path().stem() ) );
+            names_.push_back( utf8string( entry.path().stem() ) );
         }
     }
     if ( ec )

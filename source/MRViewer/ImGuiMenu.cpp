@@ -2106,7 +2106,7 @@ void ImGuiMenu::reorderSceneIfNeeded_()
         bool detachSuccess = sourcePtr->detachFromParent();
         if ( !detachSuccess )
         {
-            showErrorModal( "Cannot preform such reorder" );
+            showErrorModal( "Cannot perform such reorder" );
             dragOrDropFailed = true;
             break;
         }
@@ -2120,7 +2120,7 @@ void ImGuiMenu::reorderSceneIfNeeded_()
         if ( !attachSucess )
         {
             detachAction->action( HistoryAction::Type::Undo );
-            showErrorModal( "Cannot preform such reorder" );
+            showErrorModal( "Cannot perform such reorder" );
             dragOrDropFailed = true;
             break;
         }

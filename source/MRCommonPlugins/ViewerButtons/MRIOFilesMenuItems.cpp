@@ -581,7 +581,6 @@ bool SaveSelectedMenuItem::action()
                 else
                 {
                     const auto errStr = "Error saving in MRU-format: " + res.error();
-                    spdlog::error( errStr );
                     showError( errStr );
                 }
             };
@@ -595,10 +594,7 @@ bool SaveSelectedMenuItem::action()
 
         auto res = MeshSave::sceneToObj( objs, savePath );
         if ( !res.has_value() )
-        {
             showError( res.error() );
-            spdlog::error( res.error() );
-        }
         else
             getViewerInstance().recentFilesStore.storeFile( savePath );
     }
@@ -624,7 +620,6 @@ void SaveSceneAsMenuItem::saveScene_( const std::filesystem::path& savePath )
             else
             {
                 const auto errStr = "Error saving in MRU-format: " + res.error();
-                spdlog::error( errStr );
                 showError( errStr );
             }
         };
@@ -674,10 +669,7 @@ bool CaptureScreenshotMenuItem::action()
         auto image = Viewer::instanceRef().captureScreenShot( Vector2i( bounds.min ), Vector2i( bounds.max - bounds.min ) );
         auto res = ImageSave::toAnySupportedFormat( image, savePath );
         if ( !res.has_value() )
-        {
-            spdlog::warn( "Error saving screenshot: {}", res.error() );
-            showError( res.error() );
-        }
+            showError( "Error saving screenshot: " + res.error() );
     }
     return false;
 }
@@ -700,10 +692,7 @@ bool CaptureUIScreenshotMenuItem::action()
         {
             auto res = ImageSave::toAnySupportedFormat( image, savePath );
             if ( !res.has_value() )
-            {
-                spdlog::warn( "Error saving screenshot: {}", res.error() );
-                showError( res.error() );
-            }
+                showError( "Error saving screenshot: " + res.error() );
         }
     } );
     return false;

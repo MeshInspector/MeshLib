@@ -19,6 +19,7 @@
 #include "MRIOFormatsRegistry.h"
 #include "MRMeshLoadObj.h"
 #include "MRSerializer.h"
+#include "MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
 
 #ifndef MRMESH_NO_GLTF
@@ -335,15 +336,14 @@ bool isSupportedFileInSubfolders( const std::filesystem::path& folder )
         filesList.erase( filesList.begin() );
 
         std::error_code ec;
-        const std::filesystem::directory_iterator dirEnd;
-        for ( auto it = std::filesystem::directory_iterator( path, ec ); !ec && it != dirEnd; it.increment( ec ) )
+        for ( auto entry : Directory{ path, ec } )
         {
-            auto subpath = it->path();
-            if ( it->is_directory( ec ) )
+            auto subpath = entry.path();
+            if ( entry.is_directory( ec ) )
             {
                 filesList.push_back( path = subpath );
             }
-            else if ( it->is_regular_file( ec ) )
+            else if ( entry.is_regular_file( ec ) )
             {
                 auto ext = utf8string( subpath.extension() );
                 for ( auto& c : ext )
@@ -383,16 +383,15 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
     fillFilesTree = [&fillFilesTree] ( FilePathNode& node )
     {
         std::error_code ec;
-        const std::filesystem::directory_iterator dirEnd;
-        for ( auto it = std::filesystem::directory_iterator( node.path, ec ); !ec && it != dirEnd; it.increment( ec ) )
+        for ( auto entry : Directory{ node.path, ec } )
         {
-            auto path = it->path();
-            if ( it->is_directory( ec ) )
+            auto path = entry.path();
+            if ( entry.is_directory( ec ) )
             {
                 node.subfolders.push_back( { .path = path } );
                 fillFilesTree( node.subfolders[node.subfolders.size() - 1] );
             }
-            else if ( it->is_regular_file( ec ) )
+            else if ( entry.is_regular_file( ec ) )
             {
                 auto ext = utf8string( path.extension() );
                 for ( auto& c : ext )

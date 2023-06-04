@@ -1,14 +1,15 @@
 #include "MRRibbonSchema.h"
 #include "MRRibbonMenuItem.h"
+#include "imgui.h"
+#include "MRRibbonMenu.h"
+#include "MRViewer.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRDirectory.h"
+#include "MRMesh/MRString.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRJson.h"
-#include "MRViewer/MRViewer.h"
-#include "MRRibbonMenu.h"
-#include "MRMesh/MRString.h"
-#include "imgui.h"
 
 namespace MR
 {
@@ -269,13 +270,13 @@ std::vector<std::filesystem::path> RibbonSchemaLoader::getStructureFiles_( const
 {
     std::vector<std::filesystem::path> files;
     std::error_code ec;
-    for ( auto it = std::filesystem::directory_iterator( GetResourcesDirectory(), ec ); !ec && it != std::filesystem::end( it ); it.increment( ec ) )
+    for ( auto entry : Directory{ GetResourcesDirectory(), ec } )
     {
-        auto filename = it->path().filename().u8string();
+        auto filename = entry.path().filename().u8string();
         for ( auto& c : filename )
             c = ( char ) tolower( c );
         if ( filename.ends_with( asU8String( fileExtension ) ) )
-            files.push_back( it->path() );
+            files.push_back( entry.path() );
     }
     return files;
 }

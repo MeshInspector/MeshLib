@@ -6,11 +6,11 @@
 #include "MRVDBConversions.h"
 #include "MRStringConvert.h"
 #include "MRFloatGrid.h"
+#include "MRStringConvert.h"
+#include "MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
-#include "MRStringConvert.h"
 #include <compare>
-#include <filesystem>
 #include <fstream>
 
 #ifndef MRMESH_NO_DICOM
@@ -495,19 +495,18 @@ tl::expected<DicomVolume, std::string> loadDicomFolder( const std::filesystem::p
 
     int filesNum = 0;
     std::vector<std::filesystem::path> files;
-    const std::filesystem::directory_iterator dirEnd;
-    for ( auto it = std::filesystem::directory_iterator( path, ec ); !ec && it != dirEnd; it.increment( ec ) )
+    for ( auto entry : Directory{ path, ec } )
     {
-        if ( it->is_regular_file( ec ) )
+        if ( entry.is_regular_file( ec ) )
             ++filesNum;
     }
     files.reserve( filesNum );
     int fCounter = 0;
-    for ( auto it = std::filesystem::directory_iterator( path, ec ); !ec && it != dirEnd; it.increment( ec ) )
+    for ( auto entry : Directory{ path, ec } )
     {
         ++fCounter;
-        auto filePath = it->path();
-        if ( it->is_regular_file( ec ) && isDICOMFile( filePath ) )
+        auto filePath = entry.path();
+        if ( entry.is_regular_file( ec ) && isDICOMFile( filePath ) )
             files.push_back( filePath );
         if ( !reportProgress( cb, 0.3f * float( fCounter ) / float( filesNum ) ) )
             tl::make_unexpected( "Loading canceled" );
@@ -601,11 +600,10 @@ std::vector<tl::expected<LoadDCMResult, std::string>> loadDCMFolderTree( const s
     if ( !tryLoadDir( path ) )
         return { tl::make_unexpected( "Loading canceled" ) };
 
-    const std::filesystem::recursive_directory_iterator dirEnd;
     std::error_code ec;
-    for ( auto it = std::filesystem::recursive_directory_iterator( path, ec ); !ec && it != dirEnd; it.increment( ec ) )
+    for ( auto entry : DirectoryRecursive{ path, ec } )
     {
-        if ( it->is_directory( ec ) && !tryLoadDir( *it ) )
+        if ( entry.is_directory( ec ) && !tryLoadDir( entry ) )
             break;
     }
     return res;
@@ -660,7 +658,7 @@ tl::expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& path,
     if ( !std::filesystem::is_directory( parentPath, ec ) )
         return tl::make_unexpected( utf8string( parentPath ) + " - is not directory" );
     std::vector<std::filesystem::path> candidatePaths;
-    for ( auto entry : std::filesystem::directory_iterator( parentPath, ec ) )
+    for ( auto entry : Directory{ parentPath, ec } )
     {
         auto filename = entry.path().filename();
         auto pos = utf8string( filename ).find( utf8string( path.filename() ) );
@@ -935,17 +933,16 @@ tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& set
 
     int filesNum = 0;
     std::vector<std::filesystem::path> files;
-    const std::filesystem::directory_iterator dirEnd;
-    for ( auto it = std::filesystem::directory_iterator( settings.dir, ec ); !ec && it != dirEnd; it.increment( ec ) )
+    for ( auto entry : Directory{ settings.dir, ec } )
     {
-        if ( it->is_regular_file( ec ) )
+        if ( entry.is_regular_file( ec ) )
             ++filesNum;
     }
     files.reserve( filesNum );
-    for ( auto it = std::filesystem::directory_iterator( settings.dir, ec ); !ec && it != dirEnd; it.increment( ec ) )
+    for ( auto entry : Directory{ settings.dir, ec } )
     {
-        auto filePath = it->path();
-        if ( it->is_regular_file( ec ) && isTIFFFile( filePath ) )
+        auto filePath = entry.path();
+        if ( entry.is_regular_file( ec ) && isTIFFFile( filePath ) )
             files.push_back( filePath );
     }
 

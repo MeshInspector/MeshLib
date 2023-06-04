@@ -19,11 +19,12 @@
 #include "MRCube.h"
 #include "MRObjectMesh.h"
 #include "MRStringConvert.h"
-#include <filesystem>
-#include "MRPch/MRSpdlog.h"
 #include "MRGTest.h"
-#include "MRPch/MRJson.h"
 #include "MRMeshTexture.h"
+#include "MRDirectory.h"
+#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRJson.h"
+#include <filesystem>
 
 #if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)
 #pragma clang diagnostic push
@@ -179,13 +180,12 @@ VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::files
         return excluded == excludeFiles.end();
     };
 
-    const std::filesystem::recursive_directory_iterator dirEnd;
     // pass #1: add directories in the archive and count the files
     int totalFiles = 0;
-    for ( auto entry = std::filesystem::recursive_directory_iterator( sourceFolder, ec ); !ec && entry != dirEnd; entry.increment( ec ) )
+    for ( auto entry : DirectoryRecursive{ sourceFolder, ec } )
     {
-        const auto path = entry->path();
-        if ( entry->is_directory( ec ) && path != sourceFolder )
+        const auto path = entry.path();
+        if ( entry.is_directory( ec ) && path != sourceFolder )
         {
             auto archiveDirPath = utf8string( std::filesystem::relative( path, sourceFolder, ec ) );
             // convert folder separators in Linux style for the latest 7-zip to open archive correctly
@@ -201,9 +201,9 @@ VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::files
 
     // pass #2: add files in the archive
     int compressedFiles = 0;
-    for ( auto entry = std::filesystem::recursive_directory_iterator( sourceFolder, ec ); !ec && entry != dirEnd; entry.increment( ec ) )
+    for ( auto entry : DirectoryRecursive{ sourceFolder, ec } )
     {
-        const auto path = entry->path();
+        const auto path = entry.path();
         if ( !goodFile( path ) )
             continue;
 
@@ -405,12 +405,11 @@ tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromFold
 
     std::error_code ec;
     std::filesystem::path jsonFile;
-    const std::filesystem::directory_iterator dirEnd;
-    for ( auto entry = std::filesystem::directory_iterator( folder, ec ); !ec && entry != dirEnd; entry.increment( ec ) )
+    for ( auto entry : Directory{ folder, ec } )
     {
-        if ( entry->path().extension() == ".json" )
+        if ( entry.path().extension() == ".json" )
         {
-            jsonFile = entry->path();
+            jsonFile = entry.path();
             break;
         }
     }

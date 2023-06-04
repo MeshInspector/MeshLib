@@ -8,6 +8,7 @@
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRSuppressWarning.h"
 #include "MRViewer/MRRibbonButtonDrawer.h"
@@ -195,7 +196,7 @@ void AddCustomThemePlugin::updateThemeNames_()
     std::error_code ec;
     if ( std::filesystem::is_directory( userThemesDir, ec ) )
     {
-        for ( const auto& entry : std::filesystem::directory_iterator( userThemesDir, ec ) )
+        for ( const auto& entry : Directory{ userThemesDir, ec } )
         {
             if ( entry.is_regular_file( ec ) )
             {

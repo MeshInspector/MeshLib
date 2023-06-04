@@ -2,9 +2,10 @@
 #include "MRRestoringStreamsSink.h"
 #include "MRSystem.h"
 #include "MRStringConvert.h"
+#include "MRDirectory.h"
+#include "MRTimer.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
-#include "MRTimer.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/stacktrace.hpp>
@@ -16,7 +17,6 @@
 #endif
 
 #ifndef __EMSCRIPTEN__
-#include "MRDirectory.h"
 #include <fmt/chrono.h>
 #endif
 #include <sstream>

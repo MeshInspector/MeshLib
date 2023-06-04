@@ -600,11 +600,10 @@ std::vector<tl::expected<LoadDCMResult, std::string>> loadDCMFolderTree( const s
     if ( !tryLoadDir( path ) )
         return { tl::make_unexpected( "Loading canceled" ) };
 
-    const std::filesystem::recursive_directory_iterator dirEnd;
     std::error_code ec;
-    for ( auto it = std::filesystem::recursive_directory_iterator( path, ec ); !ec && it != dirEnd; it.increment( ec ) )
+    for ( auto entry : DirectoryRecursive{ path, ec } )
     {
-        if ( it->is_directory( ec ) && !tryLoadDir( *it ) )
+        if ( entry.is_directory( ec ) && !tryLoadDir( entry ) )
             break;
     }
     return res;

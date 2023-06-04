@@ -180,13 +180,12 @@ VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::files
         return excluded == excludeFiles.end();
     };
 
-    const std::filesystem::recursive_directory_iterator dirEnd;
     // pass #1: add directories in the archive and count the files
     int totalFiles = 0;
-    for ( auto entry = std::filesystem::recursive_directory_iterator( sourceFolder, ec ); !ec && entry != dirEnd; entry.increment( ec ) )
+    for ( auto entry : DirectoryRecursive{ sourceFolder, ec } )
     {
-        const auto path = entry->path();
-        if ( entry->is_directory( ec ) && path != sourceFolder )
+        const auto path = entry.path();
+        if ( entry.is_directory( ec ) && path != sourceFolder )
         {
             auto archiveDirPath = utf8string( std::filesystem::relative( path, sourceFolder, ec ) );
             // convert folder separators in Linux style for the latest 7-zip to open archive correctly
@@ -202,9 +201,9 @@ VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::files
 
     // pass #2: add files in the archive
     int compressedFiles = 0;
-    for ( auto entry = std::filesystem::recursive_directory_iterator( sourceFolder, ec ); !ec && entry != dirEnd; entry.increment( ec ) )
+    for ( auto entry : DirectoryRecursive{ sourceFolder, ec } )
     {
-        const auto path = entry->path();
+        const auto path = entry.path();
         if ( !goodFile( path ) )
             continue;
 

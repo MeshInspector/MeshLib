@@ -14,6 +14,8 @@ IF(NOT ${MR_FEDORA} AND NOT ${MR_UBUNTU22} AND NOT ${MR_EMSCRIPTEN})
  target_link_libraries(${PROJECT_NAME} PRIVATE
          MRMesh
          MRViewer
+         GTest::gtest GTest::gtest_main
+         fmt
          spdlog
          mrmeshpy
  )
@@ -23,14 +25,14 @@ ELSE()
         MRMesh
         MRViewer
         fmt
-        gtest
+        GTest::gtest GTest::gtest_main
         spdlog
         mrmeshpy
     )
   ELSE()
     set(CMAKE_EXECUTABLE_SUFFIX ".html")
     target_link_libraries(${PROJECT_NAME} PRIVATE
-        gtest
+        GTest::gtest GTest::gtest_main
         pthread
         zip
         -Wl,--whole-archive

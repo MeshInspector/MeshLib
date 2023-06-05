@@ -143,12 +143,12 @@ IF(APPLE OR MR_EMSCRIPTEN)
 	#include_directories(/opt/homebrew/opt/jpeg-turbo/include)
 	#link_directories(/opt/homebrew/opt/jpeg-turbo/lib)
 
-	IF (NOT MR_EMSCRIPTEN)
+	IF (APPLE)
 		find_library(COCOA_LIBRARY Cocoa ONLY)
 	    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
 		target_link_libraries(${PROJECT_NAME} PRIVATE
 		    spdlog
-		    gtest gtest_main
+		    GTest::gtest GTest::gtest_main
 		    zip
 		    pthread
 		    Boost::boost

@@ -40,6 +40,7 @@ IF(APPLE)
     target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 			MRMesh
+			GTest::gtest GTest::gtest_main
 			fmt
 			tbb
 			OpenVDB

@@ -230,7 +230,6 @@ GcodeProcessor::MoveAction GcodeProcessor::moveArc_( const Vector3f& newPoint, b
 void GcodeProcessor::updateWorkPlane_( WorkPlane wp )
 {
     workPlane_ = wp;
-    constexpr float pi2 = PI2_F;
     if ( workPlane_ == WorkPlane::zx )
         toWorkPlaneXf_ = Matrix3f( { 0, 0, 1 }, { 1, 0, 0 }, { 0, 1, 0 } );
     else if ( workPlane_ == WorkPlane::yz )

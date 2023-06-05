@@ -972,6 +972,9 @@
     <ClInclude Include="MRDirectory.h">
       <Filter>Source Files\System</Filter>
     </ClInclude>
+    <ClInclude Include="MRAxis.h">
+      <Filter>Source Files\BaseStructures</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

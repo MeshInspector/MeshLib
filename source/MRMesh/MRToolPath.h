@@ -1,6 +1,7 @@
 #pragma once
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRMeshFwd.h"
+#include "MRAxis.h"
 #include "MRMesh.h"
 #include "MRPolyline.h"
 
@@ -57,12 +58,7 @@ enum class MoveType
     PlaneSelectionYZ = 19
 };
 
-enum class Axis
-{
-    X,
-    Y,
-    Z
-};
+
 
 struct GCommand
 {
@@ -79,7 +75,9 @@ struct GCommand
     float j = std::numeric_limits<float>::quiet_NaN();
     float k = std::numeric_limits<float>::quiet_NaN();
 
+    // get coordinate along specified axis
     float coord( Axis axis ) const;
+    // get projection to the plane orthogonal to the specified axis
     Vector2f project( Axis axis ) const;
 };
 
@@ -93,11 +91,11 @@ struct ToolPathResult
     std::vector<GCommand> commands;
 };
 
-// compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down )
+// compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
 // mesh can be transformed using xf parameter
 MRMESH_API ToolPathResult constantZToolPath( const Mesh& mesh, const ToolPathParams& params, const AffineXf3f* xf );
 
-// compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down )
+// compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
 // mesh can be transformed using xf parameter
 MRMESH_API ToolPathResult lacingToolPath( const Mesh& mesh, const ToolPathParams& params, const AffineXf3f* xf );
 

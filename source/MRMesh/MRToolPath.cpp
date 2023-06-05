@@ -144,6 +144,7 @@ ToolPathResult lacingToolPath( const Mesh& inputMesh, const ToolPathParams& para
 
             if ( bottomLeftIt < bottomRightIt )
             {
+                res.commands.reserve( res.commands.size() + std::distance( bottomLeftIt, bottomRightIt ) + 1 );
                 for ( auto it = bottomLeftIt; it <= bottomRightIt; ++it )
                 {
                     toolPath.push_back( *it );
@@ -152,6 +153,7 @@ ToolPathResult lacingToolPath( const Mesh& inputMesh, const ToolPathParams& para
             }
             else
             {
+                res.commands.reserve( res.commands.size() + std::distance( bottomLeftIt, contour.end() ) + std::distance( contour.begin(), bottomRightIt ) );
                 for ( auto it = bottomLeftIt; it < contour.end(); ++it )
                 {
                     toolPath.push_back( *it );
@@ -564,7 +566,7 @@ float distSqrToLineSegment( const MR::Vector2f p, const MR::Vector2f& seg0, cons
 {
     const auto segDir = seg1 - seg0;
     const auto len2 = segDir.lengthSq();
-    if ( len2 < 1e-30 )
+    if ( len2 < std::numeric_limits<float>::epsilon() )
     {
         return ( seg0 - p ).lengthSq();
     }

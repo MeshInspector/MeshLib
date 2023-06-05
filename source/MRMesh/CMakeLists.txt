@@ -148,7 +148,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
 	    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
 		target_link_libraries(${PROJECT_NAME} PRIVATE
 		    spdlog
-		    GTest::gtest GTest::gtest_main
+		    GTest::gtest
 		    zip
 		    pthread
 		    Boost::boost
@@ -161,7 +161,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		)
 	ELSE()
 	    target_link_libraries(${PROJECT_NAME} PRIVATE
-	        gtest gtest_main
+	        gtest
 	        zip
 	        freetype
 	        pthread
@@ -177,7 +177,7 @@ ELSE()
 		fmt
 		spdlog
         tinyxml2
-		gtest gtest_main
+		gtest
 		zip
 		pthread
 		Boost::boost

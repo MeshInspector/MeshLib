@@ -15,7 +15,7 @@ IF(APPLE)
          MRMesh
          MRViewer
          fmt
-         GTest::gtest GTest::gtest_main
+         GTest::gtest
          spdlog
          mrmeshpy
  )
@@ -25,14 +25,14 @@ ELSE()
         MRMesh
         MRViewer
         fmt
-        gtest gtest_main
+        gtest
         spdlog
         mrmeshpy
     )
   ELSE()
     set(CMAKE_EXECUTABLE_SUFFIX ".html")
     target_link_libraries(${PROJECT_NAME} PRIVATE
-        gtest gtest_main
+        gtest
         pthread
         zip
         -Wl,--whole-archive

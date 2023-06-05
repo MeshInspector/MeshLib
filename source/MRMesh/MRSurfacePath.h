@@ -74,6 +74,10 @@ MRMESH_API HashMap<VertId, VertId> computeClosestSurfacePathTargets( const Mesh 
 /// the lines try to avoid sharp turns in the vertices
 MRMESH_API SurfacePaths getSurfacePathsViaVertices( const Mesh & mesh, const VertBitSet & vs );
 
+/// returns a set of closed mesh loops without intersections that smoothly approximates the boundary of given region,
+/// each returned edge segment passes in a triangle adjacent to original region-boundary vertex
+MRMESH_API SurfacePaths smoothRegionBoundary( const Mesh & mesh, const FaceBitSet & regionFaces );
+
 /// computes the length of surface path
 MRMESH_API float surfacePathLength( const Mesh& mesh, const SurfacePath& surfacePath );
 

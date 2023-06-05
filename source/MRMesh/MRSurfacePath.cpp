@@ -501,9 +501,7 @@ SurfacePaths getSurfacePathsViaVertices( const Mesh & mesh, const VertBitSet & v
         auto freeCC = cc - vs;
         auto numfree = freeCC.count();
         if ( numfree <= 0 )
-            continue; // too small connected component
-        if ( numfree == cc.count() )
-            continue; // no single fixed vertex in the component
+            continue; // all component vertices are fixed
 
         // fix one additional vertex in each connected component with the value 1
         // (to avoid constant 0 solution)
@@ -511,6 +509,47 @@ SurfacePaths getSurfacePathsViaVertices( const Mesh & mesh, const VertBitSet & v
         scalarField[fixedV] = 1;
         freeCC.reset( fixedV );
         freeVerts |= freeCC;
+    }
+
+    Laplacian lap( const_cast<Mesh&>( mesh ) ); //mesh will not be changed
+    lap.init( freeVerts, Laplacian::EdgeWeights::Unit, Laplacian::RememberShape::No );
+    lap.applyToScalar( scalarField );
+    res = extractIsolines( mesh.topology, scalarField, 0 );
+
+    return res;
+}
+
+SurfacePaths smoothRegionBoundary( const Mesh & mesh, const FaceBitSet & regionFaces )
+{
+    MR_TIMER
+    SurfacePaths res;
+    if ( !regionFaces.any() )
+        return res;
+
+    // value -1 for out-of-region vertices
+    Vector<float,VertId> scalarField( mesh.topology.vertSize(), -1 );
+
+    const auto regionVerts = getIncidentVerts( mesh.topology, regionFaces );
+    // value 1 for in-region vertices
+    for( auto v : regionVerts )
+        scalarField[v] = 1;
+
+    /// free vertices must have both in-region and out-of-region neighbor faces
+    VertBitSet freeVerts = getIncidentVerts( mesh.topology, mesh.topology.getValidFaces() - regionFaces ) & regionVerts;
+
+    for ( const auto & cc : MeshComponents::getAllComponentsVerts( mesh ) )
+    {
+        auto freeCC = cc & freeVerts;
+        auto numfree = freeCC.count();
+        auto numCC = cc.count();
+        assert( numfree <= numCC );
+        if ( numfree <= 0 )
+            continue; // too small connected component
+        if ( numfree < numCC )
+            continue; // at least one fixed vertex in the component
+
+        // all component vertices are free, just fix them all (to 1) to avoid under-determined system of equations
+        freeVerts -= cc;
     }
 
     Laplacian lap( const_cast<Mesh&>( mesh ) ); //mesh will not be changed

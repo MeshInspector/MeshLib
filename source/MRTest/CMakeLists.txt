@@ -15,7 +15,6 @@ IF(NOT ${MR_FEDORA} AND NOT ${MR_UBUNTU22} AND NOT ${MR_EMSCRIPTEN})
          MRMesh
          MRViewer
          GTest::gtest GTest::gtest_main
-         fmt
          spdlog
          mrmeshpy
  )

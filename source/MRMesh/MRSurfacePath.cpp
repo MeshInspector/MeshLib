@@ -526,13 +526,13 @@ SurfacePaths smoothRegionBoundary( const Mesh & mesh, const FaceBitSet & regionF
     if ( !regionFaces.any() )
         return res;
 
-    // value -1 for out-of-region vertices
-    Vector<float,VertId> scalarField( mesh.topology.vertSize(), -1 );
+    // value 1 for out-of-region vertices
+    Vector<float,VertId> scalarField( mesh.topology.vertSize(), 1 );
 
     const auto regionVerts = getIncidentVerts( mesh.topology, regionFaces );
-    // value 1 for in-region vertices
+    // value -1 for in-region vertices
     for( auto v : regionVerts )
-        scalarField[v] = 1;
+        scalarField[v] = -1;
 
     /// free vertices must have both in-region and out-of-region neighbor faces
     VertBitSet freeVerts = getIncidentVerts( mesh.topology, mesh.topology.getValidFaces() - regionFaces ) & regionVerts;
@@ -548,7 +548,7 @@ SurfacePaths smoothRegionBoundary( const Mesh & mesh, const FaceBitSet & regionF
         if ( numfree < numCC )
             continue; // at least one fixed vertex in the component
 
-        // all component vertices are free, just fix them all (to 1) to avoid under-determined system of equations
+        // all component vertices are free, just fix them all (to -1) to avoid under-determined system of equations
         freeVerts -= cc;
     }
 

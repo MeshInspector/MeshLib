@@ -377,7 +377,7 @@ std::vector<GCommand> replaceLineSegmentsWithCircularArcs( const std::span<GComm
     for ( int i = startIdx + 2; i < path.size(); ++i )
     {
         const GCommand& d2 = path[i];
-        int middleI = ( i + startIdx ) / 2;
+        const int middleI = ( i + startIdx ) / 2;
         const GCommand& d1 = path[middleI];
 
         const Vector2f p0 = path[startIdx].project( axis );
@@ -391,13 +391,11 @@ std::vector<GCommand> replaceLineSegmentsWithCircularArcs( const std::span<GComm
         if ( dot( dif1, dif2 ) > 0
             && calcCircleCenter( p0, p1, p2, pCenter ) )
         {
-            double rArc2 = ( pCenter - p0 ).lengthSq();
-            const double rArc2_1 = ( pCenter - p2 ).lengthSq();
-            double rArc = sqrt( rArc2 );
-            double r2Max = sqr( rArc + eps );
-            double r2Min = sqr( rArc - eps );
+            const double rArc = ( pCenter - p0 ).length();            
+            const double r2Max = sqr( rArc + eps );
+            const double r2Min = sqr( rArc - eps );
 
-            bool ccwRotation = cross( dif1, dif2 ) > 0;
+            const bool ccwRotation = cross( dif1, dif2 ) > 0;
 
             Vector2f dirStart = rotate90( p0 - pCenter );
             Vector2f dirEnd = rotateMinus90( p2 - pCenter );

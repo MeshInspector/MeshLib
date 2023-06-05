@@ -553,7 +553,7 @@ SurfacePaths smoothRegionBoundary( const Mesh & mesh, const FaceBitSet & regionF
     }
 
     Laplacian lap( const_cast<Mesh&>( mesh ) ); //mesh will not be changed
-    lap.init( freeVerts, Laplacian::EdgeWeights::Unit, Laplacian::RememberShape::No );
+    lap.init( freeVerts, Laplacian::EdgeWeights::Cotan, Laplacian::RememberShape::No );
     lap.applyToScalar( scalarField );
     res = extractIsolines( mesh.topology, scalarField, 0 );
 

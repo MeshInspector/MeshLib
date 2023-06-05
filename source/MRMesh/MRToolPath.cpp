@@ -113,8 +113,6 @@ ToolPathResult lacingToolPath( const Mesh& inputMesh, const ToolPathParams& para
         if ( contour.size() < 3 )
             continue;
 
-        const size_t cSize = contour.size();
-
         auto bottomLeftIt = contour.begin();
         auto bottomRightIt = contour.begin();
 

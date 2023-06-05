@@ -19,7 +19,7 @@ IF(APPLE)
  # Fix linking on 10.14+. See https://stackoverflow.com/questions/54068035
  LINK_DIRECTORIES(${HOMEBREW_PREFIX}/lib)
  set(CPPFLAGS "-I${HOMEBREW_PREFIX}/opt/llvm/include -I${HOMEBREW_PREFIX}/include")
- # set(LDFLAGS "-L${HOMEBREW_PREFIX}/opt/llvm/lib -Wl,-rpath,${HOMEBREW_PREFIX}/opt/llvm/lib")
+ set(LDFLAGS "-L${HOMEBREW_PREFIX}/opt/llvm/lib -Wl,-rpath,${HOMEBREW_PREFIX}/opt/llvm/lib")
  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -std=c++20-stdlib=libc++ -framework Cocoa -framework IOKit") # https://github.com/pybind/pybind11/issues/382
 
  set(BUILD_SHARED_LIBS ON)
@@ -221,7 +221,6 @@ IF(NOT MR_EMSCRIPTEN)
 ENDIF() # NOT MR_EMSCRIPTEN
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewerApp ./MRViewerApp)
-
 
 include(CMakePackageConfigHelpers)
 configure_package_config_file(meshlib-config.cmake.in

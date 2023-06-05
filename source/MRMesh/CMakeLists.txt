@@ -144,7 +144,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
 	#link_directories(/opt/homebrew/opt/jpeg-turbo/lib)
 
 	IF (APPLE)
-		find_library(COCOA_LIBRARY Cocoa ONLY)
+        find_library(COCOA_LIBRARY Cocoa ONLY)
 	    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
 		target_link_libraries(${PROJECT_NAME} PRIVATE
 		    spdlog

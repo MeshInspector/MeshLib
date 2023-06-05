@@ -566,7 +566,8 @@ float distSqrToLineSegment( const MR::Vector2f p, const MR::Vector2f& seg0, cons
 {
     const auto segDir = seg1 - seg0;
     const auto len2 = segDir.lengthSq();
-    if ( len2 < std::numeric_limits<float>::epsilon() )
+    constexpr float epsSq = std::numeric_limits<float>::epsilon() * std::numeric_limits<float>::epsilon();
+    if ( len2 <  epsSq )
     {
         return ( seg0 - p ).lengthSq();
     }

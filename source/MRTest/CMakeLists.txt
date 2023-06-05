@@ -10,10 +10,12 @@ IF(MR_EMSCRIPTEN)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --emrun")
 ENDIF()
 
-IF(NOT ${MR_FEDORA} AND NOT ${MR_UBUNTU22} AND NOT ${MR_EMSCRIPTEN})
+IF(APPLE)
  target_link_libraries(${PROJECT_NAME} PRIVATE
          MRMesh
          MRViewer
+         fmt
+         GTest::gtest
          spdlog
          mrmeshpy
  )

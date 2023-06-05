@@ -495,7 +495,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
     window = context->CurrentWindow;
     // Manually draw Y scroll bar if window cannot be big enough
-    if ( window->SizeFull.y < window->ContentSizeIdeal.y + 2 * style.WindowPadding.y && !params.changedSize )
+    if ( std::ceil( window->SizeFull.y ) < std::floor( window->ContentSizeIdeal.y + 2 * style.WindowPadding.y ) && !params.changedSize )
     {
         // Set scrollbar size
         window->ScrollbarSizes[ImGuiAxis_Y ^ 1] = style.ScrollbarSize;
@@ -698,7 +698,7 @@ bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWi
     window = context->CurrentWindow;
     const auto& style = GetStyle();
     // Manually draw Y scroll bar if window cannot be big enough
-    if ( window->SizeFull.y < window->ContentSizeIdeal.y + 2 * style.WindowPadding.y )
+    if ( std::ceil( window->SizeFull.y ) < std::floor( window->ContentSizeIdeal.y + 2 * style.WindowPadding.y ) )
     {
         // Set scrollbar size
         window->ScrollbarSizes[ImGuiAxis_Y ^ 1] = style.ScrollbarSize;

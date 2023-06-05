@@ -2,7 +2,7 @@
 
 namespace MR
 {
- enum Axis
+ enum class Axis
  {
      X,
      Y,

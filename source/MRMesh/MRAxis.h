@@ -6,6 +6,7 @@ namespace MR
  {
      X,
      Y,
-     Z
+     Z,
+     Count
  };
 }

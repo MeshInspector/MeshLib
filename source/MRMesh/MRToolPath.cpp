@@ -467,6 +467,9 @@ std::vector<GCommand> replaceLineSegmentsWithCircularArcs( const std::span<GComm
                 d1a.i = bestArcCenter.x - d0a.x;
                 d1a.j = bestArcCenter.y - d0a.y;
                 break;
+            default:
+                assert( false );
+                break;
             }
             
             d1a.type = CCWrotation ? MoveType::ArcCCW : MoveType::ArcCW;

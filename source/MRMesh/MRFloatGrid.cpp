@@ -27,16 +27,18 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
     transform.setToScale( openvdb::Vec3R{ voxelScale.x,voxelScale.y,voxelScale.z } );
     dest->setTransform( openvdb::math::Transform::createLinearTransform( transform ) ); // org voxel size is 1.0f
 
-    ProgressCallback undefinedProgressCb;
+    // just grows to 100% 
+    // first grows fast, then slower
+    ProgressCallback dummyProgressCb;
     float i = 1.0f;
     if ( cb )
-        undefinedProgressCb = [&] ( float )->bool
+        dummyProgressCb = [&] ( float )->bool
     {
         i += 1e-4f;
         return cb( 1.0f - 1.0f / std::sqrt( i ) );
     };
 
-    ProgressInterrupter interrupter( undefinedProgressCb );
+    ProgressInterrupter interrupter( dummyProgressCb );
     // openvdb::util::NullInterrupter template argument to avoid tbb inconsistency
     openvdb::tools::resampleToMatch<openvdb::tools::BoxSampler, openvdb::util::NullInterrupter>( grid_, *dest, interrupter );
     if ( interrupter.getWasInterrupted() )

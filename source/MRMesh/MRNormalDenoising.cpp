@@ -118,13 +118,13 @@ void updateIndicator( const Mesh & mesh, Vector<float, UndirectedEdgeId> & v, co
     const float k = 2 * beta * eps;
     for ( auto ue = 0_ue; ue < sz; ++ue )
     {
-        const EdgeId e = ue;
+        const EdgeId e = ue; // note that it can be lone edge
         float centralWeight = rh;
         const auto l = mesh.topology.left( e );
         const auto r = mesh.topology.right( e );
         if ( l && r )
             centralWeight += 2 * gamma * ( normals[l] - normals[r] ).lengthSq();
-        const auto lenE = mesh.edgeLength( e );
+        const auto lenE = ( l || r ) ? mesh.edgeLength( e ) : 0.0f;
         if ( lenE > 0 )
         {
             if ( l )

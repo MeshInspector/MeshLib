@@ -11,42 +11,25 @@
 #include "MRFastWindingNumber.h"
 #include "MRVolumeIndexer.h"
 #include "MRRegionBoundary.h"
-#include <thread>
 
 namespace MR
 {
 constexpr float denseVolumeToGridTolerance = 1e-6f;
 
-struct Interrupter
-{
-    Interrupter( ProgressCallback cb ) :
-        cb_{ cb }
-    {
-        progressThreadId_ = std::this_thread::get_id();
-    };
 
-    void start( const char* name = nullptr )
-    {
-        ( void )name;
-    }
-    void end()
-    {}
-    bool wasInterrupted( int percent = -1 )
-    {
-        wasInterrupted_ = false;
-        if ( cb_ && progressThreadId_ == std::this_thread::get_id() )
-            wasInterrupted_ = !cb_( float( std::clamp( percent, 0, 100 ) ) / 100.0f );
-        return wasInterrupted_;
-    }
-    bool getWasInterrupted() const
-    {
-        return wasInterrupted_;
-    }
-private:
-    bool wasInterrupted_{ false };
-    ProgressCallback cb_;
-    std::thread::id progressThreadId_;
-};
+ProgressInterrupter::ProgressInterrupter( ProgressCallback cb ) :
+    cb_{ cb }
+{
+    progressThreadId_ = std::this_thread::get_id();
+}
+
+bool ProgressInterrupter::wasInterrupted( int percent /*= -1 */ )
+{
+    wasInterrupted_ = false;
+    if ( cb_ && progressThreadId_ == std::this_thread::get_id() )
+        wasInterrupted_ = !cb_( float( std::clamp( percent, 0, 100 ) ) / 100.0f );
+    return wasInterrupted_;
+}
 
 void convertToVDMMesh( const MeshPart& mp, const AffineXf3f& xf, const Vector3f& voxelSize,
                        std::vector<openvdb::Vec3s>& points, std::vector<openvdb::Vec3I>& tris )
@@ -199,8 +182,8 @@ FloatGrid meshToLevelSet( const MeshPart& mp, const AffineXf3f& xf,
     convertToVDMMesh( mp, xf, voxelSize, points, tris );
 
     openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
-    Interrupter interrupter( cb );
-    auto resGrid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, Interrupter>
+    ProgressInterrupter interrupter( cb );
+    auto resGrid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, ProgressInterrupter>
         ( interrupter, *xform, points, tris, surfaceOffset ) );
     if ( interrupter.getWasInterrupted() )
         return {};
@@ -223,9 +206,9 @@ FloatGrid meshToDistanceField( const MeshPart& mp, const AffineXf3f& xf,
     convertToVDMMesh( mp, xf, voxelSize, points, tris );
 
     openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
-    Interrupter interrupter( cb );
+    ProgressInterrupter interrupter( cb );
 
-    auto resGrid = MakeFloatGrid( openvdb::tools::meshToUnsignedDistanceField<openvdb::FloatGrid, Interrupter>
+    auto resGrid = MakeFloatGrid( openvdb::tools::meshToUnsignedDistanceField<openvdb::FloatGrid, ProgressInterrupter>
         ( interrupter, *xform, points, tris, {}, surfaceOffset ) );
 
     if ( interrupter.getWasInterrupted() )
@@ -544,12 +527,12 @@ tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, co
 
     auto sp = subprogress( cb, 0.1f, needSignUpdate ? 0.2f : 0.3f );
     openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
-    Interrupter interrupter1( sp );
+    ProgressInterrupter interrupter1( sp );
     auto grid = MakeFloatGrid( 
         needSignUpdate ?
-        openvdb::tools::meshToUnsignedDistanceField<openvdb::FloatGrid, Interrupter>
+        openvdb::tools::meshToUnsignedDistanceField<openvdb::FloatGrid, ProgressInterrupter>
         ( interrupter1, *xform, points, tris, {}, std::abs( offsetInVoxelsA ) + 1 ) :
-        openvdb::tools::meshToLevelSet<openvdb::FloatGrid, Interrupter>
+        openvdb::tools::meshToLevelSet<openvdb::FloatGrid, ProgressInterrupter>
         ( interrupter1, *xform, points, tris, std::abs( offsetInVoxelsA ) + 1 ) );
 
     if ( interrupter1.getWasInterrupted() )
@@ -569,8 +552,8 @@ tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, co
         return unexpectedOperationCanceled();
     sp = subprogress( cb, 0.5f, 0.7f );
 
-    Interrupter interrupter2( sp );
-    grid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, Interrupter>
+    ProgressInterrupter interrupter2( sp );
+    grid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, ProgressInterrupter>
         ( interrupter2, *xform, points, tris, quads, std::abs( offsetInVoxelsB ) + 1 ) );
 
     if ( interrupter2.getWasInterrupted() || ( cb && !cb( 0.9f ) ) )

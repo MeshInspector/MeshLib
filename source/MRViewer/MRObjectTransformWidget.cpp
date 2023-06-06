@@ -309,23 +309,23 @@ void ObjectTransformWidget::activeMove_( bool press )
             activeEditMode_ = RotationMode;
         }
     }
-    TransformAxis activeAxis;
+    Axis activeAxis;
     switch ( activeControl )
     {
     case MR::ControlBit::MoveX:
     case MR::ControlBit::RotX:
-        activeAxis = TransformAxis::X;
+        activeAxis = Axis::X;
         break;
     case MR::ControlBit::MoveY:
     case MR::ControlBit::RotY:
-        activeAxis = TransformAxis::Y;
+        activeAxis = Axis::Y;
         break;
     case MR::ControlBit::MoveZ:
     case MR::ControlBit::RotZ:
-        activeAxis = TransformAxis::Z;
+        activeAxis = Axis::Z;
         break;
     default:
-        activeAxis = TransformAxis::X;
+        activeAxis = Axis::X;
         break;
     }
 
@@ -345,7 +345,7 @@ void ObjectTransformWidget::activeMove_( bool press )
     }
 }
 
-void ObjectTransformWidget::processScaling_( TransformAxis ax, bool press )
+void ObjectTransformWidget::processScaling_( Axis ax, bool press )
 {
     const auto& mousePos = getViewerInstance().mouseController.getMousePos();
     auto& viewport = getViewerInstance().viewport();
@@ -386,7 +386,7 @@ void ObjectTransformWidget::processScaling_( TransformAxis ax, bool press )
         assert( false );
 }
 
-void ObjectTransformWidget::processTranslation_( TransformAxis ax, bool press )
+void ObjectTransformWidget::processTranslation_( Axis ax, bool press )
 {
     const auto& mousePos = getViewerInstance().mouseController.getMousePos();
     auto& viewport = getViewerInstance().viewport();
@@ -415,7 +415,7 @@ void ObjectTransformWidget::processTranslation_( TransformAxis ax, bool press )
         controls_->updateTranslation( ax, startTranslation_, newTranslation );
 }
 
-void ObjectTransformWidget::processRotation_( TransformAxis ax, bool press )
+void ObjectTransformWidget::processRotation_( Axis ax, bool press )
 {
     const auto& mousePos = getViewerInstance().mouseController.getMousePos();
     auto& viewport = getViewerInstance().viewport();
@@ -552,7 +552,7 @@ TransformControls::~TransformControls()
 
 void TransformControls::init( std::shared_ptr<Object> parent )
 {
-    for ( int i = int( TransformAxis::X ); i < int( TransformAxis::Count ); ++i )
+    for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
     {
         if ( !translateControls_[i] )
         {
@@ -776,12 +776,12 @@ void TransformControls::updateVisualTransformMode_( uint8_t showMask, ViewportMa
     }
 }
 
-void TransformControls::updateTranslation( TransformAxis, const Vector3f& startMove, const Vector3f& endMove )
+void TransformControls::updateTranslation( Axis, const Vector3f& startMove, const Vector3f& endMove )
 {
     setActiveLineFromPoints_( { startMove,endMove } );
 }
 
-void TransformControls::updateRotation( TransformAxis ax, const AffineXf3f& xf, float startAngle, float endAngle )
+void TransformControls::updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle )
 {
     std::vector<Vector3f> activePoints;
     activePoints.reserve( 182 );
@@ -855,7 +855,7 @@ int TransformControls::findHoveredIndex_() const
         return -1;
 
     // 0-2 three is translation, 3-5 is rotation
-    for ( int ax = int( TransformAxis::X ); ax < int( TransformAxis::Count ); ++ax )
+    for ( int ax = int( Axis::X ); ax < int( Axis::Count ); ++ax )
     {
         if ( hoveredObject_ == translateControls_[ax] )
             return ax;

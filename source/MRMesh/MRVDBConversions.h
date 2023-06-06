@@ -4,13 +4,28 @@
 #include "MRMeshFwd.h"
 #include "MRMeshPart.h"
 #include "MRProgressCallback.h"
+#include "MRPch/MROpenvdb.h"
 #include "MRAffineXf3.h"
 #include "MRExpected.h"
 #include <climits>
 #include <string>
+#include <thread>
 
 namespace MR
 {
+
+// This class implements OpenVdb interrupter interface and provides ability to use MR::ProgressCallback in some OpenVdb operations
+struct MRMESH_CLASS ProgressInterrupter : openvdb::util::NullInterrupter
+{
+    MRMESH_API ProgressInterrupter( ProgressCallback cb );
+    MRMESH_API virtual bool wasInterrupted( int percent = -1 ) override;
+    bool getWasInterrupted() const { return wasInterrupted_; }
+private:
+    bool wasInterrupted_{ false };
+    ProgressCallback cb_;
+    std::thread::id progressThreadId_;
+};
+
 
 // closed surface is required
 // surfaceOffset - number voxels around surface to calculate distance in (should be positive)

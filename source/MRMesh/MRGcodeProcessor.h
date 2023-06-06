@@ -14,13 +14,25 @@ namespace MR
 class MRMESH_CLASS GcodeProcessor
 {
 public:
+    template<typename Vec>
+    struct BaseAction
+    {
+        // tool movement parsed from gcode
+        std::vector<Vec> path;
+        // parser warning
+        std::string warning;
+    };
+    using BaseAction2f = BaseAction<Vector2f>;
+    using BaseAction3f = BaseAction<Vector3f>;
     // structure that stores information about the movement of the tool, specified by some string of commands
     struct MoveAction
     {
-        std::vector<Vector3f> path;
+        BaseAction3f action;
         bool idle = false;
-        bool valid = true;
         float feedrate = 100.f;
+        // return true if operation was parsed without warnings
+        bool valid() const { return action.warning.empty(); }
+        operator bool() const { return valid(); }
     };
 
     // reset internal states
@@ -51,7 +63,7 @@ private:
     std::vector<Command> parseFrame_( const std::string_view& frame );
     void applyCommand_( const Command& command );
     void applyCommandG_( const Command& command );
-    MoveAction applyMove_();
+    MoveAction generateMoveAction_();
     void resetTemporaryStates_();
 
     // g-command actions
@@ -69,13 +81,13 @@ private:
     // g-command helper methods
 
     // sample arc points in 2d by begin point, end point and center in (0, 0)
-    std::vector<MR::Vector2f> getArcPoints2_( const Vector2f& beginPoint, const Vector2f& endPoint, bool clockwise );
+    BaseAction2f getArcPoints2_( const Vector2f& beginPoint, const Vector2f& endPoint, bool clockwise );
     // sample arc points in 3d by begin point, end point and center
-    std::vector<MR::Vector3f> getArcPoints3_( const Vector3f& center, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise );
+    BaseAction3f getArcPoints3_( const Vector3f& center, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise );
     // sample arc points in 3d by begin point, end point and radius
     // r > 0 : angle - [0, 180]
     // r < 0 : angle - (0, 360)
-    std::vector<MR::Vector3f> getArcPoints3_( float r, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise );
+    BaseAction3f getArcPoints3_( float r, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise );
 
     Vector3f calcRealNewCoord_();
 
@@ -112,6 +124,9 @@ private:
     std::optional<Vector3f> arcCenter_;
 
     std::vector<std::string_view> gcodeSource_; // string list with sets of command (frames)
+
+    // internal settings
+    float accuracy_ = 1.e-3f;
 };
 
 }

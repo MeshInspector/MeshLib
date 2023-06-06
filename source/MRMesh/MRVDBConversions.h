@@ -3,7 +3,7 @@
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRMeshFwd.h"
 #include "MRMeshPart.h"
-#include "MRProgressCallback.h"
+#include "MRPch/MROpenvdb.h"
 #include "MRAffineXf3.h"
 #include "MRExpected.h"
 #include <climits>
@@ -13,7 +13,7 @@
 namespace MR
 {
 
-// This class implements OpenVdb interrupter interface and provide ability to see use MR::ProgressCallback in some OpenVdb operations
+// This class implements OpenVdb interrupter interface and provides ability to use MR::ProgressCallback in some OpenVdb operations
 struct MRMESH_CLASS ProgressInterrupter : openvdb::util::NullInterrupter
 {
     MRMESH_API ProgressInterrupter( ProgressCallback cb );

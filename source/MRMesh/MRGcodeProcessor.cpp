@@ -207,7 +207,7 @@ GcodeProcessor::MoveAction GcodeProcessor::moveLine_( const Vector3f& newPoint, 
     MoveAction res;
     res.idle = idle;
     if ( (newPoint - basePoint_).lengthSq() > (2.5f * accuracy_) )
-        res.path = { basePoint_, newPoint };
+        res.action.path = { basePoint_, newPoint };
     return res;
 }
 
@@ -215,14 +215,11 @@ GcodeProcessor::MoveAction GcodeProcessor::moveArc_( const Vector3f& newPoint, b
 {
     MoveAction res;
     if ( radius_ )
-        res.path = getArcPoints3_( *radius_, basePoint_, newPoint, clockwise, res.errorText );
+        res.action = getArcPoints3_( *radius_, basePoint_, newPoint, clockwise );
     else if ( arcCenter_ )
-        res.path = getArcPoints3_( basePoint_ + *arcCenter_, basePoint_, newPoint, clockwise, res.errorText );
+        res.action = getArcPoints3_( basePoint_ + *arcCenter_, basePoint_, newPoint, clockwise );
     else
-        res.errorText = "Missing parameters.";
-
-    if ( !res.errorText.empty() )
-        res.valid = false;
+        res.action.warning = "Missing parameters.";
 
     return res;
 }
@@ -247,14 +244,15 @@ void GcodeProcessor::updateScaling_()
     }
 }
 
-std::vector<Vector2f> GcodeProcessor::getArcPoints2_( const Vector2f& beginPoint, const Vector2f& endPoint, bool clockwise, std::string& errorText )
+GcodeProcessor::BaseAction2f GcodeProcessor::getArcPoints2_( const Vector2f& beginPoint, const Vector2f& endPoint, bool clockwise )
 {
+    BaseAction2f res;
     const float beginLengthSq = beginPoint.lengthSq();
     const float endLengthSq = endPoint.lengthSq();
     const float maxLengthSq = std::max( beginLengthSq, endLengthSq );
     const float deltaLength2 = std::fabs( beginPoint.lengthSq() - endPoint.lengthSq() );
     if ( deltaLength2 >= ( 2.5f * accuracy_ * maxLengthSq ) )
-        errorText = "Begin and end radius are different: diff = " + std::to_string( std::sqrt( deltaLength2 ) );
+        res.warning = "Begin and end radius are different: diff = " + std::to_string( std::sqrt( deltaLength2 ) );
 
     const Vector2f v1 = beginPoint / beginPoint.length();
     const Vector2f v2 = endPoint / endPoint.length();
@@ -267,18 +265,15 @@ std::vector<Vector2f> GcodeProcessor::getArcPoints2_( const Vector2f& beginPoint
 
     const int stepCount = std::clamp( int( std::ceil( std::fabs( endAngle - beginAngle ) / ( 6.f / 180.f * PI_F ) ) ), 10, 60 );
     const float angleStep = ( endAngle - beginAngle ) / stepCount;
-    std::vector<Vector2f> res;
-    res.push_back( beginPoint );
+    res.path.reserve( stepCount + 1 );
+    res.path.push_back( beginPoint );
     for ( int i = 0; i < stepCount; ++i )
-    {
-        const auto arcPoint = Matrix2f::rotation( angleStep * ( i + 1 ) ) * beginPoint;
-        res.push_back( arcPoint );
-    }
+        res.path.emplace_back( Matrix2f::rotation( angleStep * ( i + 1 ) ) * beginPoint );
 
     return res;
 }
 
-std::vector<Vector3f> GcodeProcessor::getArcPoints3_( const Vector3f& center, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise, std::string& errorText )
+GcodeProcessor::BaseAction3f GcodeProcessor::getArcPoints3_( const Vector3f& center, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise )
 {
     const Vector3f c3 = toWorkPlaneXf_ * center;
 
@@ -291,22 +286,22 @@ std::vector<Vector3f> GcodeProcessor::getArcPoints3_( const Vector3f& center, co
     const bool helical = std::fabs( b3.z - e3.z ) > accuracy_;
 
     const Matrix3f toWorldXf = toWorkPlaneXf_.inverse();
-    auto res2 = getArcPoints2_( b2, e2, clockwise, errorText );
-    std::vector<Vector3f> res3( res2.size() );
-    const float zStep = res2.size() > 1 ? ( e3.z - b3.z ) / ( res2.size() - 1 ) : 0.f;
-    for ( int i = 0; i < res2.size(); ++i )
-        res3[i] = toWorldXf * ( Vector3f( res2[i].x, res2[i].y, helical ? b3.z + zStep * i : b3.z ) + c3 );
+    auto res2 = getArcPoints2_( b2, e2, clockwise );
+
+    BaseAction3f res3;
+    res3.warning = std::move( res2.warning );
+    res3.path.resize( res2.path.size() );
+    const float zStep = res2.path.size() > 1 ? ( e3.z - b3.z ) / ( res2.path.size() - 1 ) : 0.f;
+    for ( int i = 0; i < res2.path.size(); ++i )
+        res3.path[i] = toWorldXf * ( Vector3f( res2.path[i].x, res2.path[i].y, helical ? b3.z + zStep * i : b3.z ) + c3 );
 
     return res3;
 }
 
-std::vector<MR::Vector3f> GcodeProcessor::getArcPoints3_( float r, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise, std::string& errorText )
+GcodeProcessor::BaseAction3f GcodeProcessor::getArcPoints3_( float r, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise )
 {
     if ( r < accuracy_ )
-    {
-        errorText = "Wrong radius";
-        return { beginPoint, endPoint };
-    }
+        return { .path = { beginPoint, endPoint },.warning = "Wrong radius" };
 
     const Vector3f b3 = toWorkPlaneXf_ * beginPoint;
     const Vector2f b2 = { b3.x, b3.y };
@@ -326,11 +321,13 @@ std::vector<MR::Vector3f> GcodeProcessor::getArcPoints3_( float r, const Vector3
 
 
     const Matrix3f toWorldXf = toWorkPlaneXf_.inverse();
-    auto res2 = getArcPoints2_( b2 - c2, e2 - c2, clockwise, errorText );
-    std::vector<Vector3f> res3( res2.size() );
-    const float zStep = res2.size() > 1 ? ( e3.z - b3.z ) / ( res2.size() - 1 ) : 0.f;
-    for ( int i = 0; i < res2.size(); ++i )
-        res3[i] = toWorldXf * ( Vector3f( res2[i].x, res2[i].y, helical ? b3.z + zStep * i : b3.z ) + c3 );
+    auto res2 = getArcPoints2_( b2 - c2, e2 - c2, clockwise );
+    BaseAction3f res3;
+    res3.warning = std::move( res2.warning );
+    res3.path.resize( res2.path.size() );
+    const float zStep = res2.path.size() > 1 ? ( e3.z - b3.z ) / ( res2.path.size() - 1 ) : 0.f;
+    for ( int i = 0; i < res2.path.size(); ++i )
+        res3.path[i] = toWorldXf * ( Vector3f( res2.path[i].x, res2.path[i].y, helical ? b3.z + zStep * i : b3.z ) + c3 );
 
     return res3;
 }

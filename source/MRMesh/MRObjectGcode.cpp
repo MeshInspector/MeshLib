@@ -53,10 +53,10 @@ void ObjectGcode::setGcodeSource( const std::shared_ptr<GcodeSource>& gcodeSourc
     for ( int i = 0; i < actionList_.size(); ++i )
     {
         const auto& part = actionList_[i];
-        if ( part.path.empty() )
+        if ( part.action.path.empty() )
             continue;
-        polyline->addFromPoints( part.path.data(), part.path.size() );
-        segmentToSourceLineMap_.insert( segmentToSourceLineMap_.end(), part.path.size() - 1, i );
+        polyline->addFromPoints( part.action.path.data(), part.action.path.size() );
+        segmentToSourceLineMap_.insert( segmentToSourceLineMap_.end(), part.action.path.size() - 1, i );
         if ( part.feedrate > maxFeedrate_ )
             maxFeedrate_ = part.feedrate;
     }
@@ -125,15 +125,12 @@ bool ObjectGcode::select( bool isSelected )
         return false;
     float width = getLineWidth();
     if ( isSelected )
-        width += std::clamp( width, 3.f, 6.f );
+        width += std::clamp( width, 3.0f, 6.0f );
     else
     {
-        if ( width < 6.f )
-            width = std::max( width - 3.f, 0.5f );
-        else if ( width < 12.f )
-            width /= 2.f;
-        else
-            width -= 6.f;
+        width -= std::clamp( width * 0.5f, 3.0f, 6.0f );
+        if ( width < 0.5f )
+            width = 0.5f; // minimum width
     }
     setLineWidth( width );
     return true;
@@ -238,7 +235,7 @@ void ObjectGcode::updateColors_()
     for ( int i = 0; i < actionList_.size(); ++i )
     {
         const auto& part = actionList_[i];
-        if ( part.path.empty() )
+        if ( part.action.path.empty() )
             continue;
         Color color = idleColor_;
         if ( !part.idle )
@@ -251,7 +248,7 @@ void ObjectGcode::updateColors_()
             else
                 color = workColor;
         }
-        colors.autoResizeSet( VertId( colors.size() ), part.path.size(), color );
+        colors.autoResizeSet( VertId( colors.size() ), part.action.path.size(), color );
     }
     setVertsColorMap( colors );
 }

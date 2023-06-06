@@ -3,6 +3,7 @@
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRMeshFwd.h"
 #include "MRMeshPart.h"
+#include "MRProgressCallback.h"
 #include "MRPch/MROpenvdb.h"
 #include "MRAffineXf3.h"
 #include "MRExpected.h"

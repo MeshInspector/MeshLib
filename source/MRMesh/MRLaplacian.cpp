@@ -271,6 +271,7 @@ void Laplacian::apply()
         pt.y = (float) sol[1][mapv];
         pt.z = (float) sol[2][mapv];
     }
+    mesh_.invalidateCaches();
 }
 
 void Laplacian::applyToScalar( Vector<float,VertId> & scalarField )

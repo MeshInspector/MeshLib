@@ -774,6 +774,7 @@ void ImGuiMenu::setDrawTimeMillisecThreshold( long long maxGoodTimeMillisec )
 
 void ImGuiMenu::showErrorModal( const std::string& error )
 {
+    spdlog::error( "Error Modal Dialog: {}", error );
     showRenameModal_ = false;
     ImGui::CloseCurrentPopup();
     storedError_ = error;
@@ -2105,7 +2106,7 @@ void ImGuiMenu::reorderSceneIfNeeded_()
         bool detachSuccess = sourcePtr->detachFromParent();
         if ( !detachSuccess )
         {
-            showErrorModal( "Cannot preform such reorder" );
+            showErrorModal( "Cannot perform such reorder" );
             dragOrDropFailed = true;
             break;
         }
@@ -2119,7 +2120,7 @@ void ImGuiMenu::reorderSceneIfNeeded_()
         if ( !attachSucess )
         {
             detachAction->action( HistoryAction::Type::Undo );
-            showErrorModal( "Cannot preform such reorder" );
+            showErrorModal( "Cannot perform such reorder" );
             dragOrDropFailed = true;
             break;
         }
@@ -2894,6 +2895,8 @@ void showError( const std::string& error )
 {
     if ( auto menu = getViewerInstance().getMenuPlugin() )
         menu->showErrorModal( error );
+    else
+        spdlog::error( "Show Error: {}", error );
 }
 
 } // end namespace

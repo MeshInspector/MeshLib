@@ -2,8 +2,6 @@
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRColorTheme.h"
-#include "MRMesh/MRStringConvert.h"
-#include "MRMesh/MRSceneSettings.h"
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRViewer/MRCommandLoop.h"
@@ -15,6 +13,9 @@
 #include "MRViewer/MRSpaceMouseHandlerHidapi.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer/MRUIStyle.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRSceneSettings.h"
+#include "MRMesh/MRDirectory.h"
 
 
 namespace MR
@@ -328,7 +329,7 @@ void ViewerSettingsPlugin::updateThemes()
     std::error_code ec;
     if ( std::filesystem::is_directory( userThemesDir, ec ) )
     {
-        for ( const auto& entry : std::filesystem::directory_iterator( userThemesDir, ec ) )
+        for ( auto entry : Directory{ userThemesDir, ec } )
         {
             if ( entry.is_regular_file( ec ) )
             {

@@ -4,6 +4,7 @@
 #include "MRBitSet.h"
 #include "MRVolumeIndexer.h"
 #include "MRTimer.h"
+#include "MRVDBConversions.h"
 
 namespace MR
 {
@@ -15,7 +16,7 @@ FloatGrid MakeFloatGrid( openvdb::FloatGrid::Ptr&& p )
     return std::make_shared<OpenVdbFloatGrid>( std::move( *p ) );
 }
 
-FloatGrid resampled( const FloatGrid & grid, const Vector3f& voxelScale )
+FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, ProgressCallback cb )
 {
     if ( !grid )
         return {};
@@ -25,7 +26,21 @@ FloatGrid resampled( const FloatGrid & grid, const Vector3f& voxelScale )
     openvdb::Mat4R transform;
     transform.setToScale( openvdb::Vec3R{ voxelScale.x,voxelScale.y,voxelScale.z } );
     dest->setTransform( openvdb::math::Transform::createLinearTransform( transform ) ); // org voxel size is 1.0f
-    openvdb::tools::resampleToMatch<openvdb::tools::BoxSampler>( grid_, *dest );
+
+    ProgressCallback undefinedProgressCb;
+    float i = 1.0f;
+    if ( cb )
+        undefinedProgressCb = [&] ( float )->bool
+    {
+        i += 1e-4f;
+        return cb( 1.0f - 1.0f / std::sqrt( i ) );
+    };
+
+    ProgressInterrupter interrupter( undefinedProgressCb );
+    // openvdb::util::NullInterrupter template argument to avoid tbb inconsistency
+    openvdb::tools::resampleToMatch<openvdb::tools::BoxSampler, openvdb::util::NullInterrupter>( grid_, *dest, interrupter );
+    if ( interrupter.getWasInterrupted() )
+        return {};
     // restore normal scale
     dest->setTransform( openvdb::math::Transform::createLinearTransform( 1.0f ) );
     dest->setGridClass( grid->getGridClass() );
@@ -33,9 +48,9 @@ FloatGrid resampled( const FloatGrid & grid, const Vector3f& voxelScale )
     return MakeFloatGrid( std::move( dest ) );
 }
 
-FloatGrid resampled( const FloatGrid& grid, float voxelScale )
+FloatGrid resampled( const FloatGrid& grid, float voxelScale, ProgressCallback cb )
 {
-    return resampled( grid, Vector3f::diagonal( voxelScale ) );
+    return resampled( grid, Vector3f::diagonal( voxelScale ), cb );
 }
 
 void setValue( FloatGrid & grid, const VoxelBitSet& region, float value )

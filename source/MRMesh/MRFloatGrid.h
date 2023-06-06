@@ -4,6 +4,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRPch/MROpenvdb.h"
+#include "MRProgressCallback.h"
 
 namespace MR
 {
@@ -29,10 +30,10 @@ inline const openvdb::FloatGrid & ovdb( const OpenVdbFloatGrid & v ) { return v;
 MRMESH_API FloatGrid MakeFloatGrid( openvdb::FloatGrid::Ptr&& );
 
 /// resample this grid to fit voxelScale
-MRMESH_API FloatGrid resampled( const FloatGrid & grid, float voxelScale );
+MRMESH_API FloatGrid resampled( const FloatGrid& grid, float voxelScale, ProgressCallback cb = {} );
 
 /// resample this grid to fit voxelScale
-MRMESH_API FloatGrid resampled( const FloatGrid & grid, const Vector3f& voxelScale );
+MRMESH_API FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, ProgressCallback cb = {} );
 
 /// sets given region voxels value
 /// \note region is in grid space (0 voxel id is minimum active voxel in grid)

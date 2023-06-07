@@ -237,10 +237,11 @@ void removeSpikes( Mesh & mesh, int maxIterations, float minSumAngle, const Vert
     }
 }
 
-void smoothRegionBoundary( Mesh & mesh, const FaceBitSet & regionFaces )
+void smoothRegionBoundary( Mesh & mesh, const FaceBitSet & regionFaces, int numIters )
 {
     MR_TIMER
-    if ( !regionFaces.any() )
+    assert( numIters > 0 );
+    if ( !regionFaces.any() || numIters <= 0 )
         return;
 
     // value 1 for out-of-region vertices
@@ -269,54 +270,68 @@ void smoothRegionBoundary( Mesh & mesh, const FaceBitSet & regionFaces )
         freeVerts -= cc;
     }
 
-    Laplacian lap( const_cast<Mesh&>( mesh ) ); //mesh will not be changed
-    lap.init( freeVerts, Laplacian::EdgeWeights::Cotan, Laplacian::RememberShape::No );
-    lap.applyToScalar( scalarField );
-
-//    spdlog::info( "2451-value: {}", scalarField[2451_v] );
-
+    Laplacian lap( mesh );
     std::vector<Vector3f> newPos;
-    newPos.reserve( freeVerts.count() );
-    for ( const auto v : freeVerts )
+    for( int iter = 0; iter < numIters; ++iter )
     {
-        const auto pt = mesh.points[v];
-        const auto val = scalarField[v];
-        Vector3f bestPos = pt;
-        float bestDist2 = FLT_MAX;
-        for ( auto e : orgRing( mesh.topology, v ) )
+        lap.init( freeVerts, Laplacian::EdgeWeights::Cotan, Laplacian::RememberShape::No );
+        lap.applyToScalar( scalarField );
+
+        newPos.clear();
+        newPos.reserve( freeVerts.count() );
+        for ( const auto v : freeVerts )
         {
-            if ( !mesh.topology.left( e ) )
-                continue;
-            const auto v1 = mesh.topology.dest( e );
-            const auto val1 = scalarField[v1];
-            if ( val * val1 >= 0 )
-                continue;
-            const auto v2 = mesh.topology.dest( mesh.topology.next( e ) );
-            const auto val2 = scalarField[v2];
-            if ( val * val2 >= 0 )
-                continue;
-
-            LineSegm3f ls;
-            const float c1 = val / ( val - val1 );
-            ls.a = ( 1 - c1 ) * pt + c1 * mesh.points[v1];
-            const float c2 = val / ( val - val2 );
-            ls.b = ( 1 - c2 ) * pt + c2 * mesh.points[v2];
-
-            const auto proj = closestPointOnLineSegm( pt, ls );
-            const auto dist2 = ( pt - proj ).lengthSq();
-            if ( dist2 < bestDist2 )
+            const auto pt = mesh.points[v];
+            Vector3f bestPos = pt;
+            float bestDist2 = FLT_MAX;
+            for ( auto e : orgRing( mesh.topology, v ) )
             {
-                bestPos = proj;
-                bestDist2 = dist2;
+                if ( !mesh.topology.left( e ) )
+                    continue;
+
+                VertId vs[3] = {
+                    v,
+                    mesh.topology.dest( e ),
+                    mesh.topology.dest( mesh.topology.next( e ) )
+                };
+
+                for ( int i = 0; i < 3; ++i )
+                {
+                    const auto val  = scalarField[vs[0]];
+                    const auto val1 = scalarField[vs[1]];
+                    const auto val2 = scalarField[vs[2]];
+
+                    if ( val * val1 >= 0 )
+                        continue;
+                    if ( val * val1 >= 0 )
+                        continue;
+
+                    LineSegm3f ls;
+                    const float c1 = val / ( val - val1 );
+                    ls.a = ( 1 - c1 ) * mesh.points[vs[0]] + c1 * mesh.points[vs[1]];
+                    const float c2 = val / ( val - val2 );
+                    ls.b = ( 1 - c2 ) * mesh.points[vs[0]] + c2 * mesh.points[vs[2]];
+
+                    const auto proj = closestPointOnLineSegm( pt, ls );
+                    const auto dist2 = ( pt - proj ).lengthSq();
+                    if ( dist2 < bestDist2 )
+                    {
+                        bestPos = proj;
+                        bestDist2 = dist2;
+                    }
+
+                    std::rotate( vs, vs + 1, vs + 3 );
+                }
             }
+
+            newPos.push_back( bestPos );
         }
 
-        newPos.push_back( bestPos );
+        int n = 0;
+        for ( const auto v : freeVerts )
+            // 0.75 to reduce oscillation on the next iteration
+            mesh.points[v] += 0.75f * ( newPos[n++] - mesh.points[v] );
     }
-
-    int n = 0;
-    for ( const auto v : freeVerts )
-        mesh.points[v] = newPos[n++];
 }
 
 } //namespace MR

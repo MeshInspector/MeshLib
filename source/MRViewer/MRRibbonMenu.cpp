@@ -1283,6 +1283,7 @@ void RibbonMenu::drawRibbonSceneList_()
     auto window = ImGui::FindWindowByName( "RibbonScene" );
     if ( !window || manualSizeSet )
         return;
+    // this check is need when size of app window changes size of scene window
     auto lastWindowSize = window->Size;
     if ( lastWindowSize.x != sceneSize_.x )
     {
@@ -2005,7 +2006,7 @@ void RibbonMenu::drawTopPanelOpened_()
             ImGui::PushStyleColor( ImGuiCol_ScrollbarBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TopPanelBackground ).getUInt32() );
             ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, cellPadding );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
-            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
+            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding ); // frame padding cause horizontal scrollbar which is not needed
             ImGui::PushStyleVar( ImGuiStyleVar_ScrollbarSize, cScrollBarSize * menu_scaling() );
             if ( ImGui::BeginTable( ( tab + "##table" ).c_str(), int( tabIt->second.size() + 1 ), tableFlags ) )
             {

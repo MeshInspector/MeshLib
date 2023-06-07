@@ -206,8 +206,9 @@ GcodeProcessor::MoveAction GcodeProcessor::moveLine_( const Vector3f& newPoint, 
     // MoveAction res({ basePoint_, newPoint }, idle); //fatal error C1001: Internal compiler error.
     MoveAction res;
     res.idle = idle;
-    if ( (newPoint - basePoint_).lengthSq() > (2.5f * accuracy_) )
-        res.action.path = { basePoint_, newPoint };
+    // looks like there is no need in accuracy check in line movement
+    //if ( ( newPoint - basePoint_ ).lengthSq() > sqr( 2.5f * accuracy_ ) )
+    res.action.path = { basePoint_, newPoint };
     return res;
 }
 
@@ -317,7 +318,7 @@ GcodeProcessor::BaseAction3f GcodeProcessor::getArcPoints3_( float r, const Vect
 
     const float normalLenght = std::sqrt( r * r - middleVec.lengthSq() );
     const Vector2f c2 = middlePoint + middleNormal * normalLenght * ( clockwise == ( r > 0.f ) ? 1.f : -1.f );
-    const Vector3f c3 = { c2.x, c2.y, b3.z };
+    const Vector3f c3 = { c2.x, c2.y, 0.0f };
 
 
     const Matrix3f toWorldXf = toWorkPlaneXf_.inverse();

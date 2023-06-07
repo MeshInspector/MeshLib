@@ -22,7 +22,7 @@ std::shared_ptr<Object> MR::ObjectGcode::clone() const
 {
     auto res = std::make_shared<ObjectGcode>( ProtectedStruct{}, *this );
     if ( gcodeSource_ )
-        res->gcodeSource_ = std::make_shared<GcodeSource>( *gcodeSource_ );
+        res->setGcodeSource( std::make_shared<GcodeSource>( *gcodeSource_ ) );
     return res;
 }
 
@@ -30,7 +30,7 @@ std::shared_ptr<Object> ObjectGcode::shallowClone() const
 {
     auto res = std::make_shared<ObjectGcode>( ProtectedStruct{}, *this );
     if ( gcodeSource_ )
-        res->gcodeSource_ = gcodeSource_;
+        res->setGcodeSource( gcodeSource_ );
     return res;
 }
 
@@ -55,7 +55,7 @@ void ObjectGcode::setGcodeSource( const std::shared_ptr<GcodeSource>& gcodeSourc
         const auto& part = actionList_[i];
         if ( part.action.path.empty() )
             continue;
-        polyline->addFromPoints( part.action.path.data(), part.action.path.size() );
+        polyline->addFromPoints( part.action.path.data(), part.action.path.size(), false );
         segmentToSourceLineMap_.insert( segmentToSourceLineMap_.end(), part.action.path.size() - 1, i );
         if ( part.feedrate > maxFeedrate_ )
             maxFeedrate_ = part.feedrate;
@@ -146,6 +146,11 @@ void ObjectGcode::setFrontColor( const Color& color, bool selected, ViewportId v
 ObjectGcode::ObjectGcode( const ObjectGcode& other ) :
     ObjectLinesHolder( other )
 {
+    actionList_ = other.actionList_;
+    segmentToSourceLineMap_ = other.segmentToSourceLineMap_;
+    idleColor_ = other.idleColor_;
+    maxFeedrate_ = other.maxFeedrate_;
+    feedrateGradientEnabled_ = other.feedrateGradientEnabled_;
 }
 
 void ObjectGcode::swapBase_( Object& other )

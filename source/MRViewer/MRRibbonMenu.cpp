@@ -1245,6 +1245,7 @@ void RibbonMenu::drawRibbonSceneList_()
     // Define next window position + size
     auto& viewerRef = Viewer::instanceRef();
     ImGui::SetWindowPos( "RibbonScene", ImVec2( 0.f, float( currentTopPanelHeight_ ) * scaling - 1 ), ImGuiCond_Always );
+    auto oldSceneSize = sceneSize_;
     sceneSize_.x = std::round( std::min( sceneSize_.x, viewerRef.window_width - 100 * scaling ) );
     sceneSize_.y = std::round( viewerRef.window_height - float( currentTopPanelHeight_ - 2.0f ) * scaling );
     ImGui::SetWindowSize( "RibbonScene", sceneSize_, ImGuiCond_Always );
@@ -1264,18 +1265,30 @@ void RibbonMenu::drawRibbonSceneList_()
 
     const auto newSize = drawRibbonSceneResizeLine_();// ImGui::GetWindowSize();
     static bool firstTime = true;
+    bool manualSizeSet = false;
     if ( firstTime )
     {
         firstTime = false; // this is needed because GetWindowSize() lag in one frame
     }
     else if ( newSize.x != sceneSize_.x || newSize.y != sceneSize_.y )
     {
+        manualSizeSet = true;
         sceneSize_ = newSize;
         fixViewportsSize_( viewerRef.window_width, viewerRef.window_height );
     }
+
     ImGui::End();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
+    auto window = ImGui::FindWindowByName( "RibbonScene" );
+    if ( !window || manualSizeSet )
+        return;
+    auto lastWindowSize = window->Size;
+    if ( lastWindowSize.x != sceneSize_.x )
+    {
+        sceneSize_.x = lastWindowSize.x;
+        fixViewportsSize_( viewerRef.window_width, viewerRef.window_height );
+    }
 }
 
 void RibbonMenu::drawRibbonSceneListContent_( std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all )
@@ -1970,6 +1983,8 @@ void RibbonMenu::drawTopPanelOpened_()
     itemSpacing.x = cRibbonItemInterval * menu_scaling();
     auto cellPadding = style.CellPadding;
     cellPadding.x = itemSpacing.x;
+    auto framePadding = style.FramePadding;
+    framePadding.x = 0.0f;
 
     drawHeaderPannel_();
 
@@ -1990,6 +2005,7 @@ void RibbonMenu::drawTopPanelOpened_()
             ImGui::PushStyleColor( ImGuiCol_ScrollbarBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TopPanelBackground ).getUInt32() );
             ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, cellPadding );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
+            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
             ImGui::PushStyleVar( ImGuiStyleVar_ScrollbarSize, cScrollBarSize * menu_scaling() );
             if ( ImGui::BeginTable( ( tab + "##table" ).c_str(), int( tabIt->second.size() + 1 ), tableFlags ) )
             {
@@ -2005,7 +2021,7 @@ void RibbonMenu::drawTopPanelOpened_()
                 ImGui::TableNextColumn(); // fictive
                 ImGui::EndTable();
             }
-            ImGui::PopStyleVar( 3 );
+            ImGui::PopStyleVar( 4 );
             ImGui::PopStyleColor( 2 );
         }
     }

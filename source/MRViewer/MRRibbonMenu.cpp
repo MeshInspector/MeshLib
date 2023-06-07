@@ -1283,7 +1283,7 @@ void RibbonMenu::drawRibbonSceneList_()
     auto window = ImGui::FindWindowByName( "RibbonScene" );
     if ( !window || manualSizeSet )
         return;
-    // this check is need when size of app window changes size of scene window
+    // this check is needed when resize of app window changes size of scene window
     auto lastWindowSize = window->Size;
     if ( lastWindowSize.x != sceneSize_.x )
     {

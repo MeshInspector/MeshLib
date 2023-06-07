@@ -659,7 +659,8 @@ void Viewer::launchEventLoop()
             draw( true );
             glfwPollEvents();
             eventQueue.execute();
-            spaceMouseHandler_->handle();
+            if ( spaceMouseHandler_ )
+                spaceMouseHandler_->handle();
             CommandLoop::processCommands();
         } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
 
@@ -674,7 +675,8 @@ void Viewer::launchEventLoop()
             glfwWaitEvents();
             eventQueue.execute();
         }
-        spaceMouseHandler_->handle();
+        if ( spaceMouseHandler_ )
+            spaceMouseHandler_->handle();
     }
 }
 
@@ -717,7 +719,7 @@ void Viewer::launchShut()
     glfwTerminate();
     glInitialized_ = false;
     isLaunched_ = false;
-    return;
+    spaceMouseHandler_.reset();
 }
 
 void Viewer::init_()
@@ -1141,7 +1143,8 @@ bool Viewer::interruptWindowClose()
 
 void Viewer::joystickUpdateConnected( int jid, int event )
 {
-    spaceMouseHandler_->updateConnected( jid, event );
+    if ( spaceMouseHandler_ )
+        spaceMouseHandler_->updateConnected( jid, event );
 }
 
 static bool getRedrawFlagRecursive( const Object& obj, ViewportMask mask )

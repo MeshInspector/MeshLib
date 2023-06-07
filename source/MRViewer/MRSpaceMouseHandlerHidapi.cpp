@@ -1,9 +1,8 @@
 #ifndef __EMSCRIPTEN__
 #include "MRSpaceMouseHandlerHidapi.h"
-
-#include "MRViewer/MRViewerFwd.h"
 #include "MRViewer.h"
 #include "MRGladGlfw.h"
+#include "MRMesh/MRSystem.h"
 
 namespace MR
 {
@@ -149,6 +148,13 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
     // waits for updates on SpaceMouse and notifies main thread
     listenerThread_ = std::thread( [&] ()
     {
+        spdlog::info( "SpaceMouse Listener thread started" );
+        SetCurrentThreadName( "SpaceMouse listener" );
+        struct S
+        {
+            ~S() { spdlog::info( "SpaceMouse listener thread finished" ); }
+        } s;
+
         do
         {
             std::unique_lock<std::mutex> syncThreadLock( syncThreadMutex_ );

@@ -208,8 +208,7 @@ GcodeProcessor::MoveAction GcodeProcessor::moveLine_( const Vector3f& newPoint, 
     res.idle = idle;
     // looks like there is no need in accuracy check in line movement
     //if ( ( newPoint - basePoint_ ).lengthSq() > sqr( 2.5f * accuracy_ ) )
-    if ( newPoint != basePoint_ )
-        res.action.path = { basePoint_, newPoint };
+    res.action.path = { basePoint_, newPoint };
     return res;
 }
 

@@ -55,7 +55,7 @@ void ObjectGcode::setGcodeSource( const std::shared_ptr<GcodeSource>& gcodeSourc
         const auto& part = actionList_[i];
         if ( part.action.path.empty() )
             continue;
-        polyline->addFromPoints( part.action.path.data(), part.action.path.size() );
+        polyline->addFromPoints( part.action.path.data(), part.action.path.size(), false );
         segmentToSourceLineMap_.insert( segmentToSourceLineMap_.end(), part.action.path.size() - 1, i );
         if ( part.feedrate > maxFeedrate_ )
             maxFeedrate_ = part.feedrate;

@@ -660,8 +660,10 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
         int spanStart = -1;
         for ( j = 0; j < path.size(); ++j )
         {
-            if ( !path[j].inVertex() )
+            // inVertex predicate can change its value after sym() due to rounding errors
+            if ( !path[j].inVertex() && !path[j].sym().inVertex() )
                 continue;
+            path[j].moveToClosestVertex();
             if ( spanStart + 1 < j )
                 vertSpans.emplace_back( spanStart, j );
             spanStart = j;

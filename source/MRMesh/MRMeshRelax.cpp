@@ -9,6 +9,10 @@
 #include "MRBestFitQuadric.h"
 #include "MRVector4.h"
 #include "MRMeshFixer.h"
+#include "MRRegionBoundary.h"
+#include "MRMeshComponents.h"
+#include "MRLaplacian.h"
+#include "MRLineSegm.h"
 
 namespace MR
 {
@@ -230,6 +234,103 @@ void removeSpikes( Mesh & mesh, int maxIterations, float minSumAngle, const Vert
         if ( spikeVerts.count() == 0 )
             break;
         relax( mesh, { { 1,&spikeVerts } } );
+    }
+}
+
+void smoothRegionBoundary( Mesh & mesh, const FaceBitSet & regionFaces, int numIters )
+{
+    MR_TIMER
+    assert( numIters > 0 );
+    if ( !regionFaces.any() || numIters <= 0 )
+        return;
+
+    // value 1 for out-of-region vertices
+    Vector<float,VertId> scalarField( mesh.topology.vertSize(), 1 );
+
+    const auto regionVerts = getIncidentVerts( mesh.topology, regionFaces );
+    // value -1 for in-region vertices
+    for( auto v : regionVerts )
+        scalarField[v] = -1;
+
+    /// free vertices must have both in-region and out-of-region neighbor faces
+    VertBitSet freeVerts = getIncidentVerts( mesh.topology, mesh.topology.getValidFaces() - regionFaces ) & regionVerts;
+
+    for ( const auto & cc : MeshComponents::getAllComponentsVerts( mesh ) )
+    {
+        auto freeCC = cc & freeVerts;
+        auto numfree = freeCC.count();
+        auto numCC = cc.count();
+        assert( numfree <= numCC );
+        if ( numfree <= 0 )
+            continue; // too small connected component
+        if ( numfree < numCC )
+            continue; // at least one fixed vertex in the component
+
+        // all component vertices are free, just fix them all (to -1) to avoid under-determined system of equations
+        freeVerts -= cc;
+    }
+
+    Laplacian lap( mesh );
+    std::vector<Vector3f> newPos;
+    for( int iter = 0; iter < numIters; ++iter )
+    {
+        lap.init( freeVerts, Laplacian::EdgeWeights::Cotan, Laplacian::RememberShape::No );
+        lap.applyToScalar( scalarField );
+
+        newPos.clear();
+        newPos.reserve( freeVerts.count() );
+        for ( const auto v : freeVerts )
+        {
+            const auto pt = mesh.points[v];
+            Vector3f bestPos = pt;
+            float bestDist2 = FLT_MAX;
+            for ( auto e : orgRing( mesh.topology, v ) )
+            {
+                if ( !mesh.topology.left( e ) )
+                    continue;
+
+                VertId vs[3] = {
+                    v,
+                    mesh.topology.dest( e ),
+                    mesh.topology.dest( mesh.topology.next( e ) )
+                };
+
+                for ( int i = 0; i < 3; ++i )
+                {
+                    const auto val  = scalarField[vs[0]];
+                    const auto val1 = scalarField[vs[1]];
+                    const auto val2 = scalarField[vs[2]];
+
+                    if ( val * val1 >= 0 )
+                        continue;
+                    if ( val * val1 >= 0 )
+                        continue;
+
+                    LineSegm3f ls;
+                    const float c1 = val / ( val - val1 );
+                    ls.a = ( 1 - c1 ) * mesh.points[vs[0]] + c1 * mesh.points[vs[1]];
+                    const float c2 = val / ( val - val2 );
+                    ls.b = ( 1 - c2 ) * mesh.points[vs[0]] + c2 * mesh.points[vs[2]];
+
+                    const auto proj = closestPointOnLineSegm( pt, ls );
+                    const auto dist2 = ( pt - proj ).lengthSq();
+                    if ( dist2 < bestDist2 )
+                    {
+                        bestPos = proj;
+                        bestDist2 = dist2;
+                    }
+
+                    std::rotate( vs, vs + 1, vs + 3 );
+                }
+            }
+
+            newPos.push_back( bestPos );
+        }
+
+        int n = 0;
+        for ( const auto v : freeVerts )
+            // 0.75 to reduce oscillation on the next iteration
+            mesh.points[v] += 0.75f * ( newPos[n++] - mesh.points[v] );
     }
 }
 

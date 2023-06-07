@@ -35,6 +35,7 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, Remembe
     };
 
     solver_ = std::make_unique<SimplicialLDLTSolver>();
+    solverValid_ = false;
 
     freeVerts_ = freeVerts;
     region_ = freeVerts;

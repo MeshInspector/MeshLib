@@ -6,6 +6,7 @@
 #include "MRViewer.h"
 #include "MRMesh/MRHistoryAction.h"
 #include "MRMesh/MRViewportProperty.h"
+#include "MRMesh/MRAxis.h"
 #include <boost/signals2/signal.hpp>
 #include <array>
 #include <functional>
@@ -13,10 +14,6 @@
 
 namespace MR
 {
-
-enum class TransformAxis {
-    X, Y, Z, Count
-};
 
 enum class ControlBit
 {
@@ -71,9 +68,9 @@ public:
     MRVIEWER_API void updateVisualTransformMode( uint8_t showMask, ViewportMask viewportMask, const AffineXf3f& xf );
 
     // One have to implement these functions to have visualization of translation and rotation
-    virtual void updateTranslation( TransformAxis ax, const Vector3f& startMove, const Vector3f& endMove ) = 0;
+    virtual void updateTranslation( Axis ax, const Vector3f& startMove, const Vector3f& endMove ) = 0;
     // xf - widget current xf
-    virtual void updateRotation( TransformAxis ax, const AffineXf3f& xf, float startAngle, float endAngle ) = 0;
+    virtual void updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle ) = 0;
 
     // build-in history action class for change center
     class ChangeCenterAction : public HistoryAction
@@ -137,8 +134,8 @@ public:
         /// extension of the translation line in the positive direction relative to the radius
         float positiveLineExtension{ 1.3f };
         /// colors of widget
-        std::array<Color, size_t( TransformAxis::Count )> rotationColors{ Color::red(),Color::green(),Color::blue() };
-        std::array<Color, size_t( TransformAxis::Count )> translationColors{ Color::red(),Color::green(),Color::blue() };
+        std::array<Color, size_t( Axis::Count )> rotationColors{ Color::red(),Color::green(),Color::blue() };
+        std::array<Color, size_t( Axis::Count )> translationColors{ Color::red(),Color::green(),Color::blue() };
         Color helperLineColor{ Color::black() };
         Color activeLineColor{ Color::white() };
     };
@@ -156,8 +153,8 @@ public:
     // set width for this widget
     MRVIEWER_API void setWidth( float width );
 
-    MRVIEWER_API virtual void updateTranslation( TransformAxis ax, const Vector3f& startMove, const Vector3f& endMove ) override;
-    MRVIEWER_API virtual void updateRotation( TransformAxis ax, const AffineXf3f& xf, float startAngle, float endAngle ) override;
+    MRVIEWER_API virtual void updateTranslation( Axis ax, const Vector3f& startMove, const Vector3f& endMove ) override;
+    MRVIEWER_API virtual void updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle ) override;
     
     // returns TransformModesValidator by threshold dot value (this value is duty for hiding widget controls that have small projection on screen)
     MRVIEWER_API static TransformModesValidator ThresholdDotValidator( float thresholdDot );
@@ -169,13 +166,13 @@ private:
     VisualParams params_;
 
     // Control objects
-    std::array<std::shared_ptr<ObjectMesh>, size_t( TransformAxis::Count )> translateControls_;
-    std::array<std::shared_ptr<ObjectMesh>, size_t( TransformAxis::Count )> rotateControls_;
+    std::array<std::shared_ptr<ObjectMesh>, size_t( Axis::Count )> translateControls_;
+    std::array<std::shared_ptr<ObjectMesh>, size_t( Axis::Count )> rotateControls_;
 
     // if active line is visible, other lines are not
     std::shared_ptr<ObjectLines> activeLine_;
-    std::array<std::shared_ptr<ObjectLines>, size_t( TransformAxis::Count )> translateLines_;
-    std::array<std::shared_ptr<ObjectLines>, size_t( TransformAxis::Count )> rotateLines_;
+    std::array<std::shared_ptr<ObjectLines>, size_t( Axis::Count )> translateLines_;
+    std::array<std::shared_ptr<ObjectLines>, size_t( Axis::Count )> rotateLines_;
 
     std::shared_ptr<ObjectMesh> hoveredObject_;
     int findHoveredIndex_() const;
@@ -302,9 +299,9 @@ private:
 
     void activeMove_( bool press = false );
 
-    void processScaling_( TransformAxis ax, bool press );
-    void processTranslation_( TransformAxis ax, bool press );
-    void processRotation_( TransformAxis ax, bool press );
+    void processScaling_( Axis ax, bool press );
+    void processTranslation_( Axis ax, bool press );
+    void processRotation_( Axis ax, bool press );
 
     void setControlsXf_( const AffineXf3f& xf, bool updateScaled, ViewportId id = {} );
 

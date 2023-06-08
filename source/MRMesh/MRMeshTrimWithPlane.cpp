@@ -60,6 +60,9 @@ FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap *
     } );
 
     MR_WRITER( mesh );
+    const VertId firstNewVert( mesh.topology.vertSize() );
+    auto isNewVert = [firstNewVert]( VertId v )
+        { return v >= firstNewVert; };
     for ( EdgeId e : edgesToCut )
     {
         VertId vo = mesh.topology.org( e );
@@ -95,6 +98,21 @@ FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap *
             // introduce new vertex if both existing vertices are far from plane
             const auto p = ( o * pd - d * po ) / ( o - d );
             auto eNew = mesh.splitEdge( e, p, nullptr, new2Old );
+            assert( isNewVert( mesh.topology.org( e ) ) );
+
+            // make triangulation independent on the order of edge splitting
+            const auto eNext = mesh.topology.next( e );
+            if ( mesh.topology.left( e ) && isNewVert( mesh.topology.dest( eNext ) ) )
+            {
+                const auto ee = mesh.topology.next( eNext.sym() );
+                if ( edgesToCut.test( ee.undirected() ) )
+                    mesh.topology.flipEdge( mesh.topology.prev( eNext.sym() ) );
+                else
+                {
+                    assert( edgesToCut.test( mesh.topology.next( ee ).undirected() ) );
+                    mesh.topology.flipEdge( ee );
+                }
+            }
 
             if ( onEdgeSplitCallback )
                 onEdgeSplitCallback( e, eNew, o / ( o - d ) );

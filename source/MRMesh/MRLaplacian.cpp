@@ -35,6 +35,7 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, Remembe
     };
 
     solver_ = std::make_unique<SimplicialLDLTSolver>();
+    solverValid_ = false;
 
     freeVerts_ = freeVerts;
     region_ = freeVerts;
@@ -271,6 +272,7 @@ void Laplacian::apply()
         pt.y = (float) sol[1][mapv];
         pt.z = (float) sol[2][mapv];
     }
+    mesh_.invalidateCaches();
 }
 
 void Laplacian::applyToScalar( Vector<float,VertId> & scalarField )

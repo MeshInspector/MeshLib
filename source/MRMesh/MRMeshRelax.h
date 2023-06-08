@@ -41,6 +41,12 @@ MRMESH_API bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params = {
 /// applies at most given number of relaxation iterations the spikes detected by given threshold
 MRMESH_API void removeSpikes( Mesh & mesh, int maxIterations, float minSumAngle, const VertBitSet * region = nullptr );
 
+/// given a region of faces on the mesh, moves boundary vertices of the region
+/// to make the region contour much smoother without changing mesh topology;
+/// \param numIters >= 1 how many times to run the algorithm to achive a better quality,
+/// solution is typically oscillates back and forth so even number of iterations is recommended
+MRMESH_API void smoothRegionBoundary( Mesh & mesh, const FaceBitSet & regionFaces, int numIters = 4 );
+
 /// \}
 
 }

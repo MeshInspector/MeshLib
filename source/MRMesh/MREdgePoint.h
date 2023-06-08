@@ -26,6 +26,8 @@ struct EdgePoint
     [[nodiscard]] MRMESH_API VertId getClosestVertex( const PolylineTopology & topology ) const;
     /// returns true if the point is in a vertex
     [[nodiscard]] MRMESH_API bool inVertex() const;
+    /// sets this to the closest end of the edge
+    MRMESH_API void moveToClosestVertex();
 
     /// represents the same point relative to sym edge in
     [[nodiscard]] EdgePoint sym() const { return EdgePoint{ e.sym(), 1 - a }; }

@@ -20,7 +20,10 @@ IF(APPLE)
  LINK_DIRECTORIES(${HOMEBREW_PREFIX}/lib)
  set(CPPFLAGS "-I${HOMEBREW_PREFIX}/opt/llvm/include -I${HOMEBREW_PREFIX}/include")
  set(LDFLAGS "-L${HOMEBREW_PREFIX}/opt/llvm/lib -Wl,-rpath,${HOMEBREW_PREFIX}/opt/llvm/lib")
- set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -std=c++20-stdlib=libc++ -undefined dynamic_lookup -framework Cocoa -framework IOKit") # https://github.com/pybind/pybind11/issues/382
+ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -std=c++20-stdlib=libc++ -framework Cocoa -framework IOKit") # https://github.com/pybind/pybind11/issues/382
+
+ set(BUILD_SHARED_LIBS ON)
+ set(CMAKE_FIND_LIBRARY_SUFFIXES ".dylib")
 ELSE()
  # uncomment to print compile time of each translation unit,
  # such print format is selected to simplify load in Excel with fields (user time, system time, command) subdivision by commas
@@ -78,6 +81,10 @@ IF(APPLE)
   set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/..;@loader_path/../lib;@loader_path/../lib/lib;@loader_path/meshlib;${THIRDPARTY_LIB_DIR};${CMAKE_BINARY_DIR}/bin")
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
   SET(MR_PLATFORM "APPLE_${CMAKE_HOST_SYSTEM_PROCESSOR}")
+
+  set(GTest_DIR ${THIRDPARTY_LIB_DIR}/cmake/GTest)
+  find_package(GTest REQUIRED CONFIG)
+  include_directories(${GTEST_INCLUDE_DIRS})
 ELSE()
  # set platform dependent flags
  file(STRINGS /etc/os-release distro REGEX "^NAME=")

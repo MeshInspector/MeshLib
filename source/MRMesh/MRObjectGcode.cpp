@@ -22,7 +22,7 @@ std::shared_ptr<Object> MR::ObjectGcode::clone() const
 {
     auto res = std::make_shared<ObjectGcode>( ProtectedStruct{}, *this );
     if ( gcodeSource_ )
-        res->gcodeSource_ = std::make_shared<GcodeSource>( *gcodeSource_ );
+        res->setGcodeSource( std::make_shared<GcodeSource>( *gcodeSource_ ) );
     return res;
 }
 
@@ -30,7 +30,7 @@ std::shared_ptr<Object> ObjectGcode::shallowClone() const
 {
     auto res = std::make_shared<ObjectGcode>( ProtectedStruct{}, *this );
     if ( gcodeSource_ )
-        res->gcodeSource_ = gcodeSource_;
+        res->setGcodeSource( gcodeSource_ );
     return res;
 }
 
@@ -53,10 +53,10 @@ void ObjectGcode::setGcodeSource( const std::shared_ptr<GcodeSource>& gcodeSourc
     for ( int i = 0; i < actionList_.size(); ++i )
     {
         const auto& part = actionList_[i];
-        if ( part.path.empty() )
+        if ( part.action.path.empty() )
             continue;
-        polyline->addFromPoints( part.path.data(), part.path.size() );
-        segmentToSourceLineMap_.insert( segmentToSourceLineMap_.end(), part.path.size() - 1, i );
+        polyline->addFromPoints( part.action.path.data(), part.action.path.size(), false );
+        segmentToSourceLineMap_.insert( segmentToSourceLineMap_.end(), part.action.path.size() - 1, i );
         if ( part.feedrate > maxFeedrate_ )
             maxFeedrate_ = part.feedrate;
     }
@@ -123,7 +123,16 @@ bool ObjectGcode::select( bool isSelected )
 {
     if ( !ObjectLinesHolder::select( isSelected ) )
         return false;
-    setColoringType( isSelected ? ColoringType::VertsColorMap : ColoringType::SolidColor );
+    float width = getLineWidth();
+    if ( isSelected )
+        width += std::clamp( width, 3.0f, 6.0f );
+    else
+    {
+        width -= std::clamp( width * 0.5f, 3.0f, 6.0f );
+        if ( width < 0.5f )
+            width = 0.5f; // minimum width
+    }
+    setLineWidth( width );
     return true;
 }
 
@@ -137,6 +146,11 @@ void ObjectGcode::setFrontColor( const Color& color, bool selected, ViewportId v
 ObjectGcode::ObjectGcode( const ObjectGcode& other ) :
     ObjectLinesHolder( other )
 {
+    actionList_ = other.actionList_;
+    segmentToSourceLineMap_ = other.segmentToSourceLineMap_;
+    idleColor_ = other.idleColor_;
+    maxFeedrate_ = other.maxFeedrate_;
+    feedrateGradientEnabled_ = other.feedrateGradientEnabled_;
 }
 
 void ObjectGcode::swapBase_( Object& other )
@@ -226,7 +240,7 @@ void ObjectGcode::updateColors_()
     for ( int i = 0; i < actionList_.size(); ++i )
     {
         const auto& part = actionList_[i];
-        if ( part.path.empty() )
+        if ( part.action.path.empty() )
             continue;
         Color color = idleColor_;
         if ( !part.idle )
@@ -239,7 +253,7 @@ void ObjectGcode::updateColors_()
             else
                 color = workColor;
         }
-        colors.autoResizeSet( VertId( colors.size() ), part.path.size(), color );
+        colors.autoResizeSet( VertId( colors.size() ), part.action.path.size(), color );
     }
     setVertsColorMap( colors );
 }

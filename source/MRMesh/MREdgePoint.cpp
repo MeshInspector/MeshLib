@@ -49,6 +49,14 @@ VertId EdgePoint::getClosestVertex( const PolylineTopology & topology ) const
         return topology.dest( e );
 }
 
+void EdgePoint::moveToClosestVertex()
+{
+    if ( 2 * a <= 1 )
+        a = 0;
+    else
+        a = 1;
+}
+
 bool EdgePoint::inVertex() const
 {
     return a <= eps || a + eps >= 1;

@@ -92,14 +92,18 @@ struct ToolPathResult
 };
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
+// this toolpath is built from the parallel sections along Z-axis
 // mesh can be transformed using xf parameter
 MRMESH_API ToolPathResult constantZToolPath( const Mesh& mesh, const ToolPathParams& params, const AffineXf3f* xf );
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
+// // this one is traditional lace-roughing toolpath
 // mesh can be transformed using xf parameter
 MRMESH_API ToolPathResult lacingToolPath( const Mesh& mesh, const ToolPathParams& params, const AffineXf3f* xf );
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
+// this toolpath is built from geodesic parallels divercing from the given start point
+// if the start point is not specified, the highest point on the mesh will be used
 // mesh can be transformed using xf parameter
 MRMESH_API ToolPathResult constantCuspToolPath( const Mesh& mesh, const ToolPathParams& params, VertId startPoint = {}, const AffineXf3f* xf = nullptr );
 

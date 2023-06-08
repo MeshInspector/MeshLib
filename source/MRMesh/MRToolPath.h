@@ -101,7 +101,7 @@ MRMESH_API ToolPathResult lacingToolPath( const Mesh& mesh, const ToolPathParams
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
 // mesh can be transformed using xf parameter
-MRMESH_API ToolPathResult constantCuspToolPath( const Mesh& mesh, const Vector3f& direction, const ToolPathParams& params, const AffineXf3f* xf );
+MRMESH_API ToolPathResult constantCuspToolPath( const Mesh& mesh, const ToolPathParams& params, const AffineXf3f* xf );
 
 // generates G-Code for milling tool
 MRMESH_API std::string exportToolPathToGCode( const std::vector<GCommand>& commands );

@@ -420,7 +420,7 @@ std::pair<T, T> findMinMax( const std::vector<T>& vec )
     return { minmax.min, minmax.max };
 }
 
-ToolPathResult constantCuspToolPath( const Mesh& inputMesh, const Vector3f& direction, const ToolPathParams& params, const AffineXf3f* xf )
+ToolPathResult constantCuspToolPath( const Mesh& inputMesh, const ToolPathParams& params, const AffineXf3f* xf )
 {
     ToolPathResult  res{ .modifiedMesh = preprocessMesh( inputMesh, params, xf ) };
     
@@ -428,7 +428,7 @@ ToolPathResult constantCuspToolPath( const Mesh& inputMesh, const Vector3f& dire
     const auto box = mesh.getBoundingBox();
     const float safeZ = box.max.z + params.millRadius;
     
-    const auto startPoint = findDirMax( direction, mesh );
+    const auto startPoint = findDirMax( Vector3f::plusZ(), mesh );
     const MeshTriPoint mtp( mesh.topology, startPoint );
 
     const auto distances = computeSurfaceDistances( mesh, mtp );

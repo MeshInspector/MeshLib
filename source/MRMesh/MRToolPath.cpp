@@ -8,9 +8,9 @@
 #include "MRExtractIsolines.h"
 #include "MRSurfaceDistance.h"
 #include "MRMeshDirMax.h"
+#include "MRParallelFor.h"
 
 #include "MRPch/MRTBB.h"
-#include "MRBitSetParallelFor.h"
 #include <sstream>
 #include <span>
 
@@ -367,60 +367,8 @@ ToolPathResult constantZToolPath( const Mesh& inputMesh, const ToolPathParams& p
     return res;
 }
 
-template<typename T>
-std::pair<T, T> findMinMax( const std::vector<T>& vec )
-{
-    struct MinMax
-    {
-        T min;
-        T max;
-    };
 
-    MinMax minElem{ vec[0], vec[0] };
-    auto minmax = tbb::parallel_reduce( tbb::blocked_range<size_t>( 1, vec.size() ), minElem,
-    [&] ( const tbb::blocked_range<size_t> range, MinMax curMinMax )
-    {
-        for ( size_t i = range.begin(); i < range.end(); i++ )
-        {
-            T val = vec[i];
-            
-            if ( val < curMinMax.min )
-            {
-                curMinMax.min = val;
-            }
-            if ( val > curMinMax.max )
-            {
-                curMinMax.max = val;
-            }           
-        }
-        return curMinMax;
-    },
-    [&] ( const MinMax& a, const MinMax& b )
-    {
-        MinMax res;
-        if ( a.min < b.min )
-        {
-            res.min = a.min;
-        }
-        else
-        {
-            res.min = b.min;
-        }
-        if ( a.max > b.max )
-        {
-            res.max = a.max;
-        }
-        else
-        {
-            res.max = b.max;
-        }
-        return res;
-    } );
-
-    return { minmax.min, minmax.max };
-}
-
-ToolPathResult constantCuspToolPath( const Mesh& inputMesh, const ToolPathParams& params, const AffineXf3f* xf )
+ToolPathResult constantCuspToolPath( const Mesh& inputMesh, const ToolPathParams& params, VertId startPoint, const AffineXf3f* xf )
 {
     ToolPathResult  res{ .modifiedMesh = preprocessMesh( inputMesh, params, xf ) };
     
@@ -428,11 +376,13 @@ ToolPathResult constantCuspToolPath( const Mesh& inputMesh, const ToolPathParams
     const auto box = mesh.getBoundingBox();
     const float safeZ = box.max.z + params.millRadius;
     
-    const auto startPoint = findDirMax( Vector3f::plusZ(), mesh );
+    if ( !startPoint.valid() )
+        startPoint = findDirMax( Vector3f::plusZ(), mesh );
+
     const MeshTriPoint mtp( mesh.topology, startPoint );
 
     const auto distances = computeSurfaceDistances( mesh, mtp );
-    const auto [min, max] = findMinMax( distances.vec_ );
+    const auto [min, max] = parallelMinMax( distances.vec_ );
     
     const size_t numIsolines = size_t( ( max - min ) / params.sectionStep ) - 1;  
 

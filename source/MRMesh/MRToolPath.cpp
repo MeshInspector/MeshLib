@@ -655,8 +655,6 @@ ToolPathResult constantCuspToolPath( const Mesh& inputMesh, const ToolPathParams
         
         addSliceToTheToolPath( pivotIt + 1, contour.end() );
         addSliceToTheToolPath( contour.begin() + 1, pivotIt + 1 );
-
-        auto startIt = pivotIt + 1;
         prevEdgePoint = *nextEdgePointIt;
     }
 

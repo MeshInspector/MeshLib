@@ -13,6 +13,7 @@
 #include "MRMeshComponents.h"
 #include "MRLaplacian.h"
 #include "MRLineSegm.h"
+#include "MRGeodesicPath.h"
 
 namespace MR
 {
@@ -268,6 +269,36 @@ void smoothRegionBoundary( Mesh & mesh, const FaceBitSet & regionFaces, int numI
 
         // all component vertices are free, just fix them all (to -1) to avoid under-determined system of equations
         freeVerts -= cc;
+    }
+
+    // change topology: eliminate not boundary edges joining two boundary vertices
+    for ( auto v : freeVerts )
+    {
+        mesh.topology.flipEdgesOut( v, [&]( EdgeId e )
+        {
+            assert( mesh.topology.org( e ) == v );
+            if ( regionFaces.test( mesh.topology.left( e ) ) != regionFaces.test( mesh.topology.right( e ) ) )
+                return false;
+
+            auto c = mesh.topology.dest( e );
+
+            if ( !freeVerts.test( c ) )
+                return false;
+
+            auto b = mesh.topology.dest( mesh.topology.prev( e ) );
+            auto d = mesh.topology.dest( mesh.topology.next( e ) );
+            if ( freeVerts.test( b ) && freeVerts.test( c ) )
+              return false;
+
+            if ( mesh.topology.findEdge( d, b ) )
+                return false; // multiple edges between b and d will appear
+
+            auto ap = mesh.points[v];
+            auto bp = mesh.points[b];
+            auto cp = mesh.points[c];
+            auto dp = mesh.points[d];
+            return isUnfoldQuadrangleConvex( ap, bp, cp, dp );
+        } );
     }
 
     Laplacian lap( mesh );

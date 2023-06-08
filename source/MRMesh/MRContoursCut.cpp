@@ -909,14 +909,29 @@ OneMeshIntersection intersectionFromMeshTriPoint( const Mesh& mesh, const MeshTr
     return res;
 }
 
-OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg )
+
+OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg )
 {
     MR_TIMER;
+    if ( meshTriPointsOrg.size() < 2 )
+        return {};
+    bool closed = 
+        meshTriPointsOrg.front().e == meshTriPointsOrg.back().e &&
+        meshTriPointsOrg.front().bary.a == meshTriPointsOrg.back().bary.a &&
+        meshTriPointsOrg.front().bary.b == meshTriPointsOrg.back().bary.b;
+
+    if ( closed && meshTriPointsOrg.size() < 4 )
+        return {};
+
     // clear duplicates
     auto meshTriPoints = meshTriPointsOrg;
+    if ( closed )
+        meshTriPoints.resize( meshTriPoints.size() - 1 );
+    size_t sizeMTP = closed ? meshTriPoints.size() : meshTriPoints.size() - 1;
+
     std::vector<int> sameEdgeMTPs;
     Box3f box;
-    for ( int i = 0; i < meshTriPoints.size(); ++i )
+    for ( int i = 0; i < sizeMTP; ++i )
     {
         box.include( mesh.triPoint( meshTriPoints[i] ) );
         auto e1 = meshTriPoints[i].onEdge( mesh.topology );
@@ -943,11 +958,11 @@ OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh, const std:
     if ( meshTriPoints.size() < 2 )
         return {};
     OneMeshContour res;
-    std::vector<OneMeshContour> surfacePaths( meshTriPoints.size() );
-    for ( int i = 0; i < meshTriPoints.size(); ++i )
+    std::vector<OneMeshContour> surfacePaths( sizeMTP );
+    for ( int i = 0; i < sizeMTP; ++i )
     {
         // using DijkstraAStar here might be faster, in most case points are close to each other
-        auto sp = computeGeodesicPath( mesh, meshTriPoints[i], meshTriPoints[( i + 1 ) % meshTriPoints.size()],GeodesicPathApprox::DijkstraAStar );
+        auto sp = computeGeodesicPath( mesh, meshTriPoints[i], meshTriPoints[( i + 1 ) % meshTriPoints.size()], GeodesicPathApprox::DijkstraAStar );
         if ( !sp.has_value() )
             continue;
         auto partContours = convertSurfacePathsToMeshContours( mesh, { std::move( sp.value() ) } );
@@ -991,25 +1006,36 @@ OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh, const std:
     // add interjacent
     for ( int i = 0; i < meshTriPoints.size(); ++i )
     {
-        auto& prevInter = surfacePaths[( i + int( meshTriPoints.size() ) - 1 ) % meshTriPoints.size()].intersections;
-        auto& nextInter = surfacePaths[i].intersections;
+        std::vector<OneMeshIntersection>* prevInter = ( closed || i > 0 ) ? &surfacePaths[( i + int( meshTriPoints.size() ) - 1 ) % meshTriPoints.size()].intersections : nullptr;
+        const std::vector<OneMeshIntersection>* nextInter = ( i < sizeMTP ) ? &surfacePaths[i].intersections : nullptr;
         OneMeshIntersection lastPrev;
         OneMeshIntersection firstNext;
-        if ( prevInter.empty() )
+        if ( prevInter )
         {
-            if ( !res.intersections.empty() )
-                lastPrev = res.intersections.back();
+            if ( prevInter->empty() )
+            {
+                if ( !res.intersections.empty() )
+                    lastPrev = res.intersections.back();
+                else
+                    lastPrev = intersectionFromMeshTriPoint( mesh, meshTriPoints[( i + int( meshTriPoints.size() ) - 1 ) % meshTriPoints.size()] );
+            }
             else
-                lastPrev = intersectionFromMeshTriPoint( mesh, meshTriPoints[( i + int( meshTriPoints.size() ) - 1 ) % meshTriPoints.size()] );
+                lastPrev = prevInter->back();
         }
         else
-            lastPrev = prevInter.back();
-        if ( nextInter.empty() )
+            lastPrev = intersectionFromMeshTriPoint( mesh, meshTriPoints[i] );
+        if ( nextInter )
         {
-            firstNext = intersectionFromMeshTriPoint( mesh, meshTriPoints[( i + 1 ) % meshTriPoints.size()] );
+            if ( nextInter->empty() )
+            {
+                firstNext = intersectionFromMeshTriPoint( mesh, meshTriPoints[( i + 1 ) % meshTriPoints.size()] );
+            }
+            else
+                firstNext = nextInter->front();
         }
         else
-            firstNext = nextInter.front();
+            firstNext = intersectionFromMeshTriPoint( mesh, meshTriPoints[i] );
+
         CenterInterType type;
         auto centerInterOp = centralIntersection( mesh, lastPrev, meshTriPoints[i], firstNext, closeEdgeEps, type );
         if ( centerInterOp )
@@ -1019,23 +1045,36 @@ OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh, const std:
             else
             {
                 if ( res.intersections.empty() )
-                    prevInter.back() = *centerInterOp;
+                {
+                    if ( prevInter )
+                        prevInter->back() = *centerInterOp;
+                }
                 else
                     res.intersections.back() = *centerInterOp;
 
             }
         }
-        if ( !surfacePaths[i].intersections.empty() )
+        if ( nextInter && !nextInter->empty() )
         {
             if ( type == CenterInterType::Common )
-                res.intersections.insert( res.intersections.end(), surfacePaths[i].intersections.begin(), surfacePaths[i].intersections.end() );
+                res.intersections.insert( res.intersections.end(), nextInter->begin(), nextInter->end() );
             else
-                res.intersections.insert( res.intersections.end(), surfacePaths[i].intersections.begin() + 1, surfacePaths[i].intersections.end() );
+                res.intersections.insert( res.intersections.end(), nextInter->begin() + 1, nextInter->end() );
         }
     }
-    res.intersections.push_back( res.intersections.front() );
-    res.closed = true;
+    if ( closed && !res.intersections.empty() )
+    {
+        res.intersections.push_back( res.intersections.front() );
+        res.closed = true;
+    }
     return res;
+}
+
+OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg )
+{
+    auto conts = meshTriPointsOrg;
+    conts.push_back( meshTriPointsOrg.front() );
+    return convertMeshTriPointsToMeshContour( mesh, meshTriPointsOrg );
 }
 
 OneMeshContour convertSurfacePathWithEndsToMeshContour( const MR::Mesh& mesh, const MeshTriPoint& start, const MR::SurfacePath& surfacePath, const MeshTriPoint& end )

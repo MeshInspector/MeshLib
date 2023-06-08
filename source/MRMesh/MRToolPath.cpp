@@ -558,7 +558,6 @@ ToolPathResult constantCuspToolPath( const Mesh& inputMesh, const Vector3f& dire
         const auto contour = polyline.contours().front();
 
         auto nearestPointIt = surfacePath.begin();
-
         float minDistSq = FLT_MAX;
 
         if ( prevEdgePoint.e.valid() )
@@ -606,45 +605,7 @@ ToolPathResult constantCuspToolPath( const Mesh& inputMesh, const Vector3f& dire
             res.commands.push_back( { .feed = params.plungeFeed, .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );
         }
         else
-        { 
-
-        /*if ( !prevEdgePoint.e.valid() || minDistSq > critTransitionLengthSq )
         {
-            const auto lastPoint = toolPath.back();
-            if ( lastPoint.z < safeZ )
-            {
-                if ( safeZ - lastPoint.z > params.retractLength )
-                {
-                    const float zRetract = lastPoint.z + params.retractLength;
-                    toolPath.push_back( { toolPath.back().x, toolPath.back().y, zRetract } );
-                    res.commands.push_back( { .feed = params.retractFeed, .z = zRetract } );
-                    toolPath.push_back( { toolPath.back().x, toolPath.back().y, safeZ } );
-                    res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
-                }
-                else
-                {
-                    toolPath.push_back( { toolPath.back().x, toolPath.back().y, safeZ } );
-                    res.commands.push_back( { .feed = params.retractFeed, .z = safeZ } );
-                }
-            }
-
-            toolPath.push_back( { pivotIt->x, pivotIt->y, safeZ } );
-            res.commands.push_back( { .type = MoveType::FastLinear, .x = pivotIt->x, .y = pivotIt->y } );
-
-            if ( safeZ - pivotIt->z > params.plungeLength )
-            {
-                const float zPlunge = pivotIt->z + params.plungeLength;
-                toolPath.push_back( { pivotIt->x, pivotIt->y, zPlunge } );
-                res.commands.push_back( { .type = MoveType::FastLinear, .z = zPlunge } );
-            }
-
-            toolPath.push_back( *pivotIt );
-            res.commands.push_back( { .feed = params.plungeFeed, .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );
-
-            needToRestoreBaseFeed = true;
-        }
-        else
-        {*/
             const auto p1 = mesh.edgePoint( prevEdgePoint );
             const auto p2 = mesh.edgePoint( *nextEdgePointIt );
             if ( p1.z == minZ )
@@ -675,18 +636,15 @@ ToolPathResult constantCuspToolPath( const Mesh& inputMesh, const Vector3f& dire
                 {
                     if ( sp->size() == 1 )
                     {
-                        const auto p = mesh.edgePoint( sp->front() );
-                        toolPath.push_back( p );
-                        res.commands.push_back( { .x = p.x, .y = p.y, .z = p.z } );
+                        addPointToTheToolPath( mesh.edgePoint( sp->front() ) );
                     }
                     else
                     {
                         Polyline3 transit;
                         transit.addFromSurfacePath( mesh, *sp );
-                        const auto transitContours = transit.contours().front();
-                        toolPath.insert( toolPath.end(), transitContours.begin(), transitContours.end() );
+                        const auto transitContours = transit.contours().front();                        
                         for ( const auto& p : transitContours )
-                            res.commands.push_back( { .x = p.x, .y = p.y, .z = p.z } );
+                            addPointToTheToolPath( p );
                     }
                 }
             }

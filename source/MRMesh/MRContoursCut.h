@@ -59,7 +59,7 @@ MRMESH_API OneMeshContours getOneMeshIntersectionContours( const Mesh& meshA, co
 /** \ingroup BooleanGroup
   * \brief Makes continuous contour by mesh tri points, if first and last meshTriPoint is the same, makes closed contour
   *
-  * Finds shortest paths between neighbor \p meshTriPoints and build closed contour MR::cutMesh input
+  * Finds shortest paths between neighbor \p meshTriPoints and build contour MR::cutMesh input
   */
 MRMESH_API OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints );
 

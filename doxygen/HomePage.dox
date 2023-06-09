@@ -5,7 +5,7 @@ namespace MR {
 \section WhatAreMeshLib MeshLib
 MeshLib is 3D geometry library that allows you to make your applications based on it or perform some 3D operations using it as application or library with c++ or python
 
-\section HomePageBuildWin Build with VS2019 on Windows
+\section HomePageBuildWin Build with VS2019 or VS2022 on Windows
 
 \code
 $ git clone https://github.com/MeshInspector/MeshLib.git
@@ -37,7 +37,7 @@ $ cd vcpkg # or add vcpcg to PATH
 $ ../MeshLib/thirdparty/install.bat
 $ cd ..
 \endcode
-3. Open solution file MeshInspector/source/MeshLib.sln in Visual Studio 2019. Build it and run.
+3. Open solution file MeshInspector/source/MeshLib.sln in Visual Studio. Build it and run.
 
 \section HomePageBuildLin Build with CMake on Linux
 This installation was checked on Ubuntu 20.04.4 with cmake 3.19.3 and gcc 9.3.0.\n

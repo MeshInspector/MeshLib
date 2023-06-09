@@ -135,7 +135,7 @@ pip install meshlib
 See Python Basic Examples [here](https://meshinspector.github.io/MeshLib/html/HowToBasic.html) or search for more complex ones on [stackoverflow.com](https://stackoverflow.com/).
 
 # Build
-## Build with VS2019 on Windows
+## Build with VS2019 or VS2022 on Windows
 ```sh
 git clone https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
@@ -166,11 +166,7 @@ Please install CUDA v11.4 from [official site](https://developer.nvidia.com/cuda
     ../MeshLib/thirdparty/install.bat
     cd ..
     ```
-3. Open solution file MeshInspector/source/MeshLib.sln in Visual Studio 2019. Build it and run.
-
-## Build with VS2022 on Windows
-
-The steps are the same as for VS2019 above. The only exception is that you need to change `PlatformToolset` from `v142` to `v143` in `MeshLib/source/platform.props` after cloning MeshLib.
+3. Open solution file MeshInspector/source/MeshLib.sln in Visual Studio. Build it and run.
 
 ## Build with CMake on Linux
 This installation was checked on Ubuntu 20.04.4.

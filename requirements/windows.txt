@@ -6,6 +6,7 @@ boost-move
 boost-multiprecision
 boost-program-options
 boost-range
+boost-serialization
 boost-signals2
 boost-stacktrace
 libjpeg-turbo

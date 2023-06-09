@@ -1,4 +1,5 @@
 #pragma once
+#include "exports.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRBuffer.h"
 #include "MRMesh/MRVector2.h"
@@ -7,7 +8,7 @@ namespace MR
 {
 
 // calc texture resolution, to fit MAX_TEXTURE_SIZE, and have minimal empty pixels
-Vector2i calcTextureRes( int bufferSize, int maxTextWidth );
+MRVIEWER_API Vector2i calcTextureRes( int bufferSize, int maxTextWidth );
 
 // provides access to shared buffer with type casting
 template <typename T>
@@ -59,7 +60,7 @@ private:
 };
 
 // provides shared buffer for loading different types of data to GL memory
-class RenderObjectBuffer
+class MRVIEWER_CLASS RenderObjectBuffer
 {
 public:
     template <typename T>

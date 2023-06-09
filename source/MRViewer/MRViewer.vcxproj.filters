@@ -277,6 +277,9 @@
     <ClCompile Include="MRSpaceMouseHandlerHidapi.cpp">
       <Filter>SpaceMouse</Filter>
     </ClCompile>
+    <ClCompile Include="MRFrameRedrawRequest.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -520,6 +523,9 @@
     </ClInclude>
     <ClInclude Include="MRSpaceMouseHandlerHidapi.h">
       <Filter>SpaceMouse</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFrameRedrawRequest.h">
+      <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

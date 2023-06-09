@@ -6,7 +6,7 @@
 namespace MR
 {
 
-constexpr float cInch = 2.54f;
+constexpr float cInch = 25.4f;
 
 //////////////////////////////////////////////////////////////////////////
 // GcodeExecutor
@@ -122,7 +122,7 @@ void GcodeProcessor::applyCommand_( const Command& command )
         inputCoordsReaded_[index] = true;
     }
     if ( command.key == 'f' )
-        feedrate_ = command.value;
+        feedrate_ = inches_ ? cInch * command.value : command.value;
     if ( command.key == 'r' )
         radius_ = command.value;
     if ( command.key >= 'i' && command.key <= 'k' )

@@ -11,7 +11,7 @@ on:
         type: boolean
 
 env:
-  VCPKG-VERSION: '2022.11.14'
+  VCPKG-VERSION: '2023.04.15'
   CUDA-VERSION: '11.4.2.47141'
   CUDA-MAJOR: '11'
   CUDA-MINOR: '4'
@@ -26,7 +26,6 @@ jobs:
     steps:
       - name: Restore Vcpkg Cache
         uses: actions/cache@v3
-        if: ${{ false }}
         id: vcpkg-cache
         with:
           key: vcpkg-${{env.VCPKG-VERSION}}

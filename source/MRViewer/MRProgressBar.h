@@ -1,6 +1,5 @@
 #pragma once
-#include "exports.h"
-#include "MRAsyncTimer.h"
+#include "MRFrameRedrawRequest.h"
 #include <imgui.h>
 #include <functional>
 #include <atomic>
@@ -58,18 +57,6 @@ private:
     float progress_;
     int currentTask_, taskCount_;
     std::string taskName_, title_;
-    class FrameRedrawRequest
-    {
-    public:
-        void reset();
-        void requestFrame();
-    private:
-#ifdef __EMSCRIPTEN__
-        std::atomic<bool> frameRequested_{ false }; // not to order too often
-#else
-        AsyncRequest asyncRequest_;
-#endif
-    };
 
     FrameRedrawRequest frameRequest_;
 

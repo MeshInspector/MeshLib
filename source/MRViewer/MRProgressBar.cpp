@@ -329,47 +329,10 @@ void ProgressBar::tryRunTaskWithSehHandler_()
     finish_();
 }
 
-void ProgressBar::FrameRedrawRequest::requestFrame()
-{
-    // do not do it too frequently not to overload the renderer
-    constexpr auto minInterval = std::chrono::milliseconds( 100 );
-    // make request
-#ifdef __EMSCRIPTEN__
-    bool testFrameOrder = false;
-    if ( frameRequested_.compare_exchange_strong( testFrameOrder, true ) )
-    {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
-        MAIN_THREAD_EM_ASM( postEmptyEvent( $0, 2 ), int( minInterval.count() ) );
-#pragma clang diagnostic pop
-    }
-#else
-    // do not request frame from gui thread with this mechanism
-    if ( std::this_thread::get_id() == CommandLoop::getMainThreadId() )
-    {
-        spdlog::warn( "Async requesting frame for progress bar from GUI thread!" );
-        assert( false );
-        return;
-    }
-    asyncRequest_.requestIfNotSet( std::chrono::system_clock::now() + minInterval, [] ()
-    {
-        getViewerInstance().postEmptyEvent();
-    } );
-#endif
-}
-
 void ProgressBar::finish_()
 {
     finished_ = true;
     frameRequest_.requestFrame();
-}
-
-void ProgressBar::FrameRedrawRequest::reset()
-{
-#ifdef __EMSCRIPTEN__
-    bool testFrameOrder = true;
-    frameRequested_.compare_exchange_strong( testFrameOrder, false );
-#endif
 }
 
 }

@@ -26,6 +26,7 @@ jobs:
     steps:
       - name: Restore Vcpkg Cache
         uses: actions/cache@v3
+        if: ${{ false }}
         id: vcpkg-cache
         with:
           key: vcpkg-${{env.VCPKG-VERSION}}
@@ -47,8 +48,8 @@ jobs:
         working-directory: C:\vcpkg
         run: |
           aws codeartifact login --tool dotnet --repository meshlib-vcpkg --domain meshlib --domain-owner 259351611210 --region us-east-1
-          nuget install vcpkg-export-20230329-153927 -Source "meshlib/meshlib-vcpkg"
-          Xcopy C:\vcpkg\vcpkg-export-20230329-153927.1.0.0 C:\vcpkg /E/H/C/I/y
+          nuget install vcpkg-export-20230609-102455 -Source "meshlib/meshlib-vcpkg"
+          Xcopy C:\vcpkg\vcpkg-export-20230609-102455.1.0.0 C:\vcpkg /E/H/C/I/y
 
       - name: Vcpkg integrate install
         working-directory: C:\vcpkg
@@ -86,7 +87,7 @@ jobs:
           py -3.10 -m pip install -r .\requirements\python.txt
 
       - name: Update thirdparty
-        run: vcpkg install --recurse --binarysource=clear --overlay-triplets thirdparty\vcpkg\triplets  hidapi:x64-windows-meshlib
+        run: vcpkg install --recurse --binarysource=clear --overlay-triplets thirdparty\vcpkg\triplets  boost-serialization:x64-windows-meshlib
         
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.3

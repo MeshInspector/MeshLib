@@ -8,7 +8,7 @@ namespace MR
 // This class holds all shaders that are used in the program
 // creates shader on access if it is needed
 // holds shared memory buffer for loading to GPU
-class GLStaticHolder
+class MRVIEWER_CLASS GLStaticHolder
 {
 public:
     typedef unsigned int GLuint;
@@ -44,13 +44,13 @@ public:
     };
 
     // Creates shader if it is not and return valid id
-    static GLuint getShaderId( ShaderType type );
+    MRVIEWER_API static GLuint getShaderId( ShaderType type );
     // Free shader from GL
-    static void freeShader( ShaderType type );
+    MRVIEWER_API static void freeShader( ShaderType type );
     // Free all shaders from GL
-    static void freeAllShaders();
+    MRVIEWER_API static void freeAllShaders();
     // Memory buffer for objects that about to be loaded to GPU, shared among different data types
-    static RenderObjectBuffer& getStaticGLBuffer();
+    MRVIEWER_API static RenderObjectBuffer& getStaticGLBuffer();
 private:
     GLStaticHolder();
     ~GLStaticHolder();

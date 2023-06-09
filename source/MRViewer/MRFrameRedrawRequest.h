@@ -5,7 +5,7 @@
 namespace MR
 {
 
-// class for requresting frame redraw in some time
+/// class for requesting frame redraw in some time
 class MRVIEWER_CLASS FrameRedrawRequest
 {
 public:

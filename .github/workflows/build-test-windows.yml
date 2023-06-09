@@ -87,7 +87,10 @@ jobs:
 
       - name: Update thirdparty
         working-directory: thirdparty
-        run: install.bat
+        run: |
+          chmod +x install.bat
+          cmd /c install.bat
+
         
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.3

@@ -153,7 +153,7 @@ Please install CUDA v11.4 from [official site](https://developer.nvidia.com/cuda
     ```sh
     git clone https://github.com/Microsoft/vcpkg.git
     cd vcpkg
-    git checkout 2022.11.14
+    git checkout 2023.04.15
     .\bootstrap-vcpkg.bat
     .\vcpkg integrate install (with admin rights)
     cd ..
@@ -162,9 +162,8 @@ Please install CUDA v11.4 from [official site](https://developer.nvidia.com/cuda
 
 2. Execute install.bat
     ```sh
-    cd vcpkg # or add vcpkg to PATH
-    ../MeshLib/thirdparty/install.bat
-    cd ..
+    cd MeshLib/thirdparty
+    install.bat
     ```
 3. Open solution file MeshInspector/source/MeshLib.sln in Visual Studio. Build it and run.
 

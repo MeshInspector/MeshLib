@@ -13,4 +13,4 @@ with open(REQUIREMTS_PATH) as fin:
 
 VCPKG_CMD += " --nuget"
 
-check_output("VCPKG_CMD", shell=True)
+check_output(VCPKG_CMD, shell=True)

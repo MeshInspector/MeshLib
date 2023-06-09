@@ -270,8 +270,8 @@ bool ObjectVoxels::prepareDataForVolumeRendering( ProgressCallback cb /*= {} */ 
     res.max = vdbVolume_.max;
     res.min = vdbVolume_.min;
     res.voxelSize = vdbVolume_.voxelSize;
-    auto activeBox = vdbVolume_.data->evalActiveVoxelBoundingBox();
-    res.dims = Vector3i( activeBox.dim().x(), activeBox.dim().y(), activeBox.dim().z() );
+    auto activeBox = getActiveBounds();
+    res.dims = activeBox.size() + Vector3i::diagonal( 1 );
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size() );
 
@@ -287,7 +287,7 @@ bool ObjectVoxels::prepareDataForVolumeRendering( ProgressCallback cb /*= {} */ 
             if ( cb && cancelled.load( std::memory_order_relaxed ) )
                 return;
             auto coord = indexer.toPos( VoxelId( i ) );
-            auto vdbCoord = openvdb::Coord( coord.x + activeBox.min().x(), coord.y + activeBox.min().y(), coord.z + activeBox.min().z() );
+            auto vdbCoord = openvdb::Coord( coord.x + activeBox.min.x, coord.y + activeBox.min.y, coord.z + activeBox.min.z );
             res.data[i] = uint8_t( std::clamp( ( accessor.getValue( vdbCoord ) - res.min ) / ( res.max - res.min ), 0.0f, 1.0f ) * 255.0f );
         }
         if ( cb )

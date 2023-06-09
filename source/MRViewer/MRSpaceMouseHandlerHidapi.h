@@ -74,7 +74,7 @@ private:
 
     // if you change this value, do not forget to update MeshLib/scripts/70-space-mouse-meshlib.rules
     const std::unordered_map<VendorId, std::vector<ProductId>> vendor2device_ = {
-            { 0x046d, { 0xc603,    // spacemouse plus XT
+            { VendorId(0x046d), { 0xc603,    // spacemouse plus XT
                         0xc605,    // cadman
                         0xc606,    // spacemouse classic
                         0xc621,    // spaceball 5000
@@ -87,7 +87,7 @@ private:
                         0xc62b,    // space mouse pro
                         0xc640     // nulooq
             }},
-            { 0x256f, { 0xc62e,    // spacemouse wireless (USB cable)
+            { VendorId(0x256f), { 0xc62e,    // spacemouse wireless (USB cable)
                         0xc62f,    // spacemouse wireless receiver
                         0xc631,    // spacemouse pro wireless
                         0xc632,    // spacemouse pro wireless receiver

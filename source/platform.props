@@ -9,7 +9,9 @@
     <CustomPlatfotmPropertyDir>$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), CustomMRPlatform.props))</CustomPlatfotmPropertyDir>
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(CustomPlatfotmPropertyDir)' == ''">
-    <PlatformToolset>v142</PlatformToolset> <!-- v142 = Visual Studio 2019 compiler -->
+    <!-- v142 = Visual Studio 2019 compiler -->
+    <!-- v143 = Visual Studio 2022 compiler -->
+    <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
     <PreferredToolArchitecture>x86</PreferredToolArchitecture> <!-- Using 32-bit build tools reduces memory consumption and fixes error C3859: Failed to create virtual memory for PCH -->
   </PropertyGroup>
   <Import Project="$(CustomPlatfotmPropertyDir)\CustomMRPlatform.props" Condition="'$(CustomPlatfotmPropertyDir)' != ''"/>

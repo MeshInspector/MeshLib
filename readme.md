@@ -142,6 +142,8 @@ cd MeshLib
 git submodule update --init --recursive
 cd ..
 ```
+Note: following below steps will take about 40Gb of your disk space.
+
 ### Preparing Third Parties
 Some third parties are taken from vcpkg, while others (missing in vcpkg) are configured as git submodules.
 

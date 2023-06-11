@@ -2,6 +2,7 @@
 
 #include "MRVector.h"
 #include "MRPch/MRTBB.h"
+#include <limits>
 
 namespace MR
 {
@@ -45,32 +46,29 @@ void ParallelFor( const Vector<T, I> & v, F && f )
     } );
 }
 
-/// finds minimal and maximal elementsin vector in parallel
+/// finds minimal and maximal elements in given vector in parallel;
+/// \param topExcluding if provided then all values in the array equal or larger by absolute value than it will be ignored
 template<typename T>
-std::pair<T, T> parallelMinMax( const std::vector<T>& vec )
+std::pair<T, T> parallelMinMax( const std::vector<T>& vec, const T * topExcluding = nullptr )
 {
     struct MinMax
     {
-        T min;
-        T max;
+        T min = std::numeric_limits<T>::max();
+        T max = std::numeric_limits<T>::lowest();
     };
 
-    MinMax minElem{ vec[0], vec[0] };
-    auto minmax = tbb::parallel_reduce( tbb::blocked_range<size_t>( 1, vec.size() ), minElem,
+    auto minmax = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, vec.size() ), MinMax{},
     [&] ( const tbb::blocked_range<size_t> range, MinMax curMinMax )
     {
         for ( size_t i = range.begin(); i < range.end(); i++ )
         {
             T val = vec[i];
-
+            if ( topExcluding && std::abs( val ) >= *topExcluding )
+                continue;
             if ( val < curMinMax.min )
-            {
                 curMinMax.min = val;
-            }
             if ( val > curMinMax.max )
-            {
                 curMinMax.max = val;
-            }
         }
         return curMinMax;
     },

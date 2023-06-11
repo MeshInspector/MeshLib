@@ -60,9 +60,10 @@ This list is not full and updating each day
  - Splitting
    - Splitting mesh into sub-meshes (components)
 ### 3D data operations
- - Boolean ops (union, intersection, difference) 
-   - Boolean ops on meshes via voxels. Efficient but not so accurate as explicit mesh operations.
-   - Explicit mesh boolean ops, very exact, fast and accurate.
+ - Boolean operations (union, intersection, difference) on 3D objects bounded by meshes. MeshLib has two independent modes:
+   1. Boolean ops on meshes via intermediate conversion into voxel representation. This mode requires closed meshes without holes on input and much memory for high accuracy but tolerate for various input mesh degenerations and self-intersections.
+   2. Direct Boolean ops on meshes using robust predicates, producing exact accurate result and keeping original mesh elements as is if they are not intersected. This mode supports for open meshes with holes as long as the boundary of the mesh is not intersected.
+      - According to our user reports, MeshLib direct Boolean operations are significatly faster even compared to the latest published approaches, e.g. [Interactive and Robust Mesh Booleans](https://arxiv.org/pdf/2205.14151.pdf)
  - Construction of Convex Hull of a point cloud or a mesh.
 ### 3D Data problems fixing
  - Fixing holes in mesh

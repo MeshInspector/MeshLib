@@ -2,6 +2,7 @@
 
 #include "MRVector.h"
 #include "MRPch/MRTBB.h"
+#include <limits>
 
 namespace MR
 {

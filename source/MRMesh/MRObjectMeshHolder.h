@@ -133,7 +133,7 @@ public:
     void updateAncillaryUVCoords( Vector<UVCoord, VertId>& updated ) { std::swap( ancillaryUVCoordinates_, updated ); dirty_ |= DIRTY_UV; }
     
     bool hasAncillaryTexture() const { return !ancillaryUVCoordinates_.empty() && !ancillaryTexture_.pixels.empty(); }
-    void clearAncillaryTexture() { setAncillaryTexture( {} ); setAncillaryUVCoords( {} ); }
+    MRMESH_API void clearAncillaryTexture();
 
     /// returns dirty flag of currently using normal type if they are dirty in render representation
     MRMESH_API uint32_t getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const;

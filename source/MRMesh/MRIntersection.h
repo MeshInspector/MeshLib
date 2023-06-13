@@ -82,10 +82,10 @@ inline std::optional<Vector2f> intersection( const LineSegm2f& segm1, const Line
     return ( segm1.b * cda + segm1.a * cbd ) / ( cda + cbd );
 }
 
-/// finds distance between a plane1 and a plane2
+/// finds squared distance between a plane1 and a plane2
 /// \return nullopt if they intersect
 template<typename T>
-std::optional<T> distance( const Plane3<T>& plane1, const Plane3<T>& plane2,
+std::optional<T> distanceSq( const Plane3<T>& plane1, const Plane3<T>& plane2,
     T errorLimit = std::numeric_limits<T>::epsilon() * T( 20 ) )
 {
     const auto crossDir = cross( plane1.n, plane2.n );
@@ -93,7 +93,19 @@ std::optional<T> distance( const Plane3<T>& plane1, const Plane3<T>& plane2,
     if ( crossDir.lengthSq() >= errorLimit * errorLimit )
         return {};
 
-    return ( plane2.n * plane2.d - plane1.n * plane1.d ).length();
+    return ( plane2.n * plane2.d - plane1.n * plane1.d ).lengthSq();
+}
+
+/// finds distance between a plane1 and a plane2
+/// \return nullopt if they intersect
+template<typename T>
+std::optional<T> distance( const Plane3<T>& plane1, const Plane3<T>& plane2,
+    T errorLimit = std::numeric_limits<T>::epsilon() * T( 20 ) )
+{
+    std::optional<T> res = distanceSq( plane1, plane2, errorLimit );
+    if ( res )
+        *res = std::sqrt( *res );
+    return res;
 }
 
 /// finds distance between a plane and a line;
@@ -133,13 +145,21 @@ LineSegm3<T> closestPoints( const Line3<T>& line1, const Line3<T>& line2 )
     return { line1( a ), line2( b ) };
 }
 
+/// finds squared distance between parallel or skew lines ( a line1 and a line2 )
+/// \return zero if they intersect
+template<typename T>
+inline T distanceSq( const Line3<T>& line1, const Line3<T>& line2 )
+{
+    const auto cl = closestPoints( line1, line2 );
+    return ( cl.a - cl.b ).lengthSq();
+}
+
 /// finds distance between parallel or skew lines ( a line1 and a line2 )
 /// \return zero if they intersect
 template<typename T>
-T distance( const Line3<T>& line1, const Line3<T>& line2 )
+inline T distance( const Line3<T>& line1, const Line3<T>& line2 )
 {
-    const auto cl = closestPoints( line1, line2 );
-    return ( cl.a - cl.b ).length();
+    return std::sqrt( distanceSq( line1, line2 ) );
 }
 
 /// \}

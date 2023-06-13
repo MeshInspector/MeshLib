@@ -286,4 +286,47 @@ inline int getDepthFunctionLEqual( DepthFuncion funcType )
     return getDepthFunctionLess( funcType );
 }
 
+// class for easier rendering in framebuffer texture
+class MRVIEWER_CLASS FramebufferData
+{
+public:
+    // generates framebuffer and associated data
+    // to resize: del(); gen( newSize, multisample );
+    MRVIEWER_API void gen( const Vector2i& size, bool multisample );
+    // clears this framebuffer and binds it as main rendering target
+    MRVIEWER_API void bind();
+    // copies picture rendered in this framebuffer to associated texutre for further use
+    MRVIEWER_API void copyTexture();
+    // removes this framebuffer
+    MRVIEWER_API void del();
+    // gets texture id for binding in other shaders
+    unsigned getTexture() const { return resTexture_.getId(); }
+
+    const Vector2i& getSize() const { return size_; }
+private:
+    void resize_( const Vector2i& size, bool multisample );
+
+    unsigned mainFramebuffer_{ 0 };
+    unsigned colorRenderbuffer_{ 0 };
+    unsigned depthRenderbuffer_{ 0 };
+    unsigned copyFramebuffer_{ 0 };
+    GlTexture2 resTexture_;
+    Vector2i size_;
+};
+
+// class for rendering simple texture
+class MRVIEWER_CLASS QuadTextureVertexObject
+{
+public:
+    // generates simple quad for rendering
+    MRVIEWER_API void gen();
+    // binds simple quad vertex data
+    MRVIEWER_API void bind();
+    // removes this object
+    MRVIEWER_API void del();
+private:
+    unsigned vao_;
+    unsigned vbo_;
+};
+
 } //namespace MR

@@ -50,35 +50,7 @@ private:
     Vector2i sceneSize_;
     Vector2i lowSize_;
 
-    class FramebufferData
-    {
-    public:
-        void gen( const Vector2i& size, bool multisample );
-        void bind();
-        void copyTexture();
-        void del();
-        unsigned getTexture() const { return resTexture_.getId(); }
-    private:
-        void resize_( const Vector2i& size, bool multisample );
-
-        unsigned mainFramebuffer_{ 0 };
-        unsigned colorRenderbuffer_{ 0 };
-        unsigned depthRenderbuffer_{ 0 };
-        unsigned copyFramebuffer_{ 0 };
-        GlTexture2 resTexture_;
-        Vector2i size_;
-    };
-
-    class QuadTextureVertexObject
-    {
-    public:
-        void gen();
-        void bind();
-        void del();
-    private:
-        unsigned vao_;
-        unsigned vbo_;
-    } quadObject_;
+    QuadTextureVertexObject quadObject_;
 
     FramebufferData sceneFramebuffer_;
     FramebufferData lowSizeFramebuffer_;

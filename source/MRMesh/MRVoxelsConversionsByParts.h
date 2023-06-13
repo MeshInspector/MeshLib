@@ -1,9 +1,8 @@
 #pragma once
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRMeshFwd.h"
+#include "MRExpected.h"
 #include "MRPartMapping.h"
-
-#include <tl/expected.hpp>
 
 namespace MR
 {
@@ -53,7 +52,7 @@ struct MergeGridPartSettings
  * @return nothing if succeeds, an error string otherwise
  */
 MRMESH_API
-tl::expected<void, std::string>
+VoidOrErrStr
 mergeGridPart( Mesh& mesh, std::vector<EdgePath>& cutContours, FloatGrid&& grid, const Vector3f& voxelSize,
                float leftCutPosition, float rightCutPosition, const MergeGridPartSettings& settings = {} );
 

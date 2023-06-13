@@ -51,7 +51,7 @@ void sortEdgePaths( const Mesh& mesh, std::vector<EdgePath>& paths )
 namespace MR
 {
 
-tl::expected<void, std::string>
+VoidOrErrStr
 mergeGridPart( Mesh &mesh, std::vector<EdgePath> &cutContours, FloatGrid &&grid, const Vector3f &voxelSize,
                float leftCutPosition, float rightCutPosition, const MergeGridPartSettings &settings )
 {

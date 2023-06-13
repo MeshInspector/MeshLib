@@ -4,6 +4,7 @@
 #include "MRLine3.h"
 #include "MRLineSegm.h"
 #include "MRVector2.h"
+#include "MRBox.h"
 #include <optional>
 
 namespace MR
@@ -160,6 +161,89 @@ template<typename T>
 inline T distance( const Line3<T>& line1, const Line3<T>& line2 )
 {
     return std::sqrt( distanceSq( line1, line2 ) );
+}
+
+/// finds the closest points between a line and a box wireframe (not solid) in 3D
+template<typename T>
+LineSegm3<T> closestPoints( const Line3<T>& line, const Box3<T> & box )
+{
+    assert( ( line.d.lengthSq() - 1 ) < 1e-5f );
+    LineSegm3<T> res;
+    T bestDistSq = std::numeric_limits<T>::max();
+
+    static constexpr int otherDir[3][2] = { { 1, 2 }, { 2, 0 }, { 0, 1 } };
+    for ( int iDir = 0; iDir < 3; ++iDir )
+    {
+        // consider box edges parallel to unit vector #iDir
+        Vector3<T> q[4] = { box.min, box.min, box.min, box.min };
+        {
+            const int iDir1 = otherDir[iDir][0];
+            const int iDir2 = otherDir[iDir][1];
+
+            q[1][iDir2] = box.max[iDir2];
+
+            q[2][iDir1] = box.max[iDir1];
+            q[2][iDir2] = box.max[iDir2];
+
+            q[3][iDir1] = box.max[iDir1];
+        }
+
+        const auto e = box.max[iDir] - box.min[iDir];
+        const auto ee = e * e;
+        const auto db = line.d[iDir] * e;
+        const auto denom = ee - db * db;
+        const bool par = denom <= 0; // line is parallel to box edge
+        const auto rdenom = par ? 0 : 1 / denom;
+        for ( int j = 0; j < 4; ++j )
+        {
+            LineSegm3<T> cand;
+            if ( par )
+            {
+                cand.a = line.p;
+                cand.a[iDir] = q[j][iDir];
+                cand.b = q[j];
+            }
+            else
+            {
+                const auto s = q[j] - line.p;
+                const auto dt = dot( line.d, s );
+                const auto bt = s[iDir] * e;
+
+                // t is line parameter: 0 - line.p, 1 - line.p + line.d
+                const auto t = ( dt * ee - bt * db ) * rdenom;
+                assert( !std::isnan( t ) );
+
+                // u is box edge parameter, find the point closest to line(t)
+                const auto u = ( t * db - bt ) / ee;
+                assert( !std::isnan( u ) );
+
+                if ( u <= 0 )
+                {
+                    cand.a = line( dt );
+                    cand.b = q[j];
+                }
+                else if ( u >= 1 )
+                {
+                    cand.a = line( db + dt );
+                    cand.b = q[j];
+                    cand.b[iDir] = box.max[iDir];
+                }
+                else 
+                {
+                    cand.a = line( t );
+                    cand.b = q[j];
+                    cand.b[iDir] += e * u;
+                }
+            }
+            const auto distSq = cand.lengthSq();
+            if ( distSq < bestDistSq )
+            {
+                bestDistSq = distSq;
+                res = cand;
+            }
+        }
+    }
+    return res;
 }
 
 /// \}

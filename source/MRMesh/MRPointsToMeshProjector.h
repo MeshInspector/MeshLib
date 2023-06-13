@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRAffineXf3.h"
+#include <float.h>
 #include <string>
 
 namespace MR

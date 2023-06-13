@@ -16,6 +16,7 @@ struct LineSegm
     [[nodiscard]] constexpr LineSegm( const V & a, const V & b ) noexcept : a( a ), b( b ) { }
     template <typename U>
     [[nodiscard]] constexpr explicit LineSegm( const LineSegm<U> & p ) noexcept : a( p.a ), b( p.b ) { }
+    [[nodiscard]] T lengthSq() const { return ( a - b ).lengthSq(); }
 };
 
 template <typename V> 

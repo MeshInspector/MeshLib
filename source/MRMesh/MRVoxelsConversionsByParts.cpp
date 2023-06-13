@@ -57,21 +57,16 @@ mergeGridPart( Mesh &mesh, std::vector<EdgePath> &cutContours, FloatGrid &&grid,
 {
     MR_TIMER
 
-    Timer timer( "convert grid to mesh" );
     auto res = gridToMesh( std::move( grid ), GridToMeshSettings {
-            .voxelSize = voxelSize,
+        .voxelSize = voxelSize,
     } );
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
     auto part = std::move( *res );
 
     if ( settings.preCut )
-    {
-        timer.restart( "pre-cut callback" );
         settings.preCut( part, leftCutPosition, rightCutPosition );
-    }
 
-    timer.restart( "cut part" );
     std::vector<EdgePath> leftCutContours;
     if ( leftCutPosition != -FLT_MAX )
     {
@@ -88,17 +83,13 @@ mergeGridPart( Mesh &mesh, std::vector<EdgePath> &cutContours, FloatGrid &&grid,
     }
 
     if ( settings.postCut )
-    {
-        timer.restart( "post-cut callback" );
         settings.postCut( part );
-    }
 
     auto mapping = settings.mapping;
     clearPartMapping( mapping );
 
     if ( leftCutContours.empty() && cutContours.empty() )
     {
-        timer.restart( "merge part" );
         WholeEdgeHashMap src2tgtEdges;
         if ( !mapping.src2tgtEdges )
             mapping.src2tgtEdges = &src2tgtEdges;
@@ -106,12 +97,8 @@ mergeGridPart( Mesh &mesh, std::vector<EdgePath> &cutContours, FloatGrid &&grid,
         mesh.addPartByMask( part, part.topology.getValidFaces(), mapping );
 
         if ( settings.postMerge )
-        {
-            timer.restart( "post-merge callback" );
             settings.postMerge( mesh, mapping );
-        }
 
-        timer.restart( "convert cut contours" );
         for ( auto& contour : rightCutContours )
         {
             for ( auto& e : contour )
@@ -131,7 +118,6 @@ mergeGridPart( Mesh &mesh, std::vector<EdgePath> &cutContours, FloatGrid &&grid,
         if ( cutContours[i].size() != leftCutContours[i].size() )
             return tl::make_unexpected( "Mesh cut contours mismatch" );
 
-    timer.restart( "merge part" );
     WholeEdgeHashMap src2tgtEdges;
     if ( !mapping.src2tgtEdges )
         mapping.src2tgtEdges = &src2tgtEdges;
@@ -139,12 +125,8 @@ mergeGridPart( Mesh &mesh, std::vector<EdgePath> &cutContours, FloatGrid &&grid,
     mesh.addPartByMask( part, part.topology.getValidFaces(), false, cutContours, leftCutContours, mapping );
 
     if ( settings.postMerge )
-    {
-        timer.restart( "post-merge callback" );
         settings.postMerge( mesh, mapping );
-    }
 
-    timer.restart( "convert cut contours" );
     for ( auto& contour : rightCutContours )
     {
         for ( auto& e : contour )
@@ -195,11 +177,7 @@ gridToMeshByParts( const GridPartBuilder &builder, const Vector3i &dimensions, c
         const auto begin = stripe * ( stripeSize - settings.stripeOverlap );
         const auto end = std::min( begin + stripeSize, (size_t)dimensions.x );
 
-        GridPartBuilder::result_type grid;
-        {
-            MR_NAMED_TIMER( "build grid" )
-            grid = builder( begin, end );
-        }
+        auto grid = builder( begin, end );
         if ( !grid.has_value() )
             return tl::make_unexpected( grid.error() );
 

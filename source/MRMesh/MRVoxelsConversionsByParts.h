@@ -17,7 +17,7 @@ namespace MR
 struct MergeGridPartSettings
 {
     /// callback to process the generated mesh before the side cutting, e.g. fixing specific generation artifacts
-    using PreCutCallback = std::function<void( Mesh&, float, float )>;
+    using PreCutCallback = std::function<void( Mesh& mesh, float leftCutPosition, float rightCutPosition )>;
     PreCutCallback preCut = nullptr;
     /// callback to process the generated mesh after the side cutting, e.g. decimating
     using PostCutCallback = std::function<void( Mesh& )>;
@@ -46,8 +46,8 @@ struct MergeGridPartSettings
  * @param cutContours - cut contours of the result mesh; must be placed at `leftCutPosition`
  * @param grid - voxel grid part
  * @param voxelSize - voxel size
- * @param leftCutPosition - position on X axis where the left side of the generated mesh is cut
- * @param rightCutPosition - position on X axis where the right side of the generated mesh is cut
+ * @param leftCutPosition - position on X axis where the left side of the generated mesh is cut; pass -FLT_MAX to omit a cut here
+ * @param rightCutPosition - position on X axis where the right side of the generated mesh is cut; pass +FLT_MAX to omit a cut here
  * @param settings - additional parameters; see \ref MergeGridPartSettings
  * @return nothing if succeeds, an error string otherwise
  */
@@ -57,7 +57,7 @@ mergeGridPart( Mesh& mesh, std::vector<EdgePath>& cutContours, FloatGrid&& grid,
                float leftCutPosition, float rightCutPosition, const MergeGridPartSettings& settings = {} );
 
 /// functor returning a voxel grid part within the specified range, or an error string on failure
-using GridPartBuilder = std::function<tl::expected<FloatGrid, std::string> ( size_t, size_t )>;
+using GridPartBuilder = std::function<tl::expected<FloatGrid, std::string> ( size_t begin, size_t end )>;
 
 /**
  * \struct MR::GridToMeshByPartsSettings

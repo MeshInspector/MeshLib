@@ -9,12 +9,12 @@ struct MeshProjectorData;
 class PointsToMeshProjector : public IPointsToMeshProjector
 {
     std::shared_ptr<MeshProjectorData> meshData_;
-    std::shared_ptr<const Mesh> mesh_;
+    const Mesh* mesh_{ nullptr };
 
 public:
     MRCUDA_API PointsToMeshProjector();
     /// update all data related to the referencing mesh
-    MRCUDA_API virtual void updateMeshData( std::shared_ptr<const Mesh> mesh ) override;
+    MRCUDA_API virtual void updateMeshData( const Mesh* mesh ) override;
     /// <summary>
     /// Computes the closest point on mesh to each of given points    
     /// </summary>
@@ -25,7 +25,7 @@ public:
     /// <param name="upDistLimitSq">maximal squared distance from point to mesh</param>
     /// <param name="loDistLimitSq">minimal squared distance from point to mesh</param>
     /// <returns></returns>
-    MRCUDA_API virtual void findProjections( std::vector<MR::MeshProjectionResult>& res, const std::vector<Vector3f>& points, const AffineXf3f& objXf, const AffineXf3f& refObjXf, float upDistLimitSq, float loDistLimitSq ) override;
+    MRCUDA_API virtual void findProjections( std::vector<MR::MeshProjectionResult>& res, const std::vector<Vector3f>& points, const AffineXf3f* objXf, const AffineXf3f* refObjXf, float upDistLimitSq, float loDistLimitSq ) override;
 
     /// Returns amount of additional memory needed to compute projections
     MRCUDA_API virtual size_t projectionsHeapBytes( size_t numProjections ) const override;

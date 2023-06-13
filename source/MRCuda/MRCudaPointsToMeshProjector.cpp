@@ -29,11 +29,11 @@ PointsToMeshProjector::PointsToMeshProjector()
     meshData_ = std::make_shared<MeshProjectorData>();
 }
 
-void PointsToMeshProjector::updateMeshData( std::shared_ptr<const MR::Mesh> mesh )
+void PointsToMeshProjector::updateMeshData( const MR::Mesh* mesh )
 {
     if ( !mesh )
     {
-        mesh_.reset();
+        mesh_ = nullptr;
         return;
     }
 
@@ -46,13 +46,19 @@ void PointsToMeshProjector::updateMeshData( std::shared_ptr<const MR::Mesh> mesh
     meshData_->cudaNodes.fromVector( nodes.vec_ );
     meshData_->cudaFaces.fromVector( tris.vec_ );
 
-    mesh_ = std::move( mesh );
+    mesh_ = mesh;
 }
 
 void PointsToMeshProjector::findProjections(
-      std::vector<MR::MeshProjectionResult>& res, const std::vector<Vector3f>& points, const AffineXf3f& objXf, const AffineXf3f& refObjXf, float upDistLimitSq, float loDistLimitSq )
+      std::vector<MR::MeshProjectionResult>& res, const std::vector<Vector3f>& points, const AffineXf3f* objXf, const AffineXf3f* refObjXf, float upDistLimitSq, float loDistLimitSq )
 {
     MR_TIMER
+    if ( !mesh_ )
+    {
+        assert( false );
+        return;
+    }
+    
     cudaSetDevice( 0 );
 
     const auto getCudaMatrix = [] ( const AffineXf3f& xf )
@@ -66,18 +72,26 @@ void PointsToMeshProjector::findProjections(
         return res;
     };
 
-    if ( !isRigid( refObjXf.A ) )
-    {
-        meshData_->refXf = getCudaMatrix( refObjXf );
-        if ( objXf != AffineXf3f{} )
-            meshData_->xf = getCudaMatrix( objXf );
+    const AffineXf3f* notRigidRefXf{ nullptr };
+    if ( refObjXf && !isRigid( refObjXf->A ) )
+        notRigidRefXf = refObjXf;
 
-        return;
+    AffineXf3f xf;
+    const AffineXf3f* xfPtr{ nullptr };
+    if ( notRigidRefXf || !refObjXf )
+        xfPtr = objXf;
+    else
+    {
+        xf = refObjXf->inverse();
+        if ( objXf )
+            xf = xf * ( *objXf );
+        xfPtr = &xf;
     }
 
-    const auto temp = refObjXf.inverse() * objXf;
-    if ( temp != AffineXf3f{} )
-        meshData_->xf = getCudaMatrix( temp );
+    if ( notRigidRefXf )
+        meshData_->refXf = getCudaMatrix( *notRigidRefXf );
+    if ( xfPtr )
+        meshData_->xf = getCudaMatrix( *xfPtr );
     
     const size_t size = points.size();
     res.resize( size );
@@ -87,10 +101,6 @@ void PointsToMeshProjector::findProjections(
     meshProjectionKernel( meshData_->cudaPoints.data(), meshData_->cudaNodes.data(), meshData_->cudaMeshPoints.data(), meshData_->cudaFaces.data(), meshData_->cudaResult.data(), meshData_->xf, meshData_->refXf, upDistLimitSq, loDistLimitSq, size );
     meshData_->cudaResult.toVector( res );
 
-    // put valid edge in MeshTriPoints
-    assert( mesh_ );
-    if ( !mesh_ )
-        return;
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, res.size() ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         for ( size_t i = range.begin(); i < range.end(); ++i )

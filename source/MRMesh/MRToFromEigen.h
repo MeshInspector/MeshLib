@@ -11,6 +11,7 @@
 
 // unknown pragmas
 #pragma warning(disable:4068)
+#pragma warning(disable:4127)  //C4127. "Consider using 'if constexpr' statement instead"
 
 #if defined(__clang__)
 #pragma clang diagnostic push

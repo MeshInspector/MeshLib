@@ -4,6 +4,7 @@
 
 #pragma warning(push)
 #pragma warning(disable:5054)  //operator '&': deprecated between enumerations of different types
+#pragma warning(disable:4127)  //C4127. "Consider using 'if constexpr' statement instead"
 #include <Eigen/Dense>
 
 namespace MR

@@ -1,3 +1,4 @@
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRVoxelsConversionsByParts.h"
 #include "MREdgePaths.h"
 #include "MRMesh.h"
@@ -217,3 +218,4 @@ gridToMeshByParts( const GridPartBuilder &builder, const Vector3i &dimensions, c
 }
 
 } // namespace MR
+#endif

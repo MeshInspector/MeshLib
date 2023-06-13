@@ -95,16 +95,31 @@ mergeGridPart( Mesh &mesh, std::vector<EdgePath> &cutContours, FloatGrid &&grid,
     auto mapping = settings.mapping;
     clearPartMapping( mapping );
 
-    if ( mesh.points.empty() )
+    if ( leftCutContours.empty() && cutContours.empty() )
     {
-        mesh = std::move( part );
-        cutContours = std::move( rightCutContours );
+        timer.restart( "merge part" );
+        WholeEdgeHashMap src2tgtEdges;
+        if ( !mapping.src2tgtEdges )
+            mapping.src2tgtEdges = &src2tgtEdges;
+
+        mesh.addPartByMask( part, part.topology.getValidFaces(), mapping );
 
         if ( settings.postMerge )
         {
             timer.restart( "post-merge callback" );
             settings.postMerge( mesh, mapping );
         }
+
+        timer.restart( "convert cut contours" );
+        for ( auto& contour : rightCutContours )
+        {
+            for ( auto& e : contour )
+            {
+                const auto ue = ( *mapping.src2tgtEdges )[e];
+                e = e.even() ? ue : ue.sym();
+            }
+        }
+        cutContours = std::move( rightCutContours );
 
         return {};
     }

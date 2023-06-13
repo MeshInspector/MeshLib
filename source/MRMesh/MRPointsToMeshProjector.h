@@ -13,11 +13,11 @@ protected:
 public:
     virtual ~IPointsToMeshProjector() = default;    
     /// Updates all data related to the referencing mesh
-    virtual void updateMeshData( std::shared_ptr<const Mesh> mesh ) = 0;
+    virtual void updateMeshData( const Mesh* mesh ) = 0;
     /// Computes the closest point on mesh to each of given points
     virtual void findProjections( std::vector<MeshProjectionResult>& result, const std::vector<Vector3f>& points, 
-                                  const AffineXf3f& worldXf, const AffineXf3f& worldRefXf, 
-                                  float upDistLimitSq, float loDistLimitSq ) = 0;
+                                  const AffineXf3f* worldXf = nullptr, const AffineXf3f* worldRefXf = nullptr,
+                                  float upDistLimitSq = FLT_MAX, float loDistLimitSq = 0.0f ) = 0;
 
     /// Returns amount of memory needed to compute projections
     virtual size_t projectionsHeapBytes( size_t numProjections ) const = 0;
@@ -25,12 +25,10 @@ public:
 /// Computes the closest point on mesh to each of given points on CPU
 class MRMESH_CLASS PointsToMeshProjector : public IPointsToMeshProjector
 {
-    std::shared_ptr<const Mesh> mesh_;
-    AffineXf3f xf_;
-    const AffineXf3f* refXfPtr_ = nullptr;
+    const Mesh* mesh_{ nullptr };
 public:
     /// update all data related to the referencing mesh
-    MRMESH_API virtual void updateMeshData( std::shared_ptr<const Mesh> mesh ) override;
+    MRMESH_API virtual void updateMeshData( const Mesh* mesh ) override;
     /// <summary>
     /// Computes the closest point on mesh to each of given points    
     /// </summary>
@@ -42,7 +40,7 @@ public:
     /// <param name="loDistLimitSq">minimal squared distance from point to mesh</param>
     /// <returns></returns>
     MRMESH_API virtual void findProjections( std::vector<MeshProjectionResult>& result, const std::vector<Vector3f>& points, 
-                                             const AffineXf3f& objXf, const AffineXf3f& refObjXf, 
+                                             const AffineXf3f* objXf, const AffineXf3f* refObjXf,
                                              float upDistLimitSq, float loDistLimitSq ) override;
 
     /// Returns amount of additional memory needed to compute projections

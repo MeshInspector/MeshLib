@@ -152,6 +152,8 @@ jobs:
     if: ${{ needs.image-select.outputs.need_windows_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
     timeout-minutes: 180
     runs-on: windows-2022
+    env:
+      VCPKG_DEFAULT_TRIPLET: x64-windows-meshlib
     steps:
       - name: Setup vcpkg
         working-directory: C:\vcpkg
@@ -170,7 +172,6 @@ jobs:
 
       - name: Pack vcpkg
         run: |
-          set VCPKG_DEFAULT_TRIPLET=x64-windows-meshlib
           vcpkg export tinyxml2:x64-windows-meshlib  --nuget --output vcpkg-export-2023.04.15.1
           py -3 scripts/devops/vcpkg-package-export.py --output vcpkg-export-${{env.VCPKG-VERSION}}
 

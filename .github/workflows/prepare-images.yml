@@ -18,6 +18,9 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+env:
+  VCPKG-VERSION: '2023.04.15'
+
 jobs:
   image-select:
     timeout-minutes: 5
@@ -108,7 +111,8 @@ jobs:
 
   linux-image-build-upload:
     needs: [image-select]
-    if: ${{ needs.image-select.outputs.need_linux_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
+    if: ${{ false }}
+    #if: ${{ needs.image-select.outputs.need_linux_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
     timeout-minutes: 60
     runs-on: ${{matrix.os}}
     strategy:
@@ -144,15 +148,15 @@ jobs:
 
   windows-vcpkg-build-upload:
     needs: [image-select]
-    if: ${{ false }} # @todo implement
-    #if: ${{ needs.image-select.outputs.need_windows_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
-    timeout-minutes: 100
-    runs-on: windows-2019
+    #if: ${{ false }} #
+    if: ${{ needs.image-select.outputs.need_windows_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
+    timeout-minutes: 180
+    runs-on: windows-2022
     steps:
       - name: Setup vcpkg
         working-directory: C:\vcpkg
         run: |
-          git checkout 2022.11.14
+          git checkout ${{env.VCPKG-VERSION}}
           call bootstrap-vcpkg.bat
           sudo vcpkg integrate install
 
@@ -165,7 +169,22 @@ jobs:
         run: thirdparty\install.bat
 
       - name: Pack vcpkg
-        run: py -3 scripts/devops/vcpkg-package-export.py
+        run: py -3 scripts/devops/vcpkg-package-export.py vcpkg-export-${{env.VCPKG-VERSION}}
 
-      #- name: Upload vcpkg
-       # run:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Upload to AWS Codeartifact
+        working-directory: C:\vcpkg
+        run: |
+          aws codeartifact login --tool dotnet --repository meshlib-vcpkg --domain meshlib --domain-owner 259351611210 --region us-east-1
+          nuget push vcpkg-export-${{env.VCPKG-VERSION}}.nupkg -Source meshlib/meshlib-vcpkg
+          
+      - name: Upload to AWS s3
+        working-directory: C:\vcpkg
+        run: |
+          aws s3 cp ./vcpkg-export-${{env.VCPKG-VERSION}}.nupkg s3://vcpkg-export/vcpkg-export-${{env.VCPKG-VERSION}}.nupkg

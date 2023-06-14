@@ -156,7 +156,7 @@ PolylineProjectionResult3 findProjectionOnPolyline( const Line3f& ln, const Poly
         const auto box = transformed( tree.nodes()[n].box, xf );
         float distSq = 0;
         float s = -FLT_MAX, e = FLT_MAX;
-        if( !rayBoxIntersect( box, ln.p, s, e, prec ) )
+        if( !rayBoxIntersect( box, RayOrigin<float>{ ln.p }, s, e, prec ) )
             distSq = closestPoints( ln, box ).lengthSq();
         return SubTask{ n, distSq };
     };

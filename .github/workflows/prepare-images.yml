@@ -172,6 +172,7 @@ jobs:
 
       - name: Pack vcpkg
         run: |
+          cp .\thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake C:\vcpkg\triplets\
           vcpkg export tinyxml2:x64-windows-meshlib  --nuget --output vcpkg-export-2023.04.15.1
           py -3 scripts/devops/vcpkg-package-export.py --output vcpkg-export-${{env.VCPKG-VERSION}}
 

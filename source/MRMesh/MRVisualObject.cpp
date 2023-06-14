@@ -193,11 +193,6 @@ void VisualObject::setDirtyFlags( uint32_t mask )
     dirty_ |= mask;
 }
 
-const uint32_t& VisualObject::getDirtyFlags() const
-{
-    return dirty_;
-}
-
 void VisualObject::resetDirty() const
 {
     // Bounding box and normals (all caches) is cleared only if it was recounted
@@ -206,7 +201,6 @@ void VisualObject::resetDirty() const
 
 Box3f VisualObject::getBoundingBox() const
 {
-    std::unique_lock lock( readCacheMutex_.getMutex() );
     if ( dirty_ & DIRTY_BOUNDING_BOX )
     {
         boundingBoxCache_ = computeBoundingBox_();

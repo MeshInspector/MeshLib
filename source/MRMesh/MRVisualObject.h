@@ -153,11 +153,11 @@ public:
     /// \param mask is a union of DirtyFlags flags
     MRMESH_API virtual void setDirtyFlags( uint32_t mask );
     /// returns current dirty flags for the object
-    MRMESH_API const uint32_t& getDirtyFlags() const;
+    MRMESH_API uint32_t getDirtyFlags() const { return dirty_; }
     /// resets all dirty flags (except for cache flags that will be reset automatically on cache update)
     MRMESH_API void resetDirty() const;
 
-    /// returns bounding box of this object in local coordinates
+    /// returns cached bounding box of this object in local coordinates
     MRMESH_API Box3f getBoundingBox() const;
     /// returns bounding box of this object in given viewport in world coordinates,
     /// to get world bounding box of the object with all child objects, please call Object::getWorldTreeBox method

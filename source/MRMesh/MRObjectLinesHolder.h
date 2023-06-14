@@ -77,9 +77,17 @@ protected:
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
 
-    MRMESH_API void serializeFields_( Json::Value& root ) const override;
+    /// we serialize polyline as text so separate polyline serialization and base fields serialization
+    /// serializeBaseFields_ serializes Parent fields and base fields of ObjectLinesHolder
+    MRMESH_API void serializeBaseFields_( Json::Value& root ) const;
+    /// serializeFields_: serializeBaseFields_ plus polyline serialization
+    MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 
-    MRMESH_API void deserializeFields_( const Json::Value& root ) override;
+    /// we serialize polyline as text so separate polyline serialization and base fields serialization
+    /// deserializeBaseFields_ deserialize Parent fields and base fields of ObjectLinesHolder
+    MRMESH_API void deserializeBaseFields_( const Json::Value& root );
+    /// deserializeFields_: deserializeBaseFields_ plus polyline deserialization
+    MRMESH_API virtual void deserializeFields_( const Json::Value& root ) override;
 
     MRMESH_API virtual Box3f computeBoundingBox_() const override;
 

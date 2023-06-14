@@ -16,9 +16,7 @@ on:
 jobs:
   prepare-image:
     uses: ./.github/workflows/prepare-images.yml
-    secrets:
-      BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    secrets: inherit
 
   versioning-and-release-url:
     uses: ./.github/workflows/versioning-release.yml

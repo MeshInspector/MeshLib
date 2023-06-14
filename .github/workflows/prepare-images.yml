@@ -169,7 +169,7 @@ jobs:
         run: thirdparty\install.bat
 
       - name: Pack vcpkg
-        run: py -3 scripts/devops/vcpkg-package-export.py vcpkg-export-${{env.VCPKG-VERSION}}
+        run: py -3 scripts/devops/vcpkg-package-export.py --output vcpkg-export-${{env.VCPKG-VERSION}}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2

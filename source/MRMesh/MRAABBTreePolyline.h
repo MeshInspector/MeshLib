@@ -57,6 +57,7 @@ public:
     /// creates tree for selected edges on the mesh (only for 3d tree)
     MRMESH_API AABBTreePolyline( const Mesh& mesh, const UndirectedEdgeBitSet & edgeSet );
 
+    AABBTreePolyline() = default;
     AABBTreePolyline( AABBTreePolyline && ) noexcept = default;
     AABBTreePolyline & operator =( AABBTreePolyline && ) noexcept = default;
 
@@ -64,8 +65,9 @@ public:
     [[nodiscard]] size_t heapBytes() const { return nodes_.heapBytes(); }
 
 private:
-    AABBTreePolyline() = default;
+    /// make copy constructor unavailable for the public to avoid unnecessary copies
     AABBTreePolyline( const AABBTreePolyline & ) = default;
+    /// make assign operator unavailable for the public to avoid unnecessary copies
     AABBTreePolyline & operator =( const AABBTreePolyline & ) = default;
     friend class UniqueThreadSafeOwner<AABBTreePolyline>;
 

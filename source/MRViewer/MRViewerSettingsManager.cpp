@@ -167,17 +167,14 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         if ( cfg.hasJsonValue( cQuickAccesListKey ) )
             ribbonMenu->readQuickAccessList( cfg.getJsonValue( cQuickAccesListKey ) );
 
-        if ( cfg.hasJsonValue( cRibbonLeftWindowSize ) )
+        auto sceneSize = cfg.getVector2i( cRibbonLeftWindowSize, Vector2i{ 310, 0 } );
+        // it is important to be called after `cMainWindowMaximized` block
+        // as far as scene size is clamped by window size in each frame
+        CommandLoop::appendCommand( [ribbonMenu, sceneSize]
         {
-            auto sceneSize = cfg.getVector2i( cRibbonLeftWindowSize );
-            // it is important to be called after `cMainWindowMaximized` block
-            // as far as scene size is clamped by window size in each frame
-            CommandLoop::appendCommand( [ribbonMenu, sceneSize]
-            {
-                spdlog::info( "Set menu plugin scene window size: {} {}", sceneSize.x, sceneSize.y );
-                ribbonMenu->setSceneSize( sceneSize );
-            } );
-        }
+            spdlog::info( "Set menu plugin scene window size: {} {}", sceneSize.x, sceneSize.y );
+            ribbonMenu->setSceneSize( sceneSize );
+        } );
 
         if ( cfg.hasBool( cShowSelectedObjects ) )
             ribbonMenu->setShowNewSelectedObjects( cfg.getBool( cShowSelectedObjects ) );

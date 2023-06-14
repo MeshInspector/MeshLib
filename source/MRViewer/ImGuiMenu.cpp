@@ -1381,6 +1381,9 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
     if ( currWindow )
         currWindow->DrawList->PopClipRect();
 
+    const auto& viewportid = viewer->viewport().id;
+    bool closePopup = make_visualize_checkbox( selectedObjs, "Polygon Offset", MeshVisualizePropertyType::PolygonOffsetFromCamera, viewportid );
+
     make_light_strength( selectedObjs, "Shininess", [&] ( const VisualObject* obj )
     {
         return obj->getShininess();
@@ -1405,7 +1408,7 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
         obj->setSpecularStrength( value );
     } );
 
-    return false;
+    return closePopup;
 }
 
 bool ImGuiMenu::drawRemoveButton_( const std::vector<std::shared_ptr<Object>>& selectedObjs )

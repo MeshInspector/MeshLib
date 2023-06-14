@@ -165,12 +165,17 @@ ObjectLinesHolder::ObjectLinesHolder()
     setDefaultColors_();
 }
 
-void ObjectLinesHolder::serializeFields_( Json::Value& root ) const
+void ObjectLinesHolder::serializeBaseFields_( Json::Value& root ) const
 {
     VisualObject::serializeFields_( root );
 
     root["ShowPoints"] = showPoints_.value();
     root["SmoothConnections"] = smoothConnections_.value();
+}
+
+void ObjectLinesHolder::serializeFields_( Json::Value& root ) const
+{
+    serializeBaseFields_( root );
 
     if ( !polyline_ )
         return;
@@ -198,7 +203,7 @@ void ObjectLinesHolder::serializeFields_( Json::Value& root ) const
     root["Type"].append( ObjectLinesHolder::TypeName() ); // will be appended in derived calls
 }
 
-void ObjectLinesHolder::deserializeFields_( const Json::Value& root )
+void ObjectLinesHolder::deserializeBaseFields_( const Json::Value& root )
 {
     VisualObject::deserializeFields_( root );
 
@@ -206,6 +211,11 @@ void ObjectLinesHolder::deserializeFields_( const Json::Value& root )
         showPoints_ = ViewportMask{ root["ShowPoints"].asUInt() };
     if ( root["SmoothConnections"].isUInt() )
         smoothConnections_ = ViewportMask{ root["SmoothConnections"].asUInt() };
+}
+
+void ObjectLinesHolder::deserializeFields_( const Json::Value& root )
+{
+    deserializeBaseFields_( root );
 
     const auto& polylineRoot = root["Polyline"];
     if ( !polylineRoot.isObject() )

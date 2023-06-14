@@ -20,7 +20,9 @@ struct MeshVisualizePropertyType : VisualizeMaskType
         FlatShading,
         OnlyOddFragments,
         BordersHighlight,
-        MeshVisualizePropsCount
+        PolygonOffsetFromCamera, // recommended for drawing edges on top of mesh
+
+        MeshVisualizePropsCount,
     };
 };
 
@@ -224,6 +226,7 @@ protected:
     ViewportMask showSelectedEdges_ = ViewportMask::all();
     ViewportMask showSelectedFaces_ = ViewportMask::all();
     ViewportMask showBordersHighlight_;
+    ViewportMask polygonOffset_;
     ViewportMask flatShading_; ///< toggle per-face or per-vertex properties
 
     // really it shoud be one enum Shading {None, Flat, Smooth, Crease} 

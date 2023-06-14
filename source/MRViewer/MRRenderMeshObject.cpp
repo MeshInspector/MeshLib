@@ -517,6 +517,7 @@ void RenderMeshObject::drawMesh_( bool /*solid*/, ViewportId viewportId, bool pi
     /* Avoid Z-buffer fighting between filled triangles & wireframe lines */
     GL_EXEC( glEnable( GL_POLYGON_OFFSET_FILL ) );
     if ( ( objMesh_->getVisualizePropertyMask( MeshVisualizePropertyType::Edges )
+         | objMesh_->getVisualizePropertyMask( MeshVisualizePropertyType::PolygonOffsetFromCamera )
        // intentionally do not check selected edges and borders since they are typically thicker and include not all edges
        //  | objMesh_->getVisualizePropertyMask( MeshVisualizePropertyType::SelectedEdges )
        //  | objMesh_->getVisualizePropertyMask( MeshVisualizePropertyType::BordersHighlight ) 

@@ -53,6 +53,7 @@ MRMESH_API void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contou
 // Converts ordered continuous contours of two meshes to OneMeshContours
 // converters is required for better precision in case of degenerations
 // note that contours should not have intersections
+[[nodiscard]]
 MRMESH_API OneMeshContours getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& contours, bool getMeshAIntersections,
     const CoordinateConverters& converters, const AffineXf3f* rigidB2A = nullptr );
 
@@ -61,14 +62,16 @@ MRMESH_API OneMeshContours getOneMeshIntersectionContours( const Mesh& meshA, co
   *
   * Finds shortest paths between neighbor \p meshTriPoints and build contour MR::cutMesh input
   */
+[[nodiscard]]
 MRMESH_API OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints );
 
 /** \ingroup BooleanGroup
   * \brief Makes closed continuous contour by mesh tri points, note that first and last meshTriPoint should not be same
   * 
   * Finds shortest paths between neighbor \p meshTriPoints and build closed contour MR::cutMesh input
+  * \note better use convertMeshTriPointsToMeshContour(...) instead, note that it requires same front and back MeshTriPoints for closed contour
   */
-[[deprecated( "use convertMeshTriPointsToMeshContour(...) instead, note that it requires same front and back MeshTriPoints for closed contour" )]]
+[[nodiscard]]
 MRMESH_API OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints );
 
 /** \ingroup BooleanGroup
@@ -89,6 +92,7 @@ MRMESH_API OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh,
   *               \\/
   *                 o path
   */
+[[nodiscard]]
 MRMESH_API OneMeshContour convertSurfacePathWithEndsToMeshContour( const Mesh& mesh, 
                                                                           const MeshTriPoint& start, 
                                                                           const SurfacePath& surfacePath, 
@@ -99,6 +103,7 @@ MRMESH_API OneMeshContour convertSurfacePathWithEndsToMeshContour( const Mesh& m
   * 
   * Creates MR::OneMeshContours object from given surface paths for MR::cutMesh input
   */
+[[nodiscard]]
 MRMESH_API OneMeshContours convertSurfacePathsToMeshContours( const Mesh& mesh, const std::vector<SurfacePath>& surfacePaths );
 
 /** \struct MR::CutMeshParameters

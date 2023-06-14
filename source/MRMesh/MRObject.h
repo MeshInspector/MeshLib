@@ -29,21 +29,6 @@ namespace MR
  * \{
  */
 
-/// This class exists to provide default copy and move operations on std::mutex
-class MutexOwner
-{
-public:
-    MutexOwner() noexcept = default;
-    MutexOwner( const MutexOwner& ) noexcept{}
-    MutexOwner( MutexOwner&& ) noexcept{}
-    MutexOwner& operator =( const MutexOwner& ){return *this;};
-    MutexOwner& operator =( MutexOwner&& ) noexcept{return *this;};
-    std::mutex& getMutex(){return mutex_;}
-private:
-    std::mutex mutex_;
-};
-
-
 /// the main purpose of this class is to avoid move-constructor and move-assignment
 /// implementation in Object class, which has too many fields for that;
 /// since every object stores a pointer on its parent,
@@ -260,7 +245,6 @@ protected:
 
     std::string name_;
     ViewportProperty<AffineXf3f> xf_;
-    mutable MutexOwner readCacheMutex_;
     ViewportMask visibilityMask_ = ViewportMask::all();
     bool locked_ = false;
     bool selected_{ false };

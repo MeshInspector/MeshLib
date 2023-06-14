@@ -975,6 +975,9 @@
     <ClInclude Include="MRAxis.h">
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
+    <ClInclude Include="MRChangeObjectFields.h">
+      <Filter>Source Files\History</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

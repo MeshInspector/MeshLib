@@ -27,6 +27,8 @@ std::shared_ptr<Object> ObjectLines::shallowClone() const
 
 void ObjectLines::setPolyline( const std::shared_ptr<Polyline3>& polyline )
 {
+    if ( polyline_ == polyline )
+        return;
     polyline_ = polyline;
     setDirtyFlags( DIRTY_ALL );
 }

@@ -316,6 +316,14 @@ void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const
     setVertsColorMap( std::move( colorMap ) );
 }
 
+void ObjectMeshHolder::clearAncillaryTexture()
+{
+    if ( !ancillaryTexture_.pixels.empty() )
+        setAncillaryTexture( {} );
+    if ( !ancillaryUVCoordinates_.empty() )
+        setAncillaryUVCoords( {} ); 
+}
+
 uint32_t ObjectMeshHolder::getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const
 {
     auto flatShading = getVisualizePropertyMask( MeshVisualizePropertyType::FlatShading );

@@ -3,6 +3,10 @@
 #include "MRPolyline.h"
 #include "MRAABBTreePolyline.h"
 #include "MRLineSegm.h"
+#include "MRLine.h"
+#include "MRIntersectionPrecomputes.h"
+#include "MRRayBoxIntersection.h"
+#include "MRIntersection.h"
 #include "MRMatrix2.h"
 #include "MRPch/MRTBB.h"
 #include <algorithm>
@@ -11,8 +15,9 @@
 namespace MR
 {
 
-template<typename V, typename F>
-PolylineProjectionResult<V> findProjectionCore( const V& pt, const AABBTreePolyline<V> & tree, float upDistLimitSq, AffineXf<V>* xf, F && edgeToEndPoints, float loDistLimitSq )
+template<typename V, typename F, typename B, typename L>
+PolylineProjectionResult<V> findProjectionCore( const AABBTreePolyline<V> & tree, float upDistLimitSq, AffineXf<V>* xf,
+    F && edgeToEndPoints, float loDistLimitSq, B && distSqToBox, L && closestPointsToLineSegm )
 {
     PolylineProjectionResult<V> res;
     res.distSq = upDistLimitSq;
@@ -26,10 +31,6 @@ PolylineProjectionResult<V> findProjectionCore( const V& pt, const AABBTreePolyl
     {
         typename AABBTreePolyline<V>::NodeId n;
         float distSq = 0;
-        SubTask() = default;
-        SubTask( typename AABBTreePolyline<V>::NodeId n, float dd ) : n( n ), distSq( dd )
-        {
-        }
     };
 
     constexpr int MaxStackSize = 32; // to avoid allocations
@@ -47,8 +48,7 @@ PolylineProjectionResult<V> findProjectionCore( const V& pt, const AABBTreePolyl
 
     auto getSubTask = [&] ( typename AABBTreePolyline<V>::NodeId n )
     {
-        float distSq = ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( pt ) - pt ).lengthSq();
-        return SubTask( n, distSq );
+        return SubTask{ n, distSqToBox( transformed( tree.nodes()[n].box, xf ) ) };
     };
 
     addSubTask( getSubTask( tree.rootNodeId() ) );
@@ -70,13 +70,13 @@ PolylineProjectionResult<V> findProjectionCore( const V& pt, const AABBTreePolyl
                 a = ( *xf )( a );
                 b = ( *xf )( b );
             }
-            auto proj = closestPointOnLineSegm( pt, { a, b } );
 
-            float distSq = ( proj - pt ).lengthSq();
+            const auto closest = closestPointsToLineSegm( LineSegm<V>{ a, b } );
+            const float distSq = closest.lengthSq();
             if ( distSq < res.distSq )
             {
                 res.distSq = distSq;
-                res.point = proj;
+                res.point = closest.b;
                 res.line = lineId;
                 if ( distSq <= loDistLimitSq )
                     break;
@@ -98,20 +98,43 @@ PolylineProjectionResult<V> findProjectionCore( const V& pt, const AABBTreePolyl
 
 PolylineProjectionResult2 findProjectionOnPolyline2( const Vector2f& pt, const Polyline2& polyline, float upDistLimitSq, AffineXf2f* xf, float loDistLimitSq )
 {
-    return findProjectionCore( pt, polyline.getAABBTree(), upDistLimitSq, xf, [&]( UndirectedEdgeId ue, Vector2f & a, Vector2f & b ) 
+    return findProjectionCore( polyline.getAABBTree(), upDistLimitSq, xf, [&]( UndirectedEdgeId ue, Vector2f & a, Vector2f & b ) 
     {
         a = polyline.orgPnt( ue );
         b = polyline.destPnt( ue );
-    }, loDistLimitSq );
+    }, loDistLimitSq,
+    [pt]( const Box2f & box ) { return ( box.getBoxClosestPointTo( pt ) - pt ).lengthSq(); },
+    [pt]( const LineSegm2f & ls ) { return LineSegm2f{ pt, closestPointOnLineSegm( pt, ls ) }; } );
 }
 
 PolylineProjectionResult3 findProjectionOnPolyline( const Vector3f& pt, const Polyline3& polyline, float upDistLimitSq, AffineXf3f* xf, float loDistLimitSq )
 {
-    return findProjectionCore( pt, polyline.getAABBTree(), upDistLimitSq, xf, [&]( UndirectedEdgeId ue, Vector3f & a, Vector3f & b ) 
+    return findProjectionCore( polyline.getAABBTree(), upDistLimitSq, xf, [&]( UndirectedEdgeId ue, Vector3f & a, Vector3f & b ) 
     {
         a = polyline.orgPnt( ue );
         b = polyline.destPnt( ue );
-    }, loDistLimitSq );
+    }, loDistLimitSq,
+    [pt]( const Box3f & box ) { return ( box.getBoxClosestPointTo( pt ) - pt ).lengthSq(); },
+    [pt]( const LineSegm3f & ls ) { return LineSegm3f{ pt, closestPointOnLineSegm( pt, ls ) }; } );
+}
+
+PolylineProjectionResult3 findProjectionOnPolyline( const Line3f& ln, const Polyline3& polyline,
+    float upDistLimitSq, AffineXf3f* xf, float loDistLimitSq )
+{
+    return findProjectionCore( polyline.getAABBTree(), upDistLimitSq, xf, [&]( UndirectedEdgeId ue, Vector3f & a, Vector3f & b ) 
+    {
+        a = polyline.orgPnt( ue );
+        b = polyline.destPnt( ue );
+    }, loDistLimitSq,
+    [ln, prec = IntersectionPrecomputes<float>( ln.d )]( const Box3f & box )
+    {
+        float distSq = 0;
+        float s = -FLT_MAX, e = FLT_MAX;
+        if( !rayBoxIntersect( box, RayOrigin<float>{ ln.p }, s, e, prec ) )
+            distSq = closestPoints( ln, box ).lengthSq();
+        return distSq;
+    },
+    [ln]( const LineSegm3f & ls ) { return closestPoints( ln, ls ); } );
 }
 
 template<typename V>
@@ -242,11 +265,31 @@ PolylineProjectionWithOffsetResult3 findProjectionOnPolylineWithOffset( const Ve
 
 PolylineProjectionResult3 findProjectionOnMeshEdges( const Vector3f& pt, const Mesh& mesh, const AABBTreePolyline3& tree, float upDistLimitSq, AffineXf3f* xf, float loDistLimitSq )
 {
-    return findProjectionCore( pt, tree, upDistLimitSq, xf, [&]( UndirectedEdgeId ue, Vector3f & a, Vector3f & b ) 
+    return findProjectionCore( tree, upDistLimitSq, xf, [&]( UndirectedEdgeId ue, Vector3f & a, Vector3f & b ) 
     {
         a = mesh.orgPnt( ue );
         b = mesh.destPnt( ue );
-    }, loDistLimitSq );
+    }, loDistLimitSq,
+    [pt]( const Box3f & box ) { return ( box.getBoxClosestPointTo( pt ) - pt ).lengthSq(); },
+    [pt]( const LineSegm3f & ls ) { return LineSegm3f{ pt, closestPointOnLineSegm( pt, ls ) }; } );
+}
+
+PolylineProjectionResult3 findProjectionOnMeshEdges( const Line3f& ln, const Mesh& mesh, const AABBTreePolyline3& tree, float upDistLimitSq, AffineXf3f* xf, float loDistLimitSq )
+{
+    return findProjectionCore( tree, upDistLimitSq, xf, [&]( UndirectedEdgeId ue, Vector3f & a, Vector3f & b ) 
+    {
+        a = mesh.orgPnt( ue );
+        b = mesh.destPnt( ue );
+    }, loDistLimitSq,
+    [ln, prec = IntersectionPrecomputes<float>( ln.d )]( const Box3f & box )
+    {
+        float distSq = 0;
+        float s = -FLT_MAX, e = FLT_MAX;
+        if( !rayBoxIntersect( box, RayOrigin<float>{ ln.p }, s, e, prec ) )
+            distSq = closestPoints( ln, box ).lengthSq();
+        return distSq;
+    },
+    [ln]( const LineSegm3f & ls ) { return closestPoints( ln, ls ); } );
 }
 
 template<typename V>

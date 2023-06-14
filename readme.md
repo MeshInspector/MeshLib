@@ -60,9 +60,10 @@ This list is not full and updating each day
  - Splitting
    - Splitting mesh into sub-meshes (components)
 ### 3D data operations
- - Boolean ops (union, intersection, difference) 
-   - Boolean ops on meshes via voxels. Efficient but not so accurate as explicit mesh operations.
-   - Explicit mesh boolean ops, very exact, fast and accurate.
+ - Boolean operations (union, intersection, difference) on 3D objects bounded by meshes. MeshLib has two independent modes:
+   1. Boolean ops on meshes via intermediate conversion into voxel representation. This mode requires closed meshes without holes on input and much memory for high accuracy but tolerate for various input mesh degenerations and self-intersections.
+   2. Direct Boolean ops on meshes using robust predicates, producing exact accurate result and keeping original mesh elements as is if they are not intersected. This mode supports for open meshes with holes as long as the boundary of the mesh is not intersected.
+      - According to our user reports, MeshLib direct Boolean operations are significatly faster even compared to the latest published approaches, e.g. [Interactive and Robust Mesh Booleans](https://arxiv.org/pdf/2205.14151.pdf)
  - Construction of Convex Hull of a point cloud or a mesh.
 ### 3D Data problems fixing
  - Fixing holes in mesh
@@ -142,18 +143,20 @@ cd MeshLib
 git submodule update --init --recursive
 cd ..
 ```
+Note: following below steps will take about 40Gb of your disk space.
+
 ### Preparing Third Parties
 Some third parties are taken from vcpkg, while others (missing in vcpkg) are configured as git submodules.
 
 ### Cuda
-Please install CUDA v11.4 from [official site](https://developer.nvidia.com/cuda-toolkit-archive)
+Please install CUDA v12.0 from [official site](https://developer.nvidia.com/cuda-toolkit-archive)
 
 ### Vcpkg
 1. Please install vcpkg, and integrate it into Visual Studio (note that vcpkg requires English language pack in Visual Studio, and vcpkg cannot be installed on FAT volumes, only on NTFS):
     ```sh
     git clone https://github.com/Microsoft/vcpkg.git
     cd vcpkg
-    git checkout 2022.11.14
+    git checkout 2023.04.15
     .\bootstrap-vcpkg.bat
     .\vcpkg integrate install (with admin rights)
     cd ..
@@ -162,9 +165,8 @@ Please install CUDA v11.4 from [official site](https://developer.nvidia.com/cuda
 
 2. Execute install.bat
     ```sh
-    cd vcpkg # or add vcpkg to PATH
-    ../MeshLib/thirdparty/install.bat
-    cd ..
+    cd MeshLib/thirdparty
+    install.bat
     ```
 3. Open solution file MeshInspector/source/MeshLib.sln in Visual Studio. Build it and run.
 

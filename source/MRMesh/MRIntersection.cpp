@@ -71,17 +71,17 @@ TEST( MRMesh, IntersectLineLine )
     ASSERT_FALSE( is2.has_value() );
 
 
-    auto dist0 = distance( line1, line2 );
+    auto dist0 = closestPoints( line1, line2 ).length();
     ASSERT_NEAR( dist0, 0, 1e-15 );
 
-    auto dist1 = distance( line1, line3 );
+    auto dist1 = closestPoints( line1, line3 ).length();
     ASSERT_NEAR( dist1, 1., 1e-15 );
 
-    auto dist2 = distance( line1, line4 );
+    auto dist2 = closestPoints( line1, line4 ).length();
     ASSERT_NEAR( dist2, 1., 1e-15 );
 
     const Line3d line5( Vector3d( 0, 0, 1 ), Vector3d( 1, 1, 0 ).normalized() );
-    auto dist15 = distance( line1, line5 );
+    auto dist15 = closestPoints( line1, line5 ).length();
     ASSERT_NEAR( dist15, 1, 1e-15 );
 
     auto cl0 = closestPoints( line1, line2 );
@@ -98,6 +98,50 @@ TEST( MRMesh, IntersectLineLine )
     auto cl15 = closestPoints( line1, line5 );
     ASSERT_NEAR( ( cl15.a - Vector3d( 1, 1, 0 ) ).length(), 0, 1e-15 );
     ASSERT_NEAR( ( cl15.b - Vector3d( 1, 1, 1 ) ).length(), 0, 1e-15 );
+}
+
+TEST( MRMesh, ClosestPointsLine3Box3 )
+{
+    {
+        auto cp = closestPoints( Line3f{ Vector3f{}, Vector3f{1,0,0} }, Box3f{ Vector3f{1,1,1}, Vector3f{3,3,3} } );
+        ASSERT_TRUE( ( cp.a - Vector3f{1,0,0} ).length() < 1e-6f );
+        ASSERT_TRUE( ( cp.b - Vector3f{1,1,1} ).length() < 1e-6f );
+    }
+    {
+        auto cp = closestPoints( Line3f{ Vector3f{}, Vector3f{0,1,0} }, Box3f{ Vector3f{1,1,1}, Vector3f{3,3,3} } );
+        ASSERT_TRUE( ( cp.a - Vector3f{0,1,0} ).length() < 1e-6f );
+        ASSERT_TRUE( ( cp.b - Vector3f{1,1,1} ).length() < 1e-6f );
+    }
+    {
+        auto cp = closestPoints( Line3f{ Vector3f{}, Vector3f{0,0,1} }, Box3f{ Vector3f{1,1,1}, Vector3f{3,3,3} } );
+        ASSERT_TRUE( ( cp.a - Vector3f{0,0,1} ).length() < 1e-6f );
+        ASSERT_TRUE( ( cp.b - Vector3f{1,1,1} ).length() < 1e-6f );
+    }
+    {
+        auto cp = closestPoints( Line3f{ Vector3f{}, Vector3f{-1,1,0} }, Box3f{ Vector3f{1,1,1}, Vector3f{3,3,3} } );
+        ASSERT_TRUE( ( cp.a - Vector3f{0,0,0} ).length() < 1e-6f );
+        ASSERT_TRUE( ( cp.b - Vector3f{1,1,1} ).length() < 1e-6f );
+    }
+    {
+        auto cp = closestPoints( Line3f{ Vector3f{3,5,4}, Vector3f{-1,1,0} }, Box3f{ Vector3f{1,1,1}, Vector3f{3,3,3} } );
+        ASSERT_TRUE( ( cp.a - Vector3f{4,4,4} ).length() < 1e-6f );
+        ASSERT_TRUE( ( cp.b - Vector3f{3,3,3} ).length() < 1e-6f );
+    }
+    {
+        auto cp = closestPoints( Line3f{ Vector3f{4,0,0}, Vector3f{0,1,-1} }, Box3f{ Vector3f{1,1,1}, Vector3f{3,3,3} } );
+        ASSERT_TRUE( ( cp.a - Vector3f{4,0,0} ).length() < 1e-6f );
+        ASSERT_TRUE( ( cp.b - Vector3f{3,1,1} ).length() < 1e-6f );
+    }
+    {
+        auto cp = closestPoints( Line3f{ Vector3f{0,5,3}, Vector3f{0,1,-1} }, Box3f{ Vector3f{1,1,1}, Vector3f{3,3,3} } );
+        ASSERT_TRUE( ( cp.a - Vector3f{0,4,4} ).length() < 1e-6f );
+        ASSERT_TRUE( ( cp.b - Vector3f{1,3,3} ).length() < 1e-6f );
+    }
+    {
+        auto cp = closestPoints( Line3f{ Vector3f{0,2,-2}, Vector3f{0,1,-1} }, Box3f{ Vector3f{-1,1,1}, Vector3f{3,3,3} } );
+        ASSERT_TRUE( ( cp.a - Vector3f{0,0,0} ).length() < 1e-6f );
+        ASSERT_TRUE( ( cp.b - Vector3f{0,1,1} ).length() < 1e-6f );
+    }
 }
 
 } //namespace MR

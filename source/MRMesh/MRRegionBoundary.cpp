@@ -272,11 +272,8 @@ VertBitSet getBoundaryVerts( const MeshTopology & topology, const FaceBitSet * r
 {
     MR_TIMER
 
-    VertBitSet store;
-    const VertBitSet & regionVertices = getIncidentVerts( topology, region, store );
-
-    VertBitSet bdVerts( regionVertices.size() );
-    BitSetParallelFor( regionVertices, [&]( VertId v )
+    VertBitSet bdVerts( topology.vertSize() );
+    BitSetParallelFor( topology.getValidVerts(), [&]( VertId v )
     {
         if ( topology.isBdVertex( v, region ) )
             bdVerts.set( v );

@@ -11,15 +11,15 @@ on:
         type: boolean
 
 env:
-  VCPKG-VERSION: '2022.11.14'
-  CUDA-VERSION: '11.4.2.47141'
-  CUDA-MAJOR: '11'
-  CUDA-MINOR: '4'
+  VCPKG-VERSION: '2023.04.15'
+  CUDA-VERSION: '12.0.1.52833'
+  CUDA-MAJOR: '12'
+  CUDA-MINOR: '0'
 
 jobs:
   windows-build-test:
     timeout-minutes: 50
-    runs-on: windows-2019
+    runs-on: windows-2022
     strategy:
       matrix:
         config: [Debug, Release]
@@ -47,8 +47,8 @@ jobs:
         working-directory: C:\vcpkg
         run: |
           aws codeartifact login --tool dotnet --repository meshlib-vcpkg --domain meshlib --domain-owner 259351611210 --region us-east-1
-          nuget install vcpkg-export-20230329-153927 -Source "meshlib/meshlib-vcpkg"
-          Xcopy C:\vcpkg\vcpkg-export-20230329-153927.1.0.0 C:\vcpkg /E/H/C/I/y
+          nuget install vcpkg-export-20230609-173831 -Source "meshlib/meshlib-vcpkg"
+          Xcopy C:\vcpkg\vcpkg-export-20230609-173831.1.0.0 C:\vcpkg /E/H/C/I/y
 
       - name: Vcpkg integrate install
         working-directory: C:\vcpkg
@@ -72,7 +72,12 @@ jobs:
           echo "CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
           echo "CUDA_PATH_VX_Y=CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
           echo "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}\\bin" >> $GITHUB_PATH
-          cp -R "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}\\extras\\visual_studio_integration\\MSBuildExtensions\\." "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Microsoft\VC\v160\BuildCustomizations"
+
+      - name: Install Visual Studio Integration
+        run: |
+          $x = (dir $env:CUDA_PATH -dir -recurse -depth 2).where({$_.name -eq 'visual_studio_integration'}).fullname
+          $y = (dir $x -dir -recurse).where({$_.name -eq 'MSBuildExtensions'}).fullname + '\*'
+          (gi 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
 
       - name: Checkout
         uses: actions/checkout@v3
@@ -85,9 +90,6 @@ jobs:
           py -3.10 -m pip install --upgrade pip
           py -3.10 -m pip install -r .\requirements\python.txt
 
-      - name: Update thirdparty
-        run: vcpkg install --recurse --binarysource=clear --overlay-triplets thirdparty\vcpkg\triplets  hidapi:x64-windows-meshlib
-        
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.3
 

@@ -39,6 +39,15 @@ MRMESH_API PolylineProjectionResult2 findProjectionOnPolyline2( const Vector2f& 
 MRMESH_API PolylineProjectionResult3 findProjectionOnPolyline( const Vector3f& pt, const Polyline3& polyline,
     float upDistLimitSq = FLT_MAX, AffineXf3f* xf = nullptr, float loDistLimitSq = 0 );
 
+/**
+ * \brief computes the closest point on polyline to given straight line
+ * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exists returning upDistLimitSq and no valid point
+ * \param xf polyline-to-point transformation, if not specified then identity transformation is assumed
+ * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
+ */
+MRMESH_API PolylineProjectionResult3 findProjectionOnPolyline( const Line3f& ln, const Polyline3& polyline,
+    float upDistLimitSq = FLT_MAX, AffineXf3f* xf = nullptr, float loDistLimitSq = 0 );
+
 template<typename V>
 struct PolylineProjectionWithOffsetResult
 {

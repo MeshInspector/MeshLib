@@ -16,7 +16,14 @@ struct LineSegm
     [[nodiscard]] constexpr LineSegm( const V & a, const V & b ) noexcept : a( a ), b( b ) { }
     template <typename U>
     [[nodiscard]] constexpr explicit LineSegm( const LineSegm<U> & p ) noexcept : a( p.a ), b( p.b ) { }
-    [[nodiscard]] T lengthSq() const { return ( a - b ).lengthSq(); }
+    /// returns directional vector of the line
+    [[nodiscard]] V dir() const { return b - a; }
+    /// returns squared length of this line segment
+    [[nodiscard]] T lengthSq() const { return dir().lengthSq(); }
+    /// returns the length of this line segment
+    [[nodiscard]] T length() const { return dir().length(); }
+    /// returns point on the line, where param=0 returns a and param=1 returns b
+    [[nodiscard]] V operator()( T param ) const { return ( 1 - param ) * a + param * b; }
 };
 
 template <typename V> 

@@ -146,21 +146,29 @@ LineSegm3<T> closestPoints( const Line3<T>& line1, const Line3<T>& line2 )
     return { line1( a ), line2( b ) };
 }
 
-/// finds squared distance between parallel or skew lines ( a line1 and a line2 )
-/// \return zero if they intersect
+/// finds the closest points between an infinite line and finite line segment in 3D;
+/// for parallel lines the selection is arbitrary;
+/// \return two equal points if the lines intersect
 template<typename T>
-inline T distanceSq( const Line3<T>& line1, const Line3<T>& line2 )
+LineSegm3<T> closestPoints( const Line3<T>& ln, const LineSegm3<T>& ls )
 {
-    const auto cl = closestPoints( line1, line2 );
-    return ( cl.a - cl.b ).lengthSq();
-}
+    const auto d11 = ln.d.lengthSq();
+    const auto d12 = dot( ln.d, ls.dir() );
+    const auto d22 = ls.lengthSq();
+    const auto det = d12 * d12 - d11 * d22;
+    if ( det == 0 ) // lines are parallel
+        return { ln.project( ls.a ), ls.a };
 
-/// finds distance between parallel or skew lines ( a line1 and a line2 )
-/// \return zero if they intersect
-template<typename T>
-inline T distance( const Line3<T>& line1, const Line3<T>& line2 )
-{
-    return std::sqrt( distanceSq( line1, line2 ) );
+    const auto dp = ls.a - ln.p;
+    const auto x = dot( dp, ln.d ) / det;
+    const auto y = dot( dp, ls.dir() ) / det;
+    const auto b = d11 * y - d12 * x;
+    if ( b <= 0 )
+        return { ln.project( ls.a ), ls.a };
+    if ( b >= 1 )
+        return { ln.project( ls.b ), ls.b };
+    const auto a = d12 * y - d22 * x;
+    return { ln( a ), ls( b ) };
 }
 
 /// finds the closest points between a line and a box wireframe (not solid) in 3D

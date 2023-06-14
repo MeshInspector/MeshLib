@@ -3,6 +3,10 @@
 #include "MRPolyline.h"
 #include "MRAABBTreePolyline.h"
 #include "MRLineSegm.h"
+#include "MRLine.h"
+#include "MRIntersectionPrecomputes.h"
+#include "MRRayBoxIntersection.h"
+#include "MRIntersection.h"
 #include "MRMatrix2.h"
 #include "MRPch/MRTBB.h"
 #include <algorithm>
@@ -112,6 +116,94 @@ PolylineProjectionResult3 findProjectionOnPolyline( const Vector3f& pt, const Po
         a = polyline.orgPnt( ue );
         b = polyline.destPnt( ue );
     }, loDistLimitSq );
+}
+
+PolylineProjectionResult3 findProjectionOnPolyline( const Line3f& ln, const Polyline3& polyline,
+    float upDistLimitSq, AffineXf3f* xf, float loDistLimitSq )
+{
+    PolylineProjectionResult3 res;
+    res.distSq = upDistLimitSq;
+    const auto & tree = polyline.getAABBTree();
+    if ( tree.nodes().empty() )
+    {
+        assert( false );
+        return res;
+    }
+
+    IntersectionPrecomputes<float> prec( ln.d );
+
+    struct SubTask
+    {
+        AABBTreePolyline3::NodeId n;
+        float distSq = 0;
+    };
+
+    constexpr int MaxStackSize = 32; // to avoid allocations
+    SubTask subtasks[MaxStackSize];
+    int stackSize = 0;
+
+    auto addSubTask = [&] ( const SubTask& s )
+    {
+        if ( s.distSq < res.distSq )
+        {
+            assert( stackSize < MaxStackSize );
+            subtasks[stackSize++] = s;
+        }
+    };
+
+    auto getSubTask = [&] ( AABBTreePolyline3::NodeId n )
+    {
+        const auto box = transformed( tree.nodes()[n].box, xf );
+        float distSq = 0;
+        float s = -FLT_MAX, e = FLT_MAX;
+        if( !rayBoxIntersect( box, ln.p, s, e, prec ) )
+            distSq = closestPoints( ln, box ).lengthSq();
+        return SubTask{ n, distSq };
+    };
+
+    addSubTask( getSubTask( tree.rootNodeId() ) );
+
+    while ( stackSize > 0 )
+    {
+        const auto s = subtasks[--stackSize];
+        const auto& node = tree[s.n];
+        if ( s.distSq >= res.distSq )
+            continue;
+
+        if ( node.leaf() )
+        {
+            const auto lineId = node.leafId();
+            Vector3f a = polyline.orgPnt( lineId );
+            Vector3f b = polyline.destPnt( lineId );
+            if ( xf )
+            {
+                a = ( *xf )( a );
+                b = ( *xf )( b );
+            }
+            const auto closest = closestPoints( ln, LineSegm3f{ a, b } );
+
+            float distSq = closest.lengthSq();
+            if ( distSq < res.distSq )
+            {
+                res.distSq = distSq;
+                res.point = closest.b;
+                res.line = lineId;
+                if ( distSq <= loDistLimitSq )
+                    break;
+            }
+            continue;
+        }
+
+        auto s1 = getSubTask( node.l );
+        auto s2 = getSubTask( node.r );
+        if ( s1.distSq < s2.distSq )
+            std::swap( s1, s2 );
+        assert( s1.distSq >= s2.distSq );
+        addSubTask( s1 ); // larger distance to look later
+        addSubTask( s2 ); // smaller distance to look first
+    }
+
+    return res;
 }
 
 template<typename V>

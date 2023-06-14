@@ -210,13 +210,13 @@ TEST( MRMesh, gridToMeshByParts )
         grid->setGridClass( openvdb::GRID_LEVEL_SET );
 
         auto accessor = grid->getAccessor();
-        for ( int x = begin; x < end; ++x )
+        for ( int x = (int)begin; x < end; ++x )
         {
             for ( int y = 0; y < dimensions.y; ++y )
             {
                 for ( int z = 0; z < dimensions.z; ++z )
                 {
-                    const Vector3f pos( x, y, z );
+                    const Vector3f pos( (float)x, (float)y, (float)z );
                     const auto dist = ( center - pos ).length();
                     accessor.setValue( { x, y, z }, dist - radius );
                 }

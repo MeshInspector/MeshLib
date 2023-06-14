@@ -715,7 +715,7 @@ MR_ADD_MESH_LOADER( IOFilter( "Polygon File Format (.ply)", "*.ply" ), fromPly )
 #ifndef MRMESH_NO_OPENCTM
 MR_ADD_MESH_LOADER( IOFilter( "Compact triangle-based mesh (.ctm)", "*.ctm" ), fromCtm )
 #endif
-#ifndef __EMSCRIPTEN__
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
 MR_ADD_MESH_LOADER( IOFilter( "3D Manufacturing Format (.model)", "*.model" ), from3mfModel )
 #endif
 

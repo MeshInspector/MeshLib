@@ -11,14 +11,16 @@
 #include "MRColor.h"
 #include "MRPch/MRTBB.h"
 #include "MRProgressReadWrite.h"
-#ifndef __EMSCRIPTEN__
-#include <tinyxml2.h>
-#endif
+
 #include <array>
 #include <future>
 
 #ifndef MRMESH_NO_OPENCTM
 #include "OpenCTM/openctm.h"
+#endif
+
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
+#include <tinyxml2.h>
 #endif
 
 namespace MR
@@ -568,7 +570,7 @@ tl::expected<Mesh, std::string> fromCtm( std::istream & in, VertColors* colors, 
 }
 #endif
 
-#ifndef __EMSCRIPTEN__
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
 tl::expected<Mesh, std::string> from3mfModel( const std::filesystem::path& file, VertColors* colors, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );

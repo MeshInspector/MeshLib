@@ -172,7 +172,7 @@ void ObjectGcode::swapSignals_( Object& other )
 
 void ObjectGcode::serializeFields_( Json::Value& root ) const
 {
-    ObjectLinesHolder::serializeFields_( root );
+    ObjectLinesHolder::serializeBaseFields_( root );
     root["Type"].append( ObjectGcode::TypeName() );
     root["FeedrateGradientEnable"] = feedrateGradientEnabled_;
     root["MaxFeedrate"] = maxFeedrate_;
@@ -180,24 +180,12 @@ void ObjectGcode::serializeFields_( Json::Value& root ) const
 
     auto& gcodeSourceRoot = root["GcodeSource"];
     for ( const auto& str : *gcodeSource_ )
-    {
-        Json::Value val;
-        val = str;
-        gcodeSourceRoot.append( val );
-    }
-
-    auto& mapRoot = root["SegmentToSourceLineMap"];
-    for ( const auto& v : segmentToSourceLineMap_ )
-    {
-        Json::Value val;
-        val = v;
-        mapRoot.append( val );
-    }
+        gcodeSourceRoot.append( str );
 }
 
 void ObjectGcode::deserializeFields_( const Json::Value& root )
 {
-    ObjectLinesHolder::deserializeFields_( root );
+    ObjectLinesHolder::deserializeBaseFields_( root );
     deserializeFromJson( root["IdleColor"], idleColor_ );
 
     if ( root["FeedrateGradientEnable"].isBool() )
@@ -214,22 +202,7 @@ void ObjectGcode::deserializeFields_( const Json::Value& root )
         if ( gcodeSourceRoot[i].isString() )
             gcodeSource[i] = gcodeSourceRoot[i].asString();
     }
-
-    const auto& mapRoot = root["SegmentToSourceLineMap"];
-    if ( !mapRoot.isArray() )
-        return;
-    std::vector<int> map( mapRoot.size() );
-    for ( int i = 0; i < map.size(); ++i )
-    {
-        if ( mapRoot[i].isInt() )
-            map[i] = mapRoot[i].asInt();
-    }
-
-    GcodeProcessor executor;
-    executor.setGcodeSource( gcodeSource );
-    actionList_ = executor.processSource();
-
-    updateColors_();
+    setGcodeSource( std::make_shared<GcodeSource>( std::move( gcodeSource ) ) );
 }
 
 void ObjectGcode::updateColors_()

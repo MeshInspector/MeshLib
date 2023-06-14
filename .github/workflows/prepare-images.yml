@@ -157,8 +157,8 @@ jobs:
         working-directory: C:\vcpkg
         run: |
           git checkout ${{env.VCPKG-VERSION}}
-          call bootstrap-vcpkg.bat
-          sudo vcpkg integrate install
+          bootstrap-vcpkg.bat
+          vcpkg.exe integrate install
 
       - name: Checkout
         uses: actions/checkout@v3

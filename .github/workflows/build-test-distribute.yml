@@ -29,7 +29,7 @@ jobs:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   windows-build-test:
-    needs: [ versioning-and-release-url ]
+    needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-windows.yml
     with:
       version: ${{needs.versioning-and-release-url.outputs.version_tag}}

@@ -1,6 +1,6 @@
 import os.path
 import argparse
-from subprocess import check_output
+from subprocess import check_output, CalledProcessError
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--output", help="Output filename", default=None)
@@ -25,4 +25,8 @@ VCPKG_CMD += " --nuget"
 if args.output:
     VCPKG_CMD += " --output " + args.output
 
-check_output(VCPKG_CMD, shell=True)
+try:
+    check_output(VCPKG_CMD, shell=True)
+except CalledProcessError as e:
+    print(e.output)
+    exit(1)

@@ -235,7 +235,7 @@ TEST( MRMesh, gridToMeshByParts )
     if ( mesh.has_value() )
     {
         constexpr auto r = radius * voxelSize;
-        constexpr auto expectedVolume = 4.f * M_PIf * r * r * r / 3.f;
+        constexpr auto expectedVolume = 4.f * PI_F * r * r * r / 3.f;
         const auto actualVolume = mesh->volume();
         EXPECT_NEAR( expectedVolume, actualVolume, 0.001f );
     }

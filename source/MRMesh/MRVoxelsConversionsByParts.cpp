@@ -200,9 +200,9 @@ gridToMeshByParts( const GridPartBuilder &builder, const Vector3i &dimensions, c
 
 TEST( MRMesh, gridToMeshByParts )
 {
-    const Vector3i dimensions { 201, 201, 201 };
-    constexpr float radius = 100.f;
-    constexpr Vector3f center { 100.f, 100.f, 100.f };
+    const Vector3i dimensions { 101, 101, 101 };
+    constexpr float radius = 50.f;
+    constexpr Vector3f center { 50.f, 50.f, 50.f };
 
     GridPartBuilder builder = [&] ( size_t begin, size_t end )
     {
@@ -228,7 +228,7 @@ TEST( MRMesh, gridToMeshByParts )
 
     constexpr float voxelSize = 0.01f;
     auto mesh = gridToMeshByParts( builder, dimensions, Vector3f::diagonal( voxelSize ), {
-        .maxGridPartMemoryUsage = 10 * ( 1 << 20 ), // 10 MiB
+        .maxGridPartMemoryUsage = 2 * ( 1 << 20 ), // 2 MiB
     } );
     EXPECT_TRUE( mesh.has_value() );
 

@@ -118,27 +118,27 @@ TEST( MRMesh, ClosestPointsLine3Box3 )
         ASSERT_TRUE( ( cp.b - Vector3f{1,1,1} ).length() < 1e-6f );
     }
     {
-        auto cp = closestPoints( Line3f{ Vector3f{}, Vector3f{-1,1,0}.normalized() }, Box3f{ Vector3f{1,1,1}, Vector3f{3,3,3} } );
+        auto cp = closestPoints( Line3f{ Vector3f{}, Vector3f{-1,1,0} }, Box3f{ Vector3f{1,1,1}, Vector3f{3,3,3} } );
         ASSERT_TRUE( ( cp.a - Vector3f{0,0,0} ).length() < 1e-6f );
         ASSERT_TRUE( ( cp.b - Vector3f{1,1,1} ).length() < 1e-6f );
     }
     {
-        auto cp = closestPoints( Line3f{ Vector3f{3,5,4}, Vector3f{-1,1,0}.normalized() }, Box3f{ Vector3f{1,1,1}, Vector3f{3,3,3} } );
+        auto cp = closestPoints( Line3f{ Vector3f{3,5,4}, Vector3f{-1,1,0} }, Box3f{ Vector3f{1,1,1}, Vector3f{3,3,3} } );
         ASSERT_TRUE( ( cp.a - Vector3f{4,4,4} ).length() < 1e-6f );
         ASSERT_TRUE( ( cp.b - Vector3f{3,3,3} ).length() < 1e-6f );
     }
     {
-        auto cp = closestPoints( Line3f{ Vector3f{4,0,0}, Vector3f{0,1,-1}.normalized() }, Box3f{ Vector3f{1,1,1}, Vector3f{3,3,3} } );
+        auto cp = closestPoints( Line3f{ Vector3f{4,0,0}, Vector3f{0,1,-1} }, Box3f{ Vector3f{1,1,1}, Vector3f{3,3,3} } );
         ASSERT_TRUE( ( cp.a - Vector3f{4,0,0} ).length() < 1e-6f );
         ASSERT_TRUE( ( cp.b - Vector3f{3,1,1} ).length() < 1e-6f );
     }
     {
-        auto cp = closestPoints( Line3f{ Vector3f{0,5,3}, Vector3f{0,1,-1}.normalized() }, Box3f{ Vector3f{1,1,1}, Vector3f{3,3,3} } );
+        auto cp = closestPoints( Line3f{ Vector3f{0,5,3}, Vector3f{0,1,-1} }, Box3f{ Vector3f{1,1,1}, Vector3f{3,3,3} } );
         ASSERT_TRUE( ( cp.a - Vector3f{0,4,4} ).length() < 1e-6f );
         ASSERT_TRUE( ( cp.b - Vector3f{1,3,3} ).length() < 1e-6f );
     }
     {
-        auto cp = closestPoints( Line3f{ Vector3f{0,2,-2}, Vector3f{0,1,-1}.normalized() }, Box3f{ Vector3f{-1,1,1}, Vector3f{3,3,3} } );
+        auto cp = closestPoints( Line3f{ Vector3f{0,2,-2}, Vector3f{0,1,-1} }, Box3f{ Vector3f{-1,1,1}, Vector3f{3,3,3} } );
         ASSERT_TRUE( ( cp.a - Vector3f{0,0,0} ).length() < 1e-6f );
         ASSERT_TRUE( ( cp.b - Vector3f{0,1,1} ).length() < 1e-6f );
     }

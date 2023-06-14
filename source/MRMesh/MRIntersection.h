@@ -175,8 +175,16 @@ LineSegm3<T> closestPoints( const Line3<T>& ln, const LineSegm3<T>& ls )
 template<typename T>
 LineSegm3<T> closestPoints( const Line3<T>& line, const Box3<T> & box )
 {
-    assert( ( line.d.lengthSq() - 1 ) < 1e-5f );
     LineSegm3<T> res;
+    const auto dd = line.d.lengthSq();
+    if ( dd <= 0 )
+    {
+        res.a = line.p;
+        res.b = box.getBoxClosestPointTo( res.a );
+        return res;
+    }
+    const auto rdd = 1 / dd;
+
     T bestDistSq = std::numeric_limits<T>::max();
 
     static constexpr int otherDir[3][2] = { { 1, 2 }, { 2, 0 }, { 0, 1 } };
@@ -199,7 +207,7 @@ LineSegm3<T> closestPoints( const Line3<T>& line, const Box3<T> & box )
         const auto e = box.max[iDir] - box.min[iDir];
         const auto ee = e * e;
         const auto db = line.d[iDir] * e;
-        const auto denom = ee - db * db;
+        const auto denom = dd * ee - db * db;
         const bool par = denom <= 0; // line is parallel to box edge
         const auto rdenom = par ? 0 : 1 / denom;
         for ( int j = 0; j < 4; ++j )
@@ -227,12 +235,12 @@ LineSegm3<T> closestPoints( const Line3<T>& line, const Box3<T> & box )
 
                 if ( u <= 0 )
                 {
-                    cand.a = line( dt );
+                    cand.a = line( dt * rdd );
                     cand.b = q[j];
                 }
                 else if ( u >= 1 )
                 {
-                    cand.a = line( db + dt );
+                    cand.a = line( ( db + dt ) * rdd );
                     cand.b = q[j];
                     cand.b[iDir] = box.max[iDir];
                 }

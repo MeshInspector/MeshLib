@@ -274,6 +274,24 @@ PolylineProjectionResult3 findProjectionOnMeshEdges( const Vector3f& pt, const M
     [pt]( const LineSegm3f & ls ) { return LineSegm3f{ pt, closestPointOnLineSegm( pt, ls ) }; } );
 }
 
+PolylineProjectionResult3 findProjectionOnMeshEdges( const Line3f& ln, const Mesh& mesh, const AABBTreePolyline3& tree, float upDistLimitSq, AffineXf3f* xf, float loDistLimitSq )
+{
+    return findProjectionCore( tree, upDistLimitSq, xf, [&]( UndirectedEdgeId ue, Vector3f & a, Vector3f & b ) 
+    {
+        a = mesh.orgPnt( ue );
+        b = mesh.destPnt( ue );
+    }, loDistLimitSq,
+    [ln, prec = IntersectionPrecomputes<float>( ln.d )]( const Box3f & box )
+    {
+        float distSq = 0;
+        float s = -FLT_MAX, e = FLT_MAX;
+        if( !rayBoxIntersect( box, RayOrigin<float>{ ln.p }, s, e, prec ) )
+            distSq = closestPoints( ln, box ).lengthSq();
+        return distSq;
+    },
+    [ln]( const LineSegm3f & ls ) { return closestPoints( ln, ls ); } );
+}
+
 template<typename V>
 void findEdgesInBallT( const Polyline<V>& polyline, const V& center, float radius, const FoundEdgeCallback<V>& foundCallback, AffineXf<V>* xf )
 {

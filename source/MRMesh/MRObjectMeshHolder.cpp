@@ -215,6 +215,8 @@ const ViewportMask& ObjectMeshHolder::getVisualizePropertyMask( unsigned type ) 
         return showSelectedEdges_;
     case MR::MeshVisualizePropertyType::SelectedFaces:
         return showSelectedFaces_;
+    case MR::MeshVisualizePropertyType::PolygonOffsetFromCamera:
+        return polygonOffset_;
     default:
         return VisualObject::getVisualizePropertyMask( type );
     }

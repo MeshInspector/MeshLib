@@ -8,6 +8,9 @@
 #include "MRTimer.h"
 #include "MRVDBConversions.h"
 
+#include "MRGTest.h"
+#include "MRFloatGrid.h"
+
 #include <fmt/format.h>
 
 namespace
@@ -193,6 +196,49 @@ gridToMeshByParts( const GridPartBuilder &builder, const Vector3i &dimensions, c
             return tl::make_unexpected( res.error() );
     }
     return std::move( result );
+}
+
+TEST( MRMesh, gridToMeshByParts )
+{
+    const Vector3i dimensions { 201, 201, 201 };
+    constexpr float radius = 100.f;
+    constexpr Vector3f center { 100.f, 100.f, 100.f };
+
+    GridPartBuilder builder = [&] ( size_t begin, size_t end )
+    {
+        auto grid = MakeFloatGrid( openvdb::FloatGrid::create() );
+        grid->setGridClass( openvdb::GRID_LEVEL_SET );
+
+        auto accessor = grid->getAccessor();
+        for ( int x = begin; x < end; ++x )
+        {
+            for ( int y = 0; y < dimensions.y; ++y )
+            {
+                for ( int z = 0; z < dimensions.z; ++z )
+                {
+                    const Vector3f pos( x, y, z );
+                    const auto dist = ( center - pos ).length();
+                    accessor.setValue( { x, y, z }, dist - radius );
+                }
+            }
+        }
+
+        return grid;
+    };
+
+    constexpr float voxelSize = 0.01f;
+    auto mesh = gridToMeshByParts( builder, dimensions, Vector3f::diagonal( voxelSize ), {
+        .maxGridPartMemoryUsage = 10 * ( 1 << 20 ), // 10 MiB
+    } );
+    EXPECT_TRUE( mesh.has_value() );
+
+    if ( mesh.has_value() )
+    {
+        constexpr auto r = radius * voxelSize;
+        constexpr auto expectedVolume = 4.f * M_PIf * r * r * r / 3.f;
+        const auto actualVolume = mesh->volume();
+        EXPECT_NEAR( expectedVolume, actualVolume, 0.001f );
+    }
 }
 
 } // namespace MR

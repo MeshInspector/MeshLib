@@ -145,7 +145,7 @@ jobs:
     needs: [image-select]
     #if: ${{ false }} #
     if: ${{ needs.image-select.outputs.need_windows_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
-    timeout-minutes: 180
+    timeout-minutes: 240
     runs-on: windows-2022
     env:
       VCPKG_DEFAULT_TRIPLET: x64-windows-meshlib

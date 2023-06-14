@@ -26,6 +26,7 @@ struct MergeGridPartSettings
     using PostMergeCallback = std::function<void( Mesh&, const PartMapping& )>;
     PostMergeCallback postMerge = nullptr;
     /// mapping with initialized maps required for the `postMerge` callback
+    /// if the mapping is not initialized, only `src2tgtEdges` map will be provided (since it's used during processing)
     PartMapping mapping = {};
 };
 

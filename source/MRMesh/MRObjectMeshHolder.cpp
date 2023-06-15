@@ -198,27 +198,27 @@ Box3f ObjectMeshHolder::computeBoundingBox_() const
 
 const ViewportMask& ObjectMeshHolder::getVisualizePropertyMask( unsigned type ) const
 {
-    switch ( MeshVisualizePropertyType::Type( type ) )
+    switch ( type )
     {
-    case MR::MeshVisualizePropertyType::Faces:
+    case MeshVisualizePropertyType::Faces:
         return showFaces_;
-    case MR::MeshVisualizePropertyType::Texture:
+    case MeshVisualizePropertyType::Texture:
         return showTexture_;
-    case MR::MeshVisualizePropertyType::Edges:
+    case MeshVisualizePropertyType::Edges:
         return showEdges_;
-    case MR::MeshVisualizePropertyType::FlatShading:
+    case MeshVisualizePropertyType::FlatShading:
         return flatShading_;
-    case MR::MeshVisualizePropertyType::EnableShading:
+    case MeshVisualizePropertyType::EnableShading:
         return shadingEnabled_;
-    case MR::MeshVisualizePropertyType::OnlyOddFragments:
+    case MeshVisualizePropertyType::OnlyOddFragments:
         return onlyOddFragments_;
-    case MR::MeshVisualizePropertyType::BordersHighlight:
+    case MeshVisualizePropertyType::BordersHighlight:
         return showBordersHighlight_;
-    case MR::MeshVisualizePropertyType::SelectedEdges:
+    case MeshVisualizePropertyType::SelectedEdges:
         return showSelectedEdges_;
-    case MR::MeshVisualizePropertyType::SelectedFaces:
+    case MeshVisualizePropertyType::SelectedFaces:
         return showSelectedFaces_;
-    case MR::MeshVisualizePropertyType::PolygonOffsetFromCamera:
+    case MeshVisualizePropertyType::PolygonOffsetFromCamera:
         return polygonOffset_;
     default:
         return VisualObject::getVisualizePropertyMask( type );

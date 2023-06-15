@@ -9,7 +9,7 @@ namespace MR
 
 struct MeshVisualizePropertyType : VisualizeMaskType
 {
-    enum Type : unsigned
+    enum : unsigned
     {
         Faces = VisualizeMaskType::VisualizePropsCount,
         Texture,

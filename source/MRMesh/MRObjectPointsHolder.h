@@ -8,7 +8,7 @@ namespace MR
 
 struct PointsVisualizePropertyType : VisualizeMaskType
 {
-    enum Type : unsigned
+    enum : unsigned
     {
         SelectedVertices = VisualizeMaskType::VisualizePropsCount,
         PointsVisualizePropsCount

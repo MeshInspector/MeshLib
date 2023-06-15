@@ -19,7 +19,6 @@ public:
 
     CircleObject( CircleObject&& ) noexcept = default;
     CircleObject& operator = ( CircleObject&& ) noexcept = default;
-    virtual ~CircleObject() = default;
 
     constexpr static const char* TypeName() noexcept { return "CircleObject"; }
     virtual const char* typeName() const override { return TypeName(); }

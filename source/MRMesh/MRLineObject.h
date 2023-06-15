@@ -17,7 +17,6 @@ public:
 
     LineObject( LineObject&& ) noexcept = default;
     LineObject& operator = ( LineObject&& ) noexcept = default;
-    virtual ~LineObject() = default;
 
     constexpr static const char* TypeName() noexcept { return "LineObject"; }
     virtual const char* typeName() const override { return TypeName(); }

@@ -80,10 +80,6 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   emcmake cmake -DMR_EMSCRIPTEN=1 -DMR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} ../${MR_THIRDPARTY_DIR} -DCMAKE_INSTALL_PREFIX=../
   emmake make -j `nproc` #VERBOSE=1
   make install
-  cd ..
-  cd thirdparty/wasmtbb
-  EMCC_DEBUG=0 emmake make  extra_inc=big_iron.inc VERBOSE=1  tbb
-  cd ..
 else
   cmake ../${MR_THIRDPARTY_DIR} -DCMAKE_INSTALL_PREFIX=../
   cmake --build . -j `nproc`  #VERBOSE=1

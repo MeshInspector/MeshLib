@@ -13,7 +13,7 @@ set(MESHLIB_THIRDPARTY_INCLUDE_DIR "include")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-sign-compare -Wno-unknown-pragmas -Wno-unused-variable \
        -Wno-unused-function -Wno-unused-variable -Wno-comment -Wno-parentheses -Wno-int-in-bool-context -Wno-strict-aliasing \
-       -Wno-macro-redefined -Wno-return-type -Wno-unused-variable -Wno-deprecated-declarations")
+       -Wno-macro-redefined -Wno-return-type -Wno-unused-variable -Wno-deprecated-declarations -Wno-unused-command-line-argument -Wno-deprecated-pragma")
 
 IF(MR_EMSCRIPTEN AND NOT MR_EMSCRIPTEN_SINGLETHREAD)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
@@ -106,11 +106,21 @@ IF(MR_EMSCRIPTEN)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s USE_ZLIB=1")
   set(LIBZIP_DO_INSTALL ON)
   add_subdirectory(./libzip)
+
+  set(CMAKE_CXX_FLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s NO_DISABLE_EXCEPTION_CATCHING=1")
   add_subdirectory(./jsoncpp)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BACKUP}")
+
   set(SPDLOG_INSTALL ON)
   add_subdirectory(./spdlog)
-  install(DIRECTORY wasmtbb/include/tbb DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+
+  option(TBB_TEST "Enable testing" OFF)
+  option(TBBMALLOC_BUILD "Enable tbbmalloc build" OFF)
+  add_compile_definitions(__QNXNTO__=1) # hack to disable __TBB_RESUMABLE_TASKS in tbb
+  add_compile_definitions(__TBB_DYNAMIC_LOAD_ENABLED=0)
+  add_subdirectory(./onetbb)
+  install(DIRECTORY onetbb/include/tbb DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 ELSE()
   set(CLIP_EXAMPLES OFF)
   set(CLIP_TESTS OFF)

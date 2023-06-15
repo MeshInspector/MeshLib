@@ -38,7 +38,6 @@ jobs:
         run: |
           ln -s /usr/local/lib/${{ env.MESHLIB_THIRDPATY_DIR }}/lib ./lib
           ln -s /usr/local/lib/${{ env.MESHLIB_THIRDPATY_DIR }}/include ./include
-          cp -rv /usr/local/lib/${{ env.MESHLIB_THIRDPATY_DIR }}/wasmtbb/build/linux_wasm32_emscripten_emscripten_wasm32_release ./thirdparty/wasmtbb/build
 
       - name: Build
         env:

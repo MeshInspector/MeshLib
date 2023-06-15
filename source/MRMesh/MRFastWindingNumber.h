@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRAABBTree.h"
+#include "MRProgressCallback.h"
 #include <array>
 #include <string>
 
@@ -52,7 +53,8 @@ public:
     /// </summary>
     /// <param name="res">resulting bit set</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    virtual void  calcSelfIntersections( FaceBitSet& res, float beta ) = 0;
+    /// <return>false if the operation was canceled by the user</return>
+    virtual bool calcSelfIntersections( FaceBitSet& res, float beta, ProgressCallback cb = {} ) = 0;
     /// <summary>
     /// calculates winding numbers for each point in a three-dimensional grid
     /// </summary>
@@ -126,7 +128,7 @@ public:
     /// </summary>
     /// <param name="res">resulting bit set</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    MRMESH_API void calcSelfIntersections( FaceBitSet& res, float beta ) override;
+    MRMESH_API bool calcSelfIntersections( FaceBitSet& res, float beta, ProgressCallback cb ) override;
     /// <summary>
     /// calculates winding numbers for each point in a three-dimensional grid
     /// </summary>

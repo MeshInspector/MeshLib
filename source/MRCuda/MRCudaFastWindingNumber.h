@@ -30,7 +30,7 @@ public:
     /// </summary>
     /// <param name="res">resulting bit set</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    MRCUDA_API void calcSelfIntersections( FaceBitSet& res, float beta ) override;
+    MRCUDA_API bool calcSelfIntersections( FaceBitSet& res, float beta, ProgressCallback cb ) override;
     /// <summary>
     /// calculates winding numbers for each point in a three-dimensional grid
     /// </summary>
@@ -75,6 +75,9 @@ public:
     /// <param name="dims">dimensions of original grid</param>
     /// <returns></returns>
     MRCUDA_API virtual size_t fromGridHeapBytes( const Vector3i& dims ) const override;
+
+private:
+    bool prepareData_( ProgressCallback cb );
 };
 
 }

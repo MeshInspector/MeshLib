@@ -24,24 +24,53 @@ struct FastWindingNumberData
 
 FastWindingNumber::FastWindingNumber( const Mesh& mesh ) : mesh_( mesh )
 {
-    data_ = std::make_shared<FastWindingNumberData>();
+}
 
-    const AABBTree& tree = mesh.getAABBTree();
+bool FastWindingNumber::prepareData_( ProgressCallback cb )
+{
+    if ( data_ )
+        return reportProgress( cb, 1.0f );
+    MR_TIMER
+
+    auto data = std::make_shared<FastWindingNumberData>();
+
+    if ( !reportProgress( cb, 0.0f ) )
+        return false;
+    const AABBTree& tree = mesh_.getAABBTree();
     Dipoles dipoles;
-    calcDipoles( dipoles, tree, mesh );
-    data_->dipoles.fromVector( dipoles.vec_ );
+    calcDipoles( dipoles, tree, mesh_ );
+    if ( !reportProgress( cb, 0.5f ) )
+        return false;
+
+    data->dipoles.fromVector( dipoles.vec_ );
+    if ( !reportProgress( cb, 0.625f ) )
+        return false;
 
     const auto& nodes = tree.nodes();
-    const auto& meshPoints = mesh.points;
-    const auto tris = mesh.topology.getTriangulation();
+    const auto& meshPoints = mesh_.points;
+    const auto tris = mesh_.topology.getTriangulation();
 
-    data_->cudaMeshPoints.fromVector( meshPoints.vec_ );
-    data_->cudaNodes.fromVector( nodes.vec_ );
-    data_->cudaFaces.fromVector( tris.vec_ );
+    data->cudaMeshPoints.fromVector( meshPoints.vec_ );
+    if ( !reportProgress( cb, 0.75f ) )
+        return false;
+
+    data->cudaNodes.fromVector( nodes.vec_ );
+    if ( !reportProgress( cb, 0.875f ) )
+        return false;
+
+    data->cudaFaces.fromVector( tris.vec_ );
+    if ( !reportProgress( cb, 1.0f ) )
+        return false;
+
+    data_ = std::move( data );
+    return true;
 }
 
 void FastWindingNumber::calcFromVector( std::vector<float>& res, const std::vector<Vector3f>& points, float beta, FaceId skipFace )
 {
+    MR_TIMER
+    prepareData_( {} );
+
     cudaSetDevice( 0 );
     const size_t size = points.size();
     res.resize( size );
@@ -52,8 +81,12 @@ void FastWindingNumber::calcFromVector( std::vector<float>& res, const std::vect
     data_->cudaResult.toVector( res );
 }
 
-void FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta )
+bool FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, ProgressCallback cb )
 {
+    MR_TIMER
+    if ( !prepareData_( subprogress( cb, 0.0f, 0.5f ) ) )
+        return false;
+
     cudaSetDevice( 0 );
     const size_t size = mesh_.topology.faceSize();
     res.resize( size );
@@ -62,17 +95,20 @@ void FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta )
     fastWindingNumberFromMeshKernel(data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(), data_->cudaResult.data(), beta, size);
     std::vector<float> wns;
     data_->cudaResult.toVector( wns );
+    if ( !reportProgress( cb, 0.9f ) )
+        return false;
     
-    BitSetParallelFor(res, [&] (FaceId f)
+    return BitSetParallelForAll( res, [&] (FaceId f)
     {
         if ( wns[f] < 0 || wns[f] > 1 )
             res.set( f );
-    } );   
+    }, subprogress( cb, 0.9f, 1.0f ) );
 }
 
 void FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta )
 {
     MR_TIMER
+    prepareData_( {} );
 
     cudaSetDevice( 0 );
 
@@ -99,6 +135,7 @@ void FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& d
 void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq )
 {
     MR_TIMER
+    prepareData_( {} );
 
     cudaSetDevice( 0 );
 
@@ -158,5 +195,6 @@ size_t FastWindingNumber::fromGridHeapBytes( const Vector3i& dims ) const
     return newSize - currentSize;
 }
 
-}
-}
+} //namespace Cuda
+
+} //namespace MR

@@ -146,15 +146,15 @@ void FastWindingNumber::calcFromVector( std::vector<float>& res, const std::vect
     } );
 }
 
-void FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta )
+bool FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, ProgressCallback cb )
 {
     res.resize( mesh_.topology.faceSize() );
-    BitSetParallelFor( mesh_.topology.getValidFaces(), [&] ( FaceId f )
+    return BitSetParallelFor( mesh_.topology.getValidFaces(), [&] ( FaceId f )
     {
         auto wn = calc( mesh_.triCenter( f ), beta, f );
         if ( wn < 0 || wn > 1 )
             res.set( f );
-    } );
+    }, cb );
 }
 
 void FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta )

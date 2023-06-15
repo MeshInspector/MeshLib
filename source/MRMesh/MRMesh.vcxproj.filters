@@ -981,6 +981,9 @@
     <ClInclude Include="MRMutexOwner.h">
       <Filter>Source Files\System</Filter>
     </ClInclude>
+    <ClInclude Include="MRSignal.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

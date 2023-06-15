@@ -1,6 +1,5 @@
 #pragma once
 
-#include "MRMeshFwd.h"
 #include "MRVector4.h"
 #include "MRAffineXf3.h"
 #include "MRBox.h"
@@ -8,7 +7,7 @@
 #include "MRViewportProperty.h"
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
-#include <boost/signals2/signal.hpp>
+#include "MRSignal.h"
 #include <memory>
 #include <vector>
 #include <array>
@@ -29,16 +28,16 @@ namespace MR
  * \{
  */
 
-/// the main purpose of this class is to avoid move-constructor and move-assignment
+/// the main purpose of this class is to avoid copy and move constructor and assignment operator
 /// implementation in Object class, which has too many fields for that;
 /// since every object stores a pointer on its parent,
-/// copying of this object is prohibited and moving is taken with care
+/// copying of this object does not copy the children and moving is taken with care
 class ObjectChildrenHolder
 {
 public:
     ObjectChildrenHolder() = default;
-    ObjectChildrenHolder( const ObjectChildrenHolder & ) = delete;
-    ObjectChildrenHolder & operator = ( const ObjectChildrenHolder & ) = delete;
+    ObjectChildrenHolder( const ObjectChildrenHolder & ) noexcept {}
+    ObjectChildrenHolder & operator = ( const ObjectChildrenHolder & ) noexcept { return *this; }
     MRMESH_API ObjectChildrenHolder( ObjectChildrenHolder && ) noexcept;
     MRMESH_API ObjectChildrenHolder & operator = ( ObjectChildrenHolder && ) noexcept;
     MRMESH_API ~ObjectChildrenHolder();
@@ -210,7 +209,7 @@ public:
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const;
 
     /// signal about xf changing, triggered in setXf and setWorldXf,  it is called for children too
-    using XfChangedSignal = boost::signals2::signal<void() >;
+    using XfChangedSignal = Signal<void() >;
     XfChangedSignal worldXfChangedSignal;
 protected:
     struct ProtectedStruct{ explicit ProtectedStruct() = default; };
@@ -220,7 +219,7 @@ public:
 
 protected:
     /// user should not be able to call copy implicitly, use clone() function instead
-    MRMESH_API Object( const Object& obj );
+    Object( const Object& obj ) = default;
 
     /// swaps whole object (signals too)
     MRMESH_API virtual void swapBase_( Object& other );

@@ -326,16 +326,6 @@ void Object::setVisible( bool on, ViewportMask viewportMask /*= ViewportMask::al
         setVisibilityMask( visibilityMask_ & ~viewportMask );
 }
 
-Object::Object( const Object& other )
-{
-    name_ = other.name_;
-    xf_ = other.xf_;
-    visibilityMask_ = other.visibilityMask_;
-    locked_ = other.locked_;
-    selected_ = other.selected_;
-    ancillary_ = other.ancillary_;
-}
-
 void Object::swapBase_( Object& other )
 {
     std::swap( *this, other );

@@ -54,7 +54,7 @@ public:
     /// <param name="res">resulting bit set</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
     /// <return>false if the operation was canceled by the user</return>
-    virtual bool calcSelfIntersections( FaceBitSet& res, float beta, ProgressCallback cb ) = 0;
+    virtual bool calcSelfIntersections( FaceBitSet& res, float beta, ProgressCallback cb = {} ) = 0;
     /// <summary>
     /// calculates winding numbers for each point in a three-dimensional grid
     /// </summary>

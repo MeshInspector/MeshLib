@@ -14,7 +14,6 @@ public:
 
     ObjectMesh( ObjectMesh&& ) noexcept = default;
     ObjectMesh& operator = ( ObjectMesh&& ) noexcept = default;
-    virtual ~ObjectMesh() = default;
 
     constexpr static const char* TypeName() noexcept { return "ObjectMesh"; }
     virtual const char* typeName() const override { return TypeName(); }
@@ -45,11 +44,11 @@ public:
     MRMESH_API std::optional<MeshIntersectionResult> worldRayIntersection( const Line3f& worldRay, const FaceBitSet* region = nullptr ) const;
 
     /// signal about mesh changing, triggered in setDirtyFlag
-    using MeshChangedSignal = boost::signals2::signal<void( uint32_t mask )>;
+    using MeshChangedSignal = Signal<void( uint32_t mask )>;
     MeshChangedSignal meshChangedSignal;
 
 protected:
-    MRMESH_API ObjectMesh( const ObjectMesh& other );
+    ObjectMesh( const ObjectMesh& other ) = default;
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;

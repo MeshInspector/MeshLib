@@ -143,16 +143,6 @@ void ObjectGcode::setFrontColor( const Color& color, bool selected, ViewportId v
         updateColors_();
 }
 
-ObjectGcode::ObjectGcode( const ObjectGcode& other ) :
-    ObjectLinesHolder( other )
-{
-    actionList_ = other.actionList_;
-    segmentToSourceLineMap_ = other.segmentToSourceLineMap_;
-    idleColor_ = other.idleColor_;
-    maxFeedrate_ = other.maxFeedrate_;
-    feedrateGradientEnabled_ = other.feedrateGradientEnabled_;
-}
-
 void ObjectGcode::swapBase_( Object& other )
 {
     if ( auto otherGcode = other.asType<ObjectGcode>() )

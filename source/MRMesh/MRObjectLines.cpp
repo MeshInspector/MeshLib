@@ -107,9 +107,4 @@ std::vector<std::string> ObjectLines::getInfoLines() const
     return res;
 }
 
-ObjectLines::ObjectLines( const ObjectLines& other ) :
-    ObjectLinesHolder( other )
-{
-}
-
 }

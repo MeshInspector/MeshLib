@@ -28,7 +28,6 @@ public:
     MRMESH_API ObjectLinesHolder();
     ObjectLinesHolder( ObjectLinesHolder&& ) = default;
     ObjectLinesHolder& operator=( ObjectLinesHolder&& ) = default;
-    virtual ~ObjectLinesHolder() = default;
 
     constexpr static const char* TypeName() noexcept { return "LinesHolder"; }
     virtual const char* typeName() const override { return TypeName(); }
@@ -71,8 +70,9 @@ public:
     
     /// returns cached information about the number of components in the polyline
     MRMESH_API size_t numComponents() const;
+
 protected:
-    MRMESH_API ObjectLinesHolder( const ObjectLinesHolder& other );
+    ObjectLinesHolder( const ObjectLinesHolder& other ) = default;
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;

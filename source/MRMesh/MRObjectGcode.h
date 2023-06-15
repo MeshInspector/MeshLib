@@ -16,7 +16,6 @@ public:
     MRMESH_API ObjectGcode();
     ObjectGcode( ObjectGcode&& ) = default;
     ObjectGcode& operator=( ObjectGcode&& ) = default;
-    virtual ~ObjectGcode() = default;
 
     constexpr static const char* TypeName() noexcept { return "ObjectGcode"; }
     virtual const char* typeName() const override { return TypeName(); }
@@ -47,14 +46,14 @@ public:
     const Color& getIdleColor() const { return idleColor_; }
 
     /// signal about gcode changing, triggered in setDirtyFlag
-    using GcodeChangedSignal = boost::signals2::signal<void( uint32_t mask )>;
+    using GcodeChangedSignal = Signal<void( uint32_t mask )>;
     GcodeChangedSignal gcodeChangedSignal;
 
     MRMESH_API virtual bool select( bool isSelected ) override;
     MRMESH_API virtual void setFrontColor( const Color& color, bool selected, ViewportId viewportId = {} ) override;
 
 protected:
-    MRMESH_API ObjectGcode( const ObjectGcode& other );
+    ObjectGcode( const ObjectGcode& other ) = default;
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;

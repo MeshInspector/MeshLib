@@ -50,12 +50,7 @@ std::shared_ptr<MR::Object> ObjectDistanceMap::clone() const
 
 std::shared_ptr<MR::Object> ObjectDistanceMap::shallowClone() const
 {
-    auto res = std::make_shared<ObjectDistanceMap>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = mesh_;
-    if ( dmap_ )
-        res->dmap_ = dmap_;
-    return res;
+    return std::make_shared<ObjectDistanceMap>( ProtectedStruct{}, *this );
 }
 
 void ObjectDistanceMap::swapBase_( Object& other )
@@ -124,13 +119,6 @@ const DistanceMapToWorld& ObjectDistanceMap::getToWorldParameters() const
 size_t ObjectDistanceMap::heapBytes() const
 {
     return ObjectMeshHolder::heapBytes() + MR::heapBytes( dmap_ );
-}
-
-ObjectDistanceMap::ObjectDistanceMap( const ObjectDistanceMap& other ) :
-    ObjectMeshHolder( other ),
-    dmap_( nullptr ),
-    toWorldParams_( other.toWorldParams_ )
-{
 }
 
 ObjectDistanceMap::ObjectDistanceMap()

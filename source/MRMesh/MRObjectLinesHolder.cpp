@@ -126,18 +126,6 @@ size_t ObjectLinesHolder::numComponents() const
     return *numComponents_;
 }
 
-ObjectLinesHolder::ObjectLinesHolder( const ObjectLinesHolder& other ) :
-    VisualObject( other )
-{
-    linesColorMap_ = other.linesColorMap_;
-
-    showPoints_ = other.showPoints_;
-    smoothConnections_ = other.smoothConnections_;
-
-    lineWidth_ = other.lineWidth_;
-    pointSize_ = other.pointSize_;
-}
-
 AllVisualizeProperties ObjectLinesHolder::getAllVisualizeProperties() const
 {
     AllVisualizeProperties res;

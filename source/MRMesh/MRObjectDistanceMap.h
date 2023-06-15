@@ -43,8 +43,7 @@ public:
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
 protected:
-
-    MRMESH_API ObjectDistanceMap( const ObjectDistanceMap& other );
+    ObjectDistanceMap( const ObjectDistanceMap& other ) = default;
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;

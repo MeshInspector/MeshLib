@@ -40,8 +40,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ExpectedVoid, []( pybind11::module_& m )\
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Path, [] ( pybind11::module_& m )
 {
     pybind11::class_<std::filesystem::path>( m, "Path" ).
-        def( pybind11::init<const std::string&>() );
-    pybind11::implicitly_convertible<std::string, std::filesystem::path>();
+        def( pybind11::init<const std::u8string&>() );
+    pybind11::implicitly_convertible<std::u8string, std::filesystem::path>();
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Box3f, [] ( pybind11::module_& m )

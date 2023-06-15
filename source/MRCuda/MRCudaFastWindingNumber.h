@@ -11,6 +11,7 @@ struct FastWindingNumberData;
 /// \ingroup AABBTreeGroup
 class FastWindingNumber : public IFastWindingNumber
 {
+    const Mesh & mesh_;
     std::shared_ptr<FastWindingNumberData> data_;
 
 public:

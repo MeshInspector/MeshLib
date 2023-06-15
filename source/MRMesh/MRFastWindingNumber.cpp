@@ -22,13 +22,13 @@ static float distToFarthestCornerSq( const Box3f & box, const Vector3f & pos )
     return res;
 }
 
-void IFastWindingNumber::calcDipoles( Dipoles& dipoles, const AABBTree& tree_, const Mesh& mesh )
+void calcDipoles( Dipoles& dipoles, const AABBTree& tree_, const Mesh& mesh )
 {
     MR_TIMER
     dipoles.resize( tree_.nodes().size() );
 
     // compute dipole data for tree leaves
-    ParallelFor( dipoles, [&]( NodeId i )
+    ParallelFor( dipoles, [&]( AABBTree::NodeId i )
     {
         const auto& node = tree_[i];
         if ( !node.leaf() )
@@ -46,7 +46,7 @@ void IFastWindingNumber::calcDipoles( Dipoles& dipoles, const AABBTree& tree_, c
     } );
 
     // compute dipole data for not-leaf tree nodes
-    for ( NodeId i = dipoles.backId(); i; --i )
+    for ( auto i = dipoles.backId(); i; --i )
     {
         const auto& node = tree_[i];
         if ( node.leaf() )
@@ -62,7 +62,7 @@ void IFastWindingNumber::calcDipoles( Dipoles& dipoles, const AABBTree& tree_, c
     }
 
     // compute distance to farthest corner for all nodes
-    ParallelFor( dipoles, [&]( NodeId i )
+    ParallelFor( dipoles, [&]( AABBTree::NodeId i )
     {
         const auto& node = tree_[i];
         auto& d = dipoles[i];
@@ -70,16 +70,16 @@ void IFastWindingNumber::calcDipoles( Dipoles& dipoles, const AABBTree& tree_, c
     } );
 }
 
-FastWindingNumber::FastWindingNumber( const Mesh & mesh ) : 
-IFastWindingNumber( mesh ), 
-tree_( mesh.getAABBTree() )
+FastWindingNumber::FastWindingNumber( const Mesh & mesh ) :
+    mesh_( mesh ), 
+    tree_( mesh.getAABBTree() )
 {
     calcDipoles( dipoles_, tree_, mesh_ );
 }
 
 constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
 
-float FastWindingNumber::Dipole::w( const Vector3f & q ) const
+float Dipole::w( const Vector3f & q ) const
 {
     const auto dp = pos() - q;
     const auto d = dp.length();
@@ -110,7 +110,7 @@ float FastWindingNumber::calc( const Vector3f & q, float beta, FaceId skipFace )
     }
 
     constexpr int MaxStackSize = 32; // to avoid allocations
-    NodeId subtasks[MaxStackSize];
+    AABBTree::NodeId subtasks[MaxStackSize];
     int stackSize = 0;
     subtasks[stackSize++] = tree_.rootNodeId();
 

@@ -17,7 +17,6 @@ public:
 
     SphereObject( SphereObject&& ) noexcept = default;
     SphereObject& operator = ( SphereObject&& ) noexcept = default;
-    virtual ~SphereObject() = default;
 
     constexpr static const char* TypeName() noexcept { return "SphereObject"; }
     virtual const char* typeName() const override {return TypeName(); }

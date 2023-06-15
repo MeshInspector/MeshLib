@@ -13,7 +13,6 @@ public:
     ObjectLines() = default;
     ObjectLines( ObjectLines&& ) = default;
     ObjectLines& operator=( ObjectLines&& ) = default;
-    virtual ~ObjectLines() = default;
 
     constexpr static const char* TypeName() noexcept { return "ObjectLines"; }
     virtual const char* typeName() const override { return TypeName(); }
@@ -36,11 +35,11 @@ public:
     virtual std::string getClassName() const override { return "Lines"; }
 
     /// signal about lines changing, triggered in setDirtyFlag
-    using LinesChangedSignal = boost::signals2::signal<void( uint32_t mask )>;
+    using LinesChangedSignal = Signal<void( uint32_t mask )>;
     LinesChangedSignal linesChangedSignal;
 
 protected:
-    MRMESH_API ObjectLines( const ObjectLines& other );
+    ObjectLines( const ObjectLines& other ) = default;
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;

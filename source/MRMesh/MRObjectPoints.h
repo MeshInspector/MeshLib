@@ -11,10 +11,9 @@ class MRMESH_CLASS ObjectPoints : public ObjectPointsHolder
 {
 public:
     ObjectPoints() = default;
-    MRMESH_API ObjectPoints( const ObjectMesh& objMesh, bool saveNormals = true );
+    MRMESH_API explicit ObjectPoints( const ObjectMesh& objMesh, bool saveNormals = true );
     ObjectPoints& operator = ( ObjectPoints&& ) = default;
     ObjectPoints( ObjectPoints&& ) = default;
-    virtual ~ObjectPoints() = default;
 
     constexpr static const char* TypeName() noexcept { return "ObjectPoints"; }
     virtual const char* typeName() const override { return TypeName(); }
@@ -39,11 +38,11 @@ public:
     MRMESH_API virtual void setDirtyFlags( uint32_t mask ) override;
 
     /// signal about points changing, triggered in setDirtyFlag
-    using PointsChangedSignal = boost::signals2::signal<void( uint32_t mask )>;
+    using PointsChangedSignal = Signal<void( uint32_t mask )>;
     PointsChangedSignal pointsChangedSignal;
 
 protected:
-    MRMESH_API ObjectPoints( const ObjectPoints& other );
+    ObjectPoints( const ObjectPoints& other ) = default;
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;

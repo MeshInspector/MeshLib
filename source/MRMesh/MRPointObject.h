@@ -17,7 +17,6 @@ public:
 
     PointObject( PointObject&& ) noexcept = default;
     PointObject& operator = ( PointObject&& ) noexcept = default;
-    virtual ~PointObject() = default;
 
     constexpr static const char* TypeName() noexcept { return "PointObject"; }
     virtual const char* typeName() const override { return TypeName(); }

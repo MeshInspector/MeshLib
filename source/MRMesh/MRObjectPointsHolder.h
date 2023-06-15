@@ -24,7 +24,6 @@ public:
 
     ObjectPointsHolder( ObjectPointsHolder&& ) noexcept = default;
     ObjectPointsHolder& operator = ( ObjectPointsHolder&& ) noexcept = default;
-    virtual ~ObjectPointsHolder() = default;
 
     constexpr static const char* TypeName() noexcept { return "PointsHolder"; }
     virtual const char* typeName() const override { return TypeName(); }

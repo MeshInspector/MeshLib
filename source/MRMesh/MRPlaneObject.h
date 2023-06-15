@@ -17,7 +17,6 @@ public:
 
     PlaneObject( PlaneObject&& ) noexcept = default;
     PlaneObject& operator = ( PlaneObject&& ) noexcept = default;
-    virtual ~PlaneObject() = default;
 
     constexpr static const char* TypeName() noexcept { return "PlaneObject"; }
     virtual const char* typeName() const override { return TypeName(); }

@@ -35,7 +35,6 @@ public:
 
     ObjectMeshHolder( ObjectMeshHolder&& ) noexcept = default;
     ObjectMeshHolder& operator = ( ObjectMeshHolder&& ) noexcept = default;
-    virtual ~ObjectMeshHolder() = default;
 
     constexpr static const char* TypeName() noexcept { return "MeshHolder"; }
     virtual const char* typeName() const override { return TypeName(); }
@@ -172,8 +171,9 @@ public:
     MRMESH_API size_t numHandles() const;
 
     /// signal about face selection changing, triggered in selectFaces
-    using FaceSelectionChangedSignal = boost::signals2::signal<void()>;
+    using FaceSelectionChangedSignal = Signal<void()>;
     FaceSelectionChangedSignal faceSelectionChangedSignal;
+
 protected:
     FaceBitSet selectedTriangles_;
     UndirectedEdgeBitSet selectedEdges_;
@@ -198,7 +198,7 @@ protected:
     mutable std::optional<double> totalArea_, selectedArea_;
     mutable ViewportProperty<XfBasedCache<Box3f>> worldBox_;
 
-    MRMESH_API ObjectMeshHolder( const ObjectMeshHolder& other );
+    ObjectMeshHolder( const ObjectMeshHolder& other ) = default;
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;

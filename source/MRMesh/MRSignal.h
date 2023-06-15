@@ -1,0 +1,21 @@
+#pragma once
+
+#include <boost/signals2/signal.hpp>
+
+namespace MR
+{
+
+/// This class wraps boost::signals2::signal adding copy constructor and copy assignment operator,
+/// which do nothing, but allow putting this as a member in copyable classes
+template<typename T>
+struct Signal : boost::signals2::signal<T>
+{
+    Signal() noexcept = default;
+    Signal( const Signal& ) noexcept {}
+    Signal( Signal&& ) noexcept = default;
+    Signal& operator =( const Signal& ) noexcept { return *this; }
+    Signal& operator =( Signal&& ) noexcept = default;
+    Signal& operator =( boost::signals2::signal<T>&& b ) noexcept { *static_cast<std::unique_ptr<T>*>(this) = std::move( b ); return *this; }
+};
+
+} //namespace MR

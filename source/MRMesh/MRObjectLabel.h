@@ -30,7 +30,6 @@ public:
 
     ObjectLabel( ObjectLabel&& ) noexcept = default;
     ObjectLabel& operator = ( ObjectLabel&& ) noexcept = default;
-    virtual ~ObjectLabel() = default;
 
     constexpr static const char* TypeName() noexcept
     {

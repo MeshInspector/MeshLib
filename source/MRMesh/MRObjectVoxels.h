@@ -162,12 +162,12 @@ public:
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
     /// signal about Iso-surface changes (from updateIsoSurface)
-    using IsoSurfaceChangedSignal = boost::signals2::signal<void()>;
+    using IsoSurfaceChangedSignal = Signal<void()>;
     IsoSurfaceChangedSignal isoSurfaceChangedSignal;
 
 private:
     VolumeRenderingParams volumeRenderingParams_;
-    mutable std::unique_ptr<SimpleVolumeU8> volumeRenderingData_;
+    mutable UniquePtr<SimpleVolumeU8> volumeRenderingData_;
 
     int maxSurfaceVertices_{ 5'000'000 };
     VdbVolume vdbVolume_;
@@ -189,7 +189,7 @@ private:
 protected:
     VoxelBitSet selectedVoxels_;
 
-    MRMESH_API ObjectVoxels( const ObjectVoxels& other );
+    ObjectVoxels( const ObjectVoxels& other ) = default;
     bool volumeRendering_{ false };
 
     /// swaps this object with other

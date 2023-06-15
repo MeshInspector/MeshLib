@@ -485,20 +485,6 @@ void ObjectVoxels::setDefaultColors_()
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectVoxels ), false );
 }
 
-ObjectVoxels::ObjectVoxels( const ObjectVoxels& other ) :
-    ObjectMeshHolder( other )
-{
-    vdbVolume_.dims = other.vdbVolume_.dims;
-    isoValue_ = other.isoValue_;
-    dualMarchingCubes_ = other.dualMarchingCubes_;
-    histogram_ = other.histogram_;
-    vdbVolume_.voxelSize = other.vdbVolume_.voxelSize;
-    activeBox_ = other.activeBox_;
-
-    indexer_ = other.indexer_;
-    reverseVoxelSize_ = other.reverseVoxelSize_;
-}
-
 ObjectVoxels::ObjectVoxels()
 {
     setDefaultColors_();

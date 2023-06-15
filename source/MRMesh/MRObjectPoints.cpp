@@ -27,11 +27,6 @@ ObjectPoints::ObjectPoints( const ObjectMesh& objMesh, bool saveNormals/*=true*/
     setColoringType( objMesh.getColoringType() );
 }
 
-ObjectPoints::ObjectPoints( const ObjectPoints& other ) :
-    ObjectPointsHolder( other )
-{
-}
-
 std::vector<std::string> ObjectPoints::getInfoLines() const
 {
     std::vector<std::string> res = ObjectPointsHolder::getInfoLines();

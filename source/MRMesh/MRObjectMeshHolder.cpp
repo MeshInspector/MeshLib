@@ -252,36 +252,6 @@ void ObjectMeshHolder::setDefaultColors_()
     setEdgesColor( SceneColors::get( SceneColors::Edges ) );
 }
 
-ObjectMeshHolder::ObjectMeshHolder( const ObjectMeshHolder& other ) :
-    VisualObject( other )
-{
-    showTexture_ = other.showTexture_;
-    selectedTriangles_ = other.selectedTriangles_;
-    selectedEdges_ = other.selectedEdges_;
-    creases_ = other.creases_;
-
-    showFaces_ = other.showFaces_;
-    showEdges_ = other.showEdges_;
-    showSelectedEdges_ = other.showSelectedEdges_;
-    showSelectedFaces_ = other.showSelectedFaces_;
-    showBordersHighlight_ = other.showBordersHighlight_;
-    flatShading_ = other.flatShading_;
-    shadingEnabled_ = other.shadingEnabled_;
-    onlyOddFragments_ = other.onlyOddFragments_;
-    polygonOffset_ = other.polygonOffset_;
-    
-    edgesColor_ = other.edgesColor_;
-    bordersColor_ = other.bordersColor_;
-    edgeSelectionColor_ = other.edgeSelectionColor_;
-    faceSelectionColor_ = other.faceSelectionColor_;
-
-    facesColorMap_ = other.facesColorMap_;
-    edgeWidth_ = other.edgeWidth_;
-
-    texture_ = other.texture_;
-    uvCoordinates_ = other.uvCoordinates_;
-}
-
 ObjectMeshHolder::ObjectMeshHolder()
 {
     setDefaultColors_();

@@ -978,6 +978,9 @@
     <ClInclude Include="MRChangeObjectFields.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
+    <ClInclude Include="MRMutexOwner.h">
+      <Filter>Source Files\System</Filter>
+    </ClInclude>
     <ClInclude Include="MRVoxelsConversionsByParts.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>

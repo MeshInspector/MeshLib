@@ -1074,7 +1074,7 @@ OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh, const std:
 {
     auto conts = meshTriPointsOrg;
     conts.push_back( meshTriPointsOrg.front() );
-    return convertMeshTriPointsToMeshContour( mesh, meshTriPointsOrg );
+    return convertMeshTriPointsToMeshContour( mesh, conts );
 }
 
 OneMeshContour convertSurfacePathWithEndsToMeshContour( const MR::Mesh& mesh, const MeshTriPoint& start, const MR::SurfacePath& surfacePath, const MeshTriPoint& end )

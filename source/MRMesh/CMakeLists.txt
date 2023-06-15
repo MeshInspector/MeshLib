@@ -16,6 +16,7 @@ option(MRMESH_NO_PNG "Disable PNG support" OFF)
 option(MRMESH_NO_TIFF "Disable TIFF support" OFF)
 option(MRMESH_NO_VOXEL "Disable voxel support" OFF)
 option(MRMESH_NO_GLTF "Disable glTF support" OFF)
+option(MRMESH_NO_XML "Disable XML support (affects 3MF support)" OFF)
 
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
@@ -109,6 +110,12 @@ IF(NOT MR_EMSCRIPTEN)
 	ELSE()
 		# header-only library
 	ENDIF()
+
+	IF(MRMESH_NO_XML)
+		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_XML)
+	ELSE()
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES tinyxml2)
+	ENDIF()
 ELSE()
 	target_compile_definitions(${PROJECT_NAME}
 		PRIVATE
@@ -155,7 +162,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		    jsoncpp
 		    fmt
 		    tbb
-		    tinyxml2
 			${MRMESH_OPTIONAL_DEPENDENCIES}
 			${COCOA_LIBRARY}
 		)
@@ -176,7 +182,6 @@ ELSE()
 		tl::expected
 		fmt
 		spdlog
-        tinyxml2
 		gtest
 		zip
 		pthread

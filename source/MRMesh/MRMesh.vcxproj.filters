@@ -987,6 +987,9 @@
     <ClInclude Include="MRViewportId.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRVoxelsConversionsByParts.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1631,8 +1634,8 @@
     <ClCompile Include="MRFile.cpp">
       <Filter>Source Files\System</Filter>
     </ClCompile>
-    <ClCompile Include="MRViewportId.cpp">
-      <Filter>Source Files\Basic</Filter>
+    <ClCompile Include="MRVoxelsConversionsByParts.cpp">
+      <Filter>Source Files\Voxels</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

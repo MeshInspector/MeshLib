@@ -303,6 +303,7 @@
     <ClInclude Include="MRMatrix3Decompose.h" />
     <ClInclude Include="MRNoDefInit.h" />
     <ClInclude Include="MRParallelFor.h" />
+    <ClInclude Include="MRVoxelsConversionsByParts.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -520,6 +521,7 @@
     <ClCompile Include="MRVoxelsVolume.cpp" />
     <ClCompile Include="MRPolylineRelax.cpp" />
     <ClCompile Include="MRUniteManyMeshes.cpp" />
+    <ClCompile Include="MRVoxelsConversionsByParts.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

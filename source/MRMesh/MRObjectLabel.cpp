@@ -264,7 +264,7 @@ AllVisualizeProperties ObjectLabel::getAllVisualizeProperties() const
 
 const ViewportMask &ObjectLabel::getVisualizePropertyMask( unsigned int type ) const
 {
-    switch ( LabelVisualizePropertyType::Type( type ) )
+    switch ( type )
     {
     case LabelVisualizePropertyType::SourcePoint:
         return sourcePoint_;

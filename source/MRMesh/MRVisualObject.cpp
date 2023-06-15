@@ -266,21 +266,21 @@ ViewportMask& VisualObject::getVisualizePropertyMask_( unsigned type )
 
 const ViewportMask& VisualObject::getVisualizePropertyMask( unsigned type ) const
 {
-    switch ( VisualizeMaskType::Type( type ) )
+    switch ( type )
     {
-    case MR::VisualizeMaskType::Visibility:
+    case VisualizeMaskType::Visibility:
         return visibilityMask_;
-    case MR::VisualizeMaskType::InvertedNormals:
+    case VisualizeMaskType::InvertedNormals:
         return invertNormals_;
-    case MR::VisualizeMaskType::Labels:
+    case VisualizeMaskType::Labels:
         return showLabels_;
-    case MR::VisualizeMaskType::ClippedByPlane:
+    case VisualizeMaskType::ClippedByPlane:
         return clipByPlane_;
-    case MR::VisualizeMaskType::Name:
+    case VisualizeMaskType::Name:
         return showName_;
-    case MR::VisualizeMaskType::CropLabelsByViewportRect:
+    case VisualizeMaskType::CropLabelsByViewportRect:
         return cropLabels_;
-    case MR::VisualizeMaskType::DepthTest:
+    case VisualizeMaskType::DepthTest:
         return depthTest_;
     default:
         assert( false );

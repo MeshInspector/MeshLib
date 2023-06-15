@@ -102,7 +102,7 @@ AllVisualizeProperties ObjectPointsHolder::getAllVisualizeProperties() const
 
 const ViewportMask& ObjectPointsHolder::getVisualizePropertyMask( unsigned type ) const
 {
-    switch ( PointsVisualizePropertyType::Type( type ) )
+    switch ( type )
     {
     case PointsVisualizePropertyType::SelectedVertices:
         return showSelectedVertices_;

@@ -11,7 +11,7 @@ namespace MR
 
 struct LinesVisualizePropertyType : VisualizeMaskType
 {
-    enum Type : unsigned
+    enum : unsigned
     {
         Points = VisualizeMaskType::VisualizePropsCount,
         Smooth,

@@ -9,7 +9,7 @@ namespace MR
 
 struct LabelVisualizePropertyType : VisualizeMaskType
 {
-    enum Type : unsigned
+    enum : unsigned
     {
         SourcePoint = VisualizeMaskType::VisualizePropsCount,
         LeaderLine,

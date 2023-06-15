@@ -28,7 +28,7 @@ enum class ColoringType
 
 struct VisualizeMaskType
 {
-    enum Type : unsigned
+    enum : unsigned
     {
         Visibility,
         InvertedNormals,

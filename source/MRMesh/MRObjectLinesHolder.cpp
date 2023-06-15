@@ -137,11 +137,11 @@ AllVisualizeProperties ObjectLinesHolder::getAllVisualizeProperties() const
 
 const ViewportMask& ObjectLinesHolder::getVisualizePropertyMask( unsigned type ) const
 {
-    switch ( LinesVisualizePropertyType::Type( type ) )
+    switch ( type )
     {
-    case MR::LinesVisualizePropertyType::Points:
+    case LinesVisualizePropertyType::Points:
         return showPoints_;
-    case MR::LinesVisualizePropertyType::Smooth:
+    case LinesVisualizePropertyType::Smooth:
         return smoothConnections_;
     default:
         return VisualObject::getVisualizePropertyMask( type );

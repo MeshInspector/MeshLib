@@ -1265,11 +1265,7 @@ void RibbonMenu::drawRibbonSceneList_()
     const auto newSize = drawRibbonSceneResizeLine_();// ImGui::GetWindowSize();
     static bool firstTime = true;
     bool manualSizeSet = false;
-    if ( firstTime )
-    {
-        firstTime = false; // this is needed because GetWindowSize() lag in one frame
-    }
-    else if ( newSize.x != sceneSize_.x || newSize.y != sceneSize_.y )
+    if ( !firstTime && ( newSize.x != sceneSize_.x || newSize.y != sceneSize_.y ) )
     {
         manualSizeSet = true;
         sceneSize_ = newSize;
@@ -1284,11 +1280,13 @@ void RibbonMenu::drawRibbonSceneList_()
         return;
     // this check is needed when resize of app window changes size of scene window
     auto lastWindowSize = window->Size;
-    if ( lastWindowSize.x != sceneSize_.x )
+    if ( !firstTime && lastWindowSize.x != sceneSize_.x )
     {
         sceneSize_.x = lastWindowSize.x;
         fixViewportsSize_( viewerRef.window_width, viewerRef.window_height );
     }
+    if ( firstTime )
+        firstTime = false;
 }
 
 void RibbonMenu::drawRibbonSceneListContent_( std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all )

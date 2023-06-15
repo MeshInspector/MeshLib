@@ -27,9 +27,6 @@ RUN mkdir /usr/local/lib/emscripten/ && \
     cp -r lib /usr/local/lib/emscripten/ && \
     cp -r include /usr/local/lib/emscripten/
 
-RUN mkdir -p /usr/local/lib/emscripten/wasmtbb/build && \
-    cp -r ./thirdparty/wasmtbb/build/linux_wasm32_emscripten_emscripten_wasm32_release /usr/local/lib/emscripten/wasmtbb/build/
-
 RUN rm -rf ./lib
 
 ENV MR_EMSCRIPTEN_SINGLE=ON

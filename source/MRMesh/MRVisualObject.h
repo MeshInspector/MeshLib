@@ -6,6 +6,7 @@
 #include "MRColor.h"
 #include "MRPositionedText.h"
 #include "MRIRenderObject.h"
+#include "MRUniquePtr.h"
 
 namespace MR
 {
@@ -234,16 +235,15 @@ public:
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
 
 protected:
-
-    MRMESH_API VisualObject( const VisualObject& obj );
+    VisualObject( const VisualObject& obj ) = default;
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
 
-    /// each renderable child of VisualObject should imlpement this method
+    /// each renderable child of VisualObject should implement this method
     /// and assign renderObj_ inside
     virtual void setupRenderObject_() const {}
-    mutable std::unique_ptr<IRenderObject> renderObj_;
+    mutable UniquePtr<IRenderObject> renderObj_;
 
     /// Visualization options
     /// Each option is a binary mask specifying on which viewport each option is set.

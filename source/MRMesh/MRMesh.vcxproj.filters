@@ -276,9 +276,6 @@
     <ClInclude Include="MRMakePlane.h">
       <Filter>Source Files\Primitives</Filter>
     </ClInclude>
-    <ClInclude Include="MRViewportId.h">
-      <Filter>Source Files\DataModel</Filter>
-    </ClInclude>
     <ClInclude Include="MRToFromEigen.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -792,9 +789,6 @@
     <ClInclude Include="MRChangeVoxelSelectionAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
-    <ClInclude Include="MRViewportProperty.h">
-      <Filter>Source Files\DataModel</Filter>
-    </ClInclude>
     <ClInclude Include="MRChangePointCloudNormalsAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
@@ -982,6 +976,15 @@
       <Filter>Source Files\System</Filter>
     </ClInclude>
     <ClInclude Include="MRSignal.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRUniquePtr.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewportProperty.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewportId.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
   </ItemGroup>
@@ -1288,9 +1291,6 @@
     </ClCompile>
     <ClCompile Include="MRString.cpp">
       <Filter>Source Files\Basic</Filter>
-    </ClCompile>
-    <ClCompile Include="MRViewportId.cpp">
-      <Filter>Source Files\DataModel</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineTopology.cpp">
       <Filter>Source Files\Polyline</Filter>
@@ -1630,6 +1630,9 @@
     </ClCompile>
     <ClCompile Include="MRFile.cpp">
       <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewportId.cpp">
+      <Filter>Source Files\Basic</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

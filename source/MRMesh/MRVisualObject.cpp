@@ -22,29 +22,6 @@ VisualObject::VisualObject()
     setDefaultColors_();
 }
 
-VisualObject::VisualObject( const VisualObject& other ):
-    Object( other )
-{
-    clipByPlane_ = other.clipByPlane_;
-    showLabels_ = other.showLabels_;
-    showName_ = other.showName_;
-    cropLabels_ = other.cropLabels_;
-    pickable_ = other.pickable_;
-    invertNormals_ = other.invertNormals_;
-
-    labelsColor_ = other.labelsColor_;
-
-    shininess_ = other.shininess_;
-
-    coloringType_ = other.coloringType_;
-    vertsColorMap_ = other.vertsColorMap_;
-    selectedColor_ = other.selectedColor_;
-    unselectedColor_ = other.unselectedColor_;
-    backFacesColor_ = other.backFacesColor_;
-    depthTest_ = other.depthTest_;
-    labels_ = other.labels_;
-}
-
 void VisualObject::setVisualizeProperty( bool value, unsigned type, ViewportMask viewportMask )
 {
     auto res = getVisualizePropertyMask( type );

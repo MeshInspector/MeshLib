@@ -22,14 +22,13 @@ struct FastWindingNumberData
     Matrix4 gridToMeshXf;
 };
 
-FastWindingNumber::FastWindingNumber( const Mesh& mesh )
-: IFastWindingNumber( mesh )
+FastWindingNumber::FastWindingNumber( const Mesh& mesh ) : mesh_( mesh )
 {
     data_ = std::make_shared<FastWindingNumberData>();
 
     const AABBTree& tree = mesh.getAABBTree();
-    IFastWindingNumber::Dipoles dipoles;
-    IFastWindingNumber::calcDipoles( dipoles, tree, mesh );
+    Dipoles dipoles;
+    calcDipoles( dipoles, tree, mesh );
     data_->dipoles.fromVector( dipoles.vec_ );
 
     const auto& nodes = tree.nodes();

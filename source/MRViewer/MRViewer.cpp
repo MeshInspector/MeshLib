@@ -770,7 +770,8 @@ void Viewer::parseCommandLine_( [[maybe_unused]] int argc, [[maybe_unused]] char
     std::vector<std::filesystem::path> supportedFiles;
     for ( int i = 1; i < argc; ++i )
     {
-        if( EmbeddedPython::isPythonScript( argv[i] ) )
+        const auto argAsPath = pathFromUtf8( argv[i] );
+        if( EmbeddedPython::isPythonScript( argAsPath ) )
         {
             EmbeddedPython::init();
             // Draw twice to show all menus on screen
@@ -779,7 +780,7 @@ void Viewer::parseCommandLine_( [[maybe_unused]] int argc, [[maybe_unused]] char
                 draw( true );
             }
             EmbeddedPython::setupArgv( argc - i, &argv[i] );
-            EmbeddedPython::runScript( argv[i] );
+            EmbeddedPython::runScript( argAsPath );
             // Draw to update after executing script
             {
                 draw( true );
@@ -787,8 +788,8 @@ void Viewer::parseCommandLine_( [[maybe_unused]] int argc, [[maybe_unused]] char
             EmbeddedPython::finalize();
             break;
         }
-        if ( isSupportedFormat( argv[i] ) )
-            supportedFiles.push_back( argv[i] );
+        if ( isSupportedFormat( argAsPath ) )
+            supportedFiles.push_back( argAsPath );
     }
     loadFiles( supportedFiles );
 #endif

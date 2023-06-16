@@ -69,6 +69,23 @@ enum DirtyFlags
     DIRTY_ALL = 0x3FFFF
 };
 
+/// Marks dirty buffers that need to be uploaded to OpenGL.
+/// Dirty flags must be moved together with renderObj_,
+/// but not copied since renderObj_ is not copied as well
+struct Dirty
+{
+    uint32_t f{DIRTY_ALL};
+    operator uint32_t&() { return f; }
+    operator uint32_t() const { return f; }
+
+    Dirty() noexcept = default;
+    Dirty( const Dirty& ) noexcept {}
+    Dirty( Dirty&& ) noexcept = default;
+    Dirty& operator =( const Dirty& ) noexcept { return *this; }
+    Dirty& operator =( Dirty&& ) noexcept = default;
+    Dirty& operator =( uint32_t b ) noexcept { f = b; return *this; }
+};
+
 /// Visual Object
 class MRMESH_CLASS VisualObject : public Object
 {
@@ -243,7 +260,9 @@ protected:
     /// each renderable child of VisualObject should implement this method
     /// and assign renderObj_ inside
     virtual void setupRenderObject_() const {}
+
     mutable UniquePtr<IRenderObject> renderObj_;
+    mutable Dirty dirty_;
 
     /// Visualization options
     /// Each option is a binary mask specifying on which viewport each option is set.
@@ -273,9 +292,6 @@ protected:
     std::vector<PositionedText> labels_;
 
     MRMESH_API ViewportMask& getVisualizePropertyMask_( unsigned type );
-
-    /// Marks dirty buffers that need to be uploaded to OpenGL
-    mutable uint32_t dirty_{DIRTY_ALL};
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 

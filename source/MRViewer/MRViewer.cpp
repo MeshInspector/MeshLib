@@ -410,13 +410,9 @@ int Viewer::launch( const LaunchParams& params )
         return 1;
     }
 
-    {
-        // log start line
-        std::string startLine;
-        for ( int i = 0; i < params.argc; ++i )
-            startLine += ( std::string( params.argv[i] ) + " " );
-        spdlog::info( "Start command: {}", startLine );
-    }
+    // log start line
+    for ( int i = 0; i < params.argc; ++i )
+        spdlog::info( "argv[{}]: {}", i, params.argv[i] );
 
     isAnimating = params.isAnimating;
     animationMaxFps = params.animationMaxFps;

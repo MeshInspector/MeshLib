@@ -409,6 +409,11 @@ int Viewer::launch( const LaunchParams& params )
         spdlog::error( "Viewer is already launched!" );
         return 1;
     }
+
+    // log start line
+    for ( int i = 0; i < params.argc; ++i )
+        spdlog::info( "argv[{}]: {}", i, params.argv[i] );
+
     isAnimating = params.isAnimating;
     animationMaxFps = params.animationMaxFps;
     enableDeveloperFeatures_ = params.developerFeatures;

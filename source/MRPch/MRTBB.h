@@ -25,8 +25,6 @@
 #include <tbb/task_group.h>
 #include <tbb/global_control.h>
 #include <tbb/task_scheduler_observer.h>
-#define __TBB_PREVIEW_COLLABORATIVE_CALL_ONCE 1
-#include <tbb/collaborative_call_once.h>
 #pragma warning(pop)
 
 #ifdef __EMSCRIPTEN__

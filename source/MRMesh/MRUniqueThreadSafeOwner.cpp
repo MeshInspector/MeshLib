@@ -99,7 +99,8 @@ T & UniqueThreadSafeOwner<T>::getOrCreate( const std::function<T()> & creator )
         if ( firstConstructor )
         {
             // we do not want this thread while inside creator steal outside piece of work 
-            // and call this function recursively
+            // and call this function recursively, and stopping forever (because creator() never returns)
+            // in construction->wait()
             tbb::this_task_arena::isolate( [&]
             {
                construction->run( [&]

@@ -2802,12 +2802,12 @@ void ImGuiMenu::drawShortcutsWindow_()
     ImGui::End();
 }
 
-float ImGuiMenu::getSceneInfoItemWidth_(size_t itemCount)
+float ImGuiMenu::getSceneInfoItemWidth_( int itemCount )
 {
     if ( itemCount == 0 )
         return 0;
     /// 100 is the widest label's size
-    return ( ImGui::GetContentRegionAvail().x - 100.0f * menu_scaling() - ImGui::GetStyle().ItemInnerSpacing.x * ( itemCount - 1 ) ) / float ( itemCount );
+    return ( ImGui::GetContentRegionAvail().x - 100.0f * menu_scaling() - ImGui::GetStyle().ItemInnerSpacing.x * ( itemCount - 1 ) ) / float( itemCount );
 }
 
 void ImGuiMenu::add_modifier( std::shared_ptr<MeshModifier> modifier )

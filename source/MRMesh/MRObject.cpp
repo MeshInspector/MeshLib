@@ -447,7 +447,7 @@ tl::expected<std::vector<std::future<void>>, std::string> Object::serializeRecur
     // the key must be unique among all children of same parent
     std::string key = std::to_string( childId ) + "_" + replaceProhibitedChars( name_ );
 
-    auto model = serializeModel_( path / key );
+    auto model = serializeModel_( path / pathFromUtf8( key ) );
     if ( !model.has_value() )
         return tl::make_unexpected( model.error() );
     if ( model.value().valid() )
@@ -458,7 +458,7 @@ tl::expected<std::vector<std::future<void>>, std::string> Object::serializeRecur
 
     if ( !children_.empty() )
     {
-        auto childrenPath = path / key;
+        auto childrenPath = path / pathFromUtf8( key );
         auto& childrenRoot = root["Children"];
         for ( int i = 0; i < children_.size(); ++i )
         {
@@ -483,7 +483,7 @@ VoidOrErrStr Object::deserializeRecursive( const std::filesystem::path& path, co
 {
     std::string key = root["Key"].isString() ? root["Key"].asString() : root["Name"].asString();
 
-    auto res = deserializeModel_( path / key, progressCb );
+    auto res = deserializeModel_( path / pathFromUtf8( key ), progressCb );
     if ( !res.has_value() )
         return res;
 
@@ -540,7 +540,7 @@ VoidOrErrStr Object::deserializeRecursive( const std::filesystem::path& path, co
             if ( !childObj )
                 continue;
 
-            auto childRes = childObj->deserializeRecursive( path / key, child, progressCb, objCounter );
+            auto childRes = childObj->deserializeRecursive( path / pathFromUtf8( key ), child, progressCb, objCounter );
             if ( !childRes.has_value() )
                 return childRes;
             addChild( childObj );

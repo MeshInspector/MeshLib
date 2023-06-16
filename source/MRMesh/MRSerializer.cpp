@@ -275,7 +275,7 @@ VoidOrErrStr decompressZip( const std::filesystem::path& zipFile, const std::fil
 
         std::string nameFixed = stats.name;
         std::replace( nameFixed.begin(), nameFixed.end(), '\\', '/' );
-        std::filesystem::path relativeName = nameFixed;
+        std::filesystem::path relativeName = pathFromUtf8( nameFixed );
         relativeName.make_preferred();
         std::filesystem::path newItemPath = targetFolder / relativeName;
         if ( !nameFixed.empty() && nameFixed.back() == '/' )

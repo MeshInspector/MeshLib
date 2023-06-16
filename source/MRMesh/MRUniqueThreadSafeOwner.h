@@ -8,6 +8,8 @@
 namespace MR
 {
 
+struct TaskGroup;
+
 /// \addtogroup AABBTreeGroup
 /// \{
 
@@ -33,9 +35,11 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const;
 
-protected:
+private:
     mutable std::mutex mutex_;
     std::unique_ptr<T> obj_;
+    /// not-null during creation of owned object only
+    std::shared_ptr<TaskGroup> construction_;
 };
 
 /// \}

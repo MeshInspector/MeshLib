@@ -9,7 +9,7 @@
 namespace MR
 {
 
-struct TaskGroup : tbb::task_group
+struct CollaborativeCreation : tbb::collaborative_once_flag
 {};
 
 template<typename T>
@@ -19,7 +19,7 @@ template<typename T>
 UniqueThreadSafeOwner<T>::UniqueThreadSafeOwner( const UniqueThreadSafeOwner& b ) 
 { 
     assert( this != &b );
-    // do not lock this since nobody can use it before the end of construction
+    // do not lock this since nobody can use it before the end of collaborativeCreation
     std::unique_lock lock( b.mutex_ );
     if ( b.obj_ )
         obj_.reset( new T( *b.obj_ ) );
@@ -42,7 +42,7 @@ template<typename T>
 UniqueThreadSafeOwner<T>::UniqueThreadSafeOwner( UniqueThreadSafeOwner&& b ) noexcept
 {
     assert( this != &b );
-    // do not lock this since nobody can use it before the end of construction
+    // do not lock this since nobody can use it before the end of collaborativeCreation
     std::unique_lock lock( b.mutex_ );
     obj_ = std::move( b.obj_ );
 }
@@ -65,7 +65,7 @@ template<typename T>
 void UniqueThreadSafeOwner<T>::reset()
 {
     std::unique_lock lock( mutex_ );
-    assert( !construction_ ); // one thread constructs the object, and this thread resets it
+    assert( !collaborativeCreation_ ); // one thread constructs the object, and this thread resets it
     obj_.reset();
 }
 
@@ -79,41 +79,27 @@ T & UniqueThreadSafeOwner<T>::getOrCreate( const std::function<T()> & creator )
         if ( obj_ ) // fast path to avoid locking when everything is ready
             return *obj_;
         assert( creator );
-        bool firstConstructor = false;
-        std::shared_ptr<TaskGroup> construction;
+        std::shared_ptr<CollaborativeCreation> collaborativeCreation;
         {
             std::unique_lock lock( mutex_ );
             if ( obj_ ) // already constructed while we waited for lock
             {
-                assert( !construction_ );
+                assert( !collaborativeCreation_ );
                 return *obj_;
             }
-            if ( !construction_ )
-            {
-                construction_ = std::make_unique<TaskGroup>();
-                firstConstructor = true;
-            }
-            construction = construction_;
+            if ( !collaborativeCreation_ )
+                collaborativeCreation_ = std::make_unique<CollaborativeCreation>();
+            collaborativeCreation = collaborativeCreation_;
         }
-        assert( construction );
-        if ( firstConstructor )
-        {
-            // we do not want this thread while inside creator steal outside piece of work 
-            // and call this function recursively
-            tbb::this_task_arena::isolate( [&]
-            {
-               construction->run( [&]
-               {
-                   auto newObj = std::make_unique<T>( creator() );
-                   std::unique_lock lock( mutex_ );
-                   assert( construction == construction_ );
-                   construction_.reset();
-                   obj_ = std::move( newObj );
-               } );
-            } );
-        }
-        construction->wait();
-        // several iterations are necessary only if the object was reset immediately after construction
+        assert( collaborativeCreation );
+        tbb::collaborative_call_once( *collaborativeCreation, [&] {
+            auto newObj = std::make_unique<T>( creator() );
+            std::unique_lock lock( mutex_ );
+            assert( collaborativeCreation == collaborativeCreation_ );
+            collaborativeCreation_.reset();
+            obj_ = std::move( newObj );
+        } );
+        // several iterations are necessary only if the object was reset immediately after collaborativeCreation
     }
 }
 

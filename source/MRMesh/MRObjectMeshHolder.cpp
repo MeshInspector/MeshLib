@@ -54,12 +54,12 @@ tl::expected<std::future<void>, std::string> ObjectMeshHolder::serializeModel_( 
 #ifndef MRMESH_NO_OPENCTM
     auto save = [mesh = mesh_, filename = utf8string( path ) + ".ctm", this]()
     { 
-        MR::MeshSave::toCtm( *mesh, filename, {}, vertsColorMap_.empty() ? nullptr : &vertsColorMap_ );
+        MR::MeshSave::toCtm( *mesh, pathFromUtf8( filename ), {}, vertsColorMap_.empty() ? nullptr : &vertsColorMap_ );
     };
 #else
     auto save = [mesh = mesh_, filename = utf8string( path ) + ".mrmesh"]()
     {
-        MR::MeshSave::toMrmesh( *mesh, filename );
+        MR::MeshSave::toMrmesh( *mesh, pathFromUtf8( filename ) );
     };
 #endif
 
@@ -178,9 +178,9 @@ VoidOrErrStr ObjectMeshHolder::deserializeModel_( const std::filesystem::path& p
 {
     vertsColorMap_.clear();
 #ifndef MRMESH_NO_OPENCTM
-    auto res = MeshLoad::fromCtm( utf8string( path ) + ".ctm", &vertsColorMap_, progressCb );
+    auto res = MeshLoad::fromCtm( pathFromUtf8( utf8string( path ) + ".ctm" ), &vertsColorMap_, progressCb );
 #else
-    auto res = MeshLoad::fromMrmesh( utf8string( path ) + ".mrmesh", &vertsColorMap_, progressCb );
+    auto res = MeshLoad::fromMrmesh( pathFromUtf8( utf8string( path ) + ".mrmesh" ), &vertsColorMap_, progressCb );
 #endif
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );

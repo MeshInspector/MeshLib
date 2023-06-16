@@ -518,7 +518,10 @@ tl::expected<std::future<void>, std::string> ObjectVoxels::serializeModel_( cons
         return {};
 
     return std::async( getAsyncLaunchType(),
-        [this, filename = utf8string( path ) + ".raw"]() { MR::VoxelsSave::toRawAutoname( vdbVolume_, filename ); } );
+        [this, filename = utf8string( path ) + ".raw"] ()
+    {
+        MR::VoxelsSave::toRawAutoname( vdbVolume_, pathFromUtf8( filename ) );
+    } );
 }
 
 void ObjectVoxels::deserializeFields_( const Json::Value& root )
@@ -555,7 +558,7 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
 #ifndef MRMESH_NO_DICOM
 VoidOrErrStr ObjectVoxels::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
-    auto res = VoxelsLoad::fromRaw( utf8string( path ) + ".raw", progressCb );
+    auto res = VoxelsLoad::fromRaw( pathFromUtf8( utf8string( path ) + ".raw" ), progressCb );
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
     

@@ -822,6 +822,8 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     DecimateSettings decs;
     decs.strategy = DecimateStrategy::ShortestEdgeFirst;
     decs.maxError = settings.targetEdgeLen * settings.edgeLenUniformity;
+    if ( settings.edgeLenUniformity > 0.5f )
+        decs.stabilizer = settings.targetEdgeLen; // this increases uniformity of vertices appeared after edge collapse
     decs.region = settings.region;
     decs.packMesh = settings.packMesh;
     decs.progressCallback = subprogress( settings.progressCallback, 0.5f, 1.0f );

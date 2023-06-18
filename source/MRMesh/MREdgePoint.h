@@ -29,9 +29,13 @@ struct EdgePoint
     /// sets this to the closest end of the edge
     MRMESH_API void moveToClosestVertex();
 
+    /// consider this valid if the edge ID is valid
+    [[nodiscard]] bool valid() const { return e.valid(); }
+    [[nodiscard]] explicit operator bool() const { return e.valid(); }
+
     /// represents the same point relative to sym edge in
     [[nodiscard]] EdgePoint sym() const { return EdgePoint{ e.sym(), 1 - a }; }
-    bool operator==( const EdgePoint& rhs ) const { return ( (( e == rhs.e ) && ( a == rhs.a )) ||
+    [[nodiscard]] bool operator==( const EdgePoint& rhs ) const { return ( (( e == rhs.e ) && ( a == rhs.a )) ||
         (( e == rhs.e.sym() ) && ( a == (1.f - rhs.a) ))); }
 };
 

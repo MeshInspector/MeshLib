@@ -1,7 +1,7 @@
 #pragma once
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRId.h"
-#include "MRMesh/MRMeshEdgePoint.h"
+#include "MRMesh/MREdgePoint.h"
 #include "exports.h"
 
 namespace MR

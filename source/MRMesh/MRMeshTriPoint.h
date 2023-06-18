@@ -2,7 +2,7 @@
 
 #include "MRId.h"
 #include "MRTriPoint.h"
-#include "MRMeshEdgePoint.h"
+#include "MREdgePoint.h"
 
 #include <optional>
 

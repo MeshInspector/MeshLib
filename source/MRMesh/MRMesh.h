@@ -3,7 +3,7 @@
 #include "MRMeshBuilderTypes.h"
 #include "MRMeshTopology.h"
 #include "MRMeshProject.h"
-#include "MRMeshEdgePoint.h"
+#include "MREdgePoint.h"
 #include "MRUniqueThreadSafeOwner.h"
 #include "MRWriter.h"
 #include "MRConstants.h"

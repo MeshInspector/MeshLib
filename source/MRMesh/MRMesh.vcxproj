@@ -109,7 +109,6 @@
     <ClInclude Include="MRMeshTrimWithPlane.h" />
     <ClInclude Include="MRMeshDecimate.h" />
     <ClInclude Include="MRMeshDecimateParallel.h" />
-    <ClInclude Include="MRMeshEdgePoint.h" />
     <ClInclude Include="MRMeshSaveObj.h" />
     <ClInclude Include="MRObjectLabel.h" />
     <ClInclude Include="MRObjectLinesHolder.h" />

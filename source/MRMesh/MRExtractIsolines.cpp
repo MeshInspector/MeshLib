@@ -1,7 +1,7 @@
 #include "MRExtractIsolines.h"
 #include "MRBitSet.h"
 #include "MREdgeIterator.h"
-#include "MRMeshEdgePoint.h"
+#include "MREdgePoint.h"
 #include "MRPlane3.h"
 #include "MRMesh.h"
 #include "MRAffineXf3.h"

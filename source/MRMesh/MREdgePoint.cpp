@@ -1,4 +1,4 @@
-#include "MRMeshEdgePoint.h"
+#include "MREdgePoint.h"
 #include "MRMeshTopology.h"
 #include "MRPolylineTopology.h"
 

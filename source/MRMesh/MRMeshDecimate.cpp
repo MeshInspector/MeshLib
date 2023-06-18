@@ -801,11 +801,12 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     MR_TIMER;
     MR_WRITER( mesh );
 
+    assert( settings.edgeLenUniformity > 0 && settings.edgeLenUniformity <= 1 );
     if ( settings.progressCallback && !settings.progressCallback( 0.0f ) )
         return false;
 
     SubdivideSettings subs;
-    subs.maxEdgeLen = 2 * settings.targetEdgeLen;
+    subs.maxEdgeLen = settings.targetEdgeLen / settings.edgeLenUniformity;
     subs.maxEdgeSplits = 10'000'000;
     subs.maxAngleChangeAfterFlip = settings.maxAngleChangeAfterFlip;
     subs.smoothMode = settings.useCurvature;
@@ -820,7 +821,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
 
     DecimateSettings decs;
     decs.strategy = DecimateStrategy::ShortestEdgeFirst;
-    decs.maxError = settings.targetEdgeLen / 2;
+    decs.maxError = settings.targetEdgeLen * settings.edgeLenUniformity;
     decs.region = settings.region;
     decs.packMesh = settings.packMesh;
     decs.progressCallback = subprogress( settings.progressCallback, 0.5f, 1.0f );

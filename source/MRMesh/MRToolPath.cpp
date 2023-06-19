@@ -380,7 +380,7 @@ tl::expected<ToolPathResult, std::string> constantCuspToolPath( const Mesh& inpu
     } );
 
     if ( cb && !cb( 0.4f ) )
-        return tl::make_unexpected( "Operation was canceled " );
+        return unexpectedOperationCanceled();
 
     res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
     Vector3f lastPoint{ 0.0f, 0.0f, safeZ };
@@ -596,7 +596,7 @@ tl::expected<ToolPathResult, std::string> constantCuspToolPath( const Mesh& inpu
     }
 
     if ( cb && !cb( 1.0f ) )
-        return tl::make_unexpected( "Operation was canceled " );
+        return unexpectedOperationCanceled();
 
     return res;
 }

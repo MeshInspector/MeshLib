@@ -10,6 +10,7 @@
 #include "MRMeshDirMax.h"
 #include "MRParallelFor.h"
 #include "MRObjectGcode.h"
+#include "MRExpected.h"
 
 #include "MRPch/MRTBB.h"
 #include <sstream>
@@ -102,8 +103,8 @@ tl::expected<ToolPathResult, std::string> lacingToolPath( const Mesh& inputMesh,
 
     for ( int step = 0; step < steps; ++step )
     {
-        if ( !cb( float( step ) / steps ) )
-            return tl::make_unexpected( "Operation was canceled" );
+        if ( cb && !cb( float( step ) / steps ) )
+            return unexpectedOperationCanceled();
 
         const auto sections = extractPlaneSections( mesh, Plane3f{ plane.n, plane.d - params.sectionStep * step } );
         if ( sections.empty() )
@@ -205,8 +206,8 @@ tl::expected<ToolPathResult, std::string> lacingToolPath( const Mesh& inputMesh,
         }
     }
 
-    if ( !cb( 1.0f ) )
-        return tl::make_unexpected( "Operation was canceled" );
+    if ( cb && !cb( 1.0f ) )
+        return unexpectedOperationCanceled();
 
     return res;
 }
@@ -233,8 +234,8 @@ tl::expected<ToolPathResult, std::string>  constantZToolPath( const Mesh& inputM
 
     for ( int step = 0; step < steps; ++step )
     {
-        if ( !cb( float( step ) / steps ) )
-            return tl::make_unexpected( "Operation was canceled" );
+        if ( cb && !cb( float( step ) / steps ) )
+            return unexpectedOperationCanceled();
 
         for ( const auto& section : extractPlaneSections( mesh, Plane3f{ plane.n, plane.d - params.sectionStep * step } ) )
         {
@@ -341,8 +342,8 @@ tl::expected<ToolPathResult, std::string>  constantZToolPath( const Mesh& inputM
         }        
     }
 
-    if ( !cb( 1.0f ) )
-        return tl::make_unexpected( "Operation was canceled" );
+    if ( cb && !cb( 1.0f ) )
+        return unexpectedOperationCanceled();
 
     return res;
 }
@@ -378,7 +379,7 @@ tl::expected<ToolPathResult, std::string> constantCuspToolPath( const Mesh& inpu
         }
     } );
 
-    if ( !cb( 0.4f ) )
+    if ( cb && !cb( 0.4f ) )
         return tl::make_unexpected( "Operation was canceled " );
 
     res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
@@ -480,13 +481,14 @@ tl::expected<ToolPathResult, std::string> constantCuspToolPath( const Mesh& inpu
         }
     };
 
-    if ( !cb( 0.5f ) )
-        return tl::make_unexpected( "Operation was canceled " );
+    if ( cb && !cb( 0.5f ) )
+        return unexpectedOperationCanceled();
 
+    auto sbp = subprogress( cb, 0.5f, 1.0f );
     for ( size_t i = 0; i < numIsolines; ++i )
     {
-        if ( !cb( 0.5f + 0.5f * float( i ) / numIsolines ) )
-            return tl::make_unexpected( "Operation was canceled" );
+        if ( sbp && !sbp( float( i ) / numIsolines ) )
+            return unexpectedOperationCanceled();
 
         if ( isoLines[i].empty() )
             continue;
@@ -593,7 +595,7 @@ tl::expected<ToolPathResult, std::string> constantCuspToolPath( const Mesh& inpu
         prevEdgePoint = *nextEdgePointIt;
     }
 
-    if ( !cb( 1.0f ) )
+    if ( cb && !cb( 1.0f ) )
         return tl::make_unexpected( "Operation was canceled " );
 
     return res;

@@ -43,9 +43,9 @@ jobs:
         run: |
           cp scripts/devops/release_body.txt .
           
-          pattern_version='${{SHORT_VERSION}}'
+          pattern_version='SHORT_VERSION'
           version_repl='${{steps.set_tag.outputs.my_tag}}'
-          pattern_path='${{RELEASE_PATH}}'
+          pattern_path='RELEASE_PATH'
           path_repl = 'https://github.com/MeshInspector/Meshlib/releases/download/${{steps.set_tag.outputs.my_tag}}'
           
           sed -i "s|$pattern_version|$version_repl|g" release_body.txt

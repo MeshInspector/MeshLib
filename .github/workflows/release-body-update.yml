@@ -49,9 +49,9 @@ jobs:
           sed -i "s|${pattern_path}|${path_repl}|g" release_body.txt
           sed -i "s|${pattern_version}|${version_repl}|g" release_body.txt
 
-
-
       - name: Upload New Release Body
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           RELEASE_TAG=${{ steps.set_tag.outputs.my_tag }}
           RELEASE_ID=$(gh release view ${{ github.repository }} --json "id" --jq ".[] | select(.tag_name == \"$RELEASE_TAG\") | .id")

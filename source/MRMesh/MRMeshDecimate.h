@@ -193,6 +193,9 @@ struct RemeshSettings
     /// This option in subdivision works best for natural surfaces, where all triangles are close to equilateral and have similar area,
     /// and no sharp edges in between
     bool useCurvature = false;
+    /// the number of iterations of final relaxation of mesh vertices;
+    /// few iterations can give almost perfect uniformity of the vertices and edge lengths but deviate from the original surface
+    int finalRelaxIters = 0;
     /// Region on mesh to be changed, it is updated during the operation
     FaceBitSet * region = nullptr;
     /// Edges specified by this bit-set will never be flipped

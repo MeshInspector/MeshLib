@@ -2,11 +2,6 @@ name: Prepare images
 
 on:
   workflow_call:
-    secrets:
-      BUILD_MACHINE_TOKEN:
-        required: false
-      DOCKERHUB_TOKEN:
-        required: false
     outputs:
       image_tag:
         description: "linux image for testing"
@@ -17,6 +12,9 @@ on:
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+
+env:
+  VCPKG-VERSION: '2023.04.15'
 
 jobs:
   image-select:
@@ -108,7 +106,8 @@ jobs:
 
   linux-image-build-upload:
     needs: [image-select]
-    if: ${{ needs.image-select.outputs.need_linux_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
+    if: ${{ false }}
+    #if: ${{ needs.image-select.outputs.need_linux_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
     timeout-minutes: 60
     runs-on: ${{matrix.os}}
     strategy:
@@ -144,17 +143,19 @@ jobs:
 
   windows-vcpkg-build-upload:
     needs: [image-select]
-    if: ${{ false }} # @todo implement
-    #if: ${{ needs.image-select.outputs.need_windows_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
-    timeout-minutes: 100
-    runs-on: windows-2019
+    #if: ${{ false }} #
+    if: ${{ needs.image-select.outputs.need_windows_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
+    timeout-minutes: 240
+    runs-on: windows-2022
+    env:
+      VCPKG_DEFAULT_TRIPLET: x64-windows-meshlib
     steps:
       - name: Setup vcpkg
         working-directory: C:\vcpkg
         run: |
-          git checkout 2022.11.14
-          call bootstrap-vcpkg.bat
-          sudo vcpkg integrate install
+          git checkout ${{env.VCPKG-VERSION}}
+          bootstrap-vcpkg.bat
+          vcpkg.exe integrate install
 
       - name: Checkout
         uses: actions/checkout@v3
@@ -165,7 +166,25 @@ jobs:
         run: thirdparty\install.bat
 
       - name: Pack vcpkg
-        run: py -3 scripts/devops/vcpkg-package-export.py
+        run: |
+          cp .\thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake C:\vcpkg\triplets\
+          vcpkg export tinyxml2:x64-windows-meshlib  --nuget --output vcpkg-export-2023.04.15.1
+          py -3 scripts/devops/vcpkg-package-export.py --output vcpkg-export-${{env.VCPKG-VERSION}}
 
-      #- name: Upload vcpkg
-       # run:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Upload to AWS Codeartifact
+        working-directory: C:\vcpkg
+        run: |
+          aws codeartifact login --tool dotnet --repository meshlib-vcpkg --domain meshlib --domain-owner 259351611210 --region us-east-1
+          nuget push vcpkg-export-${{env.VCPKG-VERSION}}.1.0.0.nupkg -Source meshlib/meshlib-vcpkg
+          
+      - name: Upload to AWS s3
+        working-directory: C:\vcpkg
+        run: |
+          aws s3 cp ./vcpkg-export-${{env.VCPKG-VERSION}}.1.0.0.nupkg s3://vcpkg-export/vcpkg-export-${{env.VCPKG-VERSION}}.1.0.0.nupkg

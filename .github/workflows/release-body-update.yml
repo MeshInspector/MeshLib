@@ -54,4 +54,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           RELEASE_ID=$(gh release view ${{ steps.set_tag.outputs.my_tag }} --json "id"  --jq ".[]")
-          gh release edit $RELEASE_ID --body release_body.txt
+          gh release edit $RELEASE_ID --notes-file release_body.txt

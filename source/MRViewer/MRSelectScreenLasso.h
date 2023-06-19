@@ -26,9 +26,8 @@ public:
      * closing border part is segment from begin to end point.
      * 
      * return the matrix of pixels (in local space of active viewport) belonging selected area
-     * vector contains lines of pixels (rows), and each BitSet contains pixel in line (columns)
      */
-    MRVIEWER_API std::vector<BitSet> calculateSelectedPixels( Viewer* viewer );
+    MRVIEWER_API BitSet calculateSelectedPixels( Viewer* viewer );
 
 private:
     std::vector<Vector2f> screenLoop_;
@@ -36,20 +35,30 @@ private:
 
 /**
  * get faces ids of object located in selected area on viewport
- * @param bsVec the matrix of pixels (in local space of viewport) belonging selected area
+ * @param pixBs the matrix of pixels (in local space of viewport) belonging selected area
  * @param onlyVisible get only visible faces (that no covered another faces)
  * @param includeBackfaces get also faces from back side of object
  */
-MRVIEWER_API FaceBitSet findIncidentFaces( const Viewport& viewport, const std::vector<BitSet>& bsVec, const ObjectMesh& obj,
+MRVIEWER_API FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, const ObjectMesh& obj,
                                            bool onlyVisible = false, bool includeBackfaces = true, 
                                            const std::vector<ObjectMesh*> * occludingMeshes = nullptr ); // these meshes can influence face visibility in onlyVisible=true mode
+
+/**
+ * appends viewport visible faces (in pixBs) to visibleFaces
+ * @param pixBs the matrix of pixels (in local space of viewport) belonging selected area
+ * @param objects of interest
+ * @param visibleFaces vector that correspond to objects and will be updated in this function
+ * @param includeBackfaces get also faces from back side of object
+ */
+MRVIEWER_API void appendGPUVisibleFaces( const Viewport& viewport, const BitSet& pixBs, const std::vector<std::shared_ptr<ObjectMesh>>& objects,
+    std::vector<FaceBitSet>& visibleFaces, bool includeBackfaces = true );
 
 /**
  * get vertex ids of object located in selected area on viewport
  * @param bsVec the matrix of pixels (in local space of viewport) belonging to selected area
  * @param includeBackfaces get also vertices with normals not toward the camera
  */
-MRVIEWER_API VertBitSet findVertsInViewportArea( const Viewport& viewport, const std::vector<BitSet>& bsVec, const ObjectPoints& obj,
+MRVIEWER_API VertBitSet findVertsInViewportArea( const Viewport& viewport, const BitSet& bsVec, const ObjectPoints& obj,
                          bool includeBackfaces = true );
 
 }

@@ -182,6 +182,13 @@ public:
     MRVIEWER_API std::vector<std::shared_ptr<VisualObject>> findObjectsInRect( const Box2i& rect, 
                                                                                int maxRenderResolutionSide = 512 ) const;
 
+    // This functions finds all visible faces in given includePixBs in viewport space,
+    // maxRenderResolutionSide - this parameter limits render resolution to improve performance
+    //                           if it is too small, little faces can be lost
+    // viewport space: X [0,viewport_width], Y [0,viewport_height] - (0,0) is upper left of viewport
+    MRVIEWER_API std::unordered_map<std::shared_ptr<ObjectMesh>, FaceBitSet> findVisibleFaces( const BitSet& includePixBs,
+        int maxRenderResolutionSide = 512 ) const;
+
     // This function allows to pick point in scene by GL
     // comfortable usage:
     //     const auto [obj,pick] = pick_render_object();

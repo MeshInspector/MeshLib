@@ -52,6 +52,4 @@ jobs:
       - name: Upload New Release Body
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          RELEASE_ID=$(gh release view ${{ steps.set_tag.outputs.my_tag }} --json "id"  --jq ".[]")
-          gh release edit $RELEASE_ID --notes-file release_body.txt
+        run: gh release edit ${{ steps.set_tag.outputs.my_tag }} --notes-file release_body.txt

@@ -22,7 +22,7 @@ jobs:
       - name: Determine latest release tag
         id: latest_release
         run: |
-          LATEST_RELEASE_TAG=$(git describe --tags --abbrev=0)
+          LATEST_RELEASE_TAG=$(gh release list --exclude-drafts --repo ${{ github.repository }} --limit 1 | awk '{print $4}')
           echo "::set-output name=tag::${{ env.LATEST_RELEASE_TAG }}"
 
       - name: Read release tag

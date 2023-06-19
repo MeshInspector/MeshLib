@@ -9,6 +9,7 @@
 #include "MRSurfaceDistance.h"
 #include "MRMeshDirMax.h"
 #include "MRParallelFor.h"
+#include "MRObjectGcode.h"
 
 #include "MRPch/MRTBB.h"
 #include <sstream>
@@ -61,7 +62,7 @@ Mesh preprocessMesh( const Mesh& inputMesh, const ToolPathParams& params, const 
     return meshCopy;
 }
 
-void addSurfacePath( Contour3f& toolPath, std::vector<GCommand>& gcode, const Mesh& mesh, const MeshEdgePoint& start, const MeshEdgePoint& end )
+void addSurfacePath( std::vector<GCommand>& gcode, const Mesh& mesh, const MeshEdgePoint& start, const MeshEdgePoint& end )
 {
     const auto sp = computeSurfacePath( mesh, start, end );
     if ( !sp.has_value() || sp->empty() )
@@ -70,7 +71,6 @@ void addSurfacePath( Contour3f& toolPath, std::vector<GCommand>& gcode, const Me
     if ( sp->size() == 1 )
     {
         const auto p = mesh.edgePoint( sp->front() );
-        toolPath.push_back( p );
         gcode.push_back( { .x = p.x, .y = p.y, .z = p.z } );
     }
     else
@@ -78,17 +78,15 @@ void addSurfacePath( Contour3f& toolPath, std::vector<GCommand>& gcode, const Me
         Polyline3 transit;
         transit.addFromSurfacePath( mesh, *sp );
         const auto transitContours = transit.contours().front();
-        toolPath.insert( toolPath.end(), transitContours.begin(), transitContours.end() );
         for ( const auto& p : transitContours )
             gcode.push_back( { .x = p.x, .y = p.y, .z = p.z } );
     }
 
     const auto p = mesh.edgePoint( end );
-    toolPath.push_back( p );
     gcode.push_back( { .x = p.x, .y = p.y, .z = p.z } );
 }
 
-ToolPathResult lacingToolPath( const Mesh& inputMesh, const ToolPathParams& params, const AffineXf3f* xf )
+tl::expected<ToolPathResult, std::string> lacingToolPath( const Mesh& inputMesh, const ToolPathParams& params, const AffineXf3f* xf, ProgressCallback cb )
 {
     ToolPathResult  res{ .modifiedMesh = preprocessMesh( inputMesh, params, xf ) };
     const auto& mesh = res.modifiedMesh;
@@ -100,12 +98,13 @@ ToolPathResult lacingToolPath( const Mesh& inputMesh, const ToolPathParams& para
     const auto plane = MR::Plane3f::fromDirAndPt( normal, box.max );
     const int steps = int( std::floor( ( plane.d - box.min.x ) / params.sectionStep ) );
 
-    Contour3f toolPath;
-
     MeshEdgePoint lastEdgePoint = {};
 
     for ( int step = 0; step < steps; ++step )
     {
+        if ( !cb( float( step ) / steps ) )
+            return tl::make_unexpected( "Operation was canceled" );
+
         const auto sections = extractPlaneSections( mesh, Plane3f{ plane.n, plane.d - params.sectionStep * step } );
         if ( sections.empty() )
             continue;
@@ -132,19 +131,16 @@ ToolPathResult lacingToolPath( const Mesh& inputMesh, const ToolPathParams& para
 
         if ( step & 1 )
         {
-            if ( toolPath.empty() )
+            if ( res.commands.empty() )
             {
-                toolPath.push_back( { 0, 0, safeZ } );
                 res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
-                toolPath.push_back( { bottomLeftIt->x, bottomLeftIt->y, safeZ } );
                 res.commands.push_back( { .type = MoveType::FastLinear, .x = bottomLeftIt->x, .y = bottomLeftIt->y } );
-                toolPath.push_back( *bottomLeftIt );
                 res.commands.push_back( { .x = bottomLeftIt->x, .y = bottomLeftIt->y, .z = bottomLeftIt->z } );
             }
             else
             {
                 const auto nextEdgePoint = section[bottomLeftIt - contour.begin()];
-                addSurfacePath( toolPath, res.commands, mesh, lastEdgePoint, nextEdgePoint );
+                addSurfacePath( res.commands, mesh, lastEdgePoint, nextEdgePoint );
             }
 
             if ( bottomLeftIt < bottomRightIt )
@@ -152,7 +148,6 @@ ToolPathResult lacingToolPath( const Mesh& inputMesh, const ToolPathParams& para
                 res.commands.reserve( res.commands.size() + std::distance( bottomLeftIt, bottomRightIt ) + 1 );
                 for ( auto it = bottomLeftIt; it <= bottomRightIt; ++it )
                 {
-                    toolPath.push_back( *it );
                     res.commands.push_back( { .y = it->y, .z = it->z } );
                 }
             }
@@ -161,13 +156,11 @@ ToolPathResult lacingToolPath( const Mesh& inputMesh, const ToolPathParams& para
                 res.commands.reserve( res.commands.size() + std::distance( bottomLeftIt, contour.end() ) + std::distance( contour.begin(), bottomRightIt ) );
                 for ( auto it = bottomLeftIt; it < contour.end(); ++it )
                 {
-                    toolPath.push_back( *it );
                     res.commands.push_back( { .y = it->y, .z = it->z } );
                 }
 
                 for ( auto it = std::next( contour.begin() ); it <= bottomRightIt; ++it )
                 {
-                    toolPath.push_back( *it );
                     res.commands.push_back( { .y = it->y, .z = it->z } );
                 }
             }
@@ -176,26 +169,22 @@ ToolPathResult lacingToolPath( const Mesh& inputMesh, const ToolPathParams& para
         }
         else
         {
-            if ( toolPath.empty() )
+            if ( res.commands.empty() )
             {
-                toolPath.push_back( { 0, 0, safeZ } );
                 res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
-                toolPath.push_back( { bottomRightIt->x, bottomRightIt->y, safeZ } );
                 res.commands.push_back( { .type = MoveType::FastLinear, .x = bottomRightIt->x, .y = bottomRightIt->y } );
-                toolPath.push_back( *bottomRightIt );
                 res.commands.push_back( { .x = bottomRightIt->x, .y = bottomRightIt->y, .z = bottomRightIt->z } );
             }
             else
             {
                 const auto nextEdgePoint = section[bottomRightIt - contour.begin()];
-                addSurfacePath( toolPath, res.commands, mesh, lastEdgePoint, nextEdgePoint );
+                addSurfacePath( res.commands, mesh, lastEdgePoint, nextEdgePoint );
             }
 
             if ( bottomLeftIt < bottomRightIt )
             {
                 for ( auto it = bottomRightIt - 1; it >= bottomLeftIt; --it )
                 {
-                    toolPath.push_back( *it );
                     res.commands.push_back( { .y = it->y, .z = it->z } );
                 }
             }
@@ -203,13 +192,11 @@ ToolPathResult lacingToolPath( const Mesh& inputMesh, const ToolPathParams& para
             {
                 for ( auto it = bottomRightIt; it > contour.begin(); --it )
                 {
-                    toolPath.push_back( *it );
                     res.commands.push_back( { .y = it->y, .z = it->z } );
                 }
 
                 for ( auto it = std::prev( contour.end() ); it >= bottomLeftIt; --it )
                 {
-                    toolPath.push_back( *it );
                     res.commands.push_back( { .y = it->y, .z = it->z } );
                 }
             }
@@ -218,11 +205,13 @@ ToolPathResult lacingToolPath( const Mesh& inputMesh, const ToolPathParams& para
         }
     }
 
-    res.toolPath = Polyline3( Contours3f{ toolPath } );
+    if ( !cb( 1.0f ) )
+        return tl::make_unexpected( "Operation was canceled" );
+
     return res;
 }
 
-ToolPathResult constantZToolPath( const Mesh& inputMesh, const ToolPathParams& params, const AffineXf3f* xf )
+tl::expected<ToolPathResult, std::string>  constantZToolPath( const Mesh& inputMesh, const ToolPathParams& params, const AffineXf3f* xf, ProgressCallback cb )
 {
     ToolPathResult  res{ .modifiedMesh = preprocessMesh( inputMesh, params, xf ) };
     const auto& mesh = res.modifiedMesh;
@@ -234,7 +223,7 @@ ToolPathResult constantZToolPath( const Mesh& inputMesh, const ToolPathParams& p
     const auto plane = MR::Plane3f::fromDirAndPt( normal, box.max );
     const int steps = int( std::floor( ( plane.d - box.min.z ) / params.sectionStep ) );
 
-    Contour3f toolPath{ { 0, 0, safeZ } };
+    float currentZ = safeZ;
     res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
 
     MeshEdgePoint prevEdgePoint;
@@ -243,7 +232,10 @@ ToolPathResult constantZToolPath( const Mesh& inputMesh, const ToolPathParams& p
     bool needToRestoreBaseFeed = true;
 
     for ( int step = 0; step < steps; ++step )
-    {        
+    {
+        if ( !cb( float( step ) / steps ) )
+            return tl::make_unexpected( "Operation was canceled" );
+
         for ( const auto& section : extractPlaneSections( mesh, Plane3f{ plane.n, plane.d - params.sectionStep * step } ) )
         {
             Polyline3 polyline;
@@ -279,37 +271,28 @@ ToolPathResult constantZToolPath( const Mesh& inputMesh, const ToolPathParams& p
             
             if ( !prevEdgePoint.e.valid() || minDistSq > critTransitionLengthSq )
             {
-                const auto lastPoint = toolPath.back();
-                if ( lastPoint.z < safeZ )
+                if ( currentZ < safeZ )
                 {
-                    if ( safeZ - lastPoint.z > params.retractLength )
+                    if ( safeZ - currentZ > params.retractLength )
                     {
-                        const float zRetract = lastPoint.z + params.retractLength;
-                        toolPath.push_back( { toolPath.back().x, toolPath.back().y, zRetract } );
+                        const float zRetract = currentZ + params.retractLength;
                         res.commands.push_back( { .feed = params.retractFeed, .z = zRetract } );
-                        toolPath.push_back( { toolPath.back().x, toolPath.back().y, safeZ } );
                         res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
                     }
                     else
                     {
-                        toolPath.push_back( { toolPath.back().x, toolPath.back().y, safeZ } );
                         res.commands.push_back( { .feed =params.retractFeed, .z = safeZ } );
                     }
                 }
 
-                toolPath.push_back( { pivotIt->x, pivotIt->y, safeZ } );
                 res.commands.push_back( { .type = MoveType::FastLinear, .x = pivotIt->x, .y = pivotIt->y } );
 
                 if ( safeZ - pivotIt->z > params.plungeLength )
                 {
                     const float zPlunge = pivotIt->z + params.plungeLength;
-                    toolPath.push_back( { pivotIt->x, pivotIt->y, zPlunge } );
                     res.commands.push_back( { .type = MoveType::FastLinear, .z = zPlunge } );
                 }
-                 
-                toolPath.push_back( *pivotIt );
                 res.commands.push_back( { .feed = params.plungeFeed, .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );
-
                 needToRestoreBaseFeed = true;
             }
             else
@@ -320,7 +303,6 @@ ToolPathResult constantZToolPath( const Mesh& inputMesh, const ToolPathParams& p
                     if ( sp->size() == 1 )
                     {
                         const auto p = mesh.edgePoint( sp->front() );
-                        toolPath.push_back( p );
                         res.commands.push_back( { .x = p.x, .y = p.y, .z = p.z } );
                     }
                     else
@@ -328,19 +310,15 @@ ToolPathResult constantZToolPath( const Mesh& inputMesh, const ToolPathParams& p
                         Polyline3 transit;
                         transit.addFromSurfacePath( mesh, *sp );
                         const auto transitContours = transit.contours().front();
-                        toolPath.insert( toolPath.end(), transitContours.begin(), transitContours.end() );
                         for ( const auto& p : transitContours )
                             res.commands.push_back( { .x = p.x, .y = p.y, .z = p.z } );
                     }
                 }
 
-                toolPath.push_back( *pivotIt );
-                res.commands.push_back( { .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );
+                res.commands.push_back( { .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );                
             }
-            
-            toolPath.insert( toolPath.end(),  pivotIt + 1, contours.end() );
-            toolPath.insert( toolPath.end(), contours.begin() + 1, pivotIt + 1 );
 
+            currentZ = pivotIt->z;
             auto startIt = pivotIt + 1;
             if ( needToRestoreBaseFeed )
             {
@@ -363,12 +341,14 @@ ToolPathResult constantZToolPath( const Mesh& inputMesh, const ToolPathParams& p
         }        
     }
 
-    res.toolPath = Polyline3( Contours3f{ toolPath } );
+    if ( !cb( 1.0f ) )
+        return tl::make_unexpected( "Operation was canceled" );
+
     return res;
 }
 
 
-ToolPathResult constantCuspToolPath( const Mesh& inputMesh, const ToolPathParams& params, VertId startPoint, const AffineXf3f* xf )
+tl::expected<ToolPathResult, std::string> constantCuspToolPath( const Mesh& inputMesh, const ToolPathParams& params, VertId startPoint, const AffineXf3f* xf, ProgressCallback cb )
 {
     ToolPathResult  res{ .modifiedMesh = preprocessMesh( inputMesh, params, xf ) };
     
@@ -398,8 +378,11 @@ ToolPathResult constantCuspToolPath( const Mesh& inputMesh, const ToolPathParams
         }
     } );
 
-    Contour3f toolPath{ { 0, 0, safeZ } };
+    if ( !cb( 0.4f ) )
+        return tl::make_unexpected( "Operation was canceled " );
+
     res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
+    Vector3f lastPoint{ 0.0f, 0.0f, safeZ };
 
     MeshEdgePoint prevEdgePoint;
 
@@ -407,11 +390,11 @@ ToolPathResult constantCuspToolPath( const Mesh& inputMesh, const ToolPathParams
 
     const auto addPointToTheToolPath = [&] ( const Vector3f& p )
     {
-        if ( p == toolPath.back() )
+        if ( p == lastPoint )
             return;
-
-        toolPath.push_back( p );        
+      
         res.commands.push_back( { .x = p.x, .y = p.y, .z = p.z } );
+        lastPoint = p;
     };
 
     const auto findNearestPoint = [] ( const Contour3f& contour, const Vector3f& p )
@@ -497,8 +480,14 @@ ToolPathResult constantCuspToolPath( const Mesh& inputMesh, const ToolPathParams
         }
     };
 
-    for ( size_t i = 0; i < isoLines.size(); ++i )
+    if ( !cb( 0.5f ) )
+        return tl::make_unexpected( "Operation was canceled " );
+
+    for ( size_t i = 0; i < numIsolines; ++i )
     {
+        if ( !cb( 0.5f + 0.5f * float( i ) / numIsolines ) )
+            return tl::make_unexpected( "Operation was canceled" );
+
         if ( isoLines[i].empty() )
             continue;
 
@@ -541,17 +530,14 @@ ToolPathResult constantCuspToolPath( const Mesh& inputMesh, const ToolPathParams
 
         if ( i == 0 )
         {
-            toolPath.push_back( { pivotIt->x, pivotIt->y, safeZ } );
             res.commands.push_back( { .type = MoveType::FastLinear, .x = pivotIt->x, .y = pivotIt->y } );
 
             if ( safeZ - pivotIt->z > params.plungeLength )
             {
                 const float zPlunge = pivotIt->z + params.plungeLength;
-                toolPath.push_back( { pivotIt->x, pivotIt->y, zPlunge } );
                 res.commands.push_back( { .type = MoveType::FastLinear, .z = zPlunge } );
             }
 
-            toolPath.push_back( *pivotIt );
             res.commands.push_back( { .feed = params.plungeFeed, .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );
         }
         else
@@ -599,7 +585,6 @@ ToolPathResult constantCuspToolPath( const Mesh& inputMesh, const ToolPathParams
                 }
             }
 
-            toolPath.push_back( *pivotIt );
             res.commands.push_back( { .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );
         }
         
@@ -608,7 +593,9 @@ ToolPathResult constantCuspToolPath( const Mesh& inputMesh, const ToolPathParams
         prevEdgePoint = *nextEdgePointIt;
     }
 
-    res.toolPath = Polyline3( Contours3f{ toolPath } );
+    if ( !cb( 1.0f ) )
+        return tl::make_unexpected( "Operation was canceled " );
+
     return res;
 }
 
@@ -780,12 +767,13 @@ void interpolateArcs( std::vector<GCommand>& commands, const ArcInterpolationPar
     }
 }
 
-std::string exportToolPathToGCode( const std::vector<GCommand>& commands )
+std::shared_ptr<ObjectGcode> exportToolPathToGCode( const std::vector<GCommand>& commands )
 {
-    std::ostringstream gcode;    
+    auto gcodeSource = std::make_shared<std::vector<std::string>>();
 
     for ( const auto& command : commands )
     {
+        std::ostringstream gcode;
         gcode << "G" << int( command.type );
 
         if ( !std::isnan( command.x ) )
@@ -810,9 +798,12 @@ std::string exportToolPathToGCode( const std::vector<GCommand>& commands )
             gcode << " F" << command.feed;
 
         gcode << std::endl;
+        gcodeSource->push_back( gcode.str() );
     }
 
-    return gcode.str();
+    auto res = std::make_shared<ObjectGcode>();
+    res->setGcodeSource( gcodeSource );
+    return res;
 }
 
 float distSqrToLineSegment( const MR::Vector2f p, const MR::Vector2f& seg0, const MR::Vector2f& seg1 )

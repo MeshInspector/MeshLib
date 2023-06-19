@@ -49,7 +49,7 @@ jobs:
           path_repl = 'https://github.com/MeshInspector/Meshlib/releases/download/${{steps.set_tag.outputs.my_tag}}'
           
           sed -i "s|$pattern_version|$version_repl|g" release_body.txt
-          sed -i "s|$pattern_path|path_repl|g" release_body.txt
+          sed -i "s|$pattern_path|$path_repl|g" release_body.txt
 
       - name: Upload New Release Body
         run: |

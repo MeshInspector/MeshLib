@@ -365,7 +365,7 @@ ViewportGL::PickResults ViewportGL::pickObjects( const PickParameters& params, c
         unsigned geomId = color[1];
         float z = float(color[3])/float( 0xffffffff );
 
-        results[i] = {geomId ,primId ,z};
+        results[i] = { {geomId ,primId },z };
     }
 
     // Filter results

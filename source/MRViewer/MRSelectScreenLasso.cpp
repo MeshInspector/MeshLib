@@ -27,7 +27,7 @@ void SelectScreenLasso::addPoint( int mouseX, int mouseY )
     }
 }
 
-std::vector<BitSet> SelectScreenLasso::calculateSelectedPixels( Viewer* viewer )
+BitSet SelectScreenLasso::calculateSelectedPixels( Viewer* viewer )
 {
     if ( screenLoop_.empty() )
         return {};
@@ -45,10 +45,9 @@ std::vector<BitSet> SelectScreenLasso::calculateSelectedPixels( Viewer* viewer )
     contour.back() = contour.front();
 
     Polyline2 polygon( { std::move( contour ) } );
-    // initialize line wise bitsets
-    std::vector<BitSet> bsVec( int( height( vpRect ) ) + 1 );
-    for ( auto& bs : bsVec )
-        bs.resize( int( width( vpRect ) + 1 ) );
+    auto width = int( MR::width( vpRect ) );
+    auto height = int( MR::height( vpRect ) );
+    BitSet resBS( width * height );
 
     auto box = Box2i( polygon.getBoundingBox() );
     box.min -= Vector2i::diagonal( 1 );
@@ -57,38 +56,27 @@ std::vector<BitSet> SelectScreenLasso::calculateSelectedPixels( Viewer* viewer )
         box.min.x = 0;
     if ( box.min.y < 0 )
         box.min.y = 0;
-    if ( box.max.x > int( width( vpRect ) + 1 ) )
-        box.max.x = int( width( vpRect ) + 1 );
-    if ( box.max.y > int( height( vpRect ) + 1 ) )
-        box.max.y = int( height( vpRect ) + 1 );
+    if ( box.max.x >= width )
+        box.max.x = width - 1;
+    if ( box.max.y >= height )
+        box.max.y = height - 1;
 
     // mark all pixels in the polygon
-    tbb::parallel_for( tbb::blocked_range<int>( box.min.y, box.max.y ),
-        [&] ( const tbb::blocked_range<int>& range )
+    BitSetParallelForAll( resBS, [&] ( size_t i )
     {
-        for ( int y = range.begin(); y < range.end(); ++y )
-        {
-            auto& curBs = bsVec[y];
-            for ( int x = box.min.x; x < box.max.x; x++ )
-            {
-                curBs.set( x, isPointInsidePolyline( polygon, Vector2f( float( x ), float( y ) ) ) );
-            }
-        }
+        Vector2i coord( int( i ) % width, int( i ) / width );
+        if ( !box.contains( coord ) )
+            return;
+        resBS.set( i, isPointInsidePolyline( polygon, Vector2f( coord ) ) );
     } );
 
-    return bsVec;
+    return resBS;
 }
 
-FaceBitSet findIncidentFaces( const Viewport& viewport, const std::vector<BitSet>& bsVec, const ObjectMesh& obj,
+FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, const ObjectMesh& obj,
                               bool onlyVisible, bool includeBackfaces, const std::vector<ObjectMesh*> * occludingMeshes )
 {
-    if ( bsVec.empty() )
-        return {};
-
-    bool any = false;
-    for ( const auto& bs : bsVec )
-        any = any || bs.any();
-    if ( !any )
+    if ( pixBs.none() )
         return {};
 
     const auto& mesh = obj.mesh();
@@ -101,13 +89,16 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const std::vector<BitSet
         return viewport.projectToClipSpace( p );
     };
 
+    auto width = MR::width( vpRect );
+    auto height = MR::height( vpRect );
+
     auto inSelectedArea = [&]( const Vector3f & clipSpacePoint )
     {
         if ( clipSpacePoint[0] < -1.f || clipSpacePoint[0] > 1.f || clipSpacePoint[1] < -1.f || clipSpacePoint[1] > 1.f )
             return false;
-        auto y = std::clamp( std::lround( ( -clipSpacePoint[1] / 2.f + 0.5f ) * height( vpRect ) ), long( 0 ), long( bsVec.size() ) - 1 );
-        auto x = std::clamp( std::lround( ( clipSpacePoint[0] / 2.f + 0.5f ) * width( vpRect ) ), long( 0 ), long( bsVec[y].size() ) - 1 );
-        return bsVec[y].test( x );
+        auto y = std::clamp( std::lround( ( -clipSpacePoint[1] / 2.f + 0.5f ) * height ), long( 0 ), long( height )-1 );
+        auto x = std::clamp( std::lround( ( clipSpacePoint[0] / 2.f + 0.5f ) * width ), long( 0 ), long( width ) - 1 );
+        return pixBs.test( x + long( width ) * y );
     };
 
     // find all verts inside
@@ -147,7 +138,7 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const std::vector<BitSet
         triClipBox.intersect( clipArea );
         if ( !triClipBox.valid() )
             return;
-        const int maxPixelSpan = ( int ) std::lround( std::max( triClipBox.size().x * width( vpRect ), triClipBox.size().y * height( vpRect ) ) / 2 );
+        const int maxPixelSpan = ( int ) std::lround( std::max( triClipBox.size().x * width, triClipBox.size().y * height ) / 2 );
         if ( maxPixelSpan < 6 ) // subdivide only triangles larger than 6 pixels in one of dimensions
             return;
         const int steps = std::min( maxPixelSpan / 2, 64 ); // sample over every second pixel
@@ -243,16 +234,36 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const std::vector<BitSet
     return res;
 }
 
-VertBitSet findVertsInViewportArea( const Viewport& viewport, const std::vector<BitSet>& bsVec, const ObjectPoints& obj,
+void appendGPUVisibleFaces( const Viewport& viewport, const BitSet& pixBs, 
+    const std::vector<std::shared_ptr<ObjectMesh>>& objects, 
+    std::vector<FaceBitSet>& visibleFaces, bool includeBackfaces /*= true */ )
+{
+    const auto cameraEye = viewport.getCameraPoint();
+    auto gpuPickerVisibleFaces = viewport.findVisibleFaces( pixBs );
+    for ( int i = 0; i < objects.size(); ++i )
+    {
+        const auto& selMesh = objects[i];
+        auto it = gpuPickerVisibleFaces.find( selMesh );
+        if ( it == gpuPickerVisibleFaces.end() )
+            continue;
+        if ( !includeBackfaces )
+        {
+            const auto xf = selMesh->worldXf();
+            BitSetParallelFor( it->second, [&] ( FaceId f )
+            {
+                auto n = selMesh->mesh()->dirDblArea( f );
+                if ( dot( xf.A * n, cameraEye ) < 0 )
+                    it->second.set( f, false );
+            } );
+        }
+        visibleFaces[i] |= it->second;
+    }
+}
+
+VertBitSet findVertsInViewportArea( const Viewport& viewport, const BitSet& pixBs, const ObjectPoints& obj,
                                     bool includeBackfaces /*= true */ )
 {
-    if ( bsVec.empty() )
-        return {};
-
-    bool any = false;
-    for ( const auto& bs : bsVec )
-        any = any || bs.any();
-    if ( !any )
+    if ( pixBs.none() )
         return {};
 
     const auto& pointCloud = obj.pointCloud();
@@ -265,13 +276,16 @@ VertBitSet findVertsInViewportArea( const Viewport& viewport, const std::vector<
         return viewport.projectToClipSpace( p );
     };
 
+    auto width = MR::width( vpRect );
+    auto height = MR::height( vpRect );
+
     auto inSelectedArea = [&]( const Vector3f& clipSpacePoint )
     {
         if ( clipSpacePoint[0] < -1.f || clipSpacePoint[0] > 1.f || clipSpacePoint[1] < -1.f || clipSpacePoint[1] > 1.f )
             return false;
-        auto x = std::lround( ( clipSpacePoint[0] / 2.f + 0.5f ) * width( vpRect ) );
-        auto y = std::lround( ( -clipSpacePoint[1] / 2.f + 0.5f ) * height( vpRect ) );
-        return bsVec[y].test( x );
+        auto x = std::lround( ( clipSpacePoint[0] / 2.f + 0.5f ) * width );
+        auto y = std::lround( ( -clipSpacePoint[1] / 2.f + 0.5f ) * height );
+        return pixBs.test( x + y * long( width ) );
     };
 
     // find all verts inside

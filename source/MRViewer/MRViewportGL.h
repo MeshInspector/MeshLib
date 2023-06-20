@@ -2,6 +2,7 @@
 #include "MRViewerFwd.h"
 #include "MRMesh/MRVector4.h"
 #include "MRMesh/MRVector2.h"
+#include "MRMesh/MRBox.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRLineSegm3.h"
 #include "MRMesh/MRColor.h"
@@ -111,11 +112,14 @@ public:
         Plane3f clippingPlane;                                // viewport clip plane (it is not applied while object does not have clipping flag set)
         ViewportId viewportId;                                // viewport id
     };
-    // Result of object picking
-    struct PickResult
+    struct BasePickResult
     {
-        unsigned geomId{unsigned( -1 )};  // id of picked object in PickParameters::renderVector (-1 means invalid)
-        unsigned primId{unsigned( -1 )};  // id of picked primitive (-1 means invalid)
+        unsigned geomId{ unsigned( -1 ) };  // id of picked object in PickParameters::renderVector (-1 means invalid)
+        unsigned primId{ unsigned( -1 ) };  // id of picked primitive (-1 means invalid)
+    };
+    // Result of object picking
+    struct PickResult : BasePickResult
+    {
         float zBuffer{1.0f};  // camera z coordinate of picked point (1.0f means far plane)
     };
     using PickResults = std::vector<PickResult>;
@@ -125,6 +129,17 @@ public:
     // if maxRenderResolutionSide less then current rect size, downscale rendering for better performance
     std::vector<unsigned> findUniqueObjectsInRect( const PickParameters& params, const Box2i& rect,
                                                    int maxRenderResolutionSide ) const;
+
+    using BasePickResults = std::vector<BasePickResult>;
+    struct ScaledPickRes
+    {
+        BasePickResults pickRes;
+        Box2i updatedBox;
+    };
+    // Pick all pixels in rect
+    // if maxRenderResolutionSide less then current rect size, downscale rendering for better performance
+    ScaledPickRes pickObjectsInRect( const PickParameters& params, const Box2i& rect,
+        int maxRenderResolutionSide ) const;
 
     mutable bool lines_dirty = true;
     mutable bool points_dirty = true;

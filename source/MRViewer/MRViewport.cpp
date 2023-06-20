@@ -17,6 +17,7 @@
 #include "MRPch/MRTBB.h"
 #include "MRMesh/MR2to3.h"
 #include "MRMesh/MRObjectVoxels.h"
+#include "MRMesh/MRBitSetParallelFor.h"
 
 using VisualObjectTreeDataVector = std::vector<MR::VisualObject*>;
 namespace
@@ -263,6 +264,82 @@ std::vector<std::shared_ptr<MR::VisualObject>> Viewport::findObjectsInRect( cons
     }
 
     return result;
+}
+
+std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> Viewport::findVisibleFaces( const BitSet& includePixBs, 
+    int maxRenderResolutionSide /*= 512 */ ) const
+{
+    MR_TIMER;
+
+    VisualObjectTreeDataVector renderVector;
+    getPickerDataVector( SceneRoot::get(), id, renderVector );
+
+    ViewportGL::PickParameters params{
+        renderVector,
+        { viewM_,projM_,toVec4<int>( viewportRect_ ) },
+            params_.clippingPlane, id };
+
+    int width = int( MR::width( viewportRect_ ) );
+    int height = int( MR::height( viewportRect_ ) );
+    tbb::enumerable_thread_specific<Box2i> tlBoxes;
+    BitSetParallelFor( includePixBs, [&] ( size_t i )
+    {
+        auto& localBox = tlBoxes.local();
+        localBox.include( Vector2i( int( i ) % width, int( i ) / width ) );
+    } );
+    Box2i rect;
+    for ( const auto& box : tlBoxes )
+        rect.include( box );
+
+    auto viewportRect = Box2i( Vector2i( 0, 0 ), Vector2i( width, height ) );
+    auto realRect = rect.intersection( viewportRect );
+    auto [pickResult, updatedBox] = viewportGL_.pickObjectsInRect( params, realRect, maxRenderResolutionSide );
+
+    std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> resMap;
+
+    for ( int i = 0; i < pickResult.size(); ++i )
+    {
+        Vector2f downscaledPosRatio;
+        downscaledPosRatio.x = std::clamp( float( i % ( MR::width( updatedBox ) + 1 ) ) / float( MR::width( updatedBox ) + 1 ), 0.0f, 1.0f );
+        downscaledPosRatio.y = std::clamp( 1.0f - float( i / ( MR::width( updatedBox ) + 1 ) ) / float( MR::height( updatedBox ) + 1 ), 0.0f, 1.0f );
+
+        Vector2i coord = realRect.min + Vector2i( mult( downscaledPosRatio, Vector2f( realRect.size() ) ) );
+        assert( coord.x < width );
+        assert( coord.y < height );
+        
+        int realId = coord.x + coord.y * width;
+        if ( !includePixBs.test( realId ) )
+            continue;
+
+        auto gId = pickResult[i].geomId;
+        if ( gId == unsigned( -1 ) )
+            continue;
+
+        auto pId = pickResult[i].primId;
+        if ( pId == unsigned( -1 ) )
+            continue;
+
+        std::shared_ptr<ObjectMesh> meshObj;
+        if ( auto parent = renderVector[gId]->parent() )
+        {
+            for ( auto& child : parent->children() )
+            {
+                if ( child.get() == renderVector[gId] )
+                {
+                    meshObj = std::dynamic_pointer_cast< ObjectMesh >( child );
+                    break;
+                }
+            }
+        }
+        if ( !meshObj )
+            continue;
+
+        auto& fbs = resMap[meshObj];
+        if ( fbs.empty() )
+            fbs.resize( meshObj->mesh()->topology.lastValidFace() + 1 );
+        fbs.set( FaceId( int( pId ) ) );
+    }
+    return resMap;
 }
 
 ConstObjAndPick Viewport::const_pick_render_object() const

@@ -365,7 +365,7 @@ ViewportGL::PickResults ViewportGL::pickObjects( const PickParameters& params, c
         unsigned geomId = color[1];
         float z = float(color[3])/float( 0xffffffff );
 
-        results[i] = {geomId ,primId ,z};
+        results[i] = { {geomId ,primId },z };
     }
 
     // Filter results
@@ -428,6 +428,47 @@ std::vector<unsigned> ViewportGL::findUniqueObjectsInRect( const PickParameters&
         uniqueVec.push_back( unsigned( i ) );
 
     return uniqueVec;
+}
+
+ViewportGL::ScaledPickRes ViewportGL::pickObjectsInRect( const PickParameters& params, const Box2i& rect, int maxRenderResolutionSide ) const
+{
+    if ( !rect.valid() )
+        return {};
+
+    double maxBoxSide = double( maxRenderResolutionSide );
+    double rWidth = double( width( rect ) );
+    double rHeight = double( height( rect ) );
+    Box2i updatedRect = rect;
+    PickParameters updatedParams = params;
+    if ( rWidth > maxBoxSide || rHeight > maxBoxSide )
+    {
+        double downScaleRatio = 1.0f;
+        if ( rWidth > rHeight )
+            downScaleRatio = maxBoxSide / rWidth;
+        else
+            downScaleRatio = maxBoxSide / rHeight;
+
+        updatedRect.min = Vector2i( Vector2d( updatedRect.min ) * downScaleRatio );
+        updatedRect.max = Vector2i( Vector2d( updatedRect.max ) * downScaleRatio );
+        updatedParams.baseRenderParams.viewport =
+            Vector4i( Vector4d( updatedParams.baseRenderParams.viewport ) * downScaleRatio );
+    }
+
+    auto resColors = pickObjectsInRect_( updatedParams, updatedRect );
+    BasePickResults res( resColors.size() );
+    tbb::parallel_for( tbb::blocked_range<int>( 0, int( resColors.size() ) ),
+                   [&] ( const tbb::blocked_range<int>& range )
+    {
+        for ( int i = range.begin(); i < range.end(); ++i )
+        {
+            auto geomId = resColors[i].color[1];
+            if ( geomId >= params.renderVector.size() || !params.renderVector[geomId] )
+                continue;
+            res[i].geomId = geomId;
+            res[i].primId = resColors[i].color[0];
+        }
+    } );
+    return { res,updatedRect };
 }
 
 std::vector<ViewportGL::PickColor> ViewportGL::pickObjectsInRect_( const PickParameters& params, const Box2i& rect ) const

@@ -198,8 +198,9 @@ struct RemeshSettings
     int finalRelaxIters = 0;
     /// Region on mesh to be changed, it is updated during the operation
     FaceBitSet * region = nullptr;
-    /// Edges specified by this bit-set will never be flipped
-    const UndirectedEdgeBitSet* notFlippable = nullptr;
+    /// Edges specified by this bit-set will never be flipped, but they can be split or eliminated during decimation
+    /// so it is updated during the operation; also the vertices incident to these edges are exluded from relaxation
+    UndirectedEdgeBitSet* notFlippable = nullptr;
     ///  whether to pack mesh at the end
     bool packMesh = false;
     /// this function is called each time edge (e) is split into (e1->e), but before the ring is made Delone

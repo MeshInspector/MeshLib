@@ -147,7 +147,7 @@ tl::expected<ToolPathResult, std::string> lacingToolPath( const Mesh& inputMesh,
             if ( bottomLeftIt < bottomRightIt )
             {
                 res.commands.reserve( res.commands.size() + std::distance( bottomLeftIt, bottomRightIt ) + 1 );
-                for ( auto it = bottomLeftIt; it <= bottomRightIt; ++it )
+                for ( auto it = bottomLeftIt + 1; it <= bottomRightIt; ++it )
                 {
                     res.commands.push_back( { .y = it->y, .z = it->z } );
                 }
@@ -155,7 +155,7 @@ tl::expected<ToolPathResult, std::string> lacingToolPath( const Mesh& inputMesh,
             else
             {
                 res.commands.reserve( res.commands.size() + std::distance( bottomLeftIt, contour.end() ) + std::distance( contour.begin(), bottomRightIt ) );
-                for ( auto it = bottomLeftIt; it < contour.end(); ++it )
+                for ( auto it = bottomLeftIt + 1; it < contour.end(); ++it )
                 {
                     res.commands.push_back( { .y = it->y, .z = it->z } );
                 }
@@ -191,7 +191,7 @@ tl::expected<ToolPathResult, std::string> lacingToolPath( const Mesh& inputMesh,
             }
             else
             {
-                for ( auto it = bottomRightIt; it > contour.begin(); --it )
+                for ( auto it = bottomRightIt - 1; it > contour.begin(); --it )
                 {
                     res.commands.push_back( { .y = it->y, .z = it->z } );
                 }
@@ -607,7 +607,6 @@ std::vector<GCommand> replaceLineSegmentsWithCircularArcs( const std::span<GComm
         return {};
 
     std::vector<GCommand> res;
-    res.push_back( path[0] );
 
     int startIdx = 0, endIdx = 0;
     Vector2f bestArcCenter, bestArcStart, bestArcEnd;

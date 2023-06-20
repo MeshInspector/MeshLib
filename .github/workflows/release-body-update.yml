@@ -1,0 +1,20 @@
+name: Update Release Body
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release Tag (optional)'
+        required: false
+
+  release:
+    types:
+      - created
+
+jobs:
+  update-release-body:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3

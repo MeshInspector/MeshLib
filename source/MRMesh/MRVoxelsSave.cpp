@@ -165,15 +165,29 @@ VoidOrErrStr toGav( const VdbVolume& vdbVolume, std::ostream & out, ProgressCall
 VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& filename, ProgressCallback /*callback*/ )
 {
     MR_TIMER
-    openvdb::io::File file( utf8string( filename ) );
     openvdb::FloatGrid::Ptr gridPtr = std::make_shared<openvdb::FloatGrid>();
     gridPtr->setTree( vdbVolume.data->treePtr() );
     gridPtr->setGridClass( vdbVolume.data->getGridClass() );
     openvdb::math::Transform::Ptr transform = std::make_shared<openvdb::math::Transform>();
     transform->preScale( { vdbVolume.voxelSize.x, vdbVolume.voxelSize.y, vdbVolume.voxelSize.z } );
     gridPtr->setTransform( transform );
-    file.write( { gridPtr } );
-    file.close();
+
+    // in order to save on Windows a file with Unicode symbols in the name, we need to open ofstream by ourselves,
+    // because openvdb constructs it from std::string, which on Windows means "local codepage" and not Unicode
+    std::ofstream file;
+    file.open( filename, std::ios_base::out | std::ios_base::binary | std::ios_base::trunc );
+    if ( !file )
+        return tl::make_unexpected( "cannot open file for writing: " + utf8string( filename ) );
+
+    struct MyArch : openvdb::io::Archive
+    {
+        using Archive::write;
+    };
+
+    MyArch{}.write( file, openvdb::GridCPtrVec{ gridPtr }, /*seekable=*/true, {} );
+    if ( !file )
+        return tl::make_unexpected( "error writing in file: " + utf8string( filename ) );
+
     return {};
 }
 

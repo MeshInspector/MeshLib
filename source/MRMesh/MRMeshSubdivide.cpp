@@ -116,6 +116,8 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
             settings.onVertCreated( newVertId );
         if ( settings.onEdgeSplit )
             settings.onEdgeSplit( e1, e );
+        if ( settings.notFlippable && settings.notFlippable->test( e.undirected() ) )
+            settings.notFlippable->autoResizeSet( e1.undirected() );
         ++splitsDone;
         makeDeloneOriginRing( mesh, e, {
             .maxDeviationAfterFlip = settings.maxDeviationAfterFlip,

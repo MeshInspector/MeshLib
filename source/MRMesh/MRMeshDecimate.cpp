@@ -10,6 +10,7 @@
 #include "MRGTest.h"
 #include "MRMeshDelone.h"
 #include "MRMeshSubdivide.h"
+#include "MRMeshRelax.h"
 #include "MRPch/MRTBB.h"
 #include <queue>
 
@@ -815,8 +816,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     subs.onEdgeSplit = settings.onEdgeSplit;
     subs.progressCallback = subprogress( settings.progressCallback, 0.0f, 0.5f );
     subdivideMesh( mesh, subs );
-
-    if ( settings.progressCallback && !settings.progressCallback( 0.5f ) )
+    if ( !reportProgress( settings.progressCallback, 0.5f ) )
         return false;
 
     DecimateSettings decs;
@@ -826,14 +826,27 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
         decs.stabilizer = settings.targetEdgeLen; // this increases uniformity of vertices appeared after edge collapse
     decs.region = settings.region;
     decs.packMesh = settings.packMesh;
-    decs.progressCallback = subprogress( settings.progressCallback, 0.5f, 1.0f );
+    decs.progressCallback = subprogress( settings.progressCallback, 0.5f, 0.95f );
     decs.preCollapse = settings.preCollapse;
     decimateMesh( mesh, decs );
-
-    if ( settings.progressCallback && !settings.progressCallback( 1.0f ) )
+    if ( settings.notFlippable )
+        mesh.topology.excludeLoneEdges( *settings.notFlippable );
+    if ( !reportProgress( settings.progressCallback, 0.95f ) )
         return false;
 
-    return true;
+    if ( settings.finalRelaxIters > 0 )
+    {
+        // even if region is not given, we need to exclude mesh boundary from relaxation
+        VertBitSet innerVerts = getInnerVerts( mesh.topology, settings.region );
+        if ( settings.notFlippable )
+            innerVerts -= getIncidentVerts( mesh.topology, *settings.notFlippable );
+        MeshRelaxParams rp;
+        rp.region = &innerVerts;
+        rp.iterations = settings.finalRelaxIters;
+        relax( mesh, rp, subprogress( settings.progressCallback, 0.95f, 1.0f ) );
+    }
+
+    return reportProgress( settings.progressCallback, 1.0f );
 }
 
 // check if Decimator updates region

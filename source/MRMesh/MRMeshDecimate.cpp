@@ -829,18 +829,19 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     decs.progressCallback = subprogress( settings.progressCallback, 0.5f, 0.95f );
     decs.preCollapse = settings.preCollapse;
     decimateMesh( mesh, decs );
+    if ( settings.notFlippable )
+        mesh.topology.excludeLoneEdges( *settings.notFlippable );
     if ( !reportProgress( settings.progressCallback, 0.95f ) )
         return false;
 
     if ( settings.finalRelaxIters > 0 )
     {
-        VertBitSet innerVerts;
+        // even if region is not given, we need to exclude mesh boundary from relaxation
+        VertBitSet innerVerts = getInnerVerts( mesh.topology, settings.region );
+        if ( settings.notFlippable )
+            innerVerts -= getIncidentVerts( mesh.topology, *settings.notFlippable );
         MeshRelaxParams rp;
-        if ( settings.region )
-        {
-            innerVerts = getInnerVerts( mesh.topology, *settings.region );
-            rp.region = &innerVerts;
-        }
+        rp.region = &innerVerts;
         rp.iterations = settings.finalRelaxIters;
         relax( mesh, rp, subprogress( settings.progressCallback, 0.95f, 1.0f ) );
     }

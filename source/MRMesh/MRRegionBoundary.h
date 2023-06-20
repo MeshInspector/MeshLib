@@ -46,7 +46,9 @@ namespace MR
 // otherwise performs store = getIncidentVerts( topology, *faces ) and returns reference on store
 [[nodiscard]] MRMESH_API const VertBitSet & getIncidentVerts( const MeshTopology & topology, const FaceBitSet * faces, VertBitSet & store );
 // composes the set of all vertices not on the boundary of a hole and with all their adjacent faces in given set
-[[nodiscard]] MRMESH_API VertBitSet getInnerVerts( const MeshTopology & topology, const FaceBitSet & faces );
+[[nodiscard]] MRMESH_API VertBitSet getInnerVerts( const MeshTopology & topology, const FaceBitSet * region );
+// composes the set of all vertices not on the boundary of a hole and with all their adjacent faces in given set
+[[nodiscard]] MRMESH_API VertBitSet getInnerVerts( const MeshTopology & topology, const FaceBitSet & region );
 // composes the set of all boundary vertices for given region (or whole mesh if !region)
 [[nodiscard]] MRMESH_API VertBitSet getBoundaryVerts( const MeshTopology & topology, const FaceBitSet * region = nullptr );
 

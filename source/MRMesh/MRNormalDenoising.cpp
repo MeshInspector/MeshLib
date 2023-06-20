@@ -61,10 +61,9 @@ void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<floa
         float centralWeight = 1;
         if ( sumLen > 0 )
         {
-            for ( int i = 0; i < 3; ++i )
+            for ( int i = 0; i < n; ++i )
             {
-                if ( !rf[i] )
-                    break;
+                assert ( rf[i] );
                 float weight = w[i] / sumLen;
                 centralWeight += weight;
                 mTriplets.emplace_back( f, rf[i], -weight );

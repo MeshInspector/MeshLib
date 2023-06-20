@@ -13,6 +13,7 @@
 #include "imgui.h"
 #include <memory>
 #include <functional>
+#include <unordered_map>
 
 using ObjAndPick = std::pair<std::shared_ptr<MR::VisualObject>, MR::PointOnFace>;
 using ConstObjAndPick = std::pair<std::shared_ptr<const MR::VisualObject>, MR::PointOnFace>;

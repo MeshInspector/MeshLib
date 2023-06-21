@@ -99,6 +99,8 @@ void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<floa
     } );
 }
 
+constexpr float eps = 0.001f;
+
 void updateIndicator( const Mesh & mesh, Vector<float, UndirectedEdgeId> & v, const FaceNormals & normals, float beta, float gamma )
 {
     MR_TIMER
@@ -112,7 +114,6 @@ void updateIndicator( const Mesh & mesh, Vector<float, UndirectedEdgeId> & v, co
     std::vector< Eigen::Triplet<double> > mTriplets;
     Eigen::VectorXd rhs;
     rhs.resize( sz );
-    constexpr float eps = 0.001f;
     const float rh = beta / ( 2 * eps );
     const float k = 2 * beta * eps;
     for ( auto ue = 0_ue; ue < sz; ++ue )
@@ -183,6 +184,28 @@ void updateIndicator( const Mesh & mesh, Vector<float, UndirectedEdgeId> & v, co
     } );
 }
 
+void updateIndicatorFast( const MeshTopology & topology, Vector<float, UndirectedEdgeId> & v, const FaceNormals & normals, float beta, float gamma )
+{
+    MR_TIMER
+
+    assert( v.size() == topology.undirectedEdgeSize() );
+    assert( normals.size() == topology.faceSize() );
+
+    const float rh = beta / ( 2 * eps );
+    ParallelFor( v, [&]( UndirectedEdgeId ue )
+    {
+        const EdgeId e = ue;
+        const auto l = topology.left( e );
+        const auto r = topology.right( e );
+        if ( !l || !r )
+        {
+            v[ue] = 1;
+            return;
+        }
+        v[ue] = rh / ( rh + 2 * gamma * ( normals[l] - normals[r] ).lengthSq() );
+    } );
+}
+
 VoidOrErrStr meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings )
 {
     MR_TIMER
@@ -210,7 +233,10 @@ VoidOrErrStr meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings
         if ( !reportProgress( sp, float( 2 * i ) / ( 2 * settings.normalIters ) ) )
             return unexpectedOperationCanceled();
 
-        updateIndicator( mesh, v, fnormals, settings.beta, settings.gamma );
+        if ( settings.fastIndicatorComputation )
+            updateIndicatorFast( mesh.topology, v, fnormals, settings.beta, settings.gamma );
+        else
+            updateIndicator( mesh, v, fnormals, settings.beta, settings.gamma );
         if ( !reportProgress( sp, float( 2 * i + 1 ) / ( 2 * settings.normalIters ) ) )
             return unexpectedOperationCanceled();
     }

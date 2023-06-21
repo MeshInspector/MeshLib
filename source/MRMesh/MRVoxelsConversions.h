@@ -49,10 +49,18 @@ struct VolumeToMeshParams : public BaseVolumeConversionParams
     Vector<VoxelId, FaceId>* outVoxelPerFaceMap{ nullptr }; // optional output map FaceId->VoxelId
     // function to calculate position of result mesh points
     // note: this function is called in parallel from different threads
-    VoxelPointPositioner positioner = {};
+    VoxelPointPositioner positioner = &voxelPositionerLinear;
     /// if the mesh exceeds this number of vertices, an error returns
     int maxVertices = INT_MAX;
 };
+
+/// ignore VolumeToMeshParams::positioner and call voxelPositionerLinear instead
+/// this is usually faster if you don't need a custom positioner
+class UseDefaultVoxelPointPositioner {};
+
+/// for simple volumes only: omit checks for NaN values
+/// use it if you're aware that the input volume has no NaN values
+class OmitNaNCheck {};
 
 // makes SimpleVolume from Mesh with given params
 // returns nullopt if operation was canceled
@@ -61,11 +69,13 @@ MRMESH_API std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, con
 // makes Mesh from SimpleVolume with given params
 // using marching cubes algorithm
 // returns nullopt if operation was canceled
+template <typename... Args>
 MRMESH_API tl::expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params = {} );
 
 // makes Mesh from VdbVolume with given params
 // using marching cubes algorithm
 // returns nullopt if operation was canceled
+template <typename... Args>
 MRMESH_API tl::expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params = {} );
 
 }

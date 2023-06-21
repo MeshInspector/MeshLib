@@ -11,6 +11,9 @@
 #include "MRFastWindingNumber.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MROpenvdb.h"
+
+#include <boost/mp11/algorithm.hpp>
+
 #include <limits>
 #include <optional>
 #include <thread>
@@ -558,7 +561,8 @@ inline Vector3f voxelPositionerLinearInline( const Vector3f& pos0, const Vector3
     return ( 1.0f - ratio ) * pos0 + ratio * pos1;
 }
 
-inline SeparationPoint findSeparationPoint( const VdbVolume& volume, const ConstAccessor& acc, const VdbCoord& minCoord,
+template <typename Args>
+SeparationPoint findSeparationPoint( const VdbVolume& volume, const ConstAccessor& acc, const VdbCoord& minCoord,
     const VolumeIndexer& indexer, VoxelId base, NeighborDir dir, const VolumeToMeshParams& params )
 {
     auto basePos = indexer.toPos( base );
@@ -580,12 +584,16 @@ inline SeparationPoint findSeparationPoint( const VdbVolume& volume, const Const
     Vector3f nextCoordF = Vector3f( float( nextCoord.x() ), float( nextCoord.y() ), float( nextCoord.z() ) );
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    res.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
+    if constexpr ( boost::mp11::mp_contains<Args, UseDefaultVoxelPointPositioner>::value )
+        res.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
+    else
+        res.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
     res.vid = VertId{ 0 };
     return res;
 }
 
-inline SeparationPoint findSeparationPoint( const SimpleVolume& volume,
+template <typename Args>
+SeparationPoint findSeparationPoint( const SimpleVolume& volume,
     const VolumeIndexer& indexer, VoxelId base, NeighborDir dir, const VolumeToMeshParams& params )
 {
     auto basePos = indexer.toPos( base );
@@ -595,8 +603,9 @@ inline SeparationPoint findSeparationPoint( const SimpleVolume& volume,
         return {};
     float valueB = volume.data[base];
     float valueD = volume.data[indexer.toVoxelId( nextPos ).get()];
-    if ( std::isnan( valueB ) || std::isnan( valueD ) )
-        return {};
+    if constexpr ( !boost::mp11::mp_contains<Args, OmitNaNCheck>::value )
+        if ( std::isnan( valueB ) || std::isnan( valueD ) )
+            return {};
     bool bLower = valueB < params.iso;
     bool dLower = valueD < params.iso;
 
@@ -608,12 +617,15 @@ inline SeparationPoint findSeparationPoint( const SimpleVolume& volume,
     Vector3f nextCoordF = Vector3f( nextPos ) + Vector3f::diagonal( 0.5f );
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    res.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
+    if constexpr ( boost::mp11::mp_contains<Args, UseDefaultVoxelPointPositioner>::value )
+        res.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
+    else
+        res.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
     res.vid = VertId{ 0 };
     return res;
 }
 
-template<typename V>
+template<typename V, typename Args>
 tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshParams& params /*= {} */ )
 {
     if constexpr ( std::is_same_v<V, VdbVolume> )
@@ -625,8 +637,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
         volume.dims.x <= 0 || volume.dims.y <= 0 || volume.dims.z <= 0 )
         return result;
 
-    MR_TIMER;
-
+    MR_TIMER
 
     VdbCoord minCoord;
     if constexpr ( std::is_same_v<V, VdbVolume> )
@@ -683,9 +694,9 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
             {
                 SeparationPoint separation;
                 if constexpr ( std::is_same_v<V, VdbVolume> )
-                    separation = findSeparationPoint( volume, *acc, minCoord, indexer, VoxelId( i ), NeighborDir( n ), params );
+                    separation = findSeparationPoint<Args>( volume, *acc, minCoord, indexer, VoxelId( i ), NeighborDir( n ), params );
                 else
-                    separation = findSeparationPoint( volume, indexer, VoxelId( i ), NeighborDir( n ), params );
+                    separation = findSeparationPoint<Args>( volume, indexer, VoxelId( i ), NeighborDir( n ), params );
 
                 if ( separation )
                 {
@@ -862,39 +873,42 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                 else
                 {
                     value = volume.data[indexer.toVoxelId( pos ).get()];
-                    // find non nan neighbor
-                    constexpr std::array<uint8_t, 7> cNeighborsOrder{
-                        0b001,
-                        0b010,
-                        0b100,
-                        0b011,
-                        0b101,
-                        0b110,
-                        0b111
-                    };
-                    int neighIndex = 0;
-                    // iterates over nan neighbors to find consistent value
-                    while ( std::isnan( value ) && neighIndex < 7 )
+                    if constexpr ( !boost::mp11::mp_contains<Args, OmitNaNCheck>::value )
                     {
-                        auto neighPos = pos;
-                        for ( int posCoord = 0; posCoord < 3; ++posCoord )
+                        // find non nan neighbor
+                        constexpr std::array<uint8_t, 7> cNeighborsOrder{
+                            0b001,
+                            0b010,
+                            0b100,
+                            0b011,
+                            0b101,
+                            0b110,
+                            0b111
+                        };
+                        int neighIndex = 0;
+                        // iterates over nan neighbors to find consistent value
+                        while ( std::isnan( value ) && neighIndex < 7 )
                         {
-                            int sign = 1;
-                            if ( cVoxelNeighbors[i][posCoord] == 1 )
-                                sign = -1;
-                            neighPos[posCoord] += ( sign * 
-                                ( ( cNeighborsOrder[neighIndex] & ( 1 << posCoord ) ) >> posCoord ) );
+                            auto neighPos = pos;
+                            for ( int posCoord = 0; posCoord < 3; ++posCoord )
+                            {
+                                int sign = 1;
+                                if ( cVoxelNeighbors[i][posCoord] == 1 )
+                                    sign = -1;
+                                neighPos[posCoord] += ( sign *
+                                    ( ( cNeighborsOrder[neighIndex] & ( 1 << posCoord ) ) >> posCoord ) );
+                            }
+                            value = volume.data[indexer.toVoxelId( neighPos ).get()];
+                            ++neighIndex;
                         }
-                        value = volume.data[indexer.toVoxelId( neighPos ).get()];
-                        ++neighIndex;
+                        if ( std::isnan( value ) )
+                        {
+                            voxelValid = false;
+                            break;
+                        }
+                        if ( !atLeastOneNan && neighIndex > 0 )
+                            atLeastOneNan = true;
                     }
-                    if ( std::isnan( value ) )
-                    {
-                        voxelValid = false;
-                        break;
-                    }
-                    if ( !atLeastOneNan && neighIndex > 0 )
-                        atLeastOneNan = true;
                 }
                 
                 if ( value >= params.iso )
@@ -924,20 +938,23 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
             
             if constexpr ( std::is_same_v<V, SimpleVolume> )
             {
-                // ensure consistent nan voxel
-                if ( atLeastOneNan && voxelValid )
+                if constexpr ( !boost::mp11::mp_contains<Args, OmitNaNCheck>::value )
                 {
-                    const auto& plan = cTriangleTable[voxelConfiguration];
-                    for ( int i = 0; i < plan.size() && voxelValid; i += 3 )
+                    // ensure consistent nan voxel
+                    if ( atLeastOneNan && voxelValid )
                     {
-                        const auto& [interIndex0, dir0] = cEdgeIndicesMap[plan[i]];
-                        const auto& [interIndex1, dir1] = cEdgeIndicesMap[plan[i + 1]];
-                        const auto& [interIndex2, dir2] = cEdgeIndicesMap[plan[i + 2]];
-                        // `iterStatus` indicates that current voxel has valid point for desired triangulation
-                        // as far as iter has 3 directions we use `dir` to validate (make sure that there is point in needed edge) desired direction
-                        voxelValid = voxelValid && ( iterStatus[interIndex0] && iters[interIndex0]->second[int( dir0 )].vid );
-                        voxelValid = voxelValid && ( iterStatus[interIndex1] && iters[interIndex1]->second[int( dir1 )].vid );
-                        voxelValid = voxelValid && ( iterStatus[interIndex2] && iters[interIndex2]->second[int( dir2 )].vid );
+                        const auto& plan = cTriangleTable[voxelConfiguration];
+                        for ( int i = 0; i < plan.size() && voxelValid; i += 3 )
+                        {
+                            const auto& [interIndex0, dir0] = cEdgeIndicesMap[plan[i]];
+                            const auto& [interIndex1, dir1] = cEdgeIndicesMap[plan[i + 1]];
+                            const auto& [interIndex2, dir2] = cEdgeIndicesMap[plan[i + 2]];
+                            // `iterStatus` indicates that current voxel has valid point for desired triangulation
+                            // as far as iter has 3 directions we use `dir` to validate (make sure that there is point in needed edge) desired direction
+                            voxelValid = voxelValid && ( iterStatus[interIndex0] && iters[interIndex0]->second[int( dir0 )].vid );
+                            voxelValid = voxelValid && ( iterStatus[interIndex1] && iters[interIndex1]->second[int( dir1 )].vid );
+                            voxelValid = voxelValid && ( iterStatus[interIndex2] && iters[interIndex2]->second[int( dir2 )].vid );
+                        }
                     }
                 }
             }
@@ -1040,14 +1057,28 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
     return result;
 }
 
+template <typename... Args>
 tl::expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params /*= {} */ )
 {
-    return volumeToMesh( volume, params );
+    return volumeToMesh<SimpleVolume, boost::mp11::mp_list<Args...>>( volume, params );
 }
+template <typename... Args>
 tl::expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params /*= {} */ )
 {
-    return volumeToMesh( volume, params );
+    return volumeToMesh<VdbVolume, boost::mp11::mp_list<Args...>>( volume, params );
 }
+
+template tl::expected<Mesh, std::string> simpleVolumeToMesh<>( const SimpleVolume&, const VolumeToMeshParams& );
+template tl::expected<Mesh, std::string> simpleVolumeToMesh<UseDefaultVoxelPointPositioner>( const SimpleVolume&, const VolumeToMeshParams& );
+template tl::expected<Mesh, std::string> simpleVolumeToMesh<UseDefaultVoxelPointPositioner, OmitNaNCheck>( const SimpleVolume&, const VolumeToMeshParams& );
+template tl::expected<Mesh, std::string> simpleVolumeToMesh<OmitNaNCheck>( const SimpleVolume&, const VolumeToMeshParams& );
+template tl::expected<Mesh, std::string> simpleVolumeToMesh<OmitNaNCheck, UseDefaultVoxelPointPositioner>( const SimpleVolume&, const VolumeToMeshParams& );
+
+template tl::expected<Mesh, std::string> vdbVolumeToMesh<>( const VdbVolume&, const VolumeToMeshParams& );
+template tl::expected<Mesh, std::string> vdbVolumeToMesh<UseDefaultVoxelPointPositioner>( const VdbVolume&, const VolumeToMeshParams& );
+template tl::expected<Mesh, std::string> vdbVolumeToMesh<UseDefaultVoxelPointPositioner, OmitNaNCheck>( const VdbVolume&, const VolumeToMeshParams& );
+template tl::expected<Mesh, std::string> vdbVolumeToMesh<OmitNaNCheck>( const VdbVolume&, const VolumeToMeshParams& );
+template tl::expected<Mesh, std::string> vdbVolumeToMesh<OmitNaNCheck, UseDefaultVoxelPointPositioner>( const VdbVolume&, const VolumeToMeshParams& );
 
 }
 #endif

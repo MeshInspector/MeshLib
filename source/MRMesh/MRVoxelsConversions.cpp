@@ -564,7 +564,6 @@ template <typename Args>
 SeparationPoint findSeparationPoint( const VdbVolume& volume, const ConstAccessor& acc, const VdbCoord& minCoord,
     const VolumeIndexer& indexer, VoxelId base, NeighborDir dir, const VolumeToMeshParams& params )
 {
-    auto basePos = indexer.toPos( base );
     if ( basePos[int( dir )] + 1 >= volume.dims[int( dir )] )
         return {};
     auto coord = openvdb::Coord{ basePos.x + minCoord.x(),basePos.y + minCoord.y(),basePos.z + minCoord.z() };
@@ -595,7 +594,6 @@ template <typename Args>
 SeparationPoint findSeparationPoint( const SimpleVolume& volume,
     const VolumeIndexer& indexer, VoxelId base, NeighborDir dir, const VolumeToMeshParams& params )
 {
-    auto basePos = indexer.toPos( base );
     auto nextPos = basePos;
     nextPos[int( dir )] += 1;
     if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
@@ -689,6 +687,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
 
             SeparationPointSet set;
             bool atLeastOneOk = false;
+            auto basePos = indexer.toPos( VoxelId( i ) );
             for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
             {
                 SeparationPoint separation;
@@ -832,6 +831,19 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
     using PerThreadTriangulation = std::vector<TriangulationData>;
     auto subprogress2 = MR::subprogress( params.cb, 0.5f, 0.85f );
     std::atomic<size_t> voxelsDone{0};
+
+    const std::array<size_t, 8> cVoxelNeighborsIndexAdd = 
+    {
+        0,
+        1,
+        size_t( indexer.dims().x ),
+        size_t( indexer.dims().x ) + 1,
+        indexer.sizeXY(),
+        indexer.sizeXY() + 1,
+        indexer.sizeXY() + size_t( indexer.dims().x ),
+        indexer.sizeXY() + size_t( indexer.dims().x ) + 1
+    };
+
     tbb::enumerable_thread_specific<PerThreadTriangulation> triangulationPerThread;
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size(),indexer.dims().x ), [&] ( const tbb::blocked_range<size_t>& range )
     {
@@ -926,7 +938,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                     iterStatus[i] = false;
                     continue;
                 }
-                const auto index = indexer.toVoxelId( basePos + cVoxelNeighbors[i] );
+                const auto index = ind + cVoxelNeighborsIndexAdd[i];
                 iters[i] = hmap( index ).find( index );
                 iterStatus[i] = ( iters[i] != hmap( index ).cend() ) && checkIter( iters[i]->second, i );
                 if ( !voxelValid && iterStatus[i] )
@@ -934,7 +946,6 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
             }
             assert( voxelValid );
 
-            
             if constexpr ( std::is_same_v<V, SimpleVolume> )
             {
                 if constexpr ( !boost::mp11::mp_contains<Args, OmitNaNCheck>::value )

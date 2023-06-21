@@ -37,7 +37,7 @@ struct DecimateSettings
     ///   stop the decimation as soon as the shortest edge in the mesh is greater than this value
     float maxError = 0.001f;
     /// Maximal possible edge length created during decimation
-    float maxEdgeLen = 1;
+    float maxEdgeLen = FLT_MAX;
     /// Maximal possible aspect ratio of a triangle introduced during decimation
     float maxTriangleAspectRatio = 20;
     /// the algorithm will ignore dihedral angle check if one of triangles had aspect ratio equal or more than this value;

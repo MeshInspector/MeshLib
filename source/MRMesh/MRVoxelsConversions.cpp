@@ -549,16 +549,15 @@ using namespace MarchingCubesHelper;
 using ConstAccessor = openvdb::FloatGrid::ConstAccessor;
 using VdbCoord = openvdb::Coord;
 
-Vector3f voxelPositionerLinear( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
-{
-    auto ratio = std::clamp( std::abs( iso - v0 ) / std::abs( v1 - v0 ), 0.0f, 1.0f );
-    return ( 1.0f - ratio ) * pos0 + ratio * pos1;
-}
-
 inline Vector3f voxelPositionerLinearInline( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
 {
     const auto ratio = std::clamp( std::abs( iso - v0 ) / std::abs( v1 - v0 ), 0.0f, 1.0f );
     return ( 1.0f - ratio ) * pos0 + ratio * pos1;
+}
+
+Vector3f voxelPositionerLinear( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
+{
+    return voxelPositionerLinearInline( pos0, pos1, v0, v1, iso );
 }
 
 template <typename Args>

@@ -747,8 +747,10 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
     };
     timer.start( "plan triangulation" );
     using PerThreadTriangulation = std::vector<TriangulationData>;
+    auto subprogress2 = MR::subprogress( params.cb, 0.5f, 0.85f );
+    std::atomic<size_t> voxelsDone{0};
     tbb::enumerable_thread_specific<PerThreadTriangulation> triangulationPerThread;
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size(),indexer.dims().x ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         // setup local triangulation
         auto& localTriangulatoinData = triangulationPerThread.local();
@@ -767,19 +769,13 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
         unsigned char voxelConfiguration;
         for ( size_t ind = range.begin(); ind < range.end(); ++ind )
         {
-            if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
+            if ( subprogress2 && !keepGoing.load( std::memory_order_relaxed ) )
                 break;
             Vector3i basePos = indexer.toPos( VoxelId( ind ) );
             if ( basePos.x + 1 >= volume.dims.x ||
                 basePos.y + 1 >= volume.dims.y ||
                 basePos.z + 1 >= volume.dims.z )
                 continue;
-
-            if ( params.cb && ( ( ind % 1024 ) == 0 ) && std::this_thread::get_id() == mainThreadId )
-            {
-                if ( !params.cb( 0.5f + 0.35f * float( ind ) / float( range.size() ) ) )
-                    keepGoing.store( false, std::memory_order_relaxed );
-            }
 
             bool voxelValid = true;
             voxelConfiguration = 0;
@@ -895,7 +891,14 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                     faceMap.emplace_back( VoxelId{ ind } );
             }
         }
-    }, tbb::static_partitioner() );
+
+        if ( subprogress2 )
+        {
+            voxelsDone += range.size();
+            if ( std::this_thread::get_id() == mainThreadId && !subprogress2( float( voxelsDone ) / float( indexer.size() ) ) )
+                keepGoing.store( false, std::memory_order_relaxed );
+        }
+    } );
     timer.finish();
     if ( params.cb && !keepGoing )
         return unexpectedOperationCanceled();
@@ -917,10 +920,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
             std::make_move_iterator( threadTriData.begin() ), std::make_move_iterator( threadTriData.end() ) );
     }
     // sort by voxel index
-    std::sort( resTriangulatoinData.begin(), resTriangulatoinData.end(), [] ( const auto& l, const auto& r )
-    {
-        return l.initInd < r.initInd;
-    } );
+    tbb::parallel_sort( resTriangulatoinData.begin(), resTriangulatoinData.end(), [] ( const auto& l, const auto& r ) { return l.initInd < r.initInd; } );
 
     // create result triangulation
     Triangulation resTriangulation;

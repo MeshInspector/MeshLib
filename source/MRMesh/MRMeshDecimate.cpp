@@ -822,12 +822,12 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     DecimateSettings decs;
     decs.strategy = DecimateStrategy::ShortestEdgeFirst;
     decs.maxError = settings.targetEdgeLen * settings.edgeLenUniformity;
-    if ( settings.edgeLenUniformity > 0.5f )
-        decs.stabilizer = settings.targetEdgeLen; // this increases uniformity of vertices appeared after edge collapse
     decs.region = settings.region;
     decs.packMesh = settings.packMesh;
     decs.progressCallback = subprogress( settings.progressCallback, 0.5f, 0.95f );
     decs.preCollapse = settings.preCollapse;
+    // it was a bad idea to make decs.stabilizer = settings.targetEdgeLen;
+    // yes, it increased the uniformity of vertices, but shifted boundary vertices after edge collapse inside
     decimateMesh( mesh, decs );
     if ( settings.notFlippable )
         mesh.topology.excludeLoneEdges( *settings.notFlippable );

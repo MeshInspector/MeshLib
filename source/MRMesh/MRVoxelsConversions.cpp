@@ -493,10 +493,10 @@ SeparationPoint findSeparationPoint( const VdbVolume& volume, const ConstAccesso
     if ( basePos[int( dir )] + 1 >= volume.dims[int( dir )] )
         return {};
     auto coord = openvdb::Coord{ basePos.x + minCoord.x(),basePos.y + minCoord.y(),basePos.z + minCoord.z() };
-    const auto& valueB = acc.getValue( coord );// volume.data[base];
+    float valueB = acc.getValue( coord );// volume.data[base];
     auto nextCoord = coord;
     nextCoord[int( dir )] += 1;
-    const auto& valueD = acc.getValue( nextCoord );// volume.data[nextId];
+    float valueD = acc.getValue( nextCoord );// volume.data[nextId];
     bool bLower = valueB < params.iso;
     bool dLower = valueD < params.iso;
 
@@ -521,8 +521,8 @@ SeparationPoint findSeparationPoint( const SimpleVolume& volume,
     nextPos[int( dir )] += 1;
     if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
         return {};
-    const auto& valueB = volume.data[base];
-    const auto& valueD = volume.data[indexer.toVoxelId( nextPos ).get()];
+    float valueB = volume.data[base];
+    float valueD = volume.data[indexer.toVoxelId( nextPos ).get()];
     if ( std::isnan( valueB ) || std::isnan( valueD ) )
         return {};
     bool bLower = valueB < params.iso;
@@ -553,7 +553,8 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
         volume.dims.x <= 0 || volume.dims.y <= 0 || volume.dims.z <= 0 )
         return result;
 
-    MR_TIMER
+    //MR_TIMER;
+
 
     VdbCoord minCoord;
     if constexpr ( std::is_same_v<V, VdbVolume> )
@@ -569,6 +570,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
     const auto subcnt = hmap.subcnt();
     // find all separate points
     // fill map in parallel
+    Timer timer( "find separation points" );
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         assert( range.begin() + 1 == range.end() );
@@ -616,7 +618,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
             hmap.insert( { i, set } );
         }
     } );
-
+    timer.finish();
     if ( params.cb && !keepGoing )
         return unexpectedOperationCanceled();
 
@@ -758,6 +760,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
         Triangulation t;
         Vector<VoxelId, FaceId> faceMap;
     };
+    timer.start( "plan triangulation" );
     using PerThreadTriangulation = std::vector<TriangulationData>;
     tbb::enumerable_thread_specific<PerThreadTriangulation> triangulationPerThread;
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size() ), [&] ( const tbb::blocked_range<size_t>& range )
@@ -787,23 +790,13 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                 basePos.z + 1 >= volume.dims.z )
                 continue;
 
-            bool voxelValid = false;
-            for ( int i = 0; i < iters.size(); ++i )
-            {
-                iters[i] = hmap.find( size_t( indexer.toVoxelId( basePos + cVoxelNeighbors[i] ) ) );
-                iterStatus[i] = checkIter( iters[i], i );
-                if ( !voxelValid && iterStatus[i] )
-                    voxelValid = true;
-            }
-
             if ( params.cb && ( ( ind % 1024 ) == 0 ) && std::this_thread::get_id() == mainThreadId )
             {
                 if ( !params.cb( 0.5f + 0.35f * float( ind ) / float( range.size() ) ) )
                     keepGoing.store( false, std::memory_order_relaxed );
             }
 
-            if ( !voxelValid )
-                continue;
+            bool voxelValid = true;
             voxelConfiguration = 0;
             [[maybe_unused]] bool atLeastOneNan = false;
             for ( int i = 0; i < cVoxelNeighbors.size(); ++i )
@@ -853,6 +846,18 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                     continue;
                 voxelConfiguration |= ( 1 << cMapNeighborsShift[i] );
             }
+            if ( !voxelValid || voxelConfiguration == 0x00 || voxelConfiguration == 0xff )
+                continue;
+
+            voxelValid = false;
+            for ( int i = 0; i < iters.size(); ++i )
+            {
+                iters[i] = hmap.find( size_t( indexer.toVoxelId( basePos + cVoxelNeighbors[i] ) ) );
+                iterStatus[i] = checkIter( iters[i], i );
+                if ( !voxelValid && iterStatus[i] )
+                    voxelValid = true;
+            }
+            assert( voxelValid );
 
             if constexpr ( std::is_same_v<V, SimpleVolume> )
             {
@@ -905,7 +910,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
             }
         }
     }, tbb::static_partitioner() );
-
+    timer.finish();
     if ( params.cb && !keepGoing )
         return unexpectedOperationCanceled();
 

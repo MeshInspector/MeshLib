@@ -578,28 +578,35 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
     if ( threadCount == 0 )
         threadCount = 1;
 
-    std::vector<SeparationPointMap> hmaps( threadCount );
+    const auto blockCount = threadCount;
+    const auto blockSize = (size_t)std::ceil( (float)indexer.size() / blockCount );
+    assert( indexer.size() <= blockSize * blockCount );
+
+    std::vector<SeparationPointMap> hmaps( blockCount );
     auto hmap = [&] ( size_t index ) -> SeparationPointMap&
     {
-        return hmaps[index % hmaps.size()];
+        return hmaps[index / blockSize];
     };
 
     // find all separate points
     // fill map in parallel
     Timer timer( "find separation points" );
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, hmaps.size(), 1 ), [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, blockCount, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         assert( range.begin() + 1 == range.end() );
+        const auto blockIndex = range.begin();
 
         std::optional<ConstAccessor> acc;
         if constexpr ( std::is_same_v<V, VdbVolume> )
             acc = volume.data->getConstAccessor();
 
         if ( std::this_thread::get_id() == mainThreadId && lastSubMap == -1 )
-            lastSubMap = range.begin();
-        const bool runCallback = params.cb && std::this_thread::get_id() == mainThreadId && lastSubMap == range.begin();
+            lastSubMap = blockIndex;
+        const bool runCallback = params.cb && std::this_thread::get_id() == mainThreadId && lastSubMap == blockIndex;
 
-        for ( size_t i = range.begin(); i < indexer.size(); i += hmaps.size() )
+        const auto begin = blockIndex * blockSize;
+        const auto end = std::min( ( blockIndex + 1 ) * blockSize, indexer.size() );
+        for ( size_t i = begin; i < end; ++i )
         {
             if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
                 break;
@@ -621,8 +628,8 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                 }
             }
 
-            if ( runCallback && ( i - range.begin() ) % ( hmaps.size() * 1024 ) == 0 )
-                if ( !params.cb( 0.3f * float( i ) / float( indexer.size() ) ) )
+            if ( runCallback && ( i - begin ) % 1024 == 0 )
+                if ( !params.cb( 0.3f * float( i - begin ) / float( end - begin ) ) )
                     keepGoing.store( false, std::memory_order_relaxed );
 
             if ( !atLeastOneOk )

@@ -486,7 +486,13 @@ Vector3f voxelPositionerLinear( const Vector3f& pos0, const Vector3f& pos1, floa
     return ( 1.0f - ratio ) * pos0 + ratio * pos1;
 }
 
-SeparationPoint findSeparationPoint( const VdbVolume& volume, const ConstAccessor& acc, const VdbCoord& minCoord,
+inline Vector3f voxelPositionerLinearInline( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
+{
+    const auto ratio = std::clamp( std::abs( iso - v0 ) / std::abs( v1 - v0 ), 0.0f, 1.0f );
+    return ( 1.0f - ratio ) * pos0 + ratio * pos1;
+}
+
+inline SeparationPoint findSeparationPoint( const VdbVolume& volume, const ConstAccessor& acc, const VdbCoord& minCoord,
     const VolumeIndexer& indexer, VoxelId base, NeighborDir dir, const VolumeToMeshParams& params )
 {
     auto basePos = indexer.toPos( base );
@@ -508,12 +514,12 @@ SeparationPoint findSeparationPoint( const VdbVolume& volume, const ConstAccesso
     Vector3f nextCoordF = Vector3f( float( nextCoord.x() ), float( nextCoord.y() ), float( nextCoord.z() ) );
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    res.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
+    res.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
     res.vid = VertId{ 0 };
     return res;
 }
 
-SeparationPoint findSeparationPoint( const SimpleVolume& volume,
+inline SeparationPoint findSeparationPoint( const SimpleVolume& volume,
     const VolumeIndexer& indexer, VoxelId base, NeighborDir dir, const VolumeToMeshParams& params )
 {
     auto basePos = indexer.toPos( base );
@@ -536,7 +542,7 @@ SeparationPoint findSeparationPoint( const SimpleVolume& volume,
     Vector3f nextCoordF = Vector3f( nextPos ) + Vector3f::diagonal( 0.5f );
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    res.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
+    res.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
     res.vid = VertId{ 0 };
     return res;
 }

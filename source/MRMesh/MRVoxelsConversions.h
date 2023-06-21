@@ -49,7 +49,7 @@ struct VolumeToMeshParams : public BaseVolumeConversionParams
     Vector<VoxelId, FaceId>* outVoxelPerFaceMap{ nullptr }; // optional output map FaceId->VoxelId
     // function to calculate position of result mesh points
     // note: this function is called in parallel from different threads
-    VoxelPointPositioner positioner = &voxelPositionerLinear;
+    VoxelPointPositioner positioner = {};
     /// if the mesh exceeds this number of vertices, an error returns
     int maxVertices = INT_MAX;
 };

@@ -667,8 +667,8 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
             acc = volume.data->getConstAccessor();
 
         if ( std::this_thread::get_id() == mainThreadId && lastSubMap == -1 )
-            lastSubMap = range.begin();
-        const bool runCallback = params.cb && std::this_thread::get_id() == mainThreadId && lastSubMap == range.begin();
+            lastSubMap = int( blockIndex );
+        const bool runCallback = params.cb && std::this_thread::get_id() == mainThreadId && lastSubMap == blockIndex;
 
         const auto begin = blockIndex * blockSize;
         const auto end = std::min( ( blockIndex + 1 ) * blockSize, indexer.size() );

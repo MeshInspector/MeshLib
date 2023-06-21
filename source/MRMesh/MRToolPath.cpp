@@ -804,6 +804,8 @@ std::shared_ptr<ObjectGcode> exportToolPathToGCode( const std::vector<GCommand>&
 
     auto res = std::make_shared<ObjectGcode>();
     res->setGcodeSource( gcodeSource );
+    res->setName( "Tool Path" );
+    res->setLineWidth( 1.0f );
     return res;
 }
 

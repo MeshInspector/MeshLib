@@ -572,25 +572,37 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
     auto mainThreadId = std::this_thread::get_id();
     int lastSubMap = -1;
 
-    SeparationPointMap hmap;
-    const auto subcnt = hmap.subcnt();
+    size_t threadCount = tbb::global_control::parameter( tbb::global_control::max_allowed_parallelism );
+    if ( threadCount == 0 )
+        threadCount = std::thread::hardware_concurrency();
+    if ( threadCount == 0 )
+        threadCount = 1;
+
+    std::vector<SeparationPointMap> hmaps( threadCount );
+    auto hmap = [&] ( size_t index ) -> SeparationPointMap&
+    {
+        return hmaps[index % hmaps.size()];
+    };
+
     // find all separate points
     // fill map in parallel
     Timer timer( "find separation points" );
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, hmaps.size(), 1 ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         assert( range.begin() + 1 == range.end() );
+
         std::optional<ConstAccessor> acc;
         if constexpr ( std::is_same_v<V, VdbVolume> )
             acc = volume.data->getConstAccessor();
-        for ( size_t i = 0; i < indexer.size(); ++i )
+
+        if ( std::this_thread::get_id() == mainThreadId && lastSubMap == -1 )
+            lastSubMap = range.begin();
+        const bool runCallback = params.cb && std::this_thread::get_id() == mainThreadId && lastSubMap == range.begin();
+
+        for ( size_t i = range.begin(); i < indexer.size(); i += hmaps.size() )
         {
             if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
                 break;
-
-            auto hashval = hmap.hash( i );
-            if ( hmap.subidx( hashval ) != range.begin() )
-                continue;
 
             SeparationPointSet set;
             bool atLeastOneOk = false;
@@ -609,19 +621,14 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                 }
             }
 
-            if ( params.cb && ( ( i % 1024 ) == 0 ) && std::this_thread::get_id() == mainThreadId &&
-                ( lastSubMap == -1 || lastSubMap == range.begin() ) )
-            {
-                if ( lastSubMap == -1 )
-                    lastSubMap = int( range.begin() );
+            if ( runCallback && ( i - range.begin() ) % ( hmaps.size() * 1024 ) == 0 )
                 if ( !params.cb( 0.3f * float( i ) / float( indexer.size() ) ) )
                     keepGoing.store( false, std::memory_order_relaxed );
-            }
 
             if ( !atLeastOneOk )
                 continue;
 
-            hmap.insert( { i, set } );
+            hmap( i ).insert( { i, set } );
         }
     } );
     timer.finish();
@@ -647,8 +654,8 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
         for ( size_t ind = range.begin(); ind < range.end(); ++ind )
         {
             // as far as map is filled, change of each individual value should be safe
-            auto mapIter = hmap.find( ind );
-            if ( mapIter == hmap.cend() )
+            auto mapIter = hmap( ind ).find( ind );
+            if ( mapIter == hmap( ind ).cend() )
                 continue;
             for ( auto& dir : mapIter->second )
                 if ( dir )
@@ -690,21 +697,17 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
     };
 
     // update map with determined vert indices
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ),
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, hmaps.size(), 1 ),
     [&] ( const tbb::blocked_range<size_t>& range )
     {
         assert( range.begin() + 1 == range.end() );
-        hmap.with_submap( range.begin(), [&] ( const SeparationPointMap::EmbeddedSet& subSet )
+        for ( auto& [ind, set] : hmaps[range.begin()] )
         {
-            // const_cast here is safe, we don't write to map, just change internal data
-            for ( auto& [ind, set] : const_cast< SeparationPointMap::EmbeddedSet& >( subSet ) )
-            {
-                auto vertShift = getVertIndexShiftForVoxelId( ind );
-                for ( auto& sepPoint : set )
-                    if ( sepPoint )
-                        sepPoint.vid += vertShift;
-            }
-        } );
+            auto vertShift = getVertIndexShiftForVoxelId( ind );
+            for ( auto& sepPoint : set )
+                if ( sepPoint )
+                    sepPoint.vid += vertShift;
+        }
     } );
 
 
@@ -712,48 +715,24 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
         return unexpectedOperationCanceled();
 
     // check neighbor iterator valid
-    auto checkIter = [&] ( const auto& iter, int mode ) -> bool
+    auto checkIter = [&] ( const auto& set, int mode ) -> bool
     {
         switch ( mode )
         {
         case 0: // base voxel
-            return iter != hmap.cend();
+            return true;
         case 1: // x + 1 voxel
-        {
-            if ( iter == hmap.cend() )
-                return false;
-            return iter->second[int( NeighborDir::Y )] || iter->second[int( NeighborDir::Z )];
-        }
+            return set[int( NeighborDir::Y )] || set[int( NeighborDir::Z )];
         case 2: // y + 1 voxel
-        {
-            if ( iter == hmap.cend() )
-                return false;
-            return iter->second[int( NeighborDir::X )] || iter->second[int( NeighborDir::Z )];
-        }
+            return set[int( NeighborDir::X )] || set[int( NeighborDir::Z )];
         case 3: // x + 1, y + 1 voxel
-        {
-            if ( iter == hmap.cend() )
-                return false;
-            return bool( iter->second[int( NeighborDir::Z )] );
-        }
+            return bool( set[int( NeighborDir::Z )] );
         case 4: // z + 1 voxel
-        {
-            if ( iter == hmap.cend() )
-                return false;
-            return iter->second[int( NeighborDir::X )] || iter->second[int( NeighborDir::Y )];
-        }
+            return set[int( NeighborDir::X )] || set[int( NeighborDir::Y )];
         case 5: // x + 1, z + 1 voxel
-        {
-            if ( iter == hmap.cend() )
-                return false;
-            return bool( iter->second[int( NeighborDir::Y )] );
-        }
+            return bool( set[int( NeighborDir::Y )] );
         case 6: // y + 1, z + 1 voxel
-        {
-            if ( iter == hmap.cend() )
-                return false;
-            return bool( iter->second[int( NeighborDir::X )] );
-        }
+            return bool( set[int( NeighborDir::X )] );
         default:
             return false;
         }
@@ -858,8 +837,9 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
             voxelValid = false;
             for ( int i = 0; i < iters.size(); ++i )
             {
-                iters[i] = hmap.find( size_t( indexer.toVoxelId( basePos + cVoxelNeighbors[i] ) ) );
-                iterStatus[i] = checkIter( iters[i], i );
+                const auto index = indexer.toVoxelId( basePos + cVoxelNeighbors[i] );
+                iters[i] = hmap( index ).find( index );
+                iterStatus[i] = ( iters[i] != hmap( index ).cend() ) && checkIter( iters[i]->second, i );
                 if ( !voxelValid && iterStatus[i] )
                     voxelValid = true;
             }
@@ -961,19 +941,16 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
     if ( params.cb && !params.cb( 0.95f ) )
         return unexpectedOperationCanceled();
 
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ),
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, hmaps.size(), 1 ),
         [&] ( const tbb::blocked_range<size_t>& range )
     {
         assert( range.begin() + 1 == range.end() );
-        hmap.with_submap( range.begin(), [&] ( const SeparationPointMap::EmbeddedSet& subSet )
+        for ( auto& [_, set] : hmaps[range.begin()] )
         {
-            for ( auto& separation : subSet )
-            {
-                for ( int i = int( NeighborDir::X ); i < int( NeighborDir::Count ); ++i )
-                    if ( separation.second[i].vid.valid() )
-                        result.points[separation.second[i].vid] = separation.second[i].position;
-            }
-        } );
+            for ( int i = int( NeighborDir::X ); i < int( NeighborDir::Count ); ++i )
+                if ( set[i].vid.valid() )
+                    result.points[set[i].vid] = set[i].position;
+        }
     } );
 
     if ( params.cb && !params.cb( 1.0f ) )

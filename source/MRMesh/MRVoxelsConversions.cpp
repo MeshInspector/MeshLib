@@ -562,7 +562,7 @@ Vector3f voxelPositionerLinear( const Vector3f& pos0, const Vector3f& pos1, floa
 
 template <typename Args>
 SeparationPoint findSeparationPoint( const VdbVolume& volume, const ConstAccessor& acc, const VdbCoord& minCoord,
-    const VolumeIndexer& indexer, VoxelId base, NeighborDir dir, const VolumeToMeshParams& params )
+    const Vector3i& basePos, NeighborDir dir, const VolumeToMeshParams& params )
 {
     if ( basePos[int( dir )] + 1 >= volume.dims[int( dir )] )
         return {};
@@ -592,14 +592,31 @@ SeparationPoint findSeparationPoint( const VdbVolume& volume, const ConstAccesso
 
 template <typename Args>
 SeparationPoint findSeparationPoint( const SimpleVolume& volume,
-    const VolumeIndexer& indexer, VoxelId base, NeighborDir dir, const VolumeToMeshParams& params )
+    const VolumeIndexer& indexer, VoxelId base, const Vector3i& basePos, NeighborDir dir, const VolumeToMeshParams& params )
 {
     auto nextPos = basePos;
     nextPos[int( dir )] += 1;
     if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
         return {};
+
+    OutEdge outEdge;
+    switch ( dir )
+    {
+    case MR::MarchingCubesHelper::NeighborDir::X:
+        outEdge = OutEdge::PlusX;
+        break;
+    case MR::MarchingCubesHelper::NeighborDir::Y:
+        outEdge = OutEdge::PlusY;
+        break;
+    case MR::MarchingCubesHelper::NeighborDir::Z:
+        outEdge = OutEdge::PlusZ;
+        break;
+    default:
+        return {};
+    }
+
     float valueB = volume.data[base];
-    float valueD = volume.data[indexer.toVoxelId( nextPos ).get()];
+    float valueD = volume.data[indexer.getExistingNeighbor( base, outEdge ).get()];
     if constexpr ( !boost::mp11::mp_contains<Args, OmitNaNCheck>::value )
         if ( std::isnan( valueB ) || std::isnan( valueD ) )
             return {};
@@ -692,9 +709,9 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
             {
                 SeparationPoint separation;
                 if constexpr ( std::is_same_v<V, VdbVolume> )
-                    separation = findSeparationPoint<Args>( volume, *acc, minCoord, indexer, VoxelId( i ), NeighborDir( n ), params );
+                    separation = findSeparationPoint<Args>( volume, *acc, minCoord, basePos, NeighborDir( n ), params );
                 else
-                    separation = findSeparationPoint<Args>( volume, indexer, VoxelId( i ), NeighborDir( n ), params );
+                    separation = findSeparationPoint<Args>( volume, indexer, VoxelId( i ), basePos, NeighborDir( n ), params );
 
                 if ( separation )
                 {
@@ -883,7 +900,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                     value = acc->getValue( { pos.x + minCoord.x(),pos.y + minCoord.y(),pos.z + minCoord.z() } );
                 else
                 {
-                    value = volume.data[indexer.toVoxelId( pos ).get()];
+                    value = volume.data[ind + cVoxelNeighborsIndexAdd[i]];
                     if constexpr ( !boost::mp11::mp_contains<Args, OmitNaNCheck>::value )
                     {
                         // find non nan neighbor
@@ -1078,17 +1095,17 @@ tl::expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const 
     return volumeToMesh<VdbVolume, boost::mp11::mp_list<Args...>>( volume, params );
 }
 
-template tl::expected<Mesh, std::string> simpleVolumeToMesh<>( const SimpleVolume&, const VolumeToMeshParams& );
-template tl::expected<Mesh, std::string> simpleVolumeToMesh<UseDefaultVoxelPointPositioner>( const SimpleVolume&, const VolumeToMeshParams& );
-template tl::expected<Mesh, std::string> simpleVolumeToMesh<UseDefaultVoxelPointPositioner, OmitNaNCheck>( const SimpleVolume&, const VolumeToMeshParams& );
-template tl::expected<Mesh, std::string> simpleVolumeToMesh<OmitNaNCheck>( const SimpleVolume&, const VolumeToMeshParams& );
-template tl::expected<Mesh, std::string> simpleVolumeToMesh<OmitNaNCheck, UseDefaultVoxelPointPositioner>( const SimpleVolume&, const VolumeToMeshParams& );
+template MRMESH_API tl::expected<Mesh, std::string> simpleVolumeToMesh<>( const SimpleVolume&, const VolumeToMeshParams& );
+template MRMESH_API tl::expected<Mesh, std::string> simpleVolumeToMesh<UseDefaultVoxelPointPositioner>( const SimpleVolume&, const VolumeToMeshParams& );
+template MRMESH_API tl::expected<Mesh, std::string> simpleVolumeToMesh<UseDefaultVoxelPointPositioner, OmitNaNCheck>( const SimpleVolume&, const VolumeToMeshParams& );
+template MRMESH_API tl::expected<Mesh, std::string> simpleVolumeToMesh<OmitNaNCheck>( const SimpleVolume&, const VolumeToMeshParams& );
+template MRMESH_API tl::expected<Mesh, std::string> simpleVolumeToMesh<OmitNaNCheck, UseDefaultVoxelPointPositioner>( const SimpleVolume&, const VolumeToMeshParams& );
 
-template tl::expected<Mesh, std::string> vdbVolumeToMesh<>( const VdbVolume&, const VolumeToMeshParams& );
-template tl::expected<Mesh, std::string> vdbVolumeToMesh<UseDefaultVoxelPointPositioner>( const VdbVolume&, const VolumeToMeshParams& );
-template tl::expected<Mesh, std::string> vdbVolumeToMesh<UseDefaultVoxelPointPositioner, OmitNaNCheck>( const VdbVolume&, const VolumeToMeshParams& );
-template tl::expected<Mesh, std::string> vdbVolumeToMesh<OmitNaNCheck>( const VdbVolume&, const VolumeToMeshParams& );
-template tl::expected<Mesh, std::string> vdbVolumeToMesh<OmitNaNCheck, UseDefaultVoxelPointPositioner>( const VdbVolume&, const VolumeToMeshParams& );
+template MRMESH_API tl::expected<Mesh, std::string> vdbVolumeToMesh<>( const VdbVolume&, const VolumeToMeshParams& );
+template MRMESH_API tl::expected<Mesh, std::string> vdbVolumeToMesh<UseDefaultVoxelPointPositioner>( const VdbVolume&, const VolumeToMeshParams& );
+template MRMESH_API tl::expected<Mesh, std::string> vdbVolumeToMesh<UseDefaultVoxelPointPositioner, OmitNaNCheck>( const VdbVolume&, const VolumeToMeshParams& );
+template MRMESH_API tl::expected<Mesh, std::string> vdbVolumeToMesh<OmitNaNCheck>( const VdbVolume&, const VolumeToMeshParams& );
+template MRMESH_API tl::expected<Mesh, std::string> vdbVolumeToMesh<OmitNaNCheck, UseDefaultVoxelPointPositioner>( const VdbVolume&, const VolumeToMeshParams& );
 
 }
 #endif

@@ -12,14 +12,14 @@
 namespace MR
 {
 
-struct BaseVolumeConversionParams
+struct MRMESH_CLASS BaseVolumeConversionParams
 {
     // origin point of voxels box
     Vector3f origin;
     ProgressCallback cb{}; // progress callback
 };
 
-struct MeshToSimpleVolumeParams : public BaseVolumeConversionParams
+struct MRMESH_CLASS MeshToSimpleVolumeParams : public BaseVolumeConversionParams
 {
     /// size of voxel on each axis
     Vector3f voxelSize{ 1.0f,1.0f,1.0f };
@@ -42,7 +42,7 @@ using VoxelPointPositioner = std::function<Vector3f( const Vector3f&, const Vect
 // linear interpolation positioner
 MRMESH_API Vector3f voxelPositionerLinear( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso );
 
-struct VolumeToMeshParams : public BaseVolumeConversionParams
+struct MRMESH_CLASS VolumeToMeshParams : public BaseVolumeConversionParams
 {
     float iso{ 0.0f };
     bool lessInside{ false }; // should be false for dense volumes, and true for distance volume
@@ -56,11 +56,11 @@ struct VolumeToMeshParams : public BaseVolumeConversionParams
 
 /// ignore VolumeToMeshParams::positioner and call voxelPositionerLinear instead
 /// this is usually faster if you don't need a custom positioner
-class UseDefaultVoxelPointPositioner {};
+class MRMESH_CLASS UseDefaultVoxelPointPositioner {};
 
 /// for simple volumes only: omit checks for NaN values
 /// use it if you're aware that the input volume has no NaN values
-class OmitNaNCheck {};
+class MRMESH_CLASS OmitNaNCheck {};
 
 // makes SimpleVolume from Mesh with given params
 // returns nullopt if operation was canceled
@@ -70,13 +70,13 @@ MRMESH_API std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, con
 // using marching cubes algorithm
 // returns nullopt if operation was canceled
 template <typename... Args>
-MRMESH_API tl::expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params = {} );
+tl::expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params = {} );
 
 // makes Mesh from VdbVolume with given params
 // using marching cubes algorithm
 // returns nullopt if operation was canceled
 template <typename... Args>
-MRMESH_API tl::expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params = {} );
+tl::expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params = {} );
 
 }
 #endif

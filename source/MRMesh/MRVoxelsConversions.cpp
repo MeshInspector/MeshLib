@@ -474,6 +474,72 @@ TriangulationPlan{0, 3, 8},
 TriangulationPlan{}
 };
 
+// check if this iter is needed for config
+bool cNeedIter( int iterIndex, uint8_t config )
+{
+    if ( iterIndex == 0 )
+    {
+        auto base = ( config & ( 1 << 0 ) );
+        if ( base != ( config & ( 1 << cMapNeighborsShift[1] ) ) )
+            return true;
+        else if ( base != ( config & ( 1 << cMapNeighborsShift[2] ) ) )
+            return true;
+        else if ( base != ( config & ( 1 << cMapNeighborsShift[4] ) ) )
+            return true;
+        else
+            return false;
+    }
+    else if ( iterIndex == 1 )
+    {
+        auto base = ( config & ( 1 << cMapNeighborsShift[1] ) );
+        if ( base != ( config & ( 1 << cMapNeighborsShift[3] ) ) )
+            return true;
+        else if ( base != ( config & ( 1 << cMapNeighborsShift[5] ) ) )
+            return true;
+        else
+            return false;
+    }
+    else if ( iterIndex == 2 )
+    {
+        auto base = ( config & ( 1 << cMapNeighborsShift[2] ) );
+        if ( base != ( config & ( 1 << cMapNeighborsShift[3] ) ) )
+            return true;
+        else if ( base != ( config & ( 1 << cMapNeighborsShift[6] ) ) )
+            return true;
+        else
+            return false;
+    }
+    else if ( iterIndex == 3 )
+    {
+        if ( ( config & ( 1 << cMapNeighborsShift[3] ) ) != ( config & ( 1 << cMapNeighborsShift[7] ) ) )
+            return true;
+        return false;
+    }
+    else if ( iterIndex == 4 )
+    {
+        auto base = ( config & ( 1 << cMapNeighborsShift[4] ) );
+        if ( base != ( config & ( 1 << cMapNeighborsShift[5] ) ) )
+            return true;
+        else if ( base != ( config & ( 1 << cMapNeighborsShift[6] ) ) )
+            return true;
+        else
+            return false;
+    }
+    else if ( iterIndex == 5 )
+    {
+        if ( ( config & ( 1 << cMapNeighborsShift[5] ) ) != ( config & ( 1 << cMapNeighborsShift[7] ) ) )
+            return true;
+        return false;
+    }
+    else if ( iterIndex == 6 )
+    {
+        if ( ( config & ( 1 << cMapNeighborsShift[6] ) ) != ( config & ( 1 << cMapNeighborsShift[7] ) ) )
+            return true;
+        return false;
+    }
+    return false;
+}
+
 }
 
 using namespace MarchingCubesHelper;
@@ -559,7 +625,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
         volume.dims.x <= 0 || volume.dims.y <= 0 || volume.dims.z <= 0 )
         return result;
 
-    //MR_TIMER;
+    MR_TIMER;
 
 
     VdbCoord minCoord;
@@ -601,8 +667,8 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
             acc = volume.data->getConstAccessor();
 
         if ( std::this_thread::get_id() == mainThreadId && lastSubMap == -1 )
-            lastSubMap = blockIndex;
-        const bool runCallback = params.cb && std::this_thread::get_id() == mainThreadId && lastSubMap == blockIndex;
+            lastSubMap = range.begin();
+        const bool runCallback = params.cb && std::this_thread::get_id() == mainThreadId && lastSubMap == range.begin();
 
         const auto begin = blockIndex * blockSize;
         const auto end = std::min( ( blockIndex + 1 ) * blockSize, indexer.size() );
@@ -830,6 +896,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                     if ( !atLeastOneNan && neighIndex > 0 )
                         atLeastOneNan = true;
                 }
+                
                 if ( value >= params.iso )
                     continue;
                 voxelConfiguration |= ( 1 << cMapNeighborsShift[i] );
@@ -840,6 +907,12 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
             voxelValid = false;
             for ( int i = 0; i < iters.size(); ++i )
             {
+                if ( !cNeedIter( i, voxelConfiguration ) )
+                {
+                    iters[i] = {};
+                    iterStatus[i] = false;
+                    continue;
+                }
                 const auto index = indexer.toVoxelId( basePos + cVoxelNeighbors[i] );
                 iters[i] = hmap( index ).find( index );
                 iterStatus[i] = ( iters[i] != hmap( index ).cend() ) && checkIter( iters[i]->second, i );
@@ -848,6 +921,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
             }
             assert( voxelValid );
 
+            
             if constexpr ( std::is_same_v<V, SimpleVolume> )
             {
                 // ensure consistent nan voxel

@@ -48,8 +48,7 @@ void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<floa
             {
                 assert( mesh.topology.left( e ) == f );
                 const auto r = mesh.topology.right( e );
-                if ( !r )
-                    continue;
+                // even if there is no right face (r), increment sumLen for better results on mesh boundary
                 auto len = mesh.edgeLength( e );
                 assert( n < 3 );
                 rf[n] = r;
@@ -61,9 +60,10 @@ void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<floa
         float centralWeight = 1;
         if ( sumLen > 0 )
         {
-            for ( int i = 0; i < n; ++i )
+            for ( int i = 0; i < 3; ++i )
             {
-                assert ( rf[i] );
+                if ( !rf[i] )
+                    continue;
                 float weight = w[i] / sumLen;
                 centralWeight += weight;
                 mTriplets.emplace_back( f, rf[i], -weight );

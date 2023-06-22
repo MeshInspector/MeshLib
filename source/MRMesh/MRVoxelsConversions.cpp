@@ -25,7 +25,11 @@ constexpr float cQuietNan = std::numeric_limits<float>::quiet_NaN();
 
 inline bool isNanFast( float f )
 {
+#if defined( __GNUC__ ) && __GNUC__ < 11
+    return std::isnan( f );
+#else
     return std::bit_cast< int >( f ) == std::bit_cast< int >( cQuietNan );
+#endif
 }
 }
 
@@ -650,10 +654,7 @@ bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const
 }
 
 template<typename V>
-auto accessorCtor( const V& v )
-{
-    return {};
-}
+auto accessorCtor( const V& v );
 
 template<>
 auto accessorCtor<SimpleVolume>( const SimpleVolume& )

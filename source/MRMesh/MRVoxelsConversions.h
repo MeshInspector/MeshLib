@@ -53,11 +53,10 @@ struct MRMESH_CLASS VolumeToMeshParams : public BaseVolumeConversionParams
     VoxelPointPositioner positioner = {};
     /// if the mesh exceeds this number of vertices, an error returns
     int maxVertices = INT_MAX;
+    /// for simple volumes only: omit checks for NaN values
+    /// use it if you're aware that the input volume has no NaN values
+    bool omitNaNCheck = false;
 };
-
-/// for simple volumes only: omit checks for NaN values
-/// use it if you're aware that the input volume has no NaN values
-class MRMESH_CLASS OmitNaNCheck {};
 
 // makes SimpleVolume from Mesh with given params
 // returns nullopt if operation was canceled
@@ -66,14 +65,12 @@ MRMESH_API std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, con
 // makes Mesh from SimpleVolume with given params
 // using marching cubes algorithm
 // returns nullopt if operation was canceled
-template <typename... Args>
-tl::expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params = {} );
+MRMESH_API tl::expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params = {} );
 
 // makes Mesh from VdbVolume with given params
 // using marching cubes algorithm
 // returns nullopt if operation was canceled
-template <typename... Args>
-tl::expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params = {} );
+MRMESH_API tl::expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params = {} );
 
 }
 #endif

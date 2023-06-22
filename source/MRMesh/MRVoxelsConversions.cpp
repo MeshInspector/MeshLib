@@ -561,6 +561,7 @@ Vector3f voxelPositionerLinear( const Vector3f& pos0, const Vector3f& pos1, floa
 }
 
 class UseDefaultVoxelPointPositioner {};
+class OmitNaNCheck {};
 
 template <typename Args>
 bool findSeparationPoint( SeparationPoint& sp, const VdbVolume& volume, const ConstAccessor& acc,
@@ -637,7 +638,7 @@ bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const
     return true;
 }
 
-template<typename V, typename Args>
+template<typename V, typename Args = boost::mp11::mp_list<>>
 tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshParams& params /*= {} */ )
 {
     if constexpr ( std::is_same_v<V, VdbVolume> )
@@ -1068,28 +1069,32 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
     return result;
 }
 
-template <typename... Args>
+template <typename V, typename Args = boost::mp11::mp_list<>>
+tl::expected<Mesh, std::string> volumeToMeshHelper1( const V& volume, const VolumeToMeshParams& params )
+{
+    if ( !params.positioner )
+        return volumeToMesh<V, boost::mp11::mp_append<Args, boost::mp11::mp_list<UseDefaultVoxelPointPositioner>>>( volume, params );
+    else
+        return volumeToMesh<V, Args>( volume, params );
+}
+
+template <typename V, typename Args = boost::mp11::mp_list<>>
+tl::expected<Mesh, std::string> volumeToMeshHelper2( const V& volume, const VolumeToMeshParams& params )
+{
+    if ( params.omitNaNCheck )
+        return volumeToMeshHelper1<V, boost::mp11::mp_append<Args, boost::mp11::mp_list<OmitNaNCheck>>>( volume, params );
+    else
+        return volumeToMeshHelper1<V, Args>( volume, params );
+}
+
 tl::expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params /*= {} */ )
 {
-    if ( !params.positioner )
-        return volumeToMesh<SimpleVolume, boost::mp11::mp_list<UseDefaultVoxelPointPositioner, Args...>>( volume, params );
-    else
-        return volumeToMesh<SimpleVolume, boost::mp11::mp_list<Args...>>( volume, params );
+    return volumeToMeshHelper2( volume, params );
 }
-template <typename... Args>
 tl::expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params /*= {} */ )
 {
-    if ( !params.positioner )
-        return volumeToMesh<VdbVolume, boost::mp11::mp_list<UseDefaultVoxelPointPositioner, Args...>>( volume, params );
-    else
-        return volumeToMesh<VdbVolume, boost::mp11::mp_list<Args...>>( volume, params );
+    return volumeToMeshHelper2( volume, params );
 }
-
-template MRMESH_API tl::expected<Mesh, std::string> simpleVolumeToMesh<>( const SimpleVolume&, const VolumeToMeshParams& );
-template MRMESH_API tl::expected<Mesh, std::string> simpleVolumeToMesh<OmitNaNCheck>( const SimpleVolume&, const VolumeToMeshParams& );
-
-template MRMESH_API tl::expected<Mesh, std::string> vdbVolumeToMesh<>( const VdbVolume&, const VolumeToMeshParams& );
-template MRMESH_API tl::expected<Mesh, std::string> vdbVolumeToMesh<OmitNaNCheck>( const VdbVolume&, const VolumeToMeshParams& );
 
 }
 #endif

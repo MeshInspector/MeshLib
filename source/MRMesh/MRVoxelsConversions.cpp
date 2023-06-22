@@ -600,9 +600,9 @@ bool findSeparationPoint( SeparationPoint& sp, const VdbVolume& volume, const Co
     return true;
 }
 
-template <auto NaNChecker, bool UseDefaultVoxelPointPositioner>
+template <typename NaNChecker, bool UseDefaultVoxelPointPositioner>
 bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const VolumeIndexer& indexer, VoxelId base,
-                          const Vector3i& basePos, NeighborDir dir, const VolumeToMeshParams& params )
+                          const Vector3i& basePos, NeighborDir dir, const VolumeToMeshParams& params, NaNChecker&& nanChecker )
 {
     auto nextPos = basePos;
     nextPos[int( dir )] += 1;
@@ -627,7 +627,7 @@ bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const
 
     float valueB = volume.data[base];
     float valueD = volume.data[indexer.getExistingNeighbor( base, outEdge ).get()];
-    if ( NaNChecker( valueB ) || NaNChecker( valueD ) )
+    if ( nanChecker( valueB ) || nanChecker( valueD ) )
         return false;
 
     bool bLower = valueB < params.iso;
@@ -661,8 +661,8 @@ auto accessorCtor<VdbVolume>( const VdbVolume& v )
     return v.data->getConstAccessor();
 }
 
-template<typename V, auto NaNChecker, bool UseDefaultVoxelPointPositioner>
-tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshParams& params /*= {} */ )
+template<typename V, typename NaNChecker, bool UseDefaultVoxelPointPositioner>
+tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshParams& params, NaNChecker&& nanChecker )
 {
     if constexpr ( std::is_same_v<V, VdbVolume> )
         if ( !volume.data )
@@ -752,7 +752,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                 if constexpr ( std::is_same_v<V, VdbVolume> )
                     ok = findSeparationPoint<UseDefaultVoxelPointPositioner>( set[n], volume, acc, baseCoord, basePos, baseValue, NeighborDir( n ), params );
                 else
-                    ok = findSeparationPoint<NaNChecker, UseDefaultVoxelPointPositioner>( set[n], volume, indexer, VoxelId( i ), basePos, NeighborDir( n ), params );
+                    ok = findSeparationPoint<NaNChecker, UseDefaultVoxelPointPositioner>( set[n], volume, indexer, VoxelId( i ), basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ) );
 
                 if ( ok )
                 {
@@ -925,7 +925,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                     };
                     int neighIndex = 0;
                     // iterates over nan neighbors to find consistent value
-                    while ( NaNChecker( value ) && neighIndex < 7 )
+                    while ( nanChecker( value ) && neighIndex < 7 )
                     {
                         auto neighPos = pos;
                         for ( int posCoord = 0; posCoord < 3; ++posCoord )
@@ -939,7 +939,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                         value = volume.data[indexer.toVoxelId( neighPos ).get()];
                         ++neighIndex;
                     }
-                    if ( NaNChecker( value ) )
+                    if ( nanChecker( value ) )
                     {
                         voxelValid = false;
                         break;
@@ -1088,23 +1088,22 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
     return result;
 }
 
-template <typename V, auto NaNChecker>
-tl::expected<Mesh, std::string> volumeToMeshHelper1( const V& volume, const VolumeToMeshParams& params )
+template <typename V, typename NaNChecker>
+tl::expected<Mesh, std::string> volumeToMeshHelper1( const V& volume, const VolumeToMeshParams& params, NaNChecker&& nanChecker )
 {
     if ( !params.positioner )
-        return volumeToMesh<V, NaNChecker, true>( volume, params );
+        return volumeToMesh<V, NaNChecker, true>( volume, params, std::forward<NaNChecker>( nanChecker ) );
     else
-        return volumeToMesh<V, NaNChecker, false>( volume, params );
+        return volumeToMesh<V, NaNChecker, false>( volume, params, std::forward<NaNChecker>( nanChecker ) );
 }
 
 template <typename V>
 tl::expected<Mesh, std::string> volumeToMeshHelper2( const V& volume, const VolumeToMeshParams& params )
 {
-    constexpr auto noCheck = [] ( float ) { return false; };
     if ( params.omitNaNCheck )
-        return volumeToMeshHelper1<V, noCheck>( volume, params );
+        return volumeToMeshHelper1( volume, params, [] ( float ) { return false; } );
     else
-        return volumeToMeshHelper1<V, isNanFast>( volume, params );
+        return volumeToMeshHelper1( volume, params, isNanFast );
 }
 
 tl::expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params /*= {} */ )

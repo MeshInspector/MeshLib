@@ -561,11 +561,12 @@ Vector3f voxelPositionerLinear( const Vector3f& pos0, const Vector3f& pos1, floa
 }
 
 template <typename Args>
-SeparationPoint findSeparationPoint( const VdbVolume& volume, const ConstAccessor& acc, const VdbCoord& minCoord,
-    const Vector3i& basePos, NeighborDir dir, const VolumeToMeshParams& params )
+bool findSeparationPoint( SeparationPoint& sp, const VdbVolume& volume, const ConstAccessor& acc,
+                          const VdbCoord& minCoord, const Vector3i& basePos, NeighborDir dir,
+                          const VolumeToMeshParams& params )
 {
     if ( basePos[int( dir )] + 1 >= volume.dims[int( dir )] )
-        return {};
+        return false;
     auto coord = openvdb::Coord{ basePos.x + minCoord.x(),basePos.y + minCoord.y(),basePos.z + minCoord.z() };
     float valueB = acc.getValue( coord );// volume.data[base];
     auto nextCoord = coord;
@@ -573,31 +574,28 @@ SeparationPoint findSeparationPoint( const VdbVolume& volume, const ConstAccesso
     float valueD = acc.getValue( nextCoord );// volume.data[nextId];
     bool bLower = valueB < params.iso;
     bool dLower = valueD < params.iso;
-
     if ( bLower == dLower )
-        return {};
+        return false;
 
-    SeparationPoint res;
     Vector3f coordF = Vector3f( float( coord.x() ), float( coord.y() ), float( coord.z() ) );
     Vector3f nextCoordF = Vector3f( float( nextCoord.x() ), float( nextCoord.y() ), float( nextCoord.z() ) );
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
     if constexpr ( boost::mp11::mp_contains<Args, UseDefaultVoxelPointPositioner>::value )
-        res.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
+        sp.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
     else
-        res.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
-    res.vid = VertId{ 0 };
-    return res;
+        sp.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
+    return true;
 }
 
 template <typename Args>
-SeparationPoint findSeparationPoint( const SimpleVolume& volume,
-    const VolumeIndexer& indexer, VoxelId base, const Vector3i& basePos, NeighborDir dir, const VolumeToMeshParams& params )
+bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const VolumeIndexer& indexer, VoxelId base,
+                          const Vector3i& basePos, NeighborDir dir, const VolumeToMeshParams& params )
 {
     auto nextPos = basePos;
     nextPos[int( dir )] += 1;
     if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
-        return {};
+        return false;
 
     OutEdge outEdge;
     switch ( dir )
@@ -612,31 +610,29 @@ SeparationPoint findSeparationPoint( const SimpleVolume& volume,
         outEdge = OutEdge::PlusZ;
         break;
     default:
-        return {};
+        return false;
     }
 
     float valueB = volume.data[base];
     float valueD = volume.data[indexer.getExistingNeighbor( base, outEdge ).get()];
     if constexpr ( !boost::mp11::mp_contains<Args, OmitNaNCheck>::value )
         if ( std::isnan( valueB ) || std::isnan( valueD ) )
-            return {};
+            return false;
+
     bool bLower = valueB < params.iso;
     bool dLower = valueD < params.iso;
-
     if ( bLower == dLower )
-        return {};
+        return false;
 
-    SeparationPoint res;
     Vector3f coordF = Vector3f( basePos ) + Vector3f::diagonal( 0.5f );
     Vector3f nextCoordF = Vector3f( nextPos ) + Vector3f::diagonal( 0.5f );
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
     if constexpr ( boost::mp11::mp_contains<Args, UseDefaultVoxelPointPositioner>::value )
-        res.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
+        sp.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
     else
-        res.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
-    res.vid = VertId{ 0 };
-    return res;
+        sp.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
+    return true;
 }
 
 template<typename V, typename Args>
@@ -682,6 +678,15 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
     // find all separate points
     // fill map in parallel
     Timer timer( "find separation points" );
+    struct VertsNumeration
+    {
+        // explicit ctor to fix clang build with `vec.emplace_back( ind, 0 )`
+        VertsNumeration( size_t ind, size_t num ) :initIndex{ ind }, numVerts{ num }{}
+        size_t initIndex{ 0 };
+        size_t numVerts{ 0 };
+    };
+    using PerThreadVertNumeration = std::vector<VertsNumeration>;
+    tbb::enumerable_thread_specific<PerThreadVertNumeration> perThreadVertNumeration;
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, blockCount, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         assert( range.begin() + 1 == range.end() );
@@ -697,6 +702,11 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
 
         const auto begin = blockIndex * blockSize;
         const auto end = std::min( ( blockIndex + 1 ) * blockSize, indexer.size() );
+
+        auto& localNumeration = perThreadVertNumeration.local();
+        localNumeration.emplace_back( begin, 0 );
+        auto& thisRangeNumeration = localNumeration.back().numVerts;
+
         for ( size_t i = begin; i < end; ++i )
         {
             if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
@@ -707,15 +717,15 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
             auto basePos = indexer.toPos( VoxelId( i ) );
             for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
             {
-                SeparationPoint separation;
+                bool ok = false;
                 if constexpr ( std::is_same_v<V, VdbVolume> )
-                    separation = findSeparationPoint<Args>( volume, *acc, minCoord, basePos, NeighborDir( n ), params );
+                    ok = findSeparationPoint<Args>( set[n], volume, *acc, minCoord, basePos, NeighborDir( n ), params );
                 else
-                    separation = findSeparationPoint<Args>( volume, indexer, VoxelId( i ), basePos, NeighborDir( n ), params );
+                    ok = findSeparationPoint<Args>( set[n], volume, indexer, VoxelId( i ), basePos, NeighborDir( n ), params );
 
-                if ( separation )
+                if ( ok )
                 {
-                    set[n] = std::move( separation );
+                    set[n].vid = VertId( thisRangeNumeration++ );
                     atLeastOneOk = true;
                 }
             }
@@ -733,34 +743,6 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
     timer.finish();
     if ( params.cb && !keepGoing )
         return unexpectedOperationCanceled();
-
-    // numerate verts in parallel (to have packed mesh as result, determined numeration independent of thread number)
-    struct VertsNumeration
-    {
-        // explicit ctor to fix clang build with `vec.emplace_back( ind, 0 )`
-        VertsNumeration( size_t ind, size_t num ) :initIndex{ ind }, numVerts{ num }{}
-        size_t initIndex{ 0 };
-        size_t numVerts{ 0 };
-    };
-    using PerThreadVertNumeration = std::vector<VertsNumeration>;
-    tbb::enumerable_thread_specific<PerThreadVertNumeration> perThreadVertNumeration;
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size() ),
-        [&] ( const tbb::blocked_range<size_t>& range )
-    {
-        auto& localNumeration = perThreadVertNumeration.local();
-        localNumeration.emplace_back( range.begin(), 0 );
-        auto& thisRangeNumeration = localNumeration.back().numVerts;
-        for ( size_t ind = range.begin(); ind < range.end(); ++ind )
-        {
-            // as far as map is filled, change of each individual value should be safe
-            auto mapIter = hmap( ind ).find( ind );
-            if ( mapIter == hmap( ind ).cend() )
-                continue;
-            for ( auto& dir : mapIter->second )
-                if ( dir )
-                    dir.vid = VertId( thisRangeNumeration++ );
-        }
-    }, tbb::static_partitioner() );// static_partitioner to have bigger grains
 
     // organize vert numeration
     std::vector<VertsNumeration> resultVertNumeration;

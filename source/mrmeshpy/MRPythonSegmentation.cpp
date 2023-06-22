@@ -9,6 +9,7 @@
 #include "MRMesh/MREdgePaths.h"
 #include "MRMesh/MRExpandShrink.h"
 #include "MRMesh/MRFillContour.h"
+#include <pybind11/functional.h>
 
 namespace MR
 {

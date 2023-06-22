@@ -420,6 +420,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     originNeis_.clear();
     triDblAreas_.clear();
     Vector3d sumDblArea_;
+    bool oBd = false; // there is a boundary edge incident to org( edgeToCollapse )
     for ( EdgeId e : orgRing0( topology, edgeToCollapse ) )
     {
         const auto eDest = topology.dest( e );
@@ -432,7 +433,10 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         maxOldEdgeLenSq = std::max( maxOldEdgeLenSq, ( po - pDest ).lengthSq() );
         maxNewEdgeLenSq = std::max( maxNewEdgeLenSq, ( collapsePos - pDest ).lengthSq() );
         if ( !topology.left( e ) )
+        {
+            oBd = true;
             continue;
+        }
 
         const auto pDest2 = mesh_.destPnt( topology.next( e ) );
         if ( eDest != vr )
@@ -449,6 +453,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     }
     std::sort( originNeis_.begin(), originNeis_.end() );
 
+    bool dBd = false; // there is a boundary edge incident to dest( edgeToCollapse )
     for ( EdgeId e : orgRing0( topology, edgeToCollapse.sym() ) )
     {
         const auto eDest = topology.dest( e );
@@ -460,7 +465,10 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         maxOldEdgeLenSq = std::max( maxOldEdgeLenSq, ( pd - pDest ).lengthSq() );
         maxNewEdgeLenSq = std::max( maxNewEdgeLenSq, ( collapsePos - pDest ).lengthSq() );
         if ( !topology.left( e ) )
+        {
+            dBd = true;
             continue;
+        }
 
         const auto pDest2 = mesh_.destPnt( topology.next( e ) );
         if ( eDest != vl )
@@ -475,6 +483,9 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         }
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( pd, pDest, pDest2 ) );
     }
+
+    if ( vl && vr && oBd && dBd )
+        return {}; // prohibit collapse of an inner edge if it brings two boundaries in touch
 
     if ( !tinyEdge && maxNewAspectRatio > maxOldAspectRatio && maxOldAspectRatio <= settings_.criticalTriAspectRatio )
         return {}; // new triangle aspect ratio would be larger than all of old triangle aspect ratios and larger than allowed in settings

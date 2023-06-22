@@ -473,6 +473,14 @@ double ObjectMeshHolder::selectedArea() const
     return *selectedArea_;
 }
 
+float ObjectMeshHolder::avgEdgeLen() const
+{
+    if ( !avgEdgeLen_ )
+        avgEdgeLen_ = mesh_ ? mesh_->averageEdgeLength() : 0;
+
+    return *avgEdgeLen_;
+}
+
 size_t ObjectMeshHolder::heapBytes() const
 {
     return VisualObject::heapBytes()

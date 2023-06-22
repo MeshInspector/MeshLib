@@ -618,14 +618,32 @@ Box3f Mesh::computeBoundingBox( const FaceBitSet * region, const AffineXf3f* toW
 float Mesh::averageEdgeLength() const
 {
     MR_TIMER
-    double sum = 0;
-    int n = 0;
-    for ( auto ue : undirectedEdges( topology ) )
+    struct S
     {
-        sum += edgeLength( ue );
-        ++n;
-    }
-    return n > 0 ? float( sum / n ) : 0.0f;
+        double sum = 0;
+        int n = 0;
+        S & operator +=( const S & b )
+        {
+            sum += b.sum;
+            n += b.n;
+            return *this;
+        }
+    };
+    S s = parallel_deterministic_reduce( tbb::blocked_range( 0_ue, UndirectedEdgeId{ topology.undirectedEdgeSize() }, 1024 ), S{},
+        [&] ( const auto & range, S curr )
+        {
+            for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
+                if ( !topology.isLoneEdge( ue ) )
+                {
+                    curr.sum += edgeLength( ue );
+                    ++curr.n;
+                }
+            return curr;
+        },
+        [] ( S a, const S & b ) { a += b; return a; }
+    );
+
+    return s.n > 0 ? float( s.sum / s.n ) : 0.0f;
 }
 
 void Mesh::zeroUnusedPoints()

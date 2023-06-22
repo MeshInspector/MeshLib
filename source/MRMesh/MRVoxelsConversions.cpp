@@ -11,9 +11,6 @@
 #include "MRFastWindingNumber.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MROpenvdb.h"
-
-#include <boost/mp11/algorithm.hpp>
-
 #include <limits>
 #include <optional>
 #include <thread>
@@ -576,10 +573,7 @@ Vector3f voxelPositionerLinear( const Vector3f& pos0, const Vector3f& pos1, floa
     return voxelPositionerLinearInline( pos0, pos1, v0, v1, iso );
 }
 
-class UseDefaultVoxelPointPositioner {};
-class OmitNaNCheck {};
-
-template <typename Args>
+template <bool UseDefaultVoxelPointPositioner>
 bool findSeparationPoint( SeparationPoint& sp, const VdbVolume& volume, const ConstAccessor& acc,
                           const openvdb::Coord& coord, const Vector3i& basePos, float valueB, NeighborDir dir,
                           const VolumeToMeshParams& params )
@@ -599,14 +593,14 @@ bool findSeparationPoint( SeparationPoint& sp, const VdbVolume& volume, const Co
     Vector3f nextCoordF = Vector3f( float( nextCoord.x() ), float( nextCoord.y() ), float( nextCoord.z() ) );
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    if constexpr ( boost::mp11::mp_contains<Args, UseDefaultVoxelPointPositioner>::value )
+    if constexpr ( UseDefaultVoxelPointPositioner )
         sp.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
     else
         sp.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
     return true;
 }
 
-template <typename Args>
+template <auto NaNChecker, bool UseDefaultVoxelPointPositioner>
 bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const VolumeIndexer& indexer, VoxelId base,
                           const Vector3i& basePos, NeighborDir dir, const VolumeToMeshParams& params )
 {
@@ -633,9 +627,8 @@ bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const
 
     float valueB = volume.data[base];
     float valueD = volume.data[indexer.getExistingNeighbor( base, outEdge ).get()];
-    if constexpr ( !boost::mp11::mp_contains<Args, OmitNaNCheck>::value )
-        if ( isNanFast( valueB ) || isNanFast( valueD ) )
-            return false;
+    if ( NaNChecker( valueB ) || NaNChecker( valueD ) )
+        return false;
 
     bool bLower = valueB < params.iso;
     bool dLower = valueD < params.iso;
@@ -646,7 +639,7 @@ bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const
     Vector3f nextCoordF = Vector3f( nextPos ) + Vector3f::diagonal( 0.5f );
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    if constexpr ( boost::mp11::mp_contains<Args, UseDefaultVoxelPointPositioner>::value )
+    if constexpr ( UseDefaultVoxelPointPositioner )
         sp.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
     else
         sp.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
@@ -668,7 +661,7 @@ auto accessorCtor<VdbVolume>( const VdbVolume& v )
     return v.data->getConstAccessor();
 }
 
-template<typename V, typename Args = boost::mp11::mp_list<>>
+template<typename V, auto NaNChecker, bool UseDefaultVoxelPointPositioner>
 tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshParams& params /*= {} */ )
 {
     if constexpr ( std::is_same_v<V, VdbVolume> )
@@ -757,9 +750,9 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
             {
                 bool ok = false;
                 if constexpr ( std::is_same_v<V, VdbVolume> )
-                    ok = findSeparationPoint<Args>( set[n], volume, acc, baseCoord, basePos, baseValue, NeighborDir( n ), params );
+                    ok = findSeparationPoint<UseDefaultVoxelPointPositioner>( set[n], volume, acc, baseCoord, basePos, baseValue, NeighborDir( n ), params );
                 else
-                    ok = findSeparationPoint<Args>( set[n], volume, indexer, VoxelId( i ), basePos, NeighborDir( n ), params );
+                    ok = findSeparationPoint<NaNChecker, UseDefaultVoxelPointPositioner>( set[n], volume, indexer, VoxelId( i ), basePos, NeighborDir( n ), params );
 
                 if ( ok )
                 {
@@ -920,42 +913,39 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                 else
                 {
                     value = volume.data[ind + cVoxelNeighborsIndexAdd[i]];
-                    if constexpr ( !boost::mp11::mp_contains<Args, OmitNaNCheck>::value )
+                    // find non nan neighbor
+                    constexpr std::array<uint8_t, 7> cNeighborsOrder{
+                        0b001,
+                        0b010,
+                        0b100,
+                        0b011,
+                        0b101,
+                        0b110,
+                        0b111
+                    };
+                    int neighIndex = 0;
+                    // iterates over nan neighbors to find consistent value
+                    while ( NaNChecker( value ) && neighIndex < 7 )
                     {
-                        // find non nan neighbor
-                        constexpr std::array<uint8_t, 7> cNeighborsOrder{
-                            0b001,
-                            0b010,
-                            0b100,
-                            0b011,
-                            0b101,
-                            0b110,
-                            0b111
-                        };
-                        int neighIndex = 0;
-                        // iterates over nan neighbors to find consistent value
-                        while ( isNanFast( value ) && neighIndex < 7 )
+                        auto neighPos = pos;
+                        for ( int posCoord = 0; posCoord < 3; ++posCoord )
                         {
-                            auto neighPos = pos;
-                            for ( int posCoord = 0; posCoord < 3; ++posCoord )
-                            {
-                                int sign = 1;
-                                if ( cVoxelNeighbors[i][posCoord] == 1 )
-                                    sign = -1;
-                                neighPos[posCoord] += ( sign *
-                                    ( ( cNeighborsOrder[neighIndex] & ( 1 << posCoord ) ) >> posCoord ) );
-                            }
-                            value = volume.data[indexer.toVoxelId( neighPos ).get()];
-                            ++neighIndex;
+                            int sign = 1;
+                            if ( cVoxelNeighbors[i][posCoord] == 1 )
+                                sign = -1;
+                            neighPos[posCoord] += ( sign *
+                                ( ( cNeighborsOrder[neighIndex] & ( 1 << posCoord ) ) >> posCoord ) );
                         }
-                        if ( isNanFast( value ) )
-                        {
-                            voxelValid = false;
-                            break;
-                        }
-                        if ( !atLeastOneNan && neighIndex > 0 )
-                            atLeastOneNan = true;
+                        value = volume.data[indexer.toVoxelId( neighPos ).get()];
+                        ++neighIndex;
                     }
+                    if ( NaNChecker( value ) )
+                    {
+                        voxelValid = false;
+                        break;
+                    }
+                    if ( !atLeastOneNan && neighIndex > 0 )
+                        atLeastOneNan = true;
                 }
                 
                 if ( value >= params.iso )
@@ -984,27 +974,24 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
 
             if constexpr ( std::is_same_v<V, SimpleVolume> )
             {
-                if constexpr ( !boost::mp11::mp_contains<Args, OmitNaNCheck>::value )
+                // ensure consistent nan voxel
+                if ( atLeastOneNan && voxelValid )
                 {
-                    // ensure consistent nan voxel
-                    if ( atLeastOneNan && voxelValid )
+                    const auto& plan = cTriangleTable[voxelConfiguration];
+                    for ( int i = 0; i < plan.size() && voxelValid; i += 3 )
                     {
-                        const auto& plan = cTriangleTable[voxelConfiguration];
-                        for ( int i = 0; i < plan.size() && voxelValid; i += 3 )
-                        {
-                            const auto& [interIndex0, dir0] = cEdgeIndicesMap[plan[i]];
-                            const auto& [interIndex1, dir1] = cEdgeIndicesMap[plan[i + 1]];
-                            const auto& [interIndex2, dir2] = cEdgeIndicesMap[plan[i + 2]];
-                            // `iterStatus` indicates that current voxel has valid point for desired triangulation
-                            // as far as iter has 3 directions we use `dir` to validate (make sure that there is point in needed edge) desired direction
-                            voxelValid = voxelValid && ( iterStatus[interIndex0] && iters[interIndex0]->second[int( dir0 )].vid );
-                            voxelValid = voxelValid && ( iterStatus[interIndex1] && iters[interIndex1]->second[int( dir1 )].vid );
-                            voxelValid = voxelValid && ( iterStatus[interIndex2] && iters[interIndex2]->second[int( dir2 )].vid );
-                        }
+                        const auto& [interIndex0, dir0] = cEdgeIndicesMap[plan[i]];
+                        const auto& [interIndex1, dir1] = cEdgeIndicesMap[plan[i + 1]];
+                        const auto& [interIndex2, dir2] = cEdgeIndicesMap[plan[i + 2]];
+                        // `iterStatus` indicates that current voxel has valid point for desired triangulation
+                        // as far as iter has 3 directions we use `dir` to validate (make sure that there is point in needed edge) desired direction
+                        voxelValid = voxelValid && ( iterStatus[interIndex0] && iters[interIndex0]->second[int( dir0 )].vid );
+                        voxelValid = voxelValid && ( iterStatus[interIndex1] && iters[interIndex1]->second[int( dir1 )].vid );
+                        voxelValid = voxelValid && ( iterStatus[interIndex2] && iters[interIndex2]->second[int( dir2 )].vid );
                     }
-                    if ( !voxelValid )
-                        continue;
                 }
+                if ( !voxelValid )
+                    continue;
             }
 
             const auto& plan = cTriangleTable[voxelConfiguration];
@@ -1101,22 +1088,23 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
     return result;
 }
 
-template <typename V, typename Args = boost::mp11::mp_list<>>
+template <typename V, auto NaNChecker>
 tl::expected<Mesh, std::string> volumeToMeshHelper1( const V& volume, const VolumeToMeshParams& params )
 {
     if ( !params.positioner )
-        return volumeToMesh<V, boost::mp11::mp_append<Args, boost::mp11::mp_list<UseDefaultVoxelPointPositioner>>>( volume, params );
+        return volumeToMesh<V, NaNChecker, true>( volume, params );
     else
-        return volumeToMesh<V, Args>( volume, params );
+        return volumeToMesh<V, NaNChecker, false>( volume, params );
 }
 
-template <typename V, typename Args = boost::mp11::mp_list<>>
+template <typename V>
 tl::expected<Mesh, std::string> volumeToMeshHelper2( const V& volume, const VolumeToMeshParams& params )
 {
+    constexpr auto noCheck = [] ( float ) { return false; };
     if ( params.omitNaNCheck )
-        return volumeToMeshHelper1<V, boost::mp11::mp_append<Args, boost::mp11::mp_list<OmitNaNCheck>>>( volume, params );
+        return volumeToMeshHelper1<V, noCheck>( volume, params );
     else
-        return volumeToMeshHelper1<V, Args>( volume, params );
+        return volumeToMeshHelper1<V, isNanFast>( volume, params );
 }
 
 tl::expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params /*= {} */ )

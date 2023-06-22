@@ -18,6 +18,17 @@
 #include <optional>
 #include <thread>
 
+
+namespace
+{
+constexpr float cQuietNan = std::numeric_limits<float>::quiet_NaN();
+
+inline bool isNanFast( float f )
+{
+    return std::bit_cast< int >( f ) == std::bit_cast< int >( cQuietNan );
+}
+}
+
 namespace MR
 {
 
@@ -109,10 +120,10 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
             else
             {
                 auto s = findSignedDistance( voxelCenter, mesh, params.maxDistSq, params.minDistSq );
-                dist = s ? s->dist : std::numeric_limits<float>::quiet_NaN();
+                dist = s ? s->dist : cQuietNan;
             }
 
-            if ( !std::isnan( dist ) )
+            if ( !isNanFast( dist ) )
             {
                 bool changeSign = false;
                 if ( params.signMode == SignDetectionMode::WindingRule )
@@ -619,7 +630,7 @@ bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const
     float valueB = volume.data[base];
     float valueD = volume.data[indexer.getExistingNeighbor( base, outEdge ).get()];
     if constexpr ( !boost::mp11::mp_contains<Args, OmitNaNCheck>::value )
-        if ( std::isnan( valueB ) || std::isnan( valueD ) )
+        if ( isNanFast( valueB ) || isNanFast( valueD ) )
             return false;
 
     bool bLower = valueB < params.iso;
@@ -900,7 +911,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                         };
                         int neighIndex = 0;
                         // iterates over nan neighbors to find consistent value
-                        while ( std::isnan( value ) && neighIndex < 7 )
+                        while ( isNanFast( value ) && neighIndex < 7 )
                         {
                             auto neighPos = pos;
                             for ( int posCoord = 0; posCoord < 3; ++posCoord )
@@ -914,7 +925,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                             value = volume.data[indexer.toVoxelId( neighPos ).get()];
                             ++neighIndex;
                         }
-                        if ( std::isnan( value ) )
+                        if ( isNanFast( value ) )
                         {
                             voxelValid = false;
                             break;

@@ -19,3 +19,4 @@ distr/*
 *.log
 /docker/logs/
 macos/Resources/LICENSE
+test_python/*.png

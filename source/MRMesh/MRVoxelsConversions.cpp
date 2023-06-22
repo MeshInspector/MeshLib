@@ -709,7 +709,6 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
 
     // find all separate points
     // fill map in parallel
-    Timer timer( "find separation points" );
     struct VertsNumeration
     {
         // explicit ctor to fix clang build with `vec.emplace_back( ind, 0 )`
@@ -778,7 +777,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
             hmap( i ).insert( { i, set } );
         }
     } );
-    timer.finish();
+
     if ( params.cb && !keepGoing )
         return unexpectedOperationCanceled();
 
@@ -864,7 +863,6 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
         Triangulation t;
         Vector<VoxelId, FaceId> faceMap;
     };
-    timer.start( "plan triangulation" );
     using PerThreadTriangulation = std::vector<TriangulationData>;
     auto subprogress2 = MR::subprogress( params.cb, 0.5f, 0.85f );
     std::atomic<size_t> voxelsDone{0};
@@ -1042,7 +1040,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                 keepGoing.store( false, std::memory_order_relaxed );
         }
     } );
-    timer.finish();
+
     if ( params.cb && !keepGoing )
         return unexpectedOperationCanceled();
 

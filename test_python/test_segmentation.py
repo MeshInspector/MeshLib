@@ -16,3 +16,5 @@ def test_segmentation():
     res = mrmesh.segmentByGraphCut(mesh.topology,source,sink,metric)
 
     assert (res.count() != 0)
+    assert (res.test(mrmesh.FaceId(0)))
+    assert (not res.test(mrmesh.FaceId(5)))

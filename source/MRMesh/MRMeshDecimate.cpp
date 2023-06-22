@@ -11,6 +11,7 @@
 #include "MRMeshDelone.h"
 #include "MRMeshSubdivide.h"
 #include "MRMeshRelax.h"
+#include "MRLineSegm.h"
 #include "MRPch/MRTBB.h"
 #include <queue>
 
@@ -410,6 +411,30 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         std::swap( po, pd );
     }
 
+    auto smallShift = [maxBdShiftSq = sqr( settings_.maxBdShift )]( const LineSegm3f & segm, const Vector3f & p )
+    {
+        return ( closestPointOnLineSegm( p, segm ) - p ).lengthSq() <= maxBdShiftSq;
+    };
+    if ( ( !vl || !vr ) && settings_.maxBdShift < FLT_MAX )
+    {
+        if ( !smallShift( LineSegm3f{ mesh_.orgPnt( edgeToCollapse ), mesh_.destPnt( edgeToCollapse ) }, collapsePos ) )
+            return {}; // new vertex is too far from collapsing boundary edge
+        if ( !vr )
+        {
+            if ( !smallShift( LineSegm3f{ mesh_.orgPnt( mesh_.topology.prevLeftBd( edgeToCollapse ) ), collapsePos }, po ) )
+                return {}; // origin of collapsing boundary edge is too far from new boundary segment
+            if ( !smallShift( LineSegm3f{ mesh_.destPnt( mesh_.topology.nextLeftBd( edgeToCollapse ) ), collapsePos }, pd ) )
+                return {}; // destination of collapsing boundary edge is too far from new boundary segment
+        }
+        if ( !vl )
+        {
+            if ( !smallShift( LineSegm3f{ mesh_.orgPnt( mesh_.topology.prevLeftBd( edgeToCollapse.sym() ) ), collapsePos }, pd ) )
+                return {}; // destination of collapsing boundary edge is too far from new boundary segment
+            if ( !smallShift( LineSegm3f{ mesh_.destPnt( mesh_.topology.nextLeftBd( edgeToCollapse.sym() ) ), collapsePos }, po ) )
+                return {}; // origin of collapsing boundary edge is too far from new boundary segment
+        }
+    }
+
     float maxOldAspectRatio = settings_.maxTriangleAspectRatio;
     float maxNewAspectRatio = 0;
     const float edgeLenSq = ( po - pd ).lengthSq();
@@ -420,7 +445,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     originNeis_.clear();
     triDblAreas_.clear();
     Vector3d sumDblArea_;
-    bool oBd = false; // there is a boundary edge incident to org( edgeToCollapse )
+    EdgeId oBdEdge; // a boundary edge !right(e) incident to org( edgeToCollapse )
     for ( EdgeId e : orgRing0( topology, edgeToCollapse ) )
     {
         const auto eDest = topology.dest( e );
@@ -434,7 +459,8 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         maxNewEdgeLenSq = std::max( maxNewEdgeLenSq, ( collapsePos - pDest ).lengthSq() );
         if ( !topology.left( e ) )
         {
-            oBd = true;
+            oBdEdge = topology.next( e );
+            assert( topology.isLeftBdEdge( oBdEdge ) );
             continue;
         }
 
@@ -451,9 +477,13 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         }
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( po, pDest, pDest2 ) );
     }
+    if ( oBdEdge
+        && !smallShift( LineSegm3f{ po, mesh_.destPnt( oBdEdge ) }, collapsePos )
+        && !smallShift( LineSegm3f{ po, mesh_.orgPnt( topology.prevLeftBd( oBdEdge ) ) }, collapsePos ) )
+            return {}; // new vertex is too far from both existed boundary edges
     std::sort( originNeis_.begin(), originNeis_.end() );
 
-    bool dBd = false; // there is a boundary edge incident to dest( edgeToCollapse )
+    EdgeId dBdEdge; // a boundary edge !right(e) incident to dest( edgeToCollapse )
     for ( EdgeId e : orgRing0( topology, edgeToCollapse.sym() ) )
     {
         const auto eDest = topology.dest( e );
@@ -466,7 +496,8 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         maxNewEdgeLenSq = std::max( maxNewEdgeLenSq, ( collapsePos - pDest ).lengthSq() );
         if ( !topology.left( e ) )
         {
-            dBd = true;
+            dBdEdge = topology.next( e );
+            assert( topology.isLeftBdEdge( dBdEdge ) );
             continue;
         }
 
@@ -483,8 +514,12 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         }
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( pd, pDest, pDest2 ) );
     }
+    if ( dBdEdge
+        && !smallShift( LineSegm3f{ pd, mesh_.destPnt( dBdEdge ) }, collapsePos )
+        && !smallShift( LineSegm3f{ pd, mesh_.orgPnt( topology.prevLeftBd( dBdEdge ) ) }, collapsePos ) )
+            return {}; // new vertex is too far from both existed boundary edges
 
-    if ( vl && vr && oBd && dBd )
+    if ( vl && vr && oBdEdge && dBdEdge )
         return {}; // prohibit collapse of an inner edge if it brings two boundaries in touch
 
     if ( !tinyEdge && maxNewAspectRatio > maxOldAspectRatio && maxOldAspectRatio <= settings_.criticalTriAspectRatio )
@@ -834,6 +869,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     DecimateSettings decs;
     decs.strategy = DecimateStrategy::ShortestEdgeFirst;
     decs.maxError = settings.targetEdgeLen * uni;
+    decs.maxBdShift = settings.maxBdShift;
     decs.region = settings.region;
     decs.packMesh = settings.packMesh;
     decs.progressCallback = subprogress( settings.progressCallback, 0.5f, 0.95f );

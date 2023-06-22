@@ -560,6 +560,8 @@ Vector3f voxelPositionerLinear( const Vector3f& pos0, const Vector3f& pos1, floa
     return voxelPositionerLinearInline( pos0, pos1, v0, v1, iso );
 }
 
+class UseDefaultVoxelPointPositioner {};
+
 template <typename Args>
 bool findSeparationPoint( SeparationPoint& sp, const VdbVolume& volume, const ConstAccessor& acc,
                           const VdbCoord& minCoord, const Vector3i& basePos, NeighborDir dir,
@@ -1069,25 +1071,25 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
 template <typename... Args>
 tl::expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params /*= {} */ )
 {
-    return volumeToMesh<SimpleVolume, boost::mp11::mp_list<Args...>>( volume, params );
+    if ( !params.positioner )
+        return volumeToMesh<SimpleVolume, boost::mp11::mp_list<UseDefaultVoxelPointPositioner, Args...>>( volume, params );
+    else
+        return volumeToMesh<SimpleVolume, boost::mp11::mp_list<Args...>>( volume, params );
 }
 template <typename... Args>
 tl::expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params /*= {} */ )
 {
-    return volumeToMesh<VdbVolume, boost::mp11::mp_list<Args...>>( volume, params );
+    if ( !params.positioner )
+        return volumeToMesh<VdbVolume, boost::mp11::mp_list<UseDefaultVoxelPointPositioner, Args...>>( volume, params );
+    else
+        return volumeToMesh<VdbVolume, boost::mp11::mp_list<Args...>>( volume, params );
 }
 
 template MRMESH_API tl::expected<Mesh, std::string> simpleVolumeToMesh<>( const SimpleVolume&, const VolumeToMeshParams& );
-template MRMESH_API tl::expected<Mesh, std::string> simpleVolumeToMesh<UseDefaultVoxelPointPositioner>( const SimpleVolume&, const VolumeToMeshParams& );
-template MRMESH_API tl::expected<Mesh, std::string> simpleVolumeToMesh<UseDefaultVoxelPointPositioner, OmitNaNCheck>( const SimpleVolume&, const VolumeToMeshParams& );
 template MRMESH_API tl::expected<Mesh, std::string> simpleVolumeToMesh<OmitNaNCheck>( const SimpleVolume&, const VolumeToMeshParams& );
-template MRMESH_API tl::expected<Mesh, std::string> simpleVolumeToMesh<OmitNaNCheck, UseDefaultVoxelPointPositioner>( const SimpleVolume&, const VolumeToMeshParams& );
 
 template MRMESH_API tl::expected<Mesh, std::string> vdbVolumeToMesh<>( const VdbVolume&, const VolumeToMeshParams& );
-template MRMESH_API tl::expected<Mesh, std::string> vdbVolumeToMesh<UseDefaultVoxelPointPositioner>( const VdbVolume&, const VolumeToMeshParams& );
-template MRMESH_API tl::expected<Mesh, std::string> vdbVolumeToMesh<UseDefaultVoxelPointPositioner, OmitNaNCheck>( const VdbVolume&, const VolumeToMeshParams& );
 template MRMESH_API tl::expected<Mesh, std::string> vdbVolumeToMesh<OmitNaNCheck>( const VdbVolume&, const VolumeToMeshParams& );
-template MRMESH_API tl::expected<Mesh, std::string> vdbVolumeToMesh<OmitNaNCheck, UseDefaultVoxelPointPositioner>( const VdbVolume&, const VolumeToMeshParams& );
 
 }
 #endif

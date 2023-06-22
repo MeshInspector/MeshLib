@@ -202,6 +202,10 @@ public:
     [[nodiscard]] bool isLeftBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return region ? ( isLeftInRegion( e, region ) && !isLeftInRegion( e.sym(), region ) ) : !right( e ); }
     /// return true if given edge is inner or boundary for given region (or for whole mesh if region is nullptr), returns false for lone edges
     [[nodiscard]] bool isInnerOrBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return isLeftInRegion( e, region ) || isLeftInRegion( e.sym(), region ); }
+    /// given a (region) boundary edge with no right face in given region, returns next boundary edge for the same region: dest(e)==org(res)
+    [[nodiscard]] MRMESH_API EdgeId nextLeftBd( EdgeId e, const FaceBitSet * region = nullptr ) const;
+    /// given a (region) boundary edge with no right face in given region, returns previous boundary edge for the same region; dest(res)==org(e)
+    [[nodiscard]] MRMESH_API EdgeId prevLeftBd( EdgeId e, const FaceBitSet * region = nullptr ) const;
 
     /// finds and returns edge from o to d in the mesh; returns invalid edge otherwise
     [[nodiscard]] MRMESH_API EdgeId findEdge( VertId o, VertId d ) const;

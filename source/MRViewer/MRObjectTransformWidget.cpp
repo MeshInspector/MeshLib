@@ -352,9 +352,11 @@ void ObjectTransformWidget::processScaling_( Axis ax, bool press )
     auto viewportPoint = getViewerInstance().screenToViewport( Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), viewport.id );
     auto line = viewport.unprojectPixelRay( Vector2f( viewportPoint.x, viewportPoint.y ) );
     auto xf = controlsRoot_->xf( viewport.id );
+    const auto& wCenter = controls_->getCenter();
+    auto wRadius = controls_->getRadius();
     auto newScaling = findClosestPointOfSkewLines(
-        xf( controls_->getCenter() - baseAxis[int( ax )] * 0.5f ),
-        xf( controls_->getCenter() + baseAxis[int( ax )] * 0.5f ),
+        xf( wCenter - baseAxis[int( ax )] * wRadius ),
+        xf( wCenter + baseAxis[int( ax )] * wRadius ),
         line.p, line.p + line.d
     );
     auto centerTransformed = xf( controls_->getCenter() );
@@ -393,9 +395,11 @@ void ObjectTransformWidget::processTranslation_( Axis ax, bool press )
     auto viewportPoint = getViewerInstance().screenToViewport( Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), viewport.id );
     auto line = viewport.unprojectPixelRay( Vector2f( viewportPoint.x, viewportPoint.y ) );
     auto xf = controlsRoot_->xf( viewport.id );
+    const auto& wCenter = controls_->getCenter();
+    auto wRadius = controls_->getRadius();
     auto newTranslation = findClosestPointOfSkewLines(
-        xf( controls_->getCenter() - baseAxis[int( ax )] * 0.5f ),
-        xf( controls_->getCenter() + baseAxis[int( ax )] * 0.5f ),
+        xf( wCenter - baseAxis[int( ax )] * wRadius ),
+        xf( wCenter + baseAxis[int( ax )] * wRadius ),
         line.p, line.p + line.d
     );
 
@@ -423,9 +427,11 @@ void ObjectTransformWidget::processRotation_( Axis ax, bool press )
     auto line = viewport.unprojectPixelRay( Vector2f( viewportPoint.x, viewportPoint.y ) );
 
     auto xf = controlsRoot_->xf( viewport.id );
-    auto zeroPoint = xf( controls_->getCenter() + baseAxis[( int( ax ) + 1 ) % 3] );
+    const auto& wCenter = controls_->getCenter();
+    auto wRadius = controls_->getRadius();
+    auto zeroPoint = xf( wCenter + baseAxis[( int( ax ) + 1 ) % 3] * wRadius );
     auto norm = xf.A * ( baseAxis[int( ax )] );
-    auto centerTransformed = xf( controls_->getCenter() );
+    auto centerTransformed = xf( wCenter );
     auto angle = findAngleDegOfPick( centerTransformed, zeroPoint, norm, line, viewport, viewportPoint );
 
     if ( press )

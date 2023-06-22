@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include <cfloat>
 #include <climits>
 #include <functional>
 
@@ -20,7 +21,7 @@ struct DecimatePolylineSettings
     /// Limit from above on the maximum distance from moved vertices to original contour
     float maxError = 0.001f;
     /// Maximal possible edge length created during decimation
-    float maxEdgeLen = 1;
+    float maxEdgeLen = FLT_MAX;
     /// Stabilizer is dimensionless coefficient.
     /// The larger is stabilizer, the more Decimator will strive to retain the density of input points.
     /// If stabilizer is zero, then only the shape of input line will be preserved.

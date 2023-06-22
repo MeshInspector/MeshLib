@@ -195,6 +195,7 @@ struct SeparationPoint
 
 using SeparationPointSet = std::array<SeparationPoint, size_t( NeighborDir::Count )>;
 using SeparationPointMap = ParallelHashMap<size_t, SeparationPointSet>;
+template <size_t N> using ItersArray = std::array<SeparationPointMap::const_iterator, N>;
 
 // lookup table from
 // http://paulbourke.net/geometry/polygonise/
@@ -576,16 +577,15 @@ class OmitNaNCheck {};
 
 template <typename Args>
 bool findSeparationPoint( SeparationPoint& sp, const VdbVolume& volume, const ConstAccessor& acc,
-                          const VdbCoord& minCoord, const Vector3i& basePos, NeighborDir dir,
+                          const openvdb::Coord& coord, const Vector3i& basePos, float valueB, NeighborDir dir,
                           const VolumeToMeshParams& params )
 {
     if ( basePos[int( dir )] + 1 >= volume.dims[int( dir )] )
         return false;
-    auto coord = openvdb::Coord{ basePos.x + minCoord.x(),basePos.y + minCoord.y(),basePos.z + minCoord.z() };
-    float valueB = acc.getValue( coord );// volume.data[base];
     auto nextCoord = coord;
     nextCoord[int( dir )] += 1;
     float valueD = acc.getValue( nextCoord );// volume.data[nextId];
+
     bool bLower = valueB < params.iso;
     bool dLower = valueD < params.iso;
     if ( bLower == dLower )
@@ -649,6 +649,24 @@ bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const
     return true;
 }
 
+template<typename V>
+auto accessorCtor( const V& v )
+{
+    return {};
+}
+
+template<>
+auto accessorCtor<SimpleVolume>( const SimpleVolume& )
+{
+    return ( void* )nullptr;
+}
+
+template<>
+auto accessorCtor<VdbVolume>( const VdbVolume& v )
+{
+    return v.data->getConstAccessor();
+}
+
 template<typename V, typename Args = boost::mp11::mp_list<>>
 tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshParams& params /*= {} */ )
 {
@@ -706,9 +724,10 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
         assert( range.begin() + 1 == range.end() );
         const auto blockIndex = range.begin();
 
-        std::optional<ConstAccessor> acc;
-        if constexpr ( std::is_same_v<V, VdbVolume> )
-            acc = volume.data->getConstAccessor();
+        // vdb version cache
+        [[maybe_unused]] auto acc = accessorCtor( volume );
+        [[maybe_unused]] openvdb::Coord baseCoord;
+        [[maybe_unused]] float baseValue{ 0.0f };
 
         if ( std::this_thread::get_id() == mainThreadId && lastSubMap == -1 )
             lastSubMap = int( blockIndex );
@@ -729,11 +748,16 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
             SeparationPointSet set;
             bool atLeastOneOk = false;
             auto basePos = indexer.toPos( VoxelId( i ) );
+            if constexpr ( std::is_same_v<V, VdbVolume> )
+            {
+                baseCoord = openvdb::Coord{ basePos.x + minCoord.x(), basePos.y + minCoord.y(), basePos.z + minCoord.z() };
+                baseValue = acc.getValue( baseCoord );
+            }
             for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
             {
                 bool ok = false;
                 if constexpr ( std::is_same_v<V, VdbVolume> )
-                    ok = findSeparationPoint<Args>( set[n], volume, *acc, minCoord, basePos, NeighborDir( n ), params );
+                    ok = findSeparationPoint<Args>( set[n], volume, acc, baseCoord, basePos, baseValue, NeighborDir( n ), params );
                 else
                     ok = findSeparationPoint<Args>( set[n], volume, indexer, VoxelId( i ), basePos, NeighborDir( n ), params );
 
@@ -858,7 +882,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
     };
 
     tbb::enumerable_thread_specific<PerThreadTriangulation> triangulationPerThread;
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size(),indexer.dims().x ), [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size() ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         // setup local triangulation
         auto& localTriangulatoinData = triangulationPerThread.local();
@@ -868,11 +892,11 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
         auto& t = thisTriData.t;
         auto& faceMap = thisTriData.faceMap;
 
+        // vdb accessor
+        [[maybe_unused]] auto acc = accessorCtor( volume );
+
         // cell data
-        std::optional<ConstAccessor> acc;
-        if constexpr ( std::is_same_v<V, VdbVolume> )
-            acc = volume.data->getConstAccessor();
-        std::array<SeparationPointMap::const_iterator, 7> iters;
+        ItersArray<7> iters;
         std::array<bool, 7> iterStatus;
         unsigned char voxelConfiguration;
         for ( size_t ind = range.begin(); ind < range.end(); ++ind )
@@ -893,7 +917,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                 auto pos = basePos + cVoxelNeighbors[i];
                 float value{ 0.0f };
                 if constexpr ( std::is_same_v<V, VdbVolume> )
-                    value = acc->getValue( { pos.x + minCoord.x(),pos.y + minCoord.y(),pos.z + minCoord.z() } );
+                    value = acc.getValue( { pos.x + minCoord.x(),pos.y + minCoord.y(),pos.z + minCoord.z() } );
                 else
                 {
                     value = volume.data[ind + cVoxelNeighborsIndexAdd[i]];
@@ -979,12 +1003,10 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                             voxelValid = voxelValid && ( iterStatus[interIndex2] && iters[interIndex2]->second[int( dir2 )].vid );
                         }
                     }
+                    if ( !voxelValid )
+                        continue;
                 }
             }
-
-            if constexpr ( std::is_same_v<V, SimpleVolume> )
-                if ( !voxelValid )
-                    continue;
 
             const auto& plan = cTriangleTable[voxelConfiguration];
             for ( int i = 0; i < plan.size(); i += 3 )

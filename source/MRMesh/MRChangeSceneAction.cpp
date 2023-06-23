@@ -43,6 +43,12 @@ void ChangeSceneAction::action( HistoryAction::Type actionType )
 
 size_t ChangeSceneAction::heapBytes() const
 {
+    // if type_ == Type::AddObject: obj_ has at least two owners - scene and this action
+    // so this action does not really hold it, so we do not count it as part of action
+    // otherwise - action is (in common case) the only owner of obj_, so we count it
+    //
+    // note: calling undo makes scene own object again, but it does not really matter 
+    // because we only interested in `heapBytes` for undo part of stack
     return name_.capacity() + ( type_ == Type::RemoveObject ? MR::heapBytes( obj_ ) : 0 );
 }
 

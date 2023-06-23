@@ -12,14 +12,14 @@
 namespace MR
 {
 
-struct MRMESH_CLASS BaseVolumeConversionParams
+struct BaseVolumeConversionParams
 {
     // origin point of voxels box
     Vector3f origin;
     ProgressCallback cb{}; // progress callback
 };
 
-struct MRMESH_CLASS MeshToSimpleVolumeParams : public BaseVolumeConversionParams
+struct MeshToSimpleVolumeParams : public BaseVolumeConversionParams
 {
     /// size of voxel on each axis
     Vector3f voxelSize{ 1.0f,1.0f,1.0f };
@@ -42,7 +42,7 @@ using VoxelPointPositioner = std::function<Vector3f( const Vector3f&, const Vect
 // linear interpolation positioner
 MRMESH_API Vector3f voxelPositionerLinear( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso );
 
-struct MRMESH_CLASS VolumeToMeshParams : public BaseVolumeConversionParams
+struct VolumeToMeshParams : public BaseVolumeConversionParams
 {
     float iso{ 0.0f };
     bool lessInside{ false }; // should be false for dense volumes, and true for distance volume

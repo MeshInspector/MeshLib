@@ -228,7 +228,19 @@ const std::array<Vector3i, 8> cVoxelNeighbors{
     Vector3i{0,1,1},
     Vector3i{1,1,1}
 };
-const std::array<int, 8> cMapNeighborsShift{ 0,1,3,2,4,5,7,6 };
+constexpr std::array<int, 8> cMapNeighborsShift{ 0,1,3,2,4,5,7,6 };
+
+constexpr std::array<uint8_t, 8> cMapNeighbors
+{
+    1 << cMapNeighborsShift[0],
+    1 << cMapNeighborsShift[1],
+    1 << cMapNeighborsShift[2],
+    1 << cMapNeighborsShift[3],
+    1 << cMapNeighborsShift[4],
+    1 << cMapNeighborsShift[5],
+    1 << cMapNeighborsShift[6],
+    1 << cMapNeighborsShift[7]
+};
 
 using TriangulationPlan = std::vector<int>;
 const std::array<TriangulationPlan, 256> cTriangleTable = {
@@ -490,70 +502,113 @@ TriangulationPlan{0, 3, 8},
 TriangulationPlan{}
 };
 
-// check if this iter is needed for config
-bool cNeedIter( int iterIndex, uint8_t config )
+const std::array<OutEdge, size_t( NeighborDir::Count )> cOutEdgeMap { OutEdge::PlusX, OutEdge::PlusY, OutEdge::PlusZ };
+
+// each iterator has info about separation point on plus directions of it base
+// mode: 0 - (0,0,0) voxel, +x, +y, +z possible separation points
+// mode: 1 - (1,0,0) voxel,     +y, +z possible separation points
+// mode: 2 - (0,1,0) voxel, +x,     +z possible separation points
+// mode: 3 - (1,1,0) voxel,         +z possible separation points
+// mode: 4 - (0,0,1) voxel, +x, +y     possible separation points
+// mode: 5 - (1,0,1) voxel,     +y     possible separation points
+// mode: 6 - (0,1,1) voxel, +x         possible separation points
+// 
+// function returns true if given voxelsConfig requires separation points in given mode
+bool cNeedIteratorMode( int mode, uint8_t voxelsConfig )
 {
-    if ( iterIndex == 0 )
+    if ( mode == 0 )
     {
-        auto base = ( config & ( 1 << 0 ) );
-        if ( base != ( config & ( 1 << cMapNeighborsShift[1] ) ) )
+        auto base = ( voxelsConfig & cMapNeighbors[0] );
+        if ( base != ( voxelsConfig & cMapNeighbors[1] ) )
             return true;
-        else if ( base != ( config & ( 1 << cMapNeighborsShift[2] ) ) )
+        else if ( base != ( voxelsConfig & cMapNeighbors[2] ) )
             return true;
-        else if ( base != ( config & ( 1 << cMapNeighborsShift[4] ) ) )
+        else if ( base != ( voxelsConfig & cMapNeighbors[4] ) )
             return true;
         else
             return false;
     }
-    else if ( iterIndex == 1 )
+    else if ( mode == 1 )
     {
-        auto base = ( config & ( 1 << cMapNeighborsShift[1] ) );
-        if ( base != ( config & ( 1 << cMapNeighborsShift[3] ) ) )
+        auto base = ( voxelsConfig & cMapNeighbors[1] );
+        if ( base != ( voxelsConfig & cMapNeighbors[3] ) )
             return true;
-        else if ( base != ( config & ( 1 << cMapNeighborsShift[5] ) ) )
+        else if ( base != ( voxelsConfig & cMapNeighbors[5] ) )
             return true;
         else
             return false;
     }
-    else if ( iterIndex == 2 )
+    else if ( mode == 2 )
     {
-        auto base = ( config & ( 1 << cMapNeighborsShift[2] ) );
-        if ( base != ( config & ( 1 << cMapNeighborsShift[3] ) ) )
+        auto base = ( voxelsConfig & cMapNeighbors[2] );
+        if ( base != ( voxelsConfig & cMapNeighbors[3] ) )
             return true;
-        else if ( base != ( config & ( 1 << cMapNeighborsShift[6] ) ) )
+        else if ( base != ( voxelsConfig & cMapNeighbors[6] ) )
             return true;
         else
             return false;
     }
-    else if ( iterIndex == 3 )
+    else if ( mode == 3 )
     {
-        if ( ( config & ( 1 << cMapNeighborsShift[3] ) ) != ( config & ( 1 << cMapNeighborsShift[7] ) ) )
+        if ( ( voxelsConfig & cMapNeighbors[3] ) != ( voxelsConfig & cMapNeighbors[7] ) )
             return true;
         return false;
     }
-    else if ( iterIndex == 4 )
+    else if ( mode == 4 )
     {
-        auto base = ( config & ( 1 << cMapNeighborsShift[4] ) );
-        if ( base != ( config & ( 1 << cMapNeighborsShift[5] ) ) )
+        auto base = ( voxelsConfig & cMapNeighbors[4] );
+        if ( base != ( voxelsConfig & cMapNeighbors[5] ) )
             return true;
-        else if ( base != ( config & ( 1 << cMapNeighborsShift[6] ) ) )
+        else if ( base != ( voxelsConfig & cMapNeighbors[6] ) )
             return true;
         else
             return false;
     }
-    else if ( iterIndex == 5 )
+    else if ( mode == 5 )
     {
-        if ( ( config & ( 1 << cMapNeighborsShift[5] ) ) != ( config & ( 1 << cMapNeighborsShift[7] ) ) )
+        if ( ( voxelsConfig & cMapNeighbors[5] ) != ( voxelsConfig & cMapNeighbors[7] ) )
             return true;
         return false;
     }
-    else if ( iterIndex == 6 )
+    else if ( mode == 6 )
     {
-        if ( ( config & ( 1 << cMapNeighborsShift[6] ) ) != ( config & ( 1 << cMapNeighborsShift[7] ) ) )
+        if ( ( voxelsConfig & cMapNeighbors[6] ) != ( voxelsConfig & cMapNeighbors[7] ) )
             return true;
         return false;
     }
     return false;
+}
+
+// mode: 0 - (0,0,0) voxel, +x, +y, +z possible separation points
+// mode: 1 - (1,0,0) voxel,     +y, +z possible separation points
+// mode: 2 - (0,1,0) voxel, +x,     +z possible separation points
+// mode: 3 - (1,1,0) voxel,         +z possible separation points
+// mode: 4 - (0,0,1) voxel, +x, +y     possible separation points
+// mode: 5 - (1,0,1) voxel,     +y     possible separation points
+// mode: 6 - (0,1,1) voxel, +x         possible separation points
+// 
+// function returns true if given set has at least one valid SeparationPoint
+bool checkSetValid( const SeparationPointSet& set, int mode )
+{
+    switch ( mode )
+    {
+    case 0: // base voxel
+        return true;
+    case 1: // x + 1 voxel
+        return set[int( NeighborDir::Y )] || set[int( NeighborDir::Z )];
+    case 2: // y + 1 voxel
+        return set[int( NeighborDir::X )] || set[int( NeighborDir::Z )];
+    case 3: // x + 1, y + 1 voxel
+        return bool( set[int( NeighborDir::Z )] );
+    case 4: // z + 1 voxel
+        return set[int( NeighborDir::X )] || set[int( NeighborDir::Y )];
+    case 5: // x + 1, z + 1 voxel
+        return bool( set[int( NeighborDir::Y )] );
+    case 6: // y + 1, z + 1 voxel
+        return bool( set[int( NeighborDir::X )] );
+    default:
+        return false;
+    }
 }
 
 }
@@ -564,7 +619,7 @@ using VdbCoord = openvdb::Coord;
 
 inline Vector3f voxelPositionerLinearInline( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
 {
-    const auto ratio = std::clamp( std::abs( iso - v0 ) / std::abs( v1 - v0 ), 0.0f, 1.0f );
+    const auto ratio = std::clamp( ( iso - v0 ) / ( v1 - v0 ), 0.0f, 1.0f );
     return ( 1.0f - ratio ) * pos0 + ratio * pos1;
 }
 
@@ -609,24 +664,8 @@ bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const
     if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
         return false;
 
-    OutEdge outEdge;
-    switch ( dir )
-    {
-    case MR::MarchingCubesHelper::NeighborDir::X:
-        outEdge = OutEdge::PlusX;
-        break;
-    case MR::MarchingCubesHelper::NeighborDir::Y:
-        outEdge = OutEdge::PlusY;
-        break;
-    case MR::MarchingCubesHelper::NeighborDir::Z:
-        outEdge = OutEdge::PlusZ;
-        break;
-    default:
-        return false;
-    }
-
     float valueB = volume.data[base];
-    float valueD = volume.data[indexer.getExistingNeighbor( base, outEdge ).get()];
+    float valueD = volume.data[indexer.getExistingNeighbor( base, cOutEdgeMap[int( dir )] ).get()];
     if ( nanChecker( valueB ) || nanChecker( valueD ) )
         return false;
 
@@ -646,20 +685,11 @@ bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const
     return true;
 }
 
-template<typename V>
-auto accessorCtor( const V& v );
+template<typename V> auto accessorCtor( const V& v );
 
-template<>
-auto accessorCtor<SimpleVolume>( const SimpleVolume& )
-{
-    return ( void* )nullptr;
-}
+template<> auto accessorCtor<SimpleVolume>( const SimpleVolume& ) { return ( void* )nullptr; }
 
-template<>
-auto accessorCtor<VdbVolume>( const VdbVolume& v )
-{
-    return v.data->getConstAccessor();
-}
+template<> auto accessorCtor<VdbVolume>( const VdbVolume& v ) { return v.data->getConstAccessor(); }
 
 template<typename V, typename NaNChecker, bool UseDefaultVoxelPointPositioner>
 tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshParams& params, NaNChecker&& nanChecker )
@@ -719,7 +749,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
 
         // vdb version cache
         [[maybe_unused]] auto acc = accessorCtor( volume );
-        [[maybe_unused]] openvdb::Coord baseCoord;
+        [[maybe_unused]] VdbCoord baseCoord;
         [[maybe_unused]] float baseValue{ 0.0f };
 
         if ( std::this_thread::get_id() == mainThreadId && lastSubMap == -1 )
@@ -826,30 +856,6 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
     if ( params.cb && !params.cb( 0.5f ) )
         return unexpectedOperationCanceled();
 
-    // check neighbor iterator valid
-    auto checkIter = [&] ( const auto& set, int mode ) -> bool
-    {
-        switch ( mode )
-        {
-        case 0: // base voxel
-            return true;
-        case 1: // x + 1 voxel
-            return set[int( NeighborDir::Y )] || set[int( NeighborDir::Z )];
-        case 2: // y + 1 voxel
-            return set[int( NeighborDir::X )] || set[int( NeighborDir::Z )];
-        case 3: // x + 1, y + 1 voxel
-            return bool( set[int( NeighborDir::Z )] );
-        case 4: // z + 1 voxel
-            return set[int( NeighborDir::X )] || set[int( NeighborDir::Y )];
-        case 5: // x + 1, z + 1 voxel
-            return bool( set[int( NeighborDir::Y )] );
-        case 6: // y + 1, z + 1 voxel
-            return bool( set[int( NeighborDir::X )] );
-        default:
-            return false;
-        }
-    };
-
     // triangulate by table
     struct TriangulationData
     {
@@ -950,7 +956,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                 
                 if ( value >= params.iso )
                     continue;
-                voxelConfiguration |= ( 1 << cMapNeighborsShift[i] );
+                voxelConfiguration |= cMapNeighbors[i];
             }
             if ( !voxelValid || voxelConfiguration == 0x00 || voxelConfiguration == 0xff )
                 continue;
@@ -958,7 +964,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
             voxelValid = false;
             for ( int i = 0; i < iters.size(); ++i )
             {
-                if ( !cNeedIter( i, voxelConfiguration ) )
+                if ( !cNeedIteratorMode( i, voxelConfiguration ) )
                 {
                     iters[i] = {};
                     iterStatus[i] = false;
@@ -966,7 +972,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
                 }
                 const auto index = ind + cVoxelNeighborsIndexAdd[i];
                 iters[i] = hmap( index ).find( index );
-                iterStatus[i] = ( iters[i] != hmap( index ).cend() ) && checkIter( iters[i]->second, i );
+                iterStatus[i] = ( iters[i] != hmap( index ).cend() ) && checkSetValid( iters[i]->second, i );
                 if ( !voxelValid && iterStatus[i] )
                     voxelValid = true;
             }

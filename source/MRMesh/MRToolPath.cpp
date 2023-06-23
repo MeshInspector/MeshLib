@@ -87,6 +87,83 @@ void addSurfacePath( std::vector<GCommand>& gcode, const Mesh& mesh, const MeshE
     gcode.push_back( { .x = p.x, .y = p.y, .z = p.z } );
 }
 
+std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const Plane3f& plane, float sectionStep, int steps, ProgressCallback cb )
+{
+    auto mainThreadId = std::this_thread::get_id();
+    std::atomic<bool> keepGoing{ true };
+    std::atomic<size_t> numDone{ 0 };
+
+    std::vector<PlaneSections> sections( steps );
+
+    tbb::parallel_for( tbb::blocked_range<int>( 0, steps ), [&] ( const tbb::blocked_range<int>& range )
+    {
+        for ( int step = range.begin(); step < range.end(); ++step )
+        {
+            if ( cb && !keepGoing.load( std::memory_order_relaxed ) )
+                break;
+
+            sections[step] = extractPlaneSections( mesh, Plane3f{ plane.n, plane.d - sectionStep * step } );
+        }
+
+        if ( cb )
+            numDone += range.size();
+
+        if ( cb && std::this_thread::get_id() == mainThreadId )
+        {
+            if ( !cb( float( numDone ) / float( steps ) ) )
+                keepGoing.store( false, std::memory_order_relaxed );
+        }
+    } );
+
+    if ( !keepGoing.load( std::memory_order_relaxed ) || ( cb && !cb( 1.0f ) ) )
+        return {};
+
+    return sections;
+}
+
+std::vector<IsoLines> extractAllIsolines( const Mesh& mesh, VertId startPoint, float sectionStep, ProgressCallback cb )
+{
+    const MeshTriPoint mtp( mesh.topology, startPoint );
+
+    const auto distances = computeSurfaceDistances( mesh, mtp );
+    const auto [min, max] = parallelMinMax( distances.vec_ );
+
+    const size_t numIsolines = size_t( ( max - min ) / sectionStep ) - 1;
+
+    const auto& topology = mesh.topology;
+    std::vector<IsoLines> isoLines( numIsolines );
+
+    auto mainThreadId = std::this_thread::get_id();
+    std::atomic<bool> keepGoing{ true };
+    std::atomic<size_t> numDone{ 0 };
+
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, isoLines.size() ),
+                       [&] ( const tbb::blocked_range<size_t>& range )
+    {
+        for ( size_t i = range.begin(); i < range.end(); ++i )
+        {
+            if ( cb && !keepGoing.load( std::memory_order_relaxed ) )
+                break;
+
+            isoLines[i] = extractIsolines( topology, distances, sectionStep * ( i + 1 ) );
+        }
+
+        if ( cb )
+            numDone += range.size();
+
+        if ( cb && std::this_thread::get_id() == mainThreadId )
+        {
+            if ( !cb( float( numDone ) / float( numIsolines ) ) )
+                keepGoing.store( false, std::memory_order_relaxed );
+        }
+    } );
+
+    if ( !keepGoing.load( std::memory_order_relaxed ) || ( cb && !cb( 1.0f ) ) )
+        return {};
+
+    return isoLines;
+}
+
 tl::expected<ToolPathResult, std::string> lacingToolPath( const Mesh& inputMesh, const ToolPathParams& params, const AffineXf3f* xf, ProgressCallback cb )
 {
     ToolPathResult  res{ .modifiedMesh = preprocessMesh( inputMesh, params, xf ) };
@@ -101,12 +178,16 @@ tl::expected<ToolPathResult, std::string> lacingToolPath( const Mesh& inputMesh,
 
     MeshEdgePoint lastEdgePoint = {};
 
+    const auto allSections = extractAllSections( mesh, plane, params.sectionStep, steps, subprogress( cb, 0, 0.5f ) );
+    if ( allSections.empty() )
+        return unexpectedOperationCanceled();
+    const auto sbp = subprogress( cb, 0.5f, 1.0f );
     for ( int step = 0; step < steps; ++step )
     {
-        if ( cb && !cb( float( step ) / steps ) )
+        if ( sbp && !sbp( float( step ) / steps ) )
             return unexpectedOperationCanceled();
 
-        const auto sections = extractPlaneSections( mesh, Plane3f{ plane.n, plane.d - params.sectionStep * step } );
+        const auto sections = allSections[step];
         if ( sections.empty() )
             continue;
 
@@ -232,17 +313,25 @@ tl::expected<ToolPathResult, std::string>  constantZToolPath( const Mesh& inputM
     const float critTransitionLengthSq = params.critTransitionLength * params.critTransitionLength;
     bool needToRestoreBaseFeed = true;
 
+    std::vector<PlaneSections> sections = extractAllSections( mesh, plane, params.sectionStep, steps, subprogress( cb, 0, 0.5f ) );
+    if ( sections.empty() )
+        return unexpectedOperationCanceled();
+
+    const auto sbp = subprogress( cb, 0.5f, 1.0f );
+
     for ( int step = 0; step < steps; ++step )
     {
-        if ( cb && !cb( float( step ) / steps ) )
+        if ( sbp && !sbp( float( step ) / steps ) )
             return unexpectedOperationCanceled();
 
-        for ( const auto& section : extractPlaneSections( mesh, Plane3f{ plane.n, plane.d - params.sectionStep * step } ) )
+        auto& commands = res.commands;
+
+        for ( const auto& section : sections[step] )
         {
             Polyline3 polyline;
             polyline.addFromSurfacePath( mesh, section );
             const auto contours = polyline.contours().front();
-            
+
             auto nearestPointIt = section.begin();
 
             float minDistSq = FLT_MAX;
@@ -265,11 +354,10 @@ tl::expected<ToolPathResult, std::string>  constantZToolPath( const Mesh& inputM
             do
             {
                 std::next( nextEdgePointIt ) != section.end() ? ++nextEdgePointIt : nextEdgePointIt = section.begin();
-            } 
-            while ( nextEdgePointIt != nearestPointIt && ( mesh.edgePoint( *nextEdgePointIt ) - nearestPoint ).lengthSq() < sectionStepSq );
+            } while ( nextEdgePointIt != nearestPointIt && ( mesh.edgePoint( *nextEdgePointIt ) - nearestPoint ).lengthSq() < sectionStepSq );
 
             const auto pivotIt = contours.begin() + std::distance( section.begin(), nextEdgePointIt );
-            
+
             if ( !prevEdgePoint.e.valid() || minDistSq > critTransitionLengthSq )
             {
                 if ( currentZ < safeZ )
@@ -277,23 +365,23 @@ tl::expected<ToolPathResult, std::string>  constantZToolPath( const Mesh& inputM
                     if ( safeZ - currentZ > params.retractLength )
                     {
                         const float zRetract = currentZ + params.retractLength;
-                        res.commands.push_back( { .feed = params.retractFeed, .z = zRetract } );
-                        res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
+                        commands.push_back( { .feed = params.retractFeed, .z = zRetract } );
+                        commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
                     }
                     else
                     {
-                        res.commands.push_back( { .feed =params.retractFeed, .z = safeZ } );
+                        commands.push_back( { .feed = params.retractFeed, .z = safeZ } );
                     }
                 }
 
-                res.commands.push_back( { .type = MoveType::FastLinear, .x = pivotIt->x, .y = pivotIt->y } );
+                commands.push_back( { .type = MoveType::FastLinear, .x = pivotIt->x, .y = pivotIt->y } );
 
                 if ( safeZ - pivotIt->z > params.plungeLength )
                 {
                     const float zPlunge = pivotIt->z + params.plungeLength;
-                    res.commands.push_back( { .type = MoveType::FastLinear, .z = zPlunge } );
+                    commands.push_back( { .type = MoveType::FastLinear, .z = zPlunge } );
                 }
-                res.commands.push_back( { .feed = params.plungeFeed, .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );
+                commands.push_back( { .feed = params.plungeFeed, .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );
                 needToRestoreBaseFeed = true;
             }
             else
@@ -312,34 +400,34 @@ tl::expected<ToolPathResult, std::string>  constantZToolPath( const Mesh& inputM
                         transit.addFromSurfacePath( mesh, *sp );
                         const auto transitContours = transit.contours().front();
                         for ( const auto& p : transitContours )
-                            res.commands.push_back( { .x = p.x, .y = p.y, .z = p.z } );
+                            commands.push_back( { .x = p.x, .y = p.y, .z = p.z } );
                     }
                 }
 
-                res.commands.push_back( { .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );                
+                commands.push_back( { .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );
             }
 
             currentZ = pivotIt->z;
             auto startIt = pivotIt + 1;
             if ( needToRestoreBaseFeed )
             {
-                res.commands.push_back( { .feed = params.baseFeed, .x = startIt->x, .y = startIt->y } );
+                commands.push_back( { .feed = params.baseFeed, .x = startIt->x, .y = startIt->y } );
                 ++startIt;
             }
 
             for ( auto it = startIt; it < contours.end(); ++it )
             {
-                res.commands.push_back( { .x = it->x, .y = it->y } );
+                commands.push_back( { .x = it->x, .y = it->y } );
             }
 
             for ( auto it = contours.begin() + 1; it < pivotIt + 1; ++it )
             {
-                res.commands.push_back( { .x = it->x, .y = it->y } );
+                commands.push_back( { .x = it->x, .y = it->y } );
             }
 
             needToRestoreBaseFeed = false;
             prevEdgePoint = *nextEdgePointIt;
-        }        
+        }
     }
 
     if ( cb && !cb( 1.0f ) )
@@ -360,26 +448,9 @@ tl::expected<ToolPathResult, std::string> constantCuspToolPath( const Mesh& inpu
     if ( !startPoint.valid() )
         startPoint = findDirMax( Vector3f::plusZ(), mesh );
 
-    const MeshTriPoint mtp( mesh.topology, startPoint );
+    std::vector<IsoLines> isoLines = extractAllIsolines( mesh, startPoint, params.sectionStep, subprogress(cb, 0, 0.4f ) );
 
-    const auto distances = computeSurfaceDistances( mesh, mtp );
-    const auto [min, max] = parallelMinMax( distances.vec_ );
-    
-    const size_t numIsolines = size_t( ( max - min ) / params.sectionStep ) - 1;  
-
-    const auto& topology = mesh.topology;
-    std::vector<IsoLines> isoLines( numIsolines );
-
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, isoLines.size() ),
-                       [&] ( const tbb::blocked_range<size_t>& range )
-    {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            isoLines[i] = extractIsolines( topology, distances, params.sectionStep * ( i + 1  ) );
-        }
-    } );
-
-    if ( cb && !cb( 0.4f ) )
+    if ( isoLines.empty() )
         return unexpectedOperationCanceled();
 
     res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
@@ -484,7 +555,9 @@ tl::expected<ToolPathResult, std::string> constantCuspToolPath( const Mesh& inpu
     if ( cb && !cb( 0.5f ) )
         return unexpectedOperationCanceled();
 
-    auto sbp = subprogress( cb, 0.5f, 1.0f );
+    const auto sbp = subprogress( cb, 0.5f, 1.0f );
+    const size_t numIsolines = isoLines.size();
+
     for ( size_t i = 0; i < numIsolines; ++i )
     {
         if ( sbp && !sbp( float( i ) / numIsolines ) )
@@ -804,6 +877,8 @@ std::shared_ptr<ObjectGcode> exportToolPathToGCode( const std::vector<GCommand>&
 
     auto res = std::make_shared<ObjectGcode>();
     res->setGcodeSource( gcodeSource );
+    res->setName( "Tool Path" );
+    res->setLineWidth( 1.0f );
     return res;
 }
 

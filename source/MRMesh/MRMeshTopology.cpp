@@ -386,6 +386,28 @@ void MeshTopology::setLeft( EdgeId a, FaceId f )
     }
 }
 
+EdgeId MeshTopology::nextLeftBd( EdgeId e, const FaceBitSet * region ) const
+{
+    assert( isLeftBdEdge( e, region ) );
+
+    for ( e = next( e.sym() ); !isLeftBdEdge( e, region ); e = next( e ) )
+    {
+        assert( !isLeftBdEdge( e.sym(), region ) );
+    }
+    return e;
+}
+
+EdgeId MeshTopology::prevLeftBd( EdgeId e, const FaceBitSet * region ) const
+{
+    assert( isLeftBdEdge( e, region ) );
+
+    for ( e = prev( e ); !isLeftBdEdge( e.sym(), region ); e = prev( e ) )
+    {
+        assert( !isLeftBdEdge( e, region ) );
+    }
+    return e.sym();
+}
+
 EdgeId MeshTopology::findEdge( VertId o, VertId d ) const
 {
     assert( o.valid() && d.valid() );

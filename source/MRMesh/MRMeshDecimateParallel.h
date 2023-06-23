@@ -21,7 +21,9 @@ struct DecimateParallelSettings
     ///   stop the decimation as soon as the shortest edge in the mesh is greater than this value
     float maxError = 0.001f;
     /// Maximal possible edge length created during decimation
-    float maxEdgeLen = 1;
+    float maxEdgeLen = FLT_MAX;
+    /// Maximal shift of a boundary during one edge collapse
+    float maxBdShift = FLT_MAX;
     /// Maximal possible aspect ratio of a triangle introduced during decimation
     float maxTriangleAspectRatio = 20;
     /// the algorithm will try to eliminate triangles with equal or larger aspect ratio, ignoring normal orientation checks

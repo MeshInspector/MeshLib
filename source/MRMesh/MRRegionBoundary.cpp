@@ -22,33 +22,18 @@ EdgeLoop trackRegionBoundaryLoop( const MeshTopology & topology, EdgeId e0, cons
 EdgeLoop trackBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */, bool left )
 {
     MR_TIMER
-    std::function<bool( EdgeId )> isLeftBdEdge;
     std::function<EdgeId( EdgeId )> next;
     if ( left )
-    {
-        isLeftBdEdge = [&]( EdgeId e ) { return topology.isLeftBdEdge( e, region ); };
-        next = [&] ( EdgeId e ) { return topology.next( e ); };
-    }
+        next = [&] ( EdgeId e ) { return topology.nextLeftBd( e, region ); };
     else
-    {
-        isLeftBdEdge = [&] ( EdgeId e ) { return topology.isLeftBdEdge( e.sym(), region ); };
-        next = [&] ( EdgeId e ) { return topology.prev( e ); };
-    }
+        next = [&] ( EdgeId e ) { return topology.prevLeftBd( e.sym(), region ).sym(); };
 
     EdgeLoop res;
-
     auto e = e0;
     do
     {
-        assert( isLeftBdEdge( e ) );
         res.push_back( e );
-
-        for ( e = next( e.sym() );
-             !isLeftBdEdge( e );
-             e = next( e ) )
-        {
-            assert( !isLeftBdEdge( e.sym() ) );
-        }
+        e = next( e );
     } while ( e != e0 );
 
     return res;

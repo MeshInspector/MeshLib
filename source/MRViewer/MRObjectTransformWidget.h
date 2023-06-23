@@ -43,6 +43,10 @@ public:
     // get center of the widget in local space
     const Vector3f& getCenter() const { return center_; }
     MRVIEWER_API void setCenter( const Vector3f& center );
+
+    // should return current radius of the widget
+    virtual float getRadius() const { return 1.0f; }
+
     // This lambda is called in each frame, and returns transform mode mask for this frame in given viewport
     // if not set, full mask is return
     void setTransformModesValidator( TransformModesValidator validator ) { validator_ = validator; }
@@ -147,6 +151,7 @@ public:
     MRVIEWER_API virtual void init( std::shared_ptr<Object> parent ) override;
     MRVIEWER_API virtual void update() override;
 
+    virtual float getRadius() const override { return params_.radius; }
     // get current width of widget controls
     // negative value means that controls are not setup
     float getWidth() const { return params_.width; }

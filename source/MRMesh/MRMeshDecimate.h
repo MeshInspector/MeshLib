@@ -37,7 +37,9 @@ struct DecimateSettings
     ///   stop the decimation as soon as the shortest edge in the mesh is greater than this value
     float maxError = 0.001f;
     /// Maximal possible edge length created during decimation
-    float maxEdgeLen = 1;
+    float maxEdgeLen = FLT_MAX;
+    /// Maximal shift of a boundary during one edge collapse
+    float maxBdShift = FLT_MAX;
     /// Maximal possible aspect ratio of a triangle introduced during decimation
     float maxTriangleAspectRatio = 20;
     /// the algorithm will ignore dihedral angle check if one of triangles had aspect ratio equal or more than this value;
@@ -190,6 +192,8 @@ struct RemeshSettings
     float edgeLenUniformity = 0.5f;
     /// Improves local mesh triangulation by doing edge flips if it does change dihedral angle more than on this value
     float maxAngleChangeAfterFlip = 30 * PI_F / 180.0f;
+    /// Maximal shift of a boundary during one edge collapse
+    float maxBdShift = FLT_MAX;
     /// This option in subdivision works best for natural surfaces, where all triangles are close to equilateral and have similar area,
     /// and no sharp edges in between
     bool useCurvature = false;

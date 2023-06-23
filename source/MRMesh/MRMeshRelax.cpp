@@ -67,6 +67,80 @@ bool relax( Mesh& mesh, const MeshRelaxParams& params, ProgressCallback cb )
     return keepGoing;
 }
 
+Vector3f vertexPosEqualNeiAreas( const Mesh& mesh, VertId v )
+{
+    SymMatrix3f mat;
+    Vector3f rhs;
+    const EdgeId e0 = mesh.topology.edgeWithOrg( v );
+    EdgeId ei = e0;
+    EdgeId en = mesh.topology.next( ei );
+    auto pi = mesh.destPnt( ei );
+    auto pn = mesh.destPnt( en );
+    for (;;)
+    {
+        if ( mesh.topology.left( ei ) )
+        {
+            const auto m = crossSquare( pn - pi );
+            mat += m;
+            rhs += m * pi;
+        }
+        if ( en == e0 )
+            break;
+        ei = en;
+        pi = pn;
+        en = mesh.topology.next( ei );
+        pn = mesh.destPnt( en );
+    } 
+
+    const auto det = mat.det();
+    const auto tr = mat.trace();
+    if ( FLT_EPSILON * std::abs( tr * tr * tr ) >= std::abs( det ) )
+        return mesh.points[v]; // the linear system cannot be trusted
+    return mat.inverse( det ) * rhs;
+}
+
+bool equalizeTriAreas( Mesh& mesh, const MeshRelaxParams& params, ProgressCallback cb )
+{
+    if ( params.iterations <= 0 )
+        return true;
+
+    MR_TIMER;
+    MR_WRITER( mesh );
+
+    VertCoords newPoints;
+    const VertBitSet& zone = mesh.topology.getVertIds( params.region );
+    bool keepGoing = true;
+    for ( int i = 0; i < params.iterations; ++i )
+    {
+        auto internalCb = subprogress( cb, [&]( float p ) { return ( float( i ) + p ) / float( params.iterations ); } );
+        newPoints = mesh.points;
+        keepGoing = BitSetParallelFor( zone, [&]( VertId v )
+        {
+            auto e0 = mesh.topology.edgeWithOrg( v );
+            if ( !e0.valid() )
+                return;
+            auto& np = newPoints[v];
+            auto pushForce = params.force * ( vertexPosEqualNeiAreas( mesh, v ) - np );
+            np += pushForce;
+        }, internalCb );
+        mesh.points.swap( newPoints );
+        if ( !keepGoing )
+            break;
+    }
+    if ( keepGoing && params.hardSmoothTetrahedrons )
+    {
+        auto tetrahedrons = findNRingVerts( mesh.topology, 3, params.region );
+        BitSetParallelFor( tetrahedrons, [&] ( VertId v )
+        {
+            Vector3f center;
+            for ( auto e : orgRing( mesh.topology, v ) )
+                center += mesh.destPnt( e );
+            mesh.points[v] = center / 3.0f;
+        } );
+    }
+    return keepGoing;
+}
+
 bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params, ProgressCallback cb )
 {
     if ( params.iterations <= 0 )

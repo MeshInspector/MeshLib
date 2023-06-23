@@ -94,6 +94,7 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
         res.push_back( fmt::format( "area: {:.6}", totalArea() ) );
         if( nFacesSelected )
             res.back() += fmt::format( " / {:.6} selected", selectedArea() );
+        res.push_back( fmt::format( "avg edge len: {:.6}", avgEdgeLen() ) );
 
         if ( !texture_.pixels.empty() )
             res.push_back( "texture: " + std::to_string( texture_.resolution.x ) + " x " + std::to_string( texture_.resolution.y ) );

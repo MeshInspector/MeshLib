@@ -48,10 +48,14 @@ struct VolumeToMeshParams : public BaseVolumeConversionParams
     bool lessInside{ false }; // should be false for dense volumes, and true for distance volume
     Vector<VoxelId, FaceId>* outVoxelPerFaceMap{ nullptr }; // optional output map FaceId->VoxelId
     // function to calculate position of result mesh points
+    // if the function isn't set, `voxelPositionerLinear` will be used
     // note: this function is called in parallel from different threads
-    VoxelPointPositioner positioner = &voxelPositionerLinear;
+    VoxelPointPositioner positioner = {};
     /// if the mesh exceeds this number of vertices, an error returns
     int maxVertices = INT_MAX;
+    /// for simple volumes only: omit checks for NaN values
+    /// use it if you're aware that the input volume has no NaN values
+    bool omitNaNCheck = false;
 };
 
 // makes SimpleVolume from Mesh with given params

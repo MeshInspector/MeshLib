@@ -19,13 +19,14 @@
 namespace
 {
 constexpr float cQuietNan = std::numeric_limits<float>::quiet_NaN();
+constexpr int cQuietNanBits = std::bit_cast< int >( cQuietNan );
 
 inline bool isNanFast( float f )
 {
 #if defined( __GNUC__ ) && __GNUC__ < 11
     return std::isnan( f );
 #else
-    return std::bit_cast< int >( f ) == std::bit_cast< int >( cQuietNan );
+    return std::bit_cast< int >( f ) == cQuietNanBits;
 #endif
 }
 }

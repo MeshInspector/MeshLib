@@ -31,7 +31,9 @@ struct SymMatrix3
     /// computes determinant of the matrix
     constexpr T det() const noexcept;
     /// computes inverse matrix
-    constexpr SymMatrix3<T> inverse() const noexcept;
+    constexpr SymMatrix3<T> inverse() const noexcept { return inverse( det() ); }
+    /// computes inverse matrix given determinant of this
+    constexpr SymMatrix3<T> inverse( T det ) const noexcept;
 
     SymMatrix3 & operator +=( const SymMatrix3<T> & b ) { xx += b.xx; xy += b.xy; xz += b.xz; yy += b.yy; yz += b.yz; zz += b.zz; return * this; }
     SymMatrix3 & operator -=( const SymMatrix3<T> & b ) { xx -= b.xx; xy -= b.xy; xz -= b.xz; yy -= b.yy; yz -= b.yz; zz -= b.zz; return * this; }
@@ -63,7 +65,7 @@ struct SymMatrix3
 /// \{
 
 /// x = a * b
-template <typename T> 
+template <typename T>
 inline Vector3<T> operator *( const SymMatrix3<T> & a, const Vector3<T> & b )
 {
     return 
@@ -75,7 +77,7 @@ inline Vector3<T> operator *( const SymMatrix3<T> & a, const Vector3<T> & b )
 }
 
 /// x = a * a^T
-template <typename T> 
+template <typename T>
 inline SymMatrix3<T> outerSquare( const Vector3<T> & a )
 {
     SymMatrix3<T> res;
@@ -88,35 +90,49 @@ inline SymMatrix3<T> outerSquare( const Vector3<T> & a )
     return res;
 }
 
-template <typename T> 
+/// computes a matrix that gives double application of a cross product with given vector
+/// M x = [ a, [a, x] ]
+/// https://en.wikipedia.org/wiki/Cross_product#Alternative_ways_to_compute
+template <typename T>
+inline SymMatrix3<T> crossSquare( const Vector3<T> & a )
+{
+    SymMatrix3<T> res = outerSquare( a );
+    const auto d = a.lengthSq();
+    res.xx -= d;
+    res.yy -= d;
+    res.zz -= d;
+    return res;
+}
+
+template <typename T>
 inline bool operator ==( const SymMatrix3<T> & a, const SymMatrix3<T> & b )
     { return a.xx = b.xx && a.xy = b.xy && a.xz = b.xz && a.yy = b.yy && a.yz = b.yz && a.zz = b.zz; }
 
-template <typename T> 
+template <typename T>
 inline bool operator !=( const SymMatrix3<T> & a, const SymMatrix3<T> & b )
     { return !( a == b ); }
 
-template <typename T> 
+template <typename T>
 inline SymMatrix3<T> operator +( const SymMatrix3<T> & a, const SymMatrix3<T> & b )
     { SymMatrix3<T> res{ a }; res += b; return res; }
 
-template <typename T> 
+template <typename T>
 inline SymMatrix3<T> operator -( const SymMatrix3<T> & a, const SymMatrix3<T> & b )
     { SymMatrix3<T> res{ a }; res -= b; return res; }
 
-template <typename T> 
+template <typename T>
 inline SymMatrix3<T> operator *( T a, const SymMatrix3<T> & b )
     { SymMatrix3<T> res{ b }; res *= a; return res; }
 
-template <typename T> 
+template <typename T>
 inline SymMatrix3<T> operator *( const SymMatrix3<T> & b, T a )
     { SymMatrix3<T> res{ b }; res *= a; return res; }
 
-template <typename T> 
+template <typename T>
 inline SymMatrix3<T> operator /( SymMatrix3<T> b, T a )
     { b /= a; return b; }
 
-template <typename T> 
+template <typename T>
 constexpr T SymMatrix3<T>::det() const noexcept
 {
     return
@@ -125,17 +141,16 @@ constexpr T SymMatrix3<T>::det() const noexcept
      +  xz * ( xy * yz - yy * xz );
 }
 
-template <typename T> 
+template <typename T>
 constexpr T SymMatrix3<T>::normSq() const noexcept
 {
     return sqr( xx ) + sqr( yy ) + sqr( zz ) +
         2 * ( sqr( xy ) + sqr( xz ) + sqr( yz ) );
 }
 
-template <typename T> 
-constexpr SymMatrix3<T> SymMatrix3<T>::inverse() const noexcept
+template <typename T>
+constexpr SymMatrix3<T> SymMatrix3<T>::inverse( T det ) const noexcept
 {
-    auto det = this->det();
     if ( det == 0 )
         return {};
     SymMatrix3<T> res;
@@ -148,7 +163,7 @@ constexpr SymMatrix3<T> SymMatrix3<T>::inverse() const noexcept
     return res;
 }
 
-template <typename T> 
+template <typename T>
 Vector3<T> SymMatrix3<T>::eigens( Matrix3<T> * eigenvectors ) const
 {
     //https://en.wikipedia.org/wiki/Eigenvalue_algorithm#3%C3%973_matrices
@@ -209,7 +224,7 @@ Vector3<T> SymMatrix3<T>::eigens( Matrix3<T> * eigenvectors ) const
     return eig;
 }
 
-template <typename T> 
+template <typename T>
 Vector3<T> SymMatrix3<T>::eigenvector( T eigenvalue ) const
 {
     const Vector3<T> row0( xx - eigenvalue, xy, xz );
@@ -232,7 +247,7 @@ Vector3<T> SymMatrix3<T>::eigenvector( T eigenvalue ) const
     return crs20;
 }
 
-template <typename T> 
+template <typename T>
 Vector3<T> SymMatrix3<T>::solve( const Vector3<T> & b, T tol, int * rank, Vector3<T> * space ) const
 {
     Matrix3<T> eigenvectors;

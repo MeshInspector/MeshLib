@@ -43,7 +43,7 @@ void ChangeSceneAction::action( HistoryAction::Type actionType )
 
 size_t ChangeSceneAction::heapBytes() const
 {
-    return name_.capacity() + MR::heapBytes( obj_ );
+    return name_.capacity() + ( type_ == Type::RemoveObject ? MR::heapBytes( obj_ ) : 0 );
 }
 
 void ChangeSceneAction::updateParent_()

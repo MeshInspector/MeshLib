@@ -62,6 +62,7 @@ void ObjectGcode::setGcodeSource( const std::shared_ptr<GcodeSource>& gcodeSourc
     }
     polyline_ = polyline;
     updateColors_();
+    updateHeapUsageCache_();
     setDirtyFlags( DIRTY_ALL );
 }
 
@@ -143,6 +144,13 @@ void ObjectGcode::setFrontColor( const Color& color, bool selected, ViewportId v
         updateColors_();
 }
 
+size_t ObjectGcode::heapBytes() const
+{
+    return ObjectLinesHolder::heapBytes() +
+        MR::heapBytes( segmentToSourceLineMap_ ) +
+        nonTrivialHeapUsageCache_;
+}
+
 void ObjectGcode::swapBase_( Object& other )
 {
     if ( auto otherGcode = other.asType<ObjectGcode>() )
@@ -193,6 +201,24 @@ void ObjectGcode::deserializeFields_( const Json::Value& root )
             gcodeSource[i] = gcodeSourceRoot[i].asString();
     }
     setGcodeSource( std::make_shared<GcodeSource>( std::move( gcodeSource ) ) );
+}
+
+void ObjectGcode::updateHeapUsageCache_()
+{
+    nonTrivialHeapUsageCache_ = 0;
+    if ( gcodeSource_ )
+    {
+        nonTrivialHeapUsageCache_ += sizeof( GcodeSource );
+        nonTrivialHeapUsageCache_ += sizeof( std::string ) * gcodeSource_->capacity();
+        for ( int i = 0; i < gcodeSource_->size(); ++i )
+            nonTrivialHeapUsageCache_ += ( *gcodeSource_ )[i].capacity();
+    }
+    nonTrivialHeapUsageCache_ += sizeof( GcodeProcessor::MoveAction ) * actionList_.capacity();
+    for ( int i = 0; i < actionList_.size(); ++i )
+    {
+        nonTrivialHeapUsageCache_ += actionList_[i].action.warning.capacity();
+        nonTrivialHeapUsageCache_ += MR::heapBytes( actionList_[i].action.path );
+    }
 }
 
 void ObjectGcode::updateColors_()

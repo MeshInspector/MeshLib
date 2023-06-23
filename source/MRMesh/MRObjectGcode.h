@@ -52,6 +52,9 @@ public:
     MRMESH_API virtual bool select( bool isSelected ) override;
     MRMESH_API virtual void setFrontColor( const Color& color, bool selected, ViewportId viewportId = {} ) override;
 
+    /// returns the amount of memory this object occupies on heap
+    [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
+
 protected:
     ObjectGcode( const ObjectGcode& other ) = default;
 
@@ -68,7 +71,11 @@ protected:
 private:
     std::shared_ptr<GcodeSource> gcodeSource_;
     std::vector<GcodeProcessor::MoveAction> actionList_;
+    void updateHeapUsageCache_();
+    size_t nonTrivialHeapUsageCache_{ 0 };
+
     std::vector<int> segmentToSourceLineMap_;
+
     Color idleColor_ = Color(0.3f, 0.3f, 0.3f);
     float maxFeedrate_ = 0.f;
     bool feedrateGradientEnabled_ = true;

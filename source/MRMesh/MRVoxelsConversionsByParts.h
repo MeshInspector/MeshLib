@@ -8,13 +8,13 @@ namespace MR
 {
 
 /**
- * \struct MR::MergeGridPartSettings
- * \brief Parameters' structure for MR::mergeGridPart
+ * \struct MR::MergeVolumePartSettings
+ * \brief Parameters' structure for MR::mergeVolumePart
  * \ingroup VoxelGroup
  *
- * \sa \ref mergeGridPart
+ * \sa \ref mergeVolumePart
  */
-struct MergeGridPartSettings
+struct MergeVolumePartSettings
 {
     /// callback to process the generated mesh before the side cutting, e.g. fixing specific generation artifacts
     using PreCutCallback = std::function<void( Mesh& mesh, float leftCutPosition, float rightCutPosition )>;
@@ -29,69 +29,72 @@ struct MergeGridPartSettings
     PostMergeCallback postMerge = nullptr;
     /// mapping with initialized maps required for the `postMerge` callback
     PartMapping mapping = {};
+    /// origin (position of the (0;0;0) voxel) of the voxel volume part, usually specified for SimpleVolume
+    Vector3f origin = {};
 };
 
 /**
- * \brief Merge one mesh with another generated from a voxel grid part
- * \details The helper function for generating a mesh from a voxel grid without full memory loading.
+ * \brief Merge one mesh with another generated from a voxel volume part
+ * \details The helper function for generating a mesh from a voxel volume without full memory loading.
  * It performs several actions:
- *  - converts the voxel grid part into a mesh;
+ *  - converts the voxel volume part into a mesh;
  *  - cuts it to make its sides accurate;
  *  - appends to the result mesh with the matching side cut contours.
  * The functions has requirements for the input parameters:
  *  - the result mesh must have side contours on `leftCutPosition`;
- *  - the voxel grid part must have enough data to generate a mesh with correct cut contours. The usual way is to make an overlap for each grid part.
+ *  - the voxel volume part must have enough data to generate a mesh with correct cut contours. The usual way is to make an overlap for each volume part.
  *
- * \sa \ref gridToMeshByParts
+ * \sa \ref volumeToMeshByParts
  *
  * @param mesh - result mesh to which the generated mesh will be attached
  * @param cutContours - cut contours of the result mesh; must be placed at `leftCutPosition`
- * @param grid - voxel grid part
- * @param voxelSize - voxel size
+ * @param volume - voxel volume part
  * @param leftCutPosition - position on X axis where the left side of the generated mesh is cut; pass -FLT_MAX to omit a cut here
  * @param rightCutPosition - position on X axis where the right side of the generated mesh is cut; pass +FLT_MAX to omit a cut here
- * @param settings - additional parameters; see \ref MergeGridPartSettings
+ * @param settings - additional parameters; see \ref MergeVolumePartSettings
  * @return nothing if succeeds, an error string otherwise
  */
-MRMESH_API
+template <typename Volume>
 VoidOrErrStr
-mergeGridPart( Mesh& mesh, std::vector<EdgePath>& cutContours, FloatGrid&& grid, const Vector3f& voxelSize,
-               float leftCutPosition, float rightCutPosition, const MergeGridPartSettings& settings = {} );
+mergeVolumePart( Mesh& mesh, std::vector<EdgePath>& cutContours, Volume&& volume, float leftCutPosition, float rightCutPosition,
+                 const MergeVolumePartSettings& settings = {} );
 
-/// functor returning a voxel grid part within the specified range, or an error string on failure
-using GridPartBuilder = std::function<Expected<FloatGrid, std::string> ( size_t begin, size_t end )>;
+/// functor returning a voxel volume part within the specified range, or an error string on failure
+/// the offset parameter is also required for SimpleVolume parts
+template <typename Volume>
+using VolumePartBuilder = std::function<tl::expected<Volume, std::string> ( int begin, int end, std::optional<Vector3i>& offset )>;
 
 /**
- * \struct MR::GridToMeshByPartsSettings
- * \brief Parameters' structure for MR::gridToMeshByParts
+ * \struct MR::VolumeToMeshByPartsSettings
+ * \brief Parameters' structure for MR::volumeToMeshByParts
  * \ingroup VoxelGroup
  *
- * \sa \ref gridToMeshByParts
+ * \sa \ref volumeToMeshByParts
  */
-struct GridToMeshByPartsSettings
+struct VolumeToMeshByPartsSettings
 {
-    /// the upper limit of memory amount used to store a voxel grid part
-    size_t maxGridPartMemoryUsage = 2 << 28; // 256 MiB
+    /// the upper limit of memory amount used to store a voxel volume part
+    size_t maxVolumePartMemoryUsage = 2 << 28; // 256 MiB
     /// overlap in voxels between two parts
-    size_t stripeOverlap = 3;
+    size_t stripeOverlap = 4;
 };
 
 /**
- * \brief converts a voxel grid into a mesh without full memory loading
+ * \brief converts a voxel volume into a mesh without full memory loading
  *
- * \sa \ref mergeGridPart
+ * \sa \ref mergeVolumePart
  *
- * @param builder - functor returning a voxel grid part within the specified range
- * @param dimensions - full voxel grid dimensions
+ * @param builder - functor returning a voxel volume part within the specified range
+ * @param dimensions - full voxel volume dimensions
  * @param voxelSize - voxel size used for mesh generation
- * @param settings - additional parameters; see \ref GridToMeshByPartsSettings
- * @param mergeSettings - additional parameters for merging function; see \ref MergeGridPartSettings
+ * @param settings - additional parameters; see \ref VolumeToMeshByPartsSettings
+ * @param mergeSettings - additional parameters for merging function; see \ref MergeVolumePartSettings
  * @return a generated mesh or an error string
  */
-MRMESH_API
-Expected<Mesh, std::string>
-gridToMeshByParts( const GridPartBuilder& builder, const Vector3i& dimensions, const Vector3f& voxelSize,
-                   const GridToMeshByPartsSettings& settings = {}, const MergeGridPartSettings& mergeSettings = {} );
+template <typename Volume>
+tl::expected<Mesh, std::string>
+volumeToMeshByParts( const VolumePartBuilder<Volume>& builder, const Vector3i& dimensions, const Vector3f& voxelSize,
+                     const VolumeToMeshByPartsSettings& settings = {}, const MergeVolumePartSettings& mergeSettings = {} );
 
 }
 #endif

@@ -27,7 +27,7 @@ using Expected = tl::expected<T,E>;
 
 template <class E>
 inline auto unexpected( E &&e )
-    { return tl::unexpected( std::forward<E>( e ) ); }
+    { return tl::make_unexpected( std::forward<E>( e ) ); }
 
 #endif
 

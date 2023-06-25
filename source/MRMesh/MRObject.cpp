@@ -336,7 +336,7 @@ void Object::swapSignals_( Object& other )
     std::swap( worldXfChangedSignal, other.worldXfChangedSignal );
 }
 
-tl::expected<std::future<void>, std::string> Object::serializeModel_( const std::filesystem::path& ) const
+Expected<std::future<void>, std::string> Object::serializeModel_( const std::filesystem::path& ) const
 {
     return {};
 }
@@ -358,7 +358,7 @@ void Object::serializeFields_( Json::Value& root ) const
 VoidOrErrStr Object::deserializeModel_( const std::filesystem::path&, ProgressCallback progressCb )
 {
     if ( progressCb && !progressCb( 1.f ) )
-        return tl::make_unexpected( std::string( "Loading canceled" ) );
+        return unexpected( std::string( "Loading canceled" ) );
     return{};
 }
 
@@ -434,13 +434,13 @@ std::vector<std::string> Object::getInfoLines() const
     return res;
 }
 
-tl::expected<std::vector<std::future<void>>, std::string> Object::serializeRecursive( const std::filesystem::path& path, Json::Value& root,
+Expected<std::vector<std::future<void>>, std::string> Object::serializeRecursive( const std::filesystem::path& path, Json::Value& root,
     int childId ) const
 {
     std::error_code ec;
     if ( !std::filesystem::is_directory( path, ec ) )
         if ( !std::filesystem::create_directories( path, ec ) )
-            return tl::make_unexpected( "Cannot create directories " + utf8string( path ) );
+            return unexpected( "Cannot create directories " + utf8string( path ) );
 
     std::vector<std::future<void>> res;
 
@@ -449,7 +449,7 @@ tl::expected<std::vector<std::future<void>>, std::string> Object::serializeRecur
 
     auto model = serializeModel_( path / pathFromUtf8( key ) );
     if ( !model.has_value() )
-        return tl::make_unexpected( model.error() );
+        return unexpected( model.error() );
     if ( model.value().valid() )
         res.push_back( std::move( model.value() ) );
     serializeFields_( root );
@@ -467,7 +467,7 @@ tl::expected<std::vector<std::future<void>>, std::string> Object::serializeRecur
                 continue; // consider ancillary_ objects as temporary, not requiring saving
             auto sub = child->serializeRecursive( childrenPath, childrenRoot[std::to_string( i )], i );
             if ( !sub.has_value() )
-                return tl::make_unexpected( sub.error() );
+                return unexpected( sub.error() );
             for ( auto & f : sub.value() )
             {
                 assert( f.valid() );

@@ -1,14 +1,38 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#if defined __cpp_lib_expected
+#include <expected>
+#else
 #include <tl/expected.hpp>
+#endif
 #include <string>
 
 namespace MR
 {
 
+#if defined __cpp_lib_expected
+
+template<class T, class E>
+using Expected = std::expected<T,E>;
+
+template <class E>
+inline auto unexpected( E &&e )
+    { return std::unexpected( std::forward<E>( e ) ); }
+
+#else
+
+template<class T, class E>
+using Expected = tl::expected<T,E>;
+
+template <class E>
+inline auto unexpected( E &&e )
+    { return tl::unexpected( std::forward<E>( e ) ); }
+
+#endif
+
 /// return type for a void function that can produce an error string
-using VoidOrErrStr = tl::expected<void, std::string>;
+using VoidOrErrStr = Expected<void, std::string>;
 
 /// Common operation canceled line for all
 inline std::string stringOperationCanceled()
@@ -16,10 +40,10 @@ inline std::string stringOperationCanceled()
     return "Operation was canceled";
 }
 
-/// Returns tl::expected error with `stringOperationCanceled()`
-inline tl::unexpected<std::string> unexpectedOperationCanceled()
+/// Returns Expected error with `stringOperationCanceled()`
+inline auto unexpectedOperationCanceled()
 {
-    return tl::make_unexpected( stringOperationCanceled() );
+    return unexpected( stringOperationCanceled() );
 }
 
 } //namespace MR

@@ -31,13 +31,13 @@ GcodeSource splitString( const std::string& source )
     return res;
 }
 
-tl::expected<GcodeSource, std::string> fromGcode( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+Expected<GcodeSource, std::string> fromGcode( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
 {
     std::ifstream filestream( file );
     return fromGcode( filestream, callback );
 }
 
-tl::expected<MR::GcodeSource, std::string> fromGcode( std::istream& in, ProgressCallback callback /*= {} */ )
+Expected<MR::GcodeSource, std::string> fromGcode( std::istream& in, ProgressCallback callback /*= {} */ )
 {
     std::stringstream buffer;
     buffer << in.rdbuf();
@@ -45,25 +45,25 @@ tl::expected<MR::GcodeSource, std::string> fromGcode( std::istream& in, Progress
     return splitString( buffer.str() );
 }
 
-tl::expected<GcodeSource, std::string> fromAnySupportedFormat( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+Expected<GcodeSource, std::string> fromAnySupportedFormat( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
 {
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    tl::expected<std::vector<std::string>, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    Expected<std::vector<std::string>, std::string> res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".gcode" || ext == ".txt" )
         res = fromGcode( file, callback );
     return res;
 }
 
-tl::expected<MR::GcodeSource, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, ProgressCallback callback /*= {} */ )
+Expected<MR::GcodeSource, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, ProgressCallback callback /*= {} */ )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    tl::expected<GcodeSource, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    Expected<GcodeSource, std::string> res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".gcode" || ext == ".txt" )
         res = fromGcode( in, callback );
     return res;

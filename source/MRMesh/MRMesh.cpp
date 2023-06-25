@@ -413,7 +413,7 @@ float Mesh::sumAngles( VertId v, bool * outBoundaryVert ) const
     return sum;
 }
 
-tl::expected<VertBitSet, std::string> Mesh::findSpikeVertices( float minSumAngle, const VertBitSet * region, ProgressCallback cb ) const
+Expected<VertBitSet, std::string> Mesh::findSpikeVertices( float minSumAngle, const VertBitSet * region, ProgressCallback cb ) const
 {
     MR_TIMER
     const VertBitSet & testVerts = topology.getVertIds( region );

@@ -98,20 +98,20 @@ const IOFilters SceneFileFilters =
 #endif
 };
 
-tl::expected<Json::Value, std::string> deserializeJsonValue( const std::filesystem::path& path )
+Expected<Json::Value, std::string> deserializeJsonValue( const std::filesystem::path& path )
 {
     if ( path.empty() )
-        return tl::make_unexpected( "Cannot find parameters file" );
+        return unexpected( "Cannot find parameters file" );
 
     std::ifstream ifs( path );
     if ( !ifs || ifs.bad() )
-        return tl::make_unexpected( "Cannot open json file " + utf8string( path ) );
+        return unexpected( "Cannot open json file " + utf8string( path ) );
 
     std::string str( ( std::istreambuf_iterator<char>( ifs ) ),
                      std::istreambuf_iterator<char>() );
 
     if ( !ifs || ifs.bad() )
-        return tl::make_unexpected( "Cannot read json file " + utf8string( path ) );
+        return unexpected( "Cannot read json file " + utf8string( path ) );
 
     ifs.close();
 
@@ -120,7 +120,7 @@ tl::expected<Json::Value, std::string> deserializeJsonValue( const std::filesyst
     std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
     std::string error;
     if ( !reader->parse( str.data(), str.data() + str.size(), &root, &error ) )
-        return tl::make_unexpected( "Cannot parse json file: " + error );
+        return unexpected( "Cannot parse json file: " + error );
 
     return root;
 }
@@ -162,12 +162,12 @@ VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::files
 
     std::error_code ec;
     if ( !std::filesystem::is_directory( sourceFolder, ec ) )
-        return tl::make_unexpected( "Directory '" + utf8string( sourceFolder ) + "' does not exist" );
+        return unexpected( "Directory '" + utf8string( sourceFolder ) + "' does not exist" );
 
     int err;
     AutoCloseZip zip( utf8string( zipFile ).c_str(), ZIP_CREATE | ZIP_TRUNCATE, &err );
     if ( !zip )
-        return tl::make_unexpected( "Cannot create zip, error code: " + std::to_string( err ) );
+        return unexpected( "Cannot create zip, error code: " + std::to_string( err ) );
 
     auto goodFile = [&]( const std::filesystem::path & path )
     {
@@ -191,7 +191,7 @@ VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::files
             // convert folder separators in Linux style for the latest 7-zip to open archive correctly
             std::replace( archiveDirPath.begin(), archiveDirPath.end(), '\\', '/' );
             if ( zip_dir_add( zip, archiveDirPath.c_str(), ZIP_FL_ENC_UTF_8 ) == -1 )
-                return tl::make_unexpected( "Cannot add directory " + archiveDirPath + " to archive" );
+                return unexpected( "Cannot add directory " + archiveDirPath + " to archive" );
             continue;
         }
 
@@ -209,7 +209,7 @@ VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::files
 
         auto fileSource = zip_source_file( zip, utf8string( path ).c_str(), 0, 0 );
         if ( !fileSource )
-            return tl::make_unexpected( "Cannot open file " + utf8string( path ) + " for reading" );
+            return unexpected( "Cannot open file " + utf8string( path ) + " for reading" );
 
         auto archiveFilePath = utf8string( std::filesystem::relative( path, sourceFolder, ec ) );
         // convert folder separators in Linux style for the latest 7-zip to open archive correctly
@@ -218,13 +218,13 @@ VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::files
         if ( index < 0 )
         {
             zip_source_free( fileSource );
-            return tl::make_unexpected( "Cannot add file " + archiveFilePath + " to archive" );
+            return unexpected( "Cannot add file " + archiveFilePath + " to archive" );
         }
 
         if ( password )
         {
             if ( zip_file_set_encryption( zip, index, ZIP_EM_AES_256, password ) )
-                return tl::make_unexpected( "Cannot encrypt file " + archiveFilePath + " in archive" );
+                return unexpected( "Cannot encrypt file " + archiveFilePath + " in archive" );
         }
 
         ++compressedFiles;
@@ -233,7 +233,7 @@ VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::files
     }
 
     if ( zip.close() == -1 )
-        return tl::make_unexpected( "Cannot close zip" );
+        return unexpected( "Cannot close zip" );
 
     if ( !reportProgress( cb, 1.0f ) )
         return unexpectedOperationCanceled();
@@ -255,12 +255,12 @@ VoidOrErrStr decompressZip( const std::filesystem::path& zipFile, const std::fil
 {
     std::error_code ec;
     if ( !std::filesystem::is_directory( targetFolder, ec ) )
-        return tl::make_unexpected( "Directory does not exist " + utf8string( targetFolder ) );
+        return unexpected( "Directory does not exist " + utf8string( targetFolder ) );
 
     int err;
     AutoCloseZip zip( utf8string( zipFile ).c_str(), ZIP_RDONLY, &err );
     if ( !zip )
-        return tl::make_unexpected( "Cannot open zip, error code: " + std::to_string( err ) );
+        return unexpected( "Cannot open zip, error code: " + std::to_string( err ) );
 
     if ( password )
         zip_set_default_password( zip, password );
@@ -271,7 +271,7 @@ VoidOrErrStr decompressZip( const std::filesystem::path& zipFile, const std::fil
     for ( int i = 0; i < zip_get_num_entries( zip, 0 ); ++i )
     {
         if ( zip_stat_index( zip, i, 0, &stats ) == -1 )
-            return tl::make_unexpected( "Cannot process zip content" );
+            return unexpected( "Cannot process zip content" );
 
         std::string nameFixed = stats.name;
         std::replace( nameFixed.begin(), nameFixed.end(), '\\', '/' );
@@ -282,32 +282,32 @@ VoidOrErrStr decompressZip( const std::filesystem::path& zipFile, const std::fil
         {
             if ( !std::filesystem::exists( newItemPath.parent_path(), ec ) )
                 if ( !std::filesystem::create_directories( newItemPath.parent_path(), ec ) )
-                    return tl::make_unexpected( "Cannot create folder " + utf8string( newItemPath.parent_path() ) );
+                    return unexpected( "Cannot create folder " + utf8string( newItemPath.parent_path() ) );
         }
         else
         {
             zfile = zip_fopen_index(zip,i,0);
             if ( !zfile )
-                return tl::make_unexpected( "Cannot open zip file " + nameFixed );
+                return unexpected( "Cannot open zip file " + nameFixed );
 
             // in some manually created zip-files there is no folder entries for files in sub-folders;
             // so let us create directory each time before saving a file in it
             if ( !std::filesystem::exists( newItemPath.parent_path(), ec ) )
                 if ( !std::filesystem::create_directories( newItemPath.parent_path(), ec ) )
-                    return tl::make_unexpected( "Cannot create folder " + utf8string( newItemPath.parent_path() ) );
+                    return unexpected( "Cannot create folder " + utf8string( newItemPath.parent_path() ) );
 
             std::ofstream ofs( newItemPath, std::ios::binary );
             if ( !ofs || ofs.bad() )
-                return tl::make_unexpected( "Cannot create file " + utf8string( newItemPath ) );
+                return unexpected( "Cannot create file " + utf8string( newItemPath ) );
 
             fileBufer.resize(stats.size);
             auto bitesRead = zip_fread(zfile,(void*)fileBufer.data(),fileBufer.size());
             if ( bitesRead != (zip_int64_t)stats.size )
-                return tl::make_unexpected( "Cannot read file from zip " + nameFixed );
+                return unexpected( "Cannot read file from zip " + nameFixed );
 
             zip_fclose(zfile);
             if ( !ofs.write( fileBufer.data(), fileBufer.size() ) )
-                return tl::make_unexpected( "Cannot write file from zip " + utf8string( newItemPath ) );
+                return unexpected( "Cannot write file from zip " + utf8string( newItemPath ) );
             ofs.close();
         }
     }
@@ -319,27 +319,27 @@ VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::p
 {
     MR_TIMER;
     if (path.empty())
-        return tl::make_unexpected( "Cannot save to empty path" );
+        return unexpected( "Cannot save to empty path" );
 
     UniqueTemporaryFolder scenePath( {} );
     if ( !scenePath )
-        return tl::make_unexpected( "Cannot create temporary folder" );
+        return unexpected( "Cannot create temporary folder" );
 
     if ( progressCb && !progressCb( 0.0f ) )
-        return tl::make_unexpected( "Canceled" );
+        return unexpected( "Canceled" );
 
     Json::Value root;
     root["FormatVersion"] = "0.0";
     auto saveModelFutures = object.serializeRecursive( scenePath, root, 0 );
     if ( !saveModelFutures.has_value() )
-        return tl::make_unexpected( saveModelFutures.error() );
+        return unexpected( saveModelFutures.error() );
 
     auto paramsFile = scenePath / ( object.name() + ".json" );
     std::ofstream ofs( paramsFile );
     Json::StreamWriterBuilder builder;
     std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
     if ( !ofs || writer->write( root, &ofs ) != 0 )
-        return tl::make_unexpected( "Cannot write parameters " + utf8string( paramsFile ) );
+        return unexpected( "Cannot write parameters " + utf8string( paramsFile ) );
 
     ofs.close();
 
@@ -384,21 +384,21 @@ VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::p
     return compressZip( path, scenePath, {}, nullptr, subprogress( progressCb, 0.9f, 1.0f ) );
 }
 
-tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTree( const std::filesystem::path& path, FolderCallback postDecompress,
+Expected<std::shared_ptr<Object>, std::string> deserializeObjectTree( const std::filesystem::path& path, FolderCallback postDecompress,
                                                                           ProgressCallback progressCb )
 {
     MR_TIMER;
     UniqueTemporaryFolder scenePath( postDecompress );
     if ( !scenePath )
-        return tl::make_unexpected( "Cannot create temporary folder" );
+        return unexpected( "Cannot create temporary folder" );
     auto res = decompressZip( path, scenePath );
     if ( !res.has_value() )
-        return tl::make_unexpected( res.error() );
+        return unexpected( res.error() );
 
     return deserializeObjectTreeFromFolder( scenePath, progressCb );
 }
 
-tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
+Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
                                                                                     ProgressCallback progressCb )
 {
     MR_TIMER;
@@ -417,7 +417,7 @@ tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromFold
     auto readRes = deserializeJsonValue( jsonFile );
     if( !readRes.has_value() )
     {
-        return tl::make_unexpected( readRes.error() );
+        return unexpected( readRes.error() );
     }
     auto root = readRes.value();
 
@@ -432,7 +432,7 @@ tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromFold
             break;
     }
     if ( !rootObject )
-        return tl::make_unexpected( "Unknown root object type" );
+        return unexpected( "Unknown root object type" );
 
     int modelNumber{ 0 };
     int modelCounter{ 0 };
@@ -473,7 +473,7 @@ tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromFold
         std::string errorStr = resDeser.error();
         if ( errorStr != "Loading canceled" )
             errorStr = "Cannot deserialize: " + errorStr;
-        return tl::make_unexpected( errorStr );
+        return unexpected( errorStr );
     }
 
     return rootObject;
@@ -815,13 +815,13 @@ void deserializeFromJson( const Json::Value& root, BitSet& bitset )
     }
 }
 
-tl::expected<Mesh, std::string> deserializeFromJson( const Json::Value& root, VertColors* colors )
+Expected<Mesh, std::string> deserializeFromJson( const Json::Value& root, VertColors* colors )
 {
     if ( !root.isObject() )
-        return tl::unexpected( std::string{ "deserialize mesh: json value is not an object" } );
+        return unexpected( std::string{ "deserialize mesh: json value is not an object" } );
 
     if ( !root["ply"].isString() )
-        return tl::unexpected( std::string{ "deserialize mesh: json value does not have 'ply' string"} );
+        return unexpected( std::string{ "deserialize mesh: json value does not have 'ply' string"} );
         
     auto bin = decode64( root["ply"].asString() );
     std::istringstream in( std::string( (const char *)bin.data(), bin.size() ) );

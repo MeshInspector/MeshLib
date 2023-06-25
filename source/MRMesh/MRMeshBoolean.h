@@ -3,7 +3,7 @@
 #include "MRBooleanOperation.h"
 #include "MRMesh.h"
 #include "MRBitSet.h"
-#include <tl/expected.hpp>
+#include "MRExpected.h"
 #include <string>
 
 namespace MR
@@ -77,7 +77,7 @@ struct BooleanResultPoints
  * \param operation Boolean operation to perform
  * \param rigidB2A Transform from mesh `B` space to mesh `A` space
  */
- MRMESH_API tl::expected<BooleanResultPoints,std::string> getBooleanPoints( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
+ MRMESH_API Expected<BooleanResultPoints,std::string> getBooleanPoints( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
                                                                const AffineXf3f* rigidB2A = nullptr );
 
 } //namespace MR

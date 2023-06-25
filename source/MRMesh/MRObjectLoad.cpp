@@ -37,7 +37,7 @@ const IOFilters allFilters = SceneFileFilters
                              | LinesLoad::Filters
                              | PointsLoad::Filters;
 
-tl::expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem::path & file, ProgressCallback callback )
+Expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem::path & file, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -45,7 +45,7 @@ tl::expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesys
     auto mesh = MeshLoad::fromAnySupportedFormat( file, &colors, callback );
     if ( !mesh.has_value() )
     {
-        return tl::make_unexpected( mesh.error() );
+        return unexpected( mesh.error() );
     }
 
     ObjectMesh objectMesh;
@@ -60,14 +60,14 @@ tl::expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesys
     return objectMesh;
 }
 
-tl::expected<ObjectLines, std::string> makeObjectLinesFromFile( const std::filesystem::path& file, ProgressCallback callback )
+Expected<ObjectLines, std::string> makeObjectLinesFromFile( const std::filesystem::path& file, ProgressCallback callback )
 {
     MR_TIMER;
 
     auto lines = LinesLoad::fromAnySupportedFormat( file, callback );
     if ( !lines.has_value() )
     {
-        return tl::make_unexpected( lines.error() );
+        return unexpected( lines.error() );
     }
 
     ObjectLines objectLines;
@@ -77,7 +77,7 @@ tl::expected<ObjectLines, std::string> makeObjectLinesFromFile( const std::files
     return objectLines;
 }
 
-tl::expected<ObjectPoints, std::string> makeObjectPointsFromFile( const std::filesystem::path& file, ProgressCallback callback )
+Expected<ObjectPoints, std::string> makeObjectPointsFromFile( const std::filesystem::path& file, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -85,7 +85,7 @@ tl::expected<ObjectPoints, std::string> makeObjectPointsFromFile( const std::fil
     auto pointsCloud = PointsLoad::fromAnySupportedFormat( file, &colors, callback );
     if ( !pointsCloud.has_value() )
     {
-        return tl::make_unexpected( pointsCloud.error() );
+        return unexpected( pointsCloud.error() );
     }
 
     ObjectPoints objectPoints;
@@ -100,7 +100,7 @@ tl::expected<ObjectPoints, std::string> makeObjectPointsFromFile( const std::fil
     return objectPoints;
 }
 
-tl::expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( const std::filesystem::path& file, ProgressCallback callback )
+Expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( const std::filesystem::path& file, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -108,7 +108,7 @@ tl::expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( cons
     auto distanceMap = DistanceMapLoad::fromAnySupportedFormat( file, &params, callback );
     if ( !distanceMap.has_value() )
     {
-        return tl::make_unexpected( distanceMap.error() );
+        return unexpected( distanceMap.error() );
     }
 
     ObjectDistanceMap objectDistanceMap;
@@ -118,14 +118,14 @@ tl::expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( cons
     return objectDistanceMap;
 }
 
-tl::expected<ObjectGcode, std::string> makeObjectGcodeFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+Expected<ObjectGcode, std::string> makeObjectGcodeFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
 {
     MR_TIMER;
 
     auto gcodeSource = GcodeLoad::fromAnySupportedFormat( file, callback );
     if ( !gcodeSource.has_value() )
     {
-        return tl::make_unexpected( gcodeSource.error() );
+        return unexpected( gcodeSource.error() );
     }
 
     ObjectGcode objectGcode;
@@ -136,7 +136,7 @@ tl::expected<ObjectGcode, std::string> makeObjectGcodeFromFile( const std::files
 }
 
 #if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-tl::expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+Expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
 {
     MR_TIMER;
 
@@ -146,7 +146,7 @@ tl::expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObject
     auto loadRes = VoxelsLoad::fromAnySupportedFormat( file, cb );
     if ( !loadRes.has_value() )
     {
-        return tl::make_unexpected( loadRes.error() );
+        return unexpected( loadRes.error() );
     }
     auto& loadResRef = *loadRes;
     std::vector<std::shared_ptr<ObjectVoxels>> res;
@@ -167,11 +167,11 @@ tl::expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObject
 
         obj->construct( loadResRef[i], cb );
         if ( cb && !callbackRes )
-            return tl::make_unexpected( getCancelMessage( file ) );
+            return unexpected( getCancelMessage( file ) );
         step = 1;
         obj->setIsoValue( ( loadResRef[i].min + loadResRef[i].max ) / 2.f, cb );
         if ( cb && !callbackRes )
-            return tl::make_unexpected( getCancelMessage( file ) );
+            return unexpected( getCancelMessage( file ) );
         res.emplace_back( obj );
     }
     
@@ -179,13 +179,13 @@ tl::expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObject
 }
 #endif
 
-tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFile( const std::filesystem::path& filename,
+Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFile( const std::filesystem::path& filename,
                                                                                         ProgressCallback callback )
 {
     if ( callback && !callback( 0.f ) )
-        return tl::make_unexpected( std::string( "Saving canceled" ) );
+        return unexpected( std::string( "Saving canceled" ) );
 
-    tl::expected<std::vector<std::shared_ptr<Object>>, std::string> result;
+    Expected<std::vector<std::shared_ptr<Object>>, std::string> result;
 
     auto ext = std::string( "*" ) + utf8string( filename.extension().u8string() );
     for ( auto& c : ext )
@@ -223,13 +223,13 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
             result = objects;
         }
         else
-            result = tl::make_unexpected( res.error() );
+            result = unexpected( res.error() );
     }
     else if ( std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const auto& filter ) { return filter.extension == ext;     } ) != SceneFileFilters.end() )
     {
         const auto objTree = loadSceneFromAnySupportedFormat( filename, callback );
         if ( !objTree.has_value() )
-            return tl::make_unexpected( objTree.error() );
+            return unexpected( objTree.error() );
         
         result = std::vector( { *objTree } );
         ( *result )[0]->setName( utf8string( filename.stem() ) );
@@ -245,11 +245,11 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
         }
         else if ( objectMesh.error() == "Loading canceled" )
         {
-            result = tl::make_unexpected( objectMesh.error() );
+            result = unexpected( objectMesh.error() );
         }
         else
         {
-            result = tl::make_unexpected( objectMesh.error() );
+            result = unexpected( objectMesh.error() );
 
             auto objectPoints = makeObjectPointsFromFile( filename, callback );
             if ( objectPoints.has_value() )
@@ -260,7 +260,7 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
             }
             else if ( result.error() == "unsupported file extension" )
             {
-                result = tl::make_unexpected( objectPoints.error() );
+                result = unexpected( objectPoints.error() );
 
                 auto objectLines = makeObjectLinesFromFile( filename, callback );
                 if ( objectLines.has_value() )
@@ -271,7 +271,7 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                 }
                 else if ( result.error() == "unsupported file extension" )
                 {
-                    result = tl::make_unexpected( objectLines.error() );
+                    result = unexpected( objectLines.error() );
 
                     auto objectDistanceMap = makeObjectDistanceMapFromFile( filename, callback );
                     if ( objectDistanceMap.has_value() )
@@ -282,7 +282,7 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                     }
                     else if ( result.error() == "unsupported file extension" )
                     {
-                        result = tl::make_unexpected( objectDistanceMap.error() );
+                        result = unexpected( objectDistanceMap.error() );
 
                         auto objectGcode = makeObjectGcodeFromFile( filename, callback );
                         if ( objectGcode.has_value() )
@@ -293,7 +293,7 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                         }
                         else if ( result.error() == "unsupported file extension" )
                         {
-                            result = tl::make_unexpected( objectDistanceMap.error() );
+                            result = unexpected( objectDistanceMap.error() );
 
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
                             auto objsVoxels = makeObjectVoxelsFromFile( filename, callback );
@@ -309,7 +309,7 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                                 result = resObjs;
                             }
                             else
-                                result = tl::make_unexpected( objsVoxels.error() );
+                                result = unexpected( objsVoxels.error() );
 #endif
                         }
                     }
@@ -361,12 +361,12 @@ bool isSupportedFileInSubfolders( const std::filesystem::path& folder )
     return false;
 }
 
-tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::path & folder, ProgressCallback callback )
+Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::path & folder, ProgressCallback callback )
 {
     MR_TIMER;
 
     if ( callback && !callback( 0.f ) )
-        return tl::make_unexpected( getCancelMessage( folder ) );
+        return unexpected( getCancelMessage( folder ) );
 
     struct FilePathNode
     {
@@ -425,10 +425,10 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
 
     
     if ( filesTree.subfolders.empty() && filesTree.files.empty() )
-        return tl::make_unexpected( std::string( "Error: folder is empty." ) );
+        return unexpected( std::string( "Error: folder is empty." ) );
 
 
-    using loadObjResultType = tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string>;
+    using loadObjResultType = Expected<std::vector<std::shared_ptr<MR::Object>>, std::string>;
     // create folders objects
     struct LoadTask
     {
@@ -512,20 +512,20 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
     if ( !errorString.empty() )
         spdlog::warn( "Load folder error:\n{}", errorString );
     if ( loadingCanceled )
-        return tl::make_unexpected( getCancelMessage( folder ) );
+        return unexpected( getCancelMessage( folder ) );
     if ( !atLeastOneLoaded )
-        return tl::make_unexpected( errorString );
+        return unexpected( errorString );
 
     return result;
 }
 
-tl::expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, ProgressCallback callback )
+Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, ProgressCallback callback )
 {
     auto ext = std::string( "*" ) + utf8string( path.extension().u8string() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    auto res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    auto res = unexpected( std::string( "unsupported file extension" ) );
 
     auto itF = std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const IOFilter& filter )
     {

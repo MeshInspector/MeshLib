@@ -24,7 +24,7 @@ VoidOrErrStr toMrLines( const Polyline3& polyline, const std::filesystem::path& 
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
-        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
     return toMrLines( polyline, out, callback );
 }
@@ -42,10 +42,10 @@ VoidOrErrStr toMrLines( const Polyline3& polyline, std::ostream& out, ProgressCa
         
     const bool cancel = !MR::writeByBlocks( out, (const char*) polyline.points.data(), polyline.points.size() * sizeof( Vector3f ), callback );
     if ( cancel )
-        return tl::make_unexpected( std::string( "Saving canceled" ) );
+        return unexpected( std::string( "Saving canceled" ) );
 
     if ( !out )
-        return tl::make_unexpected( std::string( "Error saving in MrLines-format" ) );
+        return unexpected( std::string( "Error saving in MrLines-format" ) );
 
     if ( callback )
         callback( 1.f );
@@ -56,7 +56,7 @@ VoidOrErrStr toPts( const Polyline3& polyline, const std::filesystem::path& file
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
-        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
     return toPts( polyline, out, callback );
 }
@@ -77,13 +77,13 @@ VoidOrErrStr toPts( const Polyline3& polyline, std::ostream& out, ProgressCallba
             out << p << "\n";
             ++pointIndex;
             if ( callback && !( pointIndex & 0x3FF ) && !callback( float( pointIndex ) / pointsNum ) )
-                return tl::make_unexpected( std::string( "Saving canceled" ) );
+                return unexpected( std::string( "Saving canceled" ) );
         }
         out << "END_Polyline\n";
     }
 
     if ( !out )
-        return tl::make_unexpected( std::string( "Error saving in PTS-format" ) );
+        return unexpected( std::string( "Error saving in PTS-format" ) );
 
     if ( callback )
         callback( 1.f );
@@ -94,7 +94,7 @@ VoidOrErrStr toDxf( const Polyline3& polyline, const std::filesystem::path& file
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
-        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
     return toDxf( polyline, out, callback );
 }
@@ -129,7 +129,7 @@ VoidOrErrStr toDxf( const Polyline3& polyline, std::ostream& out, ProgressCallba
             out << "30\n" << p.z << "\n";
             ++pointIndex;
             if ( callback && !( pointIndex & 0x3FF ) && !callback( float( pointIndex ) / pointsNum ) )
-                return tl::make_unexpected( std::string( "Saving canceled" ) );
+                return unexpected( std::string( "Saving canceled" ) );
         }
         out << "0\nSEQEND\n";
     }
@@ -138,7 +138,7 @@ VoidOrErrStr toDxf( const Polyline3& polyline, std::ostream& out, ProgressCallba
     out << "0\nEOF\n";
 
     if ( !out )
-        return tl::make_unexpected( std::string( "Error saving in DXF-format" ) );
+        return unexpected( std::string( "Error saving in DXF-format" ) );
 
     return {};
 }
@@ -149,7 +149,7 @@ VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, const std::filesys
     for ( auto& c : ext )
         c = (char) tolower( c );
 
-    VoidOrErrStr res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".mrlines" )
         res = toMrLines( polyline, file, callback );
     if ( ext == ".pts" )
@@ -165,7 +165,7 @@ VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, std::ostream& out,
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    VoidOrErrStr res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".mrlines" )
         res = toMrLines( polyline, out, callback );
     if ( ext == ".pts" )

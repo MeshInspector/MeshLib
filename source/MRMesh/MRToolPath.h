@@ -6,7 +6,7 @@
 #include "MRPolyline.h"
 #include "MRProgressCallback.h"
 
-#include <tl/expected.hpp>
+#include "MRExpected.h"
 
 namespace MR
 {
@@ -95,18 +95,18 @@ struct ToolPathResult
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
 // this toolpath is built from the parallel sections along Z-axis
 // mesh can be transformed using xf parameter
-MRMESH_API tl::expected<ToolPathResult, std::string> constantZToolPath( const Mesh& mesh, const ToolPathParams& params, const AffineXf3f* xf = nullptr, ProgressCallback cb = {} );
+MRMESH_API Expected<ToolPathResult, std::string> constantZToolPath( const Mesh& mesh, const ToolPathParams& params, const AffineXf3f* xf = nullptr, ProgressCallback cb = {} );
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
 // // this one is traditional lace-roughing toolpath
 // mesh can be transformed using xf parameter
-MRMESH_API tl::expected<ToolPathResult, std::string> lacingToolPath( const Mesh& mesh, const ToolPathParams& params, const AffineXf3f* xf = nullptr, ProgressCallback cb = {} );
+MRMESH_API Expected<ToolPathResult, std::string> lacingToolPath( const Mesh& mesh, const ToolPathParams& params, const AffineXf3f* xf = nullptr, ProgressCallback cb = {} );
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
 // this toolpath is built from geodesic parallels divercing from the given start point
 // if the start point is not specified, the highest point on the mesh will be used
 // mesh can be transformed using xf parameter
-MRMESH_API tl::expected<ToolPathResult, std::string> constantCuspToolPath( const Mesh& mesh, const ToolPathParams& params, VertId startPoint = {}, const AffineXf3f* xf = nullptr, ProgressCallback cb = {} );
+MRMESH_API Expected<ToolPathResult, std::string> constantCuspToolPath( const Mesh& mesh, const ToolPathParams& params, VertId startPoint = {}, const AffineXf3f* xf = nullptr, ProgressCallback cb = {} );
 
 // generates G-Code for milling tool
 MRMESH_API std::shared_ptr<ObjectGcode> exportToolPathToGCode( const std::vector<GCommand>& commands );

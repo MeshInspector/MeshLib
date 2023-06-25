@@ -212,7 +212,7 @@ VoidOrErrStr meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings
     if ( settings.normalIters <= 0 || settings.pointIters <= 0 )
     {
         assert( false );
-        return tl::make_unexpected( "Bad parameters" );
+        return unexpected( "Bad parameters" );
     }
 
     if ( !reportProgress( settings.cb, 0.0f ) )

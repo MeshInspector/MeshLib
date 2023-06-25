@@ -2,7 +2,7 @@
 
 #ifndef MRMESH_NO_LABEL
 #include "MRMeshFwd.h"
-#include <tl/expected.hpp>
+#include "MRExpected.h"
 #include "MRId.h"
 #include "MRVector3.h"
 #include "MRSymbolMesh.h"
@@ -31,6 +31,6 @@ struct TextMeshAlignParams : SymbolMeshParams
 };
 
 // Creates symbol mesh and aligns it to given surface
-MRMESH_API tl::expected<Mesh, std::string> alignTextToMesh( const Mesh& mesh, const TextMeshAlignParams& params );
+MRMESH_API Expected<Mesh, std::string> alignTextToMesh( const Mesh& mesh, const TextMeshAlignParams& params );
 }
 #endif

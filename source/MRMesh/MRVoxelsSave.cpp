@@ -51,9 +51,9 @@ VoidOrErrStr toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, Progres
     }
 
     if ( !writeByBlocks( out, (const char*) buffer.data(), buffer.size() * sizeof( float ), callback ) )
-        return tl::make_unexpected( std::string( "Saving canceled" ) );
+        return unexpected( std::string( "Saving canceled" ) );
     if ( !out )
-        return tl::make_unexpected( std::string( "Stream write error" ) );
+        return unexpected( std::string( "Stream write error" ) );
 
     return {};
 }
@@ -63,7 +63,7 @@ VoidOrErrStr toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::p
     MR_TIMER
     if ( file.empty() )
     {
-        return tl::make_unexpected( "Filename is empty" );
+        return unexpected( "Filename is empty" );
     }
 
     auto ext = utf8string( file.extension() );
@@ -74,13 +74,13 @@ VoidOrErrStr toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::p
     {
         std::stringstream ss;
         ss << "Extension is not correct, expected \".raw\" current \"" << ext << "\"" << std::endl;
-        return tl::make_unexpected( ss.str() );
+        return unexpected( ss.str() );
     }
 
     const auto& dims = vdbVolume.dims;
     if ( dims.x == 0 || dims.y == 0 || dims.z == 0 )
     {
-        return tl::make_unexpected( "VdbVolume is empty" );
+        return unexpected( "VdbVolume is empty" );
     }
 
     auto parentPath = file.parent_path();
@@ -93,7 +93,7 @@ VoidOrErrStr toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::p
             std::stringstream ss;
             ss << "Cannot create directories: " << utf8string( parentPath ) << std::endl;
             ss << "Error: " << ec.value() << " Message: " << systemToUtf8( ec.message() ) << std::endl;
-            return tl::make_unexpected( ss.str() );
+            return unexpected( ss.str() );
         }
     }
 
@@ -108,7 +108,7 @@ VoidOrErrStr toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::p
     std::filesystem::path outPath = parentPath / prefix.str();
     std::ofstream out( outPath, std::ios::binary );
     if ( !out )
-        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( outPath ) );
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( outPath ) );
 
     return addFileNameInError( toRawFloat( vdbVolume, out, callback ), outPath );
 }
@@ -118,7 +118,7 @@ VoidOrErrStr toGav( const VdbVolume& vdbVolume, const std::filesystem::path& fil
     MR_TIMER
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
-        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
     return addFileNameInError( toGav( vdbVolume, out, callback ), file );
 }
@@ -150,14 +150,14 @@ VoidOrErrStr toGav( const VdbVolume& vdbVolume, std::ostream & out, ProgressCall
     Json::StreamWriterBuilder builder;
     std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
     if ( writer->write( headerJson, &oss ) != 0 || !oss )
-        return tl::make_unexpected( "Header composition error" );
+        return unexpected( "Header composition error" );
 
     const auto header = oss.str();
     const auto headerLen = uint32_t( header.size() );
     out.write( (const char*)&headerLen, sizeof( headerLen ) );
     out.write( header.data(), headerLen );
     if ( !out )
-        return tl::make_unexpected( "Header write error" );
+        return unexpected( "Header write error" );
     
     return toRawFloat( vdbVolume, out, callback );
 }
@@ -177,7 +177,7 @@ VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& fil
     std::ofstream file;
     file.open( filename, std::ios_base::out | std::ios_base::binary | std::ios_base::trunc );
     if ( !file )
-        return tl::make_unexpected( "cannot open file for writing: " + utf8string( filename ) );
+        return unexpected( "cannot open file for writing: " + utf8string( filename ) );
 
     struct MyArch : openvdb::io::Archive
     {
@@ -186,7 +186,7 @@ VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& fil
 
     MyArch{}.write( file, openvdb::GridCPtrVec{ gridPtr }, /*seekable=*/true, {} );
     if ( !file )
-        return tl::make_unexpected( "error writing in file: " + utf8string( filename ) );
+        return unexpected( "error writing in file: " + utf8string( filename ) );
 
     return {};
 }
@@ -205,7 +205,7 @@ VoidOrErrStr toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesy
     else if ( ext == ".vdb" )
         return toVdb( vdbVolume, file, callback );
     else
-        return tl::make_unexpected( std::string( "unsupported file extension" ) );
+        return unexpected( std::string( "unsupported file extension" ) );
 }
 
 
@@ -222,24 +222,24 @@ VoidOrErrStr saveSliceToImage( const std::filesystem::path& path, const VdbVolum
     {
     case SlicePlane::XY:
         if ( sliceNumber > dims.z )
-            return tl::make_unexpected( "Slice number exceeds voxel object borders" );
+            return unexpected( "Slice number exceeds voxel object borders" );
 
         activeVoxel = { 0, 0, sliceNumber };
         break;
     case SlicePlane::YZ:
         if ( sliceNumber > dims.x )
-            return tl::make_unexpected( "Slice number exceeds voxel object borders" );
+            return unexpected( "Slice number exceeds voxel object borders" );
 
         activeVoxel = { sliceNumber, 0, 0 };
         break;
     case SlicePlane::ZX:
         if ( sliceNumber > dims.y )
-            return tl::make_unexpected( "Slice number exceeds voxel object borders" );
+            return unexpected( "Slice number exceeds voxel object borders" );
 
         activeVoxel = { 0, sliceNumber, 0 };
         break;
     default:
-        return tl::make_unexpected( "Slice plain is invalid" );
+        return unexpected( "Slice plain is invalid" );
     }
  
     const auto& grid = vdbVolume.data;
@@ -263,7 +263,7 @@ VoidOrErrStr saveSliceToImage( const std::filesystem::path& path, const VdbVolum
     MeshTexture meshTexture( { { std::move( texture ), {textureWidth, textureHeight} } } );
     auto saveRes = ImageSave::toAnySupportedFormat( meshTexture, path );
     if ( !saveRes.has_value() )
-        return tl::make_unexpected( saveRes.error() );
+        return unexpected( saveRes.error() );
     
     if ( callback )
         callback( 1.0f );
@@ -286,7 +286,7 @@ VoidOrErrStr saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSetti
         numSlices = vdbVolume.dims.y;
         break;
     default:
-        return tl::make_unexpected( "Slice plane is invalid" );
+        return unexpected( "Slice plane is invalid" );
     }
 
     const size_t maxNumChars = std::to_string( numSlices ).size();

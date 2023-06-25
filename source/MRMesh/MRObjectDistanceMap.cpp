@@ -154,13 +154,13 @@ VoidOrErrStr ObjectDistanceMap::deserializeModel_( const std::filesystem::path& 
 {
     auto res = DistanceMapLoad::fromRaw( pathFromUtf8( utf8string( path ) + ".raw" ) );
     if ( !res.has_value() )
-        return tl::make_unexpected( res.error() );
+        return unexpected( res.error() );
     
     dmap_ = std::make_shared<DistanceMap>( res.value() );
     return {};
 }
 
-tl::expected<std::future<void>, std::string> ObjectDistanceMap::serializeModel_( const std::filesystem::path& path ) const
+Expected<std::future<void>, std::string> ObjectDistanceMap::serializeModel_( const std::filesystem::path& path ) const
 {
     if ( !dmap_ )
         return {};

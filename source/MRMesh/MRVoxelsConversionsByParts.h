@@ -59,7 +59,7 @@ mergeGridPart( Mesh& mesh, std::vector<EdgePath>& cutContours, FloatGrid&& grid,
                float leftCutPosition, float rightCutPosition, const MergeGridPartSettings& settings = {} );
 
 /// functor returning a voxel grid part within the specified range, or an error string on failure
-using GridPartBuilder = std::function<tl::expected<FloatGrid, std::string> ( size_t begin, size_t end )>;
+using GridPartBuilder = std::function<Expected<FloatGrid, std::string> ( size_t begin, size_t end )>;
 
 /**
  * \struct MR::GridToMeshByPartsSettings
@@ -89,7 +89,7 @@ struct GridToMeshByPartsSettings
  * @return a generated mesh or an error string
  */
 MRMESH_API
-tl::expected<Mesh, std::string>
+Expected<Mesh, std::string>
 gridToMeshByParts( const GridPartBuilder& builder, const Vector3i& dimensions, const Vector3f& voxelSize,
                    const GridToMeshByPartsSettings& settings = {}, const MergeGridPartSettings& mergeSettings = {} );
 

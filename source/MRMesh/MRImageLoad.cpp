@@ -4,7 +4,7 @@
 #include "MRImage.h"
 #include "MRStringConvert.h"
 
-#include <tl/expected.hpp>
+#include "MRExpected.h"
 
 #include <filesystem>
 #include <fstream>
@@ -72,18 +72,18 @@ struct ReadPng
     FILE* fp{ nullptr };
 };
 
-tl::expected<Image, std::string> fromPng( const std::filesystem::path& file )
+Expected<Image, std::string> fromPng( const std::filesystem::path& file )
 {
     ReadPng png( file );
 
     if ( !png.fp )
-        return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
     if ( !png.pngPtr )
-        return tl::make_unexpected( std::string( "Cannot read png " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot read png " ) + utf8string( file ) );
 
     if ( !png.infoPtr )
-        return tl::make_unexpected( std::string( "Cannot create png info" ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot create png info" ) + utf8string( file ) );
 
     Image result;
 
@@ -152,7 +152,7 @@ tl::expected<Image, std::string> fromPng( const std::filesystem::path& file )
         }
     }
     else
-        return tl::make_unexpected( "Unsupported png color type" );
+        return unexpected( "Unsupported png color type" );
 
     png_read_end( png.pngPtr, NULL );
     return result;
@@ -176,33 +176,33 @@ struct JpegReader
     tjhandle tjInstance{ nullptr };
 };
 
-tl::expected<Image, std::string> fromJpeg( const std::filesystem::path& path )
+Expected<Image, std::string> fromJpeg( const std::filesystem::path& path )
 {
     std::ifstream in( path, std::ios::binary );
     if ( !in )
-        return tl::make_unexpected( "Cannot open file " + utf8string( path ) );
+        return unexpected( "Cannot open file " + utf8string( path ) );
 
     const auto fileSize = std::filesystem::file_size( path );
     Buffer<char> buffer( fileSize );
     in.read( buffer.data(), (ptrdiff_t)buffer.size() );
     if ( !in )
-        return tl::make_unexpected( "Cannot read file " + utf8string( path ) );
+        return unexpected( "Cannot read file " + utf8string( path ) );
 
     JpegReader reader;
     if ( !reader.tjInstance )
-        return tl::make_unexpected( "Cannot initialize JPEG decompressor" );
+        return unexpected( "Cannot initialize JPEG decompressor" );
 
     int width, height, jpegSubsamp, jpegColorspace;
     auto res = tjDecompressHeader3( reader.tjInstance, (const unsigned char*)buffer.data(), (unsigned long)buffer.size(), &width, &height, &jpegSubsamp, &jpegColorspace );
     if ( res != 0 )
-        return tl::make_unexpected( "Failed to decompress JPEG header" );
+        return unexpected( "Failed to decompress JPEG header" );
 
     Image image;
     image.pixels.resize( width * height );
     image.resolution = { width, height };
     res = tjDecompress2( reader.tjInstance, (const unsigned char*)buffer.data(), (unsigned long)buffer.size(), reinterpret_cast<unsigned char*>( image.pixels.data() ), width, 0, height, TJPF_RGBA, TJFLAG_BOTTOMUP );
     if ( res != 0 )
-        return tl::make_unexpected( "Failed to decompress JPEG file" );
+        return unexpected( "Failed to decompress JPEG file" );
 
     return image;
 }
@@ -210,13 +210,13 @@ tl::expected<Image, std::string> fromJpeg( const std::filesystem::path& path )
 
 #endif
 
-tl::expected<Image, std::string> fromAnySupportedFormat( const std::filesystem::path& file )
+Expected<Image, std::string> fromAnySupportedFormat( const std::filesystem::path& file )
 {
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    tl::expected<Image, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    Expected<Image, std::string> res = unexpected( std::string( "unsupported file extension" ) );
 #ifndef MRMESH_NO_PNG
     if ( ext == ".png" )
         return MR::ImageLoad::fromPng( file );

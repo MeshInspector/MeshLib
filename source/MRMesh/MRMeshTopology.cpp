@@ -2007,14 +2007,14 @@ VoidOrErrStr MeshTopology::read( std::istream & s, ProgressCallback callback )
     std::uint32_t numEdges;
     s.read( (char*)&numEdges, 4 );
     if ( !s )
-        return tl::make_unexpected( std::string( "Stream reading error" ) );
+        return unexpected( std::string( "Stream reading error" ) );
 
     auto posCur = s.tellg();
     s.seekg( 0, std::ios_base::end );
     const auto posEnd = s.tellg();
     s.seekg( posCur );
     if ( size_t( posEnd - posCur ) < numEdges * sizeof( HalfEdgeRecord ) )
-        return tl::make_unexpected( std::string( "Stream reading error: stream is too short" ) ); // stream is too short
+        return unexpected( std::string( "Stream reading error: stream is too short" ) ); // stream is too short
 
     edges_.resize( numEdges );
     if ( !readByBlocks( s, ( char* )edges_.data(), edges_.size() * sizeof( HalfEdgeRecord ),
@@ -2022,40 +2022,40 @@ VoidOrErrStr MeshTopology::read( std::istream & s, ProgressCallback callback )
     {
         return callback( v / 3.f );
     } : callback ) )
-        return tl::make_unexpected( std::string( "Loading canceled" ) );
+        return unexpected( std::string( "Loading canceled" ) );
 
     // read verts
     std::uint32_t numVerts;
     s.read( (char*)&numVerts, 4 );
     if ( !s )
-        return tl::make_unexpected( std::string( "Stream reading error" ) );
+        return unexpected( std::string( "Stream reading error" ) );
     edgePerVertex_.resize( numVerts );
     if ( !readByBlocks( s, (char*)edgePerVertex_.data(), edgePerVertex_.size() * sizeof( EdgeId ),
         callback ? [callback] ( float v )
     {
         return callback( ( 1.f + v ) / 3.f );
     } : callback ) )
-        return tl::make_unexpected( std::string( "Loading canceled" ) );
+        return unexpected( std::string( "Loading canceled" ) );
 
     // read faces
     std::uint32_t numFaces;
     s.read( (char*)&numFaces, 4 );
     if ( !s )
-        return tl::make_unexpected( std::string( "Stream reading error" ) );
+        return unexpected( std::string( "Stream reading error" ) );
     edgePerFace_.resize( numFaces );
     if ( !readByBlocks( s, (char*)edgePerFace_.data(), edgePerFace_.size() * sizeof( EdgeId ),
         callback ? [callback] ( float v )
     {
         return callback( ( 2.f + v ) / 3.f );
     } : callback ) )
-        return tl::make_unexpected( std::string( "Loading canceled" ) );
+        return unexpected( std::string( "Loading canceled" ) );
 
     computeValidsFromEdges();
 
     if ( !s.good() )
-        return tl::make_unexpected( std::string( "Stream reading error" ) );
+        return unexpected( std::string( "Stream reading error" ) );
     if ( !checkValidity() )
-        return tl::make_unexpected( std::string( "Data is invalid" ) );
+        return unexpected( std::string( "Data is invalid" ) );
     return {};
 }
 

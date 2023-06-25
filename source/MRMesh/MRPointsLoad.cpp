@@ -30,16 +30,16 @@ const IOFilters Filters =
 };
 
 #ifndef MRMESH_NO_OPENCTM
-tl::expected<MR::PointCloud, std::string> fromCtm( const std::filesystem::path& file, VertColors* colors /*= nullptr */, ProgressCallback callback )
+Expected<MR::PointCloud, std::string> fromCtm( const std::filesystem::path& file, VertColors* colors /*= nullptr */, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
-        return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
     return addFileNameInError( fromCtm( in, colors, callback ), file );
 }
 
-tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, VertColors* colors /*= nullptr */, ProgressCallback callback )
+Expected<MR::PointCloud, std::string> fromCtm( std::istream& in, VertColors* colors /*= nullptr */, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -93,9 +93,9 @@ tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, VertColors*
     auto vertCount = ctmGetInteger( context, CTM_VERTEX_COUNT );
     auto vertices = ctmGetFloatArray( context, CTM_VERTICES );
     if ( loadData.wasCanceled )
-        return tl::make_unexpected( "Loading canceled" );
+        return unexpected( "Loading canceled" );
     if ( ctmGetError( context ) != CTM_NONE )
-        return tl::make_unexpected( "Error reading CTM format" );
+        return unexpected( "Error reading CTM format" );
 
     if ( colors )
     {
@@ -130,22 +130,22 @@ tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, VertColors*
 }
 #endif
 
-tl::expected<MR::PointCloud, std::string> fromPly( const std::filesystem::path& file, VertColors* colors /*= nullptr */, ProgressCallback callback )
+Expected<MR::PointCloud, std::string> fromPly( const std::filesystem::path& file, VertColors* colors /*= nullptr */, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
-        return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
     return addFileNameInError( fromPly( in, colors, callback ), file );
 }
 
-tl::expected<MR::PointCloud, std::string> fromPly( std::istream& in, VertColors* colors /*= nullptr */, ProgressCallback callback )
+Expected<MR::PointCloud, std::string> fromPly( std::istream& in, VertColors* colors /*= nullptr */, ProgressCallback callback )
 {
     MR_TIMER;
 
     miniply::PLYReader reader( in );
     if ( !reader.valid() )
-        return tl::make_unexpected( std::string( "PLY file open error" ) );
+        return unexpected( std::string( "PLY file open error" ) );
 
     uint32_t indecies[3];
     bool gotVerts = false;
@@ -177,16 +177,16 @@ tl::expected<MR::PointCloud, std::string> fromPly( std::istream& in, VertColors*
             }
             const float progress = float( in.tellg() - posStart ) / streamSize;
             if ( callback && !callback( progress ) )
-                return tl::make_unexpected( std::string( "Loading canceled" ) );
+                return unexpected( std::string( "Loading canceled" ) );
             continue;
         }
     }
 
     if ( !reader.valid() )
-        return tl::make_unexpected( std::string( "PLY file read or parse error" ) );
+        return unexpected( std::string( "PLY file read or parse error" ) );
 
     if ( !gotVerts )
-        return tl::make_unexpected( std::string( "PLY file does not contain vertices" ) );
+        return unexpected( std::string( "PLY file does not contain vertices" ) );
 
     res.validPoints.resize( res.points.size(), true );
     if ( colors && !colorsBuffer.empty() )
@@ -202,16 +202,16 @@ tl::expected<MR::PointCloud, std::string> fromPly( std::istream& in, VertColors*
     return std::move( res );
 }
 
-tl::expected<MR::PointCloud, std::string> fromObj( const std::filesystem::path& file, ProgressCallback callback )
+Expected<MR::PointCloud, std::string> fromObj( const std::filesystem::path& file, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
-        return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
     return addFileNameInError( fromObj( in, callback ), file );
 }
 
-tl::expected<MR::PointCloud, std::string> fromObj( std::istream& in, ProgressCallback callback )
+Expected<MR::PointCloud, std::string> fromObj( std::istream& in, ProgressCallback callback )
 {
     PointCloud cloud;
 
@@ -224,7 +224,7 @@ tl::expected<MR::PointCloud, std::string> fromObj( std::istream& in, ProgressCal
     for ( int i = 0;; ++i )
     {
         if ( !in )
-            return tl::make_unexpected( std::string( "OBJ-format read error" ) );
+            return unexpected( std::string( "OBJ-format read error" ) );
         char ch = 0;
         in >> ch;
         if ( in.eof() )
@@ -246,7 +246,7 @@ tl::expected<MR::PointCloud, std::string> fromObj( std::istream& in, ProgressCal
         {
             const float progress = float( in.tellg() - posStart ) / streamSize;
             if ( !callback( progress ) )
-                return tl::make_unexpected( std::string( "Loading canceled" ) );
+                return unexpected( std::string( "Loading canceled" ) );
         }
     }
 
@@ -254,16 +254,16 @@ tl::expected<MR::PointCloud, std::string> fromObj( std::istream& in, ProgressCal
     return std::move( cloud );
 }
 
-tl::expected<MR::PointCloud, std::string> fromAsc( const std::filesystem::path& file, ProgressCallback callback )
+Expected<MR::PointCloud, std::string> fromAsc( const std::filesystem::path& file, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
-        return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
     return addFileNameInError( fromAsc( in, callback ), file );
 }
 
-tl::expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCallback callback )
+Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCallback callback )
 {
     PointCloud cloud;
     bool allNormalsValid = true;
@@ -281,7 +281,7 @@ tl::expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCal
         if ( str.empty() && in.eof() )
             break;
         if ( !in )
-            return tl::make_unexpected( std::string( "ASC-stream read error" ) );
+            return unexpected( std::string( "ASC-stream read error" ) );
         if ( str.empty() )
             continue;
         if ( str[0] == '#' )
@@ -291,7 +291,7 @@ tl::expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCal
         float x, y, z;
         is >> x >> y >> z;
         if ( !is )
-            return tl::make_unexpected( std::string( "ASC-format parse error" ) );
+            return unexpected( std::string( "ASC-format parse error" ) );
         cloud.points.emplace_back( x, y, z );
 
         if ( allNormalsValid )
@@ -310,7 +310,7 @@ tl::expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCal
         {
             const float progress = float( in.tellg() - posStart ) / streamSize;
             if ( !callback( progress ) )
-                return tl::make_unexpected( std::string( "Loading canceled" ) );
+                return unexpected( std::string( "Loading canceled" ) );
         }
     }
 
@@ -318,14 +318,14 @@ tl::expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCal
     return std::move( cloud );
 }
 
-tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, VertColors* colors /*= nullptr */,
+Expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, VertColors* colors /*= nullptr */,
                                                                   ProgressCallback callback )
 {
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
 
-    tl::expected<MR::PointCloud, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    Expected<MR::PointCloud, std::string> res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".ply" )
         res = MR::PointsLoad::fromPly( file, colors, callback );
 #ifndef MRMESH_NO_OPENCTM
@@ -339,14 +339,14 @@ tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::fil
     return res;
 }
 
-tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, VertColors* colors /*= nullptr */,
+Expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, VertColors* colors /*= nullptr */,
                                                                   ProgressCallback callback )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    tl::expected<MR::PointCloud, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    Expected<MR::PointCloud, std::string> res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".ply" )
         res = MR::PointsLoad::fromPly( in, colors, callback );
 #ifndef MRMESH_NO_OPENCTM

@@ -12,7 +12,7 @@ VoidOrErrStr sceneToObj( const std::vector<NamedXfMesh> & objects, const std::fi
 {
     std::ofstream out( file );
     if ( !out )
-        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
     return sceneToObj( objects, out );
 }

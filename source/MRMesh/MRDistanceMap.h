@@ -281,11 +281,11 @@ MRMESH_API VoidOrErrStr saveDistanceMapToImage( const DistanceMap& distMap, cons
 
 /// load distance map from monochrome image in scales of gray:
 /// \param threshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid
-[[nodiscard]] MRMESH_API tl::expected<DistanceMap, std::string> convertImageToDistanceMap( const Image& image, float threshold = 1.f / 255 );
+[[nodiscard]] MRMESH_API Expected<DistanceMap, std::string> convertImageToDistanceMap( const Image& image, float threshold = 1.f / 255 );
 
 /// load distance map from monochrome image file
 /// \param threshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid
-[[nodiscard]] MRMESH_API tl::expected<DistanceMap, std::string> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold = 1.f / 255 );
+[[nodiscard]] MRMESH_API Expected<DistanceMap, std::string> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold = 1.f / 255 );
 
 /// \}
 

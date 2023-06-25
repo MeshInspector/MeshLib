@@ -87,7 +87,7 @@ void ObjectVoxels::updateHistogramAndSurface( ProgressCallback cb )
     }
 }
 
-tl::expected<bool, std::string> ObjectVoxels::setIsoValue( float iso, ProgressCallback cb, bool updateSurface )
+Expected<bool, std::string> ObjectVoxels::setIsoValue( float iso, ProgressCallback cb, bool updateSurface )
 {
     if ( !vdbVolume_.data )
         return false; // no volume presented in this
@@ -99,7 +99,7 @@ tl::expected<bool, std::string> ObjectVoxels::setIsoValue( float iso, ProgressCa
     {
         auto recRes = recalculateIsoSurface( isoValue_, cb );
         if ( !recRes.has_value() )
-            return tl::make_unexpected( recRes.error() );
+            return unexpected( recRes.error() );
         updateIsoSurface( *recRes );
     }
     if ( volumeRendering_ )
@@ -134,11 +134,11 @@ Histogram ObjectVoxels::updateHistogram( Histogram histogram )
     return oldHistogram;
 }
 
-tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( float iso, ProgressCallback cb /*= {} */ ) const
+Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( float iso, ProgressCallback cb /*= {} */ ) const
 {
     MR_TIMER
     if ( !vdbVolume_.data )
-        return tl::make_unexpected("No VdbVolume available");
+        return unexpected("No VdbVolume available");
 
     float startProgress = 0;   // where the current iteration has started
     float reachedProgress = 0; // maximum progress reached so far
@@ -155,7 +155,7 @@ tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSur
     {
         // continue progress bar from the value where it stopped on the previous iteration
         startProgress = reachedProgress;
-        tl::expected<Mesh, std::string> meshRes;
+        Expected<Mesh, std::string> meshRes;
         if ( dualMarchingCubes_ )
         {
             meshRes = gridToMesh( vdbVolume.data, GridToMeshSettings{
@@ -512,7 +512,7 @@ void ObjectVoxels::serializeFields_( Json::Value& root ) const
     root["Type"].append( ObjectVoxels::TypeName() );
 }
 
-tl::expected<std::future<void>, std::string> ObjectVoxels::serializeModel_( const std::filesystem::path& path ) const
+Expected<std::future<void>, std::string> ObjectVoxels::serializeModel_( const std::filesystem::path& path ) const
 {
     if ( ancillary_ || !vdbVolume_.data )
         return {};
@@ -560,11 +560,11 @@ VoidOrErrStr ObjectVoxels::deserializeModel_( const std::filesystem::path& path,
 {
     auto res = VoxelsLoad::fromRaw( pathFromUtf8( utf8string( path ) + ".raw" ), progressCb );
     if ( !res.has_value() )
-        return tl::make_unexpected( res.error() );
+        return unexpected( res.error() );
     
     construct( res.value().data, res.value().voxelSize );
     if ( !vdbVolume_.data )
-        return tl::make_unexpected( "No grid loaded" );
+        return unexpected( "No grid loaded" );
 
     return {};
 }

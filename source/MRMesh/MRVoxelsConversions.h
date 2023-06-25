@@ -65,12 +65,12 @@ MRMESH_API std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, con
 // makes Mesh from SimpleVolume with given params
 // using marching cubes algorithm
 // returns nullopt if operation was canceled
-MRMESH_API tl::expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params = {} );
+MRMESH_API Expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params = {} );
 
 // makes Mesh from VdbVolume with given params
 // using marching cubes algorithm
 // returns nullopt if operation was canceled
-MRMESH_API tl::expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params = {} );
+MRMESH_API Expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params = {} );
 
 }
 #endif

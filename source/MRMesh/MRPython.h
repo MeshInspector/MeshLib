@@ -6,7 +6,7 @@
 #include <pybind11/operators.h>
 #include <pybind11/stl_bind.h>
 #include <pybind11/numpy.h>
-#include <tl/expected.hpp>
+#include "MRExpected.h"
 #include <functional>
 #include <filesystem>
 #include <unordered_map>
@@ -51,7 +51,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
 #define MR_ADD_PYTHON_EXPECTED( moduleName, name, type, errorType )\
 MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
 {\
-    using expectedType = tl::expected<type,errorType>;\
+    using expectedType = Expected<type,errorType>;\
     pybind11::class_<expectedType>(m, #name ).\
         def( "has_value", []() \
         { PyErr_WarnEx(PyExc_DeprecationWarning, ".has_value is deprecated. Please use 'try - except ValueError'", 1); \
@@ -138,7 +138,7 @@ struct PythonFunctionAdder
     MRMESH_API PythonFunctionAdder( const std::string& moduleName, PyObject* ( *initFncPointer )( void ) );
 };
 
-// overload `toString` functoion to throw exception from custom `tl::expected::error` type
+// overload `toString` functoion to throw exception from custom `Expected::error` type
 template<typename E>
 void throwExceptionFromExpected(const E& err)
 {
@@ -149,7 +149,7 @@ void throwExceptionFromExpected(const E& err)
 }
 
 template<typename R, typename E, typename... Args>
-auto decorateExpected( std::function<tl::expected<R, E>( Args... )>&& f ) -> std::function<R( Args... )>
+auto decorateExpected( std::function<Expected<R, E>( Args... )>&& f ) -> std::function<R( Args... )>
 {
     return[fLocal = std::move( f )]( Args&&... args ) mutable -> R
     {

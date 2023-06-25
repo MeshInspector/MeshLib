@@ -128,7 +128,7 @@ struct [[nodiscard]] Mesh
     // computes the sum of triangle angles at given vertex; optionally returns whether the vertex is on boundary
     [[nodiscard]] MRMESH_API float sumAngles( VertId v, bool * outBoundaryVert = nullptr ) const;
     // returns vertices where the sum of triangle angles is below given threshold
-    [[nodiscard]] MRMESH_API tl::expected<VertBitSet, std::string> findSpikeVertices( float minSumAngle, const VertBitSet* region = nullptr, ProgressCallback cb = {} ) const;
+    [[nodiscard]] MRMESH_API Expected<VertBitSet, std::string> findSpikeVertices( float minSumAngle, const VertBitSet* region = nullptr, ProgressCallback cb = {} ) const;
 
     // given an edge between two triangular faces, computes sine of dihedral angle between them:
     // 0 if both faces are in the same plane,

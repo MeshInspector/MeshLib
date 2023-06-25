@@ -1,5 +1,5 @@
 #if defined __cpp_lib_expected
-#pragma message("std::expected from C++23 is avaibled")
+#pragma message("std::expected from C++23 is available")
 #else
-#pragma message("std::expected is NOT avaibled, using tl::expected instead")
+#pragma message("std::expected is NOT available, using tl::expected instead")
 #endif

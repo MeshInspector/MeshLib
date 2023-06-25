@@ -1,17 +1,20 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-#if defined __cpp_lib_expected
+
+#include <version>
+#ifdef __cpp_lib_expected
 #include <expected>
 #else
 #include <tl/expected.hpp>
 #endif
+
 #include <string>
 
 namespace MR
 {
 
-#if defined __cpp_lib_expected
+#ifdef __cpp_lib_expected
 
 template<class T, class E>
 using Expected = std::expected<T,E>;

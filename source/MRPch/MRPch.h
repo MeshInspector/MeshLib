@@ -7,7 +7,8 @@
 
 #include <parallel_hashmap/phmap.h>
 
-#if defined __cpp_lib_expected
+#include <version>
+#ifdef __cpp_lib_expected
 #include <expected>
 #else
 #include <tl/expected.hpp>

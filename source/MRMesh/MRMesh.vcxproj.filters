@@ -1635,6 +1635,9 @@
       <Filter>Source Files\Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRViewportId.cpp" />
+    <ClCompile Include="MRExpected.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

@@ -631,7 +631,7 @@ VoidOrErrStr PalettePresets::savePreset( const std::string& name, const Palette&
         spdlog::error( "PalettePresets: directory \"{}\" does not exist and cannot be created", utf8string( path ) );
         if ( ec )
             spdlog::warn( "PalettePresets: error: \"{}\"", systemToUtf8( ec.message() ) );
-        return tl::make_unexpected( "Cannot save preset with name: \"" + name + "\"" );
+        return unexpected( "Cannot save preset with name: \"" + name + "\"" );
     }
 
     path /= asU8String( name ) + u8".json";
@@ -640,7 +640,7 @@ VoidOrErrStr PalettePresets::savePreset( const std::string& name, const Palette&
     Json::StreamWriterBuilder builder;
     std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
     if ( !ofs || writer->write( root, &ofs ) != 0 )
-        return tl::make_unexpected( "Cannot save preset with name: \"" + name + "\"" );
+        return unexpected( "Cannot save preset with name: \"" + name + "\"" );
     ofs.close();
 
     instance_().update_();

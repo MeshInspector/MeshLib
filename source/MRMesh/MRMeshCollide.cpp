@@ -220,7 +220,7 @@ static void processSelfSubtasks( const AABBTree & tree,
         }
 }
 
-tl::expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( const MeshPart & mp, ProgressCallback cb )
+Expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( const MeshPart & mp, ProgressCallback cb )
 {
     MR_TIMER
     std::vector<FaceFace> res;
@@ -336,13 +336,13 @@ tl::expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( co
     return res;
 }
 
-tl::expected<FaceBitSet, std::string> findSelfCollidingTrianglesBS( const MeshPart & mp, ProgressCallback cb )
+Expected<FaceBitSet, std::string> findSelfCollidingTrianglesBS( const MeshPart & mp, ProgressCallback cb )
 {
     MR_TIMER
     
     auto ffs = findSelfCollidingTriangles( mp, cb );
     if ( !ffs.has_value() )
-        return tl::make_unexpected( ffs.error() );
+        return unexpected( ffs.error() );
 
     FaceBitSet res;
     for ( const auto & ff : ffs.value() )

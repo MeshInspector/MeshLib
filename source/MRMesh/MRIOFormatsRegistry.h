@@ -2,7 +2,7 @@
 #include "MRMeshFwd.h"
 #include "MRIOFilters.h"
 #include "MRProgressCallback.h"
-#include <tl/expected.hpp>
+#include "MRExpected.h"
 #include <filesystem>
 
 namespace MR
@@ -15,8 +15,8 @@ namespace MeshLoad
 /// \ingroup IOGroup
 /// \{
 
-using MeshLoader = tl::expected<MR::Mesh, std::string>( * )( const std::filesystem::path&, VertColors*, ProgressCallback );
-using MeshStreamLoader = tl::expected<MR::Mesh, std::string>( * )( std::istream&, VertColors*, ProgressCallback );
+using MeshLoader = Expected<MR::Mesh, std::string>( * )( const std::filesystem::path&, VertColors*, ProgressCallback );
+using MeshStreamLoader = Expected<MR::Mesh, std::string>( * )( std::istream&, VertColors*, ProgressCallback );
 
 struct NamedMeshLoader
 {
@@ -34,7 +34,7 @@ MRMESH_API IOFilters getFilters();
 
 /** 
  * \brief Register filter with loader function
- * \details loader function signature: tl::expected<Mesh, std::string> fromFormat( const std::filesystem::path& path, std::vector<Color>* colors );
+ * \details loader function signature: Expected<Mesh, std::string> fromFormat( const std::filesystem::path& path, std::vector<Color>* colors );
  * example:
  * ADD_MESH_LOADER( IOFilter("Name of filter (.ext)","*.ext"), fromFormat)
  */

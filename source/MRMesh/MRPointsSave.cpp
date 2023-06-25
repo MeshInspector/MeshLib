@@ -28,7 +28,7 @@ VoidOrErrStr toPly( const PointCloud& points, const std::filesystem::path& file,
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
-        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
     return toPly( points, out, colors, callback );
 }
@@ -51,7 +51,7 @@ VoidOrErrStr toPly( const PointCloud& points, std::ostream& out, const VertColor
         static_assert( sizeof( points.points.front() ) == 12, "wrong size of Vector3f" );
         const bool cancel = !MR::writeByBlocks( out, (const char*) points.points.data(), points.points.size() * sizeof( Vector3f ), callback );
         if ( cancel )
-            return tl::make_unexpected( std::string( "Saving canceled" ) );
+            return unexpected( std::string( "Saving canceled" ) );
     }
     else
     {
@@ -73,12 +73,12 @@ VoidOrErrStr toPly( const PointCloud& points, std::ostream& out, const VertColor
             cVert.r = c.r; cVert.g = c.g; cVert.b = c.b;
             out.write( ( const char* )&cVert, 15 );
             if ( callback && !( v & 0x3FF ) && !callback( float( v ) / numVertices ) )
-                return tl::make_unexpected( std::string( "Saving canceled" ) );
+                return unexpected( std::string( "Saving canceled" ) );
         }
     }
 
     if ( !out )
-        return tl::make_unexpected( std::string( "Error saving in PLY-format" ) );
+        return unexpected( std::string( "Error saving in PLY-format" ) );
 
     if ( callback )
         callback( 1.f );
@@ -91,7 +91,7 @@ VoidOrErrStr toCtm( const PointCloud& points, const std::filesystem::path& file,
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
-        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
     return toCtm( points, out, colors, options, callback );
 }
@@ -129,7 +129,7 @@ VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const VertColor
         aIndices.data(), 1, normalsPtr );
 
     if ( ctmGetError( context ) != CTM_NONE )
-        return tl::make_unexpected( "Error encoding in CTM-format" );
+        return unexpected( "Error encoding in CTM-format" );
 
     std::vector<Vector4f> colors4f; // should be alive when save is performed
     if ( colors && colors->size() == points.points.size() )
@@ -142,7 +142,7 @@ VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const VertColor
     }
 
     if ( ctmGetError( context ) != CTM_NONE )
-        return tl::make_unexpected( "Error encoding in CTM-format colors" );
+        return unexpected( "Error encoding in CTM-format colors" );
 
     struct SaveData
     {
@@ -199,9 +199,9 @@ VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const VertColor
     }, &saveData );
 
     if ( saveData.wasCanceled )
-        return tl::make_unexpected( std::string( "Saving canceled" ) );
+        return unexpected( std::string( "Saving canceled" ) );
     if ( !out || ctmGetError( context ) != CTM_NONE )
-        return tl::make_unexpected( std::string( "Error saving in CTM-format" ) );
+        return unexpected( std::string( "Error saving in CTM-format" ) );
 
     if ( callback )
         callback( 1.f );
@@ -216,7 +216,7 @@ VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesyst
     for ( auto& c : ext )
         c = (char) tolower( c );
 
-    VoidOrErrStr res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".ply" )
         res = MR::PointsSave::toPly( points, file, colors, callback );
 #ifndef MRMESH_NO_OPENCTM
@@ -232,7 +232,7 @@ VoidOrErrStr toAnySupportedFormat( const PointCloud& points, std::ostream& out, 
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    VoidOrErrStr res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".ply" )
         res = MR::PointsSave::toPly( points, out, colors, callback );
 #ifndef MRMESH_NO_OPENCTM

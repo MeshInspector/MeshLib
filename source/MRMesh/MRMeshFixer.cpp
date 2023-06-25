@@ -68,7 +68,7 @@ int duplicateMultiHoleVertices( Mesh & mesh )
     return duplicates;
 }
 
-tl::expected<std::vector<MultipleEdge>, std::string> findMultipleEdges( const MeshTopology& topology, ProgressCallback cb )
+Expected<std::vector<MultipleEdge>, std::string> findMultipleEdges( const MeshTopology& topology, ProgressCallback cb )
 {
     MR_TIMER
     tbb::enumerable_thread_specific<std::vector<MultipleEdge>> threadData;
@@ -185,7 +185,7 @@ void fixMultipleEdges( Mesh & mesh )
     fixMultipleEdges( mesh, findMultipleEdges( mesh.topology ).value() );
 }
 
-tl::expected<FaceBitSet, std::string> findDegenerateFaces( const MeshPart& mp, float criticalAspectRatio, ProgressCallback cb )
+Expected<FaceBitSet, std::string> findDegenerateFaces( const MeshPart& mp, float criticalAspectRatio, ProgressCallback cb )
 {
     MR_TIMER
     FaceBitSet res( mp.mesh.topology.faceSize() );
@@ -203,7 +203,7 @@ tl::expected<FaceBitSet, std::string> findDegenerateFaces( const MeshPart& mp, f
     return res;
 }
 
-tl::expected<UndirectedEdgeBitSet, std::string> findShortEdges( const MeshPart& mp, float criticalLength, ProgressCallback cb )
+Expected<UndirectedEdgeBitSet, std::string> findShortEdges( const MeshPart& mp, float criticalLength, ProgressCallback cb )
 {
     MR_TIMER
     const auto criticalLengthSq = sqr( criticalLength );

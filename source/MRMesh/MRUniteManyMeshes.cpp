@@ -13,7 +13,7 @@
 namespace MR
 {
 
-tl::expected<Mesh, std::string> unitePairOfMeshes( Mesh&& a, Mesh&& b, 
+Expected<Mesh, std::string> unitePairOfMeshes( Mesh&& a, Mesh&& b, 
     bool fixDegenerations, float maxError, const Vector3f* shift = nullptr, BooleanResultMapper* mapper = nullptr )
 {
     if ( a.points.empty() )
@@ -31,7 +31,7 @@ tl::expected<Mesh, std::string> unitePairOfMeshes( Mesh&& a, Mesh&& b,
         fixDegenerations || mapper ? &mapper_ : nullptr
     );
     if ( !res.valid() )
-        return tl::make_unexpected( res.errorString );
+        return unexpected( res.errorString );
 
     if ( fixDegenerations )
     {
@@ -118,7 +118,7 @@ private:
     bool collectNewFaces_{ false };
 };
 
-tl::expected<Mesh, std::string> uniteManyMeshes( 
+Expected<Mesh, std::string> uniteManyMeshes( 
     const std::vector<const Mesh*>& meshes, const UniteManyMeshesParams& params /*= {} */ )
 {
     MR_TIMER
@@ -236,7 +236,7 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
     BooleanReduce reducer( mergedMeshes, randomShifts, params.maxAllowedError, params.fixDegenerations, params.newFaces != nullptr );
     tbb::parallel_deterministic_reduce( tbb::blocked_range<int>( 0, int( mergedMeshes.size() ), 1 ), reducer );
     if ( !reducer.error.empty() )
-        return tl::make_unexpected( "Error while uniting meshes: " + reducer.error );
+        return unexpected( "Error while uniting meshes: " + reducer.error );
 
     if ( params.newFaces != nullptr )
         *params.newFaces = std::move( reducer.newFaces );

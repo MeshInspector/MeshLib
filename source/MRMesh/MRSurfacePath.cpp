@@ -327,7 +327,7 @@ std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( const MeshTriPoi
     return res;
 }
 
-tl::expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
+Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
     const MeshTriPoint & start, const MeshTriPoint & end, GeodesicPathApprox atype )
 {
     MR_TIMER;
@@ -342,7 +342,7 @@ tl::expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mes
             buildShortestPathBiDir( mesh, start, end, &v1, &v2 ) :
             buildShortestPathAStar( mesh, start, end, &v1, &v2 );
         if ( !v1 || !v2 )
-            return tl::make_unexpected( PathError::StartEndNotConnected );
+            return unexpected( PathError::StartEndNotConnected );
 
         // remove last segment from the path if end-point and the origin of last segment belong to one triangle
         while( !edgePath.empty()
@@ -376,7 +376,7 @@ tl::expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mes
     return res;
 }
 
-tl::expected<std::vector<MeshEdgePoint>, PathError> computeFastMarchingPath( const MeshPart & mp,
+Expected<std::vector<MeshEdgePoint>, PathError> computeFastMarchingPath( const MeshPart & mp,
     const MeshTriPoint & start, const MeshTriPoint & end,
     const VertBitSet* vertRegion, Vector<float, VertId> * outSurfaceDistances )
 {
@@ -401,7 +401,7 @@ tl::expected<std::vector<MeshEdgePoint>, PathError> computeFastMarchingPath( con
     bool connected = false;
     auto distances = computeSurfaceDistances( mp.mesh, end, start, vertRegion, &connected );
     if ( !connected )
-        return tl::make_unexpected( PathError::StartEndNotConnected );
+        return unexpected( PathError::StartEndNotConnected );
 
     SurfacePathBuilder b( mp.mesh, distances );
     auto curr = b.findPrevPoint( start );
@@ -413,7 +413,7 @@ tl::expected<std::vector<MeshEdgePoint>, PathError> computeFastMarchingPath( con
         if ( fromSameTriangle( mp.mesh.topology, e, c ) )
             break; // reached triangle with end point
         if ( res.size() > mp.mesh.topology.numValidFaces() )
-            return tl::make_unexpected( PathError::InternalError ); // normal path cannot visit any triangle more than once
+            return unexpected( PathError::InternalError ); // normal path cannot visit any triangle more than once
         curr = b.findPrevPoint( *curr );
     }
     assert( !res.empty() );
@@ -423,7 +423,7 @@ tl::expected<std::vector<MeshEdgePoint>, PathError> computeFastMarchingPath( con
     return res;
 }
 
-tl::expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePath( const MeshPart & mp,
+Expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePath( const MeshPart & mp,
     const MeshTriPoint & start, const MeshTriPoint & end, int maxGeodesicIters,
     const VertBitSet* vertRegion, Vector<float, VertId> * outSurfaceDistances )
 {
@@ -434,7 +434,7 @@ tl::expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePath( const Me
     return res;
 }
 
-tl::expected<SurfacePath, PathError> computeGeodesicPath( const Mesh & mesh,
+Expected<SurfacePath, PathError> computeGeodesicPath( const Mesh & mesh,
     const MeshTriPoint & start, const MeshTriPoint & end, GeodesicPathApprox atype,
     int maxGeodesicIters )
 {

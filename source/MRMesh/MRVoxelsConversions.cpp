@@ -695,11 +695,11 @@ template<> auto accessorCtor<SimpleVolume>( const SimpleVolume& ) { return ( voi
 template<> auto accessorCtor<VdbVolume>( const VdbVolume& v ) { return v.data->getConstAccessor(); }
 
 template<typename V, typename NaNChecker, bool UseDefaultVoxelPointPositioner>
-tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshParams& params, NaNChecker&& nanChecker )
+Expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshParams& params, NaNChecker&& nanChecker )
 {
     if constexpr ( std::is_same_v<V, VdbVolume> )
         if ( !volume.data )
-            return tl::make_unexpected( "No volume data." );
+            return unexpected( "No volume data." );
 
     Mesh result;
     if ( params.iso <= volume.min || params.iso >= volume.max ||
@@ -822,7 +822,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
         perThreadNum.clear();
     }
     if ( totalVertices > params.maxVertices )
-        return tl::make_unexpected( "Vertices number limit exceeded." );
+        return unexpected( "Vertices number limit exceeded." );
 
     // sort by voxel index
     std::sort( resultVertNumeration.begin(), resultVertNumeration.end(), [] ( const auto& l, const auto& r )
@@ -1098,7 +1098,7 @@ tl::expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMes
 }
 
 template <typename V, typename NaNChecker>
-tl::expected<Mesh, std::string> volumeToMeshHelper1( const V& volume, const VolumeToMeshParams& params, NaNChecker&& nanChecker )
+Expected<Mesh, std::string> volumeToMeshHelper1( const V& volume, const VolumeToMeshParams& params, NaNChecker&& nanChecker )
 {
     if ( !params.positioner )
         return volumeToMesh<V, NaNChecker, true>( volume, params, std::forward<NaNChecker>( nanChecker ) );
@@ -1107,7 +1107,7 @@ tl::expected<Mesh, std::string> volumeToMeshHelper1( const V& volume, const Volu
 }
 
 template <typename V>
-tl::expected<Mesh, std::string> volumeToMeshHelper2( const V& volume, const VolumeToMeshParams& params )
+Expected<Mesh, std::string> volumeToMeshHelper2( const V& volume, const VolumeToMeshParams& params )
 {
     if ( params.omitNaNCheck )
         return volumeToMeshHelper1( volume, params, [] ( float ) { return false; } );
@@ -1115,11 +1115,11 @@ tl::expected<Mesh, std::string> volumeToMeshHelper2( const V& volume, const Volu
         return volumeToMeshHelper1( volume, params, isNanFast );
 }
 
-tl::expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params /*= {} */ )
+Expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params /*= {} */ )
 {
     return volumeToMeshHelper2( volume, params );
 }
-tl::expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params /*= {} */ )
+Expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params /*= {} */ )
 {
     return volumeToMeshHelper2( volume, params );
 }

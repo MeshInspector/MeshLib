@@ -14,7 +14,7 @@ namespace MR
 {
 
 // creates mesh from simple volume as 0.5 iso-surface
-tl::expected<MR::Mesh, std::string> meshFromSimpleVolume( const SimpleVolume& volumePart, const Vector3i& shift )
+Expected<MR::Mesh, std::string> meshFromSimpleVolume( const SimpleVolume& volumePart, const Vector3i& shift )
 {
     auto grid = simpleVolumeToDenseGrid( volumePart );
     auto mesh = gridToMesh( std::move( grid ), GridToMeshSettings{
@@ -29,7 +29,7 @@ tl::expected<MR::Mesh, std::string> meshFromSimpleVolume( const SimpleVolume& vo
     }
 
     if ( mesh.topology.numValidFaces() == 0 )
-        return tl::make_unexpected( "Failed to create mesh from mask" );
+        return unexpected( "Failed to create mesh from mask" );
 
     return mesh;
 }
@@ -119,12 +119,12 @@ void prepareVolumePart( SimpleVolume& volumePart, const VoxelBitSet& mask, Volum
     }
 }
 
-tl::expected<MR::Mesh, std::string> meshFromVoxelsMask( const VdbVolume& volume, const VoxelBitSet& mask )
+Expected<MR::Mesh, std::string> meshFromVoxelsMask( const VdbVolume& volume, const VoxelBitSet& mask )
 {
     if ( !volume.data )
-        return tl::make_unexpected( "Cannot create mesh from empty volume." );
+        return unexpected( "Cannot create mesh from empty volume." );
     if ( mask.none() )
-        return tl::make_unexpected( "Cannot create mesh from empty mask." );
+        return unexpected( "Cannot create mesh from empty mask." );
 
     auto [volumePart, partMask, minVoxel] = simpleVolumeFromVoxelsMask( volume, mask, 25 );
 
@@ -133,7 +133,7 @@ tl::expected<MR::Mesh, std::string> meshFromVoxelsMask( const VdbVolume& volume,
     return meshFromSimpleVolume( volumePart, minVoxel );
 }
 
-tl::expected<MR::Mesh, std::string> segmentVolume( const VdbVolume& volume, const std::vector<std::pair<Vector3f, Vector3f>>& pairs,
+Expected<MR::Mesh, std::string> segmentVolume( const VdbVolume& volume, const std::vector<std::pair<Vector3f, Vector3f>>& pairs,
                                                    const VolumeSegmentationParameters& params )
 {
     VolumeSegmenter segmentator( volume );
@@ -153,7 +153,7 @@ tl::expected<MR::Mesh, std::string> segmentVolume( const VdbVolume& volume, cons
     }
     auto segmentation = segmentator.segmentVolume( params.segmentationExponentModifier, params.voxelsExpansion );
     if ( !segmentation.has_value() )
-        return tl::make_unexpected( segmentation.error() );
+        return unexpected( segmentation.error() );
     return segmentator.createMeshFromSegmentation( segmentation.value() );
 }
 
@@ -199,13 +199,13 @@ const std::vector<MR::Vector3i>& VolumeSegmenter::getSeeds( SeedType seedType ) 
     return seeds_[seedType];
 }
 
-tl::expected<VoxelBitSet, std::string> VolumeSegmenter::segmentVolume( float segmentationExponentModifier /*= 3000.0f*/, int voxelsExpansion /*= 25 */, ProgressCallback cb /* =nullptr */)
+Expected<VoxelBitSet, std::string> VolumeSegmenter::segmentVolume( float segmentationExponentModifier /*= 3000.0f*/, int voxelsExpansion /*= 25 */, ProgressCallback cb /* =nullptr */)
 {
     if ( seeds_[Inside].empty() )
-        return tl::make_unexpected( "No seeds presented" );
+        return unexpected( "No seeds presented" );
 
     if ( !volume_.data )
-        return tl::make_unexpected( "Volume contain no grid" );
+        return unexpected( "Volume contain no grid" );
 
     if ( seedsChanged_ )
     {
@@ -217,7 +217,7 @@ tl::expected<VoxelBitSet, std::string> VolumeSegmenter::segmentVolume( float seg
     return segmentVolumeByGraphCut( volumePart_, segmentationExponentModifier, seedsInVolumePartSpace_[Inside], seedsInVolumePartSpace_[Outside], cb );
 }
 
-tl::expected<MR::Mesh, std::string> VolumeSegmenter::createMeshFromSegmentation( const VoxelBitSet& segmentation ) const
+Expected<MR::Mesh, std::string> VolumeSegmenter::createMeshFromSegmentation( const VoxelBitSet& segmentation ) const
 {
     auto segmentBlockCopy = volumePart_;
     segmentBlockCopy.voxelSize = volume_.voxelSize;

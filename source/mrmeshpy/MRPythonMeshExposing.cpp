@@ -19,8 +19,8 @@
 #include "MRMesh/MRMeshNormals.h"
 #include "MRMesh/MRSphere.h"
 #include "MRMesh/MRUVSphere.h"
+#include "MRMesh/MRExpected.h"
 #include <pybind11/functional.h>
-#include <tl/expected.hpp>
 using namespace MR;
 
 Mesh pythonGetSelectedMesh()

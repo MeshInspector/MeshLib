@@ -8,7 +8,7 @@
 #include "MRPlane3.h"
 #include "MRIOFilters.h"
 #include "MRProgressCallback.h"
-#include <tl/expected.hpp>
+#include "MRExpected.h"
 
 namespace Json
 {
@@ -53,7 +53,7 @@ private:
 
 MRMESH_API extern const IOFilters SceneFileFilters;
 
-MRMESH_API tl::expected<Json::Value, std::string> deserializeJsonValue( const std::filesystem::path& path );
+MRMESH_API Expected<Json::Value, std::string> deserializeJsonValue( const std::filesystem::path& path );
 
 /**
  * \brief saves object subtree in given scene file (zip/mru)
@@ -75,7 +75,7 @@ MRMESH_API VoidOrErrStr serializeObjectTree( const Object& object,
  * if postDecompress is set, it is called after decompression
  * loading is controlled with Object::deserializeModel_ and Object::deserializeFields_
  */
-MRMESH_API tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTree( const std::filesystem::path& path,
+MRMESH_API Expected<std::shared_ptr<Object>, std::string> deserializeObjectTree( const std::filesystem::path& path,
     FolderCallback postDecompress = {}, ProgressCallback progressCb = {} );
 
 /**
@@ -86,7 +86,7 @@ MRMESH_API tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectT
  *  
  * loading is controlled with Object::deserializeModel_ and Object::deserializeFields_
  */
-MRMESH_API tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
+MRMESH_API Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
     ProgressCallback progressCb = {} );
 
 /**
@@ -142,7 +142,7 @@ MRMESH_API void deserializeFromJson( const Json::Value& root, Color& col );
 MRMESH_API void deserializeFromJson( const Json::Value& root, Matrix3f& matrix );
 MRMESH_API void deserializeFromJson( const Json::Value& root, AffineXf3f& xf );
 MRMESH_API void deserializeFromJson( const Json::Value& root, BitSet& bitset );
-MRMESH_API tl::expected<Mesh, std::string> deserializeFromJson( const Json::Value& root, VertColors* colors = nullptr );
+MRMESH_API Expected<Mesh, std::string> deserializeFromJson( const Json::Value& root, VertColors* colors = nullptr );
 MRMESH_API void deserializeFromJson( const Json::Value& root, Plane3f& plane );
 MRMESH_API void deserializeFromJson( const Json::Value& root, TriPointf& tp );
 MRMESH_API void deserializeFromJson( const Json::Value& root, MeshTexture& texture );

@@ -24,7 +24,7 @@ constexpr float autoVoxelNumber = 5e6f;
 namespace MR
 {
 
-tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& params /*= {} */ )
+Expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER
 
@@ -72,7 +72,7 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
         auto sp = subprogress( params.callBack, 0.33f, 0.66f );
         auto signRes = makeSignedWithFastWinding( grid, Vector3f::diagonal( voxelSize ), mp.mesh, {}, params.fwn, sp );
         if ( !signRes.has_value() )
-            return tl::make_unexpected( signRes.error() );
+            return unexpected( signRes.error() );
     }
 
     // Make offset mesh
@@ -89,7 +89,7 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
     return newMesh;
 }
 
-tl::expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const OffsetParameters& params )
+Expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const OffsetParameters& params )
 {
     MR_TIMER
     const bool unsignedOffset = params.type == OffsetParameters::Type::Shell;
@@ -123,7 +123,7 @@ tl::expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, con
     return res;
 }
 
-tl::expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params /*= {} */ )
+Expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER
     if ( params.type == OffsetParameters::Type::Shell )
@@ -133,7 +133,7 @@ tl::expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offs
     return levelSetDoubleConvertion( mp, AffineXf3f(), params.voxelSize, offsetA, offsetB, params.adaptivity, params.fwn, params.callBack );
 }
 
-tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, 
+Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, 
     const BaseOffsetParameters& params, Vector<VoxelId, FaceId> * outMap )
 {
     MR_TIMER;
@@ -193,7 +193,7 @@ tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
     }
 }
 
-tl::expected<MR::Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float offset, const SharpOffsetParameters& params )
+Expected<MR::Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float offset, const SharpOffsetParameters& params )
 {
     MR_TIMER
     BaseOffsetParameters mcParams = params;
@@ -218,7 +218,7 @@ tl::expected<MR::Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float off
     return res;
 }
 
-tl::expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params /*= {} */ )
+Expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER;
 

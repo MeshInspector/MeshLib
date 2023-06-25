@@ -164,7 +164,7 @@ std::vector<IsoLines> extractAllIsolines( const Mesh& mesh, VertId startPoint, f
     return isoLines;
 }
 
-tl::expected<ToolPathResult, std::string> lacingToolPath( const Mesh& inputMesh, const ToolPathParams& params, const AffineXf3f* xf, ProgressCallback cb )
+Expected<ToolPathResult, std::string> lacingToolPath( const Mesh& inputMesh, const ToolPathParams& params, const AffineXf3f* xf, ProgressCallback cb )
 {
     ToolPathResult  res{ .modifiedMesh = preprocessMesh( inputMesh, params, xf ) };
     const auto& mesh = res.modifiedMesh;
@@ -293,7 +293,7 @@ tl::expected<ToolPathResult, std::string> lacingToolPath( const Mesh& inputMesh,
     return res;
 }
 
-tl::expected<ToolPathResult, std::string>  constantZToolPath( const Mesh& inputMesh, const ToolPathParams& params, const AffineXf3f* xf, ProgressCallback cb )
+Expected<ToolPathResult, std::string>  constantZToolPath( const Mesh& inputMesh, const ToolPathParams& params, const AffineXf3f* xf, ProgressCallback cb )
 {
     ToolPathResult  res{ .modifiedMesh = preprocessMesh( inputMesh, params, xf ) };
     const auto& mesh = res.modifiedMesh;
@@ -437,7 +437,7 @@ tl::expected<ToolPathResult, std::string>  constantZToolPath( const Mesh& inputM
 }
 
 
-tl::expected<ToolPathResult, std::string> constantCuspToolPath( const Mesh& inputMesh, const ToolPathParams& params, VertId startPoint, const AffineXf3f* xf, ProgressCallback cb )
+Expected<ToolPathResult, std::string> constantCuspToolPath( const Mesh& inputMesh, const ToolPathParams& params, VertId startPoint, const AffineXf3f* xf, ProgressCallback cb )
 {
     ToolPathResult  res{ .modifiedMesh = preprocessMesh( inputMesh, params, xf ) };
     

@@ -1111,7 +1111,7 @@ inline bool VoxelGraphCut::isGrandparent_( SeqVoxelId s, SeqVoxelId sGrand ) con
 
 } // anonymous namespace
 
-tl::expected<VoxelBitSet, std::string> segmentVolumeByGraphCut( const SimpleVolume & densityVolume, float k, const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds, ProgressCallback cb )
+Expected<VoxelBitSet, std::string> segmentVolumeByGraphCut( const SimpleVolume & densityVolume, float k, const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds, ProgressCallback cb )
 {
     MR_TIMER
 

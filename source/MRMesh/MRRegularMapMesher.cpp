@@ -9,7 +9,7 @@ VoidOrErrStr RegularMapMesher::loadSurfacePC( const std::filesystem::path& path 
 {
     auto res = PointsLoad::fromAnySupportedFormat( path );
     if ( !res.has_value() )
-        return tl::make_unexpected( res.error() );
+        return unexpected( res.error() );
 
     surfacePC_ = std::make_unique<PointCloud>( std::move( res.value() ) );
     return {};
@@ -24,7 +24,7 @@ VoidOrErrStr RegularMapMesher::loadDirectionsPC( const std::filesystem::path& pa
 {
     auto res = PointsLoad::fromAnySupportedFormat( path );
     if ( !res.has_value() )
-        return tl::make_unexpected( res.error() );
+        return unexpected( res.error() );
     
     directionsPC_ = std::make_unique<PointCloud>( std::move( res.value() ) );
     return {};
@@ -43,7 +43,7 @@ VoidOrErrStr RegularMapMesher::loadDistances( int width, int height, const std::
     if ( std::filesystem::file_size( path, ec ) != ( height_ * width_ * sizeof( float ) ) )
     {
         distances_.clear();
-        return tl::make_unexpected( "Distances file size is not equal height * width * sizeof(float)" );
+        return unexpected( "Distances file size is not equal height * width * sizeof(float)" );
     }
     std::ifstream ifs( path, std::ios::binary );
     distances_.resize( width_ );
@@ -58,23 +58,23 @@ void RegularMapMesher::setDistances( int width, int height, const std::vector<fl
     distances_ = distances;
 }
 
-tl::expected<Mesh, std::string> RegularMapMesher::createMesh() const
+Expected<Mesh, std::string> RegularMapMesher::createMesh() const
 {
     auto refSize = width_ * height_;
     if ( !surfacePC_ )
-        return tl::make_unexpected( "Surface Point Cloud is not loaded" );
+        return unexpected( "Surface Point Cloud is not loaded" );
     if ( surfacePC_->points.size() != refSize )
-        return tl::make_unexpected( "Surface Point Cloud size is not equal width*height" );
+        return unexpected( "Surface Point Cloud size is not equal width*height" );
 
     if ( !directionsPC_ )
-        return tl::make_unexpected( "Directions Point Cloud is not loaded" );
+        return unexpected( "Directions Point Cloud is not loaded" );
     if ( directionsPC_->points.size() != width_ )
-        return tl::make_unexpected( "Directions Point Cloud size is not equal width" );
+        return unexpected( "Directions Point Cloud size is not equal width" );
 
     if ( distances_.empty() )
-        return tl::make_unexpected( "Distances file is not loaded" );
+        return unexpected( "Distances file is not loaded" );
     if ( distances_.size() != refSize )
-        return tl::make_unexpected( "Distances size is not equal width*height" );
+        return unexpected( "Distances size is not equal width*height" );
 
 
     auto mesh = makeRegularGridMesh( width_, height_, [&]( size_t x, size_t y )

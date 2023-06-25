@@ -244,7 +244,7 @@ namespace
             ascii::space
         );
         if ( !r )
-            return tl::make_unexpected( "Failed to parse vertex in OBJ-file" );
+            return unexpected( "Failed to parse vertex in OBJ-file" );
 
         return {};
     }
@@ -264,7 +264,7 @@ namespace
                 ascii::space
         );
         if ( !r )
-            return tl::make_unexpected( "Failed to parse vertex in OBJ-file" );
+            return unexpected( "Failed to parse vertex in OBJ-file" );
 
         vt = { coords[0], coords[1] };
         return {};
@@ -294,14 +294,14 @@ namespace
             ascii::space
         );
         if ( !r )
-            return tl::make_unexpected( "Failed to parse face in OBJ-file" );
+            return unexpected( "Failed to parse face in OBJ-file" );
 
         if ( f.vertices.empty() )
-            return tl::make_unexpected( "Invalid face vertex count in OBJ-file" );
+            return unexpected( "Invalid face vertex count in OBJ-file" );
         if ( !f.textures.empty() && f.textures.size() != f.vertices.size() )
-            return tl::make_unexpected( "Invalid face texture count in OBJ-file" );
+            return unexpected( "Invalid face texture count in OBJ-file" );
         if ( !f.normals.empty() && f.normals.size() != f.vertices.size() )
-            return tl::make_unexpected( "Invalid face normal count in OBJ-file" );
+            return unexpected( "Invalid face normal count in OBJ-file" );
         return {};
     }
 
@@ -327,7 +327,7 @@ namespace
             space
         );
         if ( !res )
-            return tl::make_unexpected( "Failed to parse color in MTL-file" );
+            return unexpected( "Failed to parse color in MTL-file" );
 
         return {};
     }
@@ -361,7 +361,7 @@ namespace
             space
         );
         if ( !r )
-            return tl::make_unexpected( "Failed to parse texture in MTL-file" );
+            return unexpected( "Failed to parse texture in MTL-file" );
 
         boost::trim( textureFile );
         return {};
@@ -375,11 +375,11 @@ namespace
 
     using MtlLibrary = HashMap<std::string, MtlMaterial>;
 
-    tl::expected<MtlLibrary, std::string> loadMtlLibrary( const std::filesystem::path& path )
+    Expected<MtlLibrary, std::string> loadMtlLibrary( const std::filesystem::path& path )
     {
         std::ifstream mtlIn( path, std::ios::binary );
         if ( !mtlIn.is_open() )
-            return tl::make_unexpected( "unable to open MTL file" );
+            return unexpected( "unable to open MTL file" );
 
         const auto posStart = mtlIn.tellg();
         mtlIn.seekg( 0, std::ios_base::end );
@@ -443,7 +443,7 @@ namespace
                 break;
             }
             if ( !parseError.empty() )
-                return tl::make_unexpected( parseError );
+                return unexpected( parseError );
         }
 
         if ( !currentMaterialName.empty() )
@@ -458,17 +458,17 @@ namespace MR
 namespace MeshLoad
 {
 
-tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const std::filesystem::path& file, bool combineAllObjects,
+Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const std::filesystem::path& file, bool combineAllObjects,
                                                                     ProgressCallback callback )
 {
     std::ifstream in( file, std::ios::binary );
     if ( !in )
-        return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
     return addFileNameInError( fromSceneObjFile( in, combineAllObjects, file.parent_path(), callback ), file );
 }
 
-tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream& in, bool combineAllObjects, const std::filesystem::path& dir,
+Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream& in, bool combineAllObjects, const std::filesystem::path& dir,
                                                                     ProgressCallback callback )
 {
     MR_TIMER
@@ -483,16 +483,16 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
     // important on Windows: in stream must be open in binary mode, otherwise next will fail
     in.read( data.data(), (ptrdiff_t)data.size() );
     if ( !in )
-        return tl::make_unexpected( std::string( "OBJ-format read error" ) );
+        return unexpected( std::string( "OBJ-format read error" ) );
 
     if ( callback && !callback( 0.25f ) )
-        return tl::make_unexpected( "Loading canceled" );
+        return unexpected( "Loading canceled" );
     // TODO: redefine callback
 
     return fromSceneObjFile( data.data(), data.size(), combineAllObjects, dir, callback );
 }
 
-tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data, size_t size, bool combineAllObjects, const std::filesystem::path& dir,
+Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data, size_t size, bool combineAllObjects, const std::filesystem::path& dir,
                                                                     ProgressCallback callback )
 {
     MR_TIMER
@@ -504,7 +504,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     std::vector<int> texCoords( points.size(), -1 );
     Triangulation t;
     Vector<UVCoord, VertId> uvCoords;
-    tl::expected<MtlLibrary, std::string> mtl;
+    Expected<MtlLibrary, std::string> mtl;
     std::string currentMaterialName;
 
     std::map<int, int> additions;
@@ -592,13 +592,13 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     const auto lineCount = newlines.size() - 1;
 
     if ( callback && !callback( 0.40f ) )
-        return tl::make_unexpected( "Loading canceled" );
+        return unexpected( "Loading canceled" );
 
     timer.restart( "group element lines" );
     const auto groups = groupLines<ObjElement>( data, size, newlines );
 
     if ( callback && !callback( 0.50f ) )
-        return tl::make_unexpected( "Loading canceled" );
+        return unexpected( "Loading canceled" );
 
     auto parseVertices = [&] ( size_t begin, size_t end, std::string& parseError )
     {
@@ -835,10 +835,10 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
             break;
         }
         if ( !parseError.empty() )
-            return tl::make_unexpected( parseError );
+            return unexpected( parseError );
 
         if ( callback && !callback( 0.50f + 0.50f * ( (float)group.end / (float)lineCount ) ) )
-            return tl::make_unexpected( "Loading canceled" );
+            return unexpected( "Loading canceled" );
     }
 
     finishObject();

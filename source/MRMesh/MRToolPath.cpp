@@ -11,6 +11,8 @@
 #include "MRParallelFor.h"
 #include "MRObjectGcode.h"
 #include "MRExpected.h"
+#include "MRMeshIntersect.h"
+#include "MRLine3.h"
 
 #include "MRPch/MRTBB.h"
 #include <sstream>
@@ -48,18 +50,25 @@ bool calcCircleCenter( const Vector2f& p0, const Vector2f& p1, const Vector2f& p
     return true;
 }
 
-Mesh preprocessMesh( const Mesh& inputMesh, const ToolPathParams& params, const AffineXf3f* xf )
+Mesh preprocessMesh( const MeshPart& mp, const ToolPathParams& params, const AffineXf3f* xf )
 {
     OffsetParameters offsetParams;
-    offsetParams.voxelSize = params.voxelSize;
+    offsetParams.voxelSize = params.voxelSize;    
+    const Vector3f normal = Vector3f::plusZ();
 
-    Mesh meshCopy = *offsetMesh( inputMesh, params.millRadius, offsetParams );
+    std::optional<Mesh> inputMesh;
+
+    /*if ( mp.region )
+    {
+        inputMesh = mp.mesh.cloneRegion( *mp.region );
+        FixUndercuts::fixUndercuts( *inputMesh, normal, params.voxelSize );
+    }*/
+
+    Mesh meshCopy = *offsetMesh( inputMesh ? *inputMesh : mp.mesh, params.millRadius, offsetParams );
     if ( xf )
         meshCopy.transform( *xf );
-
-    const Vector3f normal = Vector3f::plusZ();
-    FixUndercuts::fixUndercuts( meshCopy, normal, params.voxelSize );    
-
+    
+    FixUndercuts::fixUndercuts( meshCopy, normal, params.voxelSize );
     return meshCopy;
 }
 
@@ -87,13 +96,15 @@ void addSurfacePath( std::vector<GCommand>& gcode, const Mesh& mesh, const MeshE
     gcode.push_back( { .x = p.x, .y = p.y, .z = p.z } );
 }
 
-std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const Plane3f& plane, float sectionStep, int steps, ProgressCallback cb )
+std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const MeshPart& origMeshPart, const Plane3f& plane, float sectionStep, int steps, ProgressCallback cb )
 {
     auto mainThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };
     std::atomic<size_t> numDone{ 0 };
 
     std::vector<PlaneSections> sections( steps );
+
+    const auto origBox = origMeshPart.mesh.computeBoundingBox();
 
     tbb::parallel_for( tbb::blocked_range<int>( 0, steps ), [&] ( const tbb::blocked_range<int>& range )
     {
@@ -102,7 +113,39 @@ std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const Plane3f& 
             if ( cb && !keepGoing.load( std::memory_order_relaxed ) )
                 break;
 
-            sections[step] = extractPlaneSections( mesh, Plane3f{ plane.n, plane.d - sectionStep * step } );
+            const float currentZ = plane.d - sectionStep * step;
+
+            for ( const auto section : extractPlaneSections( mesh, Plane3f{ plane.n, currentZ } ) )
+            {                
+                auto startIt = section.begin();
+                auto endIt = startIt;
+
+                for ( auto it = section.begin(); it < section.end(); ++it )
+                {
+                    const auto meshPoint = mesh.edgePoint( *it );
+                    const auto intersection = rayMeshIntersect( origMeshPart.mesh, Line3f{ Vector3f{ meshPoint.x, meshPoint.y, origBox.max.z }, Vector3f::minusZ() } );
+                    const auto faceId = origMeshPart.mesh.topology.left( intersection->mtp.e );
+                    
+                    if ( !origMeshPart.region || origMeshPart.region->test( faceId ) )
+                    {
+                        ++endIt;
+                        continue;
+                    }
+
+                    if ( startIt < endIt )
+                    {
+                        sections[step].push_back( SurfacePath{ startIt, endIt } );
+                    }
+
+                    startIt = it + 1;
+                    endIt = startIt;
+                }
+
+                if ( startIt < section.end() )
+                {
+                    sections[step].push_back( SurfacePath{ startIt, section.end() } );
+                }
+            }            
         }
 
         if ( cb )
@@ -178,7 +221,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const Mesh& inputMesh, con
 
     MeshEdgePoint lastEdgePoint = {};
 
-    const auto allSections = extractAllSections( mesh, plane, params.sectionStep, steps, subprogress( cb, 0, 0.5f ) );
+    const auto allSections = extractAllSections( mesh, inputMesh, plane, params.sectionStep, steps, subprogress( cb, 0, 0.5f ) );
     if ( allSections.empty() )
         return unexpectedOperationCanceled();
     const auto sbp = subprogress( cb, 0.5f, 1.0f );
@@ -293,12 +336,13 @@ Expected<ToolPathResult, std::string> lacingToolPath( const Mesh& inputMesh, con
     return res;
 }
 
-Expected<ToolPathResult, std::string>  constantZToolPath( const Mesh& inputMesh, const ToolPathParams& params, const AffineXf3f* xf, ProgressCallback cb )
+
+Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, const ToolPathParams& params, const AffineXf3f* xf, ProgressCallback cb )
 {
-    ToolPathResult  res{ .modifiedMesh = preprocessMesh( inputMesh, params, xf ) };
+    ToolPathResult  res{ .modifiedMesh = preprocessMesh( mp, params, xf ) };
     const auto& mesh = res.modifiedMesh;
 
-    const auto box = mesh.getBoundingBox();
+    const auto box = mp.mesh.getBoundingBox();
     const float safeZ = box.max.z + params.millRadius;
 
     const Vector3f normal = Vector3f::plusZ();
@@ -313,7 +357,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const Mesh& inputMesh,
     const float critTransitionLengthSq = params.critTransitionLength * params.critTransitionLength;
     bool needToRestoreBaseFeed = true;
 
-    std::vector<PlaneSections> sections = extractAllSections( mesh, plane, params.sectionStep, steps, subprogress( cb, 0, 0.5f ) );
+    std::vector<PlaneSections> sections = extractAllSections( mesh, mp, plane, params.sectionStep, steps, subprogress( cb, 0, 0.5f ) );
     if ( sections.empty() )
         return unexpectedOperationCanceled();
 
@@ -327,16 +371,19 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const Mesh& inputMesh,
         auto& commands = res.commands;
 
         for ( const auto& section : sections[step] )
-        {
+        {   
+            if ( section.size() < 2 )
+                continue;
+
             Polyline3 polyline;
             polyline.addFromSurfacePath( mesh, section );
             const auto contours = polyline.contours().front();
 
             auto nearestPointIt = section.begin();
+            auto nextEdgePointIt = nearestPointIt;
+            float minDistSq = FLT_MAX;            
 
-            float minDistSq = FLT_MAX;
-
-            if ( prevEdgePoint.e.valid() )
+            if ( prevEdgePoint.e.valid() && !mp.region )
             {
                 for ( auto it = section.begin(); it < section.end(); ++it )
                 {
@@ -347,14 +394,14 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const Mesh& inputMesh,
                         nearestPointIt = it;
                     }
                 }
+
+                const float sectionStepSq = params.sectionStep * params.sectionStep;
+                const auto nearestPoint = mesh.edgePoint( *nearestPointIt );
+                do
+                {
+                    std::next( nextEdgePointIt ) != section.end() ? ++nextEdgePointIt : nextEdgePointIt = section.begin();
+                } while ( nextEdgePointIt != nearestPointIt && ( mesh.edgePoint( *nextEdgePointIt ) - nearestPoint ).lengthSq() < sectionStepSq );
             }
-            auto nextEdgePointIt = nearestPointIt;
-            const float sectionStepSq = params.sectionStep * params.sectionStep;
-            const auto nearestPoint = mesh.edgePoint( *nearestPointIt );
-            do
-            {
-                std::next( nextEdgePointIt ) != section.end() ? ++nextEdgePointIt : nextEdgePointIt = section.begin();
-            } while ( nextEdgePointIt != nearestPointIt && ( mesh.edgePoint( *nextEdgePointIt ) - nearestPoint ).lengthSq() < sectionStepSq );
 
             const auto pivotIt = contours.begin() + std::distance( section.begin(), nextEdgePointIt );
 

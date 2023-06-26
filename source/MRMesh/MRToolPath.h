@@ -95,7 +95,9 @@ struct ToolPathResult
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
 // this toolpath is built from the parallel sections along Z-axis
 // mesh can be transformed using xf parameter
-MRMESH_API Expected<ToolPathResult, std::string> constantZToolPath( const Mesh& mesh, const ToolPathParams& params, const AffineXf3f* xf = nullptr, ProgressCallback cb = {} );
+
+MRMESH_API Expected<ToolPathResult, std::string> constantZToolPath( const MeshPart& mp, const ToolPathParams& params, const AffineXf3f* xf = nullptr, ProgressCallback cb = {} );
+
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
 // // this one is traditional lace-roughing toolpath

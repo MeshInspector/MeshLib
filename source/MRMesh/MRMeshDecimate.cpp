@@ -184,14 +184,14 @@ public:
     std::vector<QueueElement> elems_;
 };
 
-QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, float stabilizer )
+QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, float stabilizer, const UndirectedEdgeBitSet* notFlippable )
 {
-    QuadraticForm3f qf = mp.mesh.quadraticForm( v, mp.region );
+    QuadraticForm3f qf = mp.mesh.quadraticForm( v, mp.region, notFlippable );
     qf.addDistToOrigin( stabilizer );
     return qf;
 }
 
-Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer )
+Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer, const UndirectedEdgeBitSet* notFlippable )
 {
     MR_TIMER;
 
@@ -201,7 +201,7 @@ Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, flo
     Vector<QuadraticForm3f, VertId> res( regionVertices.find_last() + 1 );
     BitSetParallelFor( regionVertices, [&]( VertId v )
     {
-        res[v] = computeFormAtVertex( mp, v, stabilizer );
+        res[v] = computeFormAtVertex( mp, v, stabilizer, notFlippable );
     } );
 
     return res;
@@ -245,7 +245,7 @@ bool MeshDecimator::initializeQueue_()
         pVertForms_ = &myVertForms_;
 
     if ( pVertForms_->empty() )
-        *pVertForms_ = computeFormsAtVertices( MeshPart{ mesh_, settings_.region }, settings_.stabilizer );
+        *pVertForms_ = computeFormsAtVertices( MeshPart{ mesh_, settings_.region }, settings_.stabilizer, settings_.notFlippable );
 
     if ( settings_.progressCallback && !settings_.progressCallback( 0.1f ) )
         return false;
@@ -553,6 +553,14 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
             settings_.region->reset( l );
         if ( auto r = topology.left( edgeToCollapse.sym() ) )
             settings_.region->reset( r );
+    }
+    if ( settings_.notFlippable )
+    {
+        settings_.notFlippable->reset( edgeToCollapse.undirected() );
+        if ( settings_.notFlippable->test_set( topology.next( edgeToCollapse.sym() ).undirected(), false ) )
+            settings_.notFlippable->autoResizeSet( topology.prev( edgeToCollapse ).undirected() );
+        if ( settings_.notFlippable->test_set( topology.prev( edgeToCollapse.sym() ).undirected(), false ) )
+            settings_.notFlippable->autoResizeSet( topology.next( edgeToCollapse ).undirected() );
     }
     auto eo = collapseEdge( topology, edgeToCollapse );
     const auto remainingVertex = eo ? vo : VertId{};
@@ -888,6 +896,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
         decs.maxDeletedFaces = currNumTri - targetNumTri;
         decs.maxBdShift = settings.maxBdShift;
         decs.region = settings.region;
+        decs.notFlippable = settings.notFlippable;
         decs.packMesh = settings.packMesh;
         decs.progressCallback = subprogress( settings.progressCallback, 0.5f, 0.95f );
         decs.preCollapse = settings.preCollapse;
@@ -895,8 +904,6 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
         // it was a bad idea to make decs.stabilizer = settings.targetEdgeLen;
         // yes, it increased the uniformity of vertices, but shifted boundary vertices after edge collapse inside
         decimateMesh( mesh, decs );
-        if ( settings.notFlippable )
-            mesh.topology.excludeLoneEdges( *settings.notFlippable );
         if ( !reportProgress( settings.progressCallback, 0.95f ) )
             return false;
     }

@@ -121,7 +121,7 @@ if [ "${MESHLIB_BUILD_RELEASE}" = "ON" ]; then
     fi
  fi 
  if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
-    cmake --build . -j `nproc` | tee ${logfile}
+    cmake --version --build . -j `nproc` | tee ${logfile}
  else
     emmake make -j `nproc` | tee ${logfile}
  fi

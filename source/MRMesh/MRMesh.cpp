@@ -546,7 +546,7 @@ QuadraticForm3f Mesh::quadraticForm( VertId v, const FaceBitSet * region, const 
     QuadraticForm3f qf;
     for ( EdgeId e : orgRing( topology, v ) )
     {
-        if ( topology.isBdEdge( e, region ) || contains( notFlippable, e.undirected() ) )
+        if ( topology.isBdEdge( e, region ) || ( notFlippable && notFlippable->test( e.undirected() ) ) )
         {
             // zero-length boundary edge is treated as uniform stabilizer: all shift directions are equally penalized,
             // otherwise it penalizes the shift proportionally to the distance from the line containing the edge

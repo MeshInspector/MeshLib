@@ -184,12 +184,9 @@ MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, int maxIters, float maxDev
 struct RemeshSettings
 {
     /// the algorithm will try to keep the length of all edges close to this value,
-    /// splitting the edges longer than targetEdgeLen / edgeLenUniformity,
-    /// and eliminating the edges shorter than targetEdgeLen * edgeLenUniformity
+    /// splitting the edges longer than targetEdgeLen, and then
+    /// eliminating the edges shorter than targetEdgeLen (if it does not create other longer edges)
     float targetEdgeLen = 0.001f;
-    /// this value must be in (0,1]. Smaller values result in faster processing but allow for considerable deviation of
-    /// resulting edge lengths. Larger values on the contrary make edges closer by length but takes longer to compute.
-    float edgeLenUniformity = 0.5f;
     /// Improves local mesh triangulation by doing edge flips if it does change dihedral angle more than on this value
     float maxAngleChangeAfterFlip = 30 * PI_F / 180.0f;
     /// Maximal shift of a boundary during one edge collapse

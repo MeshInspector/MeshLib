@@ -48,7 +48,7 @@ public:
 private:
     void initListenerThread_();
     void setButtonsMap_( VendorId vendorId, ProductId productId );
-    virtual void postFocusSignal_( bool focused ) override;
+    virtual void postFocus_( bool focused ) override;
 
     void processAction_( const SpaceMouseAction& action );
     float convertCoord_( int coord_byte_low, int coord_byte_high );

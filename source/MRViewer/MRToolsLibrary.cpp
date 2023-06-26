@@ -12,9 +12,12 @@
 #include "MRFileDialog.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRCylinder.h"
+#include "MRUIStyle.h"
 
 namespace MR
 {
+
+const char defaultName[] = "Default";
 
 GcodeToolsLibrary::GcodeToolsLibrary( const std::string& libraryName )
 {
@@ -29,7 +32,7 @@ GcodeToolsLibrary::GcodeToolsLibrary( const std::string& libraryName )
     defaultToolMesh_->setMesh( meshPtr );
 
     toolMesh_ = defaultToolMesh_;
-    selectedFileName_ = "Default";
+    selectedFileName_ = defaultName;
 }
 
 bool GcodeToolsLibrary::drawCombo()
@@ -39,11 +42,11 @@ bool GcodeToolsLibrary::drawCombo()
     bool result = false;
     if ( ImGui::BeginCombo( "Tool Mesh", selectedFileName_.c_str() ) )
     {
-        bool selected = selectedFileName_ == "Default";
-        if ( ImGui::Selectable( "Default", &selected ) )
+        bool selected = selectedFileName_ == defaultName;
+        if ( ImGui::Selectable( defaultName, &selected ) )
         {
             toolMesh_ = defaultToolMesh_;
-            selectedFileName_ = "Default";
+            selectedFileName_ = defaultName;
             result = true;
             ImGui::CloseCurrentPopup();
         }
@@ -52,6 +55,7 @@ bool GcodeToolsLibrary::drawCombo()
         for ( int i = 0; i < filesList_.size(); ++i )
         {
             selected = selectedFileName_ == filesList_[i];
+
             if ( ImGui::Selectable( filesList_[i].c_str(), &selected ) && selected )
             {
                 result = loadMeshFromFile_( filesList_[i] );
@@ -81,6 +85,19 @@ bool GcodeToolsLibrary::drawCombo()
 
         ImGui::EndCombo();
     }
+    const float btnWidth = ImGui::CalcTextSize( "Remove" ).x + ImGui::GetStyle().FramePadding.x * 2.f;
+    const float btnHeight = ImGui::GetTextLineHeight() + ImGui::GetStyle().FramePadding.y * 2.f;
+    const float btnPosX = ImGui::GetContentRegionAvail().x - btnWidth;
+    
+    ImGui::SameLine( btnPosX );
+    if ( UI::button( "Remove", selectedFileName_ != defaultName, {btnWidth, btnHeight}) )
+    {
+        std::filesystem::remove( getFolder_() / ( selectedFileName_ + ".mrmesh" ) );
+        selectedFileName_ = defaultName;
+        result = true;
+        toolMesh_ = defaultToolMesh_;
+    }
+
     if ( openSelectMeshPopup )
         ImGui::OpenPopup( "SelectMesh" );
     drawSelectMeshPopup_();

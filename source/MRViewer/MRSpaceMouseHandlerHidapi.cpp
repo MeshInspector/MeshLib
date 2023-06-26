@@ -207,7 +207,7 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
     } );
 }
 
-void SpaceMouseHandlerHidapi::postFocusSignal_( bool focused )
+void SpaceMouseHandlerHidapi::postFocus_( bool focused )
 {
     active_ = focused;
     cv_.notify_one();

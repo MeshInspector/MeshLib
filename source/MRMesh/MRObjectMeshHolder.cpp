@@ -536,6 +536,7 @@ void ObjectMeshHolder::setDirtyFlags( uint32_t mask )
         worldBox_.get().reset();
         totalArea_.reset();
         selectedArea_.reset();
+        avgEdgeLen_.reset();
         if ( mesh_ )
             mesh_->invalidateCaches();
     }

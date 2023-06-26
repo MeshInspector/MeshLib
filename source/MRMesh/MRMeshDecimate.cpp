@@ -909,8 +909,18 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
             innerVerts -= getIncidentVerts( mesh.topology, *settings.notFlippable );
         MeshRelaxParams rp;
         rp.region = &innerVerts;
-        rp.iterations = settings.finalRelaxIters;
-        relax( mesh, rp, subprogress( settings.progressCallback, 0.95f, 1.0f ) );
+        DeloneSettings ds;
+        ds.maxAngleChange = settings.maxAngleChangeAfterFlip;
+        ds.region = settings.region;
+        ds.notFlippable = settings.notFlippable;
+        auto sp = subprogress( settings.progressCallback, 0.95f, 1.0f );
+        for ( int i = 0; i < settings.finalRelaxIters; ++i )
+        {
+            if ( !reportProgress( sp, float( i ) / settings.finalRelaxIters ) )
+                return false;
+            equalizeTriAreas( mesh, rp );
+            makeDeloneEdgeFlips( mesh, ds );
+        }
     }
 
     return reportProgress( settings.progressCallback, 1.0f );

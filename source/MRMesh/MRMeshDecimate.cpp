@@ -845,11 +845,21 @@ DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings )
 
 bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
 {
-    MR_TIMER;
-    MR_WRITER( mesh );
-
+    MR_TIMER
     if ( settings.progressCallback && !settings.progressCallback( 0.0f ) )
         return false;
+    if ( settings.targetEdgeLen <= 0 )
+    {
+        assert( false );
+        return false;
+    }
+    if ( settings.region && !settings.region->any() )
+    {
+        assert( false );
+        return false;
+    }
+
+    MR_WRITER( mesh );
 
     SubdivideSettings subs;
     subs.maxEdgeLen = settings.targetEdgeLen;
@@ -864,22 +874,32 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     if ( !reportProgress( settings.progressCallback, 0.5f ) )
         return false;
 
-    DecimateSettings decs;
-    decs.strategy = DecimateStrategy::ShortestEdgeFirst;
-    decs.maxError = settings.targetEdgeLen;
-    decs.maxEdgeLen = settings.targetEdgeLen;
-    decs.maxBdShift = settings.maxBdShift;
-    decs.region = settings.region;
-    decs.packMesh = settings.packMesh;
-    decs.progressCallback = subprogress( settings.progressCallback, 0.5f, 0.95f );
-    decs.preCollapse = settings.preCollapse;
-    // it was a bad idea to make decs.stabilizer = settings.targetEdgeLen;
-    // yes, it increased the uniformity of vertices, but shifted boundary vertices after edge collapse inside
-    decimateMesh( mesh, decs );
-    if ( settings.notFlippable )
-        mesh.topology.excludeLoneEdges( *settings.notFlippable );
-    if ( !reportProgress( settings.progressCallback, 0.95f ) )
-        return false;
+    // compute target number of triangles to get desired average edge length
+    const auto regionArea = mesh.area( settings.region );
+    const auto targetTriArea = sqr( settings.targetEdgeLen ) * ( sqrt( 3.0f ) / 4 ); // for equilateral triangle
+    const auto targetNumTri = int( regionArea / targetTriArea );
+    const auto currNumTri = settings.region ? (int)settings.region->count() : mesh.topology.numValidFaces();
+
+    if ( currNumTri > targetNumTri )
+    {
+        DecimateSettings decs;
+        decs.strategy = DecimateStrategy::ShortestEdgeFirst;
+        decs.maxError = FLT_MAX;
+        decs.maxDeletedFaces = currNumTri - targetNumTri;
+        decs.maxBdShift = settings.maxBdShift;
+        decs.region = settings.region;
+        decs.packMesh = settings.packMesh;
+        decs.progressCallback = subprogress( settings.progressCallback, 0.5f, 0.95f );
+        decs.preCollapse = settings.preCollapse;
+        decs.stabilizer = 1e-6f;
+        // it was a bad idea to make decs.stabilizer = settings.targetEdgeLen;
+        // yes, it increased the uniformity of vertices, but shifted boundary vertices after edge collapse inside
+        decimateMesh( mesh, decs );
+        if ( settings.notFlippable )
+            mesh.topology.excludeLoneEdges( *settings.notFlippable );
+        if ( !reportProgress( settings.progressCallback, 0.95f ) )
+            return false;
+    }
 
     if ( settings.finalRelaxIters > 0 )
     {

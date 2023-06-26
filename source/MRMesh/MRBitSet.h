@@ -26,6 +26,7 @@ public:
 
     // all bits after size() we silently consider as not-set
     [[nodiscard]] bool test( IndexType n ) const { return n < size() && base::test( n ); }
+    [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return ( val || n < size() ) ? base::test_set( n, val ) : false; }
     BitSet & reset( IndexType n, size_type len ) { if ( n < size() ) base::reset( n, len ); return * this; }
     BitSet & reset( IndexType n ) { if ( n < size() ) base::reset( n ); return * this; }
     BitSet & reset() { base::reset(); return * this; }

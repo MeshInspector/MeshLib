@@ -4,6 +4,7 @@
 #include "MRMeshTopology.h"
 #include "MRMeshProject.h"
 #include "MREdgePoint.h"
+#include "MRLineSegm.h"
 #include "MRUniqueThreadSafeOwner.h"
 #include "MRWriter.h"
 #include "MRConstants.h"
@@ -42,6 +43,10 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] Vector3f orgPnt( EdgeId e ) const { return points[ topology.org( e ) ]; }
     // returns coordinates of the edge destination
     [[nodiscard]] Vector3f destPnt( EdgeId e ) const { return points[ topology.dest( e ) ]; }
+    // returns vector equal to edge destination point minus edge origin point
+    [[nodiscard]] Vector3f edgeVector( EdgeId e ) const { return destPnt( e ) - orgPnt( e ); }
+    /// returns line segment of given edge
+    [[nodiscard]] LineSegm3f edgeSegment( EdgeId e ) const { return { orgPnt( e ), destPnt( e ) }; }
     // returns a point on the edge: origin point for f=0 and destination point for f=1
     [[nodiscard]] Vector3f edgePoint( EdgeId e, float f ) const { return f * destPnt( e ) + ( 1 - f ) * orgPnt( e ); }
     [[nodiscard]] Vector3f edgePoint( const MeshEdgePoint & ep ) const { return edgePoint( ep.e, ep.a ); }
@@ -74,8 +79,6 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] MRMESH_API UndirectedEdgeId getClosestEdge( const PointOnFace & p ) const;
     [[nodiscard]] UndirectedEdgeId getClosestEdge( const MeshTriPoint & p ) const { return getClosestEdge( PointOnFace{ topology.left( p.e ), triPoint( p ) } ); }
 
-    // returns vector equal to edge destination point minus edge origin point
-    [[nodiscard]] Vector3f edgeVector( EdgeId e ) const { return destPnt( e ) - orgPnt( e ); }
     // returns Euclidean length of the edge
     [[nodiscard]] float edgeLength( UndirectedEdgeId e ) const { return edgeVector( e ).length(); }
     // returns squared Euclidean length of the edge (faster to compute than length)

@@ -99,7 +99,7 @@ void WebRequest::setBody( std::string body )
     instance_().body_ = std::move( body );
 }
 
-bool WebRequest::send( std::string urlP, ResponseCallback callback, bool async /*= true */ )
+bool WebRequest::send( std::string urlP, const std::string & logName, ResponseCallback callback, bool async /*= true */ )
 {
     auto& inst = instance_();
     if ( !sRequestReady )
@@ -133,7 +133,9 @@ bool WebRequest::send( std::string urlP, ResponseCallback callback, bool async /
     inst.clear();
     if ( !async )
     {
+        spdlog::info( "WebRequest  {}", logName.c_str() );
         auto res = sendLambda();
+        spdlog::info( "WebResponse {}: {}", logName.c_str(), int( res.status_code ) );
         Json::Value resJson;
         resJson["code"] = int( res.status_code );
         resJson["text"] = res.text;
@@ -143,9 +145,11 @@ bool WebRequest::send( std::string urlP, ResponseCallback callback, bool async /
     }
     else
     {
-        std::thread requestThread = std::thread( [sendLambda, callback] ()
+        std::thread requestThread = std::thread( [sendLambda, callback, logName] ()
         {
+            spdlog::info( "WebRequest  {}", logName.c_str() );
             auto res = sendLambda();
+            spdlog::info( "WebResponse {}: {}", logName.c_str(), int( res.status_code ) );
             Json::Value resJson;
             resJson["code"] = int( res.status_code );
             resJson["text"] = res.text;

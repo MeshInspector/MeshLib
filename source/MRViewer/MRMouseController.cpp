@@ -7,6 +7,26 @@
 #include "MRGladGlfw.h"
 #include "MRPch/MRWasm.h"
 
+
+#ifdef __EMSCRIPTEN__
+
+extern "C"
+{
+EMSCRIPTEN_KEEPALIVE void emsDropEvents()
+{
+    auto& viewer = MR::getViewerInstance();
+    const auto& ctl = viewer.mouseController;
+    if ( ctl.isPressed( MR::MouseButton::Left ) )
+        viewer.mouseUp( MR::MouseButton::Left, 0 );
+    if ( ctl.isPressed( MR::MouseButton::Right ) )
+        viewer.mouseUp( MR::MouseButton::Right, 0 );
+    if ( ctl.isPressed( MR::MouseButton::Middle ) )
+        viewer.mouseUp( MR::MouseButton::Middle, 0 );
+}
+}
+
+#endif
+
 namespace MR
 {
 

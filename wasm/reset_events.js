@@ -183,7 +183,7 @@ var updateEvents = function () {
         if (typeof (dynCall_vidd) == 'undefined')
             getWasmTableEntry(GLFW.active.scrollFunc)(GLFW.active.id, sx, sy);
         else
-            (function(a1, a2, a3) {
+            (function (a1, a2, a3) {
                 dynCall_vidd.apply(null, [GLFW.active.scrollFunc, a1, a2, a3])
             })(GLFW.active.id, sx, sy);
         preventFunc(event)
@@ -196,6 +196,9 @@ var updateEvents = function () {
     Module["canvas"].addEventListener("pointerup", GLFW.onMouseButtonUp, true);
     Module["canvas"].addEventListener("wheel", GLFW.onMouseWheel, true);
     Module["canvas"].addEventListener("mousewheel", GLFW.onMouseWheel, true);
+    addEventListener('blur', (event) => {
+        Module.ccall('emsDropEvents', 'void', [], []);
+    });
     // prevent others
     Module["canvas"].addEventListener("touchmove", preventFunc, true);
     Module["canvas"].addEventListener("touchstart", preventFunc, true);

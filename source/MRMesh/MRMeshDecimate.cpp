@@ -440,6 +440,17 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         if ( auto pe = topology.prev( edgeToCollapse.sym() ); pe != edgeToCollapse.sym() && pe == topology.next( edgeToCollapse.sym() ) )
             return {};
     }
+
+    if ( settings_.notFlippable )
+    {
+        if ( settings_.notFlippable->test( edgeToCollapse ) )
+            return {}; // cannot collapse the edge from notFlippable set
+        if ( vl && settings_.notFlippable->test( topology.next( edgeToCollapse ) ) && settings_.notFlippable->test( topology.prev( edgeToCollapse.sym() ) ) )
+            return {}; // cannot collapse the edge, because two edges of its left triangle are notFlippable
+        if ( vr && settings_.notFlippable->test( topology.prev( edgeToCollapse ) ) && settings_.notFlippable->test( topology.next( edgeToCollapse.sym() ) ) )
+            return {}; // cannot collapse the edge, because two edges of its right triangle are notFlippable
+    }
+
     auto vo = topology.org( edgeToCollapse );
     auto vd = topology.dest( edgeToCollapse );
     auto po = mesh_.points[vo];
@@ -505,6 +516,8 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
             assert( topology.isLeftBdEdge( oBdEdge ) );
             continue;
         }
+        if ( settings_.notFlippable && settings_.notFlippable->test( e ) )
+            return {}; // cannot collapse an edge incident to notFlippable edge
 
         const auto pDest2 = mesh_.destPnt( topology.next( e ) );
         if ( eDest != vr )
@@ -542,6 +555,8 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
             assert( topology.isLeftBdEdge( dBdEdge ) );
             continue;
         }
+        if ( settings_.notFlippable && settings_.notFlippable->test( e ) )
+            return {}; // cannot collapse an edge incident to notFlippable edge
 
         const auto pDest2 = mesh_.destPnt( topology.next( e ) );
         if ( eDest != vl )
@@ -927,6 +942,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
         DecimateSettings decs;
         decs.strategy = DecimateStrategy::ShortestEdgeFirst;
         decs.maxError = FLT_MAX;
+        decs.maxEdgeLen = 1.5f * settings.targetEdgeLen; // not to over-decimate when there are many notFlippable edges in the region
         decs.maxDeletedFaces = currNumTri - targetNumTri;
         decs.maxBdShift = settings.maxBdShift;
         decs.region = settings.region;

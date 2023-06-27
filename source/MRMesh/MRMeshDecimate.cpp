@@ -24,13 +24,15 @@ namespace MR
 /// 3) edges: e, next( e.sym() ), prev( e.sym() );
 /// returns prev( e ) if it is valid;
 /// and updates notFlippable removing deleted edges from there, and adding the edges that shall replace them
-EdgeId collapseEdge( MeshTopology & topology, const EdgeId e, UndirectedEdgeBitSet* notFlippable )
+EdgeId collapseEdge( MeshTopology & topology, const EdgeId e, UndirectedEdgeBitSet* notFlippable, const std::function<void(EdgeId e, EdgeId e1)> & onEdgeDel )
 {
     topology.setLeft( e, FaceId() );
     topology.setLeft( e.sym(), FaceId() );
 
     if ( notFlippable )
         notFlippable->reset( e.undirected() );
+    if ( onEdgeDel )
+        onEdgeDel( e, EdgeId{} );
 
     if ( topology.next( e ) == e )
     {
@@ -86,9 +88,19 @@ EdgeId collapseEdge( MeshTopology & topology, const EdgeId e, UndirectedEdgeBitS
                 notFlippable->reset( a.undirected() );
                 notFlippable->reset( ePrev.undirected() );
             }
+            if ( onEdgeDel )
+            {
+                onEdgeDel( a, EdgeId{} );
+                onEdgeDel( ePrev, EdgeId{} );
+            }
         }
-        else if ( notFlippable && notFlippable->test_set( a.undirected(), false ) )
-            notFlippable->autoResizeSet( ePrev.undirected() );
+        else 
+        {
+            if ( notFlippable && notFlippable->test_set( a.undirected(), false ) )
+                notFlippable->autoResizeSet( ePrev.undirected() );
+            if ( onEdgeDel )
+                onEdgeDel( a, ePrev );
+        }
     }
 
     if ( topology.next( eNext.sym() ) == b.sym() )
@@ -108,9 +120,19 @@ EdgeId collapseEdge( MeshTopology & topology, const EdgeId e, UndirectedEdgeBitS
                 notFlippable->reset( b.undirected() );
                 notFlippable->reset( eNext.undirected() );
             }
+            if ( onEdgeDel )
+            {
+                onEdgeDel( b, EdgeId{} );
+                onEdgeDel( eNext, EdgeId{} );
+            }
         }
-        else if ( notFlippable && notFlippable->test_set( b.undirected(), false ) )
-            notFlippable->autoResizeSet( eNext.undirected() );
+        else
+        {
+            if ( notFlippable && notFlippable->test_set( b.undirected(), false ) )
+                notFlippable->autoResizeSet( eNext.undirected() );
+            if ( onEdgeDel )
+                onEdgeDel( b, eNext );
+        }
     }
 
     return ePrev != e ? ePrev : EdgeId();
@@ -574,7 +596,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         if ( auto r = topology.left( edgeToCollapse.sym() ) )
             settings_.region->reset( r );
     }
-    auto eo = collapseEdge( topology, edgeToCollapse, settings_.notFlippable );
+    auto eo = collapseEdge( topology, edgeToCollapse, settings_.notFlippable, settings_.onEdgeDel );
     const auto remainingVertex = eo ? vo : VertId{};
     return remainingVertex;
 }
@@ -912,6 +934,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
         decs.packMesh = settings.packMesh;
         decs.progressCallback = subprogress( settings.progressCallback, 0.5f, 0.95f );
         decs.preCollapse = settings.preCollapse;
+        decs.onEdgeDel = settings.onEdgeDel;
         decs.stabilizer = 1e-6f;
         // it was a bad idea to make decs.stabilizer = settings.targetEdgeLen;
         // yes, it increased the uniformity of vertices, but shifted boundary vertices after edge collapse inside

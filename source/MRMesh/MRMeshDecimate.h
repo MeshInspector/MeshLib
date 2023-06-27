@@ -88,6 +88,9 @@ struct DecimateSettings
      * This callback can be called many times for each edge before real collapsing, and it is important to make the same adjustment.
      */
     std::function<void( UndirectedEdgeId ue, float & collapseErrorSq, Vector3f & collapsePos )> adjustCollapse;
+    /// this function is called each time edge (e) is deleted;
+    /// if valid (e1) is given then dest(e) = dest(e1) and their origins are in different ends of collapsing edge, e1 shall take the place of e
+    std::function<void(EdgeId e, EdgeId e1)> onEdgeDel;
     /**
      * \brief  If not null, then vertex quadratic forms are stored there;
      * if on input the vector is not empty then initialization is skipped in favor of values from there;
@@ -208,6 +211,8 @@ struct RemeshSettings
     bool packMesh = false;
     /// this function is called each time edge (e) is split into (e1->e), but before the ring is made Delone
     std::function<void(EdgeId e1, EdgeId e)> onEdgeSplit;
+    /// if valid (e1) is given then dest(e) = dest(e1) and their origins are in different ends of collapsing edge, e1 shall take the place of e
+    std::function<void(EdgeId e, EdgeId e1)> onEdgeDel;
     /**
      * \brief The user can provide this optional callback that is invoked immediately before edge collapse;
      * \details It receives the edge being collapsed: its destination vertex will disappear,

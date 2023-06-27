@@ -1,6 +1,4 @@
 #include "MRToolsLibrary.h"
-#include <cassert>
-#include <imgui.h>
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRSceneRoot.h"
@@ -13,6 +11,9 @@
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRCylinder.h"
 #include "MRUIStyle.h"
+#include "MRRibbonConstants.h"
+#include <imgui.h>
+#include <cassert>
 
 namespace MR
 {
@@ -28,19 +29,20 @@ GcodeToolsLibrary::GcodeToolsLibrary( const std::string& libraryName )
     
     defaultToolMesh_ = std::make_shared<ObjectMesh>();
     defaultToolMesh_->setName( "DefaultToolMesh" );
-    auto meshPtr = std::make_shared<Mesh>( std::move( makeCylinder( 1.f, 8.f, 50 ) ) );
+    auto meshPtr = std::make_shared<Mesh>( makeCylinder( 1.f, 8.f, 50 ) );
     defaultToolMesh_->setMesh( meshPtr );
 
     toolMesh_ = defaultToolMesh_;
+    selectedIndex_ = 0;
     selectedFileName_ = defaultName;
 }
 
-bool GcodeToolsLibrary::drawCombo()
+bool GcodeToolsLibrary::drawInterface()
 {
     bool openSelectMeshPopup = false;
-
     bool result = false;
-    if ( ImGui::BeginCombo( "Tool Mesh", selectedFileName_.c_str() ) )
+
+    if ( UI::beginCombo( "Tool Mesh", selectedFileName_ ) )
     {
         bool selected = selectedFileName_ == defaultName;
         if ( ImGui::Selectable( defaultName, &selected ) )
@@ -83,10 +85,10 @@ bool GcodeToolsLibrary::drawCombo()
         if ( !anyMeshExist )
             ImGui::PopStyleColor();
 
-        ImGui::EndCombo();
+        UI::endCombo();
     }
     const float btnWidth = ImGui::CalcTextSize( "Remove" ).x + ImGui::GetStyle().FramePadding.x * 2.f;
-    const float btnHeight = ImGui::GetTextLineHeight() + ImGui::GetStyle().FramePadding.y * 2.f;
+    const float btnHeight = ImGui::GetTextLineHeight() + StyleConsts::CustomCombo::framePadding.y * 2.f;
     const float btnPosX = ImGui::GetContentRegionAvail().x - btnWidth;
     
     ImGui::SameLine( btnPosX );

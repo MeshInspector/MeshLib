@@ -62,6 +62,11 @@ MRVIEWER_API bool colorEdit4( const char* label, Color& color, ImGuiColorEditFla
 MRVIEWER_API bool combo( const char* label, int* v, const std::vector<std::string>& options,
     bool showPreview = true, const std::vector<std::string>& tooltips = {}, const std::string& defaultText = "Not selected" );
 
+/// draw custom content combo box
+MRVIEWER_API bool beginCombo( const char* label, const std::string& text = "Not selected", bool showPreview = true );
+MRVIEWER_API void endCombo( bool showPreview = true );
+
+
 
 
 /// draw input text box with text aligned by center

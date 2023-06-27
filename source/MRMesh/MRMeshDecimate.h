@@ -59,6 +59,8 @@ struct DecimateSettings
     int maxDeletedFaces = INT_MAX;
     /// Region on mesh to be decimated, it is updated during the operation
     FaceBitSet * region = nullptr;
+    /// Edges specified by this bit-set will never be flipped or collapsed, but they can be replaced during collapse of nearby edges so it is updated during the operation
+    UndirectedEdgeBitSet* notFlippable = nullptr;
     /// If pointer is not null, then only edges from here can be collapsed (and some nearby edges can disappear)
     const UndirectedEdgeBitSet * edgesToCollapse = nullptr;
     /// Whether to allow collapsing edges having at least one vertex on (region) boundary
@@ -85,6 +87,9 @@ struct DecimateSettings
      * This callback can be called many times for each edge before real collapsing, and it is important to make the same adjustment.
      */
     std::function<void( UndirectedEdgeId ue, float & collapseErrorSq, Vector3f & collapsePos )> adjustCollapse;
+    /// this function is called each time edge (e) is deleted;
+    /// if valid (e1) is given then dest(e) = dest(e1) and their origins are in different ends of collapsing edge, e1 shall take the place of e
+    std::function<void(EdgeId e, EdgeId e1)> onEdgeDel;
     /**
      * \brief  If not null, then vertex quadratic forms are stored there;
      * if on input the vector is not empty then initialization is skipped in favor of values from there;
@@ -184,12 +189,8 @@ MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, int maxIters, float maxDev
 struct RemeshSettings
 {
     /// the algorithm will try to keep the length of all edges close to this value,
-    /// splitting the edges longer than targetEdgeLen / edgeLenUniformity,
-    /// and eliminating the edges shorter than targetEdgeLen * edgeLenUniformity
+    /// splitting the edges longer than targetEdgeLen, and then eliminating the edges shorter than targetEdgeLen
     float targetEdgeLen = 0.001f;
-    /// this value must be in (0,1]. Smaller values result in faster processing but allow for considerable deviation of
-    /// resulting edge lengths. Larger values on the contrary make edges closer by length but takes longer to compute.
-    float edgeLenUniformity = 0.5f;
     /// Improves local mesh triangulation by doing edge flips if it does change dihedral angle more than on this value
     float maxAngleChangeAfterFlip = 30 * PI_F / 180.0f;
     /// Maximal shift of a boundary during one edge collapse
@@ -202,13 +203,15 @@ struct RemeshSettings
     int finalRelaxIters = 0;
     /// Region on mesh to be changed, it is updated during the operation
     FaceBitSet * region = nullptr;
-    /// Edges specified by this bit-set will never be flipped, but they can be split or eliminated during decimation
-    /// so it is updated during the operation; also the vertices incident to these edges are exluded from relaxation
+    /// Edges specified by this bit-set will never be flipped or collapsed, but they can be replaced during collapse of nearby edges so it is updated during the operation;
+    /// also the vertices incident to these edges are excluded from relaxation
     UndirectedEdgeBitSet* notFlippable = nullptr;
     ///  whether to pack mesh at the end
     bool packMesh = false;
     /// this function is called each time edge (e) is split into (e1->e), but before the ring is made Delone
     std::function<void(EdgeId e1, EdgeId e)> onEdgeSplit;
+    /// if valid (e1) is given then dest(e) = dest(e1) and their origins are in different ends of collapsing edge, e1 shall take the place of e
+    std::function<void(EdgeId e, EdgeId e1)> onEdgeDel;
     /**
      * \brief The user can provide this optional callback that is invoked immediately before edge collapse;
      * \details It receives the edge being collapsed: its destination vertex will disappear,

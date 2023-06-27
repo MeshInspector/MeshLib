@@ -660,19 +660,15 @@ void Mesh::zeroUnusedPoints()
     } );
 }
 
-void Mesh::transform( const AffineXf3f & xf )
+void Mesh::transform( const AffineXf3f& xf, const VertBitSet* region )
 {
     MR_TIMER
-    VertId lastValidVert = topology.lastValidVert();
 
-    tbb::parallel_for(tbb::blocked_range<VertId>(VertId{ 0 }, lastValidVert + 1), [&](const tbb::blocked_range<VertId> & range)
+    BitSetParallelFor( topology.getVertIds( region ), [&] ( const VertId v )
     {
-        for (VertId v = range.begin(); v < range.end(); ++v)
-        {
-            if (topology.hasVert(v))
-                points[v] = xf(points[v]);
-        }
-    });
+        if ( topology.hasVert( v ) )
+            points[v] = xf( points[v] );
+    } );
     invalidateCaches();
 }
 

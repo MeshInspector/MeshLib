@@ -24,8 +24,14 @@ GcodeToolsLibrary::GcodeToolsLibrary( const std::string& libraryName )
 {
     assert( !libraryName.empty() );
     libraryName_ = libraryName;
+
+#ifndef __EMSCRIPTEN__
+    std::error_code ec;
     if ( !std::filesystem::exists( getFolder_() ) )
-        std::filesystem::create_directory( getFolder_() );
+        std::filesystem::create_directory( getFolder_(), ec );
+    haveConfigFolder_ = !ec;
+#endif
+
     
     defaultToolMesh_ = std::make_shared<ObjectMesh>();
     defaultToolMesh_->setName( "DefaultToolMesh" );
@@ -64,27 +70,29 @@ bool GcodeToolsLibrary::drawInterface()
                 ImGui::CloseCurrentPopup();
             }
         }
-
-        selected = false;
-        if ( ImGui::Selectable( "<New Tool from File>", &selected ) )
+        
+        if ( haveConfigFolder_ )
         {
-            addNewToolFromFile_();
-            result = true;
-            ImGui::CloseCurrentPopup();
-        }
+            selected = false;
+            if ( ImGui::Selectable( "<New Tool from File>", &selected ) )
+            {
+                addNewToolFromFile_();
+                result = true;
+                ImGui::CloseCurrentPopup();
+            }
 
-        const bool anyMeshExist = bool( getDepthFirstObject<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Selectable ) );
-        if ( !anyMeshExist )
-            ImGui::PushStyleColor( ImGuiCol_Text, ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled ) );
-        if ( ImGui::Selectable( "<New Tool from exist Mesh>", &selected ) && anyMeshExist )
-        {
-            openSelectMeshPopup = true;
-            result = true;
-            ImGui::CloseCurrentPopup();
+            const bool anyMeshExist = bool( getDepthFirstObject<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Selectable ) );
+            if ( !anyMeshExist )
+                ImGui::PushStyleColor( ImGuiCol_Text, ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled ) );
+            if ( ImGui::Selectable( "<New Tool from exist Mesh>", &selected ) && anyMeshExist )
+            {
+                openSelectMeshPopup = true;
+                result = true;
+                ImGui::CloseCurrentPopup();
+            }
+            if ( !anyMeshExist )
+                ImGui::PopStyleColor();
         }
-        if ( !anyMeshExist )
-            ImGui::PopStyleColor();
-
         UI::endCombo();
     }
     const float btnWidth = ImGui::CalcTextSize( "Remove" ).x + ImGui::GetStyle().FramePadding.x * 2.f;

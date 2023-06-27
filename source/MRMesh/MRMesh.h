@@ -196,8 +196,9 @@ struct [[nodiscard]] Mesh
     // for all points not in topology.getValidVerts() sets coordinates to (0,0,0)
     MRMESH_API void zeroUnusedPoints();
 
-    // applies given transformation to all valid mesh vertices
-    MRMESH_API void transform( const AffineXf3f & xf );
+    // applies given transformation to specified vertices
+    // if region is nullptr, all valid mesh vertices are used
+    MRMESH_API void transform( const AffineXf3f& xf, const VertBitSet* region = nullptr );
 
     // creates new point and assigns given position to it
     MRMESH_API VertId addPoint( const Vector3f & pos );

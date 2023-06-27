@@ -21,9 +21,10 @@ namespace MR
 /// collapses given edge and deletes
 /// 1) faces: left( e ) and right( e );
 /// 2) vertex org( e )/dest( e ) if given edge was their only edge, otherwise only dest( e );
-/// 3) edges: e, next( e.sym() ), prev( e.sym() );
+/// 3) edges: e, next( e.sym() ), prev( e.sym() ), and optionally next( e ), prev( e ) if their left and right triangles are deleted;
+/// updates notFlippable removing deleted edges from there, and adding the edges that shall replace them;
+/// calls onEdgeDel for every deleted edge;
 /// returns prev( e ) if it is valid;
-/// and updates notFlippable removing deleted edges from there, and adding the edges that shall replace them
 EdgeId collapseEdge( MeshTopology & topology, const EdgeId e, UndirectedEdgeBitSet* notFlippable, const std::function<void(EdgeId e, EdgeId e1)> & onEdgeDel )
 {
     topology.setLeft( e, FaceId() );
@@ -441,15 +442,8 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
             return {};
     }
 
-    if ( settings_.notFlippable )
-    {
-        if ( settings_.notFlippable->test( edgeToCollapse ) )
-            return {}; // cannot collapse the edge from notFlippable set
-        if ( vl && settings_.notFlippable->test( topology.next( edgeToCollapse ) ) && settings_.notFlippable->test( topology.prev( edgeToCollapse.sym() ) ) )
-            return {}; // cannot collapse the edge, because two edges of its left triangle are notFlippable
-        if ( vr && settings_.notFlippable->test( topology.prev( edgeToCollapse ) ) && settings_.notFlippable->test( topology.next( edgeToCollapse.sym() ) ) )
-            return {}; // cannot collapse the edge, because two edges of its right triangle are notFlippable
-    }
+    if ( settings_.notFlippable && settings_.notFlippable->test( edgeToCollapse ) )
+        return {}; // cannot collapse the edge from notFlippable set
 
     auto vo = topology.org( edgeToCollapse );
     auto vd = topology.dest( edgeToCollapse );

@@ -666,8 +666,7 @@ void Mesh::transform( const AffineXf3f& xf, const VertBitSet* region )
 
     BitSetParallelFor( topology.getVertIds( region ), [&] ( const VertId v )
     {
-        if ( topology.hasVert( v ) )
-            points[v] = xf( points[v] );
+        points[v] = xf( points[v] );
     } );
     invalidateCaches();
 }

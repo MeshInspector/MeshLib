@@ -18,15 +18,19 @@
 namespace MR
 {
 
-// collapses given edge and deletes
-// 1) faces: left( e ) and right( e );
-// 2) vertex org( e )/dest( e ) if given edge was their only edge, otherwise only dest( e );
-// 3) edges: e, next( e.sym() ), prev( e.sym() );
-// returns prev( e ) if it is valid
-EdgeId collapseEdge( MeshTopology & topology, const EdgeId e )
+/// collapses given edge and deletes
+/// 1) faces: left( e ) and right( e );
+/// 2) vertex org( e )/dest( e ) if given edge was their only edge, otherwise only dest( e );
+/// 3) edges: e, next( e.sym() ), prev( e.sym() );
+/// returns prev( e ) if it is valid;
+/// and updates notFlippable removing deleted edges from there, and adding the edges that shall replace them
+EdgeId collapseEdge( MeshTopology & topology, const EdgeId e, UndirectedEdgeBitSet* notFlippable )
 {
     topology.setLeft( e, FaceId() );
     topology.setLeft( e.sym(), FaceId() );
+
+    if ( notFlippable )
+        notFlippable->reset( e.undirected() );
 
     if ( topology.next( e ) == e )
     {
@@ -76,7 +80,15 @@ EdgeId collapseEdge( MeshTopology & topology, const EdgeId e )
             topology.splice( topology.prev( ePrev.sym() ), ePrev.sym() );
             topology.setOrg( ePrev, {} );
             topology.setOrg( ePrev.sym(), {} );
+            assert( topology.isLoneEdge( ePrev ) );
+            if ( notFlippable )
+            {
+                notFlippable->reset( a.undirected() );
+                notFlippable->reset( ePrev.undirected() );
+            }
         }
+        else if ( notFlippable && notFlippable->test_set( a.undirected(), false ) )
+            notFlippable->autoResizeSet( ePrev.undirected() );
     }
 
     if ( topology.next( eNext.sym() ) == b.sym() )
@@ -90,7 +102,15 @@ EdgeId collapseEdge( MeshTopology & topology, const EdgeId e )
             topology.splice( topology.prev( eNext.sym() ), eNext.sym() );
             topology.setOrg( eNext, {} );
             topology.setOrg( eNext.sym(), {} );
+            assert( topology.isLoneEdge( eNext ) );
+            if ( notFlippable )
+            {
+                notFlippable->reset( b.undirected() );
+                notFlippable->reset( eNext.undirected() );
+            }
         }
+        else if ( notFlippable && notFlippable->test_set( b.undirected(), false ) )
+            notFlippable->autoResizeSet( eNext.undirected() );
     }
 
     return ePrev != e ? ePrev : EdgeId();
@@ -554,15 +574,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         if ( auto r = topology.left( edgeToCollapse.sym() ) )
             settings_.region->reset( r );
     }
-    if ( settings_.notFlippable )
-    {
-        settings_.notFlippable->reset( edgeToCollapse.undirected() );
-        if ( settings_.notFlippable->test_set( topology.next( edgeToCollapse.sym() ).undirected(), false ) )
-            settings_.notFlippable->autoResizeSet( topology.prev( edgeToCollapse ).undirected() );
-        if ( settings_.notFlippable->test_set( topology.prev( edgeToCollapse.sym() ).undirected(), false ) )
-            settings_.notFlippable->autoResizeSet( topology.next( edgeToCollapse ).undirected() );
-    }
-    auto eo = collapseEdge( topology, edgeToCollapse );
+    auto eo = collapseEdge( topology, edgeToCollapse, settings_.notFlippable );
     const auto remainingVertex = eo ? vo : VertId{};
     return remainingVertex;
 }

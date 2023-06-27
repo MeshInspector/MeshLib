@@ -464,7 +464,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     };
     if ( ( !vl || !vr ) && settings_.maxBdShift < FLT_MAX )
     {
-        if ( !smallShift( LineSegm3f{ mesh_.orgPnt( edgeToCollapse ), mesh_.destPnt( edgeToCollapse ) }, collapsePos ) )
+        if ( !smallShift( mesh_.edgeSegment( edgeToCollapse ), collapsePos ) )
             return {}; // new vertex is too far from collapsing boundary edge
         if ( !vr )
         {

@@ -226,14 +226,14 @@ public:
     std::vector<QueueElement> elems_;
 };
 
-QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, float stabilizer, const UndirectedEdgeBitSet* notFlippable )
+QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, float stabilizer )
 {
-    QuadraticForm3f qf = mp.mesh.quadraticForm( v, mp.region, notFlippable );
+    QuadraticForm3f qf = mp.mesh.quadraticForm( v, mp.region );
     qf.addDistToOrigin( stabilizer );
     return qf;
 }
 
-Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer, const UndirectedEdgeBitSet* notFlippable )
+Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer )
 {
     MR_TIMER;
 
@@ -243,7 +243,7 @@ Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, flo
     Vector<QuadraticForm3f, VertId> res( regionVertices.find_last() + 1 );
     BitSetParallelFor( regionVertices, [&]( VertId v )
     {
-        res[v] = computeFormAtVertex( mp, v, stabilizer, notFlippable );
+        res[v] = computeFormAtVertex( mp, v, stabilizer );
     } );
 
     return res;
@@ -287,7 +287,7 @@ bool MeshDecimator::initializeQueue_()
         pVertForms_ = &myVertForms_;
 
     if ( pVertForms_->empty() )
-        *pVertForms_ = computeFormsAtVertices( MeshPart{ mesh_, settings_.region }, settings_.stabilizer, settings_.notFlippable );
+        *pVertForms_ = computeFormsAtVertices( MeshPart{ mesh_, settings_.region }, settings_.stabilizer );
 
     if ( settings_.progressCallback && !settings_.progressCallback( 0.1f ) )
         return false;

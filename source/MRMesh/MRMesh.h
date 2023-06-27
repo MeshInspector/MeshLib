@@ -169,8 +169,7 @@ struct [[nodiscard]] Mesh
     // computes quadratic form in the vertex as the sum of squared distances from
     // 1) planes of adjacent triangles
     // 2) lines of adjacent boundary edges
-    // 2) lines of adjacent not-flippable edges
-    [[nodiscard]] MRMESH_API QuadraticForm3f quadraticForm( VertId v, const FaceBitSet * region = nullptr, const UndirectedEdgeBitSet* notFlippable = nullptr ) const;
+    [[nodiscard]] MRMESH_API QuadraticForm3f quadraticForm( VertId v, const FaceBitSet * region = nullptr ) const;
 
     // passes through all valid vertices and finds the minimal bounding box containing all of them;
     // if toWorld transformation is given then returns minimal bounding box in world space

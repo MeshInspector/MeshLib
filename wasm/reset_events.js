@@ -196,7 +196,7 @@ var updateEvents = function () {
     Module["canvas"].addEventListener("pointerup", GLFW.onMouseButtonUp, true);
     Module["canvas"].addEventListener("wheel", GLFW.onMouseWheel, true);
     Module["canvas"].addEventListener("mousewheel", GLFW.onMouseWheel, true);
-    addEventListener('focus', (event) => {
+    addEventListener('blur', (event) => {
         Module.ccall('emsDropEvents', 'void', [], []);
     });
     // prevent others

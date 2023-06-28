@@ -727,7 +727,7 @@ DecimateResult MeshDecimator::run()
         }
 
         if ( settings_.notFlippable )
-            *settings_.notFlippable = settings_.notFlippable->getTMapping( [&emap]( UndirectedEdgeId i ) { return emap[i].undirected(); }, mesh_.topology.undirectedEdgeSize() );
+            *settings_.notFlippable = settings_.notFlippable->getMapping( [&emap]( UndirectedEdgeId i ) { return emap[i].undirected(); }, mesh_.topology.undirectedEdgeSize() );
     }
 
     res_.cancelled = false;

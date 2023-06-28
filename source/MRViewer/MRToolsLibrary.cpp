@@ -12,6 +12,7 @@
 #include "MRMesh/MRCylinder.h"
 #include "MRUIStyle.h"
 #include "MRRibbonConstants.h"
+#include "MRMesh/MRDirectory.h"
 #include <imgui.h>
 #include <cassert>
 
@@ -24,9 +25,7 @@ GcodeToolsLibrary::GcodeToolsLibrary( const std::string& libraryName )
 {
     assert( !libraryName.empty() );
     libraryName_ = libraryName;
-    if ( !std::filesystem::exists( getFolder_() ) )
-        std::filesystem::create_directory( getFolder_() );
-    
+
     defaultToolMesh_ = std::make_shared<ObjectMesh>();
     defaultToolMesh_->setName( "DefaultToolMesh" );
     auto meshPtr = std::make_shared<Mesh>( makeCylinder( 1.f, 8.f, 50 ) );
@@ -64,27 +63,30 @@ bool GcodeToolsLibrary::drawInterface()
                 ImGui::CloseCurrentPopup();
             }
         }
+        
 
-        selected = false;
-        if ( ImGui::Selectable( "<New Tool from File>", &selected ) )
+        if ( !getFolder_().empty() )
         {
-            addNewToolFromFile_();
-            result = true;
-            ImGui::CloseCurrentPopup();
-        }
+            selected = false;
+            if ( ImGui::Selectable( "<New Tool from File>", &selected ) )
+            {
+                addNewToolFromFile_();
+                result = true;
+                ImGui::CloseCurrentPopup();
+            }
 
-        const bool anyMeshExist = bool( getDepthFirstObject<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Selectable ) );
-        if ( !anyMeshExist )
-            ImGui::PushStyleColor( ImGuiCol_Text, ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled ) );
-        if ( ImGui::Selectable( "<New Tool from exist Mesh>", &selected ) && anyMeshExist )
-        {
-            openSelectMeshPopup = true;
-            result = true;
-            ImGui::CloseCurrentPopup();
+            const bool anyMeshExist = bool( getDepthFirstObject<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Selectable ) );
+            if ( !anyMeshExist )
+                ImGui::PushStyleColor( ImGuiCol_Text, ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled ) );
+            if ( ImGui::Selectable( "<New Tool from exist Mesh>", &selected ) && anyMeshExist )
+            {
+                openSelectMeshPopup = true;
+                result = true;
+                ImGui::CloseCurrentPopup();
+            }
+            if ( !anyMeshExist )
+                ImGui::PopStyleColor();
         }
-        if ( !anyMeshExist )
-            ImGui::PopStyleColor();
-
         UI::endCombo();
     }
     const float btnWidth = ImGui::CalcTextSize( "Remove" ).x + ImGui::GetStyle().FramePadding.x * 2.f;
@@ -94,10 +96,15 @@ bool GcodeToolsLibrary::drawInterface()
     ImGui::SameLine( btnPosX );
     if ( UI::button( "Remove", selectedFileName_ != defaultName, {btnWidth, btnHeight}) )
     {
-        std::filesystem::remove( getFolder_() / ( selectedFileName_ + ".mrmesh" ) );
-        selectedFileName_ = defaultName;
-        result = true;
-        toolMesh_ = defaultToolMesh_;
+        const auto folderPath = getFolder_();
+        if ( !folderPath.empty() )
+        {
+            std::error_code ec;
+            std::filesystem::remove( folderPath / ( selectedFileName_ + ".mrmesh" ), ec );
+            selectedFileName_ = defaultName;
+            result = true;
+            toolMesh_ = defaultToolMesh_;
+        }
     }
 
     if ( openSelectMeshPopup )
@@ -108,14 +115,29 @@ bool GcodeToolsLibrary::drawInterface()
 
 std::filesystem::path GcodeToolsLibrary::getFolder_()
 {
-    return getUserConfigDir() / libraryName_;
+    const std::filesystem::path path = getUserConfigDir() / libraryName_;
+
+    std::error_code ec;
+    if ( std::filesystem::exists( path, ec ) )
+        return path;
+    else if ( std::filesystem::create_directory( path, ec ) )
+        return path;
+    
+    return {};
 }
 
 void GcodeToolsLibrary::updateFilesList_()
 {
     filesList_.clear();
-    for ( const auto& entry : std::filesystem::directory_iterator( getFolder_() ) )
+    const auto folderPath = getFolder_();
+    if ( folderPath.empty() )
+        return;
+
+    std::error_code ec;
+    for ( auto entry : Directory{ folderPath, ec } )
     {
+        if ( !entry.is_regular_file( ec ) )
+            continue;
         const auto filename = entry.path().filename();
         if ( utf8string( filename.extension() ) == ".mrmesh" )
             filesList_.push_back( utf8string( filename.stem() ) );
@@ -124,6 +146,10 @@ void GcodeToolsLibrary::updateFilesList_()
 
 void GcodeToolsLibrary::addNewToolFromFile_()
 {
+    const auto folderPath = getFolder_();
+    if ( folderPath.empty() )
+        return;
+
     auto path = openFileDialog( { .filters = MeshLoad::getFilters() } );
     if ( path.empty() )
         return;
@@ -135,14 +161,17 @@ void GcodeToolsLibrary::addNewToolFromFile_()
     toolMesh_ = std::make_shared<ObjectMesh>();
     toolMesh_->setName( utf8string( path.filename().stem() ) );
     toolMesh_->setMesh( std::make_shared<Mesh>( *loadRes ) );
-    MeshSave::toMrmesh( *loadRes, getFolder_() / ( toolMesh_->name() + ".mrmesh" ) );
+    MeshSave::toMrmesh( *loadRes, folderPath / ( toolMesh_->name() + ".mrmesh" ) );
     selectedFileName_ = toolMesh_->name();
 }
 
 void GcodeToolsLibrary::addNewToolFromMesh_( const std::shared_ptr<ObjectMesh>& objMesh )
 {
+    const auto folderPath = getFolder_();
+    if ( folderPath.empty() )
+        return;
     toolMesh_ = std::dynamic_pointer_cast< ObjectMesh >( objMesh->clone() );
-    MeshSave::toMrmesh( *toolMesh_->mesh(), getFolder_() / ( toolMesh_->name() + ".mrmesh" ) );
+    MeshSave::toMrmesh( *toolMesh_->mesh(), folderPath / ( toolMesh_->name() + ".mrmesh" ) );
     updateFilesList_();
 }
 
@@ -163,8 +192,13 @@ void GcodeToolsLibrary::drawSelectMeshPopup_()
 
 bool GcodeToolsLibrary::loadMeshFromFile_( const std::string& filename )
 {
-    auto path = getFolder_() / ( filename + ".mrmesh" );
-    if ( !std::filesystem::exists( path ) )
+    const auto folderPath = getFolder_();
+    if ( folderPath.empty() )
+        return false;
+
+    const auto path = folderPath / ( filename + ".mrmesh" );
+    std::error_code ec;
+    if ( !std::filesystem::exists( path, ec ) )
         return false;
 
     auto loadRes = MeshLoad::fromMrmesh( path );

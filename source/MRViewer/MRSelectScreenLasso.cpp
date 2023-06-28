@@ -13,6 +13,7 @@
 #include "MRMesh/MR2to3.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRPolyline2Intersect.h"
+#include "MRMesh/MRPolylineProject.h"
 
 namespace MR
 {
@@ -21,27 +22,27 @@ void SelectScreenLasso::addPoint( int mouseX, int mouseY )
 {
     float mx = float( mouseX );
     float my = float( mouseY );
-    if ( screenLoop_.empty() || screenLoop_.back().x != mx || screenLoop_.back().y != my )
+    if ( screenPoints_.empty() || screenPoints_.back().x != mx || screenPoints_.back().y != my )
     {
-        screenLoop_.push_back( { mx, my } );
+        screenPoints_.push_back( { mx, my } );
     }
 }
 
-BitSet SelectScreenLasso::calculateSelectedPixels( Viewer* viewer )
+BitSet SelectScreenLasso::calculateSelectedPixelsInsidePolygon()
 {
-    if ( screenLoop_.empty() )
+    if ( screenPoints_.empty() )
         return {};
 
-    Viewer& viewerRef = *viewer;
+    Viewer& viewer = getViewerInstance();
 
-    const auto& vpRect = viewerRef.viewport().getViewportRect();
+    const auto& vpRect = viewer.viewport().getViewportRect();
 
     // convert polygon
-    Contour2f contour( screenLoop_.size() + 1 );
+    Contour2f contour( screenPoints_.size() + 1 );
     
-    auto viewportId = viewerRef.viewport().id;
-    for ( int i = 0; i < screenLoop_.size(); i++ )
-        contour[i] = to2dim( viewerRef.screenToViewport( { screenLoop_[i].x, screenLoop_[i].y,0.f }, viewportId ) );
+    auto viewportId = viewer.viewport().id;
+    for ( int i = 0; i < screenPoints_.size(); i++ )
+        contour[i] = to2dim( viewer.screenToViewport( { screenPoints_[i].x, screenPoints_[i].y,0.f }, viewportId ) );
     contour.back() = contour.front();
 
     Polyline2 polygon( { std::move( contour ) } );
@@ -68,6 +69,45 @@ BitSet SelectScreenLasso::calculateSelectedPixels( Viewer* viewer )
         if ( !box.contains( coord ) )
             return;
         resBS.set( i, isPointInsidePolyline( polygon, Vector2f( coord ) ) );
+    } );
+
+    return resBS;
+}
+
+BitSet SelectScreenLasso::calculateSelectedPixelsNearPolygon( float radiusPix )
+{
+    if ( screenPoints_.empty() )
+        return {};
+
+    Viewer& viewer = getViewerInstance();
+
+    const auto& vpRect = viewer.viewport().getViewportRect();
+
+    // convert polygon
+    Contour2f contour( screenPoints_.size() );
+
+    auto viewportId = viewer.viewport().id;
+    for ( int i = 0; i < screenPoints_.size(); i++ )
+        contour[i] = to2dim( viewer.screenToViewport( { screenPoints_[i].x, screenPoints_[i].y,0.f }, viewportId ) );
+    if ( contour.size() == 1 )
+        contour.emplace_back( contour.front() );
+
+    Polyline2 polygon;
+    polygon.addFromPoints( contour.data(), contour.size(), false );
+    polygon.getAABBTree(); // create tree first
+
+    auto width = int( MR::width( vpRect ) );
+    auto height = int( MR::height( vpRect ) );
+    BitSet resBS( width * height );
+
+    auto radSq = radiusPix * radiusPix;
+    // mark all pixels in the polygon
+    BitSetParallelForAll( resBS, [&] ( size_t i )
+    {
+        Vector2i coord( int( i ) % width, int( i ) / width );
+        auto projRes = findProjectionOnPolyline2( Vector2f( coord ), polygon, radSq );
+        if ( projRes.line.valid() )
+            resBS.set( i );
     } );
 
     return resBS;

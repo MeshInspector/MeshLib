@@ -12,25 +12,31 @@ namespace MR
 class MRVIEWER_CLASS SelectScreenLasso
 {
 public:
-    /// add point of area border
+    /// add point to contour
     MRVIEWER_API void addPoint( int mouseX, int mouseY );
 
-    /// get current area border
-    const std::vector<Vector2f>& getScreenLoop() { return screenLoop_; };
+    /// get current points in contour
+    const Contour2f& getScreenPoints() { return screenPoints_; };
     
-    /// clean area border
-    void cleanScreenLoop() { screenLoop_.clear(); };
+    /// clean contour
+    void cleanScreenPoints() { screenPoints_.clear(); };
 
     /**
-     * calculate area on screen that are inside for border.
-     * closing border part is segment from begin to end point.
+     * calculate area on screen that are inside of closed contour.
      * 
      * return the matrix of pixels (in local space of active viewport) belonging selected area
      */
-    MRVIEWER_API BitSet calculateSelectedPixels( Viewer* viewer );
+    MRVIEWER_API BitSet calculateSelectedPixelsInsidePolygon();
+
+    /**
+     * calculate area on screen that near open contour.
+     *
+     * return the matrix of pixels (in local space of active viewport) belonging selected area
+     */
+    MRVIEWER_API BitSet calculateSelectedPixelsNearPolygon( float radiusPix );
 
 private:
-    std::vector<Vector2f> screenLoop_;
+    Contour2f screenPoints_;
 };
 
 /**

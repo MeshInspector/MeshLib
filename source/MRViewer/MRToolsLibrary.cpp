@@ -12,7 +12,7 @@
 #include "MRMesh/MRCylinder.h"
 #include "MRUIStyle.h"
 #include "MRRibbonConstants.h"
-//#include "MRMesh/MRDirectory.h"
+#include "MRMesh/MRDirectory.h"
 #include <imgui.h>
 #include <cassert>
 
@@ -134,7 +134,7 @@ void GcodeToolsLibrary::updateFilesList_()
         return;
 
     std::error_code ec;
-    for ( const auto& entry : std::filesystem::directory_iterator( folderPath, ec ) )
+    for ( auto entry : Directory{ folderPath, ec } )
     {
         if ( !entry.is_regular_file( ec ) )
             continue;

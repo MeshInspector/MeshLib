@@ -26,13 +26,6 @@ GcodeToolsLibrary::GcodeToolsLibrary( const std::string& libraryName )
     assert( !libraryName.empty() );
     libraryName_ = libraryName;
 
-    defaultToolMesh_ = std::make_shared<ObjectMesh>();
-    defaultToolMesh_->setName( "DefaultToolMesh" );
-    auto meshPtr = std::make_shared<Mesh>( makeCylinder( 1.f, 8.f, 50 ) );
-    defaultToolMesh_->setMesh( meshPtr );
-
-    toolMesh_ = defaultToolMesh_;
-    selectedIndex_ = 0;
     selectedFileName_ = defaultName;
 }
 
@@ -111,6 +104,24 @@ bool GcodeToolsLibrary::drawInterface()
         ImGui::OpenPopup( "SelectMesh" );
     drawSelectMeshPopup_();
     return result;
+}
+
+const std::shared_ptr<MR::ObjectMesh>& GcodeToolsLibrary::getToolObject()
+{
+    if ( selectedFileName_ == defaultName )
+    {
+        if ( !defaultToolMesh_ )
+        {
+            defaultToolMesh_ = std::make_shared<ObjectMesh>();
+            defaultToolMesh_->setName( "DefaultToolMesh" );
+            auto meshPtr = std::make_shared<Mesh>( makeCylinder( 1.f, 8.f, 50 ) );
+            defaultToolMesh_->setMesh( meshPtr );
+        }
+
+        if ( toolMesh_ != defaultToolMesh_ )
+            toolMesh_ = defaultToolMesh_;
+    }
+    return toolMesh_;
 }
 
 std::filesystem::path GcodeToolsLibrary::getFolder_()

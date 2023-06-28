@@ -18,7 +18,7 @@ public:
     MRVIEWER_API bool drawInterface();
 
     // get selected tool as ObjectMesh
-    const std::shared_ptr<ObjectMesh>& getToolObject() { return toolMesh_; }
+    MRVIEWER_API const std::shared_ptr<ObjectMesh>& getToolObject();
 private:
 
     // storage folder
@@ -36,7 +36,6 @@ private:
 
     std::string libraryName_;
     std::vector<std::string> filesList_;
-    int selectedIndex_;
     std::string selectedFileName_;
     std::shared_ptr<ObjectMesh> toolMesh_;
     std::shared_ptr<ObjectMesh> defaultToolMesh_; // default mesh

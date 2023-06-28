@@ -1,0 +1,4 @@
+awslambdaric
+meshlib
+requests
+boto3

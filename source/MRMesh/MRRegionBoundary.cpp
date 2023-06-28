@@ -396,6 +396,11 @@ static VertBitSet getIncidentVerts_( const MeshTopology & topology, const Undire
     VertBitSet res( topology.vertSize() );
     for ( auto ue : edges )
     {
+        if ( ue >= topology.undirectedEdgeSize() )
+        {
+            assert( false );
+            break;
+        }
         if ( auto v = topology.org( ue ) )
             res.set( v );
         if ( auto v = topology.dest( ue ) )

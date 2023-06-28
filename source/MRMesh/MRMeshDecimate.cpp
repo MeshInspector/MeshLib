@@ -708,9 +708,11 @@ DecimateResult MeshDecimator::run()
     {
         FaceMap fmap;
         VertMap vmap;
+        WholeEdgeMap emap;
         mesh_.pack( 
             settings_.region ? &fmap : nullptr,
-            settings_.vertForms ? &vmap : nullptr );
+            settings_.vertForms ? &vmap : nullptr,
+            settings_.notFlippable ? &emap : nullptr );
 
         if ( settings_.region )
             *settings_.region = settings_.region->getMapping( fmap, mesh_.topology.faceSize() );
@@ -723,6 +725,9 @@ DecimateResult MeshDecimator::run()
                         (*pVertForms_)[newV] = (*pVertForms_)[oldV];
             pVertForms_->resize( mesh_.topology.vertSize() );
         }
+
+        if ( settings_.notFlippable )
+            *settings_.notFlippable = settings_.notFlippable->getTMapping( [&emap]( UndirectedEdgeId i ) { return emap[i].undirected(); }, mesh_.topology.undirectedEdgeSize() );
     }
 
     res_.cancelled = false;

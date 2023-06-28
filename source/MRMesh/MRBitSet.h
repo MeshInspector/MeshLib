@@ -120,12 +120,21 @@ public:
     [[nodiscard]] bool autoResizeTestSet( IndexType pos, bool val = true ) { return base::autoResizeTestSet( pos, val ); }
 
     /// constructs another bit set from this where every set bit index is transformed using given map
-    [[nodiscard]] TaggedBitSet getMapping( const Vector<IndexType, IndexType> & map ) const;
-    [[nodiscard]] TaggedBitSet getMapping( const BMap<IndexType, IndexType> & map ) const;
-    [[nodiscard]] TaggedBitSet getMapping( const HashMap<IndexType, IndexType> & map ) const;
+    template <typename M>
+    [[nodiscard]] TaggedBitSet getTMapping( M && map ) const;
+    [[nodiscard]] TaggedBitSet getMapping( const Vector<IndexType, IndexType> & map ) const
+        { return getTMapping( [&map]( IndexType i ) { return map[i]; } ); }
+    [[nodiscard]] TaggedBitSet getMapping( const BMap<IndexType, IndexType> & map ) const
+        { return getTMapping( [&map]( IndexType i ) { return map.b[i]; }, map.tsize ); }
+    [[nodiscard]] TaggedBitSet getMapping( const HashMap<IndexType, IndexType> & map ) const
+        { return getTMapping( [&map]( IndexType i ) { return getAt( map, i ); } ); }
     /// this is a faster version if the result size is known beforehand
-    [[nodiscard]] TaggedBitSet getMapping( const Vector<IndexType, IndexType> & map, size_t resSize ) const;
-    [[nodiscard]] TaggedBitSet getMapping( const HashMap<IndexType, IndexType> & map, size_t resSize ) const;
+    template <typename M>
+    [[nodiscard]] TaggedBitSet getTMapping( M && map, size_t resSize ) const;
+    [[nodiscard]] TaggedBitSet getMapping( const Vector<IndexType, IndexType> & map, size_t resSize ) const
+        { return getTMapping( [&map]( IndexType i ) { return map[i]; }, resSize ); }
+    [[nodiscard]] TaggedBitSet getMapping( const HashMap<IndexType, IndexType> & map, size_t resSize ) const
+        { return getTMapping( [&map]( IndexType i ) { return getAt( map, i ); }, resSize ); }
 
     /// returns the identifier of the back() element
     [[nodiscard]] IndexType backId() const { assert( !empty() ); return IndexType{ size() - 1 }; }
@@ -216,60 +225,26 @@ template <typename T>
     { return SetBitIteratorT<TaggedBitSet<T>>(); }
 
 template <typename T>
-[[nodiscard]] TaggedBitSet<T> TaggedBitSet<T>::getMapping( const Vector<IndexType, IndexType> & map ) const
+template <typename M>
+[[nodiscard]] TaggedBitSet<T> TaggedBitSet<T>::getTMapping( M && map ) const
 {
     TaggedBitSet<T> res;
     for ( auto b : *this )
-        if ( auto mapped = map[b] )
+        if ( auto mapped = map( b ) )
             res.autoResizeSet( mapped );
     return res;
 }
 
 template <typename T>
-[[nodiscard]] TaggedBitSet<T> TaggedBitSet<T>::getMapping( const BMap<IndexType, IndexType> & map ) const
-{
-    TaggedBitSet<T> res;
-    if ( !any() )
-        return res;
-    res.resize( map.tsize );
-    for ( auto b : *this )
-        if ( auto mapped = map.b[b] )
-            res.set( mapped );
-    return res;
-}
-
-template <typename T>
-[[nodiscard]] TaggedBitSet<T> TaggedBitSet<T>::getMapping( const HashMap<IndexType, IndexType> & map ) const
-{
-    TaggedBitSet<T> res;
-    for ( auto b : *this )
-        if ( auto mapped = getAt( map, b ) )
-            res.autoResizeSet( mapped );
-    return res;
-}
-
-template <typename T>
-[[nodiscard]] TaggedBitSet<T> TaggedBitSet<T>::getMapping( const Vector<IndexType, IndexType> & map, size_t resSize ) const
+template <typename M>
+[[nodiscard]] TaggedBitSet<T> TaggedBitSet<T>::getTMapping( M && map, size_t resSize ) const
 {
     TaggedBitSet<T> res;
     if ( !any() )
         return res;
     res.resize( resSize );
     for ( auto b : *this )
-        if ( auto mapped = map[b] )
-            res.set( mapped );
-    return res;
-}
-
-template <typename T>
-[[nodiscard]] TaggedBitSet<T> TaggedBitSet<T>::getMapping( const HashMap<IndexType, IndexType> & map, size_t resSize ) const
-{
-    TaggedBitSet<T> res;
-    if ( !any() )
-        return res;
-    res.resize( resSize );
-    for ( auto b : *this )
-        if ( auto mapped = getAt( map, b ) )
+        if ( auto mapped = map( b ) )
             res.set( mapped );
     return res;
 }

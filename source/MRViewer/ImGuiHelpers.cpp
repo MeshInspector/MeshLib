@@ -986,6 +986,9 @@ PaletteChanges Palette(
 
     UI::combo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
     UI::setTooltipIfHovered( "If \"Central zone\" selected you can separately fit values which are higher or lower then central one. Otherwise only the whole scale can be fit", menuScaling );
+    ImGui::PopItemWidth();
+
+    ImGui::PushItemWidth( 0.5f * scaledWidth );
     float ranges[4];
     ranges[0] = params.ranges.front();
     ranges[3] = params.ranges.back();
@@ -1088,7 +1091,7 @@ PaletteChanges Palette(
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
 
     std::string popupName = std::string( "Save Palette##Config" ) + std::string( label );
-    if ( UI::button( "Save Palette as", Vector2f( scaledWidth - 10.0f * menuScaling, 0 ) ) )
+    if ( UI::button( "Save Palette as", Vector2f( scaledWidth, 0 ) ) )
         ImGui::OpenPopup( popupName.c_str() );
     UI::setTooltipIfHovered( "Save the current palette settings to file. You can load it later as a preset.", menuScaling );
     ImGui::PopStyleVar();

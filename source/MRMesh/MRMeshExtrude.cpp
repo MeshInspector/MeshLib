@@ -29,7 +29,7 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceB
     {
         for ( auto& be : contour )
         {
-            be = be.even() ? src2tgtEdges[be] : src2tgtEdges[be.sym()].sym();
+            be = mapEdge( src2tgtEdges, be );
             assert( component.topology.isLeftBdEdge( be ) );
         }
     }
@@ -47,7 +47,7 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceB
     {
         for ( auto& be : contour )
         {
-            be = be.even() ? outEmap[be] : outEmap[be.sym()].sym();
+            be = mapEdge( outEmap, be );
             assert( topology.isLeftBdEdge( be ) );
         }
     }

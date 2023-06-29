@@ -14,6 +14,7 @@
 #include "MRLaplacian.h"
 #include "MRLineSegm.h"
 #include "MRGeodesicPath.h"
+#include "MRSymMatrix2.h"
 
 namespace MR
 {
@@ -67,15 +68,16 @@ bool relax( Mesh& mesh, const MeshRelaxParams& params, ProgressCallback cb )
     return keepGoing;
 }
 
-Vector3f vertexPosEqualNeiAreas( const Mesh& mesh, VertId v )
+Vector3f vertexPosEqualNeiAreas( const Mesh& mesh, VertId v, bool noShrinkage )
 {
-    SymMatrix3f mat;
-    Vector3f rhs;
+    // computation in doubles improves quality of the result in case of degenerate input
+    SymMatrix3d mat;
+    Vector3d rhs;
     const EdgeId e0 = mesh.topology.edgeWithOrg( v );
     EdgeId ei = e0;
     EdgeId en = mesh.topology.next( ei );
-    auto pi = mesh.destPnt( ei );
-    auto pn = mesh.destPnt( en );
+    auto pi = Vector3d( mesh.destPnt( ei ) );
+    auto pn = Vector3d( mesh.destPnt( en ) );
     for (;;)
     {
         if ( mesh.topology.left( ei ) )
@@ -89,17 +91,43 @@ Vector3f vertexPosEqualNeiAreas( const Mesh& mesh, VertId v )
         ei = en;
         pi = pn;
         en = mesh.topology.next( ei );
-        pn = mesh.destPnt( en );
+        pn = Vector3d( mesh.destPnt( en ) );
     } 
+
+    if ( noShrinkage )
+    {
+        const auto norm = Vector3d( mesh.normal( v ) );
+        const auto [x,y] = norm.perpendicular();
+        SymMatrix2d mat2;
+        const auto mx = mat * x;
+        mat2.xx = dot( mx, x );
+        mat2.xy = dot( mx, y );
+        mat2.yy = dot( mat * y, y );
+
+        const auto det = mat2.det();
+        const auto tr = mat2.trace();
+        if ( DBL_EPSILON * std::abs( tr * tr ) >= std::abs( det ) )
+            return mesh.points[v]; // the linear system cannot be trusted
+
+        const auto p0 = dot( norm, Vector3d( mesh.points[v] ) ) * norm;
+        rhs -= mat * p0;
+        Vector2d rhs2;
+        rhs2.x = dot( rhs, x );
+        rhs2.y = dot( rhs, y );
+
+        const auto sol2 = mat2.inverse( det ) * rhs2;
+        return Vector3f( p0 + x * sol2.x + y * sol2.y );
+    }
 
     const auto det = mat.det();
     const auto tr = mat.trace();
-    if ( FLT_EPSILON * std::abs( tr * tr * tr ) >= std::abs( det ) )
+    if ( DBL_EPSILON * std::abs( tr * tr * tr ) >= std::abs( det ) )
         return mesh.points[v]; // the linear system cannot be trusted
-    return mat.inverse( det ) * rhs;
+
+    return Vector3f( mat.inverse( det ) * rhs );
 }
 
-bool equalizeTriAreas( Mesh& mesh, const MeshRelaxParams& params, ProgressCallback cb )
+bool equalizeTriAreas( Mesh& mesh, const MeshEqualizeTriAreasParams& params, ProgressCallback cb )
 {
     if ( params.iterations <= 0 )
         return true;
@@ -120,7 +148,7 @@ bool equalizeTriAreas( Mesh& mesh, const MeshRelaxParams& params, ProgressCallba
             if ( !e0.valid() )
                 return;
             auto& np = newPoints[v];
-            auto pushForce = params.force * ( vertexPosEqualNeiAreas( mesh, v ) - np );
+            auto pushForce = params.force * ( vertexPosEqualNeiAreas( mesh, v, params.noShrinkage ) - np );
             np += pushForce;
         }, internalCb );
         mesh.points.swap( newPoints );

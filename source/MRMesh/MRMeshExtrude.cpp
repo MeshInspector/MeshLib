@@ -64,6 +64,7 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceB
             ( *old2newMap )[f] = outFmap[src2tgtFaces[f]];
     }
 
+    topology.edgeReserve( topology.edgeSize() + boundaryEdgeCount * 4 );
     topology.faceReserve( topology.faceSize() + boundaryEdgeCount * 2 );
     if ( outNewFaces )
         outNewFaces->resize( topology.faceSize() + boundaryEdgeCount * 2 );

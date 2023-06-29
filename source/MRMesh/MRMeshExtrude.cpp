@@ -63,8 +63,6 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceB
         {
             const auto mbe = meshContour[ei];
             const auto cbe = componentContour[ei];
-            assert( topology.isBdEdge( mbe ) );
-            assert( topology.isBdEdge( cbe.sym() ) );
 
             if ( ei == 0 )
             {

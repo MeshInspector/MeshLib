@@ -9,6 +9,7 @@ namespace MR
 void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceBitSet* outNewFaces, FaceMap* old2newMap )
 {
     MR_TIMER
+    MR_WRITER( mesh )
 
     auto& topology = mesh.topology;
     if ( region.none() || ( topology.getValidFaces() - region ).none() )

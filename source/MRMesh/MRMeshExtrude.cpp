@@ -35,9 +35,11 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceB
     }
 
     topology.deleteFaces( region );
+#ifndef NDEBUG
     for ( const auto& contour : meshBoundary )
-        for ( [[maybe_unused]] const auto be : contour )
+        for ( const auto be : contour )
             assert( topology.isBdEdge( be ) );
+#endif
 
     FaceMap outFmap;
     WholeEdgeMap outEmap;

@@ -30,7 +30,9 @@ struct SymMatrix2
     /// computes determinant of the matrix
     constexpr T det() const noexcept;
     /// computes inverse matrix
-    constexpr SymMatrix2<T> inverse() const noexcept;
+    constexpr SymMatrix2<T> inverse() const noexcept { return inverse( det() ); }
+    /// computes inverse matrix given determinant of this
+    constexpr SymMatrix2<T> inverse( T det ) const noexcept;
 
     SymMatrix2 & operator +=( const SymMatrix2<T> & b ) { xx += b.xx; xy += b.xy; yy += b.yy; return * this; }
     SymMatrix2 & operator -=( const SymMatrix2<T> & b ) { xx -= b.xx; xy -= b.xy; yy -= b.yy; return * this; }
@@ -117,9 +119,8 @@ constexpr T SymMatrix2<T>::det() const noexcept
 }
 
 template <typename T> 
-constexpr SymMatrix2<T> SymMatrix2<T>::inverse() const noexcept
+constexpr SymMatrix2<T> SymMatrix2<T>::inverse( T det ) const noexcept
 {
-    auto det = this->det();
     if ( det == 0 )
         return {};
     SymMatrix2<T> res;

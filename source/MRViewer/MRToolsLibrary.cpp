@@ -26,19 +26,11 @@ GcodeToolsLibrary::GcodeToolsLibrary( const std::string& libraryName )
     assert( !libraryName.empty() );
     libraryName_ = libraryName;
 
-    defaultToolMesh_ = std::make_shared<ObjectMesh>();
-    defaultToolMesh_->setName( "DefaultToolMesh" );
-    auto meshPtr = std::make_shared<Mesh>( makeCylinder( 1.f, 8.f, 50 ) );
-    defaultToolMesh_->setMesh( meshPtr );
-
-    toolMesh_ = defaultToolMesh_;
-    selectedIndex_ = 0;
     selectedFileName_ = defaultName;
 }
 
 bool GcodeToolsLibrary::drawInterface()
 {
-    bool openSelectMeshPopup = false;
     bool result = false;
 
     if ( UI::beginCombo( "Tool Mesh", selectedFileName_ ) )
@@ -49,7 +41,6 @@ bool GcodeToolsLibrary::drawInterface()
             toolMesh_ = defaultToolMesh_;
             selectedFileName_ = defaultName;
             result = true;
-            ImGui::CloseCurrentPopup();
         }
 
         updateFilesList_();
@@ -60,7 +51,6 @@ bool GcodeToolsLibrary::drawInterface()
             if ( ImGui::Selectable( filesList_[i].c_str(), &selected ) && selected )
             {
                 result = loadMeshFromFile_( filesList_[i] );
-                ImGui::CloseCurrentPopup();
             }
         }
         
@@ -72,20 +62,29 @@ bool GcodeToolsLibrary::drawInterface()
             {
                 addNewToolFromFile_();
                 result = true;
-                ImGui::CloseCurrentPopup();
             }
 
             const bool anyMeshExist = bool( getDepthFirstObject<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Selectable ) );
             if ( !anyMeshExist )
-                ImGui::PushStyleColor( ImGuiCol_Text, ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled ) );
-            if ( ImGui::Selectable( "<New Tool from exist Mesh>", &selected ) && anyMeshExist )
             {
-                openSelectMeshPopup = true;
-                result = true;
-                ImGui::CloseCurrentPopup();
-            }
-            if ( !anyMeshExist )
+                ImGui::PushStyleColor( ImGuiCol_Text, ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled ) );
+                ImGui::Text( "%s", "<New Tool from exist Mesh>" );
                 ImGui::PopStyleColor();
+            } else if ( ImGui::BeginMenu( "<New Tool from exist Mesh>" ) )
+            {
+                auto objsMesh = getAllObjectsInTree<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Selectable );
+                for ( int i = 0; i < objsMesh.size(); ++i )
+                {
+                    selected = false;
+                    if ( ImGui::Selectable( objsMesh[i]->name().c_str(), &selected ) )
+                    {
+                        result = true;
+                        addNewToolFromMesh_( objsMesh[i] );
+                    }
+                }
+
+                ImGui::EndMenu();
+            }
         }
         UI::endCombo();
     }
@@ -107,10 +106,25 @@ bool GcodeToolsLibrary::drawInterface()
         }
     }
 
-    if ( openSelectMeshPopup )
-        ImGui::OpenPopup( "SelectMesh" );
-    drawSelectMeshPopup_();
     return result;
+}
+
+const std::shared_ptr<MR::ObjectMesh>& GcodeToolsLibrary::getToolObject()
+{
+    if ( selectedFileName_ == defaultName )
+    {
+        if ( !defaultToolMesh_ )
+        {
+            defaultToolMesh_ = std::make_shared<ObjectMesh>();
+            defaultToolMesh_->setName( "DefaultToolMesh" );
+            auto meshPtr = std::make_shared<Mesh>( makeCylinder( 1.f, 8.f, 50 ) );
+            defaultToolMesh_->setMesh( meshPtr );
+        }
+
+        if ( toolMesh_ != defaultToolMesh_ )
+            toolMesh_ = defaultToolMesh_;
+    }
+    return toolMesh_;
 }
 
 std::filesystem::path GcodeToolsLibrary::getFolder_()
@@ -172,7 +186,7 @@ void GcodeToolsLibrary::addNewToolFromMesh_( const std::shared_ptr<ObjectMesh>& 
         return;
     toolMesh_ = std::dynamic_pointer_cast< ObjectMesh >( objMesh->clone() );
     MeshSave::toMrmesh( *toolMesh_->mesh(), folderPath / ( toolMesh_->name() + ".mrmesh" ) );
-    updateFilesList_();
+    selectedFileName_ = toolMesh_->name();
 }
 
 void GcodeToolsLibrary::drawSelectMeshPopup_()

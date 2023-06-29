@@ -694,7 +694,7 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
         auto& hmap = hmaps[range.begin()];
 
         const auto begin = range.begin() * blockSize;
-        const auto end = std::min( begin + blockSize, size );
+        const auto end = std::min( begin + blockSize, resY );
 
         auto& localNumeration = perThreadVertNumeration.local();
         localNumeration.emplace_back( begin * resX, 0 );

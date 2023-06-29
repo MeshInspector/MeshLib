@@ -661,35 +661,54 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
         return pos.x + pos.y * size_t( resX );
     };
 
-    SeparationPointMap hmap;
-    const auto subcnt = hmap.subcnt();
+    size_t threadCount = tbb::global_control::parameter( tbb::global_control::max_allowed_parallelism );
+    if ( threadCount == 0 )
+        threadCount = std::thread::hardware_concurrency();
+    if ( threadCount == 0 )
+        threadCount = 1;
+
+    const auto blockCount = threadCount;
+    const auto blockSize = (size_t)std::ceil( (float)resY / blockCount );
+    assert( resY <= blockSize * blockCount );
+
+    std::vector<SeparationPointMap> hmaps( blockCount );
+    auto hmap = [&] ( size_t y ) -> SeparationPointMap&
+    {
+        return hmaps[y / blockSize];
+    };
+
     // find all separate points
     // fill map in parallel
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, hmaps.size(), 1 ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         assert( range.begin() + 1 == range.end() );
-        for ( size_t i = 0; i < size; ++i )
+        auto& hmap = hmaps[range.begin()];
+
+        const auto begin = range.begin() * blockSize;
+        const auto end = std::min( begin + blockSize, size );
+
+        for ( auto y = begin; y < end; ++y )
         {
-            auto pos = toPos( i );
-
-            auto hashval = hmap.hash( i );
-            if ( hmap.subidx( hashval ) != range.begin() )
-                continue;
-
-            SeparationPointSet set;
-            bool atLeastOneOk = false;
-            for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
+            for ( auto x = 0; x < resX; ++x )
             {
-                SeparationPoint separation = findSeparationPoint( distMap, pos, NeighborDir( n ), isoValue );
-                if ( separation )
+                const Vector2i pos( x, y );
+
+                SeparationPointSet set;
+                bool atLeastOneOk = false;
+                for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
                 {
-                    set[n] = std::move( separation );
-                    atLeastOneOk = true;
+                    SeparationPoint separation = findSeparationPoint( distMap, pos, NeighborDir( n ), isoValue );
+                    if ( separation )
+                    {
+                        set[n] = std::move( separation );
+                        atLeastOneOk = true;
+                    }
                 }
+                if ( !atLeastOneOk )
+                    continue;
+
+                hmap.insert( { toId( pos ), set } );
             }
-            if ( !atLeastOneOk )
-                continue;
-            hmap.insert( { i, set } );
         }
     } );
 
@@ -703,21 +722,24 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
     };
     using PerThreadVertNumeration = std::vector<VertsNumeration>;
     tbb::enumerable_thread_specific<PerThreadVertNumeration> perThreadVertNumeration;
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, size ),
-        [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::parallel_for( tbb::blocked_range<int>( 0, resY ), [&] ( const tbb::blocked_range<int>& range )
     {
         auto& localNumeration = perThreadVertNumeration.local();
-        localNumeration.emplace_back( range.begin(), 0 );
+        localNumeration.emplace_back( range.begin() * resX, 0 );
         auto& thisRangeNumeration = localNumeration.back().numVerts;
-        for ( size_t ind = range.begin(); ind < range.end(); ++ind )
+        for ( auto y = range.begin(); y < range.end(); ++y )
         {
-            // as far as map is filled, change of each individual value should be safe
-            auto mapIter = hmap.find( ind );
-            if ( mapIter == hmap.cend() )
-                continue;
-            for ( auto& dir : mapIter->second )
-                if ( dir )
-                    dir.vid = VertId( thisRangeNumeration++ );
+            auto& map = hmap( y );
+            for ( auto x = 0; x < resX; ++x )
+            {
+                // as far as map is filled, change of each individual value should be safe
+                auto mapIter = map.find( toId( { x, y } ) );
+                if ( mapIter == map.cend() )
+                    continue;
+                for ( auto& dir : mapIter->second )
+                    if ( dir )
+                        dir.vid = VertId( thisRangeNumeration++ );
+            }
         }
     }, tbb::static_partitioner() );// static_partitioner to have bigger grains
 
@@ -755,41 +777,33 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
     };
 
     // update map with determined vert indices
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ),
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, hmaps.size(), 1 ),
     [&] ( const tbb::blocked_range<size_t>& range )
     {
         assert( range.begin() + 1 == range.end() );
-        hmap.with_submap( range.begin(), [&] ( const SeparationPointMap::EmbeddedSet& subSet )
+        for ( auto& [ind, set] : hmaps[range.begin()] )
         {
-            // const_cast here is safe, we don't write to map, just change internal data
-            for ( auto& [ind, set] : const_cast< SeparationPointMap::EmbeddedSet& >( subSet ) )
-            {
-                auto vertShift = getVertIndexShiftForPixelId( ind );
-                for ( auto& sepPoint : set )
-                    if ( sepPoint )
-                        sepPoint.vid += vertShift;
-            }
-        } );
+            auto vertShift = getVertIndexShiftForPixelId( ind );
+            for ( auto& sepPoint : set )
+                if ( sepPoint )
+                    sepPoint.vid += vertShift;
+        }
     } );
 
     // check neighbor iterator valid
-    auto checkIter = [&] ( const auto& iter, int mode ) -> bool
+    auto checkIter = [&] ( const auto& set, int mode ) -> bool
     {
         switch ( mode )
         {
         case 0: // base pixel
-            return iter != hmap.cend();
+            return true;
         case 1: // x + 1 pixel
         {
-            if ( iter == hmap.cend() )
-                return false;
-            return bool( iter->second[int( NeighborDir::Y )] );
+            return bool( set[int( NeighborDir::Y )] );
         }
         case 2: // y + 1 voxel
         {
-            if ( iter == hmap.cend() )
-                return false;
-            return bool( iter->second[int( NeighborDir::X )] );
+            return bool( set[int( NeighborDir::X )] );
         }
         default:
             return false;
@@ -805,7 +819,7 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
 
     using PerThreadTopologyData = std::vector<TopologyData>;
     tbb::enumerable_thread_specific<PerThreadTopologyData> topologyPerThread;
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, size ), [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::parallel_for( tbb::blocked_range<int>( 0, resY ), [&] ( const tbb::blocked_range<int>& range )
     {
         // setup local triangulation
         auto& localTopologyData = topologyPerThread.local();
@@ -818,53 +832,57 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
         std::array<SeparationPointMap::const_iterator, 3> iters;
         std::array<bool, 3> iterStatus;
         unsigned char pixelConfiguration;
-        for ( size_t ind = range.begin(); ind < range.end(); ++ind )
+        for ( auto y = range.begin(); y < range.end(); ++y )
         {
-            Vector2i basePos = toPos( ind );
-            if ( basePos.x + 1 >= resX || basePos.y + 1 >= resY )
-                continue;
-
-            bool pixelValid = false;
-            for ( int i = 0; i < iters.size(); ++i )
+            for ( auto x = 0; x < resX; ++x )
             {
-                iters[i] = hmap.find( toId( basePos + cPixelNeighbors[i] ) );
-                iterStatus[i] = checkIter( iters[i], i );
-                if ( !pixelValid && iterStatus[i] )
-                    pixelValid = true;
-            }
-            if ( !pixelValid )
-                continue;
-            pixelConfiguration = 0;
-            [[maybe_unused]] bool atLeastOneNan = false;
-            for ( int i = 0; i < cPixelNeighbors.size(); ++i )
-            {
-                auto pos = basePos + cPixelNeighbors[i];
-                float value = distMap.getValue( pos.x, pos.y );
-                if ( value == NOT_VALID_VALUE )
-                {
-                    pixelValid = false;
-                    break;
-                }
-                if ( value >= isoValue )
+                const Vector2i basePos( x, y );
+                if ( basePos.x + 1 >= resX || basePos.y + 1 >= resY )
                     continue;
-                pixelConfiguration |= ( 1 << i );
-            }
 
-            if ( !pixelValid )
-                continue;
+                bool pixelValid = false;
+                for ( int i = 0; i < iters.size(); ++i )
+                {
+                    const auto pos = basePos + cPixelNeighbors[i];
+                    iters[i] = hmap( pos.y ).find( toId( pos ) );
+                    iterStatus[i] = iters[i] != hmap( pos.y ).cend() && checkIter( iters[i]->second, i );
+                    if ( !pixelValid && iterStatus[i] )
+                        pixelValid = true;
+                }
+                if ( !pixelValid )
+                    continue;
+                pixelConfiguration = 0;
+                [[maybe_unused]] bool atLeastOneNan = false;
+                for ( int i = 0; i < cPixelNeighbors.size(); ++i )
+                {
+                    auto pos = basePos + cPixelNeighbors[i];
+                    float value = distMap.getValue( pos.x, pos.y );
+                    if ( value == NOT_VALID_VALUE )
+                    {
+                        pixelValid = false;
+                        break;
+                    }
+                    if ( value >= isoValue )
+                        continue;
+                    pixelConfiguration |= ( 1 << i );
+                }
 
-            const auto& plan = cTopologyTable[pixelConfiguration];
-            for ( int i = 0; i < plan.size(); i += 2 )
-            {
-                const auto& [interIndex0, dir0] = cEdgeIndicesMap[plan[i]];
-                const auto& [interIndex1, dir1] = cEdgeIndicesMap[plan[i + 1]];
-                assert( iterStatus[interIndex0] && iters[interIndex0]->second[int( dir0 )].vid );
-                assert( iterStatus[interIndex1] && iters[interIndex1]->second[int( dir1 )].vid );
+                if ( !pixelValid )
+                    continue;
 
-                lines.emplace_back( std::array<VertId, 2>{ 
-                    iters[interIndex0]->second[int( dir0 )].vid,
-                        iters[interIndex1]->second[int( dir1 )].vid
-                } );
+                const auto& plan = cTopologyTable[pixelConfiguration];
+                for ( int i = 0; i < plan.size(); i += 2 )
+                {
+                    const auto& [interIndex0, dir0] = cEdgeIndicesMap[plan[i]];
+                    const auto& [interIndex1, dir1] = cEdgeIndicesMap[plan[i + 1]];
+                    assert( iterStatus[interIndex0] && iters[interIndex0]->second[int( dir0 )].vid );
+                    assert( iterStatus[interIndex1] && iters[interIndex1]->second[int( dir1 )].vid );
+
+                    lines.emplace_back( std::array<VertId, 2>{
+                        iters[interIndex0]->second[int( dir0 )].vid,
+                            iters[interIndex1]->second[int( dir1 )].vid
+                    } );
+                }
             }
         }
     } );
@@ -895,19 +913,16 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
     size_t pointsSize = resultVertNumeration.empty() ? 0 : size_t( getVertIndexShiftForPixelId( size ) ) + resultVertNumeration.back().numVerts;
     polyline.points.resize( pointsSize );
     polyline.topology.vertResize( polyline.points.size() );
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ),
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, blockCount, 1 ),
         [&] ( const tbb::blocked_range<size_t>& range )
     {
         assert( range.begin() + 1 == range.end() );
-        hmap.with_submap( range.begin(), [&] ( const SeparationPointMap::EmbeddedSet& subSet )
+        for ( auto& [_, set] : hmaps[range.begin()] )
         {
-            for ( auto& separation : subSet )
-            {
-                for ( int i = int( NeighborDir::X ); i < int( NeighborDir::Count ); ++i )
-                    if ( separation.second[i].vid.valid() )
-                        polyline.points[separation.second[i].vid] = separation.second[i].position;
-            }
-        } );
+            for ( int i = int( NeighborDir::X ); i < int( NeighborDir::Count ); ++i )
+                if ( set[i].vid.valid() )
+                    polyline.points[set[i].vid] = set[i].position;
+        }
     } );
 
     for ( auto& [ind, lines] : resTopologyData )

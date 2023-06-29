@@ -54,7 +54,6 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceB
         }
     }
 
-    UndirectedEdgeBitSet edges;
     for ( auto ci = 0u; ci < meshBoundary.size(); ++ci )
     {
         const auto& meshContour = meshBoundary[ci];

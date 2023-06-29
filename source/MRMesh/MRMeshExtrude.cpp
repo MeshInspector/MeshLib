@@ -6,7 +6,7 @@
 namespace MR
 {
 
-void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceBitSet* outNewFaces, FaceMap* old2newMap )
+void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceBitSet* outNewFaces, FaceHashMap* old2newMap )
 {
     MR_TIMER
     MR_WRITER( mesh )
@@ -59,7 +59,7 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceB
 
     if ( old2newMap )
     {
-        old2newMap->resize( topology.lastValidFace() + 1 );
+        old2newMap->reserve( topology.lastValidFace() + 1 );
         for ( const auto f : region )
             ( *old2newMap )[f] = outFmap[src2tgtFaces[f]];
     }

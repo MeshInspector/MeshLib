@@ -679,6 +679,15 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
 
     // find all separate points
     // fill map in parallel
+    struct VertsNumeration
+    {
+        // explicit ctor to fix clang build with `vec.emplace_back( ind, 0 )`
+        VertsNumeration( size_t ind, size_t num ) : initIndex{ ind }, numVerts{ num } {}
+        size_t initIndex{ 0 };
+        size_t numVerts{ 0 };
+    };
+    using PerThreadVertNumeration = std::vector<VertsNumeration>;
+    tbb::enumerable_thread_specific<PerThreadVertNumeration> perThreadVertNumeration;
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, hmaps.size(), 1 ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         assert( range.begin() + 1 == range.end() );
@@ -686,6 +695,10 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
 
         const auto begin = range.begin() * blockSize;
         const auto end = std::min( begin + blockSize, size );
+
+        auto& localNumeration = perThreadVertNumeration.local();
+        localNumeration.emplace_back( begin * resX, 0 );
+        auto& thisRangeNumeration = localNumeration.back().numVerts;
 
         for ( auto y = begin; y < end; ++y )
         {
@@ -701,6 +714,7 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
                     if ( separation )
                     {
                         set[n] = std::move( separation );
+                        set[n].vid = VertId( thisRangeNumeration++ );
                         atLeastOneOk = true;
                     }
                 }
@@ -711,37 +725,6 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
             }
         }
     } );
-
-    // numerate verts in parallel (to have packed polyline as result, determined numeration independent of thread number)
-    struct VertsNumeration
-    {
-        // explicit ctor to fix clang build with `vec.emplace_back( ind, 0 )`
-        VertsNumeration( size_t ind, size_t num ) :initIndex{ ind }, numVerts{ num }{}
-        size_t initIndex{ 0 };
-        size_t numVerts{ 0 };
-    };
-    using PerThreadVertNumeration = std::vector<VertsNumeration>;
-    tbb::enumerable_thread_specific<PerThreadVertNumeration> perThreadVertNumeration;
-    tbb::parallel_for( tbb::blocked_range<int>( 0, resY ), [&] ( const tbb::blocked_range<int>& range )
-    {
-        auto& localNumeration = perThreadVertNumeration.local();
-        localNumeration.emplace_back( range.begin() * resX, 0 );
-        auto& thisRangeNumeration = localNumeration.back().numVerts;
-        for ( auto y = range.begin(); y < range.end(); ++y )
-        {
-            auto& map = hmap( y );
-            for ( auto x = 0; x < resX; ++x )
-            {
-                // as far as map is filled, change of each individual value should be safe
-                auto mapIter = map.find( toId( { x, y } ) );
-                if ( mapIter == map.cend() )
-                    continue;
-                for ( auto& dir : mapIter->second )
-                    if ( dir )
-                        dir.vid = VertId( thisRangeNumeration++ );
-            }
-        }
-    }, tbb::static_partitioner() );// static_partitioner to have bigger grains
 
     // organize vert numeration
     std::vector<VertsNumeration> resultVertNumeration;

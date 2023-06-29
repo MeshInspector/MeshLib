@@ -25,8 +25,11 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceB
         .src2tgtEdges = &src2tgtEdges,
     };
     auto component = mesh.cloneRegion( region, false, mapping );
+
+    size_t boundaryEdgeCount = 0;
     for ( auto& contour : componentBoundary )
     {
+        boundaryEdgeCount += contour.size();
         for ( auto& be : contour )
         {
             be = mapEdge( src2tgtEdges, be );
@@ -53,6 +56,17 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceB
             assert( topology.isLeftBdEdge( be ) );
         }
     }
+
+    if ( old2newMap )
+    {
+        old2newMap->resize( topology.lastValidFace() + 1 );
+        for ( const auto f : region )
+            ( *old2newMap )[f] = outFmap[src2tgtFaces[f]];
+    }
+
+    topology.faceReserve( topology.faceSize() + boundaryEdgeCount * 2 );
+    if ( outNewFaces )
+        outNewFaces->resize( topology.faceSize() + boundaryEdgeCount * 2 );
 
     for ( auto ci = 0u; ci < meshBoundary.size(); ++ci )
     {
@@ -96,15 +110,11 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceB
             mesh.topology.setLeft( ne.sym(), f1 );
             if ( outNewFaces )
             {
-                ( *outNewFaces ).autoResizeSet( f0 );
-                ( *outNewFaces ).autoResizeSet( f1 );
+                ( *outNewFaces ).set( f0 );
+                ( *outNewFaces ).set( f1 );
             }
         }
     }
-
-    if ( old2newMap )
-        for ( const auto f : region )
-            old2newMap->autoResizeSet( f, outFmap[src2tgtFaces[f]] );
 }
 
 } // namespace MR

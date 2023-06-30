@@ -201,6 +201,8 @@ struct RemeshSettings
     /// the number of iterations of final relaxation of mesh vertices;
     /// few iterations can give almost perfect uniformity of the vertices and edge lengths but deviate from the original surface
     int finalRelaxIters = 0;
+    /// if true prevents the surface from shrinkage after many iterations
+    bool finalRelaxNoShrinkage = false;
     /// Region on mesh to be changed, it is updated during the operation
     FaceBitSet * region = nullptr;
     /// Edges specified by this bit-set will never be flipped or collapsed, but they can be replaced during collapse of nearby edges so it is updated during the operation;

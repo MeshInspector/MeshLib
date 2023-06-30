@@ -652,10 +652,6 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
         return {};
 
     const size_t size = resX * resY;
-    auto toPos = [resX] ( size_t ind )->Vector2i
-    {
-        return { int( ind % resX ),int( ind / resX ) };
-    };
     auto toId = [resX] ( const Vector2i& pos )->size_t
     {
         return pos.x + pos.y * size_t( resX );

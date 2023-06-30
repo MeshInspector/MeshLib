@@ -704,7 +704,7 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
         {
             for ( auto x = 0; x < resX; ++x )
             {
-                const Vector2i pos( x, y );
+                const Vector2i pos{ int( x ), int( y ) };
 
                 SeparationPointSet set;
                 bool atLeastOneOk = false;
@@ -802,7 +802,7 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
 
     using PerThreadTopologyData = std::vector<TopologyData>;
     tbb::enumerable_thread_specific<PerThreadTopologyData> topologyPerThread;
-    tbb::parallel_for( tbb::blocked_range<int>( 0, resY ), [&] ( const tbb::blocked_range<int>& range )
+    tbb::parallel_for( tbb::blocked_range<int>( 0, int( resY ) ), [&] ( const tbb::blocked_range<int>& range )
     {
         // setup local triangulation
         auto& localTopologyData = topologyPerThread.local();

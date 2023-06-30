@@ -966,6 +966,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
             innerVerts -= getIncidentVerts( mesh.topology, *settings.notFlippable );
         MeshEqualizeTriAreasParams rp;
         rp.region = &innerVerts;
+        rp.hardSmoothTetrahedrons = true;
         rp.noShrinkage = settings.finalRelaxNoShrinkage;
         DeloneSettings ds;
         ds.maxAngleChange = settings.maxAngleChangeAfterFlip;

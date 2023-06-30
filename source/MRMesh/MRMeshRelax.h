@@ -20,6 +20,14 @@ struct MeshRelaxParams : RelaxParams
 /// \return true if was finished successfully, false if was interrupted by progress callback
 MRMESH_API bool relax( Mesh& mesh, const MeshRelaxParams& params = {}, ProgressCallback cb = {} );
 
+/// computes position of a vertex, when all neighbor triangles have almost equal areas,
+/// more precisely it minimizes sum_i (area_i)^2 by adjusting the position of this vertex only
+[[nodiscard]] MRMESH_API Vector3f vertexPosEqualNeiAreas( const Mesh& mesh, VertId v );
+
+/// applies given number of iterations with movement toward vertexPosEqualNeiAreas() to the whole mesh ( or some region if it is specified )
+/// \return true if was finished successfully, false if was interrupted by progress callback
+MRMESH_API bool equalizeTriAreas( Mesh& mesh, const MeshRelaxParams& params = {}, ProgressCallback cb = {} );
+
 /// applies given number of relaxation iterations to the whole mesh ( or some region if it is specified ) \n
 /// do not really keeps volume but tries hard
 /// \return true if was finished successfully, false if was interrupted by progress callback

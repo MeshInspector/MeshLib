@@ -4,6 +4,7 @@
 #include "MRMeshTopology.h"
 #include "MRMeshProject.h"
 #include "MREdgePoint.h"
+#include "MRLineSegm.h"
 #include "MRUniqueThreadSafeOwner.h"
 #include "MRWriter.h"
 #include "MRConstants.h"
@@ -42,6 +43,10 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] Vector3f orgPnt( EdgeId e ) const { return points[ topology.org( e ) ]; }
     // returns coordinates of the edge destination
     [[nodiscard]] Vector3f destPnt( EdgeId e ) const { return points[ topology.dest( e ) ]; }
+    // returns vector equal to edge destination point minus edge origin point
+    [[nodiscard]] Vector3f edgeVector( EdgeId e ) const { return destPnt( e ) - orgPnt( e ); }
+    /// returns line segment of given edge
+    [[nodiscard]] LineSegm3f edgeSegment( EdgeId e ) const { return { orgPnt( e ), destPnt( e ) }; }
     // returns a point on the edge: origin point for f=0 and destination point for f=1
     [[nodiscard]] Vector3f edgePoint( EdgeId e, float f ) const { return f * destPnt( e ) + ( 1 - f ) * orgPnt( e ); }
     [[nodiscard]] Vector3f edgePoint( const MeshEdgePoint & ep ) const { return edgePoint( ep.e, ep.a ); }
@@ -74,8 +79,6 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] MRMESH_API UndirectedEdgeId getClosestEdge( const PointOnFace & p ) const;
     [[nodiscard]] UndirectedEdgeId getClosestEdge( const MeshTriPoint & p ) const { return getClosestEdge( PointOnFace{ topology.left( p.e ), triPoint( p ) } ); }
 
-    // returns vector equal to edge destination point minus edge origin point
-    [[nodiscard]] Vector3f edgeVector( EdgeId e ) const { return destPnt( e ) - orgPnt( e ); }
     // returns Euclidean length of the edge
     [[nodiscard]] float edgeLength( UndirectedEdgeId e ) const { return edgeVector( e ).length(); }
     // returns squared Euclidean length of the edge (faster to compute than length)
@@ -128,7 +131,7 @@ struct [[nodiscard]] Mesh
     // computes the sum of triangle angles at given vertex; optionally returns whether the vertex is on boundary
     [[nodiscard]] MRMESH_API float sumAngles( VertId v, bool * outBoundaryVert = nullptr ) const;
     // returns vertices where the sum of triangle angles is below given threshold
-    [[nodiscard]] MRMESH_API tl::expected<VertBitSet, std::string> findSpikeVertices( float minSumAngle, const VertBitSet* region = nullptr, ProgressCallback cb = {} ) const;
+    [[nodiscard]] MRMESH_API Expected<VertBitSet, std::string> findSpikeVertices( float minSumAngle, const VertBitSet* region = nullptr, ProgressCallback cb = {} ) const;
 
     // given an edge between two triangular faces, computes sine of dihedral angle between them:
     // 0 if both faces are in the same plane,
@@ -193,8 +196,9 @@ struct [[nodiscard]] Mesh
     // for all points not in topology.getValidVerts() sets coordinates to (0,0,0)
     MRMESH_API void zeroUnusedPoints();
 
-    // applies given transformation to all valid mesh vertices
-    MRMESH_API void transform( const AffineXf3f & xf );
+    // applies given transformation to specified vertices
+    // if region is nullptr, all valid mesh vertices are used
+    MRMESH_API void transform( const AffineXf3f& xf, const VertBitSet* region = nullptr );
 
     // creates new point and assigns given position to it
     MRMESH_API VertId addPoint( const Vector3f & pos );

@@ -99,7 +99,7 @@ void WebRequest::setBody( std::string body )
     instance_().body_ = std::move( body );
 }
 
-bool WebRequest::send( std::string urlP, ResponseCallback callback, bool async /*= true */ )
+bool WebRequest::send( std::string urlP, const std::string & logName, ResponseCallback callback, bool async /*= true */ )
 {
     auto& inst = instance_();
     if ( !sRequestReady )
@@ -133,7 +133,9 @@ bool WebRequest::send( std::string urlP, ResponseCallback callback, bool async /
     inst.clear();
     if ( !async )
     {
+        spdlog::info( "WebRequest  {}", logName.c_str() );
         auto res = sendLambda();
+        spdlog::info( "WebResponse {}: {}", logName.c_str(), int( res.status_code ) );
         Json::Value resJson;
         resJson["code"] = int( res.status_code );
         resJson["text"] = res.text;
@@ -143,9 +145,11 @@ bool WebRequest::send( std::string urlP, ResponseCallback callback, bool async /
     }
     else
     {
-        std::thread requestThread = std::thread( [sendLambda, callback] ()
+        std::thread requestThread = std::thread( [sendLambda, callback, logName] ()
         {
+            spdlog::info( "WebRequest  {}", logName.c_str() );
             auto res = sendLambda();
+            spdlog::info( "WebResponse {}: {}", logName.c_str(), int( res.status_code ) );
             Json::Value resJson;
             resJson["code"] = int( res.status_code );
             resJson["text"] = res.text;
@@ -191,19 +195,19 @@ MR::WebRequest& WebRequest::instance_()
     return inst;
 }
 
-tl::expected<Json::Value, std::string> parseResponse( const Json::Value& response )
+Expected<Json::Value, std::string> parseResponse( const Json::Value& response )
 {
     if ( response["code"].asInt() == 0 )
-        return tl::make_unexpected( "Bad internet connection." );
+        return unexpected( "Bad internet connection." );
     if ( response["error"].isString() )
     {
         auto error = response["error"].asString();
         if ( !error.empty() && error != "OK" )
-            return tl::make_unexpected( error );
+            return unexpected( error );
     }
     std::string text;
     if ( !response["text"].isString() )
-        return tl::make_unexpected( "Unknown error." );
+        return unexpected( "Unknown error." );
 
     text = response["text"].asString();
 
@@ -212,9 +216,9 @@ tl::expected<Json::Value, std::string> parseResponse( const Json::Value& respons
     std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
     std::string error;
     if ( !reader->parse( text.data(), text.data() + text.size(), &root, &error ) )
-        return tl::make_unexpected( "Unknown error." );
+        return unexpected( "Unknown error." );
     if ( root["message"].isString() )
-        return tl::make_unexpected( root["message"].asString() );
+        return unexpected( root["message"].asString() );
     return root;
 }
 

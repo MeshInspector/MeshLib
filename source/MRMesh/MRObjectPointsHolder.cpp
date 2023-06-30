@@ -182,7 +182,7 @@ Box3f ObjectPointsHolder::computeBoundingBox_() const
     return bb;
 }
 
-tl::expected<std::future<void>, std::string> ObjectPointsHolder::serializeModel_( const std::filesystem::path& path ) const
+Expected<std::future<void>, std::string> ObjectPointsHolder::serializeModel_( const std::filesystem::path& path ) const
 {
     if ( ancillary_ || !points_ )
         return {};
@@ -211,7 +211,7 @@ VoidOrErrStr ObjectPointsHolder::deserializeModel_( const std::filesystem::path&
     auto res = PointsLoad::fromPly( pathFromUtf8( utf8string( path ) + ".ply" ), &vertsColorMap_, progressCb );
 #endif
     if ( !res.has_value() )
-        return tl::make_unexpected( res.error() );
+        return unexpected( res.error() );
 
     if ( !vertsColorMap_.empty() )
         setColoringType( ColoringType::VertsColorMap );

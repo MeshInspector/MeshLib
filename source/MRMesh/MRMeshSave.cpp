@@ -31,7 +31,7 @@ VoidOrErrStr toMrmesh( const Mesh & mesh, const std::filesystem::path & file, Pr
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
-        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
     return toMrmesh( mesh, out, callback );
 }
@@ -47,10 +47,10 @@ VoidOrErrStr toMrmesh( const Mesh & mesh, std::ostream & out, ProgressCallback c
 
     const bool cancel = !MR::writeByBlocks( out, ( const char* )mesh.points.data(), mesh.points.size() * sizeof( Vector3f ), callback );
     if ( cancel )
-        return tl::make_unexpected( std::string( "Saving canceled" ) );
+        return unexpected( std::string( "Saving canceled" ) );
 
     if ( !out )
-        return tl::make_unexpected( std::string( "Error saving in Mrmesh-format" ) );
+        return unexpected( std::string( "Error saving in Mrmesh-format" ) );
 
     if ( callback )
         callback( 1.f );
@@ -61,7 +61,7 @@ VoidOrErrStr toOff( const Mesh & mesh, const std::filesystem::path & file, Progr
 {
     std::ofstream out( file );
     if ( !out )
-        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
     return toOff( mesh, out, callback );
 }
@@ -78,7 +78,7 @@ VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, ProgressCallback callba
         auto p = mesh.points[i];
         out << p.x << ' ' << p.y << ' ' << p.z << '\n';
         if ( callback && !( i & 0x3FF ) && !callback( float( i ) / maxPoints * 0.5f ) )
-            return tl::make_unexpected( std::string( "Saving canceled" ) );
+            return unexpected( std::string( "Saving canceled" ) );
     }
     out << '\n';
 
@@ -88,7 +88,7 @@ VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, ProgressCallback callba
     {
         ++faceIndex;
         if ( callback && !( faceIndex & 0x3FF ) && !callback( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
-            return tl::make_unexpected( std::string( "Saving canceled" ) );
+            return unexpected( std::string( "Saving canceled" ) );
         if ( !e.valid() )
             continue;
 
@@ -99,7 +99,7 @@ VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, ProgressCallback callba
     }
 
     if ( !out )
-        return tl::make_unexpected( std::string( "Error saving in OFF-format" ) );
+        return unexpected( std::string( "Error saving in OFF-format" ) );
 
     if ( callback )
         callback( 1.f );
@@ -112,7 +112,7 @@ VoidOrErrStr toObj( const Mesh & mesh, const std::filesystem::path & file, const
 {
     std::ofstream out( file );
     if ( !out )
-        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
     return toObj( mesh, out, xf, firstVertId, callback );
 }
@@ -130,7 +130,7 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const AffineXf3f & xf
         auto p = xf( mesh.points[i] );
         out << "v " << p.x << ' ' << p.y << ' ' << p.z << '\n';
         if ( callback && !( i & 0x3FF ) && !callback( float( i ) / lastValidPoint * 0.5f ) )
-            return tl::make_unexpected( std::string( "Saving canceled" ) );
+            return unexpected( std::string( "Saving canceled" ) );
     }
 
     const float facesNum = float( mesh.topology.edgePerFace().size() );
@@ -139,7 +139,7 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const AffineXf3f & xf
     {
         ++faceIndex;
         if ( callback && !( faceIndex & 0x3FF ) && !callback( faceIndex / facesNum * 0.5f + 0.5f ) )
-            return tl::make_unexpected( std::string( "Saving canceled" ) );
+            return unexpected( std::string( "Saving canceled" ) );
         if ( !e.valid() )
             continue;
 
@@ -150,7 +150,7 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const AffineXf3f & xf
     }
 
     if ( !out )
-        return tl::make_unexpected( std::string( "Error saving in OBJ-format" ) );
+        return unexpected( std::string( "Error saving in OBJ-format" ) );
 
     if ( callback )
         callback( 1.f );
@@ -161,7 +161,7 @@ VoidOrErrStr toBinaryStl( const Mesh & mesh, const std::filesystem::path & file,
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
-        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
     return toBinaryStl( mesh, out, callback );
 }
@@ -209,12 +209,12 @@ VoidOrErrStr toBinaryStl( const Mesh & mesh, std::ostream & out, ProgressCallbac
         std::uint16_t attr{ 0 };
         out.write( ( const char* )&attr, 2 );
         if ( callback && !( trisIndex & 0x3FF ) && !callback( trisIndex / trisNum ) )
-            return tl::make_unexpected( std::string( "Saving canceled" ) );
+            return unexpected( std::string( "Saving canceled" ) );
         ++trisIndex;
     }
 
     if ( !out )
-        return tl::make_unexpected( std::string( "Error saving in binary STL-format" ) );
+        return unexpected( std::string( "Error saving in binary STL-format" ) );
 
     if ( callback )
         callback( 1.f );
@@ -225,7 +225,7 @@ VoidOrErrStr toPly( const Mesh & mesh, const std::filesystem::path & file, const
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
-        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
     return toPly( mesh, out, colors, callback );
 }
@@ -256,7 +256,7 @@ VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const VertColors* col
             };
         const bool cancel = !MR::writeByBlocks( out, ( const char* )mesh.points.data(), numVertices * sizeof( Vector3f ), callbackFn );
         if ( cancel )
-            return tl::make_unexpected( std::string( "Saving canceled" ) );
+            return unexpected( std::string( "Saving canceled" ) );
     }
     else
     {
@@ -266,7 +266,7 @@ VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const VertColors* col
             out.write( (const char*) &mesh.points[i].x, 12 );
             out.write( (const char*) &( *colors )[i].r, 3 ); // write only r g b, not a
             if ( callback && !( i & 0x3FF ) && !callback( float( i ) / numVertices * 0.5f ) )
-                return tl::make_unexpected( std::string( "Saving canceled" ) );
+                return unexpected( std::string( "Saving canceled" ) );
         }
     }
 
@@ -288,12 +288,12 @@ VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const VertColors* col
         mesh.topology.getTriVerts( f, tri.v );
         out.write( (const char *)&tri, 13 );
         if ( callback && !( faceIndex & 0x3FF ) && !callback( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
-            return tl::make_unexpected( std::string( "Saving canceled" ) );
+            return unexpected( std::string( "Saving canceled" ) );
         ++faceIndex;
     }
 
     if ( !out )
-        return tl::make_unexpected( std::string( "Error saving in PLY-format" ) );
+        return unexpected( std::string( "Error saving in PLY-format" ) );
 
     if ( callback )
         callback( 1.f );
@@ -306,7 +306,7 @@ VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
-        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
     return toCtm( mesh, out, options, colors, callback );
 }
@@ -369,7 +369,7 @@ VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions 
         aIndices.data(), numSaveFaces, nullptr );
 
     if ( ctmGetError(context) != CTM_NONE )
-        return tl::make_unexpected( "Error encoding in CTM-format" );
+        return unexpected( "Error encoding in CTM-format" );
 
     std::vector<Vector4f> colors4f; // should be alive when save is performed
     if ( colors )
@@ -383,7 +383,7 @@ VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions 
     }
 
     if ( ctmGetError( context ) != CTM_NONE )
-        return tl::make_unexpected( "Error encoding in CTM-format colors" );
+        return unexpected( "Error encoding in CTM-format colors" );
 
     struct SaveData
     {
@@ -452,9 +452,9 @@ VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions 
     }, &saveData );
 
     if ( saveData.wasCanceled )
-        return tl::make_unexpected( std::string( "Saving canceled" ) );
+        return unexpected( std::string( "Saving canceled" ) );
     if ( !out || ctmGetError(context) != CTM_NONE )
-        return tl::make_unexpected( std::string( "Error saving in CTM-format" ) );
+        return unexpected( std::string( "Error saving in CTM-format" ) );
 
     if ( callback )
         callback( 1.f );
@@ -469,7 +469,7 @@ VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path
     for ( auto & c : ext )
         c = (char) tolower( c );
 
-    VoidOrErrStr res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".off" )
         res = MR::MeshSave::toOff( mesh, file, callback );
     else if ( ext == ".obj" )
@@ -494,7 +494,7 @@ VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const st
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    VoidOrErrStr res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".off" )
         res = MR::MeshSave::toOff( mesh, out, callback );
     else if ( ext == ".obj" )

@@ -338,21 +338,11 @@ Vector3f Mesh::pseudonormal( UndirectedEdgeId ue, const FaceBitSet * region ) co
     auto l = topology.left( e );
     auto r = topology.right( e );
     if ( !l || ( region && !region->test( l ) ) )
-    {
-        auto n = normal( r );
-        assert( n.lengthSq() > 0.0f );
-        return n;
-    }
+        return normal( r );
     if ( !r || ( region && !region->test( r ) ) )
-    {
-        auto n = normal( l );
-        assert( n.lengthSq() > 0.0f );
-        return n;
-    }
+        return normal( l );
     auto nl = normal( l );
     auto nr = normal( r );
-    assert( nl.lengthSq() > 0.0f );
-    assert( nr.lengthSq() > 0.0f );
     return ( nl + nr ).normalized();
 }
 
@@ -363,9 +353,7 @@ Vector3f Mesh::pseudonormal( const MeshTriPoint & p, const FaceBitSet * region )
     if ( auto e = p.onEdge( topology ) )
         return pseudonormal( e->e.undirected(), region );
     assert( !region || region->test( topology.left( p.e ) ) );
-    auto n = leftNormal( p.e );
-    assert( n.lengthSq() > 0.0f );
-    return n;
+    return leftNormal( p.e );
 }
 
 float Mesh::signedDistance( const Vector3f & pt, const MeshTriPoint & proj, const FaceBitSet * region ) const
@@ -413,7 +401,7 @@ float Mesh::sumAngles( VertId v, bool * outBoundaryVert ) const
     return sum;
 }
 
-tl::expected<VertBitSet, std::string> Mesh::findSpikeVertices( float minSumAngle, const VertBitSet * region, ProgressCallback cb ) const
+Expected<VertBitSet, std::string> Mesh::findSpikeVertices( float minSumAngle, const VertBitSet * region, ProgressCallback cb ) const
 {
     MR_TIMER
     const VertBitSet & testVerts = topology.getVertIds( region );
@@ -660,19 +648,14 @@ void Mesh::zeroUnusedPoints()
     } );
 }
 
-void Mesh::transform( const AffineXf3f & xf )
+void Mesh::transform( const AffineXf3f& xf, const VertBitSet* region )
 {
     MR_TIMER
-    VertId lastValidVert = topology.lastValidVert();
 
-    tbb::parallel_for(tbb::blocked_range<VertId>(VertId{ 0 }, lastValidVert + 1), [&](const tbb::blocked_range<VertId> & range)
+    BitSetParallelFor( topology.getVertIds( region ), [&] ( const VertId v )
     {
-        for (VertId v = range.begin(); v < range.end(); ++v)
-        {
-            if (topology.hasVert(v))
-                points[v] = xf(points[v]);
-        }
-    });
+        points[v] = xf( points[v] );
+    } );
     invalidateCaches();
 }
 

@@ -18,15 +18,22 @@
 namespace MR
 {
 
-// collapses given edge and deletes
-// 1) faces: left( e ) and right( e );
-// 2) vertex org( e )/dest( e ) if given edge was their only edge, otherwise only dest( e );
-// 3) edges: e, next( e.sym() ), prev( e.sym() );
-// returns prev( e ) if it is valid
-EdgeId collapseEdge( MeshTopology & topology, const EdgeId e )
+/// collapses given edge and deletes
+/// 1) faces: left( e ) and right( e );
+/// 2) vertex org( e )/dest( e ) if given edge was their only edge, otherwise only dest( e );
+/// 3) edges: e, next( e.sym() ), prev( e.sym() ), and optionally next( e ), prev( e ) if their left and right triangles are deleted;
+/// updates notFlippable removing deleted edges from there, and adding the edges that shall replace them;
+/// calls onEdgeDel for every deleted edge;
+/// returns prev( e ) if it is valid;
+EdgeId collapseEdge( MeshTopology & topology, const EdgeId e, UndirectedEdgeBitSet* notFlippable, const std::function<void(EdgeId e, EdgeId e1)> & onEdgeDel )
 {
     topology.setLeft( e, FaceId() );
     topology.setLeft( e.sym(), FaceId() );
+
+    if ( notFlippable )
+        notFlippable->reset( e.undirected() );
+    if ( onEdgeDel )
+        onEdgeDel( e, EdgeId{} );
 
     if ( topology.next( e ) == e )
     {
@@ -76,6 +83,24 @@ EdgeId collapseEdge( MeshTopology & topology, const EdgeId e )
             topology.splice( topology.prev( ePrev.sym() ), ePrev.sym() );
             topology.setOrg( ePrev, {} );
             topology.setOrg( ePrev.sym(), {} );
+            assert( topology.isLoneEdge( ePrev ) );
+            if ( notFlippable )
+            {
+                notFlippable->reset( a.undirected() );
+                notFlippable->reset( ePrev.undirected() );
+            }
+            if ( onEdgeDel )
+            {
+                onEdgeDel( a, EdgeId{} );
+                onEdgeDel( ePrev, EdgeId{} );
+            }
+        }
+        else 
+        {
+            if ( notFlippable && notFlippable->test_set( a.undirected(), false ) )
+                notFlippable->autoResizeSet( ePrev.undirected() );
+            if ( onEdgeDel )
+                onEdgeDel( a, ePrev );
         }
     }
 
@@ -90,6 +115,24 @@ EdgeId collapseEdge( MeshTopology & topology, const EdgeId e )
             topology.splice( topology.prev( eNext.sym() ), eNext.sym() );
             topology.setOrg( eNext, {} );
             topology.setOrg( eNext.sym(), {} );
+            assert( topology.isLoneEdge( eNext ) );
+            if ( notFlippable )
+            {
+                notFlippable->reset( b.undirected() );
+                notFlippable->reset( eNext.undirected() );
+            }
+            if ( onEdgeDel )
+            {
+                onEdgeDel( b, EdgeId{} );
+                onEdgeDel( eNext, EdgeId{} );
+            }
+        }
+        else
+        {
+            if ( notFlippable && notFlippable->test_set( b.undirected(), false ) )
+                notFlippable->autoResizeSet( eNext.undirected() );
+            if ( onEdgeDel )
+                onEdgeDel( b, eNext );
         }
     }
 
@@ -317,7 +360,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
     auto earlyReturn = [&]( float errSq )
     {
         bool flip = false;
-        if ( settings_.maxAngleChange >= 0 )
+        if ( settings_.maxAngleChange >= 0 && ( !settings_.notFlippable || !settings_.notFlippable->test( ue ) ) )
         {
             float deviationSqAfterFlip = FLT_MAX;
             if ( !checkDeloneQuadrangleInMesh( mesh_, ue, deloneSettings_, &deviationSqAfterFlip )
@@ -398,6 +441,10 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         if ( auto pe = topology.prev( edgeToCollapse.sym() ); pe != edgeToCollapse.sym() && pe == topology.next( edgeToCollapse.sym() ) )
             return {};
     }
+
+    if ( settings_.notFlippable && settings_.notFlippable->test( edgeToCollapse ) )
+        return {}; // cannot collapse the edge from notFlippable set
+
     auto vo = topology.org( edgeToCollapse );
     auto vd = topology.dest( edgeToCollapse );
     auto po = mesh_.points[vo];
@@ -417,7 +464,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     };
     if ( ( !vl || !vr ) && settings_.maxBdShift < FLT_MAX )
     {
-        if ( !smallShift( LineSegm3f{ mesh_.orgPnt( edgeToCollapse ), mesh_.destPnt( edgeToCollapse ) }, collapsePos ) )
+        if ( !smallShift( mesh_.edgeSegment( edgeToCollapse ), collapsePos ) )
             return {}; // new vertex is too far from collapsing boundary edge
         if ( !vr )
         {
@@ -463,6 +510,8 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
             assert( topology.isLeftBdEdge( oBdEdge ) );
             continue;
         }
+        if ( settings_.notFlippable && settings_.notFlippable->test( e ) )
+            return {}; // cannot collapse an edge incident to notFlippable edge
 
         const auto pDest2 = mesh_.destPnt( topology.next( e ) );
         if ( eDest != vr )
@@ -500,6 +549,8 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
             assert( topology.isLeftBdEdge( dBdEdge ) );
             continue;
         }
+        if ( settings_.notFlippable && settings_.notFlippable->test( e ) )
+            return {}; // cannot collapse an edge incident to notFlippable edge
 
         const auto pDest2 = mesh_.destPnt( topology.next( e ) );
         if ( eDest != vl )
@@ -554,7 +605,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         if ( auto r = topology.left( edgeToCollapse.sym() ) )
             settings_.region->reset( r );
     }
-    auto eo = collapseEdge( topology, edgeToCollapse );
+    auto eo = collapseEdge( topology, edgeToCollapse, settings_.notFlippable, settings_.onEdgeDel );
     const auto remainingVertex = eo ? vo : VertId{};
     return remainingVertex;
 }
@@ -657,9 +708,11 @@ DecimateResult MeshDecimator::run()
     {
         FaceMap fmap;
         VertMap vmap;
+        WholeEdgeMap emap;
         mesh_.pack( 
             settings_.region ? &fmap : nullptr,
-            settings_.vertForms ? &vmap : nullptr );
+            settings_.vertForms ? &vmap : nullptr,
+            settings_.notFlippable ? &emap : nullptr );
 
         if ( settings_.region )
             *settings_.region = settings_.region->getMapping( fmap, mesh_.topology.faceSize() );
@@ -672,6 +725,9 @@ DecimateResult MeshDecimator::run()
                         (*pVertForms_)[newV] = (*pVertForms_)[oldV];
             pVertForms_->resize( mesh_.topology.vertSize() );
         }
+
+        if ( settings_.notFlippable )
+            *settings_.notFlippable = settings_.notFlippable->getMapping( [&emap]( UndirectedEdgeId i ) { return emap[i].undirected(); }, mesh_.topology.undirectedEdgeSize() );
     }
 
     res_.cancelled = false;
@@ -845,16 +901,24 @@ DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings )
 
 bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
 {
-    MR_TIMER;
-    MR_WRITER( mesh );
-
-    assert( settings.edgeLenUniformity > 0 && settings.edgeLenUniformity <= 1 );
-    const auto uni = std::clamp( settings.edgeLenUniformity, 0.01f, 1.0f );
+    MR_TIMER
     if ( settings.progressCallback && !settings.progressCallback( 0.0f ) )
         return false;
+    if ( settings.targetEdgeLen <= 0 )
+    {
+        assert( false );
+        return false;
+    }
+    if ( settings.region && !settings.region->any() )
+    {
+        assert( false );
+        return false;
+    }
+
+    MR_WRITER( mesh );
 
     SubdivideSettings subs;
-    subs.maxEdgeLen = settings.targetEdgeLen / uni;
+    subs.maxEdgeLen = settings.targetEdgeLen;
     subs.maxEdgeSplits = 10'000'000;
     subs.maxAngleChangeAfterFlip = settings.maxAngleChangeAfterFlip;
     subs.smoothMode = settings.useCurvature;
@@ -866,21 +930,33 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     if ( !reportProgress( settings.progressCallback, 0.5f ) )
         return false;
 
-    DecimateSettings decs;
-    decs.strategy = DecimateStrategy::ShortestEdgeFirst;
-    decs.maxError = settings.targetEdgeLen * uni;
-    decs.maxBdShift = settings.maxBdShift;
-    decs.region = settings.region;
-    decs.packMesh = settings.packMesh;
-    decs.progressCallback = subprogress( settings.progressCallback, 0.5f, 0.95f );
-    decs.preCollapse = settings.preCollapse;
-    // it was a bad idea to make decs.stabilizer = settings.targetEdgeLen;
-    // yes, it increased the uniformity of vertices, but shifted boundary vertices after edge collapse inside
-    decimateMesh( mesh, decs );
-    if ( settings.notFlippable )
-        mesh.topology.excludeLoneEdges( *settings.notFlippable );
-    if ( !reportProgress( settings.progressCallback, 0.95f ) )
-        return false;
+    // compute target number of triangles to get desired average edge length
+    const auto regionArea = mesh.area( settings.region );
+    const auto targetTriArea = sqr( settings.targetEdgeLen ) * ( sqrt( 3.0f ) / 4 ); // for equilateral triangle
+    const auto targetNumTri = int( regionArea / targetTriArea );
+    const auto currNumTri = settings.region ? (int)settings.region->count() : mesh.topology.numValidFaces();
+
+    if ( currNumTri > targetNumTri )
+    {
+        DecimateSettings decs;
+        decs.strategy = DecimateStrategy::ShortestEdgeFirst;
+        decs.maxError = FLT_MAX;
+        decs.maxEdgeLen = 1.5f * settings.targetEdgeLen; // not to over-decimate when there are many notFlippable edges in the region
+        decs.maxDeletedFaces = currNumTri - targetNumTri;
+        decs.maxBdShift = settings.maxBdShift;
+        decs.region = settings.region;
+        decs.notFlippable = settings.notFlippable;
+        decs.packMesh = settings.packMesh;
+        decs.progressCallback = subprogress( settings.progressCallback, 0.5f, 0.95f );
+        decs.preCollapse = settings.preCollapse;
+        decs.onEdgeDel = settings.onEdgeDel;
+        decs.stabilizer = 1e-6f;
+        // it was a bad idea to make decs.stabilizer = settings.targetEdgeLen;
+        // yes, it increased the uniformity of vertices, but shifted boundary vertices after edge collapse inside
+        decimateMesh( mesh, decs );
+        if ( !reportProgress( settings.progressCallback, 0.95f ) )
+            return false;
+    }
 
     if ( settings.finalRelaxIters > 0 )
     {
@@ -890,8 +966,18 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
             innerVerts -= getIncidentVerts( mesh.topology, *settings.notFlippable );
         MeshRelaxParams rp;
         rp.region = &innerVerts;
-        rp.iterations = settings.finalRelaxIters;
-        relax( mesh, rp, subprogress( settings.progressCallback, 0.95f, 1.0f ) );
+        DeloneSettings ds;
+        ds.maxAngleChange = settings.maxAngleChangeAfterFlip;
+        ds.region = settings.region;
+        ds.notFlippable = settings.notFlippable;
+        auto sp = subprogress( settings.progressCallback, 0.95f, 1.0f );
+        for ( int i = 0; i < settings.finalRelaxIters; ++i )
+        {
+            if ( !reportProgress( sp, float( i ) / settings.finalRelaxIters ) )
+                return false;
+            equalizeTriAreas( mesh, rp );
+            makeDeloneEdgeFlips( mesh, ds );
+        }
     }
 
     return reportProgress( settings.progressCallback, 1.0f );

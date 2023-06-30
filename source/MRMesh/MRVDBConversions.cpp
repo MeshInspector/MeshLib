@@ -78,7 +78,7 @@ VoidOrErrStr gridToPointsAndTris(
         return unexpectedOperationCanceled();
 
     if ( mesher.pointListSize() > settings.maxVertices )
-        return tl::make_unexpected( "Vertices number limit exceeded." );
+        return unexpected( "Vertices number limit exceeded." );
 
     // Preallocate the point list
     points.clear();
@@ -115,7 +115,7 @@ VoidOrErrStr gridToPointsAndTris(
     const size_t tNum = numTriangles + 2 * numQuads;
 
     if ( tNum > settings.maxFaces )
-        return tl::make_unexpected( "Triangles number limit exceeded." );
+        return unexpected( "Triangles number limit exceeded." );
 
     t.clear();
     t.reserve( tNum );
@@ -230,10 +230,10 @@ void evalGridMinMax( const FloatGrid& grid, float& min, float& max )
 #endif
 }
 
-tl::expected<VdbVolume, std::string> meshToVolume( const Mesh& mesh, const MeshToVolumeParams& params /*= {} */ )
+Expected<VdbVolume, std::string> meshToVolume( const Mesh& mesh, const MeshToVolumeParams& params /*= {} */ )
 {
     if ( params.type == MeshToVolumeParams::Type::Signed && !mesh.topology.isClosed() )
-        return tl::make_unexpected( "Only closed mesh can be converted to signed volume" );
+        return unexpected( "Only closed mesh can be converted to signed volume" );
 
     auto shift = AffineXf3f::translation( mesh.computeBoundingBox( &params.worldXf ).min - params.surfaceOffset * params.voxelSize );
     FloatGrid grid;
@@ -243,7 +243,7 @@ tl::expected<VdbVolume, std::string> meshToVolume( const Mesh& mesh, const MeshT
         grid = meshToDistanceField( mesh, shift.inverse() * params.worldXf, params.voxelSize, params.surfaceOffset, params.cb );
 
     if ( !grid )
-        return tl::make_unexpected( "Operation canceled" );
+        return unexpected( "Operation canceled" );
 
     // to get proper normal orientation both for signed and unsigned cases
     grid->setGridClass( openvdb::GRID_LEVEL_SET );
@@ -302,7 +302,7 @@ VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, ProgressCal
     return res;
 }
 
-tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const GridToMeshSettings & settings )
+Expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const GridToMeshSettings & settings )
 {
     MR_TIMER;
     if ( !reportProgress( settings.cb, 0.0f ) )
@@ -314,7 +314,7 @@ tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const GridToM
         auto s = settings;
         s.cb = subprogress( settings.cb, 0.0f, 0.2f );
         if ( auto x = gridToPointsAndTris( *grid, pts, t, s ); !x )
-            return tl::make_unexpected( std::move( x.error() ) );
+            return unexpected( std::move( x.error() ) );
     }
 
     if ( !reportProgress( settings.cb, 0.2f ) )
@@ -326,7 +326,7 @@ tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const GridToM
     return res;
 }
 
-tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
+Expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
     int maxFaces, float offsetVoxels, float adaptivity, ProgressCallback cb )
 {
     return gridToMesh( grid, GridToMeshSettings{
@@ -338,7 +338,7 @@ tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3
     } );
 }
 
-tl::expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const GridToMeshSettings & settings )
+Expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const GridToMeshSettings & settings )
 {
     MR_TIMER;
     if ( !reportProgress( settings.cb, 0.0f ) )
@@ -350,7 +350,7 @@ tl::expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const GridToMeshSe
         auto s = settings;
         s.cb = subprogress( settings.cb, 0.0f, 0.2f );
         if ( auto x = gridToPointsAndTris( *grid, pts, t, s ); !x )
-            return tl::make_unexpected( std::move( x.error() ) );
+            return unexpected( std::move( x.error() ) );
     }
     grid.reset(); // free grid's memory
 
@@ -363,7 +363,7 @@ tl::expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const GridToMeshSe
     return res;
 }
 
-tl::expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const Vector3f& voxelSize,
+Expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const Vector3f& voxelSize,
     int maxFaces, float offsetVoxels, float adaptivity, ProgressCallback cb )
 {
     return gridToMesh( std::move( grid ), GridToMeshSettings{
@@ -375,7 +375,7 @@ tl::expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const Vector3f& vo
     } );
 }
 
-tl::expected<MR::Mesh, std::string> gridToMesh( const VdbVolume& vdbVolume, int maxFaces,
+Expected<MR::Mesh, std::string> gridToMesh( const VdbVolume& vdbVolume, int maxFaces,
     float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
 {
     return gridToMesh( vdbVolume.data, GridToMeshSettings{
@@ -387,7 +387,7 @@ tl::expected<MR::Mesh, std::string> gridToMesh( const VdbVolume& vdbVolume, int 
     } );
 }
 
-tl::expected<MR::Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume, int maxFaces,
+Expected<MR::Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume, int maxFaces,
     float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
 {
     return gridToMesh( std::move( vdbVolume.data ), GridToMeshSettings{
@@ -399,7 +399,7 @@ tl::expected<MR::Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume, int maxFa
     } );
 }
 
-tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
+Expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
     float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
 {
     return gridToMesh( grid, GridToMeshSettings{
@@ -410,7 +410,7 @@ tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3
     } );
 }
 
-tl::expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const Vector3f& voxelSize,
+Expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const Vector3f& voxelSize,
     float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
 {
     return gridToMesh( std::move( grid ), GridToMeshSettings{
@@ -421,7 +421,7 @@ tl::expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const Vector3f& vo
     } );
 }
 
-tl::expected<MR::Mesh, std::string> gridToMesh( const VdbVolume& vdbVolume,
+Expected<MR::Mesh, std::string> gridToMesh( const VdbVolume& vdbVolume,
     float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
 {
     return gridToMesh( vdbVolume.data, GridToMeshSettings{
@@ -432,7 +432,7 @@ tl::expected<MR::Mesh, std::string> gridToMesh( const VdbVolume& vdbVolume,
     } );
 }
 
-tl::expected<MR::Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume,
+Expected<MR::Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume,
     float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
 {
     return gridToMesh( std::move( vdbVolume.data ), GridToMeshSettings{
@@ -504,7 +504,7 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
     return {};
 }
 
-tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf, float voxelSize,
+Expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf, float voxelSize,
     float offsetA, float offsetB, float adaptivity, std::shared_ptr<IFastWindingNumber> fwn, ProgressCallback cb /*= {} */ )
 {
     MR_TIMER
@@ -543,7 +543,7 @@ tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, co
         sp = subprogress( cb, 0.2f, 0.3f );
         auto signRes = makeSignedWithFastWinding( grid, Vector3f::diagonal(voxelSize), mp.mesh, {}, fwn, sp );
         if ( !signRes.has_value() )
-            return tl::make_unexpected( signRes.error() );
+            return unexpected( signRes.error() );
     }
 
     openvdb::tools::volumeToMesh( *grid, points, tris, quads, offsetInVoxelsA, adaptivity );

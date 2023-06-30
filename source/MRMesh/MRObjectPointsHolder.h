@@ -98,7 +98,7 @@ protected:
 
     MRMESH_API virtual Box3f computeBoundingBox_() const override;
 
-    MRMESH_API virtual tl::expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const override;
+    MRMESH_API virtual Expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const override;
 
     MRMESH_API virtual VoidOrErrStr deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
 

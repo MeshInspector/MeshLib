@@ -248,7 +248,7 @@ VoidOrErrStr saveDistanceMapToImage( const DistanceMap& dm, const std::filesyste
 }
 
 
-tl::expected<MR::DistanceMap, std::string> convertImageToDistanceMap( const Image& image, float threshold /*= 1.f / 255*/ )
+Expected<MR::DistanceMap, std::string> convertImageToDistanceMap( const Image& image, float threshold /*= 1.f / 255*/ )
 {
     threshold = std::clamp( threshold * 255, 0.f, 255.f );
     DistanceMap dm( image.resolution.x, image.resolution.y );
@@ -258,7 +258,7 @@ tl::expected<MR::DistanceMap, std::string> convertImageToDistanceMap( const Imag
         const bool monochrome = pixels[i].r == pixels[i].g && pixels[i].g == pixels[i].b;
         assert( monochrome );
         if ( !monochrome )
-            return tl::make_unexpected( "Error convert Image to DistanceMap: image isn't monochrome" );
+            return unexpected( "Error convert Image to DistanceMap: image isn't monochrome" );
         if ( pixels[i].r < threshold )
             continue;
         dm.set( i, 255.0f - pixels[i].r );
@@ -266,11 +266,11 @@ tl::expected<MR::DistanceMap, std::string> convertImageToDistanceMap( const Imag
     return dm;
 }
 
-tl::expected<MR::DistanceMap, std::string> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold /*= 1.f / 255*/ )
+Expected<MR::DistanceMap, std::string> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold /*= 1.f / 255*/ )
 {
     auto resLoad = ImageLoad::fromAnySupportedFormat( filename );
     if ( !resLoad.has_value() )
-        return tl::make_unexpected( resLoad.error() );
+        return unexpected( resLoad.error() );
     return convertImageToDistanceMap( *resLoad, threshold );
 }
 

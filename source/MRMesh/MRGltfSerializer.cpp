@@ -99,21 +99,21 @@ std::vector<Material> readMaterials( const tinygltf::Model& model )
     return result;
 }
 
-tl::expected<int, std::string> readVertCoords( VertCoords& vertexCoordinates, const tinygltf::Model& model, const tinygltf::Primitive& primitive )
+Expected<int, std::string> readVertCoords( VertCoords& vertexCoordinates, const tinygltf::Model& model, const tinygltf::Primitive& primitive )
 {
     if ( primitive.mode != TINYGLTF_MODE_TRIANGLES )
-        return tl::make_unexpected( "This topology is not implemented" );
+        return unexpected( "This topology is not implemented" );
 
     auto posAttrib = primitive.attributes.find( "POSITION" );
     if ( posAttrib == primitive.attributes.end() )
-        return tl::make_unexpected( "No vertex data" );
+        return unexpected( "No vertex data" );
 
     auto accessor = model.accessors[posAttrib->second];
     auto bufferView = model.bufferViews[accessor.bufferView];
     auto buffer = model.buffers[bufferView.buffer];
 
     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT || accessor.type != TINYGLTF_TYPE_VEC3 )
-        return tl::make_unexpected( "This vertex component type is not implemented" );
+        return unexpected( "This vertex component type is not implemented" );
 
     VertId start = VertId( vertexCoordinates.size() );
     vertexCoordinates.resize( vertexCoordinates.size() + accessor.count );
@@ -211,7 +211,7 @@ std::string readTriangulation( Triangulation& t, const tinygltf::Model& model, c
     return "";
 }
 
-tl::expected<std::vector<MeshData>, std::string> readMeshes( const tinygltf::Model& model, const std::vector<Material> materials, ProgressCallback callback )
+Expected<std::vector<MeshData>, std::string> readMeshes( const tinygltf::Model& model, const std::vector<Material> materials, ProgressCallback callback )
 {
     std::vector<MeshData> result;
     result.reserve( model.meshes.size() );
@@ -219,7 +219,7 @@ tl::expected<std::vector<MeshData>, std::string> readMeshes( const tinygltf::Mod
     for ( size_t meshId = 0; meshId < model.meshes.size(); ++meshId )
     {
         if ( callback && !callback( 0.8f * ( meshId + 1 ) / float( model.meshes.size() ) ) )
-            return tl::make_unexpected( "Operation was cancelled" );
+            return unexpected( "Operation was cancelled" );
 
         result.emplace_back();
         auto& meshData = result.back();
@@ -236,15 +236,15 @@ tl::expected<std::vector<MeshData>, std::string> readMeshes( const tinygltf::Mod
             VertId oldVertexCount = VertId( vertexCoordinates.size() );
             auto vertexCount = readVertCoords( vertexCoordinates, model, primitive );
             if ( !vertexCount.has_value() )
-                return tl::make_unexpected( vertexCount.error() );
+                return unexpected( vertexCount.error() );
 
             fillVertsColorMap( meshData.vertsColorMap, *vertexCount, materials, primitive.material );
 
             if ( auto error = readUVCoords( meshData.uvCoords, *vertexCount, model, primitive ); !error.empty() )
-                return tl::make_unexpected( error );
+                return unexpected( error );
 
             if ( auto error = readTriangulation( t, model, primitive, oldVertexCount, *vertexCount ); !error.empty() )
-                return tl::make_unexpected( error );
+                return unexpected( error );
 
             if ( meshData.materialIndex < 0 )
                 meshData.materialIndex = primitive.material;
@@ -314,7 +314,7 @@ AffineXf3f readXf( const tinygltf::Node& node )
 namespace MR
 {
 
-tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromGltf( const std::filesystem::path& file, ProgressCallback callback )
+Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromGltf( const std::filesystem::path& file, ProgressCallback callback )
 {
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;
@@ -327,17 +327,17 @@ tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromGltf
         loader.LoadBinaryFromFile( &model, &err, &warn, asString( file.u8string() ) );
 
     if ( !err.empty() )
-        return tl::make_unexpected( err );
+        return unexpected( err );
 
     if ( model.meshes.empty() )
-        return tl::make_unexpected( "No mesh in file" );
+        return unexpected( "No mesh in file" );
 
     auto textures = readImages( model );
     auto materials = readMaterials( model );
     auto meshesData = readMeshes( model, materials, callback );
 
     if ( !meshesData.has_value() )
-        return tl::make_unexpected( meshesData.error() );
+        return unexpected( meshesData.error() );
 
     std::shared_ptr<Object> scene = std::make_shared<Object>();
     std::shared_ptr<Object> rootObject;
@@ -365,7 +365,7 @@ tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromGltf
         while ( !nodeStack.empty() )
         {
             if ( callback && !callback( 0.8f + 0.2f * ( ++counter ) / float( model.nodes.size() ) ) )
-                return tl::make_unexpected( "Operation was cancelled" );
+                return unexpected( "Operation was cancelled" );
 
             const auto& node = model.nodes[nodeStack.top()];
             nodeStack.pop();
@@ -472,7 +472,7 @@ VoidOrErrStr serializeObjectTreeToGltf( const Object& root, const std::filesyste
     std::stack<size_t> indexStack;
 
     if ( callback && !callback( 0.1f ) )
-        return tl::make_unexpected( "Operation was cancelled" );
+        return unexpected( "Operation was cancelled" );
 
     for ( size_t childIndex = 0; childIndex < root.children().size(); ++ childIndex )
     {
@@ -603,7 +603,7 @@ VoidOrErrStr serializeObjectTreeToGltf( const Object& root, const std::filesyste
         }
 
         if ( callback && !callback( 0.1f + 0.7f * childIndex / root.children().size() ) )
-            return tl::make_unexpected( "Operation was cancelled" );
+            return unexpected( "Operation was cancelled" );
     }
 
     model.materials.resize( materials.size() );
@@ -643,7 +643,7 @@ VoidOrErrStr serializeObjectTreeToGltf( const Object& root, const std::filesyste
     }
 
     if ( callback && !callback( 0.9f ) )
-        return tl::make_unexpected( "Operation was cancelled" );
+        return unexpected( "Operation was cancelled" );
 
     tinygltf::TinyGLTF writer;
     tinygltf::FsCallbacks fsCallbacks{ .FileExists = tinygltf::FileExists, .ExpandFilePath = tinygltf::ExpandFilePath, .ReadWholeFile = tinygltf::ReadWholeFile, .WriteWholeFile = tinygltf::WriteWholeFile };
@@ -652,10 +652,10 @@ VoidOrErrStr serializeObjectTreeToGltf( const Object& root, const std::filesyste
     const bool isBinary = file.extension() == u8".glb";
 
     if ( !writer.WriteGltfSceneToFile( &model, utf8string( file.u8string() ), isBinary, isBinary, true, isBinary ) )
-        return tl::make_unexpected( "File writing error" );
+        return unexpected( "File writing error" );
 
     if ( callback && !callback( 1.0f ) )
-        return tl::make_unexpected( "Operation was cancelled" );
+        return unexpected( "Operation was cancelled" );
 
     return {};
 }

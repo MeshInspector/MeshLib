@@ -10,14 +10,14 @@
 namespace MR
 {
 
-tl::expected<Mesh, std::string>  alignTextToMesh( 
+Expected<Mesh, std::string>  alignTextToMesh( 
     const Mesh& mesh, const TextMeshAlignParams& params )
 {
     Mesh textMesh = createSymbolsMesh( params );
 
     auto bbox = textMesh.computeBoundingBox();
     if ( !bbox.valid() )
-        return tl::make_unexpected( "Symbols mesh is empty" );
+        return unexpected( "Symbols mesh is empty" );
 
     int numLines = 1;
     for ( auto c : params.text )
@@ -67,7 +67,7 @@ tl::expected<Mesh, std::string>  alignTextToMesh(
         PointOnFace hit;
         auto inter = rayMeshIntersect( mesh, Line3f{ textMeshPoints[VertId( i )] + norm * diagonalLength, -norm } );
         if ( !inter )
-            return tl::make_unexpected( std::string( "Cannot align text" ) );
+            return unexpected( std::string( "Cannot align text" ) );
         hit = inter->proj;
 
         auto coords = hit.point;

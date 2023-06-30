@@ -10,36 +10,36 @@ namespace MR
 namespace VoxelsLoad
 {
 
-tl::expected<VdbVolume, std::string> fromGav( const std::filesystem::path& file, const ProgressCallback& cb )
+Expected<VdbVolume, std::string> fromGav( const std::filesystem::path& file, const ProgressCallback& cb )
 {
     std::ifstream in( file, std::ios::binary );
     if ( !in )
-        return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
     return addFileNameInError( fromGav( in, cb ), file );
 }
 
-tl::expected<VdbVolume, std::string> fromGav( std::istream& in, const ProgressCallback& cb )
+Expected<VdbVolume, std::string> fromGav( std::istream& in, const ProgressCallback& cb )
 {
     uint32_t headerLen = 0;
     if ( !in.read( (char*) &headerLen, sizeof( headerLen ) ) )
-        return tl::make_unexpected( "Gav-header size read error" );
+        return unexpected( "Gav-header size read error" );
 
     std::string header;
     header.resize( headerLen );
     if ( !in.read( header.data(), headerLen ) )
-        return tl::make_unexpected( "Gav-header read error" );
+        return unexpected( "Gav-header read error" );
 
     Json::Value headerJson;
     Json::CharReaderBuilder readerBuilder;
     std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
     std::string error;
     if ( !reader->parse( header.data(), header.data() + header.size(), &headerJson, &error ) )
-        return tl::make_unexpected( "Gav-header parse error: " + error );
+        return unexpected( "Gav-header parse error: " + error );
 
     RawParameters params;
 
     if ( !headerJson["ValueType"].isString() )
-        return tl::make_unexpected( "Gav-header misses ValueType" );
+        return unexpected( "Gav-header misses ValueType" );
 
     const std::string valueType = headerJson["ValueType"].asString();
     if ( valueType == "UChar" )
@@ -57,11 +57,11 @@ tl::expected<VdbVolume, std::string> fromGav( std::istream& in, const ProgressCa
     else if ( valueType == "Float" )
         params.scalarType = RawParameters::ScalarType::Float32;
     else
-        return tl::make_unexpected( "Gav-header ValueType has unknown value: " + valueType );
+        return unexpected( "Gav-header ValueType has unknown value: " + valueType );
 
     auto dimJson = headerJson["Dimensions"];
     if ( !dimJson.isObject() || !dimJson["X"].isInt() || !dimJson["Y"].isInt() || !dimJson["Z"].isInt() )
-        return tl::make_unexpected( "Gav-header misses Dimensions" );
+        return unexpected( "Gav-header misses Dimensions" );
 
     params.dimensions.x = dimJson["X"].asInt();
     params.dimensions.y = dimJson["Y"].asInt();
@@ -69,14 +69,14 @@ tl::expected<VdbVolume, std::string> fromGav( std::istream& in, const ProgressCa
 
     auto voxJson = headerJson["VoxelSize"];
     if ( !voxJson.isObject() || !voxJson["X"].isNumeric() || !voxJson["Y"].isNumeric() || !voxJson["Z"].isNumeric() )
-        return tl::make_unexpected( "Gav-header misses VoxelSize" );
+        return unexpected( "Gav-header misses VoxelSize" );
 
     params.voxelSize.x = voxJson["X"].asFloat();
     params.voxelSize.y = voxJson["Y"].asFloat();
     params.voxelSize.z = voxJson["Z"].asFloat();
 
     if ( headerJson["Compression"].isString() )
-        return tl::make_unexpected( "Compressed Gav-files are not supported" );
+        return unexpected( "Compressed Gav-files are not supported" );
 
     return fromRaw( in, params, cb );
 }

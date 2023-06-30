@@ -66,7 +66,7 @@ VoidOrErrStr toBmp( const Image& image, const std::filesystem::path& file )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
-        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
     BMPHeader header;
     static_assert( sizeof( header ) == 54 );
@@ -83,7 +83,7 @@ VoidOrErrStr toBmp( const Image& image, const std::filesystem::path& file )
         out.write( (const char*) &p[0], 1 );
         out.write( (const char*) &p[3], 1 );
         if ( !out )
-            return tl::make_unexpected( std::string( "Error saving image" ) );
+            return unexpected( std::string( "Error saving image" ) );
     }
 
     return {};
@@ -96,7 +96,7 @@ VoidOrErrStr toPng( const Image& image, const std::filesystem::path& file )
 {
     std::ofstream fp( file, std::ios::binary );
     if ( !fp )
-        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
     return toPng( image, fp );
 }
@@ -136,10 +136,10 @@ VoidOrErrStr toPng( const Image& image, std::ostream& os )
 {
     WritePng png;
     if ( !png.pngPtr )
-        return tl::make_unexpected( "Cannot create png" );
+        return unexpected( "Cannot create png" );
 
     if ( !png.infoPtr )
-        return tl::make_unexpected( "Cannot create png info" );
+        return unexpected( "Cannot create png info" );
 
     png_set_write_fn( png.pngPtr, &os, write_to_png, flush_png );
 
@@ -190,18 +190,18 @@ VoidOrErrStr toJpeg( const Image& image, const std::filesystem::path& path )
     JpegWriter writer;
 
     if ( !writer.tjInstance )
-        return tl::make_unexpected( "Cannot initialize JPEG compressor." );
+        return unexpected( "Cannot initialize JPEG compressor." );
 
     auto compressRes = tjCompress2( writer.tjInstance, ( unsigned char* )image.pixels.data(), image.resolution.x, 0, image.resolution.y, TJPF_RGBA, &writer.jpegBuf, &jpegSize, TJSAMP_444, 95, TJFLAG_BOTTOMUP );
     if ( compressRes != 0 )
-        return tl::make_unexpected( "Error occurred while compressing image data." );
+        return unexpected( "Error occurred while compressing image data." );
 
     std::ofstream outFile( path, std::ios::binary );
     if ( !outFile )
-        return tl::make_unexpected( "Cannot write file " + utf8string( path ) );
+        return unexpected( "Cannot write file " + utf8string( path ) );
 
     if ( !outFile.write( ( char* )writer.jpegBuf, jpegSize ) )
-        return tl::make_unexpected( "Cannot write file " + utf8string( path ) );
+        return unexpected( "Cannot write file " + utf8string( path ) );
 
     return {};
 }
@@ -212,7 +212,7 @@ VoidOrErrStr toTiff( const Image& image, const std::filesystem::path& path )
 {
     TIFF* tif = TIFFOpen( MR::utf8string( path ).c_str(), "w" );
     if ( !tif )
-        return tl::make_unexpected("unable to open file");
+        return unexpected("unable to open file");
 
     TIFFSetField( tif, TIFFTAG_IMAGEWIDTH, image.resolution.x );
     TIFFSetField( tif, TIFFTAG_IMAGELENGTH, image.resolution.y );
@@ -238,7 +238,7 @@ VoidOrErrStr toAnySupportedFormat( const Image& image, const std::filesystem::pa
     for ( auto& c : ext )
         c = (char) tolower( c );
 
-    VoidOrErrStr res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".bmp" )
         res = MR::ImageSave::toBmp( image, file );
 #ifndef __EMSCRIPTEN__

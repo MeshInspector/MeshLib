@@ -61,7 +61,7 @@ public:
 
     /// Sets iso value and updates iso-surfaces if needed: 
     /// Returns true if iso-value was updated, false - otherwise
-    MRMESH_API virtual tl::expected<bool, std::string> setIsoValue( float iso, ProgressCallback cb = {}, bool updateSurface = true );
+    MRMESH_API virtual Expected<bool, std::string> setIsoValue( float iso, ProgressCallback cb = {}, bool updateSurface = true );
 
     /// Sets external surface mesh for this object
     /// and returns back previous mesh of this
@@ -74,7 +74,7 @@ public:
    /// and returns back previous histogram of this
     MRMESH_API Histogram updateHistogram( Histogram histogram );
     /// Calculates and return new mesh or error message
-    MRMESH_API tl::expected<std::shared_ptr<Mesh>, std::string> recalculateIsoSurface( float iso, ProgressCallback cb = {} ) const;
+    MRMESH_API Expected<std::shared_ptr<Mesh>, std::string> recalculateIsoSurface( float iso, ProgressCallback cb = {} ) const;
     /// returns true if the iso-surface is built using Dual Marching Cubes algorithm or false if using Standard Marching Cubes
     bool getDualMarchingCubes() const { return dualMarchingCubes_; }
     /// sets whether to use Dual Marching Cubes algorithm for visualization (true) or Standard Marching Cubes (false);
@@ -206,7 +206,7 @@ protected:
     MRMESH_API VoidOrErrStr deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
 #endif
 
-    MRMESH_API virtual tl::expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const override;
+    MRMESH_API virtual Expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const override;
 };
 
 

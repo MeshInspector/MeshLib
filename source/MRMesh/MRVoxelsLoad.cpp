@@ -479,19 +479,19 @@ void sortDICOMFiles( std::vector<std::filesystem::path>& files, unsigned maxNumT
     }
 }
 
-tl::expected<DicomVolume, std::string> loadDicomFolder( const std::filesystem::path& path,
+Expected<DicomVolume, std::string> loadDicomFolder( const std::filesystem::path& path,
                                                         unsigned maxNumThreads, const ProgressCallback& cb )
 {
     MR_TIMER
     if ( !reportProgress( cb, 0.0f ) )
-        return tl::make_unexpected( "Loading canceled" );
+        return unexpected( "Loading canceled" );
 
     SimpleVolume data;
     data.voxelSize = Vector3f();
     data.dims = Vector3i::diagonal( 0 );
     std::error_code ec;
     if ( !std::filesystem::is_directory( path, ec ) )
-        return tl::make_unexpected( "loadDCMFolder: path is not directory" );
+        return unexpected( "loadDCMFolder: path is not directory" );
 
     int filesNum = 0;
     std::vector<std::filesystem::path> files;
@@ -509,11 +509,11 @@ tl::expected<DicomVolume, std::string> loadDicomFolder( const std::filesystem::p
         if ( entry.is_regular_file( ec ) && isDICOMFile( filePath ) )
             files.push_back( filePath );
         if ( !reportProgress( cb, 0.3f * float( fCounter ) / float( filesNum ) ) )
-            tl::make_unexpected( "Loading canceled" );
+            unexpected( "Loading canceled" );
     }
     if ( files.empty() )
     {
-        return tl::make_unexpected( "loadDCMFolder: there is no dcm file in folder: " + utf8string( path ) );
+        return unexpected( "loadDCMFolder: there is no dcm file in folder: " + utf8string( path ) );
     }
     if ( files.size() == 1 )
         return loadDicomFile( files[0], subprogress( cb, 0.3f, 1.0f ) );
@@ -522,13 +522,13 @@ tl::expected<DicomVolume, std::string> loadDicomFolder( const std::filesystem::p
 
     auto firstRes = loadSingleFile( files.front(), data, 0 );
     if ( !firstRes.success )
-        return tl::make_unexpected( "loadDCMFolder: error loading first file \"" + utf8string( files.front() ) + "\"" );
+        return unexpected( "loadDCMFolder: error loading first file \"" + utf8string( files.front() ) + "\"" );
     data.min = firstRes.min;
     data.max = firstRes.max;
     size_t dimXY = data.dims.x * data.dims.y;
 
     if ( !reportProgress( cb, 0.4f ) )
-        return tl::make_unexpected( "Loading canceled" );
+        return unexpected( "Loading canceled" );
 
     // other slices
     auto mainThreadId = std::this_thread::get_id();
@@ -551,7 +551,7 @@ tl::expected<DicomVolume, std::string> loadDicomFolder( const std::filesystem::p
         } );
     } );
     if ( cancelCalled )
-        return tl::make_unexpected( "Loading canceled" );
+        return unexpected( "Loading canceled" );
 
     for ( const auto& sliceRes : slicesRes )
     {
@@ -571,12 +571,12 @@ tl::expected<DicomVolume, std::string> loadDicomFolder( const std::filesystem::p
     return res;
 }
 
-tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::path& path,
+Expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::path& path,
                                                      unsigned maxNumThreads, const ProgressCallback& cb )
 {
     auto simple = loadDicomFolder( path, maxNumThreads, subprogress( cb, 0, 0.5f ) );
     if ( !simple.has_value() )
-        return tl::make_unexpected( std::move( simple.error() ) );
+        return unexpected( std::move( simple.error() ) );
 
     LoadDCMResult res;
     res.vdbVolume = simpleVolumeToVdbVolume( simple->vol, subprogress( cb, 0.5f, 1.0f ) );
@@ -586,10 +586,10 @@ tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::p
     return res;
 }
 
-std::vector<tl::expected<LoadDCMResult, std::string>> loadDCMFolderTree( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
+std::vector<Expected<LoadDCMResult, std::string>> loadDCMFolderTree( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
 {
     MR_TIMER;
-    std::vector<tl::expected<LoadDCMResult, std::string>> res;
+    std::vector<Expected<LoadDCMResult, std::string>> res;
     auto tryLoadDir = [&]( const std::filesystem::path& dir )
     {
         res.push_back( loadDCMFolder( dir, maxNumThreads, cb ) );
@@ -598,7 +598,7 @@ std::vector<tl::expected<LoadDCMResult, std::string>> loadDCMFolderTree( const s
         return true;
     };
     if ( !tryLoadDir( path ) )
-        return { tl::make_unexpected( "Loading canceled" ) };
+        return { unexpected( "Loading canceled" ) };
 
     std::error_code ec;
     for ( auto entry : DirectoryRecursive{ path, ec } )
@@ -609,18 +609,18 @@ std::vector<tl::expected<LoadDCMResult, std::string>> loadDCMFolderTree( const s
     return res;
 }
 
-tl::expected<DicomVolume, std::string> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb )
+Expected<DicomVolume, std::string> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb )
 {
     MR_TIMER
     if ( !reportProgress( cb, 0.0f ) )
-        return tl::make_unexpected( "Loading canceled" );
+        return unexpected( "Loading canceled" );
 
     SimpleVolume simpleVolume;
     simpleVolume.voxelSize = Vector3f();
     simpleVolume.dims.z = 1;
     auto fileRes = loadSingleFile( path, simpleVolume, 0 );
     if ( !fileRes.success )
-        return tl::make_unexpected( "loadDCMFile: error load file: " + utf8string( path ) );
+        return unexpected( "loadDCMFile: error load file: " + utf8string( path ) );
     simpleVolume.max = fileRes.max;
     simpleVolume.min = fileRes.min;
     
@@ -632,14 +632,14 @@ tl::expected<DicomVolume, std::string> loadDicomFile( const std::filesystem::pat
 
 #endif // MRMESH_NO_DICOM
 
-tl::expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& path,
+Expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& path,
     const ProgressCallback& cb )
 {
     MR_TIMER;
 
     if ( path.empty() )
     {
-        return tl::make_unexpected( "Path is empty" );
+        return unexpected( "Path is empty" );
     }
 
     auto ext = utf8string( path.extension() );
@@ -650,13 +650,13 @@ tl::expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& path,
     {
         std::stringstream ss;
         ss << "Extension is not correct, expected \".raw\" current \"" << ext << "\"" << std::endl;
-        return tl::make_unexpected( ss.str() );
+        return unexpected( ss.str() );
     }
 
     auto parentPath = path.parent_path();
     std::error_code ec;
     if ( !std::filesystem::is_directory( parentPath, ec ) )
-        return tl::make_unexpected( utf8string( parentPath ) + " - is not directory" );
+        return unexpected( utf8string( parentPath ) + " - is not directory" );
     std::vector<std::filesystem::path> candidatePaths;
     for ( auto entry : Directory{ parentPath, ec } )
     {
@@ -666,34 +666,34 @@ tl::expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& path,
             candidatePaths.push_back( entry.path() );
     }
     if ( candidatePaths.empty() )
-        return tl::make_unexpected( "Cannot find file: " + utf8string( path.filename() ) );
+        return unexpected( "Cannot find file: " + utf8string( path.filename() ) );
     else if ( candidatePaths.size() > 1 )
-        return tl::make_unexpected( "More than one file exists: " + utf8string( path.filename() ) );
+        return unexpected( "More than one file exists: " + utf8string( path.filename() ) );
 
     RawParameters outParams;
     auto filepathToOpen = candidatePaths[0];
     auto filename = utf8string( filepathToOpen.filename() );
     auto wEndChar = filename.find("_");
     if ( wEndChar == std::string::npos )
-        return tl::make_unexpected( "Cannot parse filename: " + filename );
+        return unexpected( "Cannot parse filename: " + filename );
     auto wString = filename.substr( 1, wEndChar - 1 );
     outParams.dimensions.x = std::atoi( wString.c_str() );
 
     auto hEndChar = filename.find( "_", wEndChar + 1 );
     if ( hEndChar == std::string::npos )
-        return tl::make_unexpected( "Cannot parse filename: " + filename );
+        return unexpected( "Cannot parse filename: " + filename );
     auto hString = filename.substr( wEndChar + 2, hEndChar - ( wEndChar + 2 ) );
     outParams.dimensions.y = std::atoi( hString.c_str() );
 
     auto sEndChar = filename.find( "_", hEndChar + 1 );
     if ( sEndChar == std::string::npos )
-        return tl::make_unexpected( "Cannot parse filename: " + filename );
+        return unexpected( "Cannot parse filename: " + filename );
     auto sString = filename.substr( hEndChar + 2, sEndChar - ( hEndChar + 2 ) );
     outParams.dimensions.z = std::atoi( sString.c_str() );
 
     auto xvEndChar = filename.find( "_", sEndChar + 1 );
     if ( xvEndChar == std::string::npos )
-        return tl::make_unexpected( "Cannot parse filename: " + filename );
+        return unexpected( "Cannot parse filename: " + filename );
     auto xvString = filename.substr( sEndChar + 2, xvEndChar - ( sEndChar + 2 ) );
     outParams.voxelSize.x = float(std::atof( xvString.c_str() ) / 1000); // convert mm to meters
 
@@ -714,13 +714,13 @@ tl::expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& path,
     {
         auto yvEndChar = filename.find( "_", xvEndChar + 1 );
         if ( yvEndChar == std::string::npos )
-            return tl::make_unexpected( "Cannot parse filename: " + filename );
+            return unexpected( "Cannot parse filename: " + filename );
         auto yvString = filename.substr( xvEndChar + 1, yvEndChar - ( xvEndChar + 1 ) );
         outParams.voxelSize.y = float( std::atof( yvString.c_str() ) / 1000 ); // convert mm to meters
 
         auto zvEndChar = filename.find( "_", yvEndChar + 1 );
         if ( zvEndChar == std::string::npos )
-            return tl::make_unexpected( "Cannot parse filename: " + filename );
+            return unexpected( "Cannot parse filename: " + filename );
         auto zvString = filename.substr( yvEndChar + 1, zvEndChar - ( yvEndChar + 1 ) );
         outParams.voxelSize.z = float( std::atof( zvString.c_str() ) / 1000 ); // convert mm to meters
 
@@ -736,10 +736,10 @@ tl::expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& path,
     return fromRaw( filepathToOpen, outParams, cb );
 }
 
-tl::expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
+Expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
 {
     if ( cb && !cb( 0.f ) )
-        return tl::make_unexpected( getCancelMessage( path ) );
+        return unexpected( getCancelMessage( path ) );
     openvdb::io::File file( path.string() );
     openvdb::initialize();
     file.open();
@@ -750,7 +750,7 @@ tl::expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem
     {
         auto& gridsRef = *grids;
         if ( grids->size() == 0 )
-            tl::make_unexpected( std::string( "Nothing to load" ) );
+            unexpected( std::string( "Nothing to load" ) );
 
         bool anyLoaded = false;
         int size = int( gridsRef.size() );
@@ -780,7 +780,7 @@ tl::expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem
             evalGridMinMax( vdbVolume.data, vdbVolume.min, vdbVolume.max );
 
             if ( scaledCb && !scaledCb( 0.1f ) )
-                return tl::make_unexpected( getCancelMessage( path ) );
+                return unexpected( getCancelMessage( path ) );
 
             openvdb::math::Transform::Ptr transformPtr = std::make_shared<openvdb::math::Transform>();
             vdbVolume.data->setTransform( transformPtr );
@@ -788,17 +788,17 @@ tl::expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem
             translateToZero( *vdbVolume.data );
 
             if ( cb && !cb( (1.f + i ) / size ) )
-                return tl::make_unexpected( getCancelMessage( path ) );
+                return unexpected( getCancelMessage( path ) );
 
             res.emplace_back( std::move( vdbVolume ) );
 
             anyLoaded = true;
         }
         if ( !anyLoaded )
-            tl::make_unexpected( std::string( "No loaded grids" ) );
+            unexpected( std::string( "No loaded grids" ) );
     }
     else
-        tl::make_unexpected( std::string( "Nothing to read" ) );
+        unexpected( std::string( "Nothing to read" ) );
 
     if ( cb )
         cb( 1.f );
@@ -806,14 +806,14 @@ tl::expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem
     return res;
 }
 
-inline tl::expected<std::vector<VdbVolume>, std::string> toSingleElementVector( tl::expected<VdbVolume, std::string> v )
+inline Expected<std::vector<VdbVolume>, std::string> toSingleElementVector( Expected<VdbVolume, std::string> v )
 {
     if ( !v.has_value() )
-        return tl::make_unexpected( std::move( v.error() ) );
+        return unexpected( std::move( v.error() ) );
     return std::vector<VdbVolume>{ std::move( v.value() ) };
 }
 
-tl::expected<std::vector<VdbVolume>, std::string> fromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
+Expected<std::vector<VdbVolume>, std::string> fromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
 {
     auto ext = utf8string( path.extension() );
     for ( auto& c : ext )
@@ -826,7 +826,7 @@ tl::expected<std::vector<VdbVolume>, std::string> fromAnySupportedFormat( const 
     if ( ext == ".gav" )
         return toSingleElementVector( fromGav( path, cb ) );
 
-    return tl::make_unexpected( std::string( "Unsupported file extension" ) );
+    return unexpected( std::string( "Unsupported file extension" ) );
 }
 
 struct TiffParams
@@ -925,11 +925,11 @@ bool ReadVoxels( SimpleVolume& outVolume, size_t layerIndex, TIFF* tif, const Ti
     return true;
 }
 
-tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& settings )
+Expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& settings )
 {
     std::error_code ec;
     if ( !std::filesystem::is_directory( settings.dir, ec ) )
-        return tl::make_unexpected( "Given path is not directory" );
+        return unexpected( "Given path is not directory" );
 
     int filesNum = 0;
     std::vector<std::filesystem::path> files;
@@ -947,7 +947,7 @@ tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& set
     }
 
     if ( files.size() < 2 )
-        return tl::make_unexpected( "Too few TIFF files in the directory" );
+        return unexpected( "Too few TIFF files in the directory" );
     
     sortFilesByName( files );
 
@@ -964,20 +964,20 @@ tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& set
     for ( int layerIndex = 0; layerIndex < files.size(); ++layerIndex )
     {
         if ( settings.cb && !settings.cb( float( layerIndex ) / files.size() ) )
-            return tl::make_unexpected( "Loading was cancelled" );
+            return unexpected( "Loading was cancelled" );
 
         switch ( tp.bitsPerSample )
         {
         case 8:
             if ( !ReadVoxels<uint8_t>( outVolume, layerIndex, tif, tp, outVolume.min, outVolume.max ) )
-                return tl::make_unexpected( "Unsupported pixel format " );
+                return unexpected( "Unsupported pixel format " );
             break;
         case 16:
             if ( !ReadVoxels<uint16_t>( outVolume, layerIndex, tif, tp, outVolume.min, outVolume.max ) )
-                return tl::make_unexpected( "Unsupported pixel format " );
+                return unexpected( "Unsupported pixel format " );
             break;
         default:
-            return tl::make_unexpected( "Unsupported pixel format " );
+            return unexpected( "Unsupported pixel format " );
         }
         
         TIFFClose( tif );
@@ -988,15 +988,15 @@ tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& set
             TiffParams currentTiffParams;
             std::tie( tif, currentTiffParams ) = OpenTiff( files[layerIndex + 1] );
             if ( currentTiffParams != tp )
-                return tl::make_unexpected( "Unable to process images with different params" );
+                return unexpected( "Unable to process images with different params" );
         }
     }
     
     if ( settings.cb && !settings.cb( 1.0f ) )
-        return tl::make_unexpected( "Loading was cancelled" );
+        return unexpected( "Loading was cancelled" );
 
     if ( outVolume.data.empty() )
-        return tl::make_unexpected( "No voxel data" );
+        return unexpected( "No voxel data" );
 
     VdbVolume res;
 
@@ -1022,22 +1022,22 @@ tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& set
 }
 #endif // MRMESH_NO_TIFF
 
-tl::expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& file, const RawParameters& params,
+Expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& file, const RawParameters& params,
     const ProgressCallback& cb )
 {
     std::ifstream in( file, std::ios::binary );
     if ( !in )
-        return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
     return addFileNameInError( fromRaw( in, params, cb ), file );
 }
 
-tl::expected<VdbVolume, std::string> fromRaw( std::istream& in, const RawParameters& params,  const ProgressCallback& cb )
+Expected<VdbVolume, std::string> fromRaw( std::istream& in, const RawParameters& params,  const ProgressCallback& cb )
 {
     if ( params.dimensions.x <= 0 || params.dimensions.y <= 0 || params.dimensions.z <= 0 )
-        return tl::make_unexpected( "Wrong volume dimension parameter value" );
+        return unexpected( "Wrong volume dimension parameter value" );
 
     if ( params.voxelSize.x <= 0 || params.voxelSize.y <= 0 || params.voxelSize.z <= 0 )
-        return tl::make_unexpected( "Wrong voxel size parameter value" );
+        return unexpected( "Wrong voxel size parameter value" );
 
     int unitSize = 0;
     switch ( params.scalarType )
@@ -1074,7 +1074,7 @@ tl::expected<VdbVolume, std::string> fromRaw( std::istream& in, const RawParamet
         break;
     default:
         assert( false );
-        return tl::make_unexpected( "Wrong scalar type parameter value" );
+        return unexpected( "Wrong scalar type parameter value" );
     }
 
     SimpleVolume outVolume;
@@ -1096,7 +1096,7 @@ tl::expected<VdbVolume, std::string> fromRaw( std::istream& in, const RawParamet
     {
         size_t shift = xyDimsUnit * z;
         if ( !in.read( outPointer + shift, xyDimsUnit ) )
-            return tl::make_unexpected( "Read error" );
+            return unexpected( "Read error" );
         if ( cb )
             cb( ( z + 1.0f ) / float( params.dimensions.z ) );
     }

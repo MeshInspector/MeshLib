@@ -1,8 +1,8 @@
 #pragma once
 #ifndef MRMESH_NO_CPR
 #include "MRViewerFwd.h"
+#include "MRMesh/MRExpected.h"
 #include "MRPch/MRJson.h"
-#include <tl/expected.hpp>
 #include <unordered_map>
 #include <string>
 #include <functional>
@@ -10,7 +10,7 @@
 namespace MR
 {
 // returns json value of text or error if response failed
-MRVIEWER_API tl::expected<Json::Value, std::string> parseResponse( const Json::Value& response );
+MRVIEWER_API Expected<Json::Value, std::string> parseResponse( const Json::Value& response );
 
 // this class is needed to unify cpp and wasm requests
 // can perform only one request at a time
@@ -44,11 +44,13 @@ public:
 
     using ResponseCallback = std::function<void( const Json::Value& response )>;
 
-    // sends request, calling callback on answer, 
-    // if async then callback is called in next frame after getting response
-    // return true if request was sent, false if other request is processing now
-    // note: check `readyForNextRequest` before sending
-    MRVIEWER_API static bool send( std::string url, ResponseCallback callback, bool async = true );
+    /// sends request, calling callback on answer, 
+    /// if async then callback is called in next frame after getting response
+    /// return true if request was sent, false if other request is processing now
+    /// note: check `readyForNextRequest` before sending
+    /// \param request name for logging
+    MRVIEWER_API static bool send( std::string url, const std::string & logName, ResponseCallback callback, bool async = true );
+
 private:
     WebRequest() = default;
     ~WebRequest() = default;

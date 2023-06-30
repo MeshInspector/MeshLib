@@ -2,7 +2,7 @@
 #include "MRMeshFwd.h"
 #include "MRMesh.h"
 #include "MRPointCloud.h"
-#include <tl/expected.hpp>
+#include "MRExpected.h"
 #include <filesystem>
 
 namespace MR
@@ -33,7 +33,7 @@ public:
     MRMESH_API void setDistances( int width, int height, const std::vector<float>& distances );
 
     /// Creates mesh if all components were successfully loaded
-    MRMESH_API tl::expected<Mesh, std::string> createMesh() const;
+    MRMESH_API Expected<Mesh, std::string> createMesh() const;
 
 private:
     int width_{0};

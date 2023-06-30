@@ -280,6 +280,9 @@
     <ClCompile Include="MRFrameRedrawRequest.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRToolsLibrary.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -525,6 +528,9 @@
       <Filter>SpaceMouse</Filter>
     </ClInclude>
     <ClInclude Include="MRFrameRedrawRequest.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRToolsLibrary.h">
       <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>

@@ -28,7 +28,7 @@ public:
     BasisTunnelsDetector( const MeshPart & mp, EdgeMetric metric );
     VoidOrErrStr prepare( ProgressCallback cb );
     // after prepare(...) region can only shrink, not become larger
-    tl::expected<std::vector<EdgeLoop>, std::string> detect( ProgressCallback cb );
+    Expected<std::vector<EdgeLoop>, std::string> detect( ProgressCallback cb );
 
 private:
     std::vector<EdgeCurvature> innerEdges_; // sorted by metric
@@ -94,7 +94,7 @@ VoidOrErrStr BasisTunnelsDetector::prepare( ProgressCallback cb )
     return {};
 }
 
-tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( ProgressCallback cb )
+Expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( ProgressCallback cb )
 {
     MR_TIMER
 
@@ -211,7 +211,7 @@ tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( P
 
 } //anonymous namespace
 
-tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshPart & mp, EdgeMetric metric, ProgressCallback cb )
+Expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshPart & mp, EdgeMetric metric, ProgressCallback cb )
 {
     MR_TIMER
     if ( !metric )
@@ -219,11 +219,11 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
 
     BasisTunnelsDetector d( mp, metric );
     if ( auto v = d.prepare( subprogress( cb, 0.0f, 0.25f ) ); !v.has_value() )
-        return tl::make_unexpected( std::move( v.error() ) );
+        return unexpected( std::move( v.error() ) );
     return d.detect( subprogress( cb, 0.25f, 1.0f ) );
 }
 
-tl::expected<FaceBitSet, std::string> detectTunnelFaces( const MeshPart & mp, float maxTunnelLength, EdgeMetric metric, ProgressCallback progressCallback )
+Expected<FaceBitSet, std::string> detectTunnelFaces( const MeshPart & mp, float maxTunnelLength, EdgeMetric metric, ProgressCallback progressCallback )
 {
     MR_TIMER;
     if ( !metric )
@@ -236,7 +236,7 @@ tl::expected<FaceBitSet, std::string> detectTunnelFaces( const MeshPart & mp, fl
 
     BasisTunnelsDetector d( activeMeshPart, metric );
     if ( auto v = d.prepare( subprogress( progressCallback, 0.0f, 0.33f ) ); !v.has_value() )
-        return tl::make_unexpected( std::move( v.error() ) );
+        return unexpected( std::move( v.error() ) );
 
     float initialProgress = 0.33f;
     float targetProgress = 0.66f;
@@ -245,7 +245,7 @@ tl::expected<FaceBitSet, std::string> detectTunnelFaces( const MeshPart & mp, fl
     {
         auto basisTunnels = d.detect( MR::subprogress( progressCallback, initialProgress, targetProgress ) );
         if ( !basisTunnels.has_value() )
-            return tl::make_unexpected( basisTunnels.error() );
+            return unexpected( basisTunnels.error() );
 
         const auto numBasisTunnels = basisTunnels->size();
 

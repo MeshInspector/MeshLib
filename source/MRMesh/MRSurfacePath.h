@@ -3,7 +3,7 @@
 #include "MRMeshFwd.h"
 #include <vector>
 #include <string>
-#include <tl/expected.hpp>
+#include "MRExpected.h"
 
 namespace MR
 {
@@ -31,7 +31,7 @@ inline std::string toString(PathError error)
 /// returns intermediate points of the geodesic path from start to end, where it crosses mesh edges;
 /// the path can be limited to given region: in face-format inside mp, or in vert-format in vertRegion argument.
 /// It is the same as calling computeFastMarchingPath() then reducePath()
-MRMESH_API tl::expected<SurfacePath, PathError> computeSurfacePath( const MeshPart & mp, 
+MRMESH_API Expected<SurfacePath, PathError> computeSurfacePath( const MeshPart & mp, 
     const MeshTriPoint & start, const MeshTriPoint & end, 
     int maxGeodesicIters = 5, ///< the maximum number of iterations to reduce approximate path length and convert it in geodesic path
     const VertBitSet* vertRegion = nullptr, Vector<float, VertId> * outSurfaceDistances = nullptr );
@@ -49,18 +49,18 @@ enum class GeodesicPathApprox : char
 
 /// returns intermediate points of the geodesic path from start to end, where it crosses mesh edges;
 /// It is the same as calling computeGeodesicPathApprox() then reducePath()
-MRMESH_API tl::expected<SurfacePath, PathError> computeGeodesicPath( const Mesh & mesh,
+MRMESH_API Expected<SurfacePath, PathError> computeGeodesicPath( const Mesh & mesh,
     const MeshTriPoint & start, const MeshTriPoint & end, GeodesicPathApprox atype,
     int maxGeodesicIters = 100 ); ///< the maximum number of iterations to reduce approximate path length and convert it in geodesic path
 
 /// computes by given method and returns intermediate points of approximately geodesic path from start to end,
 /// every next point is located in the same triangle with the previous point
-MRMESH_API tl::expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
+MRMESH_API Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
     const MeshTriPoint & start, const MeshTriPoint & end, GeodesicPathApprox atype );
 
 /// computes by Fast Marching method and returns intermediate points of approximately geodesic path from start to end, where it crosses mesh edges;
 /// the path can be limited to given region: in face-format inside mp, or in vert-format in vertRegion argument
-MRMESH_API tl::expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp, 
+MRMESH_API Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp, 
     const MeshTriPoint & start, const MeshTriPoint & end, const VertBitSet* vertRegion = nullptr,
     Vector<float, VertId> * outSurfaceDistances = nullptr );
 

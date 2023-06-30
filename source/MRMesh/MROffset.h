@@ -3,7 +3,7 @@
 #include "MRMeshPart.h"
 #include "MRSignDetectionMode.h"
 #include "MRProgressCallback.h"
-#include <tl/expected.hpp>
+#include "MRExpected.h"
 #include <optional>
 #include <string>
 
@@ -58,31 +58,31 @@ struct SharpOffsetParameters : BaseOffsetParameters
 
 /// Offsets mesh by converting it to voxels and back
 /// so result mesh is always closed
-[[nodiscard]] MRMESH_API tl::expected<Mesh, std::string> offsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params = {} );
+[[nodiscard]] MRMESH_API Expected<Mesh, std::string> offsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params = {} );
 
 /// in case of positive offset, returns the mesh consisting of offset mesh merged with inversed original mesh (thickening mode);
 /// in case of negative offset, returns the mesh consisting of inversed offset mesh merged with original mesh (hollowing mode);
 /// if your input mesh is closed then please specify params.type == Offset, and you will get closed mesh on output;
 /// if your input mesh is open then please specify params.type == Shell, and you will get open mesh on output
-[[nodiscard]] MRMESH_API tl::expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const OffsetParameters & params = {} );
+[[nodiscard]] MRMESH_API Expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const OffsetParameters & params = {} );
 
 /// Offsets mesh by converting it to voxels and back two times
 /// only closed meshes allowed (only Offset mode)
 /// typically offsetA and offsetB have distinct signs
-[[nodiscard]] MRMESH_API tl::expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params = {} );
+[[nodiscard]] MRMESH_API Expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params = {} );
 
 /// Offsets mesh by converting it to voxels and back using standard Marching Cubes, as opposed to Dual Marching Cubes in offsetMesh(...)
-[[nodiscard]] MRMESH_API tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, 
+[[nodiscard]] MRMESH_API Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, 
     const BaseOffsetParameters& params = {}, Vector<VoxelId, FaceId>* outMap = nullptr );
 
 /// Offsets mesh by converting it to voxels and back
 /// post process result using reference mesh to sharpen features
-[[nodiscard]] MRMESH_API tl::expected<Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float offset, const SharpOffsetParameters& params = {} );
+[[nodiscard]] MRMESH_API Expected<Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float offset, const SharpOffsetParameters& params = {} );
 
 /// Offsets polyline by converting it to voxels and building iso-surface
 /// do offset in all directions
 /// so result mesh is always closed
-[[nodiscard]] MRMESH_API tl::expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params = {} );
+[[nodiscard]] MRMESH_API Expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params = {} );
 
 }
 #endif

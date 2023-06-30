@@ -7,7 +7,7 @@
 namespace MR
 {
 
-tl::expected<FaceBitSet, std::string> findOverlappingTris( const MeshPart & mp, const FindOverlappingSettings & settings )
+Expected<FaceBitSet, std::string> findOverlappingTris( const MeshPart & mp, const FindOverlappingSettings & settings )
 {
     MR_TIMER
     FaceBitSet res( mp.mesh.topology.faceSize() );

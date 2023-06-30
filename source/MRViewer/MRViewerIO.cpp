@@ -29,7 +29,7 @@ namespace MR
 VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& filename, ProgressCallback callback )
 {
     if ( callback && !callback( 0.f ) )
-        return tl::make_unexpected( std::string( "Saving canceled" ) );
+        return unexpected( std::string( "Saving canceled" ) );
 
     VoidOrErrStr result;
 
@@ -42,7 +42,7 @@ VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& f
                                                          colors.empty() ? nullptr : &colors, callback );
         }
         else
-            result = tl::make_unexpected( std::string( "ObjectPoints has no PointCloud in it" ) );
+            result = unexpected( std::string( "ObjectPoints has no PointCloud in it" ) );
     }
     else if ( auto objLines = obj.asType<ObjectLines>() )
     {
@@ -51,7 +51,7 @@ VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& f
             result = LinesSave::toAnySupportedFormat( *objLines->polyline(), filename, callback );
         }
         else
-            result = tl::make_unexpected( std::string( "ObjectLines has no Polyline in it" ) );
+            result = unexpected( std::string( "ObjectLines has no Polyline in it" ) );
     }
     else if ( auto objMesh = obj.asType<ObjectMesh>() )
     {
@@ -64,7 +64,7 @@ VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& f
             result = MeshSave::toAnySupportedFormat( *objMesh->mesh(), filename, colors, callback );
         }
         else
-            result = tl::make_unexpected( std::string( "ObjectMesh has no Mesh in it" ) );
+            result = unexpected( std::string( "ObjectMesh has no Mesh in it" ) );
     }
     else if ( auto objDistanceMap = obj.asType<ObjectDistanceMap>() )
     {
@@ -74,7 +74,7 @@ VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& f
         }
         else
         {
-            result = tl::make_unexpected( std::string( "ObjectDistanceMap has no DistanceMap in it" ) );
+            result = unexpected( std::string( "ObjectDistanceMap has no DistanceMap in it" ) );
         }
     }
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)

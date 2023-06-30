@@ -364,7 +364,7 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
     return result;
 }
 
-tl::expected<BooleanResultPoints, std::string> getBooleanPoints( const Mesh& meshA, const Mesh& meshB, 
+Expected<BooleanResultPoints, std::string> getBooleanPoints( const Mesh& meshA, const Mesh& meshB, 
     BooleanOperation operation, const AffineXf3f* rigidB2A )
 {
     MR_TIMER
@@ -408,7 +408,7 @@ tl::expected<BooleanResultPoints, std::string> getBooleanPoints( const Mesh& mes
         BooleanResultMapper mapper;
         auto boolRes = MR::boolean( meshA, meshB, operation, rigidB2A, &mapper );
         if ( !boolRes.valid() )
-            return tl::make_unexpected( boolRes.errorString );
+            return unexpected( boolRes.errorString );
 
         for ( auto v : meshA.topology.getValidVerts() )
         {

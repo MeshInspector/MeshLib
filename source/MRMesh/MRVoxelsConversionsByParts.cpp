@@ -64,7 +64,7 @@ mergeGridPart( Mesh &mesh, std::vector<EdgePath> &cutContours, FloatGrid &&grid,
         .voxelSize = voxelSize,
     } );
     if ( !res.has_value() )
-        return tl::make_unexpected( res.error() );
+        return unexpected( res.error() );
     auto part = std::move( *res );
 
     if ( settings.preCut )
@@ -116,10 +116,10 @@ mergeGridPart( Mesh &mesh, std::vector<EdgePath> &cutContours, FloatGrid &&grid,
     }
 
     if ( cutContours.size() != leftCutContours.size() )
-        return tl::make_unexpected( "Mesh cut contours mismatch" );
+        return unexpected( "Mesh cut contours mismatch" );
     for ( auto i = 0u; i < cutContours.size(); ++i )
         if ( cutContours[i].size() != leftCutContours[i].size() )
-            return tl::make_unexpected( "Mesh cut contours mismatch" );
+            return unexpected( "Mesh cut contours mismatch" );
 
     WholeEdgeHashMap src2tgtEdges;
     if ( !mapping.src2tgtEdges )
@@ -143,7 +143,7 @@ mergeGridPart( Mesh &mesh, std::vector<EdgePath> &cutContours, FloatGrid &&grid,
     return {};
 }
 
-tl::expected<Mesh, std::string>
+Expected<Mesh, std::string>
 gridToMeshByParts( const GridPartBuilder &builder, const Vector3i &dimensions, const Vector3f &voxelSize,
                    const GridToMeshByPartsSettings &settings, const MergeGridPartSettings &mergeSettings )
 {
@@ -154,7 +154,7 @@ gridToMeshByParts( const GridPartBuilder &builder, const Vector3i &dimensions, c
     const auto maxSliceCount = settings.maxGridPartMemoryUsage / maxSliceMemoryUsage;
     if ( maxSliceCount < settings.stripeOverlap + 1 )
     {
-        return tl::make_unexpected( fmt::format( "The specified grid memory usage limit is too low: at least {} required",
+        return unexpected( fmt::format( "The specified grid memory usage limit is too low: at least {} required",
                                                  bytesString( ( settings.stripeOverlap + 1 ) * maxSliceMemoryUsage ) ) );
     }
 
@@ -182,7 +182,7 @@ gridToMeshByParts( const GridPartBuilder &builder, const Vector3i &dimensions, c
 
         auto grid = builder( begin, end );
         if ( !grid.has_value() )
-            return tl::make_unexpected( grid.error() );
+            return unexpected( grid.error() );
 
         auto leftCutPosition = ( (float)begin + (float)settings.stripeOverlap / 2.f ) * voxelSize.x;
         if ( begin == 0 )
@@ -193,7 +193,7 @@ gridToMeshByParts( const GridPartBuilder &builder, const Vector3i &dimensions, c
 
         const auto res = mergeGridPart( result, cutContours, std::move( *grid ), voxelSize, leftCutPosition, rightCutPosition, mergeSettings );
         if ( !res.has_value() )
-            return tl::make_unexpected( res.error() );
+            return unexpected( res.error() );
     }
     return std::move( result );
 }

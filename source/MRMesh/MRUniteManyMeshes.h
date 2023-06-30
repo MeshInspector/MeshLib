@@ -1,7 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRMesh.h"
-#include <tl/expected.hpp>
+#include "MRExpected.h"
 #include <string>
 
 namespace MR
@@ -28,7 +28,7 @@ struct UniteManyMeshesParams
 // Computes the surface of objects' union each of which is defined by its own surface mesh
 // - merge non intersecting meshes first
 // - unite merged groups
-MRMESH_API tl::expected<Mesh, std::string> uniteManyMeshes( const std::vector<const Mesh*>& meshes, 
+MRMESH_API Expected<Mesh, std::string> uniteManyMeshes( const std::vector<const Mesh*>& meshes, 
     const UniteManyMeshesParams& params = {} );
 
 }

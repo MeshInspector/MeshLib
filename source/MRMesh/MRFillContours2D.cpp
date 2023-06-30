@@ -74,7 +74,7 @@ VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresen
     // check input
     assert( !holeRepresentativeEdges.empty() );
     if ( holeRepresentativeEdges.empty() )
-        return tl::make_unexpected( "No hole edges are given" );
+        return unexpected( "No hole edges are given" );
 
     // reorder to make edges ring with hole on left side
     bool badEdge = false;
@@ -89,7 +89,7 @@ VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresen
     }
     assert( !badEdge );
     if ( badEdge )
-        return tl::make_unexpected( "Some hole edges have left face" );
+        return unexpected( "Some hole edges have left face" );
 
     // make border rings
     std::vector<EdgeLoop> paths( holeRepresentativeEdges.size() );
@@ -122,7 +122,7 @@ VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresen
     auto fillResult = PlanarTriangulation::triangulateDisjointContours( contours2f, holeVertIds.get() );
     holeVertIds.reset();
     if ( !fillResult )
-        return tl::make_unexpected( "Cannot triangulate contours with self-intersections" );
+        return unexpected( "Cannot triangulate contours with self-intersections" );
     Mesh& patchMesh = *fillResult;
 
     // transform patch surface from plane to world space
@@ -135,7 +135,7 @@ VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresen
 
     // check that patch surface borders size equal original mesh borders size
     if ( paths.size() != newPaths.size() )
-        return tl::make_unexpected( "Patch surface borders size different from original mesh borders size" );
+        return unexpected( "Patch surface borders size different from original mesh borders size" );
 
     // need to rotate to min edge to be consistent with original paths (for addPartByMask)
     for ( auto& newPath : newPaths )
@@ -145,7 +145,7 @@ VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresen
     for ( int i = 0; i < paths.size(); ++i )
     {
         if ( paths[i].size() != newPaths[i].size() )
-            return tl::make_unexpected( "Patch surface borders size different from original mesh borders size" );
+            return unexpected( "Patch surface borders size different from original mesh borders size" );
     }
 
     // move patch surface border points to original position (according original mesh)

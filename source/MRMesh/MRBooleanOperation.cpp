@@ -186,7 +186,7 @@ Mesh doTrivialBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut, BooleanOperati
     return aPart;
 }
 
-tl::expected<MR::Mesh, std::string> doBooleanOperation( 
+Expected<MR::Mesh, std::string> doBooleanOperation( 
     Mesh&& meshACutted, Mesh&& meshBCutted, 
     const std::vector<EdgePath>& cutEdgesA, const std::vector<EdgePath>& cutEdgesB,
     BooleanOperation operation, 
@@ -240,7 +240,7 @@ tl::expected<MR::Mesh, std::string> doBooleanOperation(
             s += "Cannot separate mesh B to inside and outside parts, probably contours on mesh B are not closed or are not consistent.";
         }
 
-        return tl::make_unexpected( s );
+        return unexpected( s );
     }
     bool needStitch =
         operation != BooleanOperation::InsideA &&

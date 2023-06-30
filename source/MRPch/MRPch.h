@@ -7,7 +7,12 @@
 
 #include <parallel_hashmap/phmap.h>
 
+#include <version>
+#ifdef __cpp_lib_expected
+#include <expected>
+#else
 #include <tl/expected.hpp>
+#endif
 
 #pragma warning(push)
 #pragma warning(disable: 4619) //#pragma warning: there is no warning number

@@ -351,6 +351,7 @@
     <ClCompile Include="MREmbeddedPython.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />
     <ClCompile Include="MRExpandShrink.cpp" />
+    <ClCompile Include="MRExpected.cpp" />
     <ClCompile Include="MRExtractIsolines.cpp" />
     <ClCompile Include="MRExtractIsolinesTests.cpp" />
     <ClCompile Include="MRFastWindingNumber.cpp" />

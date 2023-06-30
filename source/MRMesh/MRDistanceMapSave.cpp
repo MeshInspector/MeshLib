@@ -20,7 +20,7 @@ const IOFilters Filters =
 VoidOrErrStr toRAW( const std::filesystem::path& path, const DistanceMap& dmap )
 {
     if ( path.empty() )
-        return tl::make_unexpected( "Path is empty" );
+        return unexpected( "Path is empty" );
 
     auto ext = utf8string( path.extension() );
     for ( auto& c : ext )
@@ -30,20 +30,20 @@ VoidOrErrStr toRAW( const std::filesystem::path& path, const DistanceMap& dmap )
     {
         std::stringstream ss;
         ss << "Extension is not correct, expected \".raw\" current \"" << ext << "\"" << std::endl;
-        return tl::make_unexpected( ss.str() );
+        return unexpected( ss.str() );
     }
 
     if ( dmap.numPoints() == 0 )
-        return tl::make_unexpected( "ObjectDistanceMap is empty" );
+        return unexpected( "ObjectDistanceMap is empty" );
 
     std::ofstream outFile( path, std::ios::binary );
     const std::string writeError = "Cannot write file: " + utf8string( path );
     if ( !outFile )
-        return tl::make_unexpected( writeError );    
+        return unexpected( writeError );    
 
     size_t resolution[2] = { dmap.resX(), dmap.resY() };
     if ( !outFile.write( ( char* )resolution, sizeof( resolution ) ) )
-        return tl::make_unexpected( writeError );
+        return unexpected( writeError );
 
     // this coping block allow us to write data to disk faster
     const size_t numPoints = dmap.numPoints();
@@ -52,7 +52,7 @@ VoidOrErrStr toRAW( const std::filesystem::path& path, const DistanceMap& dmap )
         buffer[i] = dmap.getValue( i );
 
     if ( !outFile.write( ( const char* )buffer.data(), buffer.size() * sizeof( float ) ) )
-        return tl::make_unexpected( writeError );
+        return unexpected( writeError );
 
     return {};
 }
@@ -60,7 +60,7 @@ VoidOrErrStr toRAW( const std::filesystem::path& path, const DistanceMap& dmap )
 VoidOrErrStr toMrDistanceMap( const std::filesystem::path& path, const DistanceMap& dmap, const DistanceMapToWorld& params )
 {
     if ( path.empty() )
-        return tl::make_unexpected( "Path is empty" );
+        return unexpected( "Path is empty" );
 
     auto ext = utf8string( path.extension() );
     for ( auto& c : ext )
@@ -70,23 +70,23 @@ VoidOrErrStr toMrDistanceMap( const std::filesystem::path& path, const DistanceM
     {
         std::stringstream ss;
         ss << "Extension is not correct, expected \".mrdistancemap\" current \"" << ext << "\"" << std::endl;
-        return tl::make_unexpected( ss.str() );
+        return unexpected( ss.str() );
     }
 
     if ( dmap.numPoints() == 0 )
-        return tl::make_unexpected( "ObjectDistanceMap is empty" );
+        return unexpected( "ObjectDistanceMap is empty" );
 
     std::ofstream outFile( path, std::ios::binary );
     const std::string writeError = "Cannot write file: " + utf8string( path );
     if ( !outFile )
-        return tl::make_unexpected( writeError );
+        return unexpected( writeError );
     
     if ( !outFile.write( ( const char* )&params, sizeof( DistanceMapToWorld ) ) )
-        return tl::make_unexpected( writeError );
+        return unexpected( writeError );
 
     size_t resolution[2] = { dmap.resX(), dmap.resY() };
     if ( !outFile.write( ( const char* )resolution, sizeof( resolution ) ) )
-        return tl::make_unexpected( writeError );
+        return unexpected( writeError );
 
     // this coping block allow us to write data to disk faster
     const size_t numPoints = dmap.numPoints();
@@ -95,7 +95,7 @@ VoidOrErrStr toMrDistanceMap( const std::filesystem::path& path, const DistanceM
         buffer[i] = dmap.getValue( i );
 
     if ( !outFile.write( ( const char* )buffer.data(), buffer.size() * sizeof( float ) ) )
-        return tl::make_unexpected( writeError );
+        return unexpected( writeError );
 
     return {};
 }
@@ -112,7 +112,7 @@ VoidOrErrStr toAnySupportedFormat( const std::filesystem::path& path, const Dist
         return filter.extension == ext;
     } );
     if ( itF == Filters.end() )
-        return tl::make_unexpected( std::string( "unsupported file extension" ) );
+        return unexpected( std::string( "unsupported file extension" ) );
 
     if ( itF->extension == "*.raw" )
         return toRAW( path, dmap );

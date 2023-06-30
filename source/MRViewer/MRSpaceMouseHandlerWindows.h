@@ -14,7 +14,7 @@ public:
 
     virtual void initialize() override;
     virtual void handle() override;
-    virtual void updateConnected( int jid, int event );
+    virtual void updateConnected( int jid, int event ) override;
 
     // set state of zoom by mouse scroll (to fix scroll signal from spacemouse driver)
     MRVIEWER_API void activateMouseScrollZoom( bool activeMouseScrollZoom );

@@ -76,7 +76,7 @@ bool isSpaceMouseAttached()
         return false;
 
     std::vector<RAWINPUTDEVICELIST> rawInputDeviceList( devicesCount );
-    if ( GetRawInputDeviceList( rawInputDeviceList.data(), &devicesCount, sizeof( RAWINPUTDEVICELIST ) ) == unsigned int( -1 ) )
+    if ( GetRawInputDeviceList( rawInputDeviceList.data(), &devicesCount, sizeof( RAWINPUTDEVICELIST ) ) == (unsigned int)-1 )
         return false;
 
     for ( unsigned int i = 0; i < devicesCount; ++i )

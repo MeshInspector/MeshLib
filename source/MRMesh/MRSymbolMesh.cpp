@@ -12,6 +12,7 @@
 #include "MRPolyline.h"
 #include "MRDistanceMap.h"
 #include "MRTimer.h"
+#include "MRBuffer.h"
 #include "MRPch/MRSpdlog.h"
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -109,7 +110,18 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
     FT_Library library;
     FT_Face face;
     FT_Init_FreeType( &library );
+#ifdef _WIN32
+    // on Windows, FT_New_Face cannot open files with Unicode names
+    std::error_code ec;
+    const auto fileSize = std::filesystem::file_size( params.pathToFontFile, ec );
+    Buffer<char> buffer( fileSize );
+    std::ifstream in( params.pathToFontFile, std::ifstream::binary );
+    in.read( buffer.data(), buffer.size() );
+    assert( in );
+    FT_New_Memory_Face( library, (const FT_Byte *)buffer.data(), (FT_Long)buffer.size(), 0, &face );
+#else
     FT_New_Face( library, utf8string( params.pathToFontFile ).c_str(), 0, &face );
+#endif
 
     FT_Set_Char_Size( face, 128 << 6, 128 << 6, 72, 72 );
     OutlineDecomposer decomposer( params.fontDetalization );

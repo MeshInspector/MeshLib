@@ -48,7 +48,7 @@ Expected<DistanceMap, std::string> fromRaw( const std::filesystem::path& path, P
     if ( !inFile.read( ( char* )resolution, sizeof( resolution ) ) )
         return unexpected( readError );
     const size_t size = size_t( resolution[0] ) * size_t( resolution[1] );
-    const size_t fileSize = std::filesystem::file_size( path );
+    const size_t fileSize = std::filesystem::file_size( path, ec );
 
     if ( size != ( fileSize - 2 * sizeof( uint64_t ) ) / sizeof( float ) )
         return unexpected( "File does not hold a distance map" );

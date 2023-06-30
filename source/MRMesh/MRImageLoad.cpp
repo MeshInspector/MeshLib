@@ -182,7 +182,8 @@ Expected<Image, std::string> fromJpeg( const std::filesystem::path& path )
     if ( !in )
         return unexpected( "Cannot open file " + utf8string( path ) );
 
-    const auto fileSize = std::filesystem::file_size( path );
+    std::error_code ec;
+    const auto fileSize = std::filesystem::file_size( path, ec );
     Buffer<char> buffer( fileSize );
     in.read( buffer.data(), (ptrdiff_t)buffer.size() );
     if ( !in )

@@ -18,3 +18,38 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+
+      - name: Determine latest release tag
+        id: latest_release
+        run: |
+          LATEST_RELEASE_TAG=$(gh release list --exclude-drafts --repo ${{ github.repository }} --limit 1 | awk '{print $4}')
+          echo "::set-output name=tag::${{ env.LATEST_RELEASE_TAG }}"
+
+      - name: Read release tag
+        id: read_tag
+        if: github.event.inputs.tag
+        run: echo "::set-output name=tag::${{ github.event.inputs.tag }}"
+
+      - name: Set release tag
+        id: set_tag
+        run: |
+          if [[ -z "${{ steps.read_tag.outputs.tag }}" ]]; then
+            echo "::set-output name=my_tag::${{ steps.latest_release.outputs.tag }}"
+          else
+            echo "::set-output name=my_tag::${{ steps.read_tag.outputs.tag }}"
+          fi
+
+      - name: Update Release Body
+        run: |
+          cp scripts/devops/release_body.txt .
+          pattern_path="RELEASE_PATH"
+          path_repl="https://github.com/MeshInspector/Meshlib/releases/download/SHORT_VERSION"
+          pattern_version='SHORT_VERSION'
+          version_repl='${{steps.set_tag.outputs.my_tag}}'
+          sed -i "s|${pattern_path}|${path_repl}|g" release_body.txt
+          sed -i "s|${pattern_version}|${version_repl}|g" release_body.txt
+
+      - name: Upload New Release Body
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit ${{ steps.set_tag.outputs.my_tag }} --notes-file release_body.txt

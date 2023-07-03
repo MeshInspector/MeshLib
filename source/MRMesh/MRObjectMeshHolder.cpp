@@ -388,6 +388,7 @@ void ObjectMeshHolder::selectEdges( UndirectedEdgeBitSet newSelection )
 {
     selectedEdges_ = std::move( newSelection );
     numSelectedEdges_.reset();
+    edgeSelectionChangedSignal();
     dirty_ |= DIRTY_EDGES_SELECTION;
 }
 
@@ -548,7 +549,7 @@ void ObjectMeshHolder::setCreases( UndirectedEdgeBitSet creases )
         return;
     creases_ = std::move( creases );
     numCreaseEdges_.reset();
-
+    creasesChangedSignal();
     if ( creases_.any() )
     {
         dirty_ |= DIRTY_CORNERS_RENDER_NORMAL;
@@ -571,7 +572,11 @@ void ObjectMeshHolder::swapSignals_( Object& other )
 {
     VisualObject::swapSignals_( other );
     if ( auto otherMesh = other.asType<ObjectMeshHolder>() )
+    {
         std::swap( faceSelectionChangedSignal, otherMesh->faceSelectionChangedSignal );
+        std::swap( edgeSelectionChangedSignal, otherMesh->edgeSelectionChangedSignal );
+        std::swap( creasesChangedSignal, otherMesh->creasesChangedSignal );
+    }
     else
         assert( false );
 }

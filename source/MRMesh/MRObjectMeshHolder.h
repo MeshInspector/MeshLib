@@ -173,8 +173,10 @@ public:
     MRMESH_API size_t numHandles() const;
 
     /// signal about face selection changing, triggered in selectFaces
-    using FaceSelectionChangedSignal = Signal<void()>;
-    FaceSelectionChangedSignal faceSelectionChangedSignal;
+    using SelectionChangedSignal = Signal<void()>;
+    SelectionChangedSignal faceSelectionChangedSignal;
+    SelectionChangedSignal edgeSelectionChangedSignal;
+    SelectionChangedSignal creasesChangedSignal;
 
 protected:
     FaceBitSet selectedTriangles_;

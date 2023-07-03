@@ -171,6 +171,8 @@ Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface
             vparams.iso = iso;
             vparams.maxVertices = maxSurfaceVertices_;
             vparams.cb = myCb;
+            if ( vdbVolume.data->getGridClass() == openvdb::GridClass::GRID_LEVEL_SET )
+                vparams.lessInside = true;
             meshRes = vdbVolumeToMesh( vdbVolume, vparams );
         }
         if ( meshRes.has_value() )

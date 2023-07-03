@@ -38,10 +38,11 @@ MRMESH_API void fixUndercuts( Mesh& mesh, const FaceBitSet& selectedArea, const 
 // Output - metric value
 using UndercutMetric = std::function<double( const FaceBitSet&, const Vector3f& upDir )>;
 
-// returns simple area of undercut faces
-MRMESH_API UndercutMetric getUndercutAreaMetric( const Mesh& mesh );
-// returns projected are of undercut faces
-MRMESH_API UndercutMetric getUndercutAreaProjectionMetric( const Mesh& mesh );
+/// returns the metric that computes total area of undercut faces
+[[nodiscard]] MRMESH_API UndercutMetric getUndercutAreaMetric( const Mesh& mesh );
+
+/// returns the metric that computes summed absolute area of undercut faces as visible if look from upDir
+[[nodiscard]] MRMESH_API UndercutMetric getUndercutAreaProjectionMetric( const Mesh& mesh );
 
 // Adds to outUndercuts undercut faces
 // Returns summary metric of undercut faces
@@ -50,7 +51,7 @@ MRMESH_API double findUndercuts( const Mesh& mesh, const Vector3f& upDirection, 
 MRMESH_API void findUndercuts( const Mesh& mesh, const Vector3f& upDirection, VertBitSet& outUndercuts );
 // Fast score undercuts projected area via distance map with given resolution
 // lower resolution means lower precision, but faster work
-MRMESH_API double scoreUndercuts( const Mesh& mesh, const Vector3f& upDirection, const Vector2i& resolution );
+[[nodiscard]] MRMESH_API double scoreUndercuts( const Mesh& mesh, const Vector3f& upDirection, const Vector2i& resolution );
 
 struct ImproveDirectionParameters
 {
@@ -78,9 +79,9 @@ struct DistMapImproveDirectionParameters : ImproveDirectionParameters
 //                    \  \_/\_/  /                                        | / _/
 //                     \__/__\__/                                         |/_/
 // This picture shows polarAngle = 60 deg
-MRMESH_API Vector3f improveDirection( const Mesh& mesh, const ImproveDirectionParameters& params, const UndercutMetric& metric );
+[[nodiscard]] MRMESH_API Vector3f improveDirection( const Mesh& mesh, const ImproveDirectionParameters& params, const UndercutMetric& metric );
 // Score candidates with distance maps, lower resolution -> faster score
-MRMESH_API Vector3f distMapImproveDirection( const Mesh& mesh, const DistMapImproveDirectionParameters& params );
+[[nodiscard]] MRMESH_API Vector3f distMapImproveDirection( const Mesh& mesh, const DistMapImproveDirectionParameters& params );
 }
 }
 #endif

@@ -173,13 +173,7 @@ UndercutMetric getUndercutAreaProjectionMetric( const Mesh& mesh )
 {
     return [&]( const FaceBitSet& faces, const Vector3f& upDir )
     {
-        Vector3f dir = upDir.normalized();
-        double twiceRes = 0;
-        for ( const auto& f : faces )
-        {
-            twiceRes += std::abs( dot( mesh.dirDblArea( f ), dir ) );
-        }
-        return twiceRes * 0.5;
+        return mesh.projArea( upDir, faces );
     };
 }
 
@@ -221,14 +215,7 @@ double scoreUndercuts( const Mesh& mesh, const Vector3f& upDirection, const Vect
     MR_TIMER;
     auto dir = upDirection.normalized();
     // find whole mesh projected area
-    tbb::enumerable_thread_specific<double> areaPerThread( 0.0 );
-    BitSetParallelFor( mesh.topology.getValidFaces(), [&]( FaceId id )
-    {
-        areaPerThread.local() += ( std::abs( dot( mesh.dirDblArea( id ), dir ) ) * 0.5 );
-    } );
-    double meshProjArea = 0.0;
-    for ( const auto& apt : areaPerThread )
-        meshProjArea += apt;
+    const double meshProjArea =  mesh.projArea( dir );
 
     // prepare distance map
     auto perp = dir.perpendicular();
@@ -265,7 +252,7 @@ double scoreUndercuts( const Mesh& mesh, const Vector3f& upDirection, const Vect
         sumPixelsArea += papt;
 
     // whole area - distance map area
-    return meshProjArea - sumPixelsArea;    
+    return meshProjArea - sumPixelsArea;
 }
 
 Vector3f improveDirectionInternal( const Mesh& mesh, const DistMapImproveDirectionParameters& params, const UndercutMetric* metric )

@@ -241,6 +241,36 @@ double Mesh::area( const FaceBitSet & fs ) const
     [] ( auto a, auto b ) { return a + b; } );
 }
 
+double Mesh::projArea( const Vector3f & dir, const FaceBitSet & fs ) const
+{
+    MR_TIMER
+
+    return 0.5 * parallel_deterministic_reduce( tbb::blocked_range( 0_f, FaceId{ topology.faceSize() }, 1024 ), 0.0,
+    [&] ( const auto & range, double curr )
+    {
+        for ( FaceId f = range.begin(); f < range.end(); ++f )
+            if ( fs.test( f ) && topology.hasFace( f ) )
+                curr += std::abs( dot( dirDblArea( f ), dir ) );
+        return curr;
+    },
+    [] ( auto a, auto b ) { return a + b; } );
+}
+
+Vector3d Mesh::dirArea( const FaceBitSet & fs ) const
+{
+    MR_TIMER
+
+    return 0.5 * parallel_deterministic_reduce( tbb::blocked_range( 0_f, FaceId{ topology.faceSize() }, 1024 ), Vector3d{},
+    [&] ( const auto & range, Vector3d curr )
+    {
+        for ( FaceId f = range.begin(); f < range.end(); ++f )
+            if ( fs.test( f ) && topology.hasFace( f ) )
+                curr += Vector3d( dirDblArea( f ) );
+        return curr;
+    },
+    [] ( auto a, auto b ) { return a + b; } );
+}
+
 class FaceVolumeCalc
 {
 public:

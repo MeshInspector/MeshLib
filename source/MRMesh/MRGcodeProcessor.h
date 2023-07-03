@@ -1,10 +1,12 @@
 #pragma once
 #include "MRMeshFwd.h"
-#include "MRMesh/MRVector3.h"
-#include "MRMesh/MRMatrix3.h"
+#include "MRVector3.h"
+#include "MRMatrix3.h"
+#include "MRAffineXf3.h"
 #include <vector>
 #include <string>
 #include <optional>
+#include <functional>
 
 
 namespace MR
@@ -14,6 +16,9 @@ namespace MR
 class MRMESH_CLASS GcodeProcessor
 {
 public:
+
+    GcodeProcessor();
+
     template<typename Vec>
     struct BaseAction
     {
@@ -44,6 +49,9 @@ public:
     MRMESH_API std::vector<MoveAction> processSource();
     // process all commands from one line g-code source and generate corresponding move action
     MRMESH_API MoveAction processLine( const std::string_view& line );
+
+    // 
+    MRMESH_API void setMoveOrder( std::function<AffineXf3f( Vector3f, Vector3f )> moveOrder );
 
 private:
 
@@ -78,6 +86,9 @@ private:
     // g51
     void updateScaling_();
 
+    // a, b, c
+    BaseAction3f rotateTool_();
+
     // g-command helper methods
 
     // sample arc points in 2d by begin point, end point and center in (0, 0)
@@ -89,7 +100,8 @@ private:
     // r < 0 : angle - (0, 360)
     BaseAction3f getArcPoints3_( float r, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise );
 
-    Vector3f calcRealNewCoord_();
+    Vector3f calcCoordMotors_();
+    Vector3f calcCoordWorkpieceSpace_( const Vector3f& motorsCoord );
 
     // mode of instrument movement
     enum class MoveMode
@@ -111,7 +123,11 @@ private:
     MoveMode moveMode_ = MoveMode::Idle;
     WorkPlane workPlane_ = WorkPlane::xy;
     Matrix3f toWorkPlaneXf_;
-    Vector3f basePoint_;
+    Vector3f workpiecePos_; // position tool in workpiece space (does not correspond to world space, because workpiece can be rotated)
+    Vector3f translationMotorsPos_; // translation motor positions
+    Vector3f rotationMotorsPos_; // rotation motor positions
+    std::vector<Matrix3f> rotationMatrix_; // rotation matrix cache. to avoid calculating for each line
+    std::function<AffineXf3f( Vector3f, Vector3f )> movementsOrder_; // ??? return transformation from translation (1st param) and rotation (2nd param) space to workpiece space
     bool absoluteCoordinates_ = true; //absolute coordinates or relative coordinates
     Vector3f scaling_ = Vector3f::diagonal( 1.f );
     bool inches_ = false;
@@ -122,11 +138,16 @@ private:
     Vector3<bool> inputCoordsReaded_;
     std::optional<float> radius_;
     std::optional<Vector3f> arcCenter_;
+    std::optional<Vector3f> inputRotation_;
 
     std::vector<std::string_view> gcodeSource_; // string list with sets of command (frames)
 
     // internal settings
     float accuracy_ = 1.e-3f;
+
+
+
+    // under development
 };
 
 }

@@ -93,10 +93,18 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] float area( FaceId f ) const { return 0.5f * dblArea( f ); }
     // returns aspect ratio of a triangle equal to the ratio of the circum-radius to twice its in-radius
     [[nodiscard]] MRMESH_API float triangleAspectRatio( FaceId f ) const;
-    // returns the area of given face-region
+    // computes the area of given face-region
     [[nodiscard]] MRMESH_API double area( const FaceBitSet & fs ) const;
-    // this version returns the area of whole mesh if argument is nullptr
+    // computes the area of given face-region (or whole mesh)
     [[nodiscard]] double area( const FaceBitSet * fs = nullptr ) const { return area( topology.getFaceIds( fs ) ); }
+    // computes the sum of directed areas for faces from given region
+    [[nodiscard]] MRMESH_API Vector3d dirArea( const FaceBitSet & fs ) const;
+    // computes the sum of directed areas for faces from given region (or whole mesh)
+    [[nodiscard]] Vector3d dirArea( const FaceBitSet * fs = nullptr ) const { return dirArea( topology.getFaceIds( fs ) ); }
+    // computes the sum of absolute projected area of faces from given region as visible if look from given direction
+    [[nodiscard]] MRMESH_API double projArea( const Vector3f & dir, const FaceBitSet & fs ) const;
+    // computes the sum of absolute projected area of faces from given region (or whole mesh) as visible if look from given direction
+    [[nodiscard]] double projArea( const Vector3f & dir, const FaceBitSet * fs = nullptr ) const { return projArea( dir, topology.getFaceIds( fs ) ); }
     // returns volume of closed mesh region, if region is not closed DBL_MAX is returned
     // if region is nullptr - whole mesh is region
     [[nodiscard]] MRMESH_API double volume( const FaceBitSet* region = nullptr ) const;

@@ -177,9 +177,9 @@ UndercutMetric getUndercutAreaProjectionMetric( const Mesh& mesh )
     };
 }
 
-double findUndercuts( const Mesh& mesh, const Vector3f& upDirection, FaceBitSet& outUndercuts, const UndercutMetric& metric )
+void findUndercuts( const Mesh& mesh, const Vector3f& upDirection, FaceBitSet& outUndercuts )
 {
-    MR_TIMER;
+    MR_TIMER
 
     outUndercuts.resize( mesh.topology.faceSize() );
     float moveUpRay = mesh.computeBoundingBox().diagonal() * 1e-5f; //to be independent of mesh size
@@ -192,6 +192,12 @@ double findUndercuts( const Mesh& mesh, const Vector3f& upDirection, FaceBitSet&
             outUndercuts.set( f );
         }
     } );
+}
+
+double findUndercuts( const Mesh& mesh, const Vector3f& upDirection, FaceBitSet& outUndercuts, const UndercutMetric& metric )
+{
+    MR_TIMER
+    findUndercuts( mesh, upDirection, outUndercuts );
     return metric( outUndercuts, upDirection );
 }
 

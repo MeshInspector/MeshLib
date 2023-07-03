@@ -44,11 +44,15 @@ using UndercutMetric = std::function<double( const FaceBitSet&, const Vector3f& 
 /// returns the metric that computes summed absolute area of undercut faces as visible if look from upDir
 [[nodiscard]] MRMESH_API UndercutMetric getUndercutAreaProjectionMetric( const Mesh& mesh );
 
-// Adds to outUndercuts undercut faces
-// Returns summary metric of undercut faces
-MRMESH_API double findUndercuts( const Mesh& mesh, const Vector3f& upDirection, FaceBitSet& outUndercuts, const UndercutMetric& metric );
-// the same but search for vertices
+/// Adds to \param outUndercuts undercut faces
+MRMESH_API void findUndercuts( const Mesh& mesh, const Vector3f& upDirection, FaceBitSet& outUndercuts );
+/// Adds to \param outUndercuts undercut vertices
 MRMESH_API void findUndercuts( const Mesh& mesh, const Vector3f& upDirection, VertBitSet& outUndercuts );
+
+/// Adds to \param outUndercuts undercut faces
+/// Returns summary metric of undercut faces
+[[nodiscard]] MRMESH_API double findUndercuts( const Mesh& mesh, const Vector3f& upDirection, FaceBitSet& outUndercuts, const UndercutMetric& metric );
+
 // Fast score undercuts projected area via distance map with given resolution
 // lower resolution means lower precision, but faster work
 [[nodiscard]] MRMESH_API double scoreUndercuts( const Mesh& mesh, const Vector3f& upDirection, const Vector2i& resolution );

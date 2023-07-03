@@ -98,11 +98,11 @@ struct [[nodiscard]] Mesh
     // computes the area of given face-region (or whole mesh)
     [[nodiscard]] double area( const FaceBitSet * fs = nullptr ) const { return area( topology.getFaceIds( fs ) ); }
     // computes the sum of directed areas for faces from given region
-    [[nodiscard]] Vector3d dirArea( const FaceBitSet & fs ) const;
+    [[nodiscard]] MRMESH_API Vector3d dirArea( const FaceBitSet & fs ) const;
     // computes the sum of directed areas for faces from given region (or whole mesh)
     [[nodiscard]] Vector3d dirArea( const FaceBitSet * fs = nullptr ) const { return dirArea( topology.getFaceIds( fs ) ); }
     // computes the sum of absolute projected area of faces from given region as visible if look from given direction
-    [[nodiscard]] double projArea( const Vector3f & dir, const FaceBitSet & fs ) const;
+    [[nodiscard]] MRMESH_API double projArea( const Vector3f & dir, const FaceBitSet & fs ) const;
     // computes the sum of absolute projected area of faces from given region (or whole mesh) as visible if look from given direction
     [[nodiscard]] double projArea( const Vector3f & dir, const FaceBitSet * fs = nullptr ) const { return projArea( dir, topology.getFaceIds( fs ) ); }
     // returns volume of closed mesh region, if region is not closed DBL_MAX is returned

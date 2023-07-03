@@ -1,0 +1,11 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MeshLibDir Condition="'$(MeshLibDir)' == ''">$(MSBuildThisFileDirectory)..\</MeshLibDir>
+    <MeshLibBinDir>$(MeshLibDir)lib\native\</MeshLibBinDir>
+    <MeshLibDebugDir>$(MeshLibDir)lib\native\</MeshLibDebugDir>
+    <MeshLibIncludeDir>$(MeshLibDir)include\native\</MeshLibIncludeDir>
+    <MeshLibShareDir>$(MeshLibDir)share\native\</MeshLibShareDir>
+    <MeshLibSrcDir>$(MeshLibDir)src\native\</MeshLibSrcDir>
+    <MeshLibToolsDir>$(MeshLibDir)tools\native\</MeshLibToolsDir>
+  </PropertyGroup>
+</Project>

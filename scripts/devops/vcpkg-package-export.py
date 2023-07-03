@@ -19,11 +19,13 @@ with open(REQUIREMTS_PATH) as fin:
         if line:
             VCPKG_CMD += line + ":x64-windows-meshlib "
 
-VCPKG_CMD += " --nuget"
+VCPKG_CMD += " --raw "
 
 # If the output filename is specified
 if args.output:
     VCPKG_CMD += " --output " + args.output
+else:
+    VCPKG_CMD += " --output export"
 
 try:
     check_output(VCPKG_CMD, shell=True)

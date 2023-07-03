@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>MeshLibVcpkgPackage</id>
+    <version>2023.4.15</version>
+    <title>Meshlib vcpkg binaries</title>
+    <authors>MeshInspector Team</authors>
+    <owners>MeshInspector Team</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>This package contains all vcpkg packages.</description>
+    <releaseNotes>First release.</releaseNotes>
+    <copyright>Copyright 2023</copyright>
+    <tags>vcpkg nuget c++</tags>
+    <dependencies>
+      <group>
+        <dependency id="Python" version="3.10.3" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="MeshLibVcpkgPackage.props" target="build\native" />
+    <file src="MeshLibVcpkgPackage.targets" target="build\native" />
+    <file src="G:\vcpkg_s\export\installed\x64-windows-meshlib\bin\**\*" target="lib\native" />
+    <file src="G:\vcpkg_s\export\installed\x64-windows-meshlib\debug\**\*" target="lib\native" />
+    <file src="G:\vcpkg_s\export\installed\x64-windows-meshlib\include\**\*" target="include\native" />
+    <file src="G:\vcpkg_s\export\installed\x64-windows-meshlib\share\**\*" target="share\native" />
+    <file src="G:\vcpkg_s\export\installed\x64-windows-meshlib\src\**\*" target="src\native" />
+    <file src="G:\vcpkg_s\export\installed\x64-windows-meshlib\tools\**\*" target="tools\native" />
+  </files>
+</package>

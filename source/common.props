@@ -23,13 +23,32 @@
   <PropertyGroup>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
-  <PropertyGroup Label="Globals">
-    <VcpkgCurrentInstalledDir>$(VcpkgRoot)\installed\$(VcpkgTriplet)</VcpkgCurrentInstalledDir>
-    <PythonVersion>310</PythonVersion>
-	<PythonIncludePath>$(VcpkgCurrentInstalledDir)\include\python3.10\</PythonIncludePath>
-    <PythonLibPath>$(VcpkgCurrentInstalledDir)\lib\python$(PythonVersion).lib</PythonLibPath>
-    <PythonDllPath>$(VcpkgCurrentInstalledDir)\bin\python$(PythonVersion).dll</PythonDllPath>
-  </PropertyGroup>
+
+    <PropertyGroup>
+      <PotentialPythonDir>$(MSBuildThisFileDirectory)packages\python.3.10.3\tools</PotentialPythonDir>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(PotentialPythonDir)')">
+      <VcpkgCurrentInstalledDir>$(PotentialPythonDir)</VcpkgCurrentInstalledDir>
+      <PythonVersion>310</PythonVersion>
+      <PythonIncludePath>$(VcpkgCurrentInstalledDir)\include\python3.10\</PythonIncludePath>
+      <PythonLibPath>$(VcpkgCurrentInstalledDir)\libs\python$(PythonVersion).lib</PythonLibPath>
+      <PythonDllPath>$(VcpkgCurrentInstalledDir)\python$(PythonVersion).dll</PythonDllPath>
+    </PropertyGroup>
+    <PropertyGroup Condition="!Exists('$(PotentialPythonDir)')">
+      <VcpkgCurrentInstalledDir>$(VcpkgRoot)\installed\$(VcpkgTriplet)</VcpkgCurrentInstalledDir>
+      <PythonVersion>310</PythonVersion>
+      <PythonIncludePath>$(VcpkgCurrentInstalledDir)\include\python3.10\</PythonIncludePath>
+      <PythonLibPath>$(VcpkgCurrentInstalledDir)\lib\python$(PythonVersion).lib</PythonLibPath>
+      <PythonDllPath>$(VcpkgCurrentInstalledDir)\bin\python$(PythonVersion).dll</PythonDllPath>
+    </PropertyGroup>
+    <PropertyGroup Label="Globals">
+      <PythonVersion>$(PythonVersion)</PythonVersion>
+      <PythonIncludePath>$(PythonIncludePath)</PythonIncludePath>
+      <PythonLibPath>$(PythonLibPath)</PythonLibPath>
+      <PythonDllPath>$(PythonDllPath)</PythonDllPath>
+    </PropertyGroup>
+
+
   <ItemDefinitionGroup>
     <ClCompile>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>

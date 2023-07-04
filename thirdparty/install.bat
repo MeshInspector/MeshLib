@@ -11,7 +11,7 @@ for /f "delims=" %%i in ('type "%~dp0..\requirements\windows.txt"') do (
 )
 
 REM Set the binary sources to use the S3 bucket
-set VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/2023.04.15/x64-windows-meshlib/,read;
+set VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/2023.04.15/x64-windows-meshlib/,read;
 
 vcpkg install !packages! --recurse --overlay-triplets "%~dp0vcpkg\triplets"
 endlocal

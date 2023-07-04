@@ -116,7 +116,6 @@ std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const MeshPart&
     constexpr Vector3f normals[3] = { {1, 0, 0}, {0, 1, 0}, {0, 0 ,1} };
     const Vector3f normal = normals[axisIndex];
     const auto box = mesh.computeBoundingBox();
-    const auto origBox = origMeshPart.mesh.computeBoundingBox();
     const auto plane = MR::Plane3f::fromDirAndPt( normal, box.max );    
 
     tbb::parallel_for( tbb::blocked_range<int>( 0, steps ), [&] ( const tbb::blocked_range<int>& range )
@@ -136,7 +135,7 @@ std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const MeshPart&
                 continue;
             }
 
-            for ( const auto section : stepSections )
+            for ( const auto& section : stepSections )
             {
                 auto startIt = section.begin();
                 auto endIt = startIt;

@@ -172,11 +172,12 @@ jobs:
           aws-region: us-east-1
 
       - name: Build and cache vcpkg
-        run: .\thirdparty\install_runner.bat
+        run: |
+          cp .\thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake C:\vcpkg\triplets\
+          .\thirdparty\install_runner.bat
 
       - name: Pack vcpkg
         run: |
-          cp .\thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake C:\vcpkg\triplets\
           py -3 scripts/devops/vcpkg-package-export.py --output vcpkg-export-${{env.VCPKG-VERSION}}-${{matrix.os}}
 
       - name: Upload to AWS Codeartifact

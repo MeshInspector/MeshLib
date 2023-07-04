@@ -103,7 +103,7 @@ MRMESH_API Expected<ToolPathResult, std::string> constantZToolPath( const MeshPa
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
 // // this one is traditional lace-roughing toolpath
 // mesh can be transformed using xf parameter
-MRMESH_API Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const ToolPathParams& params, const AffineXf3f* xf = nullptr, ProgressCallback cb = {} );
+MRMESH_API Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const ToolPathParams& params, Axis cutDirection, const AffineXf3f* xf = nullptr, ProgressCallback cb = {} );
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
 // this toolpath is built from geodesic parallels divercing from the given start point

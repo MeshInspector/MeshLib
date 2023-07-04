@@ -13,5 +13,5 @@ for /f "delims=" %%i in ('type "%~dp0..\requirements\windows.txt"') do (
 REM Set the binary sources to use the S3 bucket
 set VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/2023.04.15/test/,readwrite;
 
-vcpkg install !packages! --recurse --overlay-triplets "%~dp0vcpkg\triplets" --debug --x-abi-tools-use-exact-versions
+vcpkg install eigen3 --recurse --overlay-triplets "%~dp0vcpkg\triplets" --debug --x-abi-tools-use-exact-versions
 endlocal

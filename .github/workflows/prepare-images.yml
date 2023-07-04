@@ -176,16 +176,15 @@ jobs:
       - name: Pack vcpkg
         run: |
           cp .\thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake C:\vcpkg\triplets\
-          vcpkg export tinyxml2:x64-windows-meshlib  --nuget --output vcpkg-export-2023.04.15.1
-          py -3 scripts/devops/vcpkg-package-export.py --output vcpkg-export-${{env.VCPKG-VERSION}}
+          py -3 scripts/devops/vcpkg-package-export.py --output vcpkg-export-${{env.VCPKG-VERSION}}-${{matrix.os}}
 
       - name: Upload to AWS Codeartifact
         working-directory: C:\vcpkg
         run: |
           aws codeartifact login --tool dotnet --repository meshlib-vcpkg --domain meshlib --domain-owner 259351611210 --region us-east-1
-          nuget push vcpkg-export-${{env.VCPKG-VERSION}}.1.0.0.nupkg -Source meshlib/meshlib-vcpkg
+          nuget push vcpkg-export-${{env.VCPKG-VERSION}}-${{matrix.os}}.1.0.0.nupkg -Source meshlib/meshlib-vcpkg
           
       - name: Upload to AWS s3
         working-directory: C:\vcpkg
         run: |
-          aws s3 cp ./vcpkg-export-${{env.VCPKG-VERSION}}.1.0.0.nupkg s3://vcpkg-export/vcpkg-export-${{env.VCPKG-VERSION}}.1.0.0.nupkg
+          aws s3 cp ./vcpkg-export-${{env.VCPKG-VERSION}}-${{matrix.os}}.1.0.0.nupkg s3://vcpkg-export/vcpkg-export-${{env.VCPKG-VERSION}}-${{matrix.os}}.1.0.0.nupkg

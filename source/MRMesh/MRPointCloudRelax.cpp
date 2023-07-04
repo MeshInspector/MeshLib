@@ -79,7 +79,6 @@ bool relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
         pointCloud.getBoundingBox().diagonal() * 0.1f;
 
     std::vector<Vector3f> vertPushForces( zone.size() );
-    std::vector<std::vector<VertId>> neighbors( zone.size() );
 
     bool keepGoing = true;
     for ( int i = 0; i < params.iterations; ++i )
@@ -100,33 +99,39 @@ bool relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
         keepGoing = BitSetParallelFor( zone, [&] ( VertId v )
         {
             Vector3d sumPos;
-            auto& neighs = neighbors[v];
-            neighs.clear();
+            int count = 0;
             findPointsInBall( pointCloud, pointCloud.points[v], radius,
-                [&] ( VertId newV, const Vector3f& position )
+                [&] ( VertId nv, const Vector3f& position )
             {
-                if ( newV != v )
+                if ( nv != v && zone.test( nv ) )
                 {
-                    neighs.push_back( newV );
                     sumPos += Vector3d( position );
+                    ++count;
                 }
             } );
-            if ( neighs.empty() )
+            if ( count <= 0 )
                 return;
-            vertPushForces[v] = params.force * ( Vector3f{ sumPos / double( neighs.size() ) } - pointCloud.points[v] );
+            vertPushForces[v] = params.force * ( Vector3f{ sumPos / double( count ) } - pointCloud.points[v] );
         }, internalCb1 );
         if ( !keepGoing )
             break;
         keepGoing = BitSetParallelFor( zone, [&] ( VertId v )
         {
-            auto& np = newPoints[v];
-            np += vertPushForces[v];
-            auto modifier = 1.0f / float( neighbors.size() );
-            for ( const auto& nv : neighbors[v] )
+            Vector3d sumForces;
+            int count = 0;
+            findPointsInBall( pointCloud, pointCloud.points[v], radius,
+                [&] ( VertId nv, const Vector3f& )
             {
-                if ( zone.test( nv ) )
-                    np -= ( vertPushForces[nv] * modifier );
-            }
+                if ( nv != v && zone.test( nv ) )
+                {
+                    sumForces += Vector3d( vertPushForces[nv] );
+                    ++count;
+                }
+            } );
+            if ( count <= 0 )
+                return;
+
+            newPoints[v] += vertPushForces[v] - Vector3f{ sumForces / double( count ) };
         }, internalCb2 );
         pointCloud.points.swap( newPoints );
         pointCloud.invalidateCaches();

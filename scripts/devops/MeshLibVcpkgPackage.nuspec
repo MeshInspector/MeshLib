@@ -20,11 +20,8 @@
   <files>
     <file src="MeshLibVcpkgPackage.props" target="build\native" />
     <file src="MeshLibVcpkgPackage.targets" target="build\native" />
-    <file src="G:\vcpkg_s\export\installed\x64-windows-meshlib\bin\**\*" target="lib\native" />
-    <file src="G:\vcpkg_s\export\installed\x64-windows-meshlib\debug\**\*" target="lib\native" />
-    <file src="G:\vcpkg_s\export\installed\x64-windows-meshlib\include\**\*" target="include\native" />
-    <file src="G:\vcpkg_s\export\installed\x64-windows-meshlib\share\**\*" target="share\native" />
-    <file src="G:\vcpkg_s\export\installed\x64-windows-meshlib\src\**\*" target="src\native" />
-    <file src="G:\vcpkg_s\export\installed\x64-windows-meshlib\tools\**\*" target="tools\native" />
+    <file src="G:\vcpkg_s\export\installed\x64-windows-meshlib\bin\**\*" target="build\native\lib" />
+    <file src="G:\vcpkg_s\export\installed\x64-windows-meshlib\debug\**\*" target="build\native\lib" />
+    <file src="G:\vcpkg_s\export\installed\x64-windows-meshlib\include\**\*" target="build\native\include" />
   </files>
 </package>

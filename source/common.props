@@ -30,7 +30,7 @@
     <PropertyGroup Condition="Exists('$(PotentialPythonDir)')">
       <VcpkgCurrentInstalledDir>$(PotentialPythonDir)</VcpkgCurrentInstalledDir>
       <PythonVersion>310</PythonVersion>
-      <PythonIncludePath>$(VcpkgCurrentInstalledDir)\include\python3.10\</PythonIncludePath>
+      <PythonIncludePath>$(VcpkgCurrentInstalledDir)\include\</PythonIncludePath>
       <PythonLibPath>$(VcpkgCurrentInstalledDir)\libs\python$(PythonVersion).lib</PythonLibPath>
       <PythonDllPath>$(VcpkgCurrentInstalledDir)\python$(PythonVersion).dll</PythonDllPath>
     </PropertyGroup>

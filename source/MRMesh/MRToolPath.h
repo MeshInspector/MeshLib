@@ -34,6 +34,10 @@ struct ToolPathParams
     float baseFeed = {};
     // z-coordinate of plane where tool can move in any direction without touching the object
     float safeZ = {};
+    // mesh can be transformed using xf parameter
+    const AffineXf3f* xf = nullptr;
+    // callback for reporting on progress
+    ProgressCallback cb = {};
 };
 
 struct LineInterpolationParams
@@ -77,12 +81,12 @@ struct GCommand
     ArcPlane arcPlane = ArcPlane::None;
     // feedrate for move
     float feed = std::numeric_limits<float>::quiet_NaN();
-    // 
+    // coordinates of destination point
     float x = std::numeric_limits<float>::quiet_NaN();
     float y = std::numeric_limits<float>::quiet_NaN();
     float z = std::numeric_limits<float>::quiet_NaN();
-
-    Vector3f arcCenter = { std::numeric_limits<float>::quiet_NaN() , std::numeric_limits<float>::quiet_NaN() , std::numeric_limits<float>::quiet_NaN() };
+    // if moveType is ArcCW or ArcCCW center of the arc shoult be specified
+    Vector3f arcCenter = Vector3f::diagonal( std::numeric_limits<float>::quiet_NaN() );
 };
 
 struct ToolPathResult
@@ -97,19 +101,20 @@ struct ToolPathResult
 // this toolpath is built from the parallel sections along Z-axis
 // mesh can be transformed using xf parameter
 
-MRMESH_API Expected<ToolPathResult, std::string> constantZToolPath( const MeshPart& mp, const ToolPathParams& params, const AffineXf3f* xf = nullptr, ProgressCallback cb = {} );
+MRMESH_API Expected<ToolPathResult, std::string> constantZToolPath( const MeshPart& mp, const ToolPathParams& params );
 
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
 // // this one is traditional lace-roughing toolpath
-// mesh can be transformed using xf parameter
-MRMESH_API Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const ToolPathParams& params, Axis cutDirection, const AffineXf3f* xf = nullptr, ProgressCallback cb = {} );
+
+// Slices are built along the axis defined by cutDirection argument (can be Axis::X or Axis::Y)
+MRMESH_API Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const ToolPathParams& params, Axis cutDirection );
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
 // this toolpath is built from geodesic parallels divercing from the given start point
 // if the start point is not specified, the highest point on the mesh will be used
 // mesh can be transformed using xf parameter
-MRMESH_API Expected<ToolPathResult, std::string> constantCuspToolPath( const Mesh& mesh, const ToolPathParams& params, VertId startPoint = {}, const AffineXf3f* xf = nullptr, ProgressCallback cb = {} );
+MRMESH_API Expected<ToolPathResult, std::string> constantCuspToolPath( const Mesh& mesh, const ToolPathParams& params, VertId startPoint = {} );
 
 // generates G-Code for milling tool
 MRMESH_API std::shared_ptr<ObjectGcode> exportToolPathToGCode( const std::vector<GCommand>& commands );

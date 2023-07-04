@@ -148,6 +148,7 @@ jobs:
     timeout-minutes: 240
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [windows-2022, windows-2019]
     steps:
@@ -171,7 +172,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Build and cache vcpkg
-        run: .\scripts\devops\install.bat
+        run: .\thirdparty\install_runner.bat
 
       - name: Pack vcpkg
         run: |

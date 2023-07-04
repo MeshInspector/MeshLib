@@ -1,4 +1,4 @@
-set VCPKG_DEFAULT_TRIPLET=x64-windows-meshlib
+set VCPKG_DEFAULT_TRIPLET=x64-windows
 
 for /f "delims=" %%i in ('where vcpkg') do set vcpkg_path=%%~dpi
 if not exist "%vcpkg_path%downloads" mkdir "%vcpkg_path%downloads"

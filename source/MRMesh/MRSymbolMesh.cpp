@@ -247,8 +247,8 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
 
     if ( params.symbolsThicknessOffsetModifier != 0.0f )
     {
-        auto height = box.max.y - box.min.y;
-        auto absOffset = height * params.symbolsThicknessOffsetModifier;
+        auto size = box.size();
+        auto absOffset = size.y / double( numSymbols.y ) * params.symbolsThicknessOffsetModifier;
         Polyline2 polyline;
         polyline.topology.buildFromContours( decomposer.contours,
             [&points = polyline.points]( size_t sz )
@@ -262,10 +262,10 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
         }
         );
         ContourToDistanceMapParams dmParams;
-        dmParams.pixelSize = Vector2f::diagonal( float( height ) / 72.0f );
+        dmParams.pixelSize = Vector2f::diagonal( float( size.y ) / float( numSymbols.y ) / 72.0f );
         dmParams.orgPoint = Vector2f( box.min );
-        dmParams.resolution.x = 72 * int( numSymbols.x * ( 1.0f + params.symbolsDistanceAdditionalOffset.x ) + 1.0f );
-        dmParams.resolution.y = 72 * int( numSymbols.y * ( 1.0f + params.symbolsDistanceAdditionalOffset.y ) + 1.0f );
+        dmParams.resolution.x = int( std::ceil( size.x / dmParams.pixelSize.x ) ) + 1;
+        dmParams.resolution.y = int( std::ceil( size.y / dmParams.pixelSize.y ) ) + 1;
         dmParams.withSign = true;
         if ( absOffset > 0.0f )
         {

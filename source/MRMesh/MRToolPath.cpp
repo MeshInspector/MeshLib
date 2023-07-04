@@ -263,7 +263,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
     using V3fIt = std::vector<Vector3f>::const_iterator;
     using Intervals = std::vector<std::pair<V3fIt, V3fIt>>;
 
-    // compute intervals of the slice which are projected on the selected area in the mesh
+    // compute intervals of the slice which are projected on the selected area in the mesh (skip if not specified)
     const auto getIntervals = [&] (const V3fIt startIt, const V3fIt endIt, const V3fIt beginVec, const V3fIt endVec, bool moveForward )
     {
         Intervals res;

@@ -987,6 +987,9 @@
     <ClInclude Include="MRVoxelsConversionsByParts.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
+    <ClInclude Include="MRMovementBuildBody.h">
+      <Filter>Source Files\Primitives</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1639,6 +1642,9 @@
     </ClCompile>
     <ClCompile Include="MRViewportId.cpp">
       <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMovementBuildBody.cpp">
+      <Filter>Source Files\Primitives</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

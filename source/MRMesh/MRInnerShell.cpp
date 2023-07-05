@@ -2,6 +2,7 @@
 #include "MRMesh.h"
 #include "MRMeshProject.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
 #include "MRTimer.h"
 
@@ -47,7 +48,40 @@ FaceBitSet findInnerShellFacesWithSplits( const Mesh & mesh, Mesh & shell, Side 
         if ( contains( innerVerts, shell.topology.org( ue ) ) != contains( innerVerts, shell.topology.dest( ue ) ) )
             ues.set( ue );
     } );
-    //...
+
+    std::vector<EdgePoint> splitEdges;
+    splitEdges.reserve( ues.count() );
+    for ( EdgeId e : ues )
+        splitEdges.emplace_back( e, 0 );
+
+    // find split-point on each edge
+    ParallelFor( splitEdges, [&]( size_t i )
+    {
+        EdgeId e = splitEdges[i].e;
+        if ( !contains( innerVerts, shell.topology.org( e ) ) )
+            e = e.sym();
+        assert( contains( innerVerts, shell.topology.org( e ) ) );
+        assert( !contains( innerVerts, shell.topology.dest( e ) ) );
+        auto a = shell.orgPnt( e );
+        auto b = shell.destPnt( e );
+        float av = 0, bv = 1;
+        // binary search
+        for ( int j = 0; j < 8; ++j )
+        {
+            const auto v = 0.5f * ( av + bv );
+            const auto p = ( 1 - v ) * a + v * b;
+            if ( isInnerShellVert( mesh, p, side ) )
+                av = v;
+            else
+                bv = v;
+        }
+        splitEdges[i] = EdgePoint( e, 0.5f * ( av + bv ) );
+    } );
+
+    // perform actual splitting
+    for ( const auto & ep : splitEdges )
+        shell.splitEdge( ep.e, shell.edgePoint( ep ) );
+
     return getIncidentFaces( shell.topology, innerVerts );
 }
 

@@ -213,7 +213,11 @@ struct [[nodiscard]] Mesh
 
     // append points to mesh and connect them as closed edge loop
     // returns first EdgeId of new edges
-    MRMESH_API EdgeId addSeparateEdgeLoop( const std::vector<Vector3f>& contourPoints );
+    MRMESH_API EdgeId addSeparateEdgeLoop(const std::vector<Vector3f>& contourPoints);
+
+    // append points to mesh and connect them
+    // returns first EdgeId of new edges
+    MRMESH_API EdgeId addSeparateContours( const Contours3f& contours, const AffineXf3f* shift = nullptr );
 
     // append points to mesh and connect them to given edges making edge loop
     // first point connects with first edge dest

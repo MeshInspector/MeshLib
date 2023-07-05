@@ -1634,8 +1634,10 @@
     <ClCompile Include="MRVoxelsConversionsByParts.cpp">
       <Filter>Source Files\Voxels</Filter>
     </ClCompile>
-    <ClCompile Include="MRViewportId.cpp" />
     <ClCompile Include="MRExpected.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewportId.cpp">
       <Filter>Source Files\Basic</Filter>
     </ClCompile>
   </ItemGroup>

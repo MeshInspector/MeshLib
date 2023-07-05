@@ -710,6 +710,52 @@ EdgeId Mesh::addSeparateEdgeLoop( const std::vector<Vector3f>& contourPoints )
     return newEdges.front();
 }
 
+EdgeId Mesh::addSeparateContours( const Contours3f& contours, const AffineXf3f* shift )
+{
+    auto isClosed = [&] ( const Contour3f& cont )
+    {
+        return cont.size() > 2 && cont.front() == cont.back();
+    };
+    EdgeId firstNewEdge;
+    for ( const auto& cont : contours )
+    {
+        bool closed = isClosed( cont );
+        size_t numNewVerts = closed ? cont.size() - 1 : cont.size();
+        size_t numNewEdges = cont.size() - 1;
+        EdgeId prevEdgeId;
+        EdgeId firstContEdge;
+        for ( size_t i = 0; i < numNewVerts; ++i )
+        {
+            auto newVert = addPoint( shift ? ( *shift )( cont[i] ) : cont[i] );
+            if ( prevEdgeId )
+                topology.setOrg( prevEdgeId.sym(), newVert );
+            if ( i < numNewEdges )
+            {
+                auto newEdge = topology.makeEdge();
+                if ( !firstContEdge )
+                {
+                    firstContEdge = newEdge;
+                    if ( !firstNewEdge )
+                        firstNewEdge = firstContEdge;
+                }
+                if ( prevEdgeId )
+                    topology.splice( prevEdgeId.sym(), newEdge );
+                else
+                {
+                    topology.setOrg( newEdge, newVert );
+                    prevEdgeId = newEdge;
+                }
+            }
+        }
+        if ( closed )
+            topology.splice( firstContEdge, prevEdgeId.sym() );
+    }
+
+    invalidateCaches();
+
+    return firstNewEdge;
+}
+
 void Mesh::attachEdgeLoopPart( EdgeId first, EdgeId last, const std::vector<Vector3f>& contourPoints )
 {
     if ( topology.left( first ) || topology.left( last ) )

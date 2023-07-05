@@ -1,7 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
-#include "MRMesh/MRVector3.h"
-#include "MRMesh/MRMatrix3.h"
+#include "MRVector3.h"
+#include "MRMatrix3.h"
 #include <vector>
 #include <string>
 #include <optional>
@@ -14,6 +14,7 @@ namespace MR
 class MRMESH_CLASS GcodeProcessor
 {
 public:
+
     template<typename Vec>
     struct BaseAction
     {
@@ -70,6 +71,7 @@ private:
 
     // g0, g1
     MoveAction moveLine_( const Vector3f& newPoint, bool idle );
+    // g2, g3
     MoveAction moveArc_( const Vector3f& newPoint, bool clockwise );
 
     // g17, g18, g19
@@ -89,7 +91,14 @@ private:
     // r < 0 : angle - (0, 360)
     BaseAction3f getArcPoints3_( float r, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise );
 
-    Vector3f calcRealNewCoord_();
+    // sample arc points of tool movement during rotation
+    BaseAction3f getToolRotationPoints_();
+
+    Vector3f calcCoordMotors_();
+    Vector3f calcRealCoord_( const Vector3f& translationPos, const Vector3f& rotationAngles );
+    void updateRotationAngleAndMatrix_( const Vector3f& rotationAngles );
+    Vector3f calcRealCoordCached_( const Vector3f& translationPos, const Vector3f& rotationAngles );
+    Vector3f calcRealCoordCached_( const Vector3f& translationPos );
 
     // mode of instrument movement
     enum class MoveMode
@@ -107,26 +116,34 @@ private:
         Movement,
         Scaling
     };
+
+    // internal states (such as current position and different work modes)
     CoordType coordType_ = CoordType::Movement;
     MoveMode moveMode_ = MoveMode::Idle;
     WorkPlane workPlane_ = WorkPlane::xy;
-    Matrix3f toWorkPlaneXf_;
-    Vector3f basePoint_;
+    Matrix3f toWorkPlaneXf_; // work plane for calculation arc movement
+    Vector3f translationPos_; // last values of x, y, z (translation. positions of linear movement motors)
+    Vector3f rotationAngles_; // last values of a, b, c (rotation. angles of circular movement motors)
     bool absoluteCoordinates_ = true; //absolute coordinates or relative coordinates
     Vector3f scaling_ = Vector3f::diagonal( 1.f );
     bool inches_ = false;
     float feedrate_ = 100.f;
 
-    // temporary states
-    Vector3f inputCoords_;
-    Vector3<bool> inputCoordsReaded_;
-    std::optional<float> radius_;
-    std::optional<Vector3f> arcCenter_;
+    // cached data
+    std::array<Matrix3f, 3> cacheRotationMatrix_; // cached rotation matrices. to avoid calculating for each line (without rotation)
+
+    // input data (data entered in last line)
+    Vector3f inputCoords_; // x, y, z
+    Vector3<bool> inputCoordsReaded_; // any of (x, y, z) was readed
+    std::optional<float> radius_; // r
+    std::optional<Vector3f> arcCenter_; // i, j, k
+    std::optional<Vector3f> inputRotation_; // a, b, c
 
     std::vector<std::string_view> gcodeSource_; // string list with sets of command (frames)
 
     // internal settings
     float accuracy_ = 1.e-3f;
+
 };
 
 }

@@ -2,11 +2,9 @@
 #include "MRMeshFwd.h"
 #include "MRVector3.h"
 #include "MRMatrix3.h"
-#include "MRAffineXf3.h"
 #include <vector>
 #include <string>
 #include <optional>
-#include <functional>
 
 
 namespace MR
@@ -31,7 +29,6 @@ public:
     struct MoveAction
     {
         BaseAction3f action;
-        std::vector<Vector3f> toolDirection; // tool direction for each point action.path
         bool idle = false;
         float feedrate = 100.f;
         // return true if operation was parsed without warnings
@@ -95,7 +92,7 @@ private:
     BaseAction3f getArcPoints3_( float r, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise );
 
     // sample arc points of tool movement during rotation
-    BaseAction3f rotateTool_();
+    BaseAction3f getToolRotationPoints_();
 
     Vector3f calcCoordMotors_();
     Vector3f calcRealCoord_( const Vector3f& translationPos, const Vector3f& rotationAngles );
@@ -135,12 +132,12 @@ private:
     // cached data
     std::array<Matrix3f, 3> cacheRotationMatrix_; // cached rotation matrices. to avoid calculating for each line (without rotation)
 
-    // input data
-    Vector3f inputCoords_;
-    Vector3<bool> inputCoordsReaded_;
-    std::optional<float> radius_;
-    std::optional<Vector3f> arcCenter_;
-    std::optional<Vector3f> inputRotation_;
+    // input data (data entered in last line)
+    Vector3f inputCoords_; // x, y, z
+    Vector3<bool> inputCoordsReaded_; // any of (x, y, z) was readed
+    std::optional<float> radius_; // r
+    std::optional<Vector3f> arcCenter_; // i, j, k
+    std::optional<Vector3f> inputRotation_; // a, b, c
 
     std::vector<std::string_view> gcodeSource_; // string list with sets of command (frames)
 

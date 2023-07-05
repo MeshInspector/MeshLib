@@ -199,7 +199,7 @@ GcodeProcessor::MoveAction GcodeProcessor::generateMoveAction_()
         res = moveArc_( newMotorsPos, moveMode_ == MoveMode::Clockwise );
     else if ( inputRotation_ )
     {
-        res.action = rotateTool_();
+        res.action = getToolRotationPoints_();
         res.idle = moveMode_ == MoveMode::Idle;
     }
 
@@ -299,7 +299,7 @@ void GcodeProcessor::updateScaling_()
     }
 }
 
-GcodeProcessor::BaseAction3f GcodeProcessor::rotateTool_()
+GcodeProcessor::BaseAction3f GcodeProcessor::getToolRotationPoints_()
 {
     if ( !inputRotation_ )
         return {};

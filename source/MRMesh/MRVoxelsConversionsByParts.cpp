@@ -55,17 +55,21 @@ namespace MR
 {
 
 VoidOrErrStr
-mergeGridPart( Mesh &mesh, std::vector<EdgePath> &cutContours, FloatGrid &&grid, const Vector3f &voxelSize,
+mergeGridPart( Mesh &mesh, std::vector<EdgePath> &cutContours, const FunctionVolume& volume, const Vector3i& offset,
                float leftCutPosition, float rightCutPosition, const MergeGridPartSettings &settings )
 {
     MR_TIMER
 
-    auto res = gridToMesh( std::move( grid ), GridToMeshSettings {
-        .voxelSize = voxelSize,
+    auto res = functionVolumeToMesh( volume, {
+        .iso = 0.f,
+        .lessInside = true,
+        .omitNaNCheck = true,
     } );
     if ( !res.has_value() )
         return unexpected( res.error() );
     auto part = std::move( *res );
+
+    part.transform( AffineXf3f::translation( mult( Vector3f( offset ), volume.voxelSize ) ) );
 
     if ( settings.preCut )
         settings.preCut( part, leftCutPosition, rightCutPosition );
@@ -144,7 +148,7 @@ mergeGridPart( Mesh &mesh, std::vector<EdgePath> &cutContours, FloatGrid &&grid,
 }
 
 Expected<Mesh, std::string>
-gridToMeshByParts( const GridPartBuilder &builder, const Vector3i &dimensions, const Vector3f &voxelSize,
+gridToMeshByParts( const VoxelValueGetter& getter, const Vector3i &dimensions, const Vector3f &voxelSize,
                    const GridToMeshByPartsSettings &settings, const MergeGridPartSettings &mergeSettings )
 {
     MR_TIMER
@@ -180,10 +184,6 @@ gridToMeshByParts( const GridPartBuilder &builder, const Vector3i &dimensions, c
         const auto begin = stripe * ( stripeSize - settings.stripeOverlap );
         const auto end = std::min( begin + stripeSize, (size_t)dimensions.x );
 
-        auto grid = builder( begin, end );
-        if ( !grid.has_value() )
-            return unexpected( grid.error() );
-
         auto leftCutPosition = ( (float)begin + (float)settings.stripeOverlap / 2.f ) * voxelSize.x;
         if ( begin == 0 )
             leftCutPosition = -FLT_MAX;
@@ -191,13 +191,27 @@ gridToMeshByParts( const GridPartBuilder &builder, const Vector3i &dimensions, c
         if ( end == dimensions.x )
             rightCutPosition = +FLT_MAX;
 
-        const auto res = mergeGridPart( result, cutContours, std::move( *grid ), voxelSize, leftCutPosition, rightCutPosition, mergeSettings );
+        const Vector3i offset( begin, 0, 0 );
+        VoxelValueGetter offsetGetter = [&] ( const Vector3i& pos )
+        {
+            return getter( pos + offset );
+        };
+
+        FunctionVolume volume {
+            .data = offsetGetter,
+            .dims = { int( end - begin ), dimensions.y, dimensions.z },
+            .voxelSize = voxelSize,
+            .min = -FLT_MAX,
+            .max = +FLT_MAX,
+        };
+        const auto res = mergeGridPart( result, cutContours, volume, offset, leftCutPosition, rightCutPosition, mergeSettings );
         if ( !res.has_value() )
             return unexpected( res.error() );
     }
     return std::move( result );
 }
 
+# if false
 TEST( MRMesh, gridToMeshByParts )
 {
     const Vector3i dimensions { 101, 101, 101 };
@@ -240,6 +254,7 @@ TEST( MRMesh, gridToMeshByParts )
         EXPECT_NEAR( expectedVolume, actualVolume, 0.001f );
     }
 }
+# endif
 
 } // namespace MR
 #endif

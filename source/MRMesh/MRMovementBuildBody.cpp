@@ -47,7 +47,6 @@ Mesh makeMovementBuildBody( const Polyline3& body, const Polyline3& trajectory, 
         auto& tp = res.topology;
         for ( int i = 0; i < numEdges; ++i )
         {
-            // connect pairs
         }
     };
     for ( const auto& trajectoryCont : trajectoryContours )
@@ -55,6 +54,7 @@ Mesh makeMovementBuildBody( const Polyline3& body, const Polyline3& trajectory, 
         EdgeId curBodyEdge;
         bool closed = trajectoryCont.size() > 2 && trajectoryCont.front() == trajectoryCont.back();
         firstBodyEdge = {};
+        prevHalfRot = accumRot = Matrix3f();
         for ( int i = 0; i + ( closed ? 1 : 0 ) < trajectoryCont.size(); ++i )
         {
             const auto& trajPoint = trajectoryCont[i];

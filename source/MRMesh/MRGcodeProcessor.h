@@ -17,8 +17,6 @@ class MRMESH_CLASS GcodeProcessor
 {
 public:
 
-    GcodeProcessor();
-
     template<typename Vec>
     struct BaseAction
     {
@@ -33,6 +31,7 @@ public:
     struct MoveAction
     {
         BaseAction3f action;
+        std::vector<Vector3f> toolDirection; // tool direction for each point action.path
         bool idle = false;
         float feedrate = 100.f;
         // return true if operation was parsed without warnings
@@ -49,9 +48,6 @@ public:
     MRMESH_API std::vector<MoveAction> processSource();
     // process all commands from one line g-code source and generate corresponding move action
     MRMESH_API MoveAction processLine( const std::string_view& line );
-
-    // 
-    MRMESH_API void setMoveOrder( std::function<AffineXf3f( Vector3f, Vector3f )> moveOrder );
 
 private:
 
@@ -78,6 +74,7 @@ private:
 
     // g0, g1
     MoveAction moveLine_( const Vector3f& newPoint, bool idle );
+    // g2, g3
     MoveAction moveArc_( const Vector3f& newPoint, bool clockwise );
 
     // g17, g18, g19
@@ -85,9 +82,6 @@ private:
 
     // g51
     void updateScaling_();
-
-    // a, b, c
-    BaseAction3f rotateTool_();
 
     // g-command helper methods
 
@@ -100,8 +94,14 @@ private:
     // r < 0 : angle - (0, 360)
     BaseAction3f getArcPoints3_( float r, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise );
 
+    // sample arc points of tool movement during rotation
+    BaseAction3f rotateTool_();
+
     Vector3f calcCoordMotors_();
-    Vector3f calcCoordWorkpieceSpace_( const Vector3f& motorsCoord );
+    Vector3f calcRealCoord_( const Vector3f& translationPos, const Vector3f& rotationAngles );
+    void updateRotationAngleAndMatrix_( const Vector3f& rotationAngles );
+    Vector3f calcRealCoordCached_( const Vector3f& translationPos, const Vector3f& rotationAngles );
+    Vector3f calcRealCoordCached_( const Vector3f& translationPos );
 
     // mode of instrument movement
     enum class MoveMode
@@ -119,21 +119,23 @@ private:
         Movement,
         Scaling
     };
+
+    // internal states (such as current position and different work modes)
     CoordType coordType_ = CoordType::Movement;
     MoveMode moveMode_ = MoveMode::Idle;
     WorkPlane workPlane_ = WorkPlane::xy;
-    Matrix3f toWorkPlaneXf_;
-    Vector3f workpiecePos_; // position tool in workpiece space (does not correspond to world space, because workpiece can be rotated)
-    Vector3f translationMotorsPos_; // translation motor positions
-    Vector3f rotationMotorsPos_; // rotation motor positions
-    std::vector<Matrix3f> rotationMatrix_; // rotation matrix cache. to avoid calculating for each line
-    std::function<AffineXf3f( Vector3f, Vector3f )> movementsOrder_; // ??? return transformation from translation (1st param) and rotation (2nd param) space to workpiece space
+    Matrix3f toWorkPlaneXf_; // work plane for calculation arc movement
+    Vector3f translationPos_; // last values of x, y, z (translation. positions of linear movement motors)
+    Vector3f rotationAngles_; // last values of a, b, c (rotation. angles of circular movement motors)
     bool absoluteCoordinates_ = true; //absolute coordinates or relative coordinates
     Vector3f scaling_ = Vector3f::diagonal( 1.f );
     bool inches_ = false;
     float feedrate_ = 100.f;
 
-    // temporary states
+    // cached data
+    std::array<Matrix3f, 3> cacheRotationMatrix_; // cached rotation matrices. to avoid calculating for each line (without rotation)
+
+    // input data
     Vector3f inputCoords_;
     Vector3<bool> inputCoordsReaded_;
     std::optional<float> radius_;
@@ -145,9 +147,6 @@ private:
     // internal settings
     float accuracy_ = 1.e-3f;
 
-
-
-    // under development
 };
 
 }

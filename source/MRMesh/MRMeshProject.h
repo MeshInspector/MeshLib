@@ -60,6 +60,12 @@ enum class Side
     Positive
 };
 
+/// Tests \param shellPoint from bidirectional shell constructed for an open \param mesh;
+/// \param side specifies which side of shell is of interest: negative or positive relative to mesh normals;
+/// \return whether the distance from given point to given mesh is of same sign as \param side,
+/// always returning false for the points projecting on mesh boundary
+[[nodiscard]] MRMESH_API bool isInnerShellVert( const Mesh & mesh, const Vector3f & shellPoint, Side side );
+
 /// Finds inner-shell vertices on bidirectional \param shell constructed for an open \param mesh;
 /// \param side specifies which side of shell is of interest: negative or positive relative to mesh normals;
 /// The function will return all shell vertices that have distance to mesh of same sign as \param side

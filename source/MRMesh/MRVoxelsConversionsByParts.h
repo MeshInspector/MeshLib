@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRExpected.h"
 #include "MRPartMapping.h"
+#include "MRVoxelsConversions.h"
 
 namespace MR
 {
@@ -55,11 +56,8 @@ struct MergeGridPartSettings
  */
 MRMESH_API
 VoidOrErrStr
-mergeGridPart( Mesh& mesh, std::vector<EdgePath>& cutContours, FloatGrid&& grid, const Vector3f& voxelSize,
+mergeGridPart( Mesh& mesh, std::vector<EdgePath>& cutContours, const FunctionVolume& volume, const Vector3i& offset,
                float leftCutPosition, float rightCutPosition, const MergeGridPartSettings& settings = {} );
-
-/// functor returning a voxel grid part within the specified range, or an error string on failure
-using GridPartBuilder = std::function<Expected<FloatGrid, std::string> ( size_t begin, size_t end )>;
 
 /**
  * \struct MR::GridToMeshByPartsSettings
@@ -90,7 +88,7 @@ struct GridToMeshByPartsSettings
  */
 MRMESH_API
 Expected<Mesh, std::string>
-gridToMeshByParts( const GridPartBuilder& builder, const Vector3i& dimensions, const Vector3f& voxelSize,
+gridToMeshByParts( const VoxelValueGetter& getter, const Vector3i& dimensions, const Vector3f& voxelSize,
                    const GridToMeshByPartsSettings& settings = {}, const MergeGridPartSettings& mergeSettings = {} );
 
 }

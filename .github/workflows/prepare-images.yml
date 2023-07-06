@@ -106,7 +106,6 @@ jobs:
 
   linux-image-build-upload:
     needs: [image-select]
-    #if: ${{ false }}
     if: ${{ needs.image-select.outputs.need_linux_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
     timeout-minutes: 60
     runs-on: ${{matrix.os}}
@@ -143,7 +142,6 @@ jobs:
 
   windows-vcpkg-build-upload:
     needs: [image-select]
-    #if: ${{ false }} #
     if: ${{ needs.image-select.outputs.need_windows_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
     timeout-minutes: 240
     runs-on: windows-2019
@@ -173,15 +171,15 @@ jobs:
       - name: Pack vcpkg
         run: |
           cp .\thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake C:\vcpkg\triplets\
-          py -3 scripts/devops/vcpkg-package-export.py --output vcpkg-export-${{env.VCPKG-VERSION}}-${{matrix.os}}
+          py -3 scripts/devops/vcpkg-package-export.py --output vcpkg-export-${{env.VCPKG-VERSION}}
 
       - name: Upload to AWS Codeartifact
         working-directory: C:\vcpkg
         run: |
           aws codeartifact login --tool dotnet --repository meshlib-vcpkg --domain meshlib --domain-owner 259351611210 --region us-east-1
-          nuget push vcpkg-export-${{env.VCPKG-VERSION}}-${{matrix.os}}.1.0.0.nupkg -Source meshlib/meshlib-vcpkg -SkipDuplicate
+          nuget push vcpkg-export-${{env.VCPKG-VERSION}}.1.0.0.nupkg -Source meshlib/meshlib-vcpkg -SkipDuplicate
           
       - name: Upload to AWS s3
         working-directory: C:\vcpkg
         run: |
-          aws s3 cp ./vcpkg-export-${{env.VCPKG-VERSION}}-${{matrix.os}}.1.0.0.nupkg s3://vcpkg-export/vcpkg-export-${{env.VCPKG-VERSION}}-${{matrix.os}}.1.0.0.nupkg
+          aws s3 cp ./vcpkg-export-${{env.VCPKG-VERSION}}.1.0.0.nupkg s3://vcpkg-export/vcpkg-export-${{env.VCPKG-VERSION}}.1.0.0.nupkg

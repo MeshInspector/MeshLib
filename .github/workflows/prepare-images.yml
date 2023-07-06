@@ -106,8 +106,8 @@ jobs:
 
   linux-image-build-upload:
     needs: [image-select]
-    if: ${{ false }}
-    #if: ${{ needs.image-select.outputs.need_linux_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
+    #if: ${{ false }}
+    if: ${{ needs.image-select.outputs.need_linux_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
     timeout-minutes: 60
     runs-on: ${{matrix.os}}
     strategy:
@@ -176,6 +176,7 @@ jobs:
 
       - name: Pack vcpkg
         run: |
+          cp .\thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake C:\vcpkg\triplets\
           py -3 scripts/devops/vcpkg-package-export.py --output vcpkg-export-${{env.VCPKG-VERSION}}-${{matrix.os}}
 
       - name: Upload to AWS Codeartifact

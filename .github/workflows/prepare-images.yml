@@ -172,9 +172,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Build and cache vcpkg
-        run: |
-          cp .\thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake C:\vcpkg\triplets\
-          .\thirdparty\install_runner.bat
+        run: .\thirdparty\install.bat --write-s3
 
       - name: Pack vcpkg
         run: |

@@ -182,7 +182,7 @@ jobs:
         working-directory: C:\vcpkg
         run: |
           aws codeartifact login --tool dotnet --repository meshlib-vcpkg --domain meshlib --domain-owner 259351611210 --region us-east-1
-          nuget push vcpkg-export-${{env.VCPKG-VERSION}}-${{matrix.os}}.1.0.0.nupkg -Source meshlib/meshlib-vcpkg
+          nuget push vcpkg-export-${{env.VCPKG-VERSION}}-${{matrix.os}}.1.0.0.nupkg -Source meshlib/meshlib-vcpkg -SkipDuplicate
           
       - name: Upload to AWS s3
         working-directory: C:\vcpkg

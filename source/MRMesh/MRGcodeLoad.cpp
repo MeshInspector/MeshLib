@@ -12,6 +12,7 @@ namespace GcodeLoad
 const IOFilters Filters =
 {
     {"G-code", "*.gcode"},
+    {"Numerical Control", "*.nc"},
     {"Text file", "*.txt"}
 };
 

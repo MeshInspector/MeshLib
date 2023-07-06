@@ -40,7 +40,7 @@ struct MeshData
 {
     std::shared_ptr<Mesh> mesh;
     VertColors vertsColorMap;
-    Vector<UVCoord, VertId> uvCoords;
+    VertUVCoords uvCoords;
     int materialIndex = -1;
 };
 
@@ -131,7 +131,7 @@ void fillVertsColorMap( VertColors& vertsColorMap, int vertexCount, const std::v
                 materialIndex >= 0 ? materials[materialIndex].baseColor.getUInt32() : 0xFFFFFFFF );
 }
 
-std::string readUVCoords( Vector<UVCoord, VertId>& uvCoords, int vertexCount, const tinygltf::Model& model, const tinygltf::Primitive& primitive )
+std::string readUVCoords( VertUVCoords& uvCoords, int vertexCount, const tinygltf::Model& model, const tinygltf::Primitive& primitive )
 {
     uvCoords.resize( uvCoords.size() + vertexCount );
 

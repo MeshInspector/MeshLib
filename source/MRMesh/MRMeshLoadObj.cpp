@@ -503,7 +503,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
     std::vector<UVCoord> textureVertices;
     std::vector<int> texCoords( points.size(), -1 );
     Triangulation t;
-    Vector<UVCoord, VertId> uvCoords;
+    VertUVCoords uvCoords;
     Expected<MtlLibrary, std::string> mtl;
     std::string currentMaterialName;
 

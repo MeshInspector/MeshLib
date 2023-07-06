@@ -118,9 +118,9 @@ public:
     const MeshTexture& getTexture() const { return texture_; }
     virtual void setTexture( MeshTexture texture ) { texture_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
 
-    const Vector<UVCoord, VertId>& getUVCoords() const { return uvCoordinates_; }
-    virtual void setUVCoords( Vector<UVCoord, VertId> uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
-    void updateUVCoords( Vector<UVCoord, VertId>& updated ) { std::swap( uvCoordinates_, updated ); dirty_ |= DIRTY_UV; }
+    const VertUVCoords& getUVCoords() const { return uvCoordinates_; }
+    virtual void setUVCoords( VertUVCoords uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
+    void updateUVCoords( VertUVCoords& updated ) { std::swap( uvCoordinates_, updated ); dirty_ |= DIRTY_UV; }
 
     /// copies texture, UV-coordinates and vertex colors from given source object \param src using given map \param thisToSrc
     MRMESH_API virtual void copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc );
@@ -129,9 +129,9 @@ public:
     const MeshTexture& getAncillaryTexture() const { return ancillaryTexture_; }
     virtual void setAncillaryTexture( MeshTexture texture ) { ancillaryTexture_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
 
-    const Vector<UVCoord, VertId>& getAncillaryUVCoords() const { return ancillaryUVCoordinates_; }
-    virtual void setAncillaryUVCoords( Vector<UVCoord, VertId> uvCoordinates ) { ancillaryUVCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
-    void updateAncillaryUVCoords( Vector<UVCoord, VertId>& updated ) { std::swap( ancillaryUVCoordinates_, updated ); dirty_ |= DIRTY_UV; }
+    const VertUVCoords& getAncillaryUVCoords() const { return ancillaryUVCoordinates_; }
+    virtual void setAncillaryUVCoords( VertUVCoords uvCoordinates ) { ancillaryUVCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
+    void updateAncillaryUVCoords( VertUVCoords& updated ) { std::swap( ancillaryUVCoordinates_, updated ); dirty_ |= DIRTY_UV; }
     
     bool hasAncillaryTexture() const { return !ancillaryUVCoordinates_.empty() && !ancillaryTexture_.pixels.empty(); }
     MRMESH_API void clearAncillaryTexture();
@@ -173,8 +173,10 @@ public:
     MRMESH_API size_t numHandles() const;
 
     /// signal about face selection changing, triggered in selectFaces
-    using FaceSelectionChangedSignal = Signal<void()>;
-    FaceSelectionChangedSignal faceSelectionChangedSignal;
+    using SelectionChangedSignal = Signal<void()>;
+    SelectionChangedSignal faceSelectionChangedSignal;
+    SelectionChangedSignal edgeSelectionChangedSignal;
+    SelectionChangedSignal creasesChangedSignal;
 
 protected:
     FaceBitSet selectedTriangles_;

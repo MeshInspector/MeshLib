@@ -102,7 +102,7 @@ public:
     }
 
 private:
-    Vector<UVCoord, VertId> uvCoords_;
+    VertUVCoords uvCoords_;
     std::shared_ptr<ObjectMesh> objMesh_;
     std::string name_;
 };

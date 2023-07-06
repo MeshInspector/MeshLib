@@ -23,7 +23,7 @@ struct NamedMesh
 {
     std::string name;
     Mesh mesh;
-    Vector<UVCoord, VertId> uvCoords;
+    VertUVCoords uvCoords;
     std::filesystem::path pathToTexture;
     std::optional<Color> diffuseColor;
 };

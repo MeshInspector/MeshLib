@@ -80,6 +80,7 @@
     <ClInclude Include="MRImageLoad.h" />
     <ClInclude Include="MRImageSave.h" />
     <ClInclude Include="MRInnerShell.h" />
+    <ClInclude Include="MRMovementBuildBody.h" />
     <ClInclude Include="MRMutexOwner.h" />
     <ClInclude Include="MRNormalDenoising.h" />
     <ClInclude Include="MRNormalsToPoints.h" />
@@ -383,6 +384,7 @@
     <ClCompile Include="MRMeshBoolean.cpp" />
     <ClCompile Include="MRMeshBooleanFacade.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
+    <ClCompile Include="MRMovementBuildBody.cpp" />
     <ClCompile Include="MRNormalDenoising.cpp" />
     <ClCompile Include="MRNormalsToPoints.cpp" />
     <ClCompile Include="MROverlappingTris.cpp" />

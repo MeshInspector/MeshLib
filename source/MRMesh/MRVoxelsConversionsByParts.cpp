@@ -214,7 +214,7 @@ volumeToMeshByParts( const VolumePartBuilder<Volume> &builder, const Vector3i &d
         const auto end = std::min( begin + stripeSize, (size_t)dimensions.x );
 
         std::optional<Vector3i> offset;
-        auto volume = builder( begin, end, offset );
+        auto volume = builder( (int)begin, (int)end, offset );
         if ( !volume.has_value() )
             return unexpected( volume.error() );
 
@@ -314,7 +314,7 @@ TEST( MRMesh, volumeToMeshByParts )
             .max = +radius,
         };
 
-        result.data = [radius = radius, offsetCenter = center - Vector3f( begin, 0, 0 )] ( const Vector3i& pos )
+        result.data = [radius = radius, offsetCenter = center - Vector3f( (float)begin, 0.f, 0.f )] ( const Vector3i& pos )
         {
             const auto dist = ( offsetCenter - Vector3f( pos ) ).length();
             return dist - radius;

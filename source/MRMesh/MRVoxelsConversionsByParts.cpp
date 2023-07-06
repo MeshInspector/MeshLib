@@ -314,10 +314,10 @@ TEST( MRMesh, volumeToMeshByParts )
             .max = +radius,
         };
 
-
+        const auto offsetCenter = center - Vector3f( begin, 0, 0 );
         result.data = [&] ( const Vector3i& pos )
         {
-            const auto dist = ( center - Vector3f( pos ) ).length();
+            const auto dist = ( offsetCenter - Vector3f( pos ) ).length();
             return dist - radius;
         };
 

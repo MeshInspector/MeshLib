@@ -80,6 +80,14 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
             .omitNaNCheck = true,
         } );
     }
+    else if constexpr ( std::is_same_v<Volume, FunctionVolume> )
+    {
+        res = functionVolumeToMesh( volume, {
+            .iso = 0.f,
+            .lessInside = true,
+            .omitNaNCheck = true,
+        } );
+    }
     else
     {
         return tl::make_unexpected( "Unsupported volume format" );
@@ -297,12 +305,36 @@ TEST( MRMesh, volumeToMeshByParts )
         return result;
     };
 
+    VolumePartBuilder<FunctionVolume> functionBuilder = [&] ( int begin, int end, std::optional<Vector3i>& offset )
+    {
+        FunctionVolume result {
+            .dims = { end - begin, dimensions.y, dimensions.z },
+            .voxelSize = Vector3f::diagonal( voxelSize ),
+            .min = -radius,
+            .max = +radius,
+        };
+
+
+        result.data = [&] ( const Vector3i& pos )
+        {
+            const auto dist = ( center - Vector3f( pos ) ).length();
+            return dist - radius;
+        };
+
+        offset = { begin, 0, 0 };
+
+        return result;
+    };
+
     constexpr size_t memoryUsage = 2 * ( 1 << 20 ); // 2 MiB
 
     auto vdbMesh = volumeToMeshByParts( vdbBuilder, dimensions, Vector3f::diagonal( voxelSize ), {
         .maxVolumePartMemoryUsage = memoryUsage,
     } );
     auto simpleMesh = volumeToMeshByParts( simpleBuilder, dimensions, Vector3f::diagonal( voxelSize ), {
+        .maxVolumePartMemoryUsage = memoryUsage,
+    } );
+    auto functionMesh = volumeToMeshByParts( functionBuilder, dimensions, Vector3f::diagonal( voxelSize ), {
         .maxVolumePartMemoryUsage = memoryUsage,
     } );
     for ( auto* ptr : { &vdbMesh, &simpleMesh } )

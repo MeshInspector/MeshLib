@@ -24,6 +24,7 @@
 #include <vector>
 #include <string>
 #include <parallel_hashmap/phmap_fwd_decl.h>
+#include <functional>
 
 #ifdef _WIN32
 #   ifdef MRMESH_EXPORT
@@ -366,6 +367,11 @@ template <typename T>
 struct VoxelsVolume;
 using SimpleVolume = VoxelsVolume<std::vector<float>>;
 using SimpleVolumeU8 = VoxelsVolume<std::vector<uint8_t>>;
+
+template <typename T>
+using VoxelValueGetter = std::function<T ( const Vector3i& )>;
+using FunctionVolume = VoxelsVolume<VoxelValueGetter<float>>;
+using FunctionVolumeU8 = VoxelsVolume<VoxelValueGetter<uint8_t>>;
 
 #ifndef MRMESH_NO_VOXEL
 class ObjectVoxels;

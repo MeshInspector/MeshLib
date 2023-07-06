@@ -27,7 +27,7 @@ void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<floa
     MR_TIMER
 
     const auto sz = normals.size();
-    assert( sz == mesh.topology.faceSize() );
+    assert( (int)sz >= mesh.topology.lastValidFace() );
     assert( v.size() == mesh.topology.undirectedEdgeSize() );
     if ( sz <= 0 )
         return;
@@ -107,7 +107,7 @@ void updateIndicator( const Mesh & mesh, Vector<float, UndirectedEdgeId> & v, co
 
     const auto sz = v.size();
     assert( sz == mesh.topology.undirectedEdgeSize() );
-    assert( normals.size() == mesh.topology.faceSize() );
+    assert( (int)normals.size() >= mesh.topology.lastValidFace() );
     if ( sz <= 0 )
         return;
 
@@ -189,7 +189,7 @@ void updateIndicatorFast( const MeshTopology & topology, Vector<float, Undirecte
     MR_TIMER
 
     assert( v.size() == topology.undirectedEdgeSize() );
-    assert( normals.size() == topology.faceSize() );
+    assert( (int)normals.size() >= topology.lastValidFace() );
 
     const float rh = beta / ( 2 * eps );
     ParallelFor( v, [&]( UndirectedEdgeId ue )

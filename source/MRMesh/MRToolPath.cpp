@@ -465,6 +465,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
             {
                 res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
                 res.commands.push_back( { .type = MoveType::FastLinear, .x = intervals[0].first->x, .y = intervals[0].first->y } );
+                res.commands.push_back( { .type = MoveType::FastLinear, .z = intervals[0].first->z } );
             }
             else
             {

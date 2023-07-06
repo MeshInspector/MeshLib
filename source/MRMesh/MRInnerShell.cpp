@@ -36,10 +36,9 @@ VertBitSet findInnerShellVerts( const Mesh & mesh, const Mesh & shell, Side side
     return res;
 }
 
-FaceBitSet findInnerShellFacesWithSplits( const Mesh & mesh, Mesh & shell, float offset )
+FaceBitSet findInnerShellFacesWithSplits( const Mesh & mesh, Mesh & shell, Side side )
 {
     MR_TIMER
-    const auto side = offset > 0 ? Side::Positive : Side::Negative;
     const auto innerVerts = findInnerShellVerts( mesh, shell, side );
 
     // find all edges connecting inner and not-inner vertices
@@ -50,16 +49,10 @@ FaceBitSet findInnerShellFacesWithSplits( const Mesh & mesh, Mesh & shell, float
             ues.set( ue );
     } );
 
-    // for each edge to be split, stores the target point
-    struct SplitEdge
-    {
-        EdgeId e;
-        Vector3f p;
-    };
-    std::vector<SplitEdge> splitEdges;
+    std::vector<EdgePoint> splitEdges;
     splitEdges.reserve( ues.count() );
     for ( EdgeId e : ues )
-        splitEdges.push_back( { e } );
+        splitEdges.emplace_back( e, 0 );
 
     // find split-point on each edge
     ParallelFor( splitEdges, [&]( size_t i )
@@ -82,17 +75,12 @@ FaceBitSet findInnerShellFacesWithSplits( const Mesh & mesh, Mesh & shell, float
             else
                 bv = v;
         }
-        // shift found point to have exactly offset-distance
-        const auto p = shell.edgePoint( EdgePoint( e, 0.5f * ( av + bv ) ) );
-        const auto prj = findProjection( p, mesh );
-        const auto n = mesh.pseudonormal( prj.mtp );
-        const auto pt = prj.proj.point + offset * n;
-        splitEdges[i] = SplitEdge{ e, pt };
+        splitEdges[i] = EdgePoint( e, 0.5f * ( av + bv ) );
     } );
 
     // perform actual splitting
-    for ( const auto & se : splitEdges )
-        shell.splitEdge( se.e, se.p );
+    for ( const auto & ep : splitEdges )
+        shell.splitEdge( ep.e, shell.edgePoint( ep ) );
 
     return getIncidentFaces( shell.topology, innerVerts );
 }

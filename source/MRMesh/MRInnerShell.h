@@ -25,8 +25,8 @@ enum class Side
 
 /// Finds inner-shell faces on bidirectional \param shell constructed for an open \param mesh;
 /// \param side specifies which side of shell is of interest: negative or positive relative to mesh normals;
-/// The function will return all shell faces (after some subdivision) that have distance to mesh of same sign as \param offset
+/// The function will return all shell faces (after some subdivision) that have distance to mesh of same sign as \param side
 /// excluding the face projecting on mesh boundary
-[[nodiscard]] MRMESH_API FaceBitSet findInnerShellFacesWithSplits( const Mesh & mesh, Mesh & shell, float offset );
+[[nodiscard]] MRMESH_API FaceBitSet findInnerShellFacesWithSplits( const Mesh & mesh, Mesh & shell, Side side );
 
 } // namespace MR

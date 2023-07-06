@@ -102,7 +102,7 @@ Expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const O
     if ( unsignedOffset )
     {
         // for open input mesh, let us find only necessary portion on the shell
-        auto innerFaces = findInnerShellFacesWithSplits( mesh, resMesh, offset );
+        auto innerFaces = findInnerShellFacesWithSplits( mesh, resMesh, offset > 0 ? Side::Positive : Side::Negative );
         resMesh.topology.deleteFaces( resMesh.topology.getValidFaces() - innerFaces );
         resMesh.pack();
     }

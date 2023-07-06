@@ -29,6 +29,7 @@ public:
     struct MoveAction
     {
         BaseAction3f action;
+        std::vector<Vector3f> toolDirection; // tool direction for each point from action.path
         bool idle = false;
         float feedrate = 100.f;
         // return true if operation was parsed without warnings
@@ -92,7 +93,7 @@ private:
     BaseAction3f getArcPoints3_( float r, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise );
 
     // sample arc points of tool movement during rotation
-    BaseAction3f getToolRotationPoints_();
+    MoveAction getToolRotationPoints_();
 
     Vector3f calcCoordMotors_();
     Vector3f calcRealCoord_( const Vector3f& translationPos, const Vector3f& rotationAngles );

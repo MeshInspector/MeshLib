@@ -199,9 +199,11 @@ GcodeProcessor::MoveAction GcodeProcessor::generateMoveAction_()
         res = moveArc_( newMotorsPos, moveMode_ == MoveMode::Clockwise );
     else if ( inputRotation_ )
     {
-        res.action = getToolRotationPoints_();
-        res.idle = moveMode_ == MoveMode::Idle;
+        res = getToolRotationPoints_();
     }
+
+    // test
+    //assert( res.action.path.size() == res.toolDirection.size() );
 
     translationPos_ = newMotorsPos;
     if ( inputRotation_ )
@@ -229,17 +231,19 @@ GcodeProcessor::MoveAction GcodeProcessor::moveLine_( const Vector3f& newPoint, 
     if ( !inputRotation_ )
     {
         res.action.path = { calcRealCoordCached_( translationPos_ ), calcRealCoordCached_( newPoint ) };
+        res.toolDirection = std::vector<Vector3f>( 2, calcRealCoordCached_( Vector3f::plusZ() ) );
         return res;
     }
 
     res.action.path.resize( pointInRotation );
+    res.toolDirection.resize( pointInRotation );
     const Vector3f lineStep = ( newPoint - translationPos_ ) / ( pointInRotation - 1.f );
-
     const Vector3f rotationAnglesStep_ = ( *inputRotation_ - rotationAngles_ ) / ( pointInRotation - 1.f );
     for ( int i = 0; i < pointInRotation; ++i )
     {
         const auto currentRotationAngles_ = rotationAnglesStep_ * float( i ) + rotationAngles_;
         res.action.path[i] = calcRealCoord_( translationPos_ + lineStep * float( i ), currentRotationAngles_ );
+        res.toolDirection[i] = calcRealCoord_( Vector3f::plusZ(), currentRotationAngles_ );
     }
 
     return res;
@@ -262,16 +266,19 @@ GcodeProcessor::MoveAction GcodeProcessor::moveArc_( const Vector3f& newPoint, b
         {
             for ( auto& point : res.action.path )
                 point = calcRealCoordCached_( point );
+            res.toolDirection = std::vector<Vector3f>( res.action.path.size(), calcRealCoordCached_( Vector3f::plusZ() ) );
         }
         else
         {
             const int pointCount = int( res.action.path.size() );
+            res.toolDirection.resize( pointCount );
             const Vector3f rotationAnglesStep_ = ( *inputRotation_ - rotationAngles_ ) / ( pointCount - 1.f );
             for ( int i = 0; i < pointCount; ++i )
             {
                 auto& point = res.action.path[i];
                 const auto currentRotationAngles_ = rotationAnglesStep_ * float( i ) + rotationAngles_;
                 point = calcRealCoord_( point, currentRotationAngles_ );
+                res.toolDirection[i] = calcRealCoord_( Vector3f::plusZ(), currentRotationAngles_ );
             }
         }
     }
@@ -299,18 +306,22 @@ void GcodeProcessor::updateScaling_()
     }
 }
 
-GcodeProcessor::BaseAction3f GcodeProcessor::getToolRotationPoints_()
+GcodeProcessor::MoveAction GcodeProcessor::getToolRotationPoints_()
 {
     if ( !inputRotation_ )
         return {};
 
-    BaseAction3f res;
+    MoveAction res;
+    res.idle = moveMode_ == MoveMode::Idle;
     
     Vector3f rotationAnglesStep_ = ( *inputRotation_ - rotationAngles_ ) / ( pointInRotation - 1.f );
+    res.action.path.resize( pointInRotation );
+    res.toolDirection.resize( pointInRotation );
     for ( int i = 0; i < pointInRotation; ++i )
     {
         const auto currentRotationAngles_ = rotationAnglesStep_ * float(i) + rotationAngles_;
-        res.path.push_back( calcRealCoord_( translationPos_, currentRotationAngles_ ) );
+        res.action.path[i] = calcRealCoord_( translationPos_, currentRotationAngles_ );
+        res.toolDirection[i] = calcRealCoord_( Vector3f::plusZ(), currentRotationAngles_ );
     }
 
     updateRotationAngleAndMatrix_( *inputRotation_ );

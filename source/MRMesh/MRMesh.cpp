@@ -710,7 +710,7 @@ EdgeId Mesh::addSeparateEdgeLoop( const std::vector<Vector3f>& contourPoints )
     return newEdges.front();
 }
 
-EdgeId Mesh::addSeparateContours( const Contours3f& contours, const AffineXf3f* shift )
+EdgeId Mesh::addSeparateContours( const Contours3f& contours, const AffineXf3f* xf )
 {
     EdgeId firstNewEdge;
     for ( const auto& cont : contours )
@@ -722,7 +722,7 @@ EdgeId Mesh::addSeparateContours( const Contours3f& contours, const AffineXf3f* 
         EdgeId firstContEdge;
         for ( size_t i = 0; i < numNewVerts; ++i )
         {
-            auto newVert = addPoint( shift ? ( *shift )( cont[i] ) : cont[i] );
+            auto newVert = addPoint( xf ? ( *xf )( cont[i] ) : cont[i] );
             if ( prevEdgeId )
                 topology.setOrg( prevEdgeId.sym(), newVert );
             if ( i < numNewEdges )

@@ -217,7 +217,7 @@ struct [[nodiscard]] Mesh
 
     // append points to mesh and connect them
     // returns first EdgeId of new edges
-    MRMESH_API EdgeId addSeparateContours( const Contours3f& contours, const AffineXf3f* shift = nullptr );
+    MRMESH_API EdgeId addSeparateContours( const Contours3f& contours, const AffineXf3f* xf = nullptr );
 
     // append points to mesh and connect them to given edges making edge loop
     // first point connects with first edge dest

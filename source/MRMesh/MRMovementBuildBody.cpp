@@ -9,13 +9,13 @@
 namespace MR
 {
 
-Mesh makeMovementBuildBody( const Polyline3& body, const Polyline3& trajectory,
+Mesh makeMovementBuildBody( const Contours3f& bodyContours, const Contours3f& trajectoryContoursOrg,
     const MovementBuildBodyParams& params )
 {
     MR_TIMER;
 
-    auto bodyContours = body.contours();
-    auto trajectoryContours = trajectory.contours();
+    // copy to clear duplicates (mb leave it to user?)
+    auto trajectoryContours = trajectoryContoursOrg;
     // filter same points in trajectory
     for ( auto& trajC : trajectoryContours )
         trajC.erase( std::unique( trajC.begin(), trajC.end() ), trajC.end() );
@@ -24,7 +24,17 @@ Mesh makeMovementBuildBody( const Polyline3& body, const Polyline3& trajectory,
     Vector3f trans;
     Matrix3f prevHalfRot;
     Matrix3f accumRot;
-    auto rotationCenter = params.rotationCenter.value_or( body.computeBoundingBox().center() );
+    Vector3f rotationCenter;
+    if ( params.rotationCenter )
+        rotationCenter = *params.rotationCenter;
+    else
+    {
+        Box3f box;
+        for ( const auto& c : bodyContours )
+            for ( const auto& p : c )
+                box.include( p );
+        rotationCenter = box.center();
+    }
     Vector3f normal;
     if ( params.bodyNormal )
         normal = *params.bodyNormal;

@@ -987,6 +987,9 @@
     <ClInclude Include="MRVoxelsConversionsByParts.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
+    <ClInclude Include="MRInnerShell.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1637,6 +1640,9 @@
     <ClCompile Include="MRViewportId.cpp" />
     <ClCompile Include="MRExpected.cpp">
       <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRInnerShell.cpp">
+      <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

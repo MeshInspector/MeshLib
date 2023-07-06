@@ -54,18 +54,6 @@ struct SignedDistanceToMeshResult
 [[nodiscard]] MRMESH_API std::optional<SignedDistanceToMeshResult> findSignedDistance( const Vector3f & pt, const MeshPart & mp,
     float upDistLimitSq = FLT_MAX, float loDistLimitSq = 0 );
 
-enum class Side
-{
-    Negative,
-    Positive
-};
-
-/// Finds inner-shell vertices on bidirectional \param shell constructed for an open \param mesh;
-/// \param side specifies which side of shell is of interest: negative or positive relative to mesh normals;
-/// The function will return all shell vertices that have distance to mesh of same sign as \param side
-/// excluding the vertices projecting on mesh boundary
-[[nodiscard]] MRMESH_API VertBitSet findInnerShellVerts( const Mesh & mesh, const Mesh & shell, Side side );
-
 /// \}
 
 } // namespace MR

@@ -8,12 +8,12 @@
 #include "MRPolyline.h"
 #include "MRMeshFillHole.h"
 #include "MRRegionBoundary.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRVoxelsConversions.h"
 #include "MRSharpenMarchingCubesMesh.h"
 #include "MRFastWindingNumber.h"
 #include "MRVolumeIndexer.h"
-#include "MRMeshBoundary.h"
+#include "MRInnerShell.h"
+#include "MRPch/MRSpdlog.h"
 #include <thread>
 
 namespace
@@ -102,11 +102,8 @@ Expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const O
     if ( unsignedOffset )
     {
         // for open input mesh, let us find only necessary portion on the shell
-        auto innerFaces = getInnerFaces( resMesh.topology, findInnerShellVerts( mesh, resMesh, offset > 0 ? Side::Positive : Side::Negative ) );
+        auto innerFaces = findInnerShellFacesWithSplits( mesh, resMesh, offset > 0 ? Side::Positive : Side::Negative );
         resMesh.topology.deleteFaces( resMesh.topology.getValidFaces() - innerFaces );
-        resMesh.invalidateCaches();
-        for ( auto bd : resMesh.topology.findHoleRepresentiveEdges() )
-            straightenBoundary( resMesh, bd, 0.5f, 10.0f );
         resMesh.pack();
     }
 

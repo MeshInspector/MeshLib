@@ -163,12 +163,14 @@ Please install CUDA (v12.0|v11.4)(Visual Studio 2022|2019) from [official site](
     ```
     More details here: [vcpkg](https://github.com/microsoft/vcpkg).
 
-2. Execute install.bat
+2. (Optional, but recommended) Install [AWS CLI v2](https://awscli.amazonaws.com/AWSCLIV2.msi). Once installed, reopen PowerShell or CMD. This will allow you to use the vcpkg binary cache from our aws s3, which will speed up the installation process and reduce the required disk space.
+
+3. Execute install.bat
     ```sh
     cd MeshLib/thirdparty
     install.bat
     ```
-3. Open solution file MeshInspector/source/MeshLib.sln in Visual Studio. Build it and run.
+4. Open solution file MeshInspector/source/MeshLib.sln in Visual Studio. Build it and run.
 
 ## Build with CMake on Linux
 This installation was checked on Ubuntu 20.04.4.

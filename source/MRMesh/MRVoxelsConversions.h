@@ -72,5 +72,10 @@ MRMESH_API Expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& v
 // returns nullopt if operation was canceled
 MRMESH_API Expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params = {} );
 
+// makes Mesh from FunctionVolume with given params
+// using marching cubes algorithm
+// returns nullopt if operation was canceled
+MRMESH_API Expected<Mesh, std::string> functionVolumeToMesh( const FunctionVolume& volume, const VolumeToMeshParams& params = {} );
+
 }
 #endif

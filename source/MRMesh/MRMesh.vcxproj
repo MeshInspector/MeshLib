@@ -79,6 +79,7 @@
     <ClInclude Include="MRImage.h" />
     <ClInclude Include="MRImageLoad.h" />
     <ClInclude Include="MRImageSave.h" />
+    <ClInclude Include="MRInnerShell.h" />
     <ClInclude Include="MRMovementBuildBody.h" />
     <ClInclude Include="MRMutexOwner.h" />
     <ClInclude Include="MRNormalDenoising.h" />
@@ -370,6 +371,7 @@
     <ClCompile Include="MRIdentifyVertices.cpp" />
     <ClCompile Include="MRImageLoad.cpp" />
     <ClCompile Include="MRImageSave.cpp" />
+    <ClCompile Include="MRInnerShell.cpp" />
     <ClCompile Include="MRIntersection.cpp" />
     <ClCompile Include="MRIntersectionContour.cpp" />
     <ClCompile Include="MRIOFormatsRegistry.cpp" />

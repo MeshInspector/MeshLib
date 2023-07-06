@@ -688,18 +688,57 @@ bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const
     return true;
 }
 
+template <typename NaNChecker, bool UseDefaultVoxelPointPositioner>
+bool findSeparationPoint( SeparationPoint& sp, const FunctionVolume& volume, const Vector3i& basePos, NeighborDir dir,
+                          const VolumeToMeshParams& params, NaNChecker&& nanChecker )
+{
+    auto nextPos = basePos;
+    nextPos[int( dir )] += 1;
+    if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
+        return false;
+
+    float valueB = volume.data( basePos );
+    float valueD = volume.data( nextPos );
+    if ( nanChecker( valueB ) || nanChecker( valueD ) )
+        return false;
+
+    bool bLower = valueB < params.iso;
+    bool dLower = valueD < params.iso;
+    if ( bLower == dLower )
+        return false;
+
+    Vector3f coordF = Vector3f( basePos ) + Vector3f::diagonal( 0.5f );
+    Vector3f nextCoordF = Vector3f( nextPos ) + Vector3f::diagonal( 0.5f );
+    auto bPos = params.origin + mult( volume.voxelSize, coordF );
+    auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
+    if constexpr ( UseDefaultVoxelPointPositioner )
+        sp.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
+    else
+        sp.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
+    return true;
+}
+
 template<typename V> auto accessorCtor( const V& v );
 
 template<> auto accessorCtor<SimpleVolume>( const SimpleVolume& ) { return ( void* )nullptr; }
 
 template<> auto accessorCtor<VdbVolume>( const VdbVolume& v ) { return v.data->getConstAccessor(); }
 
+template<> auto accessorCtor<FunctionVolume>( const FunctionVolume& ) { return (void*)nullptr; }
+
 template<typename V, typename NaNChecker, bool UseDefaultVoxelPointPositioner>
 Expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshParams& params, NaNChecker&& nanChecker )
 {
     if constexpr ( std::is_same_v<V, VdbVolume> )
+    {
         if ( !volume.data )
             return unexpected( "No volume data." );
+    }
+    else if constexpr ( std::is_same_v<V, FunctionVolume> )
+    {
+        if ( !volume.data )
+            return unexpected( "Getter function is not specified." );
+    }
 
     Mesh result;
     if ( params.iso <= volume.min || params.iso >= volume.max ||
@@ -784,8 +823,12 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshPar
                 bool ok = false;
                 if constexpr ( std::is_same_v<V, VdbVolume> )
                     ok = findSeparationPoint<UseDefaultVoxelPointPositioner>( set[n], volume, acc, baseCoord, basePos, baseValue, NeighborDir( n ), params );
-                else
+                else if constexpr ( std::is_same_v<V, SimpleVolume> )
                     ok = findSeparationPoint<NaNChecker, UseDefaultVoxelPointPositioner>( set[n], volume, indexer, VoxelId( i ), basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ) );
+                else if constexpr ( std::is_same_v<V, FunctionVolume> )
+                    ok = findSeparationPoint<NaNChecker, UseDefaultVoxelPointPositioner>( set[n], volume, basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ) );
+                else
+                    static_assert( !sizeof( V ), "Unsupported voxel volume type." );
 
                 if ( ok )
                 {
@@ -918,10 +961,15 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshPar
                 auto pos = basePos + cVoxelNeighbors[i];
                 float value{ 0.0f };
                 if constexpr ( std::is_same_v<V, VdbVolume> )
-                    value = acc.getValue( { pos.x + minCoord.x(),pos.y + minCoord.y(),pos.z + minCoord.z() } );
-                else
                 {
-                    value = volume.data[ind + cVoxelNeighborsIndexAdd[i]];
+                    value = acc.getValue( { pos.x + minCoord.x(),pos.y + minCoord.y(),pos.z + minCoord.z() } );
+                }
+                else if constexpr ( std::is_same_v<V, SimpleVolume> || std::is_same_v<V, FunctionVolume> )
+                {
+                    if constexpr ( std::is_same_v<V, SimpleVolume> )
+                        value = volume.data[ind + cVoxelNeighborsIndexAdd[i]];
+                    else
+                        value = volume.data( pos );
                     // find non nan neighbor
                     constexpr std::array<uint8_t, 7> cNeighborsOrder{
                         0b001,
@@ -945,7 +993,10 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshPar
                             neighPos[posCoord] += ( sign *
                                 ( ( cNeighborsOrder[neighIndex] & ( 1 << posCoord ) ) >> posCoord ) );
                         }
-                        value = volume.data[indexer.toVoxelId( neighPos ).get()];
+                        if constexpr ( std::is_same_v<V, SimpleVolume> )
+                            value = volume.data[indexer.toVoxelId( neighPos ).get()];
+                        else
+                            value = volume.data( neighPos );
                         ++neighIndex;
                     }
                     if ( nanChecker( value ) )
@@ -955,6 +1006,10 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshPar
                     }
                     if ( !atLeastOneNan && neighIndex > 0 )
                         atLeastOneNan = true;
+                }
+                else
+                {
+                    static_assert( !sizeof( V ), "Unsupported voxel volume type." );
                 }
                 
                 if ( value >= params.iso )
@@ -981,7 +1036,7 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshPar
             }
             assert( voxelValid );
 
-            if constexpr ( std::is_same_v<V, SimpleVolume> )
+            if constexpr ( std::is_same_v<V, SimpleVolume> || std::is_same_v<V, FunctionVolume> )
             {
                 // ensure consistent nan voxel
                 if ( atLeastOneNan && voxelValid )
@@ -1120,6 +1175,10 @@ Expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, cons
     return volumeToMeshHelper2( volume, params );
 }
 Expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params /*= {} */ )
+{
+    return volumeToMeshHelper2( volume, params );
+}
+Expected<Mesh, std::string> functionVolumeToMesh( const FunctionVolume& volume, const VolumeToMeshParams& params )
 {
     return volumeToMeshHelper2( volume, params );
 }

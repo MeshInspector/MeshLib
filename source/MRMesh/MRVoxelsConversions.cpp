@@ -724,7 +724,7 @@ template<> auto accessorCtor<SimpleVolume>( const SimpleVolume& ) { return ( voi
 
 template<> auto accessorCtor<VdbVolume>( const VdbVolume& v ) { return v.data->getConstAccessor(); }
 
-template<> auto accessorCtor<FunctionVolume>( const FunctionVolume& v ) { return (void*)nullptr; }
+template<> auto accessorCtor<FunctionVolume>( const FunctionVolume& ) { return (void*)nullptr; }
 
 template<typename V, typename NaNChecker, bool UseDefaultVoxelPointPositioner>
 Expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshParams& params, NaNChecker&& nanChecker )

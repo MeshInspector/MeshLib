@@ -106,8 +106,7 @@ jobs:
 
   linux-image-build-upload:
     needs: [image-select]
-    if: ${{ false }}
-    #if: ${{ needs.image-select.outputs.need_linux_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
+    if: ${{ needs.image-select.outputs.need_linux_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
     timeout-minutes: 60
     runs-on: ${{matrix.os}}
     strategy:
@@ -143,12 +142,9 @@ jobs:
 
   windows-vcpkg-build-upload:
     needs: [image-select]
-    #if: ${{ false }} #
     if: ${{ needs.image-select.outputs.need_windows_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
     timeout-minutes: 240
-    runs-on: windows-2022
-    env:
-      VCPKG_DEFAULT_TRIPLET: x64-windows-meshlib
+    runs-on: windows-2019
     steps:
       - name: Setup vcpkg
         working-directory: C:\vcpkg
@@ -162,15 +158,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Build vcpkg
-        run: thirdparty\install.bat
-
-      - name: Pack vcpkg
-        run: |
-          cp .\thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake C:\vcpkg\triplets\
-          vcpkg export tinyxml2:x64-windows-meshlib  --nuget --output vcpkg-export-2023.04.15.1
-          py -3 scripts/devops/vcpkg-package-export.py --output vcpkg-export-${{env.VCPKG-VERSION}}
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -178,11 +165,19 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
+      - name: Build and cache vcpkg
+        run: .\thirdparty\install.bat --write-s3
+
+      - name: Pack vcpkg
+        run: |
+          cp .\thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake C:\vcpkg\triplets\
+          py -3 scripts/devops/vcpkg-package-export.py --output vcpkg-export-${{env.VCPKG-VERSION}}
+
       - name: Upload to AWS Codeartifact
         working-directory: C:\vcpkg
         run: |
           aws codeartifact login --tool dotnet --repository meshlib-vcpkg --domain meshlib --domain-owner 259351611210 --region us-east-1
-          nuget push vcpkg-export-${{env.VCPKG-VERSION}}.1.0.0.nupkg -Source meshlib/meshlib-vcpkg
+          nuget push vcpkg-export-${{env.VCPKG-VERSION}}.1.0.0.nupkg -Source meshlib/meshlib-vcpkg -SkipDuplicate
           
       - name: Upload to AWS s3
         working-directory: C:\vcpkg

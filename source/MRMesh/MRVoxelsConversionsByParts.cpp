@@ -353,9 +353,11 @@ TEST( MRMesh, volumeToMeshByParts )
 
 template MRMESH_API VoidOrErrStr mergeVolumePart<SimpleVolume>( Mesh&, std::vector<EdgePath>&, SimpleVolume&&, float, float, const MergeVolumePartSettings& );
 template MRMESH_API VoidOrErrStr mergeVolumePart<VdbVolume>( Mesh&, std::vector<EdgePath>&, VdbVolume&&, float, float, const MergeVolumePartSettings& );
+template MRMESH_API VoidOrErrStr mergeVolumePart<FunctionVolume>( Mesh&, std::vector<EdgePath>&, FunctionVolume&&, float, float, const MergeVolumePartSettings& );
 
 template MRMESH_API tl::expected<Mesh, std::string> volumeToMeshByParts<SimpleVolume>( const VolumePartBuilder<SimpleVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
 template MRMESH_API tl::expected<Mesh, std::string> volumeToMeshByParts<VdbVolume>( const VolumePartBuilder<VdbVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
+template MRMESH_API tl::expected<Mesh, std::string> volumeToMeshByParts<FunctionVolume>( const VolumePartBuilder<FunctionVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
 
 } // namespace MR
 

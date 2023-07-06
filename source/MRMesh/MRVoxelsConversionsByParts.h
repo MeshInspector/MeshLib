@@ -62,7 +62,7 @@ mergeVolumePart( Mesh& mesh, std::vector<EdgePath>& cutContours, Volume&& volume
 /// functor returning a voxel volume part within the specified range, or an error string on failure
 /// the offset parameter is also required for SimpleVolume parts
 template <typename Volume>
-using VolumePartBuilder = std::function<tl::expected<Volume, std::string> ( int begin, int end, std::optional<Vector3i>& offset )>;
+using VolumePartBuilder = std::function<Expected<Volume, std::string> ( int begin, int end, std::optional<Vector3i>& offset )>;
 
 /**
  * \struct MR::VolumeToMeshByPartsSettings
@@ -92,7 +92,7 @@ struct VolumeToMeshByPartsSettings
  * @return a generated mesh or an error string
  */
 template <typename Volume>
-tl::expected<Mesh, std::string>
+Expected<Mesh, std::string>
 volumeToMeshByParts( const VolumePartBuilder<Volume>& builder, const Vector3i& dimensions, const Vector3f& voxelSize,
                      const VolumeToMeshByPartsSettings& settings = {}, const MergeVolumePartSettings& mergeSettings = {} );
 

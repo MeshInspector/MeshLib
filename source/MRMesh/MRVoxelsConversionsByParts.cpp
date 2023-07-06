@@ -64,7 +64,7 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
 {
     MR_TIMER
 
-    tl::expected<Mesh, std::string> res;
+    Expected<Mesh, std::string> res;
     if constexpr ( std::is_same_v<Volume, VdbVolume> )
     {
         res = gridToMesh( std::move( volume.data ), GridToMeshSettings {
@@ -90,7 +90,7 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
     }
     else
     {
-        return tl::make_unexpected( "Unsupported volume format" );
+        return unexpected( "Unsupported volume format" );
     }
     if ( !res.has_value() )
         return unexpected( res.error() );
@@ -176,7 +176,7 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
 }
 
 template <typename Volume>
-tl::expected<Mesh, std::string>
+Expected<Mesh, std::string>
 volumeToMeshByParts( const VolumePartBuilder<Volume> &builder, const Vector3i &dimensions, const Vector3f &voxelSize,
                      const VolumeToMeshByPartsSettings &settings, const MergeVolumePartSettings &mergeSettings )
 {
@@ -187,8 +187,8 @@ volumeToMeshByParts( const VolumePartBuilder<Volume> &builder, const Vector3i &d
     const auto maxSliceCount = settings.maxVolumePartMemoryUsage / maxSliceMemoryUsage;
     if ( maxSliceCount < settings.stripeOverlap + 1 )
     {
-        return tl::make_unexpected( fmt::format( "The specified volume memory usage limit is too low: at least {} required",
-                                                 bytesString( ( settings.stripeOverlap + 1 ) * maxSliceMemoryUsage ) ) );
+        return unexpected( fmt::format( "The specified volume memory usage limit is too low: at least {} required",
+                                        bytesString( ( settings.stripeOverlap + 1 ) * maxSliceMemoryUsage ) ) );
     }
 
     const size_t width = dimensions.x - settings.stripeOverlap;
@@ -216,7 +216,7 @@ volumeToMeshByParts( const VolumePartBuilder<Volume> &builder, const Vector3i &d
         std::optional<Vector3i> offset;
         auto volume = builder( begin, end, offset );
         if ( !volume.has_value() )
-            return tl::make_unexpected( volume.error() );
+            return unexpected( volume.error() );
 
         auto mergeOffsetSettings = mergeSettings;
         if ( offset )
@@ -354,9 +354,9 @@ template MRMESH_API VoidOrErrStr mergeVolumePart<SimpleVolume>( Mesh&, std::vect
 template MRMESH_API VoidOrErrStr mergeVolumePart<VdbVolume>( Mesh&, std::vector<EdgePath>&, VdbVolume&&, float, float, const MergeVolumePartSettings& );
 template MRMESH_API VoidOrErrStr mergeVolumePart<FunctionVolume>( Mesh&, std::vector<EdgePath>&, FunctionVolume&&, float, float, const MergeVolumePartSettings& );
 
-template MRMESH_API tl::expected<Mesh, std::string> volumeToMeshByParts<SimpleVolume>( const VolumePartBuilder<SimpleVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
-template MRMESH_API tl::expected<Mesh, std::string> volumeToMeshByParts<VdbVolume>( const VolumePartBuilder<VdbVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
-template MRMESH_API tl::expected<Mesh, std::string> volumeToMeshByParts<FunctionVolume>( const VolumePartBuilder<FunctionVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
+template MRMESH_API Expected<Mesh, std::string> volumeToMeshByParts<SimpleVolume>( const VolumePartBuilder<SimpleVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
+template MRMESH_API Expected<Mesh, std::string> volumeToMeshByParts<VdbVolume>( const VolumePartBuilder<VdbVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
+template MRMESH_API Expected<Mesh, std::string> volumeToMeshByParts<FunctionVolume>( const VolumePartBuilder<FunctionVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
 
 } // namespace MR
 

@@ -83,11 +83,11 @@ FaceBitSet findInnerShellFacesWithSplits( const Mesh & mesh, Mesh & shell, float
                 bv = v;
         }
         // shift found point to have exactly offset-distance
-        auto pt = shell.edgePoint( EdgePoint( e, 0.5f * ( av + bv ) ) );
-        auto prj = findProjection( pt, mesh );
-        if ( prj.distSq > 0 )
-            pt = pt + ( pt - prj.proj.point ).normalized() * std::abs( offset );
-        splitEdges[i] = SplitEdge( e, pt );
+        const auto p = shell.edgePoint( EdgePoint( e, 0.5f * ( av + bv ) ) );
+        const auto prj = findProjection( p, mesh );
+        const auto n = mesh.pseudonormal( prj.mtp );
+        const auto pt = prj.proj.point + offset * n;
+        splitEdges[i] = SplitEdge{ e, pt };
     } );
 
     // perform actual splitting

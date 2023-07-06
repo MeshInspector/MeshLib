@@ -6,7 +6,7 @@ if errorlevel 1 (
     echo AWS CLI v2 is not installed.
 ) else (
     echo AWS CLI v2 is installed.
-    set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/2023.04.15/x64-windows-meshlib/,readwrite;"
+    set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/2023.04.15/x64-windows-meshlib/,readwrite;"
 )
 
 for /f "delims=" %%i in ('where vcpkg') do set vcpkg_path=%%~dpi

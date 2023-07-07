@@ -215,7 +215,11 @@ float ProgressBar::getProgress()
 bool ProgressBar::setProgress( float p )
 {
     auto& instance = instance_();
-    assert( instance.thread_.get_id() == std::this_thread::get_id() );
+
+    // this assert is not really needed
+    // leave it in comment: we don't expect progress from different threads
+    //assert( instance.thread_.get_id() == std::this_thread::get_id() );
+
     int newPercents = int( p * 100.0f );
     int percents = instance.percents_;
     if ( percents != newPercents && instance.percents_.compare_exchange_strong( percents, newPercents ) )

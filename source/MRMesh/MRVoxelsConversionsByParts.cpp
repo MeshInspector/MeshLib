@@ -250,11 +250,11 @@ TEST( MRMesh, volumeToMeshByParts )
         grid->setGridClass( openvdb::GRID_LEVEL_SET );
 
         auto accessor = grid->getAccessor();
-        for ( auto x = begin; x < end; ++x )
+        for ( auto z = 0; z < dimensions.z; ++z )
         {
             for ( auto y = 0; y < dimensions.y; ++y )
             {
-                for ( auto z = 0; z < dimensions.z; ++z )
+                for ( auto x = begin; x < end; ++x )
                 {
                     const Vector3f pos( (float)x, (float)y, (float)z );
                     const auto dist = ( center - pos ).length();

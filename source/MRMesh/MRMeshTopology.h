@@ -181,6 +181,16 @@ public:
     void flip( FaceBitSet & fs ) const { fs = getValidFaces() - fs; }
     /// if region pointer is not null then converts it in reference, otherwise returns all valid faces in the mesh
     [[nodiscard]] const FaceBitSet & getFaceIds( const FaceBitSet * region ) const { assert( region || updateValids_ ); return region ? *region : validFaces_; }
+    /// returns the first boundary edge (for given region or for whole mesh if region is nullptr) in counter-clockwise order starting from given edge with the same left;
+    /// returns invalid edge if no boundary edge is found
+    [[nodiscard]] MRMESH_API EdgeId bdEdgeSameLeft( EdgeId e, const FaceBitSet * region = nullptr ) const;
+    /// returns true if edge's left is on (region) boundary
+    [[nodiscard]] bool isBdVertexInLeft( EdgeId e, const FaceBitSet * region = nullptr ) const { return bdEdgeSameLeft( e, region ).valid(); }
+    /// returns a boundary edge with given left face considering boundary of given region (or for whole mesh if region is nullptr);
+    /// returns invalid edge if no boundary edge is found
+    [[nodiscard]] EdgeId bdEdgeWithLeft( FaceId f, const FaceBitSet * region = nullptr ) const { return bdEdgeSameLeft( edgeWithLeft( f ), region ); }
+    /// returns true if given face is on (region) boundary
+    [[nodiscard]] bool isBdFace( FaceId f, const FaceBitSet * region = nullptr ) const { return isBdVertexInLeft( edgeWithLeft( f ), region ); }
 
     /// return true if left face of given edge belongs to region (or just have valid id if region is nullptr)
     [[nodiscard]] bool isLeftInRegion( EdgeId e, const FaceBitSet * region = nullptr ) const { return contains( region, left( e ) ); }

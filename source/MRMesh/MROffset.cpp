@@ -13,8 +13,10 @@
 #include "MRFastWindingNumber.h"
 #include "MRVolumeIndexer.h"
 #include "MRInnerShell.h"
+#include "MRMeshFixer.h"
+#include "MRBitSetParallelFor.h"
+#include "MRRingIterator.h"
 #include "MRPch/MRSpdlog.h"
-#include <thread>
 
 namespace
 {
@@ -101,8 +103,27 @@ Expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const O
 
     if ( unsignedOffset )
     {
+        // do not trust degenerate faces with huge aspect ratios
+        auto badFaces = findDegenerateFaces( mesh, 1000 ).value();
+        // do not trust only boundary degenerate faces (excluding touching the boundary only by short edge)
+        BitSetParallelFor( badFaces, [&] ( FaceId f )
+        {
+            float perimeter = 0;
+            float bdLen = 0;
+            for ( EdgeId e : leftRing( mesh.topology, f ) )
+            {
+                auto elen = mesh.edgeLength( e );
+                perimeter += elen;
+                if ( mesh.topology.isBdEdge( e ) )
+                    bdLen += elen;
+            }
+            if ( perimeter * 0.1f >= bdLen )
+                badFaces.reset( f );
+        } );
+        const auto goodFaces = mesh.topology.getValidFaces() - badFaces;
+
         // for open input mesh, let us find only necessary portion on the shell
-        auto innerFaces = findInnerShellFacesWithSplits( mesh, resMesh, offset > 0 ? Side::Positive : Side::Negative );
+        auto innerFaces = findInnerShellFacesWithSplits( MeshPart{ mesh, &goodFaces }, resMesh, offset > 0 ? Side::Positive : Side::Negative );
         resMesh.topology.deleteFaces( resMesh.topology.getValidFaces() - innerFaces );
         resMesh.pack();
     }

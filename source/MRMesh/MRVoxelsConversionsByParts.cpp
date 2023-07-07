@@ -336,7 +336,7 @@ TEST( MRMesh, volumeToMeshByParts )
     auto functionMesh = volumeToMeshByParts( functionBuilder, dimensions, Vector3f::diagonal( voxelSize ), {
         .maxVolumePartMemoryUsage = memoryUsage,
     } );
-    for ( auto* ptr : { &vdbMesh, &simpleMesh } )
+    for ( auto* ptr : { &vdbMesh, &simpleMesh, &functionMesh } )
     {
         auto& mesh = *ptr;
         EXPECT_TRUE( mesh.has_value() );

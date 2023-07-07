@@ -13,8 +13,8 @@
 #include "MRFastWindingNumber.h"
 #include "MRVolumeIndexer.h"
 #include "MRInnerShell.h"
+#include "MRMeshFixer.h"
 #include "MRPch/MRSpdlog.h"
-#include <thread>
 
 namespace
 {
@@ -101,8 +101,11 @@ Expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const O
 
     if ( unsignedOffset )
     {
+        // do not trust degenerate faces with huge aspect ratios
+        const auto goodFaces = mesh.topology.getValidFaces() - findDegenerateFaces( mesh, 1000 ).value();
+
         // for open input mesh, let us find only necessary portion on the shell
-        auto innerFaces = findInnerShellFacesWithSplits( mesh, resMesh, offset > 0 ? Side::Positive : Side::Negative );
+        auto innerFaces = findInnerShellFacesWithSplits( MeshPart{ mesh, &goodFaces }, resMesh, offset > 0 ? Side::Positive : Side::Negative );
         resMesh.topology.deleteFaces( resMesh.topology.getValidFaces() - innerFaces );
         resMesh.pack();
     }

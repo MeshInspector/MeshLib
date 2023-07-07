@@ -9,13 +9,13 @@
 namespace MR
 {
 
-bool isInnerShellVert( const Mesh & mesh, const Vector3f & shellPoint, Side side )
+bool isInnerShellVert( const MeshPart & mp, const Vector3f & shellPoint, Side side )
 {
-    auto sd = findSignedDistance( shellPoint, mesh );
+    auto sd = findSignedDistance( shellPoint, mp );
     assert( sd );
     if ( !sd )
         return false;
-    if ( sd->mtp.isBd( mesh.topology ) )
+    if ( sd->mtp.isBd( mp.mesh.topology, mp.region ) )
         return false;
     if ( side == Side::Positive && sd->dist <= 0 )
         return false;
@@ -24,22 +24,22 @@ bool isInnerShellVert( const Mesh & mesh, const Vector3f & shellPoint, Side side
     return true;
 }
 
-VertBitSet findInnerShellVerts( const Mesh & mesh, const Mesh & shell, Side side )
+VertBitSet findInnerShellVerts( const MeshPart & mp, const Mesh & shell, Side side )
 {
     MR_TIMER
     VertBitSet res( shell.topology.vertSize() );
     BitSetParallelFor( shell.topology.getValidVerts(), [&]( VertId v )
     {
-        if ( isInnerShellVert( mesh, shell.points[v], side ) )
+        if ( isInnerShellVert( mp, shell.points[v], side ) )
             res.set( v );
     } );
     return res;
 }
 
-FaceBitSet findInnerShellFacesWithSplits( const Mesh & mesh, Mesh & shell, Side side )
+FaceBitSet findInnerShellFacesWithSplits( const MeshPart & mp, Mesh & shell, Side side )
 {
     MR_TIMER
-    const auto innerVerts = findInnerShellVerts( mesh, shell, side );
+    const auto innerVerts = findInnerShellVerts( mp, shell, side );
 
     // find all edges connecting inner and not-inner vertices
     UndirectedEdgeBitSet ues( shell.topology.undirectedEdgeSize() );
@@ -70,7 +70,7 @@ FaceBitSet findInnerShellFacesWithSplits( const Mesh & mesh, Mesh & shell, Side 
         {
             const auto v = 0.5f * ( av + bv );
             const auto p = ( 1 - v ) * a + v * b;
-            if ( isInnerShellVert( mesh, p, side ) )
+            if ( isInnerShellVert( mp, p, side ) )
                 av = v;
             else
                 bv = v;

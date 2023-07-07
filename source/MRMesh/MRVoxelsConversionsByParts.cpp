@@ -90,7 +90,7 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
     }
     else
     {
-        return unexpected( "Unsupported volume format" );
+        static_assert( !sizeof( Volume ), "Unsupported voxel volume type." );
     }
     if ( !res.has_value() )
         return unexpected( res.error() );

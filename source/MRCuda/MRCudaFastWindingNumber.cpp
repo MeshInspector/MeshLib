@@ -28,6 +28,7 @@ FastWindingNumber::FastWindingNumber( const Mesh& mesh ) : mesh_( mesh )
 
 bool FastWindingNumber::prepareData_( ProgressCallback cb )
 {
+    cudaSetDevice( 0 );
     if ( data_ )
         return reportProgress( cb, 1.0f );
     MR_TIMER
@@ -71,7 +72,6 @@ void FastWindingNumber::calcFromVector( std::vector<float>& res, const std::vect
     MR_TIMER
     prepareData_( {} );
 
-    cudaSetDevice( 0 );
     const size_t size = points.size();
     res.resize( size );
     data_->cudaPoints.fromVector( points );
@@ -87,7 +87,6 @@ bool FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, Prog
     if ( !prepareData_( subprogress( cb, 0.0f, 0.5f ) ) )
         return false;
 
-    cudaSetDevice( 0 );
     const size_t size = mesh_.topology.faceSize();
     res.resize( size );
     data_->cudaResult.resize( size );
@@ -109,8 +108,6 @@ void FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& d
 {
     MR_TIMER
     prepareData_( {} );
-
-    cudaSetDevice( 0 );
 
     const auto getCudaMatrix = [] ( const AffineXf3f& xf )
     {
@@ -136,8 +133,6 @@ void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, cons
 {
     MR_TIMER
     prepareData_( {} );
-
-    cudaSetDevice( 0 );
 
     const auto getCudaMatrix = [] ( const AffineXf3f& xf )
     {

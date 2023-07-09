@@ -43,7 +43,7 @@ Mesh makeMovementBuildBody( const Contours3f& bodyContours, const Contours3f& tr
     else
     {
         for ( const auto& bc : bodyContours )
-            normal = calcOrientedArea( bc );
+            normal += calcOrientedArea( bc );
     }
     // minus to have correct orientation of result mesh
     normal = -normal.normalized();

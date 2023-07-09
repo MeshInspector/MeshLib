@@ -14,7 +14,7 @@ DistanceMap distanceMapFromContours( const MR::Polyline2& polyline, const Contou
     const auto& nodes = tree.nodes();
     const auto& edges = polyline.topology.edges();
 
-    cudaSetDevice( 0 );
+    CUDA_EXEC( cudaSetDevice( 0 ) );
     const size_t size = size_t( params.resolution.x ) * params.resolution.y;
 
     DynamicArray<float2> cudaPts;

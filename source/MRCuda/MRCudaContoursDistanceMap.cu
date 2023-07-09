@@ -133,7 +133,7 @@ void contoursDistanceMapProjectionKernel(
     const size_t size )
 {
     int maxThreadsPerBlock = 0;
-    cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 );
+    CUDA_EXEC( cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 ) );
     int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
 
     // kernel

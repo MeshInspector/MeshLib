@@ -124,9 +124,7 @@ void FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& d
     const size_t size = size_t( dims.x ) * dims.y * dims.z;
     data_->cudaResult.resize( size );
     // if we execute the kernel for a huge volume, then cudaErrorLaunchTimeout will come,
-    // so we have to execute the kernel by slices
-    void* dummy = nullptr;
-    CUDA_EXEC( cudaMalloc(&dummy, 1) );
+    // so we have to execute the kernel by slices and synchronize after each
     for ( int z = 0; z < dims.z; ++z )
     {
         fastWindingNumberFromGridKernel(
@@ -135,10 +133,8 @@ void FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& d
             float3{ voxelSize.x, voxelSize.y, voxelSize.z }, cudaGridToMeshXf,
             data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(),
             data_->cudaResult.data() + size_t( dims.x ) * dims.y * z, beta );
-        // https://stackoverflow.com/a/27965702/7325599
-        CUDA_EXEC( cudaMemcpyAsync(dummy, dummy, 1, cudaMemcpyDeviceToDevice) );
+        CUDA_EXEC( cudaDeviceSynchronize() );
     }
-    CUDA_EXEC( cudaFree(dummy) );
     
     data_->cudaResult.toVector( res );
 }

@@ -5,6 +5,7 @@
 #include "MRBox.h"
 #include "MRTimer.h"
 #include "MRMatrix3.h"
+#include "MRContour.h"
 
 namespace MR
 {
@@ -42,14 +43,7 @@ Mesh makeMovementBuildBody( const Contours3f& bodyContours, const Contours3f& tr
     else
     {
         for ( const auto& bc : bodyContours )
-        {
-            if ( bc.size() < 3 )
-                continue;
-            for ( int i = 0; i + 1 < bc.size(); ++i )
-                normal += cross( bc[i], bc[i + 1] );
-            if ( bc.front() != bc.back() )
-                normal += cross( bc.back(), bc.front() );
-        }
+            normal = calcOrientedArea( bc );
     }
     // minus to have correct orientation of result mesh
     normal = -normal.normalized();

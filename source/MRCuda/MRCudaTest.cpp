@@ -11,7 +11,7 @@ namespace Cuda
 {
 void negatePicture( Image& image )
 {
-    cudaSetDevice( 0 );
+    CUDA_EXEC( cudaSetDevice( 0 ) );
 
     DynamicArray<Cuda::Color> cudaArray;
     cudaArray.fromVector( image.pixels );

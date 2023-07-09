@@ -28,7 +28,7 @@ FastWindingNumber::FastWindingNumber( const Mesh& mesh ) : mesh_( mesh )
 
 bool FastWindingNumber::prepareData_( ProgressCallback cb )
 {
-    cudaSetDevice( 0 );
+    CUDA_EXEC( cudaSetDevice( 0 ) );
     if ( data_ )
         return reportProgress( cb, 1.0f );
     MR_TIMER

@@ -59,7 +59,7 @@ void PointsToMeshProjector::findProjections(
         return;
     }
     
-    cudaSetDevice( 0 );
+    CUDA_EXEC( cudaSetDevice( 0 ) );
 
     const auto getCudaMatrix = [] ( const AffineXf3f& xf )
     {

@@ -232,7 +232,7 @@ namespace Cuda
                                   float* resVec, float beta, int skipFace, size_t size )
     {
         int maxThreadsPerBlock = 0;
-        cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 );
+        CUDA_EXEC( cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 ) );
         int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
         kernel << <numBlocks, maxThreadsPerBlock >> > ( points, dipoles, nodes, meshPoints, faces, resVec, beta, skipFace, size );
     }
@@ -242,7 +242,7 @@ namespace Cuda
                                           float* resVec, float beta, size_t size )
     {
         int maxThreadsPerBlock = 0;
-        cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 );
+        CUDA_EXEC( cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 ) );
         int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
         kernel << <numBlocks, maxThreadsPerBlock >> > ( dipoles, nodes, meshPoints, faces, resVec, beta, size );
     }
@@ -252,7 +252,7 @@ namespace Cuda
     {
         const size_t size = size_t( dims.x ) * dims.y * dims.z;
         int maxThreadsPerBlock = 0;
-        cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 );
+        CUDA_EXEC( cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 ) );
         int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
         kernel << <numBlocks, maxThreadsPerBlock >> > ( dims, minCoord, voxelSize, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, beta, size );       
     }
@@ -263,7 +263,7 @@ namespace Cuda
     {
         const size_t size = size_t( dims.x ) * dims.y * dims.z;
         int maxThreadsPerBlock = 0;
-        cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 );
+        CUDA_EXEC( cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 ) );
         int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
         kernelWithDistances << <numBlocks, maxThreadsPerBlock >> > ( dims, minCoord, voxelSize, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, beta, maxDistSq, minDistSq, size );
     }

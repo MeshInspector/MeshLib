@@ -46,6 +46,15 @@ double calcPathMetric( const EdgePath & path, EdgeMetric metric )
     return res;
 }
 
+Vector3d calcOrientedArea( const EdgeLoop & loop, const Mesh & mesh )
+{
+    assert( isEdgeLoop( mesh.topology, loop ) );
+    Vector3d dblArea;
+    for ( auto e : loop )
+        dblArea += cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) );
+    return 0.5 * dblArea;
+}
+
 void sortPathsByMetric( std::vector<EdgePath> & paths, EdgeMetric metric )
 {
     MR_TIMER

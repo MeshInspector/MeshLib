@@ -16,10 +16,6 @@ constexpr int pointInRotation = 21;
 
 GcodeProcessor::GcodeProcessor()
 {
-    calcCoordMethod_ = [] ( Vector3f tr, Matrix3f mx, Matrix3f, Matrix3f mz )
-    {
-        return mz * mx * tr;
-    };
     rotationAxes_ = { Vector3f::minusX(), Vector3f::minusY(), Vector3f::plusZ() };
     setRotationOrder( { RotationParameterName::A, RotationParameterName::B, RotationParameterName::C } );
 }
@@ -136,6 +132,16 @@ bool GcodeProcessor::setRotationOrder( std::array<RotationParameterName, 3> rota
 
     rotationAxesOrder_ = newOrder;
     return true;
+}
+
+std::array<GcodeProcessor::RotationParameterName, 3> GcodeProcessor::getRotationOrder()
+{
+    std::array<MR::GcodeProcessor::RotationParameterName, 3> res;
+    for ( int i = 0; i < 3; ++i )
+    {
+        res[i] = RotationParameterName( rotationAxesOrder_[i] );
+    }
+    return res;
 }
 
 std::vector<GcodeProcessor::Command> GcodeProcessor::parseFrame_( const std::string_view& frame )

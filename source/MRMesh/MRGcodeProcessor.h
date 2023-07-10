@@ -62,6 +62,7 @@ public:
     MRMESH_API void setRotationParams( RotationParameterName paramName, const Vector3f& rotationAxis );
     MRMESH_API Vector3f getRotationParams( RotationParameterName paramName );
     MRMESH_API bool setRotationOrder( std::array<RotationParameterName, 3> rotationAxisOrder );
+    MRMESH_API std::array<RotationParameterName, 3> getRotationOrder();
 
 private:
 
@@ -162,7 +163,6 @@ private:
     float accuracy_ = 1.e-3f;
     std::array<Vector3f, 3> rotationAxes_;
     std::array<int, 3> rotationAxesOrder_; // map RotationParameterName => rotationAxes_ index
-    std::function<Vector3f( Vector3f, Matrix3f, Matrix3f, Matrix3f )> calcCoordMethod_; //
 
 };
 

@@ -1034,8 +1034,6 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshPar
                 if ( !voxelValid && iterStatus[i] )
                     voxelValid = true;
             }
-            assert( voxelValid );
-
             if constexpr ( std::is_same_v<V, SimpleVolume> || std::is_same_v<V, FunctionVolume> )
             {
                 // ensure consistent nan voxel

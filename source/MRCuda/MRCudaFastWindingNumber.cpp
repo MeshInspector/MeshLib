@@ -28,6 +28,7 @@ FastWindingNumber::FastWindingNumber( const Mesh& mesh ) : mesh_( mesh )
 
 bool FastWindingNumber::prepareData_( ProgressCallback cb )
 {
+    CUDA_EXEC( cudaSetDevice( 0 ) );
     if ( data_ )
         return reportProgress( cb, 1.0f );
     MR_TIMER
@@ -71,7 +72,6 @@ void FastWindingNumber::calcFromVector( std::vector<float>& res, const std::vect
     MR_TIMER
     prepareData_( {} );
 
-    cudaSetDevice( 0 );
     const size_t size = points.size();
     res.resize( size );
     data_->cudaPoints.fromVector( points );
@@ -87,7 +87,6 @@ bool FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, Prog
     if ( !prepareData_( subprogress( cb, 0.0f, 0.5f ) ) )
         return false;
 
-    cudaSetDevice( 0 );
     const size_t size = mesh_.topology.faceSize();
     res.resize( size );
     data_->cudaResult.resize( size );
@@ -110,8 +109,6 @@ void FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& d
     MR_TIMER
     prepareData_( {} );
 
-    cudaSetDevice( 0 );
-
     const auto getCudaMatrix = [] ( const AffineXf3f& xf )
     {
         Matrix4 res;
@@ -125,9 +122,19 @@ void FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& d
     
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
     const size_t size = size_t( dims.x ) * dims.y * dims.z;
-    data_->cudaResult.resize( size );    
-    fastWindingNumberFromGridKernel( int3{ dims.x, dims.y, dims.z }, float3{ minCoord.x, minCoord.y, minCoord.z }, float3{ voxelSize.x, voxelSize.y, voxelSize.z }, cudaGridToMeshXf,
-                                     data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(), data_->cudaResult.data(), beta );   
+    data_->cudaResult.resize( size );
+    // if we execute the kernel for a huge volume, then cudaErrorLaunchTimeout will come,
+    // so we have to execute the kernel by slices and synchronize after each
+    for ( int z = 0; z < dims.z; ++z )
+    {
+        fastWindingNumberFromGridKernel(
+            int3{ dims.x, dims.y, 1 },
+            float3{ minCoord.x, minCoord.y, minCoord.z + z },
+            float3{ voxelSize.x, voxelSize.y, voxelSize.z }, cudaGridToMeshXf,
+            data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(),
+            data_->cudaResult.data() + size_t( dims.x ) * dims.y * z, beta );
+        CUDA_EXEC( cudaDeviceSynchronize() );
+    }
     
     data_->cudaResult.toVector( res );
 }
@@ -136,8 +143,6 @@ void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, cons
 {
     MR_TIMER
     prepareData_( {} );
-
-    cudaSetDevice( 0 );
 
     const auto getCudaMatrix = [] ( const AffineXf3f& xf )
     {

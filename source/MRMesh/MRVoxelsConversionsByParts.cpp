@@ -4,9 +4,12 @@
 #include "MRMesh.h"
 #include "MRMeshTrimWithPlane.h"
 #include "MRPlane3.h"
+#include "MRSimpleVolume.h"
 #include "MRStringConvert.h"
 #include "MRTimer.h"
 #include "MRVDBConversions.h"
+#include "MRVolumeIndexer.h"
+#include "MRVoxelsConversions.h"
 
 #include "MRGTest.h"
 #include "MRFloatGrid.h"
@@ -54,18 +57,47 @@ void sortEdgePaths( const Mesh& mesh, std::vector<EdgePath>& paths )
 namespace MR
 {
 
+template <typename Volume>
 VoidOrErrStr
-mergeGridPart( Mesh &mesh, std::vector<EdgePath> &cutContours, FloatGrid &&grid, const Vector3f &voxelSize,
-               float leftCutPosition, float rightCutPosition, const MergeGridPartSettings &settings )
+mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume,
+               float leftCutPosition, float rightCutPosition, const MergeVolumePartSettings &settings )
 {
     MR_TIMER
 
-    auto res = gridToMesh( std::move( grid ), GridToMeshSettings {
-        .voxelSize = voxelSize,
-    } );
+    Expected<Mesh, std::string> res;
+    if constexpr ( std::is_same_v<Volume, VdbVolume> )
+    {
+        res = gridToMesh( std::move( volume.data ), GridToMeshSettings {
+            .voxelSize = volume.voxelSize,
+            .isoValue = 0.f,
+        } );
+    }
+    else if constexpr ( std::is_same_v<Volume, SimpleVolume> )
+    {
+        res = simpleVolumeToMesh( volume, {
+            .iso = 0.f,
+            .lessInside = true,
+            .omitNaNCheck = true,
+        } );
+    }
+    else if constexpr ( std::is_same_v<Volume, FunctionVolume> )
+    {
+        res = functionVolumeToMesh( volume, {
+            .iso = 0.f,
+            .lessInside = true,
+            .omitNaNCheck = true,
+        } );
+    }
+    else
+    {
+        static_assert( !sizeof( Volume ), "Unsupported voxel volume type." );
+    }
     if ( !res.has_value() )
         return unexpected( res.error() );
     auto part = std::move( *res );
+
+    if ( settings.origin != Vector3f() )
+        part.transform( AffineXf3f::translation( settings.origin ) );
 
     if ( settings.preCut )
         settings.preCut( part, leftCutPosition, rightCutPosition );
@@ -143,19 +175,20 @@ mergeGridPart( Mesh &mesh, std::vector<EdgePath> &cutContours, FloatGrid &&grid,
     return {};
 }
 
+template <typename Volume>
 Expected<Mesh, std::string>
-gridToMeshByParts( const GridPartBuilder &builder, const Vector3i &dimensions, const Vector3f &voxelSize,
-                   const GridToMeshByPartsSettings &settings, const MergeGridPartSettings &mergeSettings )
+volumeToMeshByParts( const VolumePartBuilder<Volume> &builder, const Vector3i &dimensions, const Vector3f &voxelSize,
+                     const VolumeToMeshByPartsSettings &settings, const MergeVolumePartSettings &mergeSettings )
 {
     MR_TIMER
 
     constexpr float cMemOverhead = 1.25f;
     const auto maxSliceMemoryUsage = size_t( float( dimensions.y * dimensions.z * sizeof( float ) ) * cMemOverhead );
-    const auto maxSliceCount = settings.maxGridPartMemoryUsage / maxSliceMemoryUsage;
+    const auto maxSliceCount = settings.maxVolumePartMemoryUsage / maxSliceMemoryUsage;
     if ( maxSliceCount < settings.stripeOverlap + 1 )
     {
-        return unexpected( fmt::format( "The specified grid memory usage limit is too low: at least {} required",
-                                                 bytesString( ( settings.stripeOverlap + 1 ) * maxSliceMemoryUsage ) ) );
+        return unexpected( fmt::format( "The specified volume memory usage limit is too low: at least {} required",
+                                        bytesString( ( settings.stripeOverlap + 1 ) * maxSliceMemoryUsage ) ) );
     }
 
     const size_t width = dimensions.x - settings.stripeOverlap;
@@ -180,9 +213,14 @@ gridToMeshByParts( const GridPartBuilder &builder, const Vector3i &dimensions, c
         const auto begin = stripe * ( stripeSize - settings.stripeOverlap );
         const auto end = std::min( begin + stripeSize, (size_t)dimensions.x );
 
-        auto grid = builder( begin, end );
-        if ( !grid.has_value() )
-            return unexpected( grid.error() );
+        std::optional<Vector3i> offset;
+        auto volume = builder( (int)begin, (int)end, offset );
+        if ( !volume.has_value() )
+            return unexpected( volume.error() );
+
+        auto mergeOffsetSettings = mergeSettings;
+        if ( offset )
+            mergeOffsetSettings.origin = mult( Vector3f( *offset ), voxelSize );
 
         auto leftCutPosition = ( (float)begin + (float)settings.stripeOverlap / 2.f ) * voxelSize.x;
         if ( begin == 0 )
@@ -191,30 +229,32 @@ gridToMeshByParts( const GridPartBuilder &builder, const Vector3i &dimensions, c
         if ( end == dimensions.x )
             rightCutPosition = +FLT_MAX;
 
-        const auto res = mergeGridPart( result, cutContours, std::move( *grid ), voxelSize, leftCutPosition, rightCutPosition, mergeSettings );
+        const auto res = mergeVolumePart( result, cutContours, std::move( *volume ), leftCutPosition, rightCutPosition, mergeOffsetSettings );
         if ( !res.has_value() )
             return unexpected( res.error() );
     }
     return std::move( result );
 }
 
-TEST( MRMesh, gridToMeshByParts )
+TEST( MRMesh, volumeToMeshByParts )
 {
     const Vector3i dimensions { 101, 101, 101 };
     constexpr float radius = 50.f;
     constexpr Vector3f center { 50.f, 50.f, 50.f };
 
-    GridPartBuilder builder = [&] ( size_t begin, size_t end )
+    constexpr float voxelSize = 0.01f;
+
+    VolumePartBuilder<VdbVolume> vdbBuilder = [&] ( int begin, int end, std::optional<Vector3i>& )
     {
         auto grid = MakeFloatGrid( openvdb::FloatGrid::create() );
         grid->setGridClass( openvdb::GRID_LEVEL_SET );
 
         auto accessor = grid->getAccessor();
-        for ( int x = (int)begin; x < end; ++x )
+        for ( auto z = 0; z < dimensions.z; ++z )
         {
-            for ( int y = 0; y < dimensions.y; ++y )
+            for ( auto y = 0; y < dimensions.y; ++y )
             {
-                for ( int z = 0; z < dimensions.z; ++z )
+                for ( auto x = begin; x < end; ++x )
                 {
                     const Vector3f pos( (float)x, (float)y, (float)z );
                     const auto dist = ( center - pos ).length();
@@ -223,23 +263,101 @@ TEST( MRMesh, gridToMeshByParts )
             }
         }
 
-        return grid;
+        return VdbVolume {
+            .data = std::move( grid ),
+            .dims = { end - begin, dimensions.y, dimensions.z },
+            .voxelSize = Vector3f::diagonal( voxelSize ),
+            .min = -radius,
+            .max = +radius,
+        };
     };
 
-    constexpr float voxelSize = 0.01f;
-    auto mesh = gridToMeshByParts( builder, dimensions, Vector3f::diagonal( voxelSize ), {
-        .maxGridPartMemoryUsage = 2 * ( 1 << 20 ), // 2 MiB
-    } );
-    EXPECT_TRUE( mesh.has_value() );
-
-    if ( mesh.has_value() )
+    VolumePartBuilder<SimpleVolume> simpleBuilder = [&] ( int begin, int end, std::optional<Vector3i>& offset )
     {
-        constexpr auto r = radius * voxelSize;
-        constexpr auto expectedVolume = 4.f * PI_F * r * r * r / 3.f;
-        const auto actualVolume = mesh->volume();
-        EXPECT_NEAR( expectedVolume, actualVolume, 0.001f );
+        SimpleVolume result {
+            .dims = { end - begin, dimensions.y, dimensions.z },
+            .voxelSize = Vector3f::diagonal( voxelSize ),
+            .min = -radius,
+            .max = +radius,
+        };
+
+        VolumeIndexer indexer( result.dims );
+        result.data.resize( indexer.size() );
+
+        tbb::parallel_for( tbb::blocked_range<int>( 0, dimensions.z ), [&] ( const tbb::blocked_range<int>& range )
+        {
+            for ( auto z = range.begin(); z < range.end(); ++z )
+            {
+                for ( auto y = 0; y < dimensions.y; ++y )
+                {
+                    for ( auto x = begin; x < end; ++x )
+                    {
+                        const Vector3f pos( (float)x, (float)y, (float)z );
+                        const auto dist = ( center - pos ).length();
+                        result.data[indexer.toVoxelId( { x - begin, y, z } )] = dist - radius;
+                    }
+                }
+            }
+        } );
+
+        offset = { begin, 0, 0 };
+
+        return result;
+    };
+
+    VolumePartBuilder<FunctionVolume> functionBuilder = [&] ( int begin, int end, std::optional<Vector3i>& offset )
+    {
+        FunctionVolume result {
+            .dims = { end - begin, dimensions.y, dimensions.z },
+            .voxelSize = Vector3f::diagonal( voxelSize ),
+            .min = -radius,
+            .max = +radius,
+        };
+
+        result.data = [radius = radius, offsetCenter = center - Vector3f( (float)begin, 0.f, 0.f )] ( const Vector3i& pos )
+        {
+            const auto dist = ( offsetCenter - Vector3f( pos ) ).length();
+            return dist - radius;
+        };
+
+        offset = { begin, 0, 0 };
+
+        return result;
+    };
+
+    constexpr size_t memoryUsage = 2 * ( 1 << 20 ); // 2 MiB
+
+    auto vdbMesh = volumeToMeshByParts( vdbBuilder, dimensions, Vector3f::diagonal( voxelSize ), {
+        .maxVolumePartMemoryUsage = memoryUsage,
+    } );
+    auto simpleMesh = volumeToMeshByParts( simpleBuilder, dimensions, Vector3f::diagonal( voxelSize ), {
+        .maxVolumePartMemoryUsage = memoryUsage,
+    } );
+    auto functionMesh = volumeToMeshByParts( functionBuilder, dimensions, Vector3f::diagonal( voxelSize ), {
+        .maxVolumePartMemoryUsage = memoryUsage,
+    } );
+    for ( auto* ptr : { &vdbMesh, &simpleMesh, &functionMesh } )
+    {
+        auto& mesh = *ptr;
+        EXPECT_TRUE( mesh.has_value() );
+        if ( mesh.has_value() )
+        {
+            constexpr auto r = radius * voxelSize;
+            constexpr auto expectedVolume = 4.f * PI_F * r * r * r / 3.f;
+            const auto actualVolume = mesh->volume();
+            EXPECT_NEAR( expectedVolume, actualVolume, 0.001f );
+        }
     }
 }
 
+template MRMESH_API VoidOrErrStr mergeVolumePart<SimpleVolume>( Mesh&, std::vector<EdgePath>&, SimpleVolume&&, float, float, const MergeVolumePartSettings& );
+template MRMESH_API VoidOrErrStr mergeVolumePart<VdbVolume>( Mesh&, std::vector<EdgePath>&, VdbVolume&&, float, float, const MergeVolumePartSettings& );
+template MRMESH_API VoidOrErrStr mergeVolumePart<FunctionVolume>( Mesh&, std::vector<EdgePath>&, FunctionVolume&&, float, float, const MergeVolumePartSettings& );
+
+template MRMESH_API Expected<Mesh, std::string> volumeToMeshByParts<SimpleVolume>( const VolumePartBuilder<SimpleVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
+template MRMESH_API Expected<Mesh, std::string> volumeToMeshByParts<VdbVolume>( const VolumePartBuilder<VdbVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
+template MRMESH_API Expected<Mesh, std::string> volumeToMeshByParts<FunctionVolume>( const VolumePartBuilder<FunctionVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
+
 } // namespace MR
+
 #endif

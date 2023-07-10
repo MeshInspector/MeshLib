@@ -1,6 +1,8 @@
 #include "MRCudaBasic.h"
+#include "MRCudaBasic.hpp"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+#include <MRPch/MRSpdlog.h>
 
 namespace MR
 {
@@ -21,13 +23,26 @@ size_t getCudaAvailableMemory()
 {
     if ( !isCudaAvailable() )
         return 0;
-    cudaSetDevice( 0 );
+    CUDA_EXEC( cudaSetDevice( 0 ) );
     size_t memFree = 0, memTot = 0;
-    cudaMemGetInfo( &memFree, &memTot );
+    CUDA_EXEC( cudaMemGetInfo( &memFree, &memTot ) );
     // minus extra 128 MB
     return memFree - 128 * 1024 * 1024;
 }
 
+void logError( cudaError_t code, const char * file, int line )
+{
+    if ( file )
+    {
+        spdlog::error("CUDA error {}: {}. In file: {} Line: {}", 
+            cudaGetErrorName( code ), cudaGetErrorString( code ), file, line );
+    }
+    else
+    {
+        spdlog::error( "CUDA error {}: {}", cudaGetErrorName( code ), cudaGetErrorString( code ) );
+    }
 }
 
-}
+} //namespace Cuda
+
+} //namespace MR

@@ -5,6 +5,7 @@
 #include "MRBox.h"
 #include "MRTimer.h"
 #include "MRMatrix3.h"
+#include "MRContour.h"
 
 namespace MR
 {
@@ -25,6 +26,7 @@ Mesh makeMovementBuildBody( const Contours3f& bodyContours, const Contours3f& tr
     Matrix3f prevHalfRot;
     Matrix3f accumRot;
     Vector3f rotationCenter;
+    Matrix3f scaling;
     if ( params.rotationCenter )
         rotationCenter = *params.rotationCenter;
     else
@@ -41,28 +43,27 @@ Mesh makeMovementBuildBody( const Contours3f& bodyContours, const Contours3f& tr
     else
     {
         for ( const auto& bc : bodyContours )
-        {
-            if ( bc.size() < 3 )
-                continue;
-            for ( int i = 0; i + 1 < bc.size(); ++i )
-                normal += cross( bc[i], bc[i + 1] );
-            if ( bc.front() != bc.back() )
-                normal += cross( bc.back(), bc.front() );
-        }
+            normal += calcOrientedArea( bc );
     }
     // minus to have correct orientation of result mesh
     normal = -normal.normalized();
 
     Vector3f prevVec, nextVec; // needed for soft rotation
 
-    auto halfRot = [] ( const Vector3f& from, const Vector3f& to )->Matrix3f
+
+    auto halfRot = [] ( const Vector3f& from, const Vector3f& to, Vector3f& axis, float& halfAng )->Matrix3f
     {
-        auto axis = cross( from, to );
+        axis = cross( from, to );
+        halfAng = 0.0f;
         if ( axis.lengthSq() > 0 )
-            return Matrix3f::rotation( axis, angle( from, to ) * 0.5f );
+        {
+            halfAng = angle( from, to ) * 0.5f;
+            return Matrix3f::rotation( axis, halfAng );
+        }
         if ( dot( from, to ) >= 0 )
             return {}; // identity matrix
-        return Matrix3f::rotation( cross( from, from.furthestBasisVector() ), PI2_F );
+        halfAng = PI2_F;
+        return Matrix3f::rotation( cross( from, from.furthestBasisVector() ), halfAng );
     };
 
     Mesh res;
@@ -147,12 +148,32 @@ Mesh makeMovementBuildBody( const Contours3f& bodyContours, const Contours3f& tr
                     initRotationDone = true;
                     accumRot = Matrix3f::rotation( normal, prevVec );
                 }
-
-                auto curHalfRot = halfRot( prevVec, nextVec );
+                float outHalfAng = 0.0f;
+                Vector3f axis;
+                auto curHalfRot = halfRot( prevVec, nextVec, axis, outHalfAng );
                 accumRot = curHalfRot * prevHalfRot * accumRot;
                 prevHalfRot = curHalfRot;
+                scaling = Matrix3f{};
+                if ( axis.lengthSq() > 0 )
+                {
+                    auto scaleDir = cross( axis, accumRot * normal );
+                    Vector3f basisVec = Vector3f::plusX();
+                    if ( std::abs( scaleDir.y ) > std::abs( scaleDir.x ) &&
+                        std::abs( scaleDir.y ) > std::abs( scaleDir.z ) )
+                        basisVec = Vector3f::plusY();
+                    else if ( std::abs( scaleDir.z ) > std::abs( scaleDir.x ) &&
+                        std::abs( scaleDir.z ) > std::abs( scaleDir.y ) )
+                        basisVec = Vector3f::plusZ();
+
+                    float additionalScale = std::min( 1.0f / std::cos( outHalfAng ), 2.0f ) - 1.0f;
+
+                    scaling = 
+                        Matrix3f::rotation( basisVec, scaleDir ) *
+                        Matrix3f::scale(Vector3f::diagonal(1) + basisVec * additionalScale ) *
+                        Matrix3f::rotation( scaleDir, basisVec );
+                }
             }
-            xf = AffineXf3f::translation( trans ) * AffineXf3f::xfAround( accumRot, rotationCenter );
+            xf = AffineXf3f::translation( trans ) * AffineXf3f::xfAround( scaling * accumRot, rotationCenter );
 
             auto curBodyEdge = res.addSeparateContours( bodyContours, &xf );
             if ( !firstBodyEdge )

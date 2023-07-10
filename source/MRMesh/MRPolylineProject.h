@@ -90,6 +90,9 @@ MRMESH_API void findEdgesInBall( const Polyline2& polyline, const Vector2f& cent
 /// Finds all edges of given polyline that cross or touch given ball (center, radius)
 MRMESH_API void findEdgesInBall( const Polyline3& polyline, const Vector3f& center, float radius, const FoundEdgeCallback3& foundCallback, AffineXf3f* xf = nullptr );
 
+/// Finds all edges of given mesh edges (specified by the tree) that cross or touch given ball (center, radius)
+MRMESH_API void findMeshEdgesInBall( const Mesh& mesh, const AABBTreePolyline3& tree, const Vector3f& center, float radius, const FoundEdgeCallback3& foundCallback, AffineXf3f* xf = nullptr );
+
 /**
  * \brief computes the closest point on the mesh edges (specified by the tree) to given point
  * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exists returning upDistLimitSq and no valid point

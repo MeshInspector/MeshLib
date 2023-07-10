@@ -11,6 +11,7 @@
 #include "MRFastWindingNumber.h"
 #include "MRVolumeIndexer.h"
 #include "MRRegionBoundary.h"
+#include "MRParallelFor.h"
 
 namespace MR
 {
@@ -447,9 +448,7 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
 {
     MR_TIMER
 
-    std::atomic<bool> keepGoing{ true };
-    auto mainThreadId = std::this_thread::get_id();
-    const auto gridToMeshXf = meshToGridXf.inverse();    
+    const auto gridToMeshXf = meshToGridXf.inverse();
 
     auto activeBox = grid->evalActiveVoxelBoundingBox();
     // make dense topology tree to copy its nodes topology to original grid
@@ -469,16 +468,19 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
     if ( !fwn )
         fwn = std::make_shared<FastWindingNumber>( refMesh );
 
-    fwn->calcFromGrid( windVals, Vector3i{ dims.x(),  dims.y(), dims.z() }, Vector3f{ float( minCoord.x() ), float( minCoord.y() ), float( minCoord.z() ) }, voxelSize, gridToMeshXf, 2.0f );  
-    
-    tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), volume ),
-        [&] ( const tbb::blocked_range<size_t>& range )
+    if ( !fwn->calcFromGrid( windVals, 
+        Vector3i{ dims.x(),  dims.y(), dims.z() }, 
+        Vector3f{ float( minCoord.x() ), float( minCoord.y() ), float( minCoord.z() ) }, 
+        voxelSize, gridToMeshXf, 2.0f, subprogress( cb, 0.0f, 0.8f ) ) )
     {
-        auto accessor = grid->getAccessor();
-        for ( auto i = range.begin(); i < range.end(); ++i )
+        return unexpectedOperationCanceled();
+    }
+    
+    tbb::enumerable_thread_specific<openvdb::FloatGrid::Accessor> perThreadAccessor( grid->getAccessor() );
+
+    if ( !ParallelFor( size_t( 0 ), volume, [&]( size_t i )
         {
-            if ( cb && !keepGoing.load( std::memory_order_relaxed ) )
-                break;
+            auto & accessor = perThreadAccessor.local();
 
             auto pos = indexer.toPos( VoxelId( i ) );
             auto coord = minCoord;
@@ -494,12 +496,11 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
             {
                 val *= windVal;
             } );
-            if ( cb && mainThreadId == std::this_thread::get_id() && !cb( float( i ) / float( range.size() ) ) )
-                keepGoing.store( false, std::memory_order_relaxed );
-        }
-    }, tbb::static_partitioner() );
-    if ( !keepGoing )
+        }, subprogress( cb, 0.8f, 1.0f ) ) )
+    {
         return unexpectedOperationCanceled();
+    }
+
     grid->pruneGrid( 0.0f );
     return {};
 }

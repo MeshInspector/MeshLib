@@ -157,14 +157,14 @@ bool FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, Prog
     }, cb );
 }
 
-void FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta )
+bool FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb )
 {
     MR_TIMER
 
     const size_t size = dims.x * dims.y * dims.z;
     res.resize( size );
     VolumeIndexer indexer( dims );
-    ParallelFor( size_t( 0 ), size, [&]( size_t i )
+    return ParallelFor( size_t( 0 ), size, [&]( size_t i )
     {
         auto pos = indexer.toPos( VoxelId( i ) );
         auto coord = minCoord;
@@ -174,7 +174,7 @@ void FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& d
         auto coord3i = Vector3i( int( coord.x ), int( coord.y ), int( coord.z ) );
         auto pointInSpace = mult( voxelSize, Vector3f( coord3i ) );
         res[i] = calc( gridToMeshXf( pointInSpace ), beta );
-    } );
+    }, cb );
 }
 
 void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq )

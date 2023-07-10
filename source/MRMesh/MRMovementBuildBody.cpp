@@ -25,18 +25,20 @@ Mesh makeMovementBuildBody( const Contours3f& bodyContours, const Contours3f& tr
     Vector3f trans;
     Matrix3f prevHalfRot;
     Matrix3f accumRot;
-    Vector3f rotationCenter;
+    Vector3f center;
     Matrix3f scaling;
-    if ( params.rotationCenter )
-        rotationCenter = *params.rotationCenter;
+    if ( params.center )
+        center = *params.center;
     else
     {
         Box3f box;
         for ( const auto& c : bodyContours )
             for ( const auto& p : c )
                 box.include( p );
-        rotationCenter = box.center();
+        center = box.center();
     }
+    if ( params.b2tXf )
+        center = ( *params.b2tXf )( center );
     Vector3f normal;
     if ( params.bodyNormal )
         normal = *params.bodyNormal;
@@ -45,6 +47,8 @@ Mesh makeMovementBuildBody( const Contours3f& bodyContours, const Contours3f& tr
         for ( const auto& bc : bodyContours )
             normal += calcOrientedArea( bc );
     }
+    if ( params.b2tXf )
+        normal = params.b2tXf->A.inverse().transposed() * normal;
     // minus to have correct orientation of result mesh
     normal = -normal.normalized();
 
@@ -110,11 +114,6 @@ Mesh makeMovementBuildBody( const Contours3f& bodyContours, const Contours3f& tr
             tp.setLeft( newEdge.sym(), tp.addFaceId() );
         }
     };
-    auto getTrajectoryPoint = [&] ( const auto& cont, size_t i )
-    {
-        return params.t2bXf ? ( *params.t2bXf )( cont[i] ) : cont[i];
-    };
-    Vector3f basePos = getTrajectoryPoint( trajectoryContours[0], 0 );
     for ( const auto& trajectoryCont : trajectoryContours )
     {
         bool closed = trajectoryCont.size() > 2 && trajectoryCont.front() == trajectoryCont.back();
@@ -124,19 +123,19 @@ Mesh makeMovementBuildBody( const Contours3f& bodyContours, const Contours3f& tr
         prevHalfRot = accumRot = Matrix3f();
         for ( int i = 0; i + ( closed ? 1 : 0 ) < trajectoryCont.size(); ++i )
         {
-            const auto& trajPoint = getTrajectoryPoint( trajectoryCont, i );
+            const auto& trajPoint = trajectoryCont[i];
             nextVec = prevVec = Vector3f();
-            trans = trajPoint - basePos;
+            trans = trajPoint - center;
             if ( params.allowRotation )
             {
                 if ( i > 0 )
-                    prevVec = trajPoint - getTrajectoryPoint( trajectoryCont, i -1);
+                    prevVec = trajPoint - trajectoryCont[i - 1];
                 else if ( closed )
-                    prevVec = trajPoint - getTrajectoryPoint( trajectoryCont, trajectoryCont.size() - 2 );
+                    prevVec = trajPoint - trajectoryCont[trajectoryCont.size() - 2];
                 if ( i + 1 < trajectoryCont.size() )
-                    nextVec = getTrajectoryPoint( trajectoryCont, i + 1 ) - trajPoint;
+                    nextVec = trajectoryCont[i + 1] - trajPoint;
                 else if ( closed )
-                    prevVec = trajPoint - getTrajectoryPoint( trajectoryCont, 1 );
+                    prevVec = trajPoint - trajectoryCont[1];
 
                 if ( prevVec == Vector3f() )
                     prevVec = nextVec;
@@ -173,7 +172,10 @@ Mesh makeMovementBuildBody( const Contours3f& bodyContours, const Contours3f& tr
                         Matrix3f::rotation( scaleDir, basisVec );
                 }
             }
-            xf = AffineXf3f::translation( trans ) * AffineXf3f::xfAround( scaling * accumRot, rotationCenter );
+            xf = AffineXf3f::translation( trans ) * AffineXf3f::xfAround( scaling * accumRot, center );
+            if ( params.b2tXf )
+                xf = xf * ( *params.b2tXf );
+
 
             auto curBodyEdge = res.addSeparateContours( bodyContours, &xf );
             if ( !firstBodyEdge )

@@ -104,7 +104,7 @@ bool FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, Prog
     }, subprogress( cb, 0.9f, 1.0f ) );
 }
 
-void FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta )
+bool FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb )
 {
     MR_TIMER
     prepareData_( {} );
@@ -127,6 +127,8 @@ void FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& d
     // so we have to execute the kernel by slices and synchronize after each
     for ( int z = 0; z < dims.z; ++z )
     {
+        if ( !reportProgress( cb, float( z ) / dims.z ) )
+            return false;
         fastWindingNumberFromGridKernel(
             int3{ dims.x, dims.y, 1 },
             float3{ minCoord.x, minCoord.y, minCoord.z + z },
@@ -137,6 +139,7 @@ void FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& d
     }
     
     data_->cudaResult.toVector( res );
+    return reportProgress( cb, 1.0f );
 }
 
 void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq )

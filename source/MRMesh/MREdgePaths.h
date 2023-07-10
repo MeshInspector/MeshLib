@@ -31,6 +31,10 @@ MRMESH_API void reverse( std::vector<EdgePath> & paths );
 [[nodiscard]] MRMESH_API double calcPathMetric( const EdgePath & path, EdgeMetric metric );
 [[nodiscard]] inline double calcPathLength( const EdgePath & path, const Mesh & mesh ) { return calcPathMetric( path, edgeLengthMetric( mesh ) ); }
 
+/// returns the vector with the magnitude equal to the area surrounded by the loop (if the loop is planar),
+/// and directed to see the loop in ccw order from the vector tip
+[[nodiscard]] MRMESH_API Vector3d calcOrientedArea( const EdgeLoop & loop, const Mesh & mesh );
+
 /// sorts given paths in ascending order of their metrics
 MRMESH_API void sortPathsByMetric( std::vector<EdgePath> & paths, EdgeMetric metric );
 inline void sortPathsByLength( std::vector<EdgePath> & paths, const Mesh & mesh ) { sortPathsByMetric( paths, edgeLengthMetric( mesh ) ); }

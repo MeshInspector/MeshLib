@@ -73,7 +73,7 @@ bool doTrianglesIntersect(
         return true; // DE segment penetrates triangle ABC since points B and C are at distinct sides of ADE
 
     if ( abdf == 0 && acde == 0 )
-        return true; // ...
+        return true; // AB and DF segments are in the same plane, and AC and DE segments are in other same plane => triangles intersect, but no edge intersect the interior of other triangle
 
     const auto acdf = mixed( a - f, c - f, d - f );
 
@@ -84,7 +84,7 @@ bool doTrianglesIntersect(
         return true; // DF segment penetrates triangle ABC since points B and C are at distinct sides of ADF
 
     if ( abde == 0 && acdf == 0 )
-        return true; // ...
+        return true; // AB and DE segments are in the same plane, and AC and DF segments are in other same plane => triangles intersect, but no edge intersect the interior of other triangle
 
     return false;
 }

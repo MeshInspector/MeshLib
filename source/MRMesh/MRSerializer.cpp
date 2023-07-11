@@ -619,7 +619,7 @@ void deserializeViaVerticesFromJson( const Json::Value& root, UndirectedEdgeBitS
     edges.resize( root["size"].asInt() );
     auto bin = decode64( root["vertpairs"].asString() );
 
-    for ( size_t i = 0; i + 8 < bin.size(); i += 8 )
+    for ( size_t i = 0; i < bin.size(); i += 8 )
     {
         VertId o, d;
         static_assert( sizeof( VertId ) == 4 );

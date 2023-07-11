@@ -177,7 +177,7 @@ bool FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& d
     }, cb );
 }
 
-void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq )
+bool FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb )
 {
     MR_TIMER
 
@@ -187,7 +187,7 @@ void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, cons
 
     MeshPart mp( mesh_ );
 
-    ParallelFor( size_t( 0 ), size, [&]( size_t i )
+    return ParallelFor( size_t( 0 ), size, [&]( size_t i )
     {
         auto pos = indexer.toPos( VoxelId( i ) );
         auto coord = minCoord;
@@ -200,7 +200,7 @@ void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, cons
         res[i] = sqrt( findProjection( transformedPoint, mp, maxDistSq, nullptr, minDistSq ).distSq );
         if ( calc( transformedPoint, beta ) > 0.5f )
             res[i] = -res[i];
-    } );
+    }, cb );
 }
 
 size_t FastWindingNumber::fromVectorHeapBytes( size_t ) const

@@ -50,7 +50,7 @@ public:
     /// <param name="voxelSize">size of voxel</param>
     /// <param name="gridToMeshXf">transform from grid to mesh</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    MRCUDA_API void calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq = FLT_MAX, float minDistSq = 0 ) override;
+    MRCUDA_API bool calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) override;
 
     /// <summary>
     /// returns amount of required memory for calcFromVector operation

@@ -65,6 +65,8 @@ namespace MR
 [[nodiscard]] MRMESH_API VertBitSet getIncidentVerts( const MeshTopology & topology, const UndirectedEdgeBitSet & edges );
 // composes the set of all faces incident to given edges
 [[nodiscard]] MRMESH_API FaceBitSet getIncidentFaces( const MeshTopology & topology, const UndirectedEdgeBitSet & edges );
+// composes the set of all faces neighboring given edges
+[[nodiscard]] MRMESH_API FaceBitSet getNeighborFaces( const MeshTopology& topology, const UndirectedEdgeBitSet& edges );
 // composes the set of all edges with all their vertices in given set
 [[nodiscard]] MRMESH_API UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const VertBitSet& verts );
 // composes the set of all edges having both left and right in given region

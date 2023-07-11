@@ -380,6 +380,20 @@ FaceBitSet getIncidentFaces( const MeshTopology & topology, const VertBitSet & v
     return topology.getValidFaces() - getInnerFaces_( topology, topology.getValidVerts() - verts );
 }
 
+FaceBitSet getNeighborFaces( const MeshTopology& topology, const UndirectedEdgeBitSet& edges )
+{
+    MR_TIMER
+    FaceBitSet res( topology.faceSize() );
+    for ( auto ue : edges )
+    {
+        if ( auto l = topology.left( ue ) )
+            res.set( l );
+        if ( auto r = topology.right( ue ) )
+            res.set( r );
+    }
+    return res;
+}
+
 FaceBitSet getInnerFaces( const MeshTopology & topology, const VertBitSet & verts )
 {
     MR_TIMER

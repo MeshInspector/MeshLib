@@ -114,7 +114,7 @@ MRMESH_API Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart&
 // this toolpath is built from geodesic parallels divercing from the given start point
 // if the start point is not specified, the highest point on the mesh will be used
 // mesh can be transformed using xf parameter
-MRMESH_API Expected<ToolPathResult, std::string> constantCuspToolPath( const Mesh& mesh, const ToolPathParams& params, VertId startPoint = {} );
+MRMESH_API Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, const ToolPathParams& params, VertId startPoint = {} );
 
 // generates G-Code for milling tool
 MRMESH_API std::shared_ptr<ObjectGcode> exportToolPathToGCode( const std::vector<GCommand>& commands );

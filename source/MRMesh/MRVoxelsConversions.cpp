@@ -97,7 +97,9 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
         auto basis = AffineXf3f::linear( Matrix3f::scale( params.voxelSize ) );
         basis.b = params.origin;
         constexpr float beta = 2;
-        fwn->calcFromGridWithDistances( res.data, res.dims, Vector3f::diagonal( 0.5f ), Vector3f::diagonal( 1.0f ), basis, beta, params.maxDistSq, params.minDistSq );
+        if ( !fwn->calcFromGridWithDistances( res.data, res.dims, Vector3f::diagonal( 0.5f ), Vector3f::diagonal( 1.0f ), basis, beta,
+            params.maxDistSq, params.minDistSq, params.cb ) )
+            return {};
         MinMaxCalc minMaxCalc( res.data );
         tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, res.data.size() ), minMaxCalc );
         res.min = minMaxCalc.min();

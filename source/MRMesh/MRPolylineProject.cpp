@@ -292,8 +292,9 @@ PolylineProjectionResult3 findProjectionOnMeshEdges( const Line3f& ln, const Mes
     [ln]( const LineSegm3f & ls ) { return closestPoints( ln, ls ); } );
 }
 
-template<typename V>
-void findEdgesInBallT( const Polyline<V>& polyline, const V& center, float radius, const FoundEdgeCallback<V>& foundCallback, AffineXf<V>* xf )
+template<typename V, typename F>
+void findEdgesInBallCore( const AABBTreePolyline<V>& tree, const V& center, 
+    float radius, const FoundEdgeCallback<V>& foundCallback, AffineXf<V>* xf, F&& edgeToEndPoints )
 {
     if ( !foundCallback )
     {
@@ -301,7 +302,6 @@ void findEdgesInBallT( const Polyline<V>& polyline, const V& center, float radiu
         return;
     }
 
-    const auto & tree = polyline.getAABBTree();
     if ( tree.nodes().empty() )
         return;
 
@@ -326,7 +326,8 @@ void findEdgesInBallT( const Polyline<V>& polyline, const V& center, float radiu
 
         if ( node.leaf() )
         {
-            auto segm = polyline.edgeSegment( node.leafId() );
+            LineSegm<V> segm;
+            edgeToEndPoints( node.leafId(), segm.a, segm.b );
             if ( xf )
             {
                 segm.a = ( *xf )( segm.a );
@@ -347,12 +348,29 @@ void findEdgesInBallT( const Polyline<V>& polyline, const V& center, float radiu
 
 void findEdgesInBall( const Polyline2& polyline, const Vector2f& center, float radius, const FoundEdgeCallback2& foundCallback, AffineXf2f* xf )
 {
-    findEdgesInBallT( polyline, center, radius, foundCallback, xf );
+    findEdgesInBallCore( polyline.getAABBTree(), center, radius, foundCallback, xf, [&] ( UndirectedEdgeId ue, Vector2f& a, Vector2f& b )
+    {
+        a = polyline.orgPnt( ue );
+        b = polyline.destPnt( ue );
+    } );
 }
 
 void findEdgesInBall( const Polyline3& polyline, const Vector3f& center, float radius, const FoundEdgeCallback3& foundCallback, AffineXf3f* xf )
 {
-    findEdgesInBallT( polyline, center, radius, foundCallback, xf );
+    findEdgesInBallCore( polyline.getAABBTree(), center, radius, foundCallback, xf, [&] ( UndirectedEdgeId ue, Vector3f& a, Vector3f& b )
+    {
+        a = polyline.orgPnt( ue );
+        b = polyline.destPnt( ue );
+    } );
+}
+
+void findMeshEdgesInBall( const Mesh& mesh, const AABBTreePolyline3& tree, const Vector3f& center, float radius, const FoundEdgeCallback3& foundCallback, AffineXf3f* xf /*= nullptr */ )
+{
+    findEdgesInBallCore( tree, center, radius, foundCallback, xf, [&] ( UndirectedEdgeId ue, Vector3f& a, Vector3f& b )
+    {
+        a = mesh.orgPnt( ue );
+        b = mesh.destPnt( ue );
+    } );
 }
 
 } //namespace MR

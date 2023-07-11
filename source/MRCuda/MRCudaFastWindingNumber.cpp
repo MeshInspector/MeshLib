@@ -142,7 +142,7 @@ bool FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& d
     return reportProgress( cb, 1.0f );
 }
 
-void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq )
+bool FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb )
 {
     MR_TIMER
     prepareData_( {} );
@@ -161,10 +161,24 @@ void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, cons
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
     const size_t size = size_t( dims.x ) * dims.y * dims.z;
     data_->cudaResult.resize( size );
-    signedDistanceKernel( int3{ dims.x, dims.y, dims.z }, float3{ minCoord.x, minCoord.y, minCoord.z }, float3{ voxelSize.x, voxelSize.y, voxelSize.z }, cudaGridToMeshXf,
-                                     data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(), data_->cudaResult.data(), beta, maxDistSq, minDistSq );
+    // if we execute the kernel for a huge volume, then cudaErrorLaunchTimeout will come,
+    // so we have to execute the kernel by slices and synchronize after each
+    for ( int z = 0; z < dims.z; ++z )
+    {
+        if ( !reportProgress( cb, float( z ) / dims.z ) )
+            return false;
+
+        signedDistanceKernel(
+            int3{ dims.x, dims.y, 1 },
+            float3{ minCoord.x, minCoord.y, minCoord.z + z },
+            float3{ voxelSize.x, voxelSize.y, voxelSize.z }, cudaGridToMeshXf,
+            data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(),
+            data_->cudaResult.data() + size_t( dims.x ) * dims.y * z, beta, maxDistSq, minDistSq );
+        CUDA_EXEC( cudaDeviceSynchronize() );
+    }
 
     data_->cudaResult.toVector( res );
+    return reportProgress( cb, 1.0f );
 }
 
 size_t FastWindingNumber::fromVectorHeapBytes( size_t inputSize ) const

@@ -72,6 +72,9 @@ bool doTrianglesIntersect(
     if ( abde * acde < 0 )
         return true; // DE segment penetrates triangle ABC since points B and C are at distinct sides of ADE
 
+    if ( abdf == 0 && acde == 0 )
+        return true; // ...
+
     const auto acdf = mixed( a - f, c - f, d - f );
 
     if ( acde * acdf < 0 )
@@ -79,6 +82,9 @@ bool doTrianglesIntersect(
 
     if ( abdf * acdf < 0 )
         return true; // DF segment penetrates triangle ABC since points B and C are at distinct sides of ADF
+
+    if ( abde == 0 && acdf == 0 )
+        return true; // ...
 
     return false;
 }

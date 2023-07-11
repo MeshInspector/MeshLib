@@ -14,12 +14,6 @@ constexpr int pointInRotation = 21;
 //////////////////////////////////////////////////////////////////////////
 // GcodeExecutor
 
-GcodeProcessor::GcodeProcessor()
-{
-    rotationAxes_ = { Vector3f::minusX(), Vector3f::minusY(), Vector3f::plusZ() };
-    setRotationOrder( { RotationParameterName::A, RotationParameterName::B, RotationParameterName::C } );
-}
-
 void GcodeProcessor::reset()
 {
     workPlane_ = WorkPlane::xy;
@@ -78,11 +72,10 @@ GcodeProcessor::MoveAction GcodeProcessor::processLine( const std::string_view& 
     return {};
 }
 
-void GcodeProcessor::setRotationParams( RotationParameterName paramName, const Vector3f& rotationAxis )
+void GcodeProcessor::setRotationParams( RotationAxisName paramName, const Vector3f& rotationAxis )
 {
     const int intParamName = int( paramName );
-    const bool validParamName = intParamName >= int( RotationParameterName::A ) && intParamName < int( RotationParameterName::Count );
-    assert( validParamName );
+    const bool validParamName = intParamName >= int( RotationAxisName::A ) && intParamName < int( RotationAxisName::Count );
     if ( !validParamName )
         return;
 
@@ -96,11 +89,10 @@ void GcodeProcessor::setRotationParams( RotationParameterName paramName, const V
     rotationAxes_[axisIndex] = rotationAxis;
 }
 
-Vector3f GcodeProcessor::getRotationParams( RotationParameterName paramName )
+Vector3f GcodeProcessor::getRotationParams( RotationAxisName paramName ) const
 {
     const int intParamName = int( paramName );
-    const bool validParamName = intParamName >= int( RotationParameterName::A ) && intParamName < int( RotationParameterName::Count );
-    assert( validParamName );
+    const bool validParamName = intParamName >= int( RotationAxisName::A ) && intParamName < int( RotationAxisName::Count );
     if ( !validParamName )
         return {};
 
@@ -111,19 +103,14 @@ Vector3f GcodeProcessor::getRotationParams( RotationParameterName paramName )
     return rotationAxes_[axisIndex];
 }
 
-bool GcodeProcessor::setRotationOrder( std::array<RotationParameterName, 3> rotationAxisOrder )
+bool GcodeProcessor::setRotationOrder( const RotationAxisMap& rotationAxisOrder )
 {
     bool validInput = true;
     std::array<int, 3> newOrder = {-1, -1, -1};
     for ( int i = 0; i < 3; ++i )
     {
         const int parameterIndex = int( rotationAxisOrder[i] );
-        if ( parameterIndex < int( RotationParameterName::None ) || parameterIndex >= int( RotationParameterName::Count ) )
-        {
-            validInput = false;
-            break;
-        }
-        if ( parameterIndex != int( RotationParameterName::None ) )
+        if ( parameterIndex != int( RotationAxisName::None ) )
             newOrder[i] = parameterIndex;
     }
     assert( validInput );
@@ -134,12 +121,12 @@ bool GcodeProcessor::setRotationOrder( std::array<RotationParameterName, 3> rota
     return true;
 }
 
-std::array<GcodeProcessor::RotationParameterName, 3> GcodeProcessor::getRotationOrder()
+std::array<GcodeProcessor::RotationAxisName, 3> GcodeProcessor::getRotationOrder() const
 {
-    std::array<MR::GcodeProcessor::RotationParameterName, 3> res;
+    std::array<MR::GcodeProcessor::RotationAxisName, 3> res;
     for ( int i = 0; i < 3; ++i )
     {
-        res[i] = RotationParameterName( rotationAxesOrder_[i] );
+        res[i] = RotationAxisName( rotationAxesOrder_[i] );
     }
     return res;
 }

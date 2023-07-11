@@ -51,7 +51,7 @@ public:
     MRMESH_API MoveAction processLine( const std::string_view& line );
 
     // settings
-    enum class RotationParameterName
+    enum class RotationAxisName
     {
         None = -1,
         A,
@@ -59,10 +59,11 @@ public:
         C,
         Count
     };
-    MRMESH_API void setRotationParams( RotationParameterName paramName, const Vector3f& rotationAxis );
-    MRMESH_API Vector3f getRotationParams( RotationParameterName paramName );
-    MRMESH_API bool setRotationOrder( std::array<RotationParameterName, 3> rotationAxisOrder );
-    MRMESH_API std::array<RotationParameterName, 3> getRotationOrder();
+    using RotationAxisMap = std::array<RotationAxisName, size_t( RotationAxisName::Count )>;
+    MRMESH_API void setRotationParams( RotationAxisName paramName, const Vector3f& rotationAxis );
+    MRMESH_API Vector3f getRotationParams( RotationAxisName paramName ) const;
+    MRMESH_API bool setRotationOrder( const RotationAxisMap& rotationAxisOrder );
+    MRMESH_API RotationAxisMap getRotationOrder() const;
 
 private:
 
@@ -161,8 +162,8 @@ private:
 
     // internal / machine settings
     float accuracy_ = 1.e-3f;
-    std::array<Vector3f, 3> rotationAxes_;
-    std::array<int, 3> rotationAxesOrder_; // map RotationParameterName => rotationAxes_ index
+    std::array<Vector3f, 3> rotationAxes_ = { Vector3f::minusX(), Vector3f::minusY(), Vector3f::plusZ() };
+    std::array<int, 3> rotationAxesOrder_ = {0, 1, 2}; // {Axis A, Axis B, Axis C}. map RotationParameterName => rotationAxes_ index
 
 };
 

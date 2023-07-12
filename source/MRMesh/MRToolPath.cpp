@@ -699,7 +699,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
 }
 
 
-Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, const ToolPathParams& params, VertId startPoint )
+Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, const ToolPathParams& params, VertId startPoint, bool millFromUpToDown )
 {
     auto preprocessedMesh = preprocessMesh( mp.mesh, params );
     if ( !preprocessedMesh )
@@ -827,12 +827,15 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
             return false;
 
         const auto sbp = subprogress( cb, 0.5f, 1.0f );
-        const int numIsolines = int( isoLines.size() );
+        const size_t numIsolines = isoLines.size();
+
+        if ( millFromUpToDown )
+            std::reverse( isoLines.begin(), isoLines.end() );
         
         // go on in the inverse order (from the highest isoline to the lowest )
-        for ( int i = numIsolines - 1; i >= 0; --i )
+        for ( size_t i = 0; i < numIsolines; ++i )
         {
-            if ( sbp && !sbp( float( numIsolines - i ) / numIsolines ) )
+            if ( sbp && !sbp( float( i ) / numIsolines ) )
                 return false;
 
             if ( isoLines[i].empty() )

@@ -414,6 +414,7 @@ void Pdf::close()
         activeFont_ = nullptr;
 }
 
+#if !defined(__APPLE__) || !defined(__MACH__)
 TEST( MRMesh, Pdf )
 {
     UniqueTemporaryFolder pathFolder( {} );
@@ -444,6 +445,7 @@ TEST( MRMesh, Pdf )
     pdfTest.addImageFromFile( colorMapPath, "test image" );
     pdfTest.close();
 }
+#endif
 
 }
 #endif

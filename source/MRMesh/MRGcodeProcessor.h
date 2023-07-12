@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <optional>
+#include <functional>
 
 
 namespace MR
@@ -46,6 +47,21 @@ public:
     MRMESH_API std::vector<MoveAction> processSource();
     // process all commands from one line g-code source and generate corresponding move action
     MRMESH_API MoveAction processLine( const std::string_view& line );
+
+    // settings
+    enum class RotationAxisName
+    {
+        A,
+        B,
+        C,
+        Count
+    };
+    //using RotationAxisMap = std::array<RotationAxisName, size_t( RotationAxisName::Count )>;
+    using RotationAxisOrder = std::vector<RotationAxisName>;
+    MRMESH_API void setRotationParams( RotationAxisName paramName, const Vector3f& rotationAxis );
+    MRMESH_API Vector3f getRotationParams( RotationAxisName paramName ) const;
+    MRMESH_API void setRotationOrder( const RotationAxisOrder& rotationAxisOrder );
+    const RotationAxisOrder& getRotationOrder() const { return rotationAxesOrder_; }
 
 private:
 
@@ -135,15 +151,18 @@ private:
 
     // input data (data entered in last line)
     Vector3f inputCoords_; // x, y, z
-    Vector3<bool> inputCoordsReaded_; // any of (x, y, z) was readed
+    Vector3<bool> inputCoordsReaded_; // any of (x, y, z) was read
     std::optional<float> radius_; // r
     std::optional<Vector3f> arcCenter_; // i, j, k
     std::optional<Vector3f> inputRotation_; // a, b, c
 
     std::vector<std::string_view> gcodeSource_; // string list with sets of command (frames)
 
-    // internal settings
+    // internal / machine settings
     float accuracy_ = 1.e-3f;
+    std::array<Vector3f, 3> rotationAxes_ = { Vector3f::minusX(), Vector3f::minusY(), Vector3f::plusZ() };
+    RotationAxisOrder rotationAxesOrder_ = { RotationAxisName::A, RotationAxisName::B, RotationAxisName::C };
+    std::vector<int> rotationAxesOrderMap_ = {0, 1, 2}; // mapping axis sequence number to axis number in storage
 
 };
 

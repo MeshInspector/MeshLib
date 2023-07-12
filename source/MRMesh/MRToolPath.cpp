@@ -15,6 +15,7 @@
 #include "MRLine3.h"
 #include "MRRegionBoundary.h"
 #include "MRMeshDecimate.h"
+#include "MRBitSetParallelFor.h"
 
 #include "MRPch/MRTBB.h"
 #include <sstream>
@@ -81,7 +82,7 @@ Expected<Mesh, std::string> preprocessMesh( const Mesh& inputMesh, const ToolPat
         meshCopy.transform( *params.xf );
     
     FixUndercuts::fixUndercuts( meshCopy, normal, params.voxelSize );
-    if ( params.cb && !params.cb( 0.20f ) )
+    if ( !reportProgress( params.cb, 0.20f ) )
         return unexpectedOperationCanceled();
 
     const auto decimateResult = decimateMesh( meshCopy, {.progressCallback = subprogress(params.cb, 0.20f, 0.25f ) } );
@@ -199,7 +200,7 @@ std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const MeshPart&
         }
     } );
 
-    if ( !keepGoing.load( std::memory_order_relaxed ) || ( cb && !cb( 1.0f ) ) )
+    if ( !keepGoing.load( std::memory_order_relaxed ) || !reportProgress( cb, 1.0f ) )
         return {};
 
     return sections;
@@ -258,7 +259,7 @@ std::vector<IsoLines> extractAllIsolines( const Mesh& mesh, VertId startPoint, c
         }
     } );
 
-    if ( !keepGoing.load( std::memory_order_relaxed ) || ( cb && !cb( 1.0f ) ) )
+    if ( !keepGoing.load( std::memory_order_relaxed ) || !reportProgress( cb, 1.0f ) )
         return {};
 
     return isoLines;
@@ -453,7 +454,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
 
     for ( int step = 0; step < steps; ++step )
     {
-        if ( sbp && !sbp( float( step ) / steps ) )
+        if ( !reportProgress( sbp, float( step ) / steps ) )
             return unexpectedOperationCanceled();
 
         const auto sections = allSections[step];
@@ -541,7 +542,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
         }
     }
 
-    if ( params.cb && !params.cb( 1.0f ) )
+    if ( !reportProgress( params.cb, 1.0f ) )
         return unexpectedOperationCanceled();
 
     return res;
@@ -580,7 +581,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
 
     for ( int step = 0; step < steps; ++step )
     {
-        if ( sbp && !sbp( float( step ) / steps ) )
+        if ( !reportProgress( sbp, float( step ) / steps ) )
             return unexpectedOperationCanceled();
 
         auto& commands = res.commands;
@@ -692,14 +693,14 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
         }
     }
 
-    if ( params.cb && !params.cb( 1.0f ) )
+    if ( !reportProgress( params.cb, 1.0f ) )
         return unexpectedOperationCanceled();
 
     return res;
 }
 
 
-Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, const ToolPathParams& params, VertId startPoint, bool millFromCenterToBoundary )
+Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, const ConstantCuspParams& params )
 {
     auto preprocessedMesh = preprocessMesh( mp.mesh, params );
     if ( !preprocessedMesh )
@@ -711,6 +712,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
     const auto box = mesh.getBoundingBox();
 
     // if start point is valid, project it on the modified mesh
+    auto startPoint = params.startPoint;
     if ( startPoint.valid() )
     {
         const auto coords = mp.mesh.points[startPoint];
@@ -780,13 +782,9 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
 
         // compute bitset of the vertices that are not belonged to the undercut
         VertBitSet noUndercutVertices( mesh.points.size() );
-        tbb::parallel_for( tbb::blocked_range<VertId>( VertId{ 0 }, VertId{ noUndercutVertices.size() } ),
-                          [&] ( const tbb::blocked_range<VertId>& range )
+        BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
         {
-            for ( VertId i = range.begin(); i < range.end(); ++i )
-            {
-                noUndercutVertices.set( i, mesh.points[i].z >= minZ );
-            }
+            noUndercutVertices.set( v, mesh.points[v].z >= minZ );
         } );
 
         ToolPathParams paramsCopy = params;
@@ -823,13 +821,13 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
             }
         };
 
-        if ( cb && !cb( 0.5f ) )
+        if ( !reportProgress( cb, 0.5f ) )
             return false;
 
         const auto sbp = subprogress( cb, 0.5f, 1.0f );
         const size_t numIsolines = isoLines.size();
 
-        if ( millFromCenterToBoundary )
+        if ( params.fromCenterToBoundary )
             std::reverse( isoLines.begin(), isoLines.end() );
         
         // go on in the inverse order (from the highest isoline to the lowest )
@@ -969,10 +967,10 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         return true;
     };
     
-    //if selection is not specified process all the vertices above the undercut
+    //if selection is not specified then process all the vertices above the undercut
     if ( !mp.region )
     {
-        if ( !processZone( undercutSection, {}, subprogress( params.cb, 0.25f, 1.0f ) ) || ( params.cb && !params.cb( 1.0f ) ) )
+        if ( !processZone( undercutSection, {}, subprogress( params.cb, 0.25f, 1.0f ) ) || !reportProgress( params.cb, 1.0f ) )
             return unexpectedOperationCanceled();
 
         return res;

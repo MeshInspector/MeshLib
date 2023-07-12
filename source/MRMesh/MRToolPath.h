@@ -40,6 +40,14 @@ struct ToolPathParams
     ProgressCallback cb = {};
 };
 
+struct ConstantCuspParams : ToolPathParams
+{
+    // start vertex for computing isolines
+    VertId startPoint = {};
+    // if true isolines will be processed from center point to the boundary (usually it means from up to down)
+    bool fromCenterToBoundary = true;
+};
+
 struct LineInterpolationParams
 {
     // maximal deviation from given line
@@ -114,7 +122,7 @@ MRMESH_API Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart&
 // this toolpath is built from geodesic parallels divercing from the given start point
 // if the start point is not specified, the highest point on the mesh will be used
 // mesh can be transformed using xf parameter
-MRMESH_API Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, const ToolPathParams& params, VertId startPoint = {}, bool fromCenterToBoundary = true );
+MRMESH_API Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, const ConstantCuspParams& params );
 
 // generates G-Code for milling tool
 MRMESH_API std::shared_ptr<ObjectGcode> exportToolPathToGCode( const std::vector<GCommand>& commands );

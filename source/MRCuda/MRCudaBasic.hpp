@@ -20,9 +20,7 @@ MRCUDA_API cudaError_t logError( cudaError_t code, const char * file = nullptr, 
 /// executes given CUDA function and checks the error code after
 #define CUDA_EXEC( func )\
 {\
-    auto code = func; \
-    if( code != cudaSuccess ) \
-        logError( code, __FILE__ , __LINE__ );\
+    logError( func, __FILE__ , __LINE__ );\
 }
 
 template<typename T>

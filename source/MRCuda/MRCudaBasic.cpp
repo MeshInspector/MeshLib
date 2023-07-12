@@ -37,6 +37,9 @@ std::string getError( cudaError_t code )
 
 cudaError_t logError( cudaError_t code, const char * file, int line )
 {
+    if ( code == cudaSuccess )
+        return code;
+
     if ( file )
     {
         spdlog::error("CUDA error {}: {}. In file: {} Line: {}", 

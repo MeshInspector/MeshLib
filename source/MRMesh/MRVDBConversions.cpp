@@ -468,12 +468,12 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
     if ( !fwn )
         fwn = std::make_shared<FastWindingNumber>( refMesh );
 
-    if ( !fwn->calcFromGrid( windVals, 
+    if ( auto res = fwn->calcFromGrid( windVals, 
         Vector3i{ dims.x(),  dims.y(), dims.z() }, 
         Vector3f{ float( minCoord.x() ), float( minCoord.y() ), float( minCoord.z() ) }, 
-        voxelSize, gridToMeshXf, 2.0f, subprogress( cb, 0.0f, 0.8f ) ) )
+        voxelSize, gridToMeshXf, 2.0f, subprogress( cb, 0.0f, 0.8f ) ); !res )
     {
-        return unexpectedOperationCanceled();
+        return res;
     }
     
     tbb::enumerable_thread_specific<openvdb::FloatGrid::Accessor> perThreadAccessor( grid->getAccessor() );

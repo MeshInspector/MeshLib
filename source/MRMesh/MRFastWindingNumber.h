@@ -2,6 +2,7 @@
 
 #include "MRAABBTree.h"
 #include "MRProgressCallback.h"
+#include "MRExpected.h"
 #include <array>
 #include <string>
 
@@ -64,7 +65,7 @@ public:
     /// <param name="voxelSize">size of voxel</param>
     /// <param name="gridToMeshXf">transform from grid to mesh</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    virtual bool calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb = {} ) = 0;
+    virtual VoidOrErrStr calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb = {} ) = 0;
 
     /// <summary>
     /// calculates distances and winding numbers for each point in a three-dimensional grid
@@ -75,7 +76,7 @@ public:
     /// <param name="voxelSize">size of voxel</param>
     /// <param name="gridToMeshXf">transform from grid to mesh</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    virtual bool calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) = 0;
+    virtual VoidOrErrStr calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) = 0;
 
     /// <summary>
     /// returns amount of required memory for calcFromVector operation
@@ -138,7 +139,7 @@ public:
     /// <param name="voxelSize">size of voxel</param>
     /// <param name="gridToMeshXf">transform from grid to mesh</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    MRMESH_API bool calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb ) override;
+    MRMESH_API VoidOrErrStr calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb ) override;
     /// <summary>
     /// calculates distances and winding numbers for each point in a three-dimensional grid
     /// </summary>
@@ -148,7 +149,7 @@ public:
     /// <param name="voxelSize">size of voxel</param>
     /// <param name="gridToMeshXf">transform from grid to mesh</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    MRMESH_API bool calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) override;
+    MRMESH_API VoidOrErrStr calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) override;
     
     /// <summary>
     /// returns amount of required memory for calcFromVector operation

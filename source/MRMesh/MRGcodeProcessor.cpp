@@ -75,60 +75,42 @@ GcodeProcessor::MoveAction GcodeProcessor::processLine( const std::string_view& 
 void GcodeProcessor::setRotationParams( RotationAxisName paramName, const Vector3f& rotationAxis )
 {
     const int intParamName = int( paramName );
-    const bool validParamName = intParamName >= int( RotationAxisName::A ) && intParamName < int( RotationAxisName::Count );
+    const bool validParamName = intParamName < int( RotationAxisName::Count );
     if ( !validParamName )
-        return;
-
-    const int axisIndex = rotationAxesOrder_[intParamName];
-    if ( axisIndex < 0 || axisIndex >= 3 )
         return;
 
     if ( rotationAxis.lengthSq() < 0.01f )
         return;
 
-    rotationAxes_[axisIndex] = rotationAxis;
+    rotationAxes_[intParamName] = rotationAxis;
 }
 
 Vector3f GcodeProcessor::getRotationParams( RotationAxisName paramName ) const
 {
     const int intParamName = int( paramName );
-    const bool validParamName = intParamName >= int( RotationAxisName::A ) && intParamName < int( RotationAxisName::Count );
+    const bool validParamName = intParamName < int( RotationAxisName::Count );
     if ( !validParamName )
         return {};
 
-    const int axisIndex = rotationAxesOrder_[intParamName];
-    if ( axisIndex < 0 || axisIndex >= 3 )
-        return {};
-
-    return rotationAxes_[axisIndex];
+    return rotationAxes_[intParamName];
 }
 
-bool GcodeProcessor::setRotationOrder( const RotationAxisMap& rotationAxisOrder )
+void GcodeProcessor::setRotationOrder( const RotationAxisOrder& rotationAxesOrder )
 {
-    bool validInput = true;
-    std::array<int, 3> newOrder = {-1, -1, -1};
-    for ( int i = 0; i < 3; ++i )
+    rotationAxesOrder_.clear();
+    rotationAxesOrderMap_.clear();
+    for ( int i = 0; i < rotationAxesOrder.size(); ++i )
     {
-        const int parameterIndex = int( rotationAxisOrder[i] );
-        if ( parameterIndex != int( RotationAxisName::None ) )
-            newOrder[i] = parameterIndex;
-    }
-    assert( validInput );
-    if ( !validInput )
-        return false;
+        const int intRotationAxis = int( rotationAxesOrder[i] );
+        if ( intRotationAxis == int( RotationAxisName::Count ) )
+            continue;
 
-    rotationAxesOrder_ = newOrder;
-    return true;
-}
+        if ( std::find( rotationAxesOrderMap_.begin(), rotationAxesOrderMap_.end(), intRotationAxis ) != rotationAxesOrderMap_.end() )
+            continue;
 
-std::array<GcodeProcessor::RotationAxisName, 3> GcodeProcessor::getRotationOrder() const
-{
-    std::array<MR::GcodeProcessor::RotationAxisName, 3> res;
-    for ( int i = 0; i < 3; ++i )
-    {
-        res[i] = RotationAxisName( rotationAxesOrder_[i] );
+        rotationAxesOrder_.push_back( rotationAxesOrder[i] );
+        rotationAxesOrderMap_.push_back( intRotationAxis );
     }
-    return res;
 }
 
 std::vector<GcodeProcessor::Command> GcodeProcessor::parseFrame_( const std::string_view& frame )
@@ -497,12 +479,10 @@ MR::Vector3f GcodeProcessor::calcCoordMotors_()
 MR::Vector3f GcodeProcessor::calcRealCoord_( const Vector3f& translationPos, const Vector3f& rotationAngles )
 {
     Vector3f res = translationPos;
-    for ( int i = 0; i < 3; ++i )
+    for ( int i = 0; i < rotationAxesOrderMap_.size(); ++i )
     {
-        const int axisIndex = rotationAxesOrder_[i];
-        if ( axisIndex < 0 || axisIndex > 2 )
-            continue;
-        const Matrix3f rotationMatrix = Matrix3f::rotation( rotationAxes_[axisIndex], rotationAngles[axisIndex] / 180.f * PI_F );
+        const int axisNumber = rotationAxesOrderMap_[i];
+        const Matrix3f rotationMatrix = Matrix3f::rotation( rotationAxes_[axisNumber], rotationAngles[axisNumber] / 180.f * PI_F );
         res = rotationMatrix * res;
     }
     return res;
@@ -512,8 +492,6 @@ void GcodeProcessor::updateRotationAngleAndMatrix_( const Vector3f& rotationAngl
 {
     for ( int i = 0; i < 3; ++i )
     {
-        if ( rotationAngles[i] == rotationAngles_[i] )
-            continue;
         rotationAngles_[i] = rotationAngles[i];
         cacheRotationMatrix_[i] = Matrix3f::rotation( rotationAxes_[i], rotationAngles_[i] / 180.f * PI_F );
     }
@@ -521,13 +499,7 @@ void GcodeProcessor::updateRotationAngleAndMatrix_( const Vector3f& rotationAngl
 
 MR::Vector3f GcodeProcessor::calcRealCoordCached_( const Vector3f& translationPos, const Vector3f& rotationAngles )
 {
-    for ( int i = 0; i < 3; ++i )
-    {
-        if ( rotationAngles[i] == rotationAngles_[i] )
-            continue;
-        rotationAngles_[i] = rotationAngles[i];
-        cacheRotationMatrix_[i] = Matrix3f::rotation( rotationAxes_[i], rotationAngles_[i] / 180.f * PI_F );
-    }
+    updateRotationAngleAndMatrix_( rotationAngles );
     return calcRealCoordCached_( translationPos );
 }
 
@@ -536,10 +508,8 @@ MR::Vector3f GcodeProcessor::calcRealCoordCached_( const Vector3f& translationPo
     Vector3f res = translationPos;
     for ( int i = 0; i < 3; ++i )
     {
-        const int axisIndex = rotationAxesOrder_[i];
-        if ( axisIndex < 0 || axisIndex > 2 )
-            continue;
-        res = cacheRotationMatrix_[axisIndex] * res;
+        const int axisNumber = rotationAxesOrderMap_[i];
+        res = cacheRotationMatrix_[axisNumber] * res;
     }
     return res;
 }

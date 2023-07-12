@@ -16,8 +16,6 @@ class MRMESH_CLASS GcodeProcessor
 {
 public:
 
-    MRMESH_API GcodeProcessor();
-
     template<typename Vec>
     struct BaseAction
     {
@@ -53,17 +51,17 @@ public:
     // settings
     enum class RotationAxisName
     {
-        None = -1,
         A,
         B,
         C,
         Count
     };
-    using RotationAxisMap = std::array<RotationAxisName, size_t( RotationAxisName::Count )>;
+    //using RotationAxisMap = std::array<RotationAxisName, size_t( RotationAxisName::Count )>;
+    using RotationAxisOrder = std::vector<RotationAxisName>;
     MRMESH_API void setRotationParams( RotationAxisName paramName, const Vector3f& rotationAxis );
     MRMESH_API Vector3f getRotationParams( RotationAxisName paramName ) const;
-    MRMESH_API bool setRotationOrder( const RotationAxisMap& rotationAxisOrder );
-    MRMESH_API RotationAxisMap getRotationOrder() const;
+    MRMESH_API void setRotationOrder( const RotationAxisOrder& rotationAxisOrder );
+    const RotationAxisOrder& getRotationOrder() const { return rotationAxesOrder_; }
 
 private:
 
@@ -163,7 +161,8 @@ private:
     // internal / machine settings
     float accuracy_ = 1.e-3f;
     std::array<Vector3f, 3> rotationAxes_ = { Vector3f::minusX(), Vector3f::minusY(), Vector3f::plusZ() };
-    std::array<int, 3> rotationAxesOrder_ = {0, 1, 2}; // {Axis A, Axis B, Axis C}. map RotationParameterName => rotationAxes_ index
+    RotationAxisOrder rotationAxesOrder_ = { RotationAxisName::A, RotationAxisName::B, RotationAxisName::C };
+    std::vector<int> rotationAxesOrderMap_ = {0, 1, 2}; // mapping axis sequence number to axis number in storage
 
 };
 

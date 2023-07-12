@@ -30,7 +30,12 @@ size_t getCudaAvailableMemory()
     return memFree - 128 * 1024 * 1024;
 }
 
-void logError( cudaError_t code, const char * file, int line )
+std::string getError( cudaError_t code )
+{
+    return fmt::format( "CUDA error: {}", cudaGetErrorString( code ) );
+}
+
+cudaError_t logError( cudaError_t code, const char * file, int line )
 {
     if ( file )
     {
@@ -41,6 +46,7 @@ void logError( cudaError_t code, const char * file, int line )
     {
         spdlog::error( "CUDA error {}: {}", cudaGetErrorName( code ), cudaGetErrorString( code ) );
     }
+    return code;
 }
 
 } //namespace Cuda

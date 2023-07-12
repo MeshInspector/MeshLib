@@ -76,7 +76,7 @@ private:
     const std::vector<float>& vec_;
 };
 
-std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSimpleVolumeParams& params /*= {} */ )
+Expected<SimpleVolume, std::string> meshToSimpleVolume( const Mesh& mesh, const MeshToSimpleVolumeParams& params /*= {} */ )
 {
     MR_TIMER
     SimpleVolume res;
@@ -97,9 +97,11 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
         auto basis = AffineXf3f::linear( Matrix3f::scale( params.voxelSize ) );
         basis.b = params.origin;
         constexpr float beta = 2;
-        if ( !fwn->calcFromGridWithDistances( res.data, res.dims, Vector3f::diagonal( 0.5f ), Vector3f::diagonal( 1.0f ), basis, beta,
-            params.maxDistSq, params.minDistSq, params.cb ) )
-            return {};
+        if ( auto d = fwn->calcFromGridWithDistances( res.data, res.dims, Vector3f::diagonal( 0.5f ), Vector3f::diagonal( 1.0f ), basis, beta,
+            params.maxDistSq, params.minDistSq, params.cb ); !d )
+        {
+            return unexpected( std::move( d.error() ) );
+        }
         MinMaxCalc minMaxCalc( res.data );
         tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, res.data.size() ), minMaxCalc );
         res.min = minMaxCalc.min();
@@ -167,7 +169,7 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
         tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size() ), core );
 
     if ( params.cb && !keepGoing )
-        return {};
+        return unexpectedOperationCanceled();
     for ( const auto& [min, max] : minMax )
     {
         if ( min < res.min )

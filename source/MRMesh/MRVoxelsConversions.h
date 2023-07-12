@@ -60,7 +60,7 @@ struct VolumeToMeshParams : public BaseVolumeConversionParams
 
 // makes SimpleVolume from Mesh with given params
 // returns nullopt if operation was canceled
-MRMESH_API std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSimpleVolumeParams& params = {} );
+MRMESH_API Expected<SimpleVolume, std::string> meshToSimpleVolume( const Mesh& mesh, const MeshToSimpleVolumeParams& params = {} );
 
 // makes Mesh from SimpleVolume with given params
 // using marching cubes algorithm

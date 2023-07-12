@@ -104,7 +104,7 @@ bool FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, Prog
     }, subprogress( cb, 0.9f, 1.0f ) );
 }
 
-bool FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb )
+VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb )
 {
     MR_TIMER
     prepareData_( {} );
@@ -123,26 +123,25 @@ bool FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& d
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
     const size_t size = size_t( dims.x ) * dims.y * dims.z;
     data_->cudaResult.resize( size );
-    // if we execute the kernel for a huge volume, then cudaErrorLaunchTimeout will come,
-    // so we have to execute the kernel by slices and synchronize after each
-    for ( int z = 0; z < dims.z; ++z )
-    {
-        if ( !reportProgress( cb, float( z ) / dims.z ) )
-            return false;
-        fastWindingNumberFromGridKernel(
-            int3{ dims.x, dims.y, 1 },
-            float3{ minCoord.x, minCoord.y, minCoord.z + z },
-            float3{ voxelSize.x, voxelSize.y, voxelSize.z }, cudaGridToMeshXf,
-            data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(),
-            data_->cudaResult.data() + size_t( dims.x ) * dims.y * z, beta );
-        CUDA_EXEC( cudaDeviceSynchronize() );
-    }
+    if ( !reportProgress( cb, 0.0f ) )
+        return unexpectedOperationCanceled();
+
+    fastWindingNumberFromGridKernel(
+        int3{ dims.x, dims.y, dims.z },
+        float3{ minCoord.x, minCoord.y, minCoord.z },
+        float3{ voxelSize.x, voxelSize.y, voxelSize.z }, cudaGridToMeshXf,
+        data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(),
+        data_->cudaResult.data(), beta );
     
-    data_->cudaResult.toVector( res );
-    return reportProgress( cb, 1.0f );
+    if ( auto code = data_->cudaResult.toVector( res ) )
+        return unexpected( Cuda::getError( code ) );
+
+    if ( !reportProgress( cb, 1.0f ) )
+        return unexpectedOperationCanceled();
+    return {};
 }
 
-bool FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb )
+VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb )
 {
     MR_TIMER
     prepareData_( {} );
@@ -161,24 +160,23 @@ bool FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, cons
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
     const size_t size = size_t( dims.x ) * dims.y * dims.z;
     data_->cudaResult.resize( size );
-    // if we execute the kernel for a huge volume, then cudaErrorLaunchTimeout will come,
-    // so we have to execute the kernel by slices and synchronize after each
-    for ( int z = 0; z < dims.z; ++z )
-    {
-        if ( !reportProgress( cb, float( z ) / dims.z ) )
-            return false;
+    if ( !reportProgress( cb, 0.0f ) )
+        return unexpectedOperationCanceled();
 
-        signedDistanceKernel(
-            int3{ dims.x, dims.y, 1 },
-            float3{ minCoord.x, minCoord.y, minCoord.z + z },
-            float3{ voxelSize.x, voxelSize.y, voxelSize.z }, cudaGridToMeshXf,
-            data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(),
-            data_->cudaResult.data() + size_t( dims.x ) * dims.y * z, beta, maxDistSq, minDistSq );
-        CUDA_EXEC( cudaDeviceSynchronize() );
-    }
+    signedDistanceKernel(
+        int3{ dims.x, dims.y, dims.z },
+        float3{ minCoord.x, minCoord.y, minCoord.z },
+        float3{ voxelSize.x, voxelSize.y, voxelSize.z }, cudaGridToMeshXf,
+        data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(),
+        data_->cudaResult.data(), beta, maxDistSq, minDistSq );
 
-    data_->cudaResult.toVector( res );
-    return reportProgress( cb, 1.0f );
+    if ( auto code = data_->cudaResult.toVector( res ) )
+        return unexpected( Cuda::getError( code ) );
+
+    if ( !reportProgress( cb, 1.0f ) )
+        return unexpectedOperationCanceled();
+    return {};
+
 }
 
 size_t FastWindingNumber::fromVectorHeapBytes( size_t inputSize ) const

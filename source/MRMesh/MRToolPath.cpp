@@ -14,6 +14,7 @@
 #include "MRMeshIntersect.h"
 #include "MRLine3.h"
 #include "MRRegionBoundary.h"
+#include "MRMeshDecimate.h"
 
 #include "MRPch/MRTBB.h"
 #include <sstream>
@@ -82,6 +83,8 @@ Expected<Mesh, std::string> preprocessMesh( const Mesh& inputMesh, const ToolPat
     FixUndercuts::fixUndercuts( meshCopy, normal, params.voxelSize );
     if ( params.cb && !params.cb( 0.25f ) )
         return unexpectedOperationCanceled();
+
+    decimateMesh( meshCopy );
         
     return meshCopy;
 }
@@ -220,7 +223,8 @@ std::vector<IsoLines> extractAllIsolines( const Mesh& mesh, VertId startPoint, c
         distances = computeSurfaceDistances(mesh, startVertices);
     }
 
-    const auto [min, max] = parallelMinMax( distances.vec_ );
+    const float topExcluded = FLT_MAX;
+    const auto [min, max] = parallelMinMax( distances.vec_, &topExcluded );
 
     const size_t numIsolines = size_t( ( max - min ) / sectionStep ) - 1;
 
@@ -724,32 +728,35 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
     if ( mp.region )
     {
         const auto edgeLoops = findLeftBoundary( mp.mesh.topology, mp.region );
-        const auto edgeLoop = edgeLoops.front();
-        
-        for ( auto edgeId : edgeLoop )
-        {
-            const auto origPoint = mp.mesh.edgePoint( MeshEdgePoint( edgeId, 0 ) );
-            const auto mpr = mesh.projectPoint( origPoint );
-            if ( !mpr )
-                continue;
+        //const auto edgeLoop = edgeLoops.front();
 
-            if ( selectionBound.empty() )
+        for ( const auto& edgeLoop : edgeLoops )
+        {
+            for ( auto edgeId : edgeLoop )
             {
+                const auto origPoint = mp.mesh.edgePoint( MeshEdgePoint( edgeId, 0 ) );
+                const auto mpr = mesh.projectPoint( origPoint );
+                if ( !mpr )
+                    continue;
+
+                if ( selectionBound.empty() )
+                {
+                    selectionBound.push_back( MeshEdgePoint( mpr->mtp.e, 0 ) );
+                    continue;
+                }
+
+                const auto sp = computeSurfacePath( mesh, selectionBound.back(), MeshEdgePoint( mpr->mtp.e, 0 ) );
+                if ( sp )
+                    selectionBound.insert( selectionBound.end(), sp->begin(), sp->end() );
+
                 selectionBound.push_back( MeshEdgePoint( mpr->mtp.e, 0 ) );
-                continue;
             }
 
-            const auto sp = computeSurfacePath( mesh, selectionBound.back(), MeshEdgePoint( mpr->mtp.e, 0 ) );
+            const auto sp = computeSurfacePath( mesh, selectionBound.back(), selectionBound.front() );
             if ( sp )
                 selectionBound.insert( selectionBound.end(), sp->begin(), sp->end() );
-
-            selectionBound.push_back( MeshEdgePoint( mpr->mtp.e, 0 ) );
+            selectionBound.push_back( selectionBound.front() );
         }
-
-        const auto sp = computeSurfacePath( mesh, selectionBound.back(), selectionBound.front() );
-        if ( sp )
-            selectionBound.insert( selectionBound.end(), sp->begin(), sp->end() );
-        selectionBound.push_back( selectionBound.front() );
     } 
 
     std::vector<IsoLines> isoLines = extractAllIsolines( mesh, startPoint, selectionBound.empty() ? undercutSection : selectionBound, params.sectionStep, subprogress( params.cb, 0.25f, 0.4f ) );
@@ -841,15 +848,11 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         return unexpectedOperationCanceled();
 
     const auto sbp = subprogress( params.cb, 0.5f, 1.0f );
-    const size_t numIsolines = isoLines.size();
+    const int numIsolines = int( isoLines.size() );
 
-    for ( size_t i = 1; i < numIsolines; ++i )
-    {
-        if ( i == 32 )
-        {
-            i = i;
-        }
-        if ( sbp && !sbp( float( i ) / numIsolines ) )
+    for ( int i = numIsolines - 1; i >=0; --i )
+    {        
+        if ( sbp && !sbp( float( numIsolines - i ) / numIsolines ) )
             return unexpectedOperationCanceled();
 
         if ( isoLines[i].empty() )
@@ -863,22 +866,18 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
 
             auto nearestPointIt = surfacePath.begin();
             float minDistSq = FLT_MAX;
-
             
             if ( mp.region )
             {
-                bool skipIsoline = true;
+                size_t pointsInside = 0;
                 for ( const auto& p : contour )
                 {
                     auto mpr = mp.mesh.projectPoint( p );
                     if ( mpr && mp.region->test( mp.mesh.topology.left( mpr->mtp.e ) ) )
-                    {
-                        skipIsoline = false;
-                        break;
-                    }
+                        ++pointsInside;
                 }
 
-                if ( skipIsoline )
+                if ( pointsInside < ( contour.size() >> 1  ) )
                     continue;
             }
 

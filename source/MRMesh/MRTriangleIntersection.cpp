@@ -8,14 +8,6 @@ namespace
         MR::Vector3f { +30.f, -52.f, 0.f },
         MR::Vector3f { 0.f, 0.f, 0.f },
     };
-    constexpr MR::Vector3f add( const MR::Vector3f& a, const MR::Vector3f& b )
-    {
-        return {
-            a.x + b.x,
-            a.y + b.y,
-            a.z + b.z,
-        };
-    }
     constexpr MR::Triangle3f triangle2( float x, float y, float z )
     {
         constexpr MR::Triangle3f origin {
@@ -24,9 +16,9 @@ namespace
             MR::Vector3f { 0.f, 0.f, 0.f },
         };
         return {
-            add( origin[0], MR::Vector3f { x, y, z } ),
-            add( origin[1], MR::Vector3f { x, y, z } ),
-            add( origin[2], MR::Vector3f { x, y, z } ),
+            origin[0] + MR::Vector3f { x, y, z },
+            origin[1] + MR::Vector3f { x, y, z },
+            origin[2] + MR::Vector3f { x, y, z },
         };
     }
     constexpr MR::Triangle3f triangle3 {

@@ -2,9 +2,8 @@
 
 #include "MRCudaBasic.cuh"
 #include "exports.h"
-#include "cuda_runtime.h"
-#include <assert.h>
-#include <stdint.h>
+#include <cassert>
+#include <string>
 
 namespace MR
 {
@@ -12,8 +11,11 @@ namespace MR
 namespace Cuda
 {
 
+/// converts given code in user-readable error string
+[[nodiscard]] MRCUDA_API std::string getError( cudaError_t code );
+
 /// spdlog::error the information about some CUDA error including optional filename and line number
-MRCUDA_API void logError( cudaError_t code, const char * file = nullptr, int line = 0 );
+MRCUDA_API cudaError_t logError( cudaError_t code, const char * file = nullptr, int line = 0 );
 
 /// executes given CUDA function and checks the error code after
 #define CUDA_EXEC( func )\
@@ -44,56 +46,65 @@ DynamicArray<T>::~DynamicArray()
 
 template<typename T>
 template<typename U>
-inline void DynamicArray<T>::fromVector( const std::vector<U>& vec )
+inline cudaError_t DynamicArray<T>::fromVector( const std::vector<U>& vec )
 {
     static_assert ( sizeof( T ) == sizeof( U ) ); 
-    resize( vec.size() );
-    CUDA_EXEC( cudaMemcpy( data_, vec.data(), size_ * sizeof( T ), cudaMemcpyHostToDevice ) );
+    if ( auto code = resize( vec.size() ) )
+        return code;
+    return logError( cudaMemcpy( data_, vec.data(), size_ * sizeof( T ), cudaMemcpyHostToDevice ), __FILE__ , __LINE__ );
 }
 
 
 template <typename T>
-void DynamicArray<T>::fromBytes( const uint8_t* data, size_t numBytes )
+inline cudaError_t DynamicArray<T>::fromBytes( const uint8_t* data, size_t numBytes )
 {
     assert( numBytes % sizeof( T ) == 0 );
     resize( numBytes / sizeof( T ) );
-    CUDA_EXEC( cudaMemcpy( data_, data, numBytes, cudaMemcpyHostToDevice ) );
+    logError( cudaMemcpy( data_, data, numBytes, cudaMemcpyHostToDevice ), __FILE__ , __LINE__ );
 }
 
 template <typename T>
-void DynamicArray<T>::toBytes( uint8_t* data )
+inline cudaError_t DynamicArray<T>::toBytes( uint8_t* data )
 {
-    CUDA_EXEC( cudaMemcpy( data, data_, size_ * sizeof( T ), cudaMemcpyDeviceToHost ) );
+    return logError( cudaMemcpy( data, data_, size_ * sizeof( T ), cudaMemcpyDeviceToHost ), __FILE__ , __LINE__ );
 }
 
 template<typename T>
-void DynamicArray<T>::resize( size_t size )
+cudaError_t DynamicArray<T>::resize( size_t size )
 {
     if ( size == size_ )
-        return;
+        return cudaSuccess;
     if ( size_ != 0 )
-        CUDA_EXEC( cudaFree( data_ ) );
+    {
+        if ( auto code = logError( cudaFree( data_ ), __FILE__ , __LINE__ ) )
+            return code;
+    }
 
     size_ = size;
     if ( size_ != 0 )
-        CUDA_EXEC( cudaMalloc( ( void** )&data_, size_ * sizeof( T ) ) );
+    {
+        if ( auto code = logError( cudaMalloc( ( void** )&data_, size_ * sizeof( T ) ), __FILE__ , __LINE__ ) )
+            return code;
+    }
+    return cudaSuccess;
 }
 
 template<typename T>
 template<typename U>
-void DynamicArray<T>::toVector( std::vector<U>& vec ) const
+cudaError_t DynamicArray<T>::toVector( std::vector<U>& vec ) const
 {
     static_assert ( sizeof( T ) == sizeof( U ) );
     vec.resize( size_ );
-    CUDA_EXEC( cudaMemcpy( vec.data(), data_, size_ * sizeof( T ), cudaMemcpyDeviceToHost ) );
+    return logError( cudaMemcpy( vec.data(), data_, size_ * sizeof( T ), cudaMemcpyDeviceToHost ), __FILE__ , __LINE__ );
 }
 
-inline void setToZero( DynamicArrayF& devArray )
+inline cudaError_t setToZero( DynamicArrayF& devArray )
 {
     if ( devArray.size() == 0 )
-        return;
-    CUDA_EXEC( cudaMemset( devArray.data(), 0, devArray.size() * sizeof( float ) ) );
+        return cudaSuccess;
+    return logError( cudaMemset( devArray.data(), 0, devArray.size() * sizeof( float ) ), __FILE__ , __LINE__ );
 }
 
-}
-}
+} // namespace Cuda
+
+} // namespace MR

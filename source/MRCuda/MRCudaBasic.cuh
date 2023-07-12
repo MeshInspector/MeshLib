@@ -1,6 +1,8 @@
 #pragma once
+
+#include "cuda_runtime.h"
+#include <cstdint>
 #include <vector>
-#include <stdint.h>
 
 namespace MR
 {
@@ -28,20 +30,20 @@ public:
 
     // copy given vector to GPU (if this array was allocated with inconsistent size, free it and then malloc again)
     template <typename U>
-    void fromVector( const std::vector<U>& vec );
+    cudaError_t fromVector( const std::vector<U>& vec );
 
     // copy given data to GPU (if this array was allocated with inconsistent size, free it and then malloc again)
-    void fromBytes( const uint8_t* data, size_t numBytes );
+    cudaError_t fromBytes( const uint8_t* data, size_t numBytes );
 
     // copy given data to CPU (data should be already allocated)
-    void toBytes( uint8_t* data );
+    cudaError_t toBytes( uint8_t* data );
 
     // copy this GPU array to given vector
     template <typename U>
-    void toVector( std::vector<U>& vec ) const;
+    cudaError_t toVector( std::vector<U>& vec ) const;
 
     // resize (free and malloc againg if size inconsistent) this GPU array (if size == 0 free it (if needed))
-    void resize( size_t size );
+    cudaError_t resize( size_t size );
 
     // pointer to GPU array
     T* data()
@@ -73,7 +75,7 @@ using DynamicArrayU16 = MR::Cuda::DynamicArray<uint16_t>;
 using DynamicArrayF = MR::Cuda::DynamicArray<float>;
 
 // Sets all float values of GPU array to zero
-void setToZero( DynamicArrayF& devArray );
+cudaError_t setToZero( DynamicArrayF& devArray );
 
 }
 

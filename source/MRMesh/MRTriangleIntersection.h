@@ -25,6 +25,7 @@ struct TriIntersectResult
 };
 
 /// checks whether triangles ABC and DEF intersect
+/// returns false if ABC and DEF are coplanar
 template <typename T>
 bool doTrianglesIntersect(
     Vector3<T> a, Vector3<T> b, Vector3<T> c,

@@ -60,7 +60,7 @@ inline cudaError_t DynamicArray<T>::fromBytes( const uint8_t* data, size_t numBy
 {
     assert( numBytes % sizeof( T ) == 0 );
     resize( numBytes / sizeof( T ) );
-    logError( cudaMemcpy( data_, data, numBytes, cudaMemcpyHostToDevice ), __FILE__ , __LINE__ );
+    return logError( cudaMemcpy( data_, data, numBytes, cudaMemcpyHostToDevice ), __FILE__ , __LINE__ );
 }
 
 template <typename T>

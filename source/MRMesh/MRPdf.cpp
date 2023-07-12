@@ -81,23 +81,38 @@ params_( params )
         spdlog::warn( "Can't create painter." );
         return;
     }
- 
+ #if PODOFO_VERSION >= 0x000a00
+    activePage_ = &document_->GetPages().CreatePage( PoDoFo::PdfPage::CreateStandardPageSize( PoDoFo::PdfPageSize::A4 ) );
+ #else
     activePage_ = document_->CreatePage( PoDoFo::PdfPage::CreateStandardPageSize( PoDoFo::ePdfPageSize_A4 ) );
+#endif
     if ( !activePage_ )
     {
         spdlog::warn( "Can't create page." );
         return;
     }
+#if PODOFO_VERSION >= 0x000a00
+    painter_->SetCanvas( *activePage_ );
+#else
     painter_->SetPage( activePage_ );
+#endif
 
+ #if PODOFO_VERSION >= 0x000a00
+    activeFont_ = document_->GetFonts().SearchFont( params_.fontName.c_str() );
+ #else
     activeFont_ = document_->CreateFont( params_.fontName.c_str() );
+#endif
     if ( !activeFont_ )
     {
         spdlog::warn( "Can't found font : \"{}\"", params_.fontName );
         return;
     }
+#if PODOFO_VERSION >= 0x000a00
+    painter_->TextState.SetFont( *activeFont_, params_.textSize );
+#else
     activeFont_->SetFontSize( params_.textSize );
     painter_->SetFont( activeFont_ );
+#endif
 }
 
 Pdf::~Pdf()
@@ -109,9 +124,12 @@ void Pdf::addText( const std::string& text, bool isTitle /*= false*/ )
 {
     if ( !checkDocument() || !activeFont_ )
         return;
-
+#if PODOFO_VERSION >= 0x000a00
+    painter_->TextState.SetFont( *activeFont_, isTitle ? params_.titleSize : params_.textSize  );
+#else
     activeFont_->SetFontSize( isTitle ? params_.titleSize : params_.textSize );
     painter_->SetFont( activeFont_ );
+#endif
 
     int strNum = 1;
     size_t pos = text.find( '\n', 0 );
@@ -128,9 +146,19 @@ void Pdf::addText( const std::string& text, bool isTitle /*= false*/ )
     
     cursorY_ -= textHeight;
 
+#if PODOFO_VERSION >= 0x000a00 
+    const PoDoFo::PdfHorizontalAlignment alignment = isTitle ? PoDoFo::PdfHorizontalAlignment::Center : PoDoFo::PdfHorizontalAlignment::Left;
+#else
     const PoDoFo::EPdfAlignment alignment = isTitle ? PoDoFo::ePdfAlignment_Center : PoDoFo::ePdfAlignment_Left;
+#endif
+
+#if PODOFO_VERSION >= 0x000a00
+    painter_->DrawTextMultiLine( text.c_str(), cursorX_, cursorY_, pageWorkWidth, textHeight,
+        { .HorizontalAlignment = alignment, .VerticalAlignment = PoDoFo::PdfVerticalAlignment::Center } );
+#else
     painter_->DrawMultiLineText( PoDoFo::PdfRect( cursorX_, cursorY_, pageWorkWidth, textHeight ), text.c_str(),
         alignment, PoDoFo::ePdfVerticalAlignment_Center );
+#endif
 
     if ( cursorY_ - spacing < borderFieldBottom )
         newPage();
@@ -142,10 +170,28 @@ void Pdf::addTextManual( const std::string& text, const Box2d& box, HorAlignment
 {
     if ( !checkDocument() || !activeFont_ )
         return;
-
+#if PODOFO_VERSION >= 0x000a00
+    painter_->TextState.SetFont( *activeFont_, params_.textSize  );
+#else
     activeFont_->SetFontSize( params_.textSize );
     painter_->SetFont( activeFont_ );
+#endif
 
+#if PODOFO_VERSION >= 0x000a00
+    PoDoFo::PdfHorizontalAlignment alignment = PoDoFo::PdfHorizontalAlignment::Center;
+    switch ( horAlignment )
+    {
+    case MR::Pdf::HorAlignment::Left:
+        alignment = PoDoFo::PdfHorizontalAlignment::Left;
+        break;
+    case MR::Pdf::HorAlignment::Right:
+        alignment = PoDoFo::PdfHorizontalAlignment::Right;
+        break;
+    case MR::Pdf::HorAlignment::Center:
+    default:
+        break;
+    }
+#else
     PoDoFo::EPdfAlignment alignment = PoDoFo::ePdfAlignment_Center;
     switch ( horAlignment )
     {
@@ -159,7 +205,23 @@ void Pdf::addTextManual( const std::string& text, const Box2d& box, HorAlignment
     default:
         break;
     }
+#endif
 
+#if PODOFO_VERSION >= 0x000a00
+    PoDoFo::PdfVerticalAlignment verticalAlignment = PoDoFo::PdfVerticalAlignment::Center;
+    switch ( vertAlignment )
+    {
+    case MR::Pdf::VertAlignment::Top:
+        verticalAlignment = PoDoFo::PdfVerticalAlignment::Top;
+        break;
+    case MR::Pdf::VertAlignment::Bottom:
+        verticalAlignment = PoDoFo::PdfVerticalAlignment::Bottom;
+        break;
+    case MR::Pdf::VertAlignment::Center:
+    default:
+        break;
+    }
+#else
     PoDoFo::EPdfVerticalAlignment verticalAlignment = PoDoFo::ePdfVerticalAlignment_Center;
     switch ( vertAlignment )
     {
@@ -173,9 +235,14 @@ void Pdf::addTextManual( const std::string& text, const Box2d& box, HorAlignment
     default:
         break;
     }
-
+#endif
+#if PODOFO_VERSION >= 0x000a00
+    painter_->DrawTextMultiLine( text.c_str(), box.min.x, box.min.y, box.size().x, box.size().y,
+        { .HorizontalAlignment = alignment, .VerticalAlignment = verticalAlignment } );
+#else
     painter_->DrawMultiLineText( PoDoFo::PdfRect( box.min.x, box.min.y, box.size().x, box.size().y ), text.c_str(),
         alignment, verticalAlignment );
+#endif
 }
 
 void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const std::string& caption /*= {}*/,
@@ -184,8 +251,14 @@ void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const std::s
     if ( !checkDocument() || !activeFont_ )
         return;
 
+    
+#if PODOFO_VERSION >= 0x000a00
+    std::unique_ptr<PoDoFo::PdfImage> pdfImage = document_->CreateImage();
+    pdfImage->Load( imagePath.c_str() );
+#else
     std::unique_ptr<PoDoFo::PdfImage> pdfImage = std::make_unique<PoDoFo::PdfImage>( document_.get() );
     pdfImage->LoadFromFile( imagePath.c_str() );
+#endif
 
     const double additionalHeight = marksHeight * valuesMarks.empty() + labelHeight * caption.empty();
     const double scalingFactor = std::min( ( pageWorkHeight - additionalHeight ) / pdfImage->GetHeight(), pageWorkWidth / pdfImage->GetWidth() );
@@ -197,7 +270,11 @@ void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const std::s
 
     cursorY_ -= scalingHeight;
 
+#if PODOFO_VERSION >= 0x000a00
+    painter_->DrawImage( *pdfImage, cursorX_, cursorY_, scalingFactor, scalingFactor );
+#else
     painter_->DrawImage( cursorX_, cursorY_, pdfImage.get(), scalingFactor, scalingFactor );
+#endif
 
     if ( activeFont_ )
     {
@@ -207,16 +284,26 @@ void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const std::s
             for ( auto& mark : valuesMarks )
             {
                 const double posX = cursorX_ + scalingWidth * mark.first - marksWidth / 2.;
+#if PODOFO_VERSION >= 0x000a00
+                painter_->DrawTextMultiLine( mark.second.c_str(), posX , cursorY_, marksWidth, marksHeight,
+                    { .HorizontalAlignment = PoDoFo::PdfHorizontalAlignment::Center , .VerticalAlignment = PoDoFo::PdfVerticalAlignment::Center } );
+#else
                 painter_->DrawMultiLineText( PoDoFo::PdfRect( posX , cursorY_, marksWidth, marksHeight ), mark.second.c_str(),
                     PoDoFo::ePdfAlignment_Center, PoDoFo::ePdfVerticalAlignment_Center );
+#endif
             }
         }
 
         if ( !caption.empty() )
         {
             cursorY_ -= labelHeight;
+#if PODOFO_VERSION >= 0x000a00
+            painter_->DrawTextMultiLine( caption.c_str(), cursorX_, cursorY_, pageWorkWidth, labelHeight,
+                { .HorizontalAlignment = PoDoFo::PdfHorizontalAlignment::Center , .VerticalAlignment = PoDoFo::PdfVerticalAlignment::Center } );
+#else
             painter_->DrawMultiLineText( PoDoFo::PdfRect( cursorX_, cursorY_, pageWorkWidth, labelHeight ), caption.c_str(),
                 PoDoFo::ePdfAlignment_Center, PoDoFo::ePdfVerticalAlignment_Center );
+#endif
         }
     }
 
@@ -232,8 +319,13 @@ void Pdf::addImageFromFileManual( const std::filesystem::path& imagePath, const 
     if ( !checkDocument() )
         return;
 
+#if PODOFO_VERSION >= 0x000a00
+    std::unique_ptr<PoDoFo::PdfImage> pdfImage = document_->CreateImage();
+    pdfImage->Load( imagePath.c_str() );
+#else
     std::unique_ptr<PoDoFo::PdfImage> pdfImage = std::make_unique<PoDoFo::PdfImage>( document_.get() );
     pdfImage->LoadFromFile( imagePath.c_str() );
+#endif
 
     const double scalingFactor = std::min( box.size().x / pdfImage->GetWidth(), box.size().y / pdfImage->GetHeight() );
     const double scalingWidth = scalingFactor * pdfImage->GetWidth();
@@ -266,8 +358,11 @@ void Pdf::addImageFromFileManual( const std::filesystem::path& imagePath, const 
     default:
         break;
     }
-
+#if PODOFO_VERSION >= 0x000a00
+    painter_->DrawImage( *pdfImage, posX, posY, scalingFactor, scalingFactor );
+#else
     painter_->DrawImage( posX, posY, pdfImage.get(), scalingFactor, scalingFactor );
+#endif
 }
 
 void Pdf::newPage()
@@ -275,14 +370,23 @@ void Pdf::newPage()
     if ( !checkDocument() )
         return;
 
+#if PODOFO_VERSION >= 0x000a00
+    painter_->FinishDrawing();
+    activePage_ = &document_->GetPages().CreatePage( PoDoFo::PdfPage::CreateStandardPageSize( PoDoFo::PdfPageSize::A4 ) );
+#else
     painter_->FinishPage();
     activePage_ = document_->CreatePage( PoDoFo::PdfPage::CreateStandardPageSize( PoDoFo::ePdfPageSize_A4 ) );
+#endif
     if ( !activePage_ )
     {
         spdlog::warn( "Can't create page." );
         return;
     }
+#if PODOFO_VERSION >= 0x000a00
+    painter_->SetCanvas( *activePage_ );
+#else
     painter_->SetPage( activePage_ );
+#endif
 
     cursorX_ = borderFieldLeft;
     cursorY_ = borderFieldTop;
@@ -292,7 +396,11 @@ void Pdf::close()
 {
     if ( checkDocument() )
     {
+#if PODOFO_VERSION >= 0x000a00
+        painter_->FinishDrawing();
+#else
         painter_->FinishPage();
+#endif
         document_->Close();
     }
 

@@ -5,7 +5,7 @@
 
 namespace PoDoFo
 {
-class PdfStreamedDocument;
+class PdfMemDocument;
 class PdfPainter;
 class PdfPage;
 class PdfFont;
@@ -118,10 +118,13 @@ public:
     operator bool() const { return document_ != 0; };
 
 private:
-    std::unique_ptr<PoDoFo::PdfStreamedDocument> document_;
+    std::unique_ptr<PoDoFo::PdfMemDocument> document_;
     std::unique_ptr<PoDoFo::PdfPainter> painter_;
     PoDoFo::PdfPage* activePage_ = nullptr;
     PoDoFo::PdfFont* activeFont_ = nullptr;
+
+    
+    const std::filesystem::path filename_;
 
     PdfParameters params_;
 

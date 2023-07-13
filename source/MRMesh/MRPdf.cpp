@@ -8,6 +8,7 @@
 #include "MRStringConvert.h"
 #include "MRGTest.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRSystem.h"
 #include <fstream>
 
 #undef NOMINMAX
@@ -49,31 +50,13 @@ constexpr double marksWidth = 30 * scaleFactor;
 }
 
 Pdf::Pdf( const std::filesystem::path& documentPath, const PdfParameters& params /*= PdfParameters()*/ ) :
+filename_{ documentPath },
 params_( params )
 {
-    if ( documentPath.empty() )
-    {
-        spdlog::warn( "Wrong file path : \"{}\"", utf8string( documentPath ) );
-        return;
-    }
     cursorX_ = borderFieldLeft;
     cursorY_ = borderFieldTop;
 
-    std::ofstream checkFile( documentPath );
-    if ( checkFile.good() )
-        checkFile.close();
-    else
-    {
-        spdlog::warn( "file on path \"{}\" is busy", utf8string( documentPath ) );
-        return;
-    }
-
-    document_ = std::make_unique<PoDoFo::PdfStreamedDocument>( documentPath.c_str() );
-    if ( !document_ )
-    {
-        spdlog::warn( "Can't create file : \"{}\"", utf8string( documentPath ) );
-        return;
-    }
+    document_ = std::make_unique<PoDoFo::PdfMemDocument>();
 
     painter_ = std::make_unique<PoDoFo::PdfPainter>();
     if ( !painter_ )
@@ -98,7 +81,8 @@ params_( params )
 #endif
 
  #if PODOFO_VERSION >= 0x000a00
-    activeFont_ = document_->GetFonts().SearchFont( params_.fontName.c_str() );
+    auto fontpath = GetFontsDirectory() / "NotoSans-Regular.ttf";
+    activeFont_ = &document_->GetFonts().GetOrCreateFont( fontpath.string() );
  #else
     activeFont_ = document_->CreateFont( params_.fontName.c_str() );
 #endif
@@ -398,10 +382,11 @@ void Pdf::close()
     {
 #if PODOFO_VERSION >= 0x000a00
         painter_->FinishDrawing();
+        document_->Save(  filename_.string() );
 #else
         painter_->FinishPage();
+        document_->Write( filename_.string() );
 #endif
-        document_->Close();
     }
 
     if ( document_ )
@@ -414,7 +399,6 @@ void Pdf::close()
         activeFont_ = nullptr;
 }
 
-#if !defined(__APPLE__) || !defined(__MACH__)
 TEST( MRMesh, Pdf )
 {
     UniqueTemporaryFolder pathFolder( {} );
@@ -445,7 +429,6 @@ TEST( MRMesh, Pdf )
     pdfTest.addImageFromFile( colorMapPath, "test image" );
     pdfTest.close();
 }
-#endif
 
 }
 #endif

@@ -50,11 +50,6 @@ public:
     MRMESH_API MoveAction processLine( const std::string_view& line );
 
     // settings
-    MRMESH_API void setRotationParams( CNCMachineSettings::RotationAxisName paramName, const Vector3f& rotationAxis );
-    MRMESH_API Vector3f getRotationParams( CNCMachineSettings::RotationAxisName paramName ) const;
-    MRMESH_API void setRotationOrder( const CNCMachineSettings::RotationAxisOrder& rotationAxisOrder );
-    const CNCMachineSettings::RotationAxisOrder& getRotationOrder() const { return cncSettings_.rotationAxesOrder; }
-
     MRMESH_API void setCNCMachineSettings( const CNCMachineSettings& settings );
     const CNCMachineSettings& getCNCMachineSettings() { return cncSettings_; }
 

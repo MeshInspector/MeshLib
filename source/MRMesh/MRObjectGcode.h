@@ -13,7 +13,7 @@ using GcodeSource = std::vector<std::string>;
 class MRMESH_CLASS ObjectGcode : public ObjectLinesHolder
 {
 public:
-    MRMESH_API ObjectGcode( const CNCMachineSettings& cncSettings );
+    MRMESH_API ObjectGcode();
     ObjectGcode( ObjectGcode&& ) = default;
     ObjectGcode& operator=( ObjectGcode&& ) = default;
 

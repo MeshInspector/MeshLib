@@ -1655,6 +1655,9 @@
     <ClCompile Include="MRInnerShell.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
+    <ClCompile Include="MRCNCMachineSettings.cpp">
+      <Filter>Source Files\Gcode</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

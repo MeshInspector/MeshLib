@@ -3,18 +3,19 @@
 #include "MRPolyline.h"
 #include "MRPch/MRJson.h"
 #include "MRSerializer.h"
+#include "MRSceneSettings.h"
 
 namespace MR
 {
 
 MR_ADD_CLASS_FACTORY( ObjectGcode )
 
-ObjectGcode::ObjectGcode( const CNCMachineSettings& cncSettings )
+ObjectGcode::ObjectGcode()
 {
     setVisualizeProperty( true, LinesVisualizePropertyType::Smooth, ViewportMask::all() );
     setColoringType( ColoringType::VertsColorMap );
     setLineWidth( 3.f );
-    cncMachineSettings_ = cncSettings;
+    cncMachineSettings_ = SceneSettings::getCNCMachineSettings();
 }
 
 

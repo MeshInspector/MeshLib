@@ -565,7 +565,6 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
     const auto plane = MR::Plane3f::fromDirAndPt( normal, box.max );
     const int steps = int( std::floor( ( plane.d - box.min.z ) / params.sectionStep ) );
 
-    float currentZ = safeZ;
     res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
 
     MeshEdgePoint prevEdgePoint;
@@ -671,7 +670,6 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
                 commands.push_back( { .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );
             }
 
-            currentZ = pivotIt->z;
             auto startIt = pivotIt + 1;
 
             for ( auto it = startIt; it < contours.end(); ++it )

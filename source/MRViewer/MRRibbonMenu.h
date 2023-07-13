@@ -216,10 +216,11 @@ private:
 template<typename T>
 struct RibbonMenuItemAdder
 {
-    RibbonMenuItemAdder()
+    template<typename... Args>
+    RibbonMenuItemAdder(Args&&... args)
     {
         static_assert( std::is_base_of_v<RibbonMenuItem, T> );
-        RibbonSchemaHolder::addItem( std::make_shared<T>() );
+        RibbonSchemaHolder::addItem( std::make_shared<T>( std::forward<Args>(args)... ) );
     }
 };
 

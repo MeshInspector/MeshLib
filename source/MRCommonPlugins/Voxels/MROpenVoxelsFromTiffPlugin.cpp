@@ -114,3 +114,8 @@ MR_REGISTER_RIBBON_ITEM( OpenVoxelsFromTiffPlugin )
 }
 
 #endif
+
+#ifdef __EMSCRIPTEN__
+#include "MRCommonPlugins/Basic/MRWasmUnavailablePlugin.h"
+MR_REGISTER_WASM_UNAVAILABLE_ITEM( OpenVoxelsFromTiffPlugin, "Open Voxels From TIFF" )
+#endif

@@ -565,19 +565,40 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
     const auto plane = MR::Plane3f::fromDirAndPt( normal, box.max );
     const int steps = int( std::floor( ( plane.d - box.min.z ) / params.sectionStep ) );
 
-    float currentZ = safeZ;
     res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
 
     MeshEdgePoint prevEdgePoint;
 
     const float critTransitionLengthSq = params.critTransitionLength * params.critTransitionLength;
-    bool needToRestoreBaseFeed = true;
 
     std::vector<PlaneSections> sections = extractAllSections( mesh, mp, Axis::Z, params.sectionStep, steps, subprogress( params.cb, 0.25f, 0.5f ) );
     if ( sections.empty() )
         return unexpectedOperationCanceled();
 
     const auto sbp = subprogress( params.cb, 0.5f, 1.0f );
+
+    float lastFeed = 0;
+
+    Vector3f lastPoint;
+    // if the last point is equal to parameter, do nothing
+    // otherwise add new move
+    const auto addPoint = [&] ( const Vector3f& point )
+    {
+        if ( lastPoint == point )
+            return;
+
+        if ( lastFeed == params.baseFeed )
+        {
+                res.commands.push_back( { .x = point.x, .y = point.y } );
+        }
+        else
+        {
+            res.commands.push_back( { .feed = params.baseFeed, .x = point.x, .y = point.y } );
+            lastFeed = params.baseFeed;
+        }
+
+        lastPoint = point;
+    };
 
     for ( int step = 0; step < steps; ++step )
     {
@@ -596,7 +617,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
             const auto contours = polyline.contours().front();
 
             auto nearestPointIt = section.begin();
-            auto nextEdgePointIt = nearestPointIt;
+            auto nextEdgePointIt = section.begin();
             float minDistSq = FLT_MAX;            
 
             if ( prevEdgePoint.e.valid() && !mp.region )
@@ -613,6 +634,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
 
                 const float sectionStepSq = params.sectionStep * params.sectionStep;
                 const auto nearestPoint = mesh.edgePoint( *nearestPointIt );
+                nextEdgePointIt = nearestPointIt;
                 do
                 {
                     std::next( nextEdgePointIt ) != section.end() ? ++nextEdgePointIt : nextEdgePointIt = section.begin();
@@ -623,29 +645,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
 
             if ( !prevEdgePoint.e.valid() || minDistSq > critTransitionLengthSq )
             {
-                if ( currentZ < safeZ )
-                {
-                    if ( safeZ - currentZ > params.retractLength )
-                    {
-                        const float zRetract = currentZ + params.retractLength;
-                        commands.push_back( { .feed = params.retractFeed, .z = zRetract } );
-                        commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
-                    }
-                    else
-                    {
-                        commands.push_back( { .feed = params.retractFeed, .z = safeZ } );
-                    }
-                }
-
-                commands.push_back( { .type = MoveType::FastLinear, .x = pivotIt->x, .y = pivotIt->y } );
-
-                if ( safeZ - pivotIt->z > params.plungeLength )
-                {
-                    const float zPlunge = pivotIt->z + params.plungeLength;
-                    commands.push_back( { .type = MoveType::FastLinear, .z = zPlunge } );
-                }
-                commands.push_back( { .feed = params.plungeFeed, .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );
-                needToRestoreBaseFeed = true;
+                transitOverSafeZ( pivotIt, res, params, lastFeed );               
             }
             else
             {
@@ -670,25 +670,18 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
                 commands.push_back( { .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );
             }
 
-            currentZ = pivotIt->z;
             auto startIt = pivotIt + 1;
-            if ( needToRestoreBaseFeed )
-            {
-                commands.push_back( { .feed = params.baseFeed, .x = startIt->x, .y = startIt->y } );
-                ++startIt;
-            }
 
             for ( auto it = startIt; it < contours.end(); ++it )
             {
-                commands.push_back( { .x = it->x, .y = it->y } );
+                addPoint( *it );
             }
 
             for ( auto it = contours.begin() + 1; it < pivotIt + 1; ++it )
             {
-                commands.push_back( { .x = it->x, .y = it->y } );
+                addPoint( *it );
             }
 
-            needToRestoreBaseFeed = false;
             prevEdgePoint = *nextEdgePointIt;
         }
     }
@@ -1138,12 +1131,13 @@ std::vector<GCommand> replaceLineSegmentsWithCircularArcs( const std::span<GComm
         else
         {
             ++startIdx;
+            endIdx = startIdx;
             res.push_back( path[startIdx] );
             i = startIdx + 1;
         }
     }
 
-    for ( size_t i = endIdx + 1; i < path.size(); ++i )
+    for ( size_t i = endIdx; i < path.size(); ++i )
         res.push_back( path[i] );
 
     return res;
@@ -1163,7 +1157,7 @@ void interpolateArcs( std::vector<GCommand>& commands, const ArcInterpolationPar
         while ( startIndex != commands.size() && ( commands[startIndex].type != MoveType::Linear || std::isnan( coord( commands[startIndex], axis ) ) ) )
             ++startIndex;
 
-        if ( startIndex == commands.size() )
+        if ( ++startIndex >= commands.size() )
             return;
 
         auto endIndex = startIndex + 1;
@@ -1292,6 +1286,11 @@ std::vector<GCommand> replaceStraightSegmentsWithOneLine( const std::span<GComma
         i = startIdx + 1;
     }
 
+    for ( int i = startIdx; i < path.size(); ++i )
+    {
+        res.push_back( path[i] );
+    }
+
     return res;
 }
 
@@ -1304,7 +1303,7 @@ void interpolateLines( std::vector<GCommand>& commands, const LineInterpolationP
         while ( startIndex != commands.size() && ( commands[startIndex].type != MoveType::Linear || std::isnan( coord( commands[startIndex], axis ) ) ) )
             ++startIndex;
 
-        if ( startIndex == commands.size() )
+        if ( ++startIndex >= commands.size() )
             return;
 
         auto endIndex = startIndex + 1;

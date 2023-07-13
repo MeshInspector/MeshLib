@@ -34,6 +34,11 @@ std::shared_ptr<Object> ObjectGcode::shallowClone() const
     return res;
 }
 
+void ObjectGcode::setCNCMachineSettings( const CNCMachineSettings& cncSettings )
+{
+    cncMachineSettings_ = cncSettings;
+}
+
 void ObjectGcode::setGcodeSource( const std::shared_ptr<GcodeSource>& gcodeSource )
 {
     if ( !gcodeSource )
@@ -45,6 +50,7 @@ void ObjectGcode::setGcodeSource( const std::shared_ptr<GcodeSource>& gcodeSourc
 
     gcodeSource_ = gcodeSource;
     GcodeProcessor executor;
+    executor.setCNCMachineSettings( cncMachineSettings_ );
     executor.setGcodeSource( *gcodeSource );
     actionList_ = executor.processSource();
 

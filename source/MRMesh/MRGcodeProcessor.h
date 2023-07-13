@@ -2,6 +2,7 @@
 #include "MRMeshFwd.h"
 #include "MRVector3.h"
 #include "MRMatrix3.h"
+#include "MRCNCMachineSettings.h"
 #include <vector>
 #include <string>
 #include <optional>
@@ -49,19 +50,13 @@ public:
     MRMESH_API MoveAction processLine( const std::string_view& line );
 
     // settings
-    enum class RotationAxisName
-    {
-        A,
-        B,
-        C,
-        Count
-    };
-    //using RotationAxisMap = std::array<RotationAxisName, size_t( RotationAxisName::Count )>;
-    using RotationAxisOrder = std::vector<RotationAxisName>;
-    MRMESH_API void setRotationParams( RotationAxisName paramName, const Vector3f& rotationAxis );
-    MRMESH_API Vector3f getRotationParams( RotationAxisName paramName ) const;
-    MRMESH_API void setRotationOrder( const RotationAxisOrder& rotationAxisOrder );
-    const RotationAxisOrder& getRotationOrder() const { return rotationAxesOrder_; }
+    MRMESH_API void setRotationParams( CNCMachineSettings::RotationAxisName paramName, const Vector3f& rotationAxis );
+    MRMESH_API Vector3f getRotationParams( CNCMachineSettings::RotationAxisName paramName ) const;
+    MRMESH_API void setRotationOrder( const CNCMachineSettings::RotationAxisOrder& rotationAxisOrder );
+    const CNCMachineSettings::RotationAxisOrder& getRotationOrder() const { return cncSettings_.rotationAxesOrder; }
+
+    MRMESH_API void setCNCMachineSettings( const CNCMachineSettings& settings );
+    const CNCMachineSettings& getCNCMachineSettings() { return cncSettings_; }
 
 private:
 
@@ -160,8 +155,9 @@ private:
 
     // internal / machine settings
     float accuracy_ = 1.e-3f;
-    std::array<Vector3f, 3> rotationAxes_ = { Vector3f::minusX(), Vector3f::minusY(), Vector3f::plusZ() };
-    RotationAxisOrder rotationAxesOrder_ = { RotationAxisName::A, RotationAxisName::B, RotationAxisName::C };
+//     std::array<Vector3f, 3> rotationAxes_ = { Vector3f::minusX(), Vector3f::minusY(), Vector3f::plusZ() };
+//     CNCMachineSettings::RotationAxisOrder rotationAxesOrder_ = { CNCMachineSettings::RotationAxisName::A, CNCMachineSettings::RotationAxisName::B, CNCMachineSettings::RotationAxisName::C };
+    CNCMachineSettings cncSettings_;
     std::vector<int> rotationAxesOrderMap_ = {0, 1, 2}; // mapping axis sequence number to axis number in storage
 
 };

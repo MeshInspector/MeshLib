@@ -993,6 +993,9 @@
     <ClInclude Include="MRMovementBuildBody.h">
       <Filter>Source Files\Primitives</Filter>
     </ClInclude>
+    <ClInclude Include="MRCNCMachineSettings.h">
+      <Filter>Source Files\Gcode</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

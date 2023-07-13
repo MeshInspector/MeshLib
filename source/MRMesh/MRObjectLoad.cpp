@@ -25,6 +25,7 @@
 #ifndef MRMESH_NO_GLTF
 #include "MRGltfSerializer.h"
 #endif
+#include "MRSceneSettings.h"
 
 namespace MR
 {
@@ -130,6 +131,7 @@ Expected<ObjectGcode, std::string> makeObjectGcodeFromFile( const std::filesyste
 
     ObjectGcode objectGcode;
     objectGcode.setName( utf8string( file.stem() ) );
+    objectGcode.setCNCMachineSettings( SceneSettings::getCNCMachineSettings() );
     objectGcode.setGcodeSource( std::make_shared<GcodeSource>( *gcodeSource ) );
 
     return objectGcode;

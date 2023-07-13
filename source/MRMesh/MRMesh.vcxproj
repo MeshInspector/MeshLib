@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRCNCMachineSettings.h" />
     <ClInclude Include="MRAxis.h" />
     <ClInclude Include="MRChangeVertsColorMapAction.h" />
     <ClInclude Include="MRBooleanOperation.h" />

@@ -13,7 +13,7 @@ using GcodeSource = std::vector<std::string>;
 class MRMESH_CLASS ObjectGcode : public ObjectLinesHolder
 {
 public:
-    MRMESH_API ObjectGcode();
+    MRMESH_API ObjectGcode( const CNCMachineSettings& cncSettings );
     ObjectGcode( ObjectGcode&& ) = default;
     ObjectGcode& operator=( ObjectGcode&& ) = default;
 
@@ -24,7 +24,7 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     MRMESH_API virtual void setCNCMachineSettings( const CNCMachineSettings& cncSettings );
-    virtual const CNCMachineSettings& getCNCMachineSettings() { return cncMachineSettings_; }
+    virtual const CNCMachineSettings& getCNCMachineSettings() const { return cncMachineSettings_; }
 
     MRMESH_API virtual void setGcodeSource( const std::shared_ptr<GcodeSource>& gcodeSource );
     virtual const std::shared_ptr<GcodeSource>& gcodeSource() const { return gcodeSource_; }
@@ -85,7 +85,7 @@ private:
     bool feedrateGradientEnabled_ = true;
 
     void updateColors_();
-
+    void updateAll_();
 };
 
 }

@@ -155,8 +155,6 @@ private:
 
     // internal / machine settings
     float accuracy_ = 1.e-3f;
-//     std::array<Vector3f, 3> rotationAxes_ = { Vector3f::minusX(), Vector3f::minusY(), Vector3f::plusZ() };
-//     CNCMachineSettings::RotationAxisOrder rotationAxesOrder_ = { CNCMachineSettings::RotationAxisName::A, CNCMachineSettings::RotationAxisName::B, CNCMachineSettings::RotationAxisName::C };
     CNCMachineSettings cncSettings_;
     std::vector<int> rotationAxesOrderMap_ = {0, 1, 2}; // mapping axis sequence number to axis number in storage
 

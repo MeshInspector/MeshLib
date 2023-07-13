@@ -9,11 +9,12 @@ namespace MR
 
 MR_ADD_CLASS_FACTORY( ObjectGcode )
 
-ObjectGcode::ObjectGcode()
+ObjectGcode::ObjectGcode( const CNCMachineSettings& cncSettings )
 {
     setVisualizeProperty( true, LinesVisualizePropertyType::Smooth, ViewportMask::all() );
     setColoringType( ColoringType::VertsColorMap );
     setLineWidth( 3.f );
+    cncMachineSettings_ = cncSettings;
 }
 
 
@@ -37,39 +38,13 @@ std::shared_ptr<Object> ObjectGcode::shallowClone() const
 void ObjectGcode::setCNCMachineSettings( const CNCMachineSettings& cncSettings )
 {
     cncMachineSettings_ = cncSettings;
+    updateAll_();
 }
 
 void ObjectGcode::setGcodeSource( const std::shared_ptr<GcodeSource>& gcodeSource )
 {
-    if ( !gcodeSource )
-    {
-        polyline_ = std::make_shared<Polyline3>();
-        setDirtyFlags( DIRTY_ALL );
-        return;
-    }
-
     gcodeSource_ = gcodeSource;
-    GcodeProcessor executor;
-    executor.setCNCMachineSettings( cncMachineSettings_ );
-    executor.setGcodeSource( *gcodeSource );
-    actionList_ = executor.processSource();
-
-    maxFeedrate_ = 0.f;
-    std::shared_ptr<Polyline3> polyline = std::make_shared<Polyline3>();
-    for ( int i = 0; i < actionList_.size(); ++i )
-    {
-        const auto& part = actionList_[i];
-        if ( part.action.path.empty() )
-            continue;
-        polyline->addFromPoints( part.action.path.data(), part.action.path.size(), false );
-        segmentToSourceLineMap_.insert( segmentToSourceLineMap_.end(), part.action.path.size() - 1, i );
-        if ( part.feedrate > maxFeedrate_ )
-            maxFeedrate_ = part.feedrate;
-    }
-    polyline_ = polyline;
-    updateColors_();
-    updateHeapUsageCache_();
-    setDirtyFlags( DIRTY_ALL );
+    updateAll_();
 }
 
 void ObjectGcode::setDirtyFlags( uint32_t mask )
@@ -251,6 +226,38 @@ void ObjectGcode::updateColors_()
         colors.autoResizeSet( VertId( colors.size() ), part.action.path.size(), color );
     }
     setVertsColorMap( colors );
+}
+
+void ObjectGcode::updateAll_()
+{
+    if ( !gcodeSource_ )
+    {
+        polyline_ = std::make_shared<Polyline3>();
+        setDirtyFlags( DIRTY_ALL );
+        return;
+    }
+
+    GcodeProcessor executor;
+    executor.setCNCMachineSettings( cncMachineSettings_ );
+    executor.setGcodeSource( *gcodeSource_ );
+    actionList_ = executor.processSource();
+
+    maxFeedrate_ = 0.f;
+    std::shared_ptr<Polyline3> polyline = std::make_shared<Polyline3>();
+    for ( int i = 0; i < actionList_.size(); ++i )
+    {
+        const auto& part = actionList_[i];
+        if ( part.action.path.empty() )
+            continue;
+        polyline->addFromPoints( part.action.path.data(), part.action.path.size(), false );
+        segmentToSourceLineMap_.insert( segmentToSourceLineMap_.end(), part.action.path.size() - 1, i );
+        if ( part.feedrate > maxFeedrate_ )
+            maxFeedrate_ = part.feedrate;
+    }
+    polyline_ = polyline;
+    updateColors_();
+    updateHeapUsageCache_();
+    setDirtyFlags( DIRTY_ALL );
 }
 
 }

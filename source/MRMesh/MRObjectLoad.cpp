@@ -129,9 +129,8 @@ Expected<ObjectGcode, std::string> makeObjectGcodeFromFile( const std::filesyste
         return unexpected( gcodeSource.error() );
     }
 
-    ObjectGcode objectGcode;
+    ObjectGcode objectGcode( SceneSettings::getCNCMachineSettings() );
     objectGcode.setName( utf8string( file.stem() ) );
-    objectGcode.setCNCMachineSettings( SceneSettings::getCNCMachineSettings() );
     objectGcode.setGcodeSource( std::make_shared<GcodeSource>( *gcodeSource ) );
 
     return objectGcode;

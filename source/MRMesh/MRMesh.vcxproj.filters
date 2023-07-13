@@ -993,6 +993,9 @@
     <ClInclude Include="MRMovementBuildBody.h">
       <Filter>Source Files\Primitives</Filter>
     </ClInclude>
+    <ClInclude Include="MRVDBProgressInterrupter.h">
+      <Filter>Source Files\VDBConversions</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

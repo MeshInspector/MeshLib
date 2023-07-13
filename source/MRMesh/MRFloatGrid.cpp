@@ -5,6 +5,7 @@
 #include "MRVolumeIndexer.h"
 #include "MRTimer.h"
 #include "MRVDBConversions.h"
+#include "MRVDBProgressInterrupter.h"
 
 namespace MR
 {

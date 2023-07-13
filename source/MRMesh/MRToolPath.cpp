@@ -646,30 +646,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
 
             if ( !prevEdgePoint.e.valid() || minDistSq > critTransitionLengthSq )
             {
-                transitOverSafeZ( pivotIt, res, params, lastFeed );
-                /*if ( currentZ < safeZ )
-                {
-                    if ( safeZ - currentZ > params.retractLength )
-                    {
-                        const float zRetract = currentZ + params.retractLength;
-                        commands.push_back( { .feed = params.retractFeed, .z = zRetract } );
-                        commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
-                    }
-                    else
-                    {
-                        commands.push_back( { .feed = params.retractFeed, .z = safeZ } );
-                    }
-                }
-
-                commands.push_back( { .type = MoveType::FastLinear, .x = pivotIt->x, .y = pivotIt->y } );
-
-                if ( safeZ - pivotIt->z > params.plungeLength )
-                {
-                    const float zPlunge = pivotIt->z + params.plungeLength;
-                    commands.push_back( { .type = MoveType::FastLinear, .z = zPlunge } );
-                }
-                commands.push_back( { .feed = params.plungeFeed, .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );
-                needToRestoreBaseFeed = true;*/
+                transitOverSafeZ( pivotIt, res, params, lastFeed );               
             }
             else
             {
@@ -696,11 +673,6 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
 
             currentZ = pivotIt->z;
             auto startIt = pivotIt + 1;
-            /*if ( needToRestoreBaseFeed )
-            {
-                commands.push_back( { .feed = params.baseFeed, .x = startIt->x, .y = startIt->y } );
-                ++startIt;
-            }*/
 
             for ( auto it = startIt; it < contours.end(); ++it )
             {

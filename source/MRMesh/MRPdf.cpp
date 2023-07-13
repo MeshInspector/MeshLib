@@ -380,12 +380,13 @@ void Pdf::close()
 {
     if ( checkDocument() )
     {
+        auto pathString = utf8string( filename_ );
 #if PODOFO_VERSION >= 0x000a00
         painter_->FinishDrawing();
-        document_->Save(  filename_.string() );
+        document_->Save( pathString );
 #else
         painter_->FinishPage();
-        document_->Write( filename_.string() );
+        document_->Write( pathString.c_str() );
 #endif
     }
 

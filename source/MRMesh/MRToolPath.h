@@ -119,8 +119,8 @@ MRMESH_API Expected<ToolPathResult, std::string> constantZToolPath( const MeshPa
 MRMESH_API Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const ToolPathParams& params, Axis cutDirection );
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
-// this toolpath is built from geodesic parallels divercing from the given start point
-// if the start point is not specified, the highest point on the mesh will be used
+// this toolpath is built from geodesic parallels divercing from the given start point or from the bounaries of selected areas
+// if neither is specified, the lowest section by XY plane will be used as a start contour
 // mesh can be transformed using xf parameter
 MRMESH_API Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, const ConstantCuspParams& params );
 

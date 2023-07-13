@@ -41,7 +41,7 @@ void WasmUnavailablePlugin::drawDialog( float menuScaling, ImGuiContext* )
         if ( headerFont )
             ImGui::PopFont();
 
-        auto text = "This tool is unavailable due to some browser limitations, you can use it in desktop verison.";
+        auto text = "This tool is unavailable due to some browser\nlimitations, you can use it in desktop verison.";
         const float textWidth = ImGui::CalcTextSize( text ).x;
         if ( textWidth < windowSize.x )
         {

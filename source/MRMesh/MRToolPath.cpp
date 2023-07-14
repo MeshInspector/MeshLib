@@ -66,7 +66,7 @@ Vector2f project( const GCommand& command, Axis axis )
         ( axis == Axis::Y ) ? Vector2f{ command.x, command.z } : Vector2f{ command.x, command.y };
 }
 
-Expected<Mesh, std::string> preprocessMesh( const Mesh& inputMesh, const ToolPathParams& params )
+Expected<Mesh, std::string> preprocessMesh( const Mesh& inputMesh, const ToolPathParams& params, bool needToDecimate )
 {
     OffsetParameters offsetParams;
     offsetParams.voxelSize = params.voxelSize;
@@ -85,9 +85,12 @@ Expected<Mesh, std::string> preprocessMesh( const Mesh& inputMesh, const ToolPat
     if ( !reportProgress( params.cb, 0.20f ) )
         return unexpectedOperationCanceled();
 
-    const auto decimateResult = decimateMesh( meshCopy, {.progressCallback = subprogress(params.cb, 0.20f, 0.25f ) } );
-    if ( decimateResult.cancelled )
-        return unexpectedOperationCanceled();
+    if ( needToDecimate )
+    {
+        const auto decimateResult = decimateMesh( meshCopy, { .progressCallback = subprogress( params.cb, 0.20f, 0.25f ) } );
+        if ( decimateResult.cancelled )
+            return unexpectedOperationCanceled();
+    }
         
     return meshCopy;
 }
@@ -344,6 +347,8 @@ Intervals getIntervals( const MeshPart& mp, const V3fIt startIt, const V3fIt end
         for ( auto it = endIt - 1; it > beginVec; --it )
             processPoint( it );
 
+        processPoint( beginVec );
+
         if ( startInterval != endInterval )
             res.emplace_back( startInterval, endInterval );
 
@@ -401,7 +406,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
     const auto cutDirectionIdx = int( cutDirection );
     const auto sideDirection = ( cutDirection == Axis::X ) ? Axis::Y : Axis::X;
     const auto sideDirectionIdx = int( sideDirection );
-    auto preprocessedMesh = preprocessMesh( mp.mesh, params );
+    auto preprocessedMesh = preprocessMesh( mp.mesh, params, false );
     if ( !preprocessedMesh )
         return unexpected( preprocessedMesh.error() );
 
@@ -519,8 +524,16 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
             {
                 const auto& interval = intervals[i];
 
-                for ( auto it = interval.first; it < interval.second; ++it )
-                    addPoint( *it );
+                if ( moveForward )
+                {
+                    for ( auto it = interval.first; it < interval.second; ++it )
+                        addPoint( *it );
+                }
+                else
+                {
+                    for ( auto it = interval.first - 1; it >= interval.second; --it )
+                        addPoint( *it );
+                }
 
                 if ( *intervals[i + 1].first != lastPoint )
                     transitOverSafeZ( intervals[i + 1].first, res, params, lastFeed );
@@ -551,7 +564,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
 
 Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, const ToolPathParams& params )
 {
-    auto preprocessedMesh = preprocessMesh( mp.mesh, params );
+    auto preprocessedMesh = preprocessMesh( mp.mesh, params, false );
     if ( !preprocessedMesh )
         return unexpected( preprocessedMesh.error() );
 
@@ -695,7 +708,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
 
 Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, const ConstantCuspParams& params )
 {
-    auto preprocessedMesh = preprocessMesh( mp.mesh, params );
+    auto preprocessedMesh = preprocessMesh( mp.mesh, params, true );
     if ( !preprocessedMesh )
         return unexpected( preprocessedMesh.error() );
 

@@ -209,25 +209,17 @@ std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const MeshPart&
     return sections;
 }
 
-std::vector<IsoLines> extractAllIsolines( const Mesh& mesh, VertId startPoint, const SurfacePath& startSurfacePath, float sectionStep, ProgressCallback cb )
+std::vector<IsoLines> extractAllIsolines( const Mesh& mesh, const SurfacePath& startSurfacePath, float sectionStep, ProgressCallback cb )
 {
     MR::Vector<float, VertId> distances;
-
-    if ( startPoint.valid() )
+   
+    VertBitSet startVertices( mesh.topology.vertSize() );
+    for ( const auto& ep : startSurfacePath )
     {
-        const MeshTriPoint mtp( mesh.topology, startPoint );
-        distances = computeSurfaceDistances( mesh, mtp );
+        startVertices.set( mesh.topology.org( ep.e ) );
     }
-    else
-    {
-        VertBitSet startVertices( mesh.topology.vertSize() );
-        for ( const auto& ep : startSurfacePath )
-        {
-            startVertices.set( mesh.topology.org( ep.e ) );
-        }
 
-        distances = computeSurfaceDistances(mesh, startVertices);
-    }
+    distances = computeSurfaceDistances(mesh, startVertices);    
 
     const float topExcluded = FLT_MAX;
     const auto [min, max] = parallelMinMax( distances.vec_, &topExcluded );
@@ -715,16 +707,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
     ToolPathResult  res{ .modifiedMesh = std::move( *preprocessedMesh ) };
     
     const auto& mesh = res.modifiedMesh;
-    const auto box = mesh.getBoundingBox();
-
-    // if start point is valid, project it on the modified mesh
-    auto startPoint = params.startPoint;
-    if ( startPoint.valid() )
-    {
-        const auto coords = mp.mesh.points[startPoint];
-        const auto mpr = mesh.projectPoint( coords );
-        startPoint = mpr ? mesh.topology.org( mpr->mtp.e ) : VertId{};
-    }
+    const auto box = mesh.getBoundingBox();  
 
     const Vector3f normal = Vector3f::plusZ();
     const float minZ = box.min.z + params.sectionStep;
@@ -740,7 +723,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
     const auto processZone = [&] ( const SurfacePath& bounds, Vector3f lastPoint, ProgressCallback cb ) -> bool
     {
         //compute isolines based on the start point or the bounding contour
-        std::vector<IsoLines> isoLines = extractAllIsolines( mesh, startPoint, bounds, params.sectionStep, subprogress( cb, 0.0f, 0.4f ) );
+        std::vector<IsoLines> isoLines = extractAllIsolines( mesh, bounds, params.sectionStep, subprogress( cb, 0.0f, 0.4f ) );
 
         if ( isoLines.empty() )
             return false;

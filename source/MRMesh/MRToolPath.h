@@ -42,8 +42,6 @@ struct ToolPathParams
 
 struct ConstantCuspParams : ToolPathParams
 {
-    // start vertex for computing isolines
-    VertId startPoint = {};
     // if true isolines will be processed from center point to the boundary (usually it means from up to down)
     bool fromCenterToBoundary = true;
 };

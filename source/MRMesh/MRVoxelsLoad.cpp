@@ -5,7 +5,7 @@
 #include "MRObjectVoxels.h"
 #include "MRVDBConversions.h"
 #include "MRStringConvert.h"
-#include "MRFloatGrid.h"
+#include "MRVDBFloatGrid.h"
 #include "MRStringConvert.h"
 #include "MRDirectory.h"
 #include "MRPch/MRSpdlog.h"

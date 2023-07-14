@@ -996,6 +996,9 @@
     <ClInclude Include="MRVDBProgressInterrupter.h">
       <Filter>Source Files\VDBConversions</Filter>
     </ClInclude>
+    <ClInclude Include="MRVDBFloatGrid.h">
+      <Filter>Source Files\BaseStructures</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

@@ -2,7 +2,7 @@
 #include "MRVoxelsSave.h"
 #include "MRMeshFwd.h"
 #include "MRImageSave.h"
-#include "MRFloatGrid.h"
+#include "MRVDBFloatGrid.h"
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
 #include "MRColor.h"

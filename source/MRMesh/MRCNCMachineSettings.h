@@ -15,13 +15,12 @@ public:
     {
         A,
         B,
-        C,
-        Count
+        C
     };
     using RotationAxesOrder = std::vector<RotationAxisName>;
 
-    MRMESH_API void setRotationParams( RotationAxisName paramName, const Vector3f& rotationAxis );
-    MRMESH_API Vector3f getRotationParams( RotationAxisName paramName ) const;
+    MRMESH_API void setRotationAxis( RotationAxisName paramName, const Vector3f& rotationAxis );
+    MRMESH_API Vector3f getRotationAxis( RotationAxisName paramName ) const;
     MRMESH_API void setRotationOrder( const RotationAxesOrder& rotationAxesOrder );
     const RotationAxesOrder& getRotationOrder() const { return rotationAxesOrder_; }
 private:

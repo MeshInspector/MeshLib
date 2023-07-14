@@ -453,7 +453,7 @@ MR::Vector3f GcodeProcessor::calcRealCoord_( const Vector3f& translationPos, con
     for ( int i = 0; i < axesOrder.size(); ++i )
     {
         const int axisNumber = int( axesOrder[i] );
-        const Matrix3f rotationMatrix = Matrix3f::rotation( cncSettings_.getRotationParams( axesOrder[i] ), rotationAngles[axisNumber] / 180.f * PI_F );
+        const Matrix3f rotationMatrix = Matrix3f::rotation( cncSettings_.getRotationAxis( axesOrder[i] ), rotationAngles[axisNumber] / 180.f * PI_F );
         res = rotationMatrix * res;
     }
     return res;
@@ -464,7 +464,7 @@ void GcodeProcessor::updateRotationAngleAndMatrix_( const Vector3f& rotationAngl
     for ( int i = 0; i < 3; ++i )
     {
         rotationAngles_[i] = rotationAngles[i];
-        cacheRotationMatrix_[i] = Matrix3f::rotation( cncSettings_.getRotationParams( CNCMachineSettings::RotationAxisName( i ) ), rotationAngles_[i] / 180.f * PI_F );
+        cacheRotationMatrix_[i] = Matrix3f::rotation( cncSettings_.getRotationAxis( CNCMachineSettings::RotationAxisName( i ) ), rotationAngles_[i] / 180.f * PI_F );
     }
 }
 

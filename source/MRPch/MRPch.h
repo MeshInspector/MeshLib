@@ -36,7 +36,8 @@
 #include <gdcmImageHelper.h>
 #pragma warning(pop)
 
-#include "MROpenvdb.h"
+//adding this include decreases MI compilation time from 160 sec to 130 sec at the cost of twice large MRPch.pch (436M -> 903M)
+//#include "MROpenvdb.h"
 #endif
 
 #include "MRJson.h"

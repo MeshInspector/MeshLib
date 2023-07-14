@@ -244,6 +244,7 @@
     <ClInclude Include="MRUnionFind.h" />
     <ClInclude Include="MRUniquePtr.h" />
     <ClInclude Include="MRUniteManyMeshes.h" />
+    <ClInclude Include="MRVDBProgressInterrupter.h" />
     <ClInclude Include="MRVector2.h" />
     <ClInclude Include="MRVertexAttributeGradient.h" />
     <ClInclude Include="MRViewportId.h" />

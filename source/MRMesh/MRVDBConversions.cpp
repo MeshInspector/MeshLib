@@ -1,6 +1,6 @@
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRVDBConversions.h"
-#include "MRFloatGrid.h"
+#include "MRVDBFloatGrid.h"
 #include "MRMesh.h"
 #include "MRMeshBuilder.h"
 #include "MRTimer.h"
@@ -12,25 +12,11 @@
 #include "MRVolumeIndexer.h"
 #include "MRRegionBoundary.h"
 #include "MRParallelFor.h"
+#include "MRVDBProgressInterrupter.h"
 
 namespace MR
 {
 constexpr float denseVolumeToGridTolerance = 1e-6f;
-
-
-ProgressInterrupter::ProgressInterrupter( ProgressCallback cb ) :
-    cb_{ cb }
-{
-    progressThreadId_ = std::this_thread::get_id();
-}
-
-bool ProgressInterrupter::wasInterrupted( int percent /*= -1 */ )
-{
-    wasInterrupted_ = false;
-    if ( cb_ && progressThreadId_ == std::this_thread::get_id() )
-        wasInterrupted_ = !cb_( float( std::clamp( percent, 0, 100 ) ) / 100.0f );
-    return wasInterrupted_;
-}
 
 void convertToVDMMesh( const MeshPart& mp, const AffineXf3f& xf, const Vector3f& voxelSize,
                        std::vector<openvdb::Vec3s>& points, std::vector<openvdb::Vec3I>& tris )

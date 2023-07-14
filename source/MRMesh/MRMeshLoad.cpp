@@ -535,9 +535,9 @@ Expected<Mesh, std::string> fromCtm( std::istream & in, VertColors* colors, Prog
     if ( ctmGetError(context) != CTM_NONE )
         return unexpected( "Error reading CTM format" );
 
-    if ( triCount == 1 &&
-         indices[0] == 0 && indices[1] == 0 && indices[2] == 0 )
-        return unexpected( "CTM File is representing points" );
+    // even if we save false triangle (0,0,0) in MG2 format, it can be open as triangle (i,i,i)
+    if ( triCount == 1 && indices[0] == indices[1] && indices[0] == indices[2] )
+        return unexpected( "CTM file is representing points" );
 
     if ( colors )
     {

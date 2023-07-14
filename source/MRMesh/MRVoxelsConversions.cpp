@@ -6,7 +6,7 @@
 #include "MRMeshIntersect.h"
 #include "MRLine3.h"
 #include "MRMeshBuilder.h"
-#include "MRFloatGrid.h"
+#include "MRVDBFloatGrid.h"
 #include "MRTimer.h"
 #include "MRFastWindingNumber.h"
 #include "MRPch/MRTBB.h"

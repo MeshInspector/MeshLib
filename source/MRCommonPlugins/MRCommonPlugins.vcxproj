@@ -25,6 +25,7 @@
   <ItemGroup>
     <ClCompile Include="Basic\MRCameraOrientationPlugin.cpp" />
     <ClCompile Include="Basic\MRMoveObjectByMouse.cpp" />
+    <ClCompile Include="Basic\MRWasmUnavailablePlugin.cpp" />
     <ClCompile Include="Selectors\MRSelectObjectByClick.cpp" />
     <ClCompile Include="ViewerButtons\MRAddCustomTheme.cpp" />
     <ClCompile Include="ViewerButtons\MRIOFilesMenuItems.cpp" />
@@ -35,8 +36,10 @@
     <ClCompile Include="Voxels\MROpenVoxelsFromTiffPlugin.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="exports.h" />
     <ClInclude Include="Basic\MRCameraOrientationPlugin.h" />
     <ClInclude Include="Basic\MRMoveObjectByMouse.h" />
+    <ClInclude Include="Basic\MRWasmUnavailablePlugin.h" />
     <ClInclude Include="Selectors\MRSelectObjectByClick.h" />
     <ClInclude Include="ViewerButtons\MRAddCustomTheme.h" />
     <ClInclude Include="ViewerButtons\MRIOFilesMenuItems.h" />
@@ -255,7 +258,7 @@
       <WarningLevel>EnableAllWarnings</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MRCOMMONPLUGINS_EXPORT;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(SolutionDir)source\MRPch\MRPch.h</PrecompiledHeaderFile>
@@ -282,7 +285,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MRCOMMONPLUGINS_EXPORT;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(SolutionDir)source\MRPch\MRPch.h</PrecompiledHeaderFile>

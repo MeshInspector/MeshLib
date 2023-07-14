@@ -3,6 +3,7 @@
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRVDBConversions.h"
 #include "MRAffineXf3.h"
+#include "MRFloatGrid.h"
 
 namespace MR
 {
@@ -28,15 +29,6 @@ struct MeshVoxelsConverter
 
     MRMESH_API Mesh operator() ( const FloatGrid & grid ) const;
 };
-
-// union operation on volumetric representation of two meshes
-MRMESH_API FloatGrid operator += ( FloatGrid & a, const FloatGrid& b );
-
-// difference operation on volumetric representation of two meshes
-MRMESH_API FloatGrid operator -= ( FloatGrid & a, const FloatGrid& b );
-
-// intersection operation on volumetric representation of two meshes
-MRMESH_API FloatGrid operator *= ( FloatGrid & a, const FloatGrid& b );
 
 } //namespace MR
 

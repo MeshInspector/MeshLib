@@ -993,6 +993,12 @@
     <ClInclude Include="MRMovementBuildBody.h">
       <Filter>Source Files\Primitives</Filter>
     </ClInclude>
+    <ClInclude Include="MRVDBProgressInterrupter.h">
+      <Filter>Source Files\VDBConversions</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVDBFloatGrid.h">
+      <Filter>Source Files\BaseStructures</Filter>
+    </ClInclude>
     <ClInclude Include="MRCNCMachineSettings.h">
       <Filter>Source Files\Gcode</Filter>
     </ClInclude>

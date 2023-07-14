@@ -12,7 +12,7 @@
 #include "MRVoxelsConversions.h"
 
 #include "MRGTest.h"
-#include "MRFloatGrid.h"
+#include "MRVDBFloatGrid.h"
 
 #include <fmt/format.h>
 

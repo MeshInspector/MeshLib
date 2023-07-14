@@ -61,8 +61,7 @@ Expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, const
         // Compute unsigned distance grid
         grid = meshToDistanceField( mp, AffineXf3f(), voxelSizeVector, std::abs( offsetInVoxels ) + 2,
                         subprogress( params.callBack, 0.0f, signPostprocess ? 0.33f : 0.5f ) );
-        if ( grid ) // to flip mesh normals
-            grid->setGridClass( openvdb::GRID_LEVEL_SET );
+        setLevelSetType( grid ); // to flip mesh normals
     }
 
     if ( !grid )

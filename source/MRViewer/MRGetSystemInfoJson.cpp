@@ -2,10 +2,11 @@
 #include "MRViewer.h"
 #include "ImGuiMenu.h"
 #include "MRMesh/MRSystem.h"
-#include "MRViewer/MRGLMacro.h"
+#include "MRGLMacro.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRGladGlfw.h"
+#include "MRCudaAccessor.h"
 #ifdef _WIN32
 #include <shlobj.h>
 #include <windows.h>
@@ -25,14 +26,18 @@ Json::Value GetSystemInfoJson()
     auto& windowInfo = root["Window Info"];
     if ( getViewerInstance().isGLInitialized() )
     {
-        auto& glInfo = root["OpenGL Info"];
+        auto& glInfo = root["Graphics Info"];
         GL_EXEC();
-        glInfo["Vendor"] = std::string( ( const char* )glGetString( GL_VENDOR ) );
+        glInfo["OpenGL Vendor"] = std::string( ( const char* )glGetString( GL_VENDOR ) );
         GL_EXEC();
-        glInfo["Renderer"] = std::string( ( const char* )glGetString( GL_RENDERER ) );
+        glInfo["OpenGL Renderer"] = std::string( ( const char* )glGetString( GL_RENDERER ) );
         GL_EXEC();
         glInfo["OpenGL Version"] = std::string( ( const char* )glGetString( GL_VERSION ) );
         GL_EXEC();
+
+        glInfo["CUDA memory"] = CudaAccessor::isCudaAvailable() ?
+            fmt::format( "{:.1f} GB", CudaAccessor::getCudaFreeMemory() / 1024 / 1024 / 1024.0f ) :
+            "n/a";
 
         int frameBufferSizeX, frameBufferSizeY;
         int windowSizeX, windowSizeY;

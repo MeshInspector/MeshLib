@@ -32,26 +32,5 @@ Mesh MeshVoxelsConverter::operator() ( const FloatGrid & grid ) const
     return *res;
 }
 
-FloatGrid operator += ( FloatGrid & a, const FloatGrid & b )
-{
-    MR_TIMER
-    openvdb::tools::csgUnion( ovdb( *a ), ovdb( *b ) );
-    return a;
-}
-
-FloatGrid operator -= ( FloatGrid & a, const FloatGrid & b )
-{
-    MR_TIMER
-    openvdb::tools::csgDifference( ovdb( *a ), ovdb( *b ) );
-    return a;
-}
-
-FloatGrid operator *= ( FloatGrid & a, const FloatGrid & b )
-{
-    MR_TIMER
-    openvdb::tools::csgIntersection( ovdb( *a ), ovdb( *b ) );
-    return a;
-}
-
 } //namespace MR
 #endif

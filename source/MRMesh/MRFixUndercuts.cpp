@@ -14,7 +14,7 @@
 #include "MRRingIterator.h"
 #include "MRDistanceMap.h"
 #include "MRColor.h"
-#include "MRFloatGrid.h"
+#include "MRVDBFloatGrid.h"
 #include "MRMeshIntersect.h"
 #include "MRLine3.h"
 #include "MRPch/MRTBB.h"

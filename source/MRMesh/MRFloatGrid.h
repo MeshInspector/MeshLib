@@ -1,9 +1,8 @@
 #pragma once
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
-// this header includes the whole OpenVDB, so please include it from .cpp files only
+// this is a lightweight header unlike MRVDBFloatGrid.h
 
 #include "MRMeshFwd.h"
-#include "MRPch/MROpenvdb.h"
 #include "MRProgressCallback.h"
 
 namespace MR
@@ -15,19 +14,8 @@ namespace MR
  * \{
  */
 
-/// this class just hides very complex type of typedef openvdb::FloatGrid
-struct OpenVdbFloatGrid : openvdb::FloatGrid
-{
-    OpenVdbFloatGrid() noexcept = default;
-    OpenVdbFloatGrid( openvdb::FloatGrid && in ) : openvdb::FloatGrid( std::move( in ) ) {}
-    [[nodiscard]] size_t heapBytes() const { return memUsage(); }
-};
-
-inline openvdb::FloatGrid & ovdb( OpenVdbFloatGrid & v ) { return v; }
-inline const openvdb::FloatGrid & ovdb( const OpenVdbFloatGrid & v ) { return v; }
-
-/// makes MR::FloatGrid shared pointer taking the contents of the input pointer
-MRMESH_API FloatGrid MakeFloatGrid( openvdb::FloatGrid::Ptr&& );
+/// returns the amount of heap memory occupied by grid
+[[nodiscard]] MRMESH_API size_t heapBytes( const FloatGrid& grid );
 
 /// resample this grid to fit voxelScale
 MRMESH_API FloatGrid resampled( const FloatGrid& grid, float voxelScale, ProgressCallback cb = {} );
@@ -35,9 +23,24 @@ MRMESH_API FloatGrid resampled( const FloatGrid& grid, float voxelScale, Progres
 /// resample this grid to fit voxelScale
 MRMESH_API FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, ProgressCallback cb = {} );
 
+/// returns the value at given voxel
+[[nodiscard]] MRMESH_API float getValue( const FloatGrid & grid, const Vector3i & p );
+
 /// sets given region voxels value
 /// \note region is in grid space (0 voxel id is minimum active voxel in grid)
 MRMESH_API void setValue( FloatGrid & grid, const VoxelBitSet& region, float value );
+
+/// sets type of this grid as LEVEL SET (for normal flipping)
+MRMESH_API void setLevelSetType( FloatGrid & grid );
+
+// union operation on volumetric representation of two meshes
+MRMESH_API FloatGrid operator += ( FloatGrid & a, const FloatGrid& b );
+
+// difference operation on volumetric representation of two meshes
+MRMESH_API FloatGrid operator -= ( FloatGrid & a, const FloatGrid& b );
+
+// intersection operation on volumetric representation of two meshes
+MRMESH_API FloatGrid operator *= ( FloatGrid & a, const FloatGrid& b );
 
 /// \}
 

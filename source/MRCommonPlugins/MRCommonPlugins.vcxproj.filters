@@ -36,6 +36,9 @@
     <ClCompile Include="Basic\MRMoveObjectByMouse.cpp">
       <Filter>Basic</Filter>
     </ClCompile>
+    <ClCompile Include="Basic\MRWasmUnavailablePlugin.cpp">
+      <Filter>Basic</Filter>
+    </ClCompile>
     <ClCompile Include="Selectors\MRSelectObjectByClick.cpp">
       <Filter>Selectors</Filter>
     </ClCompile>
@@ -65,7 +68,11 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="exports.h" />
     <ClInclude Include="Basic\MRMoveObjectByMouse.h">
+      <Filter>Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="Basic\MRWasmUnavailablePlugin.h">
       <Filter>Basic</Filter>
     </ClInclude>
     <ClInclude Include="Selectors\MRSelectObjectByClick.h">

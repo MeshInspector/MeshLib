@@ -3,6 +3,7 @@
 #include "MRObjectFactory.h"
 #include "MRMesh.h"
 #include "MRVDBConversions.h"
+#include "MRVDBFloatGrid.h"
 #include "MRFloatGrid.h"
 #include "MRSimpleVolume.h"
 #include "MRVoxelsSave.h"

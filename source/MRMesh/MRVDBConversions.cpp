@@ -1,6 +1,6 @@
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRVDBConversions.h"
-#include "MRFloatGrid.h"
+#include "MRVDBFloatGrid.h"
 #include "MRMesh.h"
 #include "MRMeshBuilder.h"
 #include "MRTimer.h"

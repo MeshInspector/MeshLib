@@ -1,5 +1,6 @@
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRFloatGrid.h"
+#include "MRVDBFloatGrid.h"
 #include "MRVector3.h"
 #include "MRBitSet.h"
 #include "MRVolumeIndexer.h"
@@ -10,11 +11,9 @@
 namespace MR
 {
 
-FloatGrid MakeFloatGrid( openvdb::FloatGrid::Ptr&& p )
+size_t heapBytes( const FloatGrid& grid )
 {
-    if ( !p )
-        return {};
-    return std::make_shared<OpenVdbFloatGrid>( std::move( *p ) );
+    return grid ? grid->memUsage() : 0;
 }
 
 FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, ProgressCallback cb )
@@ -64,6 +63,11 @@ FloatGrid resampled( const FloatGrid& grid, float voxelScale, ProgressCallback c
     return resampled( grid, Vector3f::diagonal( voxelScale ), cb );
 }
 
+float getValue( const FloatGrid & grid, const Vector3i & p )
+{
+    return grid ? grid->getConstAccessor().getValue( openvdb::Coord{ p.x, p.y, p.z } ) : 0;
+}
+
 void setValue( FloatGrid & grid, const VoxelBitSet& region, float value )
 {
     if ( !grid )
@@ -80,6 +84,33 @@ void setValue( FloatGrid & grid, const VoxelBitSet& region, float value )
         auto coord = minVox + openvdb::Coord{ pos.x,pos.y,pos.z };
         accessor.setValue( coord, value );
     }
+}
+
+void setLevelSetType( FloatGrid & grid )
+{
+    if ( grid )
+        grid->setGridClass( openvdb::GRID_LEVEL_SET );
+}
+
+FloatGrid operator += ( FloatGrid & a, const FloatGrid & b )
+{
+    MR_TIMER
+    openvdb::tools::csgUnion( ovdb( *a ), ovdb( *b ) );
+    return a;
+}
+
+FloatGrid operator -= ( FloatGrid & a, const FloatGrid & b )
+{
+    MR_TIMER
+    openvdb::tools::csgDifference( ovdb( *a ), ovdb( *b ) );
+    return a;
+}
+
+FloatGrid operator *= ( FloatGrid & a, const FloatGrid & b )
+{
+    MR_TIMER
+    openvdb::tools::csgIntersection( ovdb( *a ), ovdb( *b ) );
+    return a;
 }
 
 }

@@ -3,7 +3,7 @@
 #include "MRMesh/MRSimpleVolume.h"
 #include "MRMesh/MRVoxelsSave.h"
 #include "MRMesh/MRVoxelsLoad.h"
-#include "MRMesh/MRFloatGrid.h"
+#include "MRMesh/MRVDBFloatGrid.h"
 #include "MRMesh/MRVDBConversions.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRAffineXf3.h"

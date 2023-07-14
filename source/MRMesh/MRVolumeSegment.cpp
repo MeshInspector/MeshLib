@@ -6,7 +6,7 @@
 #include "MRBox.h"
 #include "MRVoxelGraphCut.h"
 #include "MRVDBConversions.h"
-#include "MRFloatGrid.h"
+#include "MRVDBFloatGrid.h"
 #include "MRMesh.h"
 #include <filesystem>
 

@@ -4,7 +4,7 @@
 #include "MRMesh.h"
 #include "MRVDBConversions.h"
 #include "MRBoolean.h"
-#include "MRFloatGrid.h"
+#include "MRVDBFloatGrid.h"
 
 namespace MR
 {

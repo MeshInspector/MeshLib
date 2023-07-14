@@ -253,10 +253,7 @@ public:
 
     [[nodiscard]] virtual size_t heapBytes() const override
     {
-        size_t res = name_.capacity() + histogram_.heapBytes() + changeIsoAction_.heapBytes() + changeSurfaceAction_.heapBytes();
-        if ( vdbVolume_.data )
-            res += vdbVolume_.data->memUsage();
-        return res;
+        return name_.capacity() + histogram_.heapBytes() + changeIsoAction_.heapBytes() + changeSurfaceAction_.heapBytes() + MR::heapBytes( vdbVolume_.data );
     }
 
 private:

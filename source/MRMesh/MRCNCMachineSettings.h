@@ -19,8 +19,12 @@ public:
     };
     using RotationAxesOrder = std::vector<RotationAxisName>;
 
+    static int getAxesCount() { return int( RotationAxisName::C ) + 1; }
+
+    // rotationAxis length will be more then 0.1
     MRMESH_API void setRotationAxis( RotationAxisName paramName, const Vector3f& rotationAxis );
-    MRMESH_API Vector3f getRotationAxis( RotationAxisName paramName ) const;
+    MRMESH_API const Vector3f& getRotationAxis( RotationAxisName paramName ) const;
+    // duplicated values will be removed (ABAAC - > ABC)
     MRMESH_API void setRotationOrder( const RotationAxesOrder& rotationAxesOrder );
     const RotationAxesOrder& getRotationOrder() const { return rotationAxesOrder_; }
 private:

@@ -9,10 +9,10 @@ void CNCMachineSettings::setRotationAxis( RotationAxisName paramName, const Vect
     if ( rotationAxis.lengthSq() < 0.01f )
         return;
 
-    rotationAxes_[intParamName] = rotationAxis;
+    rotationAxes_[intParamName] = rotationAxis.normalized();
 }
 
-Vector3f CNCMachineSettings::getRotationAxis( RotationAxisName paramName ) const
+const Vector3f& CNCMachineSettings::getRotationAxis( RotationAxisName paramName ) const
 {
     const int intParamName = int( paramName );
     return rotationAxes_[intParamName];

@@ -25,7 +25,6 @@
 #ifndef MRMESH_NO_GLTF
 #include "MRGltfSerializer.h"
 #endif
-#include "MRSceneSettings.h"
 
 namespace MR
 {

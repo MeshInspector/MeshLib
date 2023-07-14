@@ -13,3 +13,9 @@ var is_ios = function () {
         return true;
     return false;
 }
+
+var is_mac = function () {
+    if (is_ios())
+        return false;
+    return navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+}

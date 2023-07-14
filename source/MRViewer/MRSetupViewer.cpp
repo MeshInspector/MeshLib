@@ -44,21 +44,21 @@ void ViewerSetup::setupConfiguration( Viewer* viewer ) const
     viewer->enableGlobalHistory( true );
 
     viewer->mouseController.setMouseControl( { MouseButton::Right,0 }, MouseMode::Translation );
-
-#ifndef __EMSCRIPTEN__
-    viewer->mouseController.setMouseControl( { MouseButton::Middle,0 }, MouseMode::Rotation );
-    // 2 GB for desktop version
-    viewer->getGlobalHistoryStore()->setMemoryLimit( size_t( 2 ) * 1024 * 1024 * 1024 );
-#else
-    bool hasMouse = bool( EM_ASM_INT( return hasMouse() ) );
-    if ( hasMouse )
-        viewer->mouseController.setMouseControl( { MouseButton::Middle,0 }, MouseMode::Rotation );
-    else
-        viewer->mouseController.setMouseControl( { MouseButton::Left,0 }, MouseMode::Rotation );
-    // 1 GB for WASM version
-    viewer->getGlobalHistoryStore()->setMemoryLimit( size_t( 1024 ) * 1024 * 1024 );
-    viewer->scrollForce = 0.7f;
+    MouseController::MouseControlKey rotKey = { MouseButton::Middle,0 };
+    size_t memLimit = size_t( 2 ) * 1024 * 1024 * 1024;
+#ifdef __APPLE__
+    rotKey = { MouseButton::Left,0 };
 #endif
+#ifdef __EMSCRIPTEN__
+    memLimit = size_t( 1024 ) * 1024 * 1024;
+    viewer->scrollForce = 0.7f;
+    bool hasMouse = bool( EM_ASM_INT( return hasMouse() ) );
+    bool isMac = bool( EM_ASM_INT( return is_mac() ) );
+    if ( !hasMouse || isMac )
+        rotKey = { MouseButton::Left,0 };
+#endif
+    viewer->mouseController.setMouseControl( rotKey, MouseMode::Rotation );
+    viewer->getGlobalHistoryStore()->setMemoryLimit( memLimit );
 }
 
 void ViewerSetup::setupExtendedLibraries() const

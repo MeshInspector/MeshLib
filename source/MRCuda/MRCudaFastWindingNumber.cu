@@ -175,7 +175,7 @@ namespace Cuda
         processPoint( q, resVec[index], dipoles, nodes, meshPoints, faces, beta, index );
     }
 
-    __global__ void kernel( int3 dims, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
+    __global__ void gridKernel( int3 dims, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
                             const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                             float* resVec, float beta, size_t size )
     {
@@ -251,10 +251,10 @@ namespace Cuda
                                           float* resVec, float beta )
     {
         const size_t size = size_t( dims.x ) * dims.y * dims.z;
-        int maxThreadsPerBlock = 0;
-        CUDA_EXEC( cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 ) );
+        int maxThreadsPerBlock = 128;
+        //CUDA_EXEC( cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 ) );
         int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
-        kernel << <numBlocks, maxThreadsPerBlock >> > ( dims, minCoord, voxelSize, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, beta, size );       
+        gridKernel << <numBlocks, maxThreadsPerBlock >> > ( dims, minCoord, voxelSize, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, beta, size );       
     }
 
     void signedDistanceKernel( int3 dims, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,

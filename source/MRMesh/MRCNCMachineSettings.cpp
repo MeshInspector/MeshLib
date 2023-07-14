@@ -6,7 +6,7 @@ namespace MR
 void CNCMachineSettings::setRotationAxis( RotationAxisName paramName, const Vector3f& rotationAxis )
 {
     const int intParamName = int( paramName );
-    if ( rotationAxis.lengthSq() < 0.01f )
+    if ( rotationAxis.lengthSq() < 0.0001f )
         return;
 
     rotationAxes_[intParamName] = rotationAxis.normalized();

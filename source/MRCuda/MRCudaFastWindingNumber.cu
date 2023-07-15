@@ -5,8 +5,11 @@
 
 namespace MR
 {
+
 namespace Cuda
-{ 
+{
+    constexpr int maxThreadsPerBlock = 32;
+
     constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
 
     __device__ float Dipole::w( const float3& q ) const
@@ -136,7 +139,7 @@ namespace Cuda
         return sqrt( resSq );
     }
 
-    __global__ void kernel( const float3* points, const Dipole* dipoles,
+    __global__ void fastWindingNumberFromVectorKernel( const float3* points, const Dipole* dipoles,
                             const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                             float* resVec, float beta, int skipFace, size_t size )
     {
@@ -153,7 +156,7 @@ namespace Cuda
         processPoint( points[index], resVec[index], dipoles, nodes, meshPoints, faces, beta, skipFace );
     }
 
-    __global__ void kernel( const Dipole* dipoles,
+    __global__ void fastWindingNumberFromMeshKernel( const Dipole* dipoles,
                             const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                             float* resVec, float beta, size_t size )
     {
@@ -175,7 +178,7 @@ namespace Cuda
         processPoint( q, resVec[index], dipoles, nodes, meshPoints, faces, beta, index );
     }
 
-    __global__ void kernel( int3 dims, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
+    __global__ void fastWindingNumberFromGridKernel( int3 dims, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
                             const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                             float* resVec, float beta, size_t size )
     {
@@ -198,7 +201,7 @@ namespace Cuda
         processPoint( transformedPoint, resVec[index], dipoles, nodes, meshPoints, faces, beta, index );
     }
 
-    __global__ void kernelWithDistances( int3 dims, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
+    __global__ void signedDistanceKernel( int3 dims, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
                             const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                             float* resVec, float beta, float maxDistSq, float minDistSq, size_t size )
     {
@@ -227,45 +230,40 @@ namespace Cuda
             res = -res;
     }
 
-    void fastWindingNumberFromVectorKernel( const float3* points, const Dipole* dipoles,
+    void fastWindingNumberFromVector( const float3* points, const Dipole* dipoles,
                                   const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                                   float* resVec, float beta, int skipFace, size_t size )
     {
-        int maxThreadsPerBlock = 0;
-        CUDA_EXEC( cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 ) );
         int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
-        kernel << <numBlocks, maxThreadsPerBlock >> > ( points, dipoles, nodes, meshPoints, faces, resVec, beta, skipFace, size );
+        fastWindingNumberFromVectorKernel<<< numBlocks, maxThreadsPerBlock >>>( points, dipoles, nodes, meshPoints, faces, resVec, beta, skipFace, size );
     }
 
-    void fastWindingNumberFromMeshKernel( const Dipole* dipoles,
+    void fastWindingNumberFromMesh( const Dipole* dipoles,
                                           const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                                           float* resVec, float beta, size_t size )
     {
-        int maxThreadsPerBlock = 0;
-        CUDA_EXEC( cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 ) );
         int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
-        kernel << <numBlocks, maxThreadsPerBlock >> > ( dipoles, nodes, meshPoints, faces, resVec, beta, size );
+        fastWindingNumberFromMeshKernel<<< numBlocks, maxThreadsPerBlock >>>( dipoles, nodes, meshPoints, faces, resVec, beta, size );
     }
-    void fastWindingNumberFromGridKernel( int3 dims, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
+
+    void fastWindingNumberFromGrid( int3 dims, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
                                           const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                                           float* resVec, float beta )
     {
         const size_t size = size_t( dims.x ) * dims.y * dims.z;
-        int maxThreadsPerBlock = 0;
-        CUDA_EXEC( cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 ) );
         int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
-        kernel << <numBlocks, maxThreadsPerBlock >> > ( dims, minCoord, voxelSize, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, beta, size );       
+        fastWindingNumberFromGridKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, minCoord, voxelSize, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, beta, size );       
     }
 
-    void signedDistanceKernel( int3 dims, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
+    void signedDistance( int3 dims, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
                                           const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                                           float* resVec, float beta, float maxDistSq, float minDistSq )
     {
         const size_t size = size_t( dims.x ) * dims.y * dims.z;
-        int maxThreadsPerBlock = 0;
-        CUDA_EXEC( cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 ) );
         int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
-        kernelWithDistances << <numBlocks, maxThreadsPerBlock >> > ( dims, minCoord, voxelSize, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, beta, maxDistSq, minDistSq, size );
+        signedDistanceKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, minCoord, voxelSize, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, beta, maxDistSq, minDistSq, size );
     }
-}
-}
+
+} //namespece Cuda
+
+} //namespace MR

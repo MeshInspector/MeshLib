@@ -27,24 +27,28 @@ struct Dipole
     /// contribution of this dipole to the winding number at point \param q
     __device__ float w( const float3& q ) const;
 };
+
 // calls fast winding number for each point in parallel
-void fastWindingNumberFromVectorKernel( const float3* points, const Dipole* dipoles,
+void fastWindingNumberFromVector( const float3* points, const Dipole* dipoles,
                            const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                            float* resVec, float beta, int skipFace, size_t size );
+
 // calls fast winding number for each triangle center
-void fastWindingNumberFromMeshKernel( const Dipole* dipoles,
+void fastWindingNumberFromMesh( const Dipole* dipoles,
                                       const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                                       float* resVec, float beta, size_t size );
+
 // calls fast winding number for each point in three-dimensional grid
-void fastWindingNumberFromGridKernel( int3 gridSize, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
+void fastWindingNumberFromGrid( int3 gridSize, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
                                       const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                                       float* resVec, float beta );
 
-
 /// calls fast winding number for each point in three-dimensional grid to get sign
-void signedDistanceKernel( int3 gridSize, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
+void signedDistance( int3 gridSize, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
                                       const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                                       float* resVec, float beta, float maxDistSq, float minDistSq );
 
-}
-}
+
+} //namespece Cuda
+
+} //namespace MR

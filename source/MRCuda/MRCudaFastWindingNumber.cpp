@@ -77,7 +77,7 @@ void FastWindingNumber::calcFromVector( std::vector<float>& res, const std::vect
     data_->cudaPoints.fromVector( points );
     data_->cudaResult.resize( size );
 
-    fastWindingNumberFromVectorKernel( data_->cudaPoints.data(), data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(), data_->cudaResult.data(), beta, int( skipFace ), size );
+    fastWindingNumberFromVector( data_->cudaPoints.data(), data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(), data_->cudaResult.data(), beta, int( skipFace ), size );
     data_->cudaResult.toVector( res );
 }
 
@@ -91,7 +91,7 @@ bool FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, Prog
     res.resize( size );
     data_->cudaResult.resize( size );
 
-    fastWindingNumberFromMeshKernel(data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(), data_->cudaResult.data(), beta, size);
+    fastWindingNumberFromMesh(data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(), data_->cudaResult.data(), beta, size);
     std::vector<float> wns;
     data_->cudaResult.toVector( wns );
     if ( !reportProgress( cb, 0.9f ) )
@@ -126,7 +126,7 @@ VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vec
     if ( !reportProgress( cb, 0.0f ) )
         return unexpectedOperationCanceled();
 
-    fastWindingNumberFromGridKernel(
+    fastWindingNumberFromGrid(
         int3{ dims.x, dims.y, dims.z },
         float3{ minCoord.x, minCoord.y, minCoord.z },
         float3{ voxelSize.x, voxelSize.y, voxelSize.z }, cudaGridToMeshXf,
@@ -163,7 +163,7 @@ VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& r
     if ( !reportProgress( cb, 0.0f ) )
         return unexpectedOperationCanceled();
 
-    signedDistanceKernel(
+    signedDistance(
         int3{ dims.x, dims.y, dims.z },
         float3{ minCoord.x, minCoord.y, minCoord.z },
         float3{ voxelSize.x, voxelSize.y, voxelSize.z }, cudaGridToMeshXf,

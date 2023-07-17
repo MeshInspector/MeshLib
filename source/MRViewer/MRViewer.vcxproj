@@ -218,12 +218,14 @@
   <ItemGroup>
     <Image Include="resource\object_icons\X1\Object.png" />
     <Image Include="resource\object_icons\X1\ObjectDistanceMap.png" />
+    <Image Include="resource\object_icons\X1\ObjectGcode.png" />
     <Image Include="resource\object_icons\X1\ObjectLines.png" />
     <Image Include="resource\object_icons\X1\ObjectMesh.png" />
     <Image Include="resource\object_icons\X1\ObjectPoints.png" />
     <Image Include="resource\object_icons\X1\ObjectVoxels.png" />
     <Image Include="resource\object_icons\X3\Object.png" />
     <Image Include="resource\object_icons\X3\ObjectDistanceMap.png" />
+    <Image Include="resource\object_icons\X3\ObjectGcode.png" />
     <Image Include="resource\object_icons\X3\ObjectLines.png" />
     <Image Include="resource\object_icons\X3\ObjectMesh.png" />
     <Image Include="resource\object_icons\X3\ObjectPoints.png" />

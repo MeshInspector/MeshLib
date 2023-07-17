@@ -617,5 +617,11 @@
     <Image Include="resource\object_icons\X3\ObjectVoxels.png">
       <Filter>resource\object_icons\X3</Filter>
     </Image>
+    <Image Include="resource\object_icons\X1\ObjectGcode.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\ObjectGcode.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
   </ItemGroup>
 </Project>

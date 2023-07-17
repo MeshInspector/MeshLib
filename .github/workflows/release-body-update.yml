@@ -39,7 +39,7 @@ jobs:
             echo "::set-output name=my_tag::${{ steps.read_tag.outputs.tag }}"
           fi
 
-      - name: Update Release Body
+      - name: Setup Release Table
         run: |
           cp scripts/devops/release_table.txt .
           pattern_path="RELEASE_PATH"

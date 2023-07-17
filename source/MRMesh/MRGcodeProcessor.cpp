@@ -478,7 +478,7 @@ MR::Vector3f GcodeProcessor::calcRealCoordCached_( const Vector3f& translationPo
 {
     Vector3f res = translationPos;
     const auto& axesOrder = cncSettings_.getRotationOrder();
-    for ( int i = 0; i < 3; ++i )
+    for ( int i = 0; i < axesOrder.size(); ++i )
     {
         const int axisNumber = int( axesOrder[i] );
         res = cacheRotationMatrix_[axisNumber] * res;

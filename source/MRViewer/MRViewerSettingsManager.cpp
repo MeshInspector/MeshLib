@@ -29,6 +29,7 @@ const std::string cShowSelectedObjects = "showSelectedObjects";
 const std::string lastExtextentionsParamKey = "lastExtextentions";
 const std::string cSpaceMouseSettings = "spaceMouseSettings";
 const std::string cMSAA = "multisampleAntiAliasing";
+const std::string cncMachineSettingsKey = "CNCMachineSettings";
 }
 
 namespace MR
@@ -86,7 +87,40 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         }
     }
 
+    // SceneSettings
     SceneSettings::set( SceneSettings::Type::MeshFlatShading, cfg.getBool( cFlatShadingParamKey, SceneSettings::get( SceneSettings::Type::MeshFlatShading ) ) );
+    if ( cfg.hasJsonValue( cncMachineSettingsKey ) )
+    {
+        auto cnfCNCSettings = cfg.getJsonValue( cncMachineSettingsKey );
+        CNCMachineSettings cncSettings;
+
+        auto loadAxisFromJson = [&cnfCNCSettings, &cncSettings] ( std::string jsonName, CNCMachineSettings::RotationAxisName axisName )
+        {
+            Vector3f vec3f;
+            deserializeFromJson( cnfCNCSettings[jsonName], vec3f );
+            if ( vec3f != Vector3f() )
+                cncSettings.setRotationAxis( axisName, vec3f );
+        };
+        loadAxisFromJson( "Axis A", CNCMachineSettings::RotationAxisName::A );
+        loadAxisFromJson( "Axis B", CNCMachineSettings::RotationAxisName::B );
+        loadAxisFromJson( "Axis C", CNCMachineSettings::RotationAxisName::C );
+        if ( cnfCNCSettings["Axes Order"].isString() )
+        {
+            CNCMachineSettings::RotationAxesOrder rotationAxesOrder;
+            std::string orderStr = cnfCNCSettings["Axes Order"].asString();
+            for ( int i = 0; i < orderStr.size(); ++i )
+            {
+                if ( orderStr[i] == 'A' )
+                    rotationAxesOrder.push_back( CNCMachineSettings::RotationAxisName::A );
+                else if ( orderStr[i] == 'B' )
+                    rotationAxesOrder.push_back( CNCMachineSettings::RotationAxisName::B );
+                else if ( orderStr[i] == 'C' )
+                    rotationAxesOrder.push_back( CNCMachineSettings::RotationAxisName::C );
+            }
+            cncSettings.setRotationOrder( rotationAxesOrder );
+        }
+        SceneSettings::setCNCMachineSettings( cncSettings );
+    }
 
     ColorTheme::Type colorThemeType = ColorTheme::Type::Default;
     std::string colorThemeName = ColorTheme::getPresetName( ColorTheme::Preset::Default ); // default
@@ -258,7 +292,27 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     }
     cfg.setJsonValue( cSceneControlParamKey, sceneControls );
 
+    // SceneSettings
     cfg.setBool( cFlatShadingParamKey, SceneSettings::get( SceneSettings::Type::MeshFlatShading ) );
+    Json::Value cnfCNCSettings;
+    const auto& cncSettings = SceneSettings::getCNCMachineSettings();
+    serializeToJson( cncSettings.getRotationAxis( CNCMachineSettings::RotationAxisName::A ), cnfCNCSettings["Axis A"] );
+    serializeToJson( cncSettings.getRotationAxis( CNCMachineSettings::RotationAxisName::B ), cnfCNCSettings["Axis B"] );
+    serializeToJson( cncSettings.getRotationAxis( CNCMachineSettings::RotationAxisName::C ), cnfCNCSettings["Axis C"] );
+    std::string orderStr;
+    const auto& rotationAxesOrder = cncSettings.getRotationOrder();
+    for ( int i = 0; i < orderStr.size(); ++i )
+    {
+        if ( rotationAxesOrder[i] == CNCMachineSettings::RotationAxisName::A )
+            orderStr += "A";
+        else if ( rotationAxesOrder[i] == CNCMachineSettings::RotationAxisName::B )
+            orderStr += "B";
+        else if ( rotationAxesOrder[i] == CNCMachineSettings::RotationAxisName::C )
+            orderStr += "C";
+    }
+    cnfCNCSettings["Axes Order"] = orderStr;
+    cfg.setJsonValue( cncMachineSettingsKey, cnfCNCSettings );
+
 
     Json::Value colorThemePreset;
     colorThemePreset["TypeId"] = int( ColorTheme::getThemeType() );

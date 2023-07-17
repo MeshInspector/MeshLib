@@ -25,7 +25,13 @@ struct equalVector3f
     }
 };
 
+/// helper function to get rid of signed zero values; see \ref `VertexIdentifier` for more info
+void unsignZeroValues( Vector3f& v );
+
 /// this class is responsible for giving a unique id to each vertex with distinct coordinates
+/// NOTE: the points are considered non-identical if they have the same values but have zero values with different signs
+/// (e.g. (0; 0; 1) and (-0; 0; 1))
+/// use \ref `unsignZeroValues` function to get rid of signed zero values if you're unsure of their absence
 class VertexIdentifier
 {
 public:

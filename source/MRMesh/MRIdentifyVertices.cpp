@@ -8,6 +8,13 @@ namespace MR
 namespace MeshBuilder
 {
 
+void unsignZeroValues( Vector3f& v )
+{
+    for ( auto i = 0; i < Vector3f::elements; ++i )
+        if ( v[i] == 0.f && std::signbit( v[i] ) )
+            v[i] = 0.f;
+}
+
 void VertexIdentifier::reserve( size_t numTris )
 {
     hmap_.reserve( numTris / 2 ); // there should be about twice more triangles than vertices

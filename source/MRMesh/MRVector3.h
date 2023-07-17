@@ -67,6 +67,14 @@ struct Vector3
     {
         return xf ? ( *xf )( *this ) : *this;
     }
+
+    /// get rid of signed zero values to be sure that equal vectors have identical binary representation
+    void unsignZeroValues()
+    {
+        for ( auto i = 0; i < elements; ++i )
+            if ( (*this)[i] == 0.f && std::signbit( (*this)[i] ) )
+                (*this)[i] = 0.f;
+    }
 };
 
 /// \related Vector3

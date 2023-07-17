@@ -26,6 +26,9 @@ struct equalVector3f
 };
 
 /// this class is responsible for giving a unique id to each vertex with distinct coordinates
+/// NOTE: the points are considered non-identical if they have the same values but have zero values with different signs
+/// (e.g. (0; 0; 1) and (-0; 0; 1))
+/// use `Vector3::unsignZeroValues` method to get rid of signed zero values if you're unsure of their absence
 class VertexIdentifier
 {
 public:

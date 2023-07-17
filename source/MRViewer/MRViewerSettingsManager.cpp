@@ -29,6 +29,7 @@ const std::string cShowSelectedObjects = "showSelectedObjects";
 const std::string lastExtextentionsParamKey = "lastExtextentions";
 const std::string cSpaceMouseSettings = "spaceMouseSettings";
 const std::string cMSAA = "multisampleAntiAliasing";
+const std::string cncMachineSettingsKey = "CNCMachineSettings";
 }
 
 namespace MR
@@ -86,7 +87,14 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         }
     }
 
+    // SceneSettings
     SceneSettings::set( SceneSettings::Type::MeshFlatShading, cfg.getBool( cFlatShadingParamKey, SceneSettings::get( SceneSettings::Type::MeshFlatShading ) ) );
+    if ( cfg.hasJsonValue( cncMachineSettingsKey ) )
+    {
+        CNCMachineSettings cncSettings;
+        cncSettings.loadFromJson( cfg.getJsonValue(cncMachineSettingsKey) );
+        SceneSettings::setCNCMachineSettings( cncSettings );
+    }
 
     ColorTheme::Type colorThemeType = ColorTheme::Type::Default;
     std::string colorThemeName = ColorTheme::getPresetName( ColorTheme::Preset::Default ); // default
@@ -258,7 +266,11 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     }
     cfg.setJsonValue( cSceneControlParamKey, sceneControls );
 
+    // SceneSettings
     cfg.setBool( cFlatShadingParamKey, SceneSettings::get( SceneSettings::Type::MeshFlatShading ) );
+    Json::Value cnfCNCSettings = SceneSettings::getCNCMachineSettings().saveToJson();
+    cfg.setJsonValue( cncMachineSettingsKey, cnfCNCSettings );
+
 
     Json::Value colorThemePreset;
     colorThemePreset["TypeId"] = int( ColorTheme::getThemeType() );

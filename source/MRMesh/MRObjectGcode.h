@@ -23,6 +23,9 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
+    MRMESH_API virtual void setCNCMachineSettings( const CNCMachineSettings& cncSettings );
+    virtual const CNCMachineSettings& getCNCMachineSettings() const { return cncMachineSettings_; }
+
     MRMESH_API virtual void setGcodeSource( const std::shared_ptr<GcodeSource>& gcodeSource );
     virtual const std::shared_ptr<GcodeSource>& gcodeSource() const { return gcodeSource_; }
     // get action list (produced from g-code source)
@@ -71,6 +74,7 @@ protected:
 private:
     std::shared_ptr<GcodeSource> gcodeSource_;
     std::vector<GcodeProcessor::MoveAction> actionList_;
+    CNCMachineSettings cncMachineSettings_;
     void updateHeapUsageCache_();
     size_t nonTrivialHeapUsageCache_{ 0 };
 
@@ -81,7 +85,7 @@ private:
     bool feedrateGradientEnabled_ = true;
 
     void updateColors_();
-
+    void updateAll_();
 };
 
 }

@@ -999,6 +999,9 @@
     <ClInclude Include="MRVDBFloatGrid.h">
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
+    <ClInclude Include="MRCNCMachineSettings.h">
+      <Filter>Source Files\Gcode</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1657,6 +1660,9 @@
     </ClCompile>
     <ClCompile Include="MRInnerShell.cpp">
       <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCNCMachineSettings.cpp">
+      <Filter>Source Files\Gcode</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -72,44 +72,14 @@ GcodeProcessor::MoveAction GcodeProcessor::processLine( const std::string_view& 
     return {};
 }
 
-void GcodeProcessor::setRotationParams( RotationAxisName paramName, const Vector3f& rotationAxis )
+void GcodeProcessor::setCNCMachineSettings( const CNCMachineSettings& settings )
 {
-    const int intParamName = int( paramName );
-    const bool validParamName = intParamName < int( RotationAxisName::Count );
-    if ( !validParamName )
-        return;
-
-    if ( rotationAxis.lengthSq() < 0.01f )
-        return;
-
-    rotationAxes_[intParamName] = rotationAxis;
-}
-
-Vector3f GcodeProcessor::getRotationParams( RotationAxisName paramName ) const
-{
-    const int intParamName = int( paramName );
-    const bool validParamName = intParamName < int( RotationAxisName::Count );
-    if ( !validParamName )
-        return {};
-
-    return rotationAxes_[intParamName];
-}
-
-void GcodeProcessor::setRotationOrder( const RotationAxisOrder& rotationAxesOrder )
-{
-    rotationAxesOrder_.clear();
-    rotationAxesOrderMap_.clear();
-    for ( int i = 0; i < rotationAxesOrder.size(); ++i )
+    cncSettings_ = settings;
+    const auto& axesOrder = cncSettings_.getRotationOrder();
+    rotationAxesOrderMap_.resize( axesOrder.size() );
+    for ( int i = 0; i < axesOrder.size(); ++i )
     {
-        const int intRotationAxis = int( rotationAxesOrder[i] );
-        if ( intRotationAxis == int( RotationAxisName::Count ) )
-            continue;
-
-        if ( std::find( rotationAxesOrderMap_.begin(), rotationAxesOrderMap_.end(), intRotationAxis ) != rotationAxesOrderMap_.end() )
-            continue;
-
-        rotationAxesOrder_.push_back( rotationAxesOrder[i] );
-        rotationAxesOrderMap_.push_back( intRotationAxis );
+        rotationAxesOrderMap_[i] = int( axesOrder[i] );
     }
 }
 
@@ -479,10 +449,11 @@ MR::Vector3f GcodeProcessor::calcCoordMotors_()
 MR::Vector3f GcodeProcessor::calcRealCoord_( const Vector3f& translationPos, const Vector3f& rotationAngles )
 {
     Vector3f res = translationPos;
-    for ( int i = 0; i < rotationAxesOrderMap_.size(); ++i )
+    const auto& axesOrder = cncSettings_.getRotationOrder();
+    for ( int i = 0; i < axesOrder.size(); ++i )
     {
-        const int axisNumber = rotationAxesOrderMap_[i];
-        const Matrix3f rotationMatrix = Matrix3f::rotation( rotationAxes_[axisNumber], rotationAngles[axisNumber] / 180.f * PI_F );
+        const int axisNumber = int( axesOrder[i] );
+        const Matrix3f rotationMatrix = Matrix3f::rotation( cncSettings_.getRotationAxis( axesOrder[i] ), rotationAngles[axisNumber] / 180.f * PI_F );
         res = rotationMatrix * res;
     }
     return res;
@@ -493,7 +464,7 @@ void GcodeProcessor::updateRotationAngleAndMatrix_( const Vector3f& rotationAngl
     for ( int i = 0; i < 3; ++i )
     {
         rotationAngles_[i] = rotationAngles[i];
-        cacheRotationMatrix_[i] = Matrix3f::rotation( rotationAxes_[i], rotationAngles_[i] / 180.f * PI_F );
+        cacheRotationMatrix_[i] = Matrix3f::rotation( cncSettings_.getRotationAxis( CNCMachineSettings::RotationAxisName( i ) ), rotationAngles_[i] / 180.f * PI_F );
     }
 }
 
@@ -506,9 +477,10 @@ MR::Vector3f GcodeProcessor::calcRealCoordCached_( const Vector3f& translationPo
 MR::Vector3f GcodeProcessor::calcRealCoordCached_( const Vector3f& translationPos )
 {
     Vector3f res = translationPos;
+    const auto& axesOrder = cncSettings_.getRotationOrder();
     for ( int i = 0; i < 3; ++i )
     {
-        const int axisNumber = rotationAxesOrderMap_[i];
+        const int axisNumber = int( axesOrder[i] );
         res = cacheRotationMatrix_[axisNumber] * res;
     }
     return res;

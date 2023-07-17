@@ -78,6 +78,8 @@ void FastWindingNumber::calcFromVector( std::vector<float>& res, const std::vect
     data_->cudaResult.resize( size );
 
     fastWindingNumberFromVector( data_->cudaPoints.data(), data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(), data_->cudaResult.data(), beta, int( skipFace ), size );
+    CUDA_EXEC( cudaGetLastError() );
+
     data_->cudaResult.toVector( res );
 }
 
@@ -92,6 +94,9 @@ bool FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, Prog
     data_->cudaResult.resize( size );
 
     fastWindingNumberFromMesh(data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(), data_->cudaResult.data(), beta, size);
+    if ( CUDA_EXEC( cudaGetLastError() ) )
+        return false;
+
     std::vector<float> wns;
     data_->cudaResult.toVector( wns );
     if ( !reportProgress( cb, 0.9f ) )
@@ -133,6 +138,9 @@ VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vec
         data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(),
         data_->cudaResult.data(), beta );
     
+    if ( auto code = CUDA_EXEC( cudaGetLastError() ) )
+        return unexpected( Cuda::getError( code ) );
+
     if ( auto code = data_->cudaResult.toVector( res ) )
         return unexpected( Cuda::getError( code ) );
 
@@ -169,6 +177,9 @@ VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& r
         float3{ voxelSize.x, voxelSize.y, voxelSize.z }, cudaGridToMeshXf,
         data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(),
         data_->cudaResult.data(), beta, maxDistSq, minDistSq );
+
+    if ( auto code = CUDA_EXEC( cudaGetLastError() ) )
+        return unexpected( Cuda::getError( code ) );
 
     if ( auto code = data_->cudaResult.toVector( res ) )
         return unexpected( Cuda::getError( code ) );

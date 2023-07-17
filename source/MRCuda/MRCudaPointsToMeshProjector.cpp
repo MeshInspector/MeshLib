@@ -100,6 +100,8 @@ void PointsToMeshProjector::findProjections(
     meshData_->cudaResult.resize( size );
 
     meshProjectionKernel( meshData_->cudaPoints.data(), meshData_->cudaNodes.data(), meshData_->cudaMeshPoints.data(), meshData_->cudaFaces.data(), meshData_->cudaResult.data(), meshData_->xf, meshData_->refXf, upDistLimitSq, loDistLimitSq, size );
+    CUDA_EXEC( cudaGetLastError() );
+
     meshData_->cudaResult.toVector( res );
 
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, res.size() ), [&] ( const tbb::blocked_range<size_t>& range )

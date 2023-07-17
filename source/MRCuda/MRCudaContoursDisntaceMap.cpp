@@ -34,7 +34,8 @@ DistanceMap distanceMapFromContours( const MR::Polyline2& polyline, const Contou
         { params.resolution.x, params.resolution.y }, 
         { params.pixelSize.x, params.pixelSize.y }, 
         cudaNodes.data(), cudaPts.data(), cudaEdges.data(), cudaRes.data(), size );
-    
+    CUDA_EXEC( cudaGetLastError() );
+
     DistanceMap res( params.resolution.x, params.resolution.y );
     std::vector<float> vec( size );
     cudaRes.toVector( vec );

@@ -294,23 +294,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
 
     // SceneSettings
     cfg.setBool( cFlatShadingParamKey, SceneSettings::get( SceneSettings::Type::MeshFlatShading ) );
-    Json::Value cnfCNCSettings;
-    const auto& cncSettings = SceneSettings::getCNCMachineSettings();
-    serializeToJson( cncSettings.getRotationAxis( CNCMachineSettings::RotationAxisName::A ), cnfCNCSettings["Axis A"] );
-    serializeToJson( cncSettings.getRotationAxis( CNCMachineSettings::RotationAxisName::B ), cnfCNCSettings["Axis B"] );
-    serializeToJson( cncSettings.getRotationAxis( CNCMachineSettings::RotationAxisName::C ), cnfCNCSettings["Axis C"] );
-    std::string orderStr;
-    const auto& rotationAxesOrder = cncSettings.getRotationOrder();
-    for ( int i = 0; i < orderStr.size(); ++i )
-    {
-        if ( rotationAxesOrder[i] == CNCMachineSettings::RotationAxisName::A )
-            orderStr += "A";
-        else if ( rotationAxesOrder[i] == CNCMachineSettings::RotationAxisName::B )
-            orderStr += "B";
-        else if ( rotationAxesOrder[i] == CNCMachineSettings::RotationAxisName::C )
-            orderStr += "C";
-    }
-    cnfCNCSettings["Axes Order"] = orderStr;
+    Json::Value cnfCNCSettings = SceneSettings::getCNCMachineSettings().saveToJson();
     cfg.setJsonValue( cncMachineSettingsKey, cnfCNCSettings );
 
 

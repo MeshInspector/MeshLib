@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRVector3.h"
+#include "MRPch/MRJson.h"
 #include <array>
 
 namespace MR
@@ -27,6 +28,11 @@ public:
     // duplicated values will be removed (ABAAC - > ABC)
     MRMESH_API void setRotationOrder( const RotationAxesOrder& rotationAxesOrder );
     const RotationAxesOrder& getRotationOrder() const { return rotationAxesOrder_; }
+
+
+    MRMESH_API Json::Value saveToJson() const;
+    MRMESH_API void loadFromJson( const Json::Value& jsonValue );
+
 private:
     // direction of axes around which the rotation occurs A, B, C
     std::array<Vector3f, 3> rotationAxes_ = { Vector3f::minusX(), Vector3f::minusY(), Vector3f::plusZ() };

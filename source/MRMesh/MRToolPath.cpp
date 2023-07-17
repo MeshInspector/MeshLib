@@ -483,11 +483,16 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
                     bottomRightIt = it;
             }
 
-            if ( cutDirection == Axis::Y )
-                std::swap( bottomLeftIt, bottomRightIt );
-
             // move from left to right and then  from right to left to make the smoothest path
             const bool moveForward = step & 1;
+
+            if ( cutDirection == Axis::Y )
+            {
+                std::swap( bottomLeftIt, bottomRightIt );
+                if ( !moveForward && bottomLeftIt != contour.begin() )
+                    --bottomLeftIt;
+            }
+            
             const auto intervals = getIntervals( mp, bottomLeftIt, bottomRightIt, contour.begin(), contour.end(), moveForward );
             if ( intervals.empty() )
                 continue;
@@ -523,6 +528,9 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
                 }
                 else
                 {
+                    if ( interval.first == contour.begin() )
+                        continue;
+
                     for ( auto it = interval.first - 1; it >= interval.second; --it )
                         addPoint( *it );
                 }
@@ -1081,6 +1089,8 @@ std::vector<GCommand> replaceLineSegmentsWithCircularArcs( const std::span<GComm
                 bestArcStart = p0;
                 bestArcEnd = p2;
                 CCWrotation = ccwRotation;
+                if ( axis == Axis::Y )
+                    CCWrotation = !CCWrotation;
                 bestArcR = rArc;
 
                 if ( i < path.size() - 1 )

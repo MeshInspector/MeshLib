@@ -91,34 +91,8 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     SceneSettings::set( SceneSettings::Type::MeshFlatShading, cfg.getBool( cFlatShadingParamKey, SceneSettings::get( SceneSettings::Type::MeshFlatShading ) ) );
     if ( cfg.hasJsonValue( cncMachineSettingsKey ) )
     {
-        auto cnfCNCSettings = cfg.getJsonValue( cncMachineSettingsKey );
         CNCMachineSettings cncSettings;
-
-        auto loadAxisFromJson = [&cnfCNCSettings, &cncSettings] ( std::string jsonName, CNCMachineSettings::RotationAxisName axisName )
-        {
-            Vector3f vec3f;
-            deserializeFromJson( cnfCNCSettings[jsonName], vec3f );
-            if ( vec3f != Vector3f() )
-                cncSettings.setRotationAxis( axisName, vec3f );
-        };
-        loadAxisFromJson( "Axis A", CNCMachineSettings::RotationAxisName::A );
-        loadAxisFromJson( "Axis B", CNCMachineSettings::RotationAxisName::B );
-        loadAxisFromJson( "Axis C", CNCMachineSettings::RotationAxisName::C );
-        if ( cnfCNCSettings["Axes Order"].isString() )
-        {
-            CNCMachineSettings::RotationAxesOrder rotationAxesOrder;
-            std::string orderStr = cnfCNCSettings["Axes Order"].asString();
-            for ( int i = 0; i < orderStr.size(); ++i )
-            {
-                if ( orderStr[i] == 'A' )
-                    rotationAxesOrder.push_back( CNCMachineSettings::RotationAxisName::A );
-                else if ( orderStr[i] == 'B' )
-                    rotationAxesOrder.push_back( CNCMachineSettings::RotationAxisName::B );
-                else if ( orderStr[i] == 'C' )
-                    rotationAxesOrder.push_back( CNCMachineSettings::RotationAxisName::C );
-            }
-            cncSettings.setRotationOrder( rotationAxesOrder );
-        }
+        cncSettings.loadFromJson( cfg.getJsonValue(cncMachineSettingsKey) );
         SceneSettings::setCNCMachineSettings( cncSettings );
     }
 

@@ -132,12 +132,11 @@ void contoursDistanceMapProjectionKernel(
     const Node2* nodes, const float2* polylinePoints, const PolylineHalfEdgeRecord* edges, float* dists,
     const size_t size )
 {
-    int maxThreadsPerBlock = 0;
-    CUDA_EXEC( cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 ) );
+    constexpr int maxThreadsPerBlock = 640;
     int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
 
     // kernel
-    kernel << <numBlocks, maxThreadsPerBlock >> > ( 
+    kernel<<< numBlocks, maxThreadsPerBlock >>>(
         originPoint, resolution, pixelSize,
         nodes, polylinePoints, edges, dists, size );
 }

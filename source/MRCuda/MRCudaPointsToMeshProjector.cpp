@@ -36,6 +36,7 @@ void PointsToMeshProjector::updateMeshData( const MR::Mesh* mesh )
         mesh_ = nullptr;
         return;
     }
+    MR_TIMER
 
     const AABBTree& tree = mesh->getAABBTree();
     const auto& nodes = tree.nodes();

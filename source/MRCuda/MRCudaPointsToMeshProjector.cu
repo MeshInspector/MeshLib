@@ -5,7 +5,7 @@
 namespace MR { namespace Cuda {
 
 __global__ void kernel( const float3* points,
-    const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
+    const Node3* __restrict__ nodes, const float3* __restrict__ meshPoints, const FaceToThreeVerts* __restrict__ faces,
     MeshProjectionResult* resVec, const Matrix4 xf, const Matrix4 refXf, float upDistLimitSq, float loDistLimitSq, size_t size )
 {
     if ( size == 0 )

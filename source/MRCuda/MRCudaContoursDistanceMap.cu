@@ -38,10 +38,10 @@ __device__ float2 closestPointOnLineSegm( const float2& pt, const float2& a, con
     return a * ( 1 - ratio ) + b * ratio;
 }
 
-__global__ void kernel( 
-    const float2 originPoint, const int2 resolution, const float2 pixelSize, 
-    const Node2* nodes, const float2* polylinePoints, const PolylineHalfEdgeRecord* edges, float* dists, 
-    const size_t size )
+__global__ void kernel(
+    const float2 originPoint, const int2 resolution, const float2 pixelSize,
+    const Node2* __restrict__ nodes, const float2* __restrict__ polylinePoints, const PolylineHalfEdgeRecord* __restrict__ edges,
+    float* dists, const size_t size )
 {
     if ( size == 0 )
     {

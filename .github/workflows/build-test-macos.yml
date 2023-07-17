@@ -59,12 +59,12 @@ jobs:
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
         run: |
           ./scripts/distribution_apple.sh
-          mv MeshLib_.pkg meshlib_x64.pkg
+          mv MeshLib_.pkg meshlib_${{matrix.os}}.pkg
 
       - name: Upload Macos Distribution
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
         uses: actions/upload-artifact@v3
         with:
           name: Distributives
-          path: meshlib_x64.pkg
+          path: meshlib_${{matrix.os}}.pkg
           retention-days: 1

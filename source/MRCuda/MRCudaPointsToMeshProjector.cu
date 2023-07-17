@@ -107,10 +107,9 @@ void meshProjectionKernel( const float3* points,
                            const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                            MeshProjectionResult* resVec, const Matrix4 xf, const Matrix4 refXf, float upDistLimitSq, float loDistLimitSq, size_t size )
 {
-    int maxThreadsPerBlock = 0;
-    CUDA_EXEC( cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 ) );
+    constexpr int maxThreadsPerBlock = 640;
     int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
-    kernel << <numBlocks, maxThreadsPerBlock >> > ( points, nodes, meshPoints, faces, resVec, xf, refXf, upDistLimitSq, loDistLimitSq, size );
+    kernel<<< numBlocks, maxThreadsPerBlock >>>( points, nodes, meshPoints, faces, resVec, xf, refXf, upDistLimitSq, loDistLimitSq, size );
 }
 
 }}

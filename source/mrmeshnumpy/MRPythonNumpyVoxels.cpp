@@ -7,20 +7,19 @@ MR::SimpleVolume simpleVolumeFrom3Darray( const pybind11::buffer& voxelsArray )
 {
     pybind11::buffer_info info = voxelsArray.request();
     if ( info.ndim != 3 )
-    {
-        PyErr_SetString( PyExc_RuntimeError, "shape of input python vector 'voxelsArray' should be (x,y,z)" );
-        assert( false );
-    }
+        throw std::runtime_error( "shape of input python vector 'voxelsArray' should be (x,y,z)" );
 
     MR::SimpleVolume res;
     res.dims = MR::Vector3i( int( info.shape[0] ), int( info.shape[1] ), int( info.shape[2] ) );
     size_t countPoints = res.dims.x * res.dims.y * res.dims.z;
     res.data.resize( countPoints );
 
+    auto strideX = info.strides[0] / info.itemsize;
+    auto strideY = info.strides[1] / info.itemsize;
+    auto strideZ = info.strides[2] / info.itemsize;
+
     const size_t cX = res.dims.x;
     const size_t cXY = res.dims.x * res.dims.y;
-    const size_t cZ = res.dims.z;
-    const size_t cZY = res.dims.z * res.dims.y;
 
     if ( info.format == pybind11::format_descriptor<double>::format() )
     {
@@ -28,7 +27,7 @@ MR::SimpleVolume simpleVolumeFrom3Darray( const pybind11::buffer& voxelsArray )
         for ( size_t x = 0; x < res.dims.x; ++x )
         for ( size_t y = 0; y < res.dims.y; ++y )
         for ( size_t z = 0; z < res.dims.z; ++z )
-            res.data[x + y * cX + z * cXY] = float( data[x * cZY + y * cZ + z] );
+            res.data[x + y * cX + z * cXY] = float( data[x * strideX + y * strideY + z * strideZ] );
     }
     else if ( info.format == pybind11::format_descriptor<float>::format() )
     {
@@ -36,13 +35,10 @@ MR::SimpleVolume simpleVolumeFrom3Darray( const pybind11::buffer& voxelsArray )
         for ( size_t x = 0; x < res.dims.x; ++x )
         for ( size_t y = 0; y < res.dims.y; ++y )
         for ( size_t z = 0; z < res.dims.z; ++z )
-            res.data[x + y * cX + z * cXY] = data[x * cZY + y * cZ + z];
+            res.data[x + y * cX + z * cXY] = data[x * strideX + y * strideY + z * strideZ];
     }
     else
-    {
-        PyErr_SetString( PyExc_RuntimeError, "dtype of input python vector should be float32 or float64" );
-        assert( false );
-    }
+        throw std::runtime_error( "dtype of input python vector should be float32 or float64" );
 
     return res;
 }

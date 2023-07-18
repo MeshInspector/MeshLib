@@ -121,7 +121,7 @@ bool WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
     for ( const auto& [key, value] : inst.headers_ )
         headers[key] = value;
 
-    auto sendLambda = [tm, body, params, headers, method = inst.method_, url = std::move( urlP )]()
+    auto sendLambda = [tm, body, params, headers, method = inst.method_, url = urlP]()
     {
         cpr::Response response;
         if ( method == Method::Get )
@@ -137,6 +137,7 @@ bool WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         auto res = sendLambda();
         spdlog::info( "WebResponse {}: {}", logName.c_str(), int( res.status_code ) );
         Json::Value resJson;
+        resJson["url"] = urlP;
         resJson["code"] = int( res.status_code );
         resJson["text"] = res.text;
         resJson["error"] = res.error.message;
@@ -145,12 +146,13 @@ bool WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
     }
     else
     {
-        std::thread requestThread = std::thread( [sendLambda, callback, logName] ()
+        std::thread requestThread = std::thread( [sendLambda, callback, logName, url = urlP] ()
         {
             spdlog::info( "WebRequest  {}", logName.c_str() );
             auto res = sendLambda();
             spdlog::info( "WebResponse {}: {}", logName.c_str(), int( res.status_code ) );
             Json::Value resJson;
+            resJson["url"] = url;
             resJson["code"] = int( res.status_code );
             resJson["text"] = res.text;
             resJson["error"] = res.error.message;
@@ -205,6 +207,8 @@ Expected<Json::Value, std::string> parseResponse( const Json::Value& response )
         if ( !error.empty() && error != "OK" )
             return unexpected( error );
     }
+    if ( response["code"].asInt() == 403 )
+        return unexpected( "Connection to " + response["url"].asString() + " is forbidden." );
     std::string text;
     if ( !response["text"].isString() )
         return unexpected( "Unknown error." );

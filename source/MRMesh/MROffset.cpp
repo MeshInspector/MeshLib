@@ -167,12 +167,12 @@ Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         VdbVolume volume = floatGridToVdbVolume( voxelRes );
         volume.voxelSize = Vector3f::diagonal( params.voxelSize );
 
-        VolumeToMeshParams vmParams;
+        MarchingCubesParams vmParams;
         vmParams.iso = offsetInVoxels;
         vmParams.lessInside = true;
         vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
         vmParams.outVoxelPerFaceMap = outMap;
-        auto meshRes = vdbVolumeToMesh( volume, vmParams );
+        auto meshRes = marchingCubes( volume, vmParams );
         if ( !meshRes )
             return unexpectedOperationCanceled();
 
@@ -180,7 +180,7 @@ Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
     }
     else
     {
-        MeshToSimpleVolumeParams msParams;
+        MeshToDistanceVolumeParams msParams;
         msParams.cb = meshToLSCb;
         auto box = mesh.getBoundingBox();
         auto absOffset = std::abs( offset );
@@ -193,17 +193,17 @@ Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         msParams.minDistSq = sqr( std::max( absOffset - params.voxelSize, 0.0f ) );
         msParams.fwn = params.fwn;
         
-        auto volume = meshToSimpleVolume( mesh, msParams );
+        auto volume = meshToDistanceVolume( mesh, msParams );
         if ( !volume )
             return unexpectedOperationCanceled();
 
-        VolumeToMeshParams vmParams;
+        MarchingCubesParams vmParams;
         vmParams.origin = msParams.origin;
         vmParams.iso = offset;
         vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
         vmParams.lessInside = true;
         vmParams.outVoxelPerFaceMap = outMap;
-        auto meshRes = simpleVolumeToMesh( std::move( *volume ), vmParams );
+        auto meshRes = marchingCubes( std::move( *volume ), vmParams );
         if ( !meshRes )
             return unexpectedOperationCanceled();
         return std::move( *meshRes );

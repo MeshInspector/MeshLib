@@ -205,6 +205,8 @@ Expected<Json::Value, std::string> parseResponse( const Json::Value& response )
         if ( !error.empty() && error != "OK" )
             return unexpected( error );
     }
+    if ( response["code"].asInt() == 403 )
+        return unexpected( "Forbidden. Please contact your administrator." );
     std::string text;
     if ( !response["text"].isString() )
         return unexpected( "Unknown error." );

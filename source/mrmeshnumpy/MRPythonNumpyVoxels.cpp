@@ -20,8 +20,6 @@ MR::SimpleVolume simpleVolumeFrom3Darray( const pybind11::buffer& voxelsArray )
 
     const size_t cX = res.dims.x;
     const size_t cXY = res.dims.x * res.dims.y;
-    const size_t cZ = res.dims.z;
-    const size_t cZY = res.dims.z * res.dims.y;
 
     if ( info.format == pybind11::format_descriptor<double>::format() )
     {

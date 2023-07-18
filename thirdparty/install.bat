@@ -32,7 +32,10 @@ for /f "delims=" %%i in ('type "%~dp0..\requirements\windows.txt"') do (
   set packages=!packages! %%i
 )
 
+echo VCPKG_BINARY_SOURCES: %VCPKG_BINARY_SOURCES%
 vcpkg install vcpkg-cmake vcpkg-cmake-config --host-triplet x64-windows-meshlib --overlay-triplets "%~dp0vcpkg\triplets"  --debug --x-abi-tools-use-exact-versions
+
+echo VCPKG_BINARY_SOURCES: %VCPKG_BINARY_SOURCES%
 vcpkg install !packages! --host-triplet x64-windows-meshlib --overlay-triplets "%~dp0vcpkg\triplets" --debug --x-abi-tools-use-exact-versions
 
 endlocal

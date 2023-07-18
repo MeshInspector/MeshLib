@@ -3,6 +3,7 @@
 #include "MRObject.h"
 #include "MRVector3.h"
 #include "MRVector4.h"
+#include "MRMatrix2.h"
 #include "MRMatrix3.h"
 #include "MRBase64.h"
 #include "MRBitSet.h"
@@ -521,6 +522,14 @@ void serializeToJson( const Color& col, Json::Value& root )
     root["a"] = col.a;
 }
 
+void serializeToJson( const Matrix2f& matrix, Json::Value& root, bool skipIdentity )
+{
+    if ( skipIdentity && matrix == Matrix2f() )
+        return; // skip saving, it will initialized as Matrix2f() anyway
+    serializeToJson( matrix.x, root["rowX"] );
+    serializeToJson( matrix.y, root["rowY"] );
+}
+
 void serializeToJson( const Matrix3f& matrix, Json::Value& root, bool skipIdentity )
 {
     if ( skipIdentity && matrix == Matrix3f() )
@@ -528,6 +537,14 @@ void serializeToJson( const Matrix3f& matrix, Json::Value& root, bool skipIdenti
     serializeToJson( matrix.x, root["rowX"] );
     serializeToJson( matrix.y, root["rowY"] );
     serializeToJson( matrix.z, root["rowZ"] );
+}
+
+void serializeToJson( const AffineXf2f& xf, Json::Value& root, bool skipIdentity )
+{
+    if ( skipIdentity && xf == AffineXf2f() )
+        return; // skip saving, it will initialized as AffineXf2f() anyway
+    serializeToJson( xf.A, root["A"] );
+    serializeToJson( xf.b, root["b"] );
 }
 
 void serializeToJson( const AffineXf3f& xf, Json::Value& root, bool skipIdentity )
@@ -753,11 +770,24 @@ void deserializeFromJson( const Json::Value& root, Color& col )
     }
 }
 
+void deserializeFromJson( const Json::Value& root, Matrix2f& matrix )
+{
+    deserializeFromJson( root["rowX"], matrix.x );
+    deserializeFromJson( root["rowY"], matrix.y );
+}
+
 void deserializeFromJson( const Json::Value& root, Matrix3f& matrix )
 {
     deserializeFromJson( root["rowX"], matrix.x );
     deserializeFromJson( root["rowY"], matrix.y );
     deserializeFromJson( root["rowZ"], matrix.z );
+}
+
+void deserializeFromJson( const Json::Value& root, AffineXf2f& xf )
+{
+    if ( root["A"].isObject() )
+        deserializeFromJson( root["A"], xf.A );
+    deserializeFromJson( root["b"], xf.b );
 }
 
 void deserializeFromJson( const Json::Value& root, AffineXf3f& xf )

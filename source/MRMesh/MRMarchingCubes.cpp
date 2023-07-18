@@ -1,184 +1,19 @@
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-#include "MRVoxelsConversions.h"
+#include "MRMarchingCubes.h"
+#include "MRIsNaN.h"
 #include "MRMesh.h"
 #include "MRVolumeIndexer.h"
-#include "MRIntersectionPrecomputes.h"
-#include "MRMeshIntersect.h"
 #include "MRLine3.h"
 #include "MRMeshBuilder.h"
 #include "MRVDBFloatGrid.h"
 #include "MRTimer.h"
-#include "MRFastWindingNumber.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MROpenvdb.h"
 #include <limits>
-#include <optional>
 #include <thread>
-
-
-namespace
-{
-constexpr float cQuietNan = std::numeric_limits<float>::quiet_NaN();
-#if !defined( __GNUC__ ) || __GNUC__ >= 11
-constexpr int cQuietNanBits = std::bit_cast< int >( cQuietNan );
-#endif
-
-inline bool isNanFast( float f )
-{
-#if defined( __GNUC__ ) && __GNUC__ < 11
-    return std::isnan( f );
-#else
-    return std::bit_cast< int >( f ) == cQuietNanBits;
-#endif
-}
-}
 
 namespace MR
 {
-
-class MinMaxCalc
-{
-public:
-    MinMaxCalc( const std::vector<float>& vec )
-    : vec_( vec )
-    {}
-
-    MinMaxCalc(const MinMaxCalc& other, tbb::split)
-    : min_(other.min_)
-    , max_(other.max_)
-    ,vec_( other.vec_)
-    {}
-
-    void operator()( const tbb::blocked_range<size_t>& r )
-    {
-        for ( auto i = r.begin(); i < r.end(); ++i )
-        {
-            if ( vec_[i] < min_ )
-                min_ = vec_[i];
-
-            if ( vec_[i] > max_ )
-                max_ = vec_[i];
-        }
-    }
-
-    void join( const MinMaxCalc& other )
-    {
-        min_ = std::min( min_, other.min_ );
-        max_ = std::max( max_, other.max_ );
-    }
-
-    float min() { return min_; }
-    float max() { return max_; }
-
-private:
-    float min_{ FLT_MAX };
-    float max_{ -FLT_MAX };
-    const std::vector<float>& vec_;
-};
-
-Expected<SimpleVolume, std::string> meshToSimpleVolume( const Mesh& mesh, const MeshToSimpleVolumeParams& params /*= {} */ )
-{
-    MR_TIMER
-    SimpleVolume res;
-    res.voxelSize = params.voxelSize;
-    res.dims = params.dimensions;
-    VolumeIndexer indexer( res.dims );
-    res.data.resize( indexer.size() );
-
-    // used in Winding rule mode
-    const IntersectionPrecomputes<double> precomputedInter( Vector3d::plusX() );
-    
-    if ( params.signMode == SignDetectionMode::HoleWindingRule )
-    {
-        auto fwn = params.fwn;
-        if ( !fwn )
-            fwn = std::make_shared<FastWindingNumber>( mesh );
-
-        auto basis = AffineXf3f::linear( Matrix3f::scale( params.voxelSize ) );
-        basis.b = params.origin;
-        constexpr float beta = 2;
-        if ( auto d = fwn->calcFromGridWithDistances( res.data, res.dims, Vector3f::diagonal( 0.5f ), Vector3f::diagonal( 1.0f ), basis, beta,
-            params.maxDistSq, params.minDistSq, params.cb ); !d )
-        {
-            return unexpected( std::move( d.error() ) );
-        }
-        MinMaxCalc minMaxCalc( res.data );
-        tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, res.data.size() ), minMaxCalc );
-        res.min = minMaxCalc.min();
-        res.max = minMaxCalc.max();
-        return res;
-    }
-
-    std::atomic<bool> keepGoing{ true };
-    auto mainThreadId = std::this_thread::get_id();
-    tbb::enumerable_thread_specific<std::pair<float, float>> minMax( std::pair<float, float>{ FLT_MAX, -FLT_MAX } );
-
-    auto core = [&] ( const tbb::blocked_range<size_t>& range )
-    {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
-                break;
-
-            auto coord = Vector3f( indexer.toPos( VoxelId( i ) ) ) + Vector3f::diagonal( 0.5f );
-            auto voxelCenter = params.origin + mult( params.voxelSize, coord );
-            float dist{ 0.0f };
-            if ( params.signMode != SignDetectionMode::ProjectionNormal )
-                dist = std::sqrt( findProjection( voxelCenter, mesh, params.maxDistSq, nullptr, params.minDistSq ).distSq );
-            else
-            {
-                auto s = findSignedDistance( voxelCenter, mesh, params.maxDistSq, params.minDistSq );
-                dist = s ? s->dist : cQuietNan;
-            }
-
-            if ( !isNanFast( dist ) )
-            {
-                bool changeSign = false;
-                if ( params.signMode == SignDetectionMode::WindingRule )
-                {
-                    int numInters = 0;
-                    rayMeshIntersectAll( mesh, Line3d( Vector3d( voxelCenter ), Vector3d::plusX() ),
-                        [&numInters] ( const MeshIntersectionResult& ) mutable
-                    {
-                        ++numInters;
-                        return true;
-                    } );
-                    changeSign = numInters % 2 == 1; // inside
-                }
-                if ( changeSign )
-                    dist = -dist;
-                auto& localMinMax = minMax.local();
-                if ( dist < localMinMax.first )
-                    localMinMax.first = dist;
-                if ( dist > localMinMax.second )
-                    localMinMax.second = dist;
-            }
-            res.data[i] = dist;
-            if ( params.cb && ( ( i % 1024 ) == 0 ) && std::this_thread::get_id() == mainThreadId )
-            {
-                if ( !params.cb( float( i ) / float( range.size() ) ) )
-                    keepGoing.store( false, std::memory_order_relaxed );
-            }
-        }
-    };
-
-    if ( params.cb )
-        // static partitioner is slower but is necessary for smooth progress reporting
-        tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size() ), core, tbb::static_partitioner() );
-    else
-        tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size() ), core );
-
-    if ( params.cb && !keepGoing )
-        return unexpectedOperationCanceled();
-    for ( const auto& [min, max] : minMax )
-    {
-        if ( min < res.min )
-            res.min = min;
-        if ( max > res.max )
-            res.max = max;
-    }
-    return res;
-}
 
 namespace MarchingCubesHelper
 {
@@ -638,7 +473,7 @@ Vector3f voxelPositionerLinear( const Vector3f& pos0, const Vector3f& pos1, floa
 template <bool UseDefaultVoxelPointPositioner>
 bool findSeparationPoint( SeparationPoint& sp, const VdbVolume& volume, const ConstAccessor& acc,
                           const openvdb::Coord& coord, const Vector3i& basePos, float valueB, NeighborDir dir,
-                          const VolumeToMeshParams& params )
+                          const MarchingCubesParams& params )
 {
     if ( basePos[int( dir )] + 1 >= volume.dims[int( dir )] )
         return false;
@@ -664,7 +499,7 @@ bool findSeparationPoint( SeparationPoint& sp, const VdbVolume& volume, const Co
 
 template <typename NaNChecker, bool UseDefaultVoxelPointPositioner>
 bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const VolumeIndexer& indexer, VoxelId base,
-                          const Vector3i& basePos, NeighborDir dir, const VolumeToMeshParams& params, NaNChecker&& nanChecker )
+                          const Vector3i& basePos, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker )
 {
     auto nextPos = basePos;
     nextPos[int( dir )] += 1;
@@ -694,7 +529,7 @@ bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const
 
 template <typename NaNChecker, bool UseDefaultVoxelPointPositioner>
 bool findSeparationPoint( SeparationPoint& sp, const FunctionVolume& volume, const Vector3i& basePos, NeighborDir dir,
-                          const VolumeToMeshParams& params, NaNChecker&& nanChecker )
+                          const MarchingCubesParams& params, NaNChecker&& nanChecker )
 {
     auto nextPos = basePos;
     nextPos[int( dir )] += 1;
@@ -731,7 +566,7 @@ template<> auto accessorCtor<VdbVolume>( const VdbVolume& v ) { return v.data->g
 template<> auto accessorCtor<FunctionVolume>( const FunctionVolume& ) { return (void*)nullptr; }
 
 template<typename V, typename NaNChecker, bool UseDefaultVoxelPointPositioner>
-Expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshParams& params, NaNChecker&& nanChecker )
+Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker )
 {
     if constexpr ( std::is_same_v<V, VdbVolume> )
     {
@@ -1155,7 +990,7 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const VolumeToMeshPar
 }
 
 template <typename V, typename NaNChecker>
-Expected<Mesh, std::string> volumeToMeshHelper1( const V& volume, const VolumeToMeshParams& params, NaNChecker&& nanChecker )
+Expected<Mesh, std::string> volumeToMeshHelper1( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker )
 {
     if ( !params.positioner )
         return volumeToMesh<V, NaNChecker, true>( volume, params, std::forward<NaNChecker>( nanChecker ) );
@@ -1164,7 +999,7 @@ Expected<Mesh, std::string> volumeToMeshHelper1( const V& volume, const VolumeTo
 }
 
 template <typename V>
-Expected<Mesh, std::string> volumeToMeshHelper2( const V& volume, const VolumeToMeshParams& params )
+Expected<Mesh, std::string> volumeToMeshHelper2( const V& volume, const MarchingCubesParams& params )
 {
     if ( params.omitNaNCheck )
         return volumeToMeshHelper1( volume, params, [] ( float ) { return false; } );
@@ -1172,17 +1007,32 @@ Expected<Mesh, std::string> volumeToMeshHelper2( const V& volume, const VolumeTo
         return volumeToMeshHelper1( volume, params, isNanFast );
 }
 
-Expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params /*= {} */ )
+Expected<Mesh, std::string> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {
     return volumeToMeshHelper2( volume, params );
 }
-Expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params /*= {} */ )
+Expected<Mesh, std::string> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {
     return volumeToMeshHelper2( volume, params );
 }
-Expected<Mesh, std::string> functionVolumeToMesh( const FunctionVolume& volume, const VolumeToMeshParams& params )
+Expected<Mesh, std::string> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params )
 {
     return volumeToMeshHelper2( volume, params );
+}
+
+Expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const MarchingCubesParams& params )
+{
+    return marchingCubes( volume, params );
+}
+
+Expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const MarchingCubesParams& params )
+{
+    return marchingCubes( volume, params );
+}
+
+Expected<Mesh, std::string> functionVolumeToMesh( const FunctionVolume& volume, const MarchingCubesParams& params )
+{
+    return marchingCubes( volume, params );
 }
 
 }

@@ -822,7 +822,7 @@
     <ClInclude Include="MRExtractIsolines.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
-    <ClInclude Include="MRVoxelsConversions.h">
+    <ClInclude Include="MRMarchingCubes.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRSharpenMarchingCubesMesh.h">
@@ -1001,6 +1001,15 @@
     </ClInclude>
     <ClInclude Include="MRCNCMachineSettings.h">
       <Filter>Source Files\Gcode</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshToDistanceVolume.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
+    <ClInclude Include="MRIsNaN.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVoxelsConversions.h">
+      <Filter>Source Files\Voxels</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1547,7 +1556,7 @@
     <ClCompile Include="MRExtractIsolines.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
-    <ClCompile Include="MRVoxelsConversions.cpp">
+    <ClCompile Include="MRMarchingCubes.cpp">
       <Filter>Source Files\Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRSharpenMarchingCubesMesh.cpp">
@@ -1663,6 +1672,9 @@
     </ClCompile>
     <ClCompile Include="MRCNCMachineSettings.cpp">
       <Filter>Source Files\Gcode</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshToDistanceVolume.cpp">
+      <Filter>Source Files\Voxels</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -168,13 +168,13 @@ Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface
         }
         else
         {
-            VolumeToMeshParams vparams;
+            MarchingCubesParams vparams;
             vparams.iso = iso;
             vparams.maxVertices = maxSurfaceVertices_;
             vparams.cb = myCb;
             if ( vdbVolume.data->getGridClass() == openvdb::GridClass::GRID_LEVEL_SET )
                 vparams.lessInside = true;
-            meshRes = vdbVolumeToMesh( vdbVolume, vparams );
+            meshRes = marchingCubes( vdbVolume, vparams );
         }
         if ( meshRes.has_value() )
             return std::make_shared<Mesh>( std::move( meshRes.value() ) );

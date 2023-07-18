@@ -22,6 +22,7 @@ var web_req_clear = function () {
 
 var web_req_send = function (url, async) {
     var method;
+    var urlCpy = url;
     if (web_req_method == 0)
         method = "GET";
     else
@@ -43,6 +44,7 @@ var web_req_send = function (url, async) {
     }
     req.onloadend = (e) => {
         var res = {
+            url: urlCpy,
             code: req.status,
             text: req.responseText,
             error: req.statusText

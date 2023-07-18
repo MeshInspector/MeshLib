@@ -1,9 +1,11 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRVector2.h"
 #include "MRVector3.h"
-#include "MRObject.h"
 #include "MRVector4.h"
+#include "MRMatrix2.h"
+#include "MRObject.h"
 #include "MRColor.h"
 #include "MRPlane3.h"
 #include "MRIOFilters.h"
@@ -114,7 +116,9 @@ MRMESH_API void serializeToJson( const Vector3i& vec, Json::Value& root );
 MRMESH_API void serializeToJson( const Vector3f& vec, Json::Value& root );
 MRMESH_API void serializeToJson( const Vector4f& vec, Json::Value& root );
 MRMESH_API void serializeToJson( const Color& col, Json::Value& root );
+MRMESH_API void serializeToJson( const Matrix2f& matrix, Json::Value& root, bool skipIdentity = true );
 MRMESH_API void serializeToJson( const Matrix3f& matrix, Json::Value& root, bool skipIdentity = true );
+MRMESH_API void serializeToJson( const AffineXf2f& xf, Json::Value& root, bool skipIdentity = true );
 MRMESH_API void serializeToJson( const AffineXf3f& xf, Json::Value& root, bool skipIdentity = true );
 MRMESH_API void serializeToJson( const BitSet& bitset, Json::Value& root );
 MRMESH_API VoidOrErrStr serializeToJson( const Mesh& mesh, Json::Value& root );
@@ -139,7 +143,9 @@ MRMESH_API void deserializeFromJson( const Json::Value& root, Vector3i& vec );
 MRMESH_API void deserializeFromJson( const Json::Value& root, Vector3f& vec );
 MRMESH_API void deserializeFromJson( const Json::Value& root, Vector4f& vec );
 MRMESH_API void deserializeFromJson( const Json::Value& root, Color& col );
+MRMESH_API void deserializeFromJson( const Json::Value& root, Matrix2f& matrix );
 MRMESH_API void deserializeFromJson( const Json::Value& root, Matrix3f& matrix );
+MRMESH_API void deserializeFromJson( const Json::Value& root, AffineXf2f& xf );
 MRMESH_API void deserializeFromJson( const Json::Value& root, AffineXf3f& xf );
 MRMESH_API void deserializeFromJson( const Json::Value& root, BitSet& bitset );
 MRMESH_API Expected<Mesh, std::string> deserializeFromJson( const Json::Value& root, VertColors* colors = nullptr );

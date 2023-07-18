@@ -28,60 +28,71 @@ MR::Mesh fromFV( const pybind11::buffer& faces, const pybind11::buffer& verts )
     pybind11::buffer_info infoFaces = faces.request();
     pybind11::buffer_info infoVerts = verts.request();
     if ( infoFaces.ndim != 2 || infoFaces.shape[1] != 3 )
-    {
-        PyErr_SetString( PyExc_RuntimeError, "shape of input python vector 'faces' should be (n,3)" );
-        assert( false );
-    }
+        throw std::runtime_error( "shape of input python vector 'faces' should be (n,3)" );
     if ( infoVerts.ndim != 2 || infoVerts.shape[1] != 3 )
-    {
-        PyErr_SetString( PyExc_RuntimeError, "shape of input python vector 'verts' should be (n,3)" );
-        assert( false );
-    }
+        throw std::runtime_error( "shape of input python vector 'verts' should be (n,3)" );
 
     MR::Mesh res;
 
     // faces to topology part
+    auto strideF0 = infoFaces.strides[0] / infoFaces.itemsize;
+    auto strideF1 = infoFaces.strides[1] / infoFaces.itemsize;
     MR::Triangulation t;
-    if ( infoFaces.itemsize == sizeof( int ) )
+
+    auto fillTris = [&] ( const auto* data )
     {
         t.reserve( infoFaces.shape[0] );
-        int* data = reinterpret_cast< int* >( infoFaces.ptr );
         for ( auto i = 0; i < infoFaces.shape[0]; i++ )
         {
-            t.push_back( { MR::VertId( data[3 * i] ), MR::VertId( data[3 * i + 1] ), MR::VertId( data[3 * i + 2] ) } );
+            auto ind = strideF0 * i;
+            t.push_back( { 
+                MR::VertId( int( data[ind] ) ),
+                MR::VertId( int( data[ind + strideF1] ) ),
+                MR::VertId( int( data[ind + strideF1 * 2] ) ) 
+                } );
         }
+    };
+    if ( infoFaces.itemsize == sizeof( int32_t ) )
+    {
+        int* data = reinterpret_cast< int32_t* >( infoFaces.ptr );
+        fillTris( data );
+    }
+    else if ( infoFaces.itemsize == sizeof( int64_t ) )
+    {
+        int64_t* data = reinterpret_cast< int64_t* >( infoFaces.ptr );
+        fillTris( data );
     }
     else
-    {
-        // format of input python vector is not numeric
-        PyErr_SetString( PyExc_RuntimeError, "dtype of input python vector 'faces' should be int32" );
-        assert( false );
-    }
+        throw std::runtime_error( "dtype of input python vector 'faces' should be int32 or int64" );
     res.topology = MR::MeshBuilder::fromTriangles( t );
 
     // verts to points part
+    auto strideV0 = infoVerts.strides[0] / infoVerts.itemsize;
+    auto strideV1 = infoVerts.strides[1] / infoVerts.itemsize;
     res.points.resize( infoVerts.shape[0] );
+    auto fillVerts = [&] ( const auto* data )
+    {
+        for ( auto i = 0; i < infoVerts.shape[0]; i++ )
+        {
+            auto ind = strideV0 * i;
+            res.points[MR::VertId( i )] = MR::Vector3f(
+                float( data[ind] ),
+                float( data[ind + strideV1] ),
+                float( data[ind + strideV1 * 2] ) );
+        }
+    };
     if ( infoVerts.format == pybind11::format_descriptor<double>::format() )
     {
         double* data = reinterpret_cast< double* >( infoVerts.ptr );
-        for ( auto i = 0; i < infoVerts.shape[0]; i++ )
-        {
-            res.points[MR::VertId( i )] = MR::Vector3f( float( data[3 * i] ), float( data[3 * i + 1] ), float( data[3 * i + 2] ) );
-        }
+        fillVerts( data );
     }
     else if ( infoVerts.format == pybind11::format_descriptor<float>::format() )
     {
         float* data = reinterpret_cast< float* >( infoVerts.ptr );
-        for ( auto i = 0; i < infoVerts.shape[0]; i++ )
-        {
-            res.points[MR::VertId( i )] = MR::Vector3f( data[3 * i], data[3 * i + 1], data[3 * i + 2] );
-        }
+        fillVerts( data );
     }
     else
-    {
-        PyErr_SetString( PyExc_RuntimeError, "dtype of input python vector 'verts' should be float32 or float64" );
-        assert( false );
-    }
+        throw std::runtime_error( "dtype of input python vector 'verts' should be float32 or float64" );
 
     return res;
 }
@@ -99,8 +110,7 @@ MR::Mesh fromUVPoints( const pybind11::buffer& xArray, const pybind11::buffer& y
         if ( info.ndim != 2 )
         {
             std::string error = arrayName + " should be 2D";
-            PyErr_SetString( PyExc_RuntimeError, error.c_str() );
-            return false;
+            throw std::runtime_error( error.c_str() );
         }
         MR::Vector2i thisShape;
         thisShape.x = int( info.shape[0] );
@@ -110,8 +120,7 @@ MR::Mesh fromUVPoints( const pybind11::buffer& xArray, const pybind11::buffer& y
         else if ( shape != thisShape )
         {
             std::string error = "Input arrays shapes should be same";
-            PyErr_SetString( PyExc_RuntimeError, error.c_str() );
-            return false;
+            throw std::runtime_error( error.c_str() );
         }
         int thisFormat = -1;
         if ( info.format == pybind11::format_descriptor<float>::format() )
@@ -125,14 +134,12 @@ MR::Mesh fromUVPoints( const pybind11::buffer& xArray, const pybind11::buffer& y
         if ( format == -1 )
         {
             std::string error = arrayName + " dtype should be float32 or float64";
-            PyErr_SetString( PyExc_RuntimeError, error.c_str() );
-            return false;
+            throw std::runtime_error( error.c_str() );
         }
         if ( format != thisFormat )
         {
             std::string error = "Arrays should have same dtype";
-            PyErr_SetString( PyExc_RuntimeError, error.c_str() );
-            return false;
+            throw std::runtime_error( error.c_str() );
         }
         return true;
     };
@@ -238,42 +245,40 @@ MR::PointCloud pointCloudFromNP( const pybind11::buffer& points, const pybind11:
     pybind11::buffer_info infoPoints = points.request();
     pybind11::buffer_info infoNormals = normals.request();
     if ( infoPoints.ndim != 2 || infoPoints.shape[1] != 3 )
-    {
-        PyErr_SetString( PyExc_RuntimeError, "shape of input python vector 'points' should be (n,3)" );
-        assert( false );
-    }
+        throw std::runtime_error( "shape of input python vector 'points' should be (n,3)" );
     if ( infoNormals.size != 0 && ( infoNormals.ndim != 2 || infoNormals.shape[1] != 3 ) )
-    {
-        PyErr_SetString( PyExc_RuntimeError, "shape of input python vector 'normals' should be (n,3) or empty" );
-        assert( false );
-    }
+        throw std::runtime_error( "shape of input python vector 'normals' should be (n,3) or empty" );
 
     MR::PointCloud res;
 
     auto fillFloatVec = [] ( MR::VertCoords& vec, const pybind11::buffer_info& bufInfo )
     {
+        auto stride0 = bufInfo.strides[0] / bufInfo.itemsize;
+        auto stride1 = bufInfo.strides[1] / bufInfo.itemsize;
         vec.resize( bufInfo.shape[0] );
+        auto fillData = [&] ( const auto* data )
+        {
+            for ( auto i = 0; i < bufInfo.shape[0]; i++ )
+            {
+                auto ind = stride0 * i;
+                vec[MR::VertId( i )] = MR::Vector3f( 
+                    float( data[ind] ), 
+                    float( data[ind + stride1] ),
+                    float( data[ind + stride1 * 2] ) );
+            }
+        };
         if ( bufInfo.format == pybind11::format_descriptor<double>::format() )
         {
             double* data = reinterpret_cast< double* >( bufInfo.ptr );
-            for ( auto i = 0; i < bufInfo.shape[0]; i++ )
-            {
-                vec[MR::VertId( i )] = MR::Vector3f( float( data[3 * i] ), float( data[3 * i + 1] ), float( data[3 * i + 2] ) );
-            }
+            fillData( data );
         }
         else if ( bufInfo.format == pybind11::format_descriptor<float>::format() )
         {
             float* data = reinterpret_cast< float* >( bufInfo.ptr );
-            for ( auto i = 0; i < bufInfo.shape[0]; i++ )
-            {
-                vec[MR::VertId( i )] = MR::Vector3f( data[3 * i], data[3 * i + 1], data[3 * i + 2] );
-            }
+            fillData( data );
         }
         else
-        {
-            PyErr_SetString( PyExc_RuntimeError, "dtype of input python vector should be float32 or float64" );
-            assert( false );
-        }
+            throw std::runtime_error( "dtype of input python vector should be float32 or float64" );
     };
 
     // verts to points part
@@ -291,42 +296,36 @@ MR::Polyline2 polyline2FromNP( const pybind11::buffer& points )
 {
     pybind11::buffer_info infoPoints = points.request();
     if ( infoPoints.ndim != 2 || infoPoints.shape[1] != 2 )
-    {
-        PyErr_SetString( PyExc_RuntimeError, "shape of input python vector 'points' should be (n,2)" );
-        assert( false );
-    }
-
-    MR::Polyline2 res;
-
-    auto fillFloatVec = [] ( MR::Contour2f& vec, const pybind11::buffer_info& bufInfo )
-    {
-        vec.resize( bufInfo.shape[0] );
-        if ( bufInfo.format == pybind11::format_descriptor<double>::format() )
-        {
-            double* data = reinterpret_cast< double* >( bufInfo.ptr );
-            for ( auto i = 0; i < bufInfo.shape[0]; i++ )
-            {
-                vec[i] = MR::Vector2f( float( data[2 * i] ), float( data[2 * i + 1] ) );
-            }
-        }
-        else if ( bufInfo.format == pybind11::format_descriptor<float>::format() )
-        {
-            float* data = reinterpret_cast< float* >( bufInfo.ptr );
-            for ( auto i = 0; i < bufInfo.shape[0]; i++ )
-            {
-                vec[i] = MR::Vector2f( data[2 * i], data[2 * i + 1] );
-            }
-        }
-        else
-        {
-            PyErr_SetString( PyExc_RuntimeError, "dtype of input python vector should be float32 or float64" );
-            assert( false );
-        }
-    };
+        throw std::runtime_error( "shape of input python vector 'points' should be (n,2)" );
 
     // verts to points part
     MR::Contour2f inputContour;
-    fillFloatVec( inputContour, infoPoints );
+
+    auto stride0 = infoPoints.strides[0] / infoPoints.itemsize;
+    auto stride1 = infoPoints.strides[1] / infoPoints.itemsize;
+    inputContour.resize( infoPoints.shape[0] );
+    auto fillPoints = [&] ( const auto* data )
+    {
+        for ( auto i = 0; i < infoPoints.shape[0]; i++ )
+        {
+            auto ind = stride0 * i;
+            inputContour[i] = MR::Vector2f( float( data[ind] ), float( data[ind + stride1] ) );
+        }
+    };
+    if ( infoPoints.format == pybind11::format_descriptor<double>::format() )
+    {
+        double* data = reinterpret_cast< double* >( infoPoints.ptr );
+        fillPoints( data );
+    }
+    else if ( infoPoints.format == pybind11::format_descriptor<float>::format() )
+    {
+        float* data = reinterpret_cast< float* >( infoPoints.ptr );
+        fillPoints( data );
+    }
+    else
+        throw std::runtime_error( "dtype of input python vector should be float32 or float64" );
+
+    MR::Polyline2 res;
     res.addFromPoints( inputContour.data(), inputContour.size() );
 
     return res;
@@ -544,21 +543,13 @@ MR::TaggedBitSet<T> bitSetFromNP( const pybind11::buffer& bools )
 {
     pybind11::buffer_info boolsInfo = bools.request();
     if ( boolsInfo.ndim != 1 )
-    {
-        PyErr_SetString( PyExc_RuntimeError, "shape of input python vector 'bools' should be (n)" );
-        assert( false );
-        return {};
-    }
+        throw std::runtime_error( "shape of input python vector 'bools' should be (n)" );
 
     if ( boolsInfo.shape[0] == 0 )
         return {};
 
     if ( boolsInfo.format != pybind11::format_descriptor<bool>::format() )
-    {
-        PyErr_SetString( PyExc_RuntimeError, "format of python vector 'bools' should be bool" );
-        assert( false );
-        return {};
-    }
+        throw std::runtime_error( "format of python vector 'bools' should be bool" );
 
     MR::TaggedBitSet<T> resultBitSet( boolsInfo.shape[0] );
 

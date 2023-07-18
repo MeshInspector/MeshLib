@@ -11,6 +11,12 @@
 namespace MR
 {
 
+enum class BypassDirection
+{
+    Clockwise,
+    CounterClockwise
+};
+
 struct ToolPathParams
 {
     // radius of the milling tool
@@ -34,6 +40,8 @@ struct ToolPathParams
     float baseFeed = {};
     // z-coordinate of plane where tool can move in any direction without touching the object
     float safeZ = {};
+    // which direction isolines or sections should be passed in
+    BypassDirection bypassDir = BypassDirection::Clockwise;
     // mesh can be transformed using xf parameter
     const AffineXf3f* xf = nullptr;
     // callback for reporting on progress

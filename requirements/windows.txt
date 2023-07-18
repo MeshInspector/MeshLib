@@ -17,6 +17,7 @@ gdcm
 gtest
 hidapi
 jsoncpp
+libharu
 libzip
 openvdb
 podofo

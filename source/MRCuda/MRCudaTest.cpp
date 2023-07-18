@@ -9,6 +9,7 @@ namespace MR
 
 namespace Cuda
 {
+
 void negatePicture( Image& image )
 {
     CUDA_EXEC( cudaSetDevice( 0 ) );
@@ -17,8 +18,11 @@ void negatePicture( Image& image )
     cudaArray.fromVector( image.pixels );
 
     negatePictureKernel( cudaArray );
+    CUDA_EXEC( cudaGetLastError() );
+
     cudaArray.toVector( image.pixels );
 }
-}
 
-}
+} //namespace Cuda
+
+} //namespace MR

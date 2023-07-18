@@ -5,7 +5,7 @@
 #include "MRProgressCallback.h"
 #include "MRSignDetectionMode.h"
 #include "MRExpected.h"
-#include <climits>
+#include <cfloat>
 #include <memory>
 
 namespace MR

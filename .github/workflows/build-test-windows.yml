@@ -25,24 +25,26 @@ jobs:
         config: [ "Debug", "Release" ]
         include:
           - config: "Debug"
-            runner: windows-2019
-          - config: "Release"
             runner: windows-2022
+          - config: "Release"
+            runner: windows-2019
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           submodules: recursive
 
+      - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
+        working-directory: C:\vcpkg
+        run: git checkout ${{env.VCPKG-VERSION}}
+
       - name: Restore Vcpkg Cache
         uses: actions/cache@v3
         id: vcpkg-cache
         with:
-          key: vcpkg-${{env.VCPKG-VERSION}}
+          key: vcpkg-cache-${{env.VCPKG-VERSION}}
           path: |
-            C:\vcpkg\build\*
-            C:\vcpkg\installed\*
-            C:\vcpkg\scripts\*
+            C:\vcpkg\*
 
       - name: Update vcpkg packages
         run: |

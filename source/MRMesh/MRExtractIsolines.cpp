@@ -9,6 +9,7 @@
 #include "MRRingIterator.h"
 #include "MRRegionBoundary.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -33,9 +34,10 @@ private:
     void findNegativeVerts_();
     // if continueTrack is not set extract all
     // if continueTrack is set - extract until reach it or closed, or border faced
-    IsoLine extractOneLine_( const MeshEdgePoint& first, ContinueTrack continueTrack = {} );
-    MeshEdgePoint toEdgePoint_( EdgeId e, float vo, float vd ) const;
-    std::optional<MeshEdgePoint> findNextEdgePoint_( EdgeId e ) const;
+    IsoLine extractOneLine_( EdgeId first, ContinueTrack continueTrack = {} );
+    MeshEdgePoint toEdgePoint_( EdgeId e ) const;
+    void computePointOnEachEdge_( IsoLine & line );
+    EdgeId findNextEdge_( EdgeId e ) const;
 
 private:
     const MeshTopology& topology_;
@@ -75,12 +77,7 @@ IsoLines Isoliner::extract()
         if ( no == nd )
             continue;
 
-        float vo = valueInVertex_( o );
-        float vd = valueInVertex_( d );
-        if ( vo < 0 && 0 <= vd )
-            res.push_back( extractOneLine_( toEdgePoint_( e, vo, vd ) ) );
-        else if ( vd < 0 && 0 <= vo )
-            res.push_back( extractOneLine_( toEdgePoint_( e.sym(), vd, vo ) ) );
+        res.push_back( extractOneLine_( no ? e : e.sym() ) );
     }
     return res;
 }
@@ -104,60 +101,68 @@ bool Isoliner::hasAnyLine() const
 
 IsoLine Isoliner::track( const MeshTriPoint& start, ContinueTrack continueTrack )
 {
-    auto testEdge = [&] ( EdgeId e )->std::optional<MeshEdgePoint>
+    auto testEdge = [&] ( EdgeId e ) -> EdgeId
     {
         VertId o = topology_.org( e );
         VertId d = topology_.dest( e );
-        float vo = valueInVertex_( o );
-        float vd = valueInVertex_( d );
-        if ( vd < 0 && 0 <= vo )
-            return  toEdgePoint_( e.sym(), vd, vo );
-        return {};
+        auto no = negativeVerts_.test( o );
+        auto nd = negativeVerts_.test( d );
+        return ( nd && !no ) ? e.sym() : EdgeId{};
     };
 
-    std::optional<MeshEdgePoint> startEdgePoint;
+    EdgeId startEdge;
     if ( auto v = start.inVertex( topology_ ) )
     {
         for ( auto e : orgRing( topology_, v ) )
         {
-            if ( auto edgePoint = testEdge( e ) )
+            if ( auto se = testEdge( e ) )
             {
-                startEdgePoint = edgePoint;
+                startEdge = se;
                 break;
             }
         }
     }
     else if ( auto eOp = start.onEdge( topology_ ) )
     {
-        startEdgePoint = testEdge( eOp->e );
-        if ( !startEdgePoint )
-            startEdgePoint = eOp->sym();
-        startEdgePoint = findNextEdgePoint_( startEdgePoint->e ); // `start` is first
+        startEdge = testEdge( eOp->e );
+        if ( !startEdge )
+            startEdge = eOp->e.sym();
+        startEdge = findNextEdge_( startEdge ); // `start` is first
     }
     else
     {
         for ( auto e : leftRing( topology_, start.e ) )
         {
-            if ( auto edgePoint = testEdge( e ) )
+            if ( auto se = testEdge( e ) )
             {
-                startEdgePoint = edgePoint;
+                startEdge = se;
                 break;
             }
         }
     }
-    if ( !startEdgePoint )
+    if ( !startEdge )
         return {};
-    return extractOneLine_( *startEdgePoint, continueTrack );
+    return extractOneLine_( startEdge, continueTrack );
 }
 
-inline MeshEdgePoint Isoliner::toEdgePoint_( EdgeId e, float vo, float vd ) const
+inline MeshEdgePoint Isoliner::toEdgePoint_( EdgeId e ) const
 {
+    float vo = valueInVertex_( topology_.org( e ) );
+    float vd = valueInVertex_( topology_.dest( e ) );
     assert( ( vo < 0 && 0 <= vd ) || ( vd < 0 && 0 <= vo ) );
     const float x = vo / ( vo - vd );
     return MeshEdgePoint( e, x );
 }
 
-std::optional<MeshEdgePoint> Isoliner::findNextEdgePoint_( EdgeId e ) const
+void Isoliner::computePointOnEachEdge_( IsoLine & line )
+{
+    ParallelFor( line, [&]( size_t i )
+    {
+        line[i] = toEdgePoint_( line[i].e );
+    } );
+}
+
+EdgeId Isoliner::findNextEdge_( EdgeId e ) const
 {
     if ( !topology_.isLeftInRegion( e, region_ ) )
         return {};
@@ -169,34 +174,42 @@ std::optional<MeshEdgePoint> Isoliner::findNextEdgePoint_( EdgeId e ) const
     auto nx = negativeVerts_.test( x );
 
     if ( ( no && nx ) || ( nd && !nx ) )
-        return toEdgePoint_( topology_.prev( e.sym() ).sym(), valueInVertex_( x ), valueInVertex_( d ) );
+        return topology_.prev( e.sym() ).sym();
     else
-        return toEdgePoint_( topology_.next( e ), valueInVertex_( o ), valueInVertex_( x ) );
+        return topology_.next( e );
 }
 
-IsoLine Isoliner::extractOneLine_( const MeshEdgePoint& first, ContinueTrack continueTrack )
+IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
 {
     std::vector<MeshEdgePoint> res;
-    res.push_back( first );
-    if ( continueTrack && !continueTrack( first ) )
+    auto addCrossedEdge = [&]( EdgeId e )
+    {
+        if ( !continueTrack )
+        {
+            // exact point will be found in computePointOnEachEdge_ at the end
+            res.push_back( MeshEdgePoint( e, -1 ) );
+            return true;
+        }
+        res.push_back( toEdgePoint_( e ) );
+        return continueTrack( res.back() );
+    };
+
+    if ( !addCrossedEdge( first ) )
         return res;
-    seenEdges_.autoResizeSet( first.e.undirected() );
+    seenEdges_.autoResizeSet( first.undirected() );
 
     bool closed = false;
-    while ( auto next = findNextEdgePoint_( res.back().e ) )
+    while ( auto next = findNextEdge_( res.back().e ) )
     {
-        if ( first.e == next->e )
+        if ( first == next )
         {
-            res.push_back( first );
-            if ( continueTrack )
-                continueTrack( first );
+            addCrossedEdge( first );
             closed = true;
             break;
         }
-        res.push_back( *next );
-        if ( continueTrack && !continueTrack( *next ) )
+        if ( !addCrossedEdge( next ) )
             return res;
-        seenEdges_.autoResizeSet( next->e.undirected() );
+        seenEdges_.autoResizeSet( next.undirected() );
     }
 
     if ( continueTrack )
@@ -207,11 +220,11 @@ IsoLine Isoliner::extractOneLine_( const MeshEdgePoint& first, ContinueTrack con
         auto firstSym = first;
         firstSym = firstSym.sym(); // go backward
         std::vector<MeshEdgePoint> back;
-        back.push_back( firstSym );
-        while ( auto next = findNextEdgePoint_( back.back().e ) )
+        back.push_back( MeshEdgePoint( firstSym, -1 ) );
+        while ( auto next = findNextEdge_( back.back().e ) )
         {
-            back.push_back( *next );
-            seenEdges_.autoResizeSet( next->e.undirected() );
+            back.push_back( MeshEdgePoint( next, -1 ) );
+            seenEdges_.autoResizeSet( next.undirected() );
         }
         std::reverse( back.begin(), back.end() );
         back.pop_back(); // remove extra copy of firstSym
@@ -220,6 +233,7 @@ IsoLine Isoliner::extractOneLine_( const MeshEdgePoint& first, ContinueTrack con
         res.insert( res.begin(), back.begin(), back.end() );
     }
 
+    computePointOnEachEdge_( res );
     return res;
 }
 

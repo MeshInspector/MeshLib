@@ -293,9 +293,11 @@ void ImGuiMenu::preDraw_()
       ImGui_ImplOpenGL3_NewFrame();
       ImGui_ImplGlfw_NewFrame();
 #ifdef __APPLE__
+      // we want ImGui to think it is common scaling in case of retina monitor
       ImGui::GetIO().DisplaySize = ImVec2( float( viewer->framebufferSize.x ), float( viewer->framebufferSize.y ) );
       ImGui::GetIO().DisplayFramebufferScale = ImVec2( 1, 1 );
 
+      // ImGui takes mouse position from glfw each frame, but we scale mouse events, so need to update it
       if ( context_ )
       {
           ImGuiInputEvent e;

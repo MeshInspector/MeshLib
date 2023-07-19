@@ -203,6 +203,7 @@ static void glfw_mouse_move( GLFWwindow* /*window*/, double x, double y )
     auto* viewer = &MR::getViewerInstance();
     auto eventCall = [x, y,viewer] ()
     {
+        // scale mouse pos for retina to easier support different framebuffer and window size (glfw cursor pos is in window coords)
         viewer->mouseMove( int( std::round( x * viewer->pixelRatio ) ), int( std::round( y * viewer->pixelRatio ) ) );
         viewer->draw();
     };

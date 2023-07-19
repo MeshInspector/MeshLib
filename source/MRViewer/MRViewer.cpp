@@ -203,7 +203,7 @@ static void glfw_mouse_move( GLFWwindow* /*window*/, double x, double y )
     auto* viewer = &MR::getViewerInstance();
     auto eventCall = [x, y,viewer] ()
     {
-        viewer->mouseMove( int( x ), int( y ) );
+        viewer->mouseMove( int( std::round( x * viewer->pixelRatio ) ), int( std::round( y * viewer->pixelRatio ) ) );
         viewer->draw();
     };
     viewer->eventQueue.emplace( { "Mouse move", eventCall }, true );
@@ -580,6 +580,12 @@ int Viewer::launchInit_( const LaunchParams& params )
         glfwGetFramebufferSize( window, &width, &height );
         // Initialize IGL viewer
         glfw_framebuffer_size( window, width, height );
+
+#ifdef __APPLE__
+        int winWidth, winHeight;
+        glfwGetWindowSize( window, &winWidth, &winHeight );
+        pixelRatio = float( width ) / float( winWidth );
+#endif
 
         float xscale{ 1.0f }, yscale{ 1.0f };
 #ifndef __EMSCRIPTEN__

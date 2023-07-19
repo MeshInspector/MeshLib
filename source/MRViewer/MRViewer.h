@@ -440,6 +440,7 @@ public:
     TouchesController touchesController;
     SpaceMouseController spaceMouseController;
 
+    float pixelRatio{ 1.0f };
     Vector2i framebufferSize;
     Vector2i windowSavePos; // pos to save
     Vector2i windowSaveSize; // size to save

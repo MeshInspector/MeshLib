@@ -266,7 +266,7 @@ void ImGuiMenu::reload_font(int font_size)
 
   load_font(font_size);
 
-  io.FontGlobalScale = 1.0f / pixel_ratio_;
+  //io.FontGlobalScale = 1.0f / pixel_ratio_;
 }
 
 void ImGuiMenu::shutdown()
@@ -294,6 +294,8 @@ void ImGuiMenu::preDraw_()
   {
       ImGui_ImplOpenGL3_NewFrame();
       ImGui_ImplGlfw_NewFrame();
+      ImGui::GetIO().DisplaySize = ImVec2( float( viewer->framebufferSize.x ), float( viewer->framebufferSize.y ) );
+      ImGui::GetIO().DisplayFramebufferScale = ImVec2( 1, 1 );
   }
   else
   {

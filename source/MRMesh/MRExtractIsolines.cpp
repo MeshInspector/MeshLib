@@ -7,6 +7,8 @@
 #include "MRAffineXf3.h"
 #include "MRVector2.h"
 #include "MRRingIterator.h"
+#include "MRRegionBoundary.h"
+#include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -20,7 +22,7 @@ class Isoliner
 public:
     Isoliner( const MeshTopology& topology, ValueInVertex valueInVertex, const FaceBitSet* region )
         : topology_( topology ), region_( region ), valueInVertex_( valueInVertex )
-    {}
+        { findNegativeVerts_(); }
 
     bool hasAnyLine() const;
     IsoLines extract();
@@ -28,6 +30,7 @@ public:
     IsoLine track( const MeshTriPoint& start, ContinueTrack continueTrack );
 
 private:
+    void findNegativeVerts_();
     // if continueTrack is not set extract all
     // if continueTrack is set - extract until reach it or closed, or border faced
     IsoLine extractOneLine_( const MeshEdgePoint& first, ContinueTrack continueTrack = {} );
@@ -38,8 +41,22 @@ private:
     const MeshTopology& topology_;
     const FaceBitSet* region_ = nullptr;
     ValueInVertex valueInVertex_;
+    VertBitSet negativeVerts_;
     UndirectedEdgeBitSet seenEdges_;
 };
+
+void Isoliner::findNegativeVerts_()
+{
+    VertBitSet store;
+    const auto & vertRegion = getIncidentVerts( topology_, region_, store );
+    negativeVerts_.clear();
+    negativeVerts_.resize( vertRegion.size() );
+    BitSetParallelFor( vertRegion, [&]( VertId v )
+    {
+        if ( valueInVertex_( v ) < 0 )
+            negativeVerts_.set( v );
+    } );
+}
 
 IsoLines Isoliner::extract()
 {
@@ -53,6 +70,11 @@ IsoLines Isoliner::extract()
         EdgeId e = ue;
         VertId o = topology_.org( e );
         VertId d = topology_.dest( e );
+        auto no = negativeVerts_.test( o );
+        auto nd = negativeVerts_.test( d );
+        if ( no == nd )
+            continue;
+
         float vo = valueInVertex_( o );
         float vd = valueInVertex_( d );
         if ( vo < 0 && 0 <= vd )
@@ -72,11 +94,9 @@ bool Isoliner::hasAnyLine() const
         EdgeId e = ue;
         VertId o = topology_.org( e );
         VertId d = topology_.dest( e );
-        float vo = valueInVertex_( o );
-        float vd = valueInVertex_( d );
-        if ( vo < 0 && 0 <= vd )
-            return true;
-        else if ( vd < 0 && 0 <= vo )
+        auto no = negativeVerts_.test( o );
+        auto nd = negativeVerts_.test( d );
+        if ( no != nd )
             return true;
     }
     return false;
@@ -143,14 +163,15 @@ std::optional<MeshEdgePoint> Isoliner::findNextEdgePoint_( EdgeId e ) const
         return {};
     VertId o, d, x;
     topology_.getLeftTriVerts( e, o, d, x );
-    const float vo = valueInVertex_( o );
-    const float vd = valueInVertex_( d );
-    const float vx = valueInVertex_( x );
-    assert( ( vo < 0 && 0 <= vd ) || ( vd < 0 && 0 <= vo ) );
-    if ( ( vo < 0 && vx < 0 ) || ( vd < 0 && vx >= 0 ) )
-        return toEdgePoint_( topology_.prev( e.sym() ).sym(), vx, vd );
+    auto no = negativeVerts_.test( o );
+    auto nd = negativeVerts_.test( d );
+    assert( no != nd );
+    auto nx = negativeVerts_.test( x );
+
+    if ( ( no && nx ) || ( nd && !nx ) )
+        return toEdgePoint_( topology_.prev( e.sym() ).sym(), valueInVertex_( x ), valueInVertex_( d ) );
     else
-        return toEdgePoint_( topology_.next( e ), vo, vx );
+        return toEdgePoint_( topology_.next( e ), valueInVertex_( o ), valueInVertex_( x ) );
 }
 
 IsoLine Isoliner::extractOneLine_( const MeshEdgePoint& first, ContinueTrack continueTrack )

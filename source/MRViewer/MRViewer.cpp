@@ -1440,6 +1440,11 @@ void Viewer::postSetPosition( int xPos, int yPos )
 {
     if ( !windowMaximized && !glfwGetWindowMonitor( window ) )
         windowSavePos = { xPos, yPos };
+#ifdef __APPLE__
+    int winWidth, winHeight;
+    glfwGetWindowSize( window, &winWidth, &winHeight );
+    pixelRatio = float( framebufferSize.x ) / float( winWidth );
+#endif
 }
 
 void Viewer::postSetMaximized( bool maximized )

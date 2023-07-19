@@ -265,8 +265,6 @@ void ImGuiMenu::reload_font(int font_size)
   io.Fonts->Clear();
 
   load_font(font_size);
-
-  io.FontGlobalScale = 1.0f / pixel_ratio_;
 }
 
 void ImGuiMenu::shutdown()
@@ -294,11 +292,31 @@ void ImGuiMenu::preDraw_()
   {
       ImGui_ImplOpenGL3_NewFrame();
       ImGui_ImplGlfw_NewFrame();
+#ifdef __APPLE__
+      // we want ImGui to think it is common scaling in case of retina monitor
+      ImGui::GetIO().DisplaySize = ImVec2( float( viewer->framebufferSize.x ), float( viewer->framebufferSize.y ) );
+      ImGui::GetIO().DisplayFramebufferScale = ImVec2( 1, 1 );
+
+      // ImGui takes mouse position from glfw each frame, but we scale mouse events, so need to update it
+      if ( context_ )
+      {
+          ImGuiInputEvent e;
+          e.Type = ImGuiInputEventType_MousePos;
+          e.Source = ImGuiInputSource_Mouse;
+          auto curPos = Vector2f( viewer->mouseController.getMousePos() );
+          e.MousePos.PosX = curPos.x;
+          e.MousePos.PosY = curPos.y;
+          if ( !context_->InputEventsQueue.empty() )
+              context_->InputEventsQueue.pop_back();
+          context_->InputEventsQueue.push_back( e );
+      }
+#endif
   }
   else
   {
       // needed for dear ImGui
-      ImGui::GetIO().DisplaySize = ImVec2( float( viewer->window_width ), float( viewer->window_height ) );
+      // should be window size
+      ImGui::GetIO().DisplaySize = ImVec2( float( viewer->framebufferSize.x ), float( viewer->framebufferSize.y ) );
   }
   auto& style = ImGui::GetStyle();
   if ( storedError_.empty() )
@@ -552,9 +570,9 @@ void ImGuiMenu::draw_text(
   // Draw text labels slightly bigger than normal text
   ImDrawList* drawList = ImGui::GetWindowDrawList();
   ImVec4 clipRect( viewportRect.min.x, 
-                   viewer->window_height - ( viewportRect.min.y + height( viewportRect ) ),
+                   viewer->framebufferSize.y - ( viewportRect.min.y + height( viewportRect ) ),
                    viewportRect.min.x + width( viewportRect ),
-                   viewer->window_height - viewportRect.min.y );
+                   viewer->framebufferSize.y - viewportRect.min.y );
   drawList->AddText( ImGui::GetFont(), ImGui::GetFontSize() * 1.2f,
                      ImVec2( viewerCoord.x / pixel_ratio_, viewerCoord.y / pixel_ratio_ ),
                      color.getUInt32(),
@@ -564,9 +582,6 @@ void ImGuiMenu::draw_text(
 
 float ImGuiMenu::pixel_ratio()
 {
-#if defined(__APPLE__)
-    return 1.0f;
-#endif
     // Computes pixel ratio for hidpi devices
     int buf_size[2];
     int win_size[2];
@@ -582,9 +597,6 @@ float ImGuiMenu::pixel_ratio()
 
 float ImGuiMenu::hidpi_scaling()
 {
-#if defined(__APPLE__)
-    return 1.0f;
-#endif
     // Computes scaling factor for hidpi devices
     float xscale{ 1.0f }, yscale{ 1.0f };
 #ifndef __EMSCRIPTEN__
@@ -601,6 +613,8 @@ float ImGuiMenu::menu_scaling() const
 {
 #ifdef __EMSCRIPTEN__
     return float( emscripten_get_device_pixel_ratio() );
+#elif defined __APPLE__
+    return pixel_ratio_;
 #else
     return hidpi_scaling_ / pixel_ratio_;
 #endif
@@ -628,8 +642,8 @@ void ImGuiMenu::draw_helpers()
                                         ImGui::GetTextLineHeight() * ( numLines + 2 ) +
                                         style.ItemSpacing.y * ( numLines + 3 ) +
                                         style.FramePadding.y * 4 );
-        const float posX = Viewer::instanceRef().window_width - fpsWindowWidth;
-        const float posY = Viewer::instanceRef().window_height - fpsWindowHeight;
+        const float posX = getViewerInstance().framebufferSize.x - fpsWindowWidth;
+        const float posY = getViewerInstance().framebufferSize.y - fpsWindowHeight;
         ImGui::SetNextWindowPos( ImVec2( posX, posY ), ImGuiCond_Appearing );
         ImGui::SetNextWindowSize( ImVec2( fpsWindowWidth, fpsWindowHeight ) );
         ImGui::Begin( "##FPS", nullptr, ImGuiWindowFlags_AlwaysAutoResize | //ImGuiWindowFlags_NoInputs | 
@@ -2584,7 +2598,7 @@ void ImGuiMenu::draw_mr_menu()
 
             auto win = glfwGetCurrentContext();
             int window_width, window_height;
-            glfwGetWindowSize( win, &window_width, &window_height );
+            glfwGetFramebufferSize( win, &window_width, &window_height );
 
             auto bounds = viewer->getViewportsBounds();
 
@@ -2793,8 +2807,8 @@ void ImGuiMenu::drawShortcutsWindow_()
     const float hotkeysWindowHeight = ( style.WindowPadding.y * 2 + numLines * ( ImGui::GetTextLineHeight() + style.ItemSpacing.y ) );
 
     ImVec2 windowPos = ImGui::GetMousePos();
-    windowPos.x = std::min( windowPos.x, Viewer::instanceRef().window_width - hotkeysWindowWidth );
-    windowPos.y = std::min( windowPos.y, Viewer::instanceRef().window_height - hotkeysWindowHeight );
+    windowPos.x = std::min( windowPos.x, Viewer::instanceRef().framebufferSize.x - hotkeysWindowWidth );
+    windowPos.y = std::min( windowPos.y, Viewer::instanceRef().framebufferSize.y - hotkeysWindowHeight );
 
     ImGui::SetNextWindowPos( windowPos, ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( ImVec2( hotkeysWindowWidth, hotkeysWindowHeight ) );

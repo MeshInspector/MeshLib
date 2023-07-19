@@ -174,7 +174,7 @@ std::filesystem::path RibbonMenu::getMenuFontPath() const
 void RibbonMenu::pinTopPanel( bool on )
 {
     collapseState_ = on ? CollapseState::Pinned : CollapseState::Opened;
-    fixViewportsSize_( Viewer::instanceRef().window_width, Viewer::instanceRef().window_height );
+    fixViewportsSize_( getViewerInstance().framebufferSize.x, getViewerInstance().framebufferSize.y );
 }
 
 bool RibbonMenu::isTopPannelPinned() const
@@ -195,8 +195,8 @@ void RibbonMenu::resetQuickAccessList()
 void RibbonMenu::setSceneSize( const Vector2i& size )
 {
     sceneSize_ = ImVec2( float( size.x ), float( size.y ) );
-    auto& viewerRef = Viewer::instanceRef();
-    fixViewportsSize_( viewerRef.window_width, viewerRef.window_height );
+    auto& viewerRef = getViewerInstance();
+    fixViewportsSize_( viewerRef.framebufferSize.x, viewerRef.framebufferSize.y );
 }
 
 void RibbonMenu::updateItemStatus( const std::string& itemName )
@@ -400,7 +400,7 @@ void RibbonMenu::drawCollapseButton_()
         if ( ImGui::Button( "\xef\x81\x93", ImVec2( btnSize, btnSize ) ) )
         {
             collapseState_ = CollapseState::Opened;
-            fixViewportsSize_( Viewer::instanceRef().window_width, Viewer::instanceRef().window_height );
+            fixViewportsSize_( getViewerInstance().framebufferSize.x, getViewerInstance().framebufferSize.y );
             openedTimer_ = openedMaxSecs_;
 #ifndef __EMSCRIPTEN__
             asyncRequest_.reset();
@@ -420,7 +420,7 @@ void RibbonMenu::drawCollapseButton_()
         if ( ImGui::Button( "\xef\x81\xb7", ImVec2( btnSize, btnSize ) ) )
         {
             collapseState_ = CollapseState::Pinned;
-            fixViewportsSize_( Viewer::instanceRef().window_width, Viewer::instanceRef().window_height );
+            fixViewportsSize_( getViewerInstance().framebufferSize.x, getViewerInstance().framebufferSize.y );
         }
         ImGui::PopFont();
         if ( ImGui::IsItemHovered() )
@@ -503,7 +503,7 @@ void RibbonMenu::drawHeaderQuickAccess_()
 
     const auto width = RibbonSchemaHolder::schema().headerQuickAccessList.size() * ( itemSpacing.x + itemSize ) +
         dropCount * cSmallItemDropSizeModifier * itemSize;
-    const auto availableWidth = getViewerInstance().window_width;
+    const auto availableWidth = getViewerInstance().framebufferSize.x;
     if ( width * 2 > availableWidth )
         return; // dont show header quick panel if window is too small
 
@@ -543,7 +543,7 @@ void RibbonMenu::drawHeaderPannel_()
 
     ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddRectFilled(
         ImVec2( 0, 0 ),
-        ImVec2( float( getViewerInstance().window_width ), ( cTabHeight + cTabYOffset ) * menuScaling ),
+        ImVec2( float( getViewerInstance().framebufferSize.x ), ( cTabHeight + cTabYOffset ) * menuScaling ),
         ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::HeaderBackground ).getUInt32() );
 
     drawHeaderQuickAccess_();
@@ -695,14 +695,14 @@ void RibbonMenu::drawHeaderPannel_()
 
     ImGui::PopStyleVar( 2 );
     const float separateLinePos = ( cTabYOffset + cTabHeight ) * menuScaling;
-    ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddLine( ImVec2( 0, separateLinePos ), ImVec2( float( getViewerInstance().window_width ), separateLinePos ),
+    ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddLine( ImVec2( 0, separateLinePos ), ImVec2( float( getViewerInstance().framebufferSize.x ), separateLinePos ),
                                                                   ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::HeaderSeparator ).getUInt32() );
 
 
-    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().window_width ) - 70.0f * menuScaling, cTabYOffset* menuScaling ) );
+    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 70.0f * menuScaling, cTabYOffset* menuScaling ) );
     drawSearchButton_();
 
-    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().window_width ) - 30.0f * menuScaling, cTabYOffset * menuScaling ) );
+    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 30.0f * menuScaling, cTabYOffset * menuScaling ) );
     drawCollapseButton_();
 }
 
@@ -937,7 +937,7 @@ RibbonMenu::DrawTabConfig RibbonMenu::setupItemsGroupConfig_( const std::vector<
 {
     DrawTabConfig res( groupsInTab.size() );
     const auto& style = ImGui::GetStyle();
-    const float screenWidth = float( getViewerInstance().window_width ) - ImGui::GetCursorScreenPos().x -
+    const float screenWidth = float( getViewerInstance().framebufferSize.x ) - ImGui::GetCursorScreenPos().x -
         ( float( groupsInTab.size() ) + 1.0f ) * menu_scaling();
     std::vector<float> groupWidths( groupsInTab.size() );
     float sumWidth = 0.0f;
@@ -1200,7 +1200,7 @@ void RibbonMenu::postRescale_( float x, float y )
     ImGuiMenu::postRescale_( x, y );
     buttonDrawer_.setScaling( menu_scaling() );
     toolbar_.setScaling( menu_scaling() );
-    fixViewportsSize_( Viewer::instanceRef().window_width, Viewer::instanceRef().window_height );
+    fixViewportsSize_( Viewer::instanceRef().framebufferSize.x, Viewer::instanceRef().framebufferSize.y );
 
     RibbonSchemaLoader loader;
     loader.recalcItemSizes();
@@ -1220,10 +1220,10 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
             {
                 itemPtr.dialogPositionFixed = true;
                 auto* window = ImGui::FindWindowByName( itemPtr.item->name().c_str() ); // this function is hidden in imgui_internal.h
-                // viewer->window_width here because ImGui use screen space
+                // viewer->framebufferSize.x here because ImGui use screen space
                 if ( window )
                 {
-                    ImVec2 pos = ImVec2( viewer->window_width - window->Size.x, float( topPanelOpenedHeight_ - 1.0f ) * menu_scaling() );
+                    ImVec2 pos = ImVec2( viewer->framebufferSize.x - window->Size.x, float( topPanelOpenedHeight_ - 1.0f ) * menu_scaling() );
                     ImGui::SetWindowPos( window, pos, ImGuiCond_Always );
                 }
             }
@@ -1245,10 +1245,10 @@ void RibbonMenu::drawRibbonSceneList_()
     // Define next window position + size
     auto& viewerRef = Viewer::instanceRef();
     ImGui::SetWindowPos( "RibbonScene", ImVec2( 0.f, float( currentTopPanelHeight_ ) * scaling - 1 ), ImGuiCond_Always );
-    sceneSize_.x = std::round( std::min( sceneSize_.x, viewerRef.window_width - 100 * scaling ) );
-    sceneSize_.y = std::round( viewerRef.window_height - float( currentTopPanelHeight_ - 2.0f ) * scaling );
+    sceneSize_.x = std::round( std::min( sceneSize_.x, viewerRef.framebufferSize.x - 100 * scaling ) );
+    sceneSize_.y = std::round( viewerRef.framebufferSize.y - float( currentTopPanelHeight_ - 2.0f ) * scaling );
     ImGui::SetWindowSize( "RibbonScene", sceneSize_, ImGuiCond_Always );
-    ImGui::SetNextWindowSizeConstraints( ImVec2( 100 * scaling, -1.f ), ImVec2( viewerRef.window_width / 2.f, -1.f ) ); // TODO take out limits to special place
+    ImGui::SetNextWindowSizeConstraints( ImVec2( 100 * scaling, -1.f ), ImVec2( viewerRef.framebufferSize.x / 2.f, -1.f ) ); // TODO take out limits to special place
     ImGui::PushStyleVar( ImGuiStyleVar_Alpha, 1.f );
     auto colorBg = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
     colorBg.w = 1.f;
@@ -1269,7 +1269,7 @@ void RibbonMenu::drawRibbonSceneList_()
     {
         manualSizeSet = true;
         sceneSize_ = newSize;
-        fixViewportsSize_( viewerRef.window_width, viewerRef.window_height );
+        fixViewportsSize_( viewerRef.framebufferSize.x, viewerRef.framebufferSize.y );
     }
 
     ImGui::End();
@@ -1283,7 +1283,7 @@ void RibbonMenu::drawRibbonSceneList_()
     if ( !firstTime && lastWindowSize.x != sceneSize_.x )
     {
         sceneSize_.x = lastWindowSize.x;
-        fixViewportsSize_( viewerRef.window_width, viewerRef.window_height );
+        fixViewportsSize_( viewerRef.framebufferSize.x, viewerRef.framebufferSize.y );
     }
     if ( firstTime )
         firstTime = false;
@@ -1325,7 +1325,7 @@ Vector2f RibbonMenu::drawRibbonSceneResizeLine_()
 
     auto scaling = menu_scaling();
     auto minX = 100.0f * scaling;
-    auto maxX = getViewerInstance().window_width * 0.5f;
+    auto maxX = getViewerInstance().framebufferSize.x * 0.5f;
 
     ImRect rectHover;
     ImRect rectDraw;
@@ -1769,11 +1769,11 @@ void RibbonMenu::drawShortcutsWindow_()
     windowHeight += std::max( leftSize, rightSize );
 
     const float minHeight = 200.0f * scaling;
-    windowHeight = std::clamp( windowHeight, minHeight, float( getViewerInstance().window_height ) - 100.0f * scaling );
+    windowHeight = std::clamp( windowHeight, minHeight, float( getViewerInstance().framebufferSize.y ) - 100.0f * scaling );
 
     ImVec2 windowPos;
-    windowPos.x = ( getViewerInstance().window_width - windowWidth ) * 0.5f;
-    windowPos.y = ( getViewerInstance().window_height - windowHeight ) * 0.5f;
+    windowPos.x = ( getViewerInstance().framebufferSize.x - windowWidth ) * 0.5f;
+    windowPos.y = ( getViewerInstance().framebufferSize.y - windowHeight ) * 0.5f;
 
     ImGui::SetNextWindowPos( windowPos, ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( ImVec2( windowWidth, windowHeight ), ImGuiCond_Always );
@@ -1915,7 +1915,7 @@ void RibbonMenu::beginTopPanel_()
 {
     const auto scaling = menu_scaling();
     ImGui::SetNextWindowPos( ImVec2( 0, 0 ) );
-    ImGui::SetNextWindowSize( ImVec2( ( float ) Viewer::instanceRef().window_width, currentTopPanelHeight_ * scaling ) );
+    ImGui::SetNextWindowSize( ImVec2( ( float ) Viewer::instanceRef().framebufferSize.x, currentTopPanelHeight_ * scaling ) );
 
     ImGui::PushStyleVar( ImGuiStyleVar_Alpha, 1.0f );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 5.0f * scaling );

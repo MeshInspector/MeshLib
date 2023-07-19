@@ -69,10 +69,10 @@ void Toolbar::drawToolbar()
         + itemSpacing.x / 2.f;
 
     const Vector2i sceneSize = ribbonMenu_->getSceneSize();
-    if ( windowWidth >= getViewerInstance().window_width - sceneSize.x )
+    if ( windowWidth >= getViewerInstance().framebufferSize.x - sceneSize.x )
         return; // dont show quick panel if window is too small
 
-    const float windowPosX = std::max( getViewerInstance().window_width / 2.f - windowWidth / 2.f, sceneSize.x - 1.0f );
+    const float windowPosX = std::max( getViewerInstance().framebufferSize.x / 2.f - windowWidth / 2.f, sceneSize.x - 1.0f );
 
     const int currentTopPanelHeight = ribbonMenu_->getTopPanelCurrentHeight();
     ImGui::SetNextWindowPos( ImVec2( windowPosX, float( currentTopPanelHeight ) * scaling_ - 1 ) );

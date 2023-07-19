@@ -155,7 +155,7 @@ public:
     // Setup viewports views
     MRVIEWER_API void setupScene();
     // OpenGL context resize
-    MRVIEWER_API void resize( int w, int h ); // explicitly set window size
+    MRVIEWER_API void resize( int w, int h ); // explicitly set framebuffer size
     MRVIEWER_API void postResize( int w, int h ); // external resize due to user interaction
     MRVIEWER_API void postSetPosition( int xPos, int yPos ); // external set position due to user interaction
     MRVIEWER_API void postSetMaximized( bool maximized ); // external set maximized due to user interaction
@@ -357,13 +357,13 @@ public:
 
     // Converts screen space coordinate to viewport space coordinate
     // (0,0) if viewport does not exist
-    // screen space: X [0,window_width], Y [0,window_height] - (0,0) is upper left of window
+    // screen space: X [0,framebufferSize.x], Y [0,framebufferSize.y] - (0,0) is upper left of window
     // viewport space: X [0,viewport_width], Y [0,viewport_height] - (0,0) is upper left of viewport
     // Z [0,1] - 0 is Dnear, 1 is Dfar
     MRVIEWER_API Vector3f screenToViewport( const Vector3f& screenPoint, ViewportId id ) const;
     // Converts viewport space coordinate to screen space coordinate
     // (0,0) if viewport does not exist
-    // screen space: X [0,window_width], Y [0,window_height] - (0,0) is upper left of window
+    // screen space: X [0,framebufferSize.x], Y [0,framebufferSize.y] - (0,0) is upper left of window
     // viewport space: X [0,viewport_width], Y [0,viewport_height] - (0,0) is upper left of viewport
     // Z [0,1] - 0 is Dnear, 1 is Dfar
     MRVIEWER_API Vector3f viewportToScreen( const Vector3f& viewportPoint, ViewportId id ) const;
@@ -440,8 +440,8 @@ public:
     TouchesController touchesController;
     SpaceMouseController spaceMouseController;
 
-    int window_width; // current width
-    int window_height; // current height
+    float pixelRatio{ 1.0f };
+    Vector2i framebufferSize;
     Vector2i windowSavePos; // pos to save
     Vector2i windowSaveSize; // size to save
     Vector2i windowOldPos;

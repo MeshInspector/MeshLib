@@ -1418,7 +1418,7 @@ void Viewer::postResize( int w, int h )
     }
     postResizeSignal( w, h );
     if ( !windowMaximized ) // resize is called after maximized
-        glfwGetWindowSize( window, &windowSaveSize.x, &windowSaveSize.y );
+        windowSaveSize = framebufferSize;
     if ( w != 0 )
         framebufferSize.x = w;
     if ( h != 0 )

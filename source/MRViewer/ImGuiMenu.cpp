@@ -265,8 +265,6 @@ void ImGuiMenu::reload_font(int font_size)
   io.Fonts->Clear();
 
   load_font(font_size);
-
-  //io.FontGlobalScale = 1.0f / pixel_ratio_;
 }
 
 void ImGuiMenu::shutdown()
@@ -294,8 +292,23 @@ void ImGuiMenu::preDraw_()
   {
       ImGui_ImplOpenGL3_NewFrame();
       ImGui_ImplGlfw_NewFrame();
+#ifdef __APPLE__
       ImGui::GetIO().DisplaySize = ImVec2( float( viewer->framebufferSize.x ), float( viewer->framebufferSize.y ) );
       ImGui::GetIO().DisplayFramebufferScale = ImVec2( 1, 1 );
+
+      if ( context_ )
+      {
+          ImGuiInputEvent e;
+          e.Type = ImGuiInputEventType_MousePos;
+          e.Source = ImGuiInputSource_Mouse;
+          auto curPos = Vector2f( viewer->mouseController.getMousePos() );
+          e.MousePos.PosX = curPos.x;
+          e.MousePos.PosY = curPos.y;
+          if ( !context_->InputEventsQueue.empty() )
+              context_->InputEventsQueue.pop_back();
+          context_->InputEventsQueue.push_back( e );
+      }
+#endif
   }
   else
   {

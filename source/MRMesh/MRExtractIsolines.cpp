@@ -44,7 +44,7 @@ private:
     const FaceBitSet* region_ = nullptr;
     ValueInVertex valueInVertex_;
     VertBitSet negativeVerts_;
-    UndirectedEdgeBitSet seenEdges_;
+    UndirectedEdgeBitSet activeEdges_; // the edges crossed by the iso-line, but not yet extracted
 };
 
 void Isoliner::findNegativeVerts_()
@@ -62,20 +62,28 @@ void Isoliner::findNegativeVerts_()
 
 IsoLines Isoliner::extract()
 {
-    std::vector<std::vector<MeshEdgePoint>> res;
-    for ( auto ue : undirectedEdges( topology_ ) )
+    activeEdges_.clear();
+    activeEdges_.resize( topology_.undirectedEdgeSize() );
+    BitSetParallelForAll( activeEdges_, [&]( UndirectedEdgeId ue )
     {
-        if ( region_ && !contains( *region_, topology_.left( ue ) ) && !contains( *region_, topology_.right( ue ) ) )
-            continue;
-        if ( seenEdges_.test( ue ) )
-            continue;
-        EdgeId e = ue;
-        VertId o = topology_.org( e );
-        VertId d = topology_.dest( e );
+        VertId o = topology_.org( ue );
+        VertId d = topology_.dest( ue );
         auto no = negativeVerts_.test( o );
         auto nd = negativeVerts_.test( d );
-        if ( no == nd )
-            continue;
+        if ( no != nd )
+        {
+            assert ( !region_ || contains( *region_, topology_.left( ue ) ) || contains( *region_, topology_.right( ue ) ) );
+            activeEdges_.set( ue );
+        }
+    } );
+
+    std::vector<std::vector<MeshEdgePoint>> res;
+    for ( auto ue : activeEdges_ )
+    {
+        EdgeId e = ue;
+        VertId o = topology_.org( e );
+        auto no = negativeVerts_.test( o );
+        assert ( no != negativeVerts_.test( topology_.dest( e ) ) );
 
         res.push_back( extractOneLine_( no ? e : e.sym() ) );
     }
@@ -196,7 +204,8 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
 
     if ( !addCrossedEdge( first ) )
         return res;
-    seenEdges_.autoResizeSet( first.undirected() );
+    assert( activeEdges_.test( first.undirected() ) );
+    activeEdges_.reset( first.undirected() );
 
     bool closed = false;
     while ( auto next = findNextEdge_( res.back().e ) )
@@ -209,7 +218,8 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
         }
         if ( !addCrossedEdge( next ) )
             return res;
-        seenEdges_.autoResizeSet( next.undirected() );
+        assert( activeEdges_.test( next.undirected() ) );
+        activeEdges_.reset( next.undirected() );
     }
 
     if ( continueTrack )
@@ -224,7 +234,8 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
         while ( auto next = findNextEdge_( back.back().e ) )
         {
             back.push_back( MeshEdgePoint( next, -1 ) );
-            seenEdges_.autoResizeSet( next.undirected() );
+            assert( activeEdges_.test( next.undirected() ) );
+            activeEdges_.reset( next.undirected() );
         }
         std::reverse( back.begin(), back.end() );
         back.pop_back(); // remove extra copy of firstSym

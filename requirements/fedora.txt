@@ -20,6 +20,7 @@ tinyxml2-devel
 libzip-devel
 libzstd-devel
 openvdb-devel
+openssl-devel
 pkg-config
 python3
 spdlog-devel

@@ -18,6 +18,7 @@ libilmbase-dev
 libjsoncpp-dev
 libpython3.8-dev
 libspdlog-dev
+libssl-dev
 libtbb-dev
 libtiff-dev
 libtinyxml2-dev

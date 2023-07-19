@@ -11,6 +11,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
+#include <atomic>
 
 namespace MR
 {
@@ -67,7 +68,11 @@ IsoLines Isoliner::extract()
     BitSetParallelForAll( activeEdges_, [&]( UndirectedEdgeId ue )
     {
         VertId o = topology_.org( ue );
+        if ( !o )
+            return;
         VertId d = topology_.dest( ue );
+        if ( !d )
+            return;
         auto no = negativeVerts_.test( o );
         auto nd = negativeVerts_.test( d );
         if ( no != nd )
@@ -84,27 +89,40 @@ IsoLines Isoliner::extract()
         VertId o = topology_.org( e );
         auto no = negativeVerts_.test( o );
         assert ( no != negativeVerts_.test( topology_.dest( e ) ) );
-
+        // direct edge from negative to positive values
         res.push_back( extractOneLine_( no ? e : e.sym() ) );
     }
+    activeEdges_.clear();
     return res;
 }
 
 bool Isoliner::hasAnyLine() const
 {
-    for ( auto ue : undirectedEdges( topology_ ) )
+    std::atomic<bool> res{ false };
+    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( topology_.undirectedEdgeSize() ) ),
+        [&] ( const tbb::blocked_range<UndirectedEdgeId>& range )
     {
-        if ( region_ && !contains( *region_, topology_.left( ue ) ) && !contains( *region_, topology_.right( ue ) ) )
-            continue;
-        EdgeId e = ue;
-        VertId o = topology_.org( e );
-        VertId d = topology_.dest( e );
-        auto no = negativeVerts_.test( o );
-        auto nd = negativeVerts_.test( d );
-        if ( no != nd )
-            return true;
-    }
-    return false;
+        for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
+        {
+            if ( res.load( std::memory_order_relaxed ) )
+                break;
+            VertId o = topology_.org( ue );
+            if ( !o )
+                continue;
+            VertId d = topology_.dest( ue );
+            if ( !d )
+                continue;
+            auto no = negativeVerts_.test( o );
+            auto nd = negativeVerts_.test( d );
+            if ( no != nd )
+            {
+                assert ( !region_ || contains( *region_, topology_.left( ue ) ) || contains( *region_, topology_.right( ue ) ) );
+                res = true;
+                break;
+            }
+        }
+    } );
+    return res;
 }
 
 IsoLine Isoliner::track( const MeshTriPoint& start, ContinueTrack continueTrack )
@@ -189,6 +207,7 @@ EdgeId Isoliner::findNextEdge_( EdgeId e ) const
 
 IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
 {
+    assert( activeEdges_.empty() || activeEdges_.test( first.undirected() ) );
     std::vector<MeshEdgePoint> res;
     auto addCrossedEdge = [&]( EdgeId e )
     {
@@ -205,7 +224,7 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
     if ( !addCrossedEdge( first ) )
         return res;
     assert( activeEdges_.test( first.undirected() ) );
-    activeEdges_.reset( first.undirected() );
+        activeEdges_.reset( first.undirected() );
 
     bool closed = false;
     while ( auto next = findNextEdge_( res.back().e ) )
@@ -218,7 +237,7 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
         }
         if ( !addCrossedEdge( next ) )
             return res;
-        assert( activeEdges_.test( next.undirected() ) );
+        assert( activeEdges_.empty() || activeEdges_.test( next.undirected() ) );
         activeEdges_.reset( next.undirected() );
     }
 
@@ -234,7 +253,7 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
         while ( auto next = findNextEdge_( back.back().e ) )
         {
             back.push_back( MeshEdgePoint( next, -1 ) );
-            assert( activeEdges_.test( next.undirected() ) );
+            assert( activeEdges_.empty() || activeEdges_.test( next.undirected() ) );
             activeEdges_.reset( next.undirected() );
         }
         std::reverse( back.begin(), back.end() );

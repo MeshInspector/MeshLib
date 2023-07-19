@@ -14,13 +14,13 @@ gtkmm30-devel
 hidapi-devel
 ilmbase-devel
 jsoncpp-devel
+libharu-devel
 libtiff-devel
 tinyxml2-devel
 libzip-devel
 libzstd-devel
 openvdb-devel
 pkg-config
-podofo-devel
 python3
 spdlog-devel
 tbb-devel

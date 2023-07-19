@@ -3,14 +3,7 @@
 #include "MRMeshFwd.h"
 #include <filesystem>
 
-namespace PoDoFo
-{
-class PdfMemDocument;
-class PdfPainter;
-class PdfPage;
-class PdfFont;
-class PdfImage;
-}
+#include "hpdf.h"
 
 namespace MR
 {
@@ -27,7 +20,7 @@ struct PdfParameters
      * @detail list of available fonts:
      * Courier (-Bold, -Oblique, -BoldOblique)
      * Helvetica (-Bold, -Oblique, -BoldOblique)
-     * Times (-Roman, -Italic, -BoldItalic)
+     * Times (-Roman, -Bold, -Italic, -BoldItalic)
      * Symbol
      * ZapfDingbats
      */
@@ -40,22 +33,6 @@ struct PdfParameters
 class Pdf
 {
 public:
-    /// Horizontal alignment of object in box
-    enum class HorAlignment
-    {
-        Left,
-        Center,
-        Right
-    };
-
-    /// Vertical alignment of object in box
-    enum class VertAlignment
-    {
-        Top,
-        Center,
-        Bottom
-    };
-
     /// Ctor
     MRMESH_API Pdf( const std::filesystem::path& documentPath, const PdfParameters& params = PdfParameters() );
     /// Dtor. Automatically do close
@@ -75,14 +52,6 @@ public:
     MRMESH_API void addText( const std::string& text, bool isTitle = false );
 
     /**
-     * Direct adding text.
-     * Don't move cursor.
-     * Manually set box position & size and alignment.
-     * Uses text size.
-     */
-    MRMESH_API void addTextManual( const std::string& text, const Box2d& box, HorAlignment horAlignment, VertAlignment vertAlignment);
-
-    /**
      * @brief Add image from file in current cursor position.
      * @detail If image bigger than page size, autoscale image to page size.
      * Move cursor.
@@ -94,15 +63,6 @@ public:
     MRMESH_API void addImageFromFile( const std::filesystem::path& imagePath, const std::string& caption = {},
         const std::vector<std::pair<double, std::string>>& valuesMarks = {} );
 
-    /**
-     * Direct adding image from file.
-     * Don't move cursor.
-     * Manually set box position & size and alignment.
-     * Autoscale image to box size.
-     */
-    MRMESH_API void addImageFromFileManual( const std::filesystem::path& imagePath, const Box2d& box,
-        HorAlignment horAlignment = HorAlignment::Center, VertAlignment vertAlignment  = VertAlignment::Center);
-    
     /// Add new pageand move cursor on it
     MRMESH_API void newPage();
 
@@ -118,12 +78,10 @@ public:
     operator bool() const { return document_ != 0; };
 
 private:
-    std::unique_ptr<PoDoFo::PdfMemDocument> document_;
-    std::unique_ptr<PoDoFo::PdfPainter> painter_;
-    PoDoFo::PdfPage* activePage_ = nullptr;
-    PoDoFo::PdfFont* activeFont_ = nullptr;
+    HPDF_Doc document_ = nullptr;
+    HPDF_Page activePage_ = nullptr;
+    HPDF_Font activeFont_ = nullptr;
 
-    
     const std::filesystem::path filename_;
 
     PdfParameters params_;
@@ -131,7 +89,7 @@ private:
     double cursorX_ = 0;
     double cursorY_ = 0;
 
-    bool checkDocument() const { return document_ && painter_ && activePage_; };
+    bool checkDocument() const { return document_ && activePage_; };
 };
 
 }

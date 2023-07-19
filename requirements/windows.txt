@@ -17,9 +17,9 @@ gdcm
 gtest
 hidapi
 jsoncpp
+libharu
 libzip
 openvdb
-podofo
 python3
 spdlog
 tiff

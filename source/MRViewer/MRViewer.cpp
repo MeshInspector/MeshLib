@@ -139,7 +139,7 @@ static void glfw_key_callback( GLFWwindow* /*window*/, int key, int /*scancode*/
     } } );
 }
 
-static void glfw_window_size( GLFWwindow* /*window*/, int width, int height )
+static void glfw_framebuffer_size( GLFWwindow* /*window*/, int width, int height )
 {
     auto viewer = &MR::getViewerInstance();
     viewer->postResize( width, height );
@@ -501,7 +501,7 @@ int Viewer::launchInit_( const LaunchParams& params )
 #if defined(__APPLE__)
     //Setting window properties
     glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    glfwWindowHint( GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE );
+    glfwWindowHint( GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE );
 #endif
     if ( !settingsMng_ )
         glfwWindowHint( GLFW_SAMPLES, 8 );
@@ -562,7 +562,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         // Register callbacks
         glfwSetKeyCallback( window, glfw_key_callback );
         glfwSetCursorPosCallback( window, glfw_mouse_move );
-        glfwSetWindowSizeCallback( window, glfw_window_size );
+        glfwSetFramebufferSizeCallback( window, glfw_framebuffer_size );
         glfwSetWindowPosCallback( window, glfw_window_pos );
         glfwSetCursorEnterCallback( window, glfw_cursor_enter_callback );
 #ifndef __EMSCRIPTEN__
@@ -578,10 +578,8 @@ int Viewer::launchInit_( const LaunchParams& params )
         // Handle retina displays (windows and mac)
         int width, height;
         glfwGetFramebufferSize( window, &width, &height );
-        int width_window, height_window;
-        glfwGetWindowSize( window, &width_window, &height_window );
         // Initialize IGL viewer
-        glfw_window_size( window, width_window, height_window );
+        glfw_framebuffer_size( window, width, height );
 
         float xscale{ 1.0f }, yscale{ 1.0f };
 #ifndef __EMSCRIPTEN__
@@ -594,7 +592,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         if ( alphaSorter_ )
         {
             alphaSorter_->init();
-            alphaSorter_->updateTransparencyTexturesSize( width_window, height_window );
+            alphaSorter_->updateTransparencyTexturesSize( width, height );
         }
 
         mouseController.connect();
@@ -1374,16 +1372,21 @@ void Viewer::resize( int w, int h )
 {
     if ( window )
     {
-        glfwSetWindowSize( window, w, h );
+        Vector2i fb;
+        Vector2i win;
+        glfwGetWindowSize( window, &win.x, &win.y );
+        glfwGetFramebufferSize( window, &fb.x, &fb.y );
+
+        Vector2f ratio( float( win.x ) / float( fb.x ), float( win.y ) / float( fb.y ) );
+        glfwSetWindowSize( window, int( w * ratio.x ), int( h * ratio.y ) );
     }
-    postResize( w, h );
 }
 
 void Viewer::postResize( int w, int h )
 {
     if ( w == 0 || h == 0 )
         return;
-    if ( w == window_width && h == window_width )
+    if ( framebufferSize.x == w && framebufferSize.y == h )
         return;
     if ( viewport_list.size() == 1 )
     {
@@ -1400,24 +1403,24 @@ void Viewer::postResize( int w, int h )
                 auto rect = viewport.getViewportRect();
                 auto oldWidth = width( rect );
                 auto oldHeight = height( rect );
-                rect.min.x = float( rect.min.x / window_width ) * w;
-                rect.min.y = float( rect.min.y / window_height ) * h;
-                rect.max.x = rect.min.x + float( oldWidth / window_width ) * w;
-                rect.max.y = rect.min.y + float( oldHeight / window_height ) * h;
+                rect.min.x = float( rect.min.x / framebufferSize.x ) * w;
+                rect.min.y = float( rect.min.y / framebufferSize.y ) * h;
+                rect.max.x = rect.min.x + float( oldWidth / framebufferSize.x ) * w;
+                rect.max.y = rect.min.y + float( oldHeight / framebufferSize.y ) * h;
                 viewport.setViewportRect( rect );
             }
     }
     postResizeSignal( w, h );
     if ( !windowMaximized ) // resize is called after maximized
-        windowSaveSize = { w,h };
+        glfwGetWindowSize( window, &windowSaveSize.x, &windowSaveSize.y );
     if ( w != 0 )
-        window_width = w;
+        framebufferSize.x = w;
     if ( h != 0 )
-        window_height = h;
+        framebufferSize.y = h;
 
 
     if ( alphaSorter_ )
-        alphaSorter_->updateTransparencyTexturesSize( window_width, window_height );
+        alphaSorter_->updateTransparencyTexturesSize( framebufferSize.x, framebufferSize.y );
 #if !defined(__EMSCRIPTEN__) || defined(MR_EMSCRIPTEN_ASYNCIFY)
     if ( isLaunched_ )
     {
@@ -1723,8 +1726,8 @@ ViewportId Viewer::getHoveredViewportId() const
 
         if ( ( currentPos.x > rect.min.x ) &&
              ( currentPos.x < rect.min.x + width( rect ) ) &&
-             ( ( window_height - currentPos.y ) > rect.min.y ) &&
-             ( ( window_height - currentPos.y ) < rect.min.y + height( rect ) ) )
+             ( ( framebufferSize.y - currentPos.y ) > rect.min.y ) &&
+             ( ( framebufferSize.y - currentPos.y ) < rect.min.y + height( rect ) ) )
         {
             return viewport_list[i].id;
         }
@@ -1810,14 +1813,14 @@ Image Viewer::captureScreenShot( const Vector2i& pos /*= Vector2i()*/, const Vec
 {
     Vector2i size = sizeP;
     if ( !size.x )
-        size.x = window_width - pos.x;
+        size.x = framebufferSize.x - pos.x;
     else
-        size.x = std::min( window_width - pos.x, size.x );
+        size.x = std::min( framebufferSize.x - pos.x, size.x );
 
     if ( !size.y )
-        size.y = window_height - pos.y;
+        size.y = framebufferSize.y - pos.y;
     else
-        size.y = std::min( window_height - pos.y, size.y );
+        size.y = std::min( framebufferSize.y - pos.y, size.y );
 
     std::vector<Color> pixels( size.x * size.x );
 
@@ -1839,14 +1842,14 @@ void Viewer::captureUIScreenShot( std::function<void( const Image& )> callback,
     {
         Vector2i size = sizeP;
         if ( !size.x )
-            size.x = window_width - pos.x;
+            size.x = framebufferSize.x - pos.x;
         else
-            size.x = std::min( window_width - pos.x, size.x );
+            size.x = std::min( framebufferSize.x - pos.x, size.x );
 
         if ( !size.y )
-            size.y = window_height - pos.y;
+            size.y = framebufferSize.y - pos.y;
         else
-            size.y = std::min( window_height - pos.y, size.y );
+            size.y = std::min( framebufferSize.y - pos.y, size.y );
 
         Image image;
         image.resolution = size;
@@ -1931,7 +1934,7 @@ Vector3f Viewer::screenToViewport( const Vector3f& screenPoint, ViewportId id ) 
         return { 0.f, 0.f, 0.f };
 
     const auto& rect = viewport( id ).getViewportRect();
-    return { screenPoint.x - rect.min.x, screenPoint.y + rect.min.y + height( rect ) - window_height, screenPoint.z };
+    return { screenPoint.x - rect.min.x, screenPoint.y + rect.min.y + height( rect ) - framebufferSize.y, screenPoint.z };
 }
 
 Vector3f Viewer::viewportToScreen( const Vector3f& viewportPoint, ViewportId id ) const
@@ -1940,7 +1943,7 @@ Vector3f Viewer::viewportToScreen( const Vector3f& viewportPoint, ViewportId id 
         return { 0.f, 0.f, 0.f };
 
     const auto& rect = viewport( id ).getViewportRect();
-    return { viewportPoint.x + rect.min.x, viewportPoint.y - rect.min.y - height( rect ) + window_height, viewportPoint.z };
+    return { viewportPoint.x + rect.min.x, viewportPoint.y - rect.min.y - height( rect ) + framebufferSize.y, viewportPoint.z };
 }
 
 std::vector<std::reference_wrapper<Viewport>> Viewer::getViewports( ViewportMask mask )

@@ -189,7 +189,7 @@ bool MouseController::preMouseMove_( int x, int y)
     case MR::MouseMode::Rotation:
     {
         auto quat = viewport.getParameters().cameraTrackballAngle;
-        float maxDimension = float( std::max( viewer.window_width, viewer.window_height ) );
+        float maxDimension = float( std::max( viewer.framebufferSize.x, viewer.framebufferSize.y ) );
         auto angle = PI_F * ( Vector2f( currentMousePos_ ) - Vector2f( prevMousePos_ ) ) / maxDimension * 4.0f;
         quat = (
             quat.inverse() *

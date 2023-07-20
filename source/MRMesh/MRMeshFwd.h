@@ -276,6 +276,9 @@ using VertColors = Vector<Color, VertId>;
 using VertUVCoords = Vector<UVCoord, VertId>;
 using FaceNormals = Vector<Vector3f, FaceId>;
 
+using VertScalars = Vector<float, VertId>;
+using FaceScalars = Vector<float, FaceId>;
+
 using VertToFloatFunc = std::function<float( VertId )>;
 using FaceToFloatFunc = std::function<float( FaceId )>;
 

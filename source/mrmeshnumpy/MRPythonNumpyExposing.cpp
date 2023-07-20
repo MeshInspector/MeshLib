@@ -476,7 +476,7 @@ pybind11::array_t<double> getNumpyCurvatureGradient( const MR::Mesh& mesh )
     using namespace MR;
     int numVerts = mesh.topology.lastValidVert() + 1;
 
-    Vector<float, VertId> curv( numVerts );
+    VertScalars curv( numVerts );
     BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
     {
         curv[v] = mesh.discreteMeanCurvature( v );

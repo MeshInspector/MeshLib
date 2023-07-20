@@ -57,7 +57,7 @@ public:
     // given fixed vertices, computes positions of remaining region vertices
     MRMESH_API void apply();
     // given a pre-resized scalar field with set values in fixed vertices, computes the values in free vertices
-    MRMESH_API void applyToScalar( Vector<float,VertId> & scalarField );
+    MRMESH_API void applyToScalar( VertScalars & scalarField );
 
     // return all initially free vertices and the first layer around the them
     const VertBitSet & region() const { return region_; }

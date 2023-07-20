@@ -222,7 +222,7 @@ std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const MeshPart&
 
 std::vector<IsoLines> extractAllIsolines( const Mesh& mesh, const SurfacePath& startSurfacePath, float sectionStep, BypassDirection bypassDir, ProgressCallback cb )
 {
-    MR::Vector<float, VertId> distances;
+    MR::VertScalars distances;
    
     VertBitSet startVertices( mesh.topology.vertSize() );
     for ( const auto& ep : startSurfacePath )

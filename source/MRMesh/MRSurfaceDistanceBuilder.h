@@ -52,7 +52,7 @@ public:
     /// processes one more candidate vertex, which is returned
     MRMESH_API VertId growOne();
     /// takes ownership over constructed distance map
-    Vector<float,VertId> takeDistanceMap() { return std::move( vertDistanceMap_ ); }
+    VertScalars takeDistanceMap() { return std::move( vertDistanceMap_ ); }
 
 public:
     /// returns true if further growth is impossible
@@ -63,7 +63,7 @@ public:
 private:
     const Mesh & mesh_;
     const VertBitSet* region_{nullptr};
-    Vector<float,VertId> vertDistanceMap_;
+    VertScalars vertDistanceMap_;
     Vector<char,VertId> vertUpdatedTimes_;
     std::priority_queue<VertDistance> nextVerts_;
     std::optional<Vector3f> target_;

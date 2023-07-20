@@ -8,7 +8,7 @@ set(CMAKE_CUDA_COMPILER ${CUDA_TOOLKIT_ROOT_DIR}bin/nvcc)
 set(CMAKE_CUDA_PATH /usr/local/cuda-12.1)
 
 if( ${MR_FEDORA} )
-    find_package(CUDA 12)
+    find_package(CUDA)
 else()
     find_package(CUDA 12 REQUIRED)
 endif()

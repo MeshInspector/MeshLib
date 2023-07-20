@@ -23,6 +23,6 @@ MRMESH_API Mesh makeRegularGridMesh( size_t width, size_t height,
                                           const RegularGridLatticePositioner& positioner,
                                           const RegularGridMeshFaceValidator& faceValidator = {} );
 
-// Creates regular mesh from monotone (conects point with closed x, y neighbors) points
-MRMESH_API Expected<Mesh, std::string> makeRegularGridMesh( VertCoords&& pc, ProgressCallback cb = {} );
+// Creates regular mesh from monotone (connects point with closed x, y neighbors) points
+MRMESH_API Expected<Mesh, std::string> makeRegularGridMesh( VertCoords pc, ProgressCallback cb = {} );
 }

@@ -213,6 +213,7 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
 
 Expected<Mesh, std::string> makeRegularGridMesh( VertCoords&& points, ProgressCallback cb )
 {
+    MR_TIMER
     tbb::parallel_sort( points.vec_.begin(), points.vec_.end(), [] ( const auto& l, const auto& r )
     {
         return l.y < r.y;

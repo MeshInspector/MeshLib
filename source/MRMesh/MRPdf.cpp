@@ -23,24 +23,24 @@ namespace
 // size of A4 page in pixels (uses 72 PPI)
 // https://www.papersizes.org/a-sizes-in-pixels.htm
 // TODO need get this value from PoDoFo
-constexpr HPDF_DOUBLE pageWidth = 595.;
-constexpr HPDF_DOUBLE pageHeight = 842.;
-constexpr HPDF_DOUBLE scaleFactor = 17. / 6.; // ~2.8(3)
+constexpr HPDF_REAL pageWidth = 595.;
+constexpr HPDF_REAL pageHeight = 842.;
+constexpr HPDF_REAL scaleFactor = 17. / 6.; // ~2.8(3)
 
-constexpr HPDF_DOUBLE borderFieldLeft = 20 * scaleFactor;
-constexpr HPDF_DOUBLE borderFieldRight = pageWidth - 10 * scaleFactor;
-constexpr HPDF_DOUBLE borderFieldTop = pageHeight - 10 * scaleFactor;
-constexpr HPDF_DOUBLE borderFieldBottom = 10 * scaleFactor;
-constexpr HPDF_DOUBLE pageWorkWidth = borderFieldRight - borderFieldLeft;
-constexpr HPDF_DOUBLE pageWorkHeight = borderFieldTop - borderFieldBottom;
+constexpr HPDF_REAL borderFieldLeft = 20 * scaleFactor;
+constexpr HPDF_REAL borderFieldRight = pageWidth - 10 * scaleFactor;
+constexpr HPDF_REAL borderFieldTop = pageHeight - 10 * scaleFactor;
+constexpr HPDF_REAL borderFieldBottom = 10 * scaleFactor;
+constexpr HPDF_REAL pageWorkWidth = borderFieldRight - borderFieldLeft;
+constexpr HPDF_REAL pageWorkHeight = borderFieldTop - borderFieldBottom;
 
-constexpr HPDF_DOUBLE spacing = 6 * scaleFactor;
+constexpr HPDF_REAL spacing = 6 * scaleFactor;
 
-constexpr HPDF_DOUBLE textSpacing = 4 * scaleFactor;
+constexpr HPDF_REAL textSpacing = 4 * scaleFactor;
 
-constexpr HPDF_DOUBLE labelHeight = 10 * scaleFactor;
-constexpr HPDF_DOUBLE marksHeight = 10 * scaleFactor;
-constexpr HPDF_DOUBLE marksWidth = 30 * scaleFactor;
+constexpr HPDF_REAL labelHeight = 10 * scaleFactor;
+constexpr HPDF_REAL marksHeight = 10 * scaleFactor;
+constexpr HPDF_REAL marksWidth = 30 * scaleFactor;
 
 }
 
@@ -98,7 +98,7 @@ void Pdf::addText(const std::string& text, bool isTitle /*= false*/)
     }
 
 
-    const HPDF_DOUBLE textHeight = ( isTitle ? params_.titleSize : params_.textSize ) * strNum + textSpacing * 2.;
+    const HPDF_REAL textHeight = ( isTitle ? params_.titleSize : params_.textSize ) * strNum + textSpacing * 2.;
 
     if ( cursorY_ - textHeight < borderFieldBottom )
         newPage();
@@ -133,10 +133,10 @@ void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const std::s
         return;
     }
 
-    const HPDF_DOUBLE additionalHeight = marksHeight * valuesMarks.empty() + marksHeight * !valuesMarks.empty() + labelHeight * !caption.empty();
-    const HPDF_DOUBLE scalingFactor = std::min( ( pageWorkHeight - additionalHeight ) / HPDF_Image_GetHeight( pdfImage ), pageWorkWidth / HPDF_Image_GetWidth( pdfImage ) );
-    const HPDF_DOUBLE scalingWidth = scalingFactor * HPDF_Image_GetWidth( pdfImage );
-    const HPDF_DOUBLE scalingHeight = scalingFactor * HPDF_Image_GetHeight( pdfImage );
+    const HPDF_REAL additionalHeight = marksHeight * valuesMarks.empty() + marksHeight * !valuesMarks.empty() + labelHeight * !caption.empty();
+    const HPDF_REAL scalingFactor = std::min( ( pageWorkHeight - additionalHeight ) / HPDF_Image_GetHeight( pdfImage ), pageWorkWidth / HPDF_Image_GetWidth( pdfImage ) );
+    const HPDF_REAL scalingWidth = scalingFactor * HPDF_Image_GetWidth( pdfImage );
+    const HPDF_REAL scalingHeight = scalingFactor * HPDF_Image_GetHeight( pdfImage );
 
     if ( cursorY_ - scalingHeight - additionalHeight < borderFieldBottom )
         newPage();
@@ -146,10 +146,10 @@ void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const std::s
 
     if ( !valuesMarks.empty() )
     {
-        HPDF_DOUBLE step = pageWorkWidth - marksWidth / 2.;
+        HPDF_REAL step = pageWorkWidth - marksWidth / 2.;
         if ( valuesMarks.size() > 1)
             step /= ( valuesMarks.size() - 1);
-        HPDF_DOUBLE posX = cursorX_;
+        HPDF_REAL posX = cursorX_;
         for ( auto& mark : valuesMarks )
         {
             HPDF_Page_BeginText( activePage_ );

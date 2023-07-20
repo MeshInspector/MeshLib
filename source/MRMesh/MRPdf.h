@@ -69,10 +69,10 @@ public:
     /// Save and close document. After this impossible add anything in document
     MRMESH_API void close();
 
-    void setCursorPosX( HPDF_DOUBLE posX ) { cursorX_ = posX; };
-    void setCursorPosY( HPDF_DOUBLE posY ) { cursorY_ = posY; };
-    double getCursorPosX() const { return cursorX_; };
-    double getCursorPosY() const { return cursorY_; };
+    void setCursorPosX( HPDF_REAL posX ) { cursorX_ = posX; };
+    void setCursorPosY( HPDF_REAL posY ) { cursorY_ = posY; };
+    float getCursorPosX() const { return cursorX_; };
+    float getCursorPosY() const { return cursorY_; };
 
     /// Checking the ability to work with a document
     operator bool() const { return document_ != 0; };
@@ -86,8 +86,8 @@ private:
 
     PdfParameters params_;
 
-    HPDF_DOUBLE cursorX_ = 0;
-    HPDF_DOUBLE cursorY_ = 0;
+    HPDF_REAL cursorX_ = 0;
+    HPDF_REAL cursorY_ = 0;
 
     bool checkDocument() const { return document_ && activePage_; };
 };

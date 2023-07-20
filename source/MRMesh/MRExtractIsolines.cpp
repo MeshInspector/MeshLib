@@ -16,13 +16,12 @@
 namespace MR
 {
 
-using ValueInVertex = std::function<float( VertId )>;
 using ContinueTrack = std::function<bool( const MeshEdgePoint& )>;
 
 class Isoliner
 {
 public:
-    Isoliner( const MeshTopology& topology, ValueInVertex valueInVertex, const FaceBitSet* region )
+    Isoliner( const MeshTopology& topology, VertToFloatFunc valueInVertex, const FaceBitSet* region )
         : topology_( topology ), region_( region ), valueInVertex_( valueInVertex )
         { findNegativeVerts_(); }
 
@@ -43,7 +42,7 @@ private:
 private:
     const MeshTopology& topology_;
     const FaceBitSet* region_ = nullptr;
-    ValueInVertex valueInVertex_;
+    VertToFloatFunc valueInVertex_;
     VertBitSet negativeVerts_;
     UndirectedEdgeBitSet activeEdges_; // the edges crossed by the iso-line, but not yet extracted
 };
@@ -268,27 +267,31 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
 }
 
 IsoLines extractIsolines( const MeshTopology& topology,
-    const Vector<float, VertId>& vertValues, float isoValue, const FaceBitSet* region )
+    const VertToFloatFunc & vertValues, const FaceBitSet* region )
 {
-    MR_TIMER;
-
-    Isoliner s( topology, [&] ( VertId v )
-    {
-        return vertValues[v] - isoValue;
-    }, region );
+    MR_TIMER
+    Isoliner s( topology, vertValues, region );
     return s.extract();
 }
 
 bool hasAnyIsoline( const MeshTopology& topology,
-    const Vector<float, VertId>& vertValues, float isoValue, const FaceBitSet* region )
+    const VertToFloatFunc & vertValues, const FaceBitSet* region )
 {
-    MR_TIMER;
-
-    Isoliner s( topology, [&] ( VertId v )
-    {
-        return vertValues[v] - isoValue;
-    }, region );
+    MR_TIMER
+    Isoliner s( topology, vertValues, region );
     return s.hasAnyLine();
+}
+
+IsoLines extractIsolines( const MeshTopology & topology,
+    const Vector<float,VertId> & vertValues, float isoValue, const FaceBitSet * region )
+{
+    return extractIsolines( topology, [&vertValues, isoValue] ( VertId v ) { return vertValues[v] - isoValue; }, region );
+}
+
+bool hasAnyIsoline( const MeshTopology & topology,
+    const Vector<float,VertId> & vertValues, float isoValue, const FaceBitSet * region )
+{
+    return hasAnyIsoline( topology, [&vertValues, isoValue] ( VertId v ) { return vertValues[v] - isoValue; }, region );
 }
 
 PlaneSections extractPlaneSections( const MeshPart& mp, const Plane3f& plane )
@@ -327,7 +330,7 @@ PlaneSection trackSection( const MeshPart& mp,
     auto startPoint = mp.mesh.triPoint( start );
     auto prevPoint = startPoint;
     auto plane = Plane3f::fromDirAndPt( cross( dir, mp.mesh.pseudonormal( start ) ), prevPoint );
-    ValueInVertex valueInVertex = [&] ( VertId v )
+    VertToFloatFunc valueInVertex = [&] ( VertId v )
     {
         return plane.distance( mp.mesh.points[v] );
     };

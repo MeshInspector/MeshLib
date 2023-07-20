@@ -276,6 +276,9 @@ using VertColors = Vector<Color, VertId>;
 using VertUVCoords = Vector<UVCoord, VertId>;
 using FaceNormals = Vector<Vector3f, FaceId>;
 
+using VertToFloatFunc = std::function<float( VertId )>;
+using FaceToFloatFunc = std::function<float( FaceId )>;
+
 template <typename T, typename I> struct MRMESH_CLASS BMap;
 using FaceBMap = BMap<FaceId, FaceId>;
 using VertBMap = BMap<VertId, VertId>;

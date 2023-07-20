@@ -81,7 +81,7 @@ IsoLines Isoliner::extract()
         }
     } );
 
-    std::vector<std::vector<MeshEdgePoint>> res;
+    IsoLines res;
     for ( auto ue : activeEdges_ )
     {
         EdgeId e = ue;
@@ -207,7 +207,7 @@ EdgeId Isoliner::findNextEdge_( EdgeId e ) const
 IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
 {
     assert( activeEdges_.empty() || activeEdges_.test( first.undirected() ) );
-    std::vector<MeshEdgePoint> res;
+    IsoLine res;
     auto addCrossedEdge = [&]( EdgeId e )
     {
         if ( !continueTrack )
@@ -247,7 +247,7 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
     {
         auto firstSym = first;
         firstSym = firstSym.sym(); // go backward
-        std::vector<MeshEdgePoint> back;
+        IsoLine back;
         back.push_back( MeshEdgePoint( firstSym, -1 ) );
         while ( auto next = findNextEdge_( back.back().e ) )
         {

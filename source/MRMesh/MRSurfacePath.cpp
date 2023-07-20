@@ -376,12 +376,12 @@ Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
     return res;
 }
 
-Expected<std::vector<MeshEdgePoint>, PathError> computeFastMarchingPath( const MeshPart & mp,
+Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp,
     const MeshTriPoint & start, const MeshTriPoint & end,
     const VertBitSet* vertRegion, VertScalars * outSurfaceDistances )
 {
     MR_TIMER;
-    std::vector<MeshEdgePoint> res;
+    SurfacePath res;
     auto s = start;
     auto e = end;
     if ( fromSameTriangle( mp.mesh.topology, s, e ) )
@@ -423,7 +423,7 @@ Expected<std::vector<MeshEdgePoint>, PathError> computeFastMarchingPath( const M
     return res;
 }
 
-Expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePath( const MeshPart & mp,
+Expected<SurfacePath, PathError> computeSurfacePath( const MeshPart & mp,
     const MeshTriPoint & start, const MeshTriPoint & end, int maxGeodesicIters,
     const VertBitSet* vertRegion, VertScalars * outSurfaceDistances )
 {

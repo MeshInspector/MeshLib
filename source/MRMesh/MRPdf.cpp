@@ -25,7 +25,7 @@ namespace
 // TODO need get this value from PoDoFo
 constexpr HPDF_REAL pageWidth = 595.;
 constexpr HPDF_REAL pageHeight = 842.;
-constexpr HPDF_REAL scaleFactor = 17. / 6.; // ~2.8(3)
+constexpr HPDF_REAL scaleFactor = static_cast<HPDF_REAL>(17. / 6.); // ~2.8(3)
 
 constexpr HPDF_REAL borderFieldLeft = 20 * scaleFactor;
 constexpr HPDF_REAL borderFieldRight = pageWidth - 10 * scaleFactor;
@@ -98,7 +98,7 @@ void Pdf::addText(const std::string& text, bool isTitle /*= false*/)
     }
 
 
-    const HPDF_REAL textHeight = ( isTitle ? params_.titleSize : params_.textSize ) * strNum + textSpacing * 2.;
+    const HPDF_REAL textHeight = static_cast<HPDF_REAL>(( isTitle ? params_.titleSize : params_.textSize ) * strNum + textSpacing * 2.);
 
     if ( cursorY_ - textHeight < borderFieldBottom )
         newPage();

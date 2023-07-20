@@ -96,7 +96,7 @@ VoidOrErrStr parseCoordinate( const std::string_view& str, Vector3f& v )
         str.begin(),
         str.end(),
         ( float_[coord] >> float_[coord] >> float_[coord] ),
-        ascii::space
+        ascii::space | ascii::punct
     );
     if ( !r )
         return unexpected( "Failed to parse vertex" );
@@ -115,7 +115,7 @@ VoidOrErrStr parseCoordinate( const std::string_view& str, Vector3f& v, char pre
         str.begin(),
         str.end(),
         ( prefix >> float_[coord] >> float_[coord] >> float_[coord] ),
-        ascii::space
+        ascii::space | ascii::punct
     );
     if ( !r )
         return unexpected( "Failed to parse vertex" );

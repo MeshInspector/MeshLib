@@ -2,6 +2,8 @@
 #include "MRMeshFwd.h"
 #include "MRMesh.h"
 #include "MRVector3.h"
+#include "MRProgressCallback.h"
+#include "MRExpected.h"
 #include <functional>
 
 namespace MR
@@ -20,4 +22,7 @@ MRMESH_API Mesh makeRegularGridMesh( size_t width, size_t height,
                                           const RegularGridLatticeValidator& validator,
                                           const RegularGridLatticePositioner& positioner,
                                           const RegularGridMeshFaceValidator& faceValidator = {} );
+
+// Creates regular mesh from monotone (conects point with closed x, y neighbors) points
+MRMESH_API Expected<Mesh, std::string> makeRegularGridMesh( VertCoords&& pc, ProgressCallback cb = {} );
 }

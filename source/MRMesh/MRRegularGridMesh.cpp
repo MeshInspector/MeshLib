@@ -5,6 +5,7 @@
 #include "MRMeshDelone.h"
 #include "MRGridSettings.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRTimer.h"
 #include "MRGTest.h"
 
@@ -207,6 +208,63 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
 
     res.topology.buildGridMesh( gs );
     assert( res.topology.checkValidity() );
+    return res;
+}
+
+Expected<Mesh, std::string> makeRegularGridMesh( VertCoords&& points, ProgressCallback cb )
+{
+    MR_TIMER
+    tbb::parallel_sort( points.vec_.begin(), points.vec_.end(), [] ( const auto& l, const auto& r )
+    {
+        return l.y < r.y;
+    } );
+    if ( cb && !cb( 0.2f ) )
+        return unexpectedOperationCanceled();
+
+    std::vector<size_t> lineWidths;
+    std::vector<size_t> positionOffsets;
+    size_t gCounter = 0;
+    size_t maxCounter = 0;
+    while ( gCounter != points.size() )
+    {
+        size_t counter = 0;
+        while ( points.vec_[gCounter + counter].y == points.vec_[gCounter].y )
+            ++counter;
+        positionOffsets.push_back( gCounter );
+        lineWidths.push_back( counter );
+        gCounter += counter;
+        if ( counter > maxCounter )
+            maxCounter = counter;
+    }
+    positionOffsets.push_back( gCounter );
+
+    auto keepGoing = ParallelFor( positionOffsets, [&] ( size_t i )
+    {
+        if ( i + 1 == positionOffsets.size() )
+            return;
+        std::sort( points.vec_.begin() + positionOffsets[i], points.vec_.begin() + positionOffsets[i + 1],
+            [] ( const auto& l, const auto& r ) { return l.x < r.x; } );
+    }, subprogress( cb, 0.2f, 0.8f ) );
+    
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
+
+    auto res = makeRegularGridMesh( maxCounter, lineWidths.size(),
+        [&] ( size_t x, size_t y )->bool
+    {
+        if ( y + 1 > lineWidths.size() )
+            return false;
+        if ( x + 1 > lineWidths[y] )
+            return false;
+        return true;
+    },
+        [&] ( size_t x, size_t y )->Vector3f
+    {
+        return points.vec_[positionOffsets[y] + x];
+    } );
+
+    if ( cb && !cb( 1.0f ) )
+        return unexpectedOperationCanceled();
     return res;
 }
 

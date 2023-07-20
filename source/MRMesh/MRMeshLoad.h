@@ -62,12 +62,6 @@ MRMESH_API Expected<Mesh, std::string> fromPly( const std::filesystem::path& fil
 MRMESH_API Expected<Mesh, std::string> fromPly( std::istream& in, VertColors* colors = nullptr,
                                                     ProgressCallback callback = {} );
 
-/// loads from .xyz regular grid file
-MRMESH_API Expected<Mesh, std::string> fromXyz( const std::filesystem::path& file, VertColors* colors = nullptr,
-                                                    ProgressCallback callback = {} );
-MRMESH_API Expected<Mesh, std::string> fromXyz( std::istream& in, VertColors* colors = nullptr,
-                                                    ProgressCallback callback = {} );
-
 #ifndef MRMESH_NO_OPENCTM
 /// loads from .ctm file
 MRMESH_API Expected<Mesh, std::string> fromCtm( const std::filesystem::path& file, VertColors* colors = nullptr,

@@ -11,10 +11,6 @@
 #include "MRColor.h"
 #include "MRPch/MRTBB.h"
 #include "MRProgressReadWrite.h"
-#include "MRIOParsing.h"
-#include "MRParallelFor.h"
-#include "MRComputeBoundingBox.h"
-
 
 #include <array>
 #include <future>
@@ -26,7 +22,6 @@
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
 #include <tinyxml2.h>
 #endif
-#include "MRRegularGridMesh.h"
 
 namespace MR
 {
@@ -475,99 +470,6 @@ Expected<Mesh, std::string> fromPly( std::istream& in, VertColors* colors, Progr
     return std::move( res );
 }
 
-Expected<MR::Mesh, std::string> fromXyz( const std::filesystem::path& file,
-    VertColors* colors /*= nullptr*/, ProgressCallback callback /*= {} */ )
-{
-    std::ifstream in( file, std::ifstream::binary );
-    if ( !in )
-        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
-
-    return addFileNameInError( fromXyz( in, colors, callback ), file );
-}
-
-Expected<MR::Mesh, std::string> fromXyz( std::istream& in,
-    VertColors*  /*= nullptr*/, ProgressCallback callback /*= {} */ )
-{
-    // read all to buffer
-    MR_TIMER;
-    auto dataExp = readCharBuffer( in );
-    if ( !dataExp.has_value() )
-        return unexpected( dataExp.error() );
-
-    if ( callback && !callback( 0.25f ) )
-        return unexpected( "Loading canceled" );
-
-    const auto& data = *dataExp;
-    auto lineOffsets = splitByLines( data.data(), data.size() );
-
-    int firstLine = 0;
-    std::string_view headerLine( data.data() + lineOffsets[firstLine], lineOffsets[firstLine + 1] - lineOffsets[firstLine] );
-    if ( headerLine.find( "x y z" ) != std::string::npos )
-        firstLine = 1;
-
-    std::vector<Vector3f> coords;
-    coords.resize( lineOffsets.size() - firstLine - 1 );
-    
-    std::string parseError;
-    tbb::task_group_context ctx;
-    auto keepGoing = ParallelFor( coords, [&] ( size_t i )
-    {
-        std::string_view line( data.data() + lineOffsets[firstLine + i], lineOffsets[firstLine + i + 1] - lineOffsets[firstLine + i] );
-        auto parseRes = parseCoordinate( line, coords[i] );
-        if ( !parseRes.has_value() && ctx.cancel_group_execution() )
-            parseError = std::move( parseRes.error() );
-    }, subprogress( callback, 0.25f, 0.5f ) );
-
-    if ( !keepGoing )
-        return unexpected( "Loading canceled" );
-
-    if ( !parseError.empty() )
-        return unexpected( parseError );
-
-    // it may require to sort points, but we dont have such cases
-
-    std::vector<size_t> lineWidths;
-    std::vector<size_t> positionOffsets;
-    size_t gCounter = 0;
-    size_t maxCounter = 0;
-    while ( gCounter != coords.size() )
-    {
-        size_t counter = 0;
-        while ( coords[gCounter + counter].y == coords[gCounter].y )
-            ++counter;
-        positionOffsets.push_back( gCounter );
-        lineWidths.push_back( counter );
-        gCounter += counter;
-        if ( counter > maxCounter )
-            maxCounter = counter;
-    }
-
-    if ( callback && !callback( 0.85f ) )
-        return unexpected( "Loading canceled" );
-
-
-    auto res = makeRegularGridMesh( maxCounter, lineWidths.size(),
-        [&] ( size_t x, size_t y )->bool
-    {
-        if ( y + 1 > lineWidths.size() )
-            return false;
-        if ( x + 1 > lineWidths[y] )
-            return false;
-        return true;
-    },
-        [&] ( size_t x, size_t y )->Vector3f
-    {
-        return coords[positionOffsets[y] + x];
-    } );
-
-    if ( callback && !callback( 0.97f ) )
-        return unexpected( "Loading canceled" );
-
-    // it is inverted for this cases
-    res.topology.flipOrientation();
-    return res;
-}
-
 #ifndef MRMESH_NO_OPENCTM
 
 Expected<Mesh, std::string> fromCtm( const std::filesystem::path & file, VertColors* colors, ProgressCallback callback )
@@ -811,7 +713,6 @@ MR_ADD_MESH_LOADER( IOFilter( "Stereolithography (.stl)", "*.stl" ), fromAnyStl 
 MR_ADD_MESH_LOADER( IOFilter( "Object format file (.off)", "*.off" ), fromOff )
 MR_ADD_MESH_LOADER( IOFilter( "3D model object (.obj)", "*.obj" ), fromObj )
 MR_ADD_MESH_LOADER( IOFilter( "Polygon File Format (.ply)", "*.ply" ), fromPly )
-MR_ADD_MESH_LOADER( IOFilter( "XYZ Regular Grid (.xyz)", "*.xyz" ), fromXyz )
 #ifndef MRMESH_NO_OPENCTM
 MR_ADD_MESH_LOADER( IOFilter( "Compact triangle-based mesh (.ctm)", "*.ctm" ), fromCtm )
 #endif

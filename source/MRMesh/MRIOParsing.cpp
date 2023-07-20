@@ -85,7 +85,7 @@ Expected<MR::Buffer<char>, std::string> readCharBuffer( std::istream& in )
     return data;
 }
 
-VoidOrErrStr parseCoordinate( const std::string_view& str, Vector3f& v )
+VoidOrErrStr parseTextCoordinate( const std::string_view& str, Vector3f& v )
 {
     using namespace boost::spirit::x3;
 
@@ -96,7 +96,7 @@ VoidOrErrStr parseCoordinate( const std::string_view& str, Vector3f& v )
         str.begin(),
         str.end(),
         ( float_[coord] >> float_[coord] >> float_[coord] ),
-        ascii::space
+        ascii::space | ascii::punct
     );
     if ( !r )
         return unexpected( "Failed to parse vertex" );
@@ -104,7 +104,7 @@ VoidOrErrStr parseCoordinate( const std::string_view& str, Vector3f& v )
     return {};
 }
 
-VoidOrErrStr parseCoordinate( const std::string_view& str, Vector3f& v, char prefix )
+VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3f& v )
 {
     using namespace boost::spirit::x3;
 
@@ -114,7 +114,7 @@ VoidOrErrStr parseCoordinate( const std::string_view& str, Vector3f& v, char pre
     bool r = phrase_parse(
         str.begin(),
         str.end(),
-        ( prefix >> float_[coord] >> float_[coord] >> float_[coord] ),
+        ( 'v' >> float_[coord] >> float_[coord] >> float_[coord] ),
         ascii::space
     );
     if ( !r )

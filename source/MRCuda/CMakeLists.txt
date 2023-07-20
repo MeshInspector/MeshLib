@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
 if( ${MR_FEDORA} )
-    set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-12.1/")
+    set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-12.2/")
 else()
     set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-12.1/")
 endif()

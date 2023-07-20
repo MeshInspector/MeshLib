@@ -12,9 +12,6 @@ on:
 
 env:
   VCPKG-VERSION: '2023.04.15'
-  CUDA-VERSION: '12.0.1.52833'
-  CUDA-MAJOR: '12'
-  CUDA-MINOR: '0'
 
 jobs:
   windows-build-test:
@@ -24,6 +21,18 @@ jobs:
       matrix:
         config: [ "Debug", "Release" ]
         runner: [ windows-2022, windows-2019 ]
+        include:
+          - runner: windows-2022
+            vc-version: "2022"
+            CUDA-VERSION: '12.0.1.52833'
+            CUDA-MAJOR: '12'
+            CUDA-MINOR: '0'
+          - runner: windows-2019
+            vc-version: "2019"
+            CUDA-VERSION: '11.4.2.47141'
+            CUDA-MAJOR: '11'
+            CUDA-MINOR: '4'
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -61,26 +70,26 @@ jobs:
         uses: actions/cache@v3
         id: cuda-cache
         with:
-          key: cuda-${{env.CUDA-VERSION}}
+          key: cuda-${{matrix.CUDA-VERSION}}
           path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA*
 
       - name: Install CUDA
         if: steps.cuda-cache.outputs.cache-hit != 'true'
-        run: choco install cuda --version=${{env.CUDA-VERSION}} --confirm
+        run: choco install cuda --version=${{matrix.CUDA-VERSION}} --confirm
 
       - name: Setup CUDA
         shell: bash
         run: |
-          echo "CUDA_PATH=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
-          echo "CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
-          echo "CUDA_PATH_VX_Y=CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
-          echo "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}\\bin" >> $GITHUB_PATH
+          echo "CUDA_PATH=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}" >> $GITHUB_ENV
+          echo "CUDA_PATH_V${{ matrix.CUDA-MAJOR }}_${{ matrix.CUDA-MINOR }}=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}" >> $GITHUB_ENV
+          echo "CUDA_PATH_VX_Y=CUDA_PATH_V${{ matrix.CUDA-MAJOR }}_${{ matrix.CUDA-MINOR }}" >> $GITHUB_ENV
+          echo "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}\\bin" >> $GITHUB_PATH
 
       - name: Install Visual Studio Integration
         run: |
           $x = (dir $env:CUDA_PATH -dir -recurse -depth 2).where({$_.name -eq 'visual_studio_integration'}).fullname
           $y = (dir $x -dir -recurse).where({$_.name -eq 'MSBuildExtensions'}).fullname + '\*'
-          (gi 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
+          (gi 'C:\Program Files\Microsoft Visual Studio\${{matrix.vc-version}}\Enterprise\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
 
       - name: Setup python
         run: |

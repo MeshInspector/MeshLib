@@ -24,6 +24,7 @@ void GcodeProcessor::reset()
     scaling_ = Vector3f::diagonal( 1.f );
     inches_ = false;
     gcodeSource_.clear();
+    feedrateMax_ = 0.f;
 }
 
 void GcodeProcessor::setGcodeSource( const GcodeSource& gcodeSource )
@@ -42,6 +43,12 @@ std::vector<MR::GcodeProcessor::MoveAction> GcodeProcessor::processSource()
     std::vector<MoveAction> res( gcodeSource_.size() );
     for ( int i = 0; i < gcodeSource_.size(); ++i )
         res[i] = processLine( gcodeSource_[i] );
+
+    for ( auto& action : res )
+    {
+        if ( action.idle && action.feedrate == 0.f )
+            action.feedrate = feedrateMax_;
+    }
 
     return res;
 }
@@ -218,7 +225,18 @@ GcodeProcessor::MoveAction GcodeProcessor::generateMoveAction_()
     translationPos_ = newMotorsPos;
     if ( inputRotation_ )
         updateRotationAngleAndMatrix_( *inputRotation_ );
-    res.feedrate = feedrate_;
+    if ( moveMode_ == MoveMode::Idle )
+    {
+        if ( cncSettings_.getFeedrateIdle() > 0.f )
+            res.feedrate = cncSettings_.getFeedrateIdle();
+        else
+            res.feedrate = 0.f;
+    }
+    else
+    {
+        res.feedrate = feedrate_;
+        feedrateMax_ = std::max( feedrateMax_, feedrate_ );
+    }
 
     return res;
 }

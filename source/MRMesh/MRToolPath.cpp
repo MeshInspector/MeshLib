@@ -809,31 +809,25 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         //append a part of a contour to the result
         const auto addSliceToTheToolPath = [&] ( const Contour3f::const_iterator startIt, Contour3f::const_iterator endIt )
         {
-            auto it = startIt;
-            while ( it < endIt )
+            for ( auto it = startIt; it < endIt; ++it )
             {
                 //skip point if it lies in the undercut
                 bool isPointAppropriate = ( it->z >= minZ );
-                if ( isPointAppropriate )
+                if ( !isPointAppropriate )
                 {
-                    addPointToTheToolPath( *it++ );
+                    if ( !startSkippedRegion )
+                        startSkippedRegion = *it;
+
                     continue;
                 }
-
-                if ( !startSkippedRegion )
-                    startSkippedRegion = *it;
-
-                while ( it < endIt && !isPointAppropriate )
-                {
-                    ++it;
-                    isPointAppropriate = ( it->z >= minZ );
-                }
-
-                if ( it < endIt )
+                if ( startSkippedRegion )
                 {
                     transitOverSafeZ( it, res, paramsCopy, lastFeed );
                     startSkippedRegion.reset();
+                    continue;
                 }
+                
+                addPointToTheToolPath( *it );
             }
         };
 

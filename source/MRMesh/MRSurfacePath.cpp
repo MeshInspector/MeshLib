@@ -68,7 +68,7 @@ static std::optional<float> computeExitPos( const Vector3f & b, const Vector3f &
 class SurfacePathBuilder
 {
 public:
-    SurfacePathBuilder( const Mesh & mesh, const Vector<float,VertId> & field );
+    SurfacePathBuilder( const Mesh & mesh, const VertScalars & field );
 
     // finds previous path point before given vertex, which can be located on any first ring boundary
     std::optional<MeshEdgePoint> findPrevPoint( VertId v ) const;
@@ -79,10 +79,10 @@ public:
 
 private:
     const Mesh & mesh_;
-    const Vector<float,VertId> & field_;
+    const VertScalars & field_;
 };
 
-SurfacePathBuilder::SurfacePathBuilder( const Mesh & mesh, const Vector<float,VertId> & field )
+SurfacePathBuilder::SurfacePathBuilder( const Mesh & mesh, const VertScalars & field )
     : mesh_( mesh )
     , field_( field )
 {
@@ -378,7 +378,7 @@ Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
 
 Expected<std::vector<MeshEdgePoint>, PathError> computeFastMarchingPath( const MeshPart & mp,
     const MeshTriPoint & start, const MeshTriPoint & end,
-    const VertBitSet* vertRegion, Vector<float, VertId> * outSurfaceDistances )
+    const VertBitSet* vertRegion, VertScalars * outSurfaceDistances )
 {
     MR_TIMER;
     std::vector<MeshEdgePoint> res;
@@ -425,7 +425,7 @@ Expected<std::vector<MeshEdgePoint>, PathError> computeFastMarchingPath( const M
 
 Expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePath( const MeshPart & mp,
     const MeshTriPoint & start, const MeshTriPoint & end, int maxGeodesicIters,
-    const VertBitSet* vertRegion, Vector<float, VertId> * outSurfaceDistances )
+    const VertBitSet* vertRegion, VertScalars * outSurfaceDistances )
 {
     MR_TIMER;
     auto res = computeFastMarchingPath( mp, start, end, vertRegion, outSurfaceDistances );
@@ -447,7 +447,7 @@ Expected<SurfacePath, PathError> computeGeodesicPath( const Mesh & mesh,
 
 HashMap<VertId, VertId> computeClosestSurfacePathTargets( const Mesh & mesh,
     const VertBitSet & starts, const VertBitSet & ends, 
-    const VertBitSet * vertRegion, Vector<float, VertId> * outSurfaceDistances )
+    const VertBitSet * vertRegion, VertScalars * outSurfaceDistances )
 {
     MR_TIMER;
     auto distances = computeSurfaceDistances( mesh, ends, starts, FLT_MAX, vertRegion );
@@ -494,7 +494,7 @@ SurfacePaths getSurfacePathsViaVertices( const Mesh & mesh, const VertBitSet & v
     if ( vs.empty() )
         return res;
 
-    Vector<float,VertId> scalarField( mesh.topology.vertSize(), 0 );
+    VertScalars scalarField( mesh.topology.vertSize(), 0 );
     VertBitSet freeVerts;
     for ( const auto & cc : MeshComponents::getAllComponentsVerts( mesh ) )
     {

@@ -283,13 +283,13 @@ bool hasAnyIsoline( const MeshTopology& topology,
 }
 
 IsoLines extractIsolines( const MeshTopology & topology,
-    const Vector<float,VertId> & vertValues, float isoValue, const FaceBitSet * region )
+    const VertScalars & vertValues, float isoValue, const FaceBitSet * region )
 {
     return extractIsolines( topology, [&vertValues, isoValue] ( VertId v ) { return vertValues[v] - isoValue; }, region );
 }
 
 bool hasAnyIsoline( const MeshTopology & topology,
-    const Vector<float,VertId> & vertValues, float isoValue, const FaceBitSet * region )
+    const VertScalars & vertValues, float isoValue, const FaceBitSet * region )
 {
     return hasAnyIsoline( topology, [&vertValues, isoValue] ( VertId v ) { return vertValues[v] - isoValue; }, region );
 }

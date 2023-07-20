@@ -102,9 +102,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def_readwrite( "vec", &MR::EdgeMap::vec_ );
 
-    pybind11::class_<MR::Vector<float, VertId>>( m, "VectorFloatByVert" ).
+    pybind11::class_<MR::VertScalars>( m, "VectorFloatByVert" ).
         def( pybind11::init<>() ).
-        def_readwrite( "vec", &MR::Vector<float, VertId>::vec_ );
+        def_readwrite( "vec", &MR::VertScalars::vec_ );
 
     pybind11::class_<MR::FaceNormals>( m, "FaceNormals" ).
         def( pybind11::init<>() ).

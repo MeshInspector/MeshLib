@@ -53,7 +53,7 @@ VertCoords makeNormals( const PointCloud& pointCloud, int avgNeighborhoodSize )
         normals[vid] = Vector3f( accum.getBestPlane().n ).normalized();
     } );
 
-    Vector<float, VertId> minWeights( normals.size(), FLT_MAX );
+    VertScalars minWeights( normals.size(), FLT_MAX );
     std::priority_queue<NormalCandidate> queue;
 
     auto enweight = [&]( VertId base, VertId candidate )

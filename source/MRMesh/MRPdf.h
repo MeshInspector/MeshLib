@@ -13,8 +13,8 @@ namespace MR
  */
 struct PdfParameters
 {
-    float titleSize = 18.f;
-    float textSize = 14.f;
+    HPDF_REAL titleSize = 18.f;
+    HPDF_REAL textSize = 14.f;
     /**
      * @brief Font name
      * @detail list of available fonts:
@@ -69,8 +69,8 @@ public:
     /// Save and close document. After this impossible add anything in document
     MRMESH_API void close();
 
-    void setCursorPosX( double posX ) { cursorX_ = posX; };
-    void setCursorPosY( double posY ) { cursorY_ = posY; };
+    void setCursorPosX( HPDF_DOUBLE posX ) { cursorX_ = posX; };
+    void setCursorPosY( HPDF_DOUBLE posY ) { cursorY_ = posY; };
     double getCursorPosX() const { return cursorX_; };
     double getCursorPosY() const { return cursorY_; };
 
@@ -86,8 +86,8 @@ private:
 
     PdfParameters params_;
 
-    double cursorX_ = 0;
-    double cursorY_ = 0;
+    HPDF_DOUBLE cursorX_ = 0;
+    HPDF_DOUBLE cursorY_ = 0;
 
     bool checkDocument() const { return document_ && activePage_; };
 };

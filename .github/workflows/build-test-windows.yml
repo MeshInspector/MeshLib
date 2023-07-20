@@ -12,43 +12,55 @@ on:
 
 env:
   VCPKG-VERSION: '2023.04.15'
-  CUDA-VERSION: '12.0.1.52833'
-  CUDA-MAJOR: '12'
-  CUDA-MINOR: '0'
 
 jobs:
   windows-build-test:
     timeout-minutes: 50
-    runs-on: windows-2022
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
-        config: [Debug, Release]
+        config: [ "Debug", "Release" ]
+        runner: [ windows-2022, windows-2019 ]
+        include:
+          - runner: windows-2022
+            vc-path: 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise'
+            CUDA-VERSION: '12.0.1.52833'
+            CUDA-MAJOR: '12'
+            CUDA-MINOR: '0'
+          - runner: windows-2019
+            vc-path: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise'
+            CUDA-VERSION: '11.4.2.47141'
+            CUDA-MAJOR: '11'
+            CUDA-MINOR: '4'
+
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
+        working-directory: C:\vcpkg
+        run: git checkout ${{env.VCPKG-VERSION}}
+
       - name: Restore Vcpkg Cache
         uses: actions/cache@v3
         id: vcpkg-cache
         with:
-          key: vcpkg-${{env.VCPKG-VERSION}}
+          key: vcpkg-cache-${{env.VCPKG-VERSION}}
           path: |
-            C:\vcpkg\build\*
-            C:\vcpkg\installed\*
-            C:\vcpkg\scripts\*
+            C:\vcpkg\*
 
       - name: Configure AWS Credentials
-        if: steps.vcpkg-cache.outputs.cache-hit != 'true'
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Install dependencies
-        if: steps.vcpkg-cache.outputs.cache-hit != 'true'
-        working-directory: C:\vcpkg
+      - name: Update vcpkg packages
         run: |
-          aws codeartifact login --tool dotnet --repository meshlib-vcpkg --domain meshlib --domain-owner 259351611210 --region us-east-1
-          nuget install vcpkg-export-20230609-173831 -Source "meshlib/meshlib-vcpkg"
-          Xcopy C:\vcpkg\vcpkg-export-20230609-173831.1.0.0 C:\vcpkg /E/H/C/I/y
+          .\thirdparty\install.bat --write-s3
 
       - name: Vcpkg integrate install
         working-directory: C:\vcpkg
@@ -58,31 +70,26 @@ jobs:
         uses: actions/cache@v3
         id: cuda-cache
         with:
-          key: cuda-${{env.CUDA-VERSION}}
+          key: cuda-${{matrix.CUDA-VERSION}}
           path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA*
 
       - name: Install CUDA
         if: steps.cuda-cache.outputs.cache-hit != 'true'
-        run: choco install cuda --version=${{env.CUDA-VERSION}} --confirm
+        run: choco install cuda --version=${{matrix.CUDA-VERSION}} --confirm
 
       - name: Setup CUDA
         shell: bash
         run: |
-          echo "CUDA_PATH=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
-          echo "CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
-          echo "CUDA_PATH_VX_Y=CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
-          echo "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}\\bin" >> $GITHUB_PATH
+          echo "CUDA_PATH=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}" >> $GITHUB_ENV
+          echo "CUDA_PATH_V${{ matrix.CUDA-MAJOR }}_${{ matrix.CUDA-MINOR }}=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}" >> $GITHUB_ENV
+          echo "CUDA_PATH_VX_Y=CUDA_PATH_V${{ matrix.CUDA-MAJOR }}_${{ matrix.CUDA-MINOR }}" >> $GITHUB_ENV
+          echo "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}\\bin" >> $GITHUB_PATH
 
       - name: Install Visual Studio Integration
         run: |
           $x = (dir $env:CUDA_PATH -dir -recurse -depth 2).where({$_.name -eq 'visual_studio_integration'}).fullname
           $y = (dir $x -dir -recurse).where({$_.name -eq 'MSBuildExtensions'}).fullname + '\*'
-          (gi 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
-
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
+          (gi '${{matrix.vc-path}}\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
 
       - name: Setup python
         run: |
@@ -108,11 +115,11 @@ jobs:
         run: py -3 ..\..\..\scripts\run_python_test_script.py
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ inputs.UPLOAD_ARTIFACTS }}
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.runner == 'windows-2019' }}
         run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./source/x64/${{matrix.config}}
 
       - name: Upload Windows Binaries Archive
-        if: ${{ inputs.UPLOAD_ARTIFACTS }}
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.runner == 'windows-2019' }}
         uses: actions/upload-artifact@v3
         with:
           name: WindowsArchive

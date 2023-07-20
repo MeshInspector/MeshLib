@@ -835,7 +835,6 @@ struct TiffParams
     int samplesPerPixel = 0;
     int width = 0;
     int height = 0;
-    int layers = 0;
 
     bool operator==( const TiffParams& other ) const
     {
@@ -947,8 +946,8 @@ Expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& setting
             files.push_back( filePath );
     }
 
-    //if ( files.size() < 2 )
-    //    return unexpected( "Too few TIFF files in the directory" );
+    if ( files.size() < 2 )
+        return unexpected( "Too few TIFF files in the directory" );
     
     sortFilesByName( files );
 
@@ -975,10 +974,6 @@ Expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& setting
             break;
         case 16:
             if ( !ReadVoxels<uint16_t>( outVolume, layerIndex, tif, tp, outVolume.min, outVolume.max ) )
-                return unexpected( "Unsupported pixel format " );
-            break;
-        case 32:
-            if ( !ReadVoxels<uint32_t>( outVolume, layerIndex, tif, tp, outVolume.min, outVolume.max ) )
                 return unexpected( "Unsupported pixel format " );
             break;
         default:

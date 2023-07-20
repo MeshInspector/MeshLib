@@ -21,9 +21,14 @@ using ContinueTrack = std::function<bool( const MeshEdgePoint& )>;
 class Isoliner
 {
 public:
+    /// prepares to find iso-lines inside given region (or whole mesh if region==nullptr)
     Isoliner( const MeshTopology& topology, VertToFloatFunc valueInVertex, const FaceBitSet* region )
         : topology_( topology ), region_( region ), valueInVertex_( valueInVertex )
         { findNegativeVerts_(); }
+    /// prepares to find iso-lines crossing the edges in between given edges
+    Isoliner( const MeshTopology& topology, VertToFloatFunc valueInVertex, const VertBitSet& vertRegion )
+        : topology_( topology ), valueInVertex_( valueInVertex )
+        { findNegativeVerts_( vertRegion ); }
 
     bool hasAnyLine() const;
     IsoLines extract();
@@ -32,11 +37,12 @@ public:
 
 private:
     void findNegativeVerts_();
+    void findNegativeVerts_( const VertBitSet& vertRegion );
     // if continueTrack is not set extract all
     // if continueTrack is set - extract until reach it or closed, or border faced
     IsoLine extractOneLine_( EdgeId first, ContinueTrack continueTrack = {} );
     MeshEdgePoint toEdgePoint_( EdgeId e ) const;
-    void computePointOnEachEdge_( IsoLine & line );
+    void computePointOnEachEdge_( IsoLine & line ) const;
     EdgeId findNextEdge_( EdgeId e ) const;
 
 private:
@@ -50,7 +56,11 @@ private:
 void Isoliner::findNegativeVerts_()
 {
     VertBitSet store;
-    const auto & vertRegion = getIncidentVerts( topology_, region_, store );
+    findNegativeVerts_( getIncidentVerts( topology_, region_, store ) );
+}
+
+void Isoliner::findNegativeVerts_( const VertBitSet& vertRegion )
+{
     negativeVerts_.clear();
     negativeVerts_.resize( vertRegion.size() );
     BitSetParallelFor( vertRegion, [&]( VertId v )
@@ -179,7 +189,7 @@ inline MeshEdgePoint Isoliner::toEdgePoint_( EdgeId e ) const
     return MeshEdgePoint( e, x );
 }
 
-void Isoliner::computePointOnEachEdge_( IsoLine & line )
+void Isoliner::computePointOnEachEdge_( IsoLine & line ) const
 {
     ParallelFor( line, [&]( size_t i )
     {

@@ -50,3 +50,8 @@ RUN sudo dnf config-manager --add-repo https://developer.download.nvidia.com/com
   && sudo dnf clean all \
   && sudo dnf -y module install nvidia-driver:latest-dkms \
   && sudo dnf -y install cuda
+
+# Set environment variables for CUDA
+ENV CUDA_HOME=/usr/local/cuda-12.1
+ENV PATH=$CUDA_HOME/bin:$PATH
+ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH

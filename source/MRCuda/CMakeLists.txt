@@ -7,7 +7,11 @@ set(CUDA_NVCC_EXECUTABLE ${CUDA_TOOLKIT_ROOT_DIR}bin/nvcc)
 set(CMAKE_CUDA_COMPILER ${CUDA_TOOLKIT_ROOT_DIR}bin/nvcc)
 set(CMAKE_CUDA_PATH /usr/local/cuda-12.1)
 
-find_package(CUDA 12 REQUIRED)
+if( ${MR_FEDORA} )
+    find_package(CUDA 12)
+else()
+    find_package(CUDA 12 REQUIRED)
+endif()
 
 
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --std c++17 -use_fast_math")

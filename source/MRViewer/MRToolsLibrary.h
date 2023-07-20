@@ -19,6 +19,9 @@ public:
 
     // get selected tool as ObjectMesh
     MRVIEWER_API const std::shared_ptr<ObjectMesh>& getToolObject();
+
+    // set object specific size for automatic resize default object
+    MRVIEWER_API void setAutoSize( float size );
 private:
 
     // storage folder
@@ -39,6 +42,7 @@ private:
     std::string selectedFileName_;
     std::shared_ptr<ObjectMesh> toolMesh_;
     std::shared_ptr<ObjectMesh> defaultToolMesh_; // default mesh
+    float autoSize_ = 0.f; // object specific size for automatic resize default object
 };
 
 }

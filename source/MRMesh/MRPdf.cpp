@@ -126,10 +126,10 @@ void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const std::s
         return;
     }
 
-    HPDF_Image pdfImage = HPDF_LoadPngImageFromFile( document_, imagePath.c_str() );
+    HPDF_Image pdfImage = HPDF_LoadPngImageFromFile( document_, imagePath.string().c_str() );
     if ( !pdfImage )
     {
-        spdlog::warn( "Failed to load image from file: {}. HPDF error code {}", imagePath.c_str(), HPDF_GetError( document_ ) );
+        spdlog::warn( "Failed to load image from file. HPDF error code {}", HPDF_GetError( document_ ) );
         return;
     }
 

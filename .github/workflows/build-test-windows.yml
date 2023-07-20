@@ -23,12 +23,12 @@ jobs:
         runner: [ windows-2022, windows-2019 ]
         include:
           - runner: windows-2022
-            vc-version: "2022"
+            vc-path: "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
             CUDA-VERSION: '12.0.1.52833'
             CUDA-MAJOR: '12'
             CUDA-MINOR: '0'
           - runner: windows-2019
-            vc-version: "2019"
+            vc-path: "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise"
             CUDA-VERSION: '11.4.2.47141'
             CUDA-MAJOR: '11'
             CUDA-MINOR: '4'
@@ -89,7 +89,7 @@ jobs:
         run: |
           $x = (dir $env:CUDA_PATH -dir -recurse -depth 2).where({$_.name -eq 'visual_studio_integration'}).fullname
           $y = (dir $x -dir -recurse).where({$_.name -eq 'MSBuildExtensions'}).fullname + '\*'
-          (gi 'C:\Program Files\Microsoft Visual Studio\${{matrix.vc-version}}\Enterprise\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
+          (gi '${{matrix.vc-path}}\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
 
       - name: Setup python
         run: |

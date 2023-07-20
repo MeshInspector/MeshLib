@@ -1011,6 +1011,9 @@
     <ClInclude Include="MRVoxelsConversions.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
+    <ClInclude Include="MRIOParsing.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1675,6 +1678,9 @@
     </ClCompile>
     <ClCompile Include="MRMeshToDistanceVolume.cpp">
       <Filter>Source Files\Voxels</Filter>
+    </ClCompile>
+    <ClCompile Include="MRIOParsing.cpp">
+      <Filter>Source Files\IO</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -81,6 +81,7 @@
     <ClInclude Include="MRImageLoad.h" />
     <ClInclude Include="MRImageSave.h" />
     <ClInclude Include="MRInnerShell.h" />
+    <ClInclude Include="MRIOParsing.h" />
     <ClInclude Include="MRIsNaN.h" />
     <ClInclude Include="MRMeshToDistanceVolume.h" />
     <ClInclude Include="MRMovementBuildBody.h" />
@@ -382,6 +383,7 @@
     <ClCompile Include="MRIntersection.cpp" />
     <ClCompile Include="MRIntersectionContour.cpp" />
     <ClCompile Include="MRIOFormatsRegistry.cpp" />
+    <ClCompile Include="MRIOParsing.cpp" />
     <ClCompile Include="MRIRenderObject.cpp" />
     <ClCompile Include="MRLine3.cpp" />
     <ClCompile Include="MRLineObject.cpp" />

@@ -532,7 +532,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
             for ( auto li = range.begin(); li < range.end(); li++ )
             {
                 std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-                auto res = parseCoordinate( line, v, 'v' );
+                auto res = parseObjCoordinate( line, v );
                 if ( !res.has_value() )
                 {
                     if ( ctx.cancel_group_execution() )

@@ -60,7 +60,7 @@ Expected<MR::PointCloud, std::string> fromText( std::istream& in, ProgressCallba
     int firstLine = 0;
     Vector3f firstLineCoord;
     std::string_view headerLine( data.data() + lineOffsets[firstLine], lineOffsets[firstLine + 1] - lineOffsets[firstLine] );
-    if ( !parseCoordinate( headerLine, firstLineCoord ).has_value() )
+    if ( !parseTextCoordinate( headerLine, firstLineCoord ).has_value() )
         firstLine = 1;
 
     PointCloud pc;
@@ -71,7 +71,7 @@ Expected<MR::PointCloud, std::string> fromText( std::istream& in, ProgressCallba
     auto keepGoing = ParallelFor( pc.points, [&] ( size_t i )
     {
         std::string_view line( data.data() + lineOffsets[firstLine + i], lineOffsets[firstLine + i + 1] - lineOffsets[firstLine + i] );
-        auto parseRes = parseCoordinate( line, pc.points[VertId( i )] );
+        auto parseRes = parseTextCoordinate( line, pc.points[VertId( i )] );
         if ( !parseRes.has_value() && ctx.cancel_group_execution() )
             parseError = std::move( parseRes.error() );
     }, subprogress( callback, 0.25f, 1.0f ) );

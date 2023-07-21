@@ -470,6 +470,25 @@ DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToD
                     auto vecA = v1 - v0;
                     auto ray = res.point - p;
 
+                    // get next that is not zero for sign calculation
+                    auto findNextNonZero = [&] ( EdgeId e, bool next )
+                    {
+                        float lengthSq = 0.0f;
+                        EdgeId prev = e;
+                        EdgeId res;
+                        do
+                        {
+                            res = next ? 
+                                polyline.topology.next( prev.sym() ) :
+                                polyline.topology.next( prev ).sym();
+                            if ( res == prev.sym() || res == e )
+                                return e.sym();
+                            lengthSq = polyline.edgeLengthSq( res );
+                            prev = res;
+                        } while ( lengthSq <= 0.0f );
+                        return res;
+                    };
+
                     auto lengthSq = vecA.lengthSq();
                     float ratio = 0.0f;
                     if ( lengthSq > 0.0f )
@@ -477,8 +496,8 @@ DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToD
                     if ( ratio <= 0.0f || ratio >= 1.0f || lengthSq <= 0.0f )
                     {
                         Vector2f vecB;
-                        const EdgeId prevEdge = polyline.topology.next( e ).sym();
-                        const EdgeId nextEdge = polyline.topology.next( e.sym() );
+                        const EdgeId prevEdge = findNextNonZero( e, false );
+                        const EdgeId nextEdge = findNextNonZero( e, true ); 
                         if ( ( ratio <= 0.0f || lengthSq <= 0.0f ) && e.sym() != prevEdge )
                         {
                             const auto& v2 = polyline.points[polyline.topology.org( prevEdge )];

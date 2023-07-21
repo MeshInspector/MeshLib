@@ -2,6 +2,10 @@ name: Test Distribution
 
 on:
   workflow_call:
+    inputs:
+      release_id:
+        required: true
+        type: string
 
 jobs:
   linux-test:
@@ -38,13 +42,12 @@ jobs:
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
-      - name: Download Distributive
-        uses: actions/download-artifact@v3
-        with:
-          name: Distributives
-
       - name: Install Ubuntu x86-64 Release
         if: ${{ matrix.os != 'fedora:37' && matrix.platform == 'x86-64' }}
+        uses: robinraju/release-downloader@v1.8
+        with:
+          releaseId: ${{inputs.release_id}}
+          fileName: "*${{matrix.name}}-dev.deb"
         run: |
           export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
             apt-get -y install sudo xvfb curl libssl-dev python3-distutils python3-pip && \
@@ -54,6 +57,10 @@ jobs:
 
       - name: Install Ubuntu arm64 Release
         if: ${{ matrix.os != 'fedora:37' && matrix.platform == 'arm64' }}
+        uses: robinraju/release-downloader@v1.8
+        with:
+          releaseId: ${{inputs.release_id}}
+          fileName: "*${{matrix.name}}-arm64-dev.deb"
         run: |
           export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
             apt-get -y install sudo xvfb curl libssl-dev python3-distutils python3-pip && \
@@ -63,6 +70,10 @@ jobs:
 
       - name: Install Fedora Release
         if: ${{ matrix.os == 'fedora:37' }}
+        uses: robinraju/release-downloader@v1.8
+        with:
+          releaseId: ${{inputs.release_id}}
+          fileName: "*.rpm"
         run: |
           dnf --refresh -y upgrade
           dnf -y install xorg-x11-server-Xvfb mesa-dri-drivers mesa-libGL-devel libXi-devel python3 python3-pip

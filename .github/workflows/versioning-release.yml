@@ -26,6 +26,9 @@ on:
       upload_url:
         description: "URL to draft release"
         value: ${{ jobs.versioning-and-release-url.outputs.upload_url }}
+      release_id:
+        description: "release id"
+        value: ${{ jobs.versioning-and-release-url.outputs.release_id }}
 
 jobs:
   versioning-and-release-url:
@@ -36,6 +39,7 @@ jobs:
       version_tag: ${{ steps.version-tag.outputs.version_tag }}
       short_version: ${{ steps.version-tag.outputs.short_version }}
       upload_url: ${{ steps.create_release.outputs.upload_url }}
+      release_id: ${{ steps.create_release.outputs.id }}
     steps:
       - name: Checkout
         if: ${{ inputs.UPLOAD_ARTIFACTS }}

@@ -469,21 +469,47 @@ DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToD
                     const auto& v1 = polyline.points[polyline.topology.dest( e )];
                     auto vecA = v1 - v0;
                     auto ray = res.point - p;
-                    float ratio = dot( res.point - v0, vecA ) / vecA.lengthSq();
-                    if ( ratio <= 0.0f || ratio >= 1.0f )
+
+                    // get next that is not zero for sign calculation
+                    auto findNextNonZero = [&] ( EdgeId e, bool next )
+                    {
+                        float lengthSq = 0.0f;
+                        EdgeId prev = e;
+                        EdgeId res;
+                        do
+                        {
+                            res = next ? 
+                                polyline.topology.next( prev.sym() ) :
+                                polyline.topology.next( prev ).sym();
+                            if ( res == prev.sym() || res == e )
+                                return e.sym();
+                            lengthSq = polyline.edgeLengthSq( res );
+                            prev = res;
+                        } while ( lengthSq <= 0.0f );
+                        return res;
+                    };
+
+                    auto lengthSq = vecA.lengthSq();
+                    float ratio = 0.0f;
+                    if ( lengthSq > 0.0f )
+                        ratio = dot( res.point - v0, vecA ) / lengthSq;
+                    if ( ratio <= 0.0f || ratio >= 1.0f || lengthSq <= 0.0f )
                     {
                         Vector2f vecB;
-                        const EdgeId prevEdge = polyline.topology.next( e ).sym();
-                        const EdgeId nextEdge = polyline.topology.next( e.sym() );
-                        if ( ratio <= 0.0f && e.sym() != prevEdge )
+                        const EdgeId prevEdge = findNextNonZero( e, false );
+                        const EdgeId nextEdge = findNextNonZero( e, true ); 
+                        if ( ( ratio <= 0.0f || lengthSq <= 0.0f ) && e.sym() != prevEdge )
                         {
                             const auto& v2 = polyline.points[polyline.topology.org( prevEdge )];
                             vecB = v0 - v2;
                         }
-                        else if ( ratio >= 1.0f && e.sym() != nextEdge )
+                        if ( ( ratio >= 1.0f || lengthSq <= 0.0f ) && e.sym() != nextEdge )
                         {
                             const auto& v2 = polyline.points[polyline.topology.dest( nextEdge )];
-                            vecB = v2 - v1;
+                            if ( lengthSq <= 0.0f )
+                                vecA = v2 - v1; // degenerated edge, replace with neighbor
+                            else
+                                vecB = v2 - v1;
                         }
                         vecA = ( vecA.normalized() + vecB.normalized() ) * 0.5f;
                     }

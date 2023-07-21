@@ -1,5 +1,5 @@
 #pragma once
-#ifndef MRMESH_NO_TIFF
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_TIFF )
 #include "MRMeshFwd.h"
 #include "MRExpected.h"
 #include "MRVector2.h"
@@ -9,22 +9,22 @@
 namespace MR
 {
 
-struct TifParameters
+struct TiffParameters
 {
     enum class SampleType
     {
+        Unknown,
         Uint,
         Int,
-        Float,
-        Unknown
+        Float
     } sampleType{ SampleType::Unknown };
 
     enum class ValueType 
     {
+        Unknown,
         Scalar,
         RGB,
         RGBA,
-        Unknown
     } valueType{ ValueType::Unknown };
 
     // size of internal data in file
@@ -40,28 +40,30 @@ struct TifParameters
     // size of image if not layered, otherwise size of layer
     Vector2i imageSize;
 
-    bool operator==( const TifParameters& ) const = default;
+    bool operator==( const TiffParameters& ) const = default;
 };
 
-// returns true if given file is tif
-bool isTIFFile( const std::filesystem::path& path );
+// returns true if given file is tiff
+bool isTIFFFile( const std::filesystem::path& path );
 
-// reads parameters of tif file
-Expected<TifParameters, std::string> readTifParameters( const std::filesystem::path& path );
+// reads parameters of tiff file
+Expected<TiffParameters, std::string> readTiffParameters( const std::filesystem::path& path );
 
-struct RawTifOutput
+struct RawTiffOutput
 {
     // main output data, should be allocated
     float* data{ nullptr };
-    // parameters to compare if reading series of files
-    const TifParameters* params{ nullptr };
+    // allocated data size
+    size_t size{ 0 };
+    // optional params output
+    TiffParameters* params{ nullptr };
     // min max
     float* min{ nullptr };
     float* max{ nullptr };
 };
 
-// 
-VoidOrErrStr readRawTif( const std::filesystem::path& path, RawTifOutput& output );
+// load values from tiff to ouput.data
+VoidOrErrStr readRawTiff( const std::filesystem::path& path, RawTiffOutput& output );
 
 }
 

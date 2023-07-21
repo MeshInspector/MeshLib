@@ -25,7 +25,7 @@
 #include <MRPch/MRTBB.h>
 
 #include "MROpenVDBHelper.h"
-#include "MRReadTIF.h"
+#include "MRReadTIFF.h"
 
 namespace
 {
@@ -867,7 +867,7 @@ Expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& setting
     for ( auto entry : Directory{ settings.dir, ec } )
     {
         auto filePath = entry.path();
-        if ( entry.is_regular_file( ec ) && isTIFFile( filePath ) )
+        if ( entry.is_regular_file( ec ) && isTIFFFile( filePath ) )
             files.push_back( filePath );
     }
 
@@ -876,7 +876,7 @@ Expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& setting
     
     sortFilesByName( files );
 
-    auto tpExp = readTifParameters( files.front() );
+    auto tpExp = readTiffParameters( files.front() );
     if ( !tpExp.has_value() )
         return unexpected( tpExp.error() );
 
@@ -889,18 +889,23 @@ Expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& setting
 
     outVolume.voxelSize = settings.voxelSize;
     outVolume.data.resize( outVolume.dims.x * outVolume.dims.y * outVolume.dims.z );
-    
-    RawTifOutput output;
-    output.params = &tp;
+
+    TiffParameters localParams;
+    RawTiffOutput output;
+    output.size = tp.imageSize.x * tp.imageSize.y;
+    output.params = &localParams;
     output.min = &outVolume.min;
     output.max = &outVolume.max;
     for ( int layerIndex = 0; layerIndex < files.size(); ++layerIndex )
     {
         output.data = outVolume.data.data() + layerIndex * tp.imageSize.x * tp.imageSize.y;
-        auto readRes = readRawTif( files[layerIndex], output );
+        auto readRes = readRawTiff( files[layerIndex], output );
 
         if ( !readRes.has_value() )
             return unexpected( readRes.error() );
+
+        if ( localParams != tp )
+            return unexpected( "Inconsistent TIFF files" );
 
         if ( settings.cb && !settings.cb( float( layerIndex ) / files.size() ) )
             return unexpected( "Loading was cancelled" );

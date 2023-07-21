@@ -3,7 +3,7 @@
 #include "MRDistanceMap.h"
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
-#include "MRReadTIF.h"
+#include "MRReadTIFF.h"
 #include <filesystem>
 
 namespace MR
@@ -15,7 +15,10 @@ namespace DistanceMapLoad
 const IOFilters Filters =
 {
     {"Raw (.raw)","*.raw"},
-    {"GeoTIF (.tif)","*.tif"},
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
+    {"GeoTIFF (.tif)","*.tif"},
+    {"GeoTIFF (.tiff)","*.tiff"},
+#endif
     {"MRDistanceMap (.mrdistancemap)","*.mrdistancemap"}
 };
 
@@ -117,12 +120,12 @@ Expected<DistanceMap, std::string> fromMrDistanceMap( const std::filesystem::pat
 
     return dmap;
 }
-#ifndef MRMESH_NO_TIFF
-Expected<DistanceMap, std::string> fromTif( const std::filesystem::path& path, ProgressCallback progressCb /*= {} */ )
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
+Expected<DistanceMap, std::string> fromTiff( const std::filesystem::path& path, ProgressCallback progressCb /*= {} */ )
 {
     MR_TIMER;
 
-    auto paramsExp = readTifParameters( path );
+    auto paramsExp = readTiffParameters( path );
     if ( !paramsExp.has_value() )
         return unexpected( paramsExp.error() );
 
@@ -130,9 +133,11 @@ Expected<DistanceMap, std::string> fromTif( const std::filesystem::path& path, P
         return unexpected( std::string( "Loading canceled" ) );
 
     DistanceMap res( paramsExp->imageSize.x, paramsExp->imageSize.y );
-    RawTifOutput output;
+    RawTiffOutput output;
     output.data = res.data();
-    auto readRes = readRawTif( path, output );
+    output.size = paramsExp->imageSize.x * paramsExp->imageSize.y;
+
+    auto readRes = readRawTiff( path, output );
     if ( !readRes.has_value() )
         return unexpected( readRes.error() );
 
@@ -163,9 +168,9 @@ Expected<DistanceMap, std::string> fromAnySupportedFormat( const std::filesystem
         return fromRaw( path, progressCb );
     
 
-#ifndef MRMESH_NO_TIFF
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
     if ( itF->extension == "*.tif" || itF->extension == "*.tiff" )
-            return fromTif( path, progressCb );
+            return fromTiff( path, progressCb );
 #endif
 
     if ( params )

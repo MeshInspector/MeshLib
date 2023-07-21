@@ -139,7 +139,7 @@ jobs:
 
       - name: Install Pkg
         run: |
-          sudo installer -pkg meshlib_x64.pkg  -target /
+          sudo installer -pkg meshlib_*x64.pkg  -target /
           xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
 
       # [error] NSGL: Failed to find a suitable pixel format

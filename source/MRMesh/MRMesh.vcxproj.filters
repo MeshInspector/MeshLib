@@ -1014,6 +1014,9 @@
     <ClInclude Include="MRIOParsing.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRReadTIFF.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1680,6 +1683,9 @@
       <Filter>Source Files\Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRIOParsing.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRReadTIFF.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
   </ItemGroup>

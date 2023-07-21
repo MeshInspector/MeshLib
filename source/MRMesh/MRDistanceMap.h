@@ -59,6 +59,8 @@ public:
         return data_[i];
     }
 
+    float* data() { return data_.data(); }
+    const float* data() const { return data_.data(); }
 
     /**
      * \brief finds interpolated value.

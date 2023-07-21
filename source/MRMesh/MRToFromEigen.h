@@ -8,27 +8,7 @@
 #include "MRSymMatrix3.h"
 #include "MRMatrix2.h"
 #include "MRMatrix3.h"
-
-// unknown pragmas
-#pragma warning(disable:4068)
-#pragma warning(disable:4127)  //C4127. "Consider using 'if constexpr' statement instead"
-
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"
-#elif defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#if __GNUC__ == 12
-#pragma GCC diagnostic ignored "-Warray-bounds"
-#endif
-#endif
-#include <Eigen/Core>
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#elif defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
+#include <MRPch/MREigenCore.h>
 
 namespace MR
 {

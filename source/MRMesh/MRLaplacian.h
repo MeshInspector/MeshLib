@@ -6,6 +6,8 @@
 
 #pragma warning(push)
 #pragma warning(disable: 4068) // unknown pragmas
+#pragma warning(disable: 4127) // conditional expression is constant
+#pragma warning(disable: 4464) // relative include path contains '..'
 #pragma warning(disable: 5054) // operator '|': deprecated between enumerations of different types
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"

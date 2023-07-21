@@ -11,6 +11,7 @@
     <ClInclude Include="MRSuppressWarning.h" />
     <ClInclude Include="MRAsyncLaunchType.h" />
     <ClInclude Include="MRWasm.h" />
+    <ClInclude Include="MREigenCore.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRPch.cpp" />

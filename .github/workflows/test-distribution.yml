@@ -131,9 +131,10 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Distributive
-        uses: actions/download-artifact@v3
+        uses: robinraju/release-downloader@v1.8
         with:
-          name: Distributives
+          releaseId: ${{inputs.release_id}}
+          fileName: "*x64.pkg"
 
       - name: Install Pkg
         run: |

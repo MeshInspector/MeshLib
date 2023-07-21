@@ -118,7 +118,7 @@ const std::shared_ptr<MR::ObjectMesh>& GcodeToolsLibrary::getToolObject()
             defaultToolMesh_ = std::make_shared<ObjectMesh>();
             defaultToolMesh_->setName( "DefaultToolMesh" );
             const float autoSize = autoSize_ > 0.f ? autoSize_ : 100.f;
-            auto meshPtr = std::make_shared<Mesh>( makeCylinder( 0.01f * autoSize_, 0.08f * autoSize_, 50 ) );
+            auto meshPtr = std::make_shared<Mesh>( makeCylinder( 0.01f * autoSize, 0.08f * autoSize, 50 ) );
             defaultToolMesh_->setMesh( meshPtr );
         }
 

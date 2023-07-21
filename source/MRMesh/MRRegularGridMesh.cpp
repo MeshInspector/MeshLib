@@ -211,7 +211,7 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
     return res;
 }
 
-Expected<Mesh, std::string> makeRegularGridMesh( VertCoords&& points, ProgressCallback cb )
+Expected<Mesh, std::string> makeRegularGridMesh( VertCoords points, ProgressCallback cb )
 {
     MR_TIMER
     tbb::parallel_sort( points.vec_.begin(), points.vec_.end(), [] ( const auto& l, const auto& r )

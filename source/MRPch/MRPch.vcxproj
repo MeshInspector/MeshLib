@@ -17,6 +17,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MREigenCore.h" />
     <ClInclude Include="MRWasm.h" />
     <ClInclude Include="MRAsyncLaunchType.h" />
     <ClInclude Include="MREigen.h" />

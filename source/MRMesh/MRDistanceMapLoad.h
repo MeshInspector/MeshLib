@@ -25,6 +25,9 @@ MRMESH_API extern const IOFilters Filters;
  */
 MRMESH_API Expected<DistanceMap, std::string> fromRaw( const std::filesystem::path& path, ProgressCallback progressCb = {} );
 MRMESH_API Expected<DistanceMap, std::string> fromMrDistanceMap( const std::filesystem::path& path, DistanceMapToWorld& params, ProgressCallback progressCb = {} );
+#ifndef MRMESH_NO_TIFF
+MRMESH_API Expected<DistanceMap, std::string> fromTif( const std::filesystem::path& path, ProgressCallback progressCb = {} );
+#endif
 MRMESH_API Expected<DistanceMap, std::string> fromAnySupportedFormat( const std::filesystem::path& path, DistanceMapToWorld* params, ProgressCallback progressCb = {} );
 
 /// \}

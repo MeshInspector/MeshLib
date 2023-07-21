@@ -469,21 +469,28 @@ DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToD
                     const auto& v1 = polyline.points[polyline.topology.dest( e )];
                     auto vecA = v1 - v0;
                     auto ray = res.point - p;
-                    float ratio = dot( res.point - v0, vecA ) / vecA.lengthSq();
-                    if ( ratio <= 0.0f || ratio >= 1.0f )
+
+                    auto lengthSq = vecA.lengthSq();
+                    float ratio = 0.0f;
+                    if ( lengthSq > 0.0f )
+                        ratio = dot( res.point - v0, vecA ) / lengthSq;
+                    if ( ratio <= 0.0f || ratio >= 1.0f || lengthSq <= 0.0f )
                     {
                         Vector2f vecB;
                         const EdgeId prevEdge = polyline.topology.next( e ).sym();
                         const EdgeId nextEdge = polyline.topology.next( e.sym() );
-                        if ( ratio <= 0.0f && e.sym() != prevEdge )
+                        if ( ( ratio <= 0.0f || lengthSq <= 0.0f ) && e.sym() != prevEdge )
                         {
                             const auto& v2 = polyline.points[polyline.topology.org( prevEdge )];
                             vecB = v0 - v2;
                         }
-                        else if ( ratio >= 1.0f && e.sym() != nextEdge )
+                        if ( ( ratio >= 1.0f || lengthSq <= 0.0f ) && e.sym() != nextEdge )
                         {
                             const auto& v2 = polyline.points[polyline.topology.dest( nextEdge )];
-                            vecB = v2 - v1;
+                            if ( lengthSq <= 0.0f )
+                                vecA = v2 - v1; // degenerated edge, replace with neighbor
+                            else
+                                vecB = v2 - v1;
                         }
                         vecA = ( vecA.normalized() + vecB.normalized() ) * 0.5f;
                     }

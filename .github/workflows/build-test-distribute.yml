@@ -164,7 +164,7 @@ jobs:
 
   test-distribution:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-    needs: [ upload-distributions ]
+    needs: [ versioning-and-release-url, upload-distributions ]
     uses: ./.github/workflows/test-distribution.yml
     with:
       release_id: ${{needs.versioning-and-release-url.outputs.release_id}}

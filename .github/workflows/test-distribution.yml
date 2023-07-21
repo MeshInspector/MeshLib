@@ -82,6 +82,7 @@ jobs:
           fileName: "*.rpm"
 
       - name: Install Fedora Release
+        if: ${{ matrix.os == 'fedora:37' }}
         run: |
           dnf --refresh -y upgrade
           dnf -y install xorg-x11-server-Xvfb mesa-dri-drivers mesa-libGL-devel libXi-devel python3 python3-pip

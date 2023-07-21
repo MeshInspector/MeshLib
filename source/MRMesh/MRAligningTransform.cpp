@@ -4,7 +4,7 @@
 #include "MRQuaternion.h"
 #include "MRToFromEigen.h"
 #include "MRGTest.h"
-#include <MRPch/MREigen.h>
+#include <Eigen/Eigenvalues>
 
 namespace MR
 {

@@ -7,7 +7,7 @@
 #include "MRMeshComponents.h"
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
-#include "MRPch/MREigen.h"
+#include <Eigen/SparseCholesky>
 
 namespace MR
 {

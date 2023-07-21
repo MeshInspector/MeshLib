@@ -376,6 +376,29 @@ Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
     return res;
 }
 
+SurfacePath computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field, const MeshTriPoint & start, const MeshTriPoint & end )
+{
+    assert( start );
+    SurfacePathBuilder b( mesh, field );
+    auto curr = b.findPrevPoint( start );
+    SurfacePath res;
+    while ( curr )
+    {
+        res.push_back( *curr );
+        if ( end && fromSameTriangle( mesh.topology, MeshTriPoint( end ), MeshTriPoint( *curr ) ) )
+            break; // reached triangle with end point
+        if ( res.size() > mesh.topology.numValidFaces() )
+        {
+            // normal path cannot visit any triangle more than once
+            assert( false );
+            res.clear();
+            return res;
+        }
+        curr = b.findPrevPoint( *curr );
+    }
+    return res;
+}
+
 Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp,
     const MeshTriPoint & start, const MeshTriPoint & end,
     const VertBitSet* vertRegion, VertScalars * outSurfaceDistances )
@@ -403,20 +426,9 @@ Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp,
     if ( !connected )
         return unexpected( PathError::StartEndNotConnected );
 
-    SurfacePathBuilder b( mp.mesh, distances );
-    auto curr = b.findPrevPoint( start );
-    assert( curr ); // it should be if start and end are not from the same triangle
-    while ( curr )
-    {
-        res.push_back( *curr );
-        MeshTriPoint c( *curr );
-        if ( fromSameTriangle( mp.mesh.topology, e, c ) )
-            break; // reached triangle with end point
-        if ( res.size() > mp.mesh.topology.numValidFaces() )
-            return unexpected( PathError::InternalError ); // normal path cannot visit any triangle more than once
-        curr = b.findPrevPoint( *curr );
-    }
-    assert( !res.empty() );
+    res = computeSteepestDescentPath( mp.mesh, distances, start, end );
+    if ( res.empty() ) // no edge is crossed only if start and end are from the same triangle
+        return unexpected( PathError::InternalError );
 
     if ( outSurfaceDistances )
         *outSurfaceDistances = std::move( distances );

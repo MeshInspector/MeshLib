@@ -74,6 +74,13 @@ MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3f& lin
 MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshIntersectionCallback callback,
     double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr );
 
+/// given mesh part and plane z=zLevel, outputs
+/// \param fs  triangles crossed or touched by the plane
+/// \param ues edges of these triangles
+/// \param vs  vertices of these triangles
+MRMESH_API void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
+    FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs );
+
 /// \}
 
 } // namespace MR

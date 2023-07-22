@@ -328,6 +328,74 @@ void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshInte
     }
 }
 
+void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
+    FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs )
+{
+    assert( fs || ues || vs );
+
+    const auto& m = meshPart.mesh;
+    constexpr int maxTreeDepth = 32;
+    const auto& tree = m.getAABBTree();
+    if( tree.nodes().size() == 0 )
+        return;
+
+    assert( !fs  || fs->size()  >= m.topology.faceSize() );
+    assert( !ues || ues->size() >= m.topology.undirectedEdgeSize() );
+    assert( !vs  || vs->size()  >= m.topology.vertSize() );
+
+    AABBTree::NodeId nodesStack[maxTreeDepth];
+    int currentNode = -1;
+
+    auto addNode = [&]( AABBTree::NodeId nid )
+    {
+        const auto & box = tree[nid].box;
+        if ( box.min.z <= zLevel && box.max.z >= zLevel )
+            nodesStack[++currentNode] = nid;
+    };
+    addNode( tree.rootNodeId() );
+
+    while( currentNode >= 0 )
+    {
+        if( currentNode >= maxTreeDepth ) // max depth exceeded
+        {
+            spdlog::critical( "Maximal AABBTree depth reached!" );
+            assert( false );
+            break;
+        }
+
+        const auto& node = tree[nodesStack[currentNode--]];
+        if( node.leaf() )
+        {
+            auto face = node.leafId();
+            if( !meshPart.region || meshPart.region->test( face ) )
+            {
+                if ( fs )
+                    fs->set( face );
+                if ( ues || vs )
+                {
+                    EdgeId e0, e1, e2;
+                    m.topology.getTriEdges( face, e0, e1, e2 );
+                    if ( ues )
+                    {
+                        ues->set( e0 );
+                        ues->set( e1 );
+                        ues->set( e2 );
+                    }
+                    if ( vs )
+                    {
+                        vs->set( m.topology.org( e0 ) );
+                        vs->set( m.topology.org( e1 ) );
+                        vs->set( m.topology.org( e2 ) );
+                    }
+                }
+            }
+            continue;
+        }
+        addNode( node.r ); // push first to go there later
+        addNode( node.l );
+    }
+}
+
 TEST(MRMesh, MeshIntersect) 
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );

@@ -4,6 +4,7 @@
 #include "MREdgePoint.h"
 #include "MRPlane3.h"
 #include "MRMesh.h"
+#include "MRMeshIntersect.h"
 #include "MRAffineXf3.h"
 #include "MRVector2.h"
 #include "MRRingIterator.h"
@@ -21,22 +22,32 @@ using ContinueTrack = std::function<bool( const MeshEdgePoint& )>;
 class Isoliner
 {
 public:
+    /// prepares to find iso-lines inside given region (or whole mesh if region==nullptr)
     Isoliner( const MeshTopology& topology, VertToFloatFunc valueInVertex, const FaceBitSet* region )
         : topology_( topology ), region_( region ), valueInVertex_( valueInVertex )
         { findNegativeVerts_(); }
+    /// prepares to find iso-lines crossing the edges in between given edges
+    Isoliner( const MeshTopology& topology, VertToFloatFunc valueInVertex, const VertBitSet& vertRegion )
+        : topology_( topology ), valueInVertex_( valueInVertex )
+        { findNegativeVerts_( vertRegion ); }
 
-    bool hasAnyLine() const;
+    /// if \param potentiallyCrossedEdges is given, then only these edges will be checked (otherwise all mesh edges)
+    bool hasAnyLine( const UndirectedEdgeBitSet * potentiallyCrossedEdges = nullptr ) const;
+
     IsoLines extract();
+    /// potentiallyCrossedEdges shall include all edges crossed by the iso-lines (some other edges there is permitted as well)
+    IsoLines extract( UndirectedEdgeBitSet potentiallyCrossedEdges );
 
     IsoLine track( const MeshTriPoint& start, ContinueTrack continueTrack );
 
 private:
     void findNegativeVerts_();
+    void findNegativeVerts_( const VertBitSet& vertRegion );
     // if continueTrack is not set extract all
     // if continueTrack is set - extract until reach it or closed, or border faced
     IsoLine extractOneLine_( EdgeId first, ContinueTrack continueTrack = {} );
     MeshEdgePoint toEdgePoint_( EdgeId e ) const;
-    void computePointOnEachEdge_( IsoLine & line );
+    void computePointOnEachEdge_( IsoLine & line ) const;
     EdgeId findNextEdge_( EdgeId e ) const;
 
 private:
@@ -50,7 +61,11 @@ private:
 void Isoliner::findNegativeVerts_()
 {
     VertBitSet store;
-    const auto & vertRegion = getIncidentVerts( topology_, region_, store );
+    findNegativeVerts_( getIncidentVerts( topology_, region_, store ) );
+}
+
+void Isoliner::findNegativeVerts_( const VertBitSet& vertRegion )
+{
     negativeVerts_.clear();
     negativeVerts_.resize( vertRegion.size() );
     BitSetParallelFor( vertRegion, [&]( VertId v )
@@ -95,7 +110,25 @@ IsoLines Isoliner::extract()
     return res;
 }
 
-bool Isoliner::hasAnyLine() const
+IsoLines Isoliner::extract( UndirectedEdgeBitSet potentiallyCrossedEdges )
+{
+    activeEdges_ = std::move( potentiallyCrossedEdges );
+    IsoLines res;
+    for ( auto ue : activeEdges_ )
+    {
+        EdgeId e = ue;
+        auto no = negativeVerts_.test( topology_.org( e ) );
+        auto nd = negativeVerts_.test( topology_.dest( e ) );
+        if ( no == nd )
+            continue;
+        // direct edge from negative to positive values
+        res.push_back( extractOneLine_( no ? e : e.sym() ) );
+    }
+    activeEdges_.clear();
+    return res;
+}
+
+bool Isoliner::hasAnyLine( const UndirectedEdgeBitSet * potentiallyCrossedEdges ) const
 {
     std::atomic<bool> res{ false };
     tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( topology_.undirectedEdgeSize() ) ),
@@ -105,6 +138,8 @@ bool Isoliner::hasAnyLine() const
         {
             if ( res.load( std::memory_order_relaxed ) )
                 break;
+            if ( potentiallyCrossedEdges && !potentiallyCrossedEdges->test( ue ) )
+                continue;
             VertId o = topology_.org( ue );
             if ( !o )
                 continue;
@@ -179,7 +214,7 @@ inline MeshEdgePoint Isoliner::toEdgePoint_( EdgeId e ) const
     return MeshEdgePoint( e, x );
 }
 
-void Isoliner::computePointOnEachEdge_( IsoLine & line )
+void Isoliner::computePointOnEachEdge_( IsoLine & line ) const
 {
     ParallelFor( line, [&]( size_t i )
     {
@@ -314,6 +349,36 @@ bool hasAnyPlaneSection( const MeshPart& mp, const Plane3f& plane )
         return plane.distance( mp.mesh.points[v] );
     }, mp.region );
     return s.hasAnyLine();
+}
+
+PlaneSections extractXYPlaneSections( const MeshPart & mp, float zLevel )
+{
+    MR_TIMER
+
+    UndirectedEdgeBitSet potentiallyCrossedEdges( mp.mesh.topology.undirectedEdgeSize() );
+    VertBitSet vertRegion( mp.mesh.topology.vertSize() );
+    xyPlaneMeshIntersect( mp, zLevel, nullptr, &potentiallyCrossedEdges, &vertRegion );
+
+    Isoliner s( mp.mesh.topology, [&points = mp.mesh.points, zLevel] ( VertId v )
+    {
+        return points[v].z - zLevel;
+    }, vertRegion );
+    return s.extract( std::move( potentiallyCrossedEdges ) );
+}
+
+bool hasAnyXYPlaneSection( const MeshPart & mp, float zLevel )
+{
+    MR_TIMER
+
+    UndirectedEdgeBitSet potentiallyCrossedEdges( mp.mesh.topology.undirectedEdgeSize() );
+    VertBitSet vertRegion( mp.mesh.topology.vertSize() );
+    xyPlaneMeshIntersect( mp, zLevel, nullptr, &potentiallyCrossedEdges, &vertRegion );
+
+    Isoliner s( mp.mesh.topology, [&points = mp.mesh.points, zLevel] ( VertId v )
+    {
+        return points[v].z - zLevel;
+    }, vertRegion );
+    return s.hasAnyLine( &potentiallyCrossedEdges );
 }
 
 PlaneSection trackSection( const MeshPart& mp,

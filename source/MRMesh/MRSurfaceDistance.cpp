@@ -6,7 +6,7 @@
 namespace MR
 {
 
-Vector<float,VertId> computeSurfaceDistances( const Mesh & mesh, const VertBitSet & startVertices, float maxDist, 
+VertScalars computeSurfaceDistances( const Mesh & mesh, const VertBitSet & startVertices, float maxDist, 
                                               const VertBitSet* region, int maxVertUpdates )
 {
     MR_TIMER;
@@ -21,7 +21,7 @@ Vector<float,VertId> computeSurfaceDistances( const Mesh & mesh, const VertBitSe
     return b.takeDistanceMap();
 }
 
-Vector<float,VertId> computeSurfaceDistances( const Mesh & mesh, const VertBitSet & startVertices, const VertBitSet& targetVertices,
+VertScalars computeSurfaceDistances( const Mesh & mesh, const VertBitSet & startVertices, const VertBitSet& targetVertices,
     float maxDist, const VertBitSet* region, int maxVertUpdates )
 {
     MR_TIMER;
@@ -42,7 +42,7 @@ Vector<float,VertId> computeSurfaceDistances( const Mesh & mesh, const VertBitSe
     return b.takeDistanceMap();
 }
 
-Vector<float, VertId> computeSurfaceDistances( const Mesh& mesh, const HashMap<VertId, float>& startVertices, float maxDist,
+VertScalars computeSurfaceDistances( const Mesh& mesh, const HashMap<VertId, float>& startVertices, float maxDist,
                                                const VertBitSet* region, int maxVertUpdates )
 {
     MR_TIMER;
@@ -57,7 +57,7 @@ Vector<float, VertId> computeSurfaceDistances( const Mesh& mesh, const HashMap<V
     return b.takeDistanceMap();
 }
 
-Vector<float,VertId> computeSurfaceDistances( const Mesh & mesh, const MeshTriPoint & start, const MeshTriPoint & end, 
+VertScalars computeSurfaceDistances( const Mesh & mesh, const MeshTriPoint & start, const MeshTriPoint & end, 
                                               const VertBitSet* region, bool * endReached, int maxVertUpdates )
 {
     MR_TIMER;
@@ -96,7 +96,7 @@ Vector<float,VertId> computeSurfaceDistances( const Mesh & mesh, const MeshTriPo
     return b.takeDistanceMap();
 }
 
-Vector<float,VertId> computeSurfaceDistances( const Mesh& mesh, const MeshTriPoint & start, float maxDist,
+VertScalars computeSurfaceDistances( const Mesh& mesh, const MeshTriPoint & start, float maxDist,
                                               const VertBitSet* region, int maxVertUpdates )
 {
     MR_TIMER;

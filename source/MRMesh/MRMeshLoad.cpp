@@ -471,6 +471,7 @@ Expected<Mesh, std::string> fromPly( std::istream& in, VertColors* colors, Progr
 }
 
 #ifndef MRMESH_NO_OPENCTM
+
 Expected<Mesh, std::string> fromCtm( const std::filesystem::path & file, VertColors* colors, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );

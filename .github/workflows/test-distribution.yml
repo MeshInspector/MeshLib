@@ -2,6 +2,10 @@ name: Test Distribution
 
 on:
   workflow_call:
+    inputs:
+      release_id:
+        required: true
+        type: string
 
 jobs:
   linux-test:
@@ -38,10 +42,12 @@ jobs:
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
-      - name: Download Distributive
-        uses: actions/download-artifact@v3
+      - name: Download Ubuntu x86-64 Release
+        if: ${{ matrix.os != 'fedora:37' && matrix.platform == 'x86-64' }}
+        uses: robinraju/release-downloader@v1.8
         with:
-          name: Distributives
+          releaseId: ${{inputs.release_id}}
+          fileName: "*${{matrix.name}}-dev.deb"
 
       - name: Install Ubuntu x86-64 Release
         if: ${{ matrix.os != 'fedora:37' && matrix.platform == 'x86-64' }}
@@ -52,6 +58,13 @@ jobs:
           python3 -m pip install --upgrade pip
           python3 -m pip install --upgrade -r ./requirements/python.txt
 
+      - name: Download Ubuntu arm64 Release
+        if: ${{ matrix.os != 'fedora:37' && matrix.platform == 'arm64' }}
+        uses: robinraju/release-downloader@v1.8
+        with:
+          releaseId: ${{inputs.release_id}}
+          fileName: "*${{matrix.name}}-arm64-dev.deb"
+
       - name: Install Ubuntu arm64 Release
         if: ${{ matrix.os != 'fedora:37' && matrix.platform == 'arm64' }}
         run: |
@@ -60,6 +73,13 @@ jobs:
             apt-get -y install ./*${{matrix.name}}-arm64-dev.deb
           python3 -m pip install --upgrade pip
           python3 -m pip install --upgrade -r ./requirements/python.txt
+
+      - name: Download Fedora Release
+        if: ${{ matrix.os == 'fedora:37' }}
+        uses: robinraju/release-downloader@v1.8
+        with:
+          releaseId: ${{inputs.release_id}}
+          fileName: "*.rpm"
 
       - name: Install Fedora Release
         if: ${{ matrix.os == 'fedora:37' }}
@@ -112,13 +132,14 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Distributive
-        uses: actions/download-artifact@v3
+        uses: robinraju/release-downloader@v1.8
         with:
-          name: Distributives
+          releaseId: ${{inputs.release_id}}
+          fileName: "*x64.pkg"
 
       - name: Install Pkg
         run: |
-          sudo installer -pkg meshlib_x64.pkg  -target /
+          sudo installer -pkg meshlib_*x64.pkg  -target /
           xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
 
       # [error] NSGL: Failed to find a suitable pixel format

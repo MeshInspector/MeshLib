@@ -3,6 +3,7 @@
 #include "MRDistanceMap.h"
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
+#include "MRReadTIFF.h"
 #include <filesystem>
 
 namespace MR
@@ -14,6 +15,10 @@ namespace DistanceMapLoad
 const IOFilters Filters =
 {
     {"Raw (.raw)","*.raw"},
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
+    {"GeoTIFF (.tif)","*.tif"},
+    {"GeoTIFF (.tiff)","*.tiff"},
+#endif
     {"MRDistanceMap (.mrdistancemap)","*.mrdistancemap"}
 };
 
@@ -115,6 +120,33 @@ Expected<DistanceMap, std::string> fromMrDistanceMap( const std::filesystem::pat
 
     return dmap;
 }
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
+Expected<DistanceMap, std::string> fromTiff( const std::filesystem::path& path, ProgressCallback progressCb /*= {} */ )
+{
+    MR_TIMER;
+
+    auto paramsExp = readTiffParameters( path );
+    if ( !paramsExp.has_value() )
+        return unexpected( paramsExp.error() );
+
+    if ( progressCb && !progressCb( 0.2f ) )
+        return unexpected( std::string( "Loading canceled" ) );
+
+    DistanceMap res( paramsExp->imageSize.x, paramsExp->imageSize.y );
+    RawTiffOutput output;
+    output.data = res.data();
+    output.size = paramsExp->imageSize.x * paramsExp->imageSize.y;
+
+    auto readRes = readRawTiff( path, output );
+    if ( !readRes.has_value() )
+        return unexpected( readRes.error() );
+
+    if ( progressCb && !progressCb( 0.8f ) )
+        return unexpected( std::string( "Loading canceled" ) );
+
+    return res;
+}
+#endif
 
 Expected<DistanceMap, std::string> fromAnySupportedFormat( const std::filesystem::path& path, DistanceMapToWorld* params, ProgressCallback progressCb )
 {
@@ -135,6 +167,12 @@ Expected<DistanceMap, std::string> fromAnySupportedFormat( const std::filesystem
     if ( itF->extension == "*.raw" )
         return fromRaw( path, progressCb );
     
+
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
+    if ( itF->extension == "*.tif" || itF->extension == "*.tiff" )
+            return fromTiff( path, progressCb );
+#endif
+
     if ( params )
         return fromMrDistanceMap( path, *params, progressCb );
 

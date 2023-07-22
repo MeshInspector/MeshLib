@@ -28,16 +28,21 @@ public:
     // duplicated values will be removed (ABAAC - > ABC)
     MRMESH_API void setRotationOrder( const RotationAxesOrder& rotationAxesOrder );
     const RotationAxesOrder& getRotationOrder() const { return rotationAxesOrder_; }
-
+    // set feedrate idle. valid range - [0, 100000]
+    // 0 - feedrate idle set as maximum feedrate on any action, or 100 if feedrate is not set in any action
+    MRMESH_API void setFeedrateIdle( float feedrateIdle );
+    float getFeedrateIdle() const { return feedrateIdle_; }
 
     MRMESH_API Json::Value saveToJson() const;
-    MRMESH_API void loadFromJson( const Json::Value& jsonValue );
+    MRMESH_API bool loadFromJson( const Json::Value& jsonValue );
 
 private:
     // direction of axes around which the rotation occurs A, B, C
     std::array<Vector3f, 3> rotationAxes_ = { Vector3f::minusX(), Vector3f::minusY(), Vector3f::plusZ() };
     // order of application of rotations
     RotationAxesOrder rotationAxesOrder_ = { RotationAxisName::A, RotationAxisName::B, RotationAxisName::C };
+    // feedrate idle. 0 - feedrate idle set as maximum feedrate on any action, or 100 if feedrate is not set in any action
+    float feedrateIdle_ = 10000.f;
 };
 
 }

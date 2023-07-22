@@ -3,7 +3,7 @@
 // this is to include all important for us Eigen parts in a precompiled header and suppress warnings there
 
 #pragma warning(push)
-#pragma warning(disable:4127)  //
+#pragma warning(disable:4127)  //conditional expression is constant
 #pragma warning(disable:4459)  //declaration of 'last' hides global declaration
 #pragma warning(disable:4464)  //relative include path contains '..'
 #pragma warning(disable:5054)  //operator '&': deprecated between enumerations of different types

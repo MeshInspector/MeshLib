@@ -1,27 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-
-#pragma warning(push)
-#pragma warning(disable: 4068) // unknown pragmas
-#pragma warning(disable: 5054) // operator '|': deprecated between enumerations of different types
-
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"
-#elif defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-#include <Eigen/Core>
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#elif defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
-
-
-#pragma warning(pop)
+#include <MRPch/MREigenCore.h>
 
 namespace MR
 {

@@ -6,6 +6,9 @@
 #include "MRStreamOperators.h"
 #include "MRProgressReadWrite.h"
 #include "MRPointCloud.h"
+#include "MRIOParsing.h"
+#include "MRParallelFor.h"
+#include "MRComputeBoundingBox.h"
 #include <fstream>
 
 #ifndef MRMESH_NO_OPENCTM
@@ -22,12 +25,66 @@ const IOFilters Filters =
 {
     {"All (*.*)",         "*.*"},
     {"ASC (.asc)",        "*.asc"},
+    {"CSV (.csv)",        "*.csv"},
+    {"XYZ (.xyz)",        "*.xyz"},
     {"OBJ (.obj)",        "*.obj"},
     {"PLY (.ply)",        "*.ply"},
 #ifndef MRMESH_NO_OPENCTM
     {"CTM (.ctm)",        "*.ctm"},
 #endif
 };
+
+Expected<MR::PointCloud, std::string> fromText( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+{
+    std::ifstream in( file, std::ifstream::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+
+    return addFileNameInError( fromText( in, callback ), file );
+}
+
+Expected<MR::PointCloud, std::string> fromText( std::istream& in, ProgressCallback callback /*= {} */ )
+{
+    // read all to buffer
+    MR_TIMER;
+    auto dataExp = readCharBuffer( in );
+    if ( !dataExp.has_value() )
+        return unexpected( dataExp.error() );
+
+    if ( callback && !callback( 0.25f ) )
+        return unexpected( "Loading canceled" );
+
+    const auto& data = *dataExp;
+    auto lineOffsets = splitByLines( data.data(), data.size() );
+
+    int firstLine = 0;
+    Vector3f firstLineCoord;
+    std::string_view headerLine( data.data() + lineOffsets[firstLine], lineOffsets[firstLine + 1] - lineOffsets[firstLine] );
+    if ( !parseTextCoordinate( headerLine, firstLineCoord ).has_value() )
+        firstLine = 1;
+
+    PointCloud pc;
+    pc.points.resize( lineOffsets.size() - firstLine - 1 );
+
+    std::string parseError;
+    tbb::task_group_context ctx;
+    auto keepGoing = ParallelFor( pc.points, [&] ( size_t i )
+    {
+        std::string_view line( data.data() + lineOffsets[firstLine + i], lineOffsets[firstLine + i + 1] - lineOffsets[firstLine + i] );
+        auto parseRes = parseTextCoordinate( line, pc.points[VertId( i )] );
+        if ( !parseRes.has_value() && ctx.cancel_group_execution() )
+            parseError = std::move( parseRes.error() );
+    }, subprogress( callback, 0.25f, 1.0f ) );
+
+    if ( !keepGoing )
+        return unexpected( "Loading canceled" );
+
+    if ( !parseError.empty() )
+        return unexpected( parseError );
+
+    pc.validPoints.resize( pc.points.size(), true );
+    return pc;
+}
 
 #ifndef MRMESH_NO_OPENCTM
 Expected<MR::PointCloud, std::string> fromCtm( const std::filesystem::path& file, VertColors* colors /*= nullptr */, ProgressCallback callback )
@@ -336,6 +393,8 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesys
         res = MR::PointsLoad::fromObj( file, callback );
     else if ( ext == ".asc" )
         res = MR::PointsLoad::fromAsc( file, callback );
+    else if ( ext == ".csv" || ext == ".xyz" )
+        res = MR::PointsLoad::fromText( file, callback );
     return res;
 }
 
@@ -357,6 +416,8 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, 
         res = MR::PointsLoad::fromObj( in, callback );
     else if ( ext == ".asc" )
         res = MR::PointsLoad::fromAsc( in, callback );
+    else if ( ext == ".csv" || ext == ".xyz" )
+        res = MR::PointsLoad::fromText( in, callback );
     return res;
 }
 

@@ -8,7 +8,7 @@
 namespace MR
 {
 
-Vector<Vector3f, VertId> vertexAttributeGradient( const Mesh& mesh, const Vector<float, VertId>& vertexAttribute )
+Vector<Vector3f, VertId> vertexAttributeGradient( const Mesh& mesh, const VertScalars& vertexAttribute )
 {
     Vector<Vector3f, VertId> grad( mesh.topology.lastValidVert() + 1 );
     assert( vertexAttribute.size() >= grad.size() );

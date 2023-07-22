@@ -15,7 +15,7 @@ struct PointCloud
 {
 public:
     VertCoords points;
-    Vector<Vector3f, VertId> normals;
+    VertNormals normals;
 
     VertBitSet validPoints;
 

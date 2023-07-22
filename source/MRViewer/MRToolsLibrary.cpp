@@ -117,7 +117,8 @@ const std::shared_ptr<MR::ObjectMesh>& GcodeToolsLibrary::getToolObject()
         {
             defaultToolMesh_ = std::make_shared<ObjectMesh>();
             defaultToolMesh_->setName( "DefaultToolMesh" );
-            auto meshPtr = std::make_shared<Mesh>( makeCylinder( 1.f, 8.f, 50 ) );
+            const float autoSize = autoSize_ > 0.f ? autoSize_ : 100.f;
+            auto meshPtr = std::make_shared<Mesh>( makeCylinder( 0.01f * autoSize, 0.08f * autoSize, 50 ) );
             defaultToolMesh_->setMesh( meshPtr );
         }
 
@@ -125,6 +126,14 @@ const std::shared_ptr<MR::ObjectMesh>& GcodeToolsLibrary::getToolObject()
             toolMesh_ = defaultToolMesh_;
     }
     return toolMesh_;
+}
+
+void GcodeToolsLibrary::setAutoSize( float size )
+{
+    if ( size == autoSize_ || size <= 0.f )
+        return;
+    defaultToolMesh_.reset();
+    autoSize_ = size;
 }
 
 std::filesystem::path GcodeToolsLibrary::getFolder_()
@@ -164,7 +173,15 @@ void GcodeToolsLibrary::addNewToolFromFile_()
     if ( folderPath.empty() )
         return;
 
-    auto path = openFileDialog( { .filters = MeshLoad::getFilters() } );
+    auto filters = MeshLoad::getFilters();
+    auto allIt = std::find_if( filters.begin(), filters.end(), [] ( const auto& it )
+    {
+        return it.extension == "*.*";
+    } );
+    if ( allIt != filters.end() )
+        filters.erase( allIt );
+    
+    auto path = openFileDialog( { .filters = filters } );
     if ( path.empty() )
         return;
 

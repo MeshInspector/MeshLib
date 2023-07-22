@@ -135,6 +135,7 @@ private:
     Vector3f scaling_ = Vector3f::diagonal( 1.f );
     bool inches_ = false;
     float feedrate_ = 100.f;
+    float feedrateMax_ = 0.f;
 
     // cached data
     std::array<Matrix3f, 3> cacheRotationMatrix_; // cached rotation matrices. to avoid calculating for each line (without rotation)

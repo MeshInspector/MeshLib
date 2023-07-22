@@ -10,6 +10,7 @@ hidapi
 ilmbase
 jpeg-turbo
 jsoncpp
+libharu
 libpng
 libsigc++
 libtiff
@@ -20,7 +21,6 @@ openexr
 openssl@3
 openvdb
 pkgconfig
-podofo
 python@3.10
 spdlog
 tbb

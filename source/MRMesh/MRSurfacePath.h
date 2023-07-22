@@ -34,7 +34,7 @@ inline std::string toString(PathError error)
 MRMESH_API Expected<SurfacePath, PathError> computeSurfacePath( const MeshPart & mp, 
     const MeshTriPoint & start, const MeshTriPoint & end, 
     int maxGeodesicIters = 5, ///< the maximum number of iterations to reduce approximate path length and convert it in geodesic path
-    const VertBitSet* vertRegion = nullptr, Vector<float, VertId> * outSurfaceDistances = nullptr );
+    const VertBitSet* vertRegion = nullptr, VertScalars * outSurfaceDistances = nullptr );
 
 /// the algorithm to compute approximately geodesic path
 enum class GeodesicPathApprox : char
@@ -62,13 +62,20 @@ MRMESH_API Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mes
 /// the path can be limited to given region: in face-format inside mp, or in vert-format in vertRegion argument
 MRMESH_API Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp, 
     const MeshTriPoint & start, const MeshTriPoint & end, const VertBitSet* vertRegion = nullptr,
-    Vector<float, VertId> * outSurfaceDistances = nullptr );
+    VertScalars * outSurfaceDistances = nullptr );
+
+/// computes the path (edge points crossed by the path) staring in given point
+/// and moving in each triangle in minus gradient direction of given field;
+/// the path stops when it reaches
+/// 1) a local minimum in field or
+/// 2) same triangle with \param end (which can be omitted)
+MRMESH_API SurfacePath computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field, const MeshTriPoint & start, const MeshTriPoint & end );
 
 /// for each vertex from (starts) finds the closest vertex from (ends) in geodesic sense
 /// \param vertRegion consider paths going in this region only
 MRMESH_API HashMap<VertId, VertId> computeClosestSurfacePathTargets( const Mesh & mesh,
     const VertBitSet & starts, const VertBitSet & ends, const VertBitSet * vertRegion = nullptr,
-    Vector<float, VertId> * outSurfaceDistances = nullptr );
+    VertScalars * outSurfaceDistances = nullptr );
 
 /// returns a set of mesh lines passing via most of given vertices in auto-selected order;
 /// the lines try to avoid sharp turns in the vertices

@@ -20,6 +20,11 @@ namespace PointsLoad
 
 MRMESH_API extern const IOFilters Filters;
 
+/// loads from .csv, .xyz, .txt file
+MRMESH_API Expected<PointCloud, std::string> fromText( const std::filesystem::path& file, ProgressCallback callback = {} );
+MRMESH_API Expected<PointCloud, std::string> fromText( std::istream& in, ProgressCallback callback = {} );
+
+
 #ifndef MRMESH_NO_OPENCTM
 /// loads from .ctm file
 MRMESH_API Expected<PointCloud, std::string> fromCtm( const std::filesystem::path& file, VertColors* colors = nullptr,

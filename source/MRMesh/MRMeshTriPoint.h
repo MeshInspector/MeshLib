@@ -42,6 +42,10 @@ struct MeshTriPoint
     /// returns true if the point is in vertex or on edge, and that location is on the boundary of the region
     [[nodiscard]] MRMESH_API bool isBd( const MeshTopology & topology, const FaceBitSet * region = nullptr ) const;
 
+    /// consider this valid if the edge ID is valid
+    [[nodiscard]] bool valid() const { return e.valid(); }
+    [[nodiscard]] explicit operator bool() const { return e.valid(); }
+
     /// represents the same point relative to next edge in the same triangle
     [[nodiscard]] MRMESH_API MeshTriPoint lnext( const MeshTopology & topology ) const;
     /// represents the same point relative to the topology.edgeWithLeft( topology.left( e ) )

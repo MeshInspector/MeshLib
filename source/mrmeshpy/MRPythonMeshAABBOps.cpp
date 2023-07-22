@@ -51,13 +51,13 @@ namespace
 {
 using namespace MR;
 
-Vector<float, VertId> projectAllMeshVertices( const Mesh& refMesh, const Mesh& mesh, const AffineXf3f* refXf = nullptr, const AffineXf3f* xf = nullptr, float upDistLimitSq = FLT_MAX, float loDistLimitSq = 0.0f )
+VertScalars projectAllMeshVertices( const Mesh& refMesh, const Mesh& mesh, const AffineXf3f* refXf = nullptr, const AffineXf3f* xf = nullptr, float upDistLimitSq = FLT_MAX, float loDistLimitSq = 0.0f )
 {
     PointsToMeshProjector projector;
     projector.updateMeshData( &refMesh );
     std::vector<MeshProjectionResult> mpRes( mesh.points.vec_.size() );
     projector.findProjections( mpRes, mesh.points.vec_, xf, refXf, upDistLimitSq, loDistLimitSq );
-    Vector<float, VertId> res( mesh.topology.lastValidVert() + 1, std::sqrt( upDistLimitSq ) );
+    VertScalars res( mesh.topology.lastValidVert() + 1, std::sqrt( upDistLimitSq ) );
 
     AffineXf3f fullXf;
     if ( refXf )

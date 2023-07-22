@@ -1,5 +1,4 @@
 #include "MRComputeBoundingBox.h"
-#include "MRBox.h"
 #include "MRAffineXf.h"
 #include "MRAffineXf2.h"
 #include "MRBitSet.h"
@@ -15,7 +14,7 @@ template<typename V>
 class VertBoundingBoxCalc 
 {
 public:
-    VertBoundingBoxCalc( const Vector<V, VertId> & points, const VertBitSet & region, const AffineXf<V> * toWorld ) 
+    VertBoundingBoxCalc( const Vector<V, VertId> & points, const VertBitSet * region, const AffineXf<V> * toWorld ) 
         : points_( points ), region_( region ), toWorld_( toWorld ) { }
     VertBoundingBoxCalc( VertBoundingBoxCalc & x, tbb::split ) : points_( x.points_ ), region_( x.region_ ), toWorld_( x.toWorld_ ) { }
     void join( const VertBoundingBoxCalc & y ) { box_.include( y.box_ ); }
@@ -26,20 +25,20 @@ public:
     {
         for ( VertId v = r.begin(); v < r.end(); ++v ) 
         {
-            if ( region_.test( v ) )
+            if ( !region_ || region_->test( v ) )
                 box_.include( toWorld_ ? (*toWorld_)( points_[v] ) : points_[v] );
         }
     }
             
 private:
     const Vector<V, VertId> & points_;
-    const VertBitSet & region_;
-    const AffineXf<V> * toWorld_ = nullptr;
+    const VertBitSet* region_ = nullptr;
+    const AffineXf<V>* toWorld_ = nullptr;
     Box<V> box_;
 };
 
 template<typename V>
-Box<V> computeBoundingBox( const Vector<V, VertId> & points, const VertBitSet & region, const AffineXf<V> * toWorld )
+Box<V> computeBoundingBox( const Vector<V, VertId> & points, const VertBitSet * region, const AffineXf<V> * toWorld )
 {
     MR_TIMER
 
@@ -48,7 +47,17 @@ Box<V> computeBoundingBox( const Vector<V, VertId> & points, const VertBitSet & 
     return calc.box();
 }
 
+template<typename V>
+Box<V> computeBoundingBox( const Vector<V, VertId> & points, const VertBitSet & region, const AffineXf<V> * toWorld )
+{
+    MR_TIMER
+    return computeBoundingBox( points, &region, toWorld );
+}
+
 template Box2f computeBoundingBox( const Vector<Vector2f, VertId> & points, const VertBitSet & region, const AffineXf2f * toWorld );
 template Box3f computeBoundingBox( const Vector<Vector3f, VertId> & points, const VertBitSet & region, const AffineXf3f * toWorld );
+
+template Box2f computeBoundingBox( const Vector<Vector2f, VertId>& points, const VertBitSet* region, const AffineXf2f* toWorld );
+template Box3f computeBoundingBox( const Vector<Vector3f, VertId>& points, const VertBitSet* region, const AffineXf3f* toWorld );
 
 } //namespace MR

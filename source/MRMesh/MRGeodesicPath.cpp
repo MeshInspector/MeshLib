@@ -105,7 +105,7 @@ static EdgeId firstCommonEdge( const MeshTopology & topology, VertId v, const Me
 }
 
 bool reducePathViaVertex( const Mesh & mesh, const MeshTriPoint & s, VertId v, const MeshTriPoint & e, 
-    std::vector<MeshEdgePoint> & outPath, std::vector<Vector2f> & tmp, std::vector<MeshEdgePoint>& cachePath )
+    SurfacePath & outPath, std::vector<Vector2f> & tmp, SurfacePath& cachePath )
 {
     MeshTriPoint stp( s );
     MeshTriPoint etp( e );
@@ -554,7 +554,7 @@ void TriangleStripUnfolder::find( const MeshTriPoint & end, std::function< void(
     strip_.find( e2, edgeCrossPosition );
 }
 
-int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshEdgePoint> & path, const MeshTriPoint & end, int maxIter )
+int reducePath( const Mesh & mesh, const MeshTriPoint & start, SurfacePath & path, const MeshTriPoint & end, int maxIter )
 {
     if ( maxIter <= 0 )
         return 0;
@@ -570,12 +570,12 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
         }
     }
 
-    std::vector<MeshEdgePoint> newPath;
+    SurfacePath newPath;
     newPath.reserve( path.size() );
-    std::vector<MeshEdgePoint> cacheOneSideUnfold;
+    SurfacePath cacheOneSideUnfold;
     std::vector<Vector2f> tmp;
     std::vector<std::pair<int,int>> vertSpans;
-    std::vector<MeshEdgePoint> rpoints; // to be added next in the new path in reverse order
+    SurfacePath rpoints; // to be added next in the new path in reverse order
     tbb::enumerable_thread_specific<TriangleStripUnfolder> stripPerThread( std::cref( mesh ) );
     for ( int i = 0; i < maxIter; ++i )
     {

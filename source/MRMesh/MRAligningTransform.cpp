@@ -3,8 +3,8 @@
 #include "MRAffineXf3.h"
 #include "MRQuaternion.h"
 #include "MRToFromEigen.h"
-#include <Eigen/Eigenvalues>
 #include "MRGTest.h"
+#include <Eigen/Eigenvalues>
 
 namespace MR
 {

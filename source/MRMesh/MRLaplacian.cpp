@@ -7,7 +7,6 @@
 #include "MRMeshComponents.h"
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
-
 #include <Eigen/SparseCholesky>
 
 namespace MR
@@ -275,7 +274,7 @@ void Laplacian::apply()
     mesh_.invalidateCaches();
 }
 
-void Laplacian::applyToScalar( Vector<float,VertId> & scalarField )
+void Laplacian::applyToScalar( VertScalars & scalarField )
 {
     MR_TIMER;
     if ( !freeVerts_.any() )

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRBox.h"
 
 namespace MR
 {
@@ -10,5 +11,7 @@ namespace MR
 /// \ingroup MathGroup
 template<typename V>
 MRMESH_API Box<V> computeBoundingBox( const Vector<V, VertId> & points, const VertBitSet & region, const AffineXf<V> * toWorld = nullptr );
+template<typename V>
+MRMESH_API Box<V> computeBoundingBox( const Vector<V, VertId>& points, const VertBitSet* region = nullptr, const AffineXf<V>* toWorld = nullptr );
 
 } // namespace MR

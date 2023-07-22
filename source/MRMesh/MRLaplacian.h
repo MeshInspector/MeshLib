@@ -6,6 +6,8 @@
 
 #pragma warning(push)
 #pragma warning(disable: 4068) // unknown pragmas
+#pragma warning(disable: 4127) // conditional expression is constant
+#pragma warning(disable: 4464) // relative include path contains '..'
 #pragma warning(disable: 5054) // operator '|': deprecated between enumerations of different types
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"
@@ -57,7 +59,7 @@ public:
     // given fixed vertices, computes positions of remaining region vertices
     MRMESH_API void apply();
     // given a pre-resized scalar field with set values in fixed vertices, computes the values in free vertices
-    MRMESH_API void applyToScalar( Vector<float,VertId> & scalarField );
+    MRMESH_API void applyToScalar( VertScalars & scalarField );
 
     // return all initially free vertices and the first layer around the them
     const VertBitSet & region() const { return region_; }

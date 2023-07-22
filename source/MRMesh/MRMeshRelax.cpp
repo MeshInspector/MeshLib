@@ -348,7 +348,7 @@ void smoothRegionBoundary( Mesh & mesh, const FaceBitSet & regionFaces, int numI
         return;
 
     // value 1 for out-of-region vertices
-    Vector<float,VertId> scalarField( mesh.topology.vertSize(), 1 );
+    VertScalars scalarField( mesh.topology.vertSize(), 1 );
 
     const auto regionVerts = getIncidentVerts( mesh.topology, regionFaces );
     // value -1 for in-region vertices

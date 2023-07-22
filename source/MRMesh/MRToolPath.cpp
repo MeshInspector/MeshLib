@@ -222,7 +222,7 @@ std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const MeshPart&
 
 std::vector<IsoLines> extractAllIsolines( const Mesh& mesh, const SurfacePath& startSurfacePath, float sectionStep, BypassDirection bypassDir, ProgressCallback cb )
 {
-    MR::Vector<float, VertId> distances;
+    MR::VertScalars distances;
    
     VertBitSet startVertices( mesh.topology.vertSize() );
     for ( const auto& ep : startSurfacePath )
@@ -286,6 +286,8 @@ using Intervals = std::vector<std::pair<V3fIt, V3fIt>>;
 Intervals getIntervals( const MeshPart& mp, const V3fIt startIt, const V3fIt endIt, const V3fIt beginVec, const V3fIt endVec, bool moveForward )
 {
     Intervals res;
+    if ( startIt == endIt )
+        return res;
 
     auto startInterval = moveForward ? startIt : endIt;
     auto endInterval = startInterval;
@@ -299,12 +301,18 @@ Intervals getIntervals( const MeshPart& mp, const V3fIt startIt, const V3fIt end
 
         if ( !mp.region || ( mpr && mp.region->test( faceId ) ) )
         {
-            moveForward ? ++endInterval : --endInterval;
+            if ( moveForward || endInterval > beginVec )
+                moveForward ? ++endInterval : --endInterval;
             return;
         }
 
         if ( startInterval != endInterval )
-            res.emplace_back( startInterval, endInterval );
+        {
+            if ( !moveForward && startInterval == endVec )
+                res.emplace_back( startInterval - 1, endInterval );
+            else
+                res.emplace_back( startInterval, endInterval );
+        }
 
         if ( moveForward )
             startInterval = endInterval = it + 1;

@@ -13,11 +13,12 @@ libglfw3-dev
 libgtest-dev
 libgtkmm-3.0-dev
 libhidapi-dev
+libhpdf-dev
 libilmbase-dev
 libjsoncpp-dev
-libpodofo-dev
 libpython3.8-dev
 libspdlog-dev
+libssl-dev
 libtbb-dev
 libtiff-dev
 libtinyxml2-dev

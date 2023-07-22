@@ -15,7 +15,7 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
     MR_TIMER
     assert( settings.minNewVertDev < settings.maxNewRank2VertDev );
     assert( settings.minNewVertDev < settings.maxNewRank3VertDev );
-    Vector<Vector3f, VertId> normals( vox.topology.vertSize() );
+    VertNormals normals( vox.topology.vertSize() );
     // find normals and correct points
     tbb::parallel_for( tbb::blocked_range<VertId>( 0_v, normals.endId() ), [&] ( const tbb::blocked_range<VertId>& range )
     {

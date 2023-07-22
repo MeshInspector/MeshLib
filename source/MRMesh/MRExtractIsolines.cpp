@@ -4,6 +4,7 @@
 #include "MREdgePoint.h"
 #include "MRPlane3.h"
 #include "MRMesh.h"
+#include "MRMeshIntersect.h"
 #include "MRAffineXf3.h"
 #include "MRVector2.h"
 #include "MRRingIterator.h"
@@ -344,6 +345,21 @@ bool hasAnyPlaneSection( const MeshPart& mp, const Plane3f& plane )
         return plane.distance( mp.mesh.points[v] );
     }, mp.region );
     return s.hasAnyLine();
+}
+
+PlaneSections extractXYPlaneSections( const MeshPart & mp, float zLevel )
+{
+    MR_TIMER
+
+    UndirectedEdgeBitSet potentiallyCrossedEdges( mp.mesh.topology.undirectedEdgeSize() );
+    VertBitSet vertRegion( mp.mesh.topology.vertSize() );
+    xyPlaneMeshIntersect( mp, zLevel, nullptr, &potentiallyCrossedEdges, &vertRegion );
+
+    Isoliner s( mp.mesh.topology, [&points = mp.mesh.points, zLevel] ( VertId v )
+    {
+        return points[v].z - zLevel;
+    }, vertRegion );
+    return s.extract( std::move( potentiallyCrossedEdges ) );
 }
 
 PlaneSection trackSection( const MeshPart& mp,

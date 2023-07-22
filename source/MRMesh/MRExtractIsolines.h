@@ -24,6 +24,13 @@ MRMESH_API PlaneSections extractPlaneSections( const MeshPart & mp, const Plane3
 /// quickly returns true if extractPlaneSections produce not-empty set for the same arguments
 MRMESH_API bool hasAnyPlaneSection( const MeshPart & mp, const Plane3f & plane );
 
+/// extracts all sections of given mesh with the plane z=zLevel;
+/// this function works faster than general extractPlaneSections(...) for the same plane
+/// if the sections cross relatively small number of mesh triangles and AABB tree has already been constructed
+MRMESH_API PlaneSections extractXYPlaneSections( const MeshPart & mp, float zLevel );
+/// quickly returns true if extractXYPlaneSections produce not-empty set for the same arguments
+MRMESH_API bool hasAnyXYPlaneSection( const MeshPart & mp, float zLevel );
+
 /// track section of plane set by start point, direction and surface normal in start point 
 /// in given direction while given distance or
 /// mesh boundary is not reached, or track looped

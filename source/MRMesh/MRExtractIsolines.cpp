@@ -32,6 +32,8 @@ public:
 
     bool hasAnyLine() const;
     IsoLines extract();
+    /// potentiallyCrossedEdges shall include all edges crossed by the iso-lines (some other edges there is permitted as well)
+    IsoLines extract( UndirectedEdgeBitSet potentiallyCrossedEdges );
 
     IsoLine track( const MeshTriPoint& start, ContinueTrack continueTrack );
 
@@ -98,6 +100,24 @@ IsoLines Isoliner::extract()
         VertId o = topology_.org( e );
         auto no = negativeVerts_.test( o );
         assert ( no != negativeVerts_.test( topology_.dest( e ) ) );
+        // direct edge from negative to positive values
+        res.push_back( extractOneLine_( no ? e : e.sym() ) );
+    }
+    activeEdges_.clear();
+    return res;
+}
+
+IsoLines Isoliner::extract( UndirectedEdgeBitSet potentiallyCrossedEdges )
+{
+    activeEdges_ = std::move( potentiallyCrossedEdges );
+    IsoLines res;
+    for ( auto ue : activeEdges_ )
+    {
+        EdgeId e = ue;
+        auto no = negativeVerts_.test( topology_.org( e ) );
+        auto nd = negativeVerts_.test( topology_.dest( e ) );
+        if ( no == nd )
+            continue;
         // direct edge from negative to positive values
         res.push_back( extractOneLine_( no ? e : e.sym() ) );
     }

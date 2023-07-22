@@ -31,7 +31,9 @@ public:
         : topology_( topology ), valueInVertex_( valueInVertex )
         { findNegativeVerts_( vertRegion ); }
 
-    bool hasAnyLine() const;
+    /// if \param potentiallyCrossedEdges is given, then only these edges will be checked (otherwise all mesh edges)
+    bool hasAnyLine( const UndirectedEdgeBitSet * potentiallyCrossedEdges = nullptr ) const;
+
     IsoLines extract();
     /// potentiallyCrossedEdges shall include all edges crossed by the iso-lines (some other edges there is permitted as well)
     IsoLines extract( UndirectedEdgeBitSet potentiallyCrossedEdges );
@@ -126,7 +128,7 @@ IsoLines Isoliner::extract( UndirectedEdgeBitSet potentiallyCrossedEdges )
     return res;
 }
 
-bool Isoliner::hasAnyLine() const
+bool Isoliner::hasAnyLine( const UndirectedEdgeBitSet * potentiallyCrossedEdges ) const
 {
     std::atomic<bool> res{ false };
     tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( topology_.undirectedEdgeSize() ) ),
@@ -136,6 +138,8 @@ bool Isoliner::hasAnyLine() const
         {
             if ( res.load( std::memory_order_relaxed ) )
                 break;
+            if ( potentiallyCrossedEdges && !potentiallyCrossedEdges->test( ue ) )
+                continue;
             VertId o = topology_.org( ue );
             if ( !o )
                 continue;
@@ -360,6 +364,21 @@ PlaneSections extractXYPlaneSections( const MeshPart & mp, float zLevel )
         return points[v].z - zLevel;
     }, vertRegion );
     return s.extract( std::move( potentiallyCrossedEdges ) );
+}
+
+bool hasAnyXYPlaneSection( const MeshPart & mp, float zLevel )
+{
+    MR_TIMER
+
+    UndirectedEdgeBitSet potentiallyCrossedEdges( mp.mesh.topology.undirectedEdgeSize() );
+    VertBitSet vertRegion( mp.mesh.topology.vertSize() );
+    xyPlaneMeshIntersect( mp, zLevel, nullptr, &potentiallyCrossedEdges, &vertRegion );
+
+    Isoliner s( mp.mesh.topology, [&points = mp.mesh.points, zLevel] ( VertId v )
+    {
+        return points[v].z - zLevel;
+    }, vertRegion );
+    return s.hasAnyLine( &potentiallyCrossedEdges );
 }
 
 PlaneSection trackSection( const MeshPart& mp,

@@ -324,6 +324,7 @@
     <ClCompile Include="MRAABBTreePolyline3.cpp" />
     <ClCompile Include="MRAABBTreePolyline2.cpp" />
     <ClCompile Include="MRAffineXf2.cpp" />
+    <ClCompile Include="MRAggregateFlow.cpp" />
     <ClCompile Include="MRAlignTextToMesh.cpp" />
     <ClCompile Include="MRArrow.cpp" />
     <ClCompile Include="MRBestFitQuadric.cpp" />

@@ -1688,6 +1688,9 @@
     <ClCompile Include="MRReadTIFF.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
+    <ClCompile Include="MRAggregateFlow.cpp">
+      <Filter>Source Files\SurfacePath</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

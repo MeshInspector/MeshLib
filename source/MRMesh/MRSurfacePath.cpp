@@ -376,7 +376,8 @@ Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
     return res;
 }
 
-SurfacePath computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field, const MeshTriPoint & start, const MeshTriPoint & end )
+SurfacePath computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
+    const MeshTriPoint & start, const MeshTriPoint & end, VertId * vertexReached )
 {
     assert( start );
     SurfacePathBuilder b( mesh, field );
@@ -384,6 +385,14 @@ SurfacePath computeSteepestDescentPath( const Mesh & mesh, const VertScalars & f
     SurfacePath res;
     while ( curr )
     {
+        if ( vertexReached )
+        {
+            if ( auto v = curr->inVertex( mesh.topology ) )
+            {
+                *vertexReached = v;
+                return res;
+            }
+        }
         res.push_back( *curr );
         if ( end && fromSameTriangle( mesh.topology, MeshTriPoint( end ), MeshTriPoint( *curr ) ) )
             break; // reached triangle with end point

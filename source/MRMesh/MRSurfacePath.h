@@ -68,8 +68,10 @@ MRMESH_API Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshP
 /// and moving in each triangle in minus gradient direction of given field;
 /// the path stops when it reaches
 /// 1) a local minimum in field or
-/// 2) same triangle with \param end (which can be omitted)
-MRMESH_API SurfacePath computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field, const MeshTriPoint & start, const MeshTriPoint & end );
+/// 2) same triangle with \param end (which can be omitted) or
+/// 3) any vertex if \param vertexReached is not nullptr, which receives Id of the vertex
+MRMESH_API SurfacePath computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
+    const MeshTriPoint & start, const MeshTriPoint & end, VertId * vertexReached = nullptr );
 
 /// for each vertex from (starts) finds the closest vertex from (ends) in geodesic sense
 /// \param vertRegion consider paths going in this region only

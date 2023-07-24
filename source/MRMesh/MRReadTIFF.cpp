@@ -2,6 +2,8 @@
 #include "MRReadTIFF.h"
 #include "MRStringConvert.h"
 #include "MRBuffer.h"
+#include "MRMatrix4.h"
+#include "MRAffineXf3.h"
 
 #include <tiffio.h>
 
@@ -199,6 +201,48 @@ VoidOrErrStr readRawTiff( const std::filesystem::path& path, RawTiffOutput& outp
         return unexpected( localParams.error() + ": " + utf8string( path ) );
     if ( output.params )
         *output.params = *localParams;
+
+    if ( output.p2wXf )
+    {
+        // http://geotiff.maptools.org/spec/geotiff2.6.html
+        constexpr uint32_t TIFFTAG_ModelTiePointTag = 33922;	/* GeoTIFF */
+        constexpr uint32_t TIFFTAG_ModelPixelScaleTag = 33550;	/* GeoTIFF */
+        constexpr uint32_t TIFFTAG_ModelTransformationTag = 34264;	/* GeoTIFF */
+        Matrix4d matrix;
+        if ( TIFFGetField( tiff, TIFFTAG_ModelTransformationTag, &matrix ) )
+        {
+            *output.p2wXf = AffineXf3f( Matrix4f( matrix ) );
+        }
+        else
+        {
+            double* dataTie;// will be freed with tiff
+            uint32_t count;
+            auto statusT = TIFFGetField( tiff, TIFFTAG_ModelTiePointTag, &count, &dataTie );
+            if ( statusT && count == 6 )
+            {
+                Vector3d tiePoints[2];
+                tiePoints[0] = { dataTie[0],dataTie[1],dataTie[2] };
+                tiePoints[0] = { dataTie[3],dataTie[4],dataTie[5] };
+
+                double* dataScale;// will be freed with tiff
+                Vector3d scale;
+                auto statusS = TIFFGetField( tiff, TIFFTAG_ModelPixelScaleTag, &count, &dataScale );
+                if ( statusS && count == 3 )
+                {
+                    scale = { dataScale[0],dataScale[1],dataScale[2] };
+
+                    output.p2wXf->A = Matrix3f::scale( float( scale.x ), -float( scale.y ),
+                        scale.z == 0.0 ? 1.0f : float( scale.z ) );
+                    output.p2wXf->b = Vector3f( tiePoints[1] );
+
+                    output.p2wXf->b.x += float( tiePoints[0].x );
+                    output.p2wXf->b.y += float( tiePoints[0].y );
+                    if ( scale.z != 0.0 )
+                        output.p2wXf->b.z += float( tiePoints[0].z );
+                }
+            }
+        }
+    }
 
     if ( localParams->sampleType == TiffParameters::SampleType::Uint )
     {

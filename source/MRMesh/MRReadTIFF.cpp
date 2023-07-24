@@ -207,8 +207,7 @@ VoidOrErrStr readRawTiff( const std::filesystem::path& path, RawTiffOutput& outp
         // http://geotiff.maptools.org/spec/geotiff2.6.html
         constexpr uint32_t TIFFTAG_ModelPixelScaleTag = 33550;	/* GeoTIFF */
         Matrix4d matrix;
-        auto statusXf = TIFFGetField( tiff, TIFFTAG_MODELTRANSFORMATIONTAG, &matrix );
-        if ( statusXf )
+        if ( auto statusXf = TIFFGetField( tiff, TIFFTAG_MODELTRANSFORMATIONTAG, &matrix ) )
         {
             *output.p2wXf = AffineXf3f( Matrix4f( matrix ) );
         }
@@ -226,7 +225,7 @@ VoidOrErrStr readRawTiff( const std::filesystem::path& path, RawTiffOutput& outp
                 double* dataScale;// will be freed with tiff
                 Vector3d scale;
                 auto statusS = TIFFGetField( tiff, TIFFTAG_ModelPixelScaleTag, &count, &dataScale );
-                if ( bool( statusS ) && count == 3 )
+                if ( statusS && count == 3 )
                 {
                     scale = { dataScale[0],dataScale[1],dataScale[2] };
 

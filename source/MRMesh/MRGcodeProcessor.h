@@ -77,9 +77,9 @@ private:
     // g-command actions
 
     // g0, g1
-    MoveAction moveLine_( const Vector3f& newPoint, bool idle );
+    MoveAction moveLine_( const Vector3f& newPoint, const Vector3f& newAngles );
     // g2, g3
-    MoveAction moveArc_( const Vector3f& newPoint, bool clockwise );
+    MoveAction moveArc_( const Vector3f& newPoint, const Vector3f& newAngles, bool clockwise );
 
     // g17, g18, g19
     void updateWorkPlane_( WorkPlane wp );
@@ -99,9 +99,10 @@ private:
     BaseAction3f getArcPoints3_( float r, const Vector3f& beginPoint, const Vector3f& endPoint, bool clockwise );
 
     // sample arc points of tool movement during rotation
-    MoveAction getToolRotationPoints_();
+    MoveAction getToolRotationPoints_( const Vector3f& newRotationAngles );
 
-    Vector3f calcCoordMotors_();
+    Vector3f calcNewTranslationPos_();
+    Vector3f calcNewRotationAngles_();
     Vector3f calcRealCoord_( const Vector3f& translationPos, const Vector3f& rotationAngles );
     void updateRotationAngleAndMatrix_( const Vector3f& rotationAngles );
     Vector3f calcRealCoordCached_( const Vector3f& translationPos, const Vector3f& rotationAngles );
@@ -142,10 +143,11 @@ private:
 
     // input data (data entered in last line)
     Vector3f inputCoords_; // x, y, z
-    Vector3<bool> inputCoordsReaded_; // any of (x, y, z) was read
+    Vector3b inputCoordsReaded_; // x, y, z was read
     std::optional<float> radius_; // r
     std::optional<Vector3f> arcCenter_; // i, j, k
-    std::optional<Vector3f> inputRotation_; // a, b, c
+    Vector3f inputRotation_; // a, b, c
+    Vector3b inputRotationReaded_; // a, b, c was read
 
     std::vector<std::string_view> gcodeSource_; // string list with sets of command (frames)
 

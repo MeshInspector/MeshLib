@@ -16,6 +16,7 @@ private:
     const Mesh & mesh_;
     const VertScalars & field_;
     VertMap downFlowVert_; // for each vertex stores what next vertex is on flow path (invalid vertex for local minima)
+    Vector<SurfacePath, VertId> downPath_; // till next vertex
     std::vector<VertId> vertsSortedDesc_; // all vertices sorted in descending field order
 };
 
@@ -23,11 +24,19 @@ FlowAggregator::FlowAggregator( const Mesh & mesh, const VertScalars & field ) :
 {
     MR_TIMER
     downFlowVert_.resize( mesh.topology.vertSize() );
+    downPath_.resize( mesh.topology.vertSize() );
     BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
+        const EdgePoint p0( mesh.topology, v );
+        SurfacePath path{ p0 };
         VertId nextVert;
-        computeSteepestDescentPath( mesh, field, MeshTriPoint( mesh.topology, v ), {}, nullptr, &nextVert );
+        computeSteepestDescentPath( mesh, field, p0, {}, &path, &nextVert );
         downFlowVert_[v] = nextVert;
+        if ( nextVert )
+        {
+            path.push_back( { mesh.topology, nextVert } );
+            downPath_[v] = std::move( path );
+        }
     } );
 
     using MinusHeightVert = std::pair<float, VertId>;

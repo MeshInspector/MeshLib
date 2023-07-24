@@ -570,8 +570,13 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
 
     auto parseFaces = [&] ( size_t begin, size_t end, std::string& parseError )
     {
+        struct OrderedTriangulation
+        {
+            size_t offset;
+            Triangulation t;
+        };
         tbb::task_group_context ctx;
-        tbb::enumerable_thread_specific<Triangulation> trisPerThread;
+        tbb::enumerable_thread_specific<std::vector<OrderedTriangulation>> ordTrisPerThread;
 
         std::mutex mutex;
 
@@ -582,7 +587,8 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
 
         tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
         {
-            auto& tris = trisPerThread.local();
+            auto& ordTris = ordTrisPerThread.local();
+            auto& t = ordTris.emplace_back( OrderedTriangulation { range.begin(), {} } ).t;
 
             ObjFace f;
             // usually a face has 3 or 4 vertices
@@ -673,7 +679,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
 
                 // TODO: make smarter triangulation based on point coordinates
                 for ( int j = 1; j + 1 < vs.size(); ++j )
-                    tris.push_back( { VertId( vs[0] ), VertId( vs[j] ), VertId( vs[j+1] ) } );
+                    t.push_back( { VertId( vs[0] ), VertId( vs[j] ), VertId( vs[j+1] ) } );
             }
         }, ctx );
 
@@ -683,11 +689,20 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
             return;
 
         size_t trisSize = 0;
-        for ( auto& tris : trisPerThread )
-            trisSize += tris.size();
+        std::vector<OrderedTriangulation> ordTrisAll;
+        for ( auto& ordTris : ordTrisPerThread )
+        {
+            for ( auto& ordTri : ordTris )
+            {
+                trisSize += ordTri.t.size();
+                ordTrisAll.emplace_back( std::move( ordTri ) );
+            }
+        }
+        std::sort( ordTrisAll.begin(), ordTrisAll.end(),
+                   [] ( auto&& a, auto&& b ) { return a.offset < b.offset; } );
         t.reserve( t.size() + trisSize );
-        for ( auto& tris : trisPerThread )
-            t.vec_.insert( t.vec_.end(), tris.vec_.begin(), tris.vec_.end() );
+        for ( auto& ordTri : ordTrisAll )
+            t.vec_.insert( t.vec_.end(), ordTri.t.vec_.begin(), ordTri.t.vec_.end() );
     };
 
     auto parseObject = [&] ( size_t, size_t end, std::string& )

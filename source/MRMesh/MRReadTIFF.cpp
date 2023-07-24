@@ -209,7 +209,7 @@ VoidOrErrStr readRawTiff( const std::filesystem::path& path, RawTiffOutput& outp
         constexpr uint32_t TIFFTAG_ModelPixelScaleTag = 33550;	/* GeoTIFF */
         constexpr uint32_t TIFFTAG_ModelTransformationTag = 34264;	/* GeoTIFF */
         Matrix4d matrix;
-        if ( auto statusXf = TIFFGetField( tiff, TIFFTAG_ModelTransformationTag, &matrix ) )
+        if ( TIFFGetField( tiff, TIFFTAG_ModelTransformationTag, &matrix ) )
         {
             *output.p2wXf = AffineXf3f( Matrix4f( matrix ) );
         }

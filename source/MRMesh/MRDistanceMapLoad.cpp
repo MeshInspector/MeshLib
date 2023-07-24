@@ -121,7 +121,7 @@ Expected<DistanceMap, std::string> fromMrDistanceMap( const std::filesystem::pat
     return dmap;
 }
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
-Expected<DistanceMap, std::string> fromTiff( const std::filesystem::path& path, ProgressCallback progressCb /*= {} */ )
+Expected<DistanceMap, std::string> fromTiff( const std::filesystem::path& path, DistanceMapToWorld& params, ProgressCallback progressCb /*= {} */ )
 {
     MR_TIMER;
 
@@ -137,9 +137,17 @@ Expected<DistanceMap, std::string> fromTiff( const std::filesystem::path& path, 
     output.data = res.data();
     output.size = paramsExp->imageSize.x * paramsExp->imageSize.y;
 
+    AffineXf3f outXf;
+    output.p2wXf = &outXf;
     auto readRes = readRawTiff( path, output );
     if ( !readRes.has_value() )
         return unexpected( readRes.error() );
+
+    auto transposedM = outXf.A.transposed();
+    params.orgPoint = outXf.b;
+    params.pixelXVec = transposedM.x;
+    params.pixelYVec = transposedM.y;
+    params.direction = transposedM.z;
 
     if ( progressCb && !progressCb( 0.8f ) )
         return unexpected( std::string( "Loading canceled" ) );
@@ -170,7 +178,15 @@ Expected<DistanceMap, std::string> fromAnySupportedFormat( const std::filesystem
 
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
     if ( itF->extension == "*.tif" || itF->extension == "*.tiff" )
-            return fromTiff( path, progressCb );
+    {
+        if ( params )
+            return fromTiff( path, *params, progressCb );
+        else
+        {
+            DistanceMapToWorld defaultParams;
+            return fromTiff( path, defaultParams, progressCb );
+        }
+    }
 #endif
 
     if ( params )

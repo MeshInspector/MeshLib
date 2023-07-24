@@ -6,6 +6,7 @@
 #include "MRMeshTriPoint.h"
 #include <cfloat>
 #include <functional>
+#include <optional>
 
 namespace MR
 {

@@ -381,7 +381,7 @@ Vector3f Mesh::pseudonormal( const MeshTriPoint & p, const FaceBitSet * region )
     if ( auto v = p.inVertex( topology ) )
         return pseudonormal( v, region );
     if ( auto e = p.onEdge( topology ) )
-        return pseudonormal( e->e.undirected(), region );
+        return pseudonormal( e.e.undirected(), region );
     assert( !region || region->test( topology.left( p.e ) ) );
     return leftNormal( p.e );
 }

@@ -12,7 +12,6 @@ namespace MR
 template <typename T>
 struct TriPoint
 {
-
     /// barycentric coordinates:
     /// a+b in [0,1], a+b=0 => point is in v0, a+b=1 => point is on [v1,v2] edge
     T a = 0; ///< a in [0,1], a=0 => point is on [v2,v0] edge, a=1 => point is in v1
@@ -42,6 +41,9 @@ struct TriPoint
     /// returns [0,2] if the point is on edge or -1 otherwise:
     /// 0 means edge [v1,v2]; 1 means edge [v2,v0]; 2 means edge [v0,v1]
     int onEdge() const;
+
+    /// returns true if two points have equal (a,b) representation
+    [[nodiscard]] bool operator==( const TriPoint& rhs ) const = default;
 };
 
 /// \related TriPoint

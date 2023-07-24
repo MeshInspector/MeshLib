@@ -50,6 +50,11 @@ struct MeshTriPoint
     [[nodiscard]] MRMESH_API MeshTriPoint lnext( const MeshTopology & topology ) const;
     /// represents the same point relative to the topology.edgeWithLeft( topology.left( e ) )
     [[nodiscard]] MRMESH_API MeshTriPoint canonical( const MeshTopology & topology ) const;
+
+    /// returns true if two points are equal including equal not-unique representation
+    [[nodiscard]] bool operator==( const MeshTriPoint& rhs ) const = default;
+    /// returns true if two points are equal considering different representations
+    [[nodiscard]] MRMESH_API friend bool same( const MeshTopology & topology, const MeshTriPoint& lhs, const MeshTriPoint & rhs );
 };
 
 /// \related MeshTriPoint

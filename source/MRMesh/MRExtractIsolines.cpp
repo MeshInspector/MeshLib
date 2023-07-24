@@ -184,9 +184,9 @@ IsoLine Isoliner::track( const MeshTriPoint& start, ContinueTrack continueTrack 
     }
     else if ( auto eOp = start.onEdge( topology_ ) )
     {
-        startEdge = testEdge( eOp->e );
+        startEdge = testEdge( eOp.e );
         if ( !startEdge )
-            startEdge = eOp->e.sym();
+            startEdge = eOp.e.sym();
         startEdge = findNextEdge_( startEdge ); // `start` is first
     }
     else

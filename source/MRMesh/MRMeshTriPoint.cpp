@@ -18,7 +18,7 @@ VertId MeshTriPoint::inVertex( const MeshTopology & topology ) const
     return {};
 }
 
-std::optional<MeshEdgePoint> MeshTriPoint::onEdge( const MeshTopology & topology ) const
+MeshEdgePoint MeshTriPoint::onEdge( const MeshTopology & topology ) const
 {
     switch( bary.onEdge() )
     {
@@ -37,7 +37,7 @@ bool MeshTriPoint::isBd( const MeshTopology & topology, const FaceBitSet * regio
     if ( auto v = inVertex( topology ) )
         return topology.isBdVertex( v, region );
     if ( auto oe = onEdge( topology ) )
-        return topology.isBdEdge( oe->e, region );
+        return topology.isBdEdge( oe.e, region );
     return false;
 }
 
@@ -67,10 +67,7 @@ bool same( const MeshTopology & topology, const MeshTriPoint& lhs, const MeshTri
     if ( !lhs )
         return !rhs;
     if ( auto le = lhs.onEdge( topology ) )
-    {
-        auto re = rhs.onEdge( topology );
-        return re && same( topology, *le, *re );
-    }
+        return same( topology, le, rhs.onEdge( topology ) );
 
     assert ( topology.left( lhs.e ) );
     if ( topology.left( lhs.e ) != topology.left( rhs.e ) )
@@ -87,7 +84,7 @@ bool same( const MeshTopology & topology, const MeshTriPoint& lhs, const MeshTri
     return lhs == r;
 }
 
-std::optional<MeshTriPoint> getVertexAsMeshTriPoint( const MeshTopology & topology, EdgeId e, VertId v )
+MeshTriPoint getVertexAsMeshTriPoint( const MeshTopology & topology, EdgeId e, VertId v )
 {
     VertId tv[3];
     topology.getLeftTriVerts( e, tv );
@@ -167,12 +164,12 @@ bool fromSameTriangle( const MeshTopology & topology, MeshTriPoint & a, MeshTriP
         if ( auto be = b.onEdge( topology ) )
         {
             // a in vertex, b on edge
-            return vertEdge2MeshTriPoints( topology, av, *be, a, b );
+            return vertEdge2MeshTriPoints( topology, av, be, a, b );
         }
         // a in vertex, b in triangle
         if ( auto mtp = getVertexAsMeshTriPoint( topology, b.e, av ) )
         {
-            a = *mtp;
+            a = mtp;
             return true;
         }
         return false;
@@ -182,50 +179,50 @@ bool fromSameTriangle( const MeshTopology & topology, MeshTriPoint & a, MeshTriP
         if ( auto bv = b.inVertex( topology ) )
         {
             // a on edge, b in vertex
-            return vertEdge2MeshTriPoints( topology, bv, *ae, b, a );
+            return vertEdge2MeshTriPoints( topology, bv, ae, b, a );
         }
         if ( auto be = b.onEdge( topology ) )
         {
             // a on edge, b on edge
-            const auto al = topology.left( ae->e );
-            const auto ar = topology.right( ae->e );
-            const auto bl = topology.left( be->e );
-            const auto br = topology.right( be->e );
+            const auto al = topology.left( ae.e );
+            const auto ar = topology.right( ae.e );
+            const auto bl = topology.left( be.e );
+            const auto br = topology.right( be.e );
             if ( al && al == bl )
             {
-                a = MeshTriPoint( *ae );
-                b = MeshTriPoint( *be );
+                a = MeshTriPoint( ae );
+                b = MeshTriPoint( be );
                 return true;
             }
             if ( al && al == br )
             {
-                a = MeshTriPoint( *ae );
-                b = MeshTriPoint( be->sym() );
+                a = MeshTriPoint( ae );
+                b = MeshTriPoint( be.sym() );
                 return true;
             }
             if ( ar && ar == bl )
             {
-                a = MeshTriPoint( ae->sym() );
-                b = MeshTriPoint( *be );
+                a = MeshTriPoint( ae.sym() );
+                b = MeshTriPoint( be );
                 return true;
             }
             if ( ar && ar == br )
             {
-                a = MeshTriPoint( ae->sym() );
-                b = MeshTriPoint( be->sym() );
+                a = MeshTriPoint( ae.sym() );
+                b = MeshTriPoint( be.sym() );
                 return true;
             }
             return false;
         }
         // a on edge, b in triangle
-        return edgePoint2MeshTriPoint( topology, *ae, topology.left( b.e ), a );
+        return edgePoint2MeshTriPoint( topology, ae, topology.left( b.e ), a );
     }
     if ( auto bv = b.inVertex( topology ) )
     {
         // a in triangle, b in vertex
         if ( auto mtp = getVertexAsMeshTriPoint( topology, a.e, bv ) )
         {
-            b = *mtp;
+            b = mtp;
             return true;
         }
         return false;
@@ -233,7 +230,7 @@ bool fromSameTriangle( const MeshTopology & topology, MeshTriPoint & a, MeshTriP
     if ( auto be = b.onEdge( topology ) )
     {
         // a in triangle, b on edge
-        return edgePoint2MeshTriPoint( topology, *be, topology.left( a.e ), b );
+        return edgePoint2MeshTriPoint( topology, be, topology.left( a.e ), b );
     }
     // a in triangle, b in triangle
     return topology.left( a.e ) == topology.left( b.e );

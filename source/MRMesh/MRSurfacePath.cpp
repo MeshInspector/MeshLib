@@ -71,11 +71,11 @@ public:
     SurfacePathBuilder( const Mesh & mesh, const VertScalars & field );
 
     // finds previous path point before given vertex, which can be located on any first ring boundary
-    std::optional<MeshEdgePoint> findPrevPoint( VertId v ) const;
+    MeshEdgePoint findPrevPoint( VertId v ) const;
     // finds previous path point before given edge location
-    std::optional<MeshEdgePoint> findPrevPoint( const MeshEdgePoint & ep ) const;
+    MeshEdgePoint findPrevPoint( const MeshEdgePoint & ep ) const;
     // finds previous path point before given triangle location
-    std::optional<MeshEdgePoint> findPrevPoint( const MeshTriPoint & tp ) const;
+    MeshEdgePoint findPrevPoint( const MeshTriPoint & tp ) const;
 
 private:
     const Mesh & mesh_;
@@ -88,9 +88,9 @@ SurfacePathBuilder::SurfacePathBuilder( const Mesh & mesh, const VertScalars & f
 {
 }
 
-std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( VertId v ) const
+MeshEdgePoint SurfacePathBuilder::findPrevPoint( VertId v ) const
 {
-    std::optional<MeshEdgePoint> res;
+    MeshEdgePoint res;
     float maxGradSq = 0;
     const auto vv = field_[v];
     const auto pv = mesh_.points[v];
@@ -140,13 +140,13 @@ std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( VertId v ) const
     return res;
 }
 
-std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) const
+MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) const
 {
     if ( auto v = ep.inVertex( mesh_.topology ) )
         return findPrevPoint( v );
 
     // point is not in vertex
-    std::optional<MeshEdgePoint> result;
+    MeshEdgePoint result;
     float maxGradSq = 0;
     const auto p = mesh_.edgePoint( ep );
 
@@ -268,13 +268,13 @@ std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( const MeshEdgePo
     return result;
 }
 
-std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( const MeshTriPoint & tp ) const
+MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshTriPoint & tp ) const
 {
     if ( auto ep = tp.onEdge( mesh_.topology ) )
-        return findPrevPoint( *ep );
+        return findPrevPoint( ep );
 
     // point is not on edge
-    std::optional<MeshEdgePoint> res;
+    MeshEdgePoint res;
     float maxGradSq = -1;
     const auto p = mesh_.triPoint( tp );
 
@@ -384,8 +384,8 @@ SurfacePath computeSteepestDescentPath( const Mesh & mesh, const VertScalars & f
     SurfacePath res;
     while ( curr )
     {
-        res.push_back( *curr );
-        if ( end && fromSameTriangle( mesh.topology, MeshTriPoint( end ), MeshTriPoint( *curr ) ) )
+        res.push_back( curr );
+        if ( end && fromSameTriangle( mesh.topology, MeshTriPoint( end ), MeshTriPoint( curr ) ) )
             break; // reached triangle with end point
         if ( res.size() > mesh.topology.numValidFaces() )
         {
@@ -394,7 +394,7 @@ SurfacePath computeSteepestDescentPath( const Mesh & mesh, const VertScalars & f
             res.clear();
             return res;
         }
-        curr = b.findPrevPoint( *curr );
+        curr = b.findPrevPoint( curr );
     }
     return res;
 }
@@ -482,16 +482,16 @@ HashMap<VertId, VertId> computeClosestSurfacePathTargets( const Mesh & mesh,
             {
                 // internal error
                 assert( false );
-                last.reset();
+                last = {};
                 break;
             }
-            if ( auto next = b.findPrevPoint( *last ) )
+            if ( auto next = b.findPrevPoint( last ) )
                 last = next;
             else
                 break;
         }
         if ( last )
-            res[v] = last->getClosestVertex( mesh.topology );
+            res[v] = last.getClosestVertex( mesh.topology );
     } );
 
     if ( outSurfaceDistances )

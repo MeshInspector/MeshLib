@@ -205,10 +205,10 @@ VoidOrErrStr readRawTiff( const std::filesystem::path& path, RawTiffOutput& outp
     if ( output.p2wXf )
     {
         // http://geotiff.maptools.org/spec/geotiff2.6.html
-#define	TIFFTAG_ModelPixelScaleTag	33550	/* GeoTIFF */
+        constexpr uint32_t TIFFTAG_ModelPixelScaleTag = 33550;	/* GeoTIFF */
         Matrix4d matrix;
         auto statusXf = TIFFGetField( tiff, TIFFTAG_MODELTRANSFORMATIONTAG, &matrix );
-        if ( bool( statusXf ) )
+        if ( statusXf )
         {
             *output.p2wXf = AffineXf3f( Matrix4f( matrix ) );
         }
@@ -217,7 +217,7 @@ VoidOrErrStr readRawTiff( const std::filesystem::path& path, RawTiffOutput& outp
             double* dataTie;// will be freed with tiff
             uint32_t count;
             auto statusT = TIFFGetField( tiff, TIFFTAG_MODELTIEPOINTTAG, &count, &dataTie );
-            if ( bool( statusT ) && count == 6 )
+            if ( statusT && count == 6 )
             {
                 Vector3d tiePoints[2];
                 tiePoints[0] = { dataTie[0],dataTie[1],dataTie[2] };

@@ -9,7 +9,7 @@ namespace MR
 {
 
 constexpr float cInch = 25.4f;
-constexpr int pointInRotation = 21;
+constexpr int cPointInRotation = 21;
 
 //////////////////////////////////////////////////////////////////////////
 // GcodeExecutor
@@ -259,11 +259,11 @@ GcodeProcessor::MoveAction GcodeProcessor::moveLine_( const Vector3f& newPoint, 
         return res;
     }
 
-    res.action.path.resize( pointInRotation );
-    res.toolDirection.resize( pointInRotation );
-    const Vector3f lineStep = ( newPoint - translationPos_ ) / ( pointInRotation - 1.f );
-    const Vector3f rotationAnglesStep_ = ( newAngles - rotationAngles_ ) / ( pointInRotation - 1.f );
-    for ( int i = 0; i < pointInRotation; ++i )
+    res.action.path.resize( cPointInRotation );
+    res.toolDirection.resize( cPointInRotation );
+    const Vector3f lineStep = ( newPoint - translationPos_ ) / ( cPointInRotation - 1.f );
+    const Vector3f rotationAnglesStep_ = ( newAngles - rotationAngles_ ) / ( cPointInRotation - 1.f );
+    for ( int i = 0; i < cPointInRotation; ++i )
     {
         const auto currentRotationAngles_ = rotationAnglesStep_ * float( i ) + rotationAngles_;
         res.action.path[i] = calcRealCoord_( translationPos_ + lineStep * float( i ), currentRotationAngles_ );
@@ -296,7 +296,7 @@ GcodeProcessor::MoveAction GcodeProcessor::moveArc_( const Vector3f& newPoint, c
         {
             const int pointCount = int( res.action.path.size() );
             res.toolDirection.resize( pointCount );
-            const Vector3f rotationAnglesStep_ = ( newAngles - rotationAngles_ ) / ( pointCount - 1.f );
+            const Vector3f rotationAnglesStep_ = ( newAngles - rotationAngles_ ) / ( pointCount - 1.f ); // in this case, pointCount minimum value is 11 (as result getArcPoints2_ method)
             for ( int i = 0; i < pointCount; ++i )
             {
                 auto& point = res.action.path[i];
@@ -337,10 +337,10 @@ GcodeProcessor::MoveAction GcodeProcessor::getToolRotationPoints_( const Vector3
 
     MoveAction res;
     
-    Vector3f rotationAnglesStep_ = ( newRotationAngles - rotationAngles_ ) / ( pointInRotation - 1.f );
-    res.action.path.resize( pointInRotation );
-    res.toolDirection.resize( pointInRotation );
-    for ( int i = 0; i < pointInRotation; ++i )
+    Vector3f rotationAnglesStep_ = ( newRotationAngles - rotationAngles_ ) / ( cPointInRotation - 1.f );
+    res.action.path.resize( cPointInRotation );
+    res.toolDirection.resize( cPointInRotation );
+    for ( int i = 0; i < cPointInRotation; ++i )
     {
         const auto currentRotationAngles_ = rotationAnglesStep_ * float(i) + rotationAngles_;
         res.action.path[i] = calcRealCoord_( translationPos_, currentRotationAngles_ );

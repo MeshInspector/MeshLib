@@ -37,9 +37,10 @@ struct EdgePoint
     [[nodiscard]] EdgePoint sym() const { return EdgePoint{ e.sym(), 1 - a }; }
     /// returns true if two edge-points are equal including equal not-unique representation
     [[nodiscard]] bool operator==( const EdgePoint& rhs ) const = default;
-    /// returns true if two edge-points are equal considering different representations
-    [[nodiscard]] MRMESH_API friend bool same( const MeshTopology & topology, const EdgePoint& lhs, const EdgePoint& rhs );
 };
+
+/// returns true if two edge-points are equal considering different representations
+[[nodiscard]] MRMESH_API bool same( const MeshTopology & topology, const EdgePoint& lhs, const EdgePoint& rhs );
 
 /// two edge-points (e.g. representing collision point of two edges)
 struct EdgePointPair

@@ -53,12 +53,13 @@ struct MeshTriPoint
 
     /// returns true if two points are equal including equal not-unique representation
     [[nodiscard]] bool operator==( const MeshTriPoint& rhs ) const = default;
-    /// returns true if two points are equal considering different representations
-    [[nodiscard]] MRMESH_API friend bool same( const MeshTopology & topology, const MeshTriPoint& lhs, const MeshTriPoint & rhs );
 };
 
 /// \related MeshTriPoint
 /// \{
+
+/// returns true if two points are equal considering different representations
+[[nodiscard]] MRMESH_API bool same( const MeshTopology & topology, const MeshTriPoint& lhs, const MeshTriPoint & rhs );
 
 /// returns true if points a and b are located insides or on a boundary of the same triangle;
 /// if true a.e and b.e are updated to have that triangle on the left

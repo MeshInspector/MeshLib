@@ -122,7 +122,7 @@ void addSurfacePath( std::vector<GCommand>& gcode, const Mesh& mesh, const MeshE
 
 // computes all sections of modified mesh along the given axis
 // if a selected area is specified in the original mesh, then only points projected on it will be taken into consideration
-std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const MeshPart& origMeshPart, Axis axis, float sectionStep, int steps, BypassDirection bypassDir, ProgressCallback cb )
+std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const MeshPart& origMeshPart, const Box3f& box, Axis axis, float sectionStep, int steps, BypassDirection bypassDir, ProgressCallback cb )
 {
     auto mainThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };
@@ -133,7 +133,6 @@ std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const MeshPart&
     const int axisIndex = int( axis );
     constexpr Vector3f normals[3] = { {1, 0, 0}, {0, 1, 0}, {0, 0 ,1} };
     const Vector3f normal = normals[axisIndex];
-    const auto box = mesh.computeBoundingBox();
     const auto plane = MR::Plane3f::fromDirAndPt( normal, box.max );
 
     tbb::parallel_for( tbb::blocked_range<int>( 0, steps ), [&] ( const tbb::blocked_range<int>& range )
@@ -389,26 +388,24 @@ Intervals getIntervals( const MeshPart& mp, const V3fIt startIt, const V3fIt end
 
 // if distance between the last point and the given one is more than critical distance
 // we should make a transit on the safe height
-void transitOverSafeZ( V3fIt it, ToolPathResult& res, const ToolPathParams& params, float& lastFeed )
+void transitOverSafeZ( V3fIt it, ToolPathResult& res, const ToolPathParams& params, float safeZ, float currentZ, float& lastFeed )
 {
-    float currentZ = res.commands.back().z;
-
     // retract the tool fast if possible
-    if ( params.safeZ - currentZ > params.retractLength )
+    if ( safeZ - currentZ > params.retractLength )
     {
         const float zRetract = currentZ + params.retractLength;
         res.commands.push_back( { .feed = params.retractFeed, .z = zRetract } );
-        res.commands.push_back( { .type = MoveType::FastLinear, .z = params.safeZ } );
+        res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
     }
     else
     {
-        res.commands.push_back( { .feed = params.retractFeed, .z = params.safeZ } );
+        res.commands.push_back( { .feed = params.retractFeed, .z = safeZ } );
     }
 
     res.commands.push_back( { .type = MoveType::FastLinear, .x = it->x, .y = it->y } );
 
     // plunge the tool fast if possible
-    if ( params.safeZ - it->z > params.plungeLength )
+    if ( safeZ - it->z > params.plungeLength )
     {
         const float zPlunge = it->z + params.plungeLength;
         res.commands.push_back( { .type = MoveType::FastLinear, .z = zPlunge } );
@@ -432,8 +429,8 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
     ToolPathResult  res{ .modifiedMesh = std::move( *preprocessedMesh ) };
     const auto& mesh = res.modifiedMesh;
 
-    const auto box = mesh.getBoundingBox();
-    const float safeZ = std::max( box.max.z + params.millRadius, params.safeZ );
+    const auto box = mp.mesh.computeBoundingBox( params.xf );
+    const float safeZ = std::max( box.max.z + 10.0f * params.millRadius, params.safeZ );
 
     const Vector3f normal = (cutDirection == Axis::X) ? Vector3f::plusX() : Vector3f::plusY();
     const auto plane = MR::Plane3f::fromDirAndPt( normal, box.max );
@@ -441,7 +438,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
 
     MeshEdgePoint lastEdgePoint = {};
     // bypass direction is not meaningful for this toolpath, so leave it as default
-    const auto allSections = extractAllSections( mesh, mp.mesh, cutDirection, params.sectionStep, steps, BypassDirection::Clockwise, subprogress( params.cb, 0.25f, 0.5f ) );
+    const auto allSections = extractAllSections( mesh, mp.mesh, box, cutDirection, params.sectionStep, steps, BypassDirection::Clockwise, subprogress( params.cb, 0.25f, 0.5f ) );
     if ( allSections.empty() )
         return unexpectedOperationCanceled();
     const auto sbp = subprogress( params.cb, 0.5f, 1.0f );
@@ -538,7 +535,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
                 const auto distSq = ( mesh.edgePoint( lastEdgePoint ) - mesh.edgePoint( nextEdgePoint ) ).lengthSq();
 
                 if ( distSq > critDistSq )
-                    transitOverSafeZ( intervals[0].first, res, params, lastFeed );
+                    transitOverSafeZ( intervals[0].first, res, params, safeZ, res.commands.back().z, lastFeed );
                 else
                     addSurfacePath( res.commands, mesh, lastEdgePoint, nextEdgePoint );
             }
@@ -563,7 +560,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
                 }
 
                 if ( *intervals[i + 1].first != lastPoint )
-                    transitOverSafeZ( intervals[i + 1].first, res, params, lastFeed );
+                    transitOverSafeZ( intervals[i + 1].first, res, params, safeZ, res.commands.back().z, lastFeed );
             }
             // process the last interval
             if ( moveForward )
@@ -598,8 +595,9 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
     ToolPathResult  res{ .modifiedMesh = std::move( *preprocessedMesh ) };
     const auto& mesh = res.modifiedMesh;
 
-    const auto box = mp.mesh.getBoundingBox();
-    const float safeZ = std::max( box.max.z + params.millRadius, params.safeZ );
+    const auto box = mp.mesh.computeBoundingBox( params.xf );
+    const float safeZ = std::max( box.max.z + 10.0f * params.millRadius, params.safeZ );
+    float currentZ = 0;
 
     const Vector3f normal = Vector3f::plusZ();
     const auto plane = MR::Plane3f::fromDirAndPt( normal, box.max );
@@ -611,7 +609,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
 
     const float critTransitionLengthSq = params.critTransitionLength * params.critTransitionLength;
 
-    std::vector<PlaneSections> sections = extractAllSections( mesh, mp, Axis::Z, params.sectionStep, steps, params.bypassDir, subprogress( params.cb, 0.25f, 0.5f ) );
+    std::vector<PlaneSections> sections = extractAllSections( mesh, mp, box, Axis::Z, params.sectionStep, steps, params.bypassDir, subprogress( params.cb, 0.25f, 0.5f ) );
     if ( sections.empty() )
         return unexpectedOperationCanceled();
 
@@ -685,7 +683,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
 
             if ( !prevEdgePoint.e.valid() || minDistSq > critTransitionLengthSq )
             {
-                transitOverSafeZ( pivotIt, res, params, lastFeed );               
+                transitOverSafeZ( pivotIt, res, params, safeZ, currentZ, lastFeed );               
             }
             else
             {
@@ -723,6 +721,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
             }
 
             prevEdgePoint = *nextEdgePointIt;
+            currentZ = pivotIt->z;
         }
     }
 
@@ -742,10 +741,12 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
     ToolPathResult  res{ .modifiedMesh = std::move( *preprocessedMesh ) };
     
     const auto& mesh = res.modifiedMesh;
-    const auto box = mesh.getBoundingBox();  
+    const auto box = mp.mesh.computeBoundingBox( params.xf );
 
     const Vector3f normal = Vector3f::plusZ();
-    const float minZ = box.min.z + params.sectionStep;
+    float minZ = box.min.z + params.sectionStep;
+    float safeZ = std::max( box.max.z + params.millRadius, params.safeZ );
+
     const auto undercutPlane = MR::Plane3f::fromDirAndPt( normal, { 0.0f, 0.0f, minZ } );
     
     //compute the lowest contour that might be processed
@@ -764,8 +765,8 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
             return false;
 
         //go to the start point through safe height
-        res.commands.push_back( { .type = MoveType::FastLinear, .z = params.safeZ } );
-        lastPoint.z = params.safeZ;
+        res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
+        lastPoint.z = safeZ;
         float lastFeed = 0.0f;
 
         MeshEdgePoint prevEdgePoint;
@@ -830,7 +831,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                 }
                 if ( startSkippedRegion )
                 {
-                    transitOverSafeZ( it, res, paramsCopy, lastFeed );
+                    transitOverSafeZ( it, res, paramsCopy, safeZ, res.commands.back().z, lastFeed );
                     startSkippedRegion.reset();
                     continue;
                 }
@@ -918,7 +919,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                     // go through the safe height to the first point
                     res.commands.push_back( { .type = MoveType::FastLinear, .x = pivotIt->x, .y = pivotIt->y } );
 
-                    if ( params.safeZ - pivotIt->z > params.plungeLength )
+                    if ( safeZ - pivotIt->z > params.plungeLength )
                     {
                         const float zPlunge = pivotIt->z + params.plungeLength;
                         res.commands.push_back( { .type = MoveType::FastLinear, .z = zPlunge } );

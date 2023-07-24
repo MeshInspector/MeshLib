@@ -50,10 +50,16 @@ struct MeshTriPoint
     [[nodiscard]] MRMESH_API MeshTriPoint lnext( const MeshTopology & topology ) const;
     /// represents the same point relative to the topology.edgeWithLeft( topology.left( e ) )
     [[nodiscard]] MRMESH_API MeshTriPoint canonical( const MeshTopology & topology ) const;
+
+    /// returns true if two points are equal including equal not-unique representation
+    [[nodiscard]] bool operator==( const MeshTriPoint& rhs ) const = default;
 };
 
 /// \related MeshTriPoint
 /// \{
+
+/// returns true if two points are equal considering different representations
+[[nodiscard]] MRMESH_API bool same( const MeshTopology & topology, const MeshTriPoint& lhs, const MeshTriPoint & rhs );
 
 /// returns true if points a and b are located insides or on a boundary of the same triangle;
 /// if true a.e and b.e are updated to have that triangle on the left

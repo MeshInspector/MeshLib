@@ -62,6 +62,31 @@ MeshTriPoint MeshTriPoint::canonical( const MeshTopology & topology ) const
     return res;
 }
 
+bool same( const MeshTopology & topology, const MeshTriPoint& lhs, const MeshTriPoint & rhs )
+{
+    if ( !lhs )
+        return !rhs;
+    if ( auto le = lhs.onEdge( topology ) )
+    {
+        auto re = rhs.onEdge( topology );
+        return re && same( topology, *le, *re );
+    }
+
+    assert ( topology.left( lhs.e ) );
+    if ( topology.left( lhs.e ) != topology.left( rhs.e ) )
+        return false;
+
+    if ( lhs == rhs )
+        return true;
+
+    auto r = rhs.lnext( topology );
+    if ( lhs == r )
+        return true;
+    
+    r = r.lnext( topology );
+    return lhs == r;
+}
+
 std::optional<MeshTriPoint> getVertexAsMeshTriPoint( const MeshTopology & topology, EdgeId e, VertId v )
 {
     VertId tv[3];

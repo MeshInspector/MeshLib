@@ -588,8 +588,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
         tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
         {
             auto& ordTris = ordTrisPerThread.local();
-            ordTris.emplace_back( OrderedTriangulation { range.begin(), {} } );
-            auto& t = ordTris.back().t;
+            auto& t = ordTris.emplace_back( OrderedTriangulation { range.begin(), {} } ).t;
 
             ObjFace f;
             // usually a face has 3 or 4 vertices

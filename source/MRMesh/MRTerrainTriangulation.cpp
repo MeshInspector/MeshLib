@@ -5,7 +5,7 @@
 #include "MRMeshCollidePrecise.h"
 #include "MRTimer.h"
 #include "MRComputeBoundingBox.h"
-#include "MRHighPrecision.h"
+#include "MRParallelFor.h"
 #include "MRId.h"
 
 namespace MR
@@ -24,7 +24,11 @@ public:
     {
         mesh_.points.vec_ = std::move( points );
         mesh_.topology.vertResize( mesh_.points.size() );
-        toIntConverter_ = getToIntConverter( Box3d( computeBoundingBox( mesh_.points ) ) );
+        center_ = computeBoundingBox( mesh_.points ).center();
+        ParallelFor( mesh_.points, [&] ( VertId v )
+        {
+            mesh_.points[v] -= center_;
+        } );
     }
     bool isCanceled() const
     {
@@ -33,6 +37,10 @@ public:
     Mesh run()
     {
         seqDelaunay_( 0_v, VertId( mesh_.points.size() ) );
+        ParallelFor( mesh_.points, [&] ( VertId v )
+        {
+            mesh_.points[v] += center_;
+        } );
         return std::move( mesh_ );
     }
 private:
@@ -40,28 +48,21 @@ private:
     EdgeId basel_;
     ProgressCallback cb_;
     bool canceled_{ false };
-    ConvertToIntVector toIntConverter_;
+    Vector3f center_;
 
-    bool inCircle_( const Vector3f& af, const Vector3f& bf, const Vector3f& cf, const Vector3f& df )
+    bool inCircle_( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d )
     {
-        auto a = toIntConverter_( af );
-        auto b = toIntConverter_( bf );
-        auto c = toIntConverter_( cf );
-        auto d = toIntConverter_( df );
-        return Matrix4hp(
-            Vector4hp( a.x, a.y, HighPrecisionInt( a.x ) * a.x + HighPrecisionInt( a.y ) * a.y, 1 ),
-            Vector4hp( b.x, b.y, HighPrecisionInt( b.x ) * b.x + HighPrecisionInt( b.y ) * b.y, 1 ),
-            Vector4hp( c.x, c.y, HighPrecisionInt( c.x ) * c.x + HighPrecisionInt( c.y ) * c.y, 1 ),
-            Vector4hp( d.x, d.y, HighPrecisionInt( d.x ) * d.x + HighPrecisionInt( d.y ) * d.y, 1 )
+        return Matrix4d(
+            Vector4d( a.x, a.y, double( a.x ) * a.x + double( a.y ) * a.y, 1 ),
+            Vector4d( b.x, b.y, double( b.x ) * b.x + double( b.y ) * b.y, 1 ),
+            Vector4d( c.x, c.y, double( c.x ) * c.x + double( c.y ) * c.y, 1 ),
+            Vector4d( d.x, d.y, double( d.x ) * d.x + double( d.y ) * d.y, 1 )
         ).det() > 0;
     }
 
-    bool ccw_( const Vector3f& af, const Vector3f& bf, const Vector3f& cf )
+    bool ccw_( const Vector3f& a, const Vector3f& b, const Vector3f& c )
     {
-        auto a = toIntConverter_( af );
-        auto b = toIntConverter_( bf );
-        auto c = toIntConverter_( cf );
-        return Matrix3hp( Vector3hp{ a.x,a.y,1 }, Vector3hp{ b.x,b.y,1 }, Vector3hp{ c.x,c.y,1 } ).det() > 0;
+        return Matrix3d( Vector3d{ a.x,a.y,1 }, Vector3d{ b.x,b.y,1 }, Vector3d{ c.x,c.y,1 } ).det() > 0;
     }
 
     bool leftOf_( const Vector3f& x, EdgeId e ) { return ccw_( x, mesh_.orgPnt( e ), mesh_.destPnt( e ) ); }

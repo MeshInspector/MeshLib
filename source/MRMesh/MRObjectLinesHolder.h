@@ -52,8 +52,8 @@ public:
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectLinesHolder( ProtectedStruct, const ObjectLinesHolder& obj ) : ObjectLinesHolder( obj ) {}
 
-    const Vector<Color, UndirectedEdgeId>& getLinesColorMap() const { return linesColorMap_; }
-    virtual void setLinesColorMap( Vector<Color, UndirectedEdgeId> linesColorMap )
+    const UndirectedEdgeColors& getLinesColorMap() const { return linesColorMap_; }
+    virtual void setLinesColorMap( UndirectedEdgeColors linesColorMap )
     { linesColorMap_ = std::move( linesColorMap ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
 
     /// get all visualize properties masks as array
@@ -97,7 +97,7 @@ protected:
     mutable std::optional<float> totalLength_;
     mutable ViewportProperty<XfBasedCache<Box3f>> worldBox_;
 
-    Vector<Color, UndirectedEdgeId> linesColorMap_;
+    UndirectedEdgeColors linesColorMap_;
 
     ViewportMask showPoints_;
     ViewportMask smoothConnections_;

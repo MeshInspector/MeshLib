@@ -1536,7 +1536,7 @@ void Viewer::initBasisAxesObject_()
     const Color colorX = Color::red();
     const Color colorY = Color::green();
     const Color colorZ = Color::blue();
-    Vector<Color, FaceId> colorMap( numF );
+    FaceColors colorMap( numF );
     const auto arrowSize = numF / 3;
     for (int i = 0; i < arrowSize; i++)
     {

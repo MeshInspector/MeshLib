@@ -4,6 +4,7 @@
 #include "MRMeshTriPoint.h"
 #include "MRMeshPart.h"
 #include <cfloat>
+#include <optional>
 
 namespace MR
 {

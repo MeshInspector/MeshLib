@@ -9,7 +9,7 @@ namespace MR
 {
 
 constexpr float cInch = 25.4f;
-constexpr int pointInRotation = 21;
+constexpr int cPointInRotation = 21;
 
 //////////////////////////////////////////////////////////////////////////
 // GcodeExecutor
@@ -146,9 +146,8 @@ void GcodeProcessor::applyCommand_( const Command& command )
     if ( command.key >= 'a' && command.key <= 'c' )
     {
         const int index = command.key - 'a';
-        if ( !inputRotation_ )
-            inputRotation_ = rotationAngles_;
-        ( *inputRotation_ )[index] = command.value;
+        inputRotation_[index] = command.value;
+        inputRotationReaded_[index] = true;
     }
     if ( command.key == 'f' )
         feedrate_ = inches_ ? cInch * command.value : command.value;
@@ -207,36 +206,34 @@ GcodeProcessor::MoveAction GcodeProcessor::generateMoveAction_()
 {
     MoveAction res;
 
-    Vector3f newMotorsPos = calcCoordMotors_();
+    Vector3f newTranslationPos_ = calcNewTranslationPos_();
+    Vector3f newRotationAngles = calcNewRotationAngles_();
 
     const bool anyCoordReaded = inputCoordsReaded_[0] || inputCoordsReaded_[1] || inputCoordsReaded_[2];
+    const bool anyRotationReaded = inputRotationReaded_[0] || inputRotationReaded_[1] || inputRotationReaded_[2];
     
     if ( ( moveMode_ == MoveMode::Idle || moveMode_ == MoveMode::Line ) && anyCoordReaded )
-        res = moveLine_( newMotorsPos, moveMode_ == MoveMode::Idle );
+        res = moveLine_( newTranslationPos_, newRotationAngles );
     else if ( ( moveMode_ == MoveMode::Clockwise || moveMode_ == MoveMode::Counterclockwise ) && (anyCoordReaded || arcCenter_) )
-        res = moveArc_( newMotorsPos, moveMode_ == MoveMode::Clockwise );
-    else if ( inputRotation_ )
+        res = moveArc_( newTranslationPos_, newRotationAngles, moveMode_ == MoveMode::Clockwise );
+    else if ( anyRotationReaded )
     {
-        res = getToolRotationPoints_();
+        res = getToolRotationPoints_( newRotationAngles );
     }
-
     assert( res.action.path.size() == res.toolDirection.size() );
+    res.idle = moveMode_ == MoveMode::Idle;
 
-    translationPos_ = newMotorsPos;
-    if ( inputRotation_ )
-        updateRotationAngleAndMatrix_( *inputRotation_ );
+
     if ( moveMode_ == MoveMode::Idle )
-    {
-        if ( cncSettings_.getFeedrateIdle() > 0.f )
-            res.feedrate = cncSettings_.getFeedrateIdle();
-        else
-            res.feedrate = 0.f;
-    }
+        res.feedrate = cncSettings_.getFeedrateIdle();
     else
     {
         res.feedrate = feedrate_;
         feedrateMax_ = std::max( feedrateMax_, feedrate_ );
     }
+
+    translationPos_ = newTranslationPos_;
+    updateRotationAngleAndMatrix_( newRotationAngles );
 
     return res;
 }
@@ -244,30 +241,29 @@ GcodeProcessor::MoveAction GcodeProcessor::generateMoveAction_()
 void GcodeProcessor::resetTemporaryStates_()
 {
     inputCoords_ = {};
-    inputCoordsReaded_ = Vector3<bool>( false, false, false );
+    inputCoordsReaded_ = Vector3b( false, false, false );
     radius_ = {};
     arcCenter_ = {};
     inputRotation_ = {};
+    inputRotationReaded_ = Vector3b( false, false, false );
 }
 
-GcodeProcessor::MoveAction GcodeProcessor::moveLine_( const Vector3f& newPoint, bool idle )
+GcodeProcessor::MoveAction GcodeProcessor::moveLine_( const Vector3f& newPoint, const Vector3f& newAngles )
 {
-    // MoveAction res({ basePoint_, newPoint }, idle); //fatal error C1001: Internal compiler error.
     MoveAction res;
-    res.idle = idle;
 
-    if ( !inputRotation_ )
+    if ( newAngles == rotationAngles_ )
     {
         res.action.path = { calcRealCoordCached_( translationPos_ ), calcRealCoordCached_( newPoint ) };
         res.toolDirection = std::vector<Vector3f>( 2, calcRealCoordCached_( Vector3f::plusZ() ) );
         return res;
     }
 
-    res.action.path.resize( pointInRotation );
-    res.toolDirection.resize( pointInRotation );
-    const Vector3f lineStep = ( newPoint - translationPos_ ) / ( pointInRotation - 1.f );
-    const Vector3f rotationAnglesStep_ = ( *inputRotation_ - rotationAngles_ ) / ( pointInRotation - 1.f );
-    for ( int i = 0; i < pointInRotation; ++i )
+    res.action.path.resize( cPointInRotation );
+    res.toolDirection.resize( cPointInRotation );
+    const Vector3f lineStep = ( newPoint - translationPos_ ) / ( cPointInRotation - 1.f );
+    const Vector3f rotationAnglesStep_ = ( newAngles - rotationAngles_ ) / ( cPointInRotation - 1.f );
+    for ( int i = 0; i < cPointInRotation; ++i )
     {
         const auto currentRotationAngles_ = rotationAnglesStep_ * float( i ) + rotationAngles_;
         res.action.path[i] = calcRealCoord_( translationPos_ + lineStep * float( i ), currentRotationAngles_ );
@@ -277,7 +273,7 @@ GcodeProcessor::MoveAction GcodeProcessor::moveLine_( const Vector3f& newPoint, 
     return res;
 }
 
-GcodeProcessor::MoveAction GcodeProcessor::moveArc_( const Vector3f& newPoint, bool clockwise )
+GcodeProcessor::MoveAction GcodeProcessor::moveArc_( const Vector3f& newPoint, const Vector3f& newAngles, bool clockwise )
 {
     MoveAction res;
 
@@ -290,7 +286,7 @@ GcodeProcessor::MoveAction GcodeProcessor::moveArc_( const Vector3f& newPoint, b
 
     if ( !res.action.path.empty() )
     {
-        if ( !inputRotation_ )
+        if ( newAngles == rotationAngles_ )
         {
             for ( auto& point : res.action.path )
                 point = calcRealCoordCached_( point );
@@ -300,7 +296,7 @@ GcodeProcessor::MoveAction GcodeProcessor::moveArc_( const Vector3f& newPoint, b
         {
             const int pointCount = int( res.action.path.size() );
             res.toolDirection.resize( pointCount );
-            const Vector3f rotationAnglesStep_ = ( *inputRotation_ - rotationAngles_ ) / ( pointCount - 1.f );
+            const Vector3f rotationAnglesStep_ = ( newAngles - rotationAngles_ ) / ( pointCount - 1.f ); // in this case, pointCount minimum value is 11 (as result getArcPoints2_ method)
             for ( int i = 0; i < pointCount; ++i )
             {
                 auto& point = res.action.path[i];
@@ -334,26 +330,23 @@ void GcodeProcessor::updateScaling_()
     }
 }
 
-GcodeProcessor::MoveAction GcodeProcessor::getToolRotationPoints_()
+GcodeProcessor::MoveAction GcodeProcessor::getToolRotationPoints_( const Vector3f& newRotationAngles )
 {
-    if ( !inputRotation_ )
+    if ( newRotationAngles == rotationAngles_ )
         return {};
 
     MoveAction res;
-    res.idle = moveMode_ == MoveMode::Idle;
     
-    Vector3f rotationAnglesStep_ = ( *inputRotation_ - rotationAngles_ ) / ( pointInRotation - 1.f );
-    res.action.path.resize( pointInRotation );
-    res.toolDirection.resize( pointInRotation );
-    for ( int i = 0; i < pointInRotation; ++i )
+    Vector3f rotationAnglesStep_ = ( newRotationAngles - rotationAngles_ ) / ( cPointInRotation - 1.f );
+    res.action.path.resize( cPointInRotation );
+    res.toolDirection.resize( cPointInRotation );
+    for ( int i = 0; i < cPointInRotation; ++i )
     {
         const auto currentRotationAngles_ = rotationAnglesStep_ * float(i) + rotationAngles_;
         res.action.path[i] = calcRealCoord_( translationPos_, currentRotationAngles_ );
         res.toolDirection[i] = calcRealCoord_( Vector3f::plusZ(), currentRotationAngles_ );
     }
-
-    updateRotationAngleAndMatrix_( *inputRotation_ );
-   
+       
     return res;
 }
 
@@ -445,7 +438,7 @@ GcodeProcessor::BaseAction3f GcodeProcessor::getArcPoints3_( float r, const Vect
     return res3;
 }
 
-MR::Vector3f GcodeProcessor::calcCoordMotors_()
+MR::Vector3f GcodeProcessor::calcNewTranslationPos_()
 {
     Vector3f res = mult( inputCoords_, scaling_ );
     if ( inches_ )
@@ -464,7 +457,24 @@ MR::Vector3f GcodeProcessor::calcCoordMotors_()
     return res;
 }
 
-MR::Vector3f GcodeProcessor::calcRealCoord_( const Vector3f& translationPos, const Vector3f& rotationAngles )
+Vector3f GcodeProcessor::calcNewRotationAngles_()
+{
+    Vector3f res = inputRotation_;
+    if ( absoluteCoordinates_ )
+    {
+        for ( int i = 0; i < 3; ++i )
+        {
+            if ( !inputRotationReaded_[i] )
+                res[i] = rotationAngles_[i];
+        }
+    }
+    else
+        res += rotationAngles_;
+
+    return res;
+}
+
+Vector3f GcodeProcessor::calcRealCoord_( const Vector3f& translationPos, const Vector3f& rotationAngles )
 {
     Vector3f res = translationPos;
     const auto& axesOrder = cncSettings_.getRotationOrder();

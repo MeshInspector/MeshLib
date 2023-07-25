@@ -62,6 +62,17 @@ bool EdgePoint::inVertex() const
     return a <= eps || a + eps >= 1;
 }
 
+bool same( const MeshTopology & topology, const EdgePoint& lhs, const EdgePoint& rhs )
+{
+    if ( !lhs )
+        return !rhs;
+    if ( auto v = lhs.inVertex( topology ) )
+        return v == rhs.inVertex( topology );
+
+    return (( lhs.e == rhs.e ) && ( lhs.a == rhs.a )) ||
+        (( lhs.e == rhs.e.sym() ) && ( lhs.a == (1.f - rhs.a) ));
+}
+
 static bool vertEdge2MeshEdgePoints( const MeshTopology & topology, VertId av, EdgePoint & a, EdgePoint & b )
 {
     if ( topology.org( b.e ) == av )

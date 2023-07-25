@@ -436,8 +436,8 @@ void MeshTopology::forEachVertex( const MeshTriPoint & p, T && callback ) const
     }
     if ( auto e = p.onEdge( *this ) )
     {
-        callback( org( e->e ) );
-        callback( dest( e->e ) );
+        callback( org( e.e ) );
+        callback( dest( e.e ) );
         return;
     }
 

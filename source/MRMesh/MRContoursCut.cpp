@@ -585,7 +585,7 @@ FaceId findSharedFace( const MeshTopology& topology, VertId vid, EdgeId eid, con
     if ( topology.dest( eid ) == vid )
         eid = eid.sym();
 
-    auto mtpVertRep = mtpEdgeRep->inVertex( topology );
+    auto mtpVertRep = mtpEdgeRep.inVertex( topology );
     if ( mtpVertRep.valid() )
     {
         if ( topology.dest( topology.next( eid ) ) == mtpVertRep )
@@ -595,7 +595,7 @@ FaceId findSharedFace( const MeshTopology& topology, VertId vid, EdgeId eid, con
     }
     else
     {
-        auto mtpEUndir = mtpEdgeRep->e.undirected();
+        auto mtpEUndir = mtpEdgeRep.e.undirected();
         if ( topology.next( eid ).undirected() == mtpEUndir )
             return topology.left( eid );
         else if ( topology.prev( eid ).undirected() == mtpEUndir )
@@ -638,7 +638,7 @@ std::optional<OneMeshIntersection> centralIntersectionForFaces( const Mesh& mesh
     }
     else
     {
-        auto v = optMeshEdgePoint->inVertex( mesh.topology );
+        auto v = optMeshEdgePoint.inVertex( mesh.topology );
         if ( v ) // curr in vertex
         {
             if ( prev.primitiveId.index() == OneMeshIntersection::Vertex )
@@ -656,7 +656,7 @@ std::optional<OneMeshIntersection> centralIntersectionForFaces( const Mesh& mesh
             return OneMeshIntersection{ v,mesh.points[v] };
         }
 
-        auto e = optMeshEdgePoint->e;
+        auto e = optMeshEdgePoint.e;
 
         // only need that prev and next are on different sides of curr
         if ( prev.primitiveId.index() == OneMeshIntersection::Face )
@@ -682,7 +682,7 @@ std::optional<OneMeshIntersection> centralIntersectionForFaces( const Mesh& mesh
                 }
                 else
                 {
-                    return OneMeshIntersection{ e,mesh.edgePoint( *optMeshEdgePoint ) };
+                    return OneMeshIntersection{ e,mesh.edgePoint( optMeshEdgePoint ) };
                 }
             }
             else if ( next.primitiveId.index() == OneMeshIntersection::Edge )
@@ -696,7 +696,7 @@ std::optional<OneMeshIntersection> centralIntersectionForFaces( const Mesh& mesh
                 }
                 else
                 {
-                    return OneMeshIntersection{ e,mesh.edgePoint( *optMeshEdgePoint ) };
+                    return OneMeshIntersection{ e,mesh.edgePoint( optMeshEdgePoint ) };
                 }
             }
             else // if face
@@ -709,7 +709,7 @@ std::optional<OneMeshIntersection> centralIntersectionForFaces( const Mesh& mesh
                 else
                 {
                     assert( nFId == mesh.topology.left( e ) );
-                    return OneMeshIntersection{ e,mesh.edgePoint( *optMeshEdgePoint ) };
+                    return OneMeshIntersection{ e,mesh.edgePoint( optMeshEdgePoint ) };
                 }
             }
         }
@@ -736,7 +736,7 @@ std::optional<OneMeshIntersection> centralIntersectionForFaces( const Mesh& mesh
                 }
                 else
                 {
-                    return OneMeshIntersection{ e,mesh.edgePoint( *optMeshEdgePoint ) };
+                    return OneMeshIntersection{ e,mesh.edgePoint( optMeshEdgePoint ) };
                 }
 
             }
@@ -751,7 +751,7 @@ std::optional<OneMeshIntersection> centralIntersectionForFaces( const Mesh& mesh
                 }
                 else
                 {
-                    return OneMeshIntersection{ e,mesh.edgePoint( *optMeshEdgePoint ) };
+                    return OneMeshIntersection{ e,mesh.edgePoint( optMeshEdgePoint ) };
                 }
             }
         }
@@ -804,13 +804,13 @@ std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const 
 
         auto edgeOp = curr.onEdge( topology );
         assert( edgeOp );
-        auto vid = edgeOp->inVertex( topology );
+        auto vid = edgeOp.inVertex( topology );
         if ( vid.valid() )
             return OneMeshIntersection{vid,mesh.points[vid]};
-        if ( topology.dest( topology.prev( edgeOp->e ) ) == pVId )
-            return OneMeshIntersection{edgeOp->e,mesh.edgePoint( *edgeOp )};
+        if ( topology.dest( topology.prev( edgeOp.e ) ) == pVId )
+            return OneMeshIntersection{edgeOp.e,mesh.edgePoint( edgeOp )};
         else
-            return OneMeshIntersection{edgeOp->e.sym(),mesh.edgePoint( *edgeOp )};
+            return OneMeshIntersection{edgeOp.e.sym(),mesh.edgePoint( edgeOp )};
     }
     else if ( prev.primitiveId.index() == OneMeshIntersection::Edge )
     {
@@ -876,13 +876,13 @@ std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const 
 
         auto edgeOp = curr.onEdge( topology );
         assert( edgeOp );
-        auto vid = edgeOp->inVertex( topology );
+        auto vid = edgeOp.inVertex( topology );
         if ( vid.valid() )
             return OneMeshIntersection{vid,mesh.points[vid]};
-        if ( topology.prev( edgeOp->e ) == pEId || topology.next( edgeOp->e.sym() ) == pEId.sym() )
-            return OneMeshIntersection{edgeOp->e,mesh.edgePoint( *edgeOp )};
+        if ( topology.prev( edgeOp.e ) == pEId || topology.next( edgeOp.e.sym() ) == pEId.sym() )
+            return OneMeshIntersection{edgeOp.e,mesh.edgePoint( edgeOp )};
         else
-            return OneMeshIntersection{edgeOp->e.sym(),mesh.edgePoint( *edgeOp )};
+            return OneMeshIntersection{edgeOp.e.sym(),mesh.edgePoint( edgeOp )};
     }
     else
     {
@@ -898,11 +898,11 @@ OneMeshIntersection intersectionFromMeshTriPoint( const Mesh& mesh, const MeshTr
     auto e = mtp.onEdge( mesh.topology );
     if ( e )
     {
-        auto v = e->inVertex( mesh.topology );
+        auto v = e.inVertex( mesh.topology );
         if ( v )
             res.primitiveId = v;
         else
-            res.primitiveId = e->e;
+            res.primitiveId = e.e;
     }
     else
         res.primitiveId = mesh.topology.left( mtp.e );
@@ -938,8 +938,8 @@ OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::v
         auto e2 = meshTriPoints[( i + 1 ) % meshTriPoints.size()].onEdge( mesh.topology );
         if ( !e1 || !e2 )
             continue;
-        auto v1 = e1->inVertex( mesh.topology );
-        auto v2 = e2->inVertex( mesh.topology );
+        auto v1 = e1.inVertex( mesh.topology );
+        auto v2 = e2.inVertex( mesh.topology );
         if ( v1.valid() && v2.valid() )
         {
             if ( v1 == v2 )
@@ -947,7 +947,7 @@ OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::v
         }
         else
         {
-            if ( e1->e.undirected() == e2->e.undirected() )
+            if ( e1.e.undirected() == e2.e.undirected() )
                 sameEdgeMTPs.push_back( i );
         }
     }
@@ -983,12 +983,12 @@ OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::v
                 }
                 else
                 {
-                    auto inVert = onEdge->inVertex( mesh.topology );
+                    auto inVert = onEdge.inVertex( mesh.topology );
                     if ( !inVert )
                     {
                         // if mtp is on edge - make sure it is prev(e) or next(e.sym)
-                        if ( mesh.topology.next( edge ).undirected() == onEdge->e.undirected() ||
-                            mesh.topology.prev( edge.sym() ).undirected() == onEdge->e.undirected() )
+                        if ( mesh.topology.next( edge ).undirected() == onEdge.e.undirected() ||
+                            mesh.topology.prev( edge.sym() ).undirected() == onEdge.e.undirected() )
                             edge = edge.sym();
                     }
                     else
@@ -1110,11 +1110,11 @@ OneMeshContour convertSurfacePathWithEndsToMeshContour( const MR::Mesh& mesh, co
         int shift = startMep ? 1 : 0;
         SurfacePath updatedPath( surfacePath.size() + shift + ( endMep ? 1 : 0 ) );
         if ( startMep )
-            updatedPath.front() = *startMep;
+            updatedPath.front() = startMep;
         for ( int i = 0; i < surfacePath.size(); ++i )
             updatedPath[i + shift] = surfacePath[i];
         if ( endMep )
-            updatedPath.back() = *endMep;
+            updatedPath.back() = endMep;
         res = convertSurfacePathsToMeshContours( mesh, { updatedPath } ).front();
     }
     else

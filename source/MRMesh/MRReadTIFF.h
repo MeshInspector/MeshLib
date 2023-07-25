@@ -57,6 +57,8 @@ struct RawTiffOutput
     size_t size{ 0 };
     // optional params output
     TiffParameters* params{ nullptr };
+    // optional pixel to world transform
+    AffineXf3f* p2wXf{ nullptr };
     // min max
     float* min{ nullptr };
     float* max{ nullptr };

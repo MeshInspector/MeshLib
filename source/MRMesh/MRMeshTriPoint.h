@@ -4,8 +4,6 @@
 #include "MRTriPoint.h"
 #include "MREdgePoint.h"
 
-#include <optional>
-
 namespace MR
 {
 
@@ -37,8 +35,8 @@ struct MeshTriPoint
     [[nodiscard]] MRMESH_API VertId inVertex( const MeshTopology & topology ) const;
     /// returns true if the point is in a vertex
     [[nodiscard]] bool inVertex() const { return bary.inVertex() >= 0; }
-    /// returns valid value if the point is on edge, otherwise returns null optional
-    [[nodiscard]] MRMESH_API std::optional<MeshEdgePoint> onEdge( const MeshTopology & topology ) const;
+    /// returns valid value if the point is on edge, otherwise returns invalid MeshEdgePoint
+    [[nodiscard]] MRMESH_API MeshEdgePoint onEdge( const MeshTopology & topology ) const;
     /// returns true if the point is in vertex or on edge, and that location is on the boundary of the region
     [[nodiscard]] MRMESH_API bool isBd( const MeshTopology & topology, const FaceBitSet * region = nullptr ) const;
 
@@ -50,10 +48,16 @@ struct MeshTriPoint
     [[nodiscard]] MRMESH_API MeshTriPoint lnext( const MeshTopology & topology ) const;
     /// represents the same point relative to the topology.edgeWithLeft( topology.left( e ) )
     [[nodiscard]] MRMESH_API MeshTriPoint canonical( const MeshTopology & topology ) const;
+
+    /// returns true if two points are equal including equal not-unique representation
+    [[nodiscard]] bool operator==( const MeshTriPoint& rhs ) const = default;
 };
 
 /// \related MeshTriPoint
 /// \{
+
+/// returns true if two points are equal considering different representations
+[[nodiscard]] MRMESH_API bool same( const MeshTopology & topology, const MeshTriPoint& lhs, const MeshTriPoint & rhs );
 
 /// returns true if points a and b are located insides or on a boundary of the same triangle;
 /// if true a.e and b.e are updated to have that triangle on the left
@@ -62,8 +66,8 @@ struct MeshTriPoint
 /// if true a.e and b.e are updated to have that triangle on the left
 [[nodiscard]] inline bool fromSameTriangle( const MeshTopology & topology, MeshTriPoint && a, MeshTriPoint && b ) { return fromSameTriangle( topology, a, b ); }
 
-/// returns MeshTriPoint representation of given vertex with given edge field; or null if it is not possible
-[[nodiscard]] MRMESH_API std::optional<MeshTriPoint> getVertexAsMeshTriPoint( const MeshTopology & topology, EdgeId e, VertId v );
+/// returns MeshTriPoint representation of given vertex with given edge field; or invalid MeshTriPoint if it is not possible
+[[nodiscard]] MRMESH_API MeshTriPoint getVertexAsMeshTriPoint( const MeshTopology & topology, EdgeId e, VertId v );
 
 /// \}
 

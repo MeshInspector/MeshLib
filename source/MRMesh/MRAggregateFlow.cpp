@@ -10,7 +10,7 @@
 namespace MR
 {
 
-FlowAggregator::FlowAggregator( const Mesh & mesh, const VertScalars & field ) : mesh_( mesh ), field_( field )
+FlowAggregator::FlowAggregator( const Mesh & mesh, const VertScalars & heights ) : mesh_( mesh ), heights_( heights )
 {
     MR_TIMER
     downFlowVert_.resize( mesh.topology.vertSize() );
@@ -19,7 +19,7 @@ FlowAggregator::FlowAggregator( const Mesh & mesh, const VertScalars & field ) :
     {
         const EdgePoint p0( mesh.topology, v );
         VertId nextVert;
-        downPath_[v] = computeSteepestDescentPath( mesh, field, p0, {}, &nextVert );
+        downPath_[v] = computeSteepestDescentPath( mesh, heights, p0, {}, &nextVert );
         downFlowVert_[v] = nextVert;
     } );
 
@@ -27,7 +27,7 @@ FlowAggregator::FlowAggregator( const Mesh & mesh, const VertScalars & field ) :
     std::vector<MinusHeightVert> minusHeightVerts;
     minusHeightVerts.reserve( mesh.topology.numValidVerts() );
     for ( auto v : mesh.topology.getValidVerts() )
-        minusHeightVerts.push_back( { -field[v], v } );
+        minusHeightVerts.push_back( { -heights[v], v } );
     tbb::parallel_sort( minusHeightVerts.begin(), minusHeightVerts.end() );
 
     vertsSortedDesc_.reserve( minusHeightVerts.size() );
@@ -47,7 +47,7 @@ VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts,
     ParallelFor( starts, [&]( size_t i )
     {
         VertId nextVert;
-        start2downPath[i] = computeSteepestDescentPath( mesh_, field_, starts[i].point, {}, &nextVert );
+        start2downPath[i] = computeSteepestDescentPath( mesh_, heights_, starts[i].point, {}, &nextVert );
         start2downVert[i] = nextVert;
     } );
 

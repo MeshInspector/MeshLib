@@ -272,12 +272,18 @@ using UndirectedEdgeMap = Vector<UndirectedEdgeId, UndirectedEdgeId>;
 using WholeEdgeMap = Vector<EdgeId, UndirectedEdgeId>;
 using VertCoords = Vector<Vector3f, VertId>;
 using VertNormals = Vector<Vector3f, VertId>;
-using VertColors = Vector<Color, VertId>;
 using VertUVCoords = Vector<UVCoord, VertId>;
 using FaceNormals = Vector<Vector3f, FaceId>;
 
+using VertColors = Vector<Color, VertId>;
+using FaceColors = Vector<Color, FaceId>;
+using EdgeColors = Vector<Color, EdgeId>;
+using UndirectedEdgeColors = Vector<Color, UndirectedEdgeId>;
+
 using VertScalars = Vector<float, VertId>;
 using FaceScalars = Vector<float, FaceId>;
+using EdgeScalars = Vector<float, EdgeId>;
+using UndirectedEdgeScalars = Vector<float, UndirectedEdgeId>;
 
 using VertToFloatFunc = std::function<float( VertId )>;
 using FaceToFloatFunc = std::function<float( FaceId )>;

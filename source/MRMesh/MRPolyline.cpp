@@ -256,16 +256,20 @@ EdgeId Polyline<V>::addFromSurfacePath( const Mesh& mesh, const SurfacePath& pat
 template<typename V>
 EdgeId Polyline<V>::addFromGeneralSurfacePath( const Mesh& mesh, const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end )
 {
-    assert( start && end );
+    if ( !start && !end )
+        return addFromSurfacePath( mesh, path );
     bool closed = start == end;
     auto shift = points.size();
-    points.reserve( shift + path.size() + ( closed ? 1 : 2 ) );
+    points.reserve( shift + path.size() + 2 );
     std::vector<VertId> newVerts;
     newVerts.reserve( path.size() + 2 );
 
     VertId newV( shift );
-    newVerts.push_back( newV++ );
-    points.push_back( V{ mesh.triPoint( start ) } );
+    if ( start )
+    {
+        points.push_back( V{ mesh.triPoint( start ) } );
+        newVerts.push_back( newV++ );
+    }
 
     for ( int i = 0; i < path.size(); ++i )
     {
@@ -273,15 +277,15 @@ EdgeId Polyline<V>::addFromGeneralSurfacePath( const Mesh& mesh, const MeshTriPo
         points.push_back( V{ mesh.edgePoint( path[i] ) } );
         newVerts.push_back( newV++ );
     }
-    if ( !closed )
-    {
-        assert( points.size() == newV );
-        points.push_back( V{ mesh.triPoint( end ) } );
-        newVerts.push_back( newV++ );
-    }
-    else
+    assert( points.size() == newV );
+    if ( closed )
     {
         newVerts.push_back( newVerts.front() );
+    }
+    else if ( end )
+    {
+        points.push_back( V{ mesh.triPoint( end ) } );
+        newVerts.push_back( newV++ );
     }
 
     auto e = topology.makePolyline( newVerts.data(), newVerts.size() );

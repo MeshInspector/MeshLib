@@ -376,27 +376,49 @@ Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
     return res;
 }
 
-SurfacePath computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field, const MeshTriPoint & start, const MeshTriPoint & end )
+SurfacePath computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
+    const MeshTriPoint & start, const MeshTriPoint & end, VertId * vertexReached )
+{
+    SurfacePath res;
+    computeSteepestDescentPath( mesh, field, start, end, &res, vertexReached );
+    return res;
+}
+
+void computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
+    const MeshTriPoint & start, const MeshTriPoint & end, SurfacePath * outPath, VertId * outVertexReached )
 {
     assert( start );
+    assert( outVertexReached || outPath );
+    size_t iniPathSize = outPath ? outPath->size() : 0;
+    size_t edgesPassed = 0;
     SurfacePathBuilder b( mesh, field );
     auto curr = b.findPrevPoint( start );
-    SurfacePath res;
     while ( curr )
     {
-        res.push_back( curr );
+        if ( outVertexReached )
+        {
+            if ( auto v = curr.inVertex( mesh.topology ) )
+            {
+                *outVertexReached = v;
+                return;
+            }
+        }
+        ++edgesPassed;
+        if ( outPath )
+            outPath->push_back( curr );
         if ( end && fromSameTriangle( mesh.topology, MeshTriPoint( end ), MeshTriPoint( curr ) ) )
             break; // reached triangle with end point
-        if ( res.size() > mesh.topology.numValidFaces() )
+        if ( edgesPassed > mesh.topology.numValidFaces() )
         {
             // normal path cannot visit any triangle more than once
             assert( false );
-            res.clear();
-            return res;
+            if ( outPath )
+                outPath->resize( iniPathSize );
+            return;
         }
         curr = b.findPrevPoint( curr );
     }
-    return res;
+    return;
 }
 
 Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp,

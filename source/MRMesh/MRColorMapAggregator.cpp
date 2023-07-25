@@ -148,10 +148,10 @@ TEST( MRMesh, ColorMapAggregator )
     int size = 5;
     FaceBitSet faces;
     faces.resize( 5, true );
-    cma.pushBack( { Vector<Color, FaceId>( size, cRed ), FaceBitSet( std::string( "00110" ) ) }  );
-    cma.pushBack( { Vector<Color, FaceId>( size, cGreen ), FaceBitSet( std::string( "01100" ) ) } );
+    cma.pushBack( { FaceColors( size, cRed ), FaceBitSet( std::string( "00110" ) ) }  );
+    cma.pushBack( { FaceColors( size, cGreen ), FaceBitSet( std::string( "01100" ) ) } );
     cma.setMode( FaceColorMapAggregator::AggregateMode::Overlay );
-    Vector<Color, FaceId> res = cma.aggregate( faces );
+    FaceColors res = cma.aggregate( faces );
 
     ASSERT_TRUE( res.size() == size );
     ASSERT_TRUE( res[0_f] == cWhite );

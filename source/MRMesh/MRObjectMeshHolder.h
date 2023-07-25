@@ -95,8 +95,8 @@ public:
     /// returns mask of viewports where given property is set
     MRMESH_API virtual const ViewportMask& getVisualizePropertyMask( unsigned type ) const override;
 
-    const Vector<Color, FaceId>& getFacesColorMap() const { return facesColorMap_; }
-    virtual void setFacesColorMap( Vector<Color, FaceId> facesColorMap )
+    const FaceColors& getFacesColorMap() const { return facesColorMap_; }
+    virtual void setFacesColorMap( FaceColors facesColorMap )
     { facesColorMap_ = std::move( facesColorMap ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
 
     float getEdgeWidth() const { return edgeWidth_; }
@@ -245,7 +245,7 @@ protected:
     ViewportProperty<Color> edgeSelectionColor_;
     ViewportProperty<Color> faceSelectionColor_;
 
-    Vector<Color, FaceId> facesColorMap_;
+    FaceColors facesColorMap_;
     float edgeWidth_{ 0.5f };
 
     std::shared_ptr<Mesh> mesh_;

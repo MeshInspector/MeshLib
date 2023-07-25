@@ -1,3 +1,4 @@
+#include "MRAggregateFlow.h"
 #include "MRSurfacePath.h"
 #include "MRMesh.h"
 #include "MRBitSetParallelFor.h"
@@ -9,28 +10,6 @@
 namespace MR
 {
 
-struct FlowOrigin
-{
-    /// point on the mesh, where this flow starts
-    MeshTriPoint point;
-    /// amount of flow, e.g. can be proportional to the horizontal area associated with the start point
-    float amount = 1;
-};
-
-class FlowAggregator
-{
-public:
-    FlowAggregator( const Mesh & mesh, const VertScalars & field );
-    VertScalars computeFlow( const std::vector<FlowOrigin> & starts, Polyline3 * outPolyline = nullptr );
-
-private:
-    const Mesh & mesh_;
-    const VertScalars & field_;
-    VertMap downFlowVert_; // for each vertex stores what next vertex is on flow path (invalid vertex for local minima)
-    Vector<SurfacePath, VertId> downPath_; // till next vertex
-    std::vector<VertId> vertsSortedDesc_; // all vertices sorted in descending field order
-};
-
 FlowAggregator::FlowAggregator( const Mesh & mesh, const VertScalars & field ) : mesh_( mesh ), field_( field )
 {
     MR_TIMER
@@ -39,12 +18,9 @@ FlowAggregator::FlowAggregator( const Mesh & mesh, const VertScalars & field ) :
     BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
         const EdgePoint p0( mesh.topology, v );
-        SurfacePath path;
         VertId nextVert;
-        computeSteepestDescentPath( mesh, field, p0, {}, &path, &nextVert );
+        downPath_[v] = computeSteepestDescentPath( mesh, field, p0, {}, &nextVert );
         downFlowVert_[v] = nextVert;
-        if ( nextVert )
-            downPath_[v] = std::move( path );
     } );
 
     using MinusHeightVert = std::pair<float, VertId>;
@@ -69,10 +45,8 @@ VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts,
     ParallelFor( starts, [&]( size_t i )
     {
         VertId nextVert;
-        SurfacePath path = computeSteepestDescentPath( mesh_, field_, starts[i].point, {}, &nextVert );
+        start2downPath[i] = computeSteepestDescentPath( mesh_, field_, starts[i].point, {}, &nextVert );
         start2downVert[i] = nextVert;
-        if ( nextVert )
-            start2downPath[i] = std::move( path );
     } );
 
     for ( size_t i = 0; i < starts.size(); ++i )
@@ -83,7 +57,7 @@ VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts,
             flowInVert[v] += starts[i].amount;
             end = MeshTriPoint{ mesh_.topology, v };
         }
-        if ( outPolyline )
+        if ( outPolyline && ( !start2downPath[i].empty() || end ) )
             outPolyline->addFromGeneralSurfacePath( mesh_, starts[i].point, start2downPath[i], end );
     }
 
@@ -98,7 +72,7 @@ VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts,
             flowInVert[vDn] += flowInVert[vUp];
             end = MeshTriPoint{ mesh_.topology, vDn };
         }
-        if ( outPolyline )
+        if ( outPolyline && ( !downPath_[vUp].empty() || end ) )
             outPolyline->addFromGeneralSurfacePath( mesh_, { mesh_.topology, vUp }, downPath_[vUp], end );
     }
 

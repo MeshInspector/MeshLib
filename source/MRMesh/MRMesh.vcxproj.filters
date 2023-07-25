@@ -1017,6 +1017,9 @@
     <ClInclude Include="MRReadTIFF.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRAggregateFlow.h">
+      <Filter>Source Files\SurfacePath</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

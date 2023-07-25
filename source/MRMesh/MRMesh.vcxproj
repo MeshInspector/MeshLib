@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRAggregateFlow.h" />
     <ClInclude Include="MRCNCMachineSettings.h" />
     <ClInclude Include="MRAxis.h" />
     <ClInclude Include="MRChangeVertsColorMapAction.h" />

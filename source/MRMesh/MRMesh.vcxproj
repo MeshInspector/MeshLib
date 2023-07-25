@@ -162,6 +162,7 @@
     <ClInclude Include="MRSurfaceDistanceBuilder.h" />
     <ClInclude Include="MRSurroundingContour.h" />
     <ClInclude Include="MRSymMatrix2.h" />
+    <ClInclude Include="MRTerrainTriangulation.h" />
     <ClInclude Include="MRTimeRecord.h" />
     <ClInclude Include="MRToolPath.h" />
     <ClInclude Include="MRTunnelDetector.h" />
@@ -476,6 +477,7 @@
     <ClCompile Include="MRString.cpp" />
     <ClCompile Include="MRSurfaceDistanceBuilder.cpp" />
     <ClCompile Include="MRSurroundingContour.cpp" />
+    <ClCompile Include="MRTerrainTriangulation.cpp" />
     <ClCompile Include="MRToolPath.cpp" />
     <ClCompile Include="MRTriMath.cpp" />
     <ClCompile Include="MRTunnelDetector.cpp" />

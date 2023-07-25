@@ -1017,6 +1017,9 @@
     <ClInclude Include="MRReadTIFF.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRTerrainTriangulation.h">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClInclude>
     <ClInclude Include="MRAggregateFlow.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
@@ -1690,6 +1693,9 @@
     </ClCompile>
     <ClCompile Include="MRReadTIFF.cpp">
       <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTerrainTriangulation.cpp">
+      <Filter>Source Files\Triangulation</Filter>
     </ClCompile>
     <ClCompile Include="MRAggregateFlow.cpp">
       <Filter>Source Files\SurfacePath</Filter>

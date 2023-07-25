@@ -18,7 +18,8 @@ class FlowAggregator
 {
 public:
     MRMESH_API FlowAggregator( const Mesh & mesh, const VertScalars & field );
-    MRMESH_API VertScalars computeFlow( const std::vector<FlowOrigin> & starts, Polyline3 * outPolyline = nullptr );
+    MRMESH_API VertScalars computeFlow( const std::vector<FlowOrigin> & starts,
+        Polyline3 * outPolyline = nullptr, UndirectedEdgeScalars * outFlowPerEdge = nullptr );
 
 private:
     const Mesh & mesh_;

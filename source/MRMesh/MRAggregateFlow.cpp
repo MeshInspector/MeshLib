@@ -35,9 +35,11 @@ FlowAggregator::FlowAggregator( const Mesh & mesh, const VertScalars & field ) :
         vertsSortedDesc_.push_back( minusHeightVerts[i].second );
 }
 
-VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts, Polyline3 * outPolyline )
+VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts, Polyline3 * outPolyline, UndirectedEdgeScalars * outFlowPerEdge )
 {
     MR_TIMER
+    assert( !outFlowPerEdge || outPolyline );
+
     VertScalars flowInVert( mesh_.topology.vertSize() );
     std::vector<VertId> start2downVert( starts.size() ); // for each start point stores what next vertex is on flow path (can be invalid)
     std::vector<SurfacePath> start2downPath( starts.size() ); // till next vertex
@@ -49,6 +51,15 @@ VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts,
         start2downVert[i] = nextVert;
     } );
 
+    auto addPath = [&]( float flow, const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end )
+    {
+        if ( !outPolyline || ( path.empty() && !end ) )
+            return;
+        outPolyline->addFromGeneralSurfacePath( mesh_, start, path, end );
+        if ( outFlowPerEdge )
+            outFlowPerEdge->resizeWithReserve( outPolyline->topology.undirectedEdgeSize(), flow );
+    };
+
     for ( size_t i = 0; i < starts.size(); ++i )
     {
         MeshTriPoint end;
@@ -57,8 +68,7 @@ VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts,
             flowInVert[v] += starts[i].amount;
             end = MeshTriPoint{ mesh_.topology, v };
         }
-        if ( outPolyline && ( !start2downPath[i].empty() || end ) )
-            outPolyline->addFromGeneralSurfacePath( mesh_, starts[i].point, start2downPath[i], end );
+        addPath( starts[i].amount, starts[i].point, start2downPath[i], end );
     }
 
     for ( size_t i = 0; i < vertsSortedDesc_.size(); ++i )
@@ -72,8 +82,7 @@ VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts,
             flowInVert[vDn] += flowInVert[vUp];
             end = MeshTriPoint{ mesh_.topology, vDn };
         }
-        if ( outPolyline && ( !downPath_[vUp].empty() || end ) )
-            outPolyline->addFromGeneralSurfacePath( mesh_, { mesh_.topology, vUp }, downPath_[vUp], end );
+        addPath( flowInVert[vUp], { mesh_.topology, vUp }, downPath_[vUp], end );
     }
 
     return flowInVert;

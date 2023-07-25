@@ -278,6 +278,8 @@ using FaceNormals = Vector<Vector3f, FaceId>;
 
 using VertScalars = Vector<float, VertId>;
 using FaceScalars = Vector<float, FaceId>;
+using EdgeScalars = Vector<float, EdgeId>;
+using UndirectedEdgeScalars = Vector<float, UndirectedEdgeId>;
 
 using VertToFloatFunc = std::function<float( VertId )>;
 using FaceToFloatFunc = std::function<float( FaceId )>;

@@ -1,6 +1,6 @@
 #include "MRTerrainTriangulation.h"
 #include "MRMatrix3.h"
-#include "MRMatrix4.h"
+#include "MRMatrix2.h"
 #include "MRPch/MRTBB.h"
 #include "MRMeshCollidePrecise.h"
 #include "MRTimer.h"
@@ -50,19 +50,25 @@ private:
     bool canceled_{ false };
     Vector3f center_;
 
-    bool inCircle_( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d )
+    bool inCircle_( const Vector3f& a, Vector3f b, Vector3f c, Vector3f d )
     {
-        return Matrix4d(
-            Vector4d( a.x, a.y, double( a.x ) * a.x + double( a.y ) * a.y, 1 ),
-            Vector4d( b.x, b.y, double( b.x ) * b.x + double( b.y ) * b.y, 1 ),
-            Vector4d( c.x, c.y, double( c.x ) * c.x + double( c.y ) * c.y, 1 ),
-            Vector4d( d.x, d.y, double( d.x ) * d.x + double( d.y ) * d.y, 1 )
+        b -= a;
+        c -= a;
+        d -= a;
+        return Matrix3d(
+            Vector3d( c.x, c.y, double( c.x ) * c.x + double( c.y ) * c.y ),
+            Vector3d( b.x, b.y, double( b.x ) * b.x + double( b.y ) * b.y ),
+            Vector3d( d.x, d.y, double( d.x ) * d.x + double( d.y ) * d.y )
         ).det() > 0;
     }
 
-    bool ccw_( const Vector3f& a, const Vector3f& b, const Vector3f& c )
+    bool ccw_( const Vector3f& a, Vector3f b, Vector3f c )
     {
-        return Matrix3d( Vector3d{ a.x,a.y,1 }, Vector3d{ b.x,b.y,1 }, Vector3d{ c.x,c.y,1 } ).det() > 0;
+        b -= a;
+        c -= a;
+        return Matrix2d( 
+            Vector2d{ b.x,b.y },
+            Vector2d{ c.x,c.y } ).det() > 0;
     }
 
     bool leftOf_( const Vector3f& x, EdgeId e ) { return ccw_( x, mesh_.orgPnt( e ), mesh_.destPnt( e ) ); }
@@ -241,6 +247,7 @@ private:
             };
         };
 
+        size_t reporter = 0;
         size_t counter = 0;
         size_t wholeSize = ( end - begin );
 
@@ -274,9 +281,12 @@ private:
                 res = nodeDelaunay_( s.l, s.r );
                 if ( cb_ )
                 {
-                    canceled_ = !cb_( float( counter ) / float( wholeSize ) );
-                    if ( canceled_ )
-                        return {};
+                    if ( ( ( reporter++ ) % 512 ) == 0 )
+                    {
+                        canceled_ = !cb_( float( counter ) / float( wholeSize ) );
+                        if ( canceled_ )
+                            return {};
+                    }
                 }
                 --stackSize;
                 continue;

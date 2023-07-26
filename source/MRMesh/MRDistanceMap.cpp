@@ -11,6 +11,7 @@
 #include "MRRegularGridMesh.h"
 #include "MRPolyline2Project.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRPolyline2Intersect.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
@@ -299,83 +300,26 @@ DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapPara
         }
     }
 
-    T xStep_1 = T( 1 ) / T( params.resolution.x );
-    T yStep_1 = T( 1 ) / T( params.resolution.y );
+    const T xStep_1 = T( 1 ) / T( params.resolution.x );
+    const T yStep_1 = T( 1 ) / T( params.resolution.y );
 
-    auto mainThreadId = std::this_thread::get_id();
-    std::atomic<bool> keepGoing{ true };
-
-    if ( params.useDistanceLimits )
+    if ( !ParallelFor( 0, params.resolution.y, [&]( int y )
     {
-        tbb::parallel_for( tbb::blocked_range<size_t>( 0, params.resolution.x ),
-            [&] ( const tbb::blocked_range<size_t>& range )
+        for ( int x = 0; x < params.resolution.x; ++x )
         {
-            const auto xMin = range.begin();
-            const auto xMax = xMin + range.size();
-
-            for ( size_t x = range.begin(); x < range.end(); x++ )
+            Vector3<T> rayOri = Vector3<T>( ori ) +
+                Vector3<T>( params.xRange ) * ( ( T( x ) + T( 0.5 ) ) * xStep_1 ) +
+                Vector3<T>( params.yRange ) * ( ( T( y ) + T( 0.5 ) ) * yStep_1 );
+            if ( auto meshIntersectionRes = rayMeshIntersect( mp, Line3<T>( Vector3<T>( rayOri ), Vector3<T>( params.direction ) ),
+                -std::numeric_limits<T>::max(), std::numeric_limits<T>::max(), &prec ) )
             {
-                if ( cb && !keepGoing.load( std::memory_order_relaxed ) )
-                    break;
-
-                for ( size_t y = 0; y < params.resolution.y; y++ )
-                {
-                    Vector3<T> rayOri = Vector3<T>( ori ) +
-                        Vector3<T>( params.xRange ) * ( ( T( x ) + T( 0.5 ) ) * xStep_1 ) +
-                        Vector3<T>( params.yRange ) * ( ( T( y ) + T( 0.5 ) ) * yStep_1 );
-                    if ( auto meshIntersectionRes = rayMeshIntersect( mp, Line3<T>( Vector3<T>( rayOri ), Vector3<T>( params.direction ) ),
-                        -std::numeric_limits<T>::max(), std::numeric_limits<T>::max(), &prec ) )
-                    {
-                        if ( ( meshIntersectionRes->distanceAlongLine < params.minValue ) || ( meshIntersectionRes->distanceAlongLine > params.maxValue ) )
-                            distMap.set( x, y, meshIntersectionRes->distanceAlongLine );
-                    }
-                }
-
-                if ( cb && std::this_thread::get_id() == mainThreadId )
-                {
-                    if ( cb && !cb( float( x - xMin ) / float( xMax - xMin ) ) )
-                        keepGoing.store( false, std::memory_order_relaxed );
-                }
+                if ( !params.useDistanceLimits
+                    || ( meshIntersectionRes->distanceAlongLine < params.minValue )
+                    || ( meshIntersectionRes->distanceAlongLine > params.maxValue ) )
+                    distMap.set( x, y, meshIntersectionRes->distanceAlongLine );
             }
-        }, tbb::static_partitioner() );
-    }
-    else
-    {
-        tbb::parallel_for( tbb::blocked_range<size_t>( 0, params.resolution.x ),
-            [&] ( const tbb::blocked_range<size_t>& range )
-        {
-            const auto xMin = range.begin();
-            const auto xMax = xMin + range.size();
-            for ( size_t x = range.begin(); x < range.end(); x++ )
-            //debug line
-            //for ( size_t x = 0; x < params.resX; x++ )
-            {
-                
-                if ( cb && !keepGoing.load( std::memory_order_relaxed ) )
-                    break;
-
-                for ( size_t y = 0; y < params.resolution.y; y++ )
-                {
-                    Vector3<T> rayOri = Vector3<T>( ori ) +
-                        Vector3<T>( params.xRange ) * ( ( T( x ) + T( 0.5 ) ) * xStep_1 ) +
-                        Vector3<T>( params.yRange ) * ( ( T( y ) + T( 0.5 ) ) * yStep_1 );
-                    if ( auto meshIntersectionRes = rayMeshIntersect( mp, Line3<T>( Vector3<T>( rayOri ), Vector3<T>( params.direction ) ),
-                        -std::numeric_limits<T>::max(), std::numeric_limits<T>::max(), &prec ) )
-                    {
-                        distMap.set( x, y, meshIntersectionRes->distanceAlongLine );
-                    }
-                }
-
-                if ( cb && std::this_thread::get_id() == mainThreadId )
-                {
-                    if ( cb && !cb( float( x - xMin ) / float ( xMax - xMin ) ) )
-                        keepGoing.store( false, std::memory_order_relaxed );
-                }
-            }
-        }, tbb::static_partitioner() );
-    }
-
-    if ( !keepGoing.load( std::memory_order_relaxed ) || ( cb && !cb( 1.0f ) ) )
+        }
+    }, cb, 1 ) )
         return DistanceMap{};
 
     if ( params.allowNegativeValues )

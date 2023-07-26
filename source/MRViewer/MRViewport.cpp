@@ -161,15 +161,15 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
         if ( pickRes.geomId == -1 || pickRes.primId == -1 )
             continue;
 
-        PointOnFace res;
-        res.face = FaceId( int( pickRes.primId ) );
+        PointOnObject res;
+        res.primId = int( pickRes.primId );
 #ifndef __EMSCRIPTEN__
         auto voxObj = renderVector[pickRes.geomId]->asType<ObjectVoxels>();
         if ( voxObj && voxObj->isVolumeRenderingEnabled() )
         {
             res.point = renderVector[pickRes.geomId]->worldXf( id ).inverse()( 
                 unprojectFromViewportSpace( Vector3f( viewportPoints[i].x, viewportPoints[i].y, pickRes.zBuffer ) ) );
-            // TODO: support VoxelId (PointOnFace is old class that requires rework)
+            // TODO: support VoxelId
         }
         else
 #endif

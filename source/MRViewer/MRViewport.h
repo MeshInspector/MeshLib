@@ -4,7 +4,7 @@
 #include "MRMesh/MRIRenderObject.h"
 #include <MRMesh/MRVector3.h>
 #include <MRMesh/MRPlane3.h>
-#include <MRMesh/MRPointOnFace.h>
+#include <MRMesh/MRPointOnObject.h>
 #include <MRMesh/MRViewportId.h>
 #include <MRMesh/MRQuaternion.h>
 #include <MRMesh/MRMatrix4.h>
@@ -15,8 +15,8 @@
 #include <functional>
 #include <unordered_map>
 
-using ObjAndPick = std::pair<std::shared_ptr<MR::VisualObject>, MR::PointOnFace>;
-using ConstObjAndPick = std::pair<std::shared_ptr<const MR::VisualObject>, MR::PointOnFace>;
+using ObjAndPick = std::pair<std::shared_ptr<MR::VisualObject>, MR::PointOnObject>;
+using ConstObjAndPick = std::pair<std::shared_ptr<const MR::VisualObject>, MR::PointOnObject>;
 
 namespace MR
 {

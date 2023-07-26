@@ -159,6 +159,9 @@ void ObjectLinesHolder::serializeBaseFields_( Json::Value& root ) const
 
     root["ShowPoints"] = showPoints_.value();
     root["SmoothConnections"] = smoothConnections_.value();
+
+    root["ColoringType"] = ( coloringType_ == ColoringType::LinesColorMap ) ? "PerLine" : "Solid";
+    serializeToJson( linesColorMap_.vec_, root["LineColors"] );
 }
 
 void ObjectLinesHolder::serializeFields_( Json::Value& root ) const
@@ -199,6 +202,14 @@ void ObjectLinesHolder::deserializeBaseFields_( const Json::Value& root )
         showPoints_ = ViewportMask{ root["ShowPoints"].asUInt() };
     if ( root["SmoothConnections"].isUInt() )
         smoothConnections_ = ViewportMask{ root["SmoothConnections"].asUInt() };
+
+    if ( root["ColoringType"].isString() )
+    {
+        const auto stype = root["ColoringType"].asString();
+        if ( stype == "PerLine" )
+            setColoringType( ColoringType::LinesColorMap );
+    }
+    deserializeFromJson( root["LineColors"], linesColorMap_.vec_ );
 }
 
 void ObjectLinesHolder::deserializeFields_( const Json::Value& root )

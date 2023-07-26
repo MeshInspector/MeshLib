@@ -601,8 +601,18 @@ void serializeToJson( const MeshTexture& texture, Json::Value& root )
 
 void serializeToJson( const std::vector<UVCoord>& uvCoords, Json::Value& root )
 {
+    if ( uvCoords.empty() )
+        return;
     root["Size"] = int( uvCoords.size() );
     root["Data"] = encode64( ( const uint8_t* )uvCoords.data(), uvCoords.size() * sizeof( UVCoord ) );
+}
+
+void serializeToJson( const std::vector<Color>& colors, Json::Value& root )
+{
+    if ( colors.empty() )
+        return;
+    root["Size"] = int( colors.size() );
+    root["Data"] = encode64( ( const uint8_t* )colors.data(), colors.size() * sizeof( Color ) );
 }
 
 void serializeViaVerticesToJson( const UndirectedEdgeBitSet& edges, const MeshTopology & topology, Json::Value& root )
@@ -892,9 +902,21 @@ void deserializeFromJson( const Json::Value& root, std::vector<UVCoord>& uvCoord
 {
     if ( root["Data"].isString() && root["Size"].isInt() )
     {
-        uvCoords.resize( root["Size"].asInt() );
-        auto bin = decode64( root["Data"].asString() );
-        std::copy( ( UVCoord* )bin.data(), ( UVCoord* )( bin.data() ) + uvCoords.size(), uvCoords.data() );
+        const auto bin = decode64( root["Data"].asString() );
+        const auto size = std::min<size_t>( root["Size"].asUInt64(), bin.size() / sizeof( UVCoord ) );
+        uvCoords.resize( size );
+        std::copy( ( UVCoord* )bin.data(), ( UVCoord* )( bin.data() ) + size, uvCoords.data() );
+    }
+}
+
+void deserializeFromJson( const Json::Value& root, std::vector<Color>& colors )
+{
+    if ( root["Data"].isString() && root["Size"].isUInt64() )
+    {
+        const auto bin = decode64( root["Data"].asString() );
+        const auto size = std::min<size_t>( root["Size"].asUInt64(), bin.size() / sizeof( Color ) );
+        colors.resize( size );
+        std::copy( ( Color* )bin.data(), ( Color* )( bin.data() ) + size, colors.data() );
     }
 }
 

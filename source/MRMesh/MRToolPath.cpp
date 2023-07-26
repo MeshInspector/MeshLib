@@ -132,7 +132,7 @@ void addSurfacePath( std::vector<GCommand>& gcode, const Mesh& mesh, const MeshE
 
 // computes all sections of modified mesh along the given axis
 // if a selected area is specified in the original mesh, then only points projected on it will be taken into consideration
-std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const MeshPart& origMeshPart, const Box3f& box, Axis axis, float sectionStep, int steps, BypassDirection bypassDir, ProgressCallback cb )
+std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const Box3f& box, Axis axis, float sectionStep, int steps, BypassDirection bypassDir, ProgressCallback cb )
 {
     auto mainThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };
@@ -155,8 +155,8 @@ std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const MeshPart&
             const float currentCoord = plane.d - sectionStep * step;
 
             auto stepSections = extractPlaneSections( mesh, Plane3f{ plane.n, currentCoord } );
-            // if there is not selected area just move the sections as is
-            if ( !origMeshPart.region && bypassDir == BypassDirection::Clockwise )
+
+            if ( bypassDir == BypassDirection::Clockwise )
             {
                 sections[step] = std::move( stepSections );
                 continue;
@@ -166,51 +166,9 @@ std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const MeshPart&
 
             for ( auto& section : stepSections )
             {
-                if ( bypassDir == BypassDirection::CounterClockwise )
-                    std::reverse( section.begin(), section.end() );
-
-                if ( !origMeshPart.region )
-                {
-                    sections[step].push_back( std::move( section ) );
-                    continue;
-                }
-
-                auto startIt = section.begin();
-                auto endIt = startIt;
-
-                for ( auto it = section.begin(); it < section.end(); ++it )
-                {
-                    // try to project point on the original mesh
-                    Vector3f rayStart = mesh.edgePoint( *it );
-                    rayStart[axisIndex] = box.max[axisIndex];
-
-                    auto intersection = rayMeshIntersect( origMeshPart.mesh, Line3f{ rayStart, -normal } );
-
-                    // in case of success expand the interval
-                    if ( intersection )
-                    {
-                        const auto faceId = origMeshPart.mesh.topology.left( intersection->mtp.e );
-                        if ( origMeshPart.region->test( faceId ) )
-                        {
-                            ++endIt;
-                            continue;
-                        }
-                    }
-                    // otherwise add current interval to the result (if it is not empty)
-                    if ( startIt < endIt )
-                    {
-                        sections[step].push_back( SurfacePath{ startIt, endIt } );
-                    }
-                    // reset the interval from the last point
-                    startIt = it + 1;
-                    endIt = startIt;
-                }
-                // add the last interval (if it is not empty)
-                if ( startIt < section.end() )
-                {
-                    sections[step].push_back( SurfacePath{ startIt, section.end() } );
-                }
-            }            
+                std::reverse( section.begin(), section.end() );
+                sections[step].push_back( std::move( section ) );
+            }
         }
 
         if ( cb )
@@ -448,7 +406,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
 
     MeshEdgePoint lastEdgePoint = {};
     // bypass direction is not meaningful for this toolpath, so leave it as default
-    const auto allSections = extractAllSections( mesh, mp.mesh, box, cutDirection, params.sectionStep, steps, BypassDirection::Clockwise, subprogress( params.cb, 0.25f, 0.5f ) );
+    const auto allSections = extractAllSections( mesh, box, cutDirection, params.sectionStep, steps, BypassDirection::Clockwise, subprogress( params.cb, 0.25f, 0.5f ) );
     if ( allSections.empty() )
         return unexpectedOperationCanceled();
     const auto sbp = subprogress( params.cb, 0.5f, 1.0f );
@@ -618,7 +576,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
 
     const float critTransitionLengthSq = params.critTransitionLength * params.critTransitionLength;
 
-    std::vector<PlaneSections> sections = extractAllSections( mesh, mp.mesh, box, Axis::Z, params.sectionStep, steps, params.bypassDir, subprogress( params.cb, 0.25f, 0.5f ) );
+    std::vector<PlaneSections> sections = extractAllSections( mesh, box, Axis::Z, params.sectionStep, steps, params.bypassDir, subprogress( params.cb, 0.25f, 0.5f ) );
     if ( sections.empty() )
         return unexpectedOperationCanceled();
 

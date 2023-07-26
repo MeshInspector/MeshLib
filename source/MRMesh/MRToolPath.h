@@ -119,10 +119,6 @@ struct ToolPathResult
 
 MRMESH_API Expected<ToolPathResult, std::string> constantZToolPath( const MeshPart& mp, const ToolPathParams& params );
 
-
-MRMESH_API Expected<ToolPathResult, std::string>  constantZToolPathWithFlatTool( const MeshPart& mp, const ToolPathParams& params );
-
-
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
 // // this one is traditional lace-roughing toolpath
 

@@ -595,7 +595,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
     return res;
 }
 
-Expected<ToolPathResult, std::string>  constantZToolPathWithFlatTool( const MeshPart& mp, const ToolPathParams& params )
+Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, const ToolPathParams& params )
 {
     auto preprocessedMesh = preprocessMesh( mp.mesh, params, false );
     if ( !preprocessedMesh )
@@ -613,6 +613,8 @@ Expected<ToolPathResult, std::string>  constantZToolPathWithFlatTool( const Mesh
     const int steps = int( std::floor( ( plane.d - box.min.z ) / params.sectionStep ) );
 
     res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
+
+    MeshEdgePoint prevEdgePoint;
 
     const float critTransitionLengthSq = params.critTransitionLength * params.critTransitionLength;
 
@@ -659,120 +661,56 @@ Expected<ToolPathResult, std::string>  constantZToolPathWithFlatTool( const Mesh
 
             Polyline3 polyline;
             polyline.addFromSurfacePath( mesh, section );
-            const auto currentZ = polyline.points.front().z;
-            auto polyline2d = polyline.toPolyline<Vector2f>();
-            const ContourToDistanceMapParams dmParams( params.voxelSize, polyline2d.contours(), params.millRadius + 3.0f * params.voxelSize, true );
-            const ContoursDistanceMapOptions dmOptions{ .signMethod = ContoursDistanceMapOptions::WindingRule, .minDist = params.millRadius - 2 * params.voxelSize, .maxDist = params.millRadius + 2 * params.voxelSize };
-            const auto dm = distanceMapFromContours( polyline2d, dmParams, dmOptions );
-            DistanceMapToWorld dmToWorld( dmParams );
-            auto offsetRes = distanceMapTo2DIsoPolyline( dm, dmToWorld, params.millRadius );
-            polyline2d = offsetRes.first;
-            polyline = polyline2d.toPolyline<Vector3f>();
-            polyline.transform( offsetRes.second * AffineXf3f::translation( { 0, 0, currentZ } ) );
             
+            if ( params.flatTool )
+            {
+                const auto currentZ = polyline.points.front().z;
+                auto polyline2d = polyline.toPolyline<Vector2f>();
+                const ContourToDistanceMapParams dmParams( params.voxelSize, polyline2d.contours(), params.millRadius + 3.0f * params.voxelSize, true );
+                const ContoursDistanceMapOptions dmOptions{ .signMethod = ContoursDistanceMapOptions::WindingRule, .minDist = params.millRadius - 2 * params.voxelSize, .maxDist = params.millRadius + 2 * params.voxelSize };
+                const auto dm = distanceMapFromContours( polyline2d, dmParams, dmOptions );
+                DistanceMapToWorld dmToWorld( dmParams );
+                auto offsetRes = distanceMapTo2DIsoPolyline( dm, dmToWorld, params.millRadius );
+                polyline2d = offsetRes.first;
+                polyline = polyline2d.toPolyline<Vector3f>();
+                polyline.transform( offsetRes.second * AffineXf3f::translation( { 0, 0, currentZ } ) );
+            }
+
             const auto contours = polyline.contours();
             if ( contours.empty() )
                 continue;
 
             const auto& contour = contours.front();
-            const auto intervals = getIntervals( mp, contour.begin(), contour.end(), contour.begin(), contour.end(), true );
-            if ( intervals.empty() )
-                continue;
 
-            for ( const auto& interval: intervals )
+            if ( mp.region || params.flatTool )
             {
-                if ( interval.first != contour.begin() )
+                const auto intervals = getIntervals( mp, contour.begin(), contour.end(), contour.begin(), contour.end(), true );
+                if ( intervals.empty() )
+                    continue;
+
+                for ( const auto& interval : intervals )
                 {
-                    transitOverSafeZ( interval.first, res, params, safeZ, lastZ, lastFeed );
-                    commands.push_back( { .x = interval.first->x, .y = interval.first->y, .z = interval.first->z } );
+                    if ( !mp.region || interval.first != contour.begin() )
+                    {
+                        transitOverSafeZ( interval.first, res, params, safeZ, lastZ, lastFeed );
+                        commands.push_back( { .x = interval.first->x, .y = interval.first->y, .z = interval.first->z } );
+                    }
+
+                    for ( auto it = interval.first; it < interval.second; ++it )
+                    {
+                        addPoint( *it );
+                    }
                 }
 
-                for ( auto it = interval.first; it < interval.second; ++it )
-                {
-                    addPoint( *it );
-                }
-            }
-
-            lastZ = contour.front().z;
-        }
-    }
-    
-    return res;
-}
-
-Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, const ToolPathParams& params )
-{
-    auto preprocessedMesh = preprocessMesh( mp.mesh, params, false );
-    if ( !preprocessedMesh )
-        return unexpected( preprocessedMesh.error() );
-
-    ToolPathResult  res{ .modifiedMesh = std::move( *preprocessedMesh ) };
-    const auto& mesh = res.modifiedMesh;
-
-    const auto box = mp.mesh.computeBoundingBox( params.xf );
-    const float safeZ = std::max( box.max.z + 10.0f * params.millRadius, params.safeZ );
-    float currentZ = 0;
-
-    const Vector3f normal = Vector3f::plusZ();
-    const auto plane = MR::Plane3f::fromDirAndPt( normal, box.max );
-    const int steps = int( std::floor( ( plane.d - box.min.z ) / params.sectionStep ) );
-
-    res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
-
-    MeshEdgePoint prevEdgePoint;
-
-    const float critTransitionLengthSq = params.critTransitionLength * params.critTransitionLength;
-
-    std::vector<PlaneSections> sections = extractAllSections( mesh, mp, box, Axis::Z, params.sectionStep, steps, params.bypassDir, subprogress( params.cb, 0.25f, 0.5f ) );
-    if ( sections.empty() )
-        return unexpectedOperationCanceled();
-
-    const auto sbp = subprogress( params.cb, 0.5f, 1.0f );
-
-    float lastFeed = 0;
-
-    Vector3f lastPoint;
-    // if the last point is equal to parameter, do nothing
-    // otherwise add new move
-    const auto addPoint = [&] ( const Vector3f& point )
-    {
-        if ( lastPoint == point )
-            return;
-
-        if ( lastFeed == params.baseFeed )
-        {
-            res.commands.push_back( { .x = point.x, .y = point.y } );
-        }
-        else
-        {
-            res.commands.push_back( { .feed = params.baseFeed, .x = point.x, .y = point.y } );
-            lastFeed = params.baseFeed;
-        }
-
-        lastPoint = point;
-    };
-
-    for ( int step = 0; step < steps; ++step )
-    {
-        if ( !reportProgress( sbp, float( step ) / steps ) )
-            return unexpectedOperationCanceled();
-
-        auto& commands = res.commands;
-
-        for ( const auto& section : sections[step] )
-        {
-            if ( section.size() < 2 )
+                lastZ = contour.front().z;
                 continue;
-
-            Polyline3 polyline;
-            polyline.addFromSurfacePath( mesh, section );
-            const auto contours = polyline.contours().front();
+            }
 
             auto nearestPointIt = section.begin();
             auto nextEdgePointIt = section.begin();
             float minDistSq = FLT_MAX;
 
-            if ( prevEdgePoint.e.valid() && !mp.region )
+            if ( prevEdgePoint.e.valid() )
             {
                 for ( auto it = section.begin(); it < section.end(); ++it )
                 {
@@ -793,11 +731,11 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
                 } while ( nextEdgePointIt != nearestPointIt && ( mesh.edgePoint( *nextEdgePointIt ) - nearestPoint ).lengthSq() < sectionStepSq );
             }
 
-            const auto pivotIt = contours.begin() + std::distance( section.begin(), nextEdgePointIt );
+            const auto pivotIt = contour.begin() + std::distance( section.begin(), nextEdgePointIt );
 
             if ( !prevEdgePoint.e.valid() || minDistSq > critTransitionLengthSq )
             {
-                transitOverSafeZ( pivotIt, res, params, safeZ, currentZ, lastFeed );
+                transitOverSafeZ( pivotIt, res, params, safeZ, lastZ, lastFeed );
             }
             else
             {
@@ -824,18 +762,18 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
 
             auto startIt = pivotIt + 1;
 
-            for ( auto it = startIt; it < contours.end(); ++it )
+            for ( auto it = startIt; it < contour.end(); ++it )
             {
                 addPoint( *it );
             }
 
-            for ( auto it = contours.begin() + 1; it < pivotIt + 1; ++it )
+            for ( auto it = contour.begin() + 1; it < pivotIt + 1; ++it )
             {
                 addPoint( *it );
             }
 
             prevEdgePoint = *nextEdgePointIt;
-            currentZ = pivotIt->z;
+            lastZ = pivotIt->z;
         }
     }
 

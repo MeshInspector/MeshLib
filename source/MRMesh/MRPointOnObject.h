@@ -11,6 +11,7 @@ namespace MR
 // 3. point of ObjectPoints
 struct PointOnObject
 {
+    PointOnObject() {} //default ctor is required by Clang
     /// 3D location on the object in local coordinates
     Vector3f point;
     /// to which primitive that point pertains

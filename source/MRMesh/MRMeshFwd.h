@@ -253,6 +253,7 @@ template <typename T> struct TriPoint;
 using TriPointf = TriPoint<float>;
 using TriPointd = TriPoint<double>;
 struct PointOnFace;
+struct PointOnObject;
 struct MeshTriPoint;
 struct MeshProjectionResult;
 struct MeshIntersectionResult;

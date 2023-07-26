@@ -903,7 +903,7 @@ void deserializeFromJson( const Json::Value& root, std::vector<UVCoord>& uvCoord
     if ( root["Data"].isString() && root["Size"].isInt() )
     {
         const auto bin = decode64( root["Data"].asString() );
-        const auto size = std::min( root["Size"].asUInt64(), bin.size() / sizeof( UVCoord ) );
+        const auto size = std::min<size_t>( root["Size"].asUInt64(), bin.size() / sizeof( UVCoord ) );
         uvCoords.resize( size );
         std::copy( ( UVCoord* )bin.data(), ( UVCoord* )( bin.data() ) + size, uvCoords.data() );
     }
@@ -914,7 +914,7 @@ void deserializeFromJson( const Json::Value& root, std::vector<Color>& colors )
     if ( root["Data"].isString() && root["Size"].isUInt64() )
     {
         const auto bin = decode64( root["Data"].asString() );
-        const auto size = std::min( root["Size"].asUInt64(), bin.size() / sizeof( Color ) );
+        const auto size = std::min<size_t>( root["Size"].asUInt64(), bin.size() / sizeof( Color ) );
         colors.resize( size );
         std::copy( ( Color* )bin.data(), ( Color* )( bin.data() ) + size, colors.data() );
     }

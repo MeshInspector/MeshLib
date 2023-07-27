@@ -262,4 +262,48 @@ std::vector<std::vector<T>> PolylineTopology::convertToContours( F && getPoint )
     return res;
 }
 
+/// simplifies construction of connected polyline in the topology
+struct PolylineMaker
+{
+    PolylineTopology & topology;
+    PolylineMaker( PolylineTopology & t ) : topology( t ) {}
+
+    /// creates first edge of polyline
+    /// \param v first vertex of the polyline
+    EdgeId start( VertId v )
+    {
+        assert( !e0_ && !eLast_ );
+        e0_ = eLast_ = topology.makeEdge();
+        topology.setOrg( e0_, v );
+        return e0_;
+    }
+    /// makes next edge of polyline
+    /// \param v next vertex of the polyline
+    EdgeId proceed( VertId v )
+    {
+        assert( eLast_ );
+        const auto ej = topology.makeEdge();
+        topology.splice( ej, eLast_.sym() );
+        topology.setOrg( ej, v );
+        return eLast_ = ej;
+    }
+    /// closes the polyline
+    void close()
+    {
+        assert( e0_ && eLast_ );
+        topology.splice( e0_, eLast_.sym() );
+        e0_ = eLast_ = {};
+    }
+    /// finishes the polyline adding final vertex in it
+    void finishOpen( VertId v )
+    {
+        assert( eLast_ );
+        topology.setOrg( eLast_.sym(), v );
+        e0_ = eLast_ = {};
+    }
+
+private:
+    EdgeId e0_, eLast_;
+};
+
 } // namespace MR

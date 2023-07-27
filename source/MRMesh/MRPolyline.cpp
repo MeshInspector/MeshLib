@@ -256,41 +256,41 @@ EdgeId Polyline<V>::addFromSurfacePath( const Mesh& mesh, const SurfacePath& pat
 template<typename V>
 EdgeId Polyline<V>::addFromGeneralSurfacePath( const Mesh& mesh, const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end )
 {
-    if ( !start && !end )
-        return addFromSurfacePath( mesh, path );
-    bool closed = start == end;
-    auto shift = points.size();
-    points.reserve( shift + path.size() + 2 );
-    std::vector<VertId> newVerts;
-    newVerts.reserve( path.size() + 2 );
-
-    VertId newV( shift );
-    if ( start )
+    if ( ( !start && path.empty() ) || ( !end && path.empty() ) )
     {
-        points.push_back( V{ mesh.triPoint( start ) } );
-        newVerts.push_back( newV++ );
+        assert( false );
+        return {};
     }
 
-    for ( int i = 0; i < path.size(); ++i )
+    auto v0 = topology.addVertId();
+    points.autoResizeSet( v0, V{ start ? mesh.triPoint( start ) : mesh.edgePoint( path.front() ) } );
+    assert( points.size() == topology.vertSize() );
+
+    PolylineMaker maker( topology );
+    const auto e0 = maker.start( v0 );
+
+    const bool closed = ( start == end ) && ( !start || ( path.front() == path.back() && path.size() > 1 ) );
+    const int inc = end || closed ? 0 : 1;
+    for ( int i = start ? 0 : 1; i + inc < path.size(); ++i )
     {
-        assert( points.size() == newV );
+        auto v = topology.addVertId();
         points.push_back( V{ mesh.edgePoint( path[i] ) } );
-        newVerts.push_back( newV++ );
+        maker.proceed( v );
     }
-    assert( points.size() == newV );
+
     if ( closed )
     {
-        newVerts.push_back( newVerts.front() );
+        maker.close();
     }
-    else if ( end )
+    else
     {
-        points.push_back( V{ mesh.triPoint( end ) } );
-        newVerts.push_back( newV++ );
+        auto v = topology.addVertId();
+        points.push_back( V{ end ? mesh.triPoint( end ) : mesh.edgePoint( path.back() ) } );
+        maker.finishOpen( v );
     }
 
-    auto e = topology.makePolyline( newVerts.data(), newVerts.size() );
     invalidateCaches();
-    return e;
+    return e0;
 }
 
 template<typename V>

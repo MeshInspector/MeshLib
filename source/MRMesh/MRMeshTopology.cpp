@@ -17,6 +17,42 @@
 namespace MR
 {
 
+void MeshTopology::vertResize( size_t newSize )
+{ 
+    if ( edgePerVertex_.size() >= newSize )
+        return;
+    edgePerVertex_.resize( newSize );
+    if ( updateValids_ )
+        validVerts_.resize( newSize );
+}
+
+void MeshTopology::vertResizeWithReserve( size_t newSize )
+{ 
+    if ( edgePerVertex_.size() >= newSize )
+        return;
+    edgePerVertex_.resizeWithReserve( newSize );
+    if ( updateValids_ )
+        validVerts_.resizeWithReserve( newSize );
+}
+
+void MeshTopology::faceResize( size_t newSize )
+{
+    if ( edgePerFace_.size() >= newSize )
+        return;
+    edgePerFace_.resize( newSize );
+    if ( updateValids_ ) 
+        validFaces_.resize( newSize );
+}
+
+void MeshTopology::faceResizeWithReserve( size_t newSize )
+{
+    if ( edgePerFace_.size() >= newSize )
+        return;
+    edgePerFace_.resizeWithReserve( newSize );
+    if ( updateValids_ ) 
+        validFaces_.resizeWithReserve( newSize );
+}
+
 EdgeId MeshTopology::makeEdge()
 {
     assert( edges_.size() % 2 == 0 );

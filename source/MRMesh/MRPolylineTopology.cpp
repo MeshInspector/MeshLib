@@ -5,6 +5,22 @@
 namespace MR
 {
 
+void PolylineTopology::vertResize( size_t newSize )
+{ 
+    if ( edgePerVertex_.size() >= newSize )
+        return;
+    edgePerVertex_.resize( newSize );
+    validVerts_.resize( newSize );
+}
+
+void PolylineTopology::vertResizeWithReserve( size_t newSize )
+{ 
+    if ( edgePerVertex_.size() >= newSize )
+        return;
+    edgePerVertex_.resizeWithReserve( newSize );
+    validVerts_.resizeWithReserve( newSize );
+}
+
 EdgeId PolylineTopology::makeEdge()
 {
     assert( edges_.size() % 2 == 0 );
@@ -272,6 +288,49 @@ EdgeId PolylineTopology::splitEdge( EdgeId e )
     return e0;
 }
 
+struct PolylineMaker
+{
+    PolylineTopology & topology;
+    PolylineMaker( PolylineTopology & t ) : topology( t ) {}
+
+    /// creates first edge of polyline
+    /// \param v first vertex of the polyline
+    EdgeId start( VertId v )
+    {
+        assert( !e0_ && !eLast_ );
+        e0_ = eLast_ = topology.makeEdge();
+        topology.setOrg( e0_, v );
+        return e0_;
+    }
+    /// makes next edge of polyline
+    /// \param v next vertex of the polyline
+    EdgeId proceed( VertId v )
+    {
+        assert( eLast_ );
+        const auto ej = topology.makeEdge();
+        topology.splice( ej, eLast_.sym() );
+        topology.setOrg( ej, v );
+        return eLast_ = ej;
+    }
+    /// closes the polyline
+    void close()
+    {
+        assert( e0_ && eLast_ );
+        topology.splice( e0_, eLast_.sym() );
+        e0_ = eLast_ = {};
+    }
+    /// finishes the polyline adding final vertex in it
+    void finishOpen( VertId v )
+    {
+        assert( eLast_ );
+        topology.setOrg( eLast_.sym(), v );
+        e0_ = eLast_ = {};
+    }
+
+private:
+    EdgeId e0_, eLast_;
+};
+
 EdgeId PolylineTopology::makePolyline( const VertId * vs, size_t num )
 {
     if ( !vs || num < 2 )
@@ -284,27 +343,17 @@ EdgeId PolylineTopology::makePolyline( const VertId * vs, size_t num )
     for ( size_t i = 0; i < num; ++i )
         maxVertId = std::max( maxVertId, vs[i] );
     if ( maxVertId >= (int)vertSize() )
-        vertResize( maxVertId + 1 );
+        vertResizeWithReserve( maxVertId + 1 );
 
-    const auto e0 = makeEdge();
-    setOrg( e0, vs[0] );
-    auto e = e0;
+    PolylineMaker maker{ *this };
+    auto e0 = maker.start( vs[0] );
     for ( int j = 1; j + 1 < num; ++j )
-    {
-        const auto ej = makeEdge();
-        splice( ej, e.sym() );
-        setOrg( ej, vs[j] );
-        e = ej;
-    }
+        maker.proceed( vs[j] );
+
     if ( vs[0] == vs[num-1] )
-    {
-        // close
-        splice( e0, e.sym() );
-    }
+        maker.close();
     else
-    {
-        setOrg( e.sym(), vs[num-1] );
-    }
+        maker.finishOpen( vs[num-1] );
     return e0;
 }
 

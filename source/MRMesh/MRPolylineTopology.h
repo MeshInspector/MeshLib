@@ -81,9 +81,11 @@ public:
     [[nodiscard]] MRMESH_API VertId lastValidVert() const;
     /// creates new vert-id not associated with any edge yet
     [[nodiscard]] VertId addVertId() { edgePerVertex_.push_back( {} ); validVerts_.push_back( false ); return VertId( (int)edgePerVertex_.size() - 1 ); }
-    /// explicitly increases the size of verts vector
-    void vertResize( size_t newSize ) { if ( edgePerVertex_.size() < newSize ) { edgePerVertex_.resize( newSize ); validVerts_.resize( newSize ); } }
-    /// sets the capacity of verts vector
+    /// explicitly increases the size of vertices vector
+    MRMESH_API void vertResize( size_t newSize );
+    /// explicitly increases the size of vertices vector, doubling the current capacity if it was not enough
+    MRMESH_API void vertResizeWithReserve( size_t newSize );
+    /// sets the capacity of vertices vector
     void vertReserve( size_t newCapacity ) { edgePerVertex_.reserve( newCapacity ); validVerts_.reserve( newCapacity ); }
     /// returns the number of vertex records including invalid ones
     [[nodiscard]] size_t vertSize() const { return edgePerVertex_.size(); }

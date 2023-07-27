@@ -5,6 +5,22 @@
 namespace MR
 {
 
+void PolylineTopology::vertResize( size_t newSize )
+{ 
+    if ( edgePerVertex_.size() >= newSize )
+        return;
+    edgePerVertex_.resize( newSize );
+    validVerts_.resize( newSize );
+}
+
+void PolylineTopology::vertResizeWithReserve( size_t newSize )
+{ 
+    if ( edgePerVertex_.size() >= newSize )
+        return;
+    edgePerVertex_.resizeWithReserve( newSize );
+    validVerts_.resizeWithReserve( newSize );
+}
+
 EdgeId PolylineTopology::makeEdge()
 {
     assert( edges_.size() % 2 == 0 );
@@ -284,27 +300,17 @@ EdgeId PolylineTopology::makePolyline( const VertId * vs, size_t num )
     for ( size_t i = 0; i < num; ++i )
         maxVertId = std::max( maxVertId, vs[i] );
     if ( maxVertId >= (int)vertSize() )
-        vertResize( maxVertId + 1 );
+        vertResizeWithReserve( maxVertId + 1 );
 
-    const auto e0 = makeEdge();
-    setOrg( e0, vs[0] );
-    auto e = e0;
+    PolylineMaker maker{ *this };
+    auto e0 = maker.start( vs[0] );
     for ( int j = 1; j + 1 < num; ++j )
-    {
-        const auto ej = makeEdge();
-        splice( ej, e.sym() );
-        setOrg( ej, vs[j] );
-        e = ej;
-    }
+        maker.proceed( vs[j] );
+
     if ( vs[0] == vs[num-1] )
-    {
-        // close
-        splice( e0, e.sym() );
-    }
+        maker.close();
     else
-    {
-        setOrg( e.sym(), vs[num-1] );
-    }
+        maker.finishOpen( vs[num-1] );
     return e0;
 }
 

@@ -128,9 +128,11 @@ public:
     [[nodiscard]] MRMESH_API VertId lastValidVert() const;
     /// creates new vert-id not associated with any edge yet
     [[nodiscard]] VertId addVertId() { edgePerVertex_.emplace_back(); if ( updateValids_ ) { validVerts_.push_back( false ); } return edgePerVertex_.backId(); }
-    /// explicitly increases the size of verts vector
-    void vertResize( size_t newSize ) { if ( edgePerVertex_.size() < newSize ) { edgePerVertex_.resize( newSize ); if ( updateValids_ ) { validVerts_.resize( newSize ); } } }
-    /// sets the capacity of verts vector
+    /// explicitly increases the size of vertices vector
+    MRMESH_API void vertResize( size_t newSize );
+    /// explicitly increases the size of vertices vector, doubling the current capacity if it was not enough
+    MRMESH_API void vertResizeWithReserve( size_t newSize );
+    /// sets the capacity of vertices vector
     void vertReserve( size_t newCapacity ) { edgePerVertex_.reserve( newCapacity ); if ( updateValids_ ) { validVerts_.reserve( newCapacity ); } }
     /// returns the number of vertex records including invalid ones
     [[nodiscard]] size_t vertSize() const { return edgePerVertex_.size(); }
@@ -168,7 +170,9 @@ public:
     /// deletes multiple given faces
     MRMESH_API void deleteFaces( const FaceBitSet& fs );
     /// explicitly increases the size of faces vector
-    void faceResize( size_t newSize ) { if ( edgePerFace_.size() < newSize ) { edgePerFace_.resize( newSize ); if ( updateValids_ ) { validFaces_.resize( newSize ); } } }
+    MRMESH_API void faceResize( size_t newSize );
+    /// explicitly increases the size of faces vector, doubling the current capacity if it was not enough
+    MRMESH_API void faceResizeWithReserve( size_t newSize );
     /// sets the capacity of faces vector
     void faceReserve( size_t newCapacity ) { edgePerFace_.reserve( newCapacity ); if ( updateValids_ ) { validFaces_.reserve( newCapacity ); } }
     /// returns the number of face records including invalid ones

@@ -106,7 +106,7 @@ public:
 
     /// adds path to this polyline
     /// \return the edge from first new to second new vertex
-    MRMESH_API EdgeId addFromSurfacePath( const Mesh& mesh, const SurfacePath& path );
+    EdgeId addFromSurfacePath( const Mesh& mesh, const SurfacePath& path ) { return addFromGeneralSurfacePath( mesh, {}, path, {} ); }
 
     /// adds general path = start-path-end (where both start and end are optional) to this polyline
     /// \return the edge from first new to second new vertex

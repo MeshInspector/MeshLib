@@ -8,6 +8,7 @@
 #include "MRTimer.h"
 #include "MRMesh.h"
 #include "MRComputeBoundingBox.h"
+#include "MREdgePaths.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -190,107 +191,80 @@ Contours2f Polyline<V>::contours2() const
 template<typename V>
 EdgeId Polyline<V>::addFromEdgePath( const Mesh& mesh, const EdgePath& path )
 {
-    if ( path.empty() )
-        return {};
-    bool closed = mesh.topology.org( path.front() ) == mesh.topology.dest( path.back() );
-    auto shift = points.size();
-    points.reserve( shift + path.size() + ( closed ? 0 : 1 ) );
-    std::vector<VertId> newVerts;
-    newVerts.reserve( path.size() + 1 );
-    VertId newV( shift );
-    for ( int i = 0; i < path.size(); ++i )
+    assert( isEdgePath( mesh.topology, path ) );
+    if ( path.size() < 2 )
     {
-        assert( points.size() == newV );
+        assert( false );
+        return {};
+    }
+
+    auto v0 = topology.addVertId();
+    points.autoResizeSet( v0, V{ mesh.orgPnt( path.front() ) } );
+    assert( points.size() == topology.vertSize() );
+
+    PolylineMaker maker( topology );
+    const auto e0 = maker.start( v0 );
+    for ( int i = 1; i < path.size(); ++i )
+    {
+        auto v = topology.addVertId();
         points.push_back( V{ mesh.orgPnt( path[i] ) } );
-        newVerts.push_back( newV++ );
+        maker.proceed( v );
     }
-    if ( !closed )
+
+    bool closed = mesh.topology.org( path.front() ) == mesh.topology.dest( path.back() );
+    if ( closed )
     {
-        assert( points.size() == newV );
+        maker.close();
+    }
+    else
+    {
+        auto v = topology.addVertId();
         points.push_back( V{ mesh.destPnt( path.back() ) } );
-        newVerts.push_back( newV++ );
-    }
-    else
-    {
-        newVerts.push_back( newVerts.front() );
+        maker.finishOpen( v );
     }
 
-    auto e = topology.makePolyline( newVerts.data(), newVerts.size() );
     invalidateCaches();
-    return e;
-}
-
-template<typename V>
-EdgeId Polyline<V>::addFromSurfacePath( const Mesh& mesh, const SurfacePath& path )
-{
-    if ( path.empty() )
-        return {};
-    bool closed = path.front() == path.back();
-    auto shift = points.size();
-    points.reserve( shift + path.size() + ( closed ? -1 : 0 ) );
-    std::vector<VertId> newVerts;
-    newVerts.reserve( path.size() );
-    VertId newV( shift );
-    for ( int i = 0; i + 1 < path.size(); ++i )
-    {
-        assert( points.size() == newV );
-        points.push_back( V{ mesh.edgePoint( path[i] ) } );
-        newVerts.push_back( newV++ );
-    }
-    if ( !closed )
-    {
-        assert( points.size() == newV );
-        points.push_back( V{ mesh.edgePoint( path.back() ) } );
-        newVerts.push_back( newV++ );
-    }
-    else
-    {
-        newVerts.push_back( newVerts.front() );
-    }
-
-    auto e = topology.makePolyline( newVerts.data(), newVerts.size() );
-    invalidateCaches();
-    return e;
+    return e0;
 }
 
 template<typename V>
 EdgeId Polyline<V>::addFromGeneralSurfacePath( const Mesh& mesh, const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end )
 {
-    if ( !start && !end )
-        return addFromSurfacePath( mesh, path );
-    bool closed = start == end;
-    auto shift = points.size();
-    points.reserve( shift + path.size() + 2 );
-    std::vector<VertId> newVerts;
-    newVerts.reserve( path.size() + 2 );
-
-    VertId newV( shift );
-    if ( start )
+    if ( ( !start && path.empty() ) || ( !end && path.empty() ) )
     {
-        points.push_back( V{ mesh.triPoint( start ) } );
-        newVerts.push_back( newV++ );
+        assert( false );
+        return {};
     }
 
-    for ( int i = 0; i < path.size(); ++i )
+    auto v0 = topology.addVertId();
+    points.autoResizeSet( v0, V{ start ? mesh.triPoint( start ) : mesh.edgePoint( path.front() ) } );
+    assert( points.size() == topology.vertSize() );
+
+    PolylineMaker maker( topology );
+    const auto e0 = maker.start( v0 );
+
+    const bool closed = ( start == end ) && ( !start || ( path.front() == path.back() && path.size() > 1 ) );
+    const int inc = end || closed ? 0 : 1;
+    for ( int i = start ? 0 : 1; i + inc < path.size(); ++i )
     {
-        assert( points.size() == newV );
+        auto v = topology.addVertId();
         points.push_back( V{ mesh.edgePoint( path[i] ) } );
-        newVerts.push_back( newV++ );
+        maker.proceed( v );
     }
-    assert( points.size() == newV );
+
     if ( closed )
     {
-        newVerts.push_back( newVerts.front() );
+        maker.close();
     }
-    else if ( end )
+    else
     {
-        points.push_back( V{ mesh.triPoint( end ) } );
-        newVerts.push_back( newV++ );
+        auto v = topology.addVertId();
+        points.push_back( V{ end ? mesh.triPoint( end ) : mesh.edgePoint( path.back() ) } );
+        maker.finishOpen( v );
     }
 
-    auto e = topology.makePolyline( newVerts.data(), newVerts.size() );
     invalidateCaches();
-    return e;
+    return e0;
 }
 
 template<typename V>

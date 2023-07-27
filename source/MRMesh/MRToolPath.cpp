@@ -742,7 +742,6 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
 }
 
 
-
 Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, const ConstantCuspParams& params )
 {
     auto preprocessedMesh = preprocessMesh( mp.mesh, params, true );

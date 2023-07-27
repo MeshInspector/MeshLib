@@ -40,6 +40,8 @@ VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts,
     MR_TIMER
     assert( !outFlowPerEdge || outPolyline );
 
+    Timer t("1");
+
     VertScalars flowInVert( mesh_.topology.vertSize() );
     std::vector<VertId> start2downVert( starts.size() ); // for each start point stores what next vertex is on flow path (can be invalid)
     std::vector<SurfacePath> start2downPath( starts.size() ); // till next vertex
@@ -60,6 +62,37 @@ VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts,
             outFlowPerEdge->resizeWithReserve( outPolyline->topology.undirectedEdgeSize(), flow );
     };
 
+    t.restart( "2" );
+
+    if ( outPolyline )
+    {
+        VertId n = 0_v;
+        std::vector<VertId> sample2firstPolylineVert;
+        sample2firstPolylineVert.reserve( starts.size() + 1 );
+        sample2firstPolylineVert.push_back( n );
+        for ( size_t i = 0; i < starts.size(); ++i )
+        {
+            if ( !start2downPath[i].empty() || start2downVert[i] )
+                n += 1 + (int)start2downPath[i].size() + start2downVert[i].valid();
+            sample2firstPolylineVert.push_back( n );
+        };
+        VertCoords points( n ); //TODO: noInit
+        ParallelFor( starts, [&]( size_t i )
+        {
+            if ( start2downPath[i].empty() && !start2downVert[i] )
+                return;
+            VertId j = sample2firstPolylineVert[i];
+            points[j++] = mesh_.triPoint( starts[i].point );
+            for ( const auto & ep : start2downPath[i] )
+                points[j++] = mesh_.edgePoint( ep );
+            if ( auto v = start2downVert[i] )
+                points[j++] = mesh_.points[v];
+            assert( j == sample2firstPolylineVert[i+1] );
+        } );
+        PolylineTopology pt;
+        pt.buildOpenLines( sample2firstPolylineVert );
+    }
+
     for ( size_t i = 0; i < starts.size(); ++i )
     {
         MeshTriPoint end;
@@ -70,6 +103,8 @@ VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts,
         }
         addPath( starts[i].amount, starts[i].point, start2downPath[i], end );
     }
+
+    t.restart( "3" );
 
     for ( size_t i = 0; i < vertsSortedDesc_.size(); ++i )
     {

@@ -1,12 +1,67 @@
 #include "MRPolylineTopology.h"
+#include "MRParallelFor.h"
 #include "MRTimer.h"
 #include "MRGTest.h"
 
 namespace MR
 {
 
+void PolylineTopology::buildOpenLines( const std::vector<VertId> & comp2firstVert )
+{
+    MR_TIMER
+    if ( comp2firstVert.empty() )
+    {
+        assert( false );
+        return;
+    }
+    assert( comp2firstVert.front() == 0_v );
+    numValidVerts_ = comp2firstVert.back();
+    edges_.resizeNoInit( 2 * numValidVerts_ ); // the edges in between lines will be lone
+    edgePerVertex_.resizeNoInit( numValidVerts_ );
+    validVerts_.clear();
+    validVerts_.resize( numValidVerts_, true );
+    ParallelFor( edgePerVertex_, [&]( VertId v )
+    {
+        EdgeId e( 2 * (int)v );
+        if ( v + 1 >= numValidVerts_ )
+            return;
+        edgePerVertex_[v] = e;
+        edges_[e].next = v > 0 ? e - 1 : e;
+        edges_[e].org = v;
+        edges_[e + 1].next = e + 2;
+        edges_[e + 1].org = v + 1;
+    } );
+    for ( int j = 0; j + 1 < comp2firstVert.size(); ++j )
+    {
+        auto v0 = comp2firstVert[j];
+        auto v1 = comp2firstVert[j + 1];
+        if ( v0 == v1 )
+            continue;
+
+        EdgeId e0( 2 * (int)v0 );
+        assert( org( e0 ) == v0 );
+        edges_[e0].next = e0;
+
+        EdgeId e1( 2 * (int)(v1 - 1) );
+        assert( org( e1 - 1 ) == v1 - 1 );
+        if ( v1 < numValidVerts_ )
+        {
+            assert( org( e1 ) == v1 - 1 );
+            assert( edgePerVertex_[v1 - 1] == e1 );
+        }
+        edgePerVertex_[v1 - 1] = e1 - 1;
+        edges_[e1 - 1].next = e1 - 1;
+        edges_[e1].next = e1;
+        edges_[e1 + 1].next = e1 + 1;
+        edges_[e1].org = {};
+        edges_[e1 + 1].org = {};
+        assert( isLoneEdge( e1 ) );
+    }
+    assert( checkValidity() );
+}
+
 void PolylineTopology::vertResize( size_t newSize )
-{ 
+{
     if ( edgePerVertex_.size() >= newSize )
         return;
     edgePerVertex_.resize( newSize );

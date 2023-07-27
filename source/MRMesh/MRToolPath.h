@@ -44,6 +44,8 @@ struct ToolPathParams
     BypassDirection bypassDir = BypassDirection::Clockwise;
     // mesh can be transformed using xf parameter
     const AffineXf3f* xf = nullptr;
+    // if true then a tool path for a flat milling tool will be generated
+    bool flatTool = false;
     // callback for reporting on progress
     ProgressCallback cb = {};
 };
@@ -116,7 +118,6 @@ struct ToolPathResult
 // mesh can be transformed using xf parameter
 
 MRMESH_API Expected<ToolPathResult, std::string> constantZToolPath( const MeshPart& mp, const ToolPathParams& params );
-
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
 // // this one is traditional lace-roughing toolpath

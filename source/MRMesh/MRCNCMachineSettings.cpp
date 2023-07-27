@@ -67,6 +67,7 @@ Json::Value CNCMachineSettings::saveToJson() const
             serializeToJson( rotationAxes_[i], jsonValue[axesName[i]] );
     }
     jsonValue["Feedrate Idle"] = feedrateIdle_;
+    serializeToJson( homePosition_, jsonValue["Home Position"] );
     return jsonValue;
 }
 
@@ -124,6 +125,14 @@ bool CNCMachineSettings::loadFromJson( const Json::Value& jsonValue )
 
     if ( jsonValue["Feedrate Idle"].isDouble() )
         feedrateIdle_ = jsonValue["Feedrate Idle"].asFloat();
+    else
+        return false;
+
+    const float fMax = std::numeric_limits<float>::max();
+    Vector3f vec3f( fMax, fMax, fMax );
+    deserializeFromJson( jsonValue["Home Position"], vec3f);
+    if ( vec3f != Vector3f( fMax, fMax, fMax ) )
+        homePosition_ = vec3f;
     else
         return false;
 

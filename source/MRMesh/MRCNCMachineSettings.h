@@ -32,6 +32,8 @@ public:
     // 0 - feedrate idle set as maximum feedrate on any action, or 100 if feedrate is not set in any action
     MRMESH_API void setFeedrateIdle( float feedrateIdle );
     float getFeedrateIdle() const { return feedrateIdle_; }
+    void setHomePosition( const Vector3f& homePosition ) { homePosition_ = homePosition; }
+    const Vector3f& getHomePosition() const { return homePosition_; }
 
     MRMESH_API Json::Value saveToJson() const;
     MRMESH_API bool loadFromJson( const Json::Value& jsonValue );
@@ -43,6 +45,7 @@ private:
     RotationAxesOrder rotationAxesOrder_ = { RotationAxisName::A, RotationAxisName::B, RotationAxisName::C };
     // feedrate idle. 0 - feedrate idle set as maximum feedrate on any action, or 100 if feedrate is not set in any action
     float feedrateIdle_ = 10000.f;
+    Vector3f homePosition_;
 };
 
 }

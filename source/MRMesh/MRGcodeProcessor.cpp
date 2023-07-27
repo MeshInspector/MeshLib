@@ -69,14 +69,16 @@ GcodeProcessor::MoveAction GcodeProcessor::processLine( const std::string_view& 
     for ( int i = 0; i < commands.size(); ++i )
         applyCommand_( commands[i] );
 
+    MoveAction result;
     if ( coordType_ == CoordType::Movement )
-        return generateMoveAction_();
-
-    if ( coordType_ == CoordType::Scaling )
+        result = generateMoveAction_();
+    else if ( coordType_ == CoordType::ReturnToHome )
+        result = generateReturnToHomeAction_();
+    else if ( coordType_ == CoordType::Scaling )
         updateScaling_();
 
     coordType_ = CoordType::Movement;
-    return {};
+    return result;
 }
 
 void GcodeProcessor::setCNCMachineSettings( const CNCMachineSettings& settings )
@@ -185,6 +187,9 @@ void GcodeProcessor::applyCommandG_( const Command& command )
     case 21:
         inches_ = false;
         break;
+    case 28:
+        coordType_ = CoordType::ReturnToHome;
+        break;
     case 50:
         scaling_ = Vector3f::diagonal( 1.f );
         break;
@@ -206,16 +211,16 @@ GcodeProcessor::MoveAction GcodeProcessor::generateMoveAction_()
 {
     MoveAction res;
 
-    Vector3f newTranslationPos_ = calcNewTranslationPos_();
+    Vector3f newTranslationPos = calcNewTranslationPos_();
     Vector3f newRotationAngles = calcNewRotationAngles_();
 
     const bool anyCoordReaded = inputCoordsReaded_[0] || inputCoordsReaded_[1] || inputCoordsReaded_[2];
     const bool anyRotationReaded = inputRotationReaded_[0] || inputRotationReaded_[1] || inputRotationReaded_[2];
     
     if ( ( moveMode_ == MoveMode::Idle || moveMode_ == MoveMode::Line ) && anyCoordReaded )
-        res = moveLine_( newTranslationPos_, newRotationAngles );
+        res = moveLine_( newTranslationPos, newRotationAngles );
     else if ( ( moveMode_ == MoveMode::Clockwise || moveMode_ == MoveMode::Counterclockwise ) && (anyCoordReaded || arcCenter_) )
-        res = moveArc_( newTranslationPos_, newRotationAngles, moveMode_ == MoveMode::Clockwise );
+        res = moveArc_( newTranslationPos, newRotationAngles, moveMode_ == MoveMode::Clockwise );
     else if ( anyRotationReaded )
     {
         res = getToolRotationPoints_( newRotationAngles );
@@ -232,9 +237,38 @@ GcodeProcessor::MoveAction GcodeProcessor::generateMoveAction_()
         feedrateMax_ = std::max( feedrateMax_, feedrate_ );
     }
 
-    translationPos_ = newTranslationPos_;
+    translationPos_ = newTranslationPos;
     updateRotationAngleAndMatrix_( newRotationAngles );
 
+    return res;
+}
+
+GcodeProcessor::MoveAction GcodeProcessor::generateReturnToHomeAction_()
+{
+    MoveAction res;
+    Vector3f newTranslationPos = calcNewTranslationPos_();
+
+    if ( newTranslationPos != translationPos_ )
+    {
+        res = moveLine_( newTranslationPos, rotationAngles_ );
+        translationPos_ = newTranslationPos;
+    }
+    MoveAction res2 = moveLine_( cncSettings_.getHomePosition(), rotationAngles_ );
+    translationPos_ = cncSettings_.getHomePosition();
+    if ( res.action.path.empty() )
+    {
+        res.action.path = res2.action.path;
+        res.toolDirection = res2.toolDirection;
+    }
+    else if ( !res2.action.path.empty() )
+    {
+        res.action.path.insert( res.action.path.end(), res2.action.path.begin() + 1, res2.action.path.end() );
+        res.toolDirection.insert( res.toolDirection.end(), res2.toolDirection.begin() + 1, res2.toolDirection.end() );
+    }
+    res.action.warning += ( res.action.warning.empty() ? "" : "\n" ) + res2.action.warning;
+
+    res.idle = true;
+    res.feedrate = cncSettings_.getFeedrateIdle();
     return res;
 }
 
@@ -438,7 +472,7 @@ GcodeProcessor::BaseAction3f GcodeProcessor::getArcPoints3_( float r, const Vect
     return res3;
 }
 
-MR::Vector3f GcodeProcessor::calcNewTranslationPos_()
+Vector3f GcodeProcessor::calcNewTranslationPos_()
 {
     Vector3f res = mult( inputCoords_, scaling_ );
     if ( inches_ )

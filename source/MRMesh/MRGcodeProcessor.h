@@ -72,6 +72,7 @@ private:
     void applyCommand_( const Command& command );
     void applyCommandG_( const Command& command );
     MoveAction generateMoveAction_();
+    MoveAction generateReturnToHomeAction_();
     void resetTemporaryStates_();
 
     // g-command actions
@@ -122,6 +123,7 @@ private:
     enum class CoordType
     {
         Movement,
+        ReturnToHome,
         Scaling
     };
 

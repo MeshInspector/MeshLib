@@ -44,7 +44,7 @@ struct ToolPathParams
     BypassDirection bypassDir = BypassDirection::Clockwise;
     // mesh can be transformed using xf parameter
     const AffineXf3f* xf = nullptr;
-
+    // if true then a tool path for a flat milling tool will be generated
     bool flatTool = false;
     // callback for reporting on progress
     ProgressCallback cb = {};

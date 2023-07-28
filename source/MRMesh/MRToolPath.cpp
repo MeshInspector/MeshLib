@@ -110,7 +110,11 @@ void addSurfacePath( std::vector<GCommand>& gcode, const Mesh& mesh, const MeshE
 {
     const auto sp = computeSurfacePath( mesh, start, end );
     if ( !sp.has_value() || sp->empty() )
+    {
+        const auto p = mesh.edgePoint( end );
+        gcode.push_back( { .x = p.x, .y = p.y, .z = p.z } );
         return;
+    }
 
     if ( sp->size() == 1 )
     {

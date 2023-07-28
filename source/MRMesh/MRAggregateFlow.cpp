@@ -76,7 +76,8 @@ VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts,
                 n += 1 + (int)start2downPath[i].size() + start2downVert[i].valid();
             sample2firstPolylineVert.push_back( n );
         };
-        VertCoords points( n ); //TODO: noInit
+        VertCoords points;
+        points.resizeNoInit( n );
         ParallelFor( starts, [&]( size_t i )
         {
             if ( start2downPath[i].empty() && !start2downVert[i] )

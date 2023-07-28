@@ -55,6 +55,14 @@ Polyline<V>::Polyline( const Contours3f& contours )
 }
 
 template<typename V>
+Polyline<V>::Polyline( const std::vector<VertId> & comp2firstVert, Vector<V, VertId> ps )
+{
+    MR_TIMER
+    topology.buildOpenLines( comp2firstVert );
+    points = std::move( ps );
+}
+
+template<typename V>
 EdgeId Polyline<V>::addFromPoints( const V * vs, size_t num, bool closed )
 {
     if ( !vs || num < 2 )

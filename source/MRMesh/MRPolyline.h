@@ -25,6 +25,10 @@ public:
     MRMESH_API Polyline( const Contours2f& contours );
     /// creates polyline from 3D contours, 2D polyline will lose z-component
     MRMESH_API Polyline( const Contours3f& contours );
+    /// creates comp2firstVert.size()-1 not-closed polylines
+    /// each pair (a,b) of indices in \param comp2firstVert defines vertex range of a polyline [a,b)
+    /// \param ps point coordinates
+    MRMESH_API Polyline( const std::vector<VertId> & comp2firstVert, Vector<V, VertId> ps );
 
     /// adds connected line in this, passing progressively via points *[vs, vs+num)
     /// \details if closed argument is true then the last and the first points will be additionally connected

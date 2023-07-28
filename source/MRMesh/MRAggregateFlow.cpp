@@ -89,19 +89,12 @@ VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts,
                 points[j++] = mesh_.points[v];
             assert( j == sample2firstPolylineVert[i+1] );
         } );
-        PolylineTopology pt;
-        pt.buildOpenLines( sample2firstPolylineVert );
+        *outPolyline = Polyline3( sample2firstPolylineVert, points );
     }
-
     for ( size_t i = 0; i < starts.size(); ++i )
     {
-        MeshTriPoint end;
         if ( auto v = start2downVert[i] )
-        {
             flowInVert[v] += starts[i].amount;
-            end = MeshTriPoint{ mesh_.topology, v };
-        }
-        addPath( starts[i].amount, starts[i].point, start2downPath[i], end );
     }
 
     t.restart( "3" );

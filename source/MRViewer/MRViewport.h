@@ -70,8 +70,8 @@ public:
     // negative pixelYoffset -> offset from the bottom border
     // axisPixSize -> length of each axes arrows in pixels
     // For example: default values -> right bottom corner with 100 offsets for the base point and 80 pixels each axis length
-    MRVIEWER_API void set_axes_pose(const int pixelXoffset = -100, const int pixelYoffset = -100);
-    MRVIEWER_API void set_axes_size(const int axisPixSize = 80);
+    MRVIEWER_API void setAxesPos( const int pixelXoffset = -100, const int pixelYoffset = -100 );
+    MRVIEWER_API void setAxesSize( const int axisPixSize = 80 );
 
     // Shutdown
     MRVIEWER_API void shut();
@@ -491,9 +491,9 @@ private:
     void draw_global_basis() const;
 
     // init basis axis in the corner
-    void init_axes();
+    void initBaseAxes();
     // Drawing basis axes in the corner
-    void draw_axes() const;
+    void drawAxes() const;
     // This matrix should be used for a static objects
     // For example, basis axes in the corner
     Matrix4f staticProj_;
@@ -503,7 +503,7 @@ private:
     // basis axis params
     int pixelXoffset_{ -100 };
     int pixelYoffset_{ -100 };
-    int axisPixSize_{ 80 };
+    int axisPixSize_{ 70 };
 
     // Receives point in scene coordinates, that should appear static on a screen, while rotation
     void setRotationPivot_( const Vector3f& point );

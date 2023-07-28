@@ -200,6 +200,11 @@ template<typename V>
 EdgeId Polyline<V>::addFromEdgePath( const Mesh& mesh, const EdgePath& path )
 {
     assert( isEdgePath( mesh.topology, path ) );
+    if ( path.empty() )
+    {
+        assert( false );
+        return {};
+    }
 
     auto v0 = topology.addVertId();
     points.autoResizeSet( v0, V{ mesh.orgPnt( path.front() ) } );

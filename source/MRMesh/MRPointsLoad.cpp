@@ -34,16 +34,16 @@ const IOFilters Filters =
 #endif
 };
 
-Expected<MR::PointCloud, std::string> fromText( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+Expected<MR::PointCloud, std::string> fromText( const std::filesystem::path& file, AffineXf3f* outXf, ProgressCallback callback /*= {} */ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromText( in, callback ), file );
+    return addFileNameInError( fromText( in, outXf, callback ), file );
 }
 
-Expected<MR::PointCloud, std::string> fromText( std::istream& in, ProgressCallback callback /*= {} */ )
+Expected<MR::PointCloud, std::string> fromText( std::istream& in, AffineXf3f* outXf, ProgressCallback callback /*= {} */ )
 {
     // read all to buffer
     MR_TIMER;
@@ -58,10 +58,19 @@ Expected<MR::PointCloud, std::string> fromText( std::istream& in, ProgressCallba
     auto lineOffsets = splitByLines( data.data(), data.size() );
 
     int firstLine = 0;
-    Vector3f firstLineCoord;
+    Vector3d firstLineCoord;
     std::string_view headerLine( data.data() + lineOffsets[firstLine], lineOffsets[firstLine + 1] - lineOffsets[firstLine] );
     if ( !parseTextCoordinate( headerLine, firstLineCoord ).has_value() )
+    {
         firstLine = 1;
+        std::string_view secodLine( data.data() + lineOffsets[firstLine], lineOffsets[firstLine + 1] - lineOffsets[firstLine] );
+        [[maybe_unused]] auto shiftRes = parseTextCoordinate( secodLine, firstLineCoord );
+        assert( shiftRes.has_value() );
+    }
+
+    if ( outXf )
+        *outXf = AffineXf3f::translation( Vector3f( firstLineCoord ) );
+
 
     PointCloud pc;
     pc.points.resize( lineOffsets.size() - firstLine - 1 );
@@ -71,9 +80,12 @@ Expected<MR::PointCloud, std::string> fromText( std::istream& in, ProgressCallba
     auto keepGoing = ParallelFor( pc.points, [&] ( size_t i )
     {
         std::string_view line( data.data() + lineOffsets[firstLine + i], lineOffsets[firstLine + i + 1] - lineOffsets[firstLine + i] );
-        auto parseRes = parseTextCoordinate( line, pc.points[VertId( i )] );
+        Vector3d tempDoubleCoord;
+        auto parseRes = parseTextCoordinate( line, tempDoubleCoord );
         if ( !parseRes.has_value() && ctx.cancel_group_execution() )
             parseError = std::move( parseRes.error() );
+
+        pc.points[VertId( i )] = Vector3f( tempDoubleCoord - firstLineCoord );
     }, subprogress( callback, 0.25f, 1.0f ) );
 
     if ( !keepGoing )
@@ -394,7 +406,7 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesys
     else if ( ext == ".asc" )
         res = MR::PointsLoad::fromAsc( file, callback );
     else if ( ext == ".csv" || ext == ".xyz" )
-        res = MR::PointsLoad::fromText( file, callback );
+        res = MR::PointsLoad::fromText( file, nullptr, callback );
     return res;
 }
 
@@ -417,7 +429,7 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, 
     else if ( ext == ".asc" )
         res = MR::PointsLoad::fromAsc( in, callback );
     else if ( ext == ".csv" || ext == ".xyz" )
-        res = MR::PointsLoad::fromText( in, callback );
+        res = MR::PointsLoad::fromText( in, nullptr, callback );
     return res;
 }
 

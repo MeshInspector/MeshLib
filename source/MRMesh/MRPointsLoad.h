@@ -21,8 +21,8 @@ namespace PointsLoad
 MRMESH_API extern const IOFilters Filters;
 
 /// loads from .csv, .xyz, .txt file
-MRMESH_API Expected<PointCloud, std::string> fromText( const std::filesystem::path& file, ProgressCallback callback = {} );
-MRMESH_API Expected<PointCloud, std::string> fromText( std::istream& in, ProgressCallback callback = {} );
+MRMESH_API Expected<PointCloud, std::string> fromText( const std::filesystem::path& file, AffineXf3f* outXf = nullptr, ProgressCallback callback = {} );
+MRMESH_API Expected<PointCloud, std::string> fromText( std::istream& in, AffineXf3f* outXf = nullptr, ProgressCallback callback = {} );
 
 
 #ifndef MRMESH_NO_OPENCTM

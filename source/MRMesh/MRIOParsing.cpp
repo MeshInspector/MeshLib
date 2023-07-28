@@ -85,7 +85,8 @@ Expected<MR::Buffer<char>, std::string> readCharBuffer( std::istream& in )
     return data;
 }
 
-VoidOrErrStr parseTextCoordinate( const std::string_view& str, Vector3f& v )
+template<typename T>
+VoidOrErrStr parseTextCoordinate( const std::string_view& str, Vector3<T>& v )
 {
     using namespace boost::spirit::x3;
 
@@ -95,7 +96,7 @@ VoidOrErrStr parseTextCoordinate( const std::string_view& str, Vector3f& v )
     bool r = phrase_parse(
         str.begin(),
         str.end(),
-        ( float_[coord] >> float_[coord] >> float_[coord] ),
+        ( real_parser<T>{} [coord] >> real_parser<T>{} [coord] >> real_parser<T>{} [coord] ),
         ascii::space | ascii::punct
     );
     if ( !r )
@@ -122,5 +123,8 @@ VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3f& v )
 
     return {};
 }
+
+template VoidOrErrStr parseTextCoordinate<float>( const std::string_view& str, Vector3f& v );
+template VoidOrErrStr parseTextCoordinate<double>( const std::string_view& str, Vector3d& v );
 
 }

@@ -24,11 +24,6 @@ public:
     {
         mesh_.points.vec_ = std::move( points );
         mesh_.topology.vertResize( mesh_.points.size() );
-        center_ = computeBoundingBox( mesh_.points ).center();
-        ParallelFor( mesh_.points, [&] ( VertId v )
-        {
-            mesh_.points[v] -= center_;
-        } );
     }
     bool isCanceled() const
     {
@@ -37,10 +32,6 @@ public:
     Mesh run()
     {
         seqDelaunay_( 0_v, VertId( mesh_.points.size() ) );
-        ParallelFor( mesh_.points, [&] ( VertId v )
-        {
-            mesh_.points[v] += center_;
-        } );
         return std::move( mesh_ );
     }
 private:
@@ -48,7 +39,6 @@ private:
     EdgeId basel_;
     ProgressCallback cb_;
     bool canceled_{ false };
-    Vector3f center_;
 
     bool inCircle_( const Vector3f& a, Vector3f b, Vector3f c, Vector3f d )
     {

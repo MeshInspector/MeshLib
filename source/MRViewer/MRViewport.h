@@ -79,7 +79,7 @@ public:
     // ------------------- Drawing functions
 
     // Clear the frame buffers
-    MRVIEWER_API void clear_framebuffers() const;
+    MRVIEWER_API void clearFramebuffers();
 
     /// Draw given object
     MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, 

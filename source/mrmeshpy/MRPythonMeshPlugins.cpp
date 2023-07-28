@@ -27,6 +27,8 @@
 #include "MRMesh/MROffset.h"
 #include "MRMesh/MRSurfaceDistance.h"
 #include "MRMesh/MRExpected.h"
+#include "MRMesh/MRExtractIsolines.h"
+#include "MRMesh/MRContour.h"
 #include <pybind11/functional.h>
 
 using namespace MR;
@@ -158,7 +160,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m 
 } )
 
 
-MR_ADD_PYTHON_VEC( mrmeshpy, vectorMeshEdgePoint, MR::MeshEdgePoint )
+MR_ADD_PYTHON_VEC( mrmeshpy, SurfacePath, MR::EdgePoint )
+MR_ADD_PYTHON_VEC( mrmeshpy, SurfacePaths, MR::SurfacePath )
 
 // Signed Distance
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshSignedDistanceResult, [] ( pybind11::module_& m )
@@ -187,6 +190,29 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshSignedDistanceResult, [] ( pybind11::mod
         "\trigidB2A - rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation\n"
         "\tmaxDistanceSq - upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq" );
 } )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PlaneSections, [] ( pybind11::module_& m )
+{
+    m.def( "extractPlaneSections", &extractPlaneSections,
+        pybind11::arg( "mp" ), pybind11::arg( "plane" ),
+        "extracts all plane sections of given mesh" );
+
+    m.def( "planeSectionsToContours2f", &planeSectionsToContours2f,
+        pybind11::arg( "mesh" ), pybind11::arg( "sections" ), pybind11::arg( "meshToPlane" ),
+        "converts PlaneSections in 2D contours by computing coordinate of each point, applying given xf to it, and retaining only x and y" );
+
+    m.def( "calcOrientedArea",
+        ( double( * )( const Contour2f& ) )& calcOrientedArea<float, double>,
+        pybind11::arg( "contour" ),
+        ">0 for clockwise loop, < 0 for CCW loop" );
+    
+    m.def( "calcOrientedArea",
+        ( Vector3f( * )( const Contour3f& ) )& calcOrientedArea<float, float>,
+        pybind11::arg( "contour" ),
+        "returns the vector with the magnitude equal to contour area, and directed to see the contour\n"
+        "in ccw order from the vector tip" );
+} )
+
 
 // Relax Mesh
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Relax, [] ( pybind11::module_& m )

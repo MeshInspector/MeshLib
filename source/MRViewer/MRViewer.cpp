@@ -1371,7 +1371,7 @@ void Viewer::setupScene()
     for ( auto& viewport : viewport_list )
     {
         viewport.setupView();
-        viewport.clear_framebuffers();
+        viewport.clearFramebuffers();
     }
 }
 

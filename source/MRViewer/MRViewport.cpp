@@ -100,8 +100,10 @@ void Viewport::draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix
     obj.render( params );
 }
 
-void Viewport::clear_framebuffers() const
+void Viewport::clearFramebuffers()
 {
+    if ( !viewportGL_.checkInit() )
+        viewportGL_.init();
     viewportGL_.fillViewport( toVec4<int>( viewportRect_ ), params_.backgroundColor );
 }
 

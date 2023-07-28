@@ -16,6 +16,7 @@
 #include "MRPch/MRSuppressWarning.h"
 #include "MRPch/MRTBB.h"
 #include "MRMesh/MR2to3.h"
+#include "MRViewer/ImGuiMenu.h"
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 
@@ -48,7 +49,7 @@ Viewport::~Viewport()
 void Viewport::init()
 {
     viewportGL_ = ViewportGL();
-    init_axes();
+    initBaseAxes();
     updateSceneBox_();
     setRotationPivot_( sceneBox_.valid() ? sceneBox_.center() : Vector3f() );
     setupProjMatrix_();
@@ -420,7 +421,7 @@ void Viewport::postDraw() const
         draw_points();
 
     // important to be last
-    draw_axes();
+    drawAxes();
 }
 
 void Viewport::updateSceneBox_()
@@ -434,7 +435,7 @@ void Viewport::setViewportRect( const Viewport::ViewportRectangle& rect )
         return;
     needRedraw_ = true;
     viewportRect_ = rect;
-    init_axes();
+    initBaseAxes();
 }
 
 const Viewport::ViewportRectangle& Viewport::getViewportRect() const
@@ -508,16 +509,16 @@ void Viewport::setParameters( const Viewport::Parameters& params )
     needRedraw_ = true;
 }
 
-void Viewport::set_axes_size( const int axisPixSize )
+void Viewport::setAxesSize( const int axisPixSize )
 {
     if ( axisPixSize == axisPixSize_ )
         return;
     needRedraw_ = true;
     axisPixSize_ = axisPixSize;
-    init_axes();
+    initBaseAxes();
 }
 
-void Viewport::set_axes_pose( const int pixelXoffset, const int pixelYoffset )
+void Viewport::setAxesPos( const int pixelXoffset, const int pixelYoffset )
 {
     if ( pixelXoffset_ == pixelXoffset &&
          pixelYoffset_ == pixelYoffset )
@@ -525,7 +526,7 @@ void Viewport::set_axes_pose( const int pixelXoffset, const int pixelYoffset )
     needRedraw_ = true;
     pixelXoffset_ = pixelXoffset;
     pixelYoffset_ = pixelYoffset;
-    init_axes();
+    initBaseAxes();
 }
 
 // ================================================================
@@ -550,24 +551,27 @@ void Viewport::draw_border() const
 // ================================================================
 // additional elements
 
-void Viewport::init_axes()
+void Viewport::initBaseAxes()
 {
     // find relative points for axes
+    auto scaling = 1.0f;
+    if ( auto menu = getViewerInstance().getMenuPlugin() )
+        scaling = menu->menu_scaling();
     float axesX, axesY;
     if(pixelXoffset_ < 0)
-        axesX = width( viewportRect_ ) + pixelXoffset_;
+        axesX = width( viewportRect_ ) + pixelXoffset_ * scaling;
     else
-        axesX = float(pixelXoffset_);
+        axesX = float( pixelXoffset_ * scaling );
     if(pixelYoffset_ < 0)
-        axesY = height( viewportRect_ ) + pixelYoffset_;
+        axesY = height( viewportRect_ ) + pixelYoffset_ * scaling;
     else
-        axesY = float(pixelYoffset_);
-    const float pixSize = float(axisPixSize_) / sqrtf(2);
+        axesY = float( pixelYoffset_ * scaling );
+    const float pixSize = float( axisPixSize_ * scaling ) / sqrtf( 2 );
     relPoseBase = { axesX, axesY, 0.5f };
     relPoseSide = { axesX + pixSize, axesY + pixSize, 0.5f };
 }
 
-void Viewport::draw_axes() const
+void Viewport::drawAxes() const
 {
     if ( Viewer::constInstance()->basisAxes->isVisible( id ) )
     {

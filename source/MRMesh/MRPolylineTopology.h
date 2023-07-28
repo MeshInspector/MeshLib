@@ -20,6 +20,10 @@ public:
     template<typename T, typename F1, typename F2>
     void buildFromContours( const std::vector<std::vector<T>> & contours, F1 && reservePoints, F2 && addPoint );
 
+    /// build topology of comp2firstVert.size()-1 not-closed polylines
+    /// each pair (a,b) of indices in \param comp2firstVert defines vertex range of a polyline [a,b)
+    MRMESH_API void buildOpenLines( const std::vector<VertId> & comp2firstVert );
+
     /// converts this topology into contours of given type using the functor returning point by its Id
     template<typename T, typename F>
     [[nodiscard]] std::vector<std::vector<T>> convertToContours( F && getPoint ) const;
@@ -150,7 +154,8 @@ private:
         {
             return next == b.next && org == b.org;
         }
-
+        HalfEdgeRecord() noexcept = default;
+        explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), org( noInit ) {}
     };
 
     /// edges_: EdgeId -> edge data

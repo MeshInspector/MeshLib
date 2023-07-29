@@ -41,6 +41,20 @@ static Vector3f computeGradient( const Vector3f & b, const Vector3f & c, float v
     return Vector3f{ computeGradient( Vector3d( b ), Vector3d( c ), double( vb ), double( vc ) ) };
 }
 
+static bool findExitPos( const Vector3f & b, const Vector3f & c, const Vector3f & unitDir, float & a )
+{
+    const auto d = c - b;
+    // gort is a vector in the triangle plane orthogonal to grad
+    const auto gort = d - dot( d, unitDir ) * unitDir;
+    //const auto god = dot( d, d ) - sqr( dot( d, unitDir ) );
+    const auto god = dot( gort, d );
+    if ( god <= 0 )
+        return false; // segment bc is parallel to unitDir
+    const auto gob = -dot( gort, b );
+    a = gob / god;
+    return true;
+}
+
 // consider triangle 0bc, where gradient is given;
 // computes the intersection of the ray (org=0, dir=-grad) with the open segment (b,c)
 static std::optional<float> computeExitPos( const Vector3f & b, const Vector3f & c, const Vector3f & grad )
@@ -275,7 +289,7 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshTriPoint & tp ) const
 
     // point is not on edge
     MeshEdgePoint res;
-    float maxGradSq = -1;
+    float maxGradSq = 0;
     const auto p = mesh_.triPoint( tp );
 
     VertId v[3];
@@ -287,39 +301,76 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshTriPoint & tp ) const
     auto ei = tp.e;
     for ( int i = 0; i < 3; ++i )
     {
-        pv[i] = mesh_.points[v[i]] - p;
+        pv[i] = mesh_.points[v[i]];
         vv[i] = field_[v[i]];
         e[i] = ei;
         ei = mesh_.topology.prev( ei.sym() );
     }
     const auto f = tp.bary.interpolate( vv[0], vv[1], vv[2] );
 
+    const auto triGrad = computeGradient( pv[1] - pv[0], pv[2] - pv[0], vv[1] - vv[0], vv[2] - vv[0] );
+    const auto triGradSq = triGrad.lengthSq();
+    if ( triGradSq > maxGradSq )
+    {
+        auto unitDir = triGrad.normalized();
+        float miss = FLT_MAX;
+        for ( int i = 0; i < 3; ++i )
+        {
+            const auto rv0 = pv[i];
+            const auto rv1 = pv[( i + 1 ) % 3];
+            const auto rv2 = pv[( i + 2 ) % 3];
+            auto d01 = rv1 - rv0;
+            auto l01 = d01.length();
+            if ( l01 > 0 )
+                d01 /= l01;
+            auto ortGrad = triGrad - dot( triGrad, d01 ) * d01;
+            if ( dot( ortGrad, rv2 - rv0 ) <= 0 )
+                continue;
+            float a = 0;
+            if ( findExitPos( rv0 - p, rv1 - p, unitDir, a ))
+            {
+                auto m = a < 0 ? -a * l01 : ( a > 1 ? (a - 1) * l01 : 0 );
+                if ( m < miss )
+                {
+                    miss = m;
+                    maxGradSq = triGradSq;
+                    res = MeshEdgePoint{ e[i], a };
+                }
+            }
+        }
+        if ( triGradSq > maxGradSq )
+        {
+            auto t = mesh_.topology.left( tp.e );
+//             if ( t == 13920_f )
+//             {
+//                 for ( int i = 0; i < 3; ++i )
+//                 {
+//                     const auto rv0 = pv[i];
+//                     const auto rv1 = pv[( i + 1 ) % 3];
+//                     const auto rv2 = pv[( i + 2 ) % 3];
+//                     const auto d01 = ( rv1 - rv0 ).normalized();
+//                     auto ortGrad = triGrad - dot( triGrad, d01 ) * d01;
+//                     if ( dot( ortGrad, rv2 - rv0 ) <= 0 )
+//                         continue;
+//                     computeExitPos0( rv0 - p, rv1 - p, triGrad, triGradSq );
+//                 }
+//            }
+            maxGradSq = maxGradSq;
+        }
+    }
+
     for ( int i = 0; i < 3; ++i )
     {
         vv[i] -= f;
         if ( vv[i] < 0 )
         {
-            const auto pvSq = pv[i].lengthSq();
+            const auto pvSq = ( pv[i] - p ).lengthSq();
             // if input point is close to a triangle vertex then pvSq can be zero
-            auto edgeGradSq = pvSq > 0 ? sqr( vv[i] ) / pvSq : 0;
+            auto edgeGradSq = pvSq > 0 ? sqr( vv[i] ) / pvSq : FLT_MAX;
             if ( edgeGradSq > maxGradSq )
             {
                 maxGradSq = edgeGradSq;
                 res = MeshEdgePoint{ e[i], 0 };
-            }
-        }
-    }
-
-    const auto triGrad = computeGradient( pv[1] - pv[0], pv[2] - pv[0], vv[1] - vv[0], vv[2] - vv[0] );
-    const auto triGradSq = triGrad.lengthSq();
-    if ( triGradSq > maxGradSq )
-    {
-        for ( int i = 0; i < 3; ++i )
-        {
-            if ( auto a = computeExitPos( pv[i], pv[( i + 1 ) % 3], triGrad ) )
-            {
-                maxGradSq = triGradSq;
-                res = MeshEdgePoint{ e[i], *a };
             }
         }
     }

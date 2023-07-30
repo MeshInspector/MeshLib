@@ -439,15 +439,13 @@ void computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
     auto curr = b.findPrevPoint( start );
     while ( curr )
     {
-        auto v = curr.getClosestVertex( mesh.topology );
-        if ( ( mesh.points[v] - mesh.edgePoint( curr ) ).lengthSq() <= sqr( 0.01f ) )
+        if ( outVertexReached )
         {
-            if ( outVertexReached )
+            if ( auto v = curr.inVertex( mesh.topology ) )
             {
                 *outVertexReached = v;
                 return;
             }
-            curr.moveToClosestVertex();
         }
         ++edgesPassed;
         if ( outPath )

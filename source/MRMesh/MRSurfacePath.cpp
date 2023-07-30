@@ -41,7 +41,11 @@ static Vector3f computeGradient( const Vector3f & b, const Vector3f & c, float v
     return Vector3f{ computeGradient( Vector3d( b ), Vector3d( c ), double( vb ), double( vc ) ) };
 }
 
-static bool findExitPos( const Vector3f & b, const Vector3f & c, const Vector3f & unitDir, float & a )
+/// computes the intersection between
+/// 1) the infinite line passing through the origin with direction +-unitDir;
+/// 2) the infinite line containing the segment bc, returning in \param a the intersection position on that line.
+/// \return false if the segment bc is parallel to unitDir
+static bool computeLineLineCross( const Vector3f & b, const Vector3f & c, const Vector3f & unitDir, float & a )
 {
     const auto d = c - b;
     // gort is a vector in the triangle plane orthogonal to grad
@@ -289,7 +293,6 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshTriPoint & tp ) const
 
     // point is not on edge
     MeshEdgePoint res;
-    float maxGradSq = 0;
     const auto p = mesh_.triPoint( tp );
 
     VertId v[3];
@@ -306,12 +309,15 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshTriPoint & tp ) const
         e[i] = ei;
         ei = mesh_.topology.prev( ei.sym() );
     }
+    if ( vv[0] == vv[1] && vv[1] == vv[2] )
+        return res; // the triangle is completely "flat"
     const auto f = tp.bary.interpolate( vv[0], vv[1], vv[2] );
 
     const auto triGrad = computeGradient( pv[1] - pv[0], pv[2] - pv[0], vv[1] - vv[0], vv[2] - vv[0] );
     const auto triGradSq = triGrad.lengthSq();
-    if ( triGradSq > maxGradSq )
+    if ( triGradSq > 0 )
     {
+        // search for line path inside the triangle in minus gradient direction
         auto unitDir = triGrad.normalized();
         float miss = FLT_MAX;
         for ( int i = 0; i < 3; ++i )
@@ -323,53 +329,40 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshTriPoint & tp ) const
             auto l01 = d01.length();
             if ( l01 > 0 )
                 d01 /= l01;
+            // gradient part orthogonal to the edge [rv0,rv1]
             auto ortGrad = triGrad - dot( triGrad, d01 ) * d01;
             if ( dot( ortGrad, rv2 - rv0 ) <= 0 )
-                continue;
+                continue; // minus gradient enters the triangle through the edge [rv0,rv1], and we are looking for exit point
             float a = 0;
-            if ( findExitPos( rv0 - p, rv1 - p, unitDir, a ))
+            if ( computeLineLineCross( rv0 - p, rv1 - p, unitDir, a ))
             {
+                // how much do we miss the boundaries of the segment [rv0,rv1]
                 auto m = a < 0 ? -a * l01 : ( a > 1 ? (a - 1) * l01 : 0 );
-                if ( m < miss )
+                if ( m < miss ) // minor misses due to rounding errors shall be tolerated
                 {
                     miss = m;
-                    maxGradSq = triGradSq;
                     res = MeshEdgePoint{ e[i], a };
                 }
             }
         }
-        if ( triGradSq > maxGradSq )
-        {
-            auto t = mesh_.topology.left( tp.e );
-//             if ( t == 13920_f )
-//             {
-//                 for ( int i = 0; i < 3; ++i )
-//                 {
-//                     const auto rv0 = pv[i];
-//                     const auto rv1 = pv[( i + 1 ) % 3];
-//                     const auto rv2 = pv[( i + 2 ) % 3];
-//                     const auto d01 = ( rv1 - rv0 ).normalized();
-//                     auto ortGrad = triGrad - dot( triGrad, d01 ) * d01;
-//                     if ( dot( ortGrad, rv2 - rv0 ) <= 0 )
-//                         continue;
-//                     computeExitPos0( rv0 - p, rv1 - p, triGrad, triGradSq );
-//                 }
-//            }
-            maxGradSq = maxGradSq;
-        }
+        if ( miss < FLT_MAX )
+            return res;
+        assert( false );
     }
 
+    // no line path inside the triangle was found, try to jump in a vertex with smaller field value
+    float maxGradSq = -FLT_MAX;
     for ( int i = 0; i < 3; ++i )
     {
-        vv[i] -= f;
-        if ( vv[i] < 0 )
+        if ( vv[i] <= f )
         {
             const auto pvSq = ( pv[i] - p ).lengthSq();
-            // if input point is close to a triangle vertex then pvSq can be zero
-            auto edgeGradSq = pvSq > 0 ? sqr( vv[i] ) / pvSq : FLT_MAX;
-            if ( edgeGradSq > maxGradSq )
+            // if input point is close to a triangle vertex then pvSq can be zero;
+            // in that case give that vertex a priority (FLT_MAX) over others
+            auto vertGradSq = pvSq > 0 ? sqr( vv[i] - f ) / pvSq : FLT_MAX;
+            if ( vertGradSq > maxGradSq )
             {
-                maxGradSq = edgeGradSq;
+                maxGradSq = vertGradSq;
                 res = MeshEdgePoint{ e[i], 0 };
             }
         }

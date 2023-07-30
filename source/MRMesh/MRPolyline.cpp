@@ -200,7 +200,7 @@ template<typename V>
 EdgeId Polyline<V>::addFromEdgePath( const Mesh& mesh, const EdgePath& path )
 {
     assert( isEdgePath( mesh.topology, path ) );
-    if ( path.size() < 2 )
+    if ( path.empty() )
     {
         assert( false );
         return {};

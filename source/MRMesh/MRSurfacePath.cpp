@@ -337,11 +337,12 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshTriPoint & tp ) const
             if ( computeLineLineCross( rv0 - p, rv1 - p, unitDir, a ))
             {
                 // how much do we miss the boundaries of the segment [rv0,rv1]
-                auto m = a < 0 ? -a * l01 : ( a > 1 ? (a - 1) * l01 : 0 );
+                const auto ca = std::clamp( a, 0.0f, 1.0f );
+                const auto m = std::abs( a - ca ) * l01;
                 if ( m < miss ) // minor misses due to rounding errors shall be tolerated
                 {
                     miss = m;
-                    res = MeshEdgePoint{ e[i], a };
+                    res = MeshEdgePoint{ e[i], ca };
                 }
             }
         }

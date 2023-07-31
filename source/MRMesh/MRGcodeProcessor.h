@@ -128,7 +128,6 @@ private:
     };
 
     // internal states (such as current position and different work modes)
-    bool emergencyBreak_ = false;
     CoordType coordType_ = CoordType::Movement;
     MoveMode moveMode_ = MoveMode::Idle;
     WorkPlane workPlane_ = WorkPlane::xy;

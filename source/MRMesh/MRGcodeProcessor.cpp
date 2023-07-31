@@ -16,7 +16,6 @@ constexpr int cPointInRotation = 21;
 
 void GcodeProcessor::reset()
 {
-    emergencyBreak_ = false;
     workPlane_ = WorkPlane::xy;
     toWorkPlaneXf_ = Matrix3f();
     translationPos_ = cncSettings_.getHomePosition();
@@ -43,11 +42,7 @@ std::vector<MR::GcodeProcessor::MoveAction> GcodeProcessor::processSource()
 
     std::vector<MoveAction> res( gcodeSource_.size() );
     for ( int i = 0; i < gcodeSource_.size(); ++i )
-    {
         res[i] = processLine( gcodeSource_[i] );
-        if ( emergencyBreak_ )
-            break;
-    }
 
     for ( auto& action : res )
     {
@@ -253,7 +248,6 @@ GcodeProcessor::MoveAction GcodeProcessor::generateMoveAction_()
         if ( angle < limits->x || angle > limits->y )
         {
             res.action.warning += ( !res.action.warning.empty() ? "\n" : "" ) + std::string("Error input angle: Going beyond the limits.");
-            emergencyBreak_ = true;
             break;
         }
     }

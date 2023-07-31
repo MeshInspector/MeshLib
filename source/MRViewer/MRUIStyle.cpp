@@ -1048,6 +1048,7 @@ void separator( float scaling, const std::string& text /*= ""*/, int issueCount 
     {
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling - ImGui::GetStyle().ItemSpacing.y );
     }
+    ImGui::Dummy( ImVec2( 0, 0 ) );
 }
 
 void progressBar( float scaling, float fraction, const Vector2f& sizeArg /*= Vector2f( -1, 0 ) */ )

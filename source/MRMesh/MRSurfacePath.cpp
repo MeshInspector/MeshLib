@@ -218,29 +218,32 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
         if ( triGradSq > maxGradSq )
         {
             const auto unitDir = triGrad / std::sqrt( triGradSq );
-            float a = -1;
             moveL = false;
-            if ( computeEnter01Cross( { pd, pl, po }, unitDir, p, a ) && a >= 0 )
+            if ( !dirEnters01( { po, pd, pl }, unitDir ) ) //if the gradient exits start edge then lowest point must be on the edge
             {
-                if ( a <= 1 )
+                float a = -1;
+                if ( computeEnter01Cross( { pd, pl, po }, unitDir, p, a ) && a >= 0 )
                 {
-                    moveL = false;
-                    result = MeshEdgePoint{ mesh_.topology.prev( ep.e.sym() ), a };
-                    maxGradSq = triGradSq;
+                    if ( a <= 1 )
+                    {
+                        moveL = false;
+                        result = MeshEdgePoint{ mesh_.topology.prev( ep.e.sym() ), a };
+                        maxGradSq = triGradSq;
+                    }
+                    else
+                        moveL = true;
                 }
-                else
-                    moveL = true;
-            }
-            if ( computeEnter01Cross( { pl, po, pd }, unitDir, p, a ) && a <= 1 )
-            {
-                if ( a >= 0 )
+                if ( computeEnter01Cross( { pl, po, pd }, unitDir, p, a ) && a <= 1 )
                 {
-                    moveL = false;
-                    result = MeshEdgePoint{ el.sym(), a };
-                    maxGradSq = triGradSq;
+                    if ( a >= 0 )
+                    {
+                        moveL = false;
+                        result = MeshEdgePoint{ el.sym(), a };
+                        maxGradSq = triGradSq;
+                    }
+                    else
+                        moveL = true;
                 }
-                else
-                    moveL = true;
             }
         }
         if ( moveL && fl <= v )
@@ -267,29 +270,32 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
         if ( triGradSq > maxGradSq )
         {
             const auto unitDir = triGrad / std::sqrt( triGradSq );
-            float a = -1;
             moveR = false;
-            if ( computeEnter01Cross( { pr, pd, po }, unitDir, p, a ) && a <= 1 )
+            if ( !dirEnters01( { pd, po, pr }, unitDir ) ) //if the gradient exits start edge then lowest point must be on the edge
             {
-                if ( a >= 0 )
+                float a = -1;
+                if ( computeEnter01Cross( { pr, pd, po }, unitDir, p, a ) && a <= 1 )
                 {
-                    moveR = false;
-                    result = MeshEdgePoint{ mesh_.topology.next( ep.e.sym() ).sym(), a };
-                    maxGradSq = triGradSq;
+                    if ( a >= 0 )
+                    {
+                        moveR = false;
+                        result = MeshEdgePoint{ mesh_.topology.next( ep.e.sym() ).sym(), a };
+                        maxGradSq = triGradSq;
+                    }
+                    else
+                        moveR = true;
                 }
-                else
-                    moveR = true;
-            }
-            if ( computeEnter01Cross( { po, pr, pd }, unitDir, p, a ) && a >= 0 )
-            {
-                if ( a <= 1 )
+                if ( computeEnter01Cross( { po, pr, pd }, unitDir, p, a ) && a >= 0 )
                 {
-                    moveR = false;
-                    result = MeshEdgePoint{ er, a };
-                    maxGradSq = triGradSq;
+                    if ( a <= 1 )
+                    {
+                        moveR = false;
+                        result = MeshEdgePoint{ er, a };
+                        maxGradSq = triGradSq;
+                    }
+                    else
+                        moveR = true;
                 }
-                else
-                    moveR = true;
             }
         }
         if ( moveR && fr <= v )

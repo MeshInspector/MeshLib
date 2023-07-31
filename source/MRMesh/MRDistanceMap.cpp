@@ -276,7 +276,8 @@ Expected<MR::DistanceMap, std::string> loadDistanceMapFromImage( const std::file
 }
 
 template <typename T = float>
-DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapParams& params, ProgressCallback cb = {} )
+DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapParams& params, ProgressCallback cb,
+    std::vector<MeshTriPoint> * outSamples )
 {
     DistanceMap distMap( params.resolution.x, params.resolution.y );
 
@@ -303,6 +304,11 @@ DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapPara
     const T xStep_1 = T( 1 ) / T( params.resolution.x );
     const T yStep_1 = T( 1 ) / T( params.resolution.y );
 
+    if ( outSamples )
+    {
+        outSamples->clear();
+        outSamples->resize( size_t( params.resolution.x ) * params.resolution.y );
+    }
     if ( !ParallelFor( 0, params.resolution.y, [&]( int y )
     {
         for ( int x = 0; x < params.resolution.x; ++x )
@@ -316,7 +322,12 @@ DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapPara
                 if ( !params.useDistanceLimits
                     || ( meshIntersectionRes->distanceAlongLine < params.minValue )
                     || ( meshIntersectionRes->distanceAlongLine > params.maxValue ) )
-                    distMap.set( x, y, meshIntersectionRes->distanceAlongLine );
+                {
+                    const auto i = distMap.toIndex( { x, y } );
+                    distMap.set( i, meshIntersectionRes->distanceAlongLine );
+                    if ( outSamples )
+                        (*outSamples)[i] = meshIntersectionRes->mtp;
+                }
             }
         }
     }, cb, 1 ) )
@@ -335,14 +346,14 @@ DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapPara
     return distMap;
 }
 
-DistanceMap computeDistanceMap( const MeshPart& mp, const MeshToDistanceMapParams& params, ProgressCallback cb )
+DistanceMap computeDistanceMap( const MeshPart& mp, const MeshToDistanceMapParams& params, ProgressCallback cb, std::vector<MeshTriPoint> * outSamples )
 {
-    return computeDistanceMap_<float>( mp, params, cb );
+    return computeDistanceMap_<float>( mp, params, cb, outSamples );
 }
 
-DistanceMap computeDistanceMapD( const MeshPart& mp, const MeshToDistanceMapParams& params, ProgressCallback cb )
+DistanceMap computeDistanceMapD( const MeshPart& mp, const MeshToDistanceMapParams& params, ProgressCallback cb, std::vector<MeshTriPoint> * outSamples )
 {
-    return computeDistanceMap_<double>( mp, params, cb );
+    return computeDistanceMap_<double>( mp, params, cb, outSamples );
 }
 
 DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToDistanceMapParams& params,

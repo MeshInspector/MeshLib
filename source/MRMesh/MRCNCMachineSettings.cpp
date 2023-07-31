@@ -20,6 +20,25 @@ const Vector3f& CNCMachineSettings::getRotationAxis( RotationAxisName paramName 
     return rotationAxes_[intParamName];
 }
 
+void CNCMachineSettings::setRotationLimits( RotationAxisName paramName, const RotationLimits& rotationLimits )
+{
+    if ( rotationLimits && rotationLimits->x > rotationLimits->y )
+        return;
+    auto& rotationLimitsLink = rotationLimits_[int( paramName )];
+    rotationLimitsLink = rotationLimits;
+    if ( rotationLimitsLink )
+    {
+        rotationLimitsLink->x = std::max( rotationLimitsLink->x, -180.f );
+        rotationLimitsLink->y = std::min( rotationLimitsLink->y, 180.f );
+    }
+}
+
+const CNCMachineSettings::RotationLimits& CNCMachineSettings::getRotationLimits( RotationAxisName paramName ) const
+{
+    const int intParamName = int( paramName );
+    return rotationLimits_[intParamName];
+}
+
 void CNCMachineSettings::setRotationOrder( const RotationAxesOrder& rotationAxesOrder )
 {
     rotationAxesOrder_.clear();
@@ -35,6 +54,24 @@ void CNCMachineSettings::setRotationOrder( const RotationAxesOrder& rotationAxes
 void CNCMachineSettings::setFeedrateIdle( float feedrateIdle )
 {
     feedrateIdle_ = std::clamp( feedrateIdle, 0.f, 100000.f );
+}
+
+bool CNCMachineSettings::operator==( const CNCMachineSettings& rhs )
+{
+    if ( rotationAxesOrder_ != rhs.rotationAxesOrder_ )
+        return false;
+    for ( int i = 0; i < rotationAxesOrder_.size(); ++i )
+    {
+        if ( getRotationAxis( rotationAxesOrder_[i] ) != rhs.getRotationAxis( rhs.rotationAxesOrder_[i] ) )
+            return false;
+        if ( getRotationLimits( rotationAxesOrder_[i] ) != rhs.getRotationLimits( rhs.rotationAxesOrder_[i] ) )
+            return false;
+    }
+    if ( feedrateIdle_ != rhs.feedrateIdle_ )
+        return false;
+    if ( homePosition_ != rhs.homePosition_ )
+        return false;
+    return true;
 }
 
 Json::Value CNCMachineSettings::saveToJson() const

@@ -220,16 +220,15 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
                     result =  MeshEdgePoint{ el.sym(), a };
                     maxGradSq = triGradSq;
                 }
-            }
-
-            if ( triGradSq <= 0 || triGradSq > maxGradSq )
-            {
-                const auto plSq = ( pl - p ).lengthSq();
-                auto vertGradSq = plSq > 0 ? sqr( fl - v ) / plSq : FLT_MAX;
-                if ( vertGradSq > maxGradSq )
+                else
                 {
-                    result = MeshEdgePoint{ el.sym(), 0 };
-                    maxGradSq = vertGradSq;
+                    const auto plSq = ( pl - p ).lengthSq();
+                    auto vertGradSq = plSq > 0 ? sqr( fl - v ) / plSq : FLT_MAX;
+                    if ( vertGradSq > maxGradSq )
+                    {
+                        result = MeshEdgePoint{ el.sym(), 0 };
+                        maxGradSq = vertGradSq;
+                    }
                 }
             }
         }
@@ -259,16 +258,15 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
                     result = MeshEdgePoint{ er, a };
                     maxGradSq = triGradSq;
                 }
-            }
-
-            if ( triGradSq <= 0 || triGradSq > maxGradSq )
-            {
-                const auto prSq = ( pr - p ).lengthSq();
-                auto vertGradSq = prSq > 0 ? sqr( fr - v ) / prSq : FLT_MAX;
-                if ( vertGradSq > maxGradSq )
+                else
                 {
-                    result = MeshEdgePoint{ er.sym(), 0 };
-                    maxGradSq = vertGradSq;
+                    const auto prSq = ( pr - p ).lengthSq();
+                    auto vertGradSq = prSq > 0 ? sqr( fr - v ) / prSq : FLT_MAX;
+                    if ( vertGradSq > maxGradSq )
+                    {
+                        result = MeshEdgePoint{ er.sym(), 0 };
+                        maxGradSq = vertGradSq;
+                    }
                 }
             }
         }

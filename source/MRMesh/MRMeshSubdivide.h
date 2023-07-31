@@ -22,6 +22,9 @@ struct SubdivideSettings
     float maxDeviationAfterFlip = 1;
     /// Improves local mesh triangulation by doing edge flips if it does change dihedral angle more than on this value
     float maxAngleChangeAfterFlip = 10;
+    /// If this value is less than FLT_MAX then edge flips will
+    /// ignore dihedral angle check if one of triangles has aspect ratio more than this value
+    float criticalAspectRatioFlip = 1000.0f;
     /// Region on mesh to be subdivided, it is updated during the operation
     FaceBitSet * region = nullptr;
     /// Edges specified by this bit-set will never be flipped, but they can be split so it is updated during the operation

@@ -100,8 +100,13 @@ Json::Value CNCMachineSettings::saveToJson() const
     jsonValue["Axes Order"] = orderStr;
     for ( int i = 0; i < 3; ++i )
     {
-        if ( activeAxes[i] )
-            serializeToJson( rotationAxes_[i], jsonValue[axesName[i]] );
+        if ( !activeAxes[i] )
+            continue;
+        serializeToJson( rotationAxes_[i], jsonValue[axesName[i]]["Direction"]);
+        if ( rotationLimits_[i] )
+            serializeToJson( *rotationLimits_[i], jsonValue[axesName[i]]["Limits"] );
+        else
+            jsonValue[axesName[i]]["Limits"] = false;
     }
     jsonValue["Feedrate Idle"] = feedrateIdle_;
     serializeToJson( homePosition_, jsonValue["Home Position"] );
@@ -147,10 +152,21 @@ bool CNCMachineSettings::loadFromJson( const Json::Value& jsonValue )
     auto loadAxis = [&] ( const std::string& jsonName, RotationAxisName axisName )
     {
         Vector3f vec3f;
-        deserializeFromJson( jsonValue[jsonName], vec3f );
+        deserializeFromJson( jsonValue[jsonName]["Direction"], vec3f);
         if ( vec3f == Vector3f() )
             return false;
         setRotationAxis( axisName, vec3f );
+        if ( jsonValue[jsonName]["Limits"].isBool() )
+            setRotationLimits( axisName, {} );
+        else
+        {
+            Vector2f vec2f(180.f, -180.f);
+            deserializeFromJson( jsonValue[jsonName]["Limits"], vec2f );
+            if ( vec2f == Vector2f( 180.f, -180.f ) )
+                return false;
+            setRotationLimits( axisName, vec2f );
+        }
+
         return true;
     };
     

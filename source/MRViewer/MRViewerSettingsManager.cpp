@@ -114,11 +114,14 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     if ( cfg.hasVector2i( cMainWindowSize ) )
     {
         const auto size = cfg.getVector2i( cMainWindowSize, Vector2i( 1280, 800 ) );
-        CommandLoop::appendCommand( [&viewer, size]
+        if ( size.x > 0 && size.y > 0 )
         {
-            spdlog::info( "Resize window: {} {}", size.x, size.y );
-            viewer.resize( size.x, size.y );
-        } );
+            CommandLoop::appendCommand( [&viewer, size]
+            {
+                spdlog::info( "Resize window: {} {}", size.x, size.y );
+                viewer.resize( size.x, size.y );
+            } );
+        }
     }
     if ( cfg.hasVector2i( cMainWindowPos ) )
     {
@@ -299,7 +302,8 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     cfg.setJsonValue( lastExtextentionsParamKey, lastExtentions );
 
     cfg.setVector2i( cMainWindowSize, viewer.windowSaveSize );
-    cfg.setVector2i( cMainWindowPos, viewer.windowSavePos );
+    if ( viewer.windowSaveSize.x > 0 && viewer.windowSaveSize.y > 0 )
+        cfg.setVector2i( cMainWindowPos, viewer.windowSavePos );
     cfg.setBool( cMainWindowMaximized, viewer.windowMaximized );
 
     if ( ribbonMenu )

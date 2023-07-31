@@ -1377,16 +1377,15 @@ void Viewer::setupScene()
 
 void Viewer::resize( int w, int h )
 {
-    if ( window )
-    {
-        Vector2i fb;
-        Vector2i win;
-        glfwGetWindowSize( window, &win.x, &win.y );
-        glfwGetFramebufferSize( window, &fb.x, &fb.y );
+    if ( !window )
+        return;
+    Vector2i fb;
+    Vector2i win;
+    glfwGetWindowSize( window, &win.x, &win.y );
+    glfwGetFramebufferSize( window, &fb.x, &fb.y );
 
-        Vector2f ratio( float( win.x ) / float( fb.x ), float( win.y ) / float( fb.y ) );
-        glfwSetWindowSize( window, int( w * ratio.x ), int( h * ratio.y ) );
-    }
+    Vector2f ratio( float( win.x ) / float( fb.x ), float( win.y ) / float( fb.y ) );
+    glfwSetWindowSize( window, int( w * ratio.x ), int( h * ratio.y ) );
 }
 
 void Viewer::postResize( int w, int h )

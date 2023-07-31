@@ -184,8 +184,6 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
         return findPrevPoint( v );
 
     // point is not in vertex
-    MeshEdgePoint result;
-    float maxGradSq = 0;
     const auto p = mesh_.edgePoint( ep );
 
     const auto o = mesh_.topology.org( ep.e );
@@ -196,6 +194,18 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
     const auto po = mesh_.points[o];
     const auto pd = mesh_.points[d];
 
+    MeshEdgePoint result;
+    float maxGradSq = -FLT_MAX;
+    if ( fo != fd )
+    {
+        const auto odSq = ( po - pd ).lengthSq();
+        maxGradSq = odSq > 0 ? sqr( fo - fd ) / odSq : FLT_MAX;
+        if ( fo < fd )
+            result = MeshEdgePoint{ ep.e, 0 };
+        else if ( fd < fo )
+            result = MeshEdgePoint{ ep.e.sym(), 0 };
+    }
+
     if ( mesh_.topology.left( ep.e ) )
     {
         const auto el = mesh_.topology.next( ep.e );
@@ -204,29 +214,43 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
         const auto pl = mesh_.points[l];
         const auto triGrad = computeGradient( pd - po, pl - po, fd - fo, fl - fo );
         const auto triGradSq = triGrad.lengthSq();
+        bool moveL = true;
         if ( triGradSq > maxGradSq )
         {
             const auto unitDir = triGrad / std::sqrt( triGradSq );
             float a = -1;
-            if ( computeEnter01Cross( { pd, pl, po }, unitDir, p, a ) && a >= 0 && a <= 1 )
+            moveL = false;
+            if ( computeEnter01Cross( { pd, pl, po }, unitDir, p, a ) && a >= 0 )
             {
-                result = MeshEdgePoint{ mesh_.topology.prev( ep.e.sym() ), a };
-                maxGradSq = triGradSq;
-            }
-            else if ( computeEnter01Cross( { pl, po, pd }, unitDir, p, a ) && a >= 0 && a <= 1 )
-            {
-                result =  MeshEdgePoint{ el.sym(), a };
-                maxGradSq = triGradSq;
-            }
-            else if ( fl < v )
-            {
-                const auto plSq = ( pl - p ).lengthSq();
-                auto vertGradSq = plSq > 0 ? sqr( fl - v ) / plSq : FLT_MAX;
-                if ( vertGradSq > maxGradSq )
+                if ( a <= 1 )
                 {
-                    result = MeshEdgePoint{ el.sym(), 0 };
-                    maxGradSq = vertGradSq;
+                    moveL = false;
+                    result = MeshEdgePoint{ mesh_.topology.prev( ep.e.sym() ), a };
+                    maxGradSq = triGradSq;
                 }
+                else
+                    moveL = true;
+            }
+            if ( computeEnter01Cross( { pl, po, pd }, unitDir, p, a ) && a <= 1 )
+            {
+                if ( a >= 0 )
+                {
+                    moveL = false;
+                    result = MeshEdgePoint{ el.sym(), a };
+                    maxGradSq = triGradSq;
+                }
+                else
+                    moveL = true;
+            }
+        }
+        if ( moveL && fl <= v )
+        {
+            const auto plSq = ( pl - p ).lengthSq();
+            auto vertGradSq = plSq > 0 ? sqr( fl - v ) / plSq : FLT_MAX;
+            if ( vertGradSq >= maxGradSq )
+            {
+                result = MeshEdgePoint{ el.sym(), 0 };
+                maxGradSq = vertGradSq;
             }
         }
     }
@@ -239,39 +263,45 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
         const auto pr = mesh_.points[r];
         const auto triGrad = computeGradient( pr - po, pd - po, fr - fo, fd - fo );
         const auto triGradSq = triGrad.lengthSq();
+        bool moveR = true;
         if ( triGradSq > maxGradSq )
         {
             const auto unitDir = triGrad / std::sqrt( triGradSq );
             float a = -1;
-            if ( computeEnter01Cross( { pr, pd, po }, unitDir, p, a ) && a >= 0 && a <= 1 )
+            moveR = false;
+            if ( computeEnter01Cross( { pr, pd, po }, unitDir, p, a ) && a <= 1 )
             {
-                result = MeshEdgePoint{ mesh_.topology.next( ep.e.sym() ).sym(), a };
-                maxGradSq = triGradSq;
-            }
-            else if ( computeEnter01Cross( { po, pr, pd }, unitDir, p, a ) && a >= 0 && a <= 1 )
-            {
-                result = MeshEdgePoint{ er, a };
-                maxGradSq = triGradSq;
-            }
-            else if ( fr < v )
-            {
-                const auto prSq = ( pr - p ).lengthSq();
-                auto vertGradSq = prSq > 0 ? sqr( fr - v ) / prSq : FLT_MAX;
-                if ( vertGradSq > maxGradSq )
+                if ( a >= 0 )
                 {
-                    result = MeshEdgePoint{ er.sym(), 0 };
-                    maxGradSq = vertGradSq;
+                    moveR = false;
+                    result = MeshEdgePoint{ mesh_.topology.next( ep.e.sym() ).sym(), a };
+                    maxGradSq = triGradSq;
                 }
+                else
+                    moveR = true;
+            }
+            if ( computeEnter01Cross( { po, pr, pd }, unitDir, p, a ) && a >= 0 )
+            {
+                if ( a <= 1 )
+                {
+                    moveR = false;
+                    result = MeshEdgePoint{ er, a };
+                    maxGradSq = triGradSq;
+                }
+                else
+                    moveR = true;
             }
         }
-    }
-
-    if ( !result )
-    {
-        if ( fo < fd )
-            result = MeshEdgePoint{ ep.e, 0 };
-        else if ( fd < fo )
-            result = MeshEdgePoint{ ep.e.sym(), 0 };
+        if ( moveR && fr <= v )
+        {
+            const auto prSq = ( pr - p ).lengthSq();
+            auto vertGradSq = prSq > 0 ? sqr( fr - v ) / prSq : FLT_MAX;
+            if ( vertGradSq >= maxGradSq )
+            {
+                result = MeshEdgePoint{ er.sym(), 0 };
+                maxGradSq = vertGradSq;
+            }
+        }
     }
 
     return result;

@@ -18,7 +18,7 @@ void GcodeProcessor::reset()
 {
     workPlane_ = WorkPlane::xy;
     toWorkPlaneXf_ = Matrix3f();
-    translationPos_ = Vector3f();
+    translationPos_ = cncSettings_.getHomePosition();
     rotationAngles_ = Vector3f();
     absoluteCoordinates_ = true;
     scaling_ = Vector3f::diagonal( 1.f );
@@ -228,7 +228,6 @@ GcodeProcessor::MoveAction GcodeProcessor::generateMoveAction_()
     assert( res.action.path.size() == res.toolDirection.size() );
     res.idle = moveMode_ == MoveMode::Idle;
 
-
     if ( moveMode_ == MoveMode::Idle )
         res.feedrate = cncSettings_.getFeedrateIdle();
     else
@@ -239,6 +238,19 @@ GcodeProcessor::MoveAction GcodeProcessor::generateMoveAction_()
 
     translationPos_ = newTranslationPos;
     updateRotationAngleAndMatrix_( newRotationAngles );
+    const auto& rotationOrder = cncSettings_.getRotationOrder();
+    for ( int i = 0; i < rotationOrder.size(); ++i )
+    {
+        const auto& limits = cncSettings_.getRotationLimits( rotationOrder[i] );
+        if ( !limits )
+            continue;
+        const float& angle = rotationAngles_[int( rotationOrder[i] )];
+        if ( angle < limits->x || angle > limits->y )
+        {
+            res.action.warning += ( !res.action.warning.empty() ? "\n" : "" ) + std::string("Error input angle: Going beyond the limits.");
+            break;
+        }
+    }
 
     return res;
 }

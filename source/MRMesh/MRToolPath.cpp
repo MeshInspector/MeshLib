@@ -459,14 +459,16 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
         {
             Polyline3 polyline;
             polyline.addFromSurfacePath( mesh, section );
-            const auto contours = polyline.contours();            
-            auto contour = contours.front();
+            auto contours = polyline.contours();
+            auto& contour = contours.front();
 
             if ( contour.size() < 3 )
                 continue;
 
             if ( contour.size() > section.size() )
                 contour.resize( section.size() );
+
+            res.isolines.push_back( contour );
 
             // we need to find the most left and the most right point on the mesh
             // and move tol from one side to another
@@ -641,11 +643,15 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
                 polyline.transform( offsetRes.second * AffineXf3f::translation( { 0, 0, currentZ } ) );
             }
 
-            const auto contours = polyline.contours();
+            auto contours = polyline.contours();
             if ( contours.empty() )
                 continue;
 
-            const auto& contour = contours.front();
+            auto& contour = contours.front();
+            if ( contour.size() > section.size() )
+                contour.resize( section.size() );
+
+            res.isolines.push_back( contour );
 
             if ( mp.region || params.flatTool )
             {
@@ -880,6 +886,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                 Polyline3 polyline;
                 polyline.addFromSurfacePath( mesh, surfacePath );
                 const auto contour = polyline.contours().front();
+                res.isolines.push_back( contour );
 
                 auto nearestPointIt = surfacePath.begin();
                 float minDistSq = FLT_MAX;

@@ -107,6 +107,8 @@ struct GCommand
 
 struct ToolPathResult
 {
+    // stores isolines without transits
+    Contours3f isolines;
     // mesh after fixing undercuts and offset
     Mesh modifiedMesh;
     // constains type of movement and its feed

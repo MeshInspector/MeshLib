@@ -401,7 +401,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
     ToolPathResult  res{ .modifiedMesh = std::move( *preprocessedMesh ) };
     const auto& mesh = res.modifiedMesh;
 
-    const auto box = mp.mesh.computeBoundingBox( params.xf );
+    const auto box = mesh.computeBoundingBox( params.xf );
     const float safeZ = std::max( box.max.z + 10.0f * params.millRadius, params.safeZ );
 
     const Vector3f normal = (cutDirection == Axis::X) ? Vector3f::plusX() : Vector3f::plusY();
@@ -460,10 +460,13 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
             Polyline3 polyline;
             polyline.addFromSurfacePath( mesh, section );
             const auto contours = polyline.contours();            
-            const auto contour = contours.front();
+            auto contour = contours.front();
 
             if ( contour.size() < 3 )
                 continue;
+
+            if ( contour.size() > section.size() )
+                contour.resize( section.size() );
 
             // we need to find the most left and the most right point on the mesh
             // and move tol from one side to another
@@ -566,7 +569,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
     ToolPathResult  res{ .modifiedMesh = std::move( *preprocessedMesh ) };
     const auto& mesh = res.modifiedMesh;
 
-    const auto box = mp.mesh.computeBoundingBox( params.xf );
+    const auto box = mesh.computeBoundingBox( params.xf );
     const float safeZ = std::max( box.max.z + 10.0f * params.millRadius, params.safeZ );
     float lastZ = 0;
 
@@ -755,7 +758,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
     ToolPathResult  res{ .modifiedMesh = std::move( *preprocessedMesh ) };
     
     const auto& mesh = res.modifiedMesh;
-    const auto box = mp.mesh.computeBoundingBox( params.xf );
+    const auto box = mesh.computeBoundingBox( params.xf );
 
     const Vector3f normal = Vector3f::plusZ();
     float minZ = box.min.z + params.sectionStep;

@@ -164,15 +164,17 @@ private:
 };
 
 /// fill another distance map pair with gradients across X and Y axes of the argument map
-[[nodiscard]] MRMESH_API DistanceMap combineXYderivativeMaps( std::pair<DistanceMap, DistanceMap> XYderivativeMaps );
+MRMESH_API DistanceMap combineXYderivativeMaps( std::pair<DistanceMap, DistanceMap> XYderivativeMaps );
 
 /// computes distance (height) map for given projection parameters
 /// using float-precision for finding ray-mesh intersections, which is faster but less reliable
-[[nodiscard]] MRMESH_API DistanceMap computeDistanceMap( const MeshPart& mp, const MeshToDistanceMapParams& params, ProgressCallback cb = {} );
+MRMESH_API DistanceMap computeDistanceMap( const MeshPart& mp, const MeshToDistanceMapParams& params,
+    ProgressCallback cb = {}, std::vector<MeshTriPoint> * outSamples = nullptr );
 
 /// computes distance (height) map for given projection parameters
 /// using double-precision for finding ray-mesh intersections, which is slower but more reliable
-[[nodiscard]] MRMESH_API DistanceMap computeDistanceMapD( const MeshPart& mp, const MeshToDistanceMapParams& params, ProgressCallback cb = {} );
+MRMESH_API DistanceMap computeDistanceMapD( const MeshPart& mp, const MeshToDistanceMapParams& params,
+    ProgressCallback cb = {}, std::vector<MeshTriPoint> * outSamples = nullptr );
 
 /// Structure with parameters for optional offset in `distanceMapFromContours` function
 struct [[nodiscard]] ContoursDistanceMapOffset

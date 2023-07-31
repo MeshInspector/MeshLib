@@ -27,6 +27,7 @@ struct MeshToDistanceMapParams
     /// usePreciseBoundingBox false (fast): use general (cached) bounding box with applied rotation
     /// usePreciseBoundingBox true (slow): compute bounding box from points with respect to rotation
     MRMESH_API MeshToDistanceMapParams( const Vector3f& direction, const Vector2i& resolution, const MeshPart& mp, bool usePreciseBoundingBox = false );
+    MRMESH_API MeshToDistanceMapParams( const Vector3f& direction, const Vector2f& pixelSize, const MeshPart& mp, bool usePreciseBoundingBox = false );
 
     /// input matrix should be orthonormal!
     /// rotation.z - direction

@@ -315,7 +315,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         def_readwrite( "direction", &MR::DistanceMapToWorld::direction, "Vector of depth direction."
             "Note! Typically it should be normalized and orthogonal to `pixelXVec` `pixelYVec` plane." );
 
-    m.def( "computeDistanceMapD", &MR::computeDistanceMapD, pybind11::arg( "mp" ), pybind11::arg( "params" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
+    m.def( "computeDistanceMapD", []( const MeshPart& mp, const MeshToDistanceMapParams& params, ProgressCallback cb )
+        { return MR::computeDistanceMapD( mp, params, cb ); },
+        pybind11::arg( "mp" ), pybind11::arg( "params" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
         "computes distance map for presented projection parameters\n"
         "use MeshToDistanceMapParams constructor instead of overloads of this function\n"
         "MeshPart - input 3d model\n"

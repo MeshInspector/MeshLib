@@ -11,6 +11,17 @@ MeshToDistanceMapParams::MeshToDistanceMapParams( const Vector3f& direction, con
     initFromSize_( { rot,orgSize.first }, res, orgSize.second );
 }
 
+MeshToDistanceMapParams::MeshToDistanceMapParams( const Vector3f& direction, const Vector2f& pixelSize, const MeshPart& mp, bool usePreciseBoundingBox )
+{
+    auto pair = direction.perpendicular();
+    Matrix3f rot{ pair.first,pair.second,direction };
+    auto orgSize = orgSizeFromMeshPart_( rot, mp, usePreciseBoundingBox );
+    Vector2i res;
+    res.x = int( orgSize.second.x / pixelSize.x ) + 1;
+    res.y = int( orgSize.second.y / pixelSize.y ) + 1;
+    initFromSize_( { rot,orgSize.first }, res, { pixelSize.x * res.x, pixelSize.y * res.y } );
+}
+
 MeshToDistanceMapParams::MeshToDistanceMapParams( const Matrix3f& rotation, const Vector3f& origin, const Vector2i& resolution, const Vector2f& size )
 {
     initFromSize_( { rotation,origin }, resolution, size );

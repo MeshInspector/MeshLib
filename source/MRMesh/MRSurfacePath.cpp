@@ -196,25 +196,6 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
     const auto po = mesh_.points[o];
     const auto pd = mesh_.points[d];
 
-    if ( fo < fd )
-    {
-        const auto poSq = ( po - p ).lengthSq();
-        if ( poSq >= 0 ) // not strict to handle cases with `inVertex` fail but coordinates same as vertex
-        {
-            result = MeshEdgePoint{ ep.e, 0 };
-            maxGradSq = poSq == 0 ? FLT_MAX : ( sqr( fo - v ) / poSq );
-        }
-    }
-    else if ( fd < fo )
-    {
-        const auto pdSq = ( pd - p ).lengthSq();
-        if ( pdSq >= 0 ) // not strict to handle cases with `inVertex` fail but coordinates same as vertex
-        {
-            result = MeshEdgePoint{ ep.e.sym(), 0 };
-            maxGradSq = pdSq == 0 ? FLT_MAX : ( sqr( fd - v ) / pdSq );
-        }
-    }
-
     if ( mesh_.topology.left( ep.e ) )
     {
         const auto el = mesh_.topology.next( ep.e );
@@ -223,14 +204,6 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
         if ( fl < v )
         {
             const auto pl = mesh_.points[l];
-            const auto plSq = ( pl - p ).lengthSq();
-            auto vertGradSq = plSq > 0 ? sqr( fl - v ) / plSq : FLT_MAX;
-            if ( vertGradSq > maxGradSq )
-            {
-                result = MeshEdgePoint{ el.sym(), 0 };
-                maxGradSq = vertGradSq;
-            }
-
             const auto triGrad = computeGradient( pd - po, pl - po, fd - fo, fl - fo );
             const auto triGradSq = triGrad.lengthSq();
             if ( triGradSq > maxGradSq )
@@ -248,6 +221,17 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
                     maxGradSq = triGradSq;
                 }
             }
+
+            if ( triGradSq <= 0 || triGradSq > maxGradSq )
+            {
+                const auto plSq = ( pl - p ).lengthSq();
+                auto vertGradSq = plSq > 0 ? sqr( fl - v ) / plSq : FLT_MAX;
+                if ( vertGradSq > maxGradSq )
+                {
+                    result = MeshEdgePoint{ el.sym(), 0 };
+                    maxGradSq = vertGradSq;
+                }
+            }
         }
     }
 
@@ -259,14 +243,6 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
         if ( fr < v )
         {
             const auto pr = mesh_.points[r];
-            const auto prSq = ( pr - p ).lengthSq();
-            auto vertGradSq = prSq > 0 ? sqr( fr - v ) / prSq : FLT_MAX;
-            if ( vertGradSq > maxGradSq )
-            {
-                result = MeshEdgePoint{ er.sym(), 0 };
-                maxGradSq = vertGradSq;
-            }
-
             const auto triGrad = computeGradient( pr - po, pd - po, fr - fo, fd - fo );
             const auto triGradSq = triGrad.lengthSq();
             if ( triGradSq > maxGradSq )
@@ -284,7 +260,26 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
                     maxGradSq = triGradSq;
                 }
             }
+
+            if ( triGradSq <= 0 || triGradSq > maxGradSq )
+            {
+                const auto prSq = ( pr - p ).lengthSq();
+                auto vertGradSq = prSq > 0 ? sqr( fr - v ) / prSq : FLT_MAX;
+                if ( vertGradSq > maxGradSq )
+                {
+                    result = MeshEdgePoint{ er.sym(), 0 };
+                    maxGradSq = vertGradSq;
+                }
+            }
         }
+    }
+
+    if ( !result )
+    {
+        if ( fo < fd )
+            result = MeshEdgePoint{ ep.e, 0 };
+        else if ( fd < fo )
+            result = MeshEdgePoint{ ep.e.sym(), 0 };
     }
 
     return result;

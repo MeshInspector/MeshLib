@@ -7,6 +7,7 @@
 #include "MRComputeBoundingBox.h"
 #include "MRParallelFor.h"
 #include "MRId.h"
+#include "MR2to3.h"
 
 namespace MR
 {
@@ -40,11 +41,11 @@ private:
     ProgressCallback cb_;
     bool canceled_{ false };
 
-    bool inCircle_( const Vector3f& a, Vector3f b, Vector3f c, Vector3f d )
+    bool inCircle_( const Vector3f& af, Vector3f bf, Vector3f cf, Vector3f df )
     {
-        b -= a;
-        c -= a;
-        d -= a;
+        Vector3d b = Vector3d( bf ) - Vector3d( af );
+        Vector3d c = Vector3d( cf ) - Vector3d( af );
+        Vector3d d = Vector3d( df ) - Vector3d( af );
         return Matrix3d(
             Vector3d( c.x, c.y, double( c.x ) * c.x + double( c.y ) * c.y ),
             Vector3d( b.x, b.y, double( b.x ) * b.x + double( b.y ) * b.y ),
@@ -52,13 +53,11 @@ private:
         ).det() > 0;
     }
 
-    bool ccw_( const Vector3f& a, Vector3f b, Vector3f c )
+    bool ccw_( const Vector3f& af, Vector3f bf, Vector3f cf )
     {
-        b -= a;
-        c -= a;
-        return Matrix2d( 
-            Vector2d{ b.x,b.y },
-            Vector2d{ c.x,c.y } ).det() > 0;
+        Vector3d b = Vector3d( bf ) - Vector3d( af );
+        Vector3d c = Vector3d( cf ) - Vector3d( af );
+        return Matrix2d( to2dim( b ), to2dim( c ) ).det() > 0;
     }
 
     bool leftOf_( const Vector3f& x, EdgeId e ) { return ccw_( x, mesh_.orgPnt( e ), mesh_.destPnt( e ) ); }

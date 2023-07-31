@@ -21,6 +21,8 @@ public:
 
     MRMESH_API virtual void action( HistoryAction::Type type ) override;
 
+    const HistoryActionsVector& getStack() const { return actions_; }
+
     /// Remove some actions according to condition inside combined actions.
     /// Do deep filtering.
     MRMESH_API bool filter( HistoryStackFilter filteringCondition );

@@ -41,6 +41,11 @@ public:
     /// Returns current memory limit for this store (by default uint64 max)
     size_t getMemoryLimit() const { return storageLimit_; }
 
+    /// Returns full history stack
+    const HistoryActionsVector& getHistoryStack() const { return stack_; }
+    /// Returns index of first redo action in stack
+    size_t getStackPointer() const { return firstRedoIndex_; }
+
     /// remove some actions according to condition
     MRMESH_API void filterStack( HistoryStackFilter filteringCondition, bool deepFiltering = true );
 

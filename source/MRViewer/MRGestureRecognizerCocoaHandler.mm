@@ -49,7 +49,8 @@ namespace
         auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
         if ( handler )
         {
-            handler->magnificationCb( magnificationGestureRecognizer.magnification );
+            const auto finished = magnificationGestureRecognizer.state == NSGestureRecognizerStateEnded;
+            handler->magnificationCb( magnificationGestureRecognizer.magnification, finished );
         }
     }
 
@@ -58,7 +59,8 @@ namespace
         auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
         if ( handler )
         {
-            handler->rotationCb( rotationGestureRecognizer.rotation );
+            const auto finished = rotationGestureRecognizer.state == NSGestureRecognizerStateEnded;
+            handler->rotationCb( rotationGestureRecognizer.rotation, finished );
         }
     }
 }

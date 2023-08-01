@@ -608,13 +608,17 @@ int Viewer::launchInit_( const LaunchParams& params )
         initSpaceMouseHandler_();
 
         gestureRecognizerHandler.initialize( window );
-        gestureRecognizerHandler.onMagnification( [&] ( float scale )
+        gestureRecognizerHandler.onMagnification( [&] ( float scale, bool finished )
         {
             spdlog::info( "magnification gesture ( scale = {} )", scale );
+            if ( finished )
+                spdlog::info( "magnification gesture finished" );
         } );
-        gestureRecognizerHandler.onRotation( [&] ( float angle )
+        gestureRecognizerHandler.onRotation( [&] ( float angle, bool finished )
         {
             spdlog::info( "rotation gesture ( angle = {} )", angle );
+            if ( finished )
+                spdlog::info( "rotation gesture ended" );
         } );
     }
 

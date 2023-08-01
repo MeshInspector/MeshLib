@@ -11,10 +11,10 @@ namespace MR
     public:
         void initialize( GLFWwindow* window );
 
-        using MagnificationCallback = std::function<void ( float scale )>;
+        using MagnificationCallback = std::function<void ( float scale, bool finished )>;
         void onMagnification( MagnificationCallback cb );
 
-        using RotationCallback = std::function<void ( float angle )>;
+        using RotationCallback = std::function<void ( float angle, bool finished )>;
         void onRotation( RotationCallback cb );
 
         class Impl

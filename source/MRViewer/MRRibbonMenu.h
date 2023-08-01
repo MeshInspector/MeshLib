@@ -62,7 +62,9 @@ public:
 
     /// returns true if any blocking plugin is now active
     bool hasActiveBlockingItem() const { return bool( activeBlockingItem_.item ); }
-
+    /// returns true if any plugin is now active
+    bool hasAnyActiveItem() const { return bool (activeBlockingItem_.item) || !activeNonBlockingItems_.empty(); }
+    
     /// updates status of item if it was changed outside of menu
     MRVIEWER_API void updateItemStatus( const std::string& itemName );
 

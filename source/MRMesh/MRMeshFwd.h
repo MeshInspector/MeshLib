@@ -286,8 +286,15 @@ using FaceScalars = Vector<float, FaceId>;
 using EdgeScalars = Vector<float, EdgeId>;
 using UndirectedEdgeScalars = Vector<float, UndirectedEdgeId>;
 
+using VertPredicate = std::function<bool( VertId )>;
+using FacePredicate = std::function<bool( FaceId )>;
+using EdgePredicate = std::function<bool( EdgeId )>;
+using UndirectedEdgePredicate = std::function<bool( UndirectedEdgeId )>;
+
 using VertToFloatFunc = std::function<float( VertId )>;
 using FaceToFloatFunc = std::function<float( FaceId )>;
+using EdgeToFloatFunc = std::function<float( EdgeId )>;
+using UndirectedEdgeToFloatFunc = std::function<float( UndirectedEdgeId )>;
 
 template <typename T, typename I> struct MRMESH_CLASS BMap;
 using FaceBMap = BMap<FaceId, FaceId>;

@@ -9,6 +9,7 @@
 #include <boost/dynamic_bitset.hpp>
 #pragma warning(pop)
 #include <iterator>
+#include <functional>
 
 namespace MR
 {
@@ -153,6 +154,19 @@ template <typename T>
 /// prohibit comparison of unrelated sets
 template <typename T, typename U>
 void operator == ( const TaggedBitSet<T> & a, const TaggedBitSet<U> & b ) = delete;
+
+template <typename T>
+[[nodiscard]] inline std::function<bool( Id<T> )> makePredicate( const TaggedBitSet<T> * bitset )
+{
+    std::function<bool( Id<T> )> res;
+    if ( bitset )
+        res = [bitset]( Id<T> id ) { return bitset->test( id ); };
+    return res;
+}
+
+template <typename T>
+[[nodiscard]] inline std::function<bool( Id<T> )> makePredicate( const TaggedBitSet<T> & bitset )
+    { return makePredicate( &bitset ); }
 
 template <typename T>
 [[nodiscard]] inline bool contains( const TaggedBitSet<T> * bitset, Id<T> id )

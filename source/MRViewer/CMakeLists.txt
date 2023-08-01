@@ -41,10 +41,11 @@ IF(MR_EMSCRIPTEN)
 			)
 ELSE() # MR_EMSCRIPTEN
 IF(APPLE)
-	#find_library(APPKIT_LIBRARY AppKit)
-	#IF(NOT APPKIT_LIBRARY)
-	#	message(FATAL_ERROR "AppKit not found")
-	#ENDIF()
+	add_definitions("-x objective-c++")
+	find_library(APPKIT_LIBRARY AppKit)
+	IF(NOT APPKIT_LIBRARY)
+		message(FATAL_ERROR "AppKit not found")
+	ENDIF()
     target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 			MRMesh
@@ -63,8 +64,7 @@ IF(APPLE)
 			glfw
 			gtkmm-3.0
 			hidapi
-			#${APPKIT_LIBRARY}
-			"-framework Cocoa"
+			${APPKIT_LIBRARY}
 			)
 ELSE() # APPLE
 	target_link_libraries(${PROJECT_NAME} PRIVATE

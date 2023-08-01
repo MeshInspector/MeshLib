@@ -93,9 +93,9 @@ TEST( MRMesh, DistanceMapContours )
     auto genYOrg = genDistMap.resY();
     EXPECT_EQ( orgXOrg, genXOrg );
     EXPECT_EQ( orgYOrg, genYOrg );
-    for( int x = 0; x < std::min( orgXOrg, genXOrg ); ++x )
+    for ( int y = 0; y < std::min( orgYOrg, genYOrg ); ++y )
     {
-        for( int y = 0; y < std::min( orgYOrg, genYOrg ); ++y )
+        for ( int x = 0; x < std::min( orgXOrg, genXOrg ); ++x )
         {
             const auto orgV = orgDistMap.get( x, y );
             const auto genV = genDistMap.get( x, y );
@@ -129,9 +129,9 @@ TEST( MRMesh, DistanceMapSphere )
     auto dm1 = computeDistanceMap( sphere, params1 );
     auto dm2 = computeDistanceMap( sphere, params2 );
     int count = 0;
-    for( int x = 0; x < dm1.resX(); x++ )
+    for ( int y = 0; y < dm1.resY(); y++ )
     {
-        for( int y = 0; y < dm1.resY(); y++ )
+        for ( int x = 0; x < dm1.resX(); x++ )
         {
             auto v1 = dm1.get( x, y );
             auto v2 = dm2.get( x, y );
@@ -169,9 +169,9 @@ TEST( MRMesh, DistanceMapWatertight )
     EXPECT_EQ( dm1.resX(), dm2.resX() );
     EXPECT_EQ( dm1.resY(), dm2.resY() );
 
-    for( int x = 0; x < dm2.resX(); x++ )
+    for ( int y = 0; y < dm2.resY(); y++ )
     {
-        for( int y = 0; y < dm2.resY(); y++ )
+        for ( int x = 0; x < dm2.resX(); x++ )
         {
             const auto v1 = dm1.get( x, y );
             const auto v2 = dm2.get( x, y );
@@ -266,9 +266,9 @@ TEST( MRMesh, DistanceMapNegativeValue )
     EXPECT_EQ( dm.resY(), dm2.resY() );
 
     int count = 0;
-    for ( int x = 0; x < dm2.resX(); x++ )
+    for ( int y = 0; y < dm2.resY(); y++ )
     {
-        for ( int y = 0; y < dm2.resY(); y++ )
+        for ( int x = 0; x < dm2.resX(); x++ )
         {
             EXPECT_TRUE( dm2.isValid( x, y ) == dm.isValid( x, y ) );
             const auto v1 = dm.get( x, y );

@@ -947,9 +947,9 @@ void DistanceMap::negate()
 DistanceMap DistanceMap::max( const DistanceMap& rhs ) const
 {
     DistanceMap res( resX(), resY() );
-    for( auto iX = 0; iX < resX(); iX++ )
+    for ( auto iY = 0; iY < resY(); iY++ )
     {
-        for( auto iY = 0; iY < resY(); iY++ )
+        for ( auto iX = 0; iX < resX(); iX++ )
         {
             const auto val = get( iX, iY );
             if ( iX < rhs.resX() && iY < rhs.resY() )
@@ -983,11 +983,11 @@ DistanceMap DistanceMap::max( const DistanceMap& rhs ) const
     return res;
 }
 
-const DistanceMap& DistanceMap::mergeMax( const DistanceMap& rhs)
+const DistanceMap& DistanceMap::mergeMax( const DistanceMap& rhs )
 {
-    for( auto iX = 0; iX < resX(); iX++ )
+    for ( auto iY = 0; iY < resY(); iY++ )
     {
-        for ( auto iY = 0; iY < resY(); iY++ )
+        for ( auto iX = 0; iX < resX(); iX++ )
         {
             if ( iX < rhs.resX() && iY < rhs.resY() )
             {
@@ -1007,9 +1007,9 @@ const DistanceMap& DistanceMap::mergeMax( const DistanceMap& rhs)
 DistanceMap DistanceMap::min( const DistanceMap& rhs) const
 {
     DistanceMap res( resX(), resY() );
-    for( auto iX = 0; iX < resX(); iX++ )
+    for ( auto iY = 0; iY < resY(); iY++ )
     {
-        for ( auto iY = 0; iY < resY(); iY++ )
+        for ( auto iX = 0; iX < resX(); iX++ )
         {
             const auto val = get( iX, iY );
             if ( iX < rhs.resX() && iY < rhs.resY() )
@@ -1045,9 +1045,9 @@ DistanceMap DistanceMap::min( const DistanceMap& rhs) const
 
 const DistanceMap& DistanceMap::mergeMin( const DistanceMap& rhs )
 {
-    for( auto iX = 0; iX < resX(); iX++ )
+    for ( auto iY = 0; iY < resY(); iY++ )
     {
-        for( auto iY = 0; iY < resY(); iY++ )
+        for ( auto iX = 0; iX < resX(); iX++ )
         {
             if ( iX < rhs.resX() && iY < rhs.resY() )
             {
@@ -1067,9 +1067,9 @@ const DistanceMap& DistanceMap::mergeMin( const DistanceMap& rhs )
 DistanceMap DistanceMap::operator-( const DistanceMap& rhs) const
 {
     DistanceMap res( resX(), resY() );
-    for( auto iX = 0; iX < resX(); iX++ )
+    for ( auto iY = 0; iY < resY(); iY++ )
     {
-        for( auto iY = 0; iY < resY(); iY++ )
+        for ( auto iX = 0; iX < resX(); iX++ )
         {
             const auto val = get( iX, iY );
             if ( val )
@@ -1094,9 +1094,9 @@ DistanceMap DistanceMap::operator-( const DistanceMap& rhs) const
 
 const DistanceMap& DistanceMap::operator-=( const DistanceMap& rhs )
 {
-    for( auto iX = 0; iX < resX(); iX++ )
+    for ( auto iY = 0; iY < resY(); iY++ )
     {
-        for( auto iY = 0; iY < resY(); iY++ )
+        for ( auto iX = 0; iX < resX(); iX++ )
         {
             const auto val = get( iX, iY );
             if ( val )
@@ -1126,47 +1126,44 @@ std::pair< DistanceMap, DistanceMap > DistanceMap::getXYDerivativeMaps() const
     auto res = std::make_pair( DistanceMap( resX(), resY() ), DistanceMap( resX(), resY() ) );
     DistanceMap& dx = res.first;
     DistanceMap& dy = res.second;
-    if (resX() < 3 || resY() < 3)
+    if ( resX() < 3 || resY() < 3 )
     {
         return res;
     }
-    tbb::parallel_for( tbb::blocked_range<size_t>( 1, resX() - 1 ),
-        [&] ( const tbb::blocked_range<size_t>& range )
-    {
-        for ( size_t x = range.begin(); x < range.end(); x++ )
-        {
-            for ( size_t y = 1; y + 1 < resY(); y++ )
-            {
-                const auto val = get( x, y );
-                if ( val )
-                {
-                    const auto valxpos = get( x + 1, y );
-                    const auto valxneg = get( x - 1, y );
-                    if ( valxpos )
-                        if ( valxneg )
-                            dx.set( x, y, ( ( *valxpos ) - ( *valxneg ) ) / 2.f );
-                        else
-                            dx.set( x, y, ( *valxpos ) - ( *val ) );
-                    else
-                        if ( valxneg )
-                            dx.set( x, y, ( *val ) - ( *valxneg ) );
-                        else
-                            dx.unset( x, y );
 
-                    const auto valypos = get( x, y + 1 );
-                    const auto valyneg = get( x, y - 1 );
-                    if ( valypos )
-                        if ( valyneg )
-                            dy.set( x, y, ( ( *valypos ) - ( *valyneg ) ) / 2.f );
-                        else
-                            dy.set( x, y, ( *valypos ) - ( *val ) );
-                    else
-                        if ( valyneg )
-                            dy.set( x, y, ( *val ) - ( *valyneg ) );
-                        else
-                            dy.unset( x, y );
-                }
-            }
+    ParallelFor( 1, (int)resY() - 1, [&] ( int y )
+    {
+        for ( auto x = 1; x < resX() - 1; ++x )
+        {
+            const auto val = get( x, y );
+            if ( !val )
+                continue;
+
+            const auto valxpos = get( x + 1, y );
+            const auto valxneg = get( x - 1, y );
+            if ( valxpos )
+                if ( valxneg )
+                    dx.set( x, y, ( ( *valxpos ) - ( *valxneg ) ) / 2.f );
+                else
+                    dx.set( x, y, ( *valxpos ) - ( *val ) );
+            else
+                if ( valxneg )
+                    dx.set( x, y, ( *val ) - ( *valxneg ) );
+                else
+                    dx.unset( x, y );
+
+            const auto valypos = get( x, y + 1 );
+            const auto valyneg = get( x, y - 1 );
+            if ( valypos )
+                if ( valyneg )
+                    dy.set( x, y, ( ( *valypos ) - ( *valyneg ) ) / 2.f );
+                else
+                    dy.set( x, y, ( *valypos ) - ( *val ) );
+            else
+                if ( valyneg )
+                    dy.set( x, y, ( *val ) - ( *valyneg ) );
+                else
+                    dy.unset( x, y );
         }
     } );
     return res;
@@ -1180,44 +1177,32 @@ DistanceMap combineXYderivativeMaps( std::pair<DistanceMap, DistanceMap> XYderiv
     DistanceMap dMap( XYderivativeMaps.first.resX(), XYderivativeMaps.second.resY() );
     const auto& dx = XYderivativeMaps.first;
     const auto& dy = XYderivativeMaps.second;
-
     if ( dx.resX() < 3 || dx.resY() < 3 )
     {
         return dMap;
     }
+
     // fill the central area
-    tbb::parallel_for( tbb::blocked_range<size_t>( 1, dx.resX() - 1 ),
-        [&] ( const tbb::blocked_range<size_t>& range )
+    ParallelFor( 1, (int)dx.resY() - 1, [&] ( int y )
     {
-        for ( size_t x = range.begin(); x < range.end(); x++ )
+        for ( auto x = 1; x < dx.resX() - 1; ++x )
         {
-            for ( size_t y = 1; y + 1 < dx.resY(); y++ )
+            const auto valX = dx.get( x, y );
+            const auto valY = dy.get( x, y );
+
+            if ( valX )
             {
-                const auto valX = dx.get( x, y );
-                const auto valY = dy.get( x, y );
-                
-                if (valX)
-                {
-                    if (valY)
-                    {
-                        dMap.set( x, y, std::sqrt( ( *valX ) * ( *valX ) + ( *valY ) * ( *valY ) ) );
-                    }
-                    else
-                    {
-                        dMap.set( x, y, *valY );
-                    }
-                }
+                if ( valY )
+                    dMap.set( x, y, std::sqrt( ( *valX ) * ( *valX ) + ( *valY ) * ( *valY ) ) );
                 else
-                {
-                    if (valY)
-                    {
-                        dMap.set( x, y, *valY );
-                    }
-                    else
-                    {
-                        dMap.unset( x, y );
-                    }
-                }
+                    dMap.set( x, y, *valY );
+            }
+            else
+            {
+                if ( valY )
+                    dMap.set( x, y, *valY );
+                else
+                    dMap.unset( x, y );
             }
         }
     } );

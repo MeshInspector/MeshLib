@@ -1417,13 +1417,12 @@ void Viewer::postResize( int w, int h )
             }
     }
     postResizeSignal( w, h );
-    if ( !windowMaximized ) // resize is called after maximized
-        windowSaveSize = framebufferSize;
     if ( w != 0 )
         framebufferSize.x = w;
     if ( h != 0 )
         framebufferSize.y = h;
-
+    if ( !windowMaximized ) // resize is called after maximized
+        windowSaveSize = framebufferSize;
 
     if ( alphaSorter_ )
         alphaSorter_->updateTransparencyTexturesSize( framebufferSize.x, framebufferSize.y );

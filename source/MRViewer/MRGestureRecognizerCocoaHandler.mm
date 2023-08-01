@@ -2,6 +2,8 @@
 
 #include "MRGestureRecognizerCocoaHandler.h"
 
+#include <MRMesh/MRVector2.h>
+
 #include <GLFW/glfw3.h>
 #define GLFW_EXPOSE_NATIVE_COCOA
 #include <GLFW/glfw3native.h>
@@ -9,6 +11,7 @@
 #include <objc/objc-runtime.h>
 
 #include <map>
+#import <spdlog/spdlog.h>
 
 namespace
 {
@@ -53,6 +56,17 @@ namespace
         }
     }
 
+    void panGestureEvent( NSView* view, SEL cmd, NSPanGestureRecognizer* panGestureRecognizer )
+    {
+        auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
+        if ( handler )
+        {
+            auto translation = [panGestureRecognizer translationInView:view];
+            MR::Vector2f p1( translation.x, translation.y );
+            spdlog::info( "pan gesture ( button mask = {} )", panGestureRecognizer.buttonMask );
+        }
+    }
+
     void rotationGestureEvent( NSView* view, SEL cmd, NSRotationGestureRecognizer* rotationGestureRecognizer )
     {
         auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
@@ -76,6 +90,11 @@ namespace MR
         if ( !class_respondsToSelector( cls, @selector(handleMagnificationGesture:) ) )
             class_addMethod( cls, @selector(handleMagnificationGesture:), (IMP)magnificationGestureEvent, "v@:@" );
         [view_ addGestureRecognizer:magnificationGestureRecognizer_];
+
+        panGestureRecognizer_ = [[NSPanGestureRecognizer alloc] initWithTarget:view_ action:@selector(handlePanGesture:)];
+        if ( !class_respondsToSelector( cls, @selector(handlePanGesture:) ) )
+            class_addMethod( cls, @selector(handlePanGesture:), (IMP)panGestureEvent, "v@:@" );
+        [view_ addGestureRecognizer:panGestureRecognizer_];
 
         rotationGestureRecognizer_ = [[NSRotationGestureRecognizer alloc] initWithTarget:view_ action:@selector(handleRotationGesture:)];
         if ( !class_respondsToSelector( cls, @selector(handleRotationGesture:) ) )

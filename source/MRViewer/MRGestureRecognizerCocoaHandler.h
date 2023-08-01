@@ -24,6 +24,7 @@ private:
     NSView* view_;
 
     NSMagnificationGestureRecognizer* magnificationGestureRecognizer_;
+    NSPanGestureRecognizer* panGestureRecognizer_;
     NSRotationGestureRecognizer* rotationGestureRecognizer_;
 };
 

@@ -83,6 +83,9 @@ MRMESH_API SurfacePath computeSteepestDescentPath( const Mesh & mesh, const Vert
 MRMESH_API void computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
     const MeshTriPoint & start, const MeshTriPoint & end, SurfacePath * outPath, VertId * outVertexReached = nullptr );
 
+/// computes all edges in the mesh, where the field not-increases both in left and right triangles
+[[nodiscard]] MRMESH_API UndirectedEdgeBitSet findRidgeEdges( const Mesh & mesh, const VertScalars & field );
+
 /// for each vertex from (starts) finds the closest vertex from (ends) in geodesic sense
 /// \param vertRegion consider paths going in this region only
 MRMESH_API HashMap<VertId, VertId> computeClosestSurfacePathTargets( const Mesh & mesh,

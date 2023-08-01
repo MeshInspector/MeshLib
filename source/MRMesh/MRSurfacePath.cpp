@@ -479,7 +479,45 @@ void computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
         }
         curr = b.findPrevPoint( curr );
     }
-    return;
+}
+
+UndirectedEdgeBitSet findRidgeEdges( const Mesh & mesh, const VertScalars & field )
+{
+    MR_TIMER
+    UndirectedEdgeBitSet res( mesh.topology.undirectedEdgeSize() );
+    BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
+    {
+        EdgeId e = ue;
+        if ( !mesh.topology.left( e ) || !mesh.topology.right( e ) )
+            return;
+
+        const auto vo = mesh.topology.org( e );
+        const auto vd = mesh.topology.dest( e );
+        const auto vl = mesh.topology.dest( mesh.topology.next( e ) );
+
+        const auto po = mesh.points[vo];
+        const auto pd = mesh.points[vd];
+        const auto pl = mesh.points[vl];
+
+        const auto fo = field[vo];
+        const auto fd = field[vd];
+        const auto fl = field[vl];
+
+        const auto gradL = computeGradient( pd - po, pl - po, fd - fo, fl - fo );
+        if ( !dirEnters01( { po, pd, pl }, gradL ) )
+            return;
+
+        const auto vr = mesh.topology.dest( mesh.topology.prev( e ) );
+        const auto pr = mesh.points[vr];
+        const auto fr = field[vr];
+
+        const auto gradR = computeGradient( pr - po, pd - po, fr - fo, fd - fo );
+        if ( !dirEnters01( { pd, po, pr }, gradR ) )
+            return;
+
+        res.set( ue );
+    } );
+    return res;
 }
 
 Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp,

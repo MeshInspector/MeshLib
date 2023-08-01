@@ -606,6 +606,12 @@ int Viewer::launchInit_( const LaunchParams& params )
         touchesController.connect( this );
         spaceMouseController.connect();
         initSpaceMouseHandler_();
+
+        gestureRecognizerHandler.initialize( window );
+        gestureRecognizerHandler.onRotation( [&] ( float angle )
+        {
+            spdlog::info( "rotation gesture ( angle = {} )", angle );
+        } );
     }
 
     std::future<void> splashMinTimer;

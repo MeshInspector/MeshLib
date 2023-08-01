@@ -11,6 +11,9 @@ namespace MR
     public:
         void initialize( GLFWwindow* window );
 
+        using MagnificationCallback = std::function<void ( float scale )>;
+        void onMagnification( MagnificationCallback cb );
+
         using RotationCallback = std::function<void ( float angle )>;
         void onRotation( RotationCallback cb );
 
@@ -19,6 +22,7 @@ namespace MR
         public:
             virtual ~Impl() = default;
 
+            virtual void onMagnification( MagnificationCallback cb ) = 0;
             virtual void onRotation( RotationCallback cb ) = 0;
         };
 

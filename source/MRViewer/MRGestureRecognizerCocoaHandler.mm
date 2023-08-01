@@ -44,6 +44,15 @@ namespace
         std::map<NSView*, MR::GestureRecognizerCocoaHandler*> registry_;
     };
 
+    void magnificationGestureEvent( NSView* view, SEL cmd, NSMagnificationGestureRecognizer* magnificationGestureRecognizer )
+    {
+        auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
+        if ( handler )
+        {
+            handler->magnificationCb( magnificationGestureRecognizer.magnification );
+        }
+    }
+
     void rotationGestureEvent( NSView* view, SEL cmd, NSRotationGestureRecognizer* rotationGestureRecognizer )
     {
         auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
@@ -63,9 +72,14 @@ namespace MR
 
         Class cls = [view_ class];
 
-        rotationGestureRecognizer_ = [[NSRotationGestureRecognizer alloc] initWithTarget:view_ action:@selector(handleRotateGesture:)];
-        if ( !class_respondsToSelector( cls, @selector(handleRotateGesture:)) )
-            class_addMethod( cls, @selector(handleRotateGesture:), (IMP)rotationGestureEvent, "v@:@" );
+        magnificationGestureRecognizer_ = [[NSMagnificationGestureRecognizer alloc] initWithTarget:view_ action:@selector(handleMagnificationGesture:)];
+        if ( !class_respondsToSelector( cls, @selector(handleMagnificationGesture:) ) )
+            class_addMethod( cls, @selector(handleMagnificationGesture:), (IMP)magnificationGestureEvent, "v@:@" );
+        [view_ addGestureRecognizer:magnificationGestureRecognizer_];
+
+        rotationGestureRecognizer_ = [[NSRotationGestureRecognizer alloc] initWithTarget:view_ action:@selector(handleRotationGesture:)];
+        if ( !class_respondsToSelector( cls, @selector(handleRotationGesture:) ) )
+            class_addMethod( cls, @selector(handleRotationGesture:), (IMP)rotationGestureEvent, "v@:@" );
         [view_ addGestureRecognizer:rotationGestureRecognizer_];
 
         GestureRecognizerCocoaHandlerRegistry::instance().add( view_, this );
@@ -74,6 +88,12 @@ namespace MR
     GestureRecognizerCocoaHandler::~GestureRecognizerCocoaHandler()
     {
         [rotationGestureRecognizer_ release];
+    }
+
+    void GestureRecognizerCocoaHandler::onMagnification( GestureRecognizerHandler::MagnificationCallback cb )
+    {
+        // TODO: thread safety?
+        magnificationCb = cb;
     }
 
     void GestureRecognizerCocoaHandler::onRotation( GestureRecognizerHandler::RotationCallback cb )

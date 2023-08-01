@@ -10,6 +10,14 @@ namespace MR
 #endif
     }
 
+    void GestureRecognizerHandler::onMagnification( GestureRecognizerHandler::MagnificationCallback cb )
+    {
+        if ( impl_ )
+        {
+            impl_->onMagnification( cb );
+        }
+    }
+
     void GestureRecognizerHandler::onRotation( GestureRecognizerHandler::RotationCallback cb )
     {
         if ( impl_ )

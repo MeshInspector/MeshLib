@@ -20,8 +20,6 @@ enum FaceIncidence
     PerVertex ///< face can have neighbor via vertex
 };
 
-using UndirectedEdgePredicate = std::function<bool(UndirectedEdgeId)>;
-
 /// returns one connected component containing given face, 
 /// not effective to call more than once, if several components are needed use getAllComponents
 [[nodiscard]] MRMESH_API FaceBitSet getComponent( const MeshPart& meshPart, FaceId id,

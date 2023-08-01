@@ -106,6 +106,8 @@ namespace MR
 
     GestureRecognizerCocoaHandler::~GestureRecognizerCocoaHandler()
     {
+        [magnificationGestureRecognizer_ release];
+        [panGestureRecognizer_ release];
         [rotationGestureRecognizer_ release];
     }
 

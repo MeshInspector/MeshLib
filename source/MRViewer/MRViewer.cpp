@@ -87,6 +87,16 @@ EMSCRIPTEN_KEEPALIVE void emsPostEmptyEvent( int forceFrames )
     viewer.postEmptyEvent();
 }
 
+EMSCRIPTEN_KEEPALIVE void emsUpdateViewportBounds()
+{
+    auto& viewer = MR::getViewerInstance();
+    auto bounds = viewer.getViewportsBounds();
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
+    EM_ASM( updateVPBounds($0,$1,$2,$3), bounds.min.x,bounds.min.y, MR::width( bounds ),MR::height( bounds ) );
+#pragma clang diagnostic pop
+}
+
 }
 #endif
 

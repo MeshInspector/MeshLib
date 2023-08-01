@@ -4,10 +4,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project (MRViewer CXX)
 
-file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
 if(APPLE)
-	file(GLOB SOURCES "*.mm")
+	file(GLOB SOURCES "*.cpp" "*.mm")
+ELSE()
+	file(GLOB SOURCES "*.cpp")
 ENDIF()
 
 IF(MR_EMSCRIPTEN)

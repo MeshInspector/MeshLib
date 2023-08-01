@@ -20,22 +20,27 @@ enum FaceIncidence
     PerVertex ///< face can have neighbor via vertex
 };
 
+using UndirectedEdgePredicate = std::function<bool(UndirectedEdgeId)>;
+
 /// returns one connected component containing given face, 
 /// not effective to call more than once, if several components are needed use getAllComponents
-[[nodiscard]] MRMESH_API FaceBitSet getComponent( const MeshPart& meshPart, FaceId id, FaceIncidence incidence = FaceIncidence::PerEdge );
+[[nodiscard]] MRMESH_API FaceBitSet getComponent( const MeshPart& meshPart, FaceId id,
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & uniteOverEdge = {} );
 /// returns one connected component containing given vertex, 
 /// not effective to call more than once, if several components are needed use getAllComponentsVerts
 [[nodiscard]] MRMESH_API VertBitSet getComponentVerts( const Mesh& mesh, VertId id, const VertBitSet* region = nullptr );
 
 /// returns largest by surface area component
-[[nodiscard]] MRMESH_API FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidence = FaceIncidence::PerEdge );
+[[nodiscard]] MRMESH_API FaceBitSet getLargestComponent( const MeshPart& meshPart,
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & uniteOverEdge = {} );
 /// returns largest by number of elements component
 [[nodiscard]] MRMESH_API VertBitSet getLargestComponentVerts( const Mesh& mesh, const VertBitSet* region = nullptr );
 
 /// returns union of connected components, each of which contains at least one seed face
-[[nodiscard]] MRMESH_API FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, FaceIncidence incidence = FaceIncidence::PerEdge );
+[[nodiscard]] MRMESH_API FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds,
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & uniteOverEdge = {} );
 /// returns the union of connected components, each having at least given area
-[[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, float minArea );
+[[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, float minArea, const UndirectedEdgePredicate & uniteOverEdge );
 /// given prepared union-find structure returns the union of connected components, each having at least given area
 [[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, UnionFind<FaceId> & unionFind, float minArea,
     UndirectedEdgeBitSet * bdEdgesBetweenLargeComps = nullptr );
@@ -47,10 +52,12 @@ enum FaceIncidence
 [[nodiscard]] MRMESH_API VertBitSet getComponentsVerts( const Mesh& mesh, const VertBitSet& seeds, const VertBitSet* region = nullptr );
 
 /// returns the number of connected components in mesh part
-[[nodiscard]] MRMESH_API size_t getNumComponents( const MeshPart& meshPart, FaceIncidence incidence = FaceIncidence::PerEdge );
+[[nodiscard]] MRMESH_API size_t getNumComponents( const MeshPart& meshPart,
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & uniteOverEdge = {} );
 
 /// gets all connected components of mesh part
-[[nodiscard]] MRMESH_API std::vector<FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidence incidence = FaceIncidence::PerEdge );
+[[nodiscard]] MRMESH_API std::vector<FaceBitSet> getAllComponents( const MeshPart& meshPart,
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & uniteOverEdge = {} );
 [[nodiscard]] MRMESH_API std::vector<VertBitSet> getAllComponentsVerts( const Mesh& mesh, const VertBitSet* region = nullptr );
 /// gets all connected components, separating vertices by given path (either closed or from boundary to boundary)
 [[nodiscard]] MRMESH_API std::vector<VertBitSet> getAllComponentsVertsSeparatedByPath( const Mesh& mesh, const SurfacePath& path );
@@ -61,9 +68,9 @@ enum FaceIncidence
 [[nodiscard]] MRMESH_API bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection );
 
 /// gets union-find structure for faces with different options of face-connectivity
-[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence = FaceIncidence::PerEdge );
+[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & uniteOverEdge = {} );
 /// gets union-find structure for faces with connectivity by shared edge, and optional edge predicate whether to unite components over it
-[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, std::function<bool(UndirectedEdgeId)> uniteOverEdge = {} );
+[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgePredicate & uniteOverEdge = {} );
 /// gets union-find structure for vertices
 [[nodiscard]] MRMESH_API UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet* region = nullptr );
 /// gets union-find structure for vertices, considering connections by given edges only

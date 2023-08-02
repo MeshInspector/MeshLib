@@ -66,6 +66,30 @@ namespace
         }
     }
 
+    void scrollEvent( NSView* view, SEL cmd, NSEvent* event )
+    {
+        auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
+        if ( !handler )
+            return;
+
+        auto deltaX = [event scrollingDeltaX];
+        auto deltaY = [event scrollingDeltaY];
+        if ( [event hasPreciseScrollingDeltas] )
+        {
+            deltaX *= 0.1;
+            deltaY *= 0.1;
+        }
+
+        if ( [event subtype] == NSEventSubtypeMouseEvent )
+        {
+            handler->mouseScrollCb( deltaX, deltaY );
+        }
+        else
+        {
+            handler->touchScrollCb( deltaX, deltaY );
+        }
+    }
+
     void onTouchesBegan( NSView* view, SEL cmd, NSEvent* event )
     {
         spdlog::info( "touches began" );
@@ -101,6 +125,12 @@ namespace MR
             class_addMethod( cls, @selector(handleRotationGesture:), (IMP)rotationGestureEvent, "v@:@" );
         [view_ addGestureRecognizer:rotationGestureRecognizer_];
 
+        // NOTE: GLFW scroll handler is replaced here
+        if ( !class_respondsToSelector( cls, @selector(scrollWheel:) ) )
+            class_addMethod( cls, @selector(scrollWheel:), (IMP)scrollEvent, "v@:@" );
+        else
+            class_replaceMethod( cls, @selector(scrollWheel:), (IMP)scrollEvent, "v@:@" );
+
         [view_ setAllowedTouchTypes:(NSTouchTypeMaskDirect | NSTouchTypeMaskIndirect)];
         // FIXME: find where the methods were defined previously
         //if ( !class_respondsToSelector( cls, @selector(touchesBeganWithEvent:) ) )
@@ -129,6 +159,18 @@ namespace MR
     {
         // TODO: thread safety?
         rotationCb = cb;
+    }
+
+    void GestureRecognizerCocoaHandler::onMouseScroll( GestureRecognizerHandler::ScrollCallback cb )
+    {
+        // TODO: thread safety?
+        mouseScrollCb = cb;
+    }
+
+    void GestureRecognizerCocoaHandler::onTouchScroll( GestureRecognizerHandler::ScrollCallback cb )
+    {
+        // TODO: thread safety?
+        touchScrollCb = cb;
     }
 }
 

@@ -17,6 +17,10 @@ namespace MR
         using RotationCallback = std::function<void ( float angle, bool finished )>;
         void onRotation( RotationCallback cb );
 
+        using ScrollCallback = std::function<void ( float dx, float dy )>;
+        void onMouseScroll( ScrollCallback cb );
+        void onTouchScroll( ScrollCallback cb );
+
         class Impl
         {
         public:
@@ -24,6 +28,8 @@ namespace MR
 
             virtual void onMagnification( MagnificationCallback cb ) = 0;
             virtual void onRotation( RotationCallback cb ) = 0;
+            virtual void onMouseScroll( ScrollCallback cb ) = 0;
+            virtual void onTouchScroll( ScrollCallback cb ) = 0;
         };
 
     private:

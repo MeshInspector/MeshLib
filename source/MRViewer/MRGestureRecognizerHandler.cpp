@@ -25,4 +25,20 @@ namespace MR
             impl_->onRotation( cb );
         }
     }
+
+    void GestureRecognizerHandler::onMouseScroll( GestureRecognizerHandler::ScrollCallback cb )
+    {
+        if ( impl_ )
+        {
+            impl_->onMouseScroll( cb );
+        }
+    }
+
+    void GestureRecognizerHandler::onTouchScroll( GestureRecognizerHandler::ScrollCallback cb )
+    {
+        if ( impl_ )
+        {
+            impl_->onTouchScroll( cb );
+        }
+    }
 }

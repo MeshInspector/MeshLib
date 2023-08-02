@@ -620,6 +620,14 @@ int Viewer::launchInit_( const LaunchParams& params )
             if ( finished )
                 spdlog::info( "rotation gesture ended" );
         } );
+        gestureRecognizerHandler.onMouseScroll( [&] ( float dx, float dy )
+        {
+            mouseScroll( dy );
+        } );
+        gestureRecognizerHandler.onTouchScroll( [&] ( float dx, float dy )
+        {
+            spdlog::info( "swipe gesture ( dx = {} dy = {} )", dx, dy );
+        } );
     }
 
     std::future<void> splashMinTimer;

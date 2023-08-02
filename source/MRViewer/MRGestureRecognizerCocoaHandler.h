@@ -16,9 +16,13 @@ public:
 
     GestureRecognizerHandler::MagnificationCallback magnificationCb;
     GestureRecognizerHandler::RotationCallback rotationCb;
+    GestureRecognizerHandler::ScrollCallback mouseScrollCb;
+    GestureRecognizerHandler::ScrollCallback touchScrollCb;
 
     void onMagnification( GestureRecognizerHandler::MagnificationCallback cb ) override;
     void onRotation( GestureRecognizerHandler::RotationCallback cb ) override;
+    void onMouseScroll( GestureRecognizerHandler::ScrollCallback cb ) override;
+    void onTouchScroll( GestureRecognizerHandler::ScrollCallback cb ) override;
 
 private:
     NSView* view_;

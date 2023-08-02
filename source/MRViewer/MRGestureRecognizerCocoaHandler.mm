@@ -49,21 +49,25 @@ namespace
     void magnificationGestureEvent( NSView* view, SEL cmd, NSMagnificationGestureRecognizer* magnificationGestureRecognizer )
     {
         auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
-        if ( handler )
-        {
-            const auto finished = magnificationGestureRecognizer.state == NSGestureRecognizerStateEnded;
-            handler->magnificationCb( magnificationGestureRecognizer.magnification, finished );
-        }
+        if ( !handler )
+            return;
+        if ( !handler->magnificationCb )
+            return;
+
+        const auto finished = magnificationGestureRecognizer.state == NSGestureRecognizerStateEnded;
+        handler->magnificationCb( magnificationGestureRecognizer.magnification, finished );
     }
 
     void rotationGestureEvent( NSView* view, SEL cmd, NSRotationGestureRecognizer* rotationGestureRecognizer )
     {
         auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
-        if ( handler )
-        {
-            const auto finished = rotationGestureRecognizer.state == NSGestureRecognizerStateEnded;
-            handler->rotationCb( rotationGestureRecognizer.rotation, finished );
-        }
+        if ( ! handler )
+            return;
+        if ( !handler->rotationCb )
+            return;
+
+        const auto finished = rotationGestureRecognizer.state == NSGestureRecognizerStateEnded;
+        handler->rotationCb( rotationGestureRecognizer.rotation, finished );
     }
 
     void scrollEvent( NSView* view, SEL cmd, NSEvent* event )
@@ -79,14 +83,18 @@ namespace
             deltaX *= 0.1;
             deltaY *= 0.1;
         }
+        if ( deltaX == 0.0 && deltaY == 0.0 )
+            return;
 
         if ( [event subtype] == NSEventSubtypeMouseEvent )
         {
-            handler->mouseScrollCb( deltaX, deltaY );
+            if ( handler->mouseScrollCb )
+                handler->mouseScrollCb( deltaX, deltaY );
         }
         else
         {
-            handler->touchScrollCb( deltaX, deltaY );
+            if ( handler->touchScrollCb )
+                handler->touchScrollCb( deltaX, deltaY );
         }
     }
 

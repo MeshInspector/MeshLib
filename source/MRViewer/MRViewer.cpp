@@ -628,6 +628,10 @@ int Viewer::launchInit_( const LaunchParams& params )
         {
             spdlog::info( "swipe gesture ( dx = {} dy = {} )", dx, dy );
         } );
+        gestureRecognizerHandler.onTouch( [&] ( size_t id, float x, float y, GestureRecognizerHandler::TouchState state )
+        {
+            spdlog::info( "touch ( id = {} x = {} y = {} )", id, x, y );
+        } );
     }
 
     std::future<void> splashMinTimer;

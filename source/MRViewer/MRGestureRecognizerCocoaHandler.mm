@@ -100,17 +100,78 @@ namespace
 
     void onTouchesBegan( NSView* view, SEL cmd, NSEvent* event )
     {
-        spdlog::info( "touches began" );
+        auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
+        if ( ! handler )
+            return;
+        if ( !handler->touchCb )
+            return;
+
+        NSSet* touches = [event touchesMatchingPhase:NSTouchPhaseBegan inView:view];
+        NSArray* array = [touches allObjects];
+        for ( auto i = 0; i < [array count]; ++i )
+        {
+            NSTouch* touch = [array objectAtIndex:i];
+            auto id = touch.identity;
+            auto pos = touch.normalizedPosition;
+            handler->touchCb( id.hash, pos.x, pos.y, MR::GestureRecognizerHandler::TouchState::Began );
+        }
     }
 
     void onTouchesMoved( NSView* view, SEL cmd, NSEvent* event )
     {
-        spdlog::info( "touches moved" );
+        auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
+        if ( ! handler )
+            return;
+        if ( !handler->touchCb )
+            return;
+
+        NSSet* touches = [event touchesMatchingPhase:NSTouchPhaseMoved inView:view];
+        NSArray* array = [touches allObjects];
+        for ( auto i = 0; i < [array count]; ++i )
+        {
+            NSTouch* touch = [array objectAtIndex:i];
+            auto id = touch.identity;
+            auto pos = touch.normalizedPosition;
+            handler->touchCb( id.hash, pos.x, pos.y, MR::GestureRecognizerHandler::TouchState::Moved );
+        }
     }
 
     void onTouchesEnded( NSView* view, SEL cmd, NSEvent* event )
     {
-        spdlog::info( "touches ended" );
+        auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
+        if ( ! handler )
+            return;
+        if ( !handler->touchCb )
+            return;
+
+        NSSet* touches = [event touchesMatchingPhase:NSTouchPhaseMoved inView:view];
+        NSArray* array = [touches allObjects];
+        for ( auto i = 0; i < [array count]; ++i )
+        {
+            NSTouch* touch = [array objectAtIndex:i];
+            auto id = touch.identity;
+            auto pos = touch.normalizedPosition;
+            handler->touchCb( id.hash, pos.x, pos.y, MR::GestureRecognizerHandler::TouchState::Ended );
+        }
+    }
+
+    void onTouchesCancelled( NSView* view, SEL cmd, NSEvent* event )
+    {
+        auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
+        if ( ! handler )
+            return;
+        if ( !handler->touchCb )
+            return;
+
+        NSSet* touches = [event touchesMatchingPhase:NSTouchPhaseCancelled inView:view];
+        NSArray* array = [touches allObjects];
+        for ( auto i = 0; i < [array count]; ++i )
+        {
+            NSTouch* touch = [array objectAtIndex:i];
+            auto id = touch.identity;
+            auto pos = touch.normalizedPosition;
+            handler->touchCb( id.hash, pos.x, pos.y, MR::GestureRecognizerHandler::TouchState::Canceled );
+        }
     }
 }
 
@@ -147,6 +208,8 @@ namespace MR
             class_addMethod( cls, @selector(touchesMovedWithEvent:), (IMP)onTouchesMoved, "v@:@" );
         //if ( !class_respondsToSelector( cls, @selector(touchesEndedWithEvent:) ) )
             class_addMethod( cls, @selector(touchesEndedWithEvent:), (IMP)onTouchesEnded, "v@:@" );
+        //if ( !class_respondsToSelector( cls, @selector(touchesCanceledWithEvent:) ) )
+            class_addMethod( cls, @selector(touchesCancelledWithEvent:), (IMP)onTouchesCancelled, "v@:@" );
 
         GestureRecognizerCocoaHandlerRegistry::instance().add( view_, this );
     }
@@ -179,6 +242,12 @@ namespace MR
     {
         // TODO: thread safety?
         touchScrollCb = cb;
+    }
+
+    void GestureRecognizerCocoaHandler::onTouch( GestureRecognizerHandler::TouchCallback cb )
+    {
+        // TODO: thread safety?
+        touchCb = cb;
     }
 }
 

@@ -41,4 +41,12 @@ namespace MR
             impl_->onTouchScroll( cb );
         }
     }
+
+    void GestureRecognizerHandler::onTouch( GestureRecognizerHandler::TouchCallback cb )
+    {
+        if ( impl_ )
+        {
+            impl_->onTouch( cb );
+        }
+    }
 }

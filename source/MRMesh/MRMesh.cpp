@@ -1,5 +1,6 @@
 #include "MRMesh.h"
 #include "MRAABBTree.h"
+#include "MRAABBTreePoints.h"
 #include "MRAffineXf3.h"
 #include "MRBitSet.h"
 #include "MRBitSetParallelFor.h"
@@ -904,6 +905,7 @@ PackMapping Mesh::packOptimally( bool preserveAABBTree )
     MR_TIMER
 
     PackMapping map;
+    AABBTreePointsOwner_.reset(); // points-tree will be invalidated anyway
     if ( preserveAABBTree )
     {
         getAABBTree(); // ensure that tree is constructed
@@ -978,16 +980,26 @@ const AABBTree & Mesh::getAABBTree() const
     return res;
 }
 
-void Mesh::invalidateCaches()
+const AABBTreePoints & Mesh::getAABBTreePoints() const 
+{ 
+    const auto & res = AABBTreePointsOwner_.getOrCreate( [this]{ return AABBTreePoints( *this ); } );
+    assert( res.orderedPoints().size() == topology.numValidVerts() );
+    return res;
+}
+
+void Mesh::invalidateCaches( bool pointsChanged )
 {
     AABBTreeOwner_.reset();
+    if ( pointsChanged )
+        AABBTreePointsOwner_.reset();
 }
 
 size_t Mesh::heapBytes() const
 {
     return topology.heapBytes()
         + points.heapBytes()
-        + AABBTreeOwner_.heapBytes();
+        + AABBTreeOwner_.heapBytes()
+        + AABBTreePointsOwner_.heapBytes();
 }
 
 void Mesh::shrinkToFit()

@@ -80,7 +80,18 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     root["PolygonOffset"] = polygonOffset_.value();
     root["ShadingEnabled"] = shadingEnabled_.value();
     root["FaceBased"] = !flatShading_.empty();
-    root["ColoringType"] = ( coloringType_ == ColoringType::VertsColorMap ) ? "PerVertex" : "Solid";
+    switch( coloringType_ )
+    {
+    case ColoringType::VertsColorMap:
+        root["ColoringType"] = "PerVertex";
+        break;
+    case ColoringType::FacesColorMap:
+        root["ColoringType"] = "PerFace";
+        break;
+    default:
+        root["ColoringType"] = "Solid";
+    }
+    serializeToJson( facesColorMap_.vec_, root["FaceColors"] );
 
     // texture
     serializeToJson( texture_, root["Texture"] );
@@ -137,7 +148,10 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
         const auto stype = root["ColoringType"].asString();
         if ( stype == "PerVertex" )
             setColoringType( ColoringType::VertsColorMap );
+        else if ( stype == "PerFace" )
+            setColoringType( ColoringType::FacesColorMap );
     }
+    deserializeFromJson( root["FaceColors"], facesColorMap_.vec_ );
 
     Vector4f resVec;
     deserializeFromJson( selectionColor["Diffuse"], resVec );

@@ -646,7 +646,7 @@ void deserializeViaVerticesFromJson( const Json::Value& root, UndirectedEdgeBitS
     edges.resize( root["size"].asInt() );
     auto bin = decode64( root["vertpairs"].asString() );
 
-    for ( size_t i = 0; i < bin.size(); i += 8 )
+    for ( size_t i = 0; i + 8 <= bin.size(); i += 8 )
     {
         VertId o, d;
         static_assert( sizeof( VertId ) == 4 );
@@ -894,7 +894,8 @@ void deserializeFromJson( const Json::Value& root, MeshTexture& texture )
     {
         texture.pixels.resize( texture.resolution.x * texture.resolution.y );
         auto bin = decode64( root["Data"].asString() );
-        std::copy( ( Color* )bin.data(), ( Color* )( bin.data() ) + texture.pixels.size(), texture.pixels.data() );
+        auto numColors = std::min( bin.size() / sizeof( Color ), texture.pixels.size() );
+        std::copy( ( Color* )bin.data(), ( Color* )( bin.data() ) + numColors, texture.pixels.data() );
     }
 }
 

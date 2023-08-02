@@ -112,6 +112,7 @@ void ProgressBar::setup( float scaling )
             {
                 instance.onFinish_();
                 instance.onFinish_ = {};
+                instance.isOrdered_ = false;
             }
             instance.closeDialogNextFrame_ = true;
             getViewerInstance().incrementForceRedrawFrames();
@@ -150,7 +151,7 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
 
     if ( instance.thread_.joinable() )
         return;
-
+    instance.isOrdered_ = true;
     instance.deferredProgressBar_ = [task, taskCount, nameStr = std::string(name)] ()
     {
         auto& instance = instance_();
@@ -233,6 +234,11 @@ bool ProgressBar::setProgress( float p )
 void ProgressBar::setTaskCount( int n )
 {
     instance_().taskCount_ = n;
+}
+
+bool ProgressBar::isOrdered()
+{
+    return instance_().isOrdered_;
 }
 
 void ProgressBar::nextTask()

@@ -10,6 +10,8 @@
 
 #include <map>
 
+#include <spdlog/spdlog.h>
+
 namespace
 {
     class GestureRecognizerCocoaHandlerRegistry
@@ -63,6 +65,21 @@ namespace
             handler->rotationCb( rotationGestureRecognizer.rotation, finished );
         }
     }
+
+    void onTouchesBegan( NSView* view, SEL cmd, NSEvent* event )
+    {
+        spdlog::info( "touches began" );
+    }
+
+    void onTouchesMoved( NSView* view, SEL cmd, NSEvent* event )
+    {
+        spdlog::info( "touches moved" );
+    }
+
+    void onTouchesEnded( NSView* view, SEL cmd, NSEvent* event )
+    {
+        spdlog::info( "touches ended" );
+    }
 }
 
 namespace MR
@@ -83,6 +100,15 @@ namespace MR
         if ( !class_respondsToSelector( cls, @selector(handleRotationGesture:) ) )
             class_addMethod( cls, @selector(handleRotationGesture:), (IMP)rotationGestureEvent, "v@:@" );
         [view_ addGestureRecognizer:rotationGestureRecognizer_];
+
+        [view_ setAllowedTouchTypes:(NSTouchTypeMaskDirect | NSTouchTypeMaskIndirect)];
+        // FIXME: find where the methods were defined previously
+        //if ( !class_respondsToSelector( cls, @selector(touchesBeganWithEvent:) ) )
+            class_addMethod( cls, @selector(touchesBeganWithEvent:), (IMP)onTouchesBegan, "v@:@" );
+        //if ( !class_respondsToSelector( cls, @selector(touchesMovedWithEvent:) ) )
+            class_addMethod( cls, @selector(touchesMovedWithEvent:), (IMP)onTouchesMoved, "v@:@" );
+        //if ( !class_respondsToSelector( cls, @selector(touchesEndedWithEvent:) ) )
+            class_addMethod( cls, @selector(touchesEndedWithEvent:), (IMP)onTouchesEnded, "v@:@" );
 
         GestureRecognizerCocoaHandlerRegistry::instance().add( view_, this );
     }

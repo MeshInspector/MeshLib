@@ -114,7 +114,7 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
         if ( auto tree = mesh_->getAABBTreePointsNotCreate() )
             treesSize += tree->heapBytes();
         if ( treesSize > 0 )
-            res.push_back( "AABB tree: " + bytesString( treesSize ) );
+            res.push_back( "AABB trees: " + bytesString( treesSize ) );
     }
     else
         res.push_back( "no mesh" );

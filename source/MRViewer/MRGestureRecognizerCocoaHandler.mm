@@ -55,7 +55,7 @@ namespace
             return;
 
         const auto finished = magnificationGestureRecognizer.state == NSGestureRecognizerStateEnded;
-        handler->magnificationCb( 1.0 + magnificationGestureRecognizer.magnification, finished );
+        handler->magnificationCb( std::exp( -magnificationGestureRecognizer.magnification ), finished );
     }
 
     void rotationGestureEvent( NSView* view, SEL cmd, NSRotationGestureRecognizer* rotationGestureRecognizer )

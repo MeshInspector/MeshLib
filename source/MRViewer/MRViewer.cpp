@@ -610,9 +610,19 @@ int Viewer::launchInit_( const LaunchParams& params )
         gestureRecognizerHandler.initialize( window );
         gestureRecognizerHandler.onMagnification( [&] ( float scale, bool finished )
         {
-            spdlog::info( "magnification gesture ( scale = {} )", scale );
-            if ( finished )
-                spdlog::info( "magnification gesture finished" );
+            static float cameraViewAngle = -1.f;
+            if ( !finished )
+            {
+                if ( cameraViewAngle == -1.f )
+                    cameraViewAngle = viewport().getParameters().cameraViewAngle;
+                constexpr float minAngle = 0.001f;
+                constexpr float maxAngle = 179.99f;
+                viewport().setCameraViewAngle( std::clamp( cameraViewAngle * scale, minAngle, maxAngle ) );
+            }
+            else
+            {
+                cameraViewAngle = -1.f;
+            }
         } );
         gestureRecognizerHandler.onRotation( [&] ( float angle, bool finished )
         {

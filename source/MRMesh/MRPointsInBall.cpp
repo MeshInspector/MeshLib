@@ -1,14 +1,21 @@
 #include "MRPointsInBall.h"
 #include "MRPointCloud.h"
+#include "MRMesh.h"
 #include "MRAABBTreePoints.h"
 
 namespace MR
 {
 
-void findPointsInBall( const PointCloud& pointCloud, const Vector3f& center, float radius, 
+void findPointsInBall( const PointCloud& pointCloud, const Vector3f& center, float radius,
     const FoundPointCallback& foundCallback, const AffineXf3f* xf )
 {
     findPointsInBall( pointCloud.getAABBTree(), center, radius, foundCallback, xf );
+}
+
+void findPointsInBall( const Mesh& mesh, const Vector3f& center, float radius,
+    const FoundPointCallback& foundCallback, const AffineXf3f* xf )
+{
+    findPointsInBall( mesh.getAABBTreePoints(), center, radius, foundCallback, xf );
 }
 
 void findPointsInBall( const AABBTreePoints& tree, const Vector3f& center, float radius, 

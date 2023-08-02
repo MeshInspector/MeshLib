@@ -1,5 +1,6 @@
 #include "MRCloseVertices.h"
 #include "MRMesh.h"
+#include "MRPointCloud.h"
 #include "MRAABBTreePoints.h"
 #include "MRPointsInBall.h"
 #include "MRParallelFor.h"
@@ -10,11 +11,10 @@
 namespace MR
 {
 
-VertMap findSmallestCloseVertices( const VertCoords & points, float closeDist, const VertBitSet * valid )
+VertMap findSmallestCloseVerticesUsingTree( const VertCoords & points, float closeDist, const AABBTreePoints & tree, const VertBitSet * valid )
 {
     MR_TIMER
 
-    AABBTreePoints tree( points, valid );
     VertMap res;
     res.resizeNoInit( points.size() );
     ParallelFor( points, [&]( VertId v )
@@ -59,9 +59,21 @@ VertMap findSmallestCloseVertices( const VertCoords & points, float closeDist, c
     return res;
 }
 
+VertMap findSmallestCloseVertices( const VertCoords & points, float closeDist, const VertBitSet * valid )
+{
+    MR_TIMER
+    AABBTreePoints tree( points, valid );
+    return findSmallestCloseVerticesUsingTree( points, closeDist, tree, valid );
+}
+
 VertMap findSmallestCloseVertices( const Mesh & mesh, float closeDist )
 {
-    return findSmallestCloseVertices( mesh.points, closeDist, &mesh.topology.getValidVerts() );
+    return findSmallestCloseVerticesUsingTree( mesh.points, closeDist, mesh.getAABBTreePoints(), &mesh.topology.getValidVerts() );
+}
+
+VertMap findSmallestCloseVertices( const PointCloud & cloud, float closeDist )
+{
+    return findSmallestCloseVerticesUsingTree( cloud.points, closeDist, cloud.getAABBTree(), &cloud.validPoints );
 }
 
 VertBitSet findCloseVertices( const VertMap & smallestMap )
@@ -87,7 +99,12 @@ VertBitSet findCloseVertices( const VertCoords & points, float closeDist, const 
 
 VertBitSet findCloseVertices( const Mesh & mesh, float closeDist )
 {
-    return findCloseVertices( mesh.points, closeDist, &mesh.topology.getValidVerts() );
+    return findCloseVertices( findSmallestCloseVertices( mesh, closeDist ) );
+}
+
+VertBitSet findCloseVertices( const PointCloud & cloud, float closeDist )
+{
+    return findCloseVertices( findSmallestCloseVertices( cloud, closeDist ) );
 }
 
 struct VertPair

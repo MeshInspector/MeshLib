@@ -1026,6 +1026,9 @@
     <ClInclude Include="MRPointOnObject.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRPointsProject.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1702,6 +1705,9 @@
     </ClCompile>
     <ClCompile Include="MRAggregateFlow.cpp">
       <Filter>Source Files\SurfacePath</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointsProject.cpp">
+      <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

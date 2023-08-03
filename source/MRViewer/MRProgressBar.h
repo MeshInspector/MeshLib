@@ -37,6 +37,9 @@ public:
 
     MRVIEWER_API static void setTaskCount( int n );
 
+    // returns true if progress bar was ordered and not finished
+    MRVIEWER_API static bool isOrdered();
+
     // these callbacks allow canceling
     MRVIEWER_API static bool callBackSetProgress(float p);
     // these callbacks do not allow canceling
@@ -75,6 +78,7 @@ private:
     std::atomic<bool> finished_;
     ImGuiID setupId_ = ImGuiID( -1 );
 
+    bool isOrdered_{ false };
     bool isInit_{ false };
     // this is needed to show full progress before closing
     bool closeDialogNextFrame_{ false };

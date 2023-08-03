@@ -9,39 +9,33 @@
 namespace MR
 {
 
-void WasmUnavailablePlugin::drawDialog( float menuScaling, ImGuiContext* )
+void WasmUnavailablePlugin::drawDialog( float scaling, ImGuiContext* )
 {
     auto menuInstance = getViewerInstance().getMenuPlugin();
     if ( !menuInstance )
         return;
-    const auto scaling = menuInstance->menu_scaling();
 
     if ( openPopup_ )
     {
-        ImGui::OpenPopup( "Unavailable Tool##WasmBlocked" );
+        ImGui::OpenPopup( "##WasmBlocked" );
         openPopup_ = false;
     }
 
-    const ImVec2 windowSize{ cModalWindowWidth * scaling, -1 };
+    const ImVec2 windowSize{ cModalWindowWidth * scaling * 1.5f, -1 };
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
 
     
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * scaling, 3.0f * cDefaultItemSpacing * scaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * scaling, cDefaultItemSpacing * scaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * scaling, cModalWindowPaddingY * scaling } );
-    if ( ImGui::BeginModalNoAnimation( "Unavailable Tool##WasmBlocked", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
+    if ( ImGui::BeginModalNoAnimation( "##WasmBlocked", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
-        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
-        if ( headerFont )
-            ImGui::PushFont( headerFont );
+        if ( ImGui::ModalBigTitle( "This tool can't be supported by browser", scaling ) )
+        {
+            ImGui::CloseCurrentPopup();
+            dialogIsOpen_ = false;
+        }
 
-        const auto headerWidth = ImGui::CalcTextSize( "Unavailable Tool" ).x;
-        ImGui::SetCursorPosX( ( windowSize.x - headerWidth ) * 0.5f );
-        ImGui::Text( "Unavailable Tool" );
-
-        if ( headerFont )
-            ImGui::PopFont();
-
-        auto text = "This tool is unavailable due to some browser\nlimitations, you can use it in desktop verison.";
+        auto text = "We are sorry, but the browser can't support this feature. Please feel free to install the desktop version, it will tale only 3 minutes.";
         const float textWidth = ImGui::CalcTextSize( text ).x;
         if ( textWidth < windowSize.x )
         {
@@ -52,25 +46,19 @@ void WasmUnavailablePlugin::drawDialog( float menuScaling, ImGuiContext* )
         {
             ImGui::TextWrapped( "%s", text );
         }
-
+        ImGui::NewLine();
         const auto style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * scaling } );
 
-        const float p = ImGui::GetStyle().ItemSpacing.x;
-        const Vector2f btnSize{ ( ImGui::GetContentRegionAvail().x - p ) / 2.f, 0 };
+        const Vector2f btnSize{ ImGui::CalcTextSize( "Download" ).x + 4.0f * cGradientButtonFramePadding * scaling, 0 };
+        ImGui::SetCursorPosX( ( windowSize.x - btnSize.x ) * 0.5f );
         if ( UI::button( "Download", btnSize ) )
         {
-            OpenLink( "https://github.com/MeshInspector/MeshInspector/releases" );
+            OpenLink( "https://meshinspector.com/download" );
             ImGui::CloseCurrentPopup();
             dialogIsOpen_ = false;
         }
         UI::setTooltipIfHovered( "Open page with latest releases.", scaling );
-        ImGui::SameLine();
-        if ( UI::buttonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
-        {
-            ImGui::CloseCurrentPopup();
-            dialogIsOpen_ = false;
-        }
 
         if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
         {

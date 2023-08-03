@@ -288,8 +288,14 @@ struct [[nodiscard]] Mesh
     /// returns cached aabb-tree for this mesh, but does not create it if it did not exist
     [[nodiscard]] const AABBTree * getAABBTreeNotCreate() const { return AABBTreeOwner_.get(); }
 
-    // Invalidates caches (e.g. aabb-tree) after a change in mesh geometry or topology
-    MRMESH_API void invalidateCaches();
+    // returns cached aabb-tree for points of this mesh, creating it if it did not exist in a thread-safe manner
+    MRMESH_API const AABBTreePoints & getAABBTreePoints() const;
+    /// returns cached aabb-tree for points of this mesh, but does not create it if it did not exist
+    [[nodiscard]] const AABBTreePoints * getAABBTreePointsNotCreate() const { return AABBTreePointsOwner_.get(); }
+
+    /// Invalidates caches (e.g. aabb-trees) after a change in mesh geometry or topology
+    /// \param pointsChanged specifies whether points have changed (otherwise only topology has changed)
+    MRMESH_API void invalidateCaches( bool pointsChanged = true );
 
     // returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const;
@@ -301,6 +307,7 @@ struct [[nodiscard]] Mesh
 
 private:
     mutable UniqueThreadSafeOwner<AABBTree> AABBTreeOwner_;
+    mutable UniqueThreadSafeOwner<AABBTreePoints> AABBTreePointsOwner_;
 };
 
 // deprecated, please use MR_WRITER directly

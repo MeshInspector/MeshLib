@@ -401,7 +401,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
     ToolPathResult  res{ .modifiedMesh = std::move( *preprocessedMesh ) };
     const auto& mesh = res.modifiedMesh;
 
-    const auto box = mesh.computeBoundingBox( params.xf );
+    const auto box = mesh.computeBoundingBox();
     const float safeZ = std::max( box.max.z + 10.0f * params.millRadius, params.safeZ );
 
     const Vector3f normal = (cutDirection == Axis::X) ? Vector3f::plusX() : Vector3f::plusY();
@@ -571,7 +571,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
     ToolPathResult  res{ .modifiedMesh = std::move( *preprocessedMesh ) };
     const auto& mesh = res.modifiedMesh;
 
-    const auto box = mesh.computeBoundingBox( params.xf );
+    const auto box = mesh.computeBoundingBox();
     const float safeZ = std::max( box.max.z + 10.0f * params.millRadius, params.safeZ );
     float lastZ = 0;
 
@@ -764,7 +764,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
     ToolPathResult  res{ .modifiedMesh = std::move( *preprocessedMesh ) };
     
     const auto& mesh = res.modifiedMesh;
-    const auto box = mesh.computeBoundingBox( params.xf );
+    const auto box = mesh.computeBoundingBox();
 
     const Vector3f normal = Vector3f::plusZ();
     float minZ = box.min.z + params.sectionStep;

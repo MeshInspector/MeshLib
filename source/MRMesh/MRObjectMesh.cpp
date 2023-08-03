@@ -5,6 +5,7 @@
 #include "MRMeshIntersect.h"
 #include "MRStringConvert.h"
 #include "MRAABBTree.h"
+#include "MRAABBTreePoints.h"
 #include "MRLine3.h"
 #include "MRGTest.h"
 #include "MRPch/MRJson.h"
@@ -107,8 +108,13 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
 
         boundingBoxToInfoLines_( res );
 
+        size_t treesSize = 0;
         if ( auto tree = mesh_->getAABBTreeNotCreate() )
-            res.push_back( "AABB tree: " + bytesString( tree->heapBytes() ) );
+            treesSize += tree->heapBytes();
+        if ( auto tree = mesh_->getAABBTreePointsNotCreate() )
+            treesSize += tree->heapBytes();
+        if ( treesSize > 0 )
+            res.push_back( "AABB trees: " + bytesString( treesSize ) );
     }
     else
         res.push_back( "no mesh" );

@@ -504,7 +504,7 @@ UndirectedEdgeBitSet findRidgeEdges( const Mesh & mesh, const VertScalars & fiel
         const auto fl = field[vl];
 
         const auto gradL = computeGradient( pd - po, pl - po, fd - fo, fl - fo );
-        if ( !dirEnters01( { po, pd, pl }, gradL ) )
+        if ( dirEnters01( { po, pd, pl }, gradL ) )
             return;
 
         const auto vr = mesh.topology.dest( mesh.topology.prev( e ) );
@@ -512,7 +512,7 @@ UndirectedEdgeBitSet findRidgeEdges( const Mesh & mesh, const VertScalars & fiel
         const auto fr = field[vr];
 
         const auto gradR = computeGradient( pr - po, pd - po, fr - fo, fd - fo );
-        if ( !dirEnters01( { pd, po, pr }, gradR ) )
+        if ( dirEnters01( { pd, po, pr }, gradR ) )
             return;
 
         res.set( ue );

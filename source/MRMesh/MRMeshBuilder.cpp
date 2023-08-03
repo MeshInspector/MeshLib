@@ -810,8 +810,9 @@ int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd, VertMap 
     if ( uniteOnlyBd )
         bdVerts = mesh.topology.findBoundaryVerts();
 
-    const auto & valid = uniteOnlyBd ? bdVerts : mesh.topology.getValidVerts();
-    const VertMap vertOldToNew = findSmallestCloseVertices( mesh.points, closeDist, &valid );
+    const VertMap vertOldToNew = uniteOnlyBd ? 
+        findSmallestCloseVertices( mesh.points, closeDist, &bdVerts ) :
+        findSmallestCloseVertices( mesh, closeDist );
     int numChanged = 0;
     for ( auto v = 0_v; v < vertOldToNew.size(); ++v )
         if ( v != vertOldToNew[v] )

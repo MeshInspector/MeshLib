@@ -32,6 +32,8 @@ public:
     T * get() { return obj_.get(); }
     /// returns existing owned object or creates new one using creator function
     MRMESH_API T & getOrCreate( const std::function<T()> & creator );
+    /// calls given updater for the owned object (if any)
+    MRMESH_API void update( const std::function<void(T&)> & updater );
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const;
 

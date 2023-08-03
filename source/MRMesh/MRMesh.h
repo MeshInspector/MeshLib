@@ -293,9 +293,13 @@ struct [[nodiscard]] Mesh
     /// returns cached aabb-tree for points of this mesh, but does not create it if it did not exist
     [[nodiscard]] const AABBTreePoints * getAABBTreePointsNotCreate() const { return AABBTreePointsOwner_.get(); }
 
-    /// Invalidates caches (e.g. aabb-trees) after a change in mesh geometry or topology
+    /// invalidates caches (e.g. aabb-trees) after a change in mesh geometry or topology
     /// \param pointsChanged specifies whether points have changed (otherwise only topology has changed)
     MRMESH_API void invalidateCaches( bool pointsChanged = true );
+
+    /// updates existing caches in case few vertices were changed insignificantly,
+    /// and topology remained unchanged
+    MRMESH_API void updateCaches( const VertBitSet & changedVerts );
 
     // returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const;

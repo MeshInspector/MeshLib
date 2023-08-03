@@ -7,6 +7,7 @@
 #include "MRTimer.h"
 #include "MRVDBConversions.h"
 #include "MRVDBProgressInterrupter.h"
+#include "MRBox.h"
 
 namespace MR
 {
@@ -61,6 +62,32 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
 FloatGrid resampled( const FloatGrid& grid, float voxelScale, ProgressCallback cb )
 {
     return resampled( grid, Vector3f::diagonal( voxelScale ), cb );
+}
+
+FloatGrid cropped( const FloatGrid& grid, const Box3i& box, ProgressCallback cb )
+{
+    if ( !grid )
+        return {};
+    const openvdb::FloatGrid& grid_ = *grid;
+    MR_TIMER;
+    openvdb::FloatGrid::Ptr dest = openvdb::FloatGrid::create( grid_.background() );
+    dest->setGridClass( grid_.getGridClass() );
+    auto dstAcc = dest->getAccessor();
+    auto srcAcc = grid_.getConstAccessor();
+    size_t pgCounter = 0;
+    size_t volume = size_t( width( box ) ) * height( box ) * depth( box );
+    for ( int z = box.min.z; z < box.max.z; ++z )
+    for ( int y = box.min.y; y < box.max.y; ++y )
+    for ( int x = box.min.x; x < box.max.x; ++x )
+    {
+        openvdb::Coord srcCoord( x, y, z );
+        openvdb::Coord dstCoord( x - box.min.x, y - box.min.y, z - box.min.z );
+        dstAcc.setValue( dstCoord, srcAcc.getValue( srcCoord ) );
+        if ( cb && ( ++pgCounter ) % 1024 == 0 && !cb( float( pgCounter ) / float( volume ) ) )
+            return {};
+    }
+    dest->pruneGrid();
+    return MakeFloatGrid( std::move( dest ) );
 }
 
 float getValue( const FloatGrid & grid, const Vector3i & p )

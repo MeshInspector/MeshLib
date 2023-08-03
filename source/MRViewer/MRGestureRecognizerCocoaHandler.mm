@@ -10,8 +10,6 @@
 
 #include <map>
 
-#include <spdlog/spdlog.h>
-
 namespace
 {
     class GestureRecognizerCocoaHandlerRegistry
@@ -252,4 +250,3 @@ namespace MR
 }
 
 #endif
-

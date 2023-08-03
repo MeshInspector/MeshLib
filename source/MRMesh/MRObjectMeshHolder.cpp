@@ -531,13 +531,13 @@ size_t ObjectMeshHolder::numHandles() const
     return meshStat_->numComponents - EulerCharacteristic / 2;
 }
 
-void ObjectMeshHolder::setDirtyFlags( uint32_t mask )
+void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
     // selected faces and edges can be changed only by the methods of this class, 
     // which set dirty flags appropriately
     mask &= ~( DIRTY_SELECTION | DIRTY_EDGES_SELECTION );
 
-    VisualObject::setDirtyFlags( mask );
+    VisualObject::setDirtyFlags( mask, invalidateCaches );
 
     if ( mask & DIRTY_FACE )
     {
@@ -552,7 +552,7 @@ void ObjectMeshHolder::setDirtyFlags( uint32_t mask )
         totalArea_.reset();
         selectedArea_.reset();
         avgEdgeLen_.reset();
-        if ( mesh_ )
+        if ( invalidateCaches && mesh_ )
             mesh_->invalidateCaches();
     }
 }

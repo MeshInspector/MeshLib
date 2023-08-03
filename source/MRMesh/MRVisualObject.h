@@ -169,7 +169,8 @@ public:
 
     /// sets some dirty flags for the object (to force its visual update)
     /// \param mask is a union of DirtyFlags flags
-    MRMESH_API virtual void setDirtyFlags( uint32_t mask );
+    /// \param invalidateCaches whether to automatically invalidate model caches (pass false here if you manually update the caches)
+    MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true );
     /// returns current dirty flags for the object
     MRMESH_API uint32_t getDirtyFlags() const { return dirty_; }
     /// resets all dirty flags (except for cache flags that will be reset automatically on cache update)

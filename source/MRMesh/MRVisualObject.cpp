@@ -158,7 +158,7 @@ void VisualObject::setLabelsColorsForAllViewports( ViewportProperty<Color> val )
     labelsColor_ = val;
 }
 
-void VisualObject::setDirtyFlags( uint32_t mask )
+void VisualObject::setDirtyFlags( uint32_t mask, bool )
 {
     if ( mask & DIRTY_FACE ) // first to also activate all flags due to DIRTY_POSITION later
         mask |= DIRTY_POSITION | DIRTY_UV | DIRTY_VERTS_COLORMAP;

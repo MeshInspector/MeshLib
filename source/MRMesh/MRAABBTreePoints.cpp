@@ -4,6 +4,7 @@
 #include "MRUVSphere.h"
 #include "MRMesh.h"
 #include "MRMeshToPointCloud.h"
+#include "MRBitSetParallelFor.h"
 #include "MRHeapBytes.h"
 #include "MRPch/MRTBB.h"
 #include "MRGTest.h"
@@ -190,6 +191,62 @@ size_t AABBTreePoints::heapBytes() const
     return 
         nodes_.heapBytes() +
         MR::heapBytes( orderedPoints_ );
+}
+
+void AABBTreePoints::refit( const VertCoords & newCoords, const VertBitSet & changedVerts )
+{
+    MR_TIMER
+    
+    // find changed orderedPoints_ and update them
+    BitSet changedPoints( orderedPoints_.size() );
+    BitSetParallelForAll( changedPoints, [&]( size_t i )
+    {
+        auto & p = orderedPoints_[i];
+        if ( changedVerts.test( p.id ) )
+        {
+            changedPoints.set( i );
+            p.coord = newCoords[p.id];
+        }
+        else
+            assert( p.coord == newCoords[p.id] );
+    } );
+
+    // update leaf nodes
+    NodeBitSet changedNodes( nodes_.size() );
+    BitSetParallelForAll( changedNodes, [&]( NodeId nid )
+    {
+        auto & node = nodes_[nid];
+        if ( !node.leaf() )
+            return;
+        bool changed = false;
+        const auto [first, last] = node.getLeafPointRange();
+        for ( int i = first; i < last; ++i )
+            if ( changedPoints.test(i) )
+            {
+                changed = true;
+                break;
+            }
+        if ( !changed )
+            return;
+        changedNodes.set( nid );
+        Box3f box;
+        for ( int i = first; i < last; ++i )
+            box.include( orderedPoints_[i].coord );
+        node.box = box;
+    } );
+
+    //update not-leaf nodes
+    for ( auto nid = nodes_.backId(); nid; --nid )
+    {
+        auto & node = nodes_[nid];
+        if ( node.leaf() )
+            continue;
+        if ( !changedNodes.test( node.leftOrFirst ) && !changedNodes.test( node.rightOrLast ) )
+            continue;
+        changedNodes.set( nid );
+        node.box = nodes_[node.leftOrFirst].box;
+        node.box.include( nodes_[node.rightOrLast].box );
+    }
 }
 
 TEST( MRMesh, AABBTreePoints )

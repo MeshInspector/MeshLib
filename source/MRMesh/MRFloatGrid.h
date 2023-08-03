@@ -23,6 +23,9 @@ MRMESH_API FloatGrid resampled( const FloatGrid& grid, float voxelScale, Progres
 /// resample this grid to fit voxelScale
 MRMESH_API FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, ProgressCallback cb = {} );
 
+/// returns cropped grid
+MRMESH_API FloatGrid cropped( const FloatGrid& grid, const Box3i& box, ProgressCallback cb = {} );
+
 /// returns the value at given voxel
 [[nodiscard]] MRMESH_API float getValue( const FloatGrid & grid, const Vector3i & p );
 

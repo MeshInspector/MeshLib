@@ -18,13 +18,11 @@ public:
     TouchpadController::RotationCallback rotationCb;
     TouchpadController::ScrollCallback mouseScrollCb;
     TouchpadController::ScrollCallback touchScrollCb;
-    TouchpadController::TouchCallback touchCb;
 
     void onMagnification( TouchpadController::MagnificationCallback cb ) override;
     void onRotation( TouchpadController::RotationCallback cb ) override;
     void onMouseScroll( TouchpadController::ScrollCallback cb ) override;
     void onTouchScroll( TouchpadController::ScrollCallback cb ) override;
-    void onTouch( TouchpadController::TouchCallback cb ) override;
 
 private:
     NSView* view_;

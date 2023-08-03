@@ -41,12 +41,4 @@ namespace MR
             impl_->onTouchScroll( cb );
         }
     }
-
-    void TouchpadController::onTouch( TouchpadController::TouchCallback cb )
-    {
-        if ( impl_ )
-        {
-            impl_->onTouch( cb );
-        }
-    }
 }

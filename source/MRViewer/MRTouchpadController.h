@@ -22,16 +22,6 @@ namespace MR
         void onMouseScroll( ScrollCallback cb );
         void onTouchScroll( ScrollCallback cb );
 
-        enum class TouchState
-        {
-            Began,
-            Moved,
-            Ended,
-            Canceled,
-        };
-        using TouchCallback = std::function<void ( size_t id, float x, float y, TouchState state )>;
-        void onTouch( TouchCallback cb );
-
         class Impl
         {
         public:
@@ -41,7 +31,6 @@ namespace MR
             virtual void onRotation( RotationCallback cb ) = 0;
             virtual void onMouseScroll( ScrollCallback cb ) = 0;
             virtual void onTouchScroll( ScrollCallback cb ) = 0;
-            virtual void onTouch( TouchCallback cb ) = 0;
         };
 
     private:

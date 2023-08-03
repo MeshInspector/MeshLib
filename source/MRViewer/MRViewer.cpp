@@ -648,10 +648,6 @@ int Viewer::launchInit_( const LaunchParams& params )
         {
             spdlog::info( "swipe gesture ( dx = {} dy = {} )", dx, dy );
         } );
-        touchpadController.onTouch( [&] ( size_t id, float x, float y, TouchpadController::TouchState state )
-        {
-            spdlog::info( "touch ( id = {} x = {} y = {} )", id, x, y );
-        } );
     }
 
     std::future<void> splashMinTimer;

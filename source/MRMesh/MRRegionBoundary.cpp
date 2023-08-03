@@ -335,49 +335,22 @@ UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const FaceBit
     return res;
 }
 
-FaceBitSet getIncidentFaces_( const MeshTopology & topology, const VertBitSet & verts )
-{
-    MR_TIMER
-    FaceBitSet res( topology.faceSize() );
-    for ( auto v : verts )
-    {
-        for ( auto e : orgRing( topology, v ) )
-        {
-            auto f = topology.left( e );
-            if ( f.valid() )
-                res.set( f );
-        }
-    } 
-    return res;
-}
-
-static FaceBitSet getInnerFaces_( const MeshTopology & topology, const VertBitSet & verts )
-{
-    MR_TIMER
-    FaceBitSet res = getIncidentFaces_( topology, verts );
-    for ( auto f : res )
-    {
-        for ( auto e : leftRing( topology, f ) )
-        {
-            auto v = topology.org( e );
-            if ( v.valid() && !verts.test( v ) )
-            {
-                res.reset( f );
-                break;
-            }
-        }
-    } 
-    return res;
-}
-
 FaceBitSet getIncidentFaces( const MeshTopology & topology, const VertBitSet & verts )
 {
     MR_TIMER
-
-    if ( 3 * verts.count() <= 2 * topology.numValidVerts() )
-        return getIncidentFaces_( topology, verts );
-
-    return topology.getValidFaces() - getInnerFaces_( topology, topology.getValidVerts() - verts );
+    FaceBitSet res( topology.faceSize() );
+    BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
+    {
+        for ( auto e : leftRing( topology, f ) )
+        {
+            if ( verts.test( topology.org( e ) ) )
+            {
+                res.set( f );
+                break;
+            }
+        }
+    } );
+    return res;
 }
 
 FaceBitSet getNeighborFaces( const MeshTopology& topology, const UndirectedEdgeBitSet& edges )
@@ -397,11 +370,22 @@ FaceBitSet getNeighborFaces( const MeshTopology& topology, const UndirectedEdgeB
 FaceBitSet getInnerFaces( const MeshTopology & topology, const VertBitSet & verts )
 {
     MR_TIMER
-
-    if ( 3 * verts.count() <= topology.numValidVerts() )
-        return getInnerFaces_( topology, verts );
-
-    return topology.getValidFaces() - getIncidentFaces_( topology, topology.getValidVerts() - verts );
+    FaceBitSet res( topology.faceSize() );
+    BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
+    {
+        bool inner = true;
+        for ( auto e : leftRing( topology, f ) )
+        {
+            if ( !verts.test( topology.org( e ) ) )
+            {
+                inner = false;
+                break;
+            }
+        }
+        if ( inner )
+            res.set( f );
+    } );
+    return res;
 }
 
 static VertBitSet getIncidentVerts_( const MeshTopology & topology, const UndirectedEdgeBitSet & edges )

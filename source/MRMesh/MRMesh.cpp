@@ -996,8 +996,16 @@ void Mesh::invalidateCaches( bool pointsChanged )
 
 void Mesh::updateCaches( const VertBitSet & changedVerts )
 {
-    AABBTreeOwner_.reset();
-    AABBTreePointsOwner_.update( [&]( AABBTreePoints & tree ) { tree.refit( points, changedVerts ); } );
+    AABBTreeOwner_.update( [&]( AABBTree & tree )
+    {
+        assert( tree.containsSameNumberOfTris( *this ) );
+        tree.refit( *this, changedVerts ); 
+    } );
+    AABBTreePointsOwner_.update( [&]( AABBTreePoints & tree )
+    {
+        assert( tree.orderedPoints().size() == topology.numValidVerts() );
+        tree.refit( points, changedVerts ); 
+    } );
 }
 
 size_t Mesh::heapBytes() const

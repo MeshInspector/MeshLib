@@ -52,9 +52,9 @@ std::shared_ptr<Object> ObjectLinesHolder::shallowClone() const
     return res;
 }
 
-void ObjectLinesHolder::setDirtyFlags( uint32_t mask )
+void ObjectLinesHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
-    VisualObject::setDirtyFlags( mask );
+    VisualObject::setDirtyFlags( mask, invalidateCaches );
 
     if ( mask & DIRTY_PRIMITIVES )
     {
@@ -66,7 +66,7 @@ void ObjectLinesHolder::setDirtyFlags( uint32_t mask )
         totalLength_.reset();
         worldBox_.reset();
         worldBox_.get().reset();
-        if ( polyline_ )
+        if ( invalidateCaches && polyline_ )
             polyline_->invalidateCaches();
     }
 }

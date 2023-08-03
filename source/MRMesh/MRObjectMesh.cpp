@@ -137,9 +137,9 @@ std::shared_ptr<Object> ObjectMesh::shallowClone() const
     return res;
 }
 
-void ObjectMesh::setDirtyFlags( uint32_t mask )
+void ObjectMesh::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
-    ObjectMeshHolder::setDirtyFlags( mask );
+    ObjectMeshHolder::setDirtyFlags( mask, invalidateCaches );
     if ( mask & DIRTY_POSITION || mask & DIRTY_FACE)
     {
         if ( mesh_ )

@@ -48,9 +48,9 @@ void ObjectGcode::setGcodeSource( const std::shared_ptr<GcodeSource>& gcodeSourc
     updateAll_();
 }
 
-void ObjectGcode::setDirtyFlags( uint32_t mask )
+void ObjectGcode::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
-    ObjectLinesHolder::setDirtyFlags( mask );
+    ObjectLinesHolder::setDirtyFlags( mask, invalidateCaches );
 
     if ( mask & DIRTY_POSITION || mask & DIRTY_PRIMITIVES )
     {

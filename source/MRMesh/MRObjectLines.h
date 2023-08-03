@@ -26,7 +26,7 @@ public:
 
     virtual const std::shared_ptr<Polyline3>& varPolyline() { return polyline_; }
 
-    MRMESH_API virtual void setDirtyFlags( uint32_t mask ) override;
+    MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
 
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectLines( ProtectedStruct, const ObjectLines& obj ) : ObjectLines( obj ) {}

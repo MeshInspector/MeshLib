@@ -807,7 +807,8 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
     assert( tooltips.empty() || tooltips.size() == options.size() );
 
     StyleParamHolder sh;
-    sh.addVar( ImGuiStyleVar_FramePadding, StyleConsts::CustomCombo::framePadding );
+    const float menuScaling = Viewer::instanceRef().getMenuPlugin()->menu_scaling();
+    sh.addVar( ImGuiStyleVar_FramePadding, menuScaling * StyleConsts::CustomCombo::framePadding );
 
     auto context = ImGui::GetCurrentContext();
     ImGuiWindow* window = context->CurrentWindow;
@@ -855,7 +856,7 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
         }
 
         if ( !tooltips.empty() )
-            UI::setTooltipIfHovered( tooltips[i], Viewer::instanceRef().getMenuPlugin()->menu_scaling() );
+            UI::setTooltipIfHovered( tooltips[i], menuScaling );
 
         ImGui::PopID();
     }

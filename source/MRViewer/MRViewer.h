@@ -18,7 +18,7 @@
 #include "MRMouseController.h"
 #include "MRTouchesController.h"
 #include "MRSpaceMouseController.h"
-#include "MRGestureRecognizerHandler.h"
+#include "MRTouchpadController.h"
 
 #include <boost/signals2/signal.hpp>
 #include <chrono>
@@ -441,7 +441,7 @@ public:
     MouseController mouseController;
     TouchesController touchesController;
     SpaceMouseController spaceMouseController;
-    GestureRecognizerHandler gestureRecognizerHandler;
+    TouchpadController touchpadController;
 
     float pixelRatio{ 1.0f };
     Vector2i framebufferSize;

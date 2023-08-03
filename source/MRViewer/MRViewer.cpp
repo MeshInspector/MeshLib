@@ -617,8 +617,8 @@ int Viewer::launchInit_( const LaunchParams& params )
         spaceMouseController.connect();
         initSpaceMouseHandler_();
 
-        gestureRecognizerHandler.initialize( window );
-        gestureRecognizerHandler.onMagnification( [&] ( float scale, bool finished )
+        touchpadController.initialize( window );
+        touchpadController.onMagnification( [&] ( float scale, bool finished )
         {
             static float cameraViewAngle = -1.f;
             if ( !finished )
@@ -634,21 +634,21 @@ int Viewer::launchInit_( const LaunchParams& params )
                 cameraViewAngle = -1.f;
             }
         } );
-        gestureRecognizerHandler.onRotation( [&] ( float angle, bool finished )
+        touchpadController.onRotation( [&] ( float angle, bool finished )
         {
             spdlog::info( "rotation gesture ( angle = {} )", angle );
             if ( finished )
                 spdlog::info( "rotation gesture ended" );
         } );
-        gestureRecognizerHandler.onMouseScroll( [&] ( float dx, float dy )
+        touchpadController.onMouseScroll( [&] ( float dx, float dy )
         {
             mouseScroll( dy );
         } );
-        gestureRecognizerHandler.onTouchScroll( [&] ( float dx, float dy )
+        touchpadController.onTouchScroll( [&] ( float dx, float dy )
         {
             spdlog::info( "swipe gesture ( dx = {} dy = {} )", dx, dy );
         } );
-        gestureRecognizerHandler.onTouch( [&] ( size_t id, float x, float y, GestureRecognizerHandler::TouchState state )
+        touchpadController.onTouch( [&] ( size_t id, float x, float y, TouchpadController::TouchState state )
         {
             spdlog::info( "touch ( id = {} x = {} y = {} )", id, x, y );
         } );

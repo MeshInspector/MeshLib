@@ -7,7 +7,7 @@ struct GLFWwindow;
 
 namespace MR
 {
-    class GestureRecognizerHandler
+    class TouchpadController
     {
     public:
         void initialize( GLFWwindow* window );

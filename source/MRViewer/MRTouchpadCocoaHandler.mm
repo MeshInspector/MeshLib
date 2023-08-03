@@ -12,16 +12,16 @@
 
 namespace
 {
-    class GestureRecognizerCocoaHandlerRegistry
+    class TouchpadCocoaHandlerRegistry
     {
     public:
-        static GestureRecognizerCocoaHandlerRegistry& instance()
+        static TouchpadCocoaHandlerRegistry& instance()
         {
-            static GestureRecognizerCocoaHandlerRegistry instance;
+            static TouchpadCocoaHandlerRegistry instance;
             return instance;
         }
 
-        void add( NSView* view, MR::GestureRecognizerCocoaHandler* handler )
+        void add( NSView* view, MR::TouchpadCocoaHandler* handler )
         {
             registry_.emplace( view, handler );
         }
@@ -31,7 +31,7 @@ namespace
             registry_.erase( view );
         }
 
-        [[nodiscard]] MR::GestureRecognizerCocoaHandler* find( NSView* view ) const
+        [[nodiscard]] MR::TouchpadCocoaHandler* find( NSView* view ) const
         {
             const auto it = registry_.find( view );
             if ( it != registry_.end() )
@@ -41,12 +41,12 @@ namespace
         }
 
     private:
-        std::map<NSView*, MR::GestureRecognizerCocoaHandler*> registry_;
+        std::map<NSView*, MR::TouchpadCocoaHandler*> registry_;
     };
 
     void magnificationGestureEvent( NSView* view, SEL cmd, NSMagnificationGestureRecognizer* magnificationGestureRecognizer )
     {
-        auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
+        auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
         if ( !handler )
             return;
         if ( !handler->magnificationCb )
@@ -58,7 +58,7 @@ namespace
 
     void rotationGestureEvent( NSView* view, SEL cmd, NSRotationGestureRecognizer* rotationGestureRecognizer )
     {
-        auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
+        auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
         if ( ! handler )
             return;
         if ( !handler->rotationCb )
@@ -70,7 +70,7 @@ namespace
 
     void scrollEvent( NSView* view, SEL cmd, NSEvent* event )
     {
-        auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
+        auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
         if ( !handler )
             return;
 
@@ -98,7 +98,7 @@ namespace
 
     void onTouchesBegan( NSView* view, SEL cmd, NSEvent* event )
     {
-        auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
+        auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
         if ( ! handler )
             return;
         if ( !handler->touchCb )
@@ -111,13 +111,13 @@ namespace
             NSTouch* touch = [array objectAtIndex:i];
             auto id = touch.identity;
             auto pos = touch.normalizedPosition;
-            handler->touchCb( id.hash, pos.x, pos.y, MR::GestureRecognizerHandler::TouchState::Began );
+            handler->touchCb( id.hash, pos.x, pos.y, MR::TouchpadController::TouchState::Began );
         }
     }
 
     void onTouchesMoved( NSView* view, SEL cmd, NSEvent* event )
     {
-        auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
+        auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
         if ( ! handler )
             return;
         if ( !handler->touchCb )
@@ -130,13 +130,13 @@ namespace
             NSTouch* touch = [array objectAtIndex:i];
             auto id = touch.identity;
             auto pos = touch.normalizedPosition;
-            handler->touchCb( id.hash, pos.x, pos.y, MR::GestureRecognizerHandler::TouchState::Moved );
+            handler->touchCb( id.hash, pos.x, pos.y, MR::TouchpadController::TouchState::Moved );
         }
     }
 
     void onTouchesEnded( NSView* view, SEL cmd, NSEvent* event )
     {
-        auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
+        auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
         if ( ! handler )
             return;
         if ( !handler->touchCb )
@@ -149,13 +149,13 @@ namespace
             NSTouch* touch = [array objectAtIndex:i];
             auto id = touch.identity;
             auto pos = touch.normalizedPosition;
-            handler->touchCb( id.hash, pos.x, pos.y, MR::GestureRecognizerHandler::TouchState::Ended );
+            handler->touchCb( id.hash, pos.x, pos.y, MR::TouchpadController::TouchState::Ended );
         }
     }
 
     void onTouchesCancelled( NSView* view, SEL cmd, NSEvent* event )
     {
-        auto* handler = GestureRecognizerCocoaHandlerRegistry::instance().find( view );
+        auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
         if ( ! handler )
             return;
         if ( !handler->touchCb )
@@ -168,14 +168,14 @@ namespace
             NSTouch* touch = [array objectAtIndex:i];
             auto id = touch.identity;
             auto pos = touch.normalizedPosition;
-            handler->touchCb( id.hash, pos.x, pos.y, MR::GestureRecognizerHandler::TouchState::Canceled );
+            handler->touchCb( id.hash, pos.x, pos.y, MR::TouchpadController::TouchState::Canceled );
         }
     }
 }
 
 namespace MR
 {
-    GestureRecognizerCocoaHandler::GestureRecognizerCocoaHandler( GLFWwindow* window )
+    TouchpadCocoaHandler::TouchpadCocoaHandler( GLFWwindow* window )
     {
         auto* nsWindow = (NSWindow*)glfwGetCocoaWindow( window );
         view_ = nsWindow.contentView;
@@ -209,40 +209,40 @@ namespace MR
         //if ( !class_respondsToSelector( cls, @selector(touchesCanceledWithEvent:) ) )
             class_addMethod( cls, @selector(touchesCancelledWithEvent:), (IMP)onTouchesCancelled, "v@:@" );
 
-        GestureRecognizerCocoaHandlerRegistry::instance().add( view_, this );
+        TouchpadCocoaHandlerRegistry::instance().add( view_, this );
     }
 
-    GestureRecognizerCocoaHandler::~GestureRecognizerCocoaHandler()
+    TouchpadCocoaHandler::~TouchpadCocoaHandler()
     {
         [magnificationGestureRecognizer_ release];
         [rotationGestureRecognizer_ release];
     }
 
-    void GestureRecognizerCocoaHandler::onMagnification( GestureRecognizerHandler::MagnificationCallback cb )
+    void TouchpadCocoaHandler::onMagnification( TouchpadController::MagnificationCallback cb )
     {
         // TODO: thread safety?
         magnificationCb = cb;
     }
 
-    void GestureRecognizerCocoaHandler::onRotation( GestureRecognizerHandler::RotationCallback cb )
+    void TouchpadCocoaHandler::onRotation( TouchpadController::RotationCallback cb )
     {
         // TODO: thread safety?
         rotationCb = cb;
     }
 
-    void GestureRecognizerCocoaHandler::onMouseScroll( GestureRecognizerHandler::ScrollCallback cb )
+    void TouchpadCocoaHandler::onMouseScroll( TouchpadController::ScrollCallback cb )
     {
         // TODO: thread safety?
         mouseScrollCb = cb;
     }
 
-    void GestureRecognizerCocoaHandler::onTouchScroll( GestureRecognizerHandler::ScrollCallback cb )
+    void TouchpadCocoaHandler::onTouchScroll( TouchpadController::ScrollCallback cb )
     {
         // TODO: thread safety?
         touchScrollCb = cb;
     }
 
-    void GestureRecognizerCocoaHandler::onTouch( GestureRecognizerHandler::TouchCallback cb )
+    void TouchpadCocoaHandler::onTouch( TouchpadController::TouchCallback cb )
     {
         // TODO: thread safety?
         touchCb = cb;

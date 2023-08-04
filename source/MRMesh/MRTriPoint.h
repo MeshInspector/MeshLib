@@ -74,7 +74,7 @@ int TriPoint<T>::inVertex() const
     // additional statements to guarantee:
     // MeshTriPoint.inVertex( topology ) == MeshTriPoint.onEdge() && MeshTriPoint.onEdge( topology )->inVertex( topology )
 
-    if ( a <= eps && b <= eps ) // not (a+b <= eps), because it will more strict than onEdge->inVertex
+    if ( a <= eps && b <= eps ) // not (a+b <= eps), because it will be more strict than onEdge->inVertex
         return 0;
     if ( a + eps >= 1 )
         return 1;

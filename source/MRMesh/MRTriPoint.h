@@ -71,7 +71,10 @@ TriPoint<T>::TriPoint( const Vector3<T> & p, const Vector3<T> & v1, const Vector
 template <typename T>
 int TriPoint<T>::inVertex() const
 {
-    if ( a + b <= eps )
+    // additional statements to guarantee:
+    // MeshTriPoint.inVertex( topology ) == MeshTriPoint.onEdge() && MeshTriPoint.onEdge( topology )->inVertex( topology )
+
+    if ( a <= eps && b <= eps ) // not (a+b <= eps), because it will more strict than onEdge->inVertex
         return 0;
     if ( a + eps >= 1 )
         return 1;

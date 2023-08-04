@@ -41,6 +41,7 @@ public:
 
     MRMESH_API virtual void applyScale( float scaleFactor ) override;
 
+    /// mesh object can be seen if the mesh has at least one edge
     MRMESH_API virtual bool hasVisualRepresentation() const override;
 
     const std::shared_ptr< const Mesh >& mesh() const
@@ -145,32 +146,44 @@ public:
     MRMESH_API virtual void resetDirtyExeptMask( uint32_t mask ) const;
 
     /// returns cached information whether the mesh is closed
-    MRMESH_API bool isMeshClosed() const;
+    [[nodiscard]] MRMESH_API bool isMeshClosed() const;
+
     /// returns cached bounding box of this mesh object in world coordinates;
     /// if you need bounding box in local coordinates please call getBoundingBox()
-    MRMESH_API virtual Box3f getWorldBox( ViewportId = {} ) const override;
+    [[nodiscard]] MRMESH_API virtual Box3f getWorldBox( ViewportId = {} ) const override;
+
     /// returns cached information about the number of selected faces in the mesh
-    MRMESH_API size_t numSelectedFaces() const;
+    [[nodiscard]] MRMESH_API size_t numSelectedFaces() const;
+
     /// returns cached information about the number of selected undirected edges in the mesh
-    MRMESH_API size_t numSelectedEdges() const;
+    [[nodiscard]] MRMESH_API size_t numSelectedEdges() const;
+
     /// returns cached information about the number of crease undirected edges in the mesh
-    MRMESH_API size_t numCreaseEdges() const;
+    [[nodiscard]] MRMESH_API size_t numCreaseEdges() const;
+
     /// returns cached summed area of mesh triangles
-    MRMESH_API double totalArea() const;
+    [[nodiscard]] MRMESH_API double totalArea() const;
+
     /// returns cached area of selected triangles
-    MRMESH_API double selectedArea() const;
+    [[nodiscard]] MRMESH_API double selectedArea() const;
+
     /// returns cached average edge length
-    MRMESH_API float avgEdgeLen() const;
+    [[nodiscard]] MRMESH_API float avgEdgeLen() const;
+
+    /// returns cached information about the number of undirected edges in the mesh
+    [[nodiscard]] MRMESH_API size_t numUndirectedEdges() const;
+
+    /// returns cached information about the number of holes in the mesh
+    [[nodiscard]] MRMESH_API size_t numHoles() const;
+
+    /// returns cached information about the number of components in the mesh
+    [[nodiscard]] MRMESH_API size_t numComponents() const;
+
+    /// returns cached information about the number of handles in the mesh
+    [[nodiscard]] MRMESH_API size_t numHandles() const;
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
-
-    /// returns cached information about the number of holes in the mesh
-    MRMESH_API size_t numHoles() const;
-    /// returns cached information about the number of components in the mesh
-    MRMESH_API size_t numComponents() const;
-    /// returns cached information about the number of handles in the mesh
-    MRMESH_API size_t numHandles() const;
 
     /// signal about face selection changing, triggered in selectFaces
     using SelectionChangedSignal = Signal<void()>;
@@ -190,13 +203,10 @@ protected:
     MeshTexture ancillaryTexture_;
     VertUVCoords ancillaryUVCoordinates_; ///< vertices coordinates in ancillary texture
 
-    struct MeshStat
-    {
-        size_t numComponents = 0;
-        size_t numUndirectedEdges = 0;
-        size_t numHoles = 0;
-    };
-    mutable std::optional<MeshStat> meshStat_;
+    mutable std::optional<size_t> numHoles_;
+    mutable std::optional<size_t> numComponents_;
+    mutable std::optional<size_t> numUndirectedEdges_;
+    mutable std::optional<size_t> numHandles_;
     mutable std::optional<bool> meshIsClosed_;
     mutable std::optional<size_t> numSelectedFaces_, numSelectedEdges_, numCreaseEdges_;
     mutable std::optional<double> totalArea_, selectedArea_;
@@ -222,8 +232,6 @@ protected:
     MRMESH_API virtual Box3f computeBoundingBox_() const override;
 
     MRMESH_API virtual void setupRenderObject_() const override;
-
-    MRMESH_API virtual void updateMeshStat_() const;
 
     ViewportMask showTexture_;
     ViewportMask showFaces_ = ViewportMask::all();

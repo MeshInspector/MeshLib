@@ -245,18 +245,6 @@ void ObjectMeshHolder::setupRenderObject_() const
         renderObj_ = createRenderObject<ObjectMeshHolder>( *this );
 }
 
-void ObjectMeshHolder::updateMeshStat_() const
-{
-    if ( !meshStat_ )
-    {
-        MeshStat ms;
-        ms.numComponents = MeshComponents::getNumComponents( *mesh_ );
-        ms.numUndirectedEdges = mesh_->topology.computeNotLoneUndirectedEdges();
-        ms.numHoles = mesh_->topology.findNumHoles();
-        meshStat_ = ms;
-    }
-}
-
 void ObjectMeshHolder::setDefaultColors_()
 {
     setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
@@ -370,7 +358,7 @@ void ObjectMeshHolder::applyScale( float scaleFactor )
 
 bool ObjectMeshHolder::hasVisualRepresentation() const
 {
-    return mesh_ && mesh_->topology.numValidFaces() != 0;
+    return mesh_ && numUndirectedEdges() > 0;
 }
 
 std::shared_ptr<Object> ObjectMeshHolder::clone() const
@@ -510,25 +498,33 @@ size_t ObjectMeshHolder::heapBytes() const
         + MR::heapBytes( mesh_ );
 }
 
+size_t ObjectMeshHolder::numUndirectedEdges() const
+{
+    if ( !numUndirectedEdges_ )
+        numUndirectedEdges_ = mesh_ ? mesh_->topology.computeNotLoneUndirectedEdges() : 0;
+    return *numUndirectedEdges_;
+}
+
 size_t ObjectMeshHolder::numHoles() const
 {
-    updateMeshStat_();
-    return meshStat_->numHoles;
+    if ( !numHoles_ )
+        numHoles_ = mesh_ ? mesh_->topology.findNumHoles() : 0;
+    return *numHoles_;
 }
 
 size_t ObjectMeshHolder::numComponents() const
 {
-    updateMeshStat_();
-    return meshStat_->numComponents;
+    if ( !numComponents_ )
+        numComponents_ = mesh_ ? MeshComponents::getNumComponents( *mesh_ ) : 0;
+    return *numComponents_;
 }
 
 size_t ObjectMeshHolder::numHandles() const
 {
     if ( !mesh_ )
         return 0;
-    updateMeshStat_();
-    int EulerCharacteristic = mesh_->topology.numValidFaces() + (int)meshStat_->numHoles + mesh_->topology.numValidVerts() - (int)meshStat_->numUndirectedEdges;
-    return meshStat_->numComponents - EulerCharacteristic / 2;
+    int EulerCharacteristic = mesh_->topology.numValidFaces() + (int)numHoles() + mesh_->topology.numValidVerts() - (int)numUndirectedEdges();
+    return numComponents() - EulerCharacteristic / 2;
 }
 
 void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
@@ -541,7 +537,10 @@ void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 
     if ( mask & DIRTY_FACE )
     {
-        meshStat_.reset();
+        numHoles_.reset();
+        numComponents_.reset();
+        numUndirectedEdges_.reset();
+        numHandles_.reset();
         meshIsClosed_.reset();
     }
 

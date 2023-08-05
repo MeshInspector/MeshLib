@@ -42,11 +42,11 @@ struct Color
         }
         else if constexpr ( std::is_integral_v<T> )
         {
-            return val > 255 ? uint8_t( 255 ) : ( val < 0 ? uint8_t( 0 ) : uint8_t( val ) );
+            return val >= 255 ? uint8_t( 255 ) : ( val <= 0 ? uint8_t( 0 ) : uint8_t( val ) );
         }
         else
         {
-            return val > T( 1 ) ? uint8_t( 255 ) : ( val < T( 0 ) ? uint8_t( 0 ) : uint8_t( val * 255 ) );
+            return val >= T( 1 ) ? uint8_t( 255 ) : ( val <= T( 0 ) ? uint8_t( 0 ) : uint8_t( val * 255 ) );
         }
     }
 

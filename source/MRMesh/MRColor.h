@@ -36,13 +36,17 @@ struct Color
     template<typename T>
     static constexpr uint8_t valToUint8( T val ) noexcept
     {
-        if constexpr ( std::is_same_v<T, int> )
+        if constexpr ( std::is_same_v<T, uint8_t> )
         {
-            return val > 255 ? uint8_t( 255 ) : ( val < 0 ? uint8_t( 0 ) : uint8_t( val ) );
+            return val;
+        }
+        else if constexpr ( std::is_integral_v<T> )
+        {
+            return val >= 255 ? uint8_t( 255 ) : ( val <= 0 ? uint8_t( 0 ) : uint8_t( val ) );
         }
         else
         {
-            return val > T( 1 ) ? uint8_t( 255 ) : ( val < T( 0 ) ? uint8_t( 0 ) : uint8_t( val * 255 ) );
+            return val >= T( 1 ) ? uint8_t( 255 ) : ( val <= T( 0 ) ? uint8_t( 0 ) : uint8_t( val * 255 ) );
         }
     }
 

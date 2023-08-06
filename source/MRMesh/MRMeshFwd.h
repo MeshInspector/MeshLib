@@ -239,6 +239,9 @@ using Triangle3d = Triangle3<double>;
 
 class PointAccumulator;
 
+template <typename T> struct SegmPoint;
+using SegmPointf = SegmPoint<float>;
+using SegmPointd = SegmPoint<double>;
 struct EdgePoint;
 using MeshEdgePoint = EdgePoint;
 using SurfacePath = std::vector<MeshEdgePoint>;

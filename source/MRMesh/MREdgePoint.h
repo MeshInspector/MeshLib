@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRId.h"
+#include "MRSegmPoint.h"
 
 namespace MR
 {
@@ -9,7 +10,7 @@ namespace MR
 struct EdgePoint
 {
     EdgeId e;
-    float a = 0; ///< a in [0,1], a=0 => point is in org( e ), a=1 => point is in dest( e )
+    SegmPointf a; ///< a in [0,1], a=0 => point is in org( e ), a=1 => point is in dest( e )
 
     [[nodiscard]] EdgePoint() = default;
     [[nodiscard]] EdgePoint( EdgeId e, float a ) : e( e ), a( a ) { }
@@ -25,7 +26,7 @@ struct EdgePoint
     /// returns one of two edge vertices, closest to this point
     [[nodiscard]] MRMESH_API VertId getClosestVertex( const PolylineTopology & topology ) const;
     /// returns true if the point is in a vertex
-    [[nodiscard]] MRMESH_API bool inVertex() const;
+    [[nodiscard]] bool inVertex() const { return a.inVertex() >= 0; }
     /// sets this to the closest end of the edge
     MRMESH_API void moveToClosestVertex();
 

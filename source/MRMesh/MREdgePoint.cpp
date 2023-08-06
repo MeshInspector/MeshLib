@@ -5,8 +5,6 @@
 namespace MR
 {
 
-static constexpr auto eps = 10 * std::numeric_limits<float>::epsilon();
-
 EdgePoint::EdgePoint( const MeshTopology & topology, VertId v ) : e( topology.edgeWithOrg( v ) )
 {
 }
@@ -17,20 +15,28 @@ EdgePoint::EdgePoint( const PolylineTopology & topology, VertId v ) : e( topolog
 
 VertId EdgePoint::inVertex( const MeshTopology & topology ) const
 {
-    if ( a <= eps )
+    switch ( a.inVertex() )
+    {
+    case 0:
         return topology.org( e );
-    if ( a + eps >= 1 )
+    case 1:
         return topology.dest( e );
-    return {};
+    default:
+        return {};
+    }
 }
 
 VertId EdgePoint::inVertex( const PolylineTopology & topology ) const
 {
-    if ( a <= eps )
+    switch ( a.inVertex() )
+    {
+    case 0:
         return topology.org( e );
-    if ( a + eps >= 1 )
+    case 1:
         return topology.dest( e );
-    return {};
+    default:
+        return {};
+    }
 }
 
 VertId EdgePoint::getClosestVertex( const MeshTopology & topology ) const
@@ -57,11 +63,6 @@ void EdgePoint::moveToClosestVertex()
         a = 1;
 }
 
-bool EdgePoint::inVertex() const
-{
-    return a <= eps || a + eps >= 1;
-}
-
 bool same( const MeshTopology & topology, const EdgePoint& lhs, const EdgePoint& rhs )
 {
     if ( !lhs )
@@ -69,8 +70,7 @@ bool same( const MeshTopology & topology, const EdgePoint& lhs, const EdgePoint&
     if ( auto v = lhs.inVertex( topology ) )
         return v == rhs.inVertex( topology );
 
-    return (( lhs.e == rhs.e ) && ( lhs.a == rhs.a )) ||
-        (( lhs.e == rhs.e.sym() ) && ( lhs.a == (1.f - rhs.a) ));
+    return lhs == rhs || lhs == rhs.sym();
 }
 
 static bool vertEdge2MeshEdgePoints( const MeshTopology & topology, VertId av, EdgePoint & a, EdgePoint & b )

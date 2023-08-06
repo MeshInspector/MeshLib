@@ -71,11 +71,11 @@ TriPoint<T>::TriPoint( const Vector3<T> & p, const Vector3<T> & v1, const Vector
 template <typename T>
 int TriPoint<T>::inVertex() const
 {
-    if ( a <= eps && b <= eps )
+    if ( a <= eps && b <= eps ) // and not (a + b) <= eps
         return 0;
-    if ( 1 - a <= eps && b <= eps )
+    if ( 1 - a <= eps ) // b <= 1 - a <= eps
         return 1;
-    if ( a <= eps && 1 - b <= eps )
+    if ( 1 - b <= eps ) // a <= 1 - b <= eps
         return 2;
     return -1;
 }

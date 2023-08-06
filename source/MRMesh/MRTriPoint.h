@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRVector3.h"
-#include <limits>
+#include "MRSegmPoint.h"
 
 namespace MR
 {
@@ -17,7 +17,7 @@ struct TriPoint
     T a = 0; ///< a in [0,1], a=0 => point is on [v2,v0] edge, a=1 => point is in v1
     T b = 0; ///< b in [0,1], b=0 => point is on [v0,v1] edge, b=1 => point is in v2
 
-    static constexpr auto eps = 10 * std::numeric_limits<T>::epsilon();
+    static constexpr auto eps = SegmPoint<T>::eps;
 
     TriPoint() = default;
     TriPoint( T a, T b ) : a( a ), b( b ) { }
@@ -71,14 +71,11 @@ TriPoint<T>::TriPoint( const Vector3<T> & p, const Vector3<T> & v1, const Vector
 template <typename T>
 int TriPoint<T>::inVertex() const
 {
-    // additional statements to guarantee:
-    // MeshTriPoint.inVertex( topology ) == MeshTriPoint.onEdge() && MeshTriPoint.onEdge( topology )->inVertex( topology )
-
-    if ( a <= eps && b <= eps ) // not (a+b <= eps), because it will be more strict than onEdge->inVertex
+    if ( a <= eps && b <= eps )
         return 0;
-    if ( a + eps >= 1 )
+    if ( 1 - a <= eps && b <= eps )
         return 1;
-    if ( b + eps >= 1 )
+    if ( a <= eps && 1 - b <= eps )
         return 2;
     return -1;
 }
@@ -87,28 +84,31 @@ template <typename T>
 int TriPoint<T>::onEdge() const
 {
     // additional statements to guarantee:
-    // MeshTriPoint.inVertex( topology ) == MeshTriPoint.onEdge() && MeshTriPoint.onEdge( topology )->inVertex( topology )
+    // MeshTriPoint.inVertex() == MeshTriPoint.onEdge() && MeshTriPoint.onEdge()->inVertex()
 
-    if ( a + b + eps >= 1 )
+    if ( auto v = inVertex(); v >= 0 )
     {
-        if ( a + eps >= 1 )
-            return 2; // mesh edge point will have 'a' rep
-        return 0; // mesh edge point will have 'b' rep
+        // return the edge, where the point is closer to one of the ends
+        switch ( v )
+        {
+        case 0:
+            return a <= b ? 2 /*a*/ : 1 /*1-b*/;
+        case 1:
+            return 1 - a <= b ? 2 /*a*/ : 0 /*b*/;
+        case 2:
+            return 0; // no need to select between b and 1-b
+        }
+        assert( false );
     }
+
+    if ( 1 - a - b <= eps )
+        return 0;
 
     if ( a <= eps )
-    {
-        if ( a + b <= eps )
-            return 2; // mesh edge point will have 'a' rep
-        return 1; // mesh edge point will have '1-b' rep
-    }
+        return 1;
 
     if ( b <= eps )
-    {
-        if ( a + b <= eps )
-            return 1; // mesh edge point will have '1-b' rep
-        return 2; // mesh edge point will have 'a' rep
-    }
+        return 2;
 
     return -1;
 }

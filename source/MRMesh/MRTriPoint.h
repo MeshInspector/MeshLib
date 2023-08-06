@@ -98,7 +98,6 @@ int TriPoint<T>::onEdge() const
         case 2:
             return 0; // no need to select between b and 1-b
         }
-        assert( false );
     }
 
     if ( 1 - a - b <= eps )

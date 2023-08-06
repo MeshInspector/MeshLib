@@ -32,9 +32,14 @@ struct TriPoint
     /// given three values in three vertices, computes interpolated value at this barycentric coordinates
     template <typename U>
     U interpolate( const U & v0, const U & v1, const U & v2 ) const
-    {
-        return ( 1 - a - b ) * v0 + a * v1 + b * v2;
-    }
+        { return ( 1 - a - b ) * v0 + a * v1 + b * v2; }
+
+    /// represents the same point relative to next edge in the same triangle
+    [[nodiscard]] TriPoint lnext() const { return { b, 1 - a - b }; }
+
+    // requirements:
+    // 1) inVertex() == onEdge() && toEdge()->inVertex()
+    // 2) invariance to lnext() application
 
     /// returns [0,2] if the point is in a vertex or -1 otherwise
     int inVertex() const;
@@ -71,44 +76,27 @@ TriPoint<T>::TriPoint( const Vector3<T> & p, const Vector3<T> & v1, const Vector
 template <typename T>
 int TriPoint<T>::inVertex() const
 {
-    if ( a <= eps && b <= eps ) // and not (a + b) <= eps
+    if ( a <= eps && b <= eps )
         return 0;
-    if ( 1 - a <= eps ) // b <= 1 - a <= eps
-        return 1;
-    if ( 1 - b <= eps ) // a <= 1 - b <= eps
-        return 2;
+    if ( 1 - a - b <= eps )
+    {
+        if ( b <= eps )
+            return 1;
+        if ( a <= eps )
+            return 2;
+    }
     return -1;
 }
 
 template <typename T>
 int TriPoint<T>::onEdge() const
 {
-    // additional statements to guarantee:
-    // MeshTriPoint.inVertex() == MeshTriPoint.onEdge() && MeshTriPoint.onEdge()->inVertex()
-
-    if ( auto v = inVertex(); v >= 0 )
-    {
-        // return the edge, where the point is closer to one of the ends
-        switch ( v )
-        {
-        case 0:
-            return a <= b ? 2 /*a*/ : 1 /*1-b*/;
-        case 1:
-            return 1 - a <= b ? 2 /*a*/ : 0 /*b*/;
-        case 2:
-            return 0; // no need to select between b and 1-b
-        }
-    }
-
     if ( 1 - a - b <= eps )
         return 0;
-
     if ( a <= eps )
         return 1;
-
     if ( b <= eps )
         return 2;
-
     return -1;
 }
 

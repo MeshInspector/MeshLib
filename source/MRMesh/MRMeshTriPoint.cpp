@@ -45,8 +45,7 @@ MeshTriPoint MeshTriPoint::lnext( const MeshTopology & topology ) const
 {
     MeshTriPoint res;
     res.e = topology.prev( e.sym() );
-    res.bary.a = bary.b;
-    res.bary.b = 1 - bary.a - bary.b;
+    res.bary = bary.lnext();
     return res;
 }
 

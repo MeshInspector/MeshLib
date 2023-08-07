@@ -56,10 +56,13 @@ bool TouchpadController::rotateChange_( float angle )
 
 bool TouchpadController::rotateCancel_()
 {
-    auto& viewer = getViewerInstance();
-    auto& viewport = viewer.viewport();
+    if ( parameters_.cancellable )
+    {
+        auto& viewer = getViewerInstance();
+        auto& viewport = viewer.viewport();
 
-    viewport.setCameraTrackballAngle( initRotateParams_.cameraTrackballAngle );
+        viewport.setCameraTrackballAngle( initRotateParams_.cameraTrackballAngle );
+    }
 
     return rotateEnd_();
 }
@@ -128,10 +131,13 @@ bool TouchpadController::zoomChange_( float scale )
 
 bool TouchpadController::zoomCancel_()
 {
-    auto& viewer = getViewerInstance();
-    auto& viewport = viewer.viewport();
+    if ( parameters_.cancellable )
+    {
+        auto& viewer = getViewerInstance();
+        auto& viewport = viewer.viewport();
 
-    viewport.setCameraViewAngle( initZoomParams_.cameraViewAngle );
+        viewport.setCameraViewAngle( initZoomParams_.cameraViewAngle );
+    }
 
     return zoomEnd_();
 }

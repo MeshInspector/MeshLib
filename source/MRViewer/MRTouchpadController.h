@@ -13,8 +13,8 @@ namespace MR
     {
     public:
         MR_ADD_CTOR_DELETE_MOVE( TouchpadController );
-        void initialize( GLFWwindow* window );
-        void connect();
+        MRVIEWER_API void initialize( GLFWwindow* window );
+        MRVIEWER_API void connect();
 
         class Impl
         {

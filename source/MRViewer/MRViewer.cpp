@@ -623,41 +623,50 @@ int Viewer::launchInit_( const LaunchParams& params )
             constexpr float minAngle = 0.001f;
             constexpr float maxAngle = 179.99f;
 
-            static float cameraViewAngle = -1.f;
+            static std::optional<Viewport::Parameters> params = std::nullopt;
 
             using GS = TouchpadController::GestureState;
             switch ( state )
             {
                 case GS::Begin:
-                    cameraViewAngle = viewport().getParameters().cameraViewAngle;
+                    params = viewport().getParameters();
                     [[fallthrough]];
                 case GS::Change:
-                    viewport().setCameraViewAngle( std::clamp( cameraViewAngle * scale, minAngle, maxAngle ) );
+                    assert( params );
+                    viewport().setCameraViewAngle( std::clamp( params->cameraViewAngle * scale, minAngle, maxAngle ) );
                     break;
                 case GS::Cancel:
-                    viewport().setCameraViewAngle( cameraViewAngle );
+                    assert( params );
+                    viewport().setCameraViewAngle( params->cameraViewAngle );
                     [[fallthrough]];
                 case GS::End:
-                    cameraViewAngle = -1.f;
+                    params = std::nullopt;
                     break;
             }
         } );
         touchpadController.onRotate( [&] ( float angle, TouchpadController::GestureState state )
         {
+            static std::optional<Viewport::Parameters> params = std::nullopt;
+
             using GS = TouchpadController::GestureState;
             switch ( state )
             {
                 case GS::Begin:
-                    spdlog::info( "rotation has begun ( angle = {} )", angle );
-                    break;
+                    params = viewport().getParameters();
+                    [[fallthrough]];
                 case GS::Change:
-                    spdlog::info( "rotation has changed ( angle = {} )", angle );
-                    break;
-                case GS::End:
-                    spdlog::info( "rotation has ended" );
+                    assert( params );
+                {
+                    const auto rot = Matrix3f::rotation( Vector3f::plusZ(), angle );
+                    viewport().setCameraTrackballAngle( params->cameraTrackballAngle * Quaternionf( rot ) );
+                }
                     break;
                 case GS::Cancel:
-                    spdlog::info( "rotation has been canceled" );
+                    assert( params );
+                    viewport().setCameraTrackballAngle( params->cameraTrackballAngle );
+                    [[fallthrough]];
+                case GS::End:
+                    params = std::nullopt;
                     break;
             }
         } );
@@ -667,7 +676,29 @@ int Viewer::launchInit_( const LaunchParams& params )
         } );
         touchpadController.onSwipe( [&] ( float dx, float dy, bool kinetic )
         {
-            spdlog::info( "swipe gesture ( dx = {} dy = {} kinetic = {} )", dx, dy, kinetic );
+            //if ( kinetic )
+            //    return;
+
+            auto& vp = viewport();
+
+            Vector3f sceneCenterPos;
+            if ( vp.getSceneBox().valid() )
+                sceneCenterPos = vp.getSceneBox().center();
+            const auto sceneCenterVpPos = vp.projectToViewportSpace( sceneCenterPos );
+
+            constexpr float cTranslationScale = 10.0;
+
+            const auto mousePos = mouseController.getMousePos();
+            const auto oldScreenPos = Vector3f( mousePos.x, mousePos.y, sceneCenterVpPos.z );
+            const auto newScreenPos = oldScreenPos + cTranslationScale * Vector3f( dx, dy, 0.f );
+
+            const auto oldVpPos = screenToViewport( oldScreenPos, vp.id );
+            const auto newVpPos = screenToViewport( newScreenPos, vp.id );
+
+            const auto oldWorldPos = vp.unprojectFromViewportSpace( oldVpPos );
+            const auto newWorldPos = vp.unprojectFromViewportSpace( newVpPos );
+
+            viewport().transformView( AffineXf3f::translation( newWorldPos - oldWorldPos ) );
         } );
     }
 

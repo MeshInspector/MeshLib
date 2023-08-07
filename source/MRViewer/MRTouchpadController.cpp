@@ -34,6 +34,7 @@ bool TouchpadController::rotateStart_( float angle )
     initRotateParams_ = viewport.getParameters();
     viewport.rotationCenterMode( Viewport::Parameters::RotationCenterMode::Static );
     viewport.setRotation( true );
+    viewport.rotationCenterMode( initRotateParams_.rotationMode );
 
     return rotateChange_( angle );
 }
@@ -65,7 +66,6 @@ bool TouchpadController::rotateEnd_()
     auto& viewport = viewer.viewport();
 
     viewport.setRotation( false );
-    viewport.rotationCenterMode( initRotateParams_.rotationMode );
 
     return true;
 }

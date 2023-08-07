@@ -9,6 +9,8 @@ void TouchpadController::initialize( GLFWwindow* window )
 {
 #ifdef __APPLE__
     handler_ = std::make_unique<TouchpadCocoaHandler>( window );
+#else
+    (void)window;
 #endif
 }
 

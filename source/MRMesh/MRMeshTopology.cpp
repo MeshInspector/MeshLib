@@ -1662,11 +1662,11 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             auto e1 = thisContour[j];
 
             EdgeId eNx = e.sym();
-            for ( ;;)
+            for ( ;;) // loop is needed in case of some ring part is not in fromPart, so find next edge in fromPart
             {
                 eNx = flipOrientation ? from.prev( eNx ) : from.next( eNx );
                 auto cf = flipOrientation ? from.right( eNx ) : from.left( eNx );
-                if ( cf && fmap[cf] || eNx == e.sym() )
+                if ( ( cf && fmap[cf] ) || eNx == e.sym() )
                     break;
             }
             if ( !existingEdges.test( eNx.undirected() ) )
@@ -1676,7 +1676,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             }
 
             EdgeId ePr = e;
-            for ( ;;)
+            for ( ;;) // loop is needed in case of some ring part is not in fromPart, so find prev edge in fromPart
             {
                 ePr = flipOrientation ? from.next( ePr ) : from.prev( ePr );
                 auto cf = flipOrientation ? from.left( ePr ) : from.right( ePr );

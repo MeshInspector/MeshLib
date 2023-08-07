@@ -1680,7 +1680,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             {
                 ePr = flipOrientation ? from.next( ePr ) : from.prev( ePr );
                 auto cf = flipOrientation ? from.left( ePr ) : from.right( ePr );
-                if ( cf && fmap[cf] || ePr == e )
+                if ( ( cf && fmap[cf] ) || ePr == e )
                     break;
             }
             if ( !existingEdges.test( ePr.undirected() ) )

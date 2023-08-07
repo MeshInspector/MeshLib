@@ -625,19 +625,21 @@ int Viewer::launchInit_( const LaunchParams& params )
 
             static std::optional<Viewport::Parameters> params = std::nullopt;
 
+            auto& vp = viewport();
+
             using GS = TouchpadController::GestureState;
             switch ( state )
             {
                 case GS::Begin:
-                    params = viewport().getParameters();
+                    params = vp.getParameters();
                     [[fallthrough]];
                 case GS::Change:
                     assert( params );
-                    viewport().setCameraViewAngle( std::clamp( params->cameraViewAngle * scale, minAngle, maxAngle ) );
+                    vp.setCameraViewAngle( std::clamp( params->cameraViewAngle * scale, minAngle, maxAngle ) );
                     break;
                 case GS::Cancel:
                     assert( params );
-                    viewport().setCameraViewAngle( params->cameraViewAngle );
+                    vp.setCameraViewAngle( params->cameraViewAngle );
                     [[fallthrough]];
                 case GS::End:
                     params = std::nullopt;
@@ -648,22 +650,24 @@ int Viewer::launchInit_( const LaunchParams& params )
         {
             static std::optional<Viewport::Parameters> params = std::nullopt;
 
+            auto& vp = viewport();
+
             using GS = TouchpadController::GestureState;
             switch ( state )
             {
                 case GS::Begin:
-                    params = viewport().getParameters();
+                    params = vp.getParameters();
                     [[fallthrough]];
                 case GS::Change:
                     assert( params );
                 {
                     const auto rot = Matrix3f::rotation( Vector3f::plusZ(), angle );
-                    viewport().setCameraTrackballAngle( params->cameraTrackballAngle * Quaternionf( rot ) );
+                    vp.setCameraTrackballAngle( params->cameraTrackballAngle * Quaternionf( rot ) );
                 }
                     break;
                 case GS::Cancel:
                     assert( params );
-                    viewport().setCameraTrackballAngle( params->cameraTrackballAngle );
+                    vp.setCameraTrackballAngle( params->cameraTrackballAngle );
                     [[fallthrough]];
                 case GS::End:
                     params = std::nullopt;
@@ -676,8 +680,10 @@ int Viewer::launchInit_( const LaunchParams& params )
         } );
         touchpadController.onSwipe( [&] ( float dx, float dy, bool kinetic )
         {
-            //if ( kinetic )
-            //    return;
+            // NOTE: this might be moved to parameters in the future
+            constexpr bool cIgnoreKinetic = false;
+            if ( cIgnoreKinetic && kinetic )
+                return;
 
             auto& vp = viewport();
 

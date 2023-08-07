@@ -29,7 +29,10 @@ namespace MR
     {
         auto& viewer = getViewerInstance();
         auto& viewport = viewer.viewport();
+
         initRotateParams_ = viewport.getParameters();
+        viewport.rotationCenterMode( Viewport::Parameters::RotationCenterMode::Static );
+        viewport.setRotation( true );
 
         return rotateChange_( angle );
     }
@@ -57,6 +60,12 @@ namespace MR
 
     bool TouchpadController::rotateEnd_()
     {
+        auto& viewer = getViewerInstance();
+        auto& viewport = viewer.viewport();
+
+        viewport.setRotation( false );
+        viewport.rotationCenterMode( initRotateParams_.rotationMode );
+
         return true;
     }
 

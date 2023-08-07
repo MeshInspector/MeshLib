@@ -20,7 +20,7 @@ public:
     struct Parameters
     {
         /// most touchpads implement kinetic (or inertial) scrolling, this option disables handling of these events
-        bool ignoreKineticMoves = true;
+        bool ignoreKineticMoves = false;
         /// scale coefficient for swipe movements
         float swipeScale = 10.f;
     };

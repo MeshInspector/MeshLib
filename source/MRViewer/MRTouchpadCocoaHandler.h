@@ -11,18 +11,12 @@ namespace MR
 class TouchpadCocoaHandler : public TouchpadController::Impl
 {
 public:
-    explicit TouchpadCocoaHandler( GLFWwindow* window );
+    explicit TouchpadCocoaHandler( TouchpadController* controller, GLFWwindow* window );
     ~TouchpadCocoaHandler() override;
 
-    TouchpadController::MagnificationCallback magnificationCb;
-    TouchpadController::RotationCallback rotationCb;
-    TouchpadController::ScrollCallback mouseScrollCb;
-    TouchpadController::ScrollCallback touchScrollCb;
-
-    void onMagnification( TouchpadController::MagnificationCallback cb ) override;
-    void onRotation( TouchpadController::RotationCallback cb ) override;
-    void onMouseScroll( TouchpadController::ScrollCallback cb ) override;
-    void onTouchScroll( TouchpadController::ScrollCallback cb ) override;
+    static void onMagnificationGestureEvent( NSView* view, SEL cmd, NSMagnificationGestureRecognizer* recognizer );
+    static void onRotationGestureEvent( NSView* view, SEL cmd, NSRotationGestureRecognizer* recognizer );
+    static void onScrollEvent( NSView* view, SEL cmd, NSEvent* event );
 
 private:
     NSView* view_;

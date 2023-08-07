@@ -25,15 +25,25 @@ namespace MR
         class Impl
         {
         public:
+            Impl( TouchpadController* controller, GLFWwindow* window );
             virtual ~Impl() = default;
 
-            virtual void onMagnification( MagnificationCallback cb ) = 0;
-            virtual void onRotation( RotationCallback cb ) = 0;
-            virtual void onMouseScroll( ScrollCallback cb ) = 0;
-            virtual void onTouchScroll( ScrollCallback cb ) = 0;
+            void mouseScroll( float dx, float dy );
+            void rotate( float angle, bool finished );
+            void swipe( float dx, float dy );
+            void zoom( float scale, bool finished );
+
+        private:
+            TouchpadController* controller_;
         };
 
     private:
         std::unique_ptr<Impl> impl_;
+
+        friend class Impl;
+        MagnificationCallback magnificationCb_;
+        RotationCallback rotationCb_;
+        ScrollCallback mouseScrollCb_;
+        ScrollCallback touchScrollCb_;
     };
 }

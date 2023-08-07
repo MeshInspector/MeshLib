@@ -43,32 +43,62 @@ namespace
     private:
         std::map<NSView*, MR::TouchpadCocoaHandler*> registry_;
     };
+}
 
-    void magnificationGestureEvent( NSView* view, SEL cmd, NSMagnificationGestureRecognizer* magnificationGestureRecognizer )
+namespace MR
+{
+    TouchpadCocoaHandler::TouchpadCocoaHandler( TouchpadController* controller, GLFWwindow* window )
+        : Impl( controller, window )
+        , view_( ( (NSWindow*)glfwGetCocoaWindow( window ) ).contentView )
+    {
+        Class cls = [view_ class];
+
+        magnificationGestureRecognizer_ = [[NSMagnificationGestureRecognizer alloc] initWithTarget:view_ action:@selector(handleMagnificationGesture:)];
+        if ( !class_respondsToSelector( cls, @selector(handleMagnificationGesture:) ) )
+            class_addMethod( cls, @selector(handleMagnificationGesture:), (IMP)TouchpadCocoaHandler::onMagnificationGestureEvent, "v@:@" );
+        [view_ addGestureRecognizer:magnificationGestureRecognizer_];
+
+        rotationGestureRecognizer_ = [[NSRotationGestureRecognizer alloc] initWithTarget:view_ action:@selector(handleRotationGesture:)];
+        if ( !class_respondsToSelector( cls, @selector(handleRotationGesture:) ) )
+            class_addMethod( cls, @selector(handleRotationGesture:), (IMP)TouchpadCocoaHandler::onRotationGestureEvent, "v@:@" );
+        [view_ addGestureRecognizer:rotationGestureRecognizer_];
+
+        // NOTE: GLFW scroll handler is replaced here
+        if ( !class_respondsToSelector( cls, @selector(scrollWheel:) ) )
+            class_addMethod( cls, @selector(scrollWheel:), (IMP)TouchpadCocoaHandler::onScrollEvent, "v@:@" );
+        else
+            class_replaceMethod( cls, @selector(scrollWheel:), (IMP)TouchpadCocoaHandler::onScrollEvent, "v@:@" );
+
+        TouchpadCocoaHandlerRegistry::instance().add( view_, this );
+    }
+
+    TouchpadCocoaHandler::~TouchpadCocoaHandler()
+    {
+        [magnificationGestureRecognizer_ release];
+        [rotationGestureRecognizer_ release];
+    }
+
+    void TouchpadCocoaHandler::onMagnificationGestureEvent( NSView* view, SEL cmd, NSMagnificationGestureRecognizer* recognizer )
     {
         auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
         if ( !handler )
             return;
-        if ( !handler->magnificationCb )
-            return;
 
-        const auto finished = magnificationGestureRecognizer.state == NSGestureRecognizerStateEnded;
-        handler->magnificationCb( std::exp( -magnificationGestureRecognizer.magnification ), finished );
+        const auto finished = recognizer.state == NSGestureRecognizerStateEnded;
+        handler->zoom( std::exp( -recognizer.magnification ), finished );
     }
 
-    void rotationGestureEvent( NSView* view, SEL cmd, NSRotationGestureRecognizer* rotationGestureRecognizer )
+    void TouchpadCocoaHandler::onRotationGestureEvent( NSView* view, SEL cmd, NSRotationGestureRecognizer* recognizer )
     {
         auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
         if ( ! handler )
             return;
-        if ( !handler->rotationCb )
-            return;
 
-        const auto finished = rotationGestureRecognizer.state == NSGestureRecognizerStateEnded;
-        handler->rotationCb( rotationGestureRecognizer.rotation, finished );
+        const auto finished = recognizer.state == NSGestureRecognizerStateEnded;
+        handler->rotate( recognizer.rotation, finished );
     }
 
-    void scrollEvent( NSView* view, SEL cmd, NSEvent* event )
+    void TouchpadCocoaHandler::onScrollEvent( NSView* view, SEL cmd, NSEvent* event )
     {
         auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
         if ( !handler )
@@ -85,74 +115,9 @@ namespace
             return;
 
         if ( [event subtype] == NSEventSubtypeMouseEvent )
-        {
-            if ( handler->mouseScrollCb )
-                handler->mouseScrollCb( deltaX, deltaY );
-        }
+            handler->mouseScroll( deltaX, deltaY );
         else
-        {
-            if ( handler->touchScrollCb )
-                handler->touchScrollCb( deltaX, deltaY );
-        }
-    }
-}
-
-namespace MR
-{
-    TouchpadCocoaHandler::TouchpadCocoaHandler( GLFWwindow* window )
-    {
-        auto* nsWindow = (NSWindow*)glfwGetCocoaWindow( window );
-        view_ = nsWindow.contentView;
-
-        Class cls = [view_ class];
-
-        magnificationGestureRecognizer_ = [[NSMagnificationGestureRecognizer alloc] initWithTarget:view_ action:@selector(handleMagnificationGesture:)];
-        if ( !class_respondsToSelector( cls, @selector(handleMagnificationGesture:) ) )
-            class_addMethod( cls, @selector(handleMagnificationGesture:), (IMP)magnificationGestureEvent, "v@:@" );
-        [view_ addGestureRecognizer:magnificationGestureRecognizer_];
-
-        rotationGestureRecognizer_ = [[NSRotationGestureRecognizer alloc] initWithTarget:view_ action:@selector(handleRotationGesture:)];
-        if ( !class_respondsToSelector( cls, @selector(handleRotationGesture:) ) )
-            class_addMethod( cls, @selector(handleRotationGesture:), (IMP)rotationGestureEvent, "v@:@" );
-        [view_ addGestureRecognizer:rotationGestureRecognizer_];
-
-        // NOTE: GLFW scroll handler is replaced here
-        if ( !class_respondsToSelector( cls, @selector(scrollWheel:) ) )
-            class_addMethod( cls, @selector(scrollWheel:), (IMP)scrollEvent, "v@:@" );
-        else
-            class_replaceMethod( cls, @selector(scrollWheel:), (IMP)scrollEvent, "v@:@" );
-
-        TouchpadCocoaHandlerRegistry::instance().add( view_, this );
-    }
-
-    TouchpadCocoaHandler::~TouchpadCocoaHandler()
-    {
-        [magnificationGestureRecognizer_ release];
-        [rotationGestureRecognizer_ release];
-    }
-
-    void TouchpadCocoaHandler::onMagnification( TouchpadController::MagnificationCallback cb )
-    {
-        // TODO: thread safety?
-        magnificationCb = cb;
-    }
-
-    void TouchpadCocoaHandler::onRotation( TouchpadController::RotationCallback cb )
-    {
-        // TODO: thread safety?
-        rotationCb = cb;
-    }
-
-    void TouchpadCocoaHandler::onMouseScroll( TouchpadController::ScrollCallback cb )
-    {
-        // TODO: thread safety?
-        mouseScrollCb = cb;
-    }
-
-    void TouchpadCocoaHandler::onTouchScroll( TouchpadController::ScrollCallback cb )
-    {
-        // TODO: thread safety?
-        touchScrollCb = cb;
+            handler->swipe( deltaX, deltaY );
     }
 }
 

@@ -12,10 +12,18 @@ namespace MR
     public:
         void initialize( GLFWwindow* window );
 
-        using ZoomCallback = std::function<void ( float scale, bool finished )>;
+        enum class GestureState
+        {
+            Begin,
+            Change,
+            End,
+            Cancel,
+        };
+
+        using ZoomCallback = std::function<void ( float scale, GestureState state )>;
         void onZoom( ZoomCallback cb );
 
-        using RotateCallback = std::function<void ( float angle, bool finished )>;
+        using RotateCallback = std::function<void ( float angle, GestureState state )>;
         void onRotate( RotateCallback cb );
 
         using ScrollSwipeCallback = std::function<void ( float dx, float dy )>;
@@ -29,9 +37,9 @@ namespace MR
             virtual ~Impl() = default;
 
             void mouseScroll( float dx, float dy );
-            void rotate( float angle, bool finished );
+            void rotate( float angle, GestureState state );
             void swipe( float dx, float dy );
-            void zoom( float scale, bool finished );
+            void zoom( float scale, GestureState state );
 
         private:
             TouchpadController* controller_;

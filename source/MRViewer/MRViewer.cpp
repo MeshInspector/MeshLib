@@ -618,27 +618,48 @@ int Viewer::launchInit_( const LaunchParams& params )
         initSpaceMouseHandler_();
 
         touchpadController.initialize( window );
-        touchpadController.onZoom( [&] ( float scale, bool finished )
+        touchpadController.onZoom( [&] ( float scale, TouchpadController::GestureState state )
         {
+            constexpr float minAngle = 0.001f;
+            constexpr float maxAngle = 179.99f;
+
             static float cameraViewAngle = -1.f;
-            if ( !finished )
+
+            using GS = TouchpadController::GestureState;
+            switch ( state )
             {
-                if ( cameraViewAngle == -1.f )
+                case GS::Begin:
                     cameraViewAngle = viewport().getParameters().cameraViewAngle;
-                constexpr float minAngle = 0.001f;
-                constexpr float maxAngle = 179.99f;
-                viewport().setCameraViewAngle( std::clamp( cameraViewAngle * scale, minAngle, maxAngle ) );
-            }
-            else
-            {
-                cameraViewAngle = -1.f;
+                    [[fallthrough]];
+                case GS::Change:
+                    viewport().setCameraViewAngle( std::clamp( cameraViewAngle * scale, minAngle, maxAngle ) );
+                    break;
+                case GS::Cancel:
+                    viewport().setCameraViewAngle( cameraViewAngle );
+                    [[fallthrough]];
+                case GS::End:
+                    cameraViewAngle = -1.f;
+                    break;
             }
         } );
-        touchpadController.onRotate( [&] ( float angle, bool finished )
+        touchpadController.onRotate( [&] ( float angle, TouchpadController::GestureState state )
         {
-            spdlog::info( "rotation gesture ( angle = {} )", angle );
-            if ( finished )
-                spdlog::info( "rotation gesture ended" );
+            using GS = TouchpadController::GestureState;
+            switch ( state )
+            {
+                case GS::Begin:
+                    spdlog::info( "rotation has begun ( angle = {} )", angle );
+                    break;
+                case GS::Change:
+                    spdlog::info( "rotation has changed ( angle = {} )", angle );
+                    break;
+                case GS::End:
+                    spdlog::info( "rotation has ended" );
+                    break;
+                case GS::Cancel:
+                    spdlog::info( "rotation has been canceled" );
+                    break;
+            }
         } );
         touchpadController.onMouseScroll( [&] ( float dx, float dy )
         {

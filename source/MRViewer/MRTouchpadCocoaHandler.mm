@@ -43,6 +43,24 @@ namespace
     private:
         std::map<NSView*, MR::TouchpadCocoaHandler*> registry_;
     };
+
+    std::optional<MR::TouchpadController::GestureState> convert( NSGestureRecognizerState state )
+    {
+        using GS = MR::TouchpadController::GestureState;
+        switch ( state )
+        {
+            case NSGestureRecognizerStateBegan:
+                return GS::Begin;
+            case NSGestureRecognizerStateChanged:
+                return GS::Change;
+            case NSGestureRecognizerStateEnded:
+                return GS::End;
+            case NSGestureRecognizerStateCancelled:
+                return GS::Cancel;
+            default:
+                return std::nullopt;
+        }
+    }
 }
 
 namespace MR
@@ -84,8 +102,9 @@ namespace MR
         if ( !handler )
             return;
 
-        const auto finished = recognizer.state == NSGestureRecognizerStateEnded;
-        handler->zoom( std::exp( -recognizer.magnification ), finished );
+        const auto state = convert( recognizer.state );
+        if ( state )
+            handler->zoom( std::exp( -recognizer.magnification ), *state );
     }
 
     void TouchpadCocoaHandler::onRotationGestureEvent( NSView* view, SEL cmd, NSRotationGestureRecognizer* recognizer )
@@ -94,8 +113,9 @@ namespace MR
         if ( ! handler )
             return;
 
-        const auto finished = recognizer.state == NSGestureRecognizerStateEnded;
-        handler->rotate( recognizer.rotation, finished );
+        const auto state = convert( recognizer.state );
+        if ( state )
+            handler->rotate( recognizer.rotation, *state );
     }
 
     void TouchpadCocoaHandler::onScrollEvent( NSView* view, SEL cmd, NSEvent* event )

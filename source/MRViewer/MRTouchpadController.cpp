@@ -41,9 +41,9 @@ namespace MR
         controller_->mouseScrollCb_( dx, dy );
     }
 
-    void TouchpadController::Impl::rotate( float angle, bool finished )
+    void TouchpadController::Impl::rotate( float angle, GestureState state )
     {
-        controller_->rotateCb_( angle, finished );
+        controller_->rotateCb_( angle, state );
     }
 
     void TouchpadController::Impl::swipe( float dx, float dy )
@@ -51,8 +51,8 @@ namespace MR
         controller_->swipeCb_( dx, dy );
     }
 
-    void TouchpadController::Impl::zoom( float scale, bool finished )
+    void TouchpadController::Impl::zoom( float scale, GestureState state )
     {
-        controller_->zoomCb_( scale, finished );
+        controller_->zoomCb_( scale, state );
     }
 }

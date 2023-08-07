@@ -10,24 +10,24 @@ namespace MR
 #endif
     }
 
-    void TouchpadController::onMagnification( TouchpadController::MagnificationCallback cb )
+    void TouchpadController::onZoom( ZoomCallback cb )
     {
-        magnificationCb_ = std::move( cb );
+        zoomCb_ = std::move( cb );
     }
 
-    void TouchpadController::onRotation( TouchpadController::RotationCallback cb )
+    void TouchpadController::onRotate( RotateCallback cb )
     {
-        rotationCb_ = std::move( cb );
+        rotateCb_ = std::move( cb );
     }
 
-    void TouchpadController::onMouseScroll( TouchpadController::ScrollCallback cb )
+    void TouchpadController::onMouseScroll( ScrollSwipeCallback cb )
     {
         mouseScrollCb_ = std::move( cb );
     }
 
-    void TouchpadController::onTouchScroll( TouchpadController::ScrollCallback cb )
+    void TouchpadController::onSwipe( ScrollSwipeCallback cb )
     {
-        touchScrollCb_ = std::move( cb );
+        swipeCb_ = std::move( cb );
     }
 
     TouchpadController::Impl::Impl( TouchpadController* controller, GLFWwindow* )
@@ -43,16 +43,16 @@ namespace MR
 
     void TouchpadController::Impl::rotate( float angle, bool finished )
     {
-        controller_->rotationCb_( angle, finished );
+        controller_->rotateCb_( angle, finished );
     }
 
     void TouchpadController::Impl::swipe( float dx, float dy )
     {
-        controller_->touchScrollCb_( dx, dy );
+        controller_->swipeCb_( dx, dy );
     }
 
     void TouchpadController::Impl::zoom( float scale, bool finished )
     {
-        controller_->magnificationCb_( scale, finished );
+        controller_->zoomCb_( scale, finished );
     }
 }

@@ -12,15 +12,15 @@ namespace MR
     public:
         void initialize( GLFWwindow* window );
 
-        using MagnificationCallback = std::function<void ( float scale, bool finished )>;
-        void onMagnification( MagnificationCallback cb );
+        using ZoomCallback = std::function<void ( float scale, bool finished )>;
+        void onZoom( ZoomCallback cb );
 
-        using RotationCallback = std::function<void ( float angle, bool finished )>;
-        void onRotation( RotationCallback cb );
+        using RotateCallback = std::function<void ( float angle, bool finished )>;
+        void onRotate( RotateCallback cb );
 
-        using ScrollCallback = std::function<void ( float dx, float dy )>;
-        void onMouseScroll( ScrollCallback cb );
-        void onTouchScroll( ScrollCallback cb );
+        using ScrollSwipeCallback = std::function<void ( float dx, float dy )>;
+        void onMouseScroll( ScrollSwipeCallback cb );
+        void onSwipe( ScrollSwipeCallback cb );
 
         class Impl
         {
@@ -41,9 +41,9 @@ namespace MR
         std::unique_ptr<Impl> impl_;
 
         friend class Impl;
-        MagnificationCallback magnificationCb_;
-        RotationCallback rotationCb_;
-        ScrollCallback mouseScrollCb_;
-        ScrollCallback touchScrollCb_;
+        ZoomCallback zoomCb_;
+        RotateCallback rotateCb_;
+        ScrollSwipeCallback mouseScrollCb_;
+        ScrollSwipeCallback swipeCb_;
     };
 }

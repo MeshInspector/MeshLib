@@ -618,7 +618,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         initSpaceMouseHandler_();
 
         touchpadController.initialize( window );
-        touchpadController.onMagnification( [&] ( float scale, bool finished )
+        touchpadController.onZoom( [&] ( float scale, bool finished )
         {
             static float cameraViewAngle = -1.f;
             if ( !finished )
@@ -634,7 +634,7 @@ int Viewer::launchInit_( const LaunchParams& params )
                 cameraViewAngle = -1.f;
             }
         } );
-        touchpadController.onRotation( [&] ( float angle, bool finished )
+        touchpadController.onRotate( [&] ( float angle, bool finished )
         {
             spdlog::info( "rotation gesture ( angle = {} )", angle );
             if ( finished )
@@ -644,7 +644,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         {
             mouseScroll( dy );
         } );
-        touchpadController.onTouchScroll( [&] ( float dx, float dy )
+        touchpadController.onSwipe( [&] ( float dx, float dy )
         {
             spdlog::info( "swipe gesture ( dx = {} dy = {} )", dx, dy );
         } );

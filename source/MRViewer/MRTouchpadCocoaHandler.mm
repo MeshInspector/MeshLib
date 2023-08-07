@@ -83,17 +83,28 @@ namespace MR
 
         // NOTE: GLFW scroll handler is replaced here
         if ( !class_respondsToSelector( cls, @selector(scrollWheel:) ) )
+        {
+            previousScrollWheelMethod_ = nil;
             class_addMethod( cls, @selector(scrollWheel:), (IMP)TouchpadCocoaHandler::onScrollEvent, "v@:@" );
+        }
         else
+        {
+            previousScrollWheelMethod_ = (IMP)[view_ methodForSelector:@selector(scrollWheel:)];
             class_replaceMethod( cls, @selector(scrollWheel:), (IMP)TouchpadCocoaHandler::onScrollEvent, "v@:@" );
+        }
 
         TouchpadCocoaHandlerRegistry::instance().add( view_, this );
     }
 
     TouchpadCocoaHandler::~TouchpadCocoaHandler()
     {
-        [magnificationGestureRecognizer_ release];
+        if ( previousScrollWheelMethod_ != nil )
+        {
+            Class cls = [view_ class];
+            class_replaceMethod( cls, @selector(scrollWheel:), (IMP)previousScrollWheelMethod_, "v@:@" );
+        }
         [rotationGestureRecognizer_ release];
+        [magnificationGestureRecognizer_ release];
     }
 
     void TouchpadCocoaHandler::onMagnificationGestureEvent( NSView* view, SEL cmd, NSMagnificationGestureRecognizer* recognizer )

@@ -23,6 +23,7 @@ private:
 
     NSMagnificationGestureRecognizer* magnificationGestureRecognizer_;
     NSRotationGestureRecognizer* rotationGestureRecognizer_;
+    IMP previousScrollWheelMethod_;
 };
 
 }

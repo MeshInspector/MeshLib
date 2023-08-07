@@ -1,6 +1,6 @@
 #ifdef __APPLE__
 
-#include "MRGestureRecognizerCocoaHandler.h"
+#include "MRTouchpadCocoaHandler.h"
 
 #include <GLFW/glfw3.h>
 #define GLFW_EXPOSE_NATIVE_COCOA

@@ -1,7 +1,7 @@
 #pragma once
 #ifdef __APPLE__
 
-#include "MRGestureRecognizerHandler.h"
+#include "MRTouchpadController.h"
 
 #include <AppKit/AppKit.h>
 

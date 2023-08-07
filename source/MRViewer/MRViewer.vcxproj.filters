@@ -163,6 +163,9 @@
     <ClCompile Include="MRMouseController.cpp">
       <Filter>ShortcutManager</Filter>
     </ClCompile>
+    <ClCompile Include="MRTouchpadController.cpp">
+      <Filter>ShortcutManager</Filter>
+    </ClCompile>
     <ClCompile Include="MRRibbonButtonDrawer.cpp">
       <Filter>RibbonMenu</Filter>
     </ClCompile>
@@ -420,6 +423,9 @@
       <Filter>ShortcutManager</Filter>
     </ClInclude>
     <ClInclude Include="MRTouchesController.h">
+      <Filter>ShortcutManager</Filter>
+    </ClInclude>
+    <ClInclude Include="MRTouchpadController.h">
       <Filter>ShortcutManager</Filter>
     </ClInclude>
     <ClInclude Include="MRRibbonButtonDrawer.h">

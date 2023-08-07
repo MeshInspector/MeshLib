@@ -56,7 +56,7 @@ bool TouchpadController::rotateCancel_()
 
     viewport.setCameraTrackballAngle( initRotateParams_.cameraTrackballAngle );
 
-    return true;
+    return rotateEnd_();
 }
 
 bool TouchpadController::rotateEnd_()
@@ -126,7 +126,7 @@ bool TouchpadController::zoomCancel_()
 
     viewport.setCameraViewAngle( initZoomParams_.cameraViewAngle );
 
-    return true;
+    return zoomEnd_();
 }
 
 bool TouchpadController::zoomEnd_()

@@ -50,9 +50,9 @@ std::vector<std::string> ObjectPoints::getInfoLines() const
     return res;
 }
 
-void ObjectPoints::setDirtyFlags( uint32_t mask )
+void ObjectPoints::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
-    ObjectPointsHolder::setDirtyFlags( mask );
+    ObjectPointsHolder::setDirtyFlags( mask, invalidateCaches );
     if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
     {
         if ( points_ )

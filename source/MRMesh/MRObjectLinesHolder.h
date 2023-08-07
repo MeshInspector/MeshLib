@@ -42,7 +42,7 @@ public:
     const std::shared_ptr<const Polyline3>& polyline() const
     { return reinterpret_cast< const std::shared_ptr<const Polyline3>& >( polyline_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
 
-    MRMESH_API virtual void setDirtyFlags( uint32_t mask ) override;
+    MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
 
     MRMESH_API virtual void setLineWidth( float width );
     float getLineWidth() const { return lineWidth_; }

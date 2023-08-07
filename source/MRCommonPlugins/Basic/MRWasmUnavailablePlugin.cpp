@@ -29,13 +29,13 @@ void WasmUnavailablePlugin::drawDialog( float scaling, ImGuiContext* )
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * scaling, cModalWindowPaddingY * scaling } );
     if ( ImGui::BeginModalNoAnimation( "##WasmBlocked", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
-        if ( ImGui::ModalBigTitle( "This tool can't be supported by browser", scaling ) )
+        if ( ImGui::ModalBigTitle( "This tool is not supported by browser", scaling ) )
         {
             ImGui::CloseCurrentPopup();
             dialogIsOpen_ = false;
         }
 
-        auto text = "We are sorry, but the browser can't support this feature. Please feel free to install the desktop version, it will tale only 3 minutes.";
+        auto text = "We are sorry, this feature is not implemented in web version. Please install desktop version (it is really fast).";
         const float textWidth = ImGui::CalcTextSize( text ).x;
         if ( textWidth < windowSize.x )
         {

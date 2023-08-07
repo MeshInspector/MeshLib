@@ -43,9 +43,9 @@ std::shared_ptr< Polyline3 > ObjectLines::updatePolyline( std::shared_ptr< Polyl
     return polyline;
 }
 
-void ObjectLines::setDirtyFlags( uint32_t mask )
+void ObjectLines::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
-    ObjectLinesHolder::setDirtyFlags( mask );
+    ObjectLinesHolder::setDirtyFlags( mask, invalidateCaches );
 
     if ( mask & DIRTY_POSITION || mask & DIRTY_PRIMITIVES )
     {

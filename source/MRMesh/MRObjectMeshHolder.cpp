@@ -80,7 +80,18 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     root["PolygonOffset"] = polygonOffset_.value();
     root["ShadingEnabled"] = shadingEnabled_.value();
     root["FaceBased"] = !flatShading_.empty();
-    root["ColoringType"] = ( coloringType_ == ColoringType::VertsColorMap ) ? "PerVertex" : "Solid";
+    switch( coloringType_ )
+    {
+    case ColoringType::VertsColorMap:
+        root["ColoringType"] = "PerVertex";
+        break;
+    case ColoringType::FacesColorMap:
+        root["ColoringType"] = "PerFace";
+        break;
+    default:
+        root["ColoringType"] = "Solid";
+    }
+    serializeToJson( facesColorMap_.vec_, root["FaceColors"] );
 
     // texture
     serializeToJson( texture_, root["Texture"] );
@@ -137,7 +148,10 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
         const auto stype = root["ColoringType"].asString();
         if ( stype == "PerVertex" )
             setColoringType( ColoringType::VertsColorMap );
+        else if ( stype == "PerFace" )
+            setColoringType( ColoringType::FacesColorMap );
     }
+    deserializeFromJson( root["FaceColors"], facesColorMap_.vec_ );
 
     Vector4f resVec;
     deserializeFromJson( selectionColor["Diffuse"], resVec );
@@ -229,18 +243,6 @@ void ObjectMeshHolder::setupRenderObject_() const
 {
     if ( !renderObj_ )
         renderObj_ = createRenderObject<ObjectMeshHolder>( *this );
-}
-
-void ObjectMeshHolder::updateMeshStat_() const
-{
-    if ( !meshStat_ )
-    {
-        MeshStat ms;
-        ms.numComponents = MeshComponents::getNumComponents( *mesh_ );
-        ms.numUndirectedEdges = mesh_->topology.computeNotLoneUndirectedEdges();
-        ms.numHoles = mesh_->topology.findNumHoles();
-        meshStat_ = ms;
-    }
 }
 
 void ObjectMeshHolder::setDefaultColors_()
@@ -356,7 +358,7 @@ void ObjectMeshHolder::applyScale( float scaleFactor )
 
 bool ObjectMeshHolder::hasVisualRepresentation() const
 {
-    return mesh_ && mesh_->topology.numValidFaces() != 0;
+    return mesh_ && numUndirectedEdges() > 0;
 }
 
 std::shared_ptr<Object> ObjectMeshHolder::clone() const
@@ -496,38 +498,49 @@ size_t ObjectMeshHolder::heapBytes() const
         + MR::heapBytes( mesh_ );
 }
 
+size_t ObjectMeshHolder::numUndirectedEdges() const
+{
+    if ( !numUndirectedEdges_ )
+        numUndirectedEdges_ = mesh_ ? mesh_->topology.computeNotLoneUndirectedEdges() : 0;
+    return *numUndirectedEdges_;
+}
+
 size_t ObjectMeshHolder::numHoles() const
 {
-    updateMeshStat_();
-    return meshStat_->numHoles;
+    if ( !numHoles_ )
+        numHoles_ = mesh_ ? mesh_->topology.findNumHoles() : 0;
+    return *numHoles_;
 }
 
 size_t ObjectMeshHolder::numComponents() const
 {
-    updateMeshStat_();
-    return meshStat_->numComponents;
+    if ( !numComponents_ )
+        numComponents_ = mesh_ ? MeshComponents::getNumComponents( *mesh_ ) : 0;
+    return *numComponents_;
 }
 
 size_t ObjectMeshHolder::numHandles() const
 {
     if ( !mesh_ )
         return 0;
-    updateMeshStat_();
-    int EulerCharacteristic = mesh_->topology.numValidFaces() + (int)meshStat_->numHoles + mesh_->topology.numValidVerts() - (int)meshStat_->numUndirectedEdges;
-    return meshStat_->numComponents - EulerCharacteristic / 2;
+    int EulerCharacteristic = mesh_->topology.numValidFaces() + (int)numHoles() + mesh_->topology.numValidVerts() - (int)numUndirectedEdges();
+    return numComponents() - EulerCharacteristic / 2;
 }
 
-void ObjectMeshHolder::setDirtyFlags( uint32_t mask )
+void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
     // selected faces and edges can be changed only by the methods of this class, 
     // which set dirty flags appropriately
     mask &= ~( DIRTY_SELECTION | DIRTY_EDGES_SELECTION );
 
-    VisualObject::setDirtyFlags( mask );
+    VisualObject::setDirtyFlags( mask, invalidateCaches );
 
     if ( mask & DIRTY_FACE )
     {
-        meshStat_.reset();
+        numHoles_.reset();
+        numComponents_.reset();
+        numUndirectedEdges_.reset();
+        numHandles_.reset();
         meshIsClosed_.reset();
     }
 
@@ -538,7 +551,7 @@ void ObjectMeshHolder::setDirtyFlags( uint32_t mask )
         totalArea_.reset();
         selectedArea_.reset();
         avgEdgeLen_.reset();
-        if ( mesh_ )
+        if ( invalidateCaches && mesh_ )
             mesh_->invalidateCaches();
     }
 }

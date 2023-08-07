@@ -372,11 +372,11 @@ std::shared_ptr<Object> ObjectVoxels::shallowClone() const
     return res;
 }
 
-void ObjectVoxels::setDirtyFlags( uint32_t mask )
+void ObjectVoxels::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
-    ObjectMeshHolder::setDirtyFlags( mask );
+    ObjectMeshHolder::setDirtyFlags( mask, invalidateCaches );
 
-    if ( ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && mesh_ )
+    if ( invalidateCaches && ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && mesh_ )
         mesh_->invalidateCaches();
 }
 

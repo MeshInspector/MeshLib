@@ -61,9 +61,9 @@ std::shared_ptr<MR::Object> ObjectPointsHolder::shallowClone() const
     return res;
 }
 
-void ObjectPointsHolder::setDirtyFlags( uint32_t mask )
+void ObjectPointsHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
-    VisualObject::setDirtyFlags( mask );
+    VisualObject::setDirtyFlags( mask, invalidateCaches );
 
     if ( mask & DIRTY_FACE )
         numValidPoints_.reset();
@@ -72,7 +72,7 @@ void ObjectPointsHolder::setDirtyFlags( uint32_t mask )
     {
         worldBox_.reset();
         worldBox_.get().reset();
-        if ( points_ )
+        if ( invalidateCaches && points_ )
             points_->invalidateCaches();
     }
 }

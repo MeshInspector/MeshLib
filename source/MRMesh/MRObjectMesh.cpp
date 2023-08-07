@@ -80,17 +80,17 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
         if( mesh_->topology.faceSize() < mesh_->topology.faceCapacity() )
             res.back() += " / " + std::to_string( mesh_->topology.faceCapacity() ) + " capacity";
 
-        res.push_back( "edges: " + std::to_string( meshStat_->numUndirectedEdges ) );
+        res.push_back( "edges: " + std::to_string( numUndirectedEdges() ) );
         if( auto nEdgesSelected = numSelectedEdges() )
             res.back() += " / " + std::to_string( nEdgesSelected ) + " selected";
         if( auto nCreaseEdges = numCreaseEdges() )
             res.back() += " / " + std::to_string( nCreaseEdges ) + " creases";
-        if( meshStat_->numUndirectedEdges < mesh_->topology.undirectedEdgeSize() )
+        if( numUndirectedEdges() < mesh_->topology.undirectedEdgeSize() )
             res.back() += " / " + std::to_string( mesh_->topology.undirectedEdgeSize() ) + " size";
         if( mesh_->topology.undirectedEdgeSize() < mesh_->topology.undirectedEdgeCapacity() )
             res.back() += " / " + std::to_string( mesh_->topology.undirectedEdgeCapacity() ) + " capacity";
 
-        res.push_back( "holes: " + std::to_string( meshStat_->numHoles ) );
+        res.push_back( "holes: " + std::to_string( numHoles() ) );
 
         res.push_back( fmt::format( "area: {:.6}", totalArea() ) );
         if( nFacesSelected )
@@ -137,9 +137,9 @@ std::shared_ptr<Object> ObjectMesh::shallowClone() const
     return res;
 }
 
-void ObjectMesh::setDirtyFlags( uint32_t mask )
+void ObjectMesh::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
-    ObjectMeshHolder::setDirtyFlags( mask );
+    ObjectMeshHolder::setDirtyFlags( mask, invalidateCaches );
     if ( mask & DIRTY_POSITION || mask & DIRTY_FACE)
     {
         if ( mesh_ )

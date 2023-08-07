@@ -7,6 +7,7 @@
 #include "MRBuffer.h"
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
+#include "MRRegionBoundary.h"
 
 namespace MR
 {
@@ -18,6 +19,20 @@ bool AABBTree::containsSameNumberOfTris( const Mesh & mesh ) const
     if ( mesh.topology.numValidFaces() <= 0 )
         return nodes_.size() == 0;
     return int(nodes_.size()) == getNumNodes( mesh.topology.numValidFaces() );
+}
+
+inline Box3f computeFaceBox( const Mesh & mesh, FaceId f )
+{
+    Box3f box;
+    Vector3f a, b, c;
+    mesh.getTriPoints( f, a, b, c );
+    box.include( a );
+    box.include( b );
+    box.include( c );
+
+    // micro expand boxes to have better precision in AABB algorithms
+    box = box.insignificantlyExpanded();
+    return box;
 }
 
 AABBTree::AABBTree( const Mesh & mesh )
@@ -48,16 +63,7 @@ AABBTree::AABBTree( const Mesh & mesh )
                 boxedFaces[i].leafId = f = FaceId( i );
             else
                 f = boxedFaces[i].leafId;
-            Box3f box;
-            Vector3f a, b, c;
-            mesh.getTriPoints( f, a, b, c );
-            box.include( a );
-            box.include( b );
-            box.include( c );
-
-            // micro expand boxes to have better precision in AABB algorithms
-            box = box.insignificantlyExpanded();
-            boxedFaces[i].box = box;
+            boxedFaces[i].box = computeFaceBox( mesh, f );
         }
     } );
 
@@ -172,6 +178,40 @@ auto AABBTree::getNodesFromFaces( const FaceBitSet & faces ) const -> NodeBitSet
     }
 
     return res;
+}
+
+void AABBTree::refit( const Mesh & mesh, const VertBitSet & changedVerts )
+{
+    MR_TIMER
+
+    const auto changedFaces = getIncidentFaces( mesh.topology, changedVerts );
+
+    // update leaf nodes
+    NodeBitSet changedNodes( nodes_.size() );
+    BitSetParallelForAll( changedNodes, [&]( NodeId nid )
+    {
+        auto & node = nodes_[nid];
+        if ( !node.leaf() )
+            return;
+        const auto f = node.leafId();
+        if ( !changedFaces.test( f ) )
+            return;
+        changedNodes.set( nid );
+        node.box = computeFaceBox( mesh, f );
+    } );
+
+    //update not-leaf nodes
+    for ( auto nid = nodes_.backId(); nid; --nid )
+    {
+        auto & node = nodes_[nid];
+        if ( node.leaf() )
+            continue;
+        if ( !changedNodes.test( node.l ) && !changedNodes.test( node.r ) )
+            continue;
+        changedNodes.set( nid );
+        node.box = nodes_[node.l].box;
+        node.box.include( nodes_[node.r].box );
+    }
 }
 
 TEST(MRMesh, AABBTree) 

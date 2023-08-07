@@ -53,6 +53,12 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const { return nodes_.heapBytes(); }
 
+    /// updates bounding boxes of the nodes containing changed vertices;
+    /// this is a faster alternative to full tree rebuild (but the tree after refit might be less efficient)
+    /// \param mesh same mesh for which this tree was constructed but with updated coordinates;
+    /// \param changedVerts vertex ids with modified coordinates (since tree construction or last refit)
+    MRMESH_API void refit( const Mesh & mesh, const VertBitSet & changedVerts );
+
 private:
     NodeVec nodes_;
 

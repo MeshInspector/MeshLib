@@ -155,6 +155,7 @@
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
     <ClInclude Include="MRSceneSettings.h" />
+    <ClInclude Include="MRSegmPoint.h" />
     <ClInclude Include="MRSharpenMarchingCubesMesh.h" />
     <ClInclude Include="MRSignal.h" />
     <ClInclude Include="MRSignDetectionMode.h" />

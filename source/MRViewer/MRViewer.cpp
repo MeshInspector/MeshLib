@@ -661,13 +661,13 @@ int Viewer::launchInit_( const LaunchParams& params )
                     break;
             }
         } );
-        touchpadController.onMouseScroll( [&] ( float dx, float dy )
+        touchpadController.onMouseScroll( [&] ( float dx, float dy, bool kinetic )
         {
             mouseScroll( dy );
         } );
-        touchpadController.onSwipe( [&] ( float dx, float dy )
+        touchpadController.onSwipe( [&] ( float dx, float dy, bool kinetic )
         {
-            spdlog::info( "swipe gesture ( dx = {} dy = {} )", dx, dy );
+            spdlog::info( "swipe gesture ( dx = {} dy = {} kinetic = {} )", dx, dy, kinetic );
         } );
     }
 

@@ -26,7 +26,7 @@ namespace MR
         using RotateCallback = std::function<void ( float angle, GestureState state )>;
         void onRotate( RotateCallback cb );
 
-        using ScrollSwipeCallback = std::function<void ( float dx, float dy )>;
+        using ScrollSwipeCallback = std::function<void ( float dx, float dy, bool kinetic )>;
         void onMouseScroll( ScrollSwipeCallback cb );
         void onSwipe( ScrollSwipeCallback cb );
 
@@ -36,9 +36,9 @@ namespace MR
             Impl( TouchpadController* controller, GLFWwindow* window );
             virtual ~Impl() = default;
 
-            void mouseScroll( float dx, float dy );
+            void mouseScroll( float dx, float dy, bool kinetic );
             void rotate( float angle, GestureState state );
-            void swipe( float dx, float dy );
+            void swipe( float dx, float dy, bool kinetic );
             void zoom( float scale, GestureState state );
 
         private:

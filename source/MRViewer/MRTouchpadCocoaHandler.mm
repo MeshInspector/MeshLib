@@ -146,9 +146,9 @@ namespace MR
             return;
 
         if ( [event subtype] == NSEventSubtypeMouseEvent )
-            handler->mouseScroll( deltaX, deltaY );
+            handler->mouseScroll( deltaX, deltaY, [event momentumPhase] != NSEventPhaseNone );
         else
-            handler->swipe( deltaX, deltaY );
+            handler->swipe( deltaX, deltaY, [event momentumPhase] != NSEventPhaseNone );
     }
 }
 

@@ -1661,14 +1661,28 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             auto e = fromContour[j];
             auto e1 = thisContour[j];
 
-            auto eNx = flipOrientation ? from.prev( e.sym() ) : from.next( e.sym() );
+            EdgeId eNx = e.sym();
+            for ( ;;) // loop is needed in case of some ring part is not in fromPart, so find next edge in fromPart
+            {
+                eNx = flipOrientation ? from.prev( eNx ) : from.next( eNx );
+                auto cf = flipOrientation ? from.right( eNx ) : from.left( eNx );
+                if ( ( cf && fmap[cf] ) || eNx == e.sym() )
+                    break;
+            }
             if ( !existingEdges.test( eNx.undirected() ) )
             {
                 auto e1Nx = prev( e1.sym() );
                 prevNextEdges.emplace_back( e1Nx, mapEdge( emap, eNx ) );
             }
 
-            auto ePr = flipOrientation ? from.next( e ) : from.prev( e );
+            EdgeId ePr = e;
+            for ( ;;) // loop is needed in case of some ring part is not in fromPart, so find prev edge in fromPart
+            {
+                ePr = flipOrientation ? from.next( ePr ) : from.prev( ePr );
+                auto cf = flipOrientation ? from.left( ePr ) : from.right( ePr );
+                if ( ( cf && fmap[cf] ) || ePr == e )
+                    break;
+            }
             if ( !existingEdges.test( ePr.undirected() ) )
             {
                 auto e1Pr = next( e1 );

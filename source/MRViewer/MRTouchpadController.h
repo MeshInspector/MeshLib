@@ -24,7 +24,7 @@ public:
         /// scale coefficient for swipe movements
         float swipeScale = 10.f;
     };
-    MRVIEWER_API const Parameters& getParameters() const;
+    [[nodiscard]] MRVIEWER_API const Parameters& getParameters() const;
     MRVIEWER_API void setParameters( const Parameters& parameters );
 
     class Impl

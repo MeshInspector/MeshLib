@@ -36,6 +36,7 @@ bool TouchpadController::rotateStart_( float angle )
         auto& viewer = getViewerInstance();
         auto& viewport = viewer.viewport();
 
+        // rotate camera around the scene's center
         viewport.rotationCenterMode( Viewport::Parameters::RotationCenterMode::Static );
         viewport.setRotation( true );
         viewport.rotationCenterMode( initRotateParams_.rotationMode );

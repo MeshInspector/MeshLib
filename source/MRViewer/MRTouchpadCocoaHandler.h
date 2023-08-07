@@ -8,6 +8,7 @@
 namespace MR
 {
 
+/// Touchpad event handler for macOS
 class TouchpadCocoaHandler : public TouchpadController::Handler
 {
 public:

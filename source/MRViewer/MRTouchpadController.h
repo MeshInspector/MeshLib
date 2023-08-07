@@ -1,5 +1,7 @@
 #pragma once
 
+#include "MRViewport.h"
+
 #include <functional>
 #include <memory>
 
@@ -10,48 +12,44 @@ namespace MR
     class TouchpadController
     {
     public:
+        MR_ADD_CTOR_DELETE_MOVE( TouchpadController );
         void initialize( GLFWwindow* window );
-
-        enum class GestureState
-        {
-            Begin,
-            Change,
-            End,
-            Cancel,
-        };
-
-        using ZoomCallback = std::function<void ( float scale, GestureState state )>;
-        void onZoom( ZoomCallback cb );
-
-        using RotateCallback = std::function<void ( float angle, GestureState state )>;
-        void onRotate( RotateCallback cb );
-
-        using ScrollSwipeCallback = std::function<void ( float dx, float dy, bool kinetic )>;
-        void onMouseScroll( ScrollSwipeCallback cb );
-        void onSwipe( ScrollSwipeCallback cb );
+        void connect();
 
         class Impl
         {
         public:
-            Impl( TouchpadController* controller, GLFWwindow* window );
             virtual ~Impl() = default;
+
+            enum class GestureState
+            {
+                Begin,
+                Change,
+                End,
+                Cancel,
+            };
 
             void mouseScroll( float dx, float dy, bool kinetic );
             void rotate( float angle, GestureState state );
             void swipe( float dx, float dy, bool kinetic );
             void zoom( float scale, GestureState state );
-
-        private:
-            TouchpadController* controller_;
         };
 
     private:
         std::unique_ptr<Impl> impl_;
 
-        friend class Impl;
-        ZoomCallback zoomCb_;
-        RotateCallback rotateCb_;
-        ScrollSwipeCallback mouseScrollCb_;
-        ScrollSwipeCallback swipeCb_;
+        Viewport::Parameters initRotateParams_;
+        bool rotateStart_( float angle );
+        bool rotateChange_( float angle );
+        bool rotateCancel_();
+        bool rotateEnd_();
+
+        bool swipe_( float deltaX, float deltaY, bool kinetic );
+
+        Viewport::Parameters initZoomParams_;
+        bool zoomStart_( float scale );
+        bool zoomChange_( float scale );
+        bool zoomCancel_();
+        bool zoomEnd_();
     };
 }

@@ -616,96 +616,8 @@ int Viewer::launchInit_( const LaunchParams& params )
         touchesController.connect( this );
         spaceMouseController.connect();
         initSpaceMouseHandler_();
-
+        touchpadController.connect();
         touchpadController.initialize( window );
-        touchpadController.onZoom( [&] ( float scale, TouchpadController::GestureState state )
-        {
-            constexpr float minAngle = 0.001f;
-            constexpr float maxAngle = 179.99f;
-
-            static std::optional<Viewport::Parameters> params = std::nullopt;
-
-            auto& vp = viewport();
-
-            using GS = TouchpadController::GestureState;
-            switch ( state )
-            {
-                case GS::Begin:
-                    params = vp.getParameters();
-                    [[fallthrough]];
-                case GS::Change:
-                    assert( params );
-                    vp.setCameraViewAngle( std::clamp( params->cameraViewAngle * scale, minAngle, maxAngle ) );
-                    break;
-                case GS::Cancel:
-                    assert( params );
-                    vp.setCameraViewAngle( params->cameraViewAngle );
-                    [[fallthrough]];
-                case GS::End:
-                    params = std::nullopt;
-                    break;
-            }
-        } );
-        touchpadController.onRotate( [&] ( float angle, TouchpadController::GestureState state )
-        {
-            static std::optional<Viewport::Parameters> params = std::nullopt;
-
-            auto& vp = viewport();
-
-            using GS = TouchpadController::GestureState;
-            switch ( state )
-            {
-                case GS::Begin:
-                    params = vp.getParameters();
-                    [[fallthrough]];
-                case GS::Change:
-                    assert( params );
-                {
-                    const auto rot = Matrix3f::rotation( Vector3f::plusZ(), angle );
-                    vp.setCameraTrackballAngle( params->cameraTrackballAngle * Quaternionf( rot ) );
-                }
-                    break;
-                case GS::Cancel:
-                    assert( params );
-                    vp.setCameraTrackballAngle( params->cameraTrackballAngle );
-                    [[fallthrough]];
-                case GS::End:
-                    params = std::nullopt;
-                    break;
-            }
-        } );
-        touchpadController.onMouseScroll( [&] ( float dx, float dy, bool kinetic )
-        {
-            mouseScroll( dy );
-        } );
-        touchpadController.onSwipe( [&] ( float dx, float dy, bool kinetic )
-        {
-            // NOTE: this might be moved to parameters in the future
-            constexpr bool cIgnoreKinetic = false;
-            if ( cIgnoreKinetic && kinetic )
-                return;
-
-            auto& vp = viewport();
-
-            Vector3f sceneCenterPos;
-            if ( vp.getSceneBox().valid() )
-                sceneCenterPos = vp.getSceneBox().center();
-            const auto sceneCenterVpPos = vp.projectToViewportSpace( sceneCenterPos );
-
-            constexpr float cTranslationScale = 10.0;
-
-            const auto mousePos = mouseController.getMousePos();
-            const auto oldScreenPos = Vector3f( mousePos.x, mousePos.y, sceneCenterVpPos.z );
-            const auto newScreenPos = oldScreenPos + cTranslationScale * Vector3f( dx, dy, 0.f );
-
-            const auto oldVpPos = screenToViewport( oldScreenPos, vp.id );
-            const auto newVpPos = screenToViewport( newScreenPos, vp.id );
-
-            const auto oldWorldPos = vp.unprojectFromViewportSpace( oldVpPos );
-            const auto newWorldPos = vp.unprojectFromViewportSpace( newVpPos );
-
-            viewport().transformView( AffineXf3f::translation( newWorldPos - oldWorldPos ) );
-        } );
     }
 
     std::future<void> splashMinTimer;
@@ -1206,6 +1118,51 @@ bool Viewer::touchMove( int id, int x, int y )
 bool Viewer::touchEnd( int id, int x, int y )
 {
     return touchEndSignal( id, x, y );
+}
+
+bool Viewer::touchpadRotateStart( float angle )
+{
+    return touchpadRotateStartSignal( angle );
+}
+
+bool Viewer::touchpadRotateChange( float angle )
+{
+    return touchpadRotateChangeSignal( angle );
+}
+
+bool Viewer::touchpadRotateCancel()
+{
+    return touchpadRotateCancelSignal();
+}
+
+bool Viewer::touchpadRotateEnd()
+{
+    return touchpadRotateEndSignal();
+}
+
+bool Viewer::touchpadSwipe( float deltaX, float deltaY, bool kinetic )
+{
+    return touchpadSwipeSignal( deltaX, deltaY, kinetic );
+}
+
+bool Viewer::touchpadZoomStart( float angle )
+{
+    return touchpadZoomStartSignal( angle );
+}
+
+bool Viewer::touchpadZoomChange( float angle )
+{
+    return touchpadZoomChangeSignal( angle );
+}
+
+bool Viewer::touchpadZoomCancel()
+{
+    return touchpadZoomCancelSignal();
+}
+
+bool Viewer::touchpadZoomEnd()
+{
+    return touchpadZoomEndSignal();
 }
 
 bool Viewer::mouseScroll( float delta_y )

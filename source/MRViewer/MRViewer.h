@@ -145,6 +145,16 @@ public:
     MRVIEWER_API bool touchStart( int id, int x, int y );
     MRVIEWER_API bool touchMove( int id, int x, int y );
     MRVIEWER_API bool touchEnd( int id, int x, int y );
+    // Touchpad gesture callbacks
+    MRVIEWER_API bool touchpadRotateStart( float angle );
+    MRVIEWER_API bool touchpadRotateChange( float angle );
+    MRVIEWER_API bool touchpadRotateCancel();
+    MRVIEWER_API bool touchpadRotateEnd();
+    MRVIEWER_API bool touchpadSwipe( float deltaX, float deltaY, bool kinetic );
+    MRVIEWER_API bool touchpadZoomStart( float scale );
+    MRVIEWER_API bool touchpadZoomChange( float scale );
+    MRVIEWER_API bool touchpadZoomCancel();
+    MRVIEWER_API bool touchpadZoomEnd();
     // This function is called when window should close, if return value is true, window will stay open
     MRVIEWER_API bool interruptWindowClose();
     // callback to update connected / disconnected joystick
@@ -535,6 +545,20 @@ public:
     TouchSignal touchStartSignal; // signal is called when any touch starts
     TouchSignal touchMoveSignal; // signal is called when touch moves
     TouchSignal touchEndSignal; // signal is called when touch stops
+    // Touchpad events
+    using TouchpadRotateSignal = boost::signals2::signal<bool( float angle ), SignalStopHandler>;
+    using TouchpadSwipeSignal = boost::signals2::signal<bool( float deltaX, float deltaY, bool kinetic ), SignalStopHandler>;
+    using TouchpadZoomSignal = boost::signals2::signal<bool( float scale ), SignalStopHandler>;
+    using TouchpadEndSignal = boost::signals2::signal<bool(), SignalStopHandler>;
+    TouchpadRotateSignal touchpadRotateStartSignal;
+    TouchpadRotateSignal touchpadRotateChangeSignal;
+    TouchpadEndSignal touchpadRotateCancelSignal;
+    TouchpadEndSignal touchpadRotateEndSignal;
+    TouchpadSwipeSignal touchpadSwipeSignal;
+    TouchpadZoomSignal touchpadZoomStartSignal;
+    TouchpadZoomSignal touchpadZoomChangeSignal;
+    TouchpadEndSignal touchpadZoomCancelSignal;
+    TouchpadEndSignal touchpadZoomEndSignal;
     // Window focus signal
     using PostFocusSignal = boost::signals2::signal<void( bool )>;
     PostFocusSignal postFocusSignal;

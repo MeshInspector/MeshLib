@@ -11,7 +11,7 @@ namespace MR
 class TouchpadCocoaHandler : public TouchpadController::Impl
 {
 public:
-    explicit TouchpadCocoaHandler( TouchpadController* controller, GLFWwindow* window );
+    explicit TouchpadCocoaHandler( GLFWwindow* window );
     ~TouchpadCocoaHandler() override;
 
     static void onMagnificationGestureEvent( NSView* view, SEL cmd, NSMagnificationGestureRecognizer* recognizer );

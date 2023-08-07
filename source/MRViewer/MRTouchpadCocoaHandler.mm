@@ -44,9 +44,9 @@ namespace
         std::map<NSView*, MR::TouchpadCocoaHandler*> registry_;
     };
 
-    std::optional<MR::TouchpadController::GestureState> convert( NSGestureRecognizerState state )
+    std::optional<MR::TouchpadController::Impl::GestureState> convert( NSGestureRecognizerState state )
     {
-        using GS = MR::TouchpadController::GestureState;
+        using GS = MR::TouchpadController::Impl::GestureState;
         switch ( state )
         {
             case NSGestureRecognizerStateBegan:
@@ -65,9 +65,8 @@ namespace
 
 namespace MR
 {
-    TouchpadCocoaHandler::TouchpadCocoaHandler( TouchpadController* controller, GLFWwindow* window )
-        : Impl( controller, window )
-        , view_( ( (NSWindow*)glfwGetCocoaWindow( window ) ).contentView )
+    TouchpadCocoaHandler::TouchpadCocoaHandler( GLFWwindow* window )
+        : view_( ( (NSWindow*)glfwGetCocoaWindow( window ) ).contentView )
     {
         Class cls = [view_ class];
 

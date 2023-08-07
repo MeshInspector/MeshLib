@@ -148,7 +148,9 @@ bool TouchpadController::zoomChange_( float scale )
 
         constexpr float minAngle = 0.001f;
         constexpr float maxAngle = 179.99f;
-        viewport.setCameraViewAngle( std::clamp( initZoomParams_.cameraViewAngle * scale, minAngle, maxAngle ) );
+        // more natural zoom scale
+        const auto viewAngle = std::exp( 1.f - scale ) * initZoomParams_.cameraViewAngle;
+        viewport.setCameraViewAngle( std::clamp( viewAngle, minAngle, maxAngle ) );
     } }, true );
 
     return true;

@@ -117,7 +117,7 @@ void TouchpadCocoaHandler::onMagnificationGestureEvent( NSView* view, SEL cmd, N
 
     const auto state = convert( recognizer.state );
     if ( state )
-        handler->zoom( std::exp( -recognizer.magnification ), *state );
+        handler->zoom( 1.f + recognizer.magnification, *state );
 }
 
 void TouchpadCocoaHandler::onRotationGestureEvent( NSView* view, SEL cmd, NSRotationGestureRecognizer* recognizer )

@@ -72,9 +72,7 @@ bool TouchpadController::rotateEnd_()
 
 bool TouchpadController::swipe_( float deltaX, float deltaY, bool kinetic )
 {
-    // NOTE: this might be moved to parameters in the future
-    constexpr bool cIgnoreKinetic = false;
-    if ( cIgnoreKinetic && kinetic )
+    if ( parameters_.ignoreKineticMoves && kinetic )
         return true;
 
     auto& viewer = getViewerInstance();
@@ -85,11 +83,9 @@ bool TouchpadController::swipe_( float deltaX, float deltaY, bool kinetic )
         sceneCenterPos = viewport.getSceneBox().center();
     const auto sceneCenterVpPos = viewport.projectToViewportSpace( sceneCenterPos );
 
-    constexpr float cTranslationScale = 10.0;
-
     const auto mousePos = viewer.mouseController.getMousePos();
     const auto oldScreenPos = Vector3f( mousePos.x, mousePos.y, sceneCenterVpPos.z );
-    const auto newScreenPos = oldScreenPos + cTranslationScale * Vector3f( deltaX, deltaY, 0.f );
+    const auto newScreenPos = oldScreenPos + parameters_.swipeScale * Vector3f( deltaX, deltaY, 0.f );
 
     const auto oldVpPos = viewer.screenToViewport( oldScreenPos, viewport.id );
     const auto newVpPos = viewer.screenToViewport( newScreenPos, viewport.id );
@@ -136,6 +132,16 @@ bool TouchpadController::zoomCancel_()
 bool TouchpadController::zoomEnd_()
 {
     return true;
+}
+
+const TouchpadController::Parameters& TouchpadController::getParameters() const
+{
+    return parameters_;
+}
+
+void TouchpadController::setParameters( const TouchpadController::Parameters& parameters )
+{
+    parameters_ = parameters;
 }
 
 void TouchpadController::Impl::mouseScroll( float dx, float dy, bool kinetic )

@@ -17,6 +17,16 @@ public:
     MRVIEWER_API void initialize( GLFWwindow* window );
     MRVIEWER_API void connect();
 
+    struct Parameters
+    {
+        /// most touchpads implement kinetic (or inertial) scrolling, this option disables handling of these events
+        bool ignoreKineticMoves = true;
+        /// scale coefficient for swipe movements
+        float swipeScale = 10.f;
+    };
+    MRVIEWER_API const Parameters& getParameters() const;
+    MRVIEWER_API void setParameters( const Parameters& parameters );
+
     class Impl
     {
     public:
@@ -38,6 +48,7 @@ public:
 
 private:
     std::unique_ptr<Impl> impl_;
+    Parameters parameters_;
 
     Viewport::Parameters initRotateParams_;
     bool rotateStart_( float angle );

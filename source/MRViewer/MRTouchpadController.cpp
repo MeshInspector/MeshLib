@@ -84,7 +84,7 @@ bool TouchpadController::swipe_( float deltaX, float deltaY, bool kinetic )
     const auto sceneCenterVpPos = viewport.projectToViewportSpace( sceneCenterPos );
 
     const auto mousePos = viewer.mouseController.getMousePos();
-    const auto oldScreenPos = Vector3f( mousePos.x, mousePos.y, sceneCenterVpPos.z );
+    const auto oldScreenPos = Vector3f( (float)mousePos.x, (float)mousePos.y, sceneCenterVpPos.z );
     const auto newScreenPos = oldScreenPos + parameters_.swipeScale * Vector3f( deltaX, deltaY, 0.f );
 
     const auto oldVpPos = viewer.screenToViewport( oldScreenPos, viewport.id );
@@ -144,7 +144,7 @@ void TouchpadController::setParameters( const TouchpadController::Parameters& pa
     parameters_ = parameters;
 }
 
-void TouchpadController::Impl::mouseScroll( float dx, float dy, bool kinetic )
+void TouchpadController::Impl::mouseScroll( float, float dy, bool )
 {
     auto& viewer = getViewerInstance();
     viewer.mouseScroll( dy );

@@ -27,10 +27,10 @@ public:
     [[nodiscard]] MRVIEWER_API const Parameters& getParameters() const;
     MRVIEWER_API void setParameters( const Parameters& parameters );
 
-    class Impl
+    class Handler
     {
     public:
-        virtual ~Impl() = default;
+        virtual ~Handler() = default;
 
         enum class GestureState
         {
@@ -47,7 +47,7 @@ public:
     };
 
 private:
-    std::unique_ptr<Impl> impl_;
+    std::unique_ptr<Handler> handler_;
     Parameters parameters_;
 
     Viewport::Parameters initRotateParams_;

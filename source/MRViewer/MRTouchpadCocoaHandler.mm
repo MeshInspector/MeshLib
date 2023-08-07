@@ -45,9 +45,9 @@ private:
     std::map<NSView*, MR::TouchpadCocoaHandler*> registry_;
 };
 
-std::optional<MR::TouchpadController::Impl::GestureState> convert( NSGestureRecognizerState state )
+std::optional<MR::TouchpadController::Handler::GestureState> convert( NSGestureRecognizerState state )
 {
-    using GS = MR::TouchpadController::Impl::GestureState;
+    using GS = MR::TouchpadController::Handler::GestureState;
     switch ( state )
     {
         case NSGestureRecognizerStateBegan:

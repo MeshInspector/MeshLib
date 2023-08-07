@@ -8,7 +8,7 @@
 namespace MR
 {
 
-class TouchpadCocoaHandler : public TouchpadController::Impl
+class TouchpadCocoaHandler : public TouchpadController::Handler
 {
 public:
     explicit TouchpadCocoaHandler( GLFWwindow* window );

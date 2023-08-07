@@ -8,7 +8,7 @@ namespace MR
 void TouchpadController::initialize( GLFWwindow* window )
 {
 #ifdef __APPLE__
-    impl_ = std::make_unique<TouchpadCocoaHandler>( window );
+    handler_ = std::make_unique<TouchpadCocoaHandler>( window );
 #endif
 }
 
@@ -181,13 +181,13 @@ void TouchpadController::setParameters( const TouchpadController::Parameters& pa
     parameters_ = parameters;
 }
 
-void TouchpadController::Impl::mouseScroll( float, float dy, bool )
+void TouchpadController::Handler::mouseScroll( float, float dy, bool )
 {
     auto& viewer = getViewerInstance();
     viewer.mouseScroll( dy );
 }
 
-void TouchpadController::Impl::rotate( float angle, GestureState state )
+void TouchpadController::Handler::rotate( float angle, GestureState state )
 {
     auto& viewer = getViewerInstance();
     switch ( state )
@@ -207,13 +207,13 @@ void TouchpadController::Impl::rotate( float angle, GestureState state )
     }
 }
 
-void TouchpadController::Impl::swipe( float dx, float dy, bool kinetic )
+void TouchpadController::Handler::swipe( float dx, float dy, bool kinetic )
 {
     auto& viewer = getViewerInstance();
     viewer.touchpadSwipe( dx, dy, kinetic );
 }
 
-void TouchpadController::Impl::zoom( float scale, GestureState state )
+void TouchpadController::Handler::zoom( float scale, GestureState state )
 {
     auto& viewer = getViewerInstance();
     switch ( state )

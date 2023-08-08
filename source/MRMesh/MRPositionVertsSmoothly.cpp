@@ -2,6 +2,7 @@
 #include "MRRingIterator.h"
 #include "MRMesh.h"
 #include "MRMeshComponents.h"
+#include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
 #include <Eigen/SparseCholesky>
@@ -23,7 +24,7 @@ void positionVertsSmoothly( Mesh& mesh, const VertBitSet& verts,
     laplacian.apply();
 }
 
-void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts )
+void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts, const Vector<Vector3f, VertId>* vertShifts )
 {
     MR_TIMER
     assert( !MeshComponents::hasFullySelectedComponent( mesh, verts ) );
@@ -50,6 +51,8 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts )
             sumW += 1;
         mTriplets.emplace_back( n, n, sumW );
         Vector3d sumFixed;
+        if ( vertShifts )
+            sumFixed = sumW * Vector3d( (*vertShifts)[v] );
         for ( auto e : orgRing( mesh.topology, v ) )
         {
             auto d = mesh.topology.dest( e );
@@ -93,6 +96,50 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts )
         pt.y = (float) sol[1][n];
         pt.z = (float) sol[2][n];
         ++n;
+    }
+}
+
+void inflate( Mesh& mesh, const VertBitSet& verts, const InflateSettings & settings )
+{
+    MR_TIMER
+    if ( !verts.any() )
+        return;
+    if ( settings.preSmooth )
+        positionVertsSmoothlySharpBd( mesh, verts );
+    if ( settings.iterations <= 0 || settings.pressure == 0 )
+        return;
+
+    VertScalars a( verts.find_last() + 1 );
+    BitSetParallelFor( verts, [&]( VertId v )
+    {
+        a[v] = mesh.dblArea( v );
+    } );
+    double sumArea = 0;
+    int count = 0;
+    for ( auto v : verts )
+    {
+        sumArea += a[v];
+        ++count;
+    }
+    if ( sumArea <= 0 )
+        return;
+    float rAvgArea = float( count / sumArea );
+    BitSetParallelFor( verts, [&]( VertId v )
+    {
+        a[v] *= rAvgArea;
+    } );
+    // a[v] contains relative area around vertex #v in the whole region
+
+    Vector<Vector3f, VertId> vertShifts( a.size() );
+    for ( int i = 0; i < settings.iterations; ++i )
+    {
+        const auto currPressure = settings.gradualPressureGrowth ?
+            ( i + 1 ) * settings.pressure / settings.iterations : settings.pressure;
+        BitSetParallelFor( verts, [&]( VertId v )
+        {
+            vertShifts[v] = currPressure * a[v] * mesh.normal( v );
+        } );
+        positionVertsSmoothlySharpBd( mesh, verts, &vertShifts );
     }
 }
 

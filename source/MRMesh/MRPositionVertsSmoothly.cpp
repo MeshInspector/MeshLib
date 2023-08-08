@@ -123,12 +123,12 @@ void inflate( Mesh& mesh, const VertBitSet& verts, const InflateSettings & setti
     }
     if ( sumArea <= 0 )
         return;
-    float rAvgArea = float( count / sumArea );
+    float rAvgArea = float( 1 / sumArea );
     BitSetParallelFor( verts, [&]( VertId v )
     {
         a[v] *= rAvgArea;
     } );
-    // a[v] contains relative area around vertex #v in the whole region
+    // a[v] contains relative area around vertex #v in the whole region, sum(a[v]) = 1
 
     Vector<Vector3f, VertId> vertShifts( a.size() );
     for ( int i = 0; i < settings.iterations; ++i )

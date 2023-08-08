@@ -20,9 +20,9 @@ MRMESH_API void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& vert
 
 struct InflateSettings
 {
-    /// the amount of pressure applied to an average vertex:
-    /// positive pressure moves the vertex outside, negative inside;
-    /// please specify a value by magnitude about the average length of mesh edge
+    /// the amount of pressure applied to mesh region:
+    /// positive pressure moves the vertices outside, negative - inside;
+    /// please specify a value by magnitude about the region diagonal
     float pressure = 0;
     /// the number of internal iterations (>=1);
     /// larger number of iterations makes the performance slower, but the quality better

@@ -115,12 +115,8 @@ void inflate( Mesh& mesh, const VertBitSet& verts, const InflateSettings & setti
         a[v] = mesh.dblArea( v );
     } );
     double sumArea = 0;
-    int count = 0;
     for ( auto v : verts )
-    {
         sumArea += a[v];
-        ++count;
-    }
     if ( sumArea <= 0 )
         return;
     float rAvgArea = float( 1 / sumArea );

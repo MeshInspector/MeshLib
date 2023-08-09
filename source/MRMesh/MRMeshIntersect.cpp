@@ -9,10 +9,12 @@
 #include "MRLine3.h"
 #include "MRUVSphere.h"
 #include "MRGTest.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRMeshLoad.h"
 #include "MRMeshBuilder.h"
 #include "MRMeshSave.h"
+#include "MRBitSetParallelFor.h"
+#include "MRTimer.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -394,6 +396,27 @@ void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
         addNode( node.r ); // push first to go there later
         addNode( node.l );
     }
+}
+
+VertScalars computeThicknessAtVertices( const Mesh& mesh )
+{
+    MR_TIMER
+    VertScalars res( mesh.points.size(), FLT_MAX );
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    {
+        const auto dir = -mesh.pseudonormal( v );
+        auto isec = rayMeshIntersect( mesh, { mesh.points[v], dir }, 0.0f, FLT_MAX, nullptr, true,
+            [v, &top = mesh.topology]( FaceId f )
+            {
+                // ignore intersections with incident faces of (v)
+                VertId a, b, c;
+                top.getTriVerts( f, a, b, c );
+                return v != a && v != b && v != c;
+            } );
+        if ( isec )
+            res[v] = isec->distanceAlongLine;
+    } );
+    return res;
 }
 
 TEST(MRMesh, MeshIntersect) 

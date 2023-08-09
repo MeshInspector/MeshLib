@@ -29,7 +29,7 @@ struct MeshIntersectionResult
 /// \p prec can be specified to reuse some precomputations (e.g. for checking many parallel rays).
 /// \p vadidFaces if given then all faces for which false is returned will be skipped
 /// Finds the closest to ray origin intersection (or any intersection for better performance if \p !closestIntersect).
-MRMESH_API std::optional<MeshIntersectionResult> rayMeshIntersect( const MeshPart& meshPart, const Line3f& line,
+[[nodiscard]] MRMESH_API std::optional<MeshIntersectionResult> rayMeshIntersect( const MeshPart& meshPart, const Line3f& line,
     float rayStart = 0.0f, float rayEnd = FLT_MAX, const IntersectionPrecomputes<float>* prec = nullptr, bool closestIntersect = true,
     const FacePredicate & validFaces = {} );
 
@@ -38,7 +38,7 @@ MRMESH_API std::optional<MeshIntersectionResult> rayMeshIntersect( const MeshPar
 /// \p prec can be specified to reuse some precomputations (e.g. for checking many parallel rays).
 /// \p vadidFaces if given then all faces for which false is returned will be skipped
 /// Finds the closest to ray origin intersection (or any intersection for better performance if \p !closestIntersect).
-MRMESH_API std::optional<MeshIntersectionResult> rayMeshIntersect( const MeshPart& meshPart, const Line3d& line,
+[[nodiscard]] MRMESH_API std::optional<MeshIntersectionResult> rayMeshIntersect( const MeshPart& meshPart, const Line3d& line,
     double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr, bool closestIntersect = true,
     const FacePredicate & validFaces = {} );
 
@@ -62,10 +62,10 @@ using Line3dMesh = Line3Mesh<double>;
 
 /// Intersects ray with many meshes. Finds any intersection (not the closest)
 /// \anchor rayMultiMeshAnyIntersectF
-MRMESH_API std::optional<MultiMeshIntersectionResult> rayMultiMeshAnyIntersect( const std::vector<Line3fMesh> & lineMeshes,
+[[nodiscard]] MRMESH_API std::optional<MultiMeshIntersectionResult> rayMultiMeshAnyIntersect( const std::vector<Line3fMesh> & lineMeshes,
     float rayStart = 0.0f, float rayEnd = FLT_MAX );
 /// Same as \ref rayMultiMeshAnyIntersectF, but use double precision
-MRMESH_API std::optional<MultiMeshIntersectionResult> rayMultiMeshAnyIntersect( const std::vector<Line3dMesh> & lineMeshes,
+[[nodiscard]] MRMESH_API std::optional<MultiMeshIntersectionResult> rayMultiMeshAnyIntersect( const std::vector<Line3dMesh> & lineMeshes,
     double rayStart = 0.0, double rayEnd = DBL_MAX );
 
 /// this callback is envoked for each encountered ray-mesh intersection;
@@ -85,6 +85,9 @@ MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& lin
 /// \param vs  vertices of these triangles
 MRMESH_API void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
     FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs );
+
+/// returns the distance from each vertex along minus normal to the nearest mesh intersection (or FLT_MAX if no intersection found)
+[[nodiscard]] MRMESH_API VertScalars computeThicknessAtVertices( const Mesh& mesh );
 
 /// \}
 

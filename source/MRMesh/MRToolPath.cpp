@@ -18,6 +18,8 @@
 #include "MRMeshDecimate.h"
 #include "MRBitSetParallelFor.h"
 #include "MRDistanceMap.h"
+#include "MRMeshComponents.h"
+#include "MRPolylineProject.h"
 
 #include "MRPch/MRTBB.h"
 #include <sstream>
@@ -191,17 +193,40 @@ std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const Box3f& bo
     return sections;
 }
 
-std::vector<IsoLines> extractAllIsolines( const Mesh& mesh, const SurfacePath& startSurfacePath, float sectionStep, BypassDirection bypassDir, ProgressCallback cb )
+std::vector<IsoLines> extractAllIsolines( const Mesh& mesh, const SurfacePath& startSurfacePath, Contours3f& startContours, std::vector<PositionedText>& startVertices, float sectionStep, BypassDirection bypassDir, ProgressCallback cb )
 {
     MR::VertScalars distances;
+
+    startContours.emplace_back();
+    auto& startContour = startContours.back();
    
-    VertBitSet startVertices( mesh.topology.vertSize() );
+    //VertBitSet startVertices( mesh.topology.vertSize() );
+    
+
+    Polyline3 startPolyline;
+    startPolyline.addFromSurfacePath( mesh, startSurfacePath );
+
+    HashMap<VertId, float> startVerticesWithDists;
     for ( const auto& ep : startSurfacePath )
     {
-        startVertices.set( mesh.topology.org( ep.e ) );
+        const auto vertId = mesh.topology.org( ep.e );
+        if ( !vertId.valid() )
+            continue;
+
+        /*const auto vertPos = mesh.points[vertId];
+        const auto edgePos = mesh.edgePoint( ep );
+        const auto dist = ( edgePos - vertPos ).length();*/
+
+        // if removed then warning C4686: 'MR::findProjectionOnPolyline2': possible change in behavior, change in UDT return calling convention
+        static PolylineProjectionResult3 unused;
+        const auto proj = findProjectionOnPolyline( mesh.points[vertId], startPolyline );
+        const float dist = sqrt( proj.distSq );
+        startVerticesWithDists.insert_or_assign( vertId, dist );
+        startContour.push_back( mesh.edgePoint( ep ) );
+        startVertices.push_back( { std::to_string( dist), mesh.points[vertId] } );
     }
 
-    distances = computeSurfaceDistances(mesh, startVertices);    
+    distances = computeSurfaceDistances(mesh, startVerticesWithDists );
 
     const float topExcluded = FLT_MAX;
     const auto [min, max] = parallelMinMax( distances.vec_, &topExcluded );
@@ -754,6 +779,84 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
     return res;
 }
 
+/*SurfacePath smoothSurfacePath2(const Mesh& mesh, const SurfacePath& sp)
+{
+    if ( sp.size() < 5 )
+        return sp;
+
+    SurfacePath res;
+
+    Polyline3 polyline;
+    polyline.addFromSurfacePath( mesh, sp );
+    const auto contour = polyline.contours().front();
+    assert( sp.size() <= contour.size() );
+
+    const auto stdDevSq = []( Contour3f::const_iterator startIt, Contour3f::const_iterator endIt ) -> float
+    {
+        float sum = 0;
+        const int n = endIt - startIt - 2;
+
+        if ( n < 1 )
+            return 0;
+
+        Line3f line( *startIt, *std::prev( endIt ) - *startIt );
+        for ( auto it = startIt + 1; it < endIt; ++it )
+        {            
+            sum += line.distanceSq( *it );
+        }
+
+        return sum / n;
+    };
+
+    const auto smooth = [&] ( Contour3f::const_iterator startIt, Contour3f::const_iterator endIt, float eps ) -> SurfacePath
+    {
+        if ( stdDevSq( startIt, endIt ) < eps )
+            return SurfacePath{ *startIt, *endIt };
+    }
+}*/
+
+SurfacePath smoothSurfacePath( const Mesh& mesh, const SurfacePath& sp )
+{
+    if ( sp.size() < 5 )
+        return sp;
+
+    SurfacePath res;
+
+    Polyline3 polyline;
+    polyline.addFromSurfacePath( mesh, sp );
+    const auto contour = polyline.contours().front();
+    assert( sp.size() <= contour.size() );
+
+    size_t i = 0;
+
+    for ( ; i < sp.size() - 4; ++i )
+    {
+        const auto r10 = contour[i + 1] - contour[i];
+        const auto r20 = contour[i + 2] - contour[i];
+        const auto r32 = contour[i + 3] - contour[i + 2];
+        const auto r42 = contour[i + 4] - contour[i + 2];
+
+        const auto alpha = fabs( angle( r20, r10 ) );
+        const auto beta = fabs( angle( r42, r32 ) );
+        const auto gamma = fabs( angle( r20, r42 ) );
+
+        res.push_back( sp[i] );
+
+        if ( alpha > gamma && beta > gamma )
+        {            
+            //res.push_back( sp[i + 2] );
+            //res.push_back( sp[i + 4] );
+            i += 3;
+            continue;
+        }
+    }
+
+    for ( ; i < sp.size(); ++i )
+        res.push_back( sp[i] );
+
+    return res;
+}
+
 
 Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, const ConstantCuspParams& params )
 {
@@ -782,7 +885,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
     const auto processZone = [&] ( const SurfacePath& bounds, Vector3f lastPoint, ProgressCallback cb ) -> bool
     {
         //compute isolines based on the start point or the bounding contour
-        std::vector<IsoLines> isoLines = extractAllIsolines( mesh, bounds, params.sectionStep, params.bypassDir, subprogress( cb, 0.0f, 0.4f ) );
+        std::vector<IsoLines> isoLines = extractAllIsolines( mesh, bounds, res.startContours, res.startVertices, params.sectionStep, params.bypassDir, subprogress( cb, 0.0f, 0.4f ) );
 
         if ( isoLines.empty() )
             return false;
@@ -902,7 +1005,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                             ++pointsInside;
                     }
 
-                    if ( pointsInside < ( contour.size() >> 1 ) )
+                    if ( pointsInside < ( contour.size() * 0.5f ) )
                         continue;
                 }
 
@@ -1040,16 +1143,24 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                 continue;
             }
             // compute path from the previous point to the current ( there may be additional points in the modified mesh )
-            const auto sp = computeSurfacePath( mesh, selectionBound.back(), MeshEdgePoint( mpr->mtp.e, 0 ) );
+            auto sp = computeSurfacePath( mesh, selectionBound.back(), MeshEdgePoint( mpr->mtp.e, 0 ) );
             if ( sp )
+            {
+                 //for ( int k = 0; k < 2; ++k )
+                   // sp = smoothSurfacePath( mesh, *sp );
                 selectionBound.insert( selectionBound.end(), sp->begin(), sp->end() );
+            }
 
             selectionBound.push_back( MeshEdgePoint( mpr->mtp.e, 0 ) );
         }
         // unite the last point with the first one
-        const auto sp = computeSurfacePath( mesh, selectionBound.back(), selectionBound.front() );
+        auto sp = computeSurfacePath( mesh, selectionBound.back(), selectionBound.front() );
         if ( sp )
+        {
+            //for ( int k = 0; k < 2; ++k )
+               // sp = smoothSurfacePath( mesh, *sp );
             selectionBound.insert( selectionBound.end(), sp->begin(), sp->end() );
+        }
 
         selectionBound.push_back( selectionBound.front() );
 
@@ -1060,6 +1171,29 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
             return unexpectedOperationCanceled();
         }
     }
+
+    return res;
+}
+
+Expected<ToolPathResult, std::string> flatFieldsToolPath( const MeshPart& mp, const ConstantCuspParams& params )
+{
+    //const auto validFaces = inputMesh.topology.getValidFaces();
+    
+    FaceBitSet selection = MeshComponents::getLargeByAreaSmoothComponents( mp, 0.01f, 0.015f );
+
+    constexpr Vector3f zNormal = { 0, 0, 1 };
+    BitSetParallelFor( selection, [&] ( FaceId f )
+    {       
+        const auto normal = mp.mesh.normal( f );
+        if ( ( zNormal - normal ).lengthSq() > 1e-2 )
+        {
+            selection.set( f, false );
+        }
+    } );
+
+    auto res = constantCuspToolPath( { mp.mesh, &selection }, params );
+    if ( res )
+        res->selection = selection;
 
     return res;
 }

@@ -5,7 +5,7 @@
 #include "MRMesh.h"
 #include "MRPolyline.h"
 #include "MRProgressCallback.h"
-
+#include "MRPositionedText.h"
 #include "MRExpected.h"
 
 namespace MR
@@ -107,12 +107,16 @@ struct GCommand
 
 struct ToolPathResult
 {
+    FaceBitSet selection;
     // stores isolines without transits
     Contours3f isolines;
     // mesh after fixing undercuts and offset
     Mesh modifiedMesh;
     // constains type of movement and its feed
     std::vector<GCommand> commands;
+
+    Contours3f startContours;
+    std::vector<PositionedText> startVertices;
 };
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
@@ -132,6 +136,8 @@ MRMESH_API Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart&
 // if neither is specified, the lowest section by XY plane will be used as a start contour
 // mesh can be transformed using xf parameter
 MRMESH_API Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, const ConstantCuspParams& params );
+
+MRMESH_API Expected<ToolPathResult, std::string> flatFieldsToolPath( const MeshPart& mp, const ConstantCuspParams& params );
 
 // generates G-Code for milling tool
 MRMESH_API std::shared_ptr<ObjectGcode> exportToolPathToGCode( const std::vector<GCommand>& commands );

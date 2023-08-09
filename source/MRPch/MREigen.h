@@ -10,7 +10,9 @@
 #if _MSC_VER >= 1936 // Visual Studio 2022 version 17.6
 #pragma warning(disable:5266)  //'const' qualifier on return type has no effect
 #endif
+#if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
 #pragma warning(disable:5267)  //definition of implicit copy constructor is deprecated because it has a user-provided destructor
+#endif
 #pragma warning(disable:6011)  //Dereferencing NULL pointer 'newOuterIndex'. 
 #pragma warning(disable:6255)  //_alloca indicates failure by raising a stack overflow exception.  Consider using _malloca instead.
 #pragma warning(disable:6294)  //Ill-defined for-loop:  initial condition does not satisfy test.  Loop body not executed.

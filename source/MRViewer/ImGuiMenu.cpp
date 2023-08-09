@@ -2815,7 +2815,9 @@ void ImGuiMenu::drawShortcutsWindow_()
     ImGui::Begin( "HotKeys", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );
 
 #pragma warning(push)
-#pragma warning(disable: 5267) // definition of implicit copy constructor is deprecated because it has a user-provided destructor
+#if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
+#pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
+#endif
     ImFont font = *ImGui::GetFont();
 #pragma warning(pop)
     font.Scale = 1.2f;

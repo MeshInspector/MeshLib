@@ -8,7 +8,9 @@
 #include "MRMesh/MRLog.h"
 #include "MRPch/MRSpdlog.h"
 #pragma warning(push)
-#pragma warning(disable: 5267) // definition of implicit copy constructor is deprecated because it has a user-provided destructor
+#if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
+#pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
+#endif
 #include <boost/program_options.hpp>
 #pragma warning(pop)
 #include <boost/exception/diagnostic_information.hpp>

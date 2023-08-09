@@ -1032,6 +1032,9 @@
     <ClInclude Include="MRSegmPoint.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MREmbedTerrainStructure.h">
+      <Filter>Source Files\Boolean</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1711,6 +1714,9 @@
     </ClCompile>
     <ClCompile Include="MRPointsProject.cpp">
       <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MREmbedTerrainStructure.cpp">
+      <Filter>Source Files\Boolean</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

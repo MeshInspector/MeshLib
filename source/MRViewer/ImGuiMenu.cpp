@@ -2814,7 +2814,10 @@ void ImGuiMenu::drawShortcutsWindow_()
     ImGui::SetNextWindowSize( ImVec2( hotkeysWindowWidth, hotkeysWindowHeight ) );
     ImGui::Begin( "HotKeys", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );
 
+#pragma warning(push)
+#pragma warning(disable: 5267) // definition of implicit copy constructor is deprecated because it has a user-provided destructor
     ImFont font = *ImGui::GetFont();
+#pragma warning(pop)
     font.Scale = 1.2f;
     ImGui::PushFont( &font );
     ImGui::Text( "Hot Key List" );

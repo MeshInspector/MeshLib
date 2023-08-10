@@ -15,7 +15,7 @@ namespace MR
 /// The supported gestures and their default actions are:
 ///  - pinch: zooms the camera's angle
 ///  - rotate: rotates the camera around the scene's center along the Z axis
-///  - swipe: moves the camera
+///  - swipe: rotates the camera around the world's center along all axes (by default) or moves the camera
 /// The actions are mapped by calling the `connect` method; you can define your own actions by connecting to the
 /// `MR::Viewer::touchpad*` signals.
 ///

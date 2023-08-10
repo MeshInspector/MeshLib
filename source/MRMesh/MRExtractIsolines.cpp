@@ -89,11 +89,8 @@ IsoLines Isoliner::extract()
             return;
         auto no = negativeVerts_.test( o );
         auto nd = negativeVerts_.test( d );
-        if ( no != nd )
-        {
-            assert ( !region_ || contains( *region_, topology_.left( ue ) ) || contains( *region_, topology_.right( ue ) ) );
+        if ( no != nd && ( !region_ || contains( *region_, topology_.left( ue ) ) || contains( *region_, topology_.right( ue ) ) ) )
             activeEdges_.set( ue );
-        }
     } );
 
     IsoLines res;

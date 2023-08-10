@@ -4,8 +4,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project (MRViewer CXX)
 
-file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
+if(APPLE)
+	file(GLOB SOURCES "*.cpp" "*.mm")
+ELSE()
+	file(GLOB SOURCES "*.cpp")
+ENDIF()
 
 IF(MR_EMSCRIPTEN)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
@@ -37,6 +41,11 @@ IF(MR_EMSCRIPTEN)
 			)
 ELSE() # MR_EMSCRIPTEN
 IF(APPLE)
+	add_definitions("-x objective-c++")
+	find_library(APPKIT_LIBRARY AppKit)
+	IF(NOT APPKIT_LIBRARY)
+		message(FATAL_ERROR "AppKit not found")
+	ENDIF()
     target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 			MRMesh
@@ -55,6 +64,7 @@ IF(APPLE)
 			glfw
 			gtkmm-3.0
 			hidapi
+			${APPKIT_LIBRARY}
 			)
 ELSE() # APPLE
 	target_link_libraries(${PROJECT_NAME} PRIVATE

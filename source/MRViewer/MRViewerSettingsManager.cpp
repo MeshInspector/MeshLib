@@ -30,6 +30,7 @@ const std::string lastExtextentionsParamKey = "lastExtextentions";
 const std::string cSpaceMouseSettings = "spaceMouseSettings";
 const std::string cMSAA = "multisampleAntiAliasing";
 const std::string cncMachineSettingsKey = "CNCMachineSettings";
+const std::string cTouchpadSettings = "touchpadSettings";
 }
 
 namespace MR
@@ -244,6 +245,37 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         }
 #endif
     }
+
+    if ( cfg.hasJsonValue( cTouchpadSettings ) )
+    {
+        const auto& object = cfg.getJsonValue( cTouchpadSettings );
+        TouchpadController::Parameters parameters;
+        if ( object.isMember( "ignoreKineticMoves" ) && object["ignoreKineticMoves"].isBool() )
+        {
+            parameters.ignoreKineticMoves = object["ignoreKineticMoves"].asBool();
+        }
+        if ( object.isMember( "swipeScale") && object["swipeScale"].isDouble() )
+        {
+            const auto swipeScale = object["swipeScale"].asFloat();
+            if ( swipeScale > 0.f )
+                parameters.swipeScale = swipeScale;
+            else
+                spdlog::warn( "Incorrect value for {}.swipeScale", cTouchpadSettings );
+        }
+        if ( object.isMember( "cancellable" ) && object["cancellable"].isBool() )
+        {
+            parameters.cancellable = object["cancellable"].asBool();
+        }
+        if ( object.isMember( "swipeMode" ) && object["swipeMode"].isInt() )
+        {
+            const auto swipeMode = object["swipeMode"].asInt();
+            if ( swipeMode >= 0 && swipeMode < TouchpadController::Parameters::SwipeModeCount )
+                parameters.swipeMode = (TouchpadController::Parameters::SwipeMode)swipeMode;
+            else
+                spdlog::warn( "Incorrect value for {}.swipeMode", cTouchpadSettings );
+        }
+        viewer.touchpadController.setParameters( parameters );
+    }
 }
 
 void ViewerSettingsManager::saveSettings( const Viewer& viewer )
@@ -326,6 +358,14 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     }
 #endif
     cfg.setJsonValue( cSpaceMouseSettings, spaceMouseParamsJson );
+
+    Json::Value touchpadParametersJson;
+    const auto& touchpadParameters = viewer.touchpadController.getParameters();
+    touchpadParametersJson["ignoreKineticMoves"] = touchpadParameters.ignoreKineticMoves;
+    touchpadParametersJson["swipeScale"] = touchpadParameters.swipeScale;
+    touchpadParametersJson["cancellable"] = touchpadParameters.cancellable;
+    touchpadParametersJson["swipeMode"] = (int)touchpadParameters.swipeMode;
+    cfg.setJsonValue( cTouchpadSettings, touchpadParametersJson );
 }
 
 int ViewerSettingsManager::getLastExtentionNum( ObjType objType )

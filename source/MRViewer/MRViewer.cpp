@@ -616,6 +616,8 @@ int Viewer::launchInit_( const LaunchParams& params )
         touchesController.connect( this );
         spaceMouseController.connect();
         initSpaceMouseHandler_();
+        touchpadController.connect();
+        touchpadController.initialize( window );
     }
 
     std::future<void> splashMinTimer;
@@ -1116,6 +1118,51 @@ bool Viewer::touchMove( int id, int x, int y )
 bool Viewer::touchEnd( int id, int x, int y )
 {
     return touchEndSignal( id, x, y );
+}
+
+bool Viewer::touchpadRotateStart( float angle )
+{
+    return touchpadRotateStartSignal( angle );
+}
+
+bool Viewer::touchpadRotateChange( float angle )
+{
+    return touchpadRotateChangeSignal( angle );
+}
+
+bool Viewer::touchpadRotateCancel()
+{
+    return touchpadRotateCancelSignal();
+}
+
+bool Viewer::touchpadRotateEnd()
+{
+    return touchpadRotateEndSignal();
+}
+
+bool Viewer::touchpadSwipe( float deltaX, float deltaY, bool kinetic )
+{
+    return touchpadSwipeSignal( deltaX, deltaY, kinetic );
+}
+
+bool Viewer::touchpadZoomStart( float angle )
+{
+    return touchpadZoomStartSignal( angle );
+}
+
+bool Viewer::touchpadZoomChange( float angle )
+{
+    return touchpadZoomChangeSignal( angle );
+}
+
+bool Viewer::touchpadZoomCancel()
+{
+    return touchpadZoomCancelSignal();
+}
+
+bool Viewer::touchpadZoomEnd()
+{
+    return touchpadZoomEndSignal();
 }
 
 bool Viewer::mouseScroll( float delta_y )

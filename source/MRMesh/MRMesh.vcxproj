@@ -61,6 +61,7 @@
     <ClInclude Include="MREdgeMetric.h" />
     <ClInclude Include="MREdgePathsBuilder.h" />
     <ClInclude Include="MREmbeddedPython.h" />
+    <ClInclude Include="MREmbedTerrainStructure.h" />
     <ClInclude Include="MRExpected.h" />
     <ClInclude Include="MRFastWindingNumber.h" />
     <ClInclude Include="MRFile.h" />
@@ -366,6 +367,7 @@
     <ClCompile Include="MREdgeMetric.cpp" />
     <ClCompile Include="MREdgePaths.cpp" />
     <ClCompile Include="MREmbeddedPython.cpp" />
+    <ClCompile Include="MREmbedTerrainStructure.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />
     <ClCompile Include="MRExpandShrink.cpp" />
     <ClCompile Include="MRExpected.cpp" />

@@ -82,6 +82,8 @@ bool TouchpadController::swipe_( float deltaX, float deltaY, bool kinetic )
     if ( parameters_.ignoreKineticMoves && kinetic )
         return true;
 
+    const auto swipeDirection = parameters_.swipeScale * Vector3f( deltaX, deltaY, 0.f );
+
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
 
@@ -92,7 +94,7 @@ bool TouchpadController::swipe_( float deltaX, float deltaY, bool kinetic )
 
     const auto mousePos = viewer.mouseController.getMousePos();
     const auto oldScreenPos = Vector3f( (float)mousePos.x, (float)mousePos.y, sceneCenterVpPos.z );
-    const auto newScreenPos = oldScreenPos + parameters_.swipeScale * Vector3f( deltaX, deltaY, 0.f );
+    const auto newScreenPos = oldScreenPos + swipeDirection;
 
     const auto oldVpPos = viewer.screenToViewport( oldScreenPos, viewport.id );
     const auto newVpPos = viewer.screenToViewport( newScreenPos, viewport.id );
@@ -100,10 +102,32 @@ bool TouchpadController::swipe_( float deltaX, float deltaY, bool kinetic )
     const auto oldWorldPos = viewport.unprojectFromViewportSpace( oldVpPos );
     const auto newWorldPos = viewport.unprojectFromViewportSpace( newVpPos );
 
-    const auto xf = AffineXf3f::translation( newWorldPos - oldWorldPos );
-    viewport.transformView( xf );
+    switch ( parameters_.swipeMode )
+    {
+    case Parameters::SwipeRotatesCamera:
+    {
+        const auto xf = AffineXf3f::xfAround( Matrix3f::rotation( oldWorldPos, newWorldPos ), sceneCenterPos );
+        viewport.transformView( xf );
 
-    return true;
+        return true;
+    }
+    case Parameters::SwipeMovesCamera:
+    {
+        const auto xf = AffineXf3f::translation( newWorldPos - oldWorldPos );
+        viewport.transformView( xf );
+
+        return true;
+    }
+    case Parameters::SwipeModeCount:
+        break;
+    }
+
+#ifdef __cpp_lib_unreachable
+    unreachable();
+#else
+    assert( false );
+    return {};
+#endif
 }
 
 bool TouchpadController::zoomStart_( float scale )

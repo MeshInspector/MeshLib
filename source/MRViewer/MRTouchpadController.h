@@ -40,6 +40,12 @@ public:
         float swipeScale = 10.f;
         /// enable gesture's cancellability, i.e. revert its changes in case of external interruption
         bool cancellable = false;
+        /// swipe processing mode
+        enum SwipeMode {
+            SwipeRotatesCamera = 0,
+            SwipeMovesCamera = 1,
+            SwipeModeCount,
+        } swipeMode = SwipeRotatesCamera;
     };
     [[nodiscard]] MRVIEWER_API const Parameters& getParameters() const;
     MRVIEWER_API void setParameters( const Parameters& parameters );

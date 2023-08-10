@@ -206,22 +206,13 @@ void TouchpadController::setParameters( const TouchpadController::Parameters& pa
     parameters_ = parameters;
 }
 
-#define ENQUEUE_VIEWER_METHOD( NAME, METHOD ) viewer.eventQueue.emplace( { NAME, [] { \
-    getViewerInstance() . METHOD (); \
-} } )
-#define ENQUEUE_VIEWER_METHOD_ARGS( NAME, METHOD, ... ) viewer.eventQueue.emplace( { NAME, [__VA_ARGS__] { \
-    getViewerInstance() . METHOD ( __VA_ARGS__ ); \
-} } )
-
 void TouchpadController::Handler::mouseScroll( float, float dy, bool )
 {
-    auto& viewer = getViewerInstance();
     ENQUEUE_VIEWER_METHOD_ARGS( "Mouse scroll", mouseScroll, dy );
 }
 
 void TouchpadController::Handler::rotate( float angle, GestureState state )
 {
-    auto& viewer = getViewerInstance();
     switch ( state )
     {
         case GestureState::Begin:
@@ -241,13 +232,11 @@ void TouchpadController::Handler::rotate( float angle, GestureState state )
 
 void TouchpadController::Handler::swipe( float dx, float dy, bool kinetic )
 {
-    auto& viewer = getViewerInstance();
     ENQUEUE_VIEWER_METHOD_ARGS( "Swipe touchpad gesture", touchpadSwipe, dx, dy, kinetic );
 }
 
 void TouchpadController::Handler::zoom( float scale, GestureState state )
 {
-    auto& viewer = getViewerInstance();
     switch ( state )
     {
         case GestureState::Begin:
@@ -264,8 +253,5 @@ void TouchpadController::Handler::zoom( float scale, GestureState state )
             break;
     }
 }
-
-#undef ENQUEUE_VIEWER_METHOD_ARGS
-#undef ENQUEUE_VIEWER_METHOD
 
 }

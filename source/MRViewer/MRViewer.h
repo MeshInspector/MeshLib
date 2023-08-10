@@ -42,6 +42,14 @@ auto bindSlotCallback( BaseClass* base, MemberFuncPtr func )
 // you will not be able to move your struct after using this macro
 #define MAKE_SLOT(func) bindSlotCallback(this,func)
 
+/// helper macros to add an `MR::Viewer` method call to the event queue
+#define ENQUEUE_VIEWER_METHOD( NAME, METHOD ) MR::getViewerInstance().eventQueue.emplace( { NAME, [] { \
+    MR::getViewerInstance() . METHOD (); \
+} } )
+#define ENQUEUE_VIEWER_METHOD_ARGS( NAME, METHOD, ... ) MR::getViewerInstance().eventQueue.emplace( { NAME, [__VA_ARGS__] { \
+    MR::getViewerInstance() . METHOD ( __VA_ARGS__ ); \
+} } )
+
 namespace MR
 {
 

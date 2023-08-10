@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRBooleanOperation.h"
+#include "MRContoursCut.h"
 #include "MRMesh.h"
 #include "MRBitSet.h"
 #include "MRExpected.h"
@@ -55,9 +56,38 @@ struct BooleanResult
   * \note If meshes are not closed in intersecting zone some boolean operations are not allowed (as far as input meshes interior and exterior cannot be determined)
   */
 MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
-                                  const AffineXf3f* rigidB2A = nullptr, BooleanResultMapper* mapper = nullptr, ProgressCallback cb = {} );
+                                  const AffineXf3f* rigidB2A, BooleanResultMapper* mapper = nullptr, ProgressCallback cb = {} );
 MRMESH_API BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
-                                  const AffineXf3f* rigidB2A = nullptr, BooleanResultMapper* mapper = nullptr, ProgressCallback cb = {} );
+                                  const AffineXf3f* rigidB2A, BooleanResultMapper* mapper = nullptr, ProgressCallback cb = {} );
+
+
+struct BooleanPreCutResult
+{
+    Mesh mesh;
+    OneMeshContours contours;
+};
+
+/** \struct MR::BooleanResult
+  * \ingroup BooleanGroup
+  * \brief Structure with parameters for boolean call
+  */
+struct BooleanParameters
+{
+    /// Transform from mesh `B` space to mesh `A` space
+    const AffineXf3f* rigidB2A = nullptr;
+    /// Optional output structure to map mesh `A` and mesh `B` topology to result mesh topology
+    BooleanResultMapper* mapper = nullptr;
+    /// Optional precut output of meshA, if present - does not perform boolean and just return them
+    BooleanPreCutResult* outPreCutA = nullptr;
+    /// Optional precut output of meshB, if present - does not perform boolean and just return them
+    BooleanPreCutResult* outPreCutB = nullptr;
+    ProgressCallback cb = {};
+};
+
+MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
+                                  const BooleanParameters& params = {} );
+MRMESH_API BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
+                                  const BooleanParameters& params = {} );
 
 /// vertices and points representing mesh intersection result
 struct BooleanResultPoints

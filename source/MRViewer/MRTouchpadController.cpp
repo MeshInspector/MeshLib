@@ -84,10 +84,26 @@ bool TouchpadController::swipe_( float deltaX, float deltaY, bool kinetic )
 
     const auto swipeDirection = parameters_.swipeScale * Vector3f( deltaX, deltaY, 0.f );
 
+    auto swipeMode = parameters_.swipeMode;
+    if ( ImGui::GetIO().KeyAlt )
+    {
+        switch ( swipeMode )
+        {
+        case Parameters::SwipeRotatesCamera:
+            swipeMode = Parameters::SwipeMovesCamera;
+            break;
+        case Parameters::SwipeMovesCamera:
+            swipeMode = Parameters::SwipeRotatesCamera;
+            break;
+        case Parameters::SwipeModeCount:
+            break;
+        }
+    }
+
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
 
-    switch ( parameters_.swipeMode )
+    switch ( swipeMode )
     {
     case Parameters::SwipeRotatesCamera:
     {

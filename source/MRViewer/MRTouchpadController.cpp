@@ -87,32 +87,41 @@ bool TouchpadController::swipe_( float deltaX, float deltaY, bool kinetic )
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
 
-    Vector3f sceneCenterPos;
-    if ( viewport.getSceneBox().valid() )
-        sceneCenterPos = viewport.getSceneBox().center();
-    const auto sceneCenterVpPos = viewport.projectToViewportSpace( sceneCenterPos );
-
-    const auto mousePos = viewer.mouseController.getMousePos();
-    const auto oldScreenPos = Vector3f( (float)mousePos.x, (float)mousePos.y, sceneCenterVpPos.z );
-    const auto newScreenPos = oldScreenPos + swipeDirection;
-
-    const auto oldVpPos = viewer.screenToViewport( oldScreenPos, viewport.id );
-    const auto newVpPos = viewer.screenToViewport( newScreenPos, viewport.id );
-
-    const auto oldWorldPos = viewport.unprojectFromViewportSpace( oldVpPos );
-    const auto newWorldPos = viewport.unprojectFromViewportSpace( newVpPos );
-
     switch ( parameters_.swipeMode )
     {
     case Parameters::SwipeRotatesCamera:
     {
-        const auto xf = AffineXf3f::xfAround( Matrix3f::rotation( oldWorldPos, newWorldPos ), sceneCenterPos );
+        auto quat = viewport.getParameters().cameraTrackballAngle;
+        const auto maxDim = (float)std::max( viewer.framebufferSize.x, viewer.framebufferSize.y );
+        const auto angle = 4.f * PI_F * swipeDirection / maxDim;
+        quat = (
+            quat.inverse()
+            * Quaternionf( Vector3f::plusY(), angle.x )
+            * Quaternionf( Vector3f::plusX(), angle.y )
+            * quat
+        ).normalized();
+        const auto xf = AffineXf3f::linear( Matrix3f( quat ) );
         viewport.transformView( xf );
 
         return true;
     }
     case Parameters::SwipeMovesCamera:
     {
+        Vector3f sceneCenterPos;
+        if ( viewport.getSceneBox().valid() )
+            sceneCenterPos = viewport.getSceneBox().center();
+        const auto sceneCenterVpPos = viewport.projectToViewportSpace( sceneCenterPos );
+
+        const auto mousePos = viewer.mouseController.getMousePos();
+        const auto oldScreenPos = Vector3f( (float)mousePos.x, (float)mousePos.y, sceneCenterVpPos.z );
+        const auto newScreenPos = oldScreenPos + swipeDirection;
+
+        const auto oldVpPos = viewer.screenToViewport( oldScreenPos, viewport.id );
+        const auto newVpPos = viewer.screenToViewport( newScreenPos, viewport.id );
+
+        const auto oldWorldPos = viewport.unprojectFromViewportSpace( oldVpPos );
+        const auto newWorldPos = viewport.unprojectFromViewportSpace( newVpPos );
+
         const auto xf = AffineXf3f::translation( newWorldPos - oldWorldPos );
         viewport.transformView( xf );
 

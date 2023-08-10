@@ -15,7 +15,7 @@
 namespace MR
 {
 
-MRMESH_API Expected<Mesh, std::string> embedStructureToTerrain( 
+Expected<Mesh, std::string> embedStructureToTerrain( 
     const Mesh& terrain, const Mesh& structure, const EmbeddedStructureParameters& params )
 {
     MR_TIMER;

@@ -25,7 +25,7 @@
 #include <MRPch/MRTBB.h>
 
 #include "MROpenVDBHelper.h"
-#include "MRReadTIFF.h"
+#include "MRTiffIO.h"
 
 namespace
 {
@@ -892,13 +892,13 @@ Expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& setting
 
     TiffParameters localParams;
     RawTiffOutput output;
-    output.size = tp.imageSize.x * tp.imageSize.y;
+    output.size = ( tp.imageSize.x * tp.imageSize.y ) * sizeof( float );
     output.params = &localParams;
     output.min = &outVolume.min;
     output.max = &outVolume.max;
     for ( int layerIndex = 0; layerIndex < files.size(); ++layerIndex )
     {
-        output.data = outVolume.data.data() + layerIndex * tp.imageSize.x * tp.imageSize.y;
+        output.bytes = ( uint8_t* )( outVolume.data.data() + layerIndex * tp.imageSize.x * tp.imageSize.y );
         auto readRes = readRawTiff( files[layerIndex], output );
 
         if ( !readRes.has_value() )

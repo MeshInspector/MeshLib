@@ -163,8 +163,6 @@ ENDIF() # MR_EMSCRIPTEN
 set(IMGUI_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
 include_directories(${IMGUI_DIR})
 
-enable_testing()
-
 IF(NOT MR_EMSCRIPTEN)
 
 find_package(glfw3 CONFIG REQUIRED)
@@ -216,21 +214,47 @@ else()
     set(MR_CONFIG_DIR ${MR_ROOT}/Resources)
 endif()
 
+# MRMesh library is always built
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
-add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)
-add_subdirectory(${PROJECT_SOURCE_DIR}/MRCommonPlugins ./MRCommonPlugins)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRPch ./MRPch)
+
+option(MESHLIB_BUILD_MRVIEWER "Build MRViewer library and application" ON)
+if(MESHLIB_BUILD_MRVIEWER)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/MRCommonPlugins ./MRCommonPlugins)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewerApp ./MRViewerApp)
+ENDIF()
+
+option(MESHLIB_BUILD_PYTHON_MODULES "Build Python modules" ON)
 IF(NOT MR_EMSCRIPTEN)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshpy ./mrmeshpy)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshnumpy ./mrmeshnumpy)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/mrviewerpy ./mrviewerpy)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/meshconv ./meshconv)
-  IF(NOT APPLE)
-    add_subdirectory(${PROJECT_SOURCE_DIR}/MRCuda ./MRCuda)
-  ENDIF()
-ENDIF() # NOT MR_EMSCRIPTEN
-add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)
-add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewerApp ./MRViewerApp)
+    IF(MESHLIB_BUILD_PYTHON_MODULES)
+        add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshpy ./mrmeshpy)
+        add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshnumpy ./mrmeshnumpy)
+        IF(MESHLIB_BUILD_MRVIEWER)
+            add_subdirectory(${PROJECT_SOURCE_DIR}/mrviewerpy ./mrviewerpy)
+        ENDIF()
+    ENDIF()
+ENDIF()
+
+option(MESHLIB_BUILD_MESHCONV "Build meshconv utility" ON)
+IF(NOT MR_EMSCRIPTEN)
+    IF(MESHLIB_BUILD_MESHCONV)
+        add_subdirectory(${PROJECT_SOURCE_DIR}/meshconv ./meshconv)
+    ENDIF()
+ENDIF()
+
+option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
+IF(NOT MR_EMSCRIPTEN AND NOT APPLE)
+    IF(MESHLIB_BUILD_MRCUDA)
+        add_subdirectory(${PROJECT_SOURCE_DIR}/MRCuda ./MRCuda)
+    ENDIF()
+ENDIF()
+
+include(CTest)
+IF(BUILD_TESTING)
+    enable_testing()
+    add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)
+ENDIF()
 
 include(CMakePackageConfigHelpers)
 configure_package_config_file(meshlib-config.cmake.in

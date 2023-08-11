@@ -1038,6 +1038,9 @@
     <ClInclude Include="MRMapEdge.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshExtrude.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1720,6 +1723,9 @@
     </ClCompile>
     <ClCompile Include="MREmbedTerrainStructure.cpp">
       <Filter>Source Files\Boolean</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshExtrude.cpp">
+      <Filter>Source Files\Mesh</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

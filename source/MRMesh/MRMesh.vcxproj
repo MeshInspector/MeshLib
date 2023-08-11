@@ -86,6 +86,7 @@
     <ClInclude Include="MRIOParsing.h" />
     <ClInclude Include="MRIsNaN.h" />
     <ClInclude Include="MRMapEdge.h" />
+    <ClInclude Include="MRMeshExtrude.h" />
     <ClInclude Include="MRMeshToDistanceVolume.h" />
     <ClInclude Include="MRMovementBuildBody.h" />
     <ClInclude Include="MRMutexOwner.h" />
@@ -403,6 +404,7 @@
     <ClCompile Include="MRMeshBoolean.cpp" />
     <ClCompile Include="MRMeshBooleanFacade.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
+    <ClCompile Include="MRMeshExtrude.cpp" />
     <ClCompile Include="MRMeshToDistanceVolume.cpp" />
     <ClCompile Include="MRMovementBuildBody.cpp" />
     <ClCompile Include="MRNormalDenoising.cpp" />

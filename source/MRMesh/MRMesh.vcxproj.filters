@@ -1035,6 +1035,9 @@
     <ClInclude Include="MREmbedTerrainStructure.h">
       <Filter>Source Files\Boolean</Filter>
     </ClInclude>
+    <ClInclude Include="MRMapEdge.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

@@ -1,5 +1,6 @@
 #include "MRPolylineTopology.h"
 #include "MRParallelFor.h"
+#include "MRMapEdge.h"
 #include "MRTimer.h"
 #include "MRGTest.h"
 
@@ -369,9 +370,63 @@ EdgeId PolylineTopology::makePolyline( const VertId * vs, size_t num )
     return e0;
 }
 
+void PolylineTopology::addPart( const PolylineTopology & from, VertMap * outVmap, WholeEdgeMap * outEmap )
+{
+    MR_TIMER
+
+    // in all maps: from index -> to index
+    WholeEdgeMap emap;
+    emap.resize( from.undirectedEdgeSize() );
+    EdgeId firstNewEdge = edges_.endId();
+    for ( UndirectedEdgeId i{ 0 }; i < emap.size(); ++i )
+    {
+        if ( from.isLoneEdge( i ) )
+            continue;
+        emap[i] = edges_.endId();
+        edges_.push_back( from.edges_[ EdgeId( i ) ] );
+        edges_.push_back( from.edges_[ EdgeId( i ).sym() ] );
+    }
+
+    VertMap vmap;
+    VertId lastFromValidVertId = from.lastValidVert();
+    vmap.resize( lastFromValidVertId + 1 );
+    for ( VertId i{ 0 }; i <= lastFromValidVertId; ++i )
+    {
+        auto efrom = from.edgePerVertex_[i];
+        if ( !efrom.valid() )
+            continue;
+        auto nv = addVertId();
+        vmap[i] = nv;
+        edgePerVertex_[nv] = mapEdge( emap, efrom );
+        validVerts_.set( nv );
+        ++numValidVerts_;
+    }
+
+    // translate edge records
+    tbb::parallel_for( tbb::blocked_range( firstNewEdge.undirected(), edges_.endId().undirected() ),
+        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
+    {
+        for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
+        {
+            const EdgeId e{ ue };
+            edges_[e].next = mapEdge( emap, edges_[e].next );
+            edges_[e.sym()].next = mapEdge( emap, edges_[e.sym()].next );
+        
+            edges_[e].org = vmap[edges_[e].org];
+            edges_[e.sym()].org = vmap[edges_[e.sym()].org];
+        }
+    } );
+
+    if ( outVmap )
+        *outVmap = std::move( vmap );
+    if ( outEmap )
+        *outEmap = std::move( emap );
+}
+
 void PolylineTopology::addPartByMask( const PolylineTopology& from, const UndirectedEdgeBitSet& mask, 
     VertMap* outVmap /*= nullptr*/, EdgeMap* outEmap /*= nullptr */ )
 {
+    MR_TIMER
     // in all maps: from index -> to index
     EdgeMap emap;
     EdgeId lastFromValidEdgeId = from.lastNotLoneEdge();

@@ -85,6 +85,7 @@
     <ClInclude Include="MRInnerShell.h" />
     <ClInclude Include="MRIOParsing.h" />
     <ClInclude Include="MRIsNaN.h" />
+    <ClInclude Include="MRMapEdge.h" />
     <ClInclude Include="MRMeshToDistanceVolume.h" />
     <ClInclude Include="MRMovementBuildBody.h" />
     <ClInclude Include="MRMutexOwner.h" />

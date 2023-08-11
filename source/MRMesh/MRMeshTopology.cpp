@@ -4,7 +4,7 @@
 #include "MREdgeIterator.h"
 #include "MREdgePaths.h"
 #include "MRBuffer.h"
-#include "MRphmap.h"
+#include "MRMapEdge.h"
 #include "MRNoDefInit.h"
 #include "MRTimer.h"
 #include "MRBitSetParallelFor.h"

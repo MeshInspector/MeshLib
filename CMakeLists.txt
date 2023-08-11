@@ -112,33 +112,6 @@ ENDIF() # APPLE
 add_definitions( -DMR_PLATFORM="${MR_PLATFORM}" )
 message("platform: ${MR_PLATFORM}")
 
-IF(${MR_UBUNTU22} OR APPLE)
- SET(MR_PYTHON_VERSION 3.10)
-ELSEIF(${MR_UBUNTU})
- SET(MR_PYTHON_VERSION 3.8)
-ELSEIF(${MR_FEDORA})
-    SET(MR_PYTHON_VERSION 3.11)
-ELSE()
- SET(MR_PYTHON_VERSION 3.9)
-ENDIF()
-IF ($ENV{MESHLIB_PYTHON_VERSION})
- SET(MR_PYTHON_VERSION $ENV{MESHLIB_PYTHON_VERSION})
-ENDIF()
-
-IF(APPLE)
- LINK_DIRECTORIES(${HOMEBREW_PREFIX}/opt/python@${MR_PYTHON_VERSION}/Frameworks/Python.framework/Versions/${MR_PYTHON_VERSION}/lib/)
- include_directories(${HOMEBREW_PREFIX}/include)
- find_package(pybind11 REQUIRED)
-ENDIF()
-
-set(PYTHON_VAR "python")
-string(CONCAT MR_PYTHON_LIB ${PYTHON_VAR}${MR_PYTHON_VERSION})
-
-find_package(Python ${MR_PYTHON_VERSION} EXACT REQUIRED)
-find_package(PythonInterp ${MR_PYTHON_VERSION} EXACT REQUIRED)
-find_package(PythonLibs ${MR_PYTHON_VERSION} EXACT REQUIRED)
-include_directories(${PYTHON_INCLUDE_DIRS})
-include_directories(${PYTHON_INCLUDE_PATH})
 ENDIF() # NOT MR_EMSCRIPTEN
 
 set(PROJECT_SOURCE_DIR ./source)
@@ -160,13 +133,8 @@ IF(MR_EMSCRIPTEN)
   ENDIF() # NOT MR_DISABLE_EMSCRIPTEN_ASYNCIFY
 ENDIF() # MR_EMSCRIPTEN
 
-set(IMGUI_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
-include_directories(${IMGUI_DIR})
-
 IF(NOT MR_EMSCRIPTEN)
 
-find_package(glfw3 CONFIG REQUIRED)
-pkg_check_modules(GTKMM gtkmm-3.0)
 pkg_check_modules(JSONCPP jsoncpp)
 include_directories(${JSONCPP_INCLUDE_DIRS})
 
@@ -220,6 +188,14 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/MRPch ./MRPch)
 
 option(MESHLIB_BUILD_MRVIEWER "Build MRViewer library and application" ON)
 if(MESHLIB_BUILD_MRVIEWER)
+    set(IMGUI_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
+    include_directories(${IMGUI_DIR})
+
+    IF(NOT MR_EMSCRIPTEN)
+        find_package(glfw3 CONFIG REQUIRED)
+        pkg_check_modules(GTKMM gtkmm-3.0)
+    ENDIF()
+
     add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)
     add_subdirectory(${PROJECT_SOURCE_DIR}/MRCommonPlugins ./MRCommonPlugins)
     add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewerApp ./MRViewerApp)
@@ -228,6 +204,35 @@ ENDIF()
 option(MESHLIB_BUILD_PYTHON_MODULES "Build Python modules" ON)
 IF(NOT MR_EMSCRIPTEN)
     IF(MESHLIB_BUILD_PYTHON_MODULES)
+        IF(${MR_UBUNTU22} OR APPLE)
+            SET(MR_PYTHON_VERSION 3.10)
+        ELSEIF(${MR_UBUNTU})
+            SET(MR_PYTHON_VERSION 3.8)
+        ELSEIF(${MR_FEDORA})
+            SET(MR_PYTHON_VERSION 3.11)
+        ELSE()
+            SET(MR_PYTHON_VERSION 3.9)
+        ENDIF()
+
+        IF($ENV{MESHLIB_PYTHON_VERSION})
+            SET(MR_PYTHON_VERSION $ENV{MESHLIB_PYTHON_VERSION})
+        ENDIF()
+
+        IF(APPLE)
+            LINK_DIRECTORIES(${HOMEBREW_PREFIX}/opt/python@${MR_PYTHON_VERSION}/Frameworks/Python.framework/Versions/${MR_PYTHON_VERSION}/lib/)
+            include_directories(${HOMEBREW_PREFIX}/include)
+            find_package(pybind11 REQUIRED)
+        ENDIF()
+
+        set(PYTHON_VAR "python")
+        string(CONCAT MR_PYTHON_LIB ${PYTHON_VAR}${MR_PYTHON_VERSION})
+
+        find_package(Python ${MR_PYTHON_VERSION} EXACT REQUIRED)
+        find_package(PythonInterp ${MR_PYTHON_VERSION} EXACT REQUIRED)
+        find_package(PythonLibs ${MR_PYTHON_VERSION} EXACT REQUIRED)
+        include_directories(${PYTHON_INCLUDE_DIRS})
+        include_directories(${PYTHON_INCLUDE_PATH})
+
         add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshpy ./mrmeshpy)
         add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshnumpy ./mrmeshnumpy)
         IF(MESHLIB_BUILD_MRVIEWER)

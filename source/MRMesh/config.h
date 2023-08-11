@@ -1,9 +1,7 @@
 #pragma once
 
-#ifndef MRMESH_NO_CONFIG_FILE
-#ifdef _MSC_VER
+#if defined( _MSC_VER )
 // no config file support yet
-#else
+#elif __has_include( "config_cmake.h" )
 #include "config_cmake.h"
-#endif
 #endif

@@ -1,7 +1,7 @@
+#include "MRToolPath.h"
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 
 #include "MR2to3.h"
-#include "MRToolPath.h"
 #include "MRSurfacePath.h"
 #include "MRFixUndercuts.h"
 #include "MROffset.h"

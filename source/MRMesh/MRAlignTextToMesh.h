@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config.h"
 #ifndef MRMESH_NO_LABEL
 #include "MRMeshFwd.h"
 #include "MRExpected.h"

@@ -1,4 +1,5 @@
 #pragma once
+#include "config.h"
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 // this header includes the whole OpenVDB, so please include it from .cpp files only
 

@@ -1,5 +1,6 @@
 #pragma once
 #include "exports.h"
+#include <MRMesh/config.h>
 #include <MRMesh/MRColor.h>
 #include <MRMesh/MRVector3.h>
 #include <MRMesh/MRBitSet.h>

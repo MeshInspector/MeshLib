@@ -1,5 +1,5 @@
-#ifndef MRMESH_NO_LABEL
 #include "MRSymbolMesh.h"
+#ifndef MRMESH_NO_LABEL
 #include "MRMesh.h"
 #include "MRVector2.h"
 #include "MRBox.h"

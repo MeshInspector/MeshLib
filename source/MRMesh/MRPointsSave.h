@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config.h"
 #include "MRExpected.h"
 #include "MRPointCloud.h"
 #include "MRIOFilters.h"

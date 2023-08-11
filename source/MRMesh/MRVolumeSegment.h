@@ -1,4 +1,5 @@
 #pragma once
+#include "config.h"
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRMeshFwd.h"
 #include "MRVector3.h"

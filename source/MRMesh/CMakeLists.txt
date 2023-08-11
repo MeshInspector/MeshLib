@@ -19,7 +19,7 @@ option(MRMESH_NO_GLTF "Disable glTF support" OFF)
 option(MRMESH_NO_XML "Disable XML support (affects 3MF support)" OFF)
 
 file(GLOB SOURCES "*.cpp")
-file(GLOB HEADERS "*.h" "config_cmake.h")
+file(GLOB HEADERS "*.h")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
@@ -169,7 +169,7 @@ install(TARGETS ${PROJECT_NAME}
 		EXPORT ${PROJECT_NAME}
 		DESTINATION "${MR_MAIN_LIB_DIR}")
 
-install(FILES ${HEADERS}
+install(FILES ${HEADERS} "config_cmake.h"
 		DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}")
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}Config.cmake

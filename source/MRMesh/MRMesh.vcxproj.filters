@@ -1014,7 +1014,7 @@
     <ClInclude Include="MRIOParsing.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
-    <ClInclude Include="MRReadTIFF.h">
+    <ClInclude Include="MRTiffIO.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRTerrainTriangulation.h">
@@ -1703,7 +1703,7 @@
     <ClCompile Include="MRIOParsing.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
-    <ClCompile Include="MRReadTIFF.cpp">
+    <ClCompile Include="MRTiffIO.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRTerrainTriangulation.cpp">

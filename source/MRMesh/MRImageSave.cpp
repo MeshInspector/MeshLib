@@ -13,7 +13,7 @@
 #include <turbojpeg.h>
 #endif
 #ifndef MRMESH_NO_TIFF
-#include <tiffio.h>
+#include "MRTiffIO.h"
 #endif
 #endif
 
@@ -210,22 +210,12 @@ VoidOrErrStr toJpeg( const Image& image, const std::filesystem::path& path )
 #ifndef MRMESH_NO_TIFF
 VoidOrErrStr toTiff( const Image& image, const std::filesystem::path& path )
 {
-    TIFF* tif = TIFFOpen( MR::utf8string( path ).c_str(), "w" );
-    if ( !tif )
-        return unexpected("unable to open file");
-
-    TIFFSetField( tif, TIFFTAG_IMAGEWIDTH, image.resolution.x );
-    TIFFSetField( tif, TIFFTAG_IMAGELENGTH, image.resolution.y );
-    TIFFSetField( tif, TIFFTAG_BITSPERSAMPLE, 8 );
-    TIFFSetField( tif, TIFFTAG_SAMPLESPERPIXEL, 4 );
-    TIFFSetField( tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG );
-    TIFFSetField( tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB );
-
-    for ( int row = 0; row < image.resolution.y; row++ )
-        TIFFWriteScanline( tif, ( void* )( &image.pixels[row * image.resolution.x] ), row );
-
-    TIFFClose( tif );
-    return {};
+    BaseTiffParameters btParams;
+    btParams.bytesPerSample = 1;
+    btParams.sampleType = BaseTiffParameters::SampleType::Uint;
+    btParams.valueType = BaseTiffParameters::ValueType::RGBA;
+    btParams.imageSize = image.resolution;
+    return writeRawTiff( ( const uint8_t* )image.pixels.data(), path, btParams );
 }
 #endif
 #endif

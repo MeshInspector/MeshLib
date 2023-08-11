@@ -1,5 +1,6 @@
 #pragma once
 
+#define MRMESH_NO_CONFIG_FILE
 #include <MRMesh/MRVector2.h>
 
 #ifdef _WIN32

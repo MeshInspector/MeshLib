@@ -22,8 +22,7 @@ void ObjectLabel::setLabel( const PositionedText& label )
     if ( label == label_ )
         return;
     label_ = label;
-    if ( !pathToFont_.empty() )
-        buildMesh_();
+    needRebild_ = true;
 }
 
 void ObjectLabel::setFontPath( const std::filesystem::path& pathToFont )
@@ -31,8 +30,7 @@ void ObjectLabel::setFontPath( const std::filesystem::path& pathToFont )
     if ( pathToFont_ == pathToFont )
         return;
     pathToFont_ = pathToFont;
-    if ( !label_.text.empty() )
-        buildMesh_();
+    needRebild_ = true;
 }
 
 void ObjectLabel::setPivotPoint( const Vector2f& pivotPoint )
@@ -160,6 +158,9 @@ void ObjectLabel::setupRenderObject_() const
 {
     if ( !renderObj_ )
         renderObj_ = createRenderObject<ObjectLabel>( *this );
+
+    if ( needRebild_ )
+        const_cast< ObjectLabel* >( this )->buildMesh_();
 }
 
 void ObjectLabel::setDefaultColors_()
@@ -195,6 +196,9 @@ void ObjectLabel::buildMesh_()
     setDirtyFlags( DIRTY_POSITION | DIRTY_FACE );
 
     updatePivotShift_();
+
+    // important to call before bindAllVisualization to avoid recursive calls
+    needRebild_ = false;
 
     // we can always clear cpu model for labels
     bindAllVisualization();

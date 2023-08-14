@@ -190,6 +190,8 @@ private:
     void buildMesh_();
 
     void updatePivotShift_();
+
+    bool needRebild_{ true };
 };
 
 }

@@ -22,7 +22,7 @@ void ObjectLabel::setLabel( const PositionedText& label )
     if ( label == label_ )
         return;
     label_ = label;
-    needRebild_ = true;
+    needRebuild_ = true;
     setDirtyFlags( DIRTY_POSITION | DIRTY_FACE );
 }
 
@@ -31,7 +31,7 @@ void ObjectLabel::setFontPath( const std::filesystem::path& pathToFont )
     if ( pathToFont_ == pathToFont )
         return;
     pathToFont_ = pathToFont;
-    needRebild_ = true;
+    needRebuild_ = true;
     setDirtyFlags( DIRTY_POSITION | DIRTY_FACE );
 }
 
@@ -137,7 +137,7 @@ void ObjectLabel::deserializeFields_( const Json::Value& root )
     deserializeFromJson( root["Colors"]["LeaderLine"], leaderLineColor_.get() );
     deserializeFromJson( root["Colors"]["Contour"], contourColor_.get() );
 
-    needRebild_ = true;
+    needRebuild_ = true;
 }
 
 void ObjectLabel::setupRenderObject_() const
@@ -145,7 +145,7 @@ void ObjectLabel::setupRenderObject_() const
     if ( !renderObj_ )
         renderObj_ = createRenderObject<ObjectLabel>( *this );
 
-    if ( needRebild_ && !label_.text.empty() && !pathToFont_.empty() )
+    if ( needRebuild_ && !label_.text.empty() && !pathToFont_.empty() )
         buildMesh_();
 }
 
@@ -184,7 +184,7 @@ void ObjectLabel::buildMesh_() const
     updatePivotShift_();
 
     // important to call before bindAllVisualization to avoid recursive calls
-    needRebild_ = false;
+    needRebuild_ = false;
 
     // we can always clear cpu model for labels
     bindAllVisualization();

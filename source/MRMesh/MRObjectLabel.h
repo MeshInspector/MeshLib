@@ -186,7 +186,7 @@ private:
 
     void updatePivotShift_() const;
 
-    mutable bool needRebild_{ true };
+    mutable bool needRebuild_{ true };
     mutable Vector2f pivotShift_;
     mutable std::shared_ptr<Mesh> mesh_;
     mutable Box3f meshBox_; // needed for pivot update

@@ -226,7 +226,7 @@ GcodeProcessor::MoveAction GcodeProcessor::generateMoveAction_()
         res = getToolRotationPoints_( newRotationAngles );
     }
     assert( res.action.path.size() == res.toolDirection.size() );
-    res.idle = ( moveMode_ == MoveMode::Idle || !( anyCoordReaded || anyRotationReaded ) );
+    res.idle = ( moveMode_ == MoveMode::Idle || !( anyCoordReaded || anyRotationReaded || arcCenter_ ) );
 
     if ( moveMode_ == MoveMode::Idle )
         res.feedrate = cncSettings_.getFeedrateIdle();

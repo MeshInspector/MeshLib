@@ -487,7 +487,8 @@ void sortDICOMFiles( std::vector<std::filesystem::path>& files, unsigned maxNumT
         //voxelSize.z = float( ( zOrder[1].imagePos - zOrder[0].imagePos ).length() / 1000.0 );
         // this way allows to see better 3d image, but voxel size does not correspond to slice thickness 
         
-        voxelSize.z = float( ( zOrder.back().imagePos - zOrder.front().imagePos ).length() / double( zOrder.size() * 1e3 ) );
+        voxelSize.z = float( ( zOrder.back().imagePos - zOrder.front().imagePos ).length() / 
+            double( ( zOrder.size() - 1 ) * 1e3 ) );
 
         // if slices go in descending z-order then reverse them
         if ( zOrder[1].imagePos.z < zOrder[0].imagePos.z )
@@ -605,7 +606,7 @@ std::vector<Expected<DicomVolume, std::string>> loadDicomsFolder( const std::fil
                                                         unsigned maxNumThreads, const ProgressCallback& cb )
 {
     auto seriesMap = extractDCMSeries( path, subprogress( cb, 0.0f, 0.3f ) );
-    if ( seriesMap.has_value() )
+    if ( !seriesMap.has_value() )
         return { unexpected( seriesMap.error() ) };
 
     int seriesCounter = 0;

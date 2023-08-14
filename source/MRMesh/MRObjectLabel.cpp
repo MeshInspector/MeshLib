@@ -159,7 +159,7 @@ void ObjectLabel::setupRenderObject_() const
     if ( !renderObj_ )
         renderObj_ = createRenderObject<ObjectLabel>( *this );
 
-    if ( needRebild_ )
+    if ( needRebild_ && !label_.text.empty() && !pathToFont_.empty() )
         const_cast< ObjectLabel* >( this )->buildMesh_();
 }
 

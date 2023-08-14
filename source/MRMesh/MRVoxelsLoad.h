@@ -40,10 +40,10 @@ struct LoadDCMResult
 };
 
 /// Loads 3D volumetric data from all DICOM file in a folder
-MRMESH_API Expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::path& path,
+MRMESH_API std::vector<Expected<LoadDCMResult, std::string>> loadDCMFolder( const std::filesystem::path& path,
                                                         unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 /// Loads 3D volumetric data from all DICOM file in a folder
-MRMESH_API Expected<DicomVolume, std::string> loadDicomFolder( const std::filesystem::path& path,
+MRMESH_API std::vector<Expected<DicomVolume, std::string>> loadDicomFolder( const std::filesystem::path& path,
                                                         unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 
 

@@ -39,10 +39,10 @@ struct LoadDCMResult
     AffineXf3f xf;
 };
 
-/// Loads 3D all volumetric data from all DICOM file in a folder
+/// Loads 3D all volumetric data from DICOM files in a folder
 MRMESH_API std::vector<Expected<LoadDCMResult, std::string>> loadDCMsFolder( const std::filesystem::path& path,
                                                         unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
-/// Loads 3D first volumetric data from all DICOM file in a folder
+/// Loads 3D first volumetric data from DICOM files in a folder
 MRMESH_API Expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::path& path,
                                                         unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 

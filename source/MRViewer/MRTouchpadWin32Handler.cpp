@@ -247,11 +247,8 @@ void TouchpadWin32Handler::processRawInput( TouchpadWin32Handler& handler, HRAWI
 {
 	UINT rawInputSize = 0;
 	CHECK_LAST_ERROR( GetRawInputData( hRawInput, RID_INPUT, NULL, &rawInputSize, sizeof( RAWINPUTHEADER ) ) )
-    // TODO: check for error
-
     auto rawInputData = std::make_unique<unsigned char[]>( rawInputSize );
 	CHECK_LAST_ERROR( GetRawInputData( hRawInput, RID_INPUT, (LPVOID)rawInputData.get(), &rawInputSize, sizeof( RAWINPUTHEADER ) ) )
-    // TODO: check for error
 
     auto rawInput = (PRAWINPUT)rawInputData.get();
     if ( rawInput->header.dwType != RIM_TYPEHID )

@@ -40,6 +40,8 @@ private:
 	std::map<HANDLE, DeviceInfo> devices_;
 	void fetchDeviceInfo_();
 
+	std::map<ULONG, MR::Vector2ll> state_;
+
 	static void processRawInput( TouchpadWin32Handler& handler, HRAWINPUT hRawInput );
 };
 

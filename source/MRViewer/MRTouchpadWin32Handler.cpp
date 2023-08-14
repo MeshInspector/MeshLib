@@ -273,18 +273,46 @@ void TouchpadWin32Handler::processRawInput( TouchpadWin32Handler& handler, HRAWI
         if ( !( cap.hasContactId && cap.hasX && cap.hasY && cap.hasTipSwitch ) )
             continue;
 
-        ULONG touchId = 0, xPos = 0, yPos = 0;
+        ULONG touchId = 0, x = 0, y = 0;
         CHECK_NTSTATUS( HidP_GetUsageValue( HidP_Input, HID_USAGE_PAGE_DIGITIZER, linkCollection, HID_USAGE_DIGITIZER_CONTACT_ID, &touchId, preparsed, (PCHAR)hidData.bRawData, hidData.dwSizeHid ) )
-        CHECK_NTSTATUS( HidP_GetUsageValue( HidP_Input, HID_USAGE_PAGE_GENERIC, linkCollection, HID_USAGE_GENERIC_X, &xPos, preparsed, (PCHAR)hidData.bRawData, hidData.dwSizeHid ) )
-        CHECK_NTSTATUS( HidP_GetUsageValue( HidP_Input, HID_USAGE_PAGE_GENERIC, linkCollection, HID_USAGE_GENERIC_Y, &yPos, preparsed, (PCHAR)hidData.bRawData, hidData.dwSizeHid ) )
+        CHECK_NTSTATUS( HidP_GetUsageValue( HidP_Input, HID_USAGE_PAGE_GENERIC, linkCollection, HID_USAGE_GENERIC_X, &x, preparsed, (PCHAR)hidData.bRawData, hidData.dwSizeHid ) )
+        CHECK_NTSTATUS( HidP_GetUsageValue( HidP_Input, HID_USAGE_PAGE_GENERIC, linkCollection, HID_USAGE_GENERIC_Y, &y, preparsed, (PCHAR)hidData.bRawData, hidData.dwSizeHid ) )
 
         auto maxUsageCount = HidP_MaxUsageListLength( HidP_Input, HID_USAGE_PAGE_DIGITIZER, preparsed );
         std::vector<USAGE> usages( maxUsageCount );
         CHECK_NTSTATUS( HidP_GetUsages( HidP_Input, HID_USAGE_PAGE_DIGITIZER, linkCollection, usages.data(), &maxUsageCount, preparsed, ( PCHAR )hidData.bRawData, hidData.dwSizeHid ) )
+        bool pressed = std::find( usages.begin(), usages.end(), HID_USAGE_DIGITIZER_TIP_SWITCH ) != usages.end();
 
-        bool isContactOnSurface = std::find( usages.begin(), usages.end(), HID_USAGE_DIGITIZER_TIP_SWITCH ) != usages.end();
-
-        spdlog::info( "touch id = {} x = {} y = {} on surface = {}", touchId, xPos, yPos, isContactOnSurface );
+        const MR::Vector2ll pos( x, y );
+        auto state = handler.state_.find( touchId );
+        if ( state == handler.state_.end() )
+        {
+            if ( pressed )
+            {
+                spdlog::info( "touch begin: id = {} x = {} y = {}", touchId, x, y );
+                handler.state_.emplace( touchId, pos );
+            }
+            else
+            {
+                // phantom touch?
+            }
+        }
+        else
+        {
+            if ( pressed )
+            {
+                if ( pos != state->second )
+                {
+					spdlog::info( "touch moved: id = {} x = {} y = {}", touchId, x, y );
+                    state->second = pos;
+                }
+            }
+            else
+            {
+                spdlog::info( "touch end: id = {} x = {} y = {}", touchId, x, y );
+                handler.state_.erase( touchId );
+            }
+        }
     }
 }
 

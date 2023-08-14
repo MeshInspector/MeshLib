@@ -113,9 +113,9 @@ void RenderLabelObject::render( const RenderParams& renderParams )
 			const Vector2f newShift = shift + contourShift;
 			GL_EXEC( glUniform2f( glGetUniformLocation( shader, "shift" ), newShift.x, newShift.y ) );
 			getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, faceIndicesSize_ );
-            GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
+            GL_EXEC( glDepthFunc( getDepthFunctionLEqual( renderParams.depthFunction ) ) );
 			GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * int( faceIndicesSize_ ), GL_UNSIGNED_INT, 0 ) );
-            GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
+            GL_EXEC( glDepthFunc( getDepthFunctionLEqual( DepthFuncion::Default ) ) );
 		};
 		contourFn( Vector2f( 1, 1 ) / 2.f );
 		contourFn( Vector2f( 0, 1 ) / 2.f );
@@ -134,9 +134,9 @@ void RenderLabelObject::render( const RenderParams& renderParams )
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, faceIndicesSize_ );
 
-    GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * int( faceIndicesSize_ ), GL_UNSIGNED_INT, 0 ) );
-    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( DepthFuncion::Default ) ) );
 
     GL_EXEC( glDepthFunc( GL_LESS ) );
 }
@@ -180,9 +180,9 @@ void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams )
 #else
     GL_EXEC( glPointSize( objLabel_->getSourcePointSize() ) );
 #endif
-    GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_POINTS, ( GLsizei )pointIndices.size(), GL_UNSIGNED_INT, 0 ) );
-    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( DepthFuncion::Default ) ) );
 
     dirtySrc_ = false;
 }
@@ -235,9 +235,9 @@ void RenderLabelObject::renderBackground_( const RenderParams& renderParams )
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, bgFacesIndicesBufferObj.size() );
 
-    GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * int( bgFacesIndicesBufferObj.size() ), GL_UNSIGNED_INT, 0 ) );
-    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( DepthFuncion::Default ) ) );
 
     dirtyBg_ = false;
 }
@@ -327,9 +327,9 @@ void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams )
 
     GL_EXEC( glLineWidth( objLabel_->getLeaderLineWidth() ) );
 
-    GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_LINES, 2 * int( llineEdgesIndicesSize ), GL_UNSIGNED_INT, 0 ) );
-    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( DepthFuncion::Default ) ) );
 
     dirtyLLine_ = false;
 }

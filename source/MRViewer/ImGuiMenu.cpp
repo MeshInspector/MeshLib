@@ -1410,7 +1410,19 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
         currWindow->DrawList->PopClipRect();
 
     const auto& viewportid = viewer->viewport().id;
-    bool closePopup = make_visualize_checkbox( selectedObjs, "Polygon Offset", MeshVisualizePropertyType::PolygonOffsetFromCamera, viewportid );
+
+    bool allIsObjMesh = !selectedObjs.empty() &&
+        std::all_of( selectedObjs.cbegin(), selectedObjs.cend(), [] ( const std::shared_ptr<VisualObject>& obj )
+    {
+        return obj && obj->asType<ObjectMeshHolder>();
+    } );
+
+    bool closePopup = false;
+
+    if ( allIsObjMesh )
+    {
+        make_visualize_checkbox( selectedObjs, "Polygon Offset", MeshVisualizePropertyType::PolygonOffsetFromCamera, viewportid );
+    }
 
     make_light_strength( selectedObjs, "Shininess", [&] ( const VisualObject* obj )
     {

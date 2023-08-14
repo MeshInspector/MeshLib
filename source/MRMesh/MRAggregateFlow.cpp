@@ -35,7 +35,7 @@ FlowAggregator::FlowAggregator( const Mesh & mesh, const VertScalars & heights )
         vertsSortedDesc_.push_back( minusHeightVerts[i].second );
 }
 
-VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts, Polyline3 * outPolyline, UndirectedEdgeScalars * outFlowPerEdge )
+VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts, Polyline3 * outPolyline, UndirectedEdgeScalars * outFlowPerEdge ) const
 {
     return computeFlow( starts.size(),
         [&starts]( size_t n ) { return starts[n].point; },
@@ -43,7 +43,7 @@ VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts,
         outPolyline, outFlowPerEdge );
 }
 
-VertScalars FlowAggregator::computeFlow( const std::vector<MeshTriPoint> & starts, Polyline3 * outPolyline, UndirectedEdgeScalars * outFlowPerEdge )
+VertScalars FlowAggregator::computeFlow( const std::vector<MeshTriPoint> & starts, Polyline3 * outPolyline, UndirectedEdgeScalars * outFlowPerEdge ) const
 {
     return computeFlow( starts.size(),
         [&starts]( size_t n ) { return starts[n]; },
@@ -54,7 +54,7 @@ VertScalars FlowAggregator::computeFlow( const std::vector<MeshTriPoint> & start
 VertScalars FlowAggregator::computeFlow( size_t numStarts,
     const std::function<MeshTriPoint(size_t)> & startById,
     const std::function<float(size_t)> & amountById,
-    Polyline3 * outPolyline, UndirectedEdgeScalars * outFlowPerEdge )
+    Polyline3 * outPolyline, UndirectedEdgeScalars * outFlowPerEdge ) const
 {
     MR_TIMER
     assert( !outFlowPerEdge || outPolyline );

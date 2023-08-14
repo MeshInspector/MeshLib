@@ -27,15 +27,15 @@ public:
     /// \param outFlowPerEdge flow in each line of outPolyline
     /// \return the flow reached each mesh vertex
     MRMESH_API VertScalars computeFlow( const std::vector<FlowOrigin> & starts,
-        Polyline3 * outPolyline = nullptr, UndirectedEdgeScalars * outFlowPerEdge = nullptr );
+        Polyline3 * outPolyline = nullptr, UndirectedEdgeScalars * outFlowPerEdge = nullptr ) const;
     // same with all amounts equal to 1
     MRMESH_API VertScalars computeFlow( const std::vector<MeshTriPoint> & starts,
-        Polyline3 * outPolyline = nullptr, UndirectedEdgeScalars * outFlowPerEdge = nullptr );
+        Polyline3 * outPolyline = nullptr, UndirectedEdgeScalars * outFlowPerEdge = nullptr ) const;
     // general version that supplies starts in a functional way
     MRMESH_API VertScalars computeFlow( size_t numStarts,
         const std::function<MeshTriPoint(size_t)> & startById, ///< can return invalid point that will be ignored
         const std::function<float(size_t)> & amountById,
-        Polyline3 * outPolyline = nullptr, UndirectedEdgeScalars * outFlowPerEdge = nullptr );
+        Polyline3 * outPolyline = nullptr, UndirectedEdgeScalars * outFlowPerEdge = nullptr ) const;
 
 private:
     const Mesh & mesh_;

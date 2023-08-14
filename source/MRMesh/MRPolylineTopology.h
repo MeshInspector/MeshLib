@@ -118,6 +118,10 @@ public:
     MRMESH_API EdgeId makePolyline( const VertId * vs, size_t num );
 
     /// appends polyline topology (from) in addition to the current topology: creates new edges, verts;
+    /// \param outVmap,outEmap (optionally) returns mappings: from.id -> this.id
+    MRMESH_API void addPart( const PolylineTopology & from,
+        VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr );
+    /// appends polyline topology (from) in addition to the current topology: creates new edges, verts;
     MRMESH_API void addPartByMask( const PolylineTopology& from, const UndirectedEdgeBitSet& mask,
         VertMap* outVmap = nullptr, EdgeMap* outEmap = nullptr );
 

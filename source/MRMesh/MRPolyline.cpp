@@ -103,10 +103,34 @@ EdgeId Polyline<V>::addFromPoints( const V * vs, size_t num )
 }
 
 template<typename V>
+void MR::Polyline<V>::addPart( const Polyline<V>& from, VertMap * outVmap, WholeEdgeMap * outEmap )
+{
+    MR_TIMER
+
+    VertMap vmap;
+    VertMap* vmapPtr = outVmap ? outVmap : &vmap;
+    topology.addPart( from.topology, vmapPtr, outEmap );
+    const VertMap& vmapRef = *vmapPtr;
+
+    VertId lastPointId = topology.lastValidVert();
+    if ( points.size() < lastPointId + 1 )
+        points.resize( lastPointId + 1 );
+
+    for ( VertId fromv{ 0 }; fromv < vmapRef.size(); ++fromv )
+    {
+        VertId v = vmapRef[fromv];
+        if ( v.valid() )
+            points[v] = from.points[fromv];
+    }
+
+    invalidateCaches();
+}
+
+template<typename V>
 void MR::Polyline<V>::addPartByMask( const Polyline<V>& from, const UndirectedEdgeBitSet& mask, 
     VertMap* outVmap /*= nullptr*/, EdgeMap* outEmap /*= nullptr */ )
 {
-    MR_TIMER;
+    MR_TIMER
 
     VertMap vmap;
     VertMap* vmapPtr = outVmap ? outVmap : &vmap;
@@ -126,7 +150,6 @@ void MR::Polyline<V>::addPartByMask( const Polyline<V>& from, const UndirectedEd
 
     invalidateCaches();
 }
-
 
 template<typename V>
 float Polyline<V>::totalLength() const

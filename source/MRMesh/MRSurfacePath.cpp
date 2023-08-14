@@ -481,7 +481,7 @@ void computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
     }
 }
 
-UndirectedEdgeBitSet findRidgeEdges( const Mesh & mesh, const VertScalars & field )
+UndirectedEdgeBitSet findExtremeEdges( const Mesh & mesh, const VertScalars & field, ExtremeEdgeType type )
 {
     MR_TIMER
     UndirectedEdgeBitSet res( mesh.topology.undirectedEdgeSize() );
@@ -503,7 +503,9 @@ UndirectedEdgeBitSet findRidgeEdges( const Mesh & mesh, const VertScalars & fiel
         const auto fd = field[vd];
         const auto fl = field[vl];
 
-        const auto gradL = computeGradient( pd - po, pl - po, fd - fo, fl - fo );
+        auto gradL = computeGradient( pd - po, pl - po, fd - fo, fl - fo );
+        if ( type == ExtremeEdgeType::Gorge )
+            gradL = -gradL;
         if ( dirEnters01( { po, pd, pl }, gradL ) )
             return;
 
@@ -511,7 +513,9 @@ UndirectedEdgeBitSet findRidgeEdges( const Mesh & mesh, const VertScalars & fiel
         const auto pr = mesh.points[vr];
         const auto fr = field[vr];
 
-        const auto gradR = computeGradient( pr - po, pd - po, fr - fo, fd - fo );
+        auto gradR = computeGradient( pr - po, pd - po, fr - fo, fd - fo );
+        if ( type == ExtremeEdgeType::Gorge )
+            gradR = -gradR;
         if ( dirEnters01( { pd, po, pr }, gradR ) )
             return;
 

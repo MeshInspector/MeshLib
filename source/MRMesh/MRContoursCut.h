@@ -122,12 +122,14 @@ struct CutMeshParameters
     /// This is optional output - map from newly generated faces to old faces (N-1)
     FaceMap* new2OldMap{nullptr};
     /// This enum defines the MR::cutMesh behaviour in case of bad faces acure
-    /// \note Bad triangles here mean faces where contours have intersections and cannot be cut and filled in an good way
+    /// basicaly MR::cutMesh removes all faces which contours pass through, adds new edges to topology and fills all removed parts
+    /// 
+    /// \note Bad faces here mean faces where contours have intersections and cannot be cut and filled in an good way
     enum class ForceFill
     {
-        None, //< if algorithm detects intersection of cut contours it leaves deleted faces on all contours line
-        Good, //< if algorithm detects intersection of cut contours it leaves deleted only bad faces (where contours intersects)
-        All   //< algorithm fills all deleted faces but triangulation of bad faces (where contours intersects) can have bad topology
+        None, //< if bad faces occur does not fill anything
+        Good, //< fills all faces except bad ones
+        All   //< fills all faces with bad ones, but on bad faces triangulation can also be bad (may have self-intersections or tunnels)
     } forceFillMode_{ ForceFill::None };
 };
 

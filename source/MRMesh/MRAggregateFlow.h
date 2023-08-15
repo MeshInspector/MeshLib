@@ -2,6 +2,7 @@
 
 #include "MRMeshTriPoint.h"
 #include "MRVector.h"
+#include "MRPolyline.h"
 #include <functional>
 
 namespace MR
@@ -37,10 +38,21 @@ public:
         const std::function<float(size_t)> & amountById,
         Polyline3 * outPolyline = nullptr, UndirectedEdgeScalars * outFlowPerEdge = nullptr ) const;
 
+    struct Flows
+    {
+        Polyline3 polyline;
+        UndirectedEdgeScalars flowPerEdge;
+    };
+
+    MRMESH_API HashMap<VertId, Flows> computeFlowsPerBasin( size_t numStarts,
+        const std::function<MeshTriPoint(size_t)> & startById, ///< can return invalid point that will be ignored
+        const std::function<float(size_t)> & amountById ) const;
+
 private:
     const Mesh & mesh_;
     const VertScalars & heights_;
     VertMap downFlowVert_; // for each vertex stores what next vertex is on flow path (invalid vertex for local minima)
+    VertMap rootVert_;     // for each vertex stores the final vertex is on flow path (self-vertex for local minima)
     Vector<SurfacePath, VertId> downPath_; // till next vertex
     std::vector<VertId> vertsSortedDesc_; // all vertices sorted in descending heights order
 };

@@ -1844,7 +1844,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     fixOrphans( mesh, preRes.paths, preRes.removedFaces, params.new2OldMap );
 
     res.fbsWithCountourIntersections = getBadFacesAfterCut( mesh.topology, preRes, preRes.removedFaces );
-    if ( !params.forceFillAfterBadCut && res.fbsWithCountourIntersections.count() > 0 )
+    if ( params.forceFillMode_ == CutMeshParameters::ForceFill::None && res.fbsWithCountourIntersections.count() > 0 )
         return res;
 
     // find one edge for every hole to fill
@@ -1874,7 +1874,8 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         for ( int edgeId = 0; edgeId < path.size(); ++edgeId )
         {
             FaceId oldf = preRes.removedFaces[pathId][edgeId].f;
-            if ( !oldf.valid() || res.fbsWithCountourIntersections.test( oldf ) )
+            if ( !oldf.valid() || 
+                ( params.forceFillMode_ == CutMeshParameters::ForceFill::Good && res.fbsWithCountourIntersections.test( oldf ) ) )
                 continue;
             if ( oldEdgesInfo[edgeId].hasLeft && !mesh.topology.left( path[edgeId] ).valid() )
                 addHoleDesc( path[edgeId], oldf );

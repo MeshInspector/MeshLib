@@ -302,14 +302,12 @@ void ImGuiMenu::preDraw_()
       if ( context_ )
       {
           ImGuiInputEvent e;
-          e.Type = ImGuiInputEventType_MousePos;
-          e.Source = ImGuiInputSource_Mouse;
           auto curPos = Vector2f( viewer->mouseController.getMousePos() );
-          e.MousePos.PosX = curPos.x;
-          e.MousePos.PosY = curPos.y;
-          if ( !context_->InputEventsQueue.empty() )
-              context_->InputEventsQueue.pop_back();
-          context_->InputEventsQueue.push_back( e );
+          if ( !context_->InputEventsQueue.empty() && context_->InputEventsQueue.back().Type == ImGuiInputEventType_MousePos )
+          {
+              context_->InputEventsQueue.back().MousePos.PosX = curPos.x;
+              context_->InputEventsQueue.back().MousePos.PosY = curPos.y;
+          }
       }
 #endif
   }

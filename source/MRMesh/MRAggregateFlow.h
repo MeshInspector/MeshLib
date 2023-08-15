@@ -44,6 +44,7 @@ public:
         UndirectedEdgeScalars flowPerEdge;
     };
 
+    MRMESH_API HashMap<VertId, Flows> computeFlowsPerBasin( const std::vector<MeshTriPoint> & starts ) const;
     MRMESH_API HashMap<VertId, Flows> computeFlowsPerBasin( size_t numStarts,
         const std::function<MeshTriPoint(size_t)> & startById, ///< can return invalid point that will be ignored
         const std::function<float(size_t)> & amountById ) const;

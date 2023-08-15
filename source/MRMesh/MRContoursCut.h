@@ -125,9 +125,9 @@ struct CutMeshParameters
     /// \note Bad triangles here mean faces where contours have intersections and cannot be cut and filled in an good way
     enum class ForceFill
     {
-        None, //< if algorithms detects intersection of cut contours it leaves deleted faces on all contours line
-        Good, //< if algorithms detects intersection of cut contours it leaves deleted only bad faces (where contours intersects)
-        All   //< algorithms fill all deleted faces but triangulation of bad faces (where contours intersects) can have bad topology
+        None, //< if algorithm detects intersection of cut contours it leaves deleted faces on all contours line
+        Good, //< if algorithm detects intersection of cut contours it leaves deleted only bad faces (where contours intersects)
+        All   //< algorithm fills all deleted faces but triangulation of bad faces (where contours intersects) can have bad topology
     } forceFillMode_{ ForceFill::None };
 };
 

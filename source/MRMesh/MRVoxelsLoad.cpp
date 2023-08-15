@@ -426,10 +426,19 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
     return res;
 }
 
-void sortDICOMFiles( std::vector<std::filesystem::path>& files, unsigned maxNumThreads, Vector3f& voxelSize )
+struct SeriesInfo
 {
+    float sliceSize{ 0.0f };
+    int numSlices{ 0 };
+    BitSet missedSlices;
+};
+
+SeriesInfo sortDICOMFiles( std::vector<std::filesystem::path>& files, unsigned maxNumThreads )
+{
+    SeriesInfo res;
+
     if ( files.empty() )
-        return;
+        return res;
 
     std::vector<SliceInfo> zOrder( files.size() );
 
@@ -483,17 +492,41 @@ void sortDICOMFiles( std::vector<std::filesystem::path>& files, unsigned maxNumT
     
     if ( zOrder.size() > 1 )
     {
-        // it can be that each slice has different Z offset from previous one, so there will be gaps in 3d data
-        //voxelSize.z = float( ( zOrder[1].imagePos - zOrder[0].imagePos ).length() / 1000.0 );
-        // this way allows to see better 3d image, but voxel size does not correspond to slice thickness 
-        
-        voxelSize.z = float( ( zOrder.back().imagePos - zOrder.front().imagePos ).length() / 
-            double( ( zOrder.size() - 1 ) * 1e3 ) );
+        auto denom = std::max( 1.0f, float( zOrder[1].instanceNum - zOrder[0].instanceNum ) );
+        res.sliceSize = float( ( zOrder[1].imagePos - zOrder[0].imagePos ).length() / denom / 1000.0 );
+        res.numSlices = zOrder.back().instanceNum - zOrder.front().instanceNum + 1;
+
+        bool needReverse = zOrder[1].imagePos.z < zOrder[0].imagePos.z;
+
+        if ( res.numSlices != 0 )
+        {
+            res.missedSlices.resize( res.numSlices );
+
+            auto startIN = zOrder[0].instanceNum;
+            for ( int i = 1; i < zOrder.size(); ++i )
+            {
+                auto prevIN = zOrder[i - 1].instanceNum;
+                auto diff = zOrder[i].instanceNum - prevIN;
+                if ( diff == 1 )
+                    continue;
+                if ( diff == 0 )
+                {
+                    res.numSlices = 0;
+                    res.missedSlices.clear();
+                    break; // non-consistent instances
+                }
+
+                int startMissedIndex = ( prevIN - startIN + 1 );
+                for ( int j = startMissedIndex; j + 1 < startMissedIndex + diff; ++j )
+                    res.missedSlices.set( needReverse ? ( res.numSlices - 1 - j ) : j );
+            }
+        }
 
         // if slices go in descending z-order then reverse them
-        if ( zOrder[1].imagePos.z < zOrder[0].imagePos.z )
+        if ( needReverse )
             std::reverse( files.begin(), files.end() );
     }
+    return res;
 }
 
 Expected<DicomVolume, std::string> loadSingleDicomFolder( std::vector<std::filesystem::path>& files,
@@ -512,8 +545,14 @@ Expected<DicomVolume, std::string> loadSingleDicomFolder( std::vector<std::files
 
     if ( files.size() == 1 )
         return loadDicomFile( files[0], subprogress( cb, 0.3f, 1.0f ) );
-    sortDICOMFiles( files, maxNumThreads, data.voxelSize );
-    data.dims.z = (int) files.size();
+    auto seriesInfo = sortDICOMFiles( files, maxNumThreads );
+    if ( seriesInfo.sliceSize != 0.0f )
+        data.voxelSize.z = seriesInfo.sliceSize;
+
+    if ( seriesInfo.numSlices == 0 )
+        data.dims.z = ( int )files.size();
+    else
+        data.dims.z = seriesInfo.numSlices;
 
     auto firstRes = loadSingleFile( files.front(), data, 0 );
     if ( !firstRes.success )
@@ -524,6 +563,9 @@ Expected<DicomVolume, std::string> loadSingleDicomFolder( std::vector<std::files
 
     if ( !reportProgress( cb, 0.4f ) )
         return unexpected( "Loading canceled" );
+
+    auto presentSlices = seriesInfo.missedSlices;
+    presentSlices.flip();
 
     // other slices
     auto mainThreadId = std::this_thread::get_id();
@@ -538,7 +580,7 @@ Expected<DicomVolume, std::string> loadSingleDicomFolder( std::vector<std::files
         {
             for ( int i = range.begin(); i < range.end(); ++i )
             {
-                slicesRes[i] = loadSingleFile( files[i + 1], data, ( i + 1 ) * dimXY );
+                slicesRes[i] = loadSingleFile( files[i + 1], data, ( presentSlices.nthSetBit( i + 1 ) ) * dimXY );
                 ++numLoadedSlices;
                 if ( cb && std::this_thread::get_id() == mainThreadId )
                     cancelCalled = !cb( 0.4f + 0.6f * ( float( numLoadedSlices ) / float( slicesRes.size() ) ) );

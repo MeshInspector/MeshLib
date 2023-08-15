@@ -115,7 +115,9 @@ struct ToolPathResult
     // constains type of movement and its feed
     std::vector<GCommand> commands;
 
+    Contours3f contoursBeforeProjection;
     Contours3f startContours;
+    Contours3f failedContours;
     std::vector<PositionedText> startVertices;
 };
 

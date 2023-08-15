@@ -20,6 +20,7 @@
 #include "MRDistanceMap.h"
 #include "MRMeshComponents.h"
 #include "MRPolylineProject.h"
+#include "MRContoursCut.h"
 
 #include "MRPch/MRTBB.h"
 #include <sstream>
@@ -193,54 +194,105 @@ std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const Box3f& bo
     return sections;
 }
 
-std::vector<IsoLines> extractAllIsolines( const Mesh& mesh, const SurfacePath& startSurfacePath, Contours3f& startContours, std::vector<PositionedText>& startVertices, float sectionStep, BypassDirection bypassDir, ProgressCallback cb )
+struct ExtractIsolinesResult
 {
+    std::vector<IsoLines> isolines;
+    Mesh meshAfterCut;
+};
+
+ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const SurfacePath& startSurfacePath, const std::vector<MeshTriPoint>& meshTriPoints, Contours3f& startContours, Contours3f& failedContours, std::vector<PositionedText>& startVertices, float sectionStep, BypassDirection bypassDir, ProgressCallback cb )
+{
+    ExtractIsolinesResult res;
+
     MR::VertScalars distances;
 
     startContours.emplace_back();
     auto& startContour = startContours.back();
-   
-    //VertBitSet startVertices( mesh.topology.vertSize() );
-    
 
-    Polyline3 startPolyline;
-    startPolyline.addFromSurfacePath( mesh, startSurfacePath );
-
-    HashMap<VertId, float> startVerticesWithDists;
-    for ( const auto& ep : startSurfacePath )
+    res.meshAfterCut = mesh;
+    if ( !meshTriPoints.empty() )
     {
-        const auto vertId = mesh.topology.org( ep.e );
-        if ( !vertId.valid() )
-            continue;
+        const auto meshContour = convertMeshTriPointsToClosedContour( mesh, meshTriPoints );        
+        const auto cutRes = cutMesh( res.meshAfterCut, { meshContour } );
 
-        /*const auto vertPos = mesh.points[vertId];
-        const auto edgePos = mesh.edgePoint( ep );
-        const auto dist = ( edgePos - vertPos ).length();*/
 
-        // if removed then warning C4686: 'MR::findProjectionOnPolyline2': possible change in behavior, change in UDT return calling convention
-        static PolylineProjectionResult3 unused;
-        const auto proj = findProjectionOnPolyline( mesh.points[vertId], startPolyline );
-        const float dist = sqrt( proj.distSq );
-        startVerticesWithDists.insert_or_assign( vertId, dist );
-        startContour.push_back( mesh.edgePoint( ep ) );
-        startVertices.push_back( { std::to_string( dist), mesh.points[vertId] } );
+        if ( cutRes.resultCut.empty() )
+        {
+            failedContours.emplace_back();
+            auto& failedContour = failedContours.back();
+            for ( const auto& e : meshContour.intersections )
+            {
+                failedContour.push_back( e.coordinate );
+            }
+            failedContour.push_back( failedContour.front() );
+            return res;
+        }
+
+        VertBitSet startVerts( res.meshAfterCut.topology.vertSize() );
+        for ( const auto& edgeLoop : cutRes.resultCut )
+        {
+            for ( const auto edgeId : edgeLoop )
+            {
+                const auto orgVertId = res.meshAfterCut.topology.org( edgeId );
+                const auto dstVertId = res.meshAfterCut.topology.dest( edgeId );
+                if ( !orgVertId.valid() || !dstVertId.valid() )
+                    continue;
+
+                startVerts.set( orgVertId );
+                startVertices.push_back( { std::to_string( 0 ), res.meshAfterCut.points[orgVertId] } );
+
+                startContour.push_back( res.meshAfterCut.edgePoint( { edgeId, 0.0f } ) );
+            }
+        }
+        distances = computeSurfaceDistances( res.meshAfterCut, startVerts );
+        
+    }
+    else
+    {
+        Polyline3 startPolyline;
+        startPolyline.addFromSurfacePath( res.meshAfterCut, startSurfacePath );
+
+        HashMap<VertId, float> startVerticesWithDists;
+        for ( const auto& ep : startSurfacePath )
+        {
+            const auto orgVertId = res.meshAfterCut.topology.org( ep.e );
+            const auto dstVertId = res.meshAfterCut.topology.dest( ep.e );
+            if ( !orgVertId.valid() || !dstVertId.valid() )
+                continue;
+
+            // if removed then warning C4686: 'MR::findProjectionOnPolyline2': possible change in behavior, change in UDT return calling convention
+            static PolylineProjectionResult3 unused;
+
+            auto proj = findProjectionOnPolyline( res.meshAfterCut.points[orgVertId], startPolyline );
+            float dist = sqrt( proj.distSq );
+            startVerticesWithDists.insert_or_assign( orgVertId, dist );
+            startVertices.push_back( { std::to_string( dist ), res.meshAfterCut.points[orgVertId] } );
+
+            proj = findProjectionOnPolyline( res.meshAfterCut.points[dstVertId], startPolyline );
+            dist = sqrt( proj.distSq );
+            startVerticesWithDists.insert_or_assign( dstVertId, dist );
+            startVertices.push_back( { std::to_string( dist ), res.meshAfterCut.points[dstVertId] } );
+
+            startContour.push_back( res.meshAfterCut.edgePoint( ep ) );
+        }
+
+        distances = computeSurfaceDistances( res.meshAfterCut, startVerticesWithDists );
     }
 
-    distances = computeSurfaceDistances(mesh, startVerticesWithDists );
 
     const float topExcluded = FLT_MAX;
     const auto [min, max] = parallelMinMax( distances.vec_, &topExcluded );
 
     const size_t numIsolines = size_t( ( max - min ) / sectionStep ) - 1;
 
-    const auto& topology = mesh.topology;
-    std::vector<IsoLines> isoLines( numIsolines );
+    const auto& topology = res.meshAfterCut.topology;
+    res.isolines.resize( numIsolines );
 
     auto mainThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };
     std::atomic<size_t> numDone{ 0 };
 
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, isoLines.size() ),
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, res.isolines.size() ),
                        [&] ( const tbb::blocked_range<size_t>& range )
     {
         for ( size_t i = range.begin(); i < range.end(); ++i )
@@ -248,11 +300,11 @@ std::vector<IsoLines> extractAllIsolines( const Mesh& mesh, const SurfacePath& s
             if ( cb && !keepGoing.load( std::memory_order_relaxed ) )
                 break;
 
-            isoLines[i] = extractIsolines( topology, distances, sectionStep * ( i + 1 ) );
+            res.isolines[i] = extractIsolines( topology, distances, sectionStep * ( i + 1 ) );
 
             if ( bypassDir == BypassDirection::CounterClockwise )
             {
-                for ( auto& isoLine : isoLines[i] )
+                for ( auto& isoLine : res.isolines[i] )
                 {
                     std::reverse( isoLine.begin(), isoLine.end() );
                 }
@@ -272,7 +324,7 @@ std::vector<IsoLines> extractAllIsolines( const Mesh& mesh, const SurfacePath& s
     if ( !keepGoing.load( std::memory_order_relaxed ) || !reportProgress( cb, 1.0f ) )
         return {};
 
-    return isoLines;
+    return res;
 }
 
 using V3fIt = std::vector<Vector3f>::const_iterator;
@@ -779,85 +831,6 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
     return res;
 }
 
-/*SurfacePath smoothSurfacePath2(const Mesh& mesh, const SurfacePath& sp)
-{
-    if ( sp.size() < 5 )
-        return sp;
-
-    SurfacePath res;
-
-    Polyline3 polyline;
-    polyline.addFromSurfacePath( mesh, sp );
-    const auto contour = polyline.contours().front();
-    assert( sp.size() <= contour.size() );
-
-    const auto stdDevSq = []( Contour3f::const_iterator startIt, Contour3f::const_iterator endIt ) -> float
-    {
-        float sum = 0;
-        const int n = endIt - startIt - 2;
-
-        if ( n < 1 )
-            return 0;
-
-        Line3f line( *startIt, *std::prev( endIt ) - *startIt );
-        for ( auto it = startIt + 1; it < endIt; ++it )
-        {            
-            sum += line.distanceSq( *it );
-        }
-
-        return sum / n;
-    };
-
-    const auto smooth = [&] ( Contour3f::const_iterator startIt, Contour3f::const_iterator endIt, float eps ) -> SurfacePath
-    {
-        if ( stdDevSq( startIt, endIt ) < eps )
-            return SurfacePath{ *startIt, *endIt };
-    }
-}*/
-
-SurfacePath smoothSurfacePath( const Mesh& mesh, const SurfacePath& sp )
-{
-    if ( sp.size() < 5 )
-        return sp;
-
-    SurfacePath res;
-
-    Polyline3 polyline;
-    polyline.addFromSurfacePath( mesh, sp );
-    const auto contour = polyline.contours().front();
-    assert( sp.size() <= contour.size() );
-
-    size_t i = 0;
-
-    for ( ; i < sp.size() - 4; ++i )
-    {
-        const auto r10 = contour[i + 1] - contour[i];
-        const auto r20 = contour[i + 2] - contour[i];
-        const auto r32 = contour[i + 3] - contour[i + 2];
-        const auto r42 = contour[i + 4] - contour[i + 2];
-
-        const auto alpha = fabs( angle( r20, r10 ) );
-        const auto beta = fabs( angle( r42, r32 ) );
-        const auto gamma = fabs( angle( r20, r42 ) );
-
-        res.push_back( sp[i] );
-
-        if ( alpha > gamma && beta > gamma )
-        {            
-            //res.push_back( sp[i + 2] );
-            //res.push_back( sp[i + 4] );
-            i += 3;
-            continue;
-        }
-    }
-
-    for ( ; i < sp.size(); ++i )
-        res.push_back( sp[i] );
-
-    return res;
-}
-
-
 Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, const ConstantCuspParams& params )
 {
     auto preprocessedMesh = preprocessMesh( mp.mesh, params, true );
@@ -882,13 +855,13 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
     const auto undercutContour = undercutPolyline.contours().front();
 
     // if there are multiple independent zones selected we need to process them separately
-    const auto processZone = [&] ( const SurfacePath& bounds, Vector3f lastPoint, ProgressCallback cb ) -> bool
+    const auto processZone = [&] ( const SurfacePath& bounds, const std::vector<MeshTriPoint>& meshTriPoints, Vector3f lastPoint, ProgressCallback cb ) -> bool
     {
         //compute isolines based on the start point or the bounding contour
-        std::vector<IsoLines> isoLines = extractAllIsolines( mesh, bounds, res.startContours, res.startVertices, params.sectionStep, params.bypassDir, subprogress( cb, 0.0f, 0.4f ) );
+        auto extract = extractAllIsolines( mesh, bounds, meshTriPoints, res.startContours, res.failedContours, res.startVertices, params.sectionStep, params.bypassDir, subprogress( cb, 0.0f, 0.4f ) );
 
-        if ( isoLines.empty() )
-            return false;
+        if ( extract.isolines.empty() )
+            return reportProgress( cb, 0.4f );
 
         //go to the start point through safe height
         res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
@@ -932,10 +905,10 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         };
 
         // compute bitset of the vertices that are not belonged to the undercut
-        VertBitSet noUndercutVertices( mesh.points.size() );
-        BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
+        VertBitSet noUndercutVertices( extract.meshAfterCut.points.size() );
+        BitSetParallelFor( extract.meshAfterCut.topology.getValidVerts(), [&] ( VertId v )
         {
-            noUndercutVertices.set( v, mesh.points[v].z >= minZ );
+            noUndercutVertices.set( v, extract.meshAfterCut.points[v].z >= minZ );
         } );
 
         ToolPathParams paramsCopy = params;
@@ -970,10 +943,10 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
             return false;
 
         const auto sbp = subprogress( cb, 0.5f, 1.0f );
-        const size_t numIsolines = isoLines.size();
+        const size_t numIsolines = extract.isolines.size();
 
         if ( params.fromCenterToBoundary )
-            std::reverse( isoLines.begin(), isoLines.end() );
+            std::reverse( extract.isolines.begin(), extract.isolines.end() );
         
         // go on in the inverse order (from the highest isoline to the lowest )
         for ( size_t i = 0; i < numIsolines; ++i )
@@ -981,13 +954,13 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
             if ( sbp && !sbp( float( i ) / numIsolines ) )
                 return false;
 
-            if ( isoLines[i].empty() )
+            if ( extract.isolines[i].empty() )
                 continue;
 
-            for ( const auto& surfacePath : isoLines[i] )
+            for ( const auto& surfacePath : extract.isolines[i] )
             {
                 Polyline3 polyline;
-                polyline.addFromSurfacePath( mesh, surfacePath );
+                polyline.addFromSurfacePath( extract.meshAfterCut, surfacePath );
                 const auto contour = polyline.contours().front();
                 res.isolines.push_back( contour );
 
@@ -1014,7 +987,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                 {
                     for ( auto it = surfacePath.begin(); it < surfacePath.end(); ++it )
                     {
-                        float distSq = ( mesh.edgePoint( *it ) - mesh.edgePoint( prevEdgePoint ) ).lengthSq();
+                        float distSq = ( extract.meshAfterCut.edgePoint( *it ) - extract.meshAfterCut.edgePoint( prevEdgePoint ) ).lengthSq();
                         if ( distSq < minDistSq )
                         {
                             minDistSq = distSq;
@@ -1025,7 +998,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
 
                 auto nextEdgePointIt = nearestPointIt;
                 const float sectionStepSq = params.sectionStep * params.sectionStep;
-                const auto nearestPoint = mesh.edgePoint( *nearestPointIt );
+                const auto nearestPoint = extract.meshAfterCut.edgePoint( *nearestPointIt );
 
                 // make severals steps ahead for smoother transit
                 Vector3f tmp;
@@ -1033,7 +1006,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                 do
                 {
                     std::next( nextEdgePointIt ) != surfacePath.end() ? ++nextEdgePointIt : nextEdgePointIt = surfacePath.begin();
-                    tmp = mesh.edgePoint( *nextEdgePointIt );
+                    tmp = extract.meshAfterCut.edgePoint( *nextEdgePointIt );
                     skipPoint = ( tmp.z < minZ );
                 } while ( nextEdgePointIt != nearestPointIt && ( ( ( tmp - nearestPoint ).lengthSq() < sectionStepSq ) || skipPoint ) );
 
@@ -1057,8 +1030,8 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                 else
                 {
                     // go along the undercut if the part of section is below
-                    const auto p1 = mesh.edgePoint( prevEdgePoint );
-                    const auto p2 = mesh.edgePoint( *nextEdgePointIt );
+                    const auto p1 = extract.meshAfterCut.edgePoint( prevEdgePoint );
+                    const auto p2 = extract.meshAfterCut.edgePoint( *nextEdgePointIt );
                     if ( p1.z == minZ )
                     {
                         const auto sectionStartIt = findNearestPoint( undercutContour, p1 );
@@ -1083,17 +1056,17 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                     else
                     {
                         // go along the mesh in other cases
-                        const auto sp = computeSurfacePath( mesh, prevEdgePoint, *nextEdgePointIt, 5, &noUndercutVertices );
+                        const auto sp = computeSurfacePath( extract.meshAfterCut, prevEdgePoint, *nextEdgePointIt, 5, &noUndercutVertices );
                         if ( sp.has_value() && !sp->empty() )
                         {
                             if ( sp->size() == 1 )
                             {
-                                addPointToTheToolPath( mesh.edgePoint( sp->front() ) );
+                                addPointToTheToolPath( extract.meshAfterCut.edgePoint( sp->front() ) );
                             }
                             else
                             {
                                 Polyline3 transit;
-                                transit.addFromSurfacePath( mesh, *sp );
+                                transit.addFromSurfacePath( extract.meshAfterCut, *sp );
                                 const auto transitContours = transit.contours().front();
                                 for ( const auto& p : transitContours )
                                     addPointToTheToolPath( p );
@@ -1116,7 +1089,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
     //if selection is not specified then process all the vertices above the undercut
     if ( !mp.region )
     {
-        if ( !processZone( undercutSection, {}, subprogress( params.cb, 0.25f, 1.0f ) ) || !reportProgress( params.cb, 1.0f ) )
+        if ( !processZone( undercutSection, {}, {}, subprogress( params.cb, 0.25f, 1.0f ) ) || !reportProgress( params.cb, 1.0f ) )
             return unexpectedOperationCanceled();
 
         return res;
@@ -1128,43 +1101,28 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
     for ( size_t i = 0; i < loopCount; ++i )
     {
         const auto& edgeLoop = edgeLoops[i];
-        SurfacePath selectionBound;
+
+        res.contoursBeforeProjection.emplace_back();
+        auto& contourBeforeProjecton = res.contoursBeforeProjection.back();
+        std::vector<MeshTriPoint> meshTriPoints;
         for ( auto edgeId : edgeLoop )
         {
+            const auto originalPoint = mp.mesh.edgePoint( MeshEdgePoint( edgeId, 0.0f ) );
+            contourBeforeProjecton.push_back( originalPoint );
+
             // project all the vertices in the selected contour to the modified mesh
-            const auto origPoint = mp.mesh.edgePoint( MeshEdgePoint( edgeId, 0 ) );
-            const auto mpr = mesh.projectPoint( origPoint );
-            if ( !mpr )
-                continue;
+            auto mpr = mesh.projectPoint( originalPoint );
+            if ( mpr )
+                meshTriPoints.push_back( mpr->mtp );
 
-            if ( selectionBound.empty() )
-            {
-                selectionBound.push_back( MeshEdgePoint( mpr->mtp.e, 0 ) );
-                continue;
-            }
-            // compute path from the previous point to the current ( there may be additional points in the modified mesh )
-            auto sp = computeSurfacePath( mesh, selectionBound.back(), MeshEdgePoint( mpr->mtp.e, 0 ) );
-            if ( sp )
-            {
-                 //for ( int k = 0; k < 2; ++k )
-                   // sp = smoothSurfacePath( mesh, *sp );
-                selectionBound.insert( selectionBound.end(), sp->begin(), sp->end() );
-            }
-
-            selectionBound.push_back( MeshEdgePoint( mpr->mtp.e, 0 ) );
-        }
-        // unite the last point with the first one
-        auto sp = computeSurfacePath( mesh, selectionBound.back(), selectionBound.front() );
-        if ( sp )
-        {
-            //for ( int k = 0; k < 2; ++k )
-               // sp = smoothSurfacePath( mesh, *sp );
-            selectionBound.insert( selectionBound.end(), sp->begin(), sp->end() );
+            mpr = mesh.projectPoint(mp.mesh.edgePoint(MeshEdgePoint(edgeId, 0.5f)));
+            if ( mpr )
+                meshTriPoints.push_back( mpr->mtp );           
         }
 
-        selectionBound.push_back( selectionBound.front() );
-
-        if ( !processZone( selectionBound,
+        contourBeforeProjecton.push_back( contourBeforeProjecton.front() );
+        
+        if ( !processZone( {}, meshTriPoints,
             res.commands.empty() ? Vector3f{} : Vector3f{ res.commands.back().x, res.commands.back().y, res.commands.back().z },
             subprogress( params.cb, 0.25f + 0.75f * float( i ) / loopCount, 0.25f + 0.75f * float( i + 1 ) / loopCount ) ) )
         {

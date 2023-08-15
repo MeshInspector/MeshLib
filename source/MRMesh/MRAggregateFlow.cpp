@@ -314,6 +314,13 @@ auto FlowAggregator::computeFlowsPerBasin( size_t numStarts,
     return res;
 }
 
+auto FlowAggregator::computeFlowsPerBasin( const std::vector<FlowOrigin> & starts ) const -> HashMap<VertId, Flows>
+{
+    return computeFlowsPerBasin( starts.size(),
+        [&starts]( size_t n ) { return starts[n].point; },
+        [&starts]( size_t n ) { return starts[n].amount; } );
+}
+
 auto FlowAggregator::computeFlowsPerBasin( const std::vector<MeshTriPoint> & starts ) const -> HashMap<VertId, Flows>
 {
     return computeFlowsPerBasin( starts.size(),

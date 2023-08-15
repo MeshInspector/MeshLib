@@ -44,7 +44,13 @@ public:
         UndirectedEdgeScalars flowPerEdge;
     };
 
+    /// tracks multiple flows
+    /// \param starts the origin of each flow (should be uniformly sampled over the terrain)
+    /// \return the flows grouped by the final destination vertex
+    MRMESH_API HashMap<VertId, Flows> computeFlowsPerBasin( const std::vector<FlowOrigin> & starts ) const;
+    // same with all amounts equal to 1
     MRMESH_API HashMap<VertId, Flows> computeFlowsPerBasin( const std::vector<MeshTriPoint> & starts ) const;
+    // general version that supplies starts in a functional way
     MRMESH_API HashMap<VertId, Flows> computeFlowsPerBasin( size_t numStarts,
         const std::function<MeshTriPoint(size_t)> & startById, ///< can return invalid point that will be ignored
         const std::function<float(size_t)> & amountById ) const;

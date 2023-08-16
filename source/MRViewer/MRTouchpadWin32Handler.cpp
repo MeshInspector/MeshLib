@@ -113,10 +113,11 @@ public:
             return S_OK;
         status_ = current;
 
-        if ( previous == DIRECTMANIPULATION_ENABLED || previous == DIRECTMANIPULATION_INERTIA || current == DIRECTMANIPULATION_READY )
+        if ( current == DIRECTMANIPULATION_READY )
         {
             // TODO: reset gesture state
             HR = viewport->ZoomToRect( 0.f, 0.f, 1000.f, 1000.f, FALSE );
+            handler_->pollUpdateManager_ = false;
         }
 
         return S_OK;
@@ -222,11 +223,13 @@ LRESULT WINAPI TouchpadWin32Handler::WindowSubclassProc( HWND hwnd, UINT uMsg, W
     {
     case DM_POINTERHITTEST:
         handler->processPointerHitTestEvent_( wParam );
-        HR = handler->updateManager_->Update( NULL );
         break;
     case WM_INPUT:
         break;
     }
+
+    if ( handler->pollUpdateManager_ )
+        HR = handler->updateManager_->Update( NULL );
 
 #pragma warning( push )
 #pragma warning( disable: 4312 )
@@ -244,6 +247,7 @@ void TouchpadWin32Handler::processPointerHitTestEvent_( WPARAM wParam )
         return;
 
     viewport_->SetContact( pointerId );
+    pollUpdateManager_ = true;
 }
 
 }

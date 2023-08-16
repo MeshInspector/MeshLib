@@ -39,6 +39,7 @@ private:
     DWORD eventHandlerCookie_;
 
     friend class DirectManipulationViewportEventHandler;
+    bool pollUpdateManager_{ false };
 };
 
 } // namespace MR

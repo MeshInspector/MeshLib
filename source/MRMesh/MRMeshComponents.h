@@ -56,6 +56,12 @@ enum FaceIncidence
 /// gets all connected components of mesh part
 [[nodiscard]] MRMESH_API std::vector<FaceBitSet> getAllComponents( const MeshPart& meshPart,
     FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {} );
+/// gets all connected components of mesh part as
+/// 1. the mapping: FaceId -> Component ID in [0, 1, 2, ...)
+/// 2. the total number of components
+[[nodiscard]] MRMESH_API std::pair<Vector<int, FaceId>, int> getAllComponentsMap( const MeshPart& meshPart,
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {} );
+/// gets all connected components of mesh part
 [[nodiscard]] MRMESH_API std::vector<VertBitSet> getAllComponentsVerts( const Mesh& mesh, const VertBitSet* region = nullptr );
 /// gets all connected components, separating vertices by given path (either closed or from boundary to boundary)
 [[nodiscard]] MRMESH_API std::vector<VertBitSet> getAllComponentsVertsSeparatedByPath( const Mesh& mesh, const SurfacePath& path );

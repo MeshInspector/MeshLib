@@ -216,7 +216,6 @@ TouchpadWin32Handler::TouchpadWin32Handler( GLFWwindow* window )
 
     HR = manager_->Activate( window_ );
     HR = viewport_->Enable();
-    HR = updateManager_->Update( NULL );
 }
 
 TouchpadWin32Handler::~TouchpadWin32Handler()
@@ -292,7 +291,8 @@ void TouchpadWin32Handler::stopTouchpadEventPolling_()
 {
     if ( timer_ != NULL )
     {
-        DeleteTimerQueueTimer( timerQueue_, timer_, NULL );
+        auto result = DeleteTimerQueueTimer( timerQueue_, timer_, NULL );
+        UNUSED( result );
         timer_ = NULL;
     }
 }

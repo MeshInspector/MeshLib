@@ -23,6 +23,7 @@ public:
     ~TouchpadWin32Handler() override;
 
     static LRESULT WINAPI WindowSubclassProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
+    static void CALLBACK TouchpadEventPoll( PVOID lpParam, BOOLEAN timerOrWaitFired );
 
 private:
     HWND window_;
@@ -39,7 +40,10 @@ private:
     DWORD eventHandlerCookie_;
 
     friend class DirectManipulationViewportEventHandler;
-    bool pollUpdateManager_{ false };
+    HANDLE timerQueue_{ NULL };
+    HANDLE timer_{ NULL };
+    void startTouchpadEventPolling_();
+    void stopTouchpadEventPolling_();
 };
 
 } // namespace MR

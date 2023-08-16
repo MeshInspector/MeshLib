@@ -75,6 +75,8 @@ private:
 
 #define UNUSED( x ) (void)( x )
 
+constexpr DWORD TOUCHPAD_EVENT_POLLING_PERIOD_MS = 10; // 100 Hz
+
 }
 
 namespace MR
@@ -117,7 +119,7 @@ public:
         {
             // TODO: reset gesture state
             HR = viewport->ZoomToRect( 0.f, 0.f, 1000.f, 1000.f, FALSE );
-            handler_->pollUpdateManager_ = false;
+            handler_->stopTouchpadEventPolling_();
         }
 
         return S_OK;
@@ -155,6 +157,8 @@ TouchpadWin32Handler::TouchpadWin32Handler( GLFWwindow* window )
     window_ = glfwGetWin32Window( window );
 
     TouchpadWin32HandlerRegistry::instance().add( window_, this );
+
+    timerQueue_ = CreateTimerQueue();
 
 #pragma warning( push )
 #pragma warning( disable: 4302 )
@@ -211,6 +215,8 @@ TouchpadWin32Handler::~TouchpadWin32Handler()
 
     SetWindowLongPtr( window_, GWLP_WNDPROC, glfwProc_ );
 
+    DeleteTimerQueue( timerQueue_ );
+
     TouchpadWin32HandlerRegistry::instance().remove( window_ );
 }
 
@@ -228,9 +234,6 @@ LRESULT WINAPI TouchpadWin32Handler::WindowSubclassProc( HWND hwnd, UINT uMsg, W
         break;
     }
 
-    if ( handler->pollUpdateManager_ )
-        HR = handler->updateManager_->Update( NULL );
-
 #pragma warning( push )
 #pragma warning( disable: 4312 )
     return CallWindowProc( (WNDPROC)handler->glfwProc_, hwnd, uMsg, wParam, lParam );
@@ -247,7 +250,36 @@ void TouchpadWin32Handler::processPointerHitTestEvent_( WPARAM wParam )
         return;
 
     viewport_->SetContact( pointerId );
-    pollUpdateManager_ = true;
+    startTouchpadEventPolling_();
+}
+
+void TouchpadWin32Handler::TouchpadEventPoll( PVOID lpParam, BOOLEAN timerOrWaitFired )
+{
+    UNUSED( timerOrWaitFired );
+    if ( lpParam == NULL )
+        return;
+
+    auto* handler = (TouchpadWin32Handler*)lpParam;
+    HR = handler->updateManager_->Update( NULL );
+}
+
+void TouchpadWin32Handler::startTouchpadEventPolling_()
+{
+    if ( timer_ == NULL )
+    {
+        auto result = CreateTimerQueueTimer( &timer_, timerQueue_, ( WAITORTIMERCALLBACK )&TouchpadWin32Handler::TouchpadEventPoll, this, 0, TOUCHPAD_EVENT_POLLING_PERIOD_MS, WT_EXECUTEDEFAULT );
+        UNUSED( result );
+        assert( timer_ != NULL );
+    }
+}
+
+void TouchpadWin32Handler::stopTouchpadEventPolling_()
+{
+    if ( timer_ != NULL )
+    {
+        DeleteTimerQueueTimer( timerQueue_, timer_, NULL );
+        timer_ = NULL;
+    }
 }
 
 }

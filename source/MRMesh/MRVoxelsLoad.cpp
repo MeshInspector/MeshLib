@@ -569,7 +569,6 @@ Expected<DicomVolume, std::string> loadSingleDicomFolder( std::vector<std::files
     presentSlices.flip();
 
     // other slices
-    auto mainThreadId = std::this_thread::get_id();
     bool cancelCalled = false;
     std::vector<DCMFileLoadResult> slicesRes( files.size() - 1 );
     tbb::task_arena limitedArena( maxNumThreads );

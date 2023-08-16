@@ -307,7 +307,7 @@ void TouchpadWin32Handler::startTouchpadEventPolling_()
 {
     if ( timer_ == NULL )
     {
-        auto result = CreateTimerQueueTimer( &timer_, timerQueue_, ( WAITORTIMERCALLBACK )&TouchpadWin32Handler::TouchpadEventPoll, this, 0, TOUCHPAD_EVENT_POLLING_PERIOD_MS, WT_EXECUTEDEFAULT );
+        auto result = CreateTimerQueueTimer( &timer_, timerQueue_, ( WAITORTIMERCALLBACK )&TouchpadWin32Handler::TouchpadEventPoll, this, 0, TOUCHPAD_EVENT_POLLING_PERIOD_MS, WT_EXECUTEINTIMERTHREAD );
         UNUSED( result );
         assert( timer_ != NULL );
     }

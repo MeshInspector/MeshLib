@@ -3,7 +3,13 @@
 
 #include "MRTouchpadController.h"
 
-#include <Windows.h>
+#pragma warning( push )
+#pragma warning( disable: 4265 )
+#pragma warning( disable: 5204 )
+#pragma warning( disable: 5220 )
+#include <directmanipulation.h>
+#include <wrl.h>
+#pragma warning( pop )
 
 #include <map>
 
@@ -23,26 +29,15 @@ private:
 
 	LONG_PTR glfwProc_;
 
-	struct DeviceInfo
-	{
-		struct Cap
-		{
-			bool hasX{ false };
-			bool hasY{ false };
-			bool hasContactId{ false };
-			bool hasTipSwitch{ false };
-		};
-		std::string deviceName;
-		std::string preparsedData;
-		std::map<USHORT, Cap> caps;
-		USHORT contactCountLinkCollection{ 0 };
-	};
-	std::map<HANDLE, DeviceInfo> devices_;
-	void fetchDeviceInfo_();
+	Microsoft::WRL::ComPtr<IDirectManipulationManager> manager_;
+	Microsoft::WRL::ComPtr<IDirectManipulationUpdateManager> updateManager_;
+	Microsoft::WRL::ComPtr<IDirectManipulationViewport> viewport_;
 
-	std::map<ULONG, MR::Vector2ll> state_;
+	class DirectManipulationViewportEventHandler;
+	Microsoft::WRL::ComPtr<DirectManipulationViewportEventHandler> eventHandler_;
+	DWORD eventHandlerCookie_;
 
-	static void processRawInput( TouchpadWin32Handler& handler, HRAWINPUT hRawInput );
+	friend class DirectManipulationViewportEventHandler;
 };
 
 } // namespace MR

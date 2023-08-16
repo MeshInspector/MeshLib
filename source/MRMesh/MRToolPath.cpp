@@ -21,6 +21,7 @@
 #include "MRMeshComponents.h"
 #include "MRPolylineProject.h"
 #include "MRContoursCut.h"
+#include "MRFillContour.h"
 
 #include "MRPch/MRTBB.h"
 #include <sstream>
@@ -213,12 +214,12 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const SurfacePath& s
     res.meshAfterCut = mesh;
     if ( !meshTriPoints.empty() )
     {
-        auto oldRegion = res.region;
         const auto meshContour = convertMeshTriPointsToClosedContour( mesh, meshTriPoints );
-        FaceMap faceMap;
-        CutMeshParameters cutMeshParams{ .new2OldMap = &faceMap };
 
-        const auto cutRes = cutMesh( res.meshAfterCut, { meshContour }, cutMeshParams );
+        //FaceMap faceMap;
+        //CutMeshParameters cutMeshParams{ .new2OldMap = &faceMap };
+
+        const auto cutRes = cutMesh( res.meshAfterCut, { meshContour }/*, cutMeshParams*/);
 
         if ( cutRes.resultCut.empty() )
         {
@@ -230,17 +231,12 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const SurfacePath& s
             }
             failedContour.push_back( failedContour.front() );
             return res;
-        }
-
-        res.region.clear();
-        res.region.resize( res.meshAfterCut.topology.faceSize() );
-
-        BitSetParallelFor( res.region, [&]( FaceId f )
-        { 
-            res.region[f] = oldRegion[ (*cutMeshParams.new2OldMap)[f] ];
-        } );
+        }    
 
         VertBitSet startVerts( res.meshAfterCut.topology.vertSize() );
+        res.region = fillContourLeft( res.meshAfterCut.topology, cutRes.resultCut );
+        VertBitSet innerVerts = getIncidentVerts( res.meshAfterCut.topology, res.region );
+
         for ( const auto& edgeLoop : cutRes.resultCut )
         {
             for ( const auto edgeId : edgeLoop )
@@ -256,7 +252,9 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const SurfacePath& s
                 startContour.push_back( res.meshAfterCut.edgePoint( { edgeId, 0.0f } ) );
             }
         }
-        distances = computeSurfaceDistances( res.meshAfterCut, startVerts, FLT_MAX, &startVerts );        
+
+        VertBitSet regionVerts = startVerts | innerVerts;
+        distances = computeSurfaceDistances( res.meshAfterCut, startVerts, FLT_MAX, &regionVerts );
     }
     else
     {
@@ -1128,7 +1126,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
     const size_t loopCount = edgeLoops.size();
     for ( size_t i = 0; i < loopCount; ++i )
     {
-        const auto& edgeLoop = edgeLoops[i];
+        const auto& edgeLoop = edgeLoops[i];        
 
         res.contoursBeforeProjection.emplace_back();
         auto& contourBeforeProjecton = res.contoursBeforeProjection.back();

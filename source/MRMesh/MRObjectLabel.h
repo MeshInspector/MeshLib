@@ -133,6 +133,7 @@ public:
     MRMESH_API virtual Box3f getWorldBox( ViewportId = {} ) const override;
 
     /// returns mesh that represents current label
+    /// only used in Render object for binding, cleared after it
     const std::shared_ptr<Mesh>& labelRepresentingMesh() const { return mesh_; }
 
     /// returns the amount of memory this object occupies on heap
@@ -146,8 +147,6 @@ protected:
     PositionedText label_;
     std::filesystem::path pathToFont_;
     Vector2f pivotPoint_;
-    Vector2f pivotShift_;
-    std::shared_ptr<Mesh> mesh_;
 
     /// size of label font on screen in pixels
     float fontHeight_{ 25.0f };
@@ -174,10 +173,6 @@ protected:
 
     MRMESH_API virtual Box3f computeBoundingBox_() const override;
 
-    MRMESH_API virtual Expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const override;
-
-    MRMESH_API virtual VoidOrErrStr deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
-
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 
     MRMESH_API virtual void deserializeFields_( const Json::Value& root ) override;
@@ -188,9 +183,14 @@ private:
     /// this is private function to set default colors of this type (ObjectLabel) in constructor only
     void setDefaultColors_();
 
-    void buildMesh_();
+    void buildMesh_() const;
 
-    void updatePivotShift_();
+    void updatePivotShift_() const;
+
+    mutable bool needRebuild_{ true };
+    mutable Vector2f pivotShift_;
+    mutable std::shared_ptr<Mesh> mesh_;
+    mutable Box3f meshBox_; // needed for pivot update
 };
 
 }

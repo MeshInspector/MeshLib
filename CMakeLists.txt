@@ -173,8 +173,10 @@ IF(NOT MR_EMSCRIPTEN)
 pkg_check_modules(JSONCPP jsoncpp)
 include_directories(${JSONCPP_INCLUDE_DIRS})
 
-IF(${MR_FEDORA} OR ${MR_UBUNTU22})
- add_compile_definitions(SPDLOG_FMT_EXTERNAL)
+find_package(fmt)
+find_package(spdlog REQUIRED)
+IF(spdlog_VERSION VERSION_GREATER_EQUAL "1.7" AND fmt_VERSION VERSION_GREATER_EQUAL "7.0")
+    add_compile_definitions(SPDLOG_FMT_EXTERNAL)
 ENDIF()
 
 add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)

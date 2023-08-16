@@ -82,12 +82,12 @@ namespace MR
 
 class TouchpadWin32Handler::DirectManipulationViewportEventHandler
     : public Microsoft::WRL::RuntimeClass<
-		Microsoft::WRL::RuntimeClassFlags<Microsoft::WRL::RuntimeClassType::ClassicCom>,
-		Microsoft::WRL::Implements<
-			Microsoft::WRL::RuntimeClassFlags<Microsoft::WRL::RuntimeClassType::ClassicCom>,
-			Microsoft::WRL::FtmBase,
-			IDirectManipulationViewportEventHandler
-		>
+        Microsoft::WRL::RuntimeClassFlags<Microsoft::WRL::RuntimeClassType::ClassicCom>,
+        Microsoft::WRL::Implements<
+            Microsoft::WRL::RuntimeClassFlags<Microsoft::WRL::RuntimeClassType::ClassicCom>,
+            Microsoft::WRL::FtmBase,
+            IDirectManipulationViewportEventHandler
+        >
     >
 {
 public:
@@ -110,7 +110,7 @@ public:
     {
         if ( current == previous )
             return S_OK;
-        HR = viewport->ZoomToRect( 0.f, 0.f, 10000.f, 10000.f, FALSE );
+        HR = viewport->ZoomToRect( 0.f, 0.f, 1000.f, 1000.f, FALSE );
         return S_OK;
     }
 
@@ -150,7 +150,7 @@ TouchpadWin32Handler::TouchpadWin32Handler( GLFWwindow* window )
 #pragma warning( push )
 #pragma warning( disable: 4302 )
 #pragma warning( disable: 4311 )
-	glfwProc_ = SetWindowLongPtr( window_, GWLP_WNDPROC, ( LONG_PTR )&TouchpadWin32Handler::WindowSubclassProc );
+    glfwProc_ = SetWindowLongPtr( window_, GWLP_WNDPROC, ( LONG_PTR )&TouchpadWin32Handler::WindowSubclassProc );
 #pragma warning( pop )
     if ( glfwProc_ == 0 )
     {
@@ -181,8 +181,8 @@ TouchpadWin32Handler::TouchpadWin32Handler( GLFWwindow* window )
     const RECT viewportRect {
         .left = 0,
         .top = 0,
-        .right = 10000,
-        .bottom = 10000,
+        .right = 1000,
+        .bottom = 1000,
     };
     HR = viewport_->SetViewportRect( &viewportRect );
 
@@ -210,15 +210,15 @@ LRESULT WINAPI TouchpadWin32Handler::WindowSubclassProc( HWND hwnd, UINT uMsg, W
     auto* handler = TouchpadWin32HandlerRegistry::instance().find( hwnd );
     assert( handler );
 
-	switch ( uMsg )
-	{
+    switch ( uMsg )
+    {
     //case WM_POINTERDOWN:
     case DM_POINTERHITTEST:
-		HR = handler->updateManager_->Update( NULL );
+        HR = handler->updateManager_->Update( NULL );
         break;
     case WM_INPUT:
         break;
-	}
+    }
 
 #pragma warning( push )
 #pragma warning( disable: 4312 )

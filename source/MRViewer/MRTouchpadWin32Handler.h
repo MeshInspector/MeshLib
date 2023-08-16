@@ -19,25 +19,25 @@ namespace MR
 class TouchpadWin32Handler : public TouchpadController::Handler
 {
 public:
-	TouchpadWin32Handler( GLFWwindow* window );
-	~TouchpadWin32Handler() override;
+    TouchpadWin32Handler( GLFWwindow* window );
+    ~TouchpadWin32Handler() override;
 
-	static LRESULT WINAPI WindowSubclassProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
+    static LRESULT WINAPI WindowSubclassProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 
 private:
-	HWND window_;
+    HWND window_;
 
-	LONG_PTR glfwProc_;
+    LONG_PTR glfwProc_;
 
-	Microsoft::WRL::ComPtr<IDirectManipulationManager> manager_;
-	Microsoft::WRL::ComPtr<IDirectManipulationUpdateManager> updateManager_;
-	Microsoft::WRL::ComPtr<IDirectManipulationViewport> viewport_;
+    Microsoft::WRL::ComPtr<IDirectManipulationManager> manager_;
+    Microsoft::WRL::ComPtr<IDirectManipulationUpdateManager> updateManager_;
+    Microsoft::WRL::ComPtr<IDirectManipulationViewport> viewport_;
 
-	class DirectManipulationViewportEventHandler;
-	Microsoft::WRL::ComPtr<DirectManipulationViewportEventHandler> eventHandler_;
-	DWORD eventHandlerCookie_;
+    class DirectManipulationViewportEventHandler;
+    Microsoft::WRL::ComPtr<DirectManipulationViewportEventHandler> eventHandler_;
+    DWORD eventHandlerCookie_;
 
-	friend class DirectManipulationViewportEventHandler;
+    friend class DirectManipulationViewportEventHandler;
 };
 
 } // namespace MR

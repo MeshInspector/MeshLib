@@ -50,8 +50,9 @@ private:
 class HRESULTHandler
 {
 public:
-    explicit HRESULTHandler( unsigned line )
-        : line_( line )
+    explicit HRESULTHandler( std::string_view file, unsigned line )
+        : file_( file )
+        , line_( line )
     {
         //
     }
@@ -62,16 +63,27 @@ public:
         {
             _com_error err( hr );
             _bstr_t msg( err.ErrorMessage() );
-            spdlog::error( "Line {}: error code = {:x} message = \"{}\"", line_, hr, (const char*)msg );
+            spdlog::error( "{}:{}: {:08x} {}", file_, line_, (unsigned long)hr, (const char*)msg );
         }
         return *this;
     }
 
 private:
+    std::string_view file_;
     unsigned line_;
 };
 
-#define HR HRESULTHandler( __LINE__ )
+consteval std::string_view FILENAME( std::string_view str )
+{
+    if ( auto posU = str.rfind( '/' ); posU != std::string_view::npos )
+        return str.substr( posU + 1 );
+    else if ( auto posW = str.rfind( '\\' ); posW != std::string_view::npos )
+        return str.substr( posW + 1 );
+    else
+        return str;
+}
+
+#define HR HRESULTHandler( FILENAME( __FILE__ ), __LINE__ )
 
 #define UNUSED( x ) (void)( x )
 

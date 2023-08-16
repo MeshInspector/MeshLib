@@ -26,6 +26,7 @@
 
 #include "MROpenVDBHelper.h"
 #include "MRTiffIO.h"
+#include "MRParallelFor.h"
 
 namespace
 {
@@ -575,18 +576,51 @@ Expected<DicomVolume, std::string> loadSingleDicomFolder( std::vector<std::files
     std::atomic<int> numLoadedSlices = 0;
     limitedArena.execute( [&]
     {
-        tbb::parallel_for( tbb::blocked_range( 0, int( slicesRes.size() ) ),
-                           [&]( const tbb::blocked_range<int>& range )
+        cancelCalled = !ParallelFor( 0, int( slicesRes.size() ), [&] ( int i )
         {
-            for ( int i = range.begin(); i < range.end(); ++i )
-            {
-                slicesRes[i] = loadSingleFile( files[i + 1], data, ( presentSlices.nthSetBit( i + 1 ) ) * dimXY );
-                ++numLoadedSlices;
-                if ( cb && std::this_thread::get_id() == mainThreadId )
-                    cancelCalled = !cb( 0.4f + 0.6f * ( float( numLoadedSlices ) / float( slicesRes.size() ) ) );
-            }
-        } );
+            slicesRes[i] = loadSingleFile( files[i + 1], data, ( presentSlices.nthSetBit( i + 1 ) ) * dimXY );
+            ++numLoadedSlices;
+        }, subprogress( cb, 0.4f, 0.9f ), 1 );
     } );
+    if ( cancelCalled )
+        return unexpected( "Loading canceled" );
+
+    // fill missed slices
+    int missedSlicesNum = int( seriesInfo.missedSlices.count() );
+    if ( missedSlicesNum != 0 )
+    {
+        int passedSlices = 0;
+        int prevPresentSlice = -1;
+        for ( auto presentSlice : presentSlices )
+        {
+            int numMissed = int( presentSlice ) - prevPresentSlice - 1;
+            if ( numMissed == 0 )
+            {
+                prevPresentSlice = int( presentSlice );
+                continue;
+            }
+
+            auto sb = subprogress( cb,
+                0.9f + 0.1f * float( passedSlices ) / float( missedSlicesNum ),
+                0.9f + 0.1f * float( passedSlices + numMissed ) / float( missedSlicesNum ) );
+            int firstMissed = prevPresentSlice + 1;
+            float ratioDenom = 1.0f / float( numMissed + 1 );
+            cancelCalled = !ParallelFor( firstMissed * dimXY, presentSlice * dimXY, [&] ( size_t i )
+            {
+                auto posZ = int( i / dimXY );
+                auto zBotDiff = posZ - prevPresentSlice;
+                auto botValue = data.data[i - dimXY * zBotDiff];
+                auto topValue = data.data[i + dimXY * ( int( presentSlice ) - posZ )];
+                float ratio = float( zBotDiff ) * ratioDenom;
+                data.data[i] = botValue * ( 1.0f - ratio ) + topValue * ratio;
+            }, sb );
+            if ( cancelCalled )
+                break;
+            prevPresentSlice = int( presentSlice );
+            passedSlices += numMissed;
+        }
+    }
+
     if ( cancelCalled )
         return unexpected( "Loading canceled" );
 

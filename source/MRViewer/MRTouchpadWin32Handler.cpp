@@ -108,9 +108,17 @@ public:
         DIRECTMANIPULATION_STATUS previous
     ) override
     {
+        assert( status_ == previous );
         if ( current == previous )
             return S_OK;
-        HR = viewport->ZoomToRect( 0.f, 0.f, 1000.f, 1000.f, FALSE );
+        status_ = current;
+
+        if ( previous == DIRECTMANIPULATION_ENABLED || previous == DIRECTMANIPULATION_INERTIA || current == DIRECTMANIPULATION_READY )
+        {
+            // TODO: reset gesture state
+            HR = viewport->ZoomToRect( 0.f, 0.f, 1000.f, 1000.f, FALSE );
+        }
+
         return S_OK;
     }
 
@@ -119,7 +127,6 @@ public:
     ) override
     {
         UNUSED( viewport );
-        spdlog::info( "OnViewportUpdated" );
         return S_OK;
     }
 
@@ -139,6 +146,7 @@ public:
 
 private:
     TouchpadWin32Handler* handler_;
+    DIRECTMANIPULATION_STATUS status_{ DIRECTMANIPULATION_ENABLED };
 };
 
 TouchpadWin32Handler::TouchpadWin32Handler( GLFWwindow* window )
@@ -212,8 +220,8 @@ LRESULT WINAPI TouchpadWin32Handler::WindowSubclassProc( HWND hwnd, UINT uMsg, W
 
     switch ( uMsg )
     {
-    //case WM_POINTERDOWN:
     case DM_POINTERHITTEST:
+        handler->processPointerHitTestEvent_( wParam );
         HR = handler->updateManager_->Update( NULL );
         break;
     case WM_INPUT:
@@ -224,6 +232,18 @@ LRESULT WINAPI TouchpadWin32Handler::WindowSubclassProc( HWND hwnd, UINT uMsg, W
 #pragma warning( disable: 4312 )
     return CallWindowProc( (WNDPROC)handler->glfwProc_, hwnd, uMsg, wParam, lParam );
 #pragma warning( pop )
+}
+
+void TouchpadWin32Handler::processPointerHitTestEvent_( WPARAM wParam )
+{
+    auto pointerId = GET_POINTERID_WPARAM( wParam );
+    POINTER_INPUT_TYPE pointerInputType;
+    if ( !::GetPointerType( pointerId, &pointerInputType ) )
+        return;
+    if ( pointerInputType != PT_TOUCHPAD )
+        return;
+
+    viewport_->SetContact( pointerId );
 }
 
 }

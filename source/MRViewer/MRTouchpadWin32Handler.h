@@ -28,6 +28,7 @@ private:
     HWND window_;
 
     LONG_PTR glfwProc_;
+    void processPointerHitTestEvent_( WPARAM wParam );
 
     Microsoft::WRL::ComPtr<IDirectManipulationManager> manager_;
     Microsoft::WRL::ComPtr<IDirectManipulationUpdateManager> updateManager_;

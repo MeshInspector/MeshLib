@@ -102,7 +102,8 @@ class TouchpadWin32Handler::DirectManipulationViewportEventHandler
         Microsoft::WRL::Implements<
             Microsoft::WRL::RuntimeClassFlags<Microsoft::WRL::RuntimeClassType::ClassicCom>,
             Microsoft::WRL::FtmBase,
-            IDirectManipulationViewportEventHandler
+            IDirectManipulationViewportEventHandler,
+            IDirectManipulationInteractionEventHandler
         >
     >
 {
@@ -133,7 +134,6 @@ public:
         {
             // TODO: reset gesture state
             HR = viewport->ZoomToRect( 0.f, 0.f, 1000.f, 1000.f, FALSE );
-            handler_->stopTouchpadEventPolling_();
         }
 
         return S_OK;
@@ -170,6 +170,21 @@ public:
             spdlog::info( "rotate x = {} y = {}", rotateX, rotateY );
         else
             spdlog::info( "offset x = {} y = {}", offsetX, offsetY );
+
+        return S_OK;
+    }
+
+    HRESULT STDMETHODCALLTYPE OnInteraction(
+        IDirectManipulationViewport2* viewport,
+        DIRECTMANIPULATION_INTERACTION_TYPE interaction
+    ) override
+    {
+        UNUSED( viewport );
+
+        if ( interaction == DIRECTMANIPULATION_INTERACTION_BEGIN )
+            handler_->startTouchpadEventPolling_();
+        else if ( interaction == DIRECTMANIPULATION_INTERACTION_END )
+            handler_->stopTouchpadEventPolling_();
 
         return S_OK;
     }
@@ -276,7 +291,6 @@ void TouchpadWin32Handler::processPointerHitTestEvent_( WPARAM wParam )
         return;
 
     viewport_->SetContact( pointerId );
-    startTouchpadEventPolling_();
 }
 
 void TouchpadWin32Handler::TouchpadEventPoll( PVOID lpParam, BOOLEAN timerOrWaitFired )

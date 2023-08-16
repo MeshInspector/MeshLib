@@ -77,6 +77,8 @@ private:
 
 constexpr DWORD TOUCHPAD_EVENT_POLLING_PERIOD_MS = 10; // 100 Hz
 
+#define FUZZY_ONE( x ) ( std::abs( ( x ) - 1 ) < 1e-6 )
+
 }
 
 namespace MR
@@ -142,7 +144,20 @@ public:
 
         float transform[6];
         HR = content->GetContentTransform( transform, ARRAYSIZE( transform ) );
-        spdlog::info( "scale = {} x = {} y = {}", transform[0], transform[4], transform[5] );
+
+        const auto
+            scaleX  = transform[0],
+            rotateY = transform[1],
+            rotateX = transform[2],
+            scaleY  = transform[3],
+            offsetX = transform[4],
+            offsetY = transform[5];
+        if ( !FUZZY_ONE( scaleX ) || !FUZZY_ONE( scaleY ) )
+            spdlog::info( "scale x = {} y = {}", scaleX, scaleY );
+        else if ( rotateX != 0.f || rotateY != 0.f )
+            spdlog::info( "rotate x = {} y = {}", rotateX, rotateY );
+        else
+            spdlog::info( "offset x = {} y = {}", offsetX, offsetY );
 
         return S_OK;
     }

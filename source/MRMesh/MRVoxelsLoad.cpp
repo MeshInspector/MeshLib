@@ -565,7 +565,8 @@ Expected<DicomVolume, std::string> loadSingleDicomFolder( std::vector<std::files
     if ( !reportProgress( cb, 0.4f ) )
         return unexpected( "Loading canceled" );
 
-    auto presentSlices = seriesInfo.missedSlices;
+    auto presentSlices = seriesInfo.missedSlices; 
+    presentSlices.resize( data.dims.z );
     presentSlices.flip();
 
     // other slices

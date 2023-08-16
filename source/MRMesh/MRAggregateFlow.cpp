@@ -328,4 +328,33 @@ auto FlowAggregator::computeFlowsPerBasin( const std::vector<MeshTriPoint> & sta
         []( size_t ) { return 1.0f; } );
 }
 
+UndirectedEdgeBitSet FlowAggregator::computeCatchmentDelineation() const
+{
+    MR_TIMER
+    Vector<VertId, FaceId> face2rootVert( mesh_.topology.faceSize() );
+    BitSetParallelFor( mesh_.topology.getValidFaces(), [&]( FaceId f )
+    {
+        constexpr auto oneThird = 1.0f / 3;
+        const MeshTriPoint start( mesh_.topology.edgeWithLeft( f ), { oneThird, oneThird } );
+        VertId nextVert;
+        computeSteepestDescentPath( mesh_, heights_, start, {}, nullptr, &nextVert );
+        if ( nextVert )
+            face2rootVert[f] = rootVert_[nextVert];
+    } );
+
+    UndirectedEdgeBitSet res( mesh_.topology.undirectedEdgeSize() );
+    BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
+    {
+        auto l = mesh_.topology.left( ue );
+        if ( !l )
+            return;
+        auto r = mesh_.topology.right( ue );
+        if ( !r )
+            return;
+        if ( face2rootVert[l] != face2rootVert[r] )
+            res.set( ue );
+    } );
+    return res;
+}
+
 } //namespace MR

@@ -55,6 +55,10 @@ public:
         const std::function<MeshTriPoint(size_t)> & startById, ///< can return invalid point that will be ignored
         const std::function<float(size_t)> & amountById ) const;
 
+    /// finds the edges on the mesh that divides catchment basin
+    /// (every triangle is attributed to the final destination point based on the path originated from its centroid)
+    [[nodiscard]] MRMESH_API UndirectedEdgeBitSet computeCatchmentDelineation() const;
+
 private:
     const Mesh & mesh_;
     const VertScalars & heights_;

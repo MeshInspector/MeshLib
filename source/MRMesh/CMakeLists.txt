@@ -19,7 +19,7 @@ option(MRMESH_NO_GLTF "Disable glTF support" OFF)
 option(MRMESH_NO_XML "Disable XML support (affects 3MF support)" OFF)
 
 IF(NOT MESHLIB_PYTHON_SUPPORT)
-	set(MRMESH_NO_PYTHON OFF)
+	set(MRMESH_NO_PYTHON ON)
 ENDIF()
 
 file(GLOB SOURCES "*.cpp")

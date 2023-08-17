@@ -30,7 +30,9 @@ void RenderVolumeObject::render( const RenderParams& renderParams )
 
 void RenderVolumeObject::renderPicker( const BaseRenderParams& renderParams, unsigned geomId )
 {
-    render_( renderParams, geomId );
+    Vector3f ligthPos;
+    RenderParams params{ renderParams, ligthPos };
+    render_( params, geomId );
 }
 
 size_t RenderVolumeObject::heapBytes() const
@@ -50,7 +52,7 @@ void RenderVolumeObject::forceBindAll()
     bindVolume_( true );
 }
 
-void RenderVolumeObject::render_( const BaseRenderParams& renderParams, unsigned geomId )
+void RenderVolumeObject::render_( const RenderParams& renderParams, unsigned geomId )
 {
     if ( !getViewerInstance().isGLInitialized() )
     {
@@ -91,7 +93,17 @@ void RenderVolumeObject::render_( const BaseRenderParams& renderParams, unsigned
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrix.data() ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrix.data() ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrix.data() ) );
-
+    if ( !picker )
+    {
+        if ( renderParams.normMatrixPtr )
+        {
+            GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "normal_matrix" ), 1, GL_TRUE, renderParams.normMatrixPtr->data() ) );
+        }
+        GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &renderParams.lightPos.x ) );
+        GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specExp" ), objVoxels_->getShininess() ) );
+        GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specularStrength" ), objVoxels_->getSpecularStrength() ) );
+        GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), objVoxels_->getAmbientStrength() ) );
+    }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ),
         objVoxels_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),
@@ -173,6 +185,8 @@ void RenderVolumeObject::bindVolume_( bool picker )
     auto shader = picker ? GLStaticHolder::getShaderId( GLStaticHolder::VolumePicker ) :
         GLStaticHolder::getShaderId( GLStaticHolder::Volume );
 
+    const auto& params = objVoxels_->getVolumeRenderingParams();
+
     GL_EXEC( glUseProgram( shader ) );
 
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
@@ -186,18 +200,26 @@ void RenderVolumeObject::bindVolume_( bool picker )
         }
         assert( volume );
         volume_.loadData(
-            { .resolution = volume->dims, .internalFormat = GL_R8, .format = GL_RED, .type = GL_UNSIGNED_BYTE },
+            {
+                .resolution = volume->dims,
+                .internalFormat = GL_R8,
+                .format = GL_RED,
+                .type = GL_UNSIGNED_BYTE,
+                .filter = params.volumeFilterType
+            },
             volume->data );
     }
     else
+    {
         volume_.bind();
+        setTextureFilterType( params.volumeFilterType, true );
+    }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "volume" ), 0 ) );
 
     GL_EXEC( glActiveTexture( GL_TEXTURE1 ) );
     if ( dirty_ & DIRTY_TEXTURE )
     {
         const auto& volume = objVoxels_->vdbVolume();
-        const auto& params = objVoxels_->getVolumeRenderingParams();
         std::vector<Color> denseMap( 256 );
         Vector2f realMinMax;
         realMinMax[0] = volume.min;

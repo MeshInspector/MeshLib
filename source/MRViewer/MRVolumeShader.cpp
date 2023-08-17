@@ -34,6 +34,12 @@ std::string getVolumeFragmentShader()
   uniform mat4 model;
   uniform mat4 view;
   uniform mat4 proj;
+  uniform mat4 normal_matrix;
+
+  uniform float specExp;   // (in from base) lighting parameter
+  uniform vec3 ligthPosEye;   // (in from base) light position transformed by view only (not proj)                            
+  uniform float ambientStrength;    // (in from base) non-directional lighting
+  uniform float specularStrength;   // (in from base) reflection intensity
 
   uniform vec4 viewport;
   uniform vec3 voxelSize;
@@ -67,11 +73,13 @@ std::string getVolumeFragmentShader()
     vec3 normRayDir = normalize( rayEnd - rayStart );
 
     vec3 dims = vec3( textureSize( volume, 0 ) );
+    vec3 dimStepVoxel = vec3(1,1,1)/dims;
     vec3 minPoint = voxelSize * minCorner;
     vec3 maxPoint = minPoint + vec3( dims.x * voxelSize.x, dims.y * voxelSize.y, dims.z * voxelSize.z );
     
     bool firstFound = false;
     vec3 firstOpaque = vec3(0.0,0.0,0.0);
+
     vec3 textCoord = vec3(0.0,0.0,0.0);
     outColor = vec4(0.0,0.0,0.0,0.0);
     vec3 rayStep = step * normRayDir;
@@ -90,11 +98,14 @@ std::string getVolumeFragmentShader()
 
         float density = texture( volume, textCoord ).r;        
         vec4 color = texture( denseMap, vec2( density, 0.5 ) );
+
         float alpha = outColor.a + color.a * ( 1.0 - outColor.a );
         if ( alpha == 0.0 )
             continue;
+
         outColor.rgb = mix( color.a * color.rgb, outColor.rgb, outColor.a ) / alpha;
         outColor.a = alpha;
+
         if ( outColor.a > 0.98 )
             outColor.a = 1.0;
 
@@ -107,6 +118,7 @@ std::string getVolumeFragmentShader()
 
     if ( outColor.a == 0.0 )
         discard;
+
     vec4 projCoord = fullM * vec4( firstOpaque, 1.0 );
     gl_FragDepth = projCoord.z / projCoord.w * 0.5 + 0.5;
   }

@@ -217,9 +217,10 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const SurfacePath& s
         const auto meshContour = convertMeshTriPointsToClosedContour( mesh, meshTriPoints );
 
         //FaceMap faceMap;
-        //CutMeshParameters cutMeshParams{ .new2OldMap = &faceMap };
+        CutMeshParameters cutMeshParams;
+        cutMeshParams.forceFillAfterBadCut = true;
 
-        const auto cutRes = cutMesh( res.meshAfterCut, { meshContour }/*, cutMeshParams*/);
+        const auto cutRes = cutMesh( res.meshAfterCut, { meshContour }, cutMeshParams);
 
         if ( cutRes.resultCut.empty() )
         {
@@ -975,7 +976,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         } );*/
         
         // go on in the inverse order (from the highest isoline to the lowest )
-        for ( size_t i = 0; i < numIsolines; ++i )
+        for ( int i = 0; i < numIsolines; ++i )
         {
             if ( sbp && !sbp( float( i ) / numIsolines ) )
                 return false;
@@ -983,17 +984,21 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
             if ( extract.isolines[i].empty() )
                 continue;
 
-            for ( const auto& surfacePath : extract.isolines[i] )
+            for ( int j = 1; j < extract.isolines[i].size(); ++j )
             {
+                const auto& surfacePath = extract.isolines[i][j];
+
                 Polyline3 polyline;
                 polyline.addFromSurfacePath( res.modifiedMesh, surfacePath );
-                const auto contour = polyline.contours().front();
+                const auto contours = polyline.contours();
+                const auto& contour = contours.front();
+
                 res.isolines.push_back( contour );
 
                 auto nearestPointIt = surfacePath.begin();
                 float minDistSq = FLT_MAX;
 
-                if ( mp.region )
+                /*if ( mp.region )
                 {
                     //skip isoline if nore than half of its point are not lying in the selection
                     size_t pointsInside = 0;
@@ -1006,7 +1011,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
 
                     if ( pointsInside < ( contour.size() * 0.5f ) )
                         continue;
-                }
+                }*/
 
                 // find the nearest point to the last processed one
                 if ( prevEdgePoint.e.valid() )

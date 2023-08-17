@@ -121,6 +121,7 @@ public:
     // struct to control volume rendering texture
     struct VolumeRenderingParams
     {
+        FilterType volumeFilterType{ FilterType::Linear };
         // coloring type
         enum class LutType
         {

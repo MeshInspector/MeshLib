@@ -30,7 +30,7 @@ private:
     GlTexture3 volume_;
     GlTexture2 denseMap_;
 
-    void render_( const BaseRenderParams& params, unsigned geomId );
+    void render_( const RenderParams& params, unsigned geomId );
     void bindVolume_( bool picker );
 
     // Create a new set of OpenGL buffer objects

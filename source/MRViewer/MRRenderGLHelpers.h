@@ -58,6 +58,9 @@ private:
     size_t size_ = 0;
 };
 
+MRVIEWER_API void setTextureFilterType( FilterType filter, bool dim3d = false );
+MRVIEWER_API void setTextureWrapType( WrapType wrap, bool dim3d = false );
+
 // represents OpenGL 2D texture owner, and allows uploading data in it remembering texture size
 class GlTexture2
 {

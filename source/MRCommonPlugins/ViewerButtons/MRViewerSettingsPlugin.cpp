@@ -92,6 +92,13 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     }
     drawSpaceMouseSettings_( menuScaling );
 
+    if ( UI::button( "Touchpad Settings", Vector2f( btnHalfSizeX, 0 ) ) )
+    {
+        touchpadParameters_ = viewer->touchpadController.getParameters();
+        ImGui::OpenPopup( "Touchpad Settings" );
+    }
+    drawTouchpadSettings_( menuScaling );
+
     const auto& viewportParameters = viewer->viewport().getParameters();
     // Viewing options
     if ( RibbonButtonDrawer::CustomCollapsingHeader( "Current Viewport Options", ImGuiTreeNodeFlags_DefaultOpen ) )
@@ -502,6 +509,46 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
         getViewerInstance().spaceMouseController.setParams( spaceMouseParams_ );
 
     ImGui::PopStyleVar();
+    ImGui::EndPopup();
+}
+
+void ViewerSettingsPlugin::drawTouchpadSettings_( float menuScaling )
+{
+    ImVec2 windowSize = ImVec2( 500 * menuScaling, 0 );
+    ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos( center, ImGuiCond_Appearing, ImVec2( 0.5f, 0.5f ) );
+    ImGui::SetNextWindowSizeConstraints( ImVec2( windowSize.x, -1 ), ImVec2( windowSize.x, 0 ) );
+
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 3 * MR::cDefaultItemSpacing * menuScaling, 3 * MR::cDefaultItemSpacing * menuScaling ) );
+    if ( !ImGui::BeginModalNoAnimation( "Touchpad Settings", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
+    {
+        ImGui::PopStyleVar();
+        return;
+    }
+    ImGui::PopStyleVar();
+
+    if ( ImGui::ModalBigTitle( "Touchpad Settings", menuScaling ) )
+    {
+        ImGui::CloseCurrentPopup();
+    }
+
+    const std::vector<std::string> swipeModeList = { "Swipe Rotates Camera", "Swipe Moves Camera" };
+    assert( swipeModeList.size() == TouchpadController::Parameters::SwipeModeCount );
+
+    bool updateSettings = false;
+    if ( UI::checkbox( "Ignore Kinetic Movements", &touchpadParameters_.ignoreKineticMoves ) )
+        updateSettings = true;
+    if ( ImGui::DragFloatValid( "Swipe Speed", &touchpadParameters_.swipeScale, 1.f, 1.f, 100.f ) )
+        updateSettings = true;
+    if ( UI::checkbox( "Allow System to Interrupt Gestures", &touchpadParameters_.cancellable ) )
+        updateSettings = true;
+    if ( UI::combo( "Swipe Mode", (int*)&touchpadParameters_.swipeMode, swipeModeList ) )
+        updateSettings = true;
+    if ( updateSettings )
+        viewer->touchpadController.setParameters( touchpadParameters_ );
+
     ImGui::EndPopup();
 }
 

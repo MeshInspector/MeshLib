@@ -40,7 +40,11 @@ public:
     /// \return the edge from first new to second new vertex
     MRMESH_API EdgeId addFromPoints( const V * vs, size_t num );
 
-    /// appends polyline (from) in addition to this polyline: creates new edges, faces, verts and points
+    /// appends polyline (from) in addition to this polyline: creates new edges, verts and points;
+    /// \param outVmap,outEmap (optionally) returns mappings: from.id -> this.id
+    MRMESH_API void addPart( const Polyline<V>& from,
+        VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr );
+    /// appends polyline (from) in addition to this polyline: creates new edges, verts and points
     MRMESH_API void addPartByMask( const Polyline<V>& from, const UndirectedEdgeBitSet& mask,
         VertMap* outVmap = nullptr, EdgeMap* outEmap = nullptr );
 

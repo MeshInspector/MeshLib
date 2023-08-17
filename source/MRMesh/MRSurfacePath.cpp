@@ -198,12 +198,10 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
     float maxGradSq = -FLT_MAX;
     if ( fo != fd )
     {
+        // jump by default to edge's end with smaller value
         const auto odSq = ( po - pd ).lengthSq();
         maxGradSq = odSq > 0 ? sqr( fo - fd ) / odSq : FLT_MAX;
-        if ( fo < fd )
-            result = MeshEdgePoint{ ep.e, 0 };
-        else if ( fd < fo )
-            result = MeshEdgePoint{ ep.e.sym(), 0 };
+        result = fo < fd ? MeshEdgePoint{ ep.e, 0 } : MeshEdgePoint{ ep.e.sym(), 0 };
     }
 
     if ( mesh_.topology.left( ep.e ) )
@@ -308,6 +306,14 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
                 maxGradSq = vertGradSq;
             }
         }
+    }
+
+    if ( !result )
+    {
+        // otherwise jump in the closest edge's end
+        assert( maxGradSq == -FLT_MAX );
+        assert( fo == fd );
+        result = ep.a <= 0.5f ? MeshEdgePoint{ ep.e, 0 } : MeshEdgePoint{ ep.e.sym(), 0 };
     }
 
     return result;
@@ -481,7 +487,7 @@ void computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
     }
 }
 
-UndirectedEdgeBitSet findRidgeEdges( const Mesh & mesh, const VertScalars & field )
+UndirectedEdgeBitSet findExtremeEdges( const Mesh & mesh, const VertScalars & field, ExtremeEdgeType type )
 {
     MR_TIMER
     UndirectedEdgeBitSet res( mesh.topology.undirectedEdgeSize() );
@@ -503,7 +509,9 @@ UndirectedEdgeBitSet findRidgeEdges( const Mesh & mesh, const VertScalars & fiel
         const auto fd = field[vd];
         const auto fl = field[vl];
 
-        const auto gradL = computeGradient( pd - po, pl - po, fd - fo, fl - fo );
+        auto gradL = computeGradient( pd - po, pl - po, fd - fo, fl - fo );
+        if ( type == ExtremeEdgeType::Gorge )
+            gradL = -gradL;
         if ( dirEnters01( { po, pd, pl }, gradL ) )
             return;
 
@@ -511,7 +519,9 @@ UndirectedEdgeBitSet findRidgeEdges( const Mesh & mesh, const VertScalars & fiel
         const auto pr = mesh.points[vr];
         const auto fr = field[vr];
 
-        const auto gradR = computeGradient( pr - po, pd - po, fr - fo, fd - fo );
+        auto gradR = computeGradient( pr - po, pd - po, fr - fo, fd - fo );
+        if ( type == ExtremeEdgeType::Gorge )
+            gradR = -gradR;
         if ( dirEnters01( { pd, po, pr }, gradR ) )
             return;
 

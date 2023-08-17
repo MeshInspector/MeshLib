@@ -261,6 +261,17 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveVoxels, [] ( pybind11::module_& m )
         pybind11::arg( "path" ), pybind11::arg( "VdbVoxels" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "Save raw voxels file, writing parameters in name." );
 } )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadDCMResult, [] ( pybind11::module_& m )
+{
+    pybind11::class_<MR::VoxelsLoad::LoadDCMResult>( m, "LoadDCMResult" ).
+        def_readwrite( "vdbVolume", &MR::VoxelsLoad::LoadDCMResult::vdbVolume ).
+        def_readwrite( "name", &MR::VoxelsLoad::LoadDCMResult::name ).
+        def_readwrite( "xf", &MR::VoxelsLoad::LoadDCMResult::xf );
+} )
+
+MR_ADD_PYTHON_VEC( mrmeshpy, LoadDCMResults, MR::VoxelsLoad::LoadDCMResult )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
 {
     m.def( "loadVoxels",
@@ -268,11 +279,27 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
         pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "Load raw voxels file, parsing parameters from name." );
 
-    pybind11::class_<MR::VoxelsLoad::LoadDCMResult>( m, "LoadDCMResult" ).
-        def_readwrite( "vdbVolume", &MR::VoxelsLoad::LoadDCMResult::vdbVolume ).
-        def_readwrite( "name", &MR::VoxelsLoad::LoadDCMResult::name );
-
     m.def( "loadDCMFolder", MR::decorateExpected( &MR::VoxelsLoad::loadDCMFolder ),
         pybind11::arg( "path" ), pybind11::arg( "maxNumThreads" ) = 4, pybind11::arg( "callback" ) = ProgressCallback{},
-        "Loads data from DICOM file(s)" );
+        "Loads first volumetric data from DICOM file(s)" );
+
+    m.def( "loadDCMsFolder", 
+        [] ( const std::filesystem::path& p, unsigned maxNumThreads, const ProgressCallback& cb)
+    {
+        auto res = MR::VoxelsLoad::loadDCMsFolder( p, maxNumThreads, cb );
+        std::vector<MR::VoxelsLoad::LoadDCMResult> resVec;
+        std::string accumError;
+        for ( auto& r : res )
+        {
+            if ( r.has_value() )
+                resVec.push_back( std::move( *r ) );
+            else
+                accumError += ( r.error() + "\n" );
+        }
+        if ( resVec.empty() )
+            throwExceptionFromExpected( accumError );
+        return resVec;
+    },
+        pybind11::arg( "path" ), pybind11::arg( "maxNumThreads" ) = 4, pybind11::arg( "callback" ) = ProgressCallback{},
+        "Loads all volumetric data from DICOM file(s)" );
 } )

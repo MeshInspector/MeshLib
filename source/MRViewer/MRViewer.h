@@ -18,6 +18,8 @@
 #include "MRMouseController.h"
 #include "MRTouchesController.h"
 #include "MRSpaceMouseController.h"
+#include "MRTouchpadController.h"
+
 #include <boost/signals2/signal.hpp>
 #include <chrono>
 #include <cstdint>
@@ -39,6 +41,14 @@ auto bindSlotCallback( BaseClass* base, MemberFuncPtr func )
 
 // you will not be able to move your struct after using this macro
 #define MAKE_SLOT(func) bindSlotCallback(this,func)
+
+/// helper macros to add an `MR::Viewer` method call to the event queue
+#define ENQUEUE_VIEWER_METHOD( NAME, METHOD ) MR::getViewerInstance().eventQueue.emplace( { NAME, [] { \
+    MR::getViewerInstance() . METHOD (); \
+} } )
+#define ENQUEUE_VIEWER_METHOD_ARGS( NAME, METHOD, ... ) MR::getViewerInstance().eventQueue.emplace( { NAME, [__VA_ARGS__] { \
+    MR::getViewerInstance() . METHOD ( __VA_ARGS__ ); \
+} } )
 
 namespace MR
 {
@@ -143,6 +153,16 @@ public:
     MRVIEWER_API bool touchStart( int id, int x, int y );
     MRVIEWER_API bool touchMove( int id, int x, int y );
     MRVIEWER_API bool touchEnd( int id, int x, int y );
+    // Touchpad gesture callbacks
+    MRVIEWER_API bool touchpadRotateStart( float angle );
+    MRVIEWER_API bool touchpadRotateChange( float angle );
+    MRVIEWER_API bool touchpadRotateCancel();
+    MRVIEWER_API bool touchpadRotateEnd();
+    MRVIEWER_API bool touchpadSwipe( float deltaX, float deltaY, bool kinetic );
+    MRVIEWER_API bool touchpadZoomStart( float scale );
+    MRVIEWER_API bool touchpadZoomChange( float scale );
+    MRVIEWER_API bool touchpadZoomCancel();
+    MRVIEWER_API bool touchpadZoomEnd();
     // This function is called when window should close, if return value is true, window will stay open
     MRVIEWER_API bool interruptWindowClose();
     // callback to update connected / disconnected joystick
@@ -439,6 +459,7 @@ public:
     MouseController mouseController;
     TouchesController touchesController;
     SpaceMouseController spaceMouseController;
+    TouchpadController touchpadController;
 
     float pixelRatio{ 1.0f };
     Vector2i framebufferSize;
@@ -532,6 +553,20 @@ public:
     TouchSignal touchStartSignal; // signal is called when any touch starts
     TouchSignal touchMoveSignal; // signal is called when touch moves
     TouchSignal touchEndSignal; // signal is called when touch stops
+    // Touchpad events
+    using TouchpadRotateSignal = boost::signals2::signal<bool( float angle ), SignalStopHandler>;
+    using TouchpadSwipeSignal = boost::signals2::signal<bool( float deltaX, float deltaY, bool kinetic ), SignalStopHandler>;
+    using TouchpadZoomSignal = boost::signals2::signal<bool( float scale ), SignalStopHandler>;
+    using TouchpadEndSignal = boost::signals2::signal<bool(), SignalStopHandler>;
+    TouchpadRotateSignal touchpadRotateStartSignal;
+    TouchpadRotateSignal touchpadRotateChangeSignal;
+    TouchpadEndSignal touchpadRotateCancelSignal;
+    TouchpadEndSignal touchpadRotateEndSignal;
+    TouchpadSwipeSignal touchpadSwipeSignal;
+    TouchpadZoomSignal touchpadZoomStartSignal;
+    TouchpadZoomSignal touchpadZoomChangeSignal;
+    TouchpadEndSignal touchpadZoomCancelSignal;
+    TouchpadEndSignal touchpadZoomEndSignal;
     // Window focus signal
     using PostFocusSignal = boost::signals2::signal<void( bool )>;
     PostFocusSignal postFocusSignal;

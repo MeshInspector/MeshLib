@@ -1014,7 +1014,7 @@
     <ClInclude Include="MRIOParsing.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
-    <ClInclude Include="MRReadTIFF.h">
+    <ClInclude Include="MRTiffIO.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRTerrainTriangulation.h">
@@ -1031,6 +1031,15 @@
     </ClInclude>
     <ClInclude Include="MRSegmPoint.h">
       <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MREmbedTerrainStructure.h">
+      <Filter>Source Files\Boolean</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMapEdge.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshExtrude.h">
+      <Filter>Source Files\Mesh</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1700,7 +1709,7 @@
     <ClCompile Include="MRIOParsing.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
-    <ClCompile Include="MRReadTIFF.cpp">
+    <ClCompile Include="MRTiffIO.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRTerrainTriangulation.cpp">
@@ -1711,6 +1720,12 @@
     </ClCompile>
     <ClCompile Include="MRPointsProject.cpp">
       <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MREmbedTerrainStructure.cpp">
+      <Filter>Source Files\Boolean</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshExtrude.cpp">
+      <Filter>Source Files\Mesh</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

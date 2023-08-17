@@ -490,27 +490,6 @@ void MeshTopology::flipEdgesOut( EdgeId e0, T && flipNeeded )
     } 
 }
 
-inline EdgeId mapEdge( const WholeEdgeMap & map, EdgeId src )
-{
-    EdgeId res = map[ src.undirected() ];
-    if ( res && src.odd() )
-        res = res.sym();
-    return res;
-}
-
-inline EdgeId mapEdge( const WholeEdgeHashMap & map, EdgeId src )
-{
-    EdgeId res;
-    auto it = map.find( src.undirected() );
-    if ( it != map.end() )
-    {
-        res = it->second;
-        if ( src.odd() )
-            res = res.sym();
-    }
-    return res;
-}
-
 // rearrange vector values by map (old.id -> new.id)
 template<typename T, typename I>
 [[nodiscard]] Vector<T, I> rearrangeVectorByMap( const Vector<T, I>& oldVector, const BMap<I, I>& map )

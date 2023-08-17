@@ -3,7 +3,7 @@
 #include "MRDistanceMap.h"
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
-#include "MRReadTIFF.h"
+#include "MRTiffIO.h"
 #include <filesystem>
 
 namespace MR
@@ -134,8 +134,8 @@ Expected<DistanceMap, std::string> fromTiff( const std::filesystem::path& path, 
 
     DistanceMap res( paramsExp->imageSize.x, paramsExp->imageSize.y );
     RawTiffOutput output;
-    output.data = res.data();
-    output.size = paramsExp->imageSize.x * paramsExp->imageSize.y;
+    output.bytes = ( uint8_t* )res.data();
+    output.size = ( paramsExp->imageSize.x * paramsExp->imageSize.y ) * sizeof( float );
 
     AffineXf3f outXf;
     output.p2wXf = &outXf;

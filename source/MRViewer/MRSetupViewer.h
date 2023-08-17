@@ -9,6 +9,10 @@ namespace MR
 class MRVIEWER_CLASS ViewerSetup
 {
 public:
+    // explicitly define ctors to avoid warning C5267: definition of implicit copy constructor is deprecated because it has a user-provided destructor
+    ViewerSetup() = default;
+    ViewerSetup( const ViewerSetup & ) = default;
+    ViewerSetup( ViewerSetup && ) = default;
     virtual ~ViewerSetup() = default;
     // Setups Menu Save and Open plugins
     MRVIEWER_API virtual void setupBasePlugins( Viewer* /*viewer*/ ) const;

@@ -21,7 +21,6 @@
 #include "MRMeshComponents.h"
 #include "MRPolylineProject.h"
 #include "MRContoursCut.h"
-#include "MRFillContour.h"
 #include "MRFillContourByGraphCut.h"
 
 #include "MRPch/MRTBB.h"
@@ -245,8 +244,7 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const SurfacePath& s
             for ( const auto edgeId : edgeLoop )
             {
                 const auto orgVertId = res.meshAfterCut.topology.org( edgeId );
-                const auto dstVertId = res.meshAfterCut.topology.dest( edgeId );
-                if ( !orgVertId.valid() || !dstVertId.valid() )
+                if ( !orgVertId.valid() )
                     continue;
 
                 startVertIds.set( orgVertId );

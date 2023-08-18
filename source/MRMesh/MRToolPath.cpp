@@ -23,6 +23,7 @@
 #include "MRContoursCut.h"
 #include "MRFillContourByGraphCut.h"
 
+#include "MRParallelFor.h"
 #include "MRPch/MRTBB.h"
 #include <sstream>
 #include <span>
@@ -328,40 +329,21 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsoline
     const auto& topology = res.meshAfterCut.topology;
     res.isolines.resize( numIsolines );
 
-    auto mainThreadId = std::this_thread::get_id();
-    std::atomic<bool> keepGoing{ true };
-    std::atomic<size_t> numDone{ 0 };
-
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, res.isolines.size() ),
-                       [&] ( const tbb::blocked_range<size_t>& range )
+    const bool parallelForRes = MR::ParallelFor( size_t( 0 ), res.isolines.size(),
+    [&] ( size_t i )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
+        res.isolines[i] = extractIsolines( topology, distances, params.sectionStep * ( i + 1 ) );
+
+        if ( params.bypassDir == BypassDirection::CounterClockwise )
         {
-            if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
-                break;
-
-            res.isolines[i] = extractIsolines( topology, distances, params.sectionStep * ( i + 1 ) );
-
-            if ( params.bypassDir == BypassDirection::CounterClockwise )
+            for ( auto& isoLine : res.isolines[i] )
             {
-                for ( auto& isoLine : res.isolines[i] )
-                {
-                    std::reverse( isoLine.begin(), isoLine.end() );
-                }
+                std::reverse( isoLine.begin(), isoLine.end() );
             }
-        }
+        }        
+    }, params.cb );
 
-        if ( params.cb )
-            numDone += range.size();
-
-        if ( params.cb && std::this_thread::get_id() == mainThreadId )
-        {
-            if ( !params.cb( float( numDone ) / float( numIsolines ) ) )
-                keepGoing.store( false, std::memory_order_relaxed );
-        }
-    } );
-
-    if ( !keepGoing.load( std::memory_order_relaxed ) || !reportProgress( params.cb, 1.0f ) )
+    if ( !parallelForRes || !reportProgress( params.cb, 1.0f ) )
         return {};
 
     return res;

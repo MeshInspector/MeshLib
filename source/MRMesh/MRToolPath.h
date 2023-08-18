@@ -107,18 +107,22 @@ struct GCommand
 
 struct ToolPathResult
 {
-    FaceBitSet selection;
     // stores isolines without transits
     Contours3f isolines;
     // mesh after fixing undercuts and offset
     Mesh modifiedMesh;
     // constains type of movement and its feed
     std::vector<GCommand> commands;
-
+    // boundaries of the selection on the original mesh
     Contours3f contoursBeforeProjection;
+    // boundaries of the working area on the offset mesh (which are a projection of contoursBeforeProjection )
+    Contours3f contoursBeforeCutMesh;
+    // polyline containing start vertices for isolines
     Contours3f startContours;
+    // polylines were failed to build isolines
     Contours3f failedContours;
-    std::vector<PositionedText> startVertices;
+    // start vertices on the offset mesh used for calcutating isolines
+    std::vector<Vector3f> startVertices;
 };
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )

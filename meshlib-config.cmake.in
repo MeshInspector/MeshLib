@@ -9,10 +9,10 @@ get_filename_component(SELF_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 
 set(MESHLIB_BUILD_MRVIEWER @MESHLIB_BUILD_MRVIEWER@)
 
-include(${SELF_DIR}/cmake/MRMeshConfig.cmake)
+include(${SELF_DIR}/MRMeshConfig.cmake)
 if(MESHLIB_BUILD_MRVIEWER)
-    include(${SELF_DIR}/cmake/MRViewerConfig.cmake)
-    include(${SELF_DIR}/cmake/MRCommonPluginsConfig.cmake)
+    include(${SELF_DIR}/MRViewerConfig.cmake)
+    include(${SELF_DIR}/MRCommonPluginsConfig.cmake)
 endif(MESHLIB_BUILD_MRVIEWER)
 
 if(APPLE)

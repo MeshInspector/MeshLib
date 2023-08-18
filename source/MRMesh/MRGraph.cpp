@@ -78,20 +78,25 @@ void Graph::merge( VertId remnant, VertId dead, std::function<void(EdgeId, EdgeI
         neis = std::move( neighboursPerVertex_[remnant] );
     else
         neis = std::move( neighboursPerVertex_[dead] );
+    neis.clear();
     neighboursPerVertex_[dead] = {};
 
     for ( const auto & x : neiEdges )
     {
         if ( neis.empty() || endsPerEdge_[neis.back()].otherEnd( remnant ) != x.nei )
         {
+            assert( validEdges_.test( x.e ) );
             neis.push_back( x.e );
             continue;
         }
         validEdges_.reset( x.e );
+        [[maybe_unused]] auto n = erase( neighboursPerVertex_[x.nei], x.e );
+        assert( n == 1 );
         onMergeEdges( neis.back(), x.e );
     }
     std::sort( neis.begin(), neis.end() );
     neighboursPerVertex_[remnant] = std::move( neis );
+    //assert( graph_.checkValidity() );
 }
 
 bool Graph::checkValidity() const

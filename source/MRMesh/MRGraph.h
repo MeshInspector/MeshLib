@@ -38,9 +38,9 @@ public:
             assert( what != with );
             assert( ( v0 == what && v1 != with ) || ( v1 == what && v0 != with ) );
             if ( v0 == what )
-                v1 = with;
-            else
                 v0 = with;
+            else
+                v1 = with;
             if ( v0 > v1 )
                 std::swap( v0, v1 );
         }
@@ -56,6 +56,12 @@ public:
 
     /// returns all valid edges in the graph
     [[nodiscard]] const EdgeBitSet & validEdges() const { return validEdges_; }
+
+    /// returns all edges adjacent to given vertex
+    [[nodiscard]] const Neighbours & neighbours( VertId v ) const { return neighboursPerVertex_[v]; }
+
+    /// returns the ends of given edge
+    [[nodiscard]] const EndVertices & ends( EdgeId e ) const { return endsPerEdge_[e]; }
 
     /// finds and returns edge between vertices a and b; returns invalid edge otherwise
     [[nodiscard]] MRMESH_API EdgeId findEdge( VertId a, VertId b ) const;

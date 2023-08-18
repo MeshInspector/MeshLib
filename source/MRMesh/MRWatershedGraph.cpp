@@ -106,4 +106,41 @@ void WatershedGraph::construct( const MeshTopology & topology, const VertScalars
     graph_.construct( std::move( neighboursPerVertex ), std::move( endsPerEdge ) );
 }
 
+void WatershedGraph::mergeViaLowestBd()
+{
+    MR_TIMER
+
+    Graph::EdgeId lowestEdge;
+    float lowestLevel = FLT_MAX;
+    for ( auto ei : graph_.validEdges() )
+    {
+        const auto ends = graph_.ends( ei );
+        const auto l0 = basins_[ends.v0].lowestHeight;
+        const auto l1 = basins_[ends.v1].lowestHeight;
+        const auto le = bds_[ei].lowestHeight;
+        assert( le >= l0 && le >= l1 );
+        const auto level = std::min( le - l0, le - l1 );
+        if ( level < lowestLevel )
+        {
+            lowestLevel = level;
+            lowestEdge = ei;
+        }
+    }
+    if ( !lowestEdge )
+        return;
+
+    const auto ends = graph_.ends( lowestEdge );
+    const auto vremnant = ends.v0;
+    const auto vdead = ends.v1;
+    {
+        auto & lremnant = basins_[vremnant].lowestHeight;
+        lremnant = std::min( lremnant, basins_[vdead].lowestHeight );
+    }
+    graph_.merge( vremnant, vdead, [&]( Graph::EdgeId remnant, Graph::EdgeId dead )
+    {
+        auto & lremnant = bds_[remnant].lowestHeight;
+        lremnant = std::min( lremnant, bds_[dead].lowestHeight );
+    } );
+}
+
 } //namespace MR

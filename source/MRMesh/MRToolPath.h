@@ -122,7 +122,7 @@ struct ToolPathResult
     // mesh after fixing undercuts and offset
     Mesh modifiedMesh;
     // constains type of movement and its feed
-    std::vector<GCommand> commands;    
+    std::vector<GCommand> commands;
 };
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )

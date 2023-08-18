@@ -982,7 +982,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         const size_t numIsolines = extract.isolines.size();
 
         if ( params.fromCenterToBoundary )
-            std::reverse( extract.isolines.begin(), extract.isolines.end() );        
+            std::reverse( extract.isolines.begin(), extract.isolines.end() );
         
         // go on in the inverse order (from the highest isoline to the lowest )
         for ( int i = 0; i < numIsolines; ++i )

@@ -1044,6 +1044,9 @@
     <ClInclude Include="MRGraph.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRWatershedGraph.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1731,6 +1734,9 @@
       <Filter>Source Files\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRGraph.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRWatershedGraph.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
   </ItemGroup>

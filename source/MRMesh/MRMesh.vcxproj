@@ -314,6 +314,7 @@
     <ClInclude Include="MRUniqueThreadSafeOwner.h" />
     <ClInclude Include="MRObjectDistanceMap.h" />
     <ClInclude Include="MRVoxelsVolume.h" />
+    <ClInclude Include="MRWatershedGraph.h" />
     <ClInclude Include="MRWriter.h" />
     <ClInclude Include="MRXfBasedCache.h" />
     <ClInclude Include="MRPolylineRelax.h" />
@@ -553,6 +554,7 @@
     <ClCompile Include="MRPolylineRelax.cpp" />
     <ClCompile Include="MRUniteManyMeshes.cpp" />
     <ClCompile Include="MRVoxelsConversionsByParts.cpp" />
+    <ClCompile Include="MRWatershedGraph.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

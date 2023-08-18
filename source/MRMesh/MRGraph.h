@@ -44,6 +44,7 @@ public:
             if ( v0 > v1 )
                 std::swap( v0, v1 );
         }
+        auto operator <=>( const EndVertices& ) const = default;
     };
     using EndsPerEdge = Vector<EndVertices, EdgeId>;
 

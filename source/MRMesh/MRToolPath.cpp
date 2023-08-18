@@ -221,7 +221,6 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const SurfacePath& s
 
         const auto cutRes = cutMesh( res.meshAfterCut, { meshContour }, cutMeshParams);
 
-        const bool hasSelfIntersections = cutRes.fbsWithCountourIntersections.any();
         if ( cutRes.resultCut.empty() )
         {
             failedContours.emplace_back();

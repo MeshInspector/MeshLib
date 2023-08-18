@@ -78,10 +78,10 @@ void WatershedGraph::construct( const MeshTopology & topology, const VertScalars
             const Graph::VertId basinL( face2basin[l] );
             auto & infoL = basins_[basinL];
             infoL.lowestHeight = std::min( infoL.lowestHeight, h );
-            auto r = topology.left( e );
+            auto r = topology.right( e );
             if ( !r )
                 continue;
-            const Graph::VertId basinR( face2basin[l] );
+            const Graph::VertId basinR( face2basin[r] );
             if ( basinL == basinR )
                 continue;
 

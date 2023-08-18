@@ -32,6 +32,68 @@ Graph::EdgeId Graph::findEdge( VertId a, VertId b ) const
     return {};
 }
 
+void Graph::merge( VertId remnant, VertId dead, std::function<void(EdgeId, EdgeId)> onMergeEdges )
+{
+    assert( remnant.valid() && validVerts_.test( remnant ) );
+    assert( dead.valid() && validVerts_.test( dead ) );
+    assert( remnant != dead );
+    validVerts_.reset( dead );
+
+    struct NeiEdge
+    {
+        VertId nei;
+        EdgeId e;
+        auto operator<=>(const NeiEdge&) const = default;
+    };
+    std::vector<NeiEdge> neiEdges;
+    neiEdges.reserve( neighboursPerVertex_[remnant].size() + neighboursPerVertex_[dead].size() );
+    for ( auto e : neighboursPerVertex_[remnant] )
+    {
+        const auto ends = endsPerEdge_[e];
+        const auto nei = ends.otherEnd( remnant );
+        if ( nei == dead )
+        {
+            validEdges_.reset( e );
+            continue;
+        }
+        neiEdges.push_back( { nei, e } );
+    }
+    for ( auto e : neighboursPerVertex_[dead] )
+    {
+        auto & ends = endsPerEdge_[e];
+        const auto nei = ends.otherEnd( dead );
+        if ( nei == remnant )
+        {
+            validEdges_.reset( e );
+            continue;
+        }
+        ends.replaceEnd( dead, remnant );
+        neiEdges.push_back( { nei, e } );
+    }
+    std::sort( neiEdges.begin(), neiEdges.end() );
+
+    // reuse the memory for neighbors
+    Neighbours neis;
+    if ( neighboursPerVertex_[remnant].size() >= neighboursPerVertex_[dead].size() )
+        neis = std::move( neighboursPerVertex_[remnant] );
+    else
+        neis = std::move( neighboursPerVertex_[dead] );
+    neighboursPerVertex_[dead] = {};
+
+    for ( const auto & x : neiEdges )
+    {
+        if ( neis.empty() || endsPerEdge_[neis.back()].otherEnd( remnant ) != x.nei )
+        {
+            neis.push_back( x.e );
+            continue;
+        }
+        validEdges_.reset( x.e );
+        onMergeEdges( neis.back(), x.e );
+    }
+    std::sort( neis.begin(), neis.end() );
+    neighboursPerVertex_[remnant] = std::move( neis );
+}
+
 bool Graph::checkValidity() const
 {
     MR_TIMER

@@ -4,6 +4,7 @@
 #include "MRId.h"
 #include "MRBitSet.h"
 #include <cassert>
+#include <functional>
 
 namespace MR
 {
@@ -32,6 +33,17 @@ public:
             assert( a == v0 || a == v1 );
             return a == v0 ? v1 : v0;
         }
+        void replaceEnd( VertId what, VertId with )
+        {
+            assert( what != with );
+            assert( v0 == what && v1 != with || v1 == what && v0 != with );
+            if ( v0 == what )
+                v1 = with;
+            else
+                v0 = with;
+            if ( v0 > v1 )
+                std::swap( v0, v1 );
+        }
     };
     using EndsPerEdge = Vector<EndVertices, EdgeId>;
 
@@ -49,6 +61,10 @@ public:
 
     /// returns true if the vertices a and b are neighbors
     [[nodiscard]] bool areNeighbors( VertId a, VertId b ) const { return findEdge( a, b ).valid(); }
+
+    /// unites two vertices into one (deleting the second one),
+    /// which leads to deletion and merge of some edges, for which callback is called
+    void merge( VertId remnant, VertId dead, std::function<void( EdgeId remnant, EdgeId dead )> onMergeEdges );
 
     /// verifies that all internal data structures are valid
     MRMESH_API bool checkValidity() const;

@@ -85,7 +85,7 @@ void WatershedGraph::construct( const MeshTopology & topology, const VertScalars
             if ( basinL == basinR )
                 continue;
 
-            Graph::EndVertices ends( basinL, basinR);
+            Graph::EndVertices ends{ basinL, basinR };
             if ( ends.v0 > ends.v1 )
                 std::swap( ends.v0, ends.v1 );
 

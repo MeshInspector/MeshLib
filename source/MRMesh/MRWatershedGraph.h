@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRGraph.h"
+#include "MRUnionFind.h"
 #include <cfloat>
 
 namespace MR
@@ -32,6 +33,8 @@ private:
         float lowestHeight = FLT_MAX;
     };
     Vector<BdInfo, Graph::EdgeId> bds_;
+
+    UnionFind<Graph::VertId> ufBasins_;
 };
 
 } //namespace MR

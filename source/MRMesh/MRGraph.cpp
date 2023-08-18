@@ -96,7 +96,7 @@ void Graph::merge( VertId remnant, VertId dead, std::function<void(EdgeId, EdgeI
     }
     std::sort( neis.begin(), neis.end() );
     neighboursPerVertex_[remnant] = std::move( neis );
-    //assert( graph_.checkValidity() );
+    //assert( checkValidity() );
 }
 
 bool Graph::checkValidity() const

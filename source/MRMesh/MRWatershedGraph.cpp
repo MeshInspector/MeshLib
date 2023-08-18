@@ -35,6 +35,7 @@ void WatershedGraph::construct( const MeshTopology & topology, const VertScalars
 
     basins_.resize( numBasins );
     Graph::NeighboursPerVertex neighboursPerVertex( numBasins );
+    ufBasins_.reset( numBasins );
     Graph::EndsPerEdge endsPerEdge;
 
     HashMap<Graph::EndVertices, Graph::EdgeId> neiBasins2edge;
@@ -130,8 +131,9 @@ void WatershedGraph::mergeViaLowestBd()
         return;
 
     const auto ends = graph_.ends( lowestEdge );
-    const auto vremnant = ends.v0;
-    const auto vdead = ends.v1;
+    const auto [vremnant, united] = ufBasins_.unite( ends.v0, ends.v1 );
+    assert( united );
+    const auto vdead = ends.otherEnd( vremnant );
     {
         auto & lremnant = basins_[vremnant].lowestHeight;
         lremnant = std::min( lremnant, basins_[vdead].lowestHeight );

@@ -36,7 +36,7 @@ public:
         void replaceEnd( VertId what, VertId with )
         {
             assert( what != with );
-            assert( v0 == what && v1 != with || v1 == what && v0 != with );
+            assert( ( v0 == what && v1 != with ) || ( v1 == what && v0 != with ) );
             if ( v0 == what )
                 v1 = with;
             else

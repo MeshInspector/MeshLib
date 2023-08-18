@@ -121,7 +121,15 @@ public:
     // struct to control volume rendering texture
     struct VolumeRenderingParams
     {
+        // volume texture smoothing
         FilterType volumeFilterType{ FilterType::Linear };
+        // shading model
+        enum class ShadingType
+        {
+            None,
+            ValueGradient,
+            AlphaGradient
+        } shadingType{ ShadingType::None };
         // coloring type
         enum class LutType
         {

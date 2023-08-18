@@ -295,6 +295,8 @@ void RenderVolumeObject::bindVolume_( bool picker )
         denseMap_.bind();
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "denseMap" ), 1 ) );
 
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "shadingMode" ), int( params.shadingType ) ) );
+
     dirty_ &= ~( DIRTY_PRIMITIVES | DIRTY_TEXTURE );
 }
 

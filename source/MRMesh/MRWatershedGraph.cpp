@@ -2,6 +2,7 @@
 #include "MRMeshTopology.h"
 #include "MRphmap.h"
 #include "MRRingIterator.h"
+#include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 
 namespace std
@@ -143,6 +144,27 @@ void WatershedGraph::mergeViaLowestBd()
         auto & lremnant = bds_[remnant].lowestHeight;
         lremnant = std::min( lremnant, bds_[dead].lowestHeight );
     } );
+}
+
+UndirectedEdgeBitSet WatershedGraph::getBasinEdges( const MeshTopology & topology, const Vector<int, FaceId> & face2basin ) const
+{
+    MR_TIMER
+    UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
+    const auto & roots = ufBasins_.roots();
+    BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
+    {
+        auto l = topology.left( ue );
+        if ( !l )
+            return;
+        auto r = topology.right( ue );
+        if ( !r )
+            return;
+        const auto lBasin = roots[Graph::VertId( face2basin[l] )];
+        const auto rBasin = roots[Graph::VertId( face2basin[r] )];
+        if ( lBasin != rBasin )
+            res.set( ue );
+    } );
+    return res;
 }
 
 } //namespace MR

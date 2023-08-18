@@ -17,6 +17,9 @@ public:
     /// merge two basins having the lowest boundary in between
     MRMESH_API void mergeViaLowestBd();
 
+    /// returns the mesh edges between current basins
+    [[nodiscard]] MRMESH_API UndirectedEdgeBitSet getBasinEdges( const MeshTopology & topology, const Vector<int, FaceId> & face2basin ) const;
+
 private:
     Graph graph_;
 
@@ -34,7 +37,7 @@ private:
     };
     Vector<BdInfo, Graph::EdgeId> bds_;
 
-    UnionFind<Graph::VertId> ufBasins_;
+    mutable UnionFind<Graph::VertId> ufBasins_;
 };
 
 } //namespace MR

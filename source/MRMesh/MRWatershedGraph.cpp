@@ -108,10 +108,9 @@ void WatershedGraph::construct( const MeshTopology & topology, const VertScalars
     graph_.construct( std::move( neighboursPerVertex ), std::move( endsPerEdge ) );
 }
 
-void WatershedGraph::mergeViaLowestBd()
+MRMESH_API std::pair<Graph::EdgeId, float> WatershedGraph::findLowestBd() const
 {
     MR_TIMER
-
     Graph::EdgeId lowestEdge;
     float lowestLevel = FLT_MAX;
     for ( auto ei : graph_.validEdges() )
@@ -128,10 +127,16 @@ void WatershedGraph::mergeViaLowestBd()
             lowestEdge = ei;
         }
     }
-    if ( !lowestEdge )
+    return { lowestEdge, lowestLevel };
+}
+
+void WatershedGraph::mergeViaBd( Graph::EdgeId bd )
+{
+    MR_TIMER
+    if ( !bd )
         return;
 
-    const auto ends = graph_.ends( lowestEdge );
+    const auto ends = graph_.ends( bd );
     const auto [vremnant, united] = ufBasins_.unite( ends.v0, ends.v1 );
     assert( united );
     const auto vdead = ends.otherEnd( vremnant );

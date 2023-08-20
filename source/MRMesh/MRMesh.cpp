@@ -780,11 +780,10 @@ EdgeId Mesh::splitEdge( EdgeId e, const Vector3f & newVertPos, FaceBitSet * regi
     return newe;
 }
 
-VertId Mesh::splitFace( FaceId f, FaceBitSet * region, FaceHashMap * new2Old )
+VertId Mesh::splitFace( FaceId f, const Vector3f & newVertPos, FaceBitSet * region, FaceHashMap * new2Old )
 {
-    auto newPos = triCenter( f );
     VertId newv = topology.splitFace( f, region, new2Old );
-    points.autoResizeAt( newv ) = newPos;
+    points.autoResizeAt( newv ) = newVertPos;
     return newv;
 }
 

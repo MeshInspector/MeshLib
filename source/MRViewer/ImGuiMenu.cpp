@@ -76,6 +76,7 @@
 #include "MRRibbonConstants.h"
 #include "MRRibbonFontManager.h"
 #include "MRUIStyle.h"
+#include "MRRibbonSchema.h"
 
 #ifndef __EMSCRIPTEN__
 #include "MRMesh/MRObjectVoxels.h"
@@ -301,14 +302,12 @@ void ImGuiMenu::preDraw_()
       if ( context_ )
       {
           ImGuiInputEvent e;
-          e.Type = ImGuiInputEventType_MousePos;
-          e.Source = ImGuiInputSource_Mouse;
           auto curPos = Vector2f( viewer->mouseController.getMousePos() );
-          e.MousePos.PosX = curPos.x;
-          e.MousePos.PosY = curPos.y;
-          if ( !context_->InputEventsQueue.empty() )
-              context_->InputEventsQueue.pop_back();
-          context_->InputEventsQueue.push_back( e );
+          if ( !context_->InputEventsQueue.empty() && context_->InputEventsQueue.back().Type == ImGuiInputEventType_MousePos )
+          {
+              context_->InputEventsQueue.back().MousePos.PosX = curPos.x;
+              context_->InputEventsQueue.back().MousePos.PosY = curPos.y;
+          }
       }
 #endif
   }
@@ -1409,7 +1408,19 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
         currWindow->DrawList->PopClipRect();
 
     const auto& viewportid = viewer->viewport().id;
-    bool closePopup = make_visualize_checkbox( selectedObjs, "Polygon Offset", MeshVisualizePropertyType::PolygonOffsetFromCamera, viewportid );
+
+    bool allIsObjMesh = !selectedObjs.empty() &&
+        std::all_of( selectedObjs.cbegin(), selectedObjs.cend(), [] ( const std::shared_ptr<VisualObject>& obj )
+    {
+        return obj && obj->asType<ObjectMeshHolder>();
+    } );
+
+    bool closePopup = false;
+
+    if ( allIsObjMesh )
+    {
+        make_visualize_checkbox( selectedObjs, "Polygon Offset", MeshVisualizePropertyType::PolygonOffsetFromCamera, viewportid );
+    }
 
     make_light_strength( selectedObjs, "Shininess", [&] ( const VisualObject* obj )
     {
@@ -2418,54 +2429,10 @@ void ImGuiMenu::draw_mr_menu()
         ImGui::SameLine( 0, p );
         if ( ImGui::Button( "Load Dir##Main", ImVec2( ( w - p ) / 2.f, 0 ) ) )
         {
-            auto directory = openFolderDialog();
-            if ( !directory.empty() )
+            auto openDir = RibbonSchemaHolder::schema().items.find( "Open directory" );
+            if ( openDir != RibbonSchemaHolder::schema().items.end() && openDir->second.item )
             {
-                auto container = makeObjectTreeFromFolder( directory );
-                if ( container.has_value() && !container->children().empty() )
-                {
-                    auto obj = std::make_shared<Object>( std::move( container.value() ) );
-                    obj->setName( utf8string( directory.stem() ) );
-                    selectRecursive( *obj );
-                    AppendHistory<ChangeSceneAction>( "Load Dir", obj, ChangeSceneAction::Type::AddObject );
-                    SceneRoot::get().addChild( obj );
-                    viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
-                }
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
-                else
-                {
-                    ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [directory, viewer = viewer] () -> std::function<void()>
-                    {
-                        ProgressBar::nextTask( "Load DICOM Folder" );
-                        auto loadRes = VoxelsLoad::loadDCMFolder( directory, 4, ProgressBar::callBackSetProgress );
-                        if ( loadRes.has_value() && !ProgressBar::isCanceled() )
-                        {
-                            std::shared_ptr<ObjectVoxels> voxelsObject = std::make_shared<ObjectVoxels>();
-                            voxelsObject->setName( loadRes->name );
-                            ProgressBar::setTaskCount( 2 );
-                            ProgressBar::nextTask( "Construct ObjectVoxels" );
-                            voxelsObject->construct( loadRes->vdbVolume, ProgressBar::callBackSetProgress );
-                            auto bins = voxelsObject->histogram().getBins();
-                            auto minMax = voxelsObject->histogram().getBinMinMax( bins.size() / 3 );
-
-                            ProgressBar::nextTask( "Create ISO surface" );
-                            voxelsObject->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
-                            voxelsObject->select( true );
-                            return [viewer, voxelsObject] ()
-                            {
-                                AppendHistory<ChangeSceneAction>( "Load Voxels", voxelsObject, ChangeSceneAction::Type::AddObject );
-                                SceneRoot::get().addChild( voxelsObject );
-                                viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
-                            };
-                        }
-                        else
-                            return [error = loadRes.error()] ()
-                        {
-                            showError( error );
-                        };
-                    }, 2 );
-                }
-#endif
+                openDir->second.item->action();
             }
         }
 

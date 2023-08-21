@@ -23,6 +23,15 @@ FlowAggregator::FlowAggregator( const Mesh & mesh, const VertScalars & heights )
         downFlowVert_[v] = nextVert;
     } );
 
+    rootVert_.resize( mesh.topology.vertSize() );
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    {
+        auto root = v;
+        while ( auto n = downFlowVert_[root] )
+            root = n;
+        rootVert_[v] = root;
+    } );
+
     using MinusHeightVert = std::pair<float, VertId>;
     std::vector<MinusHeightVert> minusHeightVerts;
     minusHeightVerts.reserve( mesh.topology.numValidVerts() );
@@ -156,6 +165,196 @@ VertScalars FlowAggregator::computeFlow( size_t numStarts,
     }
 
     return flowInVert;
+}
+
+auto FlowAggregator::computeFlowsPerBasin( size_t numStarts,
+    const std::function<MeshTriPoint(size_t)> & startById,
+    const std::function<float(size_t)> & amountById ) const -> HashMap<VertId, Flows>
+{
+    MR_TIMER
+
+    VertScalars flowInVert( mesh_.topology.vertSize() );
+    std::vector<VertId> start2downVert( numStarts ); // for each start point stores what next vertex is on flow path (can be invalid)
+    std::vector<VertId> start2rootVert( numStarts );
+    std::vector<SurfacePath> start2downPath( numStarts ); // till next vertex
+
+    ParallelFor( start2downVert, [&]( size_t i )
+    {
+        VertId nextVert;
+        if ( auto s = startById( i ) )
+        {
+            start2downPath[i] = computeSteepestDescentPath( mesh_, heights_, s, {}, &nextVert );
+            start2downVert[i] = nextVert;
+            if ( nextVert )
+                start2rootVert[i] = rootVert_[nextVert];
+        }
+    } );
+
+    for ( size_t i = 0; i < numStarts; ++i )
+    {
+        if ( auto v = start2downVert[i] )
+            flowInVert[v] += amountById( i );
+    }
+
+    for ( size_t i = 0; i < vertsSortedDesc_.size(); ++i )
+    {
+        auto vUp = vertsSortedDesc_[i];
+        if ( !flowInVert[vUp] )
+            continue;
+        if ( auto vDn = downFlowVert_[vUp] )
+            flowInVert[vDn] += flowInVert[vUp];
+    }
+
+    HashMap<VertId, std::vector<VertId>> root2firstPolylineVert;
+
+    // paths from sample starts to first mesh vertices
+    std::vector<size_t> start2numInRoot;
+    start2numInRoot.reserve( numStarts );
+    for ( size_t i = 0; i < numStarts; ++i )
+    {
+        const auto r = start2rootVert[i];
+        auto & f = root2firstPolylineVert[r];
+        VertId n;
+        if ( f.empty() )
+            f.push_back( n = 0_v );
+        else
+            n = f.back();
+        start2numInRoot.push_back( f.size() - 1 );
+        if ( !start2downPath[i].empty() || start2downVert[i] )
+            n += 1 + (int)start2downPath[i].size() + start2downVert[i].valid();
+        f.push_back( n );
+    };
+
+    // paths from mesh vertices
+    Vector<size_t, VertId> vert2numInRoot;
+    vert2numInRoot.resize( rootVert_.size() );
+    for ( size_t i = 0; i < vertsSortedDesc_.size(); ++i )
+    {
+        auto vUp = vertsSortedDesc_[i];
+        const auto r = rootVert_[vUp];
+        auto & f = root2firstPolylineVert[r];
+        VertId n;
+        if ( f.empty() )
+            f.push_back( n = 0_v );
+        else
+            n = f.back();
+        vert2numInRoot[vUp] = f.size() - 1;
+        if ( flowInVert[vUp] && ( !downPath_[vUp].empty() || downFlowVert_[vUp] ) )
+            n += 1 + (int)downPath_[vUp].size() + downFlowVert_[vUp].valid();
+        f.push_back( n );
+    }
+
+    HashMap<VertId, Flows> res;
+    for ( const auto & [r,v] : root2firstPolylineVert )
+    {
+        auto & x = res[r];
+        assert( !v.empty() );
+        const auto n = v.back();
+        x.polyline.points.resizeNoInit( n );
+        x.flowPerEdge.resize( n );
+    }
+        
+    // paths from sample starts to first mesh vertices
+    ParallelFor( start2downVert, [&]( size_t i )
+    {
+        const auto r = start2rootVert[i];
+        const auto it = root2firstPolylineVert.find( r );
+        assert( it != root2firstPolylineVert.end() );
+        const auto & f = it->second;
+        const auto l = start2numInRoot[i];
+        VertId j = f[l];
+        const VertId jEnd = f[l+1];
+        if ( j == jEnd )
+            return;
+        auto & x = res[r];
+        const auto a = amountById( i );
+        for ( auto k = j; k < jEnd; ++k )
+            x.flowPerEdge[UndirectedEdgeId( (int)k )] = a;
+        x.polyline.points[j++] = mesh_.triPoint( startById( i ) );
+        for ( const auto & ep : start2downPath[i] )
+            x.polyline.points[j++] = mesh_.edgePoint( ep );
+        if ( auto v = start2downVert[i] )
+            x.polyline.points[j++] = mesh_.points[v];
+        assert( j == jEnd );
+    } );
+
+    // paths from mesh vertices
+    ParallelFor( vertsSortedDesc_, [&]( size_t i )
+    {
+        auto vUp = vertsSortedDesc_[i];
+        const auto r = rootVert_[vUp];
+        const auto it = root2firstPolylineVert.find( r );
+        assert( it != root2firstPolylineVert.end() );
+        const auto & f = it->second;
+        const auto l = vert2numInRoot[vUp];
+        VertId j = f[l];
+        const VertId jEnd = f[l+1];
+        if ( j == jEnd )
+            return;
+        auto & x = res[r];
+        const auto a = flowInVert[vUp];
+        for ( auto k = j; k < jEnd; ++k )
+            x.flowPerEdge[UndirectedEdgeId( (int)k )] = a;
+        x.polyline.points[j++] = mesh_.points[vUp];
+        for ( const auto & ep : downPath_[vUp] )
+            x.polyline.points[j++] = mesh_.edgePoint( ep );
+        if ( auto v = downFlowVert_[vUp] )
+            x.polyline.points[j++] = mesh_.points[v];
+        assert( j == jEnd );
+    } );
+
+    // make polyline topology
+    for ( const auto & [r,v] : root2firstPolylineVert )
+    {
+        auto & x = res[r];
+        assert( !v.empty() );
+        x.polyline.topology.buildOpenLines( v );
+    }
+
+    return res;
+}
+
+auto FlowAggregator::computeFlowsPerBasin( const std::vector<FlowOrigin> & starts ) const -> HashMap<VertId, Flows>
+{
+    return computeFlowsPerBasin( starts.size(),
+        [&starts]( size_t n ) { return starts[n].point; },
+        [&starts]( size_t n ) { return starts[n].amount; } );
+}
+
+auto FlowAggregator::computeFlowsPerBasin( const std::vector<MeshTriPoint> & starts ) const -> HashMap<VertId, Flows>
+{
+    return computeFlowsPerBasin( starts.size(),
+        [&starts]( size_t n ) { return starts[n]; },
+        []( size_t ) { return 1.0f; } );
+}
+
+UndirectedEdgeBitSet FlowAggregator::computeCatchmentDelineation() const
+{
+    MR_TIMER
+    Vector<VertId, FaceId> face2rootVert( mesh_.topology.faceSize() );
+    BitSetParallelFor( mesh_.topology.getValidFaces(), [&]( FaceId f )
+    {
+        constexpr auto oneThird = 1.0f / 3;
+        const MeshTriPoint start( mesh_.topology.edgeWithLeft( f ), { oneThird, oneThird } );
+        VertId nextVert;
+        computeSteepestDescentPath( mesh_, heights_, start, {}, nullptr, &nextVert );
+        if ( nextVert )
+            face2rootVert[f] = rootVert_[nextVert];
+    } );
+
+    UndirectedEdgeBitSet res( mesh_.topology.undirectedEdgeSize() );
+    BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
+    {
+        auto l = mesh_.topology.left( ue );
+        if ( !l )
+            return;
+        auto r = mesh_.topology.right( ue );
+        if ( !r )
+            return;
+        if ( face2rootVert[l] != face2rootVert[r] )
+            res.set( ue );
+    } );
+    return res;
 }
 
 } //namespace MR

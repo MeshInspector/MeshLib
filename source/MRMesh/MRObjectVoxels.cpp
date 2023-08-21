@@ -172,6 +172,7 @@ Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface
             vparams.iso = iso;
             vparams.maxVertices = maxSurfaceVertices_;
             vparams.cb = myCb;
+            vparams.positioner = positioner_;
             if ( vdbVolume.data->getGridClass() == openvdb::GridClass::GRID_LEVEL_SET )
                 vparams.lessInside = true;
             meshRes = marchingCubes( vdbVolume, vparams );

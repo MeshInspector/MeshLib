@@ -263,7 +263,7 @@ EdgeId Polyline<V>::addFromGeneralSurfacePath( const Mesh& mesh, const MeshTriPo
 {
     if ( ( !start && path.empty() ) || ( !end && path.empty() ) )
     {
-        assert( false );
+        assert( !start && !end );
         return {};
     }
 
@@ -274,7 +274,7 @@ EdgeId Polyline<V>::addFromGeneralSurfacePath( const Mesh& mesh, const MeshTriPo
     PolylineMaker maker( topology );
     const auto e0 = maker.start( v0 );
 
-    const bool closed = ( start == end ) && ( !start || ( path.front() == path.back() && path.size() > 1 ) );
+    const bool closed = ( start && start == end ) || ( !start && path.size() > 1 && path.front() == path.back() );
     const int inc = end || closed ? 0 : 1;
     for ( int i = start ? 0 : 1; i + inc < path.size(); ++i )
     {

@@ -96,26 +96,8 @@ void GlTexture2::loadData( const Settings & settings, const char * arr )
         gen();
     bind();
 
-    GLint wrap = GL_MIRRORED_REPEAT;
-    switch ( settings.wrap )
-    {
-    default:
-    case WrapType::Clamp:
-        wrap = GL_CLAMP_TO_EDGE;
-        break;
-    case WrapType::Repeat:
-        wrap = GL_REPEAT;
-        break;
-    case WrapType::Mirror:
-        wrap = GL_MIRRORED_REPEAT;
-        break;
-    }
-    GLint filter = settings.filter == FilterType::Linear ? GL_LINEAR : GL_NEAREST;
-
-    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap ) );
-    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap ) );
-    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ) );
-    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ) );
+    setTextureWrapType( settings.wrap );
+    setTextureFilterType( settings.filter );
     GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
     GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, settings.internalFormat, settings.resolution.x, settings.resolution.y, 0, settings.format, settings.type, arr ) );
 
@@ -155,14 +137,18 @@ void GlTexture3::bind()
     GL_EXEC( glBindTexture( GL_TEXTURE_3D, textureID_ ) );
 }
 
-void GlTexture3::loadData( const Settings & settings, const char * arr )
+void setTextureFilterType( FilterType filterType, bool dim3d )
 {
-    if ( !valid() )
-        gen();
-    bind();
+    GLint filter = filterType == FilterType::Linear ? GL_LINEAR : GL_NEAREST;
+    auto txtDim = dim3d ? GL_TEXTURE_3D : GL_TEXTURE_2D;
+    GL_EXEC( glTexParameteri( txtDim, GL_TEXTURE_MIN_FILTER, filter ) );
+    GL_EXEC( glTexParameteri( txtDim, GL_TEXTURE_MAG_FILTER, filter ) );
+}
 
+void setTextureWrapType( WrapType wrapType, bool dim3d )
+{
     GLint wrap = GL_MIRRORED_REPEAT;
-    switch ( settings.wrap )
+    switch ( wrapType )
     {
     default:
     case WrapType::Clamp:
@@ -175,13 +161,24 @@ void GlTexture3::loadData( const Settings & settings, const char * arr )
         wrap = GL_MIRRORED_REPEAT;
         break;
     }
-    GLint filter = settings.filter == FilterType::Linear ? GL_LINEAR : GL_NEAREST;
 
-    GL_EXEC( glTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, wrap ) );
-    GL_EXEC( glTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, wrap ) );
-    GL_EXEC( glTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, wrap ) );
-    GL_EXEC( glTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, filter ) );
-    GL_EXEC( glTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, filter ) );
+    auto txtDim = dim3d ? GL_TEXTURE_3D : GL_TEXTURE_2D;
+    GL_EXEC( glTexParameteri( txtDim, GL_TEXTURE_WRAP_S, wrap ) );
+    GL_EXEC( glTexParameteri( txtDim, GL_TEXTURE_WRAP_T, wrap ) );
+    if ( dim3d )
+    {
+        GL_EXEC( glTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, wrap ) );
+    }
+}
+
+void GlTexture3::loadData( const Settings & settings, const char * arr )
+{
+    if ( !valid() )
+        gen();
+    bind();
+
+    setTextureWrapType( settings.wrap, true );
+    setTextureFilterType( settings.filter, true );
     GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
     GL_EXEC( glTexImage3D( GL_TEXTURE_3D, 0, settings.internalFormat, settings.resolution.x, settings.resolution.y, settings.resolution.z, 0, settings.format, settings.type, arr ) );
 

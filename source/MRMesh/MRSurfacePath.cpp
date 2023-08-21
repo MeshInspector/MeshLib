@@ -198,12 +198,10 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
     float maxGradSq = -FLT_MAX;
     if ( fo != fd )
     {
+        // jump by default to edge's end with smaller value
         const auto odSq = ( po - pd ).lengthSq();
         maxGradSq = odSq > 0 ? sqr( fo - fd ) / odSq : FLT_MAX;
-        if ( fo < fd )
-            result = MeshEdgePoint{ ep.e, 0 };
-        else if ( fd < fo )
-            result = MeshEdgePoint{ ep.e.sym(), 0 };
+        result = fo < fd ? MeshEdgePoint{ ep.e, 0 } : MeshEdgePoint{ ep.e.sym(), 0 };
     }
 
     if ( mesh_.topology.left( ep.e ) )
@@ -308,6 +306,14 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
                 maxGradSq = vertGradSq;
             }
         }
+    }
+
+    if ( !result )
+    {
+        // otherwise jump in the closest edge's end
+        assert( maxGradSq == -FLT_MAX );
+        assert( fo == fd );
+        result = ep.a <= 0.5f ? MeshEdgePoint{ ep.e, 0 } : MeshEdgePoint{ ep.e.sym(), 0 };
     }
 
     return result;

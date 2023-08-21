@@ -110,6 +110,10 @@ bool TouchpadController::swipe_( float deltaX, float deltaY, bool kinetic )
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
 
+    Vector3f sceneCenterPos;
+    if ( viewport.getSceneBox().valid() )
+        sceneCenterPos = viewport.getSceneBox().center();
+
     switch ( swipeMode )
     {
     case Parameters::SwipeRotatesCamera:
@@ -123,16 +127,13 @@ bool TouchpadController::swipe_( float deltaX, float deltaY, bool kinetic )
             * Quaternionf( Vector3f::plusX(), angle.y )
             * quat
         ).normalized();
-        const auto xf = AffineXf3f::linear( Matrix3f( quat ) );
+        const auto xf = AffineXf3f::xfAround( Matrix3f( quat ), sceneCenterPos );
         viewport.transformView( xf );
 
         return true;
     }
     case Parameters::SwipeMovesCamera:
     {
-        Vector3f sceneCenterPos;
-        if ( viewport.getSceneBox().valid() )
-            sceneCenterPos = viewport.getSceneBox().center();
         const auto sceneCenterVpPos = viewport.projectToViewportSpace( sceneCenterPos );
 
         const auto mousePos = viewer.mouseController.getMousePos();

@@ -119,6 +119,24 @@ public:
         //
     }
 
+    static std::string toString( DIRECTMANIPULATION_STATUS status )
+    {
+        switch ( status )
+        {
+#define CASE(STATUS) case DIRECTMANIPULATION_##STATUS: return #STATUS;
+        CASE(BUILDING)
+        CASE(ENABLED)
+        CASE(DISABLED)
+        CASE(RUNNING)
+        CASE(INERTIA)
+        CASE(READY)
+        CASE(SUSPENDED)
+#undef CASE
+        }
+        assert( false );
+        return {};
+    }
+
     HRESULT STDMETHODCALLTYPE OnViewportStatusChanged(
         IDirectManipulationViewport* viewport,
         DIRECTMANIPULATION_STATUS current,
@@ -130,6 +148,7 @@ public:
             return S_OK;
         status_ = current;
 
+        spdlog::info( "state changed: {} -> {}", toString( previous ), toString( current ) );
         if ( current == DIRECTMANIPULATION_READY )
         {
             // TODO: reset gesture state
@@ -182,9 +201,9 @@ public:
         UNUSED( viewport );
 
         if ( interaction == DIRECTMANIPULATION_INTERACTION_BEGIN )
-            handler_->startTouchpadEventPolling_();
+            spdlog::info( "interaction started" ), handler_->startTouchpadEventPolling_();
         else if ( interaction == DIRECTMANIPULATION_INTERACTION_END )
-            handler_->stopTouchpadEventPolling_();
+            spdlog::info( "interaction finished" ), handler_->stopTouchpadEventPolling_();
 
         return S_OK;
     }

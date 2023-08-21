@@ -118,10 +118,9 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
         if ( rank == 3 && distSq > sqr( settings.maxNewRank3VertDev ) )
             continue; //new point is too from existing mesh triangles
 
-        auto v = vox.splitFace( f );
+        auto v = vox.splitFace( f, sharpPt );
         assert( v == dirs.size() + firstNewVert );
         dirs.push_back( dir );
-        vox.points.autoResizeSet( v, sharpPt );
         for ( auto ei : orgRing( vox.topology, v ) )
             face2voxel.autoResizeSet( vox.topology.left( ei ), voxel );
 

@@ -205,8 +205,7 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
             queue.setSmallerValue( myFace, NoDist );
             continue;
         }
-        auto newv = res.splitFace( myFace );
-        res.points[newv] = points[topmostVert];
+        auto newv = res.splitFace( myFace, points[topmostVert] );
 
         makeConvexOriginRing( res, res.topology.edgeWithOrg( newv ) );
         queue.resize( (int)res.topology.faceSize() );

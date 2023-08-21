@@ -888,7 +888,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         res.modifiedMesh = std::move( *preprocessedMesh );
     }
 
-    const auto& mesh = params.offsetMesh ? params.offsetMesh->mesh : res.modifiedMesh;
+    auto mesh = params.offsetMesh ? params.offsetMesh->mesh : res.modifiedMesh;
     const auto box = mesh.computeBoundingBox();
 
     const Vector3f normal = Vector3f::plusZ();
@@ -918,8 +918,8 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
             .cb = subprogress( cb, 0.0f, 0.4f )
         };
         //compute isolines based on the start point or the bounding contour
-        auto extract = extractAllIsolines( res.modifiedMesh, extractionParams );
-        res.modifiedMesh = extract.meshAfterCut;
+        auto extract = extractAllIsolines( mesh, extractionParams );
+        mesh = extract.meshAfterCut;
 
         if ( extract.isolines.empty() )
             return reportProgress( cb, 0.4f );
@@ -966,10 +966,10 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         };
 
         // compute bitset of the vertices that are not belonged to the undercut
-        VertBitSet noUndercutVertices( res.modifiedMesh.points.size() );
-        BitSetParallelFor( res.modifiedMesh.topology.getValidVerts(), [&] ( VertId v )
+        VertBitSet noUndercutVertices( mesh.points.size() );
+        BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
         {
-            noUndercutVertices.set( v, res.modifiedMesh.points[v].z >= minZ );
+            noUndercutVertices.set( v, mesh.points[v].z >= minZ );
         } );
 
         ToolPathParams paramsCopy = params;
@@ -1024,7 +1024,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                 const auto& surfacePath = extract.isolines[i][j];
 
                 Polyline3 polyline;
-                polyline.addFromSurfacePath( res.modifiedMesh, surfacePath );
+                polyline.addFromSurfacePath( mesh, surfacePath );
                 const auto contours = polyline.contours();
                 const auto& contour = contours.front();
 
@@ -1039,7 +1039,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                 {
                     for ( auto it = surfacePath.begin(); it < surfacePath.end(); ++it )
                     {
-                        float distSq = ( res.modifiedMesh.edgePoint( *it ) - res.modifiedMesh.edgePoint( prevEdgePoint ) ).lengthSq();
+                        float distSq = ( mesh.edgePoint( *it ) - mesh.edgePoint( prevEdgePoint ) ).lengthSq();
                         if ( distSq < minDistSq )
                         {
                             minDistSq = distSq;
@@ -1050,7 +1050,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
 
                 auto nextEdgePointIt = nearestPointIt;
                 const float sectionStepSq = params.sectionStep * params.sectionStep;
-                const auto nearestPoint = res.modifiedMesh.edgePoint( *nearestPointIt );
+                const auto nearestPoint = mesh.edgePoint( *nearestPointIt );
 
                 // make severals steps ahead for smoother transit
                 Vector3f tmp;
@@ -1058,7 +1058,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                 do
                 {
                     std::next( nextEdgePointIt ) != surfacePath.end() ? ++nextEdgePointIt : nextEdgePointIt = surfacePath.begin();
-                    tmp = res.modifiedMesh.edgePoint( *nextEdgePointIt );
+                    tmp = mesh.edgePoint( *nextEdgePointIt );
                     skipPoint = ( tmp.z < minZ );
                 } while ( nextEdgePointIt != nearestPointIt && ( ( ( tmp - nearestPoint ).lengthSq() < sectionStepSq ) || skipPoint ) );
 
@@ -1082,8 +1082,8 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                 else
                 {
                     // go along the undercut if the part of section is below
-                    const auto p1 = res.modifiedMesh.edgePoint( prevEdgePoint );
-                    const auto p2 = res.modifiedMesh.edgePoint( *nextEdgePointIt );
+                    const auto p1 = mesh.edgePoint( prevEdgePoint );
+                    const auto p2 = mesh.edgePoint( *nextEdgePointIt );
                     if ( p1.z == minZ )
                     {
                         const auto sectionStartIt = findNearestPoint( undercutContour, p1 );
@@ -1108,17 +1108,17 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                     else
                     {
                         // go along the mesh in other cases
-                        const auto sp = computeSurfacePath( res.modifiedMesh, prevEdgePoint, *nextEdgePointIt, 5, &noUndercutVertices );
+                        const auto sp = computeSurfacePath( mesh, prevEdgePoint, *nextEdgePointIt, 5, &noUndercutVertices );
                         if ( sp.has_value() && !sp->empty() )
                         {
                             if ( sp->size() == 1 )
                             {
-                                addPointToTheToolPath( res.modifiedMesh.edgePoint( sp->front() ) );
+                                addPointToTheToolPath( mesh.edgePoint( sp->front() ) );
                             }
                             else
                             {
                                 Polyline3 transit;
-                                transit.addFromSurfacePath( res.modifiedMesh, *sp );
+                                transit.addFromSurfacePath( mesh, *sp );
                                 const auto transitContours = transit.contours().front();
                                 for ( const auto& p : transitContours )
                                     addPointToTheToolPath( p );
@@ -1139,7 +1139,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
     };
     
     //if selection is not specified then process all the vertices above the undercut
-    if ( !mp.region )
+    if ( !mp.region && ( !params.offsetMesh || !params.offsetMesh->region ) )
     {
         if ( !processZone( &undercutSection, nullptr, {}, subprogress( params.cb, 0.25f, 1.0f ) ) || !reportProgress( params.cb, 1.0f ) )
             return unexpectedOperationCanceled();
@@ -1147,7 +1147,10 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         return res;
     }
 
-    const auto edgeLoops = findLeftBoundary( mp.mesh.topology, mp.region );
+    const auto edgeLoops = ( params.offsetMesh && params.offsetMesh->region ) ? 
+        findLeftBoundary( params.offsetMesh->mesh.topology, params.offsetMesh->region ) : 
+        findLeftBoundary( mp.mesh.topology, mp.region );
+
     //otherwise process each selected zone separately
     const size_t loopCount = edgeLoops.size();
     for ( size_t i = 0; i < loopCount; ++i )
@@ -1157,7 +1160,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         Contour3f* contourBeforeProjecton = nullptr;
         Contour3f* contourBeforeCutMesh = nullptr;
 
-        if ( params.contoursBeforeProjection )
+        if ( ( !params.offsetMesh || !params.offsetMesh->region ) && params.contoursBeforeProjection )
         {
             params.contoursBeforeProjection->emplace_back();
             contourBeforeProjecton = &params.contoursBeforeProjection->back();
@@ -1172,17 +1175,27 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         std::vector<MeshTriPoint> meshTriPoints;
         for ( auto edgeId : edgeLoop )
         {
+            if ( params.offsetMesh && params.offsetMesh->region )
+            {
+                MeshTriPoint mtp( MeshEdgePoint( edgeId, 0.0f ) );
+                meshTriPoints.push_back( mtp );
+                if ( contourBeforeCutMesh )
+                    contourBeforeCutMesh->push_back( mesh.triPoint( mtp ) );
+
+                continue;
+            }
+
             const auto originalPoint = mp.mesh.edgePoint( MeshEdgePoint( edgeId, 0.0f ) );
             if ( contourBeforeProjecton )
                 contourBeforeProjecton->push_back( originalPoint );
 
             // project all the vertices in the selected contour to the modified mesh
-            auto mpr = res.modifiedMesh.projectPoint( originalPoint );
+            auto mpr = mesh.projectPoint( originalPoint );
             if ( mpr )
             {
                 meshTriPoints.push_back( mpr->mtp );
                 if ( contourBeforeCutMesh )
-                    contourBeforeCutMesh->push_back( res.modifiedMesh.triPoint( mpr->mtp ) );
+                    contourBeforeCutMesh->push_back( mesh.triPoint( mpr->mtp ) );
             }
 
             mpr = mesh.projectPoint(mp.mesh.edgePoint(MeshEdgePoint(edgeId, 0.5f)));

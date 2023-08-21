@@ -353,7 +353,7 @@ using V3fIt = std::vector<Vector3f>::const_iterator;
 using Intervals = std::vector<std::pair<V3fIt, V3fIt>>;
 
 // compute intervals of the slice which are projected on the selected area in the mesh (skip if not specified)
-Intervals getIntervals( const MeshPart& mp, const V3fIt startIt, const V3fIt endIt, const V3fIt beginVec, const V3fIt endVec, bool moveForward )
+Intervals getIntervals( const MeshPart& mp, const MeshPart* offset, const V3fIt startIt, const V3fIt endIt, const V3fIt beginVec, const V3fIt endVec, bool moveForward )
 {
     Intervals res;
     if ( startIt == endIt )
@@ -366,10 +366,14 @@ Intervals getIntervals( const MeshPart& mp, const V3fIt startIt, const V3fIt end
     // otherwise add interval to the result
     const auto processPoint = [&] ( V3fIt it )
     {
-        const auto mpr = mp.mesh.projectPoint( *it );
-        const auto faceId = mp.mesh.topology.left( mpr->mtp.e );
+        const auto mpr = offset ? offset->mesh.projectPoint( *it ) : mp.mesh.projectPoint( *it );
+        const auto faceId = offset ? offset->mesh.topology.left( mpr->mtp.e ) : mp.mesh.topology.left( mpr->mtp.e );
 
-        if ( !mp.region || ( mpr && mp.region->test( faceId ) ) )
+        const bool isInsideSelection = offset ? 
+            ( !offset->region || ( mpr && offset->region->test( faceId ) ) ) :
+            !mp.region || ( mpr && mp.region->test( faceId ) );
+
+        if ( isInsideSelection )
         {
             if ( moveForward || endInterval > beginVec )
                 moveForward ? ++endInterval : --endInterval;
@@ -493,12 +497,19 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
     const auto cutDirectionIdx = int( cutDirection );
     const auto sideDirection = ( cutDirection == Axis::X ) ? Axis::Y : Axis::X;
     const auto sideDirectionIdx = int( sideDirection );
-    auto preprocessedMesh = preprocessMesh( mp.mesh, params, false );
-    if ( !preprocessedMesh )
-        return unexpected( preprocessedMesh.error() );
 
-    ToolPathResult  res{ .modifiedMesh = std::move( *preprocessedMesh ) };
-    const auto& mesh = res.modifiedMesh;
+    ToolPathResult  res;
+
+    if ( !params.offsetMesh )
+    {
+        auto preprocessedMesh = preprocessMesh( mp.mesh, params, false );
+        if ( !preprocessedMesh )
+            return unexpected( preprocessedMesh.error() );
+
+        res.modifiedMesh = std::move( *preprocessedMesh );
+    }
+
+    const auto& mesh = params.offsetMesh ? params.offsetMesh->mesh : res.modifiedMesh;
 
     const auto box = mesh.computeBoundingBox();
     const float safeZ = std::max( box.max.z + 10.0f * params.millRadius, params.safeZ );
@@ -594,7 +605,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
                     --bottomLeftIt;
             }
             
-            const auto intervals = getIntervals( mp, bottomLeftIt, bottomRightIt, contour.begin(), contour.end(), moveForward );
+            const auto intervals = getIntervals( mp, params.offsetMesh, bottomLeftIt, bottomRightIt, contour.begin(), contour.end(), moveForward );
             if ( intervals.empty() )
                 continue;
 
@@ -664,12 +675,18 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
 
 Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, const ToolPathParams& params )
 {
-    auto preprocessedMesh = preprocessMesh( mp.mesh, params, false );
-    if ( !preprocessedMesh )
-        return unexpected( preprocessedMesh.error() );
+    ToolPathResult  res;
 
-    ToolPathResult  res{ .modifiedMesh = std::move( *preprocessedMesh ) };
-    const auto& mesh = res.modifiedMesh;
+    if ( !params.offsetMesh )
+    {
+        auto preprocessedMesh = preprocessMesh( mp.mesh, params, false );
+        if ( !preprocessedMesh )
+            return unexpected( preprocessedMesh.error() );
+
+        res.modifiedMesh = std::move( *preprocessedMesh );
+    }
+
+    const auto& mesh = params.offsetMesh ? params.offsetMesh->mesh : res.modifiedMesh;
 
     const auto box = mesh.computeBoundingBox();
     const float safeZ = std::max( box.max.z + 10.0f * params.millRadius, params.safeZ );
@@ -756,7 +773,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
 
             if ( mp.region || params.flatTool )
             {
-                const auto intervals = getIntervals( mp, contour.begin(), contour.end(), contour.begin(), contour.end(), true );
+                const auto intervals = getIntervals( mp, params.offsetMesh, contour.begin(), contour.end(), contour.begin(), contour.end(), true );
                 if ( intervals.empty() )
                     continue;
 
@@ -857,13 +874,18 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
 
 Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, const ConstantCuspParams& params )
 {
-    auto preprocessedMesh = preprocessMesh( mp.mesh, params, true );
-    if ( !preprocessedMesh )
-        return unexpected( preprocessedMesh.error() );
+    ToolPathResult  res;
 
-    ToolPathResult  res{ .modifiedMesh = std::move( *preprocessedMesh ) };
-    
-    const auto& mesh = res.modifiedMesh;
+    if ( !params.offsetMesh )
+    {
+        auto preprocessedMesh = preprocessMesh( mp.mesh, params, false );
+        if ( !preprocessedMesh )
+            return unexpected( preprocessedMesh.error() );
+
+        res.modifiedMesh = std::move( *preprocessedMesh );
+    }
+
+    const auto& mesh = params.offsetMesh ? params.offsetMesh->mesh : res.modifiedMesh;
     const auto box = mesh.computeBoundingBox();
 
     const Vector3f normal = Vector3f::plusZ();

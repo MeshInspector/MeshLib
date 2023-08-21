@@ -60,6 +60,8 @@ struct ToolPathParams
     Contours3f* failedContours = nullptr;
     // start vertices on the offset mesh used for calcutating isolines
     std::vector<Vector3f>* startVertices = nullptr;
+
+    MeshPart* offsetMesh = nullptr;
 };
 
 struct ConstantCuspParams : ToolPathParams

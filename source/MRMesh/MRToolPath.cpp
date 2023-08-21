@@ -718,16 +718,20 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
         if ( lastPoint == point )
             return;
 
-        if ( lastFeed == params.baseFeed )
+        GCommand command { .x = point.x, .y = point.y };
+        if ( lastFeed != params.baseFeed )
         {
-            res.commands.push_back( { .x = point.x, .y = point.y } );
-        }
-        else
-        {
-            res.commands.push_back( { .feed = params.baseFeed, .x = point.x, .y = point.y } );
+            command.feed = params.baseFeed;
             lastFeed = params.baseFeed;
         }
 
+        if ( lastZ != point.z )
+        {
+            command.z = point.z;
+            lastZ = point.z;
+        }
+
+        res.commands.push_back( command );
         lastPoint = point;
     };
 
@@ -791,7 +795,6 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
                     }
                 }
 
-                lastZ = contour.front().z;
                 continue;
             }
 

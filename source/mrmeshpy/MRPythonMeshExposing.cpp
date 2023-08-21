@@ -119,7 +119,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
         def_readwrite( "vec", &VertColors::vec_ );
 } )
 
-MR_ADD_PYTHON_MAP( mrmeshpy, FaceHashMap, FaceHashMap );
+MR_ADD_PYTHON_MAP( mrmeshpy, FaceHashMap, FaceHashMap )
 
 MeshTopology topologyFromTriangles( const Triangulation& t, const MeshBuilder::BuildSettings& s )
 {

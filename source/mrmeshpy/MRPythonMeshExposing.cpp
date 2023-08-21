@@ -119,6 +119,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
         def_readwrite( "vec", &VertColors::vec_ );
 } )
 
+MR_ADD_PYTHON_MAP( mrmeshpy, FaceHashMap, FaceHashMap );
+
 MeshTopology topologyFromTriangles( const Triangulation& t, const MeshBuilder::BuildSettings& s )
 {
     return MeshBuilder::fromTriangles( t, s );
@@ -185,6 +187,39 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
         def( "transform", ( void( Mesh::* ) ( const AffineXf3f&, const VertBitSet* ) )& Mesh::transform, pybind11::arg( "xf" ), pybind11::arg( "region" ) = nullptr,
              "applies given transformation to specified vertices\n"
              "if region is nullptr, all valid mesh vertices are used" ).
+
+        def( "splitEdge", ( EdgeId( Mesh::* )( EdgeId, const Vector3f&, FaceBitSet*, FaceHashMap* ) )& Mesh::splitEdge, 
+            pybind11::arg( "e" ), pybind11::arg( "newVertPos" ), pybind11::arg( "region" ) = nullptr, pybind11::arg( "new2Old" ) = nullptr,
+            "split given edge on two parts:\n"
+            "dest(returned-edge) = org(e) - newly created vertex,\n"
+            "org(returned-edge) = org(e-before-split),\n"
+            "dest(e) = dest(e-before-split)\n"
+            "\tleft and right faces of given edge if valid are also subdivided on two parts each;\n"
+            "\tif left or right faces of the original edge were in the region, then include new parts of these faces in the region\n"
+            "\tnew2Old - receive mapping from newly appeared triangle to its original triangle (part to full)" ).
+
+        def( "splitEdge", ( EdgeId( Mesh::* )( EdgeId, FaceBitSet*, FaceHashMap* ) )& Mesh::splitEdge,
+            pybind11::arg( "e" ), pybind11::arg( "region" ) = nullptr, pybind11::arg( "new2Old" ) = nullptr,
+            "split given edge on two equal parts:\n"
+            "dest(returned-edge) = org(e) - newly created vertex,\n"
+            "org(returned-edge) = org(e-before-split),\n"
+            "dest(e) = dest(e-before-split)\n"
+            "\tleft and right faces of given edge if valid are also subdivided on two parts each;\n"
+            "\tif left or right faces of the original edge were in the region, then include new parts of these faces in the region\n"
+            "\tnew2Old - receive mapping from newly appeared triangle to its original triangle (part to full)" ).
+
+        def( "splitFace", ( VertId( Mesh::* )( FaceId, const Vector3f&, FaceBitSet*, FaceHashMap* ) )& Mesh::splitFace,
+            pybind11::arg( "f" ), pybind11::arg( "newVertPos" ), pybind11::arg( "region" ) = nullptr, pybind11::arg( "new2Old" ) = nullptr,
+            "split given triangle on three triangles, introducing new vertex with given coordinates and connecting it to original triangle vertices;\n"
+            "if region is given, then it must include (f) and new faces will be added there as well\n"
+            "\tnew2Old receive mapping from newly appeared triangle to its original triangle (part to full)" ).
+
+        def( "splitFace", ( VertId( Mesh::* )( FaceId, FaceBitSet*, FaceHashMap* ) )& Mesh::splitFace,
+            pybind11::arg( "f" ), pybind11::arg( "region" ) = nullptr, pybind11::arg( "new2Old" ) = nullptr,
+            "split given triangle on three triangles, introducing new vertex in the centroid of original triangle and connecting it to original triangle vertices;\n"
+            "if region is given, then it must include (f) and new faces will be added there as well\n"
+            "\tnew2Old receive mapping from newly appeared triangle to its original triangle (part to full)" ).
+
         def( pybind11::self == pybind11::self, "compare that two meshes are exactly the same" );
 
     m.def( "copyMesh", &pythonCopyMeshFunction, pybind11::arg( "mesh" ), "returns copy of input mesh" );

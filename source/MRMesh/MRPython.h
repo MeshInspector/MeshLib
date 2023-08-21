@@ -48,6 +48,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
         def( "clear", &vecType::clear ); \
 } )
 
+#define MR_ADD_PYTHON_MAP( moduleName , name , mapType)\
+MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
+{\
+    pybind11::bind_map<mapType>(m, #name ).\
+        def( pybind11::init<>() ).\
+        def( "size", &mapType::size );\
+} )
+
 #define MR_ADD_PYTHON_EXPECTED( moduleName, name, type, errorType )\
 MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
 {\

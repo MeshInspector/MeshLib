@@ -5,12 +5,14 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 
+#ifndef NDEBUG
 #include <spdlog/spdlog.h>
 
 #pragma warning( push )
 #pragma warning( disable: 5204 )
 #include <comdef.h>
 #pragma warning( pop )
+#endif
 
 namespace
 {
@@ -57,14 +59,16 @@ public:
         //
     }
 
-    HRESULTHandler& operator =( HRESULT hr )
+    HRESULTHandler& operator =( [[maybe_unused]] HRESULT hr )
     {
+#ifndef NDEBUG
         if ( hr != S_OK )
         {
             _com_error err( hr );
             _bstr_t msg( err.ErrorMessage() );
             spdlog::error( "{}:{}: {:08x} {}", file_, line_, (unsigned long)hr, (const char*)msg );
         }
+#endif
         return *this;
     }
 
@@ -89,7 +93,9 @@ consteval std::string_view FILENAME( std::string_view str )
 
 constexpr DWORD TOUCHPAD_EVENT_POLLING_PERIOD_MS = 10; // 100 Hz
 
-#define FUZZY_ONE( x ) ( std::abs( ( x ) - 1 ) < 1e-6 )
+#define FUZZY( x, y ) ( std::abs( ( x ) - ( y ) ) < 1e-6 )
+#define FUZZY_0( x ) FUZZY( ( x ), 0 )
+#define FUZZY_1( x ) FUZZY( ( x ), 1 )
 
 }
 
@@ -148,10 +154,12 @@ public:
             return S_OK;
         status_ = current;
 
-        spdlog::info( "state changed: {} -> {}", toString( previous ), toString( current ) );
+#ifndef NDEBUG
+        spdlog::info( "touchpad gesture state changed: {} -> {}", toString( previous ), toString( current ) );
+#endif
         if ( current == DIRECTMANIPULATION_READY )
         {
-            // TODO: reset gesture state
+            endGesture_();
             HR = viewport->ZoomToRect( 0.f, 0.f, 1000.f, 1000.f, FALSE );
         }
 
@@ -183,12 +191,31 @@ public:
             scaleY  = transform[3],
             offsetX = transform[4],
             offsetY = transform[5];
-        if ( !FUZZY_ONE( scaleX ) || !FUZZY_ONE( scaleY ) )
-            spdlog::info( "scale x = {} y = {}", scaleX, scaleY );
-        else if ( rotateX != 0.f || rotateY != 0.f )
+        if ( !FUZZY_1( scaleX ) || !FUZZY_1( scaleY ) )
+        {
+            assert( scaleX == scaleY );
+            const auto scale = scaleX;
+            if ( !FUZZY( scale, lastScale_ ) )
+            {
+                emitZoom_( scale );
+                lastScale_ = scale;
+            }
+        }
+#ifndef NDEBUG
+        else if ( !FUZZY_0( rotateX ) | !FUZZY_0( rotateY ) )
+        {
             spdlog::info( "rotate x = {} y = {}", rotateX, rotateY );
-        else
-            spdlog::info( "offset x = {} y = {}", offsetX, offsetY );
+        }
+#endif
+        else if ( !FUZZY_0( offsetX ) || !FUZZY_0( offsetY ) )
+        {
+            if ( !FUZZY( offsetX, lastOffsetX_ ) || !FUZZY( offsetY, lastOffsetY_ ) )
+            {
+                emitSwipe_( offsetX - lastOffsetX_, offsetY - lastOffsetY_ );
+                lastOffsetX_ = offsetX;
+                lastOffsetY_ = offsetY;
+            }
+        }
 
         return S_OK;
     }
@@ -201,16 +228,110 @@ public:
         UNUSED( viewport );
 
         if ( interaction == DIRECTMANIPULATION_INTERACTION_BEGIN )
-            spdlog::info( "interaction started" ), handler_->startTouchpadEventPolling_();
+        {
+#ifndef NDEBUG
+            spdlog::info( "touchpad gesture interaction started" );
+#endif
+            handler_->startTouchpadEventPolling_();
+        }
         else if ( interaction == DIRECTMANIPULATION_INTERACTION_END )
-            spdlog::info( "interaction finished" ), handler_->stopTouchpadEventPolling_();
+        {
+#ifndef NDEBUG
+            spdlog::info( "touchpad gesture interaction finished" );
+#endif
+            handler_->stopTouchpadEventPolling_();
+        }
 
         return S_OK;
     }
 
+    inline DIRECTMANIPULATION_STATUS getStatus() const
+    {
+        return status_;
+    }
+
 private:
     TouchpadWin32Handler* handler_;
-    DIRECTMANIPULATION_STATUS status_{ DIRECTMANIPULATION_ENABLED };
+    DIRECTMANIPULATION_STATUS status_{ DIRECTMANIPULATION_BUILDING };
+
+    enum class Gesture
+    {
+        None,
+        Rotate,
+        Swipe,
+        Zoom,
+    } gesture_{ Gesture::None };
+    float lastAngle_{ 0.f };
+    float lastOffsetX_{ 0.f };
+    float lastOffsetY_{ 0.f };
+    float lastScale_{ 1.f };
+
+    void beginGesture_()
+    {
+        switch ( gesture_ )
+        {
+        case Gesture::None:
+            break;
+        case Gesture::Rotate:
+            handler_->rotate( 0.f, TouchpadController::Handler::GestureState::Begin );
+            break;
+        case Gesture::Swipe:
+            break;
+        case Gesture::Zoom:
+            handler_->zoom( 1.f, TouchpadController::Handler::GestureState::Begin );
+            break;
+        }
+    }
+
+    void endGesture_()
+    {
+        switch ( gesture_ )
+        {
+        case Gesture::None:
+            break;
+        case Gesture::Rotate:
+            handler_->rotate( lastAngle_, TouchpadController::Handler::GestureState::End );
+            break;
+        case Gesture::Swipe:
+            break;
+        case Gesture::Zoom:
+            handler_->zoom( lastScale_, TouchpadController::Handler::GestureState::End );
+            break;
+        }
+
+        gesture_ = Gesture::None;
+        lastAngle_ = 0.f;
+        lastOffsetX_ = 0.f;
+        lastOffsetY_ = 0.f;
+        lastScale_ = 1.f;
+    }
+
+    void updateGesture_( Gesture gesture )
+    {
+        if ( gesture_ != gesture )
+        {
+            endGesture_();
+            gesture_ = gesture;
+            beginGesture_();
+        }
+    }
+
+    void emitSwipe_( float dx, float dy )
+    {
+        updateGesture_( Gesture::Swipe );
+        const auto kinetic = status_ == DIRECTMANIPULATION_INERTIA;
+        handler_->swipe( dx, dy, kinetic );
+    }
+
+    void emitZoom_( float scale )
+    {
+        updateGesture_( Gesture::Zoom );
+        const auto kinetic = status_ == DIRECTMANIPULATION_INERTIA;
+        // TODO: support kinetic zoom
+        if ( kinetic )
+            return;
+        handler_->zoom( scale, TouchpadController::Handler::GestureState::Change );
+    }
 };
 
 TouchpadWin32Handler::TouchpadWin32Handler( GLFWwindow* window )
@@ -228,7 +349,9 @@ TouchpadWin32Handler::TouchpadWin32Handler( GLFWwindow* window )
 #pragma warning( pop )
     if ( glfwProc_ == 0 )
     {
+#ifndef NDEBUG
         spdlog::error( "Failed to set the window procedure: {:x}", GetLastError() );
+#endif
         return;
     }
 
@@ -319,7 +442,9 @@ void TouchpadWin32Handler::TouchpadEventPoll( PVOID lpParam, BOOLEAN timerOrWait
         return;
 
     auto* handler = (TouchpadWin32Handler*)lpParam;
-    HR = handler->updateManager_->Update( NULL );
+    const auto status = handler->eventHandler_->getStatus();
+    if ( status == DIRECTMANIPULATION_RUNNING || status == DIRECTMANIPULATION_INERTIA )
+        HR = handler->updateManager_->Update( NULL );
 }
 
 void TouchpadWin32Handler::startTouchpadEventPolling_()

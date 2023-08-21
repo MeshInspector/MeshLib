@@ -168,6 +168,28 @@ FaceBitSet WatershedGraph::getBasinFaces( Graph::VertId basin ) const
     return res;
 }
 
+FaceBitSet WatershedGraph::getBasinFacesBelowLevel( Graph::VertId basin, float waterLevel ) const
+{
+    MR_TIMER
+    FaceBitSet res( topology_.faceSize() );
+    const auto & roots = ufBasins_.roots();
+    assert( basin == roots[basin] );
+    BitSetParallelForAll( res, [&]( FaceId f )
+    {
+        if ( basin != roots[Graph::VertId( face2iniBasin_[f] )] )
+            return;
+        VertId vs[3];
+        topology_.getTriVerts( f, vs );
+        for ( int i = 0; i < 3; ++i )
+            if ( heights_[vs[i]] < waterLevel )
+            {
+                res.set( f );
+                break;
+            }
+    } );
+    return res;
+}
+
 UndirectedEdgeBitSet WatershedGraph::getInterBasinEdges() const
 {
     MR_TIMER

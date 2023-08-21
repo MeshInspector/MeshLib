@@ -122,9 +122,6 @@ std::string getVolumeFragmentShader()
     vec3 clipFar = clipNear;
     clipFar.z = 1.0;
 
-    if ( clipNear.x < -1.0 || clipNear.x > 1.0 || clipNear.y < -1.0 || clipNear.y > 1.0 )
-        discard;
-
     vec4 rayStartW = inverseFullM * vec4( clipNear, 1.0 );
     vec4 rayEndW = inverseFullM * vec4( clipFar, 1.0 );
 
@@ -157,10 +154,10 @@ std::string getVolumeFragmentShader()
 
         float density = texture( volume, textCoord ).r;        
         vec4 color = texture( denseMap, vec2( density, 0.5 ) );
+        if ( color.a == 0.0 )
+            continue;
 
         float alpha = outColor.a + color.a * ( 1.0 - outColor.a );
-        if ( alpha == 0.0 )
-            continue;
         
         if ( shadingMode != 0 )
         {

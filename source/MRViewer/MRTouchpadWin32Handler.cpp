@@ -5,9 +5,11 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 
-#ifndef NDEBUG
 #include <spdlog/spdlog.h>
 
+#define EVENT_DEBUG
+
+#ifdef EVENT_DEBUG
 #pragma warning( push )
 #pragma warning( disable: 5204 )
 #include <comdef.h>
@@ -55,26 +57,37 @@ public:
     explicit HRESULTHandler( std::string_view file, unsigned line )
         : file_( file )
         , line_( line )
+        , hr_( S_OK )
     {
         //
     }
 
     HRESULTHandler& operator =( [[maybe_unused]] HRESULT hr )
     {
-#ifndef NDEBUG
+        hr_ = hr;
+#ifdef EVENT_DEBUG
         if ( hr != S_OK )
         {
             _com_error err( hr );
             _bstr_t msg( err.ErrorMessage() );
-            spdlog::error( "{}:{}: {:08x} {}", file_, line_, (unsigned long)hr, (const char*)msg );
+            if ( SUCCEEDED( hr ) )
+                spdlog::warn( "{}:{}: {:08x} {}", file_, line_, (unsigned long)hr, (const char*)msg );
+            else
+                spdlog::error( "{}:{}: {:08x} {}", file_, line_, (unsigned long)hr, (const char*)msg );
         }
 #endif
         return *this;
     }
 
+    operator HRESULT() const
+    {
+        return hr_;
+    }
+
 private:
     std::string_view file_;
     unsigned line_;
+    HRESULT hr_;
 };
 
 consteval std::string_view FILENAME( std::string_view str )
@@ -154,7 +167,7 @@ public:
             return S_OK;
         status_ = current;
 
-#ifndef NDEBUG
+#ifdef EVENT_DEBUG
         spdlog::info( "touchpad gesture state changed: {} -> {}", toString( previous ), toString( current ) );
 #endif
         if ( current == DIRECTMANIPULATION_READY )
@@ -201,7 +214,7 @@ public:
                 lastScale_ = scale;
             }
         }
-#ifndef NDEBUG
+#ifdef EVENT_DEBUG
         else if ( !FUZZY_0( rotateX ) | !FUZZY_0( rotateY ) )
         {
             spdlog::info( "rotate x = {} y = {}", rotateX, rotateY );
@@ -229,14 +242,14 @@ public:
 
         if ( interaction == DIRECTMANIPULATION_INTERACTION_BEGIN )
         {
-#ifndef NDEBUG
+#ifdef EVENT_DEBUG
             spdlog::info( "touchpad gesture interaction started" );
 #endif
             handler_->startTouchpadEventPolling_();
         }
         else if ( interaction == DIRECTMANIPULATION_INTERACTION_END )
         {
-#ifndef NDEBUG
+#ifdef EVENT_DEBUG
             spdlog::info( "touchpad gesture interaction finished" );
 #endif
             handler_->stopTouchpadEventPolling_();
@@ -349,17 +362,22 @@ TouchpadWin32Handler::TouchpadWin32Handler( GLFWwindow* window )
 #pragma warning( pop )
     if ( glfwProc_ == 0 )
     {
-#ifndef NDEBUG
-        spdlog::error( "Failed to set the window procedure: {:x}", GetLastError() );
-#endif
+        spdlog::error( "Failed to set the window procedure (code {:08x})", GetLastError() );
         return;
     }
 
-    HR = ::CoInitializeEx( NULL, COINIT_APARTMENTTHREADED );
-    HR = ::CoCreateInstance( CLSID_DirectManipulationManager, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS( &manager_ ) );
-    HR = manager_->GetUpdateManager( IID_PPV_ARGS( &updateManager_ ) );
+#define CHECK( EXPR ) \
+    if ( HRESULT hr = EXPR; !SUCCEEDED( hr ) ) \
+    { \
+        spdlog::error( "Failed to initialize touchpad event processing (code {:08x})", hr ); \
+        return; \
+    }
 
-    HR = manager_->CreateViewport( NULL, window_, IID_PPV_ARGS( &viewport_ ) );
+    CHECK( HR = ::CoInitializeEx( NULL, COINIT_APARTMENTTHREADED ) )
+    CHECK( HR = ::CoCreateInstance( CLSID_DirectManipulationManager, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS( &manager_ ) ) )
+    CHECK( HR = manager_->GetUpdateManager( IID_PPV_ARGS( &updateManager_ ) ) )
+
+    CHECK( HR = manager_->CreateViewport( NULL, window_, IID_PPV_ARGS( &viewport_ ) ) )
     DIRECTMANIPULATION_CONFIGURATION configuration =
         DIRECTMANIPULATION_CONFIGURATION_INTERACTION |
         DIRECTMANIPULATION_CONFIGURATION_TRANSLATION_X |
@@ -369,11 +387,11 @@ TouchpadWin32Handler::TouchpadWin32Handler( GLFWwindow* window )
         DIRECTMANIPULATION_CONFIGURATION_RAILS_Y |
         DIRECTMANIPULATION_CONFIGURATION_SCALING |
         DIRECTMANIPULATION_CONFIGURATION_SCALING_INERTIA;
-    HR = viewport_->ActivateConfiguration( configuration );
-    HR = viewport_->SetViewportOptions( DIRECTMANIPULATION_VIEWPORT_OPTIONS_MANUALUPDATE );
+    CHECK( HR = viewport_->ActivateConfiguration( configuration ) )
+    CHECK( HR = viewport_->SetViewportOptions( DIRECTMANIPULATION_VIEWPORT_OPTIONS_MANUALUPDATE ) )
 
     eventHandler_ = Microsoft::WRL::Make<DirectManipulationViewportEventHandler>( this );
-    HR = viewport_->AddEventHandler( window_, eventHandler_.Get(), &eventHandlerCookie_ );
+    CHECK( HR = viewport_->AddEventHandler( window_, eventHandler_.Get(), &eventHandlerCookie_ ) )
 
     const RECT viewportRect {
         .left = 0,
@@ -381,10 +399,10 @@ TouchpadWin32Handler::TouchpadWin32Handler( GLFWwindow* window )
         .right = 1000,
         .bottom = 1000,
     };
-    HR = viewport_->SetViewportRect( &viewportRect );
+    CHECK( HR = viewport_->SetViewportRect( &viewportRect ) )
 
-    HR = manager_->Activate( window_ );
-    HR = viewport_->Enable();
+    CHECK( HR = manager_->Activate( window_ ) )
+    CHECK( HR = viewport_->Enable() )
 }
 
 TouchpadWin32Handler::~TouchpadWin32Handler()

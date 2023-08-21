@@ -170,7 +170,7 @@ public:
 #ifdef EVENT_DEBUG
         spdlog::info( "touchpad gesture state changed: {} -> {}", toString( previous ), toString( current ) );
 #endif
-        if ( current == DIRECTMANIPULATION_READY )
+        if ( current == DIRECTMANIPULATION_READY && gesture_ != Gesture::None )
         {
             endGesture_();
             HR = viewport->ZoomToRect( 0.f, 0.f, 1000.f, 1000.f, FALSE );

@@ -72,6 +72,7 @@
     <ClInclude Include="MRFloatGridComponents.h" />
     <ClInclude Include="MRGcodeProcessor.h" />
     <ClInclude Include="MRGcodeLoad.h" />
+    <ClInclude Include="MRGraph.h" />
     <ClInclude Include="MRGridSettings.h" />
     <ClInclude Include="MRGTest.h" />
     <ClInclude Include="MRHash.h" />
@@ -313,6 +314,7 @@
     <ClInclude Include="MRUniqueThreadSafeOwner.h" />
     <ClInclude Include="MRObjectDistanceMap.h" />
     <ClInclude Include="MRVoxelsVolume.h" />
+    <ClInclude Include="MRWatershedGraph.h" />
     <ClInclude Include="MRWriter.h" />
     <ClInclude Include="MRXfBasedCache.h" />
     <ClInclude Include="MRPolylineRelax.h" />
@@ -385,6 +387,7 @@
     <ClCompile Include="MRFloatGridComponents.cpp" />
     <ClCompile Include="MRGcodeProcessor.cpp" />
     <ClCompile Include="MRGcodeLoad.cpp" />
+    <ClCompile Include="MRGraph.cpp" />
     <ClCompile Include="MRGridSampling.cpp" />
     <ClCompile Include="MRHistoryStore.cpp" />
     <ClCompile Include="MRIdentifyVertices.cpp" />
@@ -551,6 +554,7 @@
     <ClCompile Include="MRPolylineRelax.cpp" />
     <ClCompile Include="MRUniteManyMeshes.cpp" />
     <ClCompile Include="MRVoxelsConversionsByParts.cpp" />
+    <ClCompile Include="MRWatershedGraph.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

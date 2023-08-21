@@ -16,3 +16,10 @@ def test_splitFace():
     assert (faceMap[mrmesh.FaceId(numFaces)].get() == orgFace.get())
     assert (faceMap[mrmesh.FaceId(numFaces+1)].get() == orgFace.get())
     assert (faceMap.size() == 2)
+
+    torus.splitEdge(mrmesh.EdgeId(2),None,faceMap)
+    assert (torus.topology.numValidFaces() == numFaces + 4)
+    assert (faceMap.size() == 4)
+
+
+

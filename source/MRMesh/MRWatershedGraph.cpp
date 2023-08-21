@@ -27,7 +27,10 @@ struct hash<MR::Graph::EndVertices>
 namespace MR
 {
 
-void WatershedGraph::construct( const MeshTopology & topology, const VertScalars & heights, const Vector<int, FaceId> & face2basin, int numBasins )
+WatershedGraph::WatershedGraph( const MeshTopology & topology, const VertScalars & heights, const Vector<int, FaceId> & face2basin, int numBasins )
+    : topology_( topology )
+    , heights_( heights )
+    , face2iniBasin_( face2basin )
 {
     MR_TIMER
     assert( numBasins >= 0 );
@@ -151,21 +154,35 @@ void WatershedGraph::mergeViaBd( Graph::EdgeId bd )
     } );
 }
 
-UndirectedEdgeBitSet WatershedGraph::getBasinEdges( const MeshTopology & topology, const Vector<int, FaceId> & face2basin ) const
+FaceBitSet WatershedGraph::getBasinFaces( Graph::VertId basin ) const
 {
     MR_TIMER
-    UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
+    FaceBitSet res( topology_.faceSize() );
+    const auto & roots = ufBasins_.roots();
+    assert( basin == roots[basin] );
+    BitSetParallelForAll( res, [&]( FaceId f )
+    {
+        if ( basin == roots[Graph::VertId( face2iniBasin_[f] )] )
+            res.set( f );
+    } );
+    return res;
+}
+
+UndirectedEdgeBitSet WatershedGraph::getInterBasinEdges() const
+{
+    MR_TIMER
+    UndirectedEdgeBitSet res( topology_.undirectedEdgeSize() );
     const auto & roots = ufBasins_.roots();
     BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
     {
-        auto l = topology.left( ue );
+        auto l = topology_.left( ue );
         if ( !l )
             return;
-        auto r = topology.right( ue );
+        auto r = topology_.right( ue );
         if ( !r )
             return;
-        const auto lBasin = roots[Graph::VertId( face2basin[l] )];
-        const auto rBasin = roots[Graph::VertId( face2basin[r] )];
+        const auto lBasin = roots[Graph::VertId( face2iniBasin_[l] )];
+        const auto rBasin = roots[Graph::VertId( face2iniBasin_[r] )];
         if ( lBasin != rBasin )
             res.set( ue );
     } );

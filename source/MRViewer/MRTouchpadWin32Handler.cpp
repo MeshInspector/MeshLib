@@ -407,14 +407,21 @@ TouchpadWin32Handler::TouchpadWin32Handler( GLFWwindow* window )
 
 TouchpadWin32Handler::~TouchpadWin32Handler()
 {
-    HR = viewport_->Stop();
-    HR = viewport_->Disable();
-    HR = viewport_->RemoveEventHandler( eventHandlerCookie_ );
-    HR = viewport_->Abandon();
-
-    HR = manager_->Deactivate( window_ );
-
-    SetWindowLongPtr( window_, GWLP_WNDPROC, glfwProc_ );
+    if ( viewport_ )
+    {
+        HR = viewport_->Stop();
+        HR = viewport_->Disable();
+        HR = viewport_->RemoveEventHandler( eventHandlerCookie_ );
+        HR = viewport_->Abandon();
+    }
+    if ( manager_ )
+    {
+        HR = manager_->Deactivate( window_ );
+    }
+    if ( glfwProc_ )
+    {
+        SetWindowLongPtr( window_, GWLP_WNDPROC, glfwProc_ );
+    }
 
     DeleteTimerQueue( timerQueue_ );
 

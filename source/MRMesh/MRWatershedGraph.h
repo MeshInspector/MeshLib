@@ -11,11 +11,30 @@ namespace MR
 class WatershedGraph
 {
 public:
+    // associated with each vertex in graph
+    struct BasinInfo
+    {
+        float lowestHeight = FLT_MAX;
+    };
+
+    // associated with each edge in graph
+    struct BdInfo
+    {
+        float lowestHeight = FLT_MAX;
+    };
+
+public:
     /// constructs the graph from given mesh topology, heights in vertices, and initial subdivision on basins
     MRMESH_API WatershedGraph( const MeshTopology & topology, const VertScalars & heights, const Vector<int, FaceId> & face2basin, int numBasins );
 
     /// returns underlying graph where each basin is a vertex
     [[nodiscard]] const Graph & graph() const { return graph_; }
+    
+    /// returns data associated with given basin
+    [[nodiscard]] const BasinInfo & basinInfo( Graph::VertId v ) const { return basins_[v]; }
+
+    /// returns data associated with given boundary between basins
+    [[nodiscard]] const BdInfo & bdInfo( Graph::EdgeId e ) const { return bds_[e]; }
 
     /// finds the lowest boundary between basins and its height, which is defined
     /// as the minimal different between lowest boundary point and lowest point in a basin
@@ -36,21 +55,8 @@ private:
     const Vector<int, FaceId> & face2iniBasin_;
 
     Graph graph_;
-
-    // associated with each vertex in graph
-    struct BasinInfo
-    {
-        float lowestHeight = FLT_MAX;
-    };
     Vector<BasinInfo, Graph::VertId> basins_;
-
-    // associated with each edge in graph
-    struct BdInfo
-    {
-        float lowestHeight = FLT_MAX;
-    };
     Vector<BdInfo, Graph::EdgeId> bds_;
-
     mutable UnionFind<Graph::VertId> ufBasins_;
 };
 

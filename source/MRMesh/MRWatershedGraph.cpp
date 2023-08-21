@@ -46,7 +46,7 @@ WatershedGraph::WatershedGraph( const MeshTopology & topology, const VertScalars
 
     for ( auto v : topology.getValidVerts() )
     {
-        const auto h = heights[v];
+        const auto h = heights_[v];
         bool bdVert = false;
         Graph::VertId basin0;
         for ( auto e : orgRing( topology, v ) )

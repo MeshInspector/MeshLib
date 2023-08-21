@@ -7,8 +7,7 @@
 
 #include <spdlog/spdlog.h>
 
-#define EVENT_DEBUG
-
+//#define EVENT_DEBUG
 #ifdef EVENT_DEBUG
 #pragma warning( push )
 #pragma warning( disable: 5204 )

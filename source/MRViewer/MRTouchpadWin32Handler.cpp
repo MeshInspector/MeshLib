@@ -203,6 +203,10 @@ public:
             scaleY  = transform[3],
             offsetX = transform[4],
             offsetY = transform[5];
+
+        UNUSED( rotateX );
+        UNUSED( rotateY );
+
         if ( !FUZZY_1( scaleX ) || !FUZZY_1( scaleY ) )
         {
             assert( scaleX == scaleY );

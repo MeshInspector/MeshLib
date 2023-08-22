@@ -7,8 +7,6 @@
 #include "MRTouchpadWin32Handler.h"
 #endif
 
-#include "MRPch/MRSuppressWarning.h"
-
 namespace MR
 {
 
@@ -213,9 +211,7 @@ const TouchpadController::Parameters& TouchpadController::getParameters() const
 
 void TouchpadController::setParameters( const TouchpadController::Parameters& parameters )
 {
-MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
     parameters_ = parameters;
-MR_SUPPRESS_WARNING_POP
 }
 
 void TouchpadController::Handler::mouseScroll( float, float dy, bool )

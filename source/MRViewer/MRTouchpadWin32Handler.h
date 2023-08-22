@@ -5,6 +5,7 @@
 
 #pragma warning( push )
 #pragma warning( disable: 4265 )
+#pragma warning( disable: 4986 )
 #pragma warning( disable: 5204 )
 #pragma warning( disable: 5220 )
 #include <directmanipulation.h>

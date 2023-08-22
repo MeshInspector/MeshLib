@@ -249,7 +249,7 @@ void TouchpadController::Handler::rotate( float angle, GestureState state )
             ENQUEUE_VIEWER_METHOD_ARGS( "Rotation touchpad gesture updated", touchpadRotateGestureUpdate, angle );
             break;
         case GestureState::End:
-            ENQUEUE_VIEWER_METHOD_ARGS( "Rotation touchpad gesture ended", touchpadRotateGestureEnd );
+            ENQUEUE_VIEWER_METHOD( "Rotation touchpad gesture ended", touchpadRotateGestureEnd );
             break;
     }
 }
@@ -265,7 +265,7 @@ void TouchpadController::Handler::swipe( float dx, float dy, bool kinetic, Gestu
             ENQUEUE_VIEWER_METHOD_ARGS( "Swipe touchpad gesture updated", touchpadSwipeGestureUpdate, dx, dy, kinetic );
             break;
         case GestureState::End:
-            ENQUEUE_VIEWER_METHOD_ARGS( "Swipe touchpad gesture ended", touchpadSwipeGestureEnd );
+            ENQUEUE_VIEWER_METHOD( "Swipe touchpad gesture ended", touchpadSwipeGestureEnd );
             break;
     }
 }
@@ -281,7 +281,7 @@ void TouchpadController::Handler::zoom( float scale, bool kinetic, GestureState 
             ENQUEUE_VIEWER_METHOD_ARGS( "Zoom touchpad gesture updated", touchpadZoomGestureUpdate, scale, kinetic );
             break;
         case GestureState::End:
-            ENQUEUE_VIEWER_METHOD_ARGS( "Zoom touchpad gesture ended", touchpadZoomGestureEnd );
+            ENQUEUE_VIEWER_METHOD( "Zoom touchpad gesture ended", touchpadZoomGestureEnd );
             break;
     }
 }

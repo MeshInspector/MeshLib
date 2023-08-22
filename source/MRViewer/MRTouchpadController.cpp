@@ -89,7 +89,7 @@ bool TouchpadController::swipe_( float deltaX, float deltaY, bool kinetic )
     if ( parameters_.ignoreKineticMoves && kinetic )
         return true;
 
-    const auto swipeDirection = parameters_.swipeScale * Vector3f( deltaX, deltaY, 0.f );
+    const auto swipeDirection = Vector3f( deltaX, deltaY, 0.f );
 
     auto swipeMode = parameters_.swipeMode;
     if ( ImGui::GetIO().KeyAlt )

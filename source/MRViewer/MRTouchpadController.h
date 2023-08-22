@@ -64,8 +64,8 @@ public:
         {
             /// gesture has started
             Begin,
-            /// gesture data has changed
-            Change,
+            /// gesture data has updated
+            Update,
             /// gesture has ended
             End,
         };

@@ -71,7 +71,8 @@ WatershedGraph::WatershedGraph( const MeshTopology & topology, const VertScalars
             if ( basin0 )
             {
                 auto & info0 = basins_[basin0];
-                info0.lowestHeight = std::min( info0.lowestHeight, h );
+                if ( h < getHeightAt( info0.lowestVert ) )
+                    info0.lowestVert = v;
             }
             continue;
         }
@@ -82,7 +83,8 @@ WatershedGraph::WatershedGraph( const MeshTopology & topology, const VertScalars
                 continue;
             const Graph::VertId basinL( face2basin[l] );
             auto & infoL = basins_[basinL];
-            infoL.lowestHeight = std::min( infoL.lowestHeight, h );
+            if ( h < getHeightAt( infoL.lowestVert ) )
+                infoL.lowestVert = v;
             auto r = topology.right( e );
             if ( !r )
                 continue;
@@ -104,7 +106,8 @@ WatershedGraph::WatershedGraph( const MeshTopology & topology, const VertScalars
                 neighboursPerVertex[basinR].push_back( bdEdge );
             }
             auto & bd = bds_[bdEdge];
-            bd.lowestHeight = std::min( bd.lowestHeight, h );
+            if ( h < getHeightAt( bd.lowestVert ) )
+                bd.lowestVert = v;
         }
     }
 
@@ -119,9 +122,9 @@ MRMESH_API std::pair<Graph::EdgeId, float> WatershedGraph::findLowestBd() const
     for ( auto ei : graph_.validEdges() )
     {
         const auto ends = graph_.ends( ei );
-        const auto l0 = basins_[ends.v0].lowestHeight;
-        const auto l1 = basins_[ends.v1].lowestHeight;
-        const auto le = bds_[ei].lowestHeight;
+        const auto l0 = getHeightAt( basins_[ends.v0].lowestVert );
+        const auto l1 = getHeightAt( basins_[ends.v1].lowestVert );
+        const auto le = getHeightAt( bds_[ei].lowestVert );
         assert( le >= l0 && le >= l1 );
         const auto level = std::min( le - l0, le - l1 );
         if ( level < lowestLevel )
@@ -144,13 +147,13 @@ void WatershedGraph::mergeViaBd( Graph::EdgeId bd )
     assert( united );
     const auto vdead = ends.otherEnd( vremnant );
     {
-        auto & lremnant = basins_[vremnant].lowestHeight;
-        lremnant = std::min( lremnant, basins_[vdead].lowestHeight );
+        if ( getHeightAt( basins_[vdead].lowestVert ) < getHeightAt( basins_[vremnant].lowestVert ) )
+            basins_[vremnant].lowestVert = basins_[vdead].lowestVert;
     }
-    graph_.merge( vremnant, vdead, [&]( Graph::EdgeId remnant, Graph::EdgeId dead )
+    graph_.merge( vremnant, vdead, [&]( Graph::EdgeId eremnant, Graph::EdgeId edead )
     {
-        auto & lremnant = bds_[remnant].lowestHeight;
-        lremnant = std::min( lremnant, bds_[dead].lowestHeight );
+        if ( getHeightAt( bds_[edead].lowestVert ) < getHeightAt( bds_[eremnant].lowestVert ) )
+            bds_[eremnant].lowestVert = bds_[edead].lowestVert;
     } );
 }
 

@@ -42,7 +42,7 @@ size_t RenderVolumeObject::heapBytes() const
 
 size_t RenderVolumeObject::glBytes() const
 {
-    return volume_.size()
+    return volume_.size() * sizeof( uint16_t )
         + denseMap_.size();
 }
 
@@ -202,9 +202,9 @@ void RenderVolumeObject::bindVolume_( bool picker )
         volume_.loadData(
             {
                 .resolution = volume->dims,
-                .internalFormat = GL_R8,
-                .format = GL_RED,
-                .type = GL_UNSIGNED_BYTE,
+                .internalFormat = GL_R16, // will need GL_R16UI for wasm
+                .format = GL_RED, // will need GL_RED_INTEGER for wasm
+                .type = GL_UNSIGNED_SHORT,
                 .filter = params.volumeFilterType
             },
             volume->data );
@@ -288,7 +288,12 @@ void RenderVolumeObject::bindVolume_( bool picker )
             }
         }
         denseMap_.loadData(
-            { .resolution = Vector2i( denseMap.size(),1 ), .internalFormat = GL_RGBA8, .format = GL_RGBA, .type = GL_UNSIGNED_BYTE },
+            { 
+                .resolution = Vector2i( denseMap.size(),1 ), 
+                .internalFormat = GL_RGBA8, 
+                .format = GL_RGBA, 
+                .type = GL_UNSIGNED_BYTE,
+                .filter = FilterType::Linear },
             denseMap );
     }
     else

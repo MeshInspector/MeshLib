@@ -389,7 +389,7 @@ struct Image;
 template <typename T>
 struct VoxelsVolume;
 using SimpleVolume = VoxelsVolume<std::vector<float>>;
-using SimpleVolumeU8 = VoxelsVolume<std::vector<uint8_t>>;
+using SimpleVolumeU16 = VoxelsVolume<std::vector<uint16_t>>;
 
 template <typename T>
 using VoxelValueGetter = std::function<T ( const Vector3i& )>;

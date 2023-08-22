@@ -385,8 +385,18 @@ bool ImGuiMenu::touchpadSwipeGestureBegin_()
     return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
 }
 
-bool ImGuiMenu::touchpadSwipeGestureUpdate_( float, float, bool )
+bool ImGuiMenu::touchpadSwipeGestureUpdate_( float, float deltaY, bool )
 {
+    // touchpad scroll values are larger than mouse ones
+    constexpr float cTouchpadScrollCoef = 0.1f;
+    ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, deltaY * cTouchpadScrollCoef );
+    // do extra frames to prevent imgui calculations ping
+    if ( ImGui::GetIO().WantCaptureMouse )
+    {
+        viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
+        return true;
+    }
+
     return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
 }
 

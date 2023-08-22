@@ -365,6 +365,51 @@ bool ImGuiMenu::spaceMouseDown_( int /*key*/ )
     return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
 }
 
+bool ImGuiMenu::touchpadRotateGestureBegin_()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadRotateGestureUpdate_( float )
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadRotateGestureEnd_()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadSwipeGestureBegin_()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadSwipeGestureUpdate_( float, float, bool )
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadSwipeGestureEnd_()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadZoomGestureBegin_()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadZoomGestureUpdate_( float, bool )
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadZoomGestureEnd_()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
 void ImGuiMenu::rescaleStyle_()
 {
     CommandLoop::appendCommand( [&] ()

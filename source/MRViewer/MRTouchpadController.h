@@ -36,8 +36,6 @@ public:
     {
         /// most touchpads implement kinetic (or inertial) scrolling, this option disables handling of these events
         bool ignoreKineticMoves = false;
-        /// scale coefficient for swipe movements
-        float swipeScale = 10.f;
         /// enable gesture's cancellability, i.e. revert its changes in case of external interruption
         bool cancellable = false;
         /// swipe processing mode

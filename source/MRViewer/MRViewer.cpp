@@ -616,7 +616,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         touchesController.connect( this );
         spaceMouseController.connect();
         initSpaceMouseHandler_();
-        touchpadController.connect();
+        touchpadController.connect( this );
         touchpadController.initialize( window );
     }
 
@@ -1120,49 +1120,49 @@ bool Viewer::touchEnd( int id, int x, int y )
     return touchEndSignal( id, x, y );
 }
 
-bool Viewer::touchpadRotateStart( float angle )
+bool Viewer::touchpadRotateGestureBegin()
 {
-    return touchpadRotateStartSignal( angle );
+    return touchpadRotateGestureBeginSignal();
 }
 
-bool Viewer::touchpadRotateChange( float angle )
+bool Viewer::touchpadRotateGestureUpdate( float angle )
 {
-    return touchpadRotateChangeSignal( angle );
+    return touchpadRotateGestureUpdateSignal( angle );
 }
 
-bool Viewer::touchpadRotateCancel()
+bool Viewer::touchpadRotateGestureEnd()
 {
-    return touchpadRotateCancelSignal();
+    return touchpadRotateGestureEndSignal();
 }
 
-bool Viewer::touchpadRotateEnd()
+bool Viewer::touchpadSwipeGestureBegin()
 {
-    return touchpadRotateEndSignal();
+    return touchpadSwipeGestureBeginSignal();
 }
 
-bool Viewer::touchpadSwipe( float deltaX, float deltaY, bool kinetic )
+bool Viewer::touchpadSwipeGestureUpdate( float dx, float dy, bool kinetic )
 {
-    return touchpadSwipeSignal( deltaX, deltaY, kinetic );
+    return touchpadSwipeGestureUpdateSignal( dx, dy, kinetic );
 }
 
-bool Viewer::touchpadZoomStart( float angle )
+bool Viewer::touchpadSwipeGestureEnd()
 {
-    return touchpadZoomStartSignal( angle );
+    return touchpadSwipeGestureEndSignal();
 }
 
-bool Viewer::touchpadZoomChange( float angle )
+bool Viewer::touchpadZoomGestureBegin()
 {
-    return touchpadZoomChangeSignal( angle );
+    return touchpadZoomGestureBeginSignal();
 }
 
-bool Viewer::touchpadZoomCancel()
+bool Viewer::touchpadZoomGestureUpdate( float scale, bool kinetic )
 {
-    return touchpadZoomCancelSignal();
+    return touchpadZoomGestureUpdateSignal( scale, kinetic );
 }
 
-bool Viewer::touchpadZoomEnd()
+bool Viewer::touchpadZoomGestureEnd()
 {
-    return touchpadZoomEndSignal();
+    return touchpadZoomGestureEndSignal();
 }
 
 bool Viewer::mouseScroll( float delta_y )

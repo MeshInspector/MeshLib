@@ -22,15 +22,17 @@ namespace MR
 /// NOTE: on some platforms the default GLFW mouse scroll is being disabled by the touchpad event handlers because
 /// mouse scrolls and touchpad swipe gestures are a single event type there and have to be processed by a single handler.
 /// Consider it if you use this class and define your own scroll callback with `glfwSetScrollCallback`.
-class TouchpadController
+class TouchpadController : public MultiListener<
+    TouchpadRotateGestureBeginListener, TouchpadRotateGestureUpdateListener, TouchpadRotateGestureEndListener,
+    TouchpadSwipeGestureBeginListener, TouchpadSwipeGestureUpdateListener, TouchpadSwipeGestureEndListener,
+    TouchpadZoomGestureBeginListener, TouchpadZoomGestureUpdateListener, TouchpadZoomGestureEndListener
+>
 {
 public:
     MR_ADD_CTOR_DELETE_MOVE( TouchpadController );
 
     /// initialize listening to touchpad events
     MRVIEWER_API void initialize( GLFWwindow* window );
-    /// enable default actions
-    MRVIEWER_API void connect();
 
     struct Parameters
     {
@@ -64,10 +66,8 @@ public:
             Begin,
             /// gesture data has changed
             Change,
-            /// gesture has ended successfully
+            /// gesture has ended
             End,
-            /// gesture has been canceled (e.g. by an urgent window)
-            Cancel,
         };
 
         /// not a touchpad gesture but actually a mouse scroll; call it if mouse scrolls and touchpad swipe gestures are
@@ -76,9 +76,9 @@ public:
         /// rotate gesture
         void rotate( float angle, GestureState state );
         /// swipe gesture; `kinetic` flag is set when the event is produced not by a user action but by hardware 'kinetic' scrolling
-        void swipe( float dx, float dy, bool kinetic );
+        void swipe( float dx, float dy, bool kinetic, GestureState state );
         /// pitch ('zoom') gesture
-        void zoom( float scale, GestureState state );
+        void zoom( float scale, bool kinetic, GestureState state );
     };
 
 private:
@@ -86,18 +86,18 @@ private:
     Parameters parameters_;
 
     Viewport::Parameters initRotateParams_;
-    bool rotateStart_( float angle );
-    bool rotateChange_( float angle );
-    bool rotateCancel_();
-    bool rotateEnd_();
+    virtual void touchpadRotateGestureBegin_() override;
+    virtual void touchpadRotateGestureUpdate_( float angle ) override;
+    virtual void touchpadRotateGestureEnd_() override;
 
-    bool swipe_( float deltaX, float deltaY, bool kinetic );
+    virtual void touchpadSwipeGestureBegin_() override;
+    virtual void touchpadSwipeGestureUpdate_( float deltaX, float deltaY, bool kinetic ) override;
+    virtual void touchpadSwipeGestureEnd_() override;
 
     Viewport::Parameters initZoomParams_;
-    bool zoomStart_( float scale );
-    bool zoomChange_( float scale );
-    bool zoomCancel_();
-    bool zoomEnd_();
+    virtual void touchpadZoomGestureBegin_() override;
+    virtual void touchpadZoomGestureUpdate_( float scale, bool kinetic ) override;
+    virtual void touchpadZoomGestureEnd_() override;
 };
 
 } // namespace MR

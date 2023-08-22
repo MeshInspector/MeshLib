@@ -72,7 +72,7 @@ std::optional<MR::TouchpadController::Handler::GestureState> convert( NSEventPha
             case NSEventPhaseMayBegin:
             case NSEventPhaseStationary:
                 return std::nullopt;
-            case NSEventPhaseBegin:
+            case NSEventPhaseBegan:
                 return GS::Begin;
             case NSEventPhaseChanged:
                 return GS::Update;
@@ -90,7 +90,7 @@ std::optional<MR::TouchpadController::Handler::GestureState> convert( NSEventPha
             case NSEventPhaseMayBegin:
             case NSEventPhaseStationary:
                 return std::nullopt;
-            case NSEventPhaseBegin:
+            case NSEventPhaseBegan:
             case NSEventPhaseChanged:
                 return GS::Update;
             case NSEventPhaseEnded:

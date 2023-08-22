@@ -14,18 +14,21 @@ public:
     // associated with each vertex in graph
     struct BasinInfo
     {
-        float lowestHeight = FLT_MAX;
+        VertId lowestVert; ///< in the whole basin
     };
 
     // associated with each edge in graph
     struct BdInfo
     {
-        float lowestHeight = FLT_MAX;
+        VertId lowestVert; ///< on this boundary
     };
 
 public:
     /// constructs the graph from given mesh topology, heights in vertices, and initial subdivision on basins
     MRMESH_API WatershedGraph( const MeshTopology & topology, const VertScalars & heights, const Vector<int, FaceId> & face2basin, int numBasins );
+
+    /// returns height at given vertex or FLT_MAX if the vertex is invalid
+    [[nodiscard]] float getHeightAt( VertId v ) const { return getAt( heights_, v, FLT_MAX ); }
 
     /// returns underlying graph where each basin is a vertex
     [[nodiscard]] const Graph & graph() const { return graph_; }

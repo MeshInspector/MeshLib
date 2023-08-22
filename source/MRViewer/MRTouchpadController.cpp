@@ -152,6 +152,8 @@ bool TouchpadController::touchpadZoomGestureBegin_()
 
     initZoomParams_ = viewer.viewport().getParameters();
 
+    viewer.mouseController.setMouseScroll( true );
+
     return true;
 }
 
@@ -163,17 +165,29 @@ bool TouchpadController::touchpadZoomGestureUpdate_( float scale, bool kinetic )
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
 
+    const auto currentViewAngle = viewport.getParameters().cameraViewAngle;
+
     constexpr float minAngle = 0.001f;
     constexpr float maxAngle = 179.99f;
     // more natural zoom scale
     const auto viewAngle = std::exp( 1.f - scale ) * initZoomParams_.cameraViewAngle;
-    viewport.setCameraViewAngle( std::clamp( viewAngle, minAngle, maxAngle ) );
+
+    const auto mult = std::clamp( viewAngle, minAngle, maxAngle ) / currentViewAngle;
+    const auto delta2 = std::log( mult ) / std::log( 0.95f );
+    const auto sign = delta2 >= 0.f ? +1.f : -1.f;
+    const auto delta = sign * std::sqrt( std::abs( delta2 ) );
+
+    viewer.mouseScroll( delta );
 
     return true;
 }
 
 bool TouchpadController::touchpadZoomGestureEnd_()
 {
+    auto& viewer = getViewerInstance();
+
+    viewer.mouseController.setMouseScroll( false );
+
     return true;
 }
 

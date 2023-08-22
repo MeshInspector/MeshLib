@@ -59,6 +59,33 @@ bool TouchpadController::touchpadRotateGestureEnd_()
 
 bool TouchpadController::touchpadSwipeGestureBegin_()
 {
+    auto& viewer = getViewerInstance();
+    auto& viewport = viewer.viewport();
+
+    auto swipeMode = parameters_.swipeMode;
+    if ( ImGui::GetIO().KeyAlt )
+    {
+        switch ( swipeMode )
+        {
+        case Parameters::SwipeRotatesCamera:
+            swipeMode = Parameters::SwipeMovesCamera;
+            break;
+        case Parameters::SwipeMovesCamera:
+            swipeMode = Parameters::SwipeRotatesCamera;
+            break;
+        case Parameters::SwipeModeCount:
+            break;
+        }
+    }
+
+    if ( swipeMode == Parameters::SwipeRotatesCamera )
+    {
+        const auto initParams = viewer.viewport().getParameters();
+        viewport.rotationCenterMode( Viewport::Parameters::RotationCenterMode::DynamicStatic );
+        viewport.setRotation( true );
+        viewport.rotationCenterMode( initParams.rotationMode );
+    }
+
     return true;
 }
 
@@ -105,7 +132,7 @@ bool TouchpadController::touchpadSwipeGestureUpdate_( float deltaX, float deltaY
             * Quaternionf( Vector3f::plusX(), angle.y )
             * quat
         ).normalized();
-        const auto xf = AffineXf3f::xfAround( Matrix3f( quat ), sceneCenterPos );
+        const auto xf = AffineXf3f::linear( Matrix3f( quat ) );
         viewport.transformView( xf );
 
         return true;
@@ -143,6 +170,11 @@ bool TouchpadController::touchpadSwipeGestureUpdate_( float deltaX, float deltaY
 
 bool TouchpadController::touchpadSwipeGestureEnd_()
 {
+    auto& viewer = getViewerInstance();
+    auto& viewport = viewer.viewport();
+
+    viewport.setRotation( false );
+
     return true;
 }
 

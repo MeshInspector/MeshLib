@@ -7,6 +7,7 @@
 
 #include <spdlog/spdlog.h>
 
+// uncomment to print more debug messages
 //#define EVENT_DEBUG
 #ifdef EVENT_DEBUG
 #pragma warning( push )
@@ -18,6 +19,7 @@
 namespace
 {
 
+// Helper class to print error messages in-place
 class HRESULTHandler
 {
 public:
@@ -57,6 +59,7 @@ private:
     HRESULT hr_;
 };
 
+// Extract file name from full file path
 consteval std::string_view FILENAME( std::string_view str )
 {
     if ( auto posU = str.rfind( '/' ); posU != std::string_view::npos )
@@ -67,21 +70,27 @@ consteval std::string_view FILENAME( std::string_view str )
         return str;
 }
 
+// Macro to simplify an error message output
+// Example:
+//   HR = Win32APIMethod( args );
+// for E_INVALIDARG will log something like:
+//   MRTouchpadWin32Handler.cpp:75: 80070057 One or more arguments are not valid
 #define HR HRESULTHandler( FILENAME( __FILE__ ), __LINE__ )
 
+// Some useful macros
 #define UNUSED( x ) (void)( x )
-
-constexpr DWORD TOUCHPAD_EVENT_POLLING_PERIOD_MS = 10; // 100 Hz
-
 #define FUZZY( x, y ) ( std::abs( ( x ) - ( y ) ) < 1e-6 )
 #define FUZZY_0( x ) FUZZY( ( x ), 0 )
 #define FUZZY_1( x ) FUZZY( ( x ), 1 )
+
+constexpr DWORD TOUCHPAD_EVENT_POLLING_PERIOD_MS = 10; // 100 Hz
 
 }
 
 namespace MR
 {
 
+// Class for handling status, update events and interactions from Direct Manipulation API
 class TouchpadWin32Handler::DirectManipulationViewportEventHandler
     : public Microsoft::WRL::RuntimeClass<
         Microsoft::WRL::RuntimeClassFlags<Microsoft::WRL::RuntimeClassType::ClassicCom>,
@@ -324,6 +333,7 @@ TouchpadWin32Handler::TouchpadWin32Handler( GLFWwindow* window )
 
     registry_().emplace( window_, this );
 
+    // timer is used for polling touchpad events during gesture execution
     timerQueue_ = CreateTimerQueue();
 
 #pragma warning( push )
@@ -404,6 +414,7 @@ LRESULT WINAPI TouchpadWin32Handler::WindowSubclassProc( HWND hwnd, UINT uMsg, W
 
     switch ( uMsg )
     {
+    // the event is emitted when user starts a gesture
     case DM_POINTERHITTEST:
         handler->processPointerHitTestEvent_( wParam );
         break;

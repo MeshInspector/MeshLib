@@ -16,6 +16,8 @@
 namespace MR
 {
 
+// Touchpad event handler for Windows using Direct Manipulation API
+// More info: https://learn.microsoft.com/en-us/windows/win32/directmanipulation/direct-manipulation-portal
 class TouchpadWin32Handler : public TouchpadController::Handler
 {
 public:

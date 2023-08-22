@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRViewerEventsListener.h"
 #include "MRViewport.h"
 
 #include <functional>
@@ -86,18 +87,18 @@ private:
     Parameters parameters_;
 
     Viewport::Parameters initRotateParams_;
-    virtual void touchpadRotateGestureBegin_() override;
-    virtual void touchpadRotateGestureUpdate_( float angle ) override;
-    virtual void touchpadRotateGestureEnd_() override;
+    virtual bool touchpadRotateGestureBegin_() override;
+    virtual bool touchpadRotateGestureUpdate_( float angle ) override;
+    virtual bool touchpadRotateGestureEnd_() override;
 
-    virtual void touchpadSwipeGestureBegin_() override;
-    virtual void touchpadSwipeGestureUpdate_( float deltaX, float deltaY, bool kinetic ) override;
-    virtual void touchpadSwipeGestureEnd_() override;
+    virtual bool touchpadSwipeGestureBegin_() override;
+    virtual bool touchpadSwipeGestureUpdate_( float deltaX, float deltaY, bool kinetic ) override;
+    virtual bool touchpadSwipeGestureEnd_() override;
 
     Viewport::Parameters initZoomParams_;
-    virtual void touchpadZoomGestureBegin_() override;
-    virtual void touchpadZoomGestureUpdate_( float scale, bool kinetic ) override;
-    virtual void touchpadZoomGestureEnd_() override;
+    virtual bool touchpadZoomGestureBegin_() override;
+    virtual bool touchpadZoomGestureUpdate_( float scale, bool kinetic ) override;
+    virtual bool touchpadZoomGestureEnd_() override;
 };
 
 } // namespace MR

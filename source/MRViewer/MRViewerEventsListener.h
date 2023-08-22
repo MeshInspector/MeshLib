@@ -243,7 +243,7 @@ struct MRVIEWER_CLASS TouchpadRotateGestureBeginListener : ConnectionHolder
     virtual ~TouchpadRotateGestureBeginListener() = default;
     MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
 protected:
-    virtual void touchpadRotateGestureBegin_() = 0;
+    virtual bool touchpadRotateGestureBegin_() = 0;
 };
 
 /// class to subscribe on TouchpadRotateGestureUpdateEvent
@@ -253,7 +253,7 @@ struct MRVIEWER_CLASS TouchpadRotateGestureUpdateListener : ConnectionHolder
     virtual ~TouchpadRotateGestureUpdateListener() = default;
     MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
 protected:
-    virtual void touchpadRotateGestureUpdate_( float angle ) = 0;
+    virtual bool touchpadRotateGestureUpdate_( float angle ) = 0;
 };
 
 /// class to subscribe on TouchpadRotateGestureEndEvent
@@ -263,7 +263,7 @@ struct MRVIEWER_CLASS TouchpadRotateGestureEndListener : ConnectionHolder
     virtual ~TouchpadRotateGestureEndListener() = default;
     MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
 protected:
-    virtual void touchpadRotateGestureEnd_() = 0;
+    virtual bool touchpadRotateGestureEnd_() = 0;
 };
 
 /// class to subscribe on TouchpadSwipeGestureBeginEvent
@@ -273,7 +273,7 @@ struct MRVIEWER_CLASS TouchpadSwipeGestureBeginListener : ConnectionHolder
     virtual ~TouchpadSwipeGestureBeginListener() = default;
     MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
 protected:
-    virtual void touchpadSwipeGestureBegin_() = 0;
+    virtual bool touchpadSwipeGestureBegin_() = 0;
 };
 
 /// class to subscribe on TouchpadSwipeGestureUpdateEvent
@@ -283,7 +283,7 @@ struct MRVIEWER_CLASS TouchpadSwipeGestureUpdateListener : ConnectionHolder
     virtual ~TouchpadSwipeGestureUpdateListener() = default;
     MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
 protected:
-    virtual void touchpadSwipeGestureUpdate_( float dx, float dy, bool kinetic ) = 0;
+    virtual bool touchpadSwipeGestureUpdate_( float dx, float dy, bool kinetic ) = 0;
 };
 
 /// class to subscribe on TouchpadSwipeGestureEndEvent
@@ -293,7 +293,7 @@ struct MRVIEWER_CLASS TouchpadSwipeGestureEndListener : ConnectionHolder
     virtual ~TouchpadSwipeGestureEndListener() = default;
     MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
 protected:
-    virtual void touchpadSwipeGestureEnd_() = 0;
+    virtual bool touchpadSwipeGestureEnd_() = 0;
 };
 
 /// class to subscribe on TouchpadZoomGestureBeginEvent
@@ -303,7 +303,7 @@ struct MRVIEWER_CLASS TouchpadZoomGestureBeginListener : ConnectionHolder
     virtual ~TouchpadZoomGestureBeginListener() = default;
     MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
 protected:
-    virtual void touchpadZoomGestureBegin_() = 0;
+    virtual bool touchpadZoomGestureBegin_() = 0;
 };
 
 /// class to subscribe on TouchpadZoomGestureUpdateEvent
@@ -313,7 +313,7 @@ struct MRVIEWER_CLASS TouchpadZoomGestureUpdateListener : ConnectionHolder
     virtual ~TouchpadZoomGestureUpdateListener() = default;
     MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
 protected:
-    virtual void touchpadZoomGestureUpdate_( float scale, bool kinetic ) = 0;
+    virtual bool touchpadZoomGestureUpdate_( float scale, bool kinetic ) = 0;
 };
 
 /// class to subscribe on TouchpadZoomGestureEndEvent
@@ -323,7 +323,7 @@ struct MRVIEWER_CLASS TouchpadZoomGestureEndListener : ConnectionHolder
     virtual ~TouchpadZoomGestureEndListener() = default;
     MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
 protected:
-    virtual void touchpadZoomGestureEnd_() = 0;
+    virtual bool touchpadZoomGestureEnd_() = 0;
 };
 
 /// class to subscribe on PostFocusSingal

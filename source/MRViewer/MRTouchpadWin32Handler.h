@@ -44,6 +44,9 @@ private:
     HANDLE timer_{ NULL };
     void startTouchpadEventPolling_();
     void stopTouchpadEventPolling_();
+
+    static std::map<HWND, MR::TouchpadWin32Handler*>& registry_();
+    static MR::TouchpadWin32Handler* findHandler_( HWND view );
 };
 
 } // namespace MR

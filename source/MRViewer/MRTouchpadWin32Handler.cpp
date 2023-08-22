@@ -18,38 +18,6 @@
 namespace
 {
 
-class TouchpadWin32HandlerRegistry
-{
-public:
-    static TouchpadWin32HandlerRegistry& instance()
-    {
-        static TouchpadWin32HandlerRegistry instance;
-        return instance;
-    }
-
-    void add( HWND view, MR::TouchpadWin32Handler* handler )
-    {
-        registry_.emplace( view, handler );
-    }
-
-    void remove( HWND view )
-    {
-        registry_.erase( view );
-    }
-
-    [[nodiscard]] MR::TouchpadWin32Handler* find( HWND view ) const
-    {
-        const auto it = registry_.find( view );
-        if ( it != registry_.end() )
-            return it->second;
-        else
-            return nullptr;
-    }
-
-private:
-    std::map<HWND, MR::TouchpadWin32Handler*> registry_;
-};
-
 class HRESULTHandler
 {
 public:
@@ -354,7 +322,7 @@ TouchpadWin32Handler::TouchpadWin32Handler( GLFWwindow* window )
 {
     window_ = glfwGetWin32Window( window );
 
-    TouchpadWin32HandlerRegistry::instance().add( window_, this );
+    registry_().emplace( window_, this );
 
     timerQueue_ = CreateTimerQueue();
 
@@ -426,12 +394,12 @@ TouchpadWin32Handler::~TouchpadWin32Handler()
 
     DeleteTimerQueue( timerQueue_ );
 
-    TouchpadWin32HandlerRegistry::instance().remove( window_ );
+    registry_().erase( window_ );
 }
 
 LRESULT WINAPI TouchpadWin32Handler::WindowSubclassProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
-    auto* handler = TouchpadWin32HandlerRegistry::instance().find( hwnd );
+    auto* handler = findHandler_( hwnd );
     assert( handler );
 
     switch ( uMsg )
@@ -491,6 +459,21 @@ void TouchpadWin32Handler::stopTouchpadEventPolling_()
         UNUSED( result );
         timer_ = NULL;
     }
+}
+
+std::map<HWND, MR::TouchpadWin32Handler*>& TouchpadWin32Handler::registry_()
+{
+    static std::map<HWND, MR::TouchpadWin32Handler*> instance;
+    return instance;
+}
+
+MR::TouchpadWin32Handler* TouchpadWin32Handler::findHandler_( HWND view )
+{
+    const auto it = registry_().find( view );
+    if ( it != registry_().end() )
+        return it->second;
+    else
+        return nullptr;
 }
 
 }

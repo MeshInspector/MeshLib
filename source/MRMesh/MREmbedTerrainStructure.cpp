@@ -11,6 +11,8 @@
 #include "MRFillContour.h"
 #include "MRId.h"
 #include "MRMeshSave.h"
+#include "MR2DContoursTriangulation.h"
+#include "MRTriMath.h"
 
 namespace MR
 {
@@ -27,9 +29,6 @@ Expected<Mesh, std::string> embedStructureToTerrain(
     auto boxSize = globalBox.size();
     const float boxExpansion = 0.5f;
     auto mainComponent = terrain.topology.getValidFaces();
-    FaceBitSet extenedFaces;
-    for ( auto e : resMesh.topology.findHoleRepresentiveEdges() )
-        extendHole( resMesh, e, Plane3f( Vector3f::plusZ(), globalBox.min.z - boxSize.z * boxExpansion ), &extenedFaces );
 
     auto structBound = findRightBoundary( structure.topology );
     if ( structBound.size() != 1 )
@@ -73,11 +72,23 @@ Expected<Mesh, std::string> embedStructureToTerrain(
     }
     cont.back() = cont.front();
 
+    bool needCut = ecParams.cutBitSet.any();
+    bool needFill = ecParams.cutBitSet.count() + 1 != cont.size();
+
     auto coneMeshRes = createEmbeddedConeMesh( cont, ecParams );
     if ( !coneMeshRes.has_value() )
         return unexpected( coneMeshRes.error() );
 
-    MeshSave::toMrmesh( coneMeshRes->mesh, "C:\\Users\\grant\\Downloads\\objects (1)\\coneMeshRes.mrmesh" );
+    FaceBitSet extenedFaces;
+    if ( !needFill || !needCut )
+    {
+        auto desiredZ = needFill ?
+            globalBox.max.z + boxSize.z * boxExpansion :
+            globalBox.min.z - boxSize.z * boxExpansion;
+        for ( auto e : resMesh.topology.findHoleRepresentiveEdges() )
+            extendHole( resMesh, e, Plane3f( Vector3f::plusZ(), desiredZ ), &extenedFaces );
+    }
+
 
     BooleanPreCutResult precutResTerrain;
     BooleanPreCutResult precutResCone;
@@ -110,6 +121,9 @@ Expected<Mesh, std::string> embedStructureToTerrain(
         precutResTerrain.contours.erase( precutResTerrain.contours.begin() + 1, precutResTerrain.contours.end() );
         precutResCone.contours.erase( precutResCone.contours.begin() + 1, precutResCone.contours.end() );
     }
+
+    if ( !precutResCone.contours.front().closed )
+        return unexpected( "Cannot embed structure beyond terrain" );
 
     FaceMap newTerrainFacesMap;
     auto oldTerrainFaceSize = precutResTerrain.mesh.topology.faceSize();
@@ -233,67 +247,115 @@ Expected<EmbeddedConeResult, std::string> createEmbeddedConeMesh(
     auto cutOffset = std::abs( params.maxZ - centerZ ) * std::clamp( std::tan( params.cutAngle ), 0.0f, 100.0f );
     auto fillOffset = std::abs( params.minZ - centerZ ) * std::clamp( std::tan( params.fillAngle ), 0.0f, 100.0f );
 
-    bool needCutPart = params.cutBitSet.any();
-    bool needFillPart = params.cutBitSet.count() + 1 != cont.size();
-
-    float maxOffset = 0.0f;
-    if ( needCutPart && needFillPart )
-        maxOffset = std::max( cutOffset, fillOffset );
-    else if ( needCutPart )
-        maxOffset = cutOffset;
-    else
-        maxOffset = fillOffset;
-
-    contBox.min -= Vector2f::diagonal( maxOffset + 3.0f * params.pixelSize );
-    contBox.max += Vector2f::diagonal( maxOffset + 3.0f * params.pixelSize );
-
-    ContourToDistanceMapParams dmParams;
-    dmParams.orgPoint = contBox.min;
-    dmParams.pixelSize = Vector2f::diagonal( params.pixelSize );
-    dmParams.resolution = Vector2i( contBox.size() / params.pixelSize );
-    dmParams.withSign = true;
-
-    if ( dmParams.resolution.x > 2000 || dmParams.resolution.y > 2000 )
-        return unexpected( "Exceed precision limit" );
-
-    auto dm = distanceMapFromContours( Polyline2( { cont } ), dmParams );
-
-
-    EmbeddedConeResult res;
-
-    auto moveToContVert = [&] ( VertId v, bool cut )->VertId
+    auto contNorm = [&] ( int i )
     {
-        for ( auto e : orgRing( res.mesh.topology, v ) )
+        auto norm = to2dim( cont[i + 1] ) - to2dim( cont[i] );
+        std::swap( norm.x, norm.y );
+        norm.x = -norm.x;
+        norm = norm.normalized();
+        return norm;
+    };
+
+    struct OffsetBlock
+    {
+        Mesh mesh;
+        std::vector<int> contourOffsets;
+    };
+    auto createOffet = [&] ( float offset )
+    {
+        OffsetBlock res;
+        res.contourOffsets.resize( int( cont.size() ), 0 );
+        Contour2f offsetCont;
+
+        offsetCont.reserve( 3 * cont.size() );
+        auto lastPoint = to2dim( cont[0] ) + offset * contNorm( int( cont.size() ) - 2 );
+        for ( int i = 0; i + 1 < cont.size(); ++i )
         {
-            auto d = res.mesh.topology.dest( e );
-            if ( d < params.cutBitSet.size() && ( cut != params.cutBitSet.test( d ) ) )
-                return d;
+            auto orgPt = to2dim( cont[i] );
+            auto destPt = to2dim( cont[i + 1] );
+            auto norm = contNorm( i );
+
+            auto nextPoint = orgPt + norm * offset;
+            bool sameAsPrev = false;
+            // interpolation    
+            if ( offsetCont.empty() )
+            {
+                offsetCont.emplace_back( std::move( lastPoint ) );
+                ++res.contourOffsets[i];
+            }
+            auto prevPoint = offsetCont.back();
+            auto a = prevPoint - orgPt;
+            auto b = nextPoint - orgPt;
+            auto crossRes = cross( a, b );
+            auto dotRes = dot( a, b );
+            float ang = 0.0f;
+            if ( crossRes == 0.0f )
+                ang = dotRes >= 0.0f ? 0.0f : PI_F;
+            else 
+                ang = std::atan2( crossRes, dotRes );
+                    
+            sameAsPrev = std::abs( ang ) < PI_F / 360.0f;
+            if ( !sameAsPrev )
+            {
+                int numSteps = int( std::floor( std::abs( ang ) / ( params.minAnglePrecision ) ) );
+                for ( int s = 0; s < numSteps; ++s )
+                {
+                    float stepAng = ( ang / ( numSteps + 1 ) ) * ( s + 1 );
+                    auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( stepAng ), orgPt );
+                    offsetCont.emplace_back( rotXf( prevPoint ) );
+                    ++res.contourOffsets[i];
+                }
+                offsetCont.emplace_back( std::move( nextPoint ) );
+                ++res.contourOffsets[i];
+            }
+
+            offsetCont.emplace_back( destPt + norm * offset );
+            ++res.contourOffsets[i + 1];
         }
+        int prevSum = 0;
+        for ( int i = 0; i + 1 < res.contourOffsets.size(); ++i )
+        {
+            std::swap( res.contourOffsets[i], prevSum );
+            prevSum += res.contourOffsets[i];
+        }
+
+        res.contourOffsets.back() = int( offsetCont.size() ) - 1;
+        res.mesh = PlanarTriangulation::triangulateContours( { offsetCont } );
+        return res;
+    };
+    
+    EmbeddedConeResult res;
+    res.mesh.addSeparateContours( { cont } );
+    bool needCut = params.cutBitSet.any();
+    bool needFill = params.cutBitSet.count() + 1 != cont.size();
+
+    auto findInitIndex = [] ( VertId v, const std::vector<int>& offsets, int initSize )->int
+    {
+        auto diff = v - initSize;
+        int h = 0;
+        for ( ; h + 1 < offsets.size(); ++h )
+        {
+            if ( diff >= offsets[h] && diff < offsets[h + 1] )
+                break;
+        }
+        return h;
+    };
+
+    auto moveToContVert = [&] ( VertId v, const std::vector<int>& offsets, int initSize, bool cut )->VertId
+    {
+        auto initVert = VertId( findInitIndex( v, offsets, initSize ) );
+        if ( initVert < params.cutBitSet.size() && ( cut != params.cutBitSet.test( initVert ) ) )
+            return initVert;
         return {};
     };
 
-    auto buildPart = [&] ( bool fill )->std::string
+    auto postProcess = [&] ( const EdgeLoop& baseBd, const std::vector<int>& offsets, int initSize, bool cut )->std::string
     {
-        auto cont2f = distanceMapTo2DIsoPolyline( dm, dmParams, fill ? fillOffset : cutOffset );
-        auto cont3f = cont2f.topology.convertToContours<Vector3f>( [&] ( VertId v )
-        {
-            return Vector3f( cont2f.points[v].x, cont2f.points[v].y, fill ? params.minZ : params.maxZ );
-        } );
-        auto vertSize = res.mesh.topology.lastValidVert() + 1;
-        auto eBase = res.mesh.addSeparateContours( cont3f );
-
-        buildCylinderBetweenTwoHoles( res.mesh,
-            fill ? eBase.sym() : eBase,
-            fill ? EdgeId{ 0 } : EdgeId{ 1 },
-            { .metric = getMinTriAngleMetric( res.mesh ) } );
-
-        auto fillRes = fillContours2D( res.mesh, { fill ? eBase : eBase.sym() } );
-        if ( !fillRes.has_value() )
-            return fillRes.error();
         // moves
-        for ( VertId v = vertSize; v <= res.mesh.topology.lastValidVert(); ++v )
+        for ( auto e : baseBd )
         {
-            if ( auto mv = moveToContVert( v, !fill ) )
+            auto v = res.mesh.topology.org( e );
+            if ( auto mv = moveToContVert( v, offsets, initSize, cut ) )
             {
                 res.mesh.points[v].x = res.mesh.points[mv].x;
                 res.mesh.points[v].y = res.mesh.points[mv].y;
@@ -309,11 +371,11 @@ Expected<EmbeddedConeResult, std::string> createEmbeddedConeMesh(
             if ( orgCut == params.cutBitSet.test( dest ) )
                 continue;
             EdgeId flipE;
-            if ( fill )
+            if ( !cut )
                 flipE = orgCut ? res.mesh.topology.prev( e.sym() ) : res.mesh.topology.next( e );
             else
                 flipE = orgCut ? res.mesh.topology.prev( e ) : res.mesh.topology.next( e.sym() );
-            if ( moveToContVert( res.mesh.topology.dest( flipE ), !fill ).valid() )
+            if ( moveToContVert( res.mesh.topology.dest( flipE ), offsets, initSize, cut ).valid() )
             {
                 auto nd = res.mesh.topology.dest( res.mesh.topology.next( flipE ) );
                 auto pd = res.mesh.topology.dest( res.mesh.topology.prev( flipE ) );
@@ -321,27 +383,75 @@ Expected<EmbeddedConeResult, std::string> createEmbeddedConeMesh(
                     res.mesh.topology.flipEdge( flipE );
             }
         }
-        if ( fill )
-            res.fillBitSet = res.mesh.topology.getValidFaces();
+        if ( cut )
+            res.cutBitSet = res.mesh.topology.getValidFaces();
         else
-            res.cutBitSet = res.mesh.topology.getValidFaces() - res.fillBitSet;
+            res.fillBitSet = res.mesh.topology.getValidFaces() - res.cutBitSet;
         return {};
     };
 
-    // add base contour
-    res.mesh.addSeparateContours( { cont } );
-    if ( needFillPart )
+    auto addBase = [&] ( bool cut )
     {
-        auto error = buildPart( true );
-        if ( !error.empty() )
-            return unexpected( "Building fill part failed: " + error );
-    }
+        auto basePart = createOffet( cut ? cutOffset : fillOffset );
+        for ( auto& p : basePart.mesh.points )
+            p.z = cut ? params.maxZ : params.minZ;
 
-    if ( needCutPart )
+        if ( !cut )
+            basePart.mesh.topology.flipOrientation();
+
+        VertId vertSize = res.mesh.topology.lastValidVert() + 1;
+        res.mesh.addPart( std::move( basePart.mesh ) );
+        auto holes = findRightBoundary( res.mesh.topology );
+        if ( cut && holes.size() != 3 )
+            return false;
+        else if ( !cut && holes.size() != ( needCut ? 2 : 3 ) )
+            return false;
+
+        auto ueSize = int( res.mesh.topology.undirectedEdgeSize() );
+        const auto& baseHole = ( cut || !needCut ) ? holes[1] : holes[0];
+        for (
+            int ei = cut ? 0 : int( holes.back().size() ) - 1;
+            cut ? ei < holes.back().size() : ei >= 0;
+            cut ? ++ei : --ei )
+        {
+            auto e = cut ? holes.back()[ei] : holes.back()[( ei + 2 ) % holes.back().size()];
+            auto v = res.mesh.topology.org( e );
+
+            int h = findInitIndex( v, basePart.contourOffsets, vertSize );
+            if ( h < baseHole.size() )
+                makeBridgeEdge( res.mesh.topology, e,
+                    cut ? res.mesh.topology.prev( baseHole[h] ) : baseHole[h] );
+        }
+
+        auto lastEdge = int( res.mesh.topology.undirectedEdgeSize() );
+        FillHoleMetric metric;
+        metric.triangleMetric = [&] ( VertId a, VertId b, VertId c )->double
+        {
+            if ( ( a < vertSize && b < vertSize && c < vertSize ) ||
+                ( a >= vertSize && b >= vertSize && c >= vertSize ) )
+                return DBL_MAX;
+            Vector3d aP = Vector3d( res.mesh.points[a] );
+            Vector3d bP = Vector3d( res.mesh.points[b] );
+            Vector3d cP = Vector3d( res.mesh.points[c] );
+
+            return dblArea( aP, bP, cP );
+        };
+        for ( int ue = ueSize; ue < lastEdge; ++ue )
+            fillHole( res.mesh, EdgeId( ue << 1 ), { .metric = metric } );
+
+        postProcess( holes.back(), basePart.contourOffsets, vertSize, cut );
+        return true;
+    };
+
+    if ( needCut ) // need cut part
     {
-        auto error = buildPart( false );
-        if ( !error.empty() )
-            return unexpected( "Building cut part failed: " + error );
+        if ( !addBase( true ) )
+            return unexpected( "Cannot make cut offset contour due to precision issues" );
+    }
+    if ( needFill ) // need fill part
+    {
+        if ( !addBase( false ) )
+            return unexpected( "Cannot make fill offset contour due to precision issues" );
     }
 
     return res;

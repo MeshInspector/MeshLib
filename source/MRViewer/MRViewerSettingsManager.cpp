@@ -254,14 +254,6 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         {
             parameters.ignoreKineticMoves = object["ignoreKineticMoves"].asBool();
         }
-        if ( object.isMember( "swipeScale") && object["swipeScale"].isDouble() )
-        {
-            const auto swipeScale = object["swipeScale"].asFloat();
-            if ( swipeScale > 0.f )
-                parameters.swipeScale = swipeScale;
-            else
-                spdlog::warn( "Incorrect value for {}.swipeScale", cTouchpadSettings );
-        }
         if ( object.isMember( "cancellable" ) && object["cancellable"].isBool() )
         {
             parameters.cancellable = object["cancellable"].asBool();
@@ -362,7 +354,6 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     Json::Value touchpadParametersJson;
     const auto& touchpadParameters = viewer.touchpadController.getParameters();
     touchpadParametersJson["ignoreKineticMoves"] = touchpadParameters.ignoreKineticMoves;
-    touchpadParametersJson["swipeScale"] = touchpadParameters.swipeScale;
     touchpadParametersJson["cancellable"] = touchpadParameters.cancellable;
     touchpadParametersJson["swipeMode"] = (int)touchpadParameters.swipeMode;
     cfg.setJsonValue( cTouchpadSettings, touchpadParametersJson );

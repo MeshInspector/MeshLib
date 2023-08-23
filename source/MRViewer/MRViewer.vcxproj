@@ -58,6 +58,7 @@
     <ClCompile Include="MRImmediateGL.cpp" />
     <ClCompile Include="MRStatePluginUpdate.cpp" />
     <ClCompile Include="MRSurfacePointPicker.cpp" />
+    <ClCompile Include="MRTouchpadWin32Handler.cpp" />
     <ClCompile Include="MRUIStyle.cpp" />
     <ClCompile Include="MRViewerInstance.cpp" />
     <ClCompile Include="MRViewerIO.cpp" />
@@ -153,6 +154,7 @@
     <ClInclude Include="MRStatePluginUpdate.h" />
     <ClInclude Include="MRSurfacePointPicker.h" />
     <ClInclude Include="MRSwapRootAction.h" />
+    <ClInclude Include="MRTouchpadWin32Handler.h" />
     <ClInclude Include="MRUIStyle.h" />
     <ClInclude Include="MRViewer.h" />
     <ClInclude Include="MRViewerFwd.h" />

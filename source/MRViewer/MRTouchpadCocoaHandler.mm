@@ -139,18 +139,22 @@ void TouchpadCocoaHandler::onScrollEvent( NSView* view, SEL cmd, NSEvent* event 
 
     auto deltaX = [event scrollingDeltaX];
     auto deltaY = [event scrollingDeltaY];
-    if ( [event hasPreciseScrollingDeltas] )
-    {
-        deltaX *= 0.1;
-        deltaY *= 0.1;
-    }
     if ( deltaX == 0.0 && deltaY == 0.0 )
         return;
 
     if ( [event subtype] == NSEventSubtypeMouseEvent )
+    {
+        if ( [event hasPreciseScrollingDeltas] )
+        {
+            deltaX *= 0.1;
+            deltaY *= 0.1;
+        }
         handler->mouseScroll( deltaX, deltaY, [event momentumPhase] != NSEventPhaseNone );
+    }
     else
+    {
         handler->swipe( deltaX, deltaY, [event momentumPhase] != NSEventPhaseNone );
+    }
 }
 
 }

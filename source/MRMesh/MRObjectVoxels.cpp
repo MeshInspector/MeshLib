@@ -172,6 +172,7 @@ Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface
             vparams.iso = iso;
             vparams.maxVertices = maxSurfaceVertices_;
             vparams.cb = myCb;
+            vparams.positioner = positioner_;
             if ( vdbVolume.data->getGridClass() == openvdb::GridClass::GRID_LEVEL_SET )
                 vparams.lessInside = true;
             meshRes = marchingCubes( vdbVolume, vparams );
@@ -268,7 +269,7 @@ bool ObjectVoxels::prepareDataForVolumeRendering( ProgressCallback cb /*= {} */ 
 {
     if ( !vdbVolume_.data )
         return false;
-    volumeRenderingData_ = std::make_unique<SimpleVolumeU8>();
+    volumeRenderingData_ = std::make_unique<SimpleVolumeU16>();
     auto& res = *volumeRenderingData_;
     res.max = vdbVolume_.max;
     res.min = vdbVolume_.min;
@@ -291,7 +292,8 @@ bool ObjectVoxels::prepareDataForVolumeRendering( ProgressCallback cb /*= {} */ 
                 return;
             auto coord = indexer.toPos( VoxelId( i ) );
             auto vdbCoord = openvdb::Coord( coord.x + activeBox.min.x, coord.y + activeBox.min.y, coord.z + activeBox.min.z );
-            res.data[i] = uint8_t( std::clamp( ( accessor.getValue( vdbCoord ) - res.min ) / ( res.max - res.min ), 0.0f, 1.0f ) * 255.0f );
+            res.data[i] = uint16_t( std::clamp( ( accessor.getValue( vdbCoord ) - res.min ) / ( res.max - res.min ), 0.0f, 1.0f ) * 
+                float( std::numeric_limits<uint16_t>::max() ) );
         }
         if ( cb )
         {

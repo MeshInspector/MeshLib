@@ -540,8 +540,6 @@ void ViewerSettingsPlugin::drawTouchpadSettings_( float menuScaling )
     bool updateSettings = false;
     if ( UI::checkbox( "Ignore Kinetic Movements", &touchpadParameters_.ignoreKineticMoves ) )
         updateSettings = true;
-    if ( ImGui::DragFloatValid( "Swipe Speed", &touchpadParameters_.swipeScale, 1.f, 1.f, 100.f ) )
-        updateSettings = true;
     if ( UI::checkbox( "Allow System to Interrupt Gestures", &touchpadParameters_.cancellable ) )
         updateSettings = true;
     if ( UI::combo( "Swipe Mode", (int*)&touchpadParameters_.swipeMode, swipeModeList ) )

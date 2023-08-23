@@ -1,14 +1,21 @@
 #include "MRTouchpadController.h"
-#include "MRTouchpadCocoaHandler.h"
 #include "MRViewer.h"
+
+#if defined( __APPLE__ )
+#include "MRTouchpadCocoaHandler.h"
+#elif defined( _WIN32 )
+#include "MRTouchpadWin32Handler.h"
+#endif
 
 namespace MR
 {
 
 void TouchpadController::initialize( GLFWwindow* window )
 {
-#ifdef __APPLE__
+#if defined( __APPLE__ )
     handler_ = std::make_unique<TouchpadCocoaHandler>( window );
+#elif defined( _WIN32 )
+    handler_ = std::make_unique<TouchpadWin32Handler>( window );
 #else
     (void)window;
 #endif
@@ -82,7 +89,7 @@ bool TouchpadController::swipe_( float deltaX, float deltaY, bool kinetic )
     if ( parameters_.ignoreKineticMoves && kinetic )
         return true;
 
-    const auto swipeDirection = parameters_.swipeScale * Vector3f( deltaX, deltaY, 0.f );
+    const auto swipeDirection = Vector3f( deltaX, deltaY, 0.f );
 
     auto swipeMode = parameters_.swipeMode;
     if ( ImGui::GetIO().KeyAlt )

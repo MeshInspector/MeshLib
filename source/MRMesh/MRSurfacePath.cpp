@@ -453,36 +453,41 @@ Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
 }
 
 SurfacePath computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
-    const MeshTriPoint & start, const MeshTriPoint & end, VertId * vertexReached )
+    const MeshTriPoint & start, const ComputeSteepestDescentPathSettings & settings )
 {
     SurfacePath res;
-    computeSteepestDescentPath( mesh, field, start, end, &res, vertexReached );
+    computeSteepestDescentPath( mesh, field, start, &res, settings );
     return res;
 }
 
 void computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
-    const MeshTriPoint & start, const MeshTriPoint & end, SurfacePath * outPath, VertId * outVertexReached )
+    const MeshTriPoint & start, SurfacePath * outPath, const ComputeSteepestDescentPathSettings & settings )
 {
     assert( start );
-    assert( outVertexReached || outPath );
+    assert( settings.outVertexReached || settings.outBdReached || outPath );
     size_t iniPathSize = outPath ? outPath->size() : 0;
     size_t edgesPassed = 0;
     SurfacePathBuilder b( mesh, field );
     auto curr = b.findPrevPoint( start );
     while ( curr )
     {
-        if ( outVertexReached )
+        if ( settings.outVertexReached )
         {
             if ( auto v = curr.inVertex( mesh.topology ) )
             {
-                *outVertexReached = v;
+                *settings.outVertexReached = v;
                 return;
             }
+        }
+        if ( settings.outBdReached && curr.isBd( mesh.topology ) )
+        {
+            *settings.outBdReached = curr;
+            return;
         }
         ++edgesPassed;
         if ( outPath )
             outPath->push_back( curr );
-        if ( end && fromSameTriangle( mesh.topology, MeshTriPoint( end ), MeshTriPoint( curr ) ) )
+        if ( settings.end && fromSameTriangle( mesh.topology, MeshTriPoint( settings.end ), MeshTriPoint( curr ) ) )
             break; // reached triangle with end point
         if ( edgesPassed > mesh.topology.numValidFaces() )
         {
@@ -566,7 +571,7 @@ Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp,
     if ( !connected )
         return unexpected( PathError::StartEndNotConnected );
 
-    res = computeSteepestDescentPath( mp.mesh, distances, start, end );
+    res = computeSteepestDescentPath( mp.mesh, distances, start, { .end = end } );
     if ( res.empty() ) // no edge is crossed only if start and end are from the same triangle
         return unexpected( PathError::InternalError );
 

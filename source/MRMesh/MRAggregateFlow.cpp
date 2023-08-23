@@ -17,9 +17,14 @@ FlowAggregator::FlowAggregator( const Mesh & mesh, const VertScalars & heights )
     downPath_.resize( mesh.topology.vertSize() );
     BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
+        if ( mesh.topology.isBdVertex( v ) )
+            return;
         const EdgePoint p0( mesh.topology, v );
         VertId nextVert;
-        downPath_[v] = computeSteepestDescentPath( mesh, heights, p0, {}, &nextVert );
+        EdgePoint bdPoint;
+        downPath_[v] = computeSteepestDescentPath( mesh, heights, p0, { .outVertexReached = &nextVert, .outBdReached = &bdPoint } );
+        if ( bdPoint )
+            downPath_[v].push_back( bdPoint );
         downFlowVert_[v] = nextVert;
     } );
 
@@ -75,9 +80,12 @@ VertScalars FlowAggregator::computeFlow( size_t numStarts,
     ParallelFor( start2downVert, [&]( size_t i )
     {
         VertId nextVert;
-        if ( auto s = startById( i ) )
+        if ( auto s = startById( i ); s && !s.isBd( mesh_.topology ) )
         {
-            start2downPath[i] = computeSteepestDescentPath( mesh_, heights_, s, {}, &nextVert );
+            EdgePoint bdPoint;
+            start2downPath[i] = computeSteepestDescentPath( mesh_, heights_, s, { .outVertexReached = &nextVert, .outBdReached = &bdPoint } );
+            if ( bdPoint )
+                start2downPath[i].push_back( bdPoint );
             start2downVert[i] = nextVert;
         }
     } );
@@ -181,9 +189,12 @@ auto FlowAggregator::computeFlowsPerBasin( size_t numStarts,
     ParallelFor( start2downVert, [&]( size_t i )
     {
         VertId nextVert;
-        if ( auto s = startById( i ) )
+        if ( auto s = startById( i ); s && !s.isBd( mesh_.topology ) )
         {
-            start2downPath[i] = computeSteepestDescentPath( mesh_, heights_, s, {}, &nextVert );
+            EdgePoint bdPoint;
+            start2downPath[i] = computeSteepestDescentPath( mesh_, heights_, s, { .outVertexReached = &nextVert, .outBdReached = &bdPoint } );
+            if ( bdPoint )
+                start2downPath[i].push_back( bdPoint );
             start2downVert[i] = nextVert;
             if ( nextVert )
                 start2rootVert[i] = rootVert_[nextVert];
@@ -337,8 +348,9 @@ UndirectedEdgeBitSet FlowAggregator::computeCatchmentDelineation() const
         constexpr auto oneThird = 1.0f / 3;
         const MeshTriPoint start( mesh_.topology.edgeWithLeft( f ), { oneThird, oneThird } );
         VertId nextVert;
-        computeSteepestDescentPath( mesh_, heights_, start, {}, nullptr, &nextVert );
-        if ( nextVert )
+        EdgePoint bdPoint;
+        computeSteepestDescentPath( mesh_, heights_, start, {}, { .outVertexReached = &nextVert, .outBdReached = &bdPoint } );
+        if ( nextVert && !mesh_.topology.isBdVertex( nextVert ) )
             face2rootVert[f] = rootVert_[nextVert];
     } );
 

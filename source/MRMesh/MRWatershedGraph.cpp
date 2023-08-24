@@ -3,6 +3,7 @@
 #include "MRphmap.h"
 #include "MRRingIterator.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRTimer.h"
 
 namespace std
@@ -41,7 +42,10 @@ WatershedGraph::WatershedGraph( const MeshTopology & topology, const VertScalars
     ++numBasins;
     basins_.resize( numBasins );
     Graph::NeighboursPerVertex neighboursPerVertex( numBasins );
-    ufBasins_.reset( numBasins );
+    parentBasin_.clear();
+    parentBasin_.reserve( numBasins );
+    for ( Graph::VertId v( 0 ); v < numBasins; ++v )
+        parentBasin_.push_back( v );
     Graph::EndsPerEdge endsPerEdge;
 
     HashMap<Graph::EndVertices, Graph::EdgeId> neiBasins2edge;
@@ -110,6 +114,27 @@ WatershedGraph::WatershedGraph( const MeshTopology & topology, const VertScalars
     graph_.construct( std::move( neighboursPerVertex ), std::move( endsPerEdge ) );
 }
 
+Graph::VertId WatershedGraph::getRootBasin( Graph::VertId v ) const
+{
+    assert( v );
+    for (;;)
+    {
+        auto p = parentBasin_[v];
+        if ( p == v )
+            return v;
+        v = p;
+    }
+}
+
+void WatershedGraph::setParentsToRoots()
+{
+    MR_TIMER
+    ParallelFor( parentBasin_, [&]( Graph::VertId v )
+    {
+        parentBasin_[v] = getRootBasin( v );
+    } );
+}
+
 MRMESH_API std::pair<Graph::EdgeId, float> WatershedGraph::findLowestBd() const
 {
     MR_TIMER
@@ -134,26 +159,33 @@ MRMESH_API std::pair<Graph::EdgeId, float> WatershedGraph::findLowestBd() const
     return { lowestEdge, lowestLevel };
 }
 
-void WatershedGraph::mergeViaBd( Graph::EdgeId bd )
+Graph::VertId WatershedGraph::merge( Graph::VertId v0, Graph::VertId v1 )
 {
     MR_TIMER
-    if ( !bd )
-        return;
+    assert( v0 && v1 );
+    assert( v0 != outsideId_ && v1 != outsideId_ );
+    assert( graph_.valid( v0 ) && graph_.valid( v1 ) );
+    if ( v0 == v1 )
+        return v0;
 
-    const auto ends = graph_.ends( bd );
-    assert ( ends.v0 != outsideId_ && ends.v1 != outsideId_ );
-    const auto [vremnant, united] = ufBasins_.unite( ends.v0, ends.v1 );
-    assert( united );
-    const auto vdead = ends.otherEnd( vremnant );
-    {
-        if ( getHeightAt( basins_[vdead].lowestVert ) < getHeightAt( basins_[vremnant].lowestVert ) )
-            basins_[vremnant].lowestVert = basins_[vdead].lowestVert;
-    }
-    graph_.merge( vremnant, vdead, [&]( Graph::EdgeId eremnant, Graph::EdgeId edead )
+    assert( parentBasin_[v1] == v1 );
+    parentBasin_[v1] = v0;
+    if ( getHeightAt( basins_[v1].lowestVert ) < getHeightAt( basins_[v0].lowestVert ) )
+        basins_[v0].lowestVert = basins_[v1].lowestVert;
+
+    graph_.merge( v0, v1, [&]( Graph::EdgeId eremnant, Graph::EdgeId edead )
     {
         if ( getHeightAt( bds_[edead].lowestVert ) < getHeightAt( bds_[eremnant].lowestVert ) )
             bds_[eremnant].lowestVert = bds_[edead].lowestVert;
     } );
+    return v0;
+}
+
+Graph::VertId WatershedGraph::mergeViaBd( Graph::EdgeId bd )
+{
+    assert( bd );
+    const auto ends = graph_.ends( bd );
+    return merge( ends.v0, ends.v1 );
 }
 
 FaceBitSet WatershedGraph::getBasinFaces( Graph::VertId basin ) const
@@ -163,11 +195,11 @@ FaceBitSet WatershedGraph::getBasinFaces( Graph::VertId basin ) const
     if ( basin == outsideId_ )
         return res;
     res.resize( topology_.faceSize() );
-    const auto & roots = ufBasins_.roots();
-    assert( basin == roots[basin] );
+    assert( graph_.valid( basin ) );
+    assert( basin == parentBasin_[basin] );
     BitSetParallelForAll( res, [&]( FaceId f )
     {
-        if ( basin == roots[Graph::VertId( face2iniBasin_[f] )] )
+        if ( basin == getRootBasin( Graph::VertId( face2iniBasin_[f] ) ) )
             res.set( f );
     } );
     return res;
@@ -180,11 +212,11 @@ FaceBitSet WatershedGraph::getBasinFacesBelowLevel( Graph::VertId basin, float w
     if ( basin == outsideId_ )
         return res;
     res.resize( topology_.faceSize() );
-    const auto & roots = ufBasins_.roots();
-    assert( basin == roots[basin] );
+    assert( graph_.valid( basin ) );
+    assert( basin == parentBasin_[basin] );
     BitSetParallelForAll( res, [&]( FaceId f )
     {
-        if ( basin != roots[Graph::VertId( face2iniBasin_[f] )] )
+        if ( basin != getRootBasin( Graph::VertId( face2iniBasin_[f] ) ) )
             return;
         VertId vs[3];
         topology_.getTriVerts( f, vs );
@@ -202,7 +234,6 @@ UndirectedEdgeBitSet WatershedGraph::getInterBasinEdges() const
 {
     MR_TIMER
     UndirectedEdgeBitSet res( topology_.undirectedEdgeSize() );
-    const auto & roots = ufBasins_.roots();
     BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
     {
         auto l = topology_.left( ue );
@@ -211,8 +242,8 @@ UndirectedEdgeBitSet WatershedGraph::getInterBasinEdges() const
         auto r = topology_.right( ue );
         if ( !r )
             return;
-        const auto lBasin = roots[Graph::VertId( face2iniBasin_[l] )];
-        const auto rBasin = roots[Graph::VertId( face2iniBasin_[r] )];
+        const auto lBasin = getRootBasin( Graph::VertId( face2iniBasin_[l] ) );
+        const auto rBasin = getRootBasin( Graph::VertId( face2iniBasin_[r] ) );
         if ( lBasin != rBasin )
             res.set( ue );
     } );

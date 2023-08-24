@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRGraph.h"
-#include "MRUnionFind.h"
 #include <cfloat>
 
 namespace MR
@@ -45,12 +44,22 @@ public:
     /// returns special "basin" representing outside areas of the mesh
     [[nodiscard]] Graph::VertId outsideId() const { return outsideId_; }
 
+    /// for valid basin return its id; for invalid basin returns the id of basin it was merged in
+    [[nodiscard]] MRMESH_API Graph::VertId getRootBasin( Graph::VertId v ) const;
+
+    /// replaces parent of each basin with its computed root;
+    /// this speeds up following calls to getRootBasin()
+    MRMESH_API void setParentsToRoots();
+
     /// finds the lowest boundary between basins and its height, which is defined
     /// as the minimal different between lowest boundary point and lowest point in a basin
     [[nodiscard]] MRMESH_API std::pair<Graph::EdgeId, float> findLowestBd() const;
 
-    /// merge two basins sharing given boundary
-    MRMESH_API void mergeViaBd( Graph::EdgeId bd );
+    /// merges basin v1 into basin v0, v1 is deleted after that, returns v0
+    MRMESH_API Graph::VertId merge( Graph::VertId v0, Graph::VertId v1 );
+
+    /// merges two basins sharing given boundary, returns remaining basin
+    MRMESH_API Graph::VertId mergeViaBd( Graph::EdgeId bd );
 
     /// returns the mesh faces of given basin
     [[nodiscard]] MRMESH_API FaceBitSet getBasinFaces( Graph::VertId basin ) const;
@@ -73,7 +82,8 @@ private:
     /// special "basin" representing outside areas of the mesh
     Graph::VertId outsideId_;
 
-    mutable UnionFind<Graph::VertId> ufBasins_;
+    /// for valid basin, parent is the same; for invalid basin, sequence of parents point on valid root basin
+    Vector<Graph::VertId, Graph::VertId> parentBasin_;
 };
 
 } //namespace MR

@@ -11,13 +11,13 @@ namespace MR
 class WatershedGraph
 {
 public:
-    // associated with each vertex in graph
+    /// associated with each vertex in graph
     struct BasinInfo
     {
         VertId lowestVert; ///< in the whole basin
     };
 
-    // associated with each edge in graph
+    /// associated with each edge in graph
     struct BdInfo
     {
         VertId lowestVert; ///< on this boundary
@@ -33,11 +33,17 @@ public:
     /// returns underlying graph where each basin is a vertex
     [[nodiscard]] const Graph & graph() const { return graph_; }
     
+    /// returns the current number of basins (excluding special "outside" basin)
+    [[nodiscard]] int numBasins() const { return (int)graph_.validVerts().count() - 1; }
+
     /// returns data associated with given basin
     [[nodiscard]] const BasinInfo & basinInfo( Graph::VertId v ) const { return basins_[v]; }
 
     /// returns data associated with given boundary between basins
     [[nodiscard]] const BdInfo & bdInfo( Graph::EdgeId e ) const { return bds_[e]; }
+
+    /// returns special "basin" representing outside areas of the mesh
+    [[nodiscard]] Graph::VertId outsideId() const { return outsideId_; }
 
     /// finds the lowest boundary between basins and its height, which is defined
     /// as the minimal different between lowest boundary point and lowest point in a basin
@@ -63,6 +69,10 @@ private:
     Graph graph_;
     Vector<BasinInfo, Graph::VertId> basins_;
     Vector<BdInfo, Graph::EdgeId> bds_;
+
+    /// special "basin" representing outside areas of the mesh
+    Graph::VertId outsideId_;
+
     mutable UnionFind<Graph::VertId> ufBasins_;
 };
 

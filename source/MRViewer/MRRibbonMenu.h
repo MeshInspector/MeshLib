@@ -71,15 +71,17 @@ public:
     /// returns index of active tab in RibbonSchemaHolder::schema().tabsOrder
     int getActiveTabIndex() const { return activeTabIndex_; }
 
+    const RibbonButtonDrawer& getRibbonButtonDrawer() { return buttonDrawer_; }
+    Toolbar& getToolbar() { return toolbar_; }
+
+    /// clones given objects with sub-objects (except for ancillary and unrecognized children) and undo
+    MRVIEWER_API static void cloneTree( const std::vector<std::shared_ptr<Object>>& selectedObjects );
+
     using TabChangedSignal = boost::signals2::signal<void( int prevTabId, int newTabId )>;
     /// this signal is called when active tab changes
     TabChangedSignal tabChangedSignal;
 
-    const RibbonButtonDrawer& getRibbonButtonDrawer() { return buttonDrawer_; }
-    Toolbar& getToolbar() { return toolbar_; }
-
 protected:
-
     // draw single item
     MRVIEWER_API virtual void drawBigButtonItem_( const MenuItemInfo& item );
     // draw set of small text buttons
@@ -175,6 +177,7 @@ private:
     void drawActiveListButton_( const ImVec2& basePos, float btnSize, float textSize );
 
     bool drawGroupUngroupButton_( const std::vector<std::shared_ptr<Object>>& selected );
+    bool drawCloneButton_( const std::vector<std::shared_ptr<Object>>& selected );
 
     void beginTopPanel_();
     void endTopPanel_();

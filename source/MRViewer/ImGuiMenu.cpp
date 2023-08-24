@@ -408,12 +408,27 @@ bool ImGuiMenu::onMouseScroll_(float delta_y)
 void ImGuiMenu::cursorEntrance_( [[maybe_unused]] bool entered )
 {
 #ifdef __EMSCRIPTEN__
+    static bool isInside = false;
     if ( entered )
-        ImGui::GetIO().ConfigFlags &= (~ImGuiConfigFlags_NoMouse);
+    {
+        if ( !isInside )
+        {
+            ImGui::GetIO().ConfigFlags &= (~ImGuiConfigFlags_NoMouse);
+            isInside = true;
+        }
+    }
     else
     {
-        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
-        EM_ASM( postEmptyEvent( 100, 2 ) );
+        bool anyPressed =
+            ImGui::IsMouseDown( ImGuiMouseButton_Left ) ||
+            ImGui::IsMouseDown( ImGuiMouseButton_Right ) ||
+            ImGui::IsMouseDown( ImGuiMouseButton_Middle );
+        if ( !anyPressed )
+        {
+            ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
+            isInside = false;
+            EM_ASM( postEmptyEvent( 100, 2 ) );
+        }
     }
 #endif
 }

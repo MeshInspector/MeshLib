@@ -45,6 +45,7 @@ jobs:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
           MR_EMSCRIPTEN_SINGLE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Singlethreaded'] }}
+          MR_USE_CPP_23: "ON"
         run: ./scripts/build_source.sh
 
       - name: Test

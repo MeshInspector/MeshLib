@@ -187,7 +187,7 @@ std::string getVolumeFragmentShader()
         if ( shadingMode != 0 )
         {
             vec3 normEye = normalEye(textCoord, dimStepVoxel, shadingMode == 2 );
-            if ( dot(normEye,normEye) == 0 )
+            if ( shadingMode == 1 && dot(normEye,normEye) == 0 )
                 continue;
 
             shadeColor( vec3( eyeM * vec4( rayStart, 1.0 ) ), normEye, color );
@@ -330,7 +330,7 @@ std::string getVolumePickerFragmentShader()
         if ( texture( denseMap, vec2( getVal(density), 0.5 ) ).a == 0.0 )
             continue;
 
-        if ( shadingMode != 0 && !normalEye(textCoord, dimStepVoxel, shadingMode == 2) )
+        if ( shadingMode == 1 && !normalEye(textCoord, dimStepVoxel, shadingMode == 2) )
             continue;
 
         firstFound = true;

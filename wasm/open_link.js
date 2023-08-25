@@ -1,4 +1,7 @@
 var open_link = function (link) {
+    if ( !is_ios() && !(is_mac() && is_safari()) )
+        window.open( link );
+    
     var { overlay, popup } = createOverlayPopup('open_link_dialog', '', 200, 100);
 
     var linkItem = document.createElement('a');

@@ -77,6 +77,7 @@
 #include "MRRibbonFontManager.h"
 #include "MRUIStyle.h"
 #include "MRRibbonSchema.h"
+#include "MRRibbonMenu.h"
 
 #ifndef __EMSCRIPTEN__
 #include "MRMesh/MRObjectVoxels.h"
@@ -1036,6 +1037,11 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
                                     ImGuiTreeNodeFlags_SpanAvailWidth |
                                     ImGuiTreeNodeFlags_Framed |
                                     ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
+        if ( ImGui::IsMouseDoubleClicked( 0 ) && ImGui::IsItemHovered() )
+        {
+            if ( auto m = getViewerInstance().getMenuPluginAs<RibbonMenu>() )
+                m->tryRenameSelectedObject();
+        }
 
         ImGui::PopStyleColor( isSelected ? 2 : 1 );
         ImGui::PopStyleVar();

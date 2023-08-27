@@ -476,6 +476,14 @@ double ObjectMeshHolder::selectedArea() const
     return *selectedArea_;
 }
 
+double ObjectMeshHolder::volume() const
+{
+    if ( !volume_ )
+        volume_ = mesh_ ? mesh_->volume() : 0.0;
+
+    return *volume_;
+}
+
 float ObjectMeshHolder::avgEdgeLen() const
 {
     if ( !avgEdgeLen_ )
@@ -550,6 +558,7 @@ void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
         worldBox_.get().reset();
         totalArea_.reset();
         selectedArea_.reset();
+        volume_.reset();
         avgEdgeLen_.reset();
         if ( invalidateCaches && mesh_ )
             mesh_->invalidateCaches();

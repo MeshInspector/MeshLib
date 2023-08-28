@@ -62,48 +62,31 @@ std::optional<MR::TouchpadController::Handler::GestureState> convert( NSGestureR
     }
 }
 
-std::optional<MR::TouchpadController::Handler::GestureState> convert( NSEventPhase phase, NSEventPhase momentumPhase )
+std::optional<MR::TouchpadController::Handler::GestureState> convert( NSEventPhase phase )
 {
     using GS = MR::TouchpadController::Handler::GestureState;
-    if ( phase != NSEventPhaseNone )
+    switch ( phase )
     {
-        switch ( phase )
-        {
-            case NSEventPhaseMayBegin:
-            case NSEventPhaseStationary:
-                return std::nullopt;
-            case NSEventPhaseBegan:
-                return GS::Begin;
-            case NSEventPhaseChanged:
-                return GS::Update;
-            case NSEventPhaseEnded:
-            case NSEventPhaseCancelled:
-                return GS::End;
-            default:
-                return std::nullopt;
-        }
+        case NSEventPhaseNone:
+        case NSEventPhaseMayBegin:
+        case NSEventPhaseStationary:
+            return std::nullopt;
+        case NSEventPhaseBegan:
+            return GS::Begin;
+        case NSEventPhaseChanged:
+            return GS::Update;
+        case NSEventPhaseEnded:
+        case NSEventPhaseCancelled:
+            return GS::End;
+        default:
+            return std::nullopt;
     }
-    else if ( momentumPhase != NSEventPhaseNone )
-    {
-        switch ( phase )
-        {
-            case NSEventPhaseMayBegin:
-            case NSEventPhaseStationary:
-                return std::nullopt;
-            case NSEventPhaseBegan:
-            case NSEventPhaseChanged:
-                return GS::Update;
-            case NSEventPhaseEnded:
-            case NSEventPhaseCancelled:
-                return GS::End;
-            default:
-                return std::nullopt;
-        }
-    }
-    else
-    {
-        return std::nullopt;
-    }
+#ifdef __cpp_lib_unreachable
+    std::unreachable();
+#else
+    assert( false );
+    return {};
+#endif
 }
 
 }
@@ -197,9 +180,10 @@ void TouchpadCocoaHandler::onScrollEvent( NSView* view, SEL cmd, NSEvent* event 
     }
     else
     {
-        const auto state = convert( [event phase], [event momentumPhase] );
-        if ( state )
-            handler->swipe( deltaX, deltaY, [event momentumPhase] != NSEventPhaseNone, *state );
+        if ( const auto state = convert( [event phase] ) )
+            handler->swipe( deltaX, deltaY, false, *state );
+        else if ( const auto momentumPhase = convert( [event momentumPhase] ) )
+            handler->swipe( deltaX, deltaY, true, *momentumPhase );
     }
 }
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef MRMESH_NO_LABEL
 #include "MRMeshFwd.h"
+#ifndef MRMESH_NO_LABEL
 #include "MRExpected.h"
 #include "MRId.h"
 #include "MRVector3.h"

@@ -1,5 +1,5 @@
-#ifndef MRMESH_NO_CPR
 #include "MRWebRequest.h"
+#ifndef MRMESH_NO_CPR
 #include "MRCommandLoop.h"
 #include "MRPch/MRWasm.h"
 #include "MRPch/MRSpdlog.h"

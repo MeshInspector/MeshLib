@@ -1,5 +1,5 @@
-#ifndef MRMESH_NO_GLTF
 #include "MRGltfSerializer.h"
+#ifndef MRMESH_NO_GLTF
 #include "MRVector.h"
 #include "MRMesh.h"
 #include "MRMeshBuilder.h"

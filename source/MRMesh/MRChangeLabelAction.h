@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef MRMESH_NO_LABEL
 #include "MRMesh/MRMeshFwd.h"
+#ifndef MRMESH_NO_LABEL
 #include "MRHistoryAction.h"
 #include "MRMesh/MRPositionedText.h"
 #include "MRMesh/MRVector2.h"

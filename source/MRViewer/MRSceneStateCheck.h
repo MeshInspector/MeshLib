@@ -1,5 +1,6 @@
 #pragma once
 #include "exports.h"
+#include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRObject.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectVoxels.h"

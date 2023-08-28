@@ -1,5 +1,5 @@
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRMeshToDistanceVolume.h"
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRIsNaN.h"
 #include "MRMesh.h"
 #include "MRSimpleVolume.h"

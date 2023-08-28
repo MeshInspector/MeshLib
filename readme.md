@@ -17,19 +17,17 @@ The goal which we set when designing MeshLib was to value simplicity and perform
 ## Some useful links
 * [MeshInspector](https://github.com/MeshInspector/MeshInspector/) is a free application based on MeshLib
 
-* MeshInspector [online web-browser version](https://demo.meshinspector.com/)
+* [MeshInspector online web-browser version](https://meshinspector.com/)
 
-* MeshLib and MeshInspector [slides](https://docs.google.com/presentation/d/1D0Ry6SE2J25PBtO_G9ZIp1cavoX2wyyY8jgvtjeayC4/edit?usp=sharing)
+* [Comparison of MeshLib vs VTK library](https://docs.google.com/presentation/d/1Tw5ppmWoF-aRwuVqa6xdMSEjmEd5Y6O2ny7Gu8iQBos/edit?usp=sharing)
 
-* Comparison [slides](https://docs.google.com/presentation/d/1Tw5ppmWoF-aRwuVqa6xdMSEjmEd5Y6O2ny7Gu8iQBos/edit?usp=sharing) of mesh operations with VTK library
+* [MeshInspector YouTube channel](https://www.youtube.com/channel/UCv9bNhwoVDPaLPPyWJeVPNg)
 
-* MeshInspector [YouTube channel](https://www.youtube.com/channel/UCv9bNhwoVDPaLPPyWJeVPNg)
-
-* MeshLib [documentation](https://meshinspector.github.io/MeshLib/html/index.html)
+* [MeshLib Documentation](https://meshinspector.github.io/MeshLib/html/index.html)
 
 * [Email us](mailto:support@meshinspector.com)
 
-* Contact us anonymously [form](https://meshinspector.github.io/ReportIssue/)
+* [Submit an issue](https://meshinspector.github.io/ReportIssue/)
 
 ## Major features
 This list is not full and updating each day

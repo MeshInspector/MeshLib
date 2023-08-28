@@ -295,9 +295,8 @@ public:
         {
             if ( region_.test( f ) && mesh_.topology.hasFace( f ) )
             {
-                Vector3f coords[3];
-                mesh_.getTriPoints( f, coords );
-                volume_ += mixed( coords[0], coords[1], coords[2] );
+                const auto coords = mesh_.getTriPoints( f );
+                volume_ += mixed( Vector3d( coords[0] ), Vector3d( coords[1] ), Vector3d( coords[2] ) );
             }
         }
     }

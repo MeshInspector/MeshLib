@@ -54,8 +54,14 @@ public:
     /// returns all valid vertices in the graph
     [[nodiscard]] const VertBitSet & validVerts() const { return validVerts_; }
 
+    /// returns true if given vertex is valid
+    [[nodiscard]] bool valid( VertId v ) const { return validVerts_.test( v ); }
+
     /// returns all valid edges in the graph
     [[nodiscard]] const EdgeBitSet & validEdges() const { return validEdges_; }
+
+    /// returns true if given edge is valid
+    [[nodiscard]] bool valid( EdgeId e ) const { return validEdges_.test( e ); }
 
     /// returns all edges adjacent to given vertex
     [[nodiscard]] const Neighbours & neighbours( VertId v ) const { return neighboursPerVertex_[v]; }

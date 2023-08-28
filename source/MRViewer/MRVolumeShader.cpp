@@ -45,6 +45,8 @@ std::string getVolumeFragmentShader()
   uniform vec4 viewport;
   uniform vec3 voxelSize;
   uniform vec3 minCorner;
+  uniform float minValue;
+  uniform float maxValue;
   uniform float step;
 
   uniform sampler3D volume;
@@ -55,22 +57,34 @@ std::string getVolumeFragmentShader()
 
   out vec4 outColor;
 
+  float getVal( in float value )
+  {
+    return (value - minValue) / (maxValue-minValue);
+  }
+
+  float getGradAlphaVal( in float value )
+  {
+    if ( value < 0.0 || value > 1.0 )
+      return 0.0;
+    return texture( denseMap, vec2( value, 0.5 ) ).a;
+  }
+
   vec3 normalEye( in vec3 textCoord, in vec3 dimStepVoxel, in bool alphaGrad )
   {
-    float minXVal = texture( volume, textCoord - vec3(dimStepVoxel.x,0,0)).r;
-    float maxXVal = texture( volume, textCoord + vec3(dimStepVoxel.x,0,0)).r;
-    float minYVal = texture( volume, textCoord - vec3(0,dimStepVoxel.y,0)).r;
-    float maxYVal = texture( volume, textCoord + vec3(0,dimStepVoxel.y,0)).r;
-    float minZVal = texture( volume, textCoord - vec3(0,0,dimStepVoxel.z)).r;
-    float maxZVal = texture( volume, textCoord + vec3(0,0,dimStepVoxel.z)).r;
+    float minXVal = getVal( texture( volume, textCoord - vec3(dimStepVoxel.x,0,0)).r );
+    float maxXVal = getVal( texture( volume, textCoord + vec3(dimStepVoxel.x,0,0)).r );
+    float minYVal = getVal( texture( volume, textCoord - vec3(0,dimStepVoxel.y,0)).r );
+    float maxYVal = getVal( texture( volume, textCoord + vec3(0,dimStepVoxel.y,0)).r );
+    float minZVal = getVal( texture( volume, textCoord - vec3(0,0,dimStepVoxel.z)).r );
+    float maxZVal = getVal( texture( volume, textCoord + vec3(0,0,dimStepVoxel.z)).r );
     if ( alphaGrad )
     {
-        minXVal = texture( denseMap, vec2( minXVal, 0.5 ) ).a;
-        maxXVal = texture( denseMap, vec2( maxXVal, 0.5 ) ).a;
-        minYVal = texture( denseMap, vec2( minYVal, 0.5 ) ).a;
-        maxYVal = texture( denseMap, vec2( maxYVal, 0.5 ) ).a;
-        minZVal = texture( denseMap, vec2( minZVal, 0.5 ) ).a;
-        maxZVal = texture( denseMap, vec2( maxZVal, 0.5 ) ).a;        
+        minXVal = getGradAlphaVal( minXVal );
+        maxXVal = getGradAlphaVal( maxXVal );
+        minYVal = getGradAlphaVal( minYVal );
+        maxYVal = getGradAlphaVal( maxYVal );
+        minZVal = getGradAlphaVal( minZVal );
+        maxZVal = getGradAlphaVal( maxZVal );
     }
     vec3 grad = -vec3( maxXVal - minXVal, maxYVal - minYVal, maxZVal - minZVal );
     if ( dot( grad, grad ) < 1.0e-5 )
@@ -161,7 +175,10 @@ std::string getVolumeFragmentShader()
             continue;
 
         float density = texture( volume, textCoord ).r;        
-        vec4 color = texture( denseMap, vec2( density, 0.5 ) );
+        if ( density < minValue || density > maxValue )
+            continue;
+
+        vec4 color = texture( denseMap, vec2( getVal(density), 0.5 ) );
         if ( color.a == 0.0 )
             continue;
 
@@ -170,7 +187,7 @@ std::string getVolumeFragmentShader()
         if ( shadingMode != 0 )
         {
             vec3 normEye = normalEye(textCoord, dimStepVoxel, shadingMode == 2 );
-            if ( dot(normEye,normEye) == 0 )
+            if ( shadingMode == 1 && dot(normEye,normEye) == 0 )
                 continue;
 
             shadeColor( vec3( eyeM * vec4( rayStart, 1.0 ) ), normEye, color );
@@ -211,6 +228,9 @@ std::string getVolumePickerFragmentShader()
   uniform vec4 viewport;
   uniform vec3 voxelSize;
   uniform vec3 minCorner;
+  uniform float minValue;
+  uniform float maxValue;
+  uniform float step;
 
   uniform int shadingMode; // 0-none,1-dense grad,2-alpha grad
 
@@ -223,22 +243,34 @@ std::string getVolumePickerFragmentShader()
   uniform uint uniGeomId;
   out highp uvec4 outColor;
 
+  float getVal( in float value )
+  {
+    return (value - minValue) / (maxValue-minValue);
+  }
+
+  float getGradAlphaVal( in float value )
+  {
+    if ( value < 0.0 || value > 1.0 )
+      return 0.0;
+    return texture( denseMap, vec2( value, 0.5 ) ).a;
+  }
+
   bool normalEye( in vec3 textCoord, in vec3 dimStepVoxel, in bool alphaGrad )
   {
-    float minXVal = texture( volume, textCoord - vec3(dimStepVoxel.x,0,0)).r;
-    float maxXVal = texture( volume, textCoord + vec3(dimStepVoxel.x,0,0)).r;
-    float minYVal = texture( volume, textCoord - vec3(0,dimStepVoxel.y,0)).r;
-    float maxYVal = texture( volume, textCoord + vec3(0,dimStepVoxel.y,0)).r;
-    float minZVal = texture( volume, textCoord - vec3(0,0,dimStepVoxel.z)).r;
-    float maxZVal = texture( volume, textCoord + vec3(0,0,dimStepVoxel.z)).r;
+    float minXVal = getVal( texture( volume, textCoord - vec3(dimStepVoxel.x,0,0)).r );
+    float maxXVal = getVal( texture( volume, textCoord + vec3(dimStepVoxel.x,0,0)).r );
+    float minYVal = getVal( texture( volume, textCoord - vec3(0,dimStepVoxel.y,0)).r );
+    float maxYVal = getVal( texture( volume, textCoord + vec3(0,dimStepVoxel.y,0)).r );
+    float minZVal = getVal( texture( volume, textCoord - vec3(0,0,dimStepVoxel.z)).r );
+    float maxZVal = getVal( texture( volume, textCoord + vec3(0,0,dimStepVoxel.z)).r );
     if ( alphaGrad )
     {
-        minXVal = texture( denseMap, vec2( minXVal, 0.5 ) ).a;
-        maxXVal = texture( denseMap, vec2( maxXVal, 0.5 ) ).a;
-        minYVal = texture( denseMap, vec2( minYVal, 0.5 ) ).a;
-        maxYVal = texture( denseMap, vec2( maxYVal, 0.5 ) ).a;
-        minZVal = texture( denseMap, vec2( minZVal, 0.5 ) ).a;
-        maxZVal = texture( denseMap, vec2( maxZVal, 0.5 ) ).a;        
+        minXVal = getGradAlphaVal( minXVal );
+        maxXVal = getGradAlphaVal( maxXVal );
+        minYVal = getGradAlphaVal( minYVal );
+        maxYVal = getGradAlphaVal( maxYVal );
+        minZVal = getGradAlphaVal( minZVal );
+        maxZVal = getGradAlphaVal( maxZVal );
     }
     vec3 grad = -vec3( maxXVal - minXVal, maxYVal - minYVal, maxZVal - minZVal );
     return dot( grad, grad ) >= 1.0e-5;
@@ -278,7 +310,7 @@ std::string getVolumePickerFragmentShader()
     
     bool firstFound = false;
     vec3 textCoord = vec3(0.0,0.0,0.0);
-    vec3 rayStep = 0.5 * length( voxelSize ) * normRayDir;
+    vec3 rayStep = step * normRayDir;
     rayStart = rayStart - rayStep * 0.5;
     vec3 diagonal = maxPoint - minPoint;
     while ( !firstFound )
@@ -293,10 +325,12 @@ std::string getVolumePickerFragmentShader()
             continue;
 
         float density = texture( volume, textCoord ).r;
-        if ( texture( denseMap, vec2( density, 0.5 ) ).a == 0.0 )
+        if ( density < minValue || density > maxValue )
+            continue;
+        if ( texture( denseMap, vec2( getVal(density), 0.5 ) ).a == 0.0 )
             continue;
 
-        if ( shadingMode != 0 && !normalEye(textCoord, dimStepVoxel, shadingMode == 2) )
+        if ( shadingMode == 1 && !normalEye(textCoord, dimStepVoxel, shadingMode == 2) )
             continue;
 
         firstFound = true;

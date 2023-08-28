@@ -42,6 +42,8 @@ struct EmbeddedConeParameters : EmbeddedStructureParameters
     float minZ{ -1.0f };
     // maximum Z plane of cone
     float maxZ{ 1.0f };
+    // min angle precision of basin expansion
+    float minAnglePrecision = PI_F / 9.0f; // 20 deg
     // input vertices that will have cut(pit) side (inside of terrain)
     // other vertices will have fill(mound) side (outside of terrain)
     VertBitSet cutBitSet;

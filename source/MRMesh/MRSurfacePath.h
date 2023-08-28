@@ -1,9 +1,9 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "MRExpected.h"
+#include "MRMeshTriPoint.h"
 #include <vector>
 #include <string>
-#include "MRExpected.h"
 
 namespace MR
 {
@@ -64,24 +64,28 @@ MRMESH_API Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshP
     const MeshTriPoint & start, const MeshTriPoint & end, const VertBitSet* vertRegion = nullptr,
     VertScalars * outSurfaceDistances = nullptr );
 
+struct ComputeSteepestDescentPathSettings
+{
+    /// if valid, then the descent is stopped as soon as same triangle with (end) is reached
+    MeshTriPoint end;
+    /// if not nullptr, then the descent is stopped as soon as any vertex is reached, which is written in *outVertexReached
+    VertId * outVertexReached = nullptr;
+    /// if not nullptr, then the descent is stopped as soon as any boundary point is reached, which is written in *outBdReached
+    EdgePoint * outBdReached = nullptr;
+};
+
 /// computes the path (edge points crossed by the path) staring in given point
 /// and moving in each triangle in minus gradient direction of given field;
-/// the path stops when it reaches
-/// 1) a local minimum in field or
-/// 2) same triangle with \param end (which can be omitted) or
-/// 3) any vertex if \param outVertexReached is not nullptr, which receives Id of the vertex
-MRMESH_API SurfacePath computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
-    const MeshTriPoint & start, const MeshTriPoint & end, VertId * outVertexReached = nullptr );
+/// the path stops when it reaches a local minimum in the field or one of stop conditions in settings
+[[nodiscard]] MRMESH_API SurfacePath computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
+    const MeshTriPoint & start, const ComputeSteepestDescentPathSettings & settings = {} );
 
 /// computes the path (edge points crossed by the path) staring in given point
 /// and moving in each triangle in minus gradient direction of given field,
 /// and outputs the path in \param outPath if requested;
-/// the path stops when it reaches
-/// 1) a local minimum in field or
-/// 2) same triangle with \param end (which can be omitted) or
-/// 3) any vertex if \param vertexReached is not nullptr, which receives Id of the vertex
+/// the path stops when it reaches a local minimum in the field or one of stop conditions in settings
 MRMESH_API void computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
-    const MeshTriPoint & start, const MeshTriPoint & end, SurfacePath * outPath, VertId * outVertexReached = nullptr );
+    const MeshTriPoint & start, SurfacePath * outPath, const ComputeSteepestDescentPathSettings & settings = {} );
 
 enum class ExtremeEdgeType
 {

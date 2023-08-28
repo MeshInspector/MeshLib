@@ -63,6 +63,13 @@ void EdgePoint::moveToClosestVertex()
         a = 1;
 }
 
+bool EdgePoint::isBd( const MeshTopology & topology, const FaceBitSet * region ) const
+{
+    if ( auto v = inVertex( topology ) )
+        return topology.isBdVertex( v, region );
+    return topology.isBdEdge( e, region );
+}
+
 bool same( const MeshTopology & topology, const EdgePoint& lhs, const EdgePoint& rhs )
 {
     if ( !lhs )

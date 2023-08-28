@@ -60,6 +60,7 @@ Expected<Mesh, std::string> embedStructureToTerrain(
     EmbeddedConeParameters ecParams{ params };
     ecParams.minZ = globalBox.min.z - boxSize.z * boxExpansion * 2.0f / 3.0f;
     ecParams.maxZ = globalBox.max.z + boxSize.z * boxExpansion * 2.0f / 3.0f;
+    ecParams.minAnglePrecision = params.minAnglePrecision;
 
     Contour3f cont( structBound[0].size() + 1 );
     ecParams.cutBitSet.resize( structBound[0].size() );

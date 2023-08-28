@@ -1,7 +1,6 @@
 #pragma once
-#include "config.h"
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRMeshFwd.h"
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRExpected.h"
 #include "MRPartMapping.h"
 

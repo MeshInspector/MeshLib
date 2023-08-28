@@ -1,6 +1,6 @@
 #pragma once
 
-#include "config.h"
+#include "MRMeshFwd.h"
 #ifndef MRMESH_NO_LABEL
 #include "MRVisualObject.h"
 #include "MRSymbolMesh.h"

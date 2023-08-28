@@ -1,5 +1,5 @@
 #pragma once
-#include "MRMesh/config.h"
+#include "MRMesh/MRMeshFwd.h"
 #ifndef MRMESH_NO_CPR
 #include "MRViewerFwd.h"
 #include "MRMesh/MRExpected.h"

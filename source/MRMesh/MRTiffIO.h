@@ -1,7 +1,6 @@
 #pragma once
-#include "config.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_TIFF )
 #include "MRMeshFwd.h"
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_TIFF )
 #include "MRExpected.h"
 #include "MRVector2.h"
 #include <filesystem>

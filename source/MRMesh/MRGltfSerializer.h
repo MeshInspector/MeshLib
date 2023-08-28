@@ -1,6 +1,6 @@
 #pragma once
 
-#include "config.h"
+#include "MRMeshFwd.h"
 #ifndef MRMESH_NO_GLTF
 #include "MRObject.h"
 #include "MRExpected.h"

@@ -1,5 +1,5 @@
 #pragma once
-#include "MRMesh/config.h"
+#include "MRMesh/MRMeshFwd.h"
 #include "MRViewer/MRRibbonMenuItem.h"
 #include "MRMesh/MRIOFilters.h"
 #include <filesystem>

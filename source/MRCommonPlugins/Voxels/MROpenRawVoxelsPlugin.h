@@ -1,5 +1,5 @@
 #pragma once
-#include "MRMesh/config.h"
+#include "MRMesh/MRMeshFwd.h"
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRViewer/MRStatePlugin.h"
 #include "MRMesh/MRVoxelsLoad.h"

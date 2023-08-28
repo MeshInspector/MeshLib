@@ -1,5 +1,5 @@
 #pragma once
-#include "config.h"
+#include "MRMeshFwd.h"
 #if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "openvdb/tree/TreeIterator.h"
 #include "openvdb/tree/Tree.h"

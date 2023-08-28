@@ -1,9 +1,8 @@
 #pragma once
-#include "config.h"
+#include "MRMeshFwd.h"
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 // this is a lightweight header unlike MRVDBFloatGrid.h
 
-#include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
 
 namespace MR

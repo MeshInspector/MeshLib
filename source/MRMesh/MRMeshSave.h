@@ -1,6 +1,6 @@
 #pragma once
 
-#include "config.h"
+#include "MRMeshFwd.h"
 #include "MRExpected.h"
 #include "MRIOFilters.h"
 #include "MRAffineXf3.h"

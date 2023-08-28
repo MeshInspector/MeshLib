@@ -2,6 +2,7 @@
 #include "MRVector3.h"
 #include "MRVector2.h"
 #include <algorithm>
+#include <cassert>
 
 namespace MR
 {

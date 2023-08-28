@@ -1,6 +1,6 @@
 #pragma once
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PDF )
 #include "MRMeshFwd.h"
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PDF )
 #include <filesystem>
 
 #include "hpdf.h"

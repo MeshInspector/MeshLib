@@ -1,5 +1,5 @@
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRVoxelsConversionsByParts.h"
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MREdgePaths.h"
 #include "MRMesh.h"
 #include "MRMeshTrimWithPlane.h"

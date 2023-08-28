@@ -1,7 +1,7 @@
+#include "MRToolPath.h"
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 
 #include "MR2to3.h"
-#include "MRToolPath.h"
 #include "MRSurfacePath.h"
 #include "MRFixUndercuts.h"
 #include "MROffset.h"
@@ -463,7 +463,7 @@ Intervals getIntervals( const MeshPart& mp, const MeshPart* offset, const V3fIt 
 
 // if distance between the last point and the given one is more than critical distance
 // we should make a transit on the safe height
-void transitOverSafeZ( V3fIt it, ToolPathResult& res, const ToolPathParams& params, float safeZ, float currentZ, float& lastFeed )
+void transitOverSafeZ( const Vector3f& p, ToolPathResult& res, const ToolPathParams& params, float safeZ, float currentZ, float& lastFeed )
 {
     // retract the tool fast if possible
     if ( safeZ - currentZ > params.retractLength )
@@ -472,20 +472,20 @@ void transitOverSafeZ( V3fIt it, ToolPathResult& res, const ToolPathParams& para
         res.commands.push_back( { .feed = params.retractFeed, .z = zRetract } );
         res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
     }
-    else
+    else if ( safeZ != currentZ )
     {
         res.commands.push_back( { .feed = params.retractFeed, .z = safeZ } );
     }
 
-    res.commands.push_back( { .type = MoveType::FastLinear, .x = it->x, .y = it->y } );
+    res.commands.push_back( { .type = MoveType::FastLinear, .x = p.x, .y = p.y } );
 
     // plunge the tool fast if possible
-    if ( safeZ - it->z > params.plungeLength )
+    if ( safeZ - p.z > params.plungeLength )
     {
-        const float zPlunge = it->z + params.plungeLength;
+        const float zPlunge = p.z + params.plungeLength;
         res.commands.push_back( { .type = MoveType::FastLinear, .z = zPlunge } );
     }
-    res.commands.push_back( { .feed = params.plungeFeed, .x = it->x, .y = it->y, .z = it->z } );
+    res.commands.push_back( { .feed = params.plungeFeed, .x = p.x, .y = p.y, .z = p.z } );
     lastFeed = params.plungeFeed;
 }
 
@@ -623,7 +623,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
                 const auto distSq = ( mesh.edgePoint( lastEdgePoint ) - mesh.edgePoint( nextEdgePoint ) ).lengthSq();
 
                 if ( distSq > critDistSq )
-                    transitOverSafeZ( intervals[0].first, res, params, safeZ, res.commands.back().z, lastFeed );
+                    transitOverSafeZ( *intervals[0].first, res, params, safeZ, res.commands.back().z, lastFeed );
                 else
                     addSurfacePath( res.commands, mesh, lastEdgePoint, nextEdgePoint );
             }
@@ -648,7 +648,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
                 }
 
                 if ( *intervals[i + 1].first != lastPoint )
-                    transitOverSafeZ( intervals[i + 1].first, res, params, safeZ, res.commands.back().z, lastFeed );
+                    transitOverSafeZ( *intervals[i + 1].first, res, params, safeZ, res.commands.back().z, lastFeed );
             }
             // process the last interval
             if ( moveForward )
@@ -696,7 +696,6 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
     const auto plane = MR::Plane3f::fromDirAndPt( normal, box.max );
     const int steps = int( std::floor( ( plane.d - box.min.z ) / params.sectionStep ) );
 
-    res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
 
     MeshEdgePoint prevEdgePoint;
 
@@ -769,7 +768,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
                 continue;
 
             auto& contour = contours.front();
-            if ( contour.size() > section.size() )
+            if ( !params.flatTool && contour.size() > section.size() )
                 contour.resize( section.size() );
 
             if ( params.isolines )
@@ -783,9 +782,12 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
 
                 for ( const auto& interval : intervals )
                 {
-                    if ( !mp.region || interval.first != contour.begin() )
+                    if ( !mp.region || interval.first != contour.begin() || res.commands.empty() )
                     {
-                        transitOverSafeZ( interval.first, res, params, safeZ, lastZ, lastFeed );
+                        if ( res.commands.empty() )
+                            res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
+
+                        transitOverSafeZ( *interval.first, res, params, safeZ, lastZ, lastFeed );
                         commands.push_back( { .x = interval.first->x, .y = interval.first->y, .z = interval.first->z } );
                     }
 
@@ -827,7 +829,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
 
             if ( !prevEdgePoint.e.valid() || minDistSq > critTransitionLengthSq )
             {
-                transitOverSafeZ( pivotIt, res, params, safeZ, lastZ, lastFeed );
+                transitOverSafeZ( *pivotIt, res, params, safeZ, lastZ, lastFeed );
             }
             else
             {
@@ -991,7 +993,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                 }
                 if ( startSkippedRegion )
                 {
-                    transitOverSafeZ( it, res, paramsCopy, safeZ, res.commands.back().z, lastFeed );
+                    transitOverSafeZ( *it, res, paramsCopy, safeZ, res.commands.back().z, lastFeed );
                     startSkippedRegion.reset();
                     continue;
                 }

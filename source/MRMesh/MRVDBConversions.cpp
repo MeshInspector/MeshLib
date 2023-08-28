@@ -1,5 +1,5 @@
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRVDBConversions.h"
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRVDBFloatGrid.h"
 #include "MRMesh.h"
 #include "MRMeshBuilder.h"

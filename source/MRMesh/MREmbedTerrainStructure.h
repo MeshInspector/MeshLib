@@ -14,8 +14,8 @@ struct EmbeddedStructureParameters
     float fillAngle = 0.0f;
     // angle of cut cone (pit)
     float cutAngle = 0.0f;
-    // pixel size of distance map used to build expanded cone side
-    float pixelSize{ 1.0f };
+    // min angle precision of basin expansion
+    float minAnglePrecision = PI_F / 9.0f; // 20 deg
 };
 
 // Returns terrain mesh with structure embedded to it, or error string
@@ -42,6 +42,8 @@ struct EmbeddedConeParameters : EmbeddedStructureParameters
     float minZ{ -1.0f };
     // maximum Z plane of cone
     float maxZ{ 1.0f };
+    // min angle precision of basin expansion
+    float minAnglePrecision = PI_F / 9.0f; // 20 deg
     // input vertices that will have cut(pit) side (inside of terrain)
     // other vertices will have fill(mound) side (outside of terrain)
     VertBitSet cutBitSet;

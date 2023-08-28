@@ -167,6 +167,9 @@ public:
     /// returns cached area of selected triangles
     [[nodiscard]] MRMESH_API double selectedArea() const;
 
+    /// returns cached volume of space surrounded by the mesh, which is valid only if mesh is closed
+    [[nodiscard]] MRMESH_API double volume() const;
+
     /// returns cached average edge length
     [[nodiscard]] MRMESH_API float avgEdgeLen() const;
 
@@ -210,6 +213,7 @@ protected:
     mutable std::optional<bool> meshIsClosed_;
     mutable std::optional<size_t> numSelectedFaces_, numSelectedEdges_, numCreaseEdges_;
     mutable std::optional<double> totalArea_, selectedArea_;
+    mutable std::optional<double> volume_;
     mutable std::optional<float> avgEdgeLen_;
     mutable ViewportProperty<XfBasedCache<Box3f>> worldBox_;
 

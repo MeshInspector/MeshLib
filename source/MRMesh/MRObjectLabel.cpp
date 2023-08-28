@@ -1,5 +1,5 @@
-#ifndef MRMESH_NO_LABEL
 #include "MRObjectLabel.h"
+#ifndef MRMESH_NO_LABEL
 #include "MRObjectFactory.h"
 #include "MRSerializer.h"
 #include "MRMesh.h"

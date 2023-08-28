@@ -1,5 +1,5 @@
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
 #include "MRTiffIO.h"
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
 #include "MRStringConvert.h"
 #include "MRBuffer.h"
 #include "MRMatrix4.h"

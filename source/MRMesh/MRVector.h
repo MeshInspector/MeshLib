@@ -153,9 +153,9 @@ template <typename T, typename I>
 
 /// given some Vector and a key, returns the value associated with the key, or default value if key is invalid or outside the Vector
 template <typename T, typename I>
-[[nodiscard]] inline T getAt( const Vector<T, I> & a, I id )
+[[nodiscard]] inline T getAt( const Vector<T, I> & a, I id, T def = {} )
 {
-    return ( id && id < a.size() ) ? a[id] : T{};
+    return ( id && id < a.size() ) ? a[id] : def;
 }
 
 } // namespace MR

@@ -77,6 +77,7 @@
 #include "MRRibbonFontManager.h"
 #include "MRUIStyle.h"
 #include "MRRibbonSchema.h"
+#include "MRRibbonMenu.h"
 
 #ifndef __EMSCRIPTEN__
 #include "MRMesh/MRObjectVoxels.h"
@@ -408,12 +409,27 @@ bool ImGuiMenu::onMouseScroll_(float delta_y)
 void ImGuiMenu::cursorEntrance_( [[maybe_unused]] bool entered )
 {
 #ifdef __EMSCRIPTEN__
+    static bool isInside = false;
     if ( entered )
-        ImGui::GetIO().ConfigFlags &= (~ImGuiConfigFlags_NoMouse);
+    {
+        if ( !isInside )
+        {
+            ImGui::GetIO().ConfigFlags &= (~ImGuiConfigFlags_NoMouse);
+            isInside = true;
+        }
+    }
     else
     {
-        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
-        EM_ASM( postEmptyEvent( 100, 2 ) );
+        bool anyPressed =
+            ImGui::IsMouseDown( ImGuiMouseButton_Left ) ||
+            ImGui::IsMouseDown( ImGuiMouseButton_Right ) ||
+            ImGui::IsMouseDown( ImGuiMouseButton_Middle );
+        if ( !anyPressed )
+        {
+            ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
+            isInside = false;
+            EM_ASM( postEmptyEvent( 100, 2 ) );
+        }
     }
 #endif
 }
@@ -1021,6 +1037,11 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
                                     ImGuiTreeNodeFlags_SpanAvailWidth |
                                     ImGuiTreeNodeFlags_Framed |
                                     ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
+        if ( ImGui::IsMouseDoubleClicked( 0 ) && ImGui::IsItemHovered() )
+        {
+            if ( auto m = getViewerInstance().getMenuPluginAs<RibbonMenu>() )
+                m->tryRenameSelectedObject();
+        }
 
         ImGui::PopStyleColor( isSelected ? 2 : 1 );
         ImGui::PopStyleVar();

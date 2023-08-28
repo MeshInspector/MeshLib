@@ -356,9 +356,17 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshTriPoint & tp ) const
         for ( int i = 0; i < 3; ++i )
         {
             const Triangle3f t = { pv[i], pv[( i + 1 ) % 3], pv[( i + 2 ) % 3] };
-            float a = 0;
-            if ( !computeEnter01Cross( t, unitDir, p, a ) )
+            if ( !dirEnters01( t, unitDir ) )
                 continue;
+            float a = 0;
+            if ( !computeLineLineCross( t[0] - p, t[1] - p, unitDir, a ) )
+            {
+                // we know that unitDir enters via the edge 01 of the triangle,
+                // and unitDir is almost parallel to this edge, so select appropriate edge's end (which leads inside the triangle)
+                if ( !res )
+                    res = MeshEdgePoint{ e[i], dot( t[1] - t[0], unitDir ) >= 0 ? 0.0f : 1.0f };
+                continue;
+            }
             // how much do we miss the boundaries of the segment [rv0,rv1]
             const auto ca = std::clamp( a, 0.0f, 1.0f );
             const auto m = std::abs( a - ca ) * ( t[1] - t[0] ).length();
@@ -368,8 +376,9 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshTriPoint & tp ) const
                 res = MeshEdgePoint{ e[i], ca };
             }
         }
-        if ( miss < FLT_MAX )
+        if ( res )
             return res;
+        // if triangle has not-zero gradient then res must be found above
         assert( false );
     }
 
@@ -444,36 +453,41 @@ Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
 }
 
 SurfacePath computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
-    const MeshTriPoint & start, const MeshTriPoint & end, VertId * vertexReached )
+    const MeshTriPoint & start, const ComputeSteepestDescentPathSettings & settings )
 {
     SurfacePath res;
-    computeSteepestDescentPath( mesh, field, start, end, &res, vertexReached );
+    computeSteepestDescentPath( mesh, field, start, &res, settings );
     return res;
 }
 
 void computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
-    const MeshTriPoint & start, const MeshTriPoint & end, SurfacePath * outPath, VertId * outVertexReached )
+    const MeshTriPoint & start, SurfacePath * outPath, const ComputeSteepestDescentPathSettings & settings )
 {
     assert( start );
-    assert( outVertexReached || outPath );
+    assert( settings.outVertexReached || settings.outBdReached || outPath );
     size_t iniPathSize = outPath ? outPath->size() : 0;
     size_t edgesPassed = 0;
     SurfacePathBuilder b( mesh, field );
     auto curr = b.findPrevPoint( start );
     while ( curr )
     {
-        if ( outVertexReached )
+        if ( settings.outVertexReached )
         {
             if ( auto v = curr.inVertex( mesh.topology ) )
             {
-                *outVertexReached = v;
+                *settings.outVertexReached = v;
                 return;
             }
+        }
+        if ( settings.outBdReached && curr.isBd( mesh.topology ) )
+        {
+            *settings.outBdReached = curr;
+            return;
         }
         ++edgesPassed;
         if ( outPath )
             outPath->push_back( curr );
-        if ( end && fromSameTriangle( mesh.topology, MeshTriPoint( end ), MeshTriPoint( curr ) ) )
+        if ( settings.end && fromSameTriangle( mesh.topology, MeshTriPoint( settings.end ), MeshTriPoint( curr ) ) )
             break; // reached triangle with end point
         if ( edgesPassed > mesh.topology.numValidFaces() )
         {
@@ -557,7 +571,7 @@ Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp,
     if ( !connected )
         return unexpected( PathError::StartEndNotConnected );
 
-    res = computeSteepestDescentPath( mp.mesh, distances, start, end );
+    res = computeSteepestDescentPath( mp.mesh, distances, start, { .end = end } );
     if ( res.empty() ) // no edge is crossed only if start and end are from the same triangle
         return unexpected( PathError::InternalError );
 

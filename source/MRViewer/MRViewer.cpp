@@ -489,6 +489,11 @@ bool Viewer::checkOpenGL_(const LaunchParams& params )
         if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 3, 3 ) )
         {
             spdlog::critical( "Cannot load OpenGL 3.3" );
+#ifdef _WIN32
+            MessageBoxA( NULL, "Cannot activate OpenGL 3.3.\n"
+                "Please verify that you have decent graphics card and its drivers are installed.",
+                "MeshInspector/MeshLib Error", MB_OK );
+#endif
             return false;
         }
         spdlog::warn( "Alpha sort is not available" );

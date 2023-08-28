@@ -1,5 +1,5 @@
-#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRVoxelsLoad.h"
+#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRTimer.h"
 #include "MRSimpleVolume.h"
 #include "MRObjectVoxels.h"

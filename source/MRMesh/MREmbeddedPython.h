@@ -1,7 +1,7 @@
 #pragma once
 
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PYTHON )
 #include "MRMeshFwd.h"
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PYTHON )
 #include <string>
 #include <filesystem>
 

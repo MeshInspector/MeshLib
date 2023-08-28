@@ -289,6 +289,9 @@
     <ClCompile Include="MRCudaAccessor.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
+    <ClCompile Include="MRTouchpadWin32Handler.cpp">
+      <Filter>ShortcutManager</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -544,6 +547,9 @@
     </ClInclude>
     <ClInclude Include="MRCudaAccessor.h">
       <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRTouchpadWin32Handler.h">
+      <Filter>ShortcutManager</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "config.h"
+
 // Not zero _ITERATOR_DEBUG_LEVEL in Microsoft STL greatly reduce the performance of STL containers.
 // So we change its value to zero by default. A huge restriction with this is that 
 // all other linked DLL's and LIBS' also need to define this symbol to remove STL debugging, see
@@ -389,7 +391,7 @@ struct Image;
 template <typename T>
 struct VoxelsVolume;
 using SimpleVolume = VoxelsVolume<std::vector<float>>;
-using SimpleVolumeU8 = VoxelsVolume<std::vector<uint8_t>>;
+using SimpleVolumeU16 = VoxelsVolume<std::vector<uint16_t>>;
 
 template <typename T>
 using VoxelValueGetter = std::function<T ( const Vector3i& )>;

@@ -106,6 +106,9 @@
     <Filter Include="Source Files\Gcode">
       <UniqueIdentifier>{b00cbb7d-8f55-486d-9a3f-834bc49c40f3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\WaterFlow">
+      <UniqueIdentifier>{3bf8efb6-7251-4ef8-890d-0e5c5940c8b8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRMeshFwd.h">
@@ -1020,9 +1023,6 @@
     <ClInclude Include="MRTerrainTriangulation.h">
       <Filter>Source Files\Triangulation</Filter>
     </ClInclude>
-    <ClInclude Include="MRAggregateFlow.h">
-      <Filter>Source Files\SurfacePath</Filter>
-    </ClInclude>
     <ClInclude Include="MRPointOnObject.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
@@ -1040,6 +1040,18 @@
     </ClInclude>
     <ClInclude Include="MRMeshExtrude.h">
       <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MRGraph.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRWatershedGraph.h">
+      <Filter>Source Files\WaterFlow</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAggregateFlow.h">
+      <Filter>Source Files\WaterFlow</Filter>
+    </ClInclude>
+    <ClInclude Include="MRBasinVolume.h">
+      <Filter>Source Files\WaterFlow</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1715,9 +1727,6 @@
     <ClCompile Include="MRTerrainTriangulation.cpp">
       <Filter>Source Files\Triangulation</Filter>
     </ClCompile>
-    <ClCompile Include="MRAggregateFlow.cpp">
-      <Filter>Source Files\SurfacePath</Filter>
-    </ClCompile>
     <ClCompile Include="MRPointsProject.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
@@ -1726,6 +1735,18 @@
     </ClCompile>
     <ClCompile Include="MRMeshExtrude.cpp">
       <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MRGraph.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRWatershedGraph.cpp">
+      <Filter>Source Files\WaterFlow</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAggregateFlow.cpp">
+      <Filter>Source Files\WaterFlow</Filter>
+    </ClCompile>
+    <ClCompile Include="MRBasinVolume.cpp">
+      <Filter>Source Files\WaterFlow</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -1,5 +1,5 @@
-#ifndef MRMESH_NO_LABEL
 #include "MRAlignTextToMesh.h"
+#ifndef MRMESH_NO_LABEL
 #include "MRMesh.h"
 #include "MRBox.h"
 #include "MRAffineXf3.h"

@@ -62,23 +62,23 @@ bool TouchpadController::touchpadSwipeGestureBegin_()
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
 
-    auto swipeMode = parameters_.swipeMode;
+    currentSwipeMode_ = parameters_.swipeMode;
     if ( ImGui::GetIO().KeyAlt )
     {
-        switch ( swipeMode )
+        switch ( parameters_.swipeMode )
         {
         case Parameters::SwipeRotatesCamera:
-            swipeMode = Parameters::SwipeMovesCamera;
+            currentSwipeMode_ = Parameters::SwipeMovesCamera;
             break;
         case Parameters::SwipeMovesCamera:
-            swipeMode = Parameters::SwipeRotatesCamera;
+            currentSwipeMode_ = Parameters::SwipeRotatesCamera;
             break;
         case Parameters::SwipeModeCount:
             break;
         }
     }
 
-    if ( swipeMode == Parameters::SwipeRotatesCamera )
+    if ( currentSwipeMode_ == Parameters::SwipeRotatesCamera )
     {
         const auto initParams = viewer.viewport().getParameters();
         viewport.rotationCenterMode( Viewport::Parameters::RotationCenterMode::DynamicStatic );
@@ -96,22 +96,6 @@ bool TouchpadController::touchpadSwipeGestureUpdate_( float deltaX, float deltaY
 
     const auto swipeDirection = Vector3f( deltaX, deltaY, 0.f );
 
-    auto swipeMode = parameters_.swipeMode;
-    if ( ImGui::GetIO().KeyAlt )
-    {
-        switch ( swipeMode )
-        {
-        case Parameters::SwipeRotatesCamera:
-            swipeMode = Parameters::SwipeMovesCamera;
-            break;
-        case Parameters::SwipeMovesCamera:
-            swipeMode = Parameters::SwipeRotatesCamera;
-            break;
-        case Parameters::SwipeModeCount:
-            break;
-        }
-    }
-
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
 
@@ -119,7 +103,7 @@ bool TouchpadController::touchpadSwipeGestureUpdate_( float deltaX, float deltaY
     if ( viewport.getSceneBox().valid() )
         sceneCenterPos = viewport.getSceneBox().center();
 
-    switch ( swipeMode )
+    switch ( currentSwipeMode_ )
     {
     case Parameters::SwipeRotatesCamera:
     {

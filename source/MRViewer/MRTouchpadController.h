@@ -91,6 +91,7 @@ private:
     virtual bool touchpadRotateGestureUpdate_( float angle ) override;
     virtual bool touchpadRotateGestureEnd_() override;
 
+    Parameters::SwipeMode currentSwipeMode_{ Parameters::SwipeRotatesCamera };
     virtual bool touchpadSwipeGestureBegin_() override;
     virtual bool touchpadSwipeGestureUpdate_( float deltaX, float deltaY, bool kinetic ) override;
     virtual bool touchpadSwipeGestureEnd_() override;

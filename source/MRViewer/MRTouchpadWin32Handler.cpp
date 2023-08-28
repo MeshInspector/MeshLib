@@ -7,14 +7,13 @@
 
 #include <spdlog/spdlog.h>
 
-// uncomment to print more debug messages
-//#define EVENT_DEBUG
-#ifdef EVENT_DEBUG
 #pragma warning( push )
 #pragma warning( disable: 5204 )
 #include <comdef.h>
 #pragma warning( pop )
-#endif
+
+#define TOUCHPAD_WIN32_EVENT_LOG 1
+#define TOUCHPAD_WIN32_VERBOSE_EVENT_LOG 0
 
 namespace
 {
@@ -34,15 +33,21 @@ public:
     HRESULTHandler& operator =( [[maybe_unused]] HRESULT hr )
     {
         hr_ = hr;
-#ifdef EVENT_DEBUG
+#if TOUCHPAD_WIN32_EVENT_LOG
         if ( hr != S_OK )
         {
             _com_error err( hr );
             _bstr_t msg( err.ErrorMessage() );
             if ( SUCCEEDED( hr ) )
+            {
+#if TOUCHPAD_WIN32_VERBOSE_EVENT_LOG
                 spdlog::warn( "{}:{}: {:08x} {}", file_, line_, (unsigned long)hr, (const char*)msg );
+#endif
+            }
             else
+            {
                 spdlog::error( "{}:{}: {:08x} {}", file_, line_, (unsigned long)hr, (const char*)msg );
+            }
         }
 #endif
         return *this;
@@ -143,8 +148,8 @@ public:
             return S_OK;
         status_ = current;
 
-#ifdef EVENT_DEBUG
-        spdlog::info( "touchpad gesture state changed: {} -> {}", toString( previous ), toString( current ) );
+#if TOUCHPAD_WIN32_VERBOSE_EVENT_LOG
+        spdlog::trace( "touchpad gesture state changed: {} -> {}", toString( previous ), toString( current ) );
 #endif
         if ( current == DIRECTMANIPULATION_READY && gesture_ != Gesture::None )
         {
@@ -194,10 +199,10 @@ public:
                 lastScale_ = scale;
             }
         }
-#ifdef EVENT_DEBUG
+#if TOUCHPAD_WIN32_VERBOSE_EVENT_LOG
         else if ( !FUZZY_0( rotateX ) | !FUZZY_0( rotateY ) )
         {
-            spdlog::info( "rotate x = {} y = {}", rotateX, rotateY );
+            spdlog::trace( "rotate x = {} y = {}", rotateX, rotateY );
         }
 #endif
         else if ( !FUZZY_0( offsetX ) || !FUZZY_0( offsetY ) )
@@ -222,15 +227,15 @@ public:
 
         if ( interaction == DIRECTMANIPULATION_INTERACTION_BEGIN )
         {
-#ifdef EVENT_DEBUG
-            spdlog::info( "touchpad gesture interaction started" );
+#if TOUCHPAD_WIN32_VERBOSE_EVENT_LOG
+            spdlog::trace( "touchpad gesture interaction started" );
 #endif
             handler_->startTouchpadEventPolling_();
         }
         else if ( interaction == DIRECTMANIPULATION_INTERACTION_END )
         {
-#ifdef EVENT_DEBUG
-            spdlog::info( "touchpad gesture interaction finished" );
+#if TOUCHPAD_WIN32_VERBOSE_EVENT_LOG
+            spdlog::trace( "touchpad gesture interaction finished" );
 #endif
             handler_->stopTouchpadEventPolling_();
         }
@@ -311,6 +316,14 @@ private:
 
     void emitSwipe_( float dx, float dy )
     {
+#if TOUCHPAD_WIN32_EVENT_LOG
+        static bool swipeEmitted{ false };
+        if ( !swipeEmitted )
+        {
+            spdlog::debug( "swipe gesture emitted" );
+            swipeEmitted = true;
+        }
+#endif
         updateGesture_( Gesture::Swipe );
         const auto kinetic = status_ == DIRECTMANIPULATION_INERTIA;
         handler_->swipe( dx, dy, kinetic );
@@ -318,6 +331,14 @@ private:
 
     void emitZoom_( float scale )
     {
+#if TOUCHPAD_WIN32_EVENT_LOG
+        static bool zoomEmitted{ false };
+        if ( !zoomEmitted )
+        {
+            spdlog::debug( "zoom gesture emitted" );
+            zoomEmitted = true;
+        }
+#endif
         updateGesture_( Gesture::Zoom );
         const auto kinetic = status_ == DIRECTMANIPULATION_INERTIA;
         // TODO: support kinetic zoom

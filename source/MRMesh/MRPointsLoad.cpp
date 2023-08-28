@@ -29,6 +29,7 @@ const IOFilters Filters =
     {"XYZ (.xyz)",        "*.xyz"},
     {"OBJ (.obj)",        "*.obj"},
     {"PLY (.ply)",        "*.ply"},
+    {"E57 (.e57)",        "*.e57"},
 #ifndef MRMESH_NO_OPENCTM
     {"CTM (.ctm)",        "*.ctm"},
 #endif
@@ -405,6 +406,8 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesys
         res = MR::PointsLoad::fromObj( file, callback );
     else if ( ext == ".asc" )
         res = MR::PointsLoad::fromAsc( file, callback );
+    else if ( ext == ".e57" )
+        res = MR::PointsLoad::fromE57( file, callback );
     else if ( ext == ".csv" || ext == ".xyz" )
         res = MR::PointsLoad::fromText( file, nullptr, callback );
     return res;
@@ -428,6 +431,8 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, 
         res = MR::PointsLoad::fromObj( in, callback );
     else if ( ext == ".asc" )
         res = MR::PointsLoad::fromAsc( in, callback );
+    else if ( ext == ".e57" )
+        res = MR::PointsLoad::fromE57( in, callback );
     else if ( ext == ".csv" || ext == ".xyz" )
         res = MR::PointsLoad::fromText( in, nullptr, callback );
     return res;

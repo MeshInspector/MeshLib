@@ -1748,6 +1748,9 @@
     <ClCompile Include="MRBasinVolume.cpp">
       <Filter>Source Files\WaterFlow</Filter>
     </ClCompile>
+    <ClCompile Include="MRPointsLoadE57.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

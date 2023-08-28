@@ -751,7 +751,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
                 continue;
 
             auto& contour = contours.front();
-            if ( contour.size() > section.size() )
+            if ( !params.flatTool && contour.size() > section.size() )
                 contour.resize( section.size() );
 
             if ( params.isolines )

@@ -37,10 +37,18 @@ std::vector<std::string> ObjectPoints::getInfoLines() const
             res.push_back( "points: " );
         else
             res.push_back( "points with normals: " );
-        res.back() += std::to_string( numValidPoints() );
+        const auto nValidPoints = numValidPoints();
+        res.back() += std::to_string( nValidPoints );
 
-        if ( auto nSelectedPoints = numSelectedPoints() )
+        const auto nSelectedPoints = numSelectedPoints();
+        if( nSelectedPoints )
             res.back() += " / " + std::to_string( nSelectedPoints ) + " selected";
+
+        if( nValidPoints < points_->points.size() )
+            res.back() += " / " + std::to_string( points_->points.size() ) + " size";
+
+        if( points_->points.size() < points_->points.capacity() )
+            res.back() += " / " + std::to_string( points_->points.capacity() ) + " capacity";
 
         boundingBoxToInfoLines_( res );
     }

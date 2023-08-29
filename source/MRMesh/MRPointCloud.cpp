@@ -133,7 +133,7 @@ bool PointCloud::pack( VertMap * outNew2Old )
     {
         packedPoints.push_back( points[v] );
         if ( !normals.empty() )
-            packedNormals.reserve( newSz );
+            packedNormals.push_back( normals[v] );
         if ( outNew2Old )
             outNew2Old->push_back( v );
     }

@@ -24,7 +24,7 @@ Expected<PointCloud, std::string> fromE57( std::istream& /*in*/, VertColors* /*c
     return res;
 }
 
-Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, VertColors* colors, ProgressCallback /*callback*/ )
+Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, VertColors* colors, ProgressCallback progress )
 {
     MR_TIMER
 
@@ -47,7 +47,7 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
         if ( !eReader.GetData3DSizes( scanIndex, nRow, nColumn, nPointsSize, nGroupsSize, nCountSize, bColumnIndex) )
             return MR::unexpected( std::string( "GetData3DSizes failed during reading of " + utf8string( file ) ) );
     
-        int64_t nSize = (nRow > 0) ? nRow : 1024;
+        const int64_t nSize = std::min( nPointsSize, int64_t( 1024 ) * 128 );
 
         e57::Data3DPointsFloat buffers;
         std::vector<float> xs( nSize ), ys( nSize ), zs( nSize );
@@ -78,6 +78,7 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
             colors->clear();
         while ( ( size = dataReader.read() ) > 0 )
         {
+            reportProgress( progress, float( res.points.size() ) / nPointsSize );
             if ( res.points.empty() )
             {
                 hasInputColors = invalidColors.front() == 0;

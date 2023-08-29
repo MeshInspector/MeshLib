@@ -388,13 +388,13 @@ bool ImGuiMenu::touchpadSwipeGestureBegin_()
 
 bool ImGuiMenu::touchpadSwipeGestureUpdate_( float, float deltaY, bool )
 {
+    // touchpad scroll values are larger than mouse ones
+    constexpr float cTouchpadScrollCoef = 0.1f;
+
     if ( ImGui::GetIO().WantCaptureMouse )
     {
-        // touchpad scroll values are larger than mouse ones
-        constexpr float cTouchpadScrollCoef = 0.1f;
-        // process touchpad swipe gesture as scroll
+        // allow ImGui to process the touchpad swipe gesture as a scroll exclusively
         ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, deltaY * cTouchpadScrollCoef );
-
         // do extra frames to prevent imgui calculations ping
         viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
         return true;
@@ -453,13 +453,15 @@ bool ImGuiMenu::onMouseMove_(int mouse_x, int mouse_y )
 
 bool ImGuiMenu::onMouseScroll_(float delta_y)
 {
-    ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, delta_y );
-    // do extra frames to prevent imgui calculations ping
     if ( ImGui::GetIO().WantCaptureMouse )
     {
+        // allow ImGui to process the scroll exclusively
+        ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, delta_y );
+        // do extra frames to prevent imgui calculations ping
         viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
         return true;
     }
+
     return false;
 }
 

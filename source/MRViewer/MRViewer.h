@@ -49,6 +49,9 @@ auto bindSlotCallback( BaseClass* base, MemberFuncPtr func )
 #define ENQUEUE_VIEWER_METHOD_ARGS( NAME, METHOD, ... ) MR::getViewerInstance().eventQueue.emplace( { NAME, [__VA_ARGS__] { \
     MR::getViewerInstance() . METHOD ( __VA_ARGS__ ); \
 } } )
+#define ENQUEUE_VIEWER_METHOD_ARGS_SKIPABLE( NAME, METHOD, ... ) MR::getViewerInstance().eventQueue.emplace( { NAME, [__VA_ARGS__] { \
+    MR::getViewerInstance() . METHOD ( __VA_ARGS__ ); \
+} }, true )
 
 namespace MR
 {

@@ -1,5 +1,5 @@
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PYTHON )
 #include "MREmbeddedPython.h"
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PYTHON )
 #include "MRPython.h"
 #include "MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"

@@ -1,7 +1,7 @@
+#include "MRToolPath.h"
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 
 #include "MR2to3.h"
-#include "MRToolPath.h"
 #include "MRSurfacePath.h"
 #include "MRFixUndercuts.h"
 #include "MROffset.h"
@@ -751,7 +751,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
                 continue;
 
             auto& contour = contours.front();
-            if ( contour.size() > section.size() )
+            if ( !params.flatTool && contour.size() > section.size() )
                 contour.resize( section.size() );
 
             if ( params.isolines )

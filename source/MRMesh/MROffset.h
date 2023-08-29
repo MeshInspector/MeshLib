@@ -1,4 +1,5 @@
 #pragma once
+#include "MRMeshFwd.h"
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRMeshPart.h"
 #include "MRSignDetectionMode.h"

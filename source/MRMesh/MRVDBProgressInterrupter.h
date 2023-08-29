@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMeshFwd.h"
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 
 #include "MRProgressCallback.h"

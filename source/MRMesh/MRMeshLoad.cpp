@@ -456,6 +456,9 @@ Expected<Mesh, std::string> fromPly( std::istream& in, VertColors* colors, Progr
     if ( !gotFaces )
         return unexpected( std::string( "PLY file does not contain faces" ) );
 
+    if ( !res.points.empty() && res.topology.numValidFaces() == 0 )
+        return unexpected( std::string( "PLY file contains only points and no faces" ) );
+
     if ( colors && !colorsBuffer.empty() )
     {
         colors->resize( res.points.size() );
@@ -466,8 +469,7 @@ Expected<Mesh, std::string> fromPly( std::istream& in, VertColors* colors, Progr
         }
     }
 
-
-    return std::move( res );
+    return res;
 }
 
 #ifndef MRMESH_NO_OPENCTM

@@ -419,6 +419,7 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, 
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
         c = ( char )tolower( c );
+    assert( ext != ".e57" ); // no support for reading e57 from arbitrary stream yet
 
     Expected<MR::PointCloud, std::string> res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".ply" )
@@ -431,8 +432,6 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, 
         res = MR::PointsLoad::fromObj( in, callback );
     else if ( ext == ".asc" )
         res = MR::PointsLoad::fromAsc( in, callback );
-    else if ( ext == ".e57" )
-        res = MR::PointsLoad::fromE57( in, colors, callback );
     else if ( ext == ".csv" || ext == ".xyz" )
         res = MR::PointsLoad::fromText( in, nullptr, callback );
     return res;

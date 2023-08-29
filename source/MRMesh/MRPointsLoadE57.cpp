@@ -17,13 +17,6 @@ namespace MR
 namespace PointsLoad
 {
 
-Expected<PointCloud, std::string> fromE57( std::istream& /*in*/, VertColors* /*colors*/, ProgressCallback /*callback*/ )
-{
-    assert( false );
-    PointCloud res;
-    return res;
-}
-
 Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, VertColors* colors, ProgressCallback progress )
 {
     MR_TIMER

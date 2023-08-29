@@ -407,7 +407,7 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesys
     else if ( ext == ".asc" )
         res = MR::PointsLoad::fromAsc( file, callback );
     else if ( ext == ".e57" )
-        res = MR::PointsLoad::fromE57( file, callback );
+        res = MR::PointsLoad::fromE57( file, colors, callback );
     else if ( ext == ".csv" || ext == ".xyz" )
         res = MR::PointsLoad::fromText( file, nullptr, callback );
     return res;
@@ -432,7 +432,7 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, 
     else if ( ext == ".asc" )
         res = MR::PointsLoad::fromAsc( in, callback );
     else if ( ext == ".e57" )
-        res = MR::PointsLoad::fromE57( in, callback );
+        res = MR::PointsLoad::fromE57( in, colors, callback );
     else if ( ext == ".csv" || ext == ".xyz" )
         res = MR::PointsLoad::fromText( in, nullptr, callback );
     return res;

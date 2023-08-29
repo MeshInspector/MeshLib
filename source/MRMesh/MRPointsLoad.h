@@ -48,8 +48,8 @@ MRMESH_API Expected<PointCloud, std::string> fromAsc( const std::filesystem::pat
 MRMESH_API Expected<PointCloud, std::string> fromAsc( std::istream& in, ProgressCallback callback = {} );
 
 /// loads from .e57 file
-MRMESH_API Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, ProgressCallback callback = {} );
-MRMESH_API Expected<PointCloud, std::string> fromE57( std::istream& in, ProgressCallback callback = {} );
+MRMESH_API Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, VertColors* colors = nullptr, ProgressCallback callback = {} );
+MRMESH_API Expected<PointCloud, std::string> fromE57( std::istream& in, VertColors* colors = nullptr, ProgressCallback callback = {} );
 
 /// detects the format from file extension and loads points from it
 MRMESH_API Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, VertColors* colors = nullptr,

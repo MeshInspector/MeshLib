@@ -1,6 +1,7 @@
 #include "MRPointsLoad.h"
 #include "MRPointCloud.h"
 #include "MRStringConvert.h"
+#include "MRColor.h"
 #include "MRTimer.h"
 
 #pragma warning(push)
@@ -16,14 +17,14 @@ namespace MR
 namespace PointsLoad
 {
 
-Expected<PointCloud, std::string> fromE57( std::istream& /*in*/, ProgressCallback /*callback*/ )
+Expected<PointCloud, std::string> fromE57( std::istream& /*in*/, VertColors* /*colors*/, ProgressCallback /*callback*/ )
 {
     assert( false );
     PointCloud res;
     return res;
 }
 
-Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, ProgressCallback /*callback*/ )
+Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, VertColors* colors, ProgressCallback /*callback*/ )
 {
     MR_TIMER
 
@@ -53,17 +54,41 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Pr
         buffers.cartesianX = xs.data();
         buffers.cartesianY = ys.data();
         buffers.cartesianZ = zs.data();
+        std::vector<uint16_t> rs, gs, bs;
+        std::vector<int8_t> invalidColors;
+        if ( colors )
+        {
+            rs.resize( nSize );
+            gs.resize( nSize );
+            bs.resize( nSize );
+            buffers.colorRed =   rs.data();
+            buffers.colorGreen = gs.data();
+            buffers.colorBlue =  bs.data();
+            invalidColors.resize( nSize );
+            buffers.isColorInvalid = invalidColors.data();
+        }
 
         e57::CompressedVectorReader dataReader = eReader.SetUpData3DPointsData( scanIndex, nSize, buffers );
 
         PointCloud res;
         res.points.reserve( nPointsSize );
         unsigned long size = 0;
+        bool hasInputColors = false;
+        if ( colors )
+            colors->clear();
         while ( ( size = dataReader.read() ) > 0 )
         {
+            if ( res.points.empty() )
+            {
+                hasInputColors = invalidColors.front() == 0;
+                if ( colors && hasInputColors )
+                    colors->reserve( nPointsSize );
+            }
             for ( unsigned long i = 0; i < size; ++i )
             {
                 res.points.emplace_back( buffers.cartesianX[i], buffers.cartesianY[i], buffers.cartesianZ[i] );
+                if ( colors && hasInputColors )
+                    colors->emplace_back( buffers.colorRed[i], buffers.colorGreen[i], buffers.colorBlue[i] );
             }
         }
         assert( res.points.size() == (size_t)nPointsSize );

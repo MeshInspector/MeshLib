@@ -2,9 +2,13 @@
 #include "MRPointCloud.h"
 #include "MRStringConvert.h"
 #include "MRTimer.h"
-#include <e57/time_conversion/time_conversion.h>
-#include <e57/E57Foundation.h>
-#include <e57/E57Simple.h>
+
+#pragma warning(push)
+#pragma warning(disable: 4251) // class needs to have dll-interface to be used by clients of another class
+#include <E57Format/E57SimpleReader.h>
+#pragma warning(pop)
+
+#pragma warning(disable: 4996) // allow using deprecated functions
 
 namespace MR
 {

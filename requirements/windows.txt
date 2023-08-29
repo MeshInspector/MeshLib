@@ -17,6 +17,7 @@ gdcm
 gtest
 hidapi
 jsoncpp
+libe57format
 libharu
 libzip
 openvdb

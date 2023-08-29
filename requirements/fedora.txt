@@ -1,6 +1,7 @@
 blosc-devel
 boost-devel
 clang
+clang-tools-extra
 cmake
 expected-devel
 fmt-devel
@@ -27,3 +28,4 @@ spdlog-devel
 tbb-devel
 time
 turbojpeg-devel
+xerces-c-devel

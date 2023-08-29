@@ -1,5 +1,6 @@
 build-essential
 clang-11
+clang-format
 cmake
 g++-10
 gcc-10
@@ -23,6 +24,7 @@ libtbb-dev
 libtiff-dev
 libtinyxml2-dev
 libturbojpeg0-dev
+libxerces-c-dev
 libzip-dev
 libzstd-dev
 pkg-config

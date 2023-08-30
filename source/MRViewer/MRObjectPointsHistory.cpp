@@ -11,7 +11,7 @@
 namespace MR
 {
 
-bool packPointsWithHistory( const std::shared_ptr<ObjectPoints>& objPoints )
+static bool packPointsWithHistoryCore( const std::shared_ptr<ObjectPoints>& objPoints, VertBitSet * newValidVerts )
 {
     MR_TIMER
 
@@ -19,7 +19,10 @@ bool packPointsWithHistory( const std::shared_ptr<ObjectPoints>& objPoints )
         return false;
 
     Historian<ChangePointCloudAction> h( "set cloud", objPoints );
-        
+
+    if ( newValidVerts )
+        objPoints->varPointCloud()->validPoints = std::move( *newValidVerts );
+
     VertMap new2Old;
     if ( !objPoints->varPointCloud()->pack( &new2Old ) )
     {
@@ -59,12 +62,14 @@ bool packPointsWithHistory( const std::shared_ptr<ObjectPoints>& objPoints )
     return true;
 }
 
+bool packPointsWithHistory( const std::shared_ptr<ObjectPoints>& objPoints )
+{
+    return packPointsWithHistoryCore( objPoints, nullptr );
+}
+
 bool packPointsWithHistory( const std::shared_ptr<ObjectPoints>& objPoints, VertBitSet newValidVerts )
 {
-    if ( !objPoints || !objPoints->pointCloud() )
-        return false;
-    objPoints->varPointCloud()->validPoints = std::move( newValidVerts );
-    return packPointsWithHistory( objPoints );
+    return packPointsWithHistoryCore( objPoints, &newValidVerts );
 }
 
 } //namespace MR

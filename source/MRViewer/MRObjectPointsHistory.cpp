@@ -15,6 +15,9 @@ bool packPointsWithHistory( const std::shared_ptr<ObjectPoints>& objPoints )
 {
     MR_TIMER
 
+    if ( !objPoints || !objPoints->pointCloud() )
+        return false;
+
     Historian<ChangePointCloudAction> h( "set cloud", objPoints );
         
     VertMap new2Old;
@@ -54,6 +57,14 @@ bool packPointsWithHistory( const std::shared_ptr<ObjectPoints>& objPoints )
     }
 
     return true;
+}
+
+bool packPointsWithHistory( const std::shared_ptr<ObjectPoints>& objPoints, VertBitSet newValidVerts )
+{
+    if ( !objPoints || !objPoints->pointCloud() )
+        return false;
+    objPoints->varPointCloud()->validPoints = std::move( newValidVerts );
+    return packPointsWithHistory( objPoints );
 }
 
 } //namespace MR

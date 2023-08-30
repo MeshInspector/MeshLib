@@ -1,3 +1,4 @@
+#if !defined( __EMSCRIPTEN__ )
 #include "MRPointsLoad.h"
 #include "MRPointCloud.h"
 #include "MRStringConvert.h"
@@ -99,3 +100,5 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
 } //namespace PointsLoad
 
 } //namespace MR
+
+#endif // !defined( __EMSCRIPTEN__ )

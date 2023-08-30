@@ -121,7 +121,9 @@ IF(MR_EMSCRIPTEN)
   add_compile_definitions(__TBB_DYNAMIC_LOAD_ENABLED=0)
   add_subdirectory(./onetbb)
   install(DIRECTORY onetbb/include/tbb DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-ELSE()
+
+  add_subdirectory(./libE57Format)
+ELSE() # not MR_EMSCRIPTEN
   set(CLIP_EXAMPLES OFF)
   set(CLIP_TESTS OFF)
   set(CLIP_X11_WITH_PNG OFF)
@@ -137,8 +139,6 @@ set(PYBIND11_INSTALL ON)
 add_subdirectory(./pybind11)
 set(TINYGLTF_INSTALL ON)
 add_subdirectory(./tinygltf)
-
-add_subdirectory(./libE57Format)
 
 file(GLOB IMGUI_HEADERS "imgui/*.h")
 install(FILES ${IMGUI_HEADERS} DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)

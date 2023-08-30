@@ -99,7 +99,7 @@ jobs:
           {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu-arm64\",   \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
           {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22-arm64\", \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
           {\"dockerfile\":\"fedora37Dockerfile\",   \"image\":\"fedora37\",       \"os\":\"ubuntu-latest\"}, \
-          {\"dockerfile\":\"fedora37Dockerfile\",   \"image\":\"fedora38\",       \"os\":\"ubuntu-latest\"}, \
+          {\"dockerfile\":\"fedora38Dockerfile\",   \"image\":\"fedora38\",       \"os\":\"ubuntu-latest\"}, \
           {\"dockerfile\":\"emscriptenDockerfile\", \"image\":\"emscripten\",     \"os\":\"ubuntu-latest\"}, \
           ]}"
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT

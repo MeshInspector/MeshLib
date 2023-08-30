@@ -12,10 +12,13 @@
 #include "MRMeshMetrics.h"
 #include "MRMeshFillHole.h"
 #include "MRMeshDelone.h"
+#include "MRMeshCollidePrecise.h"
+#include "MRBox.h"
 #include "MR2to3.h"
 #include <queue>
 #include <algorithm>
 #include <limits>
+#include "MRPrecisePredicates2.h"
 
 namespace MR
 {
@@ -46,16 +49,24 @@ private:
     };
     Vector<EdgeWindingInfo, UndirectedEdgeId> windingInfo_;
 
+    CoordinateConverters2 converters_;
     // struct to use easily compare mesh points by sweep line compare rule
     struct ComaparableVertId
     {
-        ComaparableVertId( const Mesh* meshP, VertId v ) :mesh{ meshP }, id{ v }{}
+        ComaparableVertId( const Mesh* meshP, VertId v, const CoordinateConverters2* conv ) :
+            mesh{ meshP }, id{ v }, converters{ conv }{}
         const Mesh* mesh;
         VertId id;
+        const CoordinateConverters2* converters;
         bool operator<( const ComaparableVertId& other ) const;
         bool operator>( const ComaparableVertId& other ) const;
     };
     std::priority_queue<ComaparableVertId, std::vector<ComaparableVertId>, std::greater<ComaparableVertId>> queue_;
+
+    ComaparableVertId createCompVert_( VertId v );
+
+    std::vector<EdgeId> findClosestCache_;
+    int findClosestToFront_( std::vector<EdgeId>& edges, bool right );
 
     // make base mesh only containing input contours as edge loops
     void initMeshByContours_( const Contours2d& contours );
@@ -90,15 +101,15 @@ private:
 
 bool PlanarTriangulator::ComaparableVertId::operator<( const ComaparableVertId& other ) const
 {
-    const auto& l = mesh->points[id];
-    const auto& r = other.mesh->points[other.id];
+    auto l = converters->toInt( to2dim( mesh->points[id] ) );
+    auto r = converters->toInt( to2dim( other.mesh->points[other.id] ) );
     return l.x < r.x || ( l.x == r.x && l.y < r.y );
 }
 
 bool PlanarTriangulator::ComaparableVertId::operator>( const ComaparableVertId& other ) const
 {
-    const auto& l = mesh->points[id];
-    const auto& r = other.mesh->points[other.id];
+    auto l = converters->toInt( to2dim( mesh->points[id] ) );
+    auto r = converters->toInt( to2dim( other.mesh->points[other.id] ) );
     return l.x > r.x || ( l.x == r.x && l.y > r.y );
 }
 
@@ -106,6 +117,17 @@ PlanarTriangulator::PlanarTriangulator( const Contours2d& contours, const HolesV
 {
     abortWhenIntersect_ = abortWhenIntersect;
     initMeshByContours_( contours );
+
+    auto box = Box3d( mesh_.computeBoundingBox() );
+    converters_.toInt = [conv = getToIntConverter( box )]( const Vector2f& coord )
+    {
+        return to2dim( conv( to3dim( coord ) ) );
+    };
+    converters_.toFloat = [conv = getToFloatConverter( box )]( const Vector2i& coord )
+    {
+        return to2dim( conv( to3dim( coord ) ) );
+    };
+
     mergeSamePoints_( holesVertId );
 }
 
@@ -143,6 +165,91 @@ std::optional<Mesh> PlanarTriangulator::run()
     makeDeloneEdgeFlips( mesh_, {}, 300 );
 
     return std::move( mesh_ ); // move here to avoid copy of class member
+}
+
+PlanarTriangulation::PlanarTriangulator::ComaparableVertId PlanarTriangulator::createCompVert_( VertId v )
+{
+    return ComaparableVertId( &mesh_, v, &converters_ );
+}
+
+int PlanarTriangulator::findClosestToFront_( std::vector<EdgeId>& edges, bool left )
+{
+    if ( edges.size() == 2 )
+        return 1;
+    std::array<PreciseVertCoords2, 3> pvc;
+    auto org = mesh_.topology.org( edges[1] );
+    pvc[2].id = org;
+    pvc[2].pt = converters_.toInt( to2dim( mesh_.points[org] ) );
+    PreciseVertCoords2 baseVertCoord;
+    if ( edges[0] )
+    {
+        auto dest = mesh_.topology.dest( edges[0] );
+        for ( int i = 1; i < edges.size(); ++i )
+        {
+            if ( dest == mesh_.topology.dest( edges[i] ) )
+                return i;
+        }
+        baseVertCoord.id = dest;
+        baseVertCoord.pt = converters_.toInt( to2dim( mesh_.points[dest] ) );
+    }
+    else
+    {
+        baseVertCoord.id = VertId{}; // -1
+        baseVertCoord.pt = pvc[2].pt;
+        baseVertCoord.pt.x -= 10000; // -X vec
+    }
+    auto getNextI = [&] ( int i, bool prev )
+    {
+        if ( prev )
+        {
+            if ( i == 1 )
+                return int( edges.size() ) - 1;
+            return i - 1;
+        }
+        else
+        {
+            if ( i == int( edges.size() ) - 1 )
+                return 1;
+            return i + 1;
+        }
+    };
+    for ( int i = 1; ; )
+    {
+        pvc[0] = baseVertCoord;
+
+        auto dest = mesh_.topology.dest( edges[i] );
+        pvc[1].id = dest;
+        pvc[1].pt = converters_.toInt( to2dim( mesh_.points[dest] ) );
+        PreciseVertCoords2 coordI = pvc[1];
+
+        bool ccwBI = ccw( pvc );
+        int nextI = getNextI( i, ccwBI );
+
+        dest = mesh_.topology.dest( edges[nextI] );
+        pvc[1].id = dest;
+        pvc[1].pt = converters_.toInt( to2dim( mesh_.points[dest] ) );
+
+        bool ccwBIn = ccw( pvc );
+
+        if ( ccwBI && !ccwBIn )
+            return left ? i : nextI;
+        if ( !ccwBI && ccwBIn )
+            return left ? nextI : i;
+
+        pvc[0] = coordI;
+        bool ccwIIn = ccw( pvc );
+
+        if ( ccwBI && ccwIIn )
+            return left ? i : nextI;
+        if ( !ccwBI && !ccwIIn )
+            return left ? nextI : i;
+
+        if ( nextI == 1 )
+            break;
+        i = nextI;
+    }
+    assert( false );
+    return 0;
 }
 
 void PlanarTriangulator::initMeshByContours_( const Contours2d& contours )
@@ -199,7 +306,7 @@ void PlanarTriangulator::mergeSamePoints_( const HolesVertIds* holesVertId )
     std::vector<ComaparableVertId> sortedPoints;
     sortedPoints.reserve( mesh_.points.size() );
     for ( int i = 0; i < mesh_.points.size(); ++i )
-        sortedPoints.emplace_back( &mesh_, VertId( i ) );
+        sortedPoints.emplace_back( createCompVert_( VertId( i ) ) );
     if ( !holesVertId )
         std::sort( sortedPoints.begin(), sortedPoints.end() );
     else
@@ -239,45 +346,56 @@ void PlanarTriangulator::mergeSamePoints_( const HolesVertIds* holesVertId )
 void PlanarTriangulator::mergeSinglePare_( VertId unique, VertId same )
 {
     std::vector<EdgeId> sameEdges;
-    bool sameToUniqueEdgeExists{ false };
+    int sameToUniqueEdgeIndex{ -1 };
+    int i = 0;
     for ( auto eSame : orgRing( mesh_.topology, same ) )
     {
         sameEdges.push_back( eSame );
         if ( mesh_.topology.dest( eSame ) == unique )
-            sameToUniqueEdgeExists = true;
+        {
+            assert( sameToUniqueEdgeIndex == -1 );
+            sameToUniqueEdgeIndex = i;
+        }
+        ++i;
     }
 
-    if ( sameToUniqueEdgeExists )
+    if ( sameToUniqueEdgeIndex != -1 )
     {
-        // if part of same contour - no need to merge
-        assert( sameEdges.size() == 2 );
-        return;
+        // if part of same contour
+        // disconnect before merge
+        auto e = sameEdges[sameToUniqueEdgeIndex];
+        mesh_.topology.splice( mesh_.topology.prev( e ), e );
+        mesh_.topology.splice( mesh_.topology.prev( e.sym() ), e.sym() );
+        sameEdges.erase( sameEdges.begin() + sameToUniqueEdgeIndex );
     }
+
 
     for ( auto eSame : sameEdges )
     {
-        auto sVec = mesh_.edgeVector( eSame ).normalized();
-        float minAngle = std::numeric_limits<float>::max();
-        EdgeId minEUnique;
+        findClosestCache_.clear();
+        findClosestCache_.push_back( eSame );
         for ( auto eUnique : orgRing( mesh_.topology, unique ) )
         {
-            auto uVec = mesh_.edgeVector( eUnique ).normalized();
-            auto crossRes = cross( uVec, sVec );
-            float angle = std::atan2( std::copysign( crossRes.length(), crossRes.z ), dot( uVec, sVec ) );
-            if ( angle < 0.0f )
-                angle += 2.0f * PI_F;
-            if ( angle < minAngle )
-            {
-                minAngle = angle;
-                minEUnique = eUnique;
-            }
+            findClosestCache_.emplace_back( eUnique );
         }
+        auto minEUnique = findClosestCache_[findClosestToFront_( findClosestCache_, false )];
         auto prev = mesh_.topology.prev( eSame );
         if ( prev != eSame )
             mesh_.topology.splice( prev, eSame );
         else
             mesh_.topology.setOrg( eSame, VertId{} );
         mesh_.topology.splice( minEUnique, eSame );
+        if ( mesh_.topology.dest( minEUnique ) == mesh_.topology.dest( eSame ) )
+        {
+            auto& edgeInfo = windingInfo_.autoResizeAt( minEUnique.undirected() );
+            if ( edgeInfo.windingMod == INT_MAX )
+                edgeInfo.windingMod = 1;
+            bool uniqueIsOdd = minEUnique.odd();
+            bool sameIsOdd = eSame.odd();
+            edgeInfo.windingMod += ( ( uniqueIsOdd == sameIsOdd ) ? 1 : -1 );
+            mesh_.topology.splice( mesh_.topology.prev( eSame ), eSame );
+            mesh_.topology.splice( mesh_.topology.prev( eSame.sym() ), eSame.sym() );
+        }
     }
 
 }
@@ -320,7 +438,7 @@ void PlanarTriangulator::triangulateMonotoneBlock_( EdgeId holeEdgeId )
     auto holeLoop = trackRightBoundaryLoop( mesh_.topology, holeEdgeId );
     auto lessPred = [&] ( EdgeId l, EdgeId r )
     {
-        return ComaparableVertId( &mesh_, mesh_.topology.org( l ) ) < ComaparableVertId( &mesh_, mesh_.topology.org( r ) );
+        return createCompVert_( mesh_.topology.org( l ) ) < createCompVert_( mesh_.topology.org( r ) );
     };
     auto minMaxIt = std::minmax_element( holeLoop.begin(), holeLoop.end(), lessPred );
 
@@ -448,7 +566,7 @@ void PlanarTriangulator::triangulateMonotoneBlock_( EdgeId holeEdgeId )
 bool PlanarTriangulator::processOneVert_( VertId v )
 {
     // remove left, find right
-    bool hasLeft = false;
+    EdgeId anyLeftEdge;
     std::vector<ActiveEdgeInfo> rightGoingEdges;
     const auto& activePoint = mesh_.points[v];
     std::vector<int> indicesToRemoveFromActive;
@@ -460,11 +578,11 @@ bool PlanarTriangulator::processOneVert_( VertId v )
         else
         {
             indicesToRemoveFromActive.push_back( int( std::distance( activeSweepEdges_.begin(), lIt ) ) );
-            hasLeft = true;
+            anyLeftEdge = e;
         }
     }
     EdgeId lowestLeftEdge;
-    if ( hasLeft )
+    if ( anyLeftEdge.valid() )
     {
         // find lowest left for helper
         std::sort( indicesToRemoveFromActive.begin(), indicesToRemoveFromActive.end() );
@@ -495,32 +613,22 @@ bool PlanarTriangulator::processOneVert_( VertId v )
     }
 
     // find lowest rightGoingEdge (for correct insertion right edges into active sweep edges)
-    auto findAngle = [&] ( const Vector3f& target, const Vector3f& baseVec )->float
+    assert( anyLeftEdge.valid() || !rightGoingEdges.empty() );
+
+    int lowestRight = -1;
+    if ( !rightGoingEdges.empty() )
     {
-        auto edgeVec = ( target - activePoint ).normalized();
-        auto crossRes = cross( baseVec, edgeVec );
-        float ang = std::atan2( std::copysign( crossRes.length(), crossRes.z ), dot( baseVec, edgeVec ) );
-        if ( ang < 0.0f )
-            ang += 2.0f * PI_F;
-        return ang;
-    };
-    assert( hasLeft || !rightGoingEdges.empty() );
-    int lowestRight = INT_MAX;
-    float minAng = FLT_MAX;
-    for ( int i = 0; i < rightGoingEdges.size(); ++i )
-    {
-        float ang = findAngle( mesh_.destPnt( rightGoingEdges[i].id ), Vector3f::minusY() );
-        if ( ang < minAng )
-        {
-            minAng = ang;
-            lowestRight = i;
-        }
+        findClosestCache_.clear();
+        findClosestCache_.emplace_back( EdgeId{} ); // empty first min -x vec
+        for ( int i = 0; i < rightGoingEdges.size(); ++i )
+            findClosestCache_.push_back( rightGoingEdges[i].id );
+        lowestRight = findClosestToFront_( findClosestCache_, true ) - 1;
     }
-    assert( rightGoingEdges.empty() || lowestRight != INT_MAX );
+    assert( rightGoingEdges.empty() || lowestRight != -1 );
 
     bool hasOuter = activeVPosition != INT_MAX && activeVPosition != -1;
     // connect with outer contour if it has no left and inside (containing region should be internal)
-    if ( !hasLeft && hasOuter && windingInfo_[activeSweepEdges_[activeVPosition].id.undirected()].inside() )
+    if ( !anyLeftEdge.valid() && hasOuter && windingInfo_[activeSweepEdges_[activeVPosition].id.undirected()].inside() )
     {
         assert( lowestRight != INT_MAX );
         // find helper:
@@ -537,8 +645,8 @@ bool PlanarTriangulator::processOneVert_( VertId v )
         }
         else
         {
-            auto compUpper = ComaparableVertId( &mesh_, mesh_.topology.org( upper.id ) );
-            auto compLower = ComaparableVertId( &mesh_, mesh_.topology.org( lower.id ) );
+            auto compUpper = createCompVert_( mesh_.topology.org( upper.id ) );
+            auto compLower = createCompVert_( mesh_.topology.org( lower.id ) );
             if ( compUpper > compLower )
                 helperId = mesh_.topology.prev( upper.id );
             else
@@ -558,21 +666,12 @@ bool PlanarTriangulator::processOneVert_( VertId v )
     {
         auto connect = [&] ( const LoneRightmostLeft& loneInfo ) mutable
         {
-            const auto& orgPt = mesh_.orgPnt( loneInfo.id );
-
-            Vector3f baseVec = ( orgPt - activePoint ).normalized();
-            float maxDiffAng = -FLT_MAX;
-            EdgeId maxDiffE;
+            findClosestCache_.clear();
+            findClosestCache_.emplace_back( loneInfo.id.sym() );
             for ( auto e : orgRing( mesh_.topology, v ) )
-            {
-                auto diffAng = findAngle( mesh_.destPnt( e ), baseVec );
+                findClosestCache_.push_back( e );
+            EdgeId maxDiffE = findClosestCache_[findClosestToFront_( findClosestCache_, false )];
 
-                if ( diffAng > maxDiffAng )
-                {
-                    maxDiffAng = diffAng;
-                    maxDiffE = e;
-                }
-            }
             auto newE = mesh_.topology.makeEdge();
             mesh_.topology.splice( loneInfo.id, newE );
             mesh_.topology.splice( maxDiffE, newE.sym() );
@@ -581,8 +680,15 @@ bool PlanarTriangulator::processOneVert_( VertId v )
             windingInfo_[newE.undirected()].winding = 1; // mark inside
             if ( maxDiffE == lowestLeftEdge )
             {
-                const auto& p = mesh_.destPnt( lowestLeftEdge );
-                if ( cross( to2dim( p - activePoint ), to2dim( baseVec ) ) > 0.0f )
+                std::array<PreciseVertCoords2, 3> pvc;
+                pvc[2].id = v;
+                pvc[2].pt = converters_.toInt( to2dim( activePoint ) );
+                pvc[0].id = mesh_.topology.dest( lowestLeftEdge );
+                pvc[0].pt = converters_.toInt( to2dim( mesh_.points[pvc[0].id] ) );
+                pvc[1].id = mesh_.topology.org( loneInfo.id );
+                pvc[1].pt = converters_.toInt( to2dim( mesh_.points[pvc[1].id] ) );
+
+                if ( ccw( pvc ) )
                     lowestLeftEdge = newE.sym();
             }
         };
@@ -615,7 +721,7 @@ bool PlanarTriangulator::processOneVert_( VertId v )
     }
     else if ( hasOuter && windingInfo_[activeSweepEdges_[activeVPosition].id.undirected()].inside() )
     {
-        assert( hasLeft );
+        assert( anyLeftEdge.valid() );
         LoneRightmostLeft loneRightmostLeft;
         loneRightmostLeft.id = lowestLeftEdge;
         loneRightmostLeft.lower = activeSweepEdges_[activeVPosition].id;
@@ -699,7 +805,7 @@ bool PlanarTriangulator::resolveIntersectios_()
         windingInfo_[e2n.undirected()].windingMod = windingInfo_[activeSweepEdges_[i + 1].id.undirected()].windingMod;
 
         // update queue
-        queue_.push( ComaparableVertId{ &mesh_,vInter } );
+        queue_.push( createCompVert_( vInter ) );
     }
     return true;
 }

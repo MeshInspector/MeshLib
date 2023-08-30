@@ -150,7 +150,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
 	        pthread
 	        jsoncpp
 	        tbb
-	 	E57Format
 		${MRMESH_OPTIONAL_DEPENDENCIES}
 	    )
 	ENDIF()

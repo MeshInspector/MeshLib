@@ -9,8 +9,6 @@
 #include <E57Format/E57SimpleReader.h>
 #pragma warning(pop)
 
-#pragma warning(disable: 4996) // allow using deprecated functions
-
 namespace MR
 {
 
@@ -23,7 +21,7 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
 
     try
     {
-        e57::Reader eReader( utf8string( file ) );
+        e57::Reader eReader( utf8string( file ), {} );
 
         int scanIndex = 0;
 

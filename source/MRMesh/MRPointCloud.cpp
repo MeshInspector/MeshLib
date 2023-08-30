@@ -4,6 +4,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPlane3.h"
 #include "MRBitSetParallelFor.h"
+#include "MRTimer.h"
 
 namespace MR
 {
@@ -20,6 +21,7 @@ Box3f PointCloud::computeBoundingBox( const AffineXf3f * toWorld ) const
 
 void PointCloud::addPartByMask( const PointCloud& from, const VertBitSet& fromVerts, VertMap* oldToNewMap /*= nullptr*/ )
 {
+    MR_TIMER
     const auto& fromPoints = from.points;
     const auto& fromNormals = from.normals;
 
@@ -93,14 +95,58 @@ size_t PointCloud::heapBytes() const
 
 void PointCloud::mirror( const Plane3f& plane )
 {
+    MR_TIMER
     BitSetParallelFor( validPoints, [&] ( VertId id )
     {
         points[id] += 2.0f * ( plane.project( points[id] ) - points[id] );
         if ( !normals.empty() )
             normals[id] -= 2.0f * dot( normals[id], plane.n ) * plane.n;
-    } );  
+    } );
 
     invalidateCaches();
+}
+
+bool PointCloud::pack( VertMap * outNew2Old )
+{
+    MR_TIMER
+    const auto newSz = validPoints.count();
+    if ( points.size() == newSz )
+    {
+        assert( normals.empty() || normals.size() == newSz );
+        assert( validPoints.size() == newSz );
+        return false;
+    }
+
+    if ( outNew2Old )
+    {
+        outNew2Old->clear();
+        outNew2Old->reserve( newSz );
+    }
+
+    VertCoords packedPoints;
+    packedPoints.reserve( newSz );
+    VertNormals packedNormals;
+    if ( !normals.empty() )
+        packedNormals.reserve( newSz );
+
+    for ( auto v : validPoints )
+    {
+        packedPoints.push_back( points[v] );
+        if ( !normals.empty() )
+            packedNormals.push_back( normals[v] );
+        if ( outNew2Old )
+            outNew2Old->push_back( v );
+    }
+
+    assert( packedPoints.size() == newSz );
+    assert( packedNormals.empty() || packedNormals.size() == newSz );
+    points = std::move( packedPoints );
+    normals = std::move( packedNormals );
+    validPoints.clear();
+    validPoints.resize( newSz, true );
+
+    invalidateCaches();
+    return true;
 }
 
 } //namespace MR

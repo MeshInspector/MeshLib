@@ -366,6 +366,63 @@ bool ImGuiMenu::spaceMouseDown_( int /*key*/ )
     return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
 }
 
+bool ImGuiMenu::touchpadRotateGestureBegin_()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadRotateGestureUpdate_( float )
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadRotateGestureEnd_()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadSwipeGestureBegin_()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadSwipeGestureUpdate_( float, float deltaY, bool )
+{
+    // touchpad scroll values are larger than mouse ones
+    constexpr float cTouchpadScrollCoef = 0.1f;
+
+    if ( ImGui::GetIO().WantCaptureMouse )
+    {
+        // allow ImGui to process the touchpad swipe gesture as a scroll exclusively
+        ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, deltaY * cTouchpadScrollCoef );
+        // do extra frames to prevent imgui calculations ping
+        viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
+        return true;
+    }
+
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadSwipeGestureEnd_()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadZoomGestureBegin_()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadZoomGestureUpdate_( float, bool )
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadZoomGestureEnd_()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
 void ImGuiMenu::rescaleStyle_()
 {
     CommandLoop::appendCommand( [&] ()
@@ -396,13 +453,15 @@ bool ImGuiMenu::onMouseMove_(int mouse_x, int mouse_y )
 
 bool ImGuiMenu::onMouseScroll_(float delta_y)
 {
-    ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, delta_y );
-    // do extra frames to prevent imgui calculations ping
     if ( ImGui::GetIO().WantCaptureMouse )
     {
+        // allow ImGui to process the scroll exclusively
+        ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, delta_y );
+        // do extra frames to prevent imgui calculations ping
         viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
         return true;
     }
+
     return false;
 }
 

@@ -21,21 +21,7 @@ void TouchpadController::initialize( GLFWwindow* window )
 #endif
 }
 
-void TouchpadController::connect()
-{
-    auto& viewer = getViewerInstance();
-    viewer.touchpadRotateStartSignal.connect( MAKE_SLOT( &TouchpadController::rotateStart_ ) );
-    viewer.touchpadRotateChangeSignal.connect( MAKE_SLOT( &TouchpadController::rotateChange_ ) );
-    viewer.touchpadRotateEndSignal.connect( MAKE_SLOT( &TouchpadController::rotateEnd_ ) );
-    viewer.touchpadRotateCancelSignal.connect( MAKE_SLOT( &TouchpadController::rotateCancel_ ) );
-    viewer.touchpadSwipeSignal.connect( MAKE_SLOT( &TouchpadController::swipe_ ) );
-    viewer.touchpadZoomStartSignal.connect( MAKE_SLOT( &TouchpadController::zoomStart_ ) );
-    viewer.touchpadZoomChangeSignal.connect( MAKE_SLOT( &TouchpadController::zoomChange_ ) );
-    viewer.touchpadZoomEndSignal.connect( MAKE_SLOT( &TouchpadController::zoomEnd_ ) );
-    viewer.touchpadZoomCancelSignal.connect( MAKE_SLOT( &TouchpadController::zoomCancel_ ) );
-}
-
-bool TouchpadController::rotateStart_( float angle )
+bool TouchpadController::touchpadRotateGestureBegin_()
 {
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
@@ -47,10 +33,10 @@ bool TouchpadController::rotateStart_( float angle )
     viewport.setRotation( true );
     viewport.rotationCenterMode( initRotateParams_.rotationMode );
 
-    return rotateChange_( angle );
+    return true;
 }
 
-bool TouchpadController::rotateChange_( float angle )
+bool TouchpadController::touchpadRotateGestureUpdate_( float angle )
 {
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
@@ -61,20 +47,7 @@ bool TouchpadController::rotateChange_( float angle )
     return true;
 }
 
-bool TouchpadController::rotateCancel_()
-{
-    if ( parameters_.cancellable )
-    {
-        auto& viewer = getViewerInstance();
-        auto& viewport = viewer.viewport();
-
-        viewport.setCameraTrackballAngle( initRotateParams_.cameraTrackballAngle );
-    }
-
-    return rotateEnd_();
-}
-
-bool TouchpadController::rotateEnd_()
+bool TouchpadController::touchpadRotateGestureEnd_()
 {
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
@@ -84,28 +57,44 @@ bool TouchpadController::rotateEnd_()
     return true;
 }
 
-bool TouchpadController::swipe_( float deltaX, float deltaY, bool kinetic )
+bool TouchpadController::touchpadSwipeGestureBegin_()
 {
-    if ( parameters_.ignoreKineticMoves && kinetic )
-        return true;
+    auto& viewer = getViewerInstance();
+    auto& viewport = viewer.viewport();
 
-    const auto swipeDirection = Vector3f( deltaX, deltaY, 0.f );
-
-    auto swipeMode = parameters_.swipeMode;
+    currentSwipeMode_ = parameters_.swipeMode;
     if ( ImGui::GetIO().KeyAlt )
     {
-        switch ( swipeMode )
+        switch ( parameters_.swipeMode )
         {
         case Parameters::SwipeRotatesCamera:
-            swipeMode = Parameters::SwipeMovesCamera;
+            currentSwipeMode_ = Parameters::SwipeMovesCamera;
             break;
         case Parameters::SwipeMovesCamera:
-            swipeMode = Parameters::SwipeRotatesCamera;
+            currentSwipeMode_ = Parameters::SwipeRotatesCamera;
             break;
         case Parameters::SwipeModeCount:
             break;
         }
     }
+
+    if ( currentSwipeMode_ == Parameters::SwipeRotatesCamera )
+    {
+        const auto initParams = viewer.viewport().getParameters();
+        viewport.rotationCenterMode( Viewport::Parameters::RotationCenterMode::DynamicStatic );
+        viewport.setRotation( true );
+        viewport.rotationCenterMode( initParams.rotationMode );
+    }
+
+    return true;
+}
+
+bool TouchpadController::touchpadSwipeGestureUpdate_( float deltaX, float deltaY, bool kinetic )
+{
+    if ( parameters_.ignoreKineticMoves && kinetic )
+        return true;
+
+    const auto swipeDirection = Vector3f( deltaX, deltaY, 0.f );
 
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
@@ -114,7 +103,7 @@ bool TouchpadController::swipe_( float deltaX, float deltaY, bool kinetic )
     if ( viewport.getSceneBox().valid() )
         sceneCenterPos = viewport.getSceneBox().center();
 
-    switch ( swipeMode )
+    switch ( currentSwipeMode_ )
     {
     case Parameters::SwipeRotatesCamera:
     {
@@ -127,7 +116,7 @@ bool TouchpadController::swipe_( float deltaX, float deltaY, bool kinetic )
             * Quaternionf( Vector3f::plusX(), angle.y )
             * quat
         ).normalized();
-        const auto xf = AffineXf3f::xfAround( Matrix3f( quat ), sceneCenterPos );
+        const auto xf = AffineXf3f::linear( Matrix3f( quat ) );
         viewport.transformView( xf );
 
         return true;
@@ -159,48 +148,62 @@ bool TouchpadController::swipe_( float deltaX, float deltaY, bool kinetic )
     std::unreachable();
 #else
     assert( false );
-    return {};
+    return false;
 #endif
 }
 
-bool TouchpadController::zoomStart_( float scale )
+bool TouchpadController::touchpadSwipeGestureEnd_()
+{
+    auto& viewer = getViewerInstance();
+    auto& viewport = viewer.viewport();
+
+    viewport.setRotation( false );
+
+    return true;
+}
+
+bool TouchpadController::touchpadZoomGestureBegin_()
 {
     auto& viewer = getViewerInstance();
 
     initZoomParams_ = viewer.viewport().getParameters();
 
-    return zoomChange_( scale );
+    viewer.mouseController.setMouseScroll( true );
+
+    return true;
 }
 
-bool TouchpadController::zoomChange_( float scale )
+bool TouchpadController::touchpadZoomGestureUpdate_( float scale, bool kinetic )
 {
+    if ( parameters_.ignoreKineticMoves && kinetic )
+        return true;
+
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
+
+    const auto currentViewAngle = viewport.getParameters().cameraViewAngle;
 
     constexpr float minAngle = 0.001f;
     constexpr float maxAngle = 179.99f;
     // more natural zoom scale
     const auto viewAngle = std::exp( 1.f - scale ) * initZoomParams_.cameraViewAngle;
-    viewport.setCameraViewAngle( std::clamp( viewAngle, minAngle, maxAngle ) );
+
+    const auto mult = std::clamp( viewAngle, minAngle, maxAngle ) / currentViewAngle;
+    const auto delta2 = std::log( mult ) / std::log( 0.95f );
+    const auto sign = delta2 >= 0.f ? +1.f : -1.f;
+    const auto delta = sign * std::sqrt( std::abs( delta2 ) );
+
+    viewer.mouseScroll( delta );
 
     return true;
 }
 
-bool TouchpadController::zoomCancel_()
+bool TouchpadController::touchpadZoomGestureEnd_()
 {
-    if ( parameters_.cancellable )
-    {
-        auto& viewer = getViewerInstance();
-        auto& viewport = viewer.viewport();
+    auto& viewer = getViewerInstance();
 
-        viewport.setCameraViewAngle( initZoomParams_.cameraViewAngle );
-    }
+    viewer.mouseController.setMouseScroll( false );
 
-    return zoomEnd_();
-}
-
-bool TouchpadController::zoomEnd_()
-{
     return true;
 }
 
@@ -224,40 +227,45 @@ void TouchpadController::Handler::rotate( float angle, GestureState state )
     switch ( state )
     {
         case GestureState::Begin:
-            ENQUEUE_VIEWER_METHOD_ARGS( "Rotation touchpad gesture started", touchpadRotateStart, angle );
+            ENQUEUE_VIEWER_METHOD( "Rotation touchpad gesture started", touchpadRotateGestureBegin );
             break;
-        case GestureState::Change:
-            ENQUEUE_VIEWER_METHOD_ARGS( "Rotation touchpad gesture updated", touchpadRotateChange, angle );
+        case GestureState::Update:
+            ENQUEUE_VIEWER_METHOD_ARGS_SKIPABLE( "Rotation touchpad gesture updated", touchpadRotateGestureUpdate, angle );
             break;
         case GestureState::End:
-            ENQUEUE_VIEWER_METHOD( "Rotation touchpad gesture ended", touchpadRotateEnd );
-            break;
-        case GestureState::Cancel:
-            ENQUEUE_VIEWER_METHOD( "Rotation touchpad gesture canceled", touchpadRotateCancel );
+            ENQUEUE_VIEWER_METHOD( "Rotation touchpad gesture ended", touchpadRotateGestureEnd );
             break;
     }
 }
 
-void TouchpadController::Handler::swipe( float dx, float dy, bool kinetic )
-{
-    ENQUEUE_VIEWER_METHOD_ARGS( "Swipe touchpad gesture", touchpadSwipe, dx, dy, kinetic );
-}
-
-void TouchpadController::Handler::zoom( float scale, GestureState state )
+void TouchpadController::Handler::swipe( float dx, float dy, bool kinetic, GestureState state )
 {
     switch ( state )
     {
         case GestureState::Begin:
-            ENQUEUE_VIEWER_METHOD_ARGS( "Zoom touchpad gesture started", touchpadZoomStart, scale );
+            ENQUEUE_VIEWER_METHOD( "Swipe touchpad gesture started", touchpadSwipeGestureBegin );
             break;
-        case GestureState::Change:
-            ENQUEUE_VIEWER_METHOD_ARGS( "Zoom touchpad gesture updated", touchpadZoomChange, scale );
+        case GestureState::Update:
+            ENQUEUE_VIEWER_METHOD_ARGS_SKIPABLE( "Swipe touchpad gesture updated", touchpadSwipeGestureUpdate, dx, dy, kinetic );
             break;
         case GestureState::End:
-            ENQUEUE_VIEWER_METHOD( "Zoom touchpad gesture ended", touchpadZoomEnd );
+            ENQUEUE_VIEWER_METHOD( "Swipe touchpad gesture ended", touchpadSwipeGestureEnd );
             break;
-        case GestureState::Cancel:
-            ENQUEUE_VIEWER_METHOD( "Zoom touchpad gesture canceled", touchpadZoomCancel );
+    }
+}
+
+void TouchpadController::Handler::zoom( float scale, bool kinetic, GestureState state )
+{
+    switch ( state )
+    {
+        case GestureState::Begin:
+            ENQUEUE_VIEWER_METHOD( "Zoom touchpad gesture started", touchpadZoomGestureBegin );
+            break;
+        case GestureState::Update:
+            ENQUEUE_VIEWER_METHOD_ARGS_SKIPABLE( "Zoom touchpad gesture updated", touchpadZoomGestureUpdate, scale, kinetic );
+            break;
+        case GestureState::End:
+            ENQUEUE_VIEWER_METHOD( "Zoom touchpad gesture ended", touchpadZoomGestureEnd );
             break;
     }
 }

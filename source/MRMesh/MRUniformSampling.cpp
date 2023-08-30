@@ -1,55 +1,26 @@
 #include "MRUniformSampling.h"
-#include "MRVector.h"
 #include "MRPointCloud.h"
-#include "MRBox.h"
-#include "MRPointsInBall.h"
+#include "MRCloseVertices.h"
+#include "MRBitSetParallelFor.h"
+#include "MRVector.h"
+#include "MRTimer.h"
 
 namespace MR
 {
 
-VertBitSet pointUniformSampling( const PointCloud& pointCloud, float distance, ProgressCallback cb )
+std::optional<VertBitSet> pointUniformSampling( const PointCloud& pointCloud, float distance, const ProgressCallback & cb )
 {
-    auto box = pointCloud.getBoundingBox();
-    if ( !box.valid() )
+    MR_TIMER
+    const auto c = findSmallestCloseVertices( pointCloud, distance, cb );
+    if ( !c )
         return {};
-
-    auto axis = ( box.max - box.min ).normalized();
-
-    struct VertProj
+    const auto & vmap = *c;
+    VertBitSet res( vmap.size() );
+    BitSetParallelForAll( pointCloud.validPoints, [&]( VertId v )
     {
-        float projLength{0};
-        VertId id{};
-    };
-
-    auto size = pointCloud.validPoints.count();
-    if ( size == 0 )
-        return {};
-
-    std::vector<VertProj> projes( size );
-    int n = 0;
-    for ( auto v : pointCloud.validPoints )
-    {
-        projes[n++] = { dot( pointCloud.points[v],axis ),v };
-        if ( !reportProgress( cb, [&]{ return 0.5f * float( n ) / float( size ); }, n, 128 ) )
-            return {};
-    }
-
-    VertBitSet res( pointCloud.validPoints.size() );
-    n = 0;
-    for ( const auto& proj : projes )
-    {
-        bool ballHasPrevVert = false;
-        findPointsInBall( pointCloud, pointCloud.points[proj.id], distance, [&res,&ballHasPrevVert]( VertId v, const Vector3f& )
-        {
-            if ( !ballHasPrevVert && res.test( v ) )
-                ballHasPrevVert = true;
-        } );
-        if ( !ballHasPrevVert )
-            res.set( proj.id );
-        if ( !reportProgress( cb, [&]{ return 0.5f + 0.5f * float( n ) / float( size ); }, n++, 128 ) )
-            return {};
-    }
-
+        if ( vmap[v] == v )
+            res.set( v );
+    } );
     return res;
 }
 

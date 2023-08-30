@@ -1,0 +1,89 @@
+name: Build and test Fedora
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+      UPLOAD_ARTIFACTS:
+        required: true
+        type: boolean
+
+jobs:
+  fedora37-build-test:
+    timeout-minutes: 40
+    runs-on: ubuntu-latest
+    container:
+      image: meshlib/meshlib-${{matrix.os}}:${{inputs.image_tag}}
+      options: --user root
+    strategy:
+      matrix:
+        os: [fedora37, fedora38]
+        config: [Debug, Release]
+        compiler: [Clang]
+        include:
+          - os: fedora37
+            cxx-compiler: /usr/bin/clang++-15
+          - os: fedora38
+            cxx-compiler: /usr/bin/clang++-16
+            MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install thirdparty libs
+        run: |
+          ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
+          ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
+
+      - name: Build
+        run: ./scripts/build_source.sh
+        env:
+          MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
+          MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
+          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          MR_VERSION: ${{ inputs.version }}
+          MR_USE_CPP_23: "ON"
+          MR_CMAKE_OPTIONS: ${{ matrix.MR_CMAKE_OPTIONS }}
+
+      - name: Collect Timings
+        run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.compiler}}"
+
+      #Save timing in artifact
+      - name: Upload Timings
+        uses: actions/upload-artifact@v3
+        with:
+          name: Timing_Logs
+          path: time_log/
+
+      - name: Run Tests
+        run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
+
+      - name: Unit Tests
+        run: ./build/${{ matrix.config }}/bin/MRTest
+
+      - name: Python Tests
+        working-directory: ./build/${{ matrix.config }}/bin
+        run: python3 ./../../../scripts/run_python_test_script.py
+
+      - name: Create RPM
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.os == 'fedora37' && matrix.config == 'Release'}}
+        run: ./scripts/distribution_rpm.sh ${{inputs.version}}
+        env:
+          MESHLIB_BUILD_RELEASE: ON
+          MESHLIB_BUILD_DEBUG: OFF
+
+      - name: Upload Fedora Developer Distribution
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.os == 'fedora37' && matrix.config == 'Release'}}
+        uses: actions/upload-artifact@v3
+        with:
+          name: Distributives
+          path: meshlib-dev.rpm
+          retention-days: 1

@@ -1,8 +1,9 @@
 #pragma once
+
 #include "MRMeshFwd.h"
 #include "MRVector3.h"
-#include "MRBitSet.h"
 #include "MRProgressCallback.h"
+#include <optional>
 
 namespace MR
 {

@@ -44,9 +44,9 @@ void MeshICP::recomputeBitSet(const float floatSamplingVoxelSize)
     auto bboxDiag = meshPart_.mesh.computeBoundingBox( meshPart_.region ).size() / floatSamplingVoxelSize;
     auto nSamples = bboxDiag[0] * bboxDiag[1] * bboxDiag[2];
     if (nSamples > MAX_RESAMPLING_VOXEL_NUMBER)
-        bitSet_ = verticesGridSampling( meshPart_, floatSamplingVoxelSize * std::cbrt(float(nSamples) / float(MAX_RESAMPLING_VOXEL_NUMBER)) );
+        bitSet_ = *verticesGridSampling( meshPart_, floatSamplingVoxelSize * std::cbrt(float(nSamples) / float(MAX_RESAMPLING_VOXEL_NUMBER)) );
     else
-        bitSet_ = verticesGridSampling( meshPart_, floatSamplingVoxelSize );
+        bitSet_ = *verticesGridSampling( meshPart_, floatSamplingVoxelSize );
 
     updateVertPairs();
 }

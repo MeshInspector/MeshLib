@@ -23,11 +23,8 @@ MRMESH_API std::string Utf16ToUtf8( const std::wstring_view & utf16 );
 
 #if defined __cpp_lib_char8_t
 
-inline const std::string & asString( const std::u8string & s ) { return reinterpret_cast<const std::string &>( s ); }
-inline const std::u8string & asU8String( const std::string & s ) { return reinterpret_cast<const std::u8string &>( s ); }
-
-inline std::string asString( std::u8string && s ) { return reinterpret_cast<std::string &&>( s ); }
-inline std::u8string asU8String( std::string && s ) { return reinterpret_cast<std::u8string &&>( s ); }
+inline std::string asString( const std::u8string & s ) { return { s.begin(), s.end() }; }
+inline std::u8string asU8String( const std::string & s ) { return { s.begin(), s.end() }; }
 
 #if defined( _LIBCPP_VERSION ) && _LIBCPP_VERSION < 12000
 inline std::filesystem::path pathFromUtf8( const std::string & s ) { return std::filesystem::path( s ); }

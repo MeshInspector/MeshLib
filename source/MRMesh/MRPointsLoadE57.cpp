@@ -4,6 +4,7 @@
 #include "MRStringConvert.h"
 #include "MRColor.h"
 #include "MRTimer.h"
+#include <MRPch/MRSpdlog.h> //fmt
 
 #pragma warning(push)
 #pragma warning(disable: 4251) // class needs to have dll-interface to be used by clients of another class
@@ -39,6 +40,7 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
         if ( !eReader.GetData3DSizes( scanIndex, nRow, nColumn, nPointsSize, nGroupsSize, nCountSize, bColumnIndex) )
             return MR::unexpected( std::string( "GetData3DSizes failed during reading of " + utf8string( file ) ) );
     
+        // how many points to read in a time
         const int64_t nSize = std::min( nPointsSize, int64_t( 1024 ) * 128 );
 
         e57::Data3DPointsFloat buffers;
@@ -93,7 +95,7 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
     }
     catch( const e57::E57Exception & e )
     {
-        return MR::unexpected( std::string( "Error '") + e.errorStr() + "' during reading of " + utf8string( file ) );
+        return MR::unexpected( fmt::format( "Error '{}' during reading of {}", e.errorStr(), utf8string( file ) ) );
     }
 }
 

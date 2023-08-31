@@ -1,6 +1,5 @@
 build-essential
 clang-14
-clang-format
 cmake
 g++-12
 gcc-12

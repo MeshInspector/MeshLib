@@ -1,7 +1,5 @@
 boost
-ccache
 c-blosc
-clang-format
 cmake
 cpr
 fmt

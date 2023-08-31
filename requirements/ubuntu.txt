@@ -1,6 +1,5 @@
 build-essential
 clang-11
-clang-format
 cmake
 g++-10
 gcc-10

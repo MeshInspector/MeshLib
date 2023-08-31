@@ -1,7 +1,6 @@
 blosc-devel
 boost-devel
 clang
-clang-tools-extra
 cmake
 expected-devel
 fmt-devel

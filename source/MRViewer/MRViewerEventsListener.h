@@ -236,6 +236,96 @@ protected:
     virtual bool spaceMouseUp_( int key ) = 0;
 };
 
+/// class to subscribe on TouchpadRotateGestureBeginEvent
+struct MRVIEWER_CLASS TouchpadRotateGestureBeginListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( TouchpadRotateGestureBeginListener );
+    virtual ~TouchpadRotateGestureBeginListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool touchpadRotateGestureBegin_() = 0;
+};
+
+/// class to subscribe on TouchpadRotateGestureUpdateEvent
+struct MRVIEWER_CLASS TouchpadRotateGestureUpdateListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( TouchpadRotateGestureUpdateListener );
+    virtual ~TouchpadRotateGestureUpdateListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool touchpadRotateGestureUpdate_( float angle ) = 0;
+};
+
+/// class to subscribe on TouchpadRotateGestureEndEvent
+struct MRVIEWER_CLASS TouchpadRotateGestureEndListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( TouchpadRotateGestureEndListener );
+    virtual ~TouchpadRotateGestureEndListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool touchpadRotateGestureEnd_() = 0;
+};
+
+/// class to subscribe on TouchpadSwipeGestureBeginEvent
+struct MRVIEWER_CLASS TouchpadSwipeGestureBeginListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( TouchpadSwipeGestureBeginListener );
+    virtual ~TouchpadSwipeGestureBeginListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool touchpadSwipeGestureBegin_() = 0;
+};
+
+/// class to subscribe on TouchpadSwipeGestureUpdateEvent
+struct MRVIEWER_CLASS TouchpadSwipeGestureUpdateListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( TouchpadSwipeGestureUpdateListener );
+    virtual ~TouchpadSwipeGestureUpdateListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool touchpadSwipeGestureUpdate_( float dx, float dy, bool kinetic ) = 0;
+};
+
+/// class to subscribe on TouchpadSwipeGestureEndEvent
+struct MRVIEWER_CLASS TouchpadSwipeGestureEndListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( TouchpadSwipeGestureEndListener );
+    virtual ~TouchpadSwipeGestureEndListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool touchpadSwipeGestureEnd_() = 0;
+};
+
+/// class to subscribe on TouchpadZoomGestureBeginEvent
+struct MRVIEWER_CLASS TouchpadZoomGestureBeginListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( TouchpadZoomGestureBeginListener );
+    virtual ~TouchpadZoomGestureBeginListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool touchpadZoomGestureBegin_() = 0;
+};
+
+/// class to subscribe on TouchpadZoomGestureUpdateEvent
+struct MRVIEWER_CLASS TouchpadZoomGestureUpdateListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( TouchpadZoomGestureUpdateListener );
+    virtual ~TouchpadZoomGestureUpdateListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool touchpadZoomGestureUpdate_( float scale, bool kinetic ) = 0;
+};
+
+/// class to subscribe on TouchpadZoomGestureEndEvent
+struct MRVIEWER_CLASS TouchpadZoomGestureEndListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( TouchpadZoomGestureEndListener );
+    virtual ~TouchpadZoomGestureEndListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool touchpadZoomGestureEnd_() = 0;
+};
+
 /// class to subscribe on PostFocusSingal
 struct MRVIEWER_CLASS PostFocusListener : ConnectionHolder
 {

@@ -274,15 +274,17 @@ private:
             handler_->rotate( 0.f, TouchpadController::Handler::GestureState::Begin );
             break;
         case Gesture::Swipe:
+            handler_->swipe( 0.f, 0.f, false, TouchpadController::Handler::GestureState::Begin );
             break;
         case Gesture::Zoom:
-            handler_->zoom( 1.f, TouchpadController::Handler::GestureState::Begin );
+            handler_->zoom( 1.f, false, TouchpadController::Handler::GestureState::Begin );
             break;
         }
     }
 
     void endGesture_()
     {
+        const auto kinetic = status_ == DIRECTMANIPULATION_INERTIA;
         switch ( gesture_ )
         {
         case Gesture::None:
@@ -291,9 +293,10 @@ private:
             handler_->rotate( lastAngle_, TouchpadController::Handler::GestureState::End );
             break;
         case Gesture::Swipe:
+            handler_->swipe( 0.f, 0.f, kinetic, TouchpadController::Handler::GestureState::End );
             break;
         case Gesture::Zoom:
-            handler_->zoom( lastScale_, TouchpadController::Handler::GestureState::End );
+            handler_->zoom( lastScale_, kinetic, TouchpadController::Handler::GestureState::End );
             break;
         }
 
@@ -326,7 +329,7 @@ private:
 #endif
         updateGesture_( Gesture::Swipe );
         const auto kinetic = status_ == DIRECTMANIPULATION_INERTIA;
-        handler_->swipe( dx, dy, kinetic );
+        handler_->swipe( dx, dy, kinetic, TouchpadController::Handler::GestureState::Update );
     }
 
     void emitZoom_( float scale )
@@ -341,10 +344,7 @@ private:
 #endif
         updateGesture_( Gesture::Zoom );
         const auto kinetic = status_ == DIRECTMANIPULATION_INERTIA;
-        // TODO: support kinetic zoom
-        if ( kinetic )
-            return;
-        handler_->zoom( scale, TouchpadController::Handler::GestureState::Change );
+        handler_->zoom( scale, kinetic, TouchpadController::Handler::GestureState::Update );
     }
 };
 

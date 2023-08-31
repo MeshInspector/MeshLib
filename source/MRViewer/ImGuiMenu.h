@@ -30,6 +30,9 @@ class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin,
     MouseDownListener, MouseMoveListener, MouseUpListener, MouseScrollListener, CursorEntranceListener,
     CharPressedListener, KeyDownListener, KeyUpListener, KeyRepeatListener,
     SpaceMouseMoveListener, SpaceMouseDownListener,
+    TouchpadRotateGestureBeginListener, TouchpadRotateGestureUpdateListener, TouchpadRotateGestureEndListener,
+    TouchpadSwipeGestureBeginListener, TouchpadSwipeGestureUpdateListener, TouchpadSwipeGestureEndListener,
+    TouchpadZoomGestureBeginListener, TouchpadZoomGestureUpdateListener, TouchpadZoomGestureEndListener,
     PreDrawListener, PostDrawListener,
     PostResizeListener, PostRescaleListener>
 {
@@ -37,6 +40,9 @@ class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin,
         MouseDownListener, MouseMoveListener, MouseUpListener, MouseScrollListener,
         CharPressedListener, KeyDownListener, KeyUpListener, KeyRepeatListener,
         SpaceMouseMoveListener, SpaceMouseDownListener,
+        TouchpadRotateGestureBeginListener, TouchpadRotateGestureUpdateListener, TouchpadRotateGestureEndListener,
+        TouchpadSwipeGestureBeginListener, TouchpadSwipeGestureUpdateListener, TouchpadSwipeGestureEndListener,
+        TouchpadZoomGestureBeginListener, TouchpadZoomGestureUpdateListener, TouchpadZoomGestureEndListener,
         PreDrawListener, PostDrawListener,
         PostResizeListener, PostRescaleListener>;
 protected:
@@ -294,6 +300,16 @@ protected:
     // Spacemouse events
     MRVIEWER_API virtual bool spaceMouseMove_( const Vector3f& translate, const Vector3f& rotate ) override;
     MRVIEWER_API virtual bool spaceMouseDown_( int key ) override;
+    // Touchpad gesture events
+    MRVIEWER_API virtual bool touchpadRotateGestureBegin_() override;
+    MRVIEWER_API virtual bool touchpadRotateGestureUpdate_( float angle ) override;
+    MRVIEWER_API virtual bool touchpadRotateGestureEnd_() override;
+    MRVIEWER_API virtual bool touchpadSwipeGestureBegin_() override;
+    MRVIEWER_API virtual bool touchpadSwipeGestureUpdate_( float deltaX, float deltaY, bool kinetic ) override;
+    MRVIEWER_API virtual bool touchpadSwipeGestureEnd_() override;
+    MRVIEWER_API virtual bool touchpadZoomGestureBegin_() override;
+    MRVIEWER_API virtual bool touchpadZoomGestureUpdate_( float scale, bool kinetic ) override;
+    MRVIEWER_API virtual bool touchpadZoomGestureEnd_() override;
 
     // This function reset ImGui style to current theme and scale it by menu_scaling
     // called in ImGuiMenu::postRescale_()

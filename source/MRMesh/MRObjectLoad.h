@@ -14,6 +14,9 @@ namespace MR
 /// loads mesh from given file in new object
 MRMESH_API Expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
 
+/// loads mesh from given file and makes either ObjectMesh or ObjectPoints (if the file has points but not faces)
+MRMESH_API Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std::filesystem::path& file, ProgressCallback callback = {} );
+
 /// loads lines from given file in new object
 MRMESH_API Expected<ObjectLines, std::string> makeObjectLinesFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
 

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(MRMesh CXX)
@@ -138,8 +138,9 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		    jsoncpp
 		    fmt
 		    tbb
-			${MRMESH_OPTIONAL_DEPENDENCIES}
-			${COCOA_LIBRARY}
+		    E57Format
+		    ${MRMESH_OPTIONAL_DEPENDENCIES}
+		    ${COCOA_LIBRARY}
 		)
 	ELSE()
 	    target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -149,7 +150,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
 	        pthread
 	        jsoncpp
 	        tbb
-			${MRMESH_OPTIONAL_DEPENDENCIES}
+		${MRMESH_OPTIONAL_DEPENDENCIES}
 	    )
 	ENDIF()
 ELSE()
@@ -164,8 +165,9 @@ ELSE()
 		Boost::boost
 		jsoncpp
 		tbb
+	 	E57Format
 		${MRMESH_OPTIONAL_DEPENDENCIES}
-		)
+	)
 ENDIF()
 
 IF(WIN32 AND MINGW)

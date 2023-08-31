@@ -292,6 +292,9 @@
     <ClCompile Include="MRTouchpadWin32Handler.cpp">
       <Filter>ShortcutManager</Filter>
     </ClCompile>
+    <ClCompile Include="MRObjectPointsHistory.cpp">
+      <Filter>History</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -550,6 +553,9 @@
     </ClInclude>
     <ClInclude Include="MRTouchpadWin32Handler.h">
       <Filter>ShortcutManager</Filter>
+    </ClInclude>
+    <ClInclude Include="MRObjectPointsHistory.h">
+      <Filter>History</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -1,4 +1,4 @@
-name: Build and test Fedora37
+name: Build and test Fedora
 
 on:
   workflow_call:
@@ -14,20 +14,23 @@ on:
         type: boolean
 
 jobs:
-  fedora37-build-test:
+  fedora-build-test:
     timeout-minutes: 40
     runs-on: ubuntu-latest
     container:
-      image: meshlib/meshlib-fedora37:${{inputs.image_tag}}
+      image: meshlib/meshlib-${{matrix.os}}:${{inputs.image_tag}}
       options: --user root
     strategy:
       matrix:
+        os: [fedora37, fedora38]
         config: [Debug, Release]
-        compiler: [Clang 15]
+        compiler: [Clang]
         include:
-          - compiler: Clang 15
+          - os: fedora37
             cxx-compiler: /usr/bin/clang++-15
-            c-compiler: /usr/bin/clang-15
+          - os: fedora38
+            cxx-compiler: /usr/bin/clang++-16
+            MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF"
 
     steps:
       - name: Checkout
@@ -46,13 +49,12 @@ jobs:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
-          # not realy needed
-          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
           MR_VERSION: ${{ inputs.version }}
           MR_USE_CPP_23: "ON"
+          MR_CMAKE_OPTIONS: ${{ matrix.MR_CMAKE_OPTIONS }}
 
       - name: Collect Timings
-        run: ./scripts/devops/collect_timing_logs.sh fedora37 ${{matrix.config}} "${{matrix.compiler}}"
+        run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.compiler}}"
 
       #Save timing in artifact
       - name: Upload Timings
@@ -72,14 +74,14 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py
 
       - name: Create RPM
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang 15' && matrix.config == 'Release'}}
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.os == 'fedora37' && matrix.config == 'Release'}}
         run: ./scripts/distribution_rpm.sh ${{inputs.version}}
         env:
           MESHLIB_BUILD_RELEASE: ON
           MESHLIB_BUILD_DEBUG: OFF
 
       - name: Upload Fedora Developer Distribution
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang 15' && matrix.config == 'Release'}}
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.os == 'fedora37' && matrix.config == 'Release'}}
         uses: actions/upload-artifact@v3
         with:
           name: Distributives

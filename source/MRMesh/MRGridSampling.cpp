@@ -98,9 +98,9 @@ VertBitSet Grid::getSamples() const
     return res;
 }
 
-VertBitSet verticesGridSampling( const MeshPart & mp, float voxelSize, ProgressCallback cb )
+std::optional<VertBitSet> verticesGridSampling( const MeshPart & mp, float voxelSize, const ProgressCallback & cb )
 {
-    MR_TIMER;
+    MR_TIMER
     if (voxelSize <= 0.f)
     {
         if ( mp.region )
@@ -130,7 +130,7 @@ VertBitSet verticesGridSampling( const MeshPart & mp, float voxelSize, ProgressC
     for ( auto v : regionVerts )
     {
         grid.addVertex( mp.mesh.points[v], v );
-        if ( !reportProgress( cb, [&]{ return 0.1f + 0.8f * float( counter ) / float( size ); }, counter++, 128 ) )
+        if ( !reportProgress( cb, [&]{ return 0.1f + 0.8f * float( counter ) / float( size ); }, counter++, 1024 ) )
             return {};
     }
 
@@ -141,11 +141,11 @@ VertBitSet verticesGridSampling( const MeshPart & mp, float voxelSize, ProgressC
     return res;
 }
 
-VertBitSet pointGridSampling( const PointCloud & cloud, float voxelSize, ProgressCallback cb )
+std::optional<VertBitSet> pointGridSampling( const PointCloud & cloud, float voxelSize, const ProgressCallback & cb )
 {
     if (voxelSize <= 0.f)
         return cloud.validPoints;
-    MR_TIMER;
+    MR_TIMER
 
     const auto bbox = cloud.getBoundingBox();
     const auto bboxSz = bbox.max - bbox.min;
@@ -166,7 +166,7 @@ VertBitSet pointGridSampling( const PointCloud & cloud, float voxelSize, Progres
     for ( auto v : cloud.validPoints )
     {
         grid.addVertex( cloud.points[v], v );
-        if ( !reportProgress( cb, [&]{ return 0.1f + 0.8f * float( counter ) / float( size ); }, counter++, 128 ) )
+        if ( !reportProgress( cb, [&]{ return 0.1f + 0.8f * float( counter ) / float( size ); }, counter++, 1024 ) )
             return {};
     }
 
@@ -182,7 +182,7 @@ TEST( MRMesh, GridSampling )
     auto sphereMesh = makeUVSphere();
     auto numVerts = sphereMesh.topology.numValidVerts();
     auto samples = verticesGridSampling( sphereMesh, 0.5f );
-    auto sampleCount = samples.count();
+    auto sampleCount = samples->count();
     EXPECT_LE( sampleCount, numVerts );
 }
 

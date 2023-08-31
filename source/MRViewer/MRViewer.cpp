@@ -742,6 +742,8 @@ void Viewer::launchShut()
 
     alphaSorter_.reset();
 
+    touchpadController.reset();
+
     glfwDestroyWindow( window );
     glfwTerminate();
     glInitialized_ = false;

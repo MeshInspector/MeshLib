@@ -21,6 +21,11 @@ void TouchpadController::initialize( GLFWwindow* window )
 #endif
 }
 
+void TouchpadController::reset()
+{
+    handler_.reset();
+}
+
 bool TouchpadController::touchpadRotateGestureBegin_()
 {
     auto& viewer = getViewerInstance();

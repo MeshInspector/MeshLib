@@ -22,6 +22,7 @@
 #include "MRPolylineProject.h"
 #include "MRContoursCut.h"
 #include "MRFillContourByGraphCut.h"
+#include "MRRingIterator.h"
 
 #include "MRParallelFor.h"
 #include "MRPch/MRTBB.h"
@@ -200,6 +201,7 @@ struct ExtractIsolinesResult
 {
     std::vector<IsoLines> isolines;
     Mesh meshAfterCut;
+    Vector<std::vector<FaceId>, FaceId> old2NewMap;
     FaceBitSet region;
 };
 
@@ -242,8 +244,16 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsoline
 
         CutMeshParameters cutMeshParams;
         cutMeshParams.forceFillMode_ = CutMeshParameters::ForceFill::All;
-
+        FaceMap new2OldMap;
+        cutMeshParams.new2OldMap = &new2OldMap;
+        res.old2NewMap.resize( res.meshAfterCut.topology.faceSize() );
         const auto cutRes = cutMesh( res.meshAfterCut, { meshContour }, cutMeshParams);
+
+        for ( FaceId f = FaceId( 0 ); f < new2OldMap.size(); ++f )
+        {
+            if ( new2OldMap[f].valid() )
+                res.old2NewMap[new2OldMap[f]].push_back( f );
+        }        
 
         if ( cutRes.resultCut.empty() )
         {
@@ -889,9 +899,11 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
 
         res.modifiedMesh = std::move( *preprocessedMesh );
     }
-
-    auto mesh = params.offsetMesh ? params.offsetMesh->mesh : res.modifiedMesh;
-    const auto box = mesh.computeBoundingBox();
+    else
+    {
+        res.modifiedMesh = params.offsetMesh->mesh;
+    }
+    const auto box = res.modifiedMesh.computeBoundingBox();
 
     const Vector3f normal = Vector3f::plusZ();
     float minZ = box.min.z + params.millRadius;
@@ -900,9 +912,9 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
     const auto undercutPlane = MR::Plane3f::fromDirAndPt( normal, { 0.0f, 0.0f, minZ } );
     
     //compute the lowest contour that might be processed
-    const auto undercutSection = extractPlaneSections( mesh, undercutPlane ).front();
+    const auto undercutSection = extractPlaneSections( res.modifiedMesh, undercutPlane ).front();
     Polyline3 undercutPolyline;
-    undercutPolyline.addFromSurfacePath( mesh, undercutSection );
+    undercutPolyline.addFromSurfacePath( res.modifiedMesh, undercutSection );
     const auto undercutContour = undercutPolyline.contours().front();
 
     // if there are multiple independent zones selected we need to process them separately
@@ -920,9 +932,21 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
             .cb = subprogress( cb, 0.0f, 0.4f )
         };
         //compute isolines based on the start point or the bounding contour
-        auto extract = extractAllIsolines( mesh, extractionParams );
-        mesh = extract.meshAfterCut;
+        auto extract = extractAllIsolines( res.modifiedMesh, extractionParams );
+        res.modifiedMesh = extract.meshAfterCut;
+        
+        const auto oldRegion = res.modifiedRegion;
+        res.modifiedRegion = extract.region;
 
+        BitSetParallelFor( oldRegion, [&] ( FaceId f )
+        {
+            for ( auto& newFace : extract.old2NewMap[f] )
+            {
+                res.modifiedRegion.set( newFace, true );
+            }
+        } );
+
+        const auto& mesh = res.modifiedMesh;
         if ( extract.isolines.empty() )
             return reportProgress( cb, 0.4f );
 
@@ -1182,7 +1206,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                 MeshTriPoint mtp( MeshEdgePoint( edgeId, 0.0f ) );
                 meshTriPoints.push_back( mtp );
                 if ( contourBeforeCutMesh )
-                    contourBeforeCutMesh->push_back( mesh.triPoint( mtp ) );
+                    contourBeforeCutMesh->push_back( res.modifiedMesh.triPoint( mtp ) );
 
                 continue;
             }
@@ -1192,15 +1216,15 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                 contourBeforeProjecton->push_back( originalPoint );
 
             // project all the vertices in the selected contour to the modified mesh
-            auto mpr = mesh.projectPoint( originalPoint );
+            auto mpr = res.modifiedMesh.projectPoint( originalPoint );
             if ( mpr )
             {
                 meshTriPoints.push_back( mpr->mtp );
                 if ( contourBeforeCutMesh )
-                    contourBeforeCutMesh->push_back( mesh.triPoint( mpr->mtp ) );
+                    contourBeforeCutMesh->push_back( res.modifiedMesh.triPoint( mpr->mtp ) );
             }
 
-            mpr = mesh.projectPoint(mp.mesh.edgePoint(MeshEdgePoint(edgeId, 0.5f)));
+            mpr = res.modifiedMesh.projectPoint(mp.mesh.edgePoint(MeshEdgePoint(edgeId, 0.5f)));
             if ( mpr )
                 meshTriPoints.push_back( mpr->mtp );
         }
@@ -1533,6 +1557,106 @@ void interpolateLines( std::vector<GCommand>& commands, const LineInterpolationP
 
         startIndex = startIndex + interpolatedSegment.size() + 1;
     }
+}
+
+FaceBitSet smoothSelection( Mesh& mesh, const FaceBitSet& region, float offset )
+{
+    auto innerVerts = getIncidentVerts( mesh.topology, region );
+    auto dists = computeSurfaceDistances( mesh, innerVerts );
+    BitSetParallelFor( getInnerVerts( mesh.topology, region ), [&] ( VertId v )
+    {
+        dists[v] = -dists[v];
+    } );
+
+    auto isolines = extractIsolines( mesh.topology, dists, offset );
+
+    HashMap<VertId, float> startVerticesWithDists;
+    const auto components = MeshComponents::getAllComponentsVertsSeparatedByPaths( mesh, isolines );
+    VertBitSet extendedVerts;
+    for ( const auto& component : components )
+    {
+        if ( ( component & innerVerts ).count() != 0 )
+            extendedVerts |= component;
+    }
+
+    for ( const auto& isoline : isolines )
+    {
+        Polyline3 polyline;
+        polyline.addFromSurfacePath( mesh, isoline );
+
+        for ( const auto& ep : isoline )
+        {
+            const VertId org = mesh.topology.org( ep.e );
+            const VertId dest = mesh.topology.dest( ep.e );
+
+            if ( ep.inVertex() )
+            {
+                startVerticesWithDists.insert_or_assign( org, 0.0f );
+                continue;
+            }
+
+            const float edgeLength = ( mesh.points[org] - mesh.points[dest] ).length();
+
+            auto proj = findProjectionOnPolyline( mesh.points[org], polyline );
+            startVerticesWithDists.insert_or_assign( org, sqrt( proj.distSq ) );
+
+            proj = findProjectionOnPolyline( mesh.points[dest], polyline );
+            startVerticesWithDists.insert_or_assign( dest, sqrt( proj.distSq ) );
+        }
+    }
+
+    dists = computeSurfaceDistances( mesh, startVerticesWithDists );
+
+    BitSetParallelFor( extendedVerts, [&] ( VertId v )
+    {
+        dists[v] = -dists[v];
+    } );
+
+    isolines = extractIsolines( mesh.topology, dists, offset );
+       
+    FaceBitSet res;
+
+    const auto origMesh = mesh;
+
+    for ( const auto& isoline : isolines )
+    {
+        std::vector<MeshTriPoint> meshTriPoints;
+        meshTriPoints.reserve( isoline.size() );
+        for ( const auto& ep : isoline )
+        {
+            const auto mpr = mesh.projectPoint( origMesh.edgePoint( ep ) );
+            meshTriPoints.emplace_back( mpr->mtp );
+        }
+
+        const auto meshContour = convertMeshTriPointsToClosedContour( mesh, meshTriPoints );
+
+        CutMeshParameters cutMeshParams;
+        cutMeshParams.forceFillMode_ = CutMeshParameters::ForceFill::All;
+        FaceMap new2OldMap;
+        cutMeshParams.new2OldMap = &new2OldMap;
+           
+        Vector<std::vector<FaceId>, FaceId> old2NewMap( mesh.topology.faceSize() );
+        const auto cutRes = cutMesh( mesh, { meshContour }, cutMeshParams );
+
+        for ( FaceId f = FaceId( 0 ); f < new2OldMap.size(); ++f )
+        {
+            if ( new2OldMap[f].valid() )
+                old2NewMap[new2OldMap[f]].push_back( f );
+        }
+
+        const auto oldRegion = res;
+        res = fillContourLeftByGraphCut( mesh.topology, cutRes.resultCut, edgeCurvMetric( mesh ) );
+
+        BitSetParallelFor( oldRegion, [&] ( FaceId f )
+        {
+            for ( auto& newFace : old2NewMap[f] )
+            {
+                res.set( newFace, true );
+            }
+        } );
+    }
+
+    return res;
 }
 
 }

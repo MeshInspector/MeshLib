@@ -34,6 +34,8 @@ public:
 
     /// initialize listening to touchpad events
     MRVIEWER_API void initialize( GLFWwindow* window );
+    /// reset event handler
+    MRVIEWER_API void reset();
 
     struct Parameters
     {

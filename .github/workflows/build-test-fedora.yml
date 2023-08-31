@@ -14,7 +14,7 @@ on:
         type: boolean
 
 jobs:
-  fedora37-build-test:
+  fedora-build-test:
     timeout-minutes: 40
     runs-on: ubuntu-latest
     container:

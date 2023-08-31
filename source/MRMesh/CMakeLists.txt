@@ -17,6 +17,7 @@ option(MRMESH_NO_TIFF "Disable TIFF support" OFF)
 option(MRMESH_NO_VOXEL "Disable voxel support" OFF)
 option(MRMESH_NO_GLTF "Disable glTF support" OFF)
 option(MRMESH_NO_XML "Disable XML support (affects 3MF support)" OFF)
+option(MRMESH_NO_E57 "Disable E57 support" OFF)
 
 IF(DEFINED MESHLIB_PYTHON_SUPPORT AND NOT MESHLIB_PYTHON_SUPPORT)
 	set(MRMESH_NO_PYTHON ON)
@@ -80,7 +81,6 @@ IF(NOT MR_EMSCRIPTEN)
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES tiff)
 	ENDIF()
 
-
 	IF(NOT MRMESH_NO_VOXEL)
 		IF(APPLE)
 			list(APPEND MRMESH_OPTIONAL_DEPENDENCIES OpenVDB)
@@ -92,6 +92,10 @@ IF(NOT MR_EMSCRIPTEN)
 	IF(NOT MRMESH_NO_XML)
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES tinyxml2)
 	ENDIF()
+
+	IF(NOT MRMESH_NO_E57)
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES E57Format)
+	ENDIF()
 ELSE()
 	target_compile_definitions(${PROJECT_NAME}
 		PRIVATE
@@ -101,6 +105,7 @@ ELSE()
 			MRMESH_NO_DICOM
 			MRMESH_NO_JPEG
 			MRMESH_NO_VOXEL
+			MRMESH_NO_E57
 	)
 ENDIF()
 
@@ -138,7 +143,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		    jsoncpp
 		    fmt
 		    tbb
-		    E57Format
 		    ${MRMESH_OPTIONAL_DEPENDENCIES}
 		    ${COCOA_LIBRARY}
 		)
@@ -165,7 +169,6 @@ ELSE()
 		Boost::boost
 		jsoncpp
 		tbb
-	 	E57Format
 		${MRMESH_OPTIONAL_DEPENDENCIES}
 	)
 ENDIF()

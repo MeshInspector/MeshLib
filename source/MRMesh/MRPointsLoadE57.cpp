@@ -1,5 +1,5 @@
-#if !defined( __EMSCRIPTEN__ )
 #include "MRPointsLoad.h"
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
 #include "MRPointCloud.h"
 #include "MRStringConvert.h"
 #include "MRColor.h"
@@ -103,4 +103,4 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
 
 } //namespace MR
 
-#endif // !defined( __EMSCRIPTEN__ )
+#endif // !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )

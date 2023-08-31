@@ -29,7 +29,7 @@ const IOFilters Filters =
     {"XYZ (.xyz)",        "*.xyz"},
     {"OBJ (.obj)",        "*.obj"},
     {"PLY (.ply)",        "*.ply"},
-#if !defined( __EMSCRIPTEN__ )
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
     {"E57 (.e57)",        "*.e57"},
 #endif
 #ifndef MRMESH_NO_OPENCTM
@@ -408,7 +408,7 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesys
         res = MR::PointsLoad::fromObj( file, callback );
     else if ( ext == ".asc" )
         res = MR::PointsLoad::fromAsc( file, callback );
-#if !defined( __EMSCRIPTEN__ )
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
     else if ( ext == ".e57" )
         res = MR::PointsLoad::fromE57( file, colors, callback );
 #endif
@@ -423,7 +423,7 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, 
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
         c = ( char )tolower( c );
-#if !defined( __EMSCRIPTEN__ )
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
     assert( ext != ".e57" ); // no support for reading e57 from arbitrary stream yet
 #endif
 

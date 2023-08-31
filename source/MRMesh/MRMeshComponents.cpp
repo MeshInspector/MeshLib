@@ -591,18 +591,18 @@ UnionFind<VertId> getUnionFindStructureVertsSeparatedByPaths( const Mesh& mesh, 
     UndirectedEdgeBitSet ignoreEdges( mesh.topology.undirectedEdgeSize() );
 
     for ( const auto& path: paths )
-    for ( const MeshEdgePoint& ep : path )
-    {
-        if ( VertId v = ep.inVertex( mesh.topology ) )
+        for ( const MeshEdgePoint& ep : path )
         {
-            if ( outPathVerts )
-                outPathVerts->autoResizeSet( v );
-            for ( auto e : orgRing( mesh.topology, v ) )
-                ignoreEdges.set( e.undirected() );
-            continue;
+            if ( VertId v = ep.inVertex( mesh.topology ) )
+            {
+                if ( outPathVerts )
+                    outPathVerts->autoResizeSet( v );
+                for ( auto e : orgRing( mesh.topology, v ) )
+                    ignoreEdges.set( e.undirected() );
+                continue;
+            }
+            ignoreEdges.set( ep.e.undirected() );
         }
-        ignoreEdges.set( ep.e.undirected() );
-    }
 
     return getUnionFindStructureVertsEx( mesh, ignoreEdges );
 }

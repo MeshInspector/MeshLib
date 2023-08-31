@@ -22,7 +22,6 @@
 #include "MRPolylineProject.h"
 #include "MRContoursCut.h"
 #include "MRFillContourByGraphCut.h"
-#include "MRRingIterator.h"
 
 #include "MRParallelFor.h"
 #include "MRPch/MRTBB.h"
@@ -1594,8 +1593,6 @@ FaceBitSet smoothSelection( Mesh& mesh, const FaceBitSet& region, float offset )
                 startVerticesWithDists.insert_or_assign( org, 0.0f );
                 continue;
             }
-
-            const float edgeLength = ( mesh.points[org] - mesh.points[dest] ).length();
 
             auto proj = findProjectionOnPolyline( mesh.points[org], polyline );
             startVerticesWithDists.insert_or_assign( org, sqrt( proj.distSq ) );

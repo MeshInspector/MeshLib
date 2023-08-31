@@ -358,6 +358,14 @@ std::vector<VertBitSet> getAllComponentsVertsSeparatedByPath( const Mesh& mesh, 
     return getAllComponentsVerts( unionFindStruct, vertsRegion, &pathVerts );
 }
 
+std::vector<VertBitSet> getAllComponentsVertsSeparatedByPaths( const Mesh& mesh, const std::vector<SurfacePath>& paths )
+{
+    VertBitSet pathVerts;
+    auto unionFindStruct = getUnionFindStructureVertsSeparatedByPaths( mesh, paths, &pathVerts );
+    const VertBitSet& vertsRegion = mesh.topology.getValidVerts();
+    return getAllComponentsVerts( unionFindStruct, vertsRegion, &pathVerts );
+}
+
 std::vector<EdgeBitSet> getAllComponentsEdges( const Mesh& mesh, const EdgeBitSet & edges )
 {
     MR_TIMER
@@ -574,6 +582,28 @@ UnionFind<VertId> getUnionFindStructureVertsSeparatedByPath( const Mesh& mesh, c
         }
         ignoreEdges.set( ep.e.undirected() );
     }
+    return getUnionFindStructureVertsEx( mesh, ignoreEdges );
+}
+
+UnionFind<VertId> getUnionFindStructureVertsSeparatedByPaths( const Mesh& mesh, const std::vector<SurfacePath>& paths, VertBitSet* outPathVerts )
+{
+    MR_TIMER
+    UndirectedEdgeBitSet ignoreEdges( mesh.topology.undirectedEdgeSize() );
+
+    for ( const auto& path: paths )
+        for ( const MeshEdgePoint& ep : path )
+        {
+            if ( VertId v = ep.inVertex( mesh.topology ) )
+            {
+                if ( outPathVerts )
+                    outPathVerts->autoResizeSet( v );
+                for ( auto e : orgRing( mesh.topology, v ) )
+                    ignoreEdges.set( e.undirected() );
+                continue;
+            }
+            ignoreEdges.set( ep.e.undirected() );
+        }
+
     return getUnionFindStructureVertsEx( mesh, ignoreEdges );
 }
 

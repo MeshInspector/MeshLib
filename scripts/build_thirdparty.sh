@@ -81,7 +81,7 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   emmake make -j `nproc` #VERBOSE=1
   make install
 else
-  cmake ../${MR_THIRDPARTY_DIR} -DCMAKE_INSTALL_PREFIX=../
+  cmake ../${MR_THIRDPARTY_DIR} -DCMAKE_INSTALL_PREFIX=../ -DCMAKE_BUILD_TYPE=Release
   cmake --build . -j `nproc`  #VERBOSE=1
   cmake --install .
 fi

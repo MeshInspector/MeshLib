@@ -33,16 +33,14 @@ static bool packPointsWithHistoryCore( const std::shared_ptr<ObjectPoints>& objP
     if ( !objPoints->getVertsColorMap().empty() )
     {
         Historian<ChangeVertsColorMapAction> hCM( "color map update", objPoints );
-        VertColors colors;
-        objPoints->updateVertsColorMap( colors );
+        VertColors newColors( new2Old.size() );
+        const auto & oldColors = objPoints->getVertsColorMap();
         for ( VertId n = 0_v; n < new2Old.size(); ++n )
         {
             VertId o = new2Old[n];
-            assert( n <= o );
-            colors[n] = colors[o];
+            newColors[n] = oldColors[o];
         }
-        colors.resize( new2Old.size() );
-        objPoints->updateVertsColorMap( colors );
+        objPoints->setVertsColorMap( std::move( newColors ) );
     }
 
     // update faces in the selection

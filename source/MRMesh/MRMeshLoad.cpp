@@ -453,12 +453,6 @@ Expected<Mesh, std::string> fromPly( std::istream& in, VertColors* colors, Progr
     if ( !gotVerts )
         return unexpected( std::string( "PLY file does not contain vertices" ) );
 
-    if ( !gotFaces )
-        return unexpected( std::string( "PLY file does not contain faces" ) );
-
-    if ( !res.points.empty() && res.topology.numValidFaces() == 0 )
-        return unexpected( std::string( "PLY file contains only points and no faces" ) );
-
     if ( colors && !colorsBuffer.empty() )
     {
         colors->resize( res.points.size() );
@@ -540,7 +534,10 @@ Expected<Mesh, std::string> fromCtm( std::istream & in, VertColors* colors, Prog
 
     // even if we save false triangle (0,0,0) in MG2 format, it can be open as triangle (i,i,i)
     if ( triCount == 1 && indices[0] == indices[1] && indices[0] == indices[2] )
-        return unexpected( "CTM file is representing points" );
+    {
+        // CTM file is representing points, but it was written with the library requiring the presence of at least one triangle
+        triCount = 0;
+    }
 
     if ( colors )
     {

@@ -60,6 +60,45 @@ Expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem:
     return objectMesh;
 }
 
+Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std::filesystem::path& file, ProgressCallback callback )
+{
+    MR_TIMER
+
+    VertColors colors;
+    auto mesh = MeshLoad::fromAnySupportedFormat( file, &colors, callback );
+    if ( !mesh.has_value() )
+        return unexpected( mesh.error() );
+    
+    if ( !mesh->points.empty() && mesh->topology.numValidFaces() <= 0 )
+    {
+        auto pointCloud = std::make_shared<MR::PointCloud>();
+        pointCloud->points = std::move( mesh->points );
+        pointCloud->validPoints.resize( pointCloud->points.size(), true );
+
+        auto objectPoints = std::make_unique<ObjectPoints>();
+        objectPoints->setName( utf8string( file.stem() ) );
+        objectPoints->setPointCloud( pointCloud );
+        if ( !colors.empty() )
+        {
+            objectPoints->setVertsColorMap( std::move( colors ) );
+            objectPoints->setColoringType( ColoringType::VertsColorMap );
+        }
+
+        return objectPoints;
+    }
+
+    auto objectMesh = std::make_unique<ObjectMesh>();
+    objectMesh->setName( utf8string( file.stem() ) );
+    objectMesh->setMesh( std::make_shared<MR::Mesh>( std::move( mesh.value() ) ) );
+    if ( !colors.empty() )
+    {
+        objectMesh->setVertsColorMap( std::move( colors ) );
+        objectMesh->setColoringType( ColoringType::VertsColorMap );
+    }
+
+    return objectMesh;
+}
+
 Expected<ObjectLines, std::string> makeObjectLinesFromFile( const std::filesystem::path& file, ProgressCallback callback )
 {
     MR_TIMER;
@@ -236,20 +275,19 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
     }
     else
     {
-        auto objectMesh = makeObjectMeshFromFile( filename, callback );
-        if ( objectMesh.has_value() )
+        auto object = makeObjectFromMeshFile( filename, callback );
+        if ( object && *object )
         {
-            objectMesh->select( true );
-            auto obj = std::make_shared<ObjectMesh>( std::move( *objectMesh ) );
-            result = { obj };
+            (*object)->select( true );
+            result = { *object };
         }
-        else if ( objectMesh.error() == "Loading canceled" )
+        else if ( object.error() == "Loading canceled" )
         {
-            result = unexpected( objectMesh.error() );
+            result = unexpected( std::move( object.error() ) );
         }
         else
         {
-            result = unexpected( objectMesh.error() );
+            result = unexpected( std::move( object.error() ) );
 
             auto objectPoints = makeObjectPointsFromFile( filename, callback );
             if ( objectPoints.has_value() )

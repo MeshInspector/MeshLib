@@ -1,55 +1,37 @@
 #include "MRUniformSampling.h"
-#include "MRVector.h"
 #include "MRPointCloud.h"
-#include "MRBox.h"
+#include "MRBitSetParallelFor.h"
+#include "MRVector.h"
+#include "MRTimer.h"
 #include "MRPointsInBall.h"
 
 namespace MR
 {
 
-VertBitSet pointUniformSampling( const PointCloud& pointCloud, float distance, ProgressCallback cb )
+std::optional<VertBitSet> pointUniformSampling( const PointCloud& pointCloud, float distance, const ProgressCallback & cb )
 {
-    auto box = pointCloud.getBoundingBox();
-    if ( !box.valid() )
-        return {};
+    MR_TIMER
 
-    auto axis = ( box.max - box.min ).normalized();
+    const auto sz = pointCloud.points.size();
+    const int reportStep = std::min( int( sz / 64 ), 1024 );
+    VertId reportNext = 0_v;
 
-    struct VertProj
+    VertBitSet res = pointCloud.validPoints;
+    for ( auto v : res )
     {
-        float projLength{0};
-        VertId id{};
-    };
-
-    auto size = pointCloud.validPoints.count();
-    if ( size == 0 )
-        return {};
-
-    std::vector<VertProj> projes( size );
-    int n = 0;
-    for ( auto v : pointCloud.validPoints )
-    {
-        projes[n++] = { dot( pointCloud.points[v],axis ),v };
-        if ( !reportProgress( cb, [&]{ return 0.5f * float( n ) / float( size ); }, n, 128 ) )
-            return {};
-    }
-
-    VertBitSet res( pointCloud.validPoints.size() );
-    n = 0;
-    for ( const auto& proj : projes )
-    {
-        bool ballHasPrevVert = false;
-        findPointsInBall( pointCloud, pointCloud.points[proj.id], distance, [&res,&ballHasPrevVert]( VertId v, const Vector3f& )
+        if ( cb && v >= reportNext )
         {
-            if ( !ballHasPrevVert && res.test( v ) )
-                ballHasPrevVert = true;
-        } );
-        if ( !ballHasPrevVert )
-            res.set( proj.id );
-        if ( !reportProgress( cb, [&]{ return 0.5f + 0.5f * float( n ) / float( size ); }, n++, 128 ) )
-            return {};
-    }
+            if ( !cb( float( v ) / sz ) )
+                return {};
+            reportNext = v + reportStep;
+        }
 
+        findPointsInBall( pointCloud, pointCloud.points[v], distance, [&]( VertId cv, const Vector3f& )
+        {
+            if ( cv > v )
+                res.reset( cv );
+        } );
+    }
     return res;
 }
 

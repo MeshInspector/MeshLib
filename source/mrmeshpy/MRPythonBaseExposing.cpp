@@ -3,6 +3,7 @@
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRBox.h"
+#include "MRMesh/MRAffineXf2.h"
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRId.h"
 #include "MRMesh/MRLine3.h"
@@ -51,10 +52,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Path, [] ( pybind11::module_& m )
     // pybind11::implicitly_convertible<std::u8string, std::filesystem::path>();
 } )
 
-#define MR_ADD_PYTHON_BOX(name, vectorT, valueT ) \
+#define MR_ADD_PYTHON_BOX(name, VectorType ) \
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
 {\
-    using VectorType = MR::vectorT<valueT>;\
     using BoxType = MR::Box<VectorType>;\
     pybind11::class_<BoxType>( m, #name, "Box given by its min- and max- corners" ).\
         def( pybind11::init<>() ).\
@@ -65,8 +65,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
         def( "size", &BoxType::size ).\
         def( "diagonal", &BoxType::diagonal ).\
         def( "volume", &BoxType::volume ).\
-        def( "include", ( void( __cdecl * )( const VectorType& ) ) &BoxType::include, pybind11::arg( "pt" ), "minimally increases the box to include given point" ).\
-        /*def( "include", ( void( * )( const BoxType& ) ) &BoxType::include, pybind11::arg( "b" ), "minimally increases the box to include another box" ).*/\
         def( "contains", &BoxType::contains, pybind11::arg( "pt" ), "checks whether given point is inside (including the surface) of the box" ).\
         def( "getBoxClosestPointTo", &BoxType::getBoxClosestPointTo, pybind11::arg( "pt" ), "returns closest point in the box to given point" ).\
         def( "intersects", &BoxType::intersects, pybind11::arg( "b" ), "checks whether this box intersects or touches given box" ).\
@@ -77,11 +75,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
         def( "insignificantlyExpanded", &BoxType::insignificantlyExpanded, "expands min and max to their closest representable value" ).\
         def( pybind11::self == pybind11::self ).\
         def( pybind11::self != pybind11::self );\
-    /*m.def( "dot", ( type( * )( const VectorType&, const VectorType& ) )& MR::dot<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "dot product" );\*/\
+    m.def( "transformed", ( BoxType( * )( const BoxType&, const MR::AffineXf<VectorType>& ) ) &MR::transformed<VectorType>, pybind11::arg( "box" ), pybind11::arg( "xf" ),\
+        "find the tightest box enclosing this one after transformation" );\
+    m.def( "transformed", ( BoxType( * )( const BoxType&, const MR::AffineXf<VectorType>* ) ) &MR::transformed<VectorType>, pybind11::arg( "box" ), pybind11::arg( "xf" ),\
+        "this version returns input box as is if pointer to transformation is null" );\
 } )
 
 MR_ADD_PYTHON_BOX( Box2f, Vector2, float )
-MR_ADD_PYTHON_BOX( Box3f, Vector3, float )
+MR_ADD_PYTHON_BOX( Box3f, MR::Vector3f )
 
 #define MR_ADD_PYTHON_VECTOR2(name, type) \
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\

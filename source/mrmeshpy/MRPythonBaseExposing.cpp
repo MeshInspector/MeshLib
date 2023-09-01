@@ -81,7 +81,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
         "this version returns input box as is if pointer to transformation is null" );\
 } )
 
-MR_ADD_PYTHON_BOX( Box2f, Vector2, float )
+MR_ADD_PYTHON_BOX( Box2f, MR::Vector2f )
 MR_ADD_PYTHON_BOX( Box3f, MR::Vector3f )
 
 #define MR_ADD_PYTHON_VECTOR2(name, type) \

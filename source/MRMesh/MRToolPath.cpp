@@ -1558,7 +1558,7 @@ void interpolateLines( std::vector<GCommand>& commands, const LineInterpolationP
     }
 }
 
-FaceBitSet smoothSelection( Mesh& mesh, const FaceBitSet& region, float offset )
+FaceBitSet smoothSelection( Mesh& mesh, const FaceBitSet& region, float expandOffset, float shrinkOffset )
 {
     auto innerVerts = getIncidentVerts( mesh.topology, region );
     auto dists = computeSurfaceDistances( mesh, innerVerts );
@@ -1567,7 +1567,7 @@ FaceBitSet smoothSelection( Mesh& mesh, const FaceBitSet& region, float offset )
         dists[v] = -dists[v];
     } );
 
-    auto isolines = extractIsolines( mesh.topology, dists, offset );
+    auto isolines = extractIsolines( mesh.topology, dists, expandOffset );
 
     HashMap<VertId, float> startVerticesWithDists;
     const auto components = MeshComponents::getAllComponentsVertsSeparatedByPaths( mesh, isolines );
@@ -1609,7 +1609,7 @@ FaceBitSet smoothSelection( Mesh& mesh, const FaceBitSet& region, float offset )
         dists[v] = -dists[v];
     } );
 
-    isolines = extractIsolines( mesh.topology, dists, offset );
+    isolines = extractIsolines( mesh.topology, dists, shrinkOffset );
        
     FaceBitSet res;
 

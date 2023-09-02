@@ -34,7 +34,7 @@ jobs:
           - os: fedora38
             config: 'Release'
             compiler: GCC
-            cxx-compiler: /usr/bin/g++-13
+            cxx-compiler: /usr/bin/g++
             MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF"
 
     steps:

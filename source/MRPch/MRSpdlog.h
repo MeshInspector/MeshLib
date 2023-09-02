@@ -9,6 +9,7 @@
 #if __GNUC__ == 13
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
 #endif
 
 #pragma warning(push)

@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 
 TEST( a, b ) {
-    spdlog::info( "info" );
+    spdlog::info( "info {}", 1 );
 }
 
 #endif

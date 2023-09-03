@@ -3,8 +3,8 @@
 #include <spdlog/spdlog.h>
 #include <gtest/gtest.h>
 
-TEST( MRMesh, aabtest ) {
-    spdlog::info( "info" );
+TEST( a, c ) {
+    spdlog::info( "info {}", 1 );
 }
 
 #endif

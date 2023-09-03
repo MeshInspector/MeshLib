@@ -14,9 +14,9 @@ struct AAB
     AAB() { aab(); }
 } sAAB;
 
-//TEST( MRMesh, aab )
-//{
-//    aab();
-//}
+TEST( MRMesh, aabtest )
+{
+    aab();
+}
 
 #endif

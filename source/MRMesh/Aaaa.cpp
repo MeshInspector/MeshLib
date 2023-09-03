@@ -3,11 +3,11 @@
 #include <fmt/format.h>
 #include "MRGTest.h"
 
-const auto aaa = fmt::format( "{}", FMT_VERSION );
-
 TEST( MRMesh, aaa )
 {
-    std::cout << aaa << std::endl;
+    const auto a = fmt::format( "{}", FMT_VERSION );
+    //std::cout << fmt::format( "1" ) << std::endl;
+    std::cout << a << std::endl;
 }
 
 #endif

@@ -1,13 +1,13 @@
 #ifndef __EMSCRIPTEN__
 
 #include <fmt/format.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
+#include <iostream>
 
-TEST( MRMesh, aaa )
+TEST( MRMesh, aaatest )
 {
-    const auto a = fmt::format( "{}", FMT_VERSION );
-    //std::cout << fmt::format( "1" ) << std::endl;
-    std::cout << a << std::endl;
+    auto x = fmt::format( "FMT_VERSION={}", FMT_VERSION );
+    std::cout << x << std::endl;
 }
 
 #endif

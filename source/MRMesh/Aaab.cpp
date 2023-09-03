@@ -1,7 +1,7 @@
 #ifndef __EMSCRIPTEN__
 
 #include <spdlog/spdlog.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 void aab()
 {

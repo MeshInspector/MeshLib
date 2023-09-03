@@ -9,14 +9,8 @@ void aab()
     spdlog::info( "FMT_VERSION={}", FMT_VERSION );
 }
 
-struct AAB
-{
-    AAB() { aab(); }
-} sAAB;
-
 TEST( MRMesh, aabtest )
 {
-    aab();
 }
 
 #endif

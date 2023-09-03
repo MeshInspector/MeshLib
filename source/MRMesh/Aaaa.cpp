@@ -1,6 +1,6 @@
 #ifndef __EMSCRIPTEN__
 
-#include <fmt/format.h>
+#include <spdlog/spdlog.h>
 #include <gtest/gtest.h>
 #include <iostream>
 

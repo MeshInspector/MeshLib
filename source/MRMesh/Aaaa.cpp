@@ -5,4 +5,9 @@
 
 const auto aaa = fmt::format( "{}", FMT_VERSION );
 
+TEST( MRMesh, aaa )
+{
+    std::cout << aaa << std::endl;
+}
+
 #endif

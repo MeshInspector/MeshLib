@@ -31,6 +31,11 @@ jobs:
           - os: fedora38
             cxx-compiler: /usr/bin/clang++-16
             MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF"
+          - os: fedora38
+            config: 'Release'
+            compiler: GCC
+            cxx-compiler: /usr/bin/g++
+            MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF"
 
     steps:
       - name: Checkout
@@ -74,14 +79,14 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py
 
       - name: Create RPM
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.os == 'fedora37' && matrix.config == 'Release'}}
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.os == 'fedora37' && matrix.config == 'Release' && matrix.compiler == 'Clang'}}
         run: ./scripts/distribution_rpm.sh ${{inputs.version}}
         env:
           MESHLIB_BUILD_RELEASE: ON
           MESHLIB_BUILD_DEBUG: OFF
 
       - name: Upload Fedora Developer Distribution
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.os == 'fedora37' && matrix.config == 'Release'}}
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.os == 'fedora37' && matrix.config == 'Release' && matrix.compiler == 'Clang'}}
         uses: actions/upload-artifact@v3
         with:
           name: Distributives

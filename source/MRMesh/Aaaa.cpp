@@ -2,6 +2,6 @@
 
 #include <fmt/format.h>
 
-const auto aaa = fmt::format( "{}", 1 );
+const auto aaa = fmt::format( "{}", FMT_VERSION );
 
 #endif

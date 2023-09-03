@@ -1,13 +1,14 @@
 #ifndef __EMSCRIPTEN__
 
+#if __GNUC__ == 13
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
+
 #include <spdlog/spdlog.h>
 #include <gtest/gtest.h>
-#include <iostream>
 
-TEST( MRMesh, aaatest )
-{
-    auto x = fmt::format( "FMT_VERSION={}", FMT_VERSION );
-    std::cout << x << std::endl;
+TEST( a, b ) {
+    spdlog::info( "info" );
 }
 
 #endif

@@ -1,6 +1,7 @@
 #ifndef __EMSCRIPTEN__
 
 #include <spdlog/spdlog.h>
+#include "MRStreamOperators.h"
 //#include "MRGTest.h"
 
 void aab()

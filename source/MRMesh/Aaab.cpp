@@ -1,5 +1,7 @@
+#ifndef __EMSCRIPTEN__
+
 #include <spdlog/spdlog.h>
-#include "MRGTest.h"
+//#include "MRGTest.h"
 
 void aab()
 {
@@ -7,7 +9,14 @@ void aab()
     spdlog::info( "FMT_VERSION={}", FMT_VERSION );
 }
 
-TEST( MRMesh, aab )
+struct AAB
 {
-    aab();
-}
+    AAB() { aab(); }
+} sAAB;
+
+//TEST( MRMesh, aab )
+//{
+//    aab();
+//}
+
+#endif

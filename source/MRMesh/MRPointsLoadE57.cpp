@@ -8,7 +8,12 @@
 
 #pragma warning(push)
 #pragma warning(disable: 4251) // class needs to have dll-interface to be used by clients of another class
+#pragma warning(disable: 4275) // vcpkg `2022.11.14`: non dll-interface class 'std::exception' used as base for dll-interface class 'e57::E57Exception'
 #include <E57Format/E57SimpleReader.h>
+#if !__has_include(<E57Format/E57Version.h>)
+#define  MR_OLD_E57
+#endif
+
 #pragma warning(pop)
 
 namespace MR
@@ -23,8 +28,11 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
 
     try
     {
+#ifdef MR_OLD_E57
+        e57::Reader eReader( utf8string( file ) );
+#else
         e57::Reader eReader( utf8string( file ), {} );
-
+#endif
         int scanIndex = 0;
 
         e57::Data3D scanHeader;
@@ -43,21 +51,29 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
         // how many points to read in a time
         const int64_t nSize = std::min( nPointsSize, int64_t( 1024 ) * 128 );
 
+#ifdef MR_OLD_E57
+        e57::Data3DPointsData buffers;
+#else
         e57::Data3DPointsFloat buffers;
+#endif
         std::vector<float> xs( nSize ), ys( nSize ), zs( nSize );
         buffers.cartesianX = xs.data();
         buffers.cartesianY = ys.data();
         buffers.cartesianZ = zs.data();
+#ifdef MR_OLD_E57
+        std::vector<uint8_t> rs, gs, bs;
+#else
         std::vector<uint16_t> rs, gs, bs;
+#endif
         std::vector<int8_t> invalidColors;
         if ( colors )
         {
             rs.resize( nSize );
             gs.resize( nSize );
             bs.resize( nSize );
-            buffers.colorRed =   rs.data();
+            buffers.colorRed = rs.data();
             buffers.colorGreen = gs.data();
-            buffers.colorBlue =  bs.data();
+            buffers.colorBlue = bs.data();
             invalidColors.resize( nSize );
             buffers.isColorInvalid = invalidColors.data();
         }
@@ -95,7 +111,8 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
     }
     catch( const e57::E57Exception & e )
     {
-        return MR::unexpected( fmt::format( "Error '{}' during reading of {}", e.errorStr(), utf8string( file ) ) );
+        return MR::unexpected( fmt::format( "Error '{}' during reading of {}", 
+            e57::Utilities::errorCodeToString( e.errorCode() ), utf8string( file ) ) );
     }
 }
 

@@ -16,16 +16,18 @@ struct PointCloud
 public:
     VertCoords points;
     VertNormals normals;
-
+    /// only points corresponding to set bits here are valid
     VertBitSet validPoints;
 
     /// returns cached aabb-tree for this point cloud, creating it if it did not exist in a thread-safe manner
     MRMESH_API const AABBTreePoints& getAABBTree() const;
+
     /// returns cached aabb-tree for this point cloud, but does not create it if it did not exist
     const AABBTreePoints * getAABBTreeNotCreate() const { return AABBTreeOwner_.get(); }
 
     /// returns the minimal bounding box containing all valid vertices (implemented via getAABBTree())
     MRMESH_API Box3f getBoundingBox() const;
+
     /// passes through all valid points and finds the minimal bounding box containing all of them;
     /// if toWorld transformation is given then returns minimal bounding box in world space
     MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
@@ -36,10 +38,17 @@ public:
 
     /// appends a point and returns its VertId
     MRMESH_API VertId addPoint( const Vector3f& point );
+
     /// appends a point with normal and returns its VertId
     MRMESH_API VertId addPoint( const Vector3f& point, const Vector3f& normal );
+
     /// reflects the points from a given plane
     MRMESH_API void mirror( const Plane3f& plane );
+
+    /// tightly packs all arrays eliminating invalid points;
+    /// returns false if the cloud was packed before the call and nothing has been changed;
+    /// if pack is done optionally returns mappings: new.id -> old.id
+    MRMESH_API bool pack( VertMap * outNew2Old = nullptr );
 
     /// Invalidates caches (e.g. aabb-tree) after a change in point cloud
     void invalidateCaches() { AABBTreeOwner_.reset(); }

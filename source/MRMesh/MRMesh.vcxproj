@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAggregateFlow.h" />
+    <ClInclude Include="MRBasinVolume.h" />
     <ClInclude Include="MRCNCMachineSettings.h" />
     <ClInclude Include="MRAxis.h" />
     <ClInclude Include="MRChangeVertsColorMapAction.h" />
@@ -337,6 +338,7 @@
     <ClCompile Include="MRAggregateFlow.cpp" />
     <ClCompile Include="MRAlignTextToMesh.cpp" />
     <ClCompile Include="MRArrow.cpp" />
+    <ClCompile Include="MRBasinVolume.cpp" />
     <ClCompile Include="MRBestFitQuadric.cpp" />
     <ClCompile Include="MRBestFitTests.cpp" />
     <ClCompile Include="MRBooleanOperation.cpp" />
@@ -414,6 +416,7 @@
     <ClCompile Include="MRNormalsToPoints.cpp" />
     <ClCompile Include="MROverlappingTris.cpp" />
     <ClCompile Include="MRObjectGcode.cpp" />
+    <ClCompile Include="MRPointsLoadE57.cpp" />
     <ClCompile Include="MRPointsProject.cpp" />
     <ClCompile Include="MRPointsToMeshProjector.cpp" />
     <ClCompile Include="MRMeshTrimWithPlane.cpp" />

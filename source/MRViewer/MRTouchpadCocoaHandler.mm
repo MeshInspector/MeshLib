@@ -53,14 +53,40 @@ std::optional<MR::TouchpadController::Handler::GestureState> convert( NSGestureR
         case NSGestureRecognizerStateBegan:
             return GS::Begin;
         case NSGestureRecognizerStateChanged:
-            return GS::Change;
+            return GS::Update;
         case NSGestureRecognizerStateEnded:
-            return GS::End;
         case NSGestureRecognizerStateCancelled:
-            return GS::Cancel;
+            return GS::End;
         default:
             return std::nullopt;
     }
+}
+
+std::optional<MR::TouchpadController::Handler::GestureState> convert( NSEventPhase phase )
+{
+    using GS = MR::TouchpadController::Handler::GestureState;
+    switch ( phase )
+    {
+        case NSEventPhaseNone:
+        case NSEventPhaseMayBegin:
+        case NSEventPhaseStationary:
+            return std::nullopt;
+        case NSEventPhaseBegan:
+            return GS::Begin;
+        case NSEventPhaseChanged:
+            return GS::Update;
+        case NSEventPhaseEnded:
+        case NSEventPhaseCancelled:
+            return GS::End;
+        default:
+            return std::nullopt;
+    }
+#ifdef __cpp_lib_unreachable
+    std::unreachable();
+#else
+    assert( false );
+    return {};
+#endif
 }
 
 }
@@ -117,13 +143,13 @@ void TouchpadCocoaHandler::onMagnificationGestureEvent( NSView* view, SEL cmd, N
 
     const auto state = convert( recognizer.state );
     if ( state )
-        handler->zoom( 1.f + recognizer.magnification, *state );
+        handler->zoom( 1.f + recognizer.magnification, false, *state );
 }
 
 void TouchpadCocoaHandler::onRotationGestureEvent( NSView* view, SEL cmd, NSRotationGestureRecognizer* recognizer )
 {
     auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
-    if ( ! handler )
+    if ( !handler )
         return;
 
     const auto state = convert( recognizer.state );
@@ -139,11 +165,12 @@ void TouchpadCocoaHandler::onScrollEvent( NSView* view, SEL cmd, NSEvent* event 
 
     auto deltaX = [event scrollingDeltaX];
     auto deltaY = [event scrollingDeltaY];
-    if ( deltaX == 0.0 && deltaY == 0.0 )
-        return;
-
     if ( [event subtype] == NSEventSubtypeMouseEvent )
     {
+        if ( deltaX == 0.0 && deltaY == 0.0 )
+        {
+            return;
+        }
         if ( [event hasPreciseScrollingDeltas] )
         {
             deltaX *= 0.1;
@@ -153,7 +180,10 @@ void TouchpadCocoaHandler::onScrollEvent( NSView* view, SEL cmd, NSEvent* event 
     }
     else
     {
-        handler->swipe( deltaX, deltaY, [event momentumPhase] != NSEventPhaseNone );
+        if ( const auto state = convert( [event phase] ) )
+            handler->swipe( deltaX, deltaY, false, *state );
+        else if ( const auto momentumPhase = convert( [event momentumPhase] ) )
+            handler->swipe( deltaX, deltaY, true, *momentumPhase );
     }
 }
 

@@ -24,6 +24,7 @@ libtbb2-dev
 libtiff-dev
 libtinyxml2-dev
 libturbojpeg0-dev
+libxerces-c-dev
 libzip-dev
 libzstd-dev
 pkg-config

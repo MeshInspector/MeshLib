@@ -2,6 +2,7 @@
 
 #include "MRId.h"
 #include "MRVector3.h"
+#include <cstdint>
 #include <cstring>
 #include <functional>
 

@@ -74,6 +74,8 @@ private:
     void mergeSamePoints_( const HolesVertIds* holesVertId );
     void mergeSinglePare_( VertId unique, VertId same );
 
+    void calculateWinding_();
+
     // merging same vertices can make multiple edges, so clear it and update winding modifiers for merged edges
     void removeMultipleAfterMerge_();
 
@@ -89,9 +91,8 @@ private:
     // active edges - edges that currently intersect sweep line
     struct ActiveEdgeInfo
     {
-        ActiveEdgeInfo( EdgeId e, float y ) :id{ e }, yPos{ y }{}
+        ActiveEdgeInfo( EdgeId e ) :id{ e }{}
         EdgeId id;
-        float yPos{ FLT_MAX };
         LoneRightmostLeft loneRightmostLeft;
     };
     std::vector<ActiveEdgeInfo> activeSweepEdges_;
@@ -400,6 +401,21 @@ void PlanarTriangulator::mergeSinglePare_( VertId unique, VertId same )
 
 }
 
+void PlanarTriangulator::calculateWinding_()
+{
+    int windingLast = 0;
+    // recalculate winding number for active edges
+    for ( const auto& e : activeSweepEdges_ )
+    {
+        auto& info = windingInfo_[e.id.undirected()];
+        if ( info.windingMod != INT_MAX )
+            info.winding = windingLast + info.windingMod;
+        else
+            info.winding = windingLast + ( ( int( e.id ) & 1 ) ? -1 : 1 ); // even edges has same direction as original contour, but e.id always look to the right
+        windingLast = info.winding;
+    }
+}
+
 void PlanarTriangulator::removeMultipleAfterMerge_()
 {
     MR_TIMER;
@@ -450,10 +466,13 @@ void PlanarTriangulator::triangulateMonotoneBlock_( EdgeId holeEdgeId )
 
     auto isReflex = [&] ( int prev, int cur, int next, bool lowerChain )
     {
-        Vector2f prevP = to2dim( mesh_.orgPnt( holeLoop[prev] ) );
-        Vector2f curP = to2dim( mesh_.orgPnt( holeLoop[cur] ) );
-        Vector2f nextP = to2dim( mesh_.orgPnt( holeLoop[next] ) );
-        return ( cross( nextP - curP, prevP - curP ) <= 0.0f ) == lowerChain;
+        std::array<PreciseVertCoords2, 3> pvc;
+        pvc[2].id = mesh_.topology.org( holeLoop[cur] );
+        pvc[0].id = mesh_.topology.org( holeLoop[prev] );
+        pvc[1].id = mesh_.topology.org( holeLoop[next] );
+        for ( int i = 0; i < 3; ++i )
+            pvc[i].pt = converters_.toInt( to2dim( mesh_.points[pvc[i].id] ) );
+        return ccw( pvc ) == lowerChain;
     };
 
     auto addDiagonal = [&] ( int cur, int prev, bool lowerChain )->bool
@@ -568,13 +587,13 @@ bool PlanarTriangulator::processOneVert_( VertId v )
     // remove left, find right
     EdgeId anyLeftEdge;
     std::vector<ActiveEdgeInfo> rightGoingEdges;
-    const auto& activePoint = mesh_.points[v];
+    auto activePoint = converters_.toInt( to2dim( mesh_.points[v] ) );
     std::vector<int> indicesToRemoveFromActive;
     for ( auto e : orgRing( mesh_.topology, v ) )
     {
         auto lIt = std::find_if( activeSweepEdges_.begin(), activeSweepEdges_.end(), [e] ( const auto& a ) { return a.id == e.sym(); } );
         if ( lIt == activeSweepEdges_.end() )
-            rightGoingEdges.emplace_back( e, activePoint.y );
+            rightGoingEdges.emplace_back( e );
         else
         {
             indicesToRemoveFromActive.push_back( int( std::distance( activeSweepEdges_.begin(), lIt ) ) );
@@ -584,6 +603,10 @@ bool PlanarTriangulator::processOneVert_( VertId v )
     EdgeId lowestLeftEdge;
     if ( anyLeftEdge.valid() )
     {
+        // also remove lone left after fixing duplicates
+        for ( int i = 0; i < activeSweepEdges_.size(); ++i )
+            if ( mesh_.topology.isLoneEdge( activeSweepEdges_[i].id ) )
+                indicesToRemoveFromActive.push_back( i );
         // find lowest left for helper
         std::sort( indicesToRemoveFromActive.begin(), indicesToRemoveFromActive.end() );
         lowestLeftEdge = activeSweepEdges_[indicesToRemoveFromActive[0]].id.sym();
@@ -594,21 +617,17 @@ bool PlanarTriangulator::processOneVert_( VertId v )
 
     // find correct place of right edges in active sweep edges
     int activeVPosition{ INT_MAX };// index of first edge, under activeV (INT_MAX - all edges are lower, -1 - all edges are upper)
+    std::array<PreciseVertCoords2, 3> pvc;
+    pvc[1].id = v;
+    pvc[1].pt = converters_.toInt( to2dim( mesh_.points[pvc[1].id] ) );
     for ( int i = 0; i < activeSweepEdges_.size(); ++i )
     {
-        auto org = mesh_.orgPnt( activeSweepEdges_[i].id );
-        auto dest = mesh_.destPnt( activeSweepEdges_[i].id );
-        auto xLength = dest.x - org.x;
-        assert( xLength >= 0.0f );
-        auto aXLength = activePoint.x - org.x;
-        if ( xLength == 0.0f )
-            activeSweepEdges_[i].yPos = ( org.y + dest.y ) * 0.5f; // vertical edge (as far as edges cannot intersect on the sweep line, we can safely use middle point as yPos )
-        else
-        {
-            auto ratio = aXLength / xLength;
-            activeSweepEdges_[i].yPos = ( 1 - ratio ) * org.y + ratio * dest.y;
-        }
-        if ( activePoint.y < activeSweepEdges_[i].yPos && activeVPosition == INT_MAX )
+        pvc[0].id = mesh_.topology.org( activeSweepEdges_[i].id );
+        pvc[2].id = mesh_.topology.dest( activeSweepEdges_[i].id );
+        pvc[0].pt = converters_.toInt( to2dim( mesh_.points[pvc[0].id] ) );
+        pvc[2].pt = converters_.toInt( to2dim( mesh_.points[pvc[2].id] ) );
+
+        if ( activeVPosition == INT_MAX && ccw( pvc ) )
             activeVPosition = i - 1;
     }
 
@@ -682,7 +701,7 @@ bool PlanarTriangulator::processOneVert_( VertId v )
             {
                 std::array<PreciseVertCoords2, 3> pvc;
                 pvc[2].id = v;
-                pvc[2].pt = converters_.toInt( to2dim( activePoint ) );
+                pvc[2].pt = activePoint;
                 pvc[0].id = mesh_.topology.dest( lowestLeftEdge );
                 pvc[0].pt = converters_.toInt( to2dim( mesh_.points[pvc[0].id] ) );
                 pvc[1].id = mesh_.topology.org( loneInfo.id );
@@ -731,24 +750,17 @@ bool PlanarTriangulator::processOneVert_( VertId v )
         activeSweepEdges_[activeVPosition + 1].loneRightmostLeft = loneRightmostLeft;
     }
 
-    int windingLast = 0;
-    // recalculate winding number for active edges
-    for ( const auto& e : activeSweepEdges_ )
-    {
-        auto& info = windingInfo_[e.id.undirected()];
-        if ( info.windingMod != INT_MAX )
-            info.winding = windingLast + info.windingMod;
-        else
-            info.winding = windingLast + ( ( int( e.id ) & 1 ) ? -1 : 1 ); // even edges has same direction as original contour, but e.id always look to the right
-        windingLast = info.winding;
-    }
-
     // resolve intersections
-    return resolveIntersectios_();
+    if ( !resolveIntersectios_() )
+        return false;
+
+    calculateWinding_();
+    return true;
 }
 
 bool PlanarTriangulator::resolveIntersectios_()
 {
+    std::array<PreciseVertCoords2, 4> pvc;
     for ( int i = 0; i + 1 < activeSweepEdges_.size(); ++i )
     {
         auto org1 = mesh_.topology.org( activeSweepEdges_[i].id );
@@ -756,29 +768,28 @@ bool PlanarTriangulator::resolveIntersectios_()
         auto org2 = mesh_.topology.org( activeSweepEdges_[i + 1].id );
         auto dest2 = mesh_.topology.dest( activeSweepEdges_[i + 1].id );
         bool canIntersect = org1 != org2 && dest1 != dest2;
-        if ( !canIntersect )
+        if ( !canIntersect || !org1 || !org2 || !dest1 || !dest2 )
             continue;
 
-        auto p1 = mesh_.points[org1];
-        auto p2 = mesh_.points[org2];
-        auto d1 = mesh_.points[dest1] - p1;
-        auto d2 = mesh_.points[dest2] - p2;
+        pvc[0].id = org1; pvc[1].id = dest1;
+        pvc[2].id = org2; pvc[3].id = dest2;
 
-        auto n = cross( d1, d2 );
-        if ( n == Vector3f() )
-            continue; // parallel
-        auto n1 = cross( d1, n );
-        auto n2 = cross( d2, n );
-        auto ratio1 = dot( p2 - p1, n2 ) / dot( d1, n2 );
-        auto ratio2 = dot( p1 - p2, n1 ) / dot( d2, n1 );
-        if ( ( ratio1 >= 1.0f || ratio1 <= 0.0f ) || ( ratio2 >= 1.0f || ratio2 <= 0.0f ) )
-            continue; // no intersection
+        for ( int p = 0; p < 4; ++p )
+            pvc[p].pt = converters_.toInt( to2dim( mesh_.points[pvc[p].id] ) );
+
+        auto haveInter = doSegmentSegmentIntersect( pvc );
+        if ( !haveInter.doIntersect )
+            continue;
 
         if ( abortWhenIntersect_ )
             return false;
 
-        auto intersection = p1 + ratio1 * d1;
-        VertId vInter = mesh_.addPoint( intersection );
+        auto intersection = findSegmentSegmentIntersectionPrecise(
+            to2dim( mesh_.points[pvc[0].id] ), to2dim( mesh_.points[pvc[1].id] ),
+            to2dim( mesh_.points[pvc[2].id] ), to2dim( mesh_.points[pvc[3].id] ),
+            converters_ );
+        
+        VertId vInter = mesh_.addPoint( to3dim( intersection ) );
         // split 1
         auto pe1s = mesh_.topology.prev( activeSweepEdges_[i].id.sym() );
         mesh_.topology.splice( pe1s, activeSweepEdges_[i].id.sym() );
@@ -794,18 +805,47 @@ bool PlanarTriangulator::resolveIntersectios_()
             e2n = e2n.sym(); // new part direction should be same as old part's
         mesh_.topology.splice( pe2s, e2n.sym() );
         // connect all
-        mesh_.topology.splice( activeSweepEdges_[i].id.sym(), e2n );
-        mesh_.topology.splice( e2n, e1n );
-        mesh_.topology.splice( e1n, activeSweepEdges_[i + 1].id.sym() );
+        PreciseVertCoords2 interPvc;
+        interPvc.id = vInter;
+        interPvc.pt = converters_.toInt( intersection );
+        
+        if (
+            ( ccw( { pvc[0],interPvc,pvc[2] } ) == ccw( { interPvc,pvc[1],pvc[2] } ) ) &&
+            ( ccw( { pvc[0],interPvc,pvc[3] } ) == ccw( { interPvc,pvc[1],pvc[3] } ) ) &&
+            ( ccw( { pvc[2],interPvc,pvc[0] } ) == ccw( { interPvc,pvc[3],pvc[0] } ) ) &&
+            ( ccw( { pvc[2],interPvc,pvc[1] } ) == ccw( { interPvc,pvc[3],pvc[1] } ) )
+            )
+        {
+            mesh_.topology.splice( activeSweepEdges_[i].id.sym(), e2n );
+            mesh_.topology.splice( e2n, e1n );
+            mesh_.topology.splice( e1n, activeSweepEdges_[i + 1].id.sym() );
+        }
+        else
+        {
+            mesh_.topology.splice( activeSweepEdges_[i].id.sym(), e1n );
+            mesh_.topology.splice( e1n, e2n );
+            mesh_.topology.splice( e2n, activeSweepEdges_[i + 1].id.sym() );
+        }
         mesh_.topology.setOrg( e1n, vInter );
 
         // winding modifiers of new parts should be same as old parts'
         windingInfo_.resize( e2n.undirected() + 1 );
         windingInfo_[e1n.undirected()].windingMod = windingInfo_[activeSweepEdges_[i].id.undirected()].windingMod;
         windingInfo_[e2n.undirected()].windingMod = windingInfo_[activeSweepEdges_[i + 1].id.undirected()].windingMod;
-
-        // update queue
-        queue_.push( createCompVert_( vInter ) );
+        
+        if ( interPvc.pt == converters_.toInt( to2dim( mesh_.points[dest1] ) ) )
+        {
+            mergeSinglePare_( dest1, interPvc.id );
+        }
+        else if ( interPvc.pt == converters_.toInt( to2dim( mesh_.points[dest2] ) ) )
+        {
+            mergeSinglePare_( dest2, interPvc.id );
+        }
+        else
+        {
+            // update queue
+            queue_.push( createCompVert_( vInter ) );
+        }
     }
     return true;
 }

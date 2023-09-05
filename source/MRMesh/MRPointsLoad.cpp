@@ -34,6 +34,7 @@ const IOFilters Filters =
 #endif
 #ifndef MRMESH_NO_LAS
     {"LAS (.las)",        "*.las"},
+    {"LASzip (.laz)",     "*.laz"},
 #endif
 #ifndef MRMESH_NO_OPENCTM
     {"CTM (.ctm)",        "*.ctm"},
@@ -416,7 +417,7 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesys
         res = MR::PointsLoad::fromE57( file, colors, callback );
 #endif
 #if !defined( MRMESH_NO_LAS )
-    else if ( ext == ".las" )
+    else if ( ext == ".las" || ext == ".laz" )
         res = MR::PointsLoad::fromLas( file, colors, callback );
 #endif
     else if ( ext == ".csv" || ext == ".xyz" )

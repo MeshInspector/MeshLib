@@ -96,8 +96,6 @@ Expected<PointCloud, std::string> fromLas( const std::filesystem::path& file, Ve
     LASreaderLAS reader;
     if ( !reader.open( file.c_str() ) )
         return unexpected( "Failed to open LAS file" );
-    if ( !reader.header.check() )
-        return unexpected( "Incorrect LAS file" );
 
     auto result = process( reader, colors, std::move( callback ) );
     reader.close();
@@ -109,8 +107,6 @@ Expected<PointCloud, std::string> fromLas( std::istream& in, VertColors* colors,
     LASreaderLAS reader;
     if ( !reader.open( in ) )
         return unexpected( "Failed to open LAS file" );
-    if ( !reader.header.check() )
-        return unexpected( "Incorrect LAS file" );
 
     auto result = process( reader, colors, std::move( callback ) );
     reader.close();

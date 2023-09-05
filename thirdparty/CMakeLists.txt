@@ -139,6 +139,9 @@ add_subdirectory(./pybind11)
 set(TINYGLTF_INSTALL ON)
 add_subdirectory(./tinygltf)
 
+set(WITH_TESTS OFF)
+add_subdirectory(./laz-perf)
+
 file(GLOB IMGUI_HEADERS "imgui/*.h")
 install(FILES ${IMGUI_HEADERS} DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
 install(DIRECTORY imgui/backends DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)

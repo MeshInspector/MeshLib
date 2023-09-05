@@ -99,9 +99,9 @@ IF(NOT MR_EMSCRIPTEN)
 	ENDIF()
 
 	IF(NOT MRMESH_NO_LAS)
-		find_package(LASlib REQUIRED)
-		target_include_directories(${PROJECT_NAME} PRIVATE LASlib)
-		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES LASlib)
+		find_package(LAZPERF REQUIRED)
+		target_include_directories(${PROJECT_NAME} PRIVATE LAZPERF::lazperf)
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES LAZPERF::lazperf)
 	ENDIF()
 ELSE()
 	target_compile_definitions(${PROJECT_NAME}

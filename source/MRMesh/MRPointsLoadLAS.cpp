@@ -53,10 +53,11 @@ Expected<PointCloud, std::string> fromLas( const std::filesystem::path& file, Ve
         {
             if ( reader->point.have_rgb )
             {
+                // convert 16-bit colors to 8-bit
                 colors->emplace_back(
-                    reader->point.get_R(),
-                    reader->point.get_G(),
-                    reader->point.get_B()
+                    reader->point.get_R() >> 8,
+                    reader->point.get_G() >> 8,
+                    reader->point.get_B() >> 8
                 );
             }
             else

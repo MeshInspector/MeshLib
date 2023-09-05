@@ -8,18 +8,34 @@
 namespace
 {
 
-static const std::map<int, MR::Color> lasPalette = {
-    { 1, MR::Color( 0xAA, 0xAA, 0xAA ) },
-    { 2, MR::Color( 0xAA, 0x55, 0x00 ) },
-    { 5, MR::Color( 0x00, 0xAA, 0x00 ) },
-    { 6, MR::Color( 0xFF, 0x55, 0x55 ) },
+#define COLOR( R, G, B ) MR::Color( 0x##R, 0x##G, 0x##B )
+constexpr std::array<MR::Color, 19> lasDefaultPalette = {
+    COLOR( BA, BA, BA ),
+    COLOR( AA, AA, AA ),
+    COLOR( AA, 55, 00 ),
+    COLOR( 00, AA, AA ),
+    COLOR( 55, FF, 55 ),
+    COLOR( 00, AA, 00 ),
+    COLOR( FF, 55, 55 ),
+    COLOR( AA, 00, 00 ),
+    COLOR( 55, 55, 55 ),
+    COLOR( 55, FF, FF ),
+    COLOR( AA, 00, AA ),
+    COLOR( 00, 00, 00 ),
+    COLOR( 55, 55, 55 ),
+    COLOR( FF, FF, 55 ),
+    COLOR( FF, FF, 55 ),
+    COLOR( FF, 55, FF ),
+    COLOR( FF, FF, 55 ),
+    COLOR( 55, 55, FF ),
+    COLOR( 64, 64, 64 ),
 };
+#undef COLOR
 
 MR::Color getColor( uint8_t classification )
 {
-    const auto it = lasPalette.find( classification );
-    if ( it != lasPalette.end() )
-        return it->second;
+    if ( classification < lasDefaultPalette.size() )
+        return lasDefaultPalette.at( classification );
     else
         return MR::Color::black();
 }

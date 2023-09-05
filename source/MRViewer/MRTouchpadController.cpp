@@ -14,12 +14,12 @@ namespace MR
 
 void TouchpadController::initialize( GLFWwindow* window )
 {
-    window_ = window;
-
 #if defined( __APPLE__ )
     handler_ = std::make_unique<TouchpadCocoaHandler>( window );
 #elif defined( _WIN32 )
     handler_ = std::make_unique<TouchpadWin32Handler>( window );
+#else
+    (void)window;
 #endif
 }
 
@@ -145,7 +145,7 @@ bool TouchpadController::touchpadSwipeGestureUpdate_( float deltaX, float deltaY
         const auto xf = AffineXf3f::translation( newWorldPos - oldWorldPos );
         viewport.transformView( xf );
 
-        glfwSetCursorPos( window_, newScreenPos.x, newScreenPos.y );
+        glfwSetCursorPos( viewer.window, newScreenPos.x, newScreenPos.y );
 
         return true;
     }

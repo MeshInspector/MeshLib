@@ -85,7 +85,6 @@ public:
     };
 
 private:
-    GLFWwindow* window_;
     std::unique_ptr<Handler> handler_;
     Parameters parameters_;
 

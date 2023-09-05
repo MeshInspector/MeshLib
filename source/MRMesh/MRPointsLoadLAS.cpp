@@ -54,12 +54,18 @@ Expected<PointCloud, std::string> fromLas( const std::filesystem::path& file, Ve
     std::unique_ptr<LASreader> reader( opener.open() );
     if ( !reader )
         return unexpected( "Failed to parse LAS header" );
+    auto& header = reader->header;
 
     PointCloud result;
-    //result.points.reserve( reader->npoints );
-    //result.points.reserve( reader->p_count );
+    result.points.reserve( header.number_of_point_records );
+    if ( colors )
+        colors->reserve( header.number_of_point_records );
+
     while ( reader->read_point() )
     {
+        if ( result.points.size() % 4096 == 0 )
+            reportProgress( callback, (float)result.points.size() / (float)header.number_of_point_records );
+
         result.points.emplace_back(
             reader->point.get_x(),
             reader->point.get_y(),

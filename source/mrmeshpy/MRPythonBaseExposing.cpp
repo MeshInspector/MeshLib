@@ -66,7 +66,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
         def( "diagonal", &BoxType::diagonal ).\
         def( "volume", &BoxType::volume ).\
         def( "include", ( void( BoxType::* )( const VectorType& ) ) &BoxType::include, pybind11::arg("pt"), "minimally increases the box to include given point" ).\
-        def( "include", (void(BoxType*)(const BoxType&)) &BoxType::include, pybind11::arg("b"), "minimally increases the box to include another box" ).\
+        def( "include", ( void( BoxType::* )( const BoxType& ) ) &BoxType::include, pybind11::arg("b"), "minimally increases the box to include another box" ).\
         def( "contains", &BoxType::contains, pybind11::arg( "pt" ), "checks whether given point is inside (including the surface) of the box" ).\
         def( "getBoxClosestPointTo", &BoxType::getBoxClosestPointTo, pybind11::arg( "pt" ), "returns closest point in the box to given point" ).\
         def( "intersects", &BoxType::intersects, pybind11::arg( "b" ), "checks whether this box intersects or touches given box" ).\
@@ -85,6 +85,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
 
 MR_ADD_PYTHON_BOX( Box2f, MR::Vector2f )
 MR_ADD_PYTHON_BOX( Box3f, MR::Vector3f )
+MR_ADD_PYTHON_BOX( Box2d, MR::Vector2d )
+MR_ADD_PYTHON_BOX( Box3d, MR::Vector3d )
 
 #define MR_ADD_PYTHON_VECTOR2(name, type) \
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\

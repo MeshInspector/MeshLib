@@ -446,6 +446,10 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, 
         res = MR::PointsLoad::fromObj( in, callback );
     else if ( ext == ".asc" )
         res = MR::PointsLoad::fromAsc( in, callback );
+#if !defined( MRMESH_NO_LAS )
+    else if ( ext == ".las" || ext == ".laz" )
+        res = MR::PointsLoad::fromLas( in, colors, callback );
+#endif
     else if ( ext == ".csv" || ext == ".xyz" )
         res = MR::PointsLoad::fromText( in, nullptr, callback );
     return res;

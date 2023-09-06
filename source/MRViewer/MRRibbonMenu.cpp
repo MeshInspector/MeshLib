@@ -1445,9 +1445,15 @@ void RibbonMenu::drawRibbonViewportsLabels_()
 
 void RibbonMenu::drawRibbonSceneInformation_( std::vector<std::shared_ptr<Object>>& /*selected*/ )
 {
-    informationHeight_ = drawSelectionInformation_();
+    const float newInfoHeight = std::ceil( drawSelectionInformation_() );
 
-    transformHeight_ = drawTransform_();
+    const float newXfHeight = std::ceil( drawTransform_() );
+    if ( newInfoHeight != informationHeight_ || newXfHeight != transformHeight_ )
+    {
+        informationHeight_ = newInfoHeight;
+        transformHeight_ = newXfHeight;
+        getViewerInstance().incrementForceRedrawFrames(1, true);
+    }
 }
 
 void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected )

@@ -407,6 +407,8 @@ void PlanarTriangulator::calculateWinding_()
     // recalculate winding number for active edges
     for ( const auto& e : activeSweepEdges_ )
     {
+        if ( mesh_.topology.isLoneEdge( e.id ) )
+            continue;
         auto& info = windingInfo_[e.id.undirected()];
         if ( info.windingMod != INT_MAX )
             info.winding = windingLast + info.windingMod;
@@ -809,12 +811,7 @@ bool PlanarTriangulator::resolveIntersectios_()
         interPvc.id = vInter;
         interPvc.pt = converters_.toInt( intersection );
         
-        if (
-            ( ccw( { pvc[0],interPvc,pvc[2] } ) == ccw( { interPvc,pvc[1],pvc[2] } ) ) &&
-            ( ccw( { pvc[0],interPvc,pvc[3] } ) == ccw( { interPvc,pvc[1],pvc[3] } ) ) &&
-            ( ccw( { pvc[2],interPvc,pvc[0] } ) == ccw( { interPvc,pvc[3],pvc[0] } ) ) &&
-            ( ccw( { pvc[2],interPvc,pvc[1] } ) == ccw( { interPvc,pvc[3],pvc[1] } ) )
-            )
+        if ( !ccw( { pvc[1],pvc[3],interPvc } ) )
         {
             mesh_.topology.splice( activeSweepEdges_[i].id.sym(), e2n );
             mesh_.topology.splice( e2n, e1n );

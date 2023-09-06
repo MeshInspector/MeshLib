@@ -73,14 +73,12 @@ Expected<Mesh, std::string> embedStructureToTerrain(
     }
     cont.back() = cont.front();
 
-    //bool needCut = ecParams.cutBitSet.any();
-    //bool needFill = ecParams.cutBitSet.count() + 1 != cont.size();
+    bool needCut = ecParams.cutBitSet.any();
+    bool needFill = ecParams.cutBitSet.count() + 1 != cont.size();
 
     auto coneMeshRes = createEmbeddedConeMesh( cont, ecParams );
     if ( !coneMeshRes.has_value() )
         return unexpected( coneMeshRes.error() );
-    return coneMeshRes->mesh;
-    /*
 
     FaceBitSet extenedFaces;
     if ( !needFill || !needCut )
@@ -227,7 +225,7 @@ Expected<Mesh, std::string> embedStructureToTerrain(
     precutResTerrain.mesh.topology.deleteFaces( extenedFaces );
     precutResTerrain.mesh.invalidateCaches();
 
-    return precutResTerrain.mesh;*/
+    return precutResTerrain.mesh;
 }
 
 Expected<EmbeddedConeResult, std::string> createEmbeddedConeMesh(
@@ -403,46 +401,47 @@ Expected<EmbeddedConeResult, std::string> createEmbeddedConeMesh(
             basePart.mesh.topology.flipOrientation();
 
         VertId vertSize = res.mesh.topology.lastValidVert() + 1;
-        res.mesh = std::move( basePart.mesh );
-        //auto holes = findRightBoundary( res.mesh.topology );
-        //if ( cut && holes.size() != 3 )
-        //    return false;
-        //else if ( !cut && holes.size() != ( needCut ? 2 : 3 ) )
-        //    return false;
-        //
-        //auto ueSize = int( res.mesh.topology.undirectedEdgeSize() );
-        //const auto& baseHole = ( cut || !needCut ) ? holes[1] : holes[0];
-        //for (
-        //    int ei = cut ? 0 : int( holes.back().size() ) - 1;
-        //    cut ? ei < holes.back().size() : ei >= 0;
-        //    cut ? ++ei : --ei )
-        //{
-        //    auto e = cut ? holes.back()[ei] : holes.back()[( ei + 2 ) % holes.back().size()];
-        //    auto v = res.mesh.topology.org( e );
-        //
-        //    int h = findInitIndex( v, basePart.contourOffsets, vertSize );
-        //    if ( h < baseHole.size() )
-        //        makeBridgeEdge( res.mesh.topology, e,
-        //            cut ? res.mesh.topology.prev( baseHole[h] ) : baseHole[h] );
-        //}
-        //
-        //auto lastEdge = int( res.mesh.topology.undirectedEdgeSize() );
-        //FillHoleMetric metric;
-        //metric.triangleMetric = [&] ( VertId a, VertId b, VertId c )->double
-        //{
-        //    if ( ( a < vertSize && b < vertSize && c < vertSize ) ||
-        //        ( a >= vertSize && b >= vertSize && c >= vertSize ) )
-        //        return DBL_MAX;
-        //    Vector3d aP = Vector3d( res.mesh.points[a] );
-        //    Vector3d bP = Vector3d( res.mesh.points[b] );
-        //    Vector3d cP = Vector3d( res.mesh.points[c] );
-        //
-        //    return dblArea( aP, bP, cP );
-        //};
-        //for ( int ue = ueSize; ue < lastEdge; ++ue )
-        //    fillHole( res.mesh, EdgeId( ue << 1 ), { .metric = metric } );
+        res.mesh.addPart( std::move( basePart.mesh ) );
+        auto holes = findRightBoundary( res.mesh.topology );
+        if ( cut && holes.size() != 3 )
+            return false;
+        else if ( !cut && holes.size() != ( needCut ? 2 : 3 ) )
+            return false;
+        
+        auto ueSize = int( res.mesh.topology.undirectedEdgeSize() );
+        const auto& baseHole = ( cut || !needCut ) ? holes[1] : holes[0];
+        for (
+            int ei = cut ? 0 : int( holes.back().size() ) - 1;
+            cut ? ei < holes.back().size() : ei >= 0;
+            cut ? ++ei : --ei )
+        {
+            auto e = cut ? holes.back()[ei] : holes.back()[( ei + 2 ) % holes.back().size()];
+            auto v = res.mesh.topology.org( e );
+        
+            int h = findInitIndex( v, basePart.contourOffsets, vertSize );
+            if ( h < baseHole.size() )
+                makeBridgeEdge( res.mesh.topology, e,
+                    cut ? res.mesh.topology.prev( baseHole[h] ) : baseHole[h] );
+        }
+        
+        auto lastEdge = int( res.mesh.topology.undirectedEdgeSize() );
+        FillHoleMetric metric;
+        metric.triangleMetric = [&] ( VertId a, VertId b, VertId c )->double
+        {
+            if ( ( a < vertSize && b < vertSize && c < vertSize ) ||
+                ( a >= vertSize && b >= vertSize && c >= vertSize ) )
+                return DBL_MAX;
+            Vector3d aP = Vector3d( res.mesh.points[a] );
+            Vector3d bP = Vector3d( res.mesh.points[b] );
+            Vector3d cP = Vector3d( res.mesh.points[c] );
+        
+            return dblArea( aP, bP, cP );
+        };
+        for ( int ue = ueSize; ue < lastEdge; ++ue )
+            if ( !res.mesh.topology.left( EdgeId( ue << 1 ) ) )
+                fillHole( res.mesh, EdgeId( ue << 1 ), { .metric = metric } );
 
-        //postProcess( holes.back(), basePart.contourOffsets, vertSize, cut );
+        postProcess( holes.back(), basePart.contourOffsets, vertSize, cut );
         return true;
     };
 

@@ -104,14 +104,14 @@ bool PlanarTriangulator::ComaparableVertId::operator<( const ComaparableVertId& 
 {
     auto l = converters->toInt( to2dim( mesh->points[id] ) );
     auto r = converters->toInt( to2dim( other.mesh->points[other.id] ) );
-    return l.x < r.x || ( l.x == r.x && l.y < r.y );
+    return l.x < r.x || ( l.x == r.x && l.y < r.y ) || ( l.x == r.x && l.y == r.y && id < other.id );
 }
 
 bool PlanarTriangulator::ComaparableVertId::operator>( const ComaparableVertId& other ) const
 {
     auto l = converters->toInt( to2dim( mesh->points[id] ) );
     auto r = converters->toInt( to2dim( other.mesh->points[other.id] ) );
-    return l.x > r.x || ( l.x == r.x && l.y > r.y );
+    return l.x > r.x || ( l.x == r.x && l.y > r.y ) || ( l.x == r.x && l.y == r.y && id > other.id );
 }
 
 PlanarTriangulator::PlanarTriangulator( const Contours2d& contours, const HolesVertIds* holesVertId /*= true*/, bool abortWhenIntersect /*= false*/ )
@@ -830,14 +830,12 @@ bool PlanarTriangulator::resolveIntersectios_()
         windingInfo_[e1n.undirected()].windingMod = windingInfo_[activeSweepEdges_[i].id.undirected()].windingMod;
         windingInfo_[e2n.undirected()].windingMod = windingInfo_[activeSweepEdges_[i + 1].id.undirected()].windingMod;
         
-        if ( interPvc.pt == converters_.toInt( to2dim( mesh_.points[dest1] ) ) )
-        {
+        // we should really check for merge origins also, 
+        // but it will require to precess origin one more time and break structure stability
+        if ( interPvc.pt == pvc[1].pt )
             mergeSinglePare_( dest1, interPvc.id );
-        }
-        else if ( interPvc.pt == converters_.toInt( to2dim( mesh_.points[dest2] ) ) )
-        {
+        else if ( interPvc.pt == pvc[3].pt )
             mergeSinglePare_( dest2, interPvc.id );
-        }
         else
         {
             // update queue

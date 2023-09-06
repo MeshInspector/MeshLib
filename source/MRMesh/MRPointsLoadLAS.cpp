@@ -3,7 +3,7 @@
 #include "MRColor.h"
 #include "MRPointCloud.h"
 
-#include <fmt/format.h>
+#include "MRPch/MRSpdlog.h"
 
 #include <lazperf/lazperf.hpp>
 #include <lazperf/readers.hpp>

@@ -111,8 +111,11 @@ ELSE()
 			MRMESH_NO_JPEG
 			MRMESH_NO_VOXEL
 			MRMESH_NO_E57
-			MRMESH_NO_LAS
 	)
+
+	IF(NOT MRMESH_NO_LAS)
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES lazperf_s)
+	ENDIF()
 ENDIF()
 
 # alternative Eigen include for external project

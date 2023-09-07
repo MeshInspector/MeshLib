@@ -240,11 +240,10 @@ Expected<PointCloud, std::string> process( lazperf::reader::basic_file& reader, 
             if ( hasColorChannels( pointFormat ) )
             {
                 const auto colorChannels = *getColorChannels( buf.data(), pointFormat );
-                // convert 16-bit colors to 8-bit
                 colors->emplace_back(
-                    colorChannels.red >> 8,
-                    colorChannels.green >> 8,
-                    colorChannels.blue >> 8
+                    colorChannels.red,
+                    colorChannels.green,
+                    colorChannels.blue
                 );
             }
             else

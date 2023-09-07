@@ -11,6 +11,12 @@
 namespace
 {
 
+/*
+ * LAS file format structures (not exposed by LAZperf)
+ * Specification: https://www.asprs.org/wp-content/uploads/2019/07/LAS_1_4_r15.pdf
+ */
+
+// point data structures
 #pragma pack(push, 1)
 struct LasPoint
 {
@@ -18,6 +24,8 @@ struct LasPoint
     int32_t y;
     int32_t z;
 };
+
+// LAS 1.0
 
 struct LasPoint0
 {
@@ -173,8 +181,9 @@ std::optional<ColorChannels> getColorChannels( const char* buf, int format )
 
 using namespace MR;
 
-#define COLOR( R, G, B ) Color( 0x##R, 0x##G, 0x##B )
+// default LAS classification palette
 constexpr std::array<Color, 19> lasDefaultPalette = {
+#define COLOR( R, G, B ) Color( 0x##R, 0x##G, 0x##B )
     COLOR( BA, BA, BA ),
     COLOR( AA, AA, AA ),
     COLOR( AA, 55, 00 ),
@@ -194,8 +203,8 @@ constexpr std::array<Color, 19> lasDefaultPalette = {
     COLOR( FF, FF, 55 ),
     COLOR( 55, 55, FF ),
     COLOR( 64, 64, 64 ),
-};
 #undef COLOR
+};
 
 Color getColor( uint8_t classification )
 {

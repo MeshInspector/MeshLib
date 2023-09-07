@@ -557,7 +557,7 @@ UnionFind<FaceId> getUnionFindStructureFacesPerEdgeWithZTolerance( const MeshPar
                         if ( f1 < fEnd && zMax - zMin < zTolerance )
                         {
                             res.unite( f0, f1 ); // our region
-                            std::shared_lock<std::shared_mutex>( mutex );
+                            std::shared_lock<std::shared_mutex> lock( mutex );
                             zRanges[f0].x = zRanges[f1].x = zMin;
                             zRanges[f0].y = zRanges[f1].y = zMax;
                         }

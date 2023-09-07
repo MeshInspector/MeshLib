@@ -69,6 +69,8 @@ enum FaceIncidence
 [[nodiscard]] MRMESH_API std::vector<VertBitSet> getAllComponentsVertsSeparatedByPaths( const Mesh& mesh, const std::vector<SurfacePath>& paths );
 /// subdivides given edges on connected components
 [[nodiscard]] MRMESH_API std::vector<EdgeBitSet> getAllComponentsEdges( const Mesh& mesh, const EdgeBitSet & edges );
+/// gets all connected components where difference between the heghest and the lowest point is less than \param zTolerance
+[[nodiscard]] MRMESH_API std::vector<FaceBitSet> getAllFlatComponents( const MeshPart& meshPart, float zTolerance );
 
 /// returns true if all vertices of a mesh connected component are present in selection
 [[nodiscard]] MRMESH_API bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection );
@@ -83,6 +85,9 @@ enum FaceIncidence
 [[nodiscard]] MRMESH_API UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const EdgeBitSet & edges );
 /// gets union-find structure for vertices, considering connections by all edges excluding given ones
 [[nodiscard]] MRMESH_API UnionFind<VertId> getUnionFindStructureVertsEx( const Mesh& mesh, const UndirectedEdgeBitSet & ignoreEdges );
+/// gets union-find structure for faces where the differebce between the highest and the lowest vertices in the connected component is less than zTolerance
+[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFacesPerEdgeWithZTolerance( const MeshPart& meshPart, const float zTolerance );
+
 /**
  * \brief gets union-find structure for vertices, separating vertices by given path (either closed or from boundary to boundary)
  * \param outPathVerts this set receives all vertices passed by the path

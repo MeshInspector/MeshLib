@@ -299,6 +299,37 @@ std::vector<FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidenc
     return res;
 }
 
+std::vector<FaceBitSet> getAllFlatComponents( const MeshPart& meshPart, float zTolerance )
+{
+    if ( zTolerance < 0 )
+        return {};
+
+    auto unionFind = MeshComponents::getUnionFindStructureFacesPerEdgeWithZTolerance( meshPart, zTolerance );
+
+    const auto& mesh = meshPart.mesh;
+    const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
+
+    const auto& allRoots = unionFind.roots();
+    auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, region );
+    std::vector<FaceBitSet> res( k );
+    // this block is needed to limit allocations for not packed meshes
+    std::vector<int> resSizes( k, 0 );
+    for ( auto f : region )
+    {
+        int index = uniqueRootsMap[f];
+        if ( f > resSizes[index] )
+            resSizes[index] = f;
+    }
+    for ( int i = 0; i < k; ++i )
+        res[i].resize( resSizes[i] + 1 );
+    // end of allocation block
+    for ( auto f : region )
+    {
+        res[uniqueRootsMap[f]].set( f );
+    }
+    return res;
+}
+
 std::pair<Vector<int, FaceId>, int> getAllComponentsMap( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
 {
     MR_TIMER
@@ -463,6 +494,99 @@ UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, c
             FaceId f1 = mesh.topology.right( e[i] );
             if ( f0 < f1 && contains( meshPart.region, f1 ) && ( !isCompBd || !isCompBd( e[i].undirected() ) ) )
                 res.unite( f0, f1 );
+        }
+    }
+
+    return res;
+}
+
+UnionFind<FaceId> getUnionFindStructureFacesPerEdgeWithZTolerance( const MeshPart& meshPart, const float zTolerance )
+{
+    MR_TIMER
+
+    const auto& mesh = meshPart.mesh;
+    const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
+    const FaceBitSet* lastPassFaces = &region;
+    const auto numFaces = region.find_last() + 1;
+    UnionFind<FaceId> res( numFaces );
+    const auto numThreads = int( tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) );
+    FaceBitSet bdFaces;
+
+    Vector<Vector2f, FaceId> zRanges( numFaces );
+    tbb::parallel_for( tbb::blocked_range<FaceId>( FaceId( 0 ), FaceId( numFaces ) ),
+            [&] ( const tbb::blocked_range<FaceId>& range )
+    {
+        for ( auto f = range.begin(); f < range.end(); ++f )
+        {
+            ThreeVertIds ids;
+            meshPart.mesh.topology.getTriVerts( f, ids );
+            zRanges[f].x = std::min( { meshPart.mesh.points[ids[0]].z, meshPart.mesh.points[ids[1]].z, meshPart.mesh.points[ids[2]].z } );
+            zRanges[f].y = std::max( { meshPart.mesh.points[ids[0]].z, meshPart.mesh.points[ids[1]].z, meshPart.mesh.points[ids[2]].z } );
+        }
+    } );
+
+    if ( numThreads > 1 )
+    {
+        bdFaces.resize( numFaces );
+        lastPassFaces = &bdFaces;
+        const int endBlock = int( bdFaces.size() + bdFaces.bits_per_block - 1 ) / bdFaces.bits_per_block;
+        const auto bitsPerThread = ( endBlock + numThreads - 1 ) / numThreads * BitSet::bits_per_block;
+
+        std::shared_mutex mutex;
+
+        tbb::parallel_for( tbb::blocked_range<int>( 0, numThreads ),
+            [&] ( const tbb::blocked_range<int>& range )
+        {
+            const FaceId fBeg{ range.begin() * bitsPerThread };
+            const FaceId fEnd{ range.end() < numThreads ? range.end() * bitsPerThread : bdFaces.size() };
+            for ( auto f0 = fBeg; f0 < fEnd; ++f0 )
+            {
+                if ( !contains( region, f0 ) )
+                    continue;
+                EdgeId e[3];
+                mesh.topology.getTriEdges( f0, e );
+                for ( int i = 0; i < 3; ++i )
+                {
+                    assert( mesh.topology.left( e[i] ) == f0 );
+                    FaceId f1 = mesh.topology.right( e[i] );
+                    if ( f0 < f1 && contains( meshPart.region, f1 ) )
+                    {
+                        const float zMax = std::max( zRanges[f0].y, zRanges[f1].y );
+                        const float zMin = std::min( zRanges[f0].x, zRanges[f1].x );
+                        
+                        if ( f1 < fEnd && zMax - zMin < zTolerance )
+                        {
+                            res.unite( f0, f1 ); // our region
+                            std::shared_lock<std::shared_mutex>( mutex );
+                            zRanges[f0].x = zRanges[f1].x = zMin;
+                            zRanges[f0].y = zRanges[f1].y = zMax;
+                        }
+                        else
+                        {
+                            bdFaces.set( f0 ); // remember the face to unite later in a sequential region
+                        }
+                    }
+                }
+            }
+        } );
+    }
+
+    for ( auto f0 : *lastPassFaces )
+    {
+        EdgeId e[3];
+        mesh.topology.getTriEdges( f0, e );
+        for ( int i = 0; i < 3; ++i )
+        {
+            assert( mesh.topology.left( e[i] ) == f0 );
+            FaceId f1 = mesh.topology.right( e[i] );
+            const float zMax = std::max( zRanges[f0].y, zRanges[f1].y );
+            const float zMin = std::min( zRanges[f0].x, zRanges[f1].x );
+            if ( f0 < f1 && contains( meshPart.region, f1 ) && zMax - zMin < zTolerance )
+            {
+                res.unite( f0, f1 );
+                zRanges[f0].x = zRanges[f1].x = zMin;
+                zRanges[f0].y = zRanges[f1].y = zMax;
+            }
         }
     }
 

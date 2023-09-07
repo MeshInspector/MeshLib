@@ -705,7 +705,7 @@ std::vector<Expected<DicomVolume, std::string>> loadDicomsFolder( const std::fil
 Expected<MR::VoxelsLoad::DicomVolume, std::string> loadDicomFolder( const std::filesystem::path& path, unsigned maxNumThreads /*= 4*/, const ProgressCallback& cb /*= {} */ )
 {
     auto seriesMap = extractDCMSeries( path, subprogress( cb, 0.0f, 0.3f ) );
-    if ( seriesMap.has_value() )
+    if ( !seriesMap.has_value() )
         return { unexpected( seriesMap.error() ) };
 
     return loadSingleDicomFolder( seriesMap->begin()->second, maxNumThreads, subprogress( cb, 0.3f, 1.0f ) );

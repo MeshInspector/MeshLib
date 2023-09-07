@@ -59,7 +59,7 @@ IF(WIN32 AND MINGW)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj")
 ENDIF()
 # make link to fail if there are unresolved symbols
-IF(NOT MR_EMSCRIPTEN and NOT APPLE)
+IF(NOT MR_EMSCRIPTEN AND NOT APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-z,defs")
 ENDIF()
 message("CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")

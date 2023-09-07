@@ -268,7 +268,7 @@ Expected<PointCloud, std::string> fromLas( const std::filesystem::path& file, Ve
 {
     try
     {
-        lazperf::reader::named_file reader( file );
+        lazperf::reader::named_file reader( file.string() );
         return process( reader, colors, std::move( callback ) );
     }
     catch ( const std::exception& exc )

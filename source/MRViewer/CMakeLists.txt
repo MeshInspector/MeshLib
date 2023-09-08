@@ -66,7 +66,7 @@ IF(APPLE)
 			hidapi
 			${APPKIT_LIBRARY}
 			)
-ELSE() # APPLE
+ELSE() # NOT APPLE
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 			MRMesh
 			imgui
@@ -74,6 +74,8 @@ ELSE() # APPLE
 			glfw
 			gtkmm-3.0
 			hidapi-hidraw
+			jsoncpp
+			tbb
 			)
 ENDIF() # APPLE
 ENDIF() # MR_EMSCRIPTEN

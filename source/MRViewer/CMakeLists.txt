@@ -69,6 +69,8 @@ IF(APPLE)
 ELSE() # NOT APPLE
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 			MRMesh
+			dl
+			cpr
 			imgui
 			glad
 			glfw

@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\charbuf.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\coderbase.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\compressor.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\decoder.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\decompressor.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\encoder.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\excepts.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\Extractor.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\filestream.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\header.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\Inserter.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\las.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\lazperf.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\lazperf_base.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\lazperf_user_base.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\model.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\portable_endian.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\readers.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\streams.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\utils.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\vlr.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\writers.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\detail\field_byte10.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\detail\field_byte14.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\detail\field_gpstime.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\detail\field_gpstime10.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\detail\field_nir14.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\detail\field_point10.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\detail\field_point14.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\detail\field_rgb10.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\detail\field_rgb14.hpp" />
+    <CLInclude Include="..\..\thirdparty\laz-perf\cpp\lazperf\detail\field_xyz.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <CLCompile Include="..\..\thirdparty\laz-perf\cpp\lazperf\charbuf.cpp" />
+    <CLCompile Include="..\..\thirdparty\laz-perf\cpp\lazperf\filestream.cpp" />
+    <CLCompile Include="..\..\thirdparty\laz-perf\cpp\lazperf\header.cpp" />
+    <CLCompile Include="..\..\thirdparty\laz-perf\cpp\lazperf\lazperf.cpp" />
+    <CLCompile Include="..\..\thirdparty\laz-perf\cpp\lazperf\readers.cpp" />
+    <CLCompile Include="..\..\thirdparty\laz-perf\cpp\lazperf\vlr.cpp" />
+    <CLCompile Include="..\..\thirdparty\laz-perf\cpp\lazperf\writers.cpp" />
+    <CLCompile Include="..\..\thirdparty\laz-perf\cpp\lazperf\detail\field_byte10.cpp" />
+    <CLCompile Include="..\..\thirdparty\laz-perf\cpp\lazperf\detail\field_byte14.cpp" />
+    <CLCompile Include="..\..\thirdparty\laz-perf\cpp\lazperf\detail\field_gpstime10.cpp" />
+    <CLCompile Include="..\..\thirdparty\laz-perf\cpp\lazperf\detail\field_nir14.cpp" />
+    <CLCompile Include="..\..\thirdparty\laz-perf\cpp\lazperf\detail\field_point10.cpp" />
+    <CLCompile Include="..\..\thirdparty\laz-perf\cpp\lazperf\detail\field_point14.cpp" />
+    <CLCompile Include="..\..\thirdparty\laz-perf\cpp\lazperf\detail\field_rgb10.cpp" />
+    <CLCompile Include="..\..\thirdparty\laz-perf\cpp\lazperf\detail\field_rgb14.cpp" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{DAA055AF-38ED-4836-A553-7539216BB64F}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>lazperf</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(ProjectDir)\..\platform.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <Import Project="$(ProjectDir)\..\common.props" />
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <DisableSpecificWarnings>4068;4244;4245;4267;4456;4458;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>ws2_32.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <DisableSpecificWarnings>4068;4244;4245;4267;4456;4458;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>ws2_32.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

@@ -32,6 +32,10 @@ const IOFilters Filters =
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
     {"E57 (.e57)",        "*.e57"},
 #endif
+#ifndef MRMESH_NO_LAS
+    {"LAS (.las)",        "*.las"},
+    {"LASzip (.laz)",     "*.laz"},
+#endif
 #ifndef MRMESH_NO_OPENCTM
     {"CTM (.ctm)",        "*.ctm"},
 #endif
@@ -412,6 +416,10 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesys
     else if ( ext == ".e57" )
         res = MR::PointsLoad::fromE57( file, colors, callback );
 #endif
+#if !defined( MRMESH_NO_LAS )
+    else if ( ext == ".las" || ext == ".laz" )
+        res = MR::PointsLoad::fromLas( file, colors, callback );
+#endif
     else if ( ext == ".csv" || ext == ".xyz" )
         res = MR::PointsLoad::fromText( file, nullptr, callback );
     return res;
@@ -438,6 +446,10 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, 
         res = MR::PointsLoad::fromObj( in, callback );
     else if ( ext == ".asc" )
         res = MR::PointsLoad::fromAsc( in, callback );
+#if !defined( MRMESH_NO_LAS )
+    else if ( ext == ".las" || ext == ".laz" )
+        res = MR::PointsLoad::fromLas( in, colors, callback );
+#endif
     else if ( ext == ".csv" || ext == ".xyz" )
         res = MR::PointsLoad::fromText( in, nullptr, callback );
     return res;

@@ -18,6 +18,7 @@ option(MRMESH_NO_VOXEL "Disable voxel support" OFF)
 option(MRMESH_NO_GLTF "Disable glTF support" OFF)
 option(MRMESH_NO_XML "Disable XML support (affects 3MF support)" OFF)
 option(MRMESH_NO_E57 "Disable E57 support" OFF)
+option(MRMESH_NO_LAS "Disable LAS/LAZ support" OFF)
 
 IF(DEFINED MESHLIB_PYTHON_SUPPORT AND NOT MESHLIB_PYTHON_SUPPORT)
 	set(MRMESH_NO_PYTHON ON)
@@ -96,6 +97,10 @@ IF(NOT MR_EMSCRIPTEN)
 	IF(NOT MRMESH_NO_E57)
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES E57Format)
 	ENDIF()
+
+	IF(NOT MRMESH_NO_LAS)
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES lazperf)
+	ENDIF()
 ELSE()
 	target_compile_definitions(${PROJECT_NAME}
 		PRIVATE
@@ -107,6 +112,10 @@ ELSE()
 			MRMESH_NO_VOXEL
 			MRMESH_NO_E57
 	)
+
+	IF(NOT MRMESH_NO_LAS)
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES lazperf_s)
+	ENDIF()
 ENDIF()
 
 # alternative Eigen include for external project

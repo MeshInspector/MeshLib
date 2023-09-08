@@ -81,6 +81,7 @@ ELSE() # NOT APPLE
 			hidapi-hidraw
 			jsoncpp
 			spdlog
+			fmt
 			openvdb
 			tbb
 			)

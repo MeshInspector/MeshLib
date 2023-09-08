@@ -40,6 +40,9 @@ ELSE()
 		MRMesh
 		MRViewer
 		imgui
+		jsoncpp
+		spdlog
+		fmt
 		)
 ENDIF()
 

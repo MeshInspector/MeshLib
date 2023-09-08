@@ -75,7 +75,7 @@ ELSE() # NOT APPLE
 			gtkmm-3.0
 			glib-2.0
 			glibmm-2.4
-			sigc
+			sigc-2.0
 			hidapi-hidraw
 			jsoncpp
 			spdlog

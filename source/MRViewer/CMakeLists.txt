@@ -73,7 +73,7 @@ ELSE() # NOT APPLE
 			glad
 			glfw
 			gtkmm-3.0
-			glibmm
+			glib
 			hidapi-hidraw
 			jsoncpp
 			spdlog

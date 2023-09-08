@@ -73,8 +73,10 @@ ELSE() # NOT APPLE
 			glad
 			glfw
 			gtkmm-3.0
+			glibmm
 			hidapi-hidraw
 			jsoncpp
+			spdlog
 			tbb
 			)
 ENDIF() # APPLE

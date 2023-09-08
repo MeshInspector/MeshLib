@@ -39,6 +39,9 @@ ELSE()
 		tbb
 		MRMesh
 		MRViewer
+		clip
+		glad
+		glfw
 		imgui
 		jsoncpp
 		spdlog

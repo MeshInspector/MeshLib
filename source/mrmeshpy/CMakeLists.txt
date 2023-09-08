@@ -26,7 +26,7 @@ ELSE()
         spdlog
         fmt
         tbb
-        OpenVDB
+        openvdb
         ${MR_PYTHON_LIB}
     )
 ENDIF()

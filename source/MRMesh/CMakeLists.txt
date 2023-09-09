@@ -176,6 +176,7 @@ ELSE()
 		zip
 		pthread
 		Boost::boost
+		dl
 		jsoncpp
 		tbb
 		${MRMESH_OPTIONAL_DEPENDENCIES}

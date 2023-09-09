@@ -22,19 +22,18 @@ ENDIF() # MR_EMSCRIPTEN
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
-IF(APPLE)
+IF(MR_EMSCRIPTEN)
 	target_link_libraries(${PROJECT_NAME} PRIVATE
+		tbb
 		MRMesh
 		MRViewer
-		clip
-		imgui
-		fmt
-		spdlog
-		glfw
-		jsoncpp
 		glad
+		glfw
+		imgui
+		jsoncpp
+		spdlog
 		)
-ELSE()
+ELSE() # NOT MR_EMSCRIPTEN
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		tbb
 		MRMesh
@@ -47,7 +46,7 @@ ELSE()
 		spdlog
 		fmt
 		)
-ENDIF()
+ENDIF() # MR_EMSCRIPTEN
 
 
 install(TARGETS ${PROJECT_NAME}

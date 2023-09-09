@@ -58,10 +58,14 @@ ENDIF() # NOT MR_EMSCRIPTEN_SINGLETHREAD
 IF(WIN32 AND MINGW)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj")
 ENDIF()
-# make link to fail if there are unresolved symbols (only in GCC)
+# make link to fail if there are unresolved symbols (GCC and Clang)
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-z,defs")
 ENDIF()
+IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-undefined,error")
+ENDIF()
+
 message("CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
 
 option(MESHLIB_CUSTOM_INSTALL_PREFIX "Install into directory defined by CMAKE_INSTALL_PREFIX" OFF)

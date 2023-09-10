@@ -63,9 +63,9 @@ IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-z,defs")
 ENDIF()
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-undefined,error")
+# without disabling the warning, CMake will fail with the error "Looking for C++ include pthread.h - not found"
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-undefined,error -Wno-unused-command-line-argument")
 ENDIF()
-
 message("CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
 
 option(MESHLIB_CUSTOM_INSTALL_PREFIX "Install into directory defined by CMAKE_INSTALL_PREFIX" OFF)

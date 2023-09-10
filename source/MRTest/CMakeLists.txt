@@ -33,7 +33,6 @@ ELSE()
     set(CMAKE_EXECUTABLE_SUFFIX ".html")
     target_link_libraries(${PROJECT_NAME} PRIVATE
         gtest
-        pthread
         zip
         -Wl,--whole-archive
         MRMesh

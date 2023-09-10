@@ -13,7 +13,6 @@ IF(MR_EMSCRIPTEN)
 file(GLOB LOCAL_WASM_FILES "../../wasm/*.*")
 file(COPY ${LOCAL_WASM_FILES} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    pthread
 	zip
 	gtest
 	-Wl,--whole-archive

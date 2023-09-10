@@ -147,7 +147,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		    spdlog
 		    GTest::gtest
 		    zip
-		    pthread
 		    Boost::boost
 		    jsoncpp
 		    fmt
@@ -160,7 +159,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
 	        gtest
 	        zip
 	        freetype
-	        pthread
 	        jsoncpp
 	        tbb
 		${MRMESH_OPTIONAL_DEPENDENCIES}
@@ -174,7 +172,6 @@ ELSE()
 		spdlog
 		gtest
 		zip
-		pthread
 		Boost::boost
 		dl
 		jsoncpp

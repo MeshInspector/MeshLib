@@ -60,7 +60,7 @@ IF(WIN32 AND MINGW)
 ENDIF()
 # make link to fail if there are unresolved symbols (GCC and Clang)
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-#    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-z,defs")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-z,defs")
 ENDIF()
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 # without disabling the warning, CMake will fail with the error "Looking for C++ include pthread.h - not found"

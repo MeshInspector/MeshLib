@@ -24,6 +24,10 @@ MRMESH_API extern const IOFilters Filters;
 MRMESH_API Expected<PointCloud, std::string> fromText( const std::filesystem::path& file, AffineXf3f* outXf = nullptr, ProgressCallback callback = {} );
 MRMESH_API Expected<PointCloud, std::string> fromText( std::istream& in, AffineXf3f* outXf = nullptr, ProgressCallback callback = {} );
 
+/// loads from .pts file
+MRMESH_API Expected<PointCloud, std::string> fromPts( const std::filesystem::path& file, VertColors* colors = nullptr, AffineXf3f* outXf = nullptr, ProgressCallback callback = {} );
+MRMESH_API Expected<PointCloud, std::string> fromPts( std::istream& in, VertColors* colors = nullptr, AffineXf3f* outXf = nullptr, ProgressCallback callback = {} );
+
 
 #ifndef MRMESH_NO_OPENCTM
 /// loads from .ctm file

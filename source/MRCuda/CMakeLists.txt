@@ -41,9 +41,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 
 target_link_libraries(${PROJECT_NAME} PRIVATE 
 	MRMesh 
-	spdlog
-	fmt
-	tbb
 )
 
 set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")

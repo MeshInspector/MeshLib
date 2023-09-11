@@ -1,6 +1,7 @@
 #include "MRPointsLoad.h"
 #if !defined( MRMESH_NO_LAS )
 #include "MRAffineXf3.h"
+#include "MRBox.h"
 #include "MRColor.h"
 #include "MRPointCloud.h"
 
@@ -232,12 +233,15 @@ Expected<PointCloud, std::string> process( lazperf::reader::basic_file& reader, 
     if ( colors )
         colors->reserve( pointCount );
 
+    Vector3d center {};
     if ( outXf )
     {
-        *outXf = AffineXf3f(
-            Matrix3f::scale( (float)header.scale.x, (float)header.scale.y, (float)header.scale.z ),
-            Vector3f( (float)header.offset.x, (float)header.offset.y, (float)header.offset.z )
-        );
+        const Box3d box {
+            { header.minx, header.miny, header.minz },
+            { header.maxx, header.maxy, header.maxz },
+        };
+        center = box.center();
+        *outXf = AffineXf3f::translation( -Vector3f( center ) );
     }
 
     for ( auto i = 0; i < pointCount; ++i )
@@ -247,22 +251,12 @@ Expected<PointCloud, std::string> process( lazperf::reader::basic_file& reader, 
 
         reader.readPoint( buf.data() );
         const auto point = getPoint( buf.data(), pointFormat );
-        if ( outXf )
-        {
-            result.points.emplace_back(
-                point.x,
-                point.y,
-                point.z
-            );
-        }
-        else
-        {
-            result.points.emplace_back(
-                point.x * reader.header().scale.x + reader.header().offset.x,
-                point.y * reader.header().scale.y + reader.header().offset.y,
-                point.z * reader.header().scale.z + reader.header().offset.z
-            );
-        }
+        const Vector3d pos {
+            point.x * reader.header().scale.x + reader.header().offset.x,
+            point.y * reader.header().scale.y + reader.header().offset.y,
+            point.z * reader.header().scale.z + reader.header().offset.z,
+        };
+        result.points.emplace_back( pos - center );
 
         if ( colors )
         {

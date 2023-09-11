@@ -471,12 +471,6 @@ Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCallbac
 }
 
 Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, VertColors* colors,
-                                                          ProgressCallback callback )
-{
-    return fromAnySupportedFormat( file, colors, nullptr, callback );
-}
-
-Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, VertColors* colors,
                                                           AffineXf3f* outXf, ProgressCallback callback )
 {
     auto ext = utf8string( file.extension() );
@@ -507,12 +501,6 @@ Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem:
     else if ( ext == ".csv" || ext == ".xyz" )
         res = MR::PointsLoad::fromText( file, outXf, callback );
     return res;
-}
-
-Expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension,
-                                                          VertColors* colors, ProgressCallback callback )
-{
-    return fromAnySupportedFormat( in, extension, colors, nullptr, callback );
 }
 
 Expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension,

@@ -60,11 +60,21 @@ MRMESH_API Expected<PointCloud, std::string> fromLas( std::istream& in, VertColo
 #endif
 
 /// detects the format from file extension and loads points from it
-MRMESH_API Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, VertColors* colors = nullptr,
-                                                                         ProgressCallback callback = {} );
+MRMESH_API Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file,
+                                                                     VertColors* colors = nullptr,
+                                                                     ProgressCallback callback = {} );
+MRMESH_API Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file,
+                                                                     AffineXf3f* outXf,
+                                                                     VertColors* colors = nullptr,
+                                                                     ProgressCallback callback = {} );
 /// extension in `*.ext` format
-MRMESH_API Expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, VertColors* colors = nullptr,
-                                                                         ProgressCallback callback = {} );
+MRMESH_API Expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension,
+                                                                     VertColors* colors = nullptr,
+                                                                     ProgressCallback callback = {} );
+MRMESH_API Expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension,
+                                                                     AffineXf3f* outXf,
+                                                                     VertColors* colors = nullptr,
+                                                                     ProgressCallback callback = {} );
 
 /// \}
 

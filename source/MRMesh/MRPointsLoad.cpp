@@ -394,8 +394,14 @@ Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCallbac
     return std::move( cloud );
 }
 
-Expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, VertColors* colors /*= nullptr */,
-                                                                  ProgressCallback callback )
+Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, VertColors* colors,
+                                                          ProgressCallback callback )
+{
+    return fromAnySupportedFormat( file, nullptr, colors, callback );
+}
+
+Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, AffineXf3f* outXf,
+                                                          VertColors* colors, ProgressCallback callback )
 {
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
@@ -421,12 +427,19 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesys
         res = MR::PointsLoad::fromLas( file, colors, callback );
 #endif
     else if ( ext == ".csv" || ext == ".xyz" )
-        res = MR::PointsLoad::fromText( file, nullptr, callback );
+        res = MR::PointsLoad::fromText( file, outXf, callback );
     return res;
 }
 
-Expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, VertColors* colors /*= nullptr */,
-                                                                  ProgressCallback callback )
+Expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension,
+                                                          VertColors* colors, ProgressCallback callback )
+{
+    return fromAnySupportedFormat( in, extension, nullptr, colors, callback );
+}
+
+Expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension,
+                                                          AffineXf3f* outXf, VertColors* colors,
+                                                          ProgressCallback callback )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
@@ -451,7 +464,7 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, 
         res = MR::PointsLoad::fromLas( in, colors, callback );
 #endif
     else if ( ext == ".csv" || ext == ".xyz" )
-        res = MR::PointsLoad::fromText( in, nullptr, callback );
+        res = MR::PointsLoad::fromText( in, outXf, callback );
     return res;
 }
 

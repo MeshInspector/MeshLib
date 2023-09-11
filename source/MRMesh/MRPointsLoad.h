@@ -59,8 +59,10 @@ MRMESH_API Expected<PointCloud, std::string> fromE57( const std::filesystem::pat
 
 #if !defined( MRMESH_NO_LAS )
 /// loads from .las file
-MRMESH_API Expected<PointCloud, std::string> fromLas( const std::filesystem::path& file, VertColors* colors = nullptr, AffineXf3f* outXf = nullptr, ProgressCallback callback = {} );
-MRMESH_API Expected<PointCloud, std::string> fromLas( std::istream& in, VertColors* colors = nullptr, AffineXf3f* outXf = nullptr, ProgressCallback callback = {} );
+MRMESH_API Expected<PointCloud, std::string> fromLas( const std::filesystem::path& file, VertColors* colors = nullptr,
+                                                      AffineXf3f* outXf = nullptr, ProgressCallback callback = {} );
+MRMESH_API Expected<PointCloud, std::string> fromLas( std::istream& in, VertColors* colors = nullptr,
+                                                      AffineXf3f* outXf = nullptr, ProgressCallback callback = {} );
 #endif
 
 /// detects the format from file extension and loads points from it

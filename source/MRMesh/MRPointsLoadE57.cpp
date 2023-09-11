@@ -54,7 +54,7 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
         const int64_t nSize = std::min( nPointsSize, int64_t( 1024 ) * 128 );
 
 #ifdef MR_OLD_E57
-        e57::Data3DPointsData buffers;
+        e57::Data3DPointsData_d buffers;
 #else
         e57::Data3DPointsDouble buffers;
 #endif

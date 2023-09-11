@@ -29,6 +29,7 @@ const IOFilters Filters =
     {"XYZ (.xyz)",        "*.xyz"},
     {"OBJ (.obj)",        "*.obj"},
     {"PLY (.ply)",        "*.ply"},
+    {"PTS (.pts)",        "*.pts"},
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
     {"E57 (.e57)",        "*.e57"},
 #endif
@@ -105,7 +106,82 @@ Expected<MR::PointCloud, std::string> fromText( std::istream& in, AffineXf3f* ou
     return pc;
 }
 
+Expected<MR::PointCloud, std::string> fromPts( const std::filesystem::path& file, VertColors* colors /*= nullptr*/, 
+    AffineXf3f* outXf /*= nullptr*/, ProgressCallback callback /*= {} */ )
+{
+    std::ifstream in( file, std::ifstream::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+
+    return addFileNameInError( fromPts( in, colors, outXf, callback ), file );
+}
+
+Expected<MR::PointCloud, std::string> fromPts( std::istream& in, VertColors* colors /*= nullptr*/, 
+    AffineXf3f* outXf /*= nullptr*/, ProgressCallback callback /*= {} */ )
+{
+    MR_TIMER;
+    std::string numPointsLine;
+    if ( !std::getline( in, numPointsLine ) )
+        return unexpected( "Cannot read header line" );
+    auto numPoints = std::atoll( numPointsLine.c_str() );
+    if ( numPoints == 0 )
+        return unexpected( "Empty pts file" );
+
+    auto dataExp = readCharBuffer( in );
+    if ( !dataExp.has_value() )
+        return unexpected( dataExp.error() );
+
+    if ( callback && !callback( 0.25f ) )
+        return unexpected( "Loading canceled" );
+
+    const auto& data = *dataExp;
+    auto lineOffsets = splitByLines( data.data(), data.size() );
+
+    int firstLine = 1;
+    Vector3d firstLineCoord;
+    Color firstLineColor;
+    std::string_view shitLine( data.data() + lineOffsets[firstLine], lineOffsets[firstLine + 1] - lineOffsets[firstLine] );
+    auto shiftLineRes = parsePtsCoordinate( shitLine, firstLineCoord, firstLineColor );
+    if ( !shiftLineRes.has_value() )
+        return unexpected( shiftLineRes.error() );
+
+    if ( outXf )
+        *outXf = AffineXf3f::translation( Vector3f( firstLineCoord ) );
+
+    if ( colors )
+        colors->resize( lineOffsets.size() - firstLine - 1 );
+
+    PointCloud pc;
+    pc.points.resize( lineOffsets.size() - firstLine - 1 );
+
+    std::string parseError;
+    tbb::task_group_context ctx;
+    auto keepGoing = ParallelFor( pc.points, [&] ( size_t i )
+    {
+        std::string_view line( data.data() + lineOffsets[firstLine + i], lineOffsets[firstLine + i + 1] - lineOffsets[firstLine + i] );
+        Vector3d tempDoubleCoord;
+        Color tempColor;
+        auto parseRes = parsePtsCoordinate( line, tempDoubleCoord, tempColor );
+        if ( !parseRes.has_value() && ctx.cancel_group_execution() )
+            parseError = std::move( parseRes.error() );
+
+        pc.points[VertId( i )] = Vector3f( tempDoubleCoord - firstLineCoord );
+        if ( colors )
+            ( *colors )[VertId( i )] = tempColor;
+    }, subprogress( callback, 0.25f, 1.0f ) );
+
+    if ( !keepGoing )
+        return unexpected( "Loading canceled" );
+
+    if ( !parseError.empty() )
+        return unexpected( parseError );
+
+    pc.validPoints.resize( pc.points.size(), true );
+    return pc;
+}
+
 #ifndef MRMESH_NO_OPENCTM
+
 Expected<MR::PointCloud, std::string> fromCtm( const std::filesystem::path& file, VertColors* colors /*= nullptr */, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
@@ -410,6 +486,8 @@ Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem:
     Expected<MR::PointCloud, std::string> res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".ply" )
         res = MR::PointsLoad::fromPly( file, colors, callback );
+    else if ( ext == ".pts" )
+        res = MR::PointsLoad::fromPts( file, colors, nullptr, callback );
 #ifndef MRMESH_NO_OPENCTM
     else if ( ext == ".ctm" )
         res = MR::PointsLoad::fromCtm( file, colors, callback );
@@ -451,6 +529,8 @@ Expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, cons
     Expected<MR::PointCloud, std::string> res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".ply" )
         res = MR::PointsLoad::fromPly( in, colors, callback );
+    else if ( ext == ".pts" )
+        res = MR::PointsLoad::fromPts( in, colors, nullptr, callback );
 #ifndef MRMESH_NO_OPENCTM
     else if ( ext == ".ctm" )
         res = MR::PointsLoad::fromCtm( in, colors, callback );

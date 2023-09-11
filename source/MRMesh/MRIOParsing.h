@@ -17,5 +17,7 @@ MRMESH_API Expected<Buffer<char>, std::string> readCharBuffer( std::istream& in 
 template<typename T>
 VoidOrErrStr parseTextCoordinate( const std::string_view& str, Vector3<T>& v );
 MRMESH_API VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3f& v );
+template<typename T>
+VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Color& c );
 
 }

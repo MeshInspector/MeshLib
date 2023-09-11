@@ -11,12 +11,12 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout MeshLib
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: 'MeshLib/'
 
       - name: Checkout doxygen data
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: 'MeshInspector/MeshInspector.github.io'
           path: 'MeshInspector.github.io/'

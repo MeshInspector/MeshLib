@@ -29,7 +29,7 @@ jobs:
       matrix: ${{ steps.matrix-set.outputs.matrix}}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
@@ -121,7 +121,7 @@ jobs:
         run: docker system prune --force --all --volumes
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
@@ -155,7 +155,7 @@ jobs:
           vcpkg.exe integrate install
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 

@@ -241,7 +241,7 @@ Expected<PointCloud, std::string> process( lazperf::reader::basic_file& reader, 
             { header.maxx, header.maxy, header.maxz },
         };
         center = box.center();
-        *outXf = AffineXf3f::translation( -Vector3f( center ) );
+        *outXf = AffineXf3f::translation( Vector3f( center ) );
     }
 
     for ( auto i = 0; i < pointCount; ++i )

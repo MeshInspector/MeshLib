@@ -120,9 +120,9 @@ Expected<ObjectPoints, std::string> makeObjectPointsFromFile( const std::filesys
 {
     MR_TIMER;
 
-    AffineXf3f xf;
     VertColors colors;
-    auto pointsCloud = PointsLoad::fromAnySupportedFormat( file, &xf, &colors, callback );
+    AffineXf3f xf;
+    auto pointsCloud = PointsLoad::fromAnySupportedFormat( file, &colors, &xf, callback );
     if ( !pointsCloud.has_value() )
     {
         return unexpected( pointsCloud.error() );

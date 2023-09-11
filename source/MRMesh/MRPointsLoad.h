@@ -59,8 +59,8 @@ MRMESH_API Expected<PointCloud, std::string> fromE57( const std::filesystem::pat
 
 #if !defined( MRMESH_NO_LAS )
 /// loads from .las file
-MRMESH_API Expected<PointCloud, std::string> fromLas( const std::filesystem::path& file, AffineXf3f* outXf = nullptr, VertColors* colors = nullptr, ProgressCallback callback = {} );
-MRMESH_API Expected<PointCloud, std::string> fromLas( std::istream& in, AffineXf3f* outXf = nullptr, VertColors* colors = nullptr, ProgressCallback callback = {} );
+MRMESH_API Expected<PointCloud, std::string> fromLas( const std::filesystem::path& file, VertColors* colors = nullptr, AffineXf3f* outXf = nullptr, ProgressCallback callback = {} );
+MRMESH_API Expected<PointCloud, std::string> fromLas( std::istream& in, VertColors* colors = nullptr, AffineXf3f* outXf = nullptr, ProgressCallback callback = {} );
 #endif
 
 /// detects the format from file extension and loads points from it
@@ -68,16 +68,14 @@ MRMESH_API Expected<PointCloud, std::string> fromAnySupportedFormat( const std::
                                                                      VertColors* colors = nullptr,
                                                                      ProgressCallback callback = {} );
 MRMESH_API Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file,
-                                                                     AffineXf3f* outXf,
-                                                                     VertColors* colors = nullptr,
+                                                                     VertColors* colors, AffineXf3f* outXf,
                                                                      ProgressCallback callback = {} );
 /// extension in `*.ext` format
 MRMESH_API Expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension,
                                                                      VertColors* colors = nullptr,
                                                                      ProgressCallback callback = {} );
 MRMESH_API Expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension,
-                                                                     AffineXf3f* outXf,
-                                                                     VertColors* colors = nullptr,
+                                                                     VertColors* colors, AffineXf3f* outXf,
                                                                      ProgressCallback callback = {} );
 
 /// \}

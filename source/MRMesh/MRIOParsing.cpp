@@ -134,7 +134,7 @@ VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Col
     int i = 0;
     auto coord = [&] ( auto& ctx ){ v[i++] = _attr( ctx ); };
     auto skip_pos = [&] ( auto& ){ i++;};
-    auto col = [&] ( auto& ctx ) { (&c.r)[i++ -4] = _attr( ctx ); };
+    auto col = [&] ( auto& ctx ) { ((uint8_t*)&c)[i++ -4] = _attr( ctx ); };
 
     using uint8_type = uint_parser<uint8_t>;
     constexpr uint8_type uint8_ = {};

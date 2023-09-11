@@ -487,7 +487,7 @@ Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem:
     if ( ext == ".ply" )
         res = MR::PointsLoad::fromPly( file, colors, callback );
     else if ( ext == ".pts" )
-        res = MR::PointsLoad::fromPts( file, colors, nullptr, callback );
+        res = MR::PointsLoad::fromPts( file, colors, outXf, callback );
 #ifndef MRMESH_NO_OPENCTM
     else if ( ext == ".ctm" )
         res = MR::PointsLoad::fromCtm( file, colors, callback );
@@ -530,7 +530,7 @@ Expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, cons
     if ( ext == ".ply" )
         res = MR::PointsLoad::fromPly( in, colors, callback );
     else if ( ext == ".pts" )
-        res = MR::PointsLoad::fromPts( in, colors, nullptr, callback );
+        res = MR::PointsLoad::fromPts( in, colors, outXf, callback );
 #ifndef MRMESH_NO_OPENCTM
     else if ( ext == ".ctm" )
         res = MR::PointsLoad::fromCtm( in, colors, callback );

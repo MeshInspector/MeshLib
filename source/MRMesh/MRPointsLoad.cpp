@@ -424,7 +424,7 @@ Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem:
 #endif
 #if !defined( MRMESH_NO_LAS )
     else if ( ext == ".las" || ext == ".laz" )
-        res = MR::PointsLoad::fromLas( file, colors, callback );
+        res = MR::PointsLoad::fromLas( file, outXf, colors, callback );
 #endif
     else if ( ext == ".csv" || ext == ".xyz" )
         res = MR::PointsLoad::fromText( file, outXf, callback );
@@ -461,7 +461,7 @@ Expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, cons
         res = MR::PointsLoad::fromAsc( in, callback );
 #if !defined( MRMESH_NO_LAS )
     else if ( ext == ".las" || ext == ".laz" )
-        res = MR::PointsLoad::fromLas( in, colors, callback );
+        res = MR::PointsLoad::fromLas( in, outXf, colors, callback );
 #endif
     else if ( ext == ".csv" || ext == ".xyz" )
         res = MR::PointsLoad::fromText( in, outXf, callback );

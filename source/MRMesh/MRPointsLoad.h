@@ -53,7 +53,8 @@ MRMESH_API Expected<PointCloud, std::string> fromAsc( std::istream& in, Progress
 
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
 /// loads from .e57 file
-MRMESH_API Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, VertColors* colors = nullptr, ProgressCallback callback = {} );
+MRMESH_API Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, VertColors* colors = nullptr,
+                                                      AffineXf3f* outXf = nullptr, ProgressCallback callback = {} );
 // no support for reading e57 from arbitrary stream yet
 #endif
 

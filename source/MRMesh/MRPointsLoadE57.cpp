@@ -1,8 +1,9 @@
 #include "MRPointsLoad.h"
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
+#include "MRAffineXf3.h"
+#include "MRColor.h"
 #include "MRPointCloud.h"
 #include "MRStringConvert.h"
-#include "MRColor.h"
 #include "MRTimer.h"
 #include <MRPch/MRSpdlog.h> //fmt
 
@@ -22,7 +23,8 @@ namespace MR
 namespace PointsLoad
 {
 
-Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, VertColors* colors, ProgressCallback progress )
+Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, VertColors* colors, AffineXf3f* outXf,
+                                           ProgressCallback progress )
 {
     MR_TIMER
 
@@ -54,9 +56,9 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
 #ifdef MR_OLD_E57
         e57::Data3DPointsData buffers;
 #else
-        e57::Data3DPointsFloat buffers;
+        e57::Data3DPointsDouble buffers;
 #endif
-        std::vector<float> xs( nSize ), ys( nSize ), zs( nSize );
+        std::vector<double> xs( nSize ), ys( nSize ), zs( nSize );
         buffers.cartesianX = xs.data();
         buffers.cartesianY = ys.data();
         buffers.cartesianZ = zs.data();
@@ -84,6 +86,8 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
         res.points.reserve( nPointsSize );
         unsigned long size = 0;
         bool hasInputColors = false;
+        Vector3d offset;
+        bool hasOffset = false;
         if ( colors )
             colors->clear();
         while ( ( size = dataReader.read() ) > 0 )
@@ -95,11 +99,31 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
                 if ( colors && hasInputColors )
                     colors->reserve( nPointsSize );
             }
+            if ( outXf && !hasOffset )
+            {
+                offset = {
+                    buffers.cartesianX[0],
+                    buffers.cartesianY[0],
+                    buffers.cartesianZ[0],
+                };
+                *outXf = AffineXf3f::translation( Vector3f( offset ) );
+                hasOffset = true;
+            }
             for ( unsigned long i = 0; i < size; ++i )
             {
-                res.points.emplace_back( buffers.cartesianX[i], buffers.cartesianY[i], buffers.cartesianZ[i] );
+                res.points.emplace_back(
+                    buffers.cartesianX[i] - offset.x,
+                    buffers.cartesianY[i] - offset.y,
+                    buffers.cartesianZ[i] - offset.z
+                );
                 if ( colors && hasInputColors )
-                    colors->emplace_back( buffers.colorRed[i], buffers.colorGreen[i], buffers.colorBlue[i] );
+                {
+                    colors->emplace_back(
+                        buffers.colorRed[i],
+                        buffers.colorGreen[i],
+                        buffers.colorBlue[i]
+                    );
+                }
             }
         }
         assert( res.points.size() == (size_t)nPointsSize );

@@ -498,7 +498,7 @@ Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem:
         res = MR::PointsLoad::fromAsc( file, callback );
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
     else if ( ext == ".e57" )
-        res = MR::PointsLoad::fromE57( file, colors, callback );
+        res = MR::PointsLoad::fromE57( file, colors, outXf, callback );
 #endif
 #if !defined( MRMESH_NO_LAS )
     else if ( ext == ".las" || ext == ".laz" )

@@ -1,6 +1,7 @@
 #include "MRIOParsing.h"
 #include "MRPch/MRTBB.h"
 #include "MRVector3.h"
+#include "MRColor.h"
 
 
 #include <boost/algorithm/string/trim.hpp>
@@ -123,6 +124,37 @@ VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3f& v )
 
     return {};
 }
+
+template<typename T>
+VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Color& c )
+{
+
+    using namespace boost::spirit::x3;
+
+    int i = 0;
+    auto coord = [&] ( auto& ctx ){ v[i++] = _attr( ctx ); };
+    auto skip_pos = [&] ( auto& ){ i++;};
+    auto col = [&] ( auto& ctx ) { (&c.r)[i++ -4] = _attr( ctx ); };
+
+    using uint8_type = uint_parser<uint8_t>;
+    constexpr uint8_type uint8_ = {};
+    bool r = phrase_parse(
+        str.begin(),
+        str.end(),
+        ( 
+            real_parser<T>{} [coord] >> real_parser<T>{} [coord] >> real_parser<T>{} [coord] >> 
+            double_[skip_pos] >> 
+            uint8_[col] >> uint8_[col] >> uint8_[col] ),
+        ascii::space
+    );
+    if ( !r )
+        return unexpected( "Failed to parse vertex" );
+
+    return {};
+}
+
+template VoidOrErrStr parsePtsCoordinate<float>( const std::string_view& str, Vector3f& v, Color& c );
+template VoidOrErrStr parsePtsCoordinate<double>( const std::string_view& str, Vector3d& v, Color& c );
 
 template VoidOrErrStr parseTextCoordinate<float>( const std::string_view& str, Vector3f& v );
 template VoidOrErrStr parseTextCoordinate<double>( const std::string_view& str, Vector3d& v );

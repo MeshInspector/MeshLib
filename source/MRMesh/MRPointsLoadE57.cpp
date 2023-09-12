@@ -86,8 +86,7 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
         res.points.reserve( nPointsSize );
         unsigned long size = 0;
         bool hasInputColors = false;
-        Vector3d offset;
-        bool hasOffset = false;
+        std::optional<Vector3d> offset;
         if ( colors )
             colors->clear();
         while ( ( size = dataReader.read() ) > 0 )
@@ -99,22 +98,21 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
                 if ( colors && hasInputColors )
                     colors->reserve( nPointsSize );
             }
-            if ( outXf && !hasOffset )
+            if ( outXf && !offset )
             {
                 offset = {
                     buffers.cartesianX[0],
                     buffers.cartesianY[0],
                     buffers.cartesianZ[0],
                 };
-                *outXf = AffineXf3f::translation( Vector3f( offset ) );
-                hasOffset = true;
+                *outXf = AffineXf3f::translation( Vector3f( *offset ) );
             }
             for ( unsigned long i = 0; i < size; ++i )
             {
                 res.points.emplace_back(
-                    buffers.cartesianX[i] - offset.x,
-                    buffers.cartesianY[i] - offset.y,
-                    buffers.cartesianZ[i] - offset.z
+                    buffers.cartesianX[i] - offset->x,
+                    buffers.cartesianY[i] - offset->y,
+                    buffers.cartesianZ[i] - offset->z
                 );
                 if ( colors && hasInputColors )
                 {

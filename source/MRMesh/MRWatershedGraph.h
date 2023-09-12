@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRGraph.h"
+#include <cassert>
 #include <cfloat>
 
 namespace MR
@@ -14,10 +15,26 @@ public:
     struct BasinInfo
     {
         VertId lowestVert; ///< in the whole basin
+        float lowestLevel = FLT_MAX; ///< lowest level (z-coordinate of lowestVert) in the basin
         float area = 0;    ///< precipitation area that flows in this basin
         float lowestBdLevel = FLT_MAX; ///< lowest position on the boundary of the basin
-        float volume = 0;  ///< water volume till water reaches the lowest height on the boundary
-        float level = -FLT_MAX; ///< current level of water (z-coordinate) in the basin
+        float fullVolume = 0; ///< full water volume to be accumulated in the basin till water reaches the lowest height on the boundary
+        float remVolume = 0;  ///< remaining water volume to be accumulated in the basin till water reaches the lowest height on the boundary
+        Graph::VertId overflowTo; ///< when level=lowestBdLevel, volume=0, all water from this basin overflows to given basin, and this.area becomes equal to 0
+
+        float timeTillOverflow() const
+        { 
+            assert( !overflowTo );
+            return remVolume / area;
+        }
+
+        /// approximate current level of water (z-coordinate) in the basin
+        float approxLevel() const
+        { 
+            const auto p = remVolume / fullVolume;
+            assert( p >= 0 && p <= 1 );
+            return p * lowestLevel + ( 1 - p ) * lowestBdLevel;
+        }
     };
 
     /// associated with each edge in graph

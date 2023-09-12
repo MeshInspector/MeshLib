@@ -77,8 +77,11 @@ WatershedGraph::WatershedGraph( const Mesh & mesh, const Vector<int, FaceId> & f
             if ( basin0 )
             {
                 auto & info0 = basins_[basin0];
-                if ( h < getHeightAt( info0.lowestVert ) )
+                if ( h < info0.lowestLevel )
+                {
                     info0.lowestVert = v;
+                    info0.lowestLevel = h;
+                }
             }
             continue;
         }
@@ -87,8 +90,11 @@ WatershedGraph::WatershedGraph( const Mesh & mesh, const Vector<int, FaceId> & f
             auto l = mesh_.topology.left( e );
             const Graph::VertId basinL( l ? face2basin[l] : outsideId_ );
             auto & infoL = basins_[basinL];
-            if ( h < getHeightAt( infoL.lowestVert ) )
+            if ( h < infoL.lowestLevel )
+            {
                 infoL.lowestVert = v;
+                infoL.lowestLevel = h;
+            }
             if ( h < infoL.lowestBdLevel )
                 infoL.lowestBdLevel = h;
             auto r = mesh_.topology.right( e );
@@ -126,9 +132,9 @@ WatershedGraph::WatershedGraph( const Mesh & mesh, const Vector<int, FaceId> & f
     for ( auto basin = Graph::VertId( 0 ); basin < outsideId_; ++basin )
     {
         auto & info = basins_[basin];
-        info.level = getHeightAt( info.lowestVert );
-        assert( info.level <= info.lowestBdLevel );
-        info.volume = (float)volumeCalcs[basin].getVolume();
+        assert( info.lowestLevel == getHeightAt( info.lowestVert ) );
+        assert( info.lowestLevel <= info.lowestBdLevel );
+        info.remVolume = info.fullVolume = (float)volumeCalcs[basin].getVolume();
     }
 
     graph_.construct( std::move( neighboursPerVertex ), std::move( endsPerEdge ) );
@@ -170,8 +176,8 @@ MRMESH_API std::pair<Graph::EdgeId, float> WatershedGraph::findLowestBd() const
         const auto ends = graph_.ends( ei );
         if ( ends.v0 == outsideId_ || ends.v1 == outsideId_ )
             continue;
-        const auto l0 = getHeightAt( basins_[ends.v0].lowestVert );
-        const auto l1 = getHeightAt( basins_[ends.v1].lowestVert );
+        const auto l0 = basins_[ends.v0].lowestLevel;
+        const auto l1 = basins_[ends.v1].lowestLevel;
         const auto le = getHeightAt( bds_[ei].lowestVert );
         assert( le >= l0 && le >= l1 );
         const auto level = std::min( le - l0, le - l1 );
@@ -195,8 +201,11 @@ Graph::VertId WatershedGraph::merge( Graph::VertId v0, Graph::VertId v1 )
 
     assert( parentBasin_[v1] == v1 );
     parentBasin_[v1] = v0;
-    if ( getHeightAt( basins_[v1].lowestVert ) < getHeightAt( basins_[v0].lowestVert ) )
+    if ( basins_[v1].lowestLevel < basins_[v0].lowestLevel )
+    {
         basins_[v0].lowestVert = basins_[v1].lowestVert;
+        basins_[v0].lowestLevel = basins_[v1].lowestLevel;
+    }
 
     graph_.merge( v0, v1, [&]( Graph::EdgeId eremnant, Graph::EdgeId edead )
     {

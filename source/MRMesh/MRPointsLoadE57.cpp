@@ -1,6 +1,7 @@
 #include "MRPointsLoad.h"
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
 #include "MRAffineXf3.h"
+#include "MRBox.h"
 #include "MRColor.h"
 #include "MRPointCloud.h"
 #include "MRStringConvert.h"
@@ -39,6 +40,25 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
 
         e57::Data3D scanHeader;
         eReader.ReadData3D( scanIndex, scanHeader );
+
+        std::optional<Vector3d> offset;
+        if ( outXf )
+        {
+            const auto& bounds = scanHeader.cartesianBounds;
+            const Box3d box {
+                { bounds.xMinimum, bounds.yMinimum, bounds.zMinimum },
+                { bounds.xMaximum, bounds.yMaximum, bounds.zMaximum },
+            };
+            if ( box.valid() )
+            {
+                offset = box.center();
+                *outXf = AffineXf3f::translation( Vector3f( *offset ) );
+            }
+        }
+        else
+        {
+            offset = Vector3d();
+        }
 
         int64_t nColumn = 0;
         int64_t nRow = 0;
@@ -86,7 +106,6 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
         res.points.reserve( nPointsSize );
         unsigned long size = 0;
         bool hasInputColors = false;
-        std::optional<Vector3d> offset;
         if ( colors )
             colors->clear();
         while ( ( size = dataReader.read() ) > 0 )

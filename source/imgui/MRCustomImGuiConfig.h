@@ -23,6 +23,8 @@ IMGUI_API ImGuiContext*& MyImGuiTLS();
 
 
 #ifndef MR_FILTER_IMGUI_INPUT_CHARS
+// This block is needed to prevent filtering alphabet characters from input
+// as far as the function lay under ImGui namespace it is used before no namespace function is found
 typedef int ImGuiInputTextFlags;
 typedef int ImGuiDataType;
 namespace ImGui

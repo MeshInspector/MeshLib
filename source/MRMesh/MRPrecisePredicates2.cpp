@@ -83,18 +83,18 @@ Vector2f findSegmentSegmentIntersectionPrecise(
     const Vector2f& a, const Vector2f& b, const Vector2f& c, const Vector2f& d,
     CoordinateConverters2 converters )
 {
-    Vector2ll ai{ converters.toInt( a ) };
-    Vector2ll bi{ converters.toInt( b ) };
-    Vector2ll ci{ converters.toInt( c ) };
-    Vector2ll di{ converters.toInt( d ) };
-    auto abc = cross( ai - ci, bi - ci );
+    auto ai{ converters.toInt( a ) };
+    auto bi{ converters.toInt( b ) };
+    auto ci{ converters.toInt( c ) };
+    auto di{ converters.toInt( d ) };
+    auto abc = cross( Vector2hp( ai - ci ), Vector2hp( bi - ci ) );
     if ( abc < 0 )
         abc = -abc;
-    auto abd = cross( ai - di, bi - di );
+    auto abd = cross( Vector2hp( ai - di ), Vector2hp( bi - di ) );
     if ( abd < 0 )
         abd = -abd;
     auto sum = abc + abd;
-    return converters.toFloat( Vector2i{ Vector2d( abc * di + abd * ci ) / double( sum ) } );
+    return converters.toFloat( Vector2i{ Vector2d( abc * Vector2hp( di ) + abd * Vector2hp( ci ) ) / double( sum ) } );
 }
 
 TEST( MRMesh, PrecisePredicates2 )

@@ -407,7 +407,7 @@ Expected<EmbeddedConeResult, std::string> createEmbeddedConeMesh(
             return false;
         else if ( !cut && holes.size() != ( needCut ? 2 : 3 ) )
             return false;
-
+        
         auto ueSize = int( res.mesh.topology.undirectedEdgeSize() );
         const auto& baseHole = ( cut || !needCut ) ? holes[1] : holes[0];
         for (
@@ -417,13 +417,13 @@ Expected<EmbeddedConeResult, std::string> createEmbeddedConeMesh(
         {
             auto e = cut ? holes.back()[ei] : holes.back()[( ei + 2 ) % holes.back().size()];
             auto v = res.mesh.topology.org( e );
-
+        
             int h = findInitIndex( v, basePart.contourOffsets, vertSize );
             if ( h < baseHole.size() )
                 makeBridgeEdge( res.mesh.topology, e,
                     cut ? res.mesh.topology.prev( baseHole[h] ) : baseHole[h] );
         }
-
+        
         auto lastEdge = int( res.mesh.topology.undirectedEdgeSize() );
         FillHoleMetric metric;
         metric.triangleMetric = [&] ( VertId a, VertId b, VertId c )->double
@@ -434,11 +434,12 @@ Expected<EmbeddedConeResult, std::string> createEmbeddedConeMesh(
             Vector3d aP = Vector3d( res.mesh.points[a] );
             Vector3d bP = Vector3d( res.mesh.points[b] );
             Vector3d cP = Vector3d( res.mesh.points[c] );
-
+        
             return dblArea( aP, bP, cP );
         };
         for ( int ue = ueSize; ue < lastEdge; ++ue )
-            fillHole( res.mesh, EdgeId( ue << 1 ), { .metric = metric } );
+            if ( !res.mesh.topology.left( EdgeId( ue << 1 ) ) )
+                fillHole( res.mesh, EdgeId( ue << 1 ), { .metric = metric } );
 
         postProcess( holes.back(), basePart.contourOffsets, vertSize, cut );
         return true;

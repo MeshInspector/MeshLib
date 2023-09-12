@@ -22,6 +22,7 @@ IMGUI_API ImGuiContext*& MyImGuiTLS();
     constexpr operator MR::Vector2f() const noexcept { return { x, y }; }
 
 
+#ifndef MR_FILTER_IMGUI_INPUT_CHARS
 typedef int ImGuiInputTextFlags;
 typedef int ImGuiDataType;
 namespace ImGui
@@ -31,3 +32,4 @@ static inline ImGuiInputTextFlags InputScalar_DefaultCharsFilter( ImGuiDataType,
     return 0;
 }
 }
+#endif

@@ -470,8 +470,8 @@ Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCallbac
     return std::move( cloud );
 }
 
-Expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, VertColors* colors /*= nullptr */,
-                                                                  ProgressCallback callback )
+Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, VertColors* colors,
+                                                          AffineXf3f* outXf, ProgressCallback callback )
 {
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
@@ -481,7 +481,7 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesys
     if ( ext == ".ply" )
         res = MR::PointsLoad::fromPly( file, colors, callback );
     else if ( ext == ".pts" )
-        res = MR::PointsLoad::fromPts( file, colors, nullptr, callback );
+        res = MR::PointsLoad::fromPts( file, colors, outXf, callback );
 #ifndef MRMESH_NO_OPENCTM
     else if ( ext == ".ctm" )
         res = MR::PointsLoad::fromCtm( file, colors, callback );
@@ -492,19 +492,20 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesys
         res = MR::PointsLoad::fromAsc( file, callback );
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
     else if ( ext == ".e57" )
-        res = MR::PointsLoad::fromE57( file, colors, callback );
+        res = MR::PointsLoad::fromE57( file, colors, outXf, callback );
 #endif
 #if !defined( MRMESH_NO_LAS )
     else if ( ext == ".las" || ext == ".laz" )
-        res = MR::PointsLoad::fromLas( file, colors, callback );
+        res = MR::PointsLoad::fromLas( file, colors, outXf, callback );
 #endif
     else if ( ext == ".csv" || ext == ".xyz" )
-        res = MR::PointsLoad::fromText( file, nullptr, callback );
+        res = MR::PointsLoad::fromText( file, outXf, callback );
     return res;
 }
 
-Expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, VertColors* colors /*= nullptr */,
-                                                                  ProgressCallback callback )
+Expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension,
+                                                          VertColors* colors, AffineXf3f* outXf,
+                                                          ProgressCallback callback )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
@@ -517,7 +518,7 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, 
     if ( ext == ".ply" )
         res = MR::PointsLoad::fromPly( in, colors, callback );
     else if ( ext == ".pts" )
-        res = MR::PointsLoad::fromPts( in, colors, nullptr, callback );
+        res = MR::PointsLoad::fromPts( in, colors, outXf, callback );
 #ifndef MRMESH_NO_OPENCTM
     else if ( ext == ".ctm" )
         res = MR::PointsLoad::fromCtm( in, colors, callback );
@@ -528,10 +529,10 @@ Expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, 
         res = MR::PointsLoad::fromAsc( in, callback );
 #if !defined( MRMESH_NO_LAS )
     else if ( ext == ".las" || ext == ".laz" )
-        res = MR::PointsLoad::fromLas( in, colors, callback );
+        res = MR::PointsLoad::fromLas( in, colors, outXf, callback );
 #endif
     else if ( ext == ".csv" || ext == ".xyz" )
-        res = MR::PointsLoad::fromText( in, nullptr, callback );
+        res = MR::PointsLoad::fromText( in, outXf, callback );
     return res;
 }
 

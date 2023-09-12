@@ -20,3 +20,14 @@ IMGUI_API ImGuiContext*& MyImGuiTLS();
 #define IM_VEC2_CLASS_EXTRA \
     constexpr ImVec2( const MR::Vector2f & v ) noexcept : x( v.x ), y( v.y ) {} \
     constexpr operator MR::Vector2f() const noexcept { return { x, y }; }
+
+
+typedef int ImGuiInputTextFlags;
+typedef int ImGuiDataType;
+namespace ImGui
+{
+static inline ImGuiInputTextFlags InputScalar_DefaultCharsFilter( ImGuiDataType, const char* )
+{
+    return 0;
+}
+}

@@ -14,6 +14,10 @@ public:
     struct BasinInfo
     {
         VertId lowestVert; ///< in the whole basin
+        float area = 0;    ///< precipitation area that flows in this basin
+        float lowestBdLevel = FLT_MAX; ///< lowest position on the boundary of the basin
+        float volume = 0;  ///< water volume till water reaches the lowest height on the boundary
+        float level = -FLT_MAX; ///< current level of water (z-coordinate) in the basin
     };
 
     /// associated with each edge in graph

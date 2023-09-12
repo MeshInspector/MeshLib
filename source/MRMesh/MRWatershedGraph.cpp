@@ -1,4 +1,5 @@
 #include "MRWatershedGraph.h"
+#include "MRBasinVolume.h"
 #include "MRMesh.h"
 #include "MRphmap.h"
 #include "MRRingIterator.h"
@@ -36,6 +37,8 @@ WatershedGraph::WatershedGraph( const Mesh & mesh, const Vector<int, FaceId> & f
     assert( numBasins >= 0 );
     basins_.clear();
     bds_.clear();
+
+    Vector<BasinVolumeCalculator, Graph::VertId> volumeCalcs( numBasins );
 
     outsideId_ = Graph::VertId( numBasins );
     ++numBasins;
@@ -86,6 +89,8 @@ WatershedGraph::WatershedGraph( const Mesh & mesh, const Vector<int, FaceId> & f
             auto & infoL = basins_[basinL];
             if ( h < getHeightAt( infoL.lowestVert ) )
                 infoL.lowestVert = v;
+            if ( h < infoL.lowestBdLevel )
+                infoL.lowestBdLevel = h;
             auto r = mesh_.topology.right( e );
             const Graph::VertId basinR( r ? face2basin[r] : outsideId_ );
             if ( basinL == basinR )
@@ -108,6 +113,22 @@ WatershedGraph::WatershedGraph( const Mesh & mesh, const Vector<int, FaceId> & f
             if ( h < getHeightAt( bd.lowestVert ) )
                 bd.lowestVert = v;
         }
+    }
+
+    for ( auto f : mesh_.topology.getValidFaces() )
+    {
+        const auto basin = Graph::VertId( face2basin[f] );
+        auto & info = basins_[basin];
+        info.area += 0.5f * mesh_.dirDblArea( f ).z;
+        volumeCalcs[basin].addTerrainTri( mesh_.getTriPoints( f ), info.lowestBdLevel );
+    }
+
+    for ( auto basin = Graph::VertId( 0 ); basin < outsideId_; ++basin )
+    {
+        auto & info = basins_[basin];
+        info.level = getHeightAt( info.lowestVert );
+        assert( info.level <= info.lowestBdLevel );
+        info.volume = (float)volumeCalcs[basin].getVolume();
     }
 
     graph_.construct( std::move( neighboursPerVertex ), std::move( endsPerEdge ) );

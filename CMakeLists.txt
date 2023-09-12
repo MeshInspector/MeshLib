@@ -58,9 +58,13 @@ ENDIF() # NOT MR_EMSCRIPTEN_SINGLETHREAD
 IF(WIN32 AND MINGW)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj")
 ENDIF()
-# make link to fail if there are unresolved symbols (only in GCC)
+# make link to fail if there are unresolved symbols (GCC and Clang)
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-z,defs")
+ENDIF()
+IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+# without disabling the warning, CMake will fail with the error "Looking for C++ include pthread.h - not found"
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-z,defs -Wno-unused-command-line-argument")
 ENDIF()
 message("CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
 

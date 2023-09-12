@@ -1,5 +1,5 @@
 #include "MRWatershedGraph.h"
-#include "MRMeshTopology.h"
+#include "MRMesh.h"
 #include "MRphmap.h"
 #include "MRRingIterator.h"
 #include "MRBitSetParallelFor.h"
@@ -28,9 +28,8 @@ struct hash<MR::Graph::EndVertices>
 namespace MR
 {
 
-WatershedGraph::WatershedGraph( const MeshTopology & topology, const VertScalars & heights, const Vector<int, FaceId> & face2basin, int numBasins )
-    : topology_( topology )
-    , heights_( heights )
+WatershedGraph::WatershedGraph( const Mesh & mesh, const Vector<int, FaceId> & face2basin, int numBasins )
+    : mesh_( mesh )
     , face2iniBasin_( face2basin )
 {
     MR_TIMER
@@ -50,14 +49,14 @@ WatershedGraph::WatershedGraph( const MeshTopology & topology, const VertScalars
 
     HashMap<Graph::EndVertices, Graph::EdgeId> neiBasins2edge;
 
-    for ( auto v : topology.getValidVerts() )
+    for ( auto v : mesh_.topology.getValidVerts() )
     {
-        const auto h = heights_[v];
+        const auto h = getHeightAt( v );
         bool bdVert = false;
         Graph::VertId basin0;
-        for ( auto e : orgRing( topology, v ) )
+        for ( auto e : orgRing( mesh_.topology, v ) )
         {
-            auto l = topology.left( e );
+            auto l = mesh_.topology.left( e );
             Graph::VertId basin( l ? face2basin[l] : outsideId_ );
             if ( !basin0 )
             {
@@ -80,14 +79,14 @@ WatershedGraph::WatershedGraph( const MeshTopology & topology, const VertScalars
             }
             continue;
         }
-        for ( auto e : orgRing( topology, v ) )
+        for ( auto e : orgRing( mesh_.topology, v ) )
         {
-            auto l = topology.left( e );
+            auto l = mesh_.topology.left( e );
             const Graph::VertId basinL( l ? face2basin[l] : outsideId_ );
             auto & infoL = basins_[basinL];
             if ( h < getHeightAt( infoL.lowestVert ) )
                 infoL.lowestVert = v;
-            auto r = topology.right( e );
+            auto r = mesh_.topology.right( e );
             const Graph::VertId basinR( r ? face2basin[r] : outsideId_ );
             if ( basinL == basinR )
                 continue;
@@ -112,6 +111,11 @@ WatershedGraph::WatershedGraph( const MeshTopology & topology, const VertScalars
     }
 
     graph_.construct( std::move( neighboursPerVertex ), std::move( endsPerEdge ) );
+}
+
+float WatershedGraph::getHeightAt( VertId v ) const
+{
+    return getAt( mesh_.points, v, { 0.f, 0.f, FLT_MAX } ).z;
 }
 
 Graph::VertId WatershedGraph::getRootBasin( Graph::VertId v ) const
@@ -194,7 +198,7 @@ FaceBitSet WatershedGraph::getBasinFaces( Graph::VertId basin ) const
     FaceBitSet res;
     if ( basin == outsideId_ )
         return res;
-    res.resize( topology_.faceSize() );
+    res.resize( mesh_.topology.faceSize() );
     assert( graph_.valid( basin ) );
     assert( basin == parentBasin_[basin] );
     BitSetParallelForAll( res, [&]( FaceId f )
@@ -211,7 +215,7 @@ FaceBitSet WatershedGraph::getBasinFacesBelowLevel( Graph::VertId basin, float w
     FaceBitSet res;
     if ( basin == outsideId_ )
         return res;
-    res.resize( topology_.faceSize() );
+    res.resize( mesh_.topology.faceSize() );
     assert( graph_.valid( basin ) );
     assert( basin == parentBasin_[basin] );
     BitSetParallelForAll( res, [&]( FaceId f )
@@ -219,9 +223,9 @@ FaceBitSet WatershedGraph::getBasinFacesBelowLevel( Graph::VertId basin, float w
         if ( basin != getRootBasin( Graph::VertId( face2iniBasin_[f] ) ) )
             return;
         VertId vs[3];
-        topology_.getTriVerts( f, vs );
+        mesh_.topology.getTriVerts( f, vs );
         for ( int i = 0; i < 3; ++i )
-            if ( heights_[vs[i]] < waterLevel )
+            if ( getHeightAt( vs[i] ) < waterLevel )
             {
                 res.set( f );
                 break;
@@ -233,13 +237,13 @@ FaceBitSet WatershedGraph::getBasinFacesBelowLevel( Graph::VertId basin, float w
 UndirectedEdgeBitSet WatershedGraph::getInterBasinEdges() const
 {
     MR_TIMER
-    UndirectedEdgeBitSet res( topology_.undirectedEdgeSize() );
+    UndirectedEdgeBitSet res( mesh_.topology.undirectedEdgeSize() );
     BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
     {
-        auto l = topology_.left( ue );
+        auto l = mesh_.topology.left( ue );
         if ( !l )
             return;
-        auto r = topology_.right( ue );
+        auto r = mesh_.topology.right( ue );
         if ( !r )
             return;
         const auto lBasin = getRootBasin( Graph::VertId( face2iniBasin_[l] ) );

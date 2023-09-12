@@ -23,11 +23,11 @@ public:
     };
 
 public:
-    /// constructs the graph from given mesh topology, heights in vertices, and initial subdivision on basins
-    MRMESH_API WatershedGraph( const MeshTopology & topology, const VertScalars & heights, const Vector<int, FaceId> & face2basin, int numBasins );
+    /// constructs the graph from given mesh, heights in z-coordinate, and initial subdivision on basins
+    MRMESH_API WatershedGraph( const Mesh & mesh, const Vector<int, FaceId> & face2basin, int numBasins );
 
     /// returns height at given vertex or FLT_MAX if the vertex is invalid
-    [[nodiscard]] float getHeightAt( VertId v ) const { return getAt( heights_, v, FLT_MAX ); }
+    [[nodiscard]] MRMESH_API float getHeightAt( VertId v ) const;
 
     /// returns underlying graph where each basin is a vertex
     [[nodiscard]] const Graph & graph() const { return graph_; }
@@ -71,8 +71,7 @@ public:
     [[nodiscard]] MRMESH_API UndirectedEdgeBitSet getInterBasinEdges() const;
 
 private:
-    const MeshTopology & topology_;
-    const VertScalars & heights_;
+    const Mesh & mesh_;
     const Vector<int, FaceId> & face2iniBasin_;
 
     Graph graph_;

@@ -2,18 +2,12 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 # nvcc supoorts only c++20
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_STANDARD 17)
 
-
-if( ${MR_FEDORA} )
-    set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-12.2/")
-    set(CMAKE_CUDA_PATH /usr/local/cuda-12.2)
-else()
-    set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-12.1/")
-    set(CMAKE_CUDA_PATH /usr/local/cuda-12.1)
-endif()
-
-set(CUDA_NVCC_EXECUTABLE ${CUDA_TOOLKIT_ROOT_DIR}bin/nvcc)
-set(CMAKE_CUDA_COMPILER ${CUDA_TOOLKIT_ROOT_DIR}bin/nvcc)
+set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda/")
+set(CMAKE_CUDA_PATH /usr/local/cuda/)
+set(CUDA_NVCC_EXECUTABLE ${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc)
+set(CMAKE_CUDA_COMPILER ${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc)
 
 find_package(CUDA 12 REQUIRED)
 
@@ -25,7 +19,6 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_52 \
             -gencode=arch=compute_70,code=sm_70 \
             -gencode=arch=compute_75,code=sm_75 \
             -gencode=arch=compute_75,code=compute_75 ")
-#enable_language(CUDA)
 set(CUDA_VERBOSE_BUILD ON)
 
 project(MRCuda CXX CUDA)

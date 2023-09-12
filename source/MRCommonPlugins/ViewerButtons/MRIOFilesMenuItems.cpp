@@ -301,7 +301,14 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
                     AppendHistory<ChangeSceneAction>( "Open DICOMs", obj, ChangeSceneAction::Type::AddObject );
                     SceneRoot::get().addChild( obj );
                 }
-                viewer->viewport().preciseFitDataToScreenBorder( { 0.9f }  );
+                viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
+
+                if ( voxelObjects.size() == 1 )
+                {
+                    std::filesystem::path scenePath = directory;
+                    scenePath += ".mru";
+                    getViewerInstance().onSceneSaved( scenePath, false );
+                }
 
                 if ( !voxelObjects.empty() )
                     getViewerInstance().recentFilesStore.storeFile( directory );

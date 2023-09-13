@@ -1,5 +1,7 @@
 #include "MRPointsLoad.h"
 #if !defined( MRMESH_NO_LAS )
+#include "MRAffineXf3.h"
+#include "MRBox.h"
 #include "MRColor.h"
 #include "MRPointCloud.h"
 
@@ -214,22 +216,38 @@ Color getColor( uint8_t classification )
         return Color::black();
 }
 
-Expected<PointCloud, std::string> process( lazperf::reader::basic_file& reader, VertColors* colors, ProgressCallback callback )
+Expected<PointCloud, std::string> process( lazperf::reader::basic_file& reader, VertColors* colors, AffineXf3f* outXf, ProgressCallback callback )
 {
     const auto pointCount = reader.pointCount();
 
     const auto& header = reader.header();
     const auto pointFormat = header.pointFormat();
 
+    constexpr size_t maxPointRecordLength = sizeof( LasPoint10 );
+    std::array<char, maxPointRecordLength> buf { '\0' };
+    if ( buf.size() < header.point_record_length )
+        return unexpected( fmt::format( "Unsupported LAS format version: {}.{}", header.version.major, header.version.minor ) );
+
     PointCloud result;
     result.points.reserve( pointCount );
     if ( colors )
         colors->reserve( pointCount );
 
-    constexpr size_t maxPointRecordLength = sizeof( LasPoint10 );
-    std::array<char, maxPointRecordLength> buf { '\0' };
-    if ( buf.size() < header.point_record_length )
-        return unexpected( fmt::format( "Unsupported LAS format version: {}.{}", header.version.major, header.version.minor ) );
+    Vector3d offset {
+        header.offset.x,
+        header.offset.y,
+        header.offset.z,
+    };
+    if ( outXf )
+    {
+        const Box3d box {
+            { header.minx, header.miny, header.minz },
+            { header.maxx, header.maxy, header.maxz },
+        };
+        const auto center = box.center();
+        *outXf = AffineXf3f::translation( Vector3f( center ) );
+        offset -= center;
+    }
 
     for ( auto i = 0; i < pointCount; ++i )
     {
@@ -238,11 +256,12 @@ Expected<PointCloud, std::string> process( lazperf::reader::basic_file& reader, 
 
         reader.readPoint( buf.data() );
         const auto point = getPoint( buf.data(), pointFormat );
-        result.points.emplace_back(
-            point.x * reader.header().scale.x + reader.header().offset.x,
-            point.y * reader.header().scale.y + reader.header().offset.y,
-            point.z * reader.header().scale.z + reader.header().offset.z
-        );
+        const Vector3d pos {
+            point.x * header.scale.x + offset.x,
+            point.y * header.scale.y + offset.y,
+            point.z * header.scale.z + offset.z,
+        };
+        result.points.emplace_back( pos );
 
         if ( colors )
         {
@@ -272,12 +291,12 @@ Expected<PointCloud, std::string> process( lazperf::reader::basic_file& reader, 
 namespace MR::PointsLoad
 {
 
-Expected<PointCloud, std::string> fromLas( const std::filesystem::path& file, VertColors* colors, ProgressCallback callback )
+Expected<PointCloud, std::string> fromLas( const std::filesystem::path& file, VertColors* colors, AffineXf3f* outXf, ProgressCallback callback )
 {
     try
     {
         lazperf::reader::named_file reader( file.string() );
-        return process( reader, colors, std::move( callback ) );
+        return process( reader, colors, outXf, std::move( callback ) );
     }
     catch ( const std::exception& exc )
     {
@@ -285,12 +304,12 @@ Expected<PointCloud, std::string> fromLas( const std::filesystem::path& file, Ve
     }
 }
 
-Expected<PointCloud, std::string> fromLas( std::istream& in, VertColors* colors, ProgressCallback callback )
+Expected<PointCloud, std::string> fromLas( std::istream& in, VertColors* colors, AffineXf3f* outXf, ProgressCallback callback )
 {
     try
     {
         lazperf::reader::generic_file reader( in );
-        return process( reader, colors, std::move( callback ) );
+        return process( reader, colors, outXf, std::move( callback ) );
     }
     catch ( const std::exception& exc )
     {

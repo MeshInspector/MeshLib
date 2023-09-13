@@ -1,8 +1,10 @@
 #include "MRPointsLoad.h"
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
+#include "MRAffineXf3.h"
+#include "MRBox.h"
+#include "MRColor.h"
 #include "MRPointCloud.h"
 #include "MRStringConvert.h"
-#include "MRColor.h"
 #include "MRTimer.h"
 #include <MRPch/MRSpdlog.h> //fmt
 
@@ -22,7 +24,8 @@ namespace MR
 namespace PointsLoad
 {
 
-Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, VertColors* colors, ProgressCallback progress )
+Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, VertColors* colors, AffineXf3f* outXf,
+                                           ProgressCallback progress )
 {
     MR_TIMER
 
@@ -38,6 +41,25 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
         e57::Data3D scanHeader;
         eReader.ReadData3D( scanIndex, scanHeader );
 
+        std::optional<Vector3d> offset;
+        if ( outXf )
+        {
+            const auto& bounds = scanHeader.cartesianBounds;
+            const Box3d box {
+                { bounds.xMinimum, bounds.yMinimum, bounds.zMinimum },
+                { bounds.xMaximum, bounds.yMaximum, bounds.zMaximum },
+            };
+            if ( box.valid() )
+            {
+                offset = box.center();
+                *outXf = AffineXf3f::translation( Vector3f( *offset ) );
+            }
+        }
+        else
+        {
+            offset = Vector3d();
+        }
+
         int64_t nColumn = 0;
         int64_t nRow = 0;
         int64_t nPointsSize = 0;
@@ -52,11 +74,11 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
         const int64_t nSize = std::min( nPointsSize, int64_t( 1024 ) * 128 );
 
 #ifdef MR_OLD_E57
-        e57::Data3DPointsData buffers;
+        e57::Data3DPointsData_d buffers;
 #else
-        e57::Data3DPointsFloat buffers;
+        e57::Data3DPointsDouble buffers;
 #endif
-        std::vector<float> xs( nSize ), ys( nSize ), zs( nSize );
+        std::vector<double> xs( nSize ), ys( nSize ), zs( nSize );
         buffers.cartesianX = xs.data();
         buffers.cartesianY = ys.data();
         buffers.cartesianZ = zs.data();
@@ -95,11 +117,30 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
                 if ( colors && hasInputColors )
                     colors->reserve( nPointsSize );
             }
+            if ( outXf && !offset )
+            {
+                offset = {
+                    buffers.cartesianX[0],
+                    buffers.cartesianY[0],
+                    buffers.cartesianZ[0],
+                };
+                *outXf = AffineXf3f::translation( Vector3f( *offset ) );
+            }
             for ( unsigned long i = 0; i < size; ++i )
             {
-                res.points.emplace_back( buffers.cartesianX[i], buffers.cartesianY[i], buffers.cartesianZ[i] );
+                res.points.emplace_back(
+                    buffers.cartesianX[i] - offset->x,
+                    buffers.cartesianY[i] - offset->y,
+                    buffers.cartesianZ[i] - offset->z
+                );
                 if ( colors && hasInputColors )
-                    colors->emplace_back( buffers.colorRed[i], buffers.colorGreen[i], buffers.colorBlue[i] );
+                {
+                    colors->emplace_back(
+                        buffers.colorRed[i],
+                        buffers.colorGreen[i],
+                        buffers.colorBlue[i]
+                    );
+                }
             }
         }
         assert( res.points.size() == (size_t)nPointsSize );

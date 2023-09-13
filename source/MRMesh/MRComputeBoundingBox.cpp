@@ -54,10 +54,10 @@ Box<V> computeBoundingBox( const Vector<V, VertId> & points, const VertBitSet & 
     return computeBoundingBox( points, &region, toWorld );
 }
 
-template Box2f computeBoundingBox( const Vector<Vector2f, VertId> & points, const VertBitSet & region, const AffineXf2f * toWorld );
-template Box3f computeBoundingBox( const Vector<Vector3f, VertId> & points, const VertBitSet & region, const AffineXf3f * toWorld );
+template MRMESH_API Box2f computeBoundingBox( const Vector<Vector2f, VertId> & points, const VertBitSet & region, const AffineXf2f * toWorld );
+template MRMESH_API Box3f computeBoundingBox( const Vector<Vector3f, VertId> & points, const VertBitSet & region, const AffineXf3f * toWorld );
 
-template Box2f computeBoundingBox( const Vector<Vector2f, VertId>& points, const VertBitSet* region, const AffineXf2f* toWorld );
-template Box3f computeBoundingBox( const Vector<Vector3f, VertId>& points, const VertBitSet* region, const AffineXf3f* toWorld );
+template MRMESH_API Box2f computeBoundingBox( const Vector<Vector2f, VertId>& points, const VertBitSet* region, const AffineXf2f* toWorld );
+template MRMESH_API Box3f computeBoundingBox( const Vector<Vector3f, VertId>& points, const VertBitSet* region, const AffineXf3f* toWorld );
 
 } //namespace MR

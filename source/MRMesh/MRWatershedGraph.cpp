@@ -157,6 +157,19 @@ Graph::VertId WatershedGraph::getRootBasin( Graph::VertId v ) const
     }
 }
 
+Graph::VertId WatershedGraph::flowsTo( Graph::VertId v ) const
+{
+    assert( v );
+    assert( graph_.valid( v ) );
+    for (;;)
+    {
+        auto p = basins_[v].overflowTo;
+        if ( !p )
+            return v;
+        v = p;
+    }
+}
+
 void WatershedGraph::setParentsToRoots()
 {
     MR_TIMER

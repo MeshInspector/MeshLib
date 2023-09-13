@@ -77,8 +77,11 @@ public:
     /// returns special "basin" representing outside areas of the mesh
     [[nodiscard]] Graph::VertId outsideId() const { return outsideId_; }
 
-    /// for valid basin return its id; for invalid basin returns the id of basin it was merged in
+    /// for valid basin returns self id; for invalid basin returns the id of basin it was merged in
     [[nodiscard]] MRMESH_API Graph::VertId getRootBasin( Graph::VertId v ) const;
+
+    /// returns basin where the flow from this basin goes (it can be self id if the basin is not full yet)
+    [[nodiscard]] MRMESH_API Graph::VertId flowsTo( Graph::VertId v ) const;
 
     /// replaces parent of each basin with its computed root;
     /// this speeds up following calls to getRootBasin()

@@ -23,7 +23,7 @@ public:
         float time = FLT_MAX;
         Graph::VertId basin;     ///< BasinFull: this basin just became full
                                  ///< Merge: this basin just absorbed the other basin
-        Graph::VertId neiBasin;  ///< BasinFull: the flow from full basin will go here
+        Graph::VertId neiBasin;  ///< BasinFull: the flow from full basin will first go here (may be not the last destination)
                                  ///< Merge: this basin was just absorbed
     };
 
@@ -58,11 +58,38 @@ auto PrecipitationSimulator::simulateOne() -> SimulationStep
     res.time = time;
 
     auto& info = wg_.basinInfo( basin );
+    assert( !info.overflowTo );
     info.lastUpdateTime = time;
     info.remVolume = 0;
 
-    res.event = Event::BasinFull;
-    res.basin = basin;
+    for ( auto bd : wg_.graph().neighbours( basin ) )
+    {
+        const auto & bdInfo = wg_.bdInfo( bd );
+        if ( wg_.getHeightAt( bdInfo.lowestVert ) != info.lowestBdLevel )
+            continue;
+        const auto neiBasin = wg_.graph().ends( bd ).otherEnd( basin );
+        auto targetBasin = wg_.flowsTo( neiBasin );
+        if ( targetBasin == basin )
+        {
+            res.event = Event::Merge;
+            //auto& neiInfo = wg_.basinInfo( basin );
+            //...
+            return res;
+        }
+        if ( targetBasin != wg_.outsideId() )
+        {
+            auto& targetInfo = wg_.basinInfo( targetBasin );
+            targetInfo.update( time );
+            targetInfo.area += info.area;
+        }
+        info.area = 0;
+        info.overflowTo = neiBasin;
+        res.event = Event::BasinFull;
+        res.basin = basin;
+        res.neiBasin = neiBasin;
+        return res;
+    }
+    assert( false );
     return res;
 }
 

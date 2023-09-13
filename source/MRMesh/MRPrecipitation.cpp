@@ -68,12 +68,15 @@ auto PrecipitationSimulator::simulateOne() -> SimulationStep
         if ( wg_.getHeightAt( bdInfo.lowestVert ) != info.lowestBdLevel )
             continue;
         const auto neiBasin = wg_.graph().ends( bd ).otherEnd( basin );
+        res.basin = basin;
+        res.neiBasin = neiBasin;
         auto targetBasin = wg_.flowsTo( neiBasin );
         if ( targetBasin == basin )
         {
             res.event = Event::Merge;
-            //auto& neiInfo = wg_.basinInfo( basin );
-            //...
+            wg_.merge( basin, neiBasin );
+            heap_.setSmallerValue( neiBasin, infTime );
+            heap_.setSmallerValue( basin, info.timeTillOverflow() );
             return res;
         }
         if ( targetBasin != wg_.outsideId() )
@@ -81,15 +84,16 @@ auto PrecipitationSimulator::simulateOne() -> SimulationStep
             auto& targetInfo = wg_.basinInfo( targetBasin );
             targetInfo.update( time );
             targetInfo.area += info.area;
+            heap_.setSmallerValue( basin, infTime );
+            heap_.setLargerValue( targetBasin, targetInfo.timeTillOverflow() );
         }
         info.area = 0;
         info.overflowTo = neiBasin;
         res.event = Event::BasinFull;
-        res.basin = basin;
-        res.neiBasin = neiBasin;
         return res;
     }
     assert( false );
+    heap_.setSmallerValue( basin, infTime );
     return res;
 }
 

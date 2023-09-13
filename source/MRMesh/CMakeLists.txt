@@ -173,7 +173,6 @@ ELSE()
 		gtest
 		zip
 		Boost::boost
-		dl
 		jsoncpp
 		tbb
 		${MRMESH_OPTIONAL_DEPENDENCIES}

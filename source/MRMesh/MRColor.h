@@ -31,6 +31,7 @@ struct Color
     static constexpr Color blue() noexcept { return Color( 0, 0, 255, 255 ); }
     static constexpr Color yellow() noexcept { return Color( 255, 255, 0, 255 ); }
     static constexpr Color brown() noexcept { return Color( 135, 74, 43, 255 ); }
+    static constexpr Color purple() noexcept { return Color( 128, 0, 128, 255 ); }
     static constexpr Color transparent() noexcept { return Color( 0, 0, 0, 0 ); }
 
     template<typename T>

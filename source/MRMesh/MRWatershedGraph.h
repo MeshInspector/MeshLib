@@ -20,6 +20,7 @@ public:
         float lowestBdLevel = FLT_MAX; ///< lowest position on the boundary of the basin
         float fullVolume = 0; ///< full water volume to be accumulated in the basin till water reaches the lowest height on the boundary
         float remVolume = 0;  ///< remaining water volume to be accumulated in the basin till water reaches the lowest height on the boundary
+        float lastUpdateTime = 0; ///< the time when remVolume was last updated
         Graph::VertId overflowTo; ///< when level=lowestBdLevel, volume=0, all water from this basin overflows to given basin, and this.area becomes equal to 0
 
         float timeTillOverflow() const
@@ -34,6 +35,15 @@ public:
             const auto p = remVolume / fullVolume;
             assert( p >= 0 && p <= 1 );
             return p * lowestLevel + ( 1 - p ) * lowestBdLevel;
+        }
+
+        void update( float time )
+        {
+            assert( time >= lastUpdateTime );
+            remVolume -= ( time - lastUpdateTime ) * area;
+            if ( remVolume < 0 ) // due to rounding errors
+                remVolume = 0;
+            lastUpdateTime = time;
         }
     };
 
@@ -58,9 +68,11 @@ public:
 
     /// returns data associated with given basin
     [[nodiscard]] const BasinInfo & basinInfo( Graph::VertId v ) const { return basins_[v]; }
+    [[nodiscard]] BasinInfo & basinInfo( Graph::VertId v ) { return basins_[v]; }
 
     /// returns data associated with given boundary between basins
     [[nodiscard]] const BdInfo & bdInfo( Graph::EdgeId e ) const { return bds_[e]; }
+    [[nodiscard]] BdInfo & bdInfo( Graph::EdgeId e ) { return bds_[e]; }
 
     /// returns special "basin" representing outside areas of the mesh
     [[nodiscard]] Graph::VertId outsideId() const { return outsideId_; }

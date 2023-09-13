@@ -103,6 +103,10 @@ public:
     /// returns the mesh faces of given basin with at least one vertex below given level
     [[nodiscard]] MRMESH_API FaceBitSet getBasinFacesBelowLevel( Graph::VertId basin, float waterLevel ) const;
 
+    /// returns water volume in basin when its surface reaches given level, which must be in between
+    /// the lowest basin level and the lowest level on basin's boundary
+    [[nodiscard]] MRMESH_API double computeBasinVolume( Graph::VertId basin, float waterLevel ) const;
+
     /// returns the mesh edges between current basins
     [[nodiscard]] MRMESH_API UndirectedEdgeBitSet getInterBasinEdges() const;
 

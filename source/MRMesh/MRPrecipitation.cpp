@@ -74,6 +74,8 @@ auto PrecipitationSimulator::simulateOne() -> SimulationStep
         if ( targetBasin == basin )
         {
             res.event = Event::Merge;
+            auto& neiInfo = wg_.basinInfo( neiBasin );
+            neiInfo.update( time );
             wg_.merge( basin, neiBasin );
             heap_.setSmallerValue( neiBasin, infTime );
             heap_.setSmallerValue( basin, info.timeTillOverflow() );

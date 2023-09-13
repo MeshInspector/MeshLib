@@ -214,10 +214,19 @@ Graph::VertId WatershedGraph::merge( Graph::VertId v0, Graph::VertId v1 )
 
     assert( parentBasin_[v1] == v1 );
     parentBasin_[v1] = v0;
-    if ( basins_[v1].lowestLevel < basins_[v0].lowestLevel )
+
+    auto & info0 = basins_[v0];
+    auto & info1 = basins_[v1];
+    assert( info0.lastUpdateTime == info1.lastUpdateTime );
+    assert( info0.remVolume == 0 );
+    assert( info1.remVolume == 0 );
+    assert( info1.area == 0 );
+    assert( !info0.overflowTo );
+    assert( info0.lowestBdLevel == info1.lowestBdLevel );
+    if ( info1.lowestLevel < info0.lowestLevel )
     {
-        basins_[v0].lowestVert = basins_[v1].lowestVert;
-        basins_[v0].lowestLevel = basins_[v1].lowestLevel;
+        info0.lowestVert = info1.lowestVert;
+        info0.lowestLevel = info1.lowestLevel;
     }
 
     graph_.merge( v0, v1, [&]( Graph::EdgeId eremnant, Graph::EdgeId edead )
@@ -225,6 +234,17 @@ Graph::VertId WatershedGraph::merge( Graph::VertId v0, Graph::VertId v1 )
         if ( getHeightAt( bds_[edead].lowestVert ) < getHeightAt( bds_[eremnant].lowestVert ) )
             bds_[eremnant].lowestVert = bds_[edead].lowestVert;
     } );
+
+    info0.lowestBdLevel = FLT_MAX;
+    for ( auto bd : graph_.neighbours( v0 ) )
+    {
+        const auto& bdInfo = bds_[bd];
+        info0.lowestBdLevel = std::min( info0.lowestBdLevel, getHeightAt( bdInfo.lowestVert ) );
+    }
+    const auto newVolume = (float)computeBasinVolume( v0, info0.lowestBdLevel );
+    info0.remVolume = newVolume - info0.fullVolume;
+    info0.fullVolume = newVolume;
+
     return v0;
 }
 
@@ -275,6 +295,11 @@ FaceBitSet WatershedGraph::getBasinFacesBelowLevel( Graph::VertId basin, float w
             }
     } );
     return res;
+}
+
+double WatershedGraph::computeBasinVolume( Graph::VertId basin, float waterLevel ) const
+{
+    return MR::computeBasinVolume( mesh_, getBasinFacesBelowLevel( basin, waterLevel ), waterLevel );
 }
 
 UndirectedEdgeBitSet WatershedGraph::getInterBasinEdges() const

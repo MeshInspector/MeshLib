@@ -1,6 +1,8 @@
 #include "MRBasinVolume.h"
 #include "MRVector3.h"
 #include "MRVector2.h"
+#include "MRMesh.h"
+#include "MRTimer.h"
 #include <algorithm>
 #include <cassert>
 
@@ -55,6 +57,15 @@ bool BasinVolumeCalculator::addTerrainTri( Triangle3f t, float level )
         sum_ += ( level - ps[0].z ) * cross( Vector2d( ps[1] ), Vector2d( ps[2] ) );
     }
     return true;
+}
+
+double computeBasinVolume( const Mesh& mesh, const FaceBitSet& faces, float level )
+{
+    MR_TIMER
+    BasinVolumeCalculator calc;
+    for ( auto f : faces )
+        calc.addTerrainTri( mesh.getTriPoints( f ), level );
+    return calc.getVolume();
 }
 
 } //namespace MR

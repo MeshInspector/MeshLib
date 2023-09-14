@@ -324,6 +324,7 @@
     <ClInclude Include="MRNoDefInit.h" />
     <ClInclude Include="MRParallelFor.h" />
     <ClInclude Include="MRVoxelsConversionsByParts.h" />
+    <ClInclude Include="MRMeshOverhangs.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -559,6 +560,7 @@
     <ClCompile Include="MRUniteManyMeshes.cpp" />
     <ClCompile Include="MRVoxelsConversionsByParts.cpp" />
     <ClCompile Include="MRWatershedGraph.cpp" />
+    <ClCompile Include="MRMeshOverhangs.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\laz-perf\laz-perf.vcxproj">

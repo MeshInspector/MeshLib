@@ -18,9 +18,11 @@ public:
         float lowestLevel = FLT_MAX; ///< lowest level (z-coordinate of lowestVert) in the basin
         float area = 0;    ///< precipitation area that flows in this basin
         float lowestBdLevel = FLT_MAX; ///< lowest position on the boundary of the basin
-        float fullVolume = 0; ///< full water volume to be accumulated in the basin till water reaches the lowest height on the boundary
+        float maxVolume = 0; ///< full water volume to be accumulated in the basin till water reaches the lowest height on the boundary
         float remVolume = 0;  ///< remaining water volume to be accumulated in the basin till water reaches the lowest height on the boundary
         float lastUpdateTime = 0; ///< the time when remVolume was last updated
+        float lastMergeLevel = FLT_MAX; ///< water level in the basin when it was formed (by merge or creation)
+        float lastMergeVolume = 0; ///< water volume in the basin when it was formed (by merge or creation)
         Graph::VertId overflowTo; ///< when level=lowestBdLevel, volume=0, all water from this basin overflows to given basin, and this.area becomes equal to 0
 
         float timeTillOverflow() const
@@ -32,9 +34,13 @@ public:
         /// approximate current level of water (z-coordinate) in the basin
         float approxLevel() const
         { 
-            const auto p = remVolume / fullVolume;
+            assert( lastMergeLevel <= lowestBdLevel );
+            assert( lastMergeVolume <= maxVolume );
+            if ( maxVolume <= lastMergeVolume )
+                return lowestBdLevel;
+            const auto p = remVolume / ( maxVolume - lastMergeVolume );
             assert( p >= 0 && p <= 1 );
-            return p * lowestLevel + ( 1 - p ) * lowestBdLevel;
+            return p * lastMergeLevel + ( 1 - p ) * lowestBdLevel;
         }
 
         void update( float time )

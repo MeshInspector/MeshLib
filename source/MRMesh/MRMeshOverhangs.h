@@ -9,7 +9,7 @@ namespace MR
 /// parameters for MR::findOverhangs
 struct FindOverhangsSettings
 {
-    /// base axis
+    /// base axis marking the up direction
     Vector3f axis;
     /// height of a layer
     float layerHeight { 1.f };

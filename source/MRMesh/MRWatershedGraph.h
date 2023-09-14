@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRGraph.h"
+#include <cassert>
 #include <cfloat>
 
 namespace MR
@@ -14,6 +15,46 @@ public:
     struct BasinInfo
     {
         VertId lowestVert; ///< in the whole basin
+        float lowestLevel = FLT_MAX; ///< lowest level (z-coordinate of lowestVert) in the basin
+        float area = 0;    ///< precipitation area that flows in this basin
+        float lowestBdLevel = FLT_MAX; ///< lowest position on the boundary of the basin
+        float maxVolume = 0; ///< full water volume to be accumulated in the basin till water reaches the lowest height on the boundary
+        float accVolume = 0; ///< accumulated water volume in the basin so far
+        float lastUpdateAmount = 0; ///< the amount when accVolume was last updated
+        float lastMergeLevel = FLT_MAX; ///< water level in the basin when it was formed (by merge or creation)
+        float lastMergeVolume = 0; ///< water volume in the basin when it was formed (by merge or creation)
+        Graph::VertId overflowTo; ///< when level=lowestBdLevel, volume=0, all water from this basin overflows to given basin, and this.area becomes equal to 0
+
+        /// amount of precipitation (in same units as mesh coordinates and water level),
+        /// which can be added before overflowing the basin
+        float amountTillOverflow() const
+        { 
+            assert( !overflowTo );
+            assert( maxVolume >= accVolume );
+            return ( maxVolume - accVolume ) / area;
+        }
+
+        /// approximate current level of water (z-coordinate) in the basin
+        float approxLevel() const
+        { 
+            assert( lastMergeLevel <= lowestBdLevel );
+            assert( lastMergeVolume <= maxVolume );
+            if ( maxVolume <= lastMergeVolume )
+                return lowestBdLevel;
+            const auto p = ( maxVolume - accVolume ) / ( maxVolume - lastMergeVolume );
+            assert( p >= 0 && p <= 1 );
+            return p * lastMergeLevel + ( 1 - p ) * lowestBdLevel;
+        }
+
+        /// updates accumulated volume in the basin to the moment of given precipitation amount
+        void updateAccVolume( float amount )
+        {
+            assert( amount >= lastUpdateAmount );
+            accVolume += ( amount - lastUpdateAmount ) * area;
+            if ( accVolume > maxVolume ) // due to rounding errors
+                accVolume = maxVolume;
+            lastUpdateAmount = amount;
+        }
     };
 
     /// associated with each edge in graph
@@ -23,11 +64,11 @@ public:
     };
 
 public:
-    /// constructs the graph from given mesh topology, heights in vertices, and initial subdivision on basins
-    MRMESH_API WatershedGraph( const MeshTopology & topology, const VertScalars & heights, const Vector<int, FaceId> & face2basin, int numBasins );
+    /// constructs the graph from given mesh, heights in z-coordinate, and initial subdivision on basins
+    MRMESH_API WatershedGraph( const Mesh & mesh, const Vector<int, FaceId> & face2basin, int numBasins );
 
     /// returns height at given vertex or FLT_MAX if the vertex is invalid
-    [[nodiscard]] float getHeightAt( VertId v ) const { return getAt( heights_, v, FLT_MAX ); }
+    [[nodiscard]] MRMESH_API float getHeightAt( VertId v ) const;
 
     /// returns underlying graph where each basin is a vertex
     [[nodiscard]] const Graph & graph() const { return graph_; }
@@ -37,15 +78,20 @@ public:
 
     /// returns data associated with given basin
     [[nodiscard]] const BasinInfo & basinInfo( Graph::VertId v ) const { return basins_[v]; }
+    [[nodiscard]] BasinInfo & basinInfo( Graph::VertId v ) { return basins_[v]; }
 
     /// returns data associated with given boundary between basins
     [[nodiscard]] const BdInfo & bdInfo( Graph::EdgeId e ) const { return bds_[e]; }
+    [[nodiscard]] BdInfo & bdInfo( Graph::EdgeId e ) { return bds_[e]; }
 
     /// returns special "basin" representing outside areas of the mesh
     [[nodiscard]] Graph::VertId outsideId() const { return outsideId_; }
 
-    /// for valid basin return its id; for invalid basin returns the id of basin it was merged in
+    /// for valid basin returns self id; for invalid basin returns the id of basin it was merged in
     [[nodiscard]] MRMESH_API Graph::VertId getRootBasin( Graph::VertId v ) const;
+
+    /// returns basin where the flow from this basin goes (it can be self id if the basin is not full yet)
+    [[nodiscard]] MRMESH_API Graph::VertId flowsTo( Graph::VertId v ) const;
 
     /// replaces parent of each basin with its computed root;
     /// this speeds up following calls to getRootBasin()
@@ -67,12 +113,16 @@ public:
     /// returns the mesh faces of given basin with at least one vertex below given level
     [[nodiscard]] MRMESH_API FaceBitSet getBasinFacesBelowLevel( Graph::VertId basin, float waterLevel ) const;
 
+    /// returns water volume in basin when its surface reaches given level, which must be in between
+    /// the lowest basin level and the lowest level on basin's boundary
+    [[nodiscard]] MRMESH_API double computeBasinVolume( Graph::VertId basin, float waterLevel ) const;
+
     /// returns the mesh edges between current basins
-    [[nodiscard]] MRMESH_API UndirectedEdgeBitSet getInterBasinEdges() const;
+    /// \param includeFlotToBds if true then the boundaries between basins related by (overflowTo) will also be included
+    [[nodiscard]] MRMESH_API UndirectedEdgeBitSet getInterBasinEdges( bool includeOverflowToBds ) const;
 
 private:
-    const MeshTopology & topology_;
-    const VertScalars & heights_;
+    const Mesh & mesh_;
     const Vector<int, FaceId> & face2iniBasin_;
 
     Graph graph_;

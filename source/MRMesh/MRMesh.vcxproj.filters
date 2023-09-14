@@ -1053,6 +1053,9 @@
     <ClInclude Include="MRBasinVolume.h">
       <Filter>Source Files\WaterFlow</Filter>
     </ClInclude>
+    <ClInclude Include="MRPrecipitationSimulator.h">
+      <Filter>Source Files\WaterFlow</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1753,6 +1756,9 @@
     </ClCompile>
     <ClCompile Include="MRPointsLoadLas.cpp">
       <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPrecipitationSimulator.cpp">
+      <Filter>Source Files\WaterFlow</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

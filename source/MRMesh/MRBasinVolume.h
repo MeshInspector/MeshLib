@@ -21,4 +21,8 @@ private:
     double sum_ = 0;
 };
 
+/// computes the volume of given mesh basin below given water level;
+/// \param faces shall include all basin faces at least partially below the water level
+[[nodiscard]] MRMESH_API double computeBasinVolume( const Mesh& mesh, const FaceBitSet& faces, float level );
+
 } //namespace MR

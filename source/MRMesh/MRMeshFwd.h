@@ -427,6 +427,16 @@ using VertColorMapAggregator = ColorMapAggregator<VertTag>;
 using UndirEdgeColorMapAggregator = ColorMapAggregator<UndirectedEdgeTag>;
 using FaceColorMapAggregator = ColorMapAggregator<FaceTag>;
 
+class Graph;
+class GraphVertTag;
+class GraphEdgeTag;
+using GraphVertId = Id<GraphVertTag>;
+using GraphEdgeId = Id<GraphEdgeTag>;
+using GraphVertBitSet = TaggedBitSet<GraphVertTag>;
+using GraphEdgeBitSet = TaggedBitSet<GraphEdgeTag>;
+
+class WatershedGraph;
+
 enum class FilterType : char
 {
     Linear,

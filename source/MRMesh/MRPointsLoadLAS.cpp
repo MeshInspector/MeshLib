@@ -7,11 +7,15 @@
 
 #include "MRPch/MRSpdlog.h"
 
+#ifdef _MSC_VER
 #pragma warning( push )
 #pragma warning( disable: 5267 )
+#endif
 #include <lazperf/lazperf.hpp>
 #include <lazperf/readers.hpp>
+#ifdef _MSC_VER
 #pragma warning( pop )
+#endif
 
 namespace
 {

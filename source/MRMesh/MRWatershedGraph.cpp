@@ -244,7 +244,7 @@ Graph::VertId WatershedGraph::merge( Graph::VertId v0, Graph::VertId v1 )
         info0.lowestBdLevel = std::min( info0.lowestBdLevel, getHeightAt( bdInfo.lowestVert ) );
     }
     info0.lastMergeVolume = info0.maxVolume + info1.maxVolume;
-    info0.maxVolume = ( float )computeBasinVolume( v0, info0.lowestBdLevel );
+    info0.maxVolume = std::max( info0.lastMergeVolume, ( float )computeBasinVolume( v0, info0.lowestBdLevel ) );
     info0.remVolume = info0.maxVolume - info0.lastMergeVolume;
     assert( info0.remVolume >= 0 );
 

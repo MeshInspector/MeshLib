@@ -7,9 +7,11 @@
 namespace MR
 {
 
+/// the class models water increase in the terrain under the rain with constant precipitation
 class PrecipitationSimulator
 {
 public:
+    /// initializes modeling from the initial subdivision of the terrain
     MRMESH_API PrecipitationSimulator( WatershedGraph& wg );
 
     enum class Event
@@ -29,7 +31,7 @@ public:
                                ///< Merge: this basin was just absorbed
     };
 
-    /// processes the next event in precipitation
+    /// processes the next event happened with the terrain basins
     MRMESH_API SimulationStep simulateOne();
 
 private:
@@ -39,4 +41,3 @@ private:
 };
 
 } //namespace MR
-

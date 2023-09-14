@@ -6,6 +6,7 @@
 #include "MRMesh.h"
 #include "MRMeshComponents.h"
 #include "MRRegionBoundary.h"
+#include "MRTimer.h"
 
 #include <cassert>
 
@@ -14,6 +15,8 @@ namespace MR
 
 std::vector<FaceBitSet> findOverhangs( const Mesh& mesh, const FindOverhangsSettings& settings )
 {
+    MR_TIMER
+
     assert( std::abs( settings.axis.lengthSq() - 1.f ) < 1e-6f );
     assert( settings.layerHeight > 0.f );
     assert( settings.maxOverhangDistance > 0.f );

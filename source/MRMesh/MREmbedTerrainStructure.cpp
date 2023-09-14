@@ -18,6 +18,7 @@
 #include "MRMeshIntersect.h"
 #include "MRPolyline.h"
 #include "MRLinesSave.h"
+#include "MRMapEdge.h"
 
 namespace MR
 {
@@ -90,7 +91,7 @@ OffsetBlock offsetContour( const Contour3f& cont, const VertBitSet& cutBitSet,
             ++res.contourIdsShifts[i];
         }
 
-        res.contour.emplace_back( destPt + norm * offset( i ) );
+        res.contour.emplace_back( destPt + norm * offset( i + 1 ) );
         ++res.contourIdsShifts[i + 1];
     }
     int prevSum = 0;
@@ -192,15 +193,15 @@ Expected<Mesh, std::string> embedStructureToTerrain(
     bool needCut = ecParams.cutBitSet.any();
     bool needFill = ecParams.cutBitSet.count() + 1 != cont.size();
     assert( needCut || needFill );
-    FaceBitSet extenedFaces;
-    if ( !needFill || !needCut )
-    {
-        auto desiredZ = needFill ?
-            globalBox.max.z + boxSize.z * boxExpansion :
-            globalBox.min.z - boxSize.z * boxExpansion;
-        for ( auto e : resMesh.topology.findHoleRepresentiveEdges() )
-            extendHole( resMesh, e, Plane3f( Vector3f::plusZ(), desiredZ ), &extenedFaces );
-    }
+    //FaceBitSet extenedFaces;
+    //if ( !needFill || !needCut )
+    //{
+    //    auto desiredZ = needFill ?
+    //        globalBox.max.z + boxSize.z * boxExpansion :
+    //        globalBox.min.z - boxSize.z * boxExpansion;
+    //    for ( auto e : resMesh.topology.findHoleRepresentiveEdges() )
+    //        extendHole( resMesh, e, Plane3f( Vector3f::plusZ(), desiredZ ), &extenedFaces );
+    //}
 
 
     auto cutOffset = std::clamp( std::tan( params.cutAngle ), 0.0f, 100.0f );
@@ -230,12 +231,13 @@ Expected<Mesh, std::string> embedStructureToTerrain(
 
     outCont.back() = outCont.front();
     polyline.addFromPoints( outCont.data(), outCont.size() );
-    LinesSave::toMrLines( polyline, "C:\\Users\\grant\\Downloads\\objects (1)\\outCont.mrlines" );
+    polyline.transform( AffineXf3f::translation( Vector3f::plusZ() ) );
 
     std::vector<MeshTriPoint> mtps( offsetContRes.contour.size() - 1 );
     tbb::task_group_context ctx;
     bool canceled = false;
-    ParallelFor( mtps, [&] ( size_t i )
+    //ParallelFor( mtps, [&] ( size_t i )
+    for ( int i = 0; i < mtps.size(); ++i )
     {
         auto index = findInitIndex( i, offsetContRes.contourIdsShifts );
         const auto& startPoint = cont[index];
@@ -244,15 +246,22 @@ Expected<Mesh, std::string> embedStructureToTerrain(
                 to3dim( offsetContRes.contour[i] ) +
                 Vector3f( 0, 0, startPoint.z ) +
                 ( ecParams.cutBitSet.test( VertId( index ) ) ? Vector3f::plusZ() : Vector3f::minusZ() ) - startPoint );
+        Vector3f vec[2];
+        vec[0] = line.p;
+        vec[1] = line.p + 20.0f * line.d;
+        polyline.addFromPoints( vec, 2, false );
         auto interRes = rayMeshIntersect( resMesh, line );
         if ( !interRes )
         {
             if ( ctx.cancel_group_execution() )
                 canceled = true;
-            return;
+            continue;
+            //return;
         }
         mtps[i] = interRes->mtp;
-    } );
+    } //);
+
+    LinesSave::toMrLines( polyline, "C:\\Users\\grant\\Downloads\\objects (1)\\outCont.mrlines" );
     if ( canceled )
         return unexpected( "Cannot embed structure beyond terrain" );
 
@@ -286,15 +295,44 @@ Expected<Mesh, std::string> embedStructureToTerrain(
         }
     }
 
+    std::vector<std::vector<int>> meshContoursPivpotIds( noBowtiesMtps.size() );
     OneMeshContours meshContours( noBowtiesMtps.size() );
     for ( int i = 0; i < meshContours.size(); ++i )
     {
-        meshContours[i] = convertMeshTriPointsToClosedContour( resMesh, noBowtiesMtps[i] );
+        meshContours[i] = convertMeshTriPointsToClosedContour( resMesh, noBowtiesMtps[i], &meshContoursPivpotIds[i] );
     }
+    ( void )meshContoursPivpotIds;
 
     auto cutRes = cutMesh( resMesh, meshContours );
     if ( cutRes.fbsWithCountourIntersections.any() )
         return unexpected( "Wall contours have self-intersections" );
+
+    resMesh.topology.deleteFaces( resMesh.topology.getValidFaces() - fillContourLeft( resMesh.topology, cutRes.resultCut ) );
+    resMesh.invalidateCaches();
+
+    WholeEdgeMap emap;
+    auto structClone = structure;
+    //structClone.topology.flipOrientation();
+    resMesh.addPart( structClone, nullptr, nullptr, &emap );
+
+    for ( int i = 0; i < meshContoursPivpotIds.size(); ++i )
+    {
+        for ( int j = 0; j < meshContoursPivpotIds[i].size(); ++j )
+        {
+            auto cutEdgeIndex = meshContoursPivpotIds[i][j];
+            auto initMtpIndex = filterBt.initIndices[i][j];
+            if ( initMtpIndex == -1 || cutEdgeIndex == -1 )
+                continue;
+            
+            auto baseEdgeIndex = findInitIndex( initMtpIndex, offsetContRes.contourIdsShifts );
+            if ( baseEdgeIndex + 1 >= offsetContRes.contourIdsShifts.size() )
+                continue;
+            makeBridgeEdge( resMesh.topology,
+                resMesh.topology.prev( cutRes.resultCut[i][cutEdgeIndex] ),
+                mapEdge( emap, structBound[0][baseEdgeIndex] ) );
+        }
+    }
+
     return resMesh;
 
     /*auto coneMeshRes = createEmbeddedConeMesh( cont, ecParams );

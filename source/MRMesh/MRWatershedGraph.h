@@ -19,16 +19,19 @@ public:
         float area = 0;    ///< precipitation area that flows in this basin
         float lowestBdLevel = FLT_MAX; ///< lowest position on the boundary of the basin
         float maxVolume = 0; ///< full water volume to be accumulated in the basin till water reaches the lowest height on the boundary
-        float remVolume = 0;  ///< remaining water volume to be accumulated in the basin till water reaches the lowest height on the boundary
-        float lastUpdateTime = 0; ///< the time when remVolume was last updated
+        float accVolume = 0; ///< accumulated water volume in the basin so far
+        float lastUpdateAmount = 0; ///< the amount when accVolume was last updated
         float lastMergeLevel = FLT_MAX; ///< water level in the basin when it was formed (by merge or creation)
         float lastMergeVolume = 0; ///< water volume in the basin when it was formed (by merge or creation)
         Graph::VertId overflowTo; ///< when level=lowestBdLevel, volume=0, all water from this basin overflows to given basin, and this.area becomes equal to 0
 
-        float timeTillOverflow() const
+        /// amount of precipitation (in same units as mesh coordinates and water level),
+        /// which can be added before overflowing the basin
+        float amountTillOverflow() const
         { 
             assert( !overflowTo );
-            return remVolume / area;
+            assert( maxVolume >= accVolume );
+            return ( maxVolume - accVolume ) / area;
         }
 
         /// approximate current level of water (z-coordinate) in the basin
@@ -38,18 +41,19 @@ public:
             assert( lastMergeVolume <= maxVolume );
             if ( maxVolume <= lastMergeVolume )
                 return lowestBdLevel;
-            const auto p = remVolume / ( maxVolume - lastMergeVolume );
+            const auto p = ( maxVolume - accVolume ) / ( maxVolume - lastMergeVolume );
             assert( p >= 0 && p <= 1 );
             return p * lastMergeLevel + ( 1 - p ) * lowestBdLevel;
         }
 
-        void update( float time )
+        /// updates accumulated volume in the basin to the moment of given precipitation amount
+        void updateAccVolume( float amount )
         {
-            assert( time >= lastUpdateTime );
-            remVolume -= ( time - lastUpdateTime ) * area;
-            if ( remVolume < 0 ) // due to rounding errors
-                remVolume = 0;
-            lastUpdateTime = time;
+            assert( amount >= lastUpdateAmount );
+            accVolume += ( amount - lastUpdateAmount ) * area;
+            if ( accVolume > maxVolume ) // due to rounding errors
+                accVolume = maxVolume;
+            lastUpdateAmount = amount;
         }
     };
 

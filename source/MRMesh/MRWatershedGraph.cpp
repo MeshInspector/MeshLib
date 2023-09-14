@@ -134,7 +134,7 @@ WatershedGraph::WatershedGraph( const Mesh & mesh, const Vector<int, FaceId> & f
         auto & info = basins_[basin];
         assert( info.lowestLevel == getHeightAt( info.lowestVert ) );
         assert( info.lowestLevel <= info.lowestBdLevel );
-        info.remVolume = info.maxVolume = (float)volumeCalcs[basin].getVolume();
+        info.maxVolume = (float)volumeCalcs[basin].getVolume();
         info.lastMergeLevel = info.lowestLevel;
     }
 
@@ -218,9 +218,9 @@ Graph::VertId WatershedGraph::merge( Graph::VertId v0, Graph::VertId v1 )
 
     auto & info0 = basins_[v0];
     auto & info1 = basins_[v1];
-    assert( info0.lastUpdateTime == info1.lastUpdateTime );
-    assert( info0.remVolume == 0 );
-    assert( info1.remVolume == 0 );
+    assert( info0.lastUpdateAmount == info1.lastUpdateAmount );
+    assert( info0.accVolume == info0.maxVolume );
+    assert( info1.accVolume == info1.maxVolume );
     assert( info1.area == 0 );
     assert( !info0.overflowTo );
     assert( info0.lowestBdLevel == info1.lowestBdLevel );
@@ -243,10 +243,8 @@ Graph::VertId WatershedGraph::merge( Graph::VertId v0, Graph::VertId v1 )
         const auto& bdInfo = bds_[bd];
         info0.lowestBdLevel = std::min( info0.lowestBdLevel, getHeightAt( bdInfo.lowestVert ) );
     }
-    info0.lastMergeVolume = info0.maxVolume + info1.maxVolume;
+    info0.accVolume = info0.lastMergeVolume = info0.maxVolume + info1.maxVolume;
     info0.maxVolume = std::max( info0.lastMergeVolume, ( float )computeBasinVolume( v0, info0.lowestBdLevel ) );
-    info0.remVolume = info0.maxVolume - info0.lastMergeVolume;
-    assert( info0.remVolume >= 0 );
 
     return v0;
 }

@@ -24,7 +24,7 @@ public:
     struct SimulationStep
     {
         Event event = Event::Finish;
-        float time = FLT_MAX;
+        float amount = FLT_MAX;///< amount of precipitation (in same units as mesh coordinates and water level)
         GraphVertId basin;     ///< BasinFull: this basin just became full
                                ///< Merge: this basin just absorbed the other basin
         GraphVertId neiBasin;  ///< BasinFull: the flow from full basin will first go here (may be not the last destination)
@@ -36,7 +36,6 @@ public:
 
 private:
     WatershedGraph& wg_;
-    static constexpr float infTime = FLT_MAX;
     Heap<float, GraphVertId, std::greater<float>> heap_;
 };
 

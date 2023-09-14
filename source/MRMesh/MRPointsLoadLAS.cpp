@@ -7,13 +7,13 @@
 
 #include "MRPch/MRSpdlog.h"
 
-#ifdef _MSC_VER
+#if defined( _MSC_VER ) && _MSC_VER >= 1930
 #pragma warning( push )
 #pragma warning( disable: 5267 )
 #endif
 #include <lazperf/lazperf.hpp>
 #include <lazperf/readers.hpp>
-#ifdef _MSC_VER
+#if defined( _MSC_VER ) && _MSC_VER >= 1930
 #pragma warning( pop )
 #endif
 

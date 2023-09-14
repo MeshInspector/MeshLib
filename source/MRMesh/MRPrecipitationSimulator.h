@@ -2,6 +2,7 @@
 
 #include "MRId.h"
 #include "MRHeap.h"
+#include <cfloat>
 
 namespace MR
 {
@@ -9,7 +10,7 @@ namespace MR
 class PrecipitationSimulator
 {
 public:
-    PrecipitationSimulator( WatershedGraph& wg );
+    MRMESH_API PrecipitationSimulator( WatershedGraph& wg );
 
     enum class Event
     {
@@ -29,7 +30,7 @@ public:
     };
 
     /// processes the next event in precipitation
-    SimulationStep simulateOne();
+    MRMESH_API SimulationStep simulateOne();
 
 private:
     WatershedGraph& wg_;

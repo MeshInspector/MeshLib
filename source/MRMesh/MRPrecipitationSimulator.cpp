@@ -47,7 +47,7 @@ auto PrecipitationSimulator::simulateOne() -> SimulationStep
             neiInfo.update( time );
             wg_.merge( basin, neiBasin );
             heap_.setSmallerValue( neiBasin, infTime );
-            heap_.setSmallerValue( basin, info.timeTillOverflow() );
+            heap_.setSmallerValue( basin, time + info.timeTillOverflow() );
             return res;
         }
         if ( targetBasin != wg_.outsideId() )
@@ -55,9 +55,9 @@ auto PrecipitationSimulator::simulateOne() -> SimulationStep
             auto& targetInfo = wg_.basinInfo( targetBasin );
             targetInfo.update( time );
             targetInfo.area += info.area;
-            heap_.setSmallerValue( basin, infTime );
-            heap_.setLargerValue( targetBasin, targetInfo.timeTillOverflow() );
+            heap_.setLargerValue( targetBasin, time + targetInfo.timeTillOverflow() );
         }
+        heap_.setSmallerValue( basin, infTime );
         info.area = 0;
         info.overflowTo = neiBasin;
         res.event = Event::BasinFull;

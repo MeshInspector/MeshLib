@@ -114,7 +114,8 @@ public:
     [[nodiscard]] MRMESH_API double computeBasinVolume( Graph::VertId basin, float waterLevel ) const;
 
     /// returns the mesh edges between current basins
-    [[nodiscard]] MRMESH_API UndirectedEdgeBitSet getInterBasinEdges() const;
+    /// \param includeFlotToBds if true then the boundaries between basins related by (overflowTo) will also be included
+    [[nodiscard]] MRMESH_API UndirectedEdgeBitSet getInterBasinEdges( bool includeOverflowToBds ) const;
 
 private:
     const Mesh & mesh_;

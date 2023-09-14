@@ -305,7 +305,7 @@ double WatershedGraph::computeBasinVolume( Graph::VertId basin, float waterLevel
     return MR::computeBasinVolume( mesh_, getBasinFacesBelowLevel( basin, waterLevel ), waterLevel );
 }
 
-UndirectedEdgeBitSet WatershedGraph::getInterBasinEdges() const
+UndirectedEdgeBitSet WatershedGraph::getInterBasinEdges( bool includeOverflowToBds ) const
 {
     MR_TIMER
     UndirectedEdgeBitSet res( mesh_.topology.undirectedEdgeSize() );
@@ -319,8 +319,16 @@ UndirectedEdgeBitSet WatershedGraph::getInterBasinEdges() const
             return;
         const auto lBasin = getRootBasin( Graph::VertId( face2iniBasin_[l] ) );
         const auto rBasin = getRootBasin( Graph::VertId( face2iniBasin_[r] ) );
-        if ( lBasin != rBasin )
-            res.set( ue );
+        if ( lBasin == rBasin )
+            return;
+        if ( !includeOverflowToBds )
+        {
+            if ( basins_[lBasin].overflowTo == rBasin )
+                return;
+            if ( basins_[rBasin].overflowTo == lBasin )
+                return;
+        }
+        res.set( ue );
     } );
     return res;
 }

@@ -151,6 +151,7 @@
     <ClInclude Include="MRLinesSave.h" />
     <ClInclude Include="MRPolylineSubdivide.h" />
     <ClInclude Include="MRPolylineTopology.h" />
+    <ClInclude Include="MRPrecipitationSimulator.h" />
     <ClInclude Include="MRPrecisePredicates2.h" />
     <ClInclude Include="MRPrimitiveMapsComposition.h" />
     <ClInclude Include="MRPrism.h" />
@@ -458,7 +459,7 @@
     <ClCompile Include="MRLinesSave.cpp" />
     <ClCompile Include="MRPolylineSubdivide.cpp" />
     <ClCompile Include="MRPolylineTopology.cpp" />
-    <ClCompile Include="MRPrecipitation.cpp" />
+    <ClCompile Include="MRPrecipitationSimulator.cpp" />
     <ClCompile Include="MRPrecisePredicates2.cpp" />
     <ClCompile Include="MRPrecisePredicates3.cpp" />
     <ClCompile Include="MRHistogram.cpp" />

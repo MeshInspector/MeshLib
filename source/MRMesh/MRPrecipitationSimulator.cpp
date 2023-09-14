@@ -1,40 +1,9 @@
+#include "MRPrecipitationSimulator.h"
 #include "MRWatershedGraph.h"
-#include "MRHeap.h"
 #include "MRTimer.h"
 
 namespace MR
 {
-
-class PrecipitationSimulator
-{
-public:
-    PrecipitationSimulator( WatershedGraph & wg );
-
-    enum class Event
-    {
-        Finish,     ///< all basins are full and water goes outside
-        BasinFull,  ///< one basin just became full
-        Merge       ///< two basins just merged
-    };
-
-    struct SimulationStep
-    {
-        Event event = Event::Finish;
-        float time = FLT_MAX;
-        Graph::VertId basin;     ///< BasinFull: this basin just became full
-                                 ///< Merge: this basin just absorbed the other basin
-        Graph::VertId neiBasin;  ///< BasinFull: the flow from full basin will first go here (may be not the last destination)
-                                 ///< Merge: this basin was just absorbed
-    };
-
-    /// processes the next event in precipitation
-    SimulationStep simulateOne();
-
-private:
-    WatershedGraph & wg_;
-    static constexpr float infTime = FLT_MAX;
-    Heap<float, Graph::VertId, std::greater<float>> heap_;
-};
 
 PrecipitationSimulator::PrecipitationSimulator( WatershedGraph & wg )
     : wg_( wg )
@@ -98,6 +67,5 @@ auto PrecipitationSimulator::simulateOne() -> SimulationStep
     heap_.setSmallerValue( basin, infTime );
     return res;
 }
-
 
 } //namespace MR

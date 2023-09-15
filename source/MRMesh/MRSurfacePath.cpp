@@ -105,6 +105,8 @@ static std::optional<float> computeExitPos( const Vector3f & b, const Vector3f &
 
 MeshEdgePoint findSteepestDescentPoint( const MeshPart & mp, const VertScalars & field, VertId v )
 {
+    assert( mp.mesh.topology.isInnerOrBdVertex( v, mp.region ) );
+
     MeshEdgePoint res;
     float maxGradSq = 0;
     const auto vv = field[v];
@@ -161,6 +163,7 @@ MeshEdgePoint findSteepestDescentPoint( const MeshPart & mp, const VertScalars &
 {
     if ( auto v = ep.inVertex( mp.mesh.topology ) )
         return findSteepestDescentPoint( mp, field, v );
+    assert( mp.mesh.topology.isInnerOrBdEdge( ep.e, mp.region ) );
 
     // point is not in vertex
     const auto p = mp.mesh.edgePoint( ep );

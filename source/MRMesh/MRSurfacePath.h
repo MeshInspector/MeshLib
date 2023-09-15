@@ -87,6 +87,15 @@ struct ComputeSteepestDescentPathSettings
 MRMESH_API void computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
     const MeshTriPoint & start, SurfacePath * outPath, const ComputeSteepestDescentPathSettings & settings = {} );
 
+/// finds the point along minus maximal gradient on the boundary of first ring boundary around given vertex
+[[nodiscard]] MRMESH_API MeshEdgePoint findSteepestDescentPoint( const Mesh & mesh, const VertScalars & field, VertId v );
+
+/// finds the point along minus maximal gradient on the boundary of triangles around given point (the boundary of left and right edge triangles' union in case (ep) is inner edge point)
+[[nodiscard]] MRMESH_API MeshEdgePoint findSteepestDescentPoint( const Mesh & mesh, const VertScalars & field, const MeshEdgePoint & ep );
+
+/// finds the point along minus maximal gradient on the boundary of triangles around given point (the boundary of the triangle itself in case (tp) is inner triangle point)
+[[nodiscard]] MRMESH_API MeshEdgePoint findSteepestDescentPoint( const Mesh & mesh, const VertScalars & field, const MeshTriPoint & tp );
+
 enum class ExtremeEdgeType
 {
     Ridge, // where the field not-increases both in left and right triangles

@@ -103,16 +103,20 @@ static std::optional<float> computeExitPos( const Vector3f & b, const Vector3f &
     return a;
 }
 
-MeshEdgePoint findSteepestDescentPoint( const Mesh & mesh, const VertScalars & field, VertId v )
+MeshEdgePoint findSteepestDescentPoint( const MeshPart & mp, const VertScalars & field, VertId v )
 {
+    assert( mp.mesh.topology.isInnerOrBdVertex( v, mp.region ) );
+
     MeshEdgePoint res;
     float maxGradSq = 0;
     const auto vv = field[v];
-    const auto pv = mesh.points[v];
-    for ( EdgeId e : orgRing( mesh.topology, v ) )
+    const auto pv = mp.mesh.points[v];
+    for ( EdgeId e : orgRing( mp.mesh.topology, v ) )
     {
-        const auto d = mesh.topology.dest( e );
-        const auto pd = mesh.points[d] - pv;
+        if ( mp.region && !mp.mesh.topology.isInnerOrBdEdge( e, mp.region ) )
+            continue;
+        const auto d = mp.mesh.topology.dest( e );
+        const auto pd = mp.mesh.points[d] - pv;
         const auto pdSq = pd.lengthSq();
         if ( field[d] == FLT_MAX )
             continue;
@@ -131,11 +135,11 @@ MeshEdgePoint findSteepestDescentPoint( const Mesh & mesh, const VertScalars & f
                 }
             }
         }
-        if ( mesh.topology.left( e ) )
+        if ( auto f = mp.mesh.topology.left( e ); contains( mp.region, f ) )
         {
-            const auto eBd = mesh.topology.prev( e.sym() );
-            const auto x = mesh.topology.dest( eBd );
-            const auto px = mesh.points[x] - pv;
+            const auto eBd = mp.mesh.topology.prev( e.sym() );
+            const auto x = mp.mesh.topology.dest( eBd );
+            const auto px = mp.mesh.points[x] - pv;
             if ( auto fx = field[x]; fx < FLT_MAX )
             {
                 const auto vx = fx - vv;
@@ -155,21 +159,22 @@ MeshEdgePoint findSteepestDescentPoint( const Mesh & mesh, const VertScalars & f
     return res;
 }
 
-MeshEdgePoint findSteepestDescentPoint( const Mesh & mesh, const VertScalars & field, const MeshEdgePoint & ep )
+MeshEdgePoint findSteepestDescentPoint( const MeshPart & mp, const VertScalars & field, const MeshEdgePoint & ep )
 {
-    if ( auto v = ep.inVertex( mesh.topology ) )
-        return findSteepestDescentPoint( mesh, field, v );
+    if ( auto v = ep.inVertex( mp.mesh.topology ) )
+        return findSteepestDescentPoint( mp, field, v );
+    assert( mp.mesh.topology.isInnerOrBdEdge( ep.e, mp.region ) );
 
     // point is not in vertex
-    const auto p = mesh.edgePoint( ep );
+    const auto p = mp.mesh.edgePoint( ep );
 
-    const auto o = mesh.topology.org( ep.e );
-    const auto d = mesh.topology.dest( ep.e );
+    const auto o = mp.mesh.topology.org( ep.e );
+    const auto d = mp.mesh.topology.dest( ep.e );
     const auto fo = field[o];
     const auto fd = field[d];
     const auto v = ( 1 - ep.a ) * fo + ep.a * fd;
-    const auto po = mesh.points[o];
-    const auto pd = mesh.points[d];
+    const auto po = mp.mesh.points[o];
+    const auto pd = mp.mesh.points[d];
 
     MeshEdgePoint result;
     float maxGradSq = -FLT_MAX;
@@ -181,12 +186,12 @@ MeshEdgePoint findSteepestDescentPoint( const Mesh & mesh, const VertScalars & f
         result = fo < fd ? MeshEdgePoint{ ep.e, 0 } : MeshEdgePoint{ ep.e.sym(), 0 };
     }
 
-    if ( mesh.topology.left( ep.e ) )
+    if ( auto f = mp.mesh.topology.left( ep.e ); contains( mp.region, f ) )
     {
-        const auto el = mesh.topology.next( ep.e );
-        const auto l = mesh.topology.dest( el );
+        const auto el = mp.mesh.topology.next( ep.e );
+        const auto l = mp.mesh.topology.dest( el );
         const auto fl = field[l];
-        const auto pl = mesh.points[l];
+        const auto pl = mp.mesh.points[l];
         const auto triGrad = computeGradient( pd - po, pl - po, fd - fo, fl - fo );
         const auto triGradSq = triGrad.lengthSq();
         bool moveL = true;
@@ -202,7 +207,7 @@ MeshEdgePoint findSteepestDescentPoint( const Mesh & mesh, const VertScalars & f
                     if ( a <= 1 )
                     {
                         moveL = false;
-                        result = MeshEdgePoint{ mesh.topology.prev( ep.e.sym() ), a };
+                        result = MeshEdgePoint{ mp.mesh.topology.prev( ep.e.sym() ), a };
                         maxGradSq = triGradSq;
                     }
                     else
@@ -233,12 +238,12 @@ MeshEdgePoint findSteepestDescentPoint( const Mesh & mesh, const VertScalars & f
         }
     }
 
-    if ( mesh.topology.right( ep.e ) )
+    if ( auto f = mp.mesh.topology.right( ep.e ); contains( mp.region, f ) )
     {
-        const auto er = mesh.topology.prev( ep.e );
-        const auto r = mesh.topology.dest( er );
+        const auto er = mp.mesh.topology.prev( ep.e );
+        const auto r = mp.mesh.topology.dest( er );
         const auto fr = field[r];
-        const auto pr = mesh.points[r];
+        const auto pr = mp.mesh.points[r];
         const auto triGrad = computeGradient( pr - po, pd - po, fr - fo, fd - fo );
         const auto triGradSq = triGrad.lengthSq();
         bool moveR = true;
@@ -254,7 +259,7 @@ MeshEdgePoint findSteepestDescentPoint( const Mesh & mesh, const VertScalars & f
                     if ( a >= 0 )
                     {
                         moveR = false;
-                        result = MeshEdgePoint{ mesh.topology.next( ep.e.sym() ).sym(), a };
+                        result = MeshEdgePoint{ mp.mesh.topology.next( ep.e.sym() ).sym(), a };
                         maxGradSq = triGradSq;
                     }
                     else
@@ -296,17 +301,18 @@ MeshEdgePoint findSteepestDescentPoint( const Mesh & mesh, const VertScalars & f
     return result;
 }
 
-MeshEdgePoint findSteepestDescentPoint( const Mesh & mesh, const VertScalars & field, const MeshTriPoint & tp )
+MeshEdgePoint findSteepestDescentPoint( const MeshPart & mp, const VertScalars & field, const MeshTriPoint & tp )
 {
-    if ( auto ep = tp.onEdge( mesh.topology ) )
-        return findSteepestDescentPoint( mesh, field, ep );
+    if ( auto ep = tp.onEdge( mp.mesh.topology ) )
+        return findSteepestDescentPoint( mp, field, ep );
+    assert( contains( mp.region, mp.mesh.topology.left( tp.e ) ) );
 
     // point is not on edge
     MeshEdgePoint res;
-    const auto p = mesh.triPoint( tp );
+    const auto p = mp.mesh.triPoint( tp );
 
     VertId v[3];
-    mesh.topology.getLeftTriVerts( tp.e, v );
+    mp.mesh.topology.getLeftTriVerts( tp.e, v );
 
     Vector3f pv[3];
     float vv[3];
@@ -314,10 +320,10 @@ MeshEdgePoint findSteepestDescentPoint( const Mesh & mesh, const VertScalars & f
     auto ei = tp.e;
     for ( int i = 0; i < 3; ++i )
     {
-        pv[i] = mesh.points[v[i]];
+        pv[i] = mp.mesh.points[v[i]];
         vv[i] = field[v[i]];
         e[i] = ei;
-        ei = mesh.topology.prev( ei.sym() );
+        ei = mp.mesh.topology.prev( ei.sym() );
     }
     if ( vv[0] == vv[1] && vv[1] == vv[2] )
         return res; // the triangle is completely "flat"
@@ -429,33 +435,33 @@ Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
     return res;
 }
 
-SurfacePath computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
+SurfacePath computeSteepestDescentPath( const MeshPart & mp, const VertScalars & field,
     const MeshTriPoint & start, const ComputeSteepestDescentPathSettings & settings )
 {
     SurfacePath res;
-    computeSteepestDescentPath( mesh, field, start, &res, settings );
+    computeSteepestDescentPath( mp, field, start, &res, settings );
     return res;
 }
 
-void computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
+void computeSteepestDescentPath( const MeshPart & mp, const VertScalars & field,
     const MeshTriPoint & start, SurfacePath * outPath, const ComputeSteepestDescentPathSettings & settings )
 {
     assert( start );
     assert( settings.outVertexReached || settings.outBdReached || outPath );
     size_t iniPathSize = outPath ? outPath->size() : 0;
     size_t edgesPassed = 0;
-    auto curr = findSteepestDescentPoint( mesh, field, start );
+    auto curr = findSteepestDescentPoint( mp, field, start );
     while ( curr )
     {
         if ( settings.outVertexReached )
         {
-            if ( auto v = curr.inVertex( mesh.topology ) )
+            if ( auto v = curr.inVertex( mp.mesh.topology ) )
             {
                 *settings.outVertexReached = v;
                 return;
             }
         }
-        if ( settings.outBdReached && curr.isBd( mesh.topology ) )
+        if ( settings.outBdReached && curr.isBd( mp.mesh.topology ) )
         {
             *settings.outBdReached = curr;
             return;
@@ -463,9 +469,9 @@ void computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
         ++edgesPassed;
         if ( outPath )
             outPath->push_back( curr );
-        if ( settings.end && fromSameTriangle( mesh.topology, MeshTriPoint( settings.end ), MeshTriPoint( curr ) ) )
+        if ( settings.end && fromSameTriangle( mp.mesh.topology, MeshTriPoint( settings.end ), MeshTriPoint( curr ) ) )
             break; // reached triangle with end point
-        if ( edgesPassed > mesh.topology.numValidFaces() )
+        if ( edgesPassed > mp.mesh.topology.numValidFaces() )
         {
             // normal path cannot visit any triangle more than once
             assert( false );
@@ -473,7 +479,7 @@ void computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
                 outPath->resize( iniPathSize );
             return;
         }
-        curr = findSteepestDescentPoint( mesh, field, curr );
+        curr = findSteepestDescentPoint( mp, field, curr );
     }
 }
 

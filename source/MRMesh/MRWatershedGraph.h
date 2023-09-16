@@ -74,6 +74,9 @@ public:
     /// returns underlying graph where each basin is a vertex
     [[nodiscard]] const Graph & graph() const { return graph_; }
     
+    /// returns total precipitation area
+    [[nodiscard]] float totalarea() const { return totalArea_; }
+
     /// returns the current number of basins (excluding special "outside" basin)
     [[nodiscard]] int numBasins() const { return (int)graph_.validVerts().count() - 1; }
 
@@ -146,6 +149,7 @@ private:
     Graph graph_;
     Vector<BasinInfo, Graph::VertId> basins_;
     Vector<BdInfo, Graph::EdgeId> bds_;
+    float totalArea_ = 0;
 
     /// special "basin" representing outside areas of the mesh
     Graph::VertId outsideId_;

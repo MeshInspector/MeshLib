@@ -129,6 +129,7 @@ WatershedGraph::WatershedGraph( const Mesh & mesh, const Vector<int, FaceId> & f
         volumeCalcs[basin].addTerrainTri( mesh_.getTriPoints( f ), info.lowestBdLevel );
     }
 
+    totalArea_ = 0;
     for ( auto basin = Graph::VertId( 0 ); basin < outsideId_; ++basin )
     {
         auto & info = basins_[basin];
@@ -136,6 +137,7 @@ WatershedGraph::WatershedGraph( const Mesh & mesh, const Vector<int, FaceId> & f
         assert( info.lowestLevel <= info.lowestBdLevel );
         info.maxVolume = (float)volumeCalcs[basin].getVolume();
         info.lastMergeLevel = info.lowestLevel;
+        totalArea_ += info.area;
     }
 
     graph_.construct( std::move( neighboursPerVertex ), std::move( endsPerEdge ) );

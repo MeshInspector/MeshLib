@@ -226,10 +226,8 @@ Graph::VertId WatershedGraph::merge( Graph::VertId v0, Graph::VertId v1 )
 
     auto & info0 = basins_[v0];
     auto & info1 = basins_[v1];
-    assert( info0.lastUpdateAmount == info1.lastUpdateAmount );
     assert( info0.accVolume == info0.maxVolume );
     assert( info1.accVolume == info1.maxVolume );
-    assert( info1.area == 0 );
     assert( !info0.overflowVia );
     assert( info0.lowestBdLevel == info1.lowestBdLevel );
     if ( info1.lowestLevel < info0.lowestLevel )

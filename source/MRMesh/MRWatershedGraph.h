@@ -16,14 +16,14 @@ public:
     {
         VertId lowestVert; ///< in the whole basin
         float lowestLevel = FLT_MAX; ///< lowest level (z-coordinate of lowestVert) in the basin
-        float area = 0;    ///< precipitation area that flows in this basin
+        float area = 0;    ///< precipitation area that flows in this basin (and if it is full, continue flowing next)
         float lowestBdLevel = FLT_MAX; ///< lowest position on the boundary of the basin
         float maxVolume = 0; ///< full water volume to be accumulated in the basin till water reaches the lowest height on the boundary
         float accVolume = 0; ///< accumulated water volume in the basin so far
         float lastUpdateAmount = 0; ///< the amount when accVolume was last updated
         float lastMergeLevel = FLT_MAX; ///< water level in the basin when it was formed (by merge or creation)
         float lastMergeVolume = 0; ///< water volume in the basin when it was formed (by merge or creation)
-        Graph::EdgeId overflowVia; ///< when level=lowestBdLevel, volume=0, all water from this basin overflows via this boundary, and this.area becomes equal to 0
+        Graph::EdgeId overflowVia; ///< when level=lowestBdLevel, volume=0, all water from this basin overflows via this boundary
 
         /// amount of precipitation (in same units as mesh coordinates and water level),
         /// which can be added before overflowing the basin
@@ -49,6 +49,7 @@ public:
         /// updates accumulated volume in the basin to the moment of given precipitation amount
         void updateAccVolume( float amount )
         {
+            assert( !overflowVia );
             assert( amount >= lastUpdateAmount );
             accVolume += ( amount - lastUpdateAmount ) * area;
             if ( accVolume > maxVolume ) // due to rounding errors

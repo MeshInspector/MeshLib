@@ -45,8 +45,6 @@ auto PrecipitationSimulator::simulateOne() -> SimulationStep
         if ( targetBasin == basin )
         {
             res.event = Event::Merge;
-            auto& neiInfo = wg_.basinInfo( neiBasin );
-            neiInfo.updateAccVolume( amount );
             wg_.merge( basin, neiBasin );
             heap_.setSmallerValue( neiBasin, infAmount );
             heap_.setSmallerValue( basin, amount + info.amountTillOverflow() );
@@ -60,7 +58,6 @@ auto PrecipitationSimulator::simulateOne() -> SimulationStep
             heap_.setLargerValue( targetBasin, amount + targetInfo.amountTillOverflow() );
         }
         heap_.setSmallerValue( basin, infAmount );
-        info.area = 0;
         info.overflowVia = bd;
         res.event = Event::BasinFull;
         return res;

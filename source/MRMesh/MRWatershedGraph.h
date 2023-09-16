@@ -124,6 +124,17 @@ public:
     /// \param includeFlotToBds if true then the boundaries between basins related by (overflowTo) will also be included
     [[nodiscard]] MRMESH_API UndirectedEdgeBitSet getInterBasinEdges( bool includeOverflowToBds ) const;
 
+    /// describes flow between two basins
+    struct OverflowOrigin
+    {
+        VertId v; // mesh vertex on the boundary of full basin and the other where it overflows
+        Graph::VertId fullBasin;
+        Graph::VertId overflowTo; // basin where the flow from v goes
+    };
+
+    /// returns all overflow origin points in the graph
+    [[nodiscard]] MRMESH_API std::vector<OverflowOrigin> getOverflowOrigins() const;
+
 private:
     const Mesh & mesh_;
     const Vector<int, FaceId> & face2iniBasin_;

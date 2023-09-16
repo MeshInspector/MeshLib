@@ -349,4 +349,25 @@ UndirectedEdgeBitSet WatershedGraph::getInterBasinEdges( bool includeOverflowToB
     return res;
 }
 
+auto WatershedGraph::getOverflowOrigins() const -> std::vector<OverflowOrigin>
+{
+    MR_TIMER
+    std::vector<OverflowOrigin> res;
+
+    for ( auto ei : graph_.validEdges() )
+    {
+        const auto ends = graph_.ends( ei );
+        if ( ends.v0 == outsideId_ || ends.v1 == outsideId_ )
+            continue;
+        const auto & info0 = basins_[ends.v0];
+        const auto & info1 = basins_[ends.v1];
+        if ( info0.overflowTo == ends.v1 )
+            res.push_back( { bds_[ei].lowestVert, ends.v0, ends.v1 } );
+        else if ( info1.overflowTo == ends.v0 )
+            res.push_back( { bds_[ei].lowestVert, ends.v1, ends.v0 } );
+    }
+
+    return res;
+}
+
 } //namespace MR

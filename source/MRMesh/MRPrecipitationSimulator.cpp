@@ -29,7 +29,7 @@ auto PrecipitationSimulator::simulateOne() -> SimulationStep
     res.amount = amount;
 
     auto& info = wg_.basinInfo( basin );
-    assert( !info.overflowTo );
+    assert( !info.overflowVia );
     info.lastUpdateAmount = amount;
     info.accVolume = info.maxVolume;
 
@@ -41,7 +41,7 @@ auto PrecipitationSimulator::simulateOne() -> SimulationStep
         const auto neiBasin = wg_.graph().ends( bd ).otherEnd( basin );
         res.basin = basin;
         res.neiBasin = neiBasin;
-        auto targetBasin = wg_.flowsTo( neiBasin );
+        auto targetBasin = wg_.flowsFinallyTo( neiBasin );
         if ( targetBasin == basin )
         {
             res.event = Event::Merge;
@@ -61,7 +61,7 @@ auto PrecipitationSimulator::simulateOne() -> SimulationStep
         }
         heap_.setSmallerValue( basin, infAmount );
         info.area = 0;
-        info.overflowTo = neiBasin;
+        info.overflowVia = bd;
         res.event = Event::BasinFull;
         return res;
     }

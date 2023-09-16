@@ -162,12 +162,20 @@ Graph::VertId WatershedGraph::flowsTo( Graph::VertId v ) const
 {
     assert( v );
     assert( graph_.valid( v ) );
+    auto e = basins_[v].overflowVia;
+    if ( !e )
+        return v;
+    return graph_.ends( e ).otherEnd( v );
+}
+
+Graph::VertId WatershedGraph::flowsFinallyTo( Graph::VertId v ) const
+{
     for (;;)
     {
-        auto p = basins_[v].overflowTo;
-        if ( !p )
+        auto v2 = flowsTo( v );
+        if ( v2 == v )
             return v;
-        v = p;
+        v = v2;
     }
 }
 
@@ -222,7 +230,7 @@ Graph::VertId WatershedGraph::merge( Graph::VertId v0, Graph::VertId v1 )
     assert( info0.accVolume == info0.maxVolume );
     assert( info1.accVolume == info1.maxVolume );
     assert( info1.area == 0 );
-    assert( !info0.overflowTo );
+    assert( !info0.overflowVia );
     assert( info0.lowestBdLevel == info1.lowestBdLevel );
     if ( info1.lowestLevel < info0.lowestLevel )
     {
@@ -277,9 +285,8 @@ Vector<FaceBitSet, Graph::VertId> WatershedGraph::getAllBasinFaces() const
 {
     MR_TIMER
     Vector<FaceBitSet, Graph::VertId> res( graph_.vertSize() );
-    for ( auto basin = Graph::VertId( 0 ); basin < res.size(); ++basin )
-        if ( graph_.valid( basin ) )
-            res[basin].resize( mesh_.topology.faceSize() );
+    for ( auto basin : graph_.validVerts() )
+        res[basin].resize( mesh_.topology.faceSize() );
 
     BitSetParallelFor( mesh_.topology.getValidFaces(), [&]( FaceId f )
     {
@@ -339,9 +346,9 @@ UndirectedEdgeBitSet WatershedGraph::getInterBasinEdges( bool includeOverflowToB
             return;
         if ( !includeOverflowToBds )
         {
-            if ( basins_[lBasin].overflowTo == rBasin )
+            if ( flowsTo( lBasin ) == rBasin )
                 return;
-            if ( basins_[rBasin].overflowTo == lBasin )
+            if ( flowsTo( rBasin ) == lBasin )
                 return;
         }
         res.set( ue );
@@ -354,17 +361,15 @@ auto WatershedGraph::getOverflowOrigins() const -> std::vector<OverflowOrigin>
     MR_TIMER
     std::vector<OverflowOrigin> res;
 
-    for ( auto ei : graph_.validEdges() )
+    for ( auto basin : graph_.validVerts() )
     {
-        const auto ends = graph_.ends( ei );
-        if ( ends.v0 == outsideId_ || ends.v1 == outsideId_ )
+        const auto & info = basins_[basin];
+        if ( !info.overflowVia )
             continue;
-        const auto & info0 = basins_[ends.v0];
-        const auto & info1 = basins_[ends.v1];
-        if ( info0.overflowTo == ends.v1 )
-            res.push_back( { bds_[ei].lowestVert, ends.v0, ends.v1 } );
-        else if ( info1.overflowTo == ends.v0 )
-            res.push_back( { bds_[ei].lowestVert, ends.v1, ends.v0 } );
+        const auto t = flowsTo( basin );
+        if ( t == outsideId_ )
+            continue;
+        res.push_back( { bds_[info.overflowVia].lowestVert, basin, t } );
     }
 
     return res;

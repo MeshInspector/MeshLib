@@ -23,13 +23,13 @@ public:
         float lastUpdateAmount = 0; ///< the amount when accVolume was last updated
         float lastMergeLevel = FLT_MAX; ///< water level in the basin when it was formed (by merge or creation)
         float lastMergeVolume = 0; ///< water volume in the basin when it was formed (by merge or creation)
-        Graph::VertId overflowTo; ///< when level=lowestBdLevel, volume=0, all water from this basin overflows to given basin, and this.area becomes equal to 0
+        Graph::EdgeId overflowVia; ///< when level=lowestBdLevel, volume=0, all water from this basin overflows via this boundary, and this.area becomes equal to 0
 
         /// amount of precipitation (in same units as mesh coordinates and water level),
         /// which can be added before overflowing the basin
         float amountTillOverflow() const
         { 
-            assert( !overflowTo );
+            assert( !overflowVia );
             assert( maxVolume >= accVolume );
             return ( maxVolume - accVolume ) / area;
         }
@@ -90,8 +90,11 @@ public:
     /// for valid basin returns self id; for invalid basin returns the id of basin it was merged in
     [[nodiscard]] MRMESH_API Graph::VertId getRootBasin( Graph::VertId v ) const;
 
-    /// returns basin where the flow from this basin goes (it can be self id if the basin is not full yet)
+    /// returns the basin where the flow from this basin goes next (it can be self id if the basin is not full yet)
     [[nodiscard]] MRMESH_API Graph::VertId flowsTo( Graph::VertId v ) const;
+
+    /// returns the basin where the flow from this basin finally goes (it can be self id if the basin is not full yet)
+    [[nodiscard]] MRMESH_API Graph::VertId flowsFinallyTo( Graph::VertId v ) const;
 
     /// replaces parent of each basin with its computed root;
     /// this speeds up following calls to getRootBasin()

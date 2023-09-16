@@ -265,11 +265,29 @@ FaceBitSet WatershedGraph::getBasinFaces( Graph::VertId basin ) const
     res.resize( mesh_.topology.faceSize() );
     assert( graph_.valid( basin ) );
     assert( basin == parentBasin_[basin] );
-    BitSetParallelForAll( res, [&]( FaceId f )
+    BitSetParallelFor( mesh_.topology.getValidFaces(), [&]( FaceId f )
     {
         if ( basin == getRootBasin( Graph::VertId( face2iniBasin_[f] ) ) )
             res.set( f );
     } );
+    return res;
+}
+
+Vector<FaceBitSet, Graph::VertId> WatershedGraph::getAllBasinFaces() const
+{
+    MR_TIMER
+    Vector<FaceBitSet, Graph::VertId> res( graph_.vertSize() );
+    for ( auto basin = Graph::VertId( 0 ); basin < res.size(); ++basin )
+        if ( graph_.valid( basin ) )
+            res[basin].resize( mesh_.topology.faceSize() );
+
+    BitSetParallelFor( mesh_.topology.getValidFaces(), [&]( FaceId f )
+    {
+        const auto basin = getRootBasin( Graph::VertId( face2iniBasin_[f] ) );
+        assert( graph_.valid( basin ) );
+        res[basin].set( f );
+    } );
+
     return res;
 }
 
@@ -282,7 +300,7 @@ FaceBitSet WatershedGraph::getBasinFacesBelowLevel( Graph::VertId basin, float w
     res.resize( mesh_.topology.faceSize() );
     assert( graph_.valid( basin ) );
     assert( basin == parentBasin_[basin] );
-    BitSetParallelForAll( res, [&]( FaceId f )
+    BitSetParallelFor( mesh_.topology.getValidFaces(), [&]( FaceId f )
     {
         if ( basin != getRootBasin( Graph::VertId( face2iniBasin_[f] ) ) )
             return;

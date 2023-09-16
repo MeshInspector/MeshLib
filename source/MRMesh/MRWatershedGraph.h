@@ -110,6 +110,9 @@ public:
     /// returns the mesh faces of given basin
     [[nodiscard]] MRMESH_API FaceBitSet getBasinFaces( Graph::VertId basin ) const;
 
+    /// returns the mesh faces of each valid basin
+    [[nodiscard]] MRMESH_API Vector<FaceBitSet, Graph::VertId> getAllBasinFaces() const;
+
     /// returns the mesh faces of given basin with at least one vertex below given level
     [[nodiscard]] MRMESH_API FaceBitSet getBasinFacesBelowLevel( Graph::VertId basin, float waterLevel ) const;
 

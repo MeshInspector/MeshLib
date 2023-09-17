@@ -75,7 +75,7 @@ public:
     [[nodiscard]] const Graph & graph() const { return graph_; }
     
     /// returns total precipitation area
-    [[nodiscard]] float totalarea() const { return totalArea_; }
+    [[nodiscard]] float totalArea() const { return totalArea_; }
 
     /// returns the current number of basins (excluding special "outside" basin)
     [[nodiscard]] int numBasins() const { return (int)graph_.validVerts().count() - 1; }
@@ -131,16 +131,16 @@ public:
     /// \param includeFlotToBds if true then the boundaries between basins related by (overflowTo) will also be included
     [[nodiscard]] MRMESH_API UndirectedEdgeBitSet getInterBasinEdges( bool includeOverflowToBds ) const;
 
-    /// describes flow between two basins
-    struct OverflowOrigin
+    /// describes a point where a flow from one basin overflows into another basin
+    struct OverflowPoint
     {
         VertId v; // mesh vertex on the boundary of full basin and the other where it overflows
         Graph::VertId fullBasin;
         Graph::VertId overflowTo; // basin where the flow from v goes
     };
 
-    /// returns all overflow origin points in the graph
-    [[nodiscard]] MRMESH_API std::vector<OverflowOrigin> getOverflowOrigins() const;
+    /// returns all overflow points in the graph
+    [[nodiscard]] MRMESH_API std::vector<OverflowPoint> getOverflowPoints() const;
 
 private:
     const Mesh & mesh_;

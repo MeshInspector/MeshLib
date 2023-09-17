@@ -356,10 +356,10 @@ UndirectedEdgeBitSet WatershedGraph::getInterBasinEdges( bool includeOverflowToB
     return res;
 }
 
-auto WatershedGraph::getOverflowOrigins() const -> std::vector<OverflowOrigin>
+auto WatershedGraph::getOverflowPoints() const -> std::vector<OverflowPoint>
 {
     MR_TIMER
-    std::vector<OverflowOrigin> res;
+    std::vector<OverflowPoint> res;
 
     for ( auto basin : graph_.validVerts() )
     {
@@ -367,8 +367,6 @@ auto WatershedGraph::getOverflowOrigins() const -> std::vector<OverflowOrigin>
         if ( !info.overflowVia )
             continue;
         const auto t = flowsTo( basin );
-        if ( t == outsideId_ )
-            continue;
         res.push_back( { bds_[info.overflowVia].lowestVert, basin, t } );
     }
 

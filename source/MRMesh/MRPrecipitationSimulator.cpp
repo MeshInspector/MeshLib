@@ -54,13 +54,23 @@ auto PrecipitationSimulator::simulateOne() -> SimulationStep
             heap_.setSmallerValue( basin, amount + info.amountTillOverflow() );
             return res;
         }
-        if ( targetBasin != wg_.outsideId() )
+        auto v = neiBasin;
+        for (;;)
         {
-            auto& targetInfo = wg_.basinInfo( targetBasin );
-            targetInfo.updateAccVolume( amount );
-            targetInfo.area += info.area;
-            heap_.setLargerValue( targetBasin, amount + targetInfo.amountTillOverflow() );
+            auto& vInfo = wg_.basinInfo( v );
+            if ( !vInfo.overflowVia )
+                vInfo.updateAccVolume( amount );
+            vInfo.area += info.area;
+            auto v2 = wg_.flowsTo( v );
+            if ( v2 == v )
+            {
+                if ( targetBasin != wg_.outsideId() )
+                    heap_.setLargerValue( v, amount + vInfo.amountTillOverflow() );
+                break;
+            }
+            v = v2;
         }
+        assert( v == targetBasin );
         heap_.setSmallerValue( basin, infAmount );
         info.overflowVia = bd;
         res.event = Event::BasinFull;

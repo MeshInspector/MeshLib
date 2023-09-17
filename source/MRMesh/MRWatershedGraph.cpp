@@ -129,6 +129,7 @@ WatershedGraph::WatershedGraph( const Mesh & mesh, const Vector<int, FaceId> & f
         volumeCalcs[basin].addTerrainTri( mesh_.getTriPoints( f ), info.lowestBdLevel );
     }
 
+    totalArea_ = 0;
     for ( auto basin = Graph::VertId( 0 ); basin < outsideId_; ++basin )
     {
         auto & info = basins_[basin];
@@ -136,6 +137,7 @@ WatershedGraph::WatershedGraph( const Mesh & mesh, const Vector<int, FaceId> & f
         assert( info.lowestLevel <= info.lowestBdLevel );
         info.maxVolume = (float)volumeCalcs[basin].getVolume();
         info.lastMergeLevel = info.lowestLevel;
+        totalArea_ += info.area;
     }
 
     graph_.construct( std::move( neighboursPerVertex ), std::move( endsPerEdge ) );
@@ -162,12 +164,20 @@ Graph::VertId WatershedGraph::flowsTo( Graph::VertId v ) const
 {
     assert( v );
     assert( graph_.valid( v ) );
+    auto e = basins_[v].overflowVia;
+    if ( !e )
+        return v;
+    return graph_.ends( e ).otherEnd( v );
+}
+
+Graph::VertId WatershedGraph::flowsFinallyTo( Graph::VertId v ) const
+{
     for (;;)
     {
-        auto p = basins_[v].overflowTo;
-        if ( !p )
+        auto v2 = flowsTo( v );
+        if ( v2 == v )
             return v;
-        v = p;
+        v = v2;
     }
 }
 
@@ -218,11 +228,9 @@ Graph::VertId WatershedGraph::merge( Graph::VertId v0, Graph::VertId v1 )
 
     auto & info0 = basins_[v0];
     auto & info1 = basins_[v1];
-    assert( info0.lastUpdateAmount == info1.lastUpdateAmount );
     assert( info0.accVolume == info0.maxVolume );
     assert( info1.accVolume == info1.maxVolume );
-    assert( info1.area == 0 );
-    assert( !info0.overflowTo );
+    assert( !info0.overflowVia );
     assert( info0.lowestBdLevel == info1.lowestBdLevel );
     if ( info1.lowestLevel < info0.lowestLevel )
     {
@@ -265,11 +273,28 @@ FaceBitSet WatershedGraph::getBasinFaces( Graph::VertId basin ) const
     res.resize( mesh_.topology.faceSize() );
     assert( graph_.valid( basin ) );
     assert( basin == parentBasin_[basin] );
-    BitSetParallelForAll( res, [&]( FaceId f )
+    BitSetParallelFor( mesh_.topology.getValidFaces(), [&]( FaceId f )
     {
         if ( basin == getRootBasin( Graph::VertId( face2iniBasin_[f] ) ) )
             res.set( f );
     } );
+    return res;
+}
+
+Vector<FaceBitSet, Graph::VertId> WatershedGraph::getAllBasinFaces() const
+{
+    MR_TIMER
+    Vector<FaceBitSet, Graph::VertId> res( graph_.vertSize() );
+    for ( auto basin : graph_.validVerts() )
+        res[basin].resize( mesh_.topology.faceSize() );
+
+    BitSetParallelFor( mesh_.topology.getValidFaces(), [&]( FaceId f )
+    {
+        const auto basin = getRootBasin( Graph::VertId( face2iniBasin_[f] ) );
+        assert( graph_.valid( basin ) );
+        res[basin].set( f );
+    } );
+
     return res;
 }
 
@@ -282,7 +307,7 @@ FaceBitSet WatershedGraph::getBasinFacesBelowLevel( Graph::VertId basin, float w
     res.resize( mesh_.topology.faceSize() );
     assert( graph_.valid( basin ) );
     assert( basin == parentBasin_[basin] );
-    BitSetParallelForAll( res, [&]( FaceId f )
+    BitSetParallelFor( mesh_.topology.getValidFaces(), [&]( FaceId f )
     {
         if ( basin != getRootBasin( Graph::VertId( face2iniBasin_[f] ) ) )
             return;
@@ -321,13 +346,30 @@ UndirectedEdgeBitSet WatershedGraph::getInterBasinEdges( bool includeOverflowToB
             return;
         if ( !includeOverflowToBds )
         {
-            if ( basins_[lBasin].overflowTo == rBasin )
+            if ( flowsTo( lBasin ) == rBasin )
                 return;
-            if ( basins_[rBasin].overflowTo == lBasin )
+            if ( flowsTo( rBasin ) == lBasin )
                 return;
         }
         res.set( ue );
     } );
+    return res;
+}
+
+auto WatershedGraph::getOverflowPoints() const -> std::vector<OverflowPoint>
+{
+    MR_TIMER
+    std::vector<OverflowPoint> res;
+
+    for ( auto basin : graph_.validVerts() )
+    {
+        const auto & info = basins_[basin];
+        if ( !info.overflowVia )
+            continue;
+        const auto t = flowsTo( basin );
+        res.push_back( { bds_[info.overflowVia].lowestVert, basin, t } );
+    }
+
     return res;
 }
 

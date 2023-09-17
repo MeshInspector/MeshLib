@@ -48,11 +48,17 @@ public:
     /// constructs the graph from all valid vertices and edges
     MRMESH_API void construct( NeighboursPerVertex neighboursPerVertex, EndsPerEdge endsPerEdge );
 
+    /// returns the number of vertex records, including invalid ones
+    [[nodiscard]] size_t vertSize() const { return neighboursPerVertex_.size(); }
+
     /// returns all valid vertices in the graph
     [[nodiscard]] const VertBitSet & validVerts() const { return validVerts_; }
 
     /// returns true if given vertex is valid
     [[nodiscard]] bool valid( VertId v ) const { return validVerts_.test( v ); }
+
+    /// returns the number of edge records, including invalid ones
+    [[nodiscard]] size_t edgeSize() const { return endsPerEdge_.size(); }
 
     /// returns all valid edges in the graph
     [[nodiscard]] const EdgeBitSet & validEdges() const { return validEdges_; }

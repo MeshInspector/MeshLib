@@ -49,7 +49,8 @@ public:
     {
         Front,
         Top,
-        Buttom = 3,
+        // 2 is skipped
+        Bottom = 3,
         Left,
         Back,
         Right,

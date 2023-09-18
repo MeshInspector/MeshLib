@@ -54,6 +54,7 @@ VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts,
     return computeFlow( starts.size(),
         [&starts]( size_t n ) { return starts[n].point; },
         [&starts]( size_t n ) { return starts[n].amount; },
+        {},
         outPolyline, outFlowPerEdge );
 }
 
@@ -62,12 +63,14 @@ VertScalars FlowAggregator::computeFlow( const std::vector<MeshTriPoint> & start
     return computeFlow( starts.size(),
         [&starts]( size_t n ) { return starts[n]; },
         []( size_t ) { return 1.0f; },
+        {},
         outPolyline, outFlowPerEdge );
 }
 
 VertScalars FlowAggregator::computeFlow( size_t numStarts,
     const std::function<MeshTriPoint(size_t)> & startById,
     const std::function<float(size_t)> & amountById,
+    const std::function<const FaceBitSet*(size_t)> & regionById,
     Polyline3 * outPolyline, UndirectedEdgeScalars * outFlowPerEdge ) const
 {
     MR_TIMER
@@ -82,8 +85,11 @@ VertScalars FlowAggregator::computeFlow( size_t numStarts,
         VertId nextVert;
         if ( auto s = startById( i ); s && !s.isBd( mesh_.topology ) )
         {
+            MeshPart mp{ mesh_ };
+            if ( regionById )
+                mp.region = regionById( i );
             EdgePoint bdPoint;
-            start2downPath[i] = computeSteepestDescentPath( mesh_, heights_, s, { .outVertexReached = &nextVert, .outBdReached = &bdPoint } );
+            start2downPath[i] = computeSteepestDescentPath( mp, heights_, s, { .outVertexReached = &nextVert, .outBdReached = &bdPoint } );
             if ( bdPoint )
                 start2downPath[i].push_back( bdPoint );
             start2downVert[i] = nextVert;

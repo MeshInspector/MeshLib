@@ -29,7 +29,7 @@ auto PrecipitationSimulator::simulateOne() -> SimulationStep
     res.amount = amount;
 
     auto& info = wg_.basinInfo( basin );
-    assert( !info.overflowTo );
+    assert( !info.overflowVia );
     info.lastUpdateAmount = amount;
     info.accVolume = info.maxVolume;
 
@@ -41,27 +41,38 @@ auto PrecipitationSimulator::simulateOne() -> SimulationStep
         const auto neiBasin = wg_.graph().ends( bd ).otherEnd( basin );
         res.basin = basin;
         res.neiBasin = neiBasin;
-        auto targetBasin = wg_.flowsTo( neiBasin );
+        auto targetBasin = wg_.flowsFinallyTo( neiBasin );
         if ( targetBasin == basin )
         {
             res.event = Event::Merge;
             auto& neiInfo = wg_.basinInfo( neiBasin );
-            neiInfo.updateAccVolume( amount );
+            // all flow from nei was already in basin:
+            assert( info.area >= neiInfo.area );
+            neiInfo.area = 0;
             wg_.merge( basin, neiBasin );
             heap_.setSmallerValue( neiBasin, infAmount );
             heap_.setSmallerValue( basin, amount + info.amountTillOverflow() );
             return res;
         }
-        if ( targetBasin != wg_.outsideId() )
+        auto v = neiBasin;
+        for (;;)
         {
-            auto& targetInfo = wg_.basinInfo( targetBasin );
-            targetInfo.updateAccVolume( amount );
-            targetInfo.area += info.area;
-            heap_.setLargerValue( targetBasin, amount + targetInfo.amountTillOverflow() );
+            auto& vInfo = wg_.basinInfo( v );
+            if ( !vInfo.overflowVia )
+                vInfo.updateAccVolume( amount );
+            vInfo.area += info.area;
+            auto v2 = wg_.flowsTo( v );
+            if ( v2 == v )
+            {
+                if ( targetBasin != wg_.outsideId() )
+                    heap_.setLargerValue( v, amount + vInfo.amountTillOverflow() );
+                break;
+            }
+            v = v2;
         }
+        assert( v == targetBasin );
         heap_.setSmallerValue( basin, infAmount );
-        info.area = 0;
-        info.overflowTo = neiBasin;
+        info.overflowVia = bd;
         res.event = Event::BasinFull;
         return res;
     }

@@ -7,8 +7,15 @@
 
 #include "MRPch/MRSpdlog.h"
 
+#if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
+#pragma warning( push )
+#pragma warning( disable: 5267 ) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
+#endif
 #include <lazperf/lazperf.hpp>
 #include <lazperf/readers.hpp>
+#if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
+#pragma warning( pop )
+#endif
 
 namespace
 {

@@ -239,10 +239,22 @@ SetViewPresetMenuItem::SetViewPresetMenuItem( Type type ) :
 bool SetViewPresetMenuItem::action()
 {
     auto& viewport = getViewerInstance().viewport();
-    if ( type_ != Type::Isometric )
-        viewport.setCameraTrackballAngle( getCanonicalQuaternions<float>()[int( type_ )] );
+
+    static const Quaternionf quats[(int)Type::Isometric] =
+    {
+        Quaternionf( Vector3f::plusX(),  -PI2_F ),        // Front
+        Quaternionf(),                                    // Top
+        Quaternionf(), // unused
+        Quaternionf( Vector3f::plusX(),   PI_F ),         // Bottom
+        Quaternionf( Vector3f(-1, 1, 1 ), 2 * PI_F / 3 ), // Left
+        Quaternionf( Vector3f( 0, 1, 1 ), PI_F ),         // Back
+        Quaternionf( Vector3f(-1,-1,-1 ), 2 * PI_F / 3 )  // Right
+    };
+
+    if ( type_ < Type::Isometric )
+        viewport.setCameraTrackballAngle( quats[int( type_ )] );
     else
-        viewport.cameraLookAlong( Vector3f( -1.f, -1.f, -1.f ), Vector3f( -1.f, 2.f, -1.f ) );
+        viewport.cameraLookAlong( Vector3f( -1.f, -1.f, -1.f ), Vector3f( -1, -1, 2 ) );
 
     viewport.preciseFitDataToScreenBorder( { 0.9f } );
     return false;
@@ -260,7 +272,7 @@ public:
 
 using SetFrontViewMenuItem = SetViewPresetMenuItemTemplate<SetViewPresetMenuItem::Type::Front>;
 using SetTopViewMenuItem = SetViewPresetMenuItemTemplate<SetViewPresetMenuItem::Type::Top>;
-using SetButtomViewMenuItem = SetViewPresetMenuItemTemplate<SetViewPresetMenuItem::Type::Buttom>;
+using SetButtomViewMenuItem = SetViewPresetMenuItemTemplate<SetViewPresetMenuItem::Type::Bottom>;
 using SetLeftViewMenuItem = SetViewPresetMenuItemTemplate<SetViewPresetMenuItem::Type::Left>;
 using SetBackViewMenuItem = SetViewPresetMenuItemTemplate<SetViewPresetMenuItem::Type::Back>;
 using SetRightViewMenuItem = SetViewPresetMenuItemTemplate<SetViewPresetMenuItem::Type::Right>;

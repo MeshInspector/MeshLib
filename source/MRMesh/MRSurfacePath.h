@@ -77,15 +77,24 @@ struct ComputeSteepestDescentPathSettings
 /// computes the path (edge points crossed by the path) staring in given point
 /// and moving in each triangle in minus gradient direction of given field;
 /// the path stops when it reaches a local minimum in the field or one of stop conditions in settings
-[[nodiscard]] MRMESH_API SurfacePath computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
+[[nodiscard]] MRMESH_API SurfacePath computeSteepestDescentPath( const MeshPart & mp, const VertScalars & field,
     const MeshTriPoint & start, const ComputeSteepestDescentPathSettings & settings = {} );
 
 /// computes the path (edge points crossed by the path) staring in given point
 /// and moving in each triangle in minus gradient direction of given field,
 /// and outputs the path in \param outPath if requested;
 /// the path stops when it reaches a local minimum in the field or one of stop conditions in settings
-MRMESH_API void computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
+MRMESH_API void computeSteepestDescentPath( const MeshPart & mp, const VertScalars & field,
     const MeshTriPoint & start, SurfacePath * outPath, const ComputeSteepestDescentPathSettings & settings = {} );
+
+/// finds the point along minus maximal gradient on the boundary of first ring boundary around given vertex
+[[nodiscard]] MRMESH_API MeshEdgePoint findSteepestDescentPoint( const MeshPart & mp, const VertScalars & field, VertId v );
+
+/// finds the point along minus maximal gradient on the boundary of triangles around given point (the boundary of left and right edge triangles' union in case (ep) is inner edge point)
+[[nodiscard]] MRMESH_API MeshEdgePoint findSteepestDescentPoint( const MeshPart & mp, const VertScalars & field, const MeshEdgePoint & ep );
+
+/// finds the point along minus maximal gradient on the boundary of triangles around given point (the boundary of the triangle itself in case (tp) is inner triangle point)
+[[nodiscard]] MRMESH_API MeshEdgePoint findSteepestDescentPoint( const MeshPart & mp, const VertScalars & field, const MeshTriPoint & tp );
 
 enum class ExtremeEdgeType
 {

@@ -21,6 +21,7 @@ std::vector<FaceBitSet> findOverhangs( const Mesh& mesh, const FindOverhangsSett
     assert( std::abs( settings.axis.lengthSq() - 1.f ) < 1e-6f );
     assert( settings.layerHeight > 0.f );
     assert( settings.maxOverhangDistance > 0.f );
+    assert( settings.hops >= 0 );
     const auto minCos = -settings.layerHeight / std::hypot( settings.layerHeight, settings.maxOverhangDistance );
 
     const auto isOverhanging = [&] ( FaceId f ) -> bool
@@ -38,10 +39,10 @@ std::vector<FaceBitSet> findOverhangs( const Mesh& mesh, const FindOverhangsSett
     } );
 
     // simplify the regions...
-    expand( mesh.topology, faces, 1 );
+    expand( mesh.topology, faces, settings.hops );
     // ...but preserve the overhanging faces
     auto shrunk = faces;
-    shrink( mesh.topology, shrunk, 1 );
+    shrink( mesh.topology, shrunk, settings.hops );
     BitSetParallelFor( faces - shrunk, [&] ( FaceId f )
     {
         faces[f] = isOverhanging( f );

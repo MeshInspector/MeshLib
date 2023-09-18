@@ -15,6 +15,8 @@ struct FindOverhangsSettings
     float layerHeight { 1.f };
     /// maximum overhang distance within a layer
     float maxOverhangDistance { 1.f };
+    /// number of hops used to simplify overhang regions (0 - disable simplification)
+    int hops = 0;
 };
 
 /// \brief Find face regions that might create overhangs

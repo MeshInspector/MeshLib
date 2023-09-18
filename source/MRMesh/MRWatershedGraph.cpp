@@ -283,19 +283,31 @@ FaceBitSet WatershedGraph::getBasinFaces( Graph::VertId basin ) const
     return res;
 }
 
-Vector<FaceBitSet, Graph::VertId> WatershedGraph::getAllBasinFaces( bool joinOverflowBasins ) const
+Vector<Graph::VertId, Graph::VertId> WatershedGraph::iniBasin2Tgt( bool joinOverflowBasins ) const
 {
     MR_TIMER
-    Vector<FaceBitSet, Graph::VertId> res( graph_.vertSize() );
-    Vector<Graph::VertId, Graph::VertId> roots( graph_.vertSize() );
-    for ( Graph::VertId basin( 0 ); basin < outsideId_; ++basin )
+    Vector<Graph::VertId, Graph::VertId> res( graph_.vertSize() );
+    ParallelFor( res, [&]( Graph::VertId basin )
     {
+        if ( basin == outsideId_ )
+            return;
         auto root = getRootBasin( basin );
         if ( joinOverflowBasins && graph_.valid( root ) )
             root = flowsFinallyTo( root, true );
         assert( root );
-        roots[basin] = root;
-        if ( root != basin )
+        res[basin] = root;
+    } );
+    return res;
+}
+
+Vector<FaceBitSet, Graph::VertId> WatershedGraph::getAllBasinFaces( bool joinOverflowBasins ) const
+{
+    MR_TIMER
+    Vector<FaceBitSet, Graph::VertId> res( graph_.vertSize() );
+    const auto roots = iniBasin2Tgt( joinOverflowBasins );
+    for ( Graph::VertId basin( 0 ); basin < outsideId_; ++basin )
+    {
+        if ( roots[basin] != basin )
             continue;
         res[basin].resize( mesh_.topology.faceSize() );
     }
@@ -340,9 +352,12 @@ double WatershedGraph::computeBasinVolume( Graph::VertId basin, float waterLevel
     return MR::computeBasinVolume( mesh_, getBasinFacesBelowLevel( basin, waterLevel ), waterLevel );
 }
 
-UndirectedEdgeBitSet WatershedGraph::getInterBasinEdges( bool includeOverflowToBds ) const
+UndirectedEdgeBitSet WatershedGraph::getInterBasinEdges( bool joinOverflowBasins ) const
 {
     MR_TIMER
+
+    const auto roots = iniBasin2Tgt( joinOverflowBasins );
+
     UndirectedEdgeBitSet res( mesh_.topology.undirectedEdgeSize() );
     BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
     {
@@ -352,17 +367,10 @@ UndirectedEdgeBitSet WatershedGraph::getInterBasinEdges( bool includeOverflowToB
         auto r = mesh_.topology.right( ue );
         if ( !r )
             return;
-        const auto lBasin = getRootBasin( Graph::VertId( face2iniBasin_[l] ) );
-        const auto rBasin = getRootBasin( Graph::VertId( face2iniBasin_[r] ) );
+        const auto lBasin = roots[ Graph::VertId( face2iniBasin_[l] ) ];
+        const auto rBasin = roots[ Graph::VertId( face2iniBasin_[r] ) ];
         if ( lBasin == rBasin )
             return;
-        if ( !includeOverflowToBds )
-        {
-            if ( flowsTo( lBasin ) == rBasin )
-                return;
-            if ( flowsTo( rBasin ) == lBasin )
-                return;
-        }
         res.set( ue );
     } );
     return res;

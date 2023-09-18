@@ -130,8 +130,8 @@ public:
     [[nodiscard]] MRMESH_API double computeBasinVolume( Graph::VertId basin, float waterLevel ) const;
 
     /// returns the mesh edges between current basins
-    /// \param includeFlotToBds if true then the boundaries between basins related by (overflowTo) will also be included
-    [[nodiscard]] MRMESH_API UndirectedEdgeBitSet getInterBasinEdges( bool includeOverflowToBds ) const;
+    /// \param joinOverflowBasins if true then overflowing basins will be merged in the target basins (except for overflow in outside)
+    [[nodiscard]] MRMESH_API UndirectedEdgeBitSet getInterBasinEdges( bool joinOverflowBasins = false ) const;
 
     /// describes a point where a flow from one basin overflows into another basin
     struct OverflowPoint
@@ -143,6 +143,10 @@ public:
 
     /// returns all overflow points in the graph
     [[nodiscard]] MRMESH_API std::vector<OverflowPoint> getOverflowPoints() const;
+
+    /// computes a map from initial basin id to a valid basin in which it was merged
+    /// \param joinOverflowBasins if true then overflowing basins will be merged in the target basins (except for overflow in outside)
+    [[nodiscard]] MRMESH_API Vector<Graph::VertId, Graph::VertId> iniBasin2Tgt( bool joinOverflowBasins = false ) const;
 
 private:
     const Mesh & mesh_;

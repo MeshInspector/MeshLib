@@ -52,18 +52,20 @@ FilterBowtiesResult filterBowties( const Contour2f& cont )
     return res;
 }
 
+// class to hold intermediate results and process structure embedding
 class TerrainEmbedder
 {
 public:
     TerrainEmbedder( const Mesh& terrain, const Mesh& structure, const EmbeddedStructureParameters& params ) :
         struct_{ structure },
         params_{ params },
-        result{terrain}
+        result_{terrain}
     {
     }
     Expected<Mesh, std::string> run();
 private:
-    Expected<VertBitSet,std::string> createCuttedStructure_();
+    // cut structure by terrain intersection contour
+    Expected<VertBitSet,std::string> createCutStructure_();
 
     struct MarkedContour
     {
@@ -71,42 +73,51 @@ private:
         VertBitSet cutBitSet;
         VertBitSet intBitSet;
     };
-
+    // makes contour for further processing with marked vertices (cut vertices and terrain intersection vertices)
     Expected<MarkedContour, std::string> createMarkedStructureContour_( VertBitSet&& structCutVerts );
 
     struct MappedMeshContours
     {
         OneMeshContours contours;
-        std::vector<std::vector<int>> map;
-        std::vector<std::vector<int>> filtBowTiesMap;
-        std::vector<int> offsetMap;
+        std::vector<std::vector<int>> map; // map from terrain cut edges to projected contours
+        std::vector<std::vector<int>> filtBowTiesMap; // map from projected contours to no bow tie filtered contours
+        std::vector<int> offsetMap; // map from filtered contours to non-project offset contours (use in findOffsetContourIndex_)
+        VertBitSet intBitSet; // 
     };
-
+    // make preparation on terrain and finds contour for cut with mapping to cut structure boundary
     Expected<MappedMeshContours, std::string> prepareTerrainCut( MarkedContour&& mc );
+    // cut terrain with filtered contours and remove internal part
     Expected<std::vector<EdgeLoop>, std::string> cutTerrain( const MappedMeshContours& mmc );
+    // connect hole on terrain with cut structure
     void connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours&& mmc );
-    void fill_();
+    // fill holes in connection
+    void fill_( size_t oldVertSize, size_t oldEdgesSize );
 
     struct OffsetBlock
     {
         Contour2f contour;
         std::vector<int> idsShifts;
     };
+    // offset marked contours respecting marks
     OffsetBlock offsetContour_( const MarkedContour& mc, float cutOffset, float fillOffset );
-
+    // return index of non-offset contour by offset index and map
     int findOffsetContourIndex_( int i, const std::vector<int>& idsShifts ) const;
 
+    // structure mesh (only used for making cut structure)
     const Mesh& struct_;
     const EmbeddedStructureParameters& params_;
-
-    Mesh result;
-    Mesh cuttedStructure_;
+    
+    // result mesh
+    Mesh result_;
+    // cut structure (last used in connect function, empty after it)
+    Mesh cutStructure_;
+    // bounds of cutStructure_
     std::vector<EdgeLoop> bounds_;
 };
 
 Expected<Mesh, std::string> TerrainEmbedder::run()
 {
-    auto cutBs = createCuttedStructure_();
+    auto cutBs = createCutStructure_();
     if ( !cutBs.has_value() )
         return unexpected( cutBs.error() );
 
@@ -122,15 +133,19 @@ Expected<Mesh, std::string> TerrainEmbedder::run()
     if ( !cutTer.has_value() )
         return unexpected( cutTer.error() );
 
+    auto oldVertSize = result_.topology.vertSize();
+    auto oldEdgeSize = result_.topology.undirectedEdgeSize();
     connect_( std::move( *cutTer ), std::move( *prepCut ) );
 
-    return std::move( result );
+    fill_( oldVertSize, oldEdgeSize );
+
+    return std::move( result_ );
 }
 
-Expected<VertBitSet, std::string> TerrainEmbedder::createCuttedStructure_()
+Expected<VertBitSet, std::string> TerrainEmbedder::createCutStructure_()
 {
     BooleanPreCutResult structPrecutRes;
-    boolean( result, struct_, BooleanOperation::InsideB, { .outPreCutB = &structPrecutRes } );
+    boolean( result_, struct_, BooleanOperation::InsideB, { .outPreCutB = &structPrecutRes } );
     VertBitSet cutVerts;
     if ( !structPrecutRes.contours.empty() )
     {
@@ -147,17 +162,17 @@ Expected<VertBitSet, std::string> TerrainEmbedder::createCuttedStructure_()
         assert( sFace );
 
         Vector3f sPoint = struct_.triCenter( sFace );
-        auto signDist = result.signedDistance( sPoint, FLT_MAX );
+        auto signDist = result_.signedDistance( sPoint, FLT_MAX );
         if ( signDist && signDist < 0.0f )
             cutVerts = structPrecutRes.mesh.topology.getValidVerts();
     }
-    cuttedStructure_ = std::move( structPrecutRes.mesh );
+    cutStructure_ = std::move( structPrecutRes.mesh );
     return cutVerts;
 }
 
 Expected<TerrainEmbedder::MarkedContour, std::string> TerrainEmbedder::createMarkedStructureContour_( VertBitSet&& structCutVerts )
 {
-    bounds_ = findRightBoundary( cuttedStructure_.topology );
+    bounds_ = findRightBoundary( cutStructure_.topology );
     if ( bounds_.size() != 1 )
         return unexpected( "Structure should have only one boundary" );
     
@@ -168,8 +183,8 @@ Expected<TerrainEmbedder::MarkedContour, std::string> TerrainEmbedder::createMar
     auto vs = struct_.topology.vertSize();
     for ( int i = 0; i + 1 < res.contour.size(); ++i )
     {
-        auto org = cuttedStructure_.topology.org( bounds_[0][i] );
-        res.contour[i] = cuttedStructure_.points[org];
+        auto org = cutStructure_.topology.org( bounds_[0][i] );
+        res.contour[i] = cutStructure_.points[org];
         if ( structCutVerts.test( org ) )
             res.cutBitSet.set( VertId( i ) );
         else if ( org >= vs )
@@ -197,14 +212,14 @@ Expected<TerrainEmbedder::MappedMeshContours, std::string> TerrainEmbedder::prep
             const auto& startPoint = mc.contour[index];
             if ( mc.intBitSet.test( VertId( index ) ) )
             {
-                mtps[i] = findProjection( startPoint, result ).mtp;
+                mtps[i] = findProjection( startPoint, result_ ).mtp;
                 return;
             }
             auto line =
                 Line3f( startPoint,
                     to3dim( offCont.contour[i] ) + Vector3f( 0, 0, startPoint.z ) +
                     ( mc.cutBitSet.test( VertId( index ) ) ? Vector3f::plusZ() : Vector3f::minusZ() ) - startPoint );
-            auto interRes = rayMeshIntersect( result, line );
+            auto interRes = rayMeshIntersect( result_, line );
             if ( !interRes )
             {
                 if ( ctx.cancel_group_execution() )
@@ -220,7 +235,7 @@ Expected<TerrainEmbedder::MappedMeshContours, std::string> TerrainEmbedder::prep
         Contour2f planarCont( mtps.size() + 1 );
         ParallelFor( mtps, [&] ( size_t i )
         {
-            planarCont[i] = to2dim( result.triPoint( mtps[i] ) );
+            planarCont[i] = to2dim( result_.triPoint( mtps[i] ) );
         } );
         planarCont.back() = planarCont.front();
 
@@ -239,7 +254,7 @@ Expected<TerrainEmbedder::MappedMeshContours, std::string> TerrainEmbedder::prep
                 else
                 {
                     auto line = Line3f( to3dim( noBTCont[j] ), Vector3f::plusZ() );
-                    auto interRes = rayMeshIntersect( result, line, -FLT_MAX, FLT_MAX );
+                    auto interRes = rayMeshIntersect( result_, line, -FLT_MAX, FLT_MAX );
                     if ( !interRes )
                         return unexpected( "Cannot resolve bow ties on embedded structure wall" );
                     noBowtiesMtp[j] = interRes->mtp;
@@ -255,7 +270,7 @@ Expected<TerrainEmbedder::MappedMeshContours, std::string> TerrainEmbedder::prep
         for ( int i = 0; i < res.contours.size(); ++i )
         {
             bool lone = true;
-            res.contours[i] = convertMeshTriPointsToClosedContour( result, noBowtiesMtps[i], &res.map[i] );
+            res.contours[i] = convertMeshTriPointsToClosedContour( result_, noBowtiesMtps[i], &res.map[i] );
             for ( int j = 0; j < res.contours[i].intersections.size(); ++j )
             {
                 if ( res.contours[i].intersections[j].primitiveId.index() == OneMeshIntersection::VariantIndex::Edge )
@@ -271,28 +286,29 @@ Expected<TerrainEmbedder::MappedMeshContours, std::string> TerrainEmbedder::prep
         if ( loneContours.empty() )
         {
             res.offsetMap = std::move( offCont.idsShifts );
+            res.intBitSet = std::move( mc.intBitSet );
             return res;
         }
-        subdivideLoneContours( result, loneContours );
+        subdivideLoneContours( result_, loneContours );
     }
     return unexpected( "Cannot resolve lone cut on terrain" );
 }
 
 Expected<std::vector<EdgeLoop>, std::string> TerrainEmbedder::cutTerrain( const MappedMeshContours& mmc )
 {
-    auto cutRes = cutMesh( result, mmc.contours );
+    auto cutRes = cutMesh( result_, mmc.contours );
     if ( cutRes.fbsWithCountourIntersections.any() )
         return unexpected( "Wall contours have self-intersections" );
 
-    result.topology.deleteFaces( result.topology.getValidFaces() - fillContourLeft( result.topology, cutRes.resultCut ) );
-    result.invalidateCaches();
+    result_.topology.deleteFaces( result_.topology.getValidFaces() - fillContourLeft( result_.topology, cutRes.resultCut ) );
+    result_.invalidateCaches();
     return cutRes.resultCut;
 }
 
 void TerrainEmbedder::connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours&& mmc )
 {
     WholeEdgeMap emap;
-    result.addPart( cuttedStructure_, nullptr, nullptr, &emap );
+    result_.addPart( std::move( cutStructure_ ), nullptr, nullptr, &emap );
 
     for ( int i = 0; i < mmc.map.size(); ++i )
     {
@@ -307,10 +323,51 @@ void TerrainEmbedder::connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours
             if ( baseEdgeIndex + 1 >= mmc.offsetMap.size() )
                 continue;
 
-            makeBridgeEdge( result.topology,
-                result.topology.prev( hole[i][cutEdgeIndex] ),
-                mapEdge( emap, bounds_[0][baseEdgeIndex] ) );
+            auto e = result_.topology.prev( hole[i][cutEdgeIndex] );
+            auto be = mapEdge( emap, bounds_[0][baseEdgeIndex] );
+            if ( mmc.intBitSet.test( VertId( baseEdgeIndex ) ) )
+            {
+                auto vert = result_.topology.org( e );
+                result_.topology.setOrg( e,  {} );
+                result_.topology.setOrg( be, {} );
+                result_.topology.splice( be, e );
+                result_.topology.setOrg( e, vert );
+            }
+            else
+                makeBridgeEdge( result_.topology, e, be );
         }
+    }
+}
+
+void TerrainEmbedder::fill_( size_t oldVertSize, size_t oldEdgesSize )
+{
+    FillHoleMetric metric;
+    metric.triangleMetric = [&] ( VertId a, VertId b, VertId c )
+    {
+        if ( ( a < oldVertSize && b < oldVertSize && c < oldVertSize ) ||
+            ( a >= oldVertSize && b >= oldVertSize && c >= oldVertSize ) )
+            return DBL_MAX; // no triangles on same part
+
+        Vector3d aP = Vector3d( result_.points[a] );
+        Vector3d bP = Vector3d( result_.points[b] );
+        Vector3d cP = Vector3d( result_.points[c] );
+
+        return dblArea( aP, bP, cP );
+    };
+    auto edgesSize = result_.topology.undirectedEdgeSize();
+
+
+    FillHoleParams fhParams;
+    fhParams.metric = metric;
+    fhParams.outNewFaces = params_.outNewFaces;
+    for ( size_t ue = oldEdgesSize; ue < edgesSize; ++ue )
+    {
+        auto edge = EdgeId( ue << 1 );
+
+        if ( !result_.topology.left( edge ) )
+            fillHole( result_, edge, fhParams );
+        if ( !result_.topology.left( edge.sym() ) )
+            fillHole( result_, edge.sym(), fhParams );
     }
 }
 

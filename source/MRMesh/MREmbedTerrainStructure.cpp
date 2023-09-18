@@ -23,88 +23,6 @@
 namespace MR
 {
 
-struct OffsetBlock
-{
-    Contour2f contour;
-    std::vector<int> contourIdsShifts;
-};
-
-OffsetBlock offsetContour( const Contour3f& cont, const VertBitSet& cutBitSet, 
-    float cutOffset, float fillOffset, float minAnglePrecision )
-{
-    OffsetBlock res;
-    res.contourIdsShifts.resize( int( cont.size() ), 0 );
-
-    auto contNorm = [&] ( int i )
-    {
-        auto norm = to2dim( cont[i + 1] ) - to2dim( cont[i] );
-        std::swap( norm.x, norm.y );
-        norm.x = -norm.x;
-        norm = norm.normalized();
-        return norm;
-    };
-
-    auto offset = [&] ( int i )
-    {
-        return cutBitSet.test( VertId( i ) ) ? cutOffset : fillOffset;
-    };
-
-    res.contour.reserve( 3 * cont.size() );
-    auto lastPoint = to2dim( cont[0] ) + offset( 0 ) * contNorm( int( cont.size() ) - 2 );
-    for ( int i = 0; i + 1 < cont.size(); ++i )
-    {
-        auto orgPt = to2dim( cont[i] );
-        auto destPt = to2dim( cont[i + 1] );
-        auto norm = contNorm( i );
-
-        auto nextPoint = orgPt + norm * offset( i );
-        bool sameAsPrev = false;
-        // interpolation    
-        if ( res.contour.empty() )
-        {
-            res.contour.emplace_back( std::move( lastPoint ) );
-            ++res.contourIdsShifts[i];
-        }
-        auto prevPoint = res.contour.back();
-        auto a = prevPoint - orgPt;
-        auto b = nextPoint - orgPt;
-        auto crossRes = cross( a, b );
-        auto dotRes = dot( a, b );
-        float ang = 0.0f;
-        if ( crossRes == 0.0f )
-            ang = dotRes >= 0.0f ? 0.0f : PI_F;
-        else
-            ang = std::atan2( crossRes, dotRes );
-
-        sameAsPrev = std::abs( ang ) < PI_F / 360.0f;
-        if ( !sameAsPrev )
-        {
-            int numSteps = int( std::floor( std::abs( ang ) / ( minAnglePrecision ) ) );
-            for ( int s = 0; s < numSteps; ++s )
-            {
-                float stepAng = ( ang / ( numSteps + 1 ) ) * ( s + 1 );
-                auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( stepAng ), orgPt );
-                res.contour.emplace_back( rotXf( prevPoint ) );
-                ++res.contourIdsShifts[i];
-            }
-            res.contour.emplace_back( std::move( nextPoint ) );
-            ++res.contourIdsShifts[i];
-        }
-
-        res.contour.emplace_back( destPt + norm * offset( i + 1 ) );
-        ++res.contourIdsShifts[i + 1];
-    }
-    int prevSum = 0;
-    for ( int i = 0; i + 1 < res.contourIdsShifts.size(); ++i )
-    {
-        std::swap( res.contourIdsShifts[i], prevSum );
-        prevSum += res.contourIdsShifts[i];
-    }
-
-    res.contourIdsShifts.back() = int( res.contour.size() ) - 1;
-    return res;
-}
-
 struct FilterBowtiesResult
 {
     Contours2f contours;
@@ -134,580 +52,362 @@ FilterBowtiesResult filterBowties( const Contour2f& cont )
     return res;
 }
 
-Expected<Mesh, std::string> embedStructureToTerrain( 
-    const Mesh& terrain, const Mesh& structure, const EmbeddedStructureParameters& params )
+class TerrainEmbedder
 {
-    MR_TIMER;
+public:
+    TerrainEmbedder( const Mesh& terrain, const Mesh& structure, const EmbeddedStructureParameters& params ) :
+        struct_{ structure },
+        params_{ params },
+        result{terrain}
+    {
+    }
+    Expected<Mesh, std::string> run();
+private:
+    Expected<VertBitSet,std::string> createCuttedStructure_();
 
-    auto resMesh = terrain;
-    auto globalBox = resMesh.computeBoundingBox();
-    globalBox.include( structure.computeBoundingBox() );
-    
-    auto boxSize = globalBox.size();
-    const float boxExpansion = 0.5f;
-    auto mainComponent = terrain.topology.getValidFaces();
+    struct MarkedContour
+    {
+        Contour3f contour;
+        VertBitSet cutBitSet;
+        VertBitSet intBitSet;
+    };
 
-    auto structBound = findRightBoundary( structure.topology );
-    if ( structBound.size() != 1 )
-        return unexpected( "Structure should have only one boundary" );
+    Expected<MarkedContour, std::string> createMarkedStructureContour_( VertBitSet&& structCutVerts );
 
+    struct MappedMeshContours
+    {
+        OneMeshContours contours;
+        std::vector<std::vector<int>> map;
+        std::vector<std::vector<int>> filtBowTiesMap;
+        std::vector<int> offsetMap;
+    };
+
+    Expected<MappedMeshContours, std::string> prepareTerrainCut( MarkedContour&& mc );
+    Expected<std::vector<EdgeLoop>, std::string> cutTerrain( const MappedMeshContours& mmc );
+    void connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours&& mmc );
+    void fill_();
+
+    struct OffsetBlock
+    {
+        Contour2f contour;
+        std::vector<int> idsShifts;
+    };
+    OffsetBlock offsetContour_( const MarkedContour& mc, float cutOffset, float fillOffset );
+
+    int findOffsetContourIndex_( int i, const std::vector<int>& idsShifts ) const;
+
+    const Mesh& struct_;
+    const EmbeddedStructureParameters& params_;
+
+    Mesh result;
+    Mesh cuttedStructure_;
+    std::vector<EdgeLoop> bounds_;
+};
+
+Expected<Mesh, std::string> TerrainEmbedder::run()
+{
+    auto cutBs = createCuttedStructure_();
+    if ( !cutBs.has_value() )
+        return unexpected( cutBs.error() );
+
+    auto markedContour = createMarkedStructureContour_( std::move( *cutBs ) );
+    if ( !markedContour.has_value() )
+        return unexpected( markedContour.error() );
+
+    auto prepCut = prepareTerrainCut( std::move( *markedContour ) );
+    if ( !prepCut.has_value() )
+        return unexpected( prepCut.error() );
+
+    auto cutTer = cutTerrain( *prepCut );
+    if ( !cutTer.has_value() )
+        return unexpected( cutTer.error() );
+
+    connect_( std::move( *cutTer ), std::move( *prepCut ) );
+
+    return std::move( result );
+}
+
+Expected<VertBitSet, std::string> TerrainEmbedder::createCuttedStructure_()
+{
     BooleanPreCutResult structPrecutRes;
-    VertBitSet structCutVerts;
-    boolean( resMesh, structure, BooleanOperation::InsideB, { .outPreCutB = &structPrecutRes } );
+    boolean( result, struct_, BooleanOperation::InsideB, { .outPreCutB = &structPrecutRes } );
+    VertBitSet cutVerts;
     if ( !structPrecutRes.contours.empty() )
     {
         auto structCutRes = cutMesh( structPrecutRes.mesh, structPrecutRes.contours );
         if ( structCutRes.fbsWithCountourIntersections.any() )
             return unexpected( "Intersection contour of structure and terrain has self-intersections" );
-        structCutVerts = getIncidentVerts( structPrecutRes.mesh.topology,
+        cutVerts = getIncidentVerts( structPrecutRes.mesh.topology,
                                                      fillContourLeft( structPrecutRes.mesh.topology, structCutRes.resultCut ) );
-        structPrecutRes.mesh.topology.flip( structCutVerts );
+        structPrecutRes.mesh.topology.flip( cutVerts );
     }
     else
     {
-        auto sFace = structure.topology.getValidFaces().find_first();
+        auto sFace = struct_.topology.getValidFaces().find_first();
         assert( sFace );
 
-        Vector3f sPoint = structure.triCenter( sFace );
-        auto signDist = resMesh.signedDistance( sPoint, FLT_MAX );
+        Vector3f sPoint = struct_.triCenter( sFace );
+        auto signDist = result.signedDistance( sPoint, FLT_MAX );
         if ( signDist && signDist < 0.0f )
-            structCutVerts = structPrecutRes.mesh.topology.getValidVerts();
+            cutVerts = structPrecutRes.mesh.topology.getValidVerts();
     }
+    cuttedStructure_ = std::move( structPrecutRes.mesh );
+    return cutVerts;
+}
 
-    EmbeddedConeParameters ecParams{ params };
-    ecParams.minZ = globalBox.min.z - boxSize.z * boxExpansion * 2.0f / 3.0f;
-    ecParams.maxZ = globalBox.max.z + boxSize.z * boxExpansion * 2.0f / 3.0f;
-    ecParams.minAnglePrecision = params.minAnglePrecision;
-
-    Contour3f cont( structBound[0].size() + 1 );
-    ecParams.cutBitSet.resize( structBound[0].size() );
-    for ( int i = 0; i + 1 < cont.size(); ++i )
+Expected<TerrainEmbedder::MarkedContour, std::string> TerrainEmbedder::createMarkedStructureContour_( VertBitSet&& structCutVerts )
+{
+    bounds_ = findRightBoundary( cuttedStructure_.topology );
+    if ( bounds_.size() != 1 )
+        return unexpected( "Structure should have only one boundary" );
+    
+    MarkedContour res;
+    res.contour.resize( bounds_[0].size() + 1 );
+    res.cutBitSet.resize( bounds_[0].size() );
+    res.intBitSet.resize( bounds_[0].size() );
+    auto vs = struct_.topology.vertSize();
+    for ( int i = 0; i + 1 < res.contour.size(); ++i )
     {
-        auto org = structure.topology.org( structBound[0][i] );
-        cont[i] = structure.points[org];
+        auto org = cuttedStructure_.topology.org( bounds_[0][i] );
+        res.contour[i] = cuttedStructure_.points[org];
         if ( structCutVerts.test( org ) )
-            ecParams.cutBitSet.set( VertId( i ) );
+            res.cutBitSet.set( VertId( i ) );
+        else if ( org >= vs )
+            res.intBitSet.set( VertId( i ) );
     }
-    cont.back() = cont.front();
+    res.contour.back() = res.contour.front();
+    return res;
+}
 
-    bool needCut = ecParams.cutBitSet.any();
-    bool needFill = ecParams.cutBitSet.count() + 1 != cont.size();
-    assert( needCut || needFill );
-    //FaceBitSet extenedFaces;
-    //if ( !needFill || !needCut )
-    //{
-    //    auto desiredZ = needFill ?
-    //        globalBox.max.z + boxSize.z * boxExpansion :
-    //        globalBox.min.z - boxSize.z * boxExpansion;
-    //    for ( auto e : resMesh.topology.findHoleRepresentiveEdges() )
-    //        extendHole( resMesh, e, Plane3f( Vector3f::plusZ(), desiredZ ), &extenedFaces );
-    //}
+Expected<TerrainEmbedder::MappedMeshContours, std::string> TerrainEmbedder::prepareTerrainCut( MarkedContour&& mc )
+{
+    auto cutOffset = std::clamp( std::tan( params_.cutAngle ), 0.0f, 100.0f );
+    auto fillOffset = std::clamp( std::tan( params_.fillAngle ), 0.0f, 100.0f );
 
+    auto offCont = offsetContour_( mc, cutOffset, fillOffset );
 
-    auto cutOffset = std::clamp( std::tan( params.cutAngle ), 0.0f, 100.0f );
-    auto fillOffset = std::clamp( std::tan( params.fillAngle ), 0.0f, 100.0f );
-
-    auto offsetContRes = offsetContour( cont, ecParams.cutBitSet, cutOffset, fillOffset, params.minAnglePrecision );
-
-    auto findInitIndex = [] ( size_t i, const std::vector<int>& offsets )->int
+    for ( int loneResolveTries = 0; loneResolveTries < 5; ++loneResolveTries )
     {
-        int h = 0;
-        for ( ; h + 1 < offsets.size(); ++h )
+        std::vector<MeshTriPoint> mtps( offCont.contour.size() - 1 );
+        tbb::task_group_context ctx;
+        bool canceled = false;
+        ParallelFor( mtps, [&] ( size_t i )
         {
-            if ( i >= offsets[h] && i < offsets[h + 1] )
-                break;
-        }
-        return h;
-    };
-
-
-
-    Polyline3 polyline;
-
-    Contour3f outCont( offsetContRes.contour.size() );
-    for ( int j = 0; j < offsetContRes.contour.size(); ++j )
-        outCont[j] = to3dim( offsetContRes.contour[j] ) + 
-        Vector3f( 0, 0, cont[findInitIndex( j, offsetContRes.contourIdsShifts )].z );
-
-    outCont.back() = outCont.front();
-    polyline.addFromPoints( outCont.data(), outCont.size() );
-    polyline.transform( AffineXf3f::translation( Vector3f::plusZ() ) );
-
-    std::vector<MeshTriPoint> mtps( offsetContRes.contour.size() - 1 );
-    tbb::task_group_context ctx;
-    bool canceled = false;
-    //ParallelFor( mtps, [&] ( size_t i )
-    for ( int i = 0; i < mtps.size(); ++i )
-    {
-        auto index = findInitIndex( i, offsetContRes.contourIdsShifts );
-        const auto& startPoint = cont[index];
-        auto line =
-            Line3f( startPoint,
-                to3dim( offsetContRes.contour[i] ) +
-                Vector3f( 0, 0, startPoint.z ) +
-                ( ecParams.cutBitSet.test( VertId( index ) ) ? Vector3f::plusZ() : Vector3f::minusZ() ) - startPoint );
-        Vector3f vec[2];
-        vec[0] = line.p;
-        vec[1] = line.p + 20.0f * line.d;
-        polyline.addFromPoints( vec, 2, false );
-        auto interRes = rayMeshIntersect( resMesh, line );
-        if ( !interRes )
-        {
-            if ( ctx.cancel_group_execution() )
-                canceled = true;
-            continue;
-            //return;
-        }
-        mtps[i] = interRes->mtp;
-    } //);
-
-    LinesSave::toMrLines( polyline, "C:\\Users\\grant\\Downloads\\objects (1)\\outCont.mrlines" );
-    if ( canceled )
-        return unexpected( "Cannot embed structure beyond terrain" );
-
-    Contour2f planarCont( mtps.size() + 1 );
-    ParallelFor( mtps, [&] ( size_t i )
-    {
-        planarCont[i] = to2dim( resMesh.triPoint( mtps[i] ) );
-    } );
-    planarCont.back() = planarCont.front();
-
-    auto filterBt = filterBowties( planarCont );
-    std::vector<std::vector<MeshTriPoint>> noBowtiesMtps( filterBt.initIndices.size() );
-    for ( int i = 0; i < noBowtiesMtps.size(); ++i )
-    {
-        const auto& initInds = filterBt.initIndices[i];
-        const auto& noBTCont = filterBt.contours[i];
-        auto& noBowtiesMtp = noBowtiesMtps[i];
-        noBowtiesMtp.resize( initInds.size() );
-        for ( int j = 0; j < initInds.size(); ++j )
-        {
-            if ( initInds[j] != -1 )
-                noBowtiesMtp[j] = mtps[initInds[j]];
-            else
+            auto index = findOffsetContourIndex_( int( i ), offCont.idsShifts );
+            const auto& startPoint = mc.contour[index];
+            if ( mc.intBitSet.test( VertId( index ) ) )
             {
-                auto line = Line3f( to3dim( noBTCont[j] ) + Vector3f( 0, 0, ecParams.minZ ), Vector3f::plusZ() );
-                auto interRes = rayMeshIntersect( resMesh, line );
-                if ( !interRes )
-                    return unexpected( "Cannot resolve bow ties on embedded structure wall" );
-                noBowtiesMtp[j] = interRes->mtp;
+                mtps[i] = findProjection( startPoint, result ).mtp;
+                return;
+            }
+            auto line =
+                Line3f( startPoint,
+                    to3dim( offCont.contour[i] ) + Vector3f( 0, 0, startPoint.z ) +
+                    ( mc.cutBitSet.test( VertId( index ) ) ? Vector3f::plusZ() : Vector3f::minusZ() ) - startPoint );
+            auto interRes = rayMeshIntersect( result, line );
+            if ( !interRes )
+            {
+                if ( ctx.cancel_group_execution() )
+                    canceled = true;
+                return;
+            }
+            mtps[i] = interRes->mtp;
+        } );
+
+        if ( canceled )
+            return unexpected( "Cannot embed structure beyond terrain" );
+
+        Contour2f planarCont( mtps.size() + 1 );
+        ParallelFor( mtps, [&] ( size_t i )
+        {
+            planarCont[i] = to2dim( result.triPoint( mtps[i] ) );
+        } );
+        planarCont.back() = planarCont.front();
+
+        auto filterBt = filterBowties( planarCont );
+        std::vector<std::vector<MeshTriPoint>> noBowtiesMtps( filterBt.initIndices.size() );
+        for ( int i = 0; i < noBowtiesMtps.size(); ++i )
+        {
+            const auto& initInds = filterBt.initIndices[i];
+            const auto& noBTCont = filterBt.contours[i];
+            auto& noBowtiesMtp = noBowtiesMtps[i];
+            noBowtiesMtp.resize( initInds.size() );
+            for ( int j = 0; j < initInds.size(); ++j )
+            {
+                if ( initInds[j] != -1 )
+                    noBowtiesMtp[j] = mtps[initInds[j]];
+                else
+                {
+                    auto line = Line3f( to3dim( noBTCont[j] ), Vector3f::plusZ() );
+                    auto interRes = rayMeshIntersect( result, line, -FLT_MAX, FLT_MAX );
+                    if ( !interRes )
+                        return unexpected( "Cannot resolve bow ties on embedded structure wall" );
+                    noBowtiesMtp[j] = interRes->mtp;
+                }
             }
         }
-    }
 
-    std::vector<std::vector<int>> meshContoursPivpotIds( noBowtiesMtps.size() );
-    OneMeshContours meshContours( noBowtiesMtps.size() );
-    for ( int i = 0; i < meshContours.size(); ++i )
-    {
-        meshContours[i] = convertMeshTriPointsToClosedContour( resMesh, noBowtiesMtps[i], &meshContoursPivpotIds[i] );
+        MappedMeshContours res;
+        res.filtBowTiesMap = std::move( filterBt.initIndices );
+        res.contours.resize( noBowtiesMtps.size() );
+        res.map.resize( noBowtiesMtps.size() );
+        OneMeshContours loneContours;
+        for ( int i = 0; i < res.contours.size(); ++i )
+        {
+            bool lone = true;
+            res.contours[i] = convertMeshTriPointsToClosedContour( result, noBowtiesMtps[i], &res.map[i] );
+            for ( int j = 0; j < res.contours[i].intersections.size(); ++j )
+            {
+                if ( res.contours[i].intersections[j].primitiveId.index() == OneMeshIntersection::VariantIndex::Edge )
+                {
+                    lone = false;
+                    break;
+                }
+            }
+            if ( !lone )
+                continue;
+            loneContours.emplace_back( std::move( res.contours[i] ) );
+        }
+        if ( loneContours.empty() )
+        {
+            res.offsetMap = std::move( offCont.idsShifts );
+            return res;
+        }
+        subdivideLoneContours( result, loneContours );
     }
-    ( void )meshContoursPivpotIds;
+    return unexpected( "Cannot resolve lone cut on terrain" );
+}
 
-    auto cutRes = cutMesh( resMesh, meshContours );
+Expected<std::vector<EdgeLoop>, std::string> TerrainEmbedder::cutTerrain( const MappedMeshContours& mmc )
+{
+    auto cutRes = cutMesh( result, mmc.contours );
     if ( cutRes.fbsWithCountourIntersections.any() )
         return unexpected( "Wall contours have self-intersections" );
 
-    resMesh.topology.deleteFaces( resMesh.topology.getValidFaces() - fillContourLeft( resMesh.topology, cutRes.resultCut ) );
-    resMesh.invalidateCaches();
-
-    WholeEdgeMap emap;
-    auto structClone = structure;
-    //structClone.topology.flipOrientation();
-    resMesh.addPart( structClone, nullptr, nullptr, &emap );
-
-    for ( int i = 0; i < meshContoursPivpotIds.size(); ++i )
-    {
-        for ( int j = 0; j < meshContoursPivpotIds[i].size(); ++j )
-        {
-            auto cutEdgeIndex = meshContoursPivpotIds[i][j];
-            auto initMtpIndex = filterBt.initIndices[i][j];
-            if ( initMtpIndex == -1 || cutEdgeIndex == -1 )
-                continue;
-            
-            auto baseEdgeIndex = findInitIndex( initMtpIndex, offsetContRes.contourIdsShifts );
-            if ( baseEdgeIndex + 1 >= offsetContRes.contourIdsShifts.size() )
-                continue;
-            makeBridgeEdge( resMesh.topology,
-                resMesh.topology.prev( cutRes.resultCut[i][cutEdgeIndex] ),
-                mapEdge( emap, structBound[0][baseEdgeIndex] ) );
-        }
-    }
-
-    return resMesh;
-
-    /*auto coneMeshRes = createEmbeddedConeMesh( cont, ecParams );
-    if ( !coneMeshRes.has_value() )
-        return unexpected( coneMeshRes.error() );
-
-
-
-
-    BooleanPreCutResult precutResTerrain;
-    BooleanPreCutResult precutResCone;
-    boolean( std::move( resMesh ), std::move( coneMeshRes->mesh ), BooleanOperation::Union,
-        { .outPreCutA = &precutResTerrain,.outPreCutB = &precutResCone } );
-    // filter excessive contours
-    if ( precutResTerrain.contours.size() != 1 )
-    {
-        int minI = 0;
-        float minDistSq = FLT_MAX;
-        for ( int i = 0; i < precutResTerrain.contours.size(); ++i )
-        {
-            Vector3f center;
-            for ( const auto& coord : precutResTerrain.contours[i].intersections )
-                center += coord.coordinate;
-
-            center /= float( precutResTerrain.contours[i].intersections.size() );
-            auto distSq = ( center - structure.getBoundingBox().center() ).lengthSq();
-            if ( distSq < minDistSq )
-            {
-                minDistSq = distSq;
-                minI = i;
-            }
-        }
-        if ( minI != 0 )
-        {
-            std::swap( precutResTerrain.contours[0], precutResTerrain.contours[minI] );
-            std::swap( precutResCone.contours[0], precutResCone.contours[minI] );
-        }
-        precutResTerrain.contours.erase( precutResTerrain.contours.begin() + 1, precutResTerrain.contours.end() );
-        precutResCone.contours.erase( precutResCone.contours.begin() + 1, precutResCone.contours.end() );
-    }
-
-    if ( !precutResCone.contours.front().closed )
-        return unexpected( "Cannot embed structure beyond terrain" );
-
-    FaceMap newTerrainFacesMap;
-    auto oldTerrainFaceSize = precutResTerrain.mesh.topology.faceSize();
-    auto cutTerrainRes = cutMesh( precutResTerrain.mesh, precutResTerrain.contours, { .new2OldMap = &newTerrainFacesMap } );
-    auto cutTerrainPart = fillContourLeft( precutResTerrain.mesh.topology, cutTerrainRes.resultCut );
-    precutResTerrain.mesh.topology.deleteFaces( cutTerrainPart );
-    precutResTerrain.mesh.invalidateCaches();
-    extenedFaces.resize( precutResTerrain.mesh.topology.faceSize() );
-    for ( FaceId nf = FaceId( oldTerrainFaceSize ); nf < precutResTerrain.mesh.topology.faceSize(); ++nf )
-    {
-        auto of = newTerrainFacesMap[nf];
-        if ( !of )
-            continue;
-        if ( extenedFaces.test( of ) )
-            extenedFaces.set( nf );
-    }
-
-
-    FaceMap new2oldFaces;
-    auto oldConeFaceSize = precutResCone.mesh.topology.faceSize();
-    auto cutConeRes = cutMesh( precutResCone.mesh, precutResCone.contours, { .new2OldMap = &new2oldFaces } );
-    coneMeshRes->fillBitSet.resize( precutResCone.mesh.topology.faceSize() );
-    coneMeshRes->cutBitSet.resize( precutResCone.mesh.topology.faceSize() );
-    for ( FaceId nf = FaceId( oldConeFaceSize ); nf < precutResCone.mesh.topology.faceSize(); ++nf )
-    {
-        auto of = new2oldFaces[nf];
-        if ( !of )
-            continue;
-
-        if ( coneMeshRes->fillBitSet.test( of ) )
-            coneMeshRes->fillBitSet.set( nf );
-        else if ( coneMeshRes->cutBitSet.test( of ) )
-            coneMeshRes->cutBitSet.set( nf );
-    }
-    auto cutConePart = fillContourLeft( precutResCone.mesh.topology, cutConeRes.resultCut );
-    auto upperPartFaces = cutConePart & coneMeshRes->cutBitSet;
-    auto lowerPartFaces = ( precutResCone.mesh.topology.getValidFaces() - cutConePart ) & coneMeshRes->fillBitSet;
-    precutResCone.mesh.topology.deleteFaces( upperPartFaces | lowerPartFaces );
-    precutResCone.mesh.invalidateCaches();
-
-
-    // merging cone parts
-    std::vector<EdgeLoop> cutConeLoop;
-    std::vector<EdgeLoop> fillConeLoop;
-    std::vector<EdgeLoop> cutTerrainLoop;
-    std::vector<EdgeLoop> fillTerrainLoop;
-    bool prevCutPart = true;
-    assert( cutConeRes.resultCut[0].size() == cutTerrainRes.resultCut[0].size() );
-    for ( int i = 0; i < cutConeRes.resultCut[0].size(); ++i )
-    {
-        auto te = cutTerrainRes.resultCut[0][i];
-        auto ce = cutConeRes.resultCut[0][i];
-        bool thisCutPart = !precutResCone.mesh.topology.left( ce ).valid();
-        if ( thisCutPart == prevCutPart && i != 0 )
-        {
-            auto& prevCone = thisCutPart ? cutConeLoop.back() : fillConeLoop.back();
-            auto& prevTerrain = thisCutPart ? cutTerrainLoop.back() : fillTerrainLoop.back();
-            prevCone.push_back( ce );
-            prevTerrain.push_back( te );
-        }
-        else
-        {
-            auto& prevCone = thisCutPart ? cutConeLoop : fillConeLoop;
-            auto& prevTerrain = thisCutPart ? cutTerrainLoop : fillTerrainLoop;
-            prevCone.push_back( { ce } );
-            prevTerrain.push_back( { te } );
-            prevCutPart = thisCutPart;
-        }
-    }
-
-    precutResTerrain.mesh.addPartByMask( precutResCone.mesh, precutResCone.mesh.topology.getValidFaces() & coneMeshRes->cutBitSet,
-                                   true, cutTerrainLoop, cutConeLoop );
-    precutResTerrain.mesh.addPartByMask( precutResCone.mesh, precutResCone.mesh.topology.getValidFaces() & coneMeshRes->fillBitSet,
-                                   false, fillTerrainLoop, fillConeLoop );
-
-    // merge with structure
-    auto holes = findRightBoundary( precutResTerrain.mesh.topology );
-    assert( !holes.empty() );
-
-    auto loopStructure = findLeftBoundary( structPrecutRes.mesh.topology )[0];
-    if ( loopStructure.size() != holes.back().size() )
-        return unexpected( "Cannot stitch structure with terrain" );
-
-    int i = 0;
-    for ( ; i < loopStructure.size(); ++i )
-    {
-        if ( structPrecutRes.mesh.orgPnt( loopStructure[i] ) ==
-                 precutResTerrain.mesh.orgPnt( holes.back().front() ) )
-            break;
-    }
-    std::rotate( loopStructure.begin(), loopStructure.begin() + i, loopStructure.end() );
-
-    precutResTerrain.mesh.addPartByMask( structPrecutRes.mesh, structPrecutRes.mesh.topology.getValidFaces(), false, { holes.back() }, { loopStructure } );
-    
-
-    // remove extenedFaces
-    extenedFaces &= precutResTerrain.mesh.topology.getValidFaces();
-    precutResTerrain.mesh.topology.deleteFaces( extenedFaces );
-    precutResTerrain.mesh.invalidateCaches();
-
-    return precutResTerrain.mesh;*/
+    result.topology.deleteFaces( result.topology.getValidFaces() - fillContourLeft( result.topology, cutRes.resultCut ) );
+    result.invalidateCaches();
+    return cutRes.resultCut;
 }
 
-Expected<EmbeddedConeResult, std::string> createEmbeddedConeMesh(
-    const Contour3f& cont, const EmbeddedConeParameters& params )
+void TerrainEmbedder::connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours&& mmc )
 {
-    MR_TIMER;
+    WholeEdgeMap emap;
+    result.addPart( cuttedStructure_, nullptr, nullptr, &emap );
 
-    if ( cont.size() < 4 || cont.back() != cont.front() )
-        return unexpected( "Input contour should be closed" );
-    float centerZ = 0;
-    Box2f contBox;
-    int i = 0;
-    for ( ; i + 1 < cont.size(); ++i )
+    for ( int i = 0; i < mmc.map.size(); ++i )
     {
-        centerZ += cont[i].z;
-        contBox.include( to2dim( cont[i] ) );
-    }
-    centerZ /= float( i );
+        for ( int j = 0; j < mmc.map[i].size(); ++j )
+        {
+            auto cutEdgeIndex = mmc.map[i][j];
+            auto initMtpIndex = mmc.filtBowTiesMap[i][j];
+            if ( initMtpIndex == -1 || cutEdgeIndex == -1 )
+                continue;
 
-    auto cutOffset = std::abs( params.maxZ - centerZ ) * std::clamp( std::tan( params.cutAngle ), 0.0f, 100.0f );
-    auto fillOffset = std::abs( params.minZ - centerZ ) * std::clamp( std::tan( params.fillAngle ), 0.0f, 100.0f );
+            auto baseEdgeIndex = findOffsetContourIndex_( initMtpIndex, mmc.offsetMap );
+            if ( baseEdgeIndex + 1 >= mmc.offsetMap.size() )
+                continue;
+
+            makeBridgeEdge( result.topology,
+                result.topology.prev( hole[i][cutEdgeIndex] ),
+                mapEdge( emap, bounds_[0][baseEdgeIndex] ) );
+        }
+    }
+}
+
+TerrainEmbedder::OffsetBlock TerrainEmbedder::offsetContour_( const MarkedContour& mc, float cutOffset, float fillOffset )
+{
+    OffsetBlock res;
+    res.idsShifts.resize( int( mc.contour.size() ), 0 );
 
     auto contNorm = [&] ( int i )
     {
-        auto norm = to2dim( cont[i + 1] ) - to2dim( cont[i] );
+        auto norm = to2dim( mc.contour[i + 1] ) - to2dim( mc.contour[i] );
         std::swap( norm.x, norm.y );
         norm.x = -norm.x;
         norm = norm.normalized();
         return norm;
     };
 
-    struct OffsetBlock
+    auto offset = [&] ( int i )
     {
-        Mesh mesh;
-        std::vector<int> contourOffsets;
-    };
-    auto createOffet = [&] ( float offset )
-    {
-        OffsetBlock res;
-        res.contourOffsets.resize( int( cont.size() ), 0 );
-        Contour2f offsetCont;
-
-        offsetCont.reserve( 3 * cont.size() );
-        auto lastPoint = to2dim( cont[0] ) + offset * contNorm( int( cont.size() ) - 2 );
-        for ( int i = 0; i + 1 < cont.size(); ++i )
-        {
-            auto orgPt = to2dim( cont[i] );
-            auto destPt = to2dim( cont[i + 1] );
-            auto norm = contNorm( i );
-
-            auto nextPoint = orgPt + norm * offset;
-            bool sameAsPrev = false;
-            // interpolation    
-            if ( offsetCont.empty() )
-            {
-                offsetCont.emplace_back( std::move( lastPoint ) );
-                ++res.contourOffsets[i];
-            }
-            auto prevPoint = offsetCont.back();
-            auto a = prevPoint - orgPt;
-            auto b = nextPoint - orgPt;
-            auto crossRes = cross( a, b );
-            auto dotRes = dot( a, b );
-            float ang = 0.0f;
-            if ( crossRes == 0.0f )
-                ang = dotRes >= 0.0f ? 0.0f : PI_F;
-            else 
-                ang = std::atan2( crossRes, dotRes );
-                    
-            sameAsPrev = std::abs( ang ) < PI_F / 360.0f;
-            if ( !sameAsPrev )
-            {
-                int numSteps = int( std::floor( std::abs( ang ) / ( params.minAnglePrecision ) ) );
-                for ( int s = 0; s < numSteps; ++s )
-                {
-                    float stepAng = ( ang / ( numSteps + 1 ) ) * ( s + 1 );
-                    auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( stepAng ), orgPt );
-                    offsetCont.emplace_back( rotXf( prevPoint ) );
-                    ++res.contourOffsets[i];
-                }
-                offsetCont.emplace_back( std::move( nextPoint ) );
-                ++res.contourOffsets[i];
-            }
-
-            offsetCont.emplace_back( destPt + norm * offset );
-            ++res.contourOffsets[i + 1];
-        }
-        int prevSum = 0;
-        for ( int i = 0; i + 1 < res.contourOffsets.size(); ++i )
-        {
-            std::swap( res.contourOffsets[i], prevSum );
-            prevSum += res.contourOffsets[i];
-        }
-
-        res.contourOffsets.back() = int( offsetCont.size() ) - 1;
-        res.mesh = PlanarTriangulation::triangulateContours( { offsetCont } );
-        return res;
-    };
-    
-    EmbeddedConeResult res;
-    res.mesh.addSeparateContours( { cont } );
-    bool needCut = params.cutBitSet.any();
-    bool needFill = params.cutBitSet.count() + 1 != cont.size();
-
-    auto findInitIndex = [] ( VertId v, const std::vector<int>& offsets, int initSize )->int
-    {
-        auto diff = v - initSize;
-        int h = 0;
-        for ( ; h + 1 < offsets.size(); ++h )
-        {
-            if ( diff >= offsets[h] && diff < offsets[h + 1] )
-                break;
-        }
-        return h;
+        if ( mc.intBitSet.test( VertId( i ) ) )
+            return 0.0f;
+        return mc.cutBitSet.test( VertId( i ) ) ? cutOffset : fillOffset;
     };
 
-    auto moveToContVert = [&] ( VertId v, const std::vector<int>& offsets, int initSize, bool cut )->VertId
+    res.contour.reserve( 3 * mc.contour.size() );
+    auto lastPoint = to2dim( mc.contour[0] ) + offset( 0 ) * contNorm( int( mc.contour.size() ) - 2 );
+    for ( int i = 0; i + 1 < mc.contour.size(); ++i )
     {
-        auto initVert = VertId( findInitIndex( v, offsets, initSize ) );
-        if ( initVert < params.cutBitSet.size() && ( cut != params.cutBitSet.test( initVert ) ) )
-            return initVert;
-        return {};
-    };
+        auto orgPt = to2dim( mc.contour[i] );
+        auto destPt = to2dim( mc.contour[i + 1] );
+        auto norm = contNorm( i );
 
-    auto postProcess = [&] ( const EdgeLoop& baseBd, const std::vector<int>& offsets, int initSize, bool cut )->std::string
-    {
-        // moves
-        for ( auto e : baseBd )
+        auto nextPoint = orgPt + norm * offset( i );
+        bool sameAsPrev = false;
+        // interpolation    
+        if ( res.contour.empty() )
         {
-            auto v = res.mesh.topology.org( e );
-            if ( auto mv = moveToContVert( v, offsets, initSize, cut ) )
-            {
-                res.mesh.points[v].x = res.mesh.points[mv].x;
-                res.mesh.points[v].y = res.mesh.points[mv].y;
-            }
+            res.contour.emplace_back( std::move( lastPoint ) );
+            ++res.idsShifts[i];
         }
-        // flips
-        for ( int ei = 0; ei + 1 < cont.size(); ++ei )
-        {
-            EdgeId e( 2 * ei );
-            auto org = res.mesh.topology.org( e );
-            auto dest = res.mesh.topology.dest( e );
-            bool orgCut = params.cutBitSet.test( org );
-            if ( orgCut == params.cutBitSet.test( dest ) )
-                continue;
-            EdgeId flipE;
-            if ( !cut )
-                flipE = orgCut ? res.mesh.topology.prev( e.sym() ) : res.mesh.topology.next( e );
-            else
-                flipE = orgCut ? res.mesh.topology.prev( e ) : res.mesh.topology.next( e.sym() );
-            if ( moveToContVert( res.mesh.topology.dest( flipE ), offsets, initSize, cut ).valid() )
-            {
-                auto nd = res.mesh.topology.dest( res.mesh.topology.next( flipE ) );
-                auto pd = res.mesh.topology.dest( res.mesh.topology.prev( flipE ) );
-                if ( nd >= params.cutBitSet.size() || pd >= params.cutBitSet.size() )
-                    res.mesh.topology.flipEdge( flipE );
-            }
-        }
-        if ( cut )
-            res.cutBitSet = res.mesh.topology.getValidFaces();
+        auto prevPoint = res.contour.back();
+        auto a = prevPoint - orgPt;
+        auto b = nextPoint - orgPt;
+        auto crossRes = cross( a, b );
+        auto dotRes = dot( a, b );
+        float ang = 0.0f;
+        if ( crossRes == 0.0f )
+            ang = dotRes >= 0.0f ? 0.0f : PI_F;
         else
-            res.fillBitSet = res.mesh.topology.getValidFaces() - res.cutBitSet;
-        return {};
-    };
+            ang = std::atan2( crossRes, dotRes );
 
-    auto addBase = [&] ( bool cut )
-    {
-        auto basePart = createOffet( cut ? cutOffset : fillOffset );
-        for ( auto& p : basePart.mesh.points )
-            p.z = cut ? params.maxZ : params.minZ;
-
-        if ( !cut )
-            basePart.mesh.topology.flipOrientation();
-
-        VertId vertSize = res.mesh.topology.lastValidVert() + 1;
-        res.mesh.addPart( std::move( basePart.mesh ) );
-        auto holes = findRightBoundary( res.mesh.topology );
-        if ( cut && holes.size() != 3 )
-            return false;
-        else if ( !cut && holes.size() != ( needCut ? 2 : 3 ) )
-            return false;
-        
-        auto ueSize = int( res.mesh.topology.undirectedEdgeSize() );
-        const auto& baseHole = ( cut || !needCut ) ? holes[1] : holes[0];
-        for (
-            int ei = cut ? 0 : int( holes.back().size() ) - 1;
-            cut ? ei < holes.back().size() : ei >= 0;
-            cut ? ++ei : --ei )
+        sameAsPrev = std::abs( ang ) < PI_F / 360.0f;
+        if ( !sameAsPrev )
         {
-            auto e = cut ? holes.back()[ei] : holes.back()[( ei + 2 ) % holes.back().size()];
-            auto v = res.mesh.topology.org( e );
-        
-            int h = findInitIndex( v, basePart.contourOffsets, vertSize );
-            if ( h < baseHole.size() )
-                makeBridgeEdge( res.mesh.topology, e,
-                    cut ? res.mesh.topology.prev( baseHole[h] ) : baseHole[h] );
+            int numSteps = int( std::floor( std::abs( ang ) / ( params_.minAnglePrecision ) ) );
+            for ( int s = 0; s < numSteps; ++s )
+            {
+                float stepAng = ( ang / ( numSteps + 1 ) ) * ( s + 1 );
+                auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( stepAng ), orgPt );
+                res.contour.emplace_back( rotXf( prevPoint ) );
+                ++res.idsShifts[i];
+            }
+            res.contour.emplace_back( std::move( nextPoint ) );
+            ++res.idsShifts[i];
         }
-        
-        auto lastEdge = int( res.mesh.topology.undirectedEdgeSize() );
-        FillHoleMetric metric;
-        metric.triangleMetric = [&] ( VertId a, VertId b, VertId c )->double
-        {
-            if ( ( a < vertSize && b < vertSize && c < vertSize ) ||
-                ( a >= vertSize && b >= vertSize && c >= vertSize ) )
-                return DBL_MAX;
-            Vector3d aP = Vector3d( res.mesh.points[a] );
-            Vector3d bP = Vector3d( res.mesh.points[b] );
-            Vector3d cP = Vector3d( res.mesh.points[c] );
-        
-            return dblArea( aP, bP, cP );
-        };
-        for ( int ue = ueSize; ue < lastEdge; ++ue )
-            if ( !res.mesh.topology.left( EdgeId( ue << 1 ) ) )
-                fillHole( res.mesh, EdgeId( ue << 1 ), { .metric = metric } );
 
-        postProcess( holes.back(), basePart.contourOffsets, vertSize, cut );
-        return true;
-    };
-
-    if ( needCut ) // need cut part
-    {
-        if ( !addBase( true ) )
-            return unexpected( "Cannot make cut offset contour due to precision issues" );
+        res.contour.emplace_back( destPt + norm * offset( i + 1 ) );
+        ++res.idsShifts[i + 1];
     }
-    if ( needFill ) // need fill part
+    int prevSum = 0;
+    for ( int i = 0; i + 1 < res.idsShifts.size(); ++i )
     {
-        if ( !addBase( false ) )
-            return unexpected( "Cannot make fill offset contour due to precision issues" );
+        std::swap( res.idsShifts[i], prevSum );
+        prevSum += res.idsShifts[i];
     }
 
+    res.idsShifts.back() = int( res.contour.size() ) - 1;
     return res;
+}
+
+int TerrainEmbedder::findOffsetContourIndex_( int i, const std::vector<int>& idsShifts ) const
+{
+    int h = 0;
+    for ( ; h + 1 < idsShifts.size(); ++h )
+    {
+        if ( i >= idsShifts[h] && i < idsShifts[h + 1] )
+            break;
+    }
+    return h;
+}
+
+Expected<Mesh, std::string> embedStructureToTerrain( 
+    const Mesh& terrain, const Mesh& structure, const EmbeddedStructureParameters& params )
+{
+    MR_TIMER;
+    TerrainEmbedder te( terrain, structure, params );
+    return te.run();
 }
 
 }

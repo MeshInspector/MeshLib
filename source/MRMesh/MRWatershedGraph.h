@@ -97,8 +97,9 @@ public:
     /// returns the basin where the flow from this basin goes next (it can be self id if the basin is not full yet)
     [[nodiscard]] MRMESH_API Graph::VertId flowsTo( Graph::VertId v ) const;
 
-    /// returns the basin where the flow from this basin finally goes (it can be self id if the basin is not full yet)
-    [[nodiscard]] MRMESH_API Graph::VertId flowsFinallyTo( Graph::VertId v ) const;
+    /// returns the basin where the flow from this basin finally goes (it can be self id if the basin is not full yet);
+    /// \param exceptOutside if true then the method returns the basin that receives water flow from (v) just before outside
+    [[nodiscard]] MRMESH_API Graph::VertId flowsFinallyTo( Graph::VertId v, bool exceptOutside = false ) const;
 
     /// replaces parent of each basin with its computed root;
     /// this speeds up following calls to getRootBasin()
@@ -117,8 +118,9 @@ public:
     /// returns the mesh faces of given basin
     [[nodiscard]] MRMESH_API FaceBitSet getBasinFaces( Graph::VertId basin ) const;
 
-    /// returns the mesh faces of each valid basin
-    [[nodiscard]] MRMESH_API Vector<FaceBitSet, Graph::VertId> getAllBasinFaces() const;
+    /// returns the mesh faces of each valid basin;
+    /// \param joinOverflowBasins if true then overflowing basins will be merged in the target basins (except for overflow in outside)
+    [[nodiscard]] MRMESH_API Vector<FaceBitSet, Graph::VertId> getAllBasinFaces( bool joinOverflowBasins = false ) const;
 
     /// returns the mesh faces of given basin with at least one vertex below given level
     [[nodiscard]] MRMESH_API FaceBitSet getBasinFacesBelowLevel( Graph::VertId basin, float waterLevel ) const;

@@ -170,12 +170,14 @@ Graph::VertId WatershedGraph::flowsTo( Graph::VertId v ) const
     return graph_.ends( e ).otherEnd( v );
 }
 
-Graph::VertId WatershedGraph::flowsFinallyTo( Graph::VertId v ) const
+Graph::VertId WatershedGraph::flowsFinallyTo( Graph::VertId v, bool exceptOutside ) const
 {
     for (;;)
     {
         auto v2 = flowsTo( v );
         if ( v2 == v )
+            return v;
+        if ( exceptOutside && v2 == outsideId_ )
             return v;
         v = v2;
     }
@@ -281,16 +283,26 @@ FaceBitSet WatershedGraph::getBasinFaces( Graph::VertId basin ) const
     return res;
 }
 
-Vector<FaceBitSet, Graph::VertId> WatershedGraph::getAllBasinFaces() const
+Vector<FaceBitSet, Graph::VertId> WatershedGraph::getAllBasinFaces( bool joinOverflowBasins ) const
 {
     MR_TIMER
     Vector<FaceBitSet, Graph::VertId> res( graph_.vertSize() );
-    for ( auto basin : graph_.validVerts() )
+    Vector<Graph::VertId, Graph::VertId> roots( graph_.vertSize() );
+    for ( Graph::VertId basin( 0 ); basin < outsideId_; ++basin )
+    {
+        auto root = getRootBasin( basin );
+        if ( joinOverflowBasins && graph_.valid( root ) )
+            root = flowsFinallyTo( root, true );
+        assert( root );
+        roots[basin] = root;
+        if ( root != basin )
+            continue;
         res[basin].resize( mesh_.topology.faceSize() );
+    }
 
     BitSetParallelFor( mesh_.topology.getValidFaces(), [&]( FaceId f )
     {
-        const auto basin = getRootBasin( Graph::VertId( face2iniBasin_[f] ) );
+        auto basin = roots[ Graph::VertId( face2iniBasin_[f] ) ];
         assert( graph_.valid( basin ) );
         res[basin].set( f );
     } );

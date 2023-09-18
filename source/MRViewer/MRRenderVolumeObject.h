@@ -8,7 +8,7 @@
 
 namespace MR
 {
-class RenderVolumeObject : public IRenderObject
+class MRVIEWER_CLASS RenderVolumeObject : public IRenderObject
 {
 public:
     RenderVolumeObject( const VisualObject& visObj );
@@ -19,6 +19,15 @@ public:
     virtual size_t heapBytes() const override;
     virtual size_t glBytes() const override;
     virtual void forceBindAll() override;
+
+protected:
+    Vector2i activeVoxelsTextureSize_;
+
+    MRVIEWER_API RenderBufferRef<unsigned> loadActiveVoxelsTextureBuffer_();
+
+    GlTexture2 activeVoxelsTex_;
+    int maxTexSize_{ 0 };
+
 private:
     const ObjectVoxels* objVoxels_{ nullptr };
 

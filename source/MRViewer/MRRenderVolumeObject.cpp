@@ -6,6 +6,7 @@
 #include "MRGladGlfw.h"
 #include "MRGLStaticHolder.h"
 #include "MRMesh/MRFloatGrid.h"
+#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -50,6 +51,40 @@ void RenderVolumeObject::forceBindAll()
 {
     update_();
     bindVolume_( true );
+}
+
+RenderBufferRef<unsigned> RenderVolumeObject::loadActiveVoxelsTextureBuffer_()
+{
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
+    if ( !( dirty_ & DIRTY_SELECTION ) || !objVoxels_->vdbVolume().data )
+        return glBuffer.prepareBuffer<unsigned>( activeVoxelsTextureSize_.x * activeVoxelsTextureSize_.y, false );
+
+    const auto& dims = objVoxels_->vdbVolume().dims;
+    auto numV = dims.x * dims.y * dims.z;
+
+    auto size = numV / 32 + 1;
+    activeVoxelsTextureSize_ = calcTextureRes( size, maxTexSize_ );
+    assert( activeVoxelsTextureSize_.x * activeVoxelsTextureSize_.y >= size );
+    auto buffer = glBuffer.prepareBuffer<unsigned>( activeVoxelsTextureSize_.x * activeVoxelsTextureSize_.y );
+
+    const auto& activeVoxels = objVoxels_->getVolumeRenderActiveVoxels().m_bits;
+    const unsigned* activeVoxelsData = ( unsigned* )activeVoxels.data();
+    tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
+    {
+        for ( int r = range.begin(); r < range.end(); ++r )
+        {
+//             auto& block = buffer[r];
+//             if ( r / 2 >= activeVoxels.size() )
+//             {
+//                 block = 0;
+//                 continue;
+//             }
+//             block = activeVoxelsData[r];
+            buffer[r] = activeVoxelsData[r];
+        }
+    } );
+
+    return buffer;
 }
 
 void RenderVolumeObject::render_( const RenderParams& renderParams, unsigned geomId )
@@ -288,6 +323,13 @@ void RenderVolumeObject::bindVolume_( bool picker )
         denseMap_.bind();
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "denseMap" ), 1 ) );
 
+    // Active Voxels
+    auto activeVoxels = loadActiveVoxelsTextureBuffer_();
+    GL_EXEC( glActiveTexture( GL_TEXTURE2 ) );
+    activeVoxelsTex_.loadDataOpt( activeVoxels.dirty(),
+        { .resolution = activeVoxelsTextureSize_, .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type = GL_UNSIGNED_INT },
+        activeVoxels );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "activeVoxels" ), 2 ) );
 
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "minValue" ), ( params.min - volume.min ) / ( volume.max - volume.min ) ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "maxValue" ), ( params.max - volume.min ) / ( volume.max - volume.min ) ) );
@@ -301,7 +343,10 @@ void RenderVolumeObject::initBuffers_()
     GL_EXEC( glGenVertexArrays( 1, &volumeArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( volumeArrayObjId_ ) );
 
-    dirty_ = DIRTY_PRIMITIVES | DIRTY_TEXTURE;
+    GL_EXEC( glGetIntegerv( GL_MAX_TEXTURE_SIZE, &maxTexSize_ ) );
+    assert( maxTexSize_ > 0 );
+
+    dirty_ = DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION;
 }
 
 void RenderVolumeObject::freeBuffers_()

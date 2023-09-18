@@ -38,6 +38,10 @@ void ObjectVoxels::construct( const SimpleVolume& volume, ProgressCallback cb )
     indexer_ = VolumeIndexer( vdbVolume_.dims );
     activeBox_ = Box3i( Vector3i(), vdbVolume_.dims );
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
+
+    volumeRenderActiveVoxels_.clear();
+    volumeRenderActiveVoxels_.resize( vdbVolume_.dims.x * vdbVolume_.dims.y * vdbVolume_.dims.z, true );
+
     updateHistogram_( volume.min, volume.max );
     if ( volumeRendering_ )
         dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE );
@@ -55,6 +59,9 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
     activeBox_ = Box3i( Vector3i(), vdbVolume_.dims );
     vdbVolume_.voxelSize = voxelSize;
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
+
+    volumeRenderActiveVoxels_.clear();
+    volumeRenderActiveVoxels_.resize( vdbVolume_.dims.x * vdbVolume_.dims.y * vdbVolume_.dims.z, true );
 
     updateHistogramAndSurface( cb );
     if ( volumeRendering_ )
@@ -250,6 +257,12 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
     }
 }
 
+void ObjectVoxels::setVolumeRenderActiveVoxels( const VoxelBitSet& activeVoxels )
+{
+    volumeRenderActiveVoxels_ = activeVoxels;
+    dirty_ |= DIRTY_SELECTION;
+}
+
 VoxelId ObjectVoxels::getVoxelIdByCoordinate( const Vector3i& coord ) const
 {
     return indexer_.toVoxelId( coord );
@@ -275,7 +288,8 @@ bool ObjectVoxels::prepareDataForVolumeRendering( ProgressCallback cb /*= {} */ 
     res.min = vdbVolume_.min;
     res.voxelSize = vdbVolume_.voxelSize;
     auto activeBox = getActiveBounds();
-    res.dims = activeBox.size() + Vector3i::diagonal( 1 );
+    //res.dims = activeBox.size() + Vector3i::diagonal( 1 );
+    res.dims = activeBox.size();
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size() );
 

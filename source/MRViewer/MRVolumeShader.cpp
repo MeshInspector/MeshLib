@@ -51,6 +51,7 @@ std::string getVolumeFragmentShader()
 
   uniform sampler3D volume;
   uniform sampler2D denseMap;
+  uniform highp usampler2D activeVoxels;      // (in from base) selection BitSet
 
   uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true
   uniform vec4 clippingPlane;        // (in from base) clipping plane
@@ -163,6 +164,8 @@ std::string getVolumeFragmentShader()
     vec3 rayStep = step * normRayDir;
     rayStart = rayStart - rayStep * 0.5;
     vec3 diagonal = maxPoint - minPoint;
+    uint dimsXY = uint( dims.y * dims.x );
+    uint dimsX = uint( dims.x );
     while ( outColor.a < 1.0 )
     {
         rayStart = rayStart + rayStep;
@@ -173,6 +176,16 @@ std::string getVolumeFragmentShader()
         
         if (useClippingPlane && dot( vec3( model*vec4(rayStart,1.0)),vec3(clippingPlane))>clippingPlane.w)
             continue;
+
+        {
+            ivec2 texSize = textureSize( activeVoxels, 0 );
+            uint voxelId = uint( textCoord.z * dims.z ) * dimsXY + uint( textCoord.y * dims.y ) * dimsX + uint( textCoord.x * dims.x );
+            uint index = voxelId / 32u;
+            uint block = texelFetch( activeVoxels, ivec2( index % uint( texSize.x ), index / uint( texSize.x ) ), 0 ).r;
+            bool active = bool( block & uint( 1 << ( voxelId % 32u ) ) );
+            if ( !active )
+                continue;
+        }
 
         float density = texture( volume, textCoord ).r;        
         if ( density < minValue || density > maxValue )

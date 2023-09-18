@@ -10,6 +10,8 @@
 #endif
 
 #define TBB_SUPPRESS_DEPRECATED_MESSAGES 1
+// disable constraints for OpenVDB 10 compatibility
+//#define __TBB_USE_CONSTRAINTS 0
 #pragma warning(push)
 #pragma warning(disable: 4459) //declaration of 'compare' hides global declaration
 #pragma warning(disable: 4464) //relative include path contains '..'
@@ -29,6 +31,11 @@
 #include <tbb/global_control.h>
 #include <tbb/task_scheduler_observer.h>
 #pragma warning(pop)
+#if __TBB_USE_CONSTRAINTS
+#pragma message("TBB: constraints enabled")
+#else
+#pragma message("TBB: constraints disabled")
+#endif
 
 #ifdef __EMSCRIPTEN__
 #pragma clang diagnostic pop

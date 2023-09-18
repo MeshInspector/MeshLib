@@ -38,7 +38,7 @@ std::vector<FaceBitSet> findOverhangs( const Mesh& mesh, const FindOverhangsSett
         faces[f] = isOverhanging( f );
     } );
 
-    // simplify the regions...
+    // smooth out the regions...
     expand( mesh.topology, faces, settings.hops );
     // ...but preserve the overhanging faces
     auto shrunk = faces;

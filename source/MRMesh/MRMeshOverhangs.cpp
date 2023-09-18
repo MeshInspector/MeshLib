@@ -5,6 +5,7 @@
 #include "MRExpandShrink.h"
 #include "MRMesh.h"
 #include "MRMeshComponents.h"
+#include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
 #include "MRTimer.h"
 
@@ -52,18 +53,20 @@ std::vector<FaceBitSet> findOverhangs( const Mesh& mesh, const FindOverhangsSett
 
     // filter out face regions with too small overhang distance
     auto regions = MeshComponents::getAllComponents( { mesh, &faces } );
-    std::vector<FaceBitSet> results;
-    results.reserve( regions.size() );
-    for ( auto& region : regions )
+    ParallelFor( regions, [&] ( size_t i )
     {
+        auto& region = regions[i];
         const auto vertices = getIncidentVerts( mesh.topology, region );
         const auto axisBox = computeBoundingBox( mesh.points, vertices, &axisXf );
         // don't include the basement region
-        if ( axisBox.min.z == axisMeshBox.min.z )
-            continue;
-        if ( axisBox.size().z > settings.layerHeight )
+        if ( axisBox.min.z == axisMeshBox.min.z || axisBox.size().z <= settings.layerHeight )
+            region.reset();
+    } );
+    std::vector<FaceBitSet> results;
+    results.reserve( regions.size() );
+    for ( auto& region : regions )
+        if ( region.any() )
             results.emplace_back( std::move( region ) );
-    }
 
     return results;
 }

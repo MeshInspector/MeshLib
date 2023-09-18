@@ -1053,6 +1053,9 @@
     <ClInclude Include="MRBasinVolume.h">
       <Filter>Source Files\WaterFlow</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshOverhangs.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
     <ClInclude Include="MRPrecipitationSimulator.h">
       <Filter>Source Files\WaterFlow</Filter>
     </ClInclude>
@@ -1759,6 +1762,9 @@
     </ClCompile>
     <ClCompile Include="MRPrecipitationSimulator.cpp">
       <Filter>Source Files\WaterFlow</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshOverhangs.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

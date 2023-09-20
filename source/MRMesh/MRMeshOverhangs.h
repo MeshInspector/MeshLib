@@ -17,6 +17,8 @@ struct FindOverhangsSettings
     float maxOverhangDistance { 1.f };
     /// number of hops used to smooth out the overhang regions (0 - disable smoothing)
     int hops = 0;
+    /// mesh transform
+    const AffineXf3f* xf = nullptr;
 };
 
 /// \brief Find face regions that might create overhangs

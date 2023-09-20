@@ -8,8 +8,8 @@ def test_box():
     
     val0 = 0.
     v0 = mrmesh.Vector2f.diagonal(val0)
-    b.min = v
-    b.max = v
+    b.min = v0
+    b.max = v0
     assert (b.valid() == True)
     assert (b.min == v0)
     assert (b.max == v0)

@@ -24,10 +24,11 @@ std::vector<FaceBitSet> findOverhangs( const Mesh& mesh, const FindOverhangsSett
     assert( settings.hops >= 0 );
     const auto minCos = -settings.layerHeight / std::hypot( settings.layerHeight, settings.maxOverhangDistance );
 
+    const auto xf = settings.xf ? *settings.xf : AffineXf3f();
     const auto isOverhanging = [&] ( FaceId f ) -> bool
     {
         const auto normal = mesh.normal( f );
-        const auto cos = dot( settings.axis, normal );
+        const auto cos = dot( settings.axis, xf( normal ) );
         return cos < minCos;
     };
 
@@ -49,7 +50,7 @@ std::vector<FaceBitSet> findOverhangs( const Mesh& mesh, const FindOverhangsSett
     } );
 
     // compute transform from the given axis
-    const auto axisXf = AffineXf3f::xfAround( Matrix3f::rotation( Vector3f::plusZ(), settings.axis ), mesh.computeBoundingBox().center() );
+    const auto axisXf = xf * AffineXf3f::xfAround( Matrix3f::rotation( Vector3f::plusZ(), settings.axis ), mesh.computeBoundingBox( settings.xf ).center() );
     const auto axisMeshBox = computeBoundingBox( mesh.points, nullptr, &axisXf );
 
     // filter out face regions with too small overhang distance

@@ -94,6 +94,7 @@ public:
     MRMESH_API void setDistanceFilterSigmaFactor(const float factor);
     MRMESH_API void recomputeBitSet(const float floatSamplingVoxelSize);
     MRMESH_API void setXfs( const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf );
+    MRMESH_API void setFloatXf( const AffineXf3f& fltMeshXf );
     // recompute point pairs after manual change of transformations or parameters
     MRMESH_API void updateVertPairs();
 
@@ -111,11 +112,12 @@ public:
 private:
     MeshPart floatMesh_;
     AffineXf3f floatXf_;
-    VertBitSet floatVerts_; // vertices of floating object to find their pairs on reference mesh
+    VertBitSet floatVerts_; ///< vertices of floating object to find their pairs on reference mesh
     
     MeshPart refMesh_;
     AffineXf3f refXf_;
-    AffineXf3f refXfInv_; // optimized for reference points transformation
+
+    AffineXf3f float2refXf_; ///< transformation from floating object space to reference object space
 
     ICPProperties prop_;
     std::unique_ptr<PointToPointAligningTransform> p2pt_ = std::make_unique<PointToPointAligningTransform>();

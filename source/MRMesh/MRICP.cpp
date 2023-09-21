@@ -35,8 +35,13 @@ MeshICP::MeshICP(const MeshPart& floatingMesh, const MeshPart& referenceMesh, co
 void MeshICP::setXfs( const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf )
 {
     refXf_ = refMeshXf;
-    refXfInv_ = refMeshXf.inverse();
+    setFloatXf( fltMeshXf );
+}
+
+void MeshICP::setFloatXf( const AffineXf3f& fltMeshXf )
+{
     floatXf_ = fltMeshXf;
+    float2refXf_ = refXf_.inverse() * floatXf_;
 }
 
 void MeshICP::recomputeBitSet(const float floatSamplingVoxelSize)
@@ -81,7 +86,7 @@ void MeshICP::updateVertPairs()
                 VertPair& vp = vertPairs_[idx];
                 auto& id = vp.vertId;
                 const auto& p = points[id];
-                MeshProjectionResult mp = findProjection( (refXfInv_ * floatXf_)(p), refMesh_ );
+                MeshProjectionResult mp = findProjection( float2refXf_(p), refMesh_ );
 
                 // projection should be found and if point projects on the border it will be ignored
                 if ( !mp.mtp.isBd( refMesh_.mesh.topology ) )
@@ -191,7 +196,7 @@ bool MeshICP::p2ptIter_()
 
     if (std::isnan(res.b.x)) //nan check
         return false;
-    floatXf_ = res * floatXf_;
+    setFloatXf( res * floatXf_ );
     p2pt_->clear();
     return true;
 }
@@ -265,7 +270,7 @@ bool MeshICP::p2plIter_()
 
     if (std::isnan(res.b.x)) //nan check
         return false;
-    floatXf_ = centroidRefXf * res * centroidRefXf.inverse() * floatXf_;
+    setFloatXf( centroidRefXf * res * centroidRefXf.inverse() * floatXf_ );
     p2pl_->clear();
     return true;
 }

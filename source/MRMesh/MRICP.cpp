@@ -1,5 +1,6 @@
 #include "MRICP.h"
 #include "MRMesh.h"
+#include "MRAligningTransform.h"
 #include "MRMeshNormals.h"
 #include "MRGridSampling.h"
 #include "MRTimer.h"
@@ -176,28 +177,28 @@ bool MeshICP::p2ptIter_()
 {
     MR_TIMER;
     const VertCoords& points = floatMesh_.mesh.points;
+    PointToPointAligningTransform p2pt;
     for (const auto& vp : vertPairs_)
     {
         const auto& id = vp.vertId;
         const auto v1 = floatXf_(points[id]);
         const auto& v2 = vp.refPoint;
-        p2pt_->add(Vector3d(v1), Vector3d(v2), vp.weight);
+        p2pt.add(Vector3d(v1), Vector3d(v2), vp.weight);
     }
 
     AffineXf3f res;
     if ( prop_.icpMode == ICPMode::TranslationOnly )
-        res = AffineXf3f(Matrix3f(), Vector3f(p2pt_->calculateTranslation()));
+        res = AffineXf3f(Matrix3f(), Vector3f(p2pt.calculateTranslation()));
     if( prop_.icpMode == ICPMode::AnyRigidXf )
-        res = AffineXf3f( p2pt_->calculateTransformationMatrix() );
+        res = AffineXf3f( p2pt.calculateTransformationMatrix() );
     if( prop_.icpMode == ICPMode::FixedAxis )
-        res = AffineXf3f( p2pt_->calculateFixedAxisRotation( Vector3d{ prop_.fixedRotationAxis } ) );
+        res = AffineXf3f( p2pt.calculateFixedAxisRotation( Vector3d{ prop_.fixedRotationAxis } ) );
     if( prop_.icpMode == ICPMode::OrthogonalAxis )
-        res = AffineXf3f( p2pt_->calculateOrthogonalAxisRotation( Vector3d{ prop_.fixedRotationAxis } ) );
+        res = AffineXf3f( p2pt.calculateOrthogonalAxisRotation( Vector3d{ prop_.fixedRotationAxis } ) );
 
     if (std::isnan(res.b.x)) //nan check
         return false;
     setFloatXf( res * floatXf_ );
-    p2pt_->clear();
     return true;
 }
 
@@ -216,32 +217,33 @@ bool MeshICP::p2plIter_()
     centroidRef /= float(vertPairs_.size() * 2);
     AffineXf3f centroidRefXf = AffineXf3f(Matrix3f(), centroidRef);
 
+    PointToPlaneAligningTransform p2pl;
     for (const auto& vp : vertPairs_)
     {
         const auto v1 = floatXf_(points[vp.vertId]);
         const auto& v2 = vp.refPoint;
-        p2pl_->add(Vector3d(v1 - centroidRef), Vector3d(v2 - centroidRef), Vector3d(vp.normRef), vp.weight);
+        p2pl.add(Vector3d(v1 - centroidRef), Vector3d(v2 - centroidRef), Vector3d(vp.normRef), vp.weight);
     }
 
     AffineXf3f res;
     PointToPlaneAligningTransform::Amendment am;
     if( prop_.icpMode == ICPMode::TranslationOnly )
     {
-        res = AffineXf3f( Matrix3f(), Vector3f( p2pl_->calculateTranslation() ) );
+        res = AffineXf3f( Matrix3f(), Vector3f( p2pl.calculateTranslation() ) );
     }
     else
     {
         if( prop_.icpMode == ICPMode::FixedAxis )
         {
-            am = p2pl_->calculateFixedAxisAmendment( Vector3d{ prop_.fixedRotationAxis } );
+            am = p2pl.calculateFixedAxisAmendment( Vector3d{ prop_.fixedRotationAxis } );
         }
         if( prop_.icpMode == ICPMode::OrthogonalAxis )
         {
-            am = p2pl_->calculateOrthogonalAxisAmendment( Vector3d{ prop_.fixedRotationAxis } );
+            am = p2pl.calculateOrthogonalAxisAmendment( Vector3d{ prop_.fixedRotationAxis } );
         }
         if( prop_.icpMode == ICPMode::AnyRigidXf )
         {
-            am = p2pl_->calculateAmendment();
+            am = p2pl.calculateAmendment();
         }
 
         auto angle = am.rotAngles.length();
@@ -271,7 +273,6 @@ bool MeshICP::p2plIter_()
     if (std::isnan(res.b.x)) //nan check
         return false;
     setFloatXf( centroidRefXf * res * centroidRefXf.inverse() * floatXf_ );
-    p2pl_->clear();
     return true;
 }
 

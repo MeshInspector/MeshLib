@@ -96,7 +96,9 @@ public:
     const VoxelBitSet& getSelectedVoxels() const { return selectedVoxels_; }
     void selectVoxels( const VoxelBitSet& selectedVoxels ) { selectedVoxels_ = selectedVoxels; }
     
+    /// get active (visible) voxels
     const VoxelBitSet& getVolumeRenderActiveVoxels() const { return volumeRenderActiveVoxels_; }
+    /// set active (visible) voxels (using only in Volume Rendering mode)
     MRMESH_API void setVolumeRenderActiveVoxels( const VoxelBitSet& activeVoxels );
 
     /// VoxelId is numerical representation of voxel

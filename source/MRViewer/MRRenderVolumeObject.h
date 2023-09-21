@@ -20,14 +20,6 @@ public:
     virtual size_t glBytes() const override;
     virtual void forceBindAll() override;
 
-protected:
-    Vector2i activeVoxelsTextureSize_;
-
-    MRVIEWER_API RenderBufferRef<unsigned> loadActiveVoxelsTextureBuffer_();
-
-    GlTexture2 activeVoxelsTex_;
-    int maxTexSize_{ 0 };
-
 private:
     const ObjectVoxels* objVoxels_{ nullptr };
 
@@ -39,6 +31,10 @@ private:
     GlTexture3 volume_;
     GlTexture2 denseMap_;
 
+    Vector2i activeVoxelsTextureSize_;
+    GlTexture2 activeVoxelsTex_;
+    int maxTexSize_{ 0 };
+
     void render_( const RenderParams& params, unsigned geomId );
     void bindVolume_( bool picker );
 
@@ -49,6 +45,8 @@ private:
     void freeBuffers_();
 
     void update_();
+
+    RenderBufferRef<unsigned> loadActiveVoxelsTextureBuffer_();
 
     // Marks dirty buffers that need to be uploaded to OpenGL
     uint32_t dirty_{ 0 };

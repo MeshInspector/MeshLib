@@ -265,6 +265,11 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
 
 void ObjectVoxels::setVolumeRenderActiveVoxels( const VoxelBitSet& activeVoxels )
 {
+    auto box = activeBox_.size();
+    const bool valid = activeVoxels.size() == box.x * box.y * box.z;
+    assert( valid );
+    if ( !valid )
+        return;
     volumeRenderActiveVoxels_ = activeVoxels;
     dirty_ |= DIRTY_SELECTION;
 }

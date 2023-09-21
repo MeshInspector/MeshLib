@@ -15,38 +15,38 @@ namespace MR
 
 MeshICP::MeshICP(const MeshPart& floatingMesh, const MeshPart& referenceMesh, const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf,
     const VertBitSet& floatingMeshBitSet)
-    : meshPart_( floatingMesh )
-    , refPart_( referenceMesh )
+    : floatMesh_( floatingMesh )
+    , refMesh_( referenceMesh )
 {
     setXfs( fltMeshXf, refMeshXf );
-    bitSet_ = floatingMeshBitSet;
+    floatVerts_ = floatingMeshBitSet;
     updateVertPairs();
 }
 
 MeshICP::MeshICP(const MeshPart& floatingMesh, const MeshPart& referenceMesh, const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf,
     float floatSamplingVoxelSize )
-    : meshPart_( floatingMesh )
-    , refPart_( referenceMesh )
+    : floatMesh_( floatingMesh )
+    , refMesh_( referenceMesh )
 {
     setXfs( fltMeshXf, refMeshXf );
-    recomputeBitSet(floatSamplingVoxelSize);
+    recomputeBitSet( floatSamplingVoxelSize );
 }
 
 void MeshICP::setXfs( const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf )
 {
     refXf_ = refMeshXf;
     refXfInv_ = refMeshXf.inverse();
-    xf_ = fltMeshXf;
+    floatXf_ = fltMeshXf;
 }
 
 void MeshICP::recomputeBitSet(const float floatSamplingVoxelSize)
 {
-    auto bboxDiag = meshPart_.mesh.computeBoundingBox( meshPart_.region ).size() / floatSamplingVoxelSize;
+    auto bboxDiag = floatMesh_.mesh.computeBoundingBox( floatMesh_.region ).size() / floatSamplingVoxelSize;
     auto nSamples = bboxDiag[0] * bboxDiag[1] * bboxDiag[2];
     if (nSamples > MAX_RESAMPLING_VOXEL_NUMBER)
-        bitSet_ = *verticesGridSampling( meshPart_, floatSamplingVoxelSize * std::cbrt(float(nSamples) / float(MAX_RESAMPLING_VOXEL_NUMBER)) );
+        floatVerts_ = *verticesGridSampling( floatMesh_, floatSamplingVoxelSize * std::cbrt(float(nSamples) / float(MAX_RESAMPLING_VOXEL_NUMBER)) );
     else
-        bitSet_ = *verticesGridSampling( meshPart_, floatSamplingVoxelSize );
+        floatVerts_ = *verticesGridSampling( floatMesh_, floatSamplingVoxelSize );
 
     updateVertPairs();
 }
@@ -54,9 +54,9 @@ void MeshICP::recomputeBitSet(const float floatSamplingVoxelSize)
 void MeshICP::updateVertPairs()
 {
     MR_TIMER;
-    const auto& actualBitSet = bitSet_;
+    const auto& actualBitSet = floatVerts_;
 
-    const VertCoords& points = meshPart_.mesh.points;
+    const VertCoords& points = floatMesh_.mesh.points;
     if (!prop_.freezePairs)
     {
         vertPairs_.clear();
@@ -81,16 +81,16 @@ void MeshICP::updateVertPairs()
                 VertPair& vp = vertPairs_[idx];
                 auto& id = vp.vertId;
                 const auto& p = points[id];
-                MeshProjectionResult mp = findProjection( (refXfInv_ * xf_)(p), refPart_ );
+                MeshProjectionResult mp = findProjection( (refXfInv_ * floatXf_)(p), refMesh_ );
 
                 // projection should be found and if point projects on the border it will be ignored
-                if ( !mp.mtp.isBd( refPart_.mesh.topology ) )
+                if ( !mp.mtp.isBd( refMesh_.mesh.topology ) )
                 {
                     vp.vertDist2 = mp.distSq;
-                    vp.weight = meshPart_.mesh.dblArea(id);
+                    vp.weight = floatMesh_.mesh.dblArea(id);
                     vp.refPoint = refXf_(mp.proj.point);
-                    vp.norm = xf_.A * meshPart_.mesh.normal(id);
-                    vp.normRef = refXf_.A * refPart_.mesh.normal(mp.proj.face);
+                    vp.norm = floatXf_.A * floatMesh_.mesh.normal(id);
+                    vp.normRef = refXf_.A * refMesh_.mesh.normal(mp.proj.face);
                     vp.normalsAngleCos = dot((vp.normRef), (vp.norm));
                 }
                 else
@@ -170,11 +170,11 @@ std::pair<float,float> MeshICP::getDistLimitsSq() const
 bool MeshICP::p2ptIter_()
 {
     MR_TIMER;
-    const VertCoords& points = meshPart_.mesh.points;
+    const VertCoords& points = floatMesh_.mesh.points;
     for (const auto& vp : vertPairs_)
     {
         const auto& id = vp.vertId;
-        const auto v1 = xf_(points[id]);
+        const auto v1 = floatXf_(points[id]);
         const auto& v2 = vp.refPoint;
         p2pt_->add(Vector3d(v1), Vector3d(v2), vp.weight);
     }
@@ -191,7 +191,7 @@ bool MeshICP::p2ptIter_()
 
     if (std::isnan(res.b.x)) //nan check
         return false;
-    xf_ = res * xf_;
+    floatXf_ = res * floatXf_;
     p2pt_->clear();
     return true;
 }
@@ -201,19 +201,19 @@ bool MeshICP::p2plIter_()
     MR_TIMER;
     if ( vertPairs_.empty() )
         return false;
-    const VertCoords& points = meshPart_.mesh.points;
+    const VertCoords& points = floatMesh_.mesh.points;
     Vector3f centroidRef;
     for (auto& vp : vertPairs_)
     {
         centroidRef += vp.refPoint;
-        centroidRef += xf_(points[vp.vertId]);
+        centroidRef += floatXf_(points[vp.vertId]);
     }
     centroidRef /= float(vertPairs_.size() * 2);
     AffineXf3f centroidRefXf = AffineXf3f(Matrix3f(), centroidRef);
 
     for (const auto& vp : vertPairs_)
     {
-        const auto v1 = xf_(points[vp.vertId]);
+        const auto v1 = floatXf_(points[vp.vertId]);
         const auto& v2 = vp.refPoint;
         p2pl_->add(Vector3d(v1 - centroidRef), Vector3d(v2 - centroidRef), Vector3d(vp.normRef), vp.weight);
     }
@@ -248,7 +248,7 @@ bool MeshICP::p2plIter_()
             PointToPlaneAligningTransform p2plTrans;
             for (const auto& vp : vertPairs_)
             {
-                const auto v1 = xf_(points[vp.vertId]);
+                const auto v1 = floatXf_(points[vp.vertId]);
                 const auto& v2 = vp.refPoint;
                 p2plTrans.add(mLimited * Vector3d(v1 - centroidRef), mLimited * Vector3d(v2 - centroidRef),
                     mLimited * Vector3d(vp.normRef), vp.weight);
@@ -265,7 +265,7 @@ bool MeshICP::p2plIter_()
 
     if (std::isnan(res.b.x)) //nan check
         return false;
-    xf_ = centroidRefXf * res * centroidRefXf.inverse() * xf_;
+    floatXf_ = centroidRefXf * res * centroidRefXf.inverse() * floatXf_;
     p2pl_->clear();
     return true;
 }
@@ -357,7 +357,7 @@ AffineXf3f MeshICP::calculateTransformation()
     }
     if ( iter_ == prop_.iterLimit )
         resultType_ = ExitType::MaxIterations;
-    return xf_;
+    return floatXf_;
 }
 
 float MeshICP::getMeanSqDistToPoint() const
@@ -376,11 +376,11 @@ float MeshICP::getMeanSqDistToPlane() const
 {
     if ( vertPairs_.empty() )
         return 0;
-    const VertCoords& points = meshPart_.mesh.points;
+    const VertCoords& points = floatMesh_.mesh.points;
     double sum = 0;
     for (const auto& vp : vertPairs_)
     {
-        auto v = dot( vp.normRef, vp.refPoint - xf_(points[vp.vertId]) );
+        auto v = dot( vp.normRef, vp.refPoint - floatXf_(points[vp.vertId]) );
         sum += sqr( v );
     }
     return (float)std::sqrt( sum / vertPairs_.size() );
@@ -388,11 +388,11 @@ float MeshICP::getMeanSqDistToPlane() const
 
 Vector3f MeshICP::getShiftVector() const
 {
-    const VertCoords& points = meshPart_.mesh.points;
+    const VertCoords& points = floatMesh_.mesh.points;
     Vector3f vecAcc{ 0.f,0.f,0.f };
     for (const auto& vp : vertPairs_)
     {
-        auto vec = (vp.refPoint) - xf_(points[vp.vertId]);
+        auto vec = (vp.refPoint) - floatXf_(points[vp.vertId]);
         vecAcc += vec;
     }
     return vertPairs_.size() == 0 ? vecAcc : vecAcc / float(vertPairs_.size());

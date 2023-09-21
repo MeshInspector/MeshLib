@@ -71,7 +71,7 @@ struct ICPProperties
     float exitVal = 0; // [distance]
 };
 
-// This class allows to match two meshes with almost same geometry throw ICP point-to-point or point-to-plane algorithms
+// This class allows to match two meshes with almost same geometry using ICP point-to-point or point-to-plane algorithms
 class MeshICP
 {
 public:
@@ -109,13 +109,11 @@ public:
     MRMESH_API AffineXf3f calculateTransformation();
 
 private:
-    // input meshes variables
-    MeshPart meshPart_;
-    AffineXf3f xf_;
+    MeshPart floatMesh_;
+    AffineXf3f floatXf_;
+    VertBitSet floatVerts_; // vertices of floating object to find their pairs on reference mesh
     
-    VertBitSet bitSet_; // region of interests on the floating mesh
-    
-    MeshPart refPart_;
+    MeshPart refMesh_;
     AffineXf3f refXf_;
     AffineXf3f refXfInv_; // optimized for reference points transformation
 

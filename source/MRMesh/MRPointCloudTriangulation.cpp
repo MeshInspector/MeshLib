@@ -143,7 +143,7 @@ std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progr
     int numMap = 0;
     for ( auto& threadInfo : tls_ )
     {
-        if ( numMap == 0 )
+        if ( numMap++ == 0 )
         {
             map.merge( std::move( threadInfo.map ) );
         }
@@ -157,30 +157,50 @@ std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progr
             }
             threadInfo.map.clear();
         }
-        if ( sp && !sp( float( ++numMap ) / float( tls_.size() ) ) ) // 50% - 60%
+        if ( sp && !sp( float( numMap ) / float( tls_.size() ) ) ) // 50% - 60%
             return {};
     }
 
     Mesh mesh;
     mesh.points = pointCloud_.points;
 
-    Triangulation t;
-    FaceBitSet region2, region3;
+    Triangulation t3;
+    Triangulation t2;
     for ( const auto& triplet : map )
     {
-        if ( triplet.second == 2 || triplet.second == 3 )
-            t.push_back( { triplet.first.a, triplet.first.b, triplet.first.c, } );
         if ( triplet.second == 3 )
-            region3.autoResizeSet( t.backId() );
+            t3.push_back( { triplet.first.a, triplet.first.b, triplet.first.c, } );
         else if ( triplet.second == 2 )
-            region2.autoResizeSet( t.backId() );
+            t2.push_back( { triplet.first.a, triplet.first.b, triplet.first.c, } );
     }
+    auto compare = [] ( const auto& l, const auto& r )->bool
+    {
+        if ( l[0] < r[0] )
+            return true;
+        if ( l[0] > r[0] )
+            return false;
+        if ( l[1] < r[1] )
+            return true;
+        if ( l[1] > r[1] )
+            return false;
+        return l[2] < r[2];
+    };
+    tbb::parallel_sort( t3.vec_.begin(), t3.vec_.end(), compare );
+    tbb::parallel_sort( t2.vec_.begin(), t2.vec_.end(), compare );
+    auto t3Size = t3.size();
+    t3.vec_.insert( t3.vec_.end(), std::make_move_iterator( t2.vec_.begin() ), std::make_move_iterator( t2.vec_.end() ) );
+    FaceBitSet region3( t3Size );
+    region3.flip();
+    FaceBitSet region2( t3.size() );
+    region2.flip();
+    region2 -= region3;
+
     // create topology
-    MeshBuilder::addTriangles( mesh.topology, t, { .region = &region3, .allowNonManifoldEdge = false } );
-    region2 |= region3;
+    MeshBuilder::addTriangles( mesh.topology, t3, { .region = &region3, .allowNonManifoldEdge = false } );
     if ( !reportProgress( progressCb, 0.67f ) )
         return {};
-    MeshBuilder::addTriangles( mesh.topology, t, { .region = &region2, .allowNonManifoldEdge = false } );
+    region2 |= region3;
+    MeshBuilder::addTriangles( mesh.topology, t3, { .region = &region2, .allowNonManifoldEdge = false } );
     if ( !reportProgress( progressCb, 0.7f ) )
         return {};
 

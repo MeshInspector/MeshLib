@@ -1,9 +1,11 @@
 #pragma once
-#include "MRMeshFwd.h"
-#include "MRAligningTransform.h"
-#include "MRVector3.h"
-#include "MRMesh.h"
+
+#include "MRMeshPart.h"
+#include "MRMatrix3.h"
 #include "MRId.h"
+#include "MRConstants.h"
+#include "MRAffineXf.h"
+#include "MRBitSet.h"
 
 namespace MR
 {
@@ -41,6 +43,8 @@ struct VertPair
     float vertDist2 = 0.f;
     // weight of the pair with respect to the sum of adjoining triangles square
     float weight = 1.f;
+
+    friend bool operator == ( const VertPair&, const VertPair& ) = default;
 };
 
 struct ICPProperties
@@ -120,8 +124,6 @@ private:
     AffineXf3f float2refXf_; ///< transformation from floating object space to reference object space
 
     ICPProperties prop_;
-    std::unique_ptr<PointToPointAligningTransform> p2pt_ = std::make_unique<PointToPointAligningTransform>();
-    std::unique_ptr<PointToPlaneAligningTransform> p2pl_ = std::make_unique<PointToPlaneAligningTransform>();
 
     std::vector<VertPair> vertPairs_;
 

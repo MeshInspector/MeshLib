@@ -11,7 +11,9 @@
 
 #define TBB_SUPPRESS_DEPRECATED_MESSAGES 1
 // disable constraints for OpenVDB 10 compatibility
-//#define __TBB_USE_CONSTRAINTS 0
+#if __GNUC__ <= 13
+#define __TBB_USE_CONSTRAINTS 0
+#endif
 #pragma warning(push)
 #pragma warning(disable: 4459) //declaration of 'compare' hides global declaration
 #pragma warning(disable: 4464) //relative include path contains '..'
@@ -31,10 +33,6 @@
 #include <tbb/global_control.h>
 #include <tbb/task_scheduler_observer.h>
 #pragma warning(pop)
-#define __MR_TBB_STRING_AUX(x) #x
-#define __MR_TBB_STRING(x) __MR_TBB_STRING_AUX(x)
-#define __MR_TBB_VERSION_STRING __MR_TBB_STRING(TBB_VERSION_MAJOR) "." __MR_TBB_STRING(TBB_VERSION_MINOR)
-#pragma message( "TBB version " __MR_TBB_VERSION_STRING )
 
 #ifdef __EMSCRIPTEN__
 #pragma clang diagnostic pop

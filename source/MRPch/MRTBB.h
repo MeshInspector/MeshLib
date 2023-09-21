@@ -31,7 +31,10 @@
 #include <tbb/global_control.h>
 #include <tbb/task_scheduler_observer.h>
 #pragma warning(pop)
-#pragma message( "TBB version " TBB_VERSION_STRING )
+#define __MR_TBB_STRING_AUX(x) #x
+#define __MR_TBB_STRING(x) __MR_TBB_STRING_AUX(x)
+#define __MR_TBB_VERSION_STRING __MR_TBB_STRING(TBB_VERSION_MAJOR) "." __MR_TBB_STRING(TBB_VERSION_MINOR)
+#pragma message( "TBB version " __MR_TBB_VERSION_STRING )
 
 #ifdef __EMSCRIPTEN__
 #pragma clang diagnostic pop

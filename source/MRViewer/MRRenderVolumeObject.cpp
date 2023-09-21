@@ -67,6 +67,16 @@ RenderBufferRef<unsigned> RenderVolumeObject::loadActiveVoxelsTextureBuffer_()
     assert( activeVoxelsTextureSize_.x * activeVoxelsTextureSize_.y >= size );
     auto buffer = glBuffer.prepareBuffer<unsigned>( activeVoxelsTextureSize_.x * activeVoxelsTextureSize_.y );
 
+    
+    if ( objVoxels_->getVolumeRenderActiveVoxels().empty() )
+    {
+        tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
+        {
+            for ( int r = range.begin(); r < range.end(); ++r )
+                buffer[r] = 0xFFFFFFFF;
+        } );
+        return buffer;
+    }
     const auto& activeVoxels = objVoxels_->getVolumeRenderActiveVoxels().m_bits;
     const unsigned* activeVoxelsData = ( unsigned* )activeVoxels.data();
     tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
@@ -326,7 +336,7 @@ void RenderVolumeObject::bindVolume_( bool picker )
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "maxValue" ), ( params.max - volume.min ) / ( volume.max - volume.min ) ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "shadingMode" ), int( params.shadingType ) ) );
 
-    dirty_ &= ~( DIRTY_PRIMITIVES | DIRTY_TEXTURE );
+    dirty_ &= ~( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
 }
 
 void RenderVolumeObject::initBuffers_()

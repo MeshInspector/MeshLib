@@ -40,7 +40,6 @@ void ObjectVoxels::construct( const SimpleVolume& volume, ProgressCallback cb )
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
 
     volumeRenderActiveVoxels_.clear();
-    volumeRenderActiveVoxels_.resize( vdbVolume_.dims.x * vdbVolume_.dims.y * vdbVolume_.dims.z, true );
 
     updateHistogram_( volume.min, volume.max );
     if ( volumeRendering_ )
@@ -61,7 +60,6 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
 
     volumeRenderActiveVoxels_.clear();
-    volumeRenderActiveVoxels_.resize( vdbVolume_.dims.x * vdbVolume_.dims.y * vdbVolume_.dims.z, true );
 
     updateHistogramAndSurface( cb );
     if ( volumeRendering_ )
@@ -241,8 +239,6 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
     }
 
     volumeRenderActiveVoxels_.clear();
-    auto newDims = activeBox_.size();
-    volumeRenderActiveVoxels_.resize( newDims.x * newDims.y * newDims.z, true );
     dirty_ |= DIRTY_SELECTION;
 
     lastProgress = cbModifier;

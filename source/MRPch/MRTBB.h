@@ -31,11 +31,7 @@
 #include <tbb/global_control.h>
 #include <tbb/task_scheduler_observer.h>
 #pragma warning(pop)
-#if __TBB_USE_CONSTRAINTS
-#pragma message("TBB: constraints enabled")
-#else
-#pragma message("TBB: constraints disabled")
-#endif
+#pragma message( "TBB version " TBB_VERSION_STRING )
 
 #ifdef __EMSCRIPTEN__
 #pragma clang diagnostic pop

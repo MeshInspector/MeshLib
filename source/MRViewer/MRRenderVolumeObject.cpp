@@ -72,16 +72,7 @@ RenderBufferRef<unsigned> RenderVolumeObject::loadActiveVoxelsTextureBuffer_()
     tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
     {
         for ( int r = range.begin(); r < range.end(); ++r )
-        {
-//             auto& block = buffer[r];
-//             if ( r / 2 >= activeVoxels.size() )
-//             {
-//                 block = 0;
-//                 continue;
-//             }
-//             block = activeVoxelsData[r];
             buffer[r] = activeVoxelsData[r];
-        }
     } );
 
     return buffer;

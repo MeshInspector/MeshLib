@@ -44,7 +44,7 @@ void ObjectVoxels::construct( const SimpleVolume& volume, ProgressCallback cb )
 
     updateHistogram_( volume.min, volume.max );
     if ( volumeRendering_ )
-        dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE );
+        dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
 }
 
 void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, ProgressCallback cb )
@@ -65,7 +65,7 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
 
     updateHistogramAndSurface( cb );
     if ( volumeRendering_ )
-        dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE );
+        dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
 }
 
 void ObjectVoxels::construct( const VdbVolume& volume, ProgressCallback cb )
@@ -239,6 +239,12 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
         accessor.setActiveState( {x,y,z}, insideX && insideY && insideZ );
         reportProgress( cb, [&]{ return cbModifier * float( counter ) / volume; }, ++counter, 256 );
     }
+
+    volumeRenderActiveVoxels_.clear();
+    auto newDims = activeBox_.size();
+    volumeRenderActiveVoxels_.resize( newDims.x * newDims.y * newDims.z, true );
+    dirty_ |= DIRTY_SELECTION;
+
     lastProgress = cbModifier;
     if ( updateSurface )
     {
@@ -288,7 +294,6 @@ bool ObjectVoxels::prepareDataForVolumeRendering( ProgressCallback cb /*= {} */ 
     res.min = vdbVolume_.min;
     res.voxelSize = vdbVolume_.voxelSize;
     auto activeBox = getActiveBounds();
-    //res.dims = activeBox.size() + Vector3i::diagonal( 1 );
     res.dims = activeBox.size();
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size() );

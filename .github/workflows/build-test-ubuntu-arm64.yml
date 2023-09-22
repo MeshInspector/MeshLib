@@ -29,14 +29,16 @@ jobs:
             docker-image: meshlib/meshlib-ubuntu-arm64:${{inputs.image_tag}}
             cxx-compiler: /usr/bin/clang++-11
             c-compiler: /usr/bin/clang-11
+            use-cpp-23: "OFF"
           - os: ubuntu22
             docker-image: meshlib/meshlib-ubuntu22-arm64:${{inputs.image_tag}}
             cxx-compiler: /usr/bin/clang++-14
             c-compiler: /usr/bin/clang-14
+            use-cpp-23: "OFF"
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
@@ -54,6 +56,7 @@ jobs:
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
           MR_VERSION: ${{ inputs.version }}
+          MR_USE_CPP_23: ${{ matrix.use-cpp-23 }}
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}}-arm64 ${{matrix.config}} "${{matrix.compiler}}"

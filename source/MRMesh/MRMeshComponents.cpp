@@ -16,28 +16,30 @@ namespace MR
 namespace MeshComponents
 {
 
-std::pair<std::vector<int>, int> getUniqueRoots( const FaceMap& allRoots, const FaceBitSet& region )
+/// returns
+/// 1. the mapping: FaceId -> Root ID in [0, 1, 2, ...)
+/// 2. the total number of roots
+static std::pair<Vector<int, FaceId>, int> getUniqueRootIds( const FaceMap& allRoots, const FaceBitSet& region )
 {
-    constexpr int InvalidRoot = -1;
-    std::vector<int> uniqueRootsMap( allRoots.size(), InvalidRoot );
+    MR_TIMER
+    Vector<int, FaceId> uniqueRootsMap( allRoots.size(), -1 );
     int k = 0;
-    int curRoot;
     for ( auto f : region )
     {
-        curRoot = allRoots[f];
-        auto& uniqIndex = uniqueRootsMap[curRoot];
-        if ( uniqIndex == InvalidRoot )
+        auto& uniqIndex = uniqueRootsMap[allRoots[f]];
+        if ( uniqIndex < 0 )
         {
             uniqIndex = k;
             ++k;
         }
+        uniqueRootsMap[f] = uniqIndex;
     }
-    return { std::move( uniqueRootsMap ),k };
+    return { std::move( uniqueRootsMap ), k };
 }
 
 FaceBitSet getComponent( const MeshPart& meshPart, FaceId id, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
 {
-    MR_TIMER;
+    MR_TIMER
     auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
     const FaceBitSet& region = meshPart.mesh.topology.getFaceIds( meshPart.region );
 
@@ -55,7 +57,7 @@ FaceBitSet getComponent( const MeshPart& meshPart, FaceId id, FaceIncidence inci
 
 VertBitSet getComponentVerts( const Mesh& mesh, VertId id, const VertBitSet* region /*= nullptr */ )
 {
-    MR_TIMER;
+    MR_TIMER
     auto unionFindStruct = getUnionFindStructureVerts( mesh, region );
     const VertBitSet& vertsRegion = mesh.topology.getVertIds( region );
 
@@ -74,21 +76,21 @@ VertBitSet getComponentVerts( const Mesh& mesh, VertId id, const VertBitSet* reg
 
 FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
 {
-    MR_TIMER;
+    MR_TIMER
 
     auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
     const auto& mesh = meshPart.mesh;
     const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
 
     const auto& allRoots = unionFindStruct.roots();
-    auto [uniqueRootsMap, k] = getUniqueRoots( allRoots, region );
+    auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, region );
 
     double maxArea = -DBL_MAX;
     int maxI = 0;
     std::vector<double> areas( k, 0.0 );
     for ( auto f : region )
     {
-        auto index = uniqueRootsMap[allRoots[f]];
+        auto index = uniqueRootsMap[f];
         auto& area = areas[index];
         area += meshPart.mesh.dblArea( f );
         if ( area > maxArea )
@@ -100,7 +102,7 @@ FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidenc
     FaceBitSet maxAreaComponent( region.find_last() + 1 );
     for ( auto f : region )
     {
-        auto index = uniqueRootsMap[allRoots[f]];
+        auto index = uniqueRootsMap[f];
         if ( index != maxI )
             continue;
         maxAreaComponent.set( f );
@@ -110,7 +112,7 @@ FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidenc
 
 VertBitSet getLargestComponentVerts( const Mesh& mesh, const VertBitSet* region /*= nullptr */ )
 {
-    MR_TIMER;
+    MR_TIMER
 
     auto allComponents = getAllComponentsVerts( mesh, region );
 
@@ -125,7 +127,7 @@ VertBitSet getLargestComponentVerts( const Mesh& mesh, const VertBitSet* region 
 
 FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
 {
-    MR_TIMER;
+    MR_TIMER
 
     FaceBitSet res;
     if ( seeds.empty() )
@@ -217,7 +219,7 @@ FaceBitSet getLargeByAreaComponents( const MeshPart& mp, UnionFind<FaceId> & uni
 
 VertBitSet getComponentsVerts( const Mesh& mesh, const VertBitSet& seeds, const VertBitSet* region /*= nullptr */ )
 {
-    MR_TIMER;
+    MR_TIMER
 
     VertBitSet res;
     if ( seeds.empty() )
@@ -248,7 +250,7 @@ VertBitSet getComponentsVerts( const Mesh& mesh, const VertBitSet& seeds, const 
 
 size_t getNumComponents( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
 {
-    MR_TIMER;
+    MR_TIMER
     auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
     const FaceBitSet& region = meshPart.mesh.topology.getFaceIds( meshPart.region );
 
@@ -271,19 +273,19 @@ size_t getNumComponents( const MeshPart& meshPart, FaceIncidence incidence, cons
 
 std::vector<FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
 {
-    MR_TIMER;
+    MR_TIMER
     auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
     const auto& mesh = meshPart.mesh;
     const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
 
     const auto& allRoots = unionFindStruct.roots();
-    auto [uniqueRootsMap, k] = getUniqueRoots( allRoots, region );
+    auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, region );
     std::vector<FaceBitSet> res( k );
     // this block is needed to limit allocations for not packed meshes
     std::vector<int> resSizes( k, 0 );
     for ( auto f : region )
     {
-        int index = uniqueRootsMap[allRoots[f]];
+        int index = uniqueRootsMap[f];
         if ( f > resSizes[index] )
             resSizes[index] = f;
     }
@@ -292,14 +294,25 @@ std::vector<FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidenc
     // end of allocation block
     for ( auto f : region )
     {
-        res[uniqueRootsMap[allRoots[f]]].set( f );
+        res[uniqueRootsMap[f]].set( f );
     }
     return res;
 }
 
+std::pair<Vector<int, FaceId>, int> getAllComponentsMap( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
+{
+    MR_TIMER
+    auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
+    const auto& mesh = meshPart.mesh;
+    const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
+
+    const auto& allRoots = unionFindStruct.roots();
+    return getUniqueRootIds( allRoots, region );
+}
+
 static std::vector<VertBitSet> getAllComponentsVerts( UnionFind<VertId>& unionFindStruct, const VertBitSet& vertsRegion, const VertBitSet* doNotOutput )
 {
-    MR_TIMER;
+    MR_TIMER
 
     const auto& allRoots = unionFindStruct.roots();
     constexpr int InvalidRoot = -1;
@@ -331,7 +344,7 @@ static std::vector<VertBitSet> getAllComponentsVerts( UnionFind<VertId>& unionFi
 
 std::vector<VertBitSet> getAllComponentsVerts( const Mesh& mesh, const VertBitSet* region )
 {
-    MR_TIMER;
+    MR_TIMER
     auto unionFindStruct = getUnionFindStructureVerts( mesh, region );
     const VertBitSet& vertsRegion = mesh.topology.getVertIds( region );
     return getAllComponentsVerts( unionFindStruct, vertsRegion, nullptr );
@@ -345,9 +358,17 @@ std::vector<VertBitSet> getAllComponentsVertsSeparatedByPath( const Mesh& mesh, 
     return getAllComponentsVerts( unionFindStruct, vertsRegion, &pathVerts );
 }
 
+std::vector<VertBitSet> getAllComponentsVertsSeparatedByPaths( const Mesh& mesh, const std::vector<SurfacePath>& paths )
+{
+    VertBitSet pathVerts;
+    auto unionFindStruct = getUnionFindStructureVertsSeparatedByPaths( mesh, paths, &pathVerts );
+    const VertBitSet& vertsRegion = mesh.topology.getValidVerts();
+    return getAllComponentsVerts( unionFindStruct, vertsRegion, &pathVerts );
+}
+
 std::vector<EdgeBitSet> getAllComponentsEdges( const Mesh& mesh, const EdgeBitSet & edges )
 {
-    MR_TIMER;
+    MR_TIMER
     auto unionFindStruct = getUnionFindStructureVerts( mesh, edges );
 
     const auto& allRoots = unionFindStruct.roots();
@@ -378,7 +399,7 @@ std::vector<EdgeBitSet> getAllComponentsEdges( const Mesh& mesh, const EdgeBitSe
 
 bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection )
 {
-    MR_TIMER;
+    MR_TIMER
     for ( const auto & component : getAllComponentsVerts( mesh ) )
     {
         if ( ( component - selection ).none() )
@@ -484,7 +505,7 @@ UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceInci
 
 UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet* region )
 {
-    MR_TIMER;
+    MR_TIMER
 
     const VertBitSet& vertsRegion = mesh.topology.getVertIds( region );
 
@@ -514,7 +535,7 @@ UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet
 
 UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const EdgeBitSet & edges )
 {
-    MR_TIMER;
+    MR_TIMER
 
     UnionFind<VertId> unionFindStructure( mesh.topology.lastValidVert() + 1 );
 
@@ -529,7 +550,7 @@ UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const EdgeBitSet
 
 UnionFind<VertId> getUnionFindStructureVertsEx( const Mesh& mesh, const UndirectedEdgeBitSet & ignoreEdges )
 {
-    MR_TIMER;
+    MR_TIMER
 
     UnionFind<VertId> unionFindStructure( mesh.topology.lastValidVert() + 1 );
 
@@ -546,7 +567,7 @@ UnionFind<VertId> getUnionFindStructureVertsEx( const Mesh& mesh, const Undirect
 
 UnionFind<VertId> getUnionFindStructureVertsSeparatedByPath( const Mesh& mesh, const SurfacePath& path, VertBitSet * outPathVerts )
 {
-    MR_TIMER;
+    MR_TIMER
     UndirectedEdgeBitSet ignoreEdges( mesh.topology.undirectedEdgeSize() );
 
     for ( const MeshEdgePoint & ep : path )
@@ -561,6 +582,28 @@ UnionFind<VertId> getUnionFindStructureVertsSeparatedByPath( const Mesh& mesh, c
         }
         ignoreEdges.set( ep.e.undirected() );
     }
+    return getUnionFindStructureVertsEx( mesh, ignoreEdges );
+}
+
+UnionFind<VertId> getUnionFindStructureVertsSeparatedByPaths( const Mesh& mesh, const std::vector<SurfacePath>& paths, VertBitSet* outPathVerts )
+{
+    MR_TIMER
+    UndirectedEdgeBitSet ignoreEdges( mesh.topology.undirectedEdgeSize() );
+
+    for ( const auto& path: paths )
+        for ( const MeshEdgePoint& ep : path )
+        {
+            if ( VertId v = ep.inVertex( mesh.topology ) )
+            {
+                if ( outPathVerts )
+                    outPathVerts->autoResizeSet( v );
+                for ( auto e : orgRing( mesh.topology, v ) )
+                    ignoreEdges.set( e.undirected() );
+                continue;
+            }
+            ignoreEdges.set( ep.e.undirected() );
+        }
+
     return getUnionFindStructureVertsEx( mesh, ignoreEdges );
 }
 

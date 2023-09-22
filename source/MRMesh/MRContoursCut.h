@@ -61,18 +61,22 @@ MRMESH_API OneMeshContours getOneMeshIntersectionContours( const Mesh& meshA, co
   * \brief Makes continuous contour by mesh tri points, if first and last meshTriPoint is the same, makes closed contour
   *
   * Finds shortest paths between neighbor \p meshTriPoints and build contour MR::cutMesh input
+  * \param pivotIndices optional output indices of given meshTriPoints in result OneMeshContour
   */
 [[nodiscard]]
-MRMESH_API OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints );
+MRMESH_API OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
+    std::vector<int>* pivotIndices = nullptr );
 
 /** \ingroup BooleanGroup
   * \brief Makes closed continuous contour by mesh tri points, note that first and last meshTriPoint should not be same
   * 
   * Finds shortest paths between neighbor \p meshTriPoints and build closed contour MR::cutMesh input
+  * \param pivotIndices optional output indices of given meshTriPoints in result OneMeshContour
   * \note better use convertMeshTriPointsToMeshContour(...) instead, note that it requires same front and back MeshTriPoints for closed contour
   */
 [[nodiscard]]
-MRMESH_API OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints );
+MRMESH_API OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints, 
+    std::vector<int>* pivotIndices = nullptr );
 
 /** \ingroup BooleanGroup
   * \brief Converts SurfacePath to OneMeshContours
@@ -121,9 +125,16 @@ struct CutMeshParameters
     const SortIntersectionsData* sortData{nullptr};
     /// This is optional output - map from newly generated faces to old faces (N-1)
     FaceMap* new2OldMap{nullptr};
-    /// If this flag is set, MR::cutMesh will fill all possible triangles, except bad ones; otherwise it will leave deleted faces on all contours line (only in case of bad triangles)
-    /// \note Bad triangles here mean faces where contours have intersections and cannot be cut and filled in an good way
-    bool forceFillAfterBadCut{false};
+    /// This enum defines the MR::cutMesh behaviour in case of bad faces acure
+    /// basicaly MR::cutMesh removes all faces which contours pass through, adds new edges to topology and fills all removed parts
+    /// 
+    /// \note Bad faces here mean faces where contours have intersections and cannot be cut and filled in an good way
+    enum class ForceFill
+    {
+        None, //< if bad faces occur does not fill anything
+        Good, //< fills all faces except bad ones
+        All   //< fills all faces with bad ones, but on bad faces triangulation can also be bad (may have self-intersections or tunnels)
+    } forceFillMode_{ ForceFill::None };
 };
 
 /** \struct MR::CutMeshResult

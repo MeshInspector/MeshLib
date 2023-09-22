@@ -26,8 +26,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshIntersect, [] ( pybind11::module_& m )
         "allows to avoid repeatable computations during intersection finding" ).
         def( pybind11::init<const MR::Vector3d&>(), pybind11::arg( "dir" ) );
 
-    m.def( "rayMeshIntersect", ( std::optional<MR::MeshIntersectionResult>( * )( const MR::MeshPart&, const MR::Line3f&,
-        float, float, const MR::IntersectionPrecomputes<float>*, bool ) )& MR::rayMeshIntersect,
+    m.def( "rayMeshIntersect", []( const MR::MeshPart& meshPart, const MR::Line3f& line,
+            float rayStart, float rayEnd, const MR::IntersectionPrecomputes<float>* prec, bool closestIntersect )
+            { return MR::rayMeshIntersect( meshPart, line, rayStart, rayEnd, prec, closestIntersect ); },
         pybind11::arg( "meshPart" ), pybind11::arg( "line" ),
         pybind11::arg( "rayStart" ) = 0.0f, pybind11::arg( "rayEnd" ) = FLT_MAX,
         pybind11::arg( "prec" ) = nullptr, pybind11::arg( "closestIntersect" ) = true,
@@ -36,8 +37,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshIntersect, [] ( pybind11::module_& m )
         "prec can be specified to reuse some precomputations (e.g. for checking many parallel rays).\n"
         "Finds the closest to ray origin intersection (or any intersection for better performance if !closestIntersect)." );
    
-    m.def( "rayMeshIntersect", ( std::optional<MR::MeshIntersectionResult>( * )( const MR::MeshPart&, const MR::Line3d&,
-        double, double, const MR::IntersectionPrecomputes<double>*, bool ) )& MR::rayMeshIntersect,
+    m.def( "rayMeshIntersect", []( const MR::MeshPart& meshPart, const MR::Line3d& line,
+            double rayStart, double rayEnd, const MR::IntersectionPrecomputes<double>* prec, bool closestIntersect )
+            { return MR::rayMeshIntersect( meshPart, line, rayStart, rayEnd, prec, closestIntersect ); },
         pybind11::arg( "meshPart" ), pybind11::arg( "line" ),
         pybind11::arg( "rayStart" ) = 0.0, pybind11::arg( "rayEnd" ) = DBL_MAX,
         pybind11::arg( "prec" ) = nullptr, pybind11::arg( "closestIntersect" ) = true,

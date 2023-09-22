@@ -1,5 +1,5 @@
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MROpenRawVoxelsPlugin.h"
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRViewer/ImGuiHelpers.h"
@@ -115,10 +115,13 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                         return showError;
                     }
 
-                    return [object] ()
+                    return [object, path] ()
                     {
                         AppendHistory<ChangeSceneAction>( "Open Voxels", object, ChangeSceneAction::Type::AddObject );
                         SceneRoot::get().addChild( object );
+                        std::filesystem::path scenePath = path;
+                        scenePath.replace_extension( ".mru" );
+                        getViewerInstance().onSceneSaved( scenePath, false );
                         getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
                     };
                 }

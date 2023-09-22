@@ -442,11 +442,15 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     {
         auto menu = MR::getViewerInstance().getMenuPluginAs<MR::RibbonMenu>();
         float yPos = 0.0f;
+        float yPivot = 0.f;
         if ( params.isDown )
-            yPos = GetIO().DisplaySize.y - height;
+        {
+            yPos = GetIO().DisplaySize.y;
+            yPivot = 1.f;
+        }
         else if ( menu )
             yPos = ( menu->getTopPanelOpenedHeight() - 1.0f ) * menu->menu_scaling();
-        SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - params.width, yPos ), ImGuiCond_FirstUseEver );
+        SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - params.width, yPos ), ImGuiCond_FirstUseEver, ImVec2(0.f, yPivot) );
     }
 
     if ( params.changedSize )

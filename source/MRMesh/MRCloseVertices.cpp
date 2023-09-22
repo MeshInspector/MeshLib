@@ -11,13 +11,13 @@
 namespace MR
 {
 
-VertMap findSmallestCloseVerticesUsingTree( const VertCoords & points, float closeDist, const AABBTreePoints & tree, const VertBitSet * valid )
+std::optional<VertMap> findSmallestCloseVerticesUsingTree( const VertCoords & points, float closeDist, const AABBTreePoints & tree, const VertBitSet * valid, const ProgressCallback & cb )
 {
     MR_TIMER
 
     VertMap res;
     res.resizeNoInit( points.size() );
-    ParallelFor( points, [&]( VertId v )
+    if ( !ParallelFor( points, [&]( VertId v )
     {
         VertId smallestCloseVert = v;
         if ( !valid || valid->test( v ) )
@@ -30,7 +30,9 @@ VertMap findSmallestCloseVerticesUsingTree( const VertCoords & points, float clo
             } );
         }
         res[v] = smallestCloseVert;
-    } );
+    }, subprogress( cb, 0.0f, 0.8f ) ) )
+        return {};
+
     // after parallel pass, some close vertices can be mapped further
 
     for ( auto v = 0_v; v < points.size(); ++v )
@@ -56,24 +58,26 @@ VertMap findSmallestCloseVerticesUsingTree( const VertCoords & points, float clo
         res[v] = smallestCloseVert;
     }
 
+    if ( !reportProgress( cb, 1.0f ) )
+        return {};
     return res;
 }
 
-VertMap findSmallestCloseVertices( const VertCoords & points, float closeDist, const VertBitSet * valid )
+std::optional<VertMap> findSmallestCloseVertices( const VertCoords & points, float closeDist, const VertBitSet * valid, const ProgressCallback & cb )
 {
     MR_TIMER
     AABBTreePoints tree( points, valid );
-    return findSmallestCloseVerticesUsingTree( points, closeDist, tree, valid );
+    return findSmallestCloseVerticesUsingTree( points, closeDist, tree, valid, cb );
 }
 
-VertMap findSmallestCloseVertices( const Mesh & mesh, float closeDist )
+std::optional<VertMap> findSmallestCloseVertices( const Mesh & mesh, float closeDist, const ProgressCallback & cb )
 {
-    return findSmallestCloseVerticesUsingTree( mesh.points, closeDist, mesh.getAABBTreePoints(), &mesh.topology.getValidVerts() );
+    return findSmallestCloseVerticesUsingTree( mesh.points, closeDist, mesh.getAABBTreePoints(), &mesh.topology.getValidVerts(), cb );
 }
 
-VertMap findSmallestCloseVertices( const PointCloud & cloud, float closeDist )
+std::optional<VertMap> findSmallestCloseVertices( const PointCloud & cloud, float closeDist, const ProgressCallback & cb )
 {
-    return findSmallestCloseVerticesUsingTree( cloud.points, closeDist, cloud.getAABBTree(), &cloud.validPoints );
+    return findSmallestCloseVerticesUsingTree( cloud.points, closeDist, cloud.getAABBTree(), &cloud.validPoints, cb );
 }
 
 VertBitSet findCloseVertices( const VertMap & smallestMap )
@@ -92,19 +96,28 @@ VertBitSet findCloseVertices( const VertMap & smallestMap )
     return res;
 }
 
-VertBitSet findCloseVertices( const VertCoords & points, float closeDist, const VertBitSet * valid )
+std::optional<VertBitSet> findCloseVertices( const VertCoords & points, float closeDist, const VertBitSet * valid, const ProgressCallback & cb )
 {
-    return findCloseVertices( findSmallestCloseVertices( points, closeDist, valid ) );
+    auto x = findSmallestCloseVertices( points, closeDist, valid, cb );
+    if ( !x )
+        return {};
+    return findCloseVertices( *x );
 }
 
-VertBitSet findCloseVertices( const Mesh & mesh, float closeDist )
+std::optional<VertBitSet> findCloseVertices( const Mesh & mesh, float closeDist, const ProgressCallback & cb )
 {
-    return findCloseVertices( findSmallestCloseVertices( mesh, closeDist ) );
+    auto x = findSmallestCloseVertices( mesh, closeDist, cb );
+    if ( !x )
+        return {};
+    return findCloseVertices( *x );
 }
 
-VertBitSet findCloseVertices( const PointCloud & cloud, float closeDist )
+std::optional<VertBitSet> findCloseVertices( const PointCloud & cloud, float closeDist, const ProgressCallback & cb )
 {
-    return findCloseVertices( findSmallestCloseVertices( cloud, closeDist ) );
+    auto x = findSmallestCloseVertices( cloud, closeDist, cb );
+    if ( !x )
+        return {};
+    return findCloseVertices( *x );
 }
 
 struct VertPair
@@ -137,7 +150,7 @@ EdgeHashMap findTwinEdgeHashMap( const Mesh & mesh, float closeDist )
     MR_TIMER
     EdgeHashMap res;
 
-    const auto map = findSmallestCloseVertices( mesh, closeDist );
+    const auto map = *findSmallestCloseVertices( mesh, closeDist );
     VertBitSet closeVerts = findCloseVertices( map );
 
     HashMap<VertPair, EdgeId> hmap;

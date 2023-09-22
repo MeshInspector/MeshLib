@@ -1,11 +1,15 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project (MRViewer CXX)
 
-file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
+if(APPLE)
+	file(GLOB SOURCES "*.cpp" "*.mm")
+ELSE()
+	file(GLOB SOURCES "*.cpp")
+ENDIF()
 
 IF(MR_EMSCRIPTEN)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
@@ -37,6 +41,11 @@ IF(MR_EMSCRIPTEN)
 			)
 ELSE() # MR_EMSCRIPTEN
 IF(APPLE)
+	add_definitions("-x objective-c++")
+	find_library(APPKIT_LIBRARY AppKit)
+	IF(NOT APPKIT_LIBRARY)
+		message(FATAL_ERROR "AppKit not found")
+	ENDIF()
     target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 			MRMesh
@@ -55,15 +64,27 @@ IF(APPLE)
 			glfw
 			gtkmm-3.0
 			hidapi
+			${APPKIT_LIBRARY}
 			)
-ELSE() # APPLE
+ELSE() # NOT APPLE
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 			MRMesh
+			gtest
+			dl
+			cpr
 			imgui
 			glad
 			glfw
 			gtkmm-3.0
+			glib-2.0
+			glibmm-2.4
+			sigc-2.0
 			hidapi-hidraw
+			jsoncpp
+			spdlog
+			fmt
+			openvdb
+			tbb
 			)
 ENDIF() # APPLE
 ENDIF() # MR_EMSCRIPTEN
@@ -89,13 +110,15 @@ ENDIF() # MR_EMSCRIPTEN
 
 install(TARGETS ${PROJECT_NAME}
 		EXPORT ${PROJECT_NAME}
-		DESTINATION "${MR_MAIN_LIB_DIR}")
+		LIBRARY DESTINATION "${MR_MAIN_LIB_DIR}"
+		ARCHIVE DESTINATION "${MR_MAIN_LIB_DIR}"
+		RUNTIME DESTINATION "${MR_BIN_DIR}")
 
 install(FILES ${HEADERS}
 		DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}")
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}Config.cmake
-		DESTINATION ${MR_CONFIG_DIR}/cmake)
+		DESTINATION ${MR_CONFIG_DIR})
 
 install(FILES ${HEADERS} DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}")
 install(FILES ${MAIN_FONTS} DESTINATION "${MR_FONTS_DIR}")
@@ -107,4 +130,4 @@ install(DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/resource DESTINATION "${MR_R
 install(EXPORT ${PROJECT_NAME}
 		FILE ${PROJECT_NAME}Targets.cmake
 		NAMESPACE MeshLib::
-		DESTINATION ${MR_CONFIG_DIR}/cmake)
+		DESTINATION ${MR_CONFIG_DIR})

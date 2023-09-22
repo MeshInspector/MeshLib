@@ -96,11 +96,14 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 return returnError;
                 
             voxelsObject->select( true );
-            return [viewer, voxelsObject] ()
+            return [viewer, voxelsObject, directory] ()
             {
                 AppendHistory<ChangeSceneAction>( "Open Voxels", voxelsObject, ChangeSceneAction::Type::AddObject );
                 SceneRoot::get().addChild( voxelsObject );
                 viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
+                std::filesystem::path scenePath = directory;
+                scenePath += ".mru";
+                getViewerInstance().onSceneSaved( scenePath, false );
             };
         }, 2 );
     }

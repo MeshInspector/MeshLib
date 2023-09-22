@@ -1,7 +1,7 @@
+#include "MRToolPath.h"
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 
 #include "MR2to3.h"
-#include "MRToolPath.h"
 #include "MRSurfacePath.h"
 #include "MRFixUndercuts.h"
 #include "MROffset.h"
@@ -18,7 +18,12 @@
 #include "MRMeshDecimate.h"
 #include "MRBitSetParallelFor.h"
 #include "MRDistanceMap.h"
+#include "MRMeshComponents.h"
+#include "MRPolylineProject.h"
+#include "MRContoursCut.h"
+#include "MRFillContourByGraphCut.h"
 
+#include "MRParallelFor.h"
 #include "MRPch/MRTBB.h"
 #include <sstream>
 #include <span>
@@ -191,70 +196,173 @@ std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const Box3f& bo
     return sections;
 }
 
-std::vector<IsoLines> extractAllIsolines( const Mesh& mesh, const SurfacePath& startSurfacePath, float sectionStep, BypassDirection bypassDir, ProgressCallback cb )
+struct ExtractIsolinesResult
 {
+    std::vector<IsoLines> isolines;
+    Mesh meshAfterCut;
+    Vector<std::vector<FaceId>, FaceId> old2NewMap;
+    FaceBitSet region;
+};
+
+struct ExtractIsolinesParams
+{
+    // if is not null, isolines will be based on this surface path
+    const SurfacePath* startSurfacePath;
+    // if is not null, isolines will be based on these meshTriPoins
+    const std::vector<MeshTriPoint>* meshTriPoints;    
+    // if is not null, coordinates of the start contours will be stored here
+    Contours3f* startContours;
+    // if is not null, coordinates of the contours failed to build isolines will be stored here
+    Contours3f* failedContours;
+    // if is not null, coordinates of the start vertices will be stored here
+    std::vector<Vector3f>* startVertices;
+    // distance between isolines
+    float sectionStep;
+    // which direction isolines should be passed in
+    BypassDirection bypassDir;
+    // callback for reporting on progress
+    ProgressCallback cb;
+};
+
+ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsolinesParams& params )
+{
+    ExtractIsolinesResult res;
     MR::VertScalars distances;
-   
-    VertBitSet startVertices( mesh.topology.vertSize() );
-    for ( const auto& ep : startSurfacePath )
+    // if startContours is provided add a new contour
+    Contour3f* startContour = nullptr;    
+    if ( params.startContours )
     {
-        startVertices.set( mesh.topology.org( ep.e ) );
+        params.startContours->emplace_back();
+        startContour = &params.startContours->back();
     }
 
-    distances = computeSurfaceDistances(mesh, startVertices);    
+    res.meshAfterCut = mesh;
+    if ( params.meshTriPoints )
+    {
+        const auto meshContour = convertMeshTriPointsToClosedContour( mesh, *params.meshTriPoints );
+
+        CutMeshParameters cutMeshParams;
+        cutMeshParams.forceFillMode_ = CutMeshParameters::ForceFill::All;
+        FaceMap new2OldMap;
+        cutMeshParams.new2OldMap = &new2OldMap;
+        res.old2NewMap.resize( res.meshAfterCut.topology.faceSize() );
+        const auto cutRes = cutMesh( res.meshAfterCut, { meshContour }, cutMeshParams);
+
+        for ( FaceId f = FaceId( 0 ); f < new2OldMap.size(); ++f )
+        {
+            if ( new2OldMap[f].valid() )
+                res.old2NewMap[new2OldMap[f]].push_back( f );
+        }        
+
+        if ( cutRes.resultCut.empty() )
+        {
+            if ( params.failedContours )
+            {
+                params.failedContours->emplace_back();
+                auto& failedContour = params.failedContours->back();
+                for ( const auto& e : meshContour.intersections )
+                {
+                    failedContour.push_back( e.coordinate );
+                }
+                failedContour.push_back( failedContour.front() );
+            }
+            return res;
+        }    
+
+        VertBitSet startVertIds( res.meshAfterCut.topology.vertSize() );
+        res.region = fillContourLeftByGraphCut( res.meshAfterCut.topology, cutRes.resultCut, edgeCurvMetric( res.meshAfterCut ) );
+
+        VertBitSet innerVerts = getIncidentVerts( res.meshAfterCut.topology, res.region );
+
+        for ( const auto& edgeLoop : cutRes.resultCut )
+        {
+            for ( const auto edgeId : edgeLoop )
+            {
+                const auto orgVertId = res.meshAfterCut.topology.org( edgeId );
+                if ( !orgVertId.valid() )
+                    continue;
+
+                startVertIds.set( orgVertId );
+                if ( params.startVertices )
+                    params.startVertices->push_back( res.meshAfterCut.points[orgVertId] );
+
+                if ( startContour )
+                    startContour->push_back( res.meshAfterCut.edgePoint( { edgeId, 0.0f } ) );
+            }
+        }
+
+        VertBitSet regionVerts = startVertIds | innerVerts;
+        distances = computeSurfaceDistances( res.meshAfterCut, startVertIds, FLT_MAX, &regionVerts );
+    }
+    else if ( params.startSurfacePath )
+    {
+        Polyline3 startPolyline;
+        startPolyline.addFromSurfacePath( res.meshAfterCut, *params.startSurfacePath );
+
+        HashMap<VertId, float> startVerticesWithDists;
+        for ( const auto& ep : *params.startSurfacePath )
+        {
+            const auto orgVertId = res.meshAfterCut.topology.org( ep.e );
+            const auto dstVertId = res.meshAfterCut.topology.dest( ep.e );
+            if ( !orgVertId.valid() || !dstVertId.valid() )
+                continue;
+
+            // if removed then warning C4686: 'MR::findProjectionOnPolyline2': possible change in behavior, change in UDT return calling convention
+            static PolylineProjectionResult3 unused;
+
+            auto proj = findProjectionOnPolyline( res.meshAfterCut.points[orgVertId], startPolyline );
+            float dist = sqrt( proj.distSq );
+            startVerticesWithDists.insert_or_assign( orgVertId, dist );
+            if ( params.startVertices )
+                params.startVertices->push_back( { res.meshAfterCut.points[orgVertId] } );
+
+            proj = findProjectionOnPolyline( res.meshAfterCut.points[dstVertId], startPolyline );
+            dist = sqrt( proj.distSq );
+            startVerticesWithDists.insert_or_assign( dstVertId, dist );
+            if ( params.startVertices )
+                params.startVertices->push_back( { res.meshAfterCut.points[dstVertId] } );
+
+            if ( startContour )
+                startContour->push_back( res.meshAfterCut.edgePoint( ep ) );
+        }
+
+        distances = computeSurfaceDistances( res.meshAfterCut, startVerticesWithDists );
+    }
+
 
     const float topExcluded = FLT_MAX;
     const auto [min, max] = parallelMinMax( distances.vec_, &topExcluded );
 
-    const size_t numIsolines = size_t( ( max - min ) / sectionStep ) - 1;
+    const size_t numIsolines = size_t( ( max - min ) / params.sectionStep ) - 1;
 
-    const auto& topology = mesh.topology;
-    std::vector<IsoLines> isoLines( numIsolines );
+    const auto& topology = res.meshAfterCut.topology;
+    res.isolines.resize( numIsolines );
 
-    auto mainThreadId = std::this_thread::get_id();
-    std::atomic<bool> keepGoing{ true };
-    std::atomic<size_t> numDone{ 0 };
-
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, isoLines.size() ),
-                       [&] ( const tbb::blocked_range<size_t>& range )
+    const bool parallelForRes = MR::ParallelFor( size_t( 0 ), res.isolines.size(),
+    [&] ( size_t i )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
+        res.isolines[i] = extractIsolines( topology, distances, params.sectionStep * ( i + 1 ) );
+
+        if ( params.bypassDir == BypassDirection::CounterClockwise )
         {
-            if ( cb && !keepGoing.load( std::memory_order_relaxed ) )
-                break;
-
-            isoLines[i] = extractIsolines( topology, distances, sectionStep * ( i + 1 ) );
-
-            if ( bypassDir == BypassDirection::CounterClockwise )
+            for ( auto& isoLine : res.isolines[i] )
             {
-                for ( auto& isoLine : isoLines[i] )
-                {
-                    std::reverse( isoLine.begin(), isoLine.end() );
-                }
+                std::reverse( isoLine.begin(), isoLine.end() );
             }
-        }
+        }        
+    }, params.cb );
 
-        if ( cb )
-            numDone += range.size();
-
-        if ( cb && std::this_thread::get_id() == mainThreadId )
-        {
-            if ( !cb( float( numDone ) / float( numIsolines ) ) )
-                keepGoing.store( false, std::memory_order_relaxed );
-        }
-    } );
-
-    if ( !keepGoing.load( std::memory_order_relaxed ) || !reportProgress( cb, 1.0f ) )
+    if ( !parallelForRes || !reportProgress( params.cb, 1.0f ) )
         return {};
 
-    return isoLines;
+    return res;
 }
 
 using V3fIt = std::vector<Vector3f>::const_iterator;
 using Intervals = std::vector<std::pair<V3fIt, V3fIt>>;
 
 // compute intervals of the slice which are projected on the selected area in the mesh (skip if not specified)
-Intervals getIntervals( const MeshPart& mp, const V3fIt startIt, const V3fIt endIt, const V3fIt beginVec, const V3fIt endVec, bool moveForward )
+Intervals getIntervals( const MeshPart& mp, const MeshPart* offset, const V3fIt startIt, const V3fIt endIt, const V3fIt beginVec, const V3fIt endVec, bool moveForward )
 {
     Intervals res;
     if ( startIt == endIt )
@@ -267,10 +375,14 @@ Intervals getIntervals( const MeshPart& mp, const V3fIt startIt, const V3fIt end
     // otherwise add interval to the result
     const auto processPoint = [&] ( V3fIt it )
     {
-        const auto mpr = mp.mesh.projectPoint( *it );
-        const auto faceId = mp.mesh.topology.left( mpr->mtp.e );
+        const auto mpr = offset ? offset->mesh.projectPoint( *it ) : mp.mesh.projectPoint( *it );
+        const auto faceId = offset ? offset->mesh.topology.left( mpr->mtp.e ) : mp.mesh.topology.left( mpr->mtp.e );
 
-        if ( !mp.region || ( mpr && mp.region->test( faceId ) ) )
+        const bool isInsideSelection = offset ? 
+            ( !offset->region || ( mpr && offset->region->test( faceId ) ) ) :
+            !mp.region || ( mpr && mp.region->test( faceId ) );
+
+        if ( isInsideSelection )
         {
             if ( moveForward || endInterval > beginVec )
                 moveForward ? ++endInterval : --endInterval;
@@ -360,7 +472,7 @@ Intervals getIntervals( const MeshPart& mp, const V3fIt startIt, const V3fIt end
 
 // if distance between the last point and the given one is more than critical distance
 // we should make a transit on the safe height
-void transitOverSafeZ( V3fIt it, ToolPathResult& res, const ToolPathParams& params, float safeZ, float currentZ, float& lastFeed )
+void transitOverSafeZ( const Vector3f& p, ToolPathResult& res, const ToolPathParams& params, float safeZ, float currentZ, float& lastFeed )
 {
     // retract the tool fast if possible
     if ( safeZ - currentZ > params.retractLength )
@@ -369,20 +481,20 @@ void transitOverSafeZ( V3fIt it, ToolPathResult& res, const ToolPathParams& para
         res.commands.push_back( { .feed = params.retractFeed, .z = zRetract } );
         res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
     }
-    else
+    else if ( safeZ != currentZ )
     {
         res.commands.push_back( { .feed = params.retractFeed, .z = safeZ } );
     }
 
-    res.commands.push_back( { .type = MoveType::FastLinear, .x = it->x, .y = it->y } );
+    res.commands.push_back( { .type = MoveType::FastLinear, .x = p.x, .y = p.y } );
 
     // plunge the tool fast if possible
-    if ( safeZ - it->z > params.plungeLength )
+    if ( safeZ - p.z > params.plungeLength )
     {
-        const float zPlunge = it->z + params.plungeLength;
+        const float zPlunge = p.z + params.plungeLength;
         res.commands.push_back( { .type = MoveType::FastLinear, .z = zPlunge } );
     }
-    res.commands.push_back( { .feed = params.plungeFeed, .x = it->x, .y = it->y, .z = it->z } );
+    res.commands.push_back( { .feed = params.plungeFeed, .x = p.x, .y = p.y, .z = p.z } );
     lastFeed = params.plungeFeed;
 }
 
@@ -394,12 +506,19 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
     const auto cutDirectionIdx = int( cutDirection );
     const auto sideDirection = ( cutDirection == Axis::X ) ? Axis::Y : Axis::X;
     const auto sideDirectionIdx = int( sideDirection );
-    auto preprocessedMesh = preprocessMesh( mp.mesh, params, false );
-    if ( !preprocessedMesh )
-        return unexpected( preprocessedMesh.error() );
 
-    ToolPathResult  res{ .modifiedMesh = std::move( *preprocessedMesh ) };
-    const auto& mesh = res.modifiedMesh;
+    ToolPathResult  res;
+
+    if ( !params.offsetMesh )
+    {
+        auto preprocessedMesh = preprocessMesh( mp.mesh, params, false );
+        if ( !preprocessedMesh )
+            return unexpected( preprocessedMesh.error() );
+
+        res.modifiedMesh = std::move( *preprocessedMesh );
+    }
+
+    const auto& mesh = params.offsetMesh ? params.offsetMesh->mesh : res.modifiedMesh;
 
     const auto box = mesh.computeBoundingBox();
     const float safeZ = std::max( box.max.z + 10.0f * params.millRadius, params.safeZ );
@@ -468,7 +587,8 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
             if ( contour.size() > section.size() )
                 contour.resize( section.size() );
 
-            res.isolines.push_back( contour );
+            if ( params.isolines )
+                params.isolines->push_back( contour );
 
             // we need to find the most left and the most right point on the mesh
             // and move tol from one side to another
@@ -494,7 +614,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
                     --bottomLeftIt;
             }
             
-            const auto intervals = getIntervals( mp, bottomLeftIt, bottomRightIt, contour.begin(), contour.end(), moveForward );
+            const auto intervals = getIntervals( mp, params.offsetMesh, bottomLeftIt, bottomRightIt, contour.begin(), contour.end(), moveForward );
             if ( intervals.empty() )
                 continue;
 
@@ -512,7 +632,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
                 const auto distSq = ( mesh.edgePoint( lastEdgePoint ) - mesh.edgePoint( nextEdgePoint ) ).lengthSq();
 
                 if ( distSq > critDistSq )
-                    transitOverSafeZ( intervals[0].first, res, params, safeZ, res.commands.back().z, lastFeed );
+                    transitOverSafeZ( *intervals[0].first, res, params, safeZ, res.commands.back().z, lastFeed );
                 else
                     addSurfacePath( res.commands, mesh, lastEdgePoint, nextEdgePoint );
             }
@@ -537,7 +657,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
                 }
 
                 if ( *intervals[i + 1].first != lastPoint )
-                    transitOverSafeZ( intervals[i + 1].first, res, params, safeZ, res.commands.back().z, lastFeed );
+                    transitOverSafeZ( *intervals[i + 1].first, res, params, safeZ, res.commands.back().z, lastFeed );
             }
             // process the last interval
             if ( moveForward )
@@ -564,12 +684,18 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
 
 Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, const ToolPathParams& params )
 {
-    auto preprocessedMesh = preprocessMesh( mp.mesh, params, false );
-    if ( !preprocessedMesh )
-        return unexpected( preprocessedMesh.error() );
+    ToolPathResult  res;
 
-    ToolPathResult  res{ .modifiedMesh = std::move( *preprocessedMesh ) };
-    const auto& mesh = res.modifiedMesh;
+    if ( !params.offsetMesh )
+    {
+        auto preprocessedMesh = preprocessMesh( mp.mesh, params, false );
+        if ( !preprocessedMesh )
+            return unexpected( preprocessedMesh.error() );
+
+        res.modifiedMesh = std::move( *preprocessedMesh );
+    }
+
+    const auto& mesh = params.offsetMesh ? params.offsetMesh->mesh : res.modifiedMesh;
 
     const auto box = mesh.computeBoundingBox();
     const float safeZ = std::max( box.max.z + 10.0f * params.millRadius, params.safeZ );
@@ -579,7 +705,6 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
     const auto plane = MR::Plane3f::fromDirAndPt( normal, box.max );
     const int steps = int( std::floor( ( plane.d - box.min.z ) / params.sectionStep ) );
 
-    res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
 
     MeshEdgePoint prevEdgePoint;
 
@@ -601,16 +726,20 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
         if ( lastPoint == point )
             return;
 
-        if ( lastFeed == params.baseFeed )
+        GCommand command { .x = point.x, .y = point.y };
+        if ( lastFeed != params.baseFeed )
         {
-            res.commands.push_back( { .x = point.x, .y = point.y } );
-        }
-        else
-        {
-            res.commands.push_back( { .feed = params.baseFeed, .x = point.x, .y = point.y } );
+            command.feed = params.baseFeed;
             lastFeed = params.baseFeed;
         }
 
+        if ( lastZ != point.z )
+        {
+            command.z = point.z;
+            lastZ = point.z;
+        }
+
+        res.commands.push_back( command );
         lastPoint = point;
     };
 
@@ -648,22 +777,26 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
                 continue;
 
             auto& contour = contours.front();
-            if ( contour.size() > section.size() )
+            if ( !params.flatTool && contour.size() > section.size() )
                 contour.resize( section.size() );
 
-            res.isolines.push_back( contour );
+            if ( params.isolines )
+                params.isolines->push_back( contour );
 
             if ( mp.region || params.flatTool )
             {
-                const auto intervals = getIntervals( mp, contour.begin(), contour.end(), contour.begin(), contour.end(), true );
+                const auto intervals = getIntervals( mp, params.offsetMesh, contour.begin(), contour.end(), contour.begin(), contour.end(), true );
                 if ( intervals.empty() )
                     continue;
 
                 for ( const auto& interval : intervals )
                 {
-                    if ( !mp.region || interval.first != contour.begin() )
+                    if ( !mp.region || interval.first != contour.begin() || res.commands.empty() )
                     {
-                        transitOverSafeZ( interval.first, res, params, safeZ, lastZ, lastFeed );
+                        if ( res.commands.empty() )
+                            res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
+
+                        transitOverSafeZ( *interval.first, res, params, safeZ, lastZ, lastFeed );
                         commands.push_back( { .x = interval.first->x, .y = interval.first->y, .z = interval.first->z } );
                     }
 
@@ -673,7 +806,6 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
                     }
                 }
 
-                lastZ = contour.front().z;
                 continue;
             }
 
@@ -706,7 +838,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
 
             if ( !prevEdgePoint.e.valid() || minDistSq > critTransitionLengthSq )
             {
-                transitOverSafeZ( pivotIt, res, params, safeZ, lastZ, lastFeed );
+                transitOverSafeZ( *pivotIt, res, params, safeZ, lastZ, lastFeed );
             }
             else
             {
@@ -754,38 +886,68 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
     return res;
 }
 
-
 Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, const ConstantCuspParams& params )
 {
-    auto preprocessedMesh = preprocessMesh( mp.mesh, params, true );
-    if ( !preprocessedMesh )
-        return unexpected( preprocessedMesh.error() );
+    ToolPathResult  res;
 
-    ToolPathResult  res{ .modifiedMesh = std::move( *preprocessedMesh ) };
-    
-    const auto& mesh = res.modifiedMesh;
-    const auto box = mesh.computeBoundingBox();
+    if ( !params.offsetMesh )
+    {
+        auto preprocessedMesh = preprocessMesh( mp.mesh, params, false );
+        if ( !preprocessedMesh )
+            return unexpected( preprocessedMesh.error() );
+
+        res.modifiedMesh = std::move( *preprocessedMesh );
+    }
+    else
+    {
+        res.modifiedMesh = params.offsetMesh->mesh;
+    }
+    const auto box = res.modifiedMesh.computeBoundingBox();
 
     const Vector3f normal = Vector3f::plusZ();
-    float minZ = box.min.z + params.sectionStep;
+    float minZ = box.min.z + params.millRadius;
     float safeZ = std::max( box.max.z + params.millRadius, params.safeZ );
 
     const auto undercutPlane = MR::Plane3f::fromDirAndPt( normal, { 0.0f, 0.0f, minZ } );
     
     //compute the lowest contour that might be processed
-    const auto undercutSection = extractPlaneSections( mesh, undercutPlane ).front();
+    const auto undercutSection = extractPlaneSections( res.modifiedMesh, undercutPlane ).front();
     Polyline3 undercutPolyline;
-    undercutPolyline.addFromSurfacePath( mesh, undercutSection );
+    undercutPolyline.addFromSurfacePath( res.modifiedMesh, undercutSection );
     const auto undercutContour = undercutPolyline.contours().front();
 
     // if there are multiple independent zones selected we need to process them separately
-    const auto processZone = [&] ( const SurfacePath& bounds, Vector3f lastPoint, ProgressCallback cb ) -> bool
+    const auto processZone = [&] ( const SurfacePath* bounds, const std::vector<MeshTriPoint>* meshTriPoints, Vector3f lastPoint, ProgressCallback cb ) -> bool
     {
+        ExtractIsolinesParams extractionParams
+        {
+            .startSurfacePath = bounds,
+            .meshTriPoints = meshTriPoints,
+            .startContours = params.startContours,
+            .failedContours = params.failedContours,
+            .startVertices = params.startVertices,
+            .sectionStep = params.sectionStep,
+            .bypassDir = params.bypassDir,
+            .cb = subprogress( cb, 0.0f, 0.4f )
+        };
         //compute isolines based on the start point or the bounding contour
-        std::vector<IsoLines> isoLines = extractAllIsolines( mesh, bounds, params.sectionStep, params.bypassDir, subprogress( cb, 0.0f, 0.4f ) );
+        auto extract = extractAllIsolines( res.modifiedMesh, extractionParams );
+        res.modifiedMesh = extract.meshAfterCut;
+        
+        const auto oldRegion = res.modifiedRegion;
+        res.modifiedRegion = extract.region;
 
-        if ( isoLines.empty() )
-            return false;
+        BitSetParallelFor( oldRegion, [&] ( FaceId f )
+        {
+            for ( auto& newFace : extract.old2NewMap[f] )
+            {
+                res.modifiedRegion.set( newFace, true );
+            }
+        } );
+
+        const auto& mesh = res.modifiedMesh;
+        if ( extract.isolines.empty() )
+            return reportProgress( cb, 0.4f );
 
         //go to the start point through safe height
         res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
@@ -854,7 +1016,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                 }
                 if ( startSkippedRegion )
                 {
-                    transitOverSafeZ( it, res, paramsCopy, safeZ, res.commands.back().z, lastFeed );
+                    transitOverSafeZ( *it, res, paramsCopy, safeZ, res.commands.back().z, lastFeed );
                     startSkippedRegion.reset();
                     continue;
                 }
@@ -867,44 +1029,35 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
             return false;
 
         const auto sbp = subprogress( cb, 0.5f, 1.0f );
-        const size_t numIsolines = isoLines.size();
+        const size_t numIsolines = extract.isolines.size();
 
         if ( params.fromCenterToBoundary )
-            std::reverse( isoLines.begin(), isoLines.end() );
+            std::reverse( extract.isolines.begin(), extract.isolines.end() );
         
         // go on in the inverse order (from the highest isoline to the lowest )
-        for ( size_t i = 0; i < numIsolines; ++i )
+        for ( int i = 0; i < numIsolines; ++i )
         {
             if ( sbp && !sbp( float( i ) / numIsolines ) )
                 return false;
 
-            if ( isoLines[i].empty() )
+            if ( extract.isolines[i].empty() )
                 continue;
 
-            for ( const auto& surfacePath : isoLines[i] )
+            const int jStart = mp.region ? 1 : 0;
+            for ( int j = jStart; j < extract.isolines[i].size(); ++j )
             {
+                const auto& surfacePath = extract.isolines[i][j];
+
                 Polyline3 polyline;
                 polyline.addFromSurfacePath( mesh, surfacePath );
-                const auto contour = polyline.contours().front();
-                res.isolines.push_back( contour );
+                const auto contours = polyline.contours();
+                const auto& contour = contours.front();
+
+                if ( params.isolines )
+                    params.isolines->push_back( contour );
 
                 auto nearestPointIt = surfacePath.begin();
-                float minDistSq = FLT_MAX;
-
-                if ( mp.region )
-                {
-                    //skip isoline if nore than half of its point are not lying in the selection
-                    size_t pointsInside = 0;
-                    for ( const auto& p : contour )
-                    {
-                        auto mpr = mp.mesh.projectPoint( p );
-                        if ( mpr && mp.region->test( mp.mesh.topology.left( mpr->mtp.e ) ) )
-                            ++pointsInside;
-                    }
-
-                    if ( pointsInside < ( contour.size() >> 1 ) )
-                        continue;
-                }
+                float minDistSq = FLT_MAX;              
 
                 // find the nearest point to the last processed one
                 if ( prevEdgePoint.e.valid() )
@@ -1011,49 +1164,74 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
     };
     
     //if selection is not specified then process all the vertices above the undercut
-    if ( !mp.region )
+    if ( !mp.region && ( !params.offsetMesh || !params.offsetMesh->region ) )
     {
-        if ( !processZone( undercutSection, {}, subprogress( params.cb, 0.25f, 1.0f ) ) || !reportProgress( params.cb, 1.0f ) )
+        if ( !processZone( &undercutSection, nullptr, {}, subprogress( params.cb, 0.25f, 1.0f ) ) || !reportProgress( params.cb, 1.0f ) )
             return unexpectedOperationCanceled();
 
         return res;
     }
 
-    const auto edgeLoops = findLeftBoundary( mp.mesh.topology, mp.region );
+    const auto edgeLoops = ( params.offsetMesh && params.offsetMesh->region ) ? 
+        findLeftBoundary( params.offsetMesh->mesh.topology, params.offsetMesh->region ) : 
+        findLeftBoundary( mp.mesh.topology, mp.region );
+
     //otherwise process each selected zone separately
     const size_t loopCount = edgeLoops.size();
     for ( size_t i = 0; i < loopCount; ++i )
     {
-        const auto& edgeLoop = edgeLoops[i];
-        SurfacePath selectionBound;
+        const auto& edgeLoop = edgeLoops[i];        
+
+        Contour3f* contourBeforeProjecton = nullptr;
+        Contour3f* contourBeforeCutMesh = nullptr;
+
+        if ( ( !params.offsetMesh || !params.offsetMesh->region ) && params.contoursBeforeProjection )
+        {
+            params.contoursBeforeProjection->emplace_back();
+            contourBeforeProjecton = &params.contoursBeforeProjection->back();
+        }
+
+        if ( params.contoursBeforeCutMesh )
+        {
+            params.contoursBeforeCutMesh->emplace_back();
+            contourBeforeCutMesh = &params.contoursBeforeCutMesh->back();
+        }
+
+        std::vector<MeshTriPoint> meshTriPoints;
         for ( auto edgeId : edgeLoop )
         {
-            // project all the vertices in the selected contour to the modified mesh
-            const auto origPoint = mp.mesh.edgePoint( MeshEdgePoint( edgeId, 0 ) );
-            const auto mpr = mesh.projectPoint( origPoint );
-            if ( !mpr )
-                continue;
-
-            if ( selectionBound.empty() )
+            if ( params.offsetMesh && params.offsetMesh->region )
             {
-                selectionBound.push_back( MeshEdgePoint( mpr->mtp.e, 0 ) );
+                MeshTriPoint mtp( MeshEdgePoint( edgeId, 0.0f ) );
+                meshTriPoints.push_back( mtp );
+                if ( contourBeforeCutMesh )
+                    contourBeforeCutMesh->push_back( res.modifiedMesh.triPoint( mtp ) );
+
                 continue;
             }
-            // compute path from the previous point to the current ( there may be additional points in the modified mesh )
-            const auto sp = computeSurfacePath( mesh, selectionBound.back(), MeshEdgePoint( mpr->mtp.e, 0 ) );
-            if ( sp )
-                selectionBound.insert( selectionBound.end(), sp->begin(), sp->end() );
 
-            selectionBound.push_back( MeshEdgePoint( mpr->mtp.e, 0 ) );
+            const auto originalPoint = mp.mesh.edgePoint( MeshEdgePoint( edgeId, 0.0f ) );
+            if ( contourBeforeProjecton )
+                contourBeforeProjecton->push_back( originalPoint );
+
+            // project all the vertices in the selected contour to the modified mesh
+            auto mpr = res.modifiedMesh.projectPoint( originalPoint );
+            if ( mpr )
+            {
+                meshTriPoints.push_back( mpr->mtp );
+                if ( contourBeforeCutMesh )
+                    contourBeforeCutMesh->push_back( res.modifiedMesh.triPoint( mpr->mtp ) );
+            }
+
+            mpr = res.modifiedMesh.projectPoint(mp.mesh.edgePoint(MeshEdgePoint(edgeId, 0.5f)));
+            if ( mpr )
+                meshTriPoints.push_back( mpr->mtp );
         }
-        // unite the last point with the first one
-        const auto sp = computeSurfacePath( mesh, selectionBound.back(), selectionBound.front() );
-        if ( sp )
-            selectionBound.insert( selectionBound.end(), sp->begin(), sp->end() );
-
-        selectionBound.push_back( selectionBound.front() );
-
-        if ( !processZone( selectionBound,
+        
+        if ( contourBeforeProjecton )
+            contourBeforeProjecton->push_back( contourBeforeProjecton->front() );
+        
+        if ( !processZone( nullptr, &meshTriPoints,
             res.commands.empty() ? Vector3f{} : Vector3f{ res.commands.back().x, res.commands.back().y, res.commands.back().z },
             subprogress( params.cb, 0.25f + 0.75f * float( i ) / loopCount, 0.25f + 0.75f * float( i + 1 ) / loopCount ) ) )
         {
@@ -1378,6 +1556,104 @@ void interpolateLines( std::vector<GCommand>& commands, const LineInterpolationP
 
         startIndex = startIndex + interpolatedSegment.size() + 1;
     }
+}
+
+FaceBitSet smoothSelection( Mesh& mesh, const FaceBitSet& region, float expandOffset, float shrinkOffset )
+{
+    auto innerVerts = getIncidentVerts( mesh.topology, region );
+    auto dists = computeSurfaceDistances( mesh, innerVerts );
+    BitSetParallelFor( getInnerVerts( mesh.topology, region ), [&] ( VertId v )
+    {
+        dists[v] = -dists[v];
+    } );
+
+    auto isolines = extractIsolines( mesh.topology, dists, expandOffset );
+
+    HashMap<VertId, float> startVerticesWithDists;
+    const auto components = MeshComponents::getAllComponentsVertsSeparatedByPaths( mesh, isolines );
+    VertBitSet extendedVerts;
+    for ( const auto& component : components )
+    {
+        if ( ( component & innerVerts ).count() != 0 )
+            extendedVerts |= component;
+    }
+
+    for ( const auto& isoline : isolines )
+    {
+        Polyline3 polyline;
+        polyline.addFromSurfacePath( mesh, isoline );
+
+        for ( const auto& ep : isoline )
+        {
+            const VertId org = mesh.topology.org( ep.e );
+            const VertId dest = mesh.topology.dest( ep.e );
+
+            if ( ep.inVertex() )
+            {
+                startVerticesWithDists.insert_or_assign( org, 0.0f );
+                continue;
+            }
+
+            auto proj = findProjectionOnPolyline( mesh.points[org], polyline );
+            startVerticesWithDists.insert_or_assign( org, sqrt( proj.distSq ) );
+
+            proj = findProjectionOnPolyline( mesh.points[dest], polyline );
+            startVerticesWithDists.insert_or_assign( dest, sqrt( proj.distSq ) );
+        }
+    }
+
+    dists = computeSurfaceDistances( mesh, startVerticesWithDists );
+
+    BitSetParallelFor( extendedVerts, [&] ( VertId v )
+    {
+        dists[v] = -dists[v];
+    } );
+
+    isolines = extractIsolines( mesh.topology, dists, shrinkOffset );
+       
+    FaceBitSet res;
+
+    const auto origMesh = mesh;
+
+    for ( const auto& isoline : isolines )
+    {
+        std::vector<MeshTriPoint> meshTriPoints;
+        meshTriPoints.reserve( isoline.size() );
+        for ( const auto& ep : isoline )
+        {
+            const auto mpr = mesh.projectPoint( origMesh.edgePoint( ep ) );
+            meshTriPoints.emplace_back( mpr->mtp );
+        }
+
+        const auto meshContour = convertMeshTriPointsToClosedContour( mesh, meshTriPoints );
+
+        CutMeshParameters cutMeshParams;
+        cutMeshParams.forceFillMode_ = CutMeshParameters::ForceFill::All;
+        FaceMap new2OldMap;
+        cutMeshParams.new2OldMap = &new2OldMap;
+           
+        Vector<std::vector<FaceId>, FaceId> old2NewMap( mesh.topology.faceSize() );
+        const auto cutRes = cutMesh( mesh, { meshContour }, cutMeshParams );
+
+        for ( FaceId f = FaceId( 0 ); f < new2OldMap.size(); ++f )
+        {
+            if ( new2OldMap[f].valid() )
+                old2NewMap[new2OldMap[f]].push_back( f );
+        }
+
+        const auto oldRegion = res;
+        res = fillContourLeftByGraphCut( mesh.topology, cutRes.resultCut, edgeCurvMetric( mesh ) );
+
+        BitSetParallelFor( oldRegion, [&] ( FaceId f )
+        {
+            for ( auto& newFace : old2NewMap[f] )
+            {
+                res.set( newFace, true );
+            }
+        } );
+    }
+
+    return res;
 }
 
 }

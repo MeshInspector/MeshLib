@@ -60,6 +60,7 @@ else:
 os.environ["MeshLibPyModulesPath"] = os.getcwd()
 os.chdir(directory)
 
+os.system(python_cmd + "-m pip uninstall -y meshlib")
 res = os.system(python_cmd + "-m pytest -s -v")
 
 if res != 0:

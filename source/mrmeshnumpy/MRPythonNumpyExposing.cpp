@@ -215,7 +215,7 @@ MR::Mesh fromUVPoints( const pybind11::buffer& xArray, const pybind11::buffer& y
     }
 
     // unite close vertices
-    const auto vertOldToNew = findSmallestCloseVertices( res.points, std::numeric_limits<float>::epsilon() );
+    const auto vertOldToNew = *findSmallestCloseVertices( res.points, std::numeric_limits<float>::epsilon() );
     for ( auto & tri : t )
     {
         for ( int i = 0; i < 3; ++i )

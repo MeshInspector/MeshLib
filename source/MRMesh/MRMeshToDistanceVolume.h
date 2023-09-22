@@ -1,6 +1,6 @@
 #pragma once
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRMeshFwd.h"
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRVector3.h"
 #include "MRProgressCallback.h"
 #include "MRSignDetectionMode.h"

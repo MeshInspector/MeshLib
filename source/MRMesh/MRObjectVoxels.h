@@ -1,11 +1,12 @@
 #pragma once
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRMeshFwd.h"
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRObjectMeshHolder.h"
 #include "MRProgressCallback.h"
 #include "MRHistogram.h"
 #include "MRVolumeIndexer.h"
 #include "MRMesh/MRSimpleVolume.h"
+#include "MRMarchingCubes.h"
 
 namespace MR
 {
@@ -80,6 +81,9 @@ public:
     /// sets whether to use Dual Marching Cubes algorithm for visualization (true) or Standard Marching Cubes (false);
     /// \param updateSurface forces immediate update
     MRMESH_API virtual void setDualMarchingCubes( bool on, bool updateSurface = true, ProgressCallback cb = {} );
+    /// set voxel point positioner for Marching Cubes (only for Standard Marching Cubes)
+    virtual void setVoxelPointPositioner( VoxelPointPositioner positioner ) { positioner_ = positioner; }
+
 
     /// Sets active bounds for some simplifications (max excluded)
     /// active bounds is box in voxel coordinates, note that voxels under (0,0,0) and voxels over (dimensions) are empty 
@@ -91,6 +95,11 @@ public:
 
     const VoxelBitSet& getSelectedVoxels() const { return selectedVoxels_; }
     void selectVoxels( const VoxelBitSet& selectedVoxels ) { selectedVoxels_ = selectedVoxels; }
+    
+    /// get active (visible) voxels
+    const VoxelBitSet& getVolumeRenderActiveVoxels() const { return volumeRenderActiveVoxels_; }
+    /// set active (visible) voxels (using only in Volume Rendering mode)
+    MRMESH_API void setVolumeRenderActiveVoxels( const VoxelBitSet& activeVoxels );
 
     /// VoxelId is numerical representation of voxel
     /// Coordinate is {x,y,z} indices of voxels in box (base dimensions space, NOT active dimensions)
@@ -112,11 +121,20 @@ public:
     // by calling `prepareDataForVolumeRendering(cb)` function before calling this one
     MRMESH_API void enableVolumeRendering( bool on );
     // move volume rendering data to caller: basically used in RenderVolumeObject 
-    [[nodiscard]] std::unique_ptr<SimpleVolumeU8> getVolumeRenderingData() const { return std::move( volumeRenderingData_ ); }
+    [[nodiscard]] std::unique_ptr<SimpleVolumeU16> getVolumeRenderingData() const { return std::move( volumeRenderingData_ ); }
 
     // struct to control volume rendering texture
     struct VolumeRenderingParams
     {
+        // volume texture smoothing
+        FilterType volumeFilterType{ FilterType::Linear };
+        // shading model
+        enum class ShadingType
+        {
+            None,
+            ValueGradient,
+            AlphaGradient
+        } shadingType{ ShadingType::None };
         // coloring type
         enum class LutType
         {
@@ -167,12 +185,13 @@ public:
 
 private:
     VolumeRenderingParams volumeRenderingParams_;
-    mutable UniquePtr<SimpleVolumeU8> volumeRenderingData_;
+    mutable UniquePtr<SimpleVolumeU16> volumeRenderingData_;
 
     int maxSurfaceVertices_{ 5'000'000 };
     VdbVolume vdbVolume_;
     float isoValue_{0.0f};
     bool dualMarchingCubes_{true};
+    VoxelPointPositioner positioner_ = {};
     Histogram histogram_;
     Box3i activeBox_;
 
@@ -188,6 +207,7 @@ private:
 
 protected:
     VoxelBitSet selectedVoxels_;
+    VoxelBitSet volumeRenderActiveVoxels_;
 
     ObjectVoxels( const ObjectVoxels& other ) = default;
     bool volumeRendering_{ false };

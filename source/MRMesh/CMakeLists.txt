@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(MRMesh CXX)
@@ -17,63 +17,55 @@ option(MRMESH_NO_TIFF "Disable TIFF support" OFF)
 option(MRMESH_NO_VOXEL "Disable voxel support" OFF)
 option(MRMESH_NO_GLTF "Disable glTF support" OFF)
 option(MRMESH_NO_XML "Disable XML support (affects 3MF support)" OFF)
+option(MRMESH_NO_E57 "Disable E57 support" OFF)
+option(MRMESH_NO_LAS "Disable LAS/LAZ support" OFF)
+
+IF(DEFINED MESHLIB_PYTHON_SUPPORT AND NOT MESHLIB_PYTHON_SUPPORT)
+	set(MRMESH_NO_PYTHON ON)
+ENDIF()
 
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
+
 set(MRMESH_OPTIONAL_DEPENDENCIES "")
 
-IF(MRMESH_NO_OPENCTM)
-	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_OPENCTM)
-ELSE()
+IF(NOT MRMESH_NO_OPENCTM)
 	list(APPEND MRMESH_OPTIONAL_DEPENDENCIES OpenCTM)
 ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
-	IF(MRMESH_NO_CLIPBOARD)
-		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_CLIPBOARD)
-	ELSE()
+	IF(NOT MRMESH_NO_CLIPBOARD)
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES clip)
 	ENDIF()
 
-	IF(MRMESH_NO_PDF)
-		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_PDF)
-	ELSE()
+	IF(NOT MRMESH_NO_PDF)
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES hpdf)
 	ENDIF()
 
-	IF(MRMESH_NO_CPR)
-		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_CPR)
-	ELSE()
+	IF(NOT MRMESH_NO_CPR)
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES cpr)
 	ENDIF()
 
-	IF(MRMESH_NO_PYTHON)
-		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_PYTHON)
-	ELSE()
+	IF(NOT MRMESH_NO_PYTHON)
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES ${MR_PYTHON_LIB})
 	ENDIF()
 
-	IF(MRMESH_NO_DICOM)
-		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_DICOM)
-	ELSE()
+	IF(NOT MRMESH_NO_DICOM)
 		find_package(GDCM CONFIG REQUIRED)
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF)
 	ENDIF()
 
-	IF(MRMESH_NO_LABEL)
-		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_LABEL)
-	ELSE()
+	IF(NOT MRMESH_NO_LABEL)
 		find_package(Freetype REQUIRED)
 		include_directories(${FREETYPE_INCLUDE_DIRS})
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES freetype)
 	ENDIF()
 
-	IF(MRMESH_NO_JPEG)
-		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_JPEG)
-	ELSE()
+	IF(NOT MRMESH_NO_JPEG)
 		IF(APPLE)
 			target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${HOMEBREW_PREFIX}/opt/jpeg-turbo/include>) # @todo
 			list(APPEND MRMESH_OPTIONAL_DEPENDENCIES ${HOMEBREW_PREFIX}/opt/jpeg-turbo/lib/libturbojpeg.dylib)
@@ -82,22 +74,15 @@ IF(NOT MR_EMSCRIPTEN)
 		ENDIF()
 	ENDIF()
 
-	IF(MRMESH_NO_PNG)
-		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_PNG)
-	ELSE()
+	IF(NOT MRMESH_NO_PNG)
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES png)
 	ENDIF()
 
-	IF(MRMESH_NO_TIFF)
-		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_TIFF)
-	ELSE()
+	IF(NOT MRMESH_NO_TIFF)
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES tiff)
 	ENDIF()
 
-
-	IF(MRMESH_NO_VOXEL)
-		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_VOXEL)
-	ELSE()
+	IF(NOT MRMESH_NO_VOXEL)
 		IF(APPLE)
 			list(APPEND MRMESH_OPTIONAL_DEPENDENCIES OpenVDB)
 		ELSE()
@@ -105,16 +90,16 @@ IF(NOT MR_EMSCRIPTEN)
 		ENDIF()
 	ENDIF()
 
-	IF(MRMESH_NO_GLTF)
-		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_GLTF)
-	ELSE()
-		# header-only library
+	IF(NOT MRMESH_NO_XML)
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES tinyxml2)
 	ENDIF()
 
-	IF(MRMESH_NO_XML)
-		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_XML)
-	ELSE()
-		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES tinyxml2)
+	IF(NOT MRMESH_NO_E57)
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES E57Format)
+	ENDIF()
+
+	IF(NOT MRMESH_NO_LAS)
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES lazperf)
 	ENDIF()
 ELSE()
 	target_compile_definitions(${PROJECT_NAME}
@@ -125,7 +110,12 @@ ELSE()
 			MRMESH_NO_DICOM
 			MRMESH_NO_JPEG
 			MRMESH_NO_VOXEL
+			MRMESH_NO_E57
 	)
+
+	IF(NOT MRMESH_NO_LAS)
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES lazperf_s)
+	ENDIF()
 ENDIF()
 
 # alternative Eigen include for external project
@@ -157,23 +147,21 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		    spdlog
 		    GTest::gtest
 		    zip
-		    pthread
 		    Boost::boost
 		    jsoncpp
 		    fmt
 		    tbb
-			${MRMESH_OPTIONAL_DEPENDENCIES}
-			${COCOA_LIBRARY}
+		    ${MRMESH_OPTIONAL_DEPENDENCIES}
+		    ${COCOA_LIBRARY}
 		)
 	ELSE()
 	    target_link_libraries(${PROJECT_NAME} PRIVATE
 	        gtest
 	        zip
 	        freetype
-	        pthread
 	        jsoncpp
 	        tbb
-			${MRMESH_OPTIONAL_DEPENDENCIES}
+		${MRMESH_OPTIONAL_DEPENDENCIES}
 	    )
 	ENDIF()
 ELSE()
@@ -184,28 +172,34 @@ ELSE()
 		spdlog
 		gtest
 		zip
-		pthread
 		Boost::boost
+		dl
 		jsoncpp
 		tbb
 		${MRMESH_OPTIONAL_DEPENDENCIES}
-		)
+	)
+ENDIF()
+
+IF(WIN32 AND MINGW)
+	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_EXPORT)
 ENDIF()
 
 set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(TARGETS ${PROJECT_NAME}
 		EXPORT ${PROJECT_NAME}
-		DESTINATION "${MR_MAIN_LIB_DIR}")
+		LIBRARY DESTINATION "${MR_MAIN_LIB_DIR}"
+		ARCHIVE DESTINATION "${MR_MAIN_LIB_DIR}"
+		RUNTIME DESTINATION "${MR_BIN_DIR}")
 
-install(FILES ${HEADERS}
+install(FILES ${HEADERS} "config_cmake.h"
 		DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}")
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}Config.cmake
-		DESTINATION ${MR_CONFIG_DIR}/cmake)
+		DESTINATION ${MR_CONFIG_DIR})
 
 
 install(EXPORT ${PROJECT_NAME}
 		FILE ${PROJECT_NAME}Targets.cmake
 		NAMESPACE MeshLib::
-		DESTINATION ${MR_CONFIG_DIR}/cmake)
+		DESTINATION ${MR_CONFIG_DIR})
 

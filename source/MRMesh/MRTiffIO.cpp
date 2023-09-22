@@ -1,5 +1,5 @@
+#include "MRTiffIO.h"
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
-#include "MRReadTIFF.h"
 #include "MRStringConvert.h"
 #include "MRBuffer.h"
 #include "MRMatrix4.h"
@@ -42,7 +42,9 @@ void setDataValue( float* data, const SampleType* input, TiffParameters::ValueTy
 }
 
 template<typename SampleType>
-void readRawTiff( TIFF* tiff, float* data, size_t size, const TiffParameters& tp, float* min = nullptr, float* max = nullptr )
+void readRawTiff( TIFF* tiff, uint8_t* bytes, size_t size, const TiffParameters& tp, 
+    bool convertToFloat,
+    float* min = nullptr, float* max = nullptr )
 {
     assert( sizeof( SampleType ) == tp.bytesPerSample );
     int samplePerPixel = 0;
@@ -54,9 +56,13 @@ void readRawTiff( TIFF* tiff, float* data, size_t size, const TiffParameters& tp
         samplePerPixel = 4;
     assert( samplePerPixel != 0 );
 
-    Buffer<SampleType> buffer( tp.tiled ? 
-        ( size_t( tp.tileSize.x ) * tp.tileSize.y * samplePerPixel ) :
-        ( size_t( tp.imageSize.x ) * samplePerPixel ) );
+    Buffer<SampleType> buffer;
+    if ( convertToFloat || tp.tiled )
+    {
+        buffer.resize( tp.tiled ?
+            ( size_t( tp.tileSize.x ) * tp.tileSize.y * samplePerPixel ) :
+            ( size_t( tp.imageSize.x ) * samplePerPixel ) );
+    }
 
     if ( tp.tiled )
     {
@@ -67,14 +73,27 @@ void readRawTiff( TIFF* tiff, float* data, size_t size, const TiffParameters& tp
                 TIFFReadTile( tiff, ( void* )( buffer.data() ), x, y, 0, 0 );
                 for ( int y0 = y; y0 < std::min( y + tp.tileSize.y, tp.imageSize.y ); ++y0 )
                 {
-                    for ( int x0 = x; x0 < std::min( x + tp.tileSize.x, tp.imageSize.x ); ++x0 )
+                    size_t shift = tp.imageSize.x * y0;
+                    if ( convertToFloat )
                     {
-                        size_t dataShift = tp.imageSize.x * y0 + x0;
-                        if ( dataShift >= size )
+                        for ( int x0 = x; x0 < std::min( x + tp.tileSize.x, tp.imageSize.x ); ++x0 )
+                        {
+                            size_t dataShift = shift + x0;
+                            if ( ( dataShift + 1 ) * sizeof( float ) > size )
+                                continue;
+                            setDataValue( ( float* )bytes + dataShift,
+                                    buffer.data() + samplePerPixel * ( tp.tileSize.x * ( y0 - y ) + ( x0 - x ) ), tp.valueType,
+                                    min, max );
+                        }
+                    }
+                    else
+                    {
+                        size_t dataShift = shift + x;
+                        auto modifier = samplePerPixel * tp.bytesPerSample;
+                        if ( ( dataShift + tp.tileSize.x ) * modifier > size )
                             continue;
-                        setDataValue( data + dataShift,
-                            buffer.data() + samplePerPixel * ( tp.tileSize.x * ( y0 - y ) + ( x0 - x ) ), tp.valueType,
-                            min, max );
+                        auto* first = ( const uint8_t* )( buffer.data() + samplePerPixel * ( tp.tileSize.x * ( y0 - y ) ) );
+                        std::copy( first, first + modifier * tp.tileSize.x, bytes + dataShift * modifier );
                     }
                 }
             }
@@ -84,18 +103,85 @@ void readRawTiff( TIFF* tiff, float* data, size_t size, const TiffParameters& tp
     {
         for ( uint32_t i = 0; i < uint32_t( tp.imageSize.y ); ++i )
         {
-            TIFFReadScanline( tiff, ( void* )( buffer.data() ), i );
             auto shift = i * tp.imageSize.x;
-            for ( int j = 0; j < tp.imageSize.x; ++j )
+            if ( !convertToFloat )
             {
-                size_t dataShift = shift + j;
-                if ( dataShift >= size )
+                auto maxShift = shift + tp.imageSize.x;
+                if ( maxShift * samplePerPixel * tp.bytesPerSample > size )
                     continue;
-                setDataValue( data + dataShift, buffer.data() + samplePerPixel * j, tp.valueType,
-                    min, max );
+            }
+            TIFFReadScanline( tiff, 
+                convertToFloat ? 
+                ( void* )( buffer.data() ) : 
+                ( void* )( bytes + shift * samplePerPixel * tp.bytesPerSample ), i );
+            if ( convertToFloat )
+            {
+                for ( int j = 0; j < tp.imageSize.x; ++j )
+                {
+                    size_t dataShift = shift + j;
+                    if ( ( dataShift + 1 ) * sizeof( float ) > size )
+                        continue;
+                    setDataValue( ( float* )bytes + dataShift, buffer.data() + samplePerPixel * j, tp.valueType,
+                        min, max );
+                }
             }
         }
     }
+}
+
+VoidOrErrStr writeRawTiff( const uint8_t* bytes, const std::filesystem::path& path, const BaseTiffParameters& params )
+{
+    TIFF* tif = TIFFOpen( MR::utf8string( path ).c_str(), "w" );
+    if ( !tif )
+        return unexpected("Cannot write file: "+ utf8string( path ) );
+
+    TIFFSetField( tif, TIFFTAG_IMAGEWIDTH, params.imageSize.x );
+    TIFFSetField( tif, TIFFTAG_IMAGELENGTH, params.imageSize.y );
+    TIFFSetField( tif, TIFFTAG_BITSPERSAMPLE, params.bytesPerSample * 8 );
+    int numSamples = 1;
+    switch ( params.valueType )
+    {
+    case BaseTiffParameters::ValueType::Scalar:
+        numSamples = 1;
+        break;
+    case BaseTiffParameters::ValueType::RGB:
+        numSamples = 3;
+        break;
+    case BaseTiffParameters::ValueType::RGBA:
+        numSamples = 4;
+        break;
+    default:
+        break;
+    }
+    TIFFSetField( tif, TIFFTAG_SAMPLESPERPIXEL, numSamples );
+
+    int sampleType = 0;
+    switch ( params.sampleType )
+    {
+    case BaseTiffParameters::SampleType::Float:
+        sampleType = SAMPLEFORMAT_IEEEFP;
+        break;
+    case BaseTiffParameters::SampleType::Uint:
+        sampleType = SAMPLEFORMAT_UINT;
+        break;
+    case BaseTiffParameters::SampleType::Int:
+        sampleType = SAMPLEFORMAT_INT;
+        break;
+    default:
+        return unexpected( "Unknown sample format" );
+        break;
+    }
+
+    TIFFSetField( tif, TIFFTAG_SAMPLEFORMAT, sampleType );
+
+    TIFFSetField( tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG );
+    TIFFSetField( tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISWHITE );
+
+    for ( int row = 0; row < params.imageSize.y; row++ )
+        TIFFWriteScanline( tif, ( void* )( bytes + row * params.imageSize.x * numSamples * params.bytesPerSample ), row );
+
+    TIFFClose( tif );
+    return {};
 }
 
 class TiffHolder 
@@ -139,6 +225,11 @@ Expected<TiffParameters, std::string> readTifParameters( TIFF* tiff )
 
     int samplePerPixel = 0;
     TIFFGetField( tiff, TIFFTAG_SAMPLESPERPIXEL, &samplePerPixel );
+    if ( samplePerPixel == 0 )
+    {
+        // incorrect tiff format, treat like Scalar
+        samplePerPixel = 1;
+    }
     if ( samplePerPixel == 1 )
         params.valueType = TiffParameters::ValueType::Scalar;
     else if ( samplePerPixel == 3 )
@@ -247,31 +338,31 @@ VoidOrErrStr readRawTiff( const std::filesystem::path& path, RawTiffOutput& outp
     if ( localParams->sampleType == TiffParameters::SampleType::Uint )
     {
         if ( localParams->bytesPerSample == sizeof( uint8_t ) )
-            readRawTiff<uint8_t>( tiff, output.data, output.size, *localParams, output.min, output.max );
+            readRawTiff<uint8_t>( tiff, output.bytes, output.size, *localParams, output.convertToFloat, output.min, output.max );
         else if ( localParams->bytesPerSample == sizeof( uint16_t ) )
-            readRawTiff<uint16_t>( tiff, output.data, output.size, *localParams, output.min, output.max );
+            readRawTiff<uint16_t>( tiff, output.bytes, output.size, *localParams, output.convertToFloat, output.min, output.max );
         else if ( localParams->bytesPerSample == sizeof( uint32_t ) )
-            readRawTiff<uint32_t>( tiff, output.data, output.size, *localParams, output.min, output.max );
+            readRawTiff<uint32_t>( tiff, output.bytes, output.size, *localParams, output.convertToFloat, output.min, output.max );
         else if ( localParams->bytesPerSample == sizeof( uint64_t ) )
-            readRawTiff<uint64_t>( tiff, output.data, output.size, *localParams, output.min, output.max );
+            readRawTiff<uint64_t>( tiff, output.bytes, output.size, *localParams, output.convertToFloat, output.min, output.max );
     }
     else if ( localParams->sampleType == TiffParameters::SampleType::Int )
     {
         if ( localParams->bytesPerSample == sizeof( int8_t ) )
-            readRawTiff<int8_t>( tiff, output.data, output.size, *localParams, output.min, output.max );
+            readRawTiff<int8_t>( tiff, output.bytes, output.size, *localParams, output.convertToFloat, output.min, output.max );
         else if ( localParams->bytesPerSample == sizeof( int16_t ) )
-            readRawTiff<int16_t>( tiff, output.data, output.size, *localParams, output.min, output.max );
+            readRawTiff<int16_t>( tiff, output.bytes, output.size, *localParams, output.convertToFloat, output.min, output.max );
         else if ( localParams->bytesPerSample == sizeof( int32_t ) )
-            readRawTiff<int32_t>( tiff, output.data, output.size, *localParams, output.min, output.max );
+            readRawTiff<int32_t>( tiff, output.bytes, output.size, *localParams, output.convertToFloat, output.min, output.max );
         else if ( localParams->bytesPerSample == sizeof( int64_t ) )
-            readRawTiff<int64_t>( tiff, output.data, output.size, *localParams, output.min, output.max );
+            readRawTiff<int64_t>( tiff, output.bytes, output.size, *localParams, output.convertToFloat, output.min, output.max );
     }
     else if ( localParams->sampleType == TiffParameters::SampleType::Float )
     {
         if ( localParams->bytesPerSample == sizeof( float ) )
-            readRawTiff<float>( tiff, output.data, output.size, *localParams, output.min, output.max );
+            readRawTiff<float>( tiff, output.bytes, output.size, *localParams, output.convertToFloat, output.min, output.max );
         else if ( localParams->bytesPerSample == sizeof( double ) )
-            readRawTiff<double>( tiff, output.data, output.size, *localParams, output.min, output.max );
+            readRawTiff<double>( tiff, output.bytes, output.size, *localParams, output.convertToFloat, output.min, output.max );
     }
     return {};
 }

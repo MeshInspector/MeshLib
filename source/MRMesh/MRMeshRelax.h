@@ -12,7 +12,7 @@ namespace MR
 
 struct MeshRelaxParams : RelaxParams
 {
-    /// smooth tetrahedron verts (with complete three edges ring) to base triangle (based on its edges destinations)
+    /// move all region vertices with exactly three neighbor vertices in the center of the neighbors
     bool hardSmoothTetrahedrons{ false };
 };
 
@@ -61,6 +61,9 @@ MRMESH_API void removeSpikes( Mesh & mesh, int maxIterations, float minSumAngle,
 /// \param numIters >= 1 how many times to run the algorithm to achive a better quality,
 /// solution is typically oscillates back and forth so even number of iterations is recommended
 MRMESH_API void smoothRegionBoundary( Mesh & mesh, const FaceBitSet & regionFaces, int numIters = 4 );
+
+/// move all region vertices with exactly three neighbor vertices in the center of the neighbors
+MRMESH_API void hardSmoothTetrahedrons( Mesh & mesh, const VertBitSet *region = nullptr );
 
 /// \}
 

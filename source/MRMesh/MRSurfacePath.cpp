@@ -103,43 +103,24 @@ static std::optional<float> computeExitPos( const Vector3f & b, const Vector3f &
     return a;
 }
 
-class SurfacePathBuilder
+MeshEdgePoint findSteepestDescentPoint( const MeshPart & mp, const VertScalars & field, VertId v )
 {
-public:
-    SurfacePathBuilder( const Mesh & mesh, const VertScalars & field );
+    assert( mp.mesh.topology.isInnerOrBdVertex( v, mp.region ) );
 
-    // finds previous path point before given vertex, which can be located on any first ring boundary
-    MeshEdgePoint findPrevPoint( VertId v ) const;
-    // finds previous path point before given edge location
-    MeshEdgePoint findPrevPoint( const MeshEdgePoint & ep ) const;
-    // finds previous path point before given triangle location
-    MeshEdgePoint findPrevPoint( const MeshTriPoint & tp ) const;
-
-private:
-    const Mesh & mesh_;
-    const VertScalars & field_;
-};
-
-SurfacePathBuilder::SurfacePathBuilder( const Mesh & mesh, const VertScalars & field )
-    : mesh_( mesh )
-    , field_( field )
-{
-}
-
-MeshEdgePoint SurfacePathBuilder::findPrevPoint( VertId v ) const
-{
     MeshEdgePoint res;
     float maxGradSq = 0;
-    const auto vv = field_[v];
-    const auto pv = mesh_.points[v];
-    for ( EdgeId e : orgRing( mesh_.topology, v ) )
+    const auto vv = field[v];
+    const auto pv = mp.mesh.points[v];
+    for ( EdgeId e : orgRing( mp.mesh.topology, v ) )
     {
-        const auto d = mesh_.topology.dest( e );
-        const auto pd = mesh_.points[d] - pv;
-        const auto pdSq = pd.lengthSq();
-        if ( field_[d] == FLT_MAX )
+        if ( mp.region && !mp.mesh.topology.isInnerOrBdEdge( e, mp.region ) )
             continue;
-        const auto vd = field_[d] - vv;
+        const auto d = mp.mesh.topology.dest( e );
+        const auto pd = mp.mesh.points[d] - pv;
+        const auto pdSq = pd.lengthSq();
+        if ( field[d] == FLT_MAX )
+            continue;
+        const auto vd = field[d] - vv;
         if ( vd < 0 )
         {
             if ( pdSq == 0 && maxGradSq == 0 && !res ) // degenerate edge
@@ -154,12 +135,12 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( VertId v ) const
                 }
             }
         }
-        if ( mesh_.topology.left( e ) )
+        if ( auto f = mp.mesh.topology.left( e ); contains( mp.region, f ) )
         {
-            const auto eBd = mesh_.topology.prev( e.sym() );
-            const auto x = mesh_.topology.dest( eBd );
-            const auto px = mesh_.points[x] - pv;
-            if ( auto fx = field_[x]; fx < FLT_MAX )
+            const auto eBd = mp.mesh.topology.prev( e.sym() );
+            const auto x = mp.mesh.topology.dest( eBd );
+            const auto px = mp.mesh.points[x] - pv;
+            if ( auto fx = field[x]; fx < FLT_MAX )
             {
                 const auto vx = fx - vv;
                 const auto triGrad = computeGradient( pd, px, vd, vx );
@@ -178,40 +159,39 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( VertId v ) const
     return res;
 }
 
-MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) const
+MeshEdgePoint findSteepestDescentPoint( const MeshPart & mp, const VertScalars & field, const MeshEdgePoint & ep )
 {
-    if ( auto v = ep.inVertex( mesh_.topology ) )
-        return findPrevPoint( v );
+    if ( auto v = ep.inVertex( mp.mesh.topology ) )
+        return findSteepestDescentPoint( mp, field, v );
+    assert( mp.mesh.topology.isInnerOrBdEdge( ep.e, mp.region ) );
 
     // point is not in vertex
-    const auto p = mesh_.edgePoint( ep );
+    const auto p = mp.mesh.edgePoint( ep );
 
-    const auto o = mesh_.topology.org( ep.e );
-    const auto d = mesh_.topology.dest( ep.e );
-    const auto fo = field_[o];
-    const auto fd = field_[d];
+    const auto o = mp.mesh.topology.org( ep.e );
+    const auto d = mp.mesh.topology.dest( ep.e );
+    const auto fo = field[o];
+    const auto fd = field[d];
     const auto v = ( 1 - ep.a ) * fo + ep.a * fd;
-    const auto po = mesh_.points[o];
-    const auto pd = mesh_.points[d];
+    const auto po = mp.mesh.points[o];
+    const auto pd = mp.mesh.points[d];
 
     MeshEdgePoint result;
     float maxGradSq = -FLT_MAX;
     if ( fo != fd )
     {
+        // jump by default to edge's end with smaller value
         const auto odSq = ( po - pd ).lengthSq();
         maxGradSq = odSq > 0 ? sqr( fo - fd ) / odSq : FLT_MAX;
-        if ( fo < fd )
-            result = MeshEdgePoint{ ep.e, 0 };
-        else if ( fd < fo )
-            result = MeshEdgePoint{ ep.e.sym(), 0 };
+        result = fo < fd ? MeshEdgePoint{ ep.e, 0 } : MeshEdgePoint{ ep.e.sym(), 0 };
     }
 
-    if ( mesh_.topology.left( ep.e ) )
+    if ( auto f = mp.mesh.topology.left( ep.e ); contains( mp.region, f ) )
     {
-        const auto el = mesh_.topology.next( ep.e );
-        const auto l = mesh_.topology.dest( el );
-        const auto fl = field_[l];
-        const auto pl = mesh_.points[l];
+        const auto el = mp.mesh.topology.next( ep.e );
+        const auto l = mp.mesh.topology.dest( el );
+        const auto fl = field[l];
+        const auto pl = mp.mesh.points[l];
         const auto triGrad = computeGradient( pd - po, pl - po, fd - fo, fl - fo );
         const auto triGradSq = triGrad.lengthSq();
         bool moveL = true;
@@ -227,7 +207,7 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
                     if ( a <= 1 )
                     {
                         moveL = false;
-                        result = MeshEdgePoint{ mesh_.topology.prev( ep.e.sym() ), a };
+                        result = MeshEdgePoint{ mp.mesh.topology.prev( ep.e.sym() ), a };
                         maxGradSq = triGradSq;
                     }
                     else
@@ -258,12 +238,12 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
         }
     }
 
-    if ( mesh_.topology.right( ep.e ) )
+    if ( auto f = mp.mesh.topology.right( ep.e ); contains( mp.region, f ) )
     {
-        const auto er = mesh_.topology.prev( ep.e );
-        const auto r = mesh_.topology.dest( er );
-        const auto fr = field_[r];
-        const auto pr = mesh_.points[r];
+        const auto er = mp.mesh.topology.prev( ep.e );
+        const auto r = mp.mesh.topology.dest( er );
+        const auto fr = field[r];
+        const auto pr = mp.mesh.points[r];
         const auto triGrad = computeGradient( pr - po, pd - po, fr - fo, fd - fo );
         const auto triGradSq = triGrad.lengthSq();
         bool moveR = true;
@@ -279,7 +259,7 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
                     if ( a >= 0 )
                     {
                         moveR = false;
-                        result = MeshEdgePoint{ mesh_.topology.next( ep.e.sym() ).sym(), a };
+                        result = MeshEdgePoint{ mp.mesh.topology.next( ep.e.sym() ).sym(), a };
                         maxGradSq = triGradSq;
                     }
                     else
@@ -310,20 +290,29 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshEdgePoint & ep ) cons
         }
     }
 
+    if ( !result )
+    {
+        // otherwise jump in the closest edge's end
+        assert( maxGradSq == -FLT_MAX );
+        assert( fo == fd );
+        result = ep.a <= 0.5f ? MeshEdgePoint{ ep.e, 0 } : MeshEdgePoint{ ep.e.sym(), 0 };
+    }
+
     return result;
 }
 
-MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshTriPoint & tp ) const
+MeshEdgePoint findSteepestDescentPoint( const MeshPart & mp, const VertScalars & field, const MeshTriPoint & tp )
 {
-    if ( auto ep = tp.onEdge( mesh_.topology ) )
-        return findPrevPoint( ep );
+    if ( auto ep = tp.onEdge( mp.mesh.topology ) )
+        return findSteepestDescentPoint( mp, field, ep );
+    assert( contains( mp.region, mp.mesh.topology.left( tp.e ) ) );
 
     // point is not on edge
     MeshEdgePoint res;
-    const auto p = mesh_.triPoint( tp );
+    const auto p = mp.mesh.triPoint( tp );
 
     VertId v[3];
-    mesh_.topology.getLeftTriVerts( tp.e, v );
+    mp.mesh.topology.getLeftTriVerts( tp.e, v );
 
     Vector3f pv[3];
     float vv[3];
@@ -331,10 +320,10 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshTriPoint & tp ) const
     auto ei = tp.e;
     for ( int i = 0; i < 3; ++i )
     {
-        pv[i] = mesh_.points[v[i]];
-        vv[i] = field_[v[i]];
+        pv[i] = mp.mesh.points[v[i]];
+        vv[i] = field[v[i]];
         e[i] = ei;
-        ei = mesh_.topology.prev( ei.sym() );
+        ei = mp.mesh.topology.prev( ei.sym() );
     }
     if ( vv[0] == vv[1] && vv[1] == vv[2] )
         return res; // the triangle is completely "flat"
@@ -350,9 +339,17 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshTriPoint & tp ) const
         for ( int i = 0; i < 3; ++i )
         {
             const Triangle3f t = { pv[i], pv[( i + 1 ) % 3], pv[( i + 2 ) % 3] };
-            float a = 0;
-            if ( !computeEnter01Cross( t, unitDir, p, a ) )
+            if ( !dirEnters01( t, unitDir ) )
                 continue;
+            float a = 0;
+            if ( !computeLineLineCross( t[0] - p, t[1] - p, unitDir, a ) )
+            {
+                // we know that unitDir enters via the edge 01 of the triangle,
+                // and unitDir is almost parallel to this edge, so select appropriate edge's end (which leads inside the triangle)
+                if ( !res )
+                    res = MeshEdgePoint{ e[i], dot( t[1] - t[0], unitDir ) >= 0 ? 0.0f : 1.0f };
+                continue;
+            }
             // how much do we miss the boundaries of the segment [rv0,rv1]
             const auto ca = std::clamp( a, 0.0f, 1.0f );
             const auto m = std::abs( a - ca ) * ( t[1] - t[0] ).length();
@@ -362,8 +359,9 @@ MeshEdgePoint SurfacePathBuilder::findPrevPoint( const MeshTriPoint & tp ) const
                 res = MeshEdgePoint{ e[i], ca };
             }
         }
-        if ( miss < FLT_MAX )
+        if ( res )
             return res;
+        // if triangle has not-zero gradient then res must be found above
         assert( false );
     }
 
@@ -437,39 +435,43 @@ Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
     return res;
 }
 
-SurfacePath computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
-    const MeshTriPoint & start, const MeshTriPoint & end, VertId * vertexReached )
+SurfacePath computeSteepestDescentPath( const MeshPart & mp, const VertScalars & field,
+    const MeshTriPoint & start, const ComputeSteepestDescentPathSettings & settings )
 {
     SurfacePath res;
-    computeSteepestDescentPath( mesh, field, start, end, &res, vertexReached );
+    computeSteepestDescentPath( mp, field, start, &res, settings );
     return res;
 }
 
-void computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
-    const MeshTriPoint & start, const MeshTriPoint & end, SurfacePath * outPath, VertId * outVertexReached )
+void computeSteepestDescentPath( const MeshPart & mp, const VertScalars & field,
+    const MeshTriPoint & start, SurfacePath * outPath, const ComputeSteepestDescentPathSettings & settings )
 {
     assert( start );
-    assert( outVertexReached || outPath );
+    assert( settings.outVertexReached || settings.outBdReached || outPath );
     size_t iniPathSize = outPath ? outPath->size() : 0;
     size_t edgesPassed = 0;
-    SurfacePathBuilder b( mesh, field );
-    auto curr = b.findPrevPoint( start );
+    auto curr = findSteepestDescentPoint( mp, field, start );
     while ( curr )
     {
-        if ( outVertexReached )
+        if ( settings.outVertexReached )
         {
-            if ( auto v = curr.inVertex( mesh.topology ) )
+            if ( auto v = curr.inVertex( mp.mesh.topology ) )
             {
-                *outVertexReached = v;
+                *settings.outVertexReached = v;
                 return;
             }
+        }
+        if ( settings.outBdReached && curr.isBd( mp.mesh.topology ) )
+        {
+            *settings.outBdReached = curr;
+            return;
         }
         ++edgesPassed;
         if ( outPath )
             outPath->push_back( curr );
-        if ( end && fromSameTriangle( mesh.topology, MeshTriPoint( end ), MeshTriPoint( curr ) ) )
+        if ( settings.end && fromSameTriangle( mp.mesh.topology, MeshTriPoint( settings.end ), MeshTriPoint( curr ) ) )
             break; // reached triangle with end point
-        if ( edgesPassed > mesh.topology.numValidFaces() )
+        if ( edgesPassed > mp.mesh.topology.numValidFaces() )
         {
             // normal path cannot visit any triangle more than once
             assert( false );
@@ -477,11 +479,11 @@ void computeSteepestDescentPath( const Mesh & mesh, const VertScalars & field,
                 outPath->resize( iniPathSize );
             return;
         }
-        curr = b.findPrevPoint( curr );
+        curr = findSteepestDescentPoint( mp, field, curr );
     }
 }
 
-UndirectedEdgeBitSet findRidgeEdges( const Mesh & mesh, const VertScalars & field )
+UndirectedEdgeBitSet findExtremeEdges( const Mesh & mesh, const VertScalars & field, ExtremeEdgeType type )
 {
     MR_TIMER
     UndirectedEdgeBitSet res( mesh.topology.undirectedEdgeSize() );
@@ -503,7 +505,9 @@ UndirectedEdgeBitSet findRidgeEdges( const Mesh & mesh, const VertScalars & fiel
         const auto fd = field[vd];
         const auto fl = field[vl];
 
-        const auto gradL = computeGradient( pd - po, pl - po, fd - fo, fl - fo );
+        auto gradL = computeGradient( pd - po, pl - po, fd - fo, fl - fo );
+        if ( type == ExtremeEdgeType::Gorge )
+            gradL = -gradL;
         if ( dirEnters01( { po, pd, pl }, gradL ) )
             return;
 
@@ -511,7 +515,9 @@ UndirectedEdgeBitSet findRidgeEdges( const Mesh & mesh, const VertScalars & fiel
         const auto pr = mesh.points[vr];
         const auto fr = field[vr];
 
-        const auto gradR = computeGradient( pr - po, pd - po, fr - fo, fd - fo );
+        auto gradR = computeGradient( pr - po, pd - po, fr - fo, fd - fo );
+        if ( type == ExtremeEdgeType::Gorge )
+            gradR = -gradR;
         if ( dirEnters01( { pd, po, pr }, gradR ) )
             return;
 
@@ -547,7 +553,7 @@ Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp,
     if ( !connected )
         return unexpected( PathError::StartEndNotConnected );
 
-    res = computeSteepestDescentPath( mp.mesh, distances, start, end );
+    res = computeSteepestDescentPath( mp.mesh, distances, start, { .end = end } );
     if ( res.empty() ) // no edge is crossed only if start and end are from the same triangle
         return unexpected( PathError::InternalError );
 
@@ -593,8 +599,7 @@ HashMap<VertId, VertId> computeClosestSurfacePathTargets( const Mesh & mesh,
 
     BitSetParallelFor( starts, [&]( VertId v )
     {
-        SurfacePathBuilder b( mesh, distances );
-        auto last = b.findPrevPoint( v );
+        auto last = findSteepestDescentPoint( mesh, distances, v );
         // if ( !last ) then v is not reachable from (ends) or it is contained in (ends)
         int steps = 0;
         while ( last )
@@ -606,7 +611,7 @@ HashMap<VertId, VertId> computeClosestSurfacePathTargets( const Mesh & mesh,
                 last = {};
                 break;
             }
-            if ( auto next = b.findPrevPoint( last ) )
+            if ( auto next = findSteepestDescentPoint( mesh, distances, last ) )
                 last = next;
             else
                 break;

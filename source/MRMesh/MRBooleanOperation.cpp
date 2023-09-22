@@ -6,6 +6,7 @@
 #include "MRMeshComponents.h"
 #include "MRMeshCollide.h"
 #include "MRAffineXf3.h"
+#include "MRMapEdge.h"
 
 namespace MR
 {

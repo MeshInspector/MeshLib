@@ -1,5 +1,5 @@
-#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRVoxelsLoad.h"
+#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRTimer.h"
 #include "MRSimpleVolume.h"
 #include "MRObjectVoxels.h"
@@ -25,7 +25,8 @@
 #include <MRPch/MRTBB.h>
 
 #include "MROpenVDBHelper.h"
-#include "MRReadTIFF.h"
+#include "MRTiffIO.h"
+#include "MRParallelFor.h"
 
 namespace
 {
@@ -189,7 +190,7 @@ std::function<float( char* )> getTypeConverter( const RawParameters::ScalarType&
 }
 
 #ifndef MRMESH_NO_DICOM
-bool isDICOMFile( const std::filesystem::path& path )
+bool isDICOMFile( const std::filesystem::path& path, std::string& seriesUid )
 {
     gdcm::ImageReader ir;
     std::ifstream ifs( path, std::ios_base::binary );
@@ -201,7 +202,8 @@ bool isDICOMFile( const std::filesystem::path& path )
         gdcm::Tag( 0x0002, 0x0002 ), // media storage
         gdcm::Tag( 0x0008, 0x0016 ), // media storage
         gdcm::Keywords::PhotometricInterpretation::GetTag(),
-        gdcm::Keywords::ImagePositionPatient::GetTag(), // is for image origin in mm
+        gdcm::Keywords::ImagePositionPatient::GetTag(), // is for image origin in mm,
+        gdcm::Keywords::SeriesInstanceUID::GetTag(),
         gdcm::Tag( 0x0028, 0x0010 ),gdcm::Tag( 0x0028, 0x0011 ),gdcm::Tag( 0x0028, 0x0008 )}; // is for dimensions
     if ( !ir.ReadSelectedTags( tags ) )
         return false;
@@ -236,6 +238,16 @@ bool isDICOMFile( const std::filesystem::path& path )
     {
         spdlog::warn( "DICOM file {} has Dimensions Value other than 3", utf8string( path ) );
         return false;
+    }
+
+    const gdcm::DataSet& ds = ir.GetFile().GetDataSet();
+    if ( ds.FindDataElement( gdcm::Keywords::SeriesInstanceUID::GetTag() ) )
+    {
+        const gdcm::DataElement& de = ds.GetDataElement( gdcm::Keywords::SeriesInstanceUID::GetTag() );
+        gdcm::Keywords::SeriesInstanceUID uid;
+        uid.SetFromDataElement( de );
+        auto uidVal = uid.GetValue();
+        seriesUid = uidVal;
     }
 
     return true;
@@ -415,10 +427,19 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
     return res;
 }
 
-void sortDICOMFiles( std::vector<std::filesystem::path>& files, unsigned maxNumThreads, Vector3f& voxelSize )
+struct SeriesInfo
 {
+    float sliceSize{ 0.0f };
+    int numSlices{ 0 };
+    BitSet missedSlices;
+};
+
+SeriesInfo sortDICOMFiles( std::vector<std::filesystem::path>& files, unsigned maxNumThreads )
+{
+    SeriesInfo res;
+
     if ( files.empty() )
-        return;
+        return res;
 
     std::vector<SliceInfo> zOrder( files.size() );
 
@@ -469,55 +490,70 @@ void sortDICOMFiles( std::vector<std::filesystem::path>& files, unsigned maxNumT
     }
 
     sortByOrder( files, zOrder );
+    
     if ( zOrder.size() > 1 )
     {
-        voxelSize.z = float( ( zOrder[1].imagePos - zOrder[0].imagePos ).length() / 1000.0 );
+        auto denom = std::max( 1.0f, float( zOrder[1].instanceNum - zOrder[0].instanceNum ) );
+        res.sliceSize = float( ( zOrder[1].imagePos - zOrder[0].imagePos ).length() / denom / 1000.0 );
+        res.numSlices = zOrder.back().instanceNum - zOrder.front().instanceNum + 1;
+
+        bool needReverse = zOrder[1].imagePos.z < zOrder[0].imagePos.z;
+
+        if ( res.numSlices != 0 )
+        {
+            res.missedSlices.resize( res.numSlices );
+
+            auto startIN = zOrder[0].instanceNum;
+            for ( int i = 1; i < zOrder.size(); ++i )
+            {
+                auto prevIN = zOrder[i - 1].instanceNum;
+                auto diff = zOrder[i].instanceNum - prevIN;
+                if ( diff == 1 )
+                    continue;
+                if ( diff == 0 )
+                {
+                    res.numSlices = 0;
+                    res.missedSlices.clear();
+                    break; // non-consistent instances
+                }
+
+                int startMissedIndex = ( prevIN - startIN + 1 );
+                for ( int j = startMissedIndex; j + 1 < startMissedIndex + diff; ++j )
+                    res.missedSlices.set( needReverse ? ( res.numSlices - 1 - j ) : j );
+            }
+        }
+
         // if slices go in descending z-order then reverse them
-        if ( zOrder[1].imagePos.z < zOrder[0].imagePos.z )
+        if ( needReverse )
             std::reverse( files.begin(), files.end() );
     }
+    return res;
 }
 
-Expected<DicomVolume, std::string> loadDicomFolder( const std::filesystem::path& path,
+Expected<DicomVolume, std::string> loadSingleDicomFolder( std::vector<std::filesystem::path>& files,
                                                         unsigned maxNumThreads, const ProgressCallback& cb )
 {
     MR_TIMER
     if ( !reportProgress( cb, 0.0f ) )
         return unexpected( "Loading canceled" );
 
+    if ( files.empty() )
+        return unexpected( "loadDCMFolder: there is no dcm file" );
+
     SimpleVolume data;
     data.voxelSize = Vector3f();
     data.dims = Vector3i::diagonal( 0 );
-    std::error_code ec;
-    if ( !std::filesystem::is_directory( path, ec ) )
-        return unexpected( "loadDCMFolder: path is not directory" );
 
-    int filesNum = 0;
-    std::vector<std::filesystem::path> files;
-    for ( auto entry : Directory{ path, ec } )
-    {
-        if ( entry.is_regular_file( ec ) )
-            ++filesNum;
-    }
-    files.reserve( filesNum );
-    int fCounter = 0;
-    for ( auto entry : Directory{ path, ec } )
-    {
-        ++fCounter;
-        auto filePath = entry.path();
-        if ( entry.is_regular_file( ec ) && isDICOMFile( filePath ) )
-            files.push_back( filePath );
-        if ( !reportProgress( cb, 0.3f * float( fCounter ) / float( filesNum ) ) )
-            unexpected( "Loading canceled" );
-    }
-    if ( files.empty() )
-    {
-        return unexpected( "loadDCMFolder: there is no dcm file in folder: " + utf8string( path ) );
-    }
     if ( files.size() == 1 )
         return loadDicomFile( files[0], subprogress( cb, 0.3f, 1.0f ) );
-    sortDICOMFiles( files, maxNumThreads, data.voxelSize );
-    data.dims.z = (int) files.size();
+    auto seriesInfo = sortDICOMFiles( files, maxNumThreads );
+    if ( seriesInfo.sliceSize != 0.0f )
+        data.voxelSize.z = seriesInfo.sliceSize;
+
+    if ( seriesInfo.numSlices == 0 )
+        data.dims.z = ( int )files.size();
+    else
+        data.dims.z = seriesInfo.numSlices;
 
     auto firstRes = loadSingleFile( files.front(), data, 0 );
     if ( !firstRes.success )
@@ -529,26 +565,62 @@ Expected<DicomVolume, std::string> loadDicomFolder( const std::filesystem::path&
     if ( !reportProgress( cb, 0.4f ) )
         return unexpected( "Loading canceled" );
 
+    auto presentSlices = seriesInfo.missedSlices; 
+    presentSlices.resize( data.dims.z );
+    presentSlices.flip();
+
     // other slices
-    auto mainThreadId = std::this_thread::get_id();
     bool cancelCalled = false;
     std::vector<DCMFileLoadResult> slicesRes( files.size() - 1 );
     tbb::task_arena limitedArena( maxNumThreads );
     std::atomic<int> numLoadedSlices = 0;
     limitedArena.execute( [&]
     {
-        tbb::parallel_for( tbb::blocked_range( 0, int( slicesRes.size() ) ),
-                           [&]( const tbb::blocked_range<int>& range )
+        cancelCalled = !ParallelFor( 0, int( slicesRes.size() ), [&] ( int i )
         {
-            for ( int i = range.begin(); i < range.end(); ++i )
-            {
-                slicesRes[i] = loadSingleFile( files[i + 1], data, ( i + 1 ) * dimXY );
-                ++numLoadedSlices;
-                if ( cb && std::this_thread::get_id() == mainThreadId )
-                    cancelCalled = !cb( 0.4f + 0.6f * ( float( numLoadedSlices ) / float( slicesRes.size() ) ) );
-            }
-        } );
+            slicesRes[i] = loadSingleFile( files[i + 1], data, ( presentSlices.nthSetBit( i + 1 ) ) * dimXY );
+            ++numLoadedSlices;
+        }, subprogress( cb, 0.4f, 0.9f ), 1 );
     } );
+    if ( cancelCalled )
+        return unexpected( "Loading canceled" );
+
+    // fill missed slices
+    int missedSlicesNum = int( seriesInfo.missedSlices.count() );
+    if ( missedSlicesNum != 0 )
+    {
+        int passedSlices = 0;
+        int prevPresentSlice = -1;
+        for ( auto presentSlice : presentSlices )
+        {
+            int numMissed = int( presentSlice ) - prevPresentSlice - 1;
+            if ( numMissed == 0 )
+            {
+                prevPresentSlice = int( presentSlice );
+                continue;
+            }
+
+            auto sb = subprogress( cb,
+                0.9f + 0.1f * float( passedSlices ) / float( missedSlicesNum ),
+                0.9f + 0.1f * float( passedSlices + numMissed ) / float( missedSlicesNum ) );
+            int firstMissed = prevPresentSlice + 1;
+            float ratioDenom = 1.0f / float( numMissed + 1 );
+            cancelCalled = !ParallelFor( firstMissed * dimXY, presentSlice * dimXY, [&] ( size_t i )
+            {
+                auto posZ = int( i / dimXY );
+                auto zBotDiff = posZ - prevPresentSlice;
+                auto botValue = data.data[i - dimXY * zBotDiff];
+                auto topValue = data.data[i + dimXY * ( int( presentSlice ) - posZ )];
+                float ratio = float( zBotDiff ) * ratioDenom;
+                data.data[i] = botValue * ( 1.0f - ratio ) + topValue * ratio;
+            }, sb );
+            if ( cancelCalled )
+                break;
+            prevPresentSlice = int( presentSlice );
+            passedSlices += numMissed;
+        }
+    }
+
     if ( cancelCalled )
         return unexpected( "Loading canceled" );
 
@@ -570,18 +642,110 @@ Expected<DicomVolume, std::string> loadDicomFolder( const std::filesystem::path&
     return res;
 }
 
-Expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::path& path,
+using SeriesMap = std::unordered_map<std::string, std::vector<std::filesystem::path>>;
+
+Expected<SeriesMap,std::string> extractDCMSeries( const std::filesystem::path& path,
+    const ProgressCallback& cb )
+{
+    std::error_code ec;
+    if ( !std::filesystem::is_directory( path, ec ) )
+        return { unexpected( "loadDCMFolder: path is not directory" ) };
+
+    int filesNum = 0;
+    std::vector<std::filesystem::path> files;
+    for ( auto entry : Directory{ path, ec } )
+    {
+        if ( entry.is_regular_file( ec ) )
+            ++filesNum;
+    }
+
+    std::unordered_map<std::string, std::vector<std::filesystem::path>> seriesMap;
+    int fCounter = 0;
+    for ( auto entry : Directory{ path, ec } )
+    {
+        ++fCounter;
+        auto filePath = entry.path();
+        std::string uid;
+        if ( entry.is_regular_file( ec ) && isDICOMFile( filePath, uid ) )
+            seriesMap[uid].push_back( filePath );
+        if ( !reportProgress( cb, float( fCounter ) / float( filesNum ) ) )
+            return { unexpected( "Loading canceled" ) };
+    }
+
+    if ( seriesMap.empty() )
+        return unexpected( "No dcm series in folder: " + utf8string( path ) );
+
+    return seriesMap;
+}
+
+std::vector<Expected<DicomVolume, std::string>> loadDicomsFolder( const std::filesystem::path& path,
+                                                        unsigned maxNumThreads, const ProgressCallback& cb )
+{
+    auto seriesMap = extractDCMSeries( path, subprogress( cb, 0.0f, 0.3f ) );
+    if ( !seriesMap.has_value() )
+        return { unexpected( seriesMap.error() ) };
+
+    int seriesCounter = 0;
+    auto seriesNum = seriesMap->size();
+    std::vector<Expected<DicomVolume, std::string>> res;
+    for ( auto& [uid, series] : *seriesMap )
+    {
+        res.push_back( loadSingleDicomFolder( series, maxNumThreads,
+            subprogress( cb,
+                0.3f + 0.7f * float( seriesCounter ) / float( seriesNum ),
+                0.3f + 0.7f * float( seriesCounter + 1 ) / float( seriesNum ) ) ) );
+
+        ++seriesCounter;
+        if ( !res.back().has_value() && res.back().error() == "Loading canceled" )
+            return { unexpected( "Loading canceled" ) };
+    }
+    return res;
+}
+
+Expected<MR::VoxelsLoad::DicomVolume, std::string> loadDicomFolder( const std::filesystem::path& path, unsigned maxNumThreads /*= 4*/, const ProgressCallback& cb /*= {} */ )
+{
+    auto seriesMap = extractDCMSeries( path, subprogress( cb, 0.0f, 0.3f ) );
+    if ( !seriesMap.has_value() )
+        return { unexpected( seriesMap.error() ) };
+
+    return loadSingleDicomFolder( seriesMap->begin()->second, maxNumThreads, subprogress( cb, 0.3f, 1.0f ) );
+}
+
+std::vector<Expected<LoadDCMResult, std::string>> loadDCMsFolder( const std::filesystem::path& path,
                                                      unsigned maxNumThreads, const ProgressCallback& cb )
 {
-    auto simple = loadDicomFolder( path, maxNumThreads, subprogress( cb, 0, 0.5f ) );
-    if ( !simple.has_value() )
-        return unexpected( std::move( simple.error() ) );
+    auto dicomRes = loadDicomsFolder( path, maxNumThreads, subprogress( cb, 0, 0.5f ) );
+    std::vector<Expected<LoadDCMResult, std::string>> res( dicomRes.size() );
+    for ( int i = 0; i < dicomRes.size(); ++i )
+    {
+        if ( !dicomRes[i].has_value() )
+        {
+            res[i] = unexpected( std::move( dicomRes[i].error() ) );
+            continue;
+        }
+        res[i] = LoadDCMResult();
+        res[i]->vdbVolume = simpleVolumeToVdbVolume( std::move( dicomRes[i]->vol ),
+            subprogress( cb, 
+                0.5f + float( i ) / float( dicomRes.size() ) * 0.5f, 
+                0.5f + float( i + 1 ) / float( dicomRes.size() ) * 0.5f ) );
+        res[i]->name = std::move( dicomRes[i]->name );
+        res[i]->xf = std::move( dicomRes[i]->xf );
+        if ( cb && !cb( 0.5f + float( i + 1 ) / float( dicomRes.size() ) * 0.5f ) )
+            return { unexpected( "Loading canceled" ) };
+    }
 
+    return { res };
+}
+
+Expected<MR::VoxelsLoad::LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::path& path, unsigned maxNumThreads /*= 4*/, const ProgressCallback& cb /*= {} */ )
+{
+    auto loadRes = loadDicomFolder( path, maxNumThreads, subprogress( cb, 0.0f, 0.5f ) );
+    if ( !loadRes.has_value() )
+        return unexpected( loadRes.error() );
     LoadDCMResult res;
-    res.vdbVolume = simpleVolumeToVdbVolume( simple->vol, subprogress( cb, 0.5f, 1.0f ) );
-    res.name = std::move( simple->name );
-    res.xf = std::move( simple->xf );
-
+    res.vdbVolume = simpleVolumeToVdbVolume( std::move( loadRes->vol ), subprogress( cb, 0.5f, 1.0f ) );
+    res.name = std::move( loadRes->name );
+    res.xf = std::move( loadRes->xf );
     return res;
 }
 
@@ -591,9 +755,12 @@ std::vector<Expected<LoadDCMResult, std::string>> loadDCMFolderTree( const std::
     std::vector<Expected<LoadDCMResult, std::string>> res;
     auto tryLoadDir = [&]( const std::filesystem::path& dir )
     {
-        res.push_back( loadDCMFolder( dir, maxNumThreads, cb ) );
-        if ( !res.back().has_value() && res.back().error() == "Loading canceled" )
+        auto loadRes = loadDCMsFolder( dir, maxNumThreads, cb );
+        if ( loadRes.size() == 1 && !loadRes[0].has_value() && loadRes[0].error() == "Loading canceled" )
             return false;
+
+        res.insert( res.end(), std::make_move_iterator( loadRes.begin() ), std::make_move_iterator( loadRes.end() ) );
+
         return true;
     };
     if ( !tryLoadDir( path ) )
@@ -892,13 +1059,13 @@ Expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& setting
 
     TiffParameters localParams;
     RawTiffOutput output;
-    output.size = tp.imageSize.x * tp.imageSize.y;
+    output.size = ( tp.imageSize.x * tp.imageSize.y ) * sizeof( float );
     output.params = &localParams;
     output.min = &outVolume.min;
     output.max = &outVolume.max;
     for ( int layerIndex = 0; layerIndex < files.size(); ++layerIndex )
     {
-        output.data = outVolume.data.data() + layerIndex * tp.imageSize.x * tp.imageSize.y;
+        output.bytes = ( uint8_t* )( outVolume.data.data() + layerIndex * tp.imageSize.x * tp.imageSize.y );
         auto readRes = readRawTiff( files[layerIndex], output );
 
         if ( !readRes.has_value() )

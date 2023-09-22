@@ -29,6 +29,8 @@ struct EdgePoint
     [[nodiscard]] bool inVertex() const { return a.inVertex() >= 0; }
     /// sets this to the closest end of the edge
     MRMESH_API void moveToClosestVertex();
+    /// returns true if the point is on the boundary of the region (or for whole mesh if region is nullptr)
+    [[nodiscard]] MRMESH_API bool isBd( const MeshTopology & topology, const FaceBitSet * region = nullptr ) const;
 
     /// consider this valid if the edge ID is valid
     [[nodiscard]] bool valid() const { return e.valid(); }

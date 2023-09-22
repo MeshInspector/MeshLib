@@ -22,6 +22,7 @@
     <ClCompile Include="MRCudaAccessor.cpp" />
     <ClCompile Include="MRFrameRedrawRequest.cpp" />
     <ClCompile Include="MRGetSystemInfoJson.cpp" />
+    <ClCompile Include="MRObjectPointsHistory.cpp" />
     <ClCompile Include="MRToolsLibrary.cpp" />
     <ClCompile Include="MRLinesShader.cpp" />
     <ClCompile Include="MRMeshShader.cpp" />
@@ -58,6 +59,7 @@
     <ClCompile Include="MRImmediateGL.cpp" />
     <ClCompile Include="MRStatePluginUpdate.cpp" />
     <ClCompile Include="MRSurfacePointPicker.cpp" />
+    <ClCompile Include="MRTouchpadWin32Handler.cpp" />
     <ClCompile Include="MRUIStyle.cpp" />
     <ClCompile Include="MRViewerInstance.cpp" />
     <ClCompile Include="MRViewerIO.cpp" />
@@ -81,6 +83,7 @@
     <ClCompile Include="MRViewportGL.cpp" />
     <ClCompile Include="MRVolumeShader.cpp" />
     <ClCompile Include="MRWebRequest.cpp" />
+    <ClCompile Include="MRTouchpadController.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -98,6 +101,7 @@
     <ClInclude Include="MRFrameRedrawRequest.h" />
     <ClInclude Include="MRGetSystemInfoJson.h" />
     <ClInclude Include="MRGladGlfw.h" />
+    <ClInclude Include="MRObjectPointsHistory.h" />
     <ClInclude Include="MRToolsLibrary.h" />
     <ClInclude Include="MRLinesShader.h" />
     <ClInclude Include="MRMeshShader.h" />
@@ -152,6 +156,7 @@
     <ClInclude Include="MRStatePluginUpdate.h" />
     <ClInclude Include="MRSurfacePointPicker.h" />
     <ClInclude Include="MRSwapRootAction.h" />
+    <ClInclude Include="MRTouchpadWin32Handler.h" />
     <ClInclude Include="MRUIStyle.h" />
     <ClInclude Include="MRViewer.h" />
     <ClInclude Include="MRViewerFwd.h" />
@@ -167,6 +172,7 @@
     <ClInclude Include="MRViewportGL.h" />
     <ClInclude Include="MRVolumeShader.h" />
     <ClInclude Include="MRWebRequest.h" />
+    <ClInclude Include="MRTouchpadController.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

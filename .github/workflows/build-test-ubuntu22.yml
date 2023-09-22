@@ -28,13 +28,15 @@ jobs:
           - compiler: Clang 14
             cxx-compiler: /usr/bin/clang++-14
             c-compiler: /usr/bin/clang-14
+            use-cpp-23: "OFF"
           - compiler: GCC 12
             cxx-compiler: /usr/bin/g++-12
             c-compiler: /usr/bin/gcc-12
+            use-cpp-23: "ON"
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
@@ -52,6 +54,7 @@ jobs:
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
           MR_VERSION: ${{ inputs.version }}
+          MR_USE_CPP_23: ${{ matrix.use-cpp-23 }}
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ubuntu22 ${{matrix.config}} "${{matrix.compiler}}"

@@ -1,5 +1,5 @@
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PDF )
 #include "MRPdf.h"
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PDF )
 #include "MRSerializer.h"
 #include "MRImageSave.h"
 #include "MRVector2.h"

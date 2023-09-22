@@ -212,6 +212,8 @@ public:
     [[nodiscard]] EdgeId bdEdgeWithOrigin( VertId v, const FaceBitSet * region = nullptr ) const { return bdEdgeSameOrigin( edgeWithOrg( v ), region ); }
     /// returns true if given vertex is on (region) boundary
     [[nodiscard]] bool isBdVertex( VertId v, const FaceBitSet * region = nullptr ) const { return isBdVertexInOrg( edgeWithOrg( v ), region ); }
+    /// returns true if one of incident faces of given vertex pertain to given region (or any such face exists if region is nullptr)
+    [[nodiscard]] MRMESH_API bool isInnerOrBdVertex( VertId v, const FaceBitSet * region = nullptr ) const;
     /// returns true if left face of given edge belongs to given region (if provided) and right face either does not exist or does not belong
     [[nodiscard]] bool isLeftBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return region ? ( isLeftInRegion( e, region ) && !isLeftInRegion( e.sym(), region ) ) : !right( e ); }
     /// return true if given edge is inner or boundary for given region (or for whole mesh if region is nullptr), returns false for lone edges
@@ -488,27 +490,6 @@ void MeshTopology::flipEdgesOut( EdgeId e0, T && flipNeeded )
                 break; // full ring has been inspected
         }
     } 
-}
-
-inline EdgeId mapEdge( const WholeEdgeMap & map, EdgeId src )
-{
-    EdgeId res = map[ src.undirected() ];
-    if ( res && src.odd() )
-        res = res.sym();
-    return res;
-}
-
-inline EdgeId mapEdge( const WholeEdgeHashMap & map, EdgeId src )
-{
-    EdgeId res;
-    auto it = map.find( src.undirected() );
-    if ( it != map.end() )
-    {
-        res = it->second;
-        if ( src.odd() )
-            res = res.sym();
-    }
-    return res;
 }
 
 // rearrange vector values by map (old.id -> new.id)

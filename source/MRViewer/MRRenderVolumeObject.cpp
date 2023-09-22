@@ -6,6 +6,7 @@
 #include "MRGladGlfw.h"
 #include "MRGLStaticHolder.h"
 #include "MRMesh/MRFloatGrid.h"
+#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -30,7 +31,9 @@ void RenderVolumeObject::render( const RenderParams& renderParams )
 
 void RenderVolumeObject::renderPicker( const BaseRenderParams& renderParams, unsigned geomId )
 {
-    render_( renderParams, geomId );
+    Vector3f ligthPos;
+    RenderParams params{ renderParams, ligthPos };
+    render_( params, geomId );
 }
 
 size_t RenderVolumeObject::heapBytes() const
@@ -40,7 +43,7 @@ size_t RenderVolumeObject::heapBytes() const
 
 size_t RenderVolumeObject::glBytes() const
 {
-    return volume_.size()
+    return volume_.size() * sizeof( uint16_t )
         + denseMap_.size();
 }
 
@@ -50,7 +53,42 @@ void RenderVolumeObject::forceBindAll()
     bindVolume_( true );
 }
 
-void RenderVolumeObject::render_( const BaseRenderParams& renderParams, unsigned geomId )
+RenderBufferRef<unsigned> RenderVolumeObject::loadActiveVoxelsTextureBuffer_()
+{
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
+    if ( !( dirty_ & DIRTY_SELECTION ) || !objVoxels_->vdbVolume().data )
+        return glBuffer.prepareBuffer<unsigned>( activeVoxelsTextureSize_.x * activeVoxelsTextureSize_.y, false );
+
+    const auto& dims = objVoxels_->vdbVolume().dims;
+    auto numV = dims.x * dims.y * dims.z;
+
+    auto size = numV / 32 + 1;
+    activeVoxelsTextureSize_ = calcTextureRes( size, maxTexSize_ );
+    assert( activeVoxelsTextureSize_.x * activeVoxelsTextureSize_.y >= size );
+    auto buffer = glBuffer.prepareBuffer<unsigned>( activeVoxelsTextureSize_.x * activeVoxelsTextureSize_.y );
+
+    
+    if ( objVoxels_->getVolumeRenderActiveVoxels().empty() )
+    {
+        tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
+        {
+            for ( int r = range.begin(); r < range.end(); ++r )
+                buffer[r] = 0xFFFFFFFF;
+        } );
+        return buffer;
+    }
+    const auto& activeVoxels = objVoxels_->getVolumeRenderActiveVoxels().m_bits;
+    const unsigned* activeVoxelsData = ( unsigned* )activeVoxels.data();
+    tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
+    {
+        for ( int r = range.begin(); r < range.end(); ++r )
+            buffer[r] = activeVoxelsData[r];
+    } );
+
+    return buffer;
+}
+
+void RenderVolumeObject::render_( const RenderParams& renderParams, unsigned geomId )
 {
     if ( !getViewerInstance().isGLInitialized() )
     {
@@ -91,7 +129,17 @@ void RenderVolumeObject::render_( const BaseRenderParams& renderParams, unsigned
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrix.data() ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrix.data() ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrix.data() ) );
-
+    if ( !picker )
+    {
+        if ( renderParams.normMatrixPtr )
+        {
+            GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "normal_matrix" ), 1, GL_TRUE, renderParams.normMatrixPtr->data() ) );
+        }
+        GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &renderParams.lightPos.x ) );
+        GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specExp" ), objVoxels_->getShininess() ) );
+        GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specularStrength" ), objVoxels_->getSpecularStrength() ) );
+        GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), objVoxels_->getAmbientStrength() ) );
+    }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ),
         objVoxels_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),
@@ -121,6 +169,7 @@ void RenderVolumeObject::render_( const BaseRenderParams& renderParams, unsigned
     GL_EXEC( glUniform3f( glGetUniformLocation( shader, "minCorner" ), float( minCorner.min.x ), float( minCorner.min.y ), float( minCorner.min.z ) ) );
     GL_EXEC( glUniform3f( glGetUniformLocation( shader, "voxelSize" ), voxelSize.x, voxelSize.y, voxelSize.z ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "step" ), std::min( { voxelSize.x, voxelSize.y, voxelSize.z } ) ) );
+
 
     constexpr std::array<float, 24> cubePoints =
     {
@@ -173,6 +222,8 @@ void RenderVolumeObject::bindVolume_( bool picker )
     auto shader = picker ? GLStaticHolder::getShaderId( GLStaticHolder::VolumePicker ) :
         GLStaticHolder::getShaderId( GLStaticHolder::Volume );
 
+    const auto& params = objVoxels_->getVolumeRenderingParams();
+
     GL_EXEC( glUseProgram( shader ) );
 
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
@@ -186,49 +237,53 @@ void RenderVolumeObject::bindVolume_( bool picker )
         }
         assert( volume );
         volume_.loadData(
-            { .resolution = volume->dims, .internalFormat = GL_R8, .format = GL_RED, .type = GL_UNSIGNED_BYTE },
+            {
+                .resolution = volume->dims,
+                .internalFormat = GL_R16, // will need GL_R16UI for wasm
+                .format = GL_RED, // will need GL_RED_INTEGER for wasm
+                .type = GL_UNSIGNED_SHORT,
+                .filter = params.volumeFilterType
+            },
             volume->data );
     }
     else
+    {
         volume_.bind();
+        setTextureFilterType( params.volumeFilterType, true );
+    }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "volume" ), 0 ) );
 
+    const auto& volume = objVoxels_->vdbVolume();
     GL_EXEC( glActiveTexture( GL_TEXTURE1 ) );
     if ( dirty_ & DIRTY_TEXTURE )
     {
-        const auto& volume = objVoxels_->vdbVolume();
-        const auto& params = objVoxels_->getVolumeRenderingParams();
-        std::vector<Color> denseMap( 256 );
-        Vector2f realMinMax;
-        realMinMax[0] = volume.min;
-        realMinMax[1] = volume.max;
-        auto size = realMinMax[1] - realMinMax[0];
-        int minIndex = int( ( params.min - realMinMax[0] ) / size * denseMap.size() );
-        int maxIndex = int( ( params.max - realMinMax[0] ) / size * denseMap.size() );
-        auto diff = maxIndex - minIndex;
-        auto getAlpha = [&] ( float ratio )->uint8_t
+        std::vector<Color> denseMap;
+        bool grayShades = params.lutType == ObjectVoxels::VolumeRenderingParams::LutType::GrayShades;
+        if ( grayShades ||
+             params.lutType == ObjectVoxels::VolumeRenderingParams::LutType::OneColor )
         {
-            if ( params.alphaType == ObjectVoxels::VolumeRenderingParams::AlphaType::Constant )
-                return params.alphaLimit;
-            if ( params.alphaType == ObjectVoxels::VolumeRenderingParams::AlphaType::LinearIncreasing )
-                return uint8_t( ratio * float( params.alphaLimit ) );
-            if ( params.alphaType == ObjectVoxels::VolumeRenderingParams::AlphaType::LinearDecreasing )
-                return uint8_t( ( 1.0f - ratio ) * float( params.alphaLimit ) );
-            return 0;
-        };
-        if ( params.lutType == ObjectVoxels::VolumeRenderingParams::LutType::GrayShades )
-        {
-            for ( int i = 0; i < denseMap.size(); ++i )
+            denseMap.resize( 2 );
+            denseMap[0] = grayShades ? Color::white() : params.oneColor;
+            denseMap[1] = grayShades ? Color::black() : params.oneColor;
+            switch ( params.alphaType )
             {
-                bool zeroAlpha = i < minIndex || i > maxIndex;
-                float ratio = std::clamp( float( i - minIndex ) / float( diff ), 0.0f, 1.0f );
-                uint8_t color = uint8_t( ratio * 255.0f );
-                denseMap[i] = Color( color, color, color, zeroAlpha ? 0 : getAlpha( ratio ) );
+            case ObjectVoxels::VolumeRenderingParams::AlphaType::LinearIncreasing :
+                denseMap[0].a = 0;
+                denseMap[1].a = params.alphaLimit;
+                break;
+            case ObjectVoxels::VolumeRenderingParams::AlphaType::LinearDecreasing:
+                denseMap[0].a = params.alphaLimit;
+                denseMap[1].a = 0;
+                break;
+            case ObjectVoxels::VolumeRenderingParams::AlphaType::Constant:
+            default:
+                denseMap[0].a = denseMap[1].a = params.alphaLimit;
+                break;
             }
         }
         else if ( params.lutType == ObjectVoxels::VolumeRenderingParams::LutType::Rainbow )
         {
-            constexpr std::array<Color, 7> rainbow{
+            denseMap = {
                 Color::red(),
                 Color( 255,127,0 ),
                 Color::yellow(),
@@ -237,43 +292,51 @@ void RenderVolumeObject::bindVolume_( bool picker )
                 Color( 75,0,130 ),
                 Color( 148,0,211 )
             };
-            for ( int i = 0; i < denseMap.size(); ++i )
-            {
-                bool zeroAlpha = i < minIndex || i > maxIndex || diff <= 0;
-                if ( zeroAlpha )
-                {
-                    denseMap[i] = Color( 0, 0, 0, 0 );
-                    continue;
-                }
-                float ratio = std::clamp( float( i - minIndex ) / float( diff ), 0.0f, 1.0f );
-                float colorRatio = ratio * float( rainbow.size() );
-                const auto& startColor = rainbow[int( std::floor( colorRatio ) )];
-                const auto& stopColor = rainbow[int( std::ceil( colorRatio ) )];
-                colorRatio = colorRatio - std::floor( colorRatio );
+            float alphaStep = float( params.alphaLimit ) / denseMap.size();
 
-                denseMap[i] = startColor * ( 1.0f - colorRatio ) + stopColor * colorRatio;
-                denseMap[i].a = getAlpha( ratio );
-            }
-        }
-        else
-        {
             for ( int i = 0; i < denseMap.size(); ++i )
             {
-                bool zeroAlpha = i < minIndex || i > maxIndex;
-                float ratio = std::clamp( float( i - minIndex ) / float( diff ), 0.0f, 1.0f );
-                denseMap[i] = params.oneColor;
-                denseMap[i].a = zeroAlpha ? 0 : getAlpha( ratio );
+                switch ( params.alphaType )
+                {
+                case ObjectVoxels::VolumeRenderingParams::AlphaType::LinearIncreasing:
+                    denseMap[i].a = uint8_t( std::clamp( i * alphaStep, 0.0f, float( params.alphaLimit ) ) );
+                    break;
+                case ObjectVoxels::VolumeRenderingParams::AlphaType::LinearDecreasing:
+                    denseMap[int( denseMap.size() ) - i - 1].a = uint8_t( std::clamp( i * alphaStep, 0.0f, float( params.alphaLimit ) ) );
+                    break;
+                case ObjectVoxels::VolumeRenderingParams::AlphaType::Constant:
+                default:
+                    denseMap[i].a = params.alphaLimit;
+                    break;
+                }
             }
         }
         denseMap_.loadData(
-            { .resolution = Vector2i( denseMap.size(),1 ), .internalFormat = GL_RGBA8, .format = GL_RGBA, .type = GL_UNSIGNED_BYTE },
+            { 
+                .resolution = Vector2i( denseMap.size(),1 ), 
+                .internalFormat = GL_RGBA8, 
+                .format = GL_RGBA, 
+                .type = GL_UNSIGNED_BYTE,
+                .filter = FilterType::Linear },
             denseMap );
     }
     else
         denseMap_.bind();
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "denseMap" ), 1 ) );
 
-    dirty_ &= ~( DIRTY_PRIMITIVES | DIRTY_TEXTURE );
+    // Active Voxels
+    auto activeVoxels = loadActiveVoxelsTextureBuffer_();
+    GL_EXEC( glActiveTexture( GL_TEXTURE2 ) );
+    activeVoxelsTex_.loadDataOpt( activeVoxels.dirty(),
+        { .resolution = activeVoxelsTextureSize_, .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type = GL_UNSIGNED_INT },
+        activeVoxels );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "activeVoxels" ), 2 ) );
+
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "minValue" ), ( params.min - volume.min ) / ( volume.max - volume.min ) ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "maxValue" ), ( params.max - volume.min ) / ( volume.max - volume.min ) ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "shadingMode" ), int( params.shadingType ) ) );
+
+    dirty_ &= ~( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
 }
 
 void RenderVolumeObject::initBuffers_()
@@ -281,7 +344,10 @@ void RenderVolumeObject::initBuffers_()
     GL_EXEC( glGenVertexArrays( 1, &volumeArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( volumeArrayObjId_ ) );
 
-    dirty_ = DIRTY_PRIMITIVES | DIRTY_TEXTURE;
+    GL_EXEC( glGetIntegerv( GL_MAX_TEXTURE_SIZE, &maxTexSize_ ) );
+    assert( maxTexSize_ > 0 );
+
+    dirty_ = DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION;
 }
 
 void RenderVolumeObject::freeBuffers_()

@@ -118,6 +118,10 @@ public:
     MRMESH_API EdgeId makePolyline( const VertId * vs, size_t num );
 
     /// appends polyline topology (from) in addition to the current topology: creates new edges, verts;
+    /// \param outVmap,outEmap (optionally) returns mappings: from.id -> this.id
+    MRMESH_API void addPart( const PolylineTopology & from,
+        VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr );
+    /// appends polyline topology (from) in addition to the current topology: creates new edges, verts;
     MRMESH_API void addPartByMask( const PolylineTopology& from, const UndirectedEdgeBitSet& mask,
         VertMap* outVmap = nullptr, EdgeMap* outEmap = nullptr );
 
@@ -181,7 +185,8 @@ void PolylineTopology::buildFromContours( const std::vector<std::vector<T>> & co
     int numClosed = 0;
     for ( const auto& c : contours )
     {
-        if ( c.size() > 2 )
+        const auto csize = c.size();
+        if ( csize > 2 )
         {
             closed.push_back( c.front() == c.back() );
         }
@@ -189,6 +194,8 @@ void PolylineTopology::buildFromContours( const std::vector<std::vector<T>> & co
         {
             closed.push_back( false );
         }
+        if ( csize < 2 )
+            continue; // ignore contours with 0 or 1 points because of no edges in them
         size += c.size();
         if ( closed.back() )
             ++numClosed;
@@ -200,8 +207,8 @@ void PolylineTopology::buildFromContours( const std::vector<std::vector<T>> & co
     for ( int i = 0; i < contours.size(); ++i )
     {
         const auto& c = contours[i];
-        if ( c.empty() )
-            continue;
+        if ( c.size() < 2 )
+            continue; // ignore contours with 0 or 1 points because of no edges in them
         const auto e0 = makeEdge();
         const auto v0 = addPoint( c[0] );
         setOrg( e0, v0 );
@@ -225,6 +232,7 @@ void PolylineTopology::buildFromContours( const std::vector<std::vector<T>> & co
         }
     }
     assert( isConsistentlyOriented() );
+    assert( edgePerVertex_.size() ==  size - numClosed );
 }
 
 template<typename T, typename F>

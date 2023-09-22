@@ -489,6 +489,11 @@ bool Viewer::checkOpenGL_(const LaunchParams& params )
         if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 3, 3 ) )
         {
             spdlog::critical( "Cannot load OpenGL 3.3" );
+#ifdef _WIN32
+            MessageBoxA( NULL, "Cannot activate OpenGL 3.3.\n"
+                "Please verify that you have decent graphics card and its drivers are installed.",
+                "MeshInspector/MeshLib Error", MB_OK );
+#endif
             return false;
         }
         spdlog::warn( "Alpha sort is not available" );
@@ -616,6 +621,8 @@ int Viewer::launchInit_( const LaunchParams& params )
         touchesController.connect( this );
         spaceMouseController.connect();
         initSpaceMouseHandler_();
+        touchpadController.connect( this );
+        touchpadController.initialize( window );
     }
 
     std::future<void> splashMinTimer;
@@ -734,6 +741,8 @@ void Viewer::launchShut()
     GLStaticHolder::freeAllShaders();
 
     alphaSorter_.reset();
+
+    touchpadController.reset();
 
     glfwDestroyWindow( window );
     glfwTerminate();
@@ -1116,6 +1125,51 @@ bool Viewer::touchMove( int id, int x, int y )
 bool Viewer::touchEnd( int id, int x, int y )
 {
     return touchEndSignal( id, x, y );
+}
+
+bool Viewer::touchpadRotateGestureBegin()
+{
+    return touchpadRotateGestureBeginSignal();
+}
+
+bool Viewer::touchpadRotateGestureUpdate( float angle )
+{
+    return touchpadRotateGestureUpdateSignal( angle );
+}
+
+bool Viewer::touchpadRotateGestureEnd()
+{
+    return touchpadRotateGestureEndSignal();
+}
+
+bool Viewer::touchpadSwipeGestureBegin()
+{
+    return touchpadSwipeGestureBeginSignal();
+}
+
+bool Viewer::touchpadSwipeGestureUpdate( float dx, float dy, bool kinetic )
+{
+    return touchpadSwipeGestureUpdateSignal( dx, dy, kinetic );
+}
+
+bool Viewer::touchpadSwipeGestureEnd()
+{
+    return touchpadSwipeGestureEndSignal();
+}
+
+bool Viewer::touchpadZoomGestureBegin()
+{
+    return touchpadZoomGestureBeginSignal();
+}
+
+bool Viewer::touchpadZoomGestureUpdate( float scale, bool kinetic )
+{
+    return touchpadZoomGestureUpdateSignal( scale, kinetic );
+}
+
+bool Viewer::touchpadZoomGestureEnd()
+{
+    return touchpadZoomGestureEndSignal();
 }
 
 bool Viewer::mouseScroll( float delta_y )

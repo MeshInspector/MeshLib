@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAggregateFlow.h" />
+    <ClInclude Include="MRBasinVolume.h" />
     <ClInclude Include="MRCNCMachineSettings.h" />
     <ClInclude Include="MRAxis.h" />
     <ClInclude Include="MRChangeVertsColorMapAction.h" />
@@ -61,6 +62,7 @@
     <ClInclude Include="MREdgeMetric.h" />
     <ClInclude Include="MREdgePathsBuilder.h" />
     <ClInclude Include="MREmbeddedPython.h" />
+    <ClInclude Include="MREmbedTerrainStructure.h" />
     <ClInclude Include="MRExpected.h" />
     <ClInclude Include="MRFastWindingNumber.h" />
     <ClInclude Include="MRFile.h" />
@@ -71,6 +73,7 @@
     <ClInclude Include="MRFloatGridComponents.h" />
     <ClInclude Include="MRGcodeProcessor.h" />
     <ClInclude Include="MRGcodeLoad.h" />
+    <ClInclude Include="MRGraph.h" />
     <ClInclude Include="MRGridSettings.h" />
     <ClInclude Include="MRGTest.h" />
     <ClInclude Include="MRHash.h" />
@@ -84,6 +87,8 @@
     <ClInclude Include="MRInnerShell.h" />
     <ClInclude Include="MRIOParsing.h" />
     <ClInclude Include="MRIsNaN.h" />
+    <ClInclude Include="MRMapEdge.h" />
+    <ClInclude Include="MRMeshExtrude.h" />
     <ClInclude Include="MRMeshToDistanceVolume.h" />
     <ClInclude Include="MRMovementBuildBody.h" />
     <ClInclude Include="MRMutexOwner.h" />
@@ -146,12 +151,13 @@
     <ClInclude Include="MRLinesSave.h" />
     <ClInclude Include="MRPolylineSubdivide.h" />
     <ClInclude Include="MRPolylineTopology.h" />
+    <ClInclude Include="MRPrecipitationSimulator.h" />
     <ClInclude Include="MRPrecisePredicates2.h" />
     <ClInclude Include="MRPrimitiveMapsComposition.h" />
     <ClInclude Include="MRPrism.h" />
     <ClInclude Include="MRProgressReadWrite.h" />
     <ClInclude Include="MRRayBoxIntersection2.h" />
-    <ClInclude Include="MRReadTIFF.h" />
+    <ClInclude Include="MRTiffIO.h" />
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
     <ClInclude Include="MRSceneSettings.h" />
@@ -310,6 +316,7 @@
     <ClInclude Include="MRUniqueThreadSafeOwner.h" />
     <ClInclude Include="MRObjectDistanceMap.h" />
     <ClInclude Include="MRVoxelsVolume.h" />
+    <ClInclude Include="MRWatershedGraph.h" />
     <ClInclude Include="MRWriter.h" />
     <ClInclude Include="MRXfBasedCache.h" />
     <ClInclude Include="MRPolylineRelax.h" />
@@ -318,6 +325,7 @@
     <ClInclude Include="MRNoDefInit.h" />
     <ClInclude Include="MRParallelFor.h" />
     <ClInclude Include="MRVoxelsConversionsByParts.h" />
+    <ClInclude Include="MRMeshOverhangs.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -332,6 +340,7 @@
     <ClCompile Include="MRAggregateFlow.cpp" />
     <ClCompile Include="MRAlignTextToMesh.cpp" />
     <ClCompile Include="MRArrow.cpp" />
+    <ClCompile Include="MRBasinVolume.cpp" />
     <ClCompile Include="MRBestFitQuadric.cpp" />
     <ClCompile Include="MRBestFitTests.cpp" />
     <ClCompile Include="MRBooleanOperation.cpp" />
@@ -366,6 +375,7 @@
     <ClCompile Include="MREdgeMetric.cpp" />
     <ClCompile Include="MREdgePaths.cpp" />
     <ClCompile Include="MREmbeddedPython.cpp" />
+    <ClCompile Include="MREmbedTerrainStructure.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />
     <ClCompile Include="MRExpandShrink.cpp" />
     <ClCompile Include="MRExpected.cpp" />
@@ -381,6 +391,7 @@
     <ClCompile Include="MRFloatGridComponents.cpp" />
     <ClCompile Include="MRGcodeProcessor.cpp" />
     <ClCompile Include="MRGcodeLoad.cpp" />
+    <ClCompile Include="MRGraph.cpp" />
     <ClCompile Include="MRGridSampling.cpp" />
     <ClCompile Include="MRHistoryStore.cpp" />
     <ClCompile Include="MRIdentifyVertices.cpp" />
@@ -400,12 +411,15 @@
     <ClCompile Include="MRMeshBoolean.cpp" />
     <ClCompile Include="MRMeshBooleanFacade.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
+    <ClCompile Include="MRMeshExtrude.cpp" />
     <ClCompile Include="MRMeshToDistanceVolume.cpp" />
     <ClCompile Include="MRMovementBuildBody.cpp" />
     <ClCompile Include="MRNormalDenoising.cpp" />
     <ClCompile Include="MRNormalsToPoints.cpp" />
     <ClCompile Include="MROverlappingTris.cpp" />
     <ClCompile Include="MRObjectGcode.cpp" />
+    <ClCompile Include="MRPointsLoadE57.cpp" />
+    <ClCompile Include="MRPointsLoadLas.cpp" />
     <ClCompile Include="MRPointsProject.cpp" />
     <ClCompile Include="MRPointsToMeshProjector.cpp" />
     <ClCompile Include="MRMeshTrimWithPlane.cpp" />
@@ -446,6 +460,7 @@
     <ClCompile Include="MRLinesSave.cpp" />
     <ClCompile Include="MRPolylineSubdivide.cpp" />
     <ClCompile Include="MRPolylineTopology.cpp" />
+    <ClCompile Include="MRPrecipitationSimulator.cpp" />
     <ClCompile Include="MRPrecisePredicates2.cpp" />
     <ClCompile Include="MRPrecisePredicates3.cpp" />
     <ClCompile Include="MRHistogram.cpp" />
@@ -456,7 +471,7 @@
     <ClCompile Include="MRMeshCollide.cpp" />
     <ClCompile Include="MRPrism.cpp" />
     <ClCompile Include="MRProgressReadWrite.cpp" />
-    <ClCompile Include="MRReadTIFF.cpp" />
+    <ClCompile Include="MRTiffIO.cpp" />
     <ClCompile Include="MRRectIndexer.cpp" />
     <ClCompile Include="MRSceneColors.cpp" />
     <ClCompile Include="MRMeshComponents.cpp" />
@@ -546,8 +561,13 @@
     <ClCompile Include="MRPolylineRelax.cpp" />
     <ClCompile Include="MRUniteManyMeshes.cpp" />
     <ClCompile Include="MRVoxelsConversionsByParts.cpp" />
+    <ClCompile Include="MRWatershedGraph.cpp" />
+    <ClCompile Include="MRMeshOverhangs.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\laz-perf\laz-perf.vcxproj">
+      <Project>{daa055af-38ed-4836-a553-7539216bb64f}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">
       <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
     </ProjectReference>
@@ -600,7 +620,7 @@
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(SolutionDir)source\MRPch\MRPch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\laz-perf\cpp\</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(SolutionDir)source\MRPch\MRPch.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
@@ -617,6 +637,10 @@
 copy $(SolutionDir)$(Platform)\Release\OpenCTM.exp $(TargetDir)OpenCTM.exp
 copy $(SolutionDir)$(Platform)\Release\OpenCTM.lib $(TargetDir)OpenCTM.lib
 copy $(SolutionDir)$(Platform)\Release\OpenCTM.pdb $(TargetDir)OpenCTM.pdb
+copy $(SolutionDir)$(Platform)\Release\laz-perf.dll $(TargetDir)laz-perf.dll
+copy $(SolutionDir)$(Platform)\Release\laz-perf.exp $(TargetDir)laz-perf.exp
+copy $(SolutionDir)$(Platform)\Release\laz-perf.lib $(TargetDir)laz-perf.lib
+copy $(SolutionDir)$(Platform)\Release\laz-perf.pdb $(TargetDir)laz-perf.pdb
 copy $(PythonDllPath) $(TargetDir)python$(PythonVersion).dll
 copy $(VcpkgCurrentInstalledDir)\bin\zlib1.dll $(TargetDir)zlib1.dll
 copy $(ProjectDir)..\..\thirdparty\python\python310.zip $(TargetDir)python310.zip</Command>
@@ -634,7 +658,7 @@ copy $(ProjectDir)..\..\thirdparty\python\python310.zip $(TargetDir)python310.zi
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(SolutionDir)source\MRPch\MRPch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\laz-perf\cpp\</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(SolutionDir)source\MRPch\MRPch.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>

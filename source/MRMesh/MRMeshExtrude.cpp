@@ -1,6 +1,7 @@
 #include "MRMeshExtrude.h"
 #include "MRMesh.h"
 #include "MRRegionBoundary.h"
+#include "MRMapEdge.h"
 #include "MRTimer.h"
 
 namespace MR

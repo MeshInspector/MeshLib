@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project (MRCommonPlugins CXX)
@@ -22,37 +22,44 @@ ENDIF() # MR_EMSCRIPTEN
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
-IF(APPLE)
-	target_link_libraries(${PROJECT_NAME} PRIVATE
-		MRMesh
-		MRViewer
-		clip
-		imgui
-		fmt
-		spdlog
-		glfw
-		jsoncpp
-		glad
-		)
-ELSE()
+IF(MR_EMSCRIPTEN)
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		tbb
 		MRMesh
 		MRViewer
+		glad
+		glfw
 		imgui
+		jsoncpp
+		spdlog
 		)
-ENDIF()
+ELSE() # NOT MR_EMSCRIPTEN
+	target_link_libraries(${PROJECT_NAME} PRIVATE
+		tbb
+		MRMesh
+		MRViewer
+		clip
+		glad
+		glfw
+		imgui
+		jsoncpp
+		spdlog
+		fmt
+		)
+ENDIF() # MR_EMSCRIPTEN
 
 
 install(TARGETS ${PROJECT_NAME}
 		EXPORT ${PROJECT_NAME}
-		DESTINATION "${MR_MAIN_LIB_DIR}")
+		LIBRARY DESTINATION "${MR_MAIN_LIB_DIR}"
+		ARCHIVE DESTINATION "${MR_MAIN_LIB_DIR}"
+		RUNTIME DESTINATION "${MR_BIN_DIR}")
 
 install(FILES ${HEADERS}
 		DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}")
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}Config.cmake
-		DESTINATION ${MR_CONFIG_DIR}/cmake)
+		DESTINATION ${MR_CONFIG_DIR})
 
 install(FILES ${HEADERS} DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}")
 install(FILES ${UI_JSON} DESTINATION "${MR_RESOURCES_DIR}")
@@ -61,4 +68,4 @@ install(FILES ${ITEMS_JSON} DESTINATION "${MR_RESOURCES_DIR}")
 install(EXPORT ${PROJECT_NAME}
 		FILE ${PROJECT_NAME}Targets.cmake
 		NAMESPACE MeshLib::
-		DESTINATION ${MR_CONFIG_DIR}/cmake)
+		DESTINATION ${MR_CONFIG_DIR})

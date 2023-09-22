@@ -1,5 +1,5 @@
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRVolumeSegment.h"
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRVoxelPath.h"
 #include "MRSimpleVolume.h"
 #include "MRVolumeIndexer.h"

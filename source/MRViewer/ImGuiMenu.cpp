@@ -76,6 +76,8 @@
 #include "MRRibbonConstants.h"
 #include "MRRibbonFontManager.h"
 #include "MRUIStyle.h"
+#include "MRRibbonSchema.h"
+#include "MRRibbonMenu.h"
 
 #ifndef __EMSCRIPTEN__
 #include "MRMesh/MRObjectVoxels.h"
@@ -301,14 +303,12 @@ void ImGuiMenu::preDraw_()
       if ( context_ )
       {
           ImGuiInputEvent e;
-          e.Type = ImGuiInputEventType_MousePos;
-          e.Source = ImGuiInputSource_Mouse;
           auto curPos = Vector2f( viewer->mouseController.getMousePos() );
-          e.MousePos.PosX = curPos.x;
-          e.MousePos.PosY = curPos.y;
-          if ( !context_->InputEventsQueue.empty() )
-              context_->InputEventsQueue.pop_back();
-          context_->InputEventsQueue.push_back( e );
+          if ( !context_->InputEventsQueue.empty() && context_->InputEventsQueue.back().Type == ImGuiInputEventType_MousePos )
+          {
+              context_->InputEventsQueue.back().MousePos.PosX = curPos.x;
+              context_->InputEventsQueue.back().MousePos.PosY = curPos.y;
+          }
       }
 #endif
   }
@@ -366,6 +366,63 @@ bool ImGuiMenu::spaceMouseDown_( int /*key*/ )
     return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
 }
 
+bool ImGuiMenu::touchpadRotateGestureBegin_()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadRotateGestureUpdate_( float )
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadRotateGestureEnd_()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadSwipeGestureBegin_()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadSwipeGestureUpdate_( float, float deltaY, bool )
+{
+    // touchpad scroll values are larger than mouse ones
+    constexpr float cTouchpadScrollCoef = 0.1f;
+
+    if ( ImGui::GetIO().WantCaptureMouse )
+    {
+        // allow ImGui to process the touchpad swipe gesture as a scroll exclusively
+        ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, deltaY * cTouchpadScrollCoef );
+        // do extra frames to prevent imgui calculations ping
+        viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
+        return true;
+    }
+
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadSwipeGestureEnd_()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadZoomGestureBegin_()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadZoomGestureUpdate_( float, bool )
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+bool ImGuiMenu::touchpadZoomGestureEnd_()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
 void ImGuiMenu::rescaleStyle_()
 {
     CommandLoop::appendCommand( [&] ()
@@ -396,25 +453,42 @@ bool ImGuiMenu::onMouseMove_(int mouse_x, int mouse_y )
 
 bool ImGuiMenu::onMouseScroll_(float delta_y)
 {
-    ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, delta_y );
-    // do extra frames to prevent imgui calculations ping
     if ( ImGui::GetIO().WantCaptureMouse )
     {
+        // allow ImGui to process the scroll exclusively
+        ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, delta_y );
+        // do extra frames to prevent imgui calculations ping
         viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
         return true;
     }
+
     return false;
 }
 
 void ImGuiMenu::cursorEntrance_( [[maybe_unused]] bool entered )
 {
 #ifdef __EMSCRIPTEN__
+    static bool isInside = false;
     if ( entered )
-        ImGui::GetIO().ConfigFlags &= (~ImGuiConfigFlags_NoMouse);
+    {
+        if ( !isInside )
+        {
+            ImGui::GetIO().ConfigFlags &= (~ImGuiConfigFlags_NoMouse);
+            isInside = true;
+        }
+    }
     else
     {
-        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
-        EM_ASM( postEmptyEvent( 100, 2 ) );
+        bool anyPressed =
+            ImGui::IsMouseDown( ImGuiMouseButton_Left ) ||
+            ImGui::IsMouseDown( ImGuiMouseButton_Right ) ||
+            ImGui::IsMouseDown( ImGuiMouseButton_Middle );
+        if ( !anyPressed )
+        {
+            ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
+            isInside = false;
+            EM_ASM( postEmptyEvent( 100, 2 ) );
+        }
     }
 #endif
 }
@@ -1022,6 +1096,11 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
                                     ImGuiTreeNodeFlags_SpanAvailWidth |
                                     ImGuiTreeNodeFlags_Framed |
                                     ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
+        if ( ImGui::IsMouseDoubleClicked( 0 ) && ImGui::IsItemHovered() )
+        {
+            if ( auto m = getViewerInstance().getMenuPluginAs<RibbonMenu>() )
+                m->tryRenameSelectedObject();
+        }
 
         ImGui::PopStyleColor( isSelected ? 2 : 1 );
         ImGui::PopStyleVar();
@@ -1133,10 +1212,9 @@ float ImGuiMenu::drawSelectionInformation_()
     auto& style = ImGui::GetStyle();
 
     float resultHeight = ImGui::GetTextLineHeight() + style.FramePadding.y * 2 + style.ItemSpacing.y;
-    if ( !drawCollapsingHeader_( "Information", ImGuiTreeNodeFlags_DefaultOpen ) )
+    if ( !drawCollapsingHeader_( "Information", ImGuiTreeNodeFlags_DefaultOpen ) || selectedObjs.empty() )
         return resultHeight;
 
-    int fieldCount = 6;
     // Points info
     size_t totalPoints = 0;
     size_t totalSelectedPoints = 0;
@@ -1202,8 +1280,23 @@ float ImGuiMenu::drawSelectionInformation_()
         }
 #endif
     }
+
+    int elementFieldsCount = 0;
+    int sizeFieldsCount = 3;
+    int doubleSpaceCount = 1;
     if ( totalPoints )
-        ++fieldCount;
+        ++elementFieldsCount;
+    if ( totalVerts )
+        ++elementFieldsCount;
+    if ( totalFaces )
+        ++elementFieldsCount;
+    if ( selectedObjs.size() == 1 && std::dynamic_pointer_cast< ObjectLabel >( selectedObjs[0] ) )
+    {
+        ++elementFieldsCount;
+        ++doubleSpaceCount;
+    }
+    if ( elementFieldsCount )
+        ++doubleSpaceCount;
     if ( selectionWorldBox_.valid() )
     {
         bsize = selectionBbox_.size();
@@ -1211,21 +1304,21 @@ float ImGuiMenu::drawSelectionInformation_()
         wbsize = selectionWorldBox_.size();
         wbsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", wbsize.x, wbsize.y, wbsize.z );
         if ( bsizeStr != wbsizeStr )
-            ++fieldCount;
+            ++sizeFieldsCount;
     }
 #ifndef __EMSCRIPTEN__
     if ( dimensions.x > 0 && dimensions.y > 0 && dimensions.z > 0 )
     {
-        ++fieldCount;
+        ++sizeFieldsCount;
     }
 #endif
 
     ImGui::PushStyleVar( ImGuiStyleVar_ScrollbarSize, 12.0f );
     const float smallItemSpacingY = 0.25f * cDefaultItemSpacing * menu_scaling();
-    const float infoHeight = ImGui::GetTextLineHeight() * fieldCount +
-        style.FramePadding.y * fieldCount * 2 +
-        style.ItemSpacing.y +
-        smallItemSpacingY * ( fieldCount + 1 );
+    const int fieldCount = elementFieldsCount + sizeFieldsCount + 1;
+    const float infoHeight = ImGui::GetTextLineHeight() * fieldCount + style.FramePadding.y * fieldCount * 2 +
+        smallItemSpacingY * fieldCount + smallItemSpacingY * 2 * doubleSpaceCount +
+        style.ItemSpacing.y;
     resultHeight += infoHeight + style.ItemSpacing.y;
 
     ImGui::BeginChild( "SceneInformation", ImVec2( 0, infoHeight ), false, ImGuiWindowFlags_HorizontalScrollbar );
@@ -1248,11 +1341,13 @@ float ImGuiMenu::drawSelectionInformation_()
         }
     };
 
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, smallItemSpacingY } );
+
     if ( selectedObjs.size() > 1 )
     {
         drawPrimitivesInfo( "Objects", selectedObjs.size() );
     }
-    else if ( !selectedObjs.empty() )
+    else if ( selectedObjs.size() == 1 )
     {
         auto pObj = selectedObjs.front();
         auto lastRenameObj = lastRenameObj_.lock();
@@ -1286,6 +1381,8 @@ float ImGuiMenu::drawSelectionInformation_()
                 oldLabelParams_.labelBuffer = oldLabelParams_.lastLabel;
             }
 
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 2 * smallItemSpacingY );
+
             if ( ImGui::InputText( "Label", oldLabelParams_.labelBuffer, ImGuiInputTextFlags_AutoSelectAll ) )
                 pObjLabel->setLabel( { oldLabelParams_.labelBuffer, pObjLabel->getLabel().position } );
             if ( ImGui::IsItemDeactivatedAfterEdit() && oldLabelParams_.labelBuffer != oldLabelParams_.lastLabel )
@@ -1310,20 +1407,21 @@ float ImGuiMenu::drawSelectionInformation_()
     else
         lastRenameObj_.reset();
 
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, smallItemSpacingY } );
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 2 * smallItemSpacingY );
 
     drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces );
     drawPrimitivesInfo( "Vertices", totalVerts );
     drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints );
 
-    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 2 * smallItemSpacingY );
+    if ( elementFieldsCount )
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 2 * smallItemSpacingY );
 
     auto drawVec3 = [&style] ( std::string title, auto& value, float width, const char* formatStr )
     {
         UI::inputTextCenteredReadOnly( ( "##" + title + "_x" ).c_str(), fmt::format( runtimeFmt( formatStr ), value.x ), width );
-        ImGui::SameLine();
+        ImGui::SameLine(0.f, style.ItemInnerSpacing.x);
         UI::inputTextCenteredReadOnly( ( "##" + title + "_y" ).c_str(), fmt::format( runtimeFmt( formatStr ), value.y ), width );
-        ImGui::SameLine();
+        ImGui::SameLine( 0.f, style.ItemInnerSpacing.x );
         UI::inputTextCenteredReadOnly( ( "##" + title + "_z" ).c_str(), fmt::format( runtimeFmt( formatStr ), value.z ), width );
 
         ImGui::SameLine( 0, style.ItemInnerSpacing.x );
@@ -1331,7 +1429,6 @@ float ImGuiMenu::drawSelectionInformation_()
     };
 
     const float fieldWidth = getSceneInfoItemWidth_( 3 );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemInnerSpacing.x, style.ItemSpacing.y } );
 #ifndef __EMSCRIPTEN__
     if ( dimensions.x > 0 && dimensions.y > 0 && dimensions.z > 0 )
     {
@@ -1347,7 +1444,6 @@ float ImGuiMenu::drawSelectionInformation_()
         if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
             drawVec3( "World box size", wbsize, fieldWidth, "{:.3f}" );
     }
-    ImGui::PopStyleVar();
 
     ImGui::PopStyleVar();
     ImGui::Dummy( ImVec2( 0, 0 ) );
@@ -1409,7 +1505,19 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
         currWindow->DrawList->PopClipRect();
 
     const auto& viewportid = viewer->viewport().id;
-    bool closePopup = make_visualize_checkbox( selectedObjs, "Polygon Offset", MeshVisualizePropertyType::PolygonOffsetFromCamera, viewportid );
+
+    bool allIsObjMesh = !selectedObjs.empty() &&
+        std::all_of( selectedObjs.cbegin(), selectedObjs.cend(), [] ( const std::shared_ptr<VisualObject>& obj )
+    {
+        return obj && obj->asType<ObjectMeshHolder>();
+    } );
+
+    bool closePopup = false;
+
+    if ( allIsObjMesh )
+    {
+        make_visualize_checkbox( selectedObjs, "Polygon Offset", MeshVisualizePropertyType::PolygonOffsetFromCamera, viewportid );
+    }
 
     make_light_strength( selectedObjs, "Shininess", [&] ( const VisualObject* obj )
     {
@@ -2418,54 +2526,10 @@ void ImGuiMenu::draw_mr_menu()
         ImGui::SameLine( 0, p );
         if ( ImGui::Button( "Load Dir##Main", ImVec2( ( w - p ) / 2.f, 0 ) ) )
         {
-            auto directory = openFolderDialog();
-            if ( !directory.empty() )
+            auto openDir = RibbonSchemaHolder::schema().items.find( "Open directory" );
+            if ( openDir != RibbonSchemaHolder::schema().items.end() && openDir->second.item )
             {
-                auto container = makeObjectTreeFromFolder( directory );
-                if ( container.has_value() && !container->children().empty() )
-                {
-                    auto obj = std::make_shared<Object>( std::move( container.value() ) );
-                    obj->setName( utf8string( directory.stem() ) );
-                    selectRecursive( *obj );
-                    AppendHistory<ChangeSceneAction>( "Load Dir", obj, ChangeSceneAction::Type::AddObject );
-                    SceneRoot::get().addChild( obj );
-                    viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
-                }
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
-                else
-                {
-                    ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [directory, viewer = viewer] () -> std::function<void()>
-                    {
-                        ProgressBar::nextTask( "Load DICOM Folder" );
-                        auto loadRes = VoxelsLoad::loadDCMFolder( directory, 4, ProgressBar::callBackSetProgress );
-                        if ( loadRes.has_value() && !ProgressBar::isCanceled() )
-                        {
-                            std::shared_ptr<ObjectVoxels> voxelsObject = std::make_shared<ObjectVoxels>();
-                            voxelsObject->setName( loadRes->name );
-                            ProgressBar::setTaskCount( 2 );
-                            ProgressBar::nextTask( "Construct ObjectVoxels" );
-                            voxelsObject->construct( loadRes->vdbVolume, ProgressBar::callBackSetProgress );
-                            auto bins = voxelsObject->histogram().getBins();
-                            auto minMax = voxelsObject->histogram().getBinMinMax( bins.size() / 3 );
-
-                            ProgressBar::nextTask( "Create ISO surface" );
-                            voxelsObject->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
-                            voxelsObject->select( true );
-                            return [viewer, voxelsObject] ()
-                            {
-                                AppendHistory<ChangeSceneAction>( "Load Voxels", voxelsObject, ChangeSceneAction::Type::AddObject );
-                                SceneRoot::get().addChild( voxelsObject );
-                                viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
-                            };
-                        }
-                        else
-                            return [error = loadRes.error()] ()
-                        {
-                            showError( error );
-                        };
-                    }, 2 );
-                }
-#endif
+                openDir->second.item->action();
             }
         }
 
@@ -2814,7 +2878,12 @@ void ImGuiMenu::drawShortcutsWindow_()
     ImGui::SetNextWindowSize( ImVec2( hotkeysWindowWidth, hotkeysWindowHeight ) );
     ImGui::Begin( "HotKeys", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );
 
+#pragma warning(push)
+#if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
+#pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
+#endif
     ImFont font = *ImGui::GetFont();
+#pragma warning(pop)
     font.Scale = 1.2f;
     ImGui::PushFont( &font );
     ImGui::Text( "Hot Key List" );

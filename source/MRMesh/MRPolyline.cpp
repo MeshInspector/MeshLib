@@ -103,10 +103,34 @@ EdgeId Polyline<V>::addFromPoints( const V * vs, size_t num )
 }
 
 template<typename V>
+void MR::Polyline<V>::addPart( const Polyline<V>& from, VertMap * outVmap, WholeEdgeMap * outEmap )
+{
+    MR_TIMER
+
+    VertMap vmap;
+    VertMap* vmapPtr = outVmap ? outVmap : &vmap;
+    topology.addPart( from.topology, vmapPtr, outEmap );
+    const VertMap& vmapRef = *vmapPtr;
+
+    VertId lastPointId = topology.lastValidVert();
+    if ( points.size() < lastPointId + 1 )
+        points.resize( lastPointId + 1 );
+
+    for ( VertId fromv{ 0 }; fromv < vmapRef.size(); ++fromv )
+    {
+        VertId v = vmapRef[fromv];
+        if ( v.valid() )
+            points[v] = from.points[fromv];
+    }
+
+    invalidateCaches();
+}
+
+template<typename V>
 void MR::Polyline<V>::addPartByMask( const Polyline<V>& from, const UndirectedEdgeBitSet& mask, 
     VertMap* outVmap /*= nullptr*/, EdgeMap* outEmap /*= nullptr */ )
 {
-    MR_TIMER;
+    MR_TIMER
 
     VertMap vmap;
     VertMap* vmapPtr = outVmap ? outVmap : &vmap;
@@ -126,7 +150,6 @@ void MR::Polyline<V>::addPartByMask( const Polyline<V>& from, const UndirectedEd
 
     invalidateCaches();
 }
-
 
 template<typename V>
 float Polyline<V>::totalLength() const
@@ -240,7 +263,7 @@ EdgeId Polyline<V>::addFromGeneralSurfacePath( const Mesh& mesh, const MeshTriPo
 {
     if ( ( !start && path.empty() ) || ( !end && path.empty() ) )
     {
-        assert( false );
+        assert( !start && !end );
         return {};
     }
 
@@ -251,7 +274,7 @@ EdgeId Polyline<V>::addFromGeneralSurfacePath( const Mesh& mesh, const MeshTriPo
     PolylineMaker maker( topology );
     const auto e0 = maker.start( v0 );
 
-    const bool closed = ( start == end ) && ( !start || ( path.front() == path.back() && path.size() > 1 ) );
+    const bool closed = ( start && start == end ) || ( !start && path.size() > 1 && path.front() == path.back() );
     const int inc = end || closed ? 0 : 1;
     for ( int i = start ? 0 : 1; i + inc < path.size(); ++i )
     {

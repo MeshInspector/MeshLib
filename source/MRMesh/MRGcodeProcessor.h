@@ -32,7 +32,7 @@ public:
     {
         BaseAction3f action;
         std::vector<Vector3f> toolDirection; // tool direction for each point from action.path
-        bool idle = false;
+        bool idle = true;
         float feedrate = 100.f;
         // return true if operation was parsed without warnings
         bool valid() const { return action.warning.empty(); }

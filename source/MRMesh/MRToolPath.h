@@ -1,11 +1,10 @@
 #pragma once
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRMeshFwd.h"
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRAxis.h"
 #include "MRMesh.h"
 #include "MRPolyline.h"
 #include "MRProgressCallback.h"
-
 #include "MRExpected.h"
 
 namespace MR
@@ -48,6 +47,21 @@ struct ToolPathParams
     bool flatTool = false;
     // callback for reporting on progress
     ProgressCallback cb = {};
+    
+    // optional output, stores isolines without transits
+    Contours3f* isolines = nullptr;
+    // optional output, boundaries of the selection on the original mesh
+    Contours3f* contoursBeforeProjection = nullptr;
+    // optional output, boundaries of the working area on the offset mesh (which are a projection of contoursBeforeProjection )
+    Contours3f* contoursBeforeCutMesh = nullptr;
+    // optional output, polyline containing start vertices for isolines
+    Contours3f* startContours = nullptr;
+    // optional output, polylines were failed to build isolines
+    Contours3f* failedContours = nullptr;
+    // start vertices on the offset mesh used for calcutating isolines
+    std::vector<Vector3f>* startVertices = nullptr;
+
+    MeshPart* offsetMesh = nullptr;
 };
 
 struct ConstantCuspParams : ToolPathParams
@@ -107,10 +121,10 @@ struct GCommand
 
 struct ToolPathResult
 {
-    // stores isolines without transits
-    Contours3f isolines;
     // mesh after fixing undercuts and offset
     Mesh modifiedMesh;
+    // selected region projected from the original mesh to the offset
+    FaceBitSet modifiedRegion;
     // constains type of movement and its feed
     std::vector<GCommand> commands;
 };
@@ -140,6 +154,11 @@ MRMESH_API std::shared_ptr<ObjectGcode> exportToolPathToGCode( const std::vector
 MRMESH_API void interpolateLines( std::vector<GCommand>& commands, const LineInterpolationParams& params, Axis axis );
 // interpolates given path with arcs
 MRMESH_API void interpolateArcs( std::vector<GCommand>& commands, const ArcInterpolationParams& params, Axis axis );
+
+// makes the given selection more smooth with shifthing a boundary of the selection outside and back. Input mesh is changed because we have to cut new edges along the new boundaries
+// \param expandOffset defines how much the boundary is expanded
+// \param expandOffset defines how much the boundary is shrinked after that
+MRMESH_API FaceBitSet smoothSelection( Mesh& mesh, const FaceBitSet& region, float expandOffset, float shrinkOffset );
 
 }
 #endif

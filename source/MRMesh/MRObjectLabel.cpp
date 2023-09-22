@@ -1,5 +1,5 @@
-#ifndef MRMESH_NO_LABEL
 #include "MRObjectLabel.h"
+#ifndef MRMESH_NO_LABEL
 #include "MRObjectFactory.h"
 #include "MRSerializer.h"
 #include "MRMesh.h"
@@ -22,8 +22,8 @@ void ObjectLabel::setLabel( const PositionedText& label )
     if ( label == label_ )
         return;
     label_ = label;
-    if ( !pathToFont_.empty() )
-        buildMesh_();
+    needRebuild_ = true;
+    setDirtyFlags( DIRTY_POSITION | DIRTY_FACE );
 }
 
 void ObjectLabel::setFontPath( const std::filesystem::path& pathToFont )
@@ -31,8 +31,8 @@ void ObjectLabel::setFontPath( const std::filesystem::path& pathToFont )
     if ( pathToFont_ == pathToFont )
         return;
     pathToFont_ = pathToFont;
-    if ( !label_.text.empty() )
-        buildMesh_();
+    needRebuild_ = true;
+    setDirtyFlags( DIRTY_POSITION | DIRTY_FACE );
 }
 
 void ObjectLabel::setPivotPoint( const Vector2f& pivotPoint )
@@ -69,45 +69,9 @@ void ObjectLabel::swapBase_( Object& other )
 
 Box3f ObjectLabel::computeBoundingBox_() const
 {
-    if ( !mesh_ )
-        return {};
     Box3f box;
     box.include( label_.position );
     return box;
-}
-
-Expected<std::future<void>, std::string> ObjectLabel::serializeModel_( const std::filesystem::path& path ) const
-{
-    if ( ancillary_ || !mesh_ )
-        return {};
-
-#ifndef MRMESH_NO_OPENCTM
-    auto save = [mesh = mesh_, filename = utf8string( path ) + ".ctm", this]()
-    {
-        MR::MeshSave::toCtm( *mesh, pathFromUtf8( filename ), {}, vertsColorMap_.empty() ? nullptr : &vertsColorMap_ );
-    };
-#else
-    auto save = [mesh = mesh_, filename = utf8string( path ) + ".mrmesh"]()
-    {
-        MR::MeshSave::toMrmesh( *mesh, pathFromUtf8( filename ) );
-    };
-#endif
-
-    return std::async( getAsyncLaunchType(), save );
-}
-
-VoidOrErrStr ObjectLabel::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
-{
-#ifndef MRMESH_NO_OPENCTM
-    auto res = MeshLoad::fromCtm( pathFromUtf8( utf8string( path ) + ".ctm" ), &vertsColorMap_, progressCb );
-#else
-    auto res = MeshLoad::fromMrmesh( pathFromUtf8( utf8string( path ) + ".mrmesh" ), &vertsColorMap_, progressCb );
-#endif
-    if ( !res.has_value() )
-        return unexpected( res.error() );
-
-    mesh_ = std::make_shared<Mesh>( std::move( res.value() ) );
-    return {};
 }
 
 void ObjectLabel::serializeFields_( Json::Value& root ) const
@@ -120,12 +84,19 @@ void ObjectLabel::serializeFields_( Json::Value& root ) const
     
     root["PathToFontFile"] = utf8string( pathToFont_ );
 
+    root["SourcePoint"] = sourcePoint_.value();
+    root["Background"] = background_.value();
+    root["Contour"] = contour_.value();
+    root["LeaderLine"] = leaderLine_.value();
+
     // append base type
     root["Type"].append( ObjectLabel::TypeName() );
     
     root["SourcePointSize"] = sourcePointSize_;
     root["LeaderLineWidth"] = leaderLineWidth_;
     root["BackgroundPadding"] = backgroundPadding_;
+
+    serializeToJson( pivotPoint_, root["PivotPoint"] );
 
     serializeToJson( sourcePointColor_.get(), root["Colors"]["SourcePoint"] );
     serializeToJson( leaderLineColor_.get(), root["Colors"]["LeaderLine"] );
@@ -144,6 +115,15 @@ void ObjectLabel::deserializeFields_( const Json::Value& root )
     if ( root["PathToFontFile"].isString() )
         pathToFont_ = root["PathToFontFile"].asString();
 
+    if ( root["SourcePoint"].isUInt() )
+        sourcePoint_ = ViewportMask( root["SourcePoint"].asUInt() );
+    if ( root["Background"].isUInt() )
+        background_ = ViewportMask( root["Background"].asUInt() );
+    if ( root["Contour"].isUInt() )
+        contour_ = ViewportMask( root["Contour"].asUInt() );
+    if ( root["LeaderLine"].isUInt() )
+        leaderLine_ = ViewportMask( root["LeaderLine"].asUInt() );
+
     if ( root["SourcePointSize"].isDouble() )
         sourcePointSize_ = root["SourcePointSize"].asFloat();
     if ( root["LeaderLineWidth"].isDouble() )
@@ -151,15 +131,22 @@ void ObjectLabel::deserializeFields_( const Json::Value& root )
     if ( root["BackgroundPadding"].isDouble() )
         backgroundPadding_ = root["BackgroundPadding"].asFloat();
 
+    deserializeFromJson( root["PivotPoint"], pivotPoint_ );
+
     deserializeFromJson( root["Colors"]["SourcePoint"], sourcePointColor_.get() );
     deserializeFromJson( root["Colors"]["LeaderLine"], leaderLineColor_.get() );
     deserializeFromJson( root["Colors"]["Contour"], contourColor_.get() );
+
+    needRebuild_ = true;
 }
 
 void ObjectLabel::setupRenderObject_() const
 {
     if ( !renderObj_ )
         renderObj_ = createRenderObject<ObjectLabel>( *this );
+
+    if ( needRebuild_ && !label_.text.empty() && !pathToFont_.empty() )
+        buildMesh_();
 }
 
 void ObjectLabel::setDefaultColors_()
@@ -171,7 +158,7 @@ void ObjectLabel::setDefaultColors_()
     setContourColor( Color::gray() );
 }
 
-void ObjectLabel::buildMesh_()
+void ObjectLabel::buildMesh_() const
 {
     std::vector<std::string> splited = split( label_.text, "\n" );
 
@@ -192,32 +179,29 @@ void ObjectLabel::buildMesh_()
 
         mesh_->addPart( mesh );
     }
-    setDirtyFlags( DIRTY_POSITION | DIRTY_FACE );
 
+    meshBox_ = mesh_->computeBoundingBox();
     updatePivotShift_();
+
+    // important to call before bindAllVisualization to avoid recursive calls
+    needRebuild_ = false;
 
     // we can always clear cpu model for labels
     bindAllVisualization();
     mesh_.reset();
 }
 
-void ObjectLabel::updatePivotShift_()
+void ObjectLabel::updatePivotShift_() const
 {
-    if ( !mesh_ )
+    if ( !meshBox_.valid() )
         return;
-    const Box3f box = mesh_->computeBoundingBox();
-    if ( box.valid() )
-    {
-        Vector3f  diagonal = box.max + box.min; // (box.max - box.min) + box.min * 2 - because box.min != 0
-        pivotShift_.x = pivotPoint_.x * diagonal.x;
-        pivotShift_.y = pivotPoint_.y * diagonal.y;
-    }
+    Vector3f  diagonal = meshBox_.max + meshBox_.min; // (box.max - box.min) + box.min * 2 - because box.min != 0
+    pivotShift_.x = pivotPoint_.x * diagonal.x;
+    pivotShift_.y = pivotPoint_.y * diagonal.y;
 }
 
 Box3f ObjectLabel::getWorldBox( ViewportId id ) const
 {
-    if ( !mesh_ )
-        return {};
     Box3f box;
     box.include( worldXf( id )( label_.position ) );
     return box;

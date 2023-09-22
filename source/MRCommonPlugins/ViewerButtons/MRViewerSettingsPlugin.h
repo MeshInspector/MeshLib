@@ -27,6 +27,8 @@ private:
 
     void drawSpaceMouseSettings_( float menuScaling );
 
+    void drawTouchpadSettings_( float menuScaling );
+
     void drawModalExitButton_( float menuScaling );
 
     int curSamples_{ 0 };
@@ -49,6 +51,8 @@ private:
 #if defined(_WIN32) || defined(__APPLE__)
     bool activeMouseScrollZoom_{ false };
 #endif
+
+    TouchpadController::Parameters touchpadParameters_;
 };
 
 }

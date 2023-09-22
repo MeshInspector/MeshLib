@@ -19,10 +19,10 @@ struct TriPoint
 
     static constexpr auto eps = SegmPoint<T>::eps;
 
-    TriPoint() = default;
-    TriPoint( T a, T b ) : a( a ), b( b ) { }
+    constexpr TriPoint() = default;
+    constexpr TriPoint( T a, T b ) : a( a ), b( b ) { }
     template <typename U>
-    TriPoint( const TriPoint<U> & s ) : a( T( s.a ) ), b( T( s.b ) ) { }
+    constexpr TriPoint( const TriPoint<U> & s ) : a( T( s.a ) ), b( T( s.b ) ) { }
 
     /// given a point coordinates and triangle (v0,v1,v2) computes barycentric coordinates of the point
     TriPoint( const Vector3<T> & p, const Vector3<T> & v0, const Vector3<T> & v1, const Vector3<T> & v2 ) : TriPoint( p - v0, v1 - v0, v2 - v0 ) { }
@@ -42,13 +42,13 @@ struct TriPoint
     // 2) invariance to lnext() application
 
     /// returns [0,2] if the point is in a vertex or -1 otherwise
-    int inVertex() const;
+    constexpr int inVertex() const;
     /// returns [0,2] if the point is on edge or -1 otherwise:
     /// 0 means edge [v1,v2]; 1 means edge [v2,v0]; 2 means edge [v0,v1]
-    int onEdge() const;
+    constexpr int onEdge() const;
 
     /// returns true if two points have equal (a,b) representation
-    [[nodiscard]] bool operator==( const TriPoint& rhs ) const = default;
+    [[nodiscard]] constexpr bool operator==( const TriPoint& rhs ) const = default;
 };
 
 /// \related TriPoint
@@ -74,7 +74,7 @@ TriPoint<T>::TriPoint( const Vector3<T> & p, const Vector3<T> & v1, const Vector
 }
 
 template <typename T>
-int TriPoint<T>::inVertex() const
+constexpr int TriPoint<T>::inVertex() const
 {
     if ( a <= eps && b <= eps )
         return 0;
@@ -89,7 +89,7 @@ int TriPoint<T>::inVertex() const
 }
 
 template <typename T>
-int TriPoint<T>::onEdge() const
+constexpr int TriPoint<T>::onEdge() const
 {
     if ( 1 - a - b <= eps )
         return 0;

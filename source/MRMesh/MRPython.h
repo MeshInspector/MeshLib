@@ -1,7 +1,7 @@
 #pragma once
 
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PYTHON )
 #include "MRMeshFwd.h"
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PYTHON )
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include <pybind11/stl_bind.h>
@@ -46,6 +46,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
         def( "size", &vecType::size ).\
         def( "resize", ( void ( vecType::* )( const vecType::size_type ) )& vecType::resize ).\
         def( "clear", &vecType::clear ); \
+} )
+
+#define MR_ADD_PYTHON_MAP( moduleName , name , mapType)\
+MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
+{\
+    pybind11::bind_map<mapType>(m, #name ).\
+        def( pybind11::init<>() ).\
+        def( "size", &mapType::size );\
 } )
 
 #define MR_ADD_PYTHON_EXPECTED( moduleName, name, type, errorType )\

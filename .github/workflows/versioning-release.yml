@@ -43,13 +43,13 @@ jobs:
     steps:
       - name: Checkout
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Versioning
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
-        uses: paulhatch/semantic-version@v5.0.3
+        uses: paulhatch/semantic-version@v5.2.1
         id: version
         with:
           tag_prefix: "v"

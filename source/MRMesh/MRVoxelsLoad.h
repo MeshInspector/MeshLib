@@ -1,6 +1,6 @@
 #pragma once
-#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRMeshFwd.h"
+#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRProgressCallback.h"
 #include "MRObject.h"
 #include "MRSimpleVolume.h"
@@ -39,13 +39,19 @@ struct LoadDCMResult
     AffineXf3f xf;
 };
 
-/// Loads 3D volumetric data from all DICOM file in a folder
+/// Loads 3D all volumetric data from DICOM files in a folder
+MRMESH_API std::vector<Expected<LoadDCMResult, std::string>> loadDCMsFolder( const std::filesystem::path& path,
+                                                        unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
+/// Loads 3D first volumetric data from DICOM files in a folder
 MRMESH_API Expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::path& path,
                                                         unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
-/// Loads 3D volumetric data from all DICOM file in a folder
+
+/// Loads 3D all volumetric data from DICOM files in a folder
+MRMESH_API std::vector<Expected<DicomVolume, std::string>> loadDicomsFolder( const std::filesystem::path& path,
+                                                        unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
+/// Loads 3D first volumetric data from DICOM files in a folder
 MRMESH_API Expected<DicomVolume, std::string> loadDicomFolder( const std::filesystem::path& path,
                                                         unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
-
 
 /// Loads every subfolder with DICOM volume as new object
 MRMESH_API std::vector<Expected<LoadDCMResult, std::string>> loadDCMFolderTree( const std::filesystem::path& path,

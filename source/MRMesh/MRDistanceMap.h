@@ -220,10 +220,18 @@ struct [[nodiscard]] ContoursDistanceMapOptions
 [[nodiscard]] MRMESH_API DistanceMap distanceMapFromContours( const Polyline2& contours, const ContourToDistanceMapParams& params,
     const ContoursDistanceMapOptions& options = {} );
 
+/**
+ * \brief Computes distance of 2d contours according ContourToDistanceMapParams
+ * \param distMap - preallocated distance map
+ * \param options - optional input and output options for distance map calculation, find more \ref ContoursDistanceMapOptions
+ */
+MRMESH_API void distanceMapFromContours( DistanceMap & distMap, const Polyline2& polyline, const ContourToDistanceMapParams& params,
+    const ContoursDistanceMapOptions& options = {} );
+
 /// Makes distance map and filter out pixels with large (>threshold) distance between closest points on contour in neighbor pixels
 /// Converts such points back in 3d space and return
 /// \note that polyline topology should be consistently oriented
-[[nodiscard]] MRMESH_API std::vector<Vector3f> edgePointsFromContours( const Polyline2& contour, float pixelSize, float threshold );
+[[nodiscard]] MRMESH_API std::vector<Vector3f> edgePointsFromContours( const Polyline2& polyline, float pixelSize, float threshold );
 
 /// converts distance map to 2d iso-lines:
 /// iso-lines are created in space DistanceMap ( plane OXY with pixelSize = (1, 1) )

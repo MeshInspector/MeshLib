@@ -1,27 +1,30 @@
 #include "MRRibbonMenu.h"
-#include "MRMesh/MRSystem.h"
-#include "MRMesh/MRStringConvert.h"
-#include "MRMesh/MRSerializer.h"
-#include "MRMesh/MRObjectsAccess.h"
 #include "MRProgressBar.h"
 #include "MRColorTheme.h"
 #include "MRAppendHistory.h"
 #include "MRCommandLoop.h"
-#include "MRMesh/MRChangeSceneObjectsOrder.h"
-#include "MRMesh/MRChangeSceneAction.h"
-#include "MRPch/MRJson.h"
-#include "MRPch/MRSpdlog.h"
-#include "MRPch/MRWasm.h"
 #include "MRRibbonIcons.h"
 #include "MRRibbonConstants.h"
 #include "ImGuiHelpers.h"
-#include "MRMesh/MRString.h"
 #include "MRImGuiImage.h"
 #include "MRFileDialog.h"
-#include "MRMesh/MRChangeXfAction.h"
 #include "MRUIStyle.h"
+#include <MRMesh/MRString.h>
+#include <MRMesh/MRSystem.h>
+#include <MRMesh/MRStringConvert.h>
+#include <MRMesh/MRSerializer.h>
+#include <MRMesh/MRObjectsAccess.h>
+#include <MRMesh/MRChangeXfAction.h>
+#include <MRMesh/MRObjectLabel.h>
+#include <MRMesh/MRChangeSceneObjectsOrder.h>
+#include <MRMesh/MRChangeSceneAction.h>
+#include <MRMesh/MRChangeObjectFields.h>
+#include <MRPch/MRJson.h>
+#include <MRPch/MRSpdlog.h>
+#include <MRPch/MRWasm.h>
 #include <imgui_internal.h> // needed here to fix items dialogs windows positions
 #include <misc/freetype/imgui_freetype.h> // for proper font loading
+#include <regex>
 
 #if defined(__APPLE__) && defined(__clang__)
 #pragma clang diagnostic push
@@ -29,7 +32,6 @@
 #endif
 
 #include <GLFW/glfw3.h>
-#include "MRMesh/MRObjectLabel.h"
 
 #if defined(__APPLE__) && defined(__clang__)
 #pragma clang diagnostic pop
@@ -786,14 +788,11 @@ bool RibbonMenu::drawGroupUngroupButton_( const std::vector<std::shared_ptr<Obje
         return someChanges;
 
     Object* parentObj = selected[0]->parent();
-    bool canGroup = parentObj != nullptr;
-    for ( int i = 1; i < selected.size(); ++i )
+    bool canGroup = parentObj != nullptr && selected.size() >= 2;
+    for ( int i = 1; canGroup && i < selected.size(); ++i )
     {
         if ( selected[i]->parent() != parentObj )
-        {
             canGroup = false;
-            break;
-        }
     }
 
     if ( canGroup && UI::button( "Group", Vector2f( -1, 0 ) ) )
@@ -855,6 +854,60 @@ bool RibbonMenu::drawGroupUngroupButton_( const std::vector<std::shared_ptr<Obje
             AppendHistory<ChangeSceneAction>( "Remove object", selected[0], ChangeSceneAction::Type::RemoveObject );
             selected[0]->detachFromParent();
         }
+    }
+
+    return someChanges;
+}
+
+void RibbonMenu::cloneTree( const std::vector<std::shared_ptr<Object>>& selectedObjects )
+{
+    const std::regex pattern( R"(.* Clone(?:| \([0-9]+\))$)" );
+    SCOPED_HISTORY( "Clone objects" );
+    for ( const auto& obj : selectedObjects )
+    {
+        if ( !obj )
+            continue;
+        auto cloneObj = obj->cloneTree();
+        AppendHistory<ChangeObjectSelectedAction>( "unselect base obj", obj );
+        obj->select( false );
+        AppendHistory<ChangeObjectVisibilityAction>( "make base obj invisible", obj );
+        obj->setVisible( false );
+        auto name = obj->name();
+        if ( std::regex_match( name, pattern ) )
+        {
+            auto endBracPos = name.rfind( ')' );
+            if ( endBracPos != int( name.length() ) - 1 )
+            {
+                name += " (2)";
+            }
+            else
+            {
+                auto startNumPos = name.rfind( '(' ) + 1;
+                auto numStr = name.substr( startNumPos, endBracPos - startNumPos );
+                int num = std::atoi( numStr.c_str() );
+                name = name.substr( 0, startNumPos - 1 ) + "(" + std::to_string( num + 1 ) + ")";
+            }
+        }
+        else
+        {
+            name += " Clone";
+        }
+        cloneObj->setName( name );
+        AppendHistory<ChangeSceneAction>( "Add cloned obj", cloneObj, ChangeSceneAction::Type::AddObject );
+        obj->parent()->addChild( cloneObj );
+    }
+}
+
+bool RibbonMenu::drawCloneButton_( const std::vector<std::shared_ptr<Object>>& selected )
+{
+    bool someChanges = false;
+    if ( selected.empty() )
+        return someChanges;
+
+    if ( UI::button( "Clone", Vector2f( -1, 0 ) ) )
+    {
+        cloneTree( selected );
+        someChanges = true;
     }
 
     return someChanges;
@@ -1392,9 +1445,15 @@ void RibbonMenu::drawRibbonViewportsLabels_()
 
 void RibbonMenu::drawRibbonSceneInformation_( std::vector<std::shared_ptr<Object>>& /*selected*/ )
 {
-    informationHeight_ = drawSelectionInformation_();
+    const float newInfoHeight = std::ceil( drawSelectionInformation_() );
 
-    transformHeight_ = drawTransform_();
+    const float newXfHeight = std::ceil( drawTransform_() );
+    if ( newInfoHeight != informationHeight_ || newXfHeight != transformHeight_ )
+    {
+        informationHeight_ = newInfoHeight;
+        transformHeight_ = newXfHeight;
+        getViewerInstance().incrementForceRedrawFrames(1, true);
+    }
 }
 
 void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected )
@@ -1409,6 +1468,7 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
             wasChanged |= drawGeneralOptions_( selected );
             wasChanged |= drawRemoveButton_( selected );
             wasChanged |= drawGroupUngroupButton_( selected );
+            wasChanged |= drawCloneButton_( selected );
         }
         else if ( ImGui::BeginTable( "##DrawOptions", 2, ImGuiTableFlags_BordersInnerV ) )
         {
@@ -1420,6 +1480,7 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
             wasChanged |= drawDrawOptionsColors_( selectedVisualObjs );
             wasChanged |= drawRemoveButton_( selected );
             wasChanged |= drawGroupUngroupButton_( selected );
+            wasChanged |= drawCloneButton_( selected );
             ImGui::EndTable();
         }
         ImGui::PopStyleVar();

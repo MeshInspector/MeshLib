@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include <cstdint>
 #include <string>
 #include <vector>
 

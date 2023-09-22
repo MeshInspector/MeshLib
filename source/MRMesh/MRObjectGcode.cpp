@@ -252,7 +252,7 @@ void ObjectGcode::updateAll_()
             continue;
         polyline->addFromPoints( part.action.path.data(), part.action.path.size(), false );
         segmentToSourceLineMap_.insert( segmentToSourceLineMap_.end(), part.action.path.size() - 1, i );
-        if ( part.idle && part.feedrate > maxFeedrate_ )
+        if ( !part.idle && part.feedrate > maxFeedrate_ )
             maxFeedrate_ = part.feedrate;
     }
     polyline_ = polyline;

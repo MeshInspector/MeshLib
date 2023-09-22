@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshPart.h"
+#include <optional>
 #include <variant>
 
 namespace MR

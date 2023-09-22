@@ -95,6 +95,11 @@ public:
 
     const VoxelBitSet& getSelectedVoxels() const { return selectedVoxels_; }
     void selectVoxels( const VoxelBitSet& selectedVoxels ) { selectedVoxels_ = selectedVoxels; }
+    
+    /// get active (visible) voxels
+    const VoxelBitSet& getVolumeRenderActiveVoxels() const { return volumeRenderActiveVoxels_; }
+    /// set active (visible) voxels (using only in Volume Rendering mode)
+    MRMESH_API void setVolumeRenderActiveVoxels( const VoxelBitSet& activeVoxels );
 
     /// VoxelId is numerical representation of voxel
     /// Coordinate is {x,y,z} indices of voxels in box (base dimensions space, NOT active dimensions)
@@ -202,6 +207,7 @@ private:
 
 protected:
     VoxelBitSet selectedVoxels_;
+    VoxelBitSet volumeRenderActiveVoxels_;
 
     ObjectVoxels( const ObjectVoxels& other ) = default;
     bool volumeRendering_{ false };

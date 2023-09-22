@@ -85,8 +85,6 @@ enum FaceIncidence
 [[nodiscard]] MRMESH_API UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const EdgeBitSet & edges );
 /// gets union-find structure for vertices, considering connections by all edges excluding given ones
 [[nodiscard]] MRMESH_API UnionFind<VertId> getUnionFindStructureVertsEx( const Mesh& mesh, const UndirectedEdgeBitSet & ignoreEdges );
-/// gets union-find structure for faces where the differebce between the highest and the lowest vertices in the connected component is less than zTolerance
-[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFacesPerEdgeWithZTolerance( const MeshPart& meshPart, const float zTolerance );
 
 /**
  * \brief gets union-find structure for vertices, separating vertices by given path (either closed or from boundary to boundary)

@@ -38,4 +38,29 @@ const VertCoords & MeshOrPoints::points() const
     }, var_ );
 }
 
+std::function<Vector3f(VertId)> MeshOrPoints::normals() const
+{
+    return std::visit( overloaded{
+        []( const MeshPart & mp ) -> std::function<Vector3f(VertId)>
+        {
+            return [&mesh = mp.mesh]( VertId v ) { return mesh.normal( v ); };
+        },
+        []( const PointCloud * pc ) -> std::function<Vector3f(VertId)>
+        { 
+            return pc->normals.empty() ? std::function<Vector3f(VertId)>{} : [pc]( VertId v ) { return pc->normals[v]; };
+        }
+    }, var_ );
+}
+
+std::function<float(VertId)> MeshOrPoints::weights() const
+{
+    return std::visit( overloaded{
+        []( const MeshPart & mp ) -> std::function<float(VertId)>
+        {
+            return [&mesh = mp.mesh]( VertId v ) { return mesh.dblArea( v ); };
+        },
+        []( const PointCloud * ) { return std::function<float(VertId)>{}; }
+    }, var_ );
+}
+
 } // namespace MR

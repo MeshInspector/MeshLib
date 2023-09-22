@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshPart.h"
+#include <functional>
 #include <optional>
 #include <variant>
 
@@ -12,6 +13,7 @@ namespace MR
 class MeshOrPoints
 {
 public:
+    MeshOrPoints( const Mesh & mesh ) : var_( MeshPart( mesh ) ) { }
     MeshOrPoints( const MeshPart & mp ) : var_( mp ) { }
     MeshOrPoints( const PointCloud & pc ) : var_( &pc ) { }
 
@@ -26,6 +28,13 @@ public:
 
     /// gives access to points-vector (which can include invalid points as well)
     [[nodiscard]] MRMESH_API const VertCoords & points() const;
+
+    /// returns normals generating function: VertId->normal (or empty for point cloud without normals)
+    [[nodiscard]] MRMESH_API std::function<Vector3f(VertId)> normals() const;
+
+    /// returns weights generating function: VertId->float:
+    /// for mesh it is double area of surrounding triangles, and for point cloud - nothing
+    [[nodiscard]] MRMESH_API std::function<float(VertId)> weights() const;
 
 private:
     std::variant<MeshPart, const PointCloud*> var_;

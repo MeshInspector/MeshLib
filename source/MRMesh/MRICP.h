@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMeshPart.h"
+#include "MRMeshOrPoints.h"
 #include "MRMatrix3.h"
 #include "MRId.h"
 #include "MRConstants.h"
@@ -83,9 +83,9 @@ public:
     // fltMeshXf transform from the local floatingMesh basis to the global
     // refMeshXf transform from the local referenceMesh basis to the global
     // floatingMeshBitSet allows to take exact set of vertices from the mesh
-    MRMESH_API MeshICP(const MeshPart& floatingMesh, const MeshPart& referenceMesh, const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf,
+    MRMESH_API MeshICP(const MeshOrPoints& floating, const MeshPart& referenceMesh, const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf,
         const VertBitSet& floatingMeshBitSet);
-    MRMESH_API MeshICP(const MeshPart& floatingMesh, const MeshPart& referenceMesh, const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf,
+    MRMESH_API MeshICP(const MeshOrPoints& floating, const MeshPart& referenceMesh, const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf,
         float floatSamplingVoxelSize ); // positive value here defines voxel size, and only one vertex per voxel will be selected
     // TODO: add single transform constructor
 
@@ -114,7 +114,7 @@ public:
     MRMESH_API AffineXf3f calculateTransformation();
 
 private:
-    MeshPart floatMesh_;
+    MeshOrPoints floating_;
     AffineXf3f floatXf_;
     VertBitSet floatVerts_; ///< vertices of floating object to find their pairs on reference mesh
     

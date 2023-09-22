@@ -36,6 +36,7 @@ public:
     MRMESH_API VertScalars computeFlow( size_t numStarts,
         const std::function<MeshTriPoint(size_t)> & startById, ///< can return invalid point that will be ignored
         const std::function<float(size_t)> & amountById,
+        const std::function<const FaceBitSet*(size_t)> & regionById, ///< if given then the flow initially is limited to this region
         Polyline3 * outPolyline = nullptr, UndirectedEdgeScalars * outFlowPerEdge = nullptr ) const;
 
     struct Flows

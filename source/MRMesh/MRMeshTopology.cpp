@@ -430,6 +430,14 @@ void MeshTopology::setLeft( EdgeId a, FaceId f )
     }
 }
 
+bool MeshTopology::isInnerOrBdVertex( VertId v, const FaceBitSet * region ) const
+{
+    for ( auto e : orgRing( *this, v ) )
+        if ( contains( region, left( e ) ) )
+            return true;
+    return false;
+}
+
 EdgeId MeshTopology::nextLeftBd( EdgeId e, const FaceBitSet * region ) const
 {
     assert( isLeftBdEdge( e, region ) );

@@ -97,7 +97,7 @@ std::vector<std::filesystem::path> windowsDialog( const FileDialogParameters& pa
     HRESULT hr = CoInitializeEx( NULL, COINIT_APARTMENTTHREADED |
         COINIT_DISABLE_OLE1DDE );
 
-    COMDLG_FILTERSPEC* filters{ nullptr };
+    std::vector<COMDLG_FILTERSPEC> filters;
     std::vector<std::pair<std::wstring, std::wstring>> filtersWCopy;
 
     if( SUCCEEDED( hr ) )
@@ -135,7 +135,7 @@ std::vector<std::filesystem::path> windowsDialog( const FileDialogParameters& pa
             {
                 unsigned filtersSize = unsigned( params.filters.size() );
                 filtersWCopy.resize( filtersSize );
-                filters = new COMDLG_FILTERSPEC[filtersSize];
+                filters.resize( filtersSize );
 
                 for( unsigned i = 0; i < filtersSize; ++i )
                 {
@@ -148,7 +148,7 @@ std::vector<std::filesystem::path> windowsDialog( const FileDialogParameters& pa
                     filters[i].pszSpec = filterW.c_str();
                 }
 
-                pFileOpen->SetFileTypes( filtersSize, filters );
+                pFileOpen->SetFileTypes( filtersSize, filters.data() );
                 pFileOpen->SetDefaultExtension( L"" );
             }
 
@@ -220,9 +220,6 @@ std::vector<std::filesystem::path> windowsDialog( const FileDialogParameters& pa
         }
         CoUninitialize();
     }
-
-    if( filters )
-        delete[] filters;
 
     return res;
 }

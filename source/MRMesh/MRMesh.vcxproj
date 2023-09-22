@@ -151,6 +151,7 @@
     <ClInclude Include="MRLinesSave.h" />
     <ClInclude Include="MRPolylineSubdivide.h" />
     <ClInclude Include="MRPolylineTopology.h" />
+    <ClInclude Include="MRPrecipitationSimulator.h" />
     <ClInclude Include="MRPrecisePredicates2.h" />
     <ClInclude Include="MRPrimitiveMapsComposition.h" />
     <ClInclude Include="MRPrism.h" />
@@ -324,6 +325,7 @@
     <ClInclude Include="MRNoDefInit.h" />
     <ClInclude Include="MRParallelFor.h" />
     <ClInclude Include="MRVoxelsConversionsByParts.h" />
+    <ClInclude Include="MRMeshOverhangs.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -417,6 +419,7 @@
     <ClCompile Include="MROverlappingTris.cpp" />
     <ClCompile Include="MRObjectGcode.cpp" />
     <ClCompile Include="MRPointsLoadE57.cpp" />
+    <ClCompile Include="MRPointsLoadLas.cpp" />
     <ClCompile Include="MRPointsProject.cpp" />
     <ClCompile Include="MRPointsToMeshProjector.cpp" />
     <ClCompile Include="MRMeshTrimWithPlane.cpp" />
@@ -457,6 +460,7 @@
     <ClCompile Include="MRLinesSave.cpp" />
     <ClCompile Include="MRPolylineSubdivide.cpp" />
     <ClCompile Include="MRPolylineTopology.cpp" />
+    <ClCompile Include="MRPrecipitationSimulator.cpp" />
     <ClCompile Include="MRPrecisePredicates2.cpp" />
     <ClCompile Include="MRPrecisePredicates3.cpp" />
     <ClCompile Include="MRHistogram.cpp" />
@@ -558,8 +562,12 @@
     <ClCompile Include="MRUniteManyMeshes.cpp" />
     <ClCompile Include="MRVoxelsConversionsByParts.cpp" />
     <ClCompile Include="MRWatershedGraph.cpp" />
+    <ClCompile Include="MRMeshOverhangs.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\laz-perf\laz-perf.vcxproj">
+      <Project>{daa055af-38ed-4836-a553-7539216bb64f}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">
       <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
     </ProjectReference>
@@ -612,7 +620,7 @@
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(SolutionDir)source\MRPch\MRPch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\laz-perf\cpp\</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(SolutionDir)source\MRPch\MRPch.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
@@ -629,6 +637,10 @@
 copy $(SolutionDir)$(Platform)\Release\OpenCTM.exp $(TargetDir)OpenCTM.exp
 copy $(SolutionDir)$(Platform)\Release\OpenCTM.lib $(TargetDir)OpenCTM.lib
 copy $(SolutionDir)$(Platform)\Release\OpenCTM.pdb $(TargetDir)OpenCTM.pdb
+copy $(SolutionDir)$(Platform)\Release\laz-perf.dll $(TargetDir)laz-perf.dll
+copy $(SolutionDir)$(Platform)\Release\laz-perf.exp $(TargetDir)laz-perf.exp
+copy $(SolutionDir)$(Platform)\Release\laz-perf.lib $(TargetDir)laz-perf.lib
+copy $(SolutionDir)$(Platform)\Release\laz-perf.pdb $(TargetDir)laz-perf.pdb
 copy $(PythonDllPath) $(TargetDir)python$(PythonVersion).dll
 copy $(VcpkgCurrentInstalledDir)\bin\zlib1.dll $(TargetDir)zlib1.dll
 copy $(ProjectDir)..\..\thirdparty\python\python310.zip $(TargetDir)python310.zip</Command>
@@ -646,7 +658,7 @@ copy $(ProjectDir)..\..\thirdparty\python\python310.zip $(TargetDir)python310.zi
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(SolutionDir)source\MRPch\MRPch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\laz-perf\cpp\</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(SolutionDir)source\MRPch\MRPch.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>

@@ -910,7 +910,8 @@ OneMeshIntersection intersectionFromMeshTriPoint( const Mesh& mesh, const MeshTr
 }
 
 
-OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg )
+OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg,
+    std::vector<int>* pivotIndices )
 {
     MR_TIMER;
     if ( meshTriPointsOrg.size() < 2 )
@@ -923,6 +924,8 @@ OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::v
     if ( closed && meshTriPointsOrg.size() < 4 )
         return {};
 
+    if ( pivotIndices )
+        pivotIndices->resize( meshTriPointsOrg.size(), -1 );
     // clear duplicates
     auto meshTriPoints = meshTriPointsOrg;
     if ( closed )
@@ -957,6 +960,11 @@ OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::v
     // build paths
     if ( meshTriPoints.size() < 2 )
         return {};
+
+    int sameMtpsNavigator = 0;
+    int pivotNavigator = 0;
+    sizeMTP = closed ? meshTriPoints.size() : meshTriPoints.size() - 1;
+
     OneMeshContour res;
     std::vector<OneMeshContour> surfacePaths( sizeMTP );
     for ( int i = 0; i < sizeMTP; ++i )
@@ -1006,6 +1014,18 @@ OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::v
     // add interjacent
     for ( int i = 0; i < meshTriPoints.size(); ++i )
     {
+        int realPivotIndex = -1;
+        if ( pivotIndices )
+        {
+            while ( sameMtpsNavigator < sameEdgeMTPs.size() && pivotNavigator == sameEdgeMTPs[sameMtpsNavigator] )
+            {
+                ++pivotNavigator;
+                ++sameMtpsNavigator;
+            }
+            realPivotIndex = pivotNavigator;
+            ++pivotNavigator;
+        }
+
         std::vector<OneMeshIntersection>* prevInter = ( closed || i > 0 ) ? &surfacePaths[( i + int( meshTriPoints.size() ) - 1 ) % meshTriPoints.size()].intersections : nullptr;
         const std::vector<OneMeshIntersection>* nextInter = ( i < sizeMTP ) ? &surfacePaths[i].intersections : nullptr;
         OneMeshIntersection lastPrev;
@@ -1040,8 +1060,12 @@ OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::v
         auto centerInterOp = centralIntersection( mesh, lastPrev, meshTriPoints[i], firstNext, closeEdgeEps, type );
         if ( centerInterOp )
         {
+            bool mtpPushed = false;
             if ( type != CenterInterType::SameEdgesClosePos )
+            {
                 res.intersections.push_back( *centerInterOp );
+                mtpPushed = true;
+            }
             else
             {
                 if ( res.intersections.empty() )
@@ -1050,8 +1074,17 @@ OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::v
                         prevInter->back() = *centerInterOp;
                 }
                 else
+                {
                     res.intersections.back() = *centerInterOp;
-
+                    mtpPushed = true;
+                }
+            }
+            if ( pivotIndices && mtpPushed )
+            {
+                int currentIndex = int( res.intersections.size() ) - 1;
+                if ( pivotNavigator > 0 && ( *pivotIndices )[realPivotIndex - 1] == currentIndex )
+                    ( *pivotIndices )[realPivotIndex - 1] = -1;
+                ( *pivotIndices )[realPivotIndex] = currentIndex;
             }
         }
         if ( nextInter && !nextInter->empty() )
@@ -1066,15 +1099,18 @@ OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::v
     {
         res.intersections.push_back( res.intersections.front() );
         res.closed = true;
+        if ( pivotIndices )
+            ( *pivotIndices ).back() = ( *pivotIndices ).front();
     }
     return res;
 }
 
-OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg )
+OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg,
+    std::vector<int>* pivotIndices )
 {
     auto conts = meshTriPointsOrg;
     conts.push_back( meshTriPointsOrg.front() );
-    return convertMeshTriPointsToMeshContour( mesh, conts );
+    return convertMeshTriPointsToMeshContour( mesh, conts, pivotIndices );
 }
 
 OneMeshContour convertSurfacePathWithEndsToMeshContour( const MR::Mesh& mesh, const MeshTriPoint& start, const MR::SurfacePath& surfacePath, const MeshTriPoint& end )

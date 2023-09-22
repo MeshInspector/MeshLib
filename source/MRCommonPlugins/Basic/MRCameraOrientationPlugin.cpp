@@ -98,40 +98,39 @@ void CameraOrientation::drawCameraPresets_( float scaling )
     auto width = ImGui::GetContentRegionAvail().x + ImGui::GetStyle().WindowPadding.x;
     const float backPosition = width - buttonSize.x;
 
-    auto applyCanonicalQuaternions = [&] ( int num )
+    auto applyQuaternion = [&] ( const Quaternionf & q )
     {
-        Viewer::instanceRef().viewport().setCameraTrackballAngle( getCanonicalQuaternions<float>()[num] );
+        Viewer::instanceRef().viewport().setCameraTrackballAngle( q );
         autofit_();
     };
 
     ImGui::SetCursorPosX( ImGui::GetCursorPosX() + centerButtonShift );
     if ( UI::button( "Top", buttonSize ) )
-        applyCanonicalQuaternions( 1 );
+        applyQuaternion( Quaternionf() );
 
     if ( UI::button( "Left", buttonSize ) )
-        applyCanonicalQuaternions( 4 );
+        applyQuaternion( Quaternionf( Vector3f(-1, 1, 1 ), 2 * PI_F / 3 ) );
     ImGui::SameLine();
     if ( UI::button( "Front", buttonSize ) )
-        applyCanonicalQuaternions( 0 );
+        applyQuaternion( Quaternionf( Vector3f::plusX(),  -PI2_F ) );
     ImGui::SameLine();
     if ( UI::button( "Right", buttonSize ) )
-        applyCanonicalQuaternions( 6 );
+        applyQuaternion( Quaternionf( Vector3f(-1,-1,-1 ), 2 * PI_F / 3 ) );
     ImGui::SameLine( backPosition );
     if ( UI::button( "Back", buttonSize ) )
-        applyCanonicalQuaternions( 5 );
+        applyQuaternion( Quaternionf( Vector3f( 0, 1, 1 ), PI_F ) );
 
     ImGui::SetCursorPosX( ImGui::GetCursorPosX() + centerButtonShift );
     if ( UI::button( "Bottom", buttonSize ) )
-        applyCanonicalQuaternions( 3 );
+        applyQuaternion( Quaternionf( Vector3f::plusX(),   PI_F ) );
 
     const float isometricPos = width - ( buttonSize.x + 20.f * scaling );
     ImGui::SameLine( isometricPos );
     if ( UI::button( "Isometric", Vector2f( buttonSize.x + 20.f * scaling, buttonSize.y ) ) )
     {
-        Viewer::instanceRef().viewport().cameraLookAlong( Vector3f( -1.f, -1.f, -1.f ), Vector3f( -1.f, 2.f, -1.f ) );
+        Viewer::instanceRef().viewport().cameraLookAlong( Vector3f( -1.f, -1.f, -1.f ), Vector3f( -1, -1, 2 ) );
         autofit_();
     }
-
 }
 
 void CameraOrientation::autofit_()

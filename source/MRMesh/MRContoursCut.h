@@ -61,18 +61,22 @@ MRMESH_API OneMeshContours getOneMeshIntersectionContours( const Mesh& meshA, co
   * \brief Makes continuous contour by mesh tri points, if first and last meshTriPoint is the same, makes closed contour
   *
   * Finds shortest paths between neighbor \p meshTriPoints and build contour MR::cutMesh input
+  * \param pivotIndices optional output indices of given meshTriPoints in result OneMeshContour
   */
 [[nodiscard]]
-MRMESH_API OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints );
+MRMESH_API OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
+    std::vector<int>* pivotIndices = nullptr );
 
 /** \ingroup BooleanGroup
   * \brief Makes closed continuous contour by mesh tri points, note that first and last meshTriPoint should not be same
   * 
   * Finds shortest paths between neighbor \p meshTriPoints and build closed contour MR::cutMesh input
+  * \param pivotIndices optional output indices of given meshTriPoints in result OneMeshContour
   * \note better use convertMeshTriPointsToMeshContour(...) instead, note that it requires same front and back MeshTriPoints for closed contour
   */
 [[nodiscard]]
-MRMESH_API OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints );
+MRMESH_API OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints, 
+    std::vector<int>* pivotIndices = nullptr );
 
 /** \ingroup BooleanGroup
   * \brief Converts SurfacePath to OneMeshContours

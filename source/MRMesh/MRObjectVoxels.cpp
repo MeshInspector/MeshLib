@@ -38,9 +38,12 @@ void ObjectVoxels::construct( const SimpleVolume& volume, ProgressCallback cb )
     indexer_ = VolumeIndexer( vdbVolume_.dims );
     activeBox_ = Box3i( Vector3i(), vdbVolume_.dims );
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
+
+    volumeRenderActiveVoxels_.clear();
+
     updateHistogram_( volume.min, volume.max );
     if ( volumeRendering_ )
-        dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE );
+        dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
 }
 
 void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, ProgressCallback cb )
@@ -56,9 +59,11 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
     vdbVolume_.voxelSize = voxelSize;
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
 
+    volumeRenderActiveVoxels_.clear();
+
     updateHistogramAndSurface( cb );
     if ( volumeRendering_ )
-        dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE );
+        dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
 }
 
 void ObjectVoxels::construct( const VdbVolume& volume, ProgressCallback cb )
@@ -232,6 +237,10 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
         accessor.setActiveState( {x,y,z}, insideX && insideY && insideZ );
         reportProgress( cb, [&]{ return cbModifier * float( counter ) / volume; }, ++counter, 256 );
     }
+
+    volumeRenderActiveVoxels_.clear();
+    dirty_ |= DIRTY_SELECTION;
+
     lastProgress = cbModifier;
     if ( updateSurface )
     {
@@ -248,6 +257,17 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
         prepareDataForVolumeRendering( subprogress( cb, lastProgress, 1.0f ) );
         setDirtyFlags( DIRTY_PRIMITIVES );
     }
+}
+
+void ObjectVoxels::setVolumeRenderActiveVoxels( const VoxelBitSet& activeVoxels )
+{
+    auto box = activeBox_.size();
+    const bool valid = activeVoxels.empty() || activeVoxels.size() == box.x * box.y * box.z;
+    assert( valid );
+    if ( !valid )
+        return;
+    volumeRenderActiveVoxels_ = activeVoxels;
+    dirty_ |= DIRTY_SELECTION;
 }
 
 VoxelId ObjectVoxels::getVoxelIdByCoordinate( const Vector3i& coord ) const
@@ -275,7 +295,7 @@ bool ObjectVoxels::prepareDataForVolumeRendering( ProgressCallback cb /*= {} */ 
     res.min = vdbVolume_.min;
     res.voxelSize = vdbVolume_.voxelSize;
     auto activeBox = getActiveBounds();
-    res.dims = activeBox.size() + Vector3i::diagonal( 1 );
+    res.dims = activeBox.size();
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size() );
 

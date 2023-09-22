@@ -137,7 +137,7 @@ bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
 std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progressCb )
 {
     MR_TIMER;
-    auto sp = subprogress( progressCb, 0.5f, 0.7f );
+    auto sp = subprogress( progressCb, 0.5f, 0.6f );
     // accumulate triplets
     phmap::flat_hash_map<VertTriplet, int, VertTripletHasher> map;
     int numMap = 0;

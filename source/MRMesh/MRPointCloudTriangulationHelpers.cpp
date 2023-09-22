@@ -21,14 +21,13 @@ namespace
 // this function check that abc acd is allowed to be flipped to abd dbc
 // aNorm - normal in point a
 // cNorm - normal in point c
-// planeDist - distance from c to plane (a,aNorm)
 bool flipPossibility( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d,
-    const Vector3f& aNorm, const Vector3f& cNorm,
-    float planeDist )
+    const Vector3f& aNorm, const Vector3f& cNorm )
 {
     if ( dot( aNorm, cNorm ) < 0.0f )
         return true;
 
+    auto planeDist = Plane3f::fromDirAndPt( cross( b - a, d - a ), a ).distance( c );
     if ( planeDist * planeDist > ( b - d ).lengthSq() )
         return true;
     
@@ -188,7 +187,7 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_(
     auto deloneProf = deloneFlipProfit( a, b, c, d ) / normVal;
     auto angleProf = trisAngleProfit( a, b, c, d, critAngle );
     // ( deloneProf > 0.0f || angleProf > 0.0f )  strict condition to have more faces options if flip is not profitable
-    res.stable = !( flipPossibility( a, b, c, d, aNorm, cNorm, planeDist ) && ( deloneProf > 0.0f || angleProf > 0.0f ) );
+    res.stable = !( flipPossibility( a, b, c, d, aNorm, cNorm ) && ( deloneProf > 0.0f || angleProf > 0.0f ) );
     if ( deloneProf > 0.0f )
         res.weight += deloneProf;
     if ( angleProf > 0.0f )

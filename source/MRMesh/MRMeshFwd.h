@@ -465,6 +465,13 @@ constexpr inline int sgn( T x ) noexcept { return x > 0 ? 1 : ( x < 0 ? -1 : 0 )
 template<typename...> 
 inline constexpr bool dependent_false = false;
 
+template<class... Ts>
+struct overloaded : Ts... { using Ts::operator()...; };
+
+// explicit deduction guide (not needed as of C++20, but still needed in Clang)
+template<class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
+
 class IFastWindingNumber;
 
 namespace MeshBuilder

@@ -7,13 +7,6 @@
 namespace MR
 {
 
-template<class... Ts>
-struct overloaded : Ts... { using Ts::operator()...; };
-
-// explicit deduction guide (not needed as of C++20, but still needed in Clang)
-template<class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
-
 Box3f MeshOrPoints::computeBoundingBox( const AffineXf3f * toWorld ) const
 {
     return std::visit( overloaded{

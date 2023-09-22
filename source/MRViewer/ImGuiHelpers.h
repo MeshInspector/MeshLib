@@ -184,6 +184,8 @@ struct CustomStatePluginWindowParameters
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize;
     /// outside owned parameter for windows with resize option
     ImVec2* changedSize{ nullptr };
+    /// reaction on press "Help" button
+    std::function<void()> helpBtnFn;
 };
 
 /// begin state plugin window with custom style.  if you use this function, you must call EndCustomStatePlugin to close the plugin correctly.

@@ -17,7 +17,6 @@ IF(APPLE)
          fmt
          GTest::gtest
          spdlog
-         mrmeshpy
  )
 ELSE()
   IF (NOT MR_EMSCRIPTEN)

@@ -2,15 +2,16 @@
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRSimpleVolume.h"
 #include "MRMesh/MRVector3.h"
+using namespace MR;
 
-MR::SimpleVolume simpleVolumeFrom3Darray( const pybind11::buffer& voxelsArray )
+SimpleVolume simpleVolumeFrom3Darray( const pybind11::buffer& voxelsArray )
 {
     pybind11::buffer_info info = voxelsArray.request();
     if ( info.ndim != 3 )
         throw std::runtime_error( "shape of input python vector 'voxelsArray' should be (x,y,z)" );
 
-    MR::SimpleVolume res;
-    res.dims = MR::Vector3i( int( info.shape[0] ), int( info.shape[1] ), int( info.shape[2] ) );
+    SimpleVolume res;
+    res.dims = Vector3i( int( info.shape[0] ), int( info.shape[1] ), int( info.shape[2] ) );
     size_t countPoints = res.dims.x * res.dims.y * res.dims.z;
     res.data.resize( countPoints );
 
@@ -43,7 +44,7 @@ MR::SimpleVolume simpleVolumeFrom3Darray( const pybind11::buffer& voxelsArray )
     return res;
 }
 
-pybind11::array_t<double> getNumpy3Darray( const MR::SimpleVolume& simpleVolume )
+pybind11::array_t<double> getNumpy3Darray( const SimpleVolume& simpleVolume )
 {
     using namespace MR;
     // Allocate and initialize some data;

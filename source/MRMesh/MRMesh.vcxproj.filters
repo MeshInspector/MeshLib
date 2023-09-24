@@ -1053,6 +1053,15 @@
     <ClInclude Include="MRBasinVolume.h">
       <Filter>Source Files\WaterFlow</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshOverhangs.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPrecipitationSimulator.h">
+      <Filter>Source Files\WaterFlow</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshOrPoints.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1747,6 +1756,21 @@
     </ClCompile>
     <ClCompile Include="MRBasinVolume.cpp">
       <Filter>Source Files\WaterFlow</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointsLoadE57.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointsLoadLas.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPrecipitationSimulator.cpp">
+      <Filter>Source Files\WaterFlow</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshOverhangs.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshOrPoints.cpp">
+      <Filter>Source Files\Mesh</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

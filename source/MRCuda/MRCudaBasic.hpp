@@ -20,6 +20,9 @@ MRCUDA_API cudaError_t logError( cudaError_t code, const char * file = nullptr, 
 /// executes given CUDA function and checks the error code after
 #define CUDA_EXEC( func ) logError( func, __FILE__ , __LINE__ )
 
+/// executes given CUDA function and returns error if it fails
+#define CUDA_EXEC_RETURN( func ) if ( auto code = CUDA_EXEC( func ); code != cudaError::cudaSuccess ) return code
+
 template<typename T>
 DynamicArray<T>::DynamicArray( size_t size )
 {

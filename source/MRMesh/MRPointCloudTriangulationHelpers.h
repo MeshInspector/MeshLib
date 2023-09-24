@@ -19,21 +19,22 @@ namespace TriangulationHelpers
  * \brief Finds max radius of neighbors search, for possible better local triangulation
  * \ingroup TriangulationHelpersGroup
  */
-MRMESH_API float updateNeighborsRadius( const VertCoords& points, VertId v, const std::list<VertId>& fan, float baseRadius );
+MRMESH_API float updateNeighborsRadius( const VertCoords& points, VertId v, const std::vector<VertId>& fan, float baseRadius );
 
 /**
  * \brief Finds all neighbors of v in given radius (v excluded)
  * \ingroup TriangulationHelpersGroup
  */
-MRMESH_API std::vector<VertId> findNeighbors( const PointCloud& pointCloud, VertId v, float radius );
+MRMESH_API void findNeighbors( const PointCloud& pointCloud, VertId v, float radius, std::vector<VertId>& neighbors );
 
 /**
- * \brief Result of local triangulation
+ * \brief Data with caches for optimizing fan triangulation
  * \ingroup TriangulationHelpersGroup
  */
-struct TriangulatedFan
+struct TriangulatedFanData
 {
-    std::list<VertId> optimized; ///< Good neighbors after optimization (each pair is fan triangle)
+    std::vector<VertId> neighbors; ///< algorithm reorders this vector to be optimized (each pair is fan triangle)
+    std::vector<std::pair<double, int>> cacheAngleOrder; ///< cache vector for ordering neighbors
     VertId border; ///< First border edge (triangle associated with this point is absent)
 };
 
@@ -44,7 +45,7 @@ struct TriangulatedFan
  * \param critAngle max allowed angle for triangles in fan
  * \param steps max optimization steps (INT_MAX - default)
  */
-MRMESH_API TriangulatedFan trianglulateFan( const VertCoords& points, VertId v, const std::vector<VertId>& neighbors,
+MRMESH_API void trianglulateFan( const VertCoords& points, VertId v, TriangulatedFanData& triangulationData,
     const VertCoords& normals, float critAngle, int steps = INT_MAX );
 
 }

@@ -7,6 +7,8 @@
 #include "MRTouchpadWin32Handler.h"
 #endif
 
+#include <GLFW/glfw3.h>
+
 namespace MR
 {
 
@@ -19,6 +21,11 @@ void TouchpadController::initialize( GLFWwindow* window )
 #else
     (void)window;
 #endif
+}
+
+void TouchpadController::reset()
+{
+    handler_.reset();
 }
 
 bool TouchpadController::touchpadRotateGestureBegin_()
@@ -138,6 +145,11 @@ bool TouchpadController::touchpadSwipeGestureUpdate_( float deltaX, float deltaY
         const auto xf = AffineXf3f::translation( newWorldPos - oldWorldPos );
         viewport.transformView( xf );
 
+        Vector2d pos;
+        glfwGetCursorPos( viewer.window, &pos.x, &pos.y );
+        pos += Vector2d( deltaX, deltaY ) / (double)viewer.pixelRatio;
+        glfwSetCursorPos( viewer.window, pos.x, pos.y );
+
         return true;
     }
     case Parameters::SwipeModeCount:
@@ -157,7 +169,10 @@ bool TouchpadController::touchpadSwipeGestureEnd_()
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
 
-    viewport.setRotation( false );
+    if ( currentSwipeMode_ == Parameters::SwipeRotatesCamera )
+    {
+        viewport.setRotation( false );
+    }
 
     return true;
 }

@@ -1,22 +1,6 @@
 #include "MRMesh/MRPython.h"
 #include "MRMesh/MRICP.h"
-
-
-namespace MR
-{
-// this is needed to expose std::vector<MR::VertPair>
-bool operator == ( const VertPair& a, const VertPair& b )
-{
-    return
-        a.norm == b.norm &&
-        a.normalsAngleCos == b.normalsAngleCos &&
-        a.normRef == b.normRef &&
-        a.refPoint == b.refPoint &&
-        a.vertDist2 == b.vertDist2 &&
-        a.vertId == b.vertId &&
-        a.weight == b.weight;
-}
-}
+#include "MRMesh/MRMesh.h"
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
 {

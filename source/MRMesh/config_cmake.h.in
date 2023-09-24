@@ -16,3 +16,5 @@
 #cmakedefine MRMESH_NO_VOXEL
 #cmakedefine MRMESH_NO_GLTF
 #cmakedefine MRMESH_NO_XML
+#cmakedefine MRMESH_NO_E57
+#cmakedefine MRMESH_NO_LAS

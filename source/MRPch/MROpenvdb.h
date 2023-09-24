@@ -14,6 +14,7 @@
 
 #pragma warning(disable:4005) // 'M_PI': macro redefinition
 #pragma warning(disable:4146)
+#pragma warning(disable:4180) // qualifier applied to function type has no meaning; ignored
 #pragma warning(disable:4244)
 #pragma warning(disable:4251)
 #pragma warning(disable:4275)

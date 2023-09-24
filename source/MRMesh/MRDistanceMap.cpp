@@ -356,11 +356,15 @@ DistanceMap computeDistanceMapD( const MeshPart& mp, const MeshToDistanceMapPara
     return computeDistanceMap_<double>( mp, params, cb, outSamples );
 }
 
-DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToDistanceMapParams& params,
+void distanceMapFromContours( DistanceMap & distMap, const Polyline2& polyline, const ContourToDistanceMapParams& params,
     const ContoursDistanceMapOptions& options )
 {
     MR_TIMER
     assert( polyline.topology.isConsistentlyOriented() );
+    assert( distMap.resX() == params.resolution.x );
+    assert( distMap.resY() == params.resolution.y );
+    if ( !polyline.topology.lastNotLoneEdge().valid() )
+        return;
 
     if ( options.offsetParameters )
     {
@@ -369,7 +373,7 @@ DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToD
         {
             assert( false );
             spdlog::error( "Offset per edges should contain offset for all edges" );
-            return {};
+            return;
         }
     }
 
@@ -380,10 +384,6 @@ DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToD
     if ( options.outClosestEdges )
         options.outClosestEdges->resize( size );
 
-    DistanceMap distMap( params.resolution.x, params.resolution.y );
-    if ( !polyline.topology.lastNotLoneEdge().valid())
-        return distMap;
-
     const auto maxDistSq = sqr( options.maxDist );
     const auto minDistSq = sqr( options.minDist );
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, size ),
@@ -392,7 +392,10 @@ DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToD
         for ( size_t i = range.begin(); i < range.end(); ++i )
         {
             if ( options.region && !options.region->test( PixelId( int( i ) ) ) )
+            {
+                distMap.set( i, NOT_VALID_VALUE );
                 continue;
+            }
             size_t x = i % params.resolution.x;
             size_t y = i / params.resolution.x;
             Vector2f p;
@@ -485,9 +488,16 @@ DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToD
             }
             if ( !params.withSign && options.offsetParameters && options.offsetParameters->type == ContoursDistanceMapOffset::OffsetType::Shell )
                 res.dist = std::abs( res.dist );
-            distMap.set( x, y, res.dist );
+            distMap.set( i, res.dist );
         }
     } );
+}
+
+DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToDistanceMapParams& params,
+    const ContoursDistanceMapOptions& options )
+{
+    DistanceMap distMap( params.resolution.x, params.resolution.y );
+    distanceMapFromContours( distMap, polyline, params, options );
     return distMap;
 }
 

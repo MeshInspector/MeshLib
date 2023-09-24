@@ -208,14 +208,14 @@ source ./emsdk_env.sh
 
 Build
 ```
-cd ~/MeshInspectorCode
+cd ~/MeshLib
 ./scripts/build_thirdparty.sh # select emscripten in the corresponding question
 ./scripts/build_sorces.sh # select emscripten in the corresponding question
 ```
 
 Run
 ```
-python3 ./scripts/local_server.py
+python3 -m http.server 8000 # note that server should have specific COEP and COOP policies for multithread version
 # open in browser 127.0.0.1:8000
 ```
 

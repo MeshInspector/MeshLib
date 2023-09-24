@@ -17,6 +17,8 @@ option(MRMESH_NO_TIFF "Disable TIFF support" OFF)
 option(MRMESH_NO_VOXEL "Disable voxel support" OFF)
 option(MRMESH_NO_GLTF "Disable glTF support" OFF)
 option(MRMESH_NO_XML "Disable XML support (affects 3MF support)" OFF)
+option(MRMESH_NO_E57 "Disable E57 support" OFF)
+option(MRMESH_NO_LAS "Disable LAS/LAZ support" OFF)
 
 IF(DEFINED MESHLIB_PYTHON_SUPPORT AND NOT MESHLIB_PYTHON_SUPPORT)
 	set(MRMESH_NO_PYTHON ON)
@@ -80,7 +82,6 @@ IF(NOT MR_EMSCRIPTEN)
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES tiff)
 	ENDIF()
 
-
 	IF(NOT MRMESH_NO_VOXEL)
 		IF(APPLE)
 			list(APPEND MRMESH_OPTIONAL_DEPENDENCIES OpenVDB)
@@ -92,6 +93,14 @@ IF(NOT MR_EMSCRIPTEN)
 	IF(NOT MRMESH_NO_XML)
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES tinyxml2)
 	ENDIF()
+
+	IF(NOT MRMESH_NO_E57)
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES E57Format)
+	ENDIF()
+
+	IF(NOT MRMESH_NO_LAS)
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES lazperf)
+	ENDIF()
 ELSE()
 	target_compile_definitions(${PROJECT_NAME}
 		PRIVATE
@@ -101,7 +110,12 @@ ELSE()
 			MRMESH_NO_DICOM
 			MRMESH_NO_JPEG
 			MRMESH_NO_VOXEL
+			MRMESH_NO_E57
 	)
+
+	IF(NOT MRMESH_NO_LAS)
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES lazperf_s)
+	ENDIF()
 ENDIF()
 
 # alternative Eigen include for external project
@@ -133,23 +147,21 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		    spdlog
 		    GTest::gtest
 		    zip
-		    pthread
 		    Boost::boost
 		    jsoncpp
 		    fmt
 		    tbb
-			${MRMESH_OPTIONAL_DEPENDENCIES}
-			${COCOA_LIBRARY}
+		    ${MRMESH_OPTIONAL_DEPENDENCIES}
+		    ${COCOA_LIBRARY}
 		)
 	ELSE()
 	    target_link_libraries(${PROJECT_NAME} PRIVATE
 	        gtest
 	        zip
 	        freetype
-	        pthread
 	        jsoncpp
 	        tbb
-			${MRMESH_OPTIONAL_DEPENDENCIES}
+		${MRMESH_OPTIONAL_DEPENDENCIES}
 	    )
 	ENDIF()
 ELSE()
@@ -160,12 +172,12 @@ ELSE()
 		spdlog
 		gtest
 		zip
-		pthread
 		Boost::boost
+		dl
 		jsoncpp
 		tbb
 		${MRMESH_OPTIONAL_DEPENDENCIES}
-		)
+	)
 ENDIF()
 
 IF(WIN32 AND MINGW)

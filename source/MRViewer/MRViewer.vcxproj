@@ -22,6 +22,7 @@
     <ClCompile Include="MRCudaAccessor.cpp" />
     <ClCompile Include="MRFrameRedrawRequest.cpp" />
     <ClCompile Include="MRGetSystemInfoJson.cpp" />
+    <ClCompile Include="MRObjectPointsHistory.cpp" />
     <ClCompile Include="MRToolsLibrary.cpp" />
     <ClCompile Include="MRLinesShader.cpp" />
     <ClCompile Include="MRMeshShader.cpp" />
@@ -100,6 +101,7 @@
     <ClInclude Include="MRFrameRedrawRequest.h" />
     <ClInclude Include="MRGetSystemInfoJson.h" />
     <ClInclude Include="MRGladGlfw.h" />
+    <ClInclude Include="MRObjectPointsHistory.h" />
     <ClInclude Include="MRToolsLibrary.h" />
     <ClInclude Include="MRLinesShader.h" />
     <ClInclude Include="MRMeshShader.h" />
@@ -223,6 +225,7 @@
     <Image Include="resource\object_icons\X1\Object.png" />
     <Image Include="resource\object_icons\X1\ObjectDistanceMap.png" />
     <Image Include="resource\object_icons\X1\ObjectGcode.png" />
+    <Image Include="resource\object_icons\X1\ObjectLabel.png" />
     <Image Include="resource\object_icons\X1\ObjectLines.png" />
     <Image Include="resource\object_icons\X1\ObjectMesh.png" />
     <Image Include="resource\object_icons\X1\ObjectPoints.png" />
@@ -230,6 +233,7 @@
     <Image Include="resource\object_icons\X3\Object.png" />
     <Image Include="resource\object_icons\X3\ObjectDistanceMap.png" />
     <Image Include="resource\object_icons\X3\ObjectGcode.png" />
+    <Image Include="resource\object_icons\X3\ObjectLabel.png" />
     <Image Include="resource\object_icons\X3\ObjectLines.png" />
     <Image Include="resource\object_icons\X3\ObjectMesh.png" />
     <Image Include="resource\object_icons\X3\ObjectPoints.png" />

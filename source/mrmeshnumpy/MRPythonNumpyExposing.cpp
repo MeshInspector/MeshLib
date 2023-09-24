@@ -9,18 +9,15 @@
 #include "MRMesh/MRVertexAttributeGradient.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRCloseVertices.h"
-#include <iostream>
 
 MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
 {
     try
     {
-        std::cerr << "pybind11::module_::import( meshlib.mrmeshpy )" << std::endl;
         pybind11::module_::import( "meshlib.mrmeshpy" );
     }
     catch ( const pybind11::error_already_set& )
     {
-        std::cerr << "pybind11::module_::import( mrmeshpy )" << std::endl;
         pybind11::module_::import( "mrmeshpy" );
     }
 } )

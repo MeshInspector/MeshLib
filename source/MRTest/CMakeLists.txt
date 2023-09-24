@@ -17,6 +17,7 @@ IF(APPLE)
          fmt
          GTest::gtest
          spdlog
+         mrmeshpy
  )
 ELSE()
   IF (NOT MR_EMSCRIPTEN)
@@ -26,7 +27,7 @@ ELSE()
         fmt
         gtest
         spdlog
-        ${MR_PYTHON_LIB}
+        mrmeshpy
     )
   ELSE()
     set(CMAKE_EXECUTABLE_SUFFIX ".html")

@@ -21,7 +21,7 @@ if(APPLE)
         pybind11::module
     )
 ELSE()
-    target_link_libraries(${PROJECT_NAME} PRIVATE
+    target_link_libraries(${PROJECT_NAME} PUBLIC
         MRMesh
         spdlog
         fmt

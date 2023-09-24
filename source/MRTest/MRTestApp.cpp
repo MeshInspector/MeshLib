@@ -8,6 +8,7 @@
 #ifndef __EMSCRIPTEN__
 #include "MRMesh/MRPython.h"
 #include "MRMesh/MREmbeddedPython.h"
+#include "mrmeshpy/MRLoadModule.h"
 #endif
 
 namespace MR
@@ -29,6 +30,10 @@ int main(int argc, char **argv)
 {
     MR::loadMeshDll();
     MR::loadMRViewerDll();
+
+#ifndef __EMSCRIPTEN__
+    MR::loadMRMeshPyModule();
+#endif
 
     MR::setupLoggerByDefault();
 

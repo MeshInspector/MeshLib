@@ -28,6 +28,7 @@ ELSE()
         gtest
         spdlog
         mrmeshpy
+        ${MR_PYTHON_LIB}
     )
   ELSE()
     set(CMAKE_EXECUTABLE_SUFFIX ".html")

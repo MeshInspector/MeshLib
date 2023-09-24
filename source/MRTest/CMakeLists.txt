@@ -27,7 +27,6 @@ ELSE()
         fmt
         gtest
         spdlog
-        mrmeshpy
         ${MR_PYTHON_LIB}
     )
   ELSE()

@@ -9,6 +9,7 @@
 #include "MRMesh/MRVertexAttributeGradient.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRCloseVertices.h"
+#include <iostream>
 
 MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
 {

@@ -160,7 +160,7 @@ Mesh pythonCopyMeshFunction( const Mesh& mesh )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::Mesh>( m, "Mesh" ).
+    pybind11::class_<Mesh>( m, "Mesh" ).
         def( pybind11::init<>() ).
         def( "computeBoundingBox", ( Box3f( Mesh::* )( const FaceBitSet*, const AffineXf3f* ) const )& Mesh::computeBoundingBox,
             pybind11::arg( "region" ) = nullptr, pybind11::arg( "toWorld" ) = nullptr,

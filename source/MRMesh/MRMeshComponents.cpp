@@ -271,10 +271,10 @@ size_t getNumComponents( const MeshPart& meshPart, FaceIncidence incidence, cons
     return res;
 }
 
-std::vector<FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
+std::vector<FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd, int numThreads )
 {
     MR_TIMER
-    auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
+    auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd, numThreads );
     const auto& mesh = meshPart.mesh;
     const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
 
@@ -309,26 +309,20 @@ std::vector<FaceBitSet> getAllFlatComponents( const MeshPart& meshPart, float zT
     const auto numFaces = region.find_last() + 1;
 
     Vector<Vector2f, FaceId> zRanges( numFaces );
-    tbb::parallel_for( tbb::blocked_range<FaceId>( FaceId( 0 ), FaceId( numFaces ) ),
-            [&] ( const tbb::blocked_range<FaceId>& range )
+    BitSetParallelFor(region, [&] (FaceId f)
     {
-        for ( auto f = range.begin(); f < range.end(); ++f )
-        {
-            ThreeVertIds ids;
-            meshPart.mesh.topology.getTriVerts( f, ids );
-            zRanges[f].x = std::min( { meshPart.mesh.points[ids[0]].z, meshPart.mesh.points[ids[1]].z, meshPart.mesh.points[ids[2]].z } );
-            zRanges[f].y = std::max( { meshPart.mesh.points[ids[0]].z, meshPart.mesh.points[ids[1]].z, meshPart.mesh.points[ids[2]].z } );
-        }
-    } );
+            Vector3f triPoints[3];
+            meshPart.mesh.getTriPoints( f, triPoints );
 
-    std::mutex mtx;
+            zRanges[f].x = std::min( { triPoints[0].z, triPoints[1].z, triPoints[2].z } );
+            zRanges[f].y = std::max( { triPoints[0].z, triPoints[1].z, triPoints[2].z } );
+    } );
+    const auto mid = std::chrono::steady_clock::now();
 
     return getAllComponents( meshPart, MeshComponents::PerEdge, [&]( UndirectedEdgeId ue ) -> bool
     {
         auto f0 = mesh.topology.left( ue );
         auto f1 = mesh.topology.right( ue );
-
-        std::lock_guard lock( mtx );
 
         const float zMax = std::max( zRanges[f0].y, zRanges[f1].y );
         const float zMin = std::min( zRanges[f0].x, zRanges[f1].x );
@@ -341,7 +335,7 @@ std::vector<FaceBitSet> getAllFlatComponents( const MeshPart& meshPart, float zT
         }
 
         return true;
-    } );
+    }, 1 );
 }
 
 std::pair<Vector<int, FaceId>, int> getAllComponentsMap( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
@@ -453,7 +447,7 @@ bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection )
     return false;
 }
 
-UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgePredicate & isCompBd )
+UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgePredicate & isCompBd, int numThreads )
 {
     MR_TIMER
 
@@ -462,10 +456,13 @@ UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, c
     const FaceBitSet* lastPassFaces = &region;
     const auto numFaces = region.find_last() + 1;
     UnionFind<FaceId> res( numFaces );
-    const auto numThreads = int( tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) );
+    numThreads = std::min( numThreads, int( tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) ) );
+
     FaceBitSet bdFaces;
     if ( numThreads > 1 )
     {
+        tbb::global_control c( tbb::global_control::max_allowed_parallelism, numThreads );
+
         bdFaces.resize( numFaces );
         lastPassFaces = &bdFaces;
         const int endBlock = int( bdFaces.size() + bdFaces.bits_per_block - 1 ) / bdFaces.bits_per_block;
@@ -514,12 +511,12 @@ UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, c
     return res;
 }
 
-UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
+UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd, int numThreads )
 {
     UnionFind<FaceId> res;
     if ( incidence == FaceIncidence::PerEdge )
     {
-        res = getUnionFindStructureFacesPerEdge( meshPart, isCompBd );
+        res = getUnionFindStructureFacesPerEdge( meshPart, isCompBd, numThreads );
         return res;
     }
 

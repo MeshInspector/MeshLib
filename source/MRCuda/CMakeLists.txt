@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-# nvcc supports only c++20
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# nvcc supports only c++20
+set(CMAKE_CUDA_STANDARD 20)
 
 set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda/")
 set(CMAKE_CUDA_PATH /usr/local/cuda/)
@@ -10,7 +12,7 @@ set(CMAKE_CUDA_COMPILER ${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc)
 
 find_package(CUDA 12 REQUIRED)
 
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --std c++17 -use_fast_math")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -use_fast_math")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_52 \
             -gencode=arch=compute_52,code=sm_52 \
             -gencode=arch=compute_60,code=sm_60 \

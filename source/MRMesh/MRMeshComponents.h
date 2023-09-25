@@ -55,7 +55,7 @@ enum FaceIncidence
 
 /// gets all connected components of mesh part
 [[nodiscard]] MRMESH_API std::vector<FaceBitSet> getAllComponents( const MeshPart& meshPart,
-    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {}, int numThreads = INT_MAX );
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {} );
 /// gets all connected components of mesh part as
 /// 1. the mapping: FaceId -> Component ID in [0, 1, 2, ...)
 /// 2. the total number of components
@@ -76,10 +76,9 @@ enum FaceIncidence
 [[nodiscard]] MRMESH_API bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection );
 
 /// gets union-find structure for faces with different options of face-connectivity
-/// \param numThreads sets maximal allowed number of threads. It will be clamped if it is larger that the system provided
-[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {}, int numThreads = INT_MAX );
+[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {} );
 /// gets union-find structure for faces with connectivity by shared edge, and optional edge predicate whether to skip uniting components over it
-[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgePredicate & isCompBd = {}, int numThreads = INT_MAX );
+[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgePredicate& isCompBd = {} );
 /// gets union-find structure for vertices
 [[nodiscard]] MRMESH_API UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet* region = nullptr );
 /// gets union-find structure for vertices, considering connections by given edges only

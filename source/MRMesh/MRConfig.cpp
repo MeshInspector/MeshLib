@@ -30,6 +30,7 @@ const std::string& Config::getAppName() const
 
 void Config::writeToFile()
 {
+#ifndef __EMSCRIPTEN__
     std::ofstream os( filePath_ );
     if ( loggerHandle_ )
         loggerHandle_->info( "Saving config file: " + utf8string( filePath_ ) );
@@ -43,10 +44,17 @@ void Config::writeToFile()
         if ( loggerHandle_ )
             loggerHandle_->warn( "Failed to save json config file " + utf8string( filePath_ ) );
     }
+#else
+    std::stringstream strStream;
+    strStream << config_;
+    std::string str = strStream.str();
+    EM_ASM( save_config( UTF8ToString( $0 ) ), str.c_str() );
+#endif
 }
 
 void Config::reset( const std::filesystem::path& filePath )
 {
+#ifndef __EMSCRIPTEN__
     if ( std::filesystem::exists( filePath ) )
     {
         auto readRes = deserializeJsonValue( filePath );
@@ -65,6 +73,29 @@ void Config::reset( const std::filesystem::path& filePath )
         if ( loggerHandle_ )
             loggerHandle_->warn( "Failed to open json config file " + utf8string( Config::filePath_ ) );
     }
+#else
+    char* charStr = (char*) EM_ASM_PTR( load_config() );
+    if ( charStr )
+    {
+        std::string configStr = std::string( charStr );
+        auto readRes = deserializeJsonValue( filePath );
+        if ( !readRes.has_value() )
+        {
+            if ( loggerHandle_ )
+                loggerHandle_->error( readRes.error() );
+        }
+        else
+        {
+            config_ = std::move( readRes.value() );
+        }
+    }
+    else
+    {
+        if ( loggerHandle_ )
+            loggerHandle_->warn( "Failed to load config from localStorage" + utf8string( Config::filePath_ ) );
+    }
+
+#endif
     filePath_ = filePath;
 }
 

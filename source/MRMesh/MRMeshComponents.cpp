@@ -317,7 +317,6 @@ std::vector<FaceBitSet> getAllFlatComponents( const MeshPart& meshPart, float zT
             zRanges[f].x = std::min( { triPoints[0].z, triPoints[1].z, triPoints[2].z } );
             zRanges[f].y = std::max( { triPoints[0].z, triPoints[1].z, triPoints[2].z } );
     } );
-    const auto mid = std::chrono::steady_clock::now();
 
     return getAllComponents( meshPart, MeshComponents::PerEdge, [&]( UndirectedEdgeId ue ) -> bool
     {
@@ -509,17 +508,11 @@ UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, c
     return res;
 }
 
-#include <chrono>
 UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
 {
     UnionFind<FaceId> res;
-    if ( incidence == FaceIncidence::PerEdge )
-    {
-        auto start = std::chrono::steady_clock::now();
-        res = getUnionFindStructureFacesPerEdge( meshPart, isCompBd );
-
-        return res;
-    }
+    if ( incidence == FaceIncidence::PerEdge )    
+        return getUnionFindStructureFacesPerEdge( meshPart, isCompBd );
 
     MR_TIMER
     assert( !isCompBd );

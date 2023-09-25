@@ -69,7 +69,7 @@ enum FaceIncidence
 [[nodiscard]] MRMESH_API std::vector<VertBitSet> getAllComponentsVertsSeparatedByPaths( const Mesh& mesh, const std::vector<SurfacePath>& paths );
 /// subdivides given edges on connected components
 [[nodiscard]] MRMESH_API std::vector<EdgeBitSet> getAllComponentsEdges( const Mesh& mesh, const EdgeBitSet & edges );
-/// gets all connected components where difference between the heghest and the lowest point is less than \param zTolerance
+/// gets all connected components where difference between the highest and the lowest point is less than \param zTolerance
 [[nodiscard]] MRMESH_API std::vector<FaceBitSet> getAllFlatComponents( const MeshPart& meshPart, float zTolerance );
 
 /// returns true if all vertices of a mesh connected component are present in selection

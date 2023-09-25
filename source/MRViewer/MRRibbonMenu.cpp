@@ -124,6 +124,7 @@ void RibbonMenu::init( MR::Viewer* _viewer )
         drawRibbonViewportsLabels_();
 
         draw_helpers();
+        drawVersionWindow_();
     };
 
     buttonDrawer_.setMenu( this );

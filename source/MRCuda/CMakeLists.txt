@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# nvcc supports only c++20
-set(CMAKE_CUDA_STANDARD 20)
+# nvcc on Ubuntu 20 supports only c++17
+set(CMAKE_CUDA_STANDARD 17)
 
 set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda/")
 set(CMAKE_CUDA_PATH /usr/local/cuda/)

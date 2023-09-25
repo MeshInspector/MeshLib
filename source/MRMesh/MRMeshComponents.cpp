@@ -455,7 +455,7 @@ UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, c
     const FaceBitSet* lastPassFaces = &region;
     const auto numFaces = region.find_last() + 1;
     UnionFind<FaceId> res( numFaces );
-    int numThreads = int( tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) );
+    const auto numThreads = int( tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) );
 
     FaceBitSet bdFaces;
     if ( numThreads > 1 )

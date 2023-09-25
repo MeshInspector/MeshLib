@@ -449,6 +449,30 @@ std::string GetCpuId()
 #endif
 }
 
+std::string getDetailedOSName()
+{
+#ifdef _WIN32
+    wchar_t value[255];
+    DWORD BufferSize = 8192;
+    RegGetValue( HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", L"ProductName",
+        RRF_RT_ANY, NULL, ( PVOID )&value, &BufferSize );
+    return Utf16ToUtf8( value );
+#else
+#ifdef __EMSCRIPTEN__
+    return "Wasm";
+#else
+    // get platform from cmake variables
+#ifdef MR_PLATFORM
+    std::string platform = MR_PLATFORM;
+    std::replace( platform.begin(), platform.end(), ' ', '_' );
+    return platform;
+#else
+    return "UNKNOWN";
+#endif
+#endif
+#endif
+}
+
 std::string getOSNoSpaces()
 {
     #ifdef _WIN32

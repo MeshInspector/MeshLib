@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-# nvcc supports only c++20
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda/")

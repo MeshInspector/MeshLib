@@ -10,11 +10,7 @@ set(CMAKE_CUDA_COMPILER ${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc)
 
 find_package(CUDA 12 REQUIRED)
 
-IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --std c++20 -use_fast_math")
-ELSE()
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --std c++17 -use_fast_math")
-ENDIF()
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_52 \
             -gencode=arch=compute_52,code=sm_52 \
             -gencode=arch=compute_60,code=sm_60 \

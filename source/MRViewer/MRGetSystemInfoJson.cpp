@@ -11,6 +11,10 @@
 #include <shlobj.h>
 #include <windows.h>
 #include <psapi.h>
+#else
+#ifndef __APPLE__
+#include <sys/sysinfo.h>
+#endif
 #endif
 
 namespace MR
@@ -67,6 +71,39 @@ Json::Value GetSystemInfoJson()
 
     memoryInfo["Physical memory total"] = fmt::format( "{:.1f} GB", memInfo.ullTotalPhys / 1024 / 1024 / 1024.0f );
     memoryInfo["Physical memory available"] = fmt::format( "{:.1f} GB", memInfo.ullAvailPhys / 1024 / 1024 / 1024.0f );
+    memoryInfo["Physical memory total MB"] = std::to_string( memInfo.ullTotalPhys / 1024 / 1024 );
+#else
+// if lunix
+#ifndef __APPLE__
+    struct sysinfo sysInfo;
+    if ( sysinfo( &sysInfo ) != 0 )
+    {
+        auto& memoryInfo = root["Memory Info"];
+        memoryInfo["Physical memory total"] = fmt::format( "{:.1f} GB", sysInfo.totalram * sysInfo.mem_unit / 1024 / 1024 / 1024.0f );
+        memoryInfo["Physical memory available"] = fmt::format( "{:.1f} GB", sysInfo.freeram * sysInfo.mem_unit / 1024 / 1024 / 1024.0f );
+        memoryInfo["Physical memory total MB"] = std::to_string( sysInfo.totalram * sysInfo.mem_unit / 1024 / 1024 );
+    }
+#else // if apple
+    char buf[1024];
+    unsigned buflen = 0;
+    char line[256];
+    FILE* sw_vers = popen( "sysctl hw.memsize", "r" );
+    while ( fgets( line, sizeof( line ), sw_vers ) != NULL )
+    {
+        int l = snprintf( buf + buflen, sizeof( buf ) - buflen, "%s", line );
+        buflen += l;
+        assert( buflen < sizeof( buf ) );
+    }
+    pclose( sw_vers );
+    auto aplStr = std::string( buf );
+    auto aplMem = std::atoll( aplStr );
+    if ( aplMem != 0 )
+    {
+        auto& memoryInfo = root["Memory Info"];
+        memoryInfo["Physical memory total"] = fmt::format( "{:.1f} GB", aplMem / 1024 / 1024 / 1024.0f );
+        memoryInfo["Physical memory total MB"] = std::to_string( aplMem / 1024 / 1024 );
+    }
+#endif
 #endif
     return root;
 }

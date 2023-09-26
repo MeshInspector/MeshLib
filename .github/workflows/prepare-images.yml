@@ -166,11 +166,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Download broken dependency manually
-        run: |
-          md .\downloads\
-          C:\msys64\usr\bin\wget.exe -cO .\downloads\msys-grep-3.0-2-x86_64.pkg.tar.xz https://mirrors.huaweicloud.com/repository/msys2/msys/x86_64/grep-3.0-2-x86_64.pkg.tar.xz
-
       - name: Build and cache vcpkg
         run: .\thirdparty\install.bat --write-s3
 

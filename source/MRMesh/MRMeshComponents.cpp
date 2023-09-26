@@ -307,7 +307,6 @@ void getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const Undirect
     const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
     const FaceBitSet* lastPassFaces = &region;
     const auto numFaces = region.find_last() + 1;
-    UnionFind<FaceId> res( numFaces );
     const auto numThreads = int( tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) );
 
     FaceBitSet bdFaces;

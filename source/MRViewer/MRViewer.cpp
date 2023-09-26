@@ -635,6 +635,8 @@ int Viewer::launchInit_( const LaunchParams& params )
             std::this_thread::sleep_for( std::chrono::duration<float>( seconds ) );
         } );
     }
+    CommandLoop::setState( CommandLoop::StartPosition::AfterWindowInit );
+    CommandLoop::processCommands();
 
     if ( menuPlugin_ )
     {

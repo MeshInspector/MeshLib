@@ -18,6 +18,7 @@ public:
     // Specify execution in specific time of application start
     enum class StartPosition
     {
+        AfterWindowInit, // executes right after window is initialized
         AfterPluginInit, // executes during splash, after plugins init)
         AfterSplash, // executes after splash, to have valid main window context
         AfterWindowAppear // executes after window appeared to have valid opengl context
@@ -57,7 +58,7 @@ private:
         std::thread::id threadId;
     };
 
-    StartPosition state_{ StartPosition::AfterPluginInit };
+    StartPosition state_{ StartPosition::AfterWindowInit };
 
     std::thread::id mainThreadId_;
     std::queue<std::shared_ptr<Command>> commands_;

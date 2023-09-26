@@ -513,7 +513,7 @@ std::string GetDetailedOSName()
         int l = snprintf( buf + buflen, sizeof( buf ) - buflen, " %s", line );
         buflen += l;
         assert( buflen < sizeof( buf ) );
-}
+    }
     pclose( sw_vers );
     auto aplStr = std::string( buf );
     aplStr.erase( std::remove( aplStr.begin(), aplStr.end(), '\n' ), aplStr.end() );

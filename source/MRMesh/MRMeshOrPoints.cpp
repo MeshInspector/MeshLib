@@ -61,9 +61,9 @@ std::function<float(VertId)> MeshOrPoints::weights() const
 auto MeshOrPoints::projector() const -> std::function<ProjectionResult( const Vector3f & )>
 {
     return std::visit( overloaded{
-        [this]( const MeshPart & mp ) -> std::function<ProjectionResult( const Vector3f & )>
+        []( const MeshPart & mp ) -> std::function<ProjectionResult( const Vector3f & )>
         {
-            return [this, &mp]( const Vector3f & p )
+            return [&mp]( const Vector3f & p )
             {
                 MeshProjectionResult mpr = findProjection( p, mp );
                 return ProjectionResult
@@ -75,9 +75,9 @@ auto MeshOrPoints::projector() const -> std::function<ProjectionResult( const Ve
                 };
             };
         },
-        [this]( const PointCloud * pc ) -> std::function<ProjectionResult( const Vector3f & )>
+        []( const PointCloud * pc ) -> std::function<ProjectionResult( const Vector3f & )>
         {
-            return [this, pc]( const Vector3f & p )
+            return [pc]( const Vector3f & p )
             {
                 PointsProjectionResult ppr = findProjectionOnPoints( p, *pc );
                 return ProjectionResult

@@ -14,6 +14,7 @@ IF(APPLE)
  target_link_libraries(${PROJECT_NAME} PRIVATE
          MRMesh
          MRViewer
+         jsoncpp
          fmt
          GTest::gtest
          spdlog
@@ -24,6 +25,7 @@ ELSE()
     target_link_libraries(${PROJECT_NAME} PRIVATE
         MRMesh
         MRViewer
+        jsoncpp
         fmt
         gtest
         spdlog
@@ -34,6 +36,7 @@ ELSE()
     target_link_libraries(${PROJECT_NAME} PRIVATE
         gtest
         zip
+        jsoncpp
         -Wl,--whole-archive
         MRMesh
         MRViewer

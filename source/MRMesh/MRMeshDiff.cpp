@@ -83,7 +83,7 @@ void MeshDiff::applyAndSwap( Mesh & m )
     m.topology.computeAllFromEdges_();
 }
 
-TEST(MRMesh, MeshDiff) 
+TEST(MRMesh, MeshDiff)
 {
     Triangulation t
     { 
@@ -102,12 +102,17 @@ TEST(MRMesh, MeshDiff)
     mesh1.points.pop_back();
 
     MeshDiff diff( mesh0, mesh1 );
+    EXPECT_EQ( diff.any(), true );
     Mesh m = mesh0;
     EXPECT_EQ( m, mesh0 );
     diff.applyAndSwap( m );
+    EXPECT_EQ( diff.any(), true );
     EXPECT_EQ( m, mesh1 );
     diff.applyAndSwap( m );
+    EXPECT_EQ( diff.any(), true );
     EXPECT_EQ( m, mesh0 );
+
+    EXPECT_EQ( MeshDiff( m, m ).any(), false );
 }
 
 } // namespace MR

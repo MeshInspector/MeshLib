@@ -76,7 +76,7 @@ Json::Value GetSystemInfoJson()
     // if lunix
 #ifndef __APPLE__
     struct sysinfo sysInfo;
-    if ( sysinfo( &sysInfo ) != 0 )
+    if ( sysinfo( &sysInfo ) == 0 )
     {
         auto& memoryInfo = root["Memory Info"];
         memoryInfo["Physical memory total"] = fmt::format( "{:.1f} GB", sysInfo.totalram * sysInfo.mem_unit / 1024 / 1024 / 1024.0f );

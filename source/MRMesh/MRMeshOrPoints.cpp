@@ -69,7 +69,7 @@ auto MeshOrPoints::projector() const -> std::function<ProjectionResult( const Ve
                 return ProjectionResult
                 {
                     .point = mpr.proj.point,
-                    .normal = mp.mesh.normal( mpr.mtp ),
+                    .normal = mp.mesh.normal( mpr.proj.face ), //mp.mesh.normal( mpr.mtp ) looks more correct here, but it breaks our script test
                     .isBd = mpr.mtp.isBd( mp.mesh.topology ),
                     .distSq = mpr.distSq
                 };

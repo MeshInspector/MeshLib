@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #include "MRMeshLoadStep.h"
 
 #include "MRMesh/MRIOFormatsRegistry.h"
@@ -20,16 +21,16 @@
 namespace MR::MeshLoad
 {
 
-Expected<Mesh, std::string> fromStep( const std::filesystem::path& path, Vector<Color, VertId>* colors, ProgressCallback callback )
+Expected<Mesh, std::string> fromStep( const std::filesystem::path& path, VertColors* colors, ProgressCallback callback )
 {
     std::ifstream in( path, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( path ) );
 
-    return fromStep( in, colors, callback );
+    return addFileNameInError( fromStep( in, colors, callback ), path );
 }
 
-Expected<Mesh, std::string> fromStep( std::istream& in, Vector<Color, VertId>*, ProgressCallback callback )
+Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCallback callback )
 {
     MR_TIMER
 
@@ -140,3 +141,4 @@ Expected<Mesh, std::string> fromStep( std::istream& in, Vector<Color, VertId>*, 
 MR_ADD_MESH_LOADER( IOFilter( "STEP files (*.step)", "*.step" ), fromStep )
 
 } // namespace MR::MeshLoad
+#endif

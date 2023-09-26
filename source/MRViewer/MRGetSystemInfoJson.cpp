@@ -73,7 +73,7 @@ Json::Value GetSystemInfoJson()
     memoryInfo["Physical memory available"] = fmt::format( "{:.1f} GB", memInfo.ullAvailPhys / 1024 / 1024 / 1024.0f );
     memoryInfo["Physical memory total MB"] = std::to_string( memInfo.ullTotalPhys / 1024 / 1024 );
 #else
-// if lunix
+    // if lunix
 #ifndef __APPLE__
     struct sysinfo sysInfo;
     if ( sysinfo( &sysInfo ) != 0 )
@@ -96,12 +96,16 @@ Json::Value GetSystemInfoJson()
     }
     pclose( sw_vers );
     auto aplStr = std::string( buf );
-    auto aplMem = std::atoll( aplStr.c_str() );
-    if ( aplMem != 0 )
+    auto memPos = aplStr.find( ": " );
+    if ( memPos != std::string::npos )
     {
-        auto& memoryInfo = root["Memory Info"];
-        memoryInfo["Physical memory total"] = fmt::format( "{:.1f} GB", aplMem / 1024 / 1024 / 1024.0f );
-        memoryInfo["Physical memory total MB"] = std::to_string( aplMem / 1024 / 1024 );
+        auto aplMem = std::atoll( aplStr.c_str() + memPos + 2 );
+        if ( aplMem != 0 )
+        {
+            auto& memoryInfo = root["Memory Info"];
+            memoryInfo["Physical memory total"] = fmt::format( "{:.1f} GB", aplMem / 1024 / 1024 / 1024.0f );
+            memoryInfo["Physical memory total MB"] = std::to_string( aplMem / 1024 / 1024 );
+        }
     }
 #endif
 #endif

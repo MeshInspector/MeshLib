@@ -37,6 +37,7 @@
 #include <libgen.h>
 #include <unistd.h>
 #include <limits.h>
+#include <regex>
 #include <pwd.h>
 
 #endif
@@ -449,25 +450,72 @@ std::string GetCpuId()
 #endif
 }
 
-std::string getDetailedOSName()
+std::string GetDetailedOSName()
 {
 #ifdef _WIN32
     wchar_t value[255];
-    DWORD BufferSize = 8192;
+    DWORD BufferSize = 255;
     RegGetValue( HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", L"ProductName",
         RRF_RT_ANY, NULL, ( PVOID )&value, &BufferSize );
-    return Utf16ToUtf8( value );
+    auto winName = Utf16ToUtf8( value );
+
+    BufferSize = 255;
+    RegGetValue( HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", L"CurrentBuild",
+    RRF_RT_ANY, NULL, ( PVOID )&value, &BufferSize );
+    auto buildStr = Utf16ToUtf8( value );
+
+    int build = std::atoi( buildStr.c_str() );
+    if ( build >= 22000 )
+    {
+        auto winPos = winName.find( "Windows 10" );
+        if ( winPos != std::string::npos )
+            winName[winPos + 9] = '1';
+    }
+    winName += " " + buildStr;
+
+    return winName;
 #else
 #ifdef __EMSCRIPTEN__
     return "Wasm";
 #else
-    // get platform from cmake variables
-#ifdef MR_PLATFORM
-    std::string platform = MR_PLATFORM;
-    std::replace( platform.begin(), platform.end(), ' ', '_' );
-    return platform;
-#else
-    return "UNKNOWN";
+// if linux
+#ifndef __APPLE__
+    std::ifstream stream( "/etc/os-release" );
+    std::string line;
+    std::regex nameRegex( "^PRETTY_NAME=\"(.*?)\"$" );
+    std::smatch match;
+
+    std::string name;
+    while ( std::getline( stream, line ) )
+    {
+        if ( std::regex_search( line, match, nameRegex ) )
+        {
+            name = match[1].str();
+            break;
+        }
+    }
+    return name;
+#else // if  apple
+    char buf[1024];
+    unsigned buflen = 0;
+    char line[256];
+    FILE* sw_vers = popen( "sw_vers --productName", "r" );
+    while ( fgets( line, sizeof( line ), sw_vers ) != NULL )
+    {
+        int l = snprintf( buf + buflen, sizeof( buf ) - buflen, "%s", line );
+        buflen += l;
+        assert( buflen < sizeof( buf ) );
+    }
+    pclose( sw_vers );
+    sw_vers = popen( "sw_vers --productVersion", "r" );
+    while ( fgets( line, sizeof( line ), sw_vers ) != NULL )
+    {
+        int l = snprintf( buf + buflen, sizeof( buf ) - buflen, " %s", line );
+        buflen += l;
+        assert( buflen < sizeof( buf ) );
+}
+    pclose( sw_vers );
+    return std::string( buf );
 #endif
 #endif
 #endif

@@ -20,6 +20,7 @@ Json::Value GetSystemInfoJson()
 {
     Json::Value root;
     root["Version"] = GetMRVersionString();
+    root["OS Version"] = GetDetailedOSName();
     auto& cpuInfo = root["CPU Info"];
     cpuInfo["CPU"] = GetCpuId();
     cpuInfo["Concurrent threads"] = ( Json::UInt64 )tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism );

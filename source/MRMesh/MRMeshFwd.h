@@ -335,6 +335,7 @@ template <typename T, typename I, typename P> class Heap;
 class MRMESH_CLASS MeshTopology;
 struct MRMESH_CLASS Mesh;
 struct MRMESH_CLASS MeshPart;
+class MRMESH_CLASS MeshOrPoints;
 struct MRMESH_CLASS PointCloud;
 class MRMESH_CLASS AABBTree;
 class MRMESH_CLASS AABBTreePoints;
@@ -437,6 +438,11 @@ using GraphEdgeBitSet = TaggedBitSet<GraphEdgeTag>;
 
 class WatershedGraph;
 
+/// Argument value - progress in [0,1];
+/// returns true to continue the operation and returns false to stop the operation
+/// \ingroup BasicStructuresGroup
+typedef std::function<bool( float )> ProgressCallback;
+
 enum class FilterType : char
 {
     Linear,
@@ -458,6 +464,13 @@ constexpr inline int sgn( T x ) noexcept { return x > 0 ? 1 : ( x < 0 ? -1 : 0 )
 
 template<typename...> 
 inline constexpr bool dependent_false = false;
+
+template<class... Ts>
+struct overloaded : Ts... { using Ts::operator()...; };
+
+// explicit deduction guide (not needed as of C++20, but still needed in Clang)
+template<class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
 
 class IFastWindingNumber;
 

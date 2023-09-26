@@ -2,7 +2,6 @@
 #include "MRMesh.h"
 #include "MRAligningTransform.h"
 #include "MRMeshNormals.h"
-#include "MRGridSampling.h"
 #include "MRTimer.h"
 #include "MRBox.h"
 #include "MRQuaternion.h"
@@ -14,9 +13,9 @@ const int MAX_RESAMPLING_VOXEL_NUMBER = 500000;
 namespace MR
 {
 
-MeshICP::MeshICP(const MeshPart& floatingMesh, const MeshPart& referenceMesh, const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf,
+MeshICP::MeshICP(const MeshOrPoints& floating, const MeshPart& referenceMesh, const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf,
     const VertBitSet& floatingMeshBitSet)
-    : floatMesh_( floatingMesh )
+    : floating_( floating )
     , refMesh_( referenceMesh )
 {
     setXfs( fltMeshXf, refMeshXf );
@@ -24,9 +23,9 @@ MeshICP::MeshICP(const MeshPart& floatingMesh, const MeshPart& referenceMesh, co
     updateVertPairs();
 }
 
-MeshICP::MeshICP(const MeshPart& floatingMesh, const MeshPart& referenceMesh, const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf,
+MeshICP::MeshICP(const MeshOrPoints& floating, const MeshPart& referenceMesh, const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf,
     float floatSamplingVoxelSize )
-    : floatMesh_( floatingMesh )
+    : floating_( floating )
     , refMesh_( referenceMesh )
 {
     setXfs( fltMeshXf, refMeshXf );
@@ -47,12 +46,12 @@ void MeshICP::setFloatXf( const AffineXf3f& fltMeshXf )
 
 void MeshICP::recomputeBitSet(const float floatSamplingVoxelSize)
 {
-    auto bboxDiag = floatMesh_.mesh.computeBoundingBox( floatMesh_.region ).size() / floatSamplingVoxelSize;
+    auto bboxDiag = floating_.computeBoundingBox().size() / floatSamplingVoxelSize;
     auto nSamples = bboxDiag[0] * bboxDiag[1] * bboxDiag[2];
     if (nSamples > MAX_RESAMPLING_VOXEL_NUMBER)
-        floatVerts_ = *verticesGridSampling( floatMesh_, floatSamplingVoxelSize * std::cbrt(float(nSamples) / float(MAX_RESAMPLING_VOXEL_NUMBER)) );
+        floatVerts_ = *floating_.pointsGridSampling( floatSamplingVoxelSize * std::cbrt(float(nSamples) / float(MAX_RESAMPLING_VOXEL_NUMBER)) );
     else
-        floatVerts_ = *verticesGridSampling( floatMesh_, floatSamplingVoxelSize );
+        floatVerts_ = *floating_.pointsGridSampling( floatSamplingVoxelSize );
 
     updateVertPairs();
 }
@@ -62,7 +61,7 @@ void MeshICP::updateVertPairs()
     MR_TIMER;
     const auto& actualBitSet = floatVerts_;
 
-    const VertCoords& points = floatMesh_.mesh.points;
+    const VertCoords& points = floating_.points();
     if (!prop_.freezePairs)
     {
         vertPairs_.clear();
@@ -77,6 +76,9 @@ void MeshICP::updateVertPairs()
             }
         }
     }
+
+    const auto floatNormals = floating_.normals();
+    const auto floatWeights = floating_.weights();
 
     // calculate pairs
     tbb::parallel_for(tbb::blocked_range<size_t>(0, vertPairs_.size()),
@@ -93,11 +95,19 @@ void MeshICP::updateVertPairs()
                 if ( !mp.mtp.isBd( refMesh_.mesh.topology ) )
                 {
                     vp.vertDist2 = mp.distSq;
-                    vp.weight = floatMesh_.mesh.dblArea(id);
+                    vp.weight = floatWeights ? floatWeights(id) : 1.0f;
                     vp.refPoint = refXf_(mp.proj.point);
-                    vp.norm = floatXf_.A * floatMesh_.mesh.normal(id);
                     vp.normRef = refXf_.A * refMesh_.mesh.normal(mp.proj.face);
-                    vp.normalsAngleCos = dot((vp.normRef), (vp.norm));
+                    if ( floatNormals )
+                    {
+                        vp.norm = floatXf_.A * floatNormals(id);
+                        vp.normalsAngleCos = dot(vp.normRef, vp.norm);
+                    }
+                    else
+                    {
+                        vp.norm = Vector3f();
+                        vp.normalsAngleCos = 1.0f;
+                    }
                 }
                 else
                 {
@@ -176,7 +186,7 @@ std::pair<float,float> MeshICP::getDistLimitsSq() const
 bool MeshICP::p2ptIter_()
 {
     MR_TIMER;
-    const VertCoords& points = floatMesh_.mesh.points;
+    const VertCoords& points = floating_.points();
     PointToPointAligningTransform p2pt;
     for (const auto& vp : vertPairs_)
     {
@@ -207,7 +217,7 @@ bool MeshICP::p2plIter_()
     MR_TIMER;
     if ( vertPairs_.empty() )
         return false;
-    const VertCoords& points = floatMesh_.mesh.points;
+    const VertCoords& points = floating_.points();
     Vector3f centroidRef;
     for (auto& vp : vertPairs_)
     {
@@ -382,7 +392,7 @@ float MeshICP::getMeanSqDistToPlane() const
 {
     if ( vertPairs_.empty() )
         return 0;
-    const VertCoords& points = floatMesh_.mesh.points;
+    const VertCoords& points = floating_.points();
     double sum = 0;
     for (const auto& vp : vertPairs_)
     {
@@ -394,7 +404,7 @@ float MeshICP::getMeanSqDistToPlane() const
 
 Vector3f MeshICP::getShiftVector() const
 {
-    const VertCoords& points = floatMesh_.mesh.points;
+    const VertCoords& points = floating_.points();
     Vector3f vecAcc{ 0.f,0.f,0.f };
     for (const auto& vp : vertPairs_)
     {

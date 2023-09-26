@@ -1,14 +1,9 @@
 #pragma once
 
-#include <functional>
+#include "MRMeshFwd.h"
 
 namespace MR
 {
-
-/// Argument value - progress in [0,1];
-/// returns true to continue the operation and returns false to stop the operation
-/// \ingroup BasicStructuresGroup
-typedef std::function<bool( float )> ProgressCallback;
 
 /// safely invokes \param cv with given value; just returning true for empty callback
 inline bool reportProgress( ProgressCallback cb, float v )

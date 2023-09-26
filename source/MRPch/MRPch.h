@@ -129,6 +129,7 @@
 #include <queue>
 #include <string>
 #include <thread>
+#include <variant>
 #include <vector>
 #include <unordered_map>
 

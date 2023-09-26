@@ -515,7 +515,9 @@ std::string GetDetailedOSName()
         assert( buflen < sizeof( buf ) );
 }
     pclose( sw_vers );
-    return std::string( buf );
+    auto aplStr = std::string( buf );
+    aplStr.erase( std::remove( aplStr.begin(), aplStr.end(), '\n' ), aplStr.end() );
+    return aplStr;
 #endif
 #endif
 #endif

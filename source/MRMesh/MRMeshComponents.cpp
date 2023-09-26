@@ -299,7 +299,7 @@ std::vector<FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidenc
     return res;
 }
 
-void getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgePredicate& isCompBd, UnionFind<FaceId>& res )
+static void getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgePredicate& isCompBd, UnionFind<FaceId>& res )
 {
     MR_TIMER
 
@@ -413,14 +413,14 @@ std::vector<FaceBitSet> getAllFlatComponents( const MeshPart& meshPart, float zT
     {
         auto f0 = mesh.topology.left( ue );
         auto f1 = mesh.topology.right( ue );
+        auto root0 = unionFindStruct.find( f0 );
+        auto root1 = unionFindStruct.find( f1 );
 
-        const float zMax = std::max( zRanges[f0].y, zRanges[f1].y );
-        const float zMin = std::min( zRanges[f0].x, zRanges[f1].x );
+        const float zMax = std::max( zRanges[root0].y, zRanges[root1].y );
+        const float zMin = std::min( zRanges[root0].x, zRanges[root1].x );
 
         if ( zMax - zMin < zTolerance )
-        {
-            auto root0 = unionFindStruct.find( f0 );
-            auto root1 = unionFindStruct.find( f1 );
+        {           
             zRanges[root0].x = zRanges[root1].x = zMin;
             zRanges[root0].y = zRanges[root1].y = zMax;
             return false;

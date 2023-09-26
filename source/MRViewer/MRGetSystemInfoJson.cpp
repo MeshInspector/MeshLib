@@ -73,6 +73,7 @@ Json::Value GetSystemInfoJson()
     memoryInfo["Physical memory available"] = fmt::format( "{:.1f} GB", memInfo.ullAvailPhys / 1024 / 1024 / 1024.0f );
     memoryInfo["Physical memory total MB"] = std::to_string( memInfo.ullTotalPhys / 1024 / 1024 );
 #else
+#ifndef __EMSCRIPTEN__
     // if lunix
 #ifndef __APPLE__
     struct sysinfo sysInfo;
@@ -107,6 +108,7 @@ Json::Value GetSystemInfoJson()
             memoryInfo["Physical memory total MB"] = std::to_string( aplMem / 1024 / 1024 );
         }
     }
+#endif
 #endif
 #endif
     return root;

@@ -499,7 +499,7 @@ std::string GetDetailedOSName()
     char buf[1024];
     unsigned buflen = 0;
     char line[256];
-    FILE* sw_vers = popen( "sw_vers --productName", "r" );
+    FILE* sw_vers = popen( "sw_vers -productName", "r" );
     while ( fgets( line, sizeof( line ), sw_vers ) != NULL )
     {
         int l = snprintf( buf + buflen, sizeof( buf ) - buflen, "%s", line );
@@ -507,7 +507,7 @@ std::string GetDetailedOSName()
         assert( buflen < sizeof( buf ) );
     }
     pclose( sw_vers );
-    sw_vers = popen( "sw_vers --productVersion", "r" );
+    sw_vers = popen( "sw_vers -productVersion", "r" );
     while ( fgets( line, sizeof( line ), sw_vers ) != NULL )
     {
         int l = snprintf( buf + buflen, sizeof( buf ) - buflen, " %s", line );

@@ -3,6 +3,8 @@
 #include "MRPointCloud.h"
 #include "MRBox.h"
 #include "MRGridSampling.h"
+#include "MRMeshProject.h"
+#include "MRPointsProject.h"
 
 namespace MR
 {
@@ -53,6 +55,39 @@ std::function<float(VertId)> MeshOrPoints::weights() const
             return [&mesh = mp.mesh]( VertId v ) { return mesh.dblArea( v ); };
         },
         []( const PointCloud * ) { return std::function<float(VertId)>{}; }
+    }, var_ );
+}
+
+auto MeshOrPoints::projector() const -> std::function<ProjectionResult( const Vector3f & )>
+{
+    return std::visit( overloaded{
+        [this]( const MeshPart & mp ) -> std::function<ProjectionResult( const Vector3f & )>
+        {
+            return [this, &mp]( const Vector3f & p )
+            {
+                MeshProjectionResult mpr = findProjection( p, mp );
+                return ProjectionResult
+                {
+                    .point = mpr.proj.point,
+                    .normal = mp.mesh.normal( mpr.mtp ),
+                    .isBd = mpr.mtp.isBd( mp.mesh.topology ),
+                    .distSq = mpr.distSq
+                };
+            };
+        },
+        [this]( const PointCloud * pc ) -> std::function<ProjectionResult( const Vector3f & )>
+        {
+            return [this, pc]( const Vector3f & p )
+            {
+                PointsProjectionResult ppr = findProjectionOnPoints( p, *pc );
+                return ProjectionResult
+                {
+                    .point = pc->points[ppr.vId],
+                    .normal = ppr.vId < pc->normals.size() ? pc->normals[ppr.vId] : std::optional<Vector3f>{},
+                    .distSq = ppr.distSq
+                };
+            };
+        }
     }, var_ );
 }
 

@@ -13,34 +13,34 @@ const int MAX_RESAMPLING_VOXEL_NUMBER = 500000;
 namespace MR
 {
 
-MeshICP::MeshICP(const MeshOrPoints& floating, const MeshPart& referenceMesh, const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf,
-    const VertBitSet& floatingMeshBitSet)
+MeshICP::MeshICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
+    const VertBitSet& floatBitSet)
     : floating_( floating )
-    , refMesh_( referenceMesh )
+    , ref_( reference )
 {
-    setXfs( fltMeshXf, refMeshXf );
-    floatVerts_ = floatingMeshBitSet;
+    setXfs( fltXf, refXf );
+    floatVerts_ = floatBitSet;
     updateVertPairs();
 }
 
-MeshICP::MeshICP(const MeshOrPoints& floating, const MeshPart& referenceMesh, const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf,
+MeshICP::MeshICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
     float floatSamplingVoxelSize )
     : floating_( floating )
-    , refMesh_( referenceMesh )
+    , ref_( reference )
 {
-    setXfs( fltMeshXf, refMeshXf );
+    setXfs( fltXf, refXf );
     recomputeBitSet( floatSamplingVoxelSize );
 }
 
-void MeshICP::setXfs( const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf )
+void MeshICP::setXfs( const AffineXf3f& fltXf, const AffineXf3f& refXf )
 {
-    refXf_ = refMeshXf;
-    setFloatXf( fltMeshXf );
+    refXf_ = refXf;
+    setFloatXf( fltXf );
 }
 
-void MeshICP::setFloatXf( const AffineXf3f& fltMeshXf )
+void MeshICP::setFloatXf( const AffineXf3f& fltXf )
 {
-    floatXf_ = fltMeshXf;
+    floatXf_ = fltXf;
     float2refXf_ = refXf_.inverse() * floatXf_;
 }
 
@@ -79,6 +79,7 @@ void MeshICP::updateVertPairs()
 
     const auto floatNormals = floating_.normals();
     const auto floatWeights = floating_.weights();
+    const auto refProjector = ref_.projector();
 
     // calculate pairs
     tbb::parallel_for(tbb::blocked_range<size_t>(0, vertPairs_.size()),
@@ -89,25 +90,17 @@ void MeshICP::updateVertPairs()
                 VertPair& vp = vertPairs_[idx];
                 auto& id = vp.vertId;
                 const auto& p = points[id];
-                MeshProjectionResult mp = findProjection( float2refXf_(p), refMesh_ );
+                const auto prj = refProjector( float2refXf_(p) );
 
                 // projection should be found and if point projects on the border it will be ignored
-                if ( !mp.mtp.isBd( refMesh_.mesh.topology ) )
+                if ( !prj.isBd )
                 {
-                    vp.vertDist2 = mp.distSq;
+                    vp.vertDist2 = prj.distSq;
                     vp.weight = floatWeights ? floatWeights(id) : 1.0f;
-                    vp.refPoint = refXf_(mp.proj.point);
-                    vp.normRef = refXf_.A * refMesh_.mesh.normal(mp.proj.face);
-                    if ( floatNormals )
-                    {
-                        vp.norm = floatXf_.A * floatNormals(id);
-                        vp.normalsAngleCos = dot(vp.normRef, vp.norm);
-                    }
-                    else
-                    {
-                        vp.norm = Vector3f();
-                        vp.normalsAngleCos = 1.0f;
-                    }
+                    vp.refPoint = refXf_( prj.point );
+                    vp.normRef = prj.normal ? refXf_.A * prj.normal.value() : Vector3f();
+                    vp.norm = floatNormals ? floatXf_.A * floatNormals(id) : Vector3f();
+                    vp.normalsAngleCos = ( prj.normal && floatNormals ) ? dot( vp.normRef, vp.norm ) : 1.0f;
                 }
                 else
                 {

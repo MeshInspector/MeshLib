@@ -96,7 +96,7 @@ Json::Value GetSystemInfoJson()
     }
     pclose( sw_vers );
     auto aplStr = std::string( buf );
-    auto aplMem = std::atoll( aplStr );
+    auto aplMem = std::atoll( aplStr.c_str() );
     if ( aplMem != 0 )
     {
         auto& memoryInfo = root["Memory Info"];

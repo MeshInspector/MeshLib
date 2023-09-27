@@ -4,6 +4,7 @@
 #include "MRMesh/MRQuadraticForm.h"
 #include "MRMesh/MRMeshBoolean.h"
 #include "MRViewer/MRViewer.h"
+#include "MRViewer/MRGetSystemInfoJson.h"
 
 #ifndef __EMSCRIPTEN__
 #include "MRMesh/MRPython.h"
@@ -45,7 +46,7 @@ int main(int argc, char **argv)
 #else
     spdlog::info( "MSVC {}", _MSC_FULL_VER );
 #endif
-
+    spdlog::info( "System info:\n{}", MR::GetSystemInfoJson().toStyledString() );
 #ifndef __EMSCRIPTEN__
     //Test python mrmeshpy
     {

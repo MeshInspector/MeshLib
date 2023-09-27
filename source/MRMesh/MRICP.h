@@ -80,12 +80,12 @@ class MeshICP
 {
 public:
     // xf parameters should represent current transformations of meshes
-    // fltMeshXf transform from the local floatingMesh basis to the global
-    // refMeshXf transform from the local referenceMesh basis to the global
-    // floatingMeshBitSet allows to take exact set of vertices from the mesh
-    MRMESH_API MeshICP(const MeshOrPoints& floating, const MeshPart& referenceMesh, const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf,
-        const VertBitSet& floatingMeshBitSet);
-    MRMESH_API MeshICP(const MeshOrPoints& floating, const MeshPart& referenceMesh, const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf,
+    // fltXf transform from the local floating basis to the global
+    // refXf transform from the local reference basis to the global
+    // floatBitSet allows to take exact set of vertices from the floating object
+    MRMESH_API MeshICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
+        const VertBitSet& floatBitSet);
+    MRMESH_API MeshICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
         float floatSamplingVoxelSize ); // positive value here defines voxel size, and only one vertex per voxel will be selected
     // TODO: add single transform constructor
 
@@ -97,8 +97,8 @@ public:
     MRMESH_API void setPairsWeight(const std::vector<float> w);
     MRMESH_API void setDistanceFilterSigmaFactor(const float factor);
     MRMESH_API void recomputeBitSet(const float floatSamplingVoxelSize);
-    MRMESH_API void setXfs( const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf );
-    MRMESH_API void setFloatXf( const AffineXf3f& fltMeshXf );
+    MRMESH_API void setXfs( const AffineXf3f& fltXf, const AffineXf3f& refXf );
+    MRMESH_API void setFloatXf( const AffineXf3f& fltXf );
     // recompute point pairs after manual change of transformations or parameters
     MRMESH_API void updateVertPairs();
 
@@ -118,7 +118,7 @@ private:
     AffineXf3f floatXf_;
     VertBitSet floatVerts_; ///< vertices of floating object to find their pairs on reference mesh
     
-    MeshPart refMesh_;
+    MeshOrPoints ref_;
     AffineXf3f refXf_;
 
     AffineXf3f float2refXf_; ///< transformation from floating object space to reference object space

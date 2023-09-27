@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshPart.h"
+#include "MRVector3.h"
 #include <functional>
 #include <optional>
 #include <variant>
@@ -35,6 +36,21 @@ public:
     /// returns weights generating function: VertId->float:
     /// for mesh it is double area of surrounding triangles, and for point cloud - nothing
     [[nodiscard]] MRMESH_API std::function<float(VertId)> weights() const;
+
+    struct ProjectionResult
+    {
+        /// found projection point
+        Vector3f point;
+        /// normal at projection point
+        std::optional<Vector3f> normal;
+        /// can be true only for meshes, if projection point is located on the boundary
+        bool isBd = false;
+        /// squared distance from query point to projection point
+        float distSq = 0;
+    };
+
+    /// returns a function that finds projection (closest) points on this: Vector3f->ProjectionResult
+    [[nodiscard]] MRMESH_API std::function<ProjectionResult( const Vector3f & )> projector() const;
 
 private:
     std::variant<MeshPart, const PointCloud*> var_;

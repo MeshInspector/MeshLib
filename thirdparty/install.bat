@@ -34,9 +34,6 @@ for /f "delims=" %%i in ('type "%~dp0..\requirements\windows.txt"') do (
   set packages=!packages! %%i
 )
 
-REM Download broken dependency manually (update or remove after updating vcpkg)
-C:\msys64\usr\bin\wget.exe -cO "%vcpkg_path%downloads\msys-grep-3.0-2-x86_64.pkg.tar.xz" https://mirrors.huaweicloud.com/repository/msys2/msys/x86_64/grep-3.0-2-x86_64.pkg.tar.xz
-
 vcpkg install vcpkg-cmake vcpkg-cmake-config --host-triplet x64-windows-meshlib --overlay-triplets "%~dp0vcpkg\triplets"  --debug --x-abi-tools-use-exact-versions
 vcpkg install !packages! --host-triplet x64-windows-meshlib --overlay-triplets "%~dp0vcpkg\triplets" --debug --x-abi-tools-use-exact-versions
 

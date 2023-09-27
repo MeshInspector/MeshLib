@@ -48,8 +48,6 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
         reader.TransferRoots();
     }
     const auto shape = reader.OneShape();
-    //for ( auto i = 1; i <= reader.NbShapes(); ++i )
-    //    shape = reader.Shape( i );
 
     BRepMesh_IncrementalMesh incMesh( shape, 0.1 );
     const auto& meshShape = incMesh.Shape();

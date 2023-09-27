@@ -625,6 +625,9 @@ int Viewer::launchInit_( const LaunchParams& params )
         touchpadController.initialize( window );
     }
 
+    CommandLoop::setState( CommandLoop::StartPosition::AfterWindowInit );
+    CommandLoop::processCommands();
+
     std::future<void> splashMinTimer;
     if ( windowMode && params.windowMode != LaunchParams::Hide && params.splashWindow )
     {
@@ -855,6 +858,8 @@ void Viewer::EventQueue::popByName( const std::string& name )
 
 void Viewer::postEmptyEvent()
 {
+    if ( !isGLInitialized() )
+        return;
 #ifdef __EMSCRIPTEN__
     eventQueue.emplace( { "Empty", [] () {} } );
 #endif

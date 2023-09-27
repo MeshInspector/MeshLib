@@ -1,9 +1,11 @@
 #pragma once
-#include "MRMeshFwd.h"
-#include "MRAligningTransform.h"
-#include "MRVector3.h"
-#include "MRMesh.h"
+
+#include "MRMeshOrPoints.h"
+#include "MRMatrix3.h"
 #include "MRId.h"
+#include "MRConstants.h"
+#include "MRAffineXf.h"
+#include "MRBitSet.h"
 
 namespace MR
 {
@@ -41,6 +43,8 @@ struct VertPair
     float vertDist2 = 0.f;
     // weight of the pair with respect to the sum of adjoining triangles square
     float weight = 1.f;
+
+    friend bool operator == ( const VertPair&, const VertPair& ) = default;
 };
 
 struct ICPProperties
@@ -71,17 +75,17 @@ struct ICPProperties
     float exitVal = 0; // [distance]
 };
 
-// This class allows to match two meshes with almost same geometry throw ICP point-to-point or point-to-plane algorithms
+// This class allows to match two meshes with almost same geometry using ICP point-to-point or point-to-plane algorithms
 class MeshICP
 {
 public:
     // xf parameters should represent current transformations of meshes
-    // fltMeshXf transform from the local floatingMesh basis to the global
-    // refMeshXf transform from the local referenceMesh basis to the global
-    // floatingMeshBitSet allows to take exact set of vertices from the mesh
-    MRMESH_API MeshICP(const MeshPart& floatingMesh, const MeshPart& referenceMesh, const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf,
-        const VertBitSet& floatingMeshBitSet);
-    MRMESH_API MeshICP(const MeshPart& floatingMesh, const MeshPart& referenceMesh, const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf,
+    // fltXf transform from the local floating basis to the global
+    // refXf transform from the local reference basis to the global
+    // floatBitSet allows to take exact set of vertices from the floating object
+    MRMESH_API MeshICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
+        const VertBitSet& floatBitSet);
+    MRMESH_API MeshICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
         float floatSamplingVoxelSize ); // positive value here defines voxel size, and only one vertex per voxel will be selected
     // TODO: add single transform constructor
 
@@ -93,7 +97,8 @@ public:
     MRMESH_API void setPairsWeight(const std::vector<float> w);
     MRMESH_API void setDistanceFilterSigmaFactor(const float factor);
     MRMESH_API void recomputeBitSet(const float floatSamplingVoxelSize);
-    MRMESH_API void setXfs( const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf );
+    MRMESH_API void setXfs( const AffineXf3f& fltXf, const AffineXf3f& refXf );
+    MRMESH_API void setFloatXf( const AffineXf3f& fltXf );
     // recompute point pairs after manual change of transformations or parameters
     MRMESH_API void updateVertPairs();
 
@@ -109,19 +114,16 @@ public:
     MRMESH_API AffineXf3f calculateTransformation();
 
 private:
-    // input meshes variables
-    MeshPart meshPart_;
-    AffineXf3f xf_;
+    MeshOrPoints floating_;
+    AffineXf3f floatXf_;
+    VertBitSet floatVerts_; ///< vertices of floating object to find their pairs on reference mesh
     
-    VertBitSet bitSet_; // region of interests on the floating mesh
-    
-    MeshPart refPart_;
+    MeshOrPoints ref_;
     AffineXf3f refXf_;
-    AffineXf3f refXfInv_; // optimized for reference points transformation
+
+    AffineXf3f float2refXf_; ///< transformation from floating object space to reference object space
 
     ICPProperties prop_;
-    std::unique_ptr<PointToPointAligningTransform> p2pt_ = std::make_unique<PointToPointAligningTransform>();
-    std::unique_ptr<PointToPlaneAligningTransform> p2pl_ = std::make_unique<PointToPlaneAligningTransform>();
 
     std::vector<VertPair> vertPairs_;
 

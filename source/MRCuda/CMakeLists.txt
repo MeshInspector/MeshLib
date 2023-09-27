@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-# nvcc supports only c++20
+# nvcc supports only c++20 and Cmake 3.16 from Ubuntu 20 does not support set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -8,9 +8,14 @@ set(CMAKE_CUDA_PATH /usr/local/cuda/)
 set(CUDA_NVCC_EXECUTABLE ${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc)
 set(CMAKE_CUDA_COMPILER ${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc)
 
+# without it we get "nvcc warning : The -std=c++20 flag is not supported with the configured host compiler. Flag will be ignored."
+# https://stackoverflow.com/q/77170793/7325599
+set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
+message("CMAKE_CXX_COMPILER=CMAKE_CUDA_HOST_COMPILER=${CMAKE_CUDA_HOST_COMPILER}")
+
 find_package(CUDA 12 REQUIRED)
 
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --std c++17 -use_fast_math")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --std c++20 -use_fast_math")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_52 \
             -gencode=arch=compute_52,code=sm_52 \
             -gencode=arch=compute_60,code=sm_60 \

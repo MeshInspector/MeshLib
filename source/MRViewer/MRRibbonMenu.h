@@ -146,6 +146,9 @@ protected:
 
     MRVIEWER_API virtual void setupShortcuts_() override;
 
+    // override this function to draw your custom version window somewhere
+    virtual void drawVersionWindow_() {};
+
     MRVIEWER_API virtual void drawShortcutsWindow_() override;
     // reads files with panel description
     MRVIEWER_API virtual void readMenuItemsStructure_();

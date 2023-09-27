@@ -20,73 +20,10 @@
 namespace MR
 {
 
-class PointCloudTriangulator
-{
-public:
-    PointCloudTriangulator( const PointCloud& pointCloud, const TriangulationParameters& params );
-
-    std::optional<Mesh> triangulate( ProgressCallback progressCb );
-
-private:
-    // parallel creates local triangulated fans for each point
-    bool optimizeAll_( ProgressCallback progressCb );
-    // accumulate local funs to surface
-    std::optional<Mesh> triangulate_( ProgressCallback progressCb );
-
-    const PointCloud& pointCloud_;
-    TriangulationParameters params_;
-
-    Vector<TriangulationHelpers::TriangulatedFan, VertId> optimizedFans_;
-};
-
-PointCloudTriangulator::PointCloudTriangulator( const PointCloud& pointCloud, const TriangulationParameters& params ) :
-    pointCloud_{pointCloud},
-    params_{params}
-{
-}
-
-std::optional<Mesh> PointCloudTriangulator::triangulate( ProgressCallback progressCb )
-{
-    MR_TIMER;
-    if ( !optimizeAll_( progressCb ) )
-        return {};
-    return triangulate_( progressCb );
-}
-
-bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
-{
-    MR_TIMER;
-    float radius = findAvgPointsRadius( pointCloud_, params_.avgNumNeighbours );
-    // const ref should prolong makeNormals lifetime
-    const VertCoords& normals = pointCloud_.normals.empty() ? makeNormals( pointCloud_, params_.avgNumNeighbours ) : pointCloud_.normals;
-
-    optimizedFans_.resize( pointCloud_.points.size() );
-
-    auto body = [&] ( VertId v )
-    {
-        auto candidates = TriangulationHelpers::findNeighbors( pointCloud_, v, radius );
-        auto optimizedRes = TriangulationHelpers::trianglulateFan( pointCloud_.points, v, candidates, normals, params_.critAngle );
-        const auto& optimized = optimizedRes.optimized;
-
-        float maxRadius = ( candidates.size() < 2 ) ? radius * 2.0f :
-            TriangulationHelpers::updateNeighborsRadius( pointCloud_.points, v, optimized, radius );
-
-        if ( maxRadius > radius )
-        {
-            // update triangulation if radius was increased
-            candidates = TriangulationHelpers::findNeighbors( pointCloud_, v, radius );
-            optimizedRes = TriangulationHelpers::trianglulateFan( pointCloud_.points, v, candidates, normals, params_.critAngle );
-        }
-        optimizedFans_[v] = optimizedRes;
-    };
-
-    return BitSetParallelFor( pointCloud_.validPoints, body, subprogress( progressCb, 0.0f, 0.35f ) );
-}
-
 struct VertTriplet
 {
     VertTriplet( VertId _a, VertId _b, VertId _c ) :
-        a{_a}, b{_b}, c{_c}
+        a{ _a }, b{ _b }, c{ _c }
     {
         if ( b < a && b < c )
         {
@@ -111,61 +48,160 @@ struct VertTripletHasher
 {
     size_t operator()( const VertTriplet& triplet ) const
     {
-        auto h1 = std::hash<int>{}(int( triplet.a ));
-        auto h2 = std::hash<int>{}(int( triplet.b ));
-        auto h3 = std::hash<int>{}(int( triplet.c ));
-        return h1 ^ (h2 << 1) ^ (h3 << 3);
+        auto h1 = std::hash<int>{}( int( triplet.a ) );
+        auto h2 = std::hash<int>{}( int( triplet.b ) );
+        auto h3 = std::hash<int>{}( int( triplet.c ) );
+        return h1 ^ ( h2 << 1 ) ^ ( h3 << 3 );
     }
 };
+
+class PointCloudTriangulator
+{
+public:
+    PointCloudTriangulator( const PointCloud& pointCloud, const TriangulationParameters& params );
+
+    std::optional<Mesh> triangulate( ProgressCallback progressCb );
+
+private:
+    // parallel creates local triangulated fans for each point
+    bool optimizeAll_( ProgressCallback progressCb );
+    // accumulate local funs to surface
+    std::optional<Mesh> triangulate_( ProgressCallback progressCb );
+
+    const PointCloud& pointCloud_;
+    TriangulationParameters params_;
+    struct PerThreadData
+    {
+        TriangulationHelpers::TriangulatedFanData fanData;
+        phmap::flat_hash_map<VertTriplet, int, VertTripletHasher> map;
+    };
+    tbb::enumerable_thread_specific<PerThreadData> tls_;
+};
+
+PointCloudTriangulator::PointCloudTriangulator( const PointCloud& pointCloud, const TriangulationParameters& params ) :
+    pointCloud_{pointCloud},
+    params_{params}
+{
+}
+
+std::optional<Mesh> PointCloudTriangulator::triangulate( ProgressCallback progressCb )
+{
+    MR_TIMER;
+    if ( !optimizeAll_( progressCb ) )
+        return {};
+    return triangulate_( progressCb );
+}
+
+bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
+{
+    MR_TIMER;
+    float radius = findAvgPointsRadius( pointCloud_, params_.avgNumNeighbours );
+    // const ref should prolong makeNormals lifetime
+    const VertCoords& normals = pointCloud_.normals.empty() ? makeNormals( pointCloud_, params_.avgNumNeighbours ) : pointCloud_.normals;
+
+    auto body = [&] ( VertId v )
+    {
+        auto& localData = tls_.local();
+        TriangulationHelpers::findNeighbors( pointCloud_, v, radius, localData.fanData.neighbors );
+        TriangulationHelpers::trianglulateFan( pointCloud_.points, v, localData.fanData, normals, params_.critAngle );
+
+        float maxRadius = ( localData.fanData.neighbors.size() < 2 ) ? radius * 2.0f :
+            TriangulationHelpers::updateNeighborsRadius( pointCloud_.points, v, localData.fanData.neighbors, radius );
+
+        if ( maxRadius > radius )
+        {
+            // update triangulation if radius was increased
+            TriangulationHelpers::findNeighbors( pointCloud_, v, maxRadius, localData.fanData.neighbors );
+            TriangulationHelpers::trianglulateFan( pointCloud_.points, v, localData.fanData, normals, params_.critAngle );
+        }
+
+        const auto& disc = localData.fanData;
+        auto& map = localData.map;
+        for ( int i = 0; i < disc.neighbors.size(); ++i )
+        {
+            if ( disc.border.valid() && disc.neighbors[i] == disc.border )
+                continue;
+
+            auto next = disc.neighbors[( i + 1 ) % disc.neighbors.size()];
+
+            VertTriplet triplet{ v,next,disc.neighbors[i] };
+            auto [mIt, inserted] = map.insert( { VertTriplet{v,next,disc.neighbors[i]},1 } );
+            if ( !inserted )
+                ++mIt->second;
+        }
+    };
+
+    return BitSetParallelFor( pointCloud_.validPoints, body, subprogress( progressCb, 0.0f, 0.5f ) );
+}
 
 std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progressCb )
 {
     MR_TIMER;
+    auto sp = subprogress( progressCb, 0.5f, 0.6f );
     // accumulate triplets
     phmap::flat_hash_map<VertTriplet, int, VertTripletHasher> map;
-    for ( auto cV : pointCloud_.validPoints )
+    int numMap = 0;
+    for ( auto& threadInfo : tls_ )
     {
-        const auto& disc = optimizedFans_[cV];
-        for ( auto it = disc.optimized.begin(); it != disc.optimized.end(); ++it )
+        if ( numMap++ == 0 )
         {
-            if ( disc.border.valid() && *it == disc.border )
-                continue;
-
-            auto next = std::next( it );
-            if ( next == disc.optimized.end() )
-                next = disc.optimized.begin();
-
-            VertTriplet triplet{ cV,*next,*it };
-            auto mIt = map.find( triplet );
-            if ( mIt == map.end() )
-                map[triplet] = 1;
-            else
-                ++mIt->second;
+            map.merge( std::move( threadInfo.map ) );
         }
-        if ( !reportProgress( progressCb, [&]{ return 0.35f + 0.30f * float( cV ) / float( pointCloud_.validPoints.size() ); } ) ) // 35% - 65%
+        else
+        {
+            for ( const auto& keyVal : threadInfo.map )
+            {
+                auto [it, inserted] = map.insert( keyVal );
+                if ( !inserted )
+                    it->second += keyVal.second;
+            }
+            threadInfo.map.clear();
+        }
+        if ( sp && !sp( float( numMap ) / float( tls_.size() ) ) ) // 50% - 60%
             return {};
     }
+
     Mesh mesh;
     mesh.points = pointCloud_.points;
 
-    Triangulation t;
-    FaceBitSet region2, region3;
+    Triangulation t3;
+    Triangulation t2;
     for ( const auto& triplet : map )
     {
-        if ( triplet.second == 2 || triplet.second == 3 )
-            t.push_back( { triplet.first.a, triplet.first.b, triplet.first.c, } );
         if ( triplet.second == 3 )
-            region3.autoResizeSet( t.backId() );
+            t3.push_back( { triplet.first.a, triplet.first.b, triplet.first.c, } );
         else if ( triplet.second == 2 )
-            region2.autoResizeSet( t.backId() );
+            t2.push_back( { triplet.first.a, triplet.first.b, triplet.first.c, } );
     }
+    auto compare = [] ( const auto& l, const auto& r )->bool
+    {
+        if ( l[0] < r[0] )
+            return true;
+        if ( l[0] > r[0] )
+            return false;
+        if ( l[1] < r[1] )
+            return true;
+        if ( l[1] > r[1] )
+            return false;
+        return l[2] < r[2];
+    };
+    tbb::parallel_sort( t3.vec_.begin(), t3.vec_.end(), compare );
+    tbb::parallel_sort( t2.vec_.begin(), t2.vec_.end(), compare );
+    auto t3Size = t3.size();
+    t3.vec_.insert( t3.vec_.end(), std::make_move_iterator( t2.vec_.begin() ), std::make_move_iterator( t2.vec_.end() ) );
+    FaceBitSet region3( t3Size );
+    region3.flip();
+    FaceBitSet region2( t3.size() );
+    region2.flip();
+    region2 -= region3;
+
     // create topology
-    MeshBuilder::addTriangles( mesh.topology, t, { .region = &region3, .allowNonManifoldEdge = false } );
-    region2 |= region3;
+    MeshBuilder::addTriangles( mesh.topology, t3, { .region = &region3, .allowNonManifoldEdge = false } );
     if ( !reportProgress( progressCb, 0.67f ) )
         return {};
-    MeshBuilder::addTriangles( mesh.topology, t, { .region = &region2, .allowNonManifoldEdge = false } );
-    if ( !reportProgress( progressCb, 0.70f ) )
+    region2 |= region3;
+    MeshBuilder::addTriangles( mesh.topology, t3, { .region = &region2, .allowNonManifoldEdge = false } );
+    if ( !reportProgress( progressCb, 0.7f ) )
         return {};
 
     // fill small holes

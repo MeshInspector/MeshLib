@@ -21,14 +21,13 @@ namespace
 // this function check that abc acd is allowed to be flipped to abd dbc
 // aNorm - normal in point a
 // cNorm - normal in point c
-// planeDist - distance from c to plane (a,aNorm)
 bool flipPossibility( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d,
-    const Vector3f& aNorm, const Vector3f& cNorm,
-    float planeDist )
+    const Vector3f& aNorm, const Vector3f& cNorm )
 {
     if ( dot( aNorm, cNorm ) < 0.0f )
         return true;
 
+    auto planeDist = Plane3f::fromDirAndPt( cross( b - a, d - a ), a ).distance( c );
     if ( planeDist * planeDist > ( b - d ).lengthSq() )
         return true;
     
@@ -61,56 +60,62 @@ float trisAngleProfit( const Vector3f& a, const Vector3f& b, const Vector3f& c, 
 
 namespace TriangulationHelpers
 {
-template<typename T>
-typename std::list<T>::const_iterator cycleNext( const std::list<T>& list, const typename std::list<T>::const_iterator& it )
+int cycleNext( const std::vector<VertId>& neighbors, int i )
 {
-    if ( std::next( it ) == list.end() )
-        return list.begin();
-    return std::next( it );
+    for ( ;;)
+    {
+        ++i;
+        if ( i == neighbors.size() )
+            i = 0;
+        if ( neighbors[i].valid() )
+            return i;
+    }
 }
 
-template<typename T>
-typename std::list<T>::const_iterator cyclePrev( const std::list<T>& list, const typename std::list<T>::const_iterator& it )
+int cyclePrev( const std::vector<VertId>& neighbors, int i )
 {
-    if ( it == list.begin() )
-        return std::prev( list.end() );
-    return std::prev( it );
+    for ( ;;)
+    {
+        --i;
+        if ( i == -1 )
+            i = int( neighbors.size() ) - 1;
+        if ( neighbors[i].valid() )
+            return i;
+    }
 }
 
-float updateNeighborsRadius( const VertCoords& points, VertId v, const std::list<VertId>& fan, float baseRadius )
+float updateNeighborsRadius( const VertCoords& points, VertId v, const std::vector<VertId>& fan, float baseRadius )
 {
     float maxRadius = 0.0f;
 
     // increase radius if better local triangulation can exist
-    for ( auto it = fan.begin(); it != fan.end(); ++it )
+    for ( int i = 0; i < fan.size(); ++i )
     {
-        auto next = cycleNext( fan, it );
+        auto next = cycleNext( fan, i );
         maxRadius = std::max( maxRadius, circumcircleDiameter( 
             points[v],
-            points[*it],
-            points[*next] ) );
+            points[fan[i]],
+            points[fan[next]] ) );
     }
 
     return std::min( maxRadius, 2.0f * baseRadius );
 }
 
-std::vector<VertId> findNeighbors( const PointCloud& pointCloud, VertId v, float radius )
+void findNeighbors( const PointCloud& pointCloud, VertId v, float radius, std::vector<VertId>& neighbors )
 {
-    std::vector<VertId> res;
+    neighbors.clear();
     const auto& points = pointCloud.points;
     findPointsInBall( pointCloud, points[v], radius, [&]( VertId vid, const Vector3f& )
     {
         if ( vid != v )
-            res.push_back( vid );
+            neighbors.push_back( vid );
     } );
-    return res;
 }
 
 struct FanOptimizerQueueElement
 {
     float weight{ 0.0f }; // profit of flipping this edge
-    std::list<int>::const_iterator pIt; // iterator to get neighbors
-    int id{ -1 }; // id in FanOptimizer::angleOrder_, to check if this element is still present in FanOptimizer::presentNeighbors_
+    int id{ -1 }; // index
 
     // needed to remove outdated queue elements
     int prevId{ -1 }; // id of prev neighbor
@@ -125,60 +130,52 @@ struct FanOptimizerQueueElement
     }
     bool operator==( const FanOptimizerQueueElement& other ) const = default;
 
-    bool isOutdated( const std::list<int>& list ) const
+    bool isOutdated( const std::vector<VertId>& neighbors ) const
     {
-        auto next = *cycleNext( list, pIt );
-        auto prev = *cyclePrev( list, pIt );
-        return next != nextId || prev != prevId;
+        return !neighbors[nextId].valid() || !neighbors[prevId].valid();
     }
 };
 
 class FanOptimizer
 {
 public:
-    FanOptimizer( const VertCoords& points, const VertCoords& normals, const std::vector<VertId>& neighbors, VertId centerVert ):
+    FanOptimizer( const VertCoords& points, const VertCoords& normals, TriangulatedFanData& fanData, VertId centerVert ):
         centerVert_{ centerVert },
-        neighbors_{neighbors},
+        fanData_{ fanData },
         points_{ points },
         normals_{ normals }
     {
         init_();
     }
-    TriangulatedFan optimize( int steps, float critAngle );
+    void optimize( int steps, float critAngle );
 private:
-    std::vector<std::pair<double, int>> angleOrder_;
-    BitSet presentNeighbors_;
     Plane3f plane_;
 
     VertId centerVert_;
-    const std::vector<VertId>& neighbors_;
+    TriangulatedFanData& fanData_;
     const VertCoords& points_;
     const VertCoords& normals_;
 
     void init_();
-    VertId getVertByPos_( int i ) const;
 
-    FanOptimizerQueueElement calcQueueElement_( 
-        const std::list<int>& list, const std::list<int>::const_iterator& it,
-        float critAngle ) const;
+    FanOptimizerQueueElement calcQueueElement_( const std::vector<VertId>& neighbors, int i, float critAngle ) const;
 };
 
 
 FanOptimizerQueueElement FanOptimizer::calcQueueElement_(
-    const std::list<int>& list, const std::list<int>::const_iterator& it, float critAngle ) const
+   const std::vector<VertId>& neighbors, int i, float critAngle ) const
 {
     FanOptimizerQueueElement res;
-    res.pIt = it;
-    res.id = *it;
-    res.nextId = *cycleNext( list, it );
-    res.prevId = *cyclePrev( list, it );
+    res.id = i;
+    res.nextId = cycleNext( neighbors, i );
+    res.prevId = cyclePrev( neighbors, i );
     const auto& a = points_[centerVert_];
-    const auto& b = points_[getVertByPos_( res.nextId )];
-    const auto& c = points_[getVertByPos_( res.id )];
-    const auto& d = points_[getVertByPos_( res.prevId )];
+    const auto& b = points_[neighbors[res.nextId]];
+    const auto& c = points_[neighbors[res.id]];
+    const auto& d = points_[neighbors[res.prevId]];
 
     const auto& aNorm = normals_[centerVert_];
-    const auto& cNorm = normals_[getVertByPos_( res.id )];
+    const auto& cNorm = normals_[neighbors[res.id]];
 
     float normVal = ( c - a ).length();
     if ( normVal == 0.0f )
@@ -190,7 +187,7 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_(
     auto deloneProf = deloneFlipProfit( a, b, c, d ) / normVal;
     auto angleProf = trisAngleProfit( a, b, c, d, critAngle );
     // ( deloneProf > 0.0f || angleProf > 0.0f )  strict condition to have more faces options if flip is not profitable
-    res.stable = !( flipPossibility( a, b, c, d, aNorm, cNorm, planeDist ) && ( deloneProf > 0.0f || angleProf > 0.0f ) );
+    res.stable = !( flipPossibility( a, b, c, d, aNorm, cNorm ) && ( deloneProf > 0.0f || angleProf > 0.0f ) );
     if ( deloneProf > 0.0f )
         res.weight += deloneProf;
     if ( angleProf > 0.0f )
@@ -212,74 +209,63 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_(
     return res;
 }
 
-TriangulatedFan FanOptimizer::optimize( int steps, float critAng )
+void FanOptimizer::optimize( int steps, float critAng )
 {
-    TriangulatedFan res;
-    res.optimized.resize( angleOrder_.size() );
-    int i = 0;
-    for ( auto it = res.optimized.begin(); it != res.optimized.end(); ++it, ++i )
+    for ( int i = 0; i < fanData_.cacheAngleOrder.size(); ++i )
     {
-        ( *it ) = getVertByPos_( i );
         // check border fans
-        auto diff = ( i + 1 < angleOrder_.size() ) ? 
-            ( angleOrder_[i + 1].first - angleOrder_[i].first ) : 
-            ( angleOrder_[0].first + 2.0 * PI - angleOrder_[i].first );
+        auto diff = ( i + 1 < fanData_.cacheAngleOrder.size() ) ?
+            ( fanData_.cacheAngleOrder[i + 1].first - fanData_.cacheAngleOrder[i].first ) :
+            ( fanData_.cacheAngleOrder[0].first + 2.0 * PI - fanData_.cacheAngleOrder[i].first );
         if ( diff > PI )
-            res.border = *it;
+            fanData_.border = fanData_.neighbors[i];
     }
     if ( steps == 0 )
-        return res;
-
-    res.optimized.clear();
-    std::list<int> posList( angleOrder_.size() );
-    std::iota( posList.begin(), posList.end(), 0 );
-    presentNeighbors_.resize( posList.size(), true );
+        return;
 
     std::priority_queue<FanOptimizerQueueElement> queue_;
-    for ( auto it = posList.begin(); it != posList.end(); ++it )
+    for ( int i = 0; i < fanData_.neighbors.size(); ++i )
     {
-        auto el = calcQueueElement_( posList, it, critAng );
-        if ( res.border == getVertByPos_( *it ) )
+        auto el = calcQueueElement_( fanData_.neighbors, i, critAng );
+        if ( fanData_.border == fanData_.neighbors[i] )
             el.stable = true;
         queue_.push( el );
     }
 
     // optimize fan
     int allRemoves = 0;
+    int currentFanSize = int( fanData_.neighbors.size() );
     while ( !queue_.empty() )
     {
         auto topEl = queue_.top();
         queue_.pop();
-        if ( !presentNeighbors_.test( topEl.id ) )
+        if ( !fanData_.neighbors[topEl.id].valid() )
             continue; // this vert was erased
-        if ( topEl.isOutdated( posList ) )
+        if ( topEl.isOutdated( fanData_.neighbors ) )
             continue; // topEl is not valid, because its neighbor was erased
         if ( topEl.stable )
             break; // topEl valid and fan is stable
 
-        auto nextIt = cycleNext( posList, topEl.pIt ); // store before erase
-        auto prevIt = cyclePrev( posList, topEl.pIt ); // store before erase
-
-        posList.erase( topEl.pIt );
-        presentNeighbors_.reset( topEl.id );
+        fanData_.neighbors[topEl.id] = {};
         allRemoves++;
+        currentFanSize--;
         if ( allRemoves >= steps )
             break;
-        if ( posList.size() < 2 )
+        if ( currentFanSize < 2 )
         {
-            posList.clear();
-            break;
+            fanData_.neighbors.clear();
+            return;
         }
-        queue_.emplace( calcQueueElement_( posList, nextIt, critAng ) );
-        queue_.emplace( calcQueueElement_( posList, prevIt, critAng ) );
+        queue_.emplace( calcQueueElement_( fanData_.neighbors, topEl.nextId, critAng ) );
+        queue_.emplace( calcQueueElement_( fanData_.neighbors, topEl.prevId, critAng ) );
     }
 
-    res.optimized.resize( posList.size() );
-    auto resIt = res.optimized.begin();
-    for ( auto it = posList.begin(); it != posList.end(); ++it, ++resIt )
-        ( *resIt ) = getVertByPos_( *it );
-    return res;
-
+    fanData_.neighbors.erase(
+        std::remove_if( fanData_.neighbors.begin(), fanData_.neighbors.end(), [] ( VertId  v )
+    {
+        return !v.valid();
+    } ),
+        fanData_.neighbors.end() );
 }
 
 void FanOptimizer::init_()
@@ -287,37 +273,51 @@ void FanOptimizer::init_()
     Vector3f centerProj = points_[centerVert_];
     plane_ = Plane3f::fromDirAndPt( normals_[centerVert_], centerProj );
 
-    Vector3f firstProj = plane_.project( points_[neighbors_.front()] );
+    Vector3f firstProj = plane_.project( points_[fanData_.neighbors.front()] );
     Vector3f baseVec = ( firstProj - centerProj ).normalized();
 
     // fill angles
-    angleOrder_.resize( neighbors_.size() );
-    for ( int i = 0; i < neighbors_.size(); ++i )
+    fanData_.cacheAngleOrder.resize( fanData_.neighbors.size() );
+    for ( int i = 0; i < fanData_.neighbors.size(); ++i )
     {
-        auto vec = ( plane_.project( points_[neighbors_[i]] ) - centerProj ).normalized();
+        auto vec = ( plane_.project( points_[fanData_.neighbors[i]] ) - centerProj ).normalized();
         auto crossProd = cross( vec, baseVec );
         double sign = 1.0;
         if ( dot( crossProd, plane_.n ) < 0 )
             sign = -1.0;
-        angleOrder_[i] = { std::atan2( sign * crossProd.length() ,dot( vec,baseVec ) ),i };
+        fanData_.cacheAngleOrder[i] = { std::atan2( sign * crossProd.length() ,dot( vec,baseVec ) ),i };
     }
 
     // sort candidates
-    std::sort( angleOrder_.begin(), angleOrder_.end() );
+    std::sort( fanData_.cacheAngleOrder.begin(), fanData_.cacheAngleOrder.end() );
+    for ( int i = 0; i < fanData_.neighbors.size(); ++i )
+    {
+        if ( fanData_.cacheAngleOrder[i].second == i )
+            continue;
+        int prevIndex = i;
+        int nextIndex = fanData_.cacheAngleOrder[i].second;
+        for ( ;;)
+        {
+            std::swap( fanData_.neighbors[prevIndex], fanData_.neighbors[nextIndex] );
+            fanData_.cacheAngleOrder[prevIndex].second = prevIndex;
+            prevIndex = nextIndex;
+            nextIndex = fanData_.cacheAngleOrder[nextIndex].second;
+            if ( nextIndex == i )
+            {
+                fanData_.cacheAngleOrder[prevIndex].second = prevIndex;
+                break;
+            }
+        }
+    }
 }
 
-VertId FanOptimizer::getVertByPos_( int i ) const
-{
-    return neighbors_[angleOrder_[i].second];
-}
-
-TriangulatedFan trianglulateFan( const VertCoords& points, VertId centerVert, const std::vector<VertId>& neighbors, 
+void trianglulateFan( const VertCoords& points, VertId centerVert, TriangulatedFanData& triangulationData,
     const VertCoords& normals, float critAngle, int steps /*= INT_MAX */ )
 {
-    if ( neighbors.empty() )
-        return {};
-    FanOptimizer optimizer( points, normals, neighbors, centerVert );
-    return optimizer.optimize( steps, critAngle );
+    if ( triangulationData.neighbors.empty() )
+        return;
+    FanOptimizer optimizer( points, normals, triangulationData, centerVert );
+    optimizer.optimize( steps, critAngle );
 }
 
 } //namespace TriangulationHelpers

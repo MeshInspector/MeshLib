@@ -158,6 +158,7 @@ protected:
 
     MRVIEWER_API virtual bool drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags flags = 0 ) override;
 
+    MRVIEWER_API virtual void highlightBlocking_();
 private:
     void changeTab_( int newTab );
 
@@ -197,6 +198,9 @@ private:
     ImVec2 sceneSize_{ 310, 0 };
     float informationHeight_{ 0.f };
     float transformHeight_{ 0.f };
+
+    // how long blocking window will blink in seconds
+    float blockingHighlightTimer_{ 0.0f };
 
     // current scroll position of tabs panel
     float tabPanelScroll_{ 0.0f };

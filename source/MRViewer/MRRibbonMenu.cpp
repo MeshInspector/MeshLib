@@ -254,6 +254,7 @@ void RibbonMenu::updateItemStatus( const std::string& itemName )
 void RibbonMenu::drawActiveBlockingDialog_()
 {
     drawItemDialog_( activeBlockingItem_ );
+    highlightBlocking_();
 }
 
 void RibbonMenu::drawActiveNonBlockingDialogs_()
@@ -1164,11 +1165,17 @@ void RibbonMenu::drawItemsGroup_( const std::string& tabName, const std::string&
 void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool available )
 {
     bool wasActive = item->isActive();
+    // take name before, because item can become invalid during `action`
+    auto name = item->name();
+    if ( !wasActive && ( activeBlockingItem_.item && item->blocking() ) )
+    {
+        spdlog::info( "Cannot activate item: \"{}\", Active: \"{}\"", name, activeBlockingItem_.item->name() );
+        blockingHighlightTimer_ = 2.0f;
+        return;
+    }
     if ( !wasActive && !available )
         return;
     ImGui::CloseCurrentPopup();
-    // take name before, because item can become invalid during `action`
-    auto name = item->name();
     bool stateChanged = item->action();
     if ( !stateChanged )
         spdlog::info( "Action item: \"{}\"", name );
@@ -1190,17 +1197,7 @@ void RibbonMenu::changeTab_( int newTab )
 
 std::string RibbonMenu::getRequirements_( const std::shared_ptr<RibbonMenuItem>& item ) const
 {
-    std::string requirements;
-    if ( !activeBlockingItem_.item || !item->blocking() )
-    {
-        requirements = item->isAvailable( selectedObjectsCache_ );
-    }
-    else
-    {
-        if ( activeBlockingItem_.item != item )
-            requirements = "Other state is active";
-    }
-    return requirements;
+    return item->isAvailable( selectedObjectsCache_ );
 }
 
 void RibbonMenu::drawSceneListButtons_()
@@ -2119,6 +2116,38 @@ void RibbonMenu::fixViewportsSize_( int width, int height )
 bool RibbonMenu::drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags flags )
 {
     return RibbonButtonDrawer::CustomCollapsingHeader( label, flags );
+}
+
+void RibbonMenu::highlightBlocking_()
+{
+    if ( blockingHighlightTimer_ <= 0.0f )
+        return;
+    if ( !activeBlockingItem_.item )
+    {
+        blockingHighlightTimer_ = 0.0f;
+        return;
+    }
+    auto* window = ImGui::FindWindowByName( activeBlockingItem_.item->name().c_str() );
+    if ( !window || blockingHighlightTimer_ <= 0.0f )
+    {
+        blockingHighlightTimer_ = 0.0f;
+        return;
+    }
+    auto scaling = menu_scaling();
+    if ( int( blockingHighlightTimer_ / 0.2f ) % 2 == 1 )
+    {
+        Color highlightColor = Color( 255, 161, 13, 255 );
+        ImGui::FocusWindow( window );
+        auto drawList = window->DrawList;
+        drawList->PushClipRect( ImVec2( 0, 0 ), ImGui::GetIO().DisplaySize );
+        drawList->AddRect(
+            ImVec2( window->Pos.x - 2.0f * scaling, window->Pos.y - 2.0f * scaling ),
+            ImVec2( window->Pos.x + window->Size.x + 2.0f * scaling, window->Pos.y + window->Size.y + 2.0f * scaling ),
+            highlightColor.getUInt32(), 0.0f, 0, 2.0f * scaling );
+        drawList->PopClipRect();
+    }
+    getViewerInstance().incrementForceRedrawFrames();
+    blockingHighlightTimer_ -= ImGui::GetIO().DeltaTime;
 }
 
 }

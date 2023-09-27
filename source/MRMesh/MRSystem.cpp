@@ -422,15 +422,14 @@ std::string GetCpuId()
     // https://stackoverflow.com/questions/850774/how-to-determine-the-hardware-cpu-and-ram-on-a-machine
     char CPUBrandString[0x40] = {};
     int CPUInfo[4] = {-1};
-    unsigned   nExIds, i = 0;
     // Get the information associated with each extended ID.
 #ifdef _MSC_VER
     __cpuid( CPUInfo, 0x80000000 );
 #else
     __cpuid( 0x80000000, CPUInfo[0], CPUInfo[1], CPUInfo[2], CPUInfo[3] );
 #endif
-    nExIds = CPUInfo[0];
-    for ( i = 0x80000000; i <= nExIds; ++i )
+    unsigned nExIds = CPUInfo[0];
+    for ( unsigned i = 0x80000000; i <= nExIds; ++i )
     {
 #ifdef _MSC_VER
         __cpuid( CPUInfo, i );
@@ -445,6 +444,14 @@ std::string GetCpuId()
         else if ( i == 0x80000004 )
             std::memcpy( CPUBrandString + 32, CPUInfo, sizeof( CPUInfo ) );
     }
+    for ( int i = 0x3f; i >= 0; --i )
+    {
+        if ( CPUBrandString[i] == ' ' )
+            CPUBrandString[i] = '\0';
+        else if ( CPUBrandString[i] != '\0' )
+            break;
+    }
+            
     auto res = std::string( CPUBrandString );
     return res.substr( res.find_first_not_of(' ') );
 #endif

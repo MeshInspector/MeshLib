@@ -858,6 +858,8 @@ void Viewer::EventQueue::popByName( const std::string& name )
 
 void Viewer::postEmptyEvent()
 {
+    if ( !isGLInitialized() )
+        return;
 #ifdef __EMSCRIPTEN__
     eventQueue.emplace( { "Empty", [] () {} } );
 #endif

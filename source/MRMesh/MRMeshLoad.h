@@ -78,6 +78,12 @@ MRMESH_API Expected<Mesh, std::string> from3mfModel( std::istream& in, VertColor
                                                     ProgressCallback callback = {} );
 #endif
 
+#ifdef _WIN32
+/// loads meshes from STEP file using OpenCASCADE
+MRMESH_API MR::Expected<MR::Mesh, std::string> fromStep( const std::filesystem::path& path, MR::VertColors* colors = nullptr, MR::ProgressCallback callback = {} );
+MRMESH_API MR::Expected<MR::Mesh, std::string> fromStep( std::istream& in, MR::VertColors* colors = nullptr, MR::ProgressCallback callback = {} );
+#endif
+
 /// detects the format from file extension and loads mesh from it
 MRMESH_API Expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path& file, VertColors* colors = nullptr,
                                                                    ProgressCallback callback = {} );

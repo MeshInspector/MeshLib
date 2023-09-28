@@ -10,7 +10,7 @@
 #endif
 
 #define TBB_SUPPRESS_DEPRECATED_MESSAGES 1
-// disable constraints for OpenVDB 10 compatibility
+// disable constraints for OpenVDB 10 + TBB 2021.5 compatibility
 #if __GNUC__ <= 13
 #define __TBB_USE_CONSTRAINTS 0
 #endif

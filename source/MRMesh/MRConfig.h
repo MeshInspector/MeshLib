@@ -27,14 +27,15 @@ public:
 
     MRMESH_API const std::string& getAppName() const;
 
+    // writes current config to file
+    MRMESH_API void writeToFile();
+
 private:
     Config();
 
     // looks for presented *.json file
     void reset( const std::filesystem::path& filePath );
 
-    // writes current config to file
-    void writeToFile();
 
     // stores configuration depends on constructor call: (<filepath>) or
     // (~/.local/share/<appname>/config.json) or (AppData\<appname>\config.json)

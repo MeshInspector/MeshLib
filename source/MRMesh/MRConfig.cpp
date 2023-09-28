@@ -6,6 +6,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRSystem.h"
 #include "MRPch/MRJson.h"
+#include "MRPch/MRWasm.h"
 
 namespace MR
 {
@@ -48,7 +49,10 @@ void Config::writeToFile()
     std::stringstream strStream;
     strStream << config_;
     std::string str = strStream.str();
-    EM_ASM( save_config( UTF8ToString( $0 ) ), str.c_str() );
+#pragma GCC diagnostic push 
+#pragma GCC diagnostic ignored "-Wdollar-in-identifier-extension"
+    EM_ASM({ localStorage.setItem( 'config', UTF8ToString( $0 ) ) }, str.c_str() );
+#pragma GCC diagnostic pop
 #endif
 }
 
@@ -74,11 +78,24 @@ void Config::reset( const std::filesystem::path& filePath )
             loggerHandle_->warn( "Failed to open json config file " + utf8string( Config::filePath_ ) );
     }
 #else
-    char* charStr = (char*) EM_ASM_PTR( load_config() );
-    if ( charStr )
+    auto *jsStr = (char *)EM_ASM_PTR({
+        var configStr = localStorage.getItem('config');
+        if ( configStr == null )
+            configStr = "";
+        var lengthBytes = lengthBytesUTF8( configStr ) + 1;
+        var stringOnWasmHeap = _malloc( lengthBytes );
+        stringToUTF8( configStr, stringOnWasmHeap, lengthBytes );
+        return stringOnWasmHeap;
+    });
+    std::string configStr;
+    if ( jsStr )
     {
-        std::string configStr = std::string( charStr );
-        auto readRes = deserializeJsonValue( filePath );
+        configStr = std::string( jsStr );
+        free(jsStr);
+    }
+    if (!configStr.empty())
+    {
+        auto readRes = deserializeJsonValue( configStr );
         if ( !readRes.has_value() )
         {
             if ( loggerHandle_ )

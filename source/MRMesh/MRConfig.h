@@ -27,7 +27,7 @@ public:
 
     MRMESH_API const std::string& getAppName() const;
 
-    // writes current config to file
+    // writes current config to file. (imlicitly called from destructor)
     MRMESH_API void writeToFile();
 
 private:

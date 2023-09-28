@@ -956,7 +956,7 @@ void VoxelGraphCut::augment_( Context & context, SeqVoxelId sSource, OutEdge vSo
     }
 }
 
-#if __GNUC__ >= 11 //https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104165
+#if __GNUC__ >= 12 //https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104165
 #pragma GCC diagnostic ignored "-Warray-bounds"
 #endif
 
@@ -982,7 +982,7 @@ void VoxelGraphCut::adopt_( Context & context )
             OutEdge e = OutEdge::Invalid;
             auto operator <=>( const OutCapacity & ) const = default;
         };
-        OutCapacity outCapacity[OutEdgeCount];
+        std::array<OutCapacity, OutEdgeCount> outCapacity;
         int numOut = 0;
         bool grandChild[OutEdgeCount] = {};
         const auto & ns = getNeighbors_( s );
@@ -1021,7 +1021,7 @@ void VoxelGraphCut::adopt_( Context & context )
                 }
             }
         }
-        std::sort( outCapacity, outCapacity + numOut );
+        std::sort( outCapacity.begin(), outCapacity.begin() + numOut );
         for ( int j = 0; j < numOut; ++j )
         {
             const auto & o = outCapacity[j];

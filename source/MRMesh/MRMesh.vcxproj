@@ -565,6 +565,7 @@
     <ClCompile Include="MRVoxelsConversionsByParts.cpp" />
     <ClCompile Include="MRWatershedGraph.cpp" />
     <ClCompile Include="MRMeshOverhangs.cpp" />
+    <ClCompile Include="MRMeshLoadStep.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\laz-perf\laz-perf.vcxproj">

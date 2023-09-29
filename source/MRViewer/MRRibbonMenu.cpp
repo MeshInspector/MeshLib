@@ -122,6 +122,8 @@ void RibbonMenu::init( MR::Viewer* _viewer )
         toolbar_.drawCustomize();
         drawRibbonSceneList_();
         drawRibbonViewportsLabels_();
+        
+        drawActiveList_();
 
         draw_helpers();
         drawVersionWindow_();
@@ -565,10 +567,9 @@ void RibbonMenu::drawHeaderPannel_()
         summaryTabPannelSize += ( tabSizes[i] + cTabsInterval * menuScaling );
     }
     // prepare active button
-    bool hasActive = activeBlockingItem_.item || !activeNonBlockingItems_.empty();
-    float activeTextSize = ImGui::CalcTextSize( "Active" ).x;
-    float activeBtnSize = std::max( activeTextSize + cTabLabelMinPadding * 2 * menuScaling, cTabMinimumWidth * menuScaling );
-    if ( hasActive )
+    bool needActive = hasAnyActiveItem() && toolbar_.getCurrentToolbarWidth() == 0.0f;
+    float activeBtnSize = cTabHeight * menuScaling - 2 * menuScaling; // small offset from border
+    if ( needActive )
         summaryTabPannelSize += ( activeBtnSize + cTabsInterval * menuScaling );
 
     // 40 - search button size (by eye)
@@ -604,7 +605,7 @@ void RibbonMenu::drawHeaderPannel_()
     {
         ImGui::SetCursorPosX( cTabsInterval * menuScaling );
         const float btnSize = 0.5f * fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons );
-        if ( buttonDrawer_.drawCustomStyledButton( "\xef\x81\x88", ImVec2( cTopPanelScrollBtnSize * menuScaling, ( cTabYOffset + cTabHeight ) * menuScaling ), btnSize ) )
+        if ( buttonDrawer_.drawTabArrawButton( "\xef\x81\x88", ImVec2( cTopPanelScrollBtnSize * menuScaling, ( cTabYOffset + cTabHeight ) * menuScaling ), btnSize ) )
         {
             tabPanelScroll_ -= cTopPanelScrollStep * menuScaling;
             if ( tabPanelScroll_ < 0.0f )
@@ -673,9 +674,9 @@ void RibbonMenu::drawHeaderPannel_()
 
         basePos.x += ( tabWidth + cTabsInterval * menuScaling );
     }
-    if ( hasActive )
+    if ( needActive )
     {
-        drawActiveListButton_( basePos, activeBtnSize, activeTextSize );
+        drawActiveListButton_( basePos, activeBtnSize );
         basePos.x += ( activeBtnSize + cTabsInterval * menuScaling );
     }
     ImGui::Dummy( ImVec2( 0, 0 ) );
@@ -685,7 +686,7 @@ void RibbonMenu::drawHeaderPannel_()
         ImGui::SameLine();
         ImGui::SetCursorPosX( ImGui::GetCursorPosX() + cTabsInterval * menuScaling );
         const float btnSize = 0.5f * fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons );
-        if ( buttonDrawer_.drawCustomStyledButton( "\xef\x81\x91", ImVec2( cTopPanelScrollBtnSize * menuScaling, ( cTabYOffset + cTabHeight ) * menuScaling ), btnSize ) )
+        if ( buttonDrawer_.drawTabArrawButton( "\xef\x81\x91", ImVec2( cTopPanelScrollBtnSize * menuScaling, ( cTabYOffset + cTabHeight ) * menuScaling ), btnSize ) )
         {
             if ( !needFwdBtn )
                 tabPanelScroll_ += tabsWindowPosX * menuScaling;//size of back btn
@@ -710,77 +711,178 @@ void RibbonMenu::drawHeaderPannel_()
     drawCollapseButton_();
 }
 
-void RibbonMenu::drawActiveListButton_( const ImVec2& basePos, float btnSize, float textSize )
+void RibbonMenu::drawActiveListButton_( const ImVec2& basePos, float btnSize )
 {
     auto scaling = menu_scaling();
     auto windowPos = ImGui::GetCurrentContext()->CurrentWindow->Pos;
     auto xPos = basePos.x + cTabsInterval * scaling;
     ImGui::SetCursorPosX( xPos - windowPos.x );
-    ImGui::SetNextItemWidth( btnSize );
-
-    bool closeBlocking = false;
-    std::vector<bool> closeNonBlocking( activeNonBlockingItems_.size(), false );
-
     ImGui::SetCursorPosY( cTabYOffset * scaling );
 
-    float fontSize = ImGui::GetFontSize();
-    auto framePaddingY = ( cTabHeight * scaling - fontSize ) * 0.5f;
-    auto framePadding = ImGui::GetStyle().FramePadding;
-    framePadding.y = framePaddingY;
-
-    ImGui::PushStyleColor( ImGuiCol_FrameBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActive ).getUInt32() );
-    ImGui::PushStyleColor( ImGuiCol_FrameBgHovered, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabHovered ).getUInt32() );
-    ImGui::PushStyleColor( ImGuiCol_FrameBgActive, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabHovered ).getUInt32() );
-    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
-    ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Small ) );
-    if ( ImGui::BeginCombo( "##ActiveStatesComboBox", "", ImGuiComboFlags_NoArrowButton ) )
+    auto activeListIt = RibbonSchemaHolder::schema().items.find( "Active Plugins List" );
+    if ( activeListIt != RibbonSchemaHolder::schema().items.end() )
     {
-        if ( activeBlockingItem_.item )
+        setActiveListPos( ImGui::GetCursorScreenPos() );
+        CustomButtonParameters cParams;
+        cParams.iconType = RibbonIcons::IconType::RibbonItemIcon;
+        cParams.pushColorsCb = [] ( bool enabled, bool )->int
         {
-            auto caption = activeBlockingItem_.item->name();
-            closeBlocking = ImGui::SmallButton( ( "Close##" + caption ).c_str() );
-            auto activeIt = RibbonSchemaHolder::schema().items.find( caption );
-            if ( activeIt != RibbonSchemaHolder::schema().items.end() )
+            if ( !enabled )
             {
-                if ( !activeIt->second.caption.empty() )
-                    caption = activeIt->second.caption;
+                ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TextDisabled ).getUInt32() );
+                ImGui::PushStyleColor( ImGuiCol_Button, Color( 0, 0, 0, 0 ).getUInt32() );
+                ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarHovered ).getUInt32() );
+                ImGui::PushStyleColor( ImGuiCol_ButtonActive, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarClicked ).getUInt32() );
             }
-            ImGui::SameLine( 0, 5.0f );
-            ImGui::Text( "%s", caption.c_str() );
+            else
+            {
+                ImGui::PushStyleColor( ImGuiCol_Text, Color::white().getUInt32() );
+                ImGui::PushStyleColor( ImGuiCol_Button, Color( 60, 169, 20, 255 ).getUInt32() );
+                ImGui::PushStyleColor( ImGuiCol_ButtonHovered, Color( 60, 169, 20, 200 ).getUInt32() );
+                ImGui::PushStyleColor( ImGuiCol_ButtonActive, Color( 60, 169, 20, 255 ).getUInt32() );
+            }
+            return 4;
+        };
+        const ImVec2 itemSize = { btnSize, btnSize };
+        DrawButtonParams params{ DrawButtonParams::SizeType::Small, itemSize, cMiddleIconSize,DrawButtonParams::RootType::Toolbar };
+        buttonDrawer_.drawCustomButtonItem( activeListIt->second, cParams, params );
+    }
+}
+
+
+void RibbonMenu::drawActiveList_()
+{
+    auto pressed = activeListPressed_;
+    activeListPressed_ = false;
+
+    auto nameWindow = "##ActiveList";
+    bool popupOpened = ImGui::IsPopupOpen( nameWindow );
+
+    // manage search popup
+    if ( pressed && !popupOpened )
+        ImGui::OpenPopup( nameWindow );
+
+    if ( !popupOpened )
+        return;
+    auto scaling = menu_scaling();
+    if ( ImGuiWindow* menuWindow = ImGui::FindWindowByName( nameWindow ) )
+        if ( menuWindow->WasActive )
+        {
+            ImRect frame;
+            frame.Min = activeListPos_;
+            frame.Min.x -= 6 * scaling;
+            frame.Min.y += 10 * scaling;
+            frame.Max = ImVec2( frame.Min.x + ImGui::GetFrameHeight(), frame.Min.y + ImGui::GetFrameHeight() );
+            ImVec2 expectedSize = ImGui::CalcWindowNextAutoFitSize( menuWindow );
+            menuWindow->AutoPosLastDirection = ImGuiDir_Down;
+            ImRect rectOuter = ImGui::GetPopupAllowedExtentRect( menuWindow );
+            ImVec2 pos = ImGui::FindBestWindowPosForPopupEx( frame.GetBL(), expectedSize, &menuWindow->AutoPosLastDirection, rectOuter, frame, ImGuiPopupPositionPolicy_ComboBox );
+            ImGui::SetNextWindowPos( pos );
         }
+
+    ImGuiWindowFlags window_flags = 
+        ImGuiWindowFlags_AlwaysAutoResize | 
+        ImGuiWindowFlags_Popup | 
+        ImGuiWindowFlags_NoTitleBar | 
+        ImGuiWindowFlags_NoResize | 
+        ImGuiWindowFlags_NoSavedSettings | 
+        ImGuiWindowFlags_NoMove;
+    ImGui::PushStyleVar( ImGuiStyleVar_PopupBorderSize, 0.0f );
+    ImGui::PushStyleColor( ImGuiCol_PopupBg, ImVec4( 0, 0, 0, 0 ) );
+    ImGui::Begin( nameWindow, NULL, window_flags );
+    if ( popupOpened )
+    {
+        bool closeBlocking = false;
+        std::vector<bool> closeNonBlocking( activeNonBlockingItems_.size(), false );
+
+        auto winPadding = ImVec2( 6 * scaling, 4 * scaling );
+        auto itemSpacing = ImVec2( 10 * scaling, 4 * scaling );
+        ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, winPadding );
+        ImGui::PushStyleVar( ImGuiStyleVar_ChildRounding, 4 * scaling );
+        ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
+
+        ImVec2 btnSize = ImVec2( 56.0f * scaling, 24.0f * scaling );
+        float maxSize = 0.0f;
+        auto getItemCaption = [] ( const std::string& name )->const std::string&
+        {
+            auto it = RibbonSchemaHolder::schema().items.find( name );
+            if ( it == RibbonSchemaHolder::schema().items.end() )
+                return name;
+            return  it->second.caption.empty() ? name : it->second.caption;
+        };
+
+        auto sbFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::SemiBold );
+        if ( sbFont )
+            ImGui::PushFont( sbFont );
+        if ( activeBlockingItem_.item )
+            maxSize = ImGui::CalcTextSize( getItemCaption( activeBlockingItem_.item->name() ).c_str() ).x;
+        for ( const auto& nonBlockItem : activeNonBlockingItems_ )
+        {
+            auto size = ImGui::CalcTextSize( getItemCaption( nonBlockItem.item->name() ).c_str() ).x;
+            if ( size > maxSize )
+                maxSize = size;
+        }
+        if ( sbFont )
+            ImGui::PopFont();
+
+        auto blockSize = ImVec2( 2 * winPadding.x + maxSize + 2 * ImGui::GetStyle().ItemSpacing.x + btnSize.x,
+            btnSize.y + winPadding.y * 2 );
+        auto dotShift = ( blockSize.y - 2 * scaling ) * 0.5f;
+        blockSize.x = blockSize.x - winPadding.x + dotShift;
+
+        auto drawItem = [&] ( const std::shared_ptr<RibbonMenuItem>& item, bool& close )
+        {
+            if ( !item )
+                return;
+            const auto& name = getItemCaption( item->name() );
+            auto childName = "##CloseItemBlock" + item->name();
+
+            ImGui::PushStyleColor( ImGuiCol_ChildBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
+            ImGui::BeginChild( childName.c_str(), blockSize, true,
+                ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse );
+            ImGui::PopStyleColor();
+            if ( sbFont )
+                ImGui::PushFont( sbFont );
+            auto center = ImGui::GetCursorScreenPos();
+            center.x += dotShift - winPadding.x;
+            center.y += dotShift - winPadding.y;
+            ImGui::GetWindowDrawList()->AddCircleFilled( center, 2 * scaling, Color( 60, 169, 20, 255 ).getUInt32() );
+            
+            ImGui::SetCursorPosX( dotShift + 2 * scaling + itemSpacing.x );
+            auto savedPos = ImGui::GetCursorPosY();
+            ImGui::SetCursorPosY( 0.5f * ( blockSize.y - ImGui::GetFontSize() ) );
+            ImGui::Text( "%s", name.c_str() );
+            if ( sbFont )
+                ImGui::PopFont();
+            ImGui::SameLine( blockSize.x - btnSize.x - winPadding.x );
+            ImGui::SetCursorPosY( savedPos );
+            if ( UI::button( "Close", btnSize ) )
+                close = true;
+            ImGui::EndChild();
+        };
+
+        drawItem( activeBlockingItem_.item, closeBlocking );
         for ( int i = 0; i < activeNonBlockingItems_.size(); ++i )
         {
-            const auto& activeNonBlock = activeNonBlockingItems_[i];
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 3.0f ); //spacing (ImGui::Spacing does not work here)
-            auto caption = activeNonBlock.item->name();
-            closeNonBlocking[i] = ImGui::SmallButton( ( "Close##" + caption ).c_str() );
-            auto activeIt = RibbonSchemaHolder::schema().items.find( caption );
-            if ( activeIt != RibbonSchemaHolder::schema().items.end() )
-            {
-                if ( !activeIt->second.caption.empty() )
-                    caption = activeIt->second.caption;
-            }
-            ImGui::SameLine( 0, 5.0f );
-            ImGui::Text( "%s", caption.c_str() );
-
+            bool close{ false };
+            drawItem( activeNonBlockingItems_[i].item, close );
+            closeNonBlocking[i] = close;
         }
-        ImGui::EndCombo();
-    }
-    if ( closeBlocking )
-        itemPressed_( activeBlockingItem_.item, true );
-    for ( int i = 0; i < activeNonBlockingItems_.size(); ++i )
-        if ( closeNonBlocking[i] )
-            itemPressed_( activeNonBlockingItems_[i].item, true );
 
-    ImGui::PopFont();
-    const char* text = "Active";
-    ImGui::SetCursorPosX( xPos + ( btnSize - textSize ) * 0.5f );
-    ImGui::SetCursorPosY( 2 * cTabYOffset * scaling + 4.0f * menu_scaling() );
-    ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActiveText ).getUInt32() );
-    ImGui::RenderText( ImGui::GetCursorPos(), text, text + 6, false );
-    ImGui::PopStyleVar( 2 );
-    ImGui::PopStyleColor( 4 );
+        if ( !activeBlockingItem_.item && activeNonBlockingItems_.empty() )
+            ImGui::CloseCurrentPopup();
+
+        ImGui::PopStyleVar( 3 );
+        ImGui::EndPopup();
+
+        if ( closeBlocking )
+            itemPressed_( activeBlockingItem_.item, true );
+        for ( int i = 0; i < activeNonBlockingItems_.size(); ++i )
+            if ( closeNonBlocking[i] )
+                itemPressed_( activeNonBlockingItems_[i].item, true );
+    }
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar();
 }
 
 bool RibbonMenu::drawGroupUngroupButton_( const std::vector<std::shared_ptr<Object>>& selected )
@@ -1167,7 +1269,7 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
     bool wasActive = item->isActive();
     // take name before, because item can become invalid during `action`
     auto name = item->name();
-    if ( !wasActive && ( activeBlockingItem_.item && item->blocking() ) )
+    if ( !wasActive && available && ( activeBlockingItem_.item && item->blocking() ) )
     {
         spdlog::info( "Cannot activate item: \"{}\", Active: \"{}\"", name, activeBlockingItem_.item->name() );
         blockingHighlightTimer_ = 2.0f;

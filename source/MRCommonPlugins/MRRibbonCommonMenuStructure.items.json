@@ -231,6 +231,12 @@
 			"Caption": "Remove Selected",
 			"Tooltip": "Remove selected objects",
 			"Icon": "\uF2ED"
+		},
+		{
+			"Name": "Active Plugins List",
+			"Caption": "Active List",
+			"Tooltip": "Show list of active tools",
+			"Icon": "\uF560"
 		}
 	]
 }

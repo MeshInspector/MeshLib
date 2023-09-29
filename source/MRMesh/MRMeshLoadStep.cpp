@@ -135,7 +135,7 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
         parts.emplace_back( std::move( region ) );
     }
 
-    return MeshBuilder::fromPointTriples( t );
+    return Mesh::fromPointTriples( t, true );
 }
 
 MR_ADD_MESH_LOADER( IOFilter( "STEP files (*.step)", "*.step" ), fromStep )

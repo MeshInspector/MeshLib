@@ -1,3 +1,4 @@
+#include <gtest/gtest.h>
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRLog.h"
 #include "MRMesh/MRGTest.h"

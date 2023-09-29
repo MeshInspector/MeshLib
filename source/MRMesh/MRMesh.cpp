@@ -22,6 +22,7 @@
 #include "MRTimer.h"
 #include "MRTriangleIntersection.h"
 #include "MRTriMath.h"
+#include "MRIdentifyVertices.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -76,6 +77,20 @@ Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices(
     if ( dups )
         *dups = std::move( localDups );
     return res;
+}
+
+Mesh Mesh::fromPointTriples( const std::vector<Triangle3f> & posTriples, bool duplicateNonManifoldVertices )
+{
+    MR_TIMER
+    MeshBuilder::VertexIdentifier vi;
+    vi.reserve( posTriples.size() );
+    vi.addTriangles( posTriples );
+    if ( duplicateNonManifoldVertices )
+    {
+        auto t = vi.takeTriangulation();
+        return fromTrianglesDuplicatingNonManifoldVertices( vi.takePoints(), t );
+    }
+    return fromTriangles( vi.takePoints(), vi.takeTriangulation() );
 }
 
 bool Mesh::operator ==( const Mesh & b ) const

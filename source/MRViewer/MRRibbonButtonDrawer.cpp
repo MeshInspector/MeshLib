@@ -219,8 +219,15 @@ RibbonButtonDrawer::ButtonItemWidth RibbonButtonDrawer::calcItemWidth( const Men
 
 void RibbonButtonDrawer::drawButtonItem( const MenuItemInfo& item, const DrawButtonParams& params ) const
 {
-    std::string requirements = getRequirements_( item.item );
+    CustomButtonParameters cParams;
+    cParams.iconType = RibbonIcons::IconType::RibbonItemIcon;
+    drawCustomButtonItem( item, cParams, params );
+}
 
+void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const CustomButtonParameters& customParam, 
+    const DrawButtonParams& params ) const
+{
+    std::string requirements = getRequirements_( item.item );
     bool dropItem = item.item->type() == RibbonItemType::ButtonWithDrop;
 
     ImVec2 itemSize = params.itemSize;
@@ -235,7 +242,9 @@ void RibbonButtonDrawer::drawButtonItem( const MenuItemInfo& item, const DrawBut
 
     ImGui::BeginGroup();
 
-    int colorChanged = pushRibbonButtonColors_( requirements.empty(), item.item->isActive(), params.rootType );
+    int colorChanged = customParam.pushColorsCb ? 
+        customParam.pushColorsCb( requirements.empty(), item.item->isActive() ) :
+        pushRibbonButtonColors_( requirements.empty(), item.item->isActive(), params.rootType );
     bool pressed = ImGui::ButtonEx( ( "##wholeChildBtn" + item.item->name() ).c_str(), itemSize, ImGuiButtonFlags_AllowItemOverlap );
     ImGui::SetItemAllowOverlap();
 
@@ -255,7 +264,7 @@ void RibbonButtonDrawer::drawButtonItem( const MenuItemInfo& item, const DrawBut
     bool needWhiteIcon = !requirements.empty() || item.item->isActive() || params.rootType != DrawButtonParams::Ribbon;
     auto* imageIcon = RibbonIcons::findByName( item.item->name(), iconRealSize.x, needWhiteIcon ?
                                                RibbonIcons::ColorType::White : RibbonIcons::ColorType::Colored,
-                                               RibbonIcons::IconType::RibbonItemIcon );
+                                               customParam.iconType );
 
     if ( !imageIcon )
         iconRealSize = ImGui::CalcTextSize( item.icon.c_str() );
@@ -395,7 +404,7 @@ void RibbonButtonDrawer::drawButtonIcon( const MenuItemInfo& item, const DrawBut
     ImGui::EndGroup();
 }
 
-bool RibbonButtonDrawer::drawCustomStyledButton( const char* icon, const ImVec2& size, float iconSize )
+bool RibbonButtonDrawer::drawTabArrawButton( const char* icon, const ImVec2& size, float iconSize )
 {
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding );
     ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrab ) );
@@ -571,6 +580,9 @@ void RibbonButtonDrawer::drawDropList_( const std::shared_ptr<RibbonMenuItem>& b
 
 void RibbonButtonDrawer::drawTooltip_( const MenuItemInfo& item, const std::string& requirements ) const
 {
+    auto sFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Small );
+    if ( sFont )
+        ImGui::PushFont( sFont );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 0 ) );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( cRibbonButtonWindowPaddingX * scaling_, cRibbonButtonWindowPaddingY * scaling_ ) );
     std::string tooltip = item.item->getDynamicTooltip();
@@ -622,6 +634,8 @@ void RibbonButtonDrawer::drawTooltip_( const MenuItemInfo& item, const std::stri
     }
     ImGui::EndTooltip();
     ImGui::PopStyleVar( 2 );
+    if ( sFont )
+        ImGui::PopFont();
 }
 
 

@@ -19,7 +19,9 @@ public:
     /// draw toolbar window
     /// \details don't show if there isn't any items or not enough space
     void drawToolbar();
-
+    /// return current size of toolbar
+    /// 0.0 if it is not present
+    float getCurrentToolbarWidth() const { return currentSize_; }
     // enable toolbar customize window rendering
     void openCustomize();
     /// draw toolbar customize window
@@ -53,6 +55,8 @@ private:
     MenuItemsList itemsList_; // toolbar items list
     MenuItemsList itemsListCustomize_; // toolbar preview items list for Toolbar Customize window
 
+
+    float currentSize_{ 0.0f };
     bool dragDrop_ = false; // active drag&drop in Toolbar Customize window
     bool openCustomizeFlag_ = false; // flag to open Toolbar Customize window
     int customizeTabNum_ = 0; // number active tab

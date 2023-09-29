@@ -73,6 +73,9 @@ public:
 
     const RibbonButtonDrawer& getRibbonButtonDrawer() { return buttonDrawer_; }
     Toolbar& getToolbar() { return toolbar_; }
+    void setActiveListPos( const ImVec2& pos ) { activeListPos_ = pos; }
+    /// set active plugins list showed
+    void showActiveList() { activeListPressed_ = true; };
 
     /// clones given objects with sub-objects (except for ancillary and unrecognized children) and undo
     MRVIEWER_API static void cloneTree( const std::vector<std::shared_ptr<Object>>& selectedObjects );
@@ -178,7 +181,11 @@ private:
     // part of top panel
     void drawHeaderQuickAccess_();
     void drawHeaderPannel_();
-    void drawActiveListButton_( const ImVec2& basePos, float btnSize, float textSize );
+    void drawActiveListButton_( const ImVec2& basePos, float btnSize );
+    
+    ImVec2 activeListPos_{ 0,0 };
+    bool activeListPressed_{ false };
+    void drawActiveList_();
 
     bool drawGroupUngroupButton_( const std::vector<std::shared_ptr<Object>>& selected );
     bool drawCloneButton_( const std::vector<std::shared_ptr<Object>>& selected );

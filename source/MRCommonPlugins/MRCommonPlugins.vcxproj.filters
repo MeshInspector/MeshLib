@@ -66,6 +66,9 @@
     <ClCompile Include="Voxels\MROpenVoxelsFromTiffPlugin.cpp">
       <Filter>Voxels</Filter>
     </ClCompile>
+    <ClCompile Include="ViewerButtons\MRActiveListPlugin.cpp">
+      <Filter>ViewerButtons</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />

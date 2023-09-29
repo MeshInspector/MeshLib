@@ -59,9 +59,14 @@ void Toolbar::drawToolbar()
             ++droppedItemCount;
     }
 
-    if ( !itemCount ) return;
+    if ( !itemCount )
+    {
+        currentWidth_ = 0.0f;
+        return;
+    }
+    ++itemCount;
 
-    const float windowWidth = windowPadding.x * 2
+    currentWidth_ = windowPadding.x * 2
         + itemSize.x * itemCount
         + itemSize.x * cSmallItemDropSizeModifier * droppedItemCount
         + itemSpacing.x * ( itemCount - 1 )
@@ -69,14 +74,17 @@ void Toolbar::drawToolbar()
         + itemSpacing.x / 2.f;
 
     const Vector2i sceneSize = ribbonMenu_->getSceneSize();
-    if ( windowWidth >= getViewerInstance().framebufferSize.x - sceneSize.x )
+    if ( currentWidth_ >= getViewerInstance().framebufferSize.x - sceneSize.x )
+    {
+        currentWidth_ = 0.0f;
         return; // dont show quick panel if window is too small
+    }
 
-    const float windowPosX = std::max( getViewerInstance().framebufferSize.x / 2.f - windowWidth / 2.f, sceneSize.x - 1.0f );
+    const float windowPosX = std::max( getViewerInstance().framebufferSize.x / 2.f - currentWidth_ / 2.f, sceneSize.x - 1.0f );
 
     const int currentTopPanelHeight = ribbonMenu_->getTopPanelCurrentHeight();
     ImGui::SetNextWindowPos( ImVec2( windowPosX, float( currentTopPanelHeight ) * scaling_ - 1 ) );
-    ImGui::SetNextWindowSize( ImVec2( windowWidth, cQuickAccessBarHeight * scaling_ ), ImGuiCond_Always );
+    ImGui::SetNextWindowSize( ImVec2( currentWidth_, cQuickAccessBarHeight * scaling_ ), ImGuiCond_Always );
 
     ImGui::PushStyleColor( ImGuiCol_WindowBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::QuickAccessBackground ).getUInt32() );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
@@ -105,6 +113,34 @@ void Toolbar::drawToolbar()
         }
 
         buttonDrawer.drawButtonItem( it->second, params );
+        ImGui::SameLine();
+    }
+
+    auto activeListIt = RibbonSchemaHolder::schema().items.find( "Active Plugins List" );
+    if ( activeListIt != RibbonSchemaHolder::schema().items.end() )
+    {
+        ribbonMenu_->setActiveListPos( ImGui::GetCursorScreenPos() );
+        CustomButtonParameters cParams;
+        cParams.iconType = RibbonIcons::IconType::RibbonItemIcon;
+        cParams.pushColorsCb = [] ( bool enabled, bool )->int
+        {
+            if ( !enabled )
+            {
+                ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TextDisabled ).getUInt32() );
+                ImGui::PushStyleColor( ImGuiCol_Button, Color( 0, 0, 0, 0 ).getUInt32() );
+                ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarHovered ).getUInt32() );
+                ImGui::PushStyleColor( ImGuiCol_ButtonActive, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarClicked ).getUInt32() );
+            }
+            else
+            {
+                ImGui::PushStyleColor( ImGuiCol_Text, Color::white().getUInt32() );
+                ImGui::PushStyleColor( ImGuiCol_Button, Color( 60, 169, 20, 255 ).getUInt32() );
+                ImGui::PushStyleColor( ImGuiCol_ButtonHovered, Color( 60, 169, 20, 200 ).getUInt32() );
+                ImGui::PushStyleColor( ImGuiCol_ButtonActive, Color( 60, 169, 20, 255 ).getUInt32() );
+            }
+            return 4;
+        };
+        buttonDrawer.drawCustomButtonItem( activeListIt->second, cParams, params );
         ImGui::SameLine();
     }
 

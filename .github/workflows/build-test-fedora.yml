@@ -32,10 +32,15 @@ jobs:
             cxx-compiler: /usr/bin/clang++-16
             MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF"
           - os: fedora38
-            config: 'Release'
+            config: 'Debug'
             compiler: GCC
             cxx-compiler: /usr/bin/g++
             MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF"
+          - os: fedora38
+            config: 'Release'
+            compiler: GCC
+            cxx-compiler: /usr/bin/g++
+            MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF -DMRMESH_NO_GTEST=ON"
 
     steps:
       - name: Checkout

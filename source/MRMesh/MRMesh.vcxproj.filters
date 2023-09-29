@@ -1226,9 +1226,6 @@
     <ClCompile Include="MRMeshCollidePrecise.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
-    <ClCompile Include="MRTriangleIntersection.cpp">
-      <Filter>Source Files\Math</Filter>
-    </ClCompile>
     <ClCompile Include="MRBase64.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>

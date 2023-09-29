@@ -511,7 +511,6 @@
     <ClCompile Include="MRSurfaceDistance.cpp" />
     <ClCompile Include="MRStringConvert.cpp" />
     <ClCompile Include="MRSurfacePath.cpp" />
-    <ClCompile Include="MRTriangleIntersection.cpp" />
     <ClCompile Include="MRTriDist.cpp" />
     <ClCompile Include="MRVertexAttributeGradient.cpp" />
     <ClCompile Include="MRViewportId.cpp" />

@@ -1,9 +1,5 @@
-#include "MRMeshFwd.h"
-
-#ifndef MRMESH_NO_GTEST
-
-#include "MRTriangleIntersection.h"
-#include "MRGTest.h"
+#include <MRMesh/MRTriangleIntersection.h>
+#include <MRMesh/MRGTest.h>
 
 namespace
 {
@@ -114,5 +110,3 @@ INSTANTIATE_TEST_SUITE_P( MRMesh, TrianglesIntersectTestFixture, testing::Values
 ) );
 
 } // namespace MR
-
-#endif // MRMESH_NO_GTEST

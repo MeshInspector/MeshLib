@@ -1,3 +1,5 @@
+#include "MRMeshFwd.h"
+
 #ifndef MRMESH_NO_GTEST
 
 #include "MRTriangleIntersection.h"

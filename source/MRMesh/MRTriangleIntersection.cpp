@@ -1,3 +1,5 @@
+#ifndef MRMESH_NO_GTEST
+
 #include "MRTriangleIntersection.h"
 #include "MRGTest.h"
 
@@ -46,8 +48,6 @@ MR_TEST( MRMesh, TriangleSegmentIntersectFloat )
 
     EXPECT_TRUE( intersection );
 }
-
-#ifndef MRMESH_NO_GTEST
 
 using TrianglesIntersectParameters = std::tuple<bool, Triangle3f, Triangle3f>;
 class TrianglesIntersectTestFixture : public testing::TestWithParam<TrianglesIntersectParameters> { };
@@ -111,6 +111,6 @@ INSTANTIATE_TEST_SUITE_P( MRMesh, TrianglesIntersectTestFixture, testing::Values
     , TrianglesIntersectParameters { true, T1, T3 }
 ) );
 
-#endif // MRMESH_NO_GTEST
-
 } // namespace MR
+
+#endif // MRMESH_NO_GTEST

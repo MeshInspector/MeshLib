@@ -83,7 +83,7 @@ void meshToEigen( const Mesh & mesh, Eigen::MatrixXd & V, Eigen::MatrixXi & F )
     }
 }
 
-MR_TEST(MRMesh, Eigen) 
+TEST(MRMesh, Eigen) 
 {
     Eigen::MatrixXd V( 3, 3 );
     V( 0, 0 ) = 0; V( 0, 1 ) = 0; V( 0, 2 ) = 0;

@@ -9,7 +9,7 @@ namespace MR
 template struct AffineXf<Vector2<float>>;
 template struct AffineXf<Vector2<double>>;
 
-MR_TEST(MRMesh, AffineXf2) 
+TEST(MRMesh, AffineXf2) 
 {
     ASSERT_EQ( Vector2f::plusX() + Vector2f::minusX(), Vector2f() );
     ASSERT_EQ( Vector2f::plusY() + Vector2f::minusY(), Vector2f() );

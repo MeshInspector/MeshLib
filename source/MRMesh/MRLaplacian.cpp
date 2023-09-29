@@ -297,7 +297,7 @@ void Laplacian::applyToScalar( VertScalars & scalarField )
     }
 }
 
-MR_TEST(MRMesh, Laplacian) 
+TEST(MRMesh, Laplacian) 
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );
 

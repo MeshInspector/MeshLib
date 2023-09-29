@@ -188,7 +188,7 @@ std::optional<PolylineIntersectionResult2> rayPolylineIntersect( const Polyline2
     }
 }
 
-MR_TEST( MRMesh, Polyline2RayIntersect )
+TEST( MRMesh, Polyline2RayIntersect )
 {
     Vector2f as[2] = { { 0, 1 }, { 4, 5 } };
     Polyline2 polyline;

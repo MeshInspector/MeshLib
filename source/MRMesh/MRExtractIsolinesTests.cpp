@@ -8,7 +8,7 @@
 namespace MR
 {
 
-MR_TEST( MRMesh, ExtractPlaneSections )
+TEST( MRMesh, ExtractPlaneSections )
 {
     Mesh mesh = MR::makeCube( Vector3f::diagonal( 1.F ), Vector3f() );
     Plane3f plane = Plane3f{ Vector3f::diagonal( 1.F ), 1.F }.normalized();

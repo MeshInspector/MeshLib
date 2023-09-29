@@ -171,7 +171,7 @@ template AABBTreeNodeVec<FaceTreeTraits3> makeAABBTreeNodeVec( Buffer<BoxedLeaf<
 template AABBTreeNodeVec<LineTreeTraits2> makeAABBTreeNodeVec( Buffer<BoxedLeaf<LineTreeTraits2>> boxedLeaves );
 template AABBTreeNodeVec<LineTreeTraits3> makeAABBTreeNodeVec( Buffer<BoxedLeaf<LineTreeTraits3>> boxedLeaves );
 
-MR_TEST(MRMesh, TBBTask)
+TEST(MRMesh, TBBTask)
 {
     const auto numThreads = tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism );
     spdlog::info( "TBB number of threads is {}", numThreads );

@@ -3,8 +3,7 @@
 
 #ifdef MRMESH_NO_GTEST
 
-#define MR_TEST( a, b ) [[maybe_unused]] static void a##b()
-
+#undef TEST
 #undef ASSERT_EQ
 #undef EXPECT_EQ
 #undef ASSERT_NE
@@ -22,6 +21,7 @@
 #undef ASSERT_NEAR
 #undef EXPECT_NEAR
 
+#define TEST( a, b ) [[maybe_unused]] static void a##b()
 #define ASSERT_EQ( a, b ) (void)( a == b );
 #define EXPECT_EQ( a, b ) (void)( a == b );
 #define ASSERT_NE( a, b ) (void)( a != b );
@@ -42,6 +42,5 @@
 #else
 
 #include <gtest/gtest.h>
-#define MR_TEST( a, b ) TEST( a, b )
 
 #endif

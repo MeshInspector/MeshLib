@@ -214,7 +214,7 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet & changedVerts )
     }
 }
 
-MR_TEST(MRMesh, AABBTree) 
+TEST(MRMesh, AABBTree) 
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );
     AABBTree tree( sphere );

@@ -953,7 +953,7 @@ EdgeId makeBridgeEdge( MeshTopology & topology, EdgeId a, EdgeId b )
     return res;
 }
 
-MR_TEST( MRMesh, buildCylinderBetweenTwoHoles )
+TEST( MRMesh, buildCylinderBetweenTwoHoles )
 {
     Triangulation t{
         { 0_v, 1_v, 2_v },
@@ -995,7 +995,7 @@ MR_TEST( MRMesh, buildCylinderBetweenTwoHoles )
     EXPECT_EQ( bdEdges.size(), 0 );
 }
 
-MR_TEST( MRMesh, makeBridge )
+TEST( MRMesh, makeBridge )
 {
     MeshTopology topology;
     auto a = topology.makeEdge();
@@ -1028,7 +1028,7 @@ MR_TEST( MRMesh, makeBridge )
     EXPECT_EQ( topology.edgeSize(), 3 * 2 );
 }
 
-MR_TEST( MRMesh, makeBridgeEdge )
+TEST( MRMesh, makeBridgeEdge )
 {
     MeshTopology topology;
     auto a = topology.makeEdge();

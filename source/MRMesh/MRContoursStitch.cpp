@@ -99,7 +99,7 @@ EdgeLoop cutAlongEdgeLoop( MeshTopology & topology, const EdgeLoop & c0 )
     return c1;
 }
 
-MR_TEST(MRMesh, cutAlongEdgeLoop)
+TEST(MRMesh, cutAlongEdgeLoop)
 {
     Mesh mesh = makeCube();
     auto & topology = mesh.topology;

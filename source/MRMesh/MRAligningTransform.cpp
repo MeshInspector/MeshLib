@@ -168,7 +168,7 @@ Vector3d PointToPointAligningTransform::calculateTranslation() const
 }
 
 
-MR_TEST( MRMesh, AligningTransform )
+TEST( MRMesh, AligningTransform )
 {
     PointToPointAligningTransform at1;
 
@@ -409,7 +409,7 @@ AffineXf3d PointToPlaneAligningTransform::calculateOrthogonalAxisRotation( const
     return AffineXf3d(Quaterniond(ammendment.rotAngles, ammendment.rotAngles.length()), ammendment.shift) * approxTransform;
 }
 
-MR_TEST( MRMesh, PointToPlaneIteration )
+TEST( MRMesh, PointToPlaneIteration )
 {
     std::vector<Vector3d> pInit, pTransformed, n, n2;
     pInit.resize( 10 );

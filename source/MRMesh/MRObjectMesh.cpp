@@ -174,7 +174,7 @@ void ObjectMesh::serializeFields_( Json::Value& root ) const
     root["Type"].append( ObjectMesh::TypeName() );
 }
 
-MR_TEST(MRMesh, DataModel)
+TEST(MRMesh, DataModel)
 {
     Object root;
     EXPECT_EQ(root.children().size(), 0);

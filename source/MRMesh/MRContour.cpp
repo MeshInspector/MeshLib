@@ -4,7 +4,7 @@
 namespace MR
 {
 
-MR_TEST( MRMesh, calcOrientedArea )
+TEST( MRMesh, calcOrientedArea )
 {
     Contour2f contour2 = {
         { 0, 0 },

@@ -6,7 +6,7 @@
 
 constexpr int MAX_RETRIES = 10;
 
-MR_TEST( MRMesh, CPRTestGet )
+TEST( MRMesh, CPRTestGet )
 {
     std::string baseUrl = "https://postman-echo.com/get";
     std::vector<std::pair<std::string, std::string>> params = { {"1","1"} };
@@ -28,7 +28,7 @@ MR_TEST( MRMesh, CPRTestGet )
     }
 }
 
-MR_TEST( MRMesh, CPRTestPost )
+TEST( MRMesh, CPRTestPost )
 {
     std::string baseUrl = "https://postman-echo.com/post";
     std::vector<std::pair<std::string, std::string>> params = { {"1","1"} };

@@ -43,7 +43,7 @@ TransformedMesh & operator *= ( TransformedMesh & a, const TransformedMesh& b )
     return a;
 }
 
-MR_TEST( MRMesh, MeshBooleanFacade )
+TEST( MRMesh, MeshBooleanFacade )
 {
     Mesh gingivaCopy = makeCube();
     Mesh combinedTooth = makeUVSphere( 1.1f );

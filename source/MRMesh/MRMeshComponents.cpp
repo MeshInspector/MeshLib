@@ -682,7 +682,7 @@ UnionFind<VertId> getUnionFindStructureVertsSeparatedByPaths( const Mesh& mesh, 
     return getUnionFindStructureVertsEx( mesh, ignoreEdges );
 }
 
-MR_TEST(MRMesh, getAllComponentsEdges) 
+TEST(MRMesh, getAllComponentsEdges) 
 {
     Triangulation t{
         { 0_v, 1_v, 2_v },

@@ -583,7 +583,7 @@ int getPathEdgesInPlane( const Mesh & mesh, const EdgePath & path, const Plane3f
     return found;
 }
 
-MR_TEST(MRMesh, BuildShortestPath) 
+TEST(MRMesh, BuildShortestPath) 
 {
     Mesh cube = makeCube();
     auto path = buildShortestPath( cube, 0_v, 6_v );

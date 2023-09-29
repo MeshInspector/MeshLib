@@ -5,7 +5,7 @@
 
 namespace MR
 {
-MR_TEST( MRMesh, StreamOperators )
+TEST( MRMesh, StreamOperators )
 {
     {
         std::stringstream ss;

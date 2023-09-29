@@ -424,7 +424,7 @@ VertScalars computeThicknessAtVertices( const Mesh& mesh )
     return res;
 }
 
-MR_TEST(MRMesh, MeshIntersect) 
+TEST(MRMesh, MeshIntersect) 
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );
 

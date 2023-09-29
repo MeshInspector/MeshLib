@@ -83,7 +83,7 @@ size_t BitSet::nthSetBit( size_t n ) const
     return npos;
 }
 
-MR_TEST(MRMesh, BitSet) 
+TEST(MRMesh, BitSet) 
 {
     BitSet bs0(4);
     bs0.set(0);
@@ -117,7 +117,7 @@ MR_TEST(MRMesh, BitSet)
     EXPECT_EQ( bs2.find_last(), size_t( -1 ) );
 }
 
-MR_TEST(MRMesh, TaggedBitSet) 
+TEST(MRMesh, TaggedBitSet) 
 {
     VertBitSet bs0( 3 );
     bs0.set( VertId( 0 ) );

@@ -4,7 +4,7 @@
 namespace MR
 {
 
-MR_TEST(MRMesh, Id) 
+TEST(MRMesh, Id) 
 {
     EdgeId e(1);
     FaceId f(2);

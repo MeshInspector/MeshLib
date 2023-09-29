@@ -521,7 +521,7 @@ Expected<BooleanResultPoints, std::string> getBooleanPoints( const Mesh& meshA, 
     return result;
 }
 
-MR_TEST( MRMesh, MeshBoolean )
+TEST( MRMesh, MeshBoolean )
 {
     Mesh meshA = makeTorus( 1.1f, 0.5f, 8, 8 );
     Mesh meshB = makeTorus( 1.0f, 0.2f, 8, 8 );
@@ -559,7 +559,7 @@ MR_TEST( MRMesh, MeshBoolean )
 }
 
 
-MR_TEST( MRMesh, BooleanMultipleEdgePropogationSort )
+TEST( MRMesh, BooleanMultipleEdgePropogationSort )
 {
     Mesh meshA;
     meshA.points = std::vector<Vector3f>

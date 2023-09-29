@@ -83,7 +83,7 @@ void MeshDiff::applyAndSwap( Mesh & m )
     m.topology.computeAllFromEdges_();
 }
 
-MR_TEST(MRMesh, MeshDiff)
+TEST(MRMesh, MeshDiff)
 {
     Triangulation t
     { 

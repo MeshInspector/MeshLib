@@ -4,7 +4,7 @@
 namespace MR
 {
 
-MR_TEST( MRMesh, IntersectPlanePlane )
+TEST( MRMesh, IntersectPlanePlane )
 {
     Plane3d plane1( Vector3d( 1, 0, 0 ), 1 );
     Plane3d plane2( Vector3d( 0, 1, 0 ), 1 );
@@ -30,7 +30,7 @@ MR_TEST( MRMesh, IntersectPlanePlane )
 
 }
 
-MR_TEST(MRMesh, IntersectPlaneLine) 
+TEST(MRMesh, IntersectPlaneLine) 
 {
     Plane3d plane( Vector3d( 1, 0, 0 ), 1 );
     Line3d line( Vector3d( 0, 0, 0 ), Vector3d( 1, 1, 1 ).normalized() );
@@ -52,7 +52,7 @@ MR_TEST(MRMesh, IntersectPlaneLine)
     ASSERT_NEAR( *dist1, 1., 1e-15 );
 }
 
-MR_TEST( MRMesh, IntersectLineLine )
+TEST( MRMesh, IntersectLineLine )
 {
     Line3d line1( Vector3d( 1, 0, 0 ), Vector3d( 0, 1, 0 ) );
     Line3d line2( Vector3d( 0, 1, 0 ), Vector3d( 1, 0, 0 ) );
@@ -100,7 +100,7 @@ MR_TEST( MRMesh, IntersectLineLine )
     ASSERT_NEAR( ( cl15.b - Vector3d( 1, 1, 1 ) ).length(), 0, 1e-15 );
 }
 
-MR_TEST( MRMesh, ClosestPointsLine3Box3 )
+TEST( MRMesh, ClosestPointsLine3Box3 )
 {
     {
         auto cp = closestPoints( Line3f{ Vector3f{}, Vector3f{1,0,0} }, Box3f{ Vector3f{1,1,1}, Vector3f{3,3,3} } );

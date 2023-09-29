@@ -6,7 +6,7 @@
 namespace MR
 {
 
-MR_TEST( MRMesh, AABBTreePolyline2 )
+TEST( MRMesh, AABBTreePolyline2 )
 {
     Polyline2 polyline;
     polyline.points.vec_ = {

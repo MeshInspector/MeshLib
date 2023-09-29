@@ -196,7 +196,7 @@ float SurfaceDistanceBuilder::metricToPenalty_( float metric, VertId v ) const
     return metric + ( mesh_.points[v] - *target_ ).length();
 }
 
-MR_TEST(MRMesh, SurfaceDistance) 
+TEST(MRMesh, SurfaceDistance) 
 {
     float vc = 0;
     EXPECT_FALSE( getFieldAtC( Vector3f{ 1, 0, 0 }, Vector3f{ 0, 1, 0 }, 1, vc ) );

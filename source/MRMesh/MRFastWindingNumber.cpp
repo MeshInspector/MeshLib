@@ -222,7 +222,7 @@ size_t FastWindingNumber::fromGridHeapBytes( const Vector3i& ) const
     return 0;
 }
 
-MR_TEST(MRMesh, TriangleSolidAngle) 
+TEST(MRMesh, TriangleSolidAngle) 
 {
     const Triangle3f tri =
     {

@@ -1110,7 +1110,7 @@ void Mesh::mirror( const Plane3f& plane )
     invalidateCaches();
 }
 
-MR_TEST( MRMesh, BasicExport )
+TEST( MRMesh, BasicExport )
 {
     Mesh mesh = makeCube();
 
@@ -1123,7 +1123,7 @@ MR_TEST( MRMesh, BasicExport )
     (void)vertexTripples;
 }
 
-MR_TEST(MRMesh, SplitEdge) 
+TEST(MRMesh, SplitEdge) 
 {
     Triangulation t{
         { VertId{0}, VertId{1}, VertId{2} },
@@ -1169,7 +1169,7 @@ MR_TEST(MRMesh, SplitEdge)
     EXPECT_EQ( region.count(), 3 );
 }
 
-MR_TEST(MRMesh, SplitEdge1) 
+TEST(MRMesh, SplitEdge1) 
 {
     Mesh mesh;
     const auto e01 = mesh.topology.makeEdge();
@@ -1191,7 +1191,7 @@ MR_TEST(MRMesh, SplitEdge1)
     EXPECT_EQ( mesh.points[v01], ( Vector3f( .5f, 0.f, 0.f ) ) );
 }
 
-MR_TEST(MRMesh, SplitFace) 
+TEST(MRMesh, SplitFace) 
 {
     Triangulation t{
         { VertId{0}, VertId{1}, VertId{2} }

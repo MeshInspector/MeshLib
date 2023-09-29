@@ -94,7 +94,7 @@ void shrinkVoxelsMask( VoxelBitSet& mask, const VolumeIndexer& indexer, int shri
     }
 }
 
-MR_TEST( MRMesh, ExpandShrinkVoxels )
+TEST( MRMesh, ExpandShrinkVoxels )
 {
     VolumeIndexer indexer( Vector3i::diagonal( 8 ) );
     VoxelBitSet mask( indexer.size() );

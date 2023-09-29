@@ -371,7 +371,7 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
     }
 }
 
-MR_TEST(MRMesh, MeshDistance) 
+TEST(MRMesh, MeshDistance) 
 {
     Mesh sphere1 = makeUVSphere( 1, 8, 8 );
 

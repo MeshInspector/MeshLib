@@ -97,7 +97,7 @@ Vector2f findSegmentSegmentIntersectionPrecise(
     return converters.toFloat( Vector2i{ Vector2d( abc * Vector2hp( di ) + abd * Vector2hp( ci ) ) / double( sum ) } );
 }
 
-MR_TEST( MRMesh, PrecisePredicates2 )
+TEST( MRMesh, PrecisePredicates2 )
 {
     std::array<PreciseVertCoords2, 4> vs = 
     { 

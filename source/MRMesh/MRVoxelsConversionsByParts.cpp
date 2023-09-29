@@ -236,7 +236,7 @@ volumeToMeshByParts( const VolumePartBuilder<Volume> &builder, const Vector3i &d
     return std::move( result );
 }
 
-MR_TEST( MRMesh, volumeToMeshByParts )
+TEST( MRMesh, volumeToMeshByParts )
 {
     const Vector3i dimensions { 101, 101, 101 };
     constexpr float radius = 50.f;

@@ -571,7 +571,7 @@ size_t Object::heapBytes() const
         + name_.capacity();
 }
 
-MR_TEST( MRMesh, DataModelRemoveChild )
+TEST( MRMesh, DataModelRemoveChild )
 {
     auto child2 = std::make_shared<Object>();
     Object root;

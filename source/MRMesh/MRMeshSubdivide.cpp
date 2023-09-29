@@ -150,7 +150,7 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
     return splitsDone;
 }
 
-MR_TEST(MRMesh, SubdivideMesh) 
+TEST(MRMesh, SubdivideMesh) 
 {
     Triangulation t{
         { 0_v, 1_v, 2_v },

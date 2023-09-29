@@ -837,7 +837,7 @@ int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd, VertMap 
 }
 
 // check non-manifold vertices resolving
-MR_TEST( MRMesh, duplicateNonManifoldVertices )
+TEST( MRMesh, duplicateNonManifoldVertices )
 {
     Triangulation t;
     t.push_back( { 0_v, 1_v, 2_v } ); //0_f

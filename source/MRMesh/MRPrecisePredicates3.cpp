@@ -128,7 +128,7 @@ Vector3f findTriangleSegmentIntersectionPrecise(
     return converters.toFloat( Vector3i{ Vector3d( abcd * Vector3hp{ ei } + abce * Vector3hp{ di } ) / double( sum ) } );
 }
 
-MR_TEST( MRMesh, PrecisePredicates3 )
+TEST( MRMesh, PrecisePredicates3 )
 {
     const std::array<PreciseVertCoords, 5> vs = 
     { 

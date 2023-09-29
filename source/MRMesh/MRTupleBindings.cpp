@@ -4,7 +4,7 @@
 namespace MR
 {
 
-MR_TEST( MRMesh, TupleBindings )
+TEST( MRMesh, TupleBindings )
 {    
     // Vector element type
     static_assert( std::is_same_v< std::tuple_element<0, Vector2f>::type, float> );

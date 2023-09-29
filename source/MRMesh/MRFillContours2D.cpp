@@ -164,7 +164,7 @@ VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresen
     return {};
 }
 
-MR_TEST( MRMesh, fillContours2D )
+TEST( MRMesh, fillContours2D )
 {
     Mesh sphereBig = makeUVSphere( 1.0f, 32, 32 );
     Mesh sphereSmall = makeUVSphere( 0.7f, 16, 16 );

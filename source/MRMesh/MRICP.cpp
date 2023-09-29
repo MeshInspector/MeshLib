@@ -461,7 +461,7 @@ std::string MeshICP::getLastICPInfo() const
     return result;
 }
 
-MR_TEST(MRMesh, RegistrationOneIterPointToPlane)
+TEST(MRMesh, RegistrationOneIterPointToPlane)
 {
     const auto err = 1e-5;
     // set points
@@ -587,7 +587,7 @@ MR_TEST(MRMesh, RegistrationOneIterPointToPlane)
     }
 }
 
-MR_TEST(MRMesh, RegistrationOneIterPointToPoint)
+TEST(MRMesh, RegistrationOneIterPointToPoint)
 {
     const auto err = 1e-10;
     // set points

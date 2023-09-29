@@ -37,7 +37,7 @@ namespace
 
 namespace MR
 {
-MR_TEST( MRMesh, TriangleSegmentIntersectFloat )
+TEST( MRMesh, TriangleSegmentIntersectFloat )
 {
     Vector3f a{2,  1, 0};
     Vector3f b{-2,  1, 0};

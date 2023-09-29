@@ -362,7 +362,7 @@ using V3fIt = std::vector<Vector3f>::const_iterator;
 using Intervals = std::vector<std::pair<V3fIt, V3fIt>>;
 
 // compute intervals of the slice which are projected on the selected area in the mesh (skip if not specified)
-Intervals getIntervals( const MeshPart& mp, const MeshPart* offset, const V3fIt startIt, const V3fIt endIt, const V3fIt beginVec, const V3fIt endVec, bool moveForward )
+Intervals getIntervals( const MeshPart& mp, const MeshPart* offset, const V3fIt startIt, const V3fIt endIt, const V3fIt beginVec, const V3fIt endVec, bool moveForward, float toolRadius )
 {
     Intervals res;
     if ( startIt == endIt )
@@ -375,12 +375,19 @@ Intervals getIntervals( const MeshPart& mp, const MeshPart* offset, const V3fIt 
     // otherwise add interval to the result
     const auto processPoint = [&] ( V3fIt it )
     {
-        const auto mpr = offset ? offset->mesh.projectPoint( *it ) : mp.mesh.projectPoint( *it );
-        const auto faceId = offset ? offset->mesh.topology.left( mpr->mtp.e ) : mp.mesh.topology.left( mpr->mtp.e );
+        const float maxDistSq = 2 * toolRadius * toolRadius;
+        const auto mpr = offset ? offset->mesh.projectPoint( *it, maxDistSq ) : mp.mesh.projectPoint( *it, maxDistSq );
 
-        const bool isInsideSelection = offset ? 
-            ( !offset->region || ( mpr && offset->region->test( faceId ) ) ) :
-            !mp.region || ( mpr && mp.region->test( faceId ) );
+        bool isInsideSelection = mpr.has_value();
+
+        if ( isInsideSelection )
+        {
+            const auto faceId = offset ? offset->mesh.topology.left( mpr->mtp.e ) : mp.mesh.topology.left( mpr->mtp.e );
+
+            isInsideSelection = offset ?
+                ( !offset->region || ( mpr && offset->region->test( faceId ) ) ) :
+                !mp.region || ( mpr && mp.region->test( faceId ) );
+        }
 
         if ( isInsideSelection )
         {
@@ -614,7 +621,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
                     --bottomLeftIt;
             }
             
-            const auto intervals = getIntervals( mp, params.offsetMesh, bottomLeftIt, bottomRightIt, contour.begin(), contour.end(), moveForward );
+            const auto intervals = getIntervals( mp, params.offsetMesh, bottomLeftIt, bottomRightIt, contour.begin(), contour.end(), moveForward, params.millRadius );
             if ( intervals.empty() )
                 continue;
 
@@ -785,7 +792,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
 
             if ( mp.region || params.flatTool )
             {
-                const auto intervals = getIntervals( mp, params.offsetMesh, contour.begin(), contour.end(), contour.begin(), contour.end(), true );
+                const auto intervals = getIntervals( mp, params.offsetMesh, contour.begin(), contour.end(), contour.begin(), contour.end(), true, params.millRadius );
                 if ( intervals.empty() )
                     continue;
 
@@ -1172,9 +1179,29 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         return res;
     }
 
-    const auto edgeLoops = ( params.offsetMesh && params.offsetMesh->region ) ? 
-        findLeftBoundary( params.offsetMesh->mesh.topology, params.offsetMesh->region ) : 
-        findLeftBoundary( mp.mesh.topology, mp.region );
+    std::vector<EdgeLoop> edgeLoops;
+    if ( params.offsetMesh && params.offsetMesh->region )
+    {
+        edgeLoops = findLeftBoundary( params.offsetMesh->mesh.topology, params.offsetMesh->region );
+    }
+    else
+    {
+        const float upDistLimitSq = 2.0f * params.millRadius * params.millRadius;
+
+        for ( const auto& component : MeshComponents::getAllComponents( mp ) )
+        {
+            FaceBitSet filteredSelection{ component };
+            
+            BitSetParallelFor( component, [&] ( FaceId f )
+            {
+                const auto mpr = findProjection( mp.mesh.triCenter( f ), res.modifiedMesh, upDistLimitSq );
+                if ( !mpr.mtp.e.valid() )
+                    filteredSelection.set( f, false );
+            } );
+
+            edgeLoops.push_back( findLeftBoundary( mp.mesh.topology, filteredSelection ).front() );
+        }
+    }
 
     //otherwise process each selected zone separately
     const size_t loopCount = edgeLoops.size();

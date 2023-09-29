@@ -10,7 +10,7 @@
 namespace MR
 {
 
-TEST( MRMesh, BasicExample )
+MR_TEST( MRMesh, BasicExample )
 {
     // please update MeshLib/doxygen/HowToExamples.dox according to this file
     
@@ -30,7 +30,7 @@ TEST( MRMesh, BasicExample )
     mesh.transform( rotationXf );
 }
 
-TEST( MRMesh, PrimitivesExtractionExapmle )
+MR_TEST( MRMesh, PrimitivesExtractionExapmle )
 {
     // please update MeshLib/doxygen/HowToExamples.dox according to this file
 

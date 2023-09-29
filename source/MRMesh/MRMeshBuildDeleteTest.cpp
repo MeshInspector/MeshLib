@@ -8,7 +8,7 @@
 namespace MR
 {
 
-TEST(MRMesh, BuildTri) 
+MR_TEST(MRMesh, BuildTri) 
 {
     Triangulation t{ { 0_v, 1_v, 2_v } };
     auto topology = MeshBuilder::fromTriangles( t );
@@ -21,7 +21,7 @@ TEST(MRMesh, BuildTri)
     EXPECT_FALSE( topology.left( bdEdges[0] ).valid() );
 }
 
-TEST(MRMesh, fromFaceSoup) 
+MR_TEST(MRMesh, fromFaceSoup) 
 {
     std::vector<VertId> vs
     { 
@@ -48,7 +48,7 @@ TEST(MRMesh, fromFaceSoup)
     EXPECT_FALSE( topology.left( bdEdges[0] ).valid() );
 }
 
-TEST(MRMesh, BuildQuadDelete) 
+MR_TEST(MRMesh, BuildQuadDelete) 
 {
     Triangulation t{
         { 0_v, 1_v, 2_v },
@@ -105,7 +105,7 @@ TEST(MRMesh, BuildQuadDelete)
     EXPECT_EQ( topology.computeNotLoneUndirectedEdges(), 0 );
 }
 
-TEST(MRMesh, FlipEdge) 
+MR_TEST(MRMesh, FlipEdge) 
 {
     Triangulation t{
         { 0_v, 1_v, 2_v },

@@ -7,7 +7,7 @@
 namespace MR
 {
 
-TEST( MRMesh, FindBestLineSimple )
+MR_TEST( MRMesh, FindBestLineSimple )
 {
     PointAccumulator acc;
     acc.addPoint( Vector3d{ 0, 0, 0 } );
@@ -23,7 +23,7 @@ TEST( MRMesh, FindBestLineSimple )
     ASSERT_LE( deltaP, 1e-12 );
 }
 
-TEST( MRMesh, FindBestLineFull )
+MR_TEST( MRMesh, FindBestLineFull )
 {
     PointAccumulator acc;
     const Vector3d e1 = Vector3d( 1, 1, 1 ).normalized();
@@ -51,7 +51,7 @@ TEST( MRMesh, FindBestLineFull )
     ASSERT_LE( deltaP, 1e-12 );
 }
 
-TEST( MRMesh, FindBestPlaneSimple )
+MR_TEST( MRMesh, FindBestPlaneSimple )
 {
     PointAccumulator acc;
     acc.addPoint( Vector3d{ 0, 0, 0 } );
@@ -64,7 +64,7 @@ TEST( MRMesh, FindBestPlaneSimple )
     ASSERT_EQ( plane.d, 0 );
 }
 
-TEST( MRMesh, FindBestPlaneFull )
+MR_TEST( MRMesh, FindBestPlaneFull )
 {
     PointAccumulator acc;
     const Vector3d e1 = Vector3d( 1, 1, 1 ).normalized();
@@ -91,7 +91,7 @@ TEST( MRMesh, FindBestPlaneFull )
     ASSERT_LE( deltaD, 1e-12 );
 }
 
-TEST( MRMesh, FindBestPlaneRealData )
+MR_TEST( MRMesh, FindBestPlaneRealData )
 {
     PointAccumulator acc;
     std::vector<Vector3d> pnts =

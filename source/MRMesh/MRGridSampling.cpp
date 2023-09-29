@@ -177,7 +177,7 @@ std::optional<VertBitSet> pointGridSampling( const PointCloud & cloud, float vox
     return res;
 }
 
-TEST( MRMesh, GridSampling )
+MR_TEST( MRMesh, GridSampling )
 {
     auto sphereMesh = makeUVSphere();
     auto numVerts = sphereMesh.topology.numValidVerts();

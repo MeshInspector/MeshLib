@@ -33,7 +33,7 @@ namespace
 
 namespace MR
 {
-TEST( MRMesh, TriangleSegmentIntersectFloat )
+MR_TEST( MRMesh, TriangleSegmentIntersectFloat )
 {
     Vector3f a{2,  1, 0};
     Vector3f b{-2,  1, 0};
@@ -46,6 +46,8 @@ TEST( MRMesh, TriangleSegmentIntersectFloat )
 
     EXPECT_TRUE( intersection );
 }
+
+#ifndef MRMESH_NO_GTEST
 
 using TrianglesIntersectParameters = std::tuple<bool, Triangle3f, Triangle3f>;
 class TrianglesIntersectTestFixture : public testing::TestWithParam<TrianglesIntersectParameters> { };
@@ -108,4 +110,7 @@ INSTANTIATE_TEST_SUITE_P( MRMesh, TrianglesIntersectTestFixture, testing::Values
     // T1 vertex lies on T3 side, T3 vertex lies on T1 side
     , TrianglesIntersectParameters { true, T1, T3 }
 ) );
-}
+
+#endif // MRMESH_NO_GTEST
+
+} // namespace MR

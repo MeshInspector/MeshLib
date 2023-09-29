@@ -2165,11 +2165,10 @@ void Viewer::GLPrimitivesCounter::reset()
 }
 
 // simple test to make sure this dll was linked and loaded to test project
-TEST( MRViewer, LoadTest )
+MR_TEST( MRViewer, LoadTest )
 {
     bool load = true;
     ASSERT_EQ( load, true );
 }
-
 
 }

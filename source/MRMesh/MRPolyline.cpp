@@ -340,7 +340,7 @@ size_t Polyline<V>::heapBytes() const
 template struct Polyline<Vector2f>;
 template struct Polyline<Vector3f>;
 
-TEST( MRMesh, Polyline2 )
+MR_TEST( MRMesh, Polyline2 )
 {
     Contour2f cont;
     cont.push_back( Vector2f( 0.f, 0.f ) );
@@ -373,7 +373,7 @@ TEST( MRMesh, Polyline2 )
     }
 }
 
-TEST( MRMesh, Polyline3 )
+MR_TEST( MRMesh, Polyline3 )
 {
     Contour2f cont;
     cont.push_back( Vector2f( 0.f, 0.f ) );
@@ -406,7 +406,7 @@ TEST( MRMesh, Polyline3 )
     }
 }
 
-TEST( MRMesh, PolylineSplitEdge )
+MR_TEST( MRMesh, PolylineSplitEdge )
 {
     Contour2f cont;
     cont.push_back( Vector2f( 0.f, 0.f ) );

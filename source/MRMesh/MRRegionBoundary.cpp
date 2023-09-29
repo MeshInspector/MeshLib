@@ -458,7 +458,7 @@ VertBitSet getInnerVerts( const MeshTopology & topology, const UndirectedEdgeBit
     return getInnerVerts_( topology, edges );
 }
 
-TEST(MRMesh, findLeftBoundary) 
+MR_TEST(MRMesh, findLeftBoundary) 
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );
     FaceBitSet faces;
@@ -475,7 +475,7 @@ TEST(MRMesh, findLeftBoundary)
     }
 }
 
-TEST( MRMesh, findRightBoundary )
+MR_TEST( MRMesh, findRightBoundary )
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );
     FaceBitSet faces;

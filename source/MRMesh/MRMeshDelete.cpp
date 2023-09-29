@@ -45,7 +45,7 @@ void deleteTargetFaces( Mesh & obj, const Mesh & target )
     deleteTargetFaces( obj, targetCenter );
 }
 
-TEST(MRMesh, DeleteTargetFaces)
+MR_TEST(MRMesh, DeleteTargetFaces)
 {
     Mesh meshObj = makeCube({ 1.f, 1.f, 1.f }, { 0.f, 0.f, 0.f });
     Mesh meshRef = makeCube({ 1.f, 1.f, 1.f }, { -1.f, -1.f, -1.f });

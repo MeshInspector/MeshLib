@@ -4,7 +4,7 @@
 namespace MR
 {
 
-TEST(MRMesh, Line3)
+MR_TEST(MRMesh, Line3)
 {
     {
         MR::Vector3f p( float(-393.72412), float(-373.53027), float(230.45459) );

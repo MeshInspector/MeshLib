@@ -38,7 +38,7 @@ Contours2f getTestCont2()
     //c.push_back( { {4.f,0.f},{4.f,4.f},{0.f,5.f} } );
     return c;
 }
-TEST( MRMesh, DistanceMapBoolean2D )
+MR_TEST( MRMesh, DistanceMapBoolean2D )
 {
     auto c1 = getTestCont1();
     auto c2 = getTestCont2();
@@ -67,7 +67,7 @@ TEST( MRMesh, DistanceMapBoolean2D )
     EXPECT_EQ( subContours.size(), 2 );
 }
 
-TEST( MRMesh, DistanceMapContours )
+MR_TEST( MRMesh, DistanceMapContours )
 {
     Contours2f conts;
     conts.push_back( { {0.0f,0.0f},{0.0f,500.0f},{500.0f,500.0f},{500.0f,0.0f},{0.0f,0.0f} } );
@@ -105,7 +105,7 @@ TEST( MRMesh, DistanceMapContours )
     }
 }
 
-TEST( MRMesh, DistanceMapSphere )
+MR_TEST( MRMesh, DistanceMapSphere )
 {
     float pixSize = 0.1f;
     Mesh sphere = makeUVSphere( 1, 100, 100 );
@@ -145,7 +145,7 @@ TEST( MRMesh, DistanceMapSphere )
     EXPECT_EQ( count, 0 );
 }
 
-TEST( MRMesh, DistanceMapWatertight )
+MR_TEST( MRMesh, DistanceMapWatertight )
 {
     float pixelSize = 0.1f;
     Mesh sphere = makeUVSphere( 1, 13, 17 );
@@ -205,7 +205,7 @@ TEST( MRMesh, DistanceMapWatertight )
     }
 }
 
-TEST( MRMesh, DistanceMapCompare )
+MR_TEST( MRMesh, DistanceMapCompare )
 {
     MR_TIMER
 
@@ -240,7 +240,7 @@ TEST( MRMesh, DistanceMapCompare )
     }
 }
 
-TEST( MRMesh, DistanceMapNegativeValue )
+MR_TEST( MRMesh, DistanceMapNegativeValue )
 {
     float pixSize = 0.1f;
     Mesh mesh = makeUVSphere( 1, 100, 100 );
@@ -294,7 +294,7 @@ TEST( MRMesh, DistanceMapNegativeValue )
     }
 }
 
-TEST( MRMesh, DistanceMapOffsetMap )
+MR_TEST( MRMesh, DistanceMapOffsetMap )
 {
     Contours2f conts;
     conts.push_back( { {0.0f,0.0f},{0.0f,300.0f},{300.0f,300.0f},{300.0f,0.0f},{0.0f,0.0f} } );
@@ -325,7 +325,7 @@ TEST( MRMesh, DistanceMapOffsetMap )
     ASSERT_EQ( counter, 80275 );
 }
 
-TEST( MRMesh, DistanceMapInterpolation )
+MR_TEST( MRMesh, DistanceMapInterpolation )
 {
     DistanceMap dm( 2, 2 );
     dm.set( 0, 0, 2.f );

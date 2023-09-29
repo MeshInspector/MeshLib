@@ -160,7 +160,7 @@ int subdividePolyline( Polyline3 & polyline, const PolylineSubdivideSettings & s
     return subdividePolylineT( polyline, settings );
 }
 
-TEST(MRMesh, SubdividePolyline)
+MR_TEST(MRMesh, SubdividePolyline)
 {
     Contour2f cont;
     cont.push_back( Vector2f( 0.f, 0.f ) );

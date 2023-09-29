@@ -986,7 +986,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
 }
 
 // check if Decimator updates region
-TEST( MRMesh, MeshDecimate )
+MR_TEST( MRMesh, MeshDecimate )
 {
     Mesh meshCylinder = makeCylinderAdvanced(0.5f, 0.5f, 0.0f, 20.0f / 180.0f * PI_F, 1.0f, 16);
 

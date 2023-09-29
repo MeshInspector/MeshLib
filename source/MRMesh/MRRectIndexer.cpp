@@ -90,7 +90,7 @@ void shrinkPixelMask( PixelBitSet& mask, const RectIndexer& indexer, int shrinka
     }
 }
 
-TEST( MRMesh, ExpandShrinkPixels )
+MR_TEST( MRMesh, ExpandShrinkPixels )
 {
     RectIndexer indexer( Vector2i::diagonal( 8 ) );
     PixelBitSet mask( indexer.size() );

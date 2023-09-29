@@ -926,7 +926,7 @@ void deserializeFromJson( const Json::Value& root, std::vector<Color>& colors )
     }
 }
 
-TEST( MRMesh, MeshToJson )
+MR_TEST( MRMesh, MeshToJson )
 {
     Json::Value root;
     auto mesh = makeCube();

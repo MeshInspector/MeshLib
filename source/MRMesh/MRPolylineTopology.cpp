@@ -631,7 +631,7 @@ bool PolylineTopology::isClosed() const
     return true;
 }
 
-TEST( MRMesh, PolylineTopology )
+MR_TEST( MRMesh, PolylineTopology )
 {
     PolylineTopology t;
     VertId vs[4] = { 0_v, 1_v, 2_v, 0_v };

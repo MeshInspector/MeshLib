@@ -4,7 +4,7 @@
 namespace MR
 {
 
-TEST(MRMesh, posFromTriEdgeLengths)
+MR_TEST(MRMesh, posFromTriEdgeLengths)
 {
     EXPECT_EQ( posFromTriEdgeLengths( 4., 5., 3. ), Vector2d( 4., 0. ) );
     EXPECT_EQ( posFromTriEdgeLengths( 5., 4., 3. ), Vector2d( 4., 3. ) );
@@ -13,7 +13,7 @@ TEST(MRMesh, posFromTriEdgeLengths)
     EXPECT_EQ( posFromTriEdgeLengths( 1., 2., 0. ), std::nullopt );
 }
 
-TEST(MRMesh, quadrangleOtherDiagonal)
+MR_TEST(MRMesh, quadrangleOtherDiagonal)
 {
     EXPECT_EQ( quadrangleOtherDiagonal( 1., 1., 1., 1., 1. ), std::sqrt( 3. ) );
     EXPECT_EQ( quadrangleOtherDiagonal( 4., 5., 3., 4., 5. ), 8. );

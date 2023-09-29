@@ -249,7 +249,7 @@ void AABBTreePoints::refit( const VertCoords & newCoords, const VertBitSet & cha
     }
 }
 
-TEST( MRMesh, AABBTreePoints )
+MR_TEST( MRMesh, AABBTreePoints )
 {
     PointCloud spherePC = meshToPointCloud( makeUVSphere( 1, 8, 8 ) );
     AABBTreePoints tree( spherePC );
@@ -269,7 +269,7 @@ TEST( MRMesh, AABBTreePoints )
     assert( tree.nodes().empty() );
 }
 
-TEST( MRMesh, AABBTreePointsFromMesh )
+MR_TEST( MRMesh, AABBTreePointsFromMesh )
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );
     AABBTreePoints tree( sphere );

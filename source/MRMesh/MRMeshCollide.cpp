@@ -379,7 +379,7 @@ bool isNonIntersectingInside( const MeshPart& a, const MeshPart& b, const Affine
     return signDist && signDist < 0;
 }
 
-TEST( MRMesh, DegenerateTrianglesIntersect )
+MR_TEST( MRMesh, DegenerateTrianglesIntersect )
 {
     Vector3f a{-24.5683002f,-17.7052994f,-21.3701000f};
     Vector3f b{-24.6611996f,-17.7504997f,-21.3423004f};

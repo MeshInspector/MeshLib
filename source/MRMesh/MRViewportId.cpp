@@ -4,7 +4,7 @@
 namespace MR
 {
 
-TEST( MRMesh, ViewportIterator )
+MR_TEST( MRMesh, ViewportIterator )
 {
     for ( [[maybe_unused]] ViewportId id : ViewportMask{0} )
         EXPECT_TRUE( false );

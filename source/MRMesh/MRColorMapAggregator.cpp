@@ -136,7 +136,7 @@ template class ColorMapAggregator<UndirectedEdgeTag>;
 template class ColorMapAggregator<FaceTag>;
 
 
-TEST( MRMesh, ColorMapAggregator )
+MR_TEST( MRMesh, ColorMapAggregator )
 {
     Color cWhite = Color::white();
     Color cRed = Color( Vector4i( 255, 0, 0, 128 ) );

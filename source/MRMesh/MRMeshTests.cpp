@@ -6,7 +6,7 @@
 namespace MR
 {
 
-TEST(MRMesh, Pack) 
+MR_TEST(MRMesh, Pack) 
 {
     Triangulation t{
         { 0_v, 1_v, 2_v },
@@ -64,7 +64,7 @@ TEST(MRMesh, Pack)
     EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId() );
 }
 
-TEST(MRMesh, AddPartByMask) 
+MR_TEST(MRMesh, AddPartByMask) 
 {
     Triangulation t{
         { 0_v, 1_v, 2_v },
@@ -120,7 +120,7 @@ TEST(MRMesh, AddPartByMask)
     EXPECT_EQ( mesh.topology.lastNotLoneEdge(), 21_e ); // 11*2 = 22 half-edges in total
 }
 
-TEST(MRMesh, AddPartByMaskAndStitch) 
+MR_TEST(MRMesh, AddPartByMaskAndStitch) 
 {
     Triangulation t{ { 0_v, 1_v, 2_v } };
     auto topology0 = MeshBuilder::fromTriangles( t );

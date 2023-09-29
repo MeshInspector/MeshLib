@@ -268,7 +268,7 @@ Expected<Mesh, std::string> makeRegularGridMesh( VertCoords points, ProgressCall
     return res;
 }
 
-TEST(MRMesh, makeRegularGridMesh)
+MR_TEST(MRMesh, makeRegularGridMesh)
 {
      auto m = makeRegularGridMesh( 2, 2,
          []( size_t, size_t ) { return true; },

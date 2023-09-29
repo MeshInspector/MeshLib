@@ -1988,7 +1988,7 @@ std::vector<MR::EdgePath> cutMeshWithPlane( MR::Mesh& mesh, const MR::Plane3f& p
     return cutEdges.resultCut;
 }
 
-TEST( MRMesh, BooleanIntersectionsSort )
+MR_TEST( MRMesh, BooleanIntersectionsSort )
 {
     Mesh meshA;
     meshA.points = std::vector<Vector3f>

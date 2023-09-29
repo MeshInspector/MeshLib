@@ -220,7 +220,7 @@ void Pdf::close()
     activeFont_ = nullptr;
 }
 
-TEST( MRMesh, Pdf )
+MR_TEST( MRMesh, Pdf )
 {
     UniqueTemporaryFolder pathFolder( {} );
     Pdf pdfTest( pathFolder / std::filesystem::path( "test.pdf" ) );

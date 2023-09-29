@@ -695,7 +695,7 @@ Contours3f surfacePathsToContours3f( const Mesh & mesh, const SurfacePaths & lin
     return res;
 }
 
-TEST(MRMesh, SurfacePath) 
+MR_TEST(MRMesh, SurfacePath) 
 {
     Vector3f g;
 
@@ -741,7 +741,7 @@ TEST(MRMesh, SurfacePath)
     EXPECT_FALSE( e.has_value() );
 }
 
-TEST( MRMesh, SurfacePathTargets )
+MR_TEST( MRMesh, SurfacePathTargets )
 {
     Triangulation t{
         { 0_v, 1_v, 2_v }

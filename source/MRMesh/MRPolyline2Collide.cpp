@@ -316,7 +316,7 @@ bool isInside( const Polyline2& a, const Polyline2& b, const AffineXf2f* rigidB2
     return cross( vecA, ray ) > 0.0f;
 }
 
-TEST( MRMesh, Polyline2Collide )
+MR_TEST( MRMesh, Polyline2Collide )
 {
     Vector2f as[2] = { { 0, 1 }, { 4, 5 } };
     Polyline2 a;
@@ -334,7 +334,7 @@ TEST( MRMesh, Polyline2Collide )
     ASSERT_EQ( res[0].b.a, 1.0f / 4 );
 }
 
-TEST( MRMesh, Polyline2SelfCollide )
+MR_TEST( MRMesh, Polyline2SelfCollide )
 {
     Vector2f as[2] = { { 0, 1 }, { 4, 5 } };
     Polyline2 polyline;

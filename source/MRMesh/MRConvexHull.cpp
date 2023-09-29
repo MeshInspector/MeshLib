@@ -294,7 +294,7 @@ Mesh makeConvexHull( const PointCloud & in )
     return makeConvexHull( in.points, in.validPoints );
 }
 
-TEST( MRMesh, ConvexHull )
+MR_TEST( MRMesh, ConvexHull )
 {
     Mesh torus = makeTorus( 1.0f, 0.3f, 16, 16 );
     Mesh discus = makeConvexHull( torus );

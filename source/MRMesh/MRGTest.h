@@ -42,6 +42,6 @@
 #else
 
 #include <gtest/gtest.h>
-#define TEST( a, b ) TEST( a, b )
+#define MR_TEST( a, b ) TEST( a, b )
 
 #endif

@@ -19,7 +19,7 @@ option(MRMESH_NO_GLTF "Disable glTF support" OFF)
 option(MRMESH_NO_XML "Disable XML support (affects 3MF support)" OFF)
 option(MRMESH_NO_E57 "Disable E57 support" OFF)
 option(MRMESH_NO_LAS "Disable LAS/LAZ support" OFF)
-option(MRMESH_NO_GTEST "Disable building Google tests" ON) //!!!
+option(MRMESH_NO_GTEST "Disable building Google tests" ON) # !!!
 
 IF(DEFINED MESHLIB_PYTHON_SUPPORT AND NOT MESHLIB_PYTHON_SUPPORT)
 	set(MRMESH_NO_PYTHON ON)

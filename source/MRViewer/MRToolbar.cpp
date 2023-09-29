@@ -61,12 +61,12 @@ void Toolbar::drawToolbar()
 
     if ( !itemCount )
     {
-        currentSize_ = 0.0f;
+        currentWidth_ = 0.0f;
         return;
     }
     ++itemCount;
 
-    currentSize_ = windowPadding.x * 2
+    currentWidth_ = windowPadding.x * 2
         + itemSize.x * itemCount
         + itemSize.x * cSmallItemDropSizeModifier * droppedItemCount
         + itemSpacing.x * ( itemCount - 1 )
@@ -74,17 +74,17 @@ void Toolbar::drawToolbar()
         + itemSpacing.x / 2.f;
 
     const Vector2i sceneSize = ribbonMenu_->getSceneSize();
-    if ( currentSize_ >= getViewerInstance().framebufferSize.x - sceneSize.x )
+    if ( currentWidth_ >= getViewerInstance().framebufferSize.x - sceneSize.x )
     {
-        currentSize_ = 0.0f;
+        currentWidth_ = 0.0f;
         return; // dont show quick panel if window is too small
     }
 
-    const float windowPosX = std::max( getViewerInstance().framebufferSize.x / 2.f - currentSize_ / 2.f, sceneSize.x - 1.0f );
+    const float windowPosX = std::max( getViewerInstance().framebufferSize.x / 2.f - currentWidth_ / 2.f, sceneSize.x - 1.0f );
 
     const int currentTopPanelHeight = ribbonMenu_->getTopPanelCurrentHeight();
     ImGui::SetNextWindowPos( ImVec2( windowPosX, float( currentTopPanelHeight ) * scaling_ - 1 ) );
-    ImGui::SetNextWindowSize( ImVec2( currentSize_, cQuickAccessBarHeight * scaling_ ), ImGuiCond_Always );
+    ImGui::SetNextWindowSize( ImVec2( currentWidth_, cQuickAccessBarHeight * scaling_ ), ImGuiCond_Always );
 
     ImGui::PushStyleColor( ImGuiCol_WindowBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::QuickAccessBackground ).getUInt32() );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );

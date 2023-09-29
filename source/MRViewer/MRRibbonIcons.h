@@ -18,7 +18,7 @@ public:
     enum class IconType
     {
         RibbonItemIcon, // have four sizes
-        ObjectTypeIcon  // have tow sizes
+        ObjectTypeIcon  // have two sizes
     };
     // this should be called once on start of programm (called in RibbonMenu::init)
     MRVIEWER_API static void load();

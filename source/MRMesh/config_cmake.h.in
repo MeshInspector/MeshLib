@@ -18,3 +18,4 @@
 #cmakedefine MRMESH_NO_XML
 #cmakedefine MRMESH_NO_E57
 #cmakedefine MRMESH_NO_LAS
+#cmakedefine MRMESH_NO_GTEST

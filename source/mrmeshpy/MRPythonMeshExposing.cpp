@@ -33,6 +33,9 @@ struct AAA
     AAA()
     {
         std::cerr << "mrmeshpy: " << typeid( Mesh ).name() << "  " << &typeid( Mesh ) << std::endl;
+        #if defined(__GLIBCXX__)
+        std::cerr << "__GLIBCXX__=" << __GLIBCXX__ << std::endl;
+        #endif
     }
 } aaa;
 

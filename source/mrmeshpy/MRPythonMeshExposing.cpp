@@ -24,19 +24,19 @@
 #include <iostream>
 #include <typeinfo>
 
+using namespace MR;
+
 namespace {
 
 struct AAA
 {
     AAA()
     {
-        std::cerr << "mrmeshpy: " << typeid( MR::Mesh ).name() << std::endl;
+        std::cerr << "mrmeshpy: " << typeid( Mesh ).name() << std::endl;
     }
 } aaa;
 
 }
-
-using namespace MR;
 
 Mesh pythonGetSelectedMesh()
 {

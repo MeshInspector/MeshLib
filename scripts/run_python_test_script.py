@@ -11,7 +11,7 @@ parser.add_argument("-d", dest="dir", type=str, help='Path to tests')
 args = parser.parse_args()
 print(args)
 
-python_cmd = "py -3.10 "
+python_cmd = "py -3.11 "
 platformSystem = platform.system()
 
 if platformSystem == 'Linux':

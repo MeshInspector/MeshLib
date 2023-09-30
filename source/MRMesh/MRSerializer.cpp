@@ -99,6 +99,18 @@ const IOFilters SceneFileFilters =
 #endif
 };
 
+Expected<Json::Value, std::string> deserializeJsonValue( const std::string& str )
+{
+    Json::Value root;
+    Json::CharReaderBuilder readerBuilder;
+    std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
+    std::string error;
+    if ( !reader->parse( str.data(), str.data() + str.size(), &root, &error ) )
+        return unexpected( "Cannot parse json file: " + error );
+
+    return root;
+}
+
 Expected<Json::Value, std::string> deserializeJsonValue( const std::filesystem::path& path )
 {
     if ( path.empty() )
@@ -116,14 +128,7 @@ Expected<Json::Value, std::string> deserializeJsonValue( const std::filesystem::
 
     ifs.close();
 
-    Json::Value root;
-    Json::CharReaderBuilder readerBuilder;
-    std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
-    std::string error;
-    if ( !reader->parse( str.data(), str.data() + str.size(), &root, &error ) )
-        return unexpected( "Cannot parse json file: " + error );
-
-    return root;
+    return deserializeJsonValue( str );
 }
 
 // this object stores a handle on open zip-archive, and automatically closes it in the destructor

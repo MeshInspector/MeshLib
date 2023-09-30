@@ -6,6 +6,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRSystem.h"
 #include "MRPch/MRJson.h"
+#include "MRPch/MRWasm.h"
 
 namespace MR
 {
@@ -30,6 +31,7 @@ const std::string& Config::getAppName() const
 
 void Config::writeToFile()
 {
+#ifndef __EMSCRIPTEN__
     std::ofstream os( filePath_ );
     if ( loggerHandle_ )
         loggerHandle_->info( "Saving config file: " + utf8string( filePath_ ) );
@@ -43,10 +45,20 @@ void Config::writeToFile()
         if ( loggerHandle_ )
             loggerHandle_->warn( "Failed to save json config file " + utf8string( filePath_ ) );
     }
+#else
+    std::stringstream strStream;
+    strStream << config_;
+    std::string str = strStream.str();
+#pragma GCC diagnostic push 
+#pragma GCC diagnostic ignored "-Wdollar-in-identifier-extension"
+    EM_ASM({ localStorage.setItem( 'config', UTF8ToString( $0 ) ) }, str.c_str() );
+#pragma GCC diagnostic pop
+#endif
 }
 
 void Config::reset( const std::filesystem::path& filePath )
 {
+#ifndef __EMSCRIPTEN__
     if ( std::filesystem::exists( filePath ) )
     {
         auto readRes = deserializeJsonValue( filePath );
@@ -65,6 +77,42 @@ void Config::reset( const std::filesystem::path& filePath )
         if ( loggerHandle_ )
             loggerHandle_->warn( "Failed to open json config file " + utf8string( Config::filePath_ ) );
     }
+#else
+    auto *jsStr = (char *)EM_ASM_PTR({
+        var configStr = localStorage.getItem('config');
+        if ( configStr == null )
+            configStr = "";
+        var lengthBytes = lengthBytesUTF8( configStr ) + 1;
+        var stringOnWasmHeap = _malloc( lengthBytes );
+        stringToUTF8( configStr, stringOnWasmHeap, lengthBytes );
+        return stringOnWasmHeap;
+    });
+    std::string configStr;
+    if ( jsStr )
+    {
+        configStr = std::string( jsStr );
+        free(jsStr);
+    }
+    if (!configStr.empty())
+    {
+        auto readRes = deserializeJsonValue( configStr );
+        if ( !readRes.has_value() )
+        {
+            if ( loggerHandle_ )
+                loggerHandle_->error( readRes.error() );
+        }
+        else
+        {
+            config_ = std::move( readRes.value() );
+        }
+    }
+    else
+    {
+        if ( loggerHandle_ )
+            loggerHandle_->warn( "Failed to load config from localStorage" + utf8string( Config::filePath_ ) );
+    }
+
+#endif
     filePath_ = filePath;
 }
 

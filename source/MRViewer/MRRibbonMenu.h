@@ -73,6 +73,9 @@ public:
 
     const RibbonButtonDrawer& getRibbonButtonDrawer() { return buttonDrawer_; }
     Toolbar& getToolbar() { return toolbar_; }
+    void setActiveListPos( const ImVec2& pos ) { activeListPos_ = pos; }
+    /// set active plugins list showed
+    void showActiveList() { activeListPressed_ = true; };
 
     /// clones given objects with sub-objects (except for ancillary and unrecognized children) and undo
     MRVIEWER_API static void cloneTree( const std::vector<std::shared_ptr<Object>>& selectedObjects );
@@ -146,6 +149,9 @@ protected:
 
     MRVIEWER_API virtual void setupShortcuts_() override;
 
+    // override this function to draw your custom version window somewhere
+    virtual void drawVersionWindow_() {};
+
     MRVIEWER_API virtual void drawShortcutsWindow_() override;
     // reads files with panel description
     MRVIEWER_API virtual void readMenuItemsStructure_();
@@ -155,6 +161,7 @@ protected:
 
     MRVIEWER_API virtual bool drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags flags = 0 ) override;
 
+    MRVIEWER_API virtual void highlightBlocking_();
 private:
     void changeTab_( int newTab );
 
@@ -174,7 +181,11 @@ private:
     // part of top panel
     void drawHeaderQuickAccess_();
     void drawHeaderPannel_();
-    void drawActiveListButton_( const ImVec2& basePos, float btnSize, float textSize );
+    void drawActiveListButton_( const ImVec2& basePos, float btnSize );
+    
+    ImVec2 activeListPos_{ 0,0 };
+    bool activeListPressed_{ false };
+    void drawActiveList_();
 
     bool drawGroupUngroupButton_( const std::vector<std::shared_ptr<Object>>& selected );
     bool drawCloneButton_( const std::vector<std::shared_ptr<Object>>& selected );
@@ -194,6 +205,9 @@ private:
     ImVec2 sceneSize_{ 310, 0 };
     float informationHeight_{ 0.f };
     float transformHeight_{ 0.f };
+
+    // how long blocking window will blink in seconds
+    float blockingHighlightTimer_{ 0.0f };
 
     // current scroll position of tabs panel
     float tabPanelScroll_{ 0.0f };

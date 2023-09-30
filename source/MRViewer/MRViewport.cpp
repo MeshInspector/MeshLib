@@ -40,6 +40,7 @@ namespace MR
 
 Viewport::Viewport()
 {
+    cameraLookAlong( Vector3f( -1.f, -1.f, -1.f ), Vector3f( -1, -1, 2 ) );
 }
 
 Viewport::~Viewport()

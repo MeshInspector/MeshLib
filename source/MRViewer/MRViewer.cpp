@@ -56,6 +56,7 @@
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/html5.h>
+#include "MRMesh/MRConfig.h"
 #define GLFW_INCLUDE_ES3
 
 namespace
@@ -95,6 +96,15 @@ EMSCRIPTEN_KEEPALIVE void emsUpdateViewportBounds()
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
     EM_ASM( updateVPBounds($0,$1,$2,$3), bounds.min.x,bounds.min.y, MR::width( bounds ),MR::height( bounds ) );
 #pragma clang diagnostic pop
+}
+
+EMSCRIPTEN_KEEPALIVE void emsForceSettingsSave()
+{
+    auto& viewer = MR::getViewerInstance();
+    auto& settingsManager = viewer.getViewportSettingsManager();
+    if ( settingsManager )
+        settingsManager->saveSettings( viewer );
+    MR::Config::instance().writeToFile();
 }
 
 }
@@ -625,6 +635,9 @@ int Viewer::launchInit_( const LaunchParams& params )
         touchpadController.initialize( window );
     }
 
+    CommandLoop::setState( CommandLoop::StartPosition::AfterWindowInit );
+    CommandLoop::processCommands();
+
     std::future<void> splashMinTimer;
     if ( windowMode && params.windowMode != LaunchParams::Hide && params.splashWindow )
     {
@@ -855,6 +868,8 @@ void Viewer::EventQueue::popByName( const std::string& name )
 
 void Viewer::postEmptyEvent()
 {
+    if ( !isGLInitialized() )
+        return;
 #ifdef __EMSCRIPTEN__
     eventQueue.emplace( { "Empty", [] () {} } );
 #endif

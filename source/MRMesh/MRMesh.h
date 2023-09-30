@@ -38,6 +38,11 @@ struct [[nodiscard]] Mesh
         std::vector<MeshBuilder::VertDuplication> * dups = nullptr,
         const MeshBuilder::BuildSettings & settings = {} );
 
+    /// construct mesh from point triples;
+    /// \param duplicateNonManifoldVertices = false, all coinciding points are given the same VertId in the result;
+    /// \param duplicateNonManifoldVertices = true, it tries to avoid non-manifold vertices by creating duplicate vertices with same coordinates 
+    [[nodiscard]] MRMESH_API static Mesh fromPointTriples( const std::vector<Triangle3f> & posTriples, bool duplicateNonManifoldVertices );
+
     /// compare that two meshes are exactly the same
     [[nodiscard]] MRMESH_API bool operator ==( const Mesh & b ) const;
 

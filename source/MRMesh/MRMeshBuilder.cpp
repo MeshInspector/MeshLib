@@ -793,14 +793,7 @@ MeshTopology fromVertexTriples( const std::vector<VertId> & vertTriples, Progres
 
 Mesh fromPointTriples( const std::vector<Triangle3f> & posTriples )
 {
-    MR_TIMER
-    VertexIdentifier vi;
-    vi.reserve( posTriples.size() );
-    vi.addTriangles( posTriples );
-    Mesh res;
-    res.points = vi.takePoints();
-    res.topology = fromTriangles( vi.takeTriangulation() );
-    return res;
+    return Mesh::fromPointTriples( posTriples, false );
 }
 
 int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd, VertMap * optionalVertOldToNew )

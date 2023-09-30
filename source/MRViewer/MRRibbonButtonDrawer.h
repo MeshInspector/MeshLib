@@ -1,6 +1,7 @@
 #pragma once
 #include <functional>
 #include "MRRibbonMenuItem.h"
+#include "MRRibbonIcons.h"
 #include "imgui.h"
 
 namespace MR
@@ -28,6 +29,13 @@ struct DrawButtonParams
         Toolbar, // button is on toolbar
         Header // button is on header quick access bar
     } rootType{ RootType::Ribbon };
+};
+
+struct CustomButtonParameters
+{
+    // if not set push default ribbon colors
+    std::function<int( bool, bool )> pushColorsCb;
+    RibbonIcons::IconType iconType;
 };
 
 /// class for drawing ribbon menu buttons
@@ -60,15 +68,19 @@ public:
         float additionalWidth{ 0.0f }; // for small drop buttons
     };
     MRVIEWER_API ButtonItemWidth calcItemWidth( const MenuItemInfo& item, DrawButtonParams::SizeType sizeType ) const;
-
+    
     /// draw item button
     MRVIEWER_API void drawButtonItem( const MenuItemInfo& item, const DrawButtonParams& params ) const;
+
+    /// draw item button
+    MRVIEWER_API void drawCustomButtonItem( const MenuItemInfo& item, const CustomButtonParameters& customParam, 
+        const DrawButtonParams& params ) const;
 
     /// draw item button icon
     MRVIEWER_API void drawButtonIcon( const MenuItemInfo& item, const DrawButtonParams& params ) const;
 
     /// draw custom styled button
-    MRVIEWER_API bool drawCustomStyledButton( const char* icon, const ImVec2& size, float iconSize );
+    MRVIEWER_API bool drawTabArrawButton( const char* icon, const ImVec2& size, float iconSize );
 
     /// set reaction on press item button
     void setOnPressAction( std::function<void( std::shared_ptr<RibbonMenuItem>, bool )> action ) { onPressAction_ = action; };

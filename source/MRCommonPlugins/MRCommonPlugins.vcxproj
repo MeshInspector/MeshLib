@@ -27,6 +27,7 @@
     <ClCompile Include="Basic\MRMoveObjectByMouse.cpp" />
     <ClCompile Include="Basic\MRWasmUnavailablePlugin.cpp" />
     <ClCompile Include="Selectors\MRSelectObjectByClick.cpp" />
+    <ClCompile Include="ViewerButtons\MRActiveListPlugin.cpp" />
     <ClCompile Include="ViewerButtons\MRAddCustomTheme.cpp" />
     <ClCompile Include="ViewerButtons\MRIOFilesMenuItems.cpp" />
     <ClCompile Include="ViewerButtons\MRRibbonSceneButtons.cpp" />

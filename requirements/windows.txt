@@ -20,6 +20,7 @@ jsoncpp
 libe57format
 libharu
 libzip
+opencascade
 openvdb
 python3
 spdlog

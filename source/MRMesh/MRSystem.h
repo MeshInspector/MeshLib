@@ -57,6 +57,9 @@ MRMESH_API void OpenLink( const std::string& url );
 // returns string identification of the CPU
 MRMESH_API std::string GetCpuId();
 
+// returns string with OS name with details
+MRMESH_API std::string GetDetailedOSName();
+
 // returns string identification of the OS
 MRMESH_API std::string getOSNoSpaces();
 

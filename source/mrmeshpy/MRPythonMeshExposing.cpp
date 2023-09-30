@@ -33,7 +33,6 @@ struct AAA
     AAA()
     {
         std::cerr << "mrmeshpy: " << typeid( Mesh ).name() << "  " << &typeid( Mesh ) << std::endl;
-        std::cerr << "mrmeshpy internals: " << &pybind11::detail::get_internals() << std::endl;
     }
 } aaa;
 
@@ -502,6 +501,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
         "finds all pairs of colliding triangles from two meshes or two mesh regions\n"
         "\trigidB2A - rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation\n"
         "\tfirstIntersectionOnly - if true then the function returns at most one pair of intersecting triangles and returns faster" );
+
+    std::cerr << "mrmeshpy internals: " << &pybind11::detail::get_internals() << std::endl;
 } )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaceFace, FaceFace )

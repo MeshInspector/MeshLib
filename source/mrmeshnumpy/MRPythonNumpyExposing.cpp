@@ -19,7 +19,6 @@ struct AAA
     AAA()
     {
         std::cerr << "mrmeshnumpy: " << typeid( MR::Mesh ).name() << "  " << &typeid( MR::Mesh ) << std::endl;
-        std::cerr << "mrmeshnumpy internals: " << &pybind11::detail::get_internals() << std::endl;
     }
 } aaa;
 
@@ -596,4 +595,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyBitSets, [] ( pybind11::module_& m )
     m.def( "vertBitSetFromBools", &bitSetFromNP<MR::VertTag>, pybind11::arg( "boolArray" ), "returns VertBitSet from numpy array with bools" );
     m.def( "edgeBitSetFromBools", &bitSetFromNP<MR::EdgeTag>, pybind11::arg( "boolArray" ), "returns EdgeBitSet from numpy array with bools" );
     m.def( "undirectedEdgeBitSetFromBools", &bitSetFromNP<MR::UndirectedEdgeTag>, pybind11::arg( "boolArray" ), "returns UndirectedEdgeBitSet from numpy array with bools" );
+
+    std::cerr << "mrmeshnumpy internals: " << &pybind11::detail::get_internals() << std::endl;
 } )

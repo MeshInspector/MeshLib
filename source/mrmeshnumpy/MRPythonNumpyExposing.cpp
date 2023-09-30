@@ -18,7 +18,7 @@ struct AAA
 {
     AAA()
     {
-        std::cerr << "mrmeshnumpy: " << typeid( MR::Mesh ).name() << std::endl;
+        std::cerr << "mrmeshnumpy: " << typeid( MR::Mesh ).name() << "  " << &typeid( MR::Mesh ) << std::endl;
     }
 } aaa;
 

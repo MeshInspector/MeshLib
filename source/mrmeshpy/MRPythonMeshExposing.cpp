@@ -32,7 +32,7 @@ struct AAA
 {
     AAA()
     {
-        std::cerr << "mrmeshpy: " << typeid( Mesh ).name() << std::endl;
+        std::cerr << "mrmeshpy: " << typeid( Mesh ).name() << "  " << &typeid( Mesh ) << std::endl;
     }
 } aaa;
 

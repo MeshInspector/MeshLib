@@ -124,8 +124,9 @@ public:
     const std::vector<PythonRegisterFuncton>& functions( const std::string& moduleName ) const
     {
         auto it = moduleData_.find( moduleName );
+        const static std::vector<PythonRegisterFuncton> empty;
         if ( it == moduleData_.end() )
-            return {};
+            return empty;
         return it->second.functions;
     }
 

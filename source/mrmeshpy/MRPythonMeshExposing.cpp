@@ -33,6 +33,7 @@ struct AAA
     AAA()
     {
         std::cerr << "mrmeshpy: " << typeid( Mesh ).name() << "  " << &typeid( Mesh ) << std::endl;
+        std::cerr << "mrmeshpy internals: " << &pybind11::detail::get_internals() << std::endl;
     }
 } aaa;
 

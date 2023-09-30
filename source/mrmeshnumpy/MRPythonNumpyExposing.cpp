@@ -19,21 +19,37 @@ struct AAA
     AAA()
     {
         std::cerr << "mrmeshnumpy: " << typeid( MR::Mesh ).name() << "  " << &typeid( MR::Mesh ) << std::endl;
+        std::cerr << "mrmeshnumpy internals: " << &pybind11::detail::get_internals() << std::endl;
     }
 } aaa;
 
 }
 
-MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
+void init()
 {
     try
     {
-        pybind11::module_::import( "meshlib.mrmeshpy" );
+        [[maybe_unused]] const auto & m = pybind11::module_::import( "meshlib.mrmeshpy" );
+        pybind11::print( m );
+/*        for ( const auto & v : m )
+        {
+            pybind11::print( v );
+        }*/
     }
     catch ( const pybind11::error_already_set& )
     {
-        pybind11::module_::import( "mrmeshpy" );
+        [[maybe_unused]] const auto & m = pybind11::module_::import( "mrmeshpy" );
+        pybind11::print( m );
+/*        for ( const auto & v : m )
+        {
+            pybind11::print( v );
+        }*/
     }
+}
+
+MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
+{
+    init();
 } )
 
 

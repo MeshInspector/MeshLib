@@ -93,9 +93,9 @@ jobs:
 
       - name: Setup python
         run: |
-          py -3.10 -m ensurepip --upgrade
-          py -3.10 -m pip install --upgrade pip
-          py -3.10 -m pip install -r .\requirements\python.txt
+          py -3.11 -m ensurepip --upgrade
+          py -3.11 -m pip install --upgrade pip
+          py -3.11 -m pip install -r .\requirements\python.txt
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.3

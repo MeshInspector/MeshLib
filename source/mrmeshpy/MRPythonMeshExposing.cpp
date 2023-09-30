@@ -21,6 +21,21 @@
 #include "MRMesh/MRUVSphere.h"
 #include "MRMesh/MRExpected.h"
 #include <pybind11/functional.h>
+#include <iostream>
+#include <typeinfo>
+
+namespace {
+
+struct AAA
+{
+    AAA()
+    {
+        std::cerr << "mrmeshpy: " << typeid( MR::Mesh ).name() << std::endl;
+    }
+} aaa;
+
+}
+
 using namespace MR;
 
 Mesh pythonGetSelectedMesh()

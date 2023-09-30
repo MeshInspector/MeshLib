@@ -9,6 +9,20 @@
 #include "MRMesh/MRVertexAttributeGradient.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRCloseVertices.h"
+#include <iostream>
+#include <typeinfo>
+
+namespace {
+
+struct AAA
+{
+    AAA()
+    {
+        std::cerr << "mrmeshnumpy: " << typeid( MR::Mesh ).name() << std::endl;
+    }
+} aaa;
+
+}
 
 MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
 {

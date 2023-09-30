@@ -121,7 +121,7 @@ public:
         auto& mod = moduleData_[moduleName];
         mod.initFncPointer = initFncPointer;
     }
-    const std::vector<PythonRegisterFuncton> functions( const std::string& moduleName ) const
+    const std::vector<PythonRegisterFuncton>& functions( const std::string& moduleName ) const
     {
         auto it = moduleData_.find( moduleName );
         if ( it == moduleData_.end() )

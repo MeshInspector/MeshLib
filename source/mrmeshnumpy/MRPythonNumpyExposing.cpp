@@ -26,6 +26,15 @@ struct AAA
         #if defined(__GLIBCXX__)
         std::cerr << "__GLIBCXX__=" << __GLIBCXX__ << std::endl;
         #endif
+        #if defined(__cplusplus)
+        std::cerr << "__cplusplus=" << __cplusplus << std::endl;
+        #endif
+        #ifdef __GXX_TYPEINFO_EQUALITY_INLINE
+        std::cerr << "__GXX_TYPEINFO_EQUALITY_INLINE\n";
+        #endif
+        #ifdef __GXX_MERGED_TYPEINFO_NAMES
+        std::cerr << "__GXX_MERGED_TYPEINFO_NAMES\n";
+        #endif
     }
 } aaa;
 

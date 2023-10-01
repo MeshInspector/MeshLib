@@ -44,10 +44,10 @@ struct AAA
         std::cerr << "__cplusplus=" << __cplusplus << std::endl;
         #endif
         #ifdef __GXX_TYPEINFO_EQUALITY_INLINE
-        std::cerr << "__GXX_TYPEINFO_EQUALITY_INLINE\n";
+        std::cerr << "__GXX_TYPEINFO_EQUALITY_INLINE=" << __GXX_TYPEINFO_EQUALITY_INLINE << "\n";
         #endif
         #ifdef __GXX_MERGED_TYPEINFO_NAMES
-        std::cerr << "__GXX_MERGED_TYPEINFO_NAMES\n";
+        std::cerr << "__GXX_MERGED_TYPEINFO_NAMES=" << __GXX_MERGED_TYPEINFO_NAMES << "\n";
         #endif
     }
 } aaa;

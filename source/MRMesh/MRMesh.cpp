@@ -1218,7 +1218,7 @@ TEST(MRMesh, SplitFace)
 const std::type_info & meshType()
 {
     const std::type_info & res = typeid( Mesh );
-    std::cerr << "MRMesh: " << res.name() << "  " << &res << std::endl;
+    std::cerr << "MRMesh:      " << res.name() << "  " << &res << ", len = " << strlen( res.name() ) << ", hash = " << res.hash_code() << std::endl;
     return res;
 }
 

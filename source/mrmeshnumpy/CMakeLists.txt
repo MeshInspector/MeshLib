@@ -4,6 +4,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project (mrmeshnumpy CXX)
 
+add_definitions( -D__GXX_TYPEINFO_EQUALITY_INLINE=0 )
+
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
 

@@ -1222,4 +1222,9 @@ const std::type_info & meshType()
     return res;
 }
 
+bool meshTypeEq( const std::type_info & t )
+{
+    return t == typeid( Mesh );
+}
+
 } //namespace MR

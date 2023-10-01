@@ -412,4 +412,6 @@ private:
 
 MRMESH_API const std::type_info & meshType();
 
+MRMESH_API bool meshTypeEq( const std::type_info & );
+
 } //namespace MR

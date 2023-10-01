@@ -35,7 +35,8 @@ struct AAA
         const auto & my = typeid( MR::Mesh );
         std::cerr << "mrmeshpy:    " << my.name() << "  " << &my << ", len = " << strlen( my.name() ) << ", hash = " << my.hash_code() << std::endl;
         const auto & mtype = MR::meshType();
-        std::cerr << "mrmeshpy:    equal types=" << ( my == mtype ) << ", names strcmp = " << strcmp( my.name(), mtype.name() ) << std::endl;
+        std::cerr << "mrmeshpy:    equal types=" << ( my == mtype ) << ", equal types rev=" << ( mtype == my ) << ", names strcmp = " << strcmp( my.name(), mtype.name() ) << std::endl;
+        std::cerr << "mrmeshpy:    meshTypeEq=" << MR::meshTypeEq( my ) << std::endl;
         #if defined(__GLIBCXX__)
         std::cerr << "__GLIBCXX__=" << __GLIBCXX__ << std::endl;
         #endif

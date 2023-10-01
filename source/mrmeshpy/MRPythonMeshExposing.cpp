@@ -33,7 +33,7 @@ struct AAA
     AAA()
     {
         const auto & my = typeid( MR::Mesh );
-        std::cerr << "mrmeshpy:    " << my.name() << "  " << &my << ", len = " << strlen( my.name() ) << ", hash = " << my.hash_code() << std::endl;
+        std::cerr << "mrmeshpy:    " << my.name() << "  " << &my << ", name = " << (void*)my.name() << ", len = " << strlen( my.name() ) << ", hash = " << my.hash_code() << std::endl;
         const auto & mtype = MR::meshType();
         std::cerr << "mrmeshpy:    equal types=" << ( my == mtype ) << ", equal types rev=" << ( mtype == my ) << ", names strcmp = " << strcmp( my.name(), mtype.name() ) << std::endl;
         std::cerr << "mrmeshpy:    meshTypeEq=" << MR::meshTypeEq( my ) << std::endl;

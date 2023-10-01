@@ -19,6 +19,8 @@ struct AAA
     AAA()
     {
         std::cerr << "mrmeshnumpy: " << typeid( MR::Mesh ).name() << "  " << &typeid( MR::Mesh ) << std::endl;
+        const auto & mtype = MR::meshType();
+        std::cerr << "mrmeshnumpy: equal types=" << ( typeid( MR::Mesh ) == mtype ) << std::endl;
         #if defined(__GLIBCXX__)
         std::cerr << "__GLIBCXX__=" << __GLIBCXX__ << std::endl;
         #endif

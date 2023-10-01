@@ -10,6 +10,7 @@
 #include "MRConstants.h"
 #include "MRProgressCallback.h"
 #include <cfloat>
+#include <typeinfo>
 
 namespace MR
 {
@@ -408,5 +409,7 @@ private:
     mutable UniqueThreadSafeOwner<AABBTree> AABBTreeOwner_;
     mutable UniqueThreadSafeOwner<AABBTreePoints> AABBTreePointsOwner_;
 };
+
+MRMESH_API const std::type_info & meshType();
 
 } //namespace MR

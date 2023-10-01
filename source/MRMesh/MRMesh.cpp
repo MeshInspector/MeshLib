@@ -24,6 +24,7 @@
 #include "MRTriMath.h"
 #include "MRIdentifyVertices.h"
 #include "MRPch/MRTBB.h"
+#include <iostream>
 
 namespace MR
 {
@@ -1212,6 +1213,13 @@ TEST(MRMesh, SplitFace)
     EXPECT_EQ( mesh.points.size(), 4 );
     EXPECT_EQ( mesh.topology.numValidFaces(), 3 );
     EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(11) ); // 6*2 = 12 half-edges in total
+}
+
+const std::type_info & meshType()
+{
+    const std::type_info & res = typeid( Mesh );
+    std::cerr << "MRMesh: " << res.name() << "  " << &res << std::endl;
+    return res;
 }
 
 } //namespace MR

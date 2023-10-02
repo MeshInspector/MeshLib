@@ -27,7 +27,7 @@
     <VcpkgCurrentInstalledDir>$(VcpkgRoot)\installed\$(VcpkgTriplet)</VcpkgCurrentInstalledDir>
   </PropertyGroup>
   <PropertyGroup Label="Globals" Condition="Exists('$(VcpkgCurrentInstalledDir)\include\python3.10')">
-    <PythonVersion>301</PythonVersion>
+    <PythonVersion>310</PythonVersion>
     <PythonIncludePath>$(VcpkgCurrentInstalledDir)\include\python3.10\</PythonIncludePath>
   </PropertyGroup>
   <PropertyGroup Label="Globals" Condition="Exists('$(VcpkgCurrentInstalledDir)\include\python3.11')">

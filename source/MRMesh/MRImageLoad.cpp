@@ -36,8 +36,7 @@ const IOFilters Filters =
 #endif
 #ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_JPEG
-    {"JPEG (.jpg)",  "*.jpg"},
-    {"JPEG (.jpeg)", "*.jpeg"},
+    {"JPEG (.jpg,.jpeg)",  "*.jpg;*.jpeg"}
 #endif
 #endif
 };

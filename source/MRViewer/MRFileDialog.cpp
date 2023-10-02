@@ -265,7 +265,16 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
     {
         auto filterText = Gtk::FileFilter::create();
         filterText->set_name( filter.name );
-        filterText->add_pattern( filter.extension );
+        size_t separatorPos = 0;
+        for (;;)
+        {
+            auto nextSeparatorPos = filter.extension.find( ";", separatorPos );
+            auto ext = filter.extension.substr( separatorPos, nextSeparatorPos - separatorPos );
+            filterText->add_pattern( ext );
+            if ( nextSeparatorPos == std::string::npos )
+                break;
+            separatorPos = nextSeparatorPos + 1;
+        }
         dialog.add_filter( filterText );
     }
 
@@ -318,6 +327,26 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
 
     return results;
 }
+#else
+std::string webAccumFilter( const MR::IOFilters& filters )
+{
+    std::string accumFilter;
+    for (  const auto& filter : filters )
+    {
+        size_t separatorPos = 0;
+        for (;;)
+        {
+            auto nextSeparatorPos = filter.extension.find( ";", separatorPos );
+            auto ext = filter.extension.substr( separatorPos, nextSeparatorPos - separatorPos );
+            accumFilter += ( ext.substr( 1 ) + ", " );
+            if ( nextSeparatorPos == std::string::npos )
+                break;
+            separatorPos = nextSeparatorPos + 1;
+        }
+    }
+    accumFilter = accumFilter.substr( 0, accumFilter.size() - 2 );
+    return accumFilter;
+}
 #endif
 #endif
 }
@@ -356,15 +385,7 @@ void openFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
         if ( !paths.empty() )
             callback( paths[0] );
     };
-    std::string accumFilter;
-    if ( !params.filters.empty() )
-        accumFilter = params.filters[0].extension.substr( 1 );
-    for ( int i = 1; i < params.filters.size(); ++i )
-    {
-        const auto& filter = params.filters[i];
-        accumFilter += ", ";
-        accumFilter += filter.extension.substr( 1 );
-    }
+    std::string accumFilter = webAccumFilter( params.filters );
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
     EM_ASM( open_files_dialog_popup( UTF8ToString( $0 ), $1 ), accumFilter.c_str(), false );
@@ -397,15 +418,7 @@ void openFilesDialogAsync( std::function<void( const std::vector<std::filesystem
     callback( openFilesDialog( params ) );
 #else
     sDialogFilesCallback = callback;
-    std::string accumFilter;
-    if ( !params.filters.empty() )
-        accumFilter = params.filters[0].extension.substr( 1 );
-    for ( int i = 1; i < params.filters.size(); ++i )
-    {
-        const auto& filter = params.filters[i];
-        accumFilter += ", ";
-        accumFilter += filter.extension.substr( 1 );
-    }
+    std::string accumFilter = webAccumFilter( params.filters );
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
     EM_ASM( open_files_dialog_popup( UTF8ToString( $0 ), $1 ), accumFilter.c_str(), true );
@@ -491,15 +504,7 @@ void saveFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
     {
         return filter.extension == "*.*";
     } ), filters.end() );
-    std::string accumFilter;
-    if ( !params.filters.empty() )
-        accumFilter = params.filters[0].extension.substr( 1 );
-    for ( int i = 1; i < filters.size(); ++i )
-    {
-        const auto& filter = filters[i];
-        accumFilter += ", ";
-        accumFilter += filter.extension.substr( 1 );
-    }
+    std::string accumFilter = webAccumFilter( params.filters );
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
     EM_ASM( download_file_dialog_popup( UTF8ToString( $0 ), UTF8ToString( $1 ) ), params.fileName.c_str(), accumFilter.c_str() );

@@ -109,7 +109,7 @@ VoidOrErrStr toAnySupportedFormat( const std::filesystem::path& path, const Dist
     ext.insert( std::begin( ext ), '*' );
     auto itF = std::find_if( Filters.begin(), Filters.end(), [ext] ( const IOFilter& filter )
     {
-        return filter.extension == ext;
+        return filter.extension.find( ext ) != std::string::npos;
     } );
     if ( itF == Filters.end() )
         return unexpected( std::string( "unsupported file extension" ) );

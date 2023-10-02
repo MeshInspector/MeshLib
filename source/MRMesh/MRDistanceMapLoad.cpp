@@ -16,8 +16,7 @@ const IOFilters Filters =
 {
     {"Raw (.raw)","*.raw"},
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
-    {"GeoTIFF (.tif)","*.tif"},
-    {"GeoTIFF (.tiff)","*.tiff"},
+    {"GeoTIFF (.tif,.tiff)","*.tif;*.tiff"},
 #endif
     {"MRDistanceMap (.mrdistancemap)","*.mrdistancemap"}
 };
@@ -167,17 +166,17 @@ Expected<DistanceMap, std::string> fromAnySupportedFormat( const std::filesystem
 
     auto itF = std::find_if( Filters.begin(), Filters.end(), [ext] ( const IOFilter& filter )
     {
-        return filter.extension == ext;
+        return filter.extension.find( ext ) != std::string::npos;
     } );
     if ( itF == Filters.end() )
         return res;
 
-    if ( itF->extension == "*.raw" )
+    if ( ext == "*.raw" )
         return fromRaw( path, progressCb );
     
 
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
-    if ( itF->extension == "*.tif" || itF->extension == "*.tiff" )
+    if ( ext == "*.tif" || ext == "*.tiff" )
     {
         if ( params )
             return fromTiff( path, *params, progressCb );

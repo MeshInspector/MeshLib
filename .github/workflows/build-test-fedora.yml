@@ -32,10 +32,15 @@ jobs:
             cxx-compiler: /usr/bin/clang++-16
             MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF"
           - os: fedora38
-            config: 'Release'
+            config: 'Debug'
             compiler: GCC
             cxx-compiler: /usr/bin/g++
             MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF"
+          - os: fedora38
+            config: 'Release'
+            compiler: GCC
+            cxx-compiler: /usr/bin/g++
+            MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF -DBUILD_TESTING=OFF"
 
     steps:
       - name: Checkout
@@ -72,6 +77,8 @@ jobs:
         run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
 
       - name: Unit Tests
+        # don't run unit tests for GCC Release configuration as unit tests are not built for it
+        if: ${{ matrix.compiler == 'Clang' || matrix.config == 'Debug' }}
         run: ./build/${{ matrix.config }}/bin/MRTest
 
       - name: Python Tests

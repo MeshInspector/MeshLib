@@ -19,9 +19,14 @@ option(MRMESH_NO_GLTF "Disable glTF support" OFF)
 option(MRMESH_NO_XML "Disable XML support (affects 3MF support)" OFF)
 option(MRMESH_NO_E57 "Disable E57 support" OFF)
 option(MRMESH_NO_LAS "Disable LAS/LAZ support" OFF)
+option(MRMESH_NO_GTEST "Disable building Google tests" OFF)
 
 IF(DEFINED MESHLIB_PYTHON_SUPPORT AND NOT MESHLIB_PYTHON_SUPPORT)
 	set(MRMESH_NO_PYTHON ON)
+ENDIF()
+
+IF(DEFINED BUILD_TESTING AND NOT BUILD_TESTING)
+	set(MRMESH_NO_GTEST ON)
 ENDIF()
 
 file(GLOB SOURCES "*.cpp")
@@ -101,6 +106,14 @@ IF(NOT MR_EMSCRIPTEN)
 	IF(NOT MRMESH_NO_LAS)
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES lazperf)
 	ENDIF()
+
+	IF(NOT MRMESH_NO_GTEST)
+		IF(APPLE)
+			list(APPEND MRMESH_OPTIONAL_DEPENDENCIES GTest::gtest)
+		ELSE()
+			list(APPEND MRMESH_OPTIONAL_DEPENDENCIES gtest)
+		ENDIF()
+	ENDIF()
 ELSE()
 	target_compile_definitions(${PROJECT_NAME}
 		PRIVATE
@@ -145,7 +158,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
 	    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
 		target_link_libraries(${PROJECT_NAME} PRIVATE
 		    spdlog
-		    GTest::gtest
 		    zip
 		    Boost::boost
 		    jsoncpp
@@ -156,7 +168,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		)
 	ELSE()
 	    target_link_libraries(${PROJECT_NAME} PRIVATE
-	        gtest
 	        zip
 	        freetype
 	        jsoncpp
@@ -170,7 +181,6 @@ ELSE()
 		tl::expected
 		fmt
 		spdlog
-		gtest
 		zip
 		Boost::boost
 		dl

@@ -1,5 +1,7 @@
-#include "MRTriangleIntersection.h"
-#include "MRGTest.h"
+#include <MRMesh/MRMeshFwd.h>
+
+#include <MRMesh/MRTriangleIntersection.h>
+#include <MRMesh/MRGTest.h>
 
 namespace
 {
@@ -108,4 +110,5 @@ INSTANTIATE_TEST_SUITE_P( MRMesh, TrianglesIntersectTestFixture, testing::Values
     // T1 vertex lies on T3 side, T3 vertex lies on T1 side
     , TrianglesIntersectParameters { true, T1, T3 }
 ) );
-}
+
+} // namespace MR

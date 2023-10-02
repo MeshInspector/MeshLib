@@ -89,7 +89,7 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
 #ifdef __EMSCRIPTEN__
         std::erase_if( filters_, [] ( const auto& filter )
         {
-            return filter.extension == "*.*";
+            return filter.extensions == "*.*";
         } );
 #else
 #ifndef MRMESH_NO_VOXEL

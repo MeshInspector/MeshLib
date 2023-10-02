@@ -25,8 +25,16 @@
   </PropertyGroup>
   <PropertyGroup Label="Globals">
     <VcpkgCurrentInstalledDir>$(VcpkgRoot)\installed\$(VcpkgTriplet)</VcpkgCurrentInstalledDir>
+  </PropertyGroup>
+  <PropertyGroup Label="Globals" Condition="Exists('$(VcpkgCurrentInstalledDir)\include\python3.10')">
+    <PythonVersion>310</PythonVersion>
+    <PythonIncludePath>$(VcpkgCurrentInstalledDir)\include\python3.10\</PythonIncludePath>
+  </PropertyGroup>
+  <PropertyGroup Label="Globals" Condition="Exists('$(VcpkgCurrentInstalledDir)\include\python3.11')">
     <PythonVersion>311</PythonVersion>
-	<PythonIncludePath>$(VcpkgCurrentInstalledDir)\include\python3.11\</PythonIncludePath>
+    <PythonIncludePath>$(VcpkgCurrentInstalledDir)\include\python3.11\</PythonIncludePath>
+  </PropertyGroup>
+  <PropertyGroup Label="Globals">
     <PythonLibPath>$(VcpkgCurrentInstalledDir)\lib\python$(PythonVersion).lib</PythonLibPath>
     <PythonDllPath>$(VcpkgCurrentInstalledDir)\bin\python$(PythonVersion).dll</PythonDllPath>
   </PropertyGroup>

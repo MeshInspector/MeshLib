@@ -23,10 +23,17 @@
   <PropertyGroup>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
-  <PropertyGroup Label="Globals">
+  <PropertyGroup Label="Globals" Condition="Exists('$(VcpkgCurrentInstalledDir)\include\python3.10')">
+    <VcpkgCurrentInstalledDir>$(VcpkgRoot)\installed\$(VcpkgTriplet)</VcpkgCurrentInstalledDir>
+    <PythonVersion>301</PythonVersion>
+    <PythonIncludePath>$(VcpkgCurrentInstalledDir)\include\python3.10\</PythonIncludePath>
+    <PythonLibPath>$(VcpkgCurrentInstalledDir)\lib\python$(PythonVersion).lib</PythonLibPath>
+    <PythonDllPath>$(VcpkgCurrentInstalledDir)\bin\python$(PythonVersion).dll</PythonDllPath>
+  </PropertyGroup>
+  <PropertyGroup Label="Globals" Condition="Exists('$(VcpkgCurrentInstalledDir)\include\python3.11')">
     <VcpkgCurrentInstalledDir>$(VcpkgRoot)\installed\$(VcpkgTriplet)</VcpkgCurrentInstalledDir>
     <PythonVersion>311</PythonVersion>
-	<PythonIncludePath>$(VcpkgCurrentInstalledDir)\include\python3.11\</PythonIncludePath>
+    <PythonIncludePath>$(VcpkgCurrentInstalledDir)\include\python3.11\</PythonIncludePath>
     <PythonLibPath>$(VcpkgCurrentInstalledDir)\lib\python$(PythonVersion).lib</PythonLibPath>
     <PythonDllPath>$(VcpkgCurrentInstalledDir)\bin\python$(PythonVersion).dll</PythonDllPath>
   </PropertyGroup>

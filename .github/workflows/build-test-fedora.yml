@@ -40,7 +40,7 @@ jobs:
             config: 'Release'
             compiler: GCC
             cxx-compiler: /usr/bin/g++
-            MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF -DMRMESH_NO_GTEST=ON"
+            MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF -DBUILD_TESTING=OFF"
 
     steps:
       - name: Checkout

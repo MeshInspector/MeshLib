@@ -268,8 +268,8 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
         size_t separatorPos = 0;
         for (;;)
         {
-            auto nextSeparatorPos = filter.extension.find( ";", separatorPos );
-            auto ext = filter.extension.substr( separatorPos, nextSeparatorPos - separatorPos );
+            auto nextSeparatorPos = filter.extensions.find( ";", separatorPos );
+            auto ext = filter.extensions.substr( separatorPos, nextSeparatorPos - separatorPos );
             filterText->add_pattern( ext );
             if ( nextSeparatorPos == std::string::npos )
                 break;
@@ -298,7 +298,7 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
                     {
                         if ( filterName == filter.name )
                         {
-                            filepath.replace_extension( filter.extension.substr( 1 ) );
+                            filepath.replace_extension( filter.extensions.substr( 1 ) );
                             break;
                         }
                     }
@@ -336,8 +336,8 @@ std::string webAccumFilter( const MR::IOFilters& filters )
         size_t separatorPos = 0;
         for (;;)
         {
-            auto nextSeparatorPos = filter.extension.find( ";", separatorPos );
-            auto ext = filter.extension.substr( separatorPos, nextSeparatorPos - separatorPos );
+            auto nextSeparatorPos = filter.extensions.find( ";", separatorPos );
+            auto ext = filter.extensions.substr( separatorPos, nextSeparatorPos - separatorPos );
             accumFilter += ( ext.substr( 1 ) + ", " );
             if ( nextSeparatorPos == std::string::npos )
                 break;
@@ -502,7 +502,7 @@ void saveFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
     auto filters = params.filters;
     filters.erase( std::remove_if( filters.begin(), filters.end(), [] ( const auto& filter )
     {
-        return filter.extension == "*.*";
+        return filter.extensions == "*.*";
     } ), filters.end() );
     std::string accumFilter = webAccumFilter( params.filters );
 #pragma clang diagnostic push

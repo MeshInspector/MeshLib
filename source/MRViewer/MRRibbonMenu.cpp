@@ -568,13 +568,12 @@ void RibbonMenu::drawHeaderPannel_()
     }
     // prepare active button
     bool needActive = hasAnyActiveItem() && toolbar_.getCurrentToolbarWidth() == 0.0f;
-    float activeBtnSize = cTabHeight * menuScaling - 2 * menuScaling; // small offset from border
-    if ( needActive )
-        summaryTabPannelSize += ( activeBtnSize + cTabsInterval * menuScaling );
+    float activeBtnSize = cTabHeight * menuScaling - 4 * menuScaling; // small offset from border
 
     // 40 - search button size (by eye)
     // 40 - collapse button size (by eye)
-    auto availWidth = ImGui::GetContentRegionAvail().x - 2 * 40.0f * menuScaling; 
+    // 40 - active button size (by eye)
+    auto availWidth = ImGui::GetContentRegionAvail().x - ( needActive ? 3 : 2 ) * 40.0f * menuScaling;
 
     float scrollMax = summaryTabPannelSize - availWidth;
     bool needScroll = scrollMax > 0.0f;
@@ -674,11 +673,6 @@ void RibbonMenu::drawHeaderPannel_()
 
         basePos.x += ( tabWidth + cTabsInterval * menuScaling );
     }
-    if ( needActive )
-    {
-        drawActiveListButton_( basePos, activeBtnSize );
-        basePos.x += ( activeBtnSize + cTabsInterval * menuScaling );
-    }
     ImGui::Dummy( ImVec2( 0, 0 ) );
     ImGui::EndChild();
     if ( needFwdBtn )
@@ -703,6 +697,11 @@ void RibbonMenu::drawHeaderPannel_()
     ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddLine( ImVec2( 0, separateLinePos ), ImVec2( float( getViewerInstance().framebufferSize.x ), separateLinePos ),
                                                                   ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::HeaderSeparator ).getUInt32() );
 
+    if ( needActive )
+    {
+        ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 110.0f * menuScaling, cTabYOffset * menuScaling ) );
+        drawActiveListButton_( activeBtnSize );
+    }
 
     ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 70.0f * menuScaling, cTabYOffset* menuScaling ) );
     drawSearchButton_();
@@ -711,14 +710,8 @@ void RibbonMenu::drawHeaderPannel_()
     drawCollapseButton_();
 }
 
-void RibbonMenu::drawActiveListButton_( const ImVec2& basePos, float btnSize )
+void RibbonMenu::drawActiveListButton_( float btnSize )
 {
-    auto scaling = menu_scaling();
-    auto windowPos = ImGui::GetCurrentContext()->CurrentWindow->Pos;
-    auto xPos = basePos.x + cTabsInterval * scaling;
-    ImGui::SetCursorPosX( xPos - windowPos.x );
-    ImGui::SetCursorPosY( cTabYOffset * scaling );
-
     auto activeListIt = RibbonSchemaHolder::schema().items.find( "Active Plugins List" );
     if ( activeListIt != RibbonSchemaHolder::schema().items.end() )
     {

@@ -181,7 +181,7 @@ private:
     // part of top panel
     void drawHeaderQuickAccess_();
     void drawHeaderPannel_();
-    void drawActiveListButton_( const ImVec2& basePos, float btnSize );
+    void drawActiveListButton_( float btnSize );
     
     ImVec2 activeListPos_{ 0,0 };
     bool activeListPressed_{ false };

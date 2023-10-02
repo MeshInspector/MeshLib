@@ -1194,9 +1194,15 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
             
             BitSetParallelFor( component, [&] ( FaceId f )
             {
-                const auto mpr = findProjection( mp.mesh.triCenter( f ), res.modifiedMesh, upDistLimitSq );
-                if ( !mpr.mtp.e.valid() )
-                    filteredSelection.set( f, false );
+                for ( const auto& p : mp.mesh.getTriPoints( f ) )
+                {
+                    const auto mpr = findProjection( p, res.modifiedMesh, upDistLimitSq );
+                    if ( !mpr.mtp.e.valid() )
+                    {
+                        filteredSelection.set( f, false );
+                        break;
+                    }
+                }
             } );
 
             edgeLoops.push_back( findLeftBoundary( mp.mesh.topology, filteredSelection ).front() );

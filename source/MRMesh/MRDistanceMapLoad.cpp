@@ -166,7 +166,7 @@ Expected<DistanceMap, std::string> fromAnySupportedFormat( const std::filesystem
 
     auto itF = std::find_if( Filters.begin(), Filters.end(), [ext] ( const IOFilter& filter )
     {
-        return filter.extension.find( ext ) != std::string::npos;
+        return filter.extensions.find( ext ) != std::string::npos;
     } );
     if ( itF == Filters.end() )
         return res;

@@ -1555,7 +1555,7 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
     if ( ImGui::BeginPopupContextItem() )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, ImGui::GetStyle().WindowPadding );
-        bool wasChanged = false;
+        [[maybe_unused]] bool wasChanged = false;
         if ( selectedVisualObjs.empty() )
         {
             wasChanged |= drawGeneralOptions_( selected );

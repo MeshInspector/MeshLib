@@ -6,6 +6,7 @@
 #include "MRPch/MRWasm.h"
 #include <GLFW/glfw3.h>
 #include <clocale>
+#include <ranges>
 
 #ifndef _WIN32
   #ifndef __EMSCRIPTEN__
@@ -265,16 +266,16 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
     {
         auto filterText = Gtk::FileFilter::create();
         filterText->set_name( filter.name );
-        size_t separatorPos = 0;
-        for (;;)
+
+        using std::operator ""sv;
+        for ( const auto r : std::views::split( std::string_view( filter.extensions ), ";"sv ) )
         {
-            auto nextSeparatorPos = filter.extensions.find( ";", separatorPos );
-            auto ext = filter.extensions.substr( separatorPos, nextSeparatorPos - separatorPos );
-            filterText->add_pattern( ext );
-            if ( nextSeparatorPos == std::string::npos )
-                break;
-            separatorPos = nextSeparatorPos + 1;
+            // sane constructor is available in C++23
+            //const std::string_view ext( r );
+            const std::string_view ext( &*r.begin(), std::ranges::distance( r ) );
+            filterText->add_pattern( { ext.data(), ext.size() } );
         }
+
         dialog.add_filter( filterText );
     }
 
@@ -330,22 +331,22 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
 #else
 std::string webAccumFilter( const MR::IOFilters& filters )
 {
-    std::string accumFilter;
-    for (  const auto& filter : filters )
+    std::ostringstream accumFilter;
+    for ( const auto& filter : params.filters )
     {
-        size_t separatorPos = 0;
-        for (;;)
+        using std::operator ""sv;
+        for ( const auto r : std::views::split( std::string_view( filter.extensions ), ";"sv ) )
         {
-            auto nextSeparatorPos = filter.extensions.find( ";", separatorPos );
-            auto ext = filter.extensions.substr( separatorPos, nextSeparatorPos - separatorPos );
-            accumFilter += ( ext.substr( 1 ) + ", " );
-            if ( nextSeparatorPos == std::string::npos )
-                break;
-            separatorPos = nextSeparatorPos + 1;
+            if ( accumFilter.tellp() != std::streampos( 0 ) )
+                accumFilter << ", ";
+
+            // sane constructor is available in C++23
+            //const std::string_view ext( r );
+            const std::string_view ext( &*r.begin(), std::ranges::distance( r ) );
+            accumFilter << ext.substr( 1 );
         }
     }
-    accumFilter = accumFilter.substr( 0, accumFilter.size() - 2 );
-    return accumFilter;
+    return accumFilter.str();
 }
 #endif
 #endif

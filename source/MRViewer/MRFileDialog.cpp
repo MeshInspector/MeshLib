@@ -6,7 +6,6 @@
 #include "MRPch/MRWasm.h"
 #include <GLFW/glfw3.h>
 #include <clocale>
-#include <ranges>
 
 #ifndef _WIN32
   #ifndef __EMSCRIPTEN__
@@ -266,16 +265,16 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
     {
         auto filterText = Gtk::FileFilter::create();
         filterText->set_name( filter.name );
-
-        using std::operator ""sv;
-        for ( const auto r : std::views::split( std::string_view( filter.extensions ), ";"sv ) )
+        size_t separatorPos = 0;
+        for (;;)
         {
-            // sane constructor is available in C++23
-            //const std::string_view ext( r );
-            const std::string_view ext( &*r.begin(), std::ranges::distance( r ) );
-            filterText->add_pattern( { ext.data(), ext.size() } );
+            auto nextSeparatorPos = filter.extensions.find( ";", separatorPos );
+            auto ext = filter.extensions.substr( separatorPos, nextSeparatorPos - separatorPos );
+            filterText->add_pattern( ext );
+            if ( nextSeparatorPos == std::string::npos )
+                break;
+            separatorPos = nextSeparatorPos + 1;
         }
-
         dialog.add_filter( filterText );
     }
 
@@ -331,22 +330,22 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
 #else
 std::string webAccumFilter( const MR::IOFilters& filters )
 {
-    std::ostringstream accumFilter;
-    for ( const auto& filter : params.filters )
+    std::string accumFilter;
+    for (  const auto& filter : filters )
     {
-        using std::operator ""sv;
-        for ( const auto r : std::views::split( std::string_view( filter.extensions ), ";"sv ) )
+        size_t separatorPos = 0;
+        for (;;)
         {
-            if ( accumFilter.tellp() != std::streampos( 0 ) )
-                accumFilter << ", ";
-
-            // sane constructor is available in C++23
-            //const std::string_view ext( r );
-            const std::string_view ext( &*r.begin(), std::ranges::distance( r ) );
-            accumFilter << ext.substr( 1 );
+            auto nextSeparatorPos = filter.extensions.find( ";", separatorPos );
+            auto ext = filter.extensions.substr( separatorPos, nextSeparatorPos - separatorPos );
+            accumFilter += ( ext.substr( 1 ) + ", " );
+            if ( nextSeparatorPos == std::string::npos )
+                break;
+            separatorPos = nextSeparatorPos + 1;
         }
     }
-    return accumFilter.str();
+    accumFilter = accumFilter.substr( 0, accumFilter.size() - 2 );
+    return accumFilter;
 }
 #endif
 #endif

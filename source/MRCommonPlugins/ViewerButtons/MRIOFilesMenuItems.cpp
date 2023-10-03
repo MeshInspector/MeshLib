@@ -89,7 +89,7 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
 #ifdef __EMSCRIPTEN__
         std::erase_if( filters_, [] ( const auto& filter )
         {
-            return filter.extension == "*.*";
+            return filter.extensions == "*.*";
         } );
 #else
 #ifndef MRMESH_NO_VOXEL
@@ -221,7 +221,7 @@ bool OpenFilesMenuItem::checkPaths_( const std::vector<std::filesystem::path>& p
             c = ( char ) std::tolower( c );
         if ( std::any_of( filters_.begin(), filters_.end(), [&fileExt] ( const auto& filter )
         {
-            return filter.extension.substr( 1 ) == fileExt;
+            return filter.extensions.find( fileExt ) != std::string::npos;
         } ) )
             return true;
     }
@@ -454,7 +454,7 @@ bool SaveObjectMenuItem::action()
             const auto extention = '*' + utf8string( savePath.extension() );
             auto findRes = std::find_if( filters.begin(), filters.end(), [&extention] ( const IOFilter& elem )
             {
-                return elem.extension == extention;
+                return elem.extensions.find( extention ) != std::string::npos;
             } );
             if ( findRes != filters.end() )
                 settingsManager->setLastExtentionNum( objType, int( findRes - filters.begin() ) );

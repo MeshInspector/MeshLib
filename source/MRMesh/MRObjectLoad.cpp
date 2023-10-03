@@ -266,7 +266,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
         else
             result = unexpected( res.error() );
     }
-    else if ( std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const auto& filter ) { return filter.extension == ext;     } ) != SceneFileFilters.end() )
+    else if ( std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const auto& filter ) { return filter.extensions.find( ext ) != std::string::npos; }) != SceneFileFilters.end() )
     {
         const auto objTree = loadSceneFromAnySupportedFormat( filename, callback );
         if ( !objTree.has_value() )
@@ -393,7 +393,7 @@ bool isSupportedFileInSubfolders( const std::filesystem::path& folder )
                     continue;
 
                 if ( std::find_if( allFilters.begin(), allFilters.end(), [&ext] ( const IOFilter& f )
-                    { return f.extension.substr( 1 ) == ext; } ) != allFilters.end() )
+                    { return f.extensions.find( ext ) != std::string::npos; }) != allFilters.end() )
                     return true;
             }
         }
@@ -442,7 +442,7 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
 
                 if ( std::find_if( allFilters.begin(), allFilters.end(), [&ext] ( const IOFilter& f )
                 {
-                    return f.extension.substr( 1 ) == ext;
+                    return f.extensions.find( ext ) != std::string::npos;
                 } ) != allFilters.end() )
                     node.files.push_back( { .path = path } );
             }
@@ -569,17 +569,17 @@ Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( 
 
     auto itF = std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const IOFilter& filter )
     {
-        return filter.extension == ext;
+        return filter.extensions.find( ext ) != std::string::npos;
     } );
     if ( itF == SceneFileFilters.end() )
         return res;
 
-    if ( itF->extension == "*.mru" )
+    if ( ext == "*.mru" )
     {
         return deserializeObjectTree( path, {}, callback );
     }
 #ifndef MRMESH_NO_GLTF
-    else if ( itF->extension == "*.gltf" || itF->extension == "*.glb" )
+    else if ( ext == "*.gltf" || ext == "*.glb" )
     {
         return deserializeObjectTreeFromGltf( path, callback );
     }

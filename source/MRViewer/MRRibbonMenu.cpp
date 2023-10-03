@@ -1577,8 +1577,9 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
             ImGui::EndTable();
         }
         ImGui::PopStyleVar();
-        if ( wasChanged )
-            ImGui::CloseCurrentPopup();
+        //uncomment to close context menu on any change
+        //if ( wasChanged )
+        //    ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
     }
 }

@@ -76,6 +76,7 @@ public:
         // remove default stdout output
         messenger->RemovePrinters( STANDARD_TYPE( Message_PrinterOStream ) );
         // add spdlog output
+        // NOTE: OpenCASCADE takes the ownership of the printer, don't delete it manually
         messenger->AddPrinter( Handle( Message_Printer )( printer_ ) );
     }
 

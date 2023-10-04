@@ -6,6 +6,7 @@
 
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/spirit/home/x3.hpp>
+#include <charconv>
 
 namespace MR
 {
@@ -152,6 +153,20 @@ VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Col
 
     return {};
 }
+
+template<typename T>
+VoidOrErrStr parseSingleNumber( const std::string_view& str, T& num )
+{
+    const auto startPos = str.find_first_not_of( ' ' );
+    auto convRes = std::from_chars( &str[startPos], &str[str.size()], num );
+    if ( bool( convRes.ec ) )
+        return unexpected( "Failed to parse number" );
+
+    return {};
+}
+
+template VoidOrErrStr parseSingleNumber<float>( const std::string_view& str, float& num );
+template VoidOrErrStr parseSingleNumber<int>( const std::string_view& str, int& num );
 
 template VoidOrErrStr parsePtsCoordinate<float>( const std::string_view& str, Vector3f& v, Color& c );
 template VoidOrErrStr parsePtsCoordinate<double>( const std::string_view& str, Vector3d& v, Color& c );

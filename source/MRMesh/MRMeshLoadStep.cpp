@@ -1,11 +1,15 @@
 #ifdef _WIN32
-#include "MRMeshLoad.h"
+#include "MRMeshLoadStep.h"
 
-#include "MRMesh/MRIOFormatsRegistry.h"
-#include "MRMesh/MRMesh.h"
-#include "MRMesh/MRMeshBuilder.h"
-#include "MRMesh/MRStringConvert.h"
-#include "MRMesh/MRTimer.h"
+#include "MRIOFormatsRegistry.h"
+#include "MRMesh.h"
+#include "MRMeshBuilder.h"
+#include "MRObjectMesh.h"
+#include "MRParallelFor.h"
+#include "MRStringConvert.h"
+#include "MRTimer.h"
+
+#include "MRPch/MRSpdlog.h"
 
 #pragma warning( push )
 #pragma warning( disable: 5054 )
@@ -15,62 +19,107 @@
 #endif
 #include <opencascade/BRep_Tool.hxx>
 #include <opencascade/BRepMesh_IncrementalMesh.hxx>
+#include <opencascade/Message.hxx>
+#include <opencascade/Message_Printer.hxx>
+#include <opencascade/Message_PrinterOStream.hxx>
 #include <opencascade/STEPControl_Reader.hxx>
+#include <opencascade/StepData_Protocol.hxx>
+#include <opencascade/StepData_StepModel.hxx>
+#include <opencascade/StepData_StepWriter.hxx>
 #include <opencascade/TopExp_Explorer.hxx>
 #include <opencascade/TopoDS.hxx>
 #pragma warning( pop )
 
-namespace MR::MeshLoad
+namespace
 {
 
-Expected<Mesh, std::string> fromStep( const std::filesystem::path& path, VertColors* colors, ProgressCallback callback )
+using namespace MR;
+
+/// spdlog adaptor for OpenCASCADE logging system
+class SpdlogPrinter final : public Message_Printer
 {
-    std::ifstream in( path, std::ifstream::binary );
-    if ( !in )
-        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( path ) );
+private:
+    void send( const TCollection_AsciiString& string, const Message_Gravity gravity ) const override
+    {
+        auto level = spdlog::level::trace;
+        switch ( gravity )
+        {
+            case Message_Trace:
+                level = spdlog::level::trace;
+                break;
+            case Message_Info:
+                level = spdlog::level::info;
+                break;
+            case Message_Warning:
+                level = spdlog::level::warn;
+                break;
+            case Message_Alarm:
+                level = spdlog::level::err;
+                break;
+            case Message_Fail:
+                level = spdlog::level::critical;
+                break;
+        }
 
-    return addFileNameInError( fromStep( in, colors, callback ), path );
-}
+        spdlog::log( level, "OpenCASCADE: {}", string.ToCString() );
+    }
+};
 
-Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCallback callback )
+/// replace default OpenCASCADE log output with redirect to spdlog
+class MessageHandler
+{
+public:
+    MessageHandler()
+        : printer_( new SpdlogPrinter )
+    {
+        auto& messenger = Message::DefaultMessenger();
+        // remove default stdout output
+        messenger->RemovePrinters( STANDARD_TYPE( Message_PrinterOStream ) );
+        // add spdlog output
+        // NOTE: OpenCASCADE takes the ownership of the printer, don't delete it manually
+        messenger->AddPrinter( Handle( Message_Printer )( printer_ ) );
+    }
+
+private:
+    SpdlogPrinter* printer_;
+};
+
+MessageHandler messageHandler;
+
+struct FeatureData
+{
+    Handle( Poly_Triangulation ) triangulation;
+    TopLoc_Location location;
+    TopAbs_Orientation orientation;
+
+    FeatureData( Handle( Poly_Triangulation )&& triangulation, TopLoc_Location&& location, TopAbs_Orientation orientation )
+        : triangulation( std::move( triangulation ) )
+        , location( std::move( location ) )
+        , orientation( orientation )
+    {
+        //
+    }
+};
+
+Mesh loadSolid( const TopoDS_Shape& solid )
 {
     MR_TIMER
 
-    // NOTE: OpenCASCADE STEP reader is NOT thread-safe
-    static std::mutex mutex;
-    std::unique_lock lock( mutex );
+    // TODO: expose parameters
+    IMeshTools_Parameters parameters;
+    parameters.Angle = 0.1;
+    parameters.Deflection = 0.5;
+    parameters.Relative = false;
+    parameters.InParallel = true;
 
-    STEPControl_Reader reader;
-    {
-        MR_NAMED_TIMER( "STEP reader: read stream" )
-        reader.ReadStream( "STEP file", in );
-    }
-    {
-        MR_NAMED_TIMER( "STEP reader: transfer roots" )
-        reader.TransferRoots();
-    }
-    const auto shape = reader.OneShape();
-
-    BRepMesh_IncrementalMesh incMesh( shape, 0.1 );
+    BRepMesh_IncrementalMesh incMesh( solid, parameters );
     const auto& meshShape = incMesh.Shape();
 
-    struct FeatureData
-    {
-        Handle( Poly_Triangulation ) triangulation;
-        TopLoc_Location location;
-        TopAbs_Orientation orientation;
-
-        FeatureData( Handle( Poly_Triangulation )&& triangulation, TopLoc_Location&& location, TopAbs_Orientation orientation )
-            : triangulation( std::move( triangulation ) )
-            , location( std::move( location ) )
-            , orientation( orientation )
-        {}
-    };
     std::deque<FeatureData> features;
     size_t totalVertexCount = 0, totalFaceCount = 0;
-    for ( auto explorer = TopExp_Explorer( meshShape, TopAbs_FACE ); explorer.More(); explorer.Next() )
+    for ( auto faceExp = TopExp_Explorer( meshShape, TopAbs_FACE ); faceExp.More(); faceExp.Next() )
     {
-        const auto& face = explorer.Current();
+        const auto& face = faceExp.Current();
 
         TopLoc_Location location;
         auto triangulation = BRep_Tool::Triangulation( TopoDS::Face( face ), location );
@@ -85,8 +134,8 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
     std::vector<Vector3f> points;
     points.reserve( totalVertexCount );
 
-    std::vector<Triangle3f> t;
-    t.reserve( totalFaceCount );
+    std::vector<Triangle3f> triples;
+    triples.reserve( totalFaceCount );
 
     std::vector<FaceBitSet> parts;
     parts.reserve( features.size() );
@@ -107,7 +156,7 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
 
         // faces
         const auto faceCount = feature.triangulation->NbTriangles();
-        const auto faceOffset = t.size();
+        const auto faceOffset = triples.size();
 
         const auto reversed = ( feature.orientation == TopAbs_REVERSED );
         for ( auto i = 1; i <= faceCount; ++i )
@@ -121,7 +170,7 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
             for ( auto& v : vs )
                 v += (int)vertexOffset - 1;
 
-            t.emplace_back( Triangle3f {
+            triples.emplace_back( Triangle3f {
                 points[vs[0]],
                 points[vs[1]],
                 points[vs[2]],
@@ -129,16 +178,140 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
         }
 
         // parts
+        // TODO: return mesh features
         FaceBitSet region;
-        region.resize( t.size(), false );
+        region.resize( triples.size(), false );
         region.set( FaceId( faceOffset ), faceCount, true );
         parts.emplace_back( std::move( region ) );
     }
 
-    return Mesh::fromPointTriples( t, true );
+    return Mesh::fromPointTriples( triples, true );
 }
 
-MR_ADD_MESH_LOADER( IOFilter( "STEP files (.step,.stp)", "*.step;*.stp" ), fromStep )
+std::mutex cOpenCascadeMutex = {};
+
+}
+
+namespace MR::MeshLoad
+{
+
+Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::filesystem::path& path, const ProgressCallback& callback )
+{
+    std::ifstream in( path, std::ifstream::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( path ) );
+
+    auto result = fromSceneStepFile( in, callback );
+    if ( !result )
+        return addFileNameInError( result, path );
+
+    if ( auto& obj = *result )
+    {
+        if ( obj->name().empty() )
+            obj->setName( utf8string( path.stem() ) );
+    }
+
+    return result;
+}
+
+Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& in, const ProgressCallback& callback )
+{
+    MR_TIMER
+
+    const auto cb = callback ? callback : [] ( float ) { return true; };
+
+    // NOTE: OpenCASCADE STEP reader is NOT thread-safe
+    std::unique_lock lock( cOpenCascadeMutex );
+
+    // repair (?) STEP model using read and write operations
+    // TODO: repair the model directly
+    std::stringstream buffer;
+    {
+        STEPControl_Reader reader;
+        const auto ret = reader.ReadStream( "STEP file", in );
+        if ( ret != IFSelect_RetDone )
+            return unexpected( "Failed to read STEP model" );
+
+        cb( 0.15f );
+
+        const auto model = reader.StepModel();
+        const auto protocol = Handle( StepData_Protocol )::DownCast( model->Protocol() );
+
+        StepData_StepWriter sw( model );
+        sw.SendModel( protocol );
+        if ( !sw.Print( buffer ) )
+            return unexpected( "Failed to repair STEP model" );
+
+        cb( 0.20f );
+    }
+    buffer.seekp( 0, std::ios::beg );
+
+    std::deque<TopoDS_Shape> shapes;
+    {
+        STEPControl_Reader reader;
+
+        const auto ret = reader.ReadStream( "STEP file", buffer );
+        if ( ret != IFSelect_RetDone )
+            return unexpected( "Failed to read STEP model" );
+
+        cb( 0.35f );
+
+        const auto cb1 = subprogress( cb, 0.30f, 0.74f );
+        const auto rootCount = reader.NbRootsForTransfer();
+        for ( auto i = 1; i <= rootCount; ++i )
+        {
+            reader.TransferRoot( i );
+            cb1( (float)i / (float)rootCount );
+        }
+        cb( 0.90f );
+
+        for ( auto i = 1; i <= reader.NbShapes(); ++i )
+            shapes.emplace_back( reader.Shape( i ) );
+    }
+
+    // TODO: preserve shape-solid hierarchy? (not sure about actual shape count in real models)
+    std::deque<TopoDS_Shape> solids;
+    for ( const auto& shape : shapes )
+        for ( auto explorer = TopExp_Explorer( shape, TopAbs_SOLID ); explorer.More(); explorer.Next() )
+            solids.emplace_back( explorer.Current() );
+    shapes.clear();
+
+    if ( solids.empty() )
+    {
+        return {};
+    }
+    else if ( solids.size() == 1 )
+    {
+        auto mesh = loadSolid( solids.front() );
+
+        auto result = std::make_shared<ObjectMesh>();
+        result->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
+        return result;
+    }
+    else
+    {
+        auto cb2 = subprogress( cb, 0.90f, 1.0f );
+
+        auto result = std::make_shared<ObjectMesh>();
+        // create empty parent mesh
+        result->setMesh( std::make_shared<Mesh>() );
+
+        std::vector<std::shared_ptr<Object>> children( solids.size() );
+        ParallelFor( size_t( 0 ), solids.size(), [&] ( size_t i )
+        {
+            auto mesh = loadSolid( solids[i] );
+
+            auto child = std::make_shared<ObjectMesh>();
+            child->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
+            child->setName( fmt::format( "Solid{}", i + 1 ) );
+            children[i] = std::move( child );
+        }, cb2 );
+
+        for ( auto& child : children )
+            result->addChild( std::move( child ), true );
+        return result;
+    }
+}
 
 } // namespace MR::MeshLoad
 #endif

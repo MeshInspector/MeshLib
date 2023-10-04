@@ -1,11 +1,12 @@
 #ifdef _WIN32
 #include "MRMeshLoad.h"
 
-#include "MRMesh/MRIOFormatsRegistry.h"
-#include "MRMesh/MRMesh.h"
-#include "MRMesh/MRMeshBuilder.h"
-#include "MRMesh/MRStringConvert.h"
-#include "MRMesh/MRTimer.h"
+#include "MRIOFormatsRegistry.h"
+#include "MRMesh.h"
+#include "MRMeshBuilder.h"
+#include "MRParallelFor.h"
+#include "MRStringConvert.h"
+#include "MRTimer.h"
 
 #include "MRPch/MRSpdlog.h"
 
@@ -95,7 +96,7 @@ struct FeatureData
     }
 };
 
-Expected<Mesh, std::string> loadSolid( const TopoDS_Shape& solid, const ProgressCallback& callback )
+Mesh loadSolid( const TopoDS_Shape& solid )
 {
     MR_TIMER
 
@@ -206,6 +207,8 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
         callback = [] ( float ) { return true; };
 
     static MessageHandler handler;
+    // not supposed to be used directly
+    (void)handler;
 
     // NOTE: OpenCASCADE STEP reader is NOT thread-safe
     std::unique_lock lock( cOpenCascadeMutex );
@@ -214,12 +217,12 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
     // TODO: repair the model directly
     std::stringstream buffer;
     {
-        MR_NAMED_TIMER( "STEP reader: repair model" )
-
         STEPControl_Reader reader;
         const auto ret = reader.ReadStream( "STEP file", in );
         if ( ret != IFSelect_RetDone )
             return unexpected( "Failed to read STEP model" );
+
+        callback( 0.15f );
 
         const auto model = reader.StepModel();
         const auto protocol = Handle( StepData_Protocol )::DownCast( model->Protocol() );
@@ -236,16 +239,19 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
     std::deque<TopoDS_Shape> shapes;
     {
         STEPControl_Reader reader;
-        {
-            MR_NAMED_TIMER( "STEP reader: read stream" )
-            const auto ret = reader.ReadStream( "STEP file", buffer );
-            if ( ret != IFSelect_RetDone )
-                return unexpected( "Failed to read STEP model" );
-        }
+
+        const auto ret = reader.ReadStream( "STEP file", buffer );
+        if ( ret != IFSelect_RetDone )
+            return unexpected( "Failed to read STEP model" );
+
         callback( 0.30f );
+
+        const auto cb = subprogress( callback, 0.30f, 0.74f );
+        const auto rootCount = reader.NbRootsForTransfer();
+        for ( auto i = 1; i <= rootCount; ++i )
         {
-            MR_NAMED_TIMER( "STEP reader: transfer roots" )
-            reader.TransferRoots();
+            reader.TransferRoot( i );
+            cb( (float)i / (float)rootCount );
         }
         callback( 0.74f );
 
@@ -253,22 +259,36 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
             shapes.emplace_back( reader.Shape( i ) );
     }
 
-    MR_NAMED_TIMER( "STEP reader: triangulate solids" )
-
-    Mesh result;
-    auto cb = subprogress( callback, 0.855f, 1.0f );
+    // TODO: preserve shape-solid hierarchy? (not sure about actual shape count in real models)
+    std::deque<TopoDS_Shape> solids;
     for ( const auto& shape : shapes )
+        for ( auto explorer = TopExp_Explorer( shape, TopAbs_SOLID ); explorer.More(); explorer.Next() )
+            solids.emplace_back( explorer.Current() );
+    shapes.clear();
+
+    callback( 0.75f );
+
+    if ( solids.empty() )
     {
-        for ( auto solidExp = TopExp_Explorer( shape, TopAbs_SOLID ); solidExp.More(); solidExp.Next() )
-        {
-            auto mesh = loadSolid( solidExp.Current(), cb );
-            if ( mesh )
-                result.addPart( *mesh );
-            else
-                return unexpected( std::move( mesh.error() ) );
-        }
+        return {};
     }
-    return result;
+    else if ( solids.size() == 1 )
+    {
+        return loadSolid( solids.front() );
+    }
+    else
+    {
+        auto cb = subprogress( callback, 0.75f, 1.0f );
+        Mesh result;
+        std::vector<Mesh> results( solids.size() );
+        ParallelFor( size_t( 0 ), solids.size(), [&] ( size_t i )
+        {
+            results[i] = loadSolid( solids[i] );
+        }, cb );
+        for ( const auto& part : results )
+            result.addPart( part );
+        return result;
+    }
 }
 
 MR_ADD_MESH_LOADER( IOFilter( "STEP files (*.step)", "*.step" ), fromStep )

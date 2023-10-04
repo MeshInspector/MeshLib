@@ -704,7 +704,7 @@ Expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path 
     auto filters = getFilters();
     auto itF = std::find_if( filters.begin(), filters.end(), [ext]( const IOFilter& filter )
     {
-        return filter.extension == ext;
+        return filter.extensions.find( ext ) != std::string::npos;
     } );
     if ( itF == filters.end() )
         return res;
@@ -725,7 +725,7 @@ Expected<Mesh, std::string> fromAnySupportedFormat( std::istream& in, const std:
     auto filters = getFilters();
     auto itF = std::find_if( filters.begin(), filters.end(), [ext] ( const IOFilter& filter )
     {
-        return filter.extension == ext;
+        return filter.extensions.find( ext ) != std::string::npos;
     } );
     if ( itF == filters.end() )
         return res;

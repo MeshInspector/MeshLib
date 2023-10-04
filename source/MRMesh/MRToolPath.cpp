@@ -332,11 +332,13 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsoline
 
     const float topExcluded = FLT_MAX;
     const auto [min, max] = parallelMinMax( distances.vec_, &topExcluded );
-
-    const size_t numIsolines = size_t( ( max - min ) / params.sectionStep ) - 1;
+    
+    size_t numIsolines = size_t( ( max - min ) / params.sectionStep );
+    if ( numIsolines == 0 )
+        return res;
 
     const auto& topology = res.meshAfterCut.topology;
-    res.isolines.resize( numIsolines );
+    res.isolines.resize( --numIsolines );
 
     const bool parallelForRes = MR::ParallelFor( size_t( 0 ), res.isolines.size(),
     [&] ( size_t i )
@@ -1205,7 +1207,9 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                 }
             } );
 
-            edgeLoops.push_back( findLeftBoundary( mp.mesh.topology, filteredSelection ).front() );
+            auto loops = findLeftBoundary( mp.mesh.topology, filteredSelection );
+            if ( !loops.empty() )
+                edgeLoops.push_back( loops.front() );
         }
     }
 

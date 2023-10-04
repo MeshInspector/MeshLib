@@ -1555,7 +1555,7 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
     if ( ImGui::BeginPopupContextItem() )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, ImGui::GetStyle().WindowPadding );
-        bool wasChanged = false;
+        [[maybe_unused]] bool wasChanged = false;
         if ( selectedVisualObjs.empty() )
         {
             wasChanged |= drawGeneralOptions_( selected );
@@ -1577,8 +1577,9 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
             ImGui::EndTable();
         }
         ImGui::PopStyleVar();
-        if ( wasChanged )
-            ImGui::CloseCurrentPopup();
+        //uncomment to close context menu on any change
+        //if ( wasChanged )
+        //    ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
     }
 }

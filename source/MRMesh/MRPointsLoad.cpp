@@ -494,7 +494,7 @@ Expected<MR::PointCloud, std::string> fromDxf( std::istream& in, ProgressCallbac
     std::getline( in, str );
 
     int code{};
-    if ( !parseSingleNumber( str, code ) )
+    if ( !parseSingleNumber<int>( str, code ) )
         return unexpected( "File is corrupted" );
 
     bool isPointFound = false;
@@ -518,7 +518,7 @@ Expected<MR::PointCloud, std::string> fromDxf( std::istream& in, ProgressCallbac
             const int cIdx = code / 10 - 1;
             if ( vIdx == 0 && cIdx >= 0 && cIdx < 3 )
             {
-                if ( !parseSingleNumber( str, cloud.points.back()[cIdx] ) )
+                if ( !parseSingleNumber<float>( str, cloud.points.back()[cIdx] ) )
                     return unexpected( "File is corrupted" );
             }
         }
@@ -527,7 +527,7 @@ Expected<MR::PointCloud, std::string> fromDxf( std::istream& in, ProgressCallbac
         if ( str.empty() )
             continue;
         
-        if ( !parseSingleNumber( str, code ) )
+        if ( !parseSingleNumber<int>( str, code ) )
             return unexpected( "File is corrupted" );
 
         if ( code == 0 )

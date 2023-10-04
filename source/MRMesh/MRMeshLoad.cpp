@@ -714,7 +714,7 @@ Expected<Mesh, std::string> fromDxf( std::istream& in, MR::VertColors* , MR::Pro
     std::getline( in, str );
 
     int code = {};
-    if ( !parseSingleNumber( str, code ) )
+    if ( !parseSingleNumber<int>( str, code ) )
         return unexpected( "File is corrupted" );
     
     bool is3DfaceFound = false;
@@ -738,7 +738,7 @@ Expected<Mesh, std::string> fromDxf( std::istream& in, MR::VertColors* , MR::Pro
             const int cIdx = code / 10 - 1;
             if ( vIdx >= 0 && vIdx < 3 && cIdx >= 0 && cIdx < 3 )
             {
-                if ( !parseSingleNumber( str, triangles.back()[vIdx][cIdx] ) )
+                if ( !parseSingleNumber<float>( str, triangles.back()[vIdx][cIdx] ) )
                     return unexpected( "File is corrupted" );
             }
         }
@@ -747,7 +747,7 @@ Expected<Mesh, std::string> fromDxf( std::istream& in, MR::VertColors* , MR::Pro
         if ( str.empty() )
             continue;
         
-        if ( !parseSingleNumber( str, code ) )
+        if ( !parseSingleNumber<int>( str, code ) )
             return unexpected( "File is corrupted" );
 
         if ( code == 0 )

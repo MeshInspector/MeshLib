@@ -158,7 +158,7 @@ template<typename T>
 VoidOrErrStr parseSingleNumber( const std::string_view& str, T& num )
 {
     const auto startPos = str.find_first_not_of( ' ' );
-    auto convRes = std::from_chars( &str[startPos], &str[str.size()], num );
+    const auto convRes = std::from_chars( &str[startPos], &str[str.size()], num );
     if ( bool( convRes.ec ) )
         return unexpected( "Failed to parse number" );
 

@@ -136,6 +136,13 @@ void RibbonSchemaLoader::loadSchema() const
     {
         return a.priority < b.priority;
     } );
+    if ( !getViewerInstance().isDeveloperFeaturesEnabled() )
+    {
+        tabsOrder.erase( std::remove_if( tabsOrder.begin(), tabsOrder.end(), [] ( const auto& tabName )
+        {
+            return tabName.name == "Test";
+        } ), tabsOrder.end() );
+    }
 }
 
 void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsList& list )

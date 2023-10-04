@@ -658,6 +658,93 @@ Expected<Mesh, std::string> from3mfModel( std::istream& in, VertColors*, Progres
 }
 #endif
 
+Expected<Mesh, std::string> fromDxf( const std::filesystem::path& path, MR::VertColors* colors, MR::ProgressCallback callback )
+{
+    std::ifstream in( path, std::ifstream::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( path ) );
+
+    return addFileNameInError( fromDxf( in, colors, callback ), path );
+}
+
+Expected<Mesh, std::string> fromDxf( std::istream& in, MR::VertColors* , MR::ProgressCallback cb )
+{
+    // find size
+    in.seekg( 0, std::ios_base::end );
+    const size_t size = in.tellg();
+    in.seekg( 0 );
+
+    std::vector<Triangle3f> triangles;
+    std::string str;
+    std::getline( in, str );
+    int code = std::stoi( str );
+    bool is3DfaceFound = false;
+
+    for ( int i = 0; !in.eof(); ++i )
+    {
+        if ( i % 128 == 0 && !reportProgress( cb, float( in.tellg() ) / size ) )
+            return unexpectedOperationCanceled();
+        
+        std::getline( in, str );
+
+        if ( str == "3DFACE" )
+        {
+            triangles.emplace_back();
+            is3DfaceFound = true;
+        }
+
+        if ( is3DfaceFound )
+        {
+            switch ( code )
+            {
+            case 10:
+                triangles.back()[0].x = std::stof( str );
+                break;
+            case 20:
+                triangles.back()[0].y = std::stof( str );
+                break;
+            case 30:
+                triangles.back()[0].z = std::stof( str );
+                break;
+            case 11:
+                triangles.back()[1].x = std::stof( str );
+                break;
+            case 21:
+                triangles.back()[1].y = std::stof( str );
+                break;
+            case 31:
+                triangles.back()[1].z = std::stof( str );
+                break;
+            case 12:
+                triangles.back()[2].x = std::stof( str );
+                break;
+            case 22:
+                triangles.back()[2].y = std::stof( str );
+                break;
+            case 32:
+                triangles.back()[2].z = std::stof( str );
+                break;
+            }
+        }
+
+        std::getline( in, str );
+        if ( str.empty() )
+            continue;
+        
+        code = std::stoi( str );
+        if ( code == 0 )
+            is3DfaceFound = false;
+    }
+
+    if ( !reportProgress( cb, 1.0f ) )
+        return unexpectedOperationCanceled();
+
+    if ( triangles.empty() )
+        return unexpected( "No mesh is found" );
+
+    return Mesh::fromPointTriples( triangles, true );
+}
+
 Expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path & file, VertColors* colors, ProgressCallback callback )
 {
     auto ext = utf8string( file.extension() );
@@ -712,6 +799,7 @@ MR_ADD_MESH_LOADER( IOFilter( "Stereolithography (.stl)", "*.stl" ), fromAnyStl 
 MR_ADD_MESH_LOADER( IOFilter( "Object format file (.off)", "*.off" ), fromOff )
 MR_ADD_MESH_LOADER( IOFilter( "3D model object (.obj)", "*.obj" ), fromObj )
 MR_ADD_MESH_LOADER( IOFilter( "Polygon File Format (.ply)", "*.ply" ), fromPly )
+MR_ADD_MESH_LOADER( IOFilter( "AutoCAD Format (.dxf)", "*.dxf" ), fromDxf )
 #ifndef MRMESH_NO_OPENCTM
 MR_ADD_MESH_LOADER( IOFilter( "Compact triangle-based mesh (.ctm)", "*.ctm" ), fromCtm )
 #endif

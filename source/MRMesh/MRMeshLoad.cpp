@@ -8,6 +8,9 @@
 #include "MRIOFormatsRegistry.h"
 #include "MRStringConvert.h"
 #include "MRMeshLoadObj.h"
+#include "MRMeshLoadStep.h"
+#include "MRObjectMesh.h"
+#include "MRObjectsAccess.h"
 #include "MRColor.h"
 #include "MRPch/MRTBB.h"
 #include "MRProgressReadWrite.h"
@@ -658,6 +661,37 @@ Expected<Mesh, std::string> from3mfModel( std::istream& in, VertColors*, Progres
 }
 #endif
 
+#ifdef _WIN32
+Expected<Mesh, std::string> fromStep( const std::filesystem::path& file, VertColors* colors, ProgressCallback callback )
+{
+    std::ifstream in( file, std::ifstream::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+
+    return addFileNameInError( fromStep( in, colors, callback ), file );
+}
+
+Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCallback callback )
+{
+    MR_TIMER
+
+    auto result = fromSceneStepFile( in, callback );
+    if ( !result )
+        return unexpected( std::move( result.error() ) );
+
+    // TODO: preserve colors?
+    Mesh mesh;
+    for ( const auto& objMesh : getAllObjectsInTree<ObjectMesh>( result->get() ) )
+    {
+        if ( const auto& subMesh = objMesh->mesh() )
+        {
+            mesh.addPart( *subMesh );
+        }
+    }
+    return mesh;
+}
+#endif
+
 Expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path & file, VertColors* colors, ProgressCallback callback )
 {
     auto ext = utf8string( file.extension() );
@@ -717,6 +751,9 @@ MR_ADD_MESH_LOADER( IOFilter( "Compact triangle-based mesh (.ctm)", "*.ctm" ), f
 #endif
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
 MR_ADD_MESH_LOADER( IOFilter( "3D Manufacturing Format (.model)", "*.model" ), from3mfModel )
+#endif
+#ifdef _WIN32
+MR_ADD_MESH_LOADER( IOFilter( "STEP files (.step,.stp)", "*.step;*.stp" ), fromStep )
 #endif
 
 } //namespace MeshLoad

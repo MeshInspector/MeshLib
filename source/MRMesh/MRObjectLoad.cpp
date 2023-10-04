@@ -586,7 +586,7 @@ Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( 
     }
 #endif
 #ifdef _WIN32
-    else if ( itF->extension == "*.step" || itF->extension == "*.stp" )
+    else if ( ext == "*.step" || ext == "*.stp" )
     {
         return MeshLoad::fromSceneStepFile( path, callback );
     }

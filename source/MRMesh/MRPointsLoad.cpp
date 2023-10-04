@@ -498,7 +498,7 @@ Expected<MR::PointCloud, std::string> fromDxf( std::istream& in, ProgressCallbac
 
     for ( int i = 0; !in.eof(); ++i )
     {
-        if ( i % 128 == 0 && !reportProgress( cb, float( in.tellg() ) / streamSize ) )
+        if ( i % 1024 == 0 && !reportProgress( cb, float( in.tellg() ) / streamSize ) )
             return unexpectedOperationCanceled();
 
         std::getline( in, str );
@@ -511,18 +511,10 @@ Expected<MR::PointCloud, std::string> fromDxf( std::istream& in, ProgressCallbac
 
         if ( isPointFound )
         {
-            switch ( code )
-            {
-            case 10:
-                cloud.points.back().x = std::stof( str );
-                break;
-            case 20:
-                cloud.points.back().y = std::stof( str );
-                break;
-            case 30:
-                cloud.points.back().z = std::stof( str );
-                break;
-            }
+            const int vIdx = code % 10;
+            const int cIdx = code / 10 - 1;
+            if ( vIdx == 0 && cIdx >= 0 && cIdx < 3 )
+                cloud.points.back()[cIdx] = std::stof( str );
         }
 
         std::getline( in, str );
@@ -610,7 +602,7 @@ Expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, cons
     else if ( ext == ".csv" || ext == ".xyz" )
         res = MR::PointsLoad::fromText( in, outXf, callback );
     else if ( ext == ".dxf" )
-        res = MR::PointsLoad::fromText( in, outXf, callback );
+        res = MR::PointsLoad::fromDxf( in, callback );
     return res;
 }
 

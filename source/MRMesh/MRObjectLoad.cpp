@@ -266,38 +266,6 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
         else
             result = unexpected( res.error() );
     }
-    else if ( ext == "*.dxf" )
-    {
-        std::vector<std::shared_ptr<Object>> objects;
-        
-        auto mesh = MeshLoad::fromDxf( filename, nullptr, subprogress( callback, 0.0f, 0.5f ) );
-        if ( mesh.has_value() )
-        {
-            auto objectMesh = std::make_shared<ObjectMesh>();
-            objectMesh->setMesh( std::make_shared<Mesh>( std::move( *mesh ) ) );
-            objectMesh->setName( filename.filename().string() );
-            objects.push_back( objectMesh );
-        }
-        else
-        {
-            auto pointCloud = PointsLoad::fromDxf( filename, subprogress( callback, 0.5f, 1.0f ) );
-            if ( pointCloud.has_value() )
-            {
-                auto objectPoints = std::make_shared<ObjectPoints>();
-                objectPoints->setPointCloud( std::make_shared<PointCloud>( std::move( *pointCloud ) ) );
-                objectPoints->setName( filename.filename().string() );
-                objects.push_back( objectPoints );
-            }
-        }
-
-        if ( !reportProgress( callback, 1.0f ) )
-            return unexpectedOperationCanceled();
-
-        if ( objects.empty() )
-            return unexpected( "No object is found" );
-
-        result = objects;
-    }
     else if ( std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const auto& filter ) { return filter.extensions.find( ext ) != std::string::npos; }) != SceneFileFilters.end() )
     {
         const auto objTree = loadSceneFromAnySupportedFormat( filename, callback );

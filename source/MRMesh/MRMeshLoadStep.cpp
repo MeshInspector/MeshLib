@@ -243,7 +243,7 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
         if ( !sw.Print( buffer ) )
             return unexpected( "Failed to repair STEP model" );
 
-        cb( 0.18f );
+        cb( 0.20f );
     }
     buffer.seekp( 0, std::ios::beg );
 
@@ -255,7 +255,7 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
         if ( ret != IFSelect_RetDone )
             return unexpected( "Failed to read STEP model" );
 
-        cb( 0.30f );
+        cb( 0.35f );
 
         const auto cb1 = subprogress( cb, 0.30f, 0.74f );
         const auto rootCount = reader.NbRootsForTransfer();
@@ -264,7 +264,7 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
             reader.TransferRoot( i );
             cb1( (float)i / (float)rootCount );
         }
-        cb( 0.74f );
+        cb( 0.90f );
 
         for ( auto i = 1; i <= reader.NbShapes(); ++i )
             shapes.emplace_back( reader.Shape( i ) );
@@ -276,8 +276,6 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
         for ( auto explorer = TopExp_Explorer( shape, TopAbs_SOLID ); explorer.More(); explorer.Next() )
             solids.emplace_back( explorer.Current() );
     shapes.clear();
-
-    cb( 0.75f );
 
     if ( solids.empty() )
     {
@@ -293,7 +291,7 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
     }
     else
     {
-        auto cb2 = subprogress( cb, 0.75f, 1.0f );
+        auto cb2 = subprogress( cb, 0.90f, 1.0f );
 
         auto result = std::make_shared<ObjectMesh>();
         // create empty parent mesh

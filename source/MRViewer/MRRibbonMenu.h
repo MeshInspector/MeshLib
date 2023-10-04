@@ -162,13 +162,15 @@ protected:
     MRVIEWER_API virtual bool drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags flags = 0 ) override;
 
     MRVIEWER_API virtual void highlightBlocking_();
+    
+    // draw scene list buttons
+    MRVIEWER_API virtual void drawSceneListButtons_();
 private:
     void changeTab_( int newTab );
 
     std::string getRequirements_( const std::shared_ptr<RibbonMenuItem>& item ) const;
 
-    // draw scene list buttons
-    void drawSceneListButtons_();
+
 
     // does look up in ribbon schema for `searchLine_`
     std::string searchLine_;

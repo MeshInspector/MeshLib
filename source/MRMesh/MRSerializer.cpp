@@ -98,7 +98,7 @@ const IOFilters SceneFileFilters =
     {"glTF binary scene (.glb)","*.glb"},
 #endif
 #ifdef _WIN32
-    { "STEP model (.step,.stp)", "*.step" },
+    { "STEP model (.step,.stp)", "*.step;*.stp" },
 #endif
 };
 

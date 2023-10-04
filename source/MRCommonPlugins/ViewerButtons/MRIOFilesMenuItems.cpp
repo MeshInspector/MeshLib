@@ -445,74 +445,24 @@ bool SaveObjectMenuItem::action()
         updateFilters( ObjType::Voxels, VoxelsSave::Filters );
 #endif
 
-    saveFileDialogAsync( [objType, settingsManager] ( const std::filesystem::path& savePath )
+    saveFileDialogAsync( [obj, objType, settingsManager] ( const std::filesystem::path& savePath )
     {
         if ( savePath.empty() )
             return;
         int objTypeInt = int( objType );
         if ( settingsManager && objTypeInt >= 0 && objTypeInt < int( ObjType::Count ) )
             settingsManager->setLastExtention( objType, utf8string( savePath.extension() ) );
-        ProgressBar::orderWithMainThreadPostProcessing( "Save object", [savePath]
+        ProgressBar::orderWithMainThreadPostProcessing( "Save object", [obj, savePath]() -> std::function<void()>
         {
-            std::optional<std::filesystem::path> copyPath{};
-            std::error_code ec;
-            std::string copySuffix = ".tmpcopy";
-            if ( std::filesystem::is_regular_file( savePath, ec ) )
-            {
-                copyPath = savePath.string() + copySuffix;
-                spdlog::info( "copy file {} into {}", utf8string( savePath ), utf8string( copyPath.value() ) );
-                std::filesystem::copy_file( savePath, copyPath.value(), ec );
-                if ( ec )
-                    spdlog::error( "copy file {} into {} failed: {}", utf8string( savePath ), utf8string( copyPath.value() ), systemToUtf8( ec.message() ) );
-            }
-
-            auto obj = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected )[0];
-            spdlog::info( "save object to file {}", utf8string( savePath ) );
-            auto res = saveObjectToFile( *obj, savePath, ProgressBar::callBackSetProgress );
-
-            std::function<void()> fnRes = [savePath]
-            {
-                getViewerInstance().recentFilesStore.storeFile( savePath );
-            };
-            if ( !res.has_value() )
-            {
-                spdlog::error( "save object to file {} failed: {}", utf8string( savePath ), res.error() );
-                fnRes = [error = res.error(), savePath, copyPath]
-                {
-                    std::error_code ec;
-                    spdlog::info( "remove file {}", utf8string( savePath ) );
-                    std::filesystem::remove( savePath, ec );
-                    if ( ec )
-                        spdlog::error( "remove file {} failed: {}", utf8string( savePath ), systemToUtf8( ec.message() ) );
-                    if ( copyPath.has_value() )
-                    {
-                        spdlog::info( "rename file {} into {}", utf8string( copyPath.value() ), utf8string( savePath ) );
-                        std::filesystem::rename( copyPath.value(), savePath, ec );
-                        if ( ec )
-                            spdlog::error( "rename file {} into {} failed: {}", utf8string( copyPath.value() ), utf8string( savePath ), systemToUtf8( ec.message() ) );
-                    }
-                    showError( error );
-                };
-            }
-            else if ( copyPath.has_value() )
-            {
-                fnRes = [copyPathValue = copyPath.value(), savePath]
-                {
-                    std::error_code ec;
-                    spdlog::info( "remove file {}", utf8string( copyPathValue ) );
-                    std::filesystem::remove( copyPathValue, ec );
-                    if ( ec )
-                        spdlog::error( "remove file {} failed: {}", utf8string( copyPathValue ), systemToUtf8( ec.message() ) );
-
-                    getViewerInstance().recentFilesStore.storeFile( savePath );
-                };
-            }
-            return fnRes;
+            auto res = saveObjectToFile( *obj, savePath, { .backupOriginalFile = true, .callback = ProgressBar::callBackSetProgress } );
+            if ( res )
+                return [savePath] { getViewerInstance().recentFilesStore.storeFile( savePath ); };
+            else
+                return [error = std::move( res.error() )] { showError( error ); };
         } );
     }, { name, {}, std::move( filters ) } );
     return false;
 }
-
 
 SaveSelectedMenuItem::SaveSelectedMenuItem():
     RibbonMenuItem( "Save selected" )

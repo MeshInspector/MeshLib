@@ -10,15 +10,20 @@ namespace MR
 {
 class Object;
 
+struct SaveObjectSettings
+{
+    // if true then before saving, original files is renamed, and renamed back if saving fails
+    bool backupOriginalFile = false;
+    // callback function to set progress (for progress bar)
+    ProgressCallback callback;
+};
+
+
 /**
  * \brief save visual object (mesh, lines, points or voxels) to file
- * \param callback - callback function to set progress (for progress bar)
  * \return empty string if no error or error text
  */
 MRVIEWER_API VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& filename,
-                                                               ProgressCallback callback = {} );
+    const SaveObjectSettings & settings = {} );
 
-
-
-
-}
+} //namespace MR

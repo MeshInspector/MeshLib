@@ -86,6 +86,9 @@ MRMESH_API Expected<Mesh, std::string> fromStep( std::istream& in, VertColors* c
                                                  ProgressCallback callback = {} );
 #endif
 
+MRMESH_API Expected<Mesh, std::string> fromDxf( const std::filesystem::path& path, MR::VertColors* colors = nullptr, MR::ProgressCallback callback = {} );
+MRMESH_API Expected<Mesh, std::string> fromDxf( std::istream& in, MR::VertColors* colors = nullptr, MR::ProgressCallback callback = {} );
+
 /// detects the format from file extension and loads mesh from it
 MRMESH_API Expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path& file, VertColors* colors = nullptr,
                                                                    ProgressCallback callback = {} );

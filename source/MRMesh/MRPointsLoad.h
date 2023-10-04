@@ -66,6 +66,9 @@ MRMESH_API Expected<PointCloud, std::string> fromLas( std::istream& in, VertColo
                                                       AffineXf3f* outXf = nullptr, ProgressCallback callback = {} );
 #endif
 
+MRMESH_API Expected<PointCloud, std::string> fromDxf( const std::filesystem::path& file, ProgressCallback callback = {} );
+MRMESH_API Expected<PointCloud, std::string> fromDxf( std::istream& in, ProgressCallback callback = {} );
+
 /// detects the format from file extension and loads points from it
 MRMESH_API Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file,
                                                                      VertColors* colors = nullptr, AffineXf3f* outXf = nullptr,

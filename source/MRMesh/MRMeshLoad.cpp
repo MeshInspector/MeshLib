@@ -14,6 +14,7 @@
 #include "MRColor.h"
 #include "MRPch/MRTBB.h"
 #include "MRProgressReadWrite.h"
+#include "MRIOParsing.h"
 
 #include <array>
 #include <future>
@@ -660,7 +661,6 @@ Expected<Mesh, std::string> from3mfModel( std::istream& in, VertColors*, Progres
     return Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( vertexCoordinates ), tris );
 }
 #endif
-
 #ifdef _WIN32
 Expected<Mesh, std::string> fromStep( const std::filesystem::path& file, VertColors* colors, ProgressCallback callback )
 {
@@ -691,6 +691,77 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
     return mesh;
 }
 #endif
+
+
+Expected<Mesh, std::string> fromDxf( const std::filesystem::path& path, MR::VertColors* colors, MR::ProgressCallback callback )
+{
+    std::ifstream in( path, std::ifstream::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( path ) );
+
+    return addFileNameInError( fromDxf( in, colors, callback ), path );
+}
+
+Expected<Mesh, std::string> fromDxf( std::istream& in, MR::VertColors* , MR::ProgressCallback cb )
+{
+    // find size
+    in.seekg( 0, std::ios_base::end );
+    const size_t size = in.tellg();
+    in.seekg( 0 );
+
+    std::vector<Triangle3f> triangles;
+    std::string str;
+    std::getline( in, str );
+
+    int code = {};
+    if ( !parseSingleNumber<int>( str, code ) )
+        return unexpected( "File is corrupted" );
+    
+    bool is3DfaceFound = false;
+
+    for ( int i = 0; !in.eof(); ++i )
+    {
+        if ( i % 1024 == 0 && !reportProgress( cb, float( in.tellg() ) / size ) )
+            return unexpectedOperationCanceled();
+        
+        std::getline( in, str );
+
+        if ( str == "3DFACE" )
+        {
+            triangles.emplace_back();
+            is3DfaceFound = true;
+        }
+
+        if ( is3DfaceFound )
+        {
+            const int vIdx = code % 10;
+            const int cIdx = code / 10 - 1;
+            if ( vIdx >= 0 && vIdx < 3 && cIdx >= 0 && cIdx < 3 )
+            {
+                if ( !parseSingleNumber<float>( str, triangles.back()[vIdx][cIdx] ) )
+                    return unexpected( "File is corrupted" );
+            }
+        }
+
+        std::getline( in, str );
+        if ( str.empty() )
+            continue;
+        
+        if ( !parseSingleNumber<int>( str, code ) )
+            return unexpected( "File is corrupted" );
+
+        if ( code == 0 )
+            is3DfaceFound = false;
+    }
+
+    if ( !reportProgress( cb, 1.0f ) )
+        return unexpectedOperationCanceled();
+
+    if ( triangles.empty() )
+        return unexpected( "No mesh is found" );
+
+    return Mesh::fromPointTriples( triangles, true );
+}
 
 Expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path & file, VertColors* colors, ProgressCallback callback )
 {
@@ -746,6 +817,7 @@ MR_ADD_MESH_LOADER( IOFilter( "Stereolithography (.stl)", "*.stl" ), fromAnyStl 
 MR_ADD_MESH_LOADER( IOFilter( "Object format file (.off)", "*.off" ), fromOff )
 MR_ADD_MESH_LOADER( IOFilter( "3D model object (.obj)", "*.obj" ), fromObj )
 MR_ADD_MESH_LOADER( IOFilter( "Polygon File Format (.ply)", "*.ply" ), fromPly )
+MR_ADD_MESH_LOADER( IOFilter( "Drawing Interchange Format (.dxf)", "*.dxf" ), fromDxf )
 #ifndef MRMESH_NO_OPENCTM
 MR_ADD_MESH_LOADER( IOFilter( "Compact triangle-based mesh (.ctm)", "*.ctm" ), fromCtm )
 #endif

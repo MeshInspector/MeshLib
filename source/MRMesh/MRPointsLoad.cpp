@@ -30,6 +30,7 @@ const IOFilters Filters =
     {"OBJ (.obj)",        "*.obj"},
     {"PLY (.ply)",        "*.ply"},
     {"PTS (.pts)",        "*.pts"},
+    {"DXF (.dxf)",        "*.dxf"},
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
     {"E57 (.e57)",        "*.e57"},
 #endif
@@ -470,6 +471,79 @@ Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCallbac
     return std::move( cloud );
 }
 
+Expected<MR::PointCloud, std::string> fromDxf( const std::filesystem::path& file, ProgressCallback callback )
+{
+    std::ifstream in( file, std::ifstream::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+
+    return addFileNameInError( fromDxf( in, callback ), file );
+}
+
+Expected<MR::PointCloud, std::string> fromDxf( std::istream& in, ProgressCallback cb )
+{
+    PointCloud cloud;
+
+    const auto posStart = in.tellg();
+    in.seekg( 0, std::ios_base::end );
+    const auto posEnd = in.tellg();
+    in.seekg( posStart );
+    const float streamSize = float( posEnd - posStart );
+
+    std::string str;
+    std::getline( in, str );
+
+    int code{};
+    if ( !parseSingleNumber<int>( str, code ) )
+        return unexpected( "File is corrupted" );
+
+    bool isPointFound = false;
+
+    for ( int i = 0; !in.eof(); ++i )
+    {
+        if ( i % 1024 == 0 && !reportProgress( cb, float( in.tellg() ) / streamSize ) )
+            return unexpectedOperationCanceled();
+
+        std::getline( in, str );
+
+        if ( str == "POINT" )
+        {
+            cloud.points.emplace_back();
+            isPointFound = true;
+        }
+
+        if ( isPointFound )
+        {
+            const int vIdx = code % 10;
+            const int cIdx = code / 10 - 1;
+            if ( vIdx == 0 && cIdx >= 0 && cIdx < 3 )
+            {
+                if ( !parseSingleNumber<float>( str, cloud.points.back()[cIdx] ) )
+                    return unexpected( "File is corrupted" );
+            }
+        }
+
+        std::getline( in, str );
+        if ( str.empty() )
+            continue;
+        
+        if ( !parseSingleNumber<int>( str, code ) )
+            return unexpected( "File is corrupted" );
+
+        if ( code == 0 )
+            isPointFound = false;
+    }
+
+    if ( !reportProgress( cb, 1.0f ) )
+        return unexpectedOperationCanceled();
+
+    if ( cloud.points.empty() )
+        return unexpected( "No points are found " );
+
+    cloud.validPoints.resize( cloud.points.size(), true );
+    return cloud;
+}
+
 Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, VertColors* colors,
                                                           AffineXf3f* outXf, ProgressCallback callback )
 {
@@ -500,6 +574,8 @@ Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem:
 #endif
     else if ( ext == ".csv" || ext == ".xyz" )
         res = MR::PointsLoad::fromText( file, outXf, callback );
+    else if ( ext == ".dxf" )
+        res = MR::PointsLoad::fromDxf( file, callback );
     return res;
 }
 
@@ -533,6 +609,8 @@ Expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, cons
 #endif
     else if ( ext == ".csv" || ext == ".xyz" )
         res = MR::PointsLoad::fromText( in, outXf, callback );
+    else if ( ext == ".dxf" )
+        res = MR::PointsLoad::fromDxf( in, callback );
     return res;
 }
 

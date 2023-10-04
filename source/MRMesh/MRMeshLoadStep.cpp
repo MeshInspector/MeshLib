@@ -83,6 +83,8 @@ private:
     SpdlogPrinter* printer_;
 };
 
+MessageHandler messageHandler;
+
 struct FeatureData
 {
     Handle( Poly_Triangulation ) triangulation;
@@ -216,10 +218,6 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
     MR_TIMER
 
     const auto cb = callback ? callback : [] ( float ) { return true; };
-
-    static MessageHandler handler;
-    // not supposed to be used directly
-    (void)handler;
 
     // NOTE: OpenCASCADE STEP reader is NOT thread-safe
     std::unique_lock lock( cOpenCascadeMutex );

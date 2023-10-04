@@ -7,6 +7,8 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRTimer.h"
 
+#include "MRPch/MRSpdlog.h"
+
 #pragma warning( push )
 #pragma warning( disable: 5054 )
 #pragma warning( disable: 5220 )
@@ -15,10 +17,64 @@
 #endif
 #include <opencascade/BRep_Tool.hxx>
 #include <opencascade/BRepMesh_IncrementalMesh.hxx>
+#include <opencascade/Message.hxx>
+#include <opencascade/Message_Printer.hxx>
+#include <opencascade/Message_PrinterOStream.hxx>
 #include <opencascade/STEPControl_Reader.hxx>
 #include <opencascade/TopExp_Explorer.hxx>
 #include <opencascade/TopoDS.hxx>
 #pragma warning( pop )
+
+namespace
+{
+
+class SpdlogPrinter final : public Message_Printer
+{
+private:
+    void send( const TCollection_AsciiString& string, const Message_Gravity gravity ) const override
+    {
+        auto level = spdlog::level::trace;
+        switch ( gravity )
+        {
+            case Message_Trace:
+                level = spdlog::level::trace;
+                break;
+            case Message_Info:
+                level = spdlog::level::info;
+                break;
+            case Message_Warning:
+                level = spdlog::level::warn;
+                break;
+            case Message_Alarm:
+                level = spdlog::level::err;
+                break;
+            case Message_Fail:
+                level = spdlog::level::critical;
+                break;
+        }
+
+        spdlog::log( level, "OpenCASCADE: {}", string.ToCString() );
+    }
+};
+
+class MessageHandler
+{
+public:
+    MessageHandler()
+        : printer_( new SpdlogPrinter )
+    {
+        auto& messenger = Message::DefaultMessenger();
+        // remove default stdout output
+        messenger->RemovePrinters( STANDARD_TYPE( Message_PrinterOStream ) );
+        // add spdlog output
+        messenger->AddPrinter( Handle( Message_Printer)( printer_ ) );
+    }
+
+private:
+    SpdlogPrinter* printer_;
+};
+
+}
 
 namespace MR::MeshLoad
 {
@@ -35,6 +91,8 @@ Expected<Mesh, std::string> fromStep( const std::filesystem::path& path, VertCol
 Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCallback callback )
 {
     MR_TIMER
+
+    static MessageHandler handler;
 
     // NOTE: OpenCASCADE STEP reader is NOT thread-safe
     static std::mutex mutex;

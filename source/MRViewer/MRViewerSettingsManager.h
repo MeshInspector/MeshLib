@@ -41,9 +41,9 @@ public:
         DistanceMap,
         Count
     };
-    MRVIEWER_API int getLastExtentionNum( ObjType objType );
-    MRVIEWER_API void setLastExtentionNum( ObjType objType, int num );
+    MRVIEWER_API const std::string & getLastExtention( ObjType objType );
+    MRVIEWER_API void setLastExtention( ObjType objType, std::string ext );
 private:
-    std::vector<int> lastExtentionNums_;
+    std::vector<std::string> lastExtentions_;
 };
 }

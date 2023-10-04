@@ -1,9 +1,10 @@
 #ifdef _WIN32
-#include "MRMeshLoad.h"
+#include "MRMeshLoadStep.h"
 
 #include "MRIOFormatsRegistry.h"
 #include "MRMesh.h"
 #include "MRMeshBuilder.h"
+#include "MRObjectMesh.h"
 #include "MRParallelFor.h"
 #include "MRStringConvert.h"
 #include "MRTimer.h"
@@ -22,7 +23,6 @@
 #include <opencascade/Message_Printer.hxx>
 #include <opencascade/Message_PrinterOStream.hxx>
 #include <opencascade/STEPControl_Reader.hxx>
-#include <opencascade/STEPControl_Writer.hxx>
 #include <opencascade/StepData_Protocol.hxx>
 #include <opencascade/StepData_StepModel.hxx>
 #include <opencascade/StepData_StepWriter.hxx>
@@ -190,21 +190,30 @@ std::mutex cOpenCascadeMutex = {};
 namespace MR::MeshLoad
 {
 
-Expected<Mesh, std::string> fromStep( const std::filesystem::path& path, VertColors* colors, ProgressCallback callback )
+Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::filesystem::path& path, const ProgressCallback& callback )
 {
     std::ifstream in( path, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( path ) );
 
-    return addFileNameInError( fromStep( in, colors, callback ), path );
+    auto result = fromSceneStepFile( in, callback );
+    if ( !result )
+        return addFileNameInError( result, path );
+
+    if ( auto& obj = *result )
+    {
+        if ( obj->name().empty() )
+            obj->setName( utf8string( path.stem() ) );
+    }
+
+    return result;
 }
 
-Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCallback callback )
+Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& in, const ProgressCallback& callback )
 {
     MR_TIMER
 
-    if ( !callback )
-        callback = [] ( float ) { return true; };
+    const auto cb = callback ? callback : [] ( float ) { return true; };
 
     static MessageHandler handler;
     // not supposed to be used directly
@@ -222,7 +231,7 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
         if ( ret != IFSelect_RetDone )
             return unexpected( "Failed to read STEP model" );
 
-        callback( 0.15f );
+        cb( 0.15f );
 
         const auto model = reader.StepModel();
         const auto protocol = Handle( StepData_Protocol )::DownCast( model->Protocol() );
@@ -232,7 +241,7 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
         if ( !sw.Print( buffer ) )
             return unexpected( "Failed to repair STEP model" );
 
-        callback( 0.18f );
+        cb( 0.18f );
     }
     buffer.seekp( 0, std::ios::beg );
 
@@ -244,16 +253,16 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
         if ( ret != IFSelect_RetDone )
             return unexpected( "Failed to read STEP model" );
 
-        callback( 0.30f );
+        cb( 0.30f );
 
-        const auto cb = subprogress( callback, 0.30f, 0.74f );
+        const auto cb1 = subprogress( cb, 0.30f, 0.74f );
         const auto rootCount = reader.NbRootsForTransfer();
         for ( auto i = 1; i <= rootCount; ++i )
         {
             reader.TransferRoot( i );
-            cb( (float)i / (float)rootCount );
+            cb1( (float)i / (float)rootCount );
         }
-        callback( 0.74f );
+        cb( 0.74f );
 
         for ( auto i = 1; i <= reader.NbShapes(); ++i )
             shapes.emplace_back( reader.Shape( i ) );
@@ -266,7 +275,7 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
             solids.emplace_back( explorer.Current() );
     shapes.clear();
 
-    callback( 0.75f );
+    cb( 0.75f );
 
     if ( solids.empty() )
     {
@@ -274,24 +283,36 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
     }
     else if ( solids.size() == 1 )
     {
-        return loadSolid( solids.front() );
+        auto mesh = loadSolid( solids.front() );
+
+        auto result = std::make_shared<ObjectMesh>();
+        result->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
+        return result;
     }
     else
     {
-        auto cb = subprogress( callback, 0.75f, 1.0f );
-        Mesh result;
-        std::vector<Mesh> results( solids.size() );
+        auto cb2 = subprogress( cb, 0.75f, 1.0f );
+
+        auto result = std::make_shared<ObjectMesh>();
+        // create empty parent mesh
+        result->setMesh( std::make_shared<Mesh>() );
+
+        std::vector<std::shared_ptr<Object>> children( solids.size() );
         ParallelFor( size_t( 0 ), solids.size(), [&] ( size_t i )
         {
-            results[i] = loadSolid( solids[i] );
-        }, cb );
-        for ( const auto& part : results )
-            result.addPart( part );
+            auto mesh = loadSolid( solids[i] );
+
+            auto child = std::make_shared<ObjectMesh>();
+            child->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
+            child->setName( fmt::format( "Solid{}", i + 1 ) );
+            children[i] = std::move( child );
+        }, cb2 );
+
+        for ( auto& child : children )
+            result->addChild( std::move( child ), true );
         return result;
     }
 }
-
-MR_ADD_MESH_LOADER( IOFilter( "STEP files (*.step)", "*.step" ), fromStep )
 
 } // namespace MR::MeshLoad
 #endif

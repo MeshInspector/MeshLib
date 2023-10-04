@@ -18,6 +18,7 @@
 #include "MRStringConvert.h"
 #include "MRIOFormatsRegistry.h"
 #include "MRMeshLoadObj.h"
+#include "MRMeshLoadStep.h"
 #include "MRSerializer.h"
 #include "MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
@@ -582,6 +583,12 @@ Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( 
     else if ( itF->extension == "*.gltf" || itF->extension == "*.glb" )
     {
         return deserializeObjectTreeFromGltf( path, callback );
+    }
+#endif
+#ifdef _WIN32
+    else if ( itF->extension == "*.step" || itF->extension == "*.stp" )
+    {
+        return MeshLoad::fromSceneStepFile( path, callback );
     }
 #endif
 

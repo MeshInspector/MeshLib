@@ -35,6 +35,7 @@ namespace
 
 using namespace MR;
 
+/// spdlog adaptor for OpenCASCADE logging system
 class SpdlogPrinter final : public Message_Printer
 {
 private:
@@ -64,6 +65,7 @@ private:
     }
 };
 
+/// replace default OpenCASCADE log output with redirect to spdlog
 class MessageHandler
 {
 public:
@@ -74,7 +76,7 @@ public:
         // remove default stdout output
         messenger->RemovePrinters( STANDARD_TYPE( Message_PrinterOStream ) );
         // add spdlog output
-        messenger->AddPrinter( Handle( Message_Printer)( printer_ ) );
+        messenger->AddPrinter( Handle( Message_Printer )( printer_ ) );
     }
 
 private:

@@ -97,6 +97,8 @@ struct FeatureData
 
 Expected<Mesh, std::string> loadSolid( const TopoDS_Shape& solid, const ProgressCallback& callback )
 {
+    MR_TIMER
+
     // TODO: expose parameters
     IMeshTools_Parameters parameters;
     parameters.Angle = 0.1;
@@ -155,14 +157,14 @@ Expected<Mesh, std::string> loadSolid( const TopoDS_Shape& solid, const Progress
         {
             const auto& tri = feature.triangulation->Triangle( i );
 
-            std::array<int, 3> vs{ -1, -1, -1 };
+            std::array<int, 3> vs { -1, -1, -1 };
             tri.Get( vs[0], vs[1], vs[2] );
             if ( reversed )
                 std::swap( vs[1], vs[2] );
             for ( auto& v : vs )
-                v += (int) vertexOffset - 1;
+                v += (int)vertexOffset - 1;
 
-            triples.emplace_back( Triangle3f{
+            triples.emplace_back( Triangle3f {
                 points[vs[0]],
                 points[vs[1]],
                 points[vs[2]],
@@ -200,6 +202,9 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
 {
     MR_TIMER
 
+    if ( !callback )
+        callback = [] ( float ) { return true; };
+
     static MessageHandler handler;
 
     // NOTE: OpenCASCADE STEP reader is NOT thread-safe
@@ -212,8 +217,12 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
         MR_NAMED_TIMER( "STEP reader: repair model" )
 
         STEPControl_Reader reader;
-        reader.ReadStream( "STEP file", in );
+        const auto ret = reader.ReadStream( "STEP file", in );
+        if ( ret != IFSelect_RetDone )
+            return unexpected( "Failed to read STEP model" );
+        callback( 0.125f );
         reader.TransferRoots();
+        callback( 0.375f );
 
         const auto& shape = reader.OneShape();
 
@@ -227,6 +236,7 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
         sw.SendModel( protocol );
         if ( !sw.Print( buffer ) )
             return unexpected( "Failed to repair STEP model" );
+        callback( 0.45f );
     }
     buffer.seekp( 0, std::ios::beg );
 
@@ -239,11 +249,12 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
             if ( ret != IFSelect_RetDone )
                 return unexpected( "Failed to read STEP model" );
         }
+        callback( 0.575f );
         {
             MR_NAMED_TIMER( "STEP reader: transfer roots" )
-            for ( auto i = 1; i <= reader.NbRootsForTransfer(); ++i )
-                reader.TransferRoot( i );
+            reader.TransferRoots();
         }
+        callback( 0.825f );
 
         for ( auto i = 1; i <= reader.NbShapes(); ++i )
             shapes.emplace_back( reader.Shape( i ) );
@@ -252,11 +263,12 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
     }
 
     Mesh result;
+    auto cb = subprogress( callback, 0.825f, 1.0f );
     for ( const auto& shape : shapes )
     {
         for ( auto solidExp = TopExp_Explorer( shape, TopAbs_SOLID ); solidExp.More(); solidExp.Next() )
         {
-            auto mesh = loadSolid( solidExp.Current(), callback );
+            auto mesh = loadSolid( solidExp.Current(), cb );
             if ( mesh )
                 result.addPart( *mesh );
             else

@@ -220,23 +220,16 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
         const auto ret = reader.ReadStream( "STEP file", in );
         if ( ret != IFSelect_RetDone )
             return unexpected( "Failed to read STEP model" );
-        callback( 0.125f );
-        reader.TransferRoots();
-        callback( 0.375f );
 
-        const auto& shape = reader.OneShape();
-
-        STEPControl_Writer writer;
-        writer.Transfer( shape, STEPControl_AsIs );
-
-        const auto model = writer.Model();
+        const auto model = reader.StepModel();
         const auto protocol = Handle( StepData_Protocol )::DownCast( model->Protocol() );
 
         StepData_StepWriter sw( model );
         sw.SendModel( protocol );
         if ( !sw.Print( buffer ) )
             return unexpected( "Failed to repair STEP model" );
-        callback( 0.45f );
+
+        callback( 0.18f );
     }
     buffer.seekp( 0, std::ios::beg );
 
@@ -249,21 +242,21 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
             if ( ret != IFSelect_RetDone )
                 return unexpected( "Failed to read STEP model" );
         }
-        callback( 0.575f );
+        callback( 0.30f );
         {
             MR_NAMED_TIMER( "STEP reader: transfer roots" )
             reader.TransferRoots();
         }
-        callback( 0.825f );
+        callback( 0.74f );
 
         for ( auto i = 1; i <= reader.NbShapes(); ++i )
             shapes.emplace_back( reader.Shape( i ) );
-
-        reader.ClearShapes();
     }
 
+    MR_NAMED_TIMER( "STEP reader: triangulate solids" )
+
     Mesh result;
-    auto cb = subprogress( callback, 0.825f, 1.0f );
+    auto cb = subprogress( callback, 0.855f, 1.0f );
     for ( const auto& shape : shapes )
     {
         for ( auto solidExp = TopExp_Explorer( shape, TopAbs_SOLID ); solidExp.More(); solidExp.Next() )

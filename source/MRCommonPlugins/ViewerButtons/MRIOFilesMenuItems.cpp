@@ -410,12 +410,12 @@ std::optional<SaveInfo> getSaveInfo( const std::vector<std::shared_ptr<T>> & obj
         return true;
     };
 
-    checkObjects.operator()<ObjectMesh>( { ViewerSettingsManager::ObjType::Mesh, MeshSave::Filters } )
-    || checkObjects.operator()<ObjectLines>( { ViewerSettingsManager::ObjType::Lines, LinesSave::Filters } )
-    || checkObjects.operator()<ObjectPoints>( { ViewerSettingsManager::ObjType::Points, PointsSave::Filters } )
-    || checkObjects.operator()<ObjectDistanceMap>( { ViewerSettingsManager::ObjType::DistanceMap, DistanceMapSave::Filters } )
+    checkObjects.template operator()<ObjectMesh>( { ViewerSettingsManager::ObjType::Mesh, MeshSave::Filters } )
+    || checkObjects.template operator()<ObjectLines>( { ViewerSettingsManager::ObjType::Lines, LinesSave::Filters } )
+    || checkObjects.template operator()<ObjectPoints>( { ViewerSettingsManager::ObjType::Points, PointsSave::Filters } )
+    || checkObjects.template operator()<ObjectDistanceMap>( { ViewerSettingsManager::ObjType::DistanceMap, DistanceMapSave::Filters } )
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-    || checkObjects.operator()<ObjectVoxels>( { ViewerSettingsManager::ObjType::Voxels, VoxelsSave::Filters } )
+    || checkObjects.template operator()<ObjectVoxels>( { ViewerSettingsManager::ObjType::Voxels, VoxelsSave::Filters } )
 #endif*/
     ;
 
@@ -431,8 +431,13 @@ SaveObjectMenuItem::SaveObjectMenuItem() :
 
 std::string SaveObjectMenuItem::isAvailable( const std::vector<std::shared_ptr<const Object>>&objs ) const
 {
+#ifdef __EMSCRIPTEN__
+    if ( objs.size() != 1 || !getSaveInfo( objs ) )
+        return "Exactly one object of an exportable type must be selected.";
+#else
     if ( !getSaveInfo( objs ) )
-        return "One or several objects of same type must be selected.";
+        return "One or several objects of same exportable type must be selected.";
+#endif
     return "";
 }
 

@@ -35,7 +35,7 @@
 		{
 			"Name": "Save object",
 			"Caption": "Export",
-			"Tooltip": "Save selected object to file.",
+			"Tooltip": "Save selected objects to files.",
 			"Icon": "\uF0C6"
 		},
 		{

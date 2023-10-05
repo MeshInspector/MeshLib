@@ -22,13 +22,13 @@ std::vector<FaceBitSet> findOverhangs( const Mesh& mesh, const FindOverhangsSett
     assert( settings.layerHeight > 0.f );
     assert( settings.maxOverhangDistance > 0.f );
     assert( settings.hops >= 0 );
-    const auto minCos = -settings.layerHeight / std::hypot( settings.layerHeight, settings.maxOverhangDistance );
+    const auto minCos = -settings.maxOverhangDistance / std::hypot( settings.layerHeight, settings.maxOverhangDistance );
 
     const auto xf = settings.xf ? *settings.xf : AffineXf3f();
     const auto isOverhanging = [&] ( FaceId f ) -> bool
     {
         const auto normal = mesh.normal( f );
-        const auto cos = dot( settings.axis, xf( normal ) );
+        const auto cos = dot( settings.axis, xf.A * normal );
         return cos < minCos;
     };
 
@@ -40,14 +40,13 @@ std::vector<FaceBitSet> findOverhangs( const Mesh& mesh, const FindOverhangsSett
     } );
 
     // smooth out the regions...
-    expand( mesh.topology, faces, settings.hops );
-    // ...but preserve the overhanging faces
-    auto shrunk = faces;
-    shrink( mesh.topology, shrunk, settings.hops );
-    BitSetParallelFor( faces - shrunk, [&] ( FaceId f )
+    if ( settings.hops > 0 )
     {
-        faces[f] = isOverhanging( f );
-    } );
+        auto smoothFaces = faces;
+        expand( mesh.topology, smoothFaces, settings.hops );
+        shrink( mesh.topology, smoothFaces, settings.hops );
+        faces |= smoothFaces;
+    }
 
     // compute transform from the given axis
     const auto axisXf = xf * AffineXf3f::xfAround( Matrix3f::rotation( Vector3f::plusZ(), settings.axis ), mesh.computeBoundingBox( settings.xf ).center() );
@@ -58,19 +57,18 @@ std::vector<FaceBitSet> findOverhangs( const Mesh& mesh, const FindOverhangsSett
     ParallelFor( regions, [&] ( size_t i )
     {
         auto& region = regions[i];
-        const auto vertices = getIncidentVerts( mesh.topology, region );
-        const auto axisBox = computeBoundingBox( mesh.points, vertices, &axisXf );
+        const auto axisBox = mesh.computeBoundingBox( &region, &axisXf );
         // don't include the basement region
         if ( axisBox.min.z == axisMeshBox.min.z || axisBox.size().z <= settings.layerHeight )
-            region.reset();
+            region.clear();
     } );
-    std::vector<FaceBitSet> results;
-    results.reserve( regions.size() );
-    for ( auto& region : regions )
-        if ( region.any() )
-            results.emplace_back( std::move( region ) );
+    
+    regions.erase( std::remove_if( regions.begin(), regions.end(), [] ( const auto& r )
+    {
+        return r.empty();
+    } ), regions.end() );
 
-    return results;
+    return regions;
 }
 
 } // namespace MR

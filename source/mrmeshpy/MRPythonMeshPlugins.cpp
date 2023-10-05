@@ -29,6 +29,7 @@
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRExtractIsolines.h"
 #include "MRMesh/MRContour.h"
+#include "MRMesh/MRMeshOverhangs.h"
 #include <pybind11/functional.h>
 
 using namespace MR;
@@ -352,6 +353,25 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         "( contours plane with parameters according DistanceMapToWorld )\n"
         "Return: pair contours in OXY & transformation from plane OXY to real contours plane" );
 
+} )
+
+// Overhangs
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Overhangs, [] ( pybind11::module_& m )
+{
+    pybind11::class_<MR::FindOverhangsSettings>( m, "FindOverhangsSettings", "parameters for findOverhangs" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "axis", &MR::FindOverhangsSettings::axis, "base axis marking the up direction" ).
+        def_readwrite( "layerHeight", &MR::FindOverhangsSettings::layerHeight, "height of a layer" ).
+        def_readwrite( "maxOverhangDistance", &MR::FindOverhangsSettings::maxOverhangDistance, "maximum overhang distance within a layer" ).
+        def_readwrite( "hops", &MR::FindOverhangsSettings::hops, "number of hops used to smooth out the overhang regions (0 - disable smoothing)" ).
+        def_readwrite( "xf", &MR::FindOverhangsSettings::xf, "mesh transform" );
+
+    m.def( "findOverhangs", &MR::findOverhangs,
+        pybind11::arg( "mesh" ), pybind11::arg( "settings" ),
+        "Find face regions that might create overhangs\n"
+        "\tmesh - source mesh\n"
+        "\tsettings - parameters\n"
+        "\treturn face regions" );
 } )
 
 // Position Verts Smooth

@@ -162,10 +162,14 @@ AddFaceResult FaceAdder::add( MeshTopology & m, FaceId face, const VertId * firs
     }
 
     // create missing face edges
+    int createdEdgeCount = 0;
     for ( int i = 0; i < sz; ++i )
     {
         if ( !e_[i].valid() )
+        {
             e_[i] = m.makeEdge();
+            ++createdEdgeCount;
+        }
     }
 
     // connect face edges at vertices and set vertex-ids

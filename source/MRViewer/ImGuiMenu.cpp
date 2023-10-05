@@ -319,10 +319,18 @@ void ImGuiMenu::preDraw_()
       ImGui::GetIO().DisplaySize = ImVec2( float( viewer->framebufferSize.x ), float( viewer->framebufferSize.y ) );
   }
   auto& style = ImGui::GetStyle();
-  if ( storedError_.empty() )
+  if ( storedModalMessage_.empty() )
       style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 0.0f, 0.0f, 0.0f, 0.8f );
   else
-      style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 1.0f, 0.2f, 0.2f, 0.5f );
+  {
+      if ( modalMessageType_ == ModalMessageType::Error )
+          style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 1.0f, 0.2f, 0.2f, 0.5f );
+      else if ( modalMessageType_ == ModalMessageType::Warning )
+            style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 1.0f, 0.86f, 0.4f, 0.5f );
+      else // if ( modalMessageType_ == ModalMessageType::Info )
+          style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 0.9f, 0.9f, 0.9f, 0.5f );
+
+  }
   ImGui::NewFrame();
 }
 
@@ -816,49 +824,66 @@ void ImGuiMenu::draw_helpers()
     }
     ImGui::PopStyleVar( 3 );
 
+    drawModalMessage();
+}
+
+void ImGuiMenu::drawModalMessage()
+{
     ImGui::PushStyleColor( ImGuiCol_ModalWindowDimBg, ImVec4( 1, 0.125f, 0.125f, ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg].w ) );
 
-    if ( !storedError_.empty() && !ImGui::IsPopupOpen( " Error##modal" ) )
-    {        
-        ImGui::OpenPopup( " Error##modal" );
+    std::string title;
+    if ( modalMessageType_ == ModalMessageType::Error )
+        title = "Error";
+    else if ( modalMessageType_ == ModalMessageType::Warning )
+        title = "Warning";
+    else //if ( modalMessageType_ == ModalMessageType::Info )
+        title = "Info";
+
+    const std::string titleImGui = " " + title + "##modal";
+
+    if ( !storedModalMessage_.empty() &&
+        !ImGui::IsPopupOpen( " Error##modal" ) && !ImGui::IsPopupOpen( " Warning##modal" ) && !ImGui::IsPopupOpen( " Info##modal" ) )
+    {
+        ImGui::OpenPopup( titleImGui.c_str() );
     }
 
+    const auto menuScaling = menu_scaling();
     const ImVec2 errorWindowSize{ MR::cModalWindowWidth * menuScaling, -1 };
     ImGui::SetNextWindowSize( errorWindowSize, ImGuiCond_Always );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling } );
-    if ( ImGui::BeginModalNoAnimation( " Error##modal", nullptr,
+    if ( ImGui::BeginModalNoAnimation( titleImGui.c_str(), nullptr,
         ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
         auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
         if ( headerFont )
             ImGui::PushFont( headerFont );
 
-        const auto headerWidth = ImGui::CalcTextSize( "Error" ).x;
+        const auto headerWidth = ImGui::CalcTextSize( title.c_str() ).x;
 
         ImGui::SetCursorPosX( ( errorWindowSize.x - headerWidth ) * 0.5f );
-        ImGui::Text( "Error" );
+        ImGui::Text( title.c_str() );
 
         if ( headerFont )
             ImGui::PopFont();
 
-        const float textWidth = ImGui::CalcTextSize( storedError_.c_str() ).x;
+        const float textWidth = ImGui::CalcTextSize( storedModalMessage_.c_str() ).x;
 
         if ( textWidth < errorWindowSize.x )
         {
             ImGui::SetCursorPosX( ( errorWindowSize.x - textWidth ) * 0.5f );
-            ImGui::Text( "%s", storedError_.c_str() );
+            ImGui::Text( "%s", storedModalMessage_.c_str() );
         }
         else
         {
-            ImGui::TextWrapped( "%s", storedError_.c_str() );
+            ImGui::TextWrapped( "%s", storedModalMessage_.c_str() );
         }
         const auto style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
         if ( UI::button( "Okay", Vector2f( -1, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Enter ) ||
            ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) ) )
         {
-            storedError_.clear();            
+            storedModalMessage_.clear();
             ImGui::CloseCurrentPopup();
         }
         ImGui::PopStyleVar();
@@ -873,13 +898,19 @@ void ImGuiMenu::setDrawTimeMillisecThreshold( long long maxGoodTimeMillisec )
     frameTimeMillisecThreshold_ = maxGoodTimeMillisec;
 }
 
-void ImGuiMenu::showErrorModal( const std::string& error )
+void ImGuiMenu::showModalMessage( const std::string& msg, ModalMessageType msgType )
 {
-    spdlog::error( "Error Modal Dialog: {}", error );
+    if ( msgType == ModalMessageType::Error )
+        spdlog::error( "Error Modal Dialog: {}", msg );
+    else if ( msgType == ModalMessageType::Warning )
+        spdlog::warn( "Warning Modal Dialog: {}", msg );
+    else // if ( msgType == ModalMessageType::Info )
+        spdlog::info( "Info Modal Dialog: {}", msg );
     showRenameModal_ = false;
+    modalMessageType_ = msgType;
     ImGui::CloseCurrentPopup();
-    storedError_ = error;
-    // this is needed to correctly resize error window
+    storedModalMessage_ = msg;
+    // this is needed to correctly resize modal window
     getViewerInstance().incrementForceRedrawFrames( 2, true );
 }
 
@@ -2244,7 +2275,7 @@ void ImGuiMenu::reorderSceneIfNeeded_()
         bool detachSuccess = sourcePtr->detachFromParent();
         if ( !detachSuccess )
         {
-            showErrorModal( "Cannot perform such reorder" );
+            showModalMessage( "Cannot perform such reorder", ModalMessageType::Error );
             dragOrDropFailed = true;
             break;
         }
@@ -2258,7 +2289,7 @@ void ImGuiMenu::reorderSceneIfNeeded_()
         if ( !attachSucess )
         {
             detachAction->action( HistoryAction::Type::Undo );
-            showErrorModal( "Cannot perform such reorder" );
+            showModalMessage( "Cannot perform such reorder", ModalMessageType::Error );
             dragOrDropFailed = true;
             break;
         }
@@ -2990,12 +3021,19 @@ const std::vector<StateBasePlugin*>& ImGuiMenu::PluginsCache::getTabPlugins( Sta
     return sortedCustomPlufins_[int( tab )];
 }
 
-void showError( const std::string& error )
+void showModal( const std::string& msg, ImGuiMenu::ModalMessageType type )
 {
     if ( auto menu = getViewerInstance().getMenuPlugin() )
-        menu->showErrorModal( error );
+        menu->showModalMessage( msg, type );
     else
-        spdlog::error( "Show Error: {}", error );
+    {
+        if ( type == ImGuiMenu::ModalMessageType::Error )
+            spdlog::error( "Show Error: {}", msg );
+        else if ( type == ImGuiMenu::ModalMessageType::Warning )
+            spdlog::warn( "Show Warning: {}", msg );
+        else //if ( type == ImGuiMenu::ModalMessageType::Info )
+            spdlog::info( "Show Info: {}", msg );
+    }
 }
 
 } // end namespace

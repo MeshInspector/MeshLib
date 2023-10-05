@@ -65,7 +65,7 @@ protected:
   bool showRenameModal_{ false };
   std::string renameBuffer_;
   std::string popUpRenameBuffer_;
-  std::string storedError_;
+  std::string storedModalMessage_;
   std::shared_ptr<ShortcutManager> shortcutManager_;
 
   ImVec2 sceneWindowPos_;
@@ -167,6 +167,8 @@ public:
 
   MRVIEWER_API void draw_helpers();
 
+  MRVIEWER_API virtual void drawModalMessage();
+
   // Can be overwritten by `callback_draw_viewer_window`
   MRVIEWER_API virtual void draw_viewer_window();
 
@@ -203,8 +205,14 @@ public:
 
   MRVIEWER_API ImGuiContext* getCurrentContext() const;
 
+  enum class ModalMessageType
+  {
+      Error,
+      Warning,
+      Info
+  };
   // opens error modal window with error text
-  MRVIEWER_API void showErrorModal( const std::string& error );
+  MRVIEWER_API void showModalMessage( const std::string& msg, ModalMessageType msgType );
 
   MRVIEWER_API virtual std::filesystem::path getMenuFontPath() const;
 
@@ -279,6 +287,8 @@ public:
   MRVIEWER_API bool getShowShortcuts() const;
 
 protected:
+    ModalMessageType modalMessageType_{ ModalMessageType::Error };
+
     bool capturedMouse_{ false };
     // Mouse IO
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
@@ -361,6 +371,10 @@ protected:
 
 
 // Check if menu is available and if it is, shows error
-MRVIEWER_API void showError( const std::string& error );
+MRVIEWER_API void showModal( const std::string& error, ImGuiMenu::ModalMessageType type );
+inline  void showError( const std::string& error )
+{
+    showModal( error, ImGuiMenu::ModalMessageType::Error );
+}
 
 } // end namespace

@@ -37,12 +37,14 @@ const IOFilters allFilters = SceneFileFilters
                              | LinesLoad::Filters
                              | PointsLoad::Filters;
 
-Expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem::path & file, ProgressCallback callback )
+Expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER;
 
+    MeshLoadSettings newSettings = settings;
     VertColors colors;
-    auto mesh = MeshLoad::fromAnySupportedFormat( file, &colors, callback );
+    newSettings.colors = &colors;
+    auto mesh = MeshLoad::fromAnySupportedFormat( file, newSettings );
     if ( !mesh.has_value() )
     {
         return unexpected( mesh.error() );
@@ -60,12 +62,14 @@ Expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem:
     return objectMesh;
 }
 
-Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std::filesystem::path& file, ProgressCallback callback )
+Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
+    MeshLoadSettings newSettings = settings;
     VertColors colors;
-    auto mesh = MeshLoad::fromAnySupportedFormat( file, &colors, callback );
+    newSettings.colors = &colors;
+    auto mesh = MeshLoad::fromAnySupportedFormat( file, newSettings );
     if ( !mesh.has_value() )
         return unexpected( mesh.error() );
     
@@ -221,7 +225,7 @@ Expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObjectVoxe
 #endif
 
 Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFile( const std::filesystem::path& filename,
-                                                                                        ProgressCallback callback )
+                                                                                    std::string* loadInfo, ProgressCallback callback )
 {
     if ( callback && !callback( 0.f ) )
         return unexpected( std::string( "Saving canceled" ) );
@@ -277,11 +281,18 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
     }
     else
     {
-        auto object = makeObjectFromMeshFile( filename, callback );
+        MeshLoadSettings settings;
+        settings.callback = callback;
+        int duplicatedVertexCount = 0;
+        if ( loadInfo )
+            settings.duplicatedVertexCount = &duplicatedVertexCount;
+        auto object = makeObjectFromMeshFile( filename, settings );
         if ( object && *object )
         {
             (*object)->select( true );
             result = { *object };
+            if ( loadInfo && duplicatedVertexCount )
+                *loadInfo = fmt::format( "Duplicated vertex count: {}", duplicatedVertexCount );
         }
         else if ( object.error() == "Loading canceled" )
         {
@@ -495,7 +506,7 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
         {
             loadTasks.emplace_back( std::async( std::launch::async, [&] ()
             {
-                return loadObjectFromFile( file.path, [&]( float ){ return !loadingCanceled; } );
+                return loadObjectFromFile( file.path, nullptr, [&]( float ){ return !loadingCanceled; } );
             } ), objPtr );
         }
     };

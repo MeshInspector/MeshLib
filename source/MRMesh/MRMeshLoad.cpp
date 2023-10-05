@@ -29,24 +29,21 @@ namespace MR
 namespace MeshLoad
 {
 
-Expected<Mesh, std::string> fromMrmesh( const std::filesystem::path& file, VertColors*, ProgressCallback callback )
+Expected<Mesh, std::string> fromMrmesh( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromMrmesh( in, nullptr, callback ), file );
+    return addFileNameInError( fromMrmesh( in, settings ), file );
 }
 
-Expected<Mesh, std::string> fromMrmesh( std::istream& in, VertColors*, ProgressCallback callback )
+Expected<Mesh, std::string> fromMrmesh( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
     Mesh mesh;
-    auto readRes = mesh.topology.read( in, callback ? [callback] ( float v )
-    {
-        return callback( v / 2.f );
-    } : callback );
+    auto readRes = mesh.topology.read( in, subprogress( settings.callback, 0.f, 0.5f) );
     if ( !readRes.has_value() )
     {
         std::string error = readRes.error();
@@ -61,8 +58,7 @@ Expected<Mesh, std::string> fromMrmesh( std::istream& in, VertColors*, ProgressC
     if ( !in )
         return unexpected( std::string( "Error reading the number of points from mrmesh-file" ) );
     mesh.points.resize( numPoints );
-    if ( !readByBlocks( in, ( char* )mesh.points.data(), mesh.points.size() * sizeof( Vector3f ), callback ? [callback] ( float v )
-        { return callback( v / 2.f + 0.5f ); } : callback ) )
+    if ( !readByBlocks( in, ( char* )mesh.points.data(), mesh.points.size() * sizeof( Vector3f ), subprogress( settings.callback, 0.5f, 1.f ) ) )
         return unexpected( std::string( "Loading canceled" ) );
 
     if ( !in )
@@ -71,16 +67,16 @@ Expected<Mesh, std::string> fromMrmesh( std::istream& in, VertColors*, ProgressC
     return std::move( mesh );
 }
 
-Expected<Mesh, std::string> fromOff( const std::filesystem::path & file, VertColors*, ProgressCallback callback )
+Expected<Mesh, std::string> fromOff( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromOff( in, nullptr, callback ), file );
+    return addFileNameInError( fromOff( in, settings ), file );
 }
 
-Expected<Mesh, std::string> fromOff( std::istream& in, VertColors*, ProgressCallback callback )
+Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
     std::string header;
@@ -103,7 +99,7 @@ Expected<Mesh, std::string> fromOff( std::istream& in, VertColors*, ProgressCall
         if ( !in )
             return unexpected( std::string( "Points read error" ) );
         points.emplace_back( x, y, z );
-        if ( callback && !( i & 0x3FF ) && !callback( float( i ) / numPoints * 0.5f ) )
+        if ( settings.callback && !( i & 0x3FF ) && !subprogress( settings.callback, 0.f, 0.5f )( float( i ) / numPoints ) )
             return unexpected( std::string( "Loading canceled" ) );
     }
 
@@ -117,27 +113,27 @@ Expected<Mesh, std::string> fromOff( std::istream& in, VertColors*, ProgressCall
         if ( !in || k != 3 )
             return unexpected( std::string( "Polygons read error" ) );
         t.push_back( { VertId( a ), VertId( b ), VertId( c ) } );
-        if ( callback && !( i & 0x3FF ) && !callback( float( i ) / numPolygons* 0.5f + 0.5f ) )
+        if ( settings.callback && !( i & 0x3FF ) && !subprogress( settings.callback, 0.5f, 1.f )( float( i ) / numPolygons ) )
             return unexpected( std::string( "Loading canceled" ) );
     }
 
     return Mesh::fromTriangles( std::move( points ), t );
 }
 
-Expected<Mesh, std::string> fromObj( const std::filesystem::path & file, VertColors*, ProgressCallback callback )
+Expected<Mesh, std::string> fromObj( const std::filesystem::path & file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ios::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromObj( in, nullptr, callback ), file );
+    return addFileNameInError( fromObj( in, settings ), file );
 }
 
-Expected<Mesh, std::string> fromObj( std::istream& in, VertColors*, ProgressCallback callback )
+Expected<Mesh, std::string> fromObj( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
-    auto objs = fromSceneObjFile( in, true, {}, callback );
+    auto objs = fromSceneObjFile( in, true, {}, settings.callback );
     if ( !objs.has_value() )
         return unexpected( objs.error() );
     if ( objs->size() != 1 )
@@ -146,39 +142,39 @@ Expected<Mesh, std::string> fromObj( std::istream& in, VertColors*, ProgressCall
     return std::move( (*objs)[0].mesh );
 }
 
-Expected<MR::Mesh, std::string> fromAnyStl( const std::filesystem::path& file, VertColors*, ProgressCallback callback )
+Expected<MR::Mesh, std::string> fromAnyStl( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromAnyStl( in, nullptr, callback ), file );
+    return addFileNameInError( fromAnyStl( in, settings ), file );
 }
 
-Expected<MR::Mesh, std::string> fromAnyStl( std::istream& in, VertColors*, ProgressCallback callback )
+Expected<MR::Mesh, std::string> fromAnyStl( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     auto pos = in.tellg();
-    auto resBin = fromBinaryStl( in, nullptr, callback );
+    auto resBin = fromBinaryStl( in, settings );
     if ( resBin.has_value() || resBin.error() == "Loading canceled" )
         return resBin;
     in.clear();
     in.seekg( pos );
-    auto resAsc = fromASCIIStl( in, nullptr, callback );
+    auto resAsc = fromASCIIStl( in, settings );
     if ( resAsc.has_value() )
         return resAsc;
     return unexpected( resBin.error() + '\n' + resAsc.error() );
 }
 
-Expected<Mesh, std::string> fromBinaryStl( const std::filesystem::path & file, VertColors*, ProgressCallback callback )
+Expected<Mesh, std::string> fromBinaryStl( const std::filesystem::path & file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromBinaryStl( in, nullptr, callback ), file );
+    return addFileNameInError( fromBinaryStl( in, settings ), file );
 }
 
-Expected<Mesh, std::string> fromBinaryStl( std::istream& in, VertColors*, ProgressCallback callback )
+Expected<Mesh, std::string> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
@@ -248,7 +244,7 @@ Expected<Mesh, std::string> fromBinaryStl( std::istream& in, VertColors*, Progre
         if ( !hasTask )
             break;
         taskGroup.wait();
-        if ( callback && !callback( readBytes / streamSize ) )
+        if ( reportProgress( settings.callback , readBytes / streamSize ) )
             return unexpected( std::string( "Loading canceled" ) );
         if ( !in  )
             return unexpected( std::string( "Binary STL read error" ) );
@@ -265,19 +261,27 @@ Expected<Mesh, std::string> fromBinaryStl( std::istream& in, VertColors*, Progre
 //         "max_load_factor = " << hmap.max_load_factor() << "\n";
 
     auto t = vi.takeTriangulation();
-    return Mesh::fromTrianglesDuplicatingNonManifoldVertices( vi.takePoints(), t );
+    if ( settings.duplicatedVertexCount )
+    {
+        std::vector<MeshBuilder::VertDuplication> dups;
+        const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( vi.takePoints(), t, &dups );
+        *settings.duplicatedVertexCount = int( dups.size() );
+        return res;
+    }
+    else
+        return Mesh::fromTrianglesDuplicatingNonManifoldVertices( vi.takePoints(), t );
 }
 
-Expected<Mesh, std::string> fromASCIIStl( const std::filesystem::path& file, VertColors*, ProgressCallback callback )
+Expected<Mesh, std::string> fromASCIIStl( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromASCIIStl( in, nullptr, callback ), file );
+    return addFileNameInError( fromASCIIStl( in, settings ), file );
 }
 
-Expected<Mesh, std::string> fromASCIIStl( std::istream& in, VertColors*, ProgressCallback callback )
+Expected<Mesh, std::string> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER;
 
@@ -340,10 +344,10 @@ Expected<Mesh, std::string> fromASCIIStl( std::istream& in, VertColors*, Progres
             t.push_back( currTri );
             continue;
         }
-        if ( callback && !( i & 0x3FF ) )
+        if ( settings.callback && !( i & 0x3FF ) )
         {
             const float progress = float( in.tellg() - posStart ) / streamSize;
-            if ( !callback( progress ) )
+            if ( !settings.callback( progress ) )
                 return unexpected( std::string( "Loading canceled" ) );
         }
     }
@@ -351,19 +355,27 @@ Expected<Mesh, std::string> fromASCIIStl( std::istream& in, VertColors*, Progres
     if ( !solidFound )
         return unexpected( std::string( "Failed to find 'solid' prefix in ascii STL" ) );
 
+
+    if ( settings.duplicatedVertexCount )
+    {
+        std::vector<MeshBuilder::VertDuplication> dups;
+        const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), t, &dups );
+        *settings.duplicatedVertexCount = int( dups.size() );
+        return res;
+    }
     return Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), t );
 }
 
-Expected<Mesh, std::string> fromPly( const std::filesystem::path& file, VertColors* colors, ProgressCallback callback )
+Expected<Mesh, std::string> fromPly( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromPly( in, colors, callback ), file );
+    return addFileNameInError( fromPly( in, settings ), file );
 }
 
-Expected<Mesh, std::string> fromPly( std::istream& in, VertColors* colors, ProgressCallback callback )
+Expected<Mesh, std::string> fromPly( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
@@ -395,14 +407,14 @@ Expected<Mesh, std::string> fromPly( std::istream& in, VertColors* colors, Progr
                 reader.extract_properties( indecies, 3, miniply::PLYPropertyType::Float, res.points.data() );
                 gotVerts = true;
             }
-            if ( colors && reader.find_color( indecies ) )
+            if ( settings.colors && reader.find_color( indecies ) )
             {
                 Timer t( "extractColors" );
                 colorsBuffer.resize( 3 * numVerts );
                 reader.extract_properties( indecies, 3, miniply::PLYPropertyType::UChar, colorsBuffer.data() );
             }
             const float progress = float( in.tellg() - posStart ) / streamSize;
-            if ( callback && !callback( progress ) )
+            if ( reportProgress( settings.callback, progress ) )
                 return unexpected( std::string( "Loading canceled" ) );
             continue;
         }
@@ -431,17 +443,17 @@ Expected<Mesh, std::string> fromPly( std::istream& in, VertColors* colors, Progr
             }
             const auto posCurent = in.tellg();
             // suppose  that reading is 10% of progress and building mesh is 90% of progress
-            if ( callback && !callback( ( float( posLast ) + ( posCurent - posLast ) * 0.1f - posStart ) / streamSize ) )
+            if ( reportProgress( settings.callback, ( float( posLast ) + ( posCurent - posLast ) * 0.1f - posStart ) / streamSize ) )
                 return unexpected( std::string( "Loading canceled" ) );
             bool isCanceled = false;
-            ProgressCallback partedProgressCb = callback ? [callback, posLast, posCurent, posStart, streamSize, &isCanceled] ( float v )
+            ProgressCallback partedProgressCb = settings.callback ? [callback = settings.callback, posLast, posCurent, posStart, streamSize, &isCanceled] ( float v )
             {
                 const bool res = callback( ( float( posLast ) + ( posCurent - posLast ) * ( 0.1f + v * 0.9f ) - posStart ) / streamSize );
                 isCanceled |= !res;
                 return res;
-            } : callback;
+            } : settings.callback;
             res.topology = MeshBuilder::fromTriangles( tris, {}, partedProgressCb );
-            if ( callback && ( !callback( float( posCurent - posStart ) / streamSize ) || isCanceled ) )
+            if ( settings.callback && ( !settings.callback( float( posCurent - posStart ) / streamSize ) || isCanceled ) )
                 return unexpected( std::string( "Loading canceled" ) );
             gotFaces = true;
         }
@@ -453,13 +465,13 @@ Expected<Mesh, std::string> fromPly( std::istream& in, VertColors* colors, Progr
     if ( !gotVerts )
         return unexpected( std::string( "PLY file does not contain vertices" ) );
 
-    if ( colors && !colorsBuffer.empty() )
+    if ( settings.colors && !colorsBuffer.empty() )
     {
-        colors->resize( res.points.size() );
+        settings.colors->resize( res.points.size() );
         for ( VertId i{ 0 }; i < res.points.size(); ++i )
         {
             int ind = 3 * i;
-            ( *colors )[i] = Color( colorsBuffer[ind], colorsBuffer[ind + 1], colorsBuffer[ind + 2] );
+            ( *settings.colors )[i] = Color( colorsBuffer[ind], colorsBuffer[ind + 1], colorsBuffer[ind + 2] );
         }
     }
 
@@ -468,16 +480,16 @@ Expected<Mesh, std::string> fromPly( std::istream& in, VertColors* colors, Progr
 
 #ifndef MRMESH_NO_OPENCTM
 
-Expected<Mesh, std::string> fromCtm( const std::filesystem::path & file, VertColors* colors, ProgressCallback callback )
+Expected<Mesh, std::string> fromCtm( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromCtm( in, colors, callback ), file );
+    return addFileNameInError( fromCtm( in, settings ), file );
 }
 
-Expected<Mesh, std::string> fromCtm( std::istream & in, VertColors* colors, ProgressCallback callback )
+Expected<Mesh, std::string> fromCtm( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
@@ -503,9 +515,9 @@ Expected<Mesh, std::string> fromCtm( std::istream & in, VertColors* colors, Prog
     const auto posEnd = in.tellg();
     in.seekg( posStart );
 
-    if ( callback )
+    if ( settings.callback )
     {
-        loadData.callbackFn = [callback, posStart, sizeAll = float( posEnd - posStart ), &in] ( float )
+        loadData.callbackFn = [callback = settings.callback, posStart, sizeAll = float( posEnd - posStart ), &in] ( float )
         {
             float progress = float( in.tellg() - posStart ) / sizeAll;
             return callback( progress );
@@ -539,17 +551,17 @@ Expected<Mesh, std::string> fromCtm( std::istream & in, VertColors* colors, Prog
         triCount = 0;
     }
 
-    if ( colors )
+    if ( settings.colors )
     {
         auto colorAttrib = ctmGetNamedAttribMap( context, "Color" );
         if ( colorAttrib != CTM_NONE )
         {
             auto colorArray = ctmGetFloatArray( context, colorAttrib );
-            colors->resize( vertCount );
+            settings.colors->resize( vertCount );
             for ( VertId i{ 0 }; CTMuint( i ) < vertCount; ++i )
             {
                 auto j = 4 * i;
-                (*colors)[i] = Color( colorArray[j], colorArray[j + 1], colorArray[j + 2], colorArray[j + 3] );
+                (*settings.colors)[i] = Color( colorArray[j], colorArray[j + 1], colorArray[j + 2], colorArray[j + 3] );
             }
         }
     }
@@ -571,16 +583,16 @@ Expected<Mesh, std::string> fromCtm( std::istream & in, VertColors* colors, Prog
 #endif
 
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
-Expected<Mesh, std::string> from3mfModel( const std::filesystem::path& file, VertColors* colors, ProgressCallback callback )
+Expected<Mesh, std::string> from3mfModel( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( from3mfModel( in, colors, callback ), file );
+    return addFileNameInError( from3mfModel( in, settings ), file );
 }
 
-Expected<Mesh, std::string> from3mfModel( std::istream& in, VertColors*, ProgressCallback callback )
+Expected<Mesh, std::string> from3mfModel( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
@@ -631,7 +643,7 @@ Expected<Mesh, std::string> from3mfModel( std::istream& in, VertColors*, Progres
         vertexCoordinates.push_back( p );
     }
 
-    if ( !reportProgress( callback, 0.25f ) )
+    if ( !reportProgress( settings.callback, 0.25f ) )
         return unexpected( std::string( "Loading canceled" ) );
 
     auto trianglesNode = meshNode->FirstChildElement( "triangles" );
@@ -651,14 +663,22 @@ Expected<Mesh, std::string> from3mfModel( std::istream& in, VertColors*, Progres
         tris.push_back( { VertId( vs[0] ), VertId( vs[1] ), VertId( vs[2] ) } );
     }
 
-    if ( !reportProgress( callback, 0.5f ) )
+    if ( !reportProgress( settings.callback, 0.5f ) )
         return unexpected( std::string( "Loading canceled" ) );
 
-    return Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( vertexCoordinates ), tris );
+    if ( settings.duplicatedVertexCount )
+    {
+        std::vector<MeshBuilder::VertDuplication> dups;
+        const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( vertexCoordinates ), tris, &dups );
+        *settings.duplicatedVertexCount = int( dups.size() );
+        return res;
+    }
+    else
+        return Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( vertexCoordinates ), tris );
 }
 #endif
 
-Expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path & file, VertColors* colors, ProgressCallback callback )
+Expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     auto ext = utf8string( file.extension() );
     for ( auto & c : ext )
@@ -678,10 +698,10 @@ Expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path 
     auto loader = getMeshLoader( *itF );
     if ( !loader )
         return res;
-    return loader( file, colors, callback );
+    return loader( file, settings );
 }
 
-Expected<Mesh, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, VertColors* colors, ProgressCallback callback )
+Expected<Mesh, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, const MeshLoadSettings& settings /*= {}*/ )
 {
     auto ext = extension;
     for ( auto& c : ext )
@@ -700,7 +720,7 @@ Expected<Mesh, std::string> fromAnySupportedFormat( std::istream& in, const std:
     if ( !loader )
         return res;
 
-    return loader( in, colors, callback );
+    return loader( in, settings );
 }
 
 /*

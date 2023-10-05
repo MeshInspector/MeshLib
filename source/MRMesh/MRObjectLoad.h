@@ -2,8 +2,9 @@
 
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
-#include <filesystem>
 #include "MRExpected.h"
+#include "MRMeshLoadSettings.h"
+#include <filesystem>
 
 namespace MR
 {
@@ -12,10 +13,10 @@ namespace MR
 /// \{
 
 /// loads mesh from given file in new object
-MRMESH_API Expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
+MRMESH_API Expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
 
 /// loads mesh from given file and makes either ObjectMesh or ObjectPoints (if the file has points but not faces)
-MRMESH_API Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std::filesystem::path& file, ProgressCallback callback = {} );
+MRMESH_API Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
 
 /// loads lines from given file in new object
 MRMESH_API Expected<ObjectLines, std::string> makeObjectLinesFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
@@ -40,7 +41,7 @@ MRMESH_API Expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> mak
  * \return empty string if no error or error text
  */
 MRMESH_API Expected<std::vector<std::shared_ptr<Object>>, std::string> loadObjectFromFile( const std::filesystem::path& filename,
-                                                                                               ProgressCallback callback = {} );
+                                                                                           std::string* loadInfo = nullptr, ProgressCallback callback = {} );
 
 // check if there are any supported files folder and subfolders
 MRMESH_API bool isSupportedFileInSubfolders( const std::filesystem::path& folder );

@@ -192,7 +192,7 @@ VoidOrErrStr ObjectMeshHolder::deserializeModel_( const std::filesystem::path& p
 {
     vertsColorMap_.clear();
 #ifndef MRMESH_NO_OPENCTM
-    auto res = MeshLoad::fromCtm( pathFromUtf8( utf8string( path ) + ".ctm" ), &vertsColorMap_, progressCb );
+    auto res = MeshLoad::fromCtm( pathFromUtf8( utf8string( path ) + ".ctm" ), { .colors = &vertsColorMap_, .callback = progressCb } );
 #else
     auto res = MeshLoad::fromMrmesh( pathFromUtf8( utf8string( path ) + ".mrmesh" ), &vertsColorMap_, progressCb );
 #endif

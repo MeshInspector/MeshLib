@@ -6,6 +6,7 @@
 #include "MRMesh/MRMeshBuilder.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRTimer.h"
+#include "MRMesh/MRMeshLoadSettings.h"
 
 #pragma warning( push )
 #pragma warning( disable: 5054 )
@@ -23,16 +24,16 @@
 namespace MR::MeshLoad
 {
 
-Expected<Mesh, std::string> fromStep( const std::filesystem::path& path, VertColors* colors, ProgressCallback callback )
+Expected<Mesh, std::string> fromStep( const std::filesystem::path& path, const MeshLoadSettings& settings )
 {
     std::ifstream in( path, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( path ) );
 
-    return addFileNameInError( fromStep( in, colors, callback ), path );
+    return addFileNameInError( fromStep( in, settings ), path );
 }
 
-Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCallback callback )
+Expected<Mesh, std::string> fromStep( std::istream& in, const MeshLoadSettings& )
 {
     MR_TIMER
 

@@ -44,20 +44,12 @@ public:
 };
 #endif
 
-class SaveObjectMenuItem : public RibbonMenuItem, 
-    public SceneStateOrCheck< 
-    SceneStateExactCheck<1, ObjectMesh> 
-    , SceneStateExactCheck<1, ObjectLines>
-    , SceneStateExactCheck<1, ObjectPoints>
-    , SceneStateExactCheck<1, ObjectDistanceMap>
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-    , SceneStateExactCheck<1, ObjectVoxels, NoVisualRepresentationCheck>
-#endif
-    >
+class SaveObjectMenuItem : public RibbonMenuItem
 {
 public:
     SaveObjectMenuItem();
     virtual bool action() override;
+    virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>&objs ) const override;
 };
 
 class SaveSelectedMenuItem : public RibbonMenuItem, public SceneStateAtLeastCheck<1, Object>

@@ -394,16 +394,17 @@ struct SaveInfo
     const IOFilters& baseFilters;
 };
 
-std::optional<SaveInfo> getSaveInfo( const std::vector<std::shared_ptr<VisualObject>> & objs )
+template<typename T>
+std::optional<SaveInfo> getSaveInfo( const std::vector<std::shared_ptr<T>> & objs )
 {
     std::optional<SaveInfo> res;
     if ( objs.empty() )
         return res;
 
-    auto checkObjects = [&]<class T>( SaveInfo info )
+    auto checkObjects = [&]<class U>( SaveInfo info )
     {
         for ( const auto & obj : objs )
-            if ( !dynamic_cast<T*>( obj.get() ) )
+            if ( !dynamic_cast<const U*>( obj.get() ) )
                 return false;
         res.emplace( info );
         return true;
@@ -428,6 +429,13 @@ SaveObjectMenuItem::SaveObjectMenuItem() :
 {
 }
 
+std::string SaveObjectMenuItem::isAvailable( const std::vector<std::shared_ptr<const Object>>&objs ) const
+{
+    if ( !getSaveInfo( objs ) )
+        return "One or several objects of same type must be selected.";
+    return "";
+}
+
 bool SaveObjectMenuItem::action()
 {
     const auto objs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
@@ -442,51 +450,66 @@ bool SaveObjectMenuItem::action()
 
     int firstFilterNum = 0;
     ViewerSettingsManager* settingsManager = dynamic_cast< ViewerSettingsManager* >( getViewerInstance().getViewportSettingsManager().get() );
-        if ( settingsManager )
+    if ( settingsManager )
+    {
+        const auto& lastExt = settingsManager->getLastExtention( objType );
+        if ( !lastExt.empty() )
         {
-            const auto& lastExt = settingsManager->getLastExtention( objType );
-            if ( !lastExt.empty() )
+            for ( int i = 0; i < baseFilters.size(); ++i )
             {
-                for ( int i = 0; i < baseFilters.size(); ++i )
+                if ( baseFilters[i].extensions.find( lastExt ) != std::string::npos )
                 {
-                    if ( baseFilters[i].extensions.find( lastExt ) != std::string::npos )
-                    {
-                        firstFilterNum = i;
-                        break;
-                    }
+                    firstFilterNum = i;
+                    break;
                 }
             }
         }
+    }
 
     IOFilters filters;
-        if ( firstFilterNum == 0 )
-            filters = baseFilters;
-        else
-        {
-            //put filter # firstFilterNum in front of all
-            filters = IOFilters( { baseFilters[firstFilterNum] } )
-                | IOFilters( baseFilters.begin(), baseFilters.begin() + firstFilterNum )
-                | IOFilters( baseFilters.begin() + firstFilterNum + 1, baseFilters.end() );
-        }
-
-    const auto & obj = objs[0];
-    const auto& name = obj->name();
-    saveFileDialogAsync( [obj, objType, settingsManager] ( const std::filesystem::path& savePath )
+    if ( firstFilterNum == 0 )
+        filters = baseFilters;
+    else
     {
-        if ( savePath.empty() )
+        //put filter # firstFilterNum in front of all
+        filters = IOFilters( { baseFilters[firstFilterNum] } )
+            | IOFilters( baseFilters.begin(), baseFilters.begin() + firstFilterNum )
+            | IOFilters( baseFilters.begin() + firstFilterNum + 1, baseFilters.end() );
+    }
+
+    saveFileDialogAsync( [objs = std::move( objs ), objType, settingsManager] ( const std::filesystem::path& savePath0 ) mutable
+    {
+        if ( savePath0.empty() )
             return;
         int objTypeInt = int( objType );
         if ( settingsManager && objTypeInt >= 0 && objTypeInt < int( ViewerSettingsManager::ObjType::Count ) )
-            settingsManager->setLastExtention( objType, utf8string( savePath.extension() ) );
-        ProgressBar::orderWithMainThreadPostProcessing( "Save object", [obj, savePath]() -> std::function<void()>
+            settingsManager->setLastExtention( objType, utf8string( savePath0.extension() ) );
+        ProgressBar::orderWithMainThreadPostProcessing( "Save object", [objs = std::move( objs ), savePath0]() -> std::function<void()>
         {
-            auto res = saveObjectToFile( *obj, savePath, { .backupOriginalFile = true, .callback = ProgressBar::callBackSetProgress } );
-            if ( res )
-                return [savePath] { getViewerInstance().recentFilesStore.storeFile( savePath ); };
-            else
-                return [error = std::move( res.error() )] { showError( error ); };
+            const auto folder = savePath0.parent_path();
+            const auto stem = utf8string( savePath0.stem() );
+            // if filename is not the same as object name, then use it as a prefix
+            const auto prefix = ( stem == objs[0]->name() ) ? std::string{} : ( stem + "_" );
+            const auto ext = utf8string( savePath0.extension() );
+
+            std::vector<std::filesystem::path> savePaths;
+            for ( int i = 0; i < objs.size(); ++i )
+            {
+                std::filesystem::path path = ( objs.size() == 1 ) ? savePath0
+                    : ( folder / asU8String( prefix + objs[i]->name() + ext ) );
+                const auto sp = subprogress( ProgressBar::callBackSetProgress, float( i ) / objs.size(), float( i + 1 ) / objs.size() );
+                auto res = saveObjectToFile( *objs[i], path, { .backupOriginalFile = true, .callback = sp } );
+                if ( !res )
+                    return [error = std::move( res.error() )] { showError( error ); };
+                savePaths.push_back( std::move( path ) );
+            }
+            return [savePaths = std::move( savePaths )]
+            {
+                for ( const auto & sp : savePaths )
+                    getViewerInstance().recentFilesStore.storeFile( sp );
+            };
         } );
-    }, { name, {}, std::move( filters ) } );
+    }, { objs[0]->name(), {}, std::move( filters ) } );
     return false;
 }
 

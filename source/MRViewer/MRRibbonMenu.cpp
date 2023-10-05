@@ -8,6 +8,7 @@
 #include "ImGuiHelpers.h"
 #include "MRImGuiImage.h"
 #include "MRFileDialog.h"
+#include "MRViewerSettingsManager.h"
 #include "MRUIStyle.h"
 #include <MRMesh/MRString.h>
 #include <MRMesh/MRSystem.h>
@@ -32,6 +33,7 @@
 #endif
 
 #include <GLFW/glfw3.h>
+#include "MRMesh/MRConfig.h"
 
 #if defined(__APPLE__) && defined(__clang__)
 #pragma clang diagnostic pop
@@ -124,6 +126,8 @@ void RibbonMenu::init( MR::Viewer* _viewer )
         drawRibbonViewportsLabels_();
         
         drawActiveList_();
+
+        drawWelcomeWindow_();
 
         draw_helpers();
         drawVersionWindow_();
@@ -1326,6 +1330,71 @@ void RibbonMenu::drawSceneListButtons_()
     ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddLine( ImVec2( 0, separateLinePos ), ImVec2( float( sceneSize_.x ), separateLinePos ),
                                                                   ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ).getUInt32() );
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ImGui::GetStyle().ItemSpacing.y + 1.0f );
+}
+
+void RibbonMenu::drawWelcomeWindow_()
+{
+    static bool drawWelcome = false; // change to true when we have real welcome screen
+    if ( !drawWelcome )
+        return;
+    
+    // change this number to force draw welcome screen once on new release
+    constexpr int cShowWelcomeTS = 0; 
+    const auto& settingsManager = getViewerInstance().getViewportSettingsManager();
+    if ( !settingsManager )
+    {
+        drawWelcome = false;
+        return;
+    }
+    static const int currentWelcomeTS = settingsManager->loadInt( "cWelcomeScreenTS", 0 );
+    if ( currentWelcomeTS == cShowWelcomeTS )
+    {
+        drawWelcome = false;
+        return;
+    }
+    else
+    {
+        settingsManager->saveInt( "cWelcomeScreenTS", cShowWelcomeTS );
+    }
+
+    auto scaling = menu_scaling();
+    const ImVec2 windowSize{ MR::cModalWindowWidth * scaling, -1 };
+    const float posX = 0.5f * ( getViewerInstance().framebufferSize.x - windowSize.x );
+    const float posY = 0.5f * ( getViewerInstance().framebufferSize.y - windowSize.x * 0.5f );
+    ImGui::SetNextWindowPos( ImVec2( posX, posY ), ImGuiCond_Appearing );
+    ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * scaling, cModalWindowPaddingY * scaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * scaling, 3.0f * cDefaultItemSpacing * scaling } );
+    if ( ImGui::Begin( "##wlcomeScreen", nullptr,
+        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar ) )
+    {
+        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
+        if ( headerFont )
+            ImGui::PushFont( headerFont );
+
+        const auto headerWidth = ImGui::CalcTextSize( "Welcome" ).x;
+
+        ImGui::SetCursorPosX( ( windowSize.x - headerWidth ) * 0.5f );
+        ImGui::Text( "Welcome" );
+
+        if ( headerFont )
+            ImGui::PopFont();
+
+        const float textWidth = ImGui::CalcTextSize( "Hello!" ).x;
+        ImGui::SetCursorPosX( ( windowSize.x - textWidth ) * 0.5f );
+        ImGui::Text( "Hello!" );
+
+        const auto style = ImGui::GetStyle();
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * scaling } );
+        if ( UI::button( "Okay", Vector2f( -1, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Enter ) ||
+           ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) ) )
+        {
+            drawWelcome = false;
+        }
+        ImGui::PopStyleVar();
+        ImGui::End();
+    }
+    ImGui::PopStyleVar( 2 );
 }
 
 void RibbonMenu::readMenuItemsStructure_()

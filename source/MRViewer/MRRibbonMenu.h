@@ -165,6 +165,9 @@ protected:
     
     // draw scene list buttons
     MRVIEWER_API virtual void drawSceneListButtons_();
+
+    // draw welcome screen
+    MRVIEWER_API virtual void drawWelcomeWindow_();
 private:
     void changeTab_( int newTab );
 

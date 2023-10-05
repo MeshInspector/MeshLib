@@ -416,7 +416,7 @@ std::optional<SaveInfo> getSaveInfo( const std::vector<std::shared_ptr<T>> & obj
     || checkObjects.template operator()<ObjectDistanceMap>( { ViewerSettingsManager::ObjType::DistanceMap, DistanceMapSave::Filters } )
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
     || checkObjects.template operator()<ObjectVoxels>( { ViewerSettingsManager::ObjType::Voxels, VoxelsSave::Filters } )
-#endif*/
+#endif
     ;
 
     return res;

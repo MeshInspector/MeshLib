@@ -33,7 +33,6 @@
 #endif
 
 #include <GLFW/glfw3.h>
-#include "MRMesh/MRConfig.h"
 
 #if defined(__APPLE__) && defined(__clang__)
 #pragma clang diagnostic pop

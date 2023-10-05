@@ -386,81 +386,135 @@ bool OpenDICOMsMenuItem::action()
 #endif
 #endif
 
+namespace {
+
+struct SaveInfo
+{
+    ViewerSettingsManager::ObjType objType;
+    const IOFilters& baseFilters;
+};
+
+template<typename T>
+std::optional<SaveInfo> getSaveInfo( const std::vector<std::shared_ptr<T>> & objs )
+{
+    std::optional<SaveInfo> res;
+    if ( objs.empty() )
+        return res;
+
+    auto checkObjects = [&]<class U>( SaveInfo info )
+    {
+        for ( const auto & obj : objs )
+            if ( !dynamic_cast<const U*>( obj.get() ) )
+                return false;
+        res.emplace( info );
+        return true;
+    };
+
+    checkObjects.template operator()<ObjectMesh>( { ViewerSettingsManager::ObjType::Mesh, MeshSave::Filters } )
+    || checkObjects.template operator()<ObjectLines>( { ViewerSettingsManager::ObjType::Lines, LinesSave::Filters } )
+    || checkObjects.template operator()<ObjectPoints>( { ViewerSettingsManager::ObjType::Points, PointsSave::Filters } )
+    || checkObjects.template operator()<ObjectDistanceMap>( { ViewerSettingsManager::ObjType::DistanceMap, DistanceMapSave::Filters } )
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+    || checkObjects.template operator()<ObjectVoxels>( { ViewerSettingsManager::ObjType::Voxels, VoxelsSave::Filters } )
+#endif
+    ;
+
+    return res;
+}
+
+} //anonymous namespace
+
 SaveObjectMenuItem::SaveObjectMenuItem() :
     RibbonMenuItem( "Save object" )
 {
 }
 
+std::string SaveObjectMenuItem::isAvailable( const std::vector<std::shared_ptr<const Object>>&objs ) const
+{
+#ifdef __EMSCRIPTEN__
+    if ( objs.size() != 1 || !getSaveInfo( objs ) )
+        return "Exactly one object of an exportable type must be selected.";
+#else
+    if ( !getSaveInfo( objs ) )
+        return "One or several objects of same exportable type must be selected.";
+#endif
+    return "";
+}
+
 bool SaveObjectMenuItem::action()
 {
-    auto obj = getDepthFirstObject<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    if ( !obj )
+    const auto objs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+    if ( objs.empty() )
         return false;
+    const auto optInfo = getSaveInfo( objs );
+    if ( !optInfo )
+        return false;
+    const auto & info = *optInfo;
+    const auto objType = info.objType;
+    const auto & baseFilters = info.baseFilters;
 
-    const auto& name = obj->name();
-    IOFilters filters;
+    int firstFilterNum = 0;
     ViewerSettingsManager* settingsManager = dynamic_cast< ViewerSettingsManager* >( getViewerInstance().getViewportSettingsManager().get() );
-    using ObjType = ViewerSettingsManager::ObjType;
-    ObjType objType = ObjType::Count;
-    auto updateFilters = [&] ( ObjType type, const IOFilters& baseFilters )
+    if ( settingsManager )
     {
-        objType = type;
-        int firstFilterNum = 0;
-        if ( settingsManager )
+        const auto& lastExt = settingsManager->getLastExtention( objType );
+        if ( !lastExt.empty() )
         {
-            const auto& lastExt = settingsManager->getLastExtention( objType );
-            if ( !lastExt.empty() )
+            for ( int i = 0; i < baseFilters.size(); ++i )
             {
-                for ( int i = 0; i < baseFilters.size(); ++i )
+                if ( baseFilters[i].extensions.find( lastExt ) != std::string::npos )
                 {
-                    if ( baseFilters[i].extensions.find( lastExt ) != std::string::npos )
-                    {
-                        firstFilterNum = i;
-                        break;
-                    }
+                    firstFilterNum = i;
+                    break;
                 }
             }
         }
-        if ( firstFilterNum == 0 )
-            filters = baseFilters;
-        else
-        {
-            //put filter # firstFilterNum in front of all
-            filters = IOFilters( { baseFilters[firstFilterNum] } )
-                | IOFilters( baseFilters.begin(), baseFilters.begin() + firstFilterNum )
-                | IOFilters( baseFilters.begin() + firstFilterNum + 1, baseFilters.end() );
-        }
-    };
+    }
 
-    if ( std::dynamic_pointer_cast< ObjectMesh >( obj ) )
-        updateFilters( ObjType::Mesh, MeshSave::Filters );
-    else if ( std::dynamic_pointer_cast< ObjectLines >( obj ) )
-        updateFilters( ObjType::Lines, LinesSave::Filters );
-    else if ( std::dynamic_pointer_cast< ObjectPoints >( obj ) )
-        updateFilters( ObjType::Points, PointsSave::Filters );
-    else if ( std::dynamic_pointer_cast< ObjectDistanceMap >( obj ) )
-        updateFilters( ObjType::DistanceMap, DistanceMapSave::Filters );
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-    else if ( std::dynamic_pointer_cast< ObjectVoxels >( obj ) )
-        updateFilters( ObjType::Voxels, VoxelsSave::Filters );
-#endif
-
-    saveFileDialogAsync( [obj, objType, settingsManager] ( const std::filesystem::path& savePath )
+    IOFilters filters;
+    if ( firstFilterNum == 0 )
+        filters = baseFilters;
+    else
     {
-        if ( savePath.empty() )
+        //put filter # firstFilterNum in front of all
+        filters = IOFilters( { baseFilters[firstFilterNum] } )
+            | IOFilters( baseFilters.begin(), baseFilters.begin() + firstFilterNum )
+            | IOFilters( baseFilters.begin() + firstFilterNum + 1, baseFilters.end() );
+    }
+
+    saveFileDialogAsync( [objs = std::move( objs ), objType, settingsManager] ( const std::filesystem::path& savePath0 ) mutable
+    {
+        if ( savePath0.empty() )
             return;
         int objTypeInt = int( objType );
-        if ( settingsManager && objTypeInt >= 0 && objTypeInt < int( ObjType::Count ) )
-            settingsManager->setLastExtention( objType, utf8string( savePath.extension() ) );
-        ProgressBar::orderWithMainThreadPostProcessing( "Save object", [obj, savePath]() -> std::function<void()>
+        if ( settingsManager && objTypeInt >= 0 && objTypeInt < int( ViewerSettingsManager::ObjType::Count ) )
+            settingsManager->setLastExtention( objType, utf8string( savePath0.extension() ) );
+        ProgressBar::orderWithMainThreadPostProcessing( "Save object", [objs = std::move( objs ), savePath0]() -> std::function<void()>
         {
-            auto res = saveObjectToFile( *obj, savePath, { .backupOriginalFile = true, .callback = ProgressBar::callBackSetProgress } );
-            if ( res )
-                return [savePath] { getViewerInstance().recentFilesStore.storeFile( savePath ); };
-            else
-                return [error = std::move( res.error() )] { showError( error ); };
+            const auto folder = savePath0.parent_path();
+            const auto stem = utf8string( savePath0.stem() );
+            // if filename is not the same as object name, then use it as a prefix
+            const auto prefix = ( stem == objs[0]->name() ) ? std::string{} : ( stem + "_" );
+            const auto ext = utf8string( savePath0.extension() );
+
+            std::vector<std::filesystem::path> savePaths;
+            for ( int i = 0; i < objs.size(); ++i )
+            {
+                std::filesystem::path path = ( objs.size() == 1 ) ? savePath0
+                    : ( folder / asU8String( prefix + objs[i]->name() + ext ) );
+                const auto sp = subprogress( ProgressBar::callBackSetProgress, float( i ) / objs.size(), float( i + 1 ) / objs.size() );
+                auto res = saveObjectToFile( *objs[i], path, { .backupOriginalFile = true, .callback = sp } );
+                if ( !res )
+                    return [error = std::move( res.error() )] { showError( error ); };
+                savePaths.push_back( std::move( path ) );
+            }
+            return [savePaths = std::move( savePaths )]
+            {
+                for ( const auto & sp : savePaths )
+                    getViewerInstance().recentFilesStore.storeFile( sp );
+            };
         } );
-    }, { name, {}, std::move( filters ) } );
+    }, { objs[0]->name(), {}, std::move( filters ) } );
     return false;
 }
 

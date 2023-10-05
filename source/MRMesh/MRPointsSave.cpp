@@ -18,11 +18,50 @@ namespace PointsSave
 {
 const IOFilters Filters =
 {
+    {"ASCII (.asc)",      "*.asc"},
     {"PLY (.ply)",        "*.ply"},
 #ifndef MRMESH_NO_OPENCTM
     {"CTM (.ctm)",        "*.ctm"},
 #endif
 };
+
+VoidOrErrStr toAsc( const PointCloud& points, const std::filesystem::path& file, const VertColors* colors /*= nullptr*/, ProgressCallback callback )
+{
+    std::ofstream out( file, std::ofstream::binary );
+    if ( !out )
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+
+    return toAsc( points, out, colors, callback );
+}
+
+VoidOrErrStr toAsc( const PointCloud& cloud, std::ostream& out, const VertColors* /*colors*/, ProgressCallback callback )
+{
+    MR_TIMER
+    const bool saveNormals = cloud.points.size() <= cloud.normals.size();
+    const size_t totalPoints = cloud.validPoints.count();
+    size_t numSaved = 0;
+    for ( auto v : cloud.validPoints )
+    {
+        const auto & p = cloud.points[v];
+        out << p.x << ' ' << p.y << ' ' << p.z;
+        if ( saveNormals )
+        {
+            const auto & n = cloud.normals[v];
+            out << ' ' << n.x << ' ' << n.y << ' ' << n.z;
+        }
+        out << '\n';
+
+        if ( callback && !( v & 0x3FF ) && !callback( float( ++numSaved ) / totalPoints ) )
+            return unexpectedOperationCanceled();
+    }
+
+    if ( !out )
+        return unexpected( std::string( "Error saving in ASC-format" ) );
+
+    if ( callback )
+        callback( 1.f );
+    return {};
+}
 
 VoidOrErrStr toPly( const PointCloud& points, const std::filesystem::path& file, const VertColors* colors /*= nullptr*/, ProgressCallback callback )
 {
@@ -217,6 +256,8 @@ VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesyst
         c = (char) tolower( c );
 
     VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
+    if ( ext == ".asc" )
+        res = MR::PointsSave::toAsc( points, file, colors, callback );
     if ( ext == ".ply" )
         res = MR::PointsSave::toPly( points, file, colors, callback );
 #ifndef MRMESH_NO_OPENCTM
@@ -233,7 +274,9 @@ VoidOrErrStr toAnySupportedFormat( const PointCloud& points, std::ostream& out, 
         c = ( char )tolower( c );
 
     VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == ".ply" )
+    if ( ext == ".asc" )
+        res = MR::PointsSave::toAsc( points, out, colors, callback );
+    else if ( ext == ".ply" )
         res = MR::PointsSave::toPly( points, out, colors, callback );
 #ifndef MRMESH_NO_OPENCTM
     else if ( ext == ".ctm" )

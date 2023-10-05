@@ -258,7 +258,11 @@ Expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float off
     for ( auto h : newHoles )
         makeDegenerateBandAroundHole( mesh, h );
 
-    return offsetMesh( mesh, offset, params );
+    // Type::Shell is more efficient in this case
+    OffsetParameters p = params;
+    p.type = OffsetParameters::Type::Shell;
+
+    return offsetMesh( mesh, offset, p );
 }
 
 }

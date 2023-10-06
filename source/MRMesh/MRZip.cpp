@@ -20,6 +20,8 @@
 namespace MR
 {
 
+namespace {
+
 // this object stores a handle on open zip-archive, and automatically closes it in the destructor
 class AutoCloseZip
 {
@@ -27,6 +29,10 @@ public:
     AutoCloseZip( const char* path, int flags, int* err )
     {
         handle_ = zip_open( path, flags, err );
+    }
+    AutoCloseZip( zip_source_t & source, int flags, zip_error_t* err )
+    {
+        handle_ = zip_open_from_source( &source, flags, err );
     }
     ~AutoCloseZip()
     {
@@ -48,7 +54,7 @@ private:
 };
 
 /// zip-callback for reading from std::istream
-zip_int64_t iostream_zip_source_callback( void *istream, void *data, zip_uint64_t len, zip_source_cmd_t cmd )
+zip_int64_t istreamZipSourceCallback( void *istream, void *data, zip_uint64_t len, zip_source_cmd_t cmd )
 {
     if ( !istream )
     {
@@ -78,6 +84,7 @@ zip_int64_t iostream_zip_source_callback( void *istream, void *data, zip_uint64_
                 assert( false );
                 return -1;
             }
+            assert( !is.fail() );
             return is.fail() ? -1 : 0;
         }
 
@@ -86,7 +93,8 @@ zip_int64_t iostream_zip_source_callback( void *istream, void *data, zip_uint64_
 
         case ZIP_SOURCE_READ:
             is.read( (char*)data, len );
-            return is.fail() ? -1 : 0;
+            assert( !is.fail() );
+            return is.fail() ? 0 : len;
 
         case ZIP_SOURCE_CLOSE:
             return 0;
@@ -98,6 +106,15 @@ zip_int64_t iostream_zip_source_callback( void *istream, void *data, zip_uint64_
         {
             zip_stat_t* zipStat = (zip_stat_t*)data;
             zip_stat_init(zipStat);
+
+            const auto posCur = is.tellg();
+            is.seekg( 0, std::ios::end );
+            const auto posEnd = is.tellg();
+            is.seekg( posCur );
+            assert( !is.fail() );
+            zipStat->size = posEnd - posCur; // or just posEnd?
+            zipStat->valid |= ZIP_STAT_SIZE;
+
             return sizeof(zip_stat_t);
         }
 
@@ -110,6 +127,68 @@ zip_int64_t iostream_zip_source_callback( void *istream, void *data, zip_uint64_
     assert( false );
     return -1;
 }
+
+VoidOrErrStr decompressZip_( zip_t * zip, const std::filesystem::path& targetFolder, const char * password )
+{
+    assert( zip );
+
+    std::error_code ec;
+    if ( !std::filesystem::is_directory( targetFolder, ec ) )
+        return unexpected( "Directory does not exist " + utf8string( targetFolder ) );
+
+    if ( password )
+        zip_set_default_password( zip, password );
+
+    zip_stat_t stats;
+    zip_file_t* zfile;
+    std::vector<char> fileBufer;
+    for ( int i = 0; i < zip_get_num_entries( zip, 0 ); ++i )
+    {
+        if ( zip_stat_index( zip, i, 0, &stats ) == -1 )
+            return unexpected( "Cannot process zip content" );
+
+        std::string nameFixed = stats.name;
+        std::replace( nameFixed.begin(), nameFixed.end(), '\\', '/' );
+        std::filesystem::path relativeName = pathFromUtf8( nameFixed );
+        relativeName.make_preferred();
+        std::filesystem::path newItemPath = targetFolder / relativeName;
+        if ( !nameFixed.empty() && nameFixed.back() == '/' )
+        {
+            if ( !std::filesystem::exists( newItemPath.parent_path(), ec ) )
+                if ( !std::filesystem::create_directories( newItemPath.parent_path(), ec ) )
+                    return unexpected( "Cannot create folder " + utf8string( newItemPath.parent_path() ) );
+        }
+        else
+        {
+            zfile = zip_fopen_index(zip,i,0);
+            if ( !zfile )
+                return unexpected( "Cannot open zip file " + nameFixed );
+
+            // in some manually created zip-files there is no folder entries for files in sub-folders;
+            // so let us create directory each time before saving a file in it
+            if ( !std::filesystem::exists( newItemPath.parent_path(), ec ) )
+                if ( !std::filesystem::create_directories( newItemPath.parent_path(), ec ) )
+                    return unexpected( "Cannot create folder " + utf8string( newItemPath.parent_path() ) );
+
+            std::ofstream ofs( newItemPath, std::ios::binary );
+            if ( !ofs || ofs.bad() )
+                return unexpected( "Cannot create file " + utf8string( newItemPath ) );
+
+            fileBufer.resize(stats.size);
+            auto bitesRead = zip_fread(zfile,(void*)fileBufer.data(),fileBufer.size());
+            if ( bitesRead != (zip_int64_t)stats.size )
+                return unexpected( "Cannot read file from zip " + nameFixed );
+
+            zip_fclose(zfile);
+            if ( !ofs.write( fileBufer.data(), fileBufer.size() ) )
+                return unexpected( "Cannot write file from zip " + utf8string( newItemPath ) );
+            ofs.close();
+        }
+    }
+    return {};
+}
+
+} // anonymous namespace
 
 VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder,
     const std::vector<std::filesystem::path>& excludeFiles, const char * password, ProgressCallback cb )
@@ -202,66 +281,28 @@ VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::files
 
 VoidOrErrStr decompressZip( const std::filesystem::path& zipFile, const std::filesystem::path& targetFolder, const char * password )
 {
-    std::error_code ec;
-    if ( !std::filesystem::is_directory( targetFolder, ec ) )
-        return unexpected( "Directory does not exist " + utf8string( targetFolder ) );
-
+    MR_TIMER
     int err;
     AutoCloseZip zip( utf8string( zipFile ).c_str(), ZIP_RDONLY, &err );
     if ( !zip )
         return unexpected( "Cannot open zip, error code: " + std::to_string( err ) );
 
-    if ( password )
-        zip_set_default_password( zip, password );
-
-    zip_stat_t stats;
-    zip_file_t* zfile;
-    std::vector<char> fileBufer;
-    for ( int i = 0; i < zip_get_num_entries( zip, 0 ); ++i )
-    {
-        if ( zip_stat_index( zip, i, 0, &stats ) == -1 )
-            return unexpected( "Cannot process zip content" );
-
-        std::string nameFixed = stats.name;
-        std::replace( nameFixed.begin(), nameFixed.end(), '\\', '/' );
-        std::filesystem::path relativeName = pathFromUtf8( nameFixed );
-        relativeName.make_preferred();
-        std::filesystem::path newItemPath = targetFolder / relativeName;
-        if ( !nameFixed.empty() && nameFixed.back() == '/' )
-        {
-            if ( !std::filesystem::exists( newItemPath.parent_path(), ec ) )
-                if ( !std::filesystem::create_directories( newItemPath.parent_path(), ec ) )
-                    return unexpected( "Cannot create folder " + utf8string( newItemPath.parent_path() ) );
-        }
-        else
-        {
-            zfile = zip_fopen_index(zip,i,0);
-            if ( !zfile )
-                return unexpected( "Cannot open zip file " + nameFixed );
-
-            // in some manually created zip-files there is no folder entries for files in sub-folders;
-            // so let us create directory each time before saving a file in it
-            if ( !std::filesystem::exists( newItemPath.parent_path(), ec ) )
-                if ( !std::filesystem::create_directories( newItemPath.parent_path(), ec ) )
-                    return unexpected( "Cannot create folder " + utf8string( newItemPath.parent_path() ) );
-
-            std::ofstream ofs( newItemPath, std::ios::binary );
-            if ( !ofs || ofs.bad() )
-                return unexpected( "Cannot create file " + utf8string( newItemPath ) );
-
-            fileBufer.resize(stats.size);
-            auto bitesRead = zip_fread(zfile,(void*)fileBufer.data(),fileBufer.size());
-            if ( bitesRead != (zip_int64_t)stats.size )
-                return unexpected( "Cannot read file from zip " + nameFixed );
-
-            zip_fclose(zfile);
-            if ( !ofs.write( fileBufer.data(), fileBufer.size() ) )
-                return unexpected( "Cannot write file from zip " + utf8string( newItemPath ) );
-            ofs.close();
-        }
-    }
-    return {};
+    return decompressZip_( zip, targetFolder, password );
 }
 
+VoidOrErrStr decompressZip( std::istream& zipStream, const std::filesystem::path& targetFolder, const char * password )
+{
+    MR_TIMER
+
+    auto zipSource = zip_source_function_create( istreamZipSourceCallback, &zipStream, nullptr );
+    if ( !zipSource )
+        return unexpected( "Cannot create zip source from stream" );
+
+    AutoCloseZip zip( *zipSource, ZIP_RDONLY, nullptr );
+    if ( !zip )
+        return unexpected( "Cannot open zip from source" );
+
+    return decompressZip_( zip, targetFolder, password );
+}
 
 } // namespace MR

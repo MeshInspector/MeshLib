@@ -19,6 +19,13 @@ namespace MR
  */
 MRMESH_API VoidOrErrStr decompressZip( const std::filesystem::path& zipFile, const std::filesystem::path& targetFolder,
     const char * password = nullptr );
+
+/**
+ * \brief decompresses given binary stream (containing the data of a zip file only) into given folder
+ * \param password if password is given then it will be used to decipher encrypted archive
+ */
+MRMESH_API VoidOrErrStr decompressZip( std::istream& zipStream, const std::filesystem::path& targetFolder, const char * password = nullptr );
+
 /**
  * \brief compresses given folder in given zip-file
  * \param excludeFiles files that should not be included to result zip 

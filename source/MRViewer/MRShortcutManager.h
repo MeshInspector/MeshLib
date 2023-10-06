@@ -89,6 +89,7 @@ public:
     MRVIEWER_API std::optional<ShortcutKey> findShortcutByName( const std::string& name ) const;
 protected:
     // returns simple map key from key with modifier (alt, ctrl, shift, etc.)
+    // if respectKeyboard is set, key will be mapped using local keyboard settings (only if it is mapped to latin symbol)
     MRVIEWER_API static int mapKeyFromKeyAndMod( const ShortcutKey& key, bool respectKeyboard );
     // returns key with modifier (alt, ctrl, shift, etc.) from simple map key
     static ShortcutKey kayAndModFromMapKey( int mapKey ) { return { mapKey >> 6, mapKey % ( 1 << 6 ) }; }

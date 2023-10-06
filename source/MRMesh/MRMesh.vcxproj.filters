@@ -1065,6 +1065,9 @@
     <ClInclude Include="MRMeshLoadStep.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRZip.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1773,6 +1776,9 @@
       <Filter>Source Files\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshLoadStep.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRZip.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
   </ItemGroup>

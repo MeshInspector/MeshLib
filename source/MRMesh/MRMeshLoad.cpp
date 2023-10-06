@@ -248,7 +248,7 @@ Expected<Mesh, std::string> fromBinaryStl( std::istream& in, const MeshLoadSetti
         if ( !hasTask )
             break;
         taskGroup.wait();
-        if ( reportProgress( settings.callback , readBytes / streamSize ) )
+        if ( !reportProgress( settings.callback , readBytes / streamSize ) )
             return unexpected( std::string( "Loading canceled" ) );
         if ( !in  )
             return unexpected( std::string( "Binary STL read error" ) );
@@ -418,7 +418,7 @@ Expected<Mesh, std::string> fromPly( std::istream& in, const MeshLoadSettings& s
                 reader.extract_properties( indecies, 3, miniply::PLYPropertyType::UChar, colorsBuffer.data() );
             }
             const float progress = float( in.tellg() - posStart ) / streamSize;
-            if ( reportProgress( settings.callback, progress ) )
+            if ( !reportProgress( settings.callback, progress ) )
                 return unexpected( std::string( "Loading canceled" ) );
             continue;
         }
@@ -447,7 +447,7 @@ Expected<Mesh, std::string> fromPly( std::istream& in, const MeshLoadSettings& s
             }
             const auto posCurent = in.tellg();
             // suppose  that reading is 10% of progress and building mesh is 90% of progress
-            if ( reportProgress( settings.callback, ( float( posLast ) + ( posCurent - posLast ) * 0.1f - posStart ) / streamSize ) )
+            if ( !reportProgress( settings.callback, ( float( posLast ) + ( posCurent - posLast ) * 0.1f - posStart ) / streamSize ) )
                 return unexpected( std::string( "Loading canceled" ) );
             bool isCanceled = false;
             ProgressCallback partedProgressCb = settings.callback ? [callback = settings.callback, posLast, posCurent, posStart, streamSize, &isCanceled] ( float v )

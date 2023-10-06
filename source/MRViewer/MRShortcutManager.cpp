@@ -140,7 +140,7 @@ int ShortcutManager::mapKeyFromKeyAndMod( const ShortcutKey& key, bool respectKe
     {
         std::string namedKey;
         // map key to char using system keyboard settings
-        auto chars = glfwGetKeyName( key.key, glfwGetKeyScancode( key.key ) );
+        auto chars = glfwGetKeyName( key.key, 0 );
         if ( chars ) // null chars means that mapping failed
             namedKey = std::string( chars );
         // if mapped to latin symbol update `upperKey`

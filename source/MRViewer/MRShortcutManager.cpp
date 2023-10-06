@@ -8,7 +8,7 @@ namespace MR
 
 void ShortcutManager::setShortcut( const ShortcutKey& key, const ShortcutCommand& command )
 {
-    auto newMapKey = mapKeyFromKeyAndMod( key );
+    auto newMapKey = mapKeyFromKeyAndMod( key, false );
     auto [backMapIt, insertedToBackMap] = backMap_.insert( { command.name,newMapKey } );
     if ( !insertedToBackMap )
     {
@@ -54,7 +54,7 @@ bool ShortcutManager::processShortcut( const ShortcutKey& key, Reason reason ) c
 {
     if ( !enabled_ )
         return false;
-    auto it = map_.find( mapKeyFromKeyAndMod( key ) );
+    auto it = map_.find( mapKeyFromKeyAndMod( key, true ) );
     if ( it != map_.end() && ( reason == Reason::KeyDown || it->second.repeatable ) )
     {
         it->second.action();
@@ -133,9 +133,21 @@ std::optional<ShortcutManager::ShortcutKey> ShortcutManager::findShortcutByName(
     return kayAndModFromMapKey( it->second );
 }
 
-int ShortcutManager::mapKeyFromKeyAndMod( const ShortcutKey& key )
+int ShortcutManager::mapKeyFromKeyAndMod( const ShortcutKey& key, bool respectKeyboard )
 {
     int upperKey = key.key;
+    if ( respectKeyboard )
+    {
+        std::string namedKey;
+        // map key to char using system keyboard settings
+        auto chars = glfwGetKeyName( key.key, 0 );
+        if ( chars ) // null chars means that mapping failed
+            namedKey = std::string( chars );
+        // if mapped to latin symbol update `upperKey`
+        if ( namedKey.size() == 1 && namedKey[0] >= 'a' && namedKey[0] <= 'z' )
+            upperKey = int( namedKey[0] );
+    }
+
     if ( upperKey >= 'a' && upperKey <= 'z' ) // lower
         upperKey = std::toupper( upperKey );
     return int( upperKey << 6 ) + key.mod;

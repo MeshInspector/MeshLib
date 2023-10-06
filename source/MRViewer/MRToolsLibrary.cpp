@@ -176,7 +176,7 @@ void GcodeToolsLibrary::addNewToolFromFile_()
     auto filters = MeshLoad::getFilters();
     auto allIt = std::find_if( filters.begin(), filters.end(), [] ( const auto& it )
     {
-        return it.extension == "*.*";
+        return it.extensions == "*.*";
     } );
     if ( allIt != filters.end() )
         filters.erase( allIt );

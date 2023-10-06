@@ -153,6 +153,43 @@ VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Col
     return {};
 }
 
+template<typename T>
+VoidOrErrStr parseSingleNumber( const std::string_view& str, T& num )
+{
+    using namespace boost::spirit::x3;
+
+    auto coord = [&] ( auto& ctx ) { num = _attr( ctx ); };
+
+    bool r{};
+
+    if constexpr ( std::is_same_v<T, int> )
+    {
+        r = phrase_parse(
+            str.begin(),
+            str.end(),
+            ( int_parser<T>{}[coord] ),
+            ascii::space
+        );
+    }
+    else
+    {
+        r = phrase_parse(
+            str.begin(),
+            str.end(),
+            ( real_parser<T>{}[coord] ),
+            ascii::space
+        );
+    }
+
+    if ( !r )
+        return unexpected( "Failed to parse number" );
+
+    return {};
+}
+
+template VoidOrErrStr parseSingleNumber<float>( const std::string_view& str, float& num );
+template VoidOrErrStr parseSingleNumber<int>( const std::string_view& str, int& num );
+
 template VoidOrErrStr parsePtsCoordinate<float>( const std::string_view& str, Vector3f& v, Color& c );
 template VoidOrErrStr parsePtsCoordinate<double>( const std::string_view& str, Vector3d& v, Color& c );
 

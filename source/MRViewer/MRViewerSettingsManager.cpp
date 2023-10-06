@@ -26,7 +26,7 @@ const std::string cMainWindowPos = "mainWindowPos";
 const std::string cMainWindowMaximized = "mainWindowMaximized";
 const std::string cRibbonLeftWindowSize = "ribbonLeftWindowSize";
 const std::string cShowSelectedObjects = "showSelectedObjects";
-const std::string lastExtextentionsParamKey = "lastExtextentions";
+const std::string lastExtentionsParamKey = "lastExtentions";
 const std::string cSpaceMouseSettings = "spaceMouseSettings";
 const std::string cMSAA = "multisampleAntiAliasing";
 const std::string cncMachineSettingsKey = "CNCMachineSettings";
@@ -38,7 +38,7 @@ namespace MR
 
 ViewerSettingsManager::ViewerSettingsManager()
 {
-    lastExtentionNums_.resize( int( ObjType::Count ), 0 );
+    lastExtentions_.resize( int( ObjType::Count ) );
 }
 
 int ViewerSettingsManager::loadInt( const std::string& name, int def )
@@ -202,22 +202,12 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     }
     ColorTheme::apply();
 
-    Json::Value lastExtentions = cfg.getJsonValue( lastExtextentionsParamKey );
-    int count = 0;
-    if ( !lastExtentions["Count"].isNull() && lastExtentions["Count"].isInt() )
-        count = lastExtentions["Count"].asInt();
-    assert( int( ObjType::Count ) >= count );
-
-    if ( !lastExtentions["Nums"].isNull() && lastExtentions["Nums"].isArray() )
+    Json::Value lastExtentions = cfg.getJsonValue( lastExtentionsParamKey );
+    if ( lastExtentions.isArray() )
     {
-        auto& nums = lastExtentions["Nums"];
-        for ( int i = 0; i < std::min( count, int( ObjType::Count ) ); ++i )
-        {
-            if ( !nums[i].isNull() && nums[i].isInt() )
-                lastExtentionNums_[i] = nums[i].asInt();
-            else
-                lastExtentionNums_[i] = 0;
-        }
+        const int end = std::min( (int)lastExtentions.size(), (int)lastExtentions_.size() );
+        for ( int i = 0; i < end; ++i )
+            lastExtentions_[i] = lastExtentions[i].asString();
     }
 
     if ( cfg.hasJsonValue( cSpaceMouseSettings ) )
@@ -317,13 +307,16 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         cfg.setVector2i( cRibbonLeftWindowSize, ribbonMenu->getSceneSize() );
     }
 
-    Json::Value lastExtentions;
-    lastExtentions["Count"] = int( ObjType::Count );
-    auto& nums = lastExtentions["Nums"];
-    nums = Json::arrayValue;
-    for ( int i = 0; i < int( ObjType::Count) ; ++i )
-        nums[i] = lastExtentionNums_[i];
-    cfg.setJsonValue( lastExtextentionsParamKey, lastExtentions );
+    Json::Value exts = Json::arrayValue;
+    for ( int i = 0; i < lastExtentions_.size(); ++i )
+        exts[i] = lastExtentions_[i];
+    cfg.setJsonValue( lastExtentionsParamKey, exts );
+
+    // this is necessary for older versions of the software not to crash on reading these settings
+    Json::Value xtext;
+    xtext["Count"] = 0;
+    xtext["Nums"] = Json::arrayValue;
+    cfg.setJsonValue( "lastExtextentions", xtext );
 
     cfg.setVector2i( cMainWindowSize, viewer.windowSaveSize );
     if ( viewer.windowSaveSize.x > 0 && viewer.windowSaveSize.y > 0 )
@@ -359,20 +352,27 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     cfg.setJsonValue( cTouchpadSettings, touchpadParametersJson );
 }
 
-int ViewerSettingsManager::getLastExtentionNum( ObjType objType )
+const std::string & ViewerSettingsManager::getLastExtention( ObjType objType )
 {
     int objTypeInt = int( objType );
     if ( objTypeInt < 0 || objTypeInt >= int( ObjType::Count ) )
-        return 0;
-    return lastExtentionNums_[objTypeInt];
+    {
+        assert( false );
+        const static std::string empty;
+        return empty;
+    }
+    return lastExtentions_[objTypeInt];
 }
 
-void ViewerSettingsManager::setLastExtentionNum( ObjType objType, int num )
+void ViewerSettingsManager::setLastExtention( ObjType objType, std::string ext )
 {
     int objTypeInt = int( objType );
     if ( objTypeInt < 0 || objTypeInt >= int( ObjType::Count ) )
+    {
+        assert( false );
         return;
-    lastExtentionNums_[objTypeInt] = num;
+    }
+    lastExtentions_[objTypeInt] = std::move( ext );
 }
 
-}
+} //namespace MR

@@ -4,6 +4,7 @@
 	"Tabs": [
 		{
 			"Name": "Home",
+			"Priority": 0,
 			"Groups": [
 				{
 					"Name": "New",
@@ -14,7 +15,7 @@
 					]
 				},
 				{
-					"Name": "Files",
+					"Name": "Files Open",
 					"List": [
 						{
 							"Name": "Open files"
@@ -22,6 +23,17 @@
 						{
 							"Name": "Open directory"
 						},
+						{
+							"Name": "Open DICOMs"
+						},
+						{
+							"Name": "Open RAW Voxels"
+						}
+					]
+				},
+				{
+					"Name": "Files Save",
+					"List": [
 						{
 							"Name": "Save Scene"
 						},
@@ -40,6 +52,7 @@
 		},
 		{
 			"Name": "View",
+			"Priority": 1,
 			"Groups": [
 				{
 					"Name": "Basic",
@@ -115,7 +128,7 @@
 		},
 		{
 			"Name": "Voxel",
-			"Priority": 1,
+			"Priority": 7,
 			"Groups": [
 				{
 					"Name": "Open",

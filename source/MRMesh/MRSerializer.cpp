@@ -95,7 +95,10 @@ const IOFilters SceneFileFilters =
     {"MeshInspector scene (.mru)","*.mru"},
 #ifndef MRMESH_NO_GLTF
     {"glTF JSON scene (.gltf)","*.gltf"},
-    {"glTF binary scene (.glb)","*.glb"}
+    {"glTF binary scene (.glb)","*.glb"},
+#endif
+#ifdef _WIN32
+    { "STEP model (.step,.stp)", "*.step;*.stp" },
 #endif
 };
 

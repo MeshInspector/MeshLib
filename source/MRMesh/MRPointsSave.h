@@ -20,6 +20,12 @@ namespace PointsSave
 
 MRMESH_API extern const IOFilters Filters;
 
+/// save valid points with normals in textual .asc file
+MRMESH_API VoidOrErrStr toAsc( const PointCloud& points, const std::filesystem::path& file, const VertColors* colors = nullptr,
+                                                  ProgressCallback callback = {} );
+MRMESH_API VoidOrErrStr toAsc( const PointCloud& points, std::ostream& out, const VertColors* colors = nullptr,
+                                                  ProgressCallback callback = {} );
+
 /// saves in .ply file
 MRMESH_API VoidOrErrStr toPly( const PointCloud& points, const std::filesystem::path& file, const VertColors* colors = nullptr,
                                                   ProgressCallback callback = {} );

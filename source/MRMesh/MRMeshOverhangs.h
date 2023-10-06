@@ -10,7 +10,7 @@ namespace MR
 struct FindOverhangsSettings
 {
     /// base axis marking the up direction
-    Vector3f axis;
+    Vector3f axis{ Vector3f::plusZ() };
     /// height of a layer
     float layerHeight { 1.f };
     /// maximum overhang distance within a layer

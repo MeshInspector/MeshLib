@@ -328,6 +328,7 @@
     <ClInclude Include="MRParallelFor.h" />
     <ClInclude Include="MRVoxelsConversionsByParts.h" />
     <ClInclude Include="MRMeshOverhangs.h" />
+    <ClInclude Include="MRMeshLoadStep.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />

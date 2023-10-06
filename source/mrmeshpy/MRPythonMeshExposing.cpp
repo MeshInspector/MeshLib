@@ -19,6 +19,7 @@
 #include "MRMesh/MRMeshNormals.h"
 #include "MRMesh/MRSphere.h"
 #include "MRMesh/MRUVSphere.h"
+#include "MRMesh/MRCylinder.h"
 #include "MRMesh/MRExpected.h"
 #include <pybind11/functional.h>
 using namespace MR;
@@ -427,6 +428,20 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
         pybind11::arg( "radius" ) = 1.0f, 
         pybind11::arg( "horisontalResolution" ) = 16, pybind11::arg( "verticalResolution" ) = 16,
         "Z is polar axis of this UVSphere" );
+
+    m.def( "makeCylinder", &makeCylinder,
+        pybind11::arg( "radius" ) = 0.1f,
+        pybind11::arg( "length" ) = 1.0f,
+        pybind11::arg( "resolution" ) = 16,
+        "creates Z-looking cylinder with radius 'radius', height - 'length', its base have 'resolution' sides" );
+
+    m.def( "makeCylinderAdvanced", &makeCylinderAdvanced,
+        pybind11::arg( "radius0" ) = 0.1f,
+        pybind11::arg( "radius1" ) = 0.1f,
+        pybind11::arg( "start_angle" ) = 0.0f,
+        pybind11::arg( "arc_size" ) = 2.0f * PI_F,
+        pybind11::arg( "length" ) = 1.0f,
+        pybind11::arg( "resolution" ) = 16 );
 
     m.def( "makeTorus", &makeTorus,
         pybind11::arg( "primaryRadius" ) = 1.0f, pybind11::arg( "secondaryRadius" ) = 0.1f,

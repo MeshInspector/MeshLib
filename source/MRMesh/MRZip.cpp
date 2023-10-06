@@ -64,6 +64,7 @@ zip_int64_t iostream_zip_source_callback( void *istream, void *data, zip_uint64_
                 ZIP_SOURCE_STAT, ZIP_SOURCE_ERROR, ZIP_SOURCE_FREE, ZIP_SOURCE_SEEK, ZIP_SOURCE_TELL, ZIP_SOURCE_SUPPORTS, -1 );
 
         case ZIP_SOURCE_SEEK:
+        {
             zip_source_args_seek argsSeek = * ((zip_source_args_seek *)data);
             if ( argsSeek.whence == SEEK_SET && argsSeek.offset >= 0 )
                 is.seekg( argsSeek.offset );
@@ -77,6 +78,7 @@ zip_int64_t iostream_zip_source_callback( void *istream, void *data, zip_uint64_
                 return -1;
             }
             return is.fail() ? -1 : 0;
+        }
 
         case ZIP_SOURCE_OPEN:
             return 0;
@@ -92,10 +94,11 @@ zip_int64_t iostream_zip_source_callback( void *istream, void *data, zip_uint64_
             return is.tellg();
 
         case ZIP_SOURCE_STAT:
-            zip_stat_t* zipStat;
-            zipStat  = (zip_stat_t*)data;
+        {
+            zip_stat_t* zipStat = (zip_stat_t*)data;
             zip_stat_init(zipStat);
             return sizeof(zip_stat_t);
+        }
 
         case ZIP_SOURCE_FREE:
             return 0;

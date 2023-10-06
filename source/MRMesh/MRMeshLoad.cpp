@@ -121,7 +121,18 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
             return unexpected( std::string( "Loading canceled" ) );
     }
 
-    return Mesh::fromTriangles( std::move( points ), t );
+    FaceBitSet deletedFaces;
+    MeshBuilder::BuildSettings buildSettings;
+    if ( settings.deletedFaceCount )
+    {
+        deletedFaces = FaceBitSet( t.size() );
+        deletedFaces.set();
+        buildSettings.region = &deletedFaces;
+    }
+    auto res = Mesh::fromTriangles( std::move( points ), t, buildSettings );
+    if ( settings.deletedFaceCount )
+        *settings.deletedFaceCount = int( deletedFaces.count() );
+    return res;
 }
 
 Expected<Mesh, std::string> fromObj( const std::filesystem::path & file, const MeshLoadSettings& settings /*= {}*/ )
@@ -265,15 +276,24 @@ Expected<Mesh, std::string> fromBinaryStl( std::istream& in, const MeshLoadSetti
 //         "max_load_factor = " << hmap.max_load_factor() << "\n";
 
     auto t = vi.takeTriangulation();
+    FaceBitSet deletedFaces;
+    std::vector<MeshBuilder::VertDuplication> dups;
+    std::vector<MeshBuilder::VertDuplication>* dupsPtr = nullptr;
     if ( settings.duplicatedVertexCount )
+        dupsPtr = &dups;
+    MeshBuilder::BuildSettings buildSettings;
+    if ( settings.deletedFaceCount )
     {
-        std::vector<MeshBuilder::VertDuplication> dups;
-        const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( vi.takePoints(), t, &dups );
-        *settings.duplicatedVertexCount = int( dups.size() );
-        return res;
+        deletedFaces = FaceBitSet( t.size() );
+        deletedFaces.set();
+        buildSettings.region = &deletedFaces;
     }
-    else
-        return Mesh::fromTrianglesDuplicatingNonManifoldVertices( vi.takePoints(), t );
+    const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( vi.takePoints(), t, dupsPtr, buildSettings );
+    if ( settings.duplicatedVertexCount )
+        *settings.duplicatedVertexCount = int( dups.size() );
+    if ( settings.deletedFaceCount )
+        *settings.deletedFaceCount = int( deletedFaces.count() );
+    return res;
 }
 
 Expected<Mesh, std::string> fromASCIIStl( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
@@ -360,14 +380,26 @@ Expected<Mesh, std::string> fromASCIIStl( std::istream& in, const MeshLoadSettin
         return unexpected( std::string( "Failed to find 'solid' prefix in ascii STL" ) );
 
 
+
+
+    FaceBitSet deletedFaces;
+    std::vector<MeshBuilder::VertDuplication> dups;
+    std::vector<MeshBuilder::VertDuplication>* dupsPtr = nullptr;
     if ( settings.duplicatedVertexCount )
+        dupsPtr = &dups;
+    MeshBuilder::BuildSettings buildSettings;
+    if ( settings.deletedFaceCount )
     {
-        std::vector<MeshBuilder::VertDuplication> dups;
-        const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), t, &dups );
-        *settings.duplicatedVertexCount = int( dups.size() );
-        return res;
+        deletedFaces = FaceBitSet( t.size() );
+        deletedFaces.set();
+        buildSettings.region = &deletedFaces;
     }
-    return Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), t );
+    const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), t, dupsPtr, buildSettings );
+    if ( settings.duplicatedVertexCount )
+        *settings.duplicatedVertexCount = int( dups.size() );
+    if ( settings.deletedFaceCount )
+        *settings.deletedFaceCount = int( deletedFaces.count() );
+    return res;
 }
 
 Expected<Mesh, std::string> fromPly( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
@@ -398,7 +430,8 @@ Expected<Mesh, std::string> fromPly( std::istream& in, const MeshLoadSettings& s
     const auto posEnd = in.tellg();
     in.seekg( posStart );
     const float streamSize = float( posEnd - posStart );
-    
+
+    FaceBitSet deletedFaces;
     for ( int i = 0; reader.has_element() && ( !gotVerts || !gotFaces ); reader.next_element(), ++i )
     {
         if ( reader.element_is(miniply::kPLYVertexElement) && reader.load_element() )
@@ -456,7 +489,17 @@ Expected<Mesh, std::string> fromPly( std::istream& in, const MeshLoadSettings& s
                 isCanceled |= !res;
                 return res;
             } : settings.callback;
-            res.topology = MeshBuilder::fromTriangles( tris, {}, partedProgressCb );
+
+            MeshBuilder::BuildSettings buildSettings;
+            if ( settings.deletedFaceCount )
+            {
+                deletedFaces = FaceBitSet( tris.size() );
+                deletedFaces.set();
+                buildSettings.region = &deletedFaces;
+            }
+            res.topology = MeshBuilder::fromTriangles( tris, buildSettings, partedProgressCb );
+            if ( settings.deletedFaceCount )
+                *settings.deletedFaceCount += int( deletedFaces.count() );
             if ( settings.callback && ( !settings.callback( float( posCurent - posStart ) / streamSize ) || isCanceled ) )
                 return unexpected( std::string( "Loading canceled" ) );
             gotFaces = true;
@@ -580,7 +623,17 @@ Expected<Mesh, std::string> fromCtm( std::istream& in, const MeshLoadSettings& s
     for ( FaceId i{0}; i < (int)triCount; ++i )
         t.push_back( { VertId( (int)indices[3*i] ), VertId( (int)indices[3*i+1] ), VertId( (int)indices[3*i+2] ) } );
 
-    mesh.topology = MeshBuilder::fromTriangles( t );
+    FaceBitSet deletedFaces;
+    MeshBuilder::BuildSettings buildSettings;
+    if ( settings.deletedFaceCount )
+    {
+        deletedFaces = FaceBitSet( t.size() );
+        deletedFaces.set();
+        buildSettings.region = &deletedFaces;
+    }
+    mesh.topology = MeshBuilder::fromTriangles( t, buildSettings );
+    if ( settings.deletedFaceCount )
+        *settings.deletedFaceCount = int( deletedFaces.count() );
 
     return mesh;
 }
@@ -670,15 +723,25 @@ Expected<Mesh, std::string> from3mfModel( std::istream& in, const MeshLoadSettin
     if ( !reportProgress( settings.callback, 0.5f ) )
         return unexpected( std::string( "Loading canceled" ) );
 
+
+    FaceBitSet deletedFaces;
+    std::vector<MeshBuilder::VertDuplication> dups;
+    std::vector<MeshBuilder::VertDuplication>* dupsPtr = nullptr;
     if ( settings.duplicatedVertexCount )
+        dupsPtr = &dups;
+    MeshBuilder::BuildSettings buildSettings;
+    if ( settings.deletedFaceCount )
     {
-        std::vector<MeshBuilder::VertDuplication> dups;
-        const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( vertexCoordinates ), tris, &dups );
-        *settings.duplicatedVertexCount = int( dups.size() );
-        return res;
+        deletedFaces = FaceBitSet( tris.size() );
+        deletedFaces.set();
+        buildSettings.region = &deletedFaces;
     }
-    else
-        return Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( vertexCoordinates ), tris );
+    const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( vertexCoordinates ), tris, dupsPtr, buildSettings );
+    if ( settings.duplicatedVertexCount )
+        *settings.duplicatedVertexCount = int( dups.size() );
+    if ( settings.deletedFaceCount )
+        *settings.deletedFaceCount = int( deletedFaces.count() );
+    return res;
 }
 #endif
 #ifdef _WIN32

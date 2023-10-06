@@ -167,8 +167,6 @@ public:
 
   MRVIEWER_API void draw_helpers();
 
-  MRVIEWER_API virtual void drawModalMessage();
-
   // Can be overwritten by `callback_draw_viewer_window`
   MRVIEWER_API virtual void draw_viewer_window();
 
@@ -211,7 +209,7 @@ public:
       Warning,
       Info
   };
-  // opens error modal window with error text
+  // opens Error / Warning / Info modal window with message text
   MRVIEWER_API void showModalMessage( const std::string& msg, ModalMessageType msgType );
 
   MRVIEWER_API virtual std::filesystem::path getMenuFontPath() const;
@@ -288,6 +286,8 @@ public:
 
 protected:
     ModalMessageType modalMessageType_{ ModalMessageType::Error };
+
+    MRVIEWER_API virtual void drawModalMessage();
 
     bool capturedMouse_{ false };
     // Mouse IO
@@ -370,7 +370,7 @@ protected:
 };
 
 
-// Check if menu is available and if it is, shows error
+// Check if menu is available and if it is, shows modal window
 MRVIEWER_API void showModal( const std::string& error, ImGuiMenu::ModalMessageType type );
 inline  void showError( const std::string& error )
 {

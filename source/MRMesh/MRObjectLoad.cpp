@@ -226,7 +226,7 @@ Expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObjectVoxe
 #endif
 
 Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFile( const std::filesystem::path& filename,
-                                                                                    std::string* loadInfo, ProgressCallback callback )
+                                                                                    std::string* loadWarn, ProgressCallback callback )
 {
     if ( callback && !callback( 0.f ) )
         return unexpected( std::string( "Saving canceled" ) );
@@ -284,16 +284,25 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
     {
         MeshLoadSettings settings;
         settings.callback = callback;
+        int deletedFaceCount = 0;
         int duplicatedVertexCount = 0;
-        if ( loadInfo )
+        if ( loadWarn )
+        {
+            settings.deletedFaceCount = &deletedFaceCount;
             settings.duplicatedVertexCount = &duplicatedVertexCount;
+        }
         auto object = makeObjectFromMeshFile( filename, settings );
         if ( object && *object )
         {
             (*object)->select( true );
             result = { *object };
-            if ( loadInfo && duplicatedVertexCount )
-                *loadInfo = fmt::format( "Duplicated vertex count: {}", duplicatedVertexCount );
+            if ( loadWarn )
+            {
+                if ( deletedFaceCount )
+                    *loadWarn = fmt::format( "Deleted faces count: {}", deletedFaceCount );
+                if ( duplicatedVertexCount )
+                    *loadWarn += ( loadWarn->empty() ? "" : "\n" ) + fmt::format("Duplicated vertices count: {}", duplicatedVertexCount);
+            }
         }
         else if ( object.error() == "Loading canceled" )
         {

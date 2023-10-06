@@ -37,11 +37,12 @@ MRMESH_API Expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> mak
 
 /**
  * \brief load object (mesh, lines, points, voxels or scene) from file
+ * \param loadWarn - string that collect warning messages
  * \param callback - callback function to set progress (for progress bar)
  * \return empty string if no error or error text
  */
 MRMESH_API Expected<std::vector<std::shared_ptr<Object>>, std::string> loadObjectFromFile( const std::filesystem::path& filename,
-                                                                                           std::string* loadInfo = nullptr, ProgressCallback callback = {} );
+                                                                                           std::string* loadWarn = nullptr, ProgressCallback callback = {} );
 
 // check if there are any supported files folder and subfolders
 MRMESH_API bool isSupportedFileInSubfolders( const std::filesystem::path& folder );

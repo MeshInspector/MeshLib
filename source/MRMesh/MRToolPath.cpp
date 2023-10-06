@@ -242,7 +242,7 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsoline
         const auto meshContour = convertMeshTriPointsToClosedContour( mesh, *params.meshTriPoints );
 
         CutMeshParameters cutMeshParams;
-        cutMeshParams.forceFillMode_ = CutMeshParameters::ForceFill::All;
+        cutMeshParams.forceFillMode = CutMeshParameters::ForceFill::All;
         FaceMap new2OldMap;
         cutMeshParams.new2OldMap = &new2OldMap;
         res.old2NewMap.resize( res.meshAfterCut.topology.faceSize() );
@@ -1665,7 +1665,7 @@ FaceBitSet smoothSelection( Mesh& mesh, const FaceBitSet& region, float expandOf
         const auto meshContour = convertMeshTriPointsToClosedContour( mesh, meshTriPoints );
 
         CutMeshParameters cutMeshParams;
-        cutMeshParams.forceFillMode_ = CutMeshParameters::ForceFill::All;
+        cutMeshParams.forceFillMode = CutMeshParameters::ForceFill::All;
         FaceMap new2OldMap;
         cutMeshParams.new2OldMap = &new2OldMap;
            

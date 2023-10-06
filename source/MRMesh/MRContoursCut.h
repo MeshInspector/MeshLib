@@ -134,7 +134,7 @@ struct CutMeshParameters
         None, //< if bad faces occur does not fill anything
         Good, //< fills all faces except bad ones
         All   //< fills all faces with bad ones, but on bad faces triangulation can also be bad (may have self-intersections or tunnels)
-    } forceFillMode_{ ForceFill::None };
+    } forceFillMode{ ForceFill::None };
 };
 
 /** \struct MR::CutMeshResult

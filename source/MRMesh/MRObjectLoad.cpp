@@ -301,7 +301,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                 if ( deletedFaceCount )
                     *loadWarn = fmt::format( "Deleted faces count: {}", deletedFaceCount );
                 if ( duplicatedVertexCount )
-                    *loadWarn += ( loadWarn->empty() ? "" : "\n" ) + fmt::format("Duplicated vertices count: {}", duplicatedVertexCount);
+                    *loadWarn += fmt::format( "{}Duplicated vertices count: {}", loadWarn->empty() ? "" : "\n", duplicatedVertexCount );
             }
         }
         else if ( object.error() == "Loading canceled" )

@@ -9,8 +9,8 @@ namespace MR
 struct MeshLoadSettings
 {
     VertColors* colors = nullptr; // vertices color map
-    int* deletedFaceCount; // counter of deleted faces (faces than can't be created)
-    int* duplicatedVertexCount; // counter of duplicated vertices (that created for resolve non-manifold geometry)
+    int* deletedFaceCount = nullptr; // counter of deleted faces (faces than can't be created)
+    int* duplicatedVertexCount = nullptr; // counter of duplicated vertices (that created for resolve non-manifold geometry)
     ProgressCallback callback = {}; // callback for set progress and stop process
 };
 

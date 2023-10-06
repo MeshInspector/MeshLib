@@ -11,6 +11,10 @@ const std::string cRecentFilesStorageKey = "recentFileNames";
 namespace MR
 {
 
+#ifdef __EMSCRIPTEN__
+void RecentFilesStore::storeFile( const std::filesystem::path& ) const
+{}
+#else
 void RecentFilesStore::storeFile( const std::filesystem::path& file ) const
 {
     if ( appName_.empty() )
@@ -29,6 +33,7 @@ void RecentFilesStore::storeFile( const std::filesystem::path& file ) const
     cfg.setFileStack( cRecentFilesStorageKey, storedFiles );
     storageUpdateSignal( storedFiles );
 }
+#endif
 
 std::vector<std::filesystem::path> RecentFilesStore::getStoredFiles() const
 {

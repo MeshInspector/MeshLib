@@ -8,7 +8,7 @@ namespace MR
 struct MeshLoadSettings
 {
     VertColors* colors = nullptr;
-    int* duplicatedEdgeCount;
+    int* deletedFaceCount;
     int* duplicatedVertexCount;
     ProgressCallback callback = {};
 };

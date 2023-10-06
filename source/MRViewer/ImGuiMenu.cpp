@@ -862,7 +862,7 @@ void ImGuiMenu::drawModalMessage()
         const auto headerWidth = ImGui::CalcTextSize( title.c_str() ).x;
 
         ImGui::SetCursorPosX( ( errorWindowSize.x - headerWidth ) * 0.5f );
-        ImGui::Text( title.c_str() );
+        ImGui::Text( "%s", title.c_str());
 
         if ( headerFont )
             ImGui::PopFont();

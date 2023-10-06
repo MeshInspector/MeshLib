@@ -14,6 +14,8 @@
 #pragma clang diagnostic pop
 #endif
 
+#include <fstream>
+
 namespace MR
 {
 

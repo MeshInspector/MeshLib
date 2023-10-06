@@ -204,9 +204,16 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveMesh, [] ( pybind11::module_& m )
 } )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadMesh, [] ( pybind11::module_& m )
 {
+    pybind11::class_<MR::MeshLoadSettings>( m, "MeshLoadSettings", "mesh load settings" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "colors", &MR::MeshLoadSettings::colors ).
+        def_readwrite( "deletedFaceCount", &MR::MeshLoadSettings::deletedFaceCount ).
+        def_readwrite( "duplicatedVertexCount", &MR::MeshLoadSettings::duplicatedVertexCount ).
+        def_readwrite( "callback", &MR::MeshLoadSettings::callback );
+
     m.def( "loadMesh",
-        MR::decorateExpected( ( Expected<MR::Mesh, std::string>( * )( const std::filesystem::path&, VertColors*, ProgressCallback ) )& MR::MeshLoad::fromAnySupportedFormat),
-        pybind11::arg( "path" ), pybind11::arg( "colors" ) = nullptr, pybind11::arg( "callback" ) = ProgressCallback{},
+        MR::decorateExpected( ( Expected<MR::Mesh, std::string>( * )( const std::filesystem::path&, const MeshLoadSettings& ) )& MR::MeshLoad::fromAnySupportedFormat),
+        pybind11::arg( "path" ), pybind11::arg( "settings" ) = MeshLoadSettings(),
         "detects the format from file extension and loads mesh from it" );
     m.def( "loadMesh",
         MR::decorateExpected( ( Expected<MR::Mesh, std::string>( * )( pybind11::object, const std::string& ) )& pythonLoadMeshFromAnyFormat ),

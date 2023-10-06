@@ -3,6 +3,7 @@
 #include "MRIOFilters.h"
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
+#include "MRMeshLoadSettings.h"
 #include <filesystem>
 
 namespace MR
@@ -15,8 +16,8 @@ namespace MeshLoad
 /// \ingroup IOGroup
 /// \{
 
-using MeshLoader = Expected<MR::Mesh, std::string>( * )( const std::filesystem::path&, VertColors*, ProgressCallback );
-using MeshStreamLoader = Expected<MR::Mesh, std::string>( * )( std::istream&, VertColors*, ProgressCallback );
+using MeshLoader = Expected<MR::Mesh, std::string>( * )( const std::filesystem::path&, const MeshLoadSettings& );
+using MeshStreamLoader = Expected<MR::Mesh, std::string>( * )( std::istream&, const MeshLoadSettings& );
 
 struct NamedMeshLoader
 {

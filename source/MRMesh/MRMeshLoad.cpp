@@ -682,20 +682,20 @@ Expected<Mesh, std::string> from3mfModel( std::istream& in, const MeshLoadSettin
 }
 #endif
 #ifdef _WIN32
-Expected<Mesh, std::string> fromStep( const std::filesystem::path& file, VertColors* colors, ProgressCallback callback )
+Expected<Mesh, std::string> fromStep( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromStep( in, colors, callback ), file );
+    return addFileNameInError( fromStep( in, settings ), file );
 }
 
-Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCallback callback )
+Expected<Mesh, std::string> fromStep( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
-    auto result = fromSceneStepFile( in, callback );
+    auto result = fromSceneStepFile( in, settings );
     if ( !result )
         return unexpected( std::move( result.error() ) );
 
@@ -713,16 +713,16 @@ Expected<Mesh, std::string> fromStep( std::istream& in, VertColors*, ProgressCal
 #endif
 
 
-Expected<Mesh, std::string> fromDxf( const std::filesystem::path& path, MR::VertColors* colors, MR::ProgressCallback callback )
+Expected<Mesh, std::string> fromDxf( const std::filesystem::path& path, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( path, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( path ) );
 
-    return addFileNameInError( fromDxf( in, colors, callback ), path );
+    return addFileNameInError( fromDxf( in, settings ), path );
 }
 
-Expected<Mesh, std::string> fromDxf( std::istream& in, MR::VertColors* , MR::ProgressCallback cb )
+Expected<Mesh, std::string> fromDxf( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     // find size
     in.seekg( 0, std::ios_base::end );
@@ -741,7 +741,7 @@ Expected<Mesh, std::string> fromDxf( std::istream& in, MR::VertColors* , MR::Pro
 
     for ( int i = 0; !in.eof(); ++i )
     {
-        if ( i % 1024 == 0 && !reportProgress( cb, float( in.tellg() ) / size ) )
+        if ( i % 1024 == 0 && !reportProgress( settings.callback, float( in.tellg() ) / size ) )
             return unexpectedOperationCanceled();
         
         std::getline( in, str );
@@ -774,7 +774,7 @@ Expected<Mesh, std::string> fromDxf( std::istream& in, MR::VertColors* , MR::Pro
             is3DfaceFound = false;
     }
 
-    if ( !reportProgress( cb, 1.0f ) )
+    if ( !reportProgress( settings.callback, 1.0f ) )
         return unexpectedOperationCanceled();
 
     if ( triangles.empty() )

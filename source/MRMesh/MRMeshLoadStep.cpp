@@ -8,7 +8,7 @@
 #include "MRParallelFor.h"
 #include "MRStringConvert.h"
 #include "MRTimer.h"
-#include "MRMesh/MRMeshLoadSettings.h"
+#include "MRMeshLoadSettings.h"
 
 #include "MRPch/MRSpdlog.h"
 
@@ -196,13 +196,13 @@ std::mutex cOpenCascadeMutex = {};
 namespace MR::MeshLoad
 {
 
-Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::filesystem::path& path, const ProgressCallback& callback )
+Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::filesystem::path& path, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( path, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( path ) );
 
-    auto result = fromSceneStepFile( in, callback );
+    auto result = fromSceneStepFile( in, settings );
     if ( !result )
         return addFileNameInError( result, path );
 
@@ -215,11 +215,9 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::fil
     return result;
 }
 
-Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& in, const ProgressCallback& callback )
+Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
-
-    const auto cb = callback ? callback : [] ( float ) { return true; };
 
     // NOTE: OpenCASCADE STEP reader is NOT thread-safe
     std::unique_lock lock( cOpenCascadeMutex );
@@ -233,7 +231,7 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
         if ( ret != IFSelect_RetDone )
             return unexpected( "Failed to read STEP model" );
 
-        cb( 0.15f );
+        reportProgress( settings.callback, 0.15f );
 
         const auto model = reader.StepModel();
         const auto protocol = Handle( StepData_Protocol )::DownCast( model->Protocol() );
@@ -243,7 +241,7 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
         if ( !sw.Print( buffer ) )
             return unexpected( "Failed to repair STEP model" );
 
-        cb( 0.20f );
+        reportProgress( settings.callback, 0.2f );
     }
     buffer.seekp( 0, std::ios::beg );
 
@@ -254,17 +252,17 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
         const auto ret = reader.ReadStream( "STEP file", buffer );
         if ( ret != IFSelect_RetDone )
             return unexpected( "Failed to read STEP model" );
+        
+        reportProgress( settings.callback, 0.3f );
 
-        cb( 0.35f );
-
-        const auto cb1 = subprogress( cb, 0.30f, 0.74f );
+        const auto cb1 = subprogress( settings.callback, 0.30f, 0.74f );
         const auto rootCount = reader.NbRootsForTransfer();
         for ( auto i = 1; i <= rootCount; ++i )
         {
             reader.TransferRoot( i );
             cb1( (float)i / (float)rootCount );
         }
-        cb( 0.90f );
+        reportProgress( settings.callback, 0.9f );
 
         for ( auto i = 1; i <= reader.NbShapes(); ++i )
             shapes.emplace_back( reader.Shape( i ) );
@@ -291,7 +289,7 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
     }
     else
     {
-        auto cb2 = subprogress( cb, 0.90f, 1.0f );
+        auto cb2 = subprogress( settings.callback, 0.90f, 1.0f );
 
         auto result = std::make_shared<ObjectMesh>();
         // create empty parent mesh

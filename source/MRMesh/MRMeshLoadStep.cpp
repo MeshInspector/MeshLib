@@ -24,6 +24,7 @@
 #include <opencascade/Message_Printer.hxx>
 #include <opencascade/Message_PrinterOStream.hxx>
 #include <opencascade/STEPControl_Reader.hxx>
+#include <opencascade/Standard_Version.hxx>
 #include <opencascade/StepData_Protocol.hxx>
 #include <opencascade/StepData_StepModel.hxx>
 #include <opencascade/StepData_StepWriter.hxx>
@@ -191,6 +192,9 @@ Mesh loadSolid( const TopoDS_Shape& solid )
 
 std::mutex cOpenCascadeMutex = {};
 
+// some STEP model are loaded broken in OpenCASCADE prior to 7.7
+#define REQUIRE_MODEL_REPAIR ( ( OCC_VERSION_MAJOR < 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR < 7 ) )
+
 }
 
 namespace MR::MeshLoad
@@ -222,6 +226,7 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
     // NOTE: OpenCASCADE STEP reader is NOT thread-safe
     std::unique_lock lock( cOpenCascadeMutex );
 
+#if REQUIRE_MODEL_REPAIR
     // repair (?) STEP model using read and write operations
     // TODO: repair the model directly
     std::stringstream buffer;
@@ -246,12 +251,16 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
             return unexpected( std::string( "Loading canceled" ) );
     }
     buffer.seekp( 0, std::ios::beg );
+    auto& input = buffer;
+#else
+    auto& input = in;
+#endif
 
     std::deque<TopoDS_Shape> shapes;
     {
         STEPControl_Reader reader;
 
-        const auto ret = reader.ReadStream( "STEP file", buffer );
+        const auto ret = reader.ReadStream( "STEP file", input );
         if ( ret != IFSelect_RetDone )
             return unexpected( "Failed to read STEP model" );
 

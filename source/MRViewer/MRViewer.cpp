@@ -950,6 +950,7 @@ bool Viewer::loadFiles( const std::vector< std::filesystem::path>& filesList )
     {
         std::vector<std::filesystem::path> loadedFiles;
         std::vector<std::string> errorList;
+        std::string loadInfoRes;
         std::vector<std::shared_ptr<Object>> loadedObjects;
         for ( int i = 0; i < filesList.size(); ++i )
         {
@@ -958,7 +959,8 @@ bool Viewer::loadFiles( const std::vector< std::filesystem::path>& filesList )
                 continue;
 
             spdlog::info( "Loading file {}", utf8string( filename ) );
-            auto res = loadObjectFromFile( filename, [callback = ProgressBar::callBackSetProgress, i, number = filesList.size()]( float v )
+            std::string loadInfo;
+            auto res = loadObjectFromFile( filename, &loadInfo, [callback = ProgressBar::callBackSetProgress, i, number = filesList.size()]( float v )
             {
                 return callback( ( i + v ) / number );
             } );
@@ -968,6 +970,12 @@ bool Viewer::loadFiles( const std::vector< std::filesystem::path>& filesList )
                 errorList.push_back( std::move( res.error() ) );
                 continue;
             }
+
+            if ( !loadInfo.empty() )
+            {
+                loadInfoRes += ( ( loadInfoRes.empty() ? "" : "\n" ) + utf8string( filename ) + ":\n" + loadInfo + "\n" );
+            }
+
 
             auto& newObjs = *res;
             bool anyObjLoaded = false;
@@ -984,7 +992,7 @@ bool Viewer::loadFiles( const std::vector< std::filesystem::path>& filesList )
             else
                 errorList.push_back( "No objects found in the file \"" + utf8string( filename ) + "\"" );
         }
-        return [loadedObjects, loadedFiles, errorList]
+        return [loadedObjects, loadedFiles, errorList, loadInfoRes]
         {
             if ( !loadedObjects.empty() )
             {
@@ -1024,6 +1032,10 @@ bool Viewer::loadFiles( const std::vector< std::filesystem::path>& filesList )
                 for ( auto& error : errorList )
                     errorAll += "\n" + error;
                 showError( errorAll.substr( 1 ) );
+            }
+            else if ( !loadInfoRes.empty() )
+            {
+                showModal( loadInfoRes, ImGuiMenu::ModalMessageType::Warning );
             }
         };
     } );

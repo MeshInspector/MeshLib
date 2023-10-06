@@ -683,7 +683,7 @@ Expected<Mesh, std::string> deserializeFromJson( const Json::Value& root, VertCo
         
     auto bin = decode64( root["ply"].asString() );
     std::istringstream in( std::string( (const char *)bin.data(), bin.size() ) );
-    return MeshLoad::fromPly( in, colors );
+    return MeshLoad::fromPly( in, { .colors = colors } );
 }
 
 void deserializeFromJson( const Json::Value& root, MeshTexture& texture )

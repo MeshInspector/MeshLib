@@ -38,12 +38,14 @@ const IOFilters allFilters = SceneFileFilters
                              | LinesLoad::Filters
                              | PointsLoad::Filters;
 
-Expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem::path & file, ProgressCallback callback )
+Expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER;
 
+    MeshLoadSettings newSettings = settings;
     VertColors colors;
-    auto mesh = MeshLoad::fromAnySupportedFormat( file, &colors, callback );
+    newSettings.colors = &colors;
+    auto mesh = MeshLoad::fromAnySupportedFormat( file, newSettings );
     if ( !mesh.has_value() )
     {
         return unexpected( mesh.error() );
@@ -61,12 +63,14 @@ Expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem:
     return objectMesh;
 }
 
-Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std::filesystem::path& file, ProgressCallback callback )
+Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
+    MeshLoadSettings newSettings = settings;
     VertColors colors;
-    auto mesh = MeshLoad::fromAnySupportedFormat( file, &colors, callback );
+    newSettings.colors = &colors;
+    auto mesh = MeshLoad::fromAnySupportedFormat( file, newSettings );
     if ( !mesh.has_value() )
         return unexpected( mesh.error() );
     
@@ -222,7 +226,7 @@ Expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObjectVoxe
 #endif
 
 Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFile( const std::filesystem::path& filename,
-                                                                                        ProgressCallback callback )
+                                                                                    std::string* loadWarn, ProgressCallback callback )
 {
     if ( callback && !callback( 0.f ) )
         return unexpected( std::string( "Saving canceled" ) );
@@ -278,11 +282,27 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
     }
     else
     {
-        auto object = makeObjectFromMeshFile( filename, callback );
+        MeshLoadSettings settings;
+        settings.callback = callback;
+        int deletedFaceCount = 0;
+        int duplicatedVertexCount = 0;
+        if ( loadWarn )
+        {
+            settings.deletedFaceCount = &deletedFaceCount;
+            settings.duplicatedVertexCount = &duplicatedVertexCount;
+        }
+        auto object = makeObjectFromMeshFile( filename, settings );
         if ( object && *object )
         {
             (*object)->select( true );
             result = { *object };
+            if ( loadWarn )
+            {
+                if ( deletedFaceCount )
+                    *loadWarn = fmt::format( "Deleted faces count: {}", deletedFaceCount );
+                if ( duplicatedVertexCount )
+                    *loadWarn += fmt::format( "{}Duplicated vertices count: {}", loadWarn->empty() ? "" : "\n", duplicatedVertexCount );
+            }
         }
         else if ( object.error() == "Loading canceled" )
         {
@@ -496,7 +516,7 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
         {
             loadTasks.emplace_back( std::async( std::launch::async, [&] ()
             {
-                return loadObjectFromFile( file.path, [&]( float ){ return !loadingCanceled; } );
+                return loadObjectFromFile( file.path, nullptr, [&]( float ){ return !loadingCanceled; } );
             } ), objPtr );
         }
     };
@@ -588,7 +608,7 @@ Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( 
 #ifdef _WIN32
     else if ( ext == "*.step" || ext == "*.stp" )
     {
-        return MeshLoad::fromSceneStepFile( path, callback );
+        return MeshLoad::fromSceneStepFile( path, { .callback = callback } );
     }
 #endif
 

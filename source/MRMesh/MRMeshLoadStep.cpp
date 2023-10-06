@@ -8,6 +8,7 @@
 #include "MRParallelFor.h"
 #include "MRStringConvert.h"
 #include "MRTimer.h"
+#include "MRMeshLoadSettings.h"
 
 #include "MRPch/MRSpdlog.h"
 
@@ -195,13 +196,13 @@ std::mutex cOpenCascadeMutex = {};
 namespace MR::MeshLoad
 {
 
-Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::filesystem::path& path, const ProgressCallback& callback )
+Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::filesystem::path& path, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( path, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( path ) );
 
-    auto result = fromSceneStepFile( in, callback );
+    auto result = fromSceneStepFile( in, settings );
     if ( !result )
         return addFileNameInError( result, path );
 
@@ -214,11 +215,9 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::fil
     return result;
 }
 
-Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& in, const ProgressCallback& callback )
+Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
-
-    const auto cb = callback ? callback : [] ( float ) { return true; };
 
     // NOTE: OpenCASCADE STEP reader is NOT thread-safe
     std::unique_lock lock( cOpenCascadeMutex );
@@ -232,7 +231,8 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
         if ( ret != IFSelect_RetDone )
             return unexpected( "Failed to read STEP model" );
 
-        cb( 0.15f );
+        if ( !reportProgress( settings.callback, 0.15f ) )
+            return unexpected( std::string( "Loading canceled" ) );
 
         const auto model = reader.StepModel();
         const auto protocol = Handle( StepData_Protocol )::DownCast( model->Protocol() );
@@ -242,7 +242,8 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
         if ( !sw.Print( buffer ) )
             return unexpected( "Failed to repair STEP model" );
 
-        cb( 0.20f );
+        if ( !reportProgress( settings.callback, 0.2f ) )
+            return unexpected( std::string( "Loading canceled" ) );
     }
     buffer.seekp( 0, std::ios::beg );
 
@@ -254,16 +255,19 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
         if ( ret != IFSelect_RetDone )
             return unexpected( "Failed to read STEP model" );
 
-        cb( 0.35f );
+        if ( !reportProgress( settings.callback, 0.3f ) )
+            return unexpected( std::string( "Loading canceled" ) );
 
-        const auto cb1 = subprogress( cb, 0.30f, 0.74f );
+        const auto cb1 = subprogress( settings.callback, 0.30f, 0.74f );
         const auto rootCount = reader.NbRootsForTransfer();
         for ( auto i = 1; i <= rootCount; ++i )
         {
             reader.TransferRoot( i );
-            cb1( (float)i / (float)rootCount );
+            if ( !reportProgress( cb1, ( float )i / ( float )rootCount ) )
+                return unexpected( std::string( "Loading canceled" ) );
         }
-        cb( 0.90f );
+        if ( !reportProgress( settings.callback, 0.9f ) )
+            return unexpected( std::string( "Loading canceled" ) );
 
         for ( auto i = 1; i <= reader.NbShapes(); ++i )
             shapes.emplace_back( reader.Shape( i ) );
@@ -290,14 +294,14 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
     }
     else
     {
-        auto cb2 = subprogress( cb, 0.90f, 1.0f );
+        auto cb2 = subprogress( settings.callback, 0.90f, 1.0f );
 
         auto result = std::make_shared<ObjectMesh>();
         // create empty parent mesh
         result->setMesh( std::make_shared<Mesh>() );
 
         std::vector<std::shared_ptr<Object>> children( solids.size() );
-        ParallelFor( size_t( 0 ), solids.size(), [&] ( size_t i )
+        const bool normalFinished = ParallelFor( size_t( 0 ), solids.size(), [&] ( size_t i )
         {
             auto mesh = loadSolid( solids[i] );
 
@@ -306,6 +310,8 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
             child->setName( fmt::format( "Solid{}", i + 1 ) );
             children[i] = std::move( child );
         }, cb2 );
+        if ( !normalFinished )
+            return unexpected( std::string( "Loading canceled" ) );
 
         for ( auto& child : children )
             result->addChild( std::move( child ), true );

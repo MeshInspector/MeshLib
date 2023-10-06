@@ -287,7 +287,7 @@ public:
 protected:
     ModalMessageType modalMessageType_{ ModalMessageType::Error };
 
-    MRVIEWER_API virtual void drawModalMessage();
+    MRVIEWER_API virtual void drawModalMessage_();
 
     bool capturedMouse_{ false };
     // Mouse IO

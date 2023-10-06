@@ -824,10 +824,10 @@ void ImGuiMenu::draw_helpers()
     }
     ImGui::PopStyleVar( 3 );
 
-    drawModalMessage();
+    drawModalMessage_();
 }
 
-void ImGuiMenu::drawModalMessage()
+void ImGuiMenu::drawModalMessage_()
 {
     ImGui::PushStyleColor( ImGuiCol_ModalWindowDimBg, ImVec4( 1, 0.125f, 0.125f, ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg].w ) );
 

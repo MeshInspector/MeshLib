@@ -41,7 +41,7 @@ private:
     ProgressCallback cb_;
     bool canceled_{ false };
 
-    bool inCircle_( const Vector3f& af, Vector3f bf, Vector3f cf, Vector3f df )
+    bool inCircle_( const Vector3f& af, Vector3f bf, Vector3f cf, Vector3f df ) const
     {
         Vector3d b = Vector3d( bf ) - Vector3d( af );
         Vector3d c = Vector3d( cf ) - Vector3d( af );
@@ -53,16 +53,16 @@ private:
         ).det() > 0;
     }
 
-    bool ccw_( const Vector3f& af, Vector3f bf, Vector3f cf )
+    bool ccw_( const Vector3f& af, Vector3f bf, Vector3f cf ) const
     {
         Vector3d b = Vector3d( bf ) - Vector3d( af );
         Vector3d c = Vector3d( cf ) - Vector3d( af );
         return Matrix2d( to2dim( b ), to2dim( c ) ).det() > 0;
     }
 
-    bool leftOf_( const Vector3f& x, EdgeId e ) { return ccw_( x, mesh_.orgPnt( e ), mesh_.destPnt( e ) ); }
-    bool rightOf_( const Vector3f& x, EdgeId e ) { return ccw_( x, mesh_.destPnt( e ), mesh_.orgPnt( e ) ); }
-    bool valid_( EdgeId e ) { return ccw_( mesh_.destPnt( e ), mesh_.destPnt( basel_ ), mesh_.orgPnt( basel_ ) ); }
+    bool leftOf_( const Vector3f& x, EdgeId e ) const { return ccw_( x, mesh_.orgPnt( e ), mesh_.destPnt( e ) ); }
+    bool rightOf_( const Vector3f& x, EdgeId e ) const { return ccw_( x, mesh_.destPnt( e ), mesh_.orgPnt( e ) ); }
+    bool valid_( EdgeId e ) const { return ccw_( mesh_.destPnt( e ), mesh_.destPnt( basel_ ), mesh_.orgPnt( basel_ ) ); }
 
     EdgeId connect_( EdgeId a, EdgeId b )
     {
@@ -164,6 +164,8 @@ private:
                     auto t = tp.next( lcand );
                     if ( t == basel_.sym() )
                         break;
+                    if ( lcand.undirected() == ldo.undirected() )
+                        break; // precision issues leads to such troubles, for now just break
                     deleteEdge_( lcand );
                     lcand = t;
                 }
@@ -176,6 +178,8 @@ private:
                     auto t = tp.prev( rcand );
                     if ( t == basel_ )
                         break;
+                    if ( rcand.undirected() == rdo.undirected() )
+                        break; // precision issues leads to such troubles, for now just break
                     deleteEdge_( rcand );
                     rcand = t;
                 }
@@ -193,6 +197,8 @@ private:
             }
             tp.setLeft( basel_, tp.addFaceId() );
         }
+        assert( tp.hasEdge( ldo ) );
+        assert( tp.hasEdge( rdo ) );
         return { ldo,rdo };
     }
 

@@ -46,6 +46,67 @@ private:
     zip_t * handle_ = nullptr;
 };
 
+/// zip-callback for reading from std::istream
+zip_int64_t iostream_zip_source_callback( void *istream, void *data, zip_uint64_t len, zip_source_cmd_t cmd )
+{
+    if ( !istream )
+    {
+        assert( false );
+        return -1;
+    }
+
+    std::istream & is = *(std::istream*)( istream );
+
+    switch ( cmd )
+    {
+        case ZIP_SOURCE_SUPPORTS:
+            return zip_source_make_command_bitmap( ZIP_SOURCE_OPEN, ZIP_SOURCE_READ, ZIP_SOURCE_CLOSE,
+                ZIP_SOURCE_STAT, ZIP_SOURCE_ERROR, ZIP_SOURCE_FREE, ZIP_SOURCE_SEEK, ZIP_SOURCE_TELL, ZIP_SOURCE_SUPPORTS, -1 );
+
+        case ZIP_SOURCE_SEEK:
+            zip_source_args_seek argsSeek = * ((zip_source_args_seek *)data);
+            if ( argsSeek.whence == SEEK_SET && argsSeek.offset >= 0 )
+                is.seekg( argsSeek.offset );
+            else if ( argsSeek.whence == SEEK_CUR )
+                is.seekg( argsSeek.offset, std::ios_base::cur );
+            else if ( argsSeek.whence == SEEK_END && argsSeek.offset <= 0 )
+                is.seekg( argsSeek.offset, std::ios_base::end );
+            else
+            {
+                assert( false );
+                return -1;
+            }
+            return is.fail() ? -1 : 0;
+
+        case ZIP_SOURCE_OPEN:
+            return 0;
+
+        case ZIP_SOURCE_READ:
+            is.read( (char*)data, len );
+            return is.fail() ? -1 : 0;
+
+        case ZIP_SOURCE_CLOSE:
+            return 0;
+
+        case ZIP_SOURCE_TELL:
+            return is.tellg();
+
+        case ZIP_SOURCE_STAT:
+            zip_stat_t* zipStat;
+            zipStat  = (zip_stat_t*)data;
+            zip_stat_init(zipStat);
+            return sizeof(zip_stat_t);
+
+        case ZIP_SOURCE_FREE:
+            return 0;
+
+        default:
+            ;
+    }
+    assert( false );
+    return -1;
+}
+
 VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder,
     const std::vector<std::filesystem::path>& excludeFiles, const char * password, ProgressCallback cb )
 {

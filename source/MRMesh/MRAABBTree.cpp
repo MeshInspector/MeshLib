@@ -35,20 +35,20 @@ inline Box3f computeFaceBox( const Mesh & mesh, FaceId f )
     return box;
 }
 
-AABBTree::AABBTree( const Mesh & mesh )
+AABBTree::AABBTree( const MeshPart & mp )
 {
-    MR_TIMER;
+    MR_TIMER
 
-    const auto numFaces = mesh.topology.numValidFaces();
+    const auto numFaces = mp.region ? (int)mp.region->count() : mp.mesh.topology.numValidFaces();
     if ( numFaces <= 0 )
         return;
 
     Buffer<BoxedFace> boxedFaces( numFaces );
-    const bool packed = numFaces == mesh.topology.faceSize();
+    const bool packed = numFaces == mp.mesh.topology.faceSize();
     if ( !packed )
     {
         int n = 0;
-        for ( auto f : mesh.topology.getValidFaces() )
+        for ( auto f : mp.mesh.topology.getFaceIds( mp.region ) )
             boxedFaces[n++].leafId = f;
     }
 
@@ -63,7 +63,7 @@ AABBTree::AABBTree( const Mesh & mesh )
                 boxedFaces[i].leafId = f = FaceId( i );
             else
                 f = boxedFaces[i].leafId;
-            boxedFaces[i].box = computeFaceBox( mesh, f );
+            boxedFaces[i].box = computeFaceBox( mp.mesh, f );
         }
     } );
 
@@ -226,6 +226,11 @@ TEST(MRMesh, AABBTree)
     assert( !tree.nodes().empty() );
     auto m = std::move( tree );
     assert( tree.nodes().empty() );
+
+    FaceBitSet fs;
+    fs.autoResizeSet( 1_f );
+    AABBTree smallerTree( { sphere, &fs } );
+    EXPECT_EQ( smallerTree.nodes().size(), 1 );
 }
 
 } //namespace MR

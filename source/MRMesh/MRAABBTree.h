@@ -30,8 +30,8 @@ public:
     /// this is fast validity check, but it is not comprehensive (tree can be outdated even if true is returned)
     [[nodiscard]] MRMESH_API bool containsSameNumberOfTris( const Mesh & mesh ) const;
 
-    /// creates tree for given mesh
-    MRMESH_API AABBTree( const Mesh & mesh );
+    /// creates tree for given mesh or its part
+    [[nodiscard]] MRMESH_API AABBTree( const MeshPart & mp );
 
     /// returns all faces in the subtree with given root
     [[nodiscard]] MRMESH_API FaceBitSet getSubtreeFaces( NodeId subtreeRoot ) const;

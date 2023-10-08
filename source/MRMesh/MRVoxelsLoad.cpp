@@ -10,6 +10,7 @@
 #include "MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
+#include <cfloat>
 #include <compare>
 #include <fstream>
 

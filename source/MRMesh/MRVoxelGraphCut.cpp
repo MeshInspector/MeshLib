@@ -12,6 +12,7 @@
 #include "MRPch/MRTBB.h"
 #include <parallel_hashmap/phmap.h>
 #include <array>
+#include <cfloat>
 
 namespace MR
 {

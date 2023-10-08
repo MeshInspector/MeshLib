@@ -9,8 +9,8 @@
 #include "MRFastWindingNumber.h"
 #include "MRLine3.h"
 #include "MRMeshIntersect.h"
+#include "MRParallelFor.h"
 #include "MRPch/MRTBB.h"
-#include <thread>
 
 namespace MR
 {
@@ -88,67 +88,47 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const Mesh& mesh, cons
         return res;
     }
 
-    std::atomic<bool> keepGoing{ true };
-    auto mainThreadId = std::this_thread::get_id();
     tbb::enumerable_thread_specific<std::pair<float, float>> minMax( std::pair<float, float>{ FLT_MAX, -FLT_MAX } );
 
-    auto core = [&] ( const tbb::blocked_range<size_t>& range )
+    if ( !ParallelFor( size_t( 0 ), indexer.size(), [&]( size_t i )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
+        auto coord = Vector3f( indexer.toPos( VoxelId( i ) ) ) + Vector3f::diagonal( 0.5f );
+        auto voxelCenter = params.origin + mult( params.voxelSize, coord );
+        float dist{ 0.0f };
+        if ( params.signMode != SignDetectionMode::ProjectionNormal )
+            dist = std::sqrt( findProjection( voxelCenter, mesh, params.maxDistSq, nullptr, params.minDistSq ).distSq );
+        else
         {
-            if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
-                break;
-
-            auto coord = Vector3f( indexer.toPos( VoxelId( i ) ) ) + Vector3f::diagonal( 0.5f );
-            auto voxelCenter = params.origin + mult( params.voxelSize, coord );
-            float dist{ 0.0f };
-            if ( params.signMode != SignDetectionMode::ProjectionNormal )
-                dist = std::sqrt( findProjection( voxelCenter, mesh, params.maxDistSq, nullptr, params.minDistSq ).distSq );
-            else
-            {
-                auto s = findSignedDistance( voxelCenter, mesh, params.maxDistSq, params.minDistSq );
-                dist = s ? s->dist : cQuietNan;
-            }
-
-            if ( !isNanFast( dist ) )
-            {
-                bool changeSign = false;
-                if ( params.signMode == SignDetectionMode::WindingRule )
-                {
-                    int numInters = 0;
-                    rayMeshIntersectAll( mesh, Line3d( Vector3d( voxelCenter ), Vector3d::plusX() ),
-                        [&numInters] ( const MeshIntersectionResult& ) mutable
-                    {
-                        ++numInters;
-                        return true;
-                    } );
-                    changeSign = numInters % 2 == 1; // inside
-                }
-                if ( changeSign )
-                    dist = -dist;
-                auto& localMinMax = minMax.local();
-                if ( dist < localMinMax.first )
-                    localMinMax.first = dist;
-                if ( dist > localMinMax.second )
-                    localMinMax.second = dist;
-            }
-            res.data[i] = dist;
-            if ( params.cb && ( ( i % 1024 ) == 0 ) && std::this_thread::get_id() == mainThreadId )
-            {
-                if ( !params.cb( float( i ) / float( range.size() ) ) )
-                    keepGoing.store( false, std::memory_order_relaxed );
-            }
+            auto s = findSignedDistance( voxelCenter, mesh, params.maxDistSq, params.minDistSq );
+            dist = s ? s->dist : cQuietNan;
         }
-    };
 
-    if ( params.cb )
-        // static partitioner is slower but is necessary for smooth progress reporting
-        tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size() ), core, tbb::static_partitioner() );
-    else
-        tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size() ), core );
-
-    if ( params.cb && !keepGoing )
+        if ( !isNanFast( dist ) )
+        {
+            bool changeSign = false;
+            if ( params.signMode == SignDetectionMode::WindingRule )
+            {
+                int numInters = 0;
+                rayMeshIntersectAll( mesh, Line3d( Vector3d( voxelCenter ), Vector3d::plusX() ),
+                    [&numInters] ( const MeshIntersectionResult& ) mutable
+                {
+                    ++numInters;
+                    return true;
+                } );
+                changeSign = numInters % 2 == 1; // inside
+            }
+            if ( changeSign )
+                dist = -dist;
+            auto& localMinMax = minMax.local();
+            if ( dist < localMinMax.first )
+                localMinMax.first = dist;
+            if ( dist > localMinMax.second )
+                localMinMax.second = dist;
+        }
+        res.data[i] = dist;
+    }, params.cb ) )
         return unexpectedOperationCanceled();
+
     for ( const auto& [min, max] : minMax )
     {
         if ( min < res.min )

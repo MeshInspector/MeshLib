@@ -293,6 +293,10 @@ bool ObjectVoxels::prepareDataForVolumeRendering( ProgressCallback cb /*= {} */ 
     auto& res = *volumeRenderingData_;
     res.max = std::numeric_limits<uint16_t>::max();
     res.min = 0;
+    const auto oMax = float( res.max );
+    const auto iMin = vdbVolume_.min;
+    const float k = oMax / ( vdbVolume_.max - vdbVolume_.min );
+
     res.voxelSize = vdbVolume_.voxelSize;
     auto activeBox = getActiveBounds();
     res.dims = activeBox.size();
@@ -312,8 +316,7 @@ bool ObjectVoxels::prepareDataForVolumeRendering( ProgressCallback cb /*= {} */ 
                 return;
             auto coord = indexer.toPos( VoxelId( i ) );
             auto vdbCoord = openvdb::Coord( coord.x + activeBox.min.x, coord.y + activeBox.min.y, coord.z + activeBox.min.z );
-            res.data[i] = uint16_t( std::clamp( ( accessor.getValue( vdbCoord ) - res.min ) / ( res.max - res.min ), 0.0f, 1.0f ) * 
-                float( std::numeric_limits<uint16_t>::max() ) );
+            res.data[i] = uint16_t( std::clamp( ( accessor.getValue( vdbCoord ) - iMin ) * k, 0.0f, oMax ) );
         }
         if ( cb )
         {

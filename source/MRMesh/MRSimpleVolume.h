@@ -22,11 +22,13 @@ struct VoxelTraits<VoxelValueGetter<T>>
     using ValueType = T;
 };
 
+#ifndef MRMESH_NO_VOXEL
 template <>
 struct VoxelTraits<FloatGrid>
 {
     using ValueType = float;
 };
+#endif
 
 /// represents a box in 3D space subdivided on voxels stored in T
 template <typename T>

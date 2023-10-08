@@ -291,8 +291,8 @@ bool ObjectVoxels::prepareDataForVolumeRendering( ProgressCallback cb /*= {} */ 
         return false;
     volumeRenderingData_ = std::make_unique<SimpleVolumeU16>();
     auto& res = *volumeRenderingData_;
-    res.max = vdbVolume_.max;
-    res.min = vdbVolume_.min;
+    res.max = std::numeric_limits<uint16_t>::max();
+    res.min = 0;
     res.voxelSize = vdbVolume_.voxelSize;
     auto activeBox = getActiveBounds();
     res.dims = activeBox.size();

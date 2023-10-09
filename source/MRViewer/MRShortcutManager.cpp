@@ -133,9 +133,10 @@ std::optional<ShortcutManager::ShortcutKey> ShortcutManager::findShortcutByName(
     return kayAndModFromMapKey( it->second );
 }
 
-int ShortcutManager::mapKeyFromKeyAndMod( const ShortcutKey& key, bool respectKeyboard )
+int ShortcutManager::mapKeyFromKeyAndMod( const ShortcutKey& key, [[maybe_unused]] bool respectKeyboard )
 {
     int upperKey = key.key;
+#ifndef __EMSCRIPTEN__
     if ( respectKeyboard )
     {
         std::string namedKey;
@@ -147,6 +148,7 @@ int ShortcutManager::mapKeyFromKeyAndMod( const ShortcutKey& key, bool respectKe
         if ( namedKey.size() == 1 && namedKey[0] >= 'a' && namedKey[0] <= 'z' )
             upperKey = int( namedKey[0] );
     }
+#endif
 
     if ( upperKey >= 'a' && upperKey <= 'z' ) // lower
         upperKey = std::toupper( upperKey );

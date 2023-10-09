@@ -17,7 +17,9 @@ The goal which we set when designing MeshLib was to value simplicity and perform
 ## Some useful links
 * [MeshInspector](https://github.com/MeshInspector/MeshInspector/) is a free application based on MeshLib
 
-* [MeshInspector online web-browser version](https://meshinspector.com/)
+* [MeshInspector online web-browser version](https://app.meshinspector.com/) (simple email sign-in is required)
+
+* [MeshInspector web-site](https://meshinspector.com/)
 
 * [Comparison of MeshLib vs VTK library](https://docs.google.com/presentation/d/1Tw5ppmWoF-aRwuVqa6xdMSEjmEd5Y6O2ny7Gu8iQBos/edit?usp=sharing)
 

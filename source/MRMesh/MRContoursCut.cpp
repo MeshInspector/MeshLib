@@ -1319,28 +1319,47 @@ OneMeshContours convertSurfacePathsToMeshContours( const Mesh& mesh, const std::
 void invalidateFace( MeshTopology& topology, FullRemovedFacesInfo& removedFaceInfo, int contId, int interId, EdgeId leftEdge, size_t oldEdgesSize )
 {
     auto thisFace = topology.left( leftEdge );
-    if ( thisFace.valid() )
+    if ( !thisFace.valid() )
+        return;
+    // fill removed tris
+    auto& removedInfo = removedFaceInfo[contId][interId];
+    removedInfo.f = thisFace;
+    int leftEdgesCount = 0;
+    for ( auto e : leftRing( topology, thisFace ) )
     {
-        // fill removed tris
-        auto& removedInfo = removedFaceInfo[contId][interId];
-        removedInfo.f = thisFace;
-        int leftEdgesCount = 0;
-        for ( auto e : leftRing( topology, thisFace ) )
+        // we don't want to add new edges to this info structure
+        // still they can be present in because of splices done before
+        if ( e < oldEdgesSize )
         {
-            // we don't want to add new edges to this info structure
-            // still they can be present in because of splices done before
-            if ( e < oldEdgesSize )
+            if ( leftEdgesCount > 2 )
             {
-                if ( leftEdgesCount > 2 )
+                assert( false );
+                break;
+            }
+            removedInfo.leftRing[leftEdgesCount] = e;
+            ++leftEdgesCount;
+        }
+    }
+    topology.setLeft( leftEdge, {} );
+}
+
+void iterateFindRemovedFaceInfo( FullRemovedFacesInfo& removedFaces, int contId, int interId, EdgeId leftEdge )
+{
+    for ( int backContId = contId; backContId >= 0; --backContId )
+    {
+        int prevInter = backContId == contId ? ( interId - 1 ) : ( int( removedFaces[backContId].size() ) - 1 );
+        for ( int backInterId = prevInter; backInterId >= 0; --backInterId )
+        {
+            const auto& removedFace = removedFaces[backContId][backInterId];
+            for ( auto e : removedFace.leftRing )
+            {
+                if ( e == leftEdge )
                 {
-                    assert( false );
-                    break;
+                    removedFaces[contId][interId] = removedFace;
+                    return;
                 }
-                removedInfo.leftRing[leftEdgesCount] = e;
-                ++leftEdgesCount;
             }
         }
-        topology.setLeft( leftEdge, {} );
     }
 }
 
@@ -1529,7 +1548,10 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
                     .orgEdgeInLeftTri = newEdgeId,
                     .beforeSortIndex = int( edgeData.size() ) } );
                 // fill removed tris
-                removedFacesInfo[intersectionId].f = mesh.topology.left( thisEdge );
+                if ( auto f = mesh.topology.left( thisEdge ) )
+                    removedFacesInfo[intersectionId].f = f;
+                else
+                    iterateFindRemovedFaceInfo( res.removedFaces, contourId, intersectionId, thisEdge );
             }
             // fill removed tris
             if ( inter.primitiveId.index() == OneMeshIntersection::Face )
@@ -1880,7 +1902,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     fixOrphans( mesh, preRes.paths, preRes.removedFaces, params.new2OldMap );
 
     res.fbsWithCountourIntersections = getBadFacesAfterCut( mesh.topology, preRes, preRes.removedFaces );
-    if ( params.forceFillMode_ == CutMeshParameters::ForceFill::None && res.fbsWithCountourIntersections.count() > 0 )
+    if ( params.forceFillMode == CutMeshParameters::ForceFill::None && res.fbsWithCountourIntersections.count() > 0 )
         return res;
 
     // find one edge for every hole to fill
@@ -1910,8 +1932,8 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         for ( int edgeId = 0; edgeId < path.size(); ++edgeId )
         {
             FaceId oldf = preRes.removedFaces[pathId][edgeId].f;
-            if ( !oldf.valid() || 
-                ( params.forceFillMode_ == CutMeshParameters::ForceFill::Good && res.fbsWithCountourIntersections.test( oldf ) ) )
+            if ( !oldf.valid() ||
+                ( params.forceFillMode == CutMeshParameters::ForceFill::Good && res.fbsWithCountourIntersections.test( oldf ) ) )
                 continue;
             if ( oldEdgesInfo[edgeId].hasLeft && !mesh.topology.left( path[edgeId] ).valid() )
                 addHoleDesc( path[edgeId], oldf );

@@ -210,6 +210,36 @@ Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
     }
 }
 
+Expected<Mesh, std::string> mcShellMeshRegion( const Mesh& mesh, const FaceBitSet& region, float offset,
+    const BaseShellParameters& params, Vector<VoxelId, FaceId> * outMap )
+{
+    MR_TIMER
+
+    DistanceVolumeParams dvParams;
+    dvParams.cb = subprogress( params.callBack, 0.0f, 0.5f );
+    auto box = mesh.getBoundingBox();
+    auto absOffset = std::abs( offset );
+    auto expansion = 3.0f * Vector3f::diagonal( params.voxelSize ) + 2.0f * Vector3f::diagonal( absOffset );
+    dvParams.origin = box.min - expansion;
+    dvParams.voxelSize = Vector3f::diagonal( params.voxelSize );
+    dvParams.dimensions = Vector3i( ( box.max + expansion - dvParams.origin ) / params.voxelSize ) + Vector3i::diagonal( 1 );
+
+    auto volume = meshRegionToIndicatorVolume( mesh, region, offset, dvParams );
+    if ( !volume )
+        return unexpectedOperationCanceled();
+
+    MarchingCubesParams vmParams;
+    vmParams.origin = dvParams.origin;
+    vmParams.iso = offset;
+    vmParams.cb = subprogress( params.callBack, 0.5f, 1.0f );
+    vmParams.lessInside = true;
+    vmParams.outVoxelPerFaceMap = outMap;
+    auto meshRes = marchingCubes( std::move( *volume ), vmParams );
+    if ( !meshRes )
+        return unexpectedOperationCanceled();
+    return std::move( *meshRes );
+}
+
 Expected<MR::Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float offset, const SharpOffsetParameters& params )
 {
     MR_TIMER

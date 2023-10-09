@@ -22,7 +22,6 @@ struct MeshProjectionResult
     float distSq = 0;
 };
 
-/// 
 /**
  * \brief computes the closest point on mesh (or its region) to given point
  * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exits returning upDistLimitSq and no valid point
@@ -31,6 +30,21 @@ struct MeshProjectionResult
  * \param skipFace this triangle will be skipped and never returned as a projection
  */
 [[nodiscard]] MRMESH_API MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp,
+    float upDistLimitSq = FLT_MAX,
+    const AffineXf3f * xf = nullptr,
+    float loDistLimitSq = 0,
+    FaceId skipFace = {} );
+
+/**
+ * \brief computes the closest point on mesh (or its region) to given point
+ * \param tree explicitly given BVH-tree for whole mesh or part of mesh we are searching projection on,
+ * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exits returning upDistLimitSq and no valid point
+ * \param xf mesh-to-point transformation, if not specified then identity transformation is assumed
+ * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
+ * \param skipFace this triangle will be skipped and never returned as a projection
+ */
+[[nodiscard]] MRMESH_API MeshProjectionResult findProjectionSubtree( const Vector3f & pt,
+    const MeshPart & mp, const AABBTree & tree,
     float upDistLimitSq = FLT_MAX,
     const AffineXf3f * xf = nullptr,
     float loDistLimitSq = 0,

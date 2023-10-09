@@ -10,50 +10,10 @@
 #include "MRLine3.h"
 #include "MRMeshIntersect.h"
 #include "MRParallelFor.h"
-#include "MRPch/MRTBB.h"
+#include <tuple>
 
 namespace MR
 {
-
-class MinMaxCalc
-{
-public:
-    MinMaxCalc( const std::vector<float>& vec )
-    : vec_( vec )
-    {}
-
-    MinMaxCalc(const MinMaxCalc& other, tbb::split)
-    : min_(other.min_)
-    , max_(other.max_)
-    ,vec_( other.vec_)
-    {}
-
-    void operator()( const tbb::blocked_range<size_t>& r )
-    {
-        for ( auto i = r.begin(); i < r.end(); ++i )
-        {
-            if ( vec_[i] < min_ )
-                min_ = vec_[i];
-
-            if ( vec_[i] > max_ )
-                max_ = vec_[i];
-        }
-    }
-
-    void join( const MinMaxCalc& other )
-    {
-        min_ = std::min( min_, other.min_ );
-        max_ = std::max( max_, other.max_ );
-    }
-
-    float min() { return min_; }
-    float max() { return max_; }
-
-private:
-    float min_{ FLT_MAX };
-    float max_{ -FLT_MAX };
-    const std::vector<float>& vec_;
-};
 
 Expected<SimpleVolume, std::string> meshToDistanceVolume( const Mesh& mesh, const MeshToDistanceVolumeParams& params /*= {} */ )
 {
@@ -81,61 +41,45 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const Mesh& mesh, cons
         {
             return unexpected( std::move( d.error() ) );
         }
-        MinMaxCalc minMaxCalc( res.data );
-        tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, res.data.size() ), minMaxCalc );
-        res.min = minMaxCalc.min();
-        res.max = minMaxCalc.max();
-        return res;
     }
-
-    tbb::enumerable_thread_specific<std::pair<float, float>> minMax( std::pair<float, float>{ FLT_MAX, -FLT_MAX } );
-
-    if ( !ParallelFor( size_t( 0 ), indexer.size(), [&]( size_t i )
+    else
     {
-        auto coord = Vector3f( indexer.toPos( VoxelId( i ) ) ) + Vector3f::diagonal( 0.5f );
-        auto voxelCenter = params.origin + mult( params.voxelSize, coord );
-        float dist{ 0.0f };
-        if ( params.signMode != SignDetectionMode::ProjectionNormal )
-            dist = std::sqrt( findProjection( voxelCenter, mesh, params.maxDistSq, nullptr, params.minDistSq ).distSq );
-        else
+        if ( !ParallelFor( size_t( 0 ), indexer.size(), [&]( size_t i )
         {
-            auto s = findSignedDistance( voxelCenter, mesh, params.maxDistSq, params.minDistSq );
-            dist = s ? s->dist : cQuietNan;
-        }
-
-        if ( !isNanFast( dist ) )
-        {
-            bool changeSign = false;
-            if ( params.signMode == SignDetectionMode::WindingRule )
+            auto coord = Vector3f( indexer.toPos( VoxelId( i ) ) ) + Vector3f::diagonal( 0.5f );
+            auto voxelCenter = params.origin + mult( params.voxelSize, coord );
+            float dist{ 0.0f };
+            if ( params.signMode != SignDetectionMode::ProjectionNormal )
+                dist = std::sqrt( findProjection( voxelCenter, mesh, params.maxDistSq, nullptr, params.minDistSq ).distSq );
+            else
             {
-                int numInters = 0;
-                rayMeshIntersectAll( mesh, Line3d( Vector3d( voxelCenter ), Vector3d::plusX() ),
-                    [&numInters] ( const MeshIntersectionResult& ) mutable
-                {
-                    ++numInters;
-                    return true;
-                } );
-                changeSign = numInters % 2 == 1; // inside
+                auto s = findSignedDistance( voxelCenter, mesh, params.maxDistSq, params.minDistSq );
+                dist = s ? s->dist : cQuietNan;
             }
-            if ( changeSign )
-                dist = -dist;
-            auto& localMinMax = minMax.local();
-            if ( dist < localMinMax.first )
-                localMinMax.first = dist;
-            if ( dist > localMinMax.second )
-                localMinMax.second = dist;
-        }
-        res.data[i] = dist;
-    }, params.cb ) )
-        return unexpectedOperationCanceled();
 
-    for ( const auto& [min, max] : minMax )
-    {
-        if ( min < res.min )
-            res.min = min;
-        if ( max > res.max )
-            res.max = max;
+            if ( !isNanFast( dist ) )
+            {
+                bool changeSign = false;
+                if ( params.signMode == SignDetectionMode::WindingRule )
+                {
+                    int numInters = 0;
+                    rayMeshIntersectAll( mesh, Line3d( Vector3d( voxelCenter ), Vector3d::plusX() ),
+                        [&numInters] ( const MeshIntersectionResult& ) mutable
+                    {
+                        ++numInters;
+                        return true;
+                    } );
+                    changeSign = numInters % 2 == 1; // inside
+                }
+                if ( changeSign )
+                    dist = -dist;
+            }
+            res.data[i] = dist;
+        }, params.cb ) )
+            return unexpectedOperationCanceled();
     }
+
+    std::tie( res.min, res.max ) = parallelMinMax( res.data );
     return res;
 }
 

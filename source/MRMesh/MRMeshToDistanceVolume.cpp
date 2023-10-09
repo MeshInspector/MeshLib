@@ -118,7 +118,7 @@ Expected<SimpleVolume, std::string> meshRegionToIndicatorVolume( const Mesh& mes
         const auto minDistSq = sqr( std::max( distToNotRegion - voxelSize, 0.0f ) );
         const auto distToRegion = std::sqrt( findProjectionSubtree( voxelCenter, mesh, regionTree, maxDistSq, nullptr, minDistSq ).distSq );
 
-        res.data[i] = distToRegion - distToRegion;
+        res.data[i] = distToRegion - distToNotRegion;
     }, params.cb ) )
         return unexpectedOperationCanceled();
 

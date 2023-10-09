@@ -230,7 +230,7 @@ Expected<Mesh, std::string> mcShellMeshRegion( const Mesh& mesh, const FaceBitSe
 
     MarchingCubesParams vmParams;
     vmParams.origin = dvParams.origin;
-    vmParams.iso = offset;
+    vmParams.iso = 0;
     vmParams.cb = subprogress( params.callBack, 0.5f, 1.0f );
     vmParams.lessInside = true;
     vmParams.outVoxelPerFaceMap = outMap;

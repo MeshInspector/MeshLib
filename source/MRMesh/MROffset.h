@@ -83,7 +83,7 @@ struct SharpOffsetParameters : BaseOffsetParameters
 /// Constructs a shell around selected mesh region with the properties that every point on the shall must
 ///  1. be located not further than given distance from selected mesh part,
 ///  2. be located not closer to not-selected mesh part than to selected mesh part.
-[[nodiscard]] Expected<Mesh, std::string> mcShellMeshRegion( const Mesh& mesh, const FaceBitSet& region, float offset,
+[[nodiscard]] MRMESH_API Expected<Mesh, std::string> mcShellMeshRegion( const Mesh& mesh, const FaceBitSet& region, float offset,
     const BaseShellParameters& params, Vector<VoxelId, FaceId> * outMap = nullptr );
 
 /// Offsets mesh by converting it to voxels and back

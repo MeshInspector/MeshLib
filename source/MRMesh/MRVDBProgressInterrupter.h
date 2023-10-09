@@ -18,7 +18,8 @@ struct ProgressInterrupter : openvdb::util::NullInterrupter
         , progressThreadId_{ std::this_thread::get_id() } {}
     virtual bool wasInterrupted( int percent = -1 ) override
     {
-        wasInterrupted_ = false;
+        // OpenVdb uses worker threads from pool, in addition to the caller thread.
+        // It is assumed that the callback is periodically called in the caller thread.
         if ( cb_ && progressThreadId_ == std::this_thread::get_id() )
             wasInterrupted_ = !cb_( float( std::clamp( percent, 0, 100 ) ) / 100.0f );
         return wasInterrupted_;

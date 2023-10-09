@@ -382,17 +382,17 @@ namespace MeshLoad
 {
 
 Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const std::filesystem::path& file, bool combineAllObjects,
-                                                                    ProgressCallback callback )
+                                                                const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ios::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromSceneObjFile( in, combineAllObjects, file.parent_path(), callback ), file );
+    return addFileNameInError( fromSceneObjFile( in, combineAllObjects, file.parent_path(), settings ), file );
 }
 
 Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream& in, bool combineAllObjects, const std::filesystem::path& dir,
-                                                                    ProgressCallback callback )
+                                                                const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
@@ -400,15 +400,18 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream& in
     if ( !data.has_value() )
         return unexpected( data.error() );
 
-    if ( callback && !callback( 0.25f ) )
+    if ( !reportProgress(settings.callback, 0.25f) )
         return unexpected( "Loading canceled" );
     // TODO: redefine callback
 
-    return fromSceneObjFile( data->data(), data->size(), combineAllObjects, dir, callback );
+    MeshLoadSettings newSettings = settings;
+    newSettings.callback = subprogress( settings.callback, 0.25f, 1.f );
+
+    return fromSceneObjFile( data->data(), data->size(), combineAllObjects, dir, newSettings );
 }
 
 Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data, size_t size, bool combineAllObjects, const std::filesystem::path& dir,
-                                                                    ProgressCallback callback )
+                                                                const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
@@ -447,11 +450,22 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
                     vs[i] -= minV;
             }
 
+            FaceBitSet deletedFaces;
             std::vector<MeshBuilder::VertDuplication> dups;
+            MeshBuilder::BuildSettings buildSettings;
+            if ( settings.deletedFaceCount )
+            {
+                deletedFaces = FaceBitSet( t.size() * 2 );
+                deletedFaces.set();
+                buildSettings.region = &deletedFaces;
+            }
             result.mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices(
-                VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), t, &dups );
+                VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), t, &dups, buildSettings );
+            if ( settings.duplicatedVertexCount )
+                *settings.duplicatedVertexCount = int( dups.size() );
+            if ( settings.deletedFaceCount )
+                *settings.deletedFaceCount = int( deletedFaces.count() );
             t.clear();
-
 
             VertHashMap dst2Src;
             dst2Src.reserve( dups.size() );
@@ -506,13 +520,13 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
     const auto newlines = splitByLines( data, size );
     const auto lineCount = newlines.size() - 1;
 
-    if ( callback && !callback( 0.40f ) )
+    if ( !reportProgress( settings.callback, 0.4f ) )
         return unexpected( "Loading canceled" );
 
     timer.restart( "group element lines" );
     const auto groups = groupLines<ObjElement>( data, size, newlines );
 
-    if ( callback && !callback( 0.50f ) )
+    if ( !reportProgress( settings.callback, 0.5f ) )
         return unexpected( "Loading canceled" );
 
     auto parseVertices = [&] ( size_t begin, size_t end, std::string& parseError )
@@ -767,7 +781,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
         if ( !parseError.empty() )
             return unexpected( parseError );
 
-        if ( callback && !callback( 0.50f + 0.50f * ( (float)group.end / (float)lineCount ) ) )
+        if ( !reportProgress( subprogress( settings.callback, 0.5f, 1.f ), ( float )group.end / ( float )lineCount ) )
             return unexpected( "Loading canceled" );
     }
 

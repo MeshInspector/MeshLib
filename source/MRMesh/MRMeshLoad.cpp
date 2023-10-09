@@ -148,7 +148,7 @@ Expected<Mesh, std::string> fromObj( std::istream& in, const MeshLoadSettings& s
 {
     MR_TIMER
 
-    auto objs = fromSceneObjFile( in, true, {}, settings.callback );
+    auto objs = fromSceneObjFile( in, true, {}, settings );
     if ( !objs.has_value() )
         return unexpected( objs.error() );
     if ( objs->size() != 1 )

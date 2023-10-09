@@ -198,7 +198,7 @@ static FaceBitSet getLocalRegion( FaceBitSet * region, size_t tSize )
 {
     FaceBitSet res;
     if ( region )
-        res = std::move( *region );
+        res = *region;
     else
     {
         res = FaceBitSet( tSize );
@@ -773,6 +773,7 @@ MeshTopology fromTrianglesDuplicatingNonManifoldVertices( Triangulation & t,
             settings.region->clear();
         return res;
     }
+
     res = fromTriangles( t, settings );
     return res;
 }

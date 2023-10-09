@@ -22,6 +22,7 @@
 #include "MRSerializer.h"
 #include "MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRMeshLoadSettings.h"
 
 #ifndef MRMESH_NO_GLTF
 #include "MRGltfSerializer.h"
@@ -239,7 +240,13 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
     
     if ( ext == "*.obj" )
     {
-        auto res = MeshLoad::fromSceneObjFile( filename, false, callback );
+        MeshLoadSettings settings;
+        settings.callback = callback;
+        int deletedFaceCount = 0;
+        settings.deletedFaceCount = &deletedFaceCount;
+        int duplicatedVertexCount = 0;
+        settings.duplicatedVertexCount = &duplicatedVertexCount;
+        auto res = MeshLoad::fromSceneObjFile( filename, false, settings );
         if ( res.has_value() )
         {
             std::vector<std::shared_ptr<Object>> objects( res.value().size() );
@@ -267,6 +274,14 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                 objects[i] = std::dynamic_pointer_cast< Object >( objectMesh );
             }
             result = objects;
+
+            if ( loadWarn )
+            {
+                if ( deletedFaceCount )
+                    *loadWarn = fmt::format( "Deleted faces count: {}", deletedFaceCount );
+                if ( duplicatedVertexCount )
+                    *loadWarn += fmt::format( "{}Duplicated vertices count: {}", loadWarn->empty() ? "" : "\n", duplicatedVertexCount );
+            }
         }
         else
             result = unexpected( res.error() );

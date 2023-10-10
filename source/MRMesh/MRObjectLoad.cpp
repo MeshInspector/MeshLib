@@ -242,8 +242,8 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
     {
         MeshLoadSettings settings;
         settings.callback = callback;
-        int deletedFaceCount = 0;
-        settings.deletedFaceCount = &deletedFaceCount;
+        int skipepdFaceCount = 0;
+        settings.skipepdFaceCount = &skipepdFaceCount;
         int duplicatedVertexCount = 0;
         settings.duplicatedVertexCount = &duplicatedVertexCount;
         auto res = MeshLoad::fromSceneObjFile( filename, false, settings );
@@ -277,8 +277,8 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
 
             if ( loadWarn )
             {
-                if ( deletedFaceCount )
-                    *loadWarn = fmt::format( "Deleted faces count: {}", deletedFaceCount );
+                if ( skipepdFaceCount )
+                    *loadWarn = fmt::format( "Skipped faces count: {}", skipepdFaceCount );
                 if ( duplicatedVertexCount )
                     *loadWarn += fmt::format( "{}Duplicated vertices count: {}", loadWarn->empty() ? "" : "\n", duplicatedVertexCount );
             }
@@ -299,11 +299,11 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
     {
         MeshLoadSettings settings;
         settings.callback = callback;
-        int deletedFaceCount = 0;
+        int skipepdFaceCount = 0;
         int duplicatedVertexCount = 0;
         if ( loadWarn )
         {
-            settings.deletedFaceCount = &deletedFaceCount;
+            settings.skipepdFaceCount = &skipepdFaceCount;
             settings.duplicatedVertexCount = &duplicatedVertexCount;
         }
         auto object = makeObjectFromMeshFile( filename, settings );
@@ -313,8 +313,8 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
             result = { *object };
             if ( loadWarn )
             {
-                if ( deletedFaceCount )
-                    *loadWarn = fmt::format( "Deleted faces count: {}", deletedFaceCount );
+                if ( skipepdFaceCount )
+                    *loadWarn = fmt::format( "Skipped faces count: {}", skipepdFaceCount );
                 if ( duplicatedVertexCount )
                     *loadWarn += fmt::format( "{}Duplicated vertices count: {}", loadWarn->empty() ? "" : "\n", duplicatedVertexCount );
             }

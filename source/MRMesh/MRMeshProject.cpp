@@ -7,10 +7,8 @@
 namespace MR
 {
 
-MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq, FaceId skipFace )
+MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart & mp, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq, FaceId skipFace )
 {
-    const AABBTree & tree = mp.mesh.getAABBTree();
-
     MeshProjectionResult res;
     res.distSq = upDistLimitSq;
     if ( tree.nodes().empty() )
@@ -99,6 +97,11 @@ MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, f
     }
 
     return res;
+}
+
+MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq, FaceId skipFace )
+{
+    return findProjectionSubtree( pt, mp, mp.mesh.getAABBTree(), upDistLimitSq, xf, loDistLimitSq, skipFace );
 }
 
 std::optional<SignedDistanceToMeshResult> findSignedDistance( const Vector3f & pt, const MeshPart & mp,

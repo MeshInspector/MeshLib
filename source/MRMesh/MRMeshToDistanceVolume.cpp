@@ -83,9 +83,47 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const Mesh& mesh, cons
     return res;
 }
 
-Expected<SimpleVolume, std::string> meshToSimpleVolume( const Mesh& mesh, const MeshToDistanceVolumeParams& params )
+Expected<SimpleVolume, std::string> meshRegionToIndicatorVolume( const Mesh& mesh, const FaceBitSet& region,
+    float offset, const DistanceVolumeParams& params )
 {
-    return meshToDistanceVolume( mesh, params );
+    MR_TIMER
+    if ( !region.any() )
+    {
+        assert( false );
+        return unexpected( "empty region" );
+    }
+
+    SimpleVolume res;
+    res.voxelSize = params.voxelSize;
+    res.dims = params.dimensions;
+    VolumeIndexer indexer( res.dims );
+    res.data.resize( indexer.size() );
+
+    AABBTree regionTree( { mesh, &region } );
+    const FaceBitSet notRegion = mesh.topology.getValidFaces() - region;
+    //TODO: check that notRegion is not empty
+    AABBTree notRegionTree( { mesh, &notRegion } );
+    
+    const auto voxelSize = std::max( { params.voxelSize.x, params.voxelSize.y, params.voxelSize.z } );
+
+    if ( !ParallelFor( size_t( 0 ), indexer.size(), [&]( size_t i )
+    {
+        const auto coord = Vector3f( indexer.toPos( VoxelId( i ) ) ) + Vector3f::diagonal( 0.5f );
+        auto voxelCenter = params.origin + mult( params.voxelSize, coord );
+
+        // minimum of given offset distance parameter and the distance to not-region part of mesh
+        const auto distToNotRegion = std::sqrt( findProjectionSubtree( voxelCenter, mesh, notRegionTree, sqr( offset ) ).distSq );
+
+        const auto maxDistSq = sqr( distToNotRegion + voxelSize );
+        const auto minDistSq = sqr( std::max( distToNotRegion - voxelSize, 0.0f ) );
+        const auto distToRegion = std::sqrt( findProjectionSubtree( voxelCenter, mesh, regionTree, maxDistSq, nullptr, minDistSq ).distSq );
+
+        res.data[i] = distToRegion - distToNotRegion;
+    }, params.cb ) )
+        return unexpectedOperationCanceled();
+
+    std::tie( res.min, res.max ) = parallelMinMax( res.data );
+    return res;
 }
 
 } //namespace MR

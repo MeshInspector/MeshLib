@@ -11,18 +11,22 @@
 namespace MR
 {
 
-struct BaseOffsetParameters
+struct BaseShellParameters
 {
     /// Size of voxel in grid conversions
     /// if value is negative, it is calculated automatically (mesh bounding box are divided to 5e6 voxels)
     float voxelSize{ -1.0f };
 
+    /// Progress callback
+    ProgressCallback callBack;
+};
+
+struct BaseOffsetParameters : BaseShellParameters
+{
     /// if not nullopt then SimpleVolume will be used for offsetting,
     /// and this value will determine the method to compute distance sign
     std::optional<SignDetectionMode> simpleVolumeSignMode;
 
-    /// Progress callback 
-    ProgressCallback callBack{};
     /// defines particular implementation of IFastWindingNumber interface that will compute windings. If it is not specified, default FastWindingNumber is used
     std::shared_ptr<IFastWindingNumber> fwn;
 };
@@ -75,6 +79,12 @@ struct SharpOffsetParameters : BaseOffsetParameters
 /// Offsets mesh by converting it to voxels and back using standard Marching Cubes, as opposed to Dual Marching Cubes in offsetMesh(...)
 [[nodiscard]] MRMESH_API Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, 
     const BaseOffsetParameters& params = {}, Vector<VoxelId, FaceId>* outMap = nullptr );
+
+/// Constructs a shell around selected mesh region with the properties that every point on the shall must
+///  1. be located not further than given distance from selected mesh part,
+///  2. be located not closer to not-selected mesh part than to selected mesh part.
+[[nodiscard]] MRMESH_API Expected<Mesh, std::string> mcShellMeshRegion( const Mesh& mesh, const FaceBitSet& region, float offset,
+    const BaseShellParameters& params, Vector<VoxelId, FaceId> * outMap = nullptr );
 
 /// Offsets mesh by converting it to voxels and back
 /// post process result using reference mesh to sharpen features

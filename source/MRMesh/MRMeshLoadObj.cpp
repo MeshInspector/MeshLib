@@ -453,7 +453,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
             FaceBitSet skippedFaces;
             std::vector<MeshBuilder::VertDuplication> dups;
             MeshBuilder::BuildSettings buildSettings;
-            if ( settings.skipepdFaceCount )
+            if ( settings.skippedFaceCount )
             {
                 skippedFaces = FaceBitSet( t.size() );
                 skippedFaces.set();
@@ -463,8 +463,8 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
                 VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), t, &dups, buildSettings );
             if ( settings.duplicatedVertexCount )
                 *settings.duplicatedVertexCount = int( dups.size() );
-            if ( settings.skipepdFaceCount )
-                *settings.skipepdFaceCount = int( skippedFaces.count() );
+            if ( settings.skippedFaceCount )
+                *settings.skippedFaceCount = int( skippedFaces.count() );
             t.clear();
 
             VertHashMap dst2Src;

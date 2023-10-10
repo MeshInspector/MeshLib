@@ -123,15 +123,15 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
 
     FaceBitSet skippedFaces;
     MeshBuilder::BuildSettings buildSettings;
-    if ( settings.skipepdFaceCount )
+    if ( settings.skippedFaceCount )
     {
         skippedFaces = FaceBitSet( t.size() );
         skippedFaces.set();
         buildSettings.region = &skippedFaces;
     }
     auto res = Mesh::fromTriangles( std::move( points ), t, buildSettings );
-    if ( settings.skipepdFaceCount )
-        *settings.skipepdFaceCount = int( skippedFaces.count() );
+    if ( settings.skippedFaceCount )
+        *settings.skippedFaceCount = int( skippedFaces.count() );
     return res;
 }
 
@@ -282,7 +282,7 @@ Expected<Mesh, std::string> fromBinaryStl( std::istream& in, const MeshLoadSetti
     if ( settings.duplicatedVertexCount )
         dupsPtr = &dups;
     MeshBuilder::BuildSettings buildSettings;
-    if ( settings.skipepdFaceCount )
+    if ( settings.skippedFaceCount )
     {
         skippedFaces = FaceBitSet( t.size() );
         skippedFaces.set();
@@ -291,8 +291,8 @@ Expected<Mesh, std::string> fromBinaryStl( std::istream& in, const MeshLoadSetti
     const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( vi.takePoints(), t, dupsPtr, buildSettings );
     if ( settings.duplicatedVertexCount )
         *settings.duplicatedVertexCount = int( dups.size() );
-    if ( settings.skipepdFaceCount )
-        *settings.skipepdFaceCount = int( skippedFaces.count() );
+    if ( settings.skippedFaceCount )
+        *settings.skippedFaceCount = int( skippedFaces.count() );
     return res;
 }
 
@@ -388,7 +388,7 @@ Expected<Mesh, std::string> fromASCIIStl( std::istream& in, const MeshLoadSettin
     if ( settings.duplicatedVertexCount )
         dupsPtr = &dups;
     MeshBuilder::BuildSettings buildSettings;
-    if ( settings.skipepdFaceCount )
+    if ( settings.skippedFaceCount )
     {
         skippedFaces = FaceBitSet( t.size() );
         skippedFaces.set();
@@ -397,8 +397,8 @@ Expected<Mesh, std::string> fromASCIIStl( std::istream& in, const MeshLoadSettin
     const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), t, dupsPtr, buildSettings );
     if ( settings.duplicatedVertexCount )
         *settings.duplicatedVertexCount = int( dups.size() );
-    if ( settings.skipepdFaceCount )
-        *settings.skipepdFaceCount = int( skippedFaces.count() );
+    if ( settings.skippedFaceCount )
+        *settings.skippedFaceCount = int( skippedFaces.count() );
     return res;
 }
 
@@ -491,15 +491,15 @@ Expected<Mesh, std::string> fromPly( std::istream& in, const MeshLoadSettings& s
             } : settings.callback;
 
             MeshBuilder::BuildSettings buildSettings;
-            if ( settings.skipepdFaceCount )
+            if ( settings.skippedFaceCount )
             {
                 skippedFaces = FaceBitSet( tris.size() );
                 skippedFaces.set();
                 buildSettings.region = &skippedFaces;
             }
             res.topology = MeshBuilder::fromTriangles( tris, buildSettings, partedProgressCb );
-            if ( settings.skipepdFaceCount )
-                *settings.skipepdFaceCount += int( skippedFaces.count() );
+            if ( settings.skippedFaceCount )
+                *settings.skippedFaceCount += int( skippedFaces.count() );
             if ( settings.callback && ( !settings.callback( float( posCurent - posStart ) / streamSize ) || isCanceled ) )
                 return unexpected( std::string( "Loading canceled" ) );
             gotFaces = true;
@@ -625,15 +625,15 @@ Expected<Mesh, std::string> fromCtm( std::istream& in, const MeshLoadSettings& s
 
     FaceBitSet skippedFaces;
     MeshBuilder::BuildSettings buildSettings;
-    if ( settings.skipepdFaceCount )
+    if ( settings.skippedFaceCount )
     {
         skippedFaces = FaceBitSet( t.size() );
         skippedFaces.set();
         buildSettings.region = &skippedFaces;
     }
     mesh.topology = MeshBuilder::fromTriangles( t, buildSettings );
-    if ( settings.skipepdFaceCount )
-        *settings.skipepdFaceCount = int( skippedFaces.count() );
+    if ( settings.skippedFaceCount )
+        *settings.skippedFaceCount = int( skippedFaces.count() );
 
     return mesh;
 }
@@ -730,7 +730,7 @@ Expected<Mesh, std::string> from3mfModel( std::istream& in, const MeshLoadSettin
     if ( settings.duplicatedVertexCount )
         dupsPtr = &dups;
     MeshBuilder::BuildSettings buildSettings;
-    if ( settings.skipepdFaceCount )
+    if ( settings.skippedFaceCount )
     {
         skippedFaces = FaceBitSet( tris.size() );
         skippedFaces.set();
@@ -739,8 +739,8 @@ Expected<Mesh, std::string> from3mfModel( std::istream& in, const MeshLoadSettin
     const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( vertexCoordinates ), tris, dupsPtr, buildSettings );
     if ( settings.duplicatedVertexCount )
         *settings.duplicatedVertexCount = int( dups.size() );
-    if ( settings.skipepdFaceCount )
-        *settings.skipepdFaceCount = int( skippedFaces.count() );
+    if ( settings.skippedFaceCount )
+        *settings.skippedFaceCount = int( skippedFaces.count() );
     return res;
 }
 #endif

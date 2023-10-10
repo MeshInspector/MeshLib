@@ -450,21 +450,21 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
                     vs[i] -= minV;
             }
 
-            FaceBitSet deletedFaces;
+            FaceBitSet skippedFaces;
             std::vector<MeshBuilder::VertDuplication> dups;
             MeshBuilder::BuildSettings buildSettings;
-            if ( settings.deletedFaceCount )
+            if ( settings.skippedFaceCount )
             {
-                deletedFaces = FaceBitSet( t.size() * 2 );
-                deletedFaces.set();
-                buildSettings.region = &deletedFaces;
+                skippedFaces = FaceBitSet( t.size() );
+                skippedFaces.set();
+                buildSettings.region = &skippedFaces;
             }
             result.mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices(
                 VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), t, &dups, buildSettings );
             if ( settings.duplicatedVertexCount )
                 *settings.duplicatedVertexCount = int( dups.size() );
-            if ( settings.deletedFaceCount )
-                *settings.deletedFaceCount = int( deletedFaces.count() );
+            if ( settings.skippedFaceCount )
+                *settings.skippedFaceCount = int( skippedFaces.count() );
             t.clear();
 
             VertHashMap dst2Src;

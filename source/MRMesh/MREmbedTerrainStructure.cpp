@@ -341,6 +341,8 @@ void TerrainEmbedder::connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours
 
 void TerrainEmbedder::fill_( size_t oldVertSize, size_t oldEdgesSize )
 {
+    auto verticaMetric = getVerticalStitchMetric( result_,Vector3f::plusZ() );
+
     FillHoleMetric metric;
     metric.triangleMetric = [&] ( VertId a, VertId b, VertId c )
     {
@@ -348,11 +350,7 @@ void TerrainEmbedder::fill_( size_t oldVertSize, size_t oldEdgesSize )
             ( a >= oldVertSize && b >= oldVertSize && c >= oldVertSize ) )
             return DBL_MAX; // no triangles on same part
 
-        Vector3d aP = Vector3d( result_.points[a] );
-        Vector3d bP = Vector3d( result_.points[b] );
-        Vector3d cP = Vector3d( result_.points[c] );
-
-        return dblArea( aP, bP, cP );
+        return verticaMetric.triangleMetric( a, b, c );
     };
     auto edgesSize = result_.topology.undirectedEdgeSize();
 

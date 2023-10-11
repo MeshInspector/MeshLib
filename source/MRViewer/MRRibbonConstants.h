@@ -38,7 +38,7 @@ constexpr float cHeaderQuickAccessXSpacing = 12.0f;
 constexpr float cHeaderQuickAccessIconSize = 14.0f;
 constexpr float cHeaderQuickAccessFrameSize = 24.0f;
 
-constexpr float cMiddleIconSize = 16.0f;
+constexpr float cMiddleIconSize = 15.0f;
 constexpr float cSmallIconSize = 10.0f;
 constexpr float cQuickAccessBarHeight = 40.0f;
 

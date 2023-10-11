@@ -1071,6 +1071,9 @@
     <ClInclude Include="MRMeshLoadSettings.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRChangeColoringType.h">
+      <Filter>Source Files\History</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

@@ -129,6 +129,9 @@ Expected<Mesh, std::string> TerrainEmbedder::run()
     if ( !prepCut.has_value() )
         return unexpected( prepCut.error() );
 
+    if ( prepCut->contours.size() > 1 )
+        return unexpected( "Non-trivial contours are not supported yet" );
+
     auto cutTer = cutTerrain( *prepCut );
     if ( !cutTer.has_value() )
         return unexpected( cutTer.error() );
@@ -310,6 +313,34 @@ void TerrainEmbedder::connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours
     WholeEdgeMap emap;
     result_.addPart( std::move( cutStructure_ ), nullptr, nullptr, &emap );
 
+    int prevBaseInd = 0;
+    int* prevMptIndexPtr{ nullptr };
+    for ( int i = 0; i < mmc.map.size(); ++i )
+    {
+        for ( int j = 0; j < mmc.map[i].size(); ++j )
+        {
+            auto cutEdgeIndex = mmc.map[i][j];
+            auto initMtpIndex = mmc.filtBowTiesMap[i][j];
+            if ( initMtpIndex == -1 || cutEdgeIndex == -1 )
+                continue;
+
+            auto baseEdgeIndex = findOffsetContourIndex_( initMtpIndex, mmc.offsetMap );
+            if ( baseEdgeIndex + 1 >= mmc.offsetMap.size() )
+                continue;
+
+            if ( prevMptIndexPtr && baseEdgeIndex < prevBaseInd )
+            {
+                *prevMptIndexPtr = -1; // disable doubtable mappings
+                // restart after filter
+                i = 0;
+                j = 0;
+            }
+            
+            prevMptIndexPtr = &mmc.filtBowTiesMap[i][j];
+            prevBaseInd = baseEdgeIndex;
+        }
+    }
+
     for ( int i = 0; i < mmc.map.size(); ++i )
     {
         for ( int j = 0; j < mmc.map[i].size(); ++j )
@@ -341,16 +372,21 @@ void TerrainEmbedder::connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours
 
 void TerrainEmbedder::fill_( size_t oldVertSize, size_t oldEdgesSize )
 {
-    auto verticaMetric = getVerticalStitchMetric( result_,Vector3f::plusZ() );
+    auto orgMetric = getEdgeLengthFillMetric( result_ );
 
     FillHoleMetric metric;
+    metric.edgeMetric = orgMetric.edgeMetric;
+    metric.combineMetric = orgMetric.combineMetric;
+
     metric.triangleMetric = [&] ( VertId a, VertId b, VertId c )
     {
         if ( ( a < oldVertSize && b < oldVertSize && c < oldVertSize ) ||
             ( a >= oldVertSize && b >= oldVertSize && c >= oldVertSize ) )
             return DBL_MAX; // no triangles on same part
 
-        return verticaMetric.triangleMetric( a, b, c );
+        if ( orgMetric.triangleMetric )
+            return orgMetric.triangleMetric( a, b, c );
+        return 0.0;
     };
     auto edgesSize = result_.topology.undirectedEdgeSize();
 

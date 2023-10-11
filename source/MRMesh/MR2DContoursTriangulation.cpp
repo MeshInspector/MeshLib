@@ -19,6 +19,8 @@
 #include <algorithm>
 #include <limits>
 #include "MRPrecisePredicates2.h"
+#include "MRPolyline.h"
+#include "MRLinesSave.h"
 
 namespace MR
 {
@@ -56,6 +58,8 @@ private:
                 return winding != 0;
             else if ( mode == WindingMode::Positive )
                 return winding > 0;
+            else if ( mode == WindingMode::Negative )
+                return winding < 0;
             return false;
         } 
     };
@@ -105,7 +109,7 @@ private:
     {
         ActiveEdgeInfo( EdgeId e ) :id{ e }{}
         EdgeId id;
-        LoneRightmostLeft loneRightmostLeft;
+        LoneRightmostLeft loneRightmostLeft; // there my be two
     };
     std::vector<ActiveEdgeInfo> activeSweepEdges_;
     bool processOneVert_( VertId v );
@@ -525,6 +529,7 @@ void PlanarTriangulator::triangulateMonotoneBlock_( EdgeId holeEdgeId )
     reflexChain.resize( 0 );
     reflexChain.push_back( curIndex );
     bool reflexChainLower{ false };
+    bool debugSaved = false;
     for ( ; ;)
     {
         assert( !reflexChain.empty() );
@@ -532,8 +537,21 @@ void PlanarTriangulator::triangulateMonotoneBlock_( EdgeId holeEdgeId )
         int nextLower = nextLowerLoopInd( curLower );
         int nextUpper = nextUpperLoopInd( curUpper );
         // assert that polygon is monotone
-        assert( lessPred( holeLoop[curLower], holeLoop[nextLower] ) );
-        assert( lessPred( holeLoop[curUpper], holeLoop[nextUpper] ) );
+        bool isOk0 = lessPred( holeLoop[curLower], holeLoop[nextLower] );
+        bool isOk1 = lessPred( holeLoop[curUpper], holeLoop[nextUpper] );
+        if ( !debugSaved && ( !isOk0 || !isOk1 ) )
+        {
+            debugSaved = true;
+            static int counter = 0;
+            Contour3f cont;
+            for ( auto e : holeLoop )
+                cont.push_back( mesh_.orgPnt( e ) );
+            cont.push_back( mesh_.destPnt( holeLoop.back() ) );
+            Polyline3 pl( { cont } );
+            LinesSave::toMrLines( pl, "C:\\Users\\grant\\Documents\\GIT\\models\\Debug\\" + std::to_string( ++counter ) + ".mrlines" );
+        }
+        //assert( lessPred( holeLoop[curLower], holeLoop[nextLower] ) );
+        //assert( lessPred( holeLoop[curUpper], holeLoop[nextUpper] ) );
         bool currentOnLower = lessPred( holeLoop[nextLower], holeLoop[nextUpper] );
         if ( currentOnLower )
         {
@@ -637,18 +655,22 @@ bool PlanarTriangulator::processOneVert_( VertId v )
         int counter = 0;
         for ( auto index : indicesToRemoveFromActive )
         {
+            if ( !activeSweepEdges_[index].loneRightmostLeft.id )
+                continue;
+
             if ( !needConnectAfterIntersection.id )
             {
-                ++counter;
                 needConnectAfterIntersection = activeSweepEdges_[index].loneRightmostLeft;
-            }
-            else if ( activeSweepEdges_[index].loneRightmostLeft.id != needConnectAfterIntersection.id )
-            {
-                needConnectAfterIntersection.id = {};
-                break;
-            }
-            else
                 ++counter;
+                continue;
+            }
+            if ( needConnectAfterIntersection.id == activeSweepEdges_[index].loneRightmostLeft.id )
+            {
+                ++counter;
+                continue;
+            }
+            counter = 0;
+            break;
         }
         if ( counter < 2 || counter != indicesToRemoveFromActive.size() )
             needConnectAfterIntersection.id = {};

@@ -12,7 +12,8 @@ namespace PlanarTriangulation
 enum class WindingMode
 {
     NonZero,
-    Positive
+    Positive,
+    Negative
 };
 
 using HoleVertIds = std::vector<VertId>;

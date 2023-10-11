@@ -97,9 +97,11 @@ Contours2f offsetContours( const Contours2f& contours, float offset, const Offse
         }
     }
 
-    auto mesh = PlanarTriangulation::triangulateContours( std::move( intermediateRes ), nullptr, PlanarTriangulation::WindingMode::NonZero );
+    auto mesh = PlanarTriangulation::triangulateContours( std::move( intermediateRes ), nullptr, 
+        PlanarTriangulation::WindingMode::NonZero ); // Should be negative
 
-    auto bourndaries = findLeftBoundary( mesh.topology );
+    // important to exclude lone boundaries
+    auto bourndaries = findLeftBoundary( mesh.topology/*, &mesh.topology.getValidFaces()*/ );
     Contours2f res;
     for ( const auto& loop : bourndaries )
     {

@@ -22,22 +22,29 @@ class FlowAggregator
 public:
     /// prepares the processing of given mesh with given height in each vertex
     MRMESH_API FlowAggregator( const Mesh & mesh, const VertScalars & heights );
+
+    struct OutputFlows
+    {
+        /// optional output: lines of all flows
+        Polyline3 * pPolyline = nullptr;
+        /// optional output: flow in each line of outPolyline
+        UndirectedEdgeScalars * pFlowPerEdge = nullptr;
+        /// output in outPolyline only the flows with the amount greater than
+        float amountGreaterThan = 0;
+    };
+
     /// tracks multiple flows
     /// \param starts the origin of each flow (should be uniformly sampled over the terrain)
-    /// \param outPolyline output lines of all flows
-    /// \param outFlowPerEdge flow in each line of outPolyline
     /// \return the flow reached each mesh vertex
-    MRMESH_API VertScalars computeFlow( const std::vector<FlowOrigin> & starts,
-        Polyline3 * outPolyline = nullptr, UndirectedEdgeScalars * outFlowPerEdge = nullptr ) const;
+    MRMESH_API VertScalars computeFlow( const std::vector<FlowOrigin> & starts, const OutputFlows & out = {} ) const;
     // same with all amounts equal to 1
-    MRMESH_API VertScalars computeFlow( const std::vector<MeshTriPoint> & starts,
-        Polyline3 * outPolyline = nullptr, UndirectedEdgeScalars * outFlowPerEdge = nullptr ) const;
+    MRMESH_API VertScalars computeFlow( const std::vector<MeshTriPoint> & starts, const OutputFlows & out = {} ) const;
     // general version that supplies starts in a functional way
     MRMESH_API VertScalars computeFlow( size_t numStarts,
         const std::function<MeshTriPoint(size_t)> & startById, ///< can return invalid point that will be ignored
         const std::function<float(size_t)> & amountById,
         const std::function<const FaceBitSet*(size_t)> & regionById, ///< if given then the flow initially is limited to this region
-        Polyline3 * outPolyline = nullptr, UndirectedEdgeScalars * outFlowPerEdge = nullptr ) const;
+        const OutputFlows & out = {} ) const;
 
     struct Flows
     {

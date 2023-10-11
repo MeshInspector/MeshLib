@@ -49,32 +49,30 @@ FlowAggregator::FlowAggregator( const Mesh & mesh, const VertScalars & heights )
         vertsSortedDesc_.push_back( minusHeightVerts[i].second );
 }
 
-VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts, Polyline3 * outPolyline, UndirectedEdgeScalars * outFlowPerEdge ) const
+VertScalars FlowAggregator::computeFlow( const std::vector<FlowOrigin> & starts, const OutputFlows & out ) const
 {
     return computeFlow( starts.size(),
         [&starts]( size_t n ) { return starts[n].point; },
         [&starts]( size_t n ) { return starts[n].amount; },
-        {},
-        outPolyline, outFlowPerEdge );
+        {}, out );
 }
 
-VertScalars FlowAggregator::computeFlow( const std::vector<MeshTriPoint> & starts, Polyline3 * outPolyline, UndirectedEdgeScalars * outFlowPerEdge ) const
+VertScalars FlowAggregator::computeFlow( const std::vector<MeshTriPoint> & starts, const OutputFlows & out ) const
 {
     return computeFlow( starts.size(),
         [&starts]( size_t n ) { return starts[n]; },
         []( size_t ) { return 1.0f; },
-        {},
-        outPolyline, outFlowPerEdge );
+        {}, out );
 }
 
 VertScalars FlowAggregator::computeFlow( size_t numStarts,
     const std::function<MeshTriPoint(size_t)> & startById,
     const std::function<float(size_t)> & amountById,
     const std::function<const FaceBitSet*(size_t)> & regionById,
-    Polyline3 * outPolyline, UndirectedEdgeScalars * outFlowPerEdge ) const
+    const OutputFlows & out ) const
 {
     MR_TIMER
-    assert( !outFlowPerEdge || outPolyline );
+    assert( !out.pFlowPerEdge || out.pPolyline );
 
     VertScalars flowInVert( mesh_.topology.vertSize() );
     std::vector<VertId> start2downVert( numStarts ); // for each start point stores what next vertex is on flow path (can be invalid)
@@ -111,42 +109,43 @@ VertScalars FlowAggregator::computeFlow( size_t numStarts,
             flowInVert[vDn] += flowInVert[vUp];
     }
 
-    if ( outPolyline )
+    if ( out.pPolyline )
     {
         std::vector<VertId> sample2firstPolylineVert;
         sample2firstPolylineVert.reserve( numStarts + vertsSortedDesc_.size() + 1 );
         VertId n = 0_v;
         sample2firstPolylineVert.push_back( n );
+        // lines from sample starts to first mesh vertices
         for ( size_t i = 0; i < numStarts; ++i )
         {
-            if ( !start2downPath[i].empty() || start2downVert[i] )
+            if ( amountById( i ) > out.amountGreaterThan && ( !start2downPath[i].empty() || start2downVert[i] ) )
                 n += 1 + (int)start2downPath[i].size() + start2downVert[i].valid();
             sample2firstPolylineVert.push_back( n );
         };
-        //polyline vertices [0,n) contain points from sample starts to first mesh vertices
+        // lines from vertices to down vertices
         for ( size_t i = 0; i < vertsSortedDesc_.size(); ++i )
         {
             auto vUp = vertsSortedDesc_[i];
-            if ( flowInVert[vUp] && ( !downPath_[vUp].empty() || downFlowVert_[vUp] ) )
+            if ( flowInVert[vUp] > out.amountGreaterThan && ( !downPath_[vUp].empty() || downFlowVert_[vUp] ) )
                 n += 1 + (int)downPath_[vUp].size() + downFlowVert_[vUp].valid();
             sample2firstPolylineVert.push_back( n );
         }
 
         VertCoords points;
         points.resizeNoInit( n );
-        if ( outFlowPerEdge )
-            outFlowPerEdge->resize( n );
+        if ( out.pFlowPerEdge )
+            out.pFlowPerEdge->resize( n );
         ParallelFor( start2downVert, [&]( size_t i )
         {
             VertId j = sample2firstPolylineVert[i];
             const VertId jEnd = sample2firstPolylineVert[i+1];
             if ( j == jEnd )
                 return;
-            if ( outFlowPerEdge )
+            if ( out.pFlowPerEdge )
             {
                 const auto f = amountById( i );
                 for ( auto k = j; k < jEnd; ++k )
-                    (*outFlowPerEdge)[UndirectedEdgeId( (int)k )] = f;
+                    (*out.pFlowPerEdge)[UndirectedEdgeId( (int)k )] = f;
             }
             points[j++] = mesh_.triPoint( startById( i ) );
             for ( const auto & ep : start2downPath[i] )
@@ -162,11 +161,11 @@ VertScalars FlowAggregator::computeFlow( size_t numStarts,
             if ( j == jEnd )
                 return;
             const VertId vUp = vertsSortedDesc_[i];
-            if ( outFlowPerEdge )
+            if ( out.pFlowPerEdge )
             {
                 const auto f = flowInVert[vUp];
                 for ( auto k = j; k < jEnd; ++k )
-                    (*outFlowPerEdge)[UndirectedEdgeId( (int)k )] = f;
+                    (*out.pFlowPerEdge)[UndirectedEdgeId( (int)k )] = f;
             }
             points[j++] = mesh_.points[vUp];
             for ( const auto & ep : downPath_[vUp] )
@@ -175,7 +174,7 @@ VertScalars FlowAggregator::computeFlow( size_t numStarts,
                 points[j++] = mesh_.points[v];
             assert( j == jEnd );
         } );
-        *outPolyline = Polyline3( sample2firstPolylineVert, points );
+        *out.pPolyline = Polyline3( sample2firstPolylineVert, points );
     }
 
     return flowInVert;

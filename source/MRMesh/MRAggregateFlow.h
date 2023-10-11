@@ -16,22 +16,22 @@ struct FlowOrigin
     float amount = 1;
 };
 
+struct OutputFlows
+{
+    /// optional output: lines of all flows
+    Polyline3* pPolyline = nullptr;
+    /// optional output: flow in each line of outPolyline
+    UndirectedEdgeScalars* pFlowPerEdge = nullptr;
+    /// output in outPolyline only the flows with the amount greater than
+    float amountGreaterThan = 0;
+};
+
 /// this class can track multiple flows and find in each mesh vertex the amount of water reached it
 class FlowAggregator
 {
 public:
     /// prepares the processing of given mesh with given height in each vertex
     MRMESH_API FlowAggregator( const Mesh & mesh, const VertScalars & heights );
-
-    struct OutputFlows
-    {
-        /// optional output: lines of all flows
-        Polyline3 * pPolyline = nullptr;
-        /// optional output: flow in each line of outPolyline
-        UndirectedEdgeScalars * pFlowPerEdge = nullptr;
-        /// output in outPolyline only the flows with the amount greater than
-        float amountGreaterThan = 0;
-    };
 
     /// tracks multiple flows
     /// \param starts the origin of each flow (should be uniformly sampled over the terrain)

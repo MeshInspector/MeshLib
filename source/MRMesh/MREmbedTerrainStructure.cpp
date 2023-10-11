@@ -332,6 +332,7 @@ void TerrainEmbedder::connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours
             {
                 *prevMptIndexPtr = -1; // disable doubtable mappings
                 // restart after filter
+                prevMptIndexPtr = nullptr;
                 i = 0;
                 j = 0;
             }

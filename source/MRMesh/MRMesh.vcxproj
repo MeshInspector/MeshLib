@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClInclude Include="MRChangeColoringType.h" />
     <ClInclude Include="MRFewSmallest.h" />
+    <ClInclude Include="MRMeshLoad3mf.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
     <ClInclude Include="MRAggregateFlow.h" />
@@ -419,6 +420,7 @@
     <ClCompile Include="MRMeshBooleanFacade.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
     <ClCompile Include="MRMeshExtrude.cpp" />
+    <ClCompile Include="MRMeshLoad3mf.cpp" />
     <ClCompile Include="MRMeshOrPoints.cpp" />
     <ClCompile Include="MRMeshToDistanceVolume.cpp" />
     <ClCompile Include="MRMovementBuildBody.cpp" />

@@ -1080,6 +1080,9 @@
     <ClInclude Include="MRFewSmallest.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshLoad3mf.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1795,6 +1798,9 @@
     </ClCompile>
     <ClCompile Include="MROffsetContours.cpp">
       <Filter>Source Files\Polyline</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshLoad3mf.cpp">
+      <Filter>Source Files\IO</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -34,8 +34,10 @@ IF(APPLE)
 ELSE()
  # uncomment to print compile time of each translation unit,
  # such print format is selected to simplify load in Excel with fields (user time, system time, command) subdivision by commas
- set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "/usr/bin/time -f \",%U,%S,%C\" -a -o compile_timings.txt")
- set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "/usr/bin/time -f \",%U,%S,%C\" -a -o link_timings.txt")
+ IF(EXISTS /usr/bin/time)
+   set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "/usr/bin/time -f \",%U,%S,%C\" -a -o compile_timings.txt")
+   set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "/usr/bin/time -f \",%U,%S,%C\" -a -o link_timings.txt")
+ ENDIF()
 ENDIF() # APPLE
 ENDIF() # NOT MR_EMSCRIPTEN
 
@@ -119,8 +121,10 @@ ELSE()
  # check version (major)
  file(STRINGS /etc/os-release version_id REGEX "^VERSION_ID=")
  string(REGEX REPLACE "VERSION_ID=\"(.*)\"" "\\1" version_id "${version_id}")
- string(FIND ${version_id} "." dot-pos)
- string(SUBSTRING ${version_id} 0 ${dot-pos} version_id)
+ IF(NOT "${version_id}" STREQUAL "")
+   string(FIND ${version_id} "." dot-pos)
+   string(SUBSTRING ${version_id} 0 ${dot-pos} version_id)
+ ENDIF()
  message("using ${distro} ${version_id}")
  SET(MR_PLATFORM "${distro}_${version_id}")
 

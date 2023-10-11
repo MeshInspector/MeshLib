@@ -12,18 +12,18 @@ printf "Thirdparty build script started.\nYou could find output in ${logfile}\n"
 
 
 if [[ $OSTYPE == 'darwin'* ]]; then
-  echo "MacOS"
-  FILE_NAME="install_brew_requirements.sh"
-else
+  echo "Host system: MacOS"
+  INSTALL_REQUIREMENTS="install_brew_requirements.sh"
+elif [[ $OSTYPE == 'linux'* ]]; then
   source /etc/os-release
-  FILE_NAME="install_apt_requirements.sh"
-
-  if [ "${NAME}" == "Fedora Linux" ]; then
-   FILE_NAME="install_dnf_requirements.sh"
-  else
-    . /etc/lsb-release
+  echo "Host system: ${NAME} ${DISTRIB_RELEASE}"
+  if [ "${NAME}" == "Ubuntu" ]; then
+    INSTALL_REQUIREMENTS="install_apt_requirements.sh"
+  elif [ "${NAME}" == "Fedora Linux" ]; then
+    INSTALL_REQUIREMENTS="install_dnf_requirements.sh"
   fi
-  echo "${NAME}" "${DISTRIB_RELEASE}"
+else
+  echo "Host system: ${OSTYPE}"
 fi
 
 MR_EMSCRIPTEN_SINGLETHREAD=0
@@ -47,15 +47,17 @@ else
   MR_EMSCRIPTEN="OFF"
  fi
 fi
-printf "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}\n"
+echo "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}"
 
 if [ $MR_EMSCRIPTEN == "ON" ]; then
- if [[ $MR_EMSCRIPTEN_SINGLE == "ON" ]]; then
-  MR_EMSCRIPTEN_SINGLETHREAD=1
- fi
+  if [[ $MR_EMSCRIPTEN_SINGLE == "ON" ]]; then
+    MR_EMSCRIPTEN_SINGLETHREAD=1
+  fi
+elif [ -n "${INSTALL_REQUIREMENTS}" ]; then
+  echo "Check requirements. Running ${INSTALL_REQUIREMENTS} ..."
+  ./scripts/$INSTALL_REQUIREMENTS
 else
- printf "Check requirements. Running ${FILE_NAME} ...\n"
- ./scripts/$FILE_NAME
+  echo "Unsupported system. Installing dependencies is your responsibility."
 fi
 
 

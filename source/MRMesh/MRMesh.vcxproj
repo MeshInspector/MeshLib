@@ -96,6 +96,7 @@
     <ClInclude Include="MRMutexOwner.h" />
     <ClInclude Include="MRNormalDenoising.h" />
     <ClInclude Include="MRNormalsToPoints.h" />
+    <ClInclude Include="MROffsetContours.h" />
     <ClInclude Include="MRPointOnObject.h" />
     <ClInclude Include="MROverlappingTris.h" />
     <ClInclude Include="MRObjectGcode.h" />
@@ -421,6 +422,7 @@
     <ClCompile Include="MRMovementBuildBody.cpp" />
     <ClCompile Include="MRNormalDenoising.cpp" />
     <ClCompile Include="MRNormalsToPoints.cpp" />
+    <ClCompile Include="MROffsetContours.cpp" />
     <ClCompile Include="MROverlappingTris.cpp" />
     <ClCompile Include="MRObjectGcode.cpp" />
     <ClCompile Include="MRPointsLoadE57.cpp" />

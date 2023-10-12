@@ -109,7 +109,7 @@ private:
     {
         ActiveEdgeInfo( EdgeId e ) :id{ e }{}
         EdgeId id;
-        LoneRightmostLeft loneRightmostLeft; // there may be two
+        LoneRightmostLeft loneRightmostLeft; // represents lone left upwards
     };
     std::vector<ActiveEdgeInfo> activeSweepEdges_;
     bool processOneVert_( VertId v );

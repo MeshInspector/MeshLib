@@ -11,6 +11,55 @@
 namespace MR
 {
 
+float findAngle( const Vector2f& prev, const Vector2f& org, const Vector2f& next )
+{
+    auto a = prev - org;
+    auto b = next - org;
+    auto crossRes = cross( a, b );
+    auto dotRes = dot( a, b );
+    if ( crossRes == 0.0f )
+        return dotRes >= 0.0f ? 0.0f : PI_F;
+    else
+        return std::atan2( crossRes, dotRes );
+}
+
+void insertRoundCorner( Contour2f& cont, Vector2f prevPoint, Vector2f orgPt, float ang, float minAnglePrecision )
+{
+    int numSteps = int( std::floor( std::abs( ang ) / minAnglePrecision ) );
+    for ( int s = 0; s < numSteps; ++s )
+    {
+        float stepAng = ( ang / ( numSteps + 1 ) ) * ( s + 1 );
+        auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( stepAng ), orgPt );
+        cont.emplace_back( rotXf( prevPoint ) );
+    }
+}
+
+void insertSharpCorner( Contour2f& cont, Vector2f prevPoint, Vector2f orgPt, float ang, float maxSharpAngle )
+{
+    if ( std::abs( ang ) <= maxSharpAngle )
+    {
+        auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( ang * 0.5f ), orgPt );
+        auto rotPoint = rotXf( prevPoint );
+        auto mod = 1.0f / std::max( std::cos( std::abs( ang ) * 0.5f ), 1e-2f );
+        cont.emplace_back( rotPoint * mod + orgPt * ( 1.0f - mod ) );
+    }
+    else
+    {
+        auto tmpAng = maxSharpAngle;
+        float mod = 1.0f / std::max( std::cos( tmpAng * 0.5f ), 1e-2f );
+        tmpAng = std::copysign( tmpAng, ang );
+
+
+        auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( tmpAng * 0.5f ), orgPt );
+        auto rotPoint = rotXf( prevPoint );
+        cont.emplace_back( rotPoint * mod + orgPt * ( 1.0f - mod ) );
+
+        rotXf = AffineXf2f::xfAround( Matrix2f::rotation( ang - tmpAng * 0.5f ), orgPt );
+        rotPoint = rotXf( prevPoint );
+        cont.emplace_back( rotPoint * mod + orgPt * ( 1.0f - mod ) );
+    }
+}
+
 Contour2f offsetOneDirectionContour( const Contour2f& cont, float offset, const OffsetContoursParams& params )
 {
     MR_TIMER;
@@ -26,6 +75,8 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, float offset, const 
     };
 
     Contour2f res;
+    res.reserve( 3 * cont.size() );
+
     res.emplace_back( isClosed ?
         cont[0] + offset * contNorm( int( cont.size() ) - 2 ) :
         cont[0] + offset * contNorm( 0 ) );
@@ -36,35 +87,24 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, float offset, const 
         auto norm = contNorm( i );
 
         auto nextPoint = orgPt + norm * offset;
-        bool sameAsPrev = false;
+
         // interpolation
         auto prevPoint = res.back();
-        auto a = prevPoint - orgPt;
-        auto b = nextPoint - orgPt;
-        auto crossRes = cross( a, b );
-        auto dotRes = dot( a, b );
-        float ang = 0.0f;
-        if ( crossRes == 0.0f )
-            ang = dotRes >= 0.0f ? 0.0f : PI_F;
-        else
-            ang = std::atan2( crossRes, dotRes );
-
-        sameAsPrev = std::abs( ang ) < PI_F / 360.0f;
+        auto ang = findAngle( prevPoint, orgPt, nextPoint );
+        bool sameAsPrev = std::abs( ang ) < PI_F / 360.0f;
         if ( !sameAsPrev )
         {
-            if ( params.cornerType == OffsetContoursParams::CornerType::Round )
+            bool needCorner = ( ang * offset ) < 0.0f;
+            if ( needCorner )
             {
-                int numSteps = int( std::floor( std::abs( ang ) / ( params.minAnglePrecision ) ) );
-                for ( int s = 0; s < numSteps; ++s )
+                if ( params.cornerType == OffsetContoursParams::CornerType::Round )
                 {
-                    float stepAng = ( ang / ( numSteps + 1 ) ) * ( s + 1 );
-                    auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( stepAng ), orgPt );
-                    res.emplace_back( rotXf( prevPoint ) );
+                    insertRoundCorner( res, prevPoint, orgPt, ang, params.minAnglePrecision );
                 }
-            }
-            else if ( params.cornerType == OffsetContoursParams::CornerType::Sharp )
-            {
-
+                else if ( params.cornerType == OffsetContoursParams::CornerType::Sharp )
+                {
+                    insertSharpCorner( res, prevPoint, orgPt, ang, params.maxSharpAngle );
+                }
             }
             res.emplace_back( std::move( nextPoint ) );
         }
@@ -81,7 +121,19 @@ Contours2f offsetContours( const Contours2f& contours, float offset, const Offse
 
     for ( int i = 0; i < contours.size(); ++i )
     {
+        if ( contours[i].empty() )
+            continue;
+
         bool isClosed = contours[i].front() == contours[i].back();
+        if ( offset == 0.0f )
+        {
+            intermediateRes.push_back( contours[i] );
+            if ( !isClosed || params.type == OffsetContoursParams::Type::Shell )
+                intermediateRes.back().insert( intermediateRes.back().end(), contours[i].rbegin(), contours[i].rend() );
+            continue;
+        }
+
+
         if ( isClosed )
         {
             intermediateRes.push_back( offsetOneDirectionContour( contours[i], offset, params ) );
@@ -93,19 +145,40 @@ Contours2f offsetContours( const Contours2f& contours, float offset, const Offse
         }
         else
         {
-
+            auto tmpOffset = std::abs( offset );
+            intermediateRes.push_back( offsetOneDirectionContour( contours[i], tmpOffset, params ) );
+            auto backward = offsetOneDirectionContour( contours[i], -tmpOffset, params );
+            std::reverse( backward.begin(), backward.end() );
+            if ( params.endType == OffsetContoursParams::EndType::Round )
+            {
+                insertRoundCorner( intermediateRes.back(), intermediateRes.back().back(), contours[i].back(), -PI_F, params.minAnglePrecision );
+                intermediateRes.back().insert( intermediateRes.back().end(), backward.begin(), backward.end() );
+                insertRoundCorner( intermediateRes.back(), intermediateRes.back().back(), contours[i].front(), -PI_F, params.minAnglePrecision );
+            }
+            else if ( params.endType == OffsetContoursParams::EndType::Cut )
+            {
+                intermediateRes.back().insert(intermediateRes.back().end(),
+                    std::make_move_iterator( backward.begin() ), std::make_move_iterator( backward.end() ) );
+            }
+            intermediateRes.back().push_back( intermediateRes.back().front() );
         }
     }
+    if ( offset == 0.0f )
+        return intermediateRes;
 
     auto mesh = PlanarTriangulation::triangulateContours( std::move( intermediateRes ), nullptr, 
-        PlanarTriangulation::WindingMode::NonZero ); // Should be negative
-
-    // important to exclude lone boundaries
-    auto bourndaries = findLeftBoundary( mesh.topology/*, &mesh.topology.getValidFaces()*/ );
+        PlanarTriangulation::WindingMode::Negative ); // Should be negative
+    
+    // `getValidFaces` important to exclude lone boundaries
+    auto bourndaries = findLeftBoundary( mesh.topology, &mesh.topology.getValidFaces() );
     Contours2f res;
-    for ( const auto& loop : bourndaries )
+    res.reserve( bourndaries.size() );
+    for ( int i = 0; i < bourndaries.size(); ++i )
     {
+        const auto& loop = bourndaries[i];
         res.push_back( {} );
+        res.back().reserve( loop.size() + 1 );
+
         for ( auto e : loop )
             res.back().push_back( to2dim( mesh.orgPnt( e ) ) );
         res.back().push_back( to2dim( mesh.destPnt( loop.back() ) ) );

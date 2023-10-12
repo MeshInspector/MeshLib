@@ -34,7 +34,7 @@ struct OffsetContoursParams
     // precision of round corners and ends
     float minAnglePrecision = PI_F / 9.0f; // 20 deg
     // limit for sharp corners connection
-    float maxSharpAngle = PI_F / 3.0f; // 60 deg
+    float maxSharpAngle = PI_F * 2.0f / 3.0f; // 120 deg
 };
 
 // offsets 2d contours in plane

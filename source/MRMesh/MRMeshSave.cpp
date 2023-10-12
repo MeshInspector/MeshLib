@@ -260,7 +260,7 @@ VoidOrErrStr toAsciiStl( const Mesh& mesh, std::ostream& out, ProgressCallback c
         out << "outer loop" ENDL;
         for ( const Vector3f& p : { ap, bp, cp } )
         {
-            s = fmt::format( "{:.8f} {:.8f} {:.8f}", p.x, p.y, p.z );
+            s = fmt::format( "{} {} {}", p.x, p.y, p.z );
             out << "vertex " << s << ENDL;
         }
         out << "endloop" ENDL;

@@ -40,7 +40,7 @@ void PointCloud::addPartByMask( const PointCloud& from, const VertBitSet& fromVe
     if ( useNormals )
         normals.resize( newSize );
     if ( oldToNewMap )
-        oldToNewMap->resize( fromValidVerts.count() );
+        oldToNewMap->resize( fromValidVerts.find_last() + 1 );
     for ( auto v : fromValidVerts )
     {
         points[idIt] = fromPoints[v];

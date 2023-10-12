@@ -15,6 +15,25 @@
 namespace MR
 {
 
+std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, float radius, const ProgressCallback & progress )
+{
+    MR_TIMER
+
+    VertNormals normals( pointCloud.points.size() );
+    if ( !BitSetParallelFor( pointCloud.validPoints, [&]( VertId vid )
+    {
+        PointAccumulator accum;
+        findPointsInBall( pointCloud, pointCloud.points[vid], radius, [&]( VertId, const Vector3f& coord )
+        {
+            accum.addPoint( Vector3d( coord ) );
+        } );
+        normals[vid] = Vector3f( accum.getBestPlane().n ).normalized();
+    }, progress ) )
+        return {};
+
+    return normals;
+}
+
 struct NormalCandidate
 {
     NormalCandidate() = default;
@@ -25,33 +44,14 @@ struct NormalCandidate
     float weight{FLT_MAX};
 };
 
-bool operator < ( const NormalCandidate& l, const NormalCandidate& r )
+inline bool operator < ( const NormalCandidate& l, const NormalCandidate& r )
 {
     return l.weight > r.weight;
 }
 
-VertCoords makeNormals( const PointCloud& pointCloud, int avgNeighborhoodSize )
+bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, float radius, const ProgressCallback & progress )
 {
-    MR_TIMER;
-
-    VertCoords normals( pointCloud.points.size() );
-    const auto& tree = pointCloud.getAABBTree();
-    AABBTreePoints::NodeId nodeId = tree.rootNodeId();
-    while ( !tree[nodeId].leaf() )
-        nodeId = tree[nodeId].leftOrFirst;
-
-    auto firstLeafRadius = findAvgPointsRadius( pointCloud, avgNeighborhoodSize );
-
-    BitSetParallelFor( pointCloud.validPoints, [&]( VertId vid )
-    {
-        PointAccumulator accum;
-        findPointsInBall( pointCloud, pointCloud.points[vid], firstLeafRadius, 
-                          [&]( VertId, const Vector3f& coord )
-        {
-            accum.addPoint( Vector3d( coord ) );
-        } );
-        normals[vid] = Vector3f( accum.getBestPlane().n ).normalized();
-    } );
+    MR_TIMER
 
     VertScalars minWeights( normals.size(), FLT_MAX );
     std::priority_queue<NormalCandidate> queue;
@@ -63,14 +63,20 @@ VertCoords makeNormals( const PointCloud& pointCloud, int avgNeighborhoodSize )
     };
 
     VertBitSet notVisited = pointCloud.validPoints;
+    const auto totalCount = notVisited.count();
+    size_t visitedCount = 0;
 
     auto enqueueNeighbors = [&]( VertId base )
     {
+        assert( notVisited.test( base ) );
         notVisited.reset( base );
-        findPointsInBall( pointCloud, pointCloud.points[base], firstLeafRadius,
+        ++visitedCount;
+        findPointsInBall( pointCloud, pointCloud.points[base], radius,
                           [&]( VertId v, const Vector3f& )
         {
             if ( v == base )
+                return;
+            if ( !notVisited.test( v ) )
                 return;
             float weight = enweight( base, v );
             if ( weight < minWeights[v] )
@@ -119,11 +125,32 @@ VertCoords makeNormals( const PointCloud& pointCloud, int avgNeighborhoodSize )
             if ( dot( normals[current.baseId], normals[current.id] ) < 0.0f )
                 normals[current.id] = -normals[current.id];
             enqueueNeighbors( current.id );
+            if ( !reportProgress( progress, [&] { return (float)visitedCount / totalCount; }, visitedCount, 1024 ) )
+                return false;
         }
         first = findFirst();
     }
-
-    return normals;
+    return true;
 }
 
+std::optional<VertNormals> makeOrientedNormals( const PointCloud& pointCloud,
+    float radius, const ProgressCallback & progress )
+{
+    MR_TIMER
+
+    auto optNormals = makeUnorientedNormals( pointCloud, radius, subprogress( progress, 0.0f, 0.1f ) );
+    if ( !optNormals )
+        return optNormals;
+
+    if ( !orientNormals( pointCloud, *optNormals, radius, subprogress( progress, 0.1f, 1.0f ) ) )
+        optNormals.reset();
+
+    return optNormals;
 }
+
+VertNormals makeNormals( const PointCloud& pointCloud, int avgNeighborhoodSize )
+{
+    return *makeOrientedNormals( pointCloud, findAvgPointsRadius( pointCloud, avgNeighborhoodSize ) );
+}
+
+} //namespace MR

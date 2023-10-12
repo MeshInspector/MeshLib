@@ -4,6 +4,7 @@
 #include "MRColor.h"
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
+#include "MRPch/MRSpdlog.h"
 
 #ifndef MRMESH_NO_OPENCTM
 #include "OpenCTM/openctm.h"
@@ -157,6 +158,24 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const AffineXf3f & xf
     return {};
 }
 
+static FaceBitSet getNotDegenTris( const Mesh &mesh )
+{
+    FaceBitSet notDegenTris = mesh.topology.getValidFaces();
+    VertId a, b, c;
+    for ( auto f : notDegenTris )
+    {
+        mesh.topology.getTriVerts( f, a, b, c );
+        assert( a.valid() && b.valid() && c.valid() );
+
+        const Vector3f& ap = mesh.points[a];
+        const Vector3f& bp = mesh.points[b];
+        const Vector3f& cp = mesh.points[c];
+        if ( ap == bp || bp == cp || cp == ap )
+            notDegenTris.reset( f );
+    }
+    return notDegenTris;
+}
+
 VoidOrErrStr toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
@@ -173,20 +192,7 @@ VoidOrErrStr toBinaryStl( const Mesh & mesh, std::ostream & out, ProgressCallbac
     char header[80] = "MeshInspector.com";
     out.write( header, 80 );
 
-    auto notDegenTris = mesh.topology.getValidFaces();
-    for ( auto f : notDegenTris )
-    {
-        VertId a, b, c;
-        mesh.topology.getTriVerts( f, a, b, c );
-        assert( a.valid() && b.valid() && c.valid() );
-
-        const Vector3f & ap = mesh.points[a];
-        const Vector3f & bp = mesh.points[b];
-        const Vector3f & cp = mesh.points[c];
-        if ( ap == bp || bp == cp || cp == ap )
-            notDegenTris.reset( f );
-    }
-
+    auto notDegenTris = getNotDegenTris( mesh );
     auto numTris = (std::uint32_t)notDegenTris.count();
     out.write( ( const char* )&numTris, 4 );
 
@@ -215,6 +221,61 @@ VoidOrErrStr toBinaryStl( const Mesh & mesh, std::ostream & out, ProgressCallbac
 
     if ( !out )
         return unexpected( std::string( "Error saving in binary STL-format" ) );
+
+    if ( callback )
+        callback( 1.f );
+    return {};
+}
+
+VoidOrErrStr toAsciiStl( const Mesh& mesh, const std::filesystem::path& file, ProgressCallback callback )
+{
+    std::ofstream out( file, std::ofstream::binary );
+    if ( !out )
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+
+    return toAsciiStl( mesh, out, callback );
+}
+
+VoidOrErrStr toAsciiStl( const Mesh& mesh, std::ostream& out, ProgressCallback callback )
+{
+    MR_TIMER;
+#define SOLID_NAME "mesh"
+#define ENDL "\r\n"
+
+    out << "solid " SOLID_NAME ENDL;
+    auto notDegenTris = getNotDegenTris( mesh );
+    const float trisNum = float( notDegenTris.count() );
+    int trisIndex = 0;
+    for ( auto f : notDegenTris )
+    {
+        VertId a, b, c;
+        mesh.topology.getTriVerts( f, a, b, c );
+        assert( a.valid() && b.valid() && c.valid() );
+        const Vector3f& ap = mesh.points[a];
+        const Vector3f& bp = mesh.points[b];
+        const Vector3f& cp = mesh.points[c];
+        Vector3f normal = cross( bp - ap, cp - ap ).normalized();
+        std::string s = fmt::format( "{:.6f} {:.6f} {:.6f}", normal.x, normal.y, normal.z );
+        out << "facet normal " << s << ENDL;
+        out << "outer loop" ENDL;
+        for ( const Vector3f& p : { ap, bp, cp } )
+        {
+            s = fmt::format( "{:.8f} {:.8f} {:.8f}", p.x, p.y, p.z );
+            out << "vertex " << s << ENDL;
+        }
+        out << "endloop" ENDL;
+        out << "endfacet" ENDL;
+        if ( callback && !( trisIndex & 0x3FF ) && !callback( trisIndex / trisNum ) )
+            return unexpected( std::string( "Saving canceled" ) );
+        ++trisIndex;
+    }
+    out << "endsolid " SOLID_NAME ENDL;
+
+#undef SOLID_NAME
+#undef ENDL
+
+    if ( !out )
+        return unexpected( std::string( "Error saving in ascii STL-format" ) );
 
     if ( callback )
         callback( 1.f );

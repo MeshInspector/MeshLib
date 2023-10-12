@@ -44,6 +44,10 @@ MRMESH_API VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const Affi
 MRMESH_API VoidOrErrStr toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback = {} );
 MRMESH_API VoidOrErrStr toBinaryStl( const Mesh & mesh, std::ostream & out, ProgressCallback callback = {} );
 
+/// saves in ascii .stl file
+MRMESH_API VoidOrErrStr toAsciiStl( const Mesh& mesh, const std::filesystem::path& file, ProgressCallback callback = {} );
+MRMESH_API VoidOrErrStr toAsciiStl( const Mesh& mesh, std::ostream& out, ProgressCallback callback = {} );
+
 /// saves in .ply file
 MRMESH_API VoidOrErrStr toPly( const Mesh& mesh, const std::filesystem::path& file, const VertColors* colors = nullptr,
                                                   ProgressCallback callback = {} );

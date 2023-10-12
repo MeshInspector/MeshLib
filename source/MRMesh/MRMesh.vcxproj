@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRChangeColoringType.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
     <ClInclude Include="MRAggregateFlow.h" />

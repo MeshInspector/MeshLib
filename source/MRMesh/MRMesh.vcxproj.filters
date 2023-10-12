@@ -1074,6 +1074,9 @@
     <ClInclude Include="MROffsetContours.h">
       <Filter>Source Files\Polyline</Filter>
     </ClInclude>
+    <ClInclude Include="MRChangeColoringType.h">
+      <Filter>Source Files\History</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

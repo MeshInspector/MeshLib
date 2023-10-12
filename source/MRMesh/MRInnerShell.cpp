@@ -9,12 +9,14 @@
 namespace MR
 {
 
-bool isInnerShellVert( const MeshPart & mp, const Vector3f & shellPoint, Side side )
+bool isInnerShellVert( const MeshPart & mp, const Vector3f & shellPoint, Side side, float maxAbsDist )
 {
     auto sd = findSignedDistance( shellPoint, mp );
+    
     assert( sd );
-    if ( !sd )
+    if ( !sd  || fabs( sd->dist ) > maxAbsDist )
         return false;
+
     if ( sd->mtp.isBd( mp.mesh.topology, mp.region ) )
         return false;
     if ( side == Side::Positive && sd->dist <= 0 )
@@ -24,13 +26,13 @@ bool isInnerShellVert( const MeshPart & mp, const Vector3f & shellPoint, Side si
     return true;
 }
 
-VertBitSet findInnerShellVerts( const MeshPart & mp, const Mesh & shell, Side side )
+VertBitSet findInnerShellVerts( const MeshPart & mp, const Mesh & shell, Side side, float maxAbsDist )
 {
     MR_TIMER
     VertBitSet res( shell.topology.vertSize() );
     BitSetParallelFor( shell.topology.getValidVerts(), [&]( VertId v )
     {
-        if ( isInnerShellVert( mp, shell.points[v], side ) )
+        if ( isInnerShellVert( mp, shell.points[v], side, maxAbsDist ) )
             res.set( v );
     } );
     return res;

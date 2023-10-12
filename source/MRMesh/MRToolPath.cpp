@@ -22,6 +22,8 @@
 #include "MRPolylineProject.h"
 #include "MRContoursCut.h"
 #include "MRFillContourByGraphCut.h"
+#include "MRInnerShell.h"
+#include "MRRingIterator.h"
 
 #include "MRParallelFor.h"
 #include "MRPch/MRTBB.h"
@@ -516,7 +518,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
     const auto sideDirection = ( cutDirection == Axis::X ) ? Axis::Y : Axis::X;
     const auto sideDirectionIdx = int( sideDirection );
 
-    ToolPathResult  res;
+    ToolPathResult res;
 
     if ( !params.offsetMesh )
     {
@@ -943,16 +945,19 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         auto extract = extractAllIsolines( res.modifiedMesh, extractionParams );
         res.modifiedMesh = extract.meshAfterCut;
         
-        const auto oldRegion = res.modifiedRegion;
-        res.modifiedRegion = extract.region;
-
-        BitSetParallelFor( oldRegion, [&] ( FaceId f )
+        if ( !extract.old2NewMap.empty() )
         {
-            for ( auto& newFace : extract.old2NewMap[f] )
+            const auto oldRegion = res.modifiedRegion;
+            res.modifiedRegion = extract.region;
+
+            BitSetParallelFor( oldRegion, [&] ( FaceId f )
             {
-                res.modifiedRegion.set( newFace, true );
-            }
-        } );
+                for ( auto& newFace : extract.old2NewMap[f] )
+                {
+                    res.modifiedRegion.set( newFace, true );
+                }
+            } );
+        }
 
         const auto& mesh = res.modifiedMesh;
         if ( extract.isolines.empty() )
@@ -1181,7 +1186,36 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         return res;
     }
 
-    std::vector<EdgeLoop> edgeLoops;
+    const auto vertBitSet = findInnerShellVerts( mp, res.modifiedMesh, Side::Positive, params.millRadius * 1.5f );
+    res.modifiedRegion.resize( res.modifiedMesh.topology.lastValidFace() + 1 );
+    BitSetParallelFor( vertBitSet, [&] ( VertId v )
+    {
+        for ( auto e : orgRing( res.modifiedMesh.topology, res.modifiedMesh.topology.edgePerVertex()[v] ) )
+        {
+            res.modifiedRegion.set( res.modifiedMesh.topology.left( e ) );
+        }
+    } );
+
+    const auto components = MeshComponents::getAllComponents( MeshPart{ res.modifiedMesh, &res.modifiedRegion } );
+    const size_t componentCount = components.size();
+    for ( size_t i = 0; i < 1; ++i )
+    {
+        const auto edgeLoop = findLeftBoundary( res.modifiedMesh.topology, components[i] ).front();
+        SurfacePath sp( edgeLoop.size() );
+
+        ParallelFor( size_t( 0 ), edgeLoop.size(), [&] ( size_t i )
+        {
+            sp[i] = EdgePoint( edgeLoop[i], 0 );
+        } );
+
+        if ( !processZone( &sp, nullptr,
+            res.commands.empty() ? Vector3f{} : Vector3f{ res.commands.back().x, res.commands.back().y, res.commands.back().z },
+            subprogress( params.cb, 0.25f + 0.75f * float( i ) / componentCount, 0.25f + 0.75f * float( i + 1 ) / componentCount ) ) )
+        {
+            return unexpectedOperationCanceled();
+        }
+    }
+    /*std::vector<EdgeLoop> edgeLoops;
     if ( params.offsetMesh && params.offsetMesh->region )
     {
         edgeLoops = findLeftBoundary( params.offsetMesh->mesh.topology, params.offsetMesh->region );
@@ -1274,7 +1308,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         {
             return unexpectedOperationCanceled();
         }
-    }
+    }*/
 
     return res;
 }

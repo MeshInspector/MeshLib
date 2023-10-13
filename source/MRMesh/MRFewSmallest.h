@@ -18,6 +18,8 @@ public:
     size_t maxElms() const { return heap_.capacity(); }
     /// returns the smallest elements found so far
     const std::vector<T> & get() const { return heap_; }
+    /// returns the largest among stored smallest elements
+    const T & top() const { assert( !heap_.empty() ); return heap_.front(); }
     /// considers one more element, storing it if it is within the smallest
     void push( T t );
     /// removes all stored elements
@@ -57,8 +59,11 @@ void FewSmallest<T>::push( T t )
 template<typename T>
 void FewSmallest<T>::clear()
 {
+#ifndef NDEBUG
+    const auto beforeMaxElms = maxElms();
+#endif
     heap_.clear();
-    assert( this->maxElms() == maxElms );
+    assert( beforeMaxElms == maxElms() );
 }
 
 } //namespace MR

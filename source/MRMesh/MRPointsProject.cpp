@@ -115,7 +115,7 @@ void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest
 
     auto topDistSq = [&]
     {
-        return res.empty() ? upDistLimitSq : res.top().distSq;
+        return !res.full() ? upDistLimitSq : res.top().distSq;
     };
 
     auto addSubTask = [&] ( const SubTask& s )

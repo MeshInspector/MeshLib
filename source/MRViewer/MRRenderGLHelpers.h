@@ -298,6 +298,9 @@ public:
     MRVIEWER_API void gen( const Vector2i& size, bool multisample );
     // clears this framebuffer and binds it as main rendering target
     MRVIEWER_API void bind();
+    MRVIEWER_API void unbind();
+    // marks the texture to reading
+    MRVIEWER_API void bindTexture();
     // copies picture rendered in this framebuffer to associated texutre for further use
     MRVIEWER_API void copyTexture();
     // removes this framebuffer

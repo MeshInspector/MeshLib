@@ -319,11 +319,10 @@ public:
     MRVIEWER_API void resetAllCounters();
 
     /**
-     * Captures part of window (redraw 3d scene over UI (without redrawing UI))
-     * @param pos left-bottom corner of capturing area relative of left-down corner of window. default = size(0, 0)
-     * @param size size of capturing area. default = size(0, 0) - auto size to right-top corner of window.
+     * Captures 3d scene7
+     * @param resolutrion resolution of the iamge <=0 means default
      */
-    MRVIEWER_API Image captureScreenShot( const Vector2i& pos = Vector2i(), const Vector2i& size = Vector2i() );
+    MRVIEWER_API Image captureSceneScreenShot( const Vector2i& resolutrion = Vector2i() );
 
     /**
      * Captures part of window in the beginning of next frame, capturing all that was drawn in this frame

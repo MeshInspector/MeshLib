@@ -43,6 +43,7 @@
 #include "MRSpaceMouseHandlerHidapi.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRSerializer.h"
+#include "MRViewer/MRRenderGLHelpers.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -1518,7 +1519,7 @@ void Viewer::postResize( int w, int h )
     if ( alphaSorter_ )
         alphaSorter_->updateTransparencyTexturesSize( framebufferSize.x, framebufferSize.y );
 #if !defined(__EMSCRIPTEN__) || defined(MR_EMSCRIPTEN_ASYNCIFY)
-    if ( isLaunched_ )
+    if ( isLaunched_ && !isInDraw_ )
     {
         incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, true );
         while ( !draw_( true ) );
@@ -1910,30 +1911,57 @@ void Viewer::resetAllCounters()
     frameCounter_.reset();
 }
 
-Image Viewer::captureScreenShot( const Vector2i& pos /*= Vector2i()*/, const Vector2i& sizeP /*= Vector2i()*/ )
+Image Viewer::captureSceneScreenShot( const Vector2i& resolutrion )
 {
-    Vector2i size = sizeP;
-    if ( !size.x )
-        size.x = framebufferSize.x - pos.x;
-    else
-        size.x = std::min( framebufferSize.x - pos.x, size.x );
+    if ( !glInitialized_ )
+        return {};
 
-    if ( !size.y )
-        size.y = framebufferSize.y - pos.y;
-    else
-        size.y = std::min( framebufferSize.y - pos.y, size.y );
+    auto newRes = resolutrion == Vector2i() ? framebufferSize : resolutrion;
+    if ( newRes.x <= 0 || newRes.y <= 0 )
+        return {};
 
-    std::vector<Color> pixels( size.x * size.x );
+    // store old sizes
+    auto vpBounbds = getViewportsBounds();
+    std::vector<ViewportRectangle> rects;
+    for ( auto& viewport : viewport_list )
+    {
+        auto rect = viewport.getViewportRect();
+        rects.push_back( rect );
+        rect.min.x = float( rect.min.x - vpBounbds.min.x ) / width( vpBounbds ) * newRes.x;
+        rect.min.y = float( rect.min.y - vpBounbds.min.y ) / height( vpBounbds ) * newRes.y;
+        rect.max.x = float( rect.max.x - vpBounbds.min.x ) / width( vpBounbds ) * newRes.x;
+        rect.max.y = float( rect.max.y - vpBounbds.min.y ) / height( vpBounbds ) * newRes.y;
+        viewport.setViewportRect( rect );
+    }
+    if ( newRes != framebufferSize && alphaSorter_ )
+        alphaSorter_->updateTransparencyTexturesSize( newRes.x, newRes.y );
+
+
+    std::vector<Color> pixels( newRes.x * newRes.x );
+
+    FramebufferData fd;
+    fd.gen( newRes, true );
+    fd.bind();
 
     setupScene();
     drawScene();
 
-    if ( glInitialized_ )
-    {
-        GL_EXEC( glReadPixels( pos.x, pos.y, size.x, size.y, GL_RGBA, GL_UNSIGNED_BYTE, ( void* )( pixels.data() ) ) );
-    }
+    fd.copyTexture();
+    fd.bindTexture();
 
-    return Image{ pixels, size };
+    GL_EXEC( glGetTexImage( GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, ( void* )( pixels.data() ) ) );
+    
+    fd.unbind();
+    fd.del();
+
+    // restore sizes
+    int i = 0;
+    for ( auto& viewport : viewport_list )
+        viewport.setViewportRect( rects[i++] );
+    if ( newRes != framebufferSize && alphaSorter_ )
+        alphaSorter_->updateTransparencyTexturesSize( framebufferSize.x, framebufferSize.y );
+
+    return Image{ pixels, newRes };
 }
 
 void Viewer::captureUIScreenShot( std::function<void( const Image& )> callback,

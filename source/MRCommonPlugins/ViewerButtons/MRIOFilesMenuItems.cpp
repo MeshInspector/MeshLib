@@ -33,6 +33,8 @@
 #include "MRViewer/MRSwapRootAction.h"
 #include "MRViewer/MRViewerEventsListener.h"
 #include "MRPch/MRWasm.h"
+#include "MRViewer/ImGuiHelpers.h"
+#include "MRViewer/MRUIStyle.h"
 
 #ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
@@ -654,26 +656,38 @@ bool SaveSceneMenuItem::action()
 }
 
 CaptureScreenshotMenuItem::CaptureScreenshotMenuItem():
-    RibbonMenuItem( "Capture screenshot" )
+    StatePlugin( "Capture screenshot" )
 {
+    CommandLoop::appendCommand( [&] ()
+    {
+        resolution_ = getViewerInstance().framebufferSize;
+    }, CommandLoop::StartPosition::AfterWindowAppear );
 }
 
-bool CaptureScreenshotMenuItem::action()
+void CaptureScreenshotMenuItem::drawDialog( float menuScaling, ImGuiContext* )
 {
-    auto now = std::chrono::system_clock::now();
-    std::time_t t = std::chrono::system_clock::to_time_t( now );
-    auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", fmt::localtime( t ) );
+    auto menuWidth = 200.0f * menuScaling;
+    if ( !ImGui::BeginCustomStatePlugin( plugin_name.c_str(), &dialogIsOpen_, { .collapsed = &dialogIsCollapsed_, .width = menuWidth, .menuScaling = menuScaling } ) )
+        return;
 
-    auto savePath = saveFileDialog( { name, {},ImageSave::Filters } );
-    if ( !savePath.empty() )
+    ImGui::DragIntValid( "Width", &resolution_.x, 1, 256 );
+    ImGui::DragIntValid( "Height", &resolution_.y, 1, 256 );
+    if ( UI::button( "Capture", ImVec2( -1, 0 ) ) )
     {
-        auto bounds = Viewer::instanceRef().getViewportsBounds();
-        auto image = Viewer::instanceRef().captureScreenShot( Vector2i( bounds.min ), Vector2i( bounds.max - bounds.min ) );
-        auto res = ImageSave::toAnySupportedFormat( image, savePath );
-        if ( !res.has_value() )
-            showError( "Error saving screenshot: " + res.error() );
+        auto now = std::chrono::system_clock::now();
+        std::time_t t = std::chrono::system_clock::to_time_t( now );
+        auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", fmt::localtime( t ) );
+
+        auto savePath = saveFileDialog( { name, {},ImageSave::Filters } );
+        if ( !savePath.empty() )
+        {
+            auto image = Viewer::instanceRef().captureSceneScreenShot( resolution_ );
+            auto res = ImageSave::toAnySupportedFormat( image, savePath );
+            if ( !res.has_value() )
+                showError( "Error saving screenshot: " + res.error() );
+        }
     }
-    return false;
+    ImGui::EndCustomStatePlugin();
 }
 
 CaptureUIScreenshotMenuItem::CaptureUIScreenshotMenuItem():
@@ -717,8 +731,7 @@ std::string CaptureScreenshotToClipBoardMenuItem::isAvailable( const std::vector
 bool CaptureScreenshotToClipBoardMenuItem::action()
 {
 #ifndef __EMSCRIPTEN__
-    auto bounds = Viewer::instanceRef().getViewportsBounds();
-    auto image = Viewer::instanceRef().captureScreenShot( Vector2i( bounds.min ), Vector2i( bounds.max - bounds.min ) );
+    auto image = Viewer::instanceRef().captureSceneScreenShot();
 
 #if defined( _WIN32 )
     auto hwnd = glfwGetWin32Window( getViewerInstance().window );

@@ -28,7 +28,7 @@ void pythonCaptureScreenShot( MR::Viewer* viewer, const char* path )
 {
     MR::CommandLoop::runCommandFromGUIThread( [&] ()
     {
-        auto image = viewer->captureScreenShot();
+        auto image = viewer->captureSceneScreenShot();
         MR::ImageSave::toAnySupportedFormat( image, path );
     } );
 }

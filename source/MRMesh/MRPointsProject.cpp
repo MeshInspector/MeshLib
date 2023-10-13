@@ -1,6 +1,7 @@
 #include "MRPointsProject.h"
 #include "MRPointCloud.h"
 #include "MRAABBTreePoints.h"
+#include "MRFewSmallest.h"
 
 namespace MR
 {
@@ -90,4 +91,15 @@ PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCl
     return res;
 }
 
+void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest<PointsProjectionResult> & res,
+    float upDistLimitSq, const AffineXf3f* xf, float loDistLimitSq )
+{
+    (void)pt;
+    (void)pc;
+    (void)res;
+    (void)upDistLimitSq;
+    (void)xf;
+    (void)loDistLimitSq;
 }
+
+} //namespace MR

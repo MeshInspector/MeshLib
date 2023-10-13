@@ -9,8 +9,8 @@
 #include "MRTimer.h"
 #include "MRPlane3.h"
 #include "MRPointCloudRadius.h"
+#include "MRHeap.h"
 #include <cfloat>
-#include <queue>
 
 namespace MR
 {
@@ -36,12 +36,8 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, 
 
 struct NormalCandidate
 {
-    NormalCandidate() = default;
-    NormalCandidate(VertId _id, VertId _baseId,float w ):
-        id{_id}, baseId{_baseId}, weight{w}{}
-    VertId id;
     VertId baseId;
-    float weight{FLT_MAX};
+    float weight = FLT_MAX;
 };
 
 inline bool operator < ( const NormalCandidate& l, const NormalCandidate& r )
@@ -53,8 +49,7 @@ bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, float ra
 {
     MR_TIMER
 
-    VertScalars minWeights( normals.size(), FLT_MAX );
-    std::priority_queue<NormalCandidate> queue;
+    Heap<NormalCandidate, VertId> heap( normals.size() );
 
     auto enweight = [&]( VertId base, VertId candidate )
     {
@@ -79,22 +74,18 @@ bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, float ra
             if ( !notVisited.test( v ) )
                 return;
             float weight = enweight( base, v );
-            if ( weight < minWeights[v] )
-            {
-                queue.emplace( v, base, weight );
-                minWeights[v] = weight;
-            }
+            heap.setValue( v, NormalCandidate{ base, weight } );
         } );
     };
 
     auto findFirst = [&]()->VertId
     {
         MR_TIMER;
-        VertId xMostVert = {};
+        VertId xMostVert;
         float maxX = -FLT_MAX;
         for ( auto v : notVisited )
         {
-            assert( minWeights[v] == FLT_MAX );
+            assert( heap.value( v ).weight == FLT_MAX );
             auto xDot = dot( pointCloud.points[v], Vector3f::plusX() );
             if ( xDot > maxX )
             {
@@ -104,27 +95,25 @@ bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, float ra
         }
         if ( xMostVert )
         {
-            minWeights[xMostVert] = 0.0f;
             if ( dot( normals[xMostVert], Vector3f::plusX() ) < 0.0f )
                 normals[xMostVert] = -normals[xMostVert];
         }
         return xMostVert;
     };
 
-    NormalCandidate current;
     VertId first = findFirst();
     while ( first.valid() )
     {
         enqueueNeighbors( first );
-        while ( !queue.empty() )
+        for (;;)
         {
-            current = queue.top(); // cannot use std::move unfortunately since top() returns const reference
-            queue.pop();
-            if ( current.weight > minWeights[current.id] )
-                continue;
-            if ( dot( normals[current.baseId], normals[current.id] ) < 0.0f )
-                normals[current.id] = -normals[current.id];
-            enqueueNeighbors( current.id );
+            auto [v, c] = heap.top();
+            if ( c.weight == FLT_MAX )
+                break;
+            heap.setSmallerValue( v, NormalCandidate{ {}, FLT_MAX } );
+            if ( dot( normals[c.baseId], normals[v] ) < 0.0f )
+                normals[v] = -normals[v];
+            enqueueNeighbors( v );
             if ( !reportProgress( progress, [&] { return (float)visitedCount / totalCount; }, visitedCount, 1024 ) )
                 return false;
         }

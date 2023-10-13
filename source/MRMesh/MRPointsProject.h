@@ -10,10 +10,12 @@ namespace MR
 
 struct PointsProjectionResult
 {
-    /// the closest vertex in point cloud
-    VertId vId;
     /// squared distance from pt to proj
     float distSq{ 0 };
+    /// the closest vertex in point cloud
+    VertId vId;
+
+    auto operator <=>(const PointsProjectionResult &) const = default;
 };
 
 /**
@@ -23,6 +25,17 @@ struct PointsProjectionResult
  * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
  */
 [[nodiscard]] MRMESH_API PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCloud& pc,
+    float upDistLimitSq = FLT_MAX,
+    const AffineXf3f* xf = nullptr,
+    float loDistLimitSq = 0 );
+
+/**
+ * \brief finds a number of the closest points in the cloud (as configured in \param res) to given point
+ * \param upDistLimitSq upper limit on the distance in question, points with larger distance than it will not be returned
+ * \param xf pointcloud-to-point transformation, if not specified then identity transformation is assumed
+ * \param loDistLimitSq low limit on the distance in question, the algorithm can return given number of points within this distance even skipping closer ones
+ */
+MRMESH_API void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest<PointsProjectionResult> & res,
     float upDistLimitSq = FLT_MAX,
     const AffineXf3f* xf = nullptr,
     float loDistLimitSq = 0 );

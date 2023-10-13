@@ -1077,6 +1077,9 @@
     <ClInclude Include="MRChangeColoringType.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
+    <ClInclude Include="MRFewSmallest.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

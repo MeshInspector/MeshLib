@@ -258,15 +258,24 @@ void FramebufferData::bind()
     GL_EXEC( glClear( GL_DEPTH_BUFFER_BIT ) );
 }
 
+void FramebufferData::unbind()
+{
+    GL_EXEC( glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0 ) );
+    GL_EXEC( glBindFramebuffer( GL_READ_FRAMEBUFFER, 0 ) );
+    GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, 0 ) );
+}
+
+void FramebufferData::bindTexture()
+{
+    resTexture_.bind();
+}
+
 void FramebufferData::copyTexture()
 {
     GL_EXEC( glBindFramebuffer( GL_READ_FRAMEBUFFER, mainFramebuffer_ ) );
     GL_EXEC( glBindFramebuffer( GL_DRAW_FRAMEBUFFER, copyFramebuffer_ ) );
     GL_EXEC( glBlitFramebuffer( 0, 0, size_.x, size_.y, 0, 0, size_.x, size_.y, GL_COLOR_BUFFER_BIT, GL_NEAREST ) );
-
-    GL_EXEC( glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0 ) );
-    GL_EXEC( glBindFramebuffer( GL_READ_FRAMEBUFFER, 0 ) );
-    GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, 0 ) );
+    unbind();
 }
 
 void FramebufferData::del()

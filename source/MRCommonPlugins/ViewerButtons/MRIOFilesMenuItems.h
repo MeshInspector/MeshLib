@@ -1,5 +1,6 @@
 #pragma once
 #include "MRMesh/MRMeshFwd.h"
+#include "MRViewer/MRStatePlugin.h"
 #include "MRViewer/MRRibbonMenuItem.h"
 #include "MRMesh/MRIOFilters.h"
 #include <filesystem>
@@ -76,11 +77,14 @@ public:
     virtual bool action() override;
 };
 
-class CaptureScreenshotMenuItem : public RibbonMenuItem
+class CaptureScreenshotMenuItem : public StatePlugin
 {
 public:
     CaptureScreenshotMenuItem();
-    virtual bool action() override;
+    virtual void drawDialog( float menuScaling, ImGuiContext* ) override;
+    virtual bool blocking() const override { return false; }
+private:
+    Vector2i resolution_;
 };
 
 class CaptureUIScreenshotMenuItem : public RibbonMenuItem

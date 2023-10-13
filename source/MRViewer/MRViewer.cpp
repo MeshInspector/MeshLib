@@ -1911,14 +1911,14 @@ void Viewer::resetAllCounters()
     frameCounter_.reset();
 }
 
-Image Viewer::captureSceneScreenShot( const Vector2i& resolutrion )
+Image Viewer::captureSceneScreenShot( const Vector2i& resolution )
 {
     if ( !glInitialized_ )
         return {};
 
-    auto newRes = resolutrion == Vector2i() ? framebufferSize : resolutrion;
-    if ( newRes.x <= 0 || newRes.y <= 0 )
-        return {};
+    Vector2i newRes;
+    newRes.x = resolution.x <= 0 ? framebufferSize.x : resolution.x;
+    newRes.y = resolution.y <= 0 ? framebufferSize.y : resolution.y;
 
     // store old sizes
     auto vpBounbds = getViewportsBounds();

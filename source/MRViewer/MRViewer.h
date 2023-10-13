@@ -319,10 +319,10 @@ public:
     MRVIEWER_API void resetAllCounters();
 
     /**
-     * Captures 3d scene7
-     * @param resolutrion resolution of the iamge <=0 means default
+     * Captures 3d scene
+     * @param resolution resolution of the image <= 0 means default
      */
-    MRVIEWER_API Image captureSceneScreenShot( const Vector2i& resolutrion = Vector2i() );
+    MRVIEWER_API Image captureSceneScreenShot( const Vector2i& resolution = Vector2i() );
 
     /**
      * Captures part of window in the beginning of next frame, capturing all that was drawn in this frame

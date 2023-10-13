@@ -16,10 +16,18 @@ public:
     explicit FewSmallest( size_t maxElms );
     /// returns the maximum number of elements to be stored here
     size_t maxElms() const { return heap_.capacity(); }
+    /// returns whether the container is currently empty
+    bool empty() const { return heap_.empty(); }
+    /// returns current number of stored element
+    size_t size() const { return heap_.size(); }
+    /// returns whether we have already maximum number of elements stored
+    bool full() const { return size() == maxElms(); }
     /// returns the smallest elements found so far
     const std::vector<T> & get() const { return heap_; }
     /// returns the largest among stored smallest elements
     const T & top() const { assert( !heap_.empty() ); return heap_.front(); }
+    /// returns the largest among stored smallest elements or given element if this is empty
+    const T & topOr( const T & emptyRes ) const { return !heap_.empty() ? heap_.front() : emptyRes; }
     /// considers one more element, storing it if it is within the smallest
     void push( T t );
     /// removes all stored elements

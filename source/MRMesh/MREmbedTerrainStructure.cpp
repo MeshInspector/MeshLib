@@ -317,7 +317,7 @@ void TerrainEmbedder::connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours
     int* prevMptIndexPtr{ nullptr };
     for ( int i = 0; i < mmc.map.size(); ++i )
     {
-        for ( int j = 0; j < mmc.map[i].size(); ++j )
+        for ( int j = 0; j < std::min( mmc.map[i].size(), mmc.filtBowTiesMap[i].size() ); ++j )
         {
             auto cutEdgeIndex = mmc.map[i][j];
             auto initMtpIndex = mmc.filtBowTiesMap[i][j];
@@ -344,7 +344,7 @@ void TerrainEmbedder::connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours
 
     for ( int i = 0; i < mmc.map.size(); ++i )
     {
-        for ( int j = 0; j < mmc.map[i].size(); ++j )
+        for ( int j = 0; j < std::min( mmc.map[i].size(), mmc.filtBowTiesMap[i].size() ); ++j )
         {
             auto cutEdgeIndex = mmc.map[i][j];
             auto initMtpIndex = mmc.filtBowTiesMap[i][j];

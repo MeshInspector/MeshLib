@@ -12,6 +12,7 @@
 #include "MRBestFit.h"
 #include "MRPlane3.h"
 #include "MRVector3.h"
+#include "MRBox.h"
 #include "MRTimer.h"
 #include "MRPointCloudTriangulationHelpers.h"
 #include "MRRegionBoundary.h"
@@ -94,10 +95,20 @@ std::optional<Mesh> PointCloudTriangulator::triangulate( ProgressCallback progre
 
 bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
 {
-    MR_TIMER;
+    MR_TIMER
     float radius = findAvgPointsRadius( pointCloud_, params_.avgNumNeighbours );
-    // const ref should prolong makeNormals lifetime
-    const VertCoords& normals = pointCloud_.normals.empty() ? makeNormals( pointCloud_, params_.avgNumNeighbours ) : pointCloud_.normals;
+
+    VertNormals myNormals;
+    if ( pointCloud_.normals.empty() )
+    {
+        auto optNormals = makeOrientedNormals( pointCloud_, radius, subprogress( progressCb, 0.0f, 0.3f ) );
+        if ( !optNormals )
+            return false;
+        if ( progressCb )
+            progressCb = subprogress( progressCb, 0.3f, 1.0f );
+        myNormals = std::move( *optNormals );
+    }
+    const VertCoords& normals = pointCloud_.normals.empty() ? myNormals : pointCloud_.normals;
 
     auto body = [&] ( VertId v )
     {

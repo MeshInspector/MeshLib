@@ -19,6 +19,8 @@
 #include <algorithm>
 #include <limits>
 #include "MRPrecisePredicates2.h"
+#include "MRPolyline.h"
+#include "MRLinesSave.h"
 
 namespace MR
 {
@@ -32,7 +34,8 @@ public:
     // constructor makes initial mesh which simply contain input contours as edges
     // if holesVertId is null - merge all vertices with same coordinates
     // otherwise only merge the ones with same initial vertId
-    PlanarTriangulator( const Contours2d& contours, const HolesVertIds* holesVertId = nullptr, bool abortWhenIntersect = false );
+    PlanarTriangulator( const Contours2d& contours, const HolesVertIds* holesVertId = nullptr, 
+        bool abortWhenIntersect = false, WindingMode mode = WindingMode::NonZero );
     // process line sweep queue and triangulate inside area of mesh (based on winding rule)
     std::optional<Mesh> run();
 private:
@@ -40,12 +43,25 @@ private:
     bool abortWhenIntersect_ = false;
     // this flag is set true if triangulation requires merging of two points that is forbidden
     bool incompleteMerge_ = false;
+    WindingMode windingMode_{ WindingMode::NonZero };
+
 
     struct EdgeWindingInfo
     {
-        int windingMod{ INT_MAX }; // modifier for merged edges (they can direct differently so we need to precalculate winding modifier)
+        int windingModifier{ INT_MAX }; // modifier for merged edges (they can direct differently so we need to precalculate winding modifier)
         int winding{ INT_MAX };
-        bool inside() const { return winding != 0 && winding != INT_MAX; } // may be other winding rule
+        bool inside( WindingMode mode ) const
+        {
+            if ( winding == INT_MAX )
+                return false;
+            if ( mode == WindingMode::NonZero )
+                return winding != 0;
+            else if ( mode == WindingMode::Positive )
+                return winding > 0;
+            else if ( mode == WindingMode::Negative )
+                return winding < 0;
+            return false;
+        } 
     };
     Vector<EdgeWindingInfo, UndirectedEdgeId> windingInfo_;
 
@@ -93,7 +109,7 @@ private:
     {
         ActiveEdgeInfo( EdgeId e ) :id{ e }{}
         EdgeId id;
-        LoneRightmostLeft loneRightmostLeft;
+        LoneRightmostLeft loneRightmostLeft; // represents lone left upwards
     };
     std::vector<ActiveEdgeInfo> activeSweepEdges_;
     bool processOneVert_( VertId v );
@@ -114,8 +130,10 @@ bool PlanarTriangulator::ComaparableVertId::operator>( const ComaparableVertId& 
     return l.x > r.x || ( l.x == r.x && l.y > r.y ) || ( l.x == r.x && l.y == r.y && id > other.id );
 }
 
-PlanarTriangulator::PlanarTriangulator( const Contours2d& contours, const HolesVertIds* holesVertId /*= true*/, bool abortWhenIntersect /*= false*/ )
+PlanarTriangulator::PlanarTriangulator( const Contours2d& contours, const HolesVertIds* holesVertId /*= true*/, 
+    bool abortWhenIntersect /*= false*/, WindingMode mode /*= WindingMode::NonZero*/ )
 {
+    windingMode_ = mode;
     abortWhenIntersect_ = abortWhenIntersect;
     initMeshByContours_( contours );
 
@@ -158,7 +176,7 @@ std::optional<Mesh> PlanarTriangulator::run()
             dirE = dirE.sym();
         if ( mesh_.topology.left( dirE ) )
             continue;
-        if ( !windingInfo_[e].inside() )
+        if ( !windingInfo_[e].inside( windingMode_ ) )
             continue;
     
         triangulateMonotoneBlock_( dirE );
@@ -389,11 +407,11 @@ void PlanarTriangulator::mergeSinglePare_( VertId unique, VertId same )
         if ( mesh_.topology.dest( minEUnique ) == mesh_.topology.dest( eSame ) )
         {
             auto& edgeInfo = windingInfo_.autoResizeAt( minEUnique.undirected() );
-            if ( edgeInfo.windingMod == INT_MAX )
-                edgeInfo.windingMod = 1;
+            if ( edgeInfo.windingModifier == INT_MAX )
+                edgeInfo.windingModifier = 1;
             bool uniqueIsOdd = minEUnique.odd();
             bool sameIsOdd = eSame.odd();
-            edgeInfo.windingMod += ( ( uniqueIsOdd == sameIsOdd ) ? 1 : -1 );
+            edgeInfo.windingModifier += ( ( uniqueIsOdd == sameIsOdd ) ? 1 : -1 );
             mesh_.topology.splice( mesh_.topology.prev( eSame ), eSame );
             mesh_.topology.splice( mesh_.topology.prev( eSame.sym() ), eSame.sym() );
         }
@@ -410,8 +428,8 @@ void PlanarTriangulator::calculateWinding_()
         if ( mesh_.topology.isLoneEdge( e.id ) )
             continue;
         auto& info = windingInfo_[e.id.undirected()];
-        if ( info.windingMod != INT_MAX )
-            info.winding = windingLast + info.windingMod;
+        if ( info.windingModifier != INT_MAX )
+            info.winding = windingLast + info.windingModifier;
         else
             info.winding = windingLast + ( ( int( e.id ) & 1 ) ? -1 : 1 ); // even edges has same direction as original contour, but e.id always look to the right
         windingLast = info.winding;
@@ -434,13 +452,13 @@ void PlanarTriangulator::removeMultipleAfterMerge_()
         assert( multiplesFromThis.size() > 1 );
 
         auto& edgeInfo = windingInfo_[multiplesFromThis.front().undirected()];
-        edgeInfo.windingMod = 1;
+        edgeInfo.windingModifier = 1;
         bool uniqueIsOdd = int( multiplesFromThis.front() ) & 1;
         for ( int i = 1; i < multiplesFromThis.size(); ++i )
         {
             auto e = multiplesFromThis[i];
             bool isMEOdd = int( e ) & 1;
-            edgeInfo.windingMod += ( ( uniqueIsOdd == isMEOdd ) ? 1 : -1 );
+            edgeInfo.windingModifier += ( ( uniqueIsOdd == isMEOdd ) ? 1 : -1 );
             mesh_.topology.splice( mesh_.topology.prev( e ), e );
             mesh_.topology.splice( mesh_.topology.prev( e.sym() ), e.sym() );
             assert( mesh_.topology.isLoneEdge( e ) );
@@ -587,8 +605,10 @@ void PlanarTriangulator::triangulateMonotoneBlock_( EdgeId holeEdgeId )
 bool PlanarTriangulator::processOneVert_( VertId v )
 {
     // remove left, find right
-    EdgeId anyLeftEdge;
+    bool hasLeft = false;
     std::vector<ActiveEdgeInfo> rightGoingEdges;
+    // information about removed lone left
+    LoneRightmostLeft removedLoneLeftInfo; 
     auto activePoint = converters_.toInt( to2dim( mesh_.points[v] ) );
     std::vector<int> indicesToRemoveFromActive;
     for ( auto e : orgRing( mesh_.topology, v ) )
@@ -599,11 +619,11 @@ bool PlanarTriangulator::processOneVert_( VertId v )
         else
         {
             indicesToRemoveFromActive.push_back( int( std::distance( activeSweepEdges_.begin(), lIt ) ) );
-            anyLeftEdge = e;
+            hasLeft = true;
         }
     }
     EdgeId lowestLeftEdge;
-    if ( anyLeftEdge.valid() )
+    if ( hasLeft )
     {
         // also remove lone left after fixing duplicates
         for ( int i = 0; i < activeSweepEdges_.size(); ++i )
@@ -612,6 +632,16 @@ bool PlanarTriangulator::processOneVert_( VertId v )
         // find lowest left for helper
         std::sort( indicesToRemoveFromActive.begin(), indicesToRemoveFromActive.end() );
         lowestLeftEdge = activeSweepEdges_[indicesToRemoveFromActive[0]].id.sym();
+
+        // save info about removed lone
+        for ( auto index : indicesToRemoveFromActive )
+        {
+            if ( !activeSweepEdges_[index].loneRightmostLeft.id )
+                continue;
+            assert( !removedLoneLeftInfo.id || removedLoneLeftInfo.id == activeSweepEdges_[index].loneRightmostLeft.id );
+            removedLoneLeftInfo = activeSweepEdges_[index].loneRightmostLeft;
+        }
+
         // remove left
         for ( int i = int( indicesToRemoveFromActive.size() ) - 1; i >= 0; --i )
             activeSweepEdges_.erase( activeSweepEdges_.begin() + indicesToRemoveFromActive[i] );
@@ -634,7 +664,7 @@ bool PlanarTriangulator::processOneVert_( VertId v )
     }
 
     // find lowest rightGoingEdge (for correct insertion right edges into active sweep edges)
-    assert( anyLeftEdge.valid() || !rightGoingEdges.empty() );
+    assert( hasLeft || !rightGoingEdges.empty() );
 
     int lowestRight = -1;
     if ( !rightGoingEdges.empty() )
@@ -649,20 +679,19 @@ bool PlanarTriangulator::processOneVert_( VertId v )
 
     bool hasOuter = activeVPosition != INT_MAX && activeVPosition != -1;
     // connect with outer contour if it has no left and inside (containing region should be internal)
-    if ( !anyLeftEdge.valid() && hasOuter && windingInfo_[activeSweepEdges_[activeVPosition].id.undirected()].inside() )
+    if ( !hasLeft && hasOuter && windingInfo_[activeSweepEdges_[activeVPosition].id.undirected()].inside( windingMode_ ) )
     {
         assert( lowestRight != INT_MAX );
         // find helper:
         // id of rightmost left vertex (it's lower edge) closest to active vertex
         // close to `helper` described here : https://www.cs.umd.edu/class/spring2020/cmsc754/Lects/lect05-triangulate.pdf
         EdgeId helperId;
-        auto& upper = activeSweepEdges_[activeVPosition + 1];
-        auto& lower = activeSweepEdges_[activeVPosition];
-        if ( upper.loneRightmostLeft.id && upper.loneRightmostLeft.id == lower.loneRightmostLeft.id &&
-             upper.loneRightmostLeft.upper == upper.id && upper.loneRightmostLeft.lower == lower.id )
+        const auto& lower = activeSweepEdges_[activeVPosition];
+        const auto& upper = activeSweepEdges_[activeVPosition + 1];
+        auto& loneLeft = activeSweepEdges_[activeVPosition].loneRightmostLeft;
+        if ( loneLeft.id && loneLeft.lower == lower.id && loneLeft.upper == upper.id )
         {
-            assert( lower.loneRightmostLeft.upper == upper.id && lower.loneRightmostLeft.lower == lower.id );
-            helperId = upper.loneRightmostLeft.id;
+            helperId = loneLeft.id;
         }
         else
         {
@@ -674,13 +703,13 @@ bool PlanarTriangulator::processOneVert_( VertId v )
                 helperId = lower.id;
         }
         assert( helperId );
-        if ( helperId == upper.loneRightmostLeft.id )
-            upper.loneRightmostLeft.id = lower.loneRightmostLeft.id = EdgeId{};
+        if ( helperId == loneLeft.id )
+            loneLeft.id = EdgeId{};
         auto newE = mesh_.topology.makeEdge();
         mesh_.topology.splice( helperId, newE );
         mesh_.topology.splice( mesh_.topology.prev( rightGoingEdges[lowestRight].id ), newE.sym() );
         windingInfo_.resize( newE.undirected() + 1 );
-        windingInfo_[newE.undirected()].winding = 1; // mark inside
+        windingInfo_[newE.undirected()].winding = windingInfo_[lower.id.undirected()].winding;
     }
 
     // connect rightmost left with no right edges to this edge, if needed
@@ -698,7 +727,7 @@ bool PlanarTriangulator::processOneVert_( VertId v )
             mesh_.topology.splice( maxDiffE, newE.sym() );
 
             windingInfo_.resize( newE.undirected() + 1 );
-            windingInfo_[newE.undirected()].winding = 1; // mark inside
+            windingInfo_[newE.undirected()].winding = windingInfo_[loneInfo.lower.undirected()].winding;
             if ( maxDiffE == lowestLeftEdge )
             {
                 std::array<PreciseVertCoords2, 3> pvc;
@@ -722,15 +751,8 @@ bool PlanarTriangulator::processOneVert_( VertId v )
                 lowerEdgeInfo.loneRightmostLeft.id = EdgeId{};
             }
         }
-        if ( activeVPosition != INT_MAX && !activeSweepEdges_.empty() )
-        {
-            auto& upperEdgeInfo = activeSweepEdges_[activeVPosition + 1];
-            if ( upperEdgeInfo.loneRightmostLeft.id && upperEdgeInfo.id == upperEdgeInfo.loneRightmostLeft.upper )
-            {
-                connect( upperEdgeInfo.loneRightmostLeft );
-                upperEdgeInfo.loneRightmostLeft.id = EdgeId{};
-            }
-        }
+        if ( removedLoneLeftInfo.id )
+            connect( removedLoneLeftInfo );
     }
 
     // insert right going to active
@@ -740,16 +762,15 @@ bool PlanarTriangulator::processOneVert_( VertId v )
         auto pos = activeVPosition == INT_MAX ? int( activeSweepEdges_.size() ) : activeVPosition + 1;
         activeSweepEdges_.insert( activeSweepEdges_.begin() + pos, rightGoingEdges.begin(), rightGoingEdges.end() );
     }
-    else if ( hasOuter && windingInfo_[activeSweepEdges_[activeVPosition].id.undirected()].inside() )
+    else if ( hasOuter && windingInfo_[activeSweepEdges_[activeVPosition].id.undirected()].inside( windingMode_ ) )
     {
-        assert( anyLeftEdge.valid() );
+        assert( hasLeft );
         LoneRightmostLeft loneRightmostLeft;
         loneRightmostLeft.id = lowestLeftEdge;
         loneRightmostLeft.lower = activeSweepEdges_[activeVPosition].id;
         loneRightmostLeft.upper = activeSweepEdges_[activeVPosition + 1].id;
 
         activeSweepEdges_[activeVPosition].loneRightmostLeft = loneRightmostLeft;
-        activeSweepEdges_[activeVPosition + 1].loneRightmostLeft = loneRightmostLeft;
     }
 
     // resolve intersections
@@ -827,8 +848,8 @@ bool PlanarTriangulator::resolveIntersectios_()
 
         // winding modifiers of new parts should be same as old parts'
         windingInfo_.resize( e2n.undirected() + 1 );
-        windingInfo_[e1n.undirected()].windingMod = windingInfo_[activeSweepEdges_[i].id.undirected()].windingMod;
-        windingInfo_[e2n.undirected()].windingMod = windingInfo_[activeSweepEdges_[i + 1].id.undirected()].windingMod;
+        windingInfo_[e1n.undirected()].windingModifier = windingInfo_[activeSweepEdges_[i].id.undirected()].windingModifier;
+        windingInfo_[e2n.undirected()].windingModifier = windingInfo_[activeSweepEdges_[i + 1].id.undirected()].windingModifier;
         
         // we should really check for merge origins also, 
         // but it will require to precess origin one more time and break structure stability
@@ -862,9 +883,10 @@ HolesVertIds findHoleVertIdsByHoleEdges( const MeshTopology& tp, const std::vect
     return res;
 }
 
-Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVertsIds /*= nullptr*/ )
+Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVertsIds /*= nullptr*/,
+    WindingMode mode )
 {
-    PlanarTriangulator triangulator( contours, holeVertsIds, false );
+    PlanarTriangulator triangulator( contours, holeVertsIds, false, mode );
     auto res = triangulator.run();
     assert( res );
     if ( res )
@@ -873,10 +895,11 @@ Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVe
         return Mesh();
 }
 
-Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVertsIds /*= nullptr*/ )
+Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVertsIds /*= nullptr*/,
+    WindingMode mode )
 {
     const auto contsd = copyContours<Contours2d>( contours );
-    PlanarTriangulator triangulator( contsd, holeVertsIds, false );
+    PlanarTriangulator triangulator( contsd, holeVertsIds, false, mode );
     auto res = triangulator.run();
     assert( res );
     if ( res )

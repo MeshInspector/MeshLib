@@ -200,7 +200,7 @@ std::vector<PlaneSections> extractAllSections( const Mesh& mesh, const Box3f& bo
 
 struct ExtractIsolinesResult
 {
-    std::vector<IsoLines> isolines;
+    std::list<SurfacePath> sortedIsolines;
     Mesh meshAfterCut;
     Vector<std::vector<FaceId>, FaceId> old2NewMap;
     FaceBitSet region;
@@ -220,8 +220,10 @@ struct ExtractIsolinesParams
     float sectionStep;
     // which direction isolines should be passed in
     BypassDirection bypassDir;
+    //
+    bool fromCenterToBoundary;
     // callback for reporting on progress
-    ProgressCallback cb;
+    ProgressCallback cb;    
 };
 
 ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsolinesParams& params )
@@ -233,64 +235,6 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsoline
     
 
     res.meshAfterCut = mesh;
-    /*if ( params.meshTriPoints )
-    {
-        const auto meshContour = convertMeshTriPointsToClosedContour( mesh, *params.meshTriPoints );
-
-        CutMeshParameters cutMeshParams;
-        cutMeshParams.forceFillMode = CutMeshParameters::ForceFill::All;
-        FaceMap new2OldMap;
-        cutMeshParams.new2OldMap = &new2OldMap;
-        res.old2NewMap.resize( res.meshAfterCut.topology.faceSize() );
-        const auto cutRes = cutMesh( res.meshAfterCut, { meshContour }, cutMeshParams);
-
-        for ( FaceId f = FaceId( 0 ); f < new2OldMap.size(); ++f )
-        {
-            if ( new2OldMap[f].valid() )
-                res.old2NewMap[new2OldMap[f]].push_back( f );
-        }        
-
-        if ( cutRes.resultCut.empty() )
-        {
-            if ( params.failedContours )
-            {
-                params.failedContours->emplace_back();
-                auto& failedContour = params.failedContours->back();
-                for ( const auto& e : meshContour.intersections )
-                {
-                    failedContour.push_back( e.coordinate );
-                }
-                failedContour.push_back( failedContour.front() );
-            }
-            return res;
-        }    
-
-        VertBitSet startVertIds( res.meshAfterCut.topology.vertSize() );
-        res.region = fillContourLeftByGraphCut( res.meshAfterCut.topology, cutRes.resultCut, edgeCurvMetric( res.meshAfterCut ) );
-
-        VertBitSet innerVerts = getIncidentVerts( res.meshAfterCut.topology, res.region );
-
-        for ( const auto& edgeLoop : cutRes.resultCut )
-        {
-            for ( const auto edgeId : edgeLoop )
-            {
-                const auto orgVertId = res.meshAfterCut.topology.org( edgeId );
-                if ( !orgVertId.valid() )
-                    continue;
-
-                startVertIds.set( orgVertId );
-                if ( params.startVertices )
-                    params.startVertices->push_back( res.meshAfterCut.points[orgVertId] );
-
-                if ( startContour )
-                    startContour->push_back( res.meshAfterCut.edgePoint( { edgeId, 0.0f } ) );
-            }
-        }
-
-        VertBitSet regionVerts = startVertIds | innerVerts;
-        distances = computeSurfaceDistances( res.meshAfterCut, startVertIds, FLT_MAX, &regionVerts );
-    }
-    else */
 
     HashMap<VertId, float> startVerticesWithDists;
 
@@ -344,23 +288,65 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsoline
         return res;
 
     const auto& topology = res.meshAfterCut.topology;
-    res.isolines.resize( --numIsolines );
+    const auto firstIsolines = extractIsolines( topology, distances, params.sectionStep );
+    const size_t groupCount = firstIsolines.size();
 
-    const bool parallelForRes = MR::ParallelFor( size_t( 0 ), res.isolines.size(),
-    [&] ( size_t i )
+    
+    std::vector<std::list<SurfacePath>::iterator> groupStarts;
+    groupStarts.reserve( groupCount );
+    std::vector<Vector3f> groupStartPositions;
+    groupStartPositions.reserve( groupCount );
+
+    for ( const auto& isoline : firstIsolines )
     {
-        res.isolines[i] = extractIsolines( topology, distances, params.sectionStep * ( i + 1 ) );
+        res.sortedIsolines.push_front( isoline );
+        groupStarts.push_back( res.sortedIsolines.begin() );
+        groupStartPositions.push_back( res.meshAfterCut.edgePoint( groupStarts.back()->front() ) );
+    }
 
+    for ( size_t i = 1; i < numIsolines - 1; ++i )
+    {
+        auto isolines = extractIsolines( topology, distances, params.sectionStep * ( i + 1 ) );
         if ( params.bypassDir == BypassDirection::CounterClockwise )
         {
-            for ( auto& isoLine : res.isolines[i] )
+            for ( auto& isoLine : isolines )
             {
                 std::reverse( isoLine.begin(), isoLine.end() );
             }
-        }        
-    }, params.cb );
+        }
 
-    if ( !parallelForRes || !reportProgress( params.cb, 1.0f ) )
+        for ( const auto& isoLine : isolines )
+        {
+            float minDist = FLT_MAX;
+            size_t nearestIdx = groupCount;
+
+            for ( auto ep : isoLine )
+            {
+                for ( size_t j = 0; j < groupCount; ++j )
+                {
+                    const float dist = ( res.meshAfterCut.edgePoint( ep ) - groupStartPositions[j] ).lengthSq();
+                    if ( dist < minDist )
+                    {
+                        nearestIdx= j;
+                        minDist = dist;
+                    }
+                }
+            }
+
+            groupStarts[nearestIdx] = res.sortedIsolines.insert( groupStarts[nearestIdx], isoLine );
+            groupStartPositions[nearestIdx] = res.meshAfterCut.edgePoint( groupStarts[nearestIdx]->front() );            
+        }        
+    }
+
+    if ( params.fromCenterToBoundary )
+    {
+        for ( size_t i = 0; i < groupCount - 1; ++i )
+            std::reverse( groupStarts[i], groupStarts[i + 1] );
+        
+        std::reverse( groupStarts.back(), res.sortedIsolines.end() );
+    }
+
+    if ( !reportProgress( params.cb, 1.0f ) )
         return {};
 
     return res;
@@ -963,7 +949,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         }
 
         const auto& mesh = res.modifiedMesh;
-        if ( extract.isolines.empty() )
+        if ( extract.sortedIsolines.empty() )
             return reportProgress( cb, 0.4f );
 
         //go to the start point through safe height
@@ -1046,138 +1032,129 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
             return false;
 
         const auto sbp = subprogress( cb, 0.5f, 1.0f );
-        const size_t numIsolines = extract.isolines.size();
 
-        if ( params.fromCenterToBoundary )
-            std::reverse( extract.isolines.begin(), extract.isolines.end() );
+       // if ( params.fromCenterToBoundary )
+         //   std::reverse( extract.isolines.begin(), extract.isolines.end() );
         
         // go on in the inverse order (from the highest isoline to the lowest )
-        for ( size_t i = 0; i < numIsolines; ++i )
+        auto isolineIt = extract.sortedIsolines.begin();
+        while ( isolineIt != extract.sortedIsolines.end() )
         {
-            if ( sbp && !sbp( float( i ) / numIsolines ) )
-                return false;
+            auto& surfacePath = *isolineIt++;
 
-            if ( extract.isolines[i].empty() )
+            if ( surfacePath.empty() || !res.modifiedRegion.test( mesh.topology.left( surfacePath[0].e ) ) )
                 continue;
 
-            for ( int j = 0; j < extract.isolines[i].size(); ++j )
+            Polyline3 polyline;
+            polyline.addFromSurfacePath( mesh, surfacePath );
+            const auto contours = polyline.contours();
+            const auto& contour = contours.front();
+
+            if ( params.isolines )
+                params.isolines->push_back( contour );
+
+            auto nearestPointIt = surfacePath.begin();
+            float minDistSq = FLT_MAX;
+
+            // find the nearest point to the last processed one
+            if ( prevEdgePoint.e.valid() )
             {
-                const auto& surfacePath = extract.isolines[i][j];
-
-                if ( surfacePath.empty() || !res.modifiedRegion.test( mesh.topology.left( surfacePath[0].e ) ) )
-                    continue;
-
-                Polyline3 polyline;
-                polyline.addFromSurfacePath( mesh, surfacePath );
-                const auto contours = polyline.contours();
-                const auto& contour = contours.front();
-
-                if ( params.isolines )
-                    params.isolines->push_back( contour );
-
-                auto nearestPointIt = surfacePath.begin();
-                float minDistSq = FLT_MAX;              
-
-                // find the nearest point to the last processed one
-                if ( prevEdgePoint.e.valid() )
+                for ( auto it = surfacePath.begin(); it < surfacePath.end(); ++it )
                 {
-                    for ( auto it = surfacePath.begin(); it < surfacePath.end(); ++it )
+                    float distSq = ( mesh.edgePoint( *it ) - mesh.edgePoint( prevEdgePoint ) ).lengthSq();
+                    if ( distSq < minDistSq )
                     {
-                        float distSq = ( mesh.edgePoint( *it ) - mesh.edgePoint( prevEdgePoint ) ).lengthSq();
-                        if ( distSq < minDistSq )
-                        {
-                            minDistSq = distSq;
-                            nearestPointIt = it;
-                        }
+                        minDistSq = distSq;
+                        nearestPointIt = it;
                     }
                 }
+            }
 
-                auto nextEdgePointIt = nearestPointIt;
-                const float sectionStepSq = params.sectionStep * params.sectionStep;
-                const auto nearestPoint = mesh.edgePoint( *nearestPointIt );
+            auto nextEdgePointIt = nearestPointIt;
+            const float sectionStepSq = params.sectionStep * params.sectionStep;
+            const auto nearestPoint = mesh.edgePoint( *nearestPointIt );
 
-                // make severals steps ahead for smoother transit
-                Vector3f tmp;
-                bool skipPoint = false;
-                do
+            // make severals steps ahead for smoother transit
+            Vector3f tmp;
+            bool skipPoint = false;
+            do
+            {
+                std::next( nextEdgePointIt ) != surfacePath.end() ? ++nextEdgePointIt : nextEdgePointIt = surfacePath.begin();
+                tmp = mesh.edgePoint( *nextEdgePointIt );
+                skipPoint = ( tmp.z < minZ );
+            } while ( nextEdgePointIt != nearestPointIt && ( ( ( tmp - nearestPoint ).lengthSq() < sectionStepSq ) || skipPoint ) );
+
+            const auto pivotIt = contour.begin() + std::distance( surfacePath.begin(), nextEdgePointIt );
+            if ( skipPoint )
+                continue;
+
+            if ( !prevEdgePoint.e.valid() )
+            {
+                // go through the safe height to the first point
+                res.commands.push_back( { .type = MoveType::FastLinear, .x = pivotIt->x, .y = pivotIt->y } );
+
+                if ( safeZ - pivotIt->z > params.plungeLength )
                 {
-                    std::next( nextEdgePointIt ) != surfacePath.end() ? ++nextEdgePointIt : nextEdgePointIt = surfacePath.begin();
-                    tmp = mesh.edgePoint( *nextEdgePointIt );
-                    skipPoint = ( tmp.z < minZ );
-                } while ( nextEdgePointIt != nearestPointIt && ( ( ( tmp - nearestPoint ).lengthSq() < sectionStepSq ) || skipPoint ) );
-
-                const auto pivotIt = contour.begin() + std::distance( surfacePath.begin(), nextEdgePointIt );
-                if ( skipPoint )
-                    continue;
-
-                if ( !prevEdgePoint.e.valid() )
-                {
-                    // go through the safe height to the first point
-                    res.commands.push_back( { .type = MoveType::FastLinear, .x = pivotIt->x, .y = pivotIt->y } );
-
-                    if ( safeZ - pivotIt->z > params.plungeLength )
-                    {
-                        const float zPlunge = pivotIt->z + params.plungeLength;
-                        res.commands.push_back( { .type = MoveType::FastLinear, .z = zPlunge } );
-                    }
-
-                    res.commands.push_back( { .feed = params.plungeFeed, .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );
+                    const float zPlunge = pivotIt->z + params.plungeLength;
+                    res.commands.push_back( { .type = MoveType::FastLinear, .z = zPlunge } );
                 }
-                else
+
+                res.commands.push_back( { .feed = params.plungeFeed, .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );
+            }
+            else
+            {
+                // go along the undercut if the part of section is below
+                const auto p1 = mesh.edgePoint( prevEdgePoint );
+                const auto p2 = mesh.edgePoint( *nextEdgePointIt );
+                if ( p1.z == minZ )
                 {
-                    // go along the undercut if the part of section is below
-                    const auto p1 = mesh.edgePoint( prevEdgePoint );
-                    const auto p2 = mesh.edgePoint( *nextEdgePointIt );
-                    if ( p1.z == minZ )
+                    const auto sectionStartIt = findNearestPoint( undercutContour, p1 );
+                    const auto sectionEndIt = findNearestPoint( undercutContour, p2 );
+
+                    if ( sectionStartIt < sectionEndIt )
                     {
-                        const auto sectionStartIt = findNearestPoint( undercutContour, p1 );
-                        const auto sectionEndIt = findNearestPoint( undercutContour, p2 );
-
-                        if ( sectionStartIt < sectionEndIt )
-                        {
-                            for ( auto sectionIt = sectionStartIt; sectionIt <= sectionEndIt; ++sectionIt )
-                                addPointToTheToolPath( *sectionIt );
-                        }
-                        else
-                        {
-                            for ( auto sectionIt = sectionStartIt; sectionIt < undercutContour.end(); ++sectionIt )
-                                addPointToTheToolPath( *sectionIt );
-
-                            for ( auto sectionIt = std::next( undercutContour.begin() ); sectionIt <= sectionEndIt; ++sectionIt )
-                                addPointToTheToolPath( *sectionIt );
-                        }
-
-                        addPointToTheToolPath( p2 );
+                        for ( auto sectionIt = sectionStartIt; sectionIt <= sectionEndIt; ++sectionIt )
+                            addPointToTheToolPath( *sectionIt );
                     }
                     else
                     {
-                        // go along the mesh in other cases
-                        const auto sp = computeSurfacePath( mesh, prevEdgePoint, *nextEdgePointIt, 5, &noUndercutVertices );
-                        if ( sp.has_value() && !sp->empty() )
-                        {
-                            if ( sp->size() == 1 )
-                            {
-                                addPointToTheToolPath( mesh.edgePoint( sp->front() ) );
-                            }
-                            else
-                            {
-                                Polyline3 transit;
-                                transit.addFromSurfacePath( mesh, *sp );
-                                const auto transitContours = transit.contours().front();
-                                for ( const auto& p : transitContours )
-                                    addPointToTheToolPath( p );
-                            }
-                        }
+                        for ( auto sectionIt = sectionStartIt; sectionIt < undercutContour.end(); ++sectionIt )
+                            addPointToTheToolPath( *sectionIt );
+
+                        for ( auto sectionIt = std::next( undercutContour.begin() ); sectionIt <= sectionEndIt; ++sectionIt )
+                            addPointToTheToolPath( *sectionIt );
                     }
 
-                    res.commands.push_back( { .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );
+                    addPointToTheToolPath( p2 );
+                }
+                else
+                {
+                    // go along the mesh in other cases
+                    const auto sp = computeSurfacePath( mesh, prevEdgePoint, *nextEdgePointIt, 5, &noUndercutVertices );
+                    if ( sp.has_value() && !sp->empty() )
+                    {
+                        if ( sp->size() == 1 )
+                        {
+                            addPointToTheToolPath( mesh.edgePoint( sp->front() ) );
+                        }
+                        else
+                        {
+                            Polyline3 transit;
+                            transit.addFromSurfacePath( mesh, *sp );
+                            const auto transitContours = transit.contours().front();
+                            for ( const auto& p : transitContours )
+                                addPointToTheToolPath( p );
+                        }
+                    }
                 }
 
-                addSliceToTheToolPath( pivotIt + 1, contour.end() );
-                addSliceToTheToolPath( contour.begin() + 1, pivotIt + 1 );
-                prevEdgePoint = *nextEdgePointIt;
+                res.commands.push_back( { .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );
             }
-        }
+
+            addSliceToTheToolPath( pivotIt + 1, contour.end() );
+            addSliceToTheToolPath( contour.begin() + 1, pivotIt + 1 );
+            prevEdgePoint = *nextEdgePointIt;
+        }   
 
         return true;
     };
@@ -1203,12 +1180,11 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
 
     const auto components = MeshComponents::getAllComponents( MeshPart{ res.modifiedMesh, &res.modifiedRegion } );
     const size_t componentCount = components.size();
-    for ( size_t i = 0; i < 1; ++i )
-    {
-        const auto edgeLoops = findLeftBoundary( res.modifiedMesh.topology, components[i] );
+    std::vector<SurfacePath> startSurfacePaths;
 
-        std::vector<SurfacePath> startSurfacePaths;
-        startSurfacePaths.reserve( edgeLoops.size() );
+    for ( size_t i = 0; i < componentCount; ++i )
+    {        
+        const auto edgeLoops = findLeftBoundary( res.modifiedMesh.topology, components[i] );        
 
         for ( const auto& edgeLoop : edgeLoops )
         {
@@ -1220,13 +1196,14 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                 sp[i] = EdgePoint( edgeLoop[i], 0 );
             } );
         }
+    }
 
-        if ( !processZone( startSurfacePaths,
-            res.commands.empty() ? Vector3f{} : Vector3f{ res.commands.back().x, res.commands.back().y, res.commands.back().z },
-            subprogress( params.cb, 0.25f + 0.75f * float( i ) / componentCount, 0.25f + 0.75f * float( i + 1 ) / componentCount ) ) )
-        {
-            return unexpectedOperationCanceled();
-        }
+    if ( !processZone( startSurfacePaths,
+        res.commands.empty() ? Vector3f{} : Vector3f{ res.commands.back().x, res.commands.back().y, res.commands.back().z },
+        params.cb ) )
+        //subprogress( params.cb, 0.25f + 0.75f * float( i ) / componentCount, 0.25f + 0.75f * float( i + 1 ) / componentCount ) ) )
+    {
+        return unexpectedOperationCanceled();
     }
     /*std::vector<EdgeLoop> edgeLoops;
     if ( params.offsetMesh && params.offsetMesh->region )

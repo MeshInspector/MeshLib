@@ -82,17 +82,19 @@ private:
         std::vector<std::vector<int>> map; // map from terrain cut edges to projected contours
         std::vector<std::vector<int>> filtBowTiesMap; // map from projected contours to no bow tie filtered contours
         std::vector<int> offsetMap; // map from filtered contours to non-project offset contours (use in findOffsetContourIndex_)
-        VertBitSet intBitSet; // bit set of intersections
-        VertBitSet cutBitSet;
+        VertBitSet intBitSet; // bit set of intersections between structure and terrain mesh
+        VertBitSet cutBitSet; // bit set of cut part of structure mesh contour
     };
     // make preparation on terrain and finds contour for cut with mapping to cut structure boundary
     Expected<MappedMeshContours, std::string> prepareTerrainCut( MarkedContour&& mc );
     // cut terrain with filtered contours and remove internal part
     Expected<std::vector<EdgeLoop>, std::string> cutTerrain( const MappedMeshContours& mmc );
+
+    // contains newly added edges from connect_ functions
     struct ConnectionEdges
     {
-        EdgePath newCutEdges;
-        EdgePath newFillEdges;
+        EdgePath newCutEdges; // newly added edges of cut part
+        EdgePath newFillEdges; // newly added edges of fill part
     };
     // connect hole on terrain with cut structure
     ConnectionEdges connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours&& mmc );

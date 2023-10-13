@@ -82,16 +82,24 @@ private:
         std::vector<std::vector<int>> map; // map from terrain cut edges to projected contours
         std::vector<std::vector<int>> filtBowTiesMap; // map from projected contours to no bow tie filtered contours
         std::vector<int> offsetMap; // map from filtered contours to non-project offset contours (use in findOffsetContourIndex_)
-        VertBitSet intBitSet; // 
+        VertBitSet intBitSet; // bit set of intersections between structure and terrain mesh
+        VertBitSet cutBitSet; // bit set of cut part of structure mesh contour
     };
     // make preparation on terrain and finds contour for cut with mapping to cut structure boundary
     Expected<MappedMeshContours, std::string> prepareTerrainCut( MarkedContour&& mc );
     // cut terrain with filtered contours and remove internal part
     Expected<std::vector<EdgeLoop>, std::string> cutTerrain( const MappedMeshContours& mmc );
+
+    // contains newly added edges from connect_ functions
+    struct ConnectionEdges
+    {
+        EdgePath newCutEdges; // newly added edges of cut part
+        EdgePath newFillEdges; // newly added edges of fill part
+    };
     // connect hole on terrain with cut structure
-    void connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours&& mmc );
+    ConnectionEdges connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours&& mmc );
     // fill holes in connection
-    void fill_( size_t oldVertSize, size_t oldEdgesSize );
+    void fill_( size_t oldVertSize, ConnectionEdges&& connectionInfo );
 
     struct OffsetBlock
     {
@@ -137,10 +145,9 @@ Expected<Mesh, std::string> TerrainEmbedder::run()
         return unexpected( cutTer.error() );
 
     auto oldVertSize = result_.topology.vertSize();
-    auto oldEdgeSize = result_.topology.undirectedEdgeSize();
-    connect_( std::move( *cutTer ), std::move( *prepCut ) );
+    auto connectionInfo = connect_( std::move( *cutTer ), std::move( *prepCut ) );
 
-    fill_( oldVertSize, oldEdgeSize );
+    fill_( oldVertSize, std::move( connectionInfo ) );
 
     return std::move( result_ );
 }
@@ -290,6 +297,7 @@ Expected<TerrainEmbedder::MappedMeshContours, std::string> TerrainEmbedder::prep
         {
             res.offsetMap = std::move( offCont.idsShifts );
             res.intBitSet = std::move( mc.intBitSet );
+            res.cutBitSet = std::move( mc.cutBitSet );
             return res;
         }
         subdivideLoneContours( result_, loneContours );
@@ -308,10 +316,16 @@ Expected<std::vector<EdgeLoop>, std::string> TerrainEmbedder::cutTerrain( const 
     return cutRes.resultCut;
 }
 
-void TerrainEmbedder::connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours&& mmc )
+TerrainEmbedder::ConnectionEdges TerrainEmbedder::connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours&& mmc )
 {
     WholeEdgeMap emap;
+    auto faceNum = int( result_.topology.faceSize() );
     result_.addPart( std::move( cutStructure_ ), nullptr, nullptr, &emap );
+    if ( params_.outStructFaces )
+    {
+        params_.outStructFaces->resize( result_.topology.faceSize() );
+        params_.outStructFaces->set( FaceId( faceNum ), params_.outStructFaces->size() - faceNum, true );
+    }
 
     int prevBaseInd = 0;
     int* prevMptIndexPtr{ nullptr };
@@ -342,6 +356,7 @@ void TerrainEmbedder::connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours
         }
     }
 
+    ConnectionEdges connectionInfo;
     for ( int i = 0; i < mmc.map.size(); ++i )
     {
         for ( int j = 0; j < std::min( mmc.map[i].size(), mmc.filtBowTiesMap[i].size() ); ++j )
@@ -366,12 +381,19 @@ void TerrainEmbedder::connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours
                 result_.topology.setOrg( e, vert );
             }
             else
-                makeBridgeEdge( result_.topology, e, be );
+            {
+                auto newE = makeBridgeEdge( result_.topology, e, be );
+                if ( mmc.cutBitSet.test( VertId( baseEdgeIndex ) ) )
+                    connectionInfo.newCutEdges.push_back( newE );
+                else
+                    connectionInfo.newFillEdges.push_back( newE );
+            }
         }
     }
+    return connectionInfo;
 }
 
-void TerrainEmbedder::fill_( size_t oldVertSize, size_t oldEdgesSize )
+void TerrainEmbedder::fill_( size_t oldVertSize, ConnectionEdges&& connectionInfo )
 {
     auto orgMetric = getEdgeLengthFillMetric( result_ );
 
@@ -389,15 +411,27 @@ void TerrainEmbedder::fill_( size_t oldVertSize, size_t oldEdgesSize )
             return orgMetric.triangleMetric( a, b, c );
         return 0.0;
     };
-    auto edgesSize = result_.topology.undirectedEdgeSize();
-
 
     FillHoleParams fhParams;
     fhParams.metric = metric;
-    fhParams.outNewFaces = params_.outNewFaces;
-    for ( size_t ue = oldEdgesSize; ue < edgesSize; ++ue )
+
+    for ( auto edge : connectionInfo.newCutEdges )
     {
-        auto edge = EdgeId( ue << 1 );
+        if ( params_.outCutFaces )
+            fhParams.outNewFaces = params_.outCutFaces;
+
+        if ( !result_.topology.left( edge ) )
+            fillHole( result_, edge, fhParams );
+        if ( !result_.topology.left( edge.sym() ) )
+            fillHole( result_, edge.sym(), fhParams );
+    }
+
+    fhParams.outNewFaces = nullptr;
+
+    for ( auto edge : connectionInfo.newFillEdges )
+    {
+        if ( params_.outFillFaces )
+            fhParams.outNewFaces = params_.outFillFaces;
 
         if ( !result_.topology.left( edge ) )
             fillHole( result_, edge, fhParams );
@@ -457,13 +491,16 @@ TerrainEmbedder::OffsetBlock TerrainEmbedder::offsetContour_( const MarkedContou
         sameAsPrev = std::abs( ang ) < PI_F / 360.0f;
         if ( !sameAsPrev )
         {
-            int numSteps = int( std::floor( std::abs( ang ) / ( params_.minAnglePrecision ) ) );
-            for ( int s = 0; s < numSteps; ++s )
+            if ( ang < 0.0f )
             {
-                float stepAng = ( ang / ( numSteps + 1 ) ) * ( s + 1 );
-                auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( stepAng ), orgPt );
-                res.contour.emplace_back( rotXf( prevPoint ) );
-                ++res.idsShifts[i];
+                int numSteps = int( std::floor( std::abs( ang ) / ( params_.minAnglePrecision ) ) );
+                for ( int s = 0; s < numSteps; ++s )
+                {
+                    float stepAng = ( ang / ( numSteps + 1 ) ) * ( s + 1 );
+                    auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( stepAng ), orgPt );
+                    res.contour.emplace_back( rotXf( prevPoint ) );
+                    ++res.idsShifts[i];
+                }
             }
             res.contour.emplace_back( std::move( nextPoint ) );
             ++res.idsShifts[i];

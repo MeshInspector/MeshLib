@@ -239,10 +239,9 @@ VoidOrErrStr toAsciiStl( const Mesh& mesh, const std::filesystem::path& file, Pr
 VoidOrErrStr toAsciiStl( const Mesh& mesh, std::ostream& out, ProgressCallback callback )
 {
     MR_TIMER;
-#define SOLID_NAME "mesh"
-#define ENDL "\r\n"
 
-    out << "solid " SOLID_NAME ENDL;
+    static const char* solid_name = "MeshInspector.com";
+    out << "solid " << solid_name << "\n";
     auto notDegenTris = getNotDegenTris( mesh );
     const float trisNum = float( notDegenTris.count() );
     int trisIndex = 0;
@@ -255,24 +254,21 @@ VoidOrErrStr toAsciiStl( const Mesh& mesh, std::ostream& out, ProgressCallback c
         const Vector3f& bp = mesh.points[b];
         const Vector3f& cp = mesh.points[c];
         Vector3f normal = cross( bp - ap, cp - ap ).normalized();
-        std::string s = fmt::format( "{:.6f} {:.6f} {:.6f}", normal.x, normal.y, normal.z );
-        out << "facet normal " << s << ENDL;
-        out << "outer loop" ENDL;
+        std::string s = fmt::format( "{} {} {}", normal.x, normal.y, normal.z );
+        out << "facet normal " << s << "\n";
+        out << "outer loop\n";
         for ( const Vector3f& p : { ap, bp, cp } )
         {
             s = fmt::format( "{} {} {}", p.x, p.y, p.z );
-            out << "vertex " << s << ENDL;
+            out << "vertex " << s << "\n";
         }
-        out << "endloop" ENDL;
-        out << "endfacet" ENDL;
+        out << "endloop\n";
+        out << "endfacet\n";
         if ( callback && !( trisIndex & 0x3FF ) && !callback( trisIndex / trisNum ) )
             return unexpected( std::string( "Saving canceled" ) );
         ++trisIndex;
     }
-    out << "endsolid " SOLID_NAME ENDL;
-
-#undef SOLID_NAME
-#undef ENDL
+    out << "endsolid " << solid_name << "\n";
 
     if ( !out )
         return unexpected( std::string( "Error saving in ascii STL-format" ) );

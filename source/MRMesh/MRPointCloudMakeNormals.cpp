@@ -10,6 +10,7 @@
 #include "MRPlane3.h"
 #include "MRPointCloudRadius.h"
 #include "MRHeap.h"
+#include "MRBuffer.h"
 #include <cfloat>
 
 namespace MR
@@ -19,7 +20,8 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, 
 {
     MR_TIMER
 
-    VertNormals normals( pointCloud.points.size() );
+    VertNormals normals;
+    normals.resizeNoInit( pointCloud.points.size() );
     if ( !BitSetParallelFor( pointCloud.validPoints, [&]( VertId vid )
     {
         PointAccumulator accum;
@@ -27,6 +29,29 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, 
         {
             accum.addPoint( Vector3d( coord ) );
         } );
+        normals[vid] = Vector3f( accum.getBestPlane().n ).normalized();
+    }, progress ) )
+        return {};
+
+    return normals;
+}
+
+std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud,
+    const Buffer<VertId> & closeVerts, int numNei, const ProgressCallback & progress )
+{
+    MR_TIMER
+
+    VertNormals normals;
+    normals.resizeNoInit( pointCloud.points.size() );
+    if ( !BitSetParallelFor( pointCloud.validPoints, [&]( VertId vid )
+    {
+        PointAccumulator accum;
+        accum.addPoint( pointCloud.points[vid] );
+        VertId * p = closeVerts.data() + ( (size_t)vid * numNei );
+        const VertId * pEnd = p + numNei;
+        for ( ; p < pEnd; ++p )
+            if ( *p )
+                accum.addPoint( pointCloud.points[*p] );
         normals[vid] = Vector3f( accum.getBestPlane().n ).normalized();
     }, progress ) )
         return {};

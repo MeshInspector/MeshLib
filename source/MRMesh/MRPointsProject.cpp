@@ -185,6 +185,9 @@ Buffer<VertId> findNClosestPointsPerPoint( const PointCloud& pc, int numNei, con
 
     tbb::enumerable_thread_specific<FewSmallest<PointsProjectionResult>> perThreadNeis( numNei + 1 );
 
+    pc.getAABBTree(); // to avoid multiple calls to tree construction from parallel region,
+                      // which can result that two different vertices will start being processed by one thread
+
     if ( !BitSetParallelFor( pc.validPoints, [&]( VertId v )
     {
         auto & neis = perThreadNeis.local();

@@ -27,6 +27,13 @@ namespace MR
 MRMESH_API bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, float radius,
     const ProgressCallback & progress = {} );
 
+/// \brief Select consistent orientation of given normals to make directions of close points consistent;
+/// \param closeVert a buffer where for every valid point #i its neighbours are stored at indices [i*numNei; (i+1)*numNei)
+/// \return false if progress returned false
+/// \ingroup PointCloudGroup
+MRMESH_API bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, const Buffer<VertId> & closeVerts, int numNei,
+    const ProgressCallback & progress = {} );
+
 /// \brief Makes normals for valid points of given point cloud; directions of close points are selected to be consistent;
 /// \param radius of neighborhood to consider
 /// \return nullopt if progress returned false

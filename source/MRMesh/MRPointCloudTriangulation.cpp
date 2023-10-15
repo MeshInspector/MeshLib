@@ -96,12 +96,11 @@ std::optional<Mesh> PointCloudTriangulator::triangulate( ProgressCallback progre
 bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
 {
     MR_TIMER
-    float radius = findAvgPointsRadius( pointCloud_, params_.avgNumNeighbours );
 
     VertNormals myNormals;
     if ( pointCloud_.normals.empty() )
     {
-        auto optNormals = makeOrientedNormals( pointCloud_, radius, subprogress( progressCb, 0.0f, 0.3f ) );
+        auto optNormals = makeOrientedNormals( pointCloud_, 8, subprogress( progressCb, 0.0f, 0.3f ) );
         if ( !optNormals )
             return false;
         if ( progressCb )
@@ -110,6 +109,7 @@ bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
     }
     const VertCoords& normals = pointCloud_.normals.empty() ? myNormals : pointCloud_.normals;
 
+    float radius = findAvgPointsRadius( pointCloud_, params_.avgNumNeighbours );
     auto body = [&] ( VertId v )
     {
         auto& localData = tls_.local();

@@ -177,7 +177,7 @@ void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest
     }
 }
 
-Buffer<VertId> findNClosestPointsPerPoint( const PointCloud& pc, int numNei )
+Buffer<VertId> findNClosestPointsPerPoint( const PointCloud& pc, int numNei, const ProgressCallback & progress )
 {
     MR_TIMER
     assert( numNei >= 1 );
@@ -185,7 +185,7 @@ Buffer<VertId> findNClosestPointsPerPoint( const PointCloud& pc, int numNei )
 
     tbb::enumerable_thread_specific<FewSmallest<PointsProjectionResult>> perThreadNeis( numNei + 1 );
 
-    BitSetParallelFor( pc.validPoints, [&]( VertId v )
+    if ( !BitSetParallelFor( pc.validPoints, [&]( VertId v )
     {
         auto & neis = perThreadNeis.local();
         neis.clear();
@@ -198,7 +198,8 @@ Buffer<VertId> findNClosestPointsPerPoint( const PointCloud& pc, int numNei )
                 *p++ = n.vId;
         while ( p < pEnd )
             *p++ = {};
-    } );
+    }, progress ) )
+        res.clear();
 
     return res;
 }

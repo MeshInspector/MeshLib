@@ -9,6 +9,7 @@
 #include "MRTimer.h"
 #include "MRPlane3.h"
 #include "MRPointCloudRadius.h"
+#include "MRPointsProject.h"
 #include "MRHeap.h"
 #include "MRBuffer.h"
 #include <cfloat>
@@ -103,7 +104,8 @@ bool orientNormalsCore( const PointCloud& pointCloud, VertNormals& normals, cons
 
     auto findFirst = [&]()->VertId
     {
-        MR_TIMER;
+        MR_TIMER
+        // find not visited point with the largest x-coordinate
         VertId xMostVert;
         float maxX = -FLT_MAX;
         for ( auto v : notVisited )
@@ -118,6 +120,7 @@ bool orientNormalsCore( const PointCloud& pointCloud, VertNormals& normals, cons
         }
         if ( xMostVert )
         {
+            // orient the point with the largest x-coordinate to have normal outside
             if ( dot( normals[xMostVert], Vector3f::plusX() ) < 0.0f )
                 normals[xMostVert] = -normals[xMostVert];
         }
@@ -174,23 +177,24 @@ bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, const Bu
 }
 
 std::optional<VertNormals> makeOrientedNormals( const PointCloud& pointCloud,
-    float radius, const ProgressCallback & progress )
+    int numNei, const ProgressCallback & progress )
 {
     MR_TIMER
 
-    auto optNormals = makeUnorientedNormals( pointCloud, radius, subprogress( progress, 0.0f, 0.1f ) );
-    if ( !optNormals )
-        return optNormals;
+    std::optional<VertNormals> res;
 
-    if ( !orientNormals( pointCloud, *optNormals, radius, subprogress( progress, 0.1f, 1.0f ) ) )
-        optNormals.reset();
+    auto closeVerts = findNClosestPointsPerPoint( pointCloud, numNei, subprogress( progress, 0.0f, 0.2f ) );
+    if ( closeVerts.empty() )
+        return res;
 
-    return optNormals;
-}
+    res = makeUnorientedNormals( pointCloud, closeVerts, numNei, subprogress( progress, 0.2f, 0.25f ) );
+    if ( !res )
+        return res;
 
-VertNormals makeNormals( const PointCloud& pointCloud, int avgNeighborhoodSize )
-{
-    return *makeOrientedNormals( pointCloud, findAvgPointsRadius( pointCloud, avgNeighborhoodSize ) );
+    if ( !orientNormals( pointCloud, *res, closeVerts, numNei, subprogress( progress, 0.25f, 1.0f ) ) )
+        res.reset();
+
+    return res;
 }
 
 } //namespace MR

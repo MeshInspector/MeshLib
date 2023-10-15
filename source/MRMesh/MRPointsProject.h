@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRId.h"
+#include "MRProgressCallback.h"
 #include <cfloat>
 
 namespace MR
@@ -45,7 +46,7 @@ MRMESH_API void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, 
  * \param numNei the number of closest points to find for each point
  * \return a buffer where for every valid point #i its neighbours are stored at indices [i*numNei; (i+1)*numNei)
  */
-[[nodiscard]] MRMESH_API Buffer<VertId> findNClosestPointsPerPoint( const PointCloud& pc, int numNei );
+[[nodiscard]] MRMESH_API Buffer<VertId> findNClosestPointsPerPoint( const PointCloud& pc, int numNei, const ProgressCallback & progress = {} );
 
 /// \}
 }

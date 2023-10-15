@@ -32,8 +32,9 @@ def test_numpy_points_mesh():
     verts = np.stack((x.flatten(),y.flatten(),z.flatten()),axis=-1).reshape(-1,3)
     # Create MeshLib PointCloud from np ndarray
     pc = mrmeshnumpy.pointCloudFromPoints(verts)
-    # Remove duplicate points
-    pc.validPoints = mrmesh.pointUniformSampling(pc,1e-3)
+    # Remove duplicate points on poles
+    # and remove too close points on parallels near poles, otherwise all 8 closest neighbours are located there
+    pc.validPoints = mrmesh.pointUniformSampling(pc,1e-2)
     pc.invalidateCaches()
 
     # Triangulate it

@@ -2,6 +2,10 @@
 #include "MRPointCloud.h"
 #include "MRAABBTreePoints.h"
 #include "MRFewSmallest.h"
+#include "MRBuffer.h"
+#include "MRBitSetParallelFor.h"
+#include "MRTimer.h"
+#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -171,6 +175,36 @@ void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest
         addSubTask( s1 ); // larger distance to look later
         addSubTask( s2 ); // smaller distance to look first
     }
+}
+
+Buffer<VertId> findNClosestPointsPerPoint( const PointCloud& pc, int numNei, const ProgressCallback & progress )
+{
+    MR_TIMER
+    assert( numNei >= 1 );
+    Buffer<VertId> res( pc.points.size() * numNei );
+
+    tbb::enumerable_thread_specific<FewSmallest<PointsProjectionResult>> perThreadNeis( numNei + 1 );
+
+    pc.getAABBTree(); // to avoid multiple calls to tree construction from parallel region,
+                      // which can result that two different vertices will start being processed by one thread
+
+    if ( !BitSetParallelFor( pc.validPoints, [&]( VertId v )
+    {
+        auto & neis = perThreadNeis.local();
+        neis.clear();
+        assert( neis.maxElms() == numNei + 1 );
+        findFewClosestPoints( pc.points[v], pc, neis );
+        VertId * p = res.data() + ( (size_t)v * numNei );
+        const VertId * pEnd = p + numNei;
+        for ( const auto & n : neis.get() )
+            if ( n.vId != v && p < pEnd )
+                *p++ = n.vId;
+        while ( p < pEnd )
+            *p++ = {};
+    }, progress ) )
+        res.clear();
+
+    return res;
 }
 
 } //namespace MR

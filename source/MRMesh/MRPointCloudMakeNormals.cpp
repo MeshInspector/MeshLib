@@ -9,7 +9,9 @@
 #include "MRTimer.h"
 #include "MRPlane3.h"
 #include "MRPointCloudRadius.h"
+#include "MRPointsProject.h"
 #include "MRHeap.h"
+#include "MRBuffer.h"
 #include <cfloat>
 
 namespace MR
@@ -19,7 +21,8 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, 
 {
     MR_TIMER
 
-    VertNormals normals( pointCloud.points.size() );
+    VertNormals normals;
+    normals.resizeNoInit( pointCloud.points.size() );
     if ( !BitSetParallelFor( pointCloud.validPoints, [&]( VertId vid )
     {
         PointAccumulator accum;
@@ -27,6 +30,28 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, 
         {
             accum.addPoint( Vector3d( coord ) );
         } );
+        normals[vid] = Vector3f( accum.getBestPlane().n ).normalized();
+    }, progress ) )
+        return {};
+
+    return normals;
+}
+
+std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud,
+    const Buffer<VertId> & closeVerts, int numNei, const ProgressCallback & progress )
+{
+    MR_TIMER
+
+    VertNormals normals;
+    normals.resizeNoInit( pointCloud.points.size() );
+    if ( !BitSetParallelFor( pointCloud.validPoints, [&]( VertId vid )
+    {
+        PointAccumulator accum;
+        accum.addPoint( pointCloud.points[vid] );
+        VertId * p = closeVerts.data() + ( (size_t)vid * numNei );
+        const VertId * pEnd = p + numNei;
+        for ( ; p < pEnd && *p; ++p )
+            accum.addPoint( pointCloud.points[*p] );
         normals[vid] = Vector3f( accum.getBestPlane().n ).normalized();
     }, progress ) )
         return {};
@@ -45,7 +70,8 @@ inline bool operator < ( const NormalCandidate& l, const NormalCandidate& r )
     return l.weight > r.weight;
 }
 
-bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, float radius, const ProgressCallback & progress )
+template<class T>
+bool orientNormalsCore( const PointCloud& pointCloud, VertNormals& normals, const T & enumNeis, const ProgressCallback & progress )
 {
     MR_TIMER
 
@@ -66,11 +92,9 @@ bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, float ra
         assert( notVisited.test( base ) );
         notVisited.reset( base );
         ++visitedCount;
-        findPointsInBall( pointCloud, pointCloud.points[base], radius,
-                          [&]( VertId v, const Vector3f& )
+        enumNeis( base, [&]( VertId v )
         {
-            if ( v == base )
-                return;
+            assert ( v != base );
             if ( !notVisited.test( v ) )
                 return;
             float weight = enweight( base, v );
@@ -80,7 +104,8 @@ bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, float ra
 
     auto findFirst = [&]()->VertId
     {
-        MR_TIMER;
+        MR_TIMER
+        // find not visited point with the largest x-coordinate
         VertId xMostVert;
         float maxX = -FLT_MAX;
         for ( auto v : notVisited )
@@ -95,6 +120,7 @@ bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, float ra
         }
         if ( xMostVert )
         {
+            // orient the point with the largest x-coordinate to have normal outside
             if ( dot( normals[xMostVert], Vector3f::plusX() ) < 0.0f )
                 normals[xMostVert] = -normals[xMostVert];
         }
@@ -114,7 +140,7 @@ bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, float ra
             if ( dot( normals[c.baseId], normals[v] ) < 0.0f )
                 normals[v] = -normals[v];
             enqueueNeighbors( v );
-            if ( !reportProgress( progress, [&] { return (float)visitedCount / totalCount; }, visitedCount, 1024 ) )
+            if ( !reportProgress( progress, [&] { return (float)visitedCount / totalCount; }, visitedCount, 0x10000 ) )
                 return false;
         }
         first = findFirst();
@@ -122,24 +148,53 @@ bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, float ra
     return true;
 }
 
+bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, float radius, const ProgressCallback & progress )
+{
+    return orientNormalsCore( pointCloud, normals,
+        [&]( VertId base, auto callback )
+        {
+            findPointsInBall( pointCloud, pointCloud.points[base], radius,
+                [&]( VertId v, const Vector3f& )
+                {
+                    if ( v == base )
+                        return;
+                    callback( v );
+                } );
+        }, progress );
+}
+
+bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, const Buffer<VertId> & closeVerts, int numNei,
+    const ProgressCallback & progress )
+{
+    return orientNormalsCore( pointCloud, normals,
+        [&]( VertId base, auto callback )
+        {
+            VertId * p = closeVerts.data() + ( (size_t)base * numNei );
+            const VertId * pEnd = p + numNei;
+            for ( ; p < pEnd && *p; ++p )
+                callback( *p );
+        }, progress );
+}
+
 std::optional<VertNormals> makeOrientedNormals( const PointCloud& pointCloud,
-    float radius, const ProgressCallback & progress )
+    int numNei, const ProgressCallback & progress )
 {
     MR_TIMER
 
-    auto optNormals = makeUnorientedNormals( pointCloud, radius, subprogress( progress, 0.0f, 0.1f ) );
-    if ( !optNormals )
-        return optNormals;
+    std::optional<VertNormals> res;
 
-    if ( !orientNormals( pointCloud, *optNormals, radius, subprogress( progress, 0.1f, 1.0f ) ) )
-        optNormals.reset();
+    auto closeVerts = findNClosestPointsPerPoint( pointCloud, numNei, subprogress( progress, 0.0f, 0.2f ) );
+    if ( closeVerts.empty() )
+        return res;
 
-    return optNormals;
-}
+    res = makeUnorientedNormals( pointCloud, closeVerts, numNei, subprogress( progress, 0.2f, 0.25f ) );
+    if ( !res )
+        return res;
 
-VertNormals makeNormals( const PointCloud& pointCloud, int avgNeighborhoodSize )
-{
-    return *makeOrientedNormals( pointCloud, findAvgPointsRadius( pointCloud, avgNeighborhoodSize ) );
+    if ( !orientNormals( pointCloud, *res, closeVerts, numNei, subprogress( progress, 0.25f, 1.0f ) ) )
+        res.reset();
+
+    return res;
 }
 
 } //namespace MR

@@ -183,8 +183,8 @@ std::string getVolumeFragmentShader()
             uint voxelId = uint( textCoord.z * dims.z ) * dimsXY + uint( textCoord.y * dims.y ) * dimsX + uint( textCoord.x * dims.x );
             uint index = voxelId / 32u;
             uint block = texelFetch( activeVoxels, ivec2( index % uint( texSize.x ), index / uint( texSize.x ) ), 0 ).r;
-            bool active = bool( block & uint( 1 << ( voxelId % 32u ) ) );
-            if ( !active )
+            bool isActiveVoxel = bool( block & uint( 1 << ( voxelId % 32u ) ) );
+            if ( !isActiveVoxel )
                 continue;
         }
 
@@ -347,8 +347,8 @@ std::string getVolumePickerFragmentShader()
             uint voxelId = uint( textCoord.z * dims.z ) * dimsXY + uint( textCoord.y * dims.y ) * dimsX + uint( textCoord.x * dims.x );
             uint index = voxelId / 32u;
             uint block = texelFetch( activeVoxels, ivec2( index % uint( texSize.x ), index / uint( texSize.x ) ), 0 ).r;
-            bool active = bool( block & uint( 1 << ( voxelId % 32u ) ) );
-            if ( !active )
+            bool isActiveVoxel = bool( block & uint( 1 << ( voxelId % 32u ) ) );
+            if ( !isActiveVoxel )
                 continue;
         }
 

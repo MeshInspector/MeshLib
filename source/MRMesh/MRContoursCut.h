@@ -6,6 +6,7 @@
 #include "MRIntersectionContour.h"
 #include "MRExtractIsolines.h"
 #include "MRMeshCollidePrecise.h"
+#include "MRSurfacePath.h"
 #include <variant>
 
 namespace MR
@@ -57,15 +58,23 @@ MRMESH_API void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contou
 MRMESH_API OneMeshContours getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& contours, bool getMeshAIntersections,
     const CoordinateConverters& converters, const AffineXf3f* rigidB2A = nullptr );
 
+
+struct SearchPathSettings
+{
+    GeodesicPathApprox geodesicPathApprox = GeodesicPathApprox::DijkstraAStar;
+    int maxReduceIters{ 0 };
+};
+
 /** \ingroup BooleanGroup
   * \brief Makes continuous contour by mesh tri points, if first and last meshTriPoint is the same, makes closed contour
   *
   * Finds shortest paths between neighbor \p meshTriPoints and build contour MR::cutMesh input
+  * \param 
   * \param pivotIndices optional output indices of given meshTriPoints in result OneMeshContour
   */
 [[nodiscard]]
-MRMESH_API OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
-    std::vector<int>* pivotIndices = nullptr );
+MRMESH_API OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints, 
+    SearchPathSettings searchSettings = {}, std::vector<int>* pivotIndices = nullptr );
 
 /** \ingroup BooleanGroup
   * \brief Makes closed continuous contour by mesh tri points, note that first and last meshTriPoint should not be same
@@ -76,7 +85,7 @@ MRMESH_API OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, c
   */
 [[nodiscard]]
 MRMESH_API OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints, 
-    std::vector<int>* pivotIndices = nullptr );
+    SearchPathSettings searchSettings = {}, std::vector<int>* pivotIndices = nullptr );
 
 /** \ingroup BooleanGroup
   * \brief Converts SurfacePath to OneMeshContours

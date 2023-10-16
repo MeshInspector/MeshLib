@@ -280,7 +280,7 @@ Expected<TerrainEmbedder::MappedMeshContours, std::string> TerrainEmbedder::prep
         for ( int i = 0; i < res.contours.size(); ++i )
         {
             bool lone = true;
-            res.contours[i] = convertMeshTriPointsToClosedContour( result_, noBowtiesMtps[i], &res.map[i] );
+            res.contours[i] = convertMeshTriPointsToClosedContour( result_, noBowtiesMtps[i], {}, &res.map[i] );
             for ( int j = 0; j < res.contours[i].intersections.size(); ++j )
             {
                 if ( res.contours[i].intersections[j].primitiveId.index() == OneMeshIntersection::VariantIndex::Edge )

@@ -1,4 +1,4 @@
-#include "MRMeshLoad3mf.h"
+#include "MRMeshLoad.h"
 #include "MRMeshBuilder.h"
 #include "MRIdentifyVertices.h"
 #include "MRMesh.h"
@@ -17,6 +17,7 @@
 #include "MRIOParsing.h"
 #include "MRSerializer.h"
 #include "MRZip.h"
+#include "MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
 
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
@@ -78,7 +79,7 @@ struct ThreeMFLoader
     // Mesh cache
     // Meshes and compound objects (containing other meshes/compounds) can go in the file in any order
     // So they are created recursively with the usage of the cache
-    std::map<std::string, std::shared_ptr<Mesh>> resources;
+    std::map<std::string, Mesh> resources;
 
     // Output information
     int *duplicatedVertexCount = nullptr, *skippedFaceCount = nullptr;
@@ -93,10 +94,10 @@ ProgressCallback makeCallback( ThreeMFLoader &loader )
 }
 
 // Load an object, using the resource cache
-Expected<std::shared_ptr<Mesh>, std::string> loadObject( const char* id, ThreeMFLoader& loader );
+Expected<Mesh, std::string> loadObject( const char* id, ThreeMFLoader& loader );
 
 // Load mesh from <mesh> element
-Expected<std::shared_ptr<Mesh>, std::string> loadMesh( const tinyxml2::XMLElement* meshNode, ProgressCallback callback,
+Expected<Mesh, std::string> loadMesh( const tinyxml2::XMLElement* meshNode, ProgressCallback callback,
     ThreeMFLoader &loader )
 {
     auto verticesNode = meshNode->FirstChildElement( "vertices" );
@@ -160,11 +161,11 @@ Expected<std::shared_ptr<Mesh>, std::string> loadMesh( const tinyxml2::XMLElemen
     if ( !reportProgress( callback, 0.75f ) )
         return unexpected( std::string( "Loading canceled" ) );
 
-    return std::make_shared<Mesh>( std::move( mesh ) );
-};
+    return mesh;
+}
 
 // Parse multi-component object form <components> or <build> element
-Expected<std::shared_ptr<Mesh>, std::string> loadComponents(
+Expected<Mesh, std::string> loadComponents(
     const tinyxml2::XMLElement* componentsNode, const char* childTagName, ProgressCallback callback, ThreeMFLoader &loader )
 {
     Mesh resultMesh;
@@ -174,7 +175,7 @@ Expected<std::shared_ptr<Mesh>, std::string> loadComponents(
         auto res = loadObject( objectNode->FindAttribute( "objectid" )->Value(), loader );
         if ( !res )
             return res;
-        std::shared_ptr<Mesh> mesh = *res;
+        Mesh mesh = std::move( *res );
         // Transform mesh
         if ( auto transformNode = objectNode->FindAttribute( "transform" ) )
         {
@@ -182,27 +183,23 @@ Expected<std::shared_ptr<Mesh>, std::string> loadComponents(
             if ( !resXf )
                 return unexpected( resXf.error() );
             if ( *resXf != AffineXf3f() )
-            {
-                mesh = std::make_shared<Mesh>( *mesh );
-                mesh->transform( *resXf );
-            }
+                mesh.transform( *resXf );
         }
 
         if ( !reportProgress( callback, 0.5f ) )
             return unexpected( std::string( "Loading canceled" ) );
 
-        resultMesh.addPart( *mesh );
+        resultMesh.addPart( mesh );
     }
-    return std::make_shared<Mesh>( std::move( resultMesh ) );
-};
+    return resultMesh;
+}
 
 // Load an object, using the resource cache
-Expected<std::shared_ptr<Mesh>, std::string> loadObject( const char* id, ThreeMFLoader &loader )
+Expected<Mesh, std::string> loadObject( const char* id, ThreeMFLoader &loader )
 {
     if ( loader.resources.contains( id ) )
         return loader.resources[id];
-    Expected<std::shared_ptr<Mesh>, std::string> res =
-        unexpected( "3DF object '" + utf8string( id ) + "' not found" );
+    Expected<Mesh, std::string> res = unexpected( "3DF object '" + utf8string( id ) + "' not found" );
     if ( loader.meshNodes.contains( id ) )
         res = loadMesh( loader.meshNodes[id], makeCallback( loader ), loader );
     else if ( loader.componentsNodes.contains( id ) )
@@ -283,8 +280,7 @@ Expected<Mesh, std::string> from3mfModel( std::istream& in, const MeshLoadSettin
     auto res = loadComponents( buildNode, "item", makeCallback(loader), loader );
     if (!res)
         return unexpected( res.error() );
-    std::shared_ptr<Mesh> mesh = std::move( *res );
-    return std::move( *mesh );
+    return *res;
 }
 
 Expected<Mesh, std::string> from3mf( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
@@ -306,11 +302,12 @@ Expected<Mesh, std::string> from3mf( std::istream& in, const MeshLoadSettings& s
 
     // Search for common locations (usually it is "3D/*.model")
     std::vector<std::filesystem::path> files;
-    if ( std::filesystem::is_directory( tmpFolder / "3D" ) )
-        for ( auto const& dir_entry : std::filesystem::recursive_directory_iterator{ tmpFolder / "3D" } )
-            files.push_back( dir_entry.path() );
-    for ( auto const& dir_entry : std::filesystem::directory_iterator{ tmpFolder } )
-        files.push_back( dir_entry.path() );
+    std::error_code ec;
+    // Errors are not expected here (except "3D" directory not existing), so don't handle them
+    for ( auto const& dirEntry : Directory{ tmpFolder / "3D", ec } )
+        files.push_back( dirEntry.path() );
+    for ( auto const& dirEntry : DirectoryRecursive{ tmpFolder, ec } )
+        files.push_back( dirEntry.path() );
 
     std::filesystem::path modelFilePath;
     for ( auto const& path: files )

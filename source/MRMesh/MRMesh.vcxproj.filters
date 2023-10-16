@@ -1080,9 +1080,6 @@
     <ClInclude Include="MRFewSmallest.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshLoad3mf.h">
-      <Filter>Source Files\IO</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

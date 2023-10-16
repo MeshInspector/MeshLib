@@ -428,6 +428,9 @@ using VertColorMapAggregator = ColorMapAggregator<VertTag>;
 using UndirEdgeColorMapAggregator = ColorMapAggregator<UndirectedEdgeTag>;
 using FaceColorMapAggregator = ColorMapAggregator<FaceTag>;
 
+template<typename T>
+class FewSmallest;
+
 class Graph;
 class GraphVertTag;
 class GraphEdgeTag;

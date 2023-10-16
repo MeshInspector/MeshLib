@@ -2610,7 +2610,7 @@ void ImGuiMenu::draw_mr_menu()
             auto savePath = saveFileDialog( { name,{},ImageSave::Filters } );
             if ( !savePath.empty() )
             {
-                auto image = viewer->captureScreenShot();
+                auto image = viewer->captureSceneScreenShot();
                 auto res = ImageSave::toAnySupportedFormat( image, savePath );
 
                 if ( !res.has_value() )

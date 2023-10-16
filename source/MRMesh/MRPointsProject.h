@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRId.h"
+#include "MRProgressCallback.h"
 #include <cfloat>
 
 namespace MR
@@ -10,10 +11,12 @@ namespace MR
 
 struct PointsProjectionResult
 {
-    /// the closest vertex in point cloud
-    VertId vId;
     /// squared distance from pt to proj
     float distSq{ 0 };
+    /// the closest vertex in point cloud
+    VertId vId;
+
+    auto operator <=>(const PointsProjectionResult &) const = default;
 };
 
 /**
@@ -26,6 +29,24 @@ struct PointsProjectionResult
     float upDistLimitSq = FLT_MAX,
     const AffineXf3f* xf = nullptr,
     float loDistLimitSq = 0 );
+
+/**
+ * \brief finds a number of the closest points in the cloud (as configured in \param res) to given point
+ * \param upDistLimitSq upper limit on the distance in question, points with larger distance than it will not be returned
+ * \param xf pointcloud-to-point transformation, if not specified then identity transformation is assumed
+ * \param loDistLimitSq low limit on the distance in question, the algorithm can return given number of points within this distance even skipping closer ones
+ */
+MRMESH_API void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest<PointsProjectionResult> & res,
+    float upDistLimitSq = FLT_MAX,
+    const AffineXf3f* xf = nullptr,
+    float loDistLimitSq = 0 );
+
+/**
+ * \brief finds given number of closest points (excluding itself) to each valid point in the cloud;
+ * \param numNei the number of closest points to find for each point
+ * \return a buffer where for every valid point #i its neighbours are stored at indices [i*numNei; (i+1)*numNei)
+ */
+[[nodiscard]] MRMESH_API Buffer<VertId> findNClosestPointsPerPoint( const PointCloud& pc, int numNei, const ProgressCallback & progress = {} );
 
 /// \}
 }

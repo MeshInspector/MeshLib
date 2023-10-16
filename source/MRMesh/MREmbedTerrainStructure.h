@@ -16,8 +16,12 @@ struct EmbeddedStructureParameters
     float cutAngle = 0.0f;
     // min angle precision of basin expansion
     float minAnglePrecision = PI_F / 9.0f; // 20 deg
-    // optional out new faces
-    FaceBitSet* outNewFaces{ nullptr };
+    // optional out new faces of embedded structure 
+    FaceBitSet* outStructFaces{ nullptr };
+    // optional out new faces of fill part
+    FaceBitSet* outFillFaces{ nullptr };
+    // optional out new faces of cut part
+    FaceBitSet* outCutFaces{ nullptr };
 };
 
 // Returns terrain mesh with structure embedded to it, or error string

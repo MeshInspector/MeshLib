@@ -1796,6 +1796,9 @@
     <ClCompile Include="MROffsetContours.cpp">
       <Filter>Source Files\Polyline</Filter>
     </ClCompile>
+    <ClCompile Include="MRMeshLoad3mf.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

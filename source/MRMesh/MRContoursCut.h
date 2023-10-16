@@ -58,18 +58,18 @@ MRMESH_API void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contou
 MRMESH_API OneMeshContours getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& contours, bool getMeshAIntersections,
     const CoordinateConverters& converters, const AffineXf3f* rigidB2A = nullptr );
 
-
+/// Geo path search settings
 struct SearchPathSettings
 {
-    GeodesicPathApprox geodesicPathApprox = GeodesicPathApprox::DijkstraAStar;
-    int maxReduceIters{ 0 };
+    GeodesicPathApprox geodesicPathApprox{ GeodesicPathApprox::DijkstraAStar }; ///< the algorithm to compute approximately geodesic path
+    int maxReduceIters{ 100 }; ///< the maximum number of iterations to reduce approximate path length and convert it in geodesic path
 };
 
 /** \ingroup BooleanGroup
   * \brief Makes continuous contour by mesh tri points, if first and last meshTriPoint is the same, makes closed contour
   *
   * Finds shortest paths between neighbor \p meshTriPoints and build contour MR::cutMesh input
-  * \param 
+  * \param searchSettings settings for search geo path 
   * \param pivotIndices optional output indices of given meshTriPoints in result OneMeshContour
   */
 [[nodiscard]]

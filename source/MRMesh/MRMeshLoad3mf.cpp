@@ -17,7 +17,7 @@
 #include "MRIOParsing.h"
 #include "MRSerializer.h"
 #include "MRZip.h"
-#include "MRpch\MRSpdlog.h"
+#include "MRPch/MRSpdlog.h"
 
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
 #include <tinyxml2.h>
@@ -64,6 +64,7 @@ static Expected <AffineXf3f, std::string> parseAffineXf( std::string s )
 
 namespace
 {
+
 struct ThreeMFLoader
 {
     // Nodes index
@@ -75,7 +76,7 @@ struct ThreeMFLoader
     ProgressCallback callback = {};
 
     // Mesh cache
-    // Meshes and compound objects (containing other meshes/compounds) can be created in any order
+    // Meshes and compound objects (containing other meshes/compounds) can go in the file in any order
     // So they are created recursively with the usage of the cache
     std::map<std::string, std::shared_ptr<Mesh>> resources;
 
@@ -92,10 +93,10 @@ ProgressCallback makeCallback( ThreeMFLoader &loader )
 }
 
 // Load an object, using the resource cache
-tl::expected< std::shared_ptr<Mesh>, std::string> loadObject( const char* id, ThreeMFLoader& loader );
+Expected<std::shared_ptr<Mesh>, std::string> loadObject( const char* id, ThreeMFLoader& loader );
 
 // Load mesh from <mesh> element
-tl::expected<std::shared_ptr<Mesh>, std::string> loadMesh( const tinyxml2::XMLElement* meshNode, ProgressCallback callback, 
+Expected<std::shared_ptr<Mesh>, std::string> loadMesh( const tinyxml2::XMLElement* meshNode, ProgressCallback callback,
     ThreeMFLoader &loader )
 {
     auto verticesNode = meshNode->FirstChildElement( "vertices" );
@@ -163,7 +164,7 @@ tl::expected<std::shared_ptr<Mesh>, std::string> loadMesh( const tinyxml2::XMLEl
 };
 
 // Parse multi-component object form <components> or <build> element
-tl::expected<std::shared_ptr<Mesh>, std::string> loadComponents(
+Expected<std::shared_ptr<Mesh>, std::string> loadComponents(
     const tinyxml2::XMLElement* componentsNode, const char* childTagName, ProgressCallback callback, ThreeMFLoader &loader )
 {
     Mesh resultMesh;
@@ -196,11 +197,11 @@ tl::expected<std::shared_ptr<Mesh>, std::string> loadComponents(
 };
 
 // Load an object, using the resource cache
-tl::expected< std::shared_ptr<Mesh>, std::string> loadObject( const char* id, ThreeMFLoader &loader )
+Expected<std::shared_ptr<Mesh>, std::string> loadObject( const char* id, ThreeMFLoader &loader )
 {
     if ( loader.resources.contains( id ) )
         return loader.resources[id];
-    tl::expected< std::shared_ptr<Mesh>, std::string> res = 
+    Expected<std::shared_ptr<Mesh>, std::string> res =
         unexpected( "3DF object '" + utf8string( id ) + "' not found" );
     if ( loader.meshNodes.contains( id ) )
         res = loadMesh( loader.meshNodes[id], makeCallback( loader ), loader );
@@ -231,10 +232,10 @@ VoidOrErrStr prepareLoader( const tinyxml2::XMLElement* rootNode, ThreeMFLoader 
         }
     }
     loader.itemsCount = int( loader.meshNodes.size() + loader.componentsNodes.size() ) + 1;
-    return VoidOrErrStr();
+    return {};
 }
 
-}
+} //namespace
 
 Expected<Mesh, std::string> from3mfModel( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {

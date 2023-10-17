@@ -59,6 +59,9 @@ MRMESH_API Expected<Mesh, std::string> fromCtm( std::istream& in, const MeshLoad
 /// loads from .model 3MF file
 MRMESH_API Expected<Mesh, std::string> from3mfModel( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
 MRMESH_API Expected<Mesh, std::string> from3mfModel( std::istream& in, const MeshLoadSettings& settings = {} );
+/// loads from .3mf file
+MRMESH_API Expected<Mesh, std::string> from3mf( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
+MRMESH_API Expected<Mesh, std::string> from3mf( std::istream& in, const MeshLoadSettings& settings = {} );
 #endif
 
 #ifdef _WIN32

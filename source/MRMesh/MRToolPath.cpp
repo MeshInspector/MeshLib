@@ -1032,17 +1032,17 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
             return false;
 
         const auto sbp = subprogress( cb, 0.5f, 1.0f );
-
-       // if ( params.fromCenterToBoundary )
-         //   std::reverse( extract.isolines.begin(), extract.isolines.end() );
         
         // go on in the inverse order (from the highest isoline to the lowest )
         auto isolineIt = extract.sortedIsolines.begin();
-        while ( isolineIt != extract.sortedIsolines.end() )
+        for ( size_t i = 0; isolineIt != extract.sortedIsolines.end(); ++i )
         {
-            auto& surfacePath = *isolineIt++;
+            if ( !reportProgress( sbp, float( i ) / extract.sortedIsolines.size() ) )
+                return false;
 
-            if ( surfacePath.empty() || !res.modifiedRegion.test( mesh.topology.left( surfacePath[0].e ) ) )
+            auto& surfacePath = *isolineIt++;
+             
+            if ( surfacePath.empty() || ( !res.modifiedRegion.empty() && !res.modifiedRegion.test( mesh.topology.left( surfacePath[0].e ) ) ) )
                 continue;
 
             Polyline3 polyline;
@@ -1106,7 +1106,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                 // go along the undercut if the part of section is below
                 const auto p1 = mesh.edgePoint( prevEdgePoint );
                 const auto p2 = mesh.edgePoint( *nextEdgePointIt );
-                if ( p1.z == minZ )
+                if ( p1.z == minZ && p2.z <= minZ )
                 {
                     const auto sectionStartIt = findNearestPoint( undercutContour, p1 );
                     const auto sectionEndIt = findNearestPoint( undercutContour, p2 );
@@ -1178,6 +1178,8 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         }
     } );
 
+    res.modifiedRegion = smoothSelection( res.modifiedMesh, res.modifiedRegion, params.millRadius, params.millRadius );
+
     const auto components = MeshComponents::getAllComponents( MeshPart{ res.modifiedMesh, &res.modifiedRegion } );
     const size_t componentCount = components.size();
     std::vector<SurfacePath> startSurfacePaths;
@@ -1201,104 +1203,9 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
     if ( !processZone( startSurfacePaths,
         res.commands.empty() ? Vector3f{} : Vector3f{ res.commands.back().x, res.commands.back().y, res.commands.back().z },
         params.cb ) )
-        //subprogress( params.cb, 0.25f + 0.75f * float( i ) / componentCount, 0.25f + 0.75f * float( i + 1 ) / componentCount ) ) )
     {
         return unexpectedOperationCanceled();
     }
-    /*std::vector<EdgeLoop> edgeLoops;
-    if ( params.offsetMesh && params.offsetMesh->region )
-    {
-        edgeLoops = findLeftBoundary( params.offsetMesh->mesh.topology, params.offsetMesh->region );
-    }
-    else
-    {
-        const float upDistLimitSq = 2.0f * params.millRadius * params.millRadius;
-
-        for ( const auto& component : MeshComponents::getAllComponents( mp ) )
-        {
-            FaceBitSet filteredSelection{ component };
-            
-            BitSetParallelFor( component, [&] ( FaceId f )
-            {
-                for ( const auto& p : mp.mesh.getTriPoints( f ) )
-                {
-                    const auto mpr = findProjection( p, res.modifiedMesh, upDistLimitSq );
-                    if ( !mpr.mtp.e.valid() )
-                    {
-                        filteredSelection.set( f, false );
-                        break;
-                    }
-                }
-            } );
-
-            auto loops = findLeftBoundary( mp.mesh.topology, filteredSelection );
-            if ( !loops.empty() )
-                edgeLoops.push_back( loops.front() );
-        }
-    }
-
-    //otherwise process each selected zone separately
-    const size_t loopCount = edgeLoops.size();
-    for ( size_t i = 0; i < loopCount; ++i )
-    {
-        const auto& edgeLoop = edgeLoops[i];        
-
-        Contour3f* contourBeforeProjecton = nullptr;
-        Contour3f* contourBeforeCutMesh = nullptr;
-
-        if ( ( !params.offsetMesh || !params.offsetMesh->region ) && params.contoursBeforeProjection )
-        {
-            params.contoursBeforeProjection->emplace_back();
-            contourBeforeProjecton = &params.contoursBeforeProjection->back();
-        }
-
-        if ( params.contoursBeforeCutMesh )
-        {
-            params.contoursBeforeCutMesh->emplace_back();
-            contourBeforeCutMesh = &params.contoursBeforeCutMesh->back();
-        }
-
-        std::vector<MeshTriPoint> meshTriPoints;
-        for ( auto edgeId : edgeLoop )
-        {
-            if ( params.offsetMesh && params.offsetMesh->region )
-            {
-                MeshTriPoint mtp( MeshEdgePoint( edgeId, 0.0f ) );
-                meshTriPoints.push_back( mtp );
-                if ( contourBeforeCutMesh )
-                    contourBeforeCutMesh->push_back( res.modifiedMesh.triPoint( mtp ) );
-
-                continue;
-            }
-
-            const auto originalPoint = mp.mesh.edgePoint( MeshEdgePoint( edgeId, 0.0f ) );
-            if ( contourBeforeProjecton )
-                contourBeforeProjecton->push_back( originalPoint );
-
-            // project all the vertices in the selected contour to the modified mesh
-            auto mpr = res.modifiedMesh.projectPoint( originalPoint );
-            if ( mpr )
-            {
-                meshTriPoints.push_back( mpr->mtp );
-                if ( contourBeforeCutMesh )
-                    contourBeforeCutMesh->push_back( res.modifiedMesh.triPoint( mpr->mtp ) );
-            }
-
-            mpr = res.modifiedMesh.projectPoint(mp.mesh.edgePoint(MeshEdgePoint(edgeId, 0.5f)));
-            if ( mpr )
-                meshTriPoints.push_back( mpr->mtp );
-        }
-        
-        if ( contourBeforeProjecton )
-            contourBeforeProjecton->push_back( contourBeforeProjecton->front() );
-        
-        if ( !processZone( nullptr, &meshTriPoints,
-            res.commands.empty() ? Vector3f{} : Vector3f{ res.commands.back().x, res.commands.back().y, res.commands.back().z },
-            subprogress( params.cb, 0.25f + 0.75f * float( i ) / loopCount, 0.25f + 0.75f * float( i + 1 ) / loopCount ) ) )
-        {
-            return unexpectedOperationCanceled();
-        }
-    }*/
 
     return res;
 }
@@ -1676,43 +1583,31 @@ FaceBitSet smoothSelection( Mesh& mesh, const FaceBitSet& region, float expandOf
 
     const auto origMesh = mesh;
 
-    for ( const auto& isoline : isolines )
+    const auto meshContours = convertSurfacePathsToMeshContours( mesh, isolines );
+    CutMeshParameters cutMeshParams;
+    cutMeshParams.forceFillMode = CutMeshParameters::ForceFill::All;
+    FaceMap new2OldMap;
+    cutMeshParams.new2OldMap = &new2OldMap;
+
+    Vector<std::vector<FaceId>, FaceId> old2NewMap( mesh.topology.faceSize() );
+    const auto cutRes = cutMesh( mesh, meshContours, cutMeshParams );
+
+    for ( FaceId f = FaceId( 0 ); f < new2OldMap.size(); ++f )
     {
-        std::vector<MeshTriPoint> meshTriPoints;
-        meshTriPoints.reserve( isoline.size() );
-        for ( const auto& ep : isoline )
-        {
-            const auto mpr = mesh.projectPoint( origMesh.edgePoint( ep ) );
-            meshTriPoints.emplace_back( mpr->mtp );
-        }
-
-        const auto meshContour = convertMeshTriPointsToClosedContour( mesh, meshTriPoints );
-
-        CutMeshParameters cutMeshParams;
-        cutMeshParams.forceFillMode = CutMeshParameters::ForceFill::All;
-        FaceMap new2OldMap;
-        cutMeshParams.new2OldMap = &new2OldMap;
-           
-        Vector<std::vector<FaceId>, FaceId> old2NewMap( mesh.topology.faceSize() );
-        const auto cutRes = cutMesh( mesh, { meshContour }, cutMeshParams );
-
-        for ( FaceId f = FaceId( 0 ); f < new2OldMap.size(); ++f )
-        {
-            if ( new2OldMap[f].valid() )
-                old2NewMap[new2OldMap[f]].push_back( f );
-        }
-
-        const auto oldRegion = res;
-        res = fillContourLeftByGraphCut( mesh.topology, cutRes.resultCut, edgeCurvMetric( mesh ) );
-
-        BitSetParallelFor( oldRegion, [&] ( FaceId f )
-        {
-            for ( auto& newFace : old2NewMap[f] )
-            {
-                res.set( newFace, true );
-            }
-        } );
+        if ( new2OldMap[f].valid() )
+            old2NewMap[new2OldMap[f]].push_back( f );
     }
+
+    const auto oldRegion = res;
+    res = fillContourLeftByGraphCut( mesh.topology, cutRes.resultCut, edgeCurvMetric( mesh ) );
+
+    BitSetParallelFor( oldRegion, [&] ( FaceId f )
+    {
+        for ( auto& newFace : old2NewMap[f] )
+        {
+            res.set( newFace, true );
+        }
+    } );
 
     return res;
 }

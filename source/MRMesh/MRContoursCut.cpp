@@ -911,7 +911,7 @@ OneMeshIntersection intersectionFromMeshTriPoint( const Mesh& mesh, const MeshTr
 
 
 OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg,
-    std::vector<int>* pivotIndices )
+    SearchPathSettings searchSettings, std::vector<int>* pivotIndices )
 {
     MR_TIMER;
     if ( meshTriPointsOrg.size() < 2 )
@@ -970,7 +970,7 @@ OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::v
     for ( int i = 0; i < sizeMTP; ++i )
     {
         // using DijkstraAStar here might be faster, in most case points are close to each other
-        auto sp = computeGeodesicPath( mesh, meshTriPoints[i], meshTriPoints[( i + 1 ) % meshTriPoints.size()], GeodesicPathApprox::DijkstraAStar );
+        auto sp = computeGeodesicPath( mesh, meshTriPoints[i], meshTriPoints[( i + 1 ) % meshTriPoints.size()], searchSettings.geodesicPathApprox, searchSettings.maxReduceIters );
         if ( !sp.has_value() )
             continue;
         auto partContours = convertSurfacePathsToMeshContours( mesh, { std::move( sp.value() ) } );
@@ -1106,11 +1106,11 @@ OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::v
 }
 
 OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg,
-    std::vector<int>* pivotIndices )
+    SearchPathSettings searchSettings, std::vector<int>* pivotIndices )
 {
     auto conts = meshTriPointsOrg;
     conts.push_back( meshTriPointsOrg.front() );
-    return convertMeshTriPointsToMeshContour( mesh, conts, pivotIndices );
+    return convertMeshTriPointsToMeshContour( mesh, conts, searchSettings, pivotIndices );
 }
 
 OneMeshContour convertSurfacePathWithEndsToMeshContour( const MR::Mesh& mesh, const MeshTriPoint& start, const MR::SurfacePath& surfacePath, const MeshTriPoint& end )

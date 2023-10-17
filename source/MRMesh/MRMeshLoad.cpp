@@ -639,111 +639,6 @@ Expected<Mesh, std::string> fromCtm( std::istream& in, const MeshLoadSettings& s
 }
 #endif
 
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
-Expected<Mesh, std::string> from3mfModel( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
-{
-    std::ifstream in( file, std::ifstream::binary );
-    if ( !in )
-        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
-
-    return addFileNameInError( from3mfModel( in, settings ), file );
-}
-
-Expected<Mesh, std::string> from3mfModel( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
-{
-    MR_TIMER
-
-    // find size
-    in.seekg( 0, std::ios_base::end );
-    size_t size = in.tellg();
-    in.seekg( 0 );
-    // read to char vector
-    std::vector<char> docStr( size + 1 );
-    in.read( docStr.data(), size );
-    if ( in.fail() || in.bad() )
-        return unexpected( std::string( "3DF model file read error" ) );
-
-    tinyxml2::XMLDocument doc;
-    if ( tinyxml2::XML_SUCCESS != doc.Parse( docStr.data(), docStr.size() ) )
-        return unexpected( std::string( "3DF model file parse error" ) );
-
-    auto rootNode = doc.FirstChildElement();
-    if ( !rootNode || std::string( rootNode->Name() ) != "model" )
-        return unexpected( std::string( "3DF model root node is not 'model' but '" ) + std::string( rootNode->Name() ) + "'" );
-
-    auto resourcesNode = rootNode->FirstChildElement( "resources" );
-    if ( !resourcesNode )
-        return unexpected( std::string( "3DF model 'resources' node not found" ) );
-
-    auto objectNode = resourcesNode->FirstChildElement( "object" );
-    if ( !resourcesNode )
-        return unexpected( std::string( "3DF model 'object' node not found" ) );
-
-    auto meshNode = objectNode->FirstChildElement( "mesh" );
-    if ( !objectNode )
-        return unexpected( std::string( "3DF model 'mesh' node not found" ) );
-
-    auto verticesNode = meshNode->FirstChildElement( "vertices" );
-    if ( !verticesNode )
-        return unexpected( std::string( "3DF model 'vertices' node not found" ) );
-
-    VertCoords vertexCoordinates;
-    for ( auto vertexNode = verticesNode->FirstChildElement( "vertex" ); vertexNode; vertexNode = vertexNode->NextSiblingElement( "vertex" ) )
-    {
-        Vector3f p;
-        if ( tinyxml2::XML_SUCCESS != vertexNode->QueryFloatAttribute( "x", &p.x ) )
-            return unexpected( std::string( "3DF model vertex node does not have 'x' attribute" ) );
-        if ( tinyxml2::XML_SUCCESS != vertexNode->QueryFloatAttribute( "y", &p.y ) )
-            return unexpected( std::string( "3DF model vertex node does not have 'y' attribute" ) );
-        if ( tinyxml2::XML_SUCCESS != vertexNode->QueryFloatAttribute( "z", &p.z ) )
-            return unexpected( std::string( "3DF model vertex node does not have 'z' attribute" ) );
-        vertexCoordinates.push_back( p );
-    }
-
-    if ( !reportProgress( settings.callback, 0.25f ) )
-        return unexpected( std::string( "Loading canceled" ) );
-
-    auto trianglesNode = meshNode->FirstChildElement( "triangles" );
-    if ( !trianglesNode )
-        return unexpected( std::string( "3DF model 'triangles' node not found" ) );
-
-    Triangulation tris;
-    for ( auto triangleNode = trianglesNode->FirstChildElement( "triangle" ); triangleNode; triangleNode = triangleNode->NextSiblingElement( "triangle" ) )
-    {
-        int vs[3];
-        if ( tinyxml2::XML_SUCCESS != triangleNode->QueryIntAttribute( "v1", &vs[0] ) )
-            return unexpected( std::string( "3DF model triangle node does not have 'v1' attribute" ) );
-        if ( tinyxml2::XML_SUCCESS != triangleNode->QueryIntAttribute( "v2", &vs[1] ) )
-            return unexpected( std::string( "3DF model triangle node does not have 'v2' attribute" ) );
-        if ( tinyxml2::XML_SUCCESS != triangleNode->QueryIntAttribute( "v3", &vs[2] ) )
-            return unexpected( std::string( "3DF model triangle node does not have 'v3' attribute" ) );
-        tris.push_back( { VertId( vs[0] ), VertId( vs[1] ), VertId( vs[2] ) } );
-    }
-
-    if ( !reportProgress( settings.callback, 0.5f ) )
-        return unexpected( std::string( "Loading canceled" ) );
-
-
-    FaceBitSet skippedFaces;
-    std::vector<MeshBuilder::VertDuplication> dups;
-    std::vector<MeshBuilder::VertDuplication>* dupsPtr = nullptr;
-    if ( settings.duplicatedVertexCount )
-        dupsPtr = &dups;
-    MeshBuilder::BuildSettings buildSettings;
-    if ( settings.skippedFaceCount )
-    {
-        skippedFaces = FaceBitSet( tris.size() );
-        skippedFaces.set();
-        buildSettings.region = &skippedFaces;
-    }
-    const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( vertexCoordinates ), tris, dupsPtr, buildSettings );
-    if ( settings.duplicatedVertexCount )
-        *settings.duplicatedVertexCount = int( dups.size() );
-    if ( settings.skippedFaceCount )
-        *settings.skippedFaceCount = int( skippedFaces.count() );
-    return res;
-}
-#endif
 #ifdef _WIN32
 Expected<Mesh, std::string> fromStep( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
@@ -905,7 +800,8 @@ MR_ADD_MESH_LOADER( IOFilter( "Drawing Interchange Format (.dxf)", "*.dxf" ), fr
 MR_ADD_MESH_LOADER( IOFilter( "Compact triangle-based mesh (.ctm)", "*.ctm" ), fromCtm )
 #endif
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
-MR_ADD_MESH_LOADER( IOFilter( "3D Manufacturing Format (.model)", "*.model" ), from3mfModel )
+MR_ADD_MESH_LOADER( IOFilter( "3D Manufacturing Format (.3mf)", "*.3mf" ), from3mf )
+MR_ADD_MESH_LOADER( IOFilter( "3D Manufacturing Format model (.model)", "*.model" ), from3mfModel )
 #endif
 #ifdef _WIN32
 MR_ADD_MESH_LOADER( IOFilter( "STEP files (.step,.stp)", "*.step;*.stp" ), fromStep )

@@ -21,12 +21,290 @@
 #include "MRPrecisePredicates2.h"
 #include "MRPolyline.h"
 #include "MRLinesSave.h"
+#include "MRPointCloud.h"
+#include "MRPointsSave.h"
 
 namespace MR
 {
 
 namespace PlanarTriangulation
 {
+
+// struct to use easily compare mesh points by sweep line compare rule
+struct ComaparableVertId
+{
+    ComaparableVertId( const Mesh* meshP, VertId v, const CoordinateConverters2* conv ) :
+        mesh{ meshP }, id{ v }, converters{ conv }
+    {}
+    const Mesh* mesh;
+    VertId id;
+    const CoordinateConverters2* converters;
+    bool operator<( const ComaparableVertId& other ) const;
+    bool operator>( const ComaparableVertId& other ) const;
+    bool operator==( const ComaparableVertId& other ) const;
+};
+
+// class for first sweep line pass for resolving intersections
+class Intersector
+{
+public:
+    Intersector( Mesh& mesh, const CoordinateConverters2& convertes );
+    std::vector<Vector3f> findIntersections();
+private:
+    Mesh& mesh_;
+    const CoordinateConverters2& converters_;
+
+    struct Event : ComaparableVertId
+    {
+        EdgeId lower;
+        EdgeId upper;
+    };
+    using InterQueue = std::priority_queue<Event, std::vector<Event>, std::greater<Event>>;
+    InterQueue interQueue_;
+
+    using ValidationMap = HashMap<std::pair<EdgeId, EdgeId>, bool>;
+    ValidationMap validationMap_;
+
+    void invalidateIntersection_( EdgeId a, EdgeId b );
+    bool validateIntersection_( EdgeId a, EdgeId b );
+    bool isIntersectionValid_( EdgeId a, EdgeId b );
+
+    std::vector<Vector3f> intersections_;
+    void processEvent_( const Event& event );
+    void checkIntersection_( int index, bool lower );
+    void checkIntersection_( int indexLower );
+    std::vector<EdgeId> sweepInfo_;
+};
+
+Intersector::Intersector( Mesh& mesh, const CoordinateConverters2& convertes ) :
+    mesh_{ mesh }, converters_{ convertes }
+{
+    for ( auto v : mesh.topology.getValidVerts() )
+        interQueue_.push( Event{ ComaparableVertId( &mesh,v,&converters_ ) } );
+}
+
+std::vector<Vector3f> Intersector::findIntersections()
+{
+    MR_TIMER;
+    while ( !interQueue_.empty() )
+    {
+        auto event = interQueue_.top();
+        interQueue_.pop();
+        processEvent_( event );
+    }
+    return std::move( intersections_ );
+}
+
+void Intersector::invalidateIntersection_( EdgeId a, EdgeId b )
+{
+    if ( b < a )
+        std::swap( a, b );
+    auto it = validationMap_.find( { a,b } );
+    if ( it == validationMap_.end() )
+        return;
+    it->second = false;
+}
+
+bool Intersector::validateIntersection_( EdgeId a, EdgeId b )
+{
+    if ( b < a )
+        std::swap( a, b );
+    auto [it, inserted] = validationMap_.insert_or_assign( { a,b }, true );
+    return inserted;
+}
+
+bool Intersector::isIntersectionValid_( EdgeId a, EdgeId b )
+{
+    if ( b < a )
+        std::swap( a, b );
+    auto it = validationMap_.find( { a,b } );
+    if ( it == validationMap_.end() )
+        return false;
+    return it->second;
+}
+
+void Intersector::processEvent_( const Event& event )
+{
+    if ( event.lower && event.upper ) // intersections mode
+    {
+        auto it = std::find( sweepInfo_.begin(), sweepInfo_.end(), event.lower );
+        if ( it == sweepInfo_.end() )
+            return; // this intersection was already processed
+
+        auto pos = int( std::distance( sweepInfo_.begin(), it ) );
+        if ( pos + 1 == sweepInfo_.size() )
+            return; // this intersection was already processed
+        if ( sweepInfo_[pos + 1] != event.upper )
+            return; // this intersection was already processed
+
+        if ( !isIntersectionValid_( event.lower, event.upper ) )
+            return;
+
+        if ( pos > 0 )
+            invalidateIntersection_( sweepInfo_[pos - 1], sweepInfo_[pos] );
+        if ( pos + 2 < sweepInfo_.size() )
+            invalidateIntersection_( sweepInfo_[pos + 1], sweepInfo_[pos + 2] );
+
+        intersections_.push_back( mesh_.points[event.id] );
+
+        std::swap( sweepInfo_[pos], sweepInfo_[pos + 1] );
+        checkIntersection_( pos, true );
+        checkIntersection_( pos + 1, false );
+        return;
+    }
+    std::array<EdgeId, 2> rightEdges;
+    std::array<int, 2> indicesToRemove = { -1,-1 };
+    for ( auto e : orgRing( mesh_.topology, event.id ) )
+    {
+        auto it = std::find_if( sweepInfo_.begin(), sweepInfo_.end(), [&] ( EdgeId sE )
+        {
+            return e.sym() == sE;
+        } );
+        if ( it == sweepInfo_.end() )
+        {
+            if ( !rightEdges[0] )
+                rightEdges[0] = e;
+            else
+            {
+                // ATTENTION: merge same points cause this assert to strike
+                assert( !rightEdges[1] );
+                rightEdges[1] = e;
+            }
+        }
+        else
+        {
+            if ( indicesToRemove[0] == -1 )
+                indicesToRemove[0] = int( std::distance( sweepInfo_.begin(), it ) );
+            else
+            {
+                // ATTENTION: merge same points cause this assert to strike
+                assert( indicesToRemove[1] == -1 );
+                indicesToRemove[1] = int( std::distance( sweepInfo_.begin(), it ) );
+            }
+        }
+    }
+
+    if ( rightEdges[0] && indicesToRemove[0] >= 0 )
+    {
+        assert( !rightEdges[1] );
+        assert( indicesToRemove[1] == -1 );
+        sweepInfo_[indicesToRemove[0]] = rightEdges[0];
+        checkIntersection_( indicesToRemove[0], true );
+        checkIntersection_( indicesToRemove[0], false );
+        return;
+    }
+
+    if ( indicesToRemove[1] >= 0 )
+    {
+        assert( indicesToRemove[0] >= 0 );
+        assert( !rightEdges[0] );
+        assert( !rightEdges[1] );
+        if ( indicesToRemove[0] > indicesToRemove[1] )
+            std::swap( indicesToRemove[0], indicesToRemove[1] );
+        // !!! this can strike sometimes
+        // intersection is later in queue than this vertex
+        assert( indicesToRemove[1] - indicesToRemove[0] == 1 );
+
+        // remove left
+        for ( int i = 1; i >= 0; --i )
+            sweepInfo_.erase( sweepInfo_.begin() + indicesToRemove[i] );
+
+        checkIntersection_( indicesToRemove[0] - 1, false );
+        return;
+    }
+
+    assert( rightEdges[0] );
+    assert( rightEdges[1] );
+    assert( indicesToRemove[0] == -1 );
+    assert( indicesToRemove[1] == -1 );
+
+    int activeVPosition{ INT_MAX };// index of first edge, under activeV (INT_MAX - all edges are lower, -1 - all edges are upper)
+    std::array<PreciseVertCoords2, 3> pvc;
+    pvc[1].id = event.id;
+    pvc[1].pt = converters_.toInt( to2dim( mesh_.points[pvc[1].id] ) );
+    for ( int i = 0; i < sweepInfo_.size(); ++i )
+    {
+        pvc[0].id = mesh_.topology.org( sweepInfo_[i] );
+        pvc[2].id = mesh_.topology.dest( sweepInfo_[i] );
+        pvc[0].pt = converters_.toInt( to2dim( mesh_.points[pvc[0].id] ) );
+        pvc[2].pt = converters_.toInt( to2dim( mesh_.points[pvc[2].id] ) );
+
+        if ( activeVPosition == INT_MAX && ccw( pvc ) )
+            activeVPosition = i - 1;
+    }
+
+    pvc[0] = pvc[1];
+    pvc[1].id = mesh_.topology.dest( rightEdges[0] );
+    pvc[2].id = mesh_.topology.dest( rightEdges[1] );
+    for ( int i = 1; i < 3; ++i )
+        pvc[i].pt = converters_.toInt( to2dim( mesh_.points[pvc[i].id] ) );
+
+    if ( !ccw( pvc ) )
+        std::swap( rightEdges[0], rightEdges[1] );
+
+    auto pos = activeVPosition == INT_MAX ? int( sweepInfo_.size() ) : activeVPosition + 1;
+
+    if ( pos > 0 && pos < sweepInfo_.size() )
+        invalidateIntersection_( sweepInfo_[pos - 1], sweepInfo_[pos] );
+
+    sweepInfo_.insert( sweepInfo_.begin() + pos, rightEdges.begin(), rightEdges.end() );
+
+    checkIntersection_( pos, true );
+    checkIntersection_( pos + 1, false );
+}
+
+void Intersector::checkIntersection_( int index, bool lower )
+{
+    if ( index < 0 || index >= sweepInfo_.size() )
+        return;
+    if ( lower && index == 0 )
+        return;
+    if ( !lower && index + 1 == sweepInfo_.size() )
+        return;
+    if ( lower && index >= 1 )
+        return checkIntersection_( index - 1 );
+    if ( !lower && index +1 < sweepInfo_.size() )
+        return checkIntersection_( index );
+}
+
+void Intersector::checkIntersection_( int i )
+{
+    assert( i >= 0 && i + 1 < sweepInfo_.size() );
+
+    // fill up
+    std::array<PreciseVertCoords2, 4> pvc;
+    auto org1 = mesh_.topology.org( sweepInfo_[i] );
+    auto dest1 = mesh_.topology.dest( sweepInfo_[i] );
+    auto org2 = mesh_.topology.org( sweepInfo_[i + 1] );
+    auto dest2 = mesh_.topology.dest( sweepInfo_[i + 1] );
+    bool canIntersect = org1 != org2 && dest1 != dest2;
+    if ( !canIntersect || !org1 || !org2 || !dest1 || !dest2 )
+        return;
+
+    pvc[0].id = org1; pvc[1].id = dest1;
+    pvc[2].id = org2; pvc[3].id = dest2;
+
+    for ( int p = 0; p < 4; ++p )
+        pvc[p].pt = converters_.toInt( to2dim( mesh_.points[pvc[p].id] ) );
+
+    auto haveInter = doSegmentSegmentIntersect( pvc );
+    if ( !haveInter.doIntersect )
+        return;
+
+    if ( !validateIntersection_( sweepInfo_[i], sweepInfo_[i + 1] ) )
+        return; // just validate is enough
+
+    auto vertId = mesh_.addPoint( to3dim(
+        findSegmentSegmentIntersectionPrecise(
+            to2dim( mesh_.points[pvc[0].id] ), to2dim( mesh_.points[pvc[1].id] ),
+            to2dim( mesh_.points[pvc[2].id] ), to2dim( mesh_.points[pvc[3].id] ),
+            converters_ ) ) );
+
+    Event event{ ComaparableVertId{&mesh_,vertId,&converters_} };
+    event.lower = sweepInfo_[i];
+    event.upper = sweepInfo_[i + 1];
+    interQueue_.push( std::move( event ) );
+}
 
 class PlanarTriangulator
 {
@@ -38,6 +316,7 @@ public:
         bool abortWhenIntersect = false, WindingMode mode = WindingMode::NonZero );
     // process line sweep queue and triangulate inside area of mesh (based on winding rule)
     std::optional<Mesh> run();
+    void saveDegubPoints();
 private:
     Mesh mesh_;
     bool abortWhenIntersect_ = false;
@@ -66,17 +345,7 @@ private:
     Vector<EdgeWindingInfo, UndirectedEdgeId> windingInfo_;
 
     CoordinateConverters2 converters_;
-    // struct to use easily compare mesh points by sweep line compare rule
-    struct ComaparableVertId
-    {
-        ComaparableVertId( const Mesh* meshP, VertId v, const CoordinateConverters2* conv ) :
-            mesh{ meshP }, id{ v }, converters{ conv }{}
-        const Mesh* mesh;
-        VertId id;
-        const CoordinateConverters2* converters;
-        bool operator<( const ComaparableVertId& other ) const;
-        bool operator>( const ComaparableVertId& other ) const;
-    };
+
     std::priority_queue<ComaparableVertId, std::vector<ComaparableVertId>, std::greater<ComaparableVertId>> queue_;
 
     ComaparableVertId createCompVert_( VertId v );
@@ -116,18 +385,25 @@ private:
     bool resolveIntersectios_();
 };
 
-bool PlanarTriangulator::ComaparableVertId::operator<( const ComaparableVertId& other ) const
+bool ComaparableVertId::operator<( const ComaparableVertId& other ) const
 {
     auto l = converters->toInt( to2dim( mesh->points[id] ) );
     auto r = converters->toInt( to2dim( other.mesh->points[other.id] ) );
     return l.x < r.x || ( l.x == r.x && l.y < r.y ) || ( l.x == r.x && l.y == r.y && id < other.id );
 }
 
-bool PlanarTriangulator::ComaparableVertId::operator>( const ComaparableVertId& other ) const
+bool ComaparableVertId::operator>( const ComaparableVertId& other ) const
 {
     auto l = converters->toInt( to2dim( mesh->points[id] ) );
     auto r = converters->toInt( to2dim( other.mesh->points[other.id] ) );
     return l.x > r.x || ( l.x == r.x && l.y > r.y ) || ( l.x == r.x && l.y == r.y && id > other.id );
+}
+
+bool ComaparableVertId::operator==( const ComaparableVertId& other ) const
+{
+    auto l = converters->toInt( to2dim( mesh->points[id] ) );
+    auto r = converters->toInt( to2dim( other.mesh->points[other.id] ) );
+    return l == r;
 }
 
 PlanarTriangulator::PlanarTriangulator( const Contours2d& contours, const HolesVertIds* holesVertId /*= true*/, 
@@ -186,7 +462,18 @@ std::optional<Mesh> PlanarTriangulator::run()
     return std::move( mesh_ ); // move here to avoid copy of class member
 }
 
-PlanarTriangulation::PlanarTriangulator::ComaparableVertId PlanarTriangulator::createCompVert_( VertId v )
+void PlanarTriangulator::saveDegubPoints()
+{
+    auto meshCpy = mesh_;
+    Intersector intersector( mesh_, converters_ );
+    PointCloud pc;
+    pc.points.vec_ = intersector.findIntersections();
+    pc.validPoints.resize( pc.points.vec_.size() );
+    pc.validPoints.set();
+    PointsSave::toCtm( pc, "C:\\Users\\grant\\Downloads\\terrain (1)\\intersections.ctm" );
+}
+
+ComaparableVertId PlanarTriangulator::createCompVert_( VertId v )
 {
     return ComaparableVertId( &mesh_, v, &converters_ );
 }
@@ -343,7 +630,8 @@ void PlanarTriangulator::mergeSamePoints_( const HolesVertIds* holesVertId )
     int prevUnique = 0;
     for ( int i = 1; i < sortedPoints.size(); ++i )
     {
-        if ( mesh_.points[sortedPoints[i].id] != mesh_.points[sortedPoints[prevUnique].id] )
+        bool sameIntCoord = createCompVert_( sortedPoints[i].id ) == createCompVert_( sortedPoints[prevUnique].id );
+        if ( !sameIntCoord )
         {
             prevUnique = i;
             continue;
@@ -887,6 +1175,7 @@ Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVe
     WindingMode mode )
 {
     PlanarTriangulator triangulator( contours, holeVertsIds, false, mode );
+    triangulator.saveDegubPoints();
     auto res = triangulator.run();
     assert( res );
     if ( res )
@@ -899,13 +1188,7 @@ Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVe
     WindingMode mode )
 {
     const auto contsd = copyContours<Contours2d>( contours );
-    PlanarTriangulator triangulator( contsd, holeVertsIds, false, mode );
-    auto res = triangulator.run();
-    assert( res );
-    if ( res )
-        return std::move( *res );
-    else
-        return Mesh();
+    return triangulateContours( contsd, holeVertsIds, mode );
 }
 
 std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, const HolesVertIds* holeVertsIds /*= nullptr*/ )
@@ -917,8 +1200,7 @@ std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, con
 std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, const HolesVertIds* holeVertsIds /*= nullptr*/ )
 {
     const auto contsd = copyContours<Contours2d>( contours );
-    PlanarTriangulator triangulator( contsd, holeVertsIds, true );
-    return triangulator.run();
+    return triangulateDisjointContours( contsd, holeVertsIds );
 }
 
 }

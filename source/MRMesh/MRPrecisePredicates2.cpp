@@ -94,7 +94,16 @@ Vector2f findSegmentSegmentIntersectionPrecise(
     if ( abd < 0 )
         abd = -abd;
     auto sum = abc + abd;
-    return converters.toFloat( Vector2i{ Vector2d( abc * Vector2hp( di ) + abd * Vector2hp( ci ) ) / double( sum ) } );
+    if ( sum != HighPrecisionInt( 0 ) )
+        return converters.toFloat( Vector2i{ Vector2d( abc * Vector2hp( di ) + abd * Vector2hp( ci ) ) / double( sum ) } );
+    auto adLSq = Vector2hp( di - ai ).lengthSq();
+    auto bcLSq = Vector2hp( bi - ci ).lengthSq();
+    if ( adLSq > bcLSq )
+        return c;
+    else if ( bcLSq > adLSq )
+        return d;
+    else
+        return converters.toFloat( Vector2i( Vector2d( Vector2hp( ai ) + Vector2hp( bi ) + Vector2hp( ci ) + Vector2hp( di ) ) * 0.5 ) );
 }
 
 TEST( MRMesh, PrecisePredicates2 )

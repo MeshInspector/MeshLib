@@ -7,6 +7,8 @@
 #include "MR2DContoursTriangulation.h"
 #include "MRRegionBoundary.h"
 #include "MR2to3.h"
+#include "MRPolyline.h"
+#include "MRLinesSave.h"
 
 namespace MR
 {
@@ -106,6 +108,10 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, float offset, const 
                     insertSharpCorner( res, prevPoint, orgPt, ang, params.maxSharpAngle );
                 }
             }
+            else
+            {
+                res.push_back( orgPt );
+            }
             res.emplace_back( std::move( nextPoint ) );
         }
         res.emplace_back( destPt + norm * offset );
@@ -165,6 +171,10 @@ Contours2f offsetContours( const Contours2f& contours, float offset, const Offse
     }
     if ( offset == 0.0f )
         return intermediateRes;
+    
+    Polyline3 pl( intermediateRes );
+    LinesSave::toMrLines( pl, "C:\\Users\\grant\\Downloads\\terrain (1)\\intermidiateLines.mrlines" );
+
 
     auto mesh = PlanarTriangulation::triangulateContours( std::move( intermediateRes ), nullptr, 
         PlanarTriangulation::WindingMode::Negative ); // Should be negative

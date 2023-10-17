@@ -66,7 +66,7 @@ VertScalars computeSolarRadiation( const Mesh & terrain, const VertCoords & samp
         auto raysInSky = skyPatches.size();
         for ( int i = 0; i < skyPatches.size(); ++i )
         {
-            if ( rayMeshIntersect( terrain, Line3f( samplePt, skyPatches[i] ), 0, FLT_MAX, &precs[i] ) )
+            if ( rayMeshIntersect( terrain, Line3f( samplePt, skyPatches[i] ), 0, FLT_MAX, &precs[i], false ) )
                 --raysInSky;
         }
         res[sampleVertId] = rPatches * (float)raysInSky;

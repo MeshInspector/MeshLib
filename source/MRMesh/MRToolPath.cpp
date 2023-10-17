@@ -220,7 +220,7 @@ struct ExtractIsolinesParams
     float sectionStep;
     // which direction isolines should be passed in
     BypassDirection bypassDir;
-    //
+    // if true isolines will be processed from center point to the boundary (usually it means from up to down)
     bool fromCenterToBoundary;
     // callback for reporting on progress
     ProgressCallback cb;
@@ -288,18 +288,20 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsoline
         return res;
 
     const auto& topology = res.meshAfterCut.topology;
-    const auto firstIsolines = extractIsolines( topology, distances, params.sectionStep );
+    auto firstIsolines = extractIsolines( topology, distances, params.sectionStep );
     const size_t groupCount = firstIsolines.size();
-
     
     std::vector<std::list<SurfacePath>::iterator> groupStarts;
     groupStarts.reserve( groupCount );
     std::vector<Vector3f> groupStartPositions;
     groupStartPositions.reserve( groupCount );
 
-    for ( const auto& isoline : firstIsolines )
+    for ( auto& isoline : firstIsolines )
     {
-        res.sortedIsolines.push_front( isoline );
+        if ( params.bypassDir == BypassDirection::CounterClockwise )
+            std::reverse( isoline.begin(), isoline.end() );
+
+        res.sortedIsolines.push_front( std::move( isoline ) );
         groupStarts.push_back( res.sortedIsolines.begin() );
         groupStartPositions.push_back( res.meshAfterCut.edgePoint( groupStarts.back()->front() ) );
     }
@@ -307,33 +309,28 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsoline
     for ( size_t i = 1; i < numIsolines - 1; ++i )
     {
         auto isolines = extractIsolines( topology, distances, params.sectionStep * ( i + 1 ) );
-        if ( params.bypassDir == BypassDirection::CounterClockwise )
+        for ( auto& isoline : isolines )
         {
-            for ( auto& isoLine : isolines )
-            {
-                std::reverse( isoLine.begin(), isoLine.end() );
-            }
-        }
+            if ( params.bypassDir == BypassDirection::CounterClockwise )
+                std::reverse( isoline.begin(), isoline.end() );
 
-        for ( const auto& isoLine : isolines )
-        {
-            float minDist = FLT_MAX;
+            float minDistSq = FLT_MAX;
             size_t nearestIdx = groupCount;
 
-            for ( auto ep : isoLine )
+            for ( auto ep : isoline )
             {
                 for ( size_t j = 0; j < groupCount; ++j )
                 {
-                    const float dist = ( res.meshAfterCut.edgePoint( ep ) - groupStartPositions[j] ).lengthSq();
-                    if ( dist < minDist )
+                    const float distSq = ( res.meshAfterCut.edgePoint( ep ) - groupStartPositions[j] ).lengthSq();
+                    if ( distSq < minDistSq )
                     {
                         nearestIdx= j;
-                        minDist = dist;
+                        minDistSq = distSq;
                     }
                 }
             }
 
-            groupStarts[nearestIdx] = res.sortedIsolines.insert( groupStarts[nearestIdx], isoLine );
+            groupStarts[nearestIdx] = res.sortedIsolines.insert( groupStarts[nearestIdx], std::move( isoline  ) );
             groupStartPositions[nearestIdx] = res.meshAfterCut.edgePoint( groupStarts[nearestIdx]->front() );            
         }        
     }
@@ -1168,7 +1165,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         return res;
     }
 
-    const auto vertBitSet = findInnerShellVerts( mp, res.modifiedMesh, Side::Positive, params.millRadius * 1.5f );
+    const auto vertBitSet = findInnerShellVerts( mp, res.modifiedMesh, Side::Positive, 2.0f * params.millRadius * params.millRadius );
     res.modifiedRegion.resize( res.modifiedMesh.topology.lastValidFace() + 1 );
     BitSetParallelFor( vertBitSet, [&] ( VertId v )
     {

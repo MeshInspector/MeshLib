@@ -1347,9 +1347,9 @@ VoidOrErrStr interpolateArcs( std::vector<GCommand>& commands, const ArcInterpol
     commands.insert( commands.begin(), { .arcPlane = arcPlane } );
     size_t startIndex = 1u;
 
-    while ( startIndex < commands.size() )
+    for ( int i = 0; startIndex < commands.size(); ++i )
     {
-        if ( !reportProgress( params.cb, float( startIndex ) / commands.size() ) )
+        if ( ( i & 0x3FF ) && !reportProgress( params.cb, float( startIndex ) / commands.size() ) )
             return unexpectedOperationCanceled();
 
         while ( startIndex != commands.size() && ( commands[startIndex].type != MoveType::Linear || std::isnan( coord( commands[startIndex], axis ) ) ) )
@@ -1501,9 +1501,9 @@ VoidOrErrStr interpolateLines( std::vector<GCommand>& commands, const LineInterp
 {
     size_t startIndex = 0u;
 
-    while ( startIndex < commands.size() )
+    for ( int i = 0; startIndex < commands.size(); ++i )
     {
-        if ( !reportProgress( params.cb, float( startIndex ) / commands.size() ) )
+        if ( ( i & 0x3FF ) && !reportProgress( params.cb, float( startIndex ) / commands.size() ) )
             return unexpectedOperationCanceled();
 
         while ( startIndex != commands.size() && ( commands[startIndex].type != MoveType::Linear || std::isnan( coord( commands[startIndex], axis ) ) ) )

@@ -1338,7 +1338,7 @@ std::vector<GCommand> replaceLineSegmentsWithCircularArcs( const std::span<GComm
     return res;
 }
 
-void interpolateArcs( std::vector<GCommand>& commands, const ArcInterpolationParams& params, Axis axis )
+VoidOrErrStr interpolateArcs( std::vector<GCommand>& commands, const ArcInterpolationParams& params, Axis axis )
 {
     const ArcPlane arcPlane = ( axis == Axis::X ) ? ArcPlane::YZ :
         ( axis == Axis::Y ) ? ArcPlane::XZ :
@@ -1349,11 +1349,14 @@ void interpolateArcs( std::vector<GCommand>& commands, const ArcInterpolationPar
 
     while ( startIndex < commands.size() )
     {
+        if ( !reportProgress( params.cb, float( startIndex ) / commands.size() ) )
+            return unexpectedOperationCanceled();
+
         while ( startIndex != commands.size() && ( commands[startIndex].type != MoveType::Linear || std::isnan( coord( commands[startIndex], axis ) ) ) )
             ++startIndex;
 
         if ( ++startIndex >= commands.size() )
-            return;
+            return {};
 
         auto endIndex = startIndex + 1;
         while ( endIndex != commands.size() && std::isnan( coord( commands[endIndex], axis ) ) )
@@ -1375,6 +1378,11 @@ void interpolateArcs( std::vector<GCommand>& commands, const ArcInterpolationPar
 
         startIndex = startIndex + interpolatedSegment.size() + 1;
     }
+
+    if ( !reportProgress( params.cb, 1.0f ) )
+        return unexpectedOperationCanceled();
+
+    return {};
 }
 
 std::shared_ptr<ObjectGcode> exportToolPathToGCode( const std::vector<GCommand>& commands )
@@ -1489,17 +1497,20 @@ std::vector<GCommand> replaceStraightSegmentsWithOneLine( const std::span<GComma
     return res;
 }
 
-void interpolateLines( std::vector<GCommand>& commands, const LineInterpolationParams& params, Axis axis )
+VoidOrErrStr interpolateLines( std::vector<GCommand>& commands, const LineInterpolationParams& params, Axis axis )
 {
     size_t startIndex = 0u;
 
     while ( startIndex < commands.size() )
     {
+        if ( !reportProgress( params.cb, float( startIndex ) / commands.size() ) )
+            return unexpectedOperationCanceled();
+
         while ( startIndex != commands.size() && ( commands[startIndex].type != MoveType::Linear || std::isnan( coord( commands[startIndex], axis ) ) ) )
             ++startIndex;
 
         if ( ++startIndex >= commands.size() )
-            return;
+            return {};
 
         auto endIndex = startIndex + 1;
         while ( endIndex != commands.size() && std::isnan( coord( commands[endIndex], axis ) ) &&  commands[endIndex].type == MoveType::Linear )
@@ -1521,6 +1532,11 @@ void interpolateLines( std::vector<GCommand>& commands, const LineInterpolationP
 
         startIndex = startIndex + interpolatedSegment.size() + 1;
     }
+
+    if ( !reportProgress( params.cb, 1.0f ) )
+        return unexpectedOperationCanceled();
+
+    return {};
 }
 
 FaceBitSet smoothSelection( Mesh& mesh, const FaceBitSet& region, float expandOffset, float shrinkOffset )

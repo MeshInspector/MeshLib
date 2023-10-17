@@ -27,12 +27,9 @@ bool flipPossibility( const Vector3f& a, const Vector3f& b, const Vector3f& c, c
     if ( dot( aNorm, cNorm ) < 0.0f )
         return true;
 
-    auto planeDist = Plane3f::fromDirAndPt( cross( b - a, d - a ), a ).distance( c );
-    if ( planeDist * planeDist > ( b - d ).lengthSq() )
-        return true;
-    
     if ( !isUnfoldQuadrangleConvex( a, b, c, d ) )
         return false;
+    
     return true;
 }
 

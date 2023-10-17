@@ -275,10 +275,11 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsoline
                 startContour->push_back( res.meshAfterCut.edgePoint( ep ) );
         }
 
+        if ( startContour )
+            startContour->push_back( startContour->front() );
     }
+
     distances = computeSurfaceDistances( res.meshAfterCut, startVerticesWithDists );
-
-
 
     const float topExcluded = FLT_MAX;
     const auto [min, max] = parallelMinMax( distances.vec_, &topExcluded );

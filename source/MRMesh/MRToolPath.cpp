@@ -223,7 +223,7 @@ struct ExtractIsolinesParams
     //
     bool fromCenterToBoundary;
     // callback for reporting on progress
-    ProgressCallback cb;    
+    ProgressCallback cb;
 };
 
 ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsolinesParams& params )

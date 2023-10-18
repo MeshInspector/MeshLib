@@ -223,7 +223,7 @@ Expected<ThreeMFLoader::Node, std::string> ThreeMFLoader::loadNodeFromDocument(
     for ( auto objectNode = resourcesNode->FirstChildElement( "object" ); objectNode;
         objectNode = objectNode->NextSiblingElement( "object" ) )
     {
-        if ( const char* attrId = objectNode->Attribute( "id", id.c_str() ) )
+        if ( objectNode->Attribute( "id", id.c_str() ) )
             // Load from <mesh> or <components> element
             return createNode( objectNode, doc );
     }

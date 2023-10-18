@@ -102,33 +102,7 @@ bool orientNormalsCore( const PointCloud& pointCloud, VertNormals& normals, cons
         } );
     };
 
-    auto findFirst = [&]()->VertId
-    {
-        MR_TIMER
-        // find not visited point with the largest x-coordinate
-        VertId xMostVert;
-        float maxX = -FLT_MAX;
-        for ( auto v : notVisited )
-        {
-            assert( heap.value( v ).weight == FLT_MAX );
-            auto xDot = dot( pointCloud.points[v], Vector3f::plusX() );
-            if ( xDot > maxX )
-            {
-                xMostVert = v;
-                maxX = xDot;
-            }
-        }
-        if ( xMostVert )
-        {
-            // orient the point with the largest x-coordinate to have normal outside
-            if ( dot( normals[xMostVert], Vector3f::plusX() ) < 0.0f )
-                normals[xMostVert] = -normals[xMostVert];
-        }
-        return xMostVert;
-    };
-
-    VertId first = findFirst();
-    while ( first.valid() )
+    for ( VertId first : notVisited )
     {
         enqueueNeighbors( first );
         for (;;)
@@ -143,7 +117,6 @@ bool orientNormalsCore( const PointCloud& pointCloud, VertNormals& normals, cons
             if ( !reportProgress( progress, [&] { return (float)visitedCount / totalCount; }, visitedCount, 0x10000 ) )
                 return false;
         }
-        first = findFirst();
     }
     return true;
 }

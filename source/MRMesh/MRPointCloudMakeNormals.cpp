@@ -150,24 +150,23 @@ bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, const Bu
 }
 
 std::optional<VertNormals> makeOrientedNormals( const PointCloud& pointCloud,
-    int numNei, const ProgressCallback & progress )
+    float radius, const ProgressCallback & progress )
 {
     MR_TIMER
 
-    std::optional<VertNormals> res;
+    auto optNormals = makeUnorientedNormals( pointCloud, radius, subprogress( progress, 0.0f, 0.1f ) );
+    if ( !optNormals )
+        return optNormals;
 
-    auto closeVerts = findNClosestPointsPerPoint( pointCloud, numNei, subprogress( progress, 0.0f, 0.2f ) );
-    if ( closeVerts.empty() )
-        return res;
+    if ( !orientNormals( pointCloud, *optNormals, radius, subprogress( progress, 0.1f, 1.0f ) ) )
+        optNormals.reset();
 
-    res = makeUnorientedNormals( pointCloud, closeVerts, numNei, subprogress( progress, 0.2f, 0.25f ) );
-    if ( !res )
-        return res;
+    return optNormals;
+}
 
-    if ( !orientNormals( pointCloud, *res, closeVerts, numNei, subprogress( progress, 0.25f, 1.0f ) ) )
-        res.reset();
-
-    return res;
+VertNormals makeNormals( const PointCloud& pointCloud, int avgNeighborhoodSize )
+{
+    return *makeOrientedNormals( pointCloud, findAvgPointsRadius( pointCloud, avgNeighborhoodSize ) );
 }
 
 } //namespace MR

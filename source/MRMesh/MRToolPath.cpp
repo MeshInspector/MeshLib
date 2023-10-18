@@ -214,8 +214,6 @@ struct ExtractIsolinesParams
     // if is not null, coordinates of the start contours will be stored here
     Contours3f* startContours;
     // if is not null, coordinates of the contours failed to build isolines will be stored here
-    Contours3f* failedContours;
-    // if is not null, coordinates of the start vertices will be stored here
     std::vector<Vector3f>* startVertices;
     // distance between isolines
     float sectionStep;
@@ -233,7 +231,6 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsoline
     MR::VertScalars distances;
     // if startContours is provided add a new contour
     Contour3f* startContour = nullptr;    
-    
 
     res.meshAfterCut = mesh;
 
@@ -923,7 +920,6 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         {
             .startSurfacePaths = startSurfacePaths,
             .startContours = params.startContours,
-            .failedContours = params.failedContours,
             .startVertices = params.startVertices,
             .sectionStep = params.sectionStep,
             .bypassDir = params.bypassDir,

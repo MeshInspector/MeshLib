@@ -49,15 +49,9 @@ struct ToolPathParams
     ProgressCallback cb = {};
     
     // optional output, stores isolines without transits
-    Contours3f* isolines = nullptr;
-    // optional output, boundaries of the selection on the original mesh
-    Contours3f* contoursBeforeProjection = nullptr;
-    // optional output, boundaries of the working area on the offset mesh (which are a projection of contoursBeforeProjection )
-    Contours3f* contoursBeforeCutMesh = nullptr;
+    Contours3f* isolines = nullptr;  
     // optional output, polyline containing start vertices for isolines
     Contours3f* startContours = nullptr;
-    // optional output, polylines were failed to build isolines
-    Contours3f* failedContours = nullptr;
     // start vertices on the offset mesh used for calcutating isolines
     std::vector<Vector3f>* startVertices = nullptr;
 

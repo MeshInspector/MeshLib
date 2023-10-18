@@ -5,6 +5,8 @@
 #include "MRGridSampling.h"
 #include "MRMeshProject.h"
 #include "MRPointsProject.h"
+#include "MRObjectMesh.h"
+#include "MRObjectPoints.h"
 
 namespace MR
 {
@@ -89,6 +91,15 @@ auto MeshOrPoints::projector() const -> std::function<ProjectionResult( const Ve
             };
         }
     }, var_ );
+}
+
+std::optional<MeshOrPoints> getMeshOrPoints( const VisualObject * obj )
+{
+    if ( auto objMesh = dynamic_cast<const ObjectMesh*>( obj ) )
+        return MeshOrPoints( objMesh->meshPart() );
+    if ( auto objPnts = dynamic_cast<const ObjectPoints*>( obj ) )
+        return MeshOrPoints( *objPnts->pointCloud() );
+    return {};
 }
 
 } // namespace MR

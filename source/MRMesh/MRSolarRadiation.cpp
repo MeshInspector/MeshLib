@@ -10,7 +10,7 @@
 namespace MR
 {
 
-std::vector<Vector3f> createSkyPatches()
+std::vector<Vector3f> sampleHalfSphere()
 {
     constexpr int numberOfRows = 7;
     constexpr int patchesPerRow[numberOfRows] = { 30, 30, 24, 24, 18, 12, 6 };
@@ -47,29 +47,32 @@ std::vector<Vector3f> createSkyPatches()
     return patches;
 }
 
-VertScalars computeSolarRadiation( const Mesh & terrain, const VertCoords & samples, const VertBitSet & validSamples )
+VertScalars computeSkyViewFactor( const Mesh & terrain, const VertCoords & samples, const VertBitSet & validSamples,
+    const std::vector<SkyPatch> & skyPatches )
 {
     MR_TIMER
     VertScalars res( samples.size(), 0.0f );
 
-    const auto skyPatches = createSkyPatches();
-    const auto rPatches = 1 / float( skyPatches.size() );
+    float maxRadiation = 0;
+    for ( const auto & patch : skyPatches )
+        maxRadiation += patch.radiation;
+    const float rMaxRadiation = 1 / maxRadiation;
     std::vector<IntersectionPrecomputes<float>> precs;
     precs.reserve( skyPatches.size() );
     for ( const auto & sp : skyPatches )
-        precs.emplace_back( sp );
+        precs.emplace_back( sp.dir );
 
     BitSetParallelFor( validSamples, [&]( VertId sampleVertId )
     {
         const auto samplePt = samples[sampleVertId];
 
-        auto raysInSky = skyPatches.size();
+        float totalRadiation = 0;
         for ( int i = 0; i < skyPatches.size(); ++i )
         {
-            if ( rayMeshIntersect( terrain, Line3f( samplePt, skyPatches[i] ), 0, FLT_MAX, &precs[i], false ) )
-                --raysInSky;
+            if ( !rayMeshIntersect( terrain, Line3f( samplePt, skyPatches[i].dir ), 0, FLT_MAX, &precs[i], false ) )
+                totalRadiation += skyPatches[i].radiation;
         }
-        res[sampleVertId] = rPatches * (float)raysInSky;
+        res[sampleVertId] = rMaxRadiation * totalRadiation;
     } );
 
     return res;

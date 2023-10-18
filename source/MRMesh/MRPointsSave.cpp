@@ -50,8 +50,8 @@ VoidOrErrStr toAsc( const PointCloud& cloud, std::ostream& out, const VertColors
             out << ' ' << n.x << ' ' << n.y << ' ' << n.z;
         }
         out << '\n';
-
-        if ( callback && !( v & 0x3FF ) && !callback( float( ++numSaved ) / totalPoints ) )
+        ++numSaved;
+        if ( callback && !( numSaved & 0x3FF ) && !callback( float( numSaved ) / totalPoints ) )
             return unexpectedOperationCanceled();
     }
 

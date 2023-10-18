@@ -82,6 +82,7 @@ Expected<Mesh, std::string> preprocessMesh( const Mesh& inputMesh, const ToolPat
     if ( !params.flatTool )
     {
         OffsetParameters offsetParams;
+        offsetParams.type = OffsetParameters::Type::Shell;
         offsetParams.voxelSize = params.voxelSize;
         offsetParams.callBack = subprogress( params.cb, 0.0f, 0.15f );
         const auto offsetRes = offsetMesh( inputMesh, params.millRadius, offsetParams );

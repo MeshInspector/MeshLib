@@ -32,9 +32,11 @@ public:
     /// if toWorld transformation is given then returns minimal bounding box in world space
     MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
 
-    //// appends points (and normals if it possible) (from) in addition to this points
-    //// if this obj have normals and from obj has not it then don't do anything
-    MRMESH_API void addPartByMask( const PointCloud& from, const VertBitSet& fromVerts, VertMap* oldToNewMap = nullptr );
+    /// appends points (and normals if it possible) (from) in addition to this points
+    /// if this obj have normals and from obj has not it then don't do anything
+    /// \param extNormals if given then they will be copied instead of from.normals
+    MRMESH_API void addPartByMask( const PointCloud& from, const VertBitSet& fromVerts, VertMap* oldToNewMap = nullptr,
+        const VertNormals * extNormals = nullptr );
 
     /// appends a point and returns its VertId
     MRMESH_API VertId addPoint( const Vector3f& point );

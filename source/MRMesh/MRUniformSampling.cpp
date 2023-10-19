@@ -35,7 +35,8 @@ std::optional<VertBitSet> pointUniformSampling( const PointCloud& pointCloud, fl
     return res;
 }
 
-std::optional<PointCloud> makeUniformSampledCloud( const PointCloud& pointCloud, float distance, const ProgressCallback & cb )
+std::optional<PointCloud> makeUniformSampledCloud( const PointCloud& pointCloud, float distance, 
+    const VertNormals * extNormals, const ProgressCallback & cb )
 {
     MR_TIMER
 
@@ -45,7 +46,7 @@ std::optional<PointCloud> makeUniformSampledCloud( const PointCloud& pointCloud,
         return res;
 
     res.emplace();
-    res->addPartByMask( pointCloud, *optVerts );
+    res->addPartByMask( pointCloud, *optVerts, nullptr, extNormals );
 
     if ( !reportProgress( cb, 1.0f ) )
         res.reset();

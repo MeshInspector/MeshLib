@@ -14,8 +14,10 @@ namespace MR
 [[nodiscard]] MRMESH_API std::optional<VertBitSet> pointUniformSampling( const PointCloud& pointCloud, float distance, const ProgressCallback & cb = {} );
 
 /// Composes new point cloud consisting of uniform samples of original point cloud;
+/// \param extNormals if given then they will be copied in new point cloud
 /// returns std::nullopt if it was terminated by the callback
 /// \ingroup PointCloudGroup
-[[nodiscard]] MRMESH_API std::optional<PointCloud> makeUniformSampledCloud( const PointCloud& pointCloud, float distance, const ProgressCallback & cb = {} );
+[[nodiscard]] MRMESH_API std::optional<PointCloud> makeUniformSampledCloud( const PointCloud& pointCloud, float distance,
+    const VertNormals * extNormals = nullptr, const ProgressCallback & cb = {} );
 
 } //namespace MR

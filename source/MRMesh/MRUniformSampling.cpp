@@ -35,4 +35,21 @@ std::optional<VertBitSet> pointUniformSampling( const PointCloud& pointCloud, fl
     return res;
 }
 
+std::optional<PointCloud> makeUniformSampledCloud( const PointCloud& pointCloud, float distance, const ProgressCallback & cb )
+{
+    MR_TIMER
+
+    std::optional<PointCloud> res;
+    auto optVerts = pointUniformSampling( pointCloud, distance, subprogress( cb, 0.0f, 0.9f ) );
+    if ( !optVerts )
+        return res;
+
+    res.emplace();
+    res->addPartByMask( pointCloud, *optVerts );
+
+    if ( !reportProgress( cb, 1.0f ) )
+        res.reset();
+    return res;
 }
+
+} //namespace MR

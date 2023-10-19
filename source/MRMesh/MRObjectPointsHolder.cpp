@@ -226,6 +226,8 @@ void ObjectPointsHolder::serializeFields_( Json::Value& root ) const
 
     serializeToJson( Vector4f( selectedVerticesColor_.get() ), root["Colors"]["Selection"]["Points"] );
     serializeToJson( selectedPoints_, root["SelectionVertBitSet"] );
+    if ( points_ )
+        serializeToJson( points_->validPoints, root["ValidVertBitSet"] );
 }
 
 void ObjectPointsHolder::deserializeFields_( const Json::Value& root )
@@ -237,6 +239,8 @@ void ObjectPointsHolder::deserializeFields_( const Json::Value& root )
     selectedVerticesColor_.set( Color( resVec ) );
 
     deserializeFromJson( root["SelectionVertBitSet"], selectedPoints_ );
+    if ( points_ )
+        deserializeFromJson( root["ValidVertBitSet"], points_->validPoints );
 }
 
 void ObjectPointsHolder::setupRenderObject_() const

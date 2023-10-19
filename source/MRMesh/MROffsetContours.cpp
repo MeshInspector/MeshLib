@@ -169,31 +169,8 @@ Contours2f offsetContours( const Contours2f& contours, float offset, const Offse
             intermediateRes.back().push_back( intermediateRes.back().front() );
         }
     }
-    if ( offset == 0.0f )
-        return intermediateRes;
     
-    Polyline3 pl( intermediateRes );
-    LinesSave::toMrLines( pl, "C:\\Users\\grant\\Downloads\\terrain (1)\\intermidiateLines.mrlines" );
-
-
-    auto mesh = PlanarTriangulation::triangulateContours( std::move( intermediateRes ), nullptr, 
-        PlanarTriangulation::WindingMode::Negative ); // Should be negative
-    
-    // `getValidFaces` important to exclude lone boundaries
-    auto bourndaries = findLeftBoundary( mesh.topology, &mesh.topology.getValidFaces() );
-    Contours2f res;
-    res.reserve( bourndaries.size() );
-    for ( int i = 0; i < bourndaries.size(); ++i )
-    {
-        const auto& loop = bourndaries[i];
-        res.push_back( {} );
-        res.back().reserve( loop.size() + 1 );
-
-        for ( auto e : loop )
-            res.back().push_back( to2dim( mesh.orgPnt( e ) ) );
-        res.back().push_back( to2dim( mesh.destPnt( loop.back() ) ) );
-    }
-    return res;
+    return PlanarTriangulation::getOutline( intermediateRes );
 }
 
 }

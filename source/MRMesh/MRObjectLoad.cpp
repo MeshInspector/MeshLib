@@ -71,6 +71,8 @@ Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std
     MeshLoadSettings newSettings = settings;
     VertColors colors;
     newSettings.colors = &colors;
+    VertNormals normals;
+    newSettings.normals = &normals;
     auto mesh = MeshLoad::fromAnySupportedFormat( file, newSettings );
     if ( !mesh.has_value() )
         return unexpected( mesh.error() );
@@ -79,6 +81,7 @@ Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std
     {
         auto pointCloud = std::make_shared<MR::PointCloud>();
         pointCloud->points = std::move( mesh->points );
+        pointCloud->normals = std::move( normals );
         pointCloud->validPoints.resize( pointCloud->points.size(), true );
 
         auto objectPoints = std::make_unique<ObjectPoints>();

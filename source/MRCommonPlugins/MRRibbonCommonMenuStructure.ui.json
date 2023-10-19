@@ -128,7 +128,7 @@
 		},
 		{
 			"Name": "Voxel",
-			"Priority": 7,
+			"Priority": 8,
 			"Groups": [
 				{
 					"Name": "Open",

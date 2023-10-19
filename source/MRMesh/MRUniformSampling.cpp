@@ -4,6 +4,7 @@
 #include "MRVector.h"
 #include "MRTimer.h"
 #include "MRPointsInBall.h"
+#include <cfloat>
 
 namespace MR
 {
@@ -33,6 +34,64 @@ std::optional<VertBitSet> pointUniformSampling( const PointCloud& pointCloud, fl
         } );
     }
     return res;
+}
+
+std::optional<VertBitSet> pointRegularUniformSampling( const PointCloud& pointCloud, float distance, const ProgressCallback& cb /*= {} */ )
+{
+    MR_TIMER
+
+    const auto sz = pointCloud.validPoints.count();
+    size_t progressCounter = 0;
+
+    auto rp = [&] ()->bool
+    {
+        if ( !cb )
+            return true;
+        ++progressCounter;
+        if ( bool( progressCounter & 0x3ff ) )
+            return true;
+        return cb( float( progressCounter ) / float( sz ) );
+    };
+
+    VertBitSet visited( pointCloud.validPoints.size() );
+    VertBitSet sampled( pointCloud.validPoints.size() );
+    for ( auto v : pointCloud.validPoints )
+    {
+        if ( visited.test( v ) )
+        {
+            if ( !rp() )
+                return {};
+            continue;
+        }
+        visited.set( v );
+
+        VertId nextVertId = v;
+
+        while ( nextVertId )
+        {
+            sampled.set( nextVertId );
+            const auto& nextVertPos = pointCloud.points[nextVertId];
+            nextVertId = {};
+            const auto maxDistSq = distance * distance;
+            float minDistSq = FLT_MAX;
+            findPointsInBall( pointCloud, nextVertPos, 2 * distance, [&] ( VertId cv, const Vector3f& pos )
+            {
+                if ( nextVertId == cv || visited.test( cv ) )
+                    return;
+                auto distSq = ( nextVertPos - pos ).lengthSq();
+                if ( distSq < maxDistSq )
+                    visited.set( cv );
+                else if ( distSq < minDistSq )
+                {
+                    minDistSq = distSq;
+                    nextVertId = cv;
+                }
+            } );
+            if ( !rp() )
+                return {};
+        }
+    }
+    return sampled;
 }
 
 std::optional<PointCloud> makeUniformSampledCloud( const PointCloud& pointCloud, float distance, 

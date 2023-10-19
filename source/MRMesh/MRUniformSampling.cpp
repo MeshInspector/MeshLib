@@ -4,6 +4,7 @@
 #include "MRVector.h"
 #include "MRTimer.h"
 #include "MRPointsInBall.h"
+#include <cfloat>
 
 namespace MR
 {

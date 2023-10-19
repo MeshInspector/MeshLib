@@ -17,6 +17,7 @@
 #include "MR2to3.h"
 #include "MRBitSetParallelFor.h"
 #include "MRPrecisePredicates2.h"
+#include <iostream>
 #include <queue>
 #include <algorithm>
 #include <limits>
@@ -343,6 +344,11 @@ bool SweepLineQueue::findIntersections()
     events_.reserve( mesh_.topology.numValidVerts() * 2 );
     while ( auto event = getNext_() )
     {
+        std::cout << "Event Type: " << int( event.type ) << ", Index: " << event.index << "\n";
+        for ( const auto& ae : activeSweepEdges_ )
+        {
+            std::cout << "  edge: " << int( ae.edgeId ) << "\n";
+        }
         if ( event.type == EventType::Start )
             processStartEvent_( event.index );
         else if ( event.type == EventType::Destination )

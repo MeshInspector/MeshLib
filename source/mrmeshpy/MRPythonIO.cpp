@@ -243,7 +243,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadLines, [] ( pybind11::module_& m )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SavePoints, [] ( pybind11::module_& m )
 {
     m.def( "savePoints",
-        MR::decorateExpected( ( VoidOrErrStr( * )( const MR::PointCloud&, const std::filesystem::path&, const VertColors*, ProgressCallback ) )& MR::PointsSave::toAnySupportedFormat ),
+        MR::decorateExpected( []( const PointCloud& cloud, const std::filesystem::path& file, const VertColors* colors, ProgressCallback callback )
+            { return MR::PointsSave::toAnySupportedFormat( cloud, file, { .colors = colors, .callback = callback } ); } ),
         pybind11::arg( "pointCloud" ), pybind11::arg( "path" ), pybind11::arg( "colors" ) = nullptr, pybind11::arg( "callback" ) = ProgressCallback{},
         "detects the format from file extension and save points to it" );
     m.def( "savePoints",

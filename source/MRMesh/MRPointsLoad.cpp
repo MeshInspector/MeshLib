@@ -323,6 +323,12 @@ Expected<MR::PointCloud, std::string> fromPly( std::istream& in, VertColors* col
                 reader.extract_properties( indecies, 3, miniply::PLYPropertyType::Float, res.points.data() );
                 gotVerts = true;
             }
+            if ( reader.find_normal( indecies ) )
+            {
+                Timer t( "extractNormals" );
+                res.normals.resize( numVerts );
+                reader.extract_properties( indecies, 3, miniply::PLYPropertyType::Float, res.normals.data() );
+            }
             if ( colors && reader.find_color( indecies ) )
             {
                 colorsBuffer.resize( 3 * numVerts );

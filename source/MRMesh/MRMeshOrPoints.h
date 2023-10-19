@@ -56,4 +56,7 @@ private:
     std::variant<MeshPart, const PointCloud*> var_;
 };
 
+/// constructs MeshOrPoints from ObjectMesh or ObjectPoints, otherwise returns nullopt
+[[nodiscard]] MRMESH_API std::optional<MeshOrPoints> getMeshOrPoints( const VisualObject * obj );
+
 } // namespace MR

@@ -35,10 +35,16 @@ MRMESH_API bool orientNormals( const PointCloud& pointCloud, VertNormals& normal
     const ProgressCallback & progress = {} );
 
 /// \brief Makes normals for valid points of given point cloud; directions of close points are selected to be consistent;
-/// \param numNei the number of closest points to consider around each point
+/// \param radius of neighborhood to consider
 /// \return nullopt if progress returned false
 /// \ingroup PointCloudGroup
 [[nodiscard]] MRMESH_API std::optional<VertNormals> makeOrientedNormals( const PointCloud& pointCloud,
-    int numNei, const ProgressCallback & progress = {} );
+    float radius, const ProgressCallback & progress = {} );
+
+/// \brief Makes consistent normals for valid points of given point cloud
+/// \param avgNeighborhoodSize avg num of neighbors of each individual point
+/// \ingroup PointCloudGroup
+//[[deprecated( "use makeOrientedNormals(...) instead" )]]
+MRMESH_API VertNormals makeNormals( const PointCloud& pointCloud, int avgNeighborhoodSize = 48 );
 
 } //namespace MR

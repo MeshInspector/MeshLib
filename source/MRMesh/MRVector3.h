@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRConstants.h"
 #include <cmath>
 #include <algorithm>
 
@@ -192,6 +193,19 @@ inline Vector3<T> operator *( const Vector3<T> & b, T a )
 template <typename T> 
 inline Vector3<T> operator /( Vector3<T> b, T a )
     { b /= a; return b; }
+
+/// returns a point on unit sphere given two angles
+template <typename T> 
+Vector3<T> unitVector3( T azimuth, T altitude )
+{
+    const auto zenithAngle = T( PI2 ) - altitude;
+    return
+    {
+        std::sin( zenithAngle ) * std::cos( azimuth ),
+        std::sin( zenithAngle ) * std::sin( azimuth ),
+        std::cos( zenithAngle )
+    };
+}
 
 template <typename T> 
 inline auto begin( const Vector3<T> & v ) { return &v[0]; }

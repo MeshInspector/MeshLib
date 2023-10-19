@@ -19,11 +19,11 @@ Box3f PointCloud::computeBoundingBox( const AffineXf3f * toWorld ) const
     return MR::computeBoundingBox( points, validPoints, toWorld );
 }
 
-void PointCloud::addPartByMask( const PointCloud& from, const VertBitSet& fromVerts, VertMap* oldToNewMap /*= nullptr*/ )
+void PointCloud::addPartByMask( const PointCloud& from, const VertBitSet& fromVerts, VertMap* oldToNewMap, const VertNormals * extNormals )
 {
     MR_TIMER
     const auto& fromPoints = from.points;
-    const auto& fromNormals = from.normals;
+    const auto& fromNormals = extNormals ? *extNormals : from.normals;
 
     const bool consistentNormals = normals.size() == 0 || ( points.size() == normals.size() && fromPoints.size() == fromNormals.size() );
     assert( consistentNormals );

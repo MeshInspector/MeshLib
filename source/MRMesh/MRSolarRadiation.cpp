@@ -6,6 +6,7 @@
 #include "MRMeshIntersect.h"
 #include "MRTimer.h"
 #include <cfloat>
+#include <cstdlib>
 
 namespace MR
 {
@@ -48,7 +49,7 @@ std::vector<Vector3f> sampleHalfSphere()
 }
 
 VertScalars computeSkyViewFactor( const Mesh & terrain, const VertCoords & samples, const VertBitSet & validSamples,
-    const std::vector<SkyPatch> & skyPatches )
+    const std::vector<SkyPatch> & skyPatches, BitSet * outSkyRays )
 {
     MR_TIMER
     VertScalars res( samples.size(), 0.0f );
@@ -57,6 +58,25 @@ VertScalars computeSkyViewFactor( const Mesh & terrain, const VertCoords & sampl
     for ( const auto & patch : skyPatches )
         maxRadiation += patch.radiation;
     const float rMaxRadiation = 1 / maxRadiation;
+
+    if ( outSkyRays )
+    {
+        *outSkyRays = findSkyRays( terrain, samples, validSamples, skyPatches );
+        BitSetParallelFor( validSamples, [&]( VertId sampleVertId )
+        {
+            float totalRadiation = 0;
+            auto ray = size_t( sampleVertId ) * skyPatches.size();
+            for ( int i = 0; i < skyPatches.size(); ++i, ++ray )
+            {
+                if ( outSkyRays->test( ray ) )
+                    totalRadiation += skyPatches[i].radiation;
+            }
+            res[sampleVertId] = rMaxRadiation * totalRadiation;
+        } );
+
+        return res;
+    }
+
     std::vector<IntersectionPrecomputes<float>> precs;
     precs.reserve( skyPatches.size() );
     for ( const auto & sp : skyPatches )
@@ -73,6 +93,32 @@ VertScalars computeSkyViewFactor( const Mesh & terrain, const VertCoords & sampl
                 totalRadiation += skyPatches[i].radiation;
         }
         res[sampleVertId] = rMaxRadiation * totalRadiation;
+    } );
+
+    return res;
+}
+
+BitSet findSkyRays( const Mesh & terrain,
+    const VertCoords & samples, const VertBitSet & validSamples,
+    const std::vector<SkyPatch> & skyPatches )
+{
+    MR_TIMER
+
+    std::vector<IntersectionPrecomputes<float>> precs;
+    precs.reserve( skyPatches.size() );
+    for ( const auto & sp : skyPatches )
+        precs.emplace_back( sp.dir );
+
+    BitSet res( samples.size() * skyPatches.size() );
+    BitSetParallelForAll( res, [&]( size_t ray )
+    {
+        const auto div = std::div( std::int64_t( ray ), std::int64_t( skyPatches.size() ) );
+        const VertId sample( int( div.quot ) );
+        if ( !validSamples.test( sample ) )
+            return;
+        const auto patch = div.rem;
+        if ( !rayMeshIntersect( terrain, Line3f( samples[sample], skyPatches[patch].dir ), 0, FLT_MAX, &precs[patch], false ) )
+            res.set( ray );
     } );
 
     return res;

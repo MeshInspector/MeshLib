@@ -444,6 +444,12 @@ Expected<Mesh, std::string> fromPly( std::istream& in, const MeshLoadSettings& s
                 reader.extract_properties( indecies, 3, miniply::PLYPropertyType::Float, res.points.data() );
                 gotVerts = true;
             }
+            if ( settings.normals && reader.find_normal( indecies ) )
+            {
+                Timer t( "extractNormals" );
+                settings.normals->resize( numVerts );
+                reader.extract_properties( indecies, 3, miniply::PLYPropertyType::Float, settings.normals->data() );
+            }
             if ( settings.colors && reader.find_color( indecies ) )
             {
                 Timer t( "extractColors" );

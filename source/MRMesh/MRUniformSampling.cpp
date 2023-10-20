@@ -42,40 +42,19 @@ std::optional<VertBitSet> pointRegularUniformSampling( const PointCloud& pointCl
 {
     MR_TIMER
 
-    std::vector<VertId> searchQueue( pointCloud.validPoints.count() );
-    int i = 0;
+    std::vector<VertId> searchQueue;
+    searchQueue.reserve( pointCloud.validPoints.count() );
     for ( auto v : pointCloud.validPoints )
-        searchQueue[i++] = v;
+        searchQueue.push_back( v );
 
     if ( cb && !cb( 0.2f ) )
         return {};
-
-    auto boxSize = pointCloud.getBoundingBox().size();
-    int xIndex = 0;
-    if ( boxSize.y > boxSize.x && boxSize.y > boxSize.z )
-        xIndex = 1;
-    else if ( boxSize.z > boxSize.x && boxSize.z > boxSize.y )
-        xIndex = 2;
-
-    int yIndex = ( xIndex + 1 ) % 3;
-    int zIndex = ( xIndex + 2 ) % 3;
-
-    if ( boxSize[zIndex] > boxSize[yIndex] )
-        std::swap( yIndex, zIndex );
 
     tbb::parallel_sort( searchQueue.begin(), searchQueue.end(), [&] ( VertId l, VertId r )
     {
         const auto& ptL = pointCloud.points[l];
         const auto& ptR = pointCloud.points[r];
-        if ( ptL[xIndex] < ptR[xIndex] )
-            return true;
-        if ( ptL[xIndex] > ptR[xIndex] )
-            return false;
-        if ( ptL[yIndex] < ptR[yIndex] )
-            return true;
-        if ( ptL[yIndex] > ptR[yIndex] )
-            return false;
-        return ptL[zIndex] < ptR[zIndex];
+        return std::tuple{ ptL.x,ptL.y,ptL.z } < std::tuple{ ptR.x,ptR.y,ptR.z };
     } );
     
     if ( cb && !cb( 0.3f ) )

@@ -1083,6 +1083,9 @@
     <ClInclude Include="MRSolarRadiation.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRImproveSampling.h">
+      <Filter>Source Files\PointCloud</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1804,6 +1807,9 @@
     </ClCompile>
     <ClCompile Include="MRSolarRadiation.cpp">
       <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRImproveSampling.cpp">
+      <Filter>Source Files\PointCloud</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

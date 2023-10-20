@@ -8,8 +8,7 @@
 namespace MR
 {
 
-/// \defgroup PrecisePredicates3
-/// \ingroup
+/// \ingroup MathGroup
 /// \{
 
 /// returns true if the plane with orientated triangle ABC has 0 point at the left;

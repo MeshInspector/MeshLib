@@ -18,7 +18,7 @@ public:
 
     /// performs one iteration consisting of projection of all triangles on planes with given normals and finding best points from them
     /// \param guide target vertex positions to avoid under-determined system
-    /// \param normal target face normals
+    /// \param normals target face normals
     /// \param points initial approximation on input, updated approximation on output
     MRMESH_API void run( const VertCoords & guide, const FaceNormals & normals, VertCoords & points );
 

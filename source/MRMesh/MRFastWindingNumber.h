@@ -47,14 +47,14 @@ public:
     /// <param name="res">resulting winding numbers, will be resized automatically</param>
     /// <param name="points">incoming points</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    /// <param name="skipFace">this triangle (if it is close to \param q) will be skipped from summation</param>
+    /// <param name="skipFace">this triangle (if it is close to `q`) will be skipped from summation</param>
     virtual void calcFromVector( std::vector<float>& res, const std::vector<Vector3f>& points, float beta, FaceId skipFace = {} ) = 0;
     /// <summary>
     /// calculates winding numbers for all centers of mesh's triangles. if winding number is less than 0 or greater then 1, that face is marked as self-intersected
     /// </summary>
     /// <param name="res">resulting bit set</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    /// <return>false if the operation was canceled by the user</return>
+    /// <returns>false if the operation was canceled by the user</returns>
     virtual bool calcSelfIntersections( FaceBitSet& res, float beta, ProgressCallback cb = {} ) = 0;
     /// <summary>
     /// calculates winding numbers for each point in a three-dimensional grid
@@ -83,7 +83,6 @@ public:
     /// does not take into account size of output vector
     /// </summary>
     /// <param name="inputSize">size of input vector</param>
-    /// <returns></returns>
     virtual size_t fromVectorHeapBytes( size_t inputSize ) const = 0;
 
     /// <summary>
@@ -91,7 +90,6 @@ public:
     /// does not take into account size of output FaceBitSet
     /// </summary>
     /// <param name="mesh">input mesh</param>
-    /// <returns></returns>
     virtual size_t selfIntersectionsHeapBytes( const Mesh& mesh ) const = 0;
 
     /// <summary>
@@ -99,7 +97,6 @@ public:
     /// does not take into account size of output vector
     /// </summary>
     /// <param name="dims">dimensions of original grid</param>
-    /// <returns></returns>
     virtual size_t fromGridHeapBytes( const Vector3i& dims ) const = 0;
 };
 
@@ -122,7 +119,7 @@ public:
     /// <param name="res">resulting winding numbers, will be resized automatically</param>
     /// <param name="points">incoming points</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    /// <param name="skipFace">this triangle (if it is close to \param q) will be skipped from summation</param>
+    /// <param name="skipFace">this triangle (if it is close to `q`) will be skipped from summation</param>
     MRMESH_API void calcFromVector( std::vector<float>& res, const std::vector<Vector3f>& points, float beta, FaceId skipFace = {} ) override;
     /// <summary>
     /// calculates winding numbers for all centers of mesh's triangles. if winding number is less than 0 or greater then 1, that face is marked as self-intersected
@@ -156,7 +153,6 @@ public:
     /// does not take into account size of output vector
     /// </summary>
     /// <param name="inputSize">size of input vector</param>
-    /// <returns></returns>
     MRMESH_API virtual size_t fromVectorHeapBytes( size_t inputSize ) const override;
 
     /// <summary>
@@ -164,7 +160,6 @@ public:
     /// does not take into account size of output FaceBitSet
     /// </summary>
     /// <param name="mesh">input mesh</param>
-    /// <returns></returns>
     MRMESH_API virtual size_t selfIntersectionsHeapBytes( const Mesh& mesh ) const override;
 
     /// <summary>
@@ -172,7 +167,6 @@ public:
     /// does not take into account size of output vector
     /// </summary>
     /// <param name="dims">dimensions of original grid</param>
-    /// <returns></returns>
     MRMESH_API virtual size_t fromGridHeapBytes( const Vector3i& dims ) const override;
 
 private:

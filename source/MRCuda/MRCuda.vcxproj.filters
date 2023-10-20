@@ -13,6 +13,9 @@
     <CudaCompile Include="MRCudaFastWindingNumber.cu">
       <Filter>FastWindingNumber</Filter>
     </CudaCompile>
+    <CudaCompile Include="MRCudaSolarRadiation.cu">
+      <Filter>SolarRadiation</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRCudaTest.cpp">
@@ -29,6 +32,9 @@
     </ClCompile>
     <ClCompile Include="MRCudaFastWindingNumber.cpp">
       <Filter>FastWindingNumber</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCudaSolarRadiation.cpp">
+      <Filter>SolarRadiation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -72,6 +78,12 @@
     <ClInclude Include="MRCudaFastWindingNumber.h">
       <Filter>FastWindingNumber</Filter>
     </ClInclude>
+    <ClInclude Include="MRCudaSolarRadiation.h">
+      <Filter>SolarRadiation</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaSolarRadiation.cuh">
+      <Filter>SolarRadiation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="CudaTest">
@@ -88,6 +100,9 @@
     </Filter>
     <Filter Include="FastWindingNumber">
       <UniqueIdentifier>{5ad9dab8-7adb-49c4-a7da-3416d396c89a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SolarRadiation">
+      <UniqueIdentifier>{1740019b-6425-4837-80d1-64cf6d2d5fde}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

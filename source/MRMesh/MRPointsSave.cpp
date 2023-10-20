@@ -80,6 +80,11 @@ VoidOrErrStr toPly( const PointCloud& cloud, std::ostream& out, const Settings& 
 
     out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n"
         "element vertex " << totalPoints << "\nproperty float x\nproperty float y\nproperty float z\n";
+
+    const bool saveNormals = cloud.points.size() <= cloud.normals.size();
+    if ( saveNormals )
+        out << "property float nx\nproperty float ny\nproperty float nz\n";
+
     if ( settings.colors )
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
     out << "end_header\n";
@@ -99,6 +104,8 @@ VoidOrErrStr toPly( const PointCloud& cloud, std::ostream& out, const Settings& 
         if ( settings.saveValidOnly && !cloud.validPoints.test( v ) )
             continue;
         out.write( ( const char* )&cloud.points[v], 12 );
+        if ( saveNormals )
+            out.write( ( const char* )&cloud.normals[v], 12 );
         if ( settings.colors )
         {
             const auto c = ( *settings.colors )[v];

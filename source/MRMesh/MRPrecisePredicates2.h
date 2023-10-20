@@ -8,7 +8,6 @@
 namespace MR
 {
 
-/// \defgroup PrecisePredicates2
 /// \ingroup MathGroup
 /// \{
 

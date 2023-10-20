@@ -5,7 +5,7 @@
 namespace MR
 {
 
-/// safely invokes \param cv with given value; just returning true for empty callback
+/// safely invokes \param cb with given value; just returning true for empty callback
 inline bool reportProgress( ProgressCallback cb, float v )
 {
     if ( cb )
@@ -13,7 +13,7 @@ inline bool reportProgress( ProgressCallback cb, float v )
     return true;
 }
 
-/// safely invokes \param cv with given value if \param counter is divisible by \param divider (preferably a power of 2);
+/// safely invokes \param cb with given value if \param counter is divisible by \param divider (preferably a power of 2);
 /// just returning true for empty callback
 inline bool reportProgress( ProgressCallback cb, float v, size_t counter, int divider )
 {
@@ -22,7 +22,7 @@ inline bool reportProgress( ProgressCallback cb, float v, size_t counter, int di
     return true;
 }
 
-/// safely invokes \param cv with the value produced by given functor;
+/// safely invokes \param cb with the value produced by given functor;
 /// just returning true for empty callback and not evaluating the function
 template<typename F>
 inline bool reportProgress( ProgressCallback cb, F && f )
@@ -32,7 +32,7 @@ inline bool reportProgress( ProgressCallback cb, F && f )
     return true;
 }
 
-/// safely invokes \param cv with the value produced by given functor if \param counter is divisible by \param divider (preferably a power of 2);
+/// safely invokes \param cb with the value produced by given functor if \param counter is divisible by \param divider (preferably a power of 2);
 /// just returning true for empty callback and not evaluating the function
 template<typename F>
 inline bool reportProgress( ProgressCallback cb, F && f, size_t counter, int divider )

@@ -9,7 +9,7 @@ namespace MR
 {
 
 
-/// \defgroup IOGroup
+/// \defgroup IOGroup Input/Output
 /// \{
 
 /// \defgroup Base64Group Base64

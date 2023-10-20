@@ -25,23 +25,25 @@ const IOFilters Filters =
 #endif
 };
 
-VoidOrErrStr toAsc( const PointCloud& points, const std::filesystem::path& file, const VertColors* colors /*= nullptr*/, ProgressCallback callback )
+VoidOrErrStr toAsc( const PointCloud& points, const std::filesystem::path& file, const Settings& settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toAsc( points, out, colors, callback );
+    return toAsc( points, out, settings );
 }
 
-VoidOrErrStr toAsc( const PointCloud& cloud, std::ostream& out, const VertColors* /*colors*/, ProgressCallback callback )
+VoidOrErrStr toAsc( const PointCloud& cloud, std::ostream& out, const Settings& settings )
 {
     MR_TIMER
     const bool saveNormals = cloud.points.size() <= cloud.normals.size();
-    const size_t totalPoints = cloud.validPoints.count();
+    const size_t totalPoints = settings.saveValidOnly ? cloud.validPoints.count() : cloud.points.size();
     size_t numSaved = 0;
-    for ( auto v : cloud.validPoints )
+    for ( auto v = 0_v; v < cloud.points.size(); ++v )
     {
+        if ( settings.saveValidOnly && !cloud.validPoints.test( v ) )
+            continue;
         const auto & p = cloud.points[v];
         out << p.x << ' ' << p.y << ' ' << p.z;
         if ( saveNormals )
@@ -51,94 +53,83 @@ VoidOrErrStr toAsc( const PointCloud& cloud, std::ostream& out, const VertColors
         }
         out << '\n';
         ++numSaved;
-        if ( callback && !( numSaved & 0x3FF ) && !callback( float( numSaved ) / totalPoints ) )
+        if ( settings.callback && !( numSaved & 0x3FF ) && !settings.callback( float( numSaved ) / totalPoints ) )
             return unexpectedOperationCanceled();
     }
 
     if ( !out )
         return unexpected( std::string( "Error saving in ASC-format" ) );
 
-    if ( callback )
-        callback( 1.f );
+    reportProgress( settings.callback, 1.f );
     return {};
 }
 
-VoidOrErrStr toPly( const PointCloud& points, const std::filesystem::path& file, const VertColors* colors /*= nullptr*/, ProgressCallback callback )
+VoidOrErrStr toPly( const PointCloud& points, const std::filesystem::path& file, const Settings& settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toPly( points, out, colors, callback );
+    return toPly( points, out, settings );
 }
 
-VoidOrErrStr toPly( const PointCloud& points, std::ostream& out, const VertColors* colors /*= nullptr*/, ProgressCallback callback )
+VoidOrErrStr toPly( const PointCloud& cloud, std::ostream& out, const Settings& settings )
 {
-    MR_TIMER;
-
-    size_t numVertices = points.points.size();
+    MR_TIMER
+    const size_t totalPoints = settings.saveValidOnly ? cloud.validPoints.count() : cloud.points.size();
 
     out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n"
-        "element vertex " << numVertices << "\nproperty float x\nproperty float y\nproperty float z\n";
-    if ( colors )
+        "element vertex " << totalPoints << "\nproperty float x\nproperty float y\nproperty float z\n";
+    if ( settings.colors )
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
     out << "end_header\n";
 
-    if ( !colors )
-    {
-        // write vertices
-        static_assert( sizeof( points.points.front() ) == 12, "wrong size of Vector3f" );
-        const bool cancel = !MR::writeByBlocks( out, (const char*) points.points.data(), points.points.size() * sizeof( Vector3f ), callback );
-        if ( cancel )
-            return unexpected( std::string( "Saving canceled" ) );
-    }
-    else
-    {
-        // write triangles
+    static_assert( sizeof( cloud.points.front() ) == 12, "wrong size of Vector3f" );
 #pragma pack(push, 1)
-        struct PlyColoredVert
-        {
-            Vector3f p;
-            unsigned char r = 0, g = 0, b = 0;
-        };
+    struct PlyColor
+    {
+        unsigned char r = 0, g = 0, b = 0;
+    };
 #pragma pack(pop)
-        static_assert( sizeof( PlyColoredVert ) == 15, "check your padding" );
+    static_assert( sizeof( PlyColor ) == 3, "check your padding" );
 
-        PlyColoredVert cVert;
-        for ( int v = 0; v < numVertices; ++v )
+    size_t numSaved = 0;
+    for ( auto v = 0_v; v < cloud.points.size(); ++v )
+    {
+        if ( settings.saveValidOnly && !cloud.validPoints.test( v ) )
+            continue;
+        out.write( ( const char* )&cloud.points[v], 12 );
+        if ( settings.colors )
         {
-            cVert.p = points.points[VertId( v )];
-            const auto& c = ( *colors )[VertId( v )];
-            cVert.r = c.r; cVert.g = c.g; cVert.b = c.b;
-            out.write( ( const char* )&cVert, 15 );
-            if ( callback && !( v & 0x3FF ) && !callback( float( v ) / numVertices ) )
-                return unexpected( std::string( "Saving canceled" ) );
+            const auto c = ( *settings.colors )[v];
+            PlyColor pc{ .r = c.r, .g = c.g, .b = c.b };
+            out.write( ( const char* )&pc, 3 );
         }
+        ++numSaved;
+        if ( settings.callback && !( numSaved & 0x3FF ) && !settings.callback( float( numSaved ) / totalPoints ) )
+            return unexpectedOperationCanceled();
     }
 
     if ( !out )
         return unexpected( std::string( "Error saving in PLY-format" ) );
 
-    if ( callback )
-        callback( 1.f );
+    reportProgress( settings.callback, 1.f );
     return {};
 }
 
 #ifndef MRMESH_NO_OPENCTM
-VoidOrErrStr toCtm( const PointCloud& points, const std::filesystem::path& file, const VertColors* colors /*= nullptr */,
-                                                  const CtmSavePointsOptions& options /*= {}*/, ProgressCallback callback )
+VoidOrErrStr toCtm( const PointCloud& points, const std::filesystem::path& file, const CtmSavePointsOptions& options )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toCtm( points, out, colors, options, callback );
+    return toCtm( points, out, options );
 }
 
-VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const VertColors* colors /*= nullptr */,
-                                                  const CtmSavePointsOptions& options /*= {}*/, ProgressCallback callback )
+VoidOrErrStr toCtm( const PointCloud& cloud, std::ostream& out, const CtmSavePointsOptions& options )
 {
-    MR_TIMER;
+    MR_TIMER
 
     class ScopedCtmConext
     {
@@ -158,25 +149,46 @@ VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const VertColor
     ctmCompressionMethod( context, CTM_METHOD_MG1 );
     ctmCompressionLevel( context, options.compressionLevel );
 
-    const CTMfloat* normalsPtr = points.normals.empty() ? nullptr : ( const CTMfloat* )points.normals.data();
-    CTMuint aVertexCount = CTMuint( points.points.size() );
+    const bool saveNormals = cloud.points.size() <= cloud.normals.size();
+    CTMuint aVertexCount = CTMuint( options.saveValidOnly ? cloud.validPoints.count() : cloud.points.size() );
 
     std::vector<CTMuint> aIndices{ 0,0,0 };
-
-    ctmDefineMesh( context,
-        ( const CTMfloat* )points.points.data(), aVertexCount,
-        aIndices.data(), 1, normalsPtr );
+    std::vector<Vector3f> validPoints, validNormals;
+    if ( options.saveValidOnly )
+    {
+        validPoints.reserve( aVertexCount );
+        for ( auto v : cloud.validPoints )
+            validPoints.push_back( cloud.points[v] );
+        if ( saveNormals )
+        {
+            validNormals.reserve( aVertexCount );
+            for ( auto v : cloud.validPoints )
+                validNormals.push_back( cloud.normals[v] );
+        }
+        ctmDefineMesh( context,
+            ( const CTMfloat* )validPoints.data(), aVertexCount,
+            aIndices.data(), 1, saveNormals ? ( const CTMfloat* )validNormals.data() : nullptr );
+    }
+    else
+    {
+        ctmDefineMesh( context,
+            ( const CTMfloat* )cloud.points.data(), aVertexCount,
+            aIndices.data(), 1, saveNormals ? ( const CTMfloat* )cloud.normals.data() : nullptr );
+    }
 
     if ( ctmGetError( context ) != CTM_NONE )
         return unexpected( "Error encoding in CTM-format" );
 
     std::vector<Vector4f> colors4f; // should be alive when save is performed
-    if ( colors && colors->size() == points.points.size() )
+    if ( options.colors && options.colors->size() >= cloud.points.size() )
     {
-        colors4f.resize( colors->size() );
-        for ( int i = 0; i < colors4f.size(); ++i )
-            colors4f[i] = Vector4f( ( *colors )[VertId{ i }] );
-
+        colors4f.reserve( aVertexCount );
+        for ( auto v = 0_v; v < cloud.points.size(); ++v )
+        {
+            if ( options.saveValidOnly && !cloud.validPoints.test( v ) )
+                continue;
+            colors4f.push_back( Vector4f{ ( *options.colors )[v] } );
+        }
         ctmAddAttribMap( context, ( const CTMfloat* )colors4f.data(), "Color" );
     }
 
@@ -192,11 +204,11 @@ VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const VertColor
         size_t maxSize{ 0 };
         bool wasCanceled{ false };
     } saveData;
-    if ( callback )
+    if ( options.callback )
     {
-        saveData.callbackFn = [callback, &saveData] ( float progress )
+        saveData.callbackFn = [callback = options.callback, &saveData] ( float progress )
         {
-            // calculate full progress in partical-linear scale (we don't know compressed size and it less than real size)
+            // calculate full progress in partial-linear scale (we don't know compressed size and it less than real size)
             // conversion rules:
             // step 1) range (0, rangeBefore) is converted in range (0, rangeAfter)
             // step 2) moving on to new ranges: (rangeBefore, 1) and (rangeAfter, 1)
@@ -222,7 +234,7 @@ VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const VertColor
         };
     }
     saveData.stream = &out;
-    saveData.maxSize = points.points.size() * sizeof( Vector3f ) + points.normals.size() * sizeof( Vector3f ) + 150; // 150 - reserve for some ctm specific data
+    saveData.maxSize = aVertexCount * sizeof( Vector3f ) + cloud.normals.size() * sizeof( Vector3f ) + 150; // 150 - reserve for some ctm specific data
     ctmSaveCustom( context, [] ( const void* buf, CTMuint size, void* data )
     {
         SaveData& saveData = *reinterpret_cast< SaveData* >( data );
@@ -242,14 +254,12 @@ VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const VertColor
     if ( !out || ctmGetError( context ) != CTM_NONE )
         return unexpected( std::string( "Error saving in CTM-format" ) );
 
-    if ( callback )
-        callback( 1.f );
+    reportProgress( options.callback, 1.f );
     return {};
 }
 #endif
 
-VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const VertColors* colors /*= nullptr */,
-                                                      ProgressCallback callback )
+VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const Settings& settings )
 {
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
@@ -257,17 +267,16 @@ VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesyst
 
     VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".asc" )
-        res = MR::PointsSave::toAsc( points, file, colors, callback );
+        res = MR::PointsSave::toAsc( points, file, settings );
     if ( ext == ".ply" )
-        res = MR::PointsSave::toPly( points, file, colors, callback );
+        res = MR::PointsSave::toPly( points, file, settings );
 #ifndef MRMESH_NO_OPENCTM
     else if ( ext == ".ctm" )
-        res = MR::PointsSave::toCtm( points, file, colors, {}, callback );
+        res = MR::PointsSave::toCtm( points, file, { settings } );
 #endif
     return res;
 }
-VoidOrErrStr toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const VertColors* colors /*= nullptr */,
-                                                      ProgressCallback callback )
+VoidOrErrStr toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const Settings& settings )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
@@ -275,15 +284,16 @@ VoidOrErrStr toAnySupportedFormat( const PointCloud& points, std::ostream& out, 
 
     VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".asc" )
-        res = MR::PointsSave::toAsc( points, out, colors, callback );
+        res = MR::PointsSave::toAsc( points, out, settings );
     else if ( ext == ".ply" )
-        res = MR::PointsSave::toPly( points, out, colors, callback );
+        res = MR::PointsSave::toPly( points, out, settings );
 #ifndef MRMESH_NO_OPENCTM
     else if ( ext == ".ctm" )
-        res = MR::PointsSave::toCtm( points, out, colors, {}, callback );
+        res = MR::PointsSave::toCtm( points, out, { settings } );
 #endif
     return res;
 }
 
-}
-}
+} // namespace PointsSave
+
+} // namespace MR

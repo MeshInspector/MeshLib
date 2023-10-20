@@ -129,7 +129,6 @@ VoidOrErrStr toCtm( const PointCloud& points, const std::filesystem::path& file,
 
 VoidOrErrStr toCtm( const PointCloud& cloud, std::ostream& out, const CtmSavePointsOptions& options )
 {
-    // TODO: support settings.saveValidOnly
     MR_TIMER
 
     class ScopedCtmConext
@@ -150,25 +149,46 @@ VoidOrErrStr toCtm( const PointCloud& cloud, std::ostream& out, const CtmSavePoi
     ctmCompressionMethod( context, CTM_METHOD_MG1 );
     ctmCompressionLevel( context, options.compressionLevel );
 
-    const CTMfloat* normalsPtr = cloud.normals.empty() ? nullptr : ( const CTMfloat* )cloud.normals.data();
-    CTMuint aVertexCount = CTMuint( cloud.points.size() );
+    const bool saveNormals = cloud.points.size() <= cloud.normals.size();
+    CTMuint aVertexCount = CTMuint( options.saveValidOnly ? cloud.validPoints.count() : cloud.points.size() );
 
     std::vector<CTMuint> aIndices{ 0,0,0 };
-
-    ctmDefineMesh( context,
-        ( const CTMfloat* )cloud.points.data(), aVertexCount,
-        aIndices.data(), 1, normalsPtr );
+    std::vector<Vector3f> validPoints, validNormals;
+    if ( options.saveValidOnly )
+    {
+        validPoints.reserve( aVertexCount );
+        for ( auto v : cloud.validPoints )
+            validPoints.push_back( cloud.points[v] );
+        if ( saveNormals )
+        {
+            validNormals.reserve( aVertexCount );
+            for ( auto v : cloud.validPoints )
+                validNormals.push_back( cloud.normals[v] );
+        }
+        ctmDefineMesh( context,
+            ( const CTMfloat* )validPoints.data(), aVertexCount,
+            aIndices.data(), 1, saveNormals ? ( const CTMfloat* )validNormals.data() : nullptr );
+    }
+    else
+    {
+        ctmDefineMesh( context,
+            ( const CTMfloat* )cloud.points.data(), aVertexCount,
+            aIndices.data(), 1, saveNormals ? ( const CTMfloat* )cloud.normals.data() : nullptr );
+    }
 
     if ( ctmGetError( context ) != CTM_NONE )
         return unexpected( "Error encoding in CTM-format" );
 
     std::vector<Vector4f> colors4f; // should be alive when save is performed
-    if ( options.colors && options.colors->size() == cloud.points.size() )
+    if ( options.colors && options.colors->size() >= cloud.points.size() )
     {
-        colors4f.resize( options.colors->size() );
-        for ( int i = 0; i < colors4f.size(); ++i )
-            colors4f[i] = Vector4f( ( *options.colors )[VertId{ i }] );
-
+        colors4f.reserve( aVertexCount );
+        for ( auto v = 0_v; v < cloud.points.size(); ++v )
+        {
+            if ( options.saveValidOnly && !cloud.validPoints.test( v ) )
+                continue;
+            colors4f.push_back( Vector4f{ ( *options.colors )[v] } );
+        }
         ctmAddAttribMap( context, ( const CTMfloat* )colors4f.data(), "Color" );
     }
 
@@ -214,7 +234,7 @@ VoidOrErrStr toCtm( const PointCloud& cloud, std::ostream& out, const CtmSavePoi
         };
     }
     saveData.stream = &out;
-    saveData.maxSize = cloud.points.size() * sizeof( Vector3f ) + cloud.normals.size() * sizeof( Vector3f ) + 150; // 150 - reserve for some ctm specific data
+    saveData.maxSize = aVertexCount * sizeof( Vector3f ) + cloud.normals.size() * sizeof( Vector3f ) + 150; // 150 - reserve for some ctm specific data
     ctmSaveCustom( context, [] ( const void* buf, CTMuint size, void* data )
     {
         SaveData& saveData = *reinterpret_cast< SaveData* >( data );

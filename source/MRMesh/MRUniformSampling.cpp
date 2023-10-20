@@ -4,6 +4,7 @@
 #include "MRVector.h"
 #include "MRTimer.h"
 #include "MRPointsInBall.h"
+#include "MRBox.h"
 #include <cfloat>
 
 namespace MR
@@ -36,60 +37,68 @@ std::optional<VertBitSet> pointUniformSampling( const PointCloud& pointCloud, fl
     return res;
 }
 
-std::optional<VertBitSet> pointRegularUniformSampling( const PointCloud& pointCloud, float distance, const ProgressCallback& cb /*= {} */ )
+std::optional<VertBitSet> pointRegularUniformSampling( const PointCloud& pointCloud, float distance, 
+    const ProgressCallback& cb /*= {} */ )
 {
     MR_TIMER
 
-    const auto sz = pointCloud.validPoints.count();
-    size_t progressCounter = 0;
+    std::vector<VertId> searchQueue( pointCloud.validPoints.count() );
+    int i = 0;
+    for ( auto v : pointCloud.validPoints )
+        searchQueue[i++] = v;
 
-    auto rp = [&] ()->bool
+    if ( cb && !cb( 0.2f ) )
+        return {};
+
+    auto boxSize = pointCloud.getBoundingBox().size();
+    int xIndex = 0;
+    if ( boxSize.y > boxSize.x && boxSize.y > boxSize.z )
+        xIndex = 1;
+    else if ( boxSize.z > boxSize.x && boxSize.z > boxSize.y )
+        xIndex = 2;
+
+    int yIndex = ( xIndex + 1 ) % 3;
+    int zIndex = ( xIndex + 2 ) % 3;
+
+    if ( boxSize[zIndex] > boxSize[yIndex] )
+        std::swap( yIndex, zIndex );
+
+    tbb::parallel_sort( searchQueue.begin(), searchQueue.end(), [&] ( VertId l, VertId r )
     {
-        if ( !cb )
+        const auto& ptL = pointCloud.points[l];
+        const auto& ptR = pointCloud.points[r];
+        if ( ptL[xIndex] < ptR[xIndex] )
             return true;
-        ++progressCounter;
-        if ( bool( progressCounter & 0x3ff ) )
+        if ( ptL[xIndex] > ptR[xIndex] )
+            return false;
+        if ( ptL[yIndex] < ptR[yIndex] )
             return true;
-        return cb( float( progressCounter ) / float( sz ) );
-    };
+        if ( ptL[yIndex] > ptR[yIndex] )
+            return false;
+        return ptL[zIndex] < ptR[zIndex];
+    } );
+    
+    if ( cb && !cb( 0.3f ) )
+        return {};
+
+
+    int progressCounter = 0;
+    auto sp = subprogress( cb, 0.3f, 1.0f );
 
     VertBitSet visited( pointCloud.validPoints.size() );
     VertBitSet sampled( pointCloud.validPoints.size() );
-    for ( auto v : pointCloud.validPoints )
+    for ( auto v : searchQueue )
     {
+        if ( sp && !( ( ++progressCounter ) & 0x3ff ) &&
+            !sp( float( progressCounter ) / float( searchQueue.size() ) ) )
+            return {};
         if ( visited.test( v ) )
-        {
-            if ( !rp() )
-                return {};
             continue;
-        }
-        visited.set( v );
-
-        VertId nextVertId = v;
-
-        while ( nextVertId )
+        sampled.set( v );
+        findPointsInBall( pointCloud, pointCloud.points[v], distance, [&] ( VertId cv, const Vector3f& )
         {
-            sampled.set( nextVertId );
-            const auto& nextVertPos = pointCloud.points[nextVertId];
-            nextVertId = {};
-            const auto maxDistSq = distance * distance;
-            float minDistSq = FLT_MAX;
-            findPointsInBall( pointCloud, nextVertPos, 2 * distance, [&] ( VertId cv, const Vector3f& pos )
-            {
-                if ( nextVertId == cv || visited.test( cv ) )
-                    return;
-                auto distSq = ( nextVertPos - pos ).lengthSq();
-                if ( distSq < maxDistSq )
-                    visited.set( cv );
-                else if ( distSq < minDistSq )
-                {
-                    minDistSq = distSq;
-                    nextVertId = cv;
-                }
-            } );
-            if ( !rp() )
-                return {};
-        }
+            visited.set( cv );
+        } );
     }
     return sampled;
 }

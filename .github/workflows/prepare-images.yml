@@ -150,6 +150,7 @@ jobs:
       - name: Setup vcpkg
         working-directory: C:\vcpkg
         run: |
+          git fetch
           git checkout ${{env.VCPKG-VERSION}}
           bootstrap-vcpkg.bat
           vcpkg.exe integrate install

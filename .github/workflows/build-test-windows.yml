@@ -41,7 +41,9 @@ jobs:
 
       - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
         working-directory: C:\vcpkg
-        run: git checkout ${{env.VCPKG-VERSION}}
+        run: |
+        git fetch
+        git checkout ${{env.VCPKG-VERSION}}
 
       - name: Restore Vcpkg Cache
         uses: actions/cache@v3

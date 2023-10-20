@@ -151,6 +151,12 @@ bool WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
             spdlog::info( "WebRequest  {}", logName.c_str() );
             auto res = sendLambda();
             spdlog::info( "WebResponse {}: {}", logName.c_str(), int( res.status_code ) );
+            if ( !res.status_line.empty() )
+                spdlog::info( "WebResponse {}: {}", logName.c_str(), res.status_line );
+            if ( !res.reason.empty() )
+                spdlog::info( "WebResponse {}: {}", logName.c_str(), res.reason );
+            if ( res.error )
+                spdlog::info( "WebResponse {}: {} {}", logName.c_str(), int( res.error.code ), res.error.message );
             Json::Value resJson;
             resJson["url"] = url;
             resJson["code"] = int( res.status_code );

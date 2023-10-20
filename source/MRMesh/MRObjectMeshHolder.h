@@ -99,6 +99,8 @@ public:
     const FaceColors& getFacesColorMap() const { return facesColorMap_; }
     virtual void setFacesColorMap( FaceColors facesColorMap )
     { facesColorMap_ = std::move( facesColorMap ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
+    virtual void updateFacesColorMap( FaceColors& updated )
+    { std::swap( facesColorMap_, updated ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
 
     float getEdgeWidth() const { return edgeWidth_; }
     virtual void setEdgeWidth( float edgeWidth )
@@ -118,10 +120,11 @@ public:
 
     const MeshTexture& getTexture() const { return texture_; }
     virtual void setTexture( MeshTexture texture ) { texture_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
+    virtual void updateTexture( MeshTexture& updated ) { std::swap( texture_, updated ); dirty_ |= DIRTY_TEXTURE; }
 
     const VertUVCoords& getUVCoords() const { return uvCoordinates_; }
     virtual void setUVCoords( VertUVCoords uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
-    void updateUVCoords( VertUVCoords& updated ) { std::swap( uvCoordinates_, updated ); dirty_ |= DIRTY_UV; }
+    virtual void updateUVCoords( VertUVCoords& updated ) { std::swap( uvCoordinates_, updated ); dirty_ |= DIRTY_UV; }
 
     /// copies texture, UV-coordinates and vertex colors from given source object \param src using given map \param thisToSrc
     MRMESH_API virtual void copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc );

@@ -8,73 +8,74 @@
 namespace MR
 {
 
-std::optional<VertBitSet> improveSampling( const PointCloud & cloud, const VertBitSet & iniSamples, const ProgressCallback & cb )
-{
-    MR_TIMER
-    std::optional<VertBitSet> res;
-
-    // create point-cloud from initial samples
-    PointCloud iniSampledCloud;
-    iniSampledCloud.addPartByMask( cloud, iniSamples );
-
-    if ( !reportProgress( cb, 0.1f ) )
-        return res;
-
-    // find the closest initial sample for each point of the cloud
-    VertMap pt2sm( cloud.points.size() );
-    if ( !BitSetParallelFor( cloud.validPoints, [&]( VertId v )
-        {
-            pt2sm[v] = findProjectionOnPoints( cloud.points[v], iniSampledCloud ).vId;
-        }, subprogress( cb, 0.1f, 0.6f ) ) )
-        return res;
-
-    // find sum of points attributed to each initial sample
-    const auto iniSz = iniSampledCloud.points.size();
-    Vector<Vector3f, VertId> sumPos( iniSz );
-    Vector<int, VertId> cnt( iniSz );
-    for ( auto v : cloud.validPoints )
-    {
-        auto sm = pt2sm[v];
-        sumPos[sm] += cloud.points[v];
-        ++cnt[sm];
-    }
-
-    if ( !reportProgress( cb, 0.7f ) )
-        return res;
-
-    // find new samples closest to average points
-    VertMap sm2pt( iniSz );
-    if ( !ParallelFor( 0_v, sumPos.endId(), [&]( VertId sm )
-        {
-            if( cnt[sm] <= 0 )
-                return; // two coinciding points
-            const auto avgPos = sumPos[sm] / float( cnt[sm] );
-            sm2pt[sm] = findProjectionOnPoints( avgPos, cloud ).vId;
-        }, subprogress( cb, 0.7f, 0.9f ) ) )
-        return res;
-
-    // produce new samples
-    res.emplace( cloud.points.size() );
-    for ( auto v : sm2pt )
-        if ( v )
-            res->set( v );
-
-    return res;
-}
-
-bool improveSampling( const PointCloud & cloud, VertBitSet & samples, int numIters, const ProgressCallback & cb )
+bool improveSampling( const PointCloud & cloud, VertBitSet & samples, int numIters, const ProgressCallback & progress )
 {
     MR_TIMER
     assert( numIters >= 1 );
 
+    // create point-cloud from initial samples
+    PointCloud cloudOfSamples;
+    cloudOfSamples.addPartByMask( cloud, samples );
+
+    if ( !reportProgress( progress, 0.1f ) )
+        return false;
+
+    VertMap pt2sm( cloud.points.size() );
+    const auto sampleSz = cloudOfSamples.points.size();
+    Vector<Vector3f, VertId> sumPos( sampleSz );
+    Vector<int, VertId> cnt( sampleSz );
+
     for ( int i = 0; i < numIters; ++i )
     {
-        auto optSamples = improveSampling( cloud, samples, subprogress( cb, float( i ) / numIters, float( i + 1 ) / numIters ) );
-        if ( !optSamples )
+        auto cb = subprogress( subprogress( progress, 0.1f, 0.9f ), float( i ) / numIters, float( i + 1 ) / numIters );
+
+        // find the closest sample for each point of the cloud
+        if ( !BitSetParallelFor( cloud.validPoints, [&]( VertId v )
+            {
+                pt2sm[v] = findProjectionOnPoints( cloud.points[v], cloudOfSamples ).vId;
+            }, subprogress( cb, 0.1f, 0.6f ) ) )
             return false;
-        samples = std::move( *optSamples );
+
+        // find sum of points attributed to each initial sample
+        for ( auto sm = 0_v; sm < sampleSz; ++sm )
+        {
+            sumPos[sm] = {};
+            cnt[sm] = 0;
+        }
+        for ( auto v : cloud.validPoints )
+        {
+            auto sm = pt2sm[v];
+            sumPos[sm] += cloud.points[v];
+            ++cnt[sm];
+        }
+
+        if ( !reportProgress( cb, 0.7f ) )
+            return false;
+
+        // move samples in the average points
+        if ( !ParallelFor( 0_v, sumPos.endId(), [&]( VertId sm )
+            {
+                if( cnt[sm] <= 0 )
+                    return; // e.g. two coinciding points
+                cloudOfSamples.points[sm] = sumPos[sm] / float( cnt[sm] );
+            }, subprogress( cb, 0.7f, 1.0f ) ) )
+            return false;
+        cloudOfSamples.invalidateCaches();
     }
 
+    // find points closest to moved samples
+    VertMap sm2pt( sampleSz );
+    if ( !ParallelFor( 0_v, sumPos.endId(), [&]( VertId sm )
+        {
+            sm2pt[sm] = findProjectionOnPoints( cloudOfSamples.points[sm], cloud ).vId;
+        }, subprogress( progress, 0.9f, 0.99f ) ) )
+        return false;
+
+    // produce new samples
+    samples.clear();
+    samples.resize( cloud.points.size() );
+    for ( auto v : sm2pt )
+        samples.set( v );
     return true;
 }
 

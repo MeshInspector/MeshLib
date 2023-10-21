@@ -762,6 +762,7 @@ void SweepLineQueue::processDestenationEvent_( int index )
 void SweepLineQueue::processIntersectionEvent_( int index )
 {
     bool isValid = isIntersectionValid_( index );
+    std::cerr << fmt::format( "MR2D: {} = isIntersectionValid_( {} )\n", isValid, index );
     if ( isValid )
     {
         intersections_.emplace_back( Intersection{
@@ -775,7 +776,7 @@ void SweepLineQueue::processIntersectionEvent_( int index )
     auto minEdgeId = std::min( activeSweepEdges_[index].edgeId, activeSweepEdges_[index + 1].edgeId );
     auto maxEdgeId = std::max( activeSweepEdges_[index].edgeId, activeSweepEdges_[index + 1].edgeId );
 
-    std::cerr << fmt::format( "intersectionsMap_.at( {}, {} )\n", (int)minEdgeId, (int)maxEdgeId );
+    std::cerr << fmt::format( "MR2D: intersectionsMap_.at( {}, {} )\n", (int)minEdgeId, (int)maxEdgeId );
     auto& interInfo = intersectionsMap_.at( { minEdgeId,maxEdgeId } );
     assert( !interInfo.processed );
     interInfo.processed = true;
@@ -830,7 +831,7 @@ void SweepLineQueue::checkIntersection_( int i )
 
     auto minEdgeId = std::min( activeSweepEdges_[i].edgeId, activeSweepEdges_[i + 1].edgeId );
     auto maxEdgeId = std::max( activeSweepEdges_[i].edgeId, activeSweepEdges_[i + 1].edgeId );
-    std::cerr << fmt::format( "intersectionsMap_.add( {}, {} )\n", (int)minEdgeId, (int)maxEdgeId );
+    std::cerr << fmt::format( "MR2D: intersectionsMap_.add( {}, {} )\n", (int)minEdgeId, (int)maxEdgeId );
     auto& interInfo = intersectionsMap_[{minEdgeId, maxEdgeId}];
     if ( !interInfo )
     {

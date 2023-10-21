@@ -241,7 +241,7 @@ private:
         EdgeId edgeId;
         union Info
         {
-            VertId interVertId;
+            VertId interVertId{}; // without {} here, GCC produces wrong code: https://stackoverflow.com/q/68881411/7325599
             EdgeId loneEdgeId;
         };
         Info lowerInfo;

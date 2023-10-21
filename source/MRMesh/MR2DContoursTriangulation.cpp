@@ -243,9 +243,9 @@ private:
     struct SweepEdgeInfo
     {
         EdgeId edgeId;
-        struct Info
+        union Info
         {
-            VertId interVertId;
+            VertId interVertId{}; // without {} here, GCC produces wrong code
             EdgeId loneEdgeId;
         };
         Info lowerInfo;

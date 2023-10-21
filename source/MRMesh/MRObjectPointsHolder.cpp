@@ -192,13 +192,13 @@ Expected<std::future<void>, std::string> ObjectPointsHolder::serializeModel_( co
     return std::async( getAsyncLaunchType(),
         [points = points_, filename = utf8string( path ) + ".ctm", ptr = colorMapPtr] ()
     {
-        MR::PointsSave::toCtm( *points, pathFromUtf8( filename ), ptr );
+        MR::PointsSave::toCtm( *points, pathFromUtf8( filename ), { MR::PointsSave::Settings{ .saveValidOnly = false, .colors = ptr } } );
     } );
 #else
     return std::async( getAsyncLaunchType(),
         [points = points_, filename = utf8string( path ) + ".ply", ptr = colorMapPtr] ()
     {
-        MR::PointsSave::toPly( *points, pathFromUtf8( filename ), ptr );
+        MR::PointsSave::toPly( *points, pathFromUtf8( filename ), MR::PointsSave::Settings{ .saveValidOnly = false, .colors = ptr } );
     } );
 #endif
 }
@@ -226,6 +226,8 @@ void ObjectPointsHolder::serializeFields_( Json::Value& root ) const
 
     serializeToJson( Vector4f( selectedVerticesColor_.get() ), root["Colors"]["Selection"]["Points"] );
     serializeToJson( selectedPoints_, root["SelectionVertBitSet"] );
+    if ( points_ )
+        serializeToJson( points_->validPoints, root["ValidVertBitSet"] );
 }
 
 void ObjectPointsHolder::deserializeFields_( const Json::Value& root )
@@ -237,6 +239,8 @@ void ObjectPointsHolder::deserializeFields_( const Json::Value& root )
     selectedVerticesColor_.set( Color( resVec ) );
 
     deserializeFromJson( root["SelectionVertBitSet"], selectedPoints_ );
+    if ( points_ )
+        deserializeFromJson( root["ValidVertBitSet"], points_->validPoints );
 }
 
 void ObjectPointsHolder::setupRenderObject_() const

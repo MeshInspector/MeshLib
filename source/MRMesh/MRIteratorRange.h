@@ -4,7 +4,7 @@ namespace MR
 {
 
 /// \brief simple alternative to boost/iterator_range
-/// \defgroup IteratorRange
+/// \defgroup IteratorRange Iterators
 /// \ingroup BasicGroup
 /// \{
     

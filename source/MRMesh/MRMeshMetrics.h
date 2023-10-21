@@ -23,12 +23,11 @@ MRMESH_API extern const double BadTriangulationMetric;
   * 
   * This is struct used as optimization metric of fillHole and buildCylinderBetweenTwoHoles functions\n
   * 
-  * \sa \ref getCircumscribedFillMetric
+  * \sa \ref getCircumscribedMetric
   * \sa \ref getPlaneFillMetric
   * \sa \ref getEdgeLengthFillMetric
   * \sa \ref getEdgeLengthStitchMetric
   * \sa \ref getComplexStitchMetric
-  * \sa \ref getCircumscribedStitchMetric
   * \sa \ref fillHole
   * \sa \ref buildCylinderBetweenTwoHoles
   */

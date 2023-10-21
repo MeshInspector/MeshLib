@@ -6,8 +6,6 @@
 namespace MR
 {
 
-/// \defgroup ModelHolderGroup Model Holder
-/// \ingroup DataModelGroup
 
 struct LinesVisualizePropertyType : VisualizeMaskType
 {
@@ -21,7 +19,7 @@ struct LinesVisualizePropertyType : VisualizeMaskType
 };
 
 /// an object that stores a lines
-/// \ingroup ModelHolderGroup
+/// \ingroup DataModelGroup
 class MRMESH_CLASS ObjectLinesHolder : public VisualObject
 {
 public:
@@ -112,6 +110,5 @@ private:
     void setDefaultColors_();
 };
 
-/// \}
 
 } // namespace MR

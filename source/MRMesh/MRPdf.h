@@ -17,7 +17,7 @@ struct PdfParameters
     HPDF_REAL textSize = 14.f;
     /**
      * @brief Font name
-     * @detail list of available fonts:
+     * list of available fonts:
      * Courier (-Bold, -Oblique, -BoldOblique)
      * Helvetica (-Bold, -Oblique, -BoldOblique)
      * Times (-Roman, -Bold, -Italic, -BoldItalic)
@@ -53,7 +53,7 @@ public:
 
     /**
      * @brief Add image from file in current cursor position.
-     * @detail If image bigger than page size, autoscale image to page size.
+     * If image bigger than page size, autoscale image to page size.
      * Move cursor.
      * @param valuesMarks if not empty - add marks under image.
      * valuesMarks contains pairs<relative_position, marks_text>. 

@@ -2,6 +2,8 @@
 #include "MRPointCloud.h"
 #include "MRAABBTreePoints.h"
 #include "MRBox.h"
+#include "MRBitSetParallelFor.h"
+#include "MRPointsInBall.h"
 
 namespace MR
 {
@@ -34,4 +36,39 @@ float findAvgPointsRadius( const PointCloud& pointCloud, int avgPoints )
     return sqrt( radiusNSq / N * avgPoints * 0.5f );
 }
 
+bool dilateRegion( const PointCloud& pointCloud, VertBitSet& region, float dilation, ProgressCallback cb, const AffineXf3f* xf )
+{
+    return BitSetParallelForAll( region, [&] ( VertId testVertex )
+    {
+        if ( region.test( testVertex ) )
+            return;
+
+        findPointsInBall( pointCloud, pointCloud.points[testVertex], dilation, [&] ( VertId v, const Vector3f& )
+        {
+            if ( region.test( testVertex ) )
+                return;
+
+            if ( region.test( v ) )
+                region.set( testVertex, true );
+        }, xf );
+    }, cb );
+}
+
+bool erodeRegion( const PointCloud& pointCloud, VertBitSet& region, float erosion, ProgressCallback cb, const AffineXf3f* xf )
+{
+    return BitSetParallelForAll( region, [&] ( VertId testVertex )
+    {
+        if ( !region.test( testVertex ) )
+            return;
+
+        findPointsInBall( pointCloud, pointCloud.points[testVertex], erosion, [&] ( VertId v, const Vector3f& )
+        {
+            if ( !region.test( testVertex ) )
+                return;
+
+            if ( !region.test( v ) )
+                region.set( testVertex, false );
+        }, xf );
+    }, cb );
+}
 }

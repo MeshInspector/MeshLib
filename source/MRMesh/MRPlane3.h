@@ -40,7 +40,7 @@ struct Plane3
     [[nodiscard]] Vector3<T> project( const Vector3<T> & p ) const { return p - distance( p ) / n.lengthSq() * n; }
 };
 
-/// \related
+/// \related Plane3
 /// \{
 
 /// given plane: pl(x) = 0, and inverse transformation: y=ixf^-1(x);

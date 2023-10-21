@@ -9,7 +9,7 @@ namespace MR
  * \defgroup MeshSegmentationGroup Mesh Segmentation overwiev
  * \brief A set of functions for selecting segments on a mesh
  * 
- * \subsection MeshSegmentationGroup_HowTo How To
+ * \section MeshSegmentationGroup_HowTo How To
  * 1. Make Contour(-s)\n
  * First step to get a mesh segment by two (/three) points, is getting the contour that bounds the segment.\n
  * To do this, you can use \ref surroundingContour

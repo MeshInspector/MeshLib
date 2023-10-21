@@ -243,7 +243,7 @@ private:
     struct SweepEdgeInfo
     {
         EdgeId edgeId;
-        union Info
+        struct Info
         {
             VertId interVertId;
             EdgeId loneEdgeId;
@@ -347,10 +347,10 @@ bool SweepLineQueue::findIntersections()
     events_.reserve( mesh_.topology.numValidVerts() * 2 );
     while ( auto event = getNext_() )
     {
-        std::cout << "Event Type: " << int( event.type ) << ", Index: " << event.index << "\n";
+        std::cerr << "Event Type: " << int( event.type ) << ", Index: " << event.index << "\n";
         for ( const auto& ae : activeSweepEdges_ )
         {
-            std::cout << "  edge: " << int( ae.edgeId ) << "\n";
+            std::cerr << "  edge: " << int( ae.edgeId ) << "\n";
         }
         if ( event.type == EventType::Start )
             processStartEvent_( event.index );

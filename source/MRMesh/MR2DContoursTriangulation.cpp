@@ -17,6 +17,7 @@
 #include "MR2to3.h"
 #include "MRBitSetParallelFor.h"
 #include "MRPrecisePredicates2.h"
+#include <MRPch/MRSpdlog.h>
 #include <iostream>
 #include <queue>
 #include <algorithm>
@@ -772,6 +773,7 @@ void SweepLineQueue::processIntersectionEvent_( int index )
     auto minEdgeId = std::min( activeSweepEdges_[index].edgeId, activeSweepEdges_[index + 1].edgeId );
     auto maxEdgeId = std::max( activeSweepEdges_[index].edgeId, activeSweepEdges_[index + 1].edgeId );
 
+    spdlog::info( "intersectionsMap_.at( {}, {} )", (int)minEdgeId, (int)maxEdgeId );
     auto& interInfo = intersectionsMap_.at( { minEdgeId,maxEdgeId } );
     assert( !interInfo.processed );
     interInfo.processed = true;
@@ -826,6 +828,7 @@ void SweepLineQueue::checkIntersection_( int i )
 
     auto minEdgeId = std::min( activeSweepEdges_[i].edgeId, activeSweepEdges_[i + 1].edgeId );
     auto maxEdgeId = std::max( activeSweepEdges_[i].edgeId, activeSweepEdges_[i + 1].edgeId );
+    spdlog::info( "intersectionsMap_.add( {}, {} )", (int)minEdgeId, (int)maxEdgeId );
     auto& interInfo = intersectionsMap_[{minEdgeId, maxEdgeId}];
     if ( !interInfo )
     {

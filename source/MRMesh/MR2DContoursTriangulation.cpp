@@ -23,6 +23,8 @@
 #include <algorithm>
 #include <limits>
 
+#pragma warning( disable : 4866 ) //compiler may not enforce left-to-right evaluation order for call to 'nlohmann::json_abi_v3_11_2::basic_json<std::map,std::vector,std::basic_string<char,std::char_traits<char>,std::allocator<char> >,bool,__int64,unsigned __int64,double,std::allocator,nlohmann::json_abi_v3_11_2::adl_serializer,std::vector<unsigned char,std::allocator<unsigned char> > >::operator[]'
+
 namespace MR
 {
 
@@ -773,7 +775,7 @@ void SweepLineQueue::processIntersectionEvent_( int index )
     auto minEdgeId = std::min( activeSweepEdges_[index].edgeId, activeSweepEdges_[index + 1].edgeId );
     auto maxEdgeId = std::max( activeSweepEdges_[index].edgeId, activeSweepEdges_[index + 1].edgeId );
 
-    spdlog::info( "intersectionsMap_.at( {}, {} )", (int)minEdgeId, (int)maxEdgeId );
+    std::cerr << fmt::format( "intersectionsMap_.at( {}, {} )\n", (int)minEdgeId, (int)maxEdgeId );
     auto& interInfo = intersectionsMap_.at( { minEdgeId,maxEdgeId } );
     assert( !interInfo.processed );
     interInfo.processed = true;
@@ -828,7 +830,7 @@ void SweepLineQueue::checkIntersection_( int i )
 
     auto minEdgeId = std::min( activeSweepEdges_[i].edgeId, activeSweepEdges_[i + 1].edgeId );
     auto maxEdgeId = std::max( activeSweepEdges_[i].edgeId, activeSweepEdges_[i + 1].edgeId );
-    spdlog::info( "intersectionsMap_.add( {}, {} )", (int)minEdgeId, (int)maxEdgeId );
+    std::cerr << fmt::format( "intersectionsMap_.add( {}, {} )\n", (int)minEdgeId, (int)maxEdgeId );
     auto& interInfo = intersectionsMap_[{minEdgeId, maxEdgeId}];
     if ( !interInfo )
     {

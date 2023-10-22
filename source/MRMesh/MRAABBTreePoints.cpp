@@ -6,8 +6,9 @@
 #include "MRMeshToPointCloud.h"
 #include "MRBitSetParallelFor.h"
 #include "MRHeapBytes.h"
-#include "MRPch/MRTBB.h"
+#include "MRBuffer.h"
 #include "MRGTest.h"
+#include "MRPch/MRTBB.h"
 #include <stack>
 #include <thread>
 
@@ -184,6 +185,24 @@ AABBTreePoints::AABBTreePoints( const VertCoords & points, const VertBitSet * va
     auto [nodes, orderedPoints] = AABBTreePointsMaker().construct( points, validPoints );
     nodes_ = std::move( nodes );
     orderedPoints_ = std::move( orderedPoints );
+}
+
+void AABBTreePoints::getLeafOrder( VertBMap & vertMap ) const
+{
+    MR_TIMER
+    VertId newId = 0_v;
+    for ( auto & n : nodes_ )
+    {
+        if ( !n.leaf() )
+            continue;
+        const auto [first, last] = n.getLeafPointRange();
+        for ( int i = first; i < last; ++i )
+        {
+            auto oldId = orderedPoints_[i].id;
+            vertMap.b[oldId] = newId++;
+        }
+    }
+    vertMap.tsize = int( newId );
 }
 
 size_t AABBTreePoints::heapBytes() const

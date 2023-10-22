@@ -59,6 +59,14 @@ public:
     AABBTreePoints( AABBTreePoints && ) noexcept = default;
     AABBTreePoints & operator =( AABBTreePoints && ) noexcept = default;
 
+    /// returns the mapping original VertId to new id following the points order in the tree;
+    /// buffer in vertMap must be resized before the call, and caller is responsible for filling missing vertex elements
+    MRMESH_API void getLeafOrder( VertBMap & vertMap ) const;
+    /// returns the mapping original VertId to new id following the points order in the tree;
+    /// then resets leaf order as if the points were renumberd following the mapping;
+    /// buffer in vertMap must be resized before the call, and caller is responsible for filling missing vertex elements
+    MRMESH_API void getLeafOrderAndReset( VertBMap & vertMap );
+
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const;
 

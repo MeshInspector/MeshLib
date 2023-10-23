@@ -93,7 +93,7 @@ std::optional<PointCloud> makeUniformSampledCloud( const PointCloud& pointCloud,
         return res;
 
     res.emplace();
-    res->addPartByMask( pointCloud, *optVerts, nullptr, extNormals );
+    res->addPartByMask( pointCloud, *optVerts, {}, extNormals );
 
     if ( !reportProgress( cb, 1.0f ) )
         res.reset();

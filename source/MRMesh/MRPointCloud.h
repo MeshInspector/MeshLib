@@ -4,6 +4,7 @@
 #include "MRBitSet.h"
 #include "MRMeshFwd.h"
 #include "MRUniqueThreadSafeOwner.h"
+#include "MRCloudPartMapping.h"
 
 namespace MR
 {
@@ -37,7 +38,7 @@ struct PointCloud
     /// appends points (and normals if it possible) (from) in addition to this points
     /// if this obj have normals and from obj has not it then don't do anything
     /// \param extNormals if given then they will be copied instead of from.normals
-    MRMESH_API void addPartByMask( const PointCloud& from, const VertBitSet& fromVerts, CloudPartMapping* outMap = nullptr,
+    MRMESH_API void addPartByMask( const PointCloud& from, const VertBitSet& fromVerts, const CloudPartMapping& outMap = {},
         const VertNormals * extNormals = nullptr );
 
     /// appends a point and returns its VertId

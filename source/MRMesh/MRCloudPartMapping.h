@@ -1,7 +1,5 @@
 #pragma once
 
-#include "MRVector.h"
-
 namespace MR
 {
 

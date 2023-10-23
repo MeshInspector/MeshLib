@@ -6,7 +6,6 @@
 #include "MRBitSetParallelFor.h"
 #include "MRBuffer.h"
 #include "MRParallelFor.h"
-#include "MRCloudPartMapping.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -22,7 +21,7 @@ Box3f PointCloud::computeBoundingBox( const AffineXf3f * toWorld ) const
     return MR::computeBoundingBox( points, validPoints, toWorld );
 }
 
-void PointCloud::addPartByMask( const PointCloud& from, const VertBitSet& fromVerts, CloudPartMapping* outMap, const VertNormals * extNormals )
+void PointCloud::addPartByMask( const PointCloud& from, const VertBitSet& fromVerts, const CloudPartMapping& outMap, const VertNormals * extNormals )
 {
     MR_TIMER
     const auto& fromPoints = from.points;
@@ -41,19 +40,19 @@ void PointCloud::addPartByMask( const PointCloud& from, const VertBitSet& fromVe
     validPoints.resize( newSize, true );
     if ( useNormals )
         normals.resize( newSize );
-    if ( outMap && outMap->src2tgtVerts )
-        outMap->src2tgtVerts->resize( fromValidVerts.find_last() + 1 );
-    if ( outMap && outMap->tgt2srcVerts )
-        outMap->tgt2srcVerts->resizeNoInit( points.size() );
+    if ( outMap.src2tgtVerts )
+        outMap.src2tgtVerts->resize( fromValidVerts.find_last() + 1 );
+    if ( outMap.tgt2srcVerts )
+        outMap.tgt2srcVerts->resizeNoInit( points.size() );
     for ( auto v : fromValidVerts )
     {
         points[idIt] = fromPoints[v];
         if ( useNormals )
             normals[idIt] = fromNormals[v];
-        if ( outMap && outMap->src2tgtVerts )
-            ( *outMap->src2tgtVerts )[v] = idIt;
-        if ( outMap && outMap->tgt2srcVerts )
-            ( *outMap->tgt2srcVerts )[idIt] = v;
+        if ( outMap.src2tgtVerts )
+            ( *outMap.src2tgtVerts )[v] = idIt;
+        if ( outMap.tgt2srcVerts )
+            ( *outMap.tgt2srcVerts )[idIt] = v;
         idIt++;
     }
 

@@ -43,7 +43,9 @@ bool dilateRegion( const PointCloud& pointCloud, VertBitSet& region, float dilat
         if ( region.test( testVertex ) )
             return;
 
-        findPointsInBall( pointCloud, pointCloud.points[testVertex], dilation, [&] ( VertId v, const Vector3f& )
+        const Vector3f point = xf ? (*xf)( pointCloud.points[testVertex] ) : pointCloud.points[testVertex];
+
+        findPointsInBall( pointCloud, point, dilation, [&] ( VertId v, const Vector3f& )
         {
             if ( region.test( testVertex ) )
                 return;
@@ -61,7 +63,9 @@ bool erodeRegion( const PointCloud& pointCloud, VertBitSet& region, float erosio
         if ( !region.test( testVertex ) )
             return;
 
-        findPointsInBall( pointCloud, pointCloud.points[testVertex], erosion, [&] ( VertId v, const Vector3f& )
+        const Vector3f point = xf ? ( *xf )( pointCloud.points[testVertex] ) : pointCloud.points[testVertex];
+
+        findPointsInBall( pointCloud, point, erosion, [&] ( VertId v, const Vector3f& )
         {
             if ( !region.test( testVertex ) )
                 return;

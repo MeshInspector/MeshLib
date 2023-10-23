@@ -12,8 +12,8 @@
 #include "MRHeapBytes.h"
 #include "MRStringConvert.h"
 #include "MRTimer.h"
+#include "MRParallelFor.h"
 #include "MRPch/MRJson.h"
-#include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
 #include <filesystem>
 
@@ -263,35 +263,24 @@ ObjectMeshHolder::ObjectMeshHolder()
 void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc )
 {
     MR_TIMER
-
-    setColoringType( src.getColoringType() );
+    copyColors( src, thisToSrc );
     setTexture( src.getTexture() );
 
     const auto& srcUVCoords = src.getUVCoords();
-    const auto& srcColorMap = src.getVertsColorMap();
     const auto lastVert = src.mesh()->topology.lastValidVert();
     const bool updateUV = lastVert < srcUVCoords.size();
-    const bool updateColorMap = lastVert < srcColorMap.size();
 
-    if ( !updateUV && !updateColorMap )
+    if ( !updateUV )
         return;
 
-    VertUVCoords uvCoords( thisToSrc.size() );
-    VertColors colorMap( thisToSrc.size() );
-
-    tbb::parallel_for( tbb::blocked_range<VertId>( VertId( 0 ), VertId( uvCoords.size() ) ), [&uvCoords, &srcUVCoords, &thisToSrc, &colorMap, &srcColorMap, updateUV, updateColorMap] ( const tbb::blocked_range<VertId>& range )
+    VertUVCoords uvCoords;
+    uvCoords.resizeNoInit( thisToSrc.size() );
+    ParallelFor( uvCoords, [&]( VertId id )
     {
-        for ( VertId id = range.begin(); id < range.end(); ++id )
-        {
-            if ( updateUV )
-                uvCoords[id] = srcUVCoords[thisToSrc[id]];
-            if ( updateColorMap )
-                colorMap[id] = srcColorMap[thisToSrc[id]];
-        }
+        uvCoords[id] = srcUVCoords[thisToSrc[id]];
     } );
 
     setUVCoords( std::move( uvCoords ) );
-    setVertsColorMap( std::move( colorMap ) );
 }
 
 void ObjectMeshHolder::clearAncillaryTexture()

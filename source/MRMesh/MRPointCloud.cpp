@@ -6,6 +6,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRBuffer.h"
 #include "MRParallelFor.h"
+#include "MRCloudPartMapping.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -21,35 +22,38 @@ Box3f PointCloud::computeBoundingBox( const AffineXf3f * toWorld ) const
     return MR::computeBoundingBox( points, validPoints, toWorld );
 }
 
-void PointCloud::addPartByMask( const PointCloud& from, const VertBitSet& fromVerts, VertMap* oldToNewMap, const VertNormals * extNormals )
+void PointCloud::addPartByMask( const PointCloud& from, const VertBitSet& fromVerts, CloudPartMapping* outMap, const VertNormals * extNormals )
 {
     MR_TIMER
     const auto& fromPoints = from.points;
     const auto& fromNormals = extNormals ? *extNormals : from.normals;
 
-    const bool consistentNormals = normals.size() == 0 || ( points.size() == normals.size() && fromPoints.size() == fromNormals.size() );
+    const bool useNormals = hasNormals() && fromPoints.size() >= fromNormals.size();
+    const bool consistentNormals = normals.size() == 0 || useNormals;
     assert( consistentNormals );
     if ( !consistentNormals )
         return;
 
-    const bool useNormals = points.size() == normals.size() && fromPoints.size() == fromNormals.size();
-
     VertBitSet fromValidVerts = fromVerts & from.validPoints;
     VertId idIt = VertId( points.size() );
     const auto newSize = points.size() + fromValidVerts.count();
-    points.resize( newSize );
+    points.resizeNoInit( newSize );
     validPoints.resize( newSize, true );
     if ( useNormals )
         normals.resize( newSize );
-    if ( oldToNewMap )
-        oldToNewMap->resize( fromValidVerts.find_last() + 1 );
+    if ( outMap && outMap->src2tgtVerts )
+        outMap->src2tgtVerts->resize( fromValidVerts.find_last() + 1 );
+    if ( outMap && outMap->tgt2srcVerts )
+        outMap->tgt2srcVerts->resizeNoInit( points.size() );
     for ( auto v : fromValidVerts )
     {
         points[idIt] = fromPoints[v];
         if ( useNormals )
             normals[idIt] = fromNormals[v];
-        if ( oldToNewMap )
-            ( *oldToNewMap )[v] = idIt;
+        if ( outMap && outMap->src2tgtVerts )
+            ( *outMap->src2tgtVerts )[v] = idIt;
+        if ( outMap && outMap->tgt2srcVerts )
+            ( *outMap->tgt2srcVerts )[idIt] = v;
         idIt++;
     }
 

@@ -48,6 +48,20 @@ struct TriangulatedFanData
 MRMESH_API void trianglulateFan( const VertCoords& points, VertId v, TriangulatedFanData& triangulationData,
     const VertCoords& normals, float critAngle, int steps = INT_MAX );
 
+/**
+ * \brief Checks if given vertex is on boundary of the point cloud
+ * \details The vertex is considered as boundary if its neighbor ring has angle more than \param boundaryAngle degrees
+ * \ingroup TriangulationHelpersGroup
+ * \param pointCloud input point cloud
+ * \param normals non-oriented normals for the point cloud
+ * \param v vertex id to check
+ * \param radius radius to find neighbors in
+ * \param triangulationData cache structure for neighbors, not to allocate for multiple calls
+ * \returns true if vertex is boundary, false otherwise
+ */
+MRMESH_API bool isBoundaryPoint( const PointCloud& pointCloud, const VertCoords& normals, 
+    VertId v, float radius, float boundaryAngle,
+    TriangulatedFanData& triangulationData );
 }
 
 } //namespace MR

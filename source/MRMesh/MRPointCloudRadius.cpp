@@ -38,41 +38,57 @@ float findAvgPointsRadius( const PointCloud& pointCloud, int avgPoints )
 
 bool dilateRegion( const PointCloud& pointCloud, VertBitSet& region, float dilation, ProgressCallback cb, const AffineXf3f* xf )
 {
-    return BitSetParallelForAll( region, [&] ( VertId testVertex )
+    auto regionCopy = region;
+
+    const auto res =  BitSetParallelForAll( region, [&] ( VertId testVertex )
     {
-        if ( region.test( testVertex ) )
+        if ( regionCopy.test( testVertex ) )
             return;
 
         const Vector3f point = xf ? (*xf)( pointCloud.points[testVertex] ) : pointCloud.points[testVertex];
 
         findPointsInBall( pointCloud, point, dilation, [&] ( VertId v, const Vector3f& )
         {
-            if ( region.test( testVertex ) )
+            if ( regionCopy.test( testVertex ) )
                 return;
 
             if ( region.test( v ) )
-                region.set( testVertex, true );
+                regionCopy.set( testVertex, true );
         }, xf );
     }, cb );
+
+    if ( !res )
+        return false;
+
+    region = regionCopy;
+    return true;
 }
 
 bool erodeRegion( const PointCloud& pointCloud, VertBitSet& region, float erosion, ProgressCallback cb, const AffineXf3f* xf )
 {
-    return BitSetParallelForAll( region, [&] ( VertId testVertex )
+    auto regionCopy = region;
+
+    const auto res =  BitSetParallelForAll( region, [&] ( VertId testVertex )
     {
-        if ( !region.test( testVertex ) )
+        if ( !regionCopy.test( testVertex ) )
             return;
 
         const Vector3f point = xf ? ( *xf )( pointCloud.points[testVertex] ) : pointCloud.points[testVertex];
 
         findPointsInBall( pointCloud, point, erosion, [&] ( VertId v, const Vector3f& )
         {
-            if ( !region.test( testVertex ) )
+            if ( !regionCopy.test( testVertex ) )
                 return;
 
             if ( !region.test( v ) )
-                region.set( testVertex, false );
+                regionCopy.set( testVertex, false );
         }, xf );
     }, cb );
+
+    if ( !res )
+        return false;
+
+    region = regionCopy;
+    return true;
 }
 }

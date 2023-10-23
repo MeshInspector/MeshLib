@@ -123,6 +123,12 @@ void AABBTreePointsMaker::makeSubtree( const SubtreePoints& s, int numThreads )
         stack.pop();
         if ( x.leaf() )
         {
+            // restore original vertex ordering within each leaf
+            std::sort( orderedPoints_.data() + x.firstPoint, orderedPoints_.data() + x.firstPoint + x.numPoints,
+                [&]( const AABBTreePoints::Point& a, const AABBTreePoints::Point& b )
+            {
+                return a.id < b.id;
+            } );
             auto& node = nodes_[x.root];
             node.setLeafPointRange( x.firstPoint, x.firstPoint + x.numPoints );
             assert( !node.box.valid() );
@@ -207,21 +213,21 @@ void AABBTreePoints::getLeafOrder( VertBMap & vertMap ) const
 
 void AABBTreePoints::getLeafOrderAndReset( VertBMap& vertMap )
 {
-	MR_TIMER
-		VertId newId = 0_v;
-	for ( auto& n : nodes_ )
-	{
-		if ( !n.leaf() )
-			continue;
-		const auto [first, last] = n.getLeafPointRange();
-		for ( int i = first; i < last; ++i )
-		{
-			auto & id = orderedPoints_[i].id;
-			vertMap.b[id] = newId;
+    MR_TIMER
+        VertId newId = 0_v;
+    for ( auto& n : nodes_ )
+    {
+        if ( !n.leaf() )
+            continue;
+        const auto [first, last] = n.getLeafPointRange();
+        for ( int i = first; i < last; ++i )
+        {
+            auto & id = orderedPoints_[i].id;
+            vertMap.b[id] = newId;
             id = newId++;
-		}
-	}
-	vertMap.tsize = int( newId );
+        }
+    }
+    vertMap.tsize = int( newId );
 }
 
 size_t AABBTreePoints::heapBytes() const

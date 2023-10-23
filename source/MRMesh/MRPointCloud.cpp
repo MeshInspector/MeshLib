@@ -4,6 +4,8 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPlane3.h"
 #include "MRBitSetParallelFor.h"
+#include "MRBuffer.h"
+#include "MRParallelFor.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -147,6 +149,44 @@ bool PointCloud::pack( VertMap * outNew2Old )
 
     invalidateCaches();
     return true;
+}
+
+VertBMap PointCloud::packOptimally()
+{
+    MR_TIMER
+
+    getAABBTree(); // ensure that tree is constructed
+    VertBMap map;
+    map.b.resize( points.size() );
+    const bool packed = validPoints.count() == points.size();
+    if ( !packed )
+    {
+        for ( VertId v = 0_v; v < map.b.size(); ++v )
+            if ( !validPoints.test( v ) )
+                map.b[v] = VertId{};
+    }
+    AABBTreeOwner_.get()->getLeafOrderAndReset( map );
+
+    VertCoords newPoints;
+    newPoints.resizeNoInit( map.tsize );
+    VertNormals newNormals;
+    if ( hasNormals() )
+        newNormals.resizeNoInit( map.tsize );
+
+    ParallelFor( 0_v, map.b.endId(), [&]( VertId oldv )
+    {
+        auto newv = map.b[oldv];
+        if ( !newv )
+            return;
+        newPoints[newv] = points[oldv];
+        if ( hasNormals() )
+            newNormals[newv] = normals[oldv];
+    } );
+    points = std::move( newPoints );
+    normals = std::move( newNormals );
+    validPoints = {};
+    validPoints.resize( points.size(), true );
+    return map;
 }
 
 } //namespace MR

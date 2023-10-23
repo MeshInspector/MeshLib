@@ -205,6 +205,25 @@ void AABBTreePoints::getLeafOrder( VertBMap & vertMap ) const
     vertMap.tsize = int( newId );
 }
 
+void AABBTreePoints::getLeafOrderAndReset( VertBMap& vertMap )
+{
+	MR_TIMER
+		VertId newId = 0_v;
+	for ( auto& n : nodes_ )
+	{
+		if ( !n.leaf() )
+			continue;
+		const auto [first, last] = n.getLeafPointRange();
+		for ( int i = first; i < last; ++i )
+		{
+			auto & id = orderedPoints_[i].id;
+			vertMap.b[id] = newId;
+            id = newId++;
+		}
+	}
+	vertMap.tsize = int( newId );
+}
+
 size_t AABBTreePoints::heapBytes() const
 {
     return 

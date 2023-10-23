@@ -145,6 +145,7 @@ public:
         init_();
     }
     void optimize( int steps, float critAngle );
+    void updateBorder( float angle = MR::PI_F );
 private:
     Plane3f plane_;
 
@@ -208,15 +209,7 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_(
 
 void FanOptimizer::optimize( int steps, float critAng )
 {
-    for ( int i = 0; i < fanData_.cacheAngleOrder.size(); ++i )
-    {
-        // check border fans
-        auto diff = ( i + 1 < fanData_.cacheAngleOrder.size() ) ?
-            ( fanData_.cacheAngleOrder[i + 1].first - fanData_.cacheAngleOrder[i].first ) :
-            ( fanData_.cacheAngleOrder[0].first + 2.0 * PI - fanData_.cacheAngleOrder[i].first );
-        if ( diff > PI )
-            fanData_.border = fanData_.neighbors[i];
-    }
+    updateBorder();
     if ( steps == 0 )
         return;
 
@@ -263,6 +256,19 @@ void FanOptimizer::optimize( int steps, float critAng )
         return !v.valid();
     } ),
         fanData_.neighbors.end() );
+}
+
+void FanOptimizer::updateBorder( float angle )
+{
+    for ( int i = 0; i < fanData_.cacheAngleOrder.size(); ++i )
+    {
+        // check border fans
+        auto diff = ( i + 1 < fanData_.cacheAngleOrder.size() ) ?
+            ( fanData_.cacheAngleOrder[i + 1].first - fanData_.cacheAngleOrder[i].first ) :
+            ( fanData_.cacheAngleOrder[0].first + 2.0 * PI - fanData_.cacheAngleOrder[i].first );
+        if ( diff > angle )
+            fanData_.border = fanData_.neighbors[i];
+    }
 }
 
 void FanOptimizer::init_()
@@ -315,6 +321,23 @@ void trianglulateFan( const VertCoords& points, VertId centerVert, TriangulatedF
         return;
     FanOptimizer optimizer( points, normals, triangulationData, centerVert );
     optimizer.optimize( steps, critAngle );
+}
+
+bool isBoundaryPoint( const PointCloud& pointCloud, const VertCoords& normals, 
+    VertId v, float radius, float angle, TriangulatedFanData& triangulationData )
+{
+    TriangulationHelpers::findNeighbors( pointCloud, v, radius, triangulationData.neighbors );
+    float maxRadius = ( triangulationData.neighbors.size() < 2 ) ? radius * 2.0f :
+        TriangulationHelpers::updateNeighborsRadius( pointCloud.points, v, triangulationData.neighbors, radius );
+    if ( maxRadius > radius )
+        TriangulationHelpers::findNeighbors( pointCloud, v, maxRadius, triangulationData.neighbors );
+    
+    triangulationData.border = {};
+    if ( triangulationData.neighbors.size() < 3 )
+        return true;
+    FanOptimizer optimizer( pointCloud.points, normals, triangulationData, v );
+    optimizer.updateBorder( angle );
+    return triangulationData.border.valid();
 }
 
 } //namespace TriangulationHelpers

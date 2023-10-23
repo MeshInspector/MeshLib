@@ -19,7 +19,7 @@ MRMESH_API extern const IOFilters Filters;
 
 /**
  * @brief Load DistanceMap from binary file
- * @detail Format:
+ * Format:
  * 2 integer - DistanceMap.resX & DistanceMap.resY
  * [resX * resY] float - matrix of values
  */

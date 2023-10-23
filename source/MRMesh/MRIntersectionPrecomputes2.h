@@ -10,7 +10,7 @@ namespace MR
 
 /**
  * \brief finds index of maximum axis and stores it into dimY
- * \details \ref http://jcgt.org/published/0002/01/05/paper.pdf
+ * \details http://jcgt.org/published/0002/01/05/paper.pdf
  * Example input: dir = (1,-2). Result: dimY = 1, dimX = 0.
  * \param[out] dimX index of minimum axis
  * \param[out] dimY index of maximum axis

@@ -14,7 +14,7 @@ namespace MR
 
 /**
  * \brief finds index of maximum axis and stores it into dimZ
- * \details \ref http://jcgt.org/published/0002/01/05/paper.pdf
+ * \details http://jcgt.org/published/0002/01/05/paper.pdf
  * Example input: dir = (1,1,-2). Result: dimZ = 2, dimX = 1, dimY = 0.
  * \param[out] dimX are filled by right-hand rule from dimZ
  * \param[out] dimY are filled by right-hand rule from dimZ

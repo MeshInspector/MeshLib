@@ -28,6 +28,4 @@ bool rayBoxIntersect( const Box2<T>& box, const Line2<T>& line, T t0, T t1 )
     return rayBoxIntersect( box, line, t0, t1, prec );
 }
 
-/// \}
-
 }

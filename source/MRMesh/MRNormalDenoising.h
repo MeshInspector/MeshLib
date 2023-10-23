@@ -17,7 +17,6 @@ MRMESH_API void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const 
 
 /// Compute edge indicator function (1 - smooth edge, 0 - crease edge) by solving large system of linear equations
 /// \param mesh contains topology information and coordinates for equation weights
-/// \param output edge indicator function
 /// \param normals per-face normals
 /// \param beta 0.001 - sharp edges, 0.01 - moderate edges, 0.1 - smooth edges
 /// \param gamma the amount of smoothing: 0 - no smoothing, 1 - average smoothing, ...
@@ -25,7 +24,6 @@ MRMESH_API void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const 
 MRMESH_API void updateIndicator( const Mesh & mesh, Vector<float, UndirectedEdgeId> & v, const FaceNormals & normals, float beta, float gamma );
 
 /// Compute edge indicator function (1 - smooth edge, 0 - crease edge) by approximation without solving the system of linear equations
-/// \param output edge indicator function
 /// \param normals per-face normals
 /// \param beta 0.001 - sharp edges, 0.01 - moderate edges, 0.1 - smooth edges
 /// \param gamma the amount of smoothing: 0 - no smoothing, 1 - average smoothing, ...

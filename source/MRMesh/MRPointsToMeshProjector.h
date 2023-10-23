@@ -39,7 +39,6 @@ public:
     /// <param name="refObjXf">transform applied to referencing mesh</param>
     /// <param name="upDistLimitSq">maximal squared distance from point to mesh</param>
     /// <param name="loDistLimitSq">minimal squared distance from point to mesh</param>
-    /// <returns></returns>
     MRMESH_API virtual void findProjections( std::vector<MeshProjectionResult>& result, const std::vector<Vector3f>& points, 
                                              const AffineXf3f* objXf, const AffineXf3f* refObjXf,
                                              float upDistLimitSq, float loDistLimitSq ) override;

@@ -13,11 +13,13 @@ namespace MR
 /// \ingroup PointCloudGroup
 struct PointCloud
 {
-public:
     VertCoords points;
     VertNormals normals;
     /// only points corresponding to set bits here are valid
     VertBitSet validPoints;
+
+    /// returns true if there is a normal for each point
+    [[nodiscard]] bool hasNormals() const { return normals.size() >= points.size(); }
 
     /// returns cached aabb-tree for this point cloud, creating it if it did not exist in a thread-safe manner
     MRMESH_API const AABBTreePoints& getAABBTree() const;
@@ -47,10 +49,14 @@ public:
     /// reflects the points from a given plane
     MRMESH_API void mirror( const Plane3f& plane );
 
-    /// tightly packs all arrays eliminating invalid points;
+    /// tightly packs all arrays eliminating invalid points, but relative order of valid points is preserved;
     /// returns false if the cloud was packed before the call and nothing has been changed;
     /// if pack is done optionally returns mappings: new.id -> old.id
     MRMESH_API bool pack( VertMap * outNew2Old = nullptr );
+
+    /// tightly packs all arrays eliminating invalid points, reorders valid points so to put close in space points in close indices;
+    /// \return points mapping: old -> new
+    MRMESH_API VertBMap packOptimally();
 
     /// Invalidates caches (e.g. aabb-tree) after a change in point cloud
     void invalidateCaches() { AABBTreeOwner_.reset(); }

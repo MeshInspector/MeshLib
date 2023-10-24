@@ -154,6 +154,22 @@ bool PointCloud::pack( VertMap * outNew2Old )
     return true;
 }
 
+std::vector<VertId> PointCloud::getLexicographicalOrder() const
+{
+    MR_TIMER
+    std::vector<VertId> lexyOrder;
+    lexyOrder.reserve( validPoints.count() );
+    for ( auto v : validPoints )
+        lexyOrder.push_back( v );
+    tbb::parallel_sort( lexyOrder.begin(), lexyOrder.end(), [&] ( VertId l, VertId r )
+    {
+        const auto& ptL = points[l];
+        const auto& ptR = points[r];
+        return std::tuple{ ptL.x, ptL.y, ptL.z } < std::tuple{ ptR.x, ptR.y, ptR.z };
+    } );
+    return lexyOrder;
+}
+
 VertBMap PointCloud::pack( Reorder reoder )
 {
     MR_TIMER
@@ -185,17 +201,7 @@ VertBMap PointCloud::pack( Reorder reoder )
     case Reorder::Lexicographically:
     {
         invalidateCaches();
-        std::vector<VertId> lexyOrder;
-        lexyOrder.reserve( map.tsize );
-        for ( auto v : validPoints )
-            lexyOrder.push_back( v );
-        tbb::parallel_sort( lexyOrder.begin(), lexyOrder.end(), [&] ( VertId l, VertId r )
-        {
-            const auto& ptL = points[l];
-            const auto& ptR = points[r];
-            return std::tuple{ ptL.x, ptL.y, ptL.z } < std::tuple{ ptR.x, ptR.y, ptR.z };
-        } );
-        //VertId newId( 0 );
+        std::vector<VertId> lexyOrder = getLexicographicalOrder();
         ParallelFor( size_t(0), lexyOrder.size(), [&]( size_t i )
         {
             VertId oldId = lexyOrder[i];

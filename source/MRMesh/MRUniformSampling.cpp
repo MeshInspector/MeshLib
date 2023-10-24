@@ -89,7 +89,7 @@ std::optional<VertBitSet> pointNormalBasedSampling( const PointCloud& pointCloud
 
     const auto& normals = optNormals ? *optNormals : pointCloud.normals;
     int progressCounter = 0;
-    auto sp = subprogress( cb, optNormals ? 0.6 : 0.3f, 1.0f );
+    auto sp = subprogress( cb, optNormals ? 0.6f : 0.3f, 1.0f );
     VertBitSet visited( pointCloud.validPoints.size() );
     VertBitSet sampled( pointCloud.validPoints.size() );
     const auto critDistSq = sqr( distance );

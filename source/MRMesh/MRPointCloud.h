@@ -55,9 +55,9 @@ struct PointCloud
     /// if pack is done optionally returns mappings: new.id -> old.id
     MRMESH_API bool pack( VertMap * outNew2Old = nullptr );
 
-    /// tightly packs all arrays eliminating invalid points, reorders valid points so to put close in space points in close indices;
+    /// tightly packs all arrays eliminating invalid points, reorders valid points according to given strategy;
     /// \return points mapping: old -> new
-    MRMESH_API VertBMap packOptimally();
+    MRMESH_API VertBMap pack( Reorder reoder );
 
     /// Invalidates caches (e.g. aabb-tree) after a change in point cloud
     void invalidateCaches() { AABBTreeOwner_.reset(); }

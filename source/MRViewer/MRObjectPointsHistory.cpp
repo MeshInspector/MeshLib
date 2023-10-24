@@ -13,7 +13,7 @@
 namespace MR
 {
 
-static void packPointsWithHistoryCore( const std::shared_ptr<ObjectPoints>& objPoints, VertBitSet * newValidVerts )
+static void packPointsWithHistoryCore( const std::shared_ptr<ObjectPoints>& objPoints, Reorder reorder, VertBitSet * newValidVerts )
 {
     MR_TIMER
 
@@ -28,7 +28,7 @@ static void packPointsWithHistoryCore( const std::shared_ptr<ObjectPoints>& objP
         objPoints->varPointCloud()->invalidateCaches();
     }
 
-    const auto map = objPoints->varPointCloud()->packOptimally();
+    const auto map = objPoints->varPointCloud()->pack( reorder );
 
     if ( !objPoints->getVertsColorMap().empty() )
     {
@@ -59,14 +59,14 @@ static void packPointsWithHistoryCore( const std::shared_ptr<ObjectPoints>& objP
     }
 }
 
-void packPointsWithHistory( const std::shared_ptr<ObjectPoints>& objPoints )
+void packPointsWithHistory( const std::shared_ptr<ObjectPoints>& objPoints, Reorder reorder )
 {
-    packPointsWithHistoryCore( objPoints, nullptr );
+    packPointsWithHistoryCore( objPoints, reorder, nullptr );
 }
 
-void packPointsWithHistory( const std::shared_ptr<ObjectPoints>& objPoints, VertBitSet newValidVerts )
+void packPointsWithHistory( const std::shared_ptr<ObjectPoints>& objPoints, Reorder reorder, VertBitSet newValidVerts )
 {
-    packPointsWithHistoryCore( objPoints, &newValidVerts );
+    packPointsWithHistoryCore( objPoints, reorder, &newValidVerts );
 }
 
 } //namespace MR

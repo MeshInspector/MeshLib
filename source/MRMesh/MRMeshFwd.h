@@ -460,6 +460,14 @@ enum class WrapType : char
     Clamp
 };
 
+/// determines how points to be ordered
+enum class Reorder : char
+{
+    None,              ///< the order is not changed
+    Lexicographically, ///< the order is determined by lexicographical sorting by coordinates (optimal for uniform sampling)
+    AABBTree           ///< the order is determined so to put close in space points in close indices (optimal for compression)
+};
+
 template <typename T>
 constexpr inline T sqr( T x ) noexcept { return x * x; }
 

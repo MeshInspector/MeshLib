@@ -10,7 +10,7 @@ namespace MR
 {
 /**
  * @brief Class for aggregate several color map in one
- * @detail Color maps are aggregated according order
+ * Color maps are aggregated according order
  */
 template<typename Tag>
 class ColorMapAggregator

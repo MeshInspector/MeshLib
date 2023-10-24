@@ -27,7 +27,6 @@ MRMESH_API std::vector<UndirectedEdgeUndirectedEdge> findCollidingEdges( const P
 /**
  * \brief finds bitset per polyline with colliding edges
  * \param rigidB2A rigid transformation from B-polyline space to A polyline space, nullptr considered as identity transformation
- * \param firstIntersectionOnly if true then the function returns at most one pair of intersecting edges and returns faster
  */
 MRMESH_API std::pair<UndirectedEdgeBitSet, UndirectedEdgeBitSet> findCollidingEdgesBitsets( const Polyline2& a, const Polyline2& b,
     const AffineXf2f* rigidB2A = nullptr );

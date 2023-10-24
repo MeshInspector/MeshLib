@@ -9,9 +9,6 @@
 namespace MR
 {
 
-/// \defgroup SurfacePathGroup
-
-/// \defgroup EdgePathsGroup Edge Paths
 /// \ingroup SurfacePathGroup
 /// \{
 

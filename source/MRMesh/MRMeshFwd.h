@@ -339,6 +339,7 @@ class MRMESH_CLASS MeshOrPoints;
 struct MRMESH_CLASS PointCloud;
 class MRMESH_CLASS AABBTree;
 class MRMESH_CLASS AABBTreePoints;
+struct MRMESH_CLASS CloudPartMapping;
 struct MRMESH_CLASS PartMapping;
 struct MeshTexture;
 struct GridSettings;
@@ -457,6 +458,14 @@ enum class WrapType : char
     Repeat,
     Mirror,
     Clamp
+};
+
+/// determines how points to be ordered
+enum class Reorder : char
+{
+    None,              ///< the order is not changed
+    Lexicographically, ///< the order is determined by lexicographical sorting by coordinates (optimal for uniform sampling)
+    AABBTree           ///< the order is determined so to put close in space points in close indices (optimal for compression)
 };
 
 template <typename T>

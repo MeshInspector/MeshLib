@@ -2,6 +2,8 @@
 #include "MRPointCloud.h"
 #include "MRAABBTreePoints.h"
 #include "MRBox.h"
+#include "MRBitSetParallelFor.h"
+#include "MRPointsInBall.h"
 
 namespace MR
 {
@@ -34,4 +36,59 @@ float findAvgPointsRadius( const PointCloud& pointCloud, int avgPoints )
     return sqrt( radiusNSq / N * avgPoints * 0.5f );
 }
 
+bool dilateRegion( const PointCloud& pointCloud, VertBitSet& region, float dilation, ProgressCallback cb, const AffineXf3f* xf )
+{
+    auto regionCopy = region;
+
+    const auto res =  BitSetParallelForAll( region, [&] ( VertId testVertex )
+    {
+        if ( regionCopy.test( testVertex ) )
+            return;
+
+        const Vector3f point = xf ? (*xf)( pointCloud.points[testVertex] ) : pointCloud.points[testVertex];
+
+        findPointsInBall( pointCloud, point, dilation, [&] ( VertId v, const Vector3f& )
+        {
+            if ( regionCopy.test( testVertex ) )
+                return;
+
+            if ( region.test( v ) )
+                regionCopy.set( testVertex, true );
+        }, xf );
+    }, cb );
+
+    if ( !res )
+        return false;
+
+    region = regionCopy;
+    return true;
+}
+
+bool erodeRegion( const PointCloud& pointCloud, VertBitSet& region, float erosion, ProgressCallback cb, const AffineXf3f* xf )
+{
+    auto regionCopy = region;
+
+    const auto res =  BitSetParallelForAll( region, [&] ( VertId testVertex )
+    {
+        if ( !regionCopy.test( testVertex ) )
+            return;
+
+        const Vector3f point = xf ? ( *xf )( pointCloud.points[testVertex] ) : pointCloud.points[testVertex];
+
+        findPointsInBall( pointCloud, point, erosion, [&] ( VertId v, const Vector3f& )
+        {
+            if ( !regionCopy.test( testVertex ) )
+                return;
+
+            if ( !region.test( v ) )
+                regionCopy.set( testVertex, false );
+        }, xf );
+    }, cb );
+
+    if ( !res )
+        return false;
+
+    region = regionCopy;
+    return true;
+}
 }

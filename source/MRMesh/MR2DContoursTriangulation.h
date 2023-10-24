@@ -24,7 +24,7 @@ MRMESH_API HolesVertIds findHoleVertIdsByHoleEdges( const MeshTopology& tp, cons
 
 /**
  * @brief triangulate 2d contours
- * @detail only closed contours are allowed (first point of each contour should be the same as last point of the contour)
+ * only closed contours are allowed (first point of each contour should be the same as last point of the contour)
  * @param holeVertsIds if set merge only points with same vertex id, otherwise merge all points with same coordinates
  * @param mode specify mode of detecting inside and outside parts of triangulation
  * @return return created mesh
@@ -36,7 +36,7 @@ MRMESH_API Mesh triangulateContours( const Contours2f& contours, const HolesVert
 
 /**
  * @brief triangulate 2d contours
- * @detail only closed contours are allowed (first point of each contour should be the same as last point of the contour)
+ * only closed contours are allowed (first point of each contour should be the same as last point of the contour)
  * @param holeVertsIds if set merge only points with same vertex id, otherwise merge all points with same coordinates
  * @return std::optional<Mesh> : if some contours intersect return false, otherwise return created mesh
  */

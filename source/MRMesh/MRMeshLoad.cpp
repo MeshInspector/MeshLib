@@ -619,6 +619,14 @@ Expected<Mesh, std::string> fromCtm( std::istream& in, const MeshLoadSettings& s
         }
     }
 
+    if ( settings.normals && ctmGetInteger( context, CTM_HAS_NORMALS ) == CTM_TRUE )
+    {
+        auto normals = ctmGetFloatArray( context, CTM_NORMALS );
+        settings.normals->resize( vertCount );
+        for ( VertId i{0}; i < (int) vertCount; ++i )
+            (*settings.normals)[i] = Vector3f( normals[3 * i], normals[3 * i + 1], normals[3 * i + 2] );
+    }
+
     Mesh mesh;
     mesh.points.resize( vertCount );
     for ( VertId i{0}; i < (int)vertCount; ++i )

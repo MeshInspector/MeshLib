@@ -44,7 +44,7 @@ MRMESH_API void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, 
 /**
  * \brief finds given number of closest points (excluding itself) to each valid point in the cloud;
  * \param numNei the number of closest points to find for each point
- * \return a buffer where for every valid point #i its neighbours are stored at indices [i*numNei; (i+1)*numNei)
+ * \return a buffer where for every valid point with index `i` its neighbours are stored at indices [i*numNei; (i+1)*numNei)
  */
 [[nodiscard]] MRMESH_API Buffer<VertId> findNClosestPointsPerPoint( const PointCloud& pc, int numNei, const ProgressCallback & progress = {} );
 

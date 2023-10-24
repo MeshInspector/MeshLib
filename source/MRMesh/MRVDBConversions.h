@@ -109,7 +109,7 @@ MRMESH_API Expected<Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume, int ma
     float isoValue = 0.0f, float adaptivity = 0.0f, ProgressCallback cb = {} );
 
 /// set signs for unsigned distance field grid using refMesh FastWindingNumber;
-/// \param meshToVoxelsXf defines the mapping from mesh reference from to grid reference frame
+/// \param meshToGridXf defines the mapping from mesh reference from to grid reference frame
 /// \param fwn defines particular implementation of IFastWindingNumber interface that will compute windings. If it is not specified, default FastWindingNumber is used
 MRMESH_API VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh,
     const AffineXf3f& meshToGridXf = {}, std::shared_ptr<IFastWindingNumber> fwn = {}, ProgressCallback cb = {} );

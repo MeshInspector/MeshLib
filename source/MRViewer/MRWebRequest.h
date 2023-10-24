@@ -49,7 +49,7 @@ public:
     /// if async then callback is called in next frame after getting response
     /// return true if request was sent, false if other request is processing now
     /// note: check `readyForNextRequest` before sending
-    /// \param request name for logging
+    /// \param logName name for logging
     MRVIEWER_API static bool send( std::string url, const std::string & logName, ResponseCallback callback, bool async = true );
 
 private:

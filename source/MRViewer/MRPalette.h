@@ -37,19 +37,19 @@ public:
     MRVIEWER_API Palette( const std::vector<Color>& colors );
     /**
      * @brief Set base palette colors
-     * @detail colors.size() should be more or equal 2
+     * colors.size() should be more or equal 2
      * for discrete palette using vector of colors calculated by mixing the base colors
      * i.e. base {blue, red} -> discrete 3 {blue, 0.5*blue + 0.5*red, red}
      */
     MRVIEWER_API void setBaseColors( const std::vector<Color>& colors );
     /**
      * @brief set range limits for palette (need for find color by value)
-     * @detail all palette colors are evenly distributed between min and max
+     * all palette colors are evenly distributed between min and max
      */
     MRVIEWER_API void setRangeMinMax( float min, float max );
     /**
      * @brief set range limits for palette (need for find color by value)
-     * @detail two half palette colors are evenly distributed between MinNeg / MaxNeg and MinPos / MaxPos
+     * two half palette colors are evenly distributed between MinNeg / MaxNeg and MinPos / MaxPos
      * for values between MaxNeg / MinPos return one color (from center palette)
      */
     MRVIEWER_API void setRangeMinMaxNegPos( float minNeg, float maxNeg, float minPos, float maxPos );

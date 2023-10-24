@@ -27,7 +27,7 @@ void PointCloud::addPartByMask( const PointCloud& from, const VertBitSet& fromVe
     const auto& fromPoints = from.points;
     const auto& fromNormals = extNormals ? *extNormals : from.normals;
 
-    const bool useNormals = hasNormals() && fromPoints.size() >= fromNormals.size();
+    const bool useNormals = hasNormals() && fromNormals.size() >= fromPoints.size();
     const bool consistentNormals = normals.size() == 0 || useNormals;
     assert( consistentNormals );
     if ( !consistentNormals )

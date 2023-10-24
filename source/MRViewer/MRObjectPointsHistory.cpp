@@ -6,40 +6,43 @@
 #include <MRMesh/MRObjectPoints.h>
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRTimer.h>
+#include <MRMesh/MRParallelFor.h>
 #include <MRMesh/MRBitSetParallelFor.h>
+#include <MRMesh/MRBuffer.h>
 
 namespace MR
 {
 
-static bool packPointsWithHistoryCore( const std::shared_ptr<ObjectPoints>& objPoints, VertBitSet * newValidVerts )
+static void packPointsWithHistoryCore( const std::shared_ptr<ObjectPoints>& objPoints, VertBitSet * newValidVerts )
 {
     MR_TIMER
 
     if ( !objPoints || !objPoints->pointCloud() )
-        return false;
+        return;
 
     Historian<ChangePointCloudAction> h( "set cloud", objPoints );
 
     if ( newValidVerts )
-        objPoints->varPointCloud()->validPoints = std::move( *newValidVerts );
-
-    VertMap new2Old;
-    if ( !objPoints->varPointCloud()->pack( &new2Old ) )
     {
-        h.cancelAction();
-        return false;
+        objPoints->varPointCloud()->validPoints = std::move( *newValidVerts );
+        objPoints->varPointCloud()->invalidateCaches();
     }
+
+    const auto map = objPoints->varPointCloud()->packOptimally();
 
     if ( !objPoints->getVertsColorMap().empty() )
     {
         Historian<ChangeVertsColorMapAction> hCM( "color map update", objPoints );
-        VertColors newColors( new2Old.size() );
+        VertColors newColors;
+        newColors.resizeNoInit( map.tsize );
         const auto & oldColors = objPoints->getVertsColorMap();
-        for ( VertId n = 0_v; n < new2Old.size(); ++n )
+        ParallelFor( 0_v, map.b.endId(), [&] ( VertId oldv )
         {
-            VertId o = new2Old[n];
-            newColors[n] = oldColors[o];
-        }
+            auto newv = map.b[oldv];
+            if ( !newv )
+                return;
+            newColors[newv] = oldColors[oldv];
+        } );
         objPoints->setVertsColorMap( std::move( newColors ) );
     }
 
@@ -48,26 +51,22 @@ static bool packPointsWithHistoryCore( const std::shared_ptr<ObjectPoints>& objP
     if ( oldSel.any() )
     {
         Historian<ChangePointPointSelectionAction> hs( "selection", objPoints );
-        VertBitSet newSel( new2Old.size() );
-        BitSetParallelForAll( newSel, [&]( VertId n )
-        {
-            if ( oldSel.test( new2Old[n] ) )
-                newSel.set( n );
-        } );
+        VertBitSet newSel( map.tsize );
+        for ( auto oldv : oldSel )
+            if ( auto newv = map.b[ oldv ] )
+                newSel.set( newv );
         objPoints->selectPoints( std::move( newSel ) );
     }
-
-    return true;
 }
 
-bool packPointsWithHistory( const std::shared_ptr<ObjectPoints>& objPoints )
+void packPointsWithHistory( const std::shared_ptr<ObjectPoints>& objPoints )
 {
-    return packPointsWithHistoryCore( objPoints, nullptr );
+    packPointsWithHistoryCore( objPoints, nullptr );
 }
 
-bool packPointsWithHistory( const std::shared_ptr<ObjectPoints>& objPoints, VertBitSet newValidVerts )
+void packPointsWithHistory( const std::shared_ptr<ObjectPoints>& objPoints, VertBitSet newValidVerts )
 {
-    return packPointsWithHistoryCore( objPoints, &newValidVerts );
+    packPointsWithHistoryCore( objPoints, &newValidVerts );
 }
 
 } //namespace MR

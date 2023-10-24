@@ -53,6 +53,8 @@ public:
     const UndirectedEdgeColors& getLinesColorMap() const { return linesColorMap_; }
     virtual void setLinesColorMap( UndirectedEdgeColors linesColorMap )
     { linesColorMap_ = std::move( linesColorMap ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
+    virtual void updateLinesColorMap( UndirectedEdgeColors& updated )
+    { std::swap( linesColorMap_, updated ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
 
     /// get all visualize properties masks as array
     MRMESH_API virtual AllVisualizeProperties getAllVisualizeProperties() const override;

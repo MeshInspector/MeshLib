@@ -4,6 +4,8 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPlane3.h"
 #include "MRBitSetParallelFor.h"
+#include "MRBuffer.h"
+#include "MRParallelFor.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -19,35 +21,38 @@ Box3f PointCloud::computeBoundingBox( const AffineXf3f * toWorld ) const
     return MR::computeBoundingBox( points, validPoints, toWorld );
 }
 
-void PointCloud::addPartByMask( const PointCloud& from, const VertBitSet& fromVerts, VertMap* oldToNewMap, const VertNormals * extNormals )
+void PointCloud::addPartByMask( const PointCloud& from, const VertBitSet& fromVerts, const CloudPartMapping& outMap, const VertNormals * extNormals )
 {
     MR_TIMER
     const auto& fromPoints = from.points;
     const auto& fromNormals = extNormals ? *extNormals : from.normals;
 
-    const bool consistentNormals = normals.size() == 0 || ( points.size() == normals.size() && fromPoints.size() == fromNormals.size() );
+    const bool useNormals = hasNormals() && fromNormals.size() >= fromPoints.size();
+    const bool consistentNormals = normals.size() == 0 || useNormals;
     assert( consistentNormals );
     if ( !consistentNormals )
         return;
 
-    const bool useNormals = points.size() == normals.size() && fromPoints.size() == fromNormals.size();
-
     VertBitSet fromValidVerts = fromVerts & from.validPoints;
     VertId idIt = VertId( points.size() );
     const auto newSize = points.size() + fromValidVerts.count();
-    points.resize( newSize );
+    points.resizeNoInit( newSize );
     validPoints.resize( newSize, true );
     if ( useNormals )
         normals.resize( newSize );
-    if ( oldToNewMap )
-        oldToNewMap->resize( fromValidVerts.find_last() + 1 );
+    if ( outMap.src2tgtVerts )
+        outMap.src2tgtVerts->resize( fromValidVerts.find_last() + 1 );
+    if ( outMap.tgt2srcVerts )
+        outMap.tgt2srcVerts->resizeNoInit( points.size() );
     for ( auto v : fromValidVerts )
     {
         points[idIt] = fromPoints[v];
         if ( useNormals )
             normals[idIt] = fromNormals[v];
-        if ( oldToNewMap )
-            ( *oldToNewMap )[v] = idIt;
+        if ( outMap.src2tgtVerts )
+            ( *outMap.src2tgtVerts )[v] = idIt;
+        if ( outMap.tgt2srcVerts )
+            ( *outMap.tgt2srcVerts )[idIt] = v;
         idIt++;
     }
 
@@ -147,6 +152,44 @@ bool PointCloud::pack( VertMap * outNew2Old )
 
     invalidateCaches();
     return true;
+}
+
+VertBMap PointCloud::packOptimally()
+{
+    MR_TIMER
+
+    getAABBTree(); // ensure that tree is constructed
+    VertBMap map;
+    map.b.resize( points.size() );
+    const bool packed = validPoints.count() == points.size();
+    if ( !packed )
+    {
+        for ( VertId v = 0_v; v < map.b.size(); ++v )
+            if ( !validPoints.test( v ) )
+                map.b[v] = VertId{};
+    }
+    AABBTreeOwner_.get()->getLeafOrderAndReset( map );
+
+    VertCoords newPoints;
+    newPoints.resizeNoInit( map.tsize );
+    VertNormals newNormals;
+    if ( hasNormals() )
+        newNormals.resizeNoInit( map.tsize );
+
+    ParallelFor( 0_v, map.b.endId(), [&]( VertId oldv )
+    {
+        auto newv = map.b[oldv];
+        if ( !newv )
+            return;
+        newPoints[newv] = points[oldv];
+        if ( hasNormals() )
+            newNormals[newv] = normals[oldv];
+    } );
+    points = std::move( newPoints );
+    normals = std::move( newNormals );
+    validPoints = {};
+    validPoints.resize( points.size(), true );
+    return map;
 }
 
 } //namespace MR

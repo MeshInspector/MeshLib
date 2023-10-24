@@ -154,21 +154,79 @@ bool PointCloud::pack( VertMap * outNew2Old )
     return true;
 }
 
-VertBMap PointCloud::packOptimally()
+VertBMap PointCloud::pack( Reorder reoder )
 {
     MR_TIMER
 
-    getAABBTree(); // ensure that tree is constructed
+    const auto numValidPoints = validPoints.count();
+    const bool wasPacked = numValidPoints == points.size();
+
     VertBMap map;
     map.b.resize( points.size() );
-    const bool packed = validPoints.count() == points.size();
-    if ( !packed )
+    map.tsize = numValidPoints;
+
+    switch ( reoder )
     {
+    default:
+        assert( false );
+        [[fallthrough]];
+    case Reorder::None:
+    {
+        invalidateCaches();
+        VertId newId( 0 );
         for ( VertId v = 0_v; v < map.b.size(); ++v )
-            if ( !validPoints.test( v ) )
+            if ( validPoints.test( v ) )
+                map.b[v] = newId++;
+            else
                 map.b[v] = VertId{};
+        assert( newId == map.tsize );
+        break;
     }
-    AABBTreeOwner_.get()->getLeafOrderAndReset( map );
+    case Reorder::Lexicographically:
+    {
+        invalidateCaches();
+        std::vector<VertId> lexyOrder;
+        lexyOrder.reserve( map.tsize );
+        for ( auto v : validPoints )
+            lexyOrder.push_back( v );
+        tbb::parallel_sort( lexyOrder.begin(), lexyOrder.end(), [&] ( VertId l, VertId r )
+        {
+            const auto& ptL = points[l];
+            const auto& ptR = points[r];
+            return std::tuple{ ptL.x, ptL.y, ptL.z } < std::tuple{ ptR.x, ptR.y, ptR.z };
+        } );
+        //VertId newId( 0 );
+        ParallelFor( size_t(0), lexyOrder.size(), [&]( size_t i )
+        {
+            VertId oldId = lexyOrder[i];
+            VertId newId( i );
+            map.b[oldId] = newId;
+        } );
+        if ( !wasPacked )
+        {
+            ParallelFor( 0_v, map.b.endId(), [&]( VertId v )
+            {
+                if ( !validPoints.test( v ) )
+                    map.b[v] = VertId{};
+            } );
+        }
+        break;
+    }
+    case Reorder::AABBTree:
+    {
+        getAABBTree(); // ensure that tree is constructed
+        AABBTreeOwner_.get()->getLeafOrderAndReset( map );
+        if ( !wasPacked )
+        {
+            ParallelFor( 0_v, map.b.endId(), [&]( VertId v )
+            {
+                if ( !validPoints.test( v ) )
+                    map.b[v] = VertId{};
+            } );
+        }
+        break;
+    }
+    }
 
     VertCoords newPoints;
     newPoints.resizeNoInit( map.tsize );

@@ -4,11 +4,15 @@
 #include "MRBitSetParallelFor.h"
 #include "MRPointsProject.h"
 #include "MRTimer.h"
+#include "MRBestFitQuadric.h"
+#include "MRPointsInBall.h"
+#include "MRBestFit.h"
 
 namespace MR
 {
 
-bool improveSampling( const PointCloud & cloud, VertBitSet & samples, int numIters, const ProgressCallback & progress )
+bool improveSampling( const PointCloud & cloud, VertBitSet & samples, int numIters, 
+    const ImproveSamplingCurvatureMode& curvatureMode, const ProgressCallback& progress )
 {
     MR_TIMER
     assert( numIters >= 1 );
@@ -20,14 +24,62 @@ bool improveSampling( const PointCloud & cloud, VertBitSet & samples, int numIte
     if ( !reportProgress( progress, 0.1f ) )
         return false;
 
-    VertMap pt2sm( cloud.points.size() );
     const auto sampleSz = cloudOfSamples.points.size();
-    Vector<Vector3f, VertId> sumPos( sampleSz );
-    Vector<int, VertId> cnt( sampleSz );
 
+    VertMap pt2sm( cloud.points.size() );
+    VertScalars pt2w;
+    bool useCurv = curvatureMode.radius > 0.0f && curvatureMode.type != ImproveSamplingCurvatureMode::None && sampleSz > 1;
+    if ( useCurv )
+    {
+        pt2w.resize( cloud.points.size() );
+        float radius = curvatureMode.radius;
+        constexpr float maxWeightExp = 10.0f;
+        constexpr float range = 1.0f / 1.5f * ( maxWeightExp - 1.0f );
+        tbb::enumerable_thread_specific<std::vector<VertId>> cacheVerts;
+        if ( !BitSetParallelFor( cloud.validPoints, [&] ( VertId v )
+        {
+            auto& lVerts = cacheVerts.local();
+            lVerts.clear();
+            PointAccumulator planeApprox;
+            findPointsInBall( cloud, cloud.points[v], radius, [&] ( VertId cv, const Vector3f& )
+            {
+                lVerts.push_back( cv );
+            } );
+            if ( lVerts.size() < 4 )
+            {
+                pt2w[v] = -FLT_MAX;
+                return;
+            }
+            for ( auto cv : lVerts )
+                planeApprox.addPoint( cloud.points[cv] );
+
+            AffineXf3d basis = planeApprox.getBasicXf();
+            basis.A = basis.A.transposed();
+            std::swap( basis.A.x, basis.A.y );
+            std::swap( basis.A.y, basis.A.z );
+            basis.A = basis.A.transposed();
+            auto basisInv = basis.inverse();
+
+            QuadricApprox qa;
+            for ( auto cv : lVerts )
+                qa.addPoint( basisInv( Vector3d( cloud.points[cv] ) ) );
+
+            auto coeffs = qa.calcBestCoefficients();
+            double sumCoeff = ( std::abs( coeffs[0] ) + std::abs( coeffs[1] ) + std::abs( coeffs[2] ) );
+
+            float w = std::clamp( float( sumCoeff ) * radius, 0.0f, 1.5f );
+            pt2w[v] = std::exp( w * range );// +1.0f;
+        }, subprogress( progress, 0.1f, 0.2f ) ) )
+            return false;
+    }
+
+    VertCoords sumPos( sampleSz );
+    VertScalars cnt( sampleSz );
+        
     for ( int i = 0; i < numIters; ++i )
     {
-        auto cb = subprogress( subprogress( progress, 0.1f, 0.9f ), float( i ) / numIters, float( i + 1 ) / numIters );
+        auto cb = subprogress( subprogress( progress, useCurv ? 0.2f : 0.1f, 0.9f ),
+            float( i ) / numIters, float( i + 1 ) / numIters );
 
         // find the closest sample for each point of the cloud
         if ( !BitSetParallelFor( cloud.validPoints, [&]( VertId v )
@@ -45,8 +97,16 @@ bool improveSampling( const PointCloud & cloud, VertBitSet & samples, int numIte
         for ( auto v : cloud.validPoints )
         {
             auto sm = pt2sm[v];
-            sumPos[sm] += cloud.points[v];
-            ++cnt[sm];
+            if ( !useCurv )
+            {
+                cnt[sm] += 1.0f;
+                sumPos[sm] += cloud.points[v];
+            }
+            else
+            {
+                cnt[sm] += pt2w[v];
+                sumPos[sm] += pt2w[v] * cloud.points[v];
+            }
         }
 
         if ( !reportProgress( cb, 0.7f ) )
@@ -57,7 +117,7 @@ bool improveSampling( const PointCloud & cloud, VertBitSet & samples, int numIte
             {
                 if( cnt[sm] <= 0 )
                     return; // e.g. two coinciding points
-                cloudOfSamples.points[sm] = sumPos[sm] / float( cnt[sm] );
+                cloudOfSamples.points[sm] = sumPos[sm] / cnt[sm];
             }, subprogress( cb, 0.7f, 1.0f ) ) )
             return false;
         cloudOfSamples.invalidateCaches();

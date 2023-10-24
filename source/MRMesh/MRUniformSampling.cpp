@@ -5,6 +5,8 @@
 #include "MRTimer.h"
 #include "MRPointsInBall.h"
 #include "MRBox.h"
+#include "MRPointCloudMakeNormals.h"
+#include "MRPointCloudRadius.h"
 #include <cfloat>
 
 namespace MR
@@ -63,6 +65,52 @@ std::optional<VertBitSet> pointRegularUniformSampling( const PointCloud& pointCl
         findPointsInBall( pointCloud, pointCloud.points[v], distance, [&] ( VertId cv, const Vector3f& )
         {
             visited.set( cv );
+        } );
+    }
+    return sampled;
+}
+
+std::optional<VertBitSet> pointNormalBasedSampling( const PointCloud& pointCloud, float distance, const ProgressCallback& cb /*= {} */ )
+{
+    MR_TIMER
+
+    std::vector<VertId> searchQueue = pointCloud.getLexicographicalOrder();
+
+    if ( cb && !cb( 0.3f ) )
+        return {};
+
+    std::optional<VertNormals> optNormals;
+    if ( !pointCloud.hasNormals() )
+    {
+        optNormals = makeUnorientedNormals( pointCloud, findAvgPointsRadius( pointCloud, 48 ), subprogress( cb, 0.3f, 0.6f ) );
+        if ( !optNormals )
+            return {};
+    }
+
+    const auto& normals = optNormals ? *optNormals : pointCloud.normals;
+    int progressCounter = 0;
+    auto sp = subprogress( cb, optNormals ? 0.6f : 0.3f, 1.0f );
+    VertBitSet visited( pointCloud.validPoints.size() );
+    VertBitSet sampled( pointCloud.validPoints.size() );
+    const auto critDistSq = sqr( distance );
+    for ( auto v : searchQueue )
+    {
+        if ( sp && !( ( ++progressCounter ) & 0x3ff ) &&
+            !sp( float( progressCounter ) / float( searchQueue.size() ) ) )
+            return {};
+        if ( visited.test( v ) )
+            continue;
+        sampled.set( v );
+        const auto c = pointCloud.points[v];
+        const auto n = normals[v];
+        findPointsInBall( pointCloud, c, distance, [&] ( VertId u, const Vector3f& )
+        {
+            const auto dd = 2 * sqr( dot( n, normals[u] ) ) - 1;
+            if ( dd <= 0 )
+                return;
+            if ( ( c - pointCloud.points[u] ).lengthSq() > dd * critDistSq )
+                return;
+            visited.set( u );
         } );
     }
     return sampled;

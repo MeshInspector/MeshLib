@@ -7,10 +7,11 @@
 #include "MRTimer.h"
 #include "MRHeapBytes.h"
 #include "MRStringConvert.h"
-#include <filesystem>
 #include "MRExpected.h"
+#include "MRParallelFor.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSuppressWarning.h"
+#include <filesystem>
 
 namespace MR
 {
@@ -212,6 +213,25 @@ void VisualObject::setColoringType( ColoringType coloringType )
     default:
         break;
     }
+}
+
+void VisualObject::copyColors( const VisualObject & src, const VertMap & thisToSrc )
+{
+    MR_TIMER
+
+    setColoringType( src.getColoringType() );
+
+    const auto& srcColorMap = src.getVertsColorMap();
+    if ( srcColorMap.empty() )
+        return;
+
+    VertColors colorMap;
+    colorMap.resizeNoInit( thisToSrc.size() );
+    ParallelFor( colorMap, [&]( VertId id )
+    {
+        colorMap[id] = srcColorMap[thisToSrc[id]];
+    } );
+    setVertsColorMap( std::move( colorMap ) );
 }
 
 std::shared_ptr<Object> VisualObject::clone() const

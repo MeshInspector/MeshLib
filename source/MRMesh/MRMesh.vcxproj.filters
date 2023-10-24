@@ -1086,6 +1086,12 @@
     <ClInclude Include="MRImproveSampling.h">
       <Filter>Source Files\PointCloud</Filter>
     </ClInclude>
+    <ClInclude Include="MRChangeColoringActions.h">
+      <Filter>Source Files\History</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCloudPartMapping.h">
+      <Filter>Source Files\PointCloud</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

@@ -12,6 +12,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRChangeColoringType.h" />
+    <ClInclude Include="MRChangeColoringActions.h" />
+    <ClInclude Include="MRCloudPartMapping.h" />
     <ClInclude Include="MRFewSmallest.h" />
     <ClInclude Include="MRImproveSampling.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />

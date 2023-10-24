@@ -203,8 +203,12 @@ public:
 
     /// returns the current coloring mode of the object
     ColoringType getColoringType() const { return coloringType_; }
+
     /// sets coloring mode of the object with given argument
     MRMESH_API virtual void setColoringType( ColoringType coloringType );
+
+    /// copies point colors from given source object \param src using given map \param thisToSrc
+    MRMESH_API virtual void copyColors( const VisualObject & src, const VertMap & thisToSrc );
 
     /// returns the current shininess visual value
     float getShininess() const { return shininess_; }

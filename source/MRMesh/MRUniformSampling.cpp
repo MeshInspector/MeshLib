@@ -42,24 +42,10 @@ std::optional<VertBitSet> pointRegularUniformSampling( const PointCloud& pointCl
 {
     MR_TIMER
 
-    std::vector<VertId> searchQueue;
-    searchQueue.reserve( pointCloud.validPoints.count() );
-    for ( auto v : pointCloud.validPoints )
-        searchQueue.push_back( v );
+    std::vector<VertId> searchQueue = pointCloud.getLexicographicalOrder();
 
-    if ( cb && !cb( 0.2f ) )
-        return {};
-
-    tbb::parallel_sort( searchQueue.begin(), searchQueue.end(), [&] ( VertId l, VertId r )
-    {
-        const auto& ptL = pointCloud.points[l];
-        const auto& ptR = pointCloud.points[r];
-        return std::tuple{ ptL.x,ptL.y,ptL.z } < std::tuple{ ptR.x,ptR.y,ptR.z };
-    } );
-    
     if ( cb && !cb( 0.3f ) )
         return {};
-
 
     int progressCounter = 0;
     auto sp = subprogress( cb, 0.3f, 1.0f );

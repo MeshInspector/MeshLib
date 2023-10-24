@@ -23,7 +23,10 @@ static void packPointsWithHistoryCore( const std::shared_ptr<ObjectPoints>& objP
     Historian<ChangePointCloudAction> h( "set cloud", objPoints );
 
     if ( newValidVerts )
+    {
         objPoints->varPointCloud()->validPoints = std::move( *newValidVerts );
+        objPoints->varPointCloud()->invalidateCaches();
+    }
 
     const auto map = objPoints->varPointCloud()->packOptimally();
 

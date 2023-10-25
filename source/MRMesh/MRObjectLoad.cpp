@@ -290,27 +290,6 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
         else
             result = unexpected( res.error() );
     }
-    else if ( ext == "*.zip" )
-    {
-        auto tmpFolder = UniqueTemporaryFolder( {} );
-        auto contentsFolder = tmpFolder / filename.stem();
-
-        std::ifstream in( filename, std::ifstream::binary );
-        if ( !in )
-            return unexpected( std::string( "Cannot open file for reading " ) + utf8string( filename ) );
-
-        std::error_code ec;
-        std::filesystem::create_directory( contentsFolder, ec );
-        auto resZip = decompressZip( in, contentsFolder );
-        if ( !resZip )
-            return unexpected( "ZIP container error: " + resZip.error() );
-
-        auto res = makeObjectTreeFromFolder( contentsFolder, callback );
-        if ( res )
-            result = std::vector( { std::make_shared<Object>( std::move( *res ) ) }  );
-        else
-            result = unexpected( res.error() );
-    }
     else if ( std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const auto& filter ) { return filter.extensions.find( ext ) != std::string::npos; }) != SceneFileFilters.end() )
     {
         const auto objTree = loadSceneFromAnySupportedFormat( filename, callback );
@@ -620,6 +599,24 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
     return result;
 }
 
+Expected <Object, std::string> makeObjectTreeFromZip( const std::filesystem::path& zipPath, ProgressCallback callback )
+{
+    auto tmpFolder = UniqueTemporaryFolder( {} );
+    auto contentsFolder = tmpFolder / zipPath.stem();
+
+    std::ifstream in( zipPath, std::ifstream::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( zipPath.filename() ) );
+
+    std::error_code ec;
+    std::filesystem::create_directory( contentsFolder, ec );
+    auto resZip = decompressZip( in, contentsFolder );
+    if ( !resZip )
+        return unexpected( "ZIP container error: " + resZip.error() );
+
+    return makeObjectTreeFromFolder( contentsFolder, callback );
+}
+
 Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, ProgressCallback callback )
 {
     auto ext = std::string( "*" ) + utf8string( path.extension().u8string() );
@@ -651,6 +648,13 @@ Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( 
         return MeshLoad::fromSceneStepFile( path, { .callback = callback } );
     }
 #endif
+    else if ( ext == "*.zip" )
+    {
+        auto result = makeObjectTreeFromZip( path, callback );
+        if ( !result )
+            return unexpected( result.error() );
+        return std::make_shared<Object>( std::move( *result ) );
+    }
 
     return res;
 }

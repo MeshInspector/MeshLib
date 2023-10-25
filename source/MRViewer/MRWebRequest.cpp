@@ -10,6 +10,7 @@
 #include <optional>
 #include <thread>
 #else
+#include <condition_variable>
 #include <mutex>
 #endif
 
@@ -20,6 +21,7 @@ struct RequestContext
 {
 #ifdef __EMSCRIPTEN__
     MR::WebRequest::ResponseCallback callback;
+    std::optional<std::condition_variable> cv;
 #else
     std::optional<std::ofstream> output;
 #endif
@@ -27,7 +29,7 @@ struct RequestContext
 
 std::mutex sRequestContextMutex;
 int sRequestContextCounter = 0;
-std::unordered_map<int, RequestContext> sRequestContextMap;
+std::unordered_map<int, std::unique_ptr<RequestContext>> sRequestContextMap;
 
 }
 
@@ -46,7 +48,10 @@ EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool asy
     {
         if ( !async )
         {
-            sRequestContextMap.at( ctxId ).callback( resJson );
+            auto& ctx = sRequestContextMap.at( ctxId );
+            ctx->callback( resJson );
+            assert( ctx.cv.has_value() );
+            ctx->cv->notify_one();
 
             std::unique_lock lock( sRequestContextMutex );
             sRequestContextMap.erase( ctxId );
@@ -55,7 +60,8 @@ EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool asy
         {
             CommandLoop::appendCommand( [resJson, ctxId] ()
             {
-                sRequestContextMap.at( ctxId ).callback( resJson );
+                auto& ctx = sRequestContextMap.at( ctxId );
+                ctx->callback( resJson );
 
                 std::unique_lock lock( sRequestContextMutex );
                 sRequestContextMap.erase( ctxId );
@@ -77,8 +83,8 @@ bool downloadFileCallback( std::string data, intptr_t userdata )
 {
     const auto ctxId = (int)userdata;
     auto& ctx = sRequestContextMap.at( ctxId );
-    assert( ctx.output.has_value() );
-    *ctx.output << data;
+    assert( ctx->output.has_value() );
+    *ctx->output << data;
 }
 
 }
@@ -140,8 +146,8 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
     {
         std::unique_lock lock( sRequestContextMutex );
         ctxId = sRequestContextCounter++;
-        auto [it, _] = sRequestContextMap.emplace( ctxId, RequestContext {} );
-        ctx = &it->second;
+        auto [it, _] = sRequestContextMap.emplace( ctxId, std::make_unique<RequestContext>() );
+        ctx = it->second.get();
     }
 
 #ifndef __EMSCRIPTEN__
@@ -273,6 +279,14 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
     ctx->callback = callback;
 
     MAIN_THREAD_EM_ASM( web_req_send( UTF8ToString( $0 ), $1, $2 ), urlP.c_str(), async, ctxId );
+
+    if ( !async )
+    {
+        ctx->cv.emplace();
+        std::mutex mutex;
+        std::unique_lock lock( mutex );
+        ctx->cv->wait( lock );
+    }
 #pragma clang diagnostic pop
 #endif
 }

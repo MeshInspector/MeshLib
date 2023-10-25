@@ -20,7 +20,7 @@ var web_req_clear = function () {
     web_req_method = 0;
 }
 
-var web_req_send = function (url, async) {
+var web_req_send = function (url, async, callbackTS) {
     var method;
     var urlCpy = url;
     if (web_req_method == 0)
@@ -49,7 +49,7 @@ var web_req_send = function (url, async) {
             text: req.responseText,
             error: req.statusText
         };
-        Module.ccall('emsCallResponseCallback', 'number', ['string'], [JSON.stringify(res)]);
+        Module.ccall('emsCallResponseCallback', 'number', ['string','bool','number'], [JSON.stringify(res),async,callbackTS]);
     };
     req.send(web_req_body);
 }

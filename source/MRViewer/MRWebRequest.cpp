@@ -12,13 +12,13 @@
 
 namespace
 {
-MR::WebRequest::ResponseCallback sCallback;
-bool sAsyncCall{false};
+int sCallbackTS = 0;
+std::unordered_map<int,MR::WebRequest::ResponseCallback> sCallbacksMap;
 }
 
 extern "C" 
 {
-EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response )
+EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool async, int callbackTS )
 {
     using namespace MR;
     std::string resStr = response;
@@ -28,17 +28,17 @@ EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response )
     std::string error;
     if ( reader->parse( resStr.data(), resStr.data() + resStr.size(), &resJson, &error ) )
     {
-        if ( !sAsyncCall )
+        if ( !async )
         {
-            sCallback( resJson );
-            sRequestReady = true;
+            sCallbacksMap[callbackTS]( resJson );
+            sCallbacksMap.erase( callbackTS );
         }
         else
         {
-            CommandLoop::appendCommand( [resJson] ()
+            CommandLoop::appendCommand( [resJson,callbackTS] ()
             {
-                sCallback( resJson );
-                sRequestReady = true;
+                sCallbacksMap[callbackTS]( resJson );
+                sCallbacksMap.erase( callbackTS );
             } );
         }
     }
@@ -152,25 +152,25 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
 #else
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
-    EM_ASM( {
+    MAIN_THREAD_EM_ASM( {
         web_req_clear();
         web_req_timeout = $0;
         web_req_body = UTF8ToString( $1 );
         web_req_method = $2;
-        }, inst.timeout_, inst.body_.c_str(), int( inst.method_ ) );
-    for ( const auto& [key, value] : inst.params_ )
-        EM_ASM( web_req_add_param( UTF8ToString( $0 ), UTF8ToString( $1 ) ), key.c_str(), value.c_str() );
+        }, timeout_, body_.c_str(), int( method_ ) );
+    for ( const auto& [key, value] : params_ )
+        MAIN_THREAD_EM_ASM( web_req_add_param( UTF8ToString( $0 ), UTF8ToString( $1 ) ), key.c_str(), value.c_str() );
     
-    for ( const auto& [key, value] : inst.headers_ )
-        EM_ASM( web_req_add_header( UTF8ToString( $0 ), UTF8ToString( $1 ) ), key.c_str(), value.c_str() );
+    for ( const auto& [key, value] : headers_ )
+        MAIN_THREAD_EM_ASM( web_req_add_header( UTF8ToString( $0 ), UTF8ToString( $1 ) ), key.c_str(), value.c_str() );
     
-    sCallback = callback;
-    sAsyncCall = async;
+    sCallbacksMap[sCallbackTS] = callback;
 
     if ( !urlP.empty() && urlP.back() == '/' )
         urlP = urlP.substr( 0, int( urlP.size() ) - 1 );
 
-    EM_ASM( web_req_send( UTF8ToString( $0 ), $1 ), urlP.c_str(), async );
+    MAIN_THREAD_EM_ASM( web_req_send( UTF8ToString( $0 ), $1, $2 ), urlP.c_str(), async, sCallbackTS );
+    sCallbackTS++;
 #pragma clang diagnostic pop
 #endif
 }

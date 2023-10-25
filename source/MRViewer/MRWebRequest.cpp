@@ -3,25 +3,38 @@
 #include "MRCommandLoop.h"
 #include "MRPch/MRWasm.h"
 #include "MRPch/MRSpdlog.h"
+
 #ifndef __EMSCRIPTEN__
 #include <cpr/cpr.h>
+#include <fstream>
+#include <optional>
 #include <thread>
 #else
 #include <mutex>
 #endif
 
-#ifdef __EMSCRIPTEN__
-
 namespace
 {
-std::mutex sCallbackStoreMutex;
-int sCallbackTS = 0;
-std::unordered_map<int,MR::WebRequest::ResponseCallback> sCallbacksMap;
+
+struct RequestContext
+{
+#ifdef __EMSCRIPTEN__
+    MR::WebRequest::ResponseCallback callback;
+#else
+    std::optional<std::ofstream> output;
+#endif
+};
+
+std::mutex sRequestContextMutex;
+int sRequestContextCounter = 0;
+std::unordered_map<int, RequestContext> sRequestContextMap;
+
 }
 
-extern "C" 
+#ifdef __EMSCRIPTEN__
+extern "C"
 {
-EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool async, int callbackTS )
+EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool async, int ctxId )
 {
     using namespace MR;
     std::string resStr = response;
@@ -33,17 +46,19 @@ EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool asy
     {
         if ( !async )
         {
-            std::unique_lock lock( sCallbackStoreMutex );
-            sCallbacksMap[callbackTS]( resJson );
-            sCallbacksMap.erase( callbackTS );
+            sRequestContextMap.at( ctxId ).callback( resJson );
+
+            std::unique_lock lock( sRequestContextMutex );
+            sRequestContextMap.erase( ctxId );
         }
         else
         {
-            CommandLoop::appendCommand( [resJson,callbackTS] ()
+            CommandLoop::appendCommand( [resJson, ctxId] ()
             {
-                std::unique_lock lock( sCallbackStoreMutex );
-                sCallbacksMap[callbackTS]( resJson );
-                sCallbacksMap.erase( callbackTS );
+                sRequestContextMap.at( ctxId ).callback( resJson );
+
+                std::unique_lock lock( sRequestContextMutex );
+                sRequestContextMap.erase( ctxId );
             } );
         }
     }
@@ -53,6 +68,19 @@ EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool asy
     }
     return 1;
 }
+}
+#else
+namespace
+{
+
+bool downloadFileCallback( std::string data, intptr_t userdata )
+{
+    const auto ctxId = (int)userdata;
+    auto& ctx = sRequestContextMap.at( ctxId );
+    assert( ctx.output.has_value() );
+    *ctx.output << data;
+}
+
 }
 #endif
 
@@ -67,6 +95,7 @@ void WebRequest::clear()
     headers_ = {};
     formData_ = {};
     body_ = {};
+    outputPath_ = {};
 }
 
 void WebRequest::setMethod( Method method )
@@ -99,8 +128,22 @@ void WebRequest::setBody( std::string body )
     body_ = std::move( body );
 }
 
+void WebRequest::setOutputPath( std::string outputPath )
+{
+    outputPath_ = std::move( outputPath );
+}
+
 void WebRequest::send( std::string urlP, const std::string & logName, ResponseCallback callback, bool async /*= true */ )
 {
+    int ctxId;
+    RequestContext* ctx;
+    {
+        std::unique_lock lock( sRequestContextMutex );
+        ctxId = sRequestContextCounter++;
+        auto [it, _] = sRequestContextMap.emplace( ctxId, RequestContext {} );
+        ctx = &it->second;
+    }
+
 #ifndef __EMSCRIPTEN__
     cpr::Timeout tm = cpr::Timeout{ timeout_ };
     cpr::Body body = cpr::Body( body_ );
@@ -118,7 +161,17 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         // TODO: update libcpr to support custom file names
         multipart.parts.emplace_back( formData.name, cpr::File( formData.path ), formData.contentType );
 
-    auto sendLambda = [tm, body, params, headers, multipart, method = method_, url = urlP]()
+    if ( !outputPath_.empty() )
+    {
+        ctx->output = std::ofstream( outputPath_, std::ios::binary );
+        if ( !ctx->output->good() )
+        {
+            spdlog::info( "WebResponse {}: Unable to open output file", logName.c_str() );
+            return;
+        }
+    }
+
+    auto sendLambda = [ctxId, ctx, tm, body, params, headers, multipart, method = method_, url = urlP]()
     {
         cpr::Session session;
         session.SetUrl( url );
@@ -129,6 +182,8 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
             session.SetBody( body );
         else
             session.SetMultipart( multipart );
+        if ( ctx->output.has_value() )
+            session.SetWriteCallback( { &downloadFileCallback, ctxId } );
 
         switch ( method )
         {
@@ -187,7 +242,13 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         web_req_timeout = $0;
         web_req_body = UTF8ToString( $1 );
         web_req_method = $2;
-        }, timeout_, body_.c_str(), int( method_ ) );
+        web_req_output_path = UTF8ToString( $3 );
+    },
+        timeout_,
+        body_.c_str(),
+        int( method_ ),
+        outputPath_.c_str()
+    );
 
     for ( const auto& [key, value] : params_ )
         MAIN_THREAD_EM_ASM( web_req_add_param( UTF8ToString( $0 ), UTF8ToString( $1 ) ), key.c_str(), value.c_str() );
@@ -209,13 +270,9 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
     if ( !urlP.empty() && urlP.back() == '/' )
         urlP = urlP.substr( 0, int( urlP.size() ) - 1 );
 
-    std::unique_lock lock( sCallbackStoreMutex );
-    int callbackTS = sCallbackTS;
-    sCallbacksMap[sCallbackTS] = callback;
-    sCallbackTS++;
-    lock.unlock();
+    ctx->callback = callback;
 
-    MAIN_THREAD_EM_ASM( web_req_send( UTF8ToString( $0 ), $1, $2 ), urlP.c_str(), async, callbackTS );
+    MAIN_THREAD_EM_ASM( web_req_send( UTF8ToString( $0 ), $1, $2 ), urlP.c_str(), async, ctxId );
 #pragma clang diagnostic pop
 #endif
 }

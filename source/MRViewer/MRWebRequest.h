@@ -48,6 +48,9 @@ public:
 
     MRVIEWER_API void setBody( std::string body );
 
+    // prefer to save the response to file
+    MRVIEWER_API void setOutputPath( std::string outputPath );
+
     using ResponseCallback = std::function<void( const Json::Value& response )>;
 
     /// sends request, calling callback on answer, 
@@ -63,6 +66,7 @@ private:
     std::unordered_map<std::string, std::string> headers_;
     std::vector<FormData> formData_;
     std::string body_;
+    std::string outputPath_;
 };
 
 }

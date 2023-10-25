@@ -4,6 +4,7 @@ var web_req_body = "";
 var web_req_formdata = null;
 var web_req_timeout = 10000;
 var web_req_method = 0;
+var web_req_output_path = "";
 
 var web_req_add_header = function (key, value) {
     web_req_headers.push({ key, value });
@@ -30,6 +31,7 @@ var web_req_clear = function () {
     web_req_formdata = null;
     web_req_timeout = 10000;
     web_req_method = 0;
+    web_req_output_path = "";
 }
 
 var web_req_send = function (url, async, callbackTS) {
@@ -54,14 +56,29 @@ var web_req_send = function (url, async, callbackTS) {
     for (var i = 0; i < web_req_headers.length; i++) {
         req.setRequestHeader(web_req_headers[i].key, web_req_headers[i].value);
     }
+    if (web_req_output_path) {
+        // FIXME: unavailable in sync mode
+        req.responseType = 'arraybuffer';
+    }
     req.onloadend = (e) => {
-        var res = {
-            url: urlCpy,
-            code: req.status,
-            text: req.responseText,
-            error: req.statusText
-        };
-        Module.ccall('emsCallResponseCallback', 'number', ['string','bool','number'], [JSON.stringify(res),async,callbackTS]);
+        if (!web_req_output_path) {
+            var res = {
+                url: urlCpy,
+                code: req.status,
+                text: req.responseText,
+                error: req.statusText,
+            };
+            Module.ccall('emsCallResponseCallback', 'number', ['string'], [JSON.stringify(res)]);
+        } else {
+            FS.writeFile(web_req_output_path, new Uint8Array(req.response));
+            var res = {
+                url: urlCpy,
+                code: req.status,
+                text: "",
+                error: req.statusText,
+            };
+            Module.ccall('emsCallResponseCallback', 'number', ['string'], [JSON.stringify(res)]);
+        }
     };
     if (web_req_formdata == null)
         req.send(web_req_body);

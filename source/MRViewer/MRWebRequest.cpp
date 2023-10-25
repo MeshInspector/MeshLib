@@ -8,11 +8,6 @@
 #include <thread>
 #endif
 
-namespace
-{
-bool sRequestReady{true};
-}
-
 #ifdef __EMSCRIPTEN__
 
 namespace
@@ -59,69 +54,55 @@ EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response )
 namespace MR
 {
 
-bool WebRequest::readyForNextRequest()
-{
-    return sRequestReady;
-}
-
 void WebRequest::clear()
 {
-    auto& inst = instance_();
-    inst.method_ = Method::Get;
-    inst.timeout_ = 10000;
-    inst.params_ = {};
-    inst.headers_ = {};
-    inst.body_ = {};
+    method_ = Method::Get;
+    timeout_ = 10000;
+    params_ = {};
+    headers_ = {};
+    body_ = {};
 }
 
 void WebRequest::setMethod( Method method )
 {
-    instance_().method_ = method;
+    method_ = method;
 }
 
 void WebRequest::setTimeout( int timeoutMs )
 {
-    instance_().timeout_ = timeoutMs;
+    timeout_ = timeoutMs;
 }
 
 void WebRequest::setParameters( std::unordered_map<std::string, std::string> parameters )
 {
-    instance_().params_ = std::move( parameters );
+    params_ = std::move( parameters );
 }
 
 void WebRequest::setHeaders( std::unordered_map<std::string, std::string> headers )
 {
-    instance_().headers_ = std::move( headers );
+    headers_ = std::move( headers );
 }
 
 void WebRequest::setBody( std::string body )
 {
-    instance_().body_ = std::move( body );
+    body_ = std::move( body );
 }
 
-bool WebRequest::send( std::string urlP, const std::string & logName, ResponseCallback callback, bool async /*= true */ )
+void WebRequest::send( std::string urlP, const std::string & logName, ResponseCallback callback, bool async /*= true */ )
 {
-    auto& inst = instance_();
-    if ( !sRequestReady )
-    {
-        assert( false );
-        return false;
-    }
-
-    sRequestReady = false;
 #ifndef __EMSCRIPTEN__
-    cpr::Timeout tm = cpr::Timeout{ inst.timeout_ };
-    cpr::Body body = cpr::Body( inst.body_ );
+    cpr::Timeout tm = cpr::Timeout{ timeout_ };
+    cpr::Body body = cpr::Body( body_ );
 
     cpr::Parameters params;
-    for ( const auto& [key, value] : inst.params_ )
+    for ( const auto& [key, value] : params_ )
         params.Add( { key, value } );
 
     cpr::Header headers;
-    for ( const auto& [key, value] : inst.headers_ )
+    for ( const auto& [key, value] : headers_ )
         headers[key] = value;
 
-    auto sendLambda = [tm, body, params, headers, method = inst.method_, url = urlP]()
+    auto sendLambda = [tm, body, params, headers, method = method_, url = urlP]()
     {
         cpr::Response response;
         if ( method == Method::Get )
@@ -130,7 +111,7 @@ bool WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
             response = cpr::Post( cpr::Url( url ), headers, params, body, tm );
         return response;
     };
-    inst.clear();
+    clear();
     if ( !async )
     {
         spdlog::info( "WebRequest  {}", logName.c_str() );
@@ -142,7 +123,6 @@ bool WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         resJson["text"] = res.text;
         resJson["error"] = res.error.message;
         callback( resJson );
-        sRequestReady = true;
     }
     else
     {
@@ -165,7 +145,6 @@ bool WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
             CommandLoop::appendCommand( [callback, resJson] ()
             {
                 callback( resJson );
-                sRequestReady = true;
             }, CommandLoop::StartPosition::AfterPluginInit );
         } );
         requestThread.detach();
@@ -194,13 +173,6 @@ bool WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
     EM_ASM( web_req_send( UTF8ToString( $0 ), $1 ), urlP.c_str(), async );
 #pragma clang diagnostic pop
 #endif
-    return true;
-}
-
-MR::WebRequest& WebRequest::instance_()
-{
-    static WebRequest inst;
-    return inst;
 }
 
 Expected<Json::Value, std::string> parseResponse( const Json::Value& response )

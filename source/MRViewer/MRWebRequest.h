@@ -14,7 +14,6 @@ namespace MR
 MRVIEWER_API Expected<Json::Value, std::string> parseResponse( const Json::Value& response );
 
 // this class is needed to unify cpp and wasm requests
-// can perform only one request at a time
 // should be called from GUI thread
 class MRVIEWER_CLASS WebRequest
 {
@@ -25,23 +24,20 @@ public:
         Post
     };
 
-    // returns true if no other request is executing right now
-    MRVIEWER_API static bool readyForNextRequest();
-
     // clears all request data
-    MRVIEWER_API static void clear();
+    MRVIEWER_API void clear();
 
-    MRVIEWER_API static void setMethod( Method method );
+    MRVIEWER_API void setMethod( Method method );
 
     // sets timeout in milliseconds
-    MRVIEWER_API static void setTimeout( int timeoutMs );
+    MRVIEWER_API void setTimeout( int timeoutMs );
 
     // sets parameters
-    MRVIEWER_API static void setParameters( std::unordered_map<std::string, std::string> parameters );
+    MRVIEWER_API void setParameters( std::unordered_map<std::string, std::string> parameters );
 
-    MRVIEWER_API static void setHeaders( std::unordered_map<std::string, std::string> headers );
+    MRVIEWER_API void setHeaders( std::unordered_map<std::string, std::string> headers );
 
-    MRVIEWER_API static void setBody( std::string body );
+    MRVIEWER_API void setBody( std::string body );
 
     using ResponseCallback = std::function<void( const Json::Value& response )>;
 
@@ -50,19 +46,14 @@ public:
     /// return true if request was sent, false if other request is processing now
     /// note: check `readyForNextRequest` before sending
     /// \param logName name for logging
-    MRVIEWER_API static bool send( std::string url, const std::string & logName, ResponseCallback callback, bool async = true );
+    MRVIEWER_API void send( std::string url, const std::string & logName, ResponseCallback callback, bool async = true );
 
 private:
-    WebRequest() = default;
-    ~WebRequest() = default;
-
     Method method_{ Method::Get };
     int timeout_{ 10000 };
     std::unordered_map<std::string, std::string> params_;
     std::unordered_map<std::string, std::string> headers_;
     std::string body_;
-
-    static WebRequest& instance_();
 };
 
 }

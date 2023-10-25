@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  VCPKG-VERSION: '2023.08.09'
+  VCPKG-VERSION: 'fbba5251f75c149d71737fd3ef09629f41b5d5aa'
   CUDA-VERSION: '11.4.2.47141'
   CUDA-MAJOR: '11'
   CUDA-MINOR: '4'
@@ -169,7 +169,9 @@ jobs:
 
       - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
         working-directory: C:\vcpkg
-        run: git checkout ${{env.VCPKG-VERSION}}
+        run: |
+          git fetch
+          git checkout ${{env.VCPKG-VERSION}}
 
       - name: Restore Vcpkg Cache
         uses: actions/cache@v3

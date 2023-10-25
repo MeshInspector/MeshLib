@@ -34,7 +34,7 @@ var web_req_clear = function () {
     web_req_output_path = "";
 }
 
-var web_req_send = function (url, async, callbackTS) {
+var web_req_send = function (url, async, ctxId) {
     var method;
     var urlCpy = url;
     if (web_req_method == 0)
@@ -68,7 +68,7 @@ var web_req_send = function (url, async, callbackTS) {
                 text: req.responseText,
                 error: req.statusText,
             };
-            Module.ccall('emsCallResponseCallback', 'number', ['string'], [JSON.stringify(res)]);
+            Module.ccall('emsCallResponseCallback', 'number', ['string', 'bool', 'number'], [JSON.stringify(res), async, ctxId]);
         } else {
             FS.writeFile(web_req_output_path, new Uint8Array(req.response));
             var res = {
@@ -77,7 +77,7 @@ var web_req_send = function (url, async, callbackTS) {
                 text: "",
                 error: req.statusText,
             };
-            Module.ccall('emsCallResponseCallback', 'number', ['string'], [JSON.stringify(res)]);
+            Module.ccall('emsCallResponseCallback', 'number', ['string', 'bool', 'number'], [JSON.stringify(res), async, ctxId]);
         }
     };
     if (web_req_formdata == null)

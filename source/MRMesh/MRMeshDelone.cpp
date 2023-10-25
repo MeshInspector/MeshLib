@@ -12,6 +12,8 @@
 namespace MR
 {
 
+constexpr float NoAngleChangeLimit = 2 * PI_F;
+
 bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float maxAngleChange )
 {
     const auto dirABD = dirDblArea( a, b, d );

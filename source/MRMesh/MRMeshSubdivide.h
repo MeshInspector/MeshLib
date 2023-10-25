@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
 #include "MRConstants.h"
+#include <cfloat>
 #include <functional>
 
 namespace MR
@@ -20,8 +21,8 @@ struct SubdivideSettings
     int maxEdgeSplits = 1000;
     /// Improves local mesh triangulation by doing edge flips if it does not make too big surface deviation
     float maxDeviationAfterFlip = 1;
-    /// Improves local mesh triangulation by doing edge flips if it does change dihedral angle more than on this value
-    float maxAngleChangeAfterFlip = 10;
+    /// Improves local mesh triangulation by doing edge flips if it does change dihedral angle more than on this value (in radians)
+    float maxAngleChangeAfterFlip = FLT_MAX;
     /// If this value is less than FLT_MAX then edge flips will
     /// ignore dihedral angle check if one of triangles has aspect ratio more than this value
     float criticalAspectRatioFlip = 1000.0f;

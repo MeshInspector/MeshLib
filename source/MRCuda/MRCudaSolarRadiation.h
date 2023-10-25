@@ -16,7 +16,7 @@ namespace Cuda
 ///                     0s for occluded rays (hitting the terrain) and 1s for the ones which don't hit anything and reach the sky
 [[nodiscard]] MRCUDA_API VertScalars computeSkyViewFactor( const Mesh& terrain,
     const VertCoords& samples, const VertBitSet& validSamples,
-    const std::vector<SkyPatch>& skyPatches,
+    const std::vector<MR::SkyPatch>& skyPatches,
     BitSet* outSkyRays = nullptr );
 
 /// In each valid sample point tests the rays from that point in the sky;
@@ -24,7 +24,7 @@ namespace Cuda
 ///         0s for occluded rays (hitting the terrain) and 1s for the ones which don't hit anything and reach the sky
 [[nodiscard]] MRCUDA_API BitSet findSkyRays( const Mesh& terrain,
     const VertCoords& samples, const VertBitSet& validSamples,
-    const std::vector<SkyPatch>& skyPatches );
+    const std::vector<MR::SkyPatch>& skyPatches );
 }
 
 }

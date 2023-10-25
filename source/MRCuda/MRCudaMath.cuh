@@ -26,6 +26,22 @@ struct Box3
         if ( pt.z < min.z ) min.z = pt.z;
         if ( pt.z > max.z ) max.z = pt.z;
     }
+
+    __device__ float3 operator[]( const int i ) const
+    {
+        assert( i == 0 || i == 1 );
+        return ( i == 0 ) ? min : max;
+    }
+};
+
+struct IntersectionPrecomputes
+{
+    float3 invDir;
+    int maxDimIdxZ = 2;
+    int idxX = 0;
+    int idxY = 1;
+    int3 sign;
+    float Sx, Sy, Sz;
 };
 
 // struct simular to AABBTreeNode<FaceTreeTraits3> with minimal needed functions
@@ -149,6 +165,157 @@ __device__ inline ClosestPointRes closestPointInTriangle( const float3& p, const
     const float v = vb * denom;
     const float w = vc * denom;
     return { { v, w }, a + ab * v + ac * w };
+}
+
+__device__ inline bool rayBoxIntersect( const Box3& box, const float3& rayOrigin, float t0, float t1, const IntersectionPrecomputes& prec )
+{
+    const int3& sign = prec.sign;
+
+    // compare and update x-dimension with t0-t1
+    t1 = min( ( box[sign.x].x - rayOrigin.x ) * prec.invDir.x, t1 );
+    t0 = max( ( box[1 - sign.x].x - rayOrigin.x ) * prec.invDir.x, t0 );
+
+    // compare and update y-dimension with t0-t1
+    t1 = min( ( box[sign.y].y - rayOrigin.y ) * prec.invDir.y, t1 );
+    t0 = max( ( box[1 - sign.y].y - rayOrigin.y ) * prec.invDir.y, t0 );
+
+    // compare and update z-dimension with t0-t1
+    t1 = min( ( box[sign.z].z - rayOrigin.z ) * prec.invDir.z, t1 );
+    t0 = max( ( box[1 - sign.z].z - rayOrigin.z ) * prec.invDir.z, t0 );
+    return t0 <= t1;
+}
+
+__device__ inline float rayTriangleIntersect(const float* oriA, const float* oriB, const float* oriC, const IntersectionPrecomputes& prec)
+{
+    const float Sx = prec.Sx;
+    const float Sy = prec.Sy;
+    const float Sz = prec.Sz;    
+
+    const float Ax = oriA[prec.idxX] - Sx * oriA[prec.maxDimIdxZ];
+    const float Ay = oriA[prec.idxY] - Sy * oriA[prec.maxDimIdxZ];
+    const float Bx = oriB[prec.idxX] - Sx * oriB[prec.maxDimIdxZ];
+    const float By = oriB[prec.idxY] - Sy * oriB[prec.maxDimIdxZ];
+    const float Cx = oriC[prec.idxX] - Sx * oriC[prec.maxDimIdxZ];
+    const float Cy = oriC[prec.idxY] - Sy * oriC[prec.maxDimIdxZ];
+
+    // due to fused multiply-add (FMA): (A*B-A*B) can be different from zero, so we need epsilon
+    const float eps = 1e-8f * max( Ax, Bx, Cx, Ay, By, Cy );    
+
+    float U = Cx * By - Cy * Bx;
+    float V = Ax * Cy - Ay * Cx;
+    float W = Bx * Ay - By * Ax;
+
+    if ( U < -eps || V < -eps || W < -eps )
+    {
+        if ( U > eps || V > eps || W > eps )
+        {
+            // U,V,W have clearly different signs, so the ray misses the triangle
+            return FLT_MIN;
+        }
+    }
+
+    float det = U + V + W;
+    if ( det == 0 )
+        return FLT_MIN;
+
+    const float Az = Sz * oriA[prec.maxDimIdxZ];
+    const float Bz = Sz * oriB[prec.maxDimIdxZ];
+    const float Cz = Sz * oriC[prec.maxDimIdxZ];
+    const float t = U * Az + V * Bz + W * Cz;
+    
+    return t / det;
+}
+
+__device__ inline int rayMeshIntersect( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, const float3& rayOrigin, float rayStart, float rayEnd, const IntersectionPrecomputes& prec )
+{
+    const Box3& box = nodes[0].box;
+    if ( !rayBoxIntersect( box, rayOrigin, rayStart, rayEnd, prec ) )
+        return -1;
+
+    struct SubTask
+    {
+        int n;
+        float rayStart = 0;
+    };
+
+    constexpr int MaxStackSize = 32; // to avoid allocations
+    SubTask subtasks[MaxStackSize];
+    int stackSize = 0;
+
+    auto addSubTask = [&] ( int n, float rayStart )
+    {
+        assert( stackSize < MaxStackSize );
+        subtasks[stackSize++].n = n;
+        subtasks[stackSize++].rayStart = rayStart;
+    };
+
+    addSubTask( 0, rayStart );
+
+    int faceId = -1;
+
+    while ( stackSize > 0 || faceId < 0 )
+    {
+        if ( stackSize >= MaxStackSize ) // max depth exceeded
+        {
+            assert( false );
+            break;
+        }
+
+        const auto s = subtasks[--stackSize];
+
+        if ( s.rayStart < rayEnd )
+        {
+            if ( nodes[s.n].leaf() )
+            {
+                auto face = nodes[s.n].leafId();
+                const auto& vs = faces[face].verts;
+                float3 a = meshPoints[vs[0]];
+                float3 b = meshPoints[vs[1]];
+                float3 c = meshPoints[vs[2]];
+
+                if ( float dist = rayTriangleIntersect( ( float* ) ( &a ), ( float* ) ( &b ), ( float* ) ( &c ), prec ); dist < rayEnd && dist > rayStart )
+                {
+                    faceId = face;
+                    rayEnd = dist;
+                }
+            }
+            else
+            {
+                float lStart = rayStart, lEnd = rayEnd;
+                float rStart = rayStart, rEnd = rayEnd;
+
+                if ( rayBoxIntersect( nodes[s.n].box, rayOrigin, lStart, lEnd, prec ) )
+                {
+                    if ( rayBoxIntersect( nodes[s.n].box, rayOrigin, rStart, rEnd, prec ) )
+                    {
+                        if ( lStart > rStart )
+                        {
+                            addSubTask( nodes[s.n].l, lStart );
+                            addSubTask( nodes[s.n].r, rStart );
+                        }
+                        else
+                        {
+                            addSubTask( nodes[s.n].r, rStart );
+                            addSubTask( nodes[s.n].l, lStart );
+                        }
+                    }
+                    else
+                    {
+                        addSubTask( nodes[s.n].l, lStart );
+                    }
+                }
+                else
+                {
+                    if ( rayBoxIntersect( nodes[s.n].box, rayOrigin, rStart, rEnd, prec ) )
+                    {
+                        addSubTask( nodes[s.n].r, rStart );
+                    }
+                }
+            }
+        }
+    }
+
+    return faceId;
 }
 
 }

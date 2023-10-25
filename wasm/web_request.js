@@ -56,12 +56,13 @@ var web_req_send = function (url, async, ctxId) {
     for (var i = 0; i < web_req_headers.length; i++) {
         req.setRequestHeader(web_req_headers[i].key, web_req_headers[i].value);
     }
-    if (web_req_output_path) {
+    var outputPath = web_req_output_path;
+    if (outputPath) {
         // FIXME: unavailable in sync mode
         req.responseType = 'arraybuffer';
     }
     req.onloadend = (e) => {
-        if (!web_req_output_path) {
+        if (!outputPath) {
             var res = {
                 url: urlCpy,
                 code: req.status,
@@ -70,7 +71,7 @@ var web_req_send = function (url, async, ctxId) {
             };
             Module.ccall('emsCallResponseCallback', 'number', ['string', 'bool', 'number'], [JSON.stringify(res), async, ctxId]);
         } else {
-            FS.writeFile(web_req_output_path, new Uint8Array(req.response));
+            FS.writeFile(outputPath, new Uint8Array(req.response));
             var res = {
                 url: urlCpy,
                 code: req.status,

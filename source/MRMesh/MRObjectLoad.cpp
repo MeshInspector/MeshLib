@@ -23,6 +23,7 @@
 #include "MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRMeshLoadSettings.h"
+#include "MRZip.h"
 
 #ifndef MRMESH_NO_GLTF
 #include "MRGltfSerializer.h"
@@ -286,6 +287,27 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                     *loadWarn += fmt::format( "{}Duplicated vertices count: {}", loadWarn->empty() ? "" : "\n", duplicatedVertexCount );
             }
         }
+        else
+            result = unexpected( res.error() );
+    }
+    else if ( ext == "*.zip" )
+    {
+        auto tmpFolder = UniqueTemporaryFolder( {} );
+        auto contentsFolder = tmpFolder / filename.stem();
+
+        std::ifstream in( filename, std::ifstream::binary );
+        if ( !in )
+            return unexpected( std::string( "Cannot open file for reading " ) + utf8string( filename ) );
+
+        std::error_code ec;
+        std::filesystem::create_directory( contentsFolder, ec );
+        auto resZip = decompressZip( in, contentsFolder );
+        if ( !resZip )
+            return unexpected( "ZIP container error: " + resZip.error() );
+
+        auto res = makeObjectTreeFromFolder( contentsFolder, callback );
+        if ( res )
+            result = std::vector( { std::make_shared<Object>( std::move( *res ) ) }  );
         else
             result = unexpected( res.error() );
     }

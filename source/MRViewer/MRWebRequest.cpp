@@ -85,6 +85,7 @@ bool downloadFileCallback( std::string data, intptr_t userdata )
     auto& ctx = sRequestContextMap.at( ctxId );
     assert( ctx->output.has_value() );
     *ctx->output << data;
+    return true;
 }
 
 }
@@ -162,7 +163,7 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
     for ( const auto& [key, value] : headers_ )
         headers[key] = value;
 
-    cpr::Multipart multipart;
+    cpr::Multipart multipart( {} );
     for ( const auto& formData : formData_ )
         // TODO: update libcpr to support custom file names
         multipart.parts.emplace_back( formData.name, cpr::File( formData.path ), formData.contentType );
@@ -177,12 +178,12 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         }
     }
 
-    auto sendLambda = [ctxId, ctx, tm, body, params, headers, multipart, method = method_, url = urlP]()
+    auto sendLambda = [ctxId, ctx, tm, body, params, headers, multipart, method = method_, url = urlP] () -> cpr::Response
     {
         cpr::Session session;
         session.SetUrl( url );
-        session.SetHeader( header );
-        session.SetParameters( parameters );
+        session.SetHeader( headers );
+        session.SetParameters( params );
         session.SetTimeout( tm );
         if ( multipart.parts.empty() )
             session.SetBody( body );
@@ -199,8 +200,12 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
                 return session.Post();
         }
 
+#ifdef __cpp_lib_unreachable
+        std::unreachable();
+#else
         assert( false );
         return {};
+#endif
     };
     clear();
     if ( !async )

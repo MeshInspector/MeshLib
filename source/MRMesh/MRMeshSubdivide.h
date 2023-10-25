@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
 #include "MRConstants.h"
+#include <cfloat>
 #include <functional>
 
 namespace MR

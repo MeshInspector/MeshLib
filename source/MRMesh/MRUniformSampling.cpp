@@ -12,124 +12,110 @@
 namespace MR
 {
 
-std::optional<VertBitSet> pointUniformSampling( const PointCloud& pointCloud, float distance, const ProgressCallback & cb )
+std::optional<VertBitSet> pointUniformSampling( const PointCloud& pointCloud, const UniformSamplingSettings & settings )
 {
     MR_TIMER
 
-    const auto sz = pointCloud.points.size();
-    const int reportStep = std::min( int( sz / 64 ), 1024 );
-    VertId reportNext = 0_v;
+    auto cb = settings.progress;
 
-    VertBitSet res = pointCloud.validPoints;
-    for ( auto v : res )
-    {
-        if ( cb && v >= reportNext )
-        {
-            if ( !cb( float( v ) / sz ) )
-                return {};
-            reportNext = v + reportStep;
-        }
-
-        findPointsInBall( pointCloud, pointCloud.points[v], distance, [&]( VertId cv, const Vector3f& )
-        {
-            if ( cv > v )
-                res.reset( cv );
-        } );
-    }
-    return res;
-}
-
-std::optional<VertBitSet> pointRegularUniformSampling( const PointCloud& pointCloud, float distance, 
-    const ProgressCallback& cb /*= {} */ )
-{
-    MR_TIMER
-
-    std::vector<VertId> searchQueue = pointCloud.getLexicographicalOrder();
-
-    if ( cb && !cb( 0.3f ) )
-        return {};
-
-    int progressCounter = 0;
-    auto sp = subprogress( cb, 0.3f, 1.0f );
-
-    VertBitSet visited( pointCloud.validPoints.size() );
-    VertBitSet sampled( pointCloud.validPoints.size() );
-    for ( auto v : searchQueue )
-    {
-        if ( sp && !( ( ++progressCounter ) & 0x3ff ) &&
-            !sp( float( progressCounter ) / float( searchQueue.size() ) ) )
-            return {};
-        if ( visited.test( v ) )
-            continue;
-        sampled.set( v );
-        findPointsInBall( pointCloud, pointCloud.points[v], distance, [&] ( VertId cv, const Vector3f& )
-        {
-            visited.set( cv );
-        } );
-    }
-    return sampled;
-}
-
-std::optional<VertBitSet> pointNormalBasedSampling( const PointCloud& pointCloud, float distance, const ProgressCallback& cb /*= {} */ )
-{
-    MR_TIMER
-
-    std::vector<VertId> searchQueue = pointCloud.getLexicographicalOrder();
-
-    if ( cb && !cb( 0.3f ) )
-        return {};
-
+    const VertNormals * pNormals = nullptr;
     std::optional<VertNormals> optNormals;
-    if ( !pointCloud.hasNormals() )
+    if ( settings.minNormalDot > 0 )
     {
-        optNormals = makeUnorientedNormals( pointCloud, findAvgPointsRadius( pointCloud, 48 ), subprogress( cb, 0.3f, 0.6f ) );
-        if ( !optNormals )
-            return {};
+        if ( pointCloud.hasNormals() )
+            pNormals = &pointCloud.normals;
+        else
+        {
+            optNormals = makeUnorientedNormals( pointCloud, findAvgPointsRadius( pointCloud, 48 ), subprogress( cb, 0.0f, 0.3f ) );
+            if ( !optNormals )
+                return {};
+            if ( !reportProgress( cb, 0.3f ) )
+                return {};
+            cb = subprogress( cb, 0.3f, 1.0f );
+            pNormals = &*optNormals;
+        }
     }
 
-    const auto& normals = optNormals ? *optNormals : pointCloud.normals;
-    int progressCounter = 0;
-    auto sp = subprogress( cb, optNormals ? 0.6f : 0.3f, 1.0f );
     VertBitSet visited( pointCloud.validPoints.size() );
     VertBitSet sampled( pointCloud.validPoints.size() );
-    const auto critDistSq = sqr( distance );
-    for ( auto v : searchQueue )
+
+    struct NearVert
     {
-        if ( sp && !( ( ++progressCounter ) & 0x3ff ) &&
-            !sp( float( progressCounter ) / float( searchQueue.size() ) ) )
-            return {};
+        VertId v;
+        float distSq = 0;
+    };
+    std::vector<NearVert> nearVerts;
+
+    auto processOne = [&]( VertId v )
+    {
         if ( visited.test( v ) )
-            continue;
+            return;
         sampled.set( v );
         const auto c = pointCloud.points[v];
-        const auto n = normals[v];
-        findPointsInBall( pointCloud, c, distance, [&] ( VertId u, const Vector3f& )
+        float localMaxDistSq = sqr( settings.distance );
+        findPointsInBall( pointCloud, c, settings.distance, [&] ( VertId u, const Vector3f& pu )
         {
-            const auto dd = 2 * sqr( dot( n, normals[u] ) ) - 1;
-            if ( dd <= 0 )
+            const auto distSq = ( c - pu ).lengthSq();
+            if ( pNormals && std::abs( dot( (*pNormals)[v], (*pNormals)[u] ) ) < settings.minNormalDot )
+            {
+                localMaxDistSq = std::min( localMaxDistSq, distSq );
                 return;
-            if ( ( c - pointCloud.points[u] ).lengthSq() > dd * critDistSq )
-                return;
-            visited.set( u );
+            }
+            nearVerts.push_back( { u, distSq } );
         } );
+        for ( const auto & [ u, distSq ] : nearVerts )
+        {
+            if ( distSq >= localMaxDistSq )
+                continue;
+            visited.set( u );
+        }
+        nearVerts.clear();
+    };
+
+    size_t progressCount = 0;
+    if ( settings.lexicographicalOrder )
+    {
+        std::vector<VertId> searchQueue = pointCloud.getLexicographicalOrder();
+        if ( !reportProgress( cb, 0.3f ) )
+            return {};
+        cb = subprogress( cb, 0.3f, 1.0f );
+        size_t totalCount = searchQueue.size();
+        for ( auto v : searchQueue )
+        {
+            if ( cb && !( ( ++progressCount ) & 0x3ff ) && !cb( float( progressCount ) / float( totalCount ) ) )
+                return {};
+            processOne( v );
+        }
     }
+    else
+    {
+        size_t totalCount = pointCloud.validPoints.count();
+        for ( auto v : pointCloud.validPoints )
+        {
+            if ( cb && !( ( ++progressCount ) & 0x3ff ) && !cb( float( progressCount ) / float( totalCount ) ) )
+                return {};
+            processOne( v );
+        }
+    }
+
     return sampled;
 }
 
-std::optional<PointCloud> makeUniformSampledCloud( const PointCloud& pointCloud, float distance, 
-    const VertNormals * extNormals, const ProgressCallback & cb )
+std::optional<PointCloud> makeUniformSampledCloud( const PointCloud& pointCloud, const UniformSamplingSettings & settings )
 {
     MR_TIMER
 
     std::optional<PointCloud> res;
-    auto optVerts = pointUniformSampling( pointCloud, distance, subprogress( cb, 0.0f, 0.9f ) );
+    auto s = settings;
+    s.progress = subprogress( s.progress, 0.0f, 0.9f );
+    auto optVerts = pointUniformSampling( pointCloud, s );
     if ( !optVerts )
         return res;
 
     res.emplace();
-    res->addPartByMask( pointCloud, *optVerts, {}, extNormals );
+    res->addPartByMask( pointCloud, *optVerts );
 
-    if ( !reportProgress( cb, 1.0f ) )
+    if ( !reportProgress( settings.progress, 1.0f ) )
         res.reset();
     return res;
 }

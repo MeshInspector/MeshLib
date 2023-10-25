@@ -1,6 +1,7 @@
 var web_req_headers = [];
 var web_req_params = [];
 var web_req_body = "";
+var web_req_formdata = null;
 var web_req_timeout = 10000;
 var web_req_method = 0;
 
@@ -12,10 +13,21 @@ var web_req_add_param = function (key, value) {
     web_req_params.push({ key, value });
 }
 
+var web_req_add_formdata = function (path, contentType, name, fileName) {
+    if (!FS.analyzePath(path).exists)
+        return;
+    const content = FS.readFile(path);
+
+    if (web_req_formdata == null)
+        web_req_formdata = new FormData();
+    web_req_formdata.append(name, new Blob(content, {type: contentType}), fileName);
+}
+
 var web_req_clear = function () {
     web_req_headers = [];
     web_req_params = [];
     web_req_body = "";
+    web_req_formdata = null;
     web_req_timeout = 10000;
     web_req_method = 0;
 }
@@ -51,5 +63,8 @@ var web_req_send = function (url, async, callbackTS) {
         };
         Module.ccall('emsCallResponseCallback', 'number', ['string','bool','number'], [JSON.stringify(res),async,callbackTS]);
     };
-    req.send(web_req_body);
+    if (web_req_formdata == null)
+        req.send(web_req_body);
+    else
+        req.send(web_req_formdata);
 }

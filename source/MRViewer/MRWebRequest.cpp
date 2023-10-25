@@ -65,6 +65,7 @@ void WebRequest::clear()
     timeout_ = 10000;
     params_ = {};
     headers_ = {};
+    formData_ = {};
     body_ = {};
 }
 
@@ -88,6 +89,11 @@ void WebRequest::setHeaders( std::unordered_map<std::string, std::string> header
     headers_ = std::move( headers );
 }
 
+void WebRequest::setFormData( std::vector<FormData> formData )
+{
+    formData_ = std::move( formData );
+}
+
 void WebRequest::setBody( std::string body )
 {
     body_ = std::move( body );
@@ -107,14 +113,33 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
     for ( const auto& [key, value] : headers_ )
         headers[key] = value;
 
-    auto sendLambda = [tm, body, params, headers, method = method_, url = urlP]()
+    cpr::Multipart multipart;
+    for ( const auto& formData : formData_ )
+        // TODO: update libcpr to support custom file names
+        multipart.parts.emplace_back( formData.name, cpr::File( formData.path ), formData.contentType );
+
+    auto sendLambda = [tm, body, params, headers, multipart, method = method_, url = urlP]()
     {
-        cpr::Response response;
-        if ( method == Method::Get )
-            response = cpr::Get( cpr::Url( url ), headers, params, body, tm );
+        cpr::Session session;
+        session.SetUrl( url );
+        session.SetHeader( header );
+        session.SetParameters( parameters );
+        session.SetTimeout( tm );
+        if ( multipart.parts.empty() )
+            session.SetBody( body );
         else
-            response = cpr::Post( cpr::Url( url ), headers, params, body, tm );
-        return response;
+            session.SetMultipart( multipart );
+
+        switch ( method )
+        {
+            case Method::Get:
+                return session.Get();
+            case Method::Post:
+                return session.Post();
+        }
+
+        assert( false );
+        return {};
     };
     clear();
     if ( !async )
@@ -163,11 +188,23 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         web_req_body = UTF8ToString( $1 );
         web_req_method = $2;
         }, timeout_, body_.c_str(), int( method_ ) );
+
     for ( const auto& [key, value] : params_ )
         MAIN_THREAD_EM_ASM( web_req_add_param( UTF8ToString( $0 ), UTF8ToString( $1 ) ), key.c_str(), value.c_str() );
     
     for ( const auto& [key, value] : headers_ )
         MAIN_THREAD_EM_ASM( web_req_add_header( UTF8ToString( $0 ), UTF8ToString( $1 ) ), key.c_str(), value.c_str() );
+
+    for ( const auto& formData : formData_ )
+    {
+        MAIN_THREAD_EM_ASM(
+            web_req_add_formdata( UTF8ToString( $0 ), UTF8ToString( $1 ), UTF8ToString( $2 ), UTF8ToString( $3 ) ),
+            formData.path.c_str(),
+            formData.contentType.c_str(),
+            formData.name.c_str(),
+            formData.fileName.c_str()
+        );
+    }
 
     if ( !urlP.empty() && urlP.back() == '/' )
         urlP = urlP.substr( 0, int( urlP.size() ) - 1 );

@@ -14,7 +14,6 @@ namespace MR
 MRVIEWER_API Expected<Json::Value, std::string> parseResponse( const Json::Value& response );
 
 // this class is needed to unify cpp and wasm requests
-// should be called from GUI thread
 class MRVIEWER_CLASS WebRequest
 {
 public:
@@ -44,7 +43,6 @@ public:
     /// sends request, calling callback on answer, 
     /// if async then callback is called in next frame after getting response
     /// return true if request was sent, false if other request is processing now
-    /// note: check `readyForNextRequest` before sending
     /// \param logName name for logging
     MRVIEWER_API void send( std::string url, const std::string & logName, ResponseCallback callback, bool async = true );
 

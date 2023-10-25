@@ -6,12 +6,15 @@
 #ifndef __EMSCRIPTEN__
 #include <cpr/cpr.h>
 #include <thread>
+#else
+#include <mutex>
 #endif
 
 #ifdef __EMSCRIPTEN__
 
 namespace
 {
+std::mutex sCallbackStoreMutex;
 int sCallbackTS = 0;
 std::unordered_map<int,MR::WebRequest::ResponseCallback> sCallbacksMap;
 }
@@ -30,6 +33,7 @@ EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool asy
     {
         if ( !async )
         {
+            std::unique_lock lock( sCallbackStoreMutex );
             sCallbacksMap[callbackTS]( resJson );
             sCallbacksMap.erase( callbackTS );
         }
@@ -37,6 +41,7 @@ EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool asy
         {
             CommandLoop::appendCommand( [resJson,callbackTS] ()
             {
+                std::unique_lock lock( sCallbackStoreMutex );
                 sCallbacksMap[callbackTS]( resJson );
                 sCallbacksMap.erase( callbackTS );
             } );
@@ -163,14 +168,17 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
     
     for ( const auto& [key, value] : headers_ )
         MAIN_THREAD_EM_ASM( web_req_add_header( UTF8ToString( $0 ), UTF8ToString( $1 ) ), key.c_str(), value.c_str() );
-    
-    sCallbacksMap[sCallbackTS] = callback;
 
     if ( !urlP.empty() && urlP.back() == '/' )
         urlP = urlP.substr( 0, int( urlP.size() ) - 1 );
 
-    MAIN_THREAD_EM_ASM( web_req_send( UTF8ToString( $0 ), $1, $2 ), urlP.c_str(), async, sCallbackTS );
+    std::unique_lock lock( sCallbackStoreMutex );
+    int callbackTS = sCallbackTS;
+    sCallbacksMap[sCallbackTS] = callback;
     sCallbackTS++;
+    lock.unlock();
+
+    MAIN_THREAD_EM_ASM( web_req_send( UTF8ToString( $0 ), $1, $2 ), urlP.c_str(), async, callbackTS );
 #pragma clang diagnostic pop
 #endif
 }

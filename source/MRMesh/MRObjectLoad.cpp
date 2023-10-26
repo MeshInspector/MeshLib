@@ -23,6 +23,7 @@
 #include "MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRMeshLoadSettings.h"
+#include "MRZip.h"
 
 #ifndef MRMESH_NO_GLTF
 #include "MRGltfSerializer.h"
@@ -458,8 +459,15 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
     filesTree.path = folder;
 
 
+    // Global variable is not correctly initialized in emscripten build
+    const IOFilters filters = SceneFileFilters | MeshLoad::getFilters() |
+#if !defined(MRMESH_NO_VOXEL)
+        VoxelsLoad::Filters |
+#endif
+        LinesLoad::Filters | PointsLoad::Filters;
+
     std::function<void( FilePathNode& )> fillFilesTree = {};
-    fillFilesTree = [&fillFilesTree] ( FilePathNode& node )
+    fillFilesTree = [&fillFilesTree, &filters] ( FilePathNode& node )
     {
         std::error_code ec;
         for ( auto entry : Directory{ node.path, ec } )
@@ -479,10 +487,10 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
                 if ( ext.empty() )
                     continue;
 
-                if ( std::find_if( allFilters.begin(), allFilters.end(), [&ext] ( const IOFilter& f )
+                if ( std::find_if( filters.begin(), filters.end(), [&ext] ( const IOFilter& f )
                 {
                     return f.extensions.find( ext ) != std::string::npos;
-                } ) != allFilters.end() )
+                } ) != filters.end() )
                     node.files.push_back( { .path = path } );
             }
         }
@@ -598,6 +606,24 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
     return result;
 }
 
+Expected <Object, std::string> makeObjectTreeFromZip( const std::filesystem::path& zipPath, ProgressCallback callback )
+{
+    auto tmpFolder = UniqueTemporaryFolder( {} );
+    auto contentsFolder = tmpFolder / zipPath.stem();
+
+    std::ifstream in( zipPath, std::ifstream::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( zipPath.filename() ) );
+
+    std::error_code ec;
+    std::filesystem::create_directory( contentsFolder, ec );
+    auto resZip = decompressZip( in, contentsFolder );
+    if ( !resZip )
+        return unexpected( "ZIP container error: " + resZip.error() );
+
+    return makeObjectTreeFromFolder( contentsFolder, callback );
+}
+
 Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, ProgressCallback callback )
 {
     auto ext = std::string( "*" ) + utf8string( path.extension().u8string() );
@@ -629,6 +655,13 @@ Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( 
         return MeshLoad::fromSceneStepFile( path, { .callback = callback } );
     }
 #endif
+    else if ( ext == "*.zip" )
+    {
+        auto result = makeObjectTreeFromZip( path, callback );
+        if ( !result )
+            return unexpected( result.error() );
+        return std::make_shared<Object>( std::move( *result ) );
+    }
 
     return res;
 }

@@ -585,7 +585,7 @@ FaceId findSharedFace( const MeshTopology& topology, VertId vid, EdgeId eid, con
     if ( topology.dest( eid ) == vid )
         eid = eid.sym();
 
-    auto mtpVertRep = mtpEdgeRep.inVertex( topology );
+    auto mtpVertRep = mtp.inVertex( topology );
     if ( mtpVertRep.valid() )
     {
         if ( topology.dest( topology.next( eid ) ) == mtpVertRep )
@@ -638,7 +638,7 @@ std::optional<OneMeshIntersection> centralIntersectionForFaces( const Mesh& mesh
     }
     else
     {
-        auto v = optMeshEdgePoint.inVertex( mesh.topology );
+        auto v = curr.inVertex( mesh.topology );
         if ( v ) // curr in vertex
         {
             if ( prev.primitiveId.index() == OneMeshIntersection::Vertex )
@@ -804,7 +804,7 @@ std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const 
 
         auto edgeOp = curr.onEdge( topology );
         assert( edgeOp );
-        auto vid = edgeOp.inVertex( topology );
+        auto vid = curr.inVertex( topology );
         if ( vid.valid() )
             return OneMeshIntersection{vid,mesh.points[vid]};
         if ( topology.dest( topology.prev( edgeOp.e ) ) == pVId )
@@ -876,7 +876,7 @@ std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const 
 
         auto edgeOp = curr.onEdge( topology );
         assert( edgeOp );
-        auto vid = edgeOp.inVertex( topology );
+        auto vid = curr.inVertex( topology );
         if ( vid.valid() )
             return OneMeshIntersection{vid,mesh.points[vid]};
         if ( topology.prev( edgeOp.e ) == pEId || topology.next( edgeOp.e.sym() ) == pEId.sym() )
@@ -898,7 +898,7 @@ OneMeshIntersection intersectionFromMeshTriPoint( const Mesh& mesh, const MeshTr
     auto e = mtp.onEdge( mesh.topology );
     if ( e )
     {
-        auto v = e.inVertex( mesh.topology );
+        auto v = mtp.inVertex( mesh.topology );
         if ( v )
             res.primitiveId = v;
         else
@@ -937,12 +937,14 @@ OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::v
     for ( int i = 0; i < sizeMTP; ++i )
     {
         box.include( mesh.triPoint( meshTriPoints[i] ) );
-        auto e1 = meshTriPoints[i].onEdge( mesh.topology );
-        auto e2 = meshTriPoints[( i + 1 ) % meshTriPoints.size()].onEdge( mesh.topology );
+        const auto& mtp1 = meshTriPoints[i];
+        const auto& mtp2 = meshTriPoints[( i + 1 ) % meshTriPoints.size()];
+        auto e1 = mtp1.onEdge( mesh.topology );
+        auto e2 = mtp2.onEdge( mesh.topology );
         if ( !e1 || !e2 )
             continue;
-        auto v1 = e1.inVertex( mesh.topology );
-        auto v2 = e2.inVertex( mesh.topology );
+        auto v1 = mtp1.inVertex( mesh.topology );
+        auto v2 = mtp2.inVertex( mesh.topology );
         if ( v1.valid() && v2.valid() )
         {
             if ( v1 == v2 )
@@ -991,7 +993,7 @@ OneMeshContour convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::v
                 }
                 else
                 {
-                    auto inVert = onEdge.inVertex( mesh.topology );
+                    auto inVert = meshTriPoints[i].inVertex( mesh.topology );
                     if ( !inVert )
                     {
                         // if mtp is on edge - make sure it is prev(e) or next(e.sym)

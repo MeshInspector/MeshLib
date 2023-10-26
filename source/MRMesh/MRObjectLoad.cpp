@@ -459,8 +459,15 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
     filesTree.path = folder;
 
 
+    // Global variable is not correctly initialized in emscripten build
+    const IOFilters filters = SceneFileFilters | MeshLoad::getFilters() |
+#if !defined(MRMESH_NO_VOXEL)
+        VoxelsLoad::Filters |
+#endif
+        LinesLoad::Filters | PointsLoad::Filters;
+
     std::function<void( FilePathNode& )> fillFilesTree = {};
-    fillFilesTree = [&fillFilesTree] ( FilePathNode& node )
+    fillFilesTree = [&fillFilesTree, &filters] ( FilePathNode& node )
     {
         std::error_code ec;
         for ( auto entry : Directory{ node.path, ec } )
@@ -480,10 +487,10 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
                 if ( ext.empty() )
                     continue;
 
-                if ( std::find_if( allFilters.begin(), allFilters.end(), [&ext] ( const IOFilter& f )
+                if ( std::find_if( filters.begin(), filters.end(), [&ext] ( const IOFilter& f )
                 {
                     return f.extensions.find( ext ) != std::string::npos;
-                } ) != allFilters.end() )
+                } ) != filters.end() )
                     node.files.push_back( { .path = path } );
             }
         }

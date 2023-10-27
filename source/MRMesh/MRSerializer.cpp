@@ -86,7 +86,7 @@ const IOFilters SceneFileFilters =
     {"glTF JSON scene (.gltf)","*.gltf"},
     {"glTF binary scene (.glb)","*.glb"},
 #endif
-#ifdef _WIN32
+#ifndef MRMESH_NO_OPENCASCADE
     { "STEP model (.step,.stp)", "*.step;*.stp" },
 #endif
     { "ZIP files (.zip)","*.zip" },

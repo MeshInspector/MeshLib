@@ -20,6 +20,7 @@ option(MRMESH_NO_XML "Disable XML support (affects 3MF support)" OFF)
 option(MRMESH_NO_E57 "Disable E57 support" OFF)
 option(MRMESH_NO_LAS "Disable LAS/LAZ support" OFF)
 option(MRMESH_NO_GTEST "Disable building Google tests" OFF)
+option(MRMESH_NO_OPENCASCADE "Disable OpenCASCADE usage" OFF)
 
 IF(DEFINED MESHLIB_PYTHON_SUPPORT AND NOT MESHLIB_PYTHON_SUPPORT)
 	set(MRMESH_NO_PYTHON ON)
@@ -37,6 +38,7 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
 set(MRMESH_OPTIONAL_DEPENDENCIES "")
+set(MRMESH_OPTIONAL_INCLUDE_DIRS "")
 
 IF(NOT MRMESH_NO_OPENCTM)
 	list(APPEND MRMESH_OPTIONAL_DEPENDENCIES OpenCTM)
@@ -114,6 +116,21 @@ IF(NOT MR_EMSCRIPTEN)
 			list(APPEND MRMESH_OPTIONAL_DEPENDENCIES gtest)
 		ENDIF()
 	ENDIF()
+
+	IF(NOT MRMESH_NO_OPENCASCADE)
+		find_package(OpenCASCADE REQUIRED
+			COMPONENTS
+				# NOTE: the component order is significant
+				FoundationClasses
+				ModelingData
+				ModelingAlgorithms
+				Visualization
+				ApplicationFramework
+				DataExchange
+		)
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES TKMesh TKSTEP)
+		list(APPEND MRMESH_OPTIONAL_INCLUDE_DIRS ${OpenCASCADE_INCLUDE_DIR})
+	ENDIF()
 ELSE()
 	target_compile_definitions(${PROJECT_NAME}
 		PRIVATE
@@ -177,6 +194,9 @@ IF(APPLE OR MR_EMSCRIPTEN)
 	ENDIF()
 ELSE()
 	find_package(tl-expected REQUIRED)
+	target_include_directories(${PROJECT_NAME} PRIVATE
+		${MRMESH_OPTIONAL_INCLUDE_DIRS}
+	)
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		tl::expected
 		fmt

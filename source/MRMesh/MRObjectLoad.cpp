@@ -649,7 +649,7 @@ Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( 
         return deserializeObjectTreeFromGltf( path, callback );
     }
 #endif
-#ifdef _WIN32
+#ifndef MRMESH_NO_OPENCASCADE
     else if ( ext == "*.step" || ext == "*.stp" )
     {
         return MeshLoad::fromSceneStepFile( path, { .callback = callback } );

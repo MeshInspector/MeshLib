@@ -1,6 +1,5 @@
-#ifdef _WIN32
 #include "MRMeshLoadStep.h"
-
+#ifndef MRMESH_NO_OPENCASCADE
 #include "MRIOFormatsRegistry.h"
 #include "MRMesh.h"
 #include "MRMeshBuilder.h"

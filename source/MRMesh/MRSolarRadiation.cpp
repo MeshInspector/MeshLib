@@ -110,24 +110,18 @@ BitSet findSkyRays( const Mesh & terrain,
         precs.emplace_back( sp.dir );
 
     BitSet res( samples.size() * skyPatches.size() );
-    //BitSetParallelForAll( res, [&]( size_t ray )
-    //{
-    for ( size_t ray = 0; ray < res.size(); ++ray )
-    {
+    BitSetParallelForAll( res, [&]( size_t ray )
+    {    
         const auto div = std::div( std::int64_t( ray ), std::int64_t( skyPatches.size() ) );
         const VertId sample( int( div.quot ) );
         if ( !validSamples.test( sample ) )
-            continue;
+            return;
 
         const auto patch = div.rem;
-        if ( ray == 47125 )
-        {
-            ray = ray;
-        }
         if ( !rayMeshIntersect( terrain, Line3f( samples[sample], skyPatches[patch].dir ), 0, FLT_MAX, &precs[patch], false ) )
             res.set( ray );
-    }
-    //} );
+
+    } );
 
     return res;
 }

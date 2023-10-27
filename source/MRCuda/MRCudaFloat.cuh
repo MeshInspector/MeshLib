@@ -106,11 +106,6 @@ __device__ inline float3 normalize( const float3& v )
     return v * invLen;
 }
 
-/*__device__ inline int3 sign(const float3& v)
-{
-
-}*/
-
 } //namespace Cuda
 
 } //namespace MR

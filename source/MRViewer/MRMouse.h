@@ -15,7 +15,7 @@ enum class MouseButton
 
 enum class MouseMode
 {
-    None, Rotation, Translation, Count
+    None, Rotation, Translation, Roll, Count
 };
 
 inline std::string getMouseModeString( MouseMode mode )
@@ -24,7 +24,8 @@ inline std::string getMouseModeString( MouseMode mode )
     {
         "None",
         "Rotation",
-        "Translation"
+        "Translation",
+        "Roll"
     };
     return names[int( mode )];
 }

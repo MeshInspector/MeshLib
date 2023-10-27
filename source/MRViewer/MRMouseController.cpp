@@ -146,7 +146,7 @@ bool MouseController::mouseDown_( MouseButton btn, int mod )
         return false;
 
     currentMode_ = modIt->second;
-    if ( currentMode_ == MouseMode::Rotation )
+    if ( currentMode_ == MouseMode::Rotation || currentMode_ == MouseMode::Roll )
         viewer.viewport().setRotation( true );
     else if ( currentMode_ == MouseMode::Translation )
         downTranslation_ = viewer.viewport().getParameters().cameraTranslation;
@@ -166,7 +166,7 @@ bool MouseController::preMouseUp_( MouseButton btn, int )
     if ( keyToMouseAndMod( btnIt->second ).btn != btn )
         return false;
 
-    if ( currentMode_ == MouseMode::Rotation )
+    if ( currentMode_ == MouseMode::Rotation || currentMode_ == MouseMode::Roll )
         getViewerInstance().viewport().setRotation( false );
 
     currentMode_ = MouseMode::None;
@@ -195,6 +195,18 @@ bool MouseController::preMouseMove_( int x, int y)
             quat.inverse() *
             Quaternionf( Vector3f{ 0,1,0 }, angle.x ) *
             Quaternionf( Vector3f{ 1,0,0 }, angle.y ) *
+            quat
+            ).normalized();
+        xf = AffineXf3f::linear( Matrix3f( quat ) );
+        break;
+    }
+    case MR::MouseMode::Roll:
+    {
+        auto quat = viewport.getParameters().cameraTrackballAngle;
+        auto angle = PI_F * ( currentMousePos_.x - prevMousePos_.x ) / viewer.framebufferSize.x * 4.0f;
+        quat = (
+            quat.inverse() *
+            Quaternionf( Vector3f{ 0,0,1 }, angle ) *
             quat
             ).normalized();
         xf = AffineXf3f::linear( Matrix3f( quat ) );

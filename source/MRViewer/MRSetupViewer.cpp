@@ -9,6 +9,7 @@
 #include "MRMesh/MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
+#include "MRGladGlfw.h"
 #if _WIN32
 #include <Windows.h>
 #else
@@ -58,6 +59,8 @@ void ViewerSetup::setupConfiguration( Viewer* viewer ) const
         rotKey = { MouseButton::Left,0 };
 #endif
     viewer->mouseController.setMouseControl( rotKey, MouseMode::Rotation );
+    rotKey.mod = GLFW_MOD_CONTROL;
+    viewer->mouseController.setMouseControl( rotKey, MouseMode::Roll );
     viewer->getGlobalHistoryStore()->setMemoryLimit( memLimit );
 }
 

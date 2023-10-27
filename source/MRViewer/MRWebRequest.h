@@ -55,7 +55,7 @@ public:
 
     /// sends request, calling callback on answer, 
     /// if async then callback is called in next frame after getting response
-    /// return true if request was sent, false if other request is processing now
+    /// NOTE: downloading a binary file in synchronous mode is forbidden by JavaScript
     /// \param logName name for logging
     MRVIEWER_API void send( std::string url, const std::string & logName, ResponseCallback callback, bool async = true );
 

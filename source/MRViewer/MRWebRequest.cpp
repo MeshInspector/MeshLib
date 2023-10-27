@@ -10,7 +10,6 @@
 #include <optional>
 #include <thread>
 #else
-#include <condition_variable>
 #include <mutex>
 #endif
 
@@ -21,7 +20,6 @@ struct RequestContext
 {
 #ifdef __EMSCRIPTEN__
     MR::WebRequest::ResponseCallback callback;
-    std::optional<std::condition_variable> cv;
 #else
     std::optional<std::ofstream> output;
 #endif
@@ -50,8 +48,6 @@ EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool asy
         {
             auto& ctx = sRequestContextMap.at( ctxId );
             ctx->callback( resJson );
-            assert( ctx.cv.has_value() );
-            ctx->cv->notify_one();
 
             std::unique_lock lock( sRequestContextMutex );
             sRequestContextMap.erase( ctxId );
@@ -253,12 +249,10 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         web_req_timeout = $0;
         web_req_body = UTF8ToString( $1 );
         web_req_method = $2;
-        web_req_output_path = UTF8ToString( $3 );
     },
         timeout_,
         body_.c_str(),
-        int( method_ ),
-        outputPath_.c_str()
+        int( method_ )
     );
 
     for ( const auto& [key, value] : params_ )
@@ -283,15 +277,10 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
 
     ctx->callback = callback;
 
-    MAIN_THREAD_EM_ASM( web_req_send( UTF8ToString( $0 ), $1, $2 ), urlP.c_str(), async, ctxId );
-
-    if ( !async )
-    {
-        ctx->cv.emplace();
-        std::mutex mutex;
-        std::unique_lock lock( mutex );
-        ctx->cv->wait( lock );
-    }
+    if ( outputPath_.empty() )
+        MAIN_THREAD_EM_ASM( web_req_send( UTF8ToString( $0 ), $1, $2 ), urlP.c_str(), async, ctxId );
+    else
+        MAIN_THREAD_EM_ASM( web_req_async_download( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ), urlP.c_str(), outputPath_.c_str(), ctxId );
 #pragma clang diagnostic pop
 #endif
 }

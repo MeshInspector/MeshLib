@@ -209,7 +209,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadMesh, [] ( pybind11::module_& m )
         def_readwrite( "colors", &MR::MeshLoadSettings::colors ).
         def_readwrite( "skippedFaceCount", &MR::MeshLoadSettings::skippedFaceCount ).
         def_readwrite( "duplicatedVertexCount", &MR::MeshLoadSettings::duplicatedVertexCount ).
-        def_readwrite( "callback", &MR::MeshLoadSettings::callback );
+        def_readwrite( "callback", &MR::MeshLoadSettings::callback ).
+        def_readwrite( "xf", &MR::MeshLoadSettings::xf );
 
     m.def( "loadMesh",
         MR::decorateExpected( ( Expected<MR::Mesh, std::string>( * )( const std::filesystem::path&, const MeshLoadSettings& ) )& MR::MeshLoad::fromAnySupportedFormat),

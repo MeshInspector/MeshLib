@@ -91,13 +91,15 @@ VoidOrErrStr parseTextCoordinate( const std::string_view& str, Vector3<T>& v )
 {
     using namespace boost::spirit::x3;
 
+    constexpr real_parser<T> floatT = {};
+
     int i = 0;
     auto coord = [&] ( auto& ctx ) { v[i++] = _attr( ctx ); };
 
     bool r = phrase_parse(
         str.begin(),
         str.end(),
-        ( real_parser<T>{} [coord] >> real_parser<T>{} [coord] >> real_parser<T>{} [coord] ),
+        ( floatT[coord] >> floatT[coord] >> floatT[coord] ),
         ascii::space | ascii::punct
     );
     if ( !r )
@@ -106,9 +108,12 @@ VoidOrErrStr parseTextCoordinate( const std::string_view& str, Vector3<T>& v )
     return {};
 }
 
-VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3f& v )
+template <typename T>
+VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3<T>& v )
 {
     using namespace boost::spirit::x3;
+
+    constexpr real_parser<T> floatT = {};
 
     int i = 0;
     auto coord = [&] ( auto& ctx ) { v[i++] = _attr( ctx ); };
@@ -116,7 +121,7 @@ VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3f& v )
     bool r = phrase_parse(
         str.begin(),
         str.end(),
-        ( 'v' >> float_[coord] >> float_[coord] >> float_[coord] ),
+        ( 'v' >> floatT[coord] >> floatT[coord] >> floatT[coord] ),
         ascii::space
     );
     if ( !r )
@@ -128,8 +133,9 @@ VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3f& v )
 template<typename T>
 VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Color& c )
 {
-
     using namespace boost::spirit::x3;
+
+    constexpr real_parser<T> floatT = {};
 
     int i = 0;
     auto coord = [&] ( auto& ctx ){ v[i++] = _attr( ctx ); };
@@ -142,7 +148,7 @@ VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Col
         str.begin(),
         str.end(),
         ( 
-            real_parser<T>{} [coord] >> real_parser<T>{} [coord] >> real_parser<T>{} [coord] >> 
+            floatT[coord] >> floatT[coord] >> floatT[coord] >>
             double_[skip_pos] >> 
             uint8_[col] >> uint8_[col] >> uint8_[col] ),
         ascii::space
@@ -157,6 +163,8 @@ template<typename T>
 VoidOrErrStr parseSingleNumber( const std::string_view& str, T& num )
 {
     using namespace boost::spirit::x3;
+
+    constexpr real_parser<T> floatT = {};
 
     auto coord = [&] ( auto& ctx ) { num = _attr( ctx ); };
 
@@ -176,7 +184,7 @@ VoidOrErrStr parseSingleNumber( const std::string_view& str, T& num )
         r = phrase_parse(
             str.begin(),
             str.end(),
-            ( real_parser<T>{}[coord] ),
+            ( floatT[coord] ),
             ascii::space
         );
     }
@@ -195,5 +203,8 @@ template VoidOrErrStr parsePtsCoordinate<double>( const std::string_view& str, V
 
 template VoidOrErrStr parseTextCoordinate<float>( const std::string_view& str, Vector3f& v );
 template VoidOrErrStr parseTextCoordinate<double>( const std::string_view& str, Vector3d& v );
+
+template VoidOrErrStr parseObjCoordinate<float>( const std::string_view& str, Vector3f& v );
+template VoidOrErrStr parseObjCoordinate<double>( const std::string_view& str, Vector3d& v );
 
 }

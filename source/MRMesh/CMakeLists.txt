@@ -173,6 +173,9 @@ IF(APPLE OR MR_EMSCRIPTEN)
 	IF (APPLE)
         find_library(COCOA_LIBRARY Cocoa ONLY)
 	    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
+		target_include_directories(${PROJECT_NAME} PRIVATE
+			${MRMESH_OPTIONAL_INCLUDE_DIRS}
+		)
 		target_link_libraries(${PROJECT_NAME} PRIVATE
 		    spdlog
 		    zip

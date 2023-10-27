@@ -22,33 +22,23 @@ static void append( std::vector<EdgeId> & to, const std::vector<EdgeId> & with )
         to.push_back( e );
 }
 
-// the function first defines the plane via the points mid(e0) and mid(e1) and parallel to dir,
-// with positive half-space to the left from the line mid(e0)-mid(e1) if look from dir;
-// then it constructs a path from "positive" end-point of e0 to "positive" end-point of e1;
-// and returns the path appended with e1 or e1.sym that goes from positive to negative side of the plane
-static EdgePath positivePath(
-    const Mesh & mesh,
+// Given
+//   1. a mesh
+//   2. a plane
+//   3. two mesh edges intersected by the plane, with dest(e0) and org(e1) in the plane's positive part of space
+//   4. edge metric
+// constructs the path from dest(e0) to org(e1) with minimal summed metric;
+// returns the path found appended with e1
+static EdgePath smallestPathInPositiveHalfspace(
+    const Mesh & mesh, const Plane3f & plane,
     EdgeId e0, EdgeId e1,
-    const EdgeMetric & edgeMetric,
-    const Vector3f & dir
-)
+    const EdgeMetric & edgeMetric )
 {
-    const auto p0 = mesh.edgePoint( e0, 0.5f );
-    const auto p1 = mesh.edgePoint( e1, 0.5f );
-    const auto midPlane = getPlaneFromTwoPointsAndDir( p0, p1, dir );
+    assert( plane.distance( mesh.orgPnt( e0 ) ) <= 0 );
+    assert( plane.distance( mesh.destPnt( e0 ) ) >= 0 );
 
-    if ( midPlane.distance( mesh.orgPnt( e0 ) ) > 0 )
-        e0 = e0.sym();
-    assert( midPlane.distance( mesh.orgPnt( e0 ) ) <= 0 );
-    assert( midPlane.distance( mesh.destPnt( e0 ) ) >= 0 );
-
-    if ( midPlane.distance( mesh.orgPnt( e1 ) ) < 0 )
-        e1 = e1.sym();
-    assert( midPlane.distance( mesh.orgPnt( e1 ) ) >= 0 );
-    assert( midPlane.distance( mesh.destPnt( e1 ) ) <= 0 );
-
-    const VertId start = mesh.topology.dest( e0 );
-    const VertId finish = mesh.topology.org( e1 );
+    assert( plane.distance( mesh.orgPnt( e1 ) ) >= 0 );
+    assert( plane.distance( mesh.destPnt( e1 ) ) <= 0 );
 
     auto planeMetric = [&]( EdgeId e ) -> float
     {
@@ -56,12 +46,12 @@ static EdgePath positivePath(
         const auto d = mesh.destPnt( e );
 
         constexpr float PenaltyFactor = 128.0f;
-        if ( midPlane.distance( o ) < 0 || midPlane.distance( d ) < 0 )
+        if ( plane.distance( o ) < 0 || plane.distance( d ) < 0 )
             return PenaltyFactor * edgeMetric( e );
 
         return edgeMetric( e );
     };
-    EdgePath res = buildSmallestMetricPathBiDir( mesh.topology, planeMetric, start, finish );
+    EdgePath res = buildSmallestMetricPathBiDir( mesh.topology, planeMetric, mesh.topology.dest( e0 ), mesh.topology.org( e1 ) );
     res.push_back( e1 );
 
     assert( isEdgePath( mesh.topology, res ) );
@@ -76,26 +66,22 @@ EdgeLoop surroundingContour(
 )
 {
     MR_TIMER
-    assert( includeEdges.size() == 2 || includeEdges.size() == 3 );
+    assert( includeEdges.size() == 2 );
 
-    if ( includeEdges.size() == 3 )
-    {
-        std::vector<Vector3f> p( 3 );
-        for ( int i = 0; i < 3; ++i )
-            p[i] = mesh.edgePoint( includeEdges[i], 0.5f );
+    auto e0 = includeEdges[0];
+    auto e1 = includeEdges[1];
+    const auto p0 = mesh.edgePoint( e0, 0.5f );
+    const auto p1 = mesh.edgePoint( e1, 0.5f );
+    const auto midPlane = getPlaneFromTwoPointsAndDir( p0, p1, dir );
 
-        const auto midPlane01 = getPlaneFromTwoPointsAndDir( p[0], p[1], dir );
-        if ( midPlane01.distance( p[2] ) > 0 )
-        {
-            std::swap( includeEdges[0], includeEdges[1] );
-            std::swap( p[0], p[1] );
-        }
-    }
+    if ( midPlane.distance( mesh.orgPnt( e0 ) ) > 0 )
+        e0 = e0.sym();
 
-    EdgeLoop res;
-    for ( int i = 0; i + 1 < includeEdges.size(); ++i )
-        append( res, positivePath( mesh, includeEdges[i], includeEdges[i + 1], edgeMetric, dir ) );
-    append( res, positivePath( mesh, includeEdges.back(), includeEdges[0], edgeMetric, dir ) );
+    if ( midPlane.distance( mesh.orgPnt( e1 ) ) < 0 )
+        e1 = e1.sym();
+
+    auto res = smallestPathInPositiveHalfspace( mesh, midPlane, e0, e1, edgeMetric );
+    append( res, smallestPathInPositiveHalfspace( mesh, -midPlane, e1, e0, edgeMetric ) );
     assert( isEdgeLoop( mesh.topology, res ) );
     return res;
 }

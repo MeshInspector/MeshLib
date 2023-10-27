@@ -36,7 +36,20 @@ public:
 
     MRVIEWER_API void setHeaders( std::unordered_map<std::string, std::string> headers );
 
+    // sets payload in multipart format
+    struct FormData
+    {
+        std::string path;
+        std::string contentType;
+        std::string name;
+        std::string fileName;
+    };
+    MRVIEWER_API void setFormData( std::vector<FormData> formData );
+
     MRVIEWER_API void setBody( std::string body );
+
+    // prefer to save the response to file
+    MRVIEWER_API void setOutputPath( std::string outputPath );
 
     using ResponseCallback = std::function<void( const Json::Value& response )>;
 
@@ -51,7 +64,9 @@ private:
     int timeout_{ 10000 };
     std::unordered_map<std::string, std::string> params_;
     std::unordered_map<std::string, std::string> headers_;
+    std::vector<FormData> formData_;
     std::string body_;
+    std::string outputPath_;
 };
 
 }

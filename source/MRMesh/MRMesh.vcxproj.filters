@@ -1092,6 +1092,9 @@
     <ClInclude Include="MRCloudPartMapping.h">
       <Filter>Source Files\PointCloud</Filter>
     </ClInclude>
+    <ClInclude Include="MREnumNeighbours.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1816,6 +1819,9 @@
     </ClCompile>
     <ClCompile Include="MRImproveSampling.cpp">
       <Filter>Source Files\PointCloud</Filter>
+    </ClCompile>
+    <ClCompile Include="MREnumNeighbours.cpp">
+      <Filter>Source Files\Mesh</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -141,6 +141,7 @@ ELSE()
 			MRMESH_NO_JPEG
 			MRMESH_NO_VOXEL
 			MRMESH_NO_E57
+			MRMESH_NO_OPENCASCADE
 	)
 
 	IF(NOT MRMESH_NO_LAS)
@@ -187,12 +188,15 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		    ${COCOA_LIBRARY}
 		)
 	ELSE()
+		target_include_directories(${PROJECT_NAME} PRIVATE
+			${MRMESH_OPTIONAL_INCLUDE_DIRS}
+		)
 	    target_link_libraries(${PROJECT_NAME} PRIVATE
 	        zip
 	        freetype
 	        jsoncpp
 	        tbb
-		${MRMESH_OPTIONAL_DEPENDENCIES}
+			${MRMESH_OPTIONAL_DEPENDENCIES}
 	    )
 	ENDIF()
 ELSE()

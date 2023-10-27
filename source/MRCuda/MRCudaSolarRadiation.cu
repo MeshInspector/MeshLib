@@ -21,7 +21,7 @@ __global__ void rayKernel( const Node3* nodes, const float3* meshPoints, const F
     if ( blockIndex >= resBlockCount )
         return;
 
-    const size_t blockStart = ( blockIndex << 6 );
+    const size_t blockStart = ( blockIndex << 6 ); // use bit shift instead of multiplying on 64
     const size_t blockEnd = ( blockIndex == resBlockCount - 1) ? ( sampleCount * precCount ) : ( ( blockIndex + 1 ) << 6 );
 
     uint64_t currentBit = 1;

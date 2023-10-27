@@ -3,9 +3,11 @@
 #include "MRVector3.h"
 #include "MRColor.h"
 
-
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/spirit/home/x3.hpp>
+
+// helper macro to make code cleaner
+#define floatT real_parser<T>{}
 
 namespace MR
 {
@@ -91,8 +93,6 @@ VoidOrErrStr parseTextCoordinate( const std::string_view& str, Vector3<T>& v )
 {
     using namespace boost::spirit::x3;
 
-    constexpr real_parser<T> floatT = {};
-
     int i = 0;
     auto coord = [&] ( auto& ctx ) { v[i++] = _attr( ctx ); };
 
@@ -113,8 +113,6 @@ VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3<T>& v )
 {
     using namespace boost::spirit::x3;
 
-    constexpr real_parser<T> floatT = {};
-
     int i = 0;
     auto coord = [&] ( auto& ctx ) { v[i++] = _attr( ctx ); };
 
@@ -134,8 +132,6 @@ template<typename T>
 VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Color& c )
 {
     using namespace boost::spirit::x3;
-
-    constexpr real_parser<T> floatT = {};
 
     int i = 0;
     auto coord = [&] ( auto& ctx ){ v[i++] = _attr( ctx ); };
@@ -163,8 +159,6 @@ template<typename T>
 VoidOrErrStr parseSingleNumber( const std::string_view& str, T& num )
 {
     using namespace boost::spirit::x3;
-
-    constexpr real_parser<T> floatT = {};
 
     auto coord = [&] ( auto& ctx ) { num = _attr( ctx ); };
 

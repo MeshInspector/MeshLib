@@ -13,11 +13,11 @@ struct Box3
     float3 min;
     float3 max;
 
-    __host__ __device__ float3 getBoxClosestPointTo( const float3& pt ) const
+    __device__ float3 getBoxClosestPointTo( const float3& pt ) const
     {
         return { clamp( pt.x, min.x, max.x ), clamp( pt.y, min.y, max.y ), clamp( pt.z, min.z, max.z ) };
     }
-    __host__ __device__ void include( const float3& pt )
+    __device__ void include( const float3& pt )
     {
         if ( pt.x < min.x ) min.x = pt.x;
         if ( pt.x > max.x ) max.x = pt.x;
@@ -27,7 +27,7 @@ struct Box3
         if ( pt.z > max.z ) max.z = pt.z;
     }
 
-    __host__ __device__ float3 operator[]( const int i ) const
+    __device__ float3 operator[]( const int i ) const
     {
         assert( i == 0 || i == 1 );
         return ( i == 0 ) ? min : max;
@@ -50,11 +50,11 @@ struct Node3
     Box3 box;
     int l, r;
 
-    __host__ __device__ bool leaf() const
+    __device__ bool leaf() const
     {
         return r < 0;
     }
-    __host__ __device__ int leafId() const
+    __device__ int leafId() const
     {
         return l;
     }
@@ -167,7 +167,7 @@ __device__ inline ClosestPointRes closestPointInTriangle( const float3& p, const
     return { { v, w }, a + ab * v + ac * w };
 }
 
-__host__ __device__ inline bool rayBoxIntersect( const Box3& box, const float3& rayOrigin, float& t0, float& t1, const IntersectionPrecomputes& prec )
+__device__ inline bool rayBoxIntersect( const Box3& box, const float3& rayOrigin, float& t0, float& t1, const IntersectionPrecomputes& prec )
 {
     const int3& sign = prec.sign;
 
@@ -185,7 +185,7 @@ __host__ __device__ inline bool rayBoxIntersect( const Box3& box, const float3& 
     return t0 <= t1;
 }
 
-__host__ __device__ inline float rayTriangleIntersect(const float* oriA, const float* oriB, const float* oriC, const IntersectionPrecomputes& prec)
+__device__ inline float rayTriangleIntersect(const float* oriA, const float* oriB, const float* oriC, const IntersectionPrecomputes& prec)
 {
     const float Sx = prec.Sx;
     const float Sy = prec.Sy;
@@ -226,7 +226,7 @@ __host__ __device__ inline float rayTriangleIntersect(const float* oriA, const f
     return t / det;
 }
 
-__host__ __device__ inline int rayMeshIntersect( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, const float3& rayOrigin, float rayStart, float rayEnd, const IntersectionPrecomputes& prec )
+__device__ inline int rayMeshIntersect( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, const float3& rayOrigin, float rayStart, float rayEnd, const IntersectionPrecomputes& prec )
 {
     const Box3& box = nodes[0].box;
     if ( !rayBoxIntersect( box, rayOrigin, rayStart, rayEnd, prec ) )
@@ -319,12 +319,12 @@ __host__ __device__ inline int rayMeshIntersect( const Node3* nodes, const float
     return faceId;
 }
 
-__host__ __device__ inline bool testBit( const uint64_t* bitSet, const size_t bitNumber )
+__device__ inline bool testBit( const uint64_t* bitSet, const size_t bitNumber )
 {
     return bool( ( bitSet[bitNumber / 64] >> ( bitNumber % 64 ) ) & 1 );
 }
 
-__host__ __device__ inline void setBit( uint64_t* bitSet, const size_t bitNumber )
+__device__ inline void setBit( uint64_t* bitSet, const size_t bitNumber )
 {
     bitSet[bitNumber / 64] += ( 1ull << ( bitNumber % 64 ) );
 }

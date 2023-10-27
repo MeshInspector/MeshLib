@@ -9,8 +9,6 @@ namespace MR
 namespace Cuda
 {
 
-
-
 __global__ void rayKernel( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, const float3* samples, const uint64_t* validSamples, const IntersectionPrecomputes* precs, uint64_t* res, const size_t resBlockCount, const size_t sampleCount, const size_t precCount )
 {
     if ( resBlockCount == 0 )

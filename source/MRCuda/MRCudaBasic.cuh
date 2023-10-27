@@ -71,6 +71,7 @@ private:
     size_t size_{ 0 };
 };
 
+using DynamicArrayU64 = MR::Cuda::DynamicArray<uint64_t>;
 using DynamicArrayU16 = MR::Cuda::DynamicArray<uint16_t>;
 using DynamicArrayF = MR::Cuda::DynamicArray<float>;
 

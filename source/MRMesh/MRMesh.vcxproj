@@ -14,6 +14,7 @@
     <ClInclude Include="MRChangeColoringType.h" />
     <ClInclude Include="MRChangeColoringActions.h" />
     <ClInclude Include="MRCloudPartMapping.h" />
+    <ClInclude Include="MREnumNeighbours.h" />
     <ClInclude Include="MRFewSmallest.h" />
     <ClInclude Include="MRImproveSampling.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />
@@ -387,6 +388,7 @@
     <ClCompile Include="MREdgePaths.cpp" />
     <ClCompile Include="MREmbeddedPython.cpp" />
     <ClCompile Include="MREmbedTerrainStructure.cpp" />
+    <ClCompile Include="MREnumNeighbours.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />
     <ClCompile Include="MRExpandShrink.cpp" />
     <ClCompile Include="MRExpected.cpp" />

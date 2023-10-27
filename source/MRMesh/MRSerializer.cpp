@@ -89,6 +89,7 @@ const IOFilters SceneFileFilters =
 #ifdef _WIN32
     { "STEP model (.step,.stp)", "*.step;*.stp" },
 #endif
+    { "ZIP files (.zip)","*.zip" },
 };
 
 Expected<Json::Value, std::string> deserializeJsonValue( const std::string& str )

@@ -33,6 +33,11 @@ MRMESH_API MeshStreamLoader getMeshStreamLoader( IOFilter filter );
 /// Gets all registered filters
 MRMESH_API IOFilters getFilters();
 
+/// Add or override a loader in the registry
+MRMESH_API void setMeshLoader( IOFilter filter, MeshLoader loader );
+/// Add or override a loader in the registry
+MRMESH_API void setMeshStreamLoader( IOFilter filter, MeshStreamLoader streamLoader );
+
 /** 
  * \brief Register filter with loader function
  * \details loader function signature: Expected<Mesh, std::string> fromFormat( const std::filesystem::path& path, std::vector<Color>* colors );

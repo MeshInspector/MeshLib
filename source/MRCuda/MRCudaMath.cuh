@@ -2,6 +2,7 @@
 #include "exports.h"
 #include "cuda_runtime.h"
 #include "MRCudaFloat.cuh"
+#include <float.h>
 
 namespace MR
 {

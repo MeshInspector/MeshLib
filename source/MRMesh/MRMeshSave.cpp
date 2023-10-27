@@ -77,7 +77,7 @@ VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, ProgressCallback callba
     for ( VertId i{ 0 }; i < maxPoints; ++i )
     {
         auto p = mesh.points[i];
-        out << p.x << ' ' << p.y << ' ' << p.z << '\n';
+        out << fmt::format( "{} {} {}\n", p.x, p.y, p.z );
         if ( callback && !( i & 0x3FF ) && !callback( float( i ) / maxPoints * 0.5f ) )
             return unexpected( std::string( "Saving canceled" ) );
     }
@@ -96,7 +96,7 @@ VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, ProgressCallback callba
         VertId a, b, c;
         mesh.topology.getLeftTriVerts( e, a, b, c );
         assert( a.valid() && b.valid() && c.valid() );
-        out << "3 " << a << ' ' << b << ' ' << c << '\n';
+        out << fmt::format( "3 {} {} {}\n", (int)a, (int)b, (int)c );
     }
 
     if ( !out )
@@ -129,7 +129,7 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const AffineXf3f & xf
     for ( VertId i{ 0 }; i <= lastValidPoint; ++i )
     {
         auto p = xf( mesh.points[i] );
-        out << "v " << p.x << ' ' << p.y << ' ' << p.z << '\n';
+        out << fmt::format( "v {} {} {}\n", p.x, p.y, p.z );
         if ( callback && !( i & 0x3FF ) && !callback( float( i ) / lastValidPoint * 0.5f ) )
             return unexpected( std::string( "Saving canceled" ) );
     }
@@ -147,7 +147,7 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const AffineXf3f & xf
         VertId a, b, c;
         mesh.topology.getLeftTriVerts( e, a, b, c );
         assert( a.valid() && b.valid() && c.valid() );
-        out << "f " << a + firstVertId << ' ' << b + firstVertId << ' ' << c + firstVertId << '\n';
+        out << fmt::format( "f {} {} {}\n", int( a + firstVertId ), int( b + firstVertId ), int( c + firstVertId ) );
     }
 
     if ( !out )
@@ -254,13 +254,11 @@ VoidOrErrStr toAsciiStl( const Mesh& mesh, std::ostream& out, ProgressCallback c
         const Vector3f& bp = mesh.points[b];
         const Vector3f& cp = mesh.points[c];
         Vector3f normal = cross( bp - ap, cp - ap ).normalized();
-        std::string s = fmt::format( "{} {} {}", normal.x, normal.y, normal.z );
-        out << "facet normal " << s << "\n";
+        out << "" << fmt::format( "facet normal {} {} {}\n", normal.x, normal.y, normal.z );
         out << "outer loop\n";
         for ( const Vector3f& p : { ap, bp, cp } )
         {
-            s = fmt::format( "{} {} {}", p.x, p.y, p.z );
-            out << "vertex " << s << "\n";
+            out << fmt::format( "vertex {} {} {}\n", p.x, p.y, p.z );
         }
         out << "endloop\n";
         out << "endfacet\n";

@@ -5,6 +5,7 @@
 #include "MRStringConvert.h"
 #include "MRStreamOperators.h"
 #include "MRProgressReadWrite.h"
+#include "MRPch/MRSpdlog.h"
 #include <fstream>
 
 #ifndef MRMESH_NO_OPENCTM
@@ -45,11 +46,11 @@ VoidOrErrStr toAsc( const PointCloud& cloud, std::ostream& out, const Settings& 
         if ( settings.saveValidOnly && !cloud.validPoints.test( v ) )
             continue;
         const auto & p = cloud.points[v];
-        out << p.x << ' ' << p.y << ' ' << p.z;
+        out << fmt::format( "{} {} {}", p.x, p.y, p.z );
         if ( saveNormals )
         {
             const auto & n = cloud.normals[v];
-            out << ' ' << n.x << ' ' << n.y << ' ' << n.z;
+            out << fmt::format( " {} {} {}", n.x, n.y, n.z );
         }
         out << '\n';
         ++numSaved;

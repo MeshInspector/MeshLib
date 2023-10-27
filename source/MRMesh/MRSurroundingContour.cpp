@@ -22,10 +22,10 @@ static void append( std::vector<EdgeId> & to, const std::vector<EdgeId> & with )
         to.push_back( e );
 }
 
-// edge path from origin e0 to origin e1 in positive half-space, defined by the plane
-// containing points mid(e0) and mid(e1) and parallel to dir,
+// the function first defines the plane via the points mid(e0) and mid(e1) and parallel to dir,
 // with positive half-space to the left from the line mid(e0)-mid(e1) if look from dir;
-// if either org(e0) or org(e1) are in negative half-space, then e0 or e1.sym() are included in the path
+// then it constructs a path from "positive" end-point of e0 to "positive" end-point of e1;
+// and returns the path appended with e1 or e1.sym that goes from positive to negative side of the plane
 static EdgePath positivePath(
     const Mesh & mesh,
     EdgeId e0, EdgeId e1,
@@ -37,18 +37,18 @@ static EdgePath positivePath(
     const auto p1 = mesh.edgePoint( e1, 0.5f );
     const auto midPlane = getPlaneFromTwoPointsAndDir( p0, p1, dir );
 
-    VertId start = mesh.topology.org( e0 );
-    VertId finish = mesh.topology.org( e1 );
-
-    EdgePath res;
-    if ( midPlane.distance( mesh.orgPnt( e0 ) ) < 0 )
-    {
-        res.push_back( e0 );
-        start = mesh.topology.dest( e0 );
-    }
+    if ( midPlane.distance( mesh.orgPnt( e0 ) ) > 0 )
+        e0 = e0.sym();
+    assert( midPlane.distance( mesh.orgPnt( e0 ) ) <= 0 );
+    assert( midPlane.distance( mesh.destPnt( e0 ) ) >= 0 );
 
     if ( midPlane.distance( mesh.orgPnt( e1 ) ) < 0 )
-        finish = mesh.topology.dest( e1 );
+        e1 = e1.sym();
+    assert( midPlane.distance( mesh.orgPnt( e1 ) ) >= 0 );
+    assert( midPlane.distance( mesh.destPnt( e1 ) ) <= 0 );
+
+    const VertId start = mesh.topology.dest( e0 );
+    const VertId finish = mesh.topology.org( e1 );
 
     auto planeMetric = [&]( EdgeId e ) -> float
     {
@@ -56,15 +56,13 @@ static EdgePath positivePath(
         const auto d = mesh.destPnt( e );
 
         constexpr float PenaltyFactor = 128.0f;
-        if ( midPlane.distance( o ) * midPlane.distance( d ) <= 0 )
+        if ( midPlane.distance( o ) < 0 || midPlane.distance( d ) < 0 )
             return PenaltyFactor * edgeMetric( e );
 
         return edgeMetric( e );
     };
-    append( res, buildSmallestMetricPathBiDir( mesh.topology, planeMetric, start, finish ) );
-
-    if ( midPlane.distance( mesh.orgPnt( e1 ) ) < 0 )
-        res.push_back( e1.sym() );
+    EdgePath res = buildSmallestMetricPathBiDir( mesh.topology, planeMetric, start, finish );
+    res.push_back( e1 );
 
     assert( isEdgePath( mesh.topology, res ) );
     return res;

@@ -65,7 +65,7 @@ static EdgePath smallestPathInPositiveHalfspace(
 // Given
 //   1. a mesh
 //   2. two planes
-//   3. two mesh edges intersected by corresponding plane, with org(ei) and dest(ei) in negative and positive parts of space
+//   3. two mesh edges, each intersected by corresponding plane, with org(ei) and dest(ei) in negative and positive parts of space
 //   4. edge metric
 // constructs the path from dest(e0) to org(e1) in the intersection of plane0' positive half-space and plane1' negative half-space
 // with minimal summed metric;
@@ -96,6 +96,73 @@ static EdgePath smallestPathInPositiveWedge(
 
     assert( isEdgePath( mesh.topology, res ) );
     return res;
+}
+
+// Given
+//   1. a mesh
+//   2. a plane
+//   3. two mesh vertices located on the plane
+//   4. edge metric
+// constructs the path from v0 to v1 in positive part of space with minimal summed metric;
+// returns the path found
+static EdgePath smallestPathInPositiveHalfspace(
+    const Mesh & mesh, const Plane3f & plane,
+    VertId v0, VertId v1,
+    const EdgeMetric & edgeMetric )
+{
+    auto planeMetric = [&]( EdgeId e ) -> float
+    {
+        const auto ov = mesh.topology.org( e );
+        if ( ov != v0 && ov != v1 )
+        {
+            const auto o = mesh.points[ov];
+            if ( plane.distance( o ) < 0 )
+                return PenaltyFactor * edgeMetric( e );
+        }
+        const auto dv = mesh.topology.dest( e );
+        if ( dv != v0 && dv != v1 )
+        {
+            const auto d = mesh.points[dv];
+            if ( plane.distance( d ) < 0 )
+                return PenaltyFactor * edgeMetric( e );
+        }
+        return edgeMetric( e );
+    };
+    return buildSmallestMetricPathBiDir( mesh.topology, planeMetric, v0, v1 );
+}
+
+// Given
+//   1. a mesh
+//   2. two planes
+//   3. two mesh vertices, each located on corresponding plane
+//   4. edge metric
+// constructs the path from v0 to v1 in the intersection of plane0' positive half-space and plane1' negative half-space
+// with minimal summed metric;
+// returns the path found
+static EdgePath smallestPathInPositiveWedge(
+    const Mesh & mesh, const Plane3f & plane0, const Plane3f & plane1,
+    VertId v0, VertId v1,
+    const EdgeMetric & edgeMetric )
+{
+    auto wedgeMetric = [&]( EdgeId e ) -> float
+    {
+        const auto ov = mesh.topology.org( e );
+        if ( ov != v0 && ov != v1 )
+        {
+            const auto o = mesh.points[ov];
+            if ( plane0.distance( o ) < 0 || plane1.distance( o ) > 0 )
+                return PenaltyFactor * edgeMetric( e );
+        }
+        const auto dv = mesh.topology.dest( e );
+        if ( dv != v0 && dv != v1 )
+        {
+            const auto d = mesh.points[dv];
+            if ( plane0.distance( d ) < 0 || plane1.distance( d ) > 0 )
+                return PenaltyFactor * edgeMetric( e );
+        }
+        return edgeMetric( e );
+    };
+    return buildSmallestMetricPathBiDir( mesh.topology, wedgeMetric, v0, v1 );
 }
 
 } //anonymous namespace
@@ -161,6 +228,61 @@ EdgeLoop surroundingContour(
         for ( int i = 0; i + 1 < sz; ++i )
             append( res, smallestPathInPositiveWedge( mesh, planes[i], planes[i+1], includeEdges[i], includeEdges[i+1], edgeMetric ) );
         append( res, smallestPathInPositiveWedge( mesh, planes.back(), planes.front(), includeEdges.back(), includeEdges.front(), edgeMetric ) );
+    }
+    assert( isEdgeLoop( mesh.topology, res ) );
+    return res;
+}
+
+EdgeLoop surroundingContourV(
+    const Mesh & mesh,
+    std::vector<VertId> keyVertices,
+    const EdgeMetric & edgeMetric,
+    const Vector3f & dir
+)
+{
+    MR_TIMER
+    EdgeLoop res;
+    const auto sz = keyVertices.size();
+    if ( sz < 2 )
+    {
+        assert( false );
+        return res;
+    }
+    if ( sz == 2 )
+    {
+        auto v0 = keyVertices[0];
+        auto v1 = keyVertices[1];
+        const auto p0 = mesh.points[v0];
+        const auto p1 = mesh.points[v1];
+        const auto midPlane = getPlaneFromTwoPointsAndDir( p0, p1, dir );
+
+        res = smallestPathInPositiveHalfspace( mesh, midPlane, v0, v1, edgeMetric );
+        append( res, smallestPathInPositiveHalfspace( mesh, -midPlane, v1, v0, edgeMetric ) );
+    }
+    else
+    {
+        Vector3f sum;
+        for ( auto v : keyVertices )
+            sum += mesh.points[v];
+        const Vector3f center = sum / float( sz );
+        
+        const Vector3f dir0 = ( mesh.points[keyVertices[0]] - center ).normalized();
+        const Vector3f dir1 = cross( dir, dir0 ).normalized();
+        auto angle = [&]( VertId v )
+        {
+            auto d = mesh.points[v] - center;
+            return std::atan2( dot( d, dir1 ), dot( d, dir0 ) );
+        };
+        std::sort( keyVertices.begin(), keyVertices.end(), [&]( VertId a, VertId b ) { return angle( a ) > angle( b ); } );
+
+        std::vector<Plane3f> planes;
+        planes.reserve( sz );
+        for ( auto v : keyVertices )
+            planes.push_back( getPlaneFromTwoPointsAndDir( mesh.points[v], center, dir ) );
+
+        for ( int i = 0; i + 1 < sz; ++i )
+            append( res, smallestPathInPositiveWedge( mesh, planes[i], planes[i+1], keyVertices[i], keyVertices[i+1], edgeMetric ) );
+        append( res, smallestPathInPositiveWedge( mesh, planes.back(), planes.front(), keyVertices.back(), keyVertices.front(), edgeMetric ) );
     }
     assert( isEdgeLoop( mesh.topology, res ) );
     return res;

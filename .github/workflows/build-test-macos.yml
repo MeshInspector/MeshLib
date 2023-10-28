@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         os: [ x64, arm ]
-        config: [Release]
+        config: [Debug]
         compiler: [Сlang]
         include:
           - compiler: Сlang

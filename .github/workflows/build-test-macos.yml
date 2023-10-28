@@ -39,7 +39,10 @@ jobs:
         run: ./scripts/build_thirdparty.sh
 
       - name: Build
-        run: ./scripts/build_source.sh | while IFS= read -r line; do echo "Resource usage for: $line"; top -l 1 | grep -E '^(CPU|PhysMem)'; done
+        run: |
+          ./scripts/build_source.sh
+          echo "Resource usage for the build step:"
+          top -l 1 | grep -E '^(CPU|PhysMem)'
         env:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}

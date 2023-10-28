@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         os: [ x64, arm ]
-        config: [Debug]
+        config: [Release]
         compiler: [Сlang]
         include:
           - compiler: Сlang
@@ -39,7 +39,7 @@ jobs:
         run: ./scripts/build_thirdparty.sh
 
       - name: Build
-        run: ./scripts/build_source.sh
+        run: ./scripts/build_source.sh | while IFS= read -r line; do echo "Resource usage for: $line"; top -l 1 | grep -E '^(CPU|PhysMem)'; done
         env:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}

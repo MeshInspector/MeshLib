@@ -30,7 +30,7 @@ namespace MR
  * \param edgeMetric returned loop will minimize the sum of this metric
  * \param dir direction approximately orthogonal to the loop
  */
-[[nodiscard]] MRMESH_API EdgeLoop surroundingContourV(
+[[nodiscard]] MRMESH_API EdgeLoop surroundingContour(
     const Mesh & mesh,
     std::vector<VertId> keyVertices,
     const EdgeMetric & edgeMetric,

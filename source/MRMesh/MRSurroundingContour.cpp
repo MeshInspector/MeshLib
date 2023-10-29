@@ -233,7 +233,7 @@ EdgeLoop surroundingContour(
     return res;
 }
 
-EdgeLoop surroundingContourV(
+EdgeLoop surroundingContour(
     const Mesh & mesh,
     std::vector<VertId> keyVertices,
     const EdgeMetric & edgeMetric,

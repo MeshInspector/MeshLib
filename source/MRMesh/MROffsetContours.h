@@ -35,6 +35,9 @@ struct OffsetContoursParams
     float minAnglePrecision = PI_F / 9.0f; // 20 deg
     /// limit for sharp corners connection
     float maxSharpAngle = PI_F * 2.0f / 3.0f; // 120 deg
+
+    /// optional output that maps result contour ids to input contour ids
+    ContoursIndicesMap* indicesMap = nullptr;
 };
 
 /// offsets 2d contours in plane

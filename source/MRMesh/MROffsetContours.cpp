@@ -9,6 +9,7 @@
 #include "MR2to3.h"
 #include "MRPolyline.h"
 #include "MRLinesSave.h"
+#include <numeric>
 
 namespace MR
 {
@@ -123,10 +124,14 @@ Contours2f offsetContours( const Contours2f& contours, float offset, const Offse
 {
     MR_TIMER;
 
+    std::vector<std::vector<int>> shiftsMap;
+
     Contours2f intermediateRes;
 
     for ( int i = 0; i < contours.size(); ++i )
     {
+        if ( params.indicesMap )
+            shiftsMap.push_back( std::vector<int>( contours[i].size() ) );
         if ( contours[i].empty() )
             continue;
 
@@ -134,8 +139,14 @@ Contours2f offsetContours( const Contours2f& contours, float offset, const Offse
         if ( offset == 0.0f )
         {
             intermediateRes.push_back( contours[i] );
+            if ( params.indicesMap )
+                std::iota( shiftsMap.back().begin(), shiftsMap.back().end(), 0 );
             if ( !isClosed || params.type == OffsetContoursParams::Type::Shell )
+            {
                 intermediateRes.back().insert( intermediateRes.back().end(), contours[i].rbegin(), contours[i].rend() );
+                if ( params.indicesMap )
+                    shiftsMap.back().insert( shiftsMap.back().end(), shiftsMap.back().rbegin(), shiftsMap.back().rend() );
+            }
             continue;
         }
 

@@ -1,4 +1,5 @@
 #include "MRMeshLoadObj.h"
+#include "MRAffineXf3.h"
 #include "MRBitSetParallelFor.h"
 #include "MRBuffer.h"
 #include "MRMeshBuilder.h"
@@ -424,6 +425,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
     VertUVCoords uvCoords;
     Expected<MtlLibrary, std::string> mtl;
     std::string currentMaterialName;
+    std::optional<Vector3d> pointOffset;
 
     std::map<int, int> additions;
     additions[0] = 0;
@@ -529,6 +531,16 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
     if ( !reportProgress( settings.callback, 0.5f ) )
         return unexpected( "Loading canceled" );
 
+    auto parseVertex = [&] ( size_t li ) -> Expected<Vector3d, std::string>
+    {
+        Vector3d v;
+        std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+        auto res = parseObjCoordinate( line, v );
+        if ( !res.has_value() )
+            return unexpected( std::move( res.error() ) );
+        return v;
+    };
+
     auto parseVertices = [&] ( size_t begin, size_t end, std::string& parseError )
     {
         const auto offset = points.size();
@@ -542,7 +554,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
         tbb::task_group_context ctx;
         tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
         {
-            Vector3f v;
+            Vector3d v;
             for ( auto li = range.begin(); li < range.end(); li++ )
             {
                 std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
@@ -553,7 +565,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
                         parseError = std::move( res.error() );
                     return;
                 }
-                points[offset + ( li - begin )] = v;
+                points[offset + ( li - begin )] = pointOffset ? Vector3f( v - *pointOffset ) : Vector3f( v );
             }
         }, ctx );
     };
@@ -760,6 +772,17 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
         case ObjElement::Unknown:
             break;
         case ObjElement::Vertex:
+            if ( settings.xf && !pointOffset.has_value() )
+            {
+                auto res1 = parseVertex( group.begin );
+                if ( !res1.has_value() )
+                {
+                    parseError = std::move( res1.error() );
+                    break;
+                }
+                pointOffset.emplace( *res1 );
+                *settings.xf = AffineXf3f::translation( Vector3f( *pointOffset ) );
+            }
             parseVertices( group.begin, group.end, parseError );
             break;
         case ObjElement::Face:

@@ -7,6 +7,23 @@ namespace MR
 namespace Cuda
 {
 
+__device__ inline float min( float x, float y )
+{
+    return ( ( x < y ) ? x : y );
+}
+
+template<typename T> __device__
+ T max( T x, T y )
+{
+    return ( ( x > y ) ? x : y );
+}
+
+template <typename T, typename ... Args>  __device__
+T max( T x, Args ... args )
+{
+    return max( x, max( args ... ) );
+}
+
 __device__ inline float clamp( float x, float l, float u )
 {
     return ( ( x < l ) ? l :

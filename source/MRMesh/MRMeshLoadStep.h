@@ -1,6 +1,7 @@
 #pragma once
-#ifdef _WIN32
+
 #include "MRMeshFwd.h"
+#ifndef MRMESH_NO_OPENCASCADE
 #include "MRExpected.h"
 #include "MRMeshLoadSettings.h"
 

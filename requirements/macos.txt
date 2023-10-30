@@ -17,6 +17,7 @@ libtiff
 libzip
 llvm@13
 openblas
+opencascade
 openexr
 openssl@3
 openvdb

@@ -1,6 +1,5 @@
-#ifdef _WIN32
 #include "MRMeshLoadStep.h"
-
+#ifndef MRMESH_NO_OPENCASCADE
 #include "MRIOFormatsRegistry.h"
 #include "MRMesh.h"
 #include "MRMeshBuilder.h"
@@ -32,6 +31,23 @@
 #include <opencascade/TopoDS.hxx>
 #pragma warning( pop )
 
+#if ( OCC_VERSION_MAJOR < 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR < 5 )
+namespace MR::MeshLoad
+{
+
+Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::filesystem::path& path, const MeshLoadSettings& settings /*= {}*/ )
+{
+    // TODO: support OpenCASCADE 7.3
+    return unexpected( "Unsupported: outdated OpenCASCADE version" );
+}
+
+Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
+{
+    return unexpected( "Unsupported: outdated OpenCASCADE version" );
+}
+
+} // namespace MR::MeshLoad
+#else
 namespace
 {
 
@@ -329,4 +345,5 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
 }
 
 } // namespace MR::MeshLoad
+#endif
 #endif

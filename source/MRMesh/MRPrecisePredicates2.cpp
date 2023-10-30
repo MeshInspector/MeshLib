@@ -79,14 +79,9 @@ SegmentSegmentIntersectResult doSegmentSegmentIntersect( const std::array<Precis
     return res;
 }
 
-Vector2f findSegmentSegmentIntersectionPrecise( 
-    const Vector2f& a, const Vector2f& b, const Vector2f& c, const Vector2f& d,
-    CoordinateConverters2 converters )
+Vector2i findSegmentSegmentIntersectionPrecise(
+    const Vector2i& ai, const Vector2i& bi, const Vector2i& ci, const Vector2i& di )
 {
-    auto ai{ converters.toInt( a ) };
-    auto bi{ converters.toInt( b ) };
-    auto ci{ converters.toInt( c ) };
-    auto di{ converters.toInt( d ) };
     auto abc = cross( Vector2hp( ai - ci ), Vector2hp( bi - ci ) );
     if ( abc < 0 )
         abc = -abc;
@@ -95,15 +90,26 @@ Vector2f findSegmentSegmentIntersectionPrecise(
         abd = -abd;
     auto sum = abc + abd;
     if ( sum != HighPrecisionInt( 0 ) )
-        return converters.toFloat( Vector2i{ Vector2d( abc * Vector2hp( di ) + abd * Vector2hp( ci ) ) / double( sum ) } );
+        return Vector2i{ Vector2d( abc * Vector2hp( di ) + abd * Vector2hp( ci ) ) / double( sum ) };
     auto adLSq = Vector2hp( di - ai ).lengthSq();
     auto bcLSq = Vector2hp( bi - ci ).lengthSq();
     if ( adLSq > bcLSq )
-        return c;
+        return ci;
     else if ( bcLSq > adLSq )
-        return d;
+        return di;
     else
-        return converters.toFloat( Vector2i( Vector2d( Vector2hp( ai ) + Vector2hp( bi ) + Vector2hp( ci ) + Vector2hp( di ) ) * 0.5 ) );
+        return Vector2i( Vector2d( Vector2hp( ai ) + Vector2hp( bi ) + Vector2hp( ci ) + Vector2hp( di ) ) * 0.5 );
+}
+
+Vector2f findSegmentSegmentIntersectionPrecise( 
+    const Vector2f& a, const Vector2f& b, const Vector2f& c, const Vector2f& d,
+    CoordinateConverters2 converters )
+{
+    auto ai{ converters.toInt( a ) };
+    auto bi{ converters.toInt( b ) };
+    auto ci{ converters.toInt( c ) };
+    auto di{ converters.toInt( d ) };
+    return converters.toFloat( findSegmentSegmentIntersectionPrecise( ai, bi, ci, di ) );
 }
 
 TEST( MRMesh, PrecisePredicates2 )

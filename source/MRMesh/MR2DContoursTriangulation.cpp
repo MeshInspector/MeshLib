@@ -642,9 +642,9 @@ void SweepLineQueue::processStartEvent_( int index )
             auto lowerOrg = tp_.org( activeSweepEdges_[index - 1].edgeId );
             auto upperOrg = tp_.org( activeSweepEdges_[index].edgeId );
             if ( less_( lowerOrg, upperOrg ) )
-                helperId = activeSweepEdges_[index - 1].edgeId;
-            else
                 helperId = tp_.prev( activeSweepEdges_[index].edgeId );
+            else
+                helperId = activeSweepEdges_[index - 1].edgeId;
         }
         assert( helperId );
 

@@ -152,17 +152,17 @@ ENDIF()
 # alternative Eigen include for external project
 find_package(Eigen3 NO_MODULE)
 if(DEFINED EIGEN3_FOUND)
-  target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIRS}>)
-  list(APPEND MRMESH_OPTIONAL_DEPENDENCIES Eigen3::Eigen)
+	target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIRS}>)
+	list(APPEND MRMESH_OPTIONAL_DEPENDENCIES Eigen3::Eigen)
 endif()
 
 IF(NOT MR_EMSCRIPTEN)
-  find_package(Boost COMPONENTS REQUIRED )
-  find_package( TBB REQUIRED )
-  pkg_check_modules(JSONCPP jsoncpp)
-  include_directories(${JSONCPP_INCLUDE_DIRS})
+	find_package(Boost COMPONENTS REQUIRED )
+	find_package( TBB REQUIRED )
+	pkg_check_modules(JSONCPP jsoncpp)
+	include_directories(${JSONCPP_INCLUDE_DIRS})
 ELSE()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_FREETYPE=1 -s USE_LIBPNG=1")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_FREETYPE=1 -s USE_LIBPNG=1")
 ENDIF()
 
 IF(APPLE OR MR_EMSCRIPTEN)
@@ -172,32 +172,32 @@ IF(APPLE OR MR_EMSCRIPTEN)
 	#link_directories(/opt/homebrew/opt/jpeg-turbo/lib)
 
 	IF (APPLE)
-        find_library(COCOA_LIBRARY Cocoa ONLY)
-	    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
+		find_library(COCOA_LIBRARY Cocoa ONLY)
+		target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
 		target_include_directories(${PROJECT_NAME} PRIVATE
 			${MRMESH_OPTIONAL_INCLUDE_DIRS}
 		)
 		target_link_libraries(${PROJECT_NAME} PRIVATE
-		    spdlog
-		    zip
-		    Boost::boost
-		    jsoncpp
-		    fmt
-		    tbb
-		    ${MRMESH_OPTIONAL_DEPENDENCIES}
-		    ${COCOA_LIBRARY}
+			spdlog
+			zip
+			Boost::boost
+			jsoncpp
+			fmt
+			tbb
+			${MRMESH_OPTIONAL_DEPENDENCIES}
+			${COCOA_LIBRARY}
 		)
 	ELSE()
 		target_include_directories(${PROJECT_NAME} PRIVATE
 			${MRMESH_OPTIONAL_INCLUDE_DIRS}
 		)
-	    target_link_libraries(${PROJECT_NAME} PRIVATE
-	        zip
-	        freetype
-	        jsoncpp
-	        tbb
+		target_link_libraries(${PROJECT_NAME} PRIVATE
+			zip
+			freetype
+			jsoncpp
+			tbb
 			${MRMESH_OPTIONAL_DEPENDENCIES}
-	    )
+		)
 	ENDIF()
 ELSE()
 	find_package(tl-expected REQUIRED)

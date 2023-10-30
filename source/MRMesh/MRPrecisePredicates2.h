@@ -56,6 +56,11 @@ struct CoordinateConverters2
 
 /// finds intersection precise, using high precision int inside
 /// this function input should have intersection
+[[nodiscard]] MRMESH_API Vector2i findSegmentSegmentIntersectionPrecise(
+    const Vector2i& a, const Vector2i& b, const Vector2i& c, const Vector2i& d );
+
+/// finds intersection precise, using high precision int inside
+/// this function input should have intersection
 [[nodiscard]] MRMESH_API Vector2f findSegmentSegmentIntersectionPrecise( 
     const Vector2f& a, const Vector2f& b, const Vector2f& c, const Vector2f& d,
     CoordinateConverters2 converters );

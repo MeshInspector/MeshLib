@@ -28,9 +28,10 @@ struct FilterBowtiesResult
     Contours2f contours;
     std::vector<std::vector<int>> initIndices;
 };
+
 FilterBowtiesResult filterBowties( const Contour2f& cont )
 {
-    auto mesh = PlanarTriangulation::triangulateContours( { cont } );
+    auto mesh = PlanarTriangulation::getOutlineMesh( { cont } );
     auto holes = findRightBoundary( mesh.topology );
     FilterBowtiesResult res;
     res.contours.resize( holes.size() );
@@ -504,6 +505,11 @@ TerrainEmbedder::OffsetBlock TerrainEmbedder::offsetContour_( const MarkedContou
                     res.contour.emplace_back( rotXf( prevPoint ) );
                     ++res.idsShifts[i];
                 }
+            }
+            else
+            {
+                res.contour.push_back( orgPt );
+                ++res.idsShifts[i];
             }
             res.contour.emplace_back( std::move( nextPoint ) );
             ++res.idsShifts[i];

@@ -79,6 +79,28 @@ SegmentSegmentIntersectResult doSegmentSegmentIntersect( const std::array<Precis
     return res;
 }
 
+Vector2i findSegmentSegmentIntersectionPrecise(
+    const Vector2i& ai, const Vector2i& bi, const Vector2i& ci, const Vector2i& di )
+{
+    auto abc = cross( Vector2hp( ai - ci ), Vector2hp( bi - ci ) );
+    if ( abc < 0 )
+        abc = -abc;
+    auto abd = cross( Vector2hp( ai - di ), Vector2hp( bi - di ) );
+    if ( abd < 0 )
+        abd = -abd;
+    auto sum = abc + abd;
+    if ( sum != HighPrecisionInt( 0 ) )
+        return Vector2i{ Vector2d( abc * Vector2hp( di ) + abd * Vector2hp( ci ) ) / double( sum ) };
+    auto adLSq = Vector2hp( di - ai ).lengthSq();
+    auto bcLSq = Vector2hp( bi - ci ).lengthSq();
+    if ( adLSq > bcLSq )
+        return ci;
+    else if ( bcLSq > adLSq )
+        return di;
+    else
+        return Vector2i( Vector2d( Vector2hp( ai ) + Vector2hp( bi ) + Vector2hp( ci ) + Vector2hp( di ) ) * 0.5 );
+}
+
 Vector2f findSegmentSegmentIntersectionPrecise( 
     const Vector2f& a, const Vector2f& b, const Vector2f& c, const Vector2f& d,
     CoordinateConverters2 converters )
@@ -87,14 +109,7 @@ Vector2f findSegmentSegmentIntersectionPrecise(
     auto bi{ converters.toInt( b ) };
     auto ci{ converters.toInt( c ) };
     auto di{ converters.toInt( d ) };
-    auto abc = cross( Vector2hp( ai - ci ), Vector2hp( bi - ci ) );
-    if ( abc < 0 )
-        abc = -abc;
-    auto abd = cross( Vector2hp( ai - di ), Vector2hp( bi - di ) );
-    if ( abd < 0 )
-        abd = -abd;
-    auto sum = abc + abd;
-    return converters.toFloat( Vector2i{ Vector2d( abc * Vector2hp( di ) + abd * Vector2hp( ci ) ) / double( sum ) } );
+    return converters.toFloat( findSegmentSegmentIntersectionPrecise( ai, bi, ci, di ) );
 }
 
 TEST( MRMesh, PrecisePredicates2 )

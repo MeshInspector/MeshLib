@@ -47,6 +47,8 @@ Expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem:
     MeshLoadSettings newSettings = settings;
     VertColors colors;
     newSettings.colors = &colors;
+    AffineXf3f xf;
+    newSettings.xf = &xf;
     auto mesh = MeshLoad::fromAnySupportedFormat( file, newSettings );
     if ( !mesh.has_value() )
     {
@@ -61,6 +63,7 @@ Expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem:
         objectMesh.setVertsColorMap( std::move( colors ) );
         objectMesh.setColoringType( ColoringType::VertsColorMap );
     }
+    objectMesh.setXf( xf );
 
     return objectMesh;
 }
@@ -74,6 +77,8 @@ Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std
     newSettings.colors = &colors;
     VertNormals normals;
     newSettings.normals = &normals;
+    AffineXf3f xf;
+    newSettings.xf = &xf;
     auto mesh = MeshLoad::fromAnySupportedFormat( file, newSettings );
     if ( !mesh.has_value() )
         return unexpected( mesh.error() );
@@ -93,6 +98,7 @@ Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std
             objectPoints->setVertsColorMap( std::move( colors ) );
             objectPoints->setColoringType( ColoringType::VertsColorMap );
         }
+        objectPoints->setXf( xf );
 
         return objectPoints;
     }
@@ -105,6 +111,7 @@ Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std
         objectMesh->setVertsColorMap( std::move( colors ) );
         objectMesh->setColoringType( ColoringType::VertsColorMap );
     }
+    objectMesh->setXf( xf );
 
     return objectMesh;
 }
@@ -250,6 +257,8 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
         settings.skippedFaceCount = &skippedFaceCount;
         int duplicatedVertexCount = 0;
         settings.duplicatedVertexCount = &duplicatedVertexCount;
+        AffineXf3f xf;
+        settings.xf = &xf;
         auto res = MeshLoad::fromSceneObjFile( filename, false, settings );
         if ( res.has_value() )
         {
@@ -274,6 +283,8 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                     objectMesh->setTexture( { image.value(), FilterType::Linear } );
                     objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
                 }
+
+                objectMesh->setXf( xf );
 
                 objects[i] = std::dynamic_pointer_cast< Object >( objectMesh );
             }

@@ -13,9 +13,14 @@ enum class MouseButton
     Count
 };
 
+// Standard mouse functions for camera control
 enum class MouseMode
 {
-    None, Rotation, Translation, Roll, Count
+    None,
+    Rotation,       // Rotate camera around selected point
+    Translation,    // Translate camera preserving its direction
+    Roll,           // Rotate camera around axis orthogonal to screen
+    Count
 };
 
 inline std::string getMouseModeString( MouseMode mode )

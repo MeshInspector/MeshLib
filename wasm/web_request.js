@@ -20,7 +20,7 @@ var web_req_add_formdata = function (path, contentType, name, fileName) {
 
     if (web_req_formdata == null)
         web_req_formdata = new FormData();
-    web_req_formdata.append(name, new Blob(content, {type: contentType}), fileName);
+    web_req_formdata.append(name, new Blob([content], {type: contentType}), fileName);
 }
 
 var web_req_clear = function () {

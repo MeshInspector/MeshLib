@@ -3,7 +3,7 @@ name: Prepare images
 on:
   workflow_call:
     outputs:
-      image_tag:
+      docker_image_tag:
         description: "linux image for testing"
         value: ${{ jobs.image-select.outputs.image_tag }}
       windows_image_tag:

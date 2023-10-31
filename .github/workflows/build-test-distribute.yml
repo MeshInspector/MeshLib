@@ -37,7 +37,7 @@ jobs:
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-ubuntu20.yml
     with:
-      docker_image_tag: ${{needs.prepare-image.outputs.image_tag}}
+      docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
       app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
@@ -45,7 +45,7 @@ jobs:
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
-      docker_image_tag: ${{needs.prepare-image.outputs.image_tag}}
+      docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
       app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
@@ -53,7 +53,7 @@ jobs:
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-ubuntu22.yml
     with:
-      docker_image_tag: ${{needs.prepare-image.outputs.image_tag}}
+      docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
       app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
@@ -61,7 +61,7 @@ jobs:
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-fedora.yml
     with:
-      docker_image_tag: ${{needs.prepare-image.outputs.image_tag}}
+      docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
       app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
@@ -69,7 +69,7 @@ jobs:
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
-      docker_image_tag: ${{needs.prepare-image.outputs.image_tag}}
+      docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   macos-build-test:

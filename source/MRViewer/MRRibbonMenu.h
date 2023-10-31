@@ -79,6 +79,8 @@ public:
 
     /// clones given objects with sub-objects (except for ancillary and unrecognized children) and undo
     MRVIEWER_API static void cloneTree( const std::vector<std::shared_ptr<Object>>& selectedObjects );
+    /// clones selected part of given object as separate object (faces, points)
+    MRVIEWER_API static void cloneSelectedPart( const std::shared_ptr<Object>& object );
 
     using TabChangedSignal = boost::signals2::signal<void( int prevTabId, int newTabId )>;
     /// this signal is called when active tab changes
@@ -194,6 +196,7 @@ private:
 
     bool drawGroupUngroupButton_( const std::vector<std::shared_ptr<Object>>& selected );
     bool drawCloneButton_( const std::vector<std::shared_ptr<Object>>& selected );
+    bool drawCloneSelectionButton_( const std::vector<std::shared_ptr<Object>>& selected );
 
     void beginTopPanel_();
     void endTopPanel_();

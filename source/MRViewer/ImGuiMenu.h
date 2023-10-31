@@ -55,8 +55,8 @@ protected:
 
   // ImGui Context
   ImGuiContext * context_ = nullptr;
-  // last focused window
-  ImGuiWindow* prevFrameFocusWindow_ = nullptr;
+  // last focused plugin window
+  ImGuiWindow* prevFrameFocusPlugin_ = nullptr;
 
   // if true, then pre_draw will start from polling glfw events
   bool pollEventsInPreDraw = false; // be careful here with true, this can cause infinite recurse 
@@ -205,7 +205,7 @@ public:
 
   MRVIEWER_API ImGuiContext* getCurrentContext() const;
 
-  MRVIEWER_API ImGuiWindow* getLastFocusedWindow() const;
+  ImGuiWindow* getLastFocusedPlugin() const { return prevFrameFocusPlugin_; };
 
   enum class ModalMessageType
   {

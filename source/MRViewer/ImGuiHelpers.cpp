@@ -642,7 +642,7 @@ bool BeginCustomStatePlugin( const char* labelArg, bool* open, const CustomState
     ImGui::SetCursorScreenPos( { window->Rect().Max.x - ( buttonSize + buttonOffset ), window->Rect().Min.y + buttonOffset } );
     bool escapeClose = params.closeWithEscape && ImGui::IsKeyPressed( ImGuiKey_Escape ) && !ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
     if ( escapeClose && menu )
-        escapeClose = window == menu->getLastFocusedWindow();
+        escapeClose = window == menu->getLastFocusedPlugin();
     if ( ImGui::Button( "\xef\x80\x8d", { buttonSize, buttonSize } ) || escapeClose ) //close button
     {
         *open = false;

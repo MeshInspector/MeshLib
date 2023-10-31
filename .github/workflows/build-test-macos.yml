@@ -3,7 +3,7 @@ name: Build and test MacOS
 on:
   workflow_call:
     inputs:
-      version:
+      app_version:
         required: true
         type: string
       UPLOAD_ARTIFACTS:
@@ -46,7 +46,7 @@ jobs:
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
-          MR_VERSION: ${{ inputs.version }}
+          MR_VERSION: ${{ inputs.app_version }}
           MR_USE_CPP_23: "ON"
 
       - name: Unit Tests

@@ -30,7 +30,7 @@ jobs:
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-windows.yml
     with:
-      version: ${{needs.versioning-and-release-url.outputs.app_version}}
+      app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     secrets: inherit
 
@@ -38,46 +38,46 @@ jobs:
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-ubuntu20.yml
     with:
-      image_tag: ${{needs.prepare-image.outputs.image_tag}}
-      version: ${{needs.versioning-and-release-url.outputs.app_version}}
+      docker_image_tag: ${{needs.prepare-image.outputs.image_tag}}
+      app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   ubuntu-arm64-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
-      image_tag: ${{needs.prepare-image.outputs.image_tag}}
-      version: ${{needs.versioning-and-release-url.outputs.app_version}}
+      docker_image_tag: ${{needs.prepare-image.outputs.image_tag}}
+      app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   ubuntu22-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-ubuntu22.yml
     with:
-      image_tag: ${{needs.prepare-image.outputs.image_tag}}
-      version: ${{needs.versioning-and-release-url.outputs.app_version}}
+      docker_image_tag: ${{needs.prepare-image.outputs.image_tag}}
+      app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   fedora-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-fedora.yml
     with:
-      image_tag: ${{needs.prepare-image.outputs.image_tag}}
-      version: ${{needs.versioning-and-release-url.outputs.app_version}}
+      docker_image_tag: ${{needs.prepare-image.outputs.image_tag}}
+      app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   emscripten-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
-      image_tag: ${{needs.prepare-image.outputs.image_tag}}
+      docker_image_tag: ${{needs.prepare-image.outputs.image_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   macos-build-test:
     needs: [ versioning-and-release-url ]
     uses: ./.github/workflows/build-test-macos.yml
     with:
-      version: ${{needs.versioning-and-release-url.outputs.app_version}}
+      app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   update-win-version:
@@ -140,27 +140,27 @@ jobs:
 
       - name: Rename Distributives
         run: |
-          mv MeshLibDist.zip MeshLibDist_${{needs.versioning-and-release-url.outputs.short_version}}.zip
-          mv meshlib-ubuntu20-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu20-dev.deb
-          mv meshlib-ubuntu22-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-dev.deb
-          mv meshlib-ubuntu20-arm64-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu20-arm64-dev.deb
-          mv meshlib-ubuntu22-arm64-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-arm64-dev.deb
-          mv meshlib-dev.rpm meshlib_${{needs.versioning-and-release-url.outputs.short_version}}-dev.rpm
-          mv meshlib_x64.pkg meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_x64.pkg
-          mv meshlib_arm.pkg meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_arm.pkg
+          mv MeshLibDist.zip MeshLibDist_${{needs.versioning-and-release-url.outputs.app_version}}.zip
+          mv meshlib-ubuntu20-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu20-dev.deb
+          mv meshlib-ubuntu22-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu22-dev.deb
+          mv meshlib-ubuntu20-arm64-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu20-arm64-dev.deb
+          mv meshlib-ubuntu22-arm64-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu22-arm64-dev.deb
+          mv meshlib-dev.rpm meshlib_${{needs.versioning-and-release-url.outputs.app_version}}-dev.rpm
+          mv meshlib_x64.pkg meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_x64.pkg
+          mv meshlib_arm.pkg meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_arm.pkg
 
       - name: Upload Distributives
         run: |
           echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
           gh release upload ${{needs.versioning-and-release-url.outputs.tag}} \
-                            MeshLibDist_${{needs.versioning-and-release-url.outputs.short_version}}.zip \
-                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu20-dev.deb \
-                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-dev.deb \
-                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu20-arm64-dev.deb \
-                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-arm64-dev.deb \
-                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}-dev.rpm \
-                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_x64.pkg \
-                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_arm.pkg
+                            MeshLibDist_${{needs.versioning-and-release-url.outputs.app_version}}.zip \
+                            meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu20-dev.deb \
+                            meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu22-dev.deb \
+                            meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu20-arm64-dev.deb \
+                            meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu22-arm64-dev.deb \
+                            meshlib_${{needs.versioning-and-release-url.outputs.app_version}}-dev.rpm \
+                            meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_x64.pkg \
+                            meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_arm.pkg
 
   test-distribution:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}

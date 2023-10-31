@@ -15,19 +15,13 @@ on:
         type: boolean
     outputs:
       tag:
-        description: "Version (with namespace)"
-        value: ${{ jobs.versioning-and-release-url.outputs.version }}
-      version:
-        description: "[deprecated] Version (with namespace)"
-        value: ${{ jobs.versioning-and-release-url.outputs.version }}
+        description: "Version with namespace (if it exists): v1.2.3.4-namespace"
+        value: ${{ jobs.versioning-and-release-url.outputs.tag }}
       app_version:
-        description: "Version (without namespace)"
-        value: ${{ jobs.versioning-and-release-url.outputs.version_tag }}
-      version_tag:
-        description: "[deprecated] Version tag (without namespace)"
-        value: ${{ jobs.versioning-and-release-url.outputs.version_tag }}
+        description: "Version without namespace: v1.2.3.4"
+        value: ${{ jobs.versioning-and-release-url.outputs.app_version }}
       short_version:
-        description: "Version tag with only three digits"
+        description: "Version with only three digits: v1.2.3"
         value: ${{ jobs.versioning-and-release-url.outputs.short_version }}
       upload_url:
         description: "URL to draft release"
@@ -41,8 +35,8 @@ jobs:
     timeout-minutes: 10
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.version.outputs.version }}
-      version_tag: ${{ steps.version-tag.outputs.version_tag }}
+      tag: ${{ steps.version-tag.outputs.tag }}
+      app_version: ${{ steps.version-tag.outputs.app_version }}
       short_version: ${{ steps.version-tag.outputs.short_version }}
       upload_url: ${{ steps.create_release.outputs.upload_url }}
       release_id: ${{ steps.create_release.outputs.id }}
@@ -67,10 +61,12 @@ jobs:
       - name: Set version tag
         id: version-tag
         run: |
-          version_tag=${{steps.version.outputs.version}}
-          version_tag=${version_tag%%-*}
-          echo "version_tag=${version_tag}" >> $GITHUB_OUTPUT
-          short_version=${version_tag%.*}
+          tag=${{steps.version.outputs.version}}
+          echo "tag=${tag}" >> $GITHUB_OUTPUT
+          app_version=${{steps.version.outputs.version}}
+          app_version=${app_version%%-*}
+          echo "app_version=${app_version}" >> $GITHUB_OUTPUT
+          short_version=${app_version%.*}
           echo "short_version=${short_version}" >> $GITHUB_OUTPUT
 
       - name: Create Release

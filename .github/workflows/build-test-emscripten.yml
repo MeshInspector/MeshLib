@@ -3,7 +3,7 @@ name: Build and test Emscripten
 on:
   workflow_call:
     inputs:
-      image_tag:
+      docker_image_tag:
         required: true
         type: string
       UPLOAD_ARTIFACTS:
@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 40
     runs-on: ubuntu-latest
     container:
-      image: meshlib/meshlib-emscripten:${{inputs.image_tag}}
+      image: meshlib/meshlib-emscripten:${{inputs.docker_image_tag}}
       options: --user 1001
     strategy:
       matrix:

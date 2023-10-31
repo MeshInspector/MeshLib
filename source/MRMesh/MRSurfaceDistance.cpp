@@ -111,4 +111,20 @@ VertScalars computeSurfaceDistances( const Mesh& mesh, const MeshTriPoint & star
     return b.takeDistanceMap();
 }
 
+VertScalars computeSurfaceDistances( const Mesh& mesh, const std::vector<MeshTriPoint>& start, float maxDist,
+                                              const VertBitSet* region, int maxVertUpdates )
+{
+    MR_TIMER;
+
+    SurfaceDistanceBuilder b( mesh, region );
+    b.setMaxVertUpdates( maxVertUpdates );
+    for ( const auto& triPoint : start )
+        b.addStart( triPoint );
+    while ( b.doneDistance() < maxDist )
+    {
+        b.growOne();
+    }
+    return b.takeDistanceMap();
+}
+
 } //namespace MR

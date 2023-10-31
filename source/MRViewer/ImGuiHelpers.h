@@ -186,6 +186,8 @@ struct CustomStatePluginWindowParameters
     ImVec2* changedSize{ nullptr };
     /// reaction on press "Help" button
     std::function<void()> helpBtnFn;
+    /// if true esc button closes the plugin
+    bool closeWithEscape{ true };
 };
 
 /// begin state plugin window with custom style.  if you use this function, you must call EndCustomStatePlugin to close the plugin correctly.

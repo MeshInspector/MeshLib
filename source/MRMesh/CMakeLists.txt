@@ -20,6 +20,7 @@ option(MRMESH_NO_XML "Disable XML support (affects 3MF support)" OFF)
 option(MRMESH_NO_E57 "Disable E57 support" OFF)
 option(MRMESH_NO_LAS "Disable LAS/LAZ support" OFF)
 option(MRMESH_NO_GTEST "Disable building Google tests" OFF)
+option(MRMESH_NO_OPENCASCADE "Disable OpenCASCADE usage" OFF)
 
 IF(DEFINED MESHLIB_PYTHON_SUPPORT AND NOT MESHLIB_PYTHON_SUPPORT)
 	set(MRMESH_NO_PYTHON ON)
@@ -37,6 +38,7 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
 set(MRMESH_OPTIONAL_DEPENDENCIES "")
+set(MRMESH_OPTIONAL_INCLUDE_DIRS "")
 
 IF(NOT MRMESH_NO_OPENCTM)
 	list(APPEND MRMESH_OPTIONAL_DEPENDENCIES OpenCTM)
@@ -114,6 +116,21 @@ IF(NOT MR_EMSCRIPTEN)
 			list(APPEND MRMESH_OPTIONAL_DEPENDENCIES gtest)
 		ENDIF()
 	ENDIF()
+
+	IF(NOT MRMESH_NO_OPENCASCADE)
+		find_package(OpenCASCADE REQUIRED
+			COMPONENTS
+				# NOTE: the component order is significant
+				FoundationClasses
+				ModelingData
+				ModelingAlgorithms
+				Visualization
+				ApplicationFramework
+				DataExchange
+		)
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES TKMesh TKSTEP)
+		list(APPEND MRMESH_OPTIONAL_INCLUDE_DIRS ${OpenCASCADE_INCLUDE_DIR})
+	ENDIF()
 ELSE()
 	target_compile_definitions(${PROJECT_NAME}
 		PRIVATE
@@ -124,6 +141,7 @@ ELSE()
 			MRMESH_NO_JPEG
 			MRMESH_NO_VOXEL
 			MRMESH_NO_E57
+			MRMESH_NO_OPENCASCADE
 	)
 
 	IF(NOT MRMESH_NO_LAS)
@@ -134,17 +152,17 @@ ENDIF()
 # alternative Eigen include for external project
 find_package(Eigen3 NO_MODULE)
 if(DEFINED EIGEN3_FOUND)
-  target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIRS}>)
-  list(APPEND MRMESH_OPTIONAL_DEPENDENCIES Eigen3::Eigen)
+	target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIRS}>)
+	list(APPEND MRMESH_OPTIONAL_DEPENDENCIES Eigen3::Eigen)
 endif()
 
 IF(NOT MR_EMSCRIPTEN)
-  find_package(Boost COMPONENTS REQUIRED )
-  find_package( TBB REQUIRED )
-  pkg_check_modules(JSONCPP jsoncpp)
-  include_directories(${JSONCPP_INCLUDE_DIRS})
+	find_package(Boost COMPONENTS REQUIRED )
+	find_package( TBB REQUIRED )
+	pkg_check_modules(JSONCPP jsoncpp)
+	include_directories(${JSONCPP_INCLUDE_DIRS})
 ELSE()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_FREETYPE=1 -s USE_LIBPNG=1")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_FREETYPE=1 -s USE_LIBPNG=1")
 ENDIF()
 
 IF(APPLE OR MR_EMSCRIPTEN)
@@ -154,29 +172,38 @@ IF(APPLE OR MR_EMSCRIPTEN)
 	#link_directories(/opt/homebrew/opt/jpeg-turbo/lib)
 
 	IF (APPLE)
-        find_library(COCOA_LIBRARY Cocoa ONLY)
-	    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
+		find_library(COCOA_LIBRARY Cocoa ONLY)
+		target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
+		target_include_directories(${PROJECT_NAME} PRIVATE
+			${MRMESH_OPTIONAL_INCLUDE_DIRS}
+		)
 		target_link_libraries(${PROJECT_NAME} PRIVATE
-		    spdlog
-		    zip
-		    Boost::boost
-		    jsoncpp
-		    fmt
-		    tbb
-		    ${MRMESH_OPTIONAL_DEPENDENCIES}
-		    ${COCOA_LIBRARY}
+			spdlog
+			zip
+			Boost::boost
+			jsoncpp
+			fmt
+			tbb
+			${MRMESH_OPTIONAL_DEPENDENCIES}
+			${COCOA_LIBRARY}
 		)
 	ELSE()
-	    target_link_libraries(${PROJECT_NAME} PRIVATE
-	        zip
-	        freetype
-	        jsoncpp
-	        tbb
-		${MRMESH_OPTIONAL_DEPENDENCIES}
-	    )
+		target_include_directories(${PROJECT_NAME} PRIVATE
+			${MRMESH_OPTIONAL_INCLUDE_DIRS}
+		)
+		target_link_libraries(${PROJECT_NAME} PRIVATE
+			zip
+			freetype
+			jsoncpp
+			tbb
+			${MRMESH_OPTIONAL_DEPENDENCIES}
+		)
 	ENDIF()
 ELSE()
 	find_package(tl-expected REQUIRED)
+	target_include_directories(${PROJECT_NAME} PRIVATE
+		${MRMESH_OPTIONAL_INCLUDE_DIRS}
+	)
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		tl::expected
 		fmt

@@ -653,7 +653,7 @@ Expected<Mesh, std::string> fromCtm( std::istream& in, const MeshLoadSettings& s
 }
 #endif
 
-#ifdef _WIN32
+#ifndef MRMESH_NO_OPENCASCADE
 Expected<Mesh, std::string> fromStep( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ifstream::binary );
@@ -816,7 +816,7 @@ MR_ADD_MESH_LOADER( IOFilter( "Compact triangle-based mesh (.ctm)", "*.ctm" ), f
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
 MR_ADD_MESH_LOADER( IOFilter( "3D Manufacturing Format (.3mf;*.model)", "*.3mf;*.model" ), from3mf )
 #endif
-#ifdef _WIN32
+#ifndef MRMESH_NO_OPENCASCADE
 MR_ADD_MESH_LOADER( IOFilter( "STEP files (.step,.stp)", "*.step;*.stp" ), fromStep )
 #endif
 

@@ -3,9 +3,6 @@ name: Build and test Windows
 on:
   workflow_call:
     inputs:
-      version:
-        required: true
-        type: string
       UPLOAD_ARTIFACTS:
         required: true
         type: boolean

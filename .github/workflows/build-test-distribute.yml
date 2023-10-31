@@ -30,7 +30,7 @@ jobs:
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-windows.yml
     with:
-      version: ${{needs.versioning-and-release-url.outputs.version_tag}}
+      version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     secrets: inherit
 
@@ -39,7 +39,7 @@ jobs:
     uses: ./.github/workflows/build-test-ubuntu20.yml
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
-      version: ${{needs.versioning-and-release-url.outputs.version_tag}}
+      version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   ubuntu-arm64-build-test:
@@ -47,7 +47,7 @@ jobs:
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
-      version: ${{needs.versioning-and-release-url.outputs.version_tag}}
+      version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   ubuntu22-build-test:
@@ -55,7 +55,7 @@ jobs:
     uses: ./.github/workflows/build-test-ubuntu22.yml
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
-      version: ${{needs.versioning-and-release-url.outputs.version_tag}}
+      version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   fedora-build-test:
@@ -63,7 +63,7 @@ jobs:
     uses: ./.github/workflows/build-test-fedora.yml
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
-      version: ${{needs.versioning-and-release-url.outputs.version_tag}}
+      version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   emscripten-build-test:
@@ -77,7 +77,7 @@ jobs:
     needs: [ versioning-and-release-url ]
     uses: ./.github/workflows/build-test-macos.yml
     with:
-      version: ${{needs.versioning-and-release-url.outputs.version_tag}}
+      version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   update-win-version:
@@ -102,7 +102,7 @@ jobs:
           tar -xvzf MREDist_Debug.zip
 
       - name: Make Install Folder
-        run: py -3.10 scripts\make_install_folder.py ${{needs.versioning-and-release-url.outputs.version_tag}}
+        run: py -3.10 scripts\make_install_folder.py ${{needs.versioning-and-release-url.outputs.app_version}}
 
       - name: Distribute
         run: py -3.10 scripts\zip_distribution.py MeshLibDist.zip
@@ -152,7 +152,7 @@ jobs:
       - name: Upload Distributives
         run: |
           echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
-          gh release upload ${{needs.versioning-and-release-url.outputs.version}} \
+          gh release upload ${{needs.versioning-and-release-url.outputs.tag}} \
                             MeshLibDist_${{needs.versioning-and-release-url.outputs.short_version}}.zip \
                             meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu20-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-dev.deb \

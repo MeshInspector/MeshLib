@@ -14,11 +14,17 @@ on:
         required: true
         type: boolean
     outputs:
-      version:
+      tag:
         description: "Version (with namespace)"
         value: ${{ jobs.versioning-and-release-url.outputs.version }}
+      version:
+        description: "[deprecated] Version (with namespace)"
+        value: ${{ jobs.versioning-and-release-url.outputs.version }}
+      app_version:
+        description: "Version (without namespace)"
+        value: ${{ jobs.versioning-and-release-url.outputs.version_tag }}
       version_tag:
-        description: "Version tag (without namespace)"
+        description: "[deprecated] Version tag (without namespace)"
         value: ${{ jobs.versioning-and-release-url.outputs.version_tag }}
       short_version:
         description: "Version tag with only three digits"
@@ -75,7 +81,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
           RELEASE_PATH: https://github.com/${{github.repository}}/releases/download/${{steps.version-tag.outputs.short_version}}
         with:
-          name: Release ${{steps.version-tag.outputs.short_version}}
+          name: Release ${{steps.version.outputs.version}}
           tag_name: ${{steps.version.outputs.version}}
           draft: true
           prerelease: false

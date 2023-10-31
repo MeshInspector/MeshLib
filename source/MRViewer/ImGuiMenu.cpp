@@ -337,6 +337,20 @@ void ImGuiMenu::preDraw_()
 void ImGuiMenu::postDraw_()
 {
   draw_menu();
+  prevFrameFocusWindow_ = nullptr;
+  if ( context_ && !context_->WindowsFocusOrder.empty() && !ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup ) )
+  {
+      for ( int i = context_->WindowsFocusOrder.size() - 1; i >= 0; --i )
+      {
+          auto* win = context_->WindowsFocusOrder[i];
+          if ( win && win->Active && std::string( win->Name ).find( "##CustomStatePlugin" ) != std::string::npos )
+          {
+              prevFrameFocusWindow_ = win;
+              break;
+          }
+      }
+  }
+
   if ( viewer->isGLInitialized() )
   {
       ImGui::Render();
@@ -705,6 +719,11 @@ float ImGuiMenu::menu_scaling() const
 ImGuiContext* ImGuiMenu::getCurrentContext() const
 {
     return context_;
+}
+
+ImGuiWindow* ImGuiMenu::getLastFocusedWindow() const
+{
+    return prevFrameFocusWindow_;
 }
 
 void ImGuiMenu::draw_helpers()

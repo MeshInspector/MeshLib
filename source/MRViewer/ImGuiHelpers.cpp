@@ -425,7 +425,7 @@ bool BeginStatePlugin( const char* label, bool* open, float width )
     return Begin( label, open, flags );
 }
 
-bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePluginWindowParameters& params )
+bool BeginCustomStatePlugin( const char* labelArg, bool* open, const CustomStatePluginWindowParameters& params )
 {
     const auto& style = ImGui::GetStyle();    
 
@@ -437,10 +437,14 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 12 * params.menuScaling, 8 * params.menuScaling ) );
 
-    ImGuiWindow* window = FindWindowByName( label );
+    std::string labelStr = labelArg;
+    labelStr += "##CustomStatePlugin";
+
+    ImGuiWindow* window = FindWindowByName( labelStr.c_str() );
+    auto menu = MR::getViewerInstance().getMenuPlugin();
     if ( !window )
     {
-        auto menu = MR::getViewerInstance().getMenuPluginAs<MR::RibbonMenu>();
+        auto ribMenu = std::dynamic_pointer_cast<MR::RibbonMenu>( menu );
         float yPos = 0.0f;
         float yPivot = 0.f;
         if ( params.isDown )
@@ -448,8 +452,8 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
             yPos = GetIO().DisplaySize.y;
             yPivot = 1.f;
         }
-        else if ( menu )
-            yPos = ( menu->getTopPanelOpenedHeight() - 1.0f ) * menu->menu_scaling();
+        else if ( ribMenu )
+            yPos = ( ribMenu->getTopPanelOpenedHeight() - 1.0f ) * menu->menu_scaling();
         SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - params.width, yPos ), ImGuiCond_FirstUseEver, ImVec2(0.f, yPivot) );
     }
 
@@ -488,7 +492,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         prevCursorMaxPos = window->DC.CursorMaxPos.y;
     }
 
-    if ( !Begin( label, open, flags | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) )
+    if ( !Begin( labelStr.c_str(), open, flags | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) )
     {
         *open = false;
         ImGui::PopStyleVar( 2 );
@@ -597,7 +601,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     else
         ImGui::SetCursorScreenPos( { cursorScreenPos.x, window->Rect().Min.y + 0.5f * ( titleBarHeight - ImGui::GetFontSize() ) } );
 
-    ImGui::RenderText( ImGui::GetCursorScreenPos(), label );
+    ImGui::RenderText( ImGui::GetCursorScreenPos(), labelStr.c_str() );
 
     if ( titleFont )
         ImGui::PopFont();
@@ -636,7 +640,10 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         ImGui::PushFont( iconsFont );
 
     ImGui::SetCursorScreenPos( { window->Rect().Max.x - ( buttonSize + buttonOffset ), window->Rect().Min.y + buttonOffset } );
-    if ( ImGui::Button( "\xef\x80\x8d", { buttonSize, buttonSize } ) ) //close button
+    bool escapeClose = params.closeWithEscape && ImGui::IsKeyPressed( ImGuiKey_Escape ) && !ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+    if ( escapeClose && menu )
+        escapeClose = window == menu->getLastFocusedWindow();
+    if ( ImGui::Button( "\xef\x80\x8d", { buttonSize, buttonSize } ) || escapeClose ) //close button
     {
         *open = false;
 

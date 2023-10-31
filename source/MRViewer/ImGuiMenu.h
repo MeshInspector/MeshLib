@@ -17,7 +17,7 @@
 
 // Forward declarations
 struct ImGuiContext;
-
+struct ImGuiWindow;
 
 namespace MR
 {
@@ -55,6 +55,8 @@ protected:
 
   // ImGui Context
   ImGuiContext * context_ = nullptr;
+  // last focused window
+  ImGuiWindow* prevFrameFocusWindow_ = nullptr;
 
   // if true, then pre_draw will start from polling glfw events
   bool pollEventsInPreDraw = false; // be careful here with true, this can cause infinite recurse 
@@ -202,6 +204,8 @@ public:
   MRVIEWER_API float menu_scaling() const;
 
   MRVIEWER_API ImGuiContext* getCurrentContext() const;
+
+  MRVIEWER_API ImGuiWindow* getLastFocusedWindow() const;
 
   enum class ModalMessageType
   {

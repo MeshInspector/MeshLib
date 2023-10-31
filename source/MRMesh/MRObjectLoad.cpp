@@ -23,6 +23,7 @@
 #include "MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRMeshLoadSettings.h"
+#include "MRZip.h"
 
 #ifndef MRMESH_NO_GLTF
 #include "MRGltfSerializer.h"
@@ -46,6 +47,8 @@ Expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem:
     MeshLoadSettings newSettings = settings;
     VertColors colors;
     newSettings.colors = &colors;
+    AffineXf3f xf;
+    newSettings.xf = &xf;
     auto mesh = MeshLoad::fromAnySupportedFormat( file, newSettings );
     if ( !mesh.has_value() )
     {
@@ -60,6 +63,7 @@ Expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem:
         objectMesh.setVertsColorMap( std::move( colors ) );
         objectMesh.setColoringType( ColoringType::VertsColorMap );
     }
+    objectMesh.setXf( xf );
 
     return objectMesh;
 }
@@ -71,6 +75,10 @@ Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std
     MeshLoadSettings newSettings = settings;
     VertColors colors;
     newSettings.colors = &colors;
+    VertNormals normals;
+    newSettings.normals = &normals;
+    AffineXf3f xf;
+    newSettings.xf = &xf;
     auto mesh = MeshLoad::fromAnySupportedFormat( file, newSettings );
     if ( !mesh.has_value() )
         return unexpected( mesh.error() );
@@ -79,6 +87,7 @@ Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std
     {
         auto pointCloud = std::make_shared<MR::PointCloud>();
         pointCloud->points = std::move( mesh->points );
+        pointCloud->normals = std::move( normals );
         pointCloud->validPoints.resize( pointCloud->points.size(), true );
 
         auto objectPoints = std::make_unique<ObjectPoints>();
@@ -89,6 +98,7 @@ Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std
             objectPoints->setVertsColorMap( std::move( colors ) );
             objectPoints->setColoringType( ColoringType::VertsColorMap );
         }
+        objectPoints->setXf( xf );
 
         return objectPoints;
     }
@@ -101,6 +111,7 @@ Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std
         objectMesh->setVertsColorMap( std::move( colors ) );
         objectMesh->setColoringType( ColoringType::VertsColorMap );
     }
+    objectMesh->setXf( xf );
 
     return objectMesh;
 }
@@ -246,6 +257,8 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
         settings.skippedFaceCount = &skippedFaceCount;
         int duplicatedVertexCount = 0;
         settings.duplicatedVertexCount = &duplicatedVertexCount;
+        AffineXf3f xf;
+        settings.xf = &xf;
         auto res = MeshLoad::fromSceneObjFile( filename, false, settings );
         if ( res.has_value() )
         {
@@ -270,6 +283,8 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                     objectMesh->setTexture( { image.value(), FilterType::Linear } );
                     objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
                 }
+
+                objectMesh->setXf( xf );
 
                 objects[i] = std::dynamic_pointer_cast< Object >( objectMesh );
             }
@@ -455,8 +470,15 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
     filesTree.path = folder;
 
 
+    // Global variable is not correctly initialized in emscripten build
+    const IOFilters filters = SceneFileFilters | MeshLoad::getFilters() |
+#if !defined(MRMESH_NO_VOXEL)
+        VoxelsLoad::Filters |
+#endif
+        LinesLoad::Filters | PointsLoad::Filters;
+
     std::function<void( FilePathNode& )> fillFilesTree = {};
-    fillFilesTree = [&fillFilesTree] ( FilePathNode& node )
+    fillFilesTree = [&fillFilesTree, &filters] ( FilePathNode& node )
     {
         std::error_code ec;
         for ( auto entry : Directory{ node.path, ec } )
@@ -476,10 +498,10 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
                 if ( ext.empty() )
                     continue;
 
-                if ( std::find_if( allFilters.begin(), allFilters.end(), [&ext] ( const IOFilter& f )
+                if ( std::find_if( filters.begin(), filters.end(), [&ext] ( const IOFilter& f )
                 {
                     return f.extensions.find( ext ) != std::string::npos;
-                } ) != allFilters.end() )
+                } ) != filters.end() )
                     node.files.push_back( { .path = path } );
             }
         }
@@ -595,6 +617,24 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
     return result;
 }
 
+Expected <Object, std::string> makeObjectTreeFromZip( const std::filesystem::path& zipPath, ProgressCallback callback )
+{
+    auto tmpFolder = UniqueTemporaryFolder( {} );
+    auto contentsFolder = tmpFolder / zipPath.stem();
+
+    std::ifstream in( zipPath, std::ifstream::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( zipPath.filename() ) );
+
+    std::error_code ec;
+    std::filesystem::create_directory( contentsFolder, ec );
+    auto resZip = decompressZip( in, contentsFolder );
+    if ( !resZip )
+        return unexpected( "ZIP container error: " + resZip.error() );
+
+    return makeObjectTreeFromFolder( contentsFolder, callback );
+}
+
 Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, ProgressCallback callback )
 {
     auto ext = std::string( "*" ) + utf8string( path.extension().u8string() );
@@ -620,12 +660,19 @@ Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( 
         return deserializeObjectTreeFromGltf( path, callback );
     }
 #endif
-#ifdef _WIN32
+#ifndef MRMESH_NO_OPENCASCADE
     else if ( ext == "*.step" || ext == "*.stp" )
     {
         return MeshLoad::fromSceneStepFile( path, { .callback = callback } );
     }
 #endif
+    else if ( ext == "*.zip" )
+    {
+        auto result = makeObjectTreeFromZip( path, callback );
+        if ( !result )
+            return unexpected( result.error() );
+        return std::make_shared<Object>( std::move( *result ) );
+    }
 
     return res;
 }

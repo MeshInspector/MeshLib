@@ -19,3 +19,4 @@
 #cmakedefine MRMESH_NO_E57
 #cmakedefine MRMESH_NO_LAS
 #cmakedefine MRMESH_NO_GTEST
+#cmakedefine MRMESH_NO_OPENCASCADE

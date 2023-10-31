@@ -6,7 +6,7 @@
 namespace MR
 {
 
-/// \defgroup ViewportGroup Vieport group
+/// \defgroup ViewportGroup Viewport group
 /// \ingroup DataModelGroup
 /// \{
 

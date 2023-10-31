@@ -64,9 +64,9 @@ public:
 
     /**
      * \brief finds interpolated value.
-     * \details \ref https:///en.wikipedia.org/wiki/Bilinear_interpolation
+     * \details https://en.wikipedia.org/wiki/Bilinear_interpolation
      * getInterpolated( 0.5f, 0.5f ) == get( 0, 0 )
-     * see \ref https:///docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-coordinates for details
+     * see https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-coordinates for details
      * all 4 elements around this point should be valid, returns nullopt if at least one is not valid
      * \param x,y should be in resolution range [0;resX][0;resY].
      */
@@ -80,7 +80,7 @@ public:
      * \brief finds 3d coordinates of the Point on the model surface for the (x,y) interpolated value
      * \param x,y should be in resolution range [0;resX][0;resY].
      * \details getInterpolated( 0.5f, 0.5f ) == get( 0, 0 )
-     * see \ref https: *docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-coordinates for details
+     * see https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-coordinates for details
      * all 4 elements around this point should be valid, returns nullopt if at least one is not valid
      */
     [[nodiscard]] MRMESH_API std::optional<Vector3f> unprojectInterpolated( float x, float y, const DistanceMapToWorld& toWorldStruct ) const;

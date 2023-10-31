@@ -8,7 +8,6 @@
 namespace MR
 {
 
-/// \defgroup PrecisePredicates2
 /// \ingroup MathGroup
 /// \{
 
@@ -54,6 +53,11 @@ struct CoordinateConverters2
     ConvertToIntVector2 toInt{};
     ConvertToFloatVector2 toFloat{};
 };
+
+/// finds intersection precise, using high precision int inside
+/// this function input should have intersection
+[[nodiscard]] MRMESH_API Vector2i findSegmentSegmentIntersectionPrecise(
+    const Vector2i& a, const Vector2i& b, const Vector2i& c, const Vector2i& d );
 
 /// finds intersection precise, using high precision int inside
 /// this function input should have intersection

@@ -7,6 +7,8 @@
 #include "MR2DContoursTriangulation.h"
 #include "MRRegionBoundary.h"
 #include "MR2to3.h"
+#include "MRPolyline.h"
+#include "MRLinesSave.h"
 
 namespace MR
 {
@@ -106,6 +108,10 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, float offset, const 
                     insertSharpCorner( res, prevPoint, orgPt, ang, params.maxSharpAngle );
                 }
             }
+            else
+            {
+                res.push_back( orgPt );
+            }
             res.emplace_back( std::move( nextPoint ) );
         }
         res.emplace_back( destPt + norm * offset );
@@ -163,27 +169,8 @@ Contours2f offsetContours( const Contours2f& contours, float offset, const Offse
             intermediateRes.back().push_back( intermediateRes.back().front() );
         }
     }
-    if ( offset == 0.0f )
-        return intermediateRes;
-
-    auto mesh = PlanarTriangulation::triangulateContours( std::move( intermediateRes ), nullptr, 
-        PlanarTriangulation::WindingMode::Negative ); // Should be negative
     
-    // `getValidFaces` important to exclude lone boundaries
-    auto bourndaries = findLeftBoundary( mesh.topology, &mesh.topology.getValidFaces() );
-    Contours2f res;
-    res.reserve( bourndaries.size() );
-    for ( int i = 0; i < bourndaries.size(); ++i )
-    {
-        const auto& loop = bourndaries[i];
-        res.push_back( {} );
-        res.back().reserve( loop.size() + 1 );
-
-        for ( auto e : loop )
-            res.back().push_back( to2dim( mesh.orgPnt( e ) ) );
-        res.back().push_back( to2dim( mesh.destPnt( loop.back() ) ) );
-    }
-    return res;
+    return PlanarTriangulation::getOutline( intermediateRes );
 }
 
 }

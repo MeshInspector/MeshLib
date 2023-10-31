@@ -89,6 +89,7 @@
   <ItemGroup>
     <CudaCompile Include="MRCudaFastWindingNumber.cu" />
     <CudaCompile Include="MRCudaPointsToMeshProjector.cu" />
+    <CudaCompile Include="MRCudaSolarRadiation.cu" />
     <CudaCompile Include="MRCudaTest.cu" />
     <CudaCompile Include="MRCudaContoursDistanceMap.cu" />
   </ItemGroup>
@@ -104,6 +105,8 @@
     <ClInclude Include="MRCudaPointsToMeshProjector.cuh" />
     <ClInclude Include="MRCudaPointsToMeshProjector.h" />
     <ClInclude Include="MRCudaContoursDistanceMap.cuh" />
+    <ClInclude Include="MRCudaSolarRadiation.cuh" />
+    <ClInclude Include="MRCudaSolarRadiation.h" />
     <ClInclude Include="MRCudaTest.cuh" />
     <ClInclude Include="MRCudaTest.h" />
     <ClInclude Include="MRCudaContoursDistanceMap.h" />
@@ -113,6 +116,7 @@
     <ClCompile Include="MRCudaContoursDisntaceMap.cpp" />
     <ClCompile Include="MRCudaFastWindingNumber.cpp" />
     <ClCompile Include="MRCudaPointsToMeshProjector.cpp" />
+    <ClCompile Include="MRCudaSolarRadiation.cpp" />
     <ClCompile Include="MRCudaTest.cpp" />
   </ItemGroup>
   <ItemGroup>

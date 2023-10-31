@@ -161,6 +161,7 @@ constexpr uint8_t& get( Color& c ) noexcept
     return c[int( I )];
 }
 
-/// \}
 
 } // namespace MR
+
+/// \}

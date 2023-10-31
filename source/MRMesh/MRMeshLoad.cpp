@@ -444,6 +444,12 @@ Expected<Mesh, std::string> fromPly( std::istream& in, const MeshLoadSettings& s
                 reader.extract_properties( indecies, 3, miniply::PLYPropertyType::Float, res.points.data() );
                 gotVerts = true;
             }
+            if ( settings.normals && reader.find_normal( indecies ) )
+            {
+                Timer t( "extractNormals" );
+                settings.normals->resize( numVerts );
+                reader.extract_properties( indecies, 3, miniply::PLYPropertyType::Float, settings.normals->data() );
+            }
             if ( settings.colors && reader.find_color( indecies ) )
             {
                 Timer t( "extractColors" );
@@ -613,6 +619,14 @@ Expected<Mesh, std::string> fromCtm( std::istream& in, const MeshLoadSettings& s
         }
     }
 
+    if ( settings.normals && ctmGetInteger( context, CTM_HAS_NORMALS ) == CTM_TRUE )
+    {
+        auto normals = ctmGetFloatArray( context, CTM_NORMALS );
+        settings.normals->resize( vertCount );
+        for ( VertId i{0}; i < (int) vertCount; ++i )
+            (*settings.normals)[i] = Vector3f( normals[3 * i], normals[3 * i + 1], normals[3 * i + 2] );
+    }
+
     Mesh mesh;
     mesh.points.resize( vertCount );
     for ( VertId i{0}; i < (int)vertCount; ++i )
@@ -639,7 +653,7 @@ Expected<Mesh, std::string> fromCtm( std::istream& in, const MeshLoadSettings& s
 }
 #endif
 
-#ifdef _WIN32
+#ifndef MRMESH_NO_OPENCASCADE
 Expected<Mesh, std::string> fromStep( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ifstream::binary );
@@ -800,10 +814,9 @@ MR_ADD_MESH_LOADER( IOFilter( "Drawing Interchange Format (.dxf)", "*.dxf" ), fr
 MR_ADD_MESH_LOADER( IOFilter( "Compact triangle-based mesh (.ctm)", "*.ctm" ), fromCtm )
 #endif
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
-MR_ADD_MESH_LOADER( IOFilter( "3D Manufacturing Format (.3mf)", "*.3mf" ), from3mf )
-MR_ADD_MESH_LOADER( IOFilter( "3D Manufacturing Format model (.model)", "*.model" ), from3mfModel )
+MR_ADD_MESH_LOADER( IOFilter( "3D Manufacturing Format (.3mf;*.model)", "*.3mf;*.model" ), from3mf )
 #endif
-#ifdef _WIN32
+#ifndef MRMESH_NO_OPENCASCADE
 MR_ADD_MESH_LOADER( IOFilter( "STEP files (.step,.stp)", "*.step;*.stp" ), fromStep )
 #endif
 

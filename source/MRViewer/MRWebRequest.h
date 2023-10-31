@@ -14,8 +14,6 @@ namespace MR
 MRVIEWER_API Expected<Json::Value, std::string> parseResponse( const Json::Value& response );
 
 // this class is needed to unify cpp and wasm requests
-// can perform only one request at a time
-// should be called from GUI thread
 class MRVIEWER_CLASS WebRequest
 {
 public:
@@ -25,44 +23,50 @@ public:
         Post
     };
 
-    // returns true if no other request is executing right now
-    MRVIEWER_API static bool readyForNextRequest();
-
     // clears all request data
-    MRVIEWER_API static void clear();
+    MRVIEWER_API void clear();
 
-    MRVIEWER_API static void setMethod( Method method );
+    MRVIEWER_API void setMethod( Method method );
 
     // sets timeout in milliseconds
-    MRVIEWER_API static void setTimeout( int timeoutMs );
+    MRVIEWER_API void setTimeout( int timeoutMs );
 
     // sets parameters
-    MRVIEWER_API static void setParameters( std::unordered_map<std::string, std::string> parameters );
+    MRVIEWER_API void setParameters( std::unordered_map<std::string, std::string> parameters );
 
-    MRVIEWER_API static void setHeaders( std::unordered_map<std::string, std::string> headers );
+    MRVIEWER_API void setHeaders( std::unordered_map<std::string, std::string> headers );
 
-    MRVIEWER_API static void setBody( std::string body );
+    // sets payload in multipart format
+    struct FormData
+    {
+        std::string path;
+        std::string contentType;
+        std::string name;
+        std::string fileName;
+    };
+    MRVIEWER_API void setFormData( std::vector<FormData> formData );
+
+    MRVIEWER_API void setBody( std::string body );
+
+    // prefer to save the response to file
+    MRVIEWER_API void setOutputPath( std::string outputPath );
 
     using ResponseCallback = std::function<void( const Json::Value& response )>;
 
     /// sends request, calling callback on answer, 
     /// if async then callback is called in next frame after getting response
-    /// return true if request was sent, false if other request is processing now
-    /// note: check `readyForNextRequest` before sending
-    /// \param request name for logging
-    MRVIEWER_API static bool send( std::string url, const std::string & logName, ResponseCallback callback, bool async = true );
+    /// NOTE: downloading a binary file in synchronous mode is forbidden by JavaScript
+    /// \param logName name for logging
+    MRVIEWER_API void send( std::string url, const std::string & logName, ResponseCallback callback, bool async = true );
 
 private:
-    WebRequest() = default;
-    ~WebRequest() = default;
-
     Method method_{ Method::Get };
     int timeout_{ 10000 };
     std::unordered_map<std::string, std::string> params_;
     std::unordered_map<std::string, std::string> headers_;
+    std::vector<FormData> formData_;
     std::string body_;
-
-    static WebRequest& instance_();
+    std::string outputPath_;
 };
 
 }

@@ -13,9 +13,8 @@
 namespace MR
 {
 
-/// \defgroup ToFromEigen
 /// \ingroup MathGroup
-/// {
+/// \{
 
 template <typename T>
 [[nodiscard]] inline Vector2<T> fromEigen( const Eigen::Matrix<T, 2, 1> & ev )

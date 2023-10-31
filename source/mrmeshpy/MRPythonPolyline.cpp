@@ -94,18 +94,18 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PlanarTriangulation, [] ( pybind11::module_&
 {
     pybind11::enum_<MR::PlanarTriangulation::WindingMode>( m, "WindingMode", "specify mode of detecting inside and outside parts of triangulation" ).
         value( "NonZero", MR::PlanarTriangulation::WindingMode::NonZero ).
+        value( "Negative", MR::PlanarTriangulation::WindingMode::Negative ).
         value( "Positive", MR::PlanarTriangulation::WindingMode::Positive );
 
     m.def( "findHoleVertIdsByHoleEdges", &MR::PlanarTriangulation::findHoleVertIdsByHoleEdges,
         pybind11::arg( "tp" ), pybind11::arg( "holePaths" ),
         "return vertices of holes that correspond internal contours representation of PlanarTriangulation" );
 
-    m.def( "triangulateContours", ( MR::Mesh( * )( const MR::Contours2f&, const MR::PlanarTriangulation::HolesVertIds*, MR::PlanarTriangulation::WindingMode ) )& MR::PlanarTriangulation::triangulateContours,
-        pybind11::arg( "contours" ), pybind11::arg( "holeVertsIds" ) = nullptr, pybind11::arg( "mode" ) = MR::PlanarTriangulation::WindingMode::NonZero,
+    m.def( "triangulateContours", ( MR::Mesh( * )( const MR::Contours2f&, const MR::PlanarTriangulation::HolesVertIds* ) )& MR::PlanarTriangulation::triangulateContours,
+        pybind11::arg( "contours" ), pybind11::arg( "holeVertsIds" ) = nullptr,
         "Triangulate 2d contours.\n"
         "Only closed contours are allowed (first point of each contour should be the same as last point of the contour).\n"
         "\tholeVertsIds if set merge only points with same vertex id, otherwise merge all points with same coordinates\n"
-        "\tmode specify mode of detecting inside and outside parts of triangulation\n"
         "\treturn created mesh" );
 } )
 

@@ -7,7 +7,7 @@
 namespace MR
 {
 
-/// \defgroup AligningTransformGroup
+/// \defgroup AligningTransformGroup Aligning Transform
 /// \ingroup MathGroup
 /// \{
 

@@ -23,7 +23,7 @@ public:
     struct MouseControlKey
     {
         MouseButton btn{ MouseButton::Left };
-        int mod{ 0 }; // modifier (alt/ctrl/shift etc.)
+        int mod{ 0 }; // modifier (GLFW_MOD_{SHIFT|CONTROL|ALT})
     };
 
     // called in Viewer init, connects to Viewer mouse signals

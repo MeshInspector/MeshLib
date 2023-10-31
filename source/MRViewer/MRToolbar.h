@@ -31,7 +31,7 @@ public:
     /// read toolbar items from json
     void readItemsList( const Json::Value& root );
     /// reset items list to default value
-    /// \detail default value is taken from RibbonSchemaHolder
+    /// \details default value is taken from RibbonSchemaHolder
     void resetItemsList();
     /// get acces to items
     const MenuItemsList& getItemsList() const { return itemsList_; }

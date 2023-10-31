@@ -12,7 +12,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRChangeColoringType.h" />
+    <ClInclude Include="MRChangeColoringActions.h" />
+    <ClInclude Include="MRCloudPartMapping.h" />
+    <ClInclude Include="MREnumNeighbours.h" />
     <ClInclude Include="MRFewSmallest.h" />
+    <ClInclude Include="MRImproveSampling.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
     <ClInclude Include="MRAggregateFlow.h" />
@@ -162,6 +166,7 @@
     <ClInclude Include="MRPrism.h" />
     <ClInclude Include="MRProgressReadWrite.h" />
     <ClInclude Include="MRRayBoxIntersection2.h" />
+    <ClInclude Include="MRSolarRadiation.h" />
     <ClInclude Include="MRTiffIO.h" />
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
@@ -383,6 +388,7 @@
     <ClCompile Include="MREdgePaths.cpp" />
     <ClCompile Include="MREmbeddedPython.cpp" />
     <ClCompile Include="MREmbedTerrainStructure.cpp" />
+    <ClCompile Include="MREnumNeighbours.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />
     <ClCompile Include="MRExpandShrink.cpp" />
     <ClCompile Include="MRExpected.cpp" />
@@ -404,6 +410,7 @@
     <ClCompile Include="MRIdentifyVertices.cpp" />
     <ClCompile Include="MRImageLoad.cpp" />
     <ClCompile Include="MRImageSave.cpp" />
+    <ClCompile Include="MRImproveSampling.cpp" />
     <ClCompile Include="MRInnerShell.cpp" />
     <ClCompile Include="MRIntersection.cpp" />
     <ClCompile Include="MRIntersectionContour.cpp" />
@@ -481,6 +488,7 @@
     <ClCompile Include="MRMeshCollide.cpp" />
     <ClCompile Include="MRPrism.cpp" />
     <ClCompile Include="MRProgressReadWrite.cpp" />
+    <ClCompile Include="MRSolarRadiation.cpp" />
     <ClCompile Include="MRTiffIO.cpp" />
     <ClCompile Include="MRRectIndexer.cpp" />
     <ClCompile Include="MRSceneColors.cpp" />

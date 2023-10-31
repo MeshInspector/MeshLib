@@ -484,6 +484,14 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
         }
         else
         {
+            auto it = std::find_if( 
+                RibbonSchemaHolder::schema().tabsOrder.begin(), 
+                RibbonSchemaHolder::schema().tabsOrder.end(),
+                [&] ( const TabNamePriority& tnp ) { return tnp.name == tabName.asString(); } );
+
+            if ( it != RibbonSchemaHolder::schema().tabsOrder.end() && tabPriority != 0 )
+                it->priority = tabPriority;
+
             tabRef.insert( tabRef.end(), newGroupsVec.begin(), newGroupsVec.end() );
         }
     }

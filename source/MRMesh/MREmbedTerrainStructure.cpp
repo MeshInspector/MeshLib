@@ -28,9 +28,10 @@ struct FilterBowtiesResult
     Contours2f contours;
     std::vector<std::vector<int>> initIndices;
 };
+
 FilterBowtiesResult filterBowties( const Contour2f& cont )
 {
-    auto mesh = PlanarTriangulation::triangulateContours( { cont } );
+    auto mesh = PlanarTriangulation::getOutlineMesh( { cont } );
     auto holes = findRightBoundary( mesh.topology );
     FilterBowtiesResult res;
     res.contours.resize( holes.size() );
@@ -280,7 +281,10 @@ Expected<TerrainEmbedder::MappedMeshContours, std::string> TerrainEmbedder::prep
         for ( int i = 0; i < res.contours.size(); ++i )
         {
             bool lone = true;
-            res.contours[i] = convertMeshTriPointsToClosedContour( result_, noBowtiesMtps[i], {}, &res.map[i] );
+            auto contourRes = convertMeshTriPointsToClosedContour( result_, noBowtiesMtps[i], {}, &res.map[i] );
+            if ( !contourRes.has_value() )
+                return unexpected( toString( contourRes.error() ) );
+            res.contours[i] = std::move( *contourRes );
             for ( int j = 0; j < res.contours[i].intersections.size(); ++j )
             {
                 if ( res.contours[i].intersections[j].primitiveId.index() == OneMeshIntersection::VariantIndex::Edge )
@@ -501,6 +505,11 @@ TerrainEmbedder::OffsetBlock TerrainEmbedder::offsetContour_( const MarkedContou
                     res.contour.emplace_back( rotXf( prevPoint ) );
                     ++res.idsShifts[i];
                 }
+            }
+            else
+            {
+                res.contour.push_back( orgPt );
+                ++res.idsShifts[i];
             }
             res.contour.emplace_back( std::move( nextPoint ) );
             ++res.idsShifts[i];

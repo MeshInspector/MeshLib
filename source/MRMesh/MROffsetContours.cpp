@@ -26,7 +26,7 @@ float findAngle( const Vector2f& prev, const Vector2f& org, const Vector2f& next
         return std::atan2( crossRes, dotRes );
 }
 
-void insertRoundCorner( Contour2f& cont, Vector2f prevPoint, Vector2f orgPt, float ang, float minAnglePrecision )
+void insertRoundCorner( Contour2f& cont, Vector2f prevPoint, Vector2f orgPt, float ang, float minAnglePrecision, int* shiftMap )
 {
     int numSteps = int( std::floor( std::abs( ang ) / minAnglePrecision ) );
     for ( int s = 0; s < numSteps; ++s )
@@ -34,10 +34,12 @@ void insertRoundCorner( Contour2f& cont, Vector2f prevPoint, Vector2f orgPt, flo
         float stepAng = ( ang / ( numSteps + 1 ) ) * ( s + 1 );
         auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( stepAng ), orgPt );
         cont.emplace_back( rotXf( prevPoint ) );
+        if ( shiftMap )
+            ++( *shiftMap );
     }
 }
 
-void insertSharpCorner( Contour2f& cont, Vector2f prevPoint, Vector2f orgPt, float ang, float maxSharpAngle )
+void insertSharpCorner( Contour2f& cont, Vector2f prevPoint, Vector2f orgPt, float ang, float maxSharpAngle, int* shiftMap )
 {
     if ( std::abs( ang ) <= maxSharpAngle )
     {
@@ -45,6 +47,8 @@ void insertSharpCorner( Contour2f& cont, Vector2f prevPoint, Vector2f orgPt, flo
         auto rotPoint = rotXf( prevPoint );
         auto mod = 1.0f / std::max( std::cos( std::abs( ang ) * 0.5f ), 1e-2f );
         cont.emplace_back( rotPoint * mod + orgPt * ( 1.0f - mod ) );
+        if ( shiftMap )
+            ++( *shiftMap );
     }
     else
     {
@@ -60,10 +64,14 @@ void insertSharpCorner( Contour2f& cont, Vector2f prevPoint, Vector2f orgPt, flo
         rotXf = AffineXf2f::xfAround( Matrix2f::rotation( ang - tmpAng * 0.5f ), orgPt );
         rotPoint = rotXf( prevPoint );
         cont.emplace_back( rotPoint * mod + orgPt * ( 1.0f - mod ) );
+
+        if ( shiftMap )
+            ( *shiftMap ) += 2;
     }
 }
 
-Contour2f offsetOneDirectionContour( const Contour2f& cont, float offset, const OffsetContoursParams& params )
+Contour2f offsetOneDirectionContour( const Contour2f& cont, float offset, const OffsetContoursParams& params, 
+    int* shiftMap )
 {
     MR_TIMER;
     bool isClosed = cont.front() == cont.back();
@@ -79,6 +87,8 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, float offset, const 
 
     Contour2f res;
     res.reserve( 3 * cont.size() );
+    if ( shiftMap )
+        ++shiftMap[0];
 
     res.emplace_back( isClosed ?
         cont[0] + offset * contNorm( int( cont.size() ) - 2 ) :
@@ -91,6 +101,9 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, float offset, const 
 
         auto nextPoint = orgPt + norm * offset;
 
+        if ( shiftMap && i > 0 )
+            shiftMap[i] = shiftMap[i - 1];
+
         // interpolation
         auto prevPoint = res.back();
         auto ang = findAngle( prevPoint, orgPt, nextPoint );
@@ -102,20 +115,26 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, float offset, const 
             {
                 if ( params.cornerType == OffsetContoursParams::CornerType::Round )
                 {
-                    insertRoundCorner( res, prevPoint, orgPt, ang, params.minAnglePrecision );
+                    insertRoundCorner( res, prevPoint, orgPt, ang, params.minAnglePrecision, shiftMap ? &shiftMap[i] : nullptr );
                 }
                 else if ( params.cornerType == OffsetContoursParams::CornerType::Sharp )
                 {
-                    insertSharpCorner( res, prevPoint, orgPt, ang, params.maxSharpAngle );
+                    insertSharpCorner( res, prevPoint, orgPt, ang, params.maxSharpAngle, shiftMap ? &shiftMap[i] : nullptr );
                 }
             }
             else
             {
                 res.push_back( orgPt );
+                if ( shiftMap )
+                    ++shiftMap[i];
             }
             res.emplace_back( std::move( nextPoint ) );
+            if ( shiftMap )
+                ++shiftMap[i];
         }
         res.emplace_back( destPt + norm * offset );
+        if ( shiftMap )
+            ++shiftMap[i];
     }
     return res;
 }
@@ -131,7 +150,8 @@ Contours2f offsetContours( const Contours2f& contours, float offset, const Offse
     for ( int i = 0; i < contours.size(); ++i )
     {
         if ( params.indicesMap )
-            shiftsMap.push_back( std::vector<int>( contours[i].size() ) );
+            shiftsMap.push_back( std::vector<int>( contours[i].size(), 0 ) );
+
         if ( contours[i].empty() )
             continue;
 
@@ -140,7 +160,7 @@ Contours2f offsetContours( const Contours2f& contours, float offset, const Offse
         {
             intermediateRes.push_back( contours[i] );
             if ( params.indicesMap )
-                std::iota( shiftsMap.back().begin(), shiftsMap.back().end(), 0 );
+                std::iota( shiftsMap.back().begin(), shiftsMap.back().end(), 1 );
             if ( !isClosed || params.type == OffsetContoursParams::Type::Shell )
             {
                 intermediateRes.back().insert( intermediateRes.back().end(), contours[i].rbegin(), contours[i].rend() );
@@ -153,24 +173,37 @@ Contours2f offsetContours( const Contours2f& contours, float offset, const Offse
 
         if ( isClosed )
         {
-            intermediateRes.push_back( offsetOneDirectionContour( contours[i], offset, params ) );
+            intermediateRes.push_back( offsetOneDirectionContour( contours[i], offset, params, 
+                params.indicesMap ? shiftsMap.back().data() : nullptr ) );
             if ( params.type == OffsetContoursParams::Type::Shell )
             {
-                intermediateRes.push_back( offsetOneDirectionContour( contours[i], -offset, params ) );
+                if ( params.indicesMap )
+                    shiftsMap.back().resize( shiftsMap.back().size() * 2, 0 );
+                intermediateRes.push_back( offsetOneDirectionContour( contours[i], -offset, params,
+                    params.indicesMap ? &shiftsMap.back()[contours[i].size()] : nullptr ) );
+                if ( params.indicesMap )
+                    std::reverse( shiftsMap.back().begin() + contours[i].size(), shiftsMap.back().end() );
                 std::reverse( intermediateRes.back().begin(), intermediateRes.back().end() );
             }
         }
         else
         {
+            if ( params.indicesMap )
+                shiftsMap.back().resize( shiftsMap.back().size() * 2, 0 );
+
             auto tmpOffset = std::abs( offset );
-            intermediateRes.push_back( offsetOneDirectionContour( contours[i], tmpOffset, params ) );
-            auto backward = offsetOneDirectionContour( contours[i], -tmpOffset, params );
+            intermediateRes.push_back( offsetOneDirectionContour( contours[i], tmpOffset, params,
+                params.indicesMap ? shiftsMap.back().data() : nullptr ) );
+            auto backward = offsetOneDirectionContour( contours[i], -tmpOffset, params,
+                params.indicesMap ? &shiftsMap.back()[contours[i].size()] : nullptr );
+            if ( params.indicesMap )
+                std::reverse( shiftsMap.back().begin() + contours[i].size(), shiftsMap.back().end() );
             std::reverse( backward.begin(), backward.end() );
             if ( params.endType == OffsetContoursParams::EndType::Round )
             {
-                insertRoundCorner( intermediateRes.back(), intermediateRes.back().back(), contours[i].back(), -PI_F, params.minAnglePrecision );
+                insertRoundCorner( intermediateRes.back(), intermediateRes.back().back(), contours[i].back(), -PI_F, params.minAnglePrecision, nullptr );
                 intermediateRes.back().insert( intermediateRes.back().end(), backward.begin(), backward.end() );
-                insertRoundCorner( intermediateRes.back(), intermediateRes.back().back(), contours[i].front(), -PI_F, params.minAnglePrecision );
+                insertRoundCorner( intermediateRes.back(), intermediateRes.back().back(), contours[i].front(), -PI_F, params.minAnglePrecision, nullptr );
             }
             else if ( params.endType == OffsetContoursParams::EndType::Cut )
             {

@@ -171,7 +171,10 @@ void RenderLinesObject::renderPicker_( const BaseRenderParams& parameters, unsig
         GL_EXEC( glUniform4f( glGetUniformLocation( shader, "viewport" ),
             float( parameters.viewport.x ), float( parameters.viewport.y ),
             float( parameters.viewport.z ), float( parameters.viewport.w ) ) );
-        GL_EXEC( glUniform1f( glGetUniformLocation( shader, "width" ), objLines_->getLineWidth() ) );
+        float width = objLines_->getLineWidth();
+        if ( width < 5.0f )
+            width = 5.0f;
+        GL_EXEC( glUniform1f( glGetUniformLocation( shader, "width" ), width ) );
     }
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objLines_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, parameters.viewportId ) ) );
@@ -194,7 +197,9 @@ void RenderLinesObject::renderPicker_( const BaseRenderParams& parameters, unsig
         const bool drawPoints = objLines_->getVisualizeProperty( LinesVisualizePropertyType::Points, parameters.viewportId );
         const bool smooth = objLines_->getVisualizeProperty( LinesVisualizePropertyType::Smooth, parameters.viewportId );
         // function is executing if drawPoints == true or smooth == true => pointSize != 0
-        const float pointSize = std::max( drawPoints * objLines_->getPointSize(), smooth * objLines_->getLineWidth() );
+        float pointSize = std::max( drawPoints * objLines_->getPointSize(), smooth * objLines_->getLineWidth() );
+        if ( pointSize < 5.0f )
+            pointSize = 5.0f;
 #ifdef __EMSCRIPTEN__
         GL_EXEC( glUniform1f( glGetUniformLocation( shader, "pointSize" ), pointSize ) );
 #else

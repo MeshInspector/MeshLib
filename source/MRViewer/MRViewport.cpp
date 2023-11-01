@@ -109,29 +109,50 @@ void Viewport::clearFramebuffers()
     viewportGL_.fillViewport( toVec4<int>( viewportRect_ ), params_.backgroundColor );
 }
 
-ObjAndPick Viewport::pick_render_object() const
+ObjAndPick Viewport::pick_render_object( PickType pickType ) const
 {
     VisualObjectTreeDataVector renderVector;
     getPickerDataVector( SceneRoot::get(), id, renderVector );
 
-    return pick_render_object( renderVector );
+    return pick_render_object( renderVector, pickType );
 }
 
 ObjAndPick Viewport::pick_render_object( const Vector2f& viewportPoint ) const
 {
     VisualObjectTreeDataVector renderVector;
     getPickerDataVector( SceneRoot::get(), id, renderVector );
-
     return pick_render_object( renderVector, viewportPoint );
 }
 
-ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector ) const
+ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector, PickType pickType ) const
 {
     auto& viewer = getViewerInstance();
     const auto& mousePos = viewer.mouseController.getMousePos();
-    auto viewerPoint = viewer.screenToViewport(
+    auto vp = viewer.screenToViewport(
         Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), id );
-    return pick_render_object( renderVector, Vector2f( viewerPoint.x, viewerPoint.y ) );
+    if ( pickType == PickType::SinglePixel )
+        return pick_render_object( renderVector, Vector2f( vp.x, vp.y ) );
+    else
+    {
+        std::vector<Vector2f> pixels;
+        pixels.reserve( 7 * 7 );
+        pixels.push_back( Vector2f( vp.x, vp.y ) );
+        for ( int i = -3; i <= 3; i++ )
+        for ( int j = -3; j <= 3; j++ )
+        {
+            if ( i != 0 || j != 0 )
+                pixels.push_back( Vector2f( vp.x + i, vp.y + j ) );
+        }
+        auto res = multiPickObjects( renderVector, pixels );
+        if ( res.empty() )
+            return {};
+        if ( bool( res.front().first ) )
+            return res.front();
+        for ( const auto& r : res )
+            if ( bool( r.first ) )
+                return r;
+        return {};
+    }
 }
 
 ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector, const Vector2f& viewportPoint ) const

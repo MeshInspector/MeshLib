@@ -150,17 +150,25 @@ public:
     // This lambda is called before each change of visual lines
     std::function<void( const ViewportPointsWithColors& curr, const ViewportPointsWithColors& next )> beforeSetPointsWithColors{};
 
+    // Type of picking
+    enum class PickType
+    {
+        SinglePixel, // pick only mouse pixel
+        Area // pick mouse pixel and little area around
+    };
     // This function allows to pick point in scene by GL
+    // pickType pick only one pixel or otherwise pick several pixels around
     // comfortable usage:
     //     auto [obj,pick] = pick_render_object();
     // pick all visible and pickable objects
     // picks objects from current mouse pose by default
-    MRVIEWER_API ObjAndPick pick_render_object() const;
+    MRVIEWER_API ObjAndPick pick_render_object( PickType pickType = PickType::Area ) const;
     // This function allows to pick point in scene by GL
+    // pickType pick only one pixel or otherwise pick several pixels around
     // comfortable usage:
     //     auto [obj,pick] = pick_render_object( objects );
     // pick objects from input
-    MRVIEWER_API ObjAndPick pick_render_object( const std::vector<VisualObject*>& objects ) const;
+    MRVIEWER_API ObjAndPick pick_render_object( const std::vector<VisualObject*>& objects, PickType pickType = PickType::Area ) const;
     // This function allows to pick point in scene by GL
     // comfortable usage:
     //     auto [obj,pick] = pick_render_object( objects );

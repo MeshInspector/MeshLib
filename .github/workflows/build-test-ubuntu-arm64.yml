@@ -3,10 +3,10 @@ name: Build and test on arm64 ubuntu20 and ubuntu22
 on:
   workflow_call:
     inputs:
-      image_tag:
+      docker_image_tag:
         required: true
         type: string
-      version:
+      app_version:
         required: true
         type: string
       UPLOAD_ARTIFACTS:
@@ -26,12 +26,12 @@ jobs:
         compiler: [ clang ]
         include:
           - os: ubuntu20
-            docker-image: meshlib/meshlib-ubuntu-arm64:${{inputs.image_tag}}
+            docker-image: meshlib/meshlib-ubuntu-arm64:${{inputs.docker_image_tag}}
             cxx-compiler: /usr/bin/clang++-11
             c-compiler: /usr/bin/clang-11
             use-cpp-23: "OFF"
           - os: ubuntu22
-            docker-image: meshlib/meshlib-ubuntu22-arm64:${{inputs.image_tag}}
+            docker-image: meshlib/meshlib-ubuntu22-arm64:${{inputs.docker_image_tag}}
             cxx-compiler: /usr/bin/clang++-14
             c-compiler: /usr/bin/clang-14
             use-cpp-23: "OFF"
@@ -55,7 +55,7 @@ jobs:
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
-          MR_VERSION: ${{ inputs.version }}
+          MR_VERSION: ${{ inputs.app_version }}
           MR_USE_CPP_23: ${{ matrix.use-cpp-23 }}
 
       - name: Collect Timings
@@ -84,7 +84,7 @@ jobs:
           MESHLIB_BUILD_RELEASE: ON
           MESHLIB_BUILD_DEBUG: OFF
         run: |
-          ./scripts/distribution.sh ${{inputs.version}}
+          ./scripts/distribution.sh ${{inputs.app_version}}
           mv ./distr/meshlib-dev.deb meshlib-${{matrix.os}}-arm64-dev.deb
 
       - name: Upload Ubuntu Developer Distribution

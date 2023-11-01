@@ -40,7 +40,7 @@ void CommandLoop::runCommandFromGUIThread( CommandFunc func )
 {
     bool blockThread = instance_().mainThreadId_ != std::this_thread::get_id();
     if ( blockThread )
-        return addCommand_( func, true, StartPosition::AfterSplash );
+        return addCommand_( func, true, StartPosition::AfterSplashHide );
     else
         return func();
 }

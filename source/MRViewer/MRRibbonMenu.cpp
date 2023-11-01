@@ -2291,7 +2291,8 @@ void RibbonMenu::highlightBlocking_()
         blockingHighlightTimer_ = 0.0f;
         return;
     }
-    auto* window = ImGui::FindWindowByName( activeBlockingItem_.item->name().c_str() );
+    auto pluginWindowName = activeBlockingItem_.item->name() + "##CustomStatePlugin";
+    auto* window = ImGui::FindWindowByName( pluginWindowName.c_str() );
     if ( !window || blockingHighlightTimer_ <= 0.0f )
     {
         blockingHighlightTimer_ = 0.0f;

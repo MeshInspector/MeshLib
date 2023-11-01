@@ -308,7 +308,10 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     setup.setupCommonPlugins( &viewer );
     setup.setupSettingsManager( &viewer, params.name );
     setup.setupConfiguration( &viewer );
-    setup.setupExtendedLibraries();
+    CommandLoop::appendCommand( [&] ()
+    {
+        setup.setupExtendedLibraries();
+    }, CommandLoop::StartPosition::AfterSplashAppear );
 #if defined(__EMSCRIPTEN__) || !defined(NDEBUG)
     return viewer.launch( params );
 #else
@@ -443,7 +446,7 @@ int Viewer::launch( const LaunchParams& params )
     if ( res != EXIT_SUCCESS )
         return res;
 
-    CommandLoop::setState( CommandLoop::StartPosition::AfterSplash );
+    CommandLoop::setState( CommandLoop::StartPosition::AfterSplashHide );
     CommandLoop::processCommands(); // execute pre init commands before first draw
     focusRedrawReady_ = true;
 
@@ -649,6 +652,9 @@ int Viewer::launchInit_( const LaunchParams& params )
             std::this_thread::sleep_for( std::chrono::duration<float>( seconds ) );
         } );
     }
+
+    CommandLoop::setState( CommandLoop::StartPosition::AfterSplashAppear );
+    CommandLoop::processCommands();
 
     if ( menuPlugin_ )
     {

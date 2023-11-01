@@ -218,6 +218,12 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         if ( flatShadingBackup != flatShading )
             SceneSettings::set( SceneSettings::Type::MeshFlatShading, flatShading );
 
+        ImGui::SetNextItemWidth( 100.0f * menuScaling );
+        int pickRadius = int( getViewerInstance().glPickRadius );
+        ImGui::DragInputInt( "Picker Radius", &pickRadius, 1, 0, 10 );
+        getViewerInstance().glPickRadius = uint16_t( pickRadius );
+        UI::setTooltipIfHovered( "Radius of area under cursor to pick objects in scene.", menuScaling );
+
         if ( viewer->isAlphaSortAvailable() )
         {
             bool alphaSortBackUp = viewer->isAlphaSortEnabled();

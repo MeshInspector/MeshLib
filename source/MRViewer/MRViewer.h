@@ -480,7 +480,9 @@ public:
     // this parameter can force up/down mouse scroll
     // useful for WebAssembler version because it has too powerful scroll
     float scrollForce{ 1.0f };
-
+    // opengl-based pick window radius in pixels
+    uint16_t glPickRadius{ 0 };
+    
     std::unique_ptr<ObjectMesh> basisAxes;
     std::unique_ptr<ObjectMesh> globalBasisAxes;
     std::unique_ptr<ObjectMesh> rotationSphere;

@@ -117,11 +117,24 @@ ObjAndPick Viewport::pick_render_object( uint16_t pickRadius ) const
     return pick_render_object( renderVector, pickRadius );
 }
 
+ObjAndPick Viewport::pick_render_object() const
+{
+    VisualObjectTreeDataVector renderVector;
+    getPickerDataVector( SceneRoot::get(), id, renderVector );
+
+    return pick_render_object( renderVector, getViewerInstance().glPickRadius );
+}
+
 ObjAndPick Viewport::pick_render_object( const Vector2f& viewportPoint ) const
 {
     VisualObjectTreeDataVector renderVector;
     getPickerDataVector( SceneRoot::get(), id, renderVector );
     return pick_render_object( renderVector, viewportPoint );
+}
+
+ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector ) const
+{
+    return pick_render_object( renderVector, getViewerInstance().glPickRadius );
 }
 
 ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector, uint16_t pickRadius ) const

@@ -152,18 +152,20 @@ public:
 
 
     // This function allows to pick point in scene by GL
-    // pickRadius pick window radius
+    // use default pick radius
     // comfortable usage:
     //     auto [obj,pick] = pick_render_object();
     // pick all visible and pickable objects
     // picks objects from current mouse pose by default
-    MRVIEWER_API ObjAndPick pick_render_object( uint16_t pickRadius = 3 ) const;
+    MRVIEWER_API ObjAndPick pick_render_object() const;
+    MRVIEWER_API ObjAndPick pick_render_object( uint16_t pickRadius ) const;
     // This function allows to pick point in scene by GL
-    // pickRadius pick window radius
+    // use default pick radius
     // comfortable usage:
     //     auto [obj,pick] = pick_render_object( objects );
     // pick objects from input
-    MRVIEWER_API ObjAndPick pick_render_object( const std::vector<VisualObject*>& objects, uint16_t pickRadius = 3 ) const;
+    MRVIEWER_API ObjAndPick pick_render_object( const std::vector<VisualObject*>& objects ) const;
+    MRVIEWER_API ObjAndPick pick_render_object( const std::vector<VisualObject*>& objects, uint16_t pickRadius ) const;
     // This function allows to pick point in scene by GL
     // comfortable usage:
     //     auto [obj,pick] = pick_render_object( objects );

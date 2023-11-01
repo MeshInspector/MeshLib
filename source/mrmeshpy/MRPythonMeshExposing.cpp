@@ -22,6 +22,7 @@
 #include "MRMesh/MRCylinder.h"
 #include "MRMesh/MRExpected.h"
 #include <pybind11/functional.h>
+#include "MRMesh/MRPartMapping.h"
 using namespace MR;
 
 Mesh pythonGetSelectedMesh()
@@ -121,6 +122,21 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
 } )
 
 MR_ADD_PYTHON_MAP( mrmeshpy, FaceHashMap, FaceHashMap )
+MR_ADD_PYTHON_MAP( mrmeshpy, VertHashMap, VertHashMap )
+MR_ADD_PYTHON_MAP( mrmeshpy, WholeEdgeHashMap, WholeEdgeHashMap )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PartMapping, [] ( pybind11::module_& m )
+{
+    pybind11::class_<PartMapping>( m, "PartMapping", "mapping among elements of source mesh, from which a part is taken, and target (this) mesh" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "src2tgtFaces", &PartMapping::src2tgtFaces, "from.id -> this.id" ).
+        def_readwrite( "src2tgtVerts", &PartMapping::src2tgtVerts, "from.id -> this.id" ).
+        def_readwrite( "src2tgtEdges", &PartMapping::src2tgtEdges, "from.id -> this.id" ).
+        def_readwrite( "tgt2srcFaces", &PartMapping::tgt2srcFaces, "this.id -> from.id" ).
+        def_readwrite( "tgt2srcVerts", &PartMapping::tgt2srcVerts, "this.id -> from.id" ).
+        def_readwrite( "tgt2srcEdges", &PartMapping::tgt2srcEdges, "this.id -> from.id" );
+} )
+
 
 MeshTopology topologyFromTriangles( const Triangulation& t, const MeshBuilder::BuildSettings& s )
 {
@@ -220,6 +236,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
             "split given triangle on three triangles, introducing new vertex in the centroid of original triangle and connecting it to original triangle vertices;\n"
             "if region is given, then it must include (f) and new faces will be added there as well\n"
             "\tnew2Old receive mapping from newly appeared triangle to its original triangle (part to full)" ).
+
+        def( "addPartByMask", ( void( Mesh::* )( const Mesh&, const FaceBitSet&, const PartMapping& ) )& Mesh::addPartByMask,
+            pybind11::arg( "from" ), pybind11::arg( "fromFaces" ) = nullptr, pybind11::arg( "map" ) = PartMapping{},
+            "appends mesh (from) in addition to this mesh: creates new edges, faces, verts and points\n"
+            "copies only portion of (from) specified by fromFaces" ).
 
         def( pybind11::self == pybind11::self, "compare that two meshes are exactly the same" );
 
@@ -334,6 +355,22 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
     m.def( "getCircumscribedMetric", &getCircumscribedMetric, pybind11::arg( "mesh" ),
         "This metric minimizes the sum of circumcircle radii for all triangles in the triangulation.\n"
         "It is rather fast to calculate, and it results in typically good triangulations." );
+
+    m.def( "getUniversalMetric", &getUniversalMetric, pybind11::arg( "mesh" ),
+        "This metric minimizes the maximal dihedral angle between the faces in the triangulation\n"
+        "and on its boundary, and it avoids creating too degenerate triangles;\n"
+        " for planar holes it is the same as getCircumscribedMetric" );
+
+    m.def( "getComplexFillMetric", &getComplexFillMetric, pybind11::arg( "mesh" ), pybind11::arg( "e" ),
+        "This metric minimizes the sum of triangleMetric for all triangles in the triangulation\n"
+        "plus the sum edgeMetric for all edges inside and on the boundary of the triangulation.\n"
+        "Where\n"
+        "triangleMetric is proportional to weighted triangle area and triangle aspect ratio\n"
+        "edgeMetric grows with angle between triangles as ( ( 1 - cos( x ) ) / ( 1 + cos( x ) ) ) ^ 4." );
+
+    m.def( "getMinAreaMetric", &getMinAreaMetric, pybind11::arg( "mesh" ),
+        "This metric is for triangulation construction with minimal summed area of triangles.\n"
+        "Warning: this metric can produce degenerated triangles" );
 
     pybind11::class_<FillHoleParams>( m, "FillHoleParams", "Structure has some options to control fillHole" ).
         def( pybind11::init<>() ).

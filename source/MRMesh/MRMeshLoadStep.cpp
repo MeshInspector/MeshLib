@@ -285,7 +285,7 @@ VoidOrErrStr readStepData( STEPControl_Reader& reader, const std::filesystem::pa
 }
 #endif
 
-Expected<std::shared_ptr<Object>, std::string> stepModelToScene( STEPControl_Reader& reader, const MeshLoadSettings& settings, const ProgressCallback& cb )
+Expected<std::shared_ptr<Object>, std::string> stepModelToScene( STEPControl_Reader& reader, const MeshLoadSettings&, const ProgressCallback& cb )
 {
     MR_TIMER
 

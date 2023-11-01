@@ -4,8 +4,12 @@
 
 namespace MR
 {
+struct ContourIndicesMap
+{
+    int contourId{ -1 };
+    std::vector<int> map;
+};
 
-using ContourIndicesMap = std::vector<int>;
 using ContoursIndicesMap = std::vector<ContourIndicesMap>;
 
 struct OffsetContoursParams

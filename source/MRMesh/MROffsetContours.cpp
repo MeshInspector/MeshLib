@@ -41,6 +41,8 @@ void insertRoundCorner( Contour2f& cont, Vector2f prevPoint, Vector2f orgPt, flo
 
 void insertSharpCorner( Contour2f& cont, Vector2f prevPoint, Vector2f orgPt, float ang, float maxSharpAngle, int* shiftMap )
 {
+    if ( maxSharpAngle <= 0.0f )
+        return;
     if ( std::abs( ang ) <= maxSharpAngle )
     {
         auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( ang * 0.5f ), orgPt );
@@ -102,7 +104,7 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, float offset, const 
         auto nextPoint = orgPt + norm * offset;
 
         if ( shiftMap && i > 0 )
-            shiftMap[i] = shiftMap[i - 1];
+            shiftMap[i] += shiftMap[i - 1];
 
         // interpolation
         auto prevPoint = res.back();
@@ -134,8 +136,10 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, float offset, const 
         }
         res.emplace_back( destPt + norm * offset );
         if ( shiftMap )
-            ++shiftMap[i];
+            ++shiftMap[i + 1];
     }
+    if ( shiftMap && cont.size() > 1 )
+        shiftMap[int( cont.size() ) - 1] += shiftMap[int( cont.size() ) - 2];
     return res;
 }
 
@@ -143,15 +147,12 @@ Contours2f offsetContours( const Contours2f& contours, float offset, const Offse
 {
     MR_TIMER;
 
-    std::vector<std::vector<int>> shiftsMap;
+    ContoursIndicesMap shiftsMap;
 
     Contours2f intermediateRes;
 
     for ( int i = 0; i < contours.size(); ++i )
     {
-        if ( params.indicesMap )
-            shiftsMap.push_back( std::vector<int>( contours[i].size(), 0 ) );
-
         if ( contours[i].empty() )
             continue;
 
@@ -160,48 +161,70 @@ Contours2f offsetContours( const Contours2f& contours, float offset, const Offse
         {
             intermediateRes.push_back( contours[i] );
             if ( params.indicesMap )
-                std::iota( shiftsMap.back().begin(), shiftsMap.back().end(), 1 );
+            {
+                shiftsMap.push_back( { i,std::vector<int>( contours[i].size(), 0 ) } );
+                std::iota( shiftsMap.back().map.begin(), shiftsMap.back().map.end(), 1 );
+            }
             if ( !isClosed || params.type == OffsetContoursParams::Type::Shell )
             {
-                intermediateRes.back().insert( intermediateRes.back().end(), contours[i].rbegin(), contours[i].rend() );
-                if ( params.indicesMap )
-                    shiftsMap.back().insert( shiftsMap.back().end(), shiftsMap.back().rbegin(), shiftsMap.back().rend() );
+                if ( isClosed )
+                {
+                    intermediateRes.push_back( contours[i] );
+                    std::reverse( intermediateRes.back().begin(), intermediateRes.back().end() );
+                    if ( params.indicesMap )
+                    {
+                        shiftsMap.push_back( { i,std::vector<int>( contours[i].size(), 0 ) } );
+                        std::iota( shiftsMap.back().map.rbegin(), shiftsMap.back().map.rend(), 1 );
+                    }
+                }
+                else
+                {
+                    intermediateRes.back().insert( intermediateRes.back().end(), contours[i].rbegin(), contours[i].rend() );
+                    if ( params.indicesMap )
+                        shiftsMap.back().map.insert( shiftsMap.back().map.end(), shiftsMap.back().map.rbegin(), shiftsMap.back().map.rend() );
+                }
             }
             continue;
         }
 
-
         if ( isClosed )
         {
+            if ( params.indicesMap )
+                shiftsMap.push_back( { i,std::vector<int>( contours[i].size(), 0 ) } );
             intermediateRes.push_back( offsetOneDirectionContour( contours[i], offset, params, 
-                params.indicesMap ? shiftsMap.back().data() : nullptr ) );
+                params.indicesMap ? shiftsMap.back().map.data() : nullptr ) );
             if ( params.type == OffsetContoursParams::Type::Shell )
             {
                 if ( params.indicesMap )
-                    shiftsMap.back().resize( shiftsMap.back().size() * 2, 0 );
+                    shiftsMap.push_back( { i,std::vector<int>( contours[i].size(), 0 ) } );
                 intermediateRes.push_back( offsetOneDirectionContour( contours[i], -offset, params,
-                    params.indicesMap ? &shiftsMap.back()[contours[i].size()] : nullptr ) );
+                    params.indicesMap ? shiftsMap.back().map.data() : nullptr ) );
                 if ( params.indicesMap )
-                    std::reverse( shiftsMap.back().begin() + contours[i].size(), shiftsMap.back().end() );
+                    std::reverse( shiftsMap.back().map.begin(), shiftsMap.back().map.end() );
                 std::reverse( intermediateRes.back().begin(), intermediateRes.back().end() );
             }
         }
         else
         {
             if ( params.indicesMap )
-                shiftsMap.back().resize( shiftsMap.back().size() * 2, 0 );
+                shiftsMap.push_back( { i,std::vector<int>( contours[i].size() * 2, 0 ) } );
 
             auto tmpOffset = std::abs( offset );
             intermediateRes.push_back( offsetOneDirectionContour( contours[i], tmpOffset, params,
-                params.indicesMap ? shiftsMap.back().data() : nullptr ) );
+                params.indicesMap ? shiftsMap.back().map.data() : nullptr ) );
             auto backward = offsetOneDirectionContour( contours[i], -tmpOffset, params,
-                params.indicesMap ? &shiftsMap.back()[contours[i].size()] : nullptr );
+                params.indicesMap ? &shiftsMap.back().map[contours[i].size()] : nullptr );
             if ( params.indicesMap )
-                std::reverse( shiftsMap.back().begin() + contours[i].size(), shiftsMap.back().end() );
+                std::reverse( shiftsMap.back().map.begin() + contours[i].size(), shiftsMap.back().map.end() );
             std::reverse( backward.begin(), backward.end() );
             if ( params.endType == OffsetContoursParams::EndType::Round )
             {
-                insertRoundCorner( intermediateRes.back(), intermediateRes.back().back(), contours[i].back(), -PI_F, params.minAnglePrecision, nullptr );
+                int lastAddiction = 0;
+                insertRoundCorner( intermediateRes.back(), intermediateRes.back().back(), contours[i].back(), -PI_F, params.minAnglePrecision, 
+                    params.indicesMap ? &lastAddiction : nullptr );
+                if ( params.indicesMap )
+                    for ( int smi = int( contours[i].size() ) - 1; smi < shiftsMap.back().map.size(); ++smi )
+                        shiftsMap.back().map[smi] += lastAddiction;
                 intermediateRes.back().insert( intermediateRes.back().end(), backward.begin(), backward.end() );
                 insertRoundCorner( intermediateRes.back(), intermediateRes.back().back(), contours[i].front(), -PI_F, params.minAnglePrecision, nullptr );
             }
@@ -213,8 +236,71 @@ Contours2f offsetContours( const Contours2f& contours, float offset, const Offse
             intermediateRes.back().push_back( intermediateRes.back().front() );
         }
     }
-    
-    return PlanarTriangulation::getOutline( intermediateRes );
+    if ( params.indicesMap )
+    {
+        auto findIndex = [&] ( int contId, int newIndex )->int
+        {
+            const auto& sm = shiftsMap[contId].map;
+            const auto& cont = contours[shiftsMap[contId].contourId];
+            const auto& resCont = intermediateRes[contId];
+
+            bool isClosed = cont.front() == cont.back();
+            if ( isClosed )
+            {
+                bool forward = params.type == OffsetContoursParams::Type::Offset || 
+                    ( sm.size() > 1 && sm[1] - sm[0] > 0 );
+                int result = 0;
+                if ( forward )
+                {
+                    for ( int i = 0; i < cont.size(); ++i )
+                        if ( newIndex < sm[i] )
+                        {
+                            result = i;
+                            break;
+                        }
+                }
+                else
+                {
+                    newIndex = int( resCont.size() ) - 1 - newIndex;
+                    for ( int i = 0; i < cont.size(); ++i )
+                        if ( newIndex < sm[int( cont.size() ) - 1 - i] )
+                        {
+                            result = i;
+                            break;
+                        }
+                }
+                return result == int( cont.size() ) - 1 ? 0 : result;
+            }
+            // if not closed
+            auto firstPartSize = sm[int( cont.size() ) - 1];
+            bool forward = newIndex < firstPartSize;
+            if ( forward )
+            {
+                for ( int i = 0; i < cont.size(); ++i )
+                    if ( newIndex < sm[i] )
+                        return i;
+            }
+            else
+            {
+                newIndex = int( resCont.size() ) - 2 - newIndex;
+                for ( int i = 0; i < cont.size(); ++i )
+                    if ( newIndex < sm[int( sm.size() ) - 1 - i] )
+                        return i;
+            }
+            return 0;
+        };
+
+        params.indicesMap->resize( intermediateRes.size() );
+        for ( int i = 0; i < intermediateRes.size(); ++i )
+        {
+            auto& map = ( *params.indicesMap )[i];
+            map.contourId = shiftsMap[i].contourId;
+            map.map.resize( intermediateRes[i].size() );
+            for ( int j = 0; j < intermediateRes[i].size(); ++j )
+                map.map[j] = findIndex( i, j );
+        }
+    }
+    return intermediateRes;// PlanarTriangulation::getOutline( intermediateRes );
 }
 
 }

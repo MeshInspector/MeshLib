@@ -35,7 +35,20 @@ namespace
 
 using namespace MR;
 
-#if ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 4 )
+// updated BRepMesh API support
+// https://dev.opencascade.org/doc/overview/html/occt__upgrade.html#upgrade_740_changed_api_of_brepmesh
+#define MODERN_BREPMESH_SUPPORTED ( ( ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 4 ) ) )
+// updated Message interface support
+// https://dev.opencascade.org/doc/overview/html/occt__upgrade.html#upgrade_750_message_messenger
+// https://dev.opencascade.org/doc/overview/html/occt__upgrade.html#upgrade_750_message_printer
+#define MODERN_MESSAGE_SUPPORTED ( ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 5 ) )
+// reading STEP data from streams support
+// https://www.opencascade.com/open-cascade-technology-7-5-0-released/
+#define STEP_READSTREAM_SUPPORTED ( ( ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 5 ) ) )
+// reading STEP data fixed
+#define STEP_READER_FIXED ( ( ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 7 ) ) )
+
+#if MODERN_MESSAGE_SUPPORTED
 /// spdlog adaptor for OpenCASCADE logging system
 class SpdlogPrinter final : public Message_Printer
 {
@@ -110,7 +123,7 @@ Mesh loadSolid( const TopoDS_Shape& solid )
     MR_TIMER
 
     // TODO: expose parameters
-#if ( ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 4 ) )
+#if MODERN_BREPMESH_SUPPORTED
     IMeshTools_Parameters parameters;
 #else
     BRepMesh_FastDiscret::Parameters parameters;
@@ -196,7 +209,7 @@ Mesh loadSolid( const TopoDS_Shape& solid )
     return Mesh::fromPointTriples( triples, true );
 }
 
-#if ( ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 7 ) )
+#if STEP_READER_FIXED
 // read STEP file without any work-arounds
 VoidOrErrStr readStepData( STEPControl_Reader& reader, std::istream& in, const ProgressCallback& )
 {
@@ -205,7 +218,7 @@ VoidOrErrStr readStepData( STEPControl_Reader& reader, std::istream& in, const P
         return unexpected( "Failed to read STEP model" );
     return {};
 }
-#elif ( ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 5 ) )
+#elif STEP_READSTREAM_SUPPORTED
 // read STEP file with the 'save-load' work-around
 // some STEP models are loaded broken in OpenCASCADE prior to 7.7
 VoidOrErrStr readStepData( STEPControl_Reader& reader, std::istream& in, const ProgressCallback& cb )
@@ -350,13 +363,13 @@ Expected<std::shared_ptr<Object>, std::string> stepModelToScene( STEPControl_Rea
 }
 
 std::mutex cOpenCascadeMutex = {};
-#if ( OCC_VERSION_MAJOR < 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR < 5 )
+#if !STEP_READSTREAM_SUPPORTED
 std::mutex cOpenCascadeTempFileMutex = {};
 #endif
 
 }
 
-#if ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 5 )
+#if STEP_READSTREAM_SUPPORTED
 namespace MR::MeshLoad
 {
 

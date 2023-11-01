@@ -109,12 +109,12 @@ void Viewport::clearFramebuffers()
     viewportGL_.fillViewport( toVec4<int>( viewportRect_ ), params_.backgroundColor );
 }
 
-ObjAndPick Viewport::pick_render_object( PickType pickType ) const
+ObjAndPick Viewport::pick_render_object( uint16_t pickRadius ) const
 {
     VisualObjectTreeDataVector renderVector;
     getPickerDataVector( SceneRoot::get(), id, renderVector );
 
-    return pick_render_object( renderVector, pickType );
+    return pick_render_object( renderVector, pickRadius );
 }
 
 ObjAndPick Viewport::pick_render_object( const Vector2f& viewportPoint ) const
@@ -124,23 +124,25 @@ ObjAndPick Viewport::pick_render_object( const Vector2f& viewportPoint ) const
     return pick_render_object( renderVector, viewportPoint );
 }
 
-ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector, PickType pickType ) const
+ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector, uint16_t pickRadius ) const
 {
     auto& viewer = getViewerInstance();
     const auto& mousePos = viewer.mouseController.getMousePos();
     auto vp = viewer.screenToViewport(
         Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), id );
-    if ( pickType == PickType::SinglePixel )
+    if ( pickRadius == 0 )
         return pick_render_object( renderVector, Vector2f( vp.x, vp.y ) );
     else
     {
         std::vector<Vector2f> pixels;
-        pixels.reserve( 7 * 7 );
+        pixels.reserve( sqr( 2 * pickRadius + 1 ) );
         pixels.push_back( Vector2f( vp.x, vp.y ) );
-        for ( int i = -3; i <= 3; i++ )
-        for ( int j = -3; j <= 3; j++ )
+        for ( int i = -int( pickRadius ); i <= int( pickRadius ); i++ )
+        for ( int j = -int( pickRadius ); j <= int( pickRadius ); j++ )
         {
-            if ( i != 0 || j != 0 )
+            if ( i == 0 && j == 0 )
+                continue;
+            if ( i * i + j * j <= pickRadius * pickRadius + 1 )
                 pixels.push_back( Vector2f( vp.x + i, vp.y + j ) );
         }
         auto res = multiPickObjects( renderVector, pixels );

@@ -134,13 +134,10 @@ void RenderPointsObject::renderPicker( const BaseRenderParams& parameters, unsig
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),
         parameters.clipPlane.n.x, parameters.clipPlane.n.y, parameters.clipPlane.n.z, parameters.clipPlane.d ) );
     GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "uniGeomId" ), geomId ) );
-    auto pointSize = objPoints_->getPointSize();
-    if ( pointSize < 10.0f )
-        pointSize = 10.0f;
 #ifdef __EMSCRIPTEN__
-    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "pointSize" ), pointSize ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "pointSize" ), objPoints_->getPointSize() ) );
 #else
-    GL_EXEC( glPointSize( pointSize ) );
+    GL_EXEC( glPointSize( objPoints_->getPointSize() ) );
 #endif
     GL_EXEC( glDepthFunc( getDepthFunctionLess( parameters.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_POINTS, ( GLsizei )validIndicesSize_, GL_UNSIGNED_INT, 0 ) );

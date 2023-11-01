@@ -14,6 +14,8 @@ struct PointOnObject
     PointOnObject() {} //default ctor is required by Clang
     /// 3D location on the object in local coordinates
     Vector3f point;
+    /// z buffer value
+    float zBuffer{ 1.0f };
     /// to which primitive that point pertains
     union
     {

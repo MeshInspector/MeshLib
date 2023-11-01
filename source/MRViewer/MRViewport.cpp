@@ -150,9 +150,21 @@ ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& rende
             return {};
         if ( bool( res.front().first ) )
             return res.front();
-        for ( const auto& r : res )
-            if ( bool( r.first ) )
-                return r;
+        int minIndex = int( res.size() );
+        float minZ = FLT_MAX;
+        for ( int i = 0; i < res.size(); ++i )
+        {
+            const auto& [obj, pick] = res[i];
+            if ( !obj )
+                continue;
+            if ( pick.zBuffer < minZ )
+            {
+                minZ = pick.zBuffer;
+                minIndex = i;
+            }
+        }
+        if ( minIndex < res.size() )
+            return res[minIndex];
         return {};
     }
 }
@@ -190,6 +202,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
 
         PointOnObject res;
         res.primId = int( pickRes.primId );
+        res.zBuffer = pickRes.zBuffer;
 #ifndef __EMSCRIPTEN__
         auto voxObj = renderVector[pickRes.geomId]->asType<ObjectVoxels>();
         if ( voxObj && voxObj->isVolumeRenderingEnabled() )

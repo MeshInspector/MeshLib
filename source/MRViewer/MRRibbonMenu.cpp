@@ -1026,9 +1026,9 @@ void RibbonMenu::cloneSelectedPart( const std::shared_ptr<Object>& object )
     }
 
     newObj->setName( object->name() + " Partial" );
-    newObj->setXf( object->worldXf() );
+    newObj->setXf( object->xf() );
     AppendHistory<ChangeSceneAction>( "Selection to New object: add " + name, newObj, ChangeSceneAction::Type::AddObject );
-    SceneRoot::get().addChild( newObj );
+    object->parent()->addChild( newObj );
 }
 
 bool RibbonMenu::drawCloneButton_( const std::vector<std::shared_ptr<Object>>& selected )

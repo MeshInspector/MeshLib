@@ -1,6 +1,5 @@
 #include "MRMeshLoadStep.h"
 #ifndef MRMESH_NO_OPENCASCADE
-#include "MRIOFormatsRegistry.h"
 #include "MRMesh.h"
 #include "MRMeshBuilder.h"
 #include "MRObjectMesh.h"
@@ -15,7 +14,7 @@
 #pragma warning( disable: 5054 )
 #pragma warning( disable: 5220 )
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
-#pragma warning( disable: 5267 ) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
+#pragma warning( disable: 5267 ) // definition of implicit copy constructor is deprecated because it has a user-provided destructor
 #endif
 #include <opencascade/BRep_Tool.hxx>
 #include <opencascade/BRepMesh_IncrementalMesh.hxx>
@@ -31,28 +30,12 @@
 #include <opencascade/TopoDS.hxx>
 #pragma warning( pop )
 
-#if ( OCC_VERSION_MAJOR < 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR < 5 )
-namespace MR::MeshLoad
-{
-
-Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::filesystem::path& path, const MeshLoadSettings& settings /*= {}*/ )
-{
-    // TODO: support OpenCASCADE 7.3
-    return unexpected( "Unsupported: outdated OpenCASCADE version" );
-}
-
-Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
-{
-    return unexpected( "Unsupported: outdated OpenCASCADE version" );
-}
-
-} // namespace MR::MeshLoad
-#else
 namespace
 {
 
 using namespace MR;
 
+#if ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 4 )
 /// spdlog adaptor for OpenCASCADE logging system
 class SpdlogPrinter final : public Message_Printer
 {
@@ -103,6 +86,9 @@ private:
 };
 
 MessageHandler messageHandler;
+#else
+#pragma message( "Log redirecting is currently unsupported for OpenCASCADE versions prior to 7.4" )
+#endif
 
 struct FeatureData
 {
@@ -124,7 +110,11 @@ Mesh loadSolid( const TopoDS_Shape& solid )
     MR_TIMER
 
     // TODO: expose parameters
+#if ( ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 4 ) )
     IMeshTools_Parameters parameters;
+#else
+    BRepMesh_FastDiscret::Parameters parameters;
+#endif
     parameters.Angle = 0.1;
     parameters.Deflection = 0.5;
     parameters.Relative = false;
@@ -206,97 +196,113 @@ Mesh loadSolid( const TopoDS_Shape& solid )
     return Mesh::fromPointTriples( triples, true );
 }
 
-std::mutex cOpenCascadeMutex = {};
+#if ( ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 7 ) )
+// read STEP file without any work-arounds
+VoidOrErrStr readStepData( STEPControl_Reader& reader, std::istream& in, const ProgressCallback& )
+{
+    auto ret = reader.ReadStream( "STEP file", in );
+    if ( ret != IFSelect_RetDone )
+        return unexpected( "Failed to read STEP model" );
+    return {};
+}
+#elif ( ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 5 ) )
+// read STEP file with the 'save-load' work-around
+// some STEP models are loaded broken in OpenCASCADE prior to 7.7
+VoidOrErrStr readStepData( STEPControl_Reader& reader, std::istream& in, const ProgressCallback& cb )
+{
+    STEPControl_Reader auxReader;
+    auto ret = auxReader.ReadStream( "STEP file", in );
+    if ( ret != IFSelect_RetDone )
+        return unexpected( "Failed to read STEP model" );
 
-// some STEP model are loaded broken in OpenCASCADE prior to 7.7
-#define REQUIRE_MODEL_REPAIR ( ( OCC_VERSION_MAJOR < 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR < 7 ) )
+    if ( !reportProgress( cb, 0.50f ) )
+        return unexpected( std::string( "Loading canceled" ) );
 
+    const auto model = auxReader.StepModel();
+    const auto protocol = Handle( StepData_Protocol )::DownCast( model->Protocol() );
+
+    StepData_StepWriter sw( model );
+    sw.SendModel( protocol );
+
+    std::stringstream buffer;
+    if ( !sw.Print( buffer ) )
+        return unexpected( "Failed to repair STEP model" );
+
+    if ( !reportProgress( cb, 0.65f ) )
+        return unexpected( std::string( "Loading canceled" ) );
+
+    buffer.seekp( 0, std::ios::beg );
+    ret = reader.ReadStream( "STEP file", buffer );
+    if ( ret != IFSelect_RetDone )
+        return unexpected( "Failed to read STEP model" );
+
+    return {};
+}
+#else
+// read STEP file with the 'save-load' work-around
+// loading from a file stream is not supported in OpenCASCADE prior to 7.5
+std::filesystem::path getStepTemporaryDirectory()
+{
+    const auto path = std::filesystem::temp_directory_path() / "MeshLib_MeshLoadStep";
+    if ( !std::filesystem::exists( path ) )
+        std::filesystem::create_directory( path );
+    return path;
 }
 
-namespace MR::MeshLoad
+VoidOrErrStr readStepData( STEPControl_Reader& reader, const std::filesystem::path& path, const ProgressCallback& cb )
 {
+    STEPControl_Reader auxReader;
+    auto ret = auxReader.ReadFile( path.c_str() );
+    if ( ret != IFSelect_RetDone )
+        return unexpected( "Failed to read STEP model" );
 
-Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::filesystem::path& path, const MeshLoadSettings& settings /*= {}*/ )
-{
-    std::ifstream in( path, std::ifstream::binary );
-    if ( !in )
-        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( path ) );
+    if ( !reportProgress( cb, 0.50f ) )
+        return unexpected( std::string( "Loading canceled" ) );
 
-    auto result = fromSceneStepFile( in, settings );
-    if ( !result )
-        return addFileNameInError( result, path );
+    const auto model = auxReader.StepModel();
+    const auto protocol = Handle( StepData_Protocol )::DownCast( model->Protocol() );
 
-    if ( auto& obj = *result )
+    StepData_StepWriter sw( model );
+    sw.SendModel( protocol );
+
+    const auto auxFilePath = getStepTemporaryDirectory() / "auxFile.step";
     {
-        if ( obj->name().empty() )
-            obj->setName( utf8string( path.stem() ) );
+        std::ofstream ofs( auxFilePath );
+        if ( !sw.Print( ofs ) )
+            return unexpected( "Failed to repair STEP model" );
     }
 
-    return result;
-}
+    if ( !reportProgress( cb, 0.65f ) )
+        return unexpected( std::string( "Loading canceled" ) );
 
-Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
+    ret = reader.ReadFile( auxFilePath.c_str() );
+    if ( ret != IFSelect_RetDone )
+        return unexpected( "Failed to read STEP model" );
+
+    std::filesystem::remove( auxFilePath );
+
+    return {};
+}
+#endif
+
+Expected<std::shared_ptr<Object>, std::string> stepModelToScene( STEPControl_Reader& reader, const MeshLoadSettings& settings, const ProgressCallback& cb )
 {
     MR_TIMER
 
-    // NOTE: OpenCASCADE STEP reader is NOT thread-safe
-    std::unique_lock lock( cOpenCascadeMutex );
-
-#if REQUIRE_MODEL_REPAIR
-    // repair (?) STEP model using read and write operations
-    // TODO: repair the model directly
-    std::stringstream buffer;
+    const auto cb1 = subprogress( cb, 0.30f, 0.74f );
+    const auto rootCount = reader.NbRootsForTransfer();
+    for ( auto i = 1; i <= rootCount; ++i )
     {
-        STEPControl_Reader reader;
-        const auto ret = reader.ReadStream( "STEP file", in );
-        if ( ret != IFSelect_RetDone )
-            return unexpected( "Failed to read STEP model" );
-
-        if ( !reportProgress( settings.callback, 0.15f ) )
-            return unexpected( std::string( "Loading canceled" ) );
-
-        const auto model = reader.StepModel();
-        const auto protocol = Handle( StepData_Protocol )::DownCast( model->Protocol() );
-
-        StepData_StepWriter sw( model );
-        sw.SendModel( protocol );
-        if ( !sw.Print( buffer ) )
-            return unexpected( "Failed to repair STEP model" );
-
-        if ( !reportProgress( settings.callback, 0.2f ) )
+        reader.TransferRoot( i );
+        if ( !reportProgress( cb1, ( float )i / ( float )rootCount ) )
             return unexpected( std::string( "Loading canceled" ) );
     }
-    buffer.seekp( 0, std::ios::beg );
-    auto& input = buffer;
-#else
-    auto& input = in;
-#endif
+    if ( !reportProgress( cb, 0.9f ) )
+        return unexpected( std::string( "Loading canceled" ) );
 
     std::deque<TopoDS_Shape> shapes;
-    {
-        STEPControl_Reader reader;
-
-        const auto ret = reader.ReadStream( "STEP file", input );
-        if ( ret != IFSelect_RetDone )
-            return unexpected( "Failed to read STEP model" );
-
-        if ( !reportProgress( settings.callback, 0.3f ) )
-            return unexpected( std::string( "Loading canceled" ) );
-
-        const auto cb1 = subprogress( settings.callback, 0.30f, 0.74f );
-        const auto rootCount = reader.NbRootsForTransfer();
-        for ( auto i = 1; i <= rootCount; ++i )
-        {
-            reader.TransferRoot( i );
-            if ( !reportProgress( cb1, ( float )i / ( float )rootCount ) )
-                return unexpected( std::string( "Loading canceled" ) );
-        }
-        if ( !reportProgress( settings.callback, 0.9f ) )
-            return unexpected( std::string( "Loading canceled" ) );
-
-        for ( auto i = 1; i <= reader.NbShapes(); ++i )
-            shapes.emplace_back( reader.Shape( i ) );
-    }
+    for ( auto i = 1; i <= reader.NbShapes(); ++i )
+        shapes.emplace_back( reader.Shape( i ) );
 
     // TODO: preserve shape-solid hierarchy? (not sure about actual shape count in real models)
     std::deque<TopoDS_Shape> solids;
@@ -319,12 +325,11 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
     }
     else
     {
-        auto cb2 = subprogress( settings.callback, 0.90f, 1.0f );
-
         auto result = std::make_shared<ObjectMesh>();
         // create empty parent mesh
         result->setMesh( std::make_shared<Mesh>() );
 
+        auto cb2 = subprogress( cb, 0.90f, 1.0f );
         std::vector<std::shared_ptr<Object>> children( solids.size() );
         const bool normalFinished = ParallelFor( size_t( 0 ), solids.size(), [&] ( size_t i )
         {
@@ -342,6 +347,88 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
             result->addChild( std::move( child ), true );
         return result;
     }
+}
+
+std::mutex cOpenCascadeMutex = {};
+#if ( OCC_VERSION_MAJOR < 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR < 5 )
+std::mutex cOpenCascadeTempFileMutex = {};
+#endif
+
+}
+
+#if ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 5 )
+namespace MR::MeshLoad
+{
+
+Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::filesystem::path& path, const MeshLoadSettings& settings )
+{
+    std::ifstream in( path, std::ifstream::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( path ) );
+
+    auto result = fromSceneStepFile( in, settings );
+    if ( !result )
+        return addFileNameInError( result, path );
+
+    if ( auto& obj = *result )
+    {
+        if ( obj->name().empty() )
+            obj->setName( utf8string( path.stem() ) );
+    }
+
+    return result;
+}
+
+Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& in, const MeshLoadSettings& settings )
+{
+    MR_TIMER
+
+    // NOTE: OpenCASCADE STEP reader is NOT thread-safe
+    std::unique_lock lock( cOpenCascadeMutex );
+
+    const auto cb1 = subprogress( settings.callback, 0.00f, 0.90f );
+    STEPControl_Reader reader;
+    const auto ret = readStepData( reader, in, cb1 );
+    if ( !ret.has_value() )
+        return unexpected( ret.error() );
+
+    const auto cb2 = subprogress( settings.callback, 0.90f, 1.00f );
+    return stepModelToScene( reader, settings, cb2 );
+}
+
+} // namespace MR::MeshLoad
+#else
+namespace MR::MeshLoad
+{
+
+Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& in, const MeshLoadSettings& settings )
+{
+    std::unique_lock lock( cOpenCascadeTempFileMutex );
+    const auto tempFileName = getStepTemporaryDirectory() / "tempFile.step";
+    {
+        std::ofstream ofs( tempFileName, std::ios::binary );
+        if ( !ofs )
+            return unexpected( std::string( "Cannot open buffer file" ) );
+        ofs << in.rdbuf();
+    }
+    return fromSceneStepFile( tempFileName, settings );
+}
+
+Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::filesystem::path& path, const MeshLoadSettings& settings )
+{
+    MR_TIMER
+
+    // NOTE: OpenCASCADE STEP reader is NOT thread-safe
+    std::unique_lock lock( cOpenCascadeMutex );
+
+    const auto cb1 = subprogress( settings.callback, 0.00f, 0.90f );
+    STEPControl_Reader reader;
+    const auto ret = readStepData( reader, path, cb1 );
+    if ( !ret.has_value() )
+        return unexpected( ret.error() );
+
+    const auto cb2 = subprogress( settings.callback, 0.90f, 1.00f );
+    return stepModelToScene( reader, settings, cb2 );
 }
 
 } // namespace MR::MeshLoad

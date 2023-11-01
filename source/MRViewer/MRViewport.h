@@ -150,17 +150,22 @@ public:
     // This lambda is called before each change of visual lines
     std::function<void( const ViewportPointsWithColors& curr, const ViewportPointsWithColors& next )> beforeSetPointsWithColors{};
 
+
     // This function allows to pick point in scene by GL
+    // use default pick radius
     // comfortable usage:
     //     auto [obj,pick] = pick_render_object();
     // pick all visible and pickable objects
     // picks objects from current mouse pose by default
     MRVIEWER_API ObjAndPick pick_render_object() const;
+    MRVIEWER_API ObjAndPick pick_render_object( uint16_t pickRadius ) const;
     // This function allows to pick point in scene by GL
+    // use default pick radius
     // comfortable usage:
     //     auto [obj,pick] = pick_render_object( objects );
     // pick objects from input
     MRVIEWER_API ObjAndPick pick_render_object( const std::vector<VisualObject*>& objects ) const;
+    MRVIEWER_API ObjAndPick pick_render_object( const std::vector<VisualObject*>& objects, uint16_t pickRadius ) const;
     // This function allows to pick point in scene by GL
     // comfortable usage:
     //     auto [obj,pick] = pick_render_object( objects );

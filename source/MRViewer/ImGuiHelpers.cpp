@@ -883,6 +883,7 @@ bool DragInputInt( const char* label, int* value, float speed /*= 1*/, int min /
     if ( label != label_end )
     {
         SameLine( 0, g.Style.ItemInnerSpacing.x );
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() - g.CurrentWindow->DC.CurrLineTextBaseOffset + style.FramePadding.y );
         TextEx( label, label_end );
     }
 

@@ -109,29 +109,77 @@ void Viewport::clearFramebuffers()
     viewportGL_.fillViewport( toVec4<int>( viewportRect_ ), params_.backgroundColor );
 }
 
+ObjAndPick Viewport::pick_render_object( uint16_t pickRadius ) const
+{
+    VisualObjectTreeDataVector renderVector;
+    getPickerDataVector( SceneRoot::get(), id, renderVector );
+
+    return pick_render_object( renderVector, pickRadius );
+}
+
 ObjAndPick Viewport::pick_render_object() const
 {
     VisualObjectTreeDataVector renderVector;
     getPickerDataVector( SceneRoot::get(), id, renderVector );
 
-    return pick_render_object( renderVector );
+    return pick_render_object( renderVector, getViewerInstance().glPickRadius );
 }
 
 ObjAndPick Viewport::pick_render_object( const Vector2f& viewportPoint ) const
 {
     VisualObjectTreeDataVector renderVector;
     getPickerDataVector( SceneRoot::get(), id, renderVector );
-
     return pick_render_object( renderVector, viewportPoint );
 }
 
 ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector ) const
 {
+    return pick_render_object( renderVector, getViewerInstance().glPickRadius );
+}
+
+ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector, uint16_t pickRadius ) const
+{
     auto& viewer = getViewerInstance();
     const auto& mousePos = viewer.mouseController.getMousePos();
-    auto viewerPoint = viewer.screenToViewport(
+    auto vp = viewer.screenToViewport(
         Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), id );
-    return pick_render_object( renderVector, Vector2f( viewerPoint.x, viewerPoint.y ) );
+    if ( pickRadius == 0 )
+        return pick_render_object( renderVector, Vector2f( vp.x, vp.y ) );
+    else
+    {
+        std::vector<Vector2f> pixels;
+        pixels.reserve( sqr( 2 * pickRadius + 1 ) );
+        pixels.push_back( Vector2f( vp.x, vp.y ) );
+        for ( int i = -int( pickRadius ); i <= int( pickRadius ); i++ )
+        for ( int j = -int( pickRadius ); j <= int( pickRadius ); j++ )
+        {
+            if ( i == 0 && j == 0 )
+                continue;
+            if ( i * i + j * j <= pickRadius * pickRadius + 1 )
+                pixels.push_back( Vector2f( vp.x + i, vp.y + j ) );
+        }
+        auto res = multiPickObjects( renderVector, pixels );
+        if ( res.empty() )
+            return {};
+        if ( bool( res.front().first ) )
+            return res.front();
+        int minIndex = int( res.size() );
+        float minZ = FLT_MAX;
+        for ( int i = 0; i < res.size(); ++i )
+        {
+            const auto& [obj, pick] = res[i];
+            if ( !obj )
+                continue;
+            if ( pick.zBuffer < minZ )
+            {
+                minZ = pick.zBuffer;
+                minIndex = i;
+            }
+        }
+        if ( minIndex < res.size() )
+            return res[minIndex];
+        return {};
+    }
 }
 
 ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector, const Vector2f& viewportPoint ) const
@@ -167,6 +215,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
 
         PointOnObject res;
         res.primId = int( pickRes.primId );
+        res.zBuffer = pickRes.zBuffer;
 #ifndef __EMSCRIPTEN__
         auto voxObj = renderVector[pickRes.geomId]->asType<ObjectVoxels>();
         if ( voxObj && voxObj->isVolumeRenderingEnabled() )

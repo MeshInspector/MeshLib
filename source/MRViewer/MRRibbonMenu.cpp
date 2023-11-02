@@ -998,6 +998,39 @@ void RibbonMenu::cloneTree( const std::vector<std::shared_ptr<Object>>& selected
     }
 }
 
+void RibbonMenu::cloneSelectedPart( const std::shared_ptr<Object>& object )
+{
+    std::shared_ptr<VisualObject> newObj;
+    std::string name;
+    if ( auto selectedMesh = std::dynamic_pointer_cast< ObjectMesh >( object ) )
+    {
+        if ( !selectedMesh->mesh() )
+            return;
+        const auto& curMesh = *selectedMesh->mesh();
+        std::shared_ptr<ObjectMesh> objMesh = std::make_shared<ObjectMesh>();
+        objMesh->setMesh( std::make_shared<Mesh>( curMesh.cloneRegion( selectedMesh->getSelectedFaces() ) ) );
+        newObj = objMesh;
+        name = "ObjectMesh";
+    }
+    else if ( auto selectedPoints = std::dynamic_pointer_cast< ObjectPoints >( object ) )
+    {
+        if ( !selectedPoints->pointCloud() )
+            return;
+        PointCloud newPointCloud;
+        const auto& curPointCloud = *selectedPoints->pointCloud();
+        newPointCloud.addPartByMask( curPointCloud, selectedPoints->getSelectedPoints() );
+        std::shared_ptr<ObjectPoints> objPoints = std::make_shared<ObjectPoints>();
+        objPoints->setPointCloud( std::make_shared<PointCloud>( std::move( newPointCloud ) ) );
+        newObj = objPoints;
+        name = "ObjectPoints";
+    }
+
+    newObj->setName( object->name() + " Partial" );
+    newObj->setXf( object->xf() );
+    AppendHistory<ChangeSceneAction>( "Selection to New object: add " + name, newObj, ChangeSceneAction::Type::AddObject );
+    object->parent()->addChild( newObj );
+}
+
 bool RibbonMenu::drawCloneButton_( const std::vector<std::shared_ptr<Object>>& selected )
 {
     bool someChanges = false;
@@ -1008,6 +1041,26 @@ bool RibbonMenu::drawCloneButton_( const std::vector<std::shared_ptr<Object>>& s
     {
         cloneTree( selected );
         someChanges = true;
+    }
+
+    return someChanges;
+}
+
+bool RibbonMenu::drawCloneSelectionButton_( const std::vector<std::shared_ptr<Object>>& selected )
+{
+    bool someChanges = false;
+    if ( selected.size() != 1 )
+        return someChanges;
+    auto objMesh = selected[0]->asType<ObjectMesh>();
+    auto objPoints = selected[0]->asType<ObjectPoints>();
+    if ( ( objMesh && objMesh->getSelectedFaces().any() ) ||
+         ( objPoints && objPoints->getSelectedPoints().any() ) )
+    {
+        if ( UI::button( "Clone Selection", Vector2f( -1, 0 ) ) )
+        {
+            cloneSelectedPart( selected[0] );
+            someChanges = true;
+        }
     }
 
     return someChanges;
@@ -1623,13 +1676,13 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
     if ( ImGui::BeginPopupContextItem() )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, ImGui::GetStyle().WindowPadding );
-        [[maybe_unused]] bool wasChanged = false;
+        [[maybe_unused]] bool wasChanged = false, wasAction = false;
         if ( selectedVisualObjs.empty() )
         {
             wasChanged |= drawGeneralOptions_( selected );
-            wasChanged |= drawRemoveButton_( selected );
-            wasChanged |= drawGroupUngroupButton_( selected );
-            wasChanged |= drawCloneButton_( selected );
+            wasAction |= drawRemoveButton_( selected );
+            wasAction |= drawGroupUngroupButton_( selected );
+            wasAction |= drawCloneButton_( selected );
         }
         else if ( ImGui::BeginTable( "##DrawOptions", 2, ImGuiTableFlags_BordersInnerV ) )
         {
@@ -1639,15 +1692,17 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
             wasChanged |= drawAdvancedOptions_( selectedVisualObjs );
             ImGui::TableNextColumn();
             wasChanged |= drawDrawOptionsColors_( selectedVisualObjs );
-            wasChanged |= drawRemoveButton_( selected );
-            wasChanged |= drawGroupUngroupButton_( selected );
-            wasChanged |= drawCloneButton_( selected );
+            wasAction |= drawRemoveButton_( selected );
+            wasAction |= drawGroupUngroupButton_( selected );
+            wasAction |= drawCloneButton_( selected );
+            wasAction |= drawCloneSelectionButton_( selected );
             ImGui::EndTable();
         }
         ImGui::PopStyleVar();
         //uncomment to close context menu on any change
-        //if ( wasChanged )
-        //    ImGui::CloseCurrentPopup();
+        //if ( wasChanged || wasAction )
+        if ( wasAction )
+            ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
     }
 }
@@ -2291,7 +2346,7 @@ void RibbonMenu::highlightBlocking_()
         blockingHighlightTimer_ = 0.0f;
         return;
     }
-    auto pluginWindowName = activeBlockingItem_.item->name() + "##CustomStatePlugin";
+    auto pluginWindowName = activeBlockingItem_.item->uiName();
     auto* window = ImGui::FindWindowByName( pluginWindowName.c_str() );
     if ( !window || blockingHighlightTimer_ <= 0.0f )
     {

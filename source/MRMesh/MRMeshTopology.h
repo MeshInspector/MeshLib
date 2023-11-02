@@ -143,7 +143,12 @@ public:
     /// sets in (vs) all valid vertices that were not selected before the call, and resets other bits
     void flip( VertBitSet & vs ) const { vs = getValidVerts() - vs; }
     /// if region pointer is not null then converts it in reference, otherwise returns all valid vertices in the mesh
-    [[nodiscard]] const VertBitSet & getVertIds( const VertBitSet * region ) const { assert( region || updateValids_ ); return region ? *region : validVerts_; }
+    [[nodiscard]] const VertBitSet & getVertIds( const VertBitSet * region ) const
+    {
+        assert( region || updateValids_ ); // region shall be either given on input or maintained in validVerts_
+        assert( !updateValids_ || !region || ( *region - validVerts_ ).none() ); // if region is given and all valid vertices are known, then region must be a subset of them
+        return region ? *region : validVerts_;
+    }
 
     /// for all valid faces this vector contains an edge with that face at left
     [[nodiscard]] const Vector<EdgeId, FaceId> & edgePerFace() const { return edgePerFace_; }
@@ -184,7 +189,12 @@ public:
     /// sets in (fs) all valid faces that were not selected before the call, and resets other bits
     void flip( FaceBitSet & fs ) const { fs = getValidFaces() - fs; }
     /// if region pointer is not null then converts it in reference, otherwise returns all valid faces in the mesh
-    [[nodiscard]] const FaceBitSet & getFaceIds( const FaceBitSet * region ) const { assert( region || updateValids_ ); return region ? *region : validFaces_; }
+    [[nodiscard]] const FaceBitSet & getFaceIds( const FaceBitSet * region ) const
+    { 
+        assert( region || updateValids_ ); // region shall be either given on input or maintained in validFaces_
+        assert( !updateValids_ || !region || ( *region - validFaces_ ).none() ); // if region is given and all valid faces are known, then region must be a subset of them
+        return region ? *region : validFaces_;
+    }
     /// returns the first boundary edge (for given region or for whole mesh if region is nullptr) in counter-clockwise order starting from given edge with the same left;
     /// returns invalid edge if no boundary edge is found
     [[nodiscard]] MRMESH_API EdgeId bdEdgeSameLeft( EdgeId e, const FaceBitSet * region = nullptr ) const;

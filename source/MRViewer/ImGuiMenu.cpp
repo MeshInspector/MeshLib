@@ -343,7 +343,7 @@ void ImGuiMenu::postDraw_()
       for ( int i = context_->WindowsFocusOrder.size() - 1; i >= 0; --i )
       {
           auto* win = context_->WindowsFocusOrder[i];
-          if ( win && win->Active && std::string( win->Name ).find( "##CustomStatePlugin" ) != std::string::npos )
+          if ( win && win->Active && std::string( win->Name ).find( StateBasePlugin::UINameSuffix() ) != std::string::npos )
           {
               prevFrameFocusPlugin_ = win;
               break;
@@ -2450,7 +2450,7 @@ void ImGuiMenu::draw_custom_plugins()
             if ( counter % pluginsPerLine != 0 )
                 ImGui::SameLine();
 
-            if ( ImGui::Button( plugin->plugin_name.c_str(), ImVec2( availibleWidth, 0 ) ) )
+            if ( ImGui::Button( plugin->uiName().c_str(), ImVec2(availibleWidth, 0)) )
             {
                 if ( plugin->isEnabled() )
                     plugin->enable( false );

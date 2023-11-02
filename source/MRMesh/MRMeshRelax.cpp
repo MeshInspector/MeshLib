@@ -166,12 +166,9 @@ bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params, ProgressCallbac
         newPoints = mesh.points;
         if ( !BitSetParallelFor( zone, [&]( VertId v )
         {
-            auto e0 = mesh.topology.edgeWithOrg( v );
-            if ( !e0.valid() )
-                return;
             Vector3d sum;
             int count = 0;
-            for ( auto e : orgRing( mesh.topology, e0 ) )
+            for ( auto e : orgRing( mesh.topology, v ) )
             {
                 sum += Vector3d( mesh.points[mesh.topology.dest( e )] );
                 ++count;
@@ -179,23 +176,22 @@ bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params, ProgressCallbac
             vertPushForces[v] = params.force * ( Vector3f{sum / double( count )} - mesh.points[v] );
         }, internalCb1 ) )
             return false;
+
         if ( !BitSetParallelFor( zone, [&]( VertId v )
         {
-            auto e0 = mesh.topology.edgeWithOrg( v );
-            if ( !e0.valid() )
-                return;
-
+            Vector3d sum;
             int count = 0;
-            for ( [[maybe_unused]] auto e : orgRing( mesh.topology, e0 ) )
+            for ( auto e : orgRing( mesh.topology, v ) )
+            {
+                auto d = mesh.topology.dest( e );
+                if ( zone.test( d ) )
+                    sum += Vector3d( vertPushForces[d] );
                 ++count;
-
-            auto& np = newPoints[v];
-            np += vertPushForces[v];
-            auto modifier = 1.0f / count;
-            for ( auto e : orgRing( mesh.topology, e0 ) )
-                np -= ( vertPushForces[mesh.topology.dest( e )] * modifier );
+            }
+            newPoints[v] += vertPushForces[v] - Vector3f{ sum / double( count ) };
         }, internalCb2 ) )
             return false;
+
         mesh.points.swap( newPoints );
     }
     if ( params.hardSmoothTetrahedrons )

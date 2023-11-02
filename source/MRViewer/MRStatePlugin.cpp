@@ -23,6 +23,7 @@ StateBasePlugin::StateBasePlugin( std::string name, StatePluginTabs tab ):
     RibbonMenuItem( name )
 {
     plugin_name = std::move( name );
+    plugin_name += UINameSuffix();
     tab_ = tab;
 }
 
@@ -62,7 +63,7 @@ bool StateBasePlugin::enable( bool on )
     {
         auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
         if ( ribbonMenu )
-            ribbonMenu->updateItemStatus( plugin_name );
+            ribbonMenu->updateItemStatus( name() );
     }
     return res;
 }
@@ -70,6 +71,11 @@ bool StateBasePlugin::enable( bool on )
 bool StateBasePlugin::dialogIsOpen() const
 {
     return dialogIsOpen_ && !shouldClose_(); // virtual call from IPluginCloseCheck
+}
+
+const char* StateBasePlugin::UINameSuffix()
+{
+    return "##CustomStatePlugin";
 }
 
 StatePluginTabs  StateBasePlugin::getTab() const
@@ -90,7 +96,7 @@ void StateBasePlugin::shutdown()
 
 bool StateBasePlugin::checkStringMask( const std::string& mask ) const
 {
-    return ( findSubstringCaseInsensitive( plugin_name, mask ) != std::string::npos ) ||
+    return ( findSubstringCaseInsensitive( name(), mask) != std::string::npos ) ||
         ( findSubstringCaseInsensitive( getTooltip(), mask ) != std::string::npos );
 }
 

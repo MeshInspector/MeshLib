@@ -111,14 +111,14 @@ VertScalars computeSurfaceDistances( const Mesh& mesh, const MeshTriPoint & star
     return b.takeDistanceMap();
 }
 
-VertScalars computeSurfaceDistances( const Mesh& mesh, const std::vector<MeshTriPoint>& start, float maxDist,
+VertScalars computeSurfaceDistances( const Mesh& mesh, const std::vector<MeshTriPoint>& starts, float maxDist,
                                               const VertBitSet* region, int maxVertUpdates )
 {
     MR_TIMER;
 
     SurfaceDistanceBuilder b( mesh, region );
     b.setMaxVertUpdates( maxVertUpdates );
-    for ( const auto& triPoint : start )
+    for ( const auto& triPoint : starts )
         b.addStart( triPoint );
     while ( b.doneDistance() < maxDist )
     {

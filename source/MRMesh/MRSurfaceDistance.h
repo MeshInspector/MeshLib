@@ -39,7 +39,9 @@ MRMESH_API VertScalars computeSurfaceDistances( const Mesh& mesh, const MeshTriP
 MRMESH_API VertScalars computeSurfaceDistances( const Mesh& mesh, const MeshTriPoint & start, float maxDist = FLT_MAX,
                                                          const VertBitSet* region = nullptr, int maxVertUpdates = 3 );
 
-MRMESH_API VertScalars computeSurfaceDistances( const Mesh& mesh, const std::vector<MeshTriPoint>& start, float maxDist = FLT_MAX,
+/// computes path distances in mesh vertices from given start points, stopping when maxDist is reached;
+/// considered paths can go either along edges or straightly within triangles
+MRMESH_API VertScalars computeSurfaceDistances( const Mesh& mesh, const std::vector<MeshTriPoint>& starts, float maxDist = FLT_MAX,
                                                          const VertBitSet* region = nullptr, int maxVertUpdates = 3 );
 
 /// \}

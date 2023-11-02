@@ -9,7 +9,9 @@ namespace MR
 
 struct ContoursVertId
 {
+    // -1 means unknown index
     int contourId{ -1 };
+    // -1 means unknown index
     int vertId{ -1 };
     bool operator==( const ContoursVertId& other ) const = default;
 };

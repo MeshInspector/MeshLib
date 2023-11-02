@@ -348,17 +348,23 @@ void SweepLineQueue::injectIntersections( IntersectionsMap* interMap )
 
     windingInfo_.resize( windingInfo_.size() + intersections_.size() * 2 );
     Vector<EdgeId, UndirectedEdgeId> oldToFirstNewEdgeMap( tp_.undirectedEdgeSize() );
-    for ( const auto& inter : intersections_ )
+
+    if ( interMap )
     {
         // create mapping if needed
-        if ( interMap )
+        for ( const auto& inter : intersections_ )
         {
             auto ind = size_t( inter.vId ) - interMap->shift;
             assert( ind < interMap->map.size() );
-            interMap->map[ind].first = std::min( tp_.org( inter.lower ), tp_.dest( inter.lower ) );
-            interMap->map[ind].second = std::min( tp_.org( inter.upper ), tp_.dest( inter.upper ) );
+            interMap->map[ind].lOrg = tp_.org( inter.lower );
+            interMap->map[ind].lDest = tp_.dest( inter.lower );
+            interMap->map[ind].uOrg = tp_.org( inter.upper );
+            interMap->map[ind].uDest = tp_.dest( inter.upper );
         }
+    }
 
+    for ( const auto& inter : intersections_ )
+    {
         // split edges
         // set new edge ids to the left and save old to the right
         // because of intersections order
@@ -925,7 +931,7 @@ void SweepLineQueue::mergeSamePoints_( const HolesVertIds* holesVertId )
     int prevUnique = 0;
     for ( int i = 1; i < sortedVerts_.size(); ++i )
     {
-        bool sameIntCoord = sortedVerts_[i] == sortedVerts_[prevUnique];
+        bool sameIntCoord = pts_[sortedVerts_[i]] == pts_[sortedVerts_[prevUnique]];
         if ( !sameIntCoord )
         {
             prevUnique = i;
@@ -1238,11 +1244,11 @@ Contours2f getOutline( const Contours2f& contours, ContoursIdMap* indicesMap )
             if ( indicesMap )
             {
                 if ( v < interMap.shift )
-                    indicesMap->back().push_back( { .id = int( v ) } );
+                    indicesMap->back().push_back( { .lOrg = v } );
                 else
                 {
                     const auto& inter = interMap.map[int( v ) - interMap.shift];
-                    indicesMap->back().push_back( { .id = inter.first,.interId = inter.second } );
+                    indicesMap->back().push_back( inter );
                 }
             }
         }

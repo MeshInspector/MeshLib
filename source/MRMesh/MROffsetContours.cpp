@@ -9,10 +9,148 @@
 #include "MR2to3.h"
 #include "MRPolyline.h"
 #include "MRLinesSave.h"
+#include "MRParallelFor.h"
 #include <numeric>
 
 namespace MR
 {
+struct IntermediateIndicesMap
+{
+    int contourId{ -1 };
+    std::vector<int> map;
+};
+
+using IntermediateIndicesMaps = std::vector<IntermediateIndicesMap>;
+
+
+void fillIntermediateIndicesMap(
+    const Contours2f& contours, 
+    const Contours2f& intermediateRes,
+    const IntermediateIndicesMaps& shiftsMap,
+    OffsetContoursParams::Type type,
+    IntermediateIndicesMaps& outMap )
+{
+    auto findIndex = [&] ( int contId, int newIndex )->int
+    {
+        const auto& sm = shiftsMap[contId].map;
+        const auto& cont = contours[shiftsMap[contId].contourId];
+        const auto& resCont = intermediateRes[contId];
+
+        bool isClosed = cont.front() == cont.back();
+        if ( isClosed )
+        {
+            bool forward = type == OffsetContoursParams::Type::Offset ||
+                ( sm.size() > 1 && sm[1] - sm[0] > 0 );
+            int result = 0;
+            if ( forward )
+            {
+                for ( int i = 0; i < cont.size(); ++i )
+                    if ( newIndex < sm[i] )
+                    {
+                        result = i;
+                        break;
+                    }
+            }
+            else
+            {
+                newIndex = int( resCont.size() ) - 1 - newIndex;
+                for ( int i = 0; i < cont.size(); ++i )
+                    if ( newIndex < sm[int( cont.size() ) - 1 - i] )
+                    {
+                        result = i;
+                        break;
+                    }
+            }
+            return result == int( cont.size() ) - 1 ? 0 : result;
+        }
+        // if not closed
+        auto firstPartSize = sm[int( cont.size() ) - 1];
+        bool forward = newIndex < firstPartSize;
+        if ( forward )
+        {
+            for ( int i = 0; i < cont.size(); ++i )
+                if ( newIndex < sm[i] )
+                    return i;
+        }
+        else
+        {
+            newIndex = int( resCont.size() ) - 2 - newIndex;
+            for ( int i = 0; i < cont.size(); ++i )
+                if ( newIndex < sm[int( sm.size() ) - 1 - i] )
+                    return i;
+        }
+        return 0;
+    };
+
+    outMap.resize( intermediateRes.size() );
+    for ( int i = 0; i < intermediateRes.size(); ++i )
+    {
+        auto& map = outMap[i];
+        map.contourId = shiftsMap[i].contourId;
+        map.map.resize( intermediateRes[i].size() );
+        ParallelFor( intermediateRes[i], [&] ( size_t j )
+        {
+            map.map[j] = findIndex( i, int( j ) );
+        } );
+    }
+}
+
+void fillResultIndicesMap(
+    const Contours2f& intermediateRes,
+    const IntermediateIndicesMaps& intermediateMap,
+    const PlanarTriangulation::ContoursIdMap& outlineMap,
+    ContoursVertMaps& outMaps )
+{
+    std::vector<int> intermediateToIdShifts( intermediateRes.size() );
+    for ( int i = 0; i < intermediateToIdShifts.size(); ++i )
+        intermediateToIdShifts[i] = int( intermediateRes[i].size() ) - 1 + ( i > 0 ? intermediateToIdShifts[i - 1] : 0 );
+
+    auto outlineVertIdToContoursVertId = [&] ( int vertId )->ContoursVertId
+    {
+        ContoursVertId res;
+        if ( vertId == -1 )
+            return res;
+        for ( int i = 0; i < intermediateToIdShifts.size(); ++i )
+        {
+            if ( vertId < intermediateToIdShifts[i] )
+            {
+                res.contourId = i;
+                if ( i > 0 )
+                    vertId -= intermediateToIdShifts[i - 1];
+                break;
+            }
+        }
+        res.vertId = intermediateMap[res.contourId].map[vertId];
+        res.contourId = intermediateMap[res.contourId].contourId;
+        return res;
+    };
+    outMaps.resize( outlineMap.size() );
+    for ( int i = 0; i < outMaps.size(); ++i )
+    {
+        auto& outMap = outMaps[i];
+        const auto& inMap = outlineMap[i];
+        outMap.resize( inMap.size() );
+        ParallelFor( outMap, [&] ( size_t ind )
+        {
+            auto inVal = inMap[ind];
+            if ( !inVal.lDest.valid() )
+            {
+                outMap[ind] = outlineVertIdToContoursVertId( int( inVal.lOrg ) );
+                return;
+            }
+            auto lOrg = outlineVertIdToContoursVertId( int( inVal.lOrg ) );
+            auto lDest = outlineVertIdToContoursVertId( int( inVal.lDest ) );
+            auto uOrg = outlineVertIdToContoursVertId( int( inVal.uOrg ) );
+            auto uDest = outlineVertIdToContoursVertId( int( inVal.uDest ) );
+            if ( lOrg == lDest || lOrg == uOrg || lOrg == uDest )
+                outMap[ind] = lOrg;
+            else if ( lDest == uOrg || lDest == uDest )
+                outMap[ind] = lDest;
+            else if ( uOrg == uDest )
+                outMap[ind] = uOrg;
+        } );
+    }
+}
 
 float findAngle( const Vector2f& prev, const Vector2f& org, const Vector2f& next )
 {
@@ -143,11 +281,15 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, float offset, const 
     return res;
 }
 
-Contours2f offsetContours( const Contours2f& contours, float offset, const OffsetContoursParams& params /*= {} */ )
+Expected<Contours2f, std::string> offsetContours( const Contours2f& contours, float offset, 
+    const OffsetContoursParams& params /*= {} */ )
 {
     MR_TIMER;
 
-    ContoursIndicesMap shiftsMap;
+    if ( offset == 0.0f && params.type == OffsetContoursParams::Type::Shell )
+        return unexpected( "Cannot perform zero shell offset." );
+
+    IntermediateIndicesMaps shiftsMap;
 
     Contours2f intermediateRes;
 
@@ -157,6 +299,10 @@ Contours2f offsetContours( const Contours2f& contours, float offset, const Offse
             continue;
 
         bool isClosed = contours[i].front() == contours[i].back();
+
+        if ( !isClosed && offset == 0.0f )
+            return unexpected( "Cannot make zero offset for open contour." );
+
         if ( offset == 0.0f )
         {
             intermediateRes.push_back( contours[i] );
@@ -165,23 +311,15 @@ Contours2f offsetContours( const Contours2f& contours, float offset, const Offse
                 shiftsMap.push_back( { i,std::vector<int>( contours[i].size(), 0 ) } );
                 std::iota( shiftsMap.back().map.begin(), shiftsMap.back().map.end(), 1 );
             }
-            if ( !isClosed || params.type == OffsetContoursParams::Type::Shell )
+            if ( params.type == OffsetContoursParams::Type::Shell )
             {
-                if ( isClosed )
+                assert( isClosed );
+                intermediateRes.push_back( contours[i] );
+                std::reverse( intermediateRes.back().begin(), intermediateRes.back().end() );
+                if ( params.indicesMap )
                 {
-                    intermediateRes.push_back( contours[i] );
-                    std::reverse( intermediateRes.back().begin(), intermediateRes.back().end() );
-                    if ( params.indicesMap )
-                    {
-                        shiftsMap.push_back( { i,std::vector<int>( contours[i].size(), 0 ) } );
-                        std::iota( shiftsMap.back().map.rbegin(), shiftsMap.back().map.rend(), 1 );
-                    }
-                }
-                else
-                {
-                    intermediateRes.back().insert( intermediateRes.back().end(), contours[i].rbegin(), contours[i].rend() );
-                    if ( params.indicesMap )
-                        shiftsMap.back().map.insert( shiftsMap.back().map.end(), shiftsMap.back().map.rbegin(), shiftsMap.back().map.rend() );
+                    shiftsMap.push_back( { i,std::vector<int>( contours[i].size(), 0 ) } );
+                    std::iota( shiftsMap.back().map.rbegin(), shiftsMap.back().map.rend(), 1 );
                 }
             }
             continue;
@@ -236,71 +374,18 @@ Contours2f offsetContours( const Contours2f& contours, float offset, const Offse
             intermediateRes.back().push_back( intermediateRes.back().front() );
         }
     }
+
+    IntermediateIndicesMaps intermediateMap;
     if ( params.indicesMap )
-    {
-        auto findIndex = [&] ( int contId, int newIndex )->int
-        {
-            const auto& sm = shiftsMap[contId].map;
-            const auto& cont = contours[shiftsMap[contId].contourId];
-            const auto& resCont = intermediateRes[contId];
+        fillIntermediateIndicesMap( contours, intermediateRes, shiftsMap, params.type, intermediateMap );
 
-            bool isClosed = cont.front() == cont.back();
-            if ( isClosed )
-            {
-                bool forward = params.type == OffsetContoursParams::Type::Offset || 
-                    ( sm.size() > 1 && sm[1] - sm[0] > 0 );
-                int result = 0;
-                if ( forward )
-                {
-                    for ( int i = 0; i < cont.size(); ++i )
-                        if ( newIndex < sm[i] )
-                        {
-                            result = i;
-                            break;
-                        }
-                }
-                else
-                {
-                    newIndex = int( resCont.size() ) - 1 - newIndex;
-                    for ( int i = 0; i < cont.size(); ++i )
-                        if ( newIndex < sm[int( cont.size() ) - 1 - i] )
-                        {
-                            result = i;
-                            break;
-                        }
-                }
-                return result == int( cont.size() ) - 1 ? 0 : result;
-            }
-            // if not closed
-            auto firstPartSize = sm[int( cont.size() ) - 1];
-            bool forward = newIndex < firstPartSize;
-            if ( forward )
-            {
-                for ( int i = 0; i < cont.size(); ++i )
-                    if ( newIndex < sm[i] )
-                        return i;
-            }
-            else
-            {
-                newIndex = int( resCont.size() ) - 2 - newIndex;
-                for ( int i = 0; i < cont.size(); ++i )
-                    if ( newIndex < sm[int( sm.size() ) - 1 - i] )
-                        return i;
-            }
-            return 0;
-        };
+    PlanarTriangulation::ContoursIdMap outlineMap;
+    auto res = PlanarTriangulation::getOutline( intermediateRes, params.indicesMap ? &outlineMap : nullptr );
 
-        params.indicesMap->resize( intermediateRes.size() );
-        for ( int i = 0; i < intermediateRes.size(); ++i )
-        {
-            auto& map = ( *params.indicesMap )[i];
-            map.contourId = shiftsMap[i].contourId;
-            map.map.resize( intermediateRes[i].size() );
-            for ( int j = 0; j < intermediateRes[i].size(); ++j )
-                map.map[j] = findIndex( i, j );
-        }
-    }
-    return intermediateRes;// PlanarTriangulation::getOutline( intermediateRes );
+    if ( params.indicesMap )
+        fillResultIndicesMap( intermediateRes, intermediateMap, outlineMap, *params.indicesMap );
+
+    return res;
 }
 
 }

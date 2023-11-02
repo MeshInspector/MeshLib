@@ -1,5 +1,6 @@
 #pragma once
 #include "MRMeshFwd.h"
+#include "MRId.h"
 #include <optional>
 
 namespace MR
@@ -22,30 +23,31 @@ using HolesVertIds = std::vector<HoleVertIds>;
 /// return vertices of holes that correspond internal contours representation of PlanarTriangulation
 MRMESH_API HolesVertIds findHoleVertIdsByHoleEdges( const MeshTopology& tp, const std::vector<EdgePath>& holePaths );
 
+/// Info about intersection point for mapping
+struct IntersectionInfo
+{
+    /// if lDest is invalid then lOrg is id of input vertex
+    /// ids of lower intersection edge vertices
+    VertId lOrg, lDest;
+    /// ids of upper intersection edge vertices
+    VertId uOrg, uDest;
+};
+
+using ContourIdMap = std::vector<IntersectionInfo>;
+using ContoursIdMap = std::vector<ContourIdMap>;
+
 /// struct to map new vertices (only appear on intersections) of the outline to it's edges
 struct IntersectionsMap
 {
     /// shift of index
     size_t shift{ 0 };
-    /// map[id-shift] = {min vert id of lower intersection edge, min vert id of upper intersection edge}
-    std::vector<std::pair<int, int>> map;
+    /// map[id-shift] = {lower intersection edge, upper intersection edge}
+    ContourIdMap map;
 };
 
 /// returns Mesh with boundaries representing outline if input contours
 /// interMap optional output intersection map
 MRMESH_API Mesh getOutlineMesh( const Contours2f& contours, IntersectionsMap* interMap = nullptr );
-
-/// maps output contour ids to input ones
-struct InputContourId
-{
-    /// if interId is invalid: id is index in input contours
-    /// otherwise minimum id of lower intersection edge
-    int id{ -1 };
-    /// if valid minimum id of upper intersection edge
-    int interId{ -1 }; 
-};
-using ContourIdMap = std::vector<InputContourId>;
-using ContoursIdMap = std::vector<ContourIdMap>;
 
 /// returns Contour representing outline if input contours
 /// indicesMap optional output from result contour ids to input ones

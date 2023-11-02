@@ -122,10 +122,11 @@ public:
         bool needOutline = false // if set do not do real triangulation, just marks inside faces as present
         );
 
-    std::optional<Mesh> run();
+    size_t vertSize() const { return tp_.vertSize(); }
+    std::optional<Mesh> run( IntersectionsMap* interMap = nullptr );
 
     bool findIntersections();
-    void injectIntersections();
+    void injectIntersections( IntersectionsMap* interMap );
     void makeMonotone();
     Mesh triangulate();
 private:
@@ -303,14 +304,14 @@ SweepLineQueue::SweepLineQueue(
     setupStartVertices_();
 }
 
-std::optional<MR::Mesh> SweepLineQueue::run()
+std::optional<MR::Mesh> SweepLineQueue::run( IntersectionsMap* interMap )
 {
     MR_TIMER;
     if ( incompleteMerge_ )
         return {};
     if ( !findIntersections() )
         return {};
-    injectIntersections();
+    injectIntersections( interMap );
     makeMonotone();
     return triangulate();
 }
@@ -338,11 +339,30 @@ bool SweepLineQueue::findIntersections()
     return true;
 }
 
-void SweepLineQueue::injectIntersections()
+void SweepLineQueue::injectIntersections( IntersectionsMap* interMap )
 {
     MR_TIMER;
+
+    if ( interMap )
+        interMap->map.resize( intersections_.size() );
+
     windingInfo_.resize( windingInfo_.size() + intersections_.size() * 2 );
     Vector<EdgeId, UndirectedEdgeId> oldToFirstNewEdgeMap( tp_.undirectedEdgeSize() );
+
+    if ( interMap )
+    {
+        // create mapping if needed
+        for ( const auto& inter : intersections_ )
+        {
+            auto ind = size_t( inter.vId ) - interMap->shift;
+            assert( ind < interMap->map.size() );
+            interMap->map[ind].lOrg = tp_.org( inter.lower );
+            interMap->map[ind].lDest = tp_.dest( inter.lower );
+            interMap->map[ind].uOrg = tp_.org( inter.upper );
+            interMap->map[ind].uDest = tp_.dest( inter.upper );
+        }
+    }
+
     for ( const auto& inter : intersections_ )
     {
         // split edges
@@ -911,7 +931,7 @@ void SweepLineQueue::mergeSamePoints_( const HolesVertIds* holesVertId )
     int prevUnique = 0;
     for ( int i = 1; i < sortedVerts_.size(); ++i )
     {
-        bool sameIntCoord = sortedVerts_[i] == sortedVerts_[prevUnique];
+        bool sameIntCoord = pts_[sortedVerts_[i]] == pts_[sortedVerts_[prevUnique]];
         if ( !sameIntCoord )
         {
             prevUnique = i;
@@ -1181,11 +1201,14 @@ HolesVertIds findHoleVertIdsByHoleEdges( const MeshTopology& tp, const std::vect
     return res;
 }
 
-Mesh getOutlineMesh( const Contours2f& contours )
+Mesh getOutlineMesh( const Contours2f& contours, IntersectionsMap* interMap )
 {
     const auto contsd = copyContours<Contours2d>( contours );
     SweepLineQueue triangulator( contsd, nullptr, false, WindingMode::Negative );
-    auto mesh = triangulator.run();
+
+    if ( interMap )
+        interMap->shift = triangulator.vertSize();
+    auto mesh = triangulator.run( interMap );
     if ( !mesh )
     {
         assert( false );
@@ -1194,9 +1217,10 @@ Mesh getOutlineMesh( const Contours2f& contours )
     return *mesh;
 }
 
-Contours2f getOutline( const Contours2f& contours )
+Contours2f getOutline( const Contours2f& contours, ContoursIdMap* indicesMap )
 {
-    auto mesh = getOutlineMesh( contours );
+    IntersectionsMap interMap;
+    auto mesh = getOutlineMesh( contours, indicesMap ? &interMap : nullptr );
 
     // `getValidFaces` important to exclude lone boundaries
     auto bourndaries = findRightBoundary( mesh.topology, &mesh.topology.getValidFaces() );
@@ -1207,10 +1231,30 @@ Contours2f getOutline( const Contours2f& contours )
         const auto& loop = bourndaries[i];
         res.push_back( {} );
         res.back().reserve( loop.size() + 1 );
+        if ( indicesMap )
+        {
+            indicesMap->push_back( {} );
+            indicesMap->back().reserve( loop.size() + 1 );
+        }
 
         for ( auto e : loop )
-            res.back().push_back( to2dim( mesh.orgPnt( e ) ) );
+        {
+            VertId v = mesh.topology.org( e );
+            res.back().push_back( to2dim( mesh.points[v] ) );
+            if ( indicesMap )
+            {
+                if ( v < interMap.shift )
+                    indicesMap->back().push_back( { .lOrg = v } );
+                else
+                {
+                    const auto& inter = interMap.map[int( v ) - interMap.shift];
+                    indicesMap->back().push_back( inter );
+                }
+            }
+        }
         res.back().push_back( to2dim( mesh.destPnt( loop.back() ) ) );
+        if ( indicesMap )
+            indicesMap->back().push_back( indicesMap->back().front() );
     }
     return res;
 }

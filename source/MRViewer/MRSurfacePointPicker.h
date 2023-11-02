@@ -62,7 +62,7 @@ public:
     
     // returns stored position of this widget
     const MeshTriPoint& getCurrentPosition() const { return currentPos_; }
-    MRVIEWER_API void updateCurrentPosition( MeshTriPoint& pos );
+    MRVIEWER_API void updateCurrentPosition( const MeshTriPoint& pos );
 
     // this callback is called when modification starts if it is set
     void setStartMoveCallback( std::function<void( const MeshTriPoint& )> startMove ) { startMove_ = startMove; }

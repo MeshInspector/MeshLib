@@ -23,6 +23,7 @@ const MeshTriPoint& SurfacePointWidget::create( const std::shared_ptr<ObjectMesh
     pickSphere_->setName( "Pick Sphere" );
     pickSphere_->setAncillary( true );
     pickSphere_->setFrontColor( params_.baseColor, false );
+    pickSphere_->setBackColor( Color::transparent() );
     baseSurface_->addChild( pickSphere_ );
     currentPos_ = startPos;
     updatePositionAndRadius_();
@@ -205,9 +206,9 @@ void SurfacePointWidget::updatePositionAndRadius_()
     pickSphere_->setRadius( radius );
 }
 
-void SurfacePointWidget::updateCurrentPosition( MeshTriPoint& pos )
+void SurfacePointWidget::updateCurrentPosition( const MeshTriPoint& pos )
 {
-    std::swap( currentPos_, pos );
+    currentPos_ = pos;
     updatePositionAndRadius_();
 }
 

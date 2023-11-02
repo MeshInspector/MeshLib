@@ -263,6 +263,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadPoints, [] ( pybind11::module_& m )
         pybind11::arg( "fileHandle" ), pybind11::arg( "extension" ), "load point cloud from python file handler, second arg: extension (`*.ext` format)" );
 } )
 
+#ifndef MRMESH_NO_VOXEL
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveVoxels, [] ( pybind11::module_& m )
 {
     m.def( "saveVoxels",
@@ -312,3 +313,4 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
         pybind11::arg( "path" ), pybind11::arg( "maxNumThreads" ) = 4, pybind11::arg( "callback" ) = ProgressCallback{},
         "Loads all volumetric data from DICOM file(s)" );
 } )
+#endif

@@ -1,5 +1,6 @@
 #include "MRMesh/MRPython.h"
 #include "MRMesh/MRMeshFwd.h"
+#ifndef MRMESH_NO_VOXEL
 #include "MRMesh/MRSimpleVolume.h"
 #include "MRMesh/MRVoxelsSave.h"
 #include "MRMesh/MRVoxelsLoad.h"
@@ -184,3 +185,4 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         pybind11::arg( "params" ) = MR::MeshToVolumeParams{},
         "convert mesh to volume in (0,0,0)-(dim.x,dim.y,dim.z) grid box" );
 } )
+#endif

@@ -34,6 +34,7 @@
 
 using namespace MR;
 
+#ifndef MRMESH_NO_VOXEL
 // Fix self-intersections
 void fixSelfIntersections( Mesh& mesh1, float voxelSize )
 {
@@ -82,6 +83,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, VoxelBooleanBlock, [] ( pybind11::module_& m
     m.def( "voxelBooleanIntersect", &booleanIntersect, pybind11::arg( "meshA" ), pybind11::arg( "meshB" ), pybind11::arg( "voxelSize" ), "intersect mesh A and mesh B" );
 
 } )
+#endif
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::module_& m )
 {
@@ -106,7 +108,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::modul
     m.def( "removeSpikes", &MR::removeSpikes,
         pybind11::arg( "mesh" ), pybind11::arg( "maxIterations" ), pybind11::arg( "minSumAngle" ), pybind11::arg( "region" ) = nullptr, 
         "applies at most given number of relaxation iterations the spikes detected by given threshold" );
+} )
 
+#ifndef MRMESH_NO_VOXEL
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FixUndercuts, [] ( pybind11::module_& m )
+{
     m.def( "fixUndercuts", ( void ( * )( Mesh&, const FaceBitSet&, const Vector3f&, float, float ) )& MR::FixUndercuts::fixUndercuts,
         pybind11::arg( "mesh" ), pybind11::arg( "selectedArea" ), pybind11::arg( "upDirection" ), pybind11::arg( "voxelSize" ) = 0.0f, pybind11::arg( "bottomExtension" ) = 0.0f,
         "aChanges mesh:\n"
@@ -131,7 +137,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::modul
         "\tif mesh is not closed this is used to prolong hole and make bottom\n"
         "\nif voxelSize == 0.0f it will be counted automaticly" );
 } )
+#endif
 
+#ifndef MRMESH_NO_LABEL
 // Text Mesh
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m )
 {
@@ -159,7 +167,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m 
     m.def( "alignTextToMesh", &alignTextToMesh, pybind11::arg( "mesh" ), pybind11::arg( "params" ),
         "create text on mesh" );
 } )
-
+#endif
 
 MR_ADD_PYTHON_VEC( mrmeshpy, SurfacePath, MR::EdgePoint )
 MR_ADD_PYTHON_VEC( mrmeshpy, SurfacePaths, MR::SurfacePath )
@@ -388,6 +396,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
         "Puts given vertices in such positions to make smooth surface both inside verts-region and on its boundary" );
 } )
 
+#ifndef MRMESH_NO_VOXEL
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
 {
     pybind11::enum_<MR::OffsetParameters::Type>( m, "OffsetParametersType", "Type of offsetting" ).
@@ -412,6 +421,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
         "so result mesh is always closed" );
 
 })
+#endif
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, GeodesicPath, [] ( pybind11::module_& m )
 {

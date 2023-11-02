@@ -94,6 +94,10 @@ public:
 
     MRVIEWER_API virtual bool dialogIsOpen() const;
 
+    MRVIEWER_API static const char* UINameSuffix();
+
+    virtual const std::string& uiName() const override { return plugin_name; }
+
     MRVIEWER_API StatePluginTabs getTab() const;
 
     MRVIEWER_API static const char* getTabName( StatePluginTabs tab );

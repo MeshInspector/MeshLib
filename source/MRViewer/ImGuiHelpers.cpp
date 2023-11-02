@@ -425,7 +425,7 @@ bool BeginStatePlugin( const char* label, bool* open, float width )
     return Begin( label, open, flags );
 }
 
-bool BeginCustomStatePlugin( const char* labelArg, bool* open, const CustomStatePluginWindowParameters& params )
+bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePluginWindowParameters& params )
 {
     const auto& style = ImGui::GetStyle();    
 
@@ -437,10 +437,7 @@ bool BeginCustomStatePlugin( const char* labelArg, bool* open, const CustomState
 
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 12 * params.menuScaling, 8 * params.menuScaling ) );
 
-    std::string labelStr = labelArg;
-    labelStr += "##CustomStatePlugin";
-
-    ImGuiWindow* window = FindWindowByName( labelStr.c_str() );
+    ImGuiWindow* window = FindWindowByName( label );
     auto menu = MR::getViewerInstance().getMenuPlugin();
     if ( !window )
     {
@@ -492,7 +489,7 @@ bool BeginCustomStatePlugin( const char* labelArg, bool* open, const CustomState
         prevCursorMaxPos = window->DC.CursorMaxPos.y;
     }
 
-    if ( !Begin( labelStr.c_str(), open, flags | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) )
+    if ( !Begin( label, open, flags | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) )
     {
         *open = false;
         ImGui::PopStyleVar( 2 );
@@ -601,7 +598,7 @@ bool BeginCustomStatePlugin( const char* labelArg, bool* open, const CustomState
     else
         ImGui::SetCursorScreenPos( { cursorScreenPos.x, window->Rect().Min.y + 0.5f * ( titleBarHeight - ImGui::GetFontSize() ) } );
 
-    ImGui::RenderText( ImGui::GetCursorScreenPos(), labelStr.c_str() );
+    ImGui::RenderText( ImGui::GetCursorScreenPos(), label );
 
     if ( titleFont )
         ImGui::PopFont();

@@ -38,6 +38,11 @@ public:
     virtual bool blocking() const { return false; }
 
     const std::string& name() const { return name_; }
+    
+    // can be overridden by some plugins with ui
+    // it is used for highlighting active and closing plugins by Esc key
+    // note that it is not RibbonSchema caption
+    virtual const std::string& uiName() const { return name_; }
 
     void setRibbonItemType( RibbonItemType type ) { type_ = type; }
 

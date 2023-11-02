@@ -103,6 +103,17 @@ IF(MR_EMSCRIPTEN)
   add_compile_definitions(GTEST_HAS_CXXABI_H_=0)
   set(INSTALL_GTEST ON)
   add_subdirectory(./googletest)
+
+  set(ENABLE_PROGRAMS OFF CACHE BOOL "")
+  add_subdirectory(./mbedtls)
+  install(DIRECTORY mbedtls/include/mbedtls DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+
+  # Use custom FindMbedTLS.cmake to override the one included in ziplib, that does not work
+  list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+
+  set(BUILD_TOOLS OFF CACHE BOOL "")
+  set(BUILD_REGRESS OFF CACHE BOOL "")
+  set(BUILD_EXAMPLES OFF CACHE BOOL "")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s USE_ZLIB=1")
   set(LIBZIP_DO_INSTALL ON)
   add_subdirectory(./libzip)

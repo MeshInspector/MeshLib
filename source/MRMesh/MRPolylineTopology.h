@@ -125,6 +125,10 @@ public:
     MRMESH_API void addPartByMask( const PolylineTopology& from, const UndirectedEdgeBitSet& mask,
         VertMap* outVmap = nullptr, EdgeMap* outEmap = nullptr );
 
+    /// tightly packs all arrays eliminating lone edges and invalid vertices
+    /// \param outVmap,outEmap if given returns mappings: old.id -> new.id;
+    MRMESH_API void pack( VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr );
+
     /// saves and loads in binary stream
     MRMESH_API void write( std::ostream & s ) const;
     MRMESH_API bool read( std::istream & s );

@@ -48,6 +48,10 @@ public:
     MRMESH_API void addPartByMask( const Polyline<V>& from, const UndirectedEdgeBitSet& mask,
         VertMap* outVmap = nullptr, EdgeMap* outEmap = nullptr );
 
+    /// tightly packs all arrays eliminating lone edges and invalid verts and points,
+    /// optionally returns mappings: old.id -> new.id
+    MRMESH_API void pack( VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr );
+
     /// returns coordinates of the edge origin
     [[nodiscard]] V orgPnt( EdgeId e ) const { return points[ topology.org( e ) ]; }
     /// returns coordinates of the edge destination

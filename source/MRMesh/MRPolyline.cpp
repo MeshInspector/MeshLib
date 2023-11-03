@@ -206,26 +206,26 @@ Box<V> Polyline<V>::computeBoundingBox( const AffineXf<V> * toWorld ) const
 }
 
 template<typename V>
-Contours<V> Polyline<V>::contours() const
+Contours<V> Polyline<V>::contours( std::vector<std::vector<VertId>>* vertMap ) const
 {
     MR_TIMER
     return topology.convertToContours<V>( 
-        [&points = this->points]( VertId v )
+        [&points = this->points] ( VertId v )
         {
             return points[v];
-        } 
+        }, vertMap
     );
 }
 
 template<typename V>
-Contours2f Polyline<V>::contours2() const
+Contours2f Polyline<V>::contours2( std::vector<std::vector<VertId>>* vertMap ) const
 {
     MR_TIMER
     return topology.convertToContours<Vector2f>( 
-        [&points = this->points]( VertId v )
+        [&points = this->points] ( VertId v )
         {
             return Vector2f{ points[v] };
-        } 
+        }, vertMap
     );
 }
 

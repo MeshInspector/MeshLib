@@ -152,6 +152,16 @@ void MR::Polyline<V>::addPartByMask( const Polyline<V>& from, const UndirectedEd
 }
 
 template<typename V>
+void Polyline<V>::pack( VertMap * outVmap, WholeEdgeMap * outEmap )
+{
+    MR_TIMER
+
+    Polyline<V> packed;
+    packed.addPart( *this, outVmap, outEmap );
+    *this = std::move( packed );
+}
+
+template<typename V>
 float Polyline<V>::totalLength() const
 {
     MR_TIMER

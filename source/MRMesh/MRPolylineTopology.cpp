@@ -482,6 +482,15 @@ void PolylineTopology::addPartByMask( const PolylineTopology& from, const Undire
         *outEmap = std::move( emap );
 }
 
+void PolylineTopology::pack( VertMap * outVmap, WholeEdgeMap * outEmap )
+{
+    MR_TIMER
+
+    PolylineTopology packed;
+    packed.addPart( *this, outVmap, outEmap );
+    *this = std::move( packed );
+}
+
 void PolylineTopology::write( std::ostream & s ) const
 {
     // write edges

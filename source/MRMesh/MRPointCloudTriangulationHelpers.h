@@ -28,6 +28,12 @@ MRMESH_API float updateNeighborsRadius( const VertCoords& points, VertId v, cons
 MRMESH_API void findNeighbors( const PointCloud& pointCloud, VertId v, float radius, std::vector<VertId>& neighbors );
 
 /**
+ * \brief Filter neighbors with crossing normals
+ * \ingroup TriangulationHelpersGroup
+ */
+MRMESH_API void filterNeighbors( const VertNormals& normals, VertId v, std::vector<VertId>& neighbors );
+
+/**
  * \brief Data with caches for optimizing fan triangulation
  * \ingroup TriangulationHelpersGroup
  */

@@ -109,6 +109,15 @@ void findNeighbors( const PointCloud& pointCloud, VertId v, float radius, std::v
     } );
 }
 
+void filterNeighbors( const VertNormals& normals, VertId v, std::vector<VertId>& neighbors )
+{
+    const auto& vNorm = normals[v];
+    neighbors.erase( std::remove_if( neighbors.begin(), neighbors.end(), [&] ( VertId nv )
+    {
+        return dot( vNorm, normals[nv] ) < -0.3f;
+    } ), neighbors.end() );
+}
+
 struct FanOptimizerQueueElement
 {
     float weight{ 0.0f }; // profit of flipping this edge
@@ -145,7 +154,7 @@ public:
         init_();
     }
     void optimize( int steps, float critAngle );
-    void updateBorder( float angle = MR::PI_F );
+    void updateBorder( float angle = 0.7 * MR::PI_F );
 private:
     Plane3f plane_;
 
@@ -156,24 +165,30 @@ private:
 
     void init_();
 
-    FanOptimizerQueueElement calcQueueElement_( const std::vector<VertId>& neighbors, int i, float critAngle ) const;
+    FanOptimizerQueueElement calcQueueElement_( int i, float critAngle ) const;
 };
 
 
-FanOptimizerQueueElement FanOptimizer::calcQueueElement_(
-   const std::vector<VertId>& neighbors, int i, float critAngle ) const
+FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle ) const
 {
     FanOptimizerQueueElement res;
     res.id = i;
-    res.nextId = cycleNext( neighbors, i );
-    res.prevId = cyclePrev( neighbors, i );
+    res.nextId = cycleNext( fanData_.neighbors, i );
+    res.prevId = cyclePrev( fanData_.neighbors, i );
+    if ( fanData_.neighbors[res.id] == fanData_.border ||
+        fanData_.neighbors[res.prevId] == fanData_.border )
+    {
+        res.stable = true;
+        return res;
+    }
+
     const auto& a = points_[centerVert_];
-    const auto& b = points_[neighbors[res.nextId]];
-    const auto& c = points_[neighbors[res.id]];
-    const auto& d = points_[neighbors[res.prevId]];
+    const auto& b = points_[fanData_.neighbors[res.nextId]];
+    const auto& c = points_[fanData_.neighbors[res.id]];
+    const auto& d = points_[fanData_.neighbors[res.prevId]];
 
     const auto& aNorm = normals_[centerVert_];
-    const auto& cNorm = normals_[neighbors[res.id]];
+    const auto& cNorm = normals_[fanData_.neighbors[res.id]];
 
     float normVal = ( c - a ).length();
     if ( normVal == 0.0f )
@@ -216,9 +231,10 @@ void FanOptimizer::optimize( int steps, float critAng )
     std::priority_queue<FanOptimizerQueueElement> queue_;
     for ( int i = 0; i < fanData_.neighbors.size(); ++i )
     {
-        auto el = calcQueueElement_( fanData_.neighbors, i, critAng );
-        if ( fanData_.border == fanData_.neighbors[i] )
-            el.stable = true;
+        auto el = calcQueueElement_( i, critAng );
+        if ( fanData_.border == fanData_.neighbors[i] || 
+            fanData_.border == fanData_.neighbors[( i - 1 + fanData_.neighbors.size() ) % fanData_.neighbors.size()] )
+            el.stable = true; // do not optimize border
         queue_.push( el );
     }
 
@@ -246,8 +262,8 @@ void FanOptimizer::optimize( int steps, float critAng )
             fanData_.neighbors.clear();
             return;
         }
-        queue_.emplace( calcQueueElement_( fanData_.neighbors, topEl.nextId, critAng ) );
-        queue_.emplace( calcQueueElement_( fanData_.neighbors, topEl.prevId, critAng ) );
+        queue_.emplace( calcQueueElement_( topEl.nextId, critAng ) );
+        queue_.emplace( calcQueueElement_( topEl.prevId, critAng ) );
     }
 
     fanData_.neighbors.erase(
@@ -267,7 +283,10 @@ void FanOptimizer::updateBorder( float angle )
             ( fanData_.cacheAngleOrder[i + 1].first - fanData_.cacheAngleOrder[i].first ) :
             ( fanData_.cacheAngleOrder[0].first + 2.0 * PI - fanData_.cacheAngleOrder[i].first );
         if ( diff > angle )
+        {
             fanData_.border = fanData_.neighbors[i];
+            break;;
+        }
     }
 }
 

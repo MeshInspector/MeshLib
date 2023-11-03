@@ -114,6 +114,7 @@ bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
     {
         auto& localData = tls_.local();
         TriangulationHelpers::findNeighbors( pointCloud_, v, radius, localData.fanData.neighbors );
+        TriangulationHelpers::filterNeighbors( normals, v, localData.fanData.neighbors );
         TriangulationHelpers::trianglulateFan( pointCloud_.points, v, localData.fanData, normals, params_.critAngle );
 
         float maxRadius = ( localData.fanData.neighbors.size() < 2 ) ? radius * 2.0f :
@@ -123,6 +124,7 @@ bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
         {
             // update triangulation if radius was increased
             TriangulationHelpers::findNeighbors( pointCloud_, v, maxRadius, localData.fanData.neighbors );
+            TriangulationHelpers::filterNeighbors( normals, v, localData.fanData.neighbors );
             TriangulationHelpers::trianglulateFan( pointCloud_.points, v, localData.fanData, normals, params_.critAngle );
         }
 

@@ -26,7 +26,7 @@ public:
 
     /// converts this topology into contours of given type using the functor returning point by its Id
     template<typename T, typename F>
-    [[nodiscard]] std::vector<std::vector<T>> convertToContours( F && getPoint ) const;
+    [[nodiscard]] std::vector<std::vector<T>> convertToContours( F&& getPoint, std::vector<std::vector<VertId>>* vertMap = nullptr ) const;
 
     /// creates an edge not associated with any vertex
     [[nodiscard]] MRMESH_API EdgeId makeEdge();
@@ -236,7 +236,7 @@ void PolylineTopology::buildFromContours( const std::vector<std::vector<T>> & co
 }
 
 template<typename T, typename F>
-std::vector<std::vector<T>> PolylineTopology::convertToContours( F && getPoint ) const
+std::vector<std::vector<T>> PolylineTopology::convertToContours( F&& getPoint, std::vector<std::vector<VertId>>* vertMap ) const
 {
     std::vector<std::vector<T>> res;
 
@@ -260,7 +260,11 @@ std::vector<std::vector<T>> PolylineTopology::convertToContours( F && getPoint )
 
         EdgeId e = curLine;
         std::vector<T> cont;
-        cont.push_back( getPoint( org( e ) ) );
+        std::vector<VertId> map;
+        auto orgV = org( e );
+        cont.push_back( getPoint( orgV ) );
+        if ( vertMap )
+            map.push_back( orgV );
         for ( ;; )
         {
             e = e.sym();
@@ -270,6 +274,8 @@ std::vector<std::vector<T>> PolylineTopology::convertToContours( F && getPoint )
                 break;
         }
         res.push_back( std::move( cont ) );
+        if ( vertMap )
+            vertMap->push_back( std::move( map ) );
     }
 
     return res;

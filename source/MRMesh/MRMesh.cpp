@@ -521,9 +521,9 @@ float Mesh::discreteMeanCurvature( UndirectedEdgeId ue ) const
 class CreaseEdgesCalc 
 {
 public:
-    CreaseEdgesCalc( const Mesh & mesh, float critCos ) : mesh_( mesh ), critCos_( critCos ) 
+    CreaseEdgesCalc( const Mesh & mesh, float critCos, float critLengthSq ) : mesh_( mesh ), critCos_( critCos ) , critLengthSq_( critLengthSq )
         { edges_.resize( mesh_.topology.undirectedEdgeSize() ); }
-    CreaseEdgesCalc( CreaseEdgesCalc & x, tbb::split ) : mesh_( x.mesh_ ), critCos_( x.critCos_ )
+    CreaseEdgesCalc( CreaseEdgesCalc & x, tbb::split ) : mesh_( x.mesh_ ), critCos_( x.critCos_ ), critLengthSq_( x.critLengthSq_ )
         { edges_.resize( mesh_.topology.undirectedEdgeSize() ); }
 
     void join( const CreaseEdgesCalc & y ) { edges_ |= y.edges_; }
@@ -536,8 +536,15 @@ public:
         {
             if ( mesh_.topology.isLoneEdge( ue ) )
                 continue;
+
+            if ( ue == UndirectedEdgeId( 10825 ) )
+            {
+                ue = ue;
+            }
+
             auto dihedralCos = mesh_.dihedralAngleCos( ue );
-            if ( dihedralCos <= critCos_ )
+            auto edgeLengthSq = mesh_.edgeLengthSq( ue );
+            if ( dihedralCos <= critCos_ && edgeLengthSq > critLengthSq_ )
                 edges_.set( ue );
         }
     }
@@ -545,15 +552,16 @@ public:
 private:
     const Mesh & mesh_;
     float critCos_ = 1;
+    float critLengthSq_ = 0;
     UndirectedEdgeBitSet edges_;
 };
 
-UndirectedEdgeBitSet Mesh::findCreaseEdges( float angleFromPlanar ) const
+UndirectedEdgeBitSet Mesh::findCreaseEdges( float angleFromPlanar, float critLengthSq ) const
 {
     MR_TIMER
     assert( angleFromPlanar > 0 && angleFromPlanar < PI );
     const float critCos = std::cos( angleFromPlanar );
-    CreaseEdgesCalc calc( *this, critCos );
+    CreaseEdgesCalc calc( *this, critCos, critLengthSq );
     parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( 0_ue, UndirectedEdgeId{ topology.undirectedEdgeSize() } ), calc );
     return calc.takeEdges();
 }

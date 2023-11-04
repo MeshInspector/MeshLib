@@ -18,22 +18,6 @@ namespace MR
 namespace
 {
 
-// this function check that abc acd is allowed to be flipped to abd dbc
-// aNorm - normal in point a
-// cNorm - normal in point c
-bool flipPossibility( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d,
-    const Vector3f& aNorm, const Vector3f& cNorm )
-{
-    if ( dot( aNorm, cNorm ) < 0.0f )
-        return true;
-
-    if ( !isUnfoldQuadrangleConvex( a, b, c, d ) )
-        return false;
-    
-    return true;
-}
-
-
 float deloneFlipProfit( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d )
 {
     auto metricAC = std::max( circumcircleDiameter( a, c, d ), circumcircleDiameter( c, a, b ) );
@@ -136,16 +120,18 @@ struct FanOptimizerQueueElement
 class FanOptimizer
 {
 public:
-    FanOptimizer( const VertCoords& points, const VertCoords& normals, TriangulatedFanData& fanData, VertId centerVert ):
+    FanOptimizer( const VertCoords& points, const VertCoords& normals, TriangulatedFanData& fanData, VertId centerVert, bool useNeiNormals ):
         centerVert_{ centerVert },
         fanData_{ fanData },
         points_{ points },
-        normals_{ normals }
+        normals_{ normals },
+        useNeiNormals_{ useNeiNormals }
     {
         init_();
     }
     void optimize( int steps, float critAngle );
     void updateBorder( float angle = MR::PI_F );
+
 private:
     Plane3f plane_;
 
@@ -153,6 +139,7 @@ private:
     TriangulatedFanData& fanData_;
     const VertCoords& points_;
     const VertCoords& normals_;
+    bool useNeiNormals_ = true;
 
     void init_();
 
@@ -172,9 +159,6 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_(
     const auto& c = points_[neighbors[res.id]];
     const auto& d = points_[neighbors[res.prevId]];
 
-    const auto& aNorm = normals_[centerVert_];
-    const auto& cNorm = normals_[neighbors[res.id]];
-
     float normVal = ( c - a ).length();
     if ( normVal == 0.0f )
     {
@@ -185,7 +169,15 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_(
     auto deloneProf = deloneFlipProfit( a, b, c, d ) / normVal;
     auto angleProf = trisAngleProfit( a, b, c, d, critAngle );
     // ( deloneProf > 0.0f || angleProf > 0.0f )  strict condition to have more faces options if flip is not profitable
-    res.stable = !( flipPossibility( a, b, c, d, aNorm, cNorm ) && ( deloneProf > 0.0f || angleProf > 0.0f ) );
+
+    // whether abc acd is allowed to be flipped to abd dbc
+    bool flipPossibility = false;
+    if ( useNeiNormals_ && ( dot( normals_[centerVert_], normals_[neighbors[res.id]] ) < 0.0f ) )
+        flipPossibility = true;
+    else
+        flipPossibility = isUnfoldQuadrangleConvex( a, b, c, d );
+
+    res.stable = !( flipPossibility && ( deloneProf > 0.0f || angleProf > 0.0f ) );
     if ( deloneProf > 0.0f )
         res.weight += deloneProf;
     if ( angleProf > 0.0f )
@@ -193,16 +185,20 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_(
 
     res.weight += planeDist / normVal;
 
-    res.weight += 5.0f * ( 1.0f - dot( normals_[centerVert_], cNorm ) );
+    if ( useNeiNormals_ )
+    {
+        const auto cNorm = normals_[neighbors[res.id]];
+        res.weight += 5.0f * ( 1.0f - dot( normals_[centerVert_], cNorm ) );
 
-    auto abcNorm = cross( b - a, c - a );
-    auto acdNorm = cross( c - a, d - a );
+        auto abcNorm = cross( b - a, c - a );
+        auto acdNorm = cross( c - a, d - a );
 
-    auto triNormWeight = dot( ( abcNorm + acdNorm ).normalized(), cNorm );
-    if ( triNormWeight < 0.0f )
-        res.weight = std::numeric_limits<float>::max();
-    else
-        res.weight += 5.0f * ( 1.0f - triNormWeight );
+        auto triNormWeight = dot( ( abcNorm + acdNorm ).normalized(), cNorm );
+        if ( triNormWeight < 0.0f )
+            res.weight = std::numeric_limits<float>::max();
+        else
+            res.weight += 5.0f * ( 1.0f - triNormWeight );
+    }
 
     return res;
 }
@@ -315,11 +311,11 @@ void FanOptimizer::init_()
 }
 
 void trianglulateFan( const VertCoords& points, VertId centerVert, TriangulatedFanData& triangulationData,
-    const VertCoords& normals, float critAngle, int steps /*= INT_MAX */ )
+    const VertCoords& normals, float critAngle, bool useNeiNormals, int steps )
 {
     if ( triangulationData.neighbors.empty() )
         return;
-    FanOptimizer optimizer( points, normals, triangulationData, centerVert );
+    FanOptimizer optimizer( points, normals, triangulationData, centerVert, useNeiNormals );
     optimizer.optimize( steps, critAngle );
 }
 
@@ -327,7 +323,7 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const VertCoord
     TriangulatedFanData & fanData )
 {
     findNeighbors( cloud, v, settings.radius, fanData.neighbors );
-    trianglulateFan( cloud.points, v, fanData, normals, settings.critAngle );
+    trianglulateFan( cloud.points, v, fanData, normals, settings.critAngle, settings.useNeiNormals );
 
     float maxRadius = ( fanData.neighbors.size() < 2 ) ? settings.radius * 2 :
         updateNeighborsRadius( cloud.points, v, fanData.neighbors, settings.radius );
@@ -336,11 +332,11 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const VertCoord
     {
         // update triangulation if radius was increased
         findNeighbors( cloud, v, maxRadius, fanData.neighbors );
-        trianglulateFan( cloud.points, v, fanData, normals, settings.critAngle );
+        trianglulateFan( cloud.points, v, fanData, normals, settings.critAngle, settings.useNeiNormals );
     }
 }
 
-bool isBoundaryPoint( const PointCloud& pointCloud, const VertCoords& normals, 
+bool isBoundaryPoint( const PointCloud& pointCloud, const VertCoords& normals,
     VertId v, float radius, float angle, TriangulatedFanData& triangulationData )
 {
     TriangulationHelpers::findNeighbors( pointCloud, v, radius, triangulationData.neighbors );
@@ -352,7 +348,7 @@ bool isBoundaryPoint( const PointCloud& pointCloud, const VertCoords& normals,
     triangulationData.border = {};
     if ( triangulationData.neighbors.size() < 3 )
         return true;
-    FanOptimizer optimizer( pointCloud.points, normals, triangulationData, v );
+    FanOptimizer optimizer( pointCloud.points, normals, triangulationData, v, true );
     optimizer.updateBorder( angle );
     return triangulationData.border.valid();
 }

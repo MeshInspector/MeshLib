@@ -323,6 +323,23 @@ void trianglulateFan( const VertCoords& points, VertId centerVert, TriangulatedF
     optimizer.optimize( steps, critAngle );
 }
 
+void buildLocalTriangulation( const PointCloud& cloud, VertId v, const VertCoords& normals, const Settings & settings,
+    TriangulatedFanData & fanData )
+{
+    findNeighbors( cloud, v, settings.radius, fanData.neighbors );
+    trianglulateFan( cloud.points, v, fanData, normals, settings.critAngle );
+
+    float maxRadius = ( fanData.neighbors.size() < 2 ) ? settings.radius * 2 :
+        updateNeighborsRadius( cloud.points, v, fanData.neighbors, settings.radius );
+
+    if ( maxRadius > settings.radius )
+    {
+        // update triangulation if radius was increased
+        findNeighbors( cloud, v, maxRadius, fanData.neighbors );
+        trianglulateFan( cloud.points, v, fanData, normals, settings.critAngle );
+    }
+}
+
 bool isBoundaryPoint( const PointCloud& pointCloud, const VertCoords& normals, 
     VertId v, float radius, float angle, TriangulatedFanData& triangulationData )
 {

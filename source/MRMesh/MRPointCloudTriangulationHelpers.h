@@ -2,6 +2,7 @@
 
 #include "MRVector.h"
 #include "MRId.h"
+#include "MRConstants.h"
 #include <list>
 #include <climits>
 
@@ -47,6 +48,18 @@ struct TriangulatedFanData
  */
 MRMESH_API void trianglulateFan( const VertCoords& points, VertId v, TriangulatedFanData& triangulationData,
     const VertCoords& normals, float critAngle, int steps = INT_MAX );
+
+struct Settings
+{
+    /// initial radius of search for neighbours, it can be increased automatically
+    float radius = 0;
+    /// max allowed angle for triangles in fan
+    float critAngle = PI2_F;
+};
+
+/// constructs local triangulation around given point with automatic increase of the radius
+MRMESH_API void buildLocalTriangulation( const PointCloud& cloud, VertId v, const VertCoords& normals, const Settings & settings,
+    TriangulatedFanData & fanData );
 
 /**
  * \brief Checks if given vertex is on boundary of the point cloud

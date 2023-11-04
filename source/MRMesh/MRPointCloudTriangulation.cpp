@@ -113,18 +113,8 @@ bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
     auto body = [&] ( VertId v )
     {
         auto& localData = tls_.local();
-        TriangulationHelpers::findNeighbors( pointCloud_, v, radius, localData.fanData.neighbors );
-        TriangulationHelpers::trianglulateFan( pointCloud_.points, v, localData.fanData, normals, params_.critAngle );
-
-        float maxRadius = ( localData.fanData.neighbors.size() < 2 ) ? radius * 2.0f :
-            TriangulationHelpers::updateNeighborsRadius( pointCloud_.points, v, localData.fanData.neighbors, radius );
-
-        if ( maxRadius > radius )
-        {
-            // update triangulation if radius was increased
-            TriangulationHelpers::findNeighbors( pointCloud_, v, maxRadius, localData.fanData.neighbors );
-            TriangulationHelpers::trianglulateFan( pointCloud_.points, v, localData.fanData, normals, params_.critAngle );
-        }
+        TriangulationHelpers::buildLocalTriangulation( pointCloud_, v, normals, { .radius = radius, .critAngle = params_.critAngle },
+            localData.fanData );
 
         const auto& disc = localData.fanData;
         auto& map = localData.map;

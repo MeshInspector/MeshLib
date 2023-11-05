@@ -14,10 +14,17 @@ namespace MR
 /// \ingroup PointCloudGroup
 struct PointCloud
 {
+    /// coordinates of points
     VertCoords points;
+
+    /// unit normal directions of points (can be empty if no normals are known)
     VertNormals normals;
-    /// only points corresponding to set bits here are valid
+
+    /// only points and normals corresponding to set bits here are valid
     VertBitSet validPoints;
+
+    /// computes the total number of valid points in the cloud
+    [[nodiscard]] size_t calcNumValidPoints() const { return validPoints.count(); }
 
     /// returns true if there is a normal for each point
     [[nodiscard]] bool hasNormals() const { return normals.size() >= points.size(); }
@@ -34,6 +41,12 @@ struct PointCloud
     /// passes through all valid points and finds the minimal bounding box containing all of them;
     /// if toWorld transformation is given then returns minimal bounding box in world space
     [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
+
+    /// computes average position of all valid points
+    [[nodiscard]] MRMESH_API Vector3f findCenterFromPoints() const;
+
+    /// computes bounding box and returns its center
+    [[nodiscard]] MRMESH_API Vector3f findCenterFromBBox() const;
 
     /// returns all valid point ids sorted lexicographically by their coordinates (optimal for uniform sampling)
     [[nodiscard]] MRMESH_API std::vector<VertId> getLexicographicalOrder() const;

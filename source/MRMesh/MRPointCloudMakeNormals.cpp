@@ -59,23 +59,12 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud,
     return normals;
 }
 
-struct NormalCandidate
-{
-    VertId baseId;
-    float weight = FLT_MAX;
-};
-
-inline bool operator < ( const NormalCandidate& l, const NormalCandidate& r )
-{
-    return l.weight > r.weight;
-}
-
 template<class T>
 bool orientNormalsCore( const PointCloud& pointCloud, VertNormals& normals, const T & enumNeis, const ProgressCallback & progress )
 {
     MR_TIMER
 
-    Heap<NormalCandidate, VertId> heap( normals.size() );
+    Heap<float, VertId, std::greater<float>> heap( normals.size(), FLT_MAX );
 
     auto enweight = [&]( VertId base, VertId candidate )
     {
@@ -98,8 +87,12 @@ bool orientNormalsCore( const PointCloud& pointCloud, VertNormals& normals, cons
             if ( !notVisited.test( v ) )
                 return;
             float weight = enweight( base, v );
-            if ( weight < heap.value( v ).weight )
-                heap.setLargerValue( v, NormalCandidate{ base, weight } );
+            if ( weight < heap.value( v ) )
+            {
+                heap.setLargerValue( v, weight );
+                if ( dot( normals[base], normals[v] ) < 0 )
+                    normals[v] = -normals[v];
+            }
         } );
     };
 
@@ -111,7 +104,7 @@ bool orientNormalsCore( const PointCloud& pointCloud, VertNormals& normals, cons
         float maxX = -FLT_MAX;
         for ( auto v : notVisited )
         {
-            assert( heap.value( v ).weight == FLT_MAX );
+            assert( heap.value( v ) == FLT_MAX );
             auto xDot = dot( pointCloud.points[v], Vector3f::plusX() );
             if ( xDot > maxX )
             {
@@ -134,12 +127,10 @@ bool orientNormalsCore( const PointCloud& pointCloud, VertNormals& normals, cons
         enqueueNeighbors( first );
         for (;;)
         {
-            auto [v, c] = heap.top();
-            if ( c.weight == FLT_MAX )
+            auto [v, weight] = heap.top();
+            if ( weight == FLT_MAX )
                 break;
-            heap.setSmallerValue( v, NormalCandidate{ {}, FLT_MAX } );
-            if ( dot( normals[c.baseId], normals[v] ) < 0.0f )
-                normals[v] = -normals[v];
+            heap.setSmallerValue( v, FLT_MAX );
             enqueueNeighbors( v );
             if ( !reportProgress( progress, [&] { return (float)visitedCount / totalCount; }, visitedCount, 0x10000 ) )
                 return false;

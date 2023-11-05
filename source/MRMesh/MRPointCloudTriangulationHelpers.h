@@ -44,10 +44,11 @@ struct TriangulatedFanData
  * \ingroup TriangulationHelpersGroup
  * 
  * \param critAngle max allowed angle for triangles in fan
+ * \param useNeiNormals whether to use oriented normals of neighbor points
  * \param steps max optimization steps (INT_MAX - default)
  */
 MRMESH_API void trianglulateFan( const VertCoords& points, VertId v, TriangulatedFanData& triangulationData,
-    const VertCoords& normals, float critAngle, int steps = INT_MAX );
+    const VertCoords& normals, float critAngle, bool useNeiNormals = true, int steps = INT_MAX );
 
 struct Settings
 {
@@ -55,6 +56,8 @@ struct Settings
     float radius = 0;
     /// max allowed angle for triangles in fan
     float critAngle = PI2_F;
+    /// whether to use oriented normals of neighbor points
+    bool useNeiNormals = true;
 };
 
 /// constructs local triangulation around given point with automatic increase of the radius

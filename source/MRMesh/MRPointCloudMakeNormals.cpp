@@ -98,7 +98,8 @@ bool orientNormalsCore( const PointCloud& pointCloud, VertNormals& normals, cons
             if ( !notVisited.test( v ) )
                 return;
             float weight = enweight( base, v );
-            heap.setValue( v, NormalCandidate{ base, weight } );
+            if ( weight < heap.value( v ).weight )
+                heap.setLargerValue( v, NormalCandidate{ base, weight } );
         } );
     };
 

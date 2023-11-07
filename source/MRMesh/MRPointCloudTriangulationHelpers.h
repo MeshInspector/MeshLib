@@ -20,7 +20,8 @@ namespace TriangulationHelpers
  * \brief Finds max radius of neighbors search, for possible better local triangulation
  * \ingroup TriangulationHelpersGroup
  */
-MRMESH_API float updateNeighborsRadius( const VertCoords& points, VertId v, const std::vector<VertId>& fan, float baseRadius );
+MRMESH_API float updateNeighborsRadius( const VertCoords& points, VertId v, VertId borderV,
+    const std::vector<VertId>& fan, float baseRadius );
 
 /**
  * \brief Finds all neighbors of v in given radius (v excluded)

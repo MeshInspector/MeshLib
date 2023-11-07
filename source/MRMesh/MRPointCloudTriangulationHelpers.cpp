@@ -384,6 +384,8 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const VertCoord
     TriangulatedFanData & fanData )
 {
     findNeighbors( cloud, v, settings.radius, fanData.neighbors );
+    if ( settings.useNeiNormals )
+        filterNeighbors( normals, v, fanData.neighbors );
     trianglulateFan( cloud.points, v, fanData, normals, settings.critAngle, settings.useNeiNormals );
 
     float maxRadius = ( fanData.neighbors.size() < 2 ) ? settings.radius * 2 :
@@ -393,6 +395,8 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const VertCoord
     {
         // update triangulation if radius was increased
         findNeighbors( cloud, v, maxRadius, fanData.neighbors );
+        if ( settings.useNeiNormals )
+            filterNeighbors( normals, v, fanData.neighbors );
         trianglulateFan( cloud.points, v, fanData, normals, settings.critAngle, settings.useNeiNormals );
     }
 }

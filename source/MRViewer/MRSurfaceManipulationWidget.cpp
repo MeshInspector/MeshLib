@@ -58,7 +58,7 @@ void SurfaceManipulationWidget::setSettings( const Settings& settings )
     settings_.intensity = std::clamp( settings_.intensity, 1.f, 100.f );
 }
 
-bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*modifier*/ )
+bool SurfaceManipulationWidget::onMouseDown( Viewer::MouseButton button, int /*modifier*/ )
 {
     if ( button != MouseButton::Left )
         return false;
@@ -73,7 +73,7 @@ bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*
     return true;
 }
 
-bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*modifier*/ )
+bool SurfaceManipulationWidget::onMouseUp( Viewer::MouseButton button, int /*modifier*/ )
 {
     if ( button != MouseButton::Left )
         return false;
@@ -89,14 +89,14 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
     return true;
 }
 
-bool SurfaceManipulationWidget::onMouseMove_( int mouse_x, int mouse_y )
+bool SurfaceManipulationWidget::onMouseMove( int mouse_x, int mouse_y )
 {
     updateRegion_( Vector2f{ float( mouse_x ), float( mouse_y ) } );
 
     return true;
 }
 
-bool SurfaceManipulationWidget::onKeyDown_( int /*key*/, int modifier )
+bool SurfaceManipulationWidget::onKeyDown( int /*key*/, int modifier )
 {
     bool res = false;
     if ( modifier & GLFW_MOD_SHIFT )
@@ -113,7 +113,7 @@ bool SurfaceManipulationWidget::onKeyDown_( int /*key*/, int modifier )
     return res;
 }
 
-bool SurfaceManipulationWidget::onKeyUp_( int /*key*/, int modifier )
+bool SurfaceManipulationWidget::onKeyUp( int /*key*/, int modifier )
 {
     bool res = false;
     if ( !( modifier & GLFW_MOD_SHIFT ) )
@@ -130,7 +130,7 @@ bool SurfaceManipulationWidget::onKeyUp_( int /*key*/, int modifier )
     return res;
 }
 
-void SurfaceManipulationWidget::preDraw_()
+void SurfaceManipulationWidget::postDraw()
 {
     if ( mousePressed_ )
         changeSurface_();

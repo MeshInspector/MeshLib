@@ -8,11 +8,7 @@
 namespace MR
 {
 
-class MRVIEWER_CLASS SurfaceManipulationWidget // :
-    //public MultiListener<KeyUpListener>
-    //public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener,
-    //                     KeyDownListener, KeyUpListener,
-    //                     PreDrawListener>
+class MRVIEWER_CLASS SurfaceManipulationWidget
 {
 public:
     struct Settings
@@ -28,23 +24,15 @@ public:
     MRVIEWER_API void setSettings( const Settings& settings );
     MRVIEWER_API const Settings& getSettings() { return settings_; };
 
-    MRVIEWER_API bool onMouseDown_( Viewer::MouseButton button, int modifier );
-    MRVIEWER_API bool onMouseUp_( Viewer::MouseButton button, int modifier );
-    MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y );
+    MRVIEWER_API bool onMouseDown( Viewer::MouseButton button, int modifier );
+    MRVIEWER_API bool onMouseUp( Viewer::MouseButton button, int modifier );
+    MRVIEWER_API bool onMouseMove( int mouse_x, int mouse_y );
 
-    MRVIEWER_API bool onKeyDown_( int key, int modifier );
-    MRVIEWER_API bool onKeyUp_( int key, int modifier );
+    MRVIEWER_API bool onKeyDown( int key, int modifier );
+    MRVIEWER_API bool onKeyUp( int key, int modifier );
 
-    MRVIEWER_API void preDraw_();
+    MRVIEWER_API void postDraw();
 private:
-    //MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
-    //MRVIEWER_API virtual bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;
-    //MRVIEWER_API virtual bool onMouseMove_( int mouse_x, int mouse_y ) override;
-
-    //MRVIEWER_API virtual bool onKeyDown_( int key, int modifier ) override;
-    //MRVIEWER_API virtual bool onKeyUp_( int key, int modifier ) override;
-
-    //MRVIEWER_API virtual void preDraw_() override;
 
     void changeSurface_();
     void updateUV_( bool set );

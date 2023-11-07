@@ -178,6 +178,14 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
         return res;
     }
 
+    auto difAngle = fanData_.cacheAngleOrder[res.nextId].first - fanData_.cacheAngleOrder[res.prevId].first;
+    if ( difAngle < 0.0 )
+        difAngle += 2.0 * PI;
+    if ( difAngle > PI )
+    {
+        res.stable = true;
+        return res;
+    }
 
     const auto& a = points_[centerVert_];
     const auto& b = points_[fanData_.neighbors[res.nextId]];
@@ -314,6 +322,7 @@ void FanOptimizer::optimize( int steps, float critAng )
 
 void FanOptimizer::updateBorder( float angle )
 {
+    fanData_.border = {};
     for ( int i = 0; i < fanData_.cacheAngleOrder.size(); ++i )
     {
         // check border fans

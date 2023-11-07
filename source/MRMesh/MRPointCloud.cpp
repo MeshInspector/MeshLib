@@ -138,6 +138,16 @@ void PointCloud::mirror( const Plane3f& plane )
     invalidateCaches();
 }
 
+void PointCloud::flipOrientation( const VertBitSet * region )
+{
+    MR_TIMER
+    BitSetParallelFor( getVertIds( region ), [&] ( VertId id )
+    {
+        if ( id < normals.size() )
+            normals[id] = -normals[id];
+    } );
+}
+
 bool PointCloud::pack( VertMap * outNew2Old )
 {
     MR_TIMER

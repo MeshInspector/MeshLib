@@ -192,9 +192,9 @@ IF(APPLE OR MR_EMSCRIPTEN)
 			${MRMESH_OPTIONAL_INCLUDE_DIRS}
 		)
 		target_link_libraries(${PROJECT_NAME} PRIVATE
-                        mbedtls
-                        mbedx509
-                        mbedcrypto
+			mbedtls
+			mbedx509
+			mbedcrypto
 			zip
 			freetype
 			jsoncpp

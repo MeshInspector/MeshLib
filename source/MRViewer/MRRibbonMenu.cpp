@@ -1639,8 +1639,11 @@ void RibbonMenu::drawRibbonViewportsLabels_()
         constexpr std::array<const char*, 2> cProjModeString = { "Orthographic" , "Perspective" };
         std::string windowName = "##ProjectionMode" + std::to_string( vp.id.value() );
         std::string text;
-        if ( viewer->viewport_list.size() > 1 )
-            text = fmt::format( "Viewport Id: {}, {}", vp.id.value(), cProjModeString[int( !vp.getParameters().orthographic )] );
+        std::string label = vp.getParameters().label;
+        if ( viewer->viewport_list.size() > 1 && label.empty() )
+            label = fmt::format( "Viewport Id : {}", vp.id.value() );
+        if ( !label.empty() )
+            text = fmt::format( "{}, {}", label, cProjModeString[int( !vp.getParameters().orthographic )] );
         else
             text = fmt::format( "{}", cProjModeString[int( !vp.getParameters().orthographic )] );
         auto textSize = ImGui::CalcTextSize( text.c_str() );

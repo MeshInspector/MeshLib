@@ -781,6 +781,7 @@ bool Viewport::Parameters::operator==( const Viewport::Parameters& other ) const
         orthographic == other.orthographic &&
         objectScale == objectScale &&
         borderColor == other.borderColor &&
+        label == other.label &&
         clippingPlane == other.clippingPlane &&
         rotationMode == other.rotationMode &&
         selectable == other.selectable;

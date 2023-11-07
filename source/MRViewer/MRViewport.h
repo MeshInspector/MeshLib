@@ -245,6 +245,8 @@ public:
 
         Color borderColor;
 
+        std::string label;
+
         Plane3f clippingPlane{Vector3f::plusX(), 0.0f};
 
          // xf representing scale of global basis in this viewport

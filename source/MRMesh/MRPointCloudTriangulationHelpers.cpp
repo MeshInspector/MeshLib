@@ -65,7 +65,8 @@ int cyclePrev( const std::vector<VertId>& neighbors, int i )
     }
 }
 
-float updateNeighborsRadius( const VertCoords& points, VertId v, const std::vector<VertId>& fan, float baseRadius )
+float updateNeighborsRadius( const VertCoords& points, VertId v, VertId borderV,
+    const std::vector<VertId>& fan, float baseRadius )
 {
     float maxRadius = 0.0f;
 
@@ -73,6 +74,8 @@ float updateNeighborsRadius( const VertCoords& points, VertId v, const std::vect
     for ( int i = 0; i < fan.size(); ++i )
     {
         auto next = cycleNext( fan, i );
+        if ( fan[i] == borderV )
+            continue;
         maxRadius = std::max( maxRadius, circumcircleDiameter( 
             points[v],
             points[fan[i]],
@@ -91,6 +94,15 @@ void findNeighbors( const PointCloud& pointCloud, VertId v, float radius, std::v
         if ( vid != v )
             neighbors.push_back( vid );
     } );
+}
+
+void filterNeighbors( const VertNormals& normals, VertId v, std::vector<VertId>& neighbors )
+{
+    const auto& vNorm = normals[v];
+    neighbors.erase( std::remove_if( neighbors.begin(), neighbors.end(), [&] ( VertId nv )
+    {
+        return dot( vNorm, normals[nv] ) < -0.3f;
+    } ), neighbors.end() );
 }
 
 struct FanOptimizerQueueElement
@@ -130,8 +142,7 @@ public:
         init_();
     }
     void optimize( int steps, float critAngle );
-    void updateBorder( float angle = MR::PI_F );
-
+    void updateBorder( float angle = 0.9 * MR::PI_F );
 private:
     Plane3f plane_;
 
@@ -143,21 +154,43 @@ private:
 
     void init_();
 
-    FanOptimizerQueueElement calcQueueElement_( const std::vector<VertId>& neighbors, int i, float critAngle ) const;
+    FanOptimizerQueueElement calcQueueElement_( int i, float critAngle ) const;
+
+    void updateBorderQueueElement_( FanOptimizerQueueElement& res, bool nextEl ) const;
 };
 
 
-FanOptimizerQueueElement FanOptimizer::calcQueueElement_(
-   const std::vector<VertId>& neighbors, int i, float critAngle ) const
+FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle ) const
 {
     FanOptimizerQueueElement res;
     res.id = i;
-    res.nextId = cycleNext( neighbors, i );
-    res.prevId = cyclePrev( neighbors, i );
+    res.nextId = cycleNext( fanData_.neighbors, i );
+    res.prevId = cyclePrev( fanData_.neighbors, i );
+
+    if ( fanData_.border == fanData_.neighbors[res.id] )
+    {
+        updateBorderQueueElement_( res, false );
+        return res;
+    }
+    else if ( fanData_.border == fanData_.neighbors[res.prevId] )
+    {
+        updateBorderQueueElement_( res, true );
+        return res;
+    }
+
+    auto difAngle = fanData_.cacheAngleOrder[res.nextId].first - fanData_.cacheAngleOrder[res.prevId].first;
+    if ( difAngle < 0.0 )
+        difAngle += 2.0 * PI;
+    if ( difAngle > PI )
+    {
+        res.stable = true;
+        return res;
+    }
+
     const auto& a = points_[centerVert_];
-    const auto& b = points_[neighbors[res.nextId]];
-    const auto& c = points_[neighbors[res.id]];
-    const auto& d = points_[neighbors[res.prevId]];
+    const auto& b = points_[fanData_.neighbors[res.nextId]];
+    const auto& c = points_[fanData_.neighbors[res.id]];
+    const auto& d = points_[fanData_.neighbors[res.prevId]];
 
     float normVal = ( c - a ).length();
     if ( normVal == 0.0f )
@@ -172,12 +205,17 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_(
 
     // whether abc acd is allowed to be flipped to abd dbc
     bool flipPossibility = false;
-    if ( useNeiNormals_ && ( dot( normals_[centerVert_], normals_[neighbors[res.id]] ) < 0.0f ) )
+    if ( useNeiNormals_ && ( dot( normals_[centerVert_], normals_[fanData_.neighbors[res.id]] ) < 0.0f ) )
         flipPossibility = true;
     else
         flipPossibility = isUnfoldQuadrangleConvex( a, b, c, d );
 
-    res.stable = !( flipPossibility && ( deloneProf > 0.0f || angleProf > 0.0f ) );
+    if ( !( flipPossibility && ( deloneProf > 0.0f || angleProf > 0.0f ) ) )
+    {
+        res.stable = true;
+        return res;
+    }
+
     if ( deloneProf > 0.0f )
         res.weight += deloneProf;
     if ( angleProf > 0.0f )
@@ -187,7 +225,7 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_(
 
     if ( useNeiNormals_ )
     {
-        const auto cNorm = normals_[neighbors[res.id]];
+        const auto cNorm = normals_[fanData_.neighbors[res.id]];
         res.weight += 5.0f * ( 1.0f - dot( normals_[centerVert_], cNorm ) );
 
         auto abcNorm = cross( b - a, c - a );
@@ -203,6 +241,36 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_(
     return res;
 }
 
+void FanOptimizer::updateBorderQueueElement_( FanOptimizerQueueElement& res, bool nextEl ) const
+{
+    assert( nextEl ? fanData_.border == fanData_.neighbors[res.prevId] : fanData_.border == fanData_.neighbors[res.id] );
+
+    int prevInd = nextEl ? res.id : res.prevId;
+    int nextInd = nextEl ? res.nextId : res.id;
+
+    auto difAngle = fanData_.cacheAngleOrder[nextInd].first - fanData_.cacheAngleOrder[prevInd].first;
+    if ( difAngle < 0.0 )
+        difAngle += 2.0 * PI;
+
+    constexpr double MIN_ANGLE = 0.05; // ~2 degrees
+
+    if ( difAngle > MIN_ANGLE )
+    {
+        res.stable = true;
+        return;
+    }
+    int otherId = nextEl ? res.nextId : res.prevId;
+    auto lengthSq = ( points_[centerVert_] - points_[fanData_.neighbors[res.id]] ).lengthSq();
+    auto otherLengthSq = ( points_[centerVert_] - points_[fanData_.neighbors[otherId]] ).lengthSq();
+    if ( lengthSq < otherLengthSq )
+    {
+        res.stable = true;
+        return;
+    }
+
+    res.weight = std::numeric_limits<float>::max();
+}
+
 void FanOptimizer::optimize( int steps, float critAng )
 {
     updateBorder();
@@ -211,12 +279,7 @@ void FanOptimizer::optimize( int steps, float critAng )
 
     std::priority_queue<FanOptimizerQueueElement> queue_;
     for ( int i = 0; i < fanData_.neighbors.size(); ++i )
-    {
-        auto el = calcQueueElement_( fanData_.neighbors, i, critAng );
-        if ( fanData_.border == fanData_.neighbors[i] )
-            el.stable = true;
-        queue_.push( el );
-    }
+        queue_.emplace( calcQueueElement_( i, critAng ) );
 
     // optimize fan
     int allRemoves = 0;
@@ -232,6 +295,7 @@ void FanOptimizer::optimize( int steps, float critAng )
         if ( topEl.stable )
             break; // topEl valid and fan is stable
 
+        auto oldNei = fanData_.neighbors[topEl.id];
         fanData_.neighbors[topEl.id] = {};
         allRemoves++;
         currentFanSize--;
@@ -242,8 +306,10 @@ void FanOptimizer::optimize( int steps, float critAng )
             fanData_.neighbors.clear();
             return;
         }
-        queue_.emplace( calcQueueElement_( fanData_.neighbors, topEl.nextId, critAng ) );
-        queue_.emplace( calcQueueElement_( fanData_.neighbors, topEl.prevId, critAng ) );
+        if ( oldNei == fanData_.border )
+            fanData_.border = fanData_.neighbors[topEl.prevId];
+        queue_.emplace( calcQueueElement_( topEl.nextId, critAng ) );
+        queue_.emplace( calcQueueElement_( topEl.prevId, critAng ) );
     }
 
     fanData_.neighbors.erase(
@@ -256,6 +322,7 @@ void FanOptimizer::optimize( int steps, float critAng )
 
 void FanOptimizer::updateBorder( float angle )
 {
+    fanData_.border = {};
     for ( int i = 0; i < fanData_.cacheAngleOrder.size(); ++i )
     {
         // check border fans
@@ -263,7 +330,10 @@ void FanOptimizer::updateBorder( float angle )
             ( fanData_.cacheAngleOrder[i + 1].first - fanData_.cacheAngleOrder[i].first ) :
             ( fanData_.cacheAngleOrder[0].first + 2.0 * PI - fanData_.cacheAngleOrder[i].first );
         if ( diff > angle )
+        {
             fanData_.border = fanData_.neighbors[i];
+            break;
+        }
     }
 }
 
@@ -323,15 +393,19 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const VertCoord
     TriangulatedFanData & fanData )
 {
     findNeighbors( cloud, v, settings.radius, fanData.neighbors );
+    if ( settings.useNeiNormals )
+        filterNeighbors( normals, v, fanData.neighbors );
     trianglulateFan( cloud.points, v, fanData, normals, settings.critAngle, settings.useNeiNormals );
 
     float maxRadius = ( fanData.neighbors.size() < 2 ) ? settings.radius * 2 :
-        updateNeighborsRadius( cloud.points, v, fanData.neighbors, settings.radius );
+        updateNeighborsRadius( cloud.points, v, fanData.border, fanData.neighbors, settings.radius );
 
     if ( maxRadius > settings.radius )
     {
         // update triangulation if radius was increased
         findNeighbors( cloud, v, maxRadius, fanData.neighbors );
+        if ( settings.useNeiNormals )
+            filterNeighbors( normals, v, fanData.neighbors );
         trianglulateFan( cloud.points, v, fanData, normals, settings.critAngle, settings.useNeiNormals );
     }
 }
@@ -340,11 +414,6 @@ bool isBoundaryPoint( const PointCloud& pointCloud, const VertCoords& normals,
     VertId v, float radius, float angle, TriangulatedFanData& triangulationData )
 {
     TriangulationHelpers::findNeighbors( pointCloud, v, radius, triangulationData.neighbors );
-    float maxRadius = ( triangulationData.neighbors.size() < 2 ) ? radius * 2.0f :
-        TriangulationHelpers::updateNeighborsRadius( pointCloud.points, v, triangulationData.neighbors, radius );
-    if ( maxRadius > radius )
-        TriangulationHelpers::findNeighbors( pointCloud, v, maxRadius, triangulationData.neighbors );
-    
     triangulationData.border = {};
     if ( triangulationData.neighbors.size() < 3 )
         return true;

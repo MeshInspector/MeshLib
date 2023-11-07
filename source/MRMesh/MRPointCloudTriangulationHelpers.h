@@ -18,15 +18,23 @@ namespace TriangulationHelpers
 
 /**
  * \brief Finds max radius of neighbors search, for possible better local triangulation
+ * \param borderV first boundary vertex in \param fan (next VertId in fan is also boundary but first is enough)
  * \ingroup TriangulationHelpersGroup
  */
-MRMESH_API float updateNeighborsRadius( const VertCoords& points, VertId v, const std::vector<VertId>& fan, float baseRadius );
+MRMESH_API float updateNeighborsRadius( const VertCoords& points, VertId v, VertId boundaryV,
+    const std::vector<VertId>& fan, float baseRadius );
 
 /**
  * \brief Finds all neighbors of v in given radius (v excluded)
  * \ingroup TriangulationHelpersGroup
  */
 MRMESH_API void findNeighbors( const PointCloud& pointCloud, VertId v, float radius, std::vector<VertId>& neighbors );
+
+/**
+ * \brief Filter neighbors with crossing normals
+ * \ingroup TriangulationHelpersGroup
+ */
+MRMESH_API void filterNeighbors( const VertNormals& normals, VertId v, std::vector<VertId>& neighbors );
 
 /**
  * \brief Data with caches for optimizing fan triangulation

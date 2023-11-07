@@ -9,6 +9,7 @@ namespace MR
 {
 
 class MRVIEWER_CLASS SurfaceManipulationWidget // :
+    //public MultiListener<KeyUpListener>
     //public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener,
     //                     KeyDownListener, KeyUpListener,
     //                     PreDrawListener>
@@ -58,7 +59,9 @@ private:
     Vector2f mousePos_;
     bool mouseMoved_ = false;
     VertBitSet region_;
-    VertBitSet regionExpanded_;
+    VertBitSet regionExpanded_; // need for proper visualization
+    VertBitSet regionOld_;
+    VertScalars changedValues_;
     VertScalars distances_;
     VertUVCoords uvs_;
     std::shared_ptr<ChangeMeshAction> changeMeshAction_;

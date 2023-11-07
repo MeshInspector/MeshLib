@@ -12,7 +12,6 @@
 #include "MRMesh/MRExpandShrink.h"
 #include "MRMesh/MREnumNeighbours.h"
 #include "MRMesh/MRTimer.h"
-//#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -21,9 +20,15 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
 {
     obj_ = objectMesh;
     diagonal_ = obj_->getBoundingBox().diagonal();
+    settings_.radius = diagonal_ / 100.f;
 
     size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
     region_ = VertBitSet( numV, false );
+    regionExpanded_ = VertBitSet( numV, false );
+    regionOld_ = VertBitSet( numV, false );
+    changedValues_ = VertScalars( numV, 0.f );
+    distances_ = VertScalars( numV, 0.f );
+
     obj_->setAncillaryTexture( { { { Color { 255, 64, 64, 255 }, Color { 0, 0, 0, 0 } }, Vector2i { 1, 2 } } } );
     uvs_ = VertUVCoords( numV, { 0, 1 } );
     obj_->setAncillaryUVCoords( uvs_ );
@@ -33,7 +38,13 @@ void SurfaceManipulationWidget::reset()
 {
     obj_->clearAncillaryTexture();
     obj_.reset();
+
     region_ = {};
+    regionExpanded_ = {};
+    regionOld_ = {};
+    changedValues_ = {};
+    distances_ = {};
+
     uvs_ = {};
 
     changeMeshAction_.reset();
@@ -71,6 +82,9 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
 
     AppendHistory( changeMeshAction_ );
     changeMeshAction_.reset();
+
+    for ( auto v : regionOld_ )
+        changedValues_[v] = 0.f;
 
     return true;
 }
@@ -118,10 +132,10 @@ bool SurfaceManipulationWidget::onKeyUp_( int /*key*/, int modifier )
 
 void SurfaceManipulationWidget::preDraw_()
 {
-    updateRegion_( mousePos_ );
-    
     if ( mousePressed_ )
         changeSurface_();
+    
+    updateRegion_( mousePos_ );
 }
 
 
@@ -147,15 +161,27 @@ void SurfaceManipulationWidget::changeSurface_()
 
     auto& points = obj_->varMesh()->points;
 
-    const float intensity = settings_.intensity / 2.f + 0.5f;
+    const float maxShift = settings_.force / 1000.f * diagonal_ / 10.f;
+    const float intensity = settings_.intensity / 200.f + 0.25f;
     const float a1 = -1.f * ( 1 - intensity ) / intensity / intensity;
     const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
     for ( auto v : region_ )
     {
         const float r = std::clamp( distances_[v] / settings_.radius, 0.f, 1.f );
         const float k = r < intensity ? a1 * r * r + 1 : a2 * ( r - 1 ) * ( r - 1 ); // I(r)
-        points[v] += direction_ * normal * settings_.force / 1000.f * diagonal_ / 10.f * k; // shift = F * I(r)
+        float pointShift = maxShift * k ; // shift = F * I(r)
+        if ( mouseMoved_ && regionOld_.test( v ) )
+        {
+            pointShift = std::clamp( pointShift, 0.f, maxShift - changedValues_[v] );
+            changedValues_[v] += pointShift;
+        }
+        points[v] += direction_ * pointShift * normal;
     }
+    if ( mouseMoved_ )
+        for ( auto v : regionOld_ )
+            if ( !region_.test( v ) )
+                changedValues_[v] = 0.f;
+    regionOld_ = region_;
     obj_->setDirtyFlags( DIRTY_PRIMITIVES );
 }
 

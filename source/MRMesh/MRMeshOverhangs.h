@@ -13,7 +13,7 @@ struct FindOverhangsSettings
     Vector3f axis{ Vector3f::plusZ() };
     /// height of a layer
     float layerHeight { 1.f };
-    /// maximum overhang distance within a layer
+    /// maximum allowed overhang distance within a layer
     float maxOverhangDistance { 1.f };
     /// number of hops used to smooth out the overhang regions (0 - disable smoothing)
     int hops = 0;

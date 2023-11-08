@@ -36,6 +36,8 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
     obj_->setAncillaryUVCoords( uvs_ );
 
     workMode_ = WorkMode::Add;
+
+    connect( &getViewerInstance() );
 }
 
 void SurfaceManipulationWidget::reset()
@@ -52,6 +54,8 @@ void SurfaceManipulationWidget::reset()
     uvs_ = {};
 
     changeMeshAction_.reset();
+
+    disconnect();
 }
 
 void SurfaceManipulationWidget::setSettings( const Settings& settings )
@@ -62,7 +66,7 @@ void SurfaceManipulationWidget::setSettings( const Settings& settings )
     settings_.intensity = std::clamp( settings_.intensity, 1.f, 100.f );
 }
 
-bool SurfaceManipulationWidget::onMouseDown( Viewer::MouseButton button, int /*modifier*/ )
+bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*modifier*/ )
 {
     if ( button != MouseButton::Left )
         return false;
@@ -77,7 +81,7 @@ bool SurfaceManipulationWidget::onMouseDown( Viewer::MouseButton button, int /*m
     return true;
 }
 
-bool SurfaceManipulationWidget::onMouseUp( Viewer::MouseButton button, int /*modifier*/ )
+bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*modifier*/ )
 {
     if ( button != MouseButton::Left )
         return false;
@@ -93,14 +97,14 @@ bool SurfaceManipulationWidget::onMouseUp( Viewer::MouseButton button, int /*mod
     return true;
 }
 
-bool SurfaceManipulationWidget::onMouseMove( int mouse_x, int mouse_y )
+bool SurfaceManipulationWidget::onMouseMove_( int mouse_x, int mouse_y )
 {
     updateRegion_( Vector2f{ float( mouse_x ), float( mouse_y ) } );
 
     return true;
 }
 
-bool SurfaceManipulationWidget::onKeyDown( int /*key*/, int modifier )
+bool SurfaceManipulationWidget::onKeyDown_( int /*key*/, int modifier )
 {
     bool res = false;
     workMode_ = WorkMode::Add;
@@ -118,7 +122,7 @@ bool SurfaceManipulationWidget::onKeyDown( int /*key*/, int modifier )
     return res;
 }
 
-bool SurfaceManipulationWidget::onKeyUp( int /*key*/, int modifier )
+bool SurfaceManipulationWidget::onKeyUp_( int /*key*/, int modifier )
 {
     bool res = false;
     workMode_ = WorkMode::Add;
@@ -136,14 +140,13 @@ bool SurfaceManipulationWidget::onKeyUp( int /*key*/, int modifier )
     return res;
 }
 
-void SurfaceManipulationWidget::postDraw()
+void SurfaceManipulationWidget::preDraw_()
 {
     if ( mousePressed_ )
         changeSurface_();
     
     updateRegion_( mousePos_ );
 }
-
 
 void SurfaceManipulationWidget::changeSurface_()
 {
@@ -154,10 +157,9 @@ void SurfaceManipulationWidget::changeSurface_()
 
         if ( workMode_ == WorkMode::Relax )
         {
-            //positionVertsSmoothly( *obj_->varMesh(), region_, Laplacian::EdgeWeights::Unit );
             MeshRelaxParams params;
             params.region = &region_;
-            params.force = 0.25f;
+            params.force = settings_.force / 200.f; // [1-100] -> (0.0, 0.5]
             relax( *obj_->varMesh(), params );
             obj_->setDirtyFlags( DIRTY_POSITION );
             return;

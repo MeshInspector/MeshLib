@@ -138,7 +138,7 @@ void ResetSceneMenuItem::preDraw_()
 
         UI::setTooltipIfHovered( "Save current scene and then remove all objects", scaling );
         ImGui::SameLine();
-        if ( UI::buttonCommonSize( "Don't Save", btnSize ) )
+        if ( UI::buttonCommonSize( "Don't Save", btnSize, ImGuiKey_N ) )
         {
             ImGui::CloseCurrentPopup();
             resetScene_();

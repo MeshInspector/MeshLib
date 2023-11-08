@@ -489,6 +489,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     float maxOldEdgeLenSq = std::max( sqr( settings_.maxEdgeLen ), edgeLenSq );
     float maxNewEdgeLenSq = 0;
 
+    bool normalFlip = false; // at least one triangle flips its normal
     originNeis_.clear();
     triDblAreas_.clear();
     Vector3d sumDblArea_;
@@ -517,6 +518,12 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         if ( eDest != vr )
         {
             auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
+            if ( !normalFlip )
+            {
+                const auto oldA = cross( pDest - po, pDest2 - po );
+                if ( dot( da, oldA ) < 0 )
+                    normalFlip = true;
+            }
             triDblAreas_.push_back( da );
             sumDblArea_ += Vector3d{ da };
             const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
@@ -556,6 +563,12 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         if ( eDest != vl )
         {
             auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
+            if ( !normalFlip )
+            {
+                const auto oldA = cross( pDest - pd, pDest2 - pd );
+                if ( dot( da, oldA ) < 0 )
+                    normalFlip = true;
+            }
             triDblAreas_.push_back( da );
             sumDblArea_ += Vector3d{ da };
             const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
@@ -579,8 +592,8 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     if ( maxNewEdgeLenSq > maxOldEdgeLenSq )
         return {}; // new edge would be longer than all of old edges and longer than allowed in settings
 
-    // checks that all new normals are consistent (do not check for degenerate edges)
-    if ( !tinyEdge && ( ( po != pd ) || ( po != collapsePos ) ) )
+    // if at least one triangle normal flips, checks that all new normals are consistent (do not check for degenerate edges)
+    if ( normalFlip && !tinyEdge && ( ( po != pd ) || ( po != collapsePos ) ) )
     {
         auto n = Vector3f{ sumDblArea_.normalized() };
         for ( const auto da : triDblAreas_ )

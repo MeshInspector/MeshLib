@@ -85,10 +85,39 @@ template <typename T>
 constexpr Quaternion<T>::Quaternion( const Matrix3<T> & m )
 {
     // https://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/
-    a = T(0.5) * std::sqrt( std::max( T(0), 1 + m.x.x + m.y.y + m.z.z ) );
-    b = T(0.5) * std::copysign( std::sqrt( std::max( T(0), 1 + m.x.x - m.y.y - m.z.z ) ), m.z.y - m.y.z );
-    c = T(0.5) * std::copysign( std::sqrt( std::max( T(0), 1 - m.x.x + m.y.y - m.z.z ) ), m.x.z - m.z.x );
-    d = T(0.5) * std::copysign( std::sqrt( std::max( T(0), 1 - m.x.x - m.y.y + m.z.z ) ), m.y.x - m.x.y );
+    const auto tr = m.trace();
+    if ( tr > 0 )
+    {
+        auto S = std::sqrt( tr + 1 ) * 2;
+        a = T( 0.25 ) * S;
+        b = ( m.z.y - m.y.z ) / S;
+        c = ( m.x.z - m.z.x ) / S;
+        d = ( m.y.x - m.x.y ) / S;
+    }
+    else if ( m.x.x > m.y.y && m.x.x > m.z.z )
+    {
+        auto S = std::sqrt( 1 + m.x.x - m.y.y - m.z.z ) * 2;
+        a = ( m.z.y - m.y.z ) / S;
+        b = T( 0.25 ) * S;
+        c = ( m.x.y + m.y.x ) / S;
+        d = ( m.x.z + m.z.x ) / S;
+    }
+    else if ( m.y.y > m.z.z )
+    {
+        auto S = std::sqrt( 1 + m.y.y - m.x.x - m.z.z ) * 2;
+        a = ( m.x.z - m.z.x ) / S;
+        b = ( m.x.y + m.y.x ) / S;
+        c = T( 0.25 ) * S;
+        d = ( m.y.z + m.z.y ) / S;
+    }
+    else
+    {
+        auto S = std::sqrt( 1 + m.z.z - m.x.x - m.y.y ) * 2;
+        a = ( m.y.x - m.x.y ) / S;
+        b = ( m.x.z + m.z.x ) / S;
+        c = ( m.y.z + m.z.y ) / S;
+        d = T( 0.25 ) * S;
+    }
 }
 
 template <typename T>

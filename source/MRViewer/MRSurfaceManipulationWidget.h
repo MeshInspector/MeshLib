@@ -8,6 +8,11 @@
 namespace MR
 {
 
+/// @brief widget for surface modifying
+/// @detail available 3 modes:
+/// add (move surface region in direction of normal)
+/// remove (move surface region in opposite direction to normal)
+/// relax (relax surface region)
 class MRVIEWER_CLASS SurfaceManipulationWidget
 {
 public:
@@ -43,7 +48,6 @@ private:
 
     std::shared_ptr<ObjectMesh> obj_;
     float diagonal_ = 1.f;
-    //VertId vert_;
     Vector2f mousePos_;
     bool mouseMoved_ = false;
     VertBitSet region_;
@@ -55,8 +59,12 @@ private:
     std::shared_ptr<ChangeMeshAction> changeMeshAction_;
 
     bool mousePressed_ = false;
-    float direction_ = 1.f;
-    bool onlySmooth_ = false;
+    enum class WorkMode
+    {
+        Add,
+        Remove,
+        Relax
+    } workMode_ = WorkMode::Add;
 };
 
 }

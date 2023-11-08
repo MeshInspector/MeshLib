@@ -12,6 +12,8 @@
 #include "MRMesh/MRExpandShrink.h"
 #include "MRMesh/MREnumNeighbours.h"
 #include "MRMesh/MRTimer.h"
+#include <MRMesh/MRMeshRelax.h>
+#include <MRMesh/MRBitSetParallelFor.h>
 
 namespace MR
 {
@@ -32,6 +34,8 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
     obj_->setAncillaryTexture( { { { Color { 255, 64, 64, 255 }, Color { 0, 0, 0, 0 } }, Vector2i { 1, 2 } } } );
     uvs_ = VertUVCoords( numV, { 0, 1 } );
     obj_->setAncillaryUVCoords( uvs_ );
+
+    workMode_ = WorkMode::Add;
 }
 
 void SurfaceManipulationWidget::reset()
@@ -99,14 +103,15 @@ bool SurfaceManipulationWidget::onMouseMove( int mouse_x, int mouse_y )
 bool SurfaceManipulationWidget::onKeyDown( int /*key*/, int modifier )
 {
     bool res = false;
+    workMode_ = WorkMode::Add;
     if ( modifier & GLFW_MOD_SHIFT )
     {
-        onlySmooth_ = true;
+        workMode_ = WorkMode::Relax;
         res = true;
     }
     if ( modifier & GLFW_MOD_CONTROL )
     {
-        direction_ = -1.f;
+        workMode_ = WorkMode::Remove;
         res = true;
     }
 
@@ -116,14 +121,15 @@ bool SurfaceManipulationWidget::onKeyDown( int /*key*/, int modifier )
 bool SurfaceManipulationWidget::onKeyUp( int /*key*/, int modifier )
 {
     bool res = false;
-    if ( !( modifier & GLFW_MOD_SHIFT ) )
+    workMode_ = WorkMode::Add;
+    if ( modifier & GLFW_MOD_SHIFT )
     {
-        onlySmooth_ = false;
+        workMode_ = WorkMode::Relax;
         res = true;
     }
-    if ( !( modifier & GLFW_MOD_CONTROL ) )
+    if ( modifier & GLFW_MOD_CONTROL )
     {
-        direction_ = 1.f;
+        workMode_ = WorkMode::Remove;
         res = true;
     }
 
@@ -146,12 +152,16 @@ void SurfaceManipulationWidget::changeSurface_()
 
     MR_TIMER
 
-    if ( onlySmooth_ )
-    {
-        positionVertsSmoothly( *obj_->varMesh(), region_, Laplacian::EdgeWeights::Unit );
-        obj_->setDirtyFlags( DIRTY_PRIMITIVES );
-        return;
-    }
+        if ( workMode_ == WorkMode::Relax )
+        {
+            //positionVertsSmoothly( *obj_->varMesh(), region_, Laplacian::EdgeWeights::Unit );
+            MeshRelaxParams params;
+            params.region = &region_;
+            params.force = 0.25f;
+            relax( *obj_->varMesh(), params );
+            obj_->setDirtyFlags( DIRTY_POSITION );
+            return;
+        }
 
     Vector3f normal;
     const auto& mesh = *obj_->mesh();
@@ -165,30 +175,35 @@ void SurfaceManipulationWidget::changeSurface_()
     const float intensity = settings_.intensity / 200.f + 0.25f;
     const float a1 = -1.f * ( 1 - intensity ) / intensity / intensity;
     const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
-    for ( auto v : region_ )
+    const float direction = workMode_ == WorkMode::Remove ? -1.f : 1.f;
+    BitSetParallelFor( region_, [&] ( VertId v )
     {
         const float r = std::clamp( distances_[v] / settings_.radius, 0.f, 1.f );
         const float k = r < intensity ? a1 * r * r + 1 : a2 * ( r - 1 ) * ( r - 1 ); // I(r)
-        float pointShift = maxShift * k ; // shift = F * I(r)
+        float pointShift = maxShift * k; // shift = F * I(r)
         if ( mouseMoved_ && regionOld_.test( v ) )
         {
             pointShift = std::clamp( pointShift, 0.f, maxShift - changedValues_[v] );
             changedValues_[v] += pointShift;
         }
-        points[v] += direction_ * pointShift * normal;
-    }
+        points[v] += direction * pointShift * normal;
+    } );
     if ( mouseMoved_ )
-        for ( auto v : regionOld_ )
-            if ( !region_.test( v ) )
-                changedValues_[v] = 0.f;
+        BitSetParallelFor( regionOld_, [&] ( VertId v )
+    {
+        if ( !region_.test( v ) )
+            changedValues_[v] = 0.f;
+    } );
     regionOld_ = region_;
     obj_->setDirtyFlags( DIRTY_PRIMITIVES );
 }
 
 void SurfaceManipulationWidget::updateUV_( bool set )
 {
-    for ( auto v : regionExpanded_ )
+    BitSetParallelFor( regionExpanded_, [&] ( VertId v )
+    {
         uvs_[v] = set ? UVCoord{ 0, std::clamp( distances_[v] / settings_.radius / 2.f, 0.f, 1.f ) } : UVCoord{ 0, 1 };
+    } );
 }
 
 void SurfaceManipulationWidget::updateRegion_( const Vector2f & mousePos )

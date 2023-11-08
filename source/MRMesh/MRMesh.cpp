@@ -24,6 +24,7 @@
 #include "MRTriMath.h"
 #include "MRIdentifyVertices.h"
 #include "MRPch/MRTBB.h"
+#include <span>
 
 namespace MR
 {
@@ -521,12 +522,30 @@ float Mesh::discreteMeanCurvature( UndirectedEdgeId ue ) const
 class CreaseEdgesCalc 
 {
 public:
-    CreaseEdgesCalc( const Mesh & mesh, float critCos, float critLengthSq ) : mesh_( mesh ), critCos_( critCos ) , critLengthSq_( critLengthSq )
-        { edges_.resize( mesh_.topology.undirectedEdgeSize() ); }
-    CreaseEdgesCalc( CreaseEdgesCalc & x, tbb::split ) : mesh_( x.mesh_ ), critCos_( x.critCos_ ), critLengthSq_( x.critLengthSq_ )
-        { edges_.resize( mesh_.topology.undirectedEdgeSize() ); }
+    CreaseEdgesCalc( const Mesh & mesh, float critCos, float critLength, bool filterBranches ) 
+    : mesh_( mesh ), critCos_( critCos ) , critLength_( critLength ), filterBranches_( filterBranches )
+    { 
+        edges_.resize( mesh_.topology.undirectedEdgeSize() );
+        if ( filterBranches_ )
+            selectedEdgesPerVert_.resize( mesh_.topology.lastValidVert() + 1 );
+    }
 
-    void join( const CreaseEdgesCalc & y ) { edges_ |= y.edges_; }
+    CreaseEdgesCalc( CreaseEdgesCalc & x, tbb::split ) 
+    : mesh_( x.mesh_ ), critCos_( x.critCos_ ), critLength_( x.critLength_ ), filterBranches_( x.filterBranches_ )
+    { 
+        edges_.resize( mesh_.topology.undirectedEdgeSize() );
+        if ( filterBranches_ )
+            selectedEdgesPerVert_.resize( mesh_.topology.lastValidVert() + 1 );
+    }
+
+    void join( const CreaseEdgesCalc & y ) 
+    { 
+        edges_ |= y.edges_;
+
+        if ( filterBranches_ )
+            for ( VertId i = VertId( 0 ); i < selectedEdgesPerVert_.size(); ++i )
+                selectedEdgesPerVert_[i] += y.selectedEdgesPerVert_[i];
+    }
 
     UndirectedEdgeBitSet takeEdges() { return std::move( edges_ ); }
 
@@ -537,23 +556,29 @@ public:
             if ( mesh_.topology.isLoneEdge( ue ) )
                 continue;
 
-            if ( ue == UndirectedEdgeId( 10825 ) )
-            {
-                ue = ue;
-            }
-
             auto dihedralCos = mesh_.dihedralAngleCos( ue );
-            auto edgeLengthSq = mesh_.edgeLengthSq( ue );
-            if ( dihedralCos <= critCos_ && edgeLengthSq > critLengthSq_ )
+            auto edgeLength = mesh_.edgeLength( ue );
+            if ( dihedralCos <= critCos_ && ( !filterBranches_ || edgeLength > critLength_ ) )
+            {
                 edges_.set( ue );
+                if ( !filterBranches_ )
+                    continue;
+
+                const VertId vOrg = mesh_.topology.org( ue );
+                const VertId vDest = mesh_.topology.dest( ue );
+                ++selectedEdgesPerVert_[vOrg];
+                ++selectedEdgesPerVert_[vDest];
+            }
         }
     }
 
 private:
     const Mesh & mesh_;
     float critCos_ = 1;
-    float critLengthSq_ = 0;
+    float critLength_ = 0;
+    bool filterBranches_ = false;
     UndirectedEdgeBitSet edges_;
+    Vector<int, VertId> selectedEdgesPerVert_;
 };
 
 UndirectedEdgeBitSet Mesh::findCreaseEdges( float angleFromPlanar, float critLengthSq ) const
@@ -561,7 +586,7 @@ UndirectedEdgeBitSet Mesh::findCreaseEdges( float angleFromPlanar, float critLen
     MR_TIMER
     assert( angleFromPlanar > 0 && angleFromPlanar < PI );
     const float critCos = std::cos( angleFromPlanar );
-    CreaseEdgesCalc calc( *this, critCos, critLengthSq );
+    CreaseEdgesCalc calc( *this, critCos, critLengthSq, false );
     parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( 0_ue, UndirectedEdgeId{ topology.undirectedEdgeSize() } ), calc );
     return calc.takeEdges();
 }

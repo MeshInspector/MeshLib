@@ -109,7 +109,7 @@ void SaveOnClosePlugin::preDraw_()
 
         UI::setTooltipIfHovered( "Save the current scene and close the application", scaling );
         ImGui::SameLine( 0, p );
-        if ( UI::button( "Don't Save", btnSize ) )
+        if ( UI::button( "Don't Save", btnSize, ImGuiKey_N ) )
         {
             glfwSetWindowShouldClose( Viewer::instance()->window, true );
             shouldClose_ = true;

@@ -230,7 +230,6 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f & mousePos )
             points[i] = oldMousePos + step * float( i );
 
         objAndPick = getViewerInstance().viewport().multiPickObjects( { obj_.get() }, points );
-        getViewerInstance().incrementForceRedrawFrames( 1, true );
         mouseMoved_ = true;
     }
     mousePos_ = mousePos;

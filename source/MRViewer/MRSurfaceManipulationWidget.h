@@ -43,7 +43,6 @@ private:
     void updateUV_( bool set );
     void updateRegion_( const Vector2f& mousePos );
 
-    bool active_ = false;
     Settings settings_;
 
     std::shared_ptr<ObjectMesh> obj_;

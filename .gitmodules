@@ -52,3 +52,6 @@
 [submodule "thirdparty/laz-perf"]
 	path = thirdparty/laz-perf
 	url = https://github.com/hobuinc/laz-perf.git
+[submodule "thirdparty/mbedtls"]
+	path = thirdparty/mbedtls
+	url = https://github.com/Mbed-TLS/mbedtls

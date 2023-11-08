@@ -517,9 +517,9 @@ void Viewport::setClippingPlane( const Plane3f& plane )
     needRedraw_ = true;
 }
 
-MRVIEWER_API void Viewport::setLabel( std::string s )
+void Viewport::setLabel( std::string s )
 {
-    params_.label = s;
+    params_.label = std::move( s );
     needRedraw_ = true;
 }
 

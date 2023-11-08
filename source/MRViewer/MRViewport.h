@@ -444,6 +444,8 @@ public:
 
     MRVIEWER_API void setClippingPlane( const Plane3f& plane );
 
+    MRVIEWER_API void setLabel( std::string s );
+
     void setSelectable( bool on ) { params_.selectable = on; }
 
     MRVIEWER_API void showAxes( bool on );

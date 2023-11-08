@@ -517,6 +517,12 @@ void Viewport::setClippingPlane( const Plane3f& plane )
     needRedraw_ = true;
 }
 
+MRVIEWER_API void Viewport::setLabel( std::string s )
+{
+    params_.label = s;
+    needRedraw_ = true;
+}
+
 void Viewport::showAxes( bool on )
 {
     Viewer::constInstance()->basisAxes->setVisible( on, id );

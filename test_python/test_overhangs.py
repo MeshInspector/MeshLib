@@ -13,4 +13,4 @@ def test_overhangs():
 	oParams.layerHeight = 0.1
 	oParams.maxOverhangDistance = 0.1
 	overhangs = mrmesh.findOverhangs(mergedMesh,oParams)
-	assert (overhangs.size() == 1)
+	assert (overhangs.size() == 2)#if base has Z size bigger than one layer than it is overhang too

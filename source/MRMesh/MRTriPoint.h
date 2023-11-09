@@ -14,13 +14,14 @@ struct TriPoint
 {
     /// barycentric coordinates:
     /// a+b in [0,1], a+b=0 => point is in v0, a+b=1 => point is on [v1,v2] edge
-    T a = 0; ///< a in [0,1], a=0 => point is on [v2,v0] edge, a=1 => point is in v1
-    T b = 0; ///< b in [0,1], b=0 => point is on [v0,v1] edge, b=1 => point is in v2
+    T a; ///< a in [0,1], a=0 => point is on [v2,v0] edge, a=1 => point is in v1
+    T b; ///< b in [0,1], b=0 => point is on [v0,v1] edge, b=1 => point is in v2
 
     static constexpr auto eps = SegmPoint<T>::eps;
 
-    constexpr TriPoint() = default;
-    constexpr TriPoint( T a, T b ) : a( a ), b( b ) { }
+    constexpr TriPoint() noexcept : a( 0 ), b( 0 ) { }
+    explicit constexpr TriPoint( NoInit ) noexcept { }
+    constexpr TriPoint( T a, T b ) noexcept : a( a ), b( b ) { }
     template <typename U>
     constexpr TriPoint( const TriPoint<U> & s ) : a( T( s.a ) ), b( T( s.b ) ) { }
 

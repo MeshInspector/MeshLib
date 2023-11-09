@@ -23,6 +23,7 @@ struct MeshTriPoint
     TriPointf bary;
 
     [[nodiscard]] MeshTriPoint() = default;
+    [[nodiscard]] MeshTriPoint( NoInit ) : e( noInit ), bary( noInit ) { }
     [[nodiscard]] MeshTriPoint( EdgeId e, TriPointf bary ) : e( e ), bary( bary ) { }
     [[nodiscard]] MeshTriPoint( const MeshEdgePoint & ep ) : e( ep.e ), bary( ep.a, 0 ) { }
     [[nodiscard]] MeshTriPoint( const MeshTopology & topology, VertId v ) : MeshTriPoint( MeshEdgePoint( topology, v ) ) { }

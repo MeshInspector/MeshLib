@@ -528,6 +528,41 @@ std::vector<EdgeBitSet> getAllComponentsEdges( const Mesh& mesh, const EdgeBitSe
     return res;
 }
 
+std::vector<UndirectedEdgeBitSet> getAllComponentsUndirectedEdges( const Mesh& mesh, const UndirectedEdgeBitSet& edges )
+{
+    MR_TIMER
+    
+    auto unionFindStruct = getUnionFindStructureVerts( mesh, edges );
+
+    const auto& allRoots = unionFindStruct.roots();
+    constexpr int InvalidRoot = -1;
+    std::vector<int> uniqueRootsMap( allRoots.size(), InvalidRoot );
+    int k = 0;
+    UndirectedEdgeId eMax;
+    for ( auto ue : edges )
+    {
+        if ( eMax < ue )
+            eMax = ue;
+
+        const EdgeId e{ ue };
+        int curRoot = allRoots[mesh.topology.org( e )];
+        auto& uniqIndex = uniqueRootsMap[curRoot];
+        if ( uniqIndex == InvalidRoot )
+        {
+            uniqIndex = k;
+            ++k;
+        }
+    }
+    std::vector<UndirectedEdgeBitSet> res( k, UndirectedEdgeBitSet( eMax + 1 ) );
+    for ( auto ue : edges )
+    {
+        const EdgeId e{ ue };
+        int curRoot = allRoots[mesh.topology.org( e )];
+        res[uniqueRootsMap[curRoot]].set( ue );
+    }
+    return res;
+}
+
 bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection )
 {
     MR_TIMER
@@ -618,6 +653,21 @@ UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const EdgeBitSet
     {
         auto vo = mesh.topology.org( e );
         auto vd = mesh.topology.dest( e );
+        unionFindStructure.unite( vo, vd );
+    }
+    return unionFindStructure;
+}
+
+UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const UndirectedEdgeBitSet& uEdges )
+{
+    MR_TIMER
+
+    UnionFind<VertId> unionFindStructure( mesh.topology.lastValidVert() + 1 );
+
+    for ( EdgeId ue : uEdges )
+    {
+        auto vo = mesh.topology.org( ue );
+        auto vd = mesh.topology.dest( ue );
         unionFindStructure.unite( vo, vd );
     }
     return unionFindStructure;

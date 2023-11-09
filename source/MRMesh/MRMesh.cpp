@@ -24,6 +24,7 @@
 #include "MRTriMath.h"
 #include "MRIdentifyVertices.h"
 #include "MRPch/MRTBB.h"
+#include "MRMeshComponents.h"
 #include <span>
 
 namespace MR
@@ -522,32 +523,34 @@ float Mesh::discreteMeanCurvature( UndirectedEdgeId ue ) const
 class CreaseEdgesCalc 
 {
 public:
+    using ConnectionsPerVert = Vector<std::vector<std::pair<UndirectedEdgeId, VertId>>, VertId>;
+
     CreaseEdgesCalc( const Mesh & mesh, float critCos, float critLength, bool filterBranches ) 
     : mesh_( mesh ), critCos_( critCos ) , critLength_( critLength ), filterBranches_( filterBranches )
     { 
         edges_.resize( mesh_.topology.undirectedEdgeSize() );
-        if ( filterBranches_ )
-            selectedEdgesPerVert_.resize( mesh_.topology.lastValidVert() + 1 );
+        connectionsPerVert_.resize( mesh_.topology.lastValidVert() + 1 );
     }
 
     CreaseEdgesCalc( CreaseEdgesCalc & x, tbb::split ) 
     : mesh_( x.mesh_ ), critCos_( x.critCos_ ), critLength_( x.critLength_ ), filterBranches_( x.filterBranches_ )
     { 
         edges_.resize( mesh_.topology.undirectedEdgeSize() );
-        if ( filterBranches_ )
-            selectedEdgesPerVert_.resize( mesh_.topology.lastValidVert() + 1 );
+        connectionsPerVert_.resize( mesh_.topology.lastValidVert() + 1 );
     }
 
     void join( const CreaseEdgesCalc & y ) 
     { 
         edges_ |= y.edges_;
 
-        if ( filterBranches_ )
-            for ( VertId i = VertId( 0 ); i < selectedEdgesPerVert_.size(); ++i )
-                selectedEdgesPerVert_[i] += y.selectedEdgesPerVert_[i];
+        for ( VertId i = VertId( 0 ); i < connectionsPerVert_.size(); ++i )
+        {
+            connectionsPerVert_[i].insert( connectionsPerVert_[i].end(), y.connectionsPerVert_[i].begin(), y.connectionsPerVert_[i].end() );
+        }
     }
 
     UndirectedEdgeBitSet takeEdges() { return std::move( edges_ ); }
+    ConnectionsPerVert takeSelectedVertsPerVert() { return std::move( connectionsPerVert_ ); }
 
     void operator()( const tbb::blocked_range<UndirectedEdgeId> & r ) 
     {
@@ -557,17 +560,14 @@ public:
                 continue;
 
             auto dihedralCos = mesh_.dihedralAngleCos( ue );
-            auto edgeLength = mesh_.edgeLength( ue );
-            if ( dihedralCos <= critCos_ && ( !filterBranches_ || edgeLength > critLength_ ) )
+
+            if ( dihedralCos <= critCos_ )
             {
                 edges_.set( ue );
-                if ( !filterBranches_ )
-                    continue;
-
                 const VertId vOrg = mesh_.topology.org( ue );
                 const VertId vDest = mesh_.topology.dest( ue );
-                ++selectedEdgesPerVert_[vOrg];
-                ++selectedEdgesPerVert_[vDest];
+                connectionsPerVert_[vOrg].push_back( { ue, vDest } );
+                connectionsPerVert_[vDest].push_back( { ue, vOrg } );
             }
         }
     }
@@ -578,17 +578,102 @@ private:
     float critLength_ = 0;
     bool filterBranches_ = false;
     UndirectedEdgeBitSet edges_;
-    Vector<int, VertId> selectedEdgesPerVert_;
+    ConnectionsPerVert connectionsPerVert_;
 };
 
-UndirectedEdgeBitSet Mesh::findCreaseEdges( float angleFromPlanar, float critLengthSq ) const
+UndirectedEdgeBitSet Mesh::findCreaseEdges( float angleFromPlanar, float critLength, bool filterBranches ) const
 {
     MR_TIMER
     assert( angleFromPlanar > 0 && angleFromPlanar < PI );
     const float critCos = std::cos( angleFromPlanar );
-    CreaseEdgesCalc calc( *this, critCos, critLengthSq, false );
+    CreaseEdgesCalc calc( *this, critCos, critLength, filterBranches );
     parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( 0_ue, UndirectedEdgeId{ topology.undirectedEdgeSize() } ), calc );
-    return calc.takeEdges();
+
+    auto selectedEdges = calc.takeEdges();
+    auto selectedComponents = MeshComponents::getAllComponentsUndirectedEdges( *this, selectedEdges );
+
+    for ( const auto& selectedComponent : selectedComponents )
+    {
+        const auto componentLength = parallel_deterministic_reduce( tbb::blocked_range( 0_ue, UndirectedEdgeId{ selectedComponent.size() }, 1024 ), 0.0,
+       [&] ( const auto& range, double curr )
+            {
+                for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
+                    if ( selectedComponent.test( ue ) )
+                        curr += edgeLength( ue );
+                return curr;
+            },
+       [] ( auto a, auto b )
+        {
+            return a + b;
+        } );
+
+        if ( componentLength < critLength )
+        {
+            BitSetParallelFor( selectedComponent, [&] ( UndirectedEdgeId ue )
+            {
+                selectedEdges.set( ue, false );
+            } );
+        }
+    }
+    
+    if ( !filterBranches )
+        return selectedEdges;
+    
+    auto connectionsPerVert = calc.takeSelectedVertsPerVert();
+
+    for ( VertId i = VertId( 0 ); i < connectionsPerVert.size(); ++i )
+    {
+        auto& connections = connectionsPerVert[i];
+        if ( connections.size() != 1 )
+            continue;
+
+        VertId prevVert = i;
+        auto nextVert = connections.front().second;
+        float branchLength = 0;
+        UndirectedEdgeId ueCur = connections.front().first;
+        std::vector<UndirectedEdgeId> branch;
+
+        while ( true )
+        {
+            branch.push_back( ueCur );
+            branchLength += ( points[prevVert] - points[nextVert] ).length();
+
+            auto& nextConnections = connectionsPerVert[nextVert];
+            if ( nextConnections.size() == 1 )
+            {
+                nextConnections.clear();
+                break;
+            }
+
+            if ( nextConnections.size() != 2 )
+                break;
+
+            prevVert = nextVert;
+            if ( nextConnections[0].first == ueCur )
+            {
+                ueCur = nextConnections[1].first;
+                nextVert = nextConnections[1].second;
+            }
+            else
+            {
+                ueCur = nextConnections[0].first;
+                nextVert = nextConnections[0].second;
+            }
+
+            nextConnections.clear();
+        }
+
+        connections.clear();
+        if ( branchLength > critLength )
+            continue;
+
+        for ( auto ue : branch )
+        {
+            selectedEdges.set( ue, false );
+        }
+    }    
+
+    return selectedEdges;
 }
 
 float Mesh::leftCotan( EdgeId e ) const

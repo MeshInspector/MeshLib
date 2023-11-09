@@ -586,29 +586,30 @@ UndirectedEdgeBitSet Mesh::findCreaseEdges( float angleFromPlanar, float critLen
         } );
 
         if ( componentLength < critLength )
-        {
-            BitSetParallelFor( selectedComponent, [&] ( UndirectedEdgeId ue )
-            {
-                selectedEdges.set( ue, false );
-            } );
-        }
+            selectedEdges -= selectedComponent;
     }
     
     if ( !filterBranches )
         return selectedEdges;
-    
-    /*auto connectionsPerVert = calc.takeSelectedVertsPerVert();
 
-    for ( VertId i = VertId( 0 ); i < connectionsPerVert.size(); ++i )
+    auto incidentVertices = getIncidentVerts( topology, selectedEdges );
+
+    for ( auto v : incidentVertices )
     {
-        auto& connections = connectionsPerVert[i];
+        std::vector<std::pair<UndirectedEdgeId, VertId>> connections;
+        for ( UndirectedEdgeId ue : orgRing( topology, v ) )
+        {
+            if ( selectedEdges.test( ue ) )
+                connections.push_back( { ue, topology.dest( ue ) } );
+        }
+
         if ( connections.size() != 1 )
             continue;
 
-        VertId prevVert = i;
-        auto nextVert = connections.front().second;
+        VertId prevVert = v;
+        VertId nextVert = connections[0].second;
         float branchLength = 0;
-        UndirectedEdgeId ueCur = connections.front().first;
+        UndirectedEdgeId ueCur = connections[0].first;
         std::vector<UndirectedEdgeId> branch;
 
         while ( true )
@@ -616,32 +617,29 @@ UndirectedEdgeBitSet Mesh::findCreaseEdges( float angleFromPlanar, float critLen
             branch.push_back( ueCur );
             branchLength += ( points[prevVert] - points[nextVert] ).length();
 
-            auto& nextConnections = connectionsPerVert[nextVert];
-            if ( nextConnections.size() == 1 )
+            connections.clear();
+            for ( EdgeId e : orgRing( topology, nextVert ) )
             {
-                nextConnections.clear();
-                break;
+                if ( selectedEdges.test( e.undirected() ) )
+                    connections.push_back( { e.undirected(), topology.dest( e ) } );
             }
 
-            if ( nextConnections.size() != 2 )
+            if ( connections.size() == 1 || connections.size() > 2 )
                 break;
 
             prevVert = nextVert;
-            if ( nextConnections[0].first == ueCur )
+            if ( connections[0].first == ueCur )
             {
-                ueCur = nextConnections[1].first;
-                nextVert = nextConnections[1].second;
+                ueCur = connections[1].first;
+                nextVert = connections[1].second;
             }
             else
             {
-                ueCur = nextConnections[0].first;
-                nextVert = nextConnections[0].second;
+                ueCur = connections[0].first;
+                nextVert = connections[0].second;
             }
-
-            nextConnections.clear();
         }
 
-        connections.clear();
         if ( branchLength > critLength )
             continue;
 
@@ -649,7 +647,7 @@ UndirectedEdgeBitSet Mesh::findCreaseEdges( float angleFromPlanar, float critLen
         {
             selectedEdges.set( ue, false );
         }
-    }*/
+    }
 
     return selectedEdges;
 }

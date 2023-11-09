@@ -241,9 +241,7 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] float discreteGaussianCurvature( VertId v, bool * outBoundaryVert = nullptr ) const { return 2 * PI_F - sumAngles( v, outBoundaryVert ); }
 
     /// finds all mesh edges where dihedral angle is distinct from planar PI angle on at least given value
-    /// connected components with summary length of their edges less than \param critLength will be excluded
-    /// if \param filterBranches is true then branches shorter than \param critLength will be excluded
-    [[nodiscard]] MRMESH_API UndirectedEdgeBitSet findCreaseEdges( float angleFromPlanar, float critLength = 0, bool filterBranches = false ) const;
+    [[nodiscard]] MRMESH_API UndirectedEdgeBitSet findCreaseEdges( float angleFromPlanar ) const;
 
     /// computes cotangent of the angle in the left( e ) triangle opposite to e,
     /// and returns 0 if left face does not exist

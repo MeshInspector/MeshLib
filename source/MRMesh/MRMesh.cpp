@@ -24,7 +24,7 @@
 #include "MRTriMath.h"
 #include "MRIdentifyVertices.h"
 #include "MRPch/MRTBB.h"
-#include "MRMeshComponents.h"
+
 
 namespace MR
 {
@@ -559,99 +559,14 @@ private:
     UndirectedEdgeBitSet edges_;
 };
 
-UndirectedEdgeBitSet Mesh::findCreaseEdges( float angleFromPlanar, float critLength, bool filterBranches ) const
+UndirectedEdgeBitSet Mesh::findCreaseEdges( float angleFromPlanar ) const
 {
     MR_TIMER
     assert( angleFromPlanar > 0 && angleFromPlanar < PI );
     const float critCos = std::cos( angleFromPlanar );
     CreaseEdgesCalc calc( *this, critCos );
     parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( 0_ue, UndirectedEdgeId{ topology.undirectedEdgeSize() } ), calc );
-
-    auto selectedEdges = calc.takeEdges();
-    auto selectedComponents = MeshComponents::getAllComponentsUndirectedEdges( *this, selectedEdges );
-
-    for ( const auto& selectedComponent : selectedComponents )
-    {
-        const auto componentLength = parallel_deterministic_reduce( tbb::blocked_range( 0_ue, UndirectedEdgeId{ selectedComponent.size() }, 1024 ), 0.0,
-       [&] ( const auto& range, double curr )
-            {
-                for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
-                    if ( selectedComponent.test( ue ) )
-                        curr += edgeLength( ue );
-                return curr;
-            },
-       [] ( auto a, auto b )
-        {
-            return a + b;
-        } );
-
-        if ( componentLength < critLength )
-            selectedEdges -= selectedComponent;
-    }
-    
-    if ( !filterBranches )
-        return selectedEdges;
-
-    auto incidentVertices = getIncidentVerts( topology, selectedEdges );
-
-    for ( auto v : incidentVertices )
-    {
-        std::vector<std::pair<UndirectedEdgeId, VertId>> connections;
-        for ( UndirectedEdgeId ue : orgRing( topology, v ) )
-        {
-            if ( selectedEdges.test( ue ) )
-                connections.push_back( { ue, topology.dest( ue ) } );
-        }
-
-        if ( connections.size() != 1 )
-            continue;
-
-        VertId prevVert = v;
-        VertId nextVert = connections[0].second;
-        float branchLength = 0;
-        UndirectedEdgeId ueCur = connections[0].first;
-        std::vector<UndirectedEdgeId> branch;
-
-        while ( true )
-        {
-            branch.push_back( ueCur );
-            branchLength += ( points[prevVert] - points[nextVert] ).length();
-            if ( branchLength > critLength )
-                break;
-
-            connections.clear();
-            for ( EdgeId e : orgRing( topology, nextVert ) )
-            {
-                if ( selectedEdges.test( e.undirected() ) )
-                    connections.push_back( { e.undirected(), topology.dest( e ) } );
-            }
-
-            if ( connections.size() == 1 || connections.size() > 2 )
-                break;
-
-            prevVert = nextVert;
-            if ( connections[0].first == ueCur )
-            {
-                ueCur = connections[1].first;
-                nextVert = connections[1].second;
-            }
-            else
-            {
-                ueCur = connections[0].first;
-                nextVert = connections[0].second;
-            }
-        }
-
-        if ( branchLength > critLength )
-            continue;
-
-        for ( auto ue : branch )
-        {
-            selectedEdges.set( ue, false );
-        }
-    }
-
-    return selectedEdges;
+    return calc.takeEdges();
 }
 
 float Mesh::leftCotan( EdgeId e ) const

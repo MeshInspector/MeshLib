@@ -179,6 +179,85 @@ void ImGuiMenu::initBackend()
     ImGui_ImplOpenGL3_Init( glsl_version );
 }
 
+void ImGuiMenu::startFrame()
+{
+    if ( pollEventsInPreDraw )
+    {
+        glfwPollEvents();
+    }
+
+    if ( viewer->isGLInitialized() )
+    {
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+#ifdef __APPLE__
+        // we want ImGui to think it is common scaling in case of retina monitor
+        ImGui::GetIO().DisplaySize = ImVec2( float( viewer->framebufferSize.x ), float( viewer->framebufferSize.y ) );
+        ImGui::GetIO().DisplayFramebufferScale = ImVec2( 1, 1 );
+
+        // ImGui takes mouse position from glfw each frame, but we scale mouse events, so need to update it
+        if ( context_ )
+        {
+            ImGuiInputEvent e;
+            auto curPos = Vector2f( viewer->mouseController.getMousePos() );
+            if ( !context_->InputEventsQueue.empty() && context_->InputEventsQueue.back().Type == ImGuiInputEventType_MousePos )
+            {
+                context_->InputEventsQueue.back().MousePos.PosX = curPos.x;
+                context_->InputEventsQueue.back().MousePos.PosY = curPos.y;
+            }
+        }
+#endif
+    }
+    else
+    {
+        // needed for dear ImGui
+        // should be window size
+        ImGui::GetIO().DisplaySize = ImVec2( float( viewer->framebufferSize.x ), float( viewer->framebufferSize.y ) );
+    }
+    auto& style = ImGui::GetStyle();
+    if ( storedModalMessage_.empty() )
+        style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 0.0f, 0.0f, 0.0f, 0.8f );
+    else
+    {
+        if ( modalMessageType_ == ModalMessageType::Error )
+            style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 1.0f, 0.2f, 0.2f, 0.5f );
+        else if ( modalMessageType_ == ModalMessageType::Warning )
+            style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 1.0f, 0.86f, 0.4f, 0.5f );
+        else // if ( modalMessageType_ == ModalMessageType::Info )
+            style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 0.9f, 0.9f, 0.9f, 0.5f );
+
+    }
+    ImGui::NewFrame();
+}
+
+void ImGuiMenu::finishFrame()
+{
+    draw_menu();
+    prevFrameFocusPlugin_ = nullptr;
+    if ( context_ && !context_->WindowsFocusOrder.empty() && !ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup ) )
+    {
+        for ( int i = context_->WindowsFocusOrder.size() - 1; i >= 0; --i )
+        {
+            auto* win = context_->WindowsFocusOrder[i];
+            if ( win && win->Active && std::string( win->Name ).find( StateBasePlugin::UINameSuffix() ) != std::string::npos )
+            {
+                prevFrameFocusPlugin_ = win;
+                break;
+            }
+        }
+    }
+
+    if ( viewer->isGLInitialized() )
+    {
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
+    }
+    else
+    {
+        ImGui::EndFrame();
+    }
+}
+
 std::filesystem::path ImGuiMenu::getMenuFontPath() const
 {
 #ifdef _WIN32
@@ -256,7 +335,6 @@ void ImGuiMenu::load_font(int font_size)
       droid_sans_compressed_size, font_size * hidpi_scaling_);
     //TODO: expand for non-Windows systems
 #endif
-  
 }
 
 void ImGuiMenu::reload_font(int font_size)
@@ -281,85 +359,6 @@ void ImGuiMenu::shutdown()
     disconnect();
     // User is responsible for destroying context if a custom context is given
     // ImGui::DestroyContext(*context_);
-}
-
-void ImGuiMenu::preDraw_()
-{
-  if( pollEventsInPreDraw )
-  {
-     glfwPollEvents();
-  }
-
-  if ( viewer->isGLInitialized() )
-  {
-      ImGui_ImplOpenGL3_NewFrame();
-      ImGui_ImplGlfw_NewFrame();
-#ifdef __APPLE__
-      // we want ImGui to think it is common scaling in case of retina monitor
-      ImGui::GetIO().DisplaySize = ImVec2( float( viewer->framebufferSize.x ), float( viewer->framebufferSize.y ) );
-      ImGui::GetIO().DisplayFramebufferScale = ImVec2( 1, 1 );
-
-      // ImGui takes mouse position from glfw each frame, but we scale mouse events, so need to update it
-      if ( context_ )
-      {
-          ImGuiInputEvent e;
-          auto curPos = Vector2f( viewer->mouseController.getMousePos() );
-          if ( !context_->InputEventsQueue.empty() && context_->InputEventsQueue.back().Type == ImGuiInputEventType_MousePos )
-          {
-              context_->InputEventsQueue.back().MousePos.PosX = curPos.x;
-              context_->InputEventsQueue.back().MousePos.PosY = curPos.y;
-          }
-      }
-#endif
-  }
-  else
-  {
-      // needed for dear ImGui
-      // should be window size
-      ImGui::GetIO().DisplaySize = ImVec2( float( viewer->framebufferSize.x ), float( viewer->framebufferSize.y ) );
-  }
-  auto& style = ImGui::GetStyle();
-  if ( storedModalMessage_.empty() )
-      style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 0.0f, 0.0f, 0.0f, 0.8f );
-  else
-  {
-      if ( modalMessageType_ == ModalMessageType::Error )
-          style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 1.0f, 0.2f, 0.2f, 0.5f );
-      else if ( modalMessageType_ == ModalMessageType::Warning )
-            style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 1.0f, 0.86f, 0.4f, 0.5f );
-      else // if ( modalMessageType_ == ModalMessageType::Info )
-          style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 0.9f, 0.9f, 0.9f, 0.5f );
-
-  }
-  ImGui::NewFrame();
-}
-
-void ImGuiMenu::postDraw_()
-{
-  draw_menu();
-  prevFrameFocusPlugin_ = nullptr;
-  if ( context_ && !context_->WindowsFocusOrder.empty() && !ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup ) )
-  {
-      for ( int i = context_->WindowsFocusOrder.size() - 1; i >= 0; --i )
-      {
-          auto* win = context_->WindowsFocusOrder[i];
-          if ( win && win->Active && std::string( win->Name ).find( StateBasePlugin::UINameSuffix() ) != std::string::npos )
-          {
-              prevFrameFocusPlugin_ = win;
-              break;
-          }
-      }
-  }
-
-  if ( viewer->isGLInitialized() )
-  {
-      ImGui::Render();
-      ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
-  }
-  else
-  {
-      ImGui::EndFrame();
-  }
 }
 
 void ImGuiMenu::postResize_( int width, int height )

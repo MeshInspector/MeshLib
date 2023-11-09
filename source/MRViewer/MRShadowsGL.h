@@ -23,15 +23,26 @@ public:
     bool isEnabled() const { return enabled_; }
 
     // shift in screen space
-    Vector2f shadowShift = Vector2f( 0.0, 0.0 );
-    Vector4f shadowColor = Vector4f( Color::yellow() );
-    float blurRadius{ 40.0f };
+    const Vector2f& getShadowShift() const { return shadowShift_; }
+    MRVIEWER_API void setShadowShift( const Vector2f& shift );
+
+    const Vector4f& getShadowColor() const { return shadowColor_; }
+    MRVIEWER_API void setShadowColor( const Vector4f& color );
+    
+    float getBlurRadius() const { return blurRadius_; }
+    MRVIEWER_API void setBlurRadius( float radius );
+
     // value that describes blur quality, blur texture downscaling coefficient
     // (0,1] 1 - is maximum quality, but it can affect performance on embedded systems
     // 0.25 - recommended value
     float getQuality() const { return quality_; }
     MRVIEWER_API void setQuality( float quality );
 private:
+    // shift in screen space
+    Vector2f shadowShift_ = Vector2f( 0.0, 0.0 );
+    Vector4f shadowColor_ = Vector4f( Color::yellow() );
+    float blurRadius_{ 40.0f };
+
     float quality_{ 0.25f };
     void preDraw_();
     void postDraw_();

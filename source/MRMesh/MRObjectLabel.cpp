@@ -295,6 +295,7 @@ void ObjectLabel::setSourcePointColor( const Color &color, ViewportId id )
         return;
 
     sourcePointColor_.set( color, id );
+    needRedraw_ = true;
 }
 
 void ObjectLabel::setLeaderLineColor( const Color &color, ViewportId id )
@@ -303,6 +304,7 @@ void ObjectLabel::setLeaderLineColor( const Color &color, ViewportId id )
         return;
 
     leaderLineColor_.set( color, id );
+    needRedraw_ = true;
 }
 
 void ObjectLabel::setContourColor( const Color& color, ViewportId id )
@@ -311,6 +313,7 @@ void ObjectLabel::setContourColor( const Color& color, ViewportId id )
         return;
 
     contourColor_.set( color, id );
+    needRedraw_ = true;
 }
 
 const ViewportProperty<Color>& ObjectLabel::getSourcePointColorsForAllViewports() const
@@ -321,6 +324,7 @@ const ViewportProperty<Color>& ObjectLabel::getSourcePointColorsForAllViewports(
 void ObjectLabel::setSourcePointColorsForAllViewports( ViewportProperty<Color> val )
 {
     sourcePointColor_ = std::move( val );
+    needRedraw_ = true;
 }
 
 const ViewportProperty<Color>& ObjectLabel::getLeaderLineColorsForAllViewports() const
@@ -331,6 +335,7 @@ const ViewportProperty<Color>& ObjectLabel::getLeaderLineColorsForAllViewports()
 void ObjectLabel::setLeaderLineColorsForAllViewports( ViewportProperty<Color> val )
 {
     leaderLineColor_ = std::move( val );
+    needRedraw_ = true;
 }
 
 const ViewportProperty<Color>& ObjectLabel::getContourColorsForAllViewports() const
@@ -341,6 +346,7 @@ const ViewportProperty<Color>& ObjectLabel::getContourColorsForAllViewports() co
 void ObjectLabel::setContourColorsForAllViewports( ViewportProperty<Color> val )
 {
     contourColor_ = std::move( val );
+    needRedraw_ = true;
 }
 
 }

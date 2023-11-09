@@ -24,6 +24,8 @@ void ShadowsGL::enable( bool on )
         return;
     if ( on == enabled_ )
         return;
+
+    getViewerInstance().setSceneDirty();
     enabled_ = on;
     if ( on )
     {
@@ -34,9 +36,9 @@ void ShadowsGL::enable( bool on )
         glfwGetFramebufferSize( getViewerInstance().window, &sceneSize_.x, &sceneSize_.y );
         lowSize_ = Vector2i( Vector2f( sceneSize_ ) * quality_ );
         quadObject_.gen();
-        sceneFramebuffer_.gen( sceneSize_, true );
-        lowSizeFramebuffer_.gen( lowSize_, false );
-        convolutionXFramebuffer_.gen( lowSize_, false );
+        sceneFramebuffer_.gen( sceneSize_, -1 );
+        lowSizeFramebuffer_.gen( lowSize_, 0 );
+        convolutionXFramebuffer_.gen( lowSize_, 0 );
     }
     else
     {
@@ -51,6 +53,30 @@ void ShadowsGL::enable( bool on )
     }
 }
 
+void ShadowsGL::setShadowShift( const Vector2f& shift )
+{
+    if ( shadowShift_ == shift )
+        return;
+    shadowShift_ = shift;
+    getViewerInstance().setSceneDirty();
+}
+
+void ShadowsGL::setShadowColor( const Vector4f& color )
+{
+    if ( shadowColor_ == color )
+        return;
+    shadowColor_ = color;
+    getViewerInstance().setSceneDirty();
+}
+
+void ShadowsGL::setBlurRadius( float radius )
+{
+    if ( blurRadius_ == radius )
+        return;
+    blurRadius_ = radius;
+    getViewerInstance().setSceneDirty();
+}
+
 void ShadowsGL::postResize_( int, int )
 {
     glfwGetFramebufferSize( getViewerInstance().window, &sceneSize_.x, &sceneSize_.y );
@@ -61,9 +87,9 @@ void ShadowsGL::postResize_( int, int )
     convolutionXFramebuffer_.del();
     lowSizeFramebuffer_.del();
         
-    sceneFramebuffer_.gen( sceneSize_, true );
-    lowSizeFramebuffer_.gen( lowSize_, false );
-    convolutionXFramebuffer_.gen( lowSize_, false );
+    sceneFramebuffer_.gen( sceneSize_, -1 );
+    lowSizeFramebuffer_.gen( lowSize_, 0 );
+    convolutionXFramebuffer_.gen( lowSize_, 0 );
 }
 
 void ShadowsGL::preDraw_()
@@ -79,10 +105,11 @@ void ShadowsGL::postDraw_()
 #ifndef __EMSCRIPTEN__
     GL_EXEC( glDisable( GL_MULTISAMPLE ) );
 #endif
-    sceneFramebuffer_.copyTexture();
+    sceneFramebuffer_.copyTextureBindDef();
     drawLowSize_(); // draw scene texture in low size for further convolution
     convolveX_(); // draw shadow with x convolution to other texture (low res)
     convolveY_(); // draw shadow with y convolution to other texture (low res)
+    getViewerInstance().bindSceneTexture( true ); // bind default scene texture
     drawTexture_( false, false ); // draw shadow in real size to main framebuffer
     drawTexture_( true, false ); // draw scene in real size to main framebuffer
     
@@ -95,21 +122,21 @@ void ShadowsGL::drawLowSize_()
 {
     lowSizeFramebuffer_.bind();
     drawTexture_( true, true );
-    lowSizeFramebuffer_.copyTexture();
+    lowSizeFramebuffer_.copyTextureBindDef();
 }
 
 void ShadowsGL::convolveX_()
 {
     convolutionXFramebuffer_.bind();
     drawShadow_( true );
-    convolutionXFramebuffer_.copyTexture();
+    convolutionXFramebuffer_.copyTextureBindDef();
 }
 
 void ShadowsGL::convolveY_()
 {
     lowSizeFramebuffer_.bind(); // reuse this framebuffer for y conv
     drawShadow_( false );
-    lowSizeFramebuffer_.copyTexture();
+    lowSizeFramebuffer_.copyTextureBindDef();
 }
 
 void ShadowsGL::drawShadow_( bool convX )
@@ -119,9 +146,9 @@ void ShadowsGL::drawShadow_( bool convX )
     GL_EXEC( glUseProgram( shader ) );
 
     quadObject_.bind();
-    GL_EXEC( glUniform4f( glGetUniformLocation( shader, "color" ), shadowColor.x, shadowColor.y, shadowColor.z, shadowColor.w ) );
-    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "blurRadius" ), blurRadius * quality_ ) );
-    GL_EXEC( glUniform2f( glGetUniformLocation( shader, "shift" ), shadowShift.x * quality_, shadowShift.y * quality_) );
+    GL_EXEC( glUniform4f( glGetUniformLocation( shader, "color" ), shadowColor_.x, shadowColor_.y, shadowColor_.z, shadowColor_.w ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "blurRadius" ), blurRadius_ * quality_ ) );
+    GL_EXEC( glUniform2f( glGetUniformLocation( shader, "shift" ), shadowShift_.x * quality_, shadowShift_.y * quality_) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "convX" ), convX ) );
 
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
@@ -190,8 +217,10 @@ void ShadowsGL::setQuality( float quality )
     convolutionXFramebuffer_.del();
     lowSizeFramebuffer_.del();
     
-    lowSizeFramebuffer_.gen( lowSize_, false );
-    convolutionXFramebuffer_.gen( lowSize_, false );
+    lowSizeFramebuffer_.gen( lowSize_, 0 );
+    convolutionXFramebuffer_.gen( lowSize_, 0 );
+
+    getViewerInstance().setSceneDirty();
 }
 
 }

@@ -298,6 +298,9 @@
     <ClCompile Include="MRSurfaceManipulationWidget.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRSceneTextureGL.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -562,6 +565,9 @@
     </ClInclude>
     <ClInclude Include="MRSurfaceManipulationWidget.h">
       <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSceneTextureGL.h">
+      <Filter>Render</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

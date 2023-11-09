@@ -7,13 +7,14 @@ namespace MR
 class SceneTextureGL
 {
 public:
-    // clears this framebuffer and binds it as main rendering target
+    // binds this framebuffer as main rendering target
+    // clears it if `clear` flag is set
     void bind( bool clear );
     // binds default framebuffer (and read/draw framebuffers)
     void unbind();
     // if present-> del();gen();
     // otherwise just gen()
-    // msaaPow - 2^msaaPow samples, msaaPow < 0 - use same default amaunt of samples
+    // msaaPow - 2^msaaPow samples, msaaPow < 0 - use same default amount of samples
     void reset( const Vector2i& size, int msaaPow );
     // copy texture so draw() can render it
     void copyTexture();

@@ -295,10 +295,11 @@ class MRVIEWER_CLASS FramebufferData
 {
 public:
     // generates framebuffer and associated data
-    // msaaPow - 2^msaaPow samples, msaaPow < 0 - use same default amaunt of samples
+    // msaaPow - 2^msaaPow samples, msaaPow < 0 - use same default amount of samples
     // to resize: del(); gen( newSize, msaaPow );
     MRVIEWER_API void gen( const Vector2i& size, int msaaPow );
-    // clears this framebuffer and binds it as main rendering target
+    // binds this framebuffer as main rendering target
+    // clears it if `clear` flag is set
     MRVIEWER_API void bind( bool clear = true );
     // binds default framebuffer (and read/draw framebuffers)
     // make sure to bind correct framebuffer `getViewerInstance().bindSceneTexture( true )`

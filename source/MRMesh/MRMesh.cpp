@@ -519,65 +519,44 @@ float Mesh::discreteMeanCurvature( UndirectedEdgeId ue ) const
     return ( sumArea > 0 ) ? 1.5f * sumAngLen / sumArea : 0;
 }
 
-class CreaseEdgesCalc 
+class CreaseEdgesCalc
 {
 public:
-    using ConnectionsPerVert = Vector<std::vector<std::pair<UndirectedEdgeId, VertId>>, VertId>;
-
-    CreaseEdgesCalc( const Mesh & mesh, float critCos, float critLength, bool filterBranches ) 
-    : mesh_( mesh ), critCos_( critCos ) , critLength_( critLength ), filterBranches_( filterBranches )
-    { 
-        edges_.resize( mesh_.topology.undirectedEdgeSize() );
-        connectionsPerVert_.resize( mesh_.topology.lastValidVert() + 1 );
-    }
-
-    CreaseEdgesCalc( CreaseEdgesCalc & x, tbb::split ) 
-    : mesh_( x.mesh_ ), critCos_( x.critCos_ ), critLength_( x.critLength_ ), filterBranches_( x.filterBranches_ )
-    { 
-        edges_.resize( mesh_.topology.undirectedEdgeSize() );
-        connectionsPerVert_.resize( mesh_.topology.lastValidVert() + 1 );
-    }
-
-    void join( const CreaseEdgesCalc & y ) 
-    { 
-        edges_ |= y.edges_;
-
-        for ( VertId i = VertId( 0 ); i < connectionsPerVert_.size(); ++i )
-        {
-            connectionsPerVert_[i].insert( connectionsPerVert_[i].end(), y.connectionsPerVert_[i].begin(), y.connectionsPerVert_[i].end() );
-        }
-    }
-
-    UndirectedEdgeBitSet takeEdges() { return std::move( edges_ ); }
-    ConnectionsPerVert takeSelectedVertsPerVert() { return std::move( connectionsPerVert_ ); }
-
-    void operator()( const tbb::blocked_range<UndirectedEdgeId> & r ) 
+    CreaseEdgesCalc( const Mesh& mesh, float critCos ) : mesh_( mesh ), critCos_( critCos )
     {
-        for ( UndirectedEdgeId ue = r.begin(); ue < r.end(); ++ue ) 
+        edges_.resize( mesh_.topology.undirectedEdgeSize() );
+    }
+    CreaseEdgesCalc( CreaseEdgesCalc& x, tbb::split ) : mesh_( x.mesh_ ), critCos_( x.critCos_ )
+    {
+        edges_.resize( mesh_.topology.undirectedEdgeSize() );
+    }
+
+    void join( const CreaseEdgesCalc& y )
+    {
+        edges_ |= y.edges_;
+    }
+
+    UndirectedEdgeBitSet takeEdges()
+    {
+        return std::move( edges_ );
+    }
+
+    void operator()( const tbb::blocked_range<UndirectedEdgeId>& r )
+    {
+        for ( UndirectedEdgeId ue = r.begin(); ue < r.end(); ++ue )
         {
             if ( mesh_.topology.isLoneEdge( ue ) )
                 continue;
-
             auto dihedralCos = mesh_.dihedralAngleCos( ue );
-
             if ( dihedralCos <= critCos_ )
-            {
                 edges_.set( ue );
-                const VertId vOrg = mesh_.topology.org( ue );
-                const VertId vDest = mesh_.topology.dest( ue );
-                connectionsPerVert_[vOrg].push_back( { ue, vDest } );
-                connectionsPerVert_[vDest].push_back( { ue, vOrg } );
-            }
         }
     }
 
 private:
-    const Mesh & mesh_;
+    const Mesh& mesh_;
     float critCos_ = 1;
-    float critLength_ = 0;
-    bool filterBranches_ = false;
     UndirectedEdgeBitSet edges_;
-    ConnectionsPerVert connectionsPerVert_;
 };
 
 UndirectedEdgeBitSet Mesh::findCreaseEdges( float angleFromPlanar, float critLength, bool filterBranches ) const
@@ -585,7 +564,7 @@ UndirectedEdgeBitSet Mesh::findCreaseEdges( float angleFromPlanar, float critLen
     MR_TIMER
     assert( angleFromPlanar > 0 && angleFromPlanar < PI );
     const float critCos = std::cos( angleFromPlanar );
-    CreaseEdgesCalc calc( *this, critCos, critLength, filterBranches );
+    CreaseEdgesCalc calc( *this, critCos );
     parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( 0_ue, UndirectedEdgeId{ topology.undirectedEdgeSize() } ), calc );
 
     auto selectedEdges = calc.takeEdges();
@@ -618,7 +597,7 @@ UndirectedEdgeBitSet Mesh::findCreaseEdges( float angleFromPlanar, float critLen
     if ( !filterBranches )
         return selectedEdges;
     
-    auto connectionsPerVert = calc.takeSelectedVertsPerVert();
+    /*auto connectionsPerVert = calc.takeSelectedVertsPerVert();
 
     for ( VertId i = VertId( 0 ); i < connectionsPerVert.size(); ++i )
     {
@@ -670,7 +649,7 @@ UndirectedEdgeBitSet Mesh::findCreaseEdges( float angleFromPlanar, float critLen
         {
             selectedEdges.set( ue, false );
         }
-    }    
+    }*/
 
     return selectedEdges;
 }

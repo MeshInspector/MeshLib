@@ -25,7 +25,6 @@
 #include "MRIdentifyVertices.h"
 #include "MRPch/MRTBB.h"
 #include "MRMeshComponents.h"
-#include <span>
 
 namespace MR
 {

@@ -61,6 +61,16 @@ MeshTriPoint MeshTriPoint::canonical( const MeshTopology & topology ) const
     return res;
 }
 
+std::array<WeightedVertex, 3> MeshTriPoint::getWeightedVerts( const MeshTopology & topology ) const
+{
+    return
+    {
+        WeightedVertex{ topology.org( e ), 1 - bary.a - bary.b },
+        WeightedVertex{ topology.dest( e ), bary.a },
+        WeightedVertex{ topology.dest( topology.next( e ) ), bary.b }
+    };
+}
+
 bool same( const MeshTopology & topology, const MeshTriPoint& lhs, const MeshTriPoint & rhs )
 {
     if ( !lhs )

@@ -16,6 +16,7 @@
     <ClInclude Include="MRCloudPartMapping.h" />
     <ClInclude Include="MREnumNeighbours.h" />
     <ClInclude Include="MRFewSmallest.h" />
+    <ClInclude Include="MRFilterCreaseEdges.h" />
     <ClInclude Include="MRImproveSampling.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
@@ -399,6 +400,7 @@
     <ClCompile Include="MRFillContour.cpp" />
     <ClCompile Include="MRFillContourByGraphCut.cpp" />
     <ClCompile Include="MRFillContours2D.cpp" />
+    <ClCompile Include="MRFilterCreaseEdges.cpp" />
     <ClCompile Include="MRFixUndercuts.cpp" />
     <ClCompile Include="MRFloatGrid.cpp" />
     <ClCompile Include="MRFloatGridComponents.cpp" />

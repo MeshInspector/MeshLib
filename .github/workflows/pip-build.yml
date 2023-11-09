@@ -22,8 +22,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: actions-ecosystem/action-get-latest-tag@v1
+      #- uses: actions-ecosystem/action-get-latest-tag@v1
+       # id: get-latest-tag
+
+      - name: use actual sources
         id: get-latest-tag
+        run: echo "version_tag=''" >> $GITHUB_OUTPUT
 
   manylinux-pip-build:
     needs: setup

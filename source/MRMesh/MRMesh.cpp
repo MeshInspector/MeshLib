@@ -25,7 +25,6 @@
 #include "MRIdentifyVertices.h"
 #include "MRPch/MRTBB.h"
 
-
 namespace MR
 {
 
@@ -519,31 +518,21 @@ float Mesh::discreteMeanCurvature( UndirectedEdgeId ue ) const
     return ( sumArea > 0 ) ? 1.5f * sumAngLen / sumArea : 0;
 }
 
-class CreaseEdgesCalc
+class CreaseEdgesCalc 
 {
 public:
-    CreaseEdgesCalc( const Mesh& mesh, float critCos ) : mesh_( mesh ), critCos_( critCos )
-    {
-        edges_.resize( mesh_.topology.undirectedEdgeSize() );
-    }
-    CreaseEdgesCalc( CreaseEdgesCalc& x, tbb::split ) : mesh_( x.mesh_ ), critCos_( x.critCos_ )
-    {
-        edges_.resize( mesh_.topology.undirectedEdgeSize() );
-    }
+    CreaseEdgesCalc( const Mesh & mesh, float critCos ) : mesh_( mesh ), critCos_( critCos ) 
+        { edges_.resize( mesh_.topology.undirectedEdgeSize() ); }
+    CreaseEdgesCalc( CreaseEdgesCalc & x, tbb::split ) : mesh_( x.mesh_ ), critCos_( x.critCos_ )
+        { edges_.resize( mesh_.topology.undirectedEdgeSize() ); }
 
-    void join( const CreaseEdgesCalc& y )
-    {
-        edges_ |= y.edges_;
-    }
+    void join( const CreaseEdgesCalc & y ) { edges_ |= y.edges_; }
 
-    UndirectedEdgeBitSet takeEdges()
-    {
-        return std::move( edges_ );
-    }
+    UndirectedEdgeBitSet takeEdges() { return std::move( edges_ ); }
 
-    void operator()( const tbb::blocked_range<UndirectedEdgeId>& r )
+    void operator()( const tbb::blocked_range<UndirectedEdgeId> & r ) 
     {
-        for ( UndirectedEdgeId ue = r.begin(); ue < r.end(); ++ue )
+        for ( UndirectedEdgeId ue = r.begin(); ue < r.end(); ++ue ) 
         {
             if ( mesh_.topology.isLoneEdge( ue ) )
                 continue;
@@ -554,7 +543,7 @@ public:
     }
 
 private:
-    const Mesh& mesh_;
+    const Mesh & mesh_;
     float critCos_ = 1;
     UndirectedEdgeBitSet edges_;
 };

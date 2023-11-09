@@ -538,12 +538,9 @@ std::vector<UndirectedEdgeBitSet> getAllComponentsUndirectedEdges( const Mesh& m
     constexpr int InvalidRoot = -1;
     std::vector<int> uniqueRootsMap( allRoots.size(), InvalidRoot );
     int k = 0;
-    UndirectedEdgeId eMax;
+
     for ( auto ue : edges )
     {
-        if ( eMax < ue )
-            eMax = ue;
-
         const EdgeId e{ ue };
         int curRoot = allRoots[mesh.topology.org( e )];
         auto& uniqIndex = uniqueRootsMap[curRoot];
@@ -553,7 +550,7 @@ std::vector<UndirectedEdgeBitSet> getAllComponentsUndirectedEdges( const Mesh& m
             ++k;
         }
     }
-    std::vector<UndirectedEdgeBitSet> res( k, UndirectedEdgeBitSet( eMax + 1 ) );
+    std::vector<UndirectedEdgeBitSet> res( k, UndirectedEdgeBitSet( edges.size() ) );
     for ( auto ue : edges )
     {
         const EdgeId e{ ue };

@@ -83,7 +83,7 @@ namespace MR
                 }
             }
 
-            if ( branchLength > critLength )
+            if ( branchLength >= critLength )
                 continue;
 
             for ( auto ue : branch )

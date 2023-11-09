@@ -97,15 +97,16 @@ bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
 {
     MR_TIMER
     float radius = findAvgPointsRadius( pointCloud_, params_.avgNumNeighbours );
+    float startProgress = 0.0f;
 
     VertNormals myNormals;
     if ( pointCloud_.normals.empty() )
     {
-        auto optNormals = makeOrientedNormals( pointCloud_, radius, subprogress( progressCb, 0.0f, 0.3f ) );
+        auto optNormals = makeOrientedNormals( pointCloud_, radius, subprogress( progressCb, startProgress, 0.3f ) );
         if ( !optNormals )
             return false;
         if ( progressCb )
-            progressCb = subprogress( progressCb, 0.3f, 1.0f );
+            startProgress = 0.3f;
         myNormals = std::move( *optNormals );
     }
     const VertCoords& normals = pointCloud_.normals.empty() ? myNormals : pointCloud_.normals;
@@ -113,18 +114,8 @@ bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
     auto body = [&] ( VertId v )
     {
         auto& localData = tls_.local();
-        TriangulationHelpers::findNeighbors( pointCloud_, v, radius, localData.fanData.neighbors );
-        TriangulationHelpers::trianglulateFan( pointCloud_.points, v, localData.fanData, normals, params_.critAngle );
-
-        float maxRadius = ( localData.fanData.neighbors.size() < 2 ) ? radius * 2.0f :
-            TriangulationHelpers::updateNeighborsRadius( pointCloud_.points, v, localData.fanData.neighbors, radius );
-
-        if ( maxRadius > radius )
-        {
-            // update triangulation if radius was increased
-            TriangulationHelpers::findNeighbors( pointCloud_, v, maxRadius, localData.fanData.neighbors );
-            TriangulationHelpers::trianglulateFan( pointCloud_.points, v, localData.fanData, normals, params_.critAngle );
-        }
+        TriangulationHelpers::buildLocalTriangulation( pointCloud_, v, normals, { .radius = radius, .critAngle = params_.critAngle },
+            localData.fanData );
 
         const auto& disc = localData.fanData;
         auto& map = localData.map;
@@ -142,7 +133,7 @@ bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
         }
     };
 
-    return BitSetParallelFor( pointCloud_.validPoints, body, subprogress( progressCb, 0.0f, 0.5f ) );
+    return BitSetParallelFor( pointCloud_.validPoints, body, subprogress( progressCb, startProgress, 0.5f ) );
 }
 
 std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progressCb )

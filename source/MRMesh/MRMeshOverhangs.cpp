@@ -8,11 +8,64 @@
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
 #include "MRTimer.h"
+#include "MREdgeMetric.h"
+#include "MREdgePathsBuilder.h"
 
 #include <cassert>
 
 namespace MR
 {
+
+float regionWidth( const MeshPart& mp, const Vector3f& axis )
+{
+    auto boundaries = findRightBoundary( mp.mesh.topology, mp.region );
+    auto metric = [&] ( EdgeId e0 )->float
+    {
+        bool incident = false;
+        for ( auto e : orgRing( mp.mesh.topology, e0.sym() ) )
+        {
+            auto f = mp.mesh.topology.left( e );
+            if ( f && mp.region->test( f ) )
+            {
+                incident = true;
+                break;
+            }
+        }
+        if ( !incident )
+            return FLT_MAX;
+        auto ev = mp.mesh.edgeVector( e0 );
+        return std::sqrt( ev.lengthSq() - sqr( dot( ev, axis ) ) );
+    };
+
+
+    EdgePathsBuilder b( mp.mesh.topology, metric );
+    for ( const auto& bd : boundaries )
+        for ( auto e : bd )
+            b.addStart( mp.mesh.topology.org( e ), 0.0f );
+
+    float maxWidth = b.doneDistance();
+    if ( maxWidth == FLT_MAX )
+        maxWidth = 0.0f;
+    while ( !b.done() )
+    {
+        b.growOneEdge();
+        auto width = b.doneDistance();
+        if ( width < FLT_MAX )
+            maxWidth = width;
+    }
+    if ( maxWidth > 0.0f )
+        return 2 * maxWidth;
+
+    for ( const auto& bd : boundaries )
+        for ( auto e : bd )
+            for ( auto oe : orgRing( mp.mesh.topology, e ) )
+            {
+                auto width = metric( oe );
+                if ( width < FLT_MAX && width > maxWidth )
+                    maxWidth = width;
+            }
+    return maxWidth;
+}
 
 std::vector<FaceBitSet> findOverhangs( const Mesh& mesh, const FindOverhangsSettings& settings )
 {
@@ -58,8 +111,16 @@ std::vector<FaceBitSet> findOverhangs( const Mesh& mesh, const FindOverhangsSett
     {
         auto& region = regions[i];
         const auto axisBox = mesh.computeBoundingBox( &region, &axisXf );
+        if ( axisBox.size().z > settings.layerHeight )
+            return;
         // don't include the basement region
-        if ( axisBox.min.z == axisMeshBox.min.z || axisBox.size().z <= settings.layerHeight )
+        if ( axisBox.min.z == axisMeshBox.min.z )
+        {
+            region.clear();
+            return;
+        }
+        auto width = regionWidth( { mesh,&region }, settings.axis );
+        if ( width < settings.maxOverhangDistance )
             region.clear();
     } );
     

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRVector.h"
-#include "MRMeshFwd.h"
+#include "MRTimer.h"
 #include <functional>
 
 namespace MR
@@ -28,6 +28,8 @@ public:
 
     /// constructs heap for given number of elements, assigning given default value to each element
     explicit Heap( size_t size, T def = {}, P pred = {} );
+    /// constructs heap from given elements (id's shall not repeat and have spaces, but can be arbitrary shuffled)
+    Heap( std::vector<Element> elms, P pred = {} );
     /// returns the size of the heap
     size_t size() const { return heap_.size(); }
     /// increases the size of the heap by adding elements at the end
@@ -60,10 +62,11 @@ private:
 
 template <typename T, typename I, typename P>
 Heap<T, I, P>::Heap( size_t size, T def, P pred )
-    : heap_ ( size, { I(), def } )
+    : heap_( size, { I(), def } )
     , id2PosInHeap_( size )
     , pred_( pred )
 {
+    MR_TIMER
     for ( I i{ size_t( 0 ) }; i < size; ++i )
     {
         heap_[i].id = i;
@@ -72,8 +75,29 @@ Heap<T, I, P>::Heap( size_t size, T def, P pred )
 }
 
 template <typename T, typename I, typename P>
+Heap<T, I, P>::Heap( std::vector<Element> elms, P pred )
+    : heap_( std::move( elms ) )
+    , id2PosInHeap_( heap_.size() )
+    , pred_( pred )
+{
+    MR_TIMER
+    std::make_heap( heap_.begin(), heap_.end(), [this]( const Element & a, const Element & b )
+        {
+            if ( pred_( a.val, b.val ) )
+                return true;
+            if ( pred_( b.val, a.val ) )
+                return false;
+            return a.id < b.id;
+        }
+    );
+    for ( size_t i = 0; i < heap_.size(); ++i )
+        id2PosInHeap_[heap_[i].id] = i;
+}
+
+template <typename T, typename I, typename P>
 void Heap<T, I, P>::resize( size_t size, T def )
 {
+    MR_TIMER
     assert ( heap_.size() == id2PosInHeap_.size() );
     while ( heap_.size() < size )
     {

@@ -517,6 +517,12 @@ void Viewport::setClippingPlane( const Plane3f& plane )
     needRedraw_ = true;
 }
 
+void Viewport::setLabel( std::string s )
+{
+    params_.label = std::move( s );
+    needRedraw_ = true;
+}
+
 void Viewport::showAxes( bool on )
 {
     Viewer::constInstance()->basisAxes->setVisible( on, id );
@@ -781,6 +787,7 @@ bool Viewport::Parameters::operator==( const Viewport::Parameters& other ) const
         orthographic == other.orthographic &&
         objectScale == objectScale &&
         borderColor == other.borderColor &&
+        label == other.label &&
         clippingPlane == other.clippingPlane &&
         rotationMode == other.rotationMode &&
         selectable == other.selectable;

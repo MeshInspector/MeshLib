@@ -295,6 +295,9 @@
     <ClCompile Include="MRObjectPointsHistory.cpp">
       <Filter>History</Filter>
     </ClCompile>
+    <ClCompile Include="MRSurfaceManipulationWidget.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -556,6 +559,9 @@
     </ClInclude>
     <ClInclude Include="MRObjectPointsHistory.h">
       <Filter>History</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSurfaceManipulationWidget.h">
+      <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

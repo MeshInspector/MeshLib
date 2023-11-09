@@ -19,6 +19,7 @@
 #include "MRTouchesController.h"
 #include "MRSpaceMouseController.h"
 #include "MRTouchpadController.h"
+#include "MRSceneTextureGL.h"
 
 #include <boost/signals2/signal.hpp>
 #include <chrono>
@@ -173,8 +174,12 @@ public:
 
     // Draw everything
     MRVIEWER_API void draw( bool force = false );
+    // Draw 3d scene with UI
+    MRVIEWER_API void drawFull( bool dirtyScene );
     // Draw 3d scene without UI
     MRVIEWER_API void drawScene();
+    // Call this function to force redraw scene into scene texture
+    void setSceneDirty() { dirtyScene_ = true; }
     // Setup viewports views
     MRVIEWER_API void setupScene();
     // OpenGL context resize
@@ -340,6 +345,10 @@ public:
     MRVIEWER_API bool enableAlphaSort( bool on );
     // Returns true if alpha sort is enabled, false otherwise
     bool isAlphaSortEnabled() const { return alphaSortEnabled_; }
+
+    // Binds or unbinds scene texture (should be called only with valid window)
+    // note that it does not clear framebuffer
+    MRVIEWER_API void bindSceneTexture( bool bind );
 
     // Sets manager of viewer settings which loads user personal settings on beginning of app 
     // and saves it in app's ending
@@ -697,6 +706,7 @@ private:
     // this flag is needed to know if all viewer setup was already done, and we can call draw
     bool focusRedrawReady_{ false };
 
+    std::unique_ptr<SceneTextureGL> sceneTexture_;
     std::unique_ptr<AlphaSortGL> alphaSorter_;
 
     bool alphaSortEnabled_{false};
@@ -704,6 +714,7 @@ private:
     bool glInitialized_{ false };
 
     bool isInDraw_{ false };
+    bool dirtyScene_{ false };
 
     ViewportId getFirstAvailableViewportId_() const;
     ViewportMask presentViewportsMask_;

@@ -89,6 +89,7 @@ void ObjectPointsHolder::setSelectedVerticesColor( const Color& color, ViewportI
     if ( color == selectedVerticesColor_.get( id ) )
         return;
     selectedVerticesColor_.set( color, id );
+    needRedraw_ = true;
 }
 
 AllVisualizeProperties ObjectPointsHolder::getAllVisualizeProperties() const

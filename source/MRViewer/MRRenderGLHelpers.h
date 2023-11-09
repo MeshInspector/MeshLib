@@ -64,8 +64,9 @@ MRVIEWER_API void setTextureWrapType( WrapType wrap, bool dim3d = false );
 // represents OpenGL 2D texture owner, and allows uploading data in it remembering texture size
 class GlTexture2
 {
-    constexpr static GLuint NO_TEX = 0;
 public:
+    constexpr static GLuint NO_TEX = 0;
+
     GlTexture2() = default;
     GlTexture2( const GlTexture2 & ) = delete;
     GlTexture2( GlTexture2 && r ) : textureID_( r.textureID_ ), size_( r.size_ ) { r.detach_(); }
@@ -294,16 +295,20 @@ class MRVIEWER_CLASS FramebufferData
 {
 public:
     // generates framebuffer and associated data
-    // to resize: del(); gen( newSize, multisample );
-    MRVIEWER_API void gen( const Vector2i& size, bool multisample );
+    // msaaPow - 2^msaaPow samples, msaaPow < 0 - use same default amaunt of samples
+    // to resize: del(); gen( newSize, msaaPow );
+    MRVIEWER_API void gen( const Vector2i& size, int msaaPow );
     // clears this framebuffer and binds it as main rendering target
-    MRVIEWER_API void bind();
+    MRVIEWER_API void bind( bool clear = true );
     // binds default framebuffer (and read/draw framebuffers)
-    MRVIEWER_API void unbind();
+    // make sure to bind correct framebuffer `getViewerInstance().bindSceneTexture( true )`
+    MRVIEWER_API void bindDefault();
     // marks the texture to reading
     MRVIEWER_API void bindTexture();
     // copies picture rendered in this framebuffer to associated texutre for further use
-    MRVIEWER_API void copyTexture();
+    // and binds default framebuffer (and read/draw framebuffers)
+    // make sure to bind correct framebuffer afterwards
+    MRVIEWER_API void copyTextureBindDef();
     // removes this framebuffer
     MRVIEWER_API void del();
     // gets texture id for binding in other shaders
@@ -311,7 +316,7 @@ public:
 
     const Vector2i& getSize() const { return size_; }
 private:
-    void resize_( const Vector2i& size, bool multisample );
+    void resize_( const Vector2i& size, int msaaPow );
 
     unsigned mainFramebuffer_{ 0 };
     unsigned colorRenderbuffer_{ 0 };

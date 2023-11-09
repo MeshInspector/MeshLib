@@ -221,7 +221,7 @@ GLint bindVertexAttribArray( const BindVertexAttribArraySettings & settings )
     return id;
 }
 
-void FramebufferData::gen( const Vector2i& size, bool multisample )
+void FramebufferData::gen( const Vector2i& size, int msaaPow )
 {
     // Create an initial multisampled framebuffer
     GL_EXEC( glGenFramebuffers( 1, &mainFramebuffer_ ) );
@@ -245,20 +245,23 @@ void FramebufferData::gen( const Vector2i& size, bool multisample )
     resTexture_.gen();
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, 0 ) );
 
-    resize_( size, multisample );
+    resize_( size, msaaPow );
 }
 
-void FramebufferData::bind()
+void FramebufferData::bind( bool clear )
 {
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, mainFramebuffer_ ) );
 
     // Clear the buffer
-    float cClearValue[4] = { 0.0f,0.0f,0.0f,0.0f };
-    GL_EXEC( glClearBufferfv( GL_COLOR, 0, cClearValue ) );
-    GL_EXEC( glClear( GL_DEPTH_BUFFER_BIT ) );
+    if ( clear )
+    {
+        float cClearValue[4] = { 0.0f,0.0f,0.0f,0.0f };
+        GL_EXEC( glClearBufferfv( GL_COLOR, 0, cClearValue ) );
+        GL_EXEC( glClear( GL_DEPTH_BUFFER_BIT ) );
+    }
 }
 
-void FramebufferData::unbind()
+void FramebufferData::bindDefault()
 {
     GL_EXEC( glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0 ) );
     GL_EXEC( glBindFramebuffer( GL_READ_FRAMEBUFFER, 0 ) );
@@ -270,12 +273,12 @@ void FramebufferData::bindTexture()
     resTexture_.bind();
 }
 
-void FramebufferData::copyTexture()
+void FramebufferData::copyTextureBindDef()
 {
     GL_EXEC( glBindFramebuffer( GL_READ_FRAMEBUFFER, mainFramebuffer_ ) );
     GL_EXEC( glBindFramebuffer( GL_DRAW_FRAMEBUFFER, copyFramebuffer_ ) );
     GL_EXEC( glBlitFramebuffer( 0, 0, size_.x, size_.y, 0, 0, size_.x, size_.y, GL_COLOR_BUFFER_BIT, GL_NEAREST ) );
-    unbind();
+    bindDefault();
 }
 
 void FramebufferData::del()
@@ -287,14 +290,27 @@ void FramebufferData::del()
     GL_EXEC( glDeleteRenderbuffers( 1, &colorRenderbuffer_ ) );
 }
 
-void FramebufferData::resize_( const Vector2i& size, bool multisample )
+void FramebufferData::resize_( const Vector2i& size, int msaaPow )
 {
     size_ = size;
     int samples = 0;
-    if ( multisample )
+    if ( msaaPow < 0 )
     {
         GL_EXEC( glGetIntegerv( GL_SAMPLES, &samples ) );
     }
+    else
+    {
+        samples = 1 << msaaPow;
+    }
+
+    int maxSamples = 0;
+    GL_EXEC( glGetIntegerv( GL_MAX_SAMPLES, &maxSamples ) );
+    if ( maxSamples < 1 )
+        maxSamples = 1;
+    samples = std::clamp( samples, 1, maxSamples );
+
+    bool multisample = samples > 1;
+
 
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, mainFramebuffer_ ) );
 

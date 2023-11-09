@@ -476,24 +476,24 @@ bool Viewer::checkOpenGL_(const LaunchParams& params )
     int windowHeight = params.height;
 #ifdef __APPLE__
     alphaSorter_.reset();
-        spdlog::warn( "Alpha sort is not available" );
+    spdlog::warn( "Alpha sort is not available" );
 
-        spdlog::warn( "Loading OpenGL 4.1 for macOS" );
-        if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 4, 1 ) )
-        {
-            spdlog::critical( "Cannot load OpenGL 4.1" );
-            return false;
-        }
+    spdlog::warn( "Loading OpenGL 4.1 for macOS" );
+    if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 4, 1 ) )
+    {
+        spdlog::critical( "Cannot load OpenGL 4.1" );
+        return false;
+    }
 #else
 #ifdef __EMSCRIPTEN__
     alphaSorter_.reset();
-        spdlog::warn( "Alpha sort is not available" );
-        spdlog::warn( "Loading WebGL 2 (OpenGL ES 3.0)" );
-        if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 3, 3 ) )
-        {
-            spdlog::critical( "Cannot load WebGL 2 (OpenGL ES 3.0)" );
-            return false;
-        }
+    spdlog::warn( "Alpha sort is not available" );
+    spdlog::warn( "Loading WebGL 2 (OpenGL ES 3.0)" );
+    if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 3, 3 ) )
+    {
+        spdlog::critical( "Cannot load WebGL 2 (OpenGL ES 3.0)" );
+        return false;
+    }
 #else
     if ( params.preferOpenGL3 || !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 4, 3 ) )
     {
@@ -544,6 +544,7 @@ int Viewer::launchInit_( const LaunchParams& params )
 #endif
 
     alphaSorter_ = std::make_unique<AlphaSortGL>();
+    sceneTexture_ = std::make_unique<SceneTextureGL>();
 
     glfwWindowHint( GLFW_VISIBLE, int( bool( params.windowMode == LaunchParams::Show ) ) );
     bool windowMode = params.windowMode != LaunchParams::NoWindow;
@@ -624,6 +625,8 @@ int Viewer::launchInit_( const LaunchParams& params )
         glfw_window_scale( window, xscale, yscale );
 
         enableAlphaSort( true );
+
+        sceneTexture_->reset( { width, height }, -1 );
 
         if ( alphaSorter_ )
         {
@@ -761,6 +764,7 @@ void Viewer::launchShut()
     GLStaticHolder::freeAllShaders();
 
     alphaSorter_.reset();
+    sceneTexture_.reset();
 
     touchpadController.reset();
 
@@ -898,6 +902,7 @@ Viewer::~Viewer()
 {
     glInitialized_ = false;
     alphaSorter_.reset();
+    sceneTexture_.reset();
 }
 
 bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
@@ -1311,6 +1316,9 @@ bool Viewer::tryCreateWindow_( bool fullscreen, int& width, int& height, const s
 
 bool Viewer::needRedraw_() const
 {
+    if ( dirtyScene_ )
+        return true;
+
     for ( const auto& viewport : viewport_list )
         if ( viewport.getRedrawFlag() )
             return true;
@@ -1320,6 +1328,8 @@ bool Viewer::needRedraw_() const
 
 void Viewer::resetRedraw_()
 {
+    dirtyScene_ = false;
+
     for ( auto& viewport : viewport_list )
         viewport.resetRedrawFlag();
 
@@ -1384,7 +1394,8 @@ void Viewer::draw( bool force )
 
 bool Viewer::draw_( bool force )
 {
-    if ( !force && !needRedraw_() )
+    bool needSceneRedraw = needRedraw_();
+    if ( !force && !needSceneRedraw )
         return false;
 
     if ( !isInDraw_ )
@@ -1402,12 +1413,8 @@ bool Viewer::draw_( bool force )
     glPrimitivesCounter_.reset();
 
     setupScene();
-    preDrawSignal();
 
-    if ( forceRedrawFramesWithoutSwap_ <= 1 ) // if swapped
-        drawScene();
-
-    postDrawSignal();
+    drawFull( needSceneRedraw );
 
     if ( forceRedrawFramesWithoutSwap_ > 0 )
         forceRedrawFramesWithoutSwap_--;
@@ -1423,6 +1430,30 @@ bool Viewer::draw_( bool force )
     frameCounter_.endDraw( swapped );
     isInDraw_ = false;
     return ( window && swapped );
+}
+
+void Viewer::drawFull( bool dirtyScene )
+{
+    if ( menuPlugin_ )
+        menuPlugin_->startFrame();
+
+    sceneTexture_->bind( true );
+    
+    preDrawSignal();
+    // check dirty scene and need swap
+    // important to check after preDrawSignal
+    bool renderScene = dirtyScene && forceRedrawFramesWithoutSwap_ <= 1;
+    if ( renderScene )
+        drawScene();
+    postDrawSignal();
+    sceneTexture_->unbind();
+    if ( renderScene )
+        sceneTexture_->copyTexture(); // copy scene texture only if scene was rendered
+
+    sceneTexture_->draw(); // always draw scene texture
+
+    if ( menuPlugin_ )
+        menuPlugin_->finishFrame();
 }
 
 void Viewer::drawScene()
@@ -1524,6 +1555,8 @@ void Viewer::postResize( int w, int h )
 
     if ( alphaSorter_ )
         alphaSorter_->updateTransparencyTexturesSize( framebufferSize.x, framebufferSize.y );
+
+    sceneTexture_->reset( framebufferSize, -1 );
 #if !defined(__EMSCRIPTEN__) || defined(MR_EMSCRIPTEN_ASYNCIFY)
     if ( isLaunched_ && !isInDraw_ )
     {
@@ -1952,13 +1985,14 @@ Image Viewer::captureSceneScreenShot( const Vector2i& resolution )
     setupScene();
     drawScene();
 
-    fd.copyTexture();
+    fd.copyTextureBindDef();
     fd.bindTexture();
 
     GL_EXEC( glGetTexImage( GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, ( void* )( pixels.data() ) ) );
     
-    fd.unbind();
     fd.del();
+
+    bindSceneTexture( true );
 
     // restore sizes
     int i = 0;
@@ -2019,6 +2053,16 @@ bool Viewer::enableAlphaSort( bool on )
 
     alphaSortEnabled_ = true;
     return true;
+}
+
+void Viewer::bindSceneTexture( bool bind )
+{
+    if ( !sceneTexture_ )
+        return;
+    if ( bind )
+        sceneTexture_->bind( false );
+    else
+        sceneTexture_->unbind();
 }
 
 void Viewer::setViewportSettingsManager( std::unique_ptr<IViewerSettingsManager> mng )

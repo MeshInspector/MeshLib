@@ -616,6 +616,8 @@ UndirectedEdgeBitSet Mesh::findCreaseEdges( float angleFromPlanar, float critLen
         {
             branch.push_back( ueCur );
             branchLength += ( points[prevVert] - points[nextVert] ).length();
+            if ( branchLength > critLength )
+                break;
 
             connections.clear();
             for ( EdgeId e : orgRing( topology, nextVert ) )

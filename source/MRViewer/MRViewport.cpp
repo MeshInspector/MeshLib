@@ -207,6 +207,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
         return result;
 
     auto pickResult = viewportGL_.pickObjects( params, picks );
+    getViewerInstance().bindSceneTexture( true );
     for ( int i = 0; i < pickResult.size(); ++i )
     {
         auto& pickRes = pickResult[i];
@@ -347,6 +348,7 @@ std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> Viewport::fi
     auto viewportRect = Box2i( Vector2i( 0, 0 ), Vector2i( width, height ) );
     auto realRect = rect.intersection( viewportRect );
     auto [pickResult, updatedBox] = viewportGL_.pickObjectsInRect( params, realRect, maxRenderResolutionSide );
+    getViewerInstance().bindSceneTexture( true );
 
     std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> resMap;
 

@@ -139,7 +139,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py-version: ["3.8", "3.9", "3.10", "3.11"]
+        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         include:
           - py-version: "3.8"
             py-tag: "cp38"
@@ -165,6 +165,12 @@ jobs:
             py-dir: "Python311"
             py-file: "python311"
             embed-version: "3.11.0"
+          - py-version: "3.12"
+            py-tag: "cp312"
+            py-short-version: "312"
+            py-dir: "Python312"
+            py-file: "python312"
+            embed-version: "3.12.0"
     steps:
       - name: Checkout
         uses: actions/checkout@v4

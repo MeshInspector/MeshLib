@@ -22,12 +22,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      #- uses: actions-ecosystem/action-get-latest-tag@v1
-       # id: get-latest-tag
-
-      - name: use actual sources
+      - uses: actions-ecosystem/action-get-latest-tag@v1
         id: get-latest-tag
-        run: echo "version_tag=''" >> $GITHUB_OUTPUT
+
+      # uncomment to run the build with actual branch state
+      #- name: use actual sources
+        #id: get-latest-tag
+        #run: echo "version_tag=''" >> $GITHUB_OUTPUT
 
   manylinux-pip-build:
     needs: setup
@@ -178,7 +179,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-          ref: ${{needs.setup.outputs.version_tag}}
+          #ref: ${{needs.setup.outputs.version_tag}} @todo
 
       - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
         working-directory: C:\vcpkg

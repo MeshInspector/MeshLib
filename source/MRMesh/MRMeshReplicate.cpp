@@ -1,3 +1,4 @@
+#include "MRMeshReplicate.h"
 #include "MRMesh.h"
 #include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
@@ -23,6 +24,15 @@ void replicateZ( Mesh & m, const Mesh & target )
 {
     MR_TIMER
 
+    const auto szM = m.topology.numValidVerts();
+    const auto szT =  target.topology.numValidVerts();
+    if ( szT < szM )
+    {
+        // target mesh shall have more vertices not to have underdetermined system of equations
+        assert( false );
+        return;
+    }
+
     Vector<MeshTriPoint, VertId> targetVertProjections;
     targetVertProjections.resizeNoInit( target.topology.vertSize() );
     m.getAABBTree();
@@ -31,8 +41,6 @@ void replicateZ( Mesh & m, const Mesh & target )
         targetVertProjections[v] = findProjection( target.points[v], m ).mtp;
     } );
 
-    const auto szM = m.topology.numValidVerts();
-    const auto szT =  target.topology.numValidVerts();
     Vector<int, VertId> mVertToNum( szM );
     int n = 0;
     for ( auto v : m.topology.getValidVerts() )
@@ -58,6 +66,11 @@ void replicateZ( Mesh & m, const Mesh & target )
     using SparseMatrixColMajor = Eigen::SparseMatrix<double,Eigen::ColMajor>;
     Eigen::SimplicialLDLT<SparseMatrixColMajor> ldlt;
     ldlt.compute( A );
+
+    Eigen::VectorXd sol = ldlt.solve( mat.adjoint() * rhs );
+    n = 0;
+    for ( auto v : m.topology.getValidVerts() )
+        m.points[v].z = float( sol[n++] );
 }
 
 } //namespace MR

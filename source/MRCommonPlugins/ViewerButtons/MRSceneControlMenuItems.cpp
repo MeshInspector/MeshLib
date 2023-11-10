@@ -162,6 +162,7 @@ void ResetSceneMenuItem::resetScene_()
 {
     auto rootClone = SceneRoot::get().clone();
     std::swap( rootClone, SceneRoot::getSharedPtr() );
+    getViewerInstance().setSceneDirty();
     if ( const auto& store = getViewerInstance().getGlobalHistoryStore() )
         store->clear();
     getViewerInstance().onSceneSaved( {} );

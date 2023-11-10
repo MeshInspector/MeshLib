@@ -41,7 +41,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["x86_64", "aarch64"]
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        py-version: ["3.8", "3.9", "3.10", "3.11"]
         include:
           - platform: "x86_64"
             docker-image: "meshlib/meshlib-ubuntu:latest"
@@ -63,9 +63,6 @@ jobs:
           - py-version: "3.11"
             py-tag: "cp311"
             py-cmd: "python3.11"
-          - py-version: "3.12"
-            py-tag: "cp312"
-            py-cmd: "python3.12"
     steps:
       - name: Git - add safe directory
         run: git config --global --add safe.directory ${{github.workspace}}/*
@@ -142,7 +139,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        py-version: ["3.8", "3.9", "3.10", "3.11"]
         include:
           - py-version: "3.8"
             py-tag: "cp38"
@@ -168,12 +165,6 @@ jobs:
             py-dir: "Python311"
             py-file: "python311"
             embed-version: "3.11.0"
-          - py-version: "3.12"
-            py-tag: "cp312"
-            py-short-version: "312"
-            py-dir: "Python312"
-            py-file: "python312"
-            embed-version: "3.12.0"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -304,7 +295,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["x86", "arm64"]
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        py-version: ["3.8", "3.9", "3.10", "3.11"]
         include:
           - platform: "x86"
             plat-name: macosx_12_0_x86_64
@@ -324,9 +315,6 @@ jobs:
           - py-version: "3.11"
             py-tag: "cp311"
             py-cmd: "python3.11"
-          - py-version: "3.12"
-            py-tag: "cp312"
-            py-cmd: "python3.12"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -430,9 +418,7 @@ jobs:
           - os: "fedora:37"
             py-version: "3.11"
             py-cmd: "python3.11"
-          - os: "fedora:39"
-            py-version: "3.12"
-            py-cmd: "python3.12"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -444,7 +430,7 @@ jobs:
         run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
 
       - name: Fedora 37 system setup
-        if: ${{matrix.os == 'fedora:37' || matrix.os == 'fedora:39'}}
+        if: ${{matrix.os == 'fedora:37'}}
         run: dnf -y install python3 pip
 
       - name: Pip setup
@@ -473,7 +459,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        py-version: ["3.8", "3.9", "3.10", "3.11"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -513,7 +499,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["arm64", "x86"]
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        py-version: ["3.8", "3.9", "3.10", "3.11"]
         include:
           - platform: "x86"
             plat-name: macosx_12_0_x86_64
@@ -529,8 +515,6 @@ jobs:
             py-cmd: "python3.10"
           - py-version: "3.11"
             py-cmd: "python3.11"
-          - py-version: "3.12"
-            py-cmd: "python3.12"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -561,7 +545,6 @@ jobs:
         run: ${{ matrix.py-cmd }} -m pytest -s -v
 
   upload-to-release:
-    if: ${{ false}} # @todo
     needs: [manylinux-pip-test, windows-pip-test, macos-pip-test]
     timeout-minutes: 30
     runs-on: ubuntu-latest
@@ -578,7 +561,6 @@ jobs:
         run: twine upload ./meshlib-*.whl -u MeshInspector -p ${{ secrets.PIP_TEST_REPO_PASS }} --skip-existing
 
   post-release-test:
-    if: ${{ false}} # @todo
     needs: upload-to-release
     uses: MeshInspector/MeshLib/.github/workflows/release-tests.yml@master
 

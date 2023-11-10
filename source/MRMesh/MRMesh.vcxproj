@@ -430,6 +430,7 @@
     <ClCompile Include="MRMeshExtrude.cpp" />
     <ClCompile Include="MRMeshLoad3mf.cpp" />
     <ClCompile Include="MRMeshOrPoints.cpp" />
+    <ClCompile Include="MRMeshReplicate.cpp" />
     <ClCompile Include="MRMeshToDistanceVolume.cpp" />
     <ClCompile Include="MRMovementBuildBody.cpp" />
     <ClCompile Include="MRNormalDenoising.cpp" />

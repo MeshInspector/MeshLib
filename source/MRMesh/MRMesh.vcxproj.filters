@@ -684,9 +684,6 @@
     <ClInclude Include="MREdgePoint.h">
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshDiff.h">
-      <Filter>Source Files\MeshAlgorithm</Filter>
-    </ClInclude>
     <ClInclude Include="MRMeshBoundary.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
@@ -1093,6 +1090,9 @@
       <Filter>Source Files\PointCloud</Filter>
     </ClInclude>
     <ClInclude Include="MREnumNeighbours.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshDiff.h">
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRFilterCreaseEdges.h">
@@ -1547,9 +1547,6 @@
     <ClCompile Include="MRMeshDelone.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
-    <ClCompile Include="MRMeshDiff.cpp">
-      <Filter>Source Files\MeshAlgorithm</Filter>
-    </ClCompile>
     <ClCompile Include="MRPolyline2Intersect.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
@@ -1824,6 +1821,12 @@
       <Filter>Source Files\PointCloud</Filter>
     </ClCompile>
     <ClCompile Include="MREnumNeighbours.cpp">
+      <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshDiff.cpp">
+      <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshReplicate.cpp">
       <Filter>Source Files\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRFilterCreaseEdges.cpp">

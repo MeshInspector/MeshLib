@@ -469,7 +469,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{needs.setup.outputs.version_tag}}
+          #ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Meshlib wheel from Artifact
         uses: actions/download-artifact@v3

@@ -4,6 +4,7 @@
 #include "MRMesh/MRMeshFwd.h"
 #include "MRViewer.h"
 #include "MRMesh/MRChangeMeshAction.h"
+#include <chrono>
 
 namespace MR
 {
@@ -23,7 +24,7 @@ public:
     struct Settings
     {
         float radius = 1.f; // radius of editing region [1 - ...]
-        float force = 10.f; // the force of changing mesh [1 - 100]
+        float force = 30.f; // the force of changing mesh [1 - 100]
         float intensity = 50.f; // intensity of changing mesh (the force depending on distance to center) [1 - 100]
     };
 
@@ -61,12 +62,11 @@ private:
 
     std::shared_ptr<ObjectMesh> obj_;
     float diagonal_ = 1.f;
+    float minRadius_ = 1.f;
     Vector2f mousePos_;
     bool mouseMoved_ = false;
     VertBitSet region_;
     VertBitSet regionExpanded_; // need for proper visualization
-    VertBitSet regionOld_;
-    VertScalars changedValues_;
     VertScalars distances_;
     VertUVCoords uvs_;
     std::shared_ptr<ChangeMeshAction> changeMeshAction_;
@@ -78,6 +78,8 @@ private:
         Remove,
         Relax
     } workMode_ = WorkMode::Add;
+
+    std::chrono::time_point<std::chrono::high_resolution_clock> timePoint_;
 };
 
 }

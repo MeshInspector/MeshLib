@@ -15,20 +15,21 @@
 #include <MRMesh/MRMeshRelax.h>
 #include <MRMesh/MRBitSetParallelFor.h>
 
+
 namespace MR
 {
+//const float k = r < 1-a ? std::sqrt( sqr( 1 - a ) - sqr( r ) ) + ( 1 - a ) : -std::sqrt( sqr( a ) - sqr( r - 1 ) ) + a; // alternative version F_point_shift(r,i) (i == a)
 
 void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectMesh )
 {
     obj_ = objectMesh;
     diagonal_ = obj_->getBoundingBox().diagonal();
-    settings_.radius = diagonal_ / 100.f;
+    minRadius_ = obj_->avgEdgeLen() * 2.f;
+    settings_.radius = diagonal_ * 0.025f;
 
     size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
     region_ = VertBitSet( numV, false );
     regionExpanded_ = VertBitSet( numV, false );
-    regionOld_ = VertBitSet( numV, false );
-    changedValues_ = VertScalars( numV, 0.f );
     distances_ = VertScalars( numV, 0.f );
 
     obj_->setAncillaryTexture( { { { Color { 255, 64, 64, 255 }, Color { 0, 0, 0, 0 } }, Vector2i { 1, 2 } } } );
@@ -47,8 +48,6 @@ void SurfaceManipulationWidget::reset()
 
     region_ = {};
     regionExpanded_ = {};
-    regionOld_ = {};
-    changedValues_ = {};
     distances_ = {};
 
     uvs_ = {};
@@ -61,7 +60,7 @@ void SurfaceManipulationWidget::reset()
 void SurfaceManipulationWidget::setSettings( const Settings& settings )
 {
     settings_ = settings;
-    settings_.radius = std::max( settings_.radius, 1.f );
+    settings_.radius = std::max( settings_.radius, minRadius_ );
     settings_.force = std::clamp( settings_.force, 1.f, 100.f );
     settings_.intensity = std::clamp( settings_.intensity, 1.f, 100.f );
 }
@@ -77,6 +76,7 @@ bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*
 
     changeMeshAction_ = std::make_shared<ChangeMeshAction>( "Change mesh surface", obj_ );
     mousePressed_ = true;
+    timePoint_ = std::chrono::high_resolution_clock::now();
 
     return true;
 }
@@ -90,9 +90,6 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
 
     AppendHistory( changeMeshAction_ );
     changeMeshAction_.reset();
-
-    for ( auto v : regionOld_ )
-        changedValues_[v] = 0.f;
 
     return true;
 }
@@ -153,17 +150,17 @@ void SurfaceManipulationWidget::changeSurface_()
     if ( !region_.any() )
         return;
 
-    MR_TIMER
+    MR_TIMER;
 
-        if ( workMode_ == WorkMode::Relax )
-        {
-            MeshRelaxParams params;
-            params.region = &region_;
-            params.force = settings_.force / 200.f; // [1-100] -> (0.0, 0.5]
-            relax( *obj_->varMesh(), params );
-            obj_->setDirtyFlags( DIRTY_POSITION );
-            return;
-        }
+    if ( workMode_ == WorkMode::Relax )
+    {
+        MeshRelaxParams params;
+        params.region = &region_;
+        params.force = settings_.force / 200.f; // [1-100] -> (0.0, 0.5]
+        relax( *obj_->varMesh(), params );
+        obj_->setDirtyFlags( DIRTY_POSITION );
+        return;
+    }
 
     Vector3f normal;
     const auto& mesh = *obj_->mesh();
@@ -173,8 +170,12 @@ void SurfaceManipulationWidget::changeSurface_()
 
     auto& points = obj_->varMesh()->points;
 
-    const float maxShift = settings_.force / 1000.f * diagonal_ / 10.f;
-    const float intensity = settings_.intensity / 200.f + 0.25f;
+    auto newTimePoint = std::chrono::high_resolution_clock::now();
+    auto timeForce = std::chrono::duration_cast< std::chrono::milliseconds >( newTimePoint - timePoint_ ).count() * 0.06f;
+    timePoint_ = newTimePoint;
+
+    const float maxShift = ( settings_.force / 5.f + 10.f ) / 1000.f * diagonal_ / 10.f * timeForce;
+    const float intensity = settings_.intensity / 100.f * 0.15f + 0.4f;
     const float a1 = -1.f * ( 1 - intensity ) / intensity / intensity;
     const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
     const float direction = workMode_ == WorkMode::Remove ? -1.f : 1.f;
@@ -183,20 +184,8 @@ void SurfaceManipulationWidget::changeSurface_()
         const float r = std::clamp( distances_[v] / settings_.radius, 0.f, 1.f );
         const float k = r < intensity ? a1 * r * r + 1 : a2 * ( r - 1 ) * ( r - 1 ); // I(r)
         float pointShift = maxShift * k; // shift = F * I(r)
-        if ( mouseMoved_ && regionOld_.test( v ) )
-        {
-            pointShift = std::clamp( pointShift, 0.f, maxShift - changedValues_[v] );
-            changedValues_[v] += pointShift;
-        }
         points[v] += direction * pointShift * normal;
     } );
-    if ( mouseMoved_ )
-        BitSetParallelFor( regionOld_, [&] ( VertId v )
-    {
-        if ( !region_.test( v ) )
-            changedValues_[v] = 0.f;
-    } );
-    regionOld_ = region_;
     obj_->setDirtyFlags( DIRTY_PRIMITIVES );
 }
 
@@ -212,6 +201,8 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f & mousePos )
 {
     if ( mousePos == mousePos_ && !mouseMoved_ )
         return;
+
+    MR_TIMER;
 
     const auto& viewerRef = getViewerInstance();
     std::vector<ObjAndPick> objAndPick;

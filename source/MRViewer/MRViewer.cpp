@@ -1438,7 +1438,11 @@ void Viewer::drawFull( bool dirtyScene )
         menuPlugin_->startFrame();
 
     sceneTexture_->bind( true );
-    
+
+    // need to clean it in texture too
+    for ( auto& viewport : viewport_list )
+        viewport.clearFramebuffers();
+
     preDrawSignal();
     // check dirty scene and need swap
     // important to check after preDrawSignal

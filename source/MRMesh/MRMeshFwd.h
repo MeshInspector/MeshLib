@@ -308,19 +308,19 @@ using EdgeBMap = BMap<EdgeId, EdgeId>;
 using UndirectedEdgeBMap = BMap<UndirectedEdgeId, UndirectedEdgeId>;
 using WholeEdgeBMap = BMap<EdgeId, UndirectedEdgeId>;
 
-template <typename K>
-using HashSet = phmap::flat_hash_set<K>;
-template <typename K>
-using ParallelHashSet = phmap::parallel_flat_hash_set<K>;
+template <typename T, typename Hash = phmap::priv::hash_default_hash<T>, typename Eq = phmap::priv::hash_default_eq<T>>
+using HashSet = phmap::flat_hash_set<T, Hash, Eq>;
+template <typename T, typename Hash = phmap::priv::hash_default_hash<T>, typename Eq = phmap::priv::hash_default_eq<T>>
+using ParallelHashSet = phmap::parallel_flat_hash_set<T, Hash, Eq>;
 
 using FaceHashSet = HashSet<FaceId>;
 using VertHashSet = HashSet<VertId>;
 using EdgeHashSet = HashSet<EdgeId>;
 
-template <typename K, typename V>
-using HashMap = phmap::flat_hash_map<K, V>;
-template <typename K, typename V>
-using ParallelHashMap = phmap::parallel_flat_hash_map<K, V>;
+template <typename K, typename V, typename Hash = phmap::priv::hash_default_hash<K>, typename Eq = phmap::priv::hash_default_eq<K>>
+using HashMap = phmap::flat_hash_map<K, V, Hash, Eq>;
+template <typename K, typename V, typename Hash = phmap::priv::hash_default_hash<K>, typename Eq = phmap::priv::hash_default_eq<K>>
+using ParallelHashMap = phmap::parallel_flat_hash_map<K, V, Hash, Eq>;
 
 using FaceHashMap = HashMap<FaceId, FaceId>;
 using VertHashMap = HashMap<VertId, VertId>;

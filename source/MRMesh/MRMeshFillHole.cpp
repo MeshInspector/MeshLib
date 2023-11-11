@@ -165,7 +165,7 @@ bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, NewEdge
 {
     MR_TIMER;
 
-    phmap::flat_hash_set<std::pair<VertId, VertId>> edgesInTriangulation;
+    HashSet<std::pair<VertId, VertId>> edgesInTriangulation;
     auto testExistance = [&] ( VertId a, VertId b )->bool
     {
         if ( a > b )

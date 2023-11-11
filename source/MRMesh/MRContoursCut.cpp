@@ -449,7 +449,7 @@ void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceMap
 {
     MR_TIMER;
     MR_WRITER( mesh );
-    phmap::flat_hash_map<int, std::vector<int>> face2contoursMap;
+    HashMap<int, std::vector<int>> face2contoursMap;
     for ( int i = 0; i < contours.size(); ++i )
     {
         FaceId f = std::get<FaceId>( contours[i].intersections.front().primitiveId );
@@ -1908,7 +1908,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         return res;
 
     // find one edge for every hole to fill
-    phmap::flat_hash_set<EdgeId> allHoleEdges;
+    HashSet<EdgeId> allHoleEdges;
     struct HoleDesc
     {
         EdgeId e;

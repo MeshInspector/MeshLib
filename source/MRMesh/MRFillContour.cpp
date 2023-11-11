@@ -38,7 +38,7 @@ void ContourLeftFiller::firstStep_()
 {
     // first step is more complicated to ensure that we do not fill to the other side from the contour
 
-    phmap::parallel_flat_hash_set<EdgeId> initialEdges;
+    ParallelHashSet<EdgeId> initialEdges;
     for ( EdgeId e : currentFacesBd_ )
         initialEdges.insert( e );
 

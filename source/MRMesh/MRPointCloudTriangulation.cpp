@@ -74,7 +74,7 @@ private:
     struct PerThreadData
     {
         TriangulationHelpers::TriangulatedFanData fanData;
-        phmap::flat_hash_map<VertTriplet, int, VertTripletHasher> map;
+        HashMap<VertTriplet, int, VertTripletHasher> map;
     };
     tbb::enumerable_thread_specific<PerThreadData> tls_;
 };
@@ -141,7 +141,7 @@ std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progr
     MR_TIMER;
     auto sp = subprogress( progressCb, 0.5f, 0.6f );
     // accumulate triplets
-    phmap::flat_hash_map<VertTriplet, int, VertTripletHasher> map;
+    HashMap<VertTriplet, int, VertTripletHasher> map;
     int numMap = 0;
     for ( auto& threadInfo : tls_ )
     {

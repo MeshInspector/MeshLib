@@ -1,6 +1,6 @@
 #include "MRIdentifyVertices.h"
+#include "MRParallelFor.h"
 #include "MRTimer.h"
-#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -25,24 +25,20 @@ void VertexIdentifier::addTriangles( const std::vector<Triangle3f> & buffer )
         auto buckets0 = hmap_.bucket_count();
 
         const auto subcnt = hmap_.subcnt();
-        tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ), [&]( const tbb::blocked_range<size_t> & range )
+        ParallelFor( size_t( 0 ), subcnt, [&]( size_t myPartId )
         {
-            assert( range.begin() + 1 == range.end() );
-            for ( size_t myPartId = range.begin(); myPartId < range.end(); ++myPartId )
+            for ( size_t j = 0; j < buffer.size(); ++j )
             {
-                for ( size_t j = 0; j < buffer.size(); ++j )
+                const auto & st = buffer[j];
+                auto & it = vertsInHMap_[j];
+                for ( int k = 0; k < 3; ++k )
                 {
-                    const auto & st = buffer[j];
-                    auto & it = vertsInHMap_[j];
-                    for ( int k = 0; k < 3; ++k )
-                    {
-                        const auto & p = st[k];
-                        auto hashval = hmap_.hash( p );
-                        auto idx = hmap_.subidx( hashval );
-                        if ( idx != myPartId )
-                            continue;
-                        it[k] = &hmap_[ p ];
-                    }
+                    const auto & p = st[k];
+                    auto hashval = hmap_.hash( p );
+                    auto idx = hmap_.subidx( hashval );
+                    if ( idx != myPartId )
+                        continue;
+                    it[k] = &hmap_[ p ];
                 }
             }
         } );

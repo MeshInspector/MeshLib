@@ -59,7 +59,7 @@ std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const Fa
     MR_TIMER
 
     std::vector<EdgeLoop> res;
-    phmap::flat_hash_set<EdgeId> reportedBdEdges;
+    HashSet<EdgeId> reportedBdEdges;
 
     std::function<bool( EdgeId )> insert;
     std::function<EdgeLoop( EdgeId )> track;
@@ -114,7 +114,7 @@ std::vector<EdgeLoop> findLeftBoundaryInsideMesh( const MeshTopology & topology,
     MR_TIMER
 
     std::vector<EdgeLoop> res;
-    phmap::flat_hash_set<EdgeId> reportedBdEdges;
+    HashSet<EdgeId> reportedBdEdges;
 
     for ( auto f : region )
     {

@@ -90,6 +90,7 @@ find_package(PkgConfig REQUIRED)
 SET(MR_UBUNTU FALSE) # any Ubuntu version
 SET(MR_UBUNTU22 FALSE) # Ubuntu 22.*
 SET(MR_FEDORA FALSE)
+SET(MR_FEDORA39 FALSE)
 SET(MR_PLATFORM "UNKNOWN")
 
 IF(NOT APPLE AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
@@ -112,28 +113,31 @@ IF(APPLE)
         include_directories(${GTEST_INCLUDE_DIRS})
     ENDIF()
 ELSE()
- # set platform dependent flags
- file(STRINGS /etc/os-release distro REGEX "^NAME=")
- string(REGEX REPLACE "NAME=\"(.*)\"" "\\1" distro "${distro}")
+    # set platform dependent flags
+    file(STRINGS /etc/os-release distro REGEX "^NAME=")
+    string(REGEX REPLACE "NAME=\"(.*)\"" "\\1" distro "${distro}")
 
- # check version (major)
- file(STRINGS /etc/os-release version_id REGEX "^VERSION_ID=")
- string(REGEX REPLACE "VERSION_ID=\"(.*)\"" "\\1" version_id "${version_id}")
- string(FIND ${version_id} "." dot-pos)
- string(SUBSTRING ${version_id} 0 ${dot-pos} version_id)
- message("using ${distro} ${version_id}")
- SET(MR_PLATFORM "${distro}_${version_id}")
+    # check version (major)
+    file(STRINGS /etc/os-release version_id REGEX "^VERSION_ID=")
+    string(REGEX REPLACE "VERSION_ID=\"(.*)\"" "\\1" version_id "${version_id}")
+    string(FIND ${version_id} "." dot-pos)
+    string(SUBSTRING ${version_id} 0 ${dot-pos} version_id)
+    message("using ${distro} ${version_id}")
+    SET(MR_PLATFORM "${distro}_${version_id}")
 
- IF( ${distro} STREQUAL "Ubuntu")
-  SET(MR_UBUNTU TRUE)
-  IF( ${version_id} STREQUAL "22")
-   SET(MR_UBUNTU22 TRUE)
-  ENDIF() # Ubuntu 22
- ENDIF() # Ubuntu
+    IF( ${distro} STREQUAL "Ubuntu")
+    SET(MR_UBUNTU TRUE)
+    IF( ${version_id} STREQUAL "22")
+        SET(MR_UBUNTU22 TRUE)
+    ENDIF() # Ubuntu 22
+    ENDIF() # Ubuntu
 
- IF( ${distro} STREQUAL "Fedora Linux")
-  SET(MR_FEDORA TRUE)
- ENDIF() # Fedora
+    IF( ${distro} STREQUAL "Fedora Linux")
+    SET(MR_FEDORA TRUE)
+    IF( ${version_id} STREQUAL "39")
+        SET(MR_FEDORA39 TRUE)
+    ENDIF() # Fedora 39
+    ENDIF() # Fedora
 ENDIF() # APPLE
 add_definitions( -DMR_PLATFORM="${MR_PLATFORM}" )
 message("platform: ${MR_PLATFORM}")
@@ -145,6 +149,8 @@ IF(NOT MR_EMSCRIPTEN)
             SET(MR_PYTHON_VERSION 3.10)
         ELSEIF(${MR_UBUNTU})
             SET(MR_PYTHON_VERSION 3.8)
+        ELSEIF(${MR_FEDORA39})
+            SET(MR_PYTHON_VERSION 3.12)
         ELSEIF(${MR_FEDORA})
             SET(MR_PYTHON_VERSION 3.11)
         ELSE()

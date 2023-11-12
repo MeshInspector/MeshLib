@@ -37,9 +37,10 @@ public:
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
 
-    /// signal about points changing, triggered in setDirtyFlag
-    using PointsChangedSignal = Signal<void( uint32_t mask )>;
-    PointsChangedSignal pointsChangedSignal;
+    /// signal about points or normals changing, triggered in setDirtyFlag
+    using ChangedSignal = Signal<void( uint32_t mask )>;
+    ChangedSignal pointsChangedSignal;
+    ChangedSignal normalsChangedSignal;
 
 protected:
     ObjectPoints( const ObjectPoints& other ) = default;

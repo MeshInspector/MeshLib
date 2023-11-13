@@ -158,7 +158,7 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
             registerThreadRootTimeRecord( rootRecord );
             SetCurrentThreadName( "ProgressBar" );
 
-            instance.tryRun_( [&instance, task]
+            instance.tryRunWithSehHandler_( [&instance, task]
             {
                 instance.onFinish_ = task();
                 return true;
@@ -170,7 +170,7 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
 #else
         staticTaskForLaterCall = [&instance, task]
         {
-            instance.tryRun_( [&instance, task]
+            instance.tryRunWithSehHandler_( [&instance, task]
             {
                 instance.onFinish_ = task();
                 return true;
@@ -391,10 +391,30 @@ bool ProgressBar::tryRun_( const std::function<bool ()>& task )
 #endif
 }
 
+bool ProgressBar::tryRunWithSehHandler_( const std::function<bool()>& task )
+{
+#ifndef _WIN32
+    return task();
+#else
+    __try
+    {
+        return tryRun_( task );
+    }
+    __except ( EXCEPTION_EXECUTE_HANDLER )
+    {
+        onFinish_ = []
+        {
+            showError( "Unknown exception occurred" );
+            return true;
+        };
+    }
+#endif
+}
+
 void ProgressBar::resumeBackgroundTask_()
 {
     assert( backgroundTask_ );
-    const auto finished = tryRun_( [this]
+    const auto finished = tryRunWithSehHandler_( [this]
     {
         return backgroundTask_->resume();
     } );

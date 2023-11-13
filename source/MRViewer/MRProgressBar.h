@@ -73,6 +73,7 @@ private:
     // cover task execution with try catch block (in release only)
     // if catches exception shows error in main thread overriding user defined main thread post-processing
     bool tryRun_( const std::function<bool ()>& task );
+    bool tryRunWithSehHandler_( const std::function<bool ()>& task );
 
     void resumeBackgroundTask_();
 

@@ -168,6 +168,8 @@ bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, NewEdge
     HashSet<std::pair<VertId, VertId>> edgesInTriangulation;
     auto testExistance = [&] ( VertId a, VertId b )->bool
     {
+        if ( topology.findEdge( a, b ) )
+            return true;
         if ( a > b )
             std::swap( a, b );
         auto it = edgesInTriangulation.find( { a,b } );

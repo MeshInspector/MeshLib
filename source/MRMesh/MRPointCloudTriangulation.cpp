@@ -209,6 +209,11 @@ std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progr
     // fill small holes
     const auto bigLength = params_.critHoleLength >= 0.0f ? params_.critHoleLength : pointCloud_.getBoundingBox().diagonal() * 0.7f;
     auto boundaries = findRightBoundary( mesh.topology );
+    // setup parameters to prevent any appearance of multiple edges during hole filling
+    FillHoleParams fillHoleParams;
+    fillHoleParams.multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong;
+    bool stoppedFlag = false;
+    fillHoleParams.stopBeforeBadTriangulation = &stoppedFlag;
     for ( int i = 0; i < boundaries.size(); ++i )
     {
         const auto& boundary = boundaries[i];
@@ -217,7 +222,7 @@ std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progr
             length += mesh.edgeLength( e );
 
         if ( length < bigLength )
-            fillHole( mesh, boundary.front() );
+            fillHole( mesh, boundary.front(), fillHoleParams );
         if ( !reportProgress( progressCb, [&]{ return 0.7f + 0.3f * float( i + 1 ) / float( boundaries.size() ); } ) ) // 70% - 100%
             return {};
     }

@@ -25,7 +25,7 @@ public:
     {
         float radius = 1.f; // radius of editing region [1 - ...]
         float force = 30.f; // the force of changing mesh [1 - 100]
-        float intensity = 50.f; // intensity of changing mesh (the force depending on distance to center) [1 - 100]
+        float saturation = 50.f; // effect of force on points far from center editing area. [1 - 100]
     };
 
     /// initialize widget according ObjectMesh

@@ -62,7 +62,7 @@ void SurfaceManipulationWidget::setSettings( const Settings& settings )
     settings_ = settings;
     settings_.radius = std::max( settings_.radius, minRadius_ );
     settings_.force = std::clamp( settings_.force, 1.f, 100.f );
-    settings_.intensity = std::clamp( settings_.intensity, 1.f, 100.f );
+    settings_.saturation = std::clamp( settings_.saturation, 1.f, 100.f );
 }
 
 bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*modifier*/ )
@@ -181,7 +181,7 @@ void SurfaceManipulationWidget::changeSurface_()
     timePoint_ = newTimePoint;
 
     const float maxShift = ( settings_.force / 5.f + 10.f ) / 1000.f * diagonal_ / 10.f * timeForce;
-    const float intensity = settings_.intensity / 100.f * 0.15f + 0.4f;
+    const float intensity = settings_.saturation / 100.f * 0.15f + 0.4f;
     const float a1 = -1.f * ( 1 - intensity ) / intensity / intensity;
     const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
     const float direction = workMode_ == WorkMode::Remove ? -1.f : 1.f;

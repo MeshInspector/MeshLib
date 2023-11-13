@@ -38,11 +38,11 @@ void ProgressBar::setup( float scaling )
 {
     auto& instance = instance_();
 
-    if ( instance.deferredProgressBar_ )
-    {
-        instance.deferredProgressBar_();
-        instance.deferredProgressBar_ = {};
-    }
+    if ( instance.deferredInit_ )
+        instance.initialize_();
+
+    if ( instance.backgroundTask_ )
+        instance.resumeBackgroundTask_();
 
     constexpr size_t bufSize = 256;
     char buf[bufSize];
@@ -145,56 +145,84 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
     }
 
     if ( isFinished() && instance.thread_.joinable() )
-    {
         instance.thread_.join();
-    }
 
-    if ( instance.thread_.joinable() )
-        return;
     instance.isOrdered_ = true;
-    instance.deferredProgressBar_ = [task, taskCount, nameStr = std::string(name)] ()
+
+    auto postInit = [&instance, task]
     {
-        auto& instance = instance_();
-
-        if ( isFinished() && instance.thread_.joinable() )
-            instance.thread_.join();
-
-        if ( instance.thread_.joinable() )
-            return;
-
-        instance.progress_ = 0.0f;
-
-        instance.task_ = task;
-        instance.currentTask_ = 0;
-        if ( taskCount == 1 )
-            instance.currentTask_ = 1;
-        instance.taskCount_ = taskCount;
-
-        instance.closeDialogNextFrame_ = false;
-        instance.canceled_ = false;
-        instance.finished_ = false;
-
-        instance.title_ = nameStr;
-
-        ImGui::OpenPopup( instance.setupId_ );
-        instance.frameRequest_.reset();
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
-        instance.thread_ = std::thread( [&instance] ()
+        instance.thread_ = std::thread( [&instance, task]
         {
             static ThreadRootTimeRecord rootRecord( "Progress" );
             registerThreadRootTimeRecord( rootRecord );
             SetCurrentThreadName( "ProgressBar" );
-            instance.tryRunTaskWithSehHandler_();
+
+            instance.tryRun_( [&instance, task]
+            {
+                instance.onFinish_ = task();
+                return true;
+            } );
+            instance.finish_();
+
             unregisterThreadRootTimeRecord( rootRecord );
         } );
 #else
-        staticTaskForLaterCall = [&instance] () 
+        staticTaskForLaterCall = [&instance, task]
         {
-            instance.tryRunTaskWithSehHandler_();
+            instance.tryRun_( [&instance, task]
+            {
+                instance.onFinish_ = task();
+                return true;
+            } );
+            instance.finish_();
         };
         emscripten_async_call( asyncCallTask, nullptr, 200 );
 #endif
     };
+
+    instance.deferredInit_ = std::make_unique<DeferredInit>( DeferredInit {
+        .taskCount = taskCount,
+        .name = name,
+        .postInit = postInit,
+    } );
+
+    getViewerInstance().incrementForceRedrawFrames();
+}
+
+void ProgressBar::orderWithResumableTask( const char * name, std::shared_ptr<ResumableTask<void>> task, int taskCount )
+{
+    auto& instance = instance_();
+
+    if ( !instance.isInit_ )
+    {
+        task->start();
+        while ( !task->resume() );
+        return;
+    }
+
+    if ( isFinished() && instance.thread_.joinable() )
+        instance.thread_.join();
+
+    instance.isOrdered_ = true;
+
+    auto postInit = [&instance, task]
+    {
+        // finalizer is not required
+        instance.onFinish_ = {};
+        task->start();
+    };
+
+    instance.deferredInit_ = std::make_unique<DeferredInit>( DeferredInit {
+        .taskCount = taskCount,
+        .name = name,
+        .postInit = postInit,
+    } );
+
+    instance.backgroundTask_ = std::make_unique<BackgroundTask>( BackgroundTask {
+        .task = std::move( task ),
+    } );
+
     getViewerInstance().incrementForceRedrawFrames();
 }
 
@@ -292,51 +320,91 @@ ProgressBar::~ProgressBar()
         thread_.join();
 }
 
-void ProgressBar::tryRunTask_()
+void ProgressBar::initialize_()
+{
+    assert( deferredInit_ );
+
+    if ( isFinished() && thread_.joinable() )
+        thread_.join();
+
+    progress_ = 0.0f;
+
+    currentTask_ = 0;
+    if ( taskCount_ == 1 )
+        currentTask_ = 1;
+    taskCount_ = deferredInit_->taskCount;
+
+    closeDialogNextFrame_ = false;
+    canceled_ = false;
+    finished_ = false;
+
+    title_ = deferredInit_->name;
+
+    ImGui::OpenPopup( setupId_ );
+    frameRequest_.reset();
+
+    if ( deferredInit_->postInit )
+        deferredInit_->postInit();
+
+    deferredInit_.reset();
+}
+
+bool ProgressBar::tryRun_( const std::function<bool ()>& task )
 {
 #ifndef NDEBUG
-    onFinish_ = task_();
+    return task();
 #else
+#ifdef _WIN32
+    __try
+    {
+#endif
     try
     {
-        onFinish_ = task_();
+        return task();
     }
     catch ( const std::bad_alloc& badAllocE )
     {
-        onFinish_ = [msg = std::string( badAllocE.what() )]()
+        onFinish_ = [msg = std::string( badAllocE.what() )]
         {
             spdlog::error( msg );
             showError( "Device ran out of memory during this operation." );
         };
+        return true;
     }
     catch ( const std::exception& e )
     {
-        onFinish_ = [msg = std::string( e.what() )]()
+        onFinish_ = [msg = std::string( e.what() )]
         {
             showError( msg );
         };
+        return true;
     }
-#endif
-}
-
-void ProgressBar::tryRunTaskWithSehHandler_()
-{
-#if !defined(_WIN32) || !defined(NDEBUG)
-    tryRunTask_();
-#else
-    __try
-    {
-        tryRunTask_();
+#ifdef _WIN32
     }
     __except ( EXCEPTION_EXECUTE_HANDLER )
     {
-        onFinish_ = []()
+        onFinish_ = []
         {
             showError( "Unknown exception occurred" );
+            return true;
         };
     }
 #endif
-    finish_();
+#endif
+}
+
+void ProgressBar::resumeBackgroundTask_()
+{
+    assert( backgroundTask_ );
+    const auto finished = tryRun_( [this]
+    {
+        return backgroundTask_->task->resume();
+    } );
+    if ( finished )
+    {
+        finish_();
+        backgroundTask_.reset();
+    }
 }
 
 void ProgressBar::finish_()

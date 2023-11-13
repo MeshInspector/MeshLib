@@ -352,10 +352,6 @@ bool ProgressBar::tryRun_( const std::function<bool ()>& task )
 #ifndef NDEBUG
     return task();
 #else
-#ifdef _WIN32
-    __try
-    {
-#endif
     try
     {
         return task();
@@ -377,17 +373,6 @@ bool ProgressBar::tryRun_( const std::function<bool ()>& task )
         };
         return true;
     }
-#ifdef _WIN32
-    }
-    __except ( EXCEPTION_EXECUTE_HANDLER )
-    {
-        onFinish_ = []
-        {
-            showError( "Unknown exception occurred" );
-            return true;
-        };
-    }
-#endif
 #endif
 }
 
@@ -405,8 +390,8 @@ bool ProgressBar::tryRunWithSehHandler_( const std::function<bool()>& task )
         onFinish_ = []
         {
             showError( "Unknown exception occurred" );
-            return true;
         };
+        return true;
     }
 #endif
 }

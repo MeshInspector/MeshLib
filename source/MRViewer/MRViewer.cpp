@@ -1991,9 +1991,21 @@ Image Viewer::captureSceneScreenShot( const Vector2i& resolution )
 
     fd.copyTextureBindDef();
     fd.bindTexture();
-
-    GL_EXEC( glGetTexImage( GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, ( void* )( pixels.data() ) ) );
     
+#ifdef __EMSCRIPTEN__
+    GLuint fbo;
+    GL_EXEC( glGenFramebuffers(1, &fbo) ); 
+    GL_EXEC( glBindFramebuffer(GL_FRAMEBUFFER, fbo) );
+    GL_EXEC( glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fd.getTexture(), 0) );
+
+    GL_EXEC( glReadPixels(0, 0, newRes.x, newRes.y, GL_RGBA, GL_UNSIGNED_BYTE, ( void* )( pixels.data() )) );
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteFramebuffers(1, &fbo);
+#else
+    GL_EXEC( glGetTexImage( GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, ( void* )( pixels.data() ) ) );
+#endif
+
     fd.del();
 
     bindSceneTexture( true );

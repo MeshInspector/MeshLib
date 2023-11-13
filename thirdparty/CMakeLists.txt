@@ -128,10 +128,10 @@ IF(MR_EMSCRIPTEN)
   add_subdirectory(./spdlog)
 
   option(TBB_TEST "Enable testing" OFF)
-  option(TBBMALLOC_BUILD "Enable tbbmalloc build" OFF)
-  add_compile_definitions(__QNXNTO__=1) # hack to disable __TBB_RESUMABLE_TASKS in tbb
-  add_compile_definitions(__TBB_DYNAMIC_LOAD_ENABLED=0)
+  set(CMAKE_SYSTEM_PROCESSOR_BACKUP "${CMAKE_SYSTEM_PROCESSOR}")
+  set(CMAKE_SYSTEM_PROCESSOR "unknown")
   add_subdirectory(./onetbb)
+  set(CMAKE_SYSTEM_PROCESSOR "${CMAKE_SYSTEM_PROCESSOR_BACKUP}")
   install(DIRECTORY onetbb/include/tbb DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 ELSE() # not MR_EMSCRIPTEN
   set(CLIP_EXAMPLES OFF)

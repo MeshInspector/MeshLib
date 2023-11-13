@@ -42,7 +42,9 @@ void RenderMeshObject::render( const RenderParams& renderParams )
     {
         GL_EXEC( glDepthMask( GL_FALSE ) );
         GL_EXEC( glColorMask( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE ) );
+#ifndef __EMSCRIPTEN__
         GL_EXEC( glDisable( GL_MULTISAMPLE ) );
+#endif
     }
     else
     {
@@ -137,7 +139,9 @@ void RenderMeshObject::render( const RenderParams& renderParams )
         // enable back masks, disabled for alpha sort
         GL_EXEC( glDepthMask( GL_TRUE ) );
         GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
+#ifndef __EMSCRIPTEN__
         GL_EXEC( glEnable( GL_MULTISAMPLE ) );
+#endif
     }
 }
 

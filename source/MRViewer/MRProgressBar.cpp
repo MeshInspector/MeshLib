@@ -219,9 +219,7 @@ void ProgressBar::orderWithResumableTask( const char * name, std::shared_ptr<Res
         .postInit = postInit,
     } );
 
-    instance.backgroundTask_ = std::make_unique<BackgroundTask>( BackgroundTask {
-        .task = std::move( task ),
-    } );
+    instance.backgroundTask_ = std::move( task );
 
     getViewerInstance().incrementForceRedrawFrames();
 }
@@ -398,7 +396,7 @@ void ProgressBar::resumeBackgroundTask_()
     assert( backgroundTask_ );
     const auto finished = tryRun_( [this]
     {
-        return backgroundTask_->task->resume();
+        return backgroundTask_->resume();
     } );
     if ( finished )
     {

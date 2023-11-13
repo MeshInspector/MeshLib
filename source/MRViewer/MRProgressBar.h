@@ -100,11 +100,8 @@ private:
     std::unique_ptr<DeferredInit> deferredInit_;
 
     // required to perform long-time tasks in single-threaded environments
-    struct BackgroundTask
-    {
-        std::shared_ptr<ResumableTask<void>> task;
-    };
-    std::unique_ptr<BackgroundTask> backgroundTask_;
+    using BackgroundTask = std::shared_ptr<ResumableTask<void>>;
+    BackgroundTask backgroundTask_;
 
     std::atomic<bool> allowCancel_;
     std::atomic<bool> canceled_;

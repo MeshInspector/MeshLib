@@ -1501,6 +1501,7 @@ void Viewer::drawScene()
 
 void Viewer::setupScene()
 {
+    bindSceneTexture( false );
     for ( auto& viewport : viewport_list )
     {
         viewport.setupView();

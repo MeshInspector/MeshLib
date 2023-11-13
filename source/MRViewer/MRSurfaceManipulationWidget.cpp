@@ -104,17 +104,20 @@ bool SurfaceManipulationWidget::onMouseMove_( int mouse_x, int mouse_y )
 bool SurfaceManipulationWidget::onKeyDown_( int /*key*/, int modifier )
 {
     bool res = false;
-    workMode_ = WorkMode::Add;
+    WorkMode newWorkMode = WorkMode::Add;
     if ( modifier & GLFW_MOD_SHIFT )
     {
-        workMode_ = WorkMode::Relax;
+        newWorkMode = WorkMode::Relax;
         res = true;
     }
-    if ( modifier & GLFW_MOD_CONTROL )
+    else if ( modifier & GLFW_MOD_CONTROL )
     {
-        workMode_ = WorkMode::Remove;
+        newWorkMode = WorkMode::Remove;
         res = true;
     }
+    if ( newWorkMode != WorkMode::Relax && workMode_ == WorkMode::Relax )
+        timePoint_ = std::chrono::high_resolution_clock::now();
+    workMode_ = newWorkMode;
 
     return res;
 }
@@ -122,17 +125,20 @@ bool SurfaceManipulationWidget::onKeyDown_( int /*key*/, int modifier )
 bool SurfaceManipulationWidget::onKeyUp_( int /*key*/, int modifier )
 {
     bool res = false;
-    workMode_ = WorkMode::Add;
+    WorkMode newWorkMode = WorkMode::Add;
     if ( modifier & GLFW_MOD_SHIFT )
     {
-        workMode_ = WorkMode::Relax;
+        newWorkMode = WorkMode::Relax;
         res = true;
     }
-    if ( modifier & GLFW_MOD_CONTROL )
+    else if ( modifier & GLFW_MOD_CONTROL )
     {
-        workMode_ = WorkMode::Remove;
+        newWorkMode = WorkMode::Remove;
         res = true;
     }
+    if ( newWorkMode != WorkMode::Relax && workMode_ == WorkMode::Relax )
+        timePoint_ = std::chrono::high_resolution_clock::now();
+    workMode_ = newWorkMode;
 
     return res;
 }

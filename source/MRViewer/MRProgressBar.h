@@ -23,6 +23,24 @@ public:
     // in this version the task returns a function to be executed in main thread
     MRVIEWER_API static void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPostProcessing task, int taskCount = 1 );
 
+    /// primitive coroutine-like task interface
+    template <typename T>
+    class ResumableTask
+    {
+    public:
+        using result_type = T;
+
+        virtual ~ResumableTask() = default;
+        /// start the task
+        virtual void start() = 0;
+        /// resume the task, return true if the task is finished, false if it should be re-invoked later
+        virtual bool resume() = 0;
+        /// get the result
+        virtual result_type result() const = 0;
+    };
+    /// in this version the task is being run in the main thread but performs as a coroutine (suspends its execution from time to time)
+    MRVIEWER_API static void orderWithResumableTask( const char * name, std::shared_ptr<ResumableTask<void>> task, int taskCount = 1 );
+
     MRVIEWER_API static bool isCanceled();
 
     MRVIEWER_API static bool isFinished();
@@ -50,10 +68,14 @@ private:
     ProgressBar();
     ~ProgressBar();
 
+    void initialize_();
+
     // cover task execution with try catch block (in release only)
-    // if catches exception shows error in main thread overriding user defined main thread post processing
-    void tryRunTask_();
-    void tryRunTaskWithSehHandler_();
+    // if catches exception shows error in main thread overriding user defined main thread post-processing
+    bool tryRun_( const std::function<bool ()>& task );
+    bool tryRunWithSehHandler_( const std::function<bool ()>& task );
+
+    void resumeBackgroundTask_();
 
     void finish_();
 
@@ -67,11 +89,20 @@ private:
     std::atomic<int> percents_;
 
     std::thread thread_;
-    TaskWithMainThreadPostProcessing task_;
     std::function<void()> onFinish_;
 
     // needed to be able to call progress bar from any point, not only from ImGui frame scope
-    std::function<void()> deferredProgressBar_;
+    struct DeferredInit
+    {
+        int taskCount;
+        std::string name;
+        std::function<void ()> postInit;
+    };
+    std::unique_ptr<DeferredInit> deferredInit_;
+
+    // required to perform long-time tasks in single-threaded environments
+    using BackgroundTask = std::shared_ptr<ResumableTask<void>>;
+    BackgroundTask backgroundTask_;
 
     std::atomic<bool> allowCancel_;
     std::atomic<bool> canceled_;

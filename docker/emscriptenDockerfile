@@ -7,13 +7,12 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends gpg-agent software-properties-common \
- && add-apt-repository ppa:mozillateam/ppa \
  && echo '\
-Package: *\
-Pin: release o=LP-PPA-mozillateam\
+Package: *\n\
+Pin: release o=LP-PPA-mozillateam\n\
 Pin-Priority: 1001\
 ' | tee /etc/apt/preferences.d/mozilla-firefox \
- && apt-get update -qqy \
+ && add-apt-repository -y ppa:mozillateam/ppa \
  && apt-get install -qqy --no-install-recommends \
         tzdata git firefox pkg-config xvfb \
  && apt-get clean \

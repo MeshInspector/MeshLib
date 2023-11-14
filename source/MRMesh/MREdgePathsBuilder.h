@@ -159,6 +159,8 @@ EdgePath EdgePathsBuilderT<MetricToPenalty>::getPathBack( VertId v ) const
 template<class MetricToPenalty>
 bool EdgePathsBuilderT<MetricToPenalty>::addNextStep_( const VertPathInfo & c )
 {
+    if ( !( c.metric < FLT_MAX ) )
+        return false; // maximal or infinity metric means that this path shall be skipped
     const auto vert = topology_.org( c.back );
     auto & vi = vertPathInfoMap_[vert];
     if ( vi.metric > c.metric )

@@ -183,10 +183,10 @@ Expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( Progr
         return unexpectedOperationCanceled();
 
     std::vector<EdgeLoop> res( joinEdges.size() );
-    const float numEdges = float( mp_.mesh.topology.undirectedEdgeSize() ); // a value larger than any loop length in edges
-    auto treeMetric = [numEdges, this]( EdgeId e )
+    constexpr float inf = std::numeric_limits<float>::infinity(); // such edges will be completely skipped during path finding for best performance
+    auto treeMetric = [this]( EdgeId e )
     {
-        return primaryTree_.test( e.undirected() ) ? 1.0f : numEdges;
+        return primaryTree_.test( e.undirected() ) ? 1.0f : inf;
     };
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, res.size() ), [&]( const tbb::blocked_range<size_t> & range )
     {

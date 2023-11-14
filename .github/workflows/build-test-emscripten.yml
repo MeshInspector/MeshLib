@@ -48,9 +48,6 @@ jobs:
           MR_USE_CPP_23: "OFF"
         run: ./scripts/build_source.sh
 
-      - name: Install Firefox
-        run: snap install firefox
-
       - name: Test
         timeout-minutes: 1
         run: |

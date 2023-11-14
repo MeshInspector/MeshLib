@@ -6,7 +6,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
     apt-get update -qqy \
-    apt-get install -qqy --no-install-recommends software-properties-common \
+ && apt-get install -qqy --no-install-recommends software-properties-common \
  && add-apt-repository ppa:mozillateam/ppa \
  && apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \

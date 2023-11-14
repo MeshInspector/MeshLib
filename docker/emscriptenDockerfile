@@ -6,8 +6,11 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
     apt-get update -qqy \
+ && apt-get install -qqy --no-install-recommends gpg-agent software-properties-common \
+ && add-apt-repository ppa:mozillateam/ppa \
+ && apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git chromium-browser pkg-config xvfb \
+        tzdata git firefox pkg-config xvfb \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 

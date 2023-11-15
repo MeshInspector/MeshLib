@@ -1045,7 +1045,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
     ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess]
     {
         auto result = SceneLoad::fromAnySupportedFormat( filesList, ProgressBar::callBackSetProgress );
-        return [result = std::move( result )]
+        return [result = std::move( result ), postProcess]
         {
             postProcess( result );
         };

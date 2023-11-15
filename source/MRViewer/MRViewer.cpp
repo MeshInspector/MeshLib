@@ -1007,7 +1007,212 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
                 showModal( std::string( result.warningSummary ), ImGuiMenu::ModalMessageType::Error );
         };
     };
+    using PostProcess = decltype( postProcess );
 
+    class AsyncFileOpener : public ResumableTask<void>
+    {
+    public:
+        explicit AsyncFileOpener( const std::vector<std::filesystem::path>& paths, PostProcess postProcess )
+            : paths_( paths )
+            , postProcess_( postProcess )
+            , state_( State::Init )
+        {
+            //
+        }
+        ~AsyncFileOpener() override = default;
+
+        void start() override
+        {
+            if ( state_ != State::Init )
+                return;
+            if ( paths_.empty() )
+                state_ = State::Finished;
+            else
+                state_ = State::TaskPreparing;
+        }
+
+        bool resume() override
+        {
+            while ( !process_() );
+            return state_ == State::Finished;
+        }
+
+        void result() const override
+        {
+            //
+        }
+
+    private:
+        enum class State
+        {
+            Init,
+            TaskPreparing,
+            TaskAwaiting,
+            TaskProcessing,
+            TaskFinished,
+            Finishing,
+            Finished,
+        };
+
+        bool process_()
+        {
+            switch ( state_ )
+            {
+                case State::Init:
+                    start();
+                    return false;
+                case State::TaskPreparing:
+                    return prepareTask_();
+                case State::TaskAwaiting:
+                    return awaitForTask_();
+                case State::TaskProcessing:
+                    return processTask_();
+                case State::TaskFinished:
+                    return nextTask_();
+                case State::Finishing:
+                    return finishing_();
+                case State::Finished:
+                    return true;
+            }
+        }
+
+        bool continueWith_( State state )
+        {
+            state_ = state;
+            return false;
+        }
+
+        static bool yield_()
+        {
+            return true;
+        }
+
+        bool prepareTask_()
+        {
+            assert( state_ == State::TaskPreparing );
+            assert( currentPath_ < paths_.size() );
+            const auto filePath = paths_[currentPath_];
+            const auto fileName = utf8string( filePath );
+
+            auto ext = std::string( "*" ) + utf8string( filePath.extension().u8string() );
+            for ( auto& c : ext )
+                c = (char)std::tolower( c );
+
+            const auto asyncFilters = AsyncObjectLoad::getFilters();
+            const auto asyncFilter = std::find_if( asyncFilters.begin(), asyncFilters.end(), [&ext] ( auto&& filter )
+            {
+                return filter.extensions.find( ext ) != std::string::npos;
+            } );
+            if ( asyncFilter != asyncFilters.end() )
+            {
+                const auto asyncLoader = AsyncObjectLoad::getObjectLoader( *asyncFilter );
+                assert( asyncLoader );
+                spdlog::info( "Loading file {}", fileName );
+                currentTask_ = asyncLoader( filePath );
+                currentTask_->start();
+                return continueWith_( State::TaskAwaiting );
+            }
+
+            spdlog::info( "Loading file {}", fileName );
+            currentResult_ = loadObjectFromFile( filePath, &warningTextBuffer_, [callback = ProgressBar::callBackSetProgress, index = currentPath_, number = paths_.size()] ( float v )
+            {
+                return callback( ( (float)index + v ) / (float)number );
+            } );
+            return continueWith_( State::TaskProcessing );
+        }
+
+        bool awaitForTask_()
+        {
+            assert( state_ == State::TaskAwaiting );
+            assert( currentTask_ );
+            if ( !currentTask_->resume() )
+                return yield_();
+
+            auto result = currentTask_->result();
+            if ( result )
+                currentResult_ = { std::move( *result ) };
+            else
+                currentResult_ = unexpected( std::move( result.error() ) );
+            currentTask_.reset();
+
+            return continueWith_( State::TaskProcessing );
+        }
+
+        bool processTask_()
+        {
+            assert( state_ == State::TaskProcessing );
+            const auto filePath = paths_[currentPath_];
+            const auto fileName = utf8string( filePath );
+
+            spdlog::info( "Load file {} - {}", fileName, currentResult_.has_value() ? "success" : currentResult_.error().c_str() );
+            if ( !currentResult_.has_value() )
+            {
+                errorSummary_ << "\n" << currentResult_.error();
+                return continueWith_( State::TaskPreparing );
+            }
+
+            if ( !warningTextBuffer_.empty() )
+                warningSummary_ << "\n" << fileName << ":\n" << warningTextBuffer_ << "\n";
+
+            auto& newObjs = *currentResult_;
+            bool anyObjLoaded = false;
+            for ( auto& obj : newObjs )
+            {
+                if ( !obj )
+                    continue;
+
+                anyObjLoaded = true;
+                result_.loadedObjects.emplace_back( obj );
+            }
+            if ( anyObjLoaded )
+                result_.loadedFiles.emplace_back( filePath );
+            else
+                errorSummary_ << "\n" << "No objects found in the file \"" << fileName << "\"";
+
+            return continueWith_( State::TaskFinished );
+        }
+
+        bool nextTask_()
+        {
+            assert( state_ == State::TaskFinished );
+            currentPath_ += 1;
+            if ( currentPath_ >= paths_.size() )
+                return continueWith_( State::Finishing );
+            return continueWith_( State::TaskPreparing );
+        }
+
+        bool finishing_()
+        {
+            assert( state_ == State::Finishing );
+            if ( !errorSummary_.view().empty() )
+                result_.errorSummary = errorSummary_.view().substr( 1 );
+            if ( !warningSummary_.view().empty() )
+                result_.warningSummary = warningSummary_.view().substr( 1 );
+            postProcess_( std::move( result_ ) )();
+
+            state_ = State::Finished;
+            return true;
+        }
+
+    private:
+        std::vector<std::filesystem::path> paths_;
+        PostProcess postProcess_;
+
+        BatchObjectLoadResult result_;
+        std::ostringstream errorSummary_;
+        std::ostringstream warningSummary_;
+
+        State state_;
+        size_t currentPath_ { 0 };
+        std::shared_ptr<ResumableTask<Expected<std::shared_ptr<Object>, std::string>>> currentTask_;
+        std::string warningTextBuffer_;
+        Expected<std::vector<std::shared_ptr<Object>>, std::string> currentResult_;
+    };
+
+#if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
+    auto opener = std::make_shared<AsyncFileOpener>( filesList, postProcess );
+    ProgressBar::orderWithResumableTask( "Open files", opener );
+#else
     ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess]
     {
         BatchObjectLoadResult result;
@@ -1057,6 +1262,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
             result.warningSummary = warningSummary.view().substr( 1 );
         return postProcess( std::move( result ) );
     } );
+#endif
 
     return true;
 }

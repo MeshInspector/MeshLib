@@ -1,9 +1,10 @@
 #pragma once
 #include "MRMeshFwd.h"
-#include "MRIOFilters.h"
-#include "MRProgressCallback.h"
 #include "MRExpected.h"
+#include "MRIOFilters.h"
 #include "MRMeshLoadSettings.h"
+#include "MRProgressCallback.h"
+#include "MRResumableTask.h"
 #include <filesystem>
 
 namespace MR
@@ -54,6 +55,20 @@ public:
 };
 
 /// \}
+
+}
+
+namespace AsyncObjectLoad
+{
+
+using AsyncObjectLoader = std::shared_ptr<ResumableTask<Expected<std::shared_ptr<Object>, std::string>>>( * )( const std::filesystem::path& );
+
+/// ...
+MRMESH_API AsyncObjectLoader getObjectLoader( IOFilter filter );
+/// ...
+MRMESH_API void setObjectLoader( IOFilter filter, AsyncObjectLoader loader );
+/// ...
+MRMESH_API IOFilters getFilters();
 
 }
 

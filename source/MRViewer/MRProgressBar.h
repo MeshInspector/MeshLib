@@ -1,5 +1,6 @@
 #pragma once
 #include "MRFrameRedrawRequest.h"
+#include "MRMesh/MRResumableTask.h"
 #include <imgui.h>
 #include <functional>
 #include <atomic>
@@ -23,21 +24,6 @@ public:
     // in this version the task returns a function to be executed in main thread
     MRVIEWER_API static void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPostProcessing task, int taskCount = 1 );
 
-    /// primitive coroutine-like task interface
-    template <typename T>
-    class ResumableTask
-    {
-    public:
-        using result_type = T;
-
-        virtual ~ResumableTask() = default;
-        /// start the task
-        virtual void start() = 0;
-        /// resume the task, return true if the task is finished, false if it should be re-invoked later
-        virtual bool resume() = 0;
-        /// get the result
-        virtual result_type result() const = 0;
-    };
     /// in this version the task is being run in the main thread but performs as a coroutine (suspends its execution from time to time)
     MRVIEWER_API static void orderWithResumableTask( const char * name, std::shared_ptr<ResumableTask<void>> task, int taskCount = 1 );
 

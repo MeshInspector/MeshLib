@@ -210,7 +210,15 @@ void ProgressBar::orderWithResumableTask( const char * name, std::shared_ptr<Res
     {
         // finalizer is not required
         instance.onFinish_ = {};
+#if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
         task->start();
+#else
+        staticTaskForLaterCall = [task]
+        {
+            task->start();
+        };
+        emscripten_async_call( asyncCallTask, nullptr, 200 );
+#endif
     };
 
     instance.deferredInit_ = std::make_unique<DeferredInit>( DeferredInit {

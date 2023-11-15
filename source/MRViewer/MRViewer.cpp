@@ -1004,42 +1004,8 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
     };
 
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
-    using PostProcess = decltype( postProcess );
-
-    class AsyncFileLoader : public ResumableTask<void>
-    {
-    public:
-        AsyncFileLoader( const std::vector<std::filesystem::path>& paths, ProgressCallback callback, PostProcess postProcess )
-            : task_( SceneLoad::asyncFromAnySupportedFormat( paths, std::move( callback ) ) )
-            , postProcess_( std::move( postProcess ) )
-        {
-            //
-        }
-
-        void start() override
-        {
-            task_->start();
-        }
-
-        bool resume() override
-        {
-            if ( !task_->resume() )
-                return false;
-            postProcess_( task_->result() );
-            return true;
-        }
-
-        void result() const override
-        {
-            //
-        }
-
-    private:
-        std::shared_ptr<ResumableTask<SceneLoad::SceneLoadResult>> task_;
-        PostProcess postProcess_;
-    };
-
-    auto task = std::make_shared<AsyncFileLoader>( filesList, ProgressBar::callBackSetProgress, postProcess );
+    auto loader = SceneLoad::asyncFromAnySupportedFormat( filesList, ProgressBar::callBackSetProgress );
+    auto task = std::make_shared<PostProcessResumableTask<SceneLoad::SceneLoadResult, void>>( loader, postProcess );
     ProgressBar::orderWithResumableTask( "Open files", task );
 #else
     ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess]

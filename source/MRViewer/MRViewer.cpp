@@ -1147,12 +1147,12 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
             spdlog::info( "Load file {} - {}", fileName, currentResult_.has_value() ? "success" : currentResult_.error().c_str() );
             if ( !currentResult_.has_value() )
             {
-                errorSummary_ << "\n" << currentResult_.error();
+                errorSummary_ << ( errorSummary_.tellp() != 0 ? "\n" : "" ) << "\n" << currentResult_.error();
                 return continueWith_( State::TaskPreparing );
             }
 
             if ( !warningTextBuffer_.empty() )
-                warningSummary_ << "\n" << fileName << ":\n" << warningTextBuffer_ << "\n";
+                warningSummary_ << ( warningSummary_.tellp() != 0 ? "\n" : "" ) << "\n" << fileName << ":\n" << warningTextBuffer_ << "\n";
 
             auto& newObjs = *currentResult_;
             bool anyObjLoaded = false;
@@ -1167,7 +1167,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
             if ( anyObjLoaded )
                 result_.loadedFiles.emplace_back( filePath );
             else
-                errorSummary_ << "\n" << "No objects found in the file \"" << fileName << "\"";
+                errorSummary_ << ( errorSummary_.tellp() != 0 ? "\n" : "" ) << "\n" << "No objects found in the file \"" << fileName << "\"";
 
             return continueWith_( State::TaskFinished );
         }
@@ -1184,10 +1184,8 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
         bool finishing_()
         {
             assert( state_ == State::Finishing );
-            if ( !errorSummary_.view().empty() )
-                result_.errorSummary = errorSummary_.view().substr( 1 );
-            if ( !warningSummary_.view().empty() )
-                result_.warningSummary = warningSummary_.view().substr( 1 );
+            result_.errorSummary = errorSummary_.str();
+            result_.warningSummary = warningSummary_.str();
             postProcess_( std::move( result_ ) )();
 
             state_ = State::Finished;
@@ -1233,12 +1231,12 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
             spdlog::info( "Load file {} - {}", utf8string( filename ), res.has_value() ? "success" : res.error().c_str() );
             if ( !res.has_value() )
             {
-                errorSummary << "\n" << res.error();
+                errorSummary << ( errorSummary.tellp() != 0 ? "\n" : "" ) << "\n" << res.error();
                 continue;
             }
             if ( !loadInfo.empty() )
             {
-                warningSummary << "\n" << utf8string( filename ) << ":\n" << loadInfo << "\n";
+                warningSummary << ( warningSummary.tellp() != 0 ? "\n" : "" ) << "\n" << utf8string( filename ) << ":\n" << loadInfo << "\n";
             }
 
             auto& newObjs = *res;
@@ -1254,12 +1252,10 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
             if ( anyObjLoaded )
                 result.loadedFiles.emplace_back( filename );
             else
-                errorSummary << "\n" << "No objects found in the file \"" << utf8string( filename ) << "\"";
+                errorSummary << ( errorSummary.tellp() != 0 ? "\n" : "" ) << "\n" << "No objects found in the file \"" << utf8string( filename ) << "\"";
         }
-        if ( !errorSummary.view().empty() )
-            result.errorSummary = errorSummary.view().substr( 1 );
-        if ( !warningSummary.view().empty() )
-            result.warningSummary = warningSummary.view().substr( 1 );
+        result.errorSummary = errorSummary.str();
+        result.warningSummary = warningSummary.str();
         return postProcess( std::move( result ) );
     } );
 #endif

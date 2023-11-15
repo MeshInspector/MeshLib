@@ -82,6 +82,7 @@ public:
         } windowMode{ HideInit };
         bool enableTransparentBackground{ false };
         bool preferOpenGL3{ false };
+        bool render3dSceneInTexture{ true }; // If not set renders scene each frame
         bool developerFeatures{ false }; // If set shows some developer features useful for debugging
         std::string name{"MRViewer"}; // Window name
         bool startEventLoop{ true }; // If false - does not start event loop

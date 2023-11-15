@@ -34,6 +34,11 @@ class EdgePathsBuilderT
 {
 public:
     EdgePathsBuilderT( const MeshTopology & topology, const EdgeMetric & metric );
+    const MeshTopology & topology() const { return topology_; }
+
+    // resets the object as if it was just constructed, but keeps allocated memory
+    void clear();
+
     // compares proposed metric with best value known for startVert;
     // if proposed metric is smaller then adds it in the queue and returns true
     bool addStart( VertId startVert, float startMetric );
@@ -113,6 +118,14 @@ EdgePathsBuilderT<MetricToPenalty>::EdgePathsBuilderT( const MeshTopology & topo
     : topology_( topology )
     , metric_( metric )
 {
+}
+
+template<class MetricToPenalty>
+void EdgePathsBuilderT<MetricToPenalty>::clear()
+{
+    vertPathInfoMap_.clear();
+    while ( !nextSteps_.empty() )
+        nextSteps_.pop();
 }
 
 template<class MetricToPenalty>

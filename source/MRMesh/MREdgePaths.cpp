@@ -149,7 +149,31 @@ EdgePath buildSmallestMetricPathBiDir(
     return buildSmallestMetricPathBiDir( topology, metric, &s, 1, &f, 1, nullptr, nullptr, maxPathMetric );
 }
 
+class BuilderOfSmallestMetricPathBiDir
+{
+public:
+    BuilderOfSmallestMetricPathBiDir( const MeshTopology & topology, const EdgeMetric & metric )
+        : bs_( topology, metric ), bf_( topology, metric ) { }
+    [[nodiscard]] EdgePath run(
+        const TerminalVertex * starts, int numStarts,
+        const TerminalVertex * finishes, int numFinishes,
+        VertId * outPathStart, VertId * outPathFinish, float maxPathMetric );
+
+private:
+    EdgePathsBuilder bs_, bf_;
+};
+
 EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const EdgeMetric & metric,
+    const TerminalVertex * starts, int numStarts,
+    const TerminalVertex * finishes, int numFinishes,
+    VertId * outPathStart, VertId * outPathFinish, float maxPathMetric )
+{
+    MR_TIMER
+    BuilderOfSmallestMetricPathBiDir b( topology, metric );
+    return b.run( starts, numStarts, finishes, numFinishes, outPathStart, outPathFinish, maxPathMetric );
+}
+
+EdgePath BuilderOfSmallestMetricPathBiDir::run(
     const TerminalVertex * starts, int numStarts,
     const TerminalVertex * finishes, int numFinishes,
     VertId * outPathStart, VertId * outPathFinish, float maxPathMetric )
@@ -160,19 +184,19 @@ EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const Edge
     VertId join;
     float joinPathMetric = maxPathMetric;
 
-    EdgePathsBuilder bs( topology, metric );
+    bs_.clear();
     for ( int si = 0; si < numStarts; ++si )
-        bs.addStart( starts[si].v, starts[si].metric );
+        bs_.addStart( starts[si].v, starts[si].metric );
 
-    EdgePathsBuilder bf( topology, metric );
+    bf_.clear();
     for ( int fi = 0; fi < numFinishes; ++fi )
-        bf.addStart( finishes[fi].v, finishes[fi].metric );
+        bf_.addStart( finishes[fi].v, finishes[fi].metric );
 
     bool keepGrowing = true;
     for (;;)
     {
-        auto ds = bs.doneDistance();
-        auto df = bf.doneDistance();
+        auto ds = bs_.doneDistance();
+        auto df = bf_.doneDistance();
         if ( keepGrowing && join && joinPathMetric <= ds + df )
         {
             keepGrowing = false;
@@ -181,12 +205,12 @@ EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const Edge
         {
             if ( ds >= FLT_MAX )
                 break;
-            auto c = bs.reachNext();
+            auto c = bs_.reachNext();
             if ( !c.v )
                 continue;
             if ( keepGrowing )
-                bs.addOrgRingSteps( c );
-            if ( auto info = bf.getVertInfo( c.v ) )
+                bs_.addOrgRingSteps( c );
+            if ( auto info = bf_.getVertInfo( c.v ) )
             {
                 auto newMetric = c.metric + info->metric;
                 if ( newMetric < joinPathMetric )
@@ -198,12 +222,12 @@ EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const Edge
         }
         else
         {
-            auto c = bf.reachNext();
+            auto c = bf_.reachNext();
             if ( !c.v )
                 continue;
             if ( keepGrowing )
-                bf.addOrgRingSteps( c );
-            if ( auto info = bs.getVertInfo( c.v ) )
+                bf_.addOrgRingSteps( c );
+            if ( auto info = bs_.getVertInfo( c.v ) )
             {
                 auto newMetric = c.metric + info->metric;
                 if ( newMetric < joinPathMetric )
@@ -216,11 +240,12 @@ EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const Edge
     }
 
     EdgePath res;
+    const auto & topology = bs_.topology();
     if ( join )
     {
-        res = bs.getPathBack( join );
+        res = bs_.getPathBack( join );
         reverse( res );
-        auto tail = bf.getPathBack( join );
+        auto tail = bf_.getPathBack( join );
         res.insert( res.end(), tail.begin(), tail.end() );
         assert( isEdgePath( topology, res ) );
 

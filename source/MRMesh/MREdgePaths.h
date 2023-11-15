@@ -50,10 +50,12 @@ struct TerminalVertex
 /// finds the shortest path in euclidean metric from start to finish vertices using Dijkstra algorithm;
 /// if no path can be found then empty path is returned
 [[nodiscard]] MRMESH_API EdgePath buildShortestPath( const Mesh & mesh, VertId start, VertId finish, float maxPathLen = FLT_MAX );
+
 /// finds the shortest path in euclidean metric from start to finish vertices using bidirectional modification of Dijkstra algorithm,
 /// constructing the path simultaneously from both start and finish, which is faster for long paths;
 /// if no path can be found then empty path is returned
 [[nodiscard]] MRMESH_API EdgePath buildShortestPathBiDir( const Mesh & mesh, VertId start, VertId finish, float maxPathLen = FLT_MAX );
+
 /// finds the path from a vertex in start-triangle to a vertex in finish-triangle,
 /// so that the length start-first_vertex-...-last_vertex-finish is shortest in euclidean metric;
 /// using bidirectional modification of Dijkstra algorithm, constructing the path simultaneously from both start and finish, which is faster for long paths;
@@ -63,10 +65,12 @@ struct TerminalVertex
     VertId * outPathStart = nullptr,  // if the path is found then its start vertex will be written here (even if start vertex is the same as finish vertex and the path is empty)
     VertId * outPathFinish = nullptr, // if the path is found then its finish vertex will be written here (even if start vertex is the same as finish vertex and the path is empty)
     float maxPathLen = FLT_MAX );
+
 /// finds the shortest path in euclidean metric from start to finish vertices using A* modification of Dijkstra algorithm,
 /// which is faster for near linear path;
 /// if no path can be found then empty path is returned
 [[nodiscard]] MRMESH_API EdgePath buildShortestPathAStar( const Mesh & mesh, VertId start, VertId finish, float maxPathLen = FLT_MAX );
+
 /// finds the path from a vertex in start-triangle to a vertex in finish-triangle,
 /// so that the length start-first_vertex-...-last_vertex-finish is shortest in euclidean metric;
 /// using A* modification of Dijkstra algorithm, which is faster for near linear path;
@@ -83,11 +87,20 @@ struct TerminalVertex
 /// builds shortest path in given metric from start to finish vertices; if no path can be found then empty path is returned
 [[nodiscard]] MRMESH_API EdgePath buildSmallestMetricPath( const MeshTopology & topology, const EdgeMetric & metric,
     VertId start, VertId finish, float maxPathMetric = FLT_MAX );
+
 /// finds the smallest metric path from start vertex to finish vertex,
 /// using bidirectional modification of Dijkstra algorithm, constructing the path simultaneously from both start and finish, which is faster for long paths;
 /// if no path can be found then empty path is returned
 [[nodiscard]] MRMESH_API EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const EdgeMetric & metric,
     VertId start, VertId finish, float maxPathMetric = FLT_MAX );
+
+/// returns the builder that can find the smallest metric path from start vertex to finish vertex,
+/// using bidirectional modification of Dijkstra algorithm, constructing the path simultaneously from both start and finish, which is faster for long paths;
+/// if no path can be found then empty path is returned;
+/// multiple runs of one builder is more efficient than multiple calls to buildSmallestMetricPathBiDir() due to less memory allocations
+[[nodiscard]] MRMESH_API std::function<EdgePath(VertId start, VertId finish, float maxPathMetric)>
+    getBuilderOfSmallestMetricPathBiDir( const MeshTopology & topology, const EdgeMetric & metric );
+
 /// finds the smallest metric path from one of start vertices to one of the finish vertices,
 /// using bidirectional modification of Dijkstra algorithm, constructing the path simultaneously from both starts and finishes, which is faster for long paths;
 /// if no path can be found then empty path is returned

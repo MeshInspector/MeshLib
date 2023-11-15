@@ -1148,7 +1148,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
             if ( !currentResult_.has_value() )
             {
                 errorSummary_ << ( errorSummary_.tellp() != 0 ? "\n" : "" ) << "\n" << currentResult_.error();
-                return continueWith_( State::TaskPreparing );
+                return continueWith_( State::TaskFinished );
             }
 
             if ( !warningTextBuffer_.empty() )

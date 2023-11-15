@@ -54,6 +54,7 @@
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRAppendHistory.h"
 #include "MRSwapRootAction.h"
+#include "MRMesh/MRSceneLoad.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/html5.h>
@@ -1009,6 +1010,53 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
     };
     using PostProcess = decltype( postProcess );
 
+    auto postProcess2 = [] ( SceneLoad::SceneLoadResult result )
+    {
+        return [result = std::move( result )]
+        {
+            assert( result.scene );
+            const auto childCount = result.scene->children().size();
+            if ( childCount > 0 )
+            {
+                const auto isSceneEmpty = SceneRoot::get().children().empty();
+                if ( !result.isSceneConstructed || ( childCount == 1 && isSceneEmpty ) )
+                {
+                    AppendHistory<SwapRootAction>( "Load Scene File" );
+                    SceneRoot::getSharedPtr() = result.scene;
+
+                    assert( result.loadedFiles.size() == 1 );
+                    auto filePath = result.loadedFiles.front();
+                    if ( result.isSceneConstructed )
+                        filePath.replace_extension( ".mru" );
+                    getViewerInstance().onSceneSaved( filePath, !result.isSceneConstructed );
+                }
+                else
+                {
+                    std::string historyName = childCount == 1 ? "Open file" : "Open files";
+                    SCOPED_HISTORY( historyName );
+
+                    const auto children = result.scene->children();
+                    result.scene->removeAllChildren();
+                    for ( const auto& obj : children )
+                    {
+                        AppendHistory<ChangeSceneAction>( "Load File", obj, ChangeSceneAction::Type::AddObject );
+                        SceneRoot::get().addChild( obj );
+                    }
+
+                    auto& viewerInst = getViewerInstance();
+                    for ( const auto& file : result.loadedFiles )
+                        viewerInst.recentFilesStore.storeFile( file );
+                }
+
+                getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
+            }
+            if ( !result.errorSummary.empty() )
+                showModal( std::string( result.errorSummary ), ImGuiMenu::ModalMessageType::Error );
+            else if ( !result.warningSummary.empty() )
+                showModal( std::string( result.warningSummary ), ImGuiMenu::ModalMessageType::Error );
+        };
+    };
+
     class AsyncFileOpener : public ResumableTask<void>
     {
     public:
@@ -1211,52 +1259,10 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
     auto opener = std::make_shared<AsyncFileOpener>( filesList, postProcess );
     ProgressBar::orderWithResumableTask( "Open files", opener );
 #else
-    ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess]
+    ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess2]
     {
-        BatchObjectLoadResult result;
-        std::ostringstream errorSummary;
-        std::ostringstream warningSummary;
-        for ( auto index = 0ull; index < filesList.size(); ++index )
-        {
-            const auto& filename = filesList[index];
-            if ( filename.empty() )
-                continue;
-
-            spdlog::info( "Loading file {}", utf8string( filename ) );
-            std::string loadInfo;
-            auto res = loadObjectFromFile( filename, &loadInfo, [callback = ProgressBar::callBackSetProgress, index, number = filesList.size()] ( float v )
-            {
-                return callback( ( (float)index + v ) / (float)number );
-            } );
-            spdlog::info( "Load file {} - {}", utf8string( filename ), res.has_value() ? "success" : res.error().c_str() );
-            if ( !res.has_value() )
-            {
-                errorSummary << ( errorSummary.tellp() != 0 ? "\n" : "" ) << "\n" << res.error();
-                continue;
-            }
-            if ( !loadInfo.empty() )
-            {
-                warningSummary << ( warningSummary.tellp() != 0 ? "\n" : "" ) << "\n" << utf8string( filename ) << ":\n" << loadInfo << "\n";
-            }
-
-            auto& newObjs = *res;
-            bool anyObjLoaded = false;
-            for ( auto& obj : newObjs )
-            {
-                if ( !obj )
-                    continue;
-
-                anyObjLoaded = true;
-                result.loadedObjects.emplace_back( obj );
-            }
-            if ( anyObjLoaded )
-                result.loadedFiles.emplace_back( filename );
-            else
-                errorSummary << ( errorSummary.tellp() != 0 ? "\n" : "" ) << "\n" << "No objects found in the file \"" << utf8string( filename ) << "\"";
-        }
-        result.errorSummary = errorSummary.str();
-        result.warningSummary = warningSummary.str();
-        return postProcess( std::move( result ) );
+        auto result = SceneLoad::fromAnySupportedFormat( filesList, ProgressBar::callBackSetProgress );
+        return postProcess2( std::move( result ) );
     } );
 #endif
 

@@ -1082,7 +1082,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
             return false;
         }
 
-        static bool yield_()
+        static bool suspend_()
         {
             return true;
         }
@@ -1126,7 +1126,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
             assert( state_ == State::TaskAwaiting );
             assert( currentTask_ );
             if ( !currentTask_->resume() )
-                return yield_();
+                return suspend_();
 
             auto result = currentTask_->result();
             if ( result )

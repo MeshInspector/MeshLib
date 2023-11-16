@@ -14,7 +14,6 @@ namespace MR
  * @param outNewFaces - (optional) output newly generated faces
  * @param old2newMap - (optional) mapping for the region's faces
  */
-MRMESH_API void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceBitSet* outNewFaces = nullptr,
-                                                FaceHashMap* old2newMap = nullptr );
+MRMESH_API void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceBitSet* outNewFaces = nullptr );
 
 } // namespace MR

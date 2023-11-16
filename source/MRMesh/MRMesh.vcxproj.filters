@@ -1835,6 +1835,9 @@
     <ClCompile Include="MRFilterCreaseEdges.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
+    <ClCompile Include="MREdgePathsBuilder.cpp">
+      <Filter>Source Files\SurfacePath</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

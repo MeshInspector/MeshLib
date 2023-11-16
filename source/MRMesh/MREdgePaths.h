@@ -94,13 +94,6 @@ struct TerminalVertex
 [[nodiscard]] MRMESH_API EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const EdgeMetric & metric,
     VertId start, VertId finish, float maxPathMetric = FLT_MAX );
 
-/// returns the builder that can find the smallest metric path from start vertex to finish vertex,
-/// using bidirectional modification of Dijkstra algorithm, constructing the path simultaneously from both start and finish, which is faster for long paths;
-/// if no path can be found then empty path is returned;
-/// multiple runs of one builder is more efficient than multiple calls to buildSmallestMetricPathBiDir() due to less memory allocations
-[[nodiscard]] MRMESH_API std::function<EdgePath(VertId start, VertId finish, float maxPathMetric)>
-    getBuilderOfSmallestMetricPathBiDir( const MeshTopology & topology, const EdgeMetric & metric );
-
 /// finds the smallest metric path from one of start vertices to one of the finish vertices,
 /// using bidirectional modification of Dijkstra algorithm, constructing the path simultaneously from both starts and finishes, which is faster for long paths;
 /// if no path can be found then empty path is returned

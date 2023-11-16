@@ -113,6 +113,25 @@ struct TrivialMetricToPenalty
 
 using EdgePathsBuilder = EdgePathsBuilderT<TrivialMetricToPenalty>;
 
+/// this object can find the smallest metric path from one of starts to one of finishes,
+/// multiple runs of one builder is more efficient than multiple calls to buildSmallestMetricPathBiDir() due to less memory allocations
+class BuilderOfSmallestMetricPathBiDir
+{
+public:
+    BuilderOfSmallestMetricPathBiDir( const MeshTopology & topology, const EdgeMetric & metric )
+        : bs_( topology, metric ), bf_( topology, metric ) { }
+
+    /// use bidirectional modification of Dijkstra algorithm, constructing the path simultaneously from both start and finish, which is faster for long paths;
+    /// if no path can be found then empty path is returned
+    [[nodiscard]] MRMESH_API EdgePath run(
+        const TerminalVertex * starts, int numStarts,
+        const TerminalVertex * finishes, int numFinishes,
+        VertId * outPathStart, VertId * outPathFinish, float maxPathMetric );
+
+private:
+    EdgePathsBuilder bs_, bf_;
+};
+
 template<class MetricToPenalty>
 EdgePathsBuilderT<MetricToPenalty>::EdgePathsBuilderT( const MeshTopology & topology, const EdgeMetric & metric )
     : topology_( topology )

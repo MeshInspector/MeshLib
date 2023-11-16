@@ -388,6 +388,7 @@
     <ClCompile Include="MRDistanceMapTests.cpp" />
     <ClCompile Include="MREdgeMetric.cpp" />
     <ClCompile Include="MREdgePaths.cpp" />
+    <ClCompile Include="MREdgePathsBuilder.cpp" />
     <ClCompile Include="MREmbeddedPython.cpp" />
     <ClCompile Include="MREmbedTerrainStructure.cpp" />
     <ClCompile Include="MREnumNeighbours.cpp" />

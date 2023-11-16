@@ -101,4 +101,13 @@ EdgePath BuilderOfSmallestMetricPathBiDir::run(
     return res;
 }
 
+EdgePath BuilderOfSmallestMetricPathBiDir::run(
+    VertId start, VertId finish,
+    VertId * outPathStart, VertId * outPathFinish, float maxPathMetric )
+{
+    TerminalVertex s{ start, 0 };
+    TerminalVertex f{ finish, 0 };
+    return run( &s, 1, &f, 1, outPathStart, outPathFinish, maxPathMetric );
+}
+
 } // namespace MR

@@ -5,7 +5,9 @@
 #include "MRUnionFind.h"
 #include "MRTimer.h"
 #include "MRExpected.h"
+#include "MRParallelFor.h"
 #include "MRPch/MRTBB.h"
+#include "MREdgePathsBuilder.h"
 
 namespace MR
 {
@@ -188,22 +190,23 @@ Expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( Progr
     {
         return primaryTree_.test( e.undirected() ) ? 1.0f : inf;
     };
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, res.size() ), [&]( const tbb::blocked_range<size_t> & range )
-    {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            auto edge = joinEdges[i];
-            const auto o = mp_.mesh.topology.org( edge );
-            const auto d = mp_.mesh.topology.dest( edge );
-            assert( o != d );
-            assert( !primaryTree_.test( edge ) );
-            assert( treeConnectedVertices_.find( o ) == treeConnectedVertices_.find( d ) );
 
-            auto tunnel = buildSmallestMetricPathBiDir( mp_.mesh.topology, treeMetric, d, o );
-            tunnel.push_back( edge );
-            assert( isEdgeLoop( mp_.mesh.topology, tunnel ) );
-            res[i] = std::move( tunnel );
-        }
+    tbb::enumerable_thread_specific<BuilderOfSmallestMetricPathBiDir> threadData( std::cref( mp_.mesh.topology ), std::cref( treeMetric ) );
+
+    ParallelFor( size_t( 0 ), res.size(),[&]( size_t i )
+    {
+        auto edge = joinEdges[i];
+        const auto o = mp_.mesh.topology.org( edge );
+        const auto d = mp_.mesh.topology.dest( edge );
+        assert( o != d );
+        assert( !primaryTree_.test( edge ) );
+        assert( treeConnectedVertices_.find( o ) == treeConnectedVertices_.find( d ) );
+
+        auto& builder = threadData.local();
+        auto tunnel = builder.run( d, o );
+        tunnel.push_back( edge );
+        assert( isEdgeLoop( mp_.mesh.topology, tunnel ) );
+        res[i] = std::move( tunnel );
     });
 
     return res;

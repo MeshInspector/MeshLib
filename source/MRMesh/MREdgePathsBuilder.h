@@ -121,12 +121,17 @@ public:
     BuilderOfSmallestMetricPathBiDir( const MeshTopology & topology, const EdgeMetric & metric )
         : bs_( topology, metric ), bf_( topology, metric ) { }
 
-    /// use bidirectional modification of Dijkstra algorithm, constructing the path simultaneously from both start and finish, which is faster for long paths;
+    /// use bidirectional modification of Dijkstra algorithm, constructing the path simultaneously from both starts and finishes, which is faster for long paths;
     /// if no path can be found then empty path is returned
     [[nodiscard]] MRMESH_API EdgePath run(
         const TerminalVertex * starts, int numStarts,
         const TerminalVertex * finishes, int numFinishes,
-        VertId * outPathStart, VertId * outPathFinish, float maxPathMetric );
+        VertId * outPathStart = nullptr, VertId * outPathFinish = nullptr, float maxPathMetric = FLT_MAX );
+
+    /// one start, one finish version
+    [[nodiscard]] MRMESH_API EdgePath run(
+        VertId start, VertId finish,
+        VertId * outPathStart = nullptr, VertId * outPathFinish = nullptr, float maxPathMetric = FLT_MAX );
 
 private:
     EdgePathsBuilder bs_, bf_;

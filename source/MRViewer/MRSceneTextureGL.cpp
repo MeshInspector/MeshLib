@@ -46,12 +46,13 @@ void SceneTextureGL::draw()
 
     qt_.bind();
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
+    GL_EXEC( glBindTexture( GL_TEXTURE_2D, fd_.getTexture() ) );
     setTextureWrapType( WrapType::Mirror );
     setTextureFilterType( FilterType::Discrete );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, fd_.getTexture() ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "pixels" ), 0 ) );
+
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "depth" ), 0.5f ) );
     GL_EXEC( glUniform2f( glGetUniformLocation( shader, "viewportSize" ), float( size.x ), float( size.y ) ) );
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "pixels" ), 0 ) );
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 2 );
     GL_EXEC( glDrawArrays( GL_TRIANGLES, 0, 6 ) );
 

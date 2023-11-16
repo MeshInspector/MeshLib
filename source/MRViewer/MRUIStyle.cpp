@@ -498,14 +498,14 @@ bool radioButton( const char* label, int* value, int valButton )
 void ColorEditRestoreHS( const float* col, float* H, float* S, float* V )
 {
     ImGuiContext& g = *ImGui::GetCurrentContext();
-    if ( g.ColorEditLastColor != ImGui::ColorConvertFloat4ToU32( ImVec4( col[0], col[1], col[2], 0 ) ) )
+    if ( g.ColorEditSavedColor != ImGui::ColorConvertFloat4ToU32( ImVec4( col[0], col[1], col[2], 0 ) ) )
         return;
 
-    if ( *S == 0.0f || ( *H == 0.0f && g.ColorEditLastHue == 1 ) )
-        *H = g.ColorEditLastHue;
+    if ( *S == 0.0f || ( *H == 0.0f && g.ColorEditSavedHue == 1 ) )
+        *H = g.ColorEditSavedHue;
 
     if ( *V == 0.0f )
-        *S = g.ColorEditLastSat;
+        *S = g.ColorEditSavedSat;
 }
 
 bool colorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags /*= ImGuiColorEditFlags_None*/ )
@@ -733,10 +733,10 @@ bool colorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags /
                 f[n] = i[n] / 255.0f;
         if ( ( flags & ImGuiColorEditFlags_DisplayHSV ) && ( flags & ImGuiColorEditFlags_InputRGB ) )
         {
-            g.ColorEditLastHue = f[0];
-            g.ColorEditLastSat = f[1];
+            g.ColorEditSavedHue = f[0];
+            g.ColorEditSavedSat = f[1];
             ColorConvertHSVtoRGB( f[0], f[1], f[2], f[0], f[1], f[2] );
-            g.ColorEditLastColor = ColorConvertFloat4ToU32( ImVec4( f[0], f[1], f[2], 0 ) );
+            g.ColorEditSavedColor = ColorConvertFloat4ToU32( ImVec4( f[0], f[1], f[2], 0 ) );
         }
         if ( ( flags & ImGuiColorEditFlags_DisplayRGB ) && ( flags & ImGuiColorEditFlags_InputHSV ) )
             ColorConvertRGBtoHSV( f[0], f[1], f[2], f[0], f[1], f[2] );

@@ -282,7 +282,7 @@ void Toolbar::drawCustomizeModal_()
         ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 0.f );
         ImGui::Button( ( "##ItemBtn" + std::to_string( i ) ).c_str(), params.itemSize );
         ImGui::PopStyleVar();
-        ImGui::SetItemAllowOverlap();
+        ImGui::SetNextItemAllowOverlap();
 
         ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2() );
         ImGui::SetNextWindowSize( tooltipSize );

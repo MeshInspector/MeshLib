@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRInTreePathBuilder.h" />
     <ClInclude Include="MRChangeColoringType.h" />
     <ClInclude Include="MRChangeColoringActions.h" />
     <ClInclude Include="MRCloudPartMapping.h" />
@@ -417,6 +418,7 @@
     <ClCompile Include="MRInnerShell.cpp" />
     <ClCompile Include="MRIntersection.cpp" />
     <ClCompile Include="MRIntersectionContour.cpp" />
+    <ClCompile Include="MRInTreePathBuilder.cpp" />
     <ClCompile Include="MRIOFormatsRegistry.cpp" />
     <ClCompile Include="MRIOParsing.cpp" />
     <ClCompile Include="MRIRenderObject.cpp" />

@@ -211,7 +211,11 @@ void ProgressBar::orderWithResumableTask( const char * name, std::shared_ptr<Res
         // finalizer is not required
         instance.onFinish_ = {};
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
-        task->start();
+        instance.thread_ = std::thread( [task]
+        {
+            std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
+            task->start();
+        } );
 #else
         staticTaskForLaterCall = [task]
         {

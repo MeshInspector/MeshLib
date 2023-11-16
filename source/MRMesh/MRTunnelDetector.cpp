@@ -1,6 +1,7 @@
 #include "MRTunnelDetector.h"
 #include "MRMesh.h"
 #include "MREdgePaths.h"
+#include "MRInTreePathBuilder.h"
 #include "MRRegionBoundary.h"
 #include "MRUnionFind.h"
 #include "MRTimer.h"
@@ -183,11 +184,8 @@ Expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( Progr
         return unexpectedOperationCanceled();
 
     std::vector<EdgeLoop> res( joinEdges.size() );
-    constexpr float inf = std::numeric_limits<float>::infinity(); // such edges will be completely skipped during path finding for best performance
-    auto treeMetric = [this]( EdgeId e )
-    {
-        return primaryTree_.test( e.undirected() ) ? 1.0f : inf;
-    };
+    InTreePathBuilder inTreePathBuilder( mp_.mesh.topology, primaryTree_ );
+
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, res.size() ), [&]( const tbb::blocked_range<size_t> & range )
     {
         for ( size_t i = range.begin(); i < range.end(); ++i )
@@ -199,7 +197,7 @@ Expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( Progr
             assert( !primaryTree_.test( edge ) );
             assert( treeConnectedVertices_.find( o ) == treeConnectedVertices_.find( d ) );
 
-            auto tunnel = buildSmallestMetricPathBiDir( mp_.mesh.topology, treeMetric, d, o );
+            auto tunnel = inTreePathBuilder.build( d, o );
             tunnel.push_back( edge );
             assert( isEdgeLoop( mp_.mesh.topology, tunnel ) );
             res[i] = std::move( tunnel );

@@ -313,7 +313,7 @@ void RenderVolumeObject::bindVolume_( bool picker )
         }
         denseMap_.loadData(
             { 
-                .resolution = Vector2i( denseMap.size(),1 ), 
+                .resolution = Vector2i( (int)denseMap.size(), 1 ),
                 .internalFormat = GL_RGBA8, 
                 .format = GL_RGBA, 
                 .type = GL_UNSIGNED_BYTE,

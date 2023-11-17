@@ -152,11 +152,15 @@ IF(NOT MR_EMSCRIPTEN)
         ELSEIF(${MR_FEDORA})
             SET(MR_PYTHON_VERSION 3.11)
         ELSE()
-            SET(MR_PYTHON_VERSION 3.9)
+            SET(MR_PYTHON_VERSION "")
         ENDIF()
 
         IF($ENV{MESHLIB_PYTHON_VERSION})
             SET(MR_PYTHON_VERSION $ENV{MESHLIB_PYTHON_VERSION})
+        ENDIF()
+
+        IF(NOT MR_PYTHON_VERSION STREQUAL "")
+            SET(MR_PYTHON_VERSION "${MR_PYTHON_VERSION} EXACT")
         ENDIF()
 
         IF(APPLE)
@@ -165,14 +169,7 @@ IF(NOT MR_EMSCRIPTEN)
             find_package(pybind11 REQUIRED)
         ENDIF()
 
-        set(PYTHON_VAR "python")
-        string(CONCAT MR_PYTHON_LIB ${PYTHON_VAR}${MR_PYTHON_VERSION})
-
-        find_package(Python ${MR_PYTHON_VERSION} EXACT REQUIRED)
-        find_package(PythonInterp ${MR_PYTHON_VERSION} EXACT REQUIRED)
-        find_package(PythonLibs ${MR_PYTHON_VERSION} EXACT REQUIRED)
-        include_directories(${PYTHON_INCLUDE_DIRS})
-        include_directories(${PYTHON_INCLUDE_PATH})
+        find_package(Python ${MR_PYTHON_VERSION} REQUIRED COMPONENTS Interpreter Development)
     ENDIF()
 ENDIF()
 

@@ -7,16 +7,30 @@
 namespace MR
 {
 
+class ImGuiImage;
+
 namespace UI
 {
 
 /// init internal parameters
 MRVIEWER_API void init();
 
-
+/// parameters to customize buttonEx
+struct ButtonCustomizationParams
+{
+    /// gradient texture other than default
+    /// {start, hover_start, acitve_start, disabled_start,
+    ///  end, hover_end, acitve_end, disabled_end  }
+    ImGuiImage* customTexture = nullptr;
+    /// force use if ImGuiCol_Text for text
+    bool forceImguiTextColor = false;
+    /// show border or not
+    bool border = false;
+};
 
 /// draw gradient button, which can be disabled (active = false)
-MRVIEWER_API bool buttonEx( const char* label, bool active, const Vector2f& size = Vector2f( 0, 0 ), ImGuiButtonFlags flags = ImGuiButtonFlags_None );
+MRVIEWER_API bool buttonEx( const char* label, bool active, const Vector2f& size = Vector2f( 0, 0 ), 
+    ImGuiButtonFlags flags = ImGuiButtonFlags_None, const ButtonCustomizationParams& custmParams = {} );
 /// draw gradient button, which can be disabled (active = false)
 /// returns true if button is clicked in this frame, or key is pressed (optional)
 MRVIEWER_API bool button( const char* label, bool active, const Vector2f& size = Vector2f( 0, 0 ), ImGuiKey key = ImGuiKey_None );

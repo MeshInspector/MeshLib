@@ -160,7 +160,8 @@ void init()
     textureR->update( data );
 }
 
-bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/, ImGuiButtonFlags flags /*= ImGuiButtonFlags_None*/ )
+bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/, 
+    ImGuiButtonFlags flags /*= ImGuiButtonFlags_None*/, const ButtonCustomizationParams& custmParams )
 {
     // copy from ImGui::ButtonEx and replaced visualize part
     ImGuiWindow* window = ImGui::GetCurrentWindow();
@@ -192,7 +193,7 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
     ImGui::RenderNavHighlight( bb, id );
 
     // replaced part
-    auto& texture = getTexture( TextureType::GradientBtn );
+    auto texture = custmParams.customTexture ? custmParams.customTexture : getTexture( TextureType::GradientBtn ).get();
     if ( texture )
     {
         const float textureU = 0.125f + ( !active ? 0.75f : ( held && hovered ) ? 0.5f : hovered ? 0.25f : 0.f );
@@ -201,6 +202,8 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
             bb.Min, bb.Max,
             ImVec2( textureU, 0.25f ), ImVec2( textureU, 0.75f ),
             Color::white().getUInt32(), style.FrameRounding );
+        if ( custmParams.border )
+            ImGui::RenderFrameBorder( bb.Min, bb.Max, style.FrameRounding );
     }
     else
     {
@@ -212,7 +215,8 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
     if ( g.LogEnabled )
         ImGui::LogSetNextTextDecoration( "[", "]" );
     StyleParamHolder sh;
-    sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnText ) );
+    if ( !custmParams.forceImguiTextColor )
+        sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnText ) );
     ImGui::RenderTextClipped( bb.Min, bb.Max, label, NULL, &label_size, style.ButtonTextAlign, &bb );
 
     IMGUI_TEST_ENGINE_ITEM_INFO( id, label, g.LastItemData.StatusFlags );

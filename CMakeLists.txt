@@ -159,14 +159,14 @@ IF(NOT MR_EMSCRIPTEN)
             SET(MR_PYTHON_VERSION $ENV{MESHLIB_PYTHON_VERSION})
         ENDIF()
 
-        IF(NOT MR_PYTHON_VERSION STREQUAL "")
-            SET(MR_PYTHON_VERSION ${MR_PYTHON_VERSION} EXACT)
-        ENDIF()
-
         IF(APPLE)
             LINK_DIRECTORIES(${HOMEBREW_PREFIX}/opt/python@${MR_PYTHON_VERSION}/Frameworks/Python.framework/Versions/${MR_PYTHON_VERSION}/lib/)
             include_directories(${HOMEBREW_PREFIX}/include)
             find_package(pybind11 REQUIRED)
+        ENDIF()
+
+        IF(NOT MR_PYTHON_VERSION STREQUAL "")
+            SET(MR_PYTHON_VERSION ${MR_PYTHON_VERSION} EXACT)
         ENDIF()
 
         find_package(Python ${MR_PYTHON_VERSION} REQUIRED COMPONENTS Interpreter Development)

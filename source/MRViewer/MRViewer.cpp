@@ -211,6 +211,14 @@ static void glfw_window_scale( GLFWwindow* /*window*/, float xscale, float yscal
     viewer->postRescale( xscale, yscale );
 }
 
+#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
+static constexpr int minEmsSleep = 3; // ms - more then 300 fps possible
+static EM_BOOL emsEmptyCallback( double, void* )
+{
+    return EM_TRUE;
+}
+#endif
+
 static void glfw_mouse_move( GLFWwindow* /*window*/, double x, double y )
 {
     auto* viewer = &MR::getViewerInstance();
@@ -393,27 +401,35 @@ void Viewer::emsMainInfiniteLoop()
 #else
 void Viewer::emsMainInfiniteLoop()
 {
-    auto& viewer = getViewerInstance();
-    if ( viewer.isAnimating )
-    {
-        const double minDuration = 1e3 / double( viewer.animationMaxFps );
-        emscripten_sleep( std::max( int( minDuration ), 0 ) );
-    }
-    else if ( viewer.eventQueue.empty() )
-        return;
-
-    do
-    {
-        viewer.draw( true );
-        viewer.eventQueue.execute();
-        CommandLoop::processCommands();
-    } while ( viewer.forceRedrawFrames_ > 0 || viewer.needRedraw_() );
 }
 #endif
 
 void Viewer::mainLoopFunc_()
 {
+#ifdef MR_EMSCRIPTEN_ASYNCIFY
+    for (;;)
+    {
+        if ( isAnimating )
+        {
+            const double minDuration = 1e3 / double( animationMaxFps );
+            emscripten_sleep( std::max( int( minDuration ), minEmsSleep ) );
+        }
+        else if ( !isAnimating && eventQueue.empty() )
+        {
+            emscripten_sleep( minEmsSleep ); // more then 300 fps possible
+            continue;
+        }
+
+        do
+        {
+            draw( true );
+            eventQueue.execute();
+            CommandLoop::processCommands();
+        } while ( forceRedrawFrames_ > 0 || needRedraw_() );
+    }
+#else
     emscripten_set_main_loop( emsMainInfiniteLoop, 0, true );
+#endif
 }
 #endif
 
@@ -1368,8 +1384,16 @@ void Viewer::recursiveDraw_( const Viewport& vp, const Object& obj, const Affine
 
 void Viewer::draw( bool force )
 {
-#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
+#ifdef __EMSCRIPTEN__
+#ifdef MR_EMSCRIPTEN_ASYNCIFY
+    if ( draw_( true ) )
+    {
+        emscripten_request_animation_frame( emsEmptyCallback, nullptr ); // call with swap
+        emscripten_sleep( minEmsSleep );
+    }
+#else
     while ( !draw_( true ) );
+#endif
 #else
     draw_( force );
 #endif

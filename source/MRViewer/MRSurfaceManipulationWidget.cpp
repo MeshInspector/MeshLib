@@ -45,6 +45,10 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
 
 void SurfaceManipulationWidget::reset()
 {
+    if ( oldMesh_ )
+        oldMesh_->detachFromParent();
+    oldMesh_.reset();
+
     obj_->clearAncillaryTexture();
     obj_.reset();
 
@@ -76,10 +80,16 @@ bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*
     if ( !obj || obj != obj_ )
         return false;
 
+    oldMesh_ = std::dynamic_pointer_cast<ObjectMesh>( obj_->clone() );
+    oldMesh_->setAncillary( true );
+    oldMesh_->setGlobalAlpha( 1 );
+    obj_->setPickable( false );
+    obj_->parent()->addChild( oldMesh_ );
+
     changeMeshAction_ = std::make_shared<ChangeMeshAction>( "Change mesh surface", obj_ );
     mousePressed_ = true;
     timePoint_ = std::chrono::high_resolution_clock::now();
-
+    changeSurface_();
 
     return true;
 }
@@ -93,6 +103,9 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
     size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
     pointsShift_ = VertScalars( numV, 0.f );
 
+    oldMesh_->detachFromParent();\
+    oldMesh_.reset();
+    obj_->setPickable( true );
     AppendHistory( changeMeshAction_ );
     changeMeshAction_.reset();
 
@@ -148,11 +161,6 @@ bool SurfaceManipulationWidget::onKeyUp_( int /*key*/, int modifier )
     workMode_ = newWorkMode;
 
     return res;
-}
-
-void SurfaceManipulationWidget::postDraw_()
-{
-    updateRegion_( mousePos_ );
 }
 
 void SurfaceManipulationWidget::changeSurface_()
@@ -219,10 +227,11 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f & mousePos )
 
     const auto& viewerRef = getViewerInstance();
     std::vector<ObjAndPick> objAndPick;
+    auto objMeshPtr = oldMesh_ ? oldMesh_ : obj_;
     if ( ( mousePos - mousePos_ ).lengthSq() < 25.f )
     {
         mouseMoved_ = false;
-        objAndPick.push_back( getViewerInstance().viewport().pick_render_object());
+        objAndPick.push_back( getViewerInstance().viewport().pick_render_object( { objMeshPtr.get() } ));
     }
     else
     {
@@ -235,7 +244,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f & mousePos )
         for ( int i = 0; i < count; ++i )
             points[i] = oldMousePos + step * float( i );
 
-        objAndPick = getViewerInstance().viewport().multiPickObjects( { obj_.get() }, points );
+        objAndPick = getViewerInstance().viewport().multiPickObjects( { objMeshPtr.get() }, points );
         mouseMoved_ = true;
     }
     mousePos_ = mousePos;
@@ -247,7 +256,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f & mousePos )
     triPoints.reserve( objAndPick.size() );
     for ( int i = 0; i < objAndPick.size(); ++i )
     {
-        if ( objAndPick[i].first == obj_ )
+        if ( objAndPick[i].first == objMeshPtr )
         {
             const auto& pick = objAndPick[i].second;
             VertId v[3];

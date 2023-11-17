@@ -17,7 +17,7 @@ namespace MR
 class MRVIEWER_CLASS SurfaceManipulationWidget :
     public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener,
                          KeyDownListener, KeyUpListener,
-                         PreDrawListener>
+                         PostDrawListener>
 {
 public:
     /// Mesh change settings
@@ -52,7 +52,7 @@ private:
     MRVIEWER_API bool onKeyUp_( int key, int modifier ) override;
 
     /// update (change) mesh surface every frame during modification is active
-    MRVIEWER_API virtual void preDraw_() override;
+    MRVIEWER_API virtual void postDraw_() override;
 
     void changeSurface_();
     void updateUV_( bool set );
@@ -67,6 +67,7 @@ private:
     bool mouseMoved_ = false;
     VertBitSet region_;
     VertBitSet regionExpanded_; // need for proper visualization
+    VertScalars pointsShift_;
     VertScalars distances_;
     VertUVCoords uvs_;
     std::shared_ptr<ChangeMeshAction> changeMeshAction_;

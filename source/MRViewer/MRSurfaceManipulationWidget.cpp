@@ -26,10 +26,12 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
     diagonal_ = obj_->getBoundingBox().diagonal();
     minRadius_ = obj_->avgEdgeLen() * 2.f;
     settings_.radius = diagonal_ * 0.025f;
+    settings_.force = diagonal_ * 0.01f;
 
     size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
     region_ = VertBitSet( numV, false );
     regionExpanded_ = VertBitSet( numV, false );
+    pointsShift_ = VertScalars( numV, 0.f );
     distances_ = VertScalars( numV, 0.f );
 
     obj_->setAncillaryTexture( { { { Color { 255, 64, 64, 255 }, Color { 0, 0, 0, 0 } }, Vector2i { 1, 2 } } } );
@@ -61,7 +63,7 @@ void SurfaceManipulationWidget::setSettings( const Settings& settings )
 {
     settings_ = settings;
     settings_.radius = std::max( settings_.radius, minRadius_ );
-    settings_.force = std::clamp( settings_.force, 1.f, 100.f );
+    settings_.force = std::max( settings_.force, 0.001f );
     settings_.saturation = std::clamp( settings_.saturation, 1.f, 100.f );
 }
 
@@ -78,6 +80,7 @@ bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*
     mousePressed_ = true;
     timePoint_ = std::chrono::high_resolution_clock::now();
 
+
     return true;
 }
 
@@ -87,6 +90,8 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         return false;
 
     mousePressed_ = false;
+    size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
+    pointsShift_ = VertScalars( numV, 0.f );
 
     AppendHistory( changeMeshAction_ );
     changeMeshAction_.reset();
@@ -97,6 +102,8 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
 bool SurfaceManipulationWidget::onMouseMove_( int mouse_x, int mouse_y )
 {
     updateRegion_( Vector2f{ float( mouse_x ), float( mouse_y ) } );
+    if ( mousePressed_ )
+        changeSurface_();
 
     return true;
 }
@@ -143,11 +150,8 @@ bool SurfaceManipulationWidget::onKeyUp_( int /*key*/, int modifier )
     return res;
 }
 
-void SurfaceManipulationWidget::preDraw_()
+void SurfaceManipulationWidget::postDraw_()
 {
-    if ( mousePressed_ )
-        changeSurface_();
-    
     updateRegion_( mousePos_ );
 }
 
@@ -176,11 +180,7 @@ void SurfaceManipulationWidget::changeSurface_()
 
     auto& points = obj_->varMesh()->points;
 
-    auto newTimePoint = std::chrono::high_resolution_clock::now();
-    auto timeForce = std::chrono::duration_cast< std::chrono::milliseconds >( newTimePoint - timePoint_ ).count() * 0.06f;
-    timePoint_ = newTimePoint;
-
-    const float maxShift = ( settings_.force / 5.f + 10.f ) / 1000.f * diagonal_ / 10.f * timeForce;
+    const float maxShift = settings_.force;
     const float intensity = settings_.saturation / 100.f * 0.15f + 0.4f;
     const float a1 = -1.f * ( 1 - intensity ) / intensity / intensity;
     const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
@@ -190,6 +190,13 @@ void SurfaceManipulationWidget::changeSurface_()
         const float r = std::clamp( distances_[v] / settings_.radius, 0.f, 1.f );
         const float k = r < intensity ? a1 * r * r + 1 : a2 * ( r - 1 ) * ( r - 1 ); // I(r)
         float pointShift = maxShift * k; // shift = F * I(r)
+        if ( pointShift > pointsShift_[v] )
+        {
+            pointShift -= pointsShift_[v];
+            pointsShift_[v] += pointShift;
+        }
+        else
+            return;
         points[v] += direction * pointShift * normal;
     } );
     obj_->setDirtyFlags( DIRTY_PRIMITIVES );
@@ -222,7 +229,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f & mousePos )
         const Vector2f newMousePos = Vector2f( viewerRef.screenToViewport( Vector3f( mousePos ), viewerRef.getHoveredViewportId() ) );
         const Vector2f oldMousePos = Vector2f( viewerRef.screenToViewport( Vector3f( mousePos_ ), viewerRef.getHoveredViewportId() ) );
         const Vector2f vec = newMousePos - oldMousePos;
-        const int count = int( std::ceil( vec.length() / 10.f ) ) + 1;
+        const int count = int( std::ceil( vec.length() ) ) + 1;
         const Vector2f step = vec / ( count - 1.f );
         std::vector<Vector2f> points( count );
         for ( int i = 0; i < count; ++i )
@@ -259,7 +266,6 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f & mousePos )
         return;
     }
 
-    region_.reset();
     regionExpanded_ = newVerts;
 
     dilateRegion( mesh, regionExpanded_, settings_.radius * 2 );
@@ -269,6 +275,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f & mousePos )
     else
         distances_ = computeSurfaceDistances( mesh, triPoints, settings_.radius * 1.5f, &regionExpanded_ );
 
+    region_.reset();
     for ( auto v : regionExpanded_ )
         region_.set( v, distances_[v] <= settings_.radius );
 

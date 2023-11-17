@@ -103,7 +103,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
     size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
     pointsShift_ = VertScalars( numV, 0.f );
 
-    oldMesh_->detachFromParent();\
+    oldMesh_->detachFromParent();
     oldMesh_.reset();
     obj_->setPickable( true );
     AppendHistory( changeMeshAction_ );

@@ -272,7 +272,7 @@ Expected<std::vector<MeshData>, std::string> readMeshes( const tinygltf::Model& 
             }
         }
 
-        if ( model.materials[meshData.materialIndex].pbrMetallicRoughness.baseColorTexture.index >= 0 )
+        if ( meshData.materialIndex >= 0 && model.materials[meshData.materialIndex].pbrMetallicRoughness.baseColorTexture.index >= 0 )
         {
             meshData.uvCoords.resize( meshData.uvCoords.size() + dups.size() );
             for ( const auto& dup : dups )

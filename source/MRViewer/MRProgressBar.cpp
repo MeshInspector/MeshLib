@@ -327,10 +327,10 @@ void ProgressBar::initialize_()
 
     progress_ = 0.0f;
 
+    taskCount_ = deferredInit_->taskCount;
     currentTask_ = 0;
     if ( taskCount_ == 1 )
         currentTask_ = 1;
-    taskCount_ = deferredInit_->taskCount;
 
     closeDialogNextFrame_ = false;
     canceled_ = false;

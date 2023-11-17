@@ -16,8 +16,7 @@ namespace MR
 /// relax (relax surface region)
 class MRVIEWER_CLASS SurfaceManipulationWidget :
     public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener,
-                         KeyDownListener, KeyUpListener,
-                         PreDrawListener>
+                         KeyDownListener, KeyUpListener>
 {
 public:
     /// Mesh change settings
@@ -51,9 +50,6 @@ private:
     /// change modifying mode (shift - relax, ctrl - remove, others - add )
     MRVIEWER_API bool onKeyUp_( int key, int modifier ) override;
 
-    /// update (change) mesh surface every frame during modification is active
-    MRVIEWER_API virtual void preDraw_() override;
-
     void changeSurface_();
     void updateUV_( bool set );
     void updateRegion_( const Vector2f& mousePos );
@@ -67,9 +63,12 @@ private:
     bool mouseMoved_ = false;
     VertBitSet region_;
     VertBitSet regionExpanded_; // need for proper visualization
+    VertScalars pointsShift_;
     VertScalars distances_;
     VertUVCoords uvs_;
     std::shared_ptr<ChangeMeshAction> changeMeshAction_;
+
+    std::shared_ptr<ObjectMesh> oldMesh_;
 
     bool mousePressed_ = false;
     enum class WorkMode

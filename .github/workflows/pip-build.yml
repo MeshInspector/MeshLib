@@ -171,7 +171,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-          ref: ${{needs.setup.outputs.version_tag}}
+          #ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
         working-directory: C:\vcpkg
@@ -553,6 +553,9 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: Wheelhouse
+
+      - name: Install twine
+        run: mv meshlib-2.2.11.51-cp312-none-win_amd64.whl  meshlib-2.2.11-cp312-none-win_amd64.whl 
 
       - name: Install twine
         run: python3 -m pip install --upgrade pip twine

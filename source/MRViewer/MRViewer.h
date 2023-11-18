@@ -14,7 +14,6 @@
 #include "MRMouse.h"
 #include <MRMesh/MRObject.h>
 #include <MRMesh/MRSceneRoot.h>
-#include "MRMesh/MRImage.h"
 #include "MRMouseController.h"
 #include "MRTouchesController.h"
 #include "MRSpaceMouseController.h"

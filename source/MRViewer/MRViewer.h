@@ -18,7 +18,6 @@
 #include "MRTouchesController.h"
 #include "MRSpaceMouseController.h"
 #include "MRTouchpadController.h"
-#include "MRSceneTextureGL.h"
 
 #include <boost/signals2/signal.hpp>
 #include <chrono>

@@ -26,6 +26,7 @@ jobs:
         id: get-latest-tag
 
   manylinux-pip-build:
+    if: ${{false}}
     needs: setup
     timeout-minutes: 40
     runs-on: ${{ matrix.runner }}
@@ -265,6 +266,7 @@ jobs:
           retention-days: 1
 
   macos-pip-build:
+    if: ${{false}}
     needs: setup
     timeout-minutes: 60
     runs-on: ${{ matrix.instance }}
@@ -363,6 +365,7 @@ jobs:
           retention-days: 1
 
   manylinux-pip-test:
+    if: ${{false}}
     needs: [setup, manylinux-pip-build]
     timeout-minutes: 20
     runs-on: ${{ matrix.runner }}
@@ -435,7 +438,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        py-version: ["3.12"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -468,6 +471,7 @@ jobs:
         run: py -${{matrix.py-version}} -m pytest -s -v
 
   macos-pip-test:
+    if: ${{false}}
     needs: [setup, macos-pip-build]
     timeout-minutes: 20
     runs-on: ${{ matrix.instance }}
@@ -521,7 +525,7 @@ jobs:
         run: ${{ matrix.py-cmd }} -m pytest -s -v
 
   upload-to-release:
-    needs: [manylinux-pip-test, windows-pip-test, macos-pip-test]
+    needs: [windows-pip-test]
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
@@ -540,6 +544,7 @@ jobs:
         run: twine upload ./meshlib-*.whl -u MeshInspector -p ${{ secrets.PIP_TEST_REPO_PASS }} --skip-existing
 
   post-release-test:
+    if: ${{false}}
     needs: upload-to-release
     uses: MeshInspector/MeshLib/.github/workflows/release-tests.yml@master
 

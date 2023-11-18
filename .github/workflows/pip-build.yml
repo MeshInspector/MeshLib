@@ -254,7 +254,7 @@ jobs:
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: Windows-debug-python${{ matrix.py-version }}
+          name: Windows-python${{ matrix.py-version }}
           path: wheelhouse\meshlib-*.whl
           retention-days: 1
 
@@ -566,11 +566,6 @@ jobs:
           name: ManyLinux-*
           failOnError: false
 
-      - name: Delete all Windows
-        uses: geekyeggo/delete-artifact@v2
-        with:
-          name: Windows-*
-          failOnError: false
 
       - name: Delete all Macos
         uses: geekyeggo/delete-artifact@v2

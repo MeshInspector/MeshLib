@@ -89,6 +89,7 @@
 
 #ifndef __EMSCRIPTEN__
 #pragma warning(push)
+#pragma warning(disable:4100) //'_unused_op': unreferenced formal parameter
 #pragma warning(disable:4189) //'has_args': local variable is initialized but not referenced
 #pragma warning(disable:4191) //'reinterpret_cast': unsafe conversion from 'PyObject *(__cdecl *)(PyObject *,PyObject *,PyObject *)' to 'void (__cdecl *)(void)'
 #pragma warning(disable:4355) //'this': used in base member initializer list

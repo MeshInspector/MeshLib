@@ -4,6 +4,7 @@
 #include "MRMesh/MRMeshFwd.h"
 #include "MRViewer.h"
 #include "MRMesh/MRChangeMeshAction.h"
+#include <chrono>
 
 namespace MR
 {
@@ -15,16 +16,15 @@ namespace MR
 /// relax (relax surface region)
 class MRVIEWER_CLASS SurfaceManipulationWidget :
     public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener,
-                         KeyDownListener, KeyUpListener,
-                         PreDrawListener>
+                         KeyDownListener, KeyUpListener>
 {
 public:
     /// Mesh change settings
     struct Settings
     {
         float radius = 1.f; // radius of editing region [1 - ...]
-        float force = 10.f; // the force of changing mesh [1 - 100]
-        float intensity = 50.f; // intensity of changing mesh (the force depending on distance to center) [1 - 100]
+        float force = 30.f; // the force of changing mesh [1 - 100]
+        float saturation = 50.f; // effect of force on points far from center editing area. [1 - 100]
     };
 
     /// initialize widget according ObjectMesh
@@ -50,9 +50,6 @@ private:
     /// change modifying mode (shift - relax, ctrl - remove, others - add )
     MRVIEWER_API bool onKeyUp_( int key, int modifier ) override;
 
-    /// update (change) mesh surface every frame during modification is active
-    MRVIEWER_API virtual void preDraw_() override;
-
     void changeSurface_();
     void updateUV_( bool set );
     void updateRegion_( const Vector2f& mousePos );
@@ -61,15 +58,17 @@ private:
 
     std::shared_ptr<ObjectMesh> obj_;
     float diagonal_ = 1.f;
+    float minRadius_ = 1.f;
     Vector2f mousePos_;
     bool mouseMoved_ = false;
     VertBitSet region_;
     VertBitSet regionExpanded_; // need for proper visualization
-    VertBitSet regionOld_;
-    VertScalars changedValues_;
+    VertScalars pointsShift_;
     VertScalars distances_;
     VertUVCoords uvs_;
     std::shared_ptr<ChangeMeshAction> changeMeshAction_;
+
+    std::shared_ptr<ObjectMesh> oldMesh_;
 
     bool mousePressed_ = false;
     enum class WorkMode
@@ -78,6 +77,8 @@ private:
         Remove,
         Relax
     } workMode_ = WorkMode::Add;
+
+    std::chrono::time_point<std::chrono::high_resolution_clock> timePoint_;
 };
 
 }

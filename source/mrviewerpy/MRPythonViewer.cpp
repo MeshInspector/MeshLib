@@ -1,14 +1,15 @@
-#include "MRMesh/MRPython.h"
 #include "MRViewer/MRViewer.h"
-#include "MRMesh/MRViewportId.h"
-#include "MRViewer/MRViewport.h"
-#include "MRViewer/MRSetupViewer.h"
-#include "MRMesh/MRLine3.h"
-#include "MRMesh/MRSystem.h"
 #include "MRViewer/MRPythonAppendCommand.h"
 #include "MRViewer/MRCommandLoop.h"
+#include "MRViewer/MRViewport.h"
+#include "MRViewer/MRSetupViewer.h"
+#include "MRMesh/MRPython.h"
+#include "MRMesh/MRViewportId.h"
+#include "MRMesh/MRLine3.h"
+#include "MRMesh/MRSystem.h"
 #include "MRMesh/MRLog.h"
 #include "MRMesh/MRImageSave.h"
+#include "MRMesh/MRImage.h"
 #include <pybind11/stl.h>
 #include <memory>
 

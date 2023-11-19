@@ -124,7 +124,7 @@ var open_files = function (e) {
         setTimeout(function () { Module.ccall('emsPostEmptyEvent', 'void', ['number'], [1]); }, i);
     };
     reader.readAsArrayBuffer(file);
-    var filename = allocateUTF8(path);
+    var filename = stringToNewUTF8(path);
     filenamesArray.push(filename);
     if (typeof GROWABLE_HEAP_U32 !== 'undefined')
       GROWABLE_HEAP_U32()[filenames + i * 4 >> 2] = filename;

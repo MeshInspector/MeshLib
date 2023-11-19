@@ -61,12 +61,12 @@ std::vector<std::string> ObjectPoints::getInfoLines() const
 void ObjectPoints::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
     ObjectPointsHolder::setDirtyFlags( mask, invalidateCaches );
-    if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
+    if ( points_ )
     {
-        if ( points_ )
-        {
+        if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
             pointsChangedSignal( mask );
-        }
+        if ( mask & DIRTY_RENDER_NORMALS )
+            normalsChangedSignal( mask );
     }
 }
 
@@ -106,7 +106,10 @@ void ObjectPoints::swapSignals_( Object& other )
 {
     ObjectPointsHolder::swapSignals_( other );
     if ( auto otherPoints = other.asType<ObjectPoints>() )
+    {
         std::swap( pointsChangedSignal, otherPoints->pointsChangedSignal );
+        std::swap( normalsChangedSignal, otherPoints->normalsChangedSignal );
+    }
     else
         assert( false );
 }

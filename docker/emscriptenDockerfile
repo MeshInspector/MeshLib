@@ -1,4 +1,4 @@
-FROM emscripten/emsdk:3.1.23
+FROM emscripten/emsdk:3.1.48
 
 # update and install req
 RUN export DEBIAN_FRONTEND=noninteractive; \
@@ -6,6 +6,13 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
     apt-get update -qqy \
+ && apt-get install -qqy --no-install-recommends gpg-agent software-properties-common \
+ && echo '\
+Package: *\n\
+Pin: release o=LP-PPA-mozillateam\n\
+Pin-Priority: 1001\
+' | tee /etc/apt/preferences.d/mozilla-firefox \
+ && add-apt-repository -y ppa:mozillateam/ppa \
  && apt-get install -qqy --no-install-recommends \
         tzdata git firefox pkg-config xvfb \
  && apt-get clean \

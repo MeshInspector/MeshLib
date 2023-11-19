@@ -186,8 +186,6 @@ set(PROJECT_SOURCE_DIR ./source)
 include_directories(${PROJECT_SOURCE_DIR})
 
 IF(MR_EMSCRIPTEN)
-  add_compile_definitions(__QNXNTO__=1) # hack to disable __TBB_RESUMABLE_TASKS in tbb
-  add_compile_definitions(__TBB_DYNAMIC_LOAD_ENABLED=0)
   IF(NOT MR_EMSCRIPTEN_SINGLETHREAD)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -s PTHREAD_POOL_SIZE_STRICT=0 -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-pthreads-mem-growth") # look https://github.com/emscripten-core/emscripten/issues/8287

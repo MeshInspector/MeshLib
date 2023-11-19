@@ -1,4 +1,19 @@
 #include "MRViewer.h"
+#include "MRSceneTextureGL.h"
+#include "MRAlphaSortGL.h"
+#include "MRGLMacro.h"
+#include "MRSetupViewer.h"
+#include "MRGLStaticHolder.h"
+#include "MRViewerPlugin.h"
+#include "MRCommandLoop.h"
+#include "MRSplashWindow.h"
+#include "MRViewerSettingsManager.h"
+#include "MRGladGlfw.h"
+#include "ImGuiMenu.h"
+#include "MRGetSystemInfoJson.h"
+#include "MRSpaceMouseHandler.h"
+#include "MRSpaceMouseHandlerHidapi.h"
+#include "MRRenderGLHelpers.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -25,25 +40,11 @@
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
-#include "MRAlphaSortGL.h"
-#include "MRGLMacro.h"
-#include "MRSetupViewer.h"
-#include "MRGLStaticHolder.h"
-#include "MRViewerPlugin.h"
-#include "MRCommandLoop.h"
-#include "MRSplashWindow.h"
-#include "MRViewerSettingsManager.h"
-#include "MRGladGlfw.h"
-#include "ImGuiMenu.h"
 #include "MRMesh/MRGTest.h"
 #include "MRMesh/MRObjectLabel.h"
-#include "MRPch/MRWasm.h"
-#include "MRGetSystemInfoJson.h"
-#include "MRSpaceMouseHandler.h"
-#include "MRSpaceMouseHandlerHidapi.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRSerializer.h"
-#include "MRViewer/MRRenderGLHelpers.h"
+#include "MRPch/MRWasm.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -378,6 +379,8 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             params.console = true;
         else if ( flag == "-openGL3" )
             params.preferOpenGL3 = true;
+        else if ( flag == "-noRenderInTexture" )
+            params.render3dSceneInTexture = false;
         else if ( flag == "-develop" )
             params.developerFeatures = true;
         else if ( flag == "-width" )
@@ -395,6 +398,10 @@ void Viewer::emsMainInfiniteLoop()
     viewer.draw( true );
     viewer.eventQueue.execute();
     CommandLoop::processCommands();
+}
+#else
+void Viewer::emsMainInfiniteLoop()
+{
 }
 #endif
 
@@ -544,7 +551,8 @@ int Viewer::launchInit_( const LaunchParams& params )
 #endif
 
     alphaSorter_ = std::make_unique<AlphaSortGL>();
-    sceneTexture_ = std::make_unique<SceneTextureGL>();
+    if ( params.render3dSceneInTexture )
+        sceneTexture_ = std::make_unique<SceneTextureGL>();
 
     glfwWindowHint( GLFW_VISIBLE, int( bool( params.windowMode == LaunchParams::Show ) ) );
     bool windowMode = params.windowMode != LaunchParams::NoWindow;
@@ -625,8 +633,8 @@ int Viewer::launchInit_( const LaunchParams& params )
         glfw_window_scale( window, xscale, yscale );
 
         enableAlphaSort( true );
-
-        sceneTexture_->reset( { width, height }, -1 );
+        if ( sceneTexture_ )
+            sceneTexture_->reset( { width, height }, -1 );
 
         if ( alphaSorter_ )
         {
@@ -1437,7 +1445,8 @@ void Viewer::drawFull( bool dirtyScene )
     if ( menuPlugin_ )
         menuPlugin_->startFrame();
 
-    sceneTexture_->bind( true );
+    if ( sceneTexture_ )
+        sceneTexture_->bind( true );
 
     // need to clean it in texture too
     for ( auto& viewport : viewport_list )
@@ -1446,16 +1455,20 @@ void Viewer::drawFull( bool dirtyScene )
     preDrawSignal();
     // check dirty scene and need swap
     // important to check after preDrawSignal
-    bool renderScene = dirtyScene && forceRedrawFramesWithoutSwap_ <= 1;
+    bool renderScene = forceRedrawFramesWithoutSwap_ <= 1;
+    if ( sceneTexture_ )
+        renderScene = renderScene && dirtyScene;
     if ( renderScene )
         drawScene();
     postDrawSignal();
-    sceneTexture_->unbind();
-    if ( renderScene )
-        sceneTexture_->copyTexture(); // copy scene texture only if scene was rendered
+    if ( sceneTexture_ )
+    {
+        sceneTexture_->unbind();
+        if ( renderScene )
+            sceneTexture_->copyTexture(); // copy scene texture only if scene was rendered
 
-    sceneTexture_->draw(); // always draw scene texture
-
+        sceneTexture_->draw(); // always draw scene texture
+    }
     if ( menuPlugin_ )
         menuPlugin_->finishFrame();
 }
@@ -1501,6 +1514,7 @@ void Viewer::drawScene()
 
 void Viewer::setupScene()
 {
+    bindSceneTexture( false );
     for ( auto& viewport : viewport_list )
     {
         viewport.setupView();
@@ -1559,8 +1573,9 @@ void Viewer::postResize( int w, int h )
 
     if ( alphaSorter_ )
         alphaSorter_->updateTransparencyTexturesSize( framebufferSize.x, framebufferSize.y );
+    if ( sceneTexture_ )
+        sceneTexture_->reset( framebufferSize, -1 );
 
-    sceneTexture_->reset( framebufferSize, -1 );
 #if !defined(__EMSCRIPTEN__) || defined(MR_EMSCRIPTEN_ASYNCIFY)
     if ( isLaunched_ && !isInDraw_ )
     {
@@ -1991,9 +2006,21 @@ Image Viewer::captureSceneScreenShot( const Vector2i& resolution )
 
     fd.copyTextureBindDef();
     fd.bindTexture();
-
-    GL_EXEC( glGetTexImage( GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, ( void* )( pixels.data() ) ) );
     
+#ifdef __EMSCRIPTEN__
+    GLuint fbo;
+    GL_EXEC( glGenFramebuffers(1, &fbo) ); 
+    GL_EXEC( glBindFramebuffer(GL_FRAMEBUFFER, fbo) );
+    GL_EXEC( glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fd.getTexture(), 0) );
+
+    GL_EXEC( glReadPixels(0, 0, newRes.x, newRes.y, GL_RGBA, GL_UNSIGNED_BYTE, ( void* )( pixels.data() )) );
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteFramebuffers(1, &fbo);
+#else
+    GL_EXEC( glGetTexImage( GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, ( void* )( pixels.data() ) ) );
+#endif
+
     fd.del();
 
     bindSceneTexture( true );

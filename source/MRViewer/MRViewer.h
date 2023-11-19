@@ -14,12 +14,10 @@
 #include "MRMouse.h"
 #include <MRMesh/MRObject.h>
 #include <MRMesh/MRSceneRoot.h>
-#include "MRMesh/MRImage.h"
 #include "MRMouseController.h"
 #include "MRTouchesController.h"
 #include "MRSpaceMouseController.h"
 #include "MRTouchpadController.h"
-#include "MRSceneTextureGL.h"
 
 #include <boost/signals2/signal.hpp>
 #include <chrono>
@@ -82,6 +80,7 @@ public:
         } windowMode{ HideInit };
         bool enableTransparentBackground{ false };
         bool preferOpenGL3{ false };
+        bool render3dSceneInTexture{ true }; // If not set renders scene each frame
         bool developerFeatures{ false }; // If set shows some developer features useful for debugging
         std::string name{"MRViewer"}; // Window name
         bool startEventLoop{ true }; // If false - does not start event loop
@@ -628,9 +627,7 @@ private:
     void parseCommandLine_( int argc, char** argv );
 #ifdef __EMSCRIPTEN__
     void mainLoopFunc_();
-#ifndef MR_EMSCRIPTEN_ASYNCIFY
     static void emsMainInfiniteLoop();
-#endif
 #endif
     // returns true if was swapped
     bool draw_( bool force );

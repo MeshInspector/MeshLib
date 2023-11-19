@@ -20,6 +20,8 @@ struct UniformSamplingSettings
     /// if true process the points in lexicographical order, which gives tighter and more uniform samples;
     /// if false process the points according to their ids, which is faster
     bool lexicographicalOrder = true;
+    /// if not nullptr then these normals will be used during sampling instead of normals in the cloud itself
+    const VertNormals * pNormals = nullptr;
     /// to report progress and cancel processing
     ProgressCallback progress;
 };

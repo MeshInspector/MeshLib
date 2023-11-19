@@ -5,8 +5,6 @@
 #include "MRTimer.h"
 #include "MRPointsInBall.h"
 #include "MRBox.h"
-#include "MRPointCloudMakeNormals.h"
-#include "MRPointCloudRadius.h"
 #include <cfloat>
 
 namespace MR
@@ -18,23 +16,9 @@ std::optional<VertBitSet> pointUniformSampling( const PointCloud& pointCloud, co
 
     auto cb = settings.progress;
 
-    const VertNormals * pNormals = nullptr;
-    std::optional<VertNormals> optNormals;
-    if ( settings.minNormalDot > 0 )
-    {
-        if ( pointCloud.hasNormals() )
-            pNormals = &pointCloud.normals;
-        else
-        {
-            optNormals = makeUnorientedNormals( pointCloud, findAvgPointsRadius( pointCloud, 48 ), subprogress( cb, 0.0f, 0.3f ) );
-            if ( !optNormals )
-                return {};
-            if ( !reportProgress( cb, 0.3f ) )
-                return {};
-            cb = subprogress( cb, 0.3f, 1.0f );
-            pNormals = &*optNormals;
-        }
-    }
+    const VertNormals * pNormals = settings.pNormals;
+    if ( !pNormals && pointCloud.hasNormals() )
+        pNormals = &pointCloud.normals;
 
     VertBitSet visited( pointCloud.validPoints.size() );
     VertBitSet sampled( pointCloud.validPoints.size() );

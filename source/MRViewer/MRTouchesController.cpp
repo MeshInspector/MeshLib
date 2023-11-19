@@ -17,21 +17,21 @@ bool TouchesController::onTouchStart_( int id, int x, int y )
     if ( finger == MultiInfo::Finger::First && numPressed == 1 )
     {
         mouseMode_ = true;
-        viewer->eventQueue.emplace( { "First touch imitates left mouse down", [x,y,viewer] ()
+        viewer->emplaceEvent( "First touch imitates left mouse down", [x,y,viewer] ()
         {
             viewer->mouseMove( x, y ); // to setup position in MouseController
             viewer->draw();
             viewer->mouseDown( MouseButton::Left, 0 );
-        } } );
+        } );
         return true;
     }
     if ( mouseMode_ )
     {
         mouseMode_ = false;
-        viewer->eventQueue.emplace( { "First touch imitates left mouse up", [viewer] ()
+        viewer->emplaceEvent( "First touch imitates left mouse up", [viewer] ()
         {
             viewer->mouseUp( MouseButton::Left, 0 );
-        } } );
+        } );
     }
     return true;
 }
@@ -41,7 +41,7 @@ bool TouchesController::onTouchMove_( int id, int x, int y )
     if ( !multiInfo_.update( { id, Vector2f( float(x), float(y) ) } ) )
         return true;
     auto* viewer = &getViewerInstance();
-    Viewer::EventQueue::EventCallback eventCall;
+    ViewerEventCallback eventCall;
     if ( mouseMode_ )
     {
         eventCall = [x, y, viewer] ()
@@ -120,7 +120,7 @@ bool TouchesController::onTouchMove_( int id, int x, int y )
     }
     else
         return true;
-    viewer->eventQueue.emplace( { "Two touches move", eventCall }, true );
+    viewer->emplaceEvent( "Two touches move", eventCall, true );
     return true;
 }
 
@@ -132,17 +132,17 @@ bool TouchesController::onTouchEnd_( int id, int x, int y )
     if ( mouseMode_ )
     {
         mouseMode_= false;
-        viewer->eventQueue.emplace( { "First touch imitates left mouse up", [viewer] ()
+        viewer->emplaceEvent( "First touch imitates left mouse up", [viewer] ()
         {
             viewer->mouseUp( MouseButton::Left, 0 );
-        } } );
+        } );
     }
     else
     {
-        viewer->eventQueue.emplace( { "Touch up", [info = multiInfo_, prevInfoPtr = &multiPrevInfo_] ()
+        viewer->emplaceEvent( "Touch up", [info = multiInfo_, prevInfoPtr = &multiPrevInfo_] ()
         {
             *prevInfoPtr = info;
-        } });
+        } );
     }
     return true;
 }

@@ -301,6 +301,9 @@
     <ClCompile Include="MRSceneTextureGL.cpp">
       <Filter>Render</Filter>
     </ClCompile>
+    <ClCompile Include="MRViewerEventQueue.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -568,6 +571,12 @@
     </ClInclude>
     <ClInclude Include="MRSceneTextureGL.h">
       <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewerEventQueue.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewerNamedEvent.h">
+      <Filter>Viewer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

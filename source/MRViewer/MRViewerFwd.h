@@ -26,6 +26,7 @@ class ViewerPlugin;
 class ViewerSettingsManager;
 class ViewerSetup;
 class Viewer;
+class ViewerEventQueue;
 class Viewport;
 class RibbonMenu;
 class RibbonMenuItem;

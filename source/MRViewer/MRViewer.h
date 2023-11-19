@@ -9,6 +9,7 @@
 
 
 #include "MRViewport.h"
+#include "MRViewerNamedEvent.h"
 #include "MRViewerInstance.h"
 #include "MRRecentFilesStore.h"
 #include "MRMouse.h"
@@ -20,8 +21,6 @@
 #include <boost/signals2/signal.hpp>
 #include <chrono>
 #include <cstdint>
-#include <mutex>
-#include <queue>
 
 struct GLFWwindow;
 
@@ -40,13 +39,13 @@ auto bindSlotCallback( BaseClass* base, MemberFuncPtr func )
 #define MAKE_SLOT(func) bindSlotCallback(this,func)
 
 /// helper macros to add an `MR::Viewer` method call to the event queue
-#define ENQUEUE_VIEWER_METHOD( NAME, METHOD ) MR::getViewerInstance().eventQueue.emplace( { NAME, [] { \
+#define ENQUEUE_VIEWER_METHOD( NAME, METHOD ) MR::getViewerInstance().emplaceEvent( { NAME, [] { \
     MR::getViewerInstance() . METHOD (); \
 } } )
-#define ENQUEUE_VIEWER_METHOD_ARGS( NAME, METHOD, ... ) MR::getViewerInstance().eventQueue.emplace( { NAME, [__VA_ARGS__] { \
+#define ENQUEUE_VIEWER_METHOD_ARGS( NAME, METHOD, ... ) MR::getViewerInstance().emplaceEvent( { NAME, [__VA_ARGS__] { \
     MR::getViewerInstance() . METHOD ( __VA_ARGS__ ); \
 } } )
-#define ENQUEUE_VIEWER_METHOD_ARGS_SKIPABLE( NAME, METHOD, ... ) MR::getViewerInstance().eventQueue.emplace( { NAME, [__VA_ARGS__] { \
+#define ENQUEUE_VIEWER_METHOD_ARGS_SKIPABLE( NAME, METHOD, ... ) MR::getViewerInstance().emplaceEvent( { NAME, [__VA_ARGS__] { \
     MR::getViewerInstance() . METHOD ( __VA_ARGS__ ); \
 } }, true )
 
@@ -582,31 +581,14 @@ public:
     using PostFocusSignal = boost::signals2::signal<void( bool )>;
     PostFocusSignal postFocusSignal;
 
-    // queue to ignore multiple mouse moves in one frame
-    class MRVIEWER_CLASS EventQueue
-    {
-    public:
-        using EventCallback = std::function<void()>;
-        struct NamedEvent
-        {
-            std::string name;
-            EventCallback cb;
-        };
-        // emplace event at the end of the queue
-        // replace last skipable with new skipable
-        MRVIEWER_API void emplace( NamedEvent event, bool skipable = false );
-        // execute all events in queue
-        MRVIEWER_API void execute();
-        // pop all events while they have this name
-        MRVIEWER_API void popByName( const std::string& name );
-        MRVIEWER_API bool empty() const;
-    private:
-        // important for wasm to be recursive
-        mutable std::recursive_mutex mutex_;
-        std::queue<NamedEvent> queue_;
-        bool lastSkipable_{false};
-    } eventQueue;
+    /// emplace event at the end of the queue
+    /// replace last skipable with new skipable
+    MRVIEWER_API void emplaceEvent( ViewerNamedEvent event, bool skipable = false );
+    // pop all events from the queue while they have this name
+    MRVIEWER_API void popEventByName( const std::string& name );
+
     MRVIEWER_API void postEmptyEvent();
+
 private:
     Viewer();
     ~Viewer();
@@ -637,6 +619,8 @@ private:
 
     // if this flag is set shows some developer features useful for debugging
     bool enableDeveloperFeatures_{ false };
+
+    std::unique_ptr<ViewerEventQueue> eventQueue_;
 
     // special plugin for menu (initialized before splash window starts)
     std::shared_ptr<ImGuiMenu> menuPlugin_;

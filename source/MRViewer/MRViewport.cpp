@@ -1,5 +1,8 @@
 #include "MRViewport.h"
 #include "MRViewer.h"
+#include "ImGuiMenu.h"
+#include "MRGLMacro.h"
+#include "MRGLStaticHolder.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRArrow.h>
 #include <MRMesh/MRUVSphere.h>
@@ -7,18 +10,16 @@
 #include <MRMesh/MRClosestPointInTriangle.h>
 #include <MRMesh/MRTimer.h>
 #include "MRMesh/MRObjectsAccess.h"
-#include "MRGLMacro.h"
 #include "MRMesh/MRObjectMesh.h"
-#include "MRGLStaticHolder.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRPolylineProject.h"
-#include "MRPch/MRSuppressWarning.h"
-#include "MRPch/MRTBB.h"
 #include "MRMesh/MR2to3.h"
-#include "MRViewer/ImGuiMenu.h"
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMesh/MRSceneRoot.h"
+#include "MRPch/MRSuppressWarning.h"
+#include "MRPch/MRTBB.h"
 
 using VisualObjectTreeDataVector = std::vector<MR::VisualObject*>;
 namespace

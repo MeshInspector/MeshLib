@@ -16,7 +16,7 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSceneSettings.h"
 #include "MRMesh/MRDirectory.h"
-
+#include <MRMesh/MRSceneRoot.h>
 
 namespace MR
 {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMesh/MRToFromEigen.h"
+#include "MRToFromEigen.h"
 
 #pragma warning(push)
 #pragma warning(disable:5054)  //operator '&': deprecated between enumerations of different types

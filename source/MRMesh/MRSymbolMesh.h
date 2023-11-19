@@ -2,7 +2,7 @@
 
 #include "MRMeshFwd.h"
 #ifndef MRMESH_NO_LABEL
-#include "MRMesh/MRVector2.h"
+#include "MRVector2.h"
 #include "MRSystem.h"
 #include <string>
 #include <filesystem>

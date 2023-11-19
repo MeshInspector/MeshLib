@@ -245,7 +245,7 @@ jobs:
           py -${{matrix.py-version}} -m pip install wheel setuptools delvewheel
           py -${{matrix.py-version}} .\scripts\wheel\setup_workspace.py
           cd scripts\wheel\meshlib
-          py -${{matrix.py-version}} setup.py bdist_wheel --plat-name=win-amd64 --python-tag=${{matrix.py-tag}} --version ${{needs.setup.outputs.version_tag}}
+          py -${{matrix.py-version}} setup.py bdist_wheel --plat-name=win-amd64 --python-tag=${{matrix.py-tag}} --version 2.2.11
           cd ..\..\..
           $WheelFile = (powershell -Command Get-ChildItem -Path scripts\wheel\meshlib\dist\*.whl -Name) 
           echo $WheelFile

@@ -8,6 +8,7 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRPlaneObject.h"
+#include "MRMesh/MRSceneRoot.h"
 #include "imgui_internal.h"
 
 namespace MR

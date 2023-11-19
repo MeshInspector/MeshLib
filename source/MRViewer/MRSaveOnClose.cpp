@@ -6,6 +6,7 @@
 #include "MRRibbonFontManager.h"
 #include <MRMesh/MRHistoryStore.h>
 #include <MRMesh/MRSerializer.h>
+#include <MRMesh/MRSceneRoot.h>
 #include "ImGuiHelpers.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRRibbonConstants.h"
@@ -78,7 +79,7 @@ void SaveOnClosePlugin::preDraw_()
         ImGui::Text( "%s", text );
 
         const auto style = ImGui::GetStyle();
-		ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * scaling } );
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * scaling } );
 
         const float p = ImGui::GetStyle().ItemSpacing.x;
         const Vector2f btnSize{ ( ImGui::GetContentRegionAvail().x - p * 2 ) / 3.f, 0 };

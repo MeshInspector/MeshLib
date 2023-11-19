@@ -1,10 +1,10 @@
 #pragma once
 
-#include "MRMesh/MRMeshFwd.h"
+#include "MRMeshFwd.h"
 #ifndef MRMESH_NO_LABEL
 #include "MRHistoryAction.h"
-#include "MRMesh/MRPositionedText.h"
-#include "MRMesh/MRVector2.h"
+#include "MRPositionedText.h"
+#include "MRVector2.h"
 
 namespace MR
 {

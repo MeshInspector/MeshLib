@@ -10,6 +10,7 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRMesh/MRChangeSceneAction.h"
+#include <MRMesh/MRSceneRoot.h>
 #include "MRViewer/MRUIStyle.h"
 
 namespace MR

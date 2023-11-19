@@ -14,6 +14,7 @@
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRVisualObject.h"
 #include "MRMesh/MRObjectMesh.h"
+#include <MRMesh/MRSceneRoot.h>
 #include "MRColorTheme.h"
 #include "MRCommandLoop.h"
 #include <GLFW/glfw3.h>

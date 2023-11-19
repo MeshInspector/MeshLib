@@ -12,7 +12,6 @@
 #include "MRViewerInstance.h"
 #include "MRRecentFilesStore.h"
 #include "MRMouse.h"
-#include <MRMesh/MRObject.h>
 #include "MRMouseController.h"
 #include "MRTouchesController.h"
 #include "MRSpaceMouseController.h"

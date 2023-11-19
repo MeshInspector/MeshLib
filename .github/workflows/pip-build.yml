@@ -245,7 +245,7 @@ jobs:
           py -${{matrix.py-version}} -m pip install wheel setuptools delvewheel
           py -${{matrix.py-version}} .\scripts\wheel\setup_workspace.py
           cd scripts\wheel\meshlib
-          py -${{matrix.py-version}} setup.py bdist_wheel --plat-name=win-amd64 --python-tag=${{matrix.py-tag}} --version 2.2.11
+          py -${{matrix.py-version}} setup.py bdist_wheel --plat-name=win-amd64 --python-tag=${{matrix.py-tag}} --version 2.2.11.51
           cd ..\..\..
           $WheelFile = (powershell -Command Get-ChildItem -Path scripts\wheel\meshlib\dist\*.whl -Name) 
           echo $WheelFile
@@ -533,9 +533,6 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: Wheelhouse
-
-      - name: Install twine
-        run: mv meshlib-2.2.11.51-cp312-none-win_amd64.whl  meshlib-2.2.11-cp312-none-win_amd64.whl 
 
       - name: Install twine
         run: python3 -m pip install --upgrade pip twine

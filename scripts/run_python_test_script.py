@@ -35,6 +35,10 @@ if platformSystem == 'Linux':
     elif "fedora" in os_name.lower():
         if os_version.startswith("35"):
             python_cmd = "python3.9 "
+        elif os_version.startswith("37"):
+            python_cmd = "python3.11 "
+        elif os_version.startswith("39"):
+            python_cmd = "python3.12 "
 
 elif platformSystem == 'Darwin':
     python_cmd = "python3.10 "

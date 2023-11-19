@@ -167,7 +167,6 @@
     <ClInclude Include="MRViewerFwd.h" />
     <ClInclude Include="MRViewerInstance.h" />
     <ClInclude Include="MRViewerIO.h" />
-    <ClInclude Include="MRViewerNamedEvent.h" />
     <ClInclude Include="MRViewport.h" />
     <ClInclude Include="MRViewerPlugin.h" />
     <ClInclude Include="MRFileDialog.h" />

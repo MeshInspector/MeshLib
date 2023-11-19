@@ -9,7 +9,6 @@
 
 
 #include "MRViewport.h"
-#include "MRViewerNamedEvent.h"
 #include "MRViewerInstance.h"
 #include "MRRecentFilesStore.h"
 #include "MRMouse.h"
@@ -39,15 +38,15 @@ auto bindSlotCallback( BaseClass* base, MemberFuncPtr func )
 #define MAKE_SLOT(func) bindSlotCallback(this,func)
 
 /// helper macros to add an `MR::Viewer` method call to the event queue
-#define ENQUEUE_VIEWER_METHOD( NAME, METHOD ) MR::getViewerInstance().emplaceEvent( { NAME, [] { \
+#define ENQUEUE_VIEWER_METHOD( NAME, METHOD ) MR::getViewerInstance().emplaceEvent( NAME, [] { \
     MR::getViewerInstance() . METHOD (); \
-} } )
-#define ENQUEUE_VIEWER_METHOD_ARGS( NAME, METHOD, ... ) MR::getViewerInstance().emplaceEvent( { NAME, [__VA_ARGS__] { \
+} )
+#define ENQUEUE_VIEWER_METHOD_ARGS( NAME, METHOD, ... ) MR::getViewerInstance().emplaceEvent( NAME, [__VA_ARGS__] { \
     MR::getViewerInstance() . METHOD ( __VA_ARGS__ ); \
-} } )
-#define ENQUEUE_VIEWER_METHOD_ARGS_SKIPABLE( NAME, METHOD, ... ) MR::getViewerInstance().emplaceEvent( { NAME, [__VA_ARGS__] { \
+} )
+#define ENQUEUE_VIEWER_METHOD_ARGS_SKIPABLE( NAME, METHOD, ... ) MR::getViewerInstance().emplaceEvent( NAME, [__VA_ARGS__] { \
     MR::getViewerInstance() . METHOD ( __VA_ARGS__ ); \
-} }, true )
+}, true )
 
 namespace MR
 {
@@ -583,7 +582,7 @@ public:
 
     /// emplace event at the end of the queue
     /// replace last skipable with new skipable
-    MRVIEWER_API void emplaceEvent( ViewerNamedEvent event, bool skipable = false );
+    MRVIEWER_API void emplaceEvent( std::string name, ViewerEventCallback cb, bool skipable = false );
     // pop all events from the queue while they have this name
     MRVIEWER_API void popEventByName( const std::string& name );
 

@@ -3,13 +3,13 @@
 namespace MR
 {
 
-void ViewerEventQueue::emplace( ViewerNamedEvent event, bool skipable )
+void ViewerEventQueue::emplace( std::string name, ViewerEventCallback cb, bool skipable )
 {
     std::unique_lock lock( mutex_ );
     if ( queue_.empty() || !skipable || !lastSkipable_ )
-        queue_.emplace( std::move( event ) );
+        queue_.emplace( NamedEvent{ std::move( name ), std::move( cb ) } );
     else
-        queue_.back() = std::move( event );
+        queue_.back() = { std::move( name ), std::move( cb ) };
     lastSkipable_ = skipable;
 }
 

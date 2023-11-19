@@ -575,9 +575,6 @@
     <ClInclude Include="MRViewerEventQueue.h">
       <Filter>Viewer</Filter>
     </ClInclude>
-    <ClInclude Include="MRViewerNamedEvent.h">
-      <Filter>Viewer</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

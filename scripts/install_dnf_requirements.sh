@@ -43,10 +43,10 @@ else
 fi
 
 # check and upgrade python3.11 pip
-python3.11 -m ensurepip --upgrade
-python3.11 -m pip install --upgrade pip
+python3 -m ensurepip --upgrade
+python3 -m pip install --upgrade pip
 
 # install requirements for python libs
-python3.11 -m pip install -r requirements/python.txt
+python3 -m pip install -r requirements/python.txt
 
 exit 0

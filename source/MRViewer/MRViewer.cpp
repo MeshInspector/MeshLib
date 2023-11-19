@@ -439,7 +439,7 @@ void Viewer::mainLoopFunc_()
         {
             draw( true );
             if ( eventQueue_ )
-                eventQueue_.execute();
+                eventQueue_->execute();
             CommandLoop::processCommands();
         } while ( forceRedrawFrames_ > 0 || needRedraw_() );
     }
@@ -874,7 +874,7 @@ void Viewer::postEmptyEvent()
     if ( !isGLInitialized() )
         return;
 #ifdef __EMSCRIPTEN__
-    emplaceEvent( { "Empty", [] () {} } );
+    emplaceEvent( "Empty", [] () {} );
 #endif
     glfwPostEmptyEvent();
 }

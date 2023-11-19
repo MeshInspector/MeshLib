@@ -119,25 +119,29 @@ ELSE()
 
     # check version (major)
     file(STRINGS /etc/os-release version_id REGEX "^VERSION_ID=")
-    string(REGEX REPLACE "VERSION_ID=\"(.*)\"" "\\1" version_id "${version_id}")
-    string(FIND ${version_id} "." dot-pos)
-    string(SUBSTRING ${version_id} 0 ${dot-pos} version_id)
-    message("using ${distro} ${version_id}")
-    SET(MR_PLATFORM "${distro}_${version_id}")
 
     IF( ${distro} STREQUAL "Ubuntu")
-    SET(MR_UBUNTU TRUE)
-    IF( ${version_id} STREQUAL "22")
-        SET(MR_UBUNTU22 TRUE)
-    ENDIF() # Ubuntu 22
+        string(REGEX REPLACE "VERSION_ID=\"(.*)\"" "\\1" version_id "${version_id}")
+        string(FIND ${version_id} "." dot-pos)
+        string(SUBSTRING ${version_id} 0 ${dot-pos} version_id)
+        
+        SET(MR_UBUNTU TRUE)
+        IF( ${version_id} STREQUAL "22")
+            SET(MR_UBUNTU22 TRUE)
+        ENDIF() # Ubuntu 22
     ENDIF() # Ubuntu
 
     IF( ${distro} STREQUAL "Fedora Linux")
-    SET(MR_FEDORA TRUE)
-    IF( ${version_id} STREQUAL "39")
-        SET(MR_FEDORA39 TRUE)
-    ENDIF() # Fedora 39
+        string(REGEX REPLACE "VERSION_ID=([0-9]+)" "\\1" version_id ${version_id})
+        
+        SET(MR_FEDORA TRUE)
+        IF( ${version_id} STREQUAL "39")
+            SET(MR_FEDORA39 TRUE)
+        ENDIF() # Fedora 39
     ENDIF() # Fedora
+
+    message("using ${distro} ${version_id}")
+    SET(MR_PLATFORM "${distro}_${version_id}")
 ENDIF() # APPLE
 add_definitions( -DMR_PLATFORM="${MR_PLATFORM}" )
 message("platform: ${MR_PLATFORM}")

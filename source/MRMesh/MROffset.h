@@ -23,8 +23,7 @@ struct BaseShellParameters
 
 struct OffsetParameters : BaseShellParameters
 {
-    /// if not OpenVDB then SimpleVolume will be used for offsetting,
-    /// and this value will determine the method to compute distance sign
+    /// determines the method to compute distance sign
     SignDetectionMode signDetectionMode = SignDetectionMode::OpenVDB;
 
     /// defines particular implementation of IFastWindingNumber interface that will compute windings. If it is not specified, default FastWindingNumber is used
@@ -46,8 +45,9 @@ struct SharpOffsetParameters : OffsetParameters
     float maxOldVertPosCorrection = 0.5f;
 };
 
-/// Offsets mesh by converting it to voxels and back using OpenVdb library (dual marching cubes),
-/// with possible sign detection by HoleWindingRule ( signDetectionMode = Unsigned | OpenVDB | HoleWindingRule ),
+/// Offsets mesh by converting it to distance field in voxels using OpenVDB library,
+/// signDetectionMode = Unsigned(from OpenVDB) | OpenVDB | HoleWindingRule,
+/// and then converts back using OpenVDB library (dual marching cubes),
 /// so result mesh is always closed
 [[nodiscard]] MRMESH_API Expected<Mesh, std::string> offsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params = {} );
 
@@ -62,7 +62,8 @@ struct SharpOffsetParameters : OffsetParameters
 /// typically offsetA and offsetB have distinct signs
 [[nodiscard]] MRMESH_API Expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params = {} );
 
-/// Offsets mesh by converting it to voxels and back using standard Marching Cubes, as opposed to Dual Marching Cubes in offsetMesh(...)
+/// Offsets mesh by converting it to distance field in voxels (using OpenVDB library if SignDetectionMode::OpenVDB or our implementation otherwise)
+/// and back using standard Marching Cubes, as opposed to Dual Marching Cubes in offsetMesh(...)
 [[nodiscard]] MRMESH_API Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, 
     const OffsetParameters& params = {}, Vector<VoxelId, FaceId>* outMap = nullptr );
 

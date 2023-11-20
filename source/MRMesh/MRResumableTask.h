@@ -8,9 +8,6 @@ namespace MR
 
 /// primitive coroutine-like task interface
 template <typename T>
-class MRMESH_CLASS ResumableTask;
-
-template <typename T>
 class ResumableTask
 {
 public:

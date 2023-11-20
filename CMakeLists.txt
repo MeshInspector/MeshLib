@@ -34,8 +34,10 @@ IF(APPLE)
 ELSE()
  # uncomment to print compile time of each translation unit,
  # such print format is selected to simplify load in Excel with fields (user time, system time, command) subdivision by commas
- set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "/usr/bin/time -f \",%U,%S,%C\" -a -o compile_timings.txt")
- set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "/usr/bin/time -f \",%U,%S,%C\" -a -o link_timings.txt")
+ IF(EXISTS /usr/bin/time)
+   set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "/usr/bin/time -f \",%U,%S,%C\" -a -o compile_timings.txt")
+   set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "/usr/bin/time -f \",%U,%S,%C\" -a -o link_timings.txt")
+ ENDIF()
 ENDIF() # APPLE
 ENDIF() # NOT MR_EMSCRIPTEN
 
@@ -158,7 +160,7 @@ IF(NOT MR_EMSCRIPTEN)
         ELSEIF(${MR_FEDORA})
             SET(MR_PYTHON_VERSION 3.11)
         ELSE()
-            SET(MR_PYTHON_VERSION 3.9)
+            SET(MR_PYTHON_VERSION "")
         ENDIF()
 
         IF($ENV{MESHLIB_PYTHON_VERSION})
@@ -171,14 +173,13 @@ IF(NOT MR_EMSCRIPTEN)
             find_package(pybind11 REQUIRED)
         ENDIF()
 
-        set(PYTHON_VAR "python")
-        string(CONCAT MR_PYTHON_LIB ${PYTHON_VAR}${MR_PYTHON_VERSION})
+        IF(NOT MR_PYTHON_VERSION STREQUAL "")
+            SET(MR_PYTHON_VERSION ${MR_PYTHON_VERSION} EXACT)
+        ENDIF()
 
-        find_package(Python ${MR_PYTHON_VERSION} EXACT REQUIRED)
-        find_package(PythonInterp ${MR_PYTHON_VERSION} EXACT REQUIRED)
-        find_package(PythonLibs ${MR_PYTHON_VERSION} EXACT REQUIRED)
-        include_directories(${PYTHON_INCLUDE_DIRS})
-        include_directories(${PYTHON_INCLUDE_PATH})
+        find_package(Python ${MR_PYTHON_VERSION} REQUIRED COMPONENTS Interpreter Development)
+        # legacy option, remove in the future
+        set(MR_PYTHON_LIB Python::Python)
     ENDIF()
 ENDIF()
 

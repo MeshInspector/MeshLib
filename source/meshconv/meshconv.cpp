@@ -36,7 +36,7 @@ bool doCommand( const boost::program_options::option& option, MR::Mesh& mesh )
         rems.targetEdgeLen = targetEdgeLen;
         MR::remesh( mesh, rems );
 
-        std::cout << "re-meshed successfully to target edge length " << targetEdgeLen << "\n";
+        std::cout << "remeshed successfully to target edge length " << targetEdgeLen << "\n";
     }
     else if ( option.string_key == "unite" || option.string_key == "subtract" || option.string_key == "intersect" )
     {

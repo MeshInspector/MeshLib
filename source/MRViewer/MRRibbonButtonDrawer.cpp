@@ -245,8 +245,8 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
     int colorChanged = customParam.pushColorsCb ? 
         customParam.pushColorsCb( requirements.empty(), item.item->isActive() ) :
         pushRibbonButtonColors_( requirements.empty(), item.item->isActive(), params.rootType );
-    bool pressed = ImGui::ButtonEx( ( "##wholeChildBtn" + item.item->name() ).c_str(), itemSize, ImGuiButtonFlags_AllowItemOverlap );
-    ImGui::SetItemAllowOverlap();
+    ImGui::SetNextItemAllowOverlap();
+    bool pressed = ImGui::ButtonEx( ( "##wholeChildBtn" + item.item->name() ).c_str(), itemSize, ImGuiButtonFlags_AllowOverlap );
 
     ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
     float fontScale = 1.f;

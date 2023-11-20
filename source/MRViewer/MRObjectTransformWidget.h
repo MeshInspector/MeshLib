@@ -7,6 +7,7 @@
 #include "MRMesh/MRHistoryAction.h"
 #include "MRMesh/MRViewportProperty.h"
 #include "MRMesh/MRAxis.h"
+#include <MRMesh/MRObject.h>
 #include <boost/signals2/signal.hpp>
 #include <array>
 #include <functional>

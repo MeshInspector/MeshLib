@@ -1101,6 +1101,9 @@
     <ClInclude Include="MRMeshReplicate.h">
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
+    <ClInclude Include="MRInTreePathBuilder.h">
+      <Filter>Source Files\SurfacePath</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1834,6 +1837,9 @@
     </ClCompile>
     <ClCompile Include="MRFilterCreaseEdges.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MRInTreePathBuilder.cpp">
+      <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

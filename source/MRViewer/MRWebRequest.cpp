@@ -222,13 +222,20 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         {
             spdlog::info( "WebRequest  {}", logName.c_str() );
             auto res = sendLambda();
-            spdlog::info( "WebResponse {}: {}", logName.c_str(), int( res.status_code ) );
+
+            // log everything in one line for convenience
+            std::string info = "status_code=" + std::to_string( res.status_code );
             if ( !res.status_line.empty() )
-                spdlog::info( "WebResponse {}: {}", logName.c_str(), res.status_line );
+                info += ", status_line=" + res.status_line;
             if ( !res.reason.empty() )
-                spdlog::info( "WebResponse {}: {}", logName.c_str(), res.reason );
+                info += ", reason=" + res.reason;
             if ( res.error )
-                spdlog::info( "WebResponse {}: {} {}", logName.c_str(), int( res.error.code ), res.error.message );
+            {
+                info += ", error_code=" + std::to_string( int( res.error.code ) );
+                info += ", error_message=" + res.error.message;
+            }
+            spdlog::info( "WebResponse {}: {}", logName.c_str(), info );
+
             Json::Value resJson;
             resJson["url"] = url;
             resJson["code"] = int( res.status_code );

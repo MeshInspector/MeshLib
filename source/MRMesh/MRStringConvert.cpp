@@ -11,13 +11,13 @@ namespace MR
 
 std::wstring utf8ToWide( const char* utf8 )
 {
-#if defined(__APPLE__) && defined(__clang__)
+#if defined(__EMSCRIPTEN__) || defined(__APPLE__) && defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     return converter.from_bytes( utf8 );
-#if defined(__APPLE__) && defined(__clang__)
+#if defined(__EMSCRIPTEN__) || defined(__APPLE__) && defined(__clang__)
 #pragma clang diagnostic pop
 #endif
 }

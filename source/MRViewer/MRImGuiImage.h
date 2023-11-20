@@ -15,7 +15,7 @@ namespace MR
 // Simple ImGui Image
 // create GL texture in constructor, free it in destructor
 // cant be moved(for now) or copied(forever)
-class ImGuiImage
+class MRVIEWER_CLASS ImGuiImage
 {
 public:
     MRVIEWER_API ImGuiImage();

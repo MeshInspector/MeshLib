@@ -4,12 +4,9 @@
 #include "MRViewerFwd.h"
 #include "MRMesh/MRExpected.h"
 #include "MRPch/MRJson.h"
-
-#include <filesystem>
-#include <functional>
-#include <string>
 #include <unordered_map>
-#include <variant>
+#include <string>
+#include <functional>
 
 namespace MR
 {
@@ -42,8 +39,10 @@ public:
     // sets payload in multipart format
     struct FormData
     {
-        std::string key;
-        std::variant<std::string, std::filesystem::path> value;
+        std::string path;
+        std::string contentType;
+        std::string name;
+        std::string fileName;
     };
     MRVIEWER_API void setFormData( std::vector<FormData> formData );
 

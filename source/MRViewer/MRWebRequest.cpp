@@ -29,9 +29,6 @@ std::mutex sRequestContextMutex;
 int sRequestContextCounter = 0;
 std::unordered_map<int, std::unique_ptr<RequestContext>> sRequestContextMap;
 
-template<class... Ts>
-struct overloaded : Ts... { using Ts::operator()...; };
-
 }
 
 #ifdef __EMSCRIPTEN__
@@ -164,18 +161,8 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
 
     cpr::Multipart multipart( {} );
     for ( const auto& formData : formData_ )
-    {
-        std::visit( overloaded {
-            [&multipart, &formData] ( const std::string& value )
-            {
-                multipart.parts.emplace_back( formData.key, value );
-            },
-            [&multipart, &formData] ( const std::filesystem::path& path )
-            {
-                multipart.parts.emplace_back( formData.key, cpr::File( path ) );
-            }
-        }, formData.value );
-    }
+        // TODO: update libcpr to support custom file names
+        multipart.parts.emplace_back( formData.name, cpr::File( formData.path ), formData.contentType );
 
     if ( !outputPath_.empty() )
     {
@@ -283,24 +270,13 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
 
     for ( const auto& formData : formData_ )
     {
-        std::visit( overloaded {
-            [&formData] ( const std::string& value )
-            {
-                MAIN_THREAD_EM_ASM(
-                    web_req_add_formdata( UTF8ToString( $0 ), UTF8ToString( $1 ) ),
-                    formData.key.c_str(),
-                    value.c_str()
-                );
-            },
-            [&formData] ( const std::filesystem::path& path )
-            {
-                MAIN_THREAD_EM_ASM(
-                    web_req_add_formdata_from_file( UTF8ToString( $0 ), UTF8ToString( $1 ) ),
-                    formData.key.c_str(),
-                    path.c_str()
-                );
-            },
-        }, formData.value );
+        MAIN_THREAD_EM_ASM(
+            web_req_add_formdata( UTF8ToString( $0 ), UTF8ToString( $1 ), UTF8ToString( $2 ), UTF8ToString( $3 ) ),
+            formData.path.c_str(),
+            formData.contentType.c_str(),
+            formData.name.c_str(),
+            formData.fileName.c_str()
+        );
     }
 
     if ( !urlP.empty() && urlP.back() == '/' )

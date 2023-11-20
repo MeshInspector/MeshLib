@@ -13,20 +13,14 @@ var web_req_add_param = function (key, value) {
     web_req_params.push({ key, value });
 }
 
-var web_req_add_formdata = function (key, value) {
-    if (web_req_formdata == null)
-        web_req_formdata = new FormData();
-    web_req_formdata.append(key, value);
-}
-
-var web_req_add_formdata_from_file = function (key, path) {
+var web_req_add_formdata = function (path, contentType, name, fileName) {
     if (!FS.analyzePath(path).exists)
         return;
     const content = FS.readFile(path);
 
     if (web_req_formdata == null)
         web_req_formdata = new FormData();
-    web_req_formdata.append(key, new Blob([content]));
+    web_req_formdata.append(name, new Blob([content], {type: contentType}), fileName);
 }
 
 var web_req_clear = function () {

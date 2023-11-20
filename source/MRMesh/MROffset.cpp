@@ -155,7 +155,7 @@ Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
 {
     MR_TIMER;
     auto meshToLSCb = subprogress( params.callBack, 0.0f, 0.4f );
-    if ( !params.simpleVolumeSignMode )
+    if ( params.signDetectionMode == SignDetectionMode::OpenVDB )
     {
         auto offsetInVoxels = offset / params.voxelSize;
         auto voxelRes = meshToLevelSet( mesh, AffineXf3f(),
@@ -188,7 +188,7 @@ Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         msParams.origin = box.min - expansion;
         msParams.voxelSize = Vector3f::diagonal( params.voxelSize );
         msParams.dimensions = Vector3i( ( box.max + expansion - msParams.origin ) / params.voxelSize ) + Vector3i::diagonal( 1 );
-        msParams.signMode = *params.simpleVolumeSignMode;
+        msParams.signMode = params.signDetectionMode;
         msParams.maxDistSq = sqr( absOffset + params.voxelSize );
         msParams.minDistSq = sqr( std::max( absOffset - params.voxelSize, 0.0f ) );
         msParams.fwn = params.fwn;

@@ -23,9 +23,9 @@ struct BaseShellParameters
 
 struct BaseOffsetParameters : BaseShellParameters
 {
-    /// if not nullopt then SimpleVolume will be used for offsetting,
+    /// if not OpenVDB then SimpleVolume will be used for offsetting,
     /// and this value will determine the method to compute distance sign
-    std::optional<SignDetectionMode> simpleVolumeSignMode;
+    SignDetectionMode signDetectionMode = SignDetectionMode::OpenVDB;
 
     /// defines particular implementation of IFastWindingNumber interface that will compute windings. If it is not specified, default FastWindingNumber is used
     std::shared_ptr<IFastWindingNumber> fwn;

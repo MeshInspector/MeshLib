@@ -22,21 +22,21 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        os: [fedora37, fedora38]
+        os: [fedora37, fedora39]
         config: [Debug, Release]
         compiler: [Clang]
         include:
           - os: fedora37
             cxx-compiler: /usr/bin/clang++-15
-          - os: fedora38
-            cxx-compiler: /usr/bin/clang++-16
+          - os: fedora39
+            cxx-compiler: /usr/bin/clang++-17
             MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF"
-          - os: fedora38
+          - os: fedora39
             config: 'Debug'
             compiler: GCC
             cxx-compiler: /usr/bin/g++
             MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF"
-          - os: fedora38
+          - os: fedora39
             config: 'Release'
             compiler: GCC
             cxx-compiler: /usr/bin/g++

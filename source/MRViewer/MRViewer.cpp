@@ -1,4 +1,20 @@
 #include "MRViewer.h"
+#include "MRViewerEventQueue.h"
+#include "MRSceneTextureGL.h"
+#include "MRAlphaSortGL.h"
+#include "MRGLMacro.h"
+#include "MRSetupViewer.h"
+#include "MRGLStaticHolder.h"
+#include "MRViewerPlugin.h"
+#include "MRCommandLoop.h"
+#include "MRSplashWindow.h"
+#include "MRViewerSettingsManager.h"
+#include "MRGladGlfw.h"
+#include "ImGuiMenu.h"
+#include "MRGetSystemInfoJson.h"
+#include "MRSpaceMouseHandler.h"
+#include "MRSpaceMouseHandlerHidapi.h"
+#include "MRRenderGLHelpers.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -25,25 +41,11 @@
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
-#include "MRAlphaSortGL.h"
-#include "MRGLMacro.h"
-#include "MRSetupViewer.h"
-#include "MRGLStaticHolder.h"
-#include "MRViewerPlugin.h"
-#include "MRCommandLoop.h"
-#include "MRSplashWindow.h"
-#include "MRViewerSettingsManager.h"
-#include "MRGladGlfw.h"
-#include "ImGuiMenu.h"
 #include "MRMesh/MRGTest.h"
 #include "MRMesh/MRObjectLabel.h"
-#include "MRPch/MRWasm.h"
-#include "MRGetSystemInfoJson.h"
-#include "MRSpaceMouseHandler.h"
-#include "MRSpaceMouseHandlerHidapi.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRSerializer.h"
-#include "MRViewer/MRRenderGLHelpers.h"
+#include "MRPch/MRWasm.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -123,13 +125,13 @@ static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, in
         mb = MR::Viewer::MouseButton::Middle;
 
     auto* viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( {"Mouse press", [mb, action, modifier, viewer] ()
+    viewer->emplaceEvent( "Mouse press", [mb, action, modifier, viewer] ()
     {
         if ( action == GLFW_PRESS )
             viewer->mouseDown( mb, modifier );
         else
             viewer->mouseUp( mb, modifier );
-    } } );
+    } );
 }
 
 static void glfw_error_callback( int /*error*/, const char* description )
@@ -140,16 +142,16 @@ static void glfw_error_callback( int /*error*/, const char* description )
 static void glfw_char_mods_callback( GLFWwindow* /*window*/, unsigned int codepoint )
 {
     auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( { "Char", [codepoint, viewer] ()
+    viewer->emplaceEvent( "Char", [codepoint, viewer] ()
     {
         viewer->keyPressed( codepoint, 0 );
-    } } );
+    } );
 }
 
 static void glfw_key_callback( GLFWwindow* /*window*/, int key, int /*scancode*/, int action, int modifier )
 {
     auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( {"Key press", [action, key, modifier, viewer] ()
+    viewer->emplaceEvent( "Key press", [action, key, modifier, viewer] ()
     {
         if ( action == GLFW_PRESS )
             viewer->keyDown( key, modifier );
@@ -157,7 +159,7 @@ static void glfw_key_callback( GLFWwindow* /*window*/, int key, int /*scancode*/
             viewer->keyUp( key, modifier );
         else if ( action == GLFW_REPEAT )
             viewer->keyRepeat( key, modifier );
-    } } );
+    } );
 }
 
 static void glfw_framebuffer_size( GLFWwindow* /*window*/, int width, int height )
@@ -172,20 +174,20 @@ static void glfw_window_pos( GLFWwindow* /*window*/, int xPos, int yPos )
     // need for remember window pos and size before maximize
     // located here because glfw_window_pos calls before glfw_window_maximize and glfw_window_iconify (experience)
     auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( { "Windows pos", [xPos, yPos, viewer] ()
+    viewer->emplaceEvent( "Windows pos", [xPos, yPos, viewer] ()
     {
         viewer->windowOldPos = viewer->windowSavePos;
         viewer->postSetPosition( xPos, yPos );
-    } } );
+    } );
 }
 
 static void glfw_cursor_enter_callback( GLFWwindow* /*window*/, int entered )
 {
     auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( { "Cursor enter", [entered, viewer] ()
+    viewer->emplaceEvent( "Cursor enter", [entered, viewer] ()
     {
         viewer->cursorEntranceSignal( bool( entered ) );
-    } } );
+    } );
 }
 
 #ifndef __EMSCRIPTEN__
@@ -211,6 +213,14 @@ static void glfw_window_scale( GLFWwindow* /*window*/, float xscale, float yscal
     viewer->postRescale( xscale, yscale );
 }
 
+#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
+static constexpr int minEmsSleep = 3; // ms - more then 300 fps possible
+static EM_BOOL emsEmptyCallback( double, void* )
+{
+    return EM_TRUE;
+}
+#endif
+
 static void glfw_mouse_move( GLFWwindow* /*window*/, double x, double y )
 {
     auto* viewer = &MR::getViewerInstance();
@@ -220,7 +230,7 @@ static void glfw_mouse_move( GLFWwindow* /*window*/, double x, double y )
         viewer->mouseMove( int( std::round( x * viewer->pixelRatio ) ), int( std::round( y * viewer->pixelRatio ) ) );
         viewer->draw();
     };
-    viewer->eventQueue.emplace( { "Mouse move", eventCall }, true );
+    viewer->emplaceEvent( "Mouse move", eventCall, true );
 }
 
 static void glfw_mouse_scroll( GLFWwindow* /*window*/, double /*x*/, double y )
@@ -228,14 +238,14 @@ static void glfw_mouse_scroll( GLFWwindow* /*window*/, double /*x*/, double y )
     static double prevY = 0.0;
     auto viewer = &MR::getViewerInstance();
     if ( prevY * y < 0.0 )
-        viewer->eventQueue.popByName( "Mouse scroll" );
+        viewer->popEventByName( "Mouse scroll" );
     auto eventCall = [y, viewer, prevPtr = &prevY] ()
     {
         *prevPtr = y;
         viewer->mouseScroll( float( y ) );
         viewer->draw();
     };
-    viewer->eventQueue.emplace( { "Mouse scroll", eventCall } );
+    viewer->emplaceEvent( "Mouse scroll", eventCall );
 }
 
 static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, const char **filenames )
@@ -249,24 +259,36 @@ static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, 
         paths[i] = MR::pathFromUtf8( filenames[i] );
     }
     auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( { "Drop", [paths, viewer] ()
+    viewer->emplaceEvent( "Drop", [paths, viewer] ()
     {
         viewer->dragDrop( paths );
-    } } );
+    } );
     viewer->postEmptyEvent();
 }
 
 static void glfw_joystick_callback( int jid, int event )
 {
     auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( { "Joystick", [jid, event, viewer] ()
+    viewer->emplaceEvent( "Joystick", [jid, event, viewer] ()
     {
         viewer->joystickUpdateConnected( jid, event );
-    } } );
+    } );
 }
 
 namespace MR
 {
+
+void Viewer::emplaceEvent( std::string name, ViewerEventCallback cb, bool skipable )
+{
+    if ( eventQueue_ )
+        eventQueue_->emplace( std::move( name ), std::move( cb ), skipable );
+}
+
+void Viewer::popEventByName( const std::string& name )
+{
+    if ( eventQueue_ )
+        eventQueue_->popByName( name );
+}
 
 void addLabel( ObjectMesh& obj, const std::string& str, const Vector3f& pos )
 {
@@ -387,33 +409,43 @@ void Viewer::emsMainInfiniteLoop()
 {
     auto& viewer = getViewerInstance();
     viewer.draw( true );
-    viewer.eventQueue.execute();
+    if ( viewer.eventQueue_ )
+        viewer.eventQueue_->execute();
     CommandLoop::processCommands();
 }
 #else
 void Viewer::emsMainInfiniteLoop()
 {
-    auto& viewer = getViewerInstance();
-    if ( viewer.isAnimating )
-    {
-        const double minDuration = 1e3 / double( viewer.animationMaxFps );
-        emscripten_sleep( std::max( int( minDuration ), 0 ) );
-    }
-    else if ( viewer.eventQueue.empty() )
-        return;
-
-    do
-    {
-        viewer.draw( true );
-        viewer.eventQueue.execute();
-        CommandLoop::processCommands();
-    } while ( viewer.forceRedrawFrames_ > 0 || viewer.needRedraw_() );
 }
 #endif
 
 void Viewer::mainLoopFunc_()
 {
+#ifdef MR_EMSCRIPTEN_ASYNCIFY
+    for (;;)
+    {
+        if ( isAnimating )
+        {
+            const double minDuration = 1e3 / double( animationMaxFps );
+            emscripten_sleep( std::max( int( minDuration ), minEmsSleep ) );
+        }
+        else if ( !isAnimating && eventQueue_ && eventQueue_->empty() )
+        {
+            emscripten_sleep( minEmsSleep ); // more then 300 fps possible
+            continue;
+        }
+
+        do
+        {
+            draw( true );
+            if ( eventQueue_ )
+                eventQueue_->execute();
+            CommandLoop::processCommands();
+        } while ( forceRedrawFrames_ > 0 || needRedraw_() );
+    }
+#else
     emscripten_set_main_loop( emsMainInfiniteLoop, 0, true );
+#endif
 }
 #endif
 
@@ -699,7 +731,8 @@ void Viewer::launchEventLoop()
         {
             draw( true );
             glfwPollEvents();
-            eventQueue.execute();
+            if ( eventQueue_ )
+                eventQueue_->execute();
             if ( spaceMouseHandler_ )
                 spaceMouseHandler_->handle();
             CommandLoop::processCommands();
@@ -709,12 +742,14 @@ void Viewer::launchEventLoop()
         {
             const double minDuration = 1.0 / double( animationMaxFps );
             glfwWaitEventsTimeout( minDuration );
-            eventQueue.execute();
+            if ( eventQueue_ )
+                eventQueue_->execute();
         }
         else
         {
             glfwWaitEvents();
-            eventQueue.execute();
+            if ( eventQueue_ )
+                eventQueue_->execute();
         }
         if ( spaceMouseHandler_ )
             spaceMouseHandler_->handle();
@@ -834,52 +869,19 @@ void Viewer::parseCommandLine_( [[maybe_unused]] int argc, [[maybe_unused]] char
 #endif
 }
 
-void Viewer::EventQueue::emplace( NamedEvent event, bool skipable )
-{
-    std::unique_lock lock( mutex_ );
-    if ( queue_.empty() || !skipable || !lastSkipable_ )
-        queue_.emplace( std::move( event ) );
-    else
-        queue_.back() = std::move( event );
-    lastSkipable_ = skipable;
-}
-
-void Viewer::EventQueue::execute()
-{
-    std::unique_lock lock( mutex_ );
-    while ( !queue_.empty() )
-    {
-        if ( queue_.front().cb )
-            queue_.front().cb();
-        queue_.pop();
-    }
-}
-
-bool Viewer::EventQueue::empty() const
-{
-    std::unique_lock lock( mutex_ );
-    return queue_.empty();
-}
-
-void Viewer::EventQueue::popByName( const std::string& name )
-{
-    std::unique_lock lock( mutex_ );
-    while ( !queue_.empty() && queue_.front().name == name )
-        queue_.pop();
-}
-
 void Viewer::postEmptyEvent()
 {
     if ( !isGLInitialized() )
         return;
 #ifdef __EMSCRIPTEN__
-    eventQueue.emplace( { "Empty", [] () {} } );
+    emplaceEvent( "Empty", [] () {} );
 #endif
     glfwPostEmptyEvent();
 }
 
 Viewer::Viewer() :
-    selected_viewport_index( 0 )
+    selected_viewport_index( 0 ),
+    eventQueue_( std::make_unique<ViewerEventQueue>() )
 {
     window = nullptr;
 
@@ -1368,8 +1370,16 @@ void Viewer::recursiveDraw_( const Viewport& vp, const Object& obj, const Affine
 
 void Viewer::draw( bool force )
 {
-#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
+#ifdef __EMSCRIPTEN__
+#ifdef MR_EMSCRIPTEN_ASYNCIFY
+    if ( draw_( true ) )
+    {
+        emscripten_request_animation_frame( emsEmptyCallback, nullptr ); // call with swap
+        emscripten_sleep( minEmsSleep );
+    }
+#else
     while ( !draw_( true ) );
+#endif
 #else
     draw_( force );
 #endif

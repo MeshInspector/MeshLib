@@ -62,6 +62,7 @@
     <ClCompile Include="MRSurfacePointPicker.cpp" />
     <ClCompile Include="MRTouchpadWin32Handler.cpp" />
     <ClCompile Include="MRUIStyle.cpp" />
+    <ClCompile Include="MRViewerEventQueue.cpp" />
     <ClCompile Include="MRViewerInstance.cpp" />
     <ClCompile Include="MRViewerIO.cpp" />
     <ClCompile Include="MRViewportCamera.cpp" />
@@ -162,6 +163,7 @@
     <ClInclude Include="MRTouchpadWin32Handler.h" />
     <ClInclude Include="MRUIStyle.h" />
     <ClInclude Include="MRViewer.h" />
+    <ClInclude Include="MRViewerEventQueue.h" />
     <ClInclude Include="MRViewerFwd.h" />
     <ClInclude Include="MRViewerInstance.h" />
     <ClInclude Include="MRViewerIO.h" />

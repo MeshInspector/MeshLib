@@ -7,6 +7,7 @@
 #include "MRMeshTexture.h"
 #include "MRQuaternion.h"
 #include "MRStringConvert.h"
+#include "MRParallelFor.h"
 
 #if (defined(__APPLE__) && defined(__clang__))
 #pragma clang diagnostic push
@@ -110,16 +111,29 @@ Expected<int, std::string> readVertCoords( VertCoords& vertexCoordinates, const 
     if ( posAttrib == primitive.attributes.end() )
         return unexpected( "No vertex data" );
 
-    auto accessor = model.accessors[posAttrib->second];
-    auto bufferView = model.bufferViews[accessor.bufferView];
-    auto buffer = model.buffers[bufferView.buffer];
+    const auto& accessor = model.accessors[posAttrib->second];
+    const auto& bufferView = model.bufferViews[accessor.bufferView];
+    const auto& buffer = model.buffers[bufferView.buffer];
 
     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT || accessor.type != TINYGLTF_TYPE_VEC3 )
         return unexpected( "This vertex component type is not implemented" );
 
     VertId start = VertId( vertexCoordinates.size() );
     vertexCoordinates.resize( vertexCoordinates.size() + accessor.count );
-    std::copy( &buffer.data[accessor.byteOffset + bufferView.byteOffset], &buffer.data[accessor.byteOffset + bufferView.byteOffset + accessor.count * sizeof( Vector3f )], ( uint8_t* )&vertexCoordinates[VertId( start )] );
+
+    if ( bufferView.byteStride == 0 )
+    {
+        std::copy( &buffer.data[accessor.byteOffset + bufferView.byteOffset], 
+            &buffer.data[accessor.byteOffset + bufferView.byteOffset + accessor.count * sizeof( Vector3f )],
+            ( uint8_t* )&vertexCoordinates[VertId( start )] );
+    }
+    else
+    {
+        ParallelFor( vertexCoordinates, [&] ( VertId v )
+        {
+            vertexCoordinates[start + v] = *( Vector3f* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + v * bufferView.byteStride ] );
+        } );
+    }
 
     return int( accessor.count );
 }
@@ -167,9 +181,9 @@ std::string readTriangulation( Triangulation& t, const tinygltf::Model& model, c
         return "";
     }
 
-    const auto accessor = model.accessors[primitive.indices];
-    const auto bufferView = model.bufferViews[accessor.bufferView];
-    const auto buffer = model.buffers[bufferView.buffer];
+    const auto& accessor = model.accessors[primitive.indices];
+    const auto& bufferView = model.bufferViews[accessor.bufferView];
+    const auto& buffer = model.buffers[bufferView.buffer];
 
     if ( accessor.componentType < TINYGLTF_COMPONENT_TYPE_BYTE || accessor.componentType > TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT || accessor.type != TINYGLTF_TYPE_SCALAR )
         return "Not implemented triangulation component type";

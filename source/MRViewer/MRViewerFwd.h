@@ -1,6 +1,7 @@
 #pragma once
 
 #include "exports.h"
+#include <functional>
 
 namespace MR
 {
@@ -18,6 +19,7 @@ class Palette;
 class RecentFilesStore;
 class ScopeHistory;
 class SelectScreenLasso;
+class SceneTextureGL;
 class SpaceMouseHandlerHidapi;
 class SplashWindow;
 class StateBasePlugin;
@@ -25,6 +27,7 @@ class ViewerPlugin;
 class ViewerSettingsManager;
 class ViewerSetup;
 class Viewer;
+class ViewerEventQueue;
 class Viewport;
 class RibbonMenu;
 class RibbonMenuItem;
@@ -33,6 +36,7 @@ template<typename ...Connectables>
 class StateListenerPlugin;
 using StatePlugin = StateListenerPlugin<>;
 
+using ViewerEventCallback = std::function<void()>;
 
 // this is needed as far as MAKE_SLOT cannot be used with movable classes
 #define MR_DELETE_MOVE(ClassName)\

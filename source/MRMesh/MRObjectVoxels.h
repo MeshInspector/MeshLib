@@ -5,7 +5,7 @@
 #include "MRProgressCallback.h"
 #include "MRHistogram.h"
 #include "MRVolumeIndexer.h"
-#include "MRMesh/MRSimpleVolume.h"
+#include "MRSimpleVolume.h"
 #include "MRMarchingCubes.h"
 
 namespace MR

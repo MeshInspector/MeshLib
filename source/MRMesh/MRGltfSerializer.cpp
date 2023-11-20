@@ -138,7 +138,7 @@ Expected<int, std::string> readVertCoords( VertCoords& vertexCoordinates, const 
     return int( accessor.count );
 }
 
-std::string fillVertsColorMap( VertColors& vertsColorMap, int vertexCount, const std::vector<Material>& materials, int materialIndex, const tinygltf::Model& model, const tinygltf::Primitive& primitive )
+VoidOrErrStr fillVertsColorMap( VertColors& vertsColorMap, int vertexCount, const std::vector<Material>& materials, int materialIndex, const tinygltf::Model& model, const tinygltf::Primitive& primitive )
 {
     const VertId startPos = VertId( vertsColorMap.size() );
     vertsColorMap.resize( vertsColorMap.size() + vertexCount );
@@ -158,7 +158,7 @@ std::string fillVertsColorMap( VertColors& vertsColorMap, int vertexCount, const
     const auto& buffer = model.buffers[bufferView.buffer];
 
     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT || accessor.type != TINYGLTF_TYPE_VEC3 )
-        return "This vertex color type is not supported";
+        return unexpected( "This vertex color type is not supported" );
 
     ParallelFor( vertsColorMap, [&] ( VertId v )
     {
@@ -276,8 +276,8 @@ Expected<std::vector<MeshData>, std::string> readMeshes( const tinygltf::Model& 
             if ( !vertexCount.has_value() )
                 return unexpected( vertexCount.error() );
 
-            if ( auto error = fillVertsColorMap( meshData.vertsColorMap, *vertexCount, materials, primitive.material, model, primitive ); !error.empty() )
-                return unexpected( error );
+            if ( auto error = fillVertsColorMap( meshData.vertsColorMap, *vertexCount, materials, primitive.material, model, primitive ); !error.has_value() )
+                return unexpected( error.error() );
 
             if ( auto error = readUVCoords( meshData.uvCoords, *vertexCount, model, primitive ); !error.empty() )
                 return unexpected( error );

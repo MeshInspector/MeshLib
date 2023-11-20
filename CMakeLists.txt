@@ -170,6 +170,8 @@ IF(NOT MR_EMSCRIPTEN)
         ENDIF()
 
         find_package(Python ${MR_PYTHON_VERSION} REQUIRED COMPONENTS Interpreter Development)
+        # legacy option, remove in the future
+        set(MR_PYTHON_LIB Python::Python)
     ENDIF()
 ENDIF()
 

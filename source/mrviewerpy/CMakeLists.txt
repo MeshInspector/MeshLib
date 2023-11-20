@@ -26,7 +26,7 @@ ELSE()
         MRViewer
         MRMesh
         fmt
-        Python::Python
+        ${MR_PYTHON_LIB}
     )
 ENDIF()
 

@@ -19,7 +19,7 @@ IF(APPLE)
          GTest::gtest
          spdlog
          mrmeshpy
-         Python::Python
+         ${MR_PYTHON_LIB}
  )
 ELSE()
   IF (NOT MR_EMSCRIPTEN)

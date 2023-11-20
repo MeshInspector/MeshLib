@@ -29,6 +29,9 @@ namespace MR
 Expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER
+    assert( params.signDetectionMode == SignDetectionMode::Unsigned 
+        || params.signDetectionMode == SignDetectionMode::OpenVDB
+        || params.signDetectionMode == SignDetectionMode::HoleWindingRule );
 
     float voxelSize = params.voxelSize;
     // Compute voxel size if needed
@@ -39,8 +42,8 @@ Expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, const
         voxelSize = std::cbrt( vol / autoVoxelNumber );
     }
 
-    bool useShell = params.type == OffsetParameters::Type::Shell;
-    bool signPostprocess = !findLeftBoundary( mp.mesh.topology, mp.region ).empty() && !useShell;
+    bool useShell = params.signDetectionMode == SignDetectionMode::Unsigned;
+    bool signPostprocess = params.signDetectionMode == SignDetectionMode::HoleWindingRule;
 
     if ( useShell )
         offset = std::abs( offset );
@@ -80,7 +83,7 @@ Expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, const
     auto newMesh = gridToMesh( std::move( grid ), GridToMeshSettings{
         .voxelSize = voxelSizeVector,
         .isoValue = offsetInVoxels,
-        .adaptivity = params.adaptivity,
+        .adaptivity = 0, // it does not work good, better use common decimation after offsetting
         .cb = subprogress( params.callBack, signPostprocess ? 0.66f : 0.5f, 1.0f )
     } );
 
@@ -93,7 +96,7 @@ Expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, const
 Expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const OffsetParameters& params )
 {
     MR_TIMER
-    const bool unsignedOffset = params.type == OffsetParameters::Type::Shell;
+    const bool unsignedOffset = params.signDetectionMode == SignDetectionMode::Unsigned;
     auto res = offsetMesh( mesh, unsignedOffset ? std::abs( offset ) : offset, params );
     if ( !res )
         return res;
@@ -143,19 +146,19 @@ Expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const O
 Expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER
-    if ( params.type == OffsetParameters::Type::Shell )
+    if ( params.signDetectionMode == SignDetectionMode::Unsigned )
     {
         spdlog::warn( "Cannot use shell for double offset, using offset mode instead." );
     }
-    return levelSetDoubleConvertion( mp, AffineXf3f(), params.voxelSize, offsetA, offsetB, params.adaptivity, params.fwn, params.callBack );
+    return levelSetDoubleConvertion( mp, AffineXf3f(), params.voxelSize, offsetA, offsetB, 0, params.fwn, params.callBack );
 }
 
 Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, 
-    const BaseOffsetParameters& params, Vector<VoxelId, FaceId> * outMap )
+    const OffsetParameters& params, Vector<VoxelId, FaceId> * outMap )
 {
     MR_TIMER;
     auto meshToLSCb = subprogress( params.callBack, 0.0f, 0.4f );
-    if ( !params.simpleVolumeSignMode )
+    if ( params.signDetectionMode == SignDetectionMode::OpenVDB )
     {
         auto offsetInVoxels = offset / params.voxelSize;
         auto voxelRes = meshToLevelSet( mesh, AffineXf3f(),
@@ -188,7 +191,7 @@ Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         msParams.origin = box.min - expansion;
         msParams.voxelSize = Vector3f::diagonal( params.voxelSize );
         msParams.dimensions = Vector3i( ( box.max + expansion - msParams.origin ) / params.voxelSize ) + Vector3i::diagonal( 1 );
-        msParams.signMode = *params.simpleVolumeSignMode;
+        msParams.signMode = params.signDetectionMode;
         msParams.maxDistSq = sqr( absOffset + params.voxelSize );
         msParams.minDistSq = sqr( std::max( absOffset - params.voxelSize, 0.0f ) );
         msParams.fwn = params.fwn;
@@ -243,7 +246,7 @@ Expected<Mesh, std::string> mcShellMeshRegion( const Mesh& mesh, const FaceBitSe
 Expected<MR::Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float offset, const SharpOffsetParameters& params )
 {
     MR_TIMER
-    BaseOffsetParameters mcParams = params;
+    OffsetParameters mcParams = params;
     mcParams.callBack = subprogress( params.callBack, 0.0f, 0.7f );
     Vector<VoxelId, FaceId> map;
     auto res = mcOffsetMesh( mesh, offset, mcParams, &map );
@@ -290,7 +293,7 @@ Expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float off
 
     // Type::Shell is more efficient in this case
     OffsetParameters p = params;
-    p.type = OffsetParameters::Type::Shell;
+    p.signDetectionMode = SignDetectionMode::Unsigned;
 
     return offsetMesh( mesh, offset, p );
 }

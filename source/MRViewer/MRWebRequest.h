@@ -20,7 +20,10 @@ public:
     enum class Method 
     {
         Get,
-        Post
+        Post,
+        Patch,
+        Put,
+        Delete,
     };
 
     // clears all request data
@@ -35,6 +38,8 @@ public:
     MRVIEWER_API void setParameters( std::unordered_map<std::string, std::string> parameters );
 
     MRVIEWER_API void setHeaders( std::unordered_map<std::string, std::string> headers );
+
+    MRVIEWER_API void setInputPath( std::string inputPath );
 
     // sets payload in multipart format
     struct FormData
@@ -64,6 +69,7 @@ private:
     int timeout_{ 10000 };
     std::unordered_map<std::string, std::string> params_;
     std::unordered_map<std::string, std::string> headers_;
+    std::string inputPath_;
     std::vector<FormData> formData_;
     std::string body_;
     std::string outputPath_;

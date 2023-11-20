@@ -29,6 +29,33 @@ std::mutex sRequestContextMutex;
 int sRequestContextCounter = 0;
 std::unordered_map<int, std::unique_ptr<RequestContext>> sRequestContextMap;
 
+std::string toString( MR::WebRequest::Method method )
+{
+    using Method = MR::WebRequest::Method;
+    switch ( method )
+    {
+        case Method::Get:
+            return "GET";
+        case Method::Post:
+            return "POST";
+        case Method::Patch:
+            return "PATCH";
+        case Method::Put:
+            return "PUT";
+        case Method::Delete:
+            return "DELETE";
+    }
+#ifdef __cpp_lib_unreachable
+    std::unreachable();
+#else
+    assert( false );
+    return {};
+#endif
+}
+
+template<class... Ts>
+struct overloaded : Ts... { using Ts::operator()...; };
+
 }
 
 #ifdef __EMSCRIPTEN__
@@ -96,6 +123,7 @@ void WebRequest::clear()
     timeout_ = 10000;
     params_ = {};
     headers_ = {};
+    inputPath_ = {};
     formData_ = {};
     body_ = {};
     outputPath_ = {};
@@ -119,6 +147,11 @@ void WebRequest::setParameters( std::unordered_map<std::string, std::string> par
 void WebRequest::setHeaders( std::unordered_map<std::string, std::string> headers )
 {
     headers_ = std::move( headers );
+}
+
+void WebRequest::setInputPath( std::string inputPath )
+{
+    inputPath_ = std::move( inputPath );
 }
 
 void WebRequest::setFormData( std::vector<FormData> formData )
@@ -194,6 +227,12 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
                 return session.Get();
             case Method::Post:
                 return session.Post();
+            case Method::Patch:
+                return session.Patch();
+            case Method::Put:
+                return session.Put();
+            case Method::Delete:
+                return session.Delete();
         }
 
 #ifdef __cpp_lib_unreachable
@@ -251,15 +290,18 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
 #else
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
+    const auto method = toString( method_ );
     MAIN_THREAD_EM_ASM( {
         web_req_clear();
         web_req_timeout = $0;
         web_req_body = UTF8ToString( $1 );
-        web_req_method = $2;
+        web_req_filename = UTF8ToString( $2 );
+        web_req_method = UTF8ToString( $3 );
     },
         timeout_,
         body_.c_str(),
-        int( method_ )
+        inputPath_.c_str(),
+        method.c_str()
     );
 
     for ( const auto& [key, value] : params_ )

@@ -1261,6 +1261,8 @@ Contours2f getOutline( const Contours2f& contours, ContoursIdMap* indicesMap )
 
 Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVertsIds /*= nullptr*/ )
 {
+    if ( contours.empty() )
+        return {};
     SweepLineQueue triangulator( contours, holeVertsIds, false, WindingMode::NonZero );
     auto res = triangulator.run();
     assert( res );
@@ -1278,6 +1280,8 @@ Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVe
 
 std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, const HolesVertIds* holeVertsIds /*= nullptr*/ )
 {
+    if ( contours.empty() )
+        return Mesh();
     SweepLineQueue triangulator( contours, holeVertsIds, true );
     return triangulator.run();
 }

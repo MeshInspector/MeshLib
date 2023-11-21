@@ -47,6 +47,7 @@ public:
     /// get widget settings 
     MRVIEWER_API const Settings& getSettings() { return settings_; };
 
+    // mimum radius of editing area.
     MRVIEWER_API float getMinRadius() { return minRadius_; };
 
 private:
@@ -76,7 +77,7 @@ private:
     VertUVCoords uvs_;
     std::shared_ptr<ChangeMeshAction> changeMeshAction_;
     std::shared_ptr<ObjectMesh> oldMesh_;
-    bool firstInit_ = true;
+    bool firstInit_ = true; // need to save settings in re-initial
 
     bool mousePressed_ = false;
 

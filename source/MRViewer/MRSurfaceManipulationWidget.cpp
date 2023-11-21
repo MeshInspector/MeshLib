@@ -34,6 +34,9 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
         settings_.workMode = WorkMode::Add;
         firstInit_ = false;
     }
+    settings_.radius = std::max( settings_.radius, minRadius_ );
+    settings_.editForce = std::max( settings_.editForce, 0.001f );
+
 
     size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
     region_ = VertBitSet( numV, false );

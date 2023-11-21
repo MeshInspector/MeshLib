@@ -207,7 +207,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
     if ( width( viewportRect_ ) == 0 || height( viewportRect_ ) == 0 )
         return result;
 
-    bool needBindSceneTexture = getViewerInstance().isSceneTextureBinded();
+    bool needBindSceneTexture = getViewerInstance().isSceneTextureBound();
     auto pickResult = viewportGL_.pickObjects( params, picks );
     if ( needBindSceneTexture )
         getViewerInstance().bindSceneTexture( true );

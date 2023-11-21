@@ -40,7 +40,7 @@ OpenRawVoxelsPlugin::OpenRawVoxelsPlugin():
 void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 {
     auto menuWidth = 350.0f * menuScaling;
-    if ( !ImGui::BeginCustomStatePlugin( plugin_name.c_str(), &dialogIsOpen_, { .collapsed = &dialogIsCollapsed_, .width = menuWidth, .menuScaling = menuScaling } ) )
+    if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
         return;
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * menuScaling, cDefaultItemSpacing * menuScaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { cDefaultItemSpacing * menuScaling, cDefaultItemSpacing * menuScaling } );

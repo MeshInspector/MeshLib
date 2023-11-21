@@ -10,11 +10,13 @@ namespace MR
 void SceneTextureGL::bind( bool clear )
 {
     fd_.bind( clear );
+    isBinded_ = true;
 }
 
 void SceneTextureGL::unbind()
 {
     fd_.bindDefault();
+    isBinded_ = false;
 }
 
 void SceneTextureGL::reset( const Vector2i& size, int msaa )
@@ -31,6 +33,7 @@ void SceneTextureGL::reset( const Vector2i& size, int msaa )
 void SceneTextureGL::copyTexture()
 {
     fd_.copyTextureBindDef();
+    isBinded_ = false;
 }
 
 void SceneTextureGL::draw()

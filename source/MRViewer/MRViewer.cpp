@@ -2071,6 +2071,13 @@ bool Viewer::enableAlphaSort( bool on )
     return true;
 }
 
+bool Viewer::isSceneTextureBinded() const
+{
+    if ( !sceneTexture_ )
+        return false;
+    return sceneTexture_->isBinded();
+}
+
 void Viewer::bindSceneTexture( bool bind )
 {
     if ( !sceneTexture_ )

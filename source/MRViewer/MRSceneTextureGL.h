@@ -20,9 +20,12 @@ public:
     void copyTexture();
     // renders texture
     void draw();
+    // return true if texture is binded
+    bool isBinded() const { return isBinded_; }
 private:
     FramebufferData fd_;
     QuadTextureVertexObject qt_;
+    bool isBinded_{ false };
 };
 
 }

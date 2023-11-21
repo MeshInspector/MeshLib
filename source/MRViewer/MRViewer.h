@@ -333,6 +333,8 @@ public:
     // Returns true if alpha sort is enabled, false otherwise
     bool isAlphaSortEnabled() const { return alphaSortEnabled_; }
 
+    // Returns if scene texture is now binded
+    MRVIEWER_API bool isSceneTextureBinded()  const;
     // Binds or unbinds scene texture (should be called only with valid window)
     // note that it does not clear framebuffer
     MRVIEWER_API void bindSceneTexture( bool bind );

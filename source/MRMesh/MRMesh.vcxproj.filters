@@ -1841,6 +1841,9 @@
     <ClCompile Include="MRInTreePathBuilder.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
+    <ClCompile Include="MRMapEdge.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

@@ -6,6 +6,7 @@
 #include "MRSceneSelectionChange.h"
 #include "MRViewerEventsListener.h"
 #include "MRRibbonMenuItem.h"
+#include "ImGuiHelpers.h"
 #include <filesystem>
 
 struct ImGuiContext;
@@ -110,7 +111,12 @@ public:
     // check if search mask satisfies for this plugin
     MRVIEWER_API bool checkStringMask( const std::string& mask ) const;
 
+
 protected:
+    // begin plugin with given parameters
+    // sets params.collapsed from `dialogIsCollapsed_`
+    MRVIEWER_API virtual bool ImGuiBeginWindow_( ImGui::CustomStatePluginWindowParameters params );
+
     MRVIEWER_API virtual bool onEnable_();
     MRVIEWER_API virtual bool onDisable_();
 

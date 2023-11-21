@@ -1,12 +1,11 @@
-#include "MRGetMapping.h"
+#include "MRMapEdge.h"
 #include "MRBitSet.h"
 #include "MRBuffer.h"
-#include "MRVector.h"
 
 namespace MR
 {
 
-UndirectedEdgeBitSet getMapping( const UndirectedEdgeBitSet & src, const WholeEdgeMap & map )
+UndirectedEdgeBitSet mapEdges( const WholeEdgeMap & map, const UndirectedEdgeBitSet & src )
 {
     UndirectedEdgeBitSet res;
     for ( auto b : src )
@@ -15,7 +14,7 @@ UndirectedEdgeBitSet getMapping( const UndirectedEdgeBitSet & src, const WholeEd
     return res;
 }
 
-UndirectedEdgeBitSet getMapping( const UndirectedEdgeBitSet & src, const WholeEdgeHashMap & map )
+UndirectedEdgeBitSet mapEdges( const WholeEdgeHashMap & map, const UndirectedEdgeBitSet & src )
 {
     UndirectedEdgeBitSet res;
     for ( auto b : src )
@@ -24,7 +23,7 @@ UndirectedEdgeBitSet getMapping( const UndirectedEdgeBitSet & src, const WholeEd
     return res;
 }
 
-UndirectedEdgeBitSet getMapping( const UndirectedEdgeBitSet & src, const UndirectedEdgeBMap & map )
+UndirectedEdgeBitSet mapEdges( const UndirectedEdgeBMap & map, const UndirectedEdgeBitSet & src )
 {
     UndirectedEdgeBitSet res;
     if ( !src.any() )

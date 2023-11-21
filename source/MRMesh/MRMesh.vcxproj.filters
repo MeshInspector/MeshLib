@@ -1104,9 +1104,6 @@
     <ClInclude Include="MRInTreePathBuilder.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
-    <ClInclude Include="MRGetMapping.h">
-      <Filter>Source Files\Basic</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1844,7 +1841,7 @@
     <ClCompile Include="MRInTreePathBuilder.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
-    <ClCompile Include="MRGetMapping.cpp">
+    <ClCompile Include="MRMapEdge.cpp">
       <Filter>Source Files\Basic</Filter>
     </ClCompile>
   </ItemGroup>

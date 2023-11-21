@@ -4,7 +4,7 @@
 #include <MRMesh/MRChangeSelectionAction.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBuffer.h>
-#include <MRMesh/MRGetMapping.h>
+#include <MRMesh/MRMapEdge.h>
 #include <MRMesh/MRTimer.h>
 
 namespace MR
@@ -52,12 +52,12 @@ void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const Whol
         return;
 
     // update edges in the selection
-    auto selEdges = getMapping( objMesh->getSelectedEdges(), emap );
+    auto selEdges = mapEdges( emap, objMesh->getSelectedEdges() );
     Historian<ChangeMeshEdgeSelectionAction> hes( "edge selection", objMesh );
     objMesh->selectEdges( std::move( selEdges ) );
 
     // update edges in the creases
-    auto creases = getMapping( objMesh->creases(), emap );
+    auto creases = mapEdges( emap, objMesh->creases() );
     Historian<ChangeMeshCreasesAction> hcr( "creases", objMesh );
     objMesh->setCreases( std::move( creases ) );
 }
@@ -69,12 +69,12 @@ void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const Whol
         return;
 
     // update edges in the selection
-    auto selEdges = getMapping( objMesh->getSelectedEdges(), emap );
+    auto selEdges = mapEdges( emap, objMesh->getSelectedEdges() );
     Historian<ChangeMeshEdgeSelectionAction> hes( "edge selection", objMesh );
     objMesh->selectEdges( std::move( selEdges ) );
 
     // update edges in the creases
-    auto creases = getMapping( objMesh->creases(), emap );
+    auto creases = mapEdges( emap, objMesh->creases() );
     Historian<ChangeMeshCreasesAction> hcr( "creases", objMesh );
     objMesh->setCreases( std::move( creases ) );
 }
@@ -86,12 +86,12 @@ void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const Undi
         return;
 
     // update edges in the selection
-    auto selEdges = getMapping( objMesh->getSelectedEdges(), emap );
+    auto selEdges = mapEdges( emap, objMesh->getSelectedEdges() );
     Historian<ChangeMeshEdgeSelectionAction> hes( "edge selection", objMesh );
     objMesh->selectEdges( std::move( selEdges ) );
 
     // update edges in the creases
-    auto creases = getMapping( objMesh->creases(), emap );
+    auto creases = mapEdges( emap, objMesh->creases() );
     Historian<ChangeMeshCreasesAction> hcr( "creases", objMesh );
     objMesh->setCreases( std::move( creases ) );
 }

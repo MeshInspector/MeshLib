@@ -59,7 +59,7 @@ struct DecimateSettings
     int maxDeletedFaces = INT_MAX;
     /// Region on mesh to be decimated, it is updated during the operation
     FaceBitSet * region = nullptr;
-    /// Edges specified by this bit-set will never be flipped or collapsed, but they can be replaced during collapse of nearby edges so it is updated during the operation
+    /// Edges specified by this bit-set will never be flipped, but they can be collapsed or replaced during collapse of nearby edges so it is updated during the operation
     UndirectedEdgeBitSet* notFlippable = nullptr;
     /// If pointer is not null, then only edges from here can be collapsed (and some nearby edges can disappear)
     const UndirectedEdgeBitSet * edgesToCollapse = nullptr;

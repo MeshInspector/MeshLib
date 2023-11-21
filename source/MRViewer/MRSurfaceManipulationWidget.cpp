@@ -25,12 +25,23 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
     obj_ = objectMesh;
     diagonal_ = obj_->getBoundingBox().diagonal();
     minRadius_ = obj_->avgEdgeLen() * 2.f;
-    settings_.radius = diagonal_ * 0.025f;
-    settings_.force = diagonal_ * 0.01f;
+
+    if ( firstInit_ )
+    {
+        settings_.radius = diagonal_ * 0.02f;
+        settings_.editForce = diagonal_ * 0.01f;
+        settings_.relaxForce = 0.2f;
+        settings_.workMode = WorkMode::Add;
+        firstInit_ = false;
+    }
+    settings_.radius = std::max( settings_.radius, minRadius_ );
+    settings_.editForce = std::max( settings_.editForce, 0.001f );
+
 
     size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
     region_ = VertBitSet( numV, false );
     regionExpanded_ = VertBitSet( numV, false );
+    regionChanged_ = VertBitSet( numV, false );
     pointsShift_ = VertScalars( numV, 0.f );
     distances_ = VertScalars( numV, 0.f );
 
@@ -38,7 +49,6 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
     uvs_ = VertUVCoords( numV, { 0, 1 } );
     obj_->setAncillaryUVCoords( uvs_ );
 
-    workMode_ = WorkMode::Add;
 
     connect( &getViewerInstance() );
 }
@@ -54,6 +64,8 @@ void SurfaceManipulationWidget::reset()
 
     region_ = {};
     regionExpanded_ = {};
+    regionChanged_ = {};
+    pointsShift_ = {};
     distances_ = {};
 
     uvs_ = {};
@@ -67,8 +79,10 @@ void SurfaceManipulationWidget::setSettings( const Settings& settings )
 {
     settings_ = settings;
     settings_.radius = std::max( settings_.radius, minRadius_ );
-    settings_.force = std::max( settings_.force, 0.001f );
-    settings_.saturation = std::clamp( settings_.saturation, 1.f, 100.f );
+    settings_.editForce = std::max( settings_.editForce, 0.001f );
+    settings_.relaxForce = std::clamp( settings_.relaxForce, 0.001f, 0.5f );
+    settings_.sharpness = std::clamp( settings_.sharpness, 1.f, 100.f );
+    updateRegion_( mousePos_ );
 }
 
 bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*modifier*/ )
@@ -103,6 +117,16 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
     size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
     pointsShift_ = VertScalars( numV, 0.f );
 
+    if ( settings_.workMode != WorkMode::Relax && settings_.relaxAfterEdit )
+    {
+        MeshRelaxParams params;
+        params.region = &regionChanged_;
+        params.force = settings_.relaxForce;
+        relax( *obj_->varMesh(), params );
+        obj_->setDirtyFlags( DIRTY_POSITION );
+    }
+    regionChanged_ = VertBitSet( numV, false );
+
     if ( oldMesh_ )
         oldMesh_->detachFromParent();
     oldMesh_.reset();
@@ -122,48 +146,6 @@ bool SurfaceManipulationWidget::onMouseMove_( int mouse_x, int mouse_y )
     return true;
 }
 
-bool SurfaceManipulationWidget::onKeyDown_( int /*key*/, int modifier )
-{
-    bool res = false;
-    WorkMode newWorkMode = WorkMode::Add;
-    if ( modifier & GLFW_MOD_SHIFT )
-    {
-        newWorkMode = WorkMode::Relax;
-        res = true;
-    }
-    else if ( modifier & GLFW_MOD_CONTROL )
-    {
-        newWorkMode = WorkMode::Remove;
-        res = true;
-    }
-    if ( newWorkMode != WorkMode::Relax && workMode_ == WorkMode::Relax )
-        timePoint_ = std::chrono::high_resolution_clock::now();
-    workMode_ = newWorkMode;
-
-    return res;
-}
-
-bool SurfaceManipulationWidget::onKeyUp_( int /*key*/, int modifier )
-{
-    bool res = false;
-    WorkMode newWorkMode = WorkMode::Add;
-    if ( modifier & GLFW_MOD_SHIFT )
-    {
-        newWorkMode = WorkMode::Relax;
-        res = true;
-    }
-    else if ( modifier & GLFW_MOD_CONTROL )
-    {
-        newWorkMode = WorkMode::Remove;
-        res = true;
-    }
-    if ( newWorkMode != WorkMode::Relax && workMode_ == WorkMode::Relax )
-        timePoint_ = std::chrono::high_resolution_clock::now();
-    workMode_ = newWorkMode;
-
-    return res;
-}
-
 void SurfaceManipulationWidget::changeSurface_()
 {
     if ( !region_.any() )
@@ -171,11 +153,11 @@ void SurfaceManipulationWidget::changeSurface_()
 
     MR_TIMER;
 
-    if ( workMode_ == WorkMode::Relax )
+    if ( settings_.workMode == WorkMode::Relax )
     {
         MeshRelaxParams params;
         params.region = &region_;
-        params.force = settings_.force / 200.f; // [1-100] -> (0.0, 0.5]
+        params.force = settings_.relaxForce ;
         relax( *obj_->varMesh(), params );
         obj_->setDirtyFlags( DIRTY_POSITION );
         return;
@@ -189,11 +171,11 @@ void SurfaceManipulationWidget::changeSurface_()
 
     auto& points = obj_->varMesh()->points;
 
-    const float maxShift = settings_.force;
-    const float intensity = settings_.saturation / 100.f * 0.15f + 0.4f;
+    const float maxShift = settings_.editForce;
+    const float intensity = ( 101.f - settings_.sharpness ) / 100.f * 0.15f + 0.4f;
     const float a1 = -1.f * ( 1 - intensity ) / intensity / intensity;
     const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
-    const float direction = workMode_ == WorkMode::Remove ? -1.f : 1.f;
+    const float direction = settings_.workMode == WorkMode::Remove ? -1.f : 1.f;
     BitSetParallelFor( region_, [&] ( VertId v )
     {
         const float r = std::clamp( distances_[v] / settings_.radius, 0.f, 1.f );
@@ -221,9 +203,6 @@ void SurfaceManipulationWidget::updateUV_( bool set )
 
 void SurfaceManipulationWidget::updateRegion_( const Vector2f & mousePos )
 {
-    if ( mousePos == mousePos_ && !mouseMoved_ )
-        return;
-
     MR_TIMER;
 
     const auto& viewerRef = getViewerInstance();
@@ -267,6 +246,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f & mousePos )
             triPoints.push_back( mesh.toTriPoint( pick.face, pick.point ) );
         }
     }
+    regionChanged_ |= region_;
 
     updateUV_( false );
 

@@ -15,16 +15,26 @@ namespace MR
 /// remove (move surface region in opposite direction to normal)
 /// relax (relax surface region)
 class MRVIEWER_CLASS SurfaceManipulationWidget :
-    public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener,
-                         KeyDownListener, KeyUpListener>
+    public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener>
 {
 public:
+    /// widget work modes
+    enum class WorkMode
+    {
+        Add,
+        Remove,
+        Relax
+    };
+
     /// Mesh change settings
     struct Settings
     {
-        float radius = 1.f; // radius of editing region [1 - ...]
-        float force = 30.f; // the force of changing mesh [1 - 100]
-        float saturation = 50.f; // effect of force on points far from center editing area. [1 - 100]
+        WorkMode workMode = WorkMode::Add;
+        float radius = 1.f; // radius of editing region
+        float relaxForce = 0.2f; // speed of relaxing, typical values (0.0, 0.5]
+        float editForce = 1.f; // the force of changing mesh
+        float sharpness = 50.f; // effect of force on points far from center editing area. [1 - 100]
+        bool relaxAfterEdit = true; // relax modified area after editing is complete. uses relaxForce
     };
 
     /// initialize widget according ObjectMesh
@@ -37,6 +47,9 @@ public:
     /// get widget settings 
     MRVIEWER_API const Settings& getSettings() { return settings_; };
 
+    // mimum radius of editing area.
+    MRVIEWER_API float getMinRadius() { return minRadius_; };
+
 private:
     /// start modifying mesh surface
     MRVIEWER_API bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
@@ -44,11 +57,6 @@ private:
     MRVIEWER_API bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;
     /// update
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
-
-    /// change modifying mode (shift - relax, ctrl - remove, others - add )
-    MRVIEWER_API bool onKeyDown_( int key, int modifier ) override;
-    /// change modifying mode (shift - relax, ctrl - remove, others - add )
-    MRVIEWER_API bool onKeyUp_( int key, int modifier ) override;
 
     void changeSurface_();
     void updateUV_( bool set );
@@ -63,20 +71,15 @@ private:
     bool mouseMoved_ = false;
     VertBitSet region_;
     VertBitSet regionExpanded_; // need for proper visualization
+    VertBitSet regionChanged_;
     VertScalars pointsShift_;
     VertScalars distances_;
     VertUVCoords uvs_;
     std::shared_ptr<ChangeMeshAction> changeMeshAction_;
-
     std::shared_ptr<ObjectMesh> oldMesh_;
+    bool firstInit_ = true; // need to save settings in re-initial
 
     bool mousePressed_ = false;
-    enum class WorkMode
-    {
-        Add,
-        Remove,
-        Relax
-    } workMode_ = WorkMode::Add;
 
     std::chrono::time_point<std::chrono::high_resolution_clock> timePoint_;
 };

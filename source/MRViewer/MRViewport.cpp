@@ -349,10 +349,13 @@ std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> Viewport::fi
     for ( const auto& box : tlBoxes )
         rect.include( box );
 
+
+    bool needBindSceneTexture = getViewerInstance().isSceneTextureBound();
     auto viewportRect = Box2i( Vector2i( 0, 0 ), Vector2i( width, height ) );
     auto realRect = rect.intersection( viewportRect );
     auto [pickResult, updatedBox] = viewportGL_.pickObjectsInRect( params, realRect, maxRenderResolutionSide );
-    getViewerInstance().bindSceneTexture( true );
+    if ( needBindSceneTexture )
+        getViewerInstance().bindSceneTexture( true );
 
     std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> resMap;
 

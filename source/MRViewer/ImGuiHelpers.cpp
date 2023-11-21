@@ -607,25 +607,20 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
     if ( params.helpBtnFn )
     {
-        if ( iconsFont )
-            ImGui::PushFont( iconsFont );
-        const float buttonFrameBorder = ( buttonSize - ImGui::CalcTextSize( "\xef\x80\x8d" ).y ) / 2.f;
-        if ( iconsFont )
-            ImGui::PopFont();
-
         auto font = ImGui::GetFont();
-        font->Scale = 0.75f;
+        font->Scale = 0.9f;
         ImGui::PushFont( font );
 
-        const float btnHelpWidth = ImGui::CalcTextSize( "HELP" ).x + buttonFrameBorder * 2.f;
+        const float btnHelpWidth = ImGui::CalcTextSize( "HELP" ).x + 6.0f * params.menuScaling;
         const float btnHelpOffset = buttonSize / 2.f;
         ImGui::SetCursorScreenPos( { window->Rect().Max.x - ( buttonSize + buttonOffset ) - ( btnHelpWidth + btnHelpOffset ), window->Rect().Min.y + buttonOffset } );
         ImGui::PushStyleColor( ImGuiCol_Button, MR::Color( 60, 169, 20 ).getUInt32() );
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered, MR::Color( 66, 186, 22 ).getUInt32() );
         ImGui::PushStyleColor( ImGuiCol_ButtonActive, MR::Color( 73, 205, 24 ).getUInt32() );
+        ImGui::PushStyleColor( ImGuiCol_Text, MR::Color::white().getUInt32() );
         if ( ImGui::Button( "HELP", { btnHelpWidth, buttonSize } ) )
             params.helpBtnFn();
-        ImGui::PopStyleColor( 3 );
+        ImGui::PopStyleColor( 4 );
 
         ImGui::PopFont();
         font->Scale = 1.f;

@@ -1,7 +1,9 @@
 #include "MRStatePlugin.h"
 #include "MRMesh/MRString.h"
 #include "MRRibbonMenu.h"
+#include "MRMesh/MRSystem.h"
 #include "MRViewer.h"
+#include "MRCommandLoop.h"
 
 namespace MR
 {
@@ -22,8 +24,18 @@ StateBasePlugin::StateBasePlugin( std::string name, StatePluginTabs tab ):
     ViewerPlugin(),
     RibbonMenuItem( name )
 {
-    plugin_name = std::move( name );
-    plugin_name += UINameSuffix();
+    CommandLoop::appendCommand( [this] ()
+    {
+        std::string name = this->name();
+        auto item = RibbonSchemaHolder::schema().items.find( name );
+        if ( item != RibbonSchemaHolder::schema().items.end() )
+        {
+            if ( !item->second.caption.empty() )
+                name = item->second.caption;
+        }
+        plugin_name = std::move( name );
+        plugin_name += UINameSuffix();
+    }, CommandLoop::StartPosition::AfterPluginInit );
     tab_ = tab;
 }
 
@@ -98,6 +110,20 @@ bool StateBasePlugin::checkStringMask( const std::string& mask ) const
 {
     return ( findSubstringCaseInsensitive( name(), mask) != std::string::npos ) ||
         ( findSubstringCaseInsensitive( getTooltip(), mask ) != std::string::npos );
+}
+
+bool StateBasePlugin::ImGuiBeginWindow_( ImGui::CustomStatePluginWindowParameters params )
+{
+    if ( !params.collapsed )
+        params.collapsed = &dialogIsCollapsed_;
+
+    // TODO get link from real schema
+    //params.helpBtnFn = [] ()
+    //{
+    //    OpenLink( "https://github.com/MeshInspector/MeshLib" );
+    //};
+
+    return BeginCustomStatePlugin( uiName().c_str(), &dialogIsOpen_, params );
 }
 
 std::string StateBasePlugin::getTooltip() const

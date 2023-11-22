@@ -76,7 +76,11 @@ VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& f
             if ( objMesh->getColoringType() == ColoringType::VertsColorMap )
                 colors = &objMesh->getVertsColorMap();
 
-            result = MeshSave::toAnySupportedFormat( *objMesh->mesh(), filename, colors, settings.callback );
+            result = MeshSave::toAnySupportedFormat( *objMesh->mesh(), filename,
+            {
+                .colors = colors,
+                .progress = settings.callback
+            } );
         }
         else
             result = unexpected( std::string( "ObjectMesh has no Mesh in it" ) );

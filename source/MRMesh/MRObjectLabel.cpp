@@ -11,6 +11,7 @@
 #include "MRPch/MRAsyncLaunchType.h"
 #include "MRPch/MRJson.h"
 #include "MRString.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {

@@ -13,7 +13,14 @@ namespace MR
 Expected<Mesh, std::string>  alignTextToMesh( 
     const Mesh& mesh, const TextMeshAlignParams& params )
 {
-    Mesh textMesh = createSymbolsMesh( params );
+    auto meshOrError = createSymbolsMesh( params );
+
+    if ( !meshOrError.has_value() )
+    {
+        return unexpected( "Font does not contain " + std::to_string( meshOrError.error() ) + "th symbol" );
+    }
+
+    auto textMesh = meshOrError.value();
 
     auto bbox = textMesh.computeBoundingBox();
     if ( !bbox.valid() )

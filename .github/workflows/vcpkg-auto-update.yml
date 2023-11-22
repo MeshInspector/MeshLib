@@ -1,0 +1,68 @@
+name: Update Vcpkg Tag
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 0"  # Run every Sunday at midnight
+
+jobs:
+  update-vcpkg-tag:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Search for Tag in Readme
+        id: extract-tag
+        run: |
+          current_vcpkg_tag=$(awk '/^    cd vcpkg/{getline; if ($0 ~ /^    git checkout (\S+)/) print gensub(/^    git checkout (\S+)/, "\\1", "g", $0)}' ./readme.md)
+          echo "current_vcpkg_tag=${current_vcpkg_tag}" >> $GITHUB_OUTPUT
+          echo "current vcpkg tag: ${current_vcpkg_tag}"
+        shell: bash
+
+      - name: Get Latest Vcpkg Tag
+        id: get-latest-tag
+        run: |
+          latest_vcpkg_tag=$(gh api repos/microsoft/vcpkg/releases/latest --jq '.tag_name' | tr -d '"')
+          echo "latest_vcpkg_tag=${latest_vcpkg_tag}" >> $GITHUB_OUTPUT
+          echo "latest vcpkg tag: ${latest_vcpkg_tag}"
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compare Tags
+        id: compare
+        run: |
+          current_tag="${{ steps.extract-tag.outputs.current_vcpkg_tag }}"
+          latest_tag="${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"
+          
+          if [ ${#current_tag} -gt 12 ] || [ "${current_tag}" < "${latest_tag}" ]; then
+            echo "Tags are different. Creating a new branch and opening a pull request."
+            echo "need_vcpkg_update=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tags are the same. No action needed."
+            echo "need_vcpkg_update=false" >> $GITHUB_OUTPUT
+          fi
+
+
+      - name: Bump vcpkg
+        if: ${{ steps.compare.outputs.need_vcpkg_update == 'true' }}
+        id: bunp-vcpkg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git checkout -b vcpkg-${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}
+
+          # Search and replace in all files except /thirdparty folder
+          find . -type f -not -path './thirdparty*' ! -path './thirdparty/install.bat' -exec \
+            sed -i 's/${{ steps.extract-tag.outputs.current_vcpkg_tag }}/${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}/g' {} +
+
+          # Commit the changes
+          git commit -am "Update vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"
+
+          # Push the changes to your repository
+          git push origin vcpkg-${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}
+
+          
+

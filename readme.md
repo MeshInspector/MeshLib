@@ -156,7 +156,7 @@ Please install CUDA (v12.0|v11.4)(Visual Studio 2022|2019) from [official site](
     ```sh
     git clone https://github.com/Microsoft/vcpkg.git
     cd vcpkg
-    git checkout fbba5251f75c149d71737fd3ef09629f41b5d5aa
+    git checkout 2023.11.20
     .\bootstrap-vcpkg.bat
     .\vcpkg integrate install (with admin rights)
     cd ..

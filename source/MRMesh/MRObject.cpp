@@ -324,12 +324,19 @@ void Object::setVisible( bool on, ViewportMask viewportMask /*= ViewportMask::al
     if ( ( visibilityMask_ & viewportMask ) == ( on ? viewportMask : ViewportMask{} ) )
         return;
 
-    needRedraw_ = true;
-
     if ( on ) 
         setVisibilityMask( visibilityMask_ | viewportMask ); 
     else 
         setVisibilityMask( visibilityMask_ & ~viewportMask );
+}
+
+void Object::setVisibilityMask( ViewportMask viewportMask )
+{
+    if ( visibilityMask_ == viewportMask )
+        return;
+
+    needRedraw_ = true;
+    visibilityMask_ = viewportMask;
 }
 
 void Object::swapBase_( Object& other )

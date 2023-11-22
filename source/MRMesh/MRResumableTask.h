@@ -20,6 +20,14 @@ public:
     virtual bool resume() = 0;
     /// get the result
     virtual result_type result() const = 0;
+
+    /// execute immediately
+    result_type exec( Args&&... args )
+    {
+        start( std::forward<Args>( args )... );
+        while ( !resume() );
+        return result();
+    }
 };
 
 template <typename T, typename... Args>

@@ -181,11 +181,7 @@ private:
         if ( !currentTask_->resume() )
             return suspend_();
 
-        auto result = currentTask_->result();
-        if ( result )
-            currentResult_ = { std::move( *result ) };
-        else
-            currentResult_ = unexpected( std::move( result.error() ) );
+        currentResult_ = currentTask_->result();
         currentTask_.reset();
 
         return continueWith_( State::TaskProcessing );
@@ -253,9 +249,9 @@ private:
 
     State state_;
     size_t currentPath_ { 0 };
-    std::shared_ptr<ResumableTask<Expected<std::shared_ptr<Object>, std::string>>> currentTask_;
+    ResumableTaskPtr<Expected<std::vector<ObjectPtr>>> currentTask_;
     std::string warningTextBuffer_;
-    Expected<std::vector<std::shared_ptr<Object>>, std::string> currentResult_;
+    Expected<std::vector<ObjectPtr>> currentResult_;
 };
 
 }

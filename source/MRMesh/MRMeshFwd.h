@@ -388,6 +388,8 @@ class CircleObject;
 class PlaneObject;
 class SphereObject;
 
+using ObjectPtr = std::shared_ptr<Object>;
+
 struct Image;
 
 template <typename T>

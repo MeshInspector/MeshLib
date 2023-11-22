@@ -22,12 +22,15 @@ public:
     virtual result_type result() const = 0;
 };
 
+template <typename T, typename... Args>
+using ResumableTaskPtr = std::shared_ptr<ResumableTask<T, Args...>>;
+
 /// helper class to post-process task result
 template <typename T, typename U>
 class PostProcessResumableTask : public ResumableTask<U>
 {
 public:
-    PostProcessResumableTask( std::shared_ptr<ResumableTask<T>> task, std::function<U ( T&& )> postProcess )
+    PostProcessResumableTask( ResumableTaskPtr<T> task, std::function<U ( T&& )> postProcess )
         : task_( std::move( task ) )
         , postProcess_( std::move( postProcess ) )
     {}
@@ -57,7 +60,7 @@ public:
     }
 
 private:
-    std::shared_ptr<ResumableTask<T>> task_;
+    ResumableTaskPtr<T> task_;
     std::function<U ( T&& )> postProcess_;
     std::optional<std::conditional<std::is_void_v<U>, bool, U>> result_;
 };

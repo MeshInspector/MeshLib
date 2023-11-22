@@ -68,12 +68,12 @@ private:
     float diagonal_ = 1.f;
     float minRadius_ = 1.f;
     Vector2f mousePos_;
-    bool mouseMoved_ = false;
-    VertBitSet region_;
-    VertBitSet regionExpanded_; // need for proper visualization
-    VertBitSet regionChanged_;
+    VertBitSet singleEditingRegion_; // region of editing of one action (move)
+    VertBitSet visualizationRegion_;
+    VertBitSet generalEditingRegion_; // region of editing of all actions (one LMB holding)
     VertScalars pointsShift_;
-    VertScalars distances_;
+    VertScalars editingDistanceMap_;
+    VertScalars visualizationDistanceMap_;
     VertUVCoords uvs_;
     std::shared_ptr<ChangeMeshAction> changeMeshAction_;
     std::shared_ptr<ObjectMesh> oldMesh_;

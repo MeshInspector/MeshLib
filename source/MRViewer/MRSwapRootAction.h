@@ -30,12 +30,12 @@ public:
         if ( !root_ )
             return;
         std::swap( root_, SceneRoot::getSharedPtr() );
-
+        getViewerInstance().setSceneDirty();
         auto scenePathClone = SceneRoot::getScenePath();
         SceneRoot::setScenePath( scenePath_ );
         scenePath_ = scenePathClone;
 
-        Viewer::instanceRef().makeTitleFromSceneRootPath();
+        getViewerInstance().makeTitleFromSceneRootPath();
     }
 
     [[nodiscard]] virtual size_t heapBytes() const override

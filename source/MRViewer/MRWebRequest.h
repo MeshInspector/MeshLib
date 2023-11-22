@@ -17,6 +17,9 @@ MRVIEWER_API Expected<Json::Value, std::string> parseResponse( const Json::Value
 class MRVIEWER_CLASS WebRequest
 {
 public:
+    WebRequest();
+    explicit WebRequest( std::string url );
+
     enum class Method 
     {
         Get,
@@ -56,6 +59,10 @@ public:
     // prefer to save the response to file
     MRVIEWER_API void setOutputPath( std::string outputPath );
 
+    MRVIEWER_API void setAsync( bool async );
+
+    MRVIEWER_API void setLogName( std::string logName );
+
     using ResponseCallback = std::function<void( const Json::Value& response )>;
 
     /// sends request, calling callback on answer, 
@@ -64,8 +71,13 @@ public:
     /// \param logName name for logging
     MRVIEWER_API void send( std::string url, const std::string & logName, ResponseCallback callback, bool async = true );
 
+    MRVIEWER_API void send( ResponseCallback callback );
+
 private:
     Method method_{ Method::Get };
+    std::string url_;
+    std::string logName_;
+    bool async_{ true };
     int timeout_{ 10000 };
     std::unordered_map<std::string, std::string> params_;
     std::unordered_map<std::string, std::string> headers_;

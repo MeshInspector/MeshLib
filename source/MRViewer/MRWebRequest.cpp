@@ -117,9 +117,23 @@ bool downloadFileCallback( std::string data, intptr_t userdata )
 namespace MR
 {
 
+WebRequest::WebRequest()
+{
+    //
+}
+
+WebRequest::WebRequest( std::string url )
+    : url_( std::move( url ) )
+{
+    //
+}
+
 void WebRequest::clear()
 {
     method_ = Method::Get;
+    url_ = {};
+    logName_ = {};
+    async_ = true;
     timeout_ = 10000;
     params_ = {};
     headers_ = {};
@@ -167,6 +181,16 @@ void WebRequest::setBody( std::string body )
 void WebRequest::setOutputPath( std::string outputPath )
 {
     outputPath_ = std::move( outputPath );
+}
+
+void WebRequest::setAsync( bool async )
+{
+    async_ = async;
+}
+
+void WebRequest::setLogName( std::string logName )
+{
+    logName_ = std::move( logName );
 }
 
 void WebRequest::send( std::string urlP, const std::string & logName, ResponseCallback callback, bool async /*= true */ )
@@ -332,6 +356,17 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         MAIN_THREAD_EM_ASM( web_req_async_download( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ), urlP.c_str(), outputPath_.c_str(), ctxId );
 #pragma clang diagnostic pop
 #endif
+}
+
+void WebRequest::send( WebRequest::ResponseCallback callback )
+{
+    if ( url_.empty() )
+    {
+        spdlog::warn( "WebRequest {}: URL is not specified", logName_ );
+        return;
+    }
+
+    send( url_, logName_, std::move( callback ), async_ );
 }
 
 Expected<Json::Value, std::string> parseResponse( const Json::Value& response )

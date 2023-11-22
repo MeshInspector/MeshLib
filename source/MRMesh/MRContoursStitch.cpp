@@ -50,8 +50,10 @@ void stitchContours( MeshTopology & topology, const EdgePath & c0, const EdgePat
     }
 }
 
-EdgeLoop cutAlongEdgeLoop( MeshTopology & topology, const EdgeLoop & c0 )
+EdgeLoop cutAlongEdgeLoop( Mesh& mesh, const EdgeLoop & c0 )
 {
+    auto& topology = mesh.topology;
+
     EdgePath c1;
     if ( !isEdgeLoop( topology, c0 ) )
     {
@@ -91,7 +93,8 @@ EdgeLoop cutAlongEdgeLoop( MeshTopology & topology, const EdgeLoop & c0 )
         topology.splice( e0, topology.prev( last0 ) );
         assert( !topology.fromSameOriginRing( e0, e1 ) );
         if ( topology.org( e0 ) )
-            topology.setOrg( e1, topology.addVertId() );
+            topology.setOrg( e1, mesh.addPoint( mesh.orgPnt( e0 ) ) );
+
         last0 = e0.sym();
     }
 
@@ -108,7 +111,7 @@ TEST(MRMesh, cutAlongEdgeLoop)
     EdgeLoop c0;
     for ( auto e : leftRing( mesh.topology, 0_f ) )
         c0.push_back( e );
-    auto c1 = cutAlongEdgeLoop( mesh.topology, c0 );
+    auto c1 = cutAlongEdgeLoop( mesh, c0 );
     const auto ueCntB = topology.computeNotLoneUndirectedEdges();
     ASSERT_EQ( ueCntB, ueCntA + 3 );
 

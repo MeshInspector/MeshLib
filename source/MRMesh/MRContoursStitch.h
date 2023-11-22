@@ -16,6 +16,6 @@ MRMESH_API void stitchContours( MeshTopology & topology, const EdgePath & c0, co
 /// 1) returned loop has the same size as input, with corresponding edges in same indexed elements of both;
 /// 2) all edges of c0 have no left faces;
 /// 3) all returned edges have no right faces;
-MRMESH_API EdgeLoop cutAlongEdgeLoop( MeshTopology & topology, const EdgeLoop & c0 );
+MRMESH_API EdgeLoop cutAlongEdgeLoop( Mesh& mesh, const EdgeLoop & c0 );
 
 } //namespace MR

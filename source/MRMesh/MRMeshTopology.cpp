@@ -692,13 +692,7 @@ VertId MeshTopology::lastValidVert() const
     assert( updateValids_ );
     if ( numValidVerts_ <= 0 )
         return {};
-    for ( VertId i{ (int)validVerts_.size() - 1 }; i.valid(); --i )
-    {
-        if ( validVerts_.test( i ) )
-            return i;
-    }
-    assert( false );
-    return {};
+    return validVerts_.find_last();
 }
 
 EdgeId MeshTopology::sharedEdge( FaceId l, FaceId r ) const
@@ -766,13 +760,7 @@ FaceId MeshTopology::lastValidFace() const
     assert( updateValids_ );
     if ( numValidFaces_ <= 0 )
         return {};
-    for ( FaceId i{ (int)validFaces_.size() - 1 }; i.valid(); --i )
-    {
-        if ( validFaces_.test( i ) )
-            return i;
-    }
-    assert( false );
-    return {};
+    return validFaces_.find_last();
 }
 
 void MeshTopology::deleteFace( FaceId f )

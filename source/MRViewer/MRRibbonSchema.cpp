@@ -346,6 +346,9 @@ void RibbonSchemaLoader::readItemsJson_( const std::filesystem::path& path ) con
         auto& itemCaption = item["Caption"];
         if ( itemCaption.isString() )
             findIt->second.caption = itemCaption.asString();
+        auto& itemHelpLink = item["HelpLink"];
+        if ( itemHelpLink.isString() )
+            findIt->second.helpLink = itemHelpLink.asString();
         auto itemIcon = item["Icon"];
         if ( !itemIcon.isString() )
         {

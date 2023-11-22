@@ -117,11 +117,12 @@ bool StateBasePlugin::ImGuiBeginWindow_( ImGui::CustomStatePluginWindowParameter
     if ( !params.collapsed )
         params.collapsed = &dialogIsCollapsed_;
 
-    // TODO get link from real schema
-    //params.helpBtnFn = [] ()
-    //{
-    //    OpenLink( "https://github.com/MeshInspector/MeshLib" );
-    //};
+    if ( !params.helpBtnFn )
+    {
+        auto it = RibbonSchemaHolder::schema().items.find( name() );
+        if ( it != RibbonSchemaHolder::schema().items.end() && !it->second.helpLink.empty() )
+            params.helpBtnFn = [&] () { OpenLink( it->second.helpLink ); };
+    }
 
     return BeginCustomStatePlugin( uiName().c_str(), &dialogIsOpen_, params );
 }

@@ -61,7 +61,7 @@ public:
 namespace AsyncObjectLoad
 {
 
-using AsyncObjectLoader = std::shared_ptr<ResumableTask<Expected<std::shared_ptr<Object>, std::string>>>( * )( const std::filesystem::path& );
+using AsyncObjectLoader = std::shared_ptr<ResumableTask<Expected<std::shared_ptr<Object>, std::string>>>( * )( const std::filesystem::path&, ProgressCallback );
 
 /// Find an appropriate loader from the registry
 MRMESH_API AsyncObjectLoader getObjectLoader( IOFilter filter );

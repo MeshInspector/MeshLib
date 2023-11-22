@@ -149,6 +149,11 @@ private:
         for ( auto& c : ext )
             c = (char)std::tolower( c );
 
+        auto cb = [callback = callback_, index = currentPath_, number = paths_.size()] ( float v )
+        {
+            return callback( ( (float)index + v ) / (float)number );
+        };
+
         const auto asyncFilters = AsyncObjectLoad::getFilters();
         const auto asyncFilter = std::find_if( asyncFilters.begin(), asyncFilters.end(), [&ext] ( auto&& filter )
         {
@@ -159,16 +164,13 @@ private:
             const auto asyncLoader = AsyncObjectLoad::getObjectLoader( *asyncFilter );
             assert( asyncLoader );
             spdlog::info( "Loading file {}", fileName );
-            currentTask_ = asyncLoader( path );
+            currentTask_ = asyncLoader( path, cb );
             currentTask_->start();
             return continueWith_( State::TaskAwaiting );
         }
 
         spdlog::info( "Loading file {}", fileName );
-        currentResult_ = loadObjectFromFile( path, &warningTextBuffer_, [callback = callback_, index = currentPath_, number = paths_.size()] ( float v )
-        {
-            return callback( ( (float)index + v ) / (float)number );
-        } );
+        currentResult_ = loadObjectFromFile( path, &warningTextBuffer_, cb );
         return continueWith_( State::TaskProcessing );
     }
 

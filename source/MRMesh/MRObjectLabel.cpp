@@ -174,7 +174,7 @@ void ObjectLabel::buildMesh_() const
         auto contours = createSymbolContours( params );
         if ( !contours.has_value() )
         {
-            spdlog::error( "Font does not contain symbol at position" + contours.error() );
+            spdlog::error( "Font does not contain symbol at position " + std::to_string( contours.error() ) );
             assert( false );
             continue;
         }

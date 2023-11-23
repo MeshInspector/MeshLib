@@ -18,6 +18,7 @@ namespace MR
 Expected<SimpleVolume, std::string> meshToDistanceVolume( const Mesh& mesh, const MeshToDistanceVolumeParams& params /*= {} */ )
 {
     MR_TIMER
+    assert( params.signMode != SignDetectionMode::OpenVDB );
     SimpleVolume res;
     res.voxelSize = params.voxelSize;
     res.dims = params.dimensions;

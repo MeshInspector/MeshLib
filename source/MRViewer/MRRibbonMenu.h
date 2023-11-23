@@ -182,6 +182,7 @@ private:
     std::vector<RibbonSchemaHolder::SearchResult> searchResult_;
     void drawSearchButton_();
     void drawCollapseButton_();
+    void drawHelpButton_();
 
     void sortObjectsRecursive_( std::shared_ptr<Object> object );
 

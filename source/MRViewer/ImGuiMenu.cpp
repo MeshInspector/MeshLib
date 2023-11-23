@@ -895,7 +895,7 @@ void ImGuiMenu::drawModalMessage_()
         const auto style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
         if ( UI::button( "Okay", Vector2f( -1, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Enter ) ||
-           ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) ) )
+           ( ImGui::IsMouseClicked( 0 ) && !ImGui::IsWindowAppearing() && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) ) ) )
         {
             storedModalMessage_.clear();
             ImGui::CloseCurrentPopup();

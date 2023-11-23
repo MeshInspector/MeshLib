@@ -138,13 +138,35 @@ Expected<int, std::string> readVertCoords( VertCoords& vertexCoordinates, const 
     return int( accessor.count );
 }
 
-void fillVertsColorMap( VertColors& vertsColorMap, int vertexCount, const std::vector<Material>& materials, int materialIndex )
+VoidOrErrStr fillVertsColorMap( VertColors& vertsColorMap, int vertexCount, const std::vector<Material>& materials, int materialIndex, const tinygltf::Model& model, const tinygltf::Primitive& primitive )
 {
-    const auto startPos = vertsColorMap.size();
+    const VertId startPos = VertId( vertsColorMap.size() );
     vertsColorMap.resize( vertsColorMap.size() + vertexCount );
-    std::fill( ( uint32_t* )( vertsColorMap.data() + startPos ),
-                ( uint32_t* )( vertsColorMap.data() + startPos + vertexCount ),
-                materialIndex >= 0 ? materials[materialIndex].baseColor.getUInt32() : 0xFFFFFFFF );
+
+    const auto posAttrib = primitive.attributes.find( "COLOR_0" );
+    if ( posAttrib == primitive.attributes.end() )
+    {
+        std::fill( ( uint32_t* )( vertsColorMap.data() + startPos ),
+                    ( uint32_t* )( vertsColorMap.data() + startPos + vertexCount ),
+                    materialIndex >= 0 ? materials[materialIndex].baseColor.getUInt32() : 0xFFFFFFFF );
+
+        return {};
+    }
+
+    const auto& accessor = model.accessors[posAttrib->second];
+    const auto& bufferView = model.bufferViews[accessor.bufferView];
+    const auto& buffer = model.buffers[bufferView.buffer];
+
+    if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT || accessor.type != TINYGLTF_TYPE_VEC3 )
+        return unexpected( "This vertex color type is not supported" );
+
+    ParallelFor( vertsColorMap, [&] ( VertId v )
+    {
+        const Vector3f col = *( Vector3f* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + v * bufferView.byteStride] );
+        vertsColorMap[startPos + v] = Color( col[0], col[1], col[2] );
+    } );
+
+    return{};
 }
 
 std::string readUVCoords( VertUVCoords& uvCoords, int vertexCount, const tinygltf::Model& model, const tinygltf::Primitive& primitive )
@@ -254,7 +276,8 @@ Expected<std::vector<MeshData>, std::string> readMeshes( const tinygltf::Model& 
             if ( !vertexCount.has_value() )
                 return unexpected( vertexCount.error() );
 
-            fillVertsColorMap( meshData.vertsColorMap, *vertexCount, materials, primitive.material );
+            if ( auto error = fillVertsColorMap( meshData.vertsColorMap, *vertexCount, materials, primitive.material, model, primitive ); !error.has_value() )
+                return unexpected( error.error() );
 
             if ( auto error = readUVCoords( meshData.uvCoords, *vertexCount, model, primitive ); !error.empty() )
                 return unexpected( error );
@@ -265,6 +288,7 @@ Expected<std::vector<MeshData>, std::string> readMeshes( const tinygltf::Model& 
             if ( meshData.materialIndex < 0 )
                 meshData.materialIndex = primitive.material;
 
+            areMaterialsSame &= ( primitive.material >= 0 );
             if ( primitiveId > 0 )
                 areMaterialsSame &= ( primitive.material == mesh.primitives[primitiveId - 1].material );
         }
@@ -416,6 +440,11 @@ Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromGltf( co
                     {
                         objectMesh->setFrontColor( materials[meshData.materialIndex].baseColor, false );
                     }
+                }
+                else if ( !meshData.vertsColorMap.empty() )
+                {
+                    objectMesh->setColoringType( ColoringType::VertsColorMap );
+                    objectMesh->setVertsColorMap( meshData.vertsColorMap );
                 }
 
                 if ( node.name.empty() )

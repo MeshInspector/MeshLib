@@ -103,7 +103,7 @@ void OutlineDecomposer::clearLast()
     }
 }
 
-Contours2d createSymbolContours( const SymbolMeshParams& params )
+Expected<Contours2d, size_t> createSymbolContours( const SymbolMeshParams& params )
 {
     MR_TIMER
     // Begin
@@ -190,6 +190,10 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
             FT_Vector delta;
             FT_Get_Kerning( face, previous, index, FT_KERNING_DEFAULT, &delta );
             xOffset += delta.x;
+        }
+        else if(index == 0)
+        {
+            return unexpected(static_cast<size_t>(i));
         }
         if ( FT_Load_Glyph( face, index, FT_LOAD_NO_BITMAP ) )
             continue;
@@ -290,10 +294,16 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
     return std::move( decomposer.contours );
 }
 
-Mesh triangulateSymbolContours( const SymbolMeshParams& params )
+Expected<Mesh, size_t> triangulateSymbolContours( const SymbolMeshParams& params )
 {
     MR_TIMER
-    return PlanarTriangulation::triangulateContours( createSymbolContours( params ) );
+    auto contours = createSymbolContours( params );
+    if ( !contours.has_value() )
+    {
+        return unexpected( contours.error() );
+    }
+
+    return PlanarTriangulation::triangulateContours( contours.value() );
 }
 
 void addBaseToPlanarMesh( Mesh & mesh, float zOffset )
@@ -327,12 +337,16 @@ void addBaseToPlanarMesh( Mesh & mesh, float zOffset )
     }
 }
 
-Mesh createSymbolsMesh( const SymbolMeshParams& params )
+Expected<Mesh, size_t> createSymbolsMesh( const SymbolMeshParams& params )
 {
     MR_TIMER
-    Mesh mesh = triangulateSymbolContours( params );
-    addBaseToPlanarMesh( mesh );
-    return mesh;
+    auto mesh = triangulateSymbolContours( params );
+    if( !mesh.has_value() )
+    {
+        return unexpected( mesh.error() );
+    }
+    addBaseToPlanarMesh( mesh.value() );
+    return mesh.value();
 }
 
 }

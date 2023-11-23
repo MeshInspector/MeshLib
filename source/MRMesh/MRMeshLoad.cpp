@@ -673,13 +673,12 @@ Expected<Mesh, std::string> fromStep( std::istream& in, const MeshLoadSettings& 
 
     // TODO: preserve colors?
     Mesh mesh;
-    for ( const auto& objMesh : getAllObjectsInTree<ObjectMesh>( result->get() ) )
-    {
+    if ( const auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( *result ) )
         if ( const auto& subMesh = objMesh->mesh() )
-        {
+            mesh = *subMesh;
+    for ( const auto& objMesh : getAllObjectsInTree<ObjectMesh>( result->get() ) )
+        if ( const auto& subMesh = objMesh->mesh() )
             mesh.addPart( *subMesh );
-        }
-    }
     return mesh;
 }
 #endif

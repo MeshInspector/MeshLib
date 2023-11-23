@@ -285,9 +285,10 @@ void RibbonMenu::drawSearchButton_()
 
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * scaling );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-    ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrab ) );
+    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
     ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
     ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
+    ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
 
     auto absMinPos = ImGui::GetCurrentContext()->CurrentWindow->DC.CursorPos;
 
@@ -298,7 +299,7 @@ void RibbonMenu::drawSearchButton_()
 
     font->Scale = 1.0f;
 
-    ImGui::PopStyleColor( 3 );
+    ImGui::PopStyleColor( 4 );
     ImGui::PopStyleVar( 2 );
 
     auto nameWindow = "##RibbonGlobalSearchPopup";
@@ -400,12 +401,13 @@ void RibbonMenu::drawCollapseButton_()
 
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * scaling );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-    ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrab ) );
+    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
     ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
     ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
 
     if ( collapseState_ == CollapseState::Pinned )
     {
+        ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
         ImGui::PushFont( font );
         if ( ImGui::Button( "\xef\x81\x93", ImVec2( btnSize, btnSize ) ) )
         {
@@ -417,15 +419,12 @@ void RibbonMenu::drawCollapseButton_()
 #endif
         }
         ImGui::PopFont();
-        if ( ImGui::IsItemHovered() )
-        {
-            ImGui::BeginTooltip();
-            ImGui::Text( "%s", "Unpin" );
-            ImGui::EndTooltip();
-        }
+        ImGui::PopStyleColor();
+        UI::setTooltipIfHovered( "Unpin", scaling );
     }
     else
     {
+        ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
         ImGui::PushFont( font );
         if ( ImGui::Button( "\xef\x81\xb7", ImVec2( btnSize, btnSize ) ) )
         {
@@ -433,12 +432,8 @@ void RibbonMenu::drawCollapseButton_()
             fixViewportsSize_( getViewerInstance().framebufferSize.x, getViewerInstance().framebufferSize.y );
         }
         ImGui::PopFont();
-        if ( ImGui::IsItemHovered() )
-        {
-            ImGui::BeginTooltip();
-            ImGui::Text( "%s", "Pin" );
-            ImGui::EndTooltip();
-        }
+        ImGui::PopStyleColor();
+        UI::setTooltipIfHovered( "Pin", scaling );
     }
     font->Scale = 1.0f;
 
@@ -481,6 +476,33 @@ void RibbonMenu::drawCollapseButton_()
                 collapseState_ = CollapseState::Closed;
         }
     }
+}
+
+void RibbonMenu::drawHelpButton_()
+{
+    const auto scaling = menu_scaling();
+    auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
+    font->Scale = 0.7f;
+
+    float btnSize = scaling * cTopPanelAditionalButtonSize;
+
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * scaling );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
+
+    ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
+    ImGui::PushFont( font );
+    if ( ImGui::Button( "\xef\x81\x99", ImVec2( btnSize, btnSize ) ) )
+        OpenLink( "https://meshinspector.com/help/en/" );
+    ImGui::PopFont();
+    ImGui::PopStyleColor();
+    UI::setTooltipIfHovered( "Open help page", scaling );
+    font->Scale = 1.0f;
+
+    ImGui::PopStyleColor( 3 );
+    ImGui::PopStyleVar( 2 );
 }
 
 void RibbonMenu::sortObjectsRecursive_( std::shared_ptr<Object> object )
@@ -574,10 +596,11 @@ void RibbonMenu::drawHeaderPannel_()
     bool needActive = hasAnyActiveItem() && toolbar_.getCurrentToolbarWidth() == 0.0f;
     float activeBtnSize = cTabHeight * menuScaling - 4 * menuScaling; // small offset from border
 
-    // 40 - search button size (by eye)
-    // 40 - collapse button size (by eye)
-    // 40 - active button size (by eye)
-    auto availWidth = ImGui::GetContentRegionAvail().x - ( needActive ? 3 : 2 ) * 40.0f * menuScaling;
+    // 40 - active button size (optional)
+    // 40 - help button size
+    // 40 - search button size
+    // 40 - collapse button size
+    auto availWidth = ImGui::GetContentRegionAvail().x - ( needActive ? 4 : 3 ) * 40.0f * menuScaling;
 
     float scrollMax = summaryTabPannelSize - availWidth;
     bool needScroll = scrollMax > 0.0f;
@@ -703,9 +726,12 @@ void RibbonMenu::drawHeaderPannel_()
 
     if ( needActive )
     {
-        ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 110.0f * menuScaling, cTabYOffset * menuScaling ) );
+        ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 150.0f * menuScaling, cTabYOffset * menuScaling ) );
         drawActiveListButton_( activeBtnSize );
     }
+
+    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 110.0f * menuScaling, cTabYOffset* menuScaling ) );
+    drawHelpButton_();
 
     ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 70.0f * menuScaling, cTabYOffset* menuScaling ) );
     drawSearchButton_();

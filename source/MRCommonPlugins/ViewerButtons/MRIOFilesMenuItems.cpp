@@ -670,7 +670,7 @@ CaptureScreenshotMenuItem::CaptureScreenshotMenuItem():
 void CaptureScreenshotMenuItem::drawDialog( float menuScaling, ImGuiContext* )
 {
     auto menuWidth = 200.0f * menuScaling;
-    if ( !ImGui::BeginCustomStatePlugin( plugin_name.c_str(), &dialogIsOpen_, { .collapsed = &dialogIsCollapsed_, .width = menuWidth, .menuScaling = menuScaling } ) )
+    if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
         return;
 
     ImGui::DragIntValid( "Width", &resolution_.x, 1, 256 );

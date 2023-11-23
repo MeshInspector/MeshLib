@@ -11,6 +11,7 @@
 #include "MRPch/MRAsyncLaunchType.h"
 #include "MRPch/MRJson.h"
 #include "MRString.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -172,7 +173,14 @@ void ObjectLabel::buildMesh_() const
         params.text = s;
         params.pathToFontFile = pathToFont_;
         auto contours = createSymbolContours( params );
-        auto mesh = PlanarTriangulation::triangulateContours( contours );
+        if ( !contours.has_value() )
+        {
+            spdlog::error( "Font does not contain symbol at position " + std::to_string( contours.error() ) );
+            assert( false );
+            continue;
+        }
+
+        auto mesh = PlanarTriangulation::triangulateContours( contours.value() );
         // 1.3f - line spacing
         mesh.transform( AffineXf3f::translation( 
             Vector3f::minusY() * SymbolMeshParams::MaxGeneratedFontHeight * 1.3f * float( i ) ) );

@@ -27,7 +27,8 @@ VoidOrErrStr sceneToObj( const std::vector<NamedXfMesh> & objects, std::ostream 
         if ( !o.mesh )
             continue;
         out << "o " << o.name << '\n';
-        auto saveRes = toObj( *o.mesh, out, o.toWorld, firstVertId );
+        AffineXf3d xf( o.toWorld );
+        auto saveRes = toObj( *o.mesh, out, { .xf = &xf }, firstVertId );
         if ( !saveRes.has_value() )
             return saveRes; //error
         firstVertId += o.mesh->topology.lastValidVert() + 1;

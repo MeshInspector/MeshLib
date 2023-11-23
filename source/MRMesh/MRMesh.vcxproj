@@ -169,6 +169,7 @@
     <ClInclude Include="MRPrism.h" />
     <ClInclude Include="MRProgressReadWrite.h" />
     <ClInclude Include="MRRayBoxIntersection2.h" />
+    <ClInclude Include="MRSaveSettings.h" />
     <ClInclude Include="MRResumableTask.h" />
     <ClInclude Include="MRSceneLoad.h" />
     <ClInclude Include="MRSolarRadiation.h" />
@@ -410,6 +411,7 @@
     <ClCompile Include="MRFloatGridComponents.cpp" />
     <ClCompile Include="MRGcodeProcessor.cpp" />
     <ClCompile Include="MRGcodeLoad.cpp" />
+    <ClCompile Include="MRMapEdge.cpp" />
     <ClCompile Include="MRGraph.cpp" />
     <ClCompile Include="MRGridSampling.cpp" />
     <ClCompile Include="MRHistoryStore.cpp" />
@@ -496,6 +498,7 @@
     <ClCompile Include="MRMeshCollide.cpp" />
     <ClCompile Include="MRPrism.cpp" />
     <ClCompile Include="MRProgressReadWrite.cpp" />
+    <ClCompile Include="MRSaveSettings.cpp" />
     <ClCompile Include="MRSceneLoad.cpp" />
     <ClCompile Include="MRSolarRadiation.cpp" />
     <ClCompile Include="MRTiffIO.cpp" />

@@ -195,7 +195,8 @@ Expected<PointCloud, std::string> pythonLoadPointCloudFromAnyFormat( pybind11::o
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveMesh, [] ( pybind11::module_& m )
 {
     m.def( "saveMesh",
-        MR::decorateExpected( ( VoidOrErrStr( * )( const MR::Mesh&, const std::filesystem::path&, const VertColors*, ProgressCallback ) )& MR::MeshSave::toAnySupportedFormat ),
+        MR::decorateExpected( []( const MR::Mesh& m, const std::filesystem::path& p, const VertColors* cs, ProgressCallback cb )
+            { return MR::MeshSave::toAnySupportedFormat( m, p, { .colors = cs, .progress = cb } ); } ),
         pybind11::arg( "mesh" ), pybind11::arg( "path" ), pybind11::arg( "colors" ) = nullptr, pybind11::arg( "callback" ) = ProgressCallback{}, 
         "detects the format from file extension and save mesh to it" );
     m.def( "saveMesh",

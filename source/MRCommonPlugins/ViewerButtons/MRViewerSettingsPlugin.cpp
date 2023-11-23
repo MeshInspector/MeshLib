@@ -55,7 +55,7 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
 void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 {
     auto menuWidth = 380.0f * menuScaling;
-    if ( !ImGui::BeginCustomStatePlugin( plugin_name.c_str(), &dialogIsOpen_, { .collapsed = &dialogIsCollapsed_, .width = menuWidth, .menuScaling = menuScaling } ) )
+    if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
         return;
 
 

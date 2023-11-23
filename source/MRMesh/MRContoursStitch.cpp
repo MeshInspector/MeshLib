@@ -102,9 +102,11 @@ EdgeLoop cutAlongEdgeLoop( MeshTopology & topology, const EdgeLoop & c0 )
 EdgeLoop cutAlongEdgeLoop( Mesh& mesh, const EdgeLoop& c0 )
 {
     const auto res = cutAlongEdgeLoop( mesh.topology, c0 );
-    for ( auto newEdge : c0 )
+    mesh.points.reserve( mesh.points.size() + res.size() );
+
+    for ( size_t i = 0; i < c0.size(); ++i )
     {
-        mesh.points.push_back( mesh.orgPnt( newEdge ) );
+        mesh.points.autoResizeSet( mesh.topology.org( res[i] ), mesh.orgPnt( c0[i] ) );
     }
     return res;
 }

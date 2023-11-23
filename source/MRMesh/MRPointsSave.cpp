@@ -12,10 +12,6 @@
 #include "OpenCTM/openctm.h"
 #endif
 
-#if _MSC_VER <= 1929 // Visual Studio 2019
-#pragma warning( disable : 4866 ) //compiler may not enforce left-to-right evaluation order for call to 'std::operator<<<char,std::char_traits<char>,std::allocator<char> >'
-#endif
-
 namespace MR
 {
 
@@ -29,6 +25,30 @@ const IOFilters Filters =
     {"CTM (.ctm)",        "*.ctm"},
 #endif
 };
+
+namespace
+{
+
+class NormalXfMatrix
+{
+public:
+    /// given transformation of points, prepares matrix for transformation of their normals
+    explicit NormalXfMatrix( const AffineXf3d * xf )
+    {
+        if ( xf )
+        {
+            normXf_ = xf->A.inverse().transposed();
+            pNormXf_ = &normXf_;
+        }
+    }
+    operator const Matrix3d *() const { return pNormXf_; }
+
+private:
+    Matrix3d normXf_;
+    const Matrix3d * pNormXf_ = nullptr;
+};
+
+} //anonymous namespace
 
 VoidOrErrStr toAsc( const PointCloud& points, const std::filesystem::path& file, const Settings& settings )
 {
@@ -45,27 +65,29 @@ VoidOrErrStr toAsc( const PointCloud& cloud, std::ostream& out, const Settings& 
     const bool saveNormals = cloud.points.size() <= cloud.normals.size();
     const size_t totalPoints = settings.saveValidOnly ? cloud.validPoints.count() : cloud.points.size();
     size_t numSaved = 0;
+
+    NormalXfMatrix normXf( settings.xf );
     for ( auto v = 0_v; v < cloud.points.size(); ++v )
     {
         if ( settings.saveValidOnly && !cloud.validPoints.test( v ) )
             continue;
-        const auto & p = cloud.points[v];
+        const auto p = applyDouble( settings.xf, cloud.points[v] );
         out << fmt::format( "{} {} {}", p.x, p.y, p.z );
         if ( saveNormals )
         {
-            const auto & n = cloud.normals[v];
+            const auto n = applyDouble( normXf, cloud.normals[v] );
             out << fmt::format( " {} {} {}", n.x, n.y, n.z );
         }
         out << '\n';
         ++numSaved;
-        if ( settings.callback && !( numSaved & 0x3FF ) && !settings.callback( float( numSaved ) / totalPoints ) )
+        if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / totalPoints ) )
             return unexpectedOperationCanceled();
     }
 
     if ( !out )
         return unexpected( std::string( "Error saving in ASC-format" ) );
 
-    reportProgress( settings.callback, 1.f );
+    reportProgress( settings.progress, 1.f );
     return {};
 }
 
@@ -103,14 +125,19 @@ VoidOrErrStr toPly( const PointCloud& cloud, std::ostream& out, const Settings& 
 #pragma pack(pop)
     static_assert( sizeof( PlyColor ) == 3, "check your padding" );
 
+    NormalXfMatrix normXf( settings.xf );
     size_t numSaved = 0;
     for ( auto v = 0_v; v < cloud.points.size(); ++v )
     {
         if ( settings.saveValidOnly && !cloud.validPoints.test( v ) )
             continue;
-        out.write( ( const char* )&cloud.points[v], 12 );
+        const Vector3f p = applyFloat( settings.xf, cloud.points[v] );
+        out.write( ( const char* )&p, 12 );
         if ( saveNormals )
-            out.write( ( const char* )&cloud.normals[v], 12 );
+        {
+            const Vector3f n = applyFloat( normXf, cloud.normals[v] );
+            out.write( ( const char* )&n, 12 );
+        }
         if ( settings.colors )
         {
             const auto c = ( *settings.colors )[v];
@@ -118,14 +145,14 @@ VoidOrErrStr toPly( const PointCloud& cloud, std::ostream& out, const Settings& 
             out.write( ( const char* )&pc, 3 );
         }
         ++numSaved;
-        if ( settings.callback && !( numSaved & 0x3FF ) && !settings.callback( float( numSaved ) / totalPoints ) )
+        if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / totalPoints ) )
             return unexpectedOperationCanceled();
     }
 
     if ( !out )
         return unexpected( std::string( "Error saving in PLY-format" ) );
 
-    reportProgress( settings.callback, 1.f );
+    reportProgress( settings.progress, 1.f );
     return {};
 }
 
@@ -165,21 +192,41 @@ VoidOrErrStr toCtm( const PointCloud& cloud, std::ostream& out, const CtmSavePoi
     CTMuint aVertexCount = CTMuint( options.saveValidOnly ? cloud.validPoints.count() : cloud.points.size() );
 
     std::vector<CTMuint> aIndices{ 0,0,0 };
-    std::vector<Vector3f> validPoints, validNormals;
-    if ( options.saveValidOnly )
+    VertCoords points;
+    VertNormals normals;
+    NormalXfMatrix normXf( options.xf );
+    if ( options.saveValidOnly || options.xf )
     {
-        validPoints.reserve( aVertexCount );
-        for ( auto v : cloud.validPoints )
-            validPoints.push_back( cloud.points[v] );
+        if ( options.saveValidOnly )
+        {
+            points.reserve( aVertexCount );
+            for ( auto v : cloud.validPoints )
+                points.push_back( applyFloat( options.xf, cloud.points[v] ) );
+        }
+        else
+        {
+            transformPoints( cloud.points, cloud.validPoints, options.xf, points );
+            assert( cloud.points.size() == points.size() );
+        }
+
         if ( saveNormals )
         {
-            validNormals.reserve( aVertexCount );
-            for ( auto v : cloud.validPoints )
-                validNormals.push_back( cloud.normals[v] );
+            if ( options.saveValidOnly )
+            {
+                normals.reserve( aVertexCount );
+                for ( auto v : cloud.validPoints )
+                    normals.push_back( applyFloat( normXf, cloud.normals[v] ) );
+            }
         }
+        else
+        {
+            transformNormals( cloud.normals, cloud.validPoints, normXf, normals );
+            assert( cloud.normals.size() == normals.size() );
+        }
+
         ctmDefineMesh( context,
-            ( const CTMfloat* )validPoints.data(), aVertexCount,
-            aIndices.data(), 1, saveNormals ? ( const CTMfloat* )validNormals.data() : nullptr );
+            ( const CTMfloat* )points.data(), aVertexCount,
+            aIndices.data(), 1, saveNormals ? ( const CTMfloat* )normals.data() : nullptr );
     }
     else
     {
@@ -216,9 +263,9 @@ VoidOrErrStr toCtm( const PointCloud& cloud, std::ostream& out, const CtmSavePoi
         size_t maxSize{ 0 };
         bool wasCanceled{ false };
     } saveData;
-    if ( options.callback )
+    if ( options.progress )
     {
-        saveData.callbackFn = [callback = options.callback, &saveData] ( float progress )
+        saveData.callbackFn = [callback = options.progress, &saveData] ( float progress )
         {
             // calculate full progress in partial-linear scale (we don't know compressed size and it less than real size)
             // conversion rules:
@@ -266,7 +313,7 @@ VoidOrErrStr toCtm( const PointCloud& cloud, std::ostream& out, const CtmSavePoi
     if ( !out || ctmGetError( context ) != CTM_NONE )
         return unexpected( std::string( "Error saving in CTM-format" ) );
 
-    reportProgress( options.callback, 1.f );
+    reportProgress( options.progress, 1.f );
     return {};
 }
 #endif

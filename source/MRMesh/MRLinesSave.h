@@ -2,7 +2,7 @@
 
 #include "MRExpected.h"
 #include "MRIOFilters.h"
-#include "MRProgressCallback.h"
+#include "MRSaveSettings.h"
 #include <filesystem>
 #include <ostream>
 
@@ -19,23 +19,21 @@ namespace LinesSave
 MRMESH_API extern const IOFilters Filters;
 
 /// saves in .mrlines file
-MRMESH_API VoidOrErrStr toMrLines( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback = {} );
-MRMESH_API VoidOrErrStr toMrLines( const Polyline3& polyline, std::ostream& out, ProgressCallback callback = {} );
+MRMESH_API VoidOrErrStr toMrLines( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );
+MRMESH_API VoidOrErrStr toMrLines( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings = {} );
 
 /// saves in .pts file
-MRMESH_API VoidOrErrStr toPts( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback = {} );
-MRMESH_API VoidOrErrStr toPts( const Polyline3& polyline, std::ostream& out, ProgressCallback callback = {} );
+MRMESH_API VoidOrErrStr toPts( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );
+MRMESH_API VoidOrErrStr toPts( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings = {} );
 
 /// saves in .dxf file
-MRMESH_API VoidOrErrStr toDxf( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback = {} );
-MRMESH_API VoidOrErrStr toDxf( const Polyline3& polyline, std::ostream& out, ProgressCallback callback = {} );
+MRMESH_API VoidOrErrStr toDxf( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );
+MRMESH_API VoidOrErrStr toDxf( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings = {} );
 
 /// detects the format from file extension and saves polyline in it
-MRMESH_API VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, const std::filesystem::path& file,
-                                                                 ProgressCallback callback = {} );
+MRMESH_API VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );
 /// extension in `*.ext` format
-MRMESH_API VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, std::ostream& out, const std::string& extension,
-                                                                 ProgressCallback callback = {} );
+MRMESH_API VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, std::ostream& out, const std::string& extension, const SaveSettings & settings = {} );
 
 } // namespace LinesSave
 

@@ -17,7 +17,7 @@ MRVIEWER_API Expected<Json::Value, std::string> parseResponse( const Json::Value
 class MRVIEWER_CLASS WebRequest
 {
 public:
-    WebRequest();
+    WebRequest() = default;
     explicit WebRequest( std::string url );
 
     enum class Method 

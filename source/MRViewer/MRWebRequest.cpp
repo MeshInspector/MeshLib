@@ -120,11 +120,6 @@ bool downloadFileCallback( std::string data, intptr_t userdata )
 namespace MR
 {
 
-WebRequest::WebRequest()
-{
-    //
-}
-
 WebRequest::WebRequest( std::string url )
     : url_( std::move( url ) )
 {

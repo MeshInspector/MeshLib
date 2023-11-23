@@ -10,10 +10,6 @@
 #include "OpenCTM/openctm.h"
 #endif
 
-#if _MSC_VER <= 1929 // Visual Studio 2019
-#pragma warning( disable : 4866 ) //compiler may not enforce left-to-right evaluation order for call to 'std::operator<<<char,std::char_traits<char>,std::allocator<char> >'
-#endif
-
 namespace MR
 {
 

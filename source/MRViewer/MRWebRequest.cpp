@@ -54,9 +54,6 @@ std::string toString( MR::WebRequest::Method method )
     return {};
 #endif
 }
-
-template<class... Ts>
-struct overloaded : Ts... { using Ts::operator()...; };
 #endif
 
 }

@@ -163,7 +163,7 @@ private:
         {
             const auto asyncLoader = AsyncObjectLoad::getObjectLoader( *asyncFilter );
             assert( asyncLoader );
-            spdlog::info( "Loading file {}", fileName );
+            spdlog::info( "Async loading file {}", fileName );
             currentTask_ = asyncLoader( path, cb );
             currentTask_->start();
             return continueWith_( State::TaskAwaiting );

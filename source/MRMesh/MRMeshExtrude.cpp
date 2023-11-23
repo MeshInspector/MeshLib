@@ -20,7 +20,7 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceB
     auto componentBoundary = findLeftBoundaryInsideMesh( topology, region );
     for ( auto& contour : componentBoundary )
     {
-        auto newContour = cutAlongEdgeLoop( mesh, contour );
+        auto newContour = cutAlongEdgeLoop( topology, contour );
         auto newEdge = makeDegenerateBandAroundHole( mesh, contour[0], outNewFaces );
         auto holeContour = trackRightBoundaryLoop( topology, newEdge );
         stitchContours( topology, holeContour, newContour );

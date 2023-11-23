@@ -21,6 +21,7 @@ struct RequestContext
 #ifdef __EMSCRIPTEN__
     MR::WebRequest::ResponseCallback callback;
 #else
+    std::optional<std::ifstream> input;
     std::optional<std::ofstream> output;
 #endif
 };
@@ -223,6 +224,16 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         // TODO: update libcpr to support custom file names
         multipart.parts.emplace_back( formData.name, cpr::File( formData.path ), formData.contentType );
 
+    if ( !inputPath_.empty() )
+    {
+        ctx->input = std::ifstream( inputPath_, std::ios::binary );
+        if ( !ctx->input->good() )
+        {
+            spdlog::info( "WebResponse {}: Unable to open input file", logName.c_str() );
+            return;
+        }
+    }
+
     if ( !outputPath_.empty() )
     {
         ctx->output = std::ofstream( outputPath_, std::ios::binary );
@@ -240,10 +251,28 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         session.SetHeader( headers );
         session.SetParameters( params );
         session.SetTimeout( tm );
-        if ( multipart.parts.empty() )
-            session.SetBody( body );
-        else
+
+        if ( ctx->input.has_value() )
+        {
+            // C++ Requests library doesn't support uploading from stream
+            auto& in = *ctx->input;
+            in.seekg( 0, std::ios::end );
+            std::string buffer;
+            buffer.resize( in.tellg() );
+            in.seekg( 0, std::ios::beg );
+            in.read( buffer.data(), buffer.size() );
+            ctx->input.reset();
+            session.SetBody( std::move( buffer ) );
+        }
+        else if ( !multipart.parts.empty() )
+        {
             session.SetMultipart( multipart );
+        }
+        else
+        {
+            session.SetBody( body );
+        }
+
         if ( ctx->output.has_value() )
             session.SetWriteCallback( { &downloadFileCallback, ctxId } );
 

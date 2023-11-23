@@ -22,16 +22,17 @@ public:
     virtual result_type result() const = 0;
 
     /// execute immediately
-    result_type exec( Args&&... args )
+    /// may be redefined by more efficient algorithms
+    virtual result_type exec()
     {
-        start( std::forward<Args>( args )... );
+        start();
         while ( !resume() );
         return result();
     }
 };
 
-template <typename T, typename... Args>
-using ResumableTaskPtr = std::shared_ptr<ResumableTask<T, Args...>>;
+template <typename T>
+using ResumableTaskPtr = std::shared_ptr<ResumableTask<T>>;
 
 /// helper class to post-process task result
 template <typename T, typename U>

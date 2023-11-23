@@ -5,12 +5,14 @@ namespace
 
 using namespace MR;
 
+// format loader registry
 template <typename T>
 class FormatRegistry
 {
 public:
     using Loader = T;
 
+    // get all registered filters
     static IOFilters getFilters()
     {
         const auto& loaders = get_().loaders_;
@@ -21,6 +23,7 @@ public:
         return res;
     }
 
+    // get a registered loader for the filter
     static Loader getLoader( IOFilter filter )
     {
         const auto& loaders = get_().loaders_;
@@ -33,6 +36,7 @@ public:
         return it->loader;
     }
 
+    // register or update a loader for the filter
     static void setLoader( IOFilter filter, Loader loader )
     {
         auto& loaders = get_().loaders_;

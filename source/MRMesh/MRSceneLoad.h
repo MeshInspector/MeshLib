@@ -11,7 +11,7 @@ struct SceneLoadResult
 {
     /// The loaded scene or empty object
     std::shared_ptr<Object> scene;
-    /// Marks whether the scene was loaded from a single file or was built from scratch
+    /// Marks whether the scene was loaded from a single file (false) or was built from scratch (true)
     bool isSceneConstructed = false;
     /// List of successfully loaded files
     std::vector<std::filesystem::path> loadedFiles;

@@ -1302,6 +1302,7 @@ void MeshTopology::buildGridMesh( const GridSettings & settings )
     stopUpdatingValids();
 
     // we use resizeNoInit because expect vertices/faces/edges to be tightly packed (no deleted elements within valid range)
+    // note: some vertices might be valid but have no edge
     edgePerVertex_.resizeNoInit( settings.vertIds.tsize );
     edgePerFace_.resizeNoInit( settings.faceIds.tsize );
     edges_.resizeNoInit( 2 * settings.uedgeIds.tsize );
@@ -1406,7 +1407,10 @@ void MeshTopology::buildGridMesh( const GridSettings & settings )
 
                 if ( edgeRing.empty() )
                 {
-                    assert( false );
+                    // grid has valid vertex with no connections
+                    // init edgePerVertex_[v] with invalid edge to override garbage from resizeNoInit 
+                    // (this is only possible case of unpacked vertices here)
+                    edgePerVertex_[v] = {};
                     continue;
                 }
                 edgePerVertex_[v] = edgeRing[0].e;

@@ -59,8 +59,9 @@ VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& f
         if ( objPoints->pointCloud() )
         {
             const auto& colors = objPoints->getVertsColorMap();
-            result = PointsSave::toAnySupportedFormat( *objPoints->pointCloud(), filename,
-                { .colors = colors.empty() ? nullptr : &colors, .callback = settings.callback } );
+            if ( !colors.empty() )
+                saveSettings.colors = &colors;
+            result = PointsSave::toAnySupportedFormat( *objPoints->pointCloud(), filename, { saveSettings } );
         }
         else
             result = unexpected( std::string( "ObjectPoints has no PointCloud in it" ) );

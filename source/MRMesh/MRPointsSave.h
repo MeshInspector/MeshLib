@@ -4,7 +4,7 @@
 #include "MRExpected.h"
 #include "MRPointCloud.h"
 #include "MRIOFilters.h"
-#include "MRProgressCallback.h"
+#include "MRSaveSettings.h"
 #include <filesystem>
 #include <ostream>
 
@@ -21,14 +21,10 @@ namespace PointsSave
 MRMESH_API extern const IOFilters Filters;
 
 /// determines how to save point cloud
-struct Settings
+struct Settings : SaveSettings
 {
     /// true - save valid points only; false - save all points preserving their indices
     bool saveValidOnly = true;
-    /// point colors to save if supported
-    const VertColors* colors = nullptr;
-    /// to report progress to the user and cancel saving
-    ProgressCallback callback;
 };
 
 /// save valid points with normals in textual .asc file

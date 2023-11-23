@@ -46,6 +46,12 @@ VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& f
     }
 
     spdlog::info( "save object to file {}", utf8string( filename ) );
+    AffineXf3d xf( obj.worldXf() );
+    SaveSettings saveSettings
+    {
+        .xf = ( xf == AffineXf3d() ) ? nullptr : &xf,
+        .progress = settings.callback
+    };
     VoidOrErrStr result;
 
     if ( auto objPoints = obj.asType<ObjectPoints>() )
@@ -63,7 +69,7 @@ VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& f
     {
         if ( objLines->polyline() )
         {
-            result = LinesSave::toAnySupportedFormat( *objLines->polyline(), filename, settings.callback );
+            result = LinesSave::toAnySupportedFormat( *objLines->polyline(), filename, saveSettings );
         }
         else
             result = unexpected( std::string( "ObjectLines has no Polyline in it" ) );
@@ -72,16 +78,9 @@ VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& f
     {
         if ( objMesh->mesh() )
         {
-            const VertColors* colors{ nullptr };
             if ( objMesh->getColoringType() == ColoringType::VertsColorMap )
-                colors = &objMesh->getVertsColorMap();
-            AffineXf3d xf( objMesh->worldXf() );
-            result = MeshSave::toAnySupportedFormat( *objMesh->mesh(), filename,
-            {
-                .colors = colors,
-                .xf = ( xf == AffineXf3d() ) ? nullptr : &xf,
-                .progress = settings.callback
-            } );
+                saveSettings.colors = &objMesh->getVertsColorMap();
+            result = MeshSave::toAnySupportedFormat( *objMesh->mesh(), filename, saveSettings );
         }
         else
             result = unexpected( std::string( "ObjectMesh has no Mesh in it" ) );

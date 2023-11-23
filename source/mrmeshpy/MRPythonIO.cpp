@@ -224,8 +224,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadMesh, [] ( pybind11::module_& m )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveLines, [] ( pybind11::module_& m )
 {
     m.def( "saveLines",
-        MR::decorateExpected( ( VoidOrErrStr( * )( const MR::Polyline3&, const std::filesystem::path&, ProgressCallback ) )& MR::LinesSave::toAnySupportedFormat ),
-        pybind11::arg( "polyline" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{}, 
+        MR::decorateExpected( []( const MR::Polyline3& pl, const std::filesystem::path& p, ProgressCallback cb )
+            { return MR::LinesSave::toAnySupportedFormat( pl, p, { .progress = cb } ); } ),
+        pybind11::arg( "polyline" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "detects the format from file extension and saves polyline in it" );
     m.def( "saveLines",
         MR::decorateExpected( ( VoidOrErrStr( * )( const MR::Polyline3&, const std::string&, pybind11::object ) )& pythonSaveLinesToAnyFormat ),

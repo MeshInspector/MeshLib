@@ -99,6 +99,16 @@ EdgeLoop cutAlongEdgeLoop( MeshTopology & topology, const EdgeLoop & c0 )
     return c1;
 }
 
+EdgeLoop cutAlongEdgeLoop( Mesh& mesh, const EdgeLoop& c0 )
+{
+    const auto res = cutAlongEdgeLoop( mesh.topology, c0 );
+    for ( auto newEdge : c0 )
+    {
+        mesh.points.push_back( mesh.orgPnt( newEdge ) );
+    }
+    return res;
+}
+
 TEST(MRMesh, cutAlongEdgeLoop)
 {
     Mesh mesh = makeCube();

@@ -90,6 +90,15 @@ const char* StateBasePlugin::UINameSuffix()
     return "##CustomStatePlugin";
 }
 
+void StateBasePlugin::setUINameDeferred( std::string name )
+{
+    CommandLoop::appendCommand( [this, pn = std::move( name )] ()
+    {
+        plugin_name = pn;
+        plugin_name += UINameSuffix();
+    }, CommandLoop::StartPosition::AfterPluginInit );
+}
+
 StatePluginTabs  StateBasePlugin::getTab() const
 {
     return tab_;

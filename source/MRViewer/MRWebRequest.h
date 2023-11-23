@@ -29,22 +29,25 @@ public:
         Delete,
     };
 
-    // clears all request data
+    // clear all request data
     MRVIEWER_API void clear();
 
+    // set HTTP method
     MRVIEWER_API void setMethod( Method method );
 
-    // sets timeout in milliseconds
+    // set timeout in milliseconds
     MRVIEWER_API void setTimeout( int timeoutMs );
 
-    // sets parameters
+    // set URL query parameters
     MRVIEWER_API void setParameters( std::unordered_map<std::string, std::string> parameters );
 
+    // set HTTP headers
     MRVIEWER_API void setHeaders( std::unordered_map<std::string, std::string> headers );
 
+    // set path to the file to upload
     MRVIEWER_API void setInputPath( std::string inputPath );
 
-    // sets payload in multipart format
+    // set payload in multipart/form-data format
     struct FormData
     {
         std::string path;
@@ -54,23 +57,25 @@ public:
     };
     MRVIEWER_API void setFormData( std::vector<FormData> formData );
 
+    // set payload in plain format
     MRVIEWER_API void setBody( std::string body );
 
     // prefer to save the response to file
     MRVIEWER_API void setOutputPath( std::string outputPath );
 
+    // set async mode (return immediately after sending request)
     MRVIEWER_API void setAsync( bool async );
 
+    // set log name
     MRVIEWER_API void setLogName( std::string logName );
 
     using ResponseCallback = std::function<void( const Json::Value& response )>;
 
-    /// sends request, calling callback on answer, 
+    /// send request, calling callback on answer,
     /// if async then callback is called in next frame after getting response
     /// NOTE: downloading a binary file in synchronous mode is forbidden by JavaScript
     /// \param logName name for logging
     MRVIEWER_API void send( std::string url, const std::string & logName, ResponseCallback callback, bool async = true );
-
     MRVIEWER_API void send( ResponseCallback callback );
 
 private:

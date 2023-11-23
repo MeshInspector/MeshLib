@@ -115,7 +115,7 @@ We plan to add computed-tomography reconstruction in MeshLib (already present in
 
 Although MeshLib is written in C++, all functions are exposed to Python as well. Python code can be executed both from within a MeshLib-based C++ application (embedded mode) and from python interpreter directly, which imports MeshLib modules.
 
-Moreover, MeshLib can be easily installed as a Python 3.8 - 3.11 package using `pip install`:
+Moreover, MeshLib can be easily installed as a Python 3.8 - 3.12 package using `pip install`:
 * On Windows via
 ```
 py -3 -m pip install --upgrade pip
@@ -156,7 +156,7 @@ Please install CUDA (v12.0|v11.4)(Visual Studio 2022|2019) from [official site](
     ```sh
     git clone https://github.com/Microsoft/vcpkg.git
     cd vcpkg
-    git checkout fbba5251f75c149d71737fd3ef09629f41b5d5aa
+    git checkout 2023.11.20
     .\bootstrap-vcpkg.bat
     .\vcpkg integrate install (with admin rights)
     cd ..

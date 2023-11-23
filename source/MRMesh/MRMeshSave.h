@@ -3,8 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRExpected.h"
 #include "MRIOFilters.h"
-#include "MRAffineXf3.h"
-#include "MRProgressCallback.h"
+#include "MRSaveSettings.h"
 #include <filesystem>
 #include <ostream>
 
@@ -22,39 +21,36 @@ MRMESH_API extern const IOFilters Filters;
 
 /// saves in internal file format
 MRMESH_API VoidOrErrStr toMrmesh( const Mesh & mesh, const std::filesystem::path & file,
-                                                     ProgressCallback callback = {} );
+                                                     const SaveSettings & settings = {} );
 MRMESH_API VoidOrErrStr toMrmesh( const Mesh & mesh, std::ostream & out,
-                                                     ProgressCallback callback = {} );
+                                                     const SaveSettings & settings = {} );
 
 /// saves in .off file
 MRMESH_API VoidOrErrStr toOff( const Mesh & mesh, const std::filesystem::path & file,
-                                                  ProgressCallback callback = {} );
+                                                  const SaveSettings & settings = {} );
 MRMESH_API VoidOrErrStr toOff( const Mesh & mesh, std::ostream & out,
-                                                  ProgressCallback callback = {} );
+                                                  const SaveSettings & settings = {} );
 
 /// saves in .obj file
-/// \param xf will be applied to all mesh vertices prior to saving;
 /// \param firstVertId is the index of first mesh vertex in the output file (if this object is not the first there)
-MRMESH_API VoidOrErrStr toObj( const Mesh & mesh, const std::filesystem::path & file, const AffineXf3f & xf = {}, int firstVertId = 1,
-                                                  ProgressCallback callback = {} );
-MRMESH_API VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const AffineXf3f & xf = {}, int firstVertId = 1,
-                                                  ProgressCallback callback = {} );
+MRMESH_API VoidOrErrStr toObj( const Mesh & mesh, const std::filesystem::path & file,
+                                                  const SaveSettings & settings = {}, int firstVertId = 1 );
+MRMESH_API VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out,
+                                                  const SaveSettings & settings = {}, int firstVertId = 1 );
 
 /// saves in binary .stl file
-MRMESH_API VoidOrErrStr toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback = {} );
-MRMESH_API VoidOrErrStr toBinaryStl( const Mesh & mesh, std::ostream & out, ProgressCallback callback = {} );
+MRMESH_API VoidOrErrStr toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
+MRMESH_API VoidOrErrStr toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
 
 /// saves in ascii .stl file
-MRMESH_API VoidOrErrStr toAsciiStl( const Mesh& mesh, const std::filesystem::path& file, ProgressCallback callback = {} );
-MRMESH_API VoidOrErrStr toAsciiStl( const Mesh& mesh, std::ostream& out, ProgressCallback callback = {} );
+MRMESH_API VoidOrErrStr toAsciiStl( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
+MRMESH_API VoidOrErrStr toAsciiStl( const Mesh& mesh, std::ostream& out, const SaveSettings & settings = {} );
 
 /// saves in .ply file
-MRMESH_API VoidOrErrStr toPly( const Mesh& mesh, const std::filesystem::path& file, const VertColors* colors = nullptr,
-                                                  ProgressCallback callback = {} );
-MRMESH_API VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const VertColors* colors = nullptr,
-                                                  ProgressCallback callback = {} );
+MRMESH_API VoidOrErrStr toPly( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
+MRMESH_API VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
 
-struct CtmSaveOptions
+struct CtmSaveOptions : SaveSettings
 {
     enum class MeshCompression
     {
@@ -76,18 +72,14 @@ struct CtmSaveOptions
 
 #ifndef MRMESH_NO_OPENCTM
 /// saves in .ctm file
-MRMESH_API VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options = {}, const VertColors* colors = nullptr,
-                                                  ProgressCallback callback = {} );
-MRMESH_API VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options = {}, const VertColors* colors = nullptr,
-                                                  ProgressCallback callback = {} );
+MRMESH_API VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options = {} );
+MRMESH_API VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options = {} );
 #endif
 
 /// detects the format from file extension and save mesh to it
-MRMESH_API VoidOrErrStr toAnySupportedFormat( const Mesh & mesh, const std::filesystem::path & file, const VertColors* colors = nullptr,
-                                                                 ProgressCallback callback = {} );
+MRMESH_API VoidOrErrStr toAnySupportedFormat( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
 /// extension in `*.ext` format
-MRMESH_API VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension, const VertColors* colors = nullptr,
-                                                                 ProgressCallback callback = {} );
+MRMESH_API VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension, const SaveSettings & settings = {} );
 
 /// \}
 

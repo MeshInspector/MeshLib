@@ -294,13 +294,7 @@ VertId PolylineTopology::lastValidVert() const
 {
     if ( numValidVerts_ <= 0 )
         return {};
-    for ( VertId i{ (int)validVerts_.size() - 1 }; i.valid(); --i )
-    {
-        if ( validVerts_.test( i ) )
-            return i;
-    }
-    assert( false );
-    return {};
+    return validVerts_.find_last();
 }
 
 VertBitSet PolylineTopology::getPathVertices( const EdgePath & path ) const

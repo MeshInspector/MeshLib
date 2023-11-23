@@ -32,57 +32,57 @@ const IOFilters Filters =
 #endif
 };
 
-VoidOrErrStr toMrmesh( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback )
+VoidOrErrStr toMrmesh( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toMrmesh( mesh, out, callback );
+    return toMrmesh( mesh, out, settings );
 }
 
-VoidOrErrStr toMrmesh( const Mesh & mesh, std::ostream & out, ProgressCallback callback )
+VoidOrErrStr toMrmesh( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
 {
     MR_TIMER
     mesh.topology.write( out );
 
     // write points
-    auto numPoints = (std::uint32_t)mesh.points.size();
+    auto numPoints = (std::uint32_t)( mesh.topology.lastValidVert() + 1 );
     out.write( (const char*)&numPoints, 4 );
 
-    const bool cancel = !MR::writeByBlocks( out, ( const char* )mesh.points.data(), mesh.points.size() * sizeof( Vector3f ), callback );
-    if ( cancel )
+    VertCoords buf;
+    const auto & xfVerts = transformPoints( mesh.points, mesh.topology.getValidVerts(), settings.xf, buf );
+    if ( !writeByBlocks( out, ( const char* )xfVerts.data(), numPoints * sizeof( Vector3f ), settings.progress ) )
         return unexpected( std::string( "Saving canceled" ) );
 
     if ( !out )
         return unexpected( std::string( "Error saving in Mrmesh-format" ) );
 
-    if ( callback )
-        callback( 1.f );
+    reportProgress( settings.progress, 1.f );
     return {};
 }
 
-VoidOrErrStr toOff( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback )
+VoidOrErrStr toOff( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
     std::ofstream out( file );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toOff( mesh, out, callback );
+    return toOff( mesh, out, settings );
 }
 
-VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, ProgressCallback callback )
+VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & settings )
 {
     MR_TIMER
-        VertId maxPoints = mesh.topology.lastValidVert() + 1;
+    VertId maxPoints = mesh.topology.lastValidVert() + 1;
     int numPolygons = mesh.topology.numValidFaces();
 
     out << "OFF\n" << maxPoints << ' ' << numPolygons << " 0\n\n";
     for ( VertId i{ 0 }; i < maxPoints; ++i )
     {
-        auto p = mesh.points[i];
+        auto p = applyDouble( settings.xf, mesh.points[i] );
         out << fmt::format( "{} {} {}\n", p.x, p.y, p.z );
-        if ( callback && !( i & 0x3FF ) && !callback( float( i ) / maxPoints * 0.5f ) )
+        if ( settings.progress && !( i & 0x3FF ) && !settings.progress( float( i ) / maxPoints * 0.5f ) )
             return unexpected( std::string( "Saving canceled" ) );
     }
     out << '\n';
@@ -92,7 +92,7 @@ VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, ProgressCallback callba
     for ( const auto& e : mesh.topology.edgePerFace() )
     {
         ++faceIndex;
-        if ( callback && !( faceIndex & 0x3FF ) && !callback( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
+        if ( settings.progress && !( faceIndex & 0x3FF ) && !settings.progress( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
             return unexpected( std::string( "Saving canceled" ) );
         if ( !e.valid() )
             continue;
@@ -106,24 +106,21 @@ VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, ProgressCallback callba
     if ( !out )
         return unexpected( std::string( "Error saving in OFF-format" ) );
 
-    if ( callback )
-        callback( 1.f );
+    reportProgress( settings.progress, 1.f );
     return {};
 }
 
 
-VoidOrErrStr toObj( const Mesh & mesh, const std::filesystem::path & file, const AffineXf3f & xf, int firstVertId,
-                                       ProgressCallback callback )
+VoidOrErrStr toObj( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, int firstVertId )
 {
     std::ofstream out( file );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toObj( mesh, out, xf, firstVertId, callback );
+    return toObj( mesh, out, settings, firstVertId );
 }
 
-VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const AffineXf3f & xf, int firstVertId,
-                                       ProgressCallback callback )
+VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & settings, int firstVertId )
 {
     MR_TIMER
     out << "# MeshInspector.com\n";
@@ -132,9 +129,9 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const AffineXf3f & xf
 
     for ( VertId i{ 0 }; i <= lastValidPoint; ++i )
     {
-        auto p = xf( mesh.points[i] );
+        auto p = applyDouble( settings.xf, mesh.points[i] );
         out << fmt::format( "v {} {} {}\n", p.x, p.y, p.z );
-        if ( callback && !( i & 0x3FF ) && !callback( float( i ) / lastValidPoint * 0.5f ) )
+        if ( settings.progress && !( i & 0x3FF ) && !settings.progress( float( i ) / lastValidPoint * 0.5f ) )
             return unexpected( std::string( "Saving canceled" ) );
     }
 
@@ -143,7 +140,7 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const AffineXf3f & xf
     for ( const auto& e : mesh.topology.edgePerFace() )
     {
         ++faceIndex;
-        if ( callback && !( faceIndex & 0x3FF ) && !callback( faceIndex / facesNum * 0.5f + 0.5f ) )
+        if ( settings.progress && !( faceIndex & 0x3FF ) && !settings.progress( faceIndex / facesNum * 0.5f + 0.5f ) )
             return unexpected( std::string( "Saving canceled" ) );
         if ( !e.valid() )
             continue;
@@ -157,13 +154,13 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const AffineXf3f & xf
     if ( !out )
         return unexpected( std::string( "Error saving in OBJ-format" ) );
 
-    if ( callback )
-        callback( 1.f );
+    reportProgress( settings.progress, 1.f );
     return {};
 }
 
 static FaceBitSet getNotDegenTris( const Mesh &mesh )
 {
+    MR_TIMER
     FaceBitSet notDegenTris = mesh.topology.getValidFaces();
     VertId a, b, c;
     for ( auto f : notDegenTris )
@@ -180,16 +177,16 @@ static FaceBitSet getNotDegenTris( const Mesh &mesh )
     return notDegenTris;
 }
 
-VoidOrErrStr toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback )
+VoidOrErrStr toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toBinaryStl( mesh, out, callback );
+    return toBinaryStl( mesh, out, settings );
 }
 
-VoidOrErrStr toBinaryStl( const Mesh & mesh, std::ostream & out, ProgressCallback callback )
+VoidOrErrStr toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
 {
     MR_TIMER
 
@@ -208,9 +205,9 @@ VoidOrErrStr toBinaryStl( const Mesh & mesh, std::ostream & out, ProgressCallbac
         mesh.topology.getTriVerts( f, a, b, c );
         assert( a.valid() && b.valid() && c.valid() );
 
-        const Vector3f& ap = mesh.points[a];
-        const Vector3f& bp = mesh.points[b];
-        const Vector3f& cp = mesh.points[c];
+        const Vector3f ap = applyFloat( settings.xf, mesh.points[a] );
+        const Vector3f bp = applyFloat( settings.xf, mesh.points[b] );
+        const Vector3f cp = applyFloat( settings.xf, mesh.points[c] );
         Vector3f normal = cross( bp - ap, cp - ap ).normalized();
         out.write( (const char*)&normal, 12 );
         out.write( (const char*)&ap, 12 );
@@ -218,7 +215,7 @@ VoidOrErrStr toBinaryStl( const Mesh & mesh, std::ostream & out, ProgressCallbac
         out.write( (const char*)&cp, 12 );
         std::uint16_t attr{ 0 };
         out.write( ( const char* )&attr, 2 );
-        if ( callback && !( trisIndex & 0x3FF ) && !callback( trisIndex / trisNum ) )
+        if ( settings.progress && !( trisIndex & 0x3FF ) && !settings.progress( trisIndex / trisNum ) )
             return unexpected( std::string( "Saving canceled" ) );
         ++trisIndex;
     }
@@ -226,21 +223,20 @@ VoidOrErrStr toBinaryStl( const Mesh & mesh, std::ostream & out, ProgressCallbac
     if ( !out )
         return unexpected( std::string( "Error saving in binary STL-format" ) );
 
-    if ( callback )
-        callback( 1.f );
+    reportProgress( settings.progress, 1.f );
     return {};
 }
 
-VoidOrErrStr toAsciiStl( const Mesh& mesh, const std::filesystem::path& file, ProgressCallback callback )
+VoidOrErrStr toAsciiStl( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toAsciiStl( mesh, out, callback );
+    return toAsciiStl( mesh, out, settings );
 }
 
-VoidOrErrStr toAsciiStl( const Mesh& mesh, std::ostream& out, ProgressCallback callback )
+VoidOrErrStr toAsciiStl( const Mesh& mesh, std::ostream& out, const SaveSettings & settings )
 {
     MR_TIMER;
 
@@ -254,19 +250,19 @@ VoidOrErrStr toAsciiStl( const Mesh& mesh, std::ostream& out, ProgressCallback c
         VertId a, b, c;
         mesh.topology.getTriVerts( f, a, b, c );
         assert( a.valid() && b.valid() && c.valid() );
-        const Vector3f& ap = mesh.points[a];
-        const Vector3f& bp = mesh.points[b];
-        const Vector3f& cp = mesh.points[c];
-        Vector3f normal = cross( bp - ap, cp - ap ).normalized();
+        const auto ap = applyDouble( settings.xf, mesh.points[a] );
+        const auto bp = applyDouble( settings.xf, mesh.points[b] );
+        const auto cp = applyDouble( settings.xf, mesh.points[c] );
+        const auto normal = cross( bp - ap, cp - ap ).normalized();
         out << "" << fmt::format( "facet normal {} {} {}\n", normal.x, normal.y, normal.z );
         out << "outer loop\n";
-        for ( const Vector3f& p : { ap, bp, cp } )
+        for ( const auto & p : { ap, bp, cp } )
         {
             out << fmt::format( "vertex {} {} {}\n", p.x, p.y, p.z );
         }
         out << "endloop\n";
         out << "endfacet\n";
-        if ( callback && !( trisIndex & 0x3FF ) && !callback( trisIndex / trisNum ) )
+        if ( settings.progress && !( trisIndex & 0x3FF ) && !settings.progress( trisIndex / trisNum ) )
             return unexpected( std::string( "Saving canceled" ) );
         ++trisIndex;
     }
@@ -275,26 +271,25 @@ VoidOrErrStr toAsciiStl( const Mesh& mesh, std::ostream& out, ProgressCallback c
     if ( !out )
         return unexpected( std::string( "Error saving in ascii STL-format" ) );
 
-    if ( callback )
-        callback( 1.f );
+    reportProgress( settings.progress, 1.f );
     return {};
 }
 
-VoidOrErrStr toPly( const Mesh & mesh, const std::filesystem::path & file, const VertColors* colors, ProgressCallback callback )
+VoidOrErrStr toPly( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toPly( mesh, out, colors, callback );
+    return toPly( mesh, out, settings );
 }
 
-VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const VertColors* colors, ProgressCallback callback )
+VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
 {
     MR_TIMER
 
     int numVertices = mesh.topology.lastValidVert() + 1;
-    bool saveColors = colors && colors->size() >= numVertices;
+    bool saveColors = settings.colors && settings.colors->size() >= numVertices;
 
     out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n"
         "element vertex " << numVertices << "\nproperty float x\nproperty float y\nproperty float z\n";
@@ -307,24 +302,20 @@ VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const VertColors* col
     static_assert( sizeof( mesh.points.front() ) == 12, "wrong size of Vector3f" );
     if ( !saveColors )
     {
-        ProgressCallback callbackFn = {};
-        if (callback)
-            callbackFn = [callback] ( float v )
-            {
-                return callback( v / 2.f );
-            };
-        const bool cancel = !MR::writeByBlocks( out, ( const char* )mesh.points.data(), numVertices * sizeof( Vector3f ), callbackFn );
-        if ( cancel )
+        VertCoords buf;
+        const auto & xfVerts = transformPoints( mesh.points, mesh.topology.getValidVerts(), settings.xf, buf );
+        if ( !writeByBlocks( out, ( const char* )xfVerts.data(), numVertices * sizeof( Vector3f ), subprogress( settings.progress, 0.0f, 0.5f ) ) )
             return unexpected( std::string( "Saving canceled" ) );
     }
     else
     {
-        static_assert( sizeof( colors->front() ) == 4, "wrong size of Color" );
+        static_assert( sizeof( settings.colors->front() ) == 4, "wrong size of Color" );
         for ( VertId i{ 0 }; i < numVertices; ++i )
         {
-            out.write( (const char*) &mesh.points[i].x, 12 );
-            out.write( (const char*) &( *colors )[i].r, 3 ); // write only r g b, not a
-            if ( callback && !( i & 0x3FF ) && !callback( float( i ) / numVertices * 0.5f ) )
+            const Vector3f p = applyFloat( settings.xf, mesh.points[i] );
+            out.write( (const char*) &p.x, 12 );
+            out.write( (const char*) &( *settings.colors )[i].r, 3 ); // write only r g b, not a
+            if ( settings.progress && !( i & 0x3FF ) && !settings.progress( float( i ) / numVertices * 0.5f ) )
                 return unexpected( std::string( "Saving canceled" ) );
         }
     }
@@ -346,7 +337,7 @@ VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const VertColors* col
     {
         mesh.topology.getTriVerts( f, tri.v );
         out.write( (const char *)&tri, 13 );
-        if ( callback && !( faceIndex & 0x3FF ) && !callback( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
+        if ( settings.progress && !( faceIndex & 0x3FF ) && !settings.progress( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
             return unexpected( std::string( "Saving canceled" ) );
         ++faceIndex;
     }
@@ -354,24 +345,21 @@ VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const VertColors* col
     if ( !out )
         return unexpected( std::string( "Error saving in PLY-format" ) );
 
-    if ( callback )
-        callback( 1.f );
+    reportProgress( settings.progress, 1.f );
     return {};
 }
 
 #ifndef MRMESH_NO_OPENCTM
-VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options, const VertColors* colors,
-                                       ProgressCallback callback )
+VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toCtm( mesh, out, options, colors, callback );
+    return toCtm( mesh, out, options );
 }
 
-VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options, const VertColors* colors,
-                                       ProgressCallback callback )
+VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options )
 {
     MR_TIMER
 
@@ -405,7 +393,7 @@ VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions 
 
     std::vector<CTMuint> aIndices;
     const auto fLast = mesh.topology.lastValidFace();
-    const auto numSaveFaces = options.rearrangeTriangles ? mesh.topology.numValidFaces()  : int( fLast + 1 );
+    const auto numSaveFaces = options.rearrangeTriangles ? mesh.topology.numValidFaces() : int( fLast + 1 );
     aIndices.reserve( numSaveFaces * 3 );
     for ( FaceId f{0}; f <= fLast; ++f )
     {
@@ -423,20 +411,22 @@ VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions 
     assert( aIndices.size() == numSaveFaces * 3 );
 
     CTMuint aVertexCount = mesh.topology.lastValidVert() + 1;
-    ctmDefineMesh( context, 
-        (const CTMfloat *)mesh.points.data(), aVertexCount, 
+    VertCoords buf;
+    const auto & xfVerts = transformPoints( mesh.points, mesh.topology.getValidVerts(), options.xf, buf );
+    ctmDefineMesh( context,
+        (const CTMfloat *)xfVerts.data(), aVertexCount, 
         aIndices.data(), numSaveFaces, nullptr );
 
     if ( ctmGetError(context) != CTM_NONE )
         return unexpected( "Error encoding in CTM-format" );
 
     std::vector<Vector4f> colors4f; // should be alive when save is performed
-    if ( colors )
+    if ( options.colors )
     {
         colors4f.resize( aVertexCount );
-        const auto maxV = (int)std::min( aVertexCount, (CTMuint)colors->size() );
+        const auto maxV = (int)std::min( aVertexCount, (CTMuint)options.colors->size() );
         for ( VertId i{ 0 }; i < maxV; ++i )
-            colors4f[i] = Vector4f( ( *colors )[i] );
+            colors4f[i] = Vector4f( ( *options.colors )[i] );
 
         ctmAddAttribMap( context, (const CTMfloat*) colors4f.data(), "Color" );
     }
@@ -453,11 +443,11 @@ VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions 
         size_t maxSize{ 0 };
         bool wasCanceled{ false };
     } saveData;
-    if ( callback )
+    if ( options.progress )
     {
         if ( options.meshCompression == CtmSaveOptions::MeshCompression::None )
         {
-            saveData.callbackFn = [callback, &saveData] ( float progress )
+            saveData.callbackFn = [callback = options.progress, &saveData] ( float progress )
             {
                 // calculate full progress
                 progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
@@ -466,9 +456,9 @@ VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions 
         }
         else
         {
-            saveData.callbackFn = [callback, &saveData] ( float progress )
+            saveData.callbackFn = [callback = options.progress, &saveData] ( float progress )
             {
-                // calculate full progress in partical-linear scale (we don't know compressed size and it less than real size)
+                // calculate full progress in partial-linear scale (we don't know compressed size and it less than real size)
                 // conversion rules:
                 // step 1) range (0, rangeBefore) is converted in range (0, rangeAfter)
                 // step 2) moving on to new ranges: (rangeBefore, 1) and (rangeAfter, 1)
@@ -515,14 +505,12 @@ VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions 
     if ( !out || ctmGetError(context) != CTM_NONE )
         return unexpected( std::string( "Error saving in CTM-format" ) );
 
-    if ( callback )
-        callback( 1.f );
+    reportProgress( options.progress, 1.f );
     return {};
 }
 #endif
 
-VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path& file, const VertColors* colors,
-                                                      ProgressCallback callback )
+VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings & settings )
 {
     auto ext = utf8string( file.extension() );
     for ( auto & c : ext )
@@ -530,24 +518,27 @@ VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path
 
     VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".off" )
-        res = MR::MeshSave::toOff( mesh, file, callback );
+        res = MR::MeshSave::toOff( mesh, file, settings );
     else if ( ext == ".obj" )
-        res = MR::MeshSave::toObj( mesh, file, {}, 1, callback );
+        res = MR::MeshSave::toObj( mesh, file, settings );
     else if ( ext == ".stl" )
-        res = MR::MeshSave::toBinaryStl( mesh, file, callback );
+        res = MR::MeshSave::toBinaryStl( mesh, file, settings );
     else if ( ext == ".ply" )
-        res = MR::MeshSave::toPly( mesh, file, colors, callback );
+        res = MR::MeshSave::toPly( mesh, file, settings );
 #ifndef MRMESH_NO_OPENCTM
     else if ( ext == ".ctm" )
-        res = MR::MeshSave::toCtm( mesh, file, { .rearrangeTriangles = true }, colors, callback );
+    {
+        CtmSaveOptions options{ settings };
+        options.rearrangeTriangles = true;
+        res = MR::MeshSave::toCtm( mesh, file, options );
+    }
 #endif
     else if ( ext == ".mrmesh" )
-        res = MR::MeshSave::toMrmesh( mesh, file, callback );
+        res = MR::MeshSave::toMrmesh( mesh, file, settings );
     return res;
 }
 
-VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension,
-                                                      const VertColors* colors /*= nullptr */, ProgressCallback callback )
+VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension, const SaveSettings & settings )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
@@ -555,19 +546,23 @@ VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const st
 
     VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".off" )
-        res = MR::MeshSave::toOff( mesh, out, callback );
+        res = MR::MeshSave::toOff( mesh, out, settings );
     else if ( ext == ".obj" )
-        res = MR::MeshSave::toObj( mesh, out, {}, 1, callback );
+        res = MR::MeshSave::toObj( mesh, out, settings );
     else if ( ext == ".stl" )
-        res = MR::MeshSave::toBinaryStl( mesh, out, callback );
+        res = MR::MeshSave::toBinaryStl( mesh, out, settings );
     else if ( ext == ".ply" )
-        res = MR::MeshSave::toPly( mesh, out, colors, callback );
+        res = MR::MeshSave::toPly( mesh, out, settings );
 #ifndef MRMESH_NO_OPENCTM
     else if ( ext == ".ctm" )
-        res = MR::MeshSave::toCtm( mesh, out, {}, colors, callback );
+    {
+        CtmSaveOptions options{ settings };
+        options.rearrangeTriangles = true;
+        res = MR::MeshSave::toCtm( mesh, out, options );
+    }
 #endif
     else if ( ext == ".mrmesh" )
-        res = MR::MeshSave::toMrmesh( mesh, out, callback );
+        res = MR::MeshSave::toMrmesh( mesh, out, settings );
     return res;
 }
 

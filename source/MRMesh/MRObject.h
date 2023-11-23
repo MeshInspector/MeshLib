@@ -158,7 +158,7 @@ public:
     /// checks whether the object is visible in any of the viewports specified by the mask (by default in any viewport)
     bool isVisible( ViewportMask viewportMask = ViewportMask::any() ) const { return !( visibilityMask_ & viewportMask ).empty(); }
     /// specifies object visibility as bitmask of viewports
-    virtual void setVisibilityMask( ViewportMask viewportMask ) { visibilityMask_ = viewportMask; }
+    MRMESH_API virtual void setVisibilityMask( ViewportMask viewportMask );
     /// gets object visibility as bitmask of viewports
     ViewportMask visibilityMask() const { return visibilityMask_; }
 

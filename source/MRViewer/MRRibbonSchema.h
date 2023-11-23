@@ -27,6 +27,7 @@ struct MenuItemInfo
     std::string tooltip;
     std::string icon;
     MenuItemCaptionSize captionSize; // already scaled
+    std::string helpLink; // link to help page
 };
 
 using ItemMap = HashMap<std::string, MenuItemInfo>;

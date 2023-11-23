@@ -29,6 +29,7 @@ std::mutex sRequestContextMutex;
 int sRequestContextCounter = 0;
 std::unordered_map<int, std::unique_ptr<RequestContext>> sRequestContextMap;
 
+#ifdef __EMSCRIPTEN__
 std::string toString( MR::WebRequest::Method method )
 {
     using Method = MR::WebRequest::Method;
@@ -55,6 +56,7 @@ std::string toString( MR::WebRequest::Method method )
 
 template<class... Ts>
 struct overloaded : Ts... { using Ts::operator()...; };
+#endif
 
 }
 

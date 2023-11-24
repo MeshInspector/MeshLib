@@ -22,13 +22,11 @@
     #endif
 #endif
 
-#include <parallel_hashmap/phmap_fwd_decl.h>
-
 #include <array>
-#include <functional>
-#include <optional>
-#include <string>
 #include <vector>
+#include <string>
+#include <parallel_hashmap/phmap_fwd_decl.h>
+#include <functional>
 
 #ifdef _WIN32
 #   ifdef MRMESH_EXPORT
@@ -389,8 +387,6 @@ class LineObject;
 class CircleObject;
 class PlaneObject;
 class SphereObject;
-
-using ObjectPtr = std::shared_ptr<Object>;
 
 struct Image;
 

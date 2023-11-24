@@ -59,6 +59,8 @@ public:
 
 }
 
+using ObjectPtr = std::shared_ptr<Object>;
+
 namespace AsyncObjectLoad
 {
 

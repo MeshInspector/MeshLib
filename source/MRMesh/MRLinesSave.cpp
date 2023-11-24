@@ -5,7 +5,7 @@
 #include "MRStringConvert.h"
 #include "MRStreamOperators.h"
 #include "MRProgressReadWrite.h"
-#include "MRPch/MRSpdlog.h" //fmt
+#include "MRPch/MRFmt.h"
 #include <fstream>
 
 namespace MR

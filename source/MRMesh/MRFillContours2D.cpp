@@ -5,7 +5,6 @@
 #include "MRRingIterator.h"
 #include "MREdgePaths.h"
 #include "MRAffineXf3.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRTimer.h"
 #include "MRRegionBoundary.h"
 #include "MRUVSphere.h"

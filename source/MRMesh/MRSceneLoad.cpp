@@ -16,41 +16,93 @@ inline bool isEmpty( std::ostream& os )
     return os.tellp() == std::streampos( 0 );
 }
 
-SceneLoad::SceneLoadResult construct( std::vector<std::filesystem::path> loadedFiles,
-                                      std::vector<std::shared_ptr<Object>> loadedObjects,
-                                      std::string errorSummary, std::string warningSummary )
+std::optional<IOFilter> findAsyncObjectLoadFilter( const std::filesystem::path& path )
 {
-    auto scene = std::make_shared<Object>();
-    bool constructed;
-    if ( loadedObjects.size() == 1 )
+    auto ext = std::string( "*" ) + utf8string( path.extension().u8string() );
+    for ( auto& c : ext )
+        c = (char)std::tolower( c );
+
+    const auto asyncFilters = AsyncObjectLoad::getFilters();
+    const auto asyncFilter = std::find_if( asyncFilters.begin(), asyncFilters.end(), [&ext] ( auto&& filter )
     {
-        auto& object = loadedObjects.front();
-        if ( object->typeName() == Object::TypeName() )
+        return filter.extensions.find( ext ) != std::string::npos;
+    } );
+    if ( asyncFilter != asyncFilters.end() )
+        return *asyncFilter;
+    else
+        return std::nullopt;
+}
+
+class SceneConstructor
+{
+public:
+    void process( const std::filesystem::path& path, Expected<std::vector<ObjectPtr>> res, std::string warningText )
+    {
+        const auto fileName = utf8string( path );
+        spdlog::info( "Load file {} - {}", fileName, res.has_value() ? "success" : res.error().c_str() );
+        if ( !res.has_value() )
         {
-            constructed = false;
-            scene = std::move( object );
+            // TODO: user-defined error format
+            errorSummary_ << ( !isEmpty( errorSummary_ ) ? "\n" : "" ) << "\n" << res.error();
+            return;
+        }
+        if ( !warningText.empty() )
+        {
+            // TODO: user-defined warning format
+            warningSummary_ << ( !isEmpty( warningSummary_ ) ? "\n" : "" ) << "\n" << fileName << ":\n" << warningText << "\n";
+        }
+
+        const auto prevObjectCount = loadedObjects_.size();
+        for ( auto& obj : *res )
+            if ( obj )
+                loadedObjects_.emplace_back( std::move( obj ) );
+        if ( prevObjectCount != loadedObjects_.size() )
+            loadedFiles_.emplace_back( path );
+        else
+            errorSummary_ << ( !isEmpty( errorSummary_ ) ? "\n" : "" ) << "\n" << "No objects found in the file \"" << fileName << "\"";
+    }
+
+    SceneLoad::SceneLoadResult construct() const
+    {
+        auto scene = std::make_shared<Object>();
+        bool constructed;
+        if ( loadedObjects_.size() == 1 )
+        {
+            const auto& object = loadedObjects_.front();
+            if ( object->typeName() == Object::TypeName() )
+            {
+                constructed = false;
+                scene = object;
+            }
+            else
+            {
+                constructed = true;
+                scene->addChild( object );
+            }
         }
         else
         {
             constructed = true;
-            scene->addChild( std::move( object ) );
+            for ( const auto& object : loadedObjects_ )
+                scene->addChild( object );
         }
-    }
-    else
-    {
-        constructed = true;
-        for ( auto& object : loadedObjects )
-            scene->addChild( std::move( object ) );
+
+        return {
+            .scene = std::move( scene ),
+            .isSceneConstructed = constructed,
+            .loadedFiles = loadedFiles_,
+            .errorSummary = errorSummary_.str(),
+            .warningSummary = warningSummary_.str(),
+        };
     }
 
-    return {
-        .scene = std::move( scene ),
-        .isSceneConstructed = constructed,
-        .loadedFiles = std::move( loadedFiles ),
-        .errorSummary = std::move( errorSummary ),
-        .warningSummary = std::move( warningSummary ),
-    };
-}
+private:
+    std::vector<std::filesystem::path> loadedFiles_;
+    std::vector<std::shared_ptr<Object>> loadedObjects_;
+    std::ostringstream errorSummary_;
+    std::ostringstream warningSummary_;
+};
+
 
 class AsyncSceneLoader
 {
@@ -62,7 +114,6 @@ public:
         TaskAwaiting,
         TaskProcessing,
         TaskFinished,
-        Finishing,
         Finished,
     };
 
@@ -73,9 +124,8 @@ public:
 
     explicit AsyncSceneLoader( const std::vector<std::filesystem::path>& paths, ProgressCallback callback )
         : paths_( paths )
-        , callback_ ( std::move( callback ) )
-        , errorSummary_( std::make_shared<std::ostringstream>() )
-        , warningSummary_( std::make_shared<std::ostringstream>() )
+        , callback_( std::move( callback ) )
+        , constructor_( std::make_shared<SceneConstructor>() )
     {
         //
     }
@@ -94,8 +144,6 @@ public:
                 return processTask_();
             case State::TaskFinished:
                 return nextTask_();
-            case State::Finishing:
-                return finishing_();
             case State::Finished:
                 return finished_();
         }
@@ -125,34 +173,26 @@ private:
         if ( path.empty() )
             return ContinueWith( State::TaskFinished );
 
-        const auto fileName = utf8string( path );
-
-        auto ext = std::string( "*" ) + utf8string( path.extension().u8string() );
-        for ( auto& c : ext )
-            c = (char)std::tolower( c );
-
         auto cb = [callback = callback_, index = currentPath_, number = paths_.size()] ( float v )
         {
             return callback( ( (float)index + v ) / (float)number );
         };
 
-        const auto asyncFilters = AsyncObjectLoad::getFilters();
-        const auto asyncFilter = std::find_if( asyncFilters.begin(), asyncFilters.end(), [&ext] ( auto&& filter )
+        if ( auto asyncFilter = findAsyncObjectLoadFilter( path ) )
         {
-            return filter.extensions.find( ext ) != std::string::npos;
-        } );
-        if ( asyncFilter != asyncFilters.end() )
-        {
+            spdlog::info( "Async loading file {}", utf8string( path ) );
             const auto asyncLoader = AsyncObjectLoad::getObjectLoader( *asyncFilter );
             assert( asyncLoader );
-            spdlog::info( "Async loading file {}", fileName );
+            // TODO: unify sync and async loader interfaces
             currentTask_ = asyncLoader( path, cb );
             return ContinueWith( State::TaskAwaiting );
         }
-
-        spdlog::info( "Loading file {}", fileName );
-        currentResult_ = loadObjectFromFile( path, &warningTextBuffer_, cb );
-        return ContinueWith( State::TaskProcessing );
+        else
+        {
+            spdlog::info( "Loading file {}", utf8string( path ) );
+            currentResult_ = loadObjectFromFile( path, &warningTextBuffer_, cb );
+            return ContinueWith( State::TaskProcessing );
+        }
     }
 
     Transition awaitForTask_()
@@ -170,31 +210,7 @@ private:
         using namespace StateMachine;
         const auto path = paths_[currentPath_];
         assert( !path.empty() );
-
-        const auto fileName = utf8string( path );
-        spdlog::info( "Load file {} - {}", fileName, currentResult_.has_value() ? "success" : currentResult_.error().c_str() );
-        if ( !currentResult_.has_value() )
-        {
-            // TODO: user-defined error format
-            *errorSummary_ << ( !isEmpty( *errorSummary_ ) ? "\n" : "" ) << "\n" << currentResult_.error();
-            return ContinueWith( State::TaskFinished );
-        }
-
-        if ( !warningTextBuffer_.empty() )
-        {
-            // TODO: user-defined warning format
-            *warningSummary_ << ( !isEmpty( *warningSummary_ ) ? "\n" : "" ) << "\n" << fileName << ":\n" << warningTextBuffer_ << "\n";
-        }
-
-        const auto prevObjectCount = loadedObjects_.size();
-        for ( auto& obj : *currentResult_ )
-            if ( obj )
-                loadedObjects_.emplace_back( std::move( obj ) );
-        if ( prevObjectCount != loadedObjects_.size() )
-            loadedFiles_.emplace_back( path );
-        else
-            *errorSummary_ << ( !isEmpty( *errorSummary_ ) ? "\n" : "" ) << "\n" << "No objects found in the file \"" << fileName << "\"";
-
+        constructor_->process( path, std::move( currentResult_ ), std::move( warningTextBuffer_ ) );
         return ContinueWith( State::TaskFinished );
     }
 
@@ -203,33 +219,22 @@ private:
         using namespace StateMachine;
         currentPath_ += 1;
         if ( currentPath_ >= paths_.size() )
-            return ContinueWith( State::Finishing );
+            return ContinueWith( State::Finished );
         return ContinueWith( State::TaskPreparing );
-    }
-
-    Transition finishing_()
-    {
-        using namespace StateMachine;
-        result_ = construct( std::move( loadedFiles_ ), std::move( loadedObjects_ ), errorSummary_->str(), warningSummary_->str() );
-        return ContinueWith( State::Finished );
     }
 
     Transition finished_()
     {
         using namespace StateMachine;
-        return FinishWith( Result { result_ } );
+        return FinishWith( constructor_->construct() );
     }
 
 private:
     std::vector<std::filesystem::path> paths_;
     ProgressCallback callback_;
 
-    SceneLoad::SceneLoadResult result_;
-    std::vector<std::filesystem::path> loadedFiles_;
-    std::vector<std::shared_ptr<Object>> loadedObjects_;
-    // TODO: make them copyable
-    std::shared_ptr<std::ostringstream> errorSummary_;
-    std::shared_ptr<std::ostringstream> warningSummary_;
+    // TODO: make it copyable
+    std::shared_ptr<SceneConstructor> constructor_;
 
     size_t currentPath_ { 0 };
     Resumable<Expected<std::vector<ObjectPtr>>> currentTask_;
@@ -245,10 +250,7 @@ namespace MR::SceneLoad
 SceneLoadResult
 fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, ProgressCallback callback )
 {
-    std::vector<std::filesystem::path> loadedFiles;
-    std::vector<std::shared_ptr<Object>> loadedObjects;
-    std::ostringstream errorSummary;
-    std::ostringstream warningSummary;
+    SceneConstructor constructor;
 
     for ( auto index = 0ull; index < files.size(); ++index )
     {
@@ -256,37 +258,17 @@ fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, Progres
         if ( path.empty() )
             continue;
 
-        const auto fileName = utf8string( path );
-        spdlog::info( "Loading file {}", fileName );
         std::string warningText;
-        auto res = loadObjectFromFile( path, &warningText, [callback, index, count = files.size()] ( float v )
+        auto cb = [callback, index, count = files.size()] ( float v )
         {
             return callback( ( (float)index + v ) / (float)count );
-        } );
-        spdlog::info( "Load file {} - {}", fileName, res.has_value() ? "success" : res.error().c_str() );
-        if ( !res.has_value() )
-        {
-            // TODO: user-defined error format
-            errorSummary << ( !isEmpty( errorSummary ) ? "\n" : "" ) << "\n" << res.error();
-            continue;
-        }
-        if ( !warningText.empty() )
-        {
-            // TODO: user-defined warning format
-            warningSummary << ( !isEmpty( warningSummary ) ? "\n" : "" ) << "\n" << fileName << ":\n" << warningText << "\n";
-        }
-
-        const auto prevObjectCount = loadedObjects.size();
-        for ( auto& obj : *res )
-            if ( obj )
-                loadedObjects.emplace_back( std::move( obj ) );
-        if ( prevObjectCount != loadedObjects.size() )
-            loadedFiles.emplace_back( path );
-        else
-            errorSummary << ( !isEmpty( errorSummary ) ? "\n" : "" ) << "\n" << "No objects found in the file \"" << fileName << "\"";
+        };
+        spdlog::info( "Loading file {}", utf8string( path ) );
+        auto res = loadObjectFromFile( path, &warningText, std::move( cb ) );
+        constructor.process( path, std::move( res ), std::move( warningText ) );
     }
 
-    return construct( std::move( loadedFiles ), std::move( loadedObjects ), errorSummary.str(), warningSummary.str() );
+    return constructor.construct();
 }
 
 Resumable<SceneLoadResult>

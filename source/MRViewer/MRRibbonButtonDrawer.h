@@ -29,6 +29,11 @@ struct DrawButtonParams
         Toolbar, // button is on toolbar
         Header // button is on header quick access bar
     } rootType{ RootType::Ribbon };
+
+    // if true treat this item as hovered
+    bool forceHovered = false;
+    // if true treat this item as pressed
+    bool forcePressed = false;
 };
 
 struct CustomButtonParameters
@@ -97,7 +102,7 @@ private:
     void drawTooltip_( const MenuItemInfo& item, const std::string& requirements ) const;
 
     // returns num of pushed colors
-    int pushRibbonButtonColors_( bool enabled, bool active, DrawButtonParams::RootType rootType ) const;
+    int pushRibbonButtonColors_( bool enabled, bool active, bool forceHovered, DrawButtonParams::RootType rootType ) const;
 
     std::function<void( std::shared_ptr<RibbonMenuItem>, bool )> onPressAction_ = []( std::shared_ptr<RibbonMenuItem>, bool ) {};
     std::function<std::string( std::shared_ptr<RibbonMenuItem> )> getRequirements_ = []( std::shared_ptr<RibbonMenuItem> ) { return std::string(); };

@@ -55,6 +55,16 @@ ObjectChildrenHolder::~ObjectChildrenHolder()
             child->parent_ = nullptr;
 }
 
+std::shared_ptr<Object> ObjectChildrenHolder::getShared() const
+{
+    if ( !parent_ )
+        return {};
+    for ( const auto& child : parent_->children_ )
+        if ( child.get() == this )
+            return child;
+    return {};
+}
+
 size_t ObjectChildrenHolder::heapBytes() const
 {
     auto res = MR::heapBytes( children_ ) + MR::heapBytes( bastards_ );

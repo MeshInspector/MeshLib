@@ -43,7 +43,8 @@ inline bool button( const char* label, const Vector2f& size = Vector2f( 0, 0 ), 
 /// draw gradient button with the ordinary button size
 /// returns true if button is clicked in this frame, or key is pressed (optional)
 MRVIEWER_API bool buttonCommonSize( const char* label, const Vector2f& size = Vector2f( 0, 0 ), ImGuiKey key = ImGuiKey_None );
-
+/// draw button with same logic as radioButton
+MRVIEWER_API bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& size = Vector2f( 0, 0 ), ImGuiKey key = ImGuiKey_None );
 
 
 /// draw gradient checkbox

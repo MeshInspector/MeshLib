@@ -55,7 +55,7 @@ ObjectChildrenHolder::~ObjectChildrenHolder()
             child->parent_ = nullptr;
 }
 
-std::shared_ptr<Object> ObjectChildrenHolder::getShared() const
+std::shared_ptr<Object> ObjectChildrenHolder::getSharedPtr() const
 {
     if ( !parent_ )
         return {};

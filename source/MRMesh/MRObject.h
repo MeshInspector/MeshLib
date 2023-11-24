@@ -44,7 +44,7 @@ public:
 
     // returns this Object as shared_ptr
     // finds it among its parent's recognized children
-    [[nodiscard]] MRMESH_API std::shared_ptr<Object> getShared() const;
+    [[nodiscard]] MRMESH_API std::shared_ptr<Object> getSharedPtr() const;
 
     /// returns the amount of memory this object occupies on heap,
     /// including the memory of all recognized children

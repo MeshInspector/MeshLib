@@ -272,7 +272,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
                 }
             }
         }
-        result[i] = { std::dynamic_pointer_cast<VisualObject>( renderVector[pickRes.geomId]->getShared() ),res };
+        result[i] = { std::dynamic_pointer_cast<VisualObject>( renderVector[pickRes.geomId]->getSharedPtr() ),res };
     }
     return result;
 }
@@ -295,7 +295,7 @@ std::vector<std::shared_ptr<MR::VisualObject>> Viewport::findObjectsInRect( cons
     std::vector<std::shared_ptr<VisualObject>> result( pickResult.size() );
     for ( int i = 0; i < pickResult.size(); ++i )
     {
-        result[i] = std::dynamic_pointer_cast<VisualObject>( renderVector[pickResult[i]]->getShared() );
+        result[i] = std::dynamic_pointer_cast<VisualObject>( renderVector[pickResult[i]]->getSharedPtr() );
     }
 
     return result;

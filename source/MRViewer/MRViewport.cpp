@@ -272,21 +272,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
                 }
             }
         }
-        if ( auto parent = renderVector[pickRes.geomId]->parent() )
-        {
-            for ( auto& child : parent->children() )
-                if ( child.get() == renderVector[pickRes.geomId] )
-                {
-                    result[i] = {std::dynamic_pointer_cast<VisualObject>( child ),res};
-                    continue;
-                }
-        }
-        else
-        {
-            // object is not in scene
-            assert( false );
-            continue;
-        }
+        result[i] = { std::dynamic_pointer_cast<VisualObject>( renderVector[pickRes.geomId]->getSharedPtr() ),res };
     }
     return result;
 }
@@ -309,16 +295,7 @@ std::vector<std::shared_ptr<MR::VisualObject>> Viewport::findObjectsInRect( cons
     std::vector<std::shared_ptr<VisualObject>> result( pickResult.size() );
     for ( int i = 0; i < pickResult.size(); ++i )
     {
-        if ( auto parent = renderVector[pickResult[i]]->parent() )
-        {
-            for ( auto& child : parent->children() )
-            {
-                if ( child.get() == renderVector[pickResult[i]] )
-                {
-                    result[i] = std::dynamic_pointer_cast< VisualObject >( child );
-                }
-            }
-        }
+        result[i] = std::dynamic_pointer_cast<VisualObject>( renderVector[pickResult[i]]->getSharedPtr() );
     }
 
     return result;

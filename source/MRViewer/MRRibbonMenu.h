@@ -175,12 +175,12 @@ private:
 
     std::string getRequirements_( const std::shared_ptr<RibbonMenuItem>& item ) const;
 
-
-
     // does look up in ribbon schema for `searchLine_`
     std::string searchLine_;
     std::vector<RibbonSchemaHolder::SearchResult> searchResult_;
+    int hightlightedSearchItem_{ -1 };
     void drawSearchButton_();
+
     void drawCollapseButton_();
     void drawHelpButton_();
 

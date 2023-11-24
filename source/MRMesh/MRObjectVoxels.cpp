@@ -18,7 +18,7 @@
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRAsyncLaunchType.h"
-#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRFmt.h"
 #include <filesystem>
 #include <thread>
 

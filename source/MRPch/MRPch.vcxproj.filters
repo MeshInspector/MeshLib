@@ -12,6 +12,7 @@
     <ClInclude Include="MRAsyncLaunchType.h" />
     <ClInclude Include="MRWasm.h" />
     <ClInclude Include="MREigenCore.h" />
+    <ClInclude Include="MRFmt.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRPch.cpp" />

@@ -193,6 +193,7 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
     ImGui::RenderNavHighlight( bb, id );
 
     // replaced part
+    // potentail fail. need check that customTexture is good
     auto texture = custmParams.customTexture ? custmParams.customTexture : getTexture( TextureType::GradientBtn ).get();
     if ( texture )
     {
@@ -237,6 +238,22 @@ bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 
 bool buttonCommonSize( const char* label, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None */ )
 {
     return buttonEx( label, true, size ) || checkKey( key );
+}
+
+bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None*/ )
+{
+    const auto menu = getViewerInstance().getMenuPlugin();
+    const float scaling = menu ? menu->menu_scaling() : 1.f;
+
+    Color clearBlue( 0x1b, 0x83, 0xff, 0xff );
+    Color bgColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background );
+
+    StyleParamHolder sh;
+    sh.addVar( ImGuiStyleVar_FramePadding, { ( cButtonPadding + 1 ) * scaling, cButtonPadding * scaling } );
+    sh.addVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x * 0.7f,  cDefaultItemSpacing * 2 * scaling } );
+
+    sh.addColor( ImGuiCol_Button, *value == ownValue ? clearBlue : bgColor );
+    return ImGui::Button( label, ImVec2( size.x, size.y ) ) || checkKey( key );
 }
 
 bool checkbox( const char* label, bool* value )

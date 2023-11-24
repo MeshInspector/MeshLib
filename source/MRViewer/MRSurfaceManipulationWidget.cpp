@@ -24,7 +24,7 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
 {
     obj_ = objectMesh;
     diagonal_ = obj_->getBoundingBox().diagonal();
-    minRadius_ = obj_->avgEdgeLen() * 2.f;
+    minRadius_ = obj_->avgEdgeLen() * 1.5f;
 
     if ( firstInit_ )
     {
@@ -169,7 +169,9 @@ void SurfaceManipulationWidget::changeSurface_()
     }
 
     Vector3f normal;
-    const auto& mesh = *obj_->mesh();
+    assert( oldMesh_ );
+    auto objMeshPtr = oldMesh_ ? oldMesh_ : obj_;
+    const auto& mesh = *objMeshPtr->mesh();
     for ( auto v : singleEditingRegion_ )
         normal += mesh.normal( v );
     normal = normal.normalized();
@@ -177,7 +179,7 @@ void SurfaceManipulationWidget::changeSurface_()
     auto& points = obj_->varMesh()->points;
 
     const float maxShift = settings_.editForce;
-    const float intensity = ( 101.f - settings_.sharpness ) / 100.f * 0.15f + 0.4f;
+    const float intensity = ( 101.f - settings_.sharpness ) / 100.f * 0.5f + 0.25f;
     const float a1 = -1.f * ( 1 - intensity ) / intensity / intensity;
     const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
     const float direction = settings_.workMode == WorkMode::Remove ? -1.f : 1.f;
@@ -232,7 +234,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     movedPosPick = getViewerInstance().viewport().multiPickObjects( { objMeshPtr.get() }, viewportPoints );
     mousePos_ = mousePos;
 
-    const auto& mesh = *obj_->mesh();
+    const auto& mesh = *objMeshPtr->mesh();
     std::vector<MeshTriPoint> triPoints;
     VertBitSet newVerts( singleEditingRegion_.size() );
     triPoints.reserve( movedPosPick.size() );
@@ -250,11 +252,11 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     }
 
     updateUV_( false );
-    const ObjAndPick& curentPosPick = movedPosPick.back();
+    ObjAndPick curentPosPick = movedPosPick.empty() ? ObjAndPick() : movedPosPick.back();
     visualizationRegion_.reset();
     if ( curentPosPick.first == objMeshPtr )
     {
-        visualizationDistanceMap_ = computeSpaceDistances( mesh, { curentPosPick.second.face,curentPosPick.second.point }, settings_.radius * 1.5f );
+        visualizationDistanceMap_ = computeSpaceDistances( mesh, { curentPosPick.second.face, curentPosPick.second.point }, settings_.radius * 1.5f );
         VertId v[3];
         mesh.topology.getTriVerts( curentPosPick.second.face, v );
         for ( int j = 0; j < 3; ++j )

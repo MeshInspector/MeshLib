@@ -6,8 +6,13 @@
 namespace MR
 {
 
+/// determines how to save points/lines/mesh
 struct SaveSettings
 {
+    /// true - save valid points/vertices only (pack them);
+    /// false - save all points/vertices preserving their indices
+    bool saveValidOnly = true;
+
     /// optional per-vertex color to save with the geometry
     const VertColors * colors = nullptr;
 

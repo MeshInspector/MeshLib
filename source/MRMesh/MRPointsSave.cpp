@@ -50,7 +50,7 @@ private:
 
 } //anonymous namespace
 
-VoidOrErrStr toAsc( const PointCloud& points, const std::filesystem::path& file, const Settings& settings )
+VoidOrErrStr toAsc( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -59,7 +59,7 @@ VoidOrErrStr toAsc( const PointCloud& points, const std::filesystem::path& file,
     return toAsc( points, out, settings );
 }
 
-VoidOrErrStr toAsc( const PointCloud& cloud, std::ostream& out, const Settings& settings )
+VoidOrErrStr toAsc( const PointCloud& cloud, std::ostream& out, const SaveSettings& settings )
 {
     MR_TIMER
     const bool saveNormals = cloud.points.size() <= cloud.normals.size();
@@ -91,7 +91,7 @@ VoidOrErrStr toAsc( const PointCloud& cloud, std::ostream& out, const Settings& 
     return {};
 }
 
-VoidOrErrStr toPly( const PointCloud& points, const std::filesystem::path& file, const Settings& settings )
+VoidOrErrStr toPly( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -100,7 +100,7 @@ VoidOrErrStr toPly( const PointCloud& points, const std::filesystem::path& file,
     return toPly( points, out, settings );
 }
 
-VoidOrErrStr toPly( const PointCloud& cloud, std::ostream& out, const Settings& settings )
+VoidOrErrStr toPly( const PointCloud& cloud, std::ostream& out, const SaveSettings& settings )
 {
     MR_TIMER
     const size_t totalPoints = settings.saveValidOnly ? cloud.validPoints.count() : cloud.points.size();
@@ -318,7 +318,7 @@ VoidOrErrStr toCtm( const PointCloud& cloud, std::ostream& out, const CtmSavePoi
 }
 #endif
 
-VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const Settings& settings )
+VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
 {
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
@@ -335,7 +335,7 @@ VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesyst
 #endif
     return res;
 }
-VoidOrErrStr toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const Settings& settings )
+VoidOrErrStr toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const SaveSettings& settings )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )

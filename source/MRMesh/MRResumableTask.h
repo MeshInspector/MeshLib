@@ -6,6 +6,9 @@
 namespace MR
 {
 
+template <typename Result>
+using Resumable = std::function<std::optional<Result> ()>;
+
 /// primitive coroutine-like task interface
 template <typename T>
 class ResumableTask

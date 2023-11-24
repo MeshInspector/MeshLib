@@ -61,7 +61,7 @@ public:
 namespace AsyncObjectLoad
 {
 
-using AsyncObjectLoader = ResumableTaskPtr<Expected<std::vector<ObjectPtr>>>( * )( const std::filesystem::path&, ProgressCallback );
+using AsyncObjectLoader = Resumable<Expected<std::vector<ObjectPtr>>>( * )( const std::filesystem::path&, ProgressCallback );
 
 /// Find an appropriate loader from the registry
 MRMESH_API AsyncObjectLoader getObjectLoader( IOFilter filter );

@@ -165,7 +165,6 @@ private:
             assert( asyncLoader );
             spdlog::info( "Async loading file {}", fileName );
             currentTask_ = asyncLoader( path, cb );
-            currentTask_->start();
             return continueWith_( State::TaskAwaiting );
         }
 
@@ -177,13 +176,10 @@ private:
     bool awaitForTask_()
     {
         assert( state_ == State::TaskAwaiting );
-        assert( currentTask_ );
-        if ( !currentTask_->resume() )
+        auto result = currentTask_();
+        if ( !result )
             return suspend_();
-
-        currentResult_ = currentTask_->result();
-        currentTask_.reset();
-
+        currentResult_ = std::move( *result );
         return continueWith_( State::TaskProcessing );
     }
 
@@ -249,7 +245,7 @@ private:
 
     State state_;
     size_t currentPath_ { 0 };
-    ResumableTaskPtr<Expected<std::vector<ObjectPtr>>> currentTask_;
+    Resumable<Expected<std::vector<ObjectPtr>>> currentTask_;
     std::string warningTextBuffer_;
     Expected<std::vector<ObjectPtr>> currentResult_;
 };

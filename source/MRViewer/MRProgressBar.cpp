@@ -41,7 +41,7 @@ void ProgressBar::setup( float scaling )
     if ( instance.deferredInit_ )
         instance.initialize_();
 
-    if ( instance.backgroundTask_ )
+    if ( instance.backgroundTask_ && !instance.backgroundTaskDelayed_ )
         instance.resumeBackgroundTask_();
 
     constexpr size_t bufSize = 256;
@@ -190,20 +190,20 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
     getViewerInstance().incrementForceRedrawFrames();
 }
 
-void ProgressBar::orderWithResumableTask( const char * name, std::shared_ptr<ResumableTask<void>> task, int taskCount )
+void ProgressBar::orderWithResumableTask( const char * name, std::shared_ptr<Resumable<bool>> task, int taskCount )
 {
     auto& instance = instance_();
 
     if ( !instance.isInit_ )
     {
-        task->start();
-        while ( !task->resume() );
+        while ( !(*task)() );
         return;
     }
 
     if ( isFinished() && instance.thread_.joinable() )
         instance.thread_.join();
 
+    instance.backgroundTaskDelayed_ = true;
     instance.isOrdered_ = true;
 
     auto postInit = [&instance, task]
@@ -211,15 +211,15 @@ void ProgressBar::orderWithResumableTask( const char * name, std::shared_ptr<Res
         // finalizer is not required
         instance.onFinish_ = {};
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
-        instance.thread_ = std::thread( [task]
+        instance.thread_ = std::thread( [&instance]
         {
             std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
-            task->start();
+            instance.backgroundTaskDelayed_ = false;
         } );
 #else
-        staticTaskForLaterCall = [task]
+        staticTaskForLaterCall = [&instance]
         {
-            task->start();
+            instance.backgroundTaskDelayed_ = false;
         };
         emscripten_async_call( asyncCallTask, nullptr, 200 );
 #endif
@@ -413,7 +413,7 @@ void ProgressBar::resumeBackgroundTask_()
     assert( backgroundTask_ );
     const auto finished = tryRunWithSehHandler_( [this]
     {
-        return backgroundTask_->resume();
+        return (bool)(*backgroundTask_)();
     } );
     if ( finished )
     {

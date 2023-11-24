@@ -25,7 +25,7 @@ public:
     MRVIEWER_API static void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPostProcessing task, int taskCount = 1 );
 
     /// in this version the task is being run in the main thread but performs as a coroutine (suspends its execution from time to time)
-    MRVIEWER_API static void orderWithResumableTask( const char * name, std::shared_ptr<ResumableTask<void>> task, int taskCount = 1 );
+    MRVIEWER_API static void orderWithResumableTask( const char * name, std::shared_ptr<Resumable<bool>> task, int taskCount = 1 );
 
     MRVIEWER_API static bool isCanceled();
 
@@ -87,8 +87,9 @@ private:
     std::unique_ptr<DeferredInit> deferredInit_;
 
     // required to perform long-time tasks in single-threaded environments
-    using BackgroundTask = std::shared_ptr<ResumableTask<void>>;
+    using BackgroundTask = std::shared_ptr<Resumable<bool>>;
     BackgroundTask backgroundTask_;
+    std::atomic<bool> backgroundTaskDelayed_{ false };
 
     std::atomic<bool> allowCancel_;
     std::atomic<bool> canceled_;

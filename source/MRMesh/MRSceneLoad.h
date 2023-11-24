@@ -28,7 +28,7 @@ MRMESH_API SceneLoadResult
 fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, ProgressCallback callback = {} );
 
 /// Async load scene from file
-MRMESH_API std::shared_ptr<ResumableTask<SceneLoadResult>>
+MRMESH_API Resumable<SceneLoadResult>
 asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& files, ProgressCallback callback = {} );
 
 } // namespace MR::SceneLoad

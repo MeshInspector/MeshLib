@@ -1,6 +1,7 @@
 #include "MRSceneLoad.h"
 #include "MRIOFormatsRegistry.h"
 #include "MRObjectLoad.h"
+#include "MRStateMachine.h"
 #include "MRStringConvert.h"
 
 #include <MRPch/MRSpdlog.h>
@@ -51,41 +52,9 @@ SceneLoad::SceneLoadResult construct( std::vector<std::filesystem::path> loadedF
     };
 }
 
-class AsyncSceneLoader : public ResumableTask<SceneLoad::SceneLoadResult>
+class AsyncSceneLoader
 {
 public:
-    explicit AsyncSceneLoader( const std::vector<std::filesystem::path>& paths, ProgressCallback callback )
-        : paths_( paths )
-        , callback_ ( std::move( callback ) )
-        , state_( State::Init )
-    {
-        //
-    }
-    ~AsyncSceneLoader() override = default;
-
-    void start() override
-    {
-        if ( state_ != State::Init )
-            return;
-
-        if ( paths_.empty() )
-            state_ = State::Finished;
-        else
-            state_ = State::TaskPreparing;
-    }
-
-    bool resume() override
-    {
-        while ( !process_() );
-        return state_ == State::Finished;
-    }
-
-    SceneLoad::SceneLoadResult result() const override
-    {
-        return result_;
-    }
-
-private:
     enum class State
     {
         Init,
@@ -97,12 +66,26 @@ private:
         Finished,
     };
 
-    bool process_()
+    using Result = SceneLoad::SceneLoadResult;
+
+    using Transition = StateMachine::Transition<State, Result>;
+    using Executor = StateMachine::Executor<State, Result>;
+
+    explicit AsyncSceneLoader( const std::vector<std::filesystem::path>& paths, ProgressCallback callback )
+        : paths_( paths )
+        , callback_ ( std::move( callback ) )
+        , errorSummary_( std::make_shared<std::ostringstream>() )
+        , warningSummary_( std::make_shared<std::ostringstream>() )
     {
-        switch ( state_ )
+        //
+    }
+
+    Transition operator ()( State state )
+    {
+        switch ( state )
         {
             case State::Init:
-                return true;
+                return init_();
             case State::TaskPreparing:
                 return prepareTask_();
             case State::TaskAwaiting:
@@ -114,7 +97,7 @@ private:
             case State::Finishing:
                 return finishing_();
             case State::Finished:
-                return true;
+                return finished_();
         }
 #ifdef __cpp_lib_unreachable
         std::unreachable();
@@ -124,24 +107,23 @@ private:
 #endif
     }
 
-    bool continueWith_( State state )
+private:
+    Transition init_()
     {
-        state_ = state;
-        return false;
+        using namespace StateMachine;
+        if ( paths_.empty() )
+            return ContinueWith( State::Finished );
+        else
+            return ContinueWith( State::TaskPreparing );
     }
 
-    static bool suspend_()
+    Transition prepareTask_()
     {
-        return true;
-    }
-
-    bool prepareTask_()
-    {
-        assert( state_ == State::TaskPreparing );
+        using namespace StateMachine;
         assert( currentPath_ < paths_.size() );
         const auto path = paths_[currentPath_];
         if ( path.empty() )
-            return continueWith_( State::TaskFinished );
+            return ContinueWith( State::TaskFinished );
 
         const auto fileName = utf8string( path );
 
@@ -165,27 +147,27 @@ private:
             assert( asyncLoader );
             spdlog::info( "Async loading file {}", fileName );
             currentTask_ = asyncLoader( path, cb );
-            return continueWith_( State::TaskAwaiting );
+            return ContinueWith( State::TaskAwaiting );
         }
 
         spdlog::info( "Loading file {}", fileName );
         currentResult_ = loadObjectFromFile( path, &warningTextBuffer_, cb );
-        return continueWith_( State::TaskProcessing );
+        return ContinueWith( State::TaskProcessing );
     }
 
-    bool awaitForTask_()
+    Transition awaitForTask_()
     {
-        assert( state_ == State::TaskAwaiting );
+        using namespace StateMachine;
         auto result = currentTask_();
         if ( !result )
-            return suspend_();
+            return Yield;
         currentResult_ = std::move( *result );
-        return continueWith_( State::TaskProcessing );
+        return ContinueWith( State::TaskProcessing );
     }
 
-    bool processTask_()
+    Transition processTask_()
     {
-        assert( state_ == State::TaskProcessing );
+        using namespace StateMachine;
         const auto path = paths_[currentPath_];
         assert( !path.empty() );
 
@@ -194,14 +176,14 @@ private:
         if ( !currentResult_.has_value() )
         {
             // TODO: user-defined error format
-            errorSummary_ << ( !isEmpty( errorSummary_ ) ? "\n" : "" ) << "\n" << currentResult_.error();
-            return continueWith_( State::TaskFinished );
+            *errorSummary_ << ( !isEmpty( *errorSummary_ ) ? "\n" : "" ) << "\n" << currentResult_.error();
+            return ContinueWith( State::TaskFinished );
         }
 
         if ( !warningTextBuffer_.empty() )
         {
             // TODO: user-defined warning format
-            warningSummary_ << ( !isEmpty( warningSummary_ ) ? "\n" : "" ) << "\n" << fileName << ":\n" << warningTextBuffer_ << "\n";
+            *warningSummary_ << ( !isEmpty( *warningSummary_ ) ? "\n" : "" ) << "\n" << fileName << ":\n" << warningTextBuffer_ << "\n";
         }
 
         const auto prevObjectCount = loadedObjects_.size();
@@ -211,26 +193,31 @@ private:
         if ( prevObjectCount != loadedObjects_.size() )
             loadedFiles_.emplace_back( path );
         else
-            errorSummary_ << ( !isEmpty( errorSummary_ ) ? "\n" : "" ) << "\n" << "No objects found in the file \"" << fileName << "\"";
+            *errorSummary_ << ( !isEmpty( *errorSummary_ ) ? "\n" : "" ) << "\n" << "No objects found in the file \"" << fileName << "\"";
 
-        return continueWith_( State::TaskFinished );
+        return ContinueWith( State::TaskFinished );
     }
 
-    bool nextTask_()
+    Transition nextTask_()
     {
-        assert( state_ == State::TaskFinished );
+        using namespace StateMachine;
         currentPath_ += 1;
         if ( currentPath_ >= paths_.size() )
-            return continueWith_( State::Finishing );
-        return continueWith_( State::TaskPreparing );
+            return ContinueWith( State::Finishing );
+        return ContinueWith( State::TaskPreparing );
     }
 
-    bool finishing_()
+    Transition finishing_()
     {
-        assert( state_ == State::Finishing );
-        result_ = construct( std::move( loadedFiles_ ), std::move( loadedObjects_ ), errorSummary_.str(), warningSummary_.str() );
-        state_ = State::Finished;
-        return true;
+        using namespace StateMachine;
+        result_ = construct( std::move( loadedFiles_ ), std::move( loadedObjects_ ), errorSummary_->str(), warningSummary_->str() );
+        return ContinueWith( State::Finished );
+    }
+
+    Transition finished_()
+    {
+        using namespace StateMachine;
+        return FinishWith( Result { result_ } );
     }
 
 private:
@@ -240,10 +227,10 @@ private:
     SceneLoad::SceneLoadResult result_;
     std::vector<std::filesystem::path> loadedFiles_;
     std::vector<std::shared_ptr<Object>> loadedObjects_;
-    std::ostringstream errorSummary_;
-    std::ostringstream warningSummary_;
+    // TODO: make them copyable
+    std::shared_ptr<std::ostringstream> errorSummary_;
+    std::shared_ptr<std::ostringstream> warningSummary_;
 
-    State state_;
     size_t currentPath_ { 0 };
     Resumable<Expected<std::vector<ObjectPtr>>> currentTask_;
     std::string warningTextBuffer_;
@@ -302,10 +289,10 @@ fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, Progres
     return construct( std::move( loadedFiles ), std::move( loadedObjects ), errorSummary.str(), warningSummary.str() );
 }
 
-std::shared_ptr<ResumableTask<SceneLoadResult>>
+Resumable<SceneLoadResult>
 asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& files, ProgressCallback callback )
 {
-    return std::make_shared<AsyncSceneLoader>( files, std::move( callback ) );
+    return AsyncSceneLoader::Executor( AsyncSceneLoader( files, std::move( callback ) ) );
 }
 
 } // namespace MR::SceneLoad

@@ -2,7 +2,6 @@
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRMesh.h"
 #include "MRMeshBoolean.h"
-#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {

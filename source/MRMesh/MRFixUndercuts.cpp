@@ -18,7 +18,6 @@
 #include "MRMeshIntersect.h"
 #include "MRLine3.h"
 #include "MRPch/MRTBB.h"
-#include "MRPch/MRSpdlog.h"
 #include <filesystem>
 
 namespace MR

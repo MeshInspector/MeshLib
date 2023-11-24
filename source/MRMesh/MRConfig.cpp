@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <iostream>
 #include <fstream>
-#include "MRPch/MRSpdlog.h"
 #include "MRSystem.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRWasm.h"

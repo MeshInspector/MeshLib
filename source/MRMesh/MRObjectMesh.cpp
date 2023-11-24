@@ -10,7 +10,7 @@
 #include "MRGTest.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
-#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRFmt.h"
 
 namespace MR
 {

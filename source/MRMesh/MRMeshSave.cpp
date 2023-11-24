@@ -4,7 +4,7 @@
 #include "MRColor.h"
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
-#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRFmt.h"
 
 #ifndef MRMESH_NO_OPENCTM
 #include "OpenCTM/openctm.h"

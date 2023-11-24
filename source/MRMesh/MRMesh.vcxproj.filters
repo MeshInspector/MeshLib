@@ -1110,6 +1110,9 @@
     <ClInclude Include="MRSceneLoad.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRResumable.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
     <ClInclude Include="MRStateMachine.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>

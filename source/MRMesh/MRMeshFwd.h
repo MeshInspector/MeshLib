@@ -451,11 +451,6 @@ class WatershedGraph;
 /// \ingroup BasicStructuresGroup
 typedef std::function<bool( float )> ProgressCallback;
 
-/// function with delayed result
-/// returns std::nullopt until the result value is ready
-template <typename Result>
-using Resumable = std::function<std::optional<Result> ()>;
-
 enum class FilterType : char
 {
     Linear,

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "MRMeshFwd.h"
 #include "MRObject.h"
+#include "MRResumable.h"
 
 namespace MR::SceneLoad
 {

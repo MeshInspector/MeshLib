@@ -565,16 +565,16 @@ int Viewer::launchInit_( const LaunchParams& params )
     glfwWindowHint( GLFW_TRANSPARENT_FRAMEBUFFER, params.enableTransparentBackground );
 #endif
 
-    alphaSorter_ = std::make_unique<AlphaSortGL>();
-    if ( params.render3dSceneInTexture )
-        sceneTexture_ = std::make_unique<SceneTextureGL>();
-
     glfwWindowHint( GLFW_VISIBLE, int( bool( params.windowMode == LaunchParams::Show ) ) );
     bool windowMode = params.windowMode != LaunchParams::NoWindow;
 
     if ( windowMode )
     {
-        if ( !checkOpenGL_(params) )
+        alphaSorter_ = std::make_unique<AlphaSortGL>();
+        if ( params.render3dSceneInTexture )
+            sceneTexture_ = std::make_unique<SceneTextureGL>();
+
+        if ( !checkOpenGL_( params ) )
         {
             if ( params.windowMode == LaunchParams::TryHidden )
                 windowMode = false;

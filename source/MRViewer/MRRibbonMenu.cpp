@@ -279,13 +279,19 @@ void RibbonMenu::drawActiveNonBlockingDialogs_()
 
 void RibbonMenu::drawSearchButton_()
 {
+    auto nameWindow = "##RibbonGlobalSearchPopup";
+    bool popupOpened = ImGui::IsPopupOpen( nameWindow );
+
     const auto scaling = menu_scaling();
     auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
     font->Scale = 0.7f;
 
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * scaling );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
+    if ( popupOpened )
+        ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
+    else
+        ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
     ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
     ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
     ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
@@ -301,9 +307,6 @@ void RibbonMenu::drawSearchButton_()
 
     ImGui::PopStyleColor( 4 );
     ImGui::PopStyleVar( 2 );
-
-    auto nameWindow = "##RibbonGlobalSearchPopup";
-    bool popupOpened = ImGui::IsPopupOpen( nameWindow );
 
     // manage search popup
     if ( pressed && !popupOpened )
@@ -330,16 +333,31 @@ void RibbonMenu::drawSearchButton_()
     if ( popupOpened )
     {
         // Search line
-        if ( ImGui::IsWindowAppearing() )
+        bool appearing = ImGui::IsWindowAppearing();
+        if ( appearing )
         {
             searchLine_.clear();
             searchResult_.clear();
+            hightlightedSearchItem_ = -1;
             ImGui::SetKeyboardFocusHere();
         }
         float minSearchSize = 300.0f * scaling;
         ImGui::SetNextItemWidth( minSearchSize );
         if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
             searchResult_ = RibbonSchemaHolder::search( searchLine_ );
+
+        if ( searchResult_.empty() )
+            hightlightedSearchItem_ = -1;
+
+        if ( !appearing )
+        {
+            if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
+                ImGui::CloseCurrentPopup();
+            else if ( ImGui::IsKeyPressed( ImGuiKey_DownArrow ) && hightlightedSearchItem_ + 1 < searchResult_.size() )
+                hightlightedSearchItem_++;
+            else if ( ImGui::IsKeyPressed( ImGuiKey_UpArrow ) && hightlightedSearchItem_ > 0 )
+                hightlightedSearchItem_--;
+        }
 
         ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Small ) );
         auto ySize = ( cSmallIconSize + 2 * cRibbonButtonWindowPaddingY ) * scaling;
@@ -350,8 +368,9 @@ void RibbonMenu::drawSearchButton_()
                                ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActive ).getUInt32() );
         ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
         int uniqueBtnCounter = 0;
-        for ( const auto& foundItem : searchResult_ )
+        for ( int i = 0; i < searchResult_.size(); ++i )
         {
+            const auto& foundItem = searchResult_[i];
             if ( !foundItem.item )
                 continue;
             auto pos = ImGui::GetCursorPos();
@@ -371,7 +390,7 @@ void RibbonMenu::drawSearchButton_()
                 ImGui::SetCursorPos( textPos );
                 ImGui::Text( "%s", tabName.c_str() );
                 ImGui::SameLine( 0.0f, cRibbonButtonWindowPaddingX * scaling + ImGui::GetStyle().ItemSpacing.x );
-                ImGui::SetCursorPosX( minSearchSize * 0.25f );
+                ImGui::SetCursorPosX( minSearchSize * 0.3f );
                 ImGui::Text( ">" );
                 ImGui::SameLine( 0.0f, cRibbonButtonWindowPaddingX * scaling + ImGui::GetStyle().ItemSpacing.x );
             }
@@ -381,6 +400,9 @@ void RibbonMenu::drawSearchButton_()
             params.iconSize = cSmallIconSize;
             params.itemSize.y = ySize;
             params.itemSize.x = width.baseWidth + width.additionalWidth + 2.0f * cRibbonButtonWindowPaddingX * scaling;
+            params.forceHovered = hightlightedSearchItem_ == i;
+            params.forcePressed = params.forceHovered &&
+                ( ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter ) );
             ImGui::SetCursorPosY( pos.y );
             buttonDrawer_.drawButtonItem( *foundItem.item, params );
         }

@@ -169,7 +169,9 @@ void SurfaceManipulationWidget::changeSurface_()
     }
 
     Vector3f normal;
-    const auto& mesh = *obj_->mesh();
+    assert( oldMesh_ );
+    auto objMeshPtr = oldMesh_ ? oldMesh_ : obj_;
+    const auto& mesh = *objMeshPtr->mesh();
     for ( auto v : singleEditingRegion_ )
         normal += mesh.normal( v );
     normal = normal.normalized();

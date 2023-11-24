@@ -1,6 +1,6 @@
 #pragma once
 #include "MRFrameRedrawRequest.h"
-#include "MRMesh/MRResumableTask.h"
+#include "MRMesh/MRMeshFwd.h"
 #include <imgui.h>
 #include <functional>
 #include <atomic>

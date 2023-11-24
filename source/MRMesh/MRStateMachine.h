@@ -1,7 +1,5 @@
 #pragma once
 
-#include <MRMesh/MRResumableTask.h>
-
 #include <functional>
 #include <variant>
 

@@ -22,11 +22,13 @@
     #endif
 #endif
 
-#include <array>
-#include <vector>
-#include <string>
 #include <parallel_hashmap/phmap_fwd_decl.h>
+
+#include <array>
 #include <functional>
+#include <optional>
+#include <string>
+#include <vector>
 
 #ifdef _WIN32
 #   ifdef MRMESH_EXPORT
@@ -448,6 +450,11 @@ class WatershedGraph;
 /// returns true to continue the operation and returns false to stop the operation
 /// \ingroup BasicStructuresGroup
 typedef std::function<bool( float )> ProgressCallback;
+
+/// function with delayed result
+/// returns std::nullopt until the result value is ready
+template <typename Result>
+using Resumable = std::function<std::optional<Result> ()>;
 
 enum class FilterType : char
 {

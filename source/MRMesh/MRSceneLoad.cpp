@@ -33,6 +33,29 @@ std::optional<IOFilter> findAsyncObjectLoadFilter( const std::filesystem::path& 
         return std::nullopt;
 }
 
+using Result = Expected<std::vector<ObjectPtr>>;
+
+Resumable<Result> getLoader( const std::filesystem::path& path, std::string* loadWarn, ProgressCallback callback )
+{
+    assert( !path.empty() );
+    if ( auto asyncFilter = findAsyncObjectLoadFilter( path ) )
+    {
+        spdlog::info( "Async loading file {}", utf8string( path ) );
+        const auto asyncLoader = AsyncObjectLoad::getObjectLoader( *asyncFilter );
+        assert( asyncLoader );
+        // TODO: unify sync and async loader interfaces
+        return asyncLoader( path, std::move( callback ) );
+    }
+    else
+    {
+        spdlog::info( "Loading file {}", utf8string( path ) );
+        return [path, loadWarn, callback] () -> std::optional<Result>
+        {
+            return loadObjectFromFile( path, loadWarn, callback );
+        };
+    }
+}
+
 class SceneConstructor
 {
 public:
@@ -103,143 +126,55 @@ private:
     std::ostringstream warningSummary_;
 };
 
-
 class AsyncSceneLoader
 {
 public:
-    enum class State
-    {
-        Init,
-        TaskPreparing,
-        TaskAwaiting,
-        TaskProcessing,
-        TaskFinished,
-        Finished,
-    };
-
-    using Result = SceneLoad::SceneLoadResult;
-
-    using Transition = StateMachine::Transition<State, Result>;
-    using Executor = StateMachine::Executor<State, Result>;
-
     explicit AsyncSceneLoader( const std::vector<std::filesystem::path>& paths, ProgressCallback callback )
         : paths_( paths )
         , callback_( std::move( callback ) )
-        , constructor_( std::make_shared<SceneConstructor>() )
     {
-        //
+        std::erase_if( paths_, [] ( auto&& path ) { return path.empty(); } );
     }
 
-    Transition operator ()( State state )
+    std::optional<SceneLoad::SceneLoadResult> operator ()()
     {
-        switch ( state )
-        {
-            case State::Init:
-                return init_();
-            case State::TaskPreparing:
-                return prepareTask_();
-            case State::TaskAwaiting:
-                return awaitForTask_();
-            case State::TaskProcessing:
-                return processTask_();
-            case State::TaskFinished:
-                return nextTask_();
-            case State::Finished:
-                return finished_();
-        }
-#ifdef __cpp_lib_unreachable
-        std::unreachable();
-#else
-        assert( false );
-        return {};
-#endif
-    }
-
-private:
-    Transition init_()
-    {
-        using namespace StateMachine;
         if ( paths_.empty() )
-            return ContinueWith( State::Finished );
-        else
-            return ContinueWith( State::TaskPreparing );
-    }
+            return SceneLoad::SceneLoadResult();
 
-    Transition prepareTask_()
-    {
-        using namespace StateMachine;
-        assert( currentPath_ < paths_.size() );
-        const auto path = paths_[currentPath_];
-        if ( path.empty() )
-            return ContinueWith( State::TaskFinished );
-
-        auto cb = [callback = callback_, index = currentPath_, number = paths_.size()] ( float v )
+        // initialize loaders
+        if ( loaders_.empty() )
         {
-            return callback( ( (float)index + v ) / (float)number );
-        };
-
-        if ( auto asyncFilter = findAsyncObjectLoadFilter( path ) )
-        {
-            spdlog::info( "Async loading file {}", utf8string( path ) );
-            const auto asyncLoader = AsyncObjectLoad::getObjectLoader( *asyncFilter );
-            assert( asyncLoader );
-            // TODO: unify sync and async loader interfaces
-            currentTask_ = asyncLoader( path, cb );
-            return ContinueWith( State::TaskAwaiting );
+            warningTexts_.resize( paths_.size() );
+            loaders_.resize( paths_.size() );
+            for ( auto index = 0ull; index < paths_.size(); ++index )
+            {
+                assert( !paths_[index].empty() );
+                loaders_[index] = cached( getLoader( paths_[index], &warningTexts_[index], subprogress( callback_, index, paths_.size() ) ) );
+            }
         }
-        else
+
+        // waiting for all loaders to finish
+        for ( auto& loader : loaders_ )
+            if ( !loader() )
+                return std::nullopt;
+
+        // gather loaded objects
+        SceneConstructor constructor;
+        for ( auto index = 0ull; index < paths_.size(); ++index )
         {
-            spdlog::info( "Loading file {}", utf8string( path ) );
-            currentResult_ = loadObjectFromFile( path, &warningTextBuffer_, cb );
-            return ContinueWith( State::TaskProcessing );
+            auto result = loaders_[index]();
+            assert( result );
+            constructor.process( paths_[index], std::move( *result ), warningTexts_[index] );
         }
-    }
-
-    Transition awaitForTask_()
-    {
-        using namespace StateMachine;
-        auto result = currentTask_();
-        if ( !result )
-            return Yield;
-        currentResult_ = std::move( *result );
-        return ContinueWith( State::TaskProcessing );
-    }
-
-    Transition processTask_()
-    {
-        using namespace StateMachine;
-        const auto path = paths_[currentPath_];
-        assert( !path.empty() );
-        constructor_->process( path, std::move( currentResult_ ), std::move( warningTextBuffer_ ) );
-        return ContinueWith( State::TaskFinished );
-    }
-
-    Transition nextTask_()
-    {
-        using namespace StateMachine;
-        currentPath_ += 1;
-        if ( currentPath_ >= paths_.size() )
-            return ContinueWith( State::Finished );
-        return ContinueWith( State::TaskPreparing );
-    }
-
-    Transition finished_()
-    {
-        using namespace StateMachine;
-        return FinishWith( constructor_->construct() );
+        return constructor.construct();
     }
 
 private:
     std::vector<std::filesystem::path> paths_;
     ProgressCallback callback_;
 
-    // TODO: make it copyable
-    std::shared_ptr<SceneConstructor> constructor_;
-
-    size_t currentPath_ { 0 };
-    Resumable<Expected<std::vector<ObjectPtr>>> currentTask_;
-    std::string warningTextBuffer_;
-    Expected<std::vector<ObjectPtr>> currentResult_;
+    std::vector<std::string> warningTexts_;
+    std::vector<Resumable<Result>> loaders_;
 };
 
 }
@@ -251,30 +186,24 @@ SceneLoadResult
 fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, ProgressCallback callback )
 {
     SceneConstructor constructor;
-
     for ( auto index = 0ull; index < files.size(); ++index )
     {
         const auto& path = files[index];
         if ( path.empty() )
             continue;
 
-        std::string warningText;
-        auto cb = [callback, index, count = files.size()] ( float v )
-        {
-            return callback( ( (float)index + v ) / (float)count );
-        };
         spdlog::info( "Loading file {}", utf8string( path ) );
-        auto res = loadObjectFromFile( path, &warningText, std::move( cb ) );
-        constructor.process( path, std::move( res ), std::move( warningText ) );
+        std::string warningText;
+        auto result = loadObjectFromFile( path, &warningText, subprogress( callback, index, files.size() ) );
+        constructor.process( path, std::move( result ), std::move( warningText ) );
     }
-
     return constructor.construct();
 }
 
 Resumable<SceneLoadResult>
 asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& files, ProgressCallback callback )
 {
-    return AsyncSceneLoader::Executor( AsyncSceneLoader( files, std::move( callback ) ) );
+    return AsyncSceneLoader( files, std::move( callback ) );
 }
 
 } // namespace MR::SceneLoad

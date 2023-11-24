@@ -61,4 +61,14 @@ inline ProgressCallback subprogress( ProgressCallback cb, F && f )
     return res;
 }
 
+/// ...
+inline ProgressCallback subprogress( ProgressCallback cb, size_t index, size_t count )
+{
+    assert( index < count );
+    ProgressCallback res;
+    if ( cb )
+        return [cb, index, count] ( float v ) { return cb( ( (float)index + v ) / (float)count ); };
+    return res;
+}
+
 } //namespace MR

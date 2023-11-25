@@ -159,13 +159,18 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & 
     MR_TIMER
     out << "# MeshInspector.com\n";
 
-    VertId lastValidPoint = mesh.topology.lastValidVert();
+    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.saveValidOnly );
+    const int maxPoints = vertRenumber.sizeVerts();
 
-    for ( VertId i{ 0 }; i <= lastValidPoint; ++i )
+    int numSaved = 0;
+    for ( VertId i{ 0 }; i < maxPoints; ++i )
     {
+        if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
+            continue;
         auto p = applyDouble( settings.xf, mesh.points[i] );
         out << fmt::format( "v {} {} {}\n", p.x, p.y, p.z );
-        if ( settings.progress && !( i & 0x3FF ) && !settings.progress( float( i ) / lastValidPoint * 0.5f ) )
+        ++numSaved;
+        if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / maxPoints * 0.5f ) )
             return unexpected( std::string( "Saving canceled" ) );
     }
 
@@ -181,8 +186,10 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & 
 
         VertId a, b, c;
         mesh.topology.getLeftTriVerts( e, a, b, c );
-        assert( a.valid() && b.valid() && c.valid() );
-        out << fmt::format( "f {} {} {}\n", int( a + firstVertId ), int( b + firstVertId ), int( c + firstVertId ) );
+        out << fmt::format( "f {} {} {}\n",
+            vertRenumber( a ) + firstVertId,
+            vertRenumber( b ) + firstVertId,
+            vertRenumber( c ) + firstVertId );
     }
 
     if ( !out )

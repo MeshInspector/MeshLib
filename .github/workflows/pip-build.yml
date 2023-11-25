@@ -69,7 +69,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-          ref: ${{needs.setup.outputs.version_tag}}
+          #ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Python setup
         if: ${{ matrix.py-version != '3.8' }}
@@ -174,7 +174,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-          ref: ${{needs.setup.outputs.version_tag}}
+          #ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
         working-directory: C:\vcpkg
@@ -327,7 +327,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-          ref: ${{needs.setup.outputs.version_tag}}
+          #ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Fix links
         if: ${{ matrix.py-version == '3.11' && matrix.platform == 'x86' }}
@@ -342,6 +342,8 @@ jobs:
 
       - name: Python setup
         run: |
+          ${{ matrix.py-cmd }} -m venv ./venv
+          source ./venv/bin/activate
           curl -sS https://bootstrap.pypa.io/get-pip.py | ${{ matrix.py-cmd }}
           ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
           ${{ matrix.py-cmd }} -m pip install pytest
@@ -391,6 +393,12 @@ jobs:
           name: Wheelhouse
           path: meshlib-*.whl
           retention-days: 1
+
+      - name: Deactivate and remove venv
+        if: always()
+        run: |
+          deactivate
+          rm -rf ./venv
 
   manylinux-pip-test:
     needs: [setup, manylinux-pip-build]

@@ -16,6 +16,39 @@ namespace MR
 namespace MeshSave
 {
 
+namespace
+{
+
+class VertRenumber
+{
+public:
+    VertRenumber( const VertBitSet & validVerts, bool saveValidOnly )
+    {
+        MR_TIMER
+        if ( saveValidOnly )
+        {
+            vert2packed_ = makeVectorWithSeqNums( validVerts );
+            sizeVerts_ = (int)validVerts.count();
+        }
+        else
+            sizeVerts_ = validVerts.find_last() + 1;
+    }
+    int operator()( VertId v ) const
+    {
+        assert( v );
+        return vert2packed_.empty() ? (int)v : vert2packed_[v];
+    }
+    int sizeVerts() const
+    {
+        return sizeVerts_;
+    }
+private:
+    Vector<int, VertId> vert2packed_;
+    int sizeVerts_ = 0;
+};
+
+} //anonymous namespace
+
 const IOFilters Filters =
 {
     {"MrMesh (.mrmesh)",  "*.mrmesh"},
@@ -70,15 +103,21 @@ VoidOrErrStr toOff( const Mesh & mesh, const std::filesystem::path & file, const
 VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & settings )
 {
     MR_TIMER
-    VertId maxPoints = mesh.topology.lastValidVert() + 1;
-    int numPolygons = mesh.topology.numValidFaces();
+
+    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.saveValidOnly );
+    const int maxPoints = vertRenumber.sizeVerts();
+    const int numPolygons = mesh.topology.numValidFaces();
 
     out << "OFF\n" << maxPoints << ' ' << numPolygons << " 0\n\n";
+    int numSaved = 0;
     for ( VertId i{ 0 }; i < maxPoints; ++i )
     {
+        if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
+            continue;
         auto p = applyDouble( settings.xf, mesh.points[i] );
         out << fmt::format( "{} {} {}\n", p.x, p.y, p.z );
-        if ( settings.progress && !( i & 0x3FF ) && !settings.progress( float( i ) / maxPoints * 0.5f ) )
+        ++numSaved;
+        if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / maxPoints * 0.5f ) )
             return unexpected( std::string( "Saving canceled" ) );
     }
     out << '\n';
@@ -95,8 +134,7 @@ VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & se
 
         VertId a, b, c;
         mesh.topology.getLeftTriVerts( e, a, b, c );
-        assert( a.valid() && b.valid() && c.valid() );
-        out << fmt::format( "3 {} {} {}\n", (int)a, (int)b, (int)c );
+        out << fmt::format( "3 {} {} {}\n", vertRenumber( a ), vertRenumber( b ), vertRenumber( c ) );
     }
 
     if ( !out )

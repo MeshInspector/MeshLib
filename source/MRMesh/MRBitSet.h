@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRId.h"
 #include "MRphmap.h"
+#include "MRVector.h"
 #define BOOST_DYNAMIC_BITSET_DONT_USE_FRIENDS
 #pragma warning(push)
 #pragma warning(disable: 4643) //Forward declaring in namespace std is not permitted by the C++ Standard.
@@ -240,6 +241,28 @@ template <typename T>
 template <typename T>
 [[nodiscard]] inline auto end( const TaggedBitSet<T> & )
     { return SetBitIteratorT<TaggedBitSet<T>>(); }
+
+/// creates a Vector where for each set bit of input bitset its sequential number starting from 0 is returned; and -1 for reset bits
+template <typename T>
+[[nodiscard]] Vector<int, Id<T>> makeVectorWithSeqNums( const TaggedBitSet<T> & bs )
+{
+    Vector<int, Id<T>> res( bs.size(), -1 );
+    int n = 0;
+    for ( auto v : bs )
+        res[v] = n++;
+    return res;
+}
+
+/// creates a HashMap where for each set bit of input bitset its sequential number starting from 0 is returned
+template <typename T>
+[[nodiscard]] HashMap<Id<T>, int> makeHashMapWithSeqNums( const TaggedBitSet<T> & bs )
+{
+    HashMap<Id<T>, int> res;
+    int n = 0;
+    for ( auto v : bs )
+        res[v] = n++;
+    return res;
+}
 
 template <typename T>
 template <typename M>

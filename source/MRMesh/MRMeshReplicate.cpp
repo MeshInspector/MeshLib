@@ -41,15 +41,12 @@ void replicateZ( Mesh & m, const Mesh & target )
         targetVertProjections[v] = findProjection( target.points[v], m ).mtp;
     } );
 
-    Vector<int, VertId> mVertToNum( m.topology.lastValidVert() + 1 );
-    int n = 0;
-    for ( auto v : m.topology.getValidVerts() )
-        mVertToNum[v] = n++;
+    Vector<int, VertId> mVertToNum = makeVectorWithSeqNums( m.topology.getValidVerts() );
 
     std::vector< Eigen::Triplet<double> > mTriplets;
     mTriplets.reserve( szT * 3 );
     Eigen::VectorXd rhs( szT );
-    n = 0;
+    int n = 0;
     for ( VertId v : target.topology.getValidVerts() )
     {
         for ( const auto & wv : targetVertProjections[v].getWeightedVerts( m.topology ) )

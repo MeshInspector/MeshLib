@@ -122,10 +122,7 @@ void Laplacian::updateSolver_()
     }
     rhsValid_ = false;
 
-    freeVert2id_.resize( freeVerts_.size() );
-    int n = 0;
-    for ( auto v : freeVerts_ )
-        freeVert2id_[v] = n++;
+    freeVert2id_ = makeVectorWithSeqNums( freeVerts_ );
 
     firstLayerFixedVerts_ = freeVerts_;
     expand( mesh_.topology, firstLayerFixedVerts_ );
@@ -135,7 +132,7 @@ void Laplacian::updateSolver_()
 
     std::vector< Eigen::Triplet<double> > mTriplets;
     // equations for free vertices
-    n = 0;
+    int n = 0;
     for ( auto v : freeVerts_ )
     {
         assert( n == freeVert2id_[v] );

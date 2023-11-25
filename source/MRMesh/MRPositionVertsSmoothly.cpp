@@ -34,16 +34,13 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts, const Ve
         return;
 
     // vertex id -> position in the matrix
-    HashMap<VertId, int> vertToMatPos;
-    int n = 0;
-    for ( auto v : verts )
-        vertToMatPos[v] = n++;
+    HashMap<VertId, int> vertToMatPos = makeHashMapWithSeqNums( verts );
 
     std::vector< Eigen::Triplet<double> > mTriplets;
     Eigen::VectorXd rhs[3];
     for ( int i = 0; i < 3; ++i )
         rhs[i].resize( sz );
-    n = 0;
+    int n = 0;
     for ( auto v : verts )
     {
         double sumW = 0;

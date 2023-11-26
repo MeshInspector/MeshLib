@@ -58,6 +58,7 @@ Expected<std::future<void>, std::string> ObjectMeshHolder::serializeModel_( cons
     {
         MR::MeshSave::CtmSaveOptions options;
         options.saveValidOnly = false;
+        options.rearrangeTriangles = false;
         if ( !vertsColorMap_.empty() )
             options.colors = &vertsColorMap_;
         MR::MeshSave::toCtm( *mesh, pathFromUtf8( filename ), options );

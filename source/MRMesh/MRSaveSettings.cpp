@@ -6,6 +6,18 @@
 namespace MR
 {
 
+VertRenumber::VertRenumber( const VertBitSet & validVerts, bool saveValidOnly )
+{
+    MR_TIMER
+    if ( saveValidOnly )
+    {
+        vert2packed_ = makeVectorWithSeqNums( validVerts );
+        sizeVerts_ = (int)validVerts.count();
+    }
+    else
+        sizeVerts_ = validVerts.find_last() + 1;
+}
+
 const VertCoords & transformPoints( const VertCoords & verts, const VertBitSet & validVerts, const AffineXf3d * xf, VertCoords & buf )
 {
     if ( !xf )

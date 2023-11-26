@@ -17,39 +17,6 @@ namespace MR
 namespace MeshSave
 {
 
-namespace
-{
-
-class VertRenumber
-{
-public:
-    VertRenumber( const VertBitSet & validVerts, bool saveValidOnly )
-    {
-        MR_TIMER
-        if ( saveValidOnly )
-        {
-            vert2packed_ = makeVectorWithSeqNums( validVerts );
-            sizeVerts_ = (int)validVerts.count();
-        }
-        else
-            sizeVerts_ = validVerts.find_last() + 1;
-    }
-    int operator()( VertId v ) const
-    {
-        assert( v );
-        return vert2packed_.empty() ? (int)v : vert2packed_[v];
-    }
-    int sizeVerts() const
-    {
-        return sizeVerts_;
-    }
-private:
-    Vector<int, VertId> vert2packed_;
-    int sizeVerts_ = 0;
-};
-
-} //anonymous namespace
-
 const IOFilters Filters =
 {
     {"MrMesh (.mrmesh)",  "*.mrmesh"},

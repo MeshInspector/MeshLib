@@ -4,6 +4,7 @@
 #include "MRColor.h"
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
+#include "MRBitSetParallelFor.h"
 #include "MRPch/MRFmt.h"
 
 #ifndef MRMESH_NO_OPENCTM
@@ -203,9 +204,9 @@ static FaceBitSet getNotDegenTris( const Mesh &mesh )
 {
     MR_TIMER
     FaceBitSet notDegenTris = mesh.topology.getValidFaces();
-    VertId a, b, c;
-    for ( auto f : notDegenTris )
+    BitSetParallelFor( notDegenTris, [&]( FaceId f )
     {
+        VertId a, b, c;
         mesh.topology.getTriVerts( f, a, b, c );
         assert( a.valid() && b.valid() && c.valid() );
 
@@ -214,7 +215,7 @@ static FaceBitSet getNotDegenTris( const Mesh &mesh )
         const Vector3f& cp = mesh.points[c];
         if ( ap == bp || bp == cp || cp == ap )
             notDegenTris.reset( f );
-    }
+    } );
     return notDegenTris;
 }
 

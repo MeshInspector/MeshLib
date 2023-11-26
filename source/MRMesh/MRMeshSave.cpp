@@ -106,19 +106,20 @@ VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & se
     MR_TIMER
 
     const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.saveValidOnly );
-    const int maxPoints = vertRenumber.sizeVerts();
+    const int numPoints = vertRenumber.sizeVerts();
+    const VertId lastVertId = mesh.topology.lastValidVert();
     const int numPolygons = mesh.topology.numValidFaces();
 
-    out << "OFF\n" << maxPoints << ' ' << numPolygons << " 0\n\n";
+    out << "OFF\n" << numPoints << ' ' << numPolygons << " 0\n\n";
     int numSaved = 0;
-    for ( VertId i{ 0 }; i < maxPoints; ++i )
+    for ( VertId i{ 0 }; i <= lastVertId; ++i )
     {
         if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
             continue;
         auto p = applyDouble( settings.xf, mesh.points[i] );
         out << fmt::format( "{} {} {}\n", p.x, p.y, p.z );
         ++numSaved;
-        if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / maxPoints * 0.5f ) )
+        if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / numPoints * 0.5f ) )
             return unexpected( std::string( "Saving canceled" ) );
     }
     out << '\n';
@@ -161,17 +162,18 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & 
     out << "# MeshInspector.com\n";
 
     const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.saveValidOnly );
-    const int maxPoints = vertRenumber.sizeVerts();
+    const int numPoints = vertRenumber.sizeVerts();
+    const VertId lastVertId = mesh.topology.lastValidVert();
 
     int numSaved = 0;
-    for ( VertId i{ 0 }; i < maxPoints; ++i )
+    for ( VertId i{ 0 }; i <= lastVertId; ++i )
     {
         if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
             continue;
         auto p = applyDouble( settings.xf, mesh.points[i] );
         out << fmt::format( "v {} {} {}\n", p.x, p.y, p.z );
         ++numSaved;
-        if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / maxPoints * 0.5f ) )
+        if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / numPoints * 0.5f ) )
             return unexpected( std::string( "Saving canceled" ) );
     }
 
@@ -330,36 +332,44 @@ VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & 
 {
     MR_TIMER
 
-    int numVertices = mesh.topology.lastValidVert() + 1;
-    bool saveColors = settings.colors && settings.colors->size() >= numVertices;
+    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.saveValidOnly );
+    const int numPoints = vertRenumber.sizeVerts();
+    const VertId lastVertId = mesh.topology.lastValidVert();
+    const bool saveColors = settings.colors && settings.colors->size() > lastVertId;
 
     out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n"
-        "element vertex " << numVertices << "\nproperty float x\nproperty float y\nproperty float z\n";
+        "element vertex " << numPoints << "\nproperty float x\nproperty float y\nproperty float z\n";
     if ( saveColors )
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
 
     out <<  "element face " << mesh.topology.numValidFaces() << "\nproperty list uchar int vertex_indices\nend_header\n";
 
+    static_assert( sizeof( Vector3f ) == 12, "wrong size of Vector3f" );
+#pragma pack(push, 1)
+    struct PlyColor
+    {
+        unsigned char r = 0, g = 0, b = 0;
+    };
+#pragma pack(pop)
+    static_assert( sizeof( PlyColor ) == 3, "check your padding" );
+
     // write vertices
-    static_assert( sizeof( mesh.points.front() ) == 12, "wrong size of Vector3f" );
-    if ( !saveColors )
+    int numSaved = 0;
+    for ( VertId i{ 0 }; i <= lastVertId; ++i )
     {
-        VertCoords buf;
-        const auto & xfVerts = transformPoints( mesh.points, mesh.topology.getValidVerts(), settings.xf, buf );
-        if ( !writeByBlocks( out, ( const char* )xfVerts.data(), numVertices * sizeof( Vector3f ), subprogress( settings.progress, 0.0f, 0.5f ) ) )
-            return unexpected( std::string( "Saving canceled" ) );
-    }
-    else
-    {
-        static_assert( sizeof( settings.colors->front() ) == 4, "wrong size of Color" );
-        for ( VertId i{ 0 }; i < numVertices; ++i )
+        if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
+            continue;
+        const Vector3f p = applyFloat( settings.xf, mesh.points[i] );
+        out.write( ( const char* )&p, 12 );
+        if ( settings.colors )
         {
-            const Vector3f p = applyFloat( settings.xf, mesh.points[i] );
-            out.write( (const char*) &p.x, 12 );
-            out.write( (const char*) &( *settings.colors )[i].r, 3 ); // write only r g b, not a
-            if ( settings.progress && !( i & 0x3FF ) && !settings.progress( float( i ) / numVertices * 0.5f ) )
-                return unexpected( std::string( "Saving canceled" ) );
+            const auto c = ( *settings.colors )[i];
+            PlyColor pc{ .r = c.r, .g = c.g, .b = c.b };
+            out.write( ( const char* )&pc, 3 );
         }
+        ++numSaved;
+        if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / numPoints ) )
+            return unexpectedOperationCanceled();
     }
 
     // write triangles
@@ -367,7 +377,7 @@ VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & 
     struct PlyTriangle
     {
         char cnt = 3;
-        VertId v[3];
+        int v[3];
     };
     #pragma pack(pop)
     static_assert( sizeof( PlyTriangle ) == 13, "check your padding" );
@@ -377,7 +387,10 @@ VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & 
     int faceIndex = 0;
     for ( auto f : mesh.topology.getValidFaces() )
     {
-        mesh.topology.getTriVerts( f, tri.v );
+        VertId vs[3];
+        mesh.topology.getTriVerts( f, vs );
+        for ( int i = 0; i < 3; ++i )
+            tri.v[i] = vertRenumber( vs[i] );
         out.write( (const char *)&tri, 13 );
         if ( settings.progress && !( faceIndex & 0x3FF ) && !settings.progress( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
             return unexpected( std::string( "Saving canceled" ) );

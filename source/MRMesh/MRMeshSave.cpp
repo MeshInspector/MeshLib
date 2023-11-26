@@ -413,28 +413,34 @@ VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions 
     ctmRearrangeTriangles( context, options.rearrangeTriangles ? 1 : 0 );
     ctmCompressionLevel( context, options.compressionLevel );
 
+    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), options.saveValidOnly );
+    const int numPoints = vertRenumber.sizeVerts();
+    const VertId lastVertId = mesh.topology.lastValidVert();
+
     std::vector<CTMuint> aIndices;
     const auto fLast = mesh.topology.lastValidFace();
     const auto numSaveFaces = options.rearrangeTriangles ? mesh.topology.numValidFaces() : int( fLast + 1 );
     aIndices.reserve( numSaveFaces * 3 );
     for ( FaceId f{0}; f <= fLast; ++f )
     {
-        VertId v[3];
         if ( mesh.topology.hasFace( f ) )
+        {
+            VertId v[3];
             mesh.topology.getTriVerts( f, v );
-        else if( options.rearrangeTriangles )
-            continue;
-        else
-            v[0] = v[1] = v[2] = 0_v;
-        aIndices.push_back( v[0] );
-        aIndices.push_back( v[1] );
-        aIndices.push_back( v[2] );
+            for ( int i = 0; i < 3; ++i )
+                aIndices.push_back( vertRenumber( v[i] ) );
+        }
+        else if ( !options.rearrangeTriangles )
+        {
+            for ( int i = 0; i < 3; ++i )
+                aIndices.push_back( 0 );
+        }
     }
     assert( aIndices.size() == numSaveFaces * 3 );
 
-    CTMuint aVertexCount = mesh.topology.lastValidVert() + 1;
+    CTMuint aVertexCount = numPoints;
     VertCoords buf;
-    const auto & xfVerts = transformPoints( mesh.points, mesh.topology.getValidVerts(), options.xf, buf );
+    const auto & xfVerts = transformPoints( mesh.points, mesh.topology.getValidVerts(), options.xf, buf, &vertRenumber );
     ctmDefineMesh( context,
         (const CTMfloat *)xfVerts.data(), aVertexCount, 
         aIndices.data(), numSaveFaces, nullptr );
@@ -445,10 +451,14 @@ VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions 
     std::vector<Vector4f> colors4f; // should be alive when save is performed
     if ( options.colors )
     {
-        colors4f.resize( aVertexCount );
-        const auto maxV = (int)std::min( aVertexCount, (CTMuint)options.colors->size() );
-        for ( VertId i{ 0 }; i < maxV; ++i )
-            colors4f[i] = Vector4f( ( *options.colors )[i] );
+        colors4f.reserve( aVertexCount );
+        for ( VertId i{ 0 }; i <= lastVertId; ++i )
+        {
+            if ( options.saveValidOnly && !mesh.topology.hasVert( i ) )
+                continue;
+            colors4f.push_back( Vector4f( ( *options.colors )[i] ) );
+        }
+        assert( colors4f.size() == aVertexCount );
 
         ctmAddAttribMap( context, (const CTMfloat*) colors4f.data(), "Color" );
     }

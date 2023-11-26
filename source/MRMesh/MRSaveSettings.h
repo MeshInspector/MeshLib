@@ -59,7 +59,7 @@ public:
     /// prepares the mapping
     MRMESH_API VertRenumber( const VertBitSet & validVerts, bool saveValidOnly );
 
-    bool saveValidOnly() const { return vert2packed_.empty(); }
+    bool saveValidOnly() const { return !vert2packed_.empty(); }
 
     /// return the total number of vertices to be saved
     int sizeVerts() const { return sizeVerts_; }
@@ -78,7 +78,8 @@ private:
 
 /// if (xf) is null then just returns (verts);
 /// otherwise copies transformed points in (buf) and returns it
-MRMESH_API const VertCoords & transformPoints( const VertCoords & verts, const VertBitSet & validVerts, const AffineXf3d * xf, VertCoords & buf );
+MRMESH_API const VertCoords & transformPoints( const VertCoords & verts, const VertBitSet & validVerts, const AffineXf3d * xf, VertCoords & buf,
+    const VertRenumber * vertRenumber = nullptr );
 
 /// if (m) is null then just returns (normals);
 /// otherwise copies transformed normals in (buf) and returns it

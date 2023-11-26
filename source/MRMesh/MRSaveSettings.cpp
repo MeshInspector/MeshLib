@@ -18,15 +18,26 @@ VertRenumber::VertRenumber( const VertBitSet & validVerts, bool saveValidOnly )
         sizeVerts_ = validVerts.find_last() + 1;
 }
 
-const VertCoords & transformPoints( const VertCoords & verts, const VertBitSet & validVerts, const AffineXf3d * xf, VertCoords & buf )
+const VertCoords & transformPoints( const VertCoords & verts, const VertBitSet & validVerts, const AffineXf3d * xf, VertCoords & buf, const VertRenumber * vertRenumber )
 {
-    if ( !xf )
-        return verts;
-    buf = verts;
+    if ( !vertRenumber || !vertRenumber->saveValidOnly() )
+    {
+        if ( !xf )
+            return verts;
+        buf = verts;
+        BitSetParallelFor( validVerts, [&]( VertId v )
+        {
+            buf[v] = Vector3f( (*xf)( Vector3d( buf[v] ) ) );
+        } );
+        return buf;
+    }
+    
+    buf.resizeNoInit( vertRenumber->sizeVerts() );
     BitSetParallelFor( validVerts, [&]( VertId v )
     {
-        buf[v] = Vector3f( (*xf)( Vector3d( buf[v] ) ) );
+        buf[VertId((*vertRenumber)(v))] = applyFloat( xf, verts[v] );
     } );
+    
     return buf;
 }
 

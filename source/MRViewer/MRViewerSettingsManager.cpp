@@ -27,7 +27,8 @@ const std::string cMainWindowPos = "mainWindowPos";
 const std::string cMainWindowMaximized = "mainWindowMaximized";
 const std::string cRibbonLeftWindowSize = "ribbonLeftWindowSize";
 const std::string cShowSelectedObjects = "showSelectedObjects";
-const std::string ñCloseOnAnyChange = "ñloseOnAnyChange";
+const std::string cDeselectNewHiddenObjects = "deselectNewHiddenObjects";
+const std::string cCloseContextOnChange = "closeContextOnChange";
 const std::string lastExtentionsParamKey = "lastExtentions";
 const std::string cSpaceMouseSettings = "spaceMouseSettings";
 const std::string cMSAA = "multisampleAntiAliasing";
@@ -194,6 +195,10 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
 
         if ( cfg.hasBool( cShowSelectedObjects ) )
             ribbonMenu->setShowNewSelectedObjects( cfg.getBool( cShowSelectedObjects ) );
+        if ( cfg.hasBool( cDeselectNewHiddenObjects ) )
+            ribbonMenu->setDeselectNewHiddenObjects( cfg.getBool( cDeselectNewHiddenObjects ) );
+        if ( cfg.hasBool( cCloseContextOnChange ) )
+            ribbonMenu->setCloseContextOnChange( cfg.getBool( cCloseContextOnChange ) );
     }
 
     ColorTheme::setupByTypeName( colorThemeType, colorThemeName );
@@ -332,7 +337,8 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     if ( ribbonMenu )
     {
         cfg.setBool( cShowSelectedObjects, ribbonMenu->getShowNewSelectedObjects() );
-        cfg.setBool( cShowSelectedObjects, ribbonMenu->getCloseOnAnyChange() );
+        cfg.setBool( cDeselectNewHiddenObjects, ribbonMenu->getDeselectNewHiddenObjects() );
+        cfg.setBool( cCloseContextOnChange, ribbonMenu->getCloseContextOnChange() );
     }
 
     Json::Value spaceMouseParamsJson;

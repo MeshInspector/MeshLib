@@ -1696,7 +1696,7 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
         {
             ImGui::CloseCurrentPopup();
         }
-        else if ( wasAction || ( wasChanged && closeOnAnyChange_ ) )
+        else if ( wasAction || ( wasChanged && closeContextOnChange_ ) )
         {
             ImGui::CloseCurrentPopup();
         }

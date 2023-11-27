@@ -28,9 +28,9 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
     if ( firstInit_ )
     {
         settings_.radius = diagonal_ * 0.02f;
-        settings_.relaxForce = 40.f;
+        settings_.relaxForce = 0.2f;
         settings_.editForce = diagonal_ * 0.01f;
-        settings_.relaxForceAfterEdit = 50.f;
+        settings_.relaxForceAfterEdit = 0.25f;
         settings_.workMode = WorkMode::Add;
         firstInit_ = false;
     }
@@ -85,9 +85,9 @@ void SurfaceManipulationWidget::setSettings( const Settings& settings )
 {
     settings_ = settings;
     settings_.radius = std::max( settings_.radius, 1.e-5f );
-    settings_.relaxForce = std::clamp( settings_.relaxForce, 1.f, 100.f );
+    settings_.relaxForce = std::clamp( settings_.relaxForce, 0.001f, 0.5f );
     settings_.editForce = std::max( settings_.editForce, 1.e-5f );
-    settings_.relaxForceAfterEdit = std::clamp( settings_.relaxForceAfterEdit, 0.f, 100.f );
+    settings_.relaxForceAfterEdit = std::clamp( settings_.relaxForceAfterEdit, 0.f, 0.5f );
     settings_.sharpness = std::clamp( settings_.sharpness, 0.f, 100.f );
     updateRegion_( mousePos_ );
 }
@@ -129,7 +129,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
     {
         MeshRelaxParams params;
         params.region = &generalEditingRegion_;
-        params.force = settings_.relaxForceAfterEdit / 200.f; // (0 - 100] -> (0 - 0.5]
+        params.force = settings_.relaxForceAfterEdit;
         params.iterations = 5;
         relax( *newMesh_->varMesh(), params );
     }
@@ -167,7 +167,7 @@ void SurfaceManipulationWidget::changeSurface_()
     {
         MeshRelaxParams params;
         params.region = &singleEditingRegion_;
-        params.force = settings_.relaxForce / 200.f ; // [1 - 100] -> (0 - 0.5]
+        params.force = settings_.relaxForce;
         relax( *newMesh_->varMesh(), params );
         newMesh_->setDirtyFlags( DIRTY_POSITION );
         return;

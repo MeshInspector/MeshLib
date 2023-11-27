@@ -17,7 +17,10 @@ inline bool isEmpty( std::ostream& os )
 
 std::optional<IOFilter> findAsyncObjectLoadFilter( const std::filesystem::path& path )
 {
-    auto ext = std::string( "*" ) + utf8string( path.extension().u8string() );
+    // TODO: resolve GCC bug
+    //auto ext = std::string( "*" ) + utf8string( path.extension().u8string() );
+    auto ext = utf8string( path.extension().u8string() );
+    ext = std::string( "*" ) + ext;
     for ( auto& c : ext )
         c = (char)std::tolower( c );
 

@@ -27,7 +27,7 @@ int calcDamerauLevenshteinDistance( const std::string& stringA, const std::strin
 
     for ( int i = 0; i < stringA.size(); ++i )
     {
-        for ( int j = 0; j < stringA.size(); ++j )
+        for ( int j = 0; j < stringB.size(); ++j )
         {
             if ( i == 0 || j == 0 )
                 at( i, j ) = std::max( i, j );
@@ -48,7 +48,7 @@ int calcDamerauLevenshteinDistance( const std::string& stringA, const std::strin
             }
         }
     }
-    return at( int( stringA.size() ), int( stringB.size() ) );
+    return at( int( stringA.size() ) - 1, int( stringB.size() ) - 1 );
 }
 
 std::vector<std::string> split( const std::string& string, const std::string& delimiter )

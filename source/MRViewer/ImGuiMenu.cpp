@@ -1199,7 +1199,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
         }
 
 
-        if ( isSelected && !mouseDown_ )
+        if ( isSelected && getViewerInstance().mouseController.isPressed( MouseButton::Middle ) )
             drawSceneContextMenu_( selected );
     }
     if ( isOpen )

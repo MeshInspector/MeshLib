@@ -297,7 +297,6 @@ protected:
     MRVIEWER_API virtual void drawModalMessage_();
 
     bool capturedMouse_{ false };
-    bool mouseDown_{ false };
     // Mouse IO
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;

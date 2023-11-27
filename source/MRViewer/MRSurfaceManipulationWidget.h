@@ -31,10 +31,10 @@ public:
     {
         WorkMode workMode = WorkMode::Add;
         float radius = 1.f; // radius of editing region
-        float relaxForce = 0.2f; // speed of relaxing, typical values (0.0, 0.5]
+        float relaxForce = 40.f; // speed of relaxing, typical values [1 - 100]
         float editForce = 1.f; // the force of changing mesh
-        float sharpness = 50.f; // effect of force on points far from center editing area. [1 - 100]
-        bool relaxAfterEdit = true; // relax modified area after editing is complete. uses relaxForce
+        float sharpness = 50.f; // effect of force on points far from center editing area. [0 - 100]
+        float relaxForceAfterEdit = 50.f; //  force of relaxing modified area after editing (add / remove) is complete. [0 - 100], 0 - not relax
     };
 
     /// initialize widget according ObjectMesh
@@ -59,8 +59,10 @@ private:
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
 
     void changeSurface_();
-    void updateUV_( bool set );
+    void updateUV_();
+    void updateUVmap_( bool set );
     void updateRegion_( const Vector2f& mousePos );
+    void abortEdit_();
 
     Settings settings_;
 
@@ -75,13 +77,13 @@ private:
     VertScalars editingDistanceMap_;
     VertScalars visualizationDistanceMap_;
     VertUVCoords uvs_;
-    std::shared_ptr<ChangeMeshAction> changeMeshAction_;
-    std::shared_ptr<ObjectMesh> oldMesh_;
+    std::shared_ptr<ObjectMesh> newMesh_;
     bool firstInit_ = true; // need to save settings in re-initial
 
     bool mousePressed_ = false;
 
     std::chrono::time_point<std::chrono::high_resolution_clock> timePoint_;
+    boost::signals2::scoped_connection meshChangedConnection_;
 };
 
 }

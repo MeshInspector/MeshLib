@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMenu.h"
 #include "MRRibbonMenuItem.h"
+#include "MRRibbonMenuSearch.h"
 #include "MRRibbonFontManager.h"
 #include "MRRibbonButtonDrawer.h"
 #include "MRAsyncTimer.h"
@@ -174,13 +175,9 @@ private:
     void changeTab_( int newTab );
 
     std::string getRequirements_( const std::shared_ptr<RibbonMenuItem>& item ) const;
-
-    // does look up in ribbon schema for `searchLine_`
-    std::string searchLine_;
-    std::vector<RibbonSchemaHolder::SearchResult> searchResult_;
-    int hightlightedSearchItem_{ -1 };
+    
+    RibbonMenuSearch searcher_;
     void drawSearchButton_();
-
     void drawCollapseButton_();
     void drawHelpButton_();
 

@@ -1691,8 +1691,15 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
         }
         ImGui::PopStyleVar();
 
-        if ( wasAction || ( wasChanged && closeOnAnyChange_ ))
+
+        if ( ImGui::IsMouseDown( 2 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
+        {
             ImGui::CloseCurrentPopup();
+        }
+        else if ( wasAction || ( wasChanged && closeOnAnyChange_ ) )
+        {
+            ImGui::CloseCurrentPopup();
+        }
         ImGui::EndPopup();
     }
 }

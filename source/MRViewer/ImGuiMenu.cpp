@@ -1193,10 +1193,10 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
                     }
                 }
             }
-
+              
         }
 
-        if ( isSelected && !ImGui::IsMouseDown(2) )
+        if ( isSelected )
             drawSceneContextMenu_( selected );
     }
     if ( isOpen )

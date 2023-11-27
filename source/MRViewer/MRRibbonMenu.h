@@ -44,6 +44,10 @@ public:
     // set maximum wait time (in seconds) before top panel is closed after mouse leaves it (only when not pinned)
     // minimum value is 0 seconds, panel will close immediately after mouse leaves it
     void setTopPanelMaxOpenedTimer( float sec ) { openedMaxSecs_ = std::max( 0.0f, sec ); }
+    
+    void setCloseOnAnyChange( bool deselect ) { closeOnAnyChange_ = deselect; }
+    // get close context menu on any change (enable / disable)
+    bool getCloseOnAnyChange() { return closeOnAnyChange_; }
 
     /// read quick access menu items list from json
     MRVIEWER_API virtual void readQuickAccessList( const Json::Value& root );
@@ -210,6 +214,8 @@ private:
     int currentTopPanelHeight_ = 111;
     int topPanelOpenedHeight_ = 111;
     int topPanelHiddenHeight_ = 33;
+
+    bool closeOnAnyChange_{ true };
 
     ImVec2 sceneSize_{ 310, 0 };
     float informationHeight_{ 0.f };

@@ -331,6 +331,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     if ( ribbonMenu )
     {
         cfg.setBool( cShowSelectedObjects, ribbonMenu->getShowNewSelectedObjects() );
+        cfg.setBool( cShowSelectedObjects, ribbonMenu->getCloseOnAnyChange() );
     }
 
     Json::Value spaceMouseParamsJson;

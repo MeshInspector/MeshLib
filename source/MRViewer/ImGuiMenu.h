@@ -82,7 +82,6 @@ protected:
   bool clickTrigger_ = false;
   bool showNewSelectedObjects_{ true };
   bool deselectNewHiddenObjects_{ false };
-  bool closeOnAnyChange_{ true };
 
   struct SceneReorder
   {
@@ -274,9 +273,6 @@ public:
   void setDeselectNewHiddenObjects( bool deselect ) { deselectNewHiddenObjects_ = deselect; }
   // get deselect hidden objects state (enable / disable)
   bool getDeselectNewHiddenObjects() { return deselectNewHiddenObjects_; }
-  void setCloseOnAnyChange( bool deselect ) { closeOnAnyChange_ = deselect; }
-  // get close context menu on any change (enable / disable)
-  bool getCloseOnAnyChange() { return closeOnAnyChange_; }
 
   std::shared_ptr<ShortcutManager> getShortcutManager() { return shortcutManager_; };
 

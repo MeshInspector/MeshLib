@@ -456,6 +456,7 @@ void ImGuiMenu::rescaleStyle_()
 // Mouse IO
 bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
 {
+    mouseDown_ = true;
     ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
     capturedMouse_ = ImGui::GetIO().WantCaptureMouse;
     return ImGui::GetIO().WantCaptureMouse;
@@ -463,6 +464,7 @@ bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
 
 bool ImGuiMenu::onMouseUp_( Viewer::MouseButton button, int modifier )
 {
+    mouseDown_ = false;
     ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_RELEASE, modifier );
     return capturedMouse_;
 }
@@ -1197,7 +1199,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
         }
 
 
-        if ( isSelected )
+        if ( isSelected && !mouseDown_ )
             drawSceneContextMenu_( selected );
     }
     if ( isOpen )

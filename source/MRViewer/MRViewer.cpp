@@ -962,7 +962,9 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
             if ( !result.isSceneConstructed || ( childCount == 1 && isSceneEmpty ) )
             {
                 AppendHistory<SwapRootAction>( "Load Scene File" );
-                SceneRoot::getSharedPtr() = result.scene;
+                auto newRoot = result.scene;
+                std::swap( newRoot, SceneRoot::getSharedPtr() );
+                getViewerInstance().setSceneDirty();
 
                 assert( result.loadedFiles.size() == 1 );
                 auto filePath = result.loadedFiles.front();

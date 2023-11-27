@@ -64,7 +64,8 @@ using ObjectPtr = std::shared_ptr<Object>;
 namespace AsyncObjectLoad
 {
 
-using AsyncObjectLoader = Resumable<Expected<std::vector<ObjectPtr>>>( * )( const std::filesystem::path&, ProgressCallback );
+using PostLoadCallback = std::function<void ( Expected<std::vector<ObjectPtr>> )>;
+using AsyncObjectLoader = void( * )( const std::filesystem::path&, PostLoadCallback, ProgressCallback );
 
 /// Find an appropriate loader from the registry
 MRMESH_API AsyncObjectLoader getObjectLoader( IOFilter filter );

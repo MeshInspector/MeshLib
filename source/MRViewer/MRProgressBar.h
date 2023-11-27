@@ -1,7 +1,5 @@
 #pragma once
 #include "MRFrameRedrawRequest.h"
-#include "MRMesh/MRMeshFwd.h"
-#include "MRMesh/MRResumable.h"
 #include <imgui.h>
 #include <functional>
 #include <atomic>
@@ -26,7 +24,7 @@ public:
     MRVIEWER_API static void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPostProcessing task, int taskCount = 1 );
 
     /// in this version the task is being run in the main thread but performs as a coroutine (suspends its execution from time to time)
-    MRVIEWER_API static void orderWithResumableTask( const char * name, std::shared_ptr<Resumable<bool>> task, int taskCount = 1 );
+    MRVIEWER_API static void orderWithManualFinish( const char * name, int taskCount = 1 );
 
     MRVIEWER_API static bool isCanceled();
 
@@ -41,6 +39,8 @@ public:
     MRVIEWER_API static void nextTask(const char * s);
 
     MRVIEWER_API static void setTaskCount( int n );
+
+    MRVIEWER_API static void finish();
 
     // returns true if progress bar was ordered and not finished
     MRVIEWER_API static bool isOrdered();
@@ -61,8 +61,6 @@ private:
     // if catches exception shows error in main thread overriding user defined main thread post-processing
     bool tryRun_( const std::function<bool ()>& task );
     bool tryRunWithSehHandler_( const std::function<bool ()>& task );
-
-    void resumeBackgroundTask_();
 
     void finish_();
 
@@ -86,11 +84,6 @@ private:
         std::function<void ()> postInit;
     };
     std::unique_ptr<DeferredInit> deferredInit_;
-
-    // required to perform long-time tasks in single-threaded environments
-    using BackgroundTask = std::shared_ptr<Resumable<bool>>;
-    BackgroundTask backgroundTask_;
-    std::atomic<bool> backgroundTaskDelayed_{ false };
 
     std::atomic<bool> allowCancel_;
     std::atomic<bool> canceled_;

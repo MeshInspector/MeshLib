@@ -24,11 +24,10 @@ struct SceneLoadResult
 };
 
 /// Load scene from file
-MRMESH_API SceneLoadResult
-fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, ProgressCallback callback = {} );
+MRMESH_API SceneLoadResult fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, ProgressCallback callback = {} );
 
 /// Async load scene from file
-MRMESH_API Resumable<SceneLoadResult>
-asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& files, ProgressCallback callback = {} );
+using PostLoadCallback = std::function<void ( SceneLoadResult )>;
+MRMESH_API void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& files, PostLoadCallback postLoadCallback, ProgressCallback progressCallback = {} );
 
 } // namespace MR::SceneLoad

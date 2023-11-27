@@ -999,16 +999,12 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
     };
 
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
-    auto loader = SceneLoad::asyncFromAnySupportedFormat( filesList, ProgressBar::callBackSetProgress );
-    auto task = [loader = std::move( loader ), postProcess] () -> std::optional<bool>
+    ProgressBar::orderWithManualFinish( "Open files" );
+    SceneLoad::asyncFromAnySupportedFormat( filesList, [&postProcess] ( SceneLoad::SceneLoadResult result )
     {
-        auto result = loader();
-        if ( !result )
-            return std::nullopt;
-        postProcess( *result );
-        return true;
-    };
-    ProgressBar::orderWithResumableTask( "Open files", std::make_shared<Resumable<bool>>( task ) );
+        postProcess( result );
+        ProgressBar::finish();
+    }, ProgressBar::callBackSetProgress );
 #else
     ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess]
     {

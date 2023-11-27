@@ -45,8 +45,8 @@ public:
     // minimum value is 0 seconds, panel will close immediately after mouse leaves it
     void setTopPanelMaxOpenedTimer( float sec ) { openedMaxSecs_ = std::max( 0.0f, sec ); }
     
+    // for enable / disable close scene context menu on any change
     void setCloseContextOnChange( bool deselect ) { closeContextOnChange_ = deselect; }
-    // get close context menu on any change (enable / disable)
     bool getCloseContextOnChange() { return closeContextOnChange_; }
 
     /// read quick access menu items list from json

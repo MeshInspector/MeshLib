@@ -111,13 +111,14 @@ std::optional<float> DistanceMap::getInterpolated( float x, float y ) const
     float yhighf = ylowf + 1.f;
     int xlow = int( xlowf );
     int ylow = int( ylowf );
-    int xhigh = xlow + 1;
-    int yhigh = ylow + 1;
+    assert( 0 <= xlow && xlow < dims_.x );
+    assert( 0 <= ylow && ylow < dims_.y );
 
-    auto lowlow = get( xlow, ylow );
-    auto lowhigh = get( xlow, yhigh );
-    auto highlow = get( xhigh, ylow );
-    auto highhigh = get( xhigh, yhigh );
+    const auto idx = toIndex( { xlow, ylow } );
+    const auto lowlow =   get( idx );
+    const auto lowhigh =  ( ylow + 1 < dims_.y ) ? get( idx + dims_.x ) : 0.0f;
+    const auto highlow =  ( xlow + 1 < dims_.x ) ? get( idx + 1 ) : 0.0f;
+    const auto highhigh = ( ylow + 1 < dims_.y ) && ( xlow + 1 < dims_.x ) ? get( idx + dims_.x + 1 ) : 0.0f;
     if ( lowlow && lowhigh && highlow && highhigh )
     {
         // bilinear interpolation

@@ -27,6 +27,7 @@ const std::string cMainWindowPos = "mainWindowPos";
 const std::string cMainWindowMaximized = "mainWindowMaximized";
 const std::string cRibbonLeftWindowSize = "ribbonLeftWindowSize";
 const std::string cShowSelectedObjects = "showSelectedObjects";
+const std::string ÒCloseOnAnyChange = "ÒloseOnAnyChange";
 const std::string lastExtentionsParamKey = "lastExtentions";
 const std::string cSpaceMouseSettings = "spaceMouseSettings";
 const std::string cMSAA = "multisampleAntiAliasing";

@@ -273,6 +273,7 @@ public:
   void setDeselectNewHiddenObjects( bool deselect ) { deselectNewHiddenObjects_ = deselect; }
   // get deselect hidden objects state (enable / disable)
   bool getDeselectNewHiddenObjects() { return deselectNewHiddenObjects_; }
+
   std::shared_ptr<ShortcutManager> getShortcutManager() { return shortcutManager_; };
 
   MRVIEWER_API void add_modifier( std::shared_ptr<MR::MeshModifier> modifier );

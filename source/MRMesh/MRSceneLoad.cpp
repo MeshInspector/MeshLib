@@ -1,7 +1,6 @@
 #include "MRSceneLoad.h"
 #include "MRIOFormatsRegistry.h"
 #include "MRObjectLoad.h"
-#include "MRStateMachine.h"
 #include "MRStringConvert.h"
 
 #include <MRPch/MRSpdlog.h>

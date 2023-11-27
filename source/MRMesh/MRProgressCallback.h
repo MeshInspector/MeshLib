@@ -2,6 +2,8 @@
 
 #include "MRMeshFwd.h"
 
+#include <cassert>
+
 namespace MR
 {
 

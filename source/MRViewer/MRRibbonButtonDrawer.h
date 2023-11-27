@@ -1,8 +1,8 @@
 #pragma once
-#include <functional>
 #include "MRRibbonMenuItem.h"
 #include "MRRibbonIcons.h"
 #include "imgui.h"
+#include <functional>
 
 namespace MR
 {

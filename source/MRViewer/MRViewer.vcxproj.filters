@@ -304,6 +304,9 @@
     <ClCompile Include="MRViewerEventQueue.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
+    <ClCompile Include="MRRibbonMenuSearch.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -574,6 +577,9 @@
     </ClInclude>
     <ClInclude Include="MRViewerEventQueue.h">
       <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRibbonMenuSearch.h">
+      <Filter>RibbonMenu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -16,6 +16,8 @@ class MRVIEWER_CLASS RibbonMenuSearch
 public:
     // returns search imgui popup window name
     const char* windowName() const { return "##RibbonGlobalSearchPopup"; }
+    // add item to recent items list
+    void pushRecentItem( const std::shared_ptr<RibbonMenuItem>& item );
 
     struct Parameters
     {
@@ -29,6 +31,7 @@ public:
 private:
     std::string searchLine_;
     std::vector<RibbonSchemaHolder::SearchResult> searchResult_;
+    std::vector<RibbonSchemaHolder::SearchResult> recentItems_;
     int hightlightedSearchItem_{ -1 };
 };
 

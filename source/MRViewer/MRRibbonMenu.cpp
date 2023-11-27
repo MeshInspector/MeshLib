@@ -1285,6 +1285,9 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
         spdlog::info( "Action item: \"{}\"", name );
     else
         spdlog::info( "{} item: \"{}\"", wasActive ? std::string( "Deactivated" ) : std::string( "Activated" ), name );
+
+    if ( stateChanged && !wasActive )
+        searcher_.pushRecentItem( item );
 }
 
 void RibbonMenu::changeTab_( int newTab )

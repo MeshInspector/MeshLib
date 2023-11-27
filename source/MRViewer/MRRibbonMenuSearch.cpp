@@ -9,6 +9,38 @@
 namespace MR
 {
 
+void RibbonMenuSearch::pushRecentItem( const std::shared_ptr<RibbonMenuItem>& item )
+{
+    if ( !item )
+        return;
+    auto it = std::find_if( recentItems_.begin(), recentItems_.end(), [&] ( const auto& other )
+    {
+        return other.item->item == item;
+    } );
+    if ( it != recentItems_.end() )
+    {
+        std::rotate( recentItems_.begin(), it, it + 1 );
+        return;
+    }
+
+    auto sIt = RibbonSchemaHolder::schema().items.find( item->name() );
+    if ( sIt == RibbonSchemaHolder::schema().items.end() )
+    {
+        assert( false );
+        return;
+    }
+
+    RibbonSchemaHolder::SearchResult res;
+    res.item = &sIt->second;
+    if ( recentItems_.size() < 10 )
+        recentItems_.insert( recentItems_.begin(), std::move( res ) );
+    else
+    {
+        std::rotate( recentItems_.begin(), recentItems_.end() - 1, recentItems_.end() );
+        recentItems_.front() = std::move( res );
+    }
+}
+
 void RibbonMenuSearch::draw( const Parameters& params )
 {
     if ( ImGuiWindow* menuWindow = ImGui::FindWindowByName( windowName() ) )
@@ -42,14 +74,16 @@ void RibbonMenuSearch::draw( const Parameters& params )
         if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
             searchResult_ = RibbonSchemaHolder::search( searchLine_ );
 
-        if ( searchResult_.empty() )
+        const auto& resultsList = searchLine_.empty() ? recentItems_ : searchResult_;
+
+        if ( resultsList.empty() )
             hightlightedSearchItem_ = -1;
 
         if ( !appearing )
         {
             if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
                 ImGui::CloseCurrentPopup();
-            else if ( ImGui::IsKeyPressed( ImGuiKey_DownArrow ) && hightlightedSearchItem_ + 1 < searchResult_.size() )
+            else if ( ImGui::IsKeyPressed( ImGuiKey_DownArrow ) && hightlightedSearchItem_ + 1 < resultsList.size() )
                 hightlightedSearchItem_++;
             else if ( ImGui::IsKeyPressed( ImGuiKey_UpArrow ) && hightlightedSearchItem_ > 0 )
                 hightlightedSearchItem_--;
@@ -64,9 +98,9 @@ void RibbonMenuSearch::draw( const Parameters& params )
                                ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActive ).getUInt32() );
         ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
         int uniqueBtnCounter = 0;
-        for ( int i = 0; i < searchResult_.size(); ++i )
+        for ( int i = 0; i < resultsList.size(); ++i )
         {
-            const auto& foundItem = searchResult_[i];
+            const auto& foundItem = resultsList[i];
             if ( !foundItem.item )
                 continue;
             auto pos = ImGui::GetCursorPos();

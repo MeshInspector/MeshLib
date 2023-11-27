@@ -1113,9 +1113,6 @@
     <ClInclude Include="MRResumable.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRStateMachine.h">
-      <Filter>Source Files\Basic</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

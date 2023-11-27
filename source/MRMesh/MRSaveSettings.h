@@ -2,12 +2,20 @@
 
 #include "MRProgressCallback.h"
 #include "MRAffineXf3.h"
+#include "MRId.h"
+#include "MRVector.h"
+#include <cassert>
 
 namespace MR
 {
 
+/// determines how to save points/lines/mesh
 struct SaveSettings
 {
+    /// true - save valid points/vertices only (pack them);
+    /// false - save all points/vertices preserving their indices
+    bool saveValidOnly = true;
+
     /// optional per-vertex color to save with the geometry
     const VertColors * colors = nullptr;
 
@@ -44,9 +52,34 @@ inline Vector3d applyDouble( const Matrix3d * m, const Vector3f & n )
     return m ? *m * nd : nd;
 }
 
+/// maps valid points to packed sequential indices
+class VertRenumber
+{
+public:
+    /// prepares the mapping
+    MRMESH_API VertRenumber( const VertBitSet & validVerts, bool saveValidOnly );
+
+    bool saveValidOnly() const { return !vert2packed_.empty(); }
+
+    /// return the total number of vertices to be saved
+    int sizeVerts() const { return sizeVerts_; }
+
+    /// return packed index (if saveValidOnly = true) or same index (if saveValidOnly = false)
+    int operator()( VertId v ) const
+    {
+        assert( v );
+        return vert2packed_.empty() ? (int)v : vert2packed_[v];
+    }
+
+private:
+    Vector<int, VertId> vert2packed_;
+    int sizeVerts_ = 0;
+};
+
 /// if (xf) is null then just returns (verts);
 /// otherwise copies transformed points in (buf) and returns it
-MRMESH_API const VertCoords & transformPoints( const VertCoords & verts, const VertBitSet & validVerts, const AffineXf3d * xf, VertCoords & buf );
+MRMESH_API const VertCoords & transformPoints( const VertCoords & verts, const VertBitSet & validVerts, const AffineXf3d * xf, VertCoords & buf,
+    const VertRenumber * vertRenumber = nullptr );
 
 /// if (m) is null then just returns (normals);
 /// otherwise copies transformed normals in (buf) and returns it

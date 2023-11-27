@@ -18,15 +18,18 @@ namespace LinesSave
 
 MRMESH_API extern const IOFilters Filters;
 
-/// saves in .mrlines file
+/// saves in .mrlines file;
+/// SaveSettings::saveValidOnly = true is ignored
 MRMESH_API VoidOrErrStr toMrLines( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );
 MRMESH_API VoidOrErrStr toMrLines( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings = {} );
 
-/// saves in .pts file
+/// saves in .pts file;
+/// SaveSettings::saveValidOnly = false is ignored
 MRMESH_API VoidOrErrStr toPts( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );
 MRMESH_API VoidOrErrStr toPts( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings = {} );
 
-/// saves in .dxf file
+/// saves in .dxf file;
+/// SaveSettings::saveValidOnly = false is ignored
 MRMESH_API VoidOrErrStr toDxf( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );
 MRMESH_API VoidOrErrStr toDxf( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings = {} );
 

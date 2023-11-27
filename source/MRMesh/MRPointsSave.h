@@ -20,22 +20,15 @@ namespace PointsSave
 
 MRMESH_API extern const IOFilters Filters;
 
-/// determines how to save point cloud
-struct Settings : SaveSettings
-{
-    /// true - save valid points only; false - save all points preserving their indices
-    bool saveValidOnly = true;
-};
-
 /// save valid points with normals in textual .asc file
-MRMESH_API VoidOrErrStr toAsc( const PointCloud& points, const std::filesystem::path& file, const Settings& settings = {} );
-MRMESH_API VoidOrErrStr toAsc( const PointCloud& points, std::ostream& out, const Settings& settings = {} );
+MRMESH_API VoidOrErrStr toAsc( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings = {} );
+MRMESH_API VoidOrErrStr toAsc( const PointCloud& points, std::ostream& out, const SaveSettings& settings = {} );
 
 /// saves in .ply file
-MRMESH_API VoidOrErrStr toPly( const PointCloud& points, const std::filesystem::path& file, const Settings& settings = {} );
-MRMESH_API VoidOrErrStr toPly( const PointCloud& points, std::ostream& out, const Settings& settings = {} );
+MRMESH_API VoidOrErrStr toPly( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings = {} );
+MRMESH_API VoidOrErrStr toPly( const PointCloud& points, std::ostream& out, const SaveSettings& settings = {} );
 
-struct CtmSavePointsOptions : Settings
+struct CtmSavePointsOptions : SaveSettings
 {
     /// 0 - minimal compression, but fast; 9 - maximal compression, but slow
     int compressionLevel = 1;
@@ -50,9 +43,9 @@ MRMESH_API VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, cons
 #endif
 
 /// detects the format from file extension and save points to it
-MRMESH_API VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const Settings& settings = {} );
+MRMESH_API VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings = {} );
 /// extension in `*.ext` format
-MRMESH_API VoidOrErrStr toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const Settings& settings = {} );
+MRMESH_API VoidOrErrStr toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const SaveSettings& settings = {} );
 
 /// \}
 

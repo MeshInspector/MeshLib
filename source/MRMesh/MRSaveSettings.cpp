@@ -6,15 +6,38 @@
 namespace MR
 {
 
-const VertCoords & transformPoints( const VertCoords & verts, const VertBitSet & validVerts, const AffineXf3d * xf, VertCoords & buf )
+VertRenumber::VertRenumber( const VertBitSet & validVerts, bool saveValidOnly )
 {
-    if ( !xf )
-        return verts;
-    buf = verts;
+    MR_TIMER
+    if ( saveValidOnly )
+    {
+        vert2packed_ = makeVectorWithSeqNums( validVerts );
+        sizeVerts_ = (int)validVerts.count();
+    }
+    else
+        sizeVerts_ = validVerts.find_last() + 1;
+}
+
+const VertCoords & transformPoints( const VertCoords & verts, const VertBitSet & validVerts, const AffineXf3d * xf, VertCoords & buf, const VertRenumber * vertRenumber )
+{
+    if ( !vertRenumber || !vertRenumber->saveValidOnly() )
+    {
+        if ( !xf )
+            return verts;
+        buf = verts;
+        BitSetParallelFor( validVerts, [&]( VertId v )
+        {
+            buf[v] = Vector3f( (*xf)( Vector3d( buf[v] ) ) );
+        } );
+        return buf;
+    }
+    
+    buf.resizeNoInit( vertRenumber->sizeVerts() );
     BitSetParallelFor( validVerts, [&]( VertId v )
     {
-        buf[v] = Vector3f( (*xf)( Vector3d( buf[v] ) ) );
+        buf[VertId((*vertRenumber)(v))] = applyFloat( xf, verts[v] );
     } );
+    
     return buf;
 }
 

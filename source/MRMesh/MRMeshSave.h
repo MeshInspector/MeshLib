@@ -19,7 +19,8 @@ namespace MeshSave
 
 MRMESH_API extern const IOFilters Filters;
 
-/// saves in internal file format
+/// saves in internal file format;
+/// SaveSettings::saveValidOnly = true is ignored
 MRMESH_API VoidOrErrStr toMrmesh( const Mesh & mesh, const std::filesystem::path & file,
                                                      const SaveSettings & settings = {} );
 MRMESH_API VoidOrErrStr toMrmesh( const Mesh & mesh, std::ostream & out,
@@ -38,11 +39,13 @@ MRMESH_API VoidOrErrStr toObj( const Mesh & mesh, const std::filesystem::path & 
 MRMESH_API VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out,
                                                   const SaveSettings & settings = {}, int firstVertId = 1 );
 
-/// saves in binary .stl file
+/// saves in binary .stl file;
+/// SaveSettings::saveValidOnly = false is ignored
 MRMESH_API VoidOrErrStr toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
 MRMESH_API VoidOrErrStr toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
 
-/// saves in ascii .stl file
+/// saves in textual .stl file;
+/// SaveSettings::saveValidOnly = false is ignored
 MRMESH_API VoidOrErrStr toAsciiStl( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
 MRMESH_API VoidOrErrStr toAsciiStl( const Mesh& mesh, std::ostream& out, const SaveSettings & settings = {} );
 
@@ -65,7 +68,7 @@ struct CtmSaveOptions : SaveSettings
     /// LZMA compression: 0 - minimal compression, but fast; 9 - maximal compression, but slow
     int compressionLevel = 1; 
     /// if it is turned on, then higher compression ratios are reached but the order of triangles is changed
-    bool rearrangeTriangles = false;
+    bool rearrangeTriangles = true;
     /// comment saved in the file
     const char * comment = "MeshInspector.com";
 };

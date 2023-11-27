@@ -206,7 +206,7 @@ void ProgressBar::orderWithResumableTask( const char * name, std::shared_ptr<Res
     instance.backgroundTaskDelayed_ = true;
     instance.isOrdered_ = true;
 
-    auto postInit = [&instance, task]
+    auto postInit = [&instance]
     {
         // finalizer is not required
         instance.onFinish_ = {};

@@ -170,7 +170,6 @@
     <ClInclude Include="MRProgressReadWrite.h" />
     <ClInclude Include="MRRayBoxIntersection2.h" />
     <ClInclude Include="MRSaveSettings.h" />
-    <ClInclude Include="MRResumable.h" />
     <ClInclude Include="MRSceneLoad.h" />
     <ClInclude Include="MRSolarRadiation.h" />
     <ClInclude Include="MRTiffIO.h" />

@@ -4,7 +4,6 @@
 #include "MRIOFilters.h"
 #include "MRMeshLoadSettings.h"
 #include "MRProgressCallback.h"
-#include "MRResumable.h"
 
 #include <filesystem>
 

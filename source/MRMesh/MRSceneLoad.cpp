@@ -148,6 +148,7 @@ void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& file
     ctx->results.resize( count, unexpected( "Uninitialized" ) );
 
     BitSet toAsyncLoad( count );
+    size_t syncIndex = 0;
     for ( auto index = 0ull; index < count; ++index )
     {
         const auto& path = ctx->paths[index];
@@ -158,9 +159,10 @@ void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& file
         else
         {
             spdlog::info( "Loading file {}", utf8string( path ) );
-            ctx->results[index] = loadObjectFromFile( path, &ctx->warningTexts[index], subprogress( progressCallback, index, count ) );
+            ctx->results[index] = loadObjectFromFile( path, &ctx->warningTexts[index], subprogress( progressCallback, syncIndex++, count ) );
         }
     }
+    assert( syncIndex + toAsyncLoad.count() == count );
 
     auto postLoad = [ctx, count, postLoadCallback]
     {
@@ -189,8 +191,7 @@ void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& file
             if ( ctx->asyncLoaderCount.fetch_sub( 1 ) == 1 )
                 // that was the last file
                 postLoad();
-        },
-        subprogress( progressCallback, index, count ) );
+        }, {} );
     }
 }
 

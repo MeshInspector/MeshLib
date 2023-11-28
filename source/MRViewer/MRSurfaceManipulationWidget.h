@@ -58,7 +58,7 @@ private:
     MRVIEWER_API bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;
     /// update
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
-
+    /// need to visualize bad region (draw grey circle)
     MRVIEWER_API void postDraw_() override;
 
     void changeSurface_();

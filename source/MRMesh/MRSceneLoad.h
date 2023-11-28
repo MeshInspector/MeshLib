@@ -26,6 +26,7 @@ struct SceneLoadResult
 MRMESH_API SceneLoadResult fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, ProgressCallback callback = {} );
 
 /// Async load scene from file
+/// calls `postLoadCallback` from a working thread (or from the main thread on single-thread platforms) after all files being loaded
 using PostLoadCallback = std::function<void ( SceneLoadResult )>;
 MRMESH_API void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& files, PostLoadCallback postLoadCallback, ProgressCallback progressCallback = {} );
 

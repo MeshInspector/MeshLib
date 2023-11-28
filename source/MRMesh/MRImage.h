@@ -25,11 +25,16 @@ struct Image
 
     /// Given texture position in [0,1]x[0,1] (which is clamped if necessary),
     /// returns the color of the closest pixel
-    MRMESH_API Color sampleDiscrete( const Vector2f & pos ) const;
+    MRMESH_API Color sampleDiscrete( const UVCoord & pos ) const;
 
     /// Given texture position in [0,1]x[0,1] (which is clamped if necessary),
     /// returns bilinear interpolated color at it
-    MRMESH_API Color sampleBilinear( const Vector2f & pos ) const;
+    MRMESH_API Color sampleBilinear( const UVCoord & pos ) const;
+
+    /// Given texture position in [0,1]x[0,1] (which is clamped if necessary),
+    /// returns sampled color at it according to given filter
+    Color sample( FilterType filter, const UVCoord & pos ) const
+        { return filter == FilterType::Discrete ? sampleDiscrete( pos ) : sampleBilinear( pos ); }
 };
 
 inline Color& Image::operator[]( const Vector2i & p )

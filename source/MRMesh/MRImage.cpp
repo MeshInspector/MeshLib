@@ -3,14 +3,14 @@
 namespace MR
 {
 
-Color Image::sampleDiscrete( const Vector2f & pos ) const
+Color Image::sampleDiscrete( const UVCoord & pos ) const
 {
     const float x = std::clamp( pos.x * resolution.x - 0.5f, 0.0f, resolution.x - 1.0f );
     const float y = std::clamp( pos.y * resolution.y - 0.5f, 0.0f, resolution.y - 1.0f );
     return operator[]( { (int)std::lround( x ), (int)std::lround( y ) } );
 }
 
-Color Image::sampleBilinear( const Vector2f & pos ) const
+Color Image::sampleBilinear( const UVCoord & pos ) const
 {
     const float x = std::clamp( pos.x * resolution.x - 0.5f, 0.0f, resolution.x - 1.0f );
     const float y = std::clamp( pos.y * resolution.y - 0.5f, 0.0f, resolution.y - 1.0f );

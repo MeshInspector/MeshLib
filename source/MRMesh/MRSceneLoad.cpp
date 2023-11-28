@@ -152,27 +152,28 @@ void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& file
     {
         const auto& path = ctx->paths[index];
         if ( findAsyncObjectLoadFilter( path ) )
+        {
             toAsyncLoad.set( index );
+        }
         else
+        {
+            spdlog::info( "Loading file {}", utf8string( path ) );
             ctx->results[index] = loadObjectFromFile( path, &ctx->warningTexts[index], subprogress( progressCallback, index, count ) );
+        }
     }
 
     auto postLoad = [ctx, count, postLoadCallback]
     {
         SceneConstructor constructor;
         for ( auto index = 0ull; index < count; ++index )
-        {
-            const auto& path = ctx->paths[index];
-            spdlog::info( "Loading file {}", utf8string( path ) );
-            constructor.process( path, ctx->results[index], ctx->warningTexts[index] );
-        }
+            constructor.process( ctx->paths[index], ctx->results[index], ctx->warningTexts[index] );
         postLoadCallback( constructor.construct() );
     };
 
     if ( toAsyncLoad.none() )
         return postLoad();
 
-    ctx->asyncLoaderCount = toAsyncLoad.size();
+    ctx->asyncLoaderCount = toAsyncLoad.count();
     for ( const auto index : toAsyncLoad )
     {
         const auto& path = ctx->paths[index];
@@ -186,6 +187,7 @@ void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& file
         {
             ctx->results[index] = std::move( result );
             if ( ctx->asyncLoaderCount.fetch_sub( 1 ) == 1 )
+                // that was the last file
                 postLoad();
         },
         subprogress( progressCallback, index, count ) );

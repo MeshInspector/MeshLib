@@ -111,7 +111,7 @@ struct AsyncLoadContext
     std::vector<std::string> warningTexts;
     std::vector<Expected<std::vector<ObjectPtr>>> results;
 
-    std::atomic_size_t asyncLoaderCount{ 0 };
+    std::atomic_size_t asyncCount{ 0 };
 
     ProgressCallback progressCallback;
     std::map<size_t, float> asyncProgressMap;
@@ -179,14 +179,14 @@ void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& file
     ctx->warningTexts.resize( count );
     ctx->results.resize( count, unexpected( "Uninitialized" ) );
 
-    BitSet toAsyncLoad( count );
     size_t syncIndex = 0;
+    BitSet asyncBitSet( count );
     for ( auto index = 0ull; index < count; ++index )
     {
         const auto& path = ctx->paths[index];
         if ( findAsyncObjectLoadFilter( path ) )
         {
-            toAsyncLoad.set( index );
+            asyncBitSet.set( index );
         }
         else
         {
@@ -194,10 +194,10 @@ void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& file
             ctx->results[index] = loadObjectFromFile( path, &ctx->warningTexts[index], subprogress( progressCallback, syncIndex++, count ) );
         }
     }
-    assert( syncIndex + toAsyncLoad.count() == count );
+    assert( syncIndex + asyncBitSet.count() == count );
 
     ctx->progressCallback = subprogress( progressCallback, (float)syncIndex / (float)count, 1.00f );
-    ctx->initializeProgressMap( toAsyncLoad );
+    ctx->initializeProgressMap( asyncBitSet );
 
     auto postLoad = [ctx, count, postLoadCallback]
     {
@@ -207,11 +207,11 @@ void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& file
         postLoadCallback( constructor.construct() );
     };
 
-    if ( toAsyncLoad.none() )
+    if ( asyncBitSet.none() )
         return postLoad();
 
-    ctx->asyncLoaderCount = toAsyncLoad.count();
-    for ( const auto index : toAsyncLoad )
+    ctx->asyncCount = asyncBitSet.count();
+    for ( const auto index : asyncBitSet )
     {
         const auto& path = ctx->paths[index];
         const auto asyncFilter = findAsyncObjectLoadFilter( path );
@@ -225,7 +225,7 @@ void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& file
         {
             ctx->results[index] = std::move( result );
             reportProgress( callback, 1.00f );
-            if ( ctx->asyncLoaderCount.fetch_sub( 1 ) == 1 )
+            if ( ctx->asyncCount.fetch_sub( 1 ) == 1 )
                 // that was the last file
                 postLoad();
         }, callback );

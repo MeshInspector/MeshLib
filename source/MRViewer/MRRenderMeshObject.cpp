@@ -701,7 +701,7 @@ RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_VERTS_COLORMAP ) || !objMesh_->mesh() )
-        return glBuffer.prepareBuffer<Color>( vertColorsSize_, false ); // use update color map
+        return glBuffer.prepareBuffer<Color>( vertColorsSize_, false ); // use updated color map
     if ( objMesh_->getColoringType() != ColoringType::VertsColorMap )
         return glBuffer.prepareBuffer<Color>( vertColorsSize_ = 0 ); // clear color map if not used
     MR_NAMED_TIMER( "vert_colormap" );

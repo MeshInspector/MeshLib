@@ -21,7 +21,7 @@ struct MakeDegenerateBandAroundRegionParams
  *
  * @param mesh - the target mesh
  * @param region - the region required to be separated by a band of degenerate faces
- * @param params - settings including target region and optional output parameters
+ * @param params - optional output parameters
  */
 MRMESH_API void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, const MakeDegenerateBandAroundRegionParams& params = {} );
 

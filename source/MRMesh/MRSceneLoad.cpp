@@ -10,11 +10,13 @@ namespace
 
 using namespace MR;
 
+// check if stream is empty (has no data)
 inline bool isEmpty( std::ostream& os )
 {
     return os.tellp() == std::streampos( 0 );
 }
 
+// find corresponding filter in the async object loader registry
 std::optional<IOFilter> findAsyncObjectLoadFilter( const std::filesystem::path& path )
 {
     // TODO: resolve GCC bug
@@ -35,10 +37,12 @@ std::optional<IOFilter> findAsyncObjectLoadFilter( const std::filesystem::path& 
         return std::nullopt;
 }
 
+// helper class to unify scene construction process
 class SceneConstructor
 {
 public:
-    void process( const std::filesystem::path& path, Expected<std::vector<ObjectPtr>> res, std::string warningText )
+    // gather objects and error and warning messages
+    void process( const std::filesystem::path& path, Expected<std::vector<ObjectPtr>> res, const std::string& warningText )
     {
         const auto fileName = utf8string( path );
         spdlog::info( "Load file {} - {}", fileName, res.has_value() ? "success" : res.error().c_str() );
@@ -64,6 +68,7 @@ public:
             errorSummary_ << ( !isEmpty( errorSummary_ ) ? "\n" : "" ) << "\n" << "No objects found in the file \"" << fileName << "\"";
     }
 
+    // construct a scene object
     SceneLoad::SceneLoadResult construct() const
     {
         auto scene = std::make_shared<Object>();
@@ -105,6 +110,7 @@ private:
     std::ostringstream warningSummary_;
 };
 
+// async loading context
 struct AsyncLoadContext
 {
     std::vector<std::filesystem::path> paths;
@@ -125,6 +131,7 @@ struct AsyncLoadContext
             asyncProgressMap.emplace( index, .00f );
     }
 
+    // create a progress callback for async task
     ProgressCallback progressCallbackFor( size_t index )
     {
         if ( !progressCallback )

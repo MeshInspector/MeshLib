@@ -409,6 +409,7 @@
     <ClCompile Include="MRFloatGridComponents.cpp" />
     <ClCompile Include="MRGcodeProcessor.cpp" />
     <ClCompile Include="MRGcodeLoad.cpp" />
+    <ClCompile Include="MRImage.cpp" />
     <ClCompile Include="MRMapEdge.cpp" />
     <ClCompile Include="MRGraph.cpp" />
     <ClCompile Include="MRGridSampling.cpp" />

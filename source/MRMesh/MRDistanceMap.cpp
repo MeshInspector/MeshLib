@@ -105,12 +105,10 @@ std::optional<float> DistanceMap::getInterpolated( float x, float y ) const
         y -= 0.5f;
     }
 
-    float xlowf = float( std::floor( x ) );
-    float ylowf = float( std::floor( y ) );
-    float xhighf = xlowf + 1.f;
-    float yhighf = ylowf + 1.f;
-    int xlow = int( xlowf );
-    int ylow = int( ylowf );
+    const float xlowf = std::floor( x );
+    const float ylowf = std::floor( y );
+    const int xlow = int( xlowf );
+    const int ylow = int( ylowf );
     assert( 0 <= xlow && xlow < dims_.x );
     assert( 0 <= ylow && ylow < dims_.y );
 
@@ -123,8 +121,11 @@ std::optional<float> DistanceMap::getInterpolated( float x, float y ) const
     {
         // bilinear interpolation
         // https://en.wikipedia.org/wiki/Bilinear_interpolation
-        return ( ( *lowlow ) * ( yhighf - y ) + ( *lowhigh ) * ( y - ylowf ) ) * ( xhighf - x ) +
-            ( ( *highlow ) * ( yhighf - y ) + ( *highhigh ) * ( y - ylowf ) ) * ( x - xlowf );
+        const float dx = x - xlowf;
+        const float dy = y - ylowf;
+        return
+            ( ( *lowlow ) * ( 1 - dy ) + ( *lowhigh ) * dy ) * ( 1 - dx ) +
+            ( ( *highlow ) * ( 1 - dy ) + ( *highhigh ) * dy ) * dx;
     }
     else
     {

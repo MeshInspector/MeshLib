@@ -112,6 +112,38 @@ struct AsyncLoadContext
     std::vector<Expected<std::vector<ObjectPtr>>> results;
 
     std::atomic_size_t asyncLoaderCount{ 0 };
+
+    ProgressCallback progressCallback;
+    std::map<size_t, float> asyncProgressMap;
+#if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
+    std::mutex asyncProgressMutex;
+#endif
+
+    void initializeProgressMap( const BitSet& asyncBitSet )
+    {
+        for ( const auto index : asyncBitSet )
+            asyncProgressMap.emplace( index, .00f );
+    }
+
+    ProgressCallback progressCallbackFor( size_t index )
+    {
+        if ( !progressCallback )
+            return {};
+
+        return [this, index] ( float v )
+        {
+            float sum = .00f;
+            {
+#if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
+                std::unique_lock lock( asyncProgressMutex );
+#endif
+                asyncProgressMap[index] = v;
+                for ( const auto& [_, v1] : asyncProgressMap )
+                    sum += v1 / (float)asyncProgressMap.size();
+            }
+            return reportProgress( progressCallback, sum );
+        };
+    }
 };
 
 }
@@ -164,6 +196,9 @@ void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& file
     }
     assert( syncIndex + toAsyncLoad.count() == count );
 
+    ctx->progressCallback = subprogress( progressCallback, (float)syncIndex / (float)count, 1.00f );
+    ctx->initializeProgressMap( toAsyncLoad );
+
     auto postLoad = [ctx, count, postLoadCallback]
     {
         SceneConstructor constructor;
@@ -183,15 +218,17 @@ void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& file
         assert( asyncFilter );
         const auto asyncLoader = AsyncObjectLoad::getObjectLoader( *asyncFilter );
         assert( asyncLoader );
+        const auto callback = ctx->progressCallbackFor( index );
         spdlog::info( "Async loading file {}", utf8string( path ) );
         // TODO: unify sync and async loader interfaces
-        asyncLoader( path, [ctx, index, postLoad] ( Expected<std::vector<ObjectPtr>> result )
+        asyncLoader( path, [ctx, index, postLoad, callback] ( Expected<std::vector<ObjectPtr>> result )
         {
             ctx->results[index] = std::move( result );
+            reportProgress( callback, 1.00f );
             if ( ctx->asyncLoaderCount.fetch_sub( 1 ) == 1 )
                 // that was the last file
                 postLoad();
-        }, {} );
+        }, callback );
     }
 }
 

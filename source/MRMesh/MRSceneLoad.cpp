@@ -220,8 +220,7 @@ void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& file
         assert( asyncLoader );
         const auto callback = ctx->progressCallbackFor( index );
         spdlog::info( "Async loading file {}", utf8string( path ) );
-        // TODO: unify sync and async loader interfaces
-        asyncLoader( path, [ctx, index, postLoad, callback] ( Expected<std::vector<ObjectPtr>> result )
+        asyncLoader( path, &ctx->warningTexts[index], [ctx, index, postLoad, callback] ( Expected<std::vector<ObjectPtr>> result )
         {
             ctx->results[index] = std::move( result );
             reportProgress( callback, 1.00f );

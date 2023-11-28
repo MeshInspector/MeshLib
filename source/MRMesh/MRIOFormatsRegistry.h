@@ -65,7 +65,7 @@ namespace AsyncObjectLoad
 {
 
 using PostLoadCallback = std::function<void ( Expected<std::vector<ObjectPtr>> )>;
-using AsyncObjectLoader = void( * )( const std::filesystem::path&, PostLoadCallback, ProgressCallback );
+using AsyncObjectLoader = void( * )( const std::filesystem::path&, std::string*, PostLoadCallback, ProgressCallback );
 
 /// Find an appropriate loader from the registry
 MRMESH_API AsyncObjectLoader getObjectLoader( IOFilter filter );

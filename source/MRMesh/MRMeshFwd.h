@@ -496,3 +496,9 @@ struct VertDuplication;
 } //namespace MeshBuilder
 
 } //namespace MR
+
+#ifdef __cpp_lib_unreachable
+#   define MR_UNREACHABLE std::unreachable();
+#else
+#   define MR_UNREACHABLE { assert( false ); return {}; }
+#endif

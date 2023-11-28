@@ -81,12 +81,7 @@ std::optional<MR::TouchpadController::Handler::GestureState> convert( NSEventPha
         default:
             return std::nullopt;
     }
-#ifdef __cpp_lib_unreachable
-    std::unreachable();
-#else
-    assert( false );
-    return {};
-#endif
+    MR_UNREACHABLE
 }
 
 }

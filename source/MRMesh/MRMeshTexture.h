@@ -11,7 +11,7 @@ namespace MR
 
 struct MeshTexture : Image
 {
-    FilterType filter = FilterType::Linear;
+    FilterType filter = FilterType::Discrete;
     WrapType wrap = WrapType::Clamp;
 };
 

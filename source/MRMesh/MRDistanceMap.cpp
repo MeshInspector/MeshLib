@@ -105,25 +105,27 @@ std::optional<float> DistanceMap::getInterpolated( float x, float y ) const
         y -= 0.5f;
     }
 
-    float xlowf = float( std::floor( x ) );
-    float ylowf = float( std::floor( y ) );
-    float xhighf = xlowf + 1.f;
-    float yhighf = ylowf + 1.f;
-    int xlow = int( xlowf );
-    int ylow = int( ylowf );
-    int xhigh = xlow + 1;
-    int yhigh = ylow + 1;
+    const float xlowf = std::floor( x );
+    const float ylowf = std::floor( y );
+    const int xlow = int( xlowf );
+    const int ylow = int( ylowf );
+    assert( 0 <= xlow && xlow < dims_.x );
+    assert( 0 <= ylow && ylow < dims_.y );
 
-    auto lowlow = get( xlow, ylow );
-    auto lowhigh = get( xlow, yhigh );
-    auto highlow = get( xhigh, ylow );
-    auto highhigh = get( xhigh, yhigh );
+    const auto idx = toIndex( { xlow, ylow } );
+    const auto lowlow =   get( idx );
+    const auto lowhigh =  ( ylow + 1 < dims_.y ) ? get( idx + dims_.x ) : 0.0f;
+    const auto highlow =  ( xlow + 1 < dims_.x ) ? get( idx + 1 ) : 0.0f;
+    const auto highhigh = ( ylow + 1 < dims_.y ) && ( xlow + 1 < dims_.x ) ? get( idx + dims_.x + 1 ) : 0.0f;
     if ( lowlow && lowhigh && highlow && highhigh )
     {
         // bilinear interpolation
         // https://en.wikipedia.org/wiki/Bilinear_interpolation
-        return ( ( *lowlow ) * ( yhighf - y ) + ( *lowhigh ) * ( y - ylowf ) ) * ( xhighf - x ) +
-            ( ( *highlow ) * ( yhighf - y ) + ( *highhigh ) * ( y - ylowf ) ) * ( x - xlowf );
+        const float dx = x - xlowf;
+        const float dy = y - ylowf;
+        return
+            ( ( *lowlow ) * ( 1 - dy ) + ( *lowhigh ) * dy ) * ( 1 - dx ) +
+            ( ( *highlow ) * ( 1 - dy ) + ( *highhigh ) * dy ) * dx;
     }
     else
     {

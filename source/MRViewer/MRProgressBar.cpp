@@ -160,7 +160,7 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
                 instance.onFinish_ = task();
                 return true;
             } );
-            instance.finish_();
+            ProgressBar::finish();
 
             unregisterThreadRootTimeRecord( rootRecord );
         } );
@@ -172,7 +172,7 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
                 instance.onFinish_ = task();
                 return true;
             } );
-            instance.finish_();
+            ProgressBar::finish();
         };
         emscripten_async_call( asyncCallTask, nullptr, 200 );
 #endif
@@ -280,7 +280,9 @@ void ProgressBar::setTaskCount( int n )
 
 void ProgressBar::finish()
 {
-    instance_().finish_();
+    auto& instance = instance_();
+    instance.finished_ = true;
+    instance.frameRequest_.requestFrame();
 }
 
 bool ProgressBar::isOrdered()
@@ -415,12 +417,6 @@ bool ProgressBar::tryRunWithSehHandler_( const std::function<bool()>& task )
         return true;
     }
 #endif
-}
-
-void ProgressBar::finish_()
-{
-    finished_ = true;
-    frameRequest_.requestFrame();
 }
 
 }

@@ -62,8 +62,6 @@ private:
     bool tryRun_( const std::function<bool ()>& task );
     bool tryRunWithSehHandler_( const std::function<bool ()>& task );
 
-    void finish_();
-
     float progress_;
     int currentTask_, taskCount_;
     std::string taskName_, title_;

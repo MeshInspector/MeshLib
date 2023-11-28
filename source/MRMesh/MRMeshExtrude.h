@@ -5,10 +5,8 @@
 namespace MR
 {
 // holds together settings for makeDegenerateBandAroundRegion
-struct ExtrudeParams
+struct MakeDegenerateBandAroundRegionParams
 {
-    // the region required to be separated by a band of degenerate faces
-    const FaceBitSet& region;
     // (optional) output newly generated faces
     FaceBitSet* outNewFaces = nullptr;
     // (optional) output edges orthogonal to the boundary
@@ -22,8 +20,9 @@ struct ExtrudeParams
  * \details The function is useful for extruding the region without changing the existing faces and creating holes
  *
  * @param mesh - the target mesh
+ * @param region - the region required to be separated by a band of degenerate faces
  * @param params - settings including target region and optional output parameters
  */
-MRMESH_API void makeDegenerateBandAroundRegion( Mesh& mesh, const ExtrudeParams& params );
+MRMESH_API void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, const MakeDegenerateBandAroundRegionParams& params = {} );
 
 } // namespace MR

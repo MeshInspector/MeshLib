@@ -8,18 +8,18 @@
 namespace MR
 {
 
-void makeDegenerateBandAroundRegion( Mesh& mesh, const ExtrudeParams& params )
+void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, const MakeDegenerateBandAroundRegionParams& params )
 {
     MR_TIMER
     MR_WRITER( mesh )
 
     auto& topology = mesh.topology;
-    if ( params.region.none() || ( topology.getValidFaces() - params.region ).none() )
+    if ( region.none() || ( topology.getValidFaces() - region ).none() )
         return;
 
     float maxEdgeLenSq = 0;
 
-    auto componentBoundary = findLeftBoundaryInsideMesh( topology, params.region );
+    auto componentBoundary = findLeftBoundaryInsideMesh( topology, region );
     for ( auto& contour : componentBoundary )
     {
         auto newContour = cutAlongEdgeLoop( mesh, contour );

@@ -952,7 +952,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
     if ( filesList.empty() )
         return false;
 
-    auto postProcess = [] ( const SceneLoad::SceneLoadResult& result )
+    const auto postProcess = [] ( const SceneLoad::SceneLoadResult& result )
     {
         assert( result.scene );
         const auto childCount = result.scene->children().size();
@@ -999,12 +999,14 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
     };
 
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
-    ProgressBar::orderWithManualFinish( "Open files" );
-    SceneLoad::asyncFromAnySupportedFormat( filesList, [&postProcess] ( SceneLoad::SceneLoadResult result )
+    ProgressBar::orderWithManualFinish( "Open files", [filesList, postProcess]
     {
-        postProcess( result );
-        ProgressBar::finish();
-    }, ProgressBar::callBackSetProgress );
+        SceneLoad::asyncFromAnySupportedFormat( filesList, [postProcess] ( SceneLoad::SceneLoadResult result )
+        {
+            postProcess( result );
+            ProgressBar::finish();
+        }, ProgressBar::callBackSetProgress );
+    } );
 #else
     ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess]
     {

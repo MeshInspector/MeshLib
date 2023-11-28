@@ -187,7 +187,7 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
     getViewerInstance().incrementForceRedrawFrames();
 }
 
-void ProgressBar::orderWithManualFinish( const char* name, int taskCount )
+void ProgressBar::orderWithManualFinish( const char* name, std::function<void ()> task, int taskCount )
 {
     auto& instance = instance_();
 
@@ -199,10 +199,36 @@ void ProgressBar::orderWithManualFinish( const char* name, int taskCount )
 
     instance.isOrdered_ = true;
 
-    auto postInit = [&instance]
+    auto postInit = [&instance, task]
     {
         // finalizer is not required
         instance.onFinish_ = {};
+#if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
+        instance.thread_ = std::thread( [&instance, task]
+        {
+            static ThreadRootTimeRecord rootRecord( "Progress" );
+            registerThreadRootTimeRecord( rootRecord );
+            SetCurrentThreadName( "ProgressBar" );
+
+            instance.tryRunWithSehHandler_( [task]
+            {
+                task();
+                return true;
+            } );
+
+            unregisterThreadRootTimeRecord( rootRecord );
+        } );
+#else
+        staticTaskForLaterCall = [&instance, task]
+        {
+            instance.tryRunWithSehHandler_( [task]
+            {
+                task();
+                return true;
+            } );
+        };
+        emscripten_async_call( asyncCallTask, nullptr, 200 );
+#endif
     };
 
     instance.deferredInit_ = std::make_unique<DeferredInit>( DeferredInit {

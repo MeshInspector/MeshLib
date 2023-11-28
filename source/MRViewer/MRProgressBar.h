@@ -23,8 +23,8 @@ public:
     // in this version the task returns a function to be executed in main thread
     MRVIEWER_API static void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPostProcessing task, int taskCount = 1 );
 
-    /// in this version the task is being run in the main thread but performs as a coroutine (suspends its execution from time to time)
-    MRVIEWER_API static void orderWithManualFinish( const char * name, int taskCount = 1 );
+    /// the task is spawned by the progress bar but the `finish` method is called from a callback
+    MRVIEWER_API static void orderWithManualFinish( const char * name, std::function<void ()> task, int taskCount = 1 );
 
     MRVIEWER_API static bool isCanceled();
 

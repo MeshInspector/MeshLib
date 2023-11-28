@@ -8,26 +8,26 @@
 namespace MR
 {
 
-void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceBitSet* outNewFaces, UndirectedEdgeBitSet* outExtrudedEdges, float* maxEdgeLength )
+void makeDegenerateBandAroundRegion( Mesh& mesh, const ExtrudeParams& params )
 {
     MR_TIMER
     MR_WRITER( mesh )
 
     auto& topology = mesh.topology;
-    if ( region.none() || ( topology.getValidFaces() - region ).none() )
+    if ( params.region.none() || ( topology.getValidFaces() - params.region ).none() )
         return;
 
     float maxEdgeLenSq = 0;
 
-    auto componentBoundary = findLeftBoundaryInsideMesh( topology, region );
+    auto componentBoundary = findLeftBoundaryInsideMesh( topology, params.region );
     for ( auto& contour : componentBoundary )
     {
         auto newContour = cutAlongEdgeLoop( mesh, contour );
-        auto newEdge = makeDegenerateBandAroundHole( mesh, contour[0], outNewFaces );
+        auto newEdge = makeDegenerateBandAroundHole( mesh, contour[0], params.outNewFaces );
         auto holeContour = trackRightBoundaryLoop( topology, newEdge );
 
         stitchContours( topology, holeContour, newContour );
-        if ( !outExtrudedEdges )
+        if ( !params.outExtrudedEdges )
             continue;
 
         for ( size_t i = 0; i < contour.size(); ++i )
@@ -36,12 +36,12 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceB
 
             const auto ue = topology.findEdge( topology.org( contour[i] ), topology.org( holeContour[i] ) ).undirected();
             if ( ue.valid() )
-                outExtrudedEdges->autoResizeSet( ue, true );
+                params.outExtrudedEdges->autoResizeSet( ue, true );
         }
     }
 
-    if ( maxEdgeLength )
-        *maxEdgeLength = sqrt( maxEdgeLenSq );
+    if ( params.maxEdgeLength )
+        *params.maxEdgeLength = sqrt( maxEdgeLenSq );
 }
 
 } // namespace MR

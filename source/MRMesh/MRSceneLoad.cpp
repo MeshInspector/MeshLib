@@ -183,7 +183,7 @@ void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& file
         assert( asyncLoader );
         spdlog::info( "Async loading file {}", utf8string( path ) );
         // TODO: unify sync and async loader interfaces
-        return asyncLoader( path, [ctx, index, postLoad] ( Expected<std::vector<ObjectPtr>> result )
+        asyncLoader( path, [ctx, index, postLoad] ( Expected<std::vector<ObjectPtr>> result )
         {
             ctx->results[index] = std::move( result );
             if ( ctx->asyncLoaderCount.fetch_sub( 1 ) == 1 )

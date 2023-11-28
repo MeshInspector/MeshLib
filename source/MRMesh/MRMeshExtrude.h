@@ -12,6 +12,8 @@ namespace MR
  * @param mesh - the target mesh
  * @param region - the region required to be separated by a band of degenerate faces
  * @param outNewFaces - (optional) output newly generated faces
+ * @param outExtrudedEdges - (optional) output edges orthogonal to the boundary
+ * @param maxEdgeLength - (optional) return legth of the longest edges from the boundary of the region
  */
 MRMESH_API void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceBitSet* outNewFaces = nullptr, UndirectedEdgeBitSet* outExtrudedEdges = nullptr, float* maxEdgeLength = nullptr );
 

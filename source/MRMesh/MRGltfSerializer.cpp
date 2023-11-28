@@ -65,8 +65,8 @@ std::vector<MeshTexture> readImages( const tinygltf::Model& model )
     result.reserve( model.images.size() );
     for ( auto& image : model.images )
     {
-        result.emplace_back();
-        auto& meshTexture = result.back();
+        auto& meshTexture = result.emplace_back();
+        meshTexture.filter = FilterType::Linear;
         meshTexture.resolution = { image.width, image.height };
         meshTexture.pixels.resize( image.width * image.height );
 

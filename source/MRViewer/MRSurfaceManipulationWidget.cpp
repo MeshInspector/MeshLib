@@ -44,24 +44,11 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
     editingDistanceMap_ = VertScalars( numV, 0.f );
     visualizationDistanceMap_ = VertScalars( numV, 0.f );
 
-    meshChangedConnection_ = obj_->meshChangedSignal.connect( [&] ( uint32_t )
-    {
-        if ( ownMeshChangedSignal_ )
-        {
-            ownMeshChangedSignal_ = false;
-            return;
-        }
-        abortEdit_();
-        init( obj_ );
-        updateRegion_( mousePos_ );
-    } );
-
-
     obj_->setAncillaryTexture( { { { Color { 255, 64, 64, 255 }, Color { 0, 0, 0, 0 } }, Vector2i { 1, 2 } } } );
     uvs_ = VertUVCoords( numV, { 0, 1 } );
     obj_->setAncillaryUVCoords( uvs_ );
 
-    connect( &getViewerInstance(), 10, boost::signals2::at_front );
+    initConnections_();
 }
 
 void SurfaceManipulationWidget::reset()
@@ -80,9 +67,7 @@ void SurfaceManipulationWidget::reset()
 
     uvs_ = {};
 
-    meshChangedConnection_.disconnect();
-
-    disconnect();
+    resetConnections_();
 }
 
 void SurfaceManipulationWidget::setSettings( const Settings& settings )
@@ -161,6 +146,32 @@ void SurfaceManipulationWidget::postDraw_()
 
     auto drawList = ImGui::GetBackgroundDrawList();
     drawList->AddCircleFilled( ImVec2( mousePos_.x, mousePos_.y ), 10.f, Color::gray().getUInt32() );
+}
+
+void SurfaceManipulationWidget::initConnections_()
+{
+    if ( connectionsInitialized_ )
+        return;
+    connectionsInitialized_ = true;
+    meshChangedConnection_ = obj_->meshChangedSignal.connect( [&] ( uint32_t )
+    {
+        if ( ownMeshChangedSignal_ )
+        {
+            ownMeshChangedSignal_ = false;
+            return;
+        }
+        abortEdit_();
+        init( obj_ );
+        updateRegion_( mousePos_ );
+    } );
+    connect( &getViewerInstance(), 10, boost::signals2::at_front );
+}
+
+void SurfaceManipulationWidget::resetConnections_()
+{
+    connectionsInitialized_ = false;
+    meshChangedConnection_.disconnect();
+    disconnect();
 }
 
 void SurfaceManipulationWidget::changeSurface_()

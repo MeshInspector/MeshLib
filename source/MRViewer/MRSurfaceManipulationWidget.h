@@ -61,6 +61,9 @@ private:
     /// need to visualize bad region (draw grey circle)
     MRVIEWER_API void postDraw_() override;
 
+    void initConnections_();
+    void resetConnections_();
+
     void changeSurface_();
     void updateUVmap_( bool set );
     void updateRegion_( const Vector2f& mousePos );
@@ -89,6 +92,8 @@ private:
     std::chrono::time_point<std::chrono::high_resolution_clock> timePoint_;
     boost::signals2::scoped_connection meshChangedConnection_;
     bool ownMeshChangedSignal_ = false;
+
+    bool connectionsInitialized_ = false;
 };
 
 }

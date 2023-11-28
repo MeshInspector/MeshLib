@@ -49,7 +49,7 @@ public:
         if ( !res.has_value() )
         {
             // TODO: user-defined error format
-            errorSummary_ << ( !isEmpty( errorSummary_ ) ? "\n" : "" ) << "\n" << res.error();
+            errorSummary_ << ( !isEmpty( errorSummary_ ) ? "\n" : "" ) << "\n" << fileName << ":\n" << res.error() << "\n";
             return;
         }
         if ( !warningText.empty() )
@@ -65,7 +65,7 @@ public:
         if ( prevObjectCount != loadedObjects_.size() )
             loadedFiles_.emplace_back( path );
         else
-            errorSummary_ << ( !isEmpty( errorSummary_ ) ? "\n" : "" ) << "\n" << "No objects found in the file \"" << fileName << "\"";
+            errorSummary_ << ( !isEmpty( errorSummary_ ) ? "\n" : "" ) << "\n" << fileName << ":\n" << "No objects found" << "\n";
     }
 
     // construct a scene object

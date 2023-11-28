@@ -63,7 +63,7 @@ inline ProgressCallback subprogress( ProgressCallback cb, F && f )
     return res;
 }
 
-/// ...
+/// returns a callback that maps [0,1] linearly into [(index+0)/count,(index+1)/count] in the call to \param cb (which can be empty)
 inline ProgressCallback subprogress( ProgressCallback cb, size_t index, size_t count )
 {
     assert( index < count );

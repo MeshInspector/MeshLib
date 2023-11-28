@@ -18,7 +18,7 @@ namespace MR
  * \ingroup BasicGroup
  */
 [[nodiscard]] MRMESH_API int calcDamerauLevenshteinDistance( const std::string& stringA, const std::string& stringB, 
-    bool caseSensative = true );
+    bool caseSensitive = true );
 
 /**
  * Splits given string by delimiter.

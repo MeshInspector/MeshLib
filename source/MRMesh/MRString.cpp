@@ -18,7 +18,7 @@ size_t findSubstringCaseInsensitive( const std::string& string, const std::strin
 }
 
 int calcDamerauLevenshteinDistance( const std::string& stringA, const std::string& stringB,
-    bool caseSensative )
+    bool caseSensitive )
 {
     std::vector<int> map( ( stringA.size() + 1 ) * ( stringB.size() + 1 ) );
     auto at = [&map, width = int( stringA.size() + 1 )] ( int i, int j )->int&
@@ -28,7 +28,7 @@ int calcDamerauLevenshteinDistance( const std::string& stringA, const std::strin
 
     auto copm = [&] ( int i, int j )->bool
     {
-        if ( caseSensative )
+        if ( caseSensitive )
             return stringA[i - 1] == stringB[j - 1];
         else
             return std::tolower( stringA[i - 1] ) == std::tolower( stringB[j - 1] );

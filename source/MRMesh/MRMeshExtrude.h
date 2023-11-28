@@ -13,6 +13,6 @@ namespace MR
  * @param region - the region required to be separated by a band of degenerate faces
  * @param outNewFaces - (optional) output newly generated faces
  */
-MRMESH_API void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceBitSet* outNewFaces = nullptr );
+MRMESH_API void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, FaceBitSet* outNewFaces = nullptr, UndirectedEdgeBitSet* outExtrudedEdges = nullptr, float* maxEdgeLength = nullptr );
 
 } // namespace MR

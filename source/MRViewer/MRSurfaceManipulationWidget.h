@@ -15,7 +15,8 @@ namespace MR
 /// remove (move surface region in opposite direction to normal)
 /// relax (relax surface region)
 class MRVIEWER_CLASS SurfaceManipulationWidget :
-    public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener>
+    public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener,
+                         PostDrawListener>
 {
 public:
     /// widget work modes
@@ -57,6 +58,8 @@ private:
     MRVIEWER_API bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;
     /// update
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
+    /// need to visualize bad region (draw grey circle)
+    MRVIEWER_API void postDraw_() override;
 
     void changeSurface_();
     void updateUVmap_( bool set );
@@ -79,6 +82,7 @@ private:
     std::shared_ptr<ChangeMeshAction> changeMeshAction_;
     std::shared_ptr<ObjectMesh> oldMesh_;
     bool firstInit_ = true; // need to save settings in re-initial
+    bool badRegion_ = false; // in selected region less than 3 points
 
     bool mousePressed_ = false;
 

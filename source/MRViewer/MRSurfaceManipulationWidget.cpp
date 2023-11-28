@@ -154,6 +154,15 @@ bool SurfaceManipulationWidget::onMouseMove_( int mouse_x, int mouse_y )
     return true;
 }
 
+void SurfaceManipulationWidget::postDraw_()
+{
+    if ( !badRegion_ )
+        return;
+
+    auto drawList = ImGui::GetBackgroundDrawList();
+    drawList->AddCircleFilled( ImVec2( mousePos_.x, mousePos_.y ), 10.f, Color::gray().getUInt32() );
+}
+
 void SurfaceManipulationWidget::changeSurface_()
 {
     if ( !singleEditingRegion_.any() )
@@ -277,7 +286,17 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
         for ( int j = 0; j < 3; ++j )
             visualizationRegion_.set( v[j] );
         dilateRegion( mesh, visualizationRegion_, settings_.radius * 1.5f );
-        updateUVmap_( true );
+        int pointsCount = 0;
+        for ( auto vId : visualizationRegion_ )
+        {
+            if ( visualizationDistanceMap_[vId] <= settings_.radius )
+                ++pointsCount;
+            if ( pointsCount == 3 )
+                break;
+        }
+        badRegion_ = pointsCount < 3;
+        if ( !badRegion_ )
+            updateUVmap_( true );
     }
     obj_->setAncillaryUVCoords( uvs_ );
 

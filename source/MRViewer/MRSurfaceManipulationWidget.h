@@ -59,7 +59,6 @@ private:
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
 
     void changeSurface_();
-    void updateUV_();
     void updateUVmap_( bool set );
     void updateRegion_( const Vector2f& mousePos );
     void abortEdit_();
@@ -77,13 +76,15 @@ private:
     VertScalars editingDistanceMap_;
     VertScalars visualizationDistanceMap_;
     VertUVCoords uvs_;
-    std::shared_ptr<ObjectMesh> newMesh_;
+    std::shared_ptr<ChangeMeshAction> changeMeshAction_;
+    std::shared_ptr<ObjectMesh> oldMesh_;
     bool firstInit_ = true; // need to save settings in re-initial
 
     bool mousePressed_ = false;
 
     std::chrono::time_point<std::chrono::high_resolution_clock> timePoint_;
     boost::signals2::scoped_connection meshChangedConnection_;
+    bool ownMeshChangedSignal_ = false;
 };
 
 }

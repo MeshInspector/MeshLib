@@ -55,8 +55,10 @@ Expected<std::future<void>, std::string> ObjectMeshHolder::serializeModel_( cons
 
 #ifndef MRMESH_NO_OPENCTM
     auto save = [mesh = mesh_, filename = utf8string( path ) + ".ctm", this]()
-    { 
+    {
         MR::MeshSave::CtmSaveOptions options;
+        options.saveValidOnly = false;
+        options.rearrangeTriangles = false;
         if ( !vertsColorMap_.empty() )
             options.colors = &vertsColorMap_;
         MR::MeshSave::toCtm( *mesh, pathFromUtf8( filename ), options );

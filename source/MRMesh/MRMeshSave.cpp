@@ -4,6 +4,7 @@
 #include "MRColor.h"
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
+#include "MRBitSetParallelFor.h"
 #include "MRPch/MRFmt.h"
 
 #ifndef MRMESH_NO_OPENCTM
@@ -70,15 +71,22 @@ VoidOrErrStr toOff( const Mesh & mesh, const std::filesystem::path & file, const
 VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & settings )
 {
     MR_TIMER
-    VertId maxPoints = mesh.topology.lastValidVert() + 1;
-    int numPolygons = mesh.topology.numValidFaces();
 
-    out << "OFF\n" << maxPoints << ' ' << numPolygons << " 0\n\n";
-    for ( VertId i{ 0 }; i < maxPoints; ++i )
+    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.saveValidOnly );
+    const int numPoints = vertRenumber.sizeVerts();
+    const VertId lastVertId = mesh.topology.lastValidVert();
+    const int numPolygons = mesh.topology.numValidFaces();
+
+    out << "OFF\n" << numPoints << ' ' << numPolygons << " 0\n\n";
+    int numSaved = 0;
+    for ( VertId i{ 0 }; i <= lastVertId; ++i )
     {
+        if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
+            continue;
         auto p = applyDouble( settings.xf, mesh.points[i] );
         out << fmt::format( "{} {} {}\n", p.x, p.y, p.z );
-        if ( settings.progress && !( i & 0x3FF ) && !settings.progress( float( i ) / maxPoints * 0.5f ) )
+        ++numSaved;
+        if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / numPoints * 0.5f ) )
             return unexpected( std::string( "Saving canceled" ) );
     }
     out << '\n';
@@ -95,8 +103,7 @@ VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & se
 
         VertId a, b, c;
         mesh.topology.getLeftTriVerts( e, a, b, c );
-        assert( a.valid() && b.valid() && c.valid() );
-        out << fmt::format( "3 {} {} {}\n", (int)a, (int)b, (int)c );
+        out << fmt::format( "3 {} {} {}\n", vertRenumber( a ), vertRenumber( b ), vertRenumber( c ) );
     }
 
     if ( !out )
@@ -121,13 +128,19 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & 
     MR_TIMER
     out << "# MeshInspector.com\n";
 
-    VertId lastValidPoint = mesh.topology.lastValidVert();
+    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.saveValidOnly );
+    const int numPoints = vertRenumber.sizeVerts();
+    const VertId lastVertId = mesh.topology.lastValidVert();
 
-    for ( VertId i{ 0 }; i <= lastValidPoint; ++i )
+    int numSaved = 0;
+    for ( VertId i{ 0 }; i <= lastVertId; ++i )
     {
+        if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
+            continue;
         auto p = applyDouble( settings.xf, mesh.points[i] );
         out << fmt::format( "v {} {} {}\n", p.x, p.y, p.z );
-        if ( settings.progress && !( i & 0x3FF ) && !settings.progress( float( i ) / lastValidPoint * 0.5f ) )
+        ++numSaved;
+        if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / numPoints * 0.5f ) )
             return unexpected( std::string( "Saving canceled" ) );
     }
 
@@ -143,8 +156,10 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & 
 
         VertId a, b, c;
         mesh.topology.getLeftTriVerts( e, a, b, c );
-        assert( a.valid() && b.valid() && c.valid() );
-        out << fmt::format( "f {} {} {}\n", int( a + firstVertId ), int( b + firstVertId ), int( c + firstVertId ) );
+        out << fmt::format( "f {} {} {}\n",
+            vertRenumber( a ) + firstVertId,
+            vertRenumber( b ) + firstVertId,
+            vertRenumber( c ) + firstVertId );
     }
 
     if ( !out )
@@ -158,9 +173,9 @@ static FaceBitSet getNotDegenTris( const Mesh &mesh )
 {
     MR_TIMER
     FaceBitSet notDegenTris = mesh.topology.getValidFaces();
-    VertId a, b, c;
-    for ( auto f : notDegenTris )
+    BitSetParallelFor( notDegenTris, [&]( FaceId f )
     {
+        VertId a, b, c;
         mesh.topology.getTriVerts( f, a, b, c );
         assert( a.valid() && b.valid() && c.valid() );
 
@@ -169,7 +184,7 @@ static FaceBitSet getNotDegenTris( const Mesh &mesh )
         const Vector3f& cp = mesh.points[c];
         if ( ap == bp || bp == cp || cp == ap )
             notDegenTris.reset( f );
-    }
+    } );
     return notDegenTris;
 }
 
@@ -284,36 +299,44 @@ VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & 
 {
     MR_TIMER
 
-    int numVertices = mesh.topology.lastValidVert() + 1;
-    bool saveColors = settings.colors && settings.colors->size() >= numVertices;
+    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.saveValidOnly );
+    const int numPoints = vertRenumber.sizeVerts();
+    const VertId lastVertId = mesh.topology.lastValidVert();
+    const bool saveColors = settings.colors && settings.colors->size() > lastVertId;
 
     out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n"
-        "element vertex " << numVertices << "\nproperty float x\nproperty float y\nproperty float z\n";
+        "element vertex " << numPoints << "\nproperty float x\nproperty float y\nproperty float z\n";
     if ( saveColors )
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
 
     out <<  "element face " << mesh.topology.numValidFaces() << "\nproperty list uchar int vertex_indices\nend_header\n";
 
+    static_assert( sizeof( Vector3f ) == 12, "wrong size of Vector3f" );
+#pragma pack(push, 1)
+    struct PlyColor
+    {
+        unsigned char r = 0, g = 0, b = 0;
+    };
+#pragma pack(pop)
+    static_assert( sizeof( PlyColor ) == 3, "check your padding" );
+
     // write vertices
-    static_assert( sizeof( mesh.points.front() ) == 12, "wrong size of Vector3f" );
-    if ( !saveColors )
+    int numSaved = 0;
+    for ( VertId i{ 0 }; i <= lastVertId; ++i )
     {
-        VertCoords buf;
-        const auto & xfVerts = transformPoints( mesh.points, mesh.topology.getValidVerts(), settings.xf, buf );
-        if ( !writeByBlocks( out, ( const char* )xfVerts.data(), numVertices * sizeof( Vector3f ), subprogress( settings.progress, 0.0f, 0.5f ) ) )
-            return unexpected( std::string( "Saving canceled" ) );
-    }
-    else
-    {
-        static_assert( sizeof( settings.colors->front() ) == 4, "wrong size of Color" );
-        for ( VertId i{ 0 }; i < numVertices; ++i )
+        if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
+            continue;
+        const Vector3f p = applyFloat( settings.xf, mesh.points[i] );
+        out.write( ( const char* )&p, 12 );
+        if ( settings.colors )
         {
-            const Vector3f p = applyFloat( settings.xf, mesh.points[i] );
-            out.write( (const char*) &p.x, 12 );
-            out.write( (const char*) &( *settings.colors )[i].r, 3 ); // write only r g b, not a
-            if ( settings.progress && !( i & 0x3FF ) && !settings.progress( float( i ) / numVertices * 0.5f ) )
-                return unexpected( std::string( "Saving canceled" ) );
+            const auto c = ( *settings.colors )[i];
+            PlyColor pc{ .r = c.r, .g = c.g, .b = c.b };
+            out.write( ( const char* )&pc, 3 );
         }
+        ++numSaved;
+        if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / numPoints ) )
+            return unexpectedOperationCanceled();
     }
 
     // write triangles
@@ -321,7 +344,7 @@ VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & 
     struct PlyTriangle
     {
         char cnt = 3;
-        VertId v[3];
+        int v[3];
     };
     #pragma pack(pop)
     static_assert( sizeof( PlyTriangle ) == 13, "check your padding" );
@@ -331,7 +354,10 @@ VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & 
     int faceIndex = 0;
     for ( auto f : mesh.topology.getValidFaces() )
     {
-        mesh.topology.getTriVerts( f, tri.v );
+        VertId vs[3];
+        mesh.topology.getTriVerts( f, vs );
+        for ( int i = 0; i < 3; ++i )
+            tri.v[i] = vertRenumber( vs[i] );
         out.write( (const char *)&tri, 13 );
         if ( settings.progress && !( faceIndex & 0x3FF ) && !settings.progress( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
             return unexpected( std::string( "Saving canceled" ) );
@@ -387,28 +413,34 @@ VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions 
     ctmRearrangeTriangles( context, options.rearrangeTriangles ? 1 : 0 );
     ctmCompressionLevel( context, options.compressionLevel );
 
+    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), options.saveValidOnly );
+    const int numPoints = vertRenumber.sizeVerts();
+    const VertId lastVertId = mesh.topology.lastValidVert();
+
     std::vector<CTMuint> aIndices;
     const auto fLast = mesh.topology.lastValidFace();
     const auto numSaveFaces = options.rearrangeTriangles ? mesh.topology.numValidFaces() : int( fLast + 1 );
     aIndices.reserve( numSaveFaces * 3 );
     for ( FaceId f{0}; f <= fLast; ++f )
     {
-        VertId v[3];
         if ( mesh.topology.hasFace( f ) )
+        {
+            VertId v[3];
             mesh.topology.getTriVerts( f, v );
-        else if( options.rearrangeTriangles )
-            continue;
-        else
-            v[0] = v[1] = v[2] = 0_v;
-        aIndices.push_back( v[0] );
-        aIndices.push_back( v[1] );
-        aIndices.push_back( v[2] );
+            for ( int i = 0; i < 3; ++i )
+                aIndices.push_back( vertRenumber( v[i] ) );
+        }
+        else if ( !options.rearrangeTriangles )
+        {
+            for ( int i = 0; i < 3; ++i )
+                aIndices.push_back( 0 );
+        }
     }
     assert( aIndices.size() == numSaveFaces * 3 );
 
-    CTMuint aVertexCount = mesh.topology.lastValidVert() + 1;
+    CTMuint aVertexCount = numPoints;
     VertCoords buf;
-    const auto & xfVerts = transformPoints( mesh.points, mesh.topology.getValidVerts(), options.xf, buf );
+    const auto & xfVerts = transformPoints( mesh.points, mesh.topology.getValidVerts(), options.xf, buf, &vertRenumber );
     ctmDefineMesh( context,
         (const CTMfloat *)xfVerts.data(), aVertexCount, 
         aIndices.data(), numSaveFaces, nullptr );
@@ -419,10 +451,14 @@ VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions 
     std::vector<Vector4f> colors4f; // should be alive when save is performed
     if ( options.colors )
     {
-        colors4f.resize( aVertexCount );
-        const auto maxV = (int)std::min( aVertexCount, (CTMuint)options.colors->size() );
-        for ( VertId i{ 0 }; i < maxV; ++i )
-            colors4f[i] = Vector4f( ( *options.colors )[i] );
+        colors4f.reserve( aVertexCount );
+        for ( VertId i{ 0 }; i <= lastVertId; ++i )
+        {
+            if ( options.saveValidOnly && !mesh.topology.hasVert( i ) )
+                continue;
+            colors4f.push_back( Vector4f( ( *options.colors )[i] ) );
+        }
+        assert( colors4f.size() == aVertexCount );
 
         ctmAddAttribMap( context, (const CTMfloat*) colors4f.data(), "Color" );
     }

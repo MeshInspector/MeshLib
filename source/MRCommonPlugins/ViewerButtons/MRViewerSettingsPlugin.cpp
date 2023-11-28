@@ -210,6 +210,10 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             UI::checkbox( "Deselect on Hide",
                                                   std::bind( &RibbonMenu::getDeselectNewHiddenObjects, ribbonMenu_ ),
                                                   std::bind( &RibbonMenu::setDeselectNewHiddenObjects, ribbonMenu_, std::placeholders::_1 ) );
+            UI::checkbox( "Close Context on Change",
+                                                  std::bind( &RibbonMenu::getCloseContextOnChange, ribbonMenu_ ),
+                                                  std::bind( &RibbonMenu::setCloseContextOnChange, ribbonMenu_, std::placeholders::_1 ) );
+            UI::setTooltipIfHovered( "Close scene context menu on any change", menuScaling );
         }
 
         bool flatShading = SceneSettings::get( SceneSettings::Type::MeshFlatShading );

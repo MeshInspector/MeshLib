@@ -279,8 +279,7 @@ void RibbonMenu::drawActiveNonBlockingDialogs_()
 
 void RibbonMenu::drawSearchButton_()
 {
-    auto nameWindow = "##RibbonGlobalSearchPopup";
-    bool popupOpened = ImGui::IsPopupOpen( nameWindow );
+    bool popupOpened = ImGui::IsPopupOpen( searcher_.windowName() );
 
     const auto scaling = menu_scaling();
     auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
@@ -310,107 +309,12 @@ void RibbonMenu::drawSearchButton_()
 
     // manage search popup
     if ( pressed && !popupOpened )
-        ImGui::OpenPopup( nameWindow );
+        ImGui::OpenPopup( searcher_.windowName() );
 
     if ( !popupOpened )
         return;
 
-    if ( ImGuiWindow* menuWindow = ImGui::FindWindowByName( nameWindow ) )
-        if ( menuWindow->WasActive )
-        {
-            ImRect frame;
-            frame.Min = absMinPos;
-            frame.Max = ImVec2( frame.Min.x + ImGui::GetFrameHeight(), frame.Min.y + ImGui::GetFrameHeight() );
-            ImVec2 expectedSize = ImGui::CalcWindowNextAutoFitSize( menuWindow );
-            menuWindow->AutoPosLastDirection = ImGuiDir_Down;
-            ImRect rectOuter = ImGui::GetPopupAllowedExtentRect( menuWindow );
-            ImVec2 pos = ImGui::FindBestWindowPosForPopupEx( frame.GetBL(), expectedSize, &menuWindow->AutoPosLastDirection, rectOuter, frame, ImGuiPopupPositionPolicy_ComboBox );
-            ImGui::SetNextWindowPos( pos );
-        }
-
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove;
-    ImGui::Begin( nameWindow, NULL, window_flags );
-    if ( popupOpened )
-    {
-        // Search line
-        bool appearing = ImGui::IsWindowAppearing();
-        if ( appearing )
-        {
-            searchLine_.clear();
-            searchResult_.clear();
-            hightlightedSearchItem_ = -1;
-            ImGui::SetKeyboardFocusHere();
-        }
-        float minSearchSize = 300.0f * scaling;
-        ImGui::SetNextItemWidth( minSearchSize );
-        if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
-            searchResult_ = RibbonSchemaHolder::search( searchLine_ );
-
-        if ( searchResult_.empty() )
-            hightlightedSearchItem_ = -1;
-
-        if ( !appearing )
-        {
-            if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
-                ImGui::CloseCurrentPopup();
-            else if ( ImGui::IsKeyPressed( ImGuiKey_DownArrow ) && hightlightedSearchItem_ + 1 < searchResult_.size() )
-                hightlightedSearchItem_++;
-            else if ( ImGui::IsKeyPressed( ImGuiKey_UpArrow ) && hightlightedSearchItem_ > 0 )
-                hightlightedSearchItem_--;
-        }
-
-        ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Small ) );
-        auto ySize = ( cSmallIconSize + 2 * cRibbonButtonWindowPaddingY ) * scaling;
-        ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
-        ImGui::PushStyleColor( ImGuiCol_ButtonHovered, 
-                               ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabHovered ).getUInt32() );
-        ImGui::PushStyleColor( ImGuiCol_ButtonActive,
-                               ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActive ).getUInt32() );
-        ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-        int uniqueBtnCounter = 0;
-        for ( int i = 0; i < searchResult_.size(); ++i )
-        {
-            const auto& foundItem = searchResult_[i];
-            if ( !foundItem.item )
-                continue;
-            auto pos = ImGui::GetCursorPos();
-            if ( foundItem.tabIndex != -1 )
-            {
-                const auto& tabName = RibbonSchemaHolder::schema().tabsOrder[foundItem.tabIndex].name;
-                auto label = "##SearchTabBtn" + tabName + std::to_string( ++uniqueBtnCounter );
-                auto labelSize = ImGui::CalcTextSize( tabName.c_str() );
-                if ( ImGui::Button( label.c_str(), ImVec2( labelSize.x + 2 * cRibbonButtonWindowPaddingX * scaling, ySize ) ) )
-                {
-                    changeTab_( foundItem.tabIndex );
-                    ImGui::CloseCurrentPopup();
-                }
-                ImVec2 textPos = pos;
-                textPos.x += cRibbonButtonWindowPaddingX * scaling;
-                textPos.y += ( ySize - labelSize.y ) * 0.5f;
-                ImGui::SetCursorPos( textPos );
-                ImGui::Text( "%s", tabName.c_str() );
-                ImGui::SameLine( 0.0f, cRibbonButtonWindowPaddingX * scaling + ImGui::GetStyle().ItemSpacing.x );
-                ImGui::SetCursorPosX( minSearchSize * 0.3f );
-                ImGui::Text( ">" );
-                ImGui::SameLine( 0.0f, cRibbonButtonWindowPaddingX * scaling + ImGui::GetStyle().ItemSpacing.x );
-            }
-            auto width = buttonDrawer_.calcItemWidth( *foundItem.item, DrawButtonParams::SizeType::SmallText );
-            DrawButtonParams params;
-            params.sizeType = DrawButtonParams::SizeType::SmallText;
-            params.iconSize = cSmallIconSize;
-            params.itemSize.y = ySize;
-            params.itemSize.x = width.baseWidth + width.additionalWidth + 2.0f * cRibbonButtonWindowPaddingX * scaling;
-            params.forceHovered = hightlightedSearchItem_ == i;
-            params.forcePressed = params.forceHovered &&
-                ( ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter ) );
-            ImGui::SetCursorPosY( pos.y );
-            buttonDrawer_.drawButtonItem( *foundItem.item, params );
-        }
-        ImGui::PopStyleVar( 1 );
-        ImGui::PopStyleColor( 3 );
-        ImGui::PopFont();
-        ImGui::EndPopup();
-    }
+    searcher_.draw( { buttonDrawer_,absMinPos,[this] ( int i ) { changeTab_( i ); }, scaling } );
 }
 
 void RibbonMenu::drawCollapseButton_()
@@ -1381,6 +1285,9 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
         spdlog::info( "Action item: \"{}\"", name );
     else
         spdlog::info( "{} item: \"{}\"", wasActive ? std::string( "Deactivated" ) : std::string( "Activated" ), name );
+
+    if ( stateChanged && !wasActive )
+        searcher_.pushRecentItem( item );
 }
 
 void RibbonMenu::changeTab_( int newTab )
@@ -1690,10 +1597,14 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
             ImGui::EndTable();
         }
         ImGui::PopStyleVar();
-        //uncomment to close context menu on any change
-        //if ( wasChanged || wasAction )
-        if ( wasAction )
+
+        const bool needCloseCurrentPopup =
+            (ImGui::IsMouseDown( 2 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) ) ||
+            ( wasAction || ( wasChanged && closeContextOnChange_ ) );
+        if ( needCloseCurrentPopup )
+        {
             ImGui::CloseCurrentPopup();
+        }
         ImGui::EndPopup();
     }
 }

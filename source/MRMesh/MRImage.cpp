@@ -5,15 +5,15 @@ namespace MR
 
 Color Image::sampleDiscrete( const UVCoord & pos ) const
 {
-    const float x = std::clamp( pos.x * resolution.x - 0.5f, 0.0f, resolution.x - 1.0f );
-    const float y = std::clamp( pos.y * resolution.y - 0.5f, 0.0f, resolution.y - 1.0f );
+    const float x = std::clamp( pos.x, 0.0f, 1.0f ) * ( resolution.x - 1 );
+    const float y = std::clamp( pos.y, 0.0f, 1.0f ) * ( resolution.y - 1 );
     return operator[]( { (int)std::lround( x ), (int)std::lround( y ) } );
 }
 
 Color Image::sampleBilinear( const UVCoord & pos ) const
 {
-    const float x = std::clamp( pos.x * resolution.x - 0.5f, 0.0f, resolution.x - 1.0f );
-    const float y = std::clamp( pos.y * resolution.y - 0.5f, 0.0f, resolution.y - 1.0f );
+    const float x = std::clamp( pos.x, 0.0f, 1.0f ) * ( resolution.x - 1 );
+    const float y = std::clamp( pos.y, 0.0f, 1.0f ) * ( resolution.y - 1 );
 
     const float xlowf = std::floor( x );
     const float ylowf = std::floor( y );

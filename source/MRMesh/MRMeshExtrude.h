@@ -14,7 +14,7 @@ struct MakeDegenerateBandAroundRegionParams
     // (optional) return legth of the longest edges from the boundary of the region
     float* maxEdgeLength = nullptr;
     // (optional) map of new verices to old ones
-    VertMap* new2OldMap = nullptr;
+    VertHashMap* new2OldMap = nullptr;
 };
 
 /**

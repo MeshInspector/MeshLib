@@ -20,15 +20,6 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, const
     if ( region.none() || ( topology.getValidFaces() - region ).none() )
         return;
 
-    if ( params.new2OldMap )
-    {
-        params.new2OldMap->resize( mesh.points.size() );
-        ParallelFor( *params.new2OldMap, [&] ( VertId v )
-        {
-            params.new2OldMap->operator[]( v ) = v;
-        } );
-    }
-
     float maxEdgeLenSq = 0;
 
     auto componentBoundary = findLeftBoundaryInsideMesh( topology, region );
@@ -40,9 +31,6 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, const
 
         if ( params.outExtrudedEdges || params.new2OldMap || params.maxEdgeLength )
         {
-            if ( params.new2OldMap )
-                params.new2OldMap->reserve( mesh.points.size() );
-
             for ( size_t i = 0; i < contour.size(); ++i )
             {
                 maxEdgeLenSq = std::max( mesh.edgeLengthSq( contour[i] ), maxEdgeLenSq );
@@ -56,8 +44,8 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, const
 
                 if ( params.new2OldMap )
                 {
-                    params.new2OldMap->autoResizeSet( mesh.topology.org( newContour[i] ), params.new2OldMap->operator[]( mesh.topology.org( contour[i] ) ) );
-                    params.new2OldMap->autoResizeSet( mesh.topology.org( holeContour[i] ), params.new2OldMap->operator[]( mesh.topology.org( contour[i] ) ) );
+                    params.new2OldMap->insert_or_assign( mesh.topology.org( newContour[i]), mesh.topology.org( contour[i] ) );
+                    params.new2OldMap->insert_or_assign( mesh.topology.org( holeContour[i] ), mesh.topology.org( contour[i] ) );
                 }
             }
         }

@@ -1,5 +1,8 @@
 #include "MRViewport.h"
 #include "MRViewer.h"
+#include "ImGuiMenu.h"
+#include "MRGLMacro.h"
+#include "MRGLStaticHolder.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRArrow.h>
 #include <MRMesh/MRUVSphere.h>
@@ -7,18 +10,16 @@
 #include <MRMesh/MRClosestPointInTriangle.h>
 #include <MRMesh/MRTimer.h>
 #include "MRMesh/MRObjectsAccess.h"
-#include "MRGLMacro.h"
 #include "MRMesh/MRObjectMesh.h"
-#include "MRGLStaticHolder.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRPolylineProject.h"
-#include "MRPch/MRSuppressWarning.h"
-#include "MRPch/MRTBB.h"
 #include "MRMesh/MR2to3.h"
-#include "MRViewer/ImGuiMenu.h"
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMesh/MRSceneRoot.h"
+#include "MRPch/MRSuppressWarning.h"
+#include "MRPch/MRTBB.h"
 
 using VisualObjectTreeDataVector = std::vector<MR::VisualObject*>;
 namespace
@@ -206,7 +207,11 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
     if ( width( viewportRect_ ) == 0 || height( viewportRect_ ) == 0 )
         return result;
 
+    bool needBindSceneTexture = getViewerInstance().isSceneTextureBound();
     auto pickResult = viewportGL_.pickObjects( params, picks );
+    if ( needBindSceneTexture )
+        getViewerInstance().bindSceneTexture( true );
+
     for ( int i = 0; i < pickResult.size(); ++i )
     {
         auto& pickRes = pickResult[i];
@@ -267,21 +272,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
                 }
             }
         }
-        if ( auto parent = renderVector[pickRes.geomId]->parent() )
-        {
-            for ( auto& child : parent->children() )
-                if ( child.get() == renderVector[pickRes.geomId] )
-                {
-                    result[i] = {std::dynamic_pointer_cast<VisualObject>( child ),res};
-                    continue;
-                }
-        }
-        else
-        {
-            // object is not in scene
-            assert( false );
-            continue;
-        }
+        result[i] = { std::dynamic_pointer_cast<VisualObject>( renderVector[pickRes.geomId]->getSharedPtr() ),res };
     }
     return result;
 }
@@ -304,16 +295,7 @@ std::vector<std::shared_ptr<MR::VisualObject>> Viewport::findObjectsInRect( cons
     std::vector<std::shared_ptr<VisualObject>> result( pickResult.size() );
     for ( int i = 0; i < pickResult.size(); ++i )
     {
-        if ( auto parent = renderVector[pickResult[i]]->parent() )
-        {
-            for ( auto& child : parent->children() )
-            {
-                if ( child.get() == renderVector[pickResult[i]] )
-                {
-                    result[i] = std::dynamic_pointer_cast< VisualObject >( child );
-                }
-            }
-        }
+        result[i] = std::dynamic_pointer_cast<VisualObject>( renderVector[pickResult[i]]->getSharedPtr() );
     }
 
     return result;
@@ -344,9 +326,13 @@ std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> Viewport::fi
     for ( const auto& box : tlBoxes )
         rect.include( box );
 
+
+    bool needBindSceneTexture = getViewerInstance().isSceneTextureBound();
     auto viewportRect = Box2i( Vector2i( 0, 0 ), Vector2i( width, height ) );
     auto realRect = rect.intersection( viewportRect );
     auto [pickResult, updatedBox] = viewportGL_.pickObjectsInRect( params, realRect, maxRenderResolutionSide );
+    if ( needBindSceneTexture )
+        getViewerInstance().bindSceneTexture( true );
 
     std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> resMap;
 
@@ -514,6 +500,12 @@ void Viewport::setClippingPlane( const Plane3f& plane )
     if ( params_.clippingPlane == plane )
         return;
     params_.clippingPlane = plane; 
+    needRedraw_ = true;
+}
+
+void Viewport::setLabel( std::string s )
+{
+    params_.label = std::move( s );
     needRedraw_ = true;
 }
 
@@ -781,6 +773,7 @@ bool Viewport::Parameters::operator==( const Viewport::Parameters& other ) const
         orthographic == other.orthographic &&
         objectScale == objectScale &&
         borderColor == other.borderColor &&
+        label == other.label &&
         clippingPlane == other.clippingPlane &&
         rotationMode == other.rotationMode &&
         selectable == other.selectable;

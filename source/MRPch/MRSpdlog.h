@@ -1,5 +1,7 @@
 #pragma once
 
+#include "MRFmt.h"
+
 #if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreorder-ctor"
@@ -13,11 +15,10 @@
 #endif
 
 #pragma warning(push)
-#pragma warning(disable:4275)
+#pragma warning(disable:4275) // non dll-interface class 'std::runtime_error' used as base for dll-interface class 'fmt::v10::format_error'
 #pragma warning(disable:4251)
 #pragma warning(disable:4273)
 #include <spdlog/spdlog.h>
-#include <spdlog/fmt/ostr.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/daily_file_sink.h>
@@ -34,18 +35,3 @@
 #if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)
 #pragma clang diagnostic pop
 #endif
-
-namespace MR
-{
-#if FMT_VERSION < 80000
-inline const std::string& runtimeFmt( const std::string& str )
-{
-    return str;
-}
-#else
-inline auto runtimeFmt( const std::string& str )
-{
-    return fmt::runtime( str );
-}
-#endif
-}

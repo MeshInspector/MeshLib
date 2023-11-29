@@ -2,8 +2,9 @@
 
 #include "MRMeshFwd.h"
 #ifndef MRMESH_NO_LABEL
-#include "MRMesh/MRVector2.h"
+#include "MRVector2.h"
 #include "MRSystem.h"
+#include "MRExpected.h"
 #include <string>
 #include <filesystem>
 
@@ -44,14 +45,18 @@ struct SymbolMeshParams
 };
 
 // converts text string into set of contours
-MRMESH_API Contours2d createSymbolContours( const SymbolMeshParams& params );
+// return: the contour if successful
+// return: the position of the first undefined symbol in case of an error
+MRMESH_API Expected<Contours2d, size_t> createSymbolContours( const SymbolMeshParams& params );
 
 // given a planar mesh with boundary on input located in plane XY, packs and extends it along Z on zOffset to make a volumetric closed mesh
 // zOffset should be > 0
 MRMESH_API void addBaseToPlanarMesh( Mesh& mesh, float zOffset = 1.0f );
 
 // converts text string into Z-facing symbol mesh
-MRMESH_API Mesh createSymbolsMesh( const SymbolMeshParams& params );
+// return: the mesh if successful
+// return: the position of the first undefined symbol in case of an error
+MRMESH_API Expected<Mesh, size_t> createSymbolsMesh( const SymbolMeshParams& params );
 
 }
 #endif

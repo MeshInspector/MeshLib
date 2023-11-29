@@ -20,6 +20,7 @@
 #include <MRMesh/MRChangeSceneObjectsOrder.h>
 #include <MRMesh/MRChangeSceneAction.h>
 #include <MRMesh/MRChangeObjectFields.h>
+#include <MRMesh/MRSceneRoot.h>
 #include <MRPch/MRJson.h>
 #include <MRPch/MRSpdlog.h>
 #include <MRPch/MRWasm.h>
@@ -278,15 +279,21 @@ void RibbonMenu::drawActiveNonBlockingDialogs_()
 
 void RibbonMenu::drawSearchButton_()
 {
+    bool popupOpened = ImGui::IsPopupOpen( searcher_.windowName() );
+
     const auto scaling = menu_scaling();
     auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
     font->Scale = 0.7f;
 
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * scaling );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-    ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrab ) );
+    if ( popupOpened )
+        ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
+    else
+        ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
     ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
     ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
+    ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
 
     auto absMinPos = ImGui::GetCurrentContext()->CurrentWindow->DC.CursorPos;
 
@@ -297,96 +304,17 @@ void RibbonMenu::drawSearchButton_()
 
     font->Scale = 1.0f;
 
-    ImGui::PopStyleColor( 3 );
+    ImGui::PopStyleColor( 4 );
     ImGui::PopStyleVar( 2 );
-
-    auto nameWindow = "##RibbonGlobalSearchPopup";
-    bool popupOpened = ImGui::IsPopupOpen( nameWindow );
 
     // manage search popup
     if ( pressed && !popupOpened )
-        ImGui::OpenPopup( nameWindow );
+        ImGui::OpenPopup( searcher_.windowName() );
 
     if ( !popupOpened )
         return;
 
-    if ( ImGuiWindow* menuWindow = ImGui::FindWindowByName( nameWindow ) )
-        if ( menuWindow->WasActive )
-        {
-            ImRect frame;
-            frame.Min = absMinPos;
-            frame.Max = ImVec2( frame.Min.x + ImGui::GetFrameHeight(), frame.Min.y + ImGui::GetFrameHeight() );
-            ImVec2 expectedSize = ImGui::CalcWindowNextAutoFitSize( menuWindow );
-            menuWindow->AutoPosLastDirection = ImGuiDir_Down;
-            ImRect rectOuter = ImGui::GetPopupAllowedExtentRect( menuWindow );
-            ImVec2 pos = ImGui::FindBestWindowPosForPopupEx( frame.GetBL(), expectedSize, &menuWindow->AutoPosLastDirection, rectOuter, frame, ImGuiPopupPositionPolicy_ComboBox );
-            ImGui::SetNextWindowPos( pos );
-        }
-
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove;
-    ImGui::Begin( nameWindow, NULL, window_flags );
-    if ( popupOpened )
-    {
-        // Search line
-        if ( ImGui::IsWindowAppearing() )
-        {
-            searchLine_.clear();
-            searchResult_.clear();
-            ImGui::SetKeyboardFocusHere();
-        }
-        float minSearchSize = 300.0f * scaling;
-        ImGui::SetNextItemWidth( minSearchSize );
-        if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
-            searchResult_ = RibbonSchemaHolder::search( searchLine_ );
-
-        ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Small ) );
-        auto ySize = ( cSmallIconSize + 2 * cRibbonButtonWindowPaddingY ) * scaling;
-        ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
-        ImGui::PushStyleColor( ImGuiCol_ButtonHovered, 
-                               ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabHovered ).getUInt32() );
-        ImGui::PushStyleColor( ImGuiCol_ButtonActive,
-                               ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActive ).getUInt32() );
-        ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-        int uniqueBtnCounter = 0;
-        for ( const auto& foundItem : searchResult_ )
-        {
-            if ( !foundItem.item )
-                continue;
-            auto pos = ImGui::GetCursorPos();
-            if ( foundItem.tabIndex != -1 )
-            {
-                const auto& tabName = RibbonSchemaHolder::schema().tabsOrder[foundItem.tabIndex].name;
-                auto label = "##SearchTabBtn" + tabName + std::to_string( ++uniqueBtnCounter );
-                auto labelSize = ImGui::CalcTextSize( tabName.c_str() );
-                if ( ImGui::Button( label.c_str(), ImVec2( labelSize.x + 2 * cRibbonButtonWindowPaddingX * scaling, ySize ) ) )
-                {
-                    changeTab_( foundItem.tabIndex );
-                    ImGui::CloseCurrentPopup();
-                }
-                ImVec2 textPos = pos;
-                textPos.x += cRibbonButtonWindowPaddingX * scaling;
-                textPos.y += ( ySize - labelSize.y ) * 0.5f;
-                ImGui::SetCursorPos( textPos );
-                ImGui::Text( "%s", tabName.c_str() );
-                ImGui::SameLine( 0.0f, cRibbonButtonWindowPaddingX * scaling + ImGui::GetStyle().ItemSpacing.x );
-                ImGui::SetCursorPosX( minSearchSize * 0.25f );
-                ImGui::Text( ">" );
-                ImGui::SameLine( 0.0f, cRibbonButtonWindowPaddingX * scaling + ImGui::GetStyle().ItemSpacing.x );
-            }
-            auto width = buttonDrawer_.calcItemWidth( *foundItem.item, DrawButtonParams::SizeType::SmallText );
-            DrawButtonParams params;
-            params.sizeType = DrawButtonParams::SizeType::SmallText;
-            params.iconSize = cSmallIconSize;
-            params.itemSize.y = ySize;
-            params.itemSize.x = width.baseWidth + width.additionalWidth + 2.0f * cRibbonButtonWindowPaddingX * scaling;
-            ImGui::SetCursorPosY( pos.y );
-            buttonDrawer_.drawButtonItem( *foundItem.item, params );
-        }
-        ImGui::PopStyleVar( 1 );
-        ImGui::PopStyleColor( 3 );
-        ImGui::PopFont();
-        ImGui::EndPopup();
-    }
+    searcher_.draw( { buttonDrawer_,absMinPos,[this] ( int i ) { changeTab_( i ); }, scaling } );
 }
 
 void RibbonMenu::drawCollapseButton_()
@@ -399,12 +327,13 @@ void RibbonMenu::drawCollapseButton_()
 
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * scaling );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-    ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrab ) );
+    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
     ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
     ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
 
     if ( collapseState_ == CollapseState::Pinned )
     {
+        ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
         ImGui::PushFont( font );
         if ( ImGui::Button( "\xef\x81\x93", ImVec2( btnSize, btnSize ) ) )
         {
@@ -416,15 +345,12 @@ void RibbonMenu::drawCollapseButton_()
 #endif
         }
         ImGui::PopFont();
-        if ( ImGui::IsItemHovered() )
-        {
-            ImGui::BeginTooltip();
-            ImGui::Text( "%s", "Unpin" );
-            ImGui::EndTooltip();
-        }
+        ImGui::PopStyleColor();
+        UI::setTooltipIfHovered( "Unpin", scaling );
     }
     else
     {
+        ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
         ImGui::PushFont( font );
         if ( ImGui::Button( "\xef\x81\xb7", ImVec2( btnSize, btnSize ) ) )
         {
@@ -432,12 +358,8 @@ void RibbonMenu::drawCollapseButton_()
             fixViewportsSize_( getViewerInstance().framebufferSize.x, getViewerInstance().framebufferSize.y );
         }
         ImGui::PopFont();
-        if ( ImGui::IsItemHovered() )
-        {
-            ImGui::BeginTooltip();
-            ImGui::Text( "%s", "Pin" );
-            ImGui::EndTooltip();
-        }
+        ImGui::PopStyleColor();
+        UI::setTooltipIfHovered( "Pin", scaling );
     }
     font->Scale = 1.0f;
 
@@ -480,6 +402,33 @@ void RibbonMenu::drawCollapseButton_()
                 collapseState_ = CollapseState::Closed;
         }
     }
+}
+
+void RibbonMenu::drawHelpButton_()
+{
+    const auto scaling = menu_scaling();
+    auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
+    font->Scale = 0.7f;
+
+    float btnSize = scaling * cTopPanelAditionalButtonSize;
+
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * scaling );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
+
+    ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
+    ImGui::PushFont( font );
+    if ( ImGui::Button( "\xef\x81\x99", ImVec2( btnSize, btnSize ) ) )
+        OpenLink( "https://meshinspector.com/help/en/" );
+    ImGui::PopFont();
+    ImGui::PopStyleColor();
+    UI::setTooltipIfHovered( "Open help page", scaling );
+    font->Scale = 1.0f;
+
+    ImGui::PopStyleColor( 3 );
+    ImGui::PopStyleVar( 2 );
 }
 
 void RibbonMenu::sortObjectsRecursive_( std::shared_ptr<Object> object )
@@ -573,10 +522,11 @@ void RibbonMenu::drawHeaderPannel_()
     bool needActive = hasAnyActiveItem() && toolbar_.getCurrentToolbarWidth() == 0.0f;
     float activeBtnSize = cTabHeight * menuScaling - 4 * menuScaling; // small offset from border
 
-    // 40 - search button size (by eye)
-    // 40 - collapse button size (by eye)
-    // 40 - active button size (by eye)
-    auto availWidth = ImGui::GetContentRegionAvail().x - ( needActive ? 3 : 2 ) * 40.0f * menuScaling;
+    // 40 - active button size (optional)
+    // 40 - help button size
+    // 40 - search button size
+    // 40 - collapse button size
+    auto availWidth = ImGui::GetContentRegionAvail().x - ( needActive ? 4 : 3 ) * 40.0f * menuScaling;
 
     float scrollMax = summaryTabPannelSize - availWidth;
     bool needScroll = scrollMax > 0.0f;
@@ -702,9 +652,12 @@ void RibbonMenu::drawHeaderPannel_()
 
     if ( needActive )
     {
-        ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 110.0f * menuScaling, cTabYOffset * menuScaling ) );
+        ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 150.0f * menuScaling, cTabYOffset * menuScaling ) );
         drawActiveListButton_( activeBtnSize );
     }
+
+    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 110.0f * menuScaling, cTabYOffset* menuScaling ) );
+    drawHelpButton_();
 
     ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 70.0f * menuScaling, cTabYOffset* menuScaling ) );
     drawSearchButton_();
@@ -1332,6 +1285,9 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
         spdlog::info( "Action item: \"{}\"", name );
     else
         spdlog::info( "{} item: \"{}\"", wasActive ? std::string( "Deactivated" ) : std::string( "Activated" ), name );
+
+    if ( stateChanged && !wasActive )
+        searcher_.pushRecentItem( item );
 }
 
 void RibbonMenu::changeTab_( int newTab )
@@ -1386,67 +1342,6 @@ void RibbonMenu::drawSceneListButtons_()
 
 void RibbonMenu::drawWelcomeWindow_()
 {
-    static bool drawWelcome = false; // change to true when we have real welcome screen
-    if ( !drawWelcome )
-        return;
-    
-    // change this number to force draw welcome screen once on new release
-    constexpr int cShowWelcomeTS = 0; 
-    const auto& settingsManager = getViewerInstance().getViewportSettingsManager();
-    if ( !settingsManager )
-    {
-        drawWelcome = false;
-        return;
-    }
-    static const int currentWelcomeTS = settingsManager->loadInt( "cWelcomeScreenTS", 0 );
-    if ( currentWelcomeTS == cShowWelcomeTS )
-    {
-        drawWelcome = false;
-        return;
-    }
-    else
-    {
-        settingsManager->saveInt( "cWelcomeScreenTS", cShowWelcomeTS );
-    }
-
-    auto scaling = menu_scaling();
-    const ImVec2 windowSize{ MR::cModalWindowWidth * scaling, -1 };
-    const float posX = 0.5f * ( getViewerInstance().framebufferSize.x - windowSize.x );
-    const float posY = 0.5f * ( getViewerInstance().framebufferSize.y - windowSize.x * 0.5f );
-    ImGui::SetNextWindowPos( ImVec2( posX, posY ), ImGuiCond_Appearing );
-    ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * scaling, cModalWindowPaddingY * scaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * scaling, 3.0f * cDefaultItemSpacing * scaling } );
-    if ( ImGui::Begin( "##wlcomeScreen", nullptr,
-        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar ) )
-    {
-        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
-        if ( headerFont )
-            ImGui::PushFont( headerFont );
-
-        const auto headerWidth = ImGui::CalcTextSize( "Welcome" ).x;
-
-        ImGui::SetCursorPosX( ( windowSize.x - headerWidth ) * 0.5f );
-        ImGui::Text( "Welcome" );
-
-        if ( headerFont )
-            ImGui::PopFont();
-
-        const float textWidth = ImGui::CalcTextSize( "Hello!" ).x;
-        ImGui::SetCursorPosX( ( windowSize.x - textWidth ) * 0.5f );
-        ImGui::Text( "Hello!" );
-
-        const auto style = ImGui::GetStyle();
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * scaling } );
-        if ( UI::button( "Okay", Vector2f( -1, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Enter ) ||
-           ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) ) )
-        {
-            drawWelcome = false;
-        }
-        ImGui::PopStyleVar();
-        ImGui::End();
-    }
-    ImGui::PopStyleVar( 2 );
 }
 
 void RibbonMenu::readMenuItemsStructure_()
@@ -1639,8 +1534,11 @@ void RibbonMenu::drawRibbonViewportsLabels_()
         constexpr std::array<const char*, 2> cProjModeString = { "Orthographic" , "Perspective" };
         std::string windowName = "##ProjectionMode" + std::to_string( vp.id.value() );
         std::string text;
-        if ( viewer->viewport_list.size() > 1 )
-            text = fmt::format( "Viewport Id: {}, {}", vp.id.value(), cProjModeString[int( !vp.getParameters().orthographic )] );
+        std::string label = vp.getParameters().label;
+        if ( viewer->viewport_list.size() > 1 && label.empty() )
+            label = fmt::format( "Viewport Id : {}", vp.id.value() );
+        if ( !label.empty() )
+            text = fmt::format( "{}, {}", label, cProjModeString[int( !vp.getParameters().orthographic )] );
         else
             text = fmt::format( "{}", cProjModeString[int( !vp.getParameters().orthographic )] );
         auto textSize = ImGui::CalcTextSize( text.c_str() );
@@ -1699,10 +1597,14 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
             ImGui::EndTable();
         }
         ImGui::PopStyleVar();
-        //uncomment to close context menu on any change
-        //if ( wasChanged || wasAction )
-        if ( wasAction )
+
+        const bool needCloseCurrentPopup =
+            (ImGui::IsMouseDown( 2 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) ) ||
+            ( wasAction || ( wasChanged && closeContextOnChange_ ) );
+        if ( needCloseCurrentPopup )
+        {
             ImGui::CloseCurrentPopup();
+        }
         ImGui::EndPopup();
     }
 }

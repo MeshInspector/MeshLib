@@ -1,12 +1,13 @@
 #include "MRPointCloud.h"
 #include "MRAABBTreePoints.h"
 #include "MRComputeBoundingBox.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRPlane3.h"
 #include "MRBitSetParallelFor.h"
 #include "MRBuffer.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
+#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -19,6 +20,32 @@ Box3f PointCloud::getBoundingBox() const
 Box3f PointCloud::computeBoundingBox( const AffineXf3f * toWorld ) const
 {
     return MR::computeBoundingBox( points, validPoints, toWorld );
+}
+
+Vector3f PointCloud::findCenterFromPoints() const
+{
+    MR_TIMER
+    const auto num = calcNumValidPoints();
+    if ( num <= 0 )
+    {
+        assert( false );
+        return {};
+    }
+    auto sumPos = parallel_deterministic_reduce( tbb::blocked_range( 0_v, VertId{ points.size() }, 1024 ), Vector3d{},
+    [&] ( const auto & range, Vector3d curr )
+    {
+        for ( VertId v = range.begin(); v < range.end(); ++v )
+            if ( validPoints.test( v ) )
+                curr += Vector3d{ points[v] };
+        return curr;
+    },
+    [] ( auto a, auto b ) { return a + b; } );
+    return Vector3f{ sumPos / (double)num };
+}
+
+Vector3f PointCloud::findCenterFromBBox() const
+{
+    return computeBoundingBox().center();
 }
 
 void PointCloud::addPartByMask( const PointCloud& from, const VertBitSet& fromVerts, const CloudPartMapping& outMap, const VertNormals * extNormals )
@@ -109,6 +136,16 @@ void PointCloud::mirror( const Plane3f& plane )
     } );
 
     invalidateCaches();
+}
+
+void PointCloud::flipOrientation( const VertBitSet * region )
+{
+    MR_TIMER
+    BitSetParallelFor( getVertIds( region ), [&] ( VertId id )
+    {
+        if ( id < normals.size() )
+            normals[id] = -normals[id];
+    } );
 }
 
 bool PointCloud::pack( VertMap * outNew2Old )

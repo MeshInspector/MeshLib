@@ -1,4 +1,20 @@
 #include "MRViewer.h"
+#include "MRViewerEventQueue.h"
+#include "MRSceneTextureGL.h"
+#include "MRAlphaSortGL.h"
+#include "MRGLMacro.h"
+#include "MRSetupViewer.h"
+#include "MRGLStaticHolder.h"
+#include "MRViewerPlugin.h"
+#include "MRCommandLoop.h"
+#include "MRSplashWindow.h"
+#include "MRViewerSettingsManager.h"
+#include "MRGladGlfw.h"
+#include "ImGuiMenu.h"
+#include "MRGetSystemInfoJson.h"
+#include "MRSpaceMouseHandler.h"
+#include "MRSpaceMouseHandlerHidapi.h"
+#include "MRRenderGLHelpers.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -25,25 +41,11 @@
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
-#include "MRAlphaSortGL.h"
-#include "MRGLMacro.h"
-#include "MRSetupViewer.h"
-#include "MRGLStaticHolder.h"
-#include "MRViewerPlugin.h"
-#include "MRCommandLoop.h"
-#include "MRSplashWindow.h"
-#include "MRViewerSettingsManager.h"
-#include "MRGladGlfw.h"
-#include "ImGuiMenu.h"
 #include "MRMesh/MRGTest.h"
 #include "MRMesh/MRObjectLabel.h"
-#include "MRPch/MRWasm.h"
-#include "MRGetSystemInfoJson.h"
-#include "MRSpaceMouseHandler.h"
-#include "MRSpaceMouseHandlerHidapi.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRSerializer.h"
-#include "MRViewer/MRRenderGLHelpers.h"
+#include "MRPch/MRWasm.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -123,13 +125,13 @@ static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, in
         mb = MR::Viewer::MouseButton::Middle;
 
     auto* viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( {"Mouse press", [mb, action, modifier, viewer] ()
+    viewer->emplaceEvent( "Mouse press", [mb, action, modifier, viewer] ()
     {
         if ( action == GLFW_PRESS )
             viewer->mouseDown( mb, modifier );
         else
             viewer->mouseUp( mb, modifier );
-    } } );
+    } );
 }
 
 static void glfw_error_callback( int /*error*/, const char* description )
@@ -140,16 +142,16 @@ static void glfw_error_callback( int /*error*/, const char* description )
 static void glfw_char_mods_callback( GLFWwindow* /*window*/, unsigned int codepoint )
 {
     auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( { "Char", [codepoint, viewer] ()
+    viewer->emplaceEvent( "Char", [codepoint, viewer] ()
     {
         viewer->keyPressed( codepoint, 0 );
-    } } );
+    } );
 }
 
 static void glfw_key_callback( GLFWwindow* /*window*/, int key, int /*scancode*/, int action, int modifier )
 {
     auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( {"Key press", [action, key, modifier, viewer] ()
+    viewer->emplaceEvent( "Key press", [action, key, modifier, viewer] ()
     {
         if ( action == GLFW_PRESS )
             viewer->keyDown( key, modifier );
@@ -157,7 +159,7 @@ static void glfw_key_callback( GLFWwindow* /*window*/, int key, int /*scancode*/
             viewer->keyUp( key, modifier );
         else if ( action == GLFW_REPEAT )
             viewer->keyRepeat( key, modifier );
-    } } );
+    } );
 }
 
 static void glfw_framebuffer_size( GLFWwindow* /*window*/, int width, int height )
@@ -172,20 +174,20 @@ static void glfw_window_pos( GLFWwindow* /*window*/, int xPos, int yPos )
     // need for remember window pos and size before maximize
     // located here because glfw_window_pos calls before glfw_window_maximize and glfw_window_iconify (experience)
     auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( { "Windows pos", [xPos, yPos, viewer] ()
+    viewer->emplaceEvent( "Windows pos", [xPos, yPos, viewer] ()
     {
         viewer->windowOldPos = viewer->windowSavePos;
         viewer->postSetPosition( xPos, yPos );
-    } } );
+    } );
 }
 
 static void glfw_cursor_enter_callback( GLFWwindow* /*window*/, int entered )
 {
     auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( { "Cursor enter", [entered, viewer] ()
+    viewer->emplaceEvent( "Cursor enter", [entered, viewer] ()
     {
         viewer->cursorEntranceSignal( bool( entered ) );
-    } } );
+    } );
 }
 
 #ifndef __EMSCRIPTEN__
@@ -228,7 +230,7 @@ static void glfw_mouse_move( GLFWwindow* /*window*/, double x, double y )
         viewer->mouseMove( int( std::round( x * viewer->pixelRatio ) ), int( std::round( y * viewer->pixelRatio ) ) );
         viewer->draw();
     };
-    viewer->eventQueue.emplace( { "Mouse move", eventCall }, true );
+    viewer->emplaceEvent( "Mouse move", eventCall, true );
 }
 
 static void glfw_mouse_scroll( GLFWwindow* /*window*/, double /*x*/, double y )
@@ -236,14 +238,14 @@ static void glfw_mouse_scroll( GLFWwindow* /*window*/, double /*x*/, double y )
     static double prevY = 0.0;
     auto viewer = &MR::getViewerInstance();
     if ( prevY * y < 0.0 )
-        viewer->eventQueue.popByName( "Mouse scroll" );
+        viewer->popEventByName( "Mouse scroll" );
     auto eventCall = [y, viewer, prevPtr = &prevY] ()
     {
         *prevPtr = y;
         viewer->mouseScroll( float( y ) );
         viewer->draw();
     };
-    viewer->eventQueue.emplace( { "Mouse scroll", eventCall } );
+    viewer->emplaceEvent( "Mouse scroll", eventCall );
 }
 
 static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, const char **filenames )
@@ -257,24 +259,36 @@ static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, 
         paths[i] = MR::pathFromUtf8( filenames[i] );
     }
     auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( { "Drop", [paths, viewer] ()
+    viewer->emplaceEvent( "Drop", [paths, viewer] ()
     {
         viewer->dragDrop( paths );
-    } } );
+    } );
     viewer->postEmptyEvent();
 }
 
 static void glfw_joystick_callback( int jid, int event )
 {
     auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( { "Joystick", [jid, event, viewer] ()
+    viewer->emplaceEvent( "Joystick", [jid, event, viewer] ()
     {
         viewer->joystickUpdateConnected( jid, event );
-    } } );
+    } );
 }
 
 namespace MR
 {
+
+void Viewer::emplaceEvent( std::string name, ViewerEventCallback cb, bool skipable )
+{
+    if ( eventQueue_ )
+        eventQueue_->emplace( std::move( name ), std::move( cb ), skipable );
+}
+
+void Viewer::popEventByName( const std::string& name )
+{
+    if ( eventQueue_ )
+        eventQueue_->popByName( name );
+}
 
 void addLabel( ObjectMesh& obj, const std::string& str, const Vector3f& pos )
 {
@@ -378,6 +392,8 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             params.console = true;
         else if ( flag == "-openGL3" )
             params.preferOpenGL3 = true;
+        else if ( flag == "-noRenderInTexture" )
+            params.render3dSceneInTexture = false;
         else if ( flag == "-develop" )
             params.developerFeatures = true;
         else if ( flag == "-width" )
@@ -393,8 +409,13 @@ void Viewer::emsMainInfiniteLoop()
 {
     auto& viewer = getViewerInstance();
     viewer.draw( true );
-    viewer.eventQueue.execute();
+    if ( viewer.eventQueue_ )
+        viewer.eventQueue_->execute();
     CommandLoop::processCommands();
+}
+#else
+void Viewer::emsMainInfiniteLoop()
+{
 }
 #endif
 
@@ -408,7 +429,7 @@ void Viewer::mainLoopFunc_()
             const double minDuration = 1e3 / double( animationMaxFps );
             emscripten_sleep( std::max( int( minDuration ), minEmsSleep ) );
         }
-        else if ( !isAnimating && eventQueue.empty() )
+        else if ( !isAnimating && eventQueue_ && eventQueue_->empty() )
         {
             emscripten_sleep( minEmsSleep ); // more then 300 fps possible
             continue;
@@ -417,7 +438,8 @@ void Viewer::mainLoopFunc_()
         do
         {
             draw( true );
-            eventQueue.execute();
+            if ( eventQueue_ )
+                eventQueue_->execute();
             CommandLoop::processCommands();
         } while ( forceRedrawFrames_ > 0 || needRedraw_() );
     }
@@ -476,24 +498,24 @@ bool Viewer::checkOpenGL_(const LaunchParams& params )
     int windowHeight = params.height;
 #ifdef __APPLE__
     alphaSorter_.reset();
-        spdlog::warn( "Alpha sort is not available" );
+    spdlog::warn( "Alpha sort is not available" );
 
-        spdlog::warn( "Loading OpenGL 4.1 for macOS" );
-        if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 4, 1 ) )
-        {
-            spdlog::critical( "Cannot load OpenGL 4.1" );
-            return false;
-        }
+    spdlog::warn( "Loading OpenGL 4.1 for macOS" );
+    if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 4, 1 ) )
+    {
+        spdlog::critical( "Cannot load OpenGL 4.1" );
+        return false;
+    }
 #else
 #ifdef __EMSCRIPTEN__
     alphaSorter_.reset();
-        spdlog::warn( "Alpha sort is not available" );
-        spdlog::warn( "Loading WebGL 2 (OpenGL ES 3.0)" );
-        if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 3, 3 ) )
-        {
-            spdlog::critical( "Cannot load WebGL 2 (OpenGL ES 3.0)" );
-            return false;
-        }
+    spdlog::warn( "Alpha sort is not available" );
+    spdlog::warn( "Loading WebGL 2 (OpenGL ES 3.0)" );
+    if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 3, 3 ) )
+    {
+        spdlog::critical( "Cannot load WebGL 2 (OpenGL ES 3.0)" );
+        return false;
+    }
 #else
     if ( params.preferOpenGL3 || !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 4, 3 ) )
     {
@@ -543,14 +565,16 @@ int Viewer::launchInit_( const LaunchParams& params )
     glfwWindowHint( GLFW_TRANSPARENT_FRAMEBUFFER, params.enableTransparentBackground );
 #endif
 
-    alphaSorter_ = std::make_unique<AlphaSortGL>();
-
     glfwWindowHint( GLFW_VISIBLE, int( bool( params.windowMode == LaunchParams::Show ) ) );
     bool windowMode = params.windowMode != LaunchParams::NoWindow;
 
     if ( windowMode )
     {
-        if ( !checkOpenGL_(params) )
+        alphaSorter_ = std::make_unique<AlphaSortGL>();
+        if ( params.render3dSceneInTexture )
+            sceneTexture_ = std::make_unique<SceneTextureGL>();
+
+        if ( !checkOpenGL_( params ) )
         {
             if ( params.windowMode == LaunchParams::TryHidden )
                 windowMode = false;
@@ -624,6 +648,8 @@ int Viewer::launchInit_( const LaunchParams& params )
         glfw_window_scale( window, xscale, yscale );
 
         enableAlphaSort( true );
+        if ( sceneTexture_ )
+            sceneTexture_->reset( { width, height }, -1 );
 
         if ( alphaSorter_ )
         {
@@ -705,7 +731,8 @@ void Viewer::launchEventLoop()
         {
             draw( true );
             glfwPollEvents();
-            eventQueue.execute();
+            if ( eventQueue_ )
+                eventQueue_->execute();
             if ( spaceMouseHandler_ )
                 spaceMouseHandler_->handle();
             CommandLoop::processCommands();
@@ -715,12 +742,14 @@ void Viewer::launchEventLoop()
         {
             const double minDuration = 1.0 / double( animationMaxFps );
             glfwWaitEventsTimeout( minDuration );
-            eventQueue.execute();
+            if ( eventQueue_ )
+                eventQueue_->execute();
         }
         else
         {
             glfwWaitEvents();
-            eventQueue.execute();
+            if ( eventQueue_ )
+                eventQueue_->execute();
         }
         if ( spaceMouseHandler_ )
             spaceMouseHandler_->handle();
@@ -761,6 +790,7 @@ void Viewer::launchShut()
     GLStaticHolder::freeAllShaders();
 
     alphaSorter_.reset();
+    sceneTexture_.reset();
 
     touchpadController.reset();
 
@@ -839,52 +869,19 @@ void Viewer::parseCommandLine_( [[maybe_unused]] int argc, [[maybe_unused]] char
 #endif
 }
 
-void Viewer::EventQueue::emplace( NamedEvent event, bool skipable )
-{
-    std::unique_lock lock( mutex_ );
-    if ( queue_.empty() || !skipable || !lastSkipable_ )
-        queue_.emplace( std::move( event ) );
-    else
-        queue_.back() = std::move( event );
-    lastSkipable_ = skipable;
-}
-
-void Viewer::EventQueue::execute()
-{
-    std::unique_lock lock( mutex_ );
-    while ( !queue_.empty() )
-    {
-        if ( queue_.front().cb )
-            queue_.front().cb();
-        queue_.pop();
-    }
-}
-
-bool Viewer::EventQueue::empty() const
-{
-    std::unique_lock lock( mutex_ );
-    return queue_.empty();
-}
-
-void Viewer::EventQueue::popByName( const std::string& name )
-{
-    std::unique_lock lock( mutex_ );
-    while ( !queue_.empty() && queue_.front().name == name )
-        queue_.pop();
-}
-
 void Viewer::postEmptyEvent()
 {
     if ( !isGLInitialized() )
         return;
 #ifdef __EMSCRIPTEN__
-    eventQueue.emplace( { "Empty", [] () {} } );
+    emplaceEvent( "Empty", [] () {} );
 #endif
     glfwPostEmptyEvent();
 }
 
 Viewer::Viewer() :
-    selected_viewport_index( 0 )
+    selected_viewport_index( 0 ),
+    eventQueue_( std::make_unique<ViewerEventQueue>() )
 {
     window = nullptr;
 
@@ -898,6 +895,7 @@ Viewer::~Viewer()
 {
     glInitialized_ = false;
     alphaSorter_.reset();
+    sceneTexture_.reset();
 }
 
 bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
@@ -1311,6 +1309,9 @@ bool Viewer::tryCreateWindow_( bool fullscreen, int& width, int& height, const s
 
 bool Viewer::needRedraw_() const
 {
+    if ( dirtyScene_ )
+        return true;
+
     for ( const auto& viewport : viewport_list )
         if ( viewport.getRedrawFlag() )
             return true;
@@ -1320,6 +1321,8 @@ bool Viewer::needRedraw_() const
 
 void Viewer::resetRedraw_()
 {
+    dirtyScene_ = false;
+
     for ( auto& viewport : viewport_list )
         viewport.resetRedrawFlag();
 
@@ -1384,7 +1387,8 @@ void Viewer::draw( bool force )
 
 bool Viewer::draw_( bool force )
 {
-    if ( !force && !needRedraw_() )
+    bool needSceneRedraw = needRedraw_();
+    if ( !force && !needSceneRedraw )
         return false;
 
     if ( !isInDraw_ )
@@ -1402,12 +1406,8 @@ bool Viewer::draw_( bool force )
     glPrimitivesCounter_.reset();
 
     setupScene();
-    preDrawSignal();
 
-    if ( forceRedrawFramesWithoutSwap_ <= 1 ) // if swapped
-        drawScene();
-
-    postDrawSignal();
+    drawFull( needSceneRedraw );
 
     if ( forceRedrawFramesWithoutSwap_ > 0 )
         forceRedrawFramesWithoutSwap_--;
@@ -1423,6 +1423,39 @@ bool Viewer::draw_( bool force )
     frameCounter_.endDraw( swapped );
     isInDraw_ = false;
     return ( window && swapped );
+}
+
+void Viewer::drawFull( bool dirtyScene )
+{
+    if ( menuPlugin_ )
+        menuPlugin_->startFrame();
+
+    if ( sceneTexture_ )
+        sceneTexture_->bind( true );
+
+    // need to clean it in texture too
+    for ( auto& viewport : viewport_list )
+        viewport.clearFramebuffers();
+
+    preDrawSignal();
+    // check dirty scene and need swap
+    // important to check after preDrawSignal
+    bool renderScene = forceRedrawFramesWithoutSwap_ <= 1;
+    if ( sceneTexture_ )
+        renderScene = renderScene && dirtyScene;
+    if ( renderScene )
+        drawScene();
+    postDrawSignal();
+    if ( sceneTexture_ )
+    {
+        sceneTexture_->unbind();
+        if ( renderScene )
+            sceneTexture_->copyTexture(); // copy scene texture only if scene was rendered
+
+        sceneTexture_->draw(); // always draw scene texture
+    }
+    if ( menuPlugin_ )
+        menuPlugin_->finishFrame();
 }
 
 void Viewer::drawScene()
@@ -1466,6 +1499,7 @@ void Viewer::drawScene()
 
 void Viewer::setupScene()
 {
+    bindSceneTexture( false );
     for ( auto& viewport : viewport_list )
     {
         viewport.setupView();
@@ -1524,6 +1558,9 @@ void Viewer::postResize( int w, int h )
 
     if ( alphaSorter_ )
         alphaSorter_->updateTransparencyTexturesSize( framebufferSize.x, framebufferSize.y );
+    if ( sceneTexture_ )
+        sceneTexture_->reset( framebufferSize, -1 );
+
 #if !defined(__EMSCRIPTEN__) || defined(MR_EMSCRIPTEN_ASYNCIFY)
     if ( isLaunched_ && !isInDraw_ )
     {
@@ -1952,13 +1989,26 @@ Image Viewer::captureSceneScreenShot( const Vector2i& resolution )
     setupScene();
     drawScene();
 
-    fd.copyTexture();
+    fd.copyTextureBindDef();
     fd.bindTexture();
-
-    GL_EXEC( glGetTexImage( GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, ( void* )( pixels.data() ) ) );
     
-    fd.unbind();
+#ifdef __EMSCRIPTEN__
+    GLuint fbo;
+    GL_EXEC( glGenFramebuffers(1, &fbo) ); 
+    GL_EXEC( glBindFramebuffer(GL_FRAMEBUFFER, fbo) );
+    GL_EXEC( glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fd.getTexture(), 0) );
+
+    GL_EXEC( glReadPixels(0, 0, newRes.x, newRes.y, GL_RGBA, GL_UNSIGNED_BYTE, ( void* )( pixels.data() )) );
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteFramebuffers(1, &fbo);
+#else
+    GL_EXEC( glGetTexImage( GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, ( void* )( pixels.data() ) ) );
+#endif
+
     fd.del();
+
+    bindSceneTexture( true );
 
     // restore sizes
     int i = 0;
@@ -2019,6 +2069,23 @@ bool Viewer::enableAlphaSort( bool on )
 
     alphaSortEnabled_ = true;
     return true;
+}
+
+bool Viewer::isSceneTextureBound() const
+{
+    if ( !sceneTexture_ )
+        return false;
+    return sceneTexture_->isBound();
+}
+
+void Viewer::bindSceneTexture( bool bind )
+{
+    if ( !sceneTexture_ )
+        return;
+    if ( bind )
+        sceneTexture_->bind( false );
+    else
+        sceneTexture_->unbind();
 }
 
 void Viewer::setViewportSettingsManager( std::unique_ptr<IViewerSettingsManager> mng )

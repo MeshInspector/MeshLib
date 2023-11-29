@@ -26,18 +26,18 @@ void WasmUnavailablePlugin::drawDialog( float scaling, ImGuiContext* )
 
     
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * scaling, cDefaultItemSpacing * scaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * scaling, cModalWindowPaddingY * scaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { 0.5f*   cModalWindowPaddingX * scaling, cModalWindowPaddingY * scaling } );
     if ( ImGui::BeginModalNoAnimation( "##WasmBlocked", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
-        if ( ImGui::ModalBigTitle( "This tool is not supported by browser", scaling ) )
+        if ( ImGui::ModalBigTitle( "The tool is not supported by the browser version", scaling ) )
         {
             ImGui::CloseCurrentPopup();
             dialogIsOpen_ = false;
         }
 
-        auto text = "We are sorry, this feature is not implemented in web version. Please install desktop version (it is really fast).";
+        auto text = "We are sorry, this feature is not implemented in web version. Please install desktop version.";
         const float textWidth = ImGui::CalcTextSize( text ).x;
-        if ( textWidth < windowSize.x )
+        if ( textWidth < windowSize.x - cModalWindowPaddingX * scaling )
         {
             ImGui::SetCursorPosX( ( windowSize.x - textWidth ) * 0.5f );
             ImGui::Text( "%s", text );

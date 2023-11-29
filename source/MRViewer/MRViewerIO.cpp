@@ -46,6 +46,12 @@ VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& f
     }
 
     spdlog::info( "save object to file {}", utf8string( filename ) );
+    AffineXf3d xf( obj.worldXf() );
+    SaveSettings saveSettings
+    {
+        .xf = ( xf == AffineXf3d() ) ? nullptr : &xf,
+        .progress = settings.callback
+    };
     VoidOrErrStr result;
 
     if ( auto objPoints = obj.asType<ObjectPoints>() )
@@ -53,8 +59,9 @@ VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& f
         if ( objPoints->pointCloud() )
         {
             const auto& colors = objPoints->getVertsColorMap();
-            result = PointsSave::toAnySupportedFormat( *objPoints->pointCloud(), filename,
-                { .colors = colors.empty() ? nullptr : &colors, .callback = settings.callback } );
+            if ( !colors.empty() )
+                saveSettings.colors = &colors;
+            result = PointsSave::toAnySupportedFormat( *objPoints->pointCloud(), filename, { saveSettings } );
         }
         else
             result = unexpected( std::string( "ObjectPoints has no PointCloud in it" ) );
@@ -63,7 +70,7 @@ VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& f
     {
         if ( objLines->polyline() )
         {
-            result = LinesSave::toAnySupportedFormat( *objLines->polyline(), filename, settings.callback );
+            result = LinesSave::toAnySupportedFormat( *objLines->polyline(), filename, saveSettings );
         }
         else
             result = unexpected( std::string( "ObjectLines has no Polyline in it" ) );
@@ -72,11 +79,9 @@ VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& f
     {
         if ( objMesh->mesh() )
         {
-            const VertColors* colors{ nullptr };
             if ( objMesh->getColoringType() == ColoringType::VertsColorMap )
-                colors = &objMesh->getVertsColorMap();
-
-            result = MeshSave::toAnySupportedFormat( *objMesh->mesh(), filename, colors, settings.callback );
+                saveSettings.colors = &objMesh->getVertsColorMap();
+            result = MeshSave::toAnySupportedFormat( *objMesh->mesh(), filename, saveSettings );
         }
         else
             result = unexpected( std::string( "ObjectMesh has no Mesh in it" ) );

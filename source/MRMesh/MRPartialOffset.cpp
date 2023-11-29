@@ -2,7 +2,6 @@
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRMesh.h"
 #include "MRMeshBoolean.h"
-#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -10,7 +9,7 @@ namespace MR
 Expected<Mesh, std::string> partialOffsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params /*= {} */ )
 {
     auto realParams = params;
-    realParams.type = OffsetParameters::Type::Shell; // for now only shell can be in partial offset
+    realParams.signDetectionMode = SignDetectionMode::Unsigned; // for now only shell can be in partial offset
     realParams.callBack = subprogress( params.callBack, 0.0f, 0.5f );
     auto offsetPart = offsetMesh( mp, offset, realParams );
     if ( params.callBack && !params.callBack( 0.5f ) )

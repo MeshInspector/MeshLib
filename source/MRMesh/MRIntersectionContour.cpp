@@ -50,7 +50,7 @@ struct EdgeTriHash
     }
 };
 
-using EdgeTriSet = phmap::flat_hash_set<EdgeTri, EdgeTriHash>;
+using EdgeTriSet = HashSet<EdgeTri, EdgeTriHash>;
 
 struct AccumulativeSet
 {

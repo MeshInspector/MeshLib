@@ -6,7 +6,6 @@
 #include "MRTimer.h"
 #include "MRSimpleVolume.h"
 #include "MRPch/MROpenvdb.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRBox.h"
 #include "MRFastWindingNumber.h"
 #include "MRVolumeIndexer.h"

@@ -692,13 +692,7 @@ VertId MeshTopology::lastValidVert() const
     assert( updateValids_ );
     if ( numValidVerts_ <= 0 )
         return {};
-    for ( VertId i{ (int)validVerts_.size() - 1 }; i.valid(); --i )
-    {
-        if ( validVerts_.test( i ) )
-            return i;
-    }
-    assert( false );
-    return {};
+    return validVerts_.find_last();
 }
 
 EdgeId MeshTopology::sharedEdge( FaceId l, FaceId r ) const
@@ -766,13 +760,7 @@ FaceId MeshTopology::lastValidFace() const
     assert( updateValids_ );
     if ( numValidFaces_ <= 0 )
         return {};
-    for ( FaceId i{ (int)validFaces_.size() - 1 }; i.valid(); --i )
-    {
-        if ( validFaces_.test( i ) )
-            return i;
-    }
-    assert( false );
-    return {};
+    return validFaces_.find_last();
 }
 
 void MeshTopology::deleteFace( FaceId f )
@@ -1314,6 +1302,7 @@ void MeshTopology::buildGridMesh( const GridSettings & settings )
     stopUpdatingValids();
 
     // we use resizeNoInit because expect vertices/faces/edges to be tightly packed (no deleted elements within valid range)
+    // note: some vertices might be valid but have no edge
     edgePerVertex_.resizeNoInit( settings.vertIds.tsize );
     edgePerFace_.resizeNoInit( settings.faceIds.tsize );
     edges_.resizeNoInit( 2 * settings.uedgeIds.tsize );
@@ -1418,7 +1407,10 @@ void MeshTopology::buildGridMesh( const GridSettings & settings )
 
                 if ( edgeRing.empty() )
                 {
-                    assert( false );
+                    // grid has valid vertex with no connections
+                    // init edgePerVertex_[v] with invalid edge to override garbage from resizeNoInit 
+                    // (this is only possible case of unpacked vertices here)
+                    edgePerVertex_[v] = {};
                     continue;
                 }
                 edgePerVertex_[v] = edgeRing[0].e;

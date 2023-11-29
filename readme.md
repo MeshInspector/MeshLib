@@ -115,7 +115,7 @@ We plan to add computed-tomography reconstruction in MeshLib (already present in
 
 Although MeshLib is written in C++, all functions are exposed to Python as well. Python code can be executed both from within a MeshLib-based C++ application (embedded mode) and from python interpreter directly, which imports MeshLib modules.
 
-Moreover, MeshLib can be easily installed as a Python 3.8 - 3.11 package using `pip install`:
+Moreover, MeshLib can be easily installed as a Python 3.8 - 3.12 package using `pip install`:
 * On Windows via
 ```
 py -3 -m pip install --upgrade pip
@@ -156,7 +156,7 @@ Please install CUDA (v12.0|v11.4)(Visual Studio 2022|2019) from [official site](
     ```sh
     git clone https://github.com/Microsoft/vcpkg.git
     cd vcpkg
-    git checkout fbba5251f75c149d71737fd3ef09629f41b5d5aa
+    git checkout 2023.11.20
     .\bootstrap-vcpkg.bat
     .\vcpkg integrate install (with admin rights)
     cd ..
@@ -196,23 +196,23 @@ sudo apt install ./distr/meshlib-dev.deb
 > **_NOTE:_** You could specify build type to Debug by `export MESHLIB_BUILD_TYPE=Debug`. Release is default.
 
 ## Build with Emscripten on Linux
-This installation was checked on Ubuntu 20.04.4 with emscripten 3.1.23.
+This installation was checked on Ubuntu 22.04 with Emscripten 3.1.48.
 
-Install Emscripten (find more on [emscripten official page](https://emscripten.org/docs/getting_started/downloads.html))
+Install Emscripten (find more on [Emscripten official page](https://emscripten.org/docs/getting_started/downloads.html))
 ```
 git clone https://github.com/emscripten-core/emsdk.git
 cd emsdk
-optional git pull # optional
-./emsdk install 3.1.23 # (or enother version / latest)
-./emsdk activate 3.1.23
+git pull origin # optional
+./emsdk install 3.1.48 # (or another version / latest)
+./emsdk activate 3.1.48
 source ./emsdk_env.sh
 ```
 
 Build
 ```
 cd ~/MeshLib
-./scripts/build_thirdparty.sh # select emscripten in the corresponding question
-./scripts/build_sorces.sh # select emscripten in the corresponding question
+./scripts/build_thirdparty.sh # select Emscripten in the corresponding question
+./scripts/build_sorces.sh # select Emscripten in the corresponding question
 ```
 
 Run

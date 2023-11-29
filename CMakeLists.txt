@@ -34,8 +34,10 @@ IF(APPLE)
 ELSE()
  # uncomment to print compile time of each translation unit,
  # such print format is selected to simplify load in Excel with fields (user time, system time, command) subdivision by commas
- set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "/usr/bin/time -f \",%U,%S,%C\" -a -o compile_timings.txt")
- set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "/usr/bin/time -f \",%U,%S,%C\" -a -o link_timings.txt")
+ IF(EXISTS /usr/bin/time)
+   set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "/usr/bin/time -f \",%U,%S,%C\" -a -o compile_timings.txt")
+   set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "/usr/bin/time -f \",%U,%S,%C\" -a -o link_timings.txt")
+ ENDIF()
 ENDIF() # APPLE
 ENDIF() # NOT MR_EMSCRIPTEN
 
@@ -90,6 +92,7 @@ find_package(PkgConfig REQUIRED)
 SET(MR_UBUNTU FALSE) # any Ubuntu version
 SET(MR_UBUNTU22 FALSE) # Ubuntu 22.*
 SET(MR_FEDORA FALSE)
+SET(MR_FEDORA39 FALSE)
 SET(MR_PLATFORM "UNKNOWN")
 
 IF(NOT APPLE AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
@@ -112,28 +115,35 @@ IF(APPLE)
         include_directories(${GTEST_INCLUDE_DIRS})
     ENDIF()
 ELSE()
- # set platform dependent flags
- file(STRINGS /etc/os-release distro REGEX "^NAME=")
- string(REGEX REPLACE "NAME=\"(.*)\"" "\\1" distro "${distro}")
+    # set platform dependent flags
+    file(STRINGS /etc/os-release distro REGEX "^NAME=")
+    string(REGEX REPLACE "NAME=\"(.*)\"" "\\1" distro "${distro}")
 
- # check version (major)
- file(STRINGS /etc/os-release version_id REGEX "^VERSION_ID=")
- string(REGEX REPLACE "VERSION_ID=\"(.*)\"" "\\1" version_id "${version_id}")
- string(FIND ${version_id} "." dot-pos)
- string(SUBSTRING ${version_id} 0 ${dot-pos} version_id)
- message("using ${distro} ${version_id}")
- SET(MR_PLATFORM "${distro}_${version_id}")
+    # check version (major)
+    file(STRINGS /etc/os-release version_id REGEX "^VERSION_ID=")
 
- IF( ${distro} STREQUAL "Ubuntu")
-  SET(MR_UBUNTU TRUE)
-  IF( ${version_id} STREQUAL "22")
-   SET(MR_UBUNTU22 TRUE)
-  ENDIF() # Ubuntu 22
- ENDIF() # Ubuntu
+    IF( ${distro} STREQUAL "Ubuntu")
+        string(REGEX REPLACE "VERSION_ID=\"(.*)\"" "\\1" version_id "${version_id}")
+        string(FIND ${version_id} "." dot-pos)
+        string(SUBSTRING ${version_id} 0 ${dot-pos} version_id)
+        
+        SET(MR_UBUNTU TRUE)
+        IF( ${version_id} STREQUAL "22")
+            SET(MR_UBUNTU22 TRUE)
+        ENDIF() # Ubuntu 22
+    ENDIF() # Ubuntu
 
- IF( ${distro} STREQUAL "Fedora Linux")
-  SET(MR_FEDORA TRUE)
- ENDIF() # Fedora
+    IF( ${distro} STREQUAL "Fedora Linux")
+        string(REGEX REPLACE "VERSION_ID=([0-9]+)" "\\1" version_id ${version_id})
+        
+        SET(MR_FEDORA TRUE)
+        IF( ${version_id} STREQUAL "39")
+            SET(MR_FEDORA39 TRUE)
+        ENDIF() # Fedora 39
+    ENDIF() # Fedora
+
+    message("using ${distro} ${version_id}")
+    SET(MR_PLATFORM "${distro}_${version_id}")
 ENDIF() # APPLE
 add_definitions( -DMR_PLATFORM="${MR_PLATFORM}" )
 message("platform: ${MR_PLATFORM}")
@@ -145,10 +155,12 @@ IF(NOT MR_EMSCRIPTEN)
             SET(MR_PYTHON_VERSION 3.10)
         ELSEIF(${MR_UBUNTU})
             SET(MR_PYTHON_VERSION 3.8)
+        ELSEIF(${MR_FEDORA39})
+            SET(MR_PYTHON_VERSION 3.12)
         ELSEIF(${MR_FEDORA})
             SET(MR_PYTHON_VERSION 3.11)
         ELSE()
-            SET(MR_PYTHON_VERSION 3.9)
+            SET(MR_PYTHON_VERSION "")
         ENDIF()
 
         IF($ENV{MESHLIB_PYTHON_VERSION})
@@ -161,14 +173,13 @@ IF(NOT MR_EMSCRIPTEN)
             find_package(pybind11 REQUIRED)
         ENDIF()
 
-        set(PYTHON_VAR "python")
-        string(CONCAT MR_PYTHON_LIB ${PYTHON_VAR}${MR_PYTHON_VERSION})
+        IF(NOT MR_PYTHON_VERSION STREQUAL "")
+            SET(MR_PYTHON_VERSION ${MR_PYTHON_VERSION} EXACT)
+        ENDIF()
 
-        find_package(Python ${MR_PYTHON_VERSION} EXACT REQUIRED)
-        find_package(PythonInterp ${MR_PYTHON_VERSION} EXACT REQUIRED)
-        find_package(PythonLibs ${MR_PYTHON_VERSION} EXACT REQUIRED)
-        include_directories(${PYTHON_INCLUDE_DIRS})
-        include_directories(${PYTHON_INCLUDE_PATH})
+        find_package(Python ${MR_PYTHON_VERSION} REQUIRED COMPONENTS Interpreter Development)
+        # legacy option, remove in the future
+        set(MR_PYTHON_LIB Python::Python)
     ENDIF()
 ENDIF()
 
@@ -176,8 +187,6 @@ set(PROJECT_SOURCE_DIR ./source)
 include_directories(${PROJECT_SOURCE_DIR})
 
 IF(MR_EMSCRIPTEN)
-  add_compile_definitions(__QNXNTO__=1) # hack to disable __TBB_RESUMABLE_TASKS in tbb
-  add_compile_definitions(__TBB_DYNAMIC_LOAD_ENABLED=0)
   IF(NOT MR_EMSCRIPTEN_SINGLETHREAD)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -s PTHREAD_POOL_SIZE_STRICT=0 -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-pthreads-mem-growth") # look https://github.com/emscripten-core/emscripten/issues/8287

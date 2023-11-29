@@ -245,6 +245,8 @@ public:
 
         Color borderColor;
 
+        std::string label;
+
         Plane3f clippingPlane{Vector3f::plusX(), 0.0f};
 
          // xf representing scale of global basis in this viewport
@@ -441,6 +443,8 @@ public:
     MRVIEWER_API void setBackgroundColor( const Color& color );
 
     MRVIEWER_API void setClippingPlane( const Plane3f& plane );
+
+    MRVIEWER_API void setLabel( std::string s );
 
     void setSelectable( bool on ) { params_.selectable = on; }
 

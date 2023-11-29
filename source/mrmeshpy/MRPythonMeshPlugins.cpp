@@ -87,7 +87,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, VoxelBooleanBlock, [] ( pybind11::module_& m
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::module_& m )
 {
-    m.def( "detectTunnelFaces", []( const MeshPart & mp, float maxTunnelLength ) { return MR::detectTunnelFaces( mp, maxTunnelLength ).value(); },
+    m.def( "detectTunnelFaces", []( const MeshPart & mp, float maxTunnelLength ) { return MR::detectTunnelFaces( mp, { .maxTunnelLength = maxTunnelLength } ).value(); },
         pybind11::arg( "mp" ), pybind11::arg( "maxTunnelLength" ), 
         "returns tunnels as a number of faces;\n"
         "if you remove these faces and patch every boundary with disk, then the surface will be topology equivalent to sphere" );
@@ -399,19 +399,19 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
 #ifndef MRMESH_NO_VOXEL
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
 {
-    pybind11::enum_<MR::OffsetParameters::Type>( m, "OffsetParametersType", "Type of offsetting" ).
-        value( "Offset", MR::OffsetParameters::Type::Offset, "can be positive or negative, input mesh should be closed" ).
-        value( "Shell", MR::OffsetParameters::Type::Shell, "can be only positive, offset in both directions of surface" );
+    pybind11::enum_<MR::SignDetectionMode>( m, "SignDetectionMode", "How to determine the sign of distances from a mesh" ).
+        value( "Unsigned",         MR::SignDetectionMode::Unsigned,         "unsigned distance, useful for bidirectional `Shell` offset" ).
+        value( "OpenVDB",          MR::SignDetectionMode::OpenVDB,          "sign detection from OpenVDB library, which is good and fast if input geometry is closed" ).
+        value( "ProjectionNormal", MR::SignDetectionMode::ProjectionNormal, "the sign is determined based on pseudonormal in closest mesh point (unsafe in case of self-intersections" ).
+        value( "WindingRule",      MR::SignDetectionMode::WindingRule,      "ray intersection counter, significantly slower than ProjectionNormal and does not support holes in mesh" ).
+        value( "HoleWindingRule",  MR::SignDetectionMode::HoleWindingRule,  "computes winding number generalization with support of holes in mesh, slower than WindingRule" );
 
     pybind11::class_<MR::OffsetParameters>( m, "OffsetParameters", "This struct represents parameters for offsetting with voxels conversions" ).
         def( pybind11::init<>() ).
         def_readwrite( "voxelSize", &MR::OffsetParameters::voxelSize,
             "Size of voxel in grid conversions\n"
             "if value is negative, it is calculated automatically (mesh bounding box are divided to 5e6 voxels)" ).
-        def_readwrite( "adaptivity", &MR::OffsetParameters::adaptivity,
-            "Decimation ratio of result mesh [0..1], this is applied on conversion from voxels to mesh\n"
-            "note: it does not work good, better use common decimation after offsetting" ).
-        def_readwrite( "type", &MR::OffsetParameters::type, "Type of offsetting" );
+        def_readwrite( "signDetectionMode", &MR::OffsetParameters::signDetectionMode, "The method to compute distance sign" );
 
     m.def( "offsetMesh",
         MR::decorateExpected( &MR::offsetMesh ),

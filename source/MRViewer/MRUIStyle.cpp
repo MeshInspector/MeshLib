@@ -84,9 +84,12 @@ bool checkKey( ImGuiKey passedKey )
 {
     if ( passedKey == ImGuiKey_None )
         return false;
+    bool pressed = false;
     if ( passedKey == ImGuiKey_Enter || passedKey == ImGuiKey_KeypadEnter )
-        return ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter );
-    return ImGui::IsKeyPressed( passedKey );
+        pressed =  ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter );
+    else 
+        pressed = ImGui::IsKeyPressed( passedKey );
+    return pressed && ImGui::GetIO().KeyMods == ImGuiMod_None;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -157,7 +160,8 @@ void init()
     textureR->update( data );
 }
 
-bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/, ImGuiButtonFlags flags /*= ImGuiButtonFlags_None*/ )
+bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/, 
+    ImGuiButtonFlags flags /*= ImGuiButtonFlags_None*/, const ButtonCustomizationParams& custmParams )
 {
     // copy from ImGui::ButtonEx and replaced visualize part
     ImGuiWindow* window = ImGui::GetCurrentWindow();
@@ -189,7 +193,8 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
     ImGui::RenderNavHighlight( bb, id );
 
     // replaced part
-    auto& texture = getTexture( TextureType::GradientBtn );
+    // potentail fail. need check that customTexture is good
+    auto texture = custmParams.customTexture ? custmParams.customTexture : getTexture( TextureType::GradientBtn ).get();
     if ( texture )
     {
         const float textureU = 0.125f + ( !active ? 0.75f : ( held && hovered ) ? 0.5f : hovered ? 0.25f : 0.f );
@@ -198,6 +203,8 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
             bb.Min, bb.Max,
             ImVec2( textureU, 0.25f ), ImVec2( textureU, 0.75f ),
             Color::white().getUInt32(), style.FrameRounding );
+        if ( custmParams.border )
+            ImGui::RenderFrameBorder( bb.Min, bb.Max, style.FrameRounding );
     }
     else
     {
@@ -209,7 +216,8 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
     if ( g.LogEnabled )
         ImGui::LogSetNextTextDecoration( "[", "]" );
     StyleParamHolder sh;
-    sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnText ) );
+    if ( !custmParams.forceImguiTextColor )
+        sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnText ) );
     ImGui::RenderTextClipped( bb.Min, bb.Max, label, NULL, &label_size, style.ButtonTextAlign, &bb );
 
     IMGUI_TEST_ENGINE_ITEM_INFO( id, label, g.LastItemData.StatusFlags );
@@ -230,6 +238,22 @@ bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 
 bool buttonCommonSize( const char* label, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None */ )
 {
     return buttonEx( label, true, size ) || checkKey( key );
+}
+
+bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None*/ )
+{
+    const auto menu = getViewerInstance().getMenuPlugin();
+    const float scaling = menu ? menu->menu_scaling() : 1.f;
+
+    Color clearBlue( 0x1b, 0x83, 0xff, 0xff );
+    Color bgColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background );
+
+    StyleParamHolder sh;
+    sh.addVar( ImGuiStyleVar_FramePadding, { ( cButtonPadding + 1 ) * scaling, cButtonPadding * scaling } );
+    sh.addVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x * 0.7f,  cDefaultItemSpacing * 2 * scaling } );
+
+    sh.addColor( ImGuiCol_Button, *value == ownValue ? clearBlue : bgColor );
+    return ImGui::Button( label, ImVec2( size.x, size.y ) ) || checkKey( key );
 }
 
 bool checkbox( const char* label, bool* value )
@@ -495,14 +519,14 @@ bool radioButton( const char* label, int* value, int valButton )
 void ColorEditRestoreHS( const float* col, float* H, float* S, float* V )
 {
     ImGuiContext& g = *ImGui::GetCurrentContext();
-    if ( g.ColorEditLastColor != ImGui::ColorConvertFloat4ToU32( ImVec4( col[0], col[1], col[2], 0 ) ) )
+    if ( g.ColorEditSavedColor != ImGui::ColorConvertFloat4ToU32( ImVec4( col[0], col[1], col[2], 0 ) ) )
         return;
 
-    if ( *S == 0.0f || ( *H == 0.0f && g.ColorEditLastHue == 1 ) )
-        *H = g.ColorEditLastHue;
+    if ( *S == 0.0f || ( *H == 0.0f && g.ColorEditSavedHue == 1 ) )
+        *H = g.ColorEditSavedHue;
 
     if ( *V == 0.0f )
-        *S = g.ColorEditLastSat;
+        *S = g.ColorEditSavedSat;
 }
 
 bool colorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags /*= ImGuiColorEditFlags_None*/ )
@@ -730,10 +754,10 @@ bool colorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags /
                 f[n] = i[n] / 255.0f;
         if ( ( flags & ImGuiColorEditFlags_DisplayHSV ) && ( flags & ImGuiColorEditFlags_InputRGB ) )
         {
-            g.ColorEditLastHue = f[0];
-            g.ColorEditLastSat = f[1];
+            g.ColorEditSavedHue = f[0];
+            g.ColorEditSavedSat = f[1];
             ColorConvertHSVtoRGB( f[0], f[1], f[2], f[0], f[1], f[2] );
-            g.ColorEditLastColor = ColorConvertFloat4ToU32( ImVec4( f[0], f[1], f[2], 0 ) );
+            g.ColorEditSavedColor = ColorConvertFloat4ToU32( ImVec4( f[0], f[1], f[2], 0 ) );
         }
         if ( ( flags & ImGuiColorEditFlags_DisplayRGB ) && ( flags & ImGuiColorEditFlags_InputHSV ) )
             ColorConvertRGBtoHSV( f[0], f[1], f[2], f[0], f[1], f[2] );

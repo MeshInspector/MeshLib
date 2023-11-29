@@ -1,20 +1,9 @@
 #pragma once
-// This file is part of libigl, a simple c++ geometry processing library.
-//
-// Copyright (C) 2014 Daniele Panozzo <daniele.panozzo@gmail.com>
-//
-// This Source Code Form is subject to the terms of the Mozilla Public License
-// v. 2.0. If a copy of the MPL was not distributed with this file, You can
-// obtain one at http://mozilla.org/MPL/2.0/.
-
 
 #include "MRViewport.h"
 #include "MRViewerInstance.h"
 #include "MRRecentFilesStore.h"
 #include "MRMouse.h"
-#include <MRMesh/MRObject.h>
-#include <MRMesh/MRSceneRoot.h>
-#include "MRMesh/MRImage.h"
 #include "MRMouseController.h"
 #include "MRTouchesController.h"
 #include "MRSpaceMouseController.h"
@@ -23,8 +12,6 @@
 #include <boost/signals2/signal.hpp>
 #include <chrono>
 #include <cstdint>
-#include <mutex>
-#include <queue>
 
 struct GLFWwindow;
 
@@ -43,15 +30,15 @@ auto bindSlotCallback( BaseClass* base, MemberFuncPtr func )
 #define MAKE_SLOT(func) bindSlotCallback(this,func)
 
 /// helper macros to add an `MR::Viewer` method call to the event queue
-#define ENQUEUE_VIEWER_METHOD( NAME, METHOD ) MR::getViewerInstance().eventQueue.emplace( { NAME, [] { \
+#define ENQUEUE_VIEWER_METHOD( NAME, METHOD ) MR::getViewerInstance().emplaceEvent( NAME, [] { \
     MR::getViewerInstance() . METHOD (); \
-} } )
-#define ENQUEUE_VIEWER_METHOD_ARGS( NAME, METHOD, ... ) MR::getViewerInstance().eventQueue.emplace( { NAME, [__VA_ARGS__] { \
+} )
+#define ENQUEUE_VIEWER_METHOD_ARGS( NAME, METHOD, ... ) MR::getViewerInstance().emplaceEvent( NAME, [__VA_ARGS__] { \
     MR::getViewerInstance() . METHOD ( __VA_ARGS__ ); \
-} } )
-#define ENQUEUE_VIEWER_METHOD_ARGS_SKIPABLE( NAME, METHOD, ... ) MR::getViewerInstance().eventQueue.emplace( { NAME, [__VA_ARGS__] { \
+} )
+#define ENQUEUE_VIEWER_METHOD_ARGS_SKIPABLE( NAME, METHOD, ... ) MR::getViewerInstance().emplaceEvent( NAME, [__VA_ARGS__] { \
     MR::getViewerInstance() . METHOD ( __VA_ARGS__ ); \
-} }, true )
+}, true )
 
 namespace MR
 {
@@ -81,6 +68,7 @@ public:
         } windowMode{ HideInit };
         bool enableTransparentBackground{ false };
         bool preferOpenGL3{ false };
+        bool render3dSceneInTexture{ true }; // If not set renders scene each frame
         bool developerFeatures{ false }; // If set shows some developer features useful for debugging
         std::string name{"MRViewer"}; // Window name
         bool startEventLoop{ true }; // If false - does not start event loop
@@ -173,8 +161,12 @@ public:
 
     // Draw everything
     MRVIEWER_API void draw( bool force = false );
+    // Draw 3d scene with UI
+    MRVIEWER_API void drawFull( bool dirtyScene );
     // Draw 3d scene without UI
     MRVIEWER_API void drawScene();
+    // Call this function to force redraw scene into scene texture
+    void setSceneDirty() { dirtyScene_ = true; }
     // Setup viewports views
     MRVIEWER_API void setupScene();
     // OpenGL context resize
@@ -340,6 +332,12 @@ public:
     MRVIEWER_API bool enableAlphaSort( bool on );
     // Returns true if alpha sort is enabled, false otherwise
     bool isAlphaSortEnabled() const { return alphaSortEnabled_; }
+
+    // Returns if scene texture is now bound
+    MRVIEWER_API bool isSceneTextureBound()  const;
+    // Binds or unbinds scene texture (should be called only with valid window)
+    // note that it does not clear framebuffer
+    MRVIEWER_API void bindSceneTexture( bool bind );
 
     // Sets manager of viewer settings which loads user personal settings on beginning of app 
     // and saves it in app's ending
@@ -576,31 +574,14 @@ public:
     using PostFocusSignal = boost::signals2::signal<void( bool )>;
     PostFocusSignal postFocusSignal;
 
-    // queue to ignore multiple mouse moves in one frame
-    class MRVIEWER_CLASS EventQueue
-    {
-    public:
-        using EventCallback = std::function<void()>;
-        struct NamedEvent
-        {
-            std::string name;
-            EventCallback cb;
-        };
-        // emplace event at the end of the queue
-        // replace last skipable with new skipable
-        MRVIEWER_API void emplace( NamedEvent event, bool skipable = false );
-        // execute all events in queue
-        MRVIEWER_API void execute();
-        // pop all events while they have this name
-        MRVIEWER_API void popByName( const std::string& name );
-        MRVIEWER_API bool empty() const;
-    private:
-        // important for wasm to be recursive
-        mutable std::recursive_mutex mutex_;
-        std::queue<NamedEvent> queue_;
-        bool lastSkipable_{false};
-    } eventQueue;
+    /// emplace event at the end of the queue
+    /// replace last skipable with new skipable
+    MRVIEWER_API void emplaceEvent( std::string name, ViewerEventCallback cb, bool skipable = false );
+    // pop all events from the queue while they have this name
+    MRVIEWER_API void popEventByName( const std::string& name );
+
     MRVIEWER_API void postEmptyEvent();
+
 private:
     Viewer();
     ~Viewer();
@@ -619,9 +600,7 @@ private:
     void parseCommandLine_( int argc, char** argv );
 #ifdef __EMSCRIPTEN__
     void mainLoopFunc_();
-#ifndef MR_EMSCRIPTEN_ASYNCIFY
     static void emsMainInfiniteLoop();
-#endif
 #endif
     // returns true if was swapped
     bool draw_( bool force );
@@ -633,6 +612,8 @@ private:
 
     // if this flag is set shows some developer features useful for debugging
     bool enableDeveloperFeatures_{ false };
+
+    std::unique_ptr<ViewerEventQueue> eventQueue_;
 
     // special plugin for menu (initialized before splash window starts)
     std::shared_ptr<ImGuiMenu> menuPlugin_;
@@ -697,6 +678,7 @@ private:
     // this flag is needed to know if all viewer setup was already done, and we can call draw
     bool focusRedrawReady_{ false };
 
+    std::unique_ptr<SceneTextureGL> sceneTexture_;
     std::unique_ptr<AlphaSortGL> alphaSorter_;
 
     bool alphaSortEnabled_{false};
@@ -704,6 +686,7 @@ private:
     bool glInitialized_{ false };
 
     bool isInDraw_{ false };
+    bool dirtyScene_{ false };
 
     ViewportId getFirstAvailableViewportId_() const;
     ViewportMask presentViewportsMask_;

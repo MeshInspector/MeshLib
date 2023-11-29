@@ -138,7 +138,7 @@ void ResetSceneMenuItem::preDraw_()
 
         UI::setTooltipIfHovered( "Save current scene and then remove all objects", scaling );
         ImGui::SameLine();
-        if ( UI::buttonCommonSize( "Don't Save", btnSize ) )
+        if ( UI::buttonCommonSize( "Don't Save", btnSize, ImGuiKey_N ) )
         {
             ImGui::CloseCurrentPopup();
             resetScene_();
@@ -162,6 +162,7 @@ void ResetSceneMenuItem::resetScene_()
 {
     auto rootClone = SceneRoot::get().clone();
     std::swap( rootClone, SceneRoot::getSharedPtr() );
+    getViewerInstance().setSceneDirty();
     if ( const auto& store = getViewerInstance().getGlobalHistoryStore() )
         store->clear();
     getViewerInstance().onSceneSaved( {} );

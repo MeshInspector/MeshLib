@@ -56,7 +56,7 @@ void VisualObject::toggleVisualizeProperty( unsigned type, ViewportMask viewport
 void VisualObject::setAllVisualizeProperties( const AllVisualizeProperties& properties )
 {
     for ( int i = 0; i < properties.size(); ++i )
-        getVisualizePropertyMask_( unsigned( i ) ) = properties[i];
+        setVisualizePropertyMask( unsigned( i ), properties[i] );
 }
 
 AllVisualizeProperties VisualObject::getAllVisualizeProperties() const
@@ -83,6 +83,7 @@ void VisualObject::setFrontColor( const Color& color, bool selected, ViewportId 
     {
         unselectedColor_.set( color, viewportId );
     }
+    needRedraw_ = true;
 }
 
 const ViewportProperty<Color>& VisualObject::getFrontColorsForAllViewports( bool selected ) const
@@ -93,6 +94,7 @@ const ViewportProperty<Color>& VisualObject::getFrontColorsForAllViewports( bool
 void VisualObject::setFrontColorsForAllViewports( ViewportProperty<Color> val, bool selected )
 {
     selected ? selectedColor_ = std::move( val ) : unselectedColor_ = std::move( val );
+    needRedraw_ = true;
 }
 
 const ViewportProperty<Color>& VisualObject::getBackColorsForAllViewports() const
@@ -103,6 +105,7 @@ const ViewportProperty<Color>& VisualObject::getBackColorsForAllViewports() cons
 void VisualObject::setBackColorsForAllViewports( ViewportProperty<Color> val )
 {
     backFacesColor_ = std::move( val );
+    needRedraw_ = true;
 }
 
 const Color& VisualObject::getBackColor( ViewportId viewportId ) const
@@ -115,7 +118,7 @@ void VisualObject::setBackColor( const Color& color, ViewportId viewportId )
     if ( backFacesColor_.get( viewportId ) == color )
         return;
     backFacesColor_.set( color, viewportId );
-    dirty_ |= DIRTY_BACK_FACES;
+    needRedraw_ = true;
 }
 
 const uint8_t& VisualObject::getGlobalAlpha( ViewportId viewportId /*= {} */ ) const
@@ -126,6 +129,7 @@ const uint8_t& VisualObject::getGlobalAlpha( ViewportId viewportId /*= {} */ ) c
 void VisualObject::setGlobalAlpha( uint8_t alpha, ViewportId viewportId /*= {} */ )
 {
     globalAlpha_.set( alpha, viewportId );
+    needRedraw_ = true;
 }
 
 const ViewportProperty<uint8_t>& VisualObject::getGlobalAlphaForAllViewports() const
@@ -136,6 +140,7 @@ const ViewportProperty<uint8_t>& VisualObject::getGlobalAlphaForAllViewports() c
 void VisualObject::setGlobalAlphaForAllViewports( ViewportProperty<uint8_t> val )
 {
     globalAlpha_ = std::move( val );
+    needRedraw_ = true;
 }
 
 const Color& VisualObject::getLabelsColor( ViewportId viewportId ) const
@@ -157,6 +162,7 @@ const ViewportProperty<Color>& VisualObject::getLabelsColorsForAllViewports() co
 void VisualObject::setLabelsColorsForAllViewports( ViewportProperty<Color> val )
 {
     labelsColor_ = val;
+    needRedraw_ = true;
 }
 
 void VisualObject::setDirtyFlags( uint32_t mask, bool )
@@ -203,6 +209,7 @@ void VisualObject::setColoringType( ColoringType coloringType )
     switch ( coloringType )
     {
     case ColoringType::SolidColor:
+        needRedraw_ = true;
         break;
     case ColoringType::PrimitivesColorMap:
         dirty_ |= DIRTY_PRIMITIVE_COLORMAP;

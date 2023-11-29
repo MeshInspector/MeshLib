@@ -5,6 +5,7 @@
 #include "MRStringConvert.h"
 #include "MRStreamOperators.h"
 #include "MRProgressReadWrite.h"
+#include "MRPch/MRFmt.h"
 #include <fstream>
 
 namespace MR
@@ -20,16 +21,16 @@ const IOFilters Filters =
     {"Drawing exchange format (.dxf)", "*.dxf"}
 };
 
-VoidOrErrStr toMrLines( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback )
+VoidOrErrStr toMrLines( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toMrLines( polyline, out, callback );
+    return toMrLines( polyline, out, settings );
 }
 
-VoidOrErrStr toMrLines( const Polyline3& polyline, std::ostream& out, ProgressCallback callback )
+VoidOrErrStr toMrLines( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings )
 {
     MR_TIMER;
     polyline.topology.write( out );
@@ -37,31 +38,31 @@ VoidOrErrStr toMrLines( const Polyline3& polyline, std::ostream& out, ProgressCa
     // write points
     const std::uint32_t type = 3; //3d points
     out.write( (const char*)&type, 4 );
-    auto numPoints = (std::uint32_t)polyline.points.size();
+    auto numPoints = (std::uint32_t)( polyline.topology.lastValidVert() + 1 );
     out.write( ( const char* )&numPoints, 4 );
         
-    const bool cancel = !MR::writeByBlocks( out, (const char*) polyline.points.data(), polyline.points.size() * sizeof( Vector3f ), callback );
-    if ( cancel )
+    VertCoords buf;
+    const auto & xfVerts = transformPoints( polyline.points, polyline.topology.getValidVerts(), settings.xf, buf );
+    if ( !writeByBlocks( out, ( const char* )xfVerts.data(), numPoints * sizeof( Vector3f ), settings.progress ) )
         return unexpected( std::string( "Saving canceled" ) );
 
     if ( !out )
         return unexpected( std::string( "Error saving in MrLines-format" ) );
 
-    if ( callback )
-        callback( 1.f );
+    reportProgress( settings.progress, 1.f );
     return {};
 }
 
-VoidOrErrStr toPts( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback )
+VoidOrErrStr toPts( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toPts( polyline, out, callback );
+    return toPts( polyline, out, settings );
 }
 
-VoidOrErrStr toPts( const Polyline3& polyline, std::ostream& out, ProgressCallback callback )
+VoidOrErrStr toPts( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings )
 {
     float pointsNum{ 0.f };
     auto contours = polyline.contours();
@@ -72,11 +73,12 @@ VoidOrErrStr toPts( const Polyline3& polyline, std::ostream& out, ProgressCallba
     for ( const auto& contour : contours )
     {
         out << "BEGIN_Polyline\n";
-        for ( auto p : contour )
+        for ( auto v : contour )
         {
-            out << p << "\n";
+            const auto p = applyDouble( settings.xf, v );
+            out << fmt::format( "{} {} {}\n", p.x, p.y, p.z );
             ++pointIndex;
-            if ( callback && !( pointIndex & 0x3FF ) && !callback( float( pointIndex ) / pointsNum ) )
+            if ( settings.progress && !( pointIndex & 0x3FF ) && !settings.progress( float( pointIndex ) / pointsNum ) )
                 return unexpected( std::string( "Saving canceled" ) );
         }
         out << "END_Polyline\n";
@@ -85,21 +87,20 @@ VoidOrErrStr toPts( const Polyline3& polyline, std::ostream& out, ProgressCallba
     if ( !out )
         return unexpected( std::string( "Error saving in PTS-format" ) );
 
-    if ( callback )
-        callback( 1.f );
+    reportProgress( settings.progress, 1.f );
     return {};
 }
 
-VoidOrErrStr toDxf( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback )
+VoidOrErrStr toDxf( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toDxf( polyline, out, callback );
+    return toDxf( polyline, out, settings );
 }
 
-VoidOrErrStr toDxf( const Polyline3& polyline, std::ostream& out, ProgressCallback callback )
+VoidOrErrStr toDxf( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings )
 {
     out << "0\nSECTION\n";
     out << "2\nENTITIES\n";
@@ -119,16 +120,19 @@ VoidOrErrStr toDxf( const Polyline3& polyline, std::ostream& out, ProgressCallba
         if ( contour[0] == contour.back() )
             flags += 1;
         out << "70\n" << flags << "\n";
-        for ( auto p : contour )
+        for ( auto v : contour )
         {
-            out << "0\nVERTEX\n";
-            out << "8\n0\n";
-            out << "70\n32\n";
-            out << "10\n" << p.x << "\n";
-            out << "20\n" << p.y << "\n";
-            out << "30\n" << p.z << "\n";
+            const auto p = applyDouble( settings.xf, v );
+            out << fmt::format( 
+                "0\nVERTEX\n"
+                "8\n0\n"
+                "70\n32\n"
+                "10\n{}\n"
+                "20\n{}\n"
+                "30\n{}\n",
+                p.x, p.y, p.z );
             ++pointIndex;
-            if ( callback && !( pointIndex & 0x3FF ) && !callback( float( pointIndex ) / pointsNum ) )
+            if ( settings.progress && !( pointIndex & 0x3FF ) && !settings.progress( float( pointIndex ) / pointsNum ) )
                 return unexpected( std::string( "Saving canceled" ) );
         }
         out << "0\nSEQEND\n";
@@ -140,10 +144,11 @@ VoidOrErrStr toDxf( const Polyline3& polyline, std::ostream& out, ProgressCallba
     if ( !out )
         return unexpected( std::string( "Error saving in DXF-format" ) );
 
+    reportProgress( settings.progress, 1.f );
     return {};
 }
 
-VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback )
+VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings )
 {
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
@@ -151,15 +156,15 @@ VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, const std::filesys
 
     VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".mrlines" )
-        res = toMrLines( polyline, file, callback );
-    if ( ext == ".pts" )
-        res = toPts( polyline, file, callback );
-    if ( ext == ".dxf" )
-        res = toDxf( polyline, file, callback );
+        res = toMrLines( polyline, file, settings );
+    else if ( ext == ".pts" )
+        res = toPts( polyline, file, settings );
+    else if ( ext == ".dxf" )
+        res = toDxf( polyline, file, settings );
     return res;
 }
 
-VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, std::ostream& out, const std::string& extension, ProgressCallback callback )
+VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, std::ostream& out, const std::string& extension, const SaveSettings & settings )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
@@ -167,11 +172,11 @@ VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, std::ostream& out,
 
     VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".mrlines" )
-        res = toMrLines( polyline, out, callback );
-    if ( ext == ".pts" )
-        res = toPts( polyline, out, callback );
-    if ( ext == ".dxf" )
-        res = toDxf( polyline, out, callback );
+        res = toMrLines( polyline, out, settings );
+    else if ( ext == ".pts" )
+        res = toPts( polyline, out, settings );
+    else if ( ext == ".dxf" )
+        res = toDxf( polyline, out, settings );
     return res;
 }
 

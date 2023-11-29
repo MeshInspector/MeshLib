@@ -46,7 +46,7 @@ public:
 private:
     using VertInHMap = std::array<VertId*, 3>;
     std::vector<VertInHMap> vertsInHMap_;
-    using HMap = phmap::parallel_flat_hash_map<Vector3f, VertId, phmap::priv::hash_default_hash<Vector3f>, equalVector3f>;
+    using HMap = ParallelHashMap<Vector3f, VertId, phmap::priv::hash_default_hash<Vector3f>, equalVector3f>;
     HMap hmap_;
     Triangulation t_;
     VertCoords points_;

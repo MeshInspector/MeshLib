@@ -10,7 +10,7 @@
 #include "MRGTest.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
-#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRFmt.h"
 
 namespace MR
 {
@@ -90,15 +90,6 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
         if( mesh_->topology.undirectedEdgeSize() < mesh_->topology.undirectedEdgeCapacity() )
             res.back() += " / " + std::to_string( mesh_->topology.undirectedEdgeCapacity() ) + " capacity";
 
-        res.push_back( "holes: " + std::to_string( numHoles() ) );
-
-        res.push_back( fmt::format( "area: {:.6}", totalArea() ) );
-        if( nFacesSelected )
-            res.back() += fmt::format( " / {:.6} selected", selectedArea() );
-        if ( numHoles() == 0 )
-            res.push_back( fmt::format( "volume: {:.6}", volume() ) );
-        res.push_back( fmt::format( "avg edge len: {:.6}", avgEdgeLen() ) );
-
         if ( !texture_.pixels.empty() )
             res.push_back( "texture: " + std::to_string( texture_.resolution.x ) + " x " + std::to_string( texture_.resolution.y ) );
         if ( !uvCoordinates_.empty() )
@@ -107,6 +98,21 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
             if ( uvCoordinates_.size() < uvCoordinates_.capacity() )
                 res.back() += " / " + std::to_string( uvCoordinates_.capacity() ) + " capacity";
         }
+        if ( !vertsColorMap_.empty() )
+        {
+            res.push_back( "colors: " + std::to_string( vertsColorMap_.size() ) );
+            if ( vertsColorMap_.size() < vertsColorMap_.capacity() )
+                res.back() += " / " + std::to_string( vertsColorMap_.capacity() ) + " capacity";
+        }
+
+        res.push_back( "holes: " + std::to_string( numHoles() ) );
+
+        res.push_back( fmt::format( "area: {:.6}", totalArea() ) );
+        if( nFacesSelected )
+            res.back() += fmt::format( " / {:.6} selected", selectedArea() );
+        if ( numHoles() == 0 )
+            res.push_back( fmt::format( "volume: {:.6}", volume() ) );
+        res.push_back( fmt::format( "avg edge len: {:.6}", avgEdgeLen() ) );
 
         boundingBoxToInfoLines_( res );
 

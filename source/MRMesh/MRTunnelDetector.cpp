@@ -1,6 +1,7 @@
 #include "MRTunnelDetector.h"
 #include "MRMesh.h"
 #include "MREdgePaths.h"
+#include "MRInTreePathBuilder.h"
 #include "MRRegionBoundary.h"
 #include "MRUnionFind.h"
 #include "MRTimer.h"
@@ -183,11 +184,8 @@ Expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( Progr
         return unexpectedOperationCanceled();
 
     std::vector<EdgeLoop> res( joinEdges.size() );
-    const float numEdges = float( mp_.mesh.topology.undirectedEdgeSize() ); // a value larger than any loop length in edges
-    auto treeMetric = [numEdges, this]( EdgeId e )
-    {
-        return primaryTree_.test( e.undirected() ) ? 1.0f : numEdges;
-    };
+    InTreePathBuilder inTreePathBuilder( mp_.mesh.topology, primaryTree_ );
+
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, res.size() ), [&]( const tbb::blocked_range<size_t> & range )
     {
         for ( size_t i = range.begin(); i < range.end(); ++i )
@@ -199,7 +197,7 @@ Expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( Progr
             assert( !primaryTree_.test( edge ) );
             assert( treeConnectedVertices_.find( o ) == treeConnectedVertices_.find( d ) );
 
-            auto tunnel = buildSmallestMetricPathBiDir( mp_.mesh.topology, treeMetric, d, o );
+            auto tunnel = inTreePathBuilder.build( d, o );
             tunnel.push_back( edge );
             assert( isEdgeLoop( mp_.mesh.topology, tunnel ) );
             res[i] = std::move( tunnel );
@@ -223,9 +221,10 @@ Expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshPart 
     return d.detect( subprogress( cb, 0.25f, 1.0f ) );
 }
 
-Expected<FaceBitSet, std::string> detectTunnelFaces( const MeshPart & mp, float maxTunnelLength, EdgeMetric metric, ProgressCallback progressCallback )
+Expected<FaceBitSet, std::string> detectTunnelFaces( const MeshPart & mp, const DetectTunnelSettings & settings )
 {
-    MR_TIMER;
+    MR_TIMER
+    auto metric = settings.metric;
     if ( !metric )
         metric = discreteMinusAbsMeanCurvatureMetric( mp.mesh );
 
@@ -235,15 +234,15 @@ Expected<FaceBitSet, std::string> detectTunnelFaces( const MeshPart & mp, float 
     VertBitSet tunnelVerts( mp.mesh.topology.lastValidVert() + 1 );
 
     BasisTunnelsDetector d( activeMeshPart, metric );
-    if ( auto v = d.prepare( subprogress( progressCallback, 0.0f, 0.33f ) ); !v.has_value() )
+    if ( auto v = d.prepare( subprogress( settings.progress, 0.0f, 0.33f ) ); !v.has_value() )
         return unexpected( std::move( v.error() ) );
 
     float initialProgress = 0.33f;
     float targetProgress = 0.66f;
 
-    for ( ;; )
+    for ( int iter = 0; iter < settings.maxIters; ++iter )
     {
-        auto basisTunnels = d.detect( MR::subprogress( progressCallback, initialProgress, targetProgress ) );
+        auto basisTunnels = d.detect( MR::subprogress( settings.progress, initialProgress, targetProgress ) );
         if ( !basisTunnels.has_value() )
             return unexpected( basisTunnels.error() );
 
@@ -252,7 +251,7 @@ Expected<FaceBitSet, std::string> detectTunnelFaces( const MeshPart & mp, float 
         sortPathsByLength( *basisTunnels, mp.mesh );
         for ( int i = 0; i < basisTunnels->size(); ++i )
         {
-            if ( calcPathLength( (*basisTunnels)[i], mp.mesh ) > maxTunnelLength )
+            if ( calcPathLength( (*basisTunnels)[i], mp.mesh ) > settings.maxTunnelLength )
             {
                 basisTunnels->erase( basisTunnels->begin() + i, basisTunnels->end() );
                 break;
@@ -286,7 +285,7 @@ Expected<FaceBitSet, std::string> detectTunnelFaces( const MeshPart & mp, float 
         }
         activeRegion -= tunnelFaces; // reduce region
         assert( numSelectedTunnels > 0 );
-        if ( progressCallback && !progressCallback( targetProgress + 0.01f ) )
+        if ( !reportProgress( settings.progress, targetProgress + 0.01f ) )
             return unexpectedOperationCanceled();
 
         initialProgress = targetProgress + 0.01f;

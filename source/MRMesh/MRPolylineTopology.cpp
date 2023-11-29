@@ -294,13 +294,7 @@ VertId PolylineTopology::lastValidVert() const
 {
     if ( numValidVerts_ <= 0 )
         return {};
-    for ( VertId i{ (int)validVerts_.size() - 1 }; i.valid(); --i )
-    {
-        if ( validVerts_.test( i ) )
-            return i;
-    }
-    assert( false );
-    return {};
+    return validVerts_.find_last();
 }
 
 VertBitSet PolylineTopology::getPathVertices( const EdgePath & path ) const
@@ -480,6 +474,15 @@ void PolylineTopology::addPartByMask( const PolylineTopology& from, const Undire
         *outVmap = std::move( vmap );
     if ( outEmap )
         *outEmap = std::move( emap );
+}
+
+void PolylineTopology::pack( VertMap * outVmap, WholeEdgeMap * outEmap )
+{
+    MR_TIMER
+
+    PolylineTopology packed;
+    packed.addPart( *this, outVmap, outEmap );
+    *this = std::move( packed );
 }
 
 void PolylineTopology::write( std::ostream & s ) const

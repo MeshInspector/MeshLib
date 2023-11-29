@@ -11,11 +11,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRInTreePathBuilder.h" />
     <ClInclude Include="MRChangeColoringType.h" />
     <ClInclude Include="MRChangeColoringActions.h" />
     <ClInclude Include="MRCloudPartMapping.h" />
     <ClInclude Include="MREnumNeighbours.h" />
     <ClInclude Include="MRFewSmallest.h" />
+    <ClInclude Include="MRFilterCreaseEdges.h" />
     <ClInclude Include="MRImproveSampling.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
@@ -97,6 +99,7 @@
     <ClInclude Include="MRIsNaN.h" />
     <ClInclude Include="MRMapEdge.h" />
     <ClInclude Include="MRMeshExtrude.h" />
+    <ClInclude Include="MRMeshReplicate.h" />
     <ClInclude Include="MRMeshToDistanceVolume.h" />
     <ClInclude Include="MRMovementBuildBody.h" />
     <ClInclude Include="MRMutexOwner.h" />
@@ -166,6 +169,7 @@
     <ClInclude Include="MRPrism.h" />
     <ClInclude Include="MRProgressReadWrite.h" />
     <ClInclude Include="MRRayBoxIntersection2.h" />
+    <ClInclude Include="MRSaveSettings.h" />
     <ClInclude Include="MRSolarRadiation.h" />
     <ClInclude Include="MRTiffIO.h" />
     <ClInclude Include="MRRectIndexer.h" />
@@ -399,11 +403,14 @@
     <ClCompile Include="MRFillContour.cpp" />
     <ClCompile Include="MRFillContourByGraphCut.cpp" />
     <ClCompile Include="MRFillContours2D.cpp" />
+    <ClCompile Include="MRFilterCreaseEdges.cpp" />
     <ClCompile Include="MRFixUndercuts.cpp" />
     <ClCompile Include="MRFloatGrid.cpp" />
     <ClCompile Include="MRFloatGridComponents.cpp" />
     <ClCompile Include="MRGcodeProcessor.cpp" />
     <ClCompile Include="MRGcodeLoad.cpp" />
+    <ClCompile Include="MRImage.cpp" />
+    <ClCompile Include="MRMapEdge.cpp" />
     <ClCompile Include="MRGraph.cpp" />
     <ClCompile Include="MRGridSampling.cpp" />
     <ClCompile Include="MRHistoryStore.cpp" />
@@ -414,6 +421,7 @@
     <ClCompile Include="MRInnerShell.cpp" />
     <ClCompile Include="MRIntersection.cpp" />
     <ClCompile Include="MRIntersectionContour.cpp" />
+    <ClCompile Include="MRInTreePathBuilder.cpp" />
     <ClCompile Include="MRIOFormatsRegistry.cpp" />
     <ClCompile Include="MRIOParsing.cpp" />
     <ClCompile Include="MRIRenderObject.cpp" />
@@ -428,6 +436,7 @@
     <ClCompile Include="MRMeshExtrude.cpp" />
     <ClCompile Include="MRMeshLoad3mf.cpp" />
     <ClCompile Include="MRMeshOrPoints.cpp" />
+    <ClCompile Include="MRMeshReplicate.cpp" />
     <ClCompile Include="MRMeshToDistanceVolume.cpp" />
     <ClCompile Include="MRMovementBuildBody.cpp" />
     <ClCompile Include="MRNormalDenoising.cpp" />
@@ -488,6 +497,7 @@
     <ClCompile Include="MRMeshCollide.cpp" />
     <ClCompile Include="MRPrism.cpp" />
     <ClCompile Include="MRProgressReadWrite.cpp" />
+    <ClCompile Include="MRSaveSettings.cpp" />
     <ClCompile Include="MRSolarRadiation.cpp" />
     <ClCompile Include="MRTiffIO.cpp" />
     <ClCompile Include="MRRectIndexer.cpp" />

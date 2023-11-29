@@ -1,12 +1,22 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRConstants.h"
+#include "MRExpected.h"
+#include <string>
 
 namespace MR
 {
 
-using ContourIndicesMap = std::vector<int>;
-using ContoursIndicesMap = std::vector<ContourIndicesMap>;
+struct ContoursVertId
+{
+    // -1 means unknown index
+    int contourId{ -1 };
+    // -1 means unknown index
+    int vertId{ -1 };
+    bool operator==( const ContoursVertId& other ) const = default;
+};
+using ContoursVertMap = std::vector<ContoursVertId>;
+using ContoursVertMaps = std::vector<ContoursVertMap>;
 
 struct OffsetContoursParams
 {
@@ -35,10 +45,13 @@ struct OffsetContoursParams
     float minAnglePrecision = PI_F / 9.0f; // 20 deg
     /// limit for sharp corners connection
     float maxSharpAngle = PI_F * 2.0f / 3.0f; // 120 deg
+
+    /// optional output that maps result contour ids to input contour ids
+    ContoursVertMaps* indicesMap = nullptr;
 };
 
 /// offsets 2d contours in plane
-[[nodiscard]] MRMESH_API Contours2f offsetContours( const Contours2f& contours, float offset,
+[[nodiscard]] MRMESH_API Expected<Contours2f, std::string> offsetContours( const Contours2f& contours, float offset,
     const OffsetContoursParams& params = {} );
 
 }

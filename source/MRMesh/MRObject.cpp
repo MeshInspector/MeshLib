@@ -55,6 +55,16 @@ ObjectChildrenHolder::~ObjectChildrenHolder()
             child->parent_ = nullptr;
 }
 
+std::shared_ptr<Object> ObjectChildrenHolder::getSharedPtr() const
+{
+    if ( !parent_ )
+        return {};
+    for ( const auto& child : parent_->children_ )
+        if ( child.get() == this )
+            return child;
+    return {};
+}
+
 size_t ObjectChildrenHolder::heapBytes() const
 {
     auto res = MR::heapBytes( children_ ) + MR::heapBytes( bastards_ );
@@ -194,7 +204,7 @@ bool Object::addChild( std::shared_ptr<Object> child, bool recognizedChild )
         std::erase_if( bastards_, [](const auto & b) { return !b.lock(); } );
         bastards_.push_back( std::move( child ) );
     }
-
+    needRedraw_ = true;
     return true;
 }
 
@@ -234,6 +244,7 @@ bool Object::addChildBefore( std::shared_ptr<Object> newChild, const std::shared
 
     newChild->parent_ = this;
     children_.insert( it1, std::move( newChild ) );
+    needRedraw_ = true;
     return true;
 }
 
@@ -248,6 +259,7 @@ bool Object::removeChild( Object* child )
         return false;
 
     child->parent_ = nullptr;
+    needRedraw_ = true;
 
     auto it = std::remove_if( children_.begin(), children_.end(), [child]( const std::shared_ptr<Object>& obj )
     {
@@ -275,6 +287,7 @@ void Object::removeAllChildren()
     for ( const auto & ch : children_ )
         ch->parent_ = nullptr;
     children_.clear();
+    needRedraw_ = true;
 }
 
 void Object::sortChildren()
@@ -292,6 +305,7 @@ void Object::sortChildren()
 
         return result.second != rhs.cend() && ( result.first == lhs.cend() || std::tolower( *result.first ) < std::tolower( *result.second ) );
     } );
+    needRedraw_ = true;
 }
 
 bool Object::select( bool on )
@@ -302,6 +316,7 @@ bool Object::select( bool on )
     if ( ancillary_ && on )
         return false;
 
+    needRedraw_ = true;
     selected_ = on;
     return true;
 }
@@ -310,6 +325,7 @@ void Object::setAncillary( bool ancillary )
 {
     if ( ancillary )
         select( false );
+    needRedraw_ = true;
     ancillary_ = ancillary;
 }
 
@@ -318,12 +334,19 @@ void Object::setVisible( bool on, ViewportMask viewportMask /*= ViewportMask::al
     if ( ( visibilityMask_ & viewportMask ) == ( on ? viewportMask : ViewportMask{} ) )
         return;
 
-    needRedraw_ = true;
-
     if ( on ) 
         setVisibilityMask( visibilityMask_ | viewportMask ); 
     else 
         setVisibilityMask( visibilityMask_ & ~viewportMask );
+}
+
+void Object::setVisibilityMask( ViewportMask viewportMask )
+{
+    if ( visibilityMask_ == viewportMask )
+        return;
+
+    needRedraw_ = true;
+    visibilityMask_ = viewportMask;
 }
 
 void Object::swapBase_( Object& other )

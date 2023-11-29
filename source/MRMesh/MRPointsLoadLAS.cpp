@@ -5,7 +5,7 @@
 #include "MRColor.h"
 #include "MRPointCloud.h"
 
-#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRFmt.h"
 
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
 #pragma warning( push )

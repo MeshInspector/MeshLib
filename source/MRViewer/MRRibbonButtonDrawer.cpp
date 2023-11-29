@@ -244,9 +244,10 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
 
     int colorChanged = customParam.pushColorsCb ? 
         customParam.pushColorsCb( requirements.empty(), item.item->isActive() ) :
-        pushRibbonButtonColors_( requirements.empty(), item.item->isActive(), params.rootType );
-    bool pressed = ImGui::ButtonEx( ( "##wholeChildBtn" + item.item->name() ).c_str(), itemSize, ImGuiButtonFlags_AllowItemOverlap );
-    ImGui::SetItemAllowOverlap();
+        pushRibbonButtonColors_( requirements.empty(), item.item->isActive(), params.forceHovered, params.rootType );
+    ImGui::SetNextItemAllowOverlap();
+    bool pressed = ImGui::ButtonEx( ( "##wholeChildBtn" + item.item->name() ).c_str(), itemSize, ImGuiButtonFlags_AllowOverlap );
+    pressed = pressed || params.forcePressed;
 
     ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
     float fontScale = 1.f;
@@ -353,7 +354,7 @@ void RibbonButtonDrawer::drawButtonIcon( const MenuItemInfo& item, const DrawBut
 {
     ImGui::BeginGroup();
 
-    int colorChanged = pushRibbonButtonColors_( true, false, params.rootType );
+    int colorChanged = pushRibbonButtonColors_( true, false, params.forceHovered, params.rootType );
 
     ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
     float fontScale = 1.f;
@@ -475,7 +476,7 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
 
     bool dropBtnEnabled = !item.item->dropItems().empty();
 
-    int pushedColors = pushRibbonButtonColors_( dropBtnEnabled, menuOpened, params.rootType );
+    int pushedColors = pushRibbonButtonColors_( dropBtnEnabled, menuOpened, params.forceHovered, params.rootType );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding );
     bool comboPressed = ImGui::Button( name.c_str(), itemSize ) && dropBtnEnabled;
 
@@ -639,13 +640,16 @@ void RibbonButtonDrawer::drawTooltip_( const MenuItemInfo& item, const std::stri
 }
 
 
-int RibbonButtonDrawer::pushRibbonButtonColors_( bool enabled, bool active, DrawButtonParams::RootType rootType ) const
+int RibbonButtonDrawer::pushRibbonButtonColors_( bool enabled, bool active, bool forceHovered, DrawButtonParams::RootType rootType ) const
 {
     if ( active )
     {
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::RibbonButtonActiveHovered ).getUInt32() );
         ImGui::PushStyleColor( ImGuiCol_ButtonActive, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::RibbonButtonActiveClicked ).getUInt32() );
-        ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::RibbonButtonActive ).getUInt32() );
+        if ( !forceHovered )
+            ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::RibbonButtonActive ).getUInt32() );
+        else
+            ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::RibbonButtonActiveHovered ).getUInt32() );
         ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TextEnabled ).getUInt32() );
         return 4;
     }
@@ -668,20 +672,27 @@ int RibbonButtonDrawer::pushRibbonButtonColors_( bool enabled, bool active, Draw
             ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text ).getUInt32() );
     }
 
-    ImGui::PushStyleColor( ImGuiCol_Button, Color( 0, 0, 0, 0 ).getUInt32() );
+    if ( !forceHovered )
+        ImGui::PushStyleColor( ImGuiCol_Button, Color( 0, 0, 0, 0 ).getUInt32() );
     if ( rootType == DrawButtonParams::RootType::Ribbon )
     {
+        if ( forceHovered )
+            ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::RibbonButtonHovered ).getUInt32() );
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::RibbonButtonHovered ).getUInt32() );
         ImGui::PushStyleColor( ImGuiCol_ButtonActive, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::RibbonButtonClicked ).getUInt32() );
     }
     else if ( rootType == DrawButtonParams::RootType::Toolbar )
     {
+        if ( forceHovered )
+            ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarHovered ).getUInt32() );
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarHovered ).getUInt32() );
         ImGui::PushStyleColor( ImGuiCol_ButtonActive, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarClicked ).getUInt32() );
     }
     else 
     {
         assert( rootType == DrawButtonParams::RootType::Header );
+        if ( forceHovered )
+            ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabHovered ).getUInt32() );
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabHovered ).getUInt32() );
         ImGui::PushStyleColor( ImGuiCol_ButtonActive, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabClicked ).getUInt32() );
     }

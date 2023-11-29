@@ -48,6 +48,10 @@ public:
     MRMESH_API void addPartByMask( const Polyline<V>& from, const UndirectedEdgeBitSet& mask,
         VertMap* outVmap = nullptr, EdgeMap* outEmap = nullptr );
 
+    /// tightly packs all arrays eliminating lone edges and invalid verts and points,
+    /// optionally returns mappings: old.id -> new.id
+    MRMESH_API void pack( VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr );
+
     /// returns coordinates of the edge origin
     [[nodiscard]] V orgPnt( EdgeId e ) const { return points[ topology.org( e ) ]; }
     /// returns coordinates of the edge destination
@@ -98,11 +102,13 @@ public:
 
     /// convert Polyline to simple contour structures with vector of points inside
     /// \details if all even edges are consistently oriented, then the output contours will be oriented the same
-    [[nodiscard]] MRMESH_API Contours<V> contours() const;
+    /// \param vertMap optional output map for for each contour point to corresponding VertId
+    [[nodiscard]] MRMESH_API Contours<V> contours( std::vector<std::vector<VertId>>* vertMap = nullptr ) const;
 
     /// convert Polyline to simple 2D contour structures with vector of points inside
     /// \details if all even edges are consistently oriented, then the output contours will be oriented the same
-    [[nodiscard]] MRMESH_API Contours2f contours2() const;
+    /// \param vertMap optional output map for for each contour point to corresponding VertId
+    [[nodiscard]] MRMESH_API Contours2f contours2( std::vector<std::vector<VertId>>* vertMap = nullptr ) const;
 
     /// convert Polyline3 to Polyline2 or vice versa
     template<typename U>

@@ -6,7 +6,7 @@
 #include "MRPointCloud.h"
 #include "MRStringConvert.h"
 #include "MRTimer.h"
-#include <MRPch/MRSpdlog.h> //fmt
+#include <MRPch/MRFmt.h>
 
 #pragma warning(push)
 #pragma warning(disable: 4251) // class needs to have dll-interface to be used by clients of another class

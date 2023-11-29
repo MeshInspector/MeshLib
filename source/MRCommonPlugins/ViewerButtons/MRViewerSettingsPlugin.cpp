@@ -16,7 +16,7 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSceneSettings.h"
 #include "MRMesh/MRDirectory.h"
-
+#include <MRMesh/MRSceneRoot.h>
 
 namespace MR
 {
@@ -55,7 +55,7 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
 void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 {
     auto menuWidth = 380.0f * menuScaling;
-    if ( !ImGui::BeginCustomStatePlugin( plugin_name.c_str(), &dialogIsOpen_, { .collapsed = &dialogIsCollapsed_, .width = menuWidth, .menuScaling = menuScaling } ) )
+    if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
         return;
 
 
@@ -210,6 +210,10 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             UI::checkbox( "Deselect on Hide",
                                                   std::bind( &RibbonMenu::getDeselectNewHiddenObjects, ribbonMenu_ ),
                                                   std::bind( &RibbonMenu::setDeselectNewHiddenObjects, ribbonMenu_, std::placeholders::_1 ) );
+            UI::checkbox( "Close Context on Change",
+                                                  std::bind( &RibbonMenu::getCloseContextOnChange, ribbonMenu_ ),
+                                                  std::bind( &RibbonMenu::setCloseContextOnChange, ribbonMenu_, std::placeholders::_1 ) );
+            UI::setTooltipIfHovered( "Close scene context menu on any change", menuScaling );
         }
 
         bool flatShading = SceneSettings::get( SceneSettings::Type::MeshFlatShading );
@@ -281,20 +285,26 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 } );
             }
             ImGui::SameLine( menuWidth * 0.25f + style.WindowPadding.x + 2 * menuScaling );
-            UI::colorEdit4( "Shadow Color", shadowGl_->shadowColor,
+            auto color = shadowGl_->getShadowColor();
+            UI::colorEdit4( "Shadow Color", color,
                 ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel );
-            
+            shadowGl_->setShadowColor( color );
+
             const char* tooltipsShift[2] = {
                 "Shift along Ox-axis to the left",
                 "Shift along Oy-axis to the top"
             };
             ImGui::PushItemWidth( menuWidth * 0.5f );
-            ImGui::DragFloatValid2( "Shift", &shadowGl_->shadowShift.x, 0.4f, -200.0f, 200.0f, "%.3f px", 0, &tooltipsShift );
-            ImGui::DragFloatValid( "Blur Radius", &shadowGl_->blurRadius, 0.2f, 0, 200, "%.3f px" );
-            float quality = shadowGl_->getQuality();
+            auto shfit = shadowGl_->getShadowShift();
+            auto radius = shadowGl_->getBlurRadius();
+            auto quality = shadowGl_->getQuality();
+            ImGui::DragFloatValid2( "Shift", &shfit.x, 0.4f, -200.0f, 200.0f, "%.3f px", 0, &tooltipsShift );
+            ImGui::DragFloatValid( "Blur Radius", &radius, 0.2f, 0, 200, "%.3f px" );
             ImGui::DragFloatValid( "Quality", &quality, 0.001f, 0.0625f, 1.0f );
             ImGui::PopItemWidth();
             UI::setTooltipIfHovered( "Blur texture downscaling coefficient", menuScaling );
+            shadowGl_->setShadowShift( shfit );
+            shadowGl_->setBlurRadius( radius );
             shadowGl_->setQuality( quality );
         }
     }

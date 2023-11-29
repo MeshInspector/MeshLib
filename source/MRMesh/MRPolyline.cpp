@@ -152,6 +152,16 @@ void MR::Polyline<V>::addPartByMask( const Polyline<V>& from, const UndirectedEd
 }
 
 template<typename V>
+void Polyline<V>::pack( VertMap * outVmap, WholeEdgeMap * outEmap )
+{
+    MR_TIMER
+
+    Polyline<V> packed;
+    packed.addPart( *this, outVmap, outEmap );
+    *this = std::move( packed );
+}
+
+template<typename V>
 float Polyline<V>::totalLength() const
 {
     MR_TIMER
@@ -196,26 +206,26 @@ Box<V> Polyline<V>::computeBoundingBox( const AffineXf<V> * toWorld ) const
 }
 
 template<typename V>
-Contours<V> Polyline<V>::contours() const
+Contours<V> Polyline<V>::contours( std::vector<std::vector<VertId>>* vertMap ) const
 {
     MR_TIMER
     return topology.convertToContours<V>( 
-        [&points = this->points]( VertId v )
+        [&points = this->points] ( VertId v )
         {
             return points[v];
-        } 
+        }, vertMap
     );
 }
 
 template<typename V>
-Contours2f Polyline<V>::contours2() const
+Contours2f Polyline<V>::contours2( std::vector<std::vector<VertId>>* vertMap ) const
 {
     MR_TIMER
     return topology.convertToContours<Vector2f>( 
-        [&points = this->points]( VertId v )
+        [&points = this->points] ( VertId v )
         {
             return Vector2f{ points[v] };
-        } 
+        }, vertMap
     );
 }
 

@@ -89,6 +89,7 @@ void ObjectPointsHolder::setSelectedVerticesColor( const Color& color, ViewportI
     if ( color == selectedVerticesColor_.get( id ) )
         return;
     selectedVerticesColor_.set( color, id );
+    needRedraw_ = true;
 }
 
 AllVisualizeProperties ObjectPointsHolder::getAllVisualizeProperties() const
@@ -192,7 +193,10 @@ Expected<std::future<void>, std::string> ObjectPointsHolder::serializeModel_( co
     return std::async( getAsyncLaunchType(),
         [points = points_, filename = utf8string( path ) + ".ctm", ptr = colorMapPtr] ()
     {
-        MR::PointsSave::toCtm( *points, pathFromUtf8( filename ), { MR::PointsSave::Settings{ .saveValidOnly = false, .colors = ptr } } );
+        MR::PointsSave::CtmSavePointsOptions settings;
+        settings.saveValidOnly = false;
+        settings.colors = ptr;
+        MR::PointsSave::toCtm( *points, pathFromUtf8( filename ), settings );
     } );
 #else
     return std::async( getAsyncLaunchType(),

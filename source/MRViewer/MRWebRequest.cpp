@@ -21,6 +21,7 @@ struct RequestContext
 #ifdef __EMSCRIPTEN__
     MR::WebRequest::ResponseCallback callback;
 #else
+    std::optional<std::ifstream> input;
     std::optional<std::ofstream> output;
 #endif
 };
@@ -28,6 +29,32 @@ struct RequestContext
 std::mutex sRequestContextMutex;
 int sRequestContextCounter = 0;
 std::unordered_map<int, std::unique_ptr<RequestContext>> sRequestContextMap;
+
+#ifdef __EMSCRIPTEN__
+std::string toString( MR::WebRequest::Method method )
+{
+    using Method = MR::WebRequest::Method;
+    switch ( method )
+    {
+        case Method::Get:
+            return "GET";
+        case Method::Post:
+            return "POST";
+        case Method::Patch:
+            return "PATCH";
+        case Method::Put:
+            return "PUT";
+        case Method::Delete:
+            return "DELETE";
+    }
+#ifdef __cpp_lib_unreachable
+    std::unreachable();
+#else
+    assert( false );
+    return {};
+#endif
+}
+#endif
 
 }
 
@@ -90,12 +117,22 @@ bool downloadFileCallback( std::string data, intptr_t userdata )
 namespace MR
 {
 
+WebRequest::WebRequest( std::string url )
+    : url_( std::move( url ) )
+{
+    //
+}
+
 void WebRequest::clear()
 {
     method_ = Method::Get;
+    url_ = {};
+    logName_ = {};
+    async_ = true;
     timeout_ = 10000;
     params_ = {};
     headers_ = {};
+    inputPath_ = {};
     formData_ = {};
     body_ = {};
     outputPath_ = {};
@@ -121,6 +158,11 @@ void WebRequest::setHeaders( std::unordered_map<std::string, std::string> header
     headers_ = std::move( headers );
 }
 
+void WebRequest::setInputPath( std::string inputPath )
+{
+    inputPath_ = std::move( inputPath );
+}
+
 void WebRequest::setFormData( std::vector<FormData> formData )
 {
     formData_ = std::move( formData );
@@ -134,6 +176,16 @@ void WebRequest::setBody( std::string body )
 void WebRequest::setOutputPath( std::string outputPath )
 {
     outputPath_ = std::move( outputPath );
+}
+
+void WebRequest::setAsync( bool async )
+{
+    async_ = async;
+}
+
+void WebRequest::setLogName( std::string logName )
+{
+    logName_ = std::move( logName );
 }
 
 void WebRequest::send( std::string urlP, const std::string & logName, ResponseCallback callback, bool async /*= true */ )
@@ -164,6 +216,16 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         // TODO: update libcpr to support custom file names
         multipart.parts.emplace_back( formData.name, cpr::File( formData.path ), formData.contentType );
 
+    if ( !inputPath_.empty() )
+    {
+        ctx->input = std::ifstream( inputPath_, std::ios::binary );
+        if ( !ctx->input->good() )
+        {
+            spdlog::info( "WebResponse {}: Unable to open input file", logName.c_str() );
+            return;
+        }
+    }
+
     if ( !outputPath_.empty() )
     {
         ctx->output = std::ofstream( outputPath_, std::ios::binary );
@@ -181,10 +243,28 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         session.SetHeader( headers );
         session.SetParameters( params );
         session.SetTimeout( tm );
-        if ( multipart.parts.empty() )
-            session.SetBody( body );
-        else
+
+        if ( ctx->input.has_value() )
+        {
+            // C++ Requests library doesn't support uploading from stream
+            auto& in = *ctx->input;
+            in.seekg( 0, std::ios::end );
+            std::string buffer;
+            buffer.resize( in.tellg() );
+            in.seekg( 0, std::ios::beg );
+            in.read( buffer.data(), buffer.size() );
+            ctx->input.reset();
+            session.SetBody( std::move( buffer ) );
+        }
+        else if ( !multipart.parts.empty() )
+        {
             session.SetMultipart( multipart );
+        }
+        else
+        {
+            session.SetBody( body );
+        }
+
         if ( ctx->output.has_value() )
             session.SetWriteCallback( { &downloadFileCallback, ctxId } );
 
@@ -194,6 +274,12 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
                 return session.Get();
             case Method::Post:
                 return session.Post();
+            case Method::Patch:
+                return session.Patch();
+            case Method::Put:
+                return session.Put();
+            case Method::Delete:
+                return session.Delete();
         }
 
 #ifdef __cpp_lib_unreachable
@@ -222,13 +308,20 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         {
             spdlog::info( "WebRequest  {}", logName.c_str() );
             auto res = sendLambda();
-            spdlog::info( "WebResponse {}: {}", logName.c_str(), int( res.status_code ) );
+
+            // log everything in one line for convenience
+            std::string info = "status_code=" + std::to_string( res.status_code );
             if ( !res.status_line.empty() )
-                spdlog::info( "WebResponse {}: {}", logName.c_str(), res.status_line );
+                info += ", status_line=" + res.status_line;
             if ( !res.reason.empty() )
-                spdlog::info( "WebResponse {}: {}", logName.c_str(), res.reason );
+                info += ", reason=" + res.reason;
             if ( res.error )
-                spdlog::info( "WebResponse {}: {} {}", logName.c_str(), int( res.error.code ), res.error.message );
+            {
+                info += ", error_code=" + std::to_string( int( res.error.code ) );
+                info += ", error_message=" + res.error.message;
+            }
+            spdlog::info( "WebResponse {}: {}", logName.c_str(), info );
+
             Json::Value resJson;
             resJson["url"] = url;
             resJson["code"] = int( res.status_code );
@@ -244,15 +337,18 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
 #else
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
+    const auto method = toString( method_ );
     MAIN_THREAD_EM_ASM( {
         web_req_clear();
         web_req_timeout = $0;
         web_req_body = UTF8ToString( $1 );
-        web_req_method = $2;
+        web_req_filename = UTF8ToString( $2 );
+        web_req_method = UTF8ToString( $3 );
     },
         timeout_,
         body_.c_str(),
-        int( method_ )
+        inputPath_.c_str(),
+        method.c_str()
     );
 
     for ( const auto& [key, value] : params_ )
@@ -283,6 +379,17 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         MAIN_THREAD_EM_ASM( web_req_async_download( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ), urlP.c_str(), outputPath_.c_str(), ctxId );
 #pragma clang diagnostic pop
 #endif
+}
+
+void WebRequest::send( WebRequest::ResponseCallback callback )
+{
+    if ( url_.empty() )
+    {
+        spdlog::warn( "WebRequest {}: URL is not specified", logName_ );
+        return;
+    }
+
+    send( url_, logName_, std::move( callback ), async_ );
 }
 
 Expected<Json::Value, std::string> parseResponse( const Json::Value& response )

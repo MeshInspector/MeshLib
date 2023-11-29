@@ -9,6 +9,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
+set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}")
 set(MESHLIB_THIRDPARTY_INCLUDE_DIR "include")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-sign-compare -Wno-unknown-pragmas -Wno-unused-variable \
@@ -56,8 +57,10 @@ ELSE()
  # check version (major)
  file(STRINGS /etc/os-release version_id REGEX "^VERSION_ID=")
  string(REGEX REPLACE "VERSION_ID=\"(.*)\"" "\\1" version_id "${version_id}")
- string(FIND ${version_id} "." dot-pos)
- string(SUBSTRING ${version_id} 0 ${dot-pos} version_id)
+ IF( NOT ${version_id} STREQUAL "" )
+   string(FIND ${version_id} "." dot-pos)
+   string(SUBSTRING ${version_id} 0 ${dot-pos} version_id)
+ ENDIF()
  message("using ${distro} ${version_id}")
 
  IF( ${distro} STREQUAL "Ubuntu")
@@ -103,6 +106,17 @@ IF(MR_EMSCRIPTEN)
   add_compile_definitions(GTEST_HAS_CXXABI_H_=0)
   set(INSTALL_GTEST ON)
   add_subdirectory(./googletest)
+
+  set(ENABLE_PROGRAMS OFF CACHE BOOL "")
+  add_subdirectory(./mbedtls)
+  install(DIRECTORY mbedtls/include/mbedtls DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+
+  # Use custom FindMbedTLS.cmake to override the one included in ziplib, that does not work
+  list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+
+  set(BUILD_TOOLS OFF CACHE BOOL "")
+  set(BUILD_REGRESS OFF CACHE BOOL "")
+  set(BUILD_EXAMPLES OFF CACHE BOOL "")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s USE_ZLIB=1")
   set(LIBZIP_DO_INSTALL ON)
   add_subdirectory(./libzip)
@@ -116,10 +130,10 @@ IF(MR_EMSCRIPTEN)
   add_subdirectory(./spdlog)
 
   option(TBB_TEST "Enable testing" OFF)
-  option(TBBMALLOC_BUILD "Enable tbbmalloc build" OFF)
-  add_compile_definitions(__QNXNTO__=1) # hack to disable __TBB_RESUMABLE_TASKS in tbb
-  add_compile_definitions(__TBB_DYNAMIC_LOAD_ENABLED=0)
+  set(CMAKE_SYSTEM_PROCESSOR_BACKUP "${CMAKE_SYSTEM_PROCESSOR}")
+  set(CMAKE_SYSTEM_PROCESSOR "unknown")
   add_subdirectory(./onetbb)
+  set(CMAKE_SYSTEM_PROCESSOR "${CMAKE_SYSTEM_PROCESSOR_BACKUP}")
   install(DIRECTORY onetbb/include/tbb DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 ELSE() # not MR_EMSCRIPTEN
   set(CLIP_EXAMPLES OFF)

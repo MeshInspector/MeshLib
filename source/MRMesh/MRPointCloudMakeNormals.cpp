@@ -59,28 +59,54 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud,
     return normals;
 }
 
-struct NormalCandidate
-{
-    VertId baseId;
-    float weight = FLT_MAX;
-};
-
-inline bool operator < ( const NormalCandidate& l, const NormalCandidate& r )
-{
-    return l.weight > r.weight;
-}
-
 template<class T>
-bool orientNormalsCore( const PointCloud& pointCloud, VertNormals& normals, const T & enumNeis, const ProgressCallback & progress )
+bool orientNormalsCore( const PointCloud& pointCloud, VertNormals& normals, const T & enumNeis, ProgressCallback progress )
 {
     MR_TIMER
 
-    Heap<NormalCandidate, VertId> heap( normals.size() );
+    const auto bbox = pointCloud.computeBoundingBox();
+    if ( !reportProgress( progress, 0.025f ) )
+        return false;
+
+    const auto center = bbox.center();
+    const auto maxDistSqToCenter = bbox.size().lengthSq() / 4;
+
+    constexpr auto InvalidWeight = -FLT_MAX;
+    using HeapT = Heap<float, VertId>;
+    std::vector<HeapT::Element> elements;
+    elements.reserve( normals.size() );
+    for ( VertId v = 0_v; v < normals.size(); ++v )
+        elements.push_back( { v, InvalidWeight } );
+
+    if ( !reportProgress( progress, 0.05f ) )
+        return false;
+
+    // fill elements with negative weights: larger weight (smaller by magnitude) for points further from the center
+    if ( !BitSetParallelFor( pointCloud.validPoints, [&]( VertId v )
+    {
+        const auto dcenter = pointCloud.points[v] - center;
+        const auto w = dcenter.lengthSq() - maxDistSqToCenter;
+        assert( w <= 0 );
+        elements[(int)v].val = w;
+        // initially orient points' normals' outside of the center
+        if ( dot( normals[v], dcenter ) < 0 )
+            normals[v] = -normals[v];
+    }, subprogress( progress, 0.05f, 0.075f ) ) )
+        return false;
+
+    HeapT heap( std::move( elements ) );
+
+    if ( !reportProgress( progress, 0.1f ) )
+        return false;
+
+    progress = subprogress( progress, 0.1f, 1.0f );
 
     auto enweight = [&]( VertId base, VertId candidate )
     {
-        Vector3f cb = pointCloud.points[base] - pointCloud.points[candidate];
-        return 0.01f * cb.lengthSq() + sqr( dot( cb, normals[base] ) ) + sqr( dot( cb, normals[candidate] ) );
+        // give positive weight to neighbours, with larger value to close points with close normal directions
+        const Vector3f cb = pointCloud.points[base] - pointCloud.points[candidate];
+        const auto d = 0.01f * cb.lengthSq() + sqr( dot( cb, normals[base] ) ) + sqr( dot( cb, normals[candidate] ) );
+        return d > 0 ? 1 / d : FLT_MAX;
     };
 
     VertBitSet notVisited = pointCloud.validPoints;
@@ -98,52 +124,24 @@ bool orientNormalsCore( const PointCloud& pointCloud, VertNormals& normals, cons
             if ( !notVisited.test( v ) )
                 return;
             float weight = enweight( base, v );
-            heap.setValue( v, NormalCandidate{ base, weight } );
+            if ( weight > heap.value( v ) )
+            {
+                heap.setLargerValue( v, weight );
+                if ( dot( normals[base], normals[v] ) < 0 )
+                    normals[v] = -normals[v];
+            }
         } );
     };
 
-    auto findFirst = [&]()->VertId
+    for (;;)
     {
-        MR_TIMER
-        // find not visited point with the largest x-coordinate
-        VertId xMostVert;
-        float maxX = -FLT_MAX;
-        for ( auto v : notVisited )
-        {
-            assert( heap.value( v ).weight == FLT_MAX );
-            auto xDot = dot( pointCloud.points[v], Vector3f::plusX() );
-            if ( xDot > maxX )
-            {
-                xMostVert = v;
-                maxX = xDot;
-            }
-        }
-        if ( xMostVert )
-        {
-            // orient the point with the largest x-coordinate to have normal outside
-            if ( dot( normals[xMostVert], Vector3f::plusX() ) < 0.0f )
-                normals[xMostVert] = -normals[xMostVert];
-        }
-        return xMostVert;
-    };
-
-    VertId first = findFirst();
-    while ( first.valid() )
-    {
-        enqueueNeighbors( first );
-        for (;;)
-        {
-            auto [v, c] = heap.top();
-            if ( c.weight == FLT_MAX )
-                break;
-            heap.setSmallerValue( v, NormalCandidate{ {}, FLT_MAX } );
-            if ( dot( normals[c.baseId], normals[v] ) < 0.0f )
-                normals[v] = -normals[v];
-            enqueueNeighbors( v );
-            if ( !reportProgress( progress, [&] { return (float)visitedCount / totalCount; }, visitedCount, 0x10000 ) )
-                return false;
-        }
-        first = findFirst();
+        auto [v, weight] = heap.top();
+        if ( weight == InvalidWeight )
+            break;
+        heap.setSmallerValue( v, InvalidWeight );
+        enqueueNeighbors( v );
+        if ( !reportProgress( progress, [&] { return (float)visitedCount / totalCount; }, visitedCount, 0x10000 ) )
+            return false;
     }
     return true;
 }

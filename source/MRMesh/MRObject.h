@@ -42,6 +42,10 @@ public:
     MRMESH_API ObjectChildrenHolder & operator = ( ObjectChildrenHolder && ) noexcept;
     MRMESH_API ~ObjectChildrenHolder();
 
+    // returns this Object as shared_ptr
+    // finds it among its parent's recognized children
+    [[nodiscard]] MRMESH_API std::shared_ptr<Object> getSharedPtr() const;
+
     /// returns the amount of memory this object occupies on heap,
     /// including the memory of all recognized children
     [[nodiscard]] size_t heapBytes() const;
@@ -158,7 +162,7 @@ public:
     /// checks whether the object is visible in any of the viewports specified by the mask (by default in any viewport)
     bool isVisible( ViewportMask viewportMask = ViewportMask::any() ) const { return !( visibilityMask_ & viewportMask ).empty(); }
     /// specifies object visibility as bitmask of viewports
-    virtual void setVisibilityMask( ViewportMask viewportMask ) { visibilityMask_ = viewportMask; }
+    MRMESH_API virtual void setVisibilityMask( ViewportMask viewportMask );
     /// gets object visibility as bitmask of viewports
     ViewportMask visibilityMask() const { return visibilityMask_; }
 

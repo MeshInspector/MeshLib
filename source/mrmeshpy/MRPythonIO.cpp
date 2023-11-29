@@ -195,7 +195,8 @@ Expected<PointCloud, std::string> pythonLoadPointCloudFromAnyFormat( pybind11::o
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveMesh, [] ( pybind11::module_& m )
 {
     m.def( "saveMesh",
-        MR::decorateExpected( ( VoidOrErrStr( * )( const MR::Mesh&, const std::filesystem::path&, const VertColors*, ProgressCallback ) )& MR::MeshSave::toAnySupportedFormat ),
+        MR::decorateExpected( []( const MR::Mesh& m, const std::filesystem::path& p, const VertColors* cs, ProgressCallback cb )
+            { return MR::MeshSave::toAnySupportedFormat( m, p, { .colors = cs, .progress = cb } ); } ),
         pybind11::arg( "mesh" ), pybind11::arg( "path" ), pybind11::arg( "colors" ) = nullptr, pybind11::arg( "callback" ) = ProgressCallback{}, 
         "detects the format from file extension and save mesh to it" );
     m.def( "saveMesh",
@@ -223,8 +224,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadMesh, [] ( pybind11::module_& m )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveLines, [] ( pybind11::module_& m )
 {
     m.def( "saveLines",
-        MR::decorateExpected( ( VoidOrErrStr( * )( const MR::Polyline3&, const std::filesystem::path&, ProgressCallback ) )& MR::LinesSave::toAnySupportedFormat ),
-        pybind11::arg( "polyline" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{}, 
+        MR::decorateExpected( []( const MR::Polyline3& pl, const std::filesystem::path& p, ProgressCallback cb )
+            { return MR::LinesSave::toAnySupportedFormat( pl, p, { .progress = cb } ); } ),
+        pybind11::arg( "polyline" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "detects the format from file extension and saves polyline in it" );
     m.def( "saveLines",
         MR::decorateExpected( ( VoidOrErrStr( * )( const MR::Polyline3&, const std::string&, pybind11::object ) )& pythonSaveLinesToAnyFormat ),
@@ -245,7 +247,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SavePoints, [] ( pybind11::module_& m )
 {
     m.def( "savePoints",
         MR::decorateExpected( []( const PointCloud& cloud, const std::filesystem::path& file, const VertColors* colors, ProgressCallback callback )
-            { return MR::PointsSave::toAnySupportedFormat( cloud, file, { .colors = colors, .callback = callback } ); } ),
+            { return MR::PointsSave::toAnySupportedFormat( cloud, file, { .colors = colors, .progress = callback } ); } ),
         pybind11::arg( "pointCloud" ), pybind11::arg( "path" ), pybind11::arg( "colors" ) = nullptr, pybind11::arg( "callback" ) = ProgressCallback{},
         "detects the format from file extension and save points to it" );
     m.def( "savePoints",

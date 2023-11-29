@@ -84,6 +84,13 @@ TEST(MRMesh, AffineXf3)
 
     for ( double d : Vector3d{1,1,1} )
         ASSERT_EQ( d, 1 );
+
+    // this failed with "Alternative Method" inside Quaternion<T>::Quaternion( const Matrix3<T> & m )
+    Matrix3d m;
+    m.x = Vector3d{ -0.942630529,  0.230237782,  0.241739601 };
+    m.y = Vector3d{  0.230237812, -0.0759973153, 0.970162332 };
+    m.z = Vector3d{  0.241739616,  0.970162332,  0.0186279733 };
+    ASSERT_NEAR( ( orthonormalized( m ) - m ).norm(), 0, 1e-6 );
 }
 
 } //namespace MR

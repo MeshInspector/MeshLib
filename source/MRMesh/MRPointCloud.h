@@ -14,13 +14,27 @@ namespace MR
 /// \ingroup PointCloudGroup
 struct PointCloud
 {
+    /// coordinates of points
     VertCoords points;
+
+    /// unit normal directions of points (can be empty if no normals are known)
     VertNormals normals;
-    /// only points corresponding to set bits here are valid
+
+    /// only points and normals corresponding to set bits here are valid
     VertBitSet validPoints;
+
+    /// computes the total number of valid points in the cloud
+    [[nodiscard]] size_t calcNumValidPoints() const { return validPoints.count(); }
 
     /// returns true if there is a normal for each point
     [[nodiscard]] bool hasNormals() const { return normals.size() >= points.size(); }
+
+    /// if region pointer is not null then converts it in reference, otherwise returns all valid points in the cloud
+    [[nodiscard]] const VertBitSet & getVertIds( const VertBitSet * region ) const
+    {
+        assert( !region || ( *region - validPoints ).none() ); // if region is given, then region must be a subset of them
+        return region ? *region : validPoints;
+    }
 
     /// returns cached aabb-tree for this point cloud, creating it if it did not exist in a thread-safe manner
     MRMESH_API const AABBTreePoints& getAABBTree() const;
@@ -34,6 +48,12 @@ struct PointCloud
     /// passes through all valid points and finds the minimal bounding box containing all of them;
     /// if toWorld transformation is given then returns minimal bounding box in world space
     [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
+
+    /// computes average position of all valid points
+    [[nodiscard]] MRMESH_API Vector3f findCenterFromPoints() const;
+
+    /// computes bounding box and returns its center
+    [[nodiscard]] MRMESH_API Vector3f findCenterFromBBox() const;
 
     /// returns all valid point ids sorted lexicographically by their coordinates (optimal for uniform sampling)
     [[nodiscard]] MRMESH_API std::vector<VertId> getLexicographicalOrder() const;
@@ -52,6 +72,9 @@ struct PointCloud
 
     /// reflects the points from a given plane
     MRMESH_API void mirror( const Plane3f& plane );
+
+    /// flip orientation (normals) of given points (or all valid points is nullptr)
+    MRMESH_API void flipOrientation( const VertBitSet * region = nullptr );
 
     /// tightly packs all arrays eliminating invalid points, but relative order of valid points is preserved;
     /// returns false if the cloud was packed before the call and nothing has been changed;

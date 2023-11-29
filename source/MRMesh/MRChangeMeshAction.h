@@ -60,14 +60,14 @@ private:
     std::string name_;
 };
 
-/// Undo action for ObjectMesh uvCoords change
+/// Undo action for ObjectMeshHolder uvCoords change
 class ChangeMeshUVCoordsAction : public HistoryAction
 {
 public:
-    using Obj = ObjectMesh;
+    using Obj = ObjectMeshHolder;
 
     /// use this constructor to remember object's mesh before making any changes in it
-    ChangeMeshUVCoordsAction( std::string name, const std::shared_ptr<ObjectMesh>& obj ) :
+    ChangeMeshUVCoordsAction( std::string name, const std::shared_ptr<ObjectMeshHolder>& obj ) :
         objMesh_{ obj },
         name_{ std::move( name ) }
     {
@@ -90,7 +90,7 @@ public:
         objMesh_->updateUVCoords( uvCoords_ );
     }
 
-    static void setObjectDirty( const std::shared_ptr<ObjectMesh>& obj )
+    static void setObjectDirty( const std::shared_ptr<ObjectMeshHolder>& obj )
     {
         if ( obj )
             obj->setDirtyFlags( DIRTY_UV );
@@ -103,7 +103,7 @@ public:
 
 private:
     VertUVCoords uvCoords_;
-    std::shared_ptr<ObjectMesh> objMesh_;
+    std::shared_ptr<ObjectMeshHolder> objMesh_;
     std::string name_;
 };
 

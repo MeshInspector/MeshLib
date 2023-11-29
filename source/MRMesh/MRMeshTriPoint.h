@@ -7,6 +7,12 @@
 namespace MR
 {
 
+struct WeightedVertex
+{
+    VertId v;
+    float weight = 0;
+};
+
 /// encodes a point inside a triangular mesh face using barycentric coordinates
 /// \ingroup MeshGroup
 /// \details Notations used below: \n
@@ -23,6 +29,7 @@ struct MeshTriPoint
     TriPointf bary;
 
     [[nodiscard]] MeshTriPoint() = default;
+    [[nodiscard]] MeshTriPoint( NoInit ) : e( noInit ), bary( noInit ) { }
     [[nodiscard]] MeshTriPoint( EdgeId e, TriPointf bary ) : e( e ), bary( bary ) { }
     [[nodiscard]] MeshTriPoint( const MeshEdgePoint & ep ) : e( ep.e ), bary( ep.a, 0 ) { }
     [[nodiscard]] MeshTriPoint( const MeshTopology & topology, VertId v ) : MeshTriPoint( MeshEdgePoint( topology, v ) ) { }
@@ -48,6 +55,9 @@ struct MeshTriPoint
     [[nodiscard]] MRMESH_API MeshTriPoint lnext( const MeshTopology & topology ) const;
     /// represents the same point relative to the topology.edgeWithLeft( topology.left( e ) )
     [[nodiscard]] MRMESH_API MeshTriPoint canonical( const MeshTopology & topology ) const;
+
+    /// returns three weighted triangle's vertices with the sum of not-negative weights equal to 1, and the largest weight in the closest vertex
+    [[nodiscard]] MRMESH_API std::array<WeightedVertex, 3> getWeightedVerts( const MeshTopology & topology ) const;
 
     /// returns true if two points are equal including equal not-unique representation
     [[nodiscard]] bool operator==( const MeshTriPoint& rhs ) const = default;

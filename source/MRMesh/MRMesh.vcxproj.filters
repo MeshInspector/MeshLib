@@ -684,9 +684,6 @@
     <ClInclude Include="MREdgePoint.h">
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshDiff.h">
-      <Filter>Source Files\MeshAlgorithm</Filter>
-    </ClInclude>
     <ClInclude Include="MRMeshBoundary.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
@@ -1094,6 +1091,21 @@
     </ClInclude>
     <ClInclude Include="MREnumNeighbours.h">
       <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshDiff.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFilterCreaseEdges.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshReplicate.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MRInTreePathBuilder.h">
+      <Filter>Source Files\SurfacePath</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSaveSettings.h">
+      <Filter>Source Files\IO</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1544,9 +1556,6 @@
     <ClCompile Include="MRMeshDelone.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
-    <ClCompile Include="MRMeshDiff.cpp">
-      <Filter>Source Files\MeshAlgorithm</Filter>
-    </ClCompile>
     <ClCompile Include="MRPolyline2Intersect.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
@@ -1822,6 +1831,27 @@
     </ClCompile>
     <ClCompile Include="MREnumNeighbours.cpp">
       <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshDiff.cpp">
+      <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshReplicate.cpp">
+      <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFilterCreaseEdges.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MRInTreePathBuilder.cpp">
+      <Filter>Source Files\SurfacePath</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMapEdge.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSaveSettings.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRImage.cpp">
+      <Filter>Source Files\BaseStructures</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

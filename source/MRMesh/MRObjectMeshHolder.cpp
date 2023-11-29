@@ -37,6 +37,7 @@ void ObjectMeshHolder::setSelectedFacesColor( const Color& color, ViewportId id 
     if ( color == faceSelectionColor_.get( id ) )
         return;
     faceSelectionColor_.set( color, id );
+    needRedraw_ = true;
 }
 
 void ObjectMeshHolder::setSelectedEdgesColor( const Color& color, ViewportId id )
@@ -44,6 +45,7 @@ void ObjectMeshHolder::setSelectedEdgesColor( const Color& color, ViewportId id 
     if ( color == edgeSelectionColor_.get( id ) )
         return;
     edgeSelectionColor_.set( color, id );
+    needRedraw_ = true;
 }
 
 Expected<std::future<void>, std::string> ObjectMeshHolder::serializeModel_( const std::filesystem::path& path ) const
@@ -53,8 +55,13 @@ Expected<std::future<void>, std::string> ObjectMeshHolder::serializeModel_( cons
 
 #ifndef MRMESH_NO_OPENCTM
     auto save = [mesh = mesh_, filename = utf8string( path ) + ".ctm", this]()
-    { 
-        MR::MeshSave::toCtm( *mesh, pathFromUtf8( filename ), {}, vertsColorMap_.empty() ? nullptr : &vertsColorMap_ );
+    {
+        MR::MeshSave::CtmSaveOptions options;
+        options.saveValidOnly = false;
+        options.rearrangeTriangles = false;
+        if ( !vertsColorMap_.empty() )
+            options.colors = &vertsColorMap_;
+        MR::MeshSave::toCtm( *mesh, pathFromUtf8( filename ), options );
     };
 #else
     auto save = [mesh = mesh_, filename = utf8string( path ) + ".mrmesh"]()
@@ -609,6 +616,7 @@ const ViewportProperty<Color>& ObjectMeshHolder::getSelectedEdgesColorsForAllVie
 void ObjectMeshHolder::setSelectedEdgesColorsForAllViewports( ViewportProperty<Color> val )
 {
     edgeSelectionColor_ = std::move( val );
+    needRedraw_ = true;
 }
 
 const ViewportProperty<Color>& ObjectMeshHolder::getSelectedFacesColorsForAllViewports() const
@@ -619,6 +627,7 @@ const ViewportProperty<Color>& ObjectMeshHolder::getSelectedFacesColorsForAllVie
 void ObjectMeshHolder::setSelectedFacesColorsForAllViewports( ViewportProperty<Color> val )
 {
     faceSelectionColor_ = std::move( val );
+    needRedraw_ = true;
 }
 
 const ViewportProperty<Color>& ObjectMeshHolder::getBordersColorsForAllViewports() const
@@ -629,6 +638,7 @@ const ViewportProperty<Color>& ObjectMeshHolder::getBordersColorsForAllViewports
 void ObjectMeshHolder::setBordersColorsForAllViewports( ViewportProperty<Color> val )
 {
     bordersColor_ = std::move( val );
+    needRedraw_ = true;
 }
 
 const ViewportProperty<Color>& ObjectMeshHolder::getEdgesColorsForAllViewports() const
@@ -639,6 +649,7 @@ const ViewportProperty<Color>& ObjectMeshHolder::getEdgesColorsForAllViewports()
 void ObjectMeshHolder::setEdgesColorsForAllViewports( ViewportProperty<Color> val )
 {
     edgesColor_ = std::move( val );
+    needRedraw_ = true;
 }
 
 } //namespace MR

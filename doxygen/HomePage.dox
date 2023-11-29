@@ -27,7 +27,7 @@ Please install CUDA (v12.0|v11.4)(Visual Studio 2022|2019) from [official site](
 \code
 $ git clone https://github.com/Microsoft/vcpkg.git
 $ cd vcpkg
-$ git checkout fbba5251f75c149d71737fd3ef09629f41b5d5aa
+$ git checkout 2023.11.20
 $ .\bootstrap-vcpkg.bat
 $ .\vcpkg integrate install (with admin rights)
 $ cd ..
@@ -87,10 +87,11 @@ $ open in browser 127.0.0.1:8000
 
 \section PythonIntegration Python integration
 Although MeshLib is written in C++, all functions are exposed to Python as well. Python code can be executed both from within a MeshLib-based C++ application (embedded mode) and from python interpreter directly, which imports MeshLib modules.\n
-Moreover, MeshLib can be easily installed as a Python 3.8 - 3.10 package using `pip install`:\n
+Moreover, MeshLib can be easily installed as a Python 3.8 - 3.12 package using `pip install`:\n
  - On Windows via
 \code
-py -3.10 -m pip install --upgrade pip meshlib
+py -3 -m pip install --upgrade pip
+py -3 -m pip install meshlib
 \endcode
  - On Linuxes supporting [manylinux_2_31+](https://github.com/mayeut/pep600_compliance#distro-compatibility), including Ubuntu 20+ and Fedora 32+ via
 \code

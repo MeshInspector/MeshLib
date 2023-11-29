@@ -7,32 +7,7 @@ dt=$(date '+%d-%m-%Y_%H:%M:%S');
 logfile="`pwd`/build_source_${dt}.log"
 printf "Project build script started.\nYou could find output in ${logfile}\n"
 
-if [[ $OSTYPE != 'darwin'* ]]; then
-  source /etc/os-release
-  printf "${NAME} ${VERSION_ID}\n"
-  if [ "${NAME}" == "Fedora Linux" ]; then
-   if [ "${CMAKE_C_COMPILER}" = "" ]; then
-    CMAKE_C_COMPILER=/usr/bin/gcc
-   fi
-   if [ "${CMAKE_CXX_COMPILER}" = "" ]; then
-    CMAKE_CXX_COMPILER=/usr/bin/g++
-   fi
-  elif [ "${NAME}" == "Ubuntu" ] && [ "${VERSION_ID}" != "20.04" ]; then
-    if [ "${CMAKE_C_COMPILER}" = "" ]; then
-        CMAKE_C_COMPILER=/usr/bin/gcc-12
-    fi
-    if [ "${CMAKE_CXX_COMPILER}" = "" ]; then
-      CMAKE_CXX_COMPILER=/usr/bin/g++-12
-    fi
-  else
-   if [ "${CMAKE_C_COMPILER}" = "" ]; then
-    CMAKE_C_COMPILER=/usr/bin/gcc-10
-   fi
-   if [ "${CMAKE_CXX_COMPILER}" = "" ]; then
-    CMAKE_CXX_COMPILER=/usr/bin/g++-10
-   fi
-  fi
-else # darwin
+if [[ $OSTYPE == 'darwin'* ]]; then
   PYTHON_VERSION="3.10"
   if [ "${MESHLIB_PYTHON_VERSION}" != "" ]; then
     PYTHON_VERSION="${MESHLIB_PYTHON_VERSION}"
@@ -42,6 +17,33 @@ else # darwin
   PYTHON_EXECUTABLE=$(which python"${PYTHON_VERSION}")
   PYTHON_LIBRARY=${PYTHON_PREFIX}/lib/libpython${PYTHON_VERSION}.dylib
   PYTHON_INCLUDE_DIR=${PYTHON_PREFIX}/include/python${PYTHON_VERSION}
+elif [[ $OSTYPE == 'linux'* ]]; then
+  source /etc/os-release
+  echo "Host system: ${NAME} ${VERSION_ID}"
+  if [ "${NAME}" == "Fedora Linux" ]; then
+   if [ "${CMAKE_C_COMPILER}" = "" ]; then
+    CMAKE_C_COMPILER=/usr/bin/gcc
+   fi
+   if [ "${CMAKE_CXX_COMPILER}" = "" ]; then
+    CMAKE_CXX_COMPILER=/usr/bin/g++
+   fi
+  elif [ "${NAME}" == "Ubuntu" ]; then
+    if [ "${VERSION_ID}" == "20.04" ]; then
+      if [ "${CMAKE_C_COMPILER}" = "" ]; then
+        CMAKE_C_COMPILER=/usr/bin/gcc-10
+      fi
+      if [ "${CMAKE_CXX_COMPILER}" = "" ]; then
+        CMAKE_CXX_COMPILER=/usr/bin/g++-10
+      fi
+    elif [ "${VERSION_ID}" == "22.04" ]; then
+      if [ "${CMAKE_C_COMPILER}" = "" ]; then
+        CMAKE_C_COMPILER=/usr/bin/gcc-12
+      fi
+      if [ "${CMAKE_CXX_COMPILER}" = "" ]; then
+        CMAKE_CXX_COMPILER=/usr/bin/g++-12
+      fi
+    fi
+  fi
 fi
 
 MR_EMSCRIPTEN_SINGLETHREAD=0
@@ -102,11 +104,19 @@ if [ "${MESHLIB_KEEP_BUILD}" != "ON" ]; then
  cd build
 fi
 
-#add env options to cmake
+# add env options to cmake
 if [[ -z "${MR_CMAKE_OPTIONS}" ]]; then
   MR_CMAKE_OPTIONS="" # set
 else
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}"
+fi
+if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
+  if [ -n "${CMAKE_C_COMPILER}" ]; then
+    MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+  fi
+  if [ -n "${CMAKE_CXX_COMPILER}" ]; then
+    MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+  fi
 fi
 
 # exit if any command failed
@@ -122,7 +132,7 @@ if [ "${MESHLIB_BUILD_RELEASE}" = "ON" ]; then
     cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY="${PYTHON_LIBRARY}" -DPYTHON_INCLUDE_DIR="${PYTHON_INCLUDE_DIR}" -DPYTHON_EXECUTABLE:FILEPATH="${PYTHON_EXECUTABLE}" ${MR_CMAKE_OPTIONS} | tee ${logfile}
  else
     if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
-      cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} ${MR_CMAKE_OPTIONS} | tee ${logfile}
+      cmake ../.. -DCMAKE_BUILD_TYPE=Release ${MR_CMAKE_OPTIONS} | tee ${logfile}
     else
       emcmake cmake ../.. -DMR_EMSCRIPTEN=1 -DMR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} -DCMAKE_BUILD_TYPE=Release ${MR_CMAKE_OPTIONS} | tee ${logfile}
     fi
@@ -145,7 +155,7 @@ if [ "${MESHLIB_BUILD_DEBUG}" = "ON" ]; then
     cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY="${PYTHON_LIBRARY}" -DPYTHON_INCLUDE_DIR="${PYTHON_INCLUDE_DIR}" -DPYTHON_EXECUTABLE:FILEPATH="${PYTHON_EXECUTABLE}" ${MR_CMAKE_OPTIONS} | tee ${logfile}
  else
     if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
-      cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} ${MR_CMAKE_OPTIONS} | tee ${logfile}
+      cmake ../.. -DCMAKE_BUILD_TYPE=Debug ${MR_CMAKE_OPTIONS} | tee ${logfile}
     else
       emcmake cmake ../.. -DMR_EMSCRIPTEN=1 -DMR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} -DCMAKE_BUILD_TYPE=Debug ${MR_CMAKE_OPTIONS} | tee ${logfile}
     fi

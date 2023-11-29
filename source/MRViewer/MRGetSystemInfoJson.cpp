@@ -50,6 +50,30 @@ Json::Value GetSystemInfoJson()
         glfwGetWindowSize( getViewerInstance().window, &windowSizeX, &windowSizeY );
         windowInfo["Framebuffer size"] = fmt::format( "{} x {}", frameBufferSizeX, frameBufferSizeY );
         windowInfo["Window size"] = fmt::format( "{} x {}", windowSizeX, windowSizeY );
+
+
+        int count;
+        auto monitors = glfwGetMonitors( &count );
+        int maxWidth = 0, maxHeight = 0, maxScale = 0;
+        for ( int i = 0; i < count; ++i )
+        {
+            const GLFWvidmode* mode = glfwGetVideoMode( monitors[i] );
+            if ( mode && mode->width > maxWidth )
+            {
+                maxWidth = mode->width;
+                maxHeight = mode->height;
+                float xScale, yScale;
+                glfwGetMonitorContentScale( monitors[i], &xScale, &yScale );
+                maxScale = int( xScale * 100 );
+            }
+        }
+        if ( maxWidth > 0 && maxHeight > 0 && maxScale > 0 )
+        {
+            auto& monitorInfo = windowInfo["BiggestMonitor"];
+            monitorInfo["Width"] = maxWidth;
+            monitorInfo["Height"] = maxHeight;
+            monitorInfo["ScalingPercent"] = maxScale;
+        }
     }
     else
     {

@@ -33,7 +33,6 @@ class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin,
     TouchpadRotateGestureBeginListener, TouchpadRotateGestureUpdateListener, TouchpadRotateGestureEndListener,
     TouchpadSwipeGestureBeginListener, TouchpadSwipeGestureUpdateListener, TouchpadSwipeGestureEndListener,
     TouchpadZoomGestureBeginListener, TouchpadZoomGestureUpdateListener, TouchpadZoomGestureEndListener,
-    PreDrawListener, PostDrawListener,
     PostResizeListener, PostRescaleListener>
 {
     using ImGuiMenuMultiListener = MultiListener<
@@ -43,7 +42,6 @@ class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin,
         TouchpadRotateGestureBeginListener, TouchpadRotateGestureUpdateListener, TouchpadRotateGestureEndListener,
         TouchpadSwipeGestureBeginListener, TouchpadSwipeGestureUpdateListener, TouchpadSwipeGestureEndListener,
         TouchpadZoomGestureBeginListener, TouchpadZoomGestureUpdateListener, TouchpadZoomGestureEndListener,
-        PreDrawListener, PostDrawListener,
         PostResizeListener, PostRescaleListener>;
 protected:
   // Hidpi scaling to be used for text rendering.
@@ -159,6 +157,11 @@ public:
   // inits glfw and glsl backend
   MRVIEWER_API virtual void initBackend();
 
+  // call this to validate imgui context in the begining of the frame
+  MRVIEWER_API virtual void startFrame();
+  // call this to draw valid imgui context at the end of the frame
+  MRVIEWER_API virtual void finishFrame();
+
   MRVIEWER_API virtual void load_font(int font_size = 13);
   MRVIEWER_API virtual void reload_font(int font_size = 13);
 
@@ -270,6 +273,7 @@ public:
   void setDeselectNewHiddenObjects( bool deselect ) { deselectNewHiddenObjects_ = deselect; }
   // get deselect hidden objects state (enable / disable)
   bool getDeselectNewHiddenObjects() { return deselectNewHiddenObjects_; }
+
   std::shared_ptr<ShortcutManager> getShortcutManager() { return shortcutManager_; };
 
   MRVIEWER_API void add_modifier( std::shared_ptr<MR::MeshModifier> modifier );
@@ -305,9 +309,6 @@ protected:
     MRVIEWER_API virtual bool onKeyDown_( int key, int modifiers ) override;
     MRVIEWER_API virtual bool onKeyUp_( int key, int modifiers ) override;
     MRVIEWER_API virtual bool onKeyRepeat_( int key, int modifiers ) override;
-    // Render events
-    MRVIEWER_API virtual void preDraw_() override;
-    MRVIEWER_API virtual void postDraw_() override;
     // Scene events
     MRVIEWER_API virtual void postResize_( int width, int height ) override;
     MRVIEWER_API virtual void postRescale_( float x, float y) override;

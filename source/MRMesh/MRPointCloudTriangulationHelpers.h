@@ -2,6 +2,7 @@
 
 #include "MRVector.h"
 #include "MRId.h"
+#include "MRConstants.h"
 #include <list>
 #include <climits>
 
@@ -17,15 +18,23 @@ namespace TriangulationHelpers
 
 /**
  * \brief Finds max radius of neighbors search, for possible better local triangulation
+ * \param borderV first boundary vertex in \param fan (next VertId in fan is also boundary but first is enough)
  * \ingroup TriangulationHelpersGroup
  */
-MRMESH_API float updateNeighborsRadius( const VertCoords& points, VertId v, const std::vector<VertId>& fan, float baseRadius );
+MRMESH_API float updateNeighborsRadius( const VertCoords& points, VertId v, VertId boundaryV,
+    const std::vector<VertId>& fan, float baseRadius );
 
 /**
  * \brief Finds all neighbors of v in given radius (v excluded)
  * \ingroup TriangulationHelpersGroup
  */
 MRMESH_API void findNeighbors( const PointCloud& pointCloud, VertId v, float radius, std::vector<VertId>& neighbors );
+
+/**
+ * \brief Filter neighbors with crossing normals
+ * \ingroup TriangulationHelpersGroup
+ */
+MRMESH_API void filterNeighbors( const VertNormals& normals, VertId v, std::vector<VertId>& neighbors );
 
 /**
  * \brief Data with caches for optimizing fan triangulation
@@ -43,10 +52,25 @@ struct TriangulatedFanData
  * \ingroup TriangulationHelpersGroup
  * 
  * \param critAngle max allowed angle for triangles in fan
+ * \param useNeiNormals whether to use oriented normals of neighbor points
  * \param steps max optimization steps (INT_MAX - default)
  */
 MRMESH_API void trianglulateFan( const VertCoords& points, VertId v, TriangulatedFanData& triangulationData,
-    const VertCoords& normals, float critAngle, int steps = INT_MAX );
+    const VertCoords& normals, float critAngle, bool useNeiNormals = true, int steps = INT_MAX );
+
+struct Settings
+{
+    /// initial radius of search for neighbours, it can be increased automatically
+    float radius = 0;
+    /// max allowed angle for triangles in fan
+    float critAngle = PI2_F;
+    /// whether to use oriented normals of neighbor points
+    bool useNeiNormals = true;
+};
+
+/// constructs local triangulation around given point with automatic increase of the radius
+MRMESH_API void buildLocalTriangulation( const PointCloud& cloud, VertId v, const VertCoords& normals, const Settings & settings,
+    TriangulatedFanData & fanData );
 
 /**
  * \brief Checks if given vertex is on boundary of the point cloud

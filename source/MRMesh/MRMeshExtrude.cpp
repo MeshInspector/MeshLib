@@ -6,6 +6,7 @@
 #include "MRMeshFillHole.h"
 #include "MRColor.h"
 #include "MRVector2.h"
+#include "MRParallelFor.h"
 
 namespace MR
 {
@@ -19,6 +20,15 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, const
     if ( region.none() || ( topology.getValidFaces() - region ).none() )
         return;
 
+    if ( params.new2OldMap )
+    {
+        params.new2OldMap->resize( mesh.points.size() );
+        ParallelFor( *params.new2OldMap, [&] ( VertId v )
+        {
+            params.new2OldMap->operator[]( v ) = v;
+        } );
+    }
+
     float maxEdgeLenSq = 0;
 
     auto componentBoundary = findLeftBoundaryInsideMesh( topology, region );
@@ -26,42 +36,33 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, const
     {
         auto newContour = cutAlongEdgeLoop( mesh, contour );
         auto newEdge = makeDegenerateBandAroundHole( mesh, contour[0], params.outNewFaces );
-        auto holeContour = trackRightBoundaryLoop( topology, newEdge );
+        auto holeContour = trackRightBoundaryLoop( topology, newEdge );       
 
-        if ( params.vertColorMap || params.uvCoords )
+        if ( params.outExtrudedEdges || params.new2OldMap || params.maxEdgeLength )
         {
-            if ( params.vertColorMap )
-                params.vertColorMap->reserve( mesh.points.size() );
-            if ( params.uvCoords )
-                params.uvCoords->reserve( mesh.points.size() );
+            if ( params.new2OldMap )
+                params.new2OldMap->reserve( mesh.points.size() );
 
             for ( size_t i = 0; i < contour.size(); ++i )
             {
-                if ( params.vertColorMap )
+                maxEdgeLenSq = std::max( mesh.edgeLengthSq( contour[i] ), maxEdgeLenSq );
+
+                if ( params.outExtrudedEdges )
                 {
-                    params.vertColorMap->autoResizeSet( mesh.topology.org( newContour[i] ), params.vertColorMap->operator[]( mesh.topology.org( contour[i] ) ) );
-                    params.vertColorMap->autoResizeSet( mesh.topology.org( holeContour[i] ), params.vertColorMap->operator[]( mesh.topology.org( contour[i] ) ) );
+                    const auto ue = topology.findEdge( topology.org( contour[i] ), topology.org( holeContour[i] ) ).undirected();
+                    if ( ue.valid() )
+                        params.outExtrudedEdges->autoResizeSet( ue, true );
                 }
-                if ( params.uvCoords )
+
+                if ( params.new2OldMap )
                 {
-                    params.uvCoords->autoResizeSet( mesh.topology.org( newContour[i] ), params.uvCoords->operator[]( mesh.topology.org( contour[i] ) ) );
-                    params.uvCoords->autoResizeSet( mesh.topology.org( holeContour[i] ), params.uvCoords->operator[]( mesh.topology.org( contour[i] ) ) );
+                    params.new2OldMap->autoResizeSet( mesh.topology.org( newContour[i] ), params.new2OldMap->operator[]( mesh.topology.org( contour[i] ) ) );
+                    params.new2OldMap->autoResizeSet( mesh.topology.org( holeContour[i] ), params.new2OldMap->operator[]( mesh.topology.org( contour[i] ) ) );
                 }
             }
         }
 
         stitchContours( topology, holeContour, newContour );
-        if ( !params.outExtrudedEdges )
-            continue;
-
-        for ( size_t i = 0; i < contour.size(); ++i )
-        {
-            maxEdgeLenSq = std::max( mesh.edgeLengthSq( contour[i] ), maxEdgeLenSq );
-
-            const auto ue = topology.findEdge( topology.org( contour[i] ), topology.org( holeContour[i] ) ).undirected();
-            if ( ue.valid() )
-                params.outExtrudedEdges->autoResizeSet( ue, true );
-        }
     }
 
     if ( params.maxEdgeLength )

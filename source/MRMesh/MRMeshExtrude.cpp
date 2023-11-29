@@ -44,8 +44,8 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, const
 
                 if ( params.new2OldMap )
                 {
-                    params.new2OldMap->insert_or_assign( mesh.topology.org( newContour[i]), mesh.topology.org( contour[i] ) );
-                    params.new2OldMap->insert_or_assign( mesh.topology.org( holeContour[i] ), mesh.topology.org( contour[i] ) );
+                    ( *params.new2OldMap )[mesh.topology.org( newContour[i] )] = mesh.topology.org( contour[i] );
+                    ( *params.new2OldMap )[mesh.topology.org( holeContour[i] )] = mesh.topology.org( contour[i] );
                 }
             }
         }

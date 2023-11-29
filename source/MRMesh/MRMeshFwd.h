@@ -500,5 +500,9 @@ struct VertDuplication;
 #ifdef __cpp_lib_unreachable
 #   define MR_UNREACHABLE std::unreachable();
 #else
-#   define MR_UNREACHABLE { assert( false ); return {}; }
+#   ifdef __GNUC__
+#       define MR_UNREACHABLE __builtin_unreachable();
+#   else
+#       define MR_UNREACHABLE { assert( false ); return {}; }
+#   endif
 #endif

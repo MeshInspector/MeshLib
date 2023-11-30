@@ -16,7 +16,7 @@ public:
     MRVIEWER_API void addPoint( int mouseX, int mouseY );
 
     /// get current points in contour
-    const Contour2f& getScreenPoints() { return screenPoints_; };
+    const Contour2f& getScreenPoints() const { return screenPoints_; };
     
     /// clean contour
     void cleanScreenPoints() { screenPoints_.clear(); };

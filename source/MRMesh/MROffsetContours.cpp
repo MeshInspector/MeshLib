@@ -164,29 +164,46 @@ float findAngle( const Vector2f& prev, const Vector2f& org, const Vector2f& next
         return std::atan2( crossRes, dotRes );
 }
 
-void insertRoundCorner( Contour2f& cont, Vector2f prevPoint, Vector2f orgPt, float ang, float minAnglePrecision, int* shiftMap )
+struct CornerParameters
 {
-    int numSteps = int( std::floor( std::abs( ang ) / minAnglePrecision ) );
+    // left prev
+    Vector2f lp;
+    // left current
+    Vector2f lc;
+    // right current
+    Vector2f rc;
+    // right next
+    Vector2f rn;
+    // org point
+    Vector2f org;
+
+    // angle lc,org,rc
+    float lrAng;
+};
+
+void insertRoundCorner( Contour2f& cont, const CornerParameters& params, float minAnglePrecision, int* shiftMap )
+{
+    int numSteps = int( std::floor( std::abs( params.lrAng ) / minAnglePrecision ) );
     for ( int s = 0; s < numSteps; ++s )
     {
-        float stepAng = ( ang / ( numSteps + 1 ) ) * ( s + 1 );
-        auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( stepAng ), orgPt );
-        cont.emplace_back( rotXf( prevPoint ) );
+        float stepAng = ( params.lrAng / ( numSteps + 1 ) ) * ( s + 1 );
+        auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( stepAng ), params.org );
+        cont.emplace_back( rotXf( params.lc ) );
         if ( shiftMap )
             ++( *shiftMap );
     }
 }
 
-void insertSharpCorner( Contour2f& cont, Vector2f prevPoint, Vector2f orgPt, float ang, float maxSharpAngle, int* shiftMap )
+void insertSharpCorner( Contour2f& cont, const CornerParameters& params, float maxSharpAngle, int* shiftMap )
 {
     if ( maxSharpAngle <= 0.0f )
         return;
-    if ( std::abs( ang ) <= maxSharpAngle )
+    if ( std::abs( params.lrAng ) <= maxSharpAngle )
     {
-        auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( ang * 0.5f ), orgPt );
-        auto rotPoint = rotXf( prevPoint );
-        auto mod = 1.0f / std::max( std::cos( std::abs( ang ) * 0.5f ), 1e-2f );
-        cont.emplace_back( rotPoint * mod + orgPt * ( 1.0f - mod ) );
+        auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( params.lrAng * 0.5f ), params.org );
+        auto rotPoint = rotXf( params.lc );
+        auto mod = 1.0f / std::max( std::cos( std::abs( params.lrAng ) * 0.5f ), 1e-2f );
+        cont.emplace_back( rotPoint * mod + params.org * ( 1.0f - mod ) );
         if ( shiftMap )
             ++( *shiftMap );
     }
@@ -194,16 +211,16 @@ void insertSharpCorner( Contour2f& cont, Vector2f prevPoint, Vector2f orgPt, flo
     {
         auto tmpAng = maxSharpAngle;
         float mod = 1.0f / std::max( std::cos( tmpAng * 0.5f ), 1e-2f );
-        tmpAng = std::copysign( tmpAng, ang );
+        tmpAng = std::copysign( tmpAng, params.lrAng );
 
 
-        auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( tmpAng * 0.5f ), orgPt );
-        auto rotPoint = rotXf( prevPoint );
-        cont.emplace_back( rotPoint * mod + orgPt * ( 1.0f - mod ) );
+        auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( tmpAng * 0.5f ), params.org );
+        auto rotPoint = rotXf( params.lc );
+        cont.emplace_back( rotPoint * mod + params.org * ( 1.0f - mod ) );
 
-        rotXf = AffineXf2f::xfAround( Matrix2f::rotation( ang - tmpAng * 0.5f ), orgPt );
-        rotPoint = rotXf( prevPoint );
-        cont.emplace_back( rotPoint * mod + orgPt * ( 1.0f - mod ) );
+        rotXf = AffineXf2f::xfAround( Matrix2f::rotation( params.lrAng - tmpAng * 0.5f ), params.org );
+        rotPoint = rotXf( params.lc );
+        cont.emplace_back( rotPoint * mod + params.org * ( 1.0f - mod ) );
 
         if ( shiftMap )
             ( *shiftMap ) += 2;
@@ -233,46 +250,50 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, float offset, const 
     res.emplace_back( isClosed ?
         cont[0] + offset * contNorm( int( cont.size() ) - 2 ) :
         cont[0] + offset * contNorm( 0 ) );
+
+    CornerParameters cParams;
+    cParams.lc = isClosed ? cont[int( cont.size() ) - 2] + offset * contNorm( int( cont.size() ) - 2 ) : res.back();
     for ( int i = 0; i + 1 < cont.size(); ++i )
     {
-        auto orgPt = cont[i];
-        auto destPt = cont[i + 1];
         auto norm = contNorm( i );
 
-        auto nextPoint = orgPt + norm * offset;
+        cParams.org = cont[i];
+        cParams.rc = cParams.org + norm * offset;
+        cParams.rn = cont[i + 1] + norm * offset;
 
         if ( shiftMap && i > 0 )
             shiftMap[i] += shiftMap[i - 1];
 
         // interpolation
-        auto prevPoint = res.back();
-        auto ang = findAngle( prevPoint, orgPt, nextPoint );
-        bool sameAsPrev = std::abs( ang ) < PI_F / 360.0f;
+        cParams.lp = cParams.lc;
+        cParams.lc = res.back();
+        cParams.lrAng = findAngle( cParams.lc, cParams.org, cParams.rc );
+        bool sameAsPrev = std::abs( cParams.lrAng ) < PI_F / 360.0f;
         if ( !sameAsPrev )
         {
-            bool needCorner = ( ang * offset ) < 0.0f;
+            bool needCorner = ( cParams.lrAng * offset ) < 0.0f;
             if ( needCorner )
             {
                 if ( params.cornerType == OffsetContoursParams::CornerType::Round )
                 {
-                    insertRoundCorner( res, prevPoint, orgPt, ang, params.minAnglePrecision, shiftMap ? &shiftMap[i] : nullptr );
+                    insertRoundCorner( res, cParams, params.minAnglePrecision, shiftMap ? &shiftMap[i] : nullptr );
                 }
                 else if ( params.cornerType == OffsetContoursParams::CornerType::Sharp )
                 {
-                    insertSharpCorner( res, prevPoint, orgPt, ang, params.maxSharpAngle, shiftMap ? &shiftMap[i] : nullptr );
+                    insertSharpCorner( res, cParams, params.maxSharpAngle, shiftMap ? &shiftMap[i] : nullptr );
                 }
             }
             else
             {
-                res.push_back( orgPt );
+                res.push_back( cParams.org );
                 if ( shiftMap )
                     ++shiftMap[i];
             }
-            res.emplace_back( std::move( nextPoint ) );
+            res.emplace_back( std::move( cParams.rc ) );
             if ( shiftMap )
                 ++shiftMap[i];
         }
-        res.emplace_back( destPt + norm * offset );
+        res.emplace_back( std::move( cParams.rn ) );
         if ( shiftMap )
             ++shiftMap[i + 1];
     }
@@ -358,13 +379,30 @@ Expected<Contours2f, std::string> offsetContours( const Contours2f& contours, fl
             if ( params.endType == OffsetContoursParams::EndType::Round )
             {
                 int lastAddiction = 0;
-                insertRoundCorner( intermediateRes.back(), intermediateRes.back().back(), contours[i].back(), -PI_F, params.minAnglePrecision, 
-                    params.indicesMap ? &lastAddiction : nullptr );
+                assert( intermediateRes.back().size() > 1 );
+                assert( backward.size() > 1 );
+                CornerParameters cParams;
+
+                cParams.lp = intermediateRes.back()[intermediateRes.back().size() - 2];
+                cParams.lc = intermediateRes.back().back();
+                cParams.org = contours[i].back();
+                cParams.rc = backward.front();
+                cParams.rn = backward[1];
+                cParams.lrAng = -PI_F;
+                insertRoundCorner( intermediateRes.back(), cParams, params.minAnglePrecision, params.indicesMap ? &lastAddiction : nullptr );
+
                 if ( params.indicesMap )
                     for ( int smi = int( contours[i].size() ) - 1; smi < shiftsMap.back().map.size(); ++smi )
                         shiftsMap.back().map[smi] += lastAddiction;
                 intermediateRes.back().insert( intermediateRes.back().end(), backward.begin(), backward.end() );
-                insertRoundCorner( intermediateRes.back(), intermediateRes.back().back(), contours[i].front(), -PI_F, params.minAnglePrecision, nullptr );
+
+                cParams.lp = intermediateRes.back()[intermediateRes.back().size() - 2];
+                cParams.lc = intermediateRes.back().back();
+                cParams.org = contours[i].front();
+                cParams.rc = intermediateRes.back().front();
+                cParams.rn = intermediateRes.back()[1];
+                cParams.lrAng = -PI_F;
+                insertRoundCorner( intermediateRes.back(), cParams, params.minAnglePrecision, nullptr );
             }
             else if ( params.endType == OffsetContoursParams::EndType::Cut )
             {

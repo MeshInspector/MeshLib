@@ -156,12 +156,7 @@ bool TouchpadController::touchpadSwipeGestureUpdate_( float deltaX, float deltaY
         break;
     }
 
-#ifdef __cpp_lib_unreachable
-    std::unreachable();
-#else
-    assert( false );
-    return false;
-#endif
+    MR_UNREACHABLE
 }
 
 bool TouchpadController::touchpadSwipeGestureEnd_()

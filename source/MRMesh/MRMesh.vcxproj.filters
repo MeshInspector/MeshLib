@@ -1107,6 +1107,9 @@
     <ClInclude Include="MRSaveSettings.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRSceneLoad.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1852,6 +1855,9 @@
     </ClCompile>
     <ClCompile Include="MRImage.cpp">
       <Filter>Source Files\BaseStructures</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSceneLoad.cpp">
+      <Filter>Source Files\IO</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

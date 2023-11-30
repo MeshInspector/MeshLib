@@ -208,6 +208,23 @@ var updateEvents = function () {
     Module["canvas"].addEventListener("mousemove", preventFunc, true);
     Module["canvas"].addEventListener("mousedown", preventFunc, true);
     Module["canvas"].addEventListener("mouseup", preventFunc, true);
+
+    GLFW.setWindowSize = function (winid, width, height) {
+        var win = GLFW.WindowFromId(winid);
+        if (!win) return;
+        if (GLFW.active.id == win.id) {
+            Browser.exitFullscreen();
+            Browser.setCanvasSize(width, height);
+            win.width = width;
+            win.height = height;
+        }
+        if (win.windowSizeFunc) {
+            if (typeof (dynCall_viii) == 'undefined')
+                getWasmTableEntry(win.windowSizeFunc)(win.id, width, height);
+            else
+                ((a1, a2, a3) => dynCall_viii.apply(null, [win.windowSizeFunc, a1, a2, a3]))(win.id, width, height);
+        }
+    }
 }
 
 var updateCalculateMouseEvent = function () {

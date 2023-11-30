@@ -17,26 +17,35 @@ size_t findSubstringCaseInsensitive( const std::string& string, const std::strin
     return std::distance( string.begin(), iter );
 }
 
-int calcDamerauLevenshteinDistance( const std::string& stringA, const std::string& stringB )
+int calcDamerauLevenshteinDistance( const std::string& stringA, const std::string& stringB,
+    bool caseSensitive )
 {
-    std::vector<int> map( stringA.size() * stringB.size() );
-    auto at = [&map,width = int( stringA.size() )] (int i, int j)->int&
+    std::vector<int> map( ( stringA.size() + 1 ) * ( stringB.size() + 1 ) );
+    auto at = [&map, width = int( stringA.size() + 1 )] ( int i, int j )->int&
     {
         return map[i + j * width];
     };
 
-    for ( int i = 0; i < stringA.size(); ++i )
+    auto copm = [&] ( int i, int j )->bool
     {
-        for ( int j = 0; j < stringB.size(); ++j )
+        if ( caseSensitive )
+            return stringA[i - 1] == stringB[j - 1];
+        else
+            return std::tolower( stringA[i - 1] ) == std::tolower( stringB[j - 1] );
+    };
+
+    for ( int i = 0; i < stringA.size() + 1; ++i )
+    {
+        for ( int j = 0; j < stringB.size() + 1; ++j )
         {
             if ( i == 0 || j == 0 )
                 at( i, j ) = std::max( i, j );
-            else if ( i > 1 && j > 1 && stringA[i] == stringB[j - 1] && stringA[i - 1] == stringB[j] )
+            else if ( i > 1 && j > 1 && copm( i, j - 1 ) && copm( i - 1, j ) )
             {
                 at( i, j ) = std::min( { 
                     at( i - 1,j ) + 1,
                     at( i ,j - 1 ) + 1, 
-                    at( i - 1,j - 1 ) + ( stringA[i] == stringB[j] ? 0 : 1 ),
+                    at( i - 1,j - 1 ) + ( copm( i, j ) ? 0 : 1 ),
                     at( i - 2,j - 2 ) + 1 } );
             }
             else
@@ -44,11 +53,11 @@ int calcDamerauLevenshteinDistance( const std::string& stringA, const std::strin
                 at( i, j ) = std::min( { 
                     at( i - 1,j ) + 1,
                     at( i ,j - 1 ) + 1,
-                    at( i - 1,j - 1 ) + ( stringA[i] == stringB[j] ? 0 : 1 ) } );
+                    at( i - 1,j - 1 ) + ( copm( i, j ) ? 0 : 1 ) } );
             }
         }
     }
-    return at( int( stringA.size() ) - 1, int( stringB.size() ) - 1 );
+    return at( int( stringA.size() ), int( stringB.size() ) );
 }
 
 std::vector<std::string> split( const std::string& string, const std::string& delimiter )

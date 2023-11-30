@@ -15,7 +15,8 @@ namespace MR
 /// remove (move surface region in opposite direction to normal)
 /// relax (relax surface region)
 class MRVIEWER_CLASS SurfaceManipulationWidget :
-    public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener>
+    public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener,
+                         PostDrawListener>
 {
 public:
     /// widget work modes
@@ -31,10 +32,10 @@ public:
     {
         WorkMode workMode = WorkMode::Add;
         float radius = 1.f; // radius of editing region
-        float relaxForce = 0.2f; // speed of relaxing, typical values (0.0, 0.5]
+        float relaxForce = 0.2f; // speed of relaxing, typical values (0 - 0.5]
         float editForce = 1.f; // the force of changing mesh
-        float sharpness = 50.f; // effect of force on points far from center editing area. [1 - 100]
-        bool relaxAfterEdit = true; // relax modified area after editing is complete. uses relaxForce
+        float sharpness = 50.f; // effect of force on points far from center editing area. [0 - 100]
+        float relaxForceAfterEdit = 0.25f; //  force of relaxing modified area after editing (add / remove) is complete. [0 - 0.5], 0 - not relax
     };
 
     /// initialize widget according ObjectMesh
@@ -57,10 +58,16 @@ private:
     MRVIEWER_API bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;
     /// update
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
+    /// need to visualize bad region (draw grey circle)
+    MRVIEWER_API void postDraw_() override;
+
+    void initConnections_();
+    void resetConnections_();
 
     void changeSurface_();
-    void updateUV_( bool set );
+    void updateUVmap_( bool set );
     void updateRegion_( const Vector2f& mousePos );
+    void abortEdit_();
 
     Settings settings_;
 
@@ -78,10 +85,15 @@ private:
     std::shared_ptr<ChangeMeshAction> changeMeshAction_;
     std::shared_ptr<ObjectMesh> oldMesh_;
     bool firstInit_ = true; // need to save settings in re-initial
+    bool badRegion_ = false; // in selected region less than 3 points
 
     bool mousePressed_ = false;
 
     std::chrono::time_point<std::chrono::high_resolution_clock> timePoint_;
+    boost::signals2::scoped_connection meshChangedConnection_;
+    bool ownMeshChangedSignal_ = false;
+
+    bool connectionsInitialized_ = false;
 };
 
 }

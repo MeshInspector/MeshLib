@@ -103,6 +103,9 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         if ( el.lenSq != mesh.edgeLengthSq( e ) )
             continue; // outdated record in the queue
 
+        if ( settings.beforeEdgeSplit && !settings.beforeEdgeSplit( e ) )
+            continue;
+
         const auto e1 = mesh.splitEdge( e, mesh.edgeCenter( e ), settings.region );
         const auto newVertId = mesh.topology.org( e );
 

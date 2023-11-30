@@ -17,7 +17,8 @@ namespace MR
  * Calculates Damerau-Levenshtein distance between to strings
  * \ingroup BasicGroup
  */
-[[nodiscard]] MRMESH_API int calcDamerauLevenshteinDistance( const std::string& stringA, const std::string& stringB );
+[[nodiscard]] MRMESH_API int calcDamerauLevenshteinDistance( const std::string& stringA, const std::string& stringB, 
+    bool caseSensitive = true );
 
 /**
  * Splits given string by delimiter.

@@ -24,18 +24,16 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
 {
     obj_ = objectMesh;
     diagonal_ = obj_->getBoundingBox().diagonal();
-    minRadius_ = obj_->avgEdgeLen() * 1.5f;
 
     if ( firstInit_ )
     {
         settings_.radius = diagonal_ * 0.02f;
-        settings_.editForce = diagonal_ * 0.01f;
         settings_.relaxForce = 0.2f;
+        settings_.editForce = diagonal_ * 0.01f;
+        settings_.relaxForceAfterEdit = 0.25f;
         settings_.workMode = WorkMode::Add;
         firstInit_ = false;
     }
-    settings_.radius = std::max( settings_.radius, minRadius_ );
-    settings_.editForce = std::max( settings_.editForce, 0.001f );
 
 
     size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
@@ -46,20 +44,15 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
     editingDistanceMap_ = VertScalars( numV, 0.f );
     visualizationDistanceMap_ = VertScalars( numV, 0.f );
 
-
-
-
     obj_->setAncillaryTexture( { { { Color { 255, 64, 64, 255 }, Color { 0, 0, 0, 0 } }, Vector2i { 1, 2 } } } );
     uvs_ = VertUVCoords( numV, { 0, 1 } );
     obj_->setAncillaryUVCoords( uvs_ );
 
-    connect( &getViewerInstance(), 10, boost::signals2::at_front );
+    initConnections_();
 }
 
 void SurfaceManipulationWidget::reset()
 {
-    if ( oldMesh_ )
-        oldMesh_->detachFromParent();
     oldMesh_.reset();
 
     obj_->clearAncillaryTexture();
@@ -74,18 +67,17 @@ void SurfaceManipulationWidget::reset()
 
     uvs_ = {};
 
-    changeMeshAction_.reset();
-
-    disconnect();
+    resetConnections_();
 }
 
 void SurfaceManipulationWidget::setSettings( const Settings& settings )
 {
     settings_ = settings;
-    settings_.radius = std::max( settings_.radius, minRadius_ );
-    settings_.editForce = std::max( settings_.editForce, 0.001f );
+    settings_.radius = std::max( settings_.radius, 1.e-5f );
     settings_.relaxForce = std::clamp( settings_.relaxForce, 0.001f, 0.5f );
-    settings_.sharpness = std::clamp( settings_.sharpness, 1.f, 100.f );
+    settings_.editForce = std::max( settings_.editForce, 1.e-5f );
+    settings_.relaxForceAfterEdit = std::clamp( settings_.relaxForceAfterEdit, 0.f, 0.5f );
+    settings_.sharpness = std::clamp( settings_.sharpness, 0.f, 100.f );
     updateRegion_( mousePos_ );
 }
 
@@ -100,13 +92,10 @@ bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*
 
     oldMesh_ = std::dynamic_pointer_cast<ObjectMesh>( obj_->clone() );
     oldMesh_->setAncillary( true );
-    oldMesh_->setGlobalAlpha( 1 );
     obj_->setPickable( false );
-    obj_->parent()->addChild( oldMesh_ );
+    AppendHistory<ChangeMeshAction>( "Edit mesh surface", obj_ );
 
-    changeMeshAction_ = std::make_shared<ChangeMeshAction>( "Change mesh surface", obj_ );
     mousePressed_ = true;
-    timePoint_ = std::chrono::high_resolution_clock::now();
     changeSurface_();
 
     return true;
@@ -114,30 +103,29 @@ bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*
 
 bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*modifier*/ )
 {
-    if ( button != MouseButton::Left )
+    if ( button != MouseButton::Left || !mousePressed_ )
         return false;
 
     mousePressed_ = false;
     size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
     pointsShift_ = VertScalars( numV, 0.f );
 
-    if ( settings_.workMode != WorkMode::Relax && settings_.relaxAfterEdit )
+    if ( settings_.workMode != WorkMode::Relax && settings_.relaxForceAfterEdit > 0.f && generalEditingRegion_.any() )
     {
+        ownMeshChangedSignal_ = true;
+
         MeshRelaxParams params;
         params.region = &generalEditingRegion_;
-        params.force = settings_.relaxForce;
+        params.force = settings_.relaxForceAfterEdit;
         params.iterations = 5;
         relax( *obj_->varMesh(), params );
-        obj_->setDirtyFlags( DIRTY_POSITION );
+        obj_->setDirtyFlags( DIRTY_PRIMITIVES );
     }
     generalEditingRegion_ = VertBitSet( numV, false );
 
-    if ( oldMesh_ )
-        oldMesh_->detachFromParent();
-    oldMesh_.reset();
     obj_->setPickable( true );
-    AppendHistory( changeMeshAction_ );
-    changeMeshAction_.reset();
+
+    oldMesh_.reset();
 
     return true;
 }
@@ -151,6 +139,41 @@ bool SurfaceManipulationWidget::onMouseMove_( int mouse_x, int mouse_y )
     return true;
 }
 
+void SurfaceManipulationWidget::postDraw_()
+{
+    if ( !badRegion_ )
+        return;
+
+    auto drawList = ImGui::GetBackgroundDrawList();
+    drawList->AddCircleFilled( ImVec2( mousePos_.x, mousePos_.y ), 10.f, Color::gray().getUInt32() );
+}
+
+void SurfaceManipulationWidget::initConnections_()
+{
+    if ( connectionsInitialized_ )
+        return;
+    connectionsInitialized_ = true;
+    meshChangedConnection_ = obj_->meshChangedSignal.connect( [&] ( uint32_t )
+    {
+        if ( ownMeshChangedSignal_ )
+        {
+            ownMeshChangedSignal_ = false;
+            return;
+        }
+        abortEdit_();
+        init( obj_ );
+        updateRegion_( mousePos_ );
+    } );
+    connect( &getViewerInstance(), 10, boost::signals2::at_front );
+}
+
+void SurfaceManipulationWidget::resetConnections_()
+{
+    connectionsInitialized_ = false;
+    meshChangedConnection_.disconnect();
+    disconnect();
+}
+
 void SurfaceManipulationWidget::changeSurface_()
 {
     if ( !singleEditingRegion_.any() )
@@ -158,18 +181,19 @@ void SurfaceManipulationWidget::changeSurface_()
 
     MR_TIMER;
 
+    ownMeshChangedSignal_ = true;
+
     if ( settings_.workMode == WorkMode::Relax )
     {
         MeshRelaxParams params;
         params.region = &singleEditingRegion_;
-        params.force = settings_.relaxForce ;
+        params.force = settings_.relaxForce;
         relax( *obj_->varMesh(), params );
         obj_->setDirtyFlags( DIRTY_POSITION );
         return;
     }
 
     Vector3f normal;
-    assert( oldMesh_ );
     auto objMeshPtr = oldMesh_ ? oldMesh_ : obj_;
     const auto& mesh = *objMeshPtr->mesh();
     for ( auto v : singleEditingRegion_ )
@@ -179,7 +203,7 @@ void SurfaceManipulationWidget::changeSurface_()
     auto& points = obj_->varMesh()->points;
 
     const float maxShift = settings_.editForce;
-    const float intensity = ( 101.f - settings_.sharpness ) / 100.f * 0.5f + 0.25f;
+    const float intensity = ( 100.f - settings_.sharpness ) / 100.f * 0.5f + 0.25f;
     const float a1 = -1.f * ( 1 - intensity ) / intensity / intensity;
     const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
     const float direction = settings_.workMode == WorkMode::Remove ? -1.f : 1.f;
@@ -201,7 +225,7 @@ void SurfaceManipulationWidget::changeSurface_()
     obj_->setDirtyFlags( DIRTY_PRIMITIVES );
 }
 
-void SurfaceManipulationWidget::updateUV_( bool set )
+void SurfaceManipulationWidget::updateUVmap_( bool set )
 {
     BitSetParallelFor( visualizationRegion_, [&] ( VertId v )
     {
@@ -231,7 +255,18 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
         for ( int i = 0; i < count; ++i )
             viewportPoints[i] = oldMousePos + step * float( i );
     }
+    std::shared_ptr<Object> parent;
+    if ( oldMesh_ )
+    {
+        parent = std::make_shared<Object>();
+        parent->addChild( oldMesh_ );
+    }
     movedPosPick = getViewerInstance().viewport().multiPickObjects( { objMeshPtr.get() }, viewportPoints );
+    if ( oldMesh_ )
+    {
+        oldMesh_->detachFromParent();
+        parent.reset();
+    }
     mousePos_ = mousePos;
 
     const auto& mesh = *objMeshPtr->mesh();
@@ -251,7 +286,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
         }
     }
 
-    updateUV_( false );
+    updateUVmap_( false );
     ObjAndPick curentPosPick = movedPosPick.empty() ? ObjAndPick() : movedPosPick.back();
     visualizationRegion_.reset();
     if ( curentPosPick.first == objMeshPtr )
@@ -262,7 +297,17 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
         for ( int j = 0; j < 3; ++j )
             visualizationRegion_.set( v[j] );
         dilateRegion( mesh, visualizationRegion_, settings_.radius * 1.5f );
-        updateUV_( true );
+        int pointsCount = 0;
+        for ( auto vId : visualizationRegion_ )
+        {
+            if ( visualizationDistanceMap_[vId] <= settings_.radius )
+                ++pointsCount;
+            if ( pointsCount == 3 )
+                break;
+        }
+        badRegion_ = pointsCount < 3;
+        if ( !badRegion_ )
+            updateUVmap_( true );
     }
     obj_->setAncillaryUVCoords( uvs_ );
 
@@ -275,6 +320,16 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
 
     for ( auto v : singleEditingRegion_ )
         singleEditingRegion_.set( v, editingDistanceMap_[v] <= settings_.radius );
+}
+
+void SurfaceManipulationWidget::abortEdit_()
+{
+    if ( !mousePressed_ )
+        return;
+    mousePressed_ = false;
+    oldMesh_.reset();
+    obj_->setPickable( true );
+    obj_->clearAncillaryTexture();
 }
 
 }

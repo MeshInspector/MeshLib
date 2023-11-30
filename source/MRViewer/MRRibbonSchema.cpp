@@ -37,21 +37,46 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     std::vector<SearchResult> res;
     if ( searchStr.empty() )
         return res;
+    auto words = split( searchStr, " " );
+    std::erase_if( words, [] ( const auto& str ) { return str.empty(); } );
     std::vector<std::pair<float, SearchResult>> resultListForSort;
+    auto enweight = [] ( const std::vector<std::string>& searchWords, const std::string& testLine )->float
+    {
+        if ( testLine.empty() )
+            return 1.0f;
+        float sumWeight = 0.0f;
+        for ( const auto& word : searchWords )
+        {
+            int minDistance = std::abs( int( word.size() ) - int( testLine.size() ) );
+            int maxDistance = std::max( int( word.size() ), int( testLine.size() ) );
+            int distance = calcDamerauLevenshteinDistance( word, testLine, false );
+            sumWeight += float( distance - minDistance ) / ( maxDistance - minDistance );
+        }
+        return std::clamp( sumWeight / float( searchWords.size() ), 0.0f, 1.0f );
+    };
+
     auto checkItem = [&] ( const MenuItemInfo& item, int t )
     {
         const auto& caption = item.caption.empty() ? item.item->name() : item.caption;
         const auto& tooltip = item.tooltip;
-        float res = 0.0f;
-        auto captionRes = findSubstringCaseInsensitive( caption, searchStr );
-        auto tooltipRes = findSubstringCaseInsensitive( tooltip, searchStr );
-        if ( captionRes == std::string::npos && tooltipRes == std::string::npos )
+        auto captionRes = enweight( words, caption );
+        auto tooltipRes = enweight( words, tooltip );
+        if ( captionRes > 0.1f && tooltipRes > 0.1f )
             return;
-        if ( captionRes != std::string::npos )
-            res += ( 1.0f - float( captionRes ) / float( caption.size() ) );
-        if ( tooltipRes != std::string::npos )
-            res += 0.5f * ( 1.0f - float( tooltipRes ) / float( tooltip.size() ) );
-        resultListForSort.push_back( { res, SearchResult{t,&item} } );
+        for ( const auto& word : words )
+        {
+            auto posC = findSubstringCaseInsensitive( caption, word );
+            auto posT = findSubstringCaseInsensitive( tooltip, word );
+            if ( posC == std::string::npos )
+                captionRes += 1.0f;
+            else
+                captionRes += 0.5f * ( float( posC ) / caption.size() );
+            if ( posT == std::string::npos )
+                tooltipRes += 1.0f;
+            else
+                tooltipRes += 0.5f * ( float( posT ) / tooltip.size() );
+        }
+        resultListForSort.push_back( { captionRes + 0.5f * captionRes, SearchResult{t,&item} } );
     };
     const auto& schema = RibbonSchemaHolder::schema();
     auto lookUpMenuItemList = [&] ( const MenuItemsList& list, int t )
@@ -110,7 +135,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
 
     std::sort( resultListForSort.begin(), resultListForSort.end(), [] ( const auto& a, const auto& b )
     {
-        return a.first > b.first;
+        return a.first < b.first;
     } );
     res.reserve( resultListForSort.size() );
     for ( const auto& sortedRes : resultListForSort )

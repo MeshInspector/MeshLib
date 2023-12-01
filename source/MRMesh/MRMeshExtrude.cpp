@@ -15,6 +15,8 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, const
 {
     MR_TIMER
     MR_WRITER( mesh )
+    if ( region.none() )
+            return;
 
     auto& topology = mesh.topology;
 

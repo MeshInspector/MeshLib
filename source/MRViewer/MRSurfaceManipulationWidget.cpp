@@ -168,7 +168,6 @@ bool SurfaceManipulationWidget::onMouseMove_( int mouse_x, int mouse_y )
             auto pos1 = viewerRef.viewport().unprojectFromViewportSpace( viewportPoint1 );
             auto viewportPoint0 = viewerRef.screenToViewport( Vector3f( float( storedDown_.x ), float( storedDown_.y ), zpos ), viewerRef.viewport().id );
             auto pos0 = viewerRef.viewport().unprojectFromViewportSpace( viewportPoint0 );
-            spdlog::info( "test length = {}", ( pos1 - pos0 ).length() );
             processMove_( obj_->worldXf().A.inverse() * ( pos1 - pos0 ) );
         }
         else

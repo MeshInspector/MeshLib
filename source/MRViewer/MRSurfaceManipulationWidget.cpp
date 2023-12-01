@@ -90,13 +90,25 @@ bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*
     if ( !obj || obj != obj_ )
         return false;
 
-    oldMesh_ = std::dynamic_pointer_cast<ObjectMesh>( obj_->clone() );
-    oldMesh_->setAncillary( true );
-    obj_->setPickable( false );
-    AppendHistory<ChangeMeshAction>( "Edit mesh surface", obj_ );
 
     mousePressed_ = true;
-    changeSurface_();
+    if ( settings_.workMode == WorkMode::Laplacian )
+    {
+        if ( !pick.face.valid() )
+            return false;
+
+        appendHistoryAction_ = true;
+        storedDown_ = getViewerInstance().mouseController.getMousePos();
+        processPick_( pick );
+    }
+    else
+    {
+        oldMesh_ = std::dynamic_pointer_cast< ObjectMesh >( obj_->clone() );
+        oldMesh_->setAncillary( true );
+        obj_->setPickable( false );
+        AppendHistory<ChangeMeshAction>( "Edit mesh surface", obj_ );
+        changeSurface_();
+    }
 
     return true;
 }
@@ -107,34 +119,67 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         return false;
 
     mousePressed_ = false;
-    size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
-    pointsShift_ = VertScalars( numV, 0.f );
-
-    if ( settings_.workMode != WorkMode::Relax && settings_.relaxForceAfterEdit > 0.f && generalEditingRegion_.any() )
+    if ( settings_.workMode == WorkMode::Laplacian )
     {
-        ownMeshChangedSignal_ = true;
 
-        MeshRelaxParams params;
-        params.region = &generalEditingRegion_;
-        params.force = settings_.relaxForceAfterEdit;
-        params.iterations = 5;
-        relax( *obj_->varMesh(), params );
-        obj_->setDirtyFlags( DIRTY_PRIMITIVES );
     }
-    generalEditingRegion_ = VertBitSet( numV, false );
+    else
+    {
+        size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
+        pointsShift_ = VertScalars( numV, 0.f );
 
-    obj_->setPickable( true );
+        if ( ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) &&
+            settings_.relaxForceAfterEdit > 0.f && generalEditingRegion_.any() )
+        {
+            ownMeshChangedSignal_ = true;
 
-    oldMesh_.reset();
+            MeshRelaxParams params;
+            params.region = &generalEditingRegion_;
+            params.force = settings_.relaxForceAfterEdit;
+            params.iterations = 5;
+            relax( *obj_->varMesh(), params );
+            obj_->setDirtyFlags( DIRTY_PRIMITIVES );
+        }
+        generalEditingRegion_ = VertBitSet( numV, false );
+
+        obj_->setPickable( true );
+
+        oldMesh_.reset();
+    }
 
     return true;
 }
 
 bool SurfaceManipulationWidget::onMouseMove_( int mouse_x, int mouse_y )
 {
-    updateRegion_( Vector2f{ float( mouse_x ), float( mouse_y ) } );
-    if ( mousePressed_ )
-        changeSurface_();
+    if ( settings_.workMode == WorkMode::Laplacian )
+    {
+        if ( mousePressed_ )
+        {
+            if ( appendHistoryAction_ )
+            {
+                appendHistoryAction_ = false;
+                AppendHistory( std::move( historyAction_ ) );
+            }
+
+            auto& viewerRef = getViewerInstance();
+            constexpr float zpos = 0.75f;
+            auto viewportPoint1 = viewerRef.screenToViewport( Vector3f( float( mouse_x ), float( mouse_y ), zpos ), viewerRef.viewport().id );
+            auto pos1 = viewerRef.viewport().unprojectFromViewportSpace( viewportPoint1 );
+            auto viewportPoint0 = viewerRef.screenToViewport( Vector3f( float( storedDown_.x ), float( storedDown_.y ), zpos ), viewerRef.viewport().id );
+            auto pos0 = viewerRef.viewport().unprojectFromViewportSpace( viewportPoint0 );
+            spdlog::info( "test length = {}", ( pos1 - pos0 ).length() );
+            processMove_( obj_->worldXf().A.inverse() * ( pos1 - pos0 ) );
+        }
+        else
+            updateRegion_( Vector2f{ float( mouse_x ), float( mouse_y ) } );
+    }
+    else
+    {
+        updateRegion_( Vector2f{ float( mouse_x ), float( mouse_y ) } );
+        if ( mousePressed_ )
+            changeSurface_();
+    }
 
     return true;
 }
@@ -242,7 +287,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     auto objMeshPtr = oldMesh_ ? oldMesh_ : obj_;
 
     std::vector<Vector2f> viewportPoints;
-    if ( mousePos == mousePos_ )
+    if ( ( mousePos - mousePos_ ).lengthSq() < 4.f )
         viewportPoints.push_back( Vector2f( viewerRef.screenToViewport( Vector3f( mousePos ), viewerRef.getHoveredViewportId() ) ) );
     else
     {
@@ -330,6 +375,26 @@ void SurfaceManipulationWidget::abortEdit_()
     oldMesh_.reset();
     obj_->setPickable( true );
     obj_->clearAncillaryTexture();
+    historyAction_.reset();
+}
+
+void SurfaceManipulationWidget::processPick_( const PointOnFace& pick )
+{
+    const auto& mesh = *obj_->mesh();
+    touchVertId = mesh.getClosestVertex( pick );
+    touchVertIniPos = mesh.points[touchVertId];
+    laplacian_ = std::make_unique<Laplacian>( *obj_->varMesh() );
+    laplacian_->init( singleEditingRegion_, edgeWeights_ );
+    historyAction_ = std::make_shared<ChangeMeshAction>( "Laplacian", obj_ );
+}
+
+void SurfaceManipulationWidget::processMove_( const Vector3f& move )
+{
+    ownMeshChangedSignal_ = true;
+    laplacian_->fixVertex( touchVertId, touchVertIniPos + move );
+    laplacian_->apply();
+
+    obj_->setDirtyFlags( DIRTY_POSITION );
 }
 
 }

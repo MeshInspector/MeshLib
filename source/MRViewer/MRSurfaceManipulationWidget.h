@@ -4,6 +4,7 @@
 #include "MRMesh/MRMeshFwd.h"
 #include "MRViewer.h"
 #include "MRMesh/MRChangeMeshAction.h"
+#include <MRMesh/MRLaplacian.h>
 #include <chrono>
 
 namespace MR
@@ -24,7 +25,8 @@ public:
     {
         Add,
         Remove,
-        Relax
+        Relax,
+        Laplacian
     };
 
     /// Mesh change settings
@@ -68,6 +70,9 @@ private:
     void updateUVmap_( bool set );
     void updateRegion_( const Vector2f& mousePos );
     void abortEdit_();
+    // Laplacian
+    void processPick_( const PointOnFace& pick );
+    void processMove_( const Vector3f& move );
 
     Settings settings_;
 
@@ -82,7 +87,6 @@ private:
     VertScalars editingDistanceMap_;
     VertScalars visualizationDistanceMap_;
     VertUVCoords uvs_;
-    std::shared_ptr<ChangeMeshAction> changeMeshAction_;
     std::shared_ptr<ObjectMesh> oldMesh_;
     bool firstInit_ = true; // need to save settings in re-initial
     bool badRegion_ = false; // in selected region less than 3 points
@@ -94,6 +98,20 @@ private:
     bool ownMeshChangedSignal_ = false;
 
     bool connectionsInitialized_ = false;
+
+    // Laplacian
+    VertId touchVertId; // we fix this vertex in Laplacian and move it manually
+    Vector3f touchVertIniPos; // initial position of fixed vertex
+    //bool enableMove_{ false }; // == mousePressed_
+    //int expansion_{ 5 }; // == settings_.radius
+    //VertUVCoords uvs_;
+    //VertBitSet zone_;
+    Vector2i storedDown_;
+    unsigned numV_;
+    Laplacian::EdgeWeights edgeWeights_ = Laplacian::EdgeWeights::Cotan;
+    std::unique_ptr<Laplacian> laplacian_;
+    std::shared_ptr<ChangeMeshAction> historyAction_; // this action is prepared beforehand for better responsiveness, but pushed only on mouse move
+    bool appendHistoryAction_ = false;
 };
 
 }

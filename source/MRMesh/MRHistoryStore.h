@@ -21,12 +21,10 @@ public:
     /// adds actions to scope block if scope mode is active (do not affect main stack)
     MRMESH_API virtual void appendAction( const std::shared_ptr<HistoryAction>& action );
 
-    /// Start using scope block for storing actions, or stop and clear it
-    MRMESH_API virtual void startScope( bool on );
-    /// Returns true if scoped mode is active now, false otherwise
-    bool isInScopeMode() const { return scoped_; }
-    /// Returns actions made in scope
-    const std::vector<std::shared_ptr<HistoryAction>>& getScopeBlock() const { return scopedBlock_; }
+    /// Returns current scope ptr
+    HistoryActionsVector* getScopeBlockPtr() const { return scopedBlock_; }
+    /// Sets pointer to current scope block
+    void setScopeBlockPtr( HistoryActionsVector* scopedBlock ) { scopedBlock_ = scopedBlock; }
 
     /// Returns true if the current scene state does not match the saved state
     bool isSceneModified() const { return firstRedoIndex_ != savedSceneIndex_; }
@@ -70,9 +68,8 @@ public:
     HistoryStoreChangedSignal changedSignal;
 
 private:
-    bool scoped_{ false };
-    /// buffer for merging actions
-    HistoryActionsVector scopedBlock_;
+    /// buffer for merging actions, if present, used for storing
+    HistoryActionsVector* scopedBlock_{ nullptr };
     /// main history stack
     HistoryActionsVector stack_;
     /// this index points to first redo action or equals to size of stack if no redo is available

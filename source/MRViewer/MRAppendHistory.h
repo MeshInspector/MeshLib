@@ -77,7 +77,8 @@ public:
 private:
     std::string name_;
     std::shared_ptr<HistoryStore> store_;
-    bool thisScopeStartedScopedMode_ = false;
+    HistoryActionsVector scope_;
+    HistoryActionsVector* parentScopePtr_{ nullptr };
 };
 
 #define SCOPED_HISTORY(name) MR::ScopeHistory __startScopedHistoryMode(name)

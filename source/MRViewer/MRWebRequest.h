@@ -18,7 +18,7 @@ class MRVIEWER_CLASS WebRequest
 {
 public:
     WebRequest() = default;
-    explicit WebRequest( std::string url );
+    MRVIEWER_API explicit WebRequest( std::string url );
 
     enum class Method 
     {

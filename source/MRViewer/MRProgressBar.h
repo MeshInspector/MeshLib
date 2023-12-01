@@ -23,23 +23,8 @@ public:
     // in this version the task returns a function to be executed in main thread
     MRVIEWER_API static void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPostProcessing task, int taskCount = 1 );
 
-    /// primitive coroutine-like task interface
-    template <typename T>
-    class ResumableTask
-    {
-    public:
-        using result_type = T;
-
-        virtual ~ResumableTask() = default;
-        /// start the task
-        virtual void start() = 0;
-        /// resume the task, return true if the task is finished, false if it should be re-invoked later
-        virtual bool resume() = 0;
-        /// get the result
-        virtual result_type result() const = 0;
-    };
-    /// in this version the task is being run in the main thread but performs as a coroutine (suspends its execution from time to time)
-    MRVIEWER_API static void orderWithResumableTask( const char * name, std::shared_ptr<ResumableTask<void>> task, int taskCount = 1 );
+    /// the task is spawned by the progress bar but the `finish` method is called from a callback
+    MRVIEWER_API static void orderWithManualFinish( const char * name, std::function<void ()> task, int taskCount = 1 );
 
     MRVIEWER_API static bool isCanceled();
 
@@ -54,6 +39,8 @@ public:
     MRVIEWER_API static void nextTask(const char * s);
 
     MRVIEWER_API static void setTaskCount( int n );
+
+    MRVIEWER_API static void finish();
 
     // returns true if progress bar was ordered and not finished
     MRVIEWER_API static bool isOrdered();
@@ -75,10 +62,6 @@ private:
     bool tryRun_( const std::function<bool ()>& task );
     bool tryRunWithSehHandler_( const std::function<bool ()>& task );
 
-    void resumeBackgroundTask_();
-
-    void finish_();
-
     float progress_;
     int currentTask_, taskCount_;
     std::string taskName_, title_;
@@ -99,10 +82,6 @@ private:
         std::function<void ()> postInit;
     };
     std::unique_ptr<DeferredInit> deferredInit_;
-
-    // required to perform long-time tasks in single-threaded environments
-    using BackgroundTask = std::shared_ptr<ResumableTask<void>>;
-    BackgroundTask backgroundTask_;
 
     std::atomic<bool> allowCancel_;
     std::atomic<bool> canceled_;

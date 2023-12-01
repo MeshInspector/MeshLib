@@ -1,9 +1,10 @@
 #pragma once
 #include "MRMeshFwd.h"
-#include "MRIOFilters.h"
-#include "MRProgressCallback.h"
 #include "MRExpected.h"
+#include "MRIOFilters.h"
 #include "MRMeshLoadSettings.h"
+#include "MRProgressCallback.h"
+
 #include <filesystem>
 
 namespace MR
@@ -54,6 +55,23 @@ public:
 };
 
 /// \}
+
+}
+
+using ObjectPtr = std::shared_ptr<Object>;
+
+namespace AsyncObjectLoad
+{
+
+using PostLoadCallback = std::function<void ( Expected<std::vector<ObjectPtr>> )>;
+using AsyncObjectLoader = void( * )( const std::filesystem::path&, std::string*, PostLoadCallback, ProgressCallback );
+
+/// Find an appropriate loader from the registry
+MRMESH_API AsyncObjectLoader getObjectLoader( IOFilter filter );
+/// Add or override a loader in the registry
+MRMESH_API void setObjectLoader( IOFilter filter, AsyncObjectLoader loader );
+/// Get all registered filters
+MRMESH_API IOFilters getFilters();
 
 }
 

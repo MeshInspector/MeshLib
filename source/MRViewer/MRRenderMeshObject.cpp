@@ -595,9 +595,6 @@ void RenderMeshObject::update_( ViewportMask mask )
     objDirty &= ~( DIRTY_RENDER_NORMALS - dirtyNormalFlag );
     dirty_ |= objDirty;
 
-    if ( objMesh_->getColoringType() != ColoringType::VertsColorMap )
-        dirty_ &= ~DIRTY_VERTS_COLORMAP;
-
     if ( dirty_ & DIRTY_FACE || dirty_ & DIRTY_POSITION )
         dirtyEdges_ = true;
 
@@ -704,10 +701,10 @@ RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_VERTS_COLORMAP ) || !objMesh_->mesh() )
-        return glBuffer.prepareBuffer<Color>( vertColorsSize_, false );
-
+        return glBuffer.prepareBuffer<Color>( vertColorsSize_, false ); // use updated color map
+    if ( objMesh_->getColoringType() != ColoringType::VertsColorMap )
+        return glBuffer.prepareBuffer<Color>( vertColorsSize_ = 0 ); // clear color map if not used
     MR_NAMED_TIMER( "vert_colormap" );
-
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
     auto numF = topology.lastValidFace() + 1;

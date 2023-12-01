@@ -287,7 +287,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     auto objMeshPtr = oldMesh_ ? oldMesh_ : obj_;
 
     std::vector<Vector2f> viewportPoints;
-    if ( ( mousePos - mousePos_ ).lengthSq() < 4.f )
+    if ( ( mousePos - mousePos_ ).lengthSq() < 9.f )
         viewportPoints.push_back( Vector2f( viewerRef.screenToViewport( Vector3f( mousePos ), viewerRef.getHoveredViewportId() ) ) );
     else
     {
@@ -384,7 +384,7 @@ void SurfaceManipulationWidget::processPick_( const PointOnFace& pick )
     touchVertId = mesh.getClosestVertex( pick );
     touchVertIniPos = mesh.points[touchVertId];
     laplacian_ = std::make_unique<Laplacian>( *obj_->varMesh() );
-    laplacian_->init( singleEditingRegion_, edgeWeights_ );
+    laplacian_->init( singleEditingRegion_, settings_.edgeWeights );
     historyAction_ = std::make_shared<ChangeMeshAction>( "Laplacian", obj_ );
 }
 

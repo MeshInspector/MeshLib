@@ -38,6 +38,7 @@ public:
         float editForce = 1.f; // the force of changing mesh
         float sharpness = 50.f; // effect of force on points far from center editing area. [0 - 100]
         float relaxForceAfterEdit = 0.25f; //  force of relaxing modified area after editing (add / remove) is complete. [0 - 0.5], 0 - not relax
+        Laplacian::EdgeWeights edgeWeights = Laplacian::EdgeWeights::Cotan; // edge weights for laplacian smoothing
     };
 
     /// initialize widget according ObjectMesh
@@ -102,13 +103,7 @@ private:
     // Laplacian
     VertId touchVertId; // we fix this vertex in Laplacian and move it manually
     Vector3f touchVertIniPos; // initial position of fixed vertex
-    //bool enableMove_{ false }; // == mousePressed_
-    //int expansion_{ 5 }; // == settings_.radius
-    //VertUVCoords uvs_;
-    //VertBitSet zone_;
     Vector2i storedDown_;
-    unsigned numV_;
-    Laplacian::EdgeWeights edgeWeights_ = Laplacian::EdgeWeights::Cotan;
     std::unique_ptr<Laplacian> laplacian_;
     std::shared_ptr<ChangeMeshAction> historyAction_; // this action is prepared beforehand for better responsiveness, but pushed only on mouse move
     bool appendHistoryAction_ = false;

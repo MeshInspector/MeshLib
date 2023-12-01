@@ -24,20 +24,18 @@ ScopeHistory::ScopeHistory( const std::string& name ) :
     store_ = viewer->getGlobalHistoryStore();
     if ( !store_ )
         return;
-    if ( store_->isInScopeMode() )
-        return;
-    store_->startScope( true );
-    thisScopeStartedScopedMode_ = true;
+    parentScopePtr_ = store_->getScopeBlockPtr();
+    store_->setScopeBlockPtr( &scope_ );
 }
 
 ScopeHistory::~ScopeHistory()
 {
-    if ( !thisScopeStartedScopedMode_ )
+    if ( !store_ )
         return;
-    auto scopeBlock = store_->getScopeBlock();
-    store_->startScope( false );
-    if ( !scopeBlock.empty() )
-        AppendHistory<CombinedHistoryAction>( name_, scopeBlock );
+    store_->setScopeBlockPtr( parentScopePtr_ );
+    parentScopePtr_ = nullptr;
+    if ( !scope_.empty() )
+        AppendHistory<CombinedHistoryAction>( name_, std::move( scope_ ) );
 }
 
 }

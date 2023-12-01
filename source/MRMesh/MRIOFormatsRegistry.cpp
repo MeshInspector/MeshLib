@@ -1,58 +1,43 @@
 #include "MRIOFormatsRegistry.h"
 
-namespace MR
-{
-const IOFilter AllFilter = {"All (*.*)",         "*.*"};
-
-namespace MeshLoad
+namespace
 {
 
-class FormatsRegistry
+using namespace MR;
+
+// format loader registry
+template <typename T>
+class FormatRegistry
 {
 public:
+    using Loader = T;
 
+    // get all registered filters
     static IOFilters getFilters()
     {
         const auto& loaders = get_().loaders_;
-        IOFilters res( loaders.size() );
-        for ( size_t i = 0; i < loaders.size(); ++i )
-            res[i] = loaders[i].filter;
+        IOFilters res;
+        res.reserve( loaders.size() );
+        for ( const auto& loader : loaders )
+            res.emplace_back( loader.filter );
         return res;
     }
 
-    static MeshLoader getLoader( IOFilter filter )
+    // get a registered loader for the filter
+    static Loader getLoader( IOFilter filter )
     {
         const auto& loaders = get_().loaders_;
-        auto it = std::find_if( loaders.begin(), loaders.end(), [filter]( const NamedMeshLoader& loader )
+        const auto it = std::find_if( loaders.begin(), loaders.end(), [&filter] ( auto&& loader )
         {
             return loader.filter.name == filter.name;
         } );
-        if ( it != loaders.end() )
-            return it->loader;
-        return {};
+        if ( it == loaders.end() )
+            return {};
+        return it->loader;
     }
 
-    static MeshStreamLoader getStreamLoader( IOFilter filter )
-    {
-        const auto& loaders = get_().loaders_;
-        auto it = std::find_if( loaders.begin(), loaders.end(), [filter] ( const NamedMeshLoader& loader )
-        {
-            return loader.filter.name == filter.name;
-        } );
-        if ( it != loaders.end() )
-            return it->streamLoader;
-        return {};
-    }
-
-    static void addLoader( const NamedMeshLoader& loader )
-    {
-        auto& loaders = get_().loaders_;
-        if ( loaders.empty() )
-            loaders.push_back( {AllFilter,{}} );
-        loaders.push_back( loader );
-    }
-
-    static void setLoader( IOFilter filter, MeshLoader loader )
+    // register or update a loader for the filter
+    static void setLoader( IOFilter filter, Loader loader )
     {
         auto& loaders = get_().loaders_;
         auto it = std::find_if( loaders.begin(), loaders.end(), [filter] ( auto&& loader )
@@ -62,63 +47,89 @@ public:
         if ( it != loaders.end() )
             it->loader = loader;
         else
-            loaders.emplace_back( NamedMeshLoader { filter, loader, nullptr } );
-    }
-
-    static void setStreamLoader( IOFilter filter, MeshStreamLoader streamLoader )
-    {
-        auto& loaders = get_().loaders_;
-        auto it = std::find_if( loaders.begin(), loaders.end(), [filter] ( auto&& loader )
-        {
-            return loader.filter.name == filter.name;
-        } );
-        if ( it != loaders.end() )
-            it->streamLoader = streamLoader;
-        else
-            loaders.emplace_back( NamedMeshLoader { filter, nullptr, streamLoader } );
+            loaders.emplace_back( NamedLoader { filter, loader } );
     }
 
 private:
-    FormatsRegistry() = default;
-    ~FormatsRegistry() = default;
+    FormatRegistry() = default;
+    ~FormatRegistry() = default;
 
-    static FormatsRegistry& get_()
+    static FormatRegistry<T>& get_()
     {
-        static FormatsRegistry instance;
+        static FormatRegistry<T> instance;
         return instance;
     }
-    std::vector<NamedMeshLoader> loaders_;
+
+    struct NamedLoader
+    {
+        IOFilter filter;
+        Loader loader;
+    };
+    std::vector<NamedLoader> loaders_;
 };
+
+}
+
+namespace MR
+{
+
+const IOFilter AllFilter = { "All (*.*)", "*.*" };
+
+namespace MeshLoad
+{
 
 MeshLoaderAdder::MeshLoaderAdder( const NamedMeshLoader& loader )
 {
-    FormatsRegistry::addLoader( loader );
+    FormatRegistry<MeshLoader>::setLoader( loader.filter, loader.loader );
+    FormatRegistry<MeshStreamLoader>::setLoader( loader.filter, loader.streamLoader );
 }
 
 MeshLoader getMeshLoader( IOFilter filter )
 {
-    return FormatsRegistry::getLoader( filter );
+    return FormatRegistry<MeshLoader>::getLoader( std::move( filter ) );
 }
 
 MeshStreamLoader getMeshStreamLoader( IOFilter filter )
 {
-    return FormatsRegistry::getStreamLoader( filter );
+    return FormatRegistry<MeshStreamLoader>::getLoader( std::move( filter ) );
 }
 
 IOFilters getFilters()
 {
-    return FormatsRegistry::getFilters();
+    return IOFilters { AllFilter } | FormatRegistry<MeshLoader>::getFilters() | FormatRegistry<MeshStreamLoader>::getFilters();
 }
 
 void setMeshLoader( IOFilter filter, MeshLoader loader )
 {
-    FormatsRegistry::setLoader( filter, loader );
+    FormatRegistry<MeshLoader>::setLoader( std::move( filter ), loader );
 }
 
 void setMeshStreamLoader( IOFilter filter, MeshStreamLoader streamLoader )
 {
-    FormatsRegistry::setStreamLoader( filter, streamLoader );
+    FormatRegistry<MeshStreamLoader>::setLoader( std::move( filter ), streamLoader );
 }
 
+} // namespace MeshLoad
+
+namespace AsyncObjectLoad
+{
+
+AsyncObjectLoader getObjectLoader( IOFilter filter )
+{
+    return FormatRegistry<AsyncObjectLoader>::getLoader( std::move( filter ) );
 }
+
+void setObjectLoader( IOFilter filter, AsyncObjectLoader loader )
+{
+    FormatRegistry<AsyncObjectLoader>::setLoader( std::move( filter ), loader );
 }
+
+IOFilters getFilters()
+{
+    // these filters are not used in file dialogs, no need to prepend AllFilter here
+    return FormatRegistry<AsyncObjectLoader>::getFilters();
+}
+
+} // namespace AsyncObjectLoad
+
+} // namespace MR

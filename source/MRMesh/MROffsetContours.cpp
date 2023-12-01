@@ -21,7 +21,7 @@ struct IntermediateIndicesMap
 };
 
 using IntermediateIndicesMaps = std::vector<IntermediateIndicesMap>;
-
+using SingleOffset = std::function<float( int )>;
 
 void fillIntermediateIndicesMap(
     const Contours2f& contours, 
@@ -227,7 +227,7 @@ void insertSharpCorner( Contour2f& cont, const CornerParameters& params, float m
     }
 }
 
-Contour2f offsetOneDirectionContour( const Contour2f& cont, float offset, const OffsetContoursParams& params, 
+Contour2f offsetOneDirectionContour( const Contour2f& cont, SingleOffset offset, const OffsetContoursParams& params,
     int* shiftMap )
 {
     MR_TIMER;
@@ -248,18 +248,19 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, float offset, const 
         ++shiftMap[0];
 
     res.emplace_back( isClosed ?
-        cont[0] + offset * contNorm( int( cont.size() ) - 2 ) :
-        cont[0] + offset * contNorm( 0 ) );
+        cont[0] + offset( 0 ) * contNorm( int( cont.size() ) - 2 ) :
+        cont[0] + offset( 0 ) * contNorm( 0 ) );
 
     CornerParameters cParams;
-    cParams.lc = isClosed ? cont[int( cont.size() ) - 2] + offset * contNorm( int( cont.size() ) - 2 ) : res.back();
+    int lastIndex = int( cont.size() ) - 2;
+    cParams.lc = isClosed ? cont[lastIndex] + offset( lastIndex ) * contNorm( lastIndex ) : res.back();
     for ( int i = 0; i + 1 < cont.size(); ++i )
     {
         auto norm = contNorm( i );
 
         cParams.org = cont[i];
-        cParams.rc = cParams.org + norm * offset;
-        cParams.rn = cont[i + 1] + norm * offset;
+        cParams.rc = cParams.org + norm * offset( i );
+        cParams.rn = cont[i + 1] + norm * offset( i + 1 );
 
         if ( shiftMap && i > 0 )
             shiftMap[i] += shiftMap[i - 1];
@@ -271,7 +272,7 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, float offset, const 
         bool sameAsPrev = std::abs( cParams.lrAng ) < PI_F / 360.0f;
         if ( !sameAsPrev )
         {
-            bool needCorner = ( cParams.lrAng * offset ) < 0.0f;
+            bool needCorner = ( cParams.lrAng * offset( i ) ) < 0.0f;
             if ( needCorner )
             {
                 if ( params.cornerType == OffsetContoursParams::CornerType::Round )
@@ -302,17 +303,42 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, float offset, const 
     return res;
 }
 
-Expected<Contours2f, std::string> offsetContours( const Contours2f& contours, float offset, 
+Expected<Contours2f> offsetContours( const Contours2f& contours, float offset, 
     const OffsetContoursParams& params /*= {} */ )
 {
-    MR_TIMER;
+    return offsetContours( contours, [offset] ( int, int ) { return offset; }, params );
+}
 
-    if ( offset == 0.0f && params.type == OffsetContoursParams::Type::Shell )
-        return unexpected( "Cannot perform zero shell offset." );
+Expected<Contours2f> offsetContours( const Contours2f& contours, ContoursVariableOffset offsetFn, const OffsetContoursParams& params /*= {} */ )
+{
+    MR_TIMER;
 
     IntermediateIndicesMaps shiftsMap;
 
     Contours2f intermediateRes;
+
+    enum class Mode
+    {
+        Raw,
+        NegativeRaw,
+        Abs,
+        Negative
+    };
+    auto getSOffset = [&] ( int i, Mode mode )->SingleOffset
+    {
+        switch ( mode )
+        {
+        default:
+        case Mode::Raw:
+            return [offsetFn,i] ( int j ) { return offsetFn( i, j ); };
+        case Mode::NegativeRaw:
+            return [offsetFn,i] ( int j ) { return -offsetFn( i, j ); };
+        case Mode::Abs:
+            return [offsetFn,i] ( int j ) { return std::abs( offsetFn( i, j ) ); };
+        case Mode::Negative:
+            return [offsetFn,i] ( int j ) { return -std::abs( offsetFn( i, j ) ); };
+        }
+    };
 
     for ( int i = 0; i < contours.size(); ++i )
     {
@@ -321,42 +347,17 @@ Expected<Contours2f, std::string> offsetContours( const Contours2f& contours, fl
 
         bool isClosed = contours[i].front() == contours[i].back();
 
-        if ( !isClosed && offset == 0.0f )
-            return unexpected( "Cannot make zero offset for open contour." );
-
-        if ( offset == 0.0f )
-        {
-            intermediateRes.push_back( contours[i] );
-            if ( params.indicesMap )
-            {
-                shiftsMap.push_back( { i,std::vector<int>( contours[i].size(), 0 ) } );
-                std::iota( shiftsMap.back().map.begin(), shiftsMap.back().map.end(), 1 );
-            }
-            if ( params.type == OffsetContoursParams::Type::Shell )
-            {
-                assert( isClosed );
-                intermediateRes.push_back( contours[i] );
-                std::reverse( intermediateRes.back().begin(), intermediateRes.back().end() );
-                if ( params.indicesMap )
-                {
-                    shiftsMap.push_back( { i,std::vector<int>( contours[i].size(), 0 ) } );
-                    std::iota( shiftsMap.back().map.rbegin(), shiftsMap.back().map.rend(), 1 );
-                }
-            }
-            continue;
-        }
-
         if ( isClosed )
         {
             if ( params.indicesMap )
                 shiftsMap.push_back( { i,std::vector<int>( contours[i].size(), 0 ) } );
-            intermediateRes.push_back( offsetOneDirectionContour( contours[i], offset, params, 
+            intermediateRes.push_back( offsetOneDirectionContour( contours[i], getSOffset( i, Mode::Raw ), params,
                 params.indicesMap ? shiftsMap.back().map.data() : nullptr ) );
             if ( params.type == OffsetContoursParams::Type::Shell )
             {
                 if ( params.indicesMap )
                     shiftsMap.push_back( { i,std::vector<int>( contours[i].size(), 0 ) } );
-                intermediateRes.push_back( offsetOneDirectionContour( contours[i], -offset, params,
+                intermediateRes.push_back( offsetOneDirectionContour( contours[i], getSOffset( i, Mode::NegativeRaw ), params,
                     params.indicesMap ? shiftsMap.back().map.data() : nullptr ) );
                 if ( params.indicesMap )
                     std::reverse( shiftsMap.back().map.begin(), shiftsMap.back().map.end() );
@@ -368,10 +369,9 @@ Expected<Contours2f, std::string> offsetContours( const Contours2f& contours, fl
             if ( params.indicesMap )
                 shiftsMap.push_back( { i,std::vector<int>( contours[i].size() * 2, 0 ) } );
 
-            auto tmpOffset = std::abs( offset );
-            intermediateRes.push_back( offsetOneDirectionContour( contours[i], tmpOffset, params,
+            intermediateRes.push_back( offsetOneDirectionContour( contours[i], getSOffset( i, Mode::Abs ), params,
                 params.indicesMap ? shiftsMap.back().map.data() : nullptr ) );
-            auto backward = offsetOneDirectionContour( contours[i], -tmpOffset, params,
+            auto backward = offsetOneDirectionContour( contours[i], getSOffset( i, Mode::Negative ), params,
                 params.indicesMap ? &shiftsMap.back().map[contours[i].size()] : nullptr );
             if ( params.indicesMap )
                 std::reverse( shiftsMap.back().map.begin() + contours[i].size(), shiftsMap.back().map.end() );
@@ -406,7 +406,7 @@ Expected<Contours2f, std::string> offsetContours( const Contours2f& contours, fl
             }
             else if ( params.endType == OffsetContoursParams::EndType::Cut )
             {
-                intermediateRes.back().insert(intermediateRes.back().end(),
+                intermediateRes.back().insert( intermediateRes.back().end(),
                     std::make_move_iterator( backward.begin() ), std::make_move_iterator( backward.end() ) );
             }
             intermediateRes.back().push_back( intermediateRes.back().front() );

@@ -119,7 +119,8 @@ public:
         const HolesVertIds* holesVertId = nullptr,
         bool abortWhenIntersect = false,
         WindingMode mode = WindingMode::NonZero,
-        bool needOutline = false // if set do not do real triangulation, just marks inside faces as present
+        bool needOutline = false // if set do not do real triangulation, just marks inside faces as present, 
+                                 // also does not merge same vertices
         );
 
     size_t vertSize() const { return tp_.vertSize(); }
@@ -928,6 +929,9 @@ void SweepLineQueue::mergeSamePoints_( const HolesVertIds* holesVertId )
             return findRealVertId( l ) < findRealVertId( r );
         } );
     }
+    if ( needOutline_ )
+        return;
+
     int prevUnique = 0;
     for ( int i = 1; i < sortedVerts_.size(); ++i )
     {

@@ -17,17 +17,15 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, const
     MR_WRITER( mesh )
 
     auto& topology = mesh.topology;
-    if ( region.none() || ( topology.getValidFaces() - region ).none() )
-        return;
 
     float maxEdgeLenSq = 0;
 
-    auto componentBoundary = findLeftBoundaryInsideMesh( topology, region );
+    auto componentBoundary = findLeftBoundary( topology, region );
     for ( auto& contour : componentBoundary )
     {
         auto newContour = cutAlongEdgeLoop( mesh, contour );
         auto newEdge = makeDegenerateBandAroundHole( mesh, contour[0], params.outNewFaces );
-        auto holeContour = trackRightBoundaryLoop( topology, newEdge );       
+        auto holeContour = trackRightBoundaryLoop( topology, newEdge );
 
         if ( params.outExtrudedEdges || params.new2OldMap || params.maxEdgeLength )
         {

@@ -80,6 +80,10 @@
 #include "MRRibbonSchema.h"
 #include "MRRibbonMenu.h"
 
+#ifdef _WIN32
+#include <sysinfoapi.h>
+#endif
+
 #ifndef __EMSCRIPTEN__
 #include "MRMesh/MRObjectVoxels.h"
 #include <fmt/chrono.h>

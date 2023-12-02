@@ -1,4 +1,4 @@
-#ifdef _WIN32
+#if defined( _WIN32 ) && !defined( __MINGW32__ )
 #include "MRTouchpadWin32Handler.h"
 
 #include <GLFW/glfw3.h>

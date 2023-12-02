@@ -1,5 +1,6 @@
 #pragma once
-#ifdef _WIN32
+// TODO: get rid of WRL
+#if defined( _WIN32 ) && !defined( __MINGW32__ )
 
 #include "MRTouchpadController.h"
 

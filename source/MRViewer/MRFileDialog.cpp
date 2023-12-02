@@ -12,6 +12,7 @@
     #include <gtkmm.h>
   #endif
 #else
+#include <ShObjIdl.h>
 #define GLFW_EXPOSE_NATIVE_WIN32
 #endif
 #ifndef __EMSCRIPTEN__

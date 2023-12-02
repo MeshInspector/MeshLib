@@ -14,7 +14,9 @@
 #endif
 #ifdef _WIN32
 #include <windows.h>
+#ifndef __MINGW32__
 #include <hidapi/hidapi_winapi.h>
+#endif
 #endif
 
 namespace MR

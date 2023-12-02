@@ -17,12 +17,12 @@ ENDIF() # MR_EMSCRIPTEN
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
-IF(NOT MR_EMSCRIPTEN)
-pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
-if(GTKMM_FOUND)
-  target_include_directories( ${PROJECT_NAME} PUBLIC ${GTKMM_INCLUDE_DIRS})
-endif()
-ENDIF() # NOT MR_EMSCRIPTEN
+IF(NOT MR_EMSCRIPTEN AND NOT MINGW)
+	pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
+	if(GTKMM_FOUND)
+		target_include_directories( ${PROJECT_NAME} PUBLIC ${GTKMM_INCLUDE_DIRS})
+	endif()
+ENDIF() # NOT MR_EMSCRIPTEN AND NOT MINGW
 
 file(GLOB JSONS "*.json")
 IF(MR_EMSCRIPTEN)
@@ -39,8 +39,7 @@ IF(MR_EMSCRIPTEN)
 			imgui
 			glfw
 			)
-ELSE() # MR_EMSCRIPTEN
-IF(APPLE)
+ELSEIF(APPLE)
 	add_definitions("-x objective-c++")
 	find_library(APPKIT_LIBRARY AppKit)
 	IF(NOT APPKIT_LIBRARY)
@@ -66,7 +65,23 @@ IF(APPLE)
 			hidapi
 			${APPKIT_LIBRARY}
 			)
-ELSE() # NOT APPLE
+ELSEIF(MINGW)
+	target_link_libraries(${PROJECT_NAME} PRIVATE
+		MRMesh
+		gtest
+		cpr
+		imgui
+		glad
+		glfw
+		hidapi
+		jsoncpp
+		spdlog
+		fmt
+		openvdb
+		tbb12
+		atomic
+	)
+ELSE()
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 			MRMesh
 			gtest
@@ -86,8 +101,11 @@ ELSE() # NOT APPLE
 			openvdb
 			tbb
 			)
-ENDIF() # APPLE
-ENDIF() # MR_EMSCRIPTEN
+ENDIF()
+
+IF(MINGW)
+	target_compile_definitions(${PROJECT_NAME} PRIVATE MRIMGUI_EXPORT MRMESH_EXPORT MRVIEWER_EXPORT)
+ENDIF()
 
 file(GLOB JSONS "*.json")
 file(GLOB AWESOME_FONTS "${MESHLIB_THIRDPARTY_DIR}/fontawesome-free/*.ttf")

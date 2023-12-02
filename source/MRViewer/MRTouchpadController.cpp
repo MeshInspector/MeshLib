@@ -3,7 +3,7 @@
 
 #if defined( __APPLE__ )
 #include "MRTouchpadCocoaHandler.h"
-#elif defined( _WIN32 )
+#elif defined( _WIN32 ) && !defined( __MINGW32__ ) // TODO: get rid of WRL
 #include "MRTouchpadWin32Handler.h"
 #endif
 
@@ -16,7 +16,7 @@ void TouchpadController::initialize( GLFWwindow* window )
 {
 #if defined( __APPLE__ )
     handler_ = std::make_unique<TouchpadCocoaHandler>( window );
-#elif defined( _WIN32 )
+#elif defined( _WIN32 ) && !defined( __MINGW32__ )
     handler_ = std::make_unique<TouchpadWin32Handler>( window );
 #else
     (void)window;

@@ -30,6 +30,11 @@ IF(DEFINED BUILD_TESTING AND NOT BUILD_TESTING)
 	set(MRMESH_NO_GTEST ON)
 ENDIF()
 
+# TODO: fix libE57Format build with MinGW
+IF(MINGW)
+	set(MRMESH_NO_E57 ON)
+ENDIF()
+
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
 
@@ -202,6 +207,19 @@ IF(APPLE OR MR_EMSCRIPTEN)
 			${MRMESH_OPTIONAL_DEPENDENCIES}
 		)
 	ENDIF()
+ELSEIF(MINGW)
+	find_package(tl-expected REQUIRED)
+	target_link_libraries(${PROJECT_NAME} PRIVATE
+		tl::expected
+		fmt
+		spdlog
+		gtest
+		zip
+		Boost::boost
+		jsoncpp
+		tbb12
+		${MRMESH_OPTIONAL_DEPENDENCIES}
+	)
 ELSE()
 	find_package(tl-expected REQUIRED)
 	target_include_directories(${PROJECT_NAME} PRIVATE
@@ -220,7 +238,7 @@ ELSE()
 	)
 ENDIF()
 
-IF(WIN32 AND MINGW)
+IF(MINGW)
 	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_EXPORT)
 ENDIF()
 

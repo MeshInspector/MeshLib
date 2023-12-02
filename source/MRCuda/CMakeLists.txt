@@ -43,6 +43,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 	tbb
 )
 
+IF(MINGW)
+	target_compile_definitions(${PROJECT_NAME} PRIVATE MRCUDA_EXPORT)
+ENDIF()
+
 set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(TARGETS ${PROJECT_NAME}
 		EXPORT ${PROJECT_NAME}

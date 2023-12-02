@@ -33,7 +33,20 @@ IF(MR_EMSCRIPTEN)
 		jsoncpp
 		spdlog
 		)
-ELSE() # NOT MR_EMSCRIPTEN
+ELSEIF(MINGW)
+	target_link_libraries(${PROJECT_NAME} PRIVATE
+		tbb12
+		MRMesh
+		MRViewer
+		clip
+		glad
+		glfw
+		imgui
+		jsoncpp
+		spdlog
+		fmt
+		)
+ELSE()
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		tbb
 		MRMesh
@@ -46,8 +59,11 @@ ELSE() # NOT MR_EMSCRIPTEN
 		spdlog
 		fmt
 		)
-ENDIF() # MR_EMSCRIPTEN
+ENDIF()
 
+IF(MINGW)
+	target_compile_definitions(${PROJECT_NAME} PRIVATE MRIMGUI_EXPORT MRMESH_EXPORT MRVIEWER_EXPORT MRCOMMONPLUGINS_EXPORT)
+ENDIF()
 
 install(TARGETS ${PROJECT_NAME}
 		EXPORT ${PROJECT_NAME}

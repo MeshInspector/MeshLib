@@ -401,7 +401,7 @@ bool ProgressBar::tryRun_( const std::function<bool ()>& task )
 
 bool ProgressBar::tryRunWithSehHandler_( const std::function<bool()>& task )
 {
-#ifndef _WIN32
+#if !defined( _WIN32 ) || defined( __MINGW32__ )
     return task();
 #else
     __try

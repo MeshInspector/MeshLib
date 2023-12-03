@@ -15,6 +15,7 @@
 #include "MRSpaceMouseHandler.h"
 #include "MRSpaceMouseHandlerHidapi.h"
 #include "MRRenderGLHelpers.h"
+#include "MRTouchpadController.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -662,8 +663,10 @@ int Viewer::launchInit_( const LaunchParams& params )
         touchesController.connect( this );
         spaceMouseController.connect();
         initSpaceMouseHandler_();
-        touchpadController.connect( this );
-        touchpadController.initialize( window );
+        if ( !touchpadController_ )
+            touchpadController_ = std::make_unique<TouchpadController>();
+        touchpadController_->connect( this );
+        touchpadController_->initialize( window );
     }
 
     CommandLoop::setState( CommandLoop::StartPosition::AfterWindowInit );
@@ -793,7 +796,8 @@ void Viewer::launchShut()
     alphaSorter_.reset();
     sceneTexture_.reset();
 
-    touchpadController.reset();
+    if ( touchpadController_ )
+        touchpadController_->reset();
 
     glfwDestroyWindow( window );
     glfwTerminate();
@@ -878,6 +882,23 @@ void Viewer::postEmptyEvent()
     emplaceEvent( "Empty", [] () {} );
 #endif
     glfwPostEmptyEvent();
+}
+
+const TouchpadParameters & Viewer::getTouchpadParameters() const
+{
+    if ( !touchpadController_ )
+    {
+        const static TouchpadParameters empty;
+        return empty;
+    }
+    return touchpadController_->getParameters();
+}
+
+void Viewer::setTouchpadParameters( const TouchpadParameters & ps )
+{
+    if ( !touchpadController_ )
+        touchpadController_ = std::make_unique<TouchpadController>();
+    touchpadController_->setParameters( ps );
 }
 
 Viewer::Viewer() :

@@ -581,6 +581,9 @@
     <ClInclude Include="MRRibbonMenuSearch.h">
       <Filter>RibbonMenu</Filter>
     </ClInclude>
+    <ClInclude Include="MRTouchpadParameters.h">
+      <Filter>ShortcutManager</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

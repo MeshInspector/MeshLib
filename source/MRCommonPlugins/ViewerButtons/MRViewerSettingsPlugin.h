@@ -1,9 +1,11 @@
 #pragma once
+
 #include "MRViewer/MRStatePlugin.h"
-#include "MRMesh/MRVector4.h"
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRShadowsGL.h"
 #include "MRViewer/MRSpaceMouseController.h"
+#include "MRViewer/MRTouchpadParameters.h"
+#include "MRMesh/MRVector4.h"
 
 namespace MR
 {
@@ -52,7 +54,7 @@ private:
     bool activeMouseScrollZoom_{ false };
 #endif
 
-    TouchpadController::Parameters touchpadParameters_;
+    TouchpadParameters touchpadParameters_;
 };
 
 }

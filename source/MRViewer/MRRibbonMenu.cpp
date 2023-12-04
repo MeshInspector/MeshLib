@@ -1002,7 +1002,12 @@ bool RibbonMenu::drawCloneButton_( const std::vector<std::shared_ptr<Object>>& s
 bool RibbonMenu::drawSelectSubtreeButton_( const std::vector<std::shared_ptr<Object>>& selected )
 {
     bool someChanges = false;
-    if ( selected.empty() )
+    const bool subtreeExists = std::any_of( selected.begin(), selected.end(), [] ( std::shared_ptr<Object> obj )
+    {
+        return obj && !obj->children().empty();
+    } );
+
+    if ( selected.empty() || !subtreeExists )
         return someChanges;
 
     if ( UI::button( "Select Subtree", { -1, 0 } ) )

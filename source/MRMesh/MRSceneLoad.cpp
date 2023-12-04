@@ -83,6 +83,12 @@ public:
             {
                 constructed = false;
                 scene = object;
+                // fix for some buggy scene files
+                if ( scene->name().empty() )
+                {
+                    scene->setName( "Root" );
+                    scene->setAncillary( true );
+                }
             }
             else
             {

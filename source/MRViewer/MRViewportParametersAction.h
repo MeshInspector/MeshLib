@@ -7,10 +7,17 @@
 namespace MR
 {
 
+/// \defgroup HistoryGroup History group
+/// \{
+
+/// Undo action for setting viewport parameters
+/// Remembers everything contained in Viewport::Parameters
+/// Can be used with Viewport::setParameters or other functions like Viewer::preciseFitDataViewport etc.
 class ViewportParametersAction : public HistoryAction
 {
 public:
-    ViewportParametersAction( std::string name, ViewportMask viewports = ViewportMask::all() ) : 
+    /// Use this constructor to remember viewport configuration before making changes in it.
+    ViewportParametersAction( std::string name, ViewportMask viewports = ViewportMask::all() ) :
         name_(name)
     {
         Viewer* viewer = &getViewerInstance();
@@ -25,6 +32,7 @@ public:
 
     virtual void action( HistoryAction::Type ) override
     {
+        // Assume user does not change viewports number
         Viewer* viewer = &getViewerInstance();
         for ( auto& [id, parameters] : saveParameters_ )
             if ( viewer->getPresentViewports().contains( id ) )

@@ -7,7 +7,7 @@
 namespace MR
 {
 
-/// History action for xf change
+/// This is an action to undo/redo a change in the value of a variable
 /// \ingroup HistoryGroup
 template <typename T>
 class ChangeValue : public HistoryAction
@@ -29,9 +29,7 @@ public:
     {
         if ( !currentValue_ )
             return;
-        auto tmpValue = *currentValue_;
-        *currentValue_ = oldValue_;
-        oldValue_ = tmpValue;
+        std::swap( *currentValue_, oldValue_ );
     }
 
     [[nodiscard]] virtual size_t heapBytes() const override

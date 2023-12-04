@@ -154,6 +154,7 @@ VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::p
     if ( !saveModelFutures.has_value() )
         return unexpected( saveModelFutures.error() );
 
+    assert( !object.name().empty() );
     auto paramsFile = scenePath / ( object.name() + ".json" );
     std::ofstream ofs( paramsFile );
     Json::StreamWriterBuilder builder;

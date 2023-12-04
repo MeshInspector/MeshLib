@@ -199,6 +199,7 @@ private:
     bool drawGroupUngroupButton_( const std::vector<std::shared_ptr<Object>>& selected );
     bool drawCloneButton_( const std::vector<std::shared_ptr<Object>>& selected );
     bool drawCloneSelectionButton_( const std::vector<std::shared_ptr<Object>>& selected );
+    bool drawSelectSubtreeButton_( const std::vector<std::shared_ptr<Object>>& selected );
 
     void beginTopPanel_();
     void endTopPanel_();

@@ -44,11 +44,11 @@ if __name__ == "__main__":
             continue
         if suffix in {".cpp"}:
             if name not in compiles:
-                print(f"Missing ClCompile item: {path.name}", file=sys.stderr)
+                print(f"{vcxproj_path}: missing ClCompile item: {path.name}", file=sys.stderr)
                 exit_code = 1
         elif suffix in {".h", ".hpp"}:
             if name not in includes:
-                print(f"Missing ClInclude item: {path.name}", file=sys.stderr)
+                print(f"{vcxproj_path}: missing ClInclude item: {path.name}", file=sys.stderr)
                 exit_code = 1
 
     sys.exit(exit_code)

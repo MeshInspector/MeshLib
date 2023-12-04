@@ -39,7 +39,7 @@ public:
 
 private:
     std::string name_;
-    T* currentValue_;
+    T* currentValue_ = nullptr;
     T oldValue_;
 };
 

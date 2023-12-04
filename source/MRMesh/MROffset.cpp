@@ -18,11 +18,6 @@
 #include "MRRingIterator.h"
 #include "MRPch/MRSpdlog.h"
 
-namespace
-{
-constexpr float autoVoxelNumber = 5e6f;
-}
-
 namespace MR
 {
 
@@ -33,15 +28,13 @@ Expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, const
         || params.signDetectionMode == SignDetectionMode::OpenVDB
         || params.signDetectionMode == SignDetectionMode::HoleWindingRule );
 
-    float voxelSize = params.voxelSize;
-    // Compute voxel size if needed
-    if ( voxelSize <= 0.0f )
+    if ( params.voxelSize <= 0 )
     {
-        auto bb = mp.mesh.computeBoundingBox( mp.region );
-        auto vol = bb.volume();
-        voxelSize = std::cbrt( vol / autoVoxelNumber );
+        assert( false );
+        return unexpected( "wrong voxelSize" );
     }
 
+    float voxelSize = params.voxelSize;
     bool useShell = params.signDetectionMode == SignDetectionMode::Unsigned;
     bool signPostprocess = params.signDetectionMode == SignDetectionMode::HoleWindingRule;
 
@@ -187,7 +180,7 @@ Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         msParams.cb = meshToLSCb;
         auto box = mesh.getBoundingBox();
         auto absOffset = std::abs( offset );
-        auto expansion = 3.0f * Vector3f::diagonal( params.voxelSize ) + 2.0f * Vector3f::diagonal( absOffset );
+        auto expansion = Vector3f::diagonal( 2 * params.voxelSize + absOffset );
         msParams.origin = box.min - expansion;
         msParams.voxelSize = Vector3f::diagonal( params.voxelSize );
         msParams.dimensions = Vector3i( ( box.max + expansion - msParams.origin ) / params.voxelSize ) + Vector3i::diagonal( 1 );
@@ -222,7 +215,7 @@ Expected<Mesh, std::string> mcShellMeshRegion( const Mesh& mesh, const FaceBitSe
     dvParams.cb = subprogress( params.callBack, 0.0f, 0.5f );
     auto box = mesh.getBoundingBox();
     auto absOffset = std::abs( offset );
-    auto expansion = 3.0f * Vector3f::diagonal( params.voxelSize ) + 2.0f * Vector3f::diagonal( absOffset );
+    auto expansion = Vector3f::diagonal( 2 * params.voxelSize + absOffset );
     dvParams.origin = box.min - expansion;
     dvParams.voxelSize = Vector3f::diagonal( params.voxelSize );
     dvParams.dimensions = Vector3i( ( box.max + expansion - dvParams.origin ) / params.voxelSize ) + Vector3i::diagonal( 1 );

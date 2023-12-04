@@ -9,10 +9,10 @@ VCXPROJ_NAMESPACES = {
 
 IGNORED_FILENAMES = {
     # CMake-specific files
-    'config.h',
-    'config_cmake.h',
+    "config.h",
+    "config_cmake.h",
     # macOS-specific files
-    'mrtouchpadcocoahandler.h',
+    "mrtouchpadcocoahandler.h",
 }
 
 if __name__ == "__main__":
@@ -42,11 +42,11 @@ if __name__ == "__main__":
         name, suffix = path.name.lower(), path.suffix.lower()
         if name in IGNORED_FILENAMES:
             continue
-        if suffix in {'.cpp'}:
+        if suffix in {".cpp"}:
             if name not in compiles:
                 print(f"Missing ClCompile item: {path.name}", file=sys.stderr)
                 exit_code = 1
-        elif suffix in {'.h', '.hpp'}:
+        elif suffix in {".h", ".hpp"}:
             if name not in includes:
                 print(f"Missing ClInclude item: {path.name}", file=sys.stderr)
                 exit_code = 1

@@ -116,22 +116,6 @@ constexpr std::array<const char*, size_t( MR::Viewer::EventType::Count )> cEvent
     "Char Pressed"
 };
 
-bool objectHasRealChildren( const MR::Object& object )
-{
-    bool res = false;
-    for ( const auto& child : object.children() )
-    {
-        if ( !child->isAncillary() )
-            res = true;
-        else
-            res = objectHasRealChildren( *child );
-
-        if ( res )
-            break;
-    }
-    return res;
-}
-
 void selectRecursive( Object& obj )
 {
     obj.select( true );
@@ -1091,7 +1075,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
     const bool isObjSelectable = !object.isAncillary();
 
     // has selectable children
-    bool hasRealChildren = objectHasRealChildren( object );
+    bool hasRealChildren = objectHasSelectableChildren( object );
     bool isOpen{ false };
     if ( ( hasRealChildren || isObjSelectable ) )
     {

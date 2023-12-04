@@ -10,6 +10,7 @@
 #include "MRFileDialog.h"
 #include "MRViewerSettingsManager.h"
 #include "MRUIStyle.h"
+#include "MRMesh/MRObjectsAccess.h"
 #include <MRMesh/MRString.h>
 #include <MRMesh/MRSystem.h>
 #include <MRMesh/MRStringConvert.h>
@@ -999,6 +1000,42 @@ bool RibbonMenu::drawCloneButton_( const std::vector<std::shared_ptr<Object>>& s
     return someChanges;
 }
 
+bool RibbonMenu::drawSelectSubtreeButton_( const std::vector<std::shared_ptr<Object>>& selected )
+{
+    bool someChanges = false;
+    const bool subtreeExists = std::any_of( selected.begin(), selected.end(), [] ( std::shared_ptr<Object> obj )
+    {
+        return obj && objectHasSelectableChildren( *obj );
+    } );
+
+    if ( selected.empty() || !subtreeExists )
+        return someChanges;
+
+    if ( UI::button( "Select Subtree", { -1, 0 } ) )
+    {
+        for ( auto selectedObject : selected )
+        {
+            std::stack<std::shared_ptr<Object>> objects;
+            objects.push( selectedObject );
+            while ( !objects.empty() )
+            {
+                auto object = objects.top();
+                objects.pop();
+
+                if ( !object )
+                    continue;
+
+                object->select( true );
+                for ( auto child : object->children() )
+                    objects.push( child );
+            }
+        }
+        someChanges = true;
+    }
+
+    return someChanges;
+}
+
 bool RibbonMenu::drawCloneSelectionButton_( const std::vector<std::shared_ptr<Object>>& selected )
 {
     bool someChanges = false;
@@ -1580,6 +1617,7 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
             wasChanged |= drawGeneralOptions_( selected );
             wasAction |= drawRemoveButton_( selected );
             wasAction |= drawGroupUngroupButton_( selected );
+            wasAction |= drawSelectSubtreeButton_( selected );
             wasAction |= drawCloneButton_( selected );
         }
         else if ( ImGui::BeginTable( "##DrawOptions", 2, ImGuiTableFlags_BordersInnerV ) )
@@ -1592,6 +1630,7 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
             wasChanged |= drawDrawOptionsColors_( selectedVisualObjs );
             wasAction |= drawRemoveButton_( selected );
             wasAction |= drawGroupUngroupButton_( selected );
+            wasAction |= drawSelectSubtreeButton_( selected );
             wasAction |= drawCloneButton_( selected );
             wasAction |= drawCloneSelectionButton_( selected );
             ImGui::EndTable();

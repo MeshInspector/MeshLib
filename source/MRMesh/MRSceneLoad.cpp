@@ -72,6 +72,8 @@ public:
     SceneLoad::SceneLoadResult construct() const
     {
         auto scene = std::make_shared<Object>();
+        scene->setName( "Root" );
+
         bool constructed;
         if ( loadedObjects_.size() == 1 )
         {

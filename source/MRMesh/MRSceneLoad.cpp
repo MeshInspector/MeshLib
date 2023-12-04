@@ -73,6 +73,7 @@ public:
     {
         auto scene = std::make_shared<Object>();
         scene->setName( "Root" );
+        scene->setAncillary( true );
 
         bool constructed;
         if ( loadedObjects_.size() == 1 )

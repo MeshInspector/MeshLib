@@ -15,8 +15,8 @@ IGNORED_FILENAMES = {
     "mrtouchpadcocoahandler.h",
 }
 
-if __name__ == "__main__":
-    vcxproj_path = Path(sys.argv[1])
+
+def find_missing_entries(vcxproj_path):
     vcxproj_dir = vcxproj_path.parent
 
     vcxproj = ET.parse(vcxproj_path)
@@ -37,18 +37,49 @@ if __name__ == "__main__":
         )
     }
 
-    exit_code = 0
+    result = {
+        'ClInclude': [],
+        'ClCompile': [],
+    }
     for path in vcxproj_dir.iterdir():
         name, suffix = path.name.lower(), path.suffix.lower()
         if name in IGNORED_FILENAMES:
             continue
         if suffix in {".cpp"}:
             if name not in compiles:
-                print(f"{vcxproj_path}: missing ClCompile item: {path.name}", file=sys.stderr)
-                exit_code = 1
+                result['ClCompile'].append(path)
         elif suffix in {".h", ".hpp"}:
             if name not in includes:
-                print(f"{vcxproj_path}: missing ClInclude item: {path.name}", file=sys.stderr)
-                exit_code = 1
+                result['ClInclude'].append(path)
 
-    sys.exit(exit_code)
+    return result
+
+
+def process_file(vcxproj_path):
+    result = find_missing_entries(vcxproj_path)
+    ok = True
+    for path in result['ClInclude']:
+        print(f"{vcxproj_path}: missing ClInclude item: {path.name}", file=sys.stderr)
+        ok = False
+    for path in result['ClCompile']:
+        print(f"{vcxproj_path}: missing ClCompile entry: {path.name}", file=sys.stderr)
+        ok = False
+    return ok
+
+
+if __name__ == "__main__":
+    arg = Path(sys.argv[1])
+    if arg.is_file() and arg.suffix == '.vcxproj':
+        if process_file(arg):
+            sys.exit(0)
+        else:
+            sys.exit(1)
+    elif arg.is_dir():
+        exit_code = 0
+        for path in arg.rglob('*.vcxproj'):
+            if not process_file(path):
+                exit_code = 1
+        sys.exit(exit_code)
+    else:
+        print(f"Unsupported file: {arg}", file=sys.stderr)
+        sys.exit(1)

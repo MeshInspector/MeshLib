@@ -584,6 +584,9 @@
     <ClInclude Include="MRTouchpadParameters.h">
       <Filter>ShortcutManager</Filter>
     </ClInclude>
+    <ClInclude Include="MRViewportParametersAction.h">
+      <Filter>History</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

@@ -10,6 +10,7 @@
 #include "MRFileDialog.h"
 #include "MRViewerSettingsManager.h"
 #include "MRUIStyle.h"
+#include "MRMesh/MRObjectsAccess.h"
 #include <MRMesh/MRString.h>
 #include <MRMesh/MRSystem.h>
 #include <MRMesh/MRStringConvert.h>
@@ -1004,7 +1005,7 @@ bool RibbonMenu::drawSelectSubtreeButton_( const std::vector<std::shared_ptr<Obj
     bool someChanges = false;
     const bool subtreeExists = std::any_of( selected.begin(), selected.end(), [] ( std::shared_ptr<Object> obj )
     {
-        return obj && !obj->children().empty();
+        return obj && objectHasSelectableChildren( *obj );
     } );
 
     if ( selected.empty() || !subtreeExists )

@@ -21,6 +21,9 @@ struct BaseShellParameters
     ProgressCallback callBack;
 };
 
+/// computes size of a cubical voxel to get approximately given number of voxels during rasterization
+[[nodiscard]] MRMESH_API float suggestVoxelSize( const MeshPart & mp, float approxNumVoxels );
+
 struct OffsetParameters : BaseShellParameters
 {
     /// determines the method to compute distance sign

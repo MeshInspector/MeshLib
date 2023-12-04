@@ -21,6 +21,14 @@
 namespace MR
 {
 
+float suggestVoxelSize( const MeshPart & mp, float approxNumVoxels )
+{
+    MR_TIMER
+    auto bb = mp.mesh.computeBoundingBox( mp.region );
+    auto vol = bb.volume();
+    return std::cbrt( vol / approxNumVoxels );
+}
+
 Expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER

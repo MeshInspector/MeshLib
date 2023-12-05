@@ -1,4 +1,5 @@
 #include "MRObjectSave.h"
+#include "MRBitSetParallelFor.h"
 #include "MRDistanceMap.h"
 #include "MRDistanceMapSave.h"
 #include "MRGltfSerializer.h"
@@ -38,6 +39,14 @@ bool hasExtension( const MR::IOFilters& filters, const std::string& extension )
 Mesh mergeToMesh( const Object& object )
 {
     Mesh result;
+    if ( const auto* objMesh = dynamic_cast<const ObjectMesh*>( &object ) )
+    {
+        if ( const auto& mesh = objMesh->mesh() )
+        {
+            result = *mesh;
+            result.transform( objMesh->worldXf() );
+        }
+    }
     for ( const auto& objMesh : getAllObjectsInTree<ObjectMesh>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable ) )
     {
         if ( !objMesh || !objMesh->mesh() )
@@ -58,6 +67,19 @@ Mesh mergeToMesh( const Object& object )
 PointCloud mergeToPoints( const Object& object )
 {
     PointCloud result;
+    if ( const auto* objPoints = dynamic_cast<const ObjectPoints*>( &object ) )
+    {
+        if ( const auto& pointCloud = objPoints->pointCloud() )
+        {
+            result = *pointCloud;
+            const auto xf = objPoints->worldXf();
+            BitSetParallelFor( result.validPoints, [&] ( const VertId v )
+            {
+                result.points[v] = xf( result.points[v] );
+            } );
+            result.invalidateCaches();
+        }
+    }
     for ( const auto& objPoints : getAllObjectsInTree<ObjectPoints>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable ) )
     {
         if ( !objPoints || !objPoints->pointCloud() )
@@ -78,6 +100,14 @@ PointCloud mergeToPoints( const Object& object )
 Polyline3 mergeToLines( const Object& object )
 {
     Polyline3 result;
+    if ( const auto* objLines = dynamic_cast<const ObjectLines*>( &object ) )
+    {
+        if ( const auto& polyline = objLines->polyline() )
+        {
+            result = *polyline;
+            result.transform( objLines->worldXf() );
+        }
+    }
     for ( const auto& objLines : getAllObjectsInTree<ObjectLines>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable ) )
     {
         if ( !objLines || !objLines->polyline() )

@@ -168,7 +168,7 @@ using MapPatch = std::vector<MapPatchElement>;
 
 // this function go backward by given triangulation and tries to fix multiple edges
 // return false if triangulation has multiple edges that cannot be fixed
-bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, NewEdgesMap& map, const EdgePath& loop,  const FillHoleMetric& metricRef,
+bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, const NewEdgesMap& map, const EdgePath& loop,  const FillHoleMetric& metricRef,
     WeightedConn start, int maxPolygonSubdivisions, MapPatch& mapPatch )
 {
     MR_TIMER;

@@ -168,6 +168,8 @@ public:
     void setSceneDirty() { dirtyScene_ = true; }
     // Setup viewports views
     MRVIEWER_API void setupScene();
+    // Cleans framebuffers for all viewports (sets its background)
+    MRVIEWER_API void clearFramebuffers();
     // OpenGL context resize
     MRVIEWER_API void resize( int w, int h ); // explicitly set framebuffer size
     MRVIEWER_API void postResize( int w, int h ); // external resize due to user interaction

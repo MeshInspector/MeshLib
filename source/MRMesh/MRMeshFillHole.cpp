@@ -158,67 +158,81 @@ void getTriangulationWeights( const MeshTopology& topology, const NewEdgesMap& m
     }
 }
 
+struct MapPatchElement
+{
+    int a{ -1 };
+    int b{ -1 };
+    int newPrevA{ -1 };
+};
+using MapPatch = std::vector<MapPatchElement>;
+
 // this function go backward by given triangulation and tries to fix multiple edges
 // return false if triangulation has multiple edges that cannot be fixed
 bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, NewEdgesMap& map, const EdgePath& loop,  const FillHoleMetric& metricRef,
-    WeightedConn start, int maxPolygonSubdivisions )
+    WeightedConn start, int maxPolygonSubdivisions, MapPatch& mapPatch )
 {
     MR_TIMER;
-
+    mapPatch.clear();
     HashSet<std::pair<VertId, VertId>> edgesInTriangulation;
-    auto testExistance = [&] ( VertId a, VertId b )->bool
+    auto testExistance = [&] ( int a, int b )->bool
     {
-        if ( topology.findEdge( a, b ) )
+        auto dist = ( a - b + loop.size() ) % loop.size();
+        if ( dist == 1 || dist + 1 == loop.size() )
+            return false;
+        auto aV = topology.org( loop[a] );
+        auto bV = topology.org( loop[b] );
+        if ( topology.findEdge( aV, bV ) )
             return true;
-        if ( a > b )
-            std::swap( a, b );
-        auto it = edgesInTriangulation.find( { a,b } );
+        if ( aV > bV )
+            std::swap( aV, bV );
+        auto it = edgesInTriangulation.find( { aV,bV } );
         return it != edgesInTriangulation.end();
     };
     std::vector<unsigned> optimalStepsCache( maxPolygonSubdivisions );
     std::queue<WeightedConn> newEdgesQueue;
-    newEdgesQueue.push( start );
+    
+    auto pushInQueue = [&] ( int a, int b )
+    {
+        VertId aV, bV;
+        aV = topology.org( loop[a] );
+        bV = topology.org( loop[b] );
+        if ( aV > bV )
+            std::swap( aV, bV );
+        edgesInTriangulation.insert( { aV,bV } );
+        newEdgesQueue.push( map[a][b] );
+    };
+
+    pushInQueue( start.a, start.b );
     while ( !newEdgesQueue.empty() )
     {
         start = std::move( newEdgesQueue.front() );
         newEdgesQueue.pop();
-
-        VertId aV, bV;
-        aV = topology.org( loop[start.a] );
-        bV = topology.org( loop[start.b] );
-        if ( aV > bV )
-            std::swap( aV, bV );
-        edgesInTriangulation.insert( { aV,bV } ); // add edge to map
-
-        if ( start.hasPrev() )
+        if ( !start.hasPrev() )
+            continue;
+        if ( testExistance( start.a, start.prevA ) || testExistance( start.b, start.prevA ) ) // test if this edge exists
         {
-            VertId prevV = topology.org( loop[start.prevA] );
-            if ( testExistance( aV, prevV ) || testExistance( bV, prevV ) ) // test if this edge exists
+            // fix multiple edge 
+            unsigned steps = ( start.b + unsigned( loop.size() ) - start.a ) % unsigned( loop.size() );
+            getOptimalSteps( optimalStepsCache, ( start.a + 1 ) % loop.size(), steps, unsigned( loop.size() ), maxPolygonSubdivisions );
+            optimalStepsCache.erase( std::remove_if( optimalStepsCache.begin(), optimalStepsCache.end(), [&] ( unsigned v )
             {
-                // fix multiple edge 
-                unsigned steps = ( start.b + unsigned( loop.size() ) - start.a ) % unsigned( loop.size() );
-                getOptimalSteps( optimalStepsCache, ( start.a + 1 ) % loop.size(), steps, unsigned( loop.size() ), maxPolygonSubdivisions );
-                optimalStepsCache.erase( std::remove_if( optimalStepsCache.begin(), optimalStepsCache.end(), [&] ( unsigned v )
-                {
-                    VertId vV = topology.org( loop[v] );
-                    return testExistance( aV, vV ) || testExistance( bV, vV ); // remove existing duplicates
-                } ) );
-                if ( optimalStepsCache.empty() )
-                    return false;
-                WeightedConn newPrev{ start.a,start.b,DBL_MAX };
-                getTriangulationWeights( topology, map, loop, metricRef, optimalStepsCache, newPrev ); // find better among steps
-                if ( !newPrev.hasPrev() )
-                    return false;
-                start.prevA = newPrev.prevA;
-                map[start.a][start.b].prevA = start.prevA;
-            }
-            auto distA = ( start.a - start.prevA + loop.size() ) % loop.size();
-            auto distB = ( start.b - start.prevA + loop.size() ) % loop.size();
-            if ( distA >= 2 && distA <= int( loop.size() ) - 2 )
-                newEdgesQueue.push( map[start.a][start.prevA] );
-            if ( distB >= 2 && distB <= int( loop.size() ) - 2 )
-                newEdgesQueue.push( map[start.prevA][start.b] );
+                return testExistance( start.a, v ) || testExistance( start.b, v ); // remove existing duplicates
+            } ), optimalStepsCache.end() );
+            if ( optimalStepsCache.empty() )
+                return false;
+            WeightedConn newPrev{ start.a,start.b,DBL_MAX,0 };
+            getTriangulationWeights( topology, map, loop, metricRef, optimalStepsCache, newPrev ); // find better among steps
+            if ( !newPrev.hasPrev() || !map[start.a][newPrev.prevA].hasPrev() || !map[start.prevA][newPrev.b].hasPrev() )
+                return false;
+            start.prevA = newPrev.prevA;
+            mapPatch.emplace_back( MapPatchElement{ .a = start.a,.b = start.b,.newPrevA = start.prevA } );
         }
+        auto distA = ( start.a - start.prevA + loop.size() ) % loop.size();
+        auto distB = ( start.b - start.prevA + loop.size() ) % loop.size();
+        if ( distA >= 2 && distA <= int( loop.size() ) - 2 )
+            pushInQueue( start.a, start.prevA );
+        if ( distB >= 2 && distB <= int( loop.size() ) - 2 )
+            pushInQueue( start.prevA, start.b );
     }
     return true;
 }
@@ -606,6 +620,7 @@ FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
         });
     }
     // find minimum triangulation
+    MapPatch savedMapPatch, cachedMapPatch;
     WeightedConn finConn{-1,-1,DBL_MAX};
     for ( unsigned i = 0; i < loopEdgesCounter; ++i )
     {
@@ -622,8 +637,9 @@ FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
         }
         if ( weight < finConn.weight &&
             ( params.multipleEdgesResolveMode != FillHoleParams::MultipleEdgesResolveMode::Strong || // try to fix multiple if needed
-                removeMultipleEdgesFromTriangulation( mesh.topology, newEdgesMap, edgeMap, metrics, newEdgesMap[cIndex][i], params.maxPolygonSubdivisions ) ) )
+                removeMultipleEdgesFromTriangulation( mesh.topology, newEdgesMap, edgeMap, metrics, newEdgesMap[cIndex][i], params.maxPolygonSubdivisions, cachedMapPatch ) ) )
         {
+            savedMapPatch = cachedMapPatch;
             finConn = newEdgesMap[cIndex][i];
             finConn.weight = weight;
         }
@@ -644,6 +660,10 @@ FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
         res.numNewTris = loopEdgesCounter;
         return res;
     }
+
+    if ( params.multipleEdgesResolveMode == FillHoleParams::MultipleEdgesResolveMode::Strong && !savedMapPatch.empty() )
+        for ( const auto& [patchA, patchB, patchPrevA] : savedMapPatch )
+            newEdgesMap[patchA][patchB].prevA = patchPrevA;
 
     // queue for adding new edges (not to make tree like recursive logic)
     WeightedConn fictiveLastConn( finConn.a, ( finConn.b + 1 ) % loopEdgesCounter, 0.0 );

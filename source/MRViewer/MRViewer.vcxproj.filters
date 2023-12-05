@@ -307,6 +307,9 @@
     <ClCompile Include="MRRibbonMenuSearch.cpp">
       <Filter>RibbonMenu</Filter>
     </ClCompile>
+    <ClCompile Include="MRSelectCurvaturePreference.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -586,6 +589,9 @@
     </ClInclude>
     <ClInclude Include="MRViewportParametersAction.h">
       <Filter>History</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSelectCurvaturePreference.h">
+      <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

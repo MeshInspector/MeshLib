@@ -20,6 +20,7 @@
     <ClCompile Include="MRCommandLoop.cpp" />
     <ClCompile Include="MRCreateShader.cpp" />
     <ClCompile Include="MRCudaAccessor.cpp" />
+    <ClCompile Include="MRSelectCurvaturePreference.cpp" />
     <ClCompile Include="MRFrameRedrawRequest.cpp" />
     <ClCompile Include="MRGetSystemInfoJson.cpp" />
     <ClCompile Include="MRObjectPointsHistory.cpp" />
@@ -102,6 +103,7 @@
     <ClInclude Include="MRCommandLoop.h" />
     <ClInclude Include="MRCreateShader.h" />
     <ClInclude Include="MRCudaAccessor.h" />
+    <ClInclude Include="MRSelectCurvaturePreference.h" />
     <ClInclude Include="MRFrameRedrawRequest.h" />
     <ClInclude Include="MRGetSystemInfoJson.h" />
     <ClInclude Include="MRGladGlfw.h" />

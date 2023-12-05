@@ -1026,6 +1026,9 @@ bool RibbonMenu::drawSelectSubtreeButton_( const std::vector<std::shared_ptr<Obj
                     continue;
 
                 object->select( true );
+                if ( showNewSelectedObjects_ )
+                    object->setGlobalVisibilty( true );
+
                 for ( auto child : object->children() )
                     objects.push( child );
             }

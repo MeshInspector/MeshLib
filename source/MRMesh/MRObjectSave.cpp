@@ -50,6 +50,7 @@ Mesh mergeToMesh( const Object& object )
         for ( const auto v : vmap )
             if ( v.valid() )
                 result.points[v] = xf( result.points[v] );
+        result.invalidateCaches();
     }
     return result;
 }
@@ -69,6 +70,7 @@ PointCloud mergeToPoints( const Object& object )
         for ( const auto v : vmap )
             if ( v.valid() )
                 result.points[v] = xf( result.points[v] );
+        result.invalidateCaches();
     }
     return result;
 }
@@ -88,6 +90,7 @@ Polyline3 mergeToLines( const Object& object )
         for ( const auto& v : vmap )
             if ( v.valid() )
                 result.points[v] = xf( result.points[v] );
+        result.invalidateCaches();
     }
     return result;
 }

@@ -11,7 +11,7 @@ namespace MR
 /// History action for object color palette change
 /// To use with setFrontColorsForAllViewports, setBackColorsForAllViewports, setFrontColor, setBackColor
 /// \ingroup HistoryGroup
-class ChangeColorAction : public HistoryAction
+class ChangeObjectColorAction : public HistoryAction
 {
 public:
     using Obj = VisualObject;
@@ -24,7 +24,7 @@ public:
     };
 
     /// Constructed from original obj
-    ChangeColorAction( const std::string& name, const std::shared_ptr<VisualObject>& obj, Type type ) :
+    ChangeObjectColorAction( const std::string& name, const std::shared_ptr<VisualObject>& obj, Type type ) :
         obj_{ obj },
         type_{ type },
         name_{ name }
@@ -59,13 +59,12 @@ public:
 
     [[nodiscard]] virtual size_t heapBytes() const override
     {
-        return name_.capacity() + sizeof( Color ) * 3;
+        return name_.capacity();
     }
 
 private:
     std::shared_ptr<VisualObject> obj_;
     Type type_;
-    ViewportMask mask_;
     ViewportProperty<Color> colors_;
     std::string name_;
 };

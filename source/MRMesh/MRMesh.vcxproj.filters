@@ -171,9 +171,6 @@
     <ClInclude Include="MRTorus.h">
       <Filter>Source Files\Primitives</Filter>
     </ClInclude>
-    <ClInclude Include="MRUVSphere.h">
-      <Filter>Source Files\Primitives</Filter>
-    </ClInclude>
     <ClInclude Include="MRConstants.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -603,7 +600,7 @@
     <ClInclude Include="MRLinesLoad.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
-    <ClInclude Include="MRSphere.h">
+    <ClInclude Include="MRMakeSphereMesh.h">
       <Filter>Source Files\Primitives</Filter>
     </ClInclude>
     <ClInclude Include="MRSphereObject.h">
@@ -1113,6 +1110,9 @@
     <ClInclude Include="MRChangeValue.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
+    <ClInclude Include="MRUVSphere.h">
+      <Filter>Source Files\Primitives</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1152,9 +1152,6 @@
       <Filter>Source Files\VDBConversions</Filter>
     </ClCompile>
     <ClCompile Include="MRTorus.cpp">
-      <Filter>Source Files\Primitives</Filter>
-    </ClCompile>
-    <ClCompile Include="MRUVSphere.cpp">
       <Filter>Source Files\Primitives</Filter>
     </ClCompile>
     <ClCompile Include="MRHistogram.cpp">
@@ -1475,7 +1472,7 @@
     <ClCompile Include="MRLinesLoad.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
-    <ClCompile Include="MRSphere.cpp">
+    <ClCompile Include="MRMakeSphereMesh.cpp">
       <Filter>Source Files\Primitives</Filter>
     </ClCompile>
     <ClCompile Include="MRSphereObject.cpp">

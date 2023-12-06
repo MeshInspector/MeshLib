@@ -1,6 +1,6 @@
 #include "MRSphereObject.h"
 #include "MRMatrix3.h"
-#include "MRSphere.h"
+#include "MRMakeSphereMesh.h"
 #include "MRMesh.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"

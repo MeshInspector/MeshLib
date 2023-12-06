@@ -4,7 +4,7 @@
 #include "MRMeshLoad.h"
 #include "MRMeshSave.h"
 #include "MRVector2.h"
-#include "MRUVSphere.h"
+#include "MRMakeSphereMesh.h"
 #include "MRTimer.h"
 #include "MRPolyline.h"
 #include "MRVector.h"

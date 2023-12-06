@@ -18,7 +18,7 @@ Pin-Priority: 1001\
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-## preprare thirdparty
+# preprare thirdparty
 RUN mkdir /home/MeshLib
 WORKDIR "/home/MeshLib"
 

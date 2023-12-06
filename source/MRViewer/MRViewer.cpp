@@ -1421,7 +1421,7 @@ bool Viewer::draw_( bool force )
 
 void Viewer::drawFull( bool dirtyScene )
 {
-    // ubbind to clean main framebuffer
+    // unbind to clean main framebuffer
     if ( sceneTexture_ )
         sceneTexture_->unbind();
     // clean main framebuffer

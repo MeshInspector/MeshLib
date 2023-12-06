@@ -1421,16 +1421,21 @@ bool Viewer::draw_( bool force )
 
 void Viewer::drawFull( bool dirtyScene )
 {
+    // unbind to clean main framebuffer
+    if ( sceneTexture_ )
+        sceneTexture_->unbind();
+    // clean main framebuffer
+    clearFramebuffers();
+
     if ( menuPlugin_ )
         menuPlugin_->startFrame();
 
     if ( sceneTexture_ )
+    {
         sceneTexture_->bind( true );
-
-    // need to clean it in texture too
-    for ( auto& viewport : viewport_list )
-        viewport.clearFramebuffers();
-
+        // need to clean it in texture too
+        clearFramebuffers();
+    }
     preDrawSignal();
     // check dirty scene and need swap
     // important to check after preDrawSignal
@@ -1493,12 +1498,14 @@ void Viewer::drawScene()
 
 void Viewer::setupScene()
 {
-    bindSceneTexture( false );
     for ( auto& viewport : viewport_list )
-    {
         viewport.setupView();
+}
+
+void Viewer::clearFramebuffers()
+{
+    for ( auto& viewport : viewport_list )
         viewport.clearFramebuffers();
-    }
 }
 
 void Viewer::resize( int w, int h )
@@ -1981,6 +1988,7 @@ Image Viewer::captureSceneScreenShot( const Vector2i& resolution )
     fd.bind();
 
     setupScene();
+    clearFramebuffers();
     drawScene();
 
     fd.copyTextureBindDef();

@@ -3,7 +3,7 @@
 #include "MRMeshFwd.h"
 
 #include <version>
-#ifdef __cpp_lib_expected
+#if __cpp_lib_expected >= 202211
 #include <expected>
 #else
 #include <tl/expected.hpp>
@@ -14,7 +14,7 @@
 namespace MR
 {
 
-#ifdef __cpp_lib_expected
+#if __cpp_lib_expected >= 202211
 
 template<class T, class E = std::string>
 using Expected = std::expected<T, E>;

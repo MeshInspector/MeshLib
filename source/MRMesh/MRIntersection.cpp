@@ -100,6 +100,20 @@ TEST( MRMesh, IntersectLineLine )
     ASSERT_NEAR( ( cl15.b - Vector3d( 1, 1, 1 ) ).length(), 0, 1e-15 );
 }
 
+TEST( MRMesh, IntersectLineShere )
+{
+    Line3d line1( Vector3d( 2, 0, 2 ), Vector3d( 0, 1, 0 ) );
+    Line3d line2( Vector3d( 4, 0, 2 ), Vector3d( 0, 1, 0 ) );
+    Sphere3d sphere( Vector3d( 2, 2, 2 ), 1 );
+    auto is1 = intersection( line1, sphere );
+    ASSERT_TRUE( is1 );
+    ASSERT_NEAR( is1->first, 1., 1e-15 );
+    ASSERT_NEAR( is1->second, 3., 1e-15 );
+
+    auto is2 = intersection( line2, sphere );
+    ASSERT_FALSE( is2 );
+}
+
 TEST( MRMesh, ClosestPointsLine3Box3 )
 {
     {

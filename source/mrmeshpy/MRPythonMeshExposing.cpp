@@ -17,8 +17,7 @@
 #include "MRMesh/MREdgeIterator.h"
 #include "MRMesh/MRMeshCollide.h"
 #include "MRMesh/MRMeshNormals.h"
-#include "MRMesh/MRSphere.h"
-#include "MRMesh/MRUVSphere.h"
+#include "MRMesh/MRMakeSphereMesh.h"
 #include "MRMesh/MRCylinder.h"
 #include "MRMesh/MRExpected.h"
 #include <pybind11/functional.h>

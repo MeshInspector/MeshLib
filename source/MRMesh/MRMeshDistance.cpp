@@ -3,7 +3,7 @@
 #include "MRMesh.h"
 #include "MRTriDist.h"
 #include "MRTimer.h"
-#include "MRUVSphere.h"
+#include "MRMakeSphereMesh.h"
 #include "MRMeshCollide.h"
 #include "MRRegionBoundary.h"
 #include "MRBitSetParallelFor.h"

@@ -7,7 +7,7 @@
 #include "MRPrecisePredicates3.h"
 #include "MRVector3.h"
 #include "MRLine3.h"
-#include "MRUVSphere.h"
+#include "MRMakeSphereMesh.h"
 #include "MRGTest.h"
 #include "MRMeshLoad.h"
 #include "MRMeshBuilder.h"

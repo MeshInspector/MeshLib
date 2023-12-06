@@ -3,7 +3,7 @@
 #include "MRTimer.h"
 #include "MRExpandShrink.h"
 #include "MRRingIterator.h"
-#include "MRUVSphere.h"
+#include "MRMakeSphereMesh.h"
 #include "MRMeshComponents.h"
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"

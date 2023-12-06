@@ -95,6 +95,15 @@ public:
     MRMESH_API virtual AllVisualizeProperties getAllVisualizeProperties() const override;
     /// returns mask of viewports where given property is set
     MRMESH_API virtual const ViewportMask& getVisualizePropertyMask( unsigned type ) const override;
+    /// set visual property mask
+    MRMESH_API void setVisualizePropertyMask( unsigned type, ViewportMask viewportMask ) override;
+
+    /// sets color of object when it is selected/not-selected (depending on argument) in given viewport
+    MRMESH_API void setFrontColor( const Color& color, bool selected, ViewportId viewportId = {} ) override
+    { VisualObject::setFrontColor( color, selected, viewportId ); customColors_ = true; }
+    /// sets backward color of object in given viewport
+    MRMESH_API void setBackColor( const Color& color, ViewportId viewportId = {} ) override
+    { VisualObject::setBackColor( color, viewportId ); customColors_ = true; }
 
     const FaceColors& getFacesColorMap() const { return facesColorMap_; }
     virtual void setFacesColorMap( FaceColors facesColorMap )
@@ -108,11 +117,11 @@ public:
 
     const Color& getEdgesColor( ViewportId id = {} ) const { return edgesColor_.get(id); }
     virtual void setEdgesColor( const Color& color, ViewportId id = {} )
-    { edgesColor_.set( color, id ); needRedraw_ = true; }
+    { edgesColor_.set( color, id ); customColors_ = true; needRedraw_ = true; }
 
     const Color& getBordersColor( ViewportId id = {} ) const { return bordersColor_.get( id ); }
     virtual void setBordersColor( const Color& color, ViewportId id = {} )
-    { bordersColor_.set( color, id ); needRedraw_ = true; }
+    { bordersColor_.set( color, id ); customColors_ = true; needRedraw_ = true; }
 
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectMeshHolder( ProtectedStruct, const ObjectMeshHolder& obj ) : ObjectMeshHolder( obj )
@@ -259,6 +268,9 @@ protected:
     ViewportProperty<Color> bordersColor_;
     ViewportProperty<Color> edgeSelectionColor_;
     ViewportProperty<Color> faceSelectionColor_;
+
+    bool customShading_{ false };
+    bool customColors_{ false };
 
     FaceColors facesColorMap_;
     float edgeWidth_{ 0.5f };

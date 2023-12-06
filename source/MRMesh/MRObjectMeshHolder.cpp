@@ -37,6 +37,7 @@ void ObjectMeshHolder::setSelectedFacesColor( const Color& color, ViewportId id 
     if ( color == faceSelectionColor_.get( id ) )
         return;
     faceSelectionColor_.set( color, id );
+    customColors_ = true;
     needRedraw_ = true;
 }
 
@@ -45,6 +46,7 @@ void ObjectMeshHolder::setSelectedEdgesColor( const Color& color, ViewportId id 
     if ( color == edgeSelectionColor_.get( id ) )
         return;
     edgeSelectionColor_.set( color, id );
+    customColors_ = true;
     needRedraw_ = true;
 }
 
@@ -123,6 +125,9 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     }
 
     root["Type"].append( ObjectMeshHolder::TypeName() );
+
+    root["CustomColors"] = customColors_;
+    root["CustomShading"] = customShading_;
 }
 
 void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
@@ -193,6 +198,20 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
         deserializeFromJson( root["SelectionEdgeBitSet"], selectedEdges_ );
         deserializeFromJson( root["MeshCreasesUndirEdgeBitSet"], creases_ );
     }
+
+    if ( root["CustomColors"].isBool() )
+    {
+        customColors_ = root["CustomColors"].asBool();
+        if ( !customColors_ )
+            setDefaultColors_();
+    }
+
+    if ( root["CustomShading"].isBool() )
+    {
+        customShading_ = root["CustomShading"].asBool();
+        if ( !customShading_ )
+            setFlatShading( SceneSettings::get( SceneSettings::Type::MeshFlatShading ) );
+    }
 }
 
 VoidOrErrStr ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
@@ -246,6 +265,20 @@ const ViewportMask& ObjectMeshHolder::getVisualizePropertyMask( unsigned type ) 
     }
 }
 
+void ObjectMeshHolder::setVisualizePropertyMask( unsigned type, ViewportMask viewportMask )
+{
+    VisualObject::setVisualizePropertyMask( type, viewportMask );
+    switch ( type )
+    {
+        case MeshVisualizePropertyType::FlatShading:
+        case MeshVisualizePropertyType::EnableShading:
+            customShading_ = true;
+            break;
+        default:
+            break;
+    }
+}
+
 void ObjectMeshHolder::setupRenderObject_() const
 {
     if ( !renderObj_ )
@@ -265,6 +298,8 @@ ObjectMeshHolder::ObjectMeshHolder()
 {
     setDefaultColors_();
     setFlatShading( SceneSettings::get( SceneSettings::Type::MeshFlatShading ) );
+    customColors_ = false;
+    customShading_ = false;
 }
 
 void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc )

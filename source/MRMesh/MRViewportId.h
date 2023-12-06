@@ -44,6 +44,7 @@ public:
     /// mask meaning all or any viewports
     static ViewportMask all() { return ViewportMask{ ~0u }; }
     static ViewportMask any() { return ViewportMask{ ~0u }; }
+    static ViewportMask none() { return ViewportMask{ 0u }; }
 
     constexpr unsigned value() const { return mask_; }
     constexpr bool empty() const { return mask_ == 0; }

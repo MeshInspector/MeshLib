@@ -215,6 +215,10 @@ public:
     /// signal about xf changing, triggered in setXf and setWorldXf,  it is called for children too
     using XfChangedSignal = Signal<void() >;
     XfChangedSignal worldXfChangedSignal;
+
+    /// ...
+    MRMESH_API void iterate( const std::function<void ( Object* )>& f );
+
 protected:
     struct ProtectedStruct{ explicit ProtectedStruct() = default; };
 public:

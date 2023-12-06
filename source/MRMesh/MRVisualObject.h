@@ -255,6 +255,12 @@ public:
     /// return several info lines that can better describe the object in the UI
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
 
+    /// ...
+    [[nodiscard]] MRMESH_API bool getRespectVisualizationProperties() const { return respectVisualizationProperties_; }
+    /// ...
+    MRMESH_API void setRespectVisualizationProperties( bool respectVisualizationProperties )
+    { respectVisualizationProperties_ = respectVisualizationProperties; }
+
 protected:
     VisualObject( const VisualObject& obj ) = default;
 
@@ -295,6 +301,8 @@ protected:
 
     std::vector<PositionedText> labels_;
 
+    bool respectVisualizationProperties_{ false };
+
     MRMESH_API ViewportMask& getVisualizePropertyMask_( unsigned type );
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
@@ -311,6 +319,9 @@ private:
 
     /// this is private function to set default colors of this type (Visual Object) in constructor only
     void setDefaultColors_();
+
+    /// ...
+    void resetVisualizationProperties_();
 };
 
 /// \}

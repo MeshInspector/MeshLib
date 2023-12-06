@@ -976,6 +976,11 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
     const auto postProcess = [] ( const SceneLoad::SceneLoadResult& result )
     {
         assert( result.scene );
+        result.scene->iterate( [] ( Object* object )
+        {
+            if ( auto* objVis = dynamic_cast<VisualObject*>( object ) )
+                objVis->setRespectVisualizationProperties( true );
+        } );
         const auto childCount = result.scene->children().size();
         if ( childCount > 0 )
         {

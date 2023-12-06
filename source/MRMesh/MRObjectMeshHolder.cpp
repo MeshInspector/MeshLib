@@ -193,6 +193,10 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
         deserializeFromJson( root["SelectionEdgeBitSet"], selectedEdges_ );
         deserializeFromJson( root["MeshCreasesUndirEdgeBitSet"], creases_ );
     }
+
+    if ( root["RespectVisualizationProperties"].isBool() )
+        if ( !respectVisualizationProperties_ )
+            resetVisualizationProperties_();
 }
 
 VoidOrErrStr ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
@@ -650,6 +654,24 @@ void ObjectMeshHolder::setEdgesColorsForAllViewports( ViewportProperty<Color> va
 {
     edgesColor_ = std::move( val );
     needRedraw_ = true;
+}
+
+void ObjectMeshHolder::resetVisualizationProperties_()
+{
+    showTexture_          = ViewportMask::none();
+    showFaces_            = ViewportMask::all();
+    showEdges_            = ViewportMask::none();
+    showSelectedEdges_    = ViewportMask::all();
+    showSelectedFaces_    = ViewportMask::all();
+    showBordersHighlight_ = ViewportMask::none();
+    polygonOffset_        = ViewportMask::none();
+    flatShading_          = SceneSettings::get( SceneSettings::Type::MeshFlatShading ) ? ViewportMask::all() : ViewportMask::none();
+    shadingEnabled_       = ViewportMask::all();
+    onlyOddFragments_     = ViewportMask::none();
+
+    setDefaultColors_();
+
+    edgeWidth_ = 0.5f;
 }
 
 } //namespace MR

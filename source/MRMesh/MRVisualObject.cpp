@@ -11,6 +11,7 @@
 #include "MRParallelFor.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSuppressWarning.h"
+#include "MRSceneSettings.h"
 #include <filesystem>
 
 namespace MR
@@ -21,6 +22,7 @@ MR_ADD_CLASS_FACTORY( VisualObject )
 VisualObject::VisualObject()
 {
     setDefaultColors_();
+    respectVisualizationProperties_ = SceneSettings::get( SceneSettings::Type::RespectVisualizationProperties );
 }
 
 void VisualObject::setVisualizeProperty( bool value, unsigned type, ViewportMask viewportMask )
@@ -340,6 +342,8 @@ MR_SUPPRESS_WARNING_POP
 
     // append base type
     root["Type"].append( VisualObject::TypeName() );
+
+    root["RespectVisualizationProperties"] = respectVisualizationProperties_;
 }
 
 void VisualObject::deserializeFields_( const Json::Value& root )
@@ -371,6 +375,13 @@ MR_SUPPRESS_WARNING_POP
     // labels
     deserializeFromJson( root["Colors"]["Labels"], resVec );
     labelsColor_.set( Color( resVec ) );
+
+    if ( root["RespectVisualizationProperties"].isBool() )
+    {
+        respectVisualizationProperties_ = root["RespectVisualizationProperties"].asBool();
+        if ( !respectVisualizationProperties_ )
+            resetVisualizationProperties_();
+    }
 
     dirty_ = DIRTY_ALL;
 }
@@ -443,6 +454,25 @@ void VisualObject::setDefaultColors_()
 MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
     setLabelsColor( SceneColors::get( SceneColors::Labels ) );
 MR_SUPPRESS_WARNING_POP
+}
+
+void VisualObject::resetVisualizationProperties_()
+{
+    clipByPlane_   = ViewportMask::none();
+    showLabels_    = ViewportMask::none();
+    showName_      = ViewportMask::none();
+    cropLabels_    = ViewportMask::all();
+    pickable_      = ViewportMask::all();
+    invertNormals_ = ViewportMask::none();
+    depthTest_     = ViewportMask::all();
+
+    shininess_        = 35.0f;
+    specularStrength_ = 0.5f;
+    ambientStrength_  = 0.1f;
+
+    coloringType_ = ColoringType::SolidColor;
+    setDefaultColors_();
+    globalAlpha_.set( 255 );
 }
 
 } //namespace MR

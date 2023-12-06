@@ -16,9 +16,9 @@
 namespace MR
 {
 
-float regionWidth( const MeshPart& mp, const Vector3f& axis )
+float regionWidth( const MeshPart& mp, const Vector3f& axis, const std::vector<EdgeLoop>& allBoundaries, const std::vector<int>& thisBdIndices )
 {
-    auto boundaries = findRightBoundary( mp.mesh.topology, mp.region );
+    MR_TIMER
     auto metric = [&] ( EdgeId e0 )->float
     {
         bool incident = false;
@@ -39,8 +39,8 @@ float regionWidth( const MeshPart& mp, const Vector3f& axis )
 
 
     EdgePathsBuilder b( mp.mesh.topology, metric );
-    for ( const auto& bd : boundaries )
-        for ( auto e : bd )
+    for ( auto bdId : thisBdIndices )
+        for ( auto e : allBoundaries[bdId] )
             b.addStart( mp.mesh.topology.org( e ), 0.0f );
 
     float maxWidth = b.doneDistance();
@@ -56,8 +56,8 @@ float regionWidth( const MeshPart& mp, const Vector3f& axis )
     if ( maxWidth > 0.0f )
         return 2 * maxWidth;
 
-    for ( const auto& bd : boundaries )
-        for ( auto e : bd )
+    for ( auto bdId : thisBdIndices )
+        for ( auto e : allBoundaries[bdId] )
             for ( auto oe : orgRing( mp.mesh.topology, e ) )
             {
                 auto width = metric( oe );
@@ -67,7 +67,7 @@ float regionWidth( const MeshPart& mp, const Vector3f& axis )
     return maxWidth;
 }
 
-std::vector<FaceBitSet> findOverhangs( const Mesh& mesh, const FindOverhangsSettings& settings )
+Expected<std::vector<FaceBitSet>> findOverhangs( const Mesh& mesh, const FindOverhangsSettings& settings )
 {
     MR_TIMER
 
@@ -85,12 +85,18 @@ std::vector<FaceBitSet> findOverhangs( const Mesh& mesh, const FindOverhangsSett
         return cos < minCos;
     };
 
+    if ( !reportProgress( settings.progressCb, 0.0f ) )
+        return unexpectedOperationCanceled();
+
     // find faces that might create overhangs
     FaceBitSet faces( mesh.topology.lastValidFace() + 1, false );
     BitSetParallelFor( mesh.topology.getValidFaces(), [&] ( FaceId f )
     {
         faces[f] = isOverhanging( f );
     } );
+
+    if ( !reportProgress( settings.progressCb, 0.2f ) )
+        return unexpectedOperationCanceled();
 
     // smooth out the regions...
     if ( settings.hops > 0 )
@@ -106,8 +112,15 @@ std::vector<FaceBitSet> findOverhangs( const Mesh& mesh, const FindOverhangsSett
     const auto axisMeshBox = computeBoundingBox( mesh.points, nullptr, &axisXf );
 
     // filter out face regions with too small overhang distance
-    auto regions = MeshComponents::getAllComponents( { mesh, &faces } );
-    ParallelFor( regions, [&] ( size_t i )
+    auto regions = MeshComponents::getAllComponents( { mesh, &faces }, MeshComponents::PerVertex );
+
+    if ( !reportProgress( settings.progressCb, 0.3f ) )
+        return unexpectedOperationCanceled();
+
+    auto allBds = findRightBoundary( mesh.topology, faces );
+    if ( !reportProgress( settings.progressCb, 0.4f ) )
+        return unexpectedOperationCanceled();
+    auto keepGoing = ParallelFor( regions, [&] ( size_t i )
     {
         auto& region = regions[i];
         const auto axisBox = mesh.computeBoundingBox( &region, &axisXf );
@@ -119,15 +132,25 @@ std::vector<FaceBitSet> findOverhangs( const Mesh& mesh, const FindOverhangsSett
             region.clear();
             return;
         }
-        auto width = regionWidth( { mesh,&region }, settings.axis );
+        std::vector<int> thisBds;
+        for ( int bdI = 0; bdI < allBds.size(); ++bdI )
+            if ( region.test( mesh.topology.right( allBds[bdI].front() ) ) )
+                thisBds.push_back( bdI );
+        auto width = regionWidth( { mesh,&region }, settings.axis, allBds, thisBds );
         if ( width < settings.maxOverhangDistance )
             region.clear();
-    } );
+    }, subprogress( settings.progressCb, 0.4f, 0.95f ) );
     
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
+
     regions.erase( std::remove_if( regions.begin(), regions.end(), [] ( const auto& r )
     {
         return r.empty();
     } ), regions.end() );
+
+    if ( !reportProgress( settings.progressCb, 1.0f ) )
+        return unexpectedOperationCanceled();
 
     return regions;
 }

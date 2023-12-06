@@ -10,7 +10,10 @@ namespace MR
 void filterCreaseEdges( const Mesh& mesh, UndirectedEdgeBitSet& creaseEdges, float critLength, bool filterComponents, bool filterBranches )
 {
     if ( !filterBranches && !filterComponents )
+    {
+        assert( false );
         return;
+    }
 
     if ( filterComponents )
     {
@@ -40,6 +43,7 @@ void filterCreaseEdges( const Mesh& mesh, UndirectedEdgeBitSet& creaseEdges, flo
         return;
 
     auto incidentVertices = getIncidentVerts( mesh.topology, creaseEdges );
+    std::vector<UndirectedEdgeId> branch;
 
     for ( auto v : incidentVertices )
     {
@@ -57,7 +61,7 @@ void filterCreaseEdges( const Mesh& mesh, UndirectedEdgeBitSet& creaseEdges, flo
         VertId nextVert = connections[0].second;
         float branchLength = 0;
         UndirectedEdgeId ueCur = connections[0].first;
-        std::vector<UndirectedEdgeId> branch;
+        branch.clear();
 
         while ( true )
         {

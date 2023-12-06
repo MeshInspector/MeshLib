@@ -136,10 +136,12 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
     const auto extension = std::string( "*" ) + toLower( utf8string( file.extension().u8string() ) );
     if ( hasExtension( SceneFileFilters, extension ) )
     {
-        if ( extension == ".mru" )
+        if ( extension == "*.mru" )
             return serializeObjectTree( object, file, callback );
-        else if ( extension == ".glb" || extension == ".gltf" )
+        else if ( extension == "*.glb" || extension == "*.gltf" )
             return serializeObjectTreeToGltf( object, file, callback );
+        else
+            return unexpected( "unsupported file format" );
     }
     else if ( hasExtension( MeshSave::Filters, extension ) )
     {

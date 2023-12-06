@@ -16,8 +16,8 @@ public:
     {
         /// enable flat shading for all new mesh objects
         MeshFlatShading,
-        /// respect object's visualization properties
-        RespectVisualizationProperties,
+        /// replace object properties with default values from SceneSettings and SceneColors
+        UseDefaultSceneProperties,
         /// total count
         Count
     };
@@ -33,7 +33,7 @@ private:
 
     static SceneSettings& instance_();
 
-    std::array<bool, size_t( Type::Count ) > settings_{ false, false };
+    std::array<bool, size_t( Type::Count ) > settings_{ false, true };
     CNCMachineSettings cncMachineSettings_;
 };
 

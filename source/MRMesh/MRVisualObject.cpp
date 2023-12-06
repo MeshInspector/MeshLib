@@ -22,7 +22,7 @@ MR_ADD_CLASS_FACTORY( VisualObject )
 VisualObject::VisualObject()
 {
     setDefaultColors_();
-    respectVisualizationProperties_ = SceneSettings::get( SceneSettings::Type::RespectVisualizationProperties );
+    useDefaultSceneProperties_ = SceneSettings::get( SceneSettings::Type::UseDefaultSceneProperties );
 }
 
 void VisualObject::setVisualizeProperty( bool value, unsigned type, ViewportMask viewportMask )
@@ -343,7 +343,7 @@ MR_SUPPRESS_WARNING_POP
     // append base type
     root["Type"].append( VisualObject::TypeName() );
 
-    root["RespectVisualizationProperties"] = respectVisualizationProperties_;
+    root["UseDefaultSceneProperties"] = useDefaultSceneProperties_;
 }
 
 void VisualObject::deserializeFields_( const Json::Value& root )
@@ -376,9 +376,8 @@ MR_SUPPRESS_WARNING_POP
     deserializeFromJson( root["Colors"]["Labels"], resVec );
     labelsColor_.set( Color( resVec ) );
 
-    if ( root["RespectVisualizationProperties"].isBool() )
-        if ( !root["RespectVisualizationProperties"].asBool() )
-            resetVisualizationProperties_();
+    if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
+        resetSceneProperties_();
 
     dirty_ = DIRTY_ALL;
 }
@@ -453,23 +452,9 @@ MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
 MR_SUPPRESS_WARNING_POP
 }
 
-void VisualObject::resetVisualizationProperties_()
+void VisualObject::resetSceneProperties_()
 {
-    clipByPlane_   = ViewportMask::none();
-    showLabels_    = ViewportMask::none();
-    showName_      = ViewportMask::none();
-    cropLabels_    = ViewportMask::all();
-    pickable_      = ViewportMask::all();
-    invertNormals_ = ViewportMask::none();
-    depthTest_     = ViewportMask::all();
-
-    shininess_        = 35.0f;
-    specularStrength_ = 0.5f;
-    ambientStrength_  = 0.1f;
-
-    coloringType_ = ColoringType::SolidColor;
     setDefaultColors_();
-    globalAlpha_.set( 255 );
 }
 
 } //namespace MR

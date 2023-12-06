@@ -269,8 +269,8 @@ private:
     /// this is private function to set default colors of this type (ObjectMeshHolder) in constructor only
     void setDefaultColors_();
 
-    /// reset visualization-related properties
-    void resetVisualizationProperties_();
+    /// reset scene-related properties
+    void resetSceneProperties_();
 };
 
 } // namespace MR

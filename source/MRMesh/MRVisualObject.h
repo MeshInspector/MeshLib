@@ -255,11 +255,12 @@ public:
     /// return several info lines that can better describe the object in the UI
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
 
-    /// whether an object viewer/renderer should respect the object's visualization-related properties
-    [[nodiscard]] MRMESH_API bool getRespectVisualizationProperties() const { return respectVisualizationProperties_; }
-    /// set whether an object viewer/renderer should respect the object's visualization-related properties
-    MRMESH_API void setRespectVisualizationProperties( bool respectVisualizationProperties )
-    { respectVisualizationProperties_ = respectVisualizationProperties; }
+    /// whether the scene-related properties should get their values from SceneColors and SceneSettings instances
+    [[nodiscard]] MRMESH_API bool useDefaultSceneProperties() const { return useDefaultSceneProperties_; }
+    /// set whether the scene-related properties should get their values from SceneColors and SceneSettings instances
+    /// set to false if you want to override the scene-related properties
+    MRMESH_API void setUseDefaultSceneProperties( bool useDefaultSceneProperties )
+    { useDefaultSceneProperties_ = useDefaultSceneProperties; }
 
 protected:
     VisualObject( const VisualObject& obj ) = default;
@@ -301,7 +302,7 @@ protected:
 
     std::vector<PositionedText> labels_;
 
-    bool respectVisualizationProperties_{ false };
+    bool useDefaultSceneProperties_{ false };
 
     MRMESH_API ViewportMask& getVisualizePropertyMask_( unsigned type );
 
@@ -320,8 +321,8 @@ private:
     /// this is private function to set default colors of this type (Visual Object) in constructor only
     void setDefaultColors_();
 
-    /// reset visualization-related properties
-    void resetVisualizationProperties_();
+    /// reset scene-related properties
+    void resetSceneProperties_();
 };
 
 /// \}

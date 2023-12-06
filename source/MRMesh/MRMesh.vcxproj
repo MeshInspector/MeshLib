@@ -173,6 +173,7 @@
     <ClInclude Include="MRSaveSettings.h" />
     <ClInclude Include="MRSceneLoad.h" />
     <ClInclude Include="MRSolarRadiation.h" />
+    <ClInclude Include="MRSphere.h" />
     <ClInclude Include="MRTiffIO.h" />
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />

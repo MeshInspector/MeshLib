@@ -1113,6 +1113,9 @@
     <ClInclude Include="MRUVSphere.h">
       <Filter>Source Files\Primitives</Filter>
     </ClInclude>
+    <ClInclude Include="MRSphere.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

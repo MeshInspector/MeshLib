@@ -21,8 +21,8 @@ MR_ADD_CLASS_FACTORY( VisualObject )
 
 VisualObject::VisualObject()
 {
-    setDefaultColors_();
     useDefaultSceneProperties_ = SceneSettings::get( SceneSettings::Type::UseDefaultSceneProperties );
+    resetSceneProperties_();
 }
 
 void VisualObject::setVisualizeProperty( bool value, unsigned type, ViewportMask viewportMask )

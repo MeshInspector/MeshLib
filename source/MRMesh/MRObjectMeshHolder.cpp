@@ -266,8 +266,7 @@ void ObjectMeshHolder::setDefaultColors_()
 
 ObjectMeshHolder::ObjectMeshHolder()
 {
-    setDefaultColors_();
-    setFlatShading( SceneSettings::get( SceneSettings::Type::MeshFlatShading ) );
+    resetSceneProperties_();
 }
 
 void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc )

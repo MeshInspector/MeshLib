@@ -174,10 +174,39 @@ void TouchpadCocoaHandler::onScrollEvent( NSView* view, SEL cmd, NSEvent* event 
     }
     else
     {
-        if ( const auto state = convert( [event phase] ) )
-            handler->swipe( deltaX, deltaY, false, *state );
-        else if ( const auto momentumPhase = convert( [event momentumPhase] ) )
-            handler->swipe( deltaX, deltaY, true, *momentumPhase );
+        std::optional<GestureState> state = std::nullopt;
+        bool kinetic = false;
+        if ( ( state = convert( [event phase] ) ) )
+            kinetic = false;
+        else if ( ( state = convert( [event momentumPhase] ) ) )
+            kinetic = true;
+        else
+            return;
+
+        // merge consecutive swipe gestures
+        static std::atomic_bool gDelayedSwipeGestureEnd = false;
+        if ( *state == GestureState::Begin && gDelayedSwipeGestureEnd )
+        {
+            gDelayedSwipeGestureEnd.store( false );
+        }
+        else if ( *state == GestureState::End )
+        {
+            gDelayedSwipeGestureEnd.store( true );
+            constexpr auto delayMs = 50.;
+            auto popTime = dispatch_time( DISPATCH_TIME_NOW, (int64_t)( delayMs * NSEC_PER_MSEC ) );
+            dispatch_after( popTime, dispatch_get_main_queue(), ^(void)
+            {
+                if ( gDelayedSwipeGestureEnd.load() )
+                {
+                    gDelayedSwipeGestureEnd.store( false );
+                    handler->swipe( deltaX, deltaY, false, GestureState::End );
+                }
+            } );
+        }
+        else
+        {
+            handler->swipe( deltaX, deltaY, kinetic, *state );
+        }
     }
 }
 

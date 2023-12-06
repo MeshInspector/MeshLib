@@ -9,9 +9,9 @@
 #include "MRStringConvert.h"
 #include "MRExpected.h"
 #include "MRParallelFor.h"
+#include "MRSceneSettings.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSuppressWarning.h"
-#include "MRSceneSettings.h"
 #include <filesystem>
 
 namespace MR

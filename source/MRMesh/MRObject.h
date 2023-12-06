@@ -216,7 +216,7 @@ public:
     using XfChangedSignal = Signal<void() >;
     XfChangedSignal worldXfChangedSignal;
 
-    /// ...
+    /// call the functor for the object and all its descendants
     MRMESH_API void iterate( const std::function<void ( Object* )>& f );
 
 protected:

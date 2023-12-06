@@ -255,9 +255,9 @@ public:
     /// return several info lines that can better describe the object in the UI
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
 
-    /// ...
+    /// whether an object viewer/renderer should respect the object's visualization-related properties
     [[nodiscard]] MRMESH_API bool getRespectVisualizationProperties() const { return respectVisualizationProperties_; }
-    /// ...
+    /// set whether an object viewer/renderer should respect the object's visualization-related properties
     MRMESH_API void setRespectVisualizationProperties( bool respectVisualizationProperties )
     { respectVisualizationProperties_ = respectVisualizationProperties; }
 
@@ -320,7 +320,7 @@ private:
     /// this is private function to set default colors of this type (Visual Object) in constructor only
     void setDefaultColors_();
 
-    /// ...
+    /// reset visualization-related properties
     void resetVisualizationProperties_();
 };
 

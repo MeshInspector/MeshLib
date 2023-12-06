@@ -1,6 +1,7 @@
 #ifdef __APPLE__
 
 #include "MRTouchpadCocoaHandler.h"
+#include "MRViewer.h"
 
 #include <GLFW/glfw3.h>
 #define GLFW_EXPOSE_NATIVE_COCOA
@@ -200,6 +201,8 @@ void TouchpadCocoaHandler::onScrollEvent( NSView* view, SEL cmd, NSEvent* event 
                 {
                     gDelayedSwipeGestureEnd.store( false );
                     handler->swipe( deltaX, deltaY, false, GestureState::End );
+                    // manually resume the event loop
+                    getViewerInstance().postEmptyEvent();
                 }
             } );
         }

@@ -377,11 +377,8 @@ MR_SUPPRESS_WARNING_POP
     labelsColor_.set( Color( resVec ) );
 
     if ( root["RespectVisualizationProperties"].isBool() )
-    {
-        respectVisualizationProperties_ = root["RespectVisualizationProperties"].asBool();
-        if ( !respectVisualizationProperties_ )
+        if ( !root["RespectVisualizationProperties"].asBool() )
             resetVisualizationProperties_();
-    }
 
     dirty_ = DIRTY_ALL;
 }

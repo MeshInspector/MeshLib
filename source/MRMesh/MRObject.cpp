@@ -594,14 +594,6 @@ size_t Object::heapBytes() const
         + name_.capacity();
 }
 
-void Object::iterate( const std::function<void ( Object* )>& f )
-{
-    f( this );
-    for ( const auto& child : children_ )
-        if ( child )
-            child->iterate( f );
-}
-
 TEST( MRMesh, DataModelRemoveChild )
 {
     auto child2 = std::make_shared<Object>();

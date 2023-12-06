@@ -195,7 +195,7 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     }
 
     if ( root["RespectVisualizationProperties"].isBool() )
-        if ( !respectVisualizationProperties_ )
+        if ( !root["RespectVisualizationProperties"].asBool() )
             resetVisualizationProperties_();
 }
 

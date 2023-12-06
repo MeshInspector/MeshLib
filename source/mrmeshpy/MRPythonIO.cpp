@@ -339,7 +339,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadSceneObject, [] ( pybind11::module_& m )
     m.def( "loadSceneObject",
            MR::decorateExpected( pythonLoadSceneObjectFromAnyFormat ),
            pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback(),
-           "detects the format from file extension and loads scene object from it" );
+           "Detects the format from file extension and loads scene object from it." );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveSceneObject, [] ( pybind11::module_& m )
@@ -347,5 +347,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveSceneObject, [] ( pybind11::module_& m )
     m.def( "saveSceneObject",
            MR::decorateExpected( pythonSaveSceneObjectToAnySupportedFormat ),
            pybind11::arg( "object" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback(),
-           "detects the format from file extension and saves scene object to it" );
+           "Detects the format from file extension and saves scene object to it. "
+           "If the object doesn't contain any entities of the corresponding type, an empty file will be created." );
 } )

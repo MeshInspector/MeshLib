@@ -186,9 +186,9 @@ void TouchpadCocoaHandler::onScrollEvent( NSView* view, SEL cmd, NSEvent* event 
 
         // merge consecutive swipe gestures
         static std::atomic_bool gDelayedSwipeGestureEnd = false;
-        if ( *state == GestureState::Begin && gDelayedSwipeGestureEnd )
+        if ( *state == GestureState::Begin && gDelayedSwipeGestureEnd.exchange( false ) )
         {
-            gDelayedSwipeGestureEnd.store( false );
+            return;
         }
         else if ( *state == GestureState::End )
         {
@@ -197,9 +197,8 @@ void TouchpadCocoaHandler::onScrollEvent( NSView* view, SEL cmd, NSEvent* event 
             auto popTime = dispatch_time( DISPATCH_TIME_NOW, (int64_t)( delayMs * NSEC_PER_MSEC ) );
             dispatch_after( popTime, dispatch_get_main_queue(), ^(void)
             {
-                if ( gDelayedSwipeGestureEnd.load() )
+                if ( gDelayedSwipeGestureEnd.exchange( false ) )
                 {
-                    gDelayedSwipeGestureEnd.store( false );
                     handler->swipe( deltaX, deltaY, false, GestureState::End );
                     // manually resume the event loop
                     getViewerInstance().postEmptyEvent();

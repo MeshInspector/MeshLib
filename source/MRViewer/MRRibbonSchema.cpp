@@ -68,15 +68,15 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
             auto posC = findSubstringCaseInsensitive( caption, word );
             auto posT = findSubstringCaseInsensitive( tooltip, word );
             if ( posC == std::string::npos )
-                captionRes += 1.0f;
+                captionRes += 10.0f;
             else
                 captionRes += 0.5f * ( float( posC ) / caption.size() );
             if ( posT == std::string::npos )
-                tooltipRes += 1.0f;
+                tooltipRes += 10.0f;
             else
                 tooltipRes += 0.5f * ( float( posT ) / tooltip.size() );
         }
-        resultListForSort.push_back( { captionRes + 0.5f * captionRes, SearchResult{t,&item} } );
+        resultListForSort.push_back( { captionRes + 0.5f * tooltipRes, SearchResult{t,&item} } );
     };
     const auto& schema = RibbonSchemaHolder::schema();
     auto lookUpMenuItemList = [&] ( const MenuItemsList& list, int t )

@@ -12,8 +12,8 @@
 #include "MRMesh/MRExpandShrink.h"
 #include "MRMesh/MREnumNeighbours.h"
 #include "MRMesh/MRTimer.h"
-#include <MRMesh/MRMeshRelax.h>
-#include <MRMesh/MRBitSetParallelFor.h>
+#include "MRMesh/MRMeshRelax.h"
+#include "MRMesh/MRBitSetParallelFor.h"
 
 
 namespace MR
@@ -97,8 +97,6 @@ bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*
         if ( !pick.face.valid() )
             return false;
 
-        appendHistoryAction_ = true;
-        storedDown_ = getViewerInstance().mouseController.getMousePos();
         processPick_( pick );
     }
     else
@@ -119,11 +117,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         return false;
 
     mousePressed_ = false;
-    if ( settings_.workMode == WorkMode::Laplacian )
-    {
-
-    }
-    else
+    if ( settings_.workMode != WorkMode::Laplacian )
     {
         size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
         pointsShift_ = VertScalars( numV, 0.f );
@@ -282,11 +276,8 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     MR_TIMER;
 
     const auto& viewerRef = getViewerInstance();
-    std::vector<ObjAndPick> movedPosPick;
-    auto objMeshPtr = oldMesh_ ? oldMesh_ : obj_;
-
     std::vector<Vector2f> viewportPoints;
-    if ( ( mousePos - mousePos_ ).lengthSq() < 9.f )
+    if ( !mousePressed_ || ( mousePos - mousePos_ ).lengthSq() < 9.f )
         viewportPoints.push_back( Vector2f( viewerRef.screenToViewport( Vector3f( mousePos ), viewerRef.getHoveredViewportId() ) ) );
     else
     {
@@ -299,13 +290,16 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
         for ( int i = 0; i < count; ++i )
             viewportPoints[i] = oldMousePos + step * float( i );
     }
+
+    auto objMeshPtr = oldMesh_ ? oldMesh_ : obj_;
+    // to pick some object, it must have a parent object
     std::shared_ptr<Object> parent;
     if ( oldMesh_ )
     {
         parent = std::make_shared<Object>();
         parent->addChild( oldMesh_ );
     }
-    movedPosPick = getViewerInstance().viewport().multiPickObjects( { objMeshPtr.get() }, viewportPoints );
+    std::vector<ObjAndPick> movedPosPick = getViewerInstance().viewport().multiPickObjects( { objMeshPtr.get() }, viewportPoints );
     if ( oldMesh_ )
     {
         oldMesh_->detachFromParent();
@@ -314,54 +308,77 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     mousePos_ = mousePos;
 
     const auto& mesh = *objMeshPtr->mesh();
-    std::vector<MeshTriPoint> triPoints;
-    VertBitSet newVerts( singleEditingRegion_.size() );
-    triPoints.reserve( movedPosPick.size() );
-    for ( int i = 0; i < movedPosPick.size(); ++i )
-    {
-        if ( movedPosPick[i].first == objMeshPtr )
-        {
-            const auto& pick = movedPosPick[i].second;
-            VertId v[3];
-            mesh.topology.getTriVerts( pick.face, v );
-            for ( int j = 0; j < 3; ++j )
-                newVerts.set( v[j] );
-            triPoints.push_back( mesh.toTriPoint( pick.face, pick.point ) );
-        }
-    }
-
     updateUVmap_( false );
     ObjAndPick curentPosPick = movedPosPick.empty() ? ObjAndPick() : movedPosPick.back();
     visualizationRegion_.reset();
     if ( curentPosPick.first == objMeshPtr )
     {
-        visualizationDistanceMap_ = computeSpaceDistances( mesh, { curentPosPick.second.face, curentPosPick.second.point }, settings_.radius * 1.5f );
-        VertId v[3];
-        mesh.topology.getTriVerts( curentPosPick.second.face, v );
-        for ( int j = 0; j < 3; ++j )
-            visualizationRegion_.set( v[j] );
-        dilateRegion( mesh, visualizationRegion_, settings_.radius * 1.5f );
-        int pointsCount = 0;
-        for ( auto vId : visualizationRegion_ )
+        if ( settings_.workMode == WorkMode::Laplacian )
         {
-            if ( visualizationDistanceMap_[vId] <= settings_.radius )
-                ++pointsCount;
-            if ( pointsCount == 3 )
-                break;
-        }
-        badRegion_ = pointsCount < 3;
-        if ( !badRegion_ )
+            const PointOnFace pOnFace( curentPosPick.second.face, curentPosPick.second.point );
+            const VertId vert = mesh.getClosestVertex( pOnFace );
+            const PointOnFace vertPOF( curentPosPick.second.face, mesh.points[vert] );
+            visualizationDistanceMap_ = computeSpaceDistances( mesh, vertPOF, settings_.radius * 1.5f );
+            visualizationRegion_ = findNeighborVerts( mesh, vertPOF, settings_.radius * 1.5f );
             updateUVmap_( true );
+        }
+        else
+        {
+            PointOnFace pOnFace( curentPosPick.second.face, curentPosPick.second.point );
+            visualizationDistanceMap_ = computeSpaceDistances( mesh, pOnFace, settings_.radius * 1.5f );
+            visualizationRegion_ = findNeighborVerts( mesh, pOnFace, settings_.radius * 1.5f );
+            int pointsCount = 0;
+            for ( auto vId : visualizationRegion_ )
+            {
+                if ( visualizationDistanceMap_[vId] <= settings_.radius )
+                    ++pointsCount;
+                if ( pointsCount == 3 )
+                    break;
+            }
+            badRegion_ = pointsCount < 3;
+            if ( !badRegion_ )
+                updateUVmap_( true );
+        }
     }
     obj_->setAncillaryUVCoords( uvs_ );
 
-    singleEditingRegion_ = newVerts;
-    dilateRegion( mesh, singleEditingRegion_, settings_.radius * 1.5f );
-    if ( triPoints.size() == 1 )
-        editingDistanceMap_ = computeSpaceDistances( mesh, { mesh.topology.left( triPoints[0].e ), mesh.triPoint( triPoints[0] ) }, settings_.radius * 1.5f );
-    else
-        editingDistanceMap_ = computeSurfaceDistances( mesh, triPoints, settings_.radius * 1.5f, &singleEditingRegion_ );
 
+    if ( !mousePressed_ )
+    {
+        editingDistanceMap_ = visualizationDistanceMap_;
+        singleEditingRegion_ = visualizationRegion_;
+    }
+    else
+    {
+        std::vector<MeshTriPoint> triPoints;
+        VertBitSet newVerts( singleEditingRegion_.size() );
+        triPoints.reserve( movedPosPick.size() );
+        for ( int i = 0; i < movedPosPick.size(); ++i )
+        {
+            if ( movedPosPick[i].first == objMeshPtr )
+            {
+                const auto& pick = movedPosPick[i].second;
+                VertId v[3];
+                mesh.topology.getTriVerts( pick.face, v );
+                for ( int j = 0; j < 3; ++j )
+                    newVerts.set( v[j] );
+                triPoints.push_back( mesh.toTriPoint( pick.face, pick.point ) );
+            }
+        }
+
+        if ( triPoints.size() == 1 )
+        {
+            editingDistanceMap_ = computeSpaceDistances( mesh, { mesh.topology.left( triPoints[0].e ), mesh.triPoint( triPoints[0] ) }, settings_.radius * 1.5f );
+            singleEditingRegion_ = findNeighborVerts( mesh, { mesh.topology.left( triPoints[0].e ), mesh.triPoint( triPoints[0] ) }, settings_.radius * 1.5f );
+        }
+        else
+        {
+            // bad logig. need rework to SpaceDistance
+            singleEditingRegion_ = newVerts;
+            dilateRegion( mesh, singleEditingRegion_, settings_.radius * 1.5f );
+            editingDistanceMap_ = computeSurfaceDistances( mesh, triPoints, settings_.radius * 1.5f, &singleEditingRegion_ );
+        }
+    }
     for ( auto v : singleEditingRegion_ )
         singleEditingRegion_.set( v, editingDistanceMap_[v] <= settings_.radius );
 }
@@ -379,6 +396,8 @@ void SurfaceManipulationWidget::abortEdit_()
 
 void SurfaceManipulationWidget::processPick_( const PointOnFace& pick )
 {
+    appendHistoryAction_ = true;
+    storedDown_ = getViewerInstance().mouseController.getMousePos();
     const auto& mesh = *obj_->mesh();
     touchVertId = mesh.getClosestVertex( pick );
     touchVertIniPos = mesh.points[touchVertId];

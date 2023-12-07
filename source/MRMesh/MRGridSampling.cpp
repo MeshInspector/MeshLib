@@ -6,7 +6,7 @@
 #include "MRRegionBoundary.h"
 #include "MRVolumeIndexer.h"
 #include "MRTimer.h"
-#include "MRUVSphere.h"
+#include "MRMakeSphereMesh.h"
 #include "MRGTest.h"
 
 namespace MR

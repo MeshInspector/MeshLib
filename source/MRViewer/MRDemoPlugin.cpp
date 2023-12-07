@@ -1,6 +1,6 @@
 #include "MRDemoPlugin.h"
 #include "MRMenu.h"
-#include "MRMesh/MRUVSphere.h"
+#include "MRMesh/MRMakeSphereMesh.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRMesh.h"
 #include "MRRibbonButtonDrawer.h"

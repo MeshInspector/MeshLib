@@ -366,7 +366,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Overhangs, [] ( pybind11::module_& m )
         def_readwrite( "hops", &MR::FindOverhangsSettings::hops, "number of hops used to smooth out the overhang regions (0 - disable smoothing)" ).
         def_readwrite( "xf", &MR::FindOverhangsSettings::xf, "mesh transform" );
 
-    m.def( "findOverhangs", &MR::findOverhangs,
+    m.def( "findOverhangs", MR::decorateExpected( &MR::findOverhangs ),
         pybind11::arg( "mesh" ), pybind11::arg( "settings" ),
         "Find face regions that might create overhangs\n"
         "\tmesh - source mesh\n"

@@ -404,6 +404,9 @@ bool ProgressBar::tryRunWithSehHandler_( const std::function<bool()>& task )
 #ifndef _WIN32
     return task();
 #else
+#ifndef NDEBUG
+    return task();
+#else
     __try
     {
         return tryRun_( task );
@@ -416,6 +419,7 @@ bool ProgressBar::tryRunWithSehHandler_( const std::function<bool()>& task )
         };
         return true;
     }
+#endif
 #endif
 }
 

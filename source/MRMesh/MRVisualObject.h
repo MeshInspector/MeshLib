@@ -256,11 +256,12 @@ public:
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
 
     /// whether the scene-related properties should get their values from SceneColors and SceneSettings instances
-    [[nodiscard]] MRMESH_API bool useDefaultSceneProperties() const { return useDefaultSceneProperties_; }
+    /// rather than from the input data on deserialization
+    [[nodiscard]] MRMESH_API bool useDefaultScenePropertiesOnDeserialization() const { return useDefaultScenePropertiesOnDeserialization_; }
     /// set whether the scene-related properties should get their values from SceneColors and SceneSettings instances
-    /// set to false if you want to override the scene-related properties
-    MRMESH_API void setUseDefaultSceneProperties( bool useDefaultSceneProperties )
-    { useDefaultSceneProperties_ = useDefaultSceneProperties; }
+    /// rather than from the input data on deserialization
+    MRMESH_API void setUseDefaultScenePropertiesOnDeserialization( bool useDefaultScenePropertiesOnDeserialization )
+    { useDefaultScenePropertiesOnDeserialization_ = useDefaultScenePropertiesOnDeserialization; }
 
 protected:
     VisualObject( const VisualObject& obj ) = default;
@@ -302,7 +303,7 @@ protected:
 
     std::vector<PositionedText> labels_;
 
-    bool useDefaultSceneProperties_{ false };
+    bool useDefaultScenePropertiesOnDeserialization_{ false };
 
     MRMESH_API ViewportMask& getVisualizePropertyMask_( unsigned type );
 

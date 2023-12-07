@@ -21,7 +21,7 @@ MR_ADD_CLASS_FACTORY( VisualObject )
 
 VisualObject::VisualObject()
 {
-    useDefaultSceneProperties_ = SceneSettings::get( SceneSettings::Type::UseDefaultSceneProperties );
+    useDefaultScenePropertiesOnDeserialization_ = SceneSettings::get( SceneSettings::Type::UseDefaultScenePropertiesOnDeserialization );
     resetSceneProperties_();
 }
 
@@ -343,7 +343,7 @@ MR_SUPPRESS_WARNING_POP
     // append base type
     root["Type"].append( VisualObject::TypeName() );
 
-    root["UseDefaultSceneProperties"] = useDefaultSceneProperties_;
+    root["UseDefaultSceneProperties"] = useDefaultScenePropertiesOnDeserialization_;
 }
 
 void VisualObject::deserializeFields_( const Json::Value& root )

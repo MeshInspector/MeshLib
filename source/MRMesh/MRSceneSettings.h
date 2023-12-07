@@ -16,8 +16,8 @@ public:
     {
         /// enable flat shading for all new mesh objects
         MeshFlatShading,
-        /// replace object properties with default values from SceneSettings and SceneColors
-        UseDefaultSceneProperties,
+        /// on deserialization replace object properties with default values from SceneSettings and SceneColors
+        UseDefaultScenePropertiesOnDeserialization,
         /// total count
         Count
     };

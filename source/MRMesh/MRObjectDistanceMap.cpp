@@ -123,7 +123,7 @@ size_t ObjectDistanceMap::heapBytes() const
 
 ObjectDistanceMap::ObjectDistanceMap()
 {
-    setDefaultColors_();
+    resetSceneProperties_();
 }
 
 void ObjectDistanceMap::serializeFields_( Json::Value& root ) const
@@ -146,6 +146,9 @@ void ObjectDistanceMap::deserializeFields_( const Json::Value& root )
     deserializeFromJson( root["PixelYVec"], toWorldParams_.pixelYVec );
     deserializeFromJson( root["DepthVec"], toWorldParams_.direction );
     deserializeFromJson( root["OriginWorld"], toWorldParams_.orgPoint );
+
+    if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
+        resetSceneProperties_();
 
     construct_();
 }
@@ -185,6 +188,11 @@ void ObjectDistanceMap::construct_()
 
     mesh_ = std::make_shared<Mesh>( distanceMapToMesh( *dmap_, toWorldParams_ ) );
     setDirtyFlags( DIRTY_ALL );
+}
+
+void ObjectDistanceMap::resetSceneProperties_()
+{
+    setDefaultColors_();
 }
 
 } // namespace MR

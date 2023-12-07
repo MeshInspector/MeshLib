@@ -205,6 +205,9 @@ private:
     /// this is private function to set default colors of this type (ObjectVoxels) in constructor only
     void setDefaultColors_();
 
+    /// reset scene-related properties
+    void resetSceneProperties_();
+
 protected:
     VoxelBitSet selectedVoxels_;
     VoxelBitSet volumeRenderActiveVoxels_;

@@ -110,6 +110,9 @@ protected:
 private:
     /// this is private function to set default colors of this type (ObjectLinesHolder) in constructor only
     void setDefaultColors_();
+
+    /// reset scene-related properties
+    void resetSceneProperties_();
 };
 
 

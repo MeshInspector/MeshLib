@@ -183,6 +183,9 @@ private:
     /// this is private function to set default colors of this type (ObjectLabel) in constructor only
     void setDefaultColors_();
 
+    /// reset scene-related properties
+    void resetSceneProperties_();
+
     void buildMesh_() const;
 
     void updatePivotShift_() const;

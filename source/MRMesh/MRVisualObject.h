@@ -255,6 +255,14 @@ public:
     /// return several info lines that can better describe the object in the UI
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
 
+    /// whether the scene-related properties should get their values from SceneColors and SceneSettings instances
+    /// rather than from the input data on deserialization
+    [[nodiscard]] MRMESH_API bool useDefaultScenePropertiesOnDeserialization() const { return useDefaultScenePropertiesOnDeserialization_; }
+    /// set whether the scene-related properties should get their values from SceneColors and SceneSettings instances
+    /// rather than from the input data on deserialization
+    MRMESH_API void setUseDefaultScenePropertiesOnDeserialization( bool useDefaultScenePropertiesOnDeserialization )
+    { useDefaultScenePropertiesOnDeserialization_ = useDefaultScenePropertiesOnDeserialization; }
+
 protected:
     VisualObject( const VisualObject& obj ) = default;
 
@@ -295,6 +303,8 @@ protected:
 
     std::vector<PositionedText> labels_;
 
+    bool useDefaultScenePropertiesOnDeserialization_{ false };
+
     MRMESH_API ViewportMask& getVisualizePropertyMask_( unsigned type );
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
@@ -311,6 +321,9 @@ private:
 
     /// this is private function to set default colors of this type (Visual Object) in constructor only
     void setDefaultColors_();
+
+    /// set default scene-related properties
+    void setDefaultSceneProperties_();
 };
 
 /// \}

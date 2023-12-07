@@ -513,9 +513,14 @@ void ObjectVoxels::setDefaultColors_()
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectVoxels ), false );
 }
 
-ObjectVoxels::ObjectVoxels()
+void ObjectVoxels::setDefaultSceneProperties_()
 {
     setDefaultColors_();
+}
+
+ObjectVoxels::ObjectVoxels()
+{
+    setDefaultSceneProperties_();
 }
 
 void ObjectVoxels::applyScale( float scaleFactor )
@@ -581,6 +586,9 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
         setActiveBounds( activeBox_ );
     else 
         setIsoValue( isoValue_ );
+
+    if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
+        setDefaultSceneProperties_();
 }
 
 #ifndef MRMESH_NO_DICOM

@@ -5,6 +5,7 @@
 #include "MRLineSegm.h"
 #include "MRVector2.h"
 #include "MRBox.h"
+#include "MRSphere.h"
 #include <optional>
 
 namespace MR
@@ -259,6 +260,27 @@ LineSegm3<T> closestPoints( const Line3<T>& line, const Box3<T> & box )
             }
         }
     }
+    return res;
+}
+
+/// finds intersection points between a line and a sphere;
+/// if found then returns parameters on the line
+template<typename V>
+auto intersection( const Line<V>& line, const Sphere<V>& sphere )
+{
+    using T = typename V::ValueType;
+    std::optional<std::pair<T,T>> res;
+    const auto p = line.p - sphere.center;
+    const auto d = line.d;
+    const auto dd = dot( d, d );
+    const auto pd = dot( p, d );
+    const auto des4 = sqr( pd ) - dd * ( dot( p, p ) - sqr( sphere.radius ) );
+    if ( des4 < 0 )
+        return res;
+    const auto sqrtDes4 = std::sqrt( des4 );
+    res.emplace();
+    res->first = ( -sqrtDes4 - pd ) / dd;
+    res->second = ( sqrtDes4 - pd ) / dd;
     return res;
 }
 

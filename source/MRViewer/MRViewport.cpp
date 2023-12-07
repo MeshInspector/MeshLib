@@ -5,7 +5,7 @@
 #include "MRGLStaticHolder.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRArrow.h>
-#include <MRMesh/MRUVSphere.h>
+#include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRToFromEigen.h>
 #include <MRMesh/MRClosestPointInTriangle.h>
 #include <MRMesh/MRTimer.h>

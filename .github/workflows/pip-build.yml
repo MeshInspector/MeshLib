@@ -301,11 +301,9 @@ jobs:
           - platform: "x86"
             plat-name: macosx_12_0_x86_64
             instance: macos-12
-            brew-bin-loc: "/usr/local/bin"
           - platform: "arm64"
             plat-name: macosx_12_0_arm64
             instance: macos-arm-build
-            brew-bin-loc: "/opt/homebrew/bin"
           - py-version: "3.8"
             py-tag: "cp38"
             py-cmd: "python3.8"
@@ -325,10 +323,18 @@ jobs:
           submodules: recursive
           ref: ${{needs.setup.outputs.version_tag}}
 
-      - name: Fix links
+      - name: Fix links x86
+        if: ${{ matrix.platform == 'x86' }}
         run: |
-          find ${{ matrix.brew-bin-loc }} -lname '*/Library/Frameworks/Python.framework/*' -delete
-          rm -rf /Library/Frameworks/Python.framework/
+          find /usr/local/bin -lname '*/Library/Frameworks/Python.framework/*' -delete
+          sudo rm -rf /Library/Frameworks/Python.framework/
+          brew install --force python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew link --overwrite python@${{ matrix.py-version }}
+
+      - name: Fix links ARM
+        if: ${{ matrix.platform == 'arm64' }}
+        run: |
+          find /opt/homebrew/bin -lname '*/Library/Frameworks/Python.framework/*' -delete
+          sudo rm -rf /Library/Frameworks/Python.framework/
           brew install --force python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew link --overwrite python@${{ matrix.py-version }}
 
       - name: Python setup

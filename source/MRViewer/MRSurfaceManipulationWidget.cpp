@@ -265,9 +265,10 @@ void SurfaceManipulationWidget::changeSurface_()
 
 void SurfaceManipulationWidget::updateUVmap_( bool set )
 {
+    const float normalize = 0.5f / settings_.radius;
     BitSetParallelFor( visualizationRegion_, [&] ( VertId v )
     {
-        uvs_[v] = set ? UVCoord{ 0, std::clamp( visualizationDistanceMap_[v] / settings_.radius / 2.f, 0.f, 1.f ) } : UVCoord{ 0, 1 };
+        uvs_[v] = set ? UVCoord{ 0, visualizationDistanceMap_[v] * normalize } : UVCoord{ 0, 1 };
     } );
 }
 
@@ -318,14 +319,14 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
             const PointOnFace pOnFace( curentPosPick.second.face, curentPosPick.second.point );
             const VertId vert = mesh.getClosestVertex( pOnFace );
             const PointOnFace vertPOF( curentPosPick.second.face, mesh.points[vert] );
-            visualizationDistanceMap_ = computeSpaceDistances( mesh, vertPOF, settings_.radius * 1.5f );
+            visualizationDistanceMap_ = computeSpaceDistances( mesh, vertPOF, settings_.radius );
             visualizationRegion_ = findNeighborVerts( mesh, vertPOF, settings_.radius * 1.5f );
             updateUVmap_( true );
         }
         else
         {
             PointOnFace pOnFace( curentPosPick.second.face, curentPosPick.second.point );
-            visualizationDistanceMap_ = computeSpaceDistances( mesh, pOnFace, settings_.radius * 1.5f );
+            visualizationDistanceMap_ = computeSpaceDistances( mesh, pOnFace, settings_.radius );
             visualizationRegion_ = findNeighborVerts( mesh, pOnFace, settings_.radius * 1.5f );
             int pointsCount = 0;
             for ( auto vId : visualizationRegion_ )
@@ -368,7 +369,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
 
         if ( triPoints.size() == 1 )
         {
-            editingDistanceMap_ = computeSpaceDistances( mesh, { mesh.topology.left( triPoints[0].e ), mesh.triPoint( triPoints[0] ) }, settings_.radius * 1.5f );
+            editingDistanceMap_ = computeSpaceDistances( mesh, { mesh.topology.left( triPoints[0].e ), mesh.triPoint( triPoints[0] ) }, settings_.radius );
             singleEditingRegion_ = findNeighborVerts( mesh, { mesh.topology.left( triPoints[0].e ), mesh.triPoint( triPoints[0] ) }, settings_.radius * 1.5f );
         }
         else

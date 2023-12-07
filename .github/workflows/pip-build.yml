@@ -328,7 +328,7 @@ jobs:
       - name: Fix links
         run: |
           find ${{ matrix.brew-bin-loc }} -lname '*/Library/Frameworks/Python.framework/*' -delete
-          sudo rm -rf /Library/Frameworks/Python.framework/
+          rm -rf /Library/Frameworks/Python.framework/
           brew install --force python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew link --overwrite python@${{ matrix.py-version }}
 
       - name: Python setup

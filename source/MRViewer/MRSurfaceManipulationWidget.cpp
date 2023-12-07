@@ -320,14 +320,16 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
             const VertId vert = mesh.getClosestVertex( pOnFace );
             const PointOnFace vertPOF( curentPosPick.second.face, mesh.points[vert] );
             visualizationDistanceMap_ = computeSpaceDistances( mesh, vertPOF, settings_.radius );
-            visualizationRegion_ = findNeighborVerts( mesh, vertPOF, settings_.radius * 1.5f );
+            visualizationRegion_ = findNeighborVerts( mesh, vertPOF, settings_.radius );
+            expand( mesh.topology, visualizationRegion_ );
             updateUVmap_( true );
         }
         else
         {
             PointOnFace pOnFace( curentPosPick.second.face, curentPosPick.second.point );
             visualizationDistanceMap_ = computeSpaceDistances( mesh, pOnFace, settings_.radius );
-            visualizationRegion_ = findNeighborVerts( mesh, pOnFace, settings_.radius * 1.5f );
+            visualizationRegion_ = findNeighborVerts( mesh, pOnFace, settings_.radius );
+            expand( mesh.topology, visualizationRegion_ );
             int pointsCount = 0;
             for ( auto vId : visualizationRegion_ )
             {
@@ -369,12 +371,13 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
 
         if ( triPoints.size() == 1 )
         {
-            editingDistanceMap_ = computeSpaceDistances( mesh, { mesh.topology.left( triPoints[0].e ), mesh.triPoint( triPoints[0] ) }, settings_.radius );
-            singleEditingRegion_ = findNeighborVerts( mesh, { mesh.topology.left( triPoints[0].e ), mesh.triPoint( triPoints[0] ) }, settings_.radius * 1.5f );
+            PointOnFace pOnFace( mesh.topology.left( triPoints[0].e ), mesh.triPoint( triPoints[0] ) );
+            editingDistanceMap_ = computeSpaceDistances( mesh, pOnFace, settings_.radius );
+            singleEditingRegion_ = findNeighborVerts( mesh, pOnFace, settings_.radius );
         }
         else
         {
-            // bad logig. need rework to SpaceDistance
+            // bad logic. need rework to SpaceDistance
             singleEditingRegion_ = newVerts;
             dilateRegion( mesh, singleEditingRegion_, settings_.radius * 1.5f );
             editingDistanceMap_ = computeSurfaceDistances( mesh, triPoints, settings_.radius * 1.5f, &singleEditingRegion_ );

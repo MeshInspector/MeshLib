@@ -15,6 +15,7 @@
 #include "MRSpaceMouseHandler.h"
 #include "MRSpaceMouseHandlerHidapi.h"
 #include "MRRenderGLHelpers.h"
+#include "MRTouchpadController.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -24,7 +25,7 @@
 #include <MRMesh/MRMakePlane.h>
 #include <MRMesh/MRToFromEigen.h>
 #include <MRMesh/MRTimer.h>
-#include "MRMesh/MRUVSphere.h"
+#include "MRMesh/MRMakeSphereMesh.h"
 #include "MRMesh/MREmbeddedPython.h"
 #include "MRMesh/MRMeshLoad.h"
 #include "MRMesh/MRLinesLoad.h"
@@ -56,6 +57,7 @@
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRAppendHistory.h"
 #include "MRSwapRootAction.h"
+#include "MRMesh/MRSceneLoad.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/html5.h>
@@ -661,8 +663,10 @@ int Viewer::launchInit_( const LaunchParams& params )
         touchesController.connect( this );
         spaceMouseController.connect();
         initSpaceMouseHandler_();
-        touchpadController.connect( this );
-        touchpadController.initialize( window );
+        if ( !touchpadController_ )
+            touchpadController_ = std::make_unique<TouchpadController>();
+        touchpadController_->connect( this );
+        touchpadController_->initialize( window );
     }
 
     CommandLoop::setState( CommandLoop::StartPosition::AfterWindowInit );
@@ -792,7 +796,8 @@ void Viewer::launchShut()
     alphaSorter_.reset();
     sceneTexture_.reset();
 
-    touchpadController.reset();
+    if ( touchpadController_ )
+        touchpadController_->reset();
 
     glfwDestroyWindow( window );
     glfwTerminate();
@@ -879,6 +884,23 @@ void Viewer::postEmptyEvent()
     glfwPostEmptyEvent();
 }
 
+const TouchpadParameters & Viewer::getTouchpadParameters() const
+{
+    if ( !touchpadController_ )
+    {
+        const static TouchpadParameters empty;
+        return empty;
+    }
+    return touchpadController_->getParameters();
+}
+
+void Viewer::setTouchpadParameters( const TouchpadParameters & ps )
+{
+    if ( !touchpadController_ )
+        touchpadController_ = std::make_unique<TouchpadController>();
+    touchpadController_->setParameters( ps );
+}
+
 Viewer::Viewer() :
     selected_viewport_index( 0 ),
     eventQueue_( std::make_unique<ViewerEventQueue>() )
@@ -946,104 +968,76 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
     return false;
 }
 
-bool Viewer::loadFiles( const std::vector< std::filesystem::path>& filesList )
+bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
 {
     if ( filesList.empty() )
         return false;
 
-    ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList] ()->std::function<void()>
+    const auto postProcess = [] ( const SceneLoad::SceneLoadResult& result )
     {
-        std::vector<std::filesystem::path> loadedFiles;
-        std::vector<std::string> errorList;
-        std::string loadInfoRes;
-        std::vector<std::shared_ptr<Object>> loadedObjects;
-        for ( int i = 0; i < filesList.size(); ++i )
+        assert( result.scene );
+        const auto childCount = result.scene->children().size();
+        if ( childCount > 0 )
         {
-            const auto& filename = filesList[i];
-            if ( filename.empty() )
-                continue;
+            const auto isSceneEmpty = SceneRoot::get().children().empty();
+            if ( !result.isSceneConstructed || ( childCount == 1 && isSceneEmpty ) )
+            {
+                AppendHistory<SwapRootAction>( "Load Scene File" );
+                auto newRoot = result.scene;
+                std::swap( newRoot, SceneRoot::getSharedPtr() );
+                getViewerInstance().setSceneDirty();
 
-            spdlog::info( "Loading file {}", utf8string( filename ) );
-            std::string loadInfo;
-            auto res = loadObjectFromFile( filename, &loadInfo, [callback = ProgressBar::callBackSetProgress, i, number = filesList.size()]( float v )
-            {
-                return callback( ( i + v ) / number );
-            } );
-            spdlog::info( "Load file {} - {}", utf8string( filename ), res.has_value() ? "success" : res.error().c_str() );
-            if ( !res.has_value() )
-            {
-                errorList.push_back( std::move( res.error() ) );
-                continue;
+                assert( result.loadedFiles.size() == 1 );
+                auto filePath = result.loadedFiles.front();
+                if ( result.isSceneConstructed )
+                    filePath.replace_extension( ".mru" );
+                getViewerInstance().onSceneSaved( filePath, !result.isSceneConstructed );
             }
-
-            if ( !loadInfo.empty() )
-            {
-                loadInfoRes += ( ( loadInfoRes.empty() ? "" : "\n" ) + utf8string( filename ) + ":\n" + loadInfo + "\n" );
-            }
-
-
-            auto& newObjs = *res;
-            bool anyObjLoaded = false;
-            for ( auto& obj : newObjs )
-            {
-                if ( !obj )
-                    continue;
-
-                anyObjLoaded = true;
-                loadedObjects.push_back( obj );
-            }
-            if ( anyObjLoaded )
-                loadedFiles.push_back( filename );
             else
-                errorList.push_back( "No objects found in the file \"" + utf8string( filename ) + "\"" );
+            {
+                std::string historyName = childCount == 1 ? "Open file" : "Open files";
+                SCOPED_HISTORY( historyName );
+
+                const auto children = result.scene->children();
+                result.scene->removeAllChildren();
+                for ( const auto& obj : children )
+                {
+                    AppendHistory<ChangeSceneAction>( "Load File", obj, ChangeSceneAction::Type::AddObject );
+                    SceneRoot::get().addChild( obj );
+                }
+
+                auto& viewerInst = getViewerInstance();
+                for ( const auto& file : result.loadedFiles )
+                    viewerInst.recentFilesStore.storeFile( file );
+            }
+
+            getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
         }
-        return [loadedObjects, loadedFiles, errorList, loadInfoRes]
+        if ( !result.errorSummary.empty() )
+            showModal( std::string( result.errorSummary ), ImGuiMenu::ModalMessageType::Error );
+        else if ( !result.warningSummary.empty() )
+            showModal( std::string( result.warningSummary ), ImGuiMenu::ModalMessageType::Error );
+    };
+
+#if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
+    ProgressBar::orderWithManualFinish( "Open files", [filesList, postProcess]
+    {
+        SceneLoad::asyncFromAnySupportedFormat( filesList, [postProcess] ( SceneLoad::SceneLoadResult result )
         {
-            if ( !loadedObjects.empty() )
-            {
-                bool sceneFile = std::string( loadedObjects[0]->typeName() ) == std::string( Object::TypeName() );
-                bool sceneEmpty = SceneRoot::get().children().empty();
-                if ( loadedObjects.size() == 1 && sceneFile )
-                {
-                    AppendHistory<SwapRootAction>( "Load Scene File" );
-                    auto newRoot = loadedObjects[0];
-                    std::swap( newRoot, SceneRoot::getSharedPtr() );
-                }
-                else
-                {
-                    std::string historyName = loadedObjects.size() == 1 ? "Open file" : "Open files";
-                    SCOPED_HISTORY( historyName );
-                    for ( auto& obj : loadedObjects )
-                    {
-                        AppendHistory<ChangeSceneAction>( "Load File", obj, ChangeSceneAction::Type::AddObject );
-                        SceneRoot::get().addChild( obj );
-                    }
-                    auto& viewerInst = getViewerInstance();
-                    for ( const auto& file : loadedFiles )
-                        viewerInst.recentFilesStore.storeFile( file );
-                }
-                if ( loadedFiles.size() == 1 && ( sceneFile || sceneEmpty ) )
-                {
-                    auto path = loadedFiles[0];
-                    if ( !sceneFile )
-                        path.replace_extension( ".mru" );
-                    getViewerInstance().onSceneSaved( path, sceneFile );
-                }
-                getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
-            }
-            if ( !errorList.empty() )
-            {
-                std::string errorAll;
-                for ( auto& error : errorList )
-                    errorAll += "\n" + error;
-                showError( errorAll.substr( 1 ) );
-            }
-            else if ( !loadInfoRes.empty() )
-            {
-                showModal( loadInfoRes, ImGuiMenu::ModalMessageType::Warning );
-            }
+            postProcess( result );
+            ProgressBar::finish();
+        }, ProgressBar::callBackSetProgress );
+    } );
+#else
+    ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess]
+    {
+        auto result = SceneLoad::fromAnySupportedFormat( filesList, ProgressBar::callBackSetProgress );
+        return [result = std::move( result ), postProcess]
+        {
+            postProcess( result );
         };
     } );
+#endif
 
     return true;
 }
@@ -1427,16 +1421,21 @@ bool Viewer::draw_( bool force )
 
 void Viewer::drawFull( bool dirtyScene )
 {
+    // unbind to clean main framebuffer
+    if ( sceneTexture_ )
+        sceneTexture_->unbind();
+    // clean main framebuffer
+    clearFramebuffers();
+
     if ( menuPlugin_ )
         menuPlugin_->startFrame();
 
     if ( sceneTexture_ )
+    {
         sceneTexture_->bind( true );
-
-    // need to clean it in texture too
-    for ( auto& viewport : viewport_list )
-        viewport.clearFramebuffers();
-
+        // need to clean it in texture too
+        clearFramebuffers();
+    }
     preDrawSignal();
     // check dirty scene and need swap
     // important to check after preDrawSignal
@@ -1499,12 +1498,14 @@ void Viewer::drawScene()
 
 void Viewer::setupScene()
 {
-    bindSceneTexture( false );
     for ( auto& viewport : viewport_list )
-    {
         viewport.setupView();
+}
+
+void Viewer::clearFramebuffers()
+{
+    for ( auto& viewport : viewport_list )
         viewport.clearFramebuffers();
-    }
 }
 
 void Viewer::resize( int w, int h )
@@ -1987,6 +1988,7 @@ Image Viewer::captureSceneScreenShot( const Vector2i& resolution )
     fd.bind();
 
     setupScene();
+    clearFramebuffers();
     drawScene();
 
     fd.copyTextureBindDef();

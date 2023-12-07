@@ -93,6 +93,9 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
         {
             return filter.extensions == "*.*";
         } );
+#ifndef __EMSCRIPTEN_PTHREADS__
+        filters_ = filters_ | AsyncObjectLoad::getFilters();
+#endif
 #else
 #ifndef MRMESH_NO_VOXEL
         filters_ = filters_ | VoxelsLoad::Filters;

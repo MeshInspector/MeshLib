@@ -1,17 +1,18 @@
 #include "MRViewerSettingsManager.h"
 #include "MRMeshViewport.h"
-#include "MRMesh/MRSystem.h"
-#include "MRMesh/MRConfig.h"
 #include "MRMeshViewer.h"
 #include "MRColorTheme.h"
 #include "MRRibbonMenu.h"
-#include "MRMesh/MRSceneSettings.h"
+#include "MRSpaceMouseHandlerHidapi.h"
+#include "MRTouchpadController.h"
 #include "MRViewer/MRCommandLoop.h"
-#include "MRMesh/MRSerializer.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRViewer/MRGLMacro.h"
 #include "MRViewer/MRGladGlfw.h"
-#include "MRSpaceMouseHandlerHidapi.h"
+#include "MRMesh/MRSystem.h"
+#include "MRMesh/MRConfig.h"
+#include "MRMesh/MRSceneSettings.h"
+#include "MRMesh/MRSerializer.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace
 {
@@ -248,7 +249,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     if ( cfg.hasJsonValue( cTouchpadSettings ) )
     {
         const auto& object = cfg.getJsonValue( cTouchpadSettings );
-        TouchpadController::Parameters parameters;
+        TouchpadParameters parameters;
         if ( object.isMember( "ignoreKineticMoves" ) && object["ignoreKineticMoves"].isBool() )
         {
             parameters.ignoreKineticMoves = object["ignoreKineticMoves"].asBool();
@@ -260,12 +261,12 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         if ( object.isMember( "swipeMode" ) && object["swipeMode"].isInt() )
         {
             const auto swipeMode = object["swipeMode"].asInt();
-            if ( swipeMode >= 0 && swipeMode < TouchpadController::Parameters::SwipeModeCount )
-                parameters.swipeMode = (TouchpadController::Parameters::SwipeMode)swipeMode;
+            if ( swipeMode >= 0 && swipeMode < (int)TouchpadParameters::SwipeMode::Count )
+                parameters.swipeMode = (TouchpadParameters::SwipeMode)swipeMode;
             else
                 spdlog::warn( "Incorrect value for {}.swipeMode", cTouchpadSettings );
         }
-        viewer.touchpadController.setParameters( parameters );
+        viewer.setTouchpadParameters( parameters );
     }
 }
 
@@ -358,7 +359,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     cfg.setJsonValue( cSpaceMouseSettings, spaceMouseParamsJson );
 
     Json::Value touchpadParametersJson;
-    const auto& touchpadParameters = viewer.touchpadController.getParameters();
+    const auto& touchpadParameters = viewer.getTouchpadParameters();
     touchpadParametersJson["ignoreKineticMoves"] = touchpadParameters.ignoreKineticMoves;
     touchpadParametersJson["cancellable"] = touchpadParameters.cancellable;
     touchpadParametersJson["swipeMode"] = (int)touchpadParameters.swipeMode;

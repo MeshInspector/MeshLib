@@ -2,6 +2,8 @@
 
 #include "MRMeshFwd.h"
 
+#include <cassert>
+
 namespace MR
 {
 
@@ -59,6 +61,16 @@ inline ProgressCallback subprogress( ProgressCallback cb, F && f )
     if ( cb )
         res = [cb, f = std::forward<F>( f )]( float v ) { return cb( f( v ) ); };
     return res;
+}
+
+/// returns a callback that maps [0,1] linearly into [(index+0)/count,(index+1)/count] in the call to \param cb (which can be empty)
+inline ProgressCallback subprogress( ProgressCallback cb, size_t index, size_t count )
+{
+    assert( index < count );
+    if ( cb )
+        return [cb, index, count] ( float v ) { return cb( ( (float)index + v ) / (float)count ); };
+    else
+        return {};
 }
 
 } //namespace MR

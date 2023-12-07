@@ -32,6 +32,9 @@ class Viewport;
 class RibbonMenu;
 class RibbonMenuItem;
 
+class TouchpadController;
+struct TouchpadParameters;
+
 template<typename ...Connectables>
 class StateListenerPlugin;
 using StatePlugin = StateListenerPlugin<>;

@@ -5,6 +5,7 @@
 #include "MRLineSegm3.h"
 #include "MRPlane3.h"
 #include "MRQuaternion.h"
+#include "MRSphere.h"
 #include "MRSymMatrix2.h"
 #include "MRSymMatrix3.h"
 #include "MRTriPoint.h"
@@ -27,6 +28,12 @@ template struct Matrix3<double>;
 
 template struct Matrix4<float>;
 template struct Matrix4<double>;
+
+template struct Sphere<Vector2f>;
+template struct Sphere<Vector2d>;
+
+template struct Sphere<Vector3f>;
+template struct Sphere<Vector3d>;
 
 template struct Line<Vector2f>;
 template struct Line<Vector2d>;

@@ -1,7 +1,7 @@
 #include "MRAABBTreePoints.h"
 #include "MRPointCloud.h"
 #include "MRTimer.h"
-#include "MRUVSphere.h"
+#include "MRMakeSphereMesh.h"
 #include "MRMesh.h"
 #include "MRMeshToPointCloud.h"
 #include "MRBitSetParallelFor.h"

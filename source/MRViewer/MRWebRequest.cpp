@@ -47,12 +47,7 @@ std::string toString( MR::WebRequest::Method method )
         case Method::Delete:
             return "DELETE";
     }
-#ifdef __cpp_lib_unreachable
-    std::unreachable();
-#else
-    assert( false );
-    return {};
-#endif
+    MR_UNREACHABLE
 }
 #endif
 
@@ -282,12 +277,7 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
                 return session.Delete();
         }
 
-#ifdef __cpp_lib_unreachable
-        std::unreachable();
-#else
-        assert( false );
-        return {};
-#endif
+        MR_UNREACHABLE
     };
     clear();
     if ( !async )

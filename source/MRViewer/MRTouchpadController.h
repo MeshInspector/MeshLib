@@ -2,6 +2,7 @@
 
 #include "MRViewerEventsListener.h"
 #include "MRViewport.h"
+#include "MRTouchpadParameters.h"
 
 #include <functional>
 #include <memory>
@@ -37,21 +38,8 @@ public:
     /// reset event handler
     MRVIEWER_API void reset();
 
-    struct Parameters
-    {
-        /// most touchpads implement kinetic (or inertial) scrolling, this option disables handling of these events
-        bool ignoreKineticMoves = false;
-        /// enable gesture's cancellability, i.e. revert its changes in case of external interruption
-        bool cancellable = false;
-        /// swipe processing mode
-        enum SwipeMode {
-            SwipeRotatesCamera = 0,
-            SwipeMovesCamera = 1,
-            SwipeModeCount,
-        } swipeMode = SwipeRotatesCamera;
-    };
-    [[nodiscard]] MRVIEWER_API const Parameters& getParameters() const;
-    MRVIEWER_API void setParameters( const Parameters& parameters );
+    [[nodiscard]] MRVIEWER_API const TouchpadParameters& getParameters() const;
+    MRVIEWER_API void setParameters( const TouchpadParameters& parameters );
 
     /// Base class for platform-dependent code handling touchpad events
     ///
@@ -86,14 +74,14 @@ public:
 
 private:
     std::unique_ptr<Handler> handler_;
-    Parameters parameters_;
+    TouchpadParameters parameters_;
 
     Viewport::Parameters initRotateParams_;
     virtual bool touchpadRotateGestureBegin_() override;
     virtual bool touchpadRotateGestureUpdate_( float angle ) override;
     virtual bool touchpadRotateGestureEnd_() override;
 
-    Parameters::SwipeMode currentSwipeMode_{ Parameters::SwipeRotatesCamera };
+    TouchpadParameters::SwipeMode currentSwipeMode_{ TouchpadParameters::SwipeMode::SwipeRotatesCamera };
     virtual bool touchpadSwipeGestureBegin_() override;
     virtual bool touchpadSwipeGestureUpdate_( float deltaX, float deltaY, bool kinetic ) override;
     virtual bool touchpadSwipeGestureEnd_() override;

@@ -8,6 +8,67 @@
 namespace MR
 {
 
+/// History action for object color palette change
+/// To use with setFrontColorsForAllViewports, setBackColorsForAllViewports, setFrontColor, setBackColor
+/// \ingroup HistoryGroup
+class ChangeObjectColorAction : public HistoryAction
+{
+public:
+    using Obj = VisualObject;
+
+    enum class Type
+    {
+        Unselected,
+        Selected,
+        Back
+    };
+
+    /// Constructed from original obj
+    ChangeObjectColorAction( const std::string& name, const std::shared_ptr<VisualObject>& obj, Type type ) :
+        obj_{ obj },
+        type_{ type },
+        name_{ name }
+    {
+        if ( obj_ )
+            colors_ = type_ == Type::Back ? obj_->getBackColorsForAllViewports() :
+                obj_->getFrontColorsForAllViewports( type_ == Type::Selected );
+    }
+
+    virtual std::string name() const override
+    {
+        return name_;
+    }
+
+    virtual void action( HistoryAction::Type ) override
+    {
+        if ( !obj_ )
+            return;
+        ViewportProperty<Color> colors =
+            type_ == Type::Back ? obj_->getBackColorsForAllViewports() :
+                obj_->getFrontColorsForAllViewports( type_ == Type::Selected );
+        if ( type_ == Type::Back )
+            obj_->setBackColorsForAllViewports( colors_ );
+        else
+            obj_->setFrontColorsForAllViewports( colors_, type_ == Type::Selected );
+        colors_ = colors;
+    }
+
+    static void setObjectDirty( const std::shared_ptr<VisualObject>& )
+    {
+    }
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity();
+    }
+
+private:
+    std::shared_ptr<VisualObject> obj_;
+    Type type_;
+    ViewportProperty<Color> colors_;
+    std::string name_;
+};
+
 /// History action for faces color map change
 /// \ingroup HistoryGroup
 class ChangeFacesColorMapAction : public HistoryAction

@@ -163,6 +163,15 @@ template <typename T> using AffineXf3 = AffineXf<Vector3<T>>;
 using AffineXf3f = AffineXf3<float>;
 using AffineXf3d = AffineXf3<double>;
 
+template <typename T> struct Sphere;
+template <typename T> using Sphere2 = Sphere<Vector2<T>>;
+using Sphere2f = Sphere2<float>;
+using Sphere2d = Sphere2<double>;
+
+template <typename T> using Sphere3 = Sphere<Vector3<T>>;
+using Sphere3f = Sphere3<float>;
+using Sphere3d = Sphere3<double>;
+
 template <typename V> struct Line;
 template <typename T> using Line2 = Line<Vector2<T>>;
 using Line2f = Line2<float>;
@@ -496,3 +505,13 @@ struct VertDuplication;
 } //namespace MeshBuilder
 
 } //namespace MR
+
+#ifdef __cpp_lib_unreachable
+#   define MR_UNREACHABLE std::unreachable();
+#else
+#   ifdef __GNUC__
+#       define MR_UNREACHABLE __builtin_unreachable();
+#   else
+#       define MR_UNREACHABLE { assert( false ); return {}; }
+#   endif
+#endif

@@ -472,7 +472,7 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
 
     // Global variable is not correctly initialized in emscripten build
     const IOFilters filters = SceneFileFilters | MeshLoad::getFilters() |
-#if !defined(MRMESH_NO_VOXEL)
+#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
         VoxelsLoad::Filters |
 #endif
         LinesLoad::Filters | PointsLoad::Filters;

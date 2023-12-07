@@ -41,9 +41,6 @@ void ProgressBar::setup( float scaling )
     if ( instance.deferredInit_ )
         instance.initialize_();
 
-    if ( instance.backgroundTask_ )
-        instance.resumeBackgroundTask_();
-
     constexpr size_t bufSize = 256;
     char buf[bufSize];
 
@@ -163,7 +160,7 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
                 instance.onFinish_ = task();
                 return true;
             } );
-            instance.finish_();
+            ProgressBar::finish();
 
             unregisterThreadRootTimeRecord( rootRecord );
         } );
@@ -175,7 +172,7 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
                 instance.onFinish_ = task();
                 return true;
             } );
-            instance.finish_();
+            ProgressBar::finish();
         };
         emscripten_async_call( asyncCallTask, nullptr, 200 );
 #endif
@@ -190,16 +187,12 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
     getViewerInstance().incrementForceRedrawFrames();
 }
 
-void ProgressBar::orderWithResumableTask( const char * name, std::shared_ptr<ResumableTask<void>> task, int taskCount )
+void ProgressBar::orderWithManualFinish( const char* name, std::function<void ()> task, int taskCount )
 {
     auto& instance = instance_();
 
     if ( !instance.isInit_ )
-    {
-        task->start();
-        while ( !task->resume() );
         return;
-    }
 
     if ( isFinished() && instance.thread_.joinable() )
         instance.thread_.join();
@@ -210,7 +203,32 @@ void ProgressBar::orderWithResumableTask( const char * name, std::shared_ptr<Res
     {
         // finalizer is not required
         instance.onFinish_ = {};
-        task->start();
+#if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
+        instance.thread_ = std::thread( [&instance, task]
+        {
+            static ThreadRootTimeRecord rootRecord( "Progress" );
+            registerThreadRootTimeRecord( rootRecord );
+            SetCurrentThreadName( "ProgressBar" );
+
+            instance.tryRunWithSehHandler_( [task]
+            {
+                task();
+                return true;
+            } );
+
+            unregisterThreadRootTimeRecord( rootRecord );
+        } );
+#else
+        staticTaskForLaterCall = [&instance, task]
+        {
+            instance.tryRunWithSehHandler_( [task]
+            {
+                task();
+                return true;
+            } );
+        };
+        emscripten_async_call( asyncCallTask, nullptr, 200 );
+#endif
     };
 
     instance.deferredInit_ = std::make_unique<DeferredInit>( DeferredInit {
@@ -218,8 +236,6 @@ void ProgressBar::orderWithResumableTask( const char * name, std::shared_ptr<Res
         .name = name,
         .postInit = postInit,
     } );
-
-    instance.backgroundTask_ = std::move( task );
 
     getViewerInstance().incrementForceRedrawFrames();
 }
@@ -260,6 +276,13 @@ bool ProgressBar::setProgress( float p )
 void ProgressBar::setTaskCount( int n )
 {
     instance_().taskCount_ = n;
+}
+
+void ProgressBar::finish()
+{
+    auto& instance = instance_();
+    instance.finished_ = true;
+    instance.frameRequest_.requestFrame();
 }
 
 bool ProgressBar::isOrdered()
@@ -381,6 +404,9 @@ bool ProgressBar::tryRunWithSehHandler_( const std::function<bool()>& task )
 #ifndef _WIN32
     return task();
 #else
+#ifndef NDEBUG
+    return task();
+#else
     __try
     {
         return tryRun_( task );
@@ -394,26 +420,7 @@ bool ProgressBar::tryRunWithSehHandler_( const std::function<bool()>& task )
         return true;
     }
 #endif
-}
-
-void ProgressBar::resumeBackgroundTask_()
-{
-    assert( backgroundTask_ );
-    const auto finished = tryRunWithSehHandler_( [this]
-    {
-        return backgroundTask_->resume();
-    } );
-    if ( finished )
-    {
-        finish_();
-        backgroundTask_.reset();
-    }
-}
-
-void ProgressBar::finish_()
-{
-    finished_ = true;
-    frameRequest_.requestFrame();
+#endif
 }
 
 }

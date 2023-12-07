@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRChangeValue.h" />
     <ClInclude Include="MRInTreePathBuilder.h" />
     <ClInclude Include="MRChangeColoringType.h" />
     <ClInclude Include="MRChangeColoringActions.h" />
@@ -170,7 +171,9 @@
     <ClInclude Include="MRProgressReadWrite.h" />
     <ClInclude Include="MRRayBoxIntersection2.h" />
     <ClInclude Include="MRSaveSettings.h" />
+    <ClInclude Include="MRSceneLoad.h" />
     <ClInclude Include="MRSolarRadiation.h" />
+    <ClInclude Include="MRSphere.h" />
     <ClInclude Include="MRTiffIO.h" />
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
@@ -179,7 +182,7 @@
     <ClInclude Include="MRSharpenMarchingCubesMesh.h" />
     <ClInclude Include="MRSignal.h" />
     <ClInclude Include="MRSignDetectionMode.h" />
-    <ClInclude Include="MRSphere.h" />
+    <ClInclude Include="MRMakeSphereMesh.h" />
     <ClInclude Include="MRSphereObject.h" />
     <ClInclude Include="MRString.h" />
     <ClInclude Include="MRSurfaceDistanceBuilder.h" />
@@ -274,6 +277,7 @@
     <ClInclude Include="MRUnionFind.h" />
     <ClInclude Include="MRUniquePtr.h" />
     <ClInclude Include="MRUniteManyMeshes.h" />
+    <ClInclude Include="MRUVSphere.h" />
     <ClInclude Include="MRVDBFloatGrid.h" />
     <ClInclude Include="MRVDBProgressInterrupter.h" />
     <ClInclude Include="MRVector2.h" />
@@ -308,7 +312,6 @@
     <ClInclude Include="MRSymbolMesh.h" />
     <ClInclude Include="MRSystem.h" />
     <ClInclude Include="MRTorus.h" />
-    <ClInclude Include="MRUVSphere.h" />
     <ClInclude Include="MRVDBConversions.h" />
     <ClInclude Include="MRMeshTopology.h" />
     <ClInclude Include="MRMeshBuilder.h" />
@@ -342,6 +345,7 @@
     <ClInclude Include="MRMeshOverhangs.h" />
     <ClInclude Include="MRMeshLoadStep.h" />
     <ClInclude Include="MRZip.h" />
+    <ClInclude Include="MRObjectSave.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -498,6 +502,7 @@
     <ClCompile Include="MRPrism.cpp" />
     <ClCompile Include="MRProgressReadWrite.cpp" />
     <ClCompile Include="MRSaveSettings.cpp" />
+    <ClCompile Include="MRSceneLoad.cpp" />
     <ClCompile Include="MRSolarRadiation.cpp" />
     <ClCompile Include="MRTiffIO.cpp" />
     <ClCompile Include="MRRectIndexer.cpp" />
@@ -519,7 +524,7 @@
     <ClCompile Include="MRSceneRoot.cpp" />
     <ClCompile Include="MRSceneSettings.cpp" />
     <ClCompile Include="MRSharpenMarchingCubesMesh.cpp" />
-    <ClCompile Include="MRSphere.cpp" />
+    <ClCompile Include="MRMakeSphereMesh.cpp" />
     <ClCompile Include="MRSphereObject.cpp" />
     <ClCompile Include="MRString.cpp" />
     <ClCompile Include="MRSurfaceDistanceBuilder.cpp" />
@@ -581,7 +586,6 @@
     <ClCompile Include="MRTimer.cpp" />
     <ClCompile Include="MRPositionVertsSmoothly.cpp" />
     <ClCompile Include="MRTorus.cpp" />
-    <ClCompile Include="MRUVSphere.cpp" />
     <ClCompile Include="MRVDBConversions.cpp" />
     <ClCompile Include="MRObjectDistanceMap.cpp" />
     <ClCompile Include="MRVoxelsVolume.cpp" />
@@ -592,6 +596,7 @@
     <ClCompile Include="MRMeshOverhangs.cpp" />
     <ClCompile Include="MRMeshLoadStep.cpp" />
     <ClCompile Include="MRZip.cpp" />
+    <ClCompile Include="MRObjectSave.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\laz-perf\laz-perf.vcxproj">

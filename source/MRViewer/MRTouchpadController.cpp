@@ -74,18 +74,18 @@ bool TouchpadController::touchpadSwipeGestureBegin_()
     {
         switch ( parameters_.swipeMode )
         {
-        case Parameters::SwipeRotatesCamera:
-            currentSwipeMode_ = Parameters::SwipeMovesCamera;
+        case TouchpadParameters::SwipeMode::SwipeRotatesCamera:
+            currentSwipeMode_ = TouchpadParameters::SwipeMode::SwipeMovesCamera;
             break;
-        case Parameters::SwipeMovesCamera:
-            currentSwipeMode_ = Parameters::SwipeRotatesCamera;
+        case TouchpadParameters::SwipeMode::SwipeMovesCamera:
+            currentSwipeMode_ = TouchpadParameters::SwipeMode::SwipeRotatesCamera;
             break;
-        case Parameters::SwipeModeCount:
+        case TouchpadParameters::SwipeMode::Count:
             break;
         }
     }
 
-    if ( currentSwipeMode_ == Parameters::SwipeRotatesCamera )
+    if ( currentSwipeMode_ == TouchpadParameters::SwipeMode::SwipeRotatesCamera )
     {
         const auto initParams = viewer.viewport().getParameters();
         viewport.rotationCenterMode( Viewport::Parameters::RotationCenterMode::DynamicStatic );
@@ -112,7 +112,7 @@ bool TouchpadController::touchpadSwipeGestureUpdate_( float deltaX, float deltaY
 
     switch ( currentSwipeMode_ )
     {
-    case Parameters::SwipeRotatesCamera:
+    case TouchpadParameters::SwipeMode::SwipeRotatesCamera:
     {
         auto quat = viewport.getParameters().cameraTrackballAngle;
         const auto maxDim = (float)std::max( viewer.framebufferSize.x, viewer.framebufferSize.y );
@@ -128,7 +128,7 @@ bool TouchpadController::touchpadSwipeGestureUpdate_( float deltaX, float deltaY
 
         return true;
     }
-    case Parameters::SwipeMovesCamera:
+    case TouchpadParameters::SwipeMode::SwipeMovesCamera:
     {
         const auto sceneCenterVpPos = viewport.projectToViewportSpace( sceneCenterPos );
 
@@ -152,16 +152,11 @@ bool TouchpadController::touchpadSwipeGestureUpdate_( float deltaX, float deltaY
 
         return true;
     }
-    case Parameters::SwipeModeCount:
+    case TouchpadParameters::SwipeMode::Count:
         break;
     }
 
-#ifdef __cpp_lib_unreachable
-    std::unreachable();
-#else
-    assert( false );
-    return false;
-#endif
+    MR_UNREACHABLE
 }
 
 bool TouchpadController::touchpadSwipeGestureEnd_()
@@ -169,7 +164,7 @@ bool TouchpadController::touchpadSwipeGestureEnd_()
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
 
-    if ( currentSwipeMode_ == Parameters::SwipeRotatesCamera )
+    if ( currentSwipeMode_ == TouchpadParameters::SwipeMode::SwipeRotatesCamera )
     {
         viewport.setRotation( false );
     }
@@ -222,12 +217,12 @@ bool TouchpadController::touchpadZoomGestureEnd_()
     return true;
 }
 
-const TouchpadController::Parameters& TouchpadController::getParameters() const
+const TouchpadParameters& TouchpadController::getParameters() const
 {
     return parameters_;
 }
 
-void TouchpadController::setParameters( const TouchpadController::Parameters& parameters )
+void TouchpadController::setParameters( const TouchpadParameters& parameters )
 {
     parameters_ = parameters;
 }

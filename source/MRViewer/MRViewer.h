@@ -7,7 +7,6 @@
 #include "MRMouseController.h"
 #include "MRTouchesController.h"
 #include "MRSpaceMouseController.h"
-#include "MRTouchpadController.h"
 
 #include <boost/signals2/signal.hpp>
 #include <chrono>
@@ -169,6 +168,8 @@ public:
     void setSceneDirty() { dirtyScene_ = true; }
     // Setup viewports views
     MRVIEWER_API void setupScene();
+    // Cleans framebuffers for all viewports (sets its background)
+    MRVIEWER_API void clearFramebuffers();
     // OpenGL context resize
     MRVIEWER_API void resize( int w, int h ); // explicitly set framebuffer size
     MRVIEWER_API void postResize( int w, int h ); // external resize due to user interaction
@@ -459,7 +460,6 @@ public:
     MouseController mouseController;
     TouchesController touchesController;
     SpaceMouseController spaceMouseController;
-    TouchpadController touchpadController;
 
     float pixelRatio{ 1.0f };
     Vector2i framebufferSize;
@@ -582,6 +582,9 @@ public:
 
     MRVIEWER_API void postEmptyEvent();
 
+    [[nodiscard]] MRVIEWER_API const TouchpadParameters & getTouchpadParameters() const;
+    MRVIEWER_API void setTouchpadParameters( const TouchpadParameters & );
+
 private:
     Viewer();
     ~Viewer();
@@ -617,6 +620,8 @@ private:
 
     // special plugin for menu (initialized before splash window starts)
     std::shared_ptr<ImGuiMenu> menuPlugin_;
+
+    std::unique_ptr<TouchpadController> touchpadController_;
 
     mutable struct FrameCounter
     {

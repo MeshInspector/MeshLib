@@ -15,9 +15,9 @@ void HistoryStore::appendAction( const std::shared_ptr<HistoryAction>& action )
 {
     if ( !action )
         return;
-    if ( scoped_ )
+    if ( scopedBlock_ )
     {
-        scopedBlock_.push_back( action );
+        scopedBlock_->push_back( action );
         return;
     }
     spdlog::info( "History action append: \"{}\"", action->name() );
@@ -42,15 +42,6 @@ void HistoryStore::appendAction( const std::shared_ptr<HistoryAction>& action )
     }
 
     changedSignal( *this, ChangeType::AppendAction );
-}
-
-void HistoryStore::startScope( bool on )
-{
-    if ( on == scoped_ )
-        return;
-    scoped_ = on;
-    if ( !on )
-        scopedBlock_.clear();
 }
 
 void HistoryStore::clear()

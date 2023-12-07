@@ -42,6 +42,16 @@ inline std::shared_ptr<ObjectT> getDepthFirstObject( Object& root, const ObjectS
 
 /// \}
 
+inline bool objectHasSelectableChildren( const MR::Object& object )
+{
+    for ( const auto& child : object.children() )
+    {
+        if ( !child->isAncillary() || objectHasSelectableChildren( *child ) )
+            return true;
+    }
+    return false;
+}
+
 }
 
 #include "MRObjectsAccess.hpp"

@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRVector3.h"
+#include "MRExpected.h"
 
 namespace MR
 {
@@ -19,12 +20,13 @@ struct FindOverhangsSettings
     int hops = 0;
     /// mesh transform
     const AffineXf3f* xf = nullptr;
+    ProgressCallback progressCb;
 };
 
 /// \brief Find face regions that might create overhangs
 /// \param mesh - source mesh
 /// \param settings - parameters
 /// \return face regions
-MRMESH_API std::vector<FaceBitSet> findOverhangs( const Mesh& mesh, const FindOverhangsSettings& settings );
+MRMESH_API Expected<std::vector<FaceBitSet>> findOverhangs( const Mesh& mesh, const FindOverhangsSettings& settings );
 
 } // namespace MR

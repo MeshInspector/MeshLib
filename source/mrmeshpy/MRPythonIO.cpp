@@ -19,6 +19,8 @@
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRLog.h"
 #include "MRMesh/MRExpected.h"
+#include "MRMesh/MRSceneLoad.h"
+#include "MRMesh/MRObjectSave.h"
 
 using namespace MR;
 
@@ -192,6 +194,23 @@ Expected<PointCloud, std::string> pythonLoadPointCloudFromAnyFormat( pybind11::o
     return MR::PointsLoad::fromAnySupportedFormat( ifs, extension );
 }
 
+Expected<std::shared_ptr<Object>> pythonLoadSceneObjectFromAnyFormat( const std::filesystem::path& path, ProgressCallback callback )
+{
+    auto result = SceneLoad::fromAnySupportedFormat( { path }, std::move( callback ) );
+    if ( !result.scene )
+        return unexpected( std::move( result.errorSummary ) );
+
+    if ( !result.isSceneConstructed || result.scene->children().size() != 1 )
+        return result.scene;
+    else
+        return result.scene->children().front();
+}
+
+VoidOrErrStr pythonSaveSceneObjectToAnySupportedFormat( const std::shared_ptr<Object>& object, const std::filesystem::path& path, ProgressCallback callback )
+{
+    return ObjectSave::toAnySupportedFormat( *object, path, std::move( callback ) );
+}
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveMesh, [] ( pybind11::module_& m )
 {
     m.def( "saveMesh",
@@ -316,3 +335,20 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
         "Loads all volumetric data from DICOM file(s)" );
 } )
 #endif
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadSceneObject, [] ( pybind11::module_& m )
+{
+    m.def( "loadSceneObject",
+           MR::decorateExpected( pythonLoadSceneObjectFromAnyFormat ),
+           pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback(),
+           "Detects the format from file extension and loads scene object from it." );
+} )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveSceneObject, [] ( pybind11::module_& m )
+{
+    m.def( "saveSceneObject",
+           MR::decorateExpected( pythonSaveSceneObjectToAnySupportedFormat ),
+           pybind11::arg( "object" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback(),
+           "Detects the format from file extension and saves scene object to it. "
+           "If the object doesn't contain any entities of the corresponding type, an empty file will be created." );
+} )

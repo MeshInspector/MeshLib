@@ -94,7 +94,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
     if ( UI::button( "Touchpad Settings", Vector2f( btnHalfSizeX, 0 ) ) )
     {
-        touchpadParameters_ = viewer->touchpadController.getParameters();
+        touchpadParameters_ = viewer->getTouchpadParameters();
         ImGui::OpenPopup( "Touchpad Settings" );
     }
     drawTouchpadSettings_( menuScaling );
@@ -551,7 +551,7 @@ void ViewerSettingsPlugin::drawTouchpadSettings_( float menuScaling )
     }
 
     const std::vector<std::string> swipeModeList = { "Swipe Rotates Camera", "Swipe Moves Camera" };
-    assert( swipeModeList.size() == TouchpadController::Parameters::SwipeModeCount );
+    assert( swipeModeList.size() == (size_t)TouchpadParameters::SwipeMode::Count );
 
     bool updateSettings = false;
     if ( UI::checkbox( "Ignore Kinetic Movements", &touchpadParameters_.ignoreKineticMoves ) )
@@ -561,7 +561,7 @@ void ViewerSettingsPlugin::drawTouchpadSettings_( float menuScaling )
     if ( UI::combo( "Swipe Mode", (int*)&touchpadParameters_.swipeMode, swipeModeList ) )
         updateSettings = true;
     if ( updateSettings )
-        viewer->touchpadController.setParameters( touchpadParameters_ );
+        viewer->setTouchpadParameters( touchpadParameters_ );
 
     ImGui::EndPopup();
 }

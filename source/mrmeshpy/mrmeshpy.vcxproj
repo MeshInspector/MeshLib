@@ -37,6 +37,7 @@
     <ClCompile Include="MRPythonSampling.cpp" />
     <ClCompile Include="MRPythonSegmentation.cpp" />
     <ClCompile Include="MRPythonVoxels.cpp" />
+    <ClCompile Include="MRPythonScene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />

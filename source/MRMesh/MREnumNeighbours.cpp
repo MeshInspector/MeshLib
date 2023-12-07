@@ -45,7 +45,23 @@ VertScalars computeSpaceDistances( const Mesh& mesh, const PointOnFace & start, 
     {
         const auto dist = ( start.point - mesh.points[v] ).length();
         res[v] = dist;
-        return dist < range;
+        return dist <= range;
+    } );
+
+    return res;
+}
+
+VertBitSet findNeighborVerts( const Mesh& mesh, const PointOnFace& start, float range )
+{
+    MR_TIMER
+
+    VertBitSet res( mesh.topology.faceSize() );
+    EnumNeihbourVertices e;
+    e.run( mesh.topology, mesh.getClosestVertex( start ), [&] ( VertId v )
+    {
+        const auto inRange = ( start.point - mesh.points[v] ).length() <= range;
+        res.set( v, inRange );
+        return inRange; // mb better <= ?
     } );
 
     return res;

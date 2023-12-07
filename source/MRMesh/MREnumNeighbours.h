@@ -22,4 +22,9 @@ private:
 /// and to first vertices with the distance more or equal than range
 [[nodiscard]] MRMESH_API VertScalars computeSpaceDistances( const Mesh& mesh, const PointOnFace & start, float range );
 
+/// calculates all neighbor vertices within a given \param range
+/// and to first vertices with the distance more or equal than range
+[[nodiscard]] MRMESH_API VertBitSet findNeighborVerts( const Mesh& mesh, const PointOnFace& start, float range );
+
+
 } //namespace MR

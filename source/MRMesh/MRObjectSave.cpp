@@ -138,8 +138,10 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
     {
         if ( extension == "*.mru" )
             return serializeObjectTree( object, file, callback );
+#ifndef MRMESH_NO_GLTF
         else if ( extension == "*.glb" || extension == "*.gltf" )
             return serializeObjectTreeToGltf( object, file, callback );
+#endif
         else
             return unexpected( "unsupported file format" );
     }
@@ -172,6 +174,7 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
 
         return DistanceMapSave::toAnySupportedFormat( file, *objDmap->getDistanceMap(), &objDmap->getToWorldParameters() );
     }
+#ifndef MRMESH_NO_VOXELS
     else if ( hasExtension( VoxelsSave::Filters, extension ) )
     {
         const auto objVoxels = getAllObjectsInTree<ObjectVoxels>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable );
@@ -186,6 +189,7 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
 
         return VoxelsSave::toAnySupportedFormat( objVoxel->vdbVolume(), file, callback );
     }
+#endif
     else
     {
         return unexpected( "unsupported file extension" );

@@ -96,6 +96,9 @@ jobs:
           py -3.11 -m pip install --upgrade pip
           py -3.11 -m pip install -r .\requirements\python.txt
 
+      - name: Check Visual Studio projects for missing file entries
+        run: py -3 scripts\check_vcxproj.py source\
+
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.3
 

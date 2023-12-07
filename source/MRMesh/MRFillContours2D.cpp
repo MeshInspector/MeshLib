@@ -7,7 +7,7 @@
 #include "MRAffineXf3.h"
 #include "MRTimer.h"
 #include "MRRegionBoundary.h"
-#include "MRUVSphere.h"
+#include "MRMakeSphereMesh.h"
 #include "MRMeshTrimWithPlane.h"
 #include "MRPlane3.h"
 #include "MRGTest.h"

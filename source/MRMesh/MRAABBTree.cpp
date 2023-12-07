@@ -2,7 +2,7 @@
 #include "MRAABBTreeMaker.h"
 #include "MRMesh.h"
 #include "MRTimer.h"
-#include "MRUVSphere.h"
+#include "MRMakeSphereMesh.h"
 #include "MRBitSetParallelFor.h"
 #include "MRBuffer.h"
 #include "MRGTest.h"

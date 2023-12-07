@@ -20,6 +20,7 @@
     <ClCompile Include="MRCommandLoop.cpp" />
     <ClCompile Include="MRCreateShader.cpp" />
     <ClCompile Include="MRCudaAccessor.cpp" />
+    <ClCompile Include="MRSelectCurvaturePreference.cpp" />
     <ClCompile Include="MRFrameRedrawRequest.cpp" />
     <ClCompile Include="MRGetSystemInfoJson.cpp" />
     <ClCompile Include="MRObjectPointsHistory.cpp" />
@@ -102,6 +103,7 @@
     <ClInclude Include="MRCommandLoop.h" />
     <ClInclude Include="MRCreateShader.h" />
     <ClInclude Include="MRCudaAccessor.h" />
+    <ClInclude Include="MRSelectCurvaturePreference.h" />
     <ClInclude Include="MRFrameRedrawRequest.h" />
     <ClInclude Include="MRGetSystemInfoJson.h" />
     <ClInclude Include="MRGladGlfw.h" />
@@ -162,6 +164,7 @@
     <ClInclude Include="MRStatePluginUpdate.h" />
     <ClInclude Include="MRSurfacePointPicker.h" />
     <ClInclude Include="MRSwapRootAction.h" />
+    <ClInclude Include="MRTouchpadParameters.h" />
     <ClInclude Include="MRTouchpadWin32Handler.h" />
     <ClInclude Include="MRUIStyle.h" />
     <ClInclude Include="MRViewer.h" />
@@ -177,6 +180,7 @@
     <ClInclude Include="MRViewerEventsListener.h" />
     <ClInclude Include="MRViewerSettingsManager.h" />
     <ClInclude Include="MRViewportGL.h" />
+    <ClInclude Include="MRViewportParametersAction.h" />
     <ClInclude Include="MRVolumeShader.h" />
     <ClInclude Include="MRWebRequest.h" />
     <ClInclude Include="MRTouchpadController.h" />

@@ -366,7 +366,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Overhangs, [] ( pybind11::module_& m )
         def_readwrite( "hops", &MR::FindOverhangsSettings::hops, "number of hops used to smooth out the overhang regions (0 - disable smoothing)" ).
         def_readwrite( "xf", &MR::FindOverhangsSettings::xf, "mesh transform" );
 
-    m.def( "findOverhangs", &MR::findOverhangs,
+    m.def( "findOverhangs", MR::decorateExpected( &MR::findOverhangs ),
         pybind11::arg( "mesh" ), pybind11::arg( "settings" ),
         "Find face regions that might create overhangs\n"
         "\tmesh - source mesh\n"
@@ -401,11 +401,16 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def_readwrite( "voxelSize", &MR::OffsetParameters::voxelSize,
             "Size of voxel in grid conversions\n"
-            "if value is negative, it is calculated automatically (mesh bounding box are divided to 5e6 voxels)" ).
+            "if value is not positive, it is calculated automatically (mesh bounding box is divided to 5e6 voxels)" ).
         def_readwrite( "signDetectionMode", &MR::OffsetParameters::signDetectionMode, "The method to compute distance sign" );
 
     m.def( "offsetMesh",
-        MR::decorateExpected( &MR::offsetMesh ),
+        MR::decorateExpected( []( const MR::MeshPart & mp, float offset, MR::OffsetParameters params )
+            {
+                if ( params.voxelSize <= 0 )
+                    params.voxelSize = suggestVoxelSize( mp, 5e6f );
+                return MR::offsetMesh( mp, offset, params );
+            } ),
         pybind11::arg( "mp" ), pybind11::arg( "offset" ), pybind11::arg( "params" ) = MR::OffsetParameters{},
         "Offsets mesh by converting it to voxels and back\n"
         "use Shell type for non closed meshes\n"

@@ -15,6 +15,7 @@
 #include "MRSpaceMouseHandler.h"
 #include "MRSpaceMouseHandlerHidapi.h"
 #include "MRRenderGLHelpers.h"
+#include "MRTouchpadController.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -24,7 +25,7 @@
 #include <MRMesh/MRMakePlane.h>
 #include <MRMesh/MRToFromEigen.h>
 #include <MRMesh/MRTimer.h>
-#include "MRMesh/MRUVSphere.h"
+#include "MRMesh/MRMakeSphereMesh.h"
 #include "MRMesh/MREmbeddedPython.h"
 #include "MRMesh/MRMeshLoad.h"
 #include "MRMesh/MRLinesLoad.h"
@@ -662,8 +663,10 @@ int Viewer::launchInit_( const LaunchParams& params )
         touchesController.connect( this );
         spaceMouseController.connect();
         initSpaceMouseHandler_();
-        touchpadController.connect( this );
-        touchpadController.initialize( window );
+        if ( !touchpadController_ )
+            touchpadController_ = std::make_unique<TouchpadController>();
+        touchpadController_->connect( this );
+        touchpadController_->initialize( window );
     }
 
     CommandLoop::setState( CommandLoop::StartPosition::AfterWindowInit );
@@ -793,7 +796,8 @@ void Viewer::launchShut()
     alphaSorter_.reset();
     sceneTexture_.reset();
 
-    touchpadController.reset();
+    if ( touchpadController_ )
+        touchpadController_->reset();
 
     glfwDestroyWindow( window );
     glfwTerminate();
@@ -878,6 +882,23 @@ void Viewer::postEmptyEvent()
     emplaceEvent( "Empty", [] () {} );
 #endif
     glfwPostEmptyEvent();
+}
+
+const TouchpadParameters & Viewer::getTouchpadParameters() const
+{
+    if ( !touchpadController_ )
+    {
+        const static TouchpadParameters empty;
+        return empty;
+    }
+    return touchpadController_->getParameters();
+}
+
+void Viewer::setTouchpadParameters( const TouchpadParameters & ps )
+{
+    if ( !touchpadController_ )
+        touchpadController_ = std::make_unique<TouchpadController>();
+    touchpadController_->setParameters( ps );
 }
 
 Viewer::Viewer() :
@@ -1400,16 +1421,21 @@ bool Viewer::draw_( bool force )
 
 void Viewer::drawFull( bool dirtyScene )
 {
+    // unbind to clean main framebuffer
+    if ( sceneTexture_ )
+        sceneTexture_->unbind();
+    // clean main framebuffer
+    clearFramebuffers();
+
     if ( menuPlugin_ )
         menuPlugin_->startFrame();
 
     if ( sceneTexture_ )
+    {
         sceneTexture_->bind( true );
-
-    // need to clean it in texture too
-    for ( auto& viewport : viewport_list )
-        viewport.clearFramebuffers();
-
+        // need to clean it in texture too
+        clearFramebuffers();
+    }
     preDrawSignal();
     // check dirty scene and need swap
     // important to check after preDrawSignal
@@ -1472,12 +1498,14 @@ void Viewer::drawScene()
 
 void Viewer::setupScene()
 {
-    bindSceneTexture( false );
     for ( auto& viewport : viewport_list )
-    {
         viewport.setupView();
+}
+
+void Viewer::clearFramebuffers()
+{
+    for ( auto& viewport : viewport_list )
         viewport.clearFramebuffers();
-    }
 }
 
 void Viewer::resize( int w, int h )
@@ -1960,6 +1988,7 @@ Image Viewer::captureSceneScreenShot( const Vector2i& resolution )
     fd.bind();
 
     setupScene();
+    clearFramebuffers();
     drawScene();
 
     fd.copyTextureBindDef();

@@ -72,6 +72,9 @@ public:
     SceneLoad::SceneLoadResult construct() const
     {
         auto scene = std::make_shared<Object>();
+        scene->setName( "Root" );
+        scene->setAncillary( true );
+
         bool constructed;
         if ( loadedObjects_.size() == 1 )
         {
@@ -80,6 +83,12 @@ public:
             {
                 constructed = false;
                 scene = object;
+                // fix for some buggy scene files
+                if ( scene->name().empty() )
+                {
+                    scene->setName( "Root" );
+                    scene->setAncillary( true );
+                }
             }
             else
             {

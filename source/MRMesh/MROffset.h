@@ -13,13 +13,16 @@ namespace MR
 
 struct BaseShellParameters
 {
-    /// Size of voxel in grid conversions
-    /// if value is negative, it is calculated automatically (mesh bounding box are divided to 5e6 voxels)
-    float voxelSize{ -1.0f };
+    /// Size of voxel in grid conversions;
+    /// The user is responsible for setting some positive value here
+    float voxelSize = 0;
 
     /// Progress callback
     ProgressCallback callBack;
 };
+
+/// computes size of a cubical voxel to get approximately given number of voxels during rasterization
+[[nodiscard]] MRMESH_API float suggestVoxelSize( const MeshPart & mp, float approxNumVoxels );
 
 struct OffsetParameters : BaseShellParameters
 {

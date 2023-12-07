@@ -8,7 +8,7 @@
 #include "MRTimer.h"
 // test
 #include "MRMesh.h"
-#include "MRUVSphere.h"
+#include "MRMakeSphereMesh.h"
 #include "MRGTest.h"
 
 namespace MR

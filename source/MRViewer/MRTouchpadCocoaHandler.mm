@@ -1,6 +1,7 @@
 #ifdef __APPLE__
 
 #include "MRTouchpadCocoaHandler.h"
+#include "MRViewer.h"
 
 #include <GLFW/glfw3.h>
 #define GLFW_EXPOSE_NATIVE_COCOA
@@ -174,10 +175,40 @@ void TouchpadCocoaHandler::onScrollEvent( NSView* view, SEL cmd, NSEvent* event 
     }
     else
     {
-        if ( const auto state = convert( [event phase] ) )
-            handler->swipe( deltaX, deltaY, false, *state );
-        else if ( const auto momentumPhase = convert( [event momentumPhase] ) )
-            handler->swipe( deltaX, deltaY, true, *momentumPhase );
+        std::optional<GestureState> state = std::nullopt;
+        bool kinetic = false;
+        if ( ( state = convert( [event phase] ) ) )
+            kinetic = false;
+        else if ( ( state = convert( [event momentumPhase] ) ) )
+            kinetic = true;
+        else
+            return;
+
+        // merge consecutive swipe gestures
+        static std::atomic_bool gDelayedSwipeGestureEnd = false;
+        if ( *state == GestureState::Begin && gDelayedSwipeGestureEnd.exchange( false ) )
+        {
+            return;
+        }
+        else if ( *state == GestureState::End )
+        {
+            gDelayedSwipeGestureEnd.store( true );
+            constexpr auto delayMs = 50.;
+            auto popTime = dispatch_time( DISPATCH_TIME_NOW, (int64_t)( delayMs * NSEC_PER_MSEC ) );
+            dispatch_after( popTime, dispatch_get_main_queue(), ^(void)
+            {
+                if ( gDelayedSwipeGestureEnd.exchange( false ) )
+                {
+                    handler->swipe( deltaX, deltaY, false, GestureState::End );
+                    // manually resume the event loop
+                    getViewerInstance().postEmptyEvent();
+                }
+            } );
+        }
+        else
+        {
+            handler->swipe( deltaX, deltaY, kinetic, *state );
+        }
     }
 }
 

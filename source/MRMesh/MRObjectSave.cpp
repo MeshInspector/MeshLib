@@ -133,7 +133,9 @@ namespace MR::ObjectSave
 Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem::path& file,
                                      ProgressCallback callback )
 {
-    const auto extension = std::string( "*" ) + toLower( utf8string( file.extension().u8string() ) );
+    // NOTE: single-char string literal may break due to the GCC bug:
+    // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
+    const auto extension = '*' + toLower( utf8string( file.extension() ) );
     if ( hasExtension( SceneFileFilters, extension ) )
     {
         if ( extension == "*.mru" )

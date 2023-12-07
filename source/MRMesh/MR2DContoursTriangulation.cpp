@@ -930,7 +930,10 @@ void SweepLineQueue::mergeSamePoints_( const HolesVertIds* holesVertId )
         } );
     }
     if ( needOutline_ )
+    {
+        windingInfo_.resize( tp_.undirectedEdgeSize() );
         return;
+    }
 
     int prevUnique = 0;
     for ( int i = 1; i < sortedVerts_.size(); ++i )
@@ -1208,7 +1211,7 @@ HolesVertIds findHoleVertIdsByHoleEdges( const MeshTopology& tp, const std::vect
 Mesh getOutlineMesh( const Contours2f& contours, IntersectionsMap* interMap )
 {
     const auto contsd = copyContours<Contours2d>( contours );
-    SweepLineQueue triangulator( contsd, nullptr, false, WindingMode::Negative );
+    SweepLineQueue triangulator( contsd, nullptr, false, WindingMode::Negative, true );
 
     if ( interMap )
         interMap->shift = triangulator.vertSize();

@@ -10,6 +10,7 @@
 #include "MRPolyline.h"
 #include "MRLinesSave.h"
 #include "MRParallelFor.h"
+#include "MRLine.h"
 #include <numeric>
 
 namespace MR
@@ -181,16 +182,79 @@ struct CornerParameters
     float lrAng;
 };
 
+// returns intersection point of (a->b)x(c->d)
+// nullopt if parallel
+std::optional<Vector2f> findIntersection( const Vector2f& a, const Vector2f& b, const Vector2f& c, const Vector2f& d )
+{
+    auto vecA = b - a;
+    if ( cross( vecA, d - c ) == 0.0f )
+        return std::nullopt;
+
+    auto abcS = cross( c - a, vecA );
+    auto abdS = cross( vecA, d - a );
+
+    auto sum = abcS + abdS;
+    auto ratio = abcS / sum;
+    return c * ( 1.0f - ratio ) + d * ratio;
+}
+
 void insertRoundCorner( Contour2f& cont, const CornerParameters& params, float minAnglePrecision, int* shiftMap )
 {
     int numSteps = int( std::floor( std::abs( params.lrAng ) / minAnglePrecision ) );
-    for ( int s = 0; s < numSteps; ++s )
+    if ( numSteps == 0 )
+        return;
+
+    auto lNorm = params.lc - params.lp;
+    std::swap( lNorm.x, lNorm.y );
+    lNorm.y = -lNorm.y;
+    auto rNorm = params.rn - params.rc;
+    std::swap( rNorm.x, rNorm.y );
+    rNorm.y = -rNorm.y;
+
+    auto ang = findAngle( params.org + lNorm, params.org, params.org + rNorm );
+    if ( ang * params.lrAng < 0.0f )
+        ang = -ang;
+
+    auto halfPoint = AffineXf2f::xfAround( Matrix2f::rotation( ang * 0.5f ), params.org )( params.lc );
+    auto smallArchMode = cross( params.lc - halfPoint, params.lp - halfPoint ) * ang > 0.0f || cross( params.rn - halfPoint, params.rc - halfPoint ) * ang > 0.0f;
+    if ( smallArchMode )
     {
-        float stepAng = ( params.lrAng / ( numSteps + 1 ) ) * ( s + 1 );
-        auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( stepAng ), params.org );
-        cont.emplace_back( rotXf( params.lc ) );
+        cont.emplace_back( halfPoint );
         if ( shiftMap )
             ++( *shiftMap );
+    }
+    else
+    {
+        auto halfPointNorm = ( halfPoint - params.org );
+        std::swap( halfPointNorm.x, halfPointNorm.y );
+        halfPointNorm.y = -halfPointNorm.y;
+
+        auto interLeft = findIntersection( halfPoint, halfPoint + halfPointNorm, params.lp, params.lc );
+        if ( !interLeft )
+            return;
+
+        auto interRight = findIntersection( halfPoint, halfPoint + halfPointNorm, params.rn, params.rc );
+        if ( !interRight )
+            return;
+
+        for ( int s = 0; s < numSteps; ++s )
+        {
+            float ratio = float( s + 1 ) / float( numSteps + 1 );
+            bool leftHalf = ratio < 0.5f;
+            float t = leftHalf ? ratio * 2.0f : ( ratio - 0.5f ) * 2.0f;
+            auto invt = ( 1 - t );
+            auto tSq = t * t;
+            auto invtSq = invt * invt;
+            auto tCb = tSq * t;
+            auto invtCb = invtSq * invt;
+            auto p1 = leftHalf ? params.lc : halfPoint;
+            auto p2 = leftHalf ? ( params.lc + *interLeft ) * 0.5f : ( halfPoint + *interRight ) * 0.5f;
+            auto p3 = leftHalf ? ( *interLeft + halfPoint ) * 0.5f : ( *interRight + params.rc ) * 0.5f;
+            auto p4 = leftHalf ? halfPoint : params.rc;
+            cont.emplace_back( p1 * invtCb + 3.0f * p2 * invtSq * t + 3.0f * p3 * invt * tSq + p4 * tCb );
+            if ( shiftMap )
+                ++( *shiftMap );
+        }
     }
 }
 

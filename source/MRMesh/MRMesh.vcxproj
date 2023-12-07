@@ -345,6 +345,7 @@
     <ClInclude Include="MRMeshOverhangs.h" />
     <ClInclude Include="MRMeshLoadStep.h" />
     <ClInclude Include="MRZip.h" />
+    <ClInclude Include="MRObjectSave.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -595,6 +596,7 @@
     <ClCompile Include="MRMeshOverhangs.cpp" />
     <ClCompile Include="MRMeshLoadStep.cpp" />
     <ClCompile Include="MRZip.cpp" />
+    <ClCompile Include="MRObjectSave.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\laz-perf\laz-perf.vcxproj">

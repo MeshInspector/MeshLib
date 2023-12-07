@@ -316,9 +316,9 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     {
         if ( settings_.workMode == WorkMode::Laplacian )
         {
-            const PointOnFace pOnFace( curentPosPick.second.face, curentPosPick.second.point );
+            const PointOnFace pOnFace{ curentPosPick.second.face, curentPosPick.second.point };
             const VertId vert = mesh.getClosestVertex( pOnFace );
-            const PointOnFace vertPOF( curentPosPick.second.face, mesh.points[vert] );
+            const PointOnFace vertPOF{ curentPosPick.second.face, mesh.points[vert] };
             visualizationDistanceMap_ = computeSpaceDistances( mesh, vertPOF, settings_.radius );
             visualizationRegion_ = findNeighborVerts( mesh, vertPOF, settings_.radius );
             expand( mesh.topology, visualizationRegion_ );
@@ -326,7 +326,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
         }
         else
         {
-            PointOnFace pOnFace( curentPosPick.second.face, curentPosPick.second.point );
+            PointOnFace pOnFace{ curentPosPick.second.face, curentPosPick.second.point };
             visualizationDistanceMap_ = computeSpaceDistances( mesh, pOnFace, settings_.radius );
             visualizationRegion_ = findNeighborVerts( mesh, pOnFace, settings_.radius );
             expand( mesh.topology, visualizationRegion_ );
@@ -371,7 +371,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
 
         if ( triPoints.size() == 1 )
         {
-            PointOnFace pOnFace( mesh.topology.left( triPoints[0].e ), mesh.triPoint( triPoints[0] ) );
+            PointOnFace pOnFace{ mesh.topology.left( triPoints[0].e ), mesh.triPoint( triPoints[0] ) };
             editingDistanceMap_ = computeSpaceDistances( mesh, pOnFace, settings_.radius );
             singleEditingRegion_ = findNeighborVerts( mesh, pOnFace, settings_.radius );
         }

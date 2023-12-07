@@ -19,7 +19,7 @@ MR_ADD_CLASS_FACTORY( ObjectPointsHolder )
 
 ObjectPointsHolder::ObjectPointsHolder()
 {
-    resetSceneProperties_();
+    setDefaultSceneProperties_();
 }
 
 void ObjectPointsHolder::applyScale( float scaleFactor )
@@ -247,7 +247,7 @@ void ObjectPointsHolder::deserializeFields_( const Json::Value& root )
         deserializeFromJson( root["ValidVertBitSet"], points_->validPoints );
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
-        resetSceneProperties_();
+        setDefaultSceneProperties_();
 }
 
 void ObjectPointsHolder::setupRenderObject_() const
@@ -273,7 +273,7 @@ void ObjectPointsHolder::setSelectedVerticesColorsForAllViewports( ViewportPrope
     selectedColor_ = std::move( val );
 }
 
-void ObjectPointsHolder::resetSceneProperties_()
+void ObjectPointsHolder::setDefaultSceneProperties_()
 {
     setDefaultColors_();
 }

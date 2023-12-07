@@ -150,7 +150,7 @@ const ViewportMask& ObjectLinesHolder::getVisualizePropertyMask( unsigned type )
 
 ObjectLinesHolder::ObjectLinesHolder()
 {
-    resetSceneProperties_();
+    setDefaultSceneProperties_();
 }
 
 void ObjectLinesHolder::serializeBaseFields_( Json::Value& root ) const
@@ -212,7 +212,7 @@ void ObjectLinesHolder::deserializeBaseFields_( const Json::Value& root )
     deserializeFromJson( root["LineColors"], linesColorMap_.vec_ );
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
-        resetSceneProperties_();
+        setDefaultSceneProperties_();
 }
 
 void ObjectLinesHolder::deserializeFields_( const Json::Value& root )
@@ -265,7 +265,7 @@ void ObjectLinesHolder::setDefaultColors_()
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectLines ), false );
 }
 
-void ObjectLinesHolder::resetSceneProperties_()
+void ObjectLinesHolder::setDefaultSceneProperties_()
 {
     setDefaultColors_();
 }

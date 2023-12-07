@@ -47,7 +47,7 @@ void ObjectLabel::setPivotPoint( const Vector2f& pivotPoint )
 
 ObjectLabel::ObjectLabel()
 {
-    resetSceneProperties_();
+    setDefaultSceneProperties_();
 
     // set default path to font if available
 #ifndef __EMSCRIPTEN__
@@ -139,7 +139,7 @@ void ObjectLabel::deserializeFields_( const Json::Value& root )
     deserializeFromJson( root["Colors"]["Contour"], contourColor_.get() );
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
-        resetSceneProperties_();
+        setDefaultSceneProperties_();
 
     needRebuild_ = true;
 }
@@ -360,7 +360,7 @@ void ObjectLabel::setContourColorsForAllViewports( ViewportProperty<Color> val )
     needRedraw_ = true;
 }
 
-void ObjectLabel::resetSceneProperties_()
+void ObjectLabel::setDefaultSceneProperties_()
 {
     setDefaultColors_();
 }

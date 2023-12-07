@@ -22,7 +22,7 @@ MR_ADD_CLASS_FACTORY( VisualObject )
 VisualObject::VisualObject()
 {
     useDefaultScenePropertiesOnDeserialization_ = SceneSettings::get( SceneSettings::Type::UseDefaultScenePropertiesOnDeserialization );
-    resetSceneProperties_();
+    setDefaultSceneProperties_();
 }
 
 void VisualObject::setVisualizeProperty( bool value, unsigned type, ViewportMask viewportMask )
@@ -377,7 +377,7 @@ MR_SUPPRESS_WARNING_POP
     labelsColor_.set( Color( resVec ) );
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
-        resetSceneProperties_();
+        setDefaultSceneProperties_();
 
     dirty_ = DIRTY_ALL;
 }
@@ -452,7 +452,7 @@ MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
 MR_SUPPRESS_WARNING_POP
 }
 
-void VisualObject::resetSceneProperties_()
+void VisualObject::setDefaultSceneProperties_()
 {
     setDefaultColors_();
 }

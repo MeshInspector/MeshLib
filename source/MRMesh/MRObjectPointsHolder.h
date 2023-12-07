@@ -114,8 +114,8 @@ private:
     /// this is private function to set default colors of this type (ObjectPointsHolder) in constructor only
     void setDefaultColors_();
 
-    /// reset scene-related properties
-    void resetSceneProperties_();
+    /// set default scene-related properties
+    void setDefaultSceneProperties_();
 };
 
 }

@@ -123,7 +123,7 @@ size_t ObjectDistanceMap::heapBytes() const
 
 ObjectDistanceMap::ObjectDistanceMap()
 {
-    resetSceneProperties_();
+    setDefaultSceneProperties_();
 }
 
 void ObjectDistanceMap::serializeFields_( Json::Value& root ) const
@@ -148,7 +148,7 @@ void ObjectDistanceMap::deserializeFields_( const Json::Value& root )
     deserializeFromJson( root["OriginWorld"], toWorldParams_.orgPoint );
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
-        resetSceneProperties_();
+        setDefaultSceneProperties_();
 
     construct_();
 }
@@ -190,7 +190,7 @@ void ObjectDistanceMap::construct_()
     setDirtyFlags( DIRTY_ALL );
 }
 
-void ObjectDistanceMap::resetSceneProperties_()
+void ObjectDistanceMap::setDefaultSceneProperties_()
 {
     setDefaultColors_();
 }

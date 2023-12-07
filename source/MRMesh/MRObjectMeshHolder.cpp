@@ -195,7 +195,7 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     }
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
-        resetSceneProperties_();
+        setDefaultSceneProperties_();
 }
 
 VoidOrErrStr ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
@@ -266,7 +266,7 @@ void ObjectMeshHolder::setDefaultColors_()
 
 ObjectMeshHolder::ObjectMeshHolder()
 {
-    resetSceneProperties_();
+    setDefaultSceneProperties_();
 }
 
 void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc )
@@ -654,7 +654,7 @@ void ObjectMeshHolder::setEdgesColorsForAllViewports( ViewportProperty<Color> va
     needRedraw_ = true;
 }
 
-void ObjectMeshHolder::resetSceneProperties_()
+void ObjectMeshHolder::setDefaultSceneProperties_()
 {
     setDefaultColors_();
     setFlatShading( SceneSettings::get( SceneSettings::Type::MeshFlatShading ) );

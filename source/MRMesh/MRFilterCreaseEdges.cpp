@@ -42,16 +42,19 @@ void filterCreaseEdges( const Mesh& mesh, UndirectedEdgeBitSet& creaseEdges, flo
     if ( !filterBranches )
         return;
 
+    UndirectedEdgeBitSet backupCreaseEdges( creaseEdges );
+
     auto incidentVertices = getIncidentVerts( mesh.topology, creaseEdges );
     std::vector<UndirectedEdgeId> branch;
 
     for ( auto v : incidentVertices )
     {
         std::vector<std::pair<UndirectedEdgeId, VertId>> connections;
-        for ( UndirectedEdgeId ue : orgRing( mesh.topology, v ) )
+        for ( EdgeId e : orgRing( mesh.topology, v ) )
         {
-            if ( creaseEdges.test( ue ) )
-                connections.push_back( { ue, mesh.topology.dest( ue ) } );
+            const UndirectedEdgeId ue = e.undirected();
+            if ( backupCreaseEdges.test( ue ) )
+                connections.push_back( { ue, mesh.topology.dest( e ) } );
         }
 
         if ( connections.size() != 1 )
@@ -73,7 +76,7 @@ void filterCreaseEdges( const Mesh& mesh, UndirectedEdgeBitSet& creaseEdges, flo
             connections.clear();
             for ( EdgeId e : orgRing( mesh.topology, nextVert ) )
             {
-                if ( creaseEdges.test( e.undirected() ) )
+                if ( backupCreaseEdges.test( e.undirected() ) )
                     connections.push_back( { e.undirected(), mesh.topology.dest( e ) } );
             }
 

@@ -204,54 +204,44 @@ void insertRoundCorner( Contour2f& cont, const CornerParameters& params, float m
     if ( numSteps == 0 )
         return;
 
-    auto lNorm = params.lc - params.lp;
-    std::swap( lNorm.x, lNorm.y );
-    lNorm.y = -lNorm.y;
-    auto rNorm = params.rn - params.rc;
-    std::swap( rNorm.x, rNorm.y );
-    rNorm.y = -rNorm.y;
-
-    auto ang = findAngle( params.org + lNorm, params.org, params.org + rNorm );
-    if ( ang * params.lrAng < 0.0f )
-        ang = -ang;
-
-    auto halfPoint = AffineXf2f::xfAround( Matrix2f::rotation( ang * 0.5f ), params.org )( params.lc );
-    auto smallArchMode = cross( params.lc - halfPoint, params.lp - halfPoint ) * ang > 0.0f || cross( params.rn - halfPoint, params.rc - halfPoint ) * ang > 0.0f;
-    if ( smallArchMode )
+    auto lVec = params.lc - params.lp;
+    auto rVec = params.rc - params.rn;
+    bool round = std::abs( dot( params.lc - params.org, lVec ) / ( params.lc - params.org ).lengthSq() ) < std::numeric_limits<float>::epsilon() * 10.0f;
+    round = round && std::abs( dot( params.rc - params.org, rVec ) / ( params.rc - params.org ).lengthSq() ) < std::numeric_limits<float>::epsilon() * 10.0f;
+    
+    if ( !round )
     {
-        cont.emplace_back( halfPoint );
-        if ( shiftMap )
-            ++( *shiftMap );
-    }
-    else
-    {
-        auto halfPointNorm = ( halfPoint - params.org );
-        std::swap( halfPointNorm.x, halfPointNorm.y );
-        halfPointNorm.y = -halfPointNorm.y;
+        //auto halfPoint = AffineXf2f::xfAround( Matrix2f::rotation( params.lrAng * 0.5f ), params.org )( params.lc );
+        auto offset = ( params.org - params.lc ).length();
+        auto width = std::abs( params.lrAng ) / PI_F * 1.5f;
 
-        auto interLeft = findIntersection( halfPoint, halfPoint + halfPointNorm, params.lp, params.lc );
-        if ( !interLeft )
-            return;
-
-        auto interRight = findIntersection( halfPoint, halfPoint + halfPointNorm, params.rn, params.rc );
-        if ( !interRight )
-            return;
+        auto ln = params.lc + lVec.normalized() * width * offset;
+        auto rp = params.rc + rVec.normalized() * width * offset;
 
         for ( int s = 0; s < numSteps; ++s )
         {
-            float ratio = float( s + 1 ) / float( numSteps + 1 );
-            bool leftHalf = ratio < 0.5f;
-            float t = leftHalf ? ratio * 2.0f : ( ratio - 0.5f ) * 2.0f;
+            float t = float( s + 1 ) / float( numSteps + 1 );
             auto invt = ( 1 - t );
             auto tSq = t * t;
             auto invtSq = invt * invt;
             auto tCb = tSq * t;
             auto invtCb = invtSq * invt;
-            auto p1 = leftHalf ? params.lc : halfPoint;
-            auto p2 = leftHalf ? ( params.lc + *interLeft ) * 0.5f : ( halfPoint + *interRight ) * 0.5f;
-            auto p3 = leftHalf ? ( *interLeft + halfPoint ) * 0.5f : ( *interRight + params.rc ) * 0.5f;
-            auto p4 = leftHalf ? halfPoint : params.rc;
+            const auto& p1 = params.lc;
+            const auto& p2 = ln;
+            const auto& p3 = rp;
+            const auto& p4 = params.rc;
             cont.emplace_back( p1 * invtCb + 3.0f * p2 * invtSq * t + 3.0f * p3 * invt * tSq + p4 * tCb );
+            if ( shiftMap )
+                ++( *shiftMap );
+        }
+    }
+    else
+    {
+        for ( int s = 0; s < numSteps; ++s )
+        {
+            float stepAng = ( params.lrAng / ( numSteps + 1 ) ) * ( s + 1 );
+            auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( stepAng ), params.org );
+            cont.emplace_back( rotXf( params.lc ) );
             if ( shiftMap )
                 ++( *shiftMap );
         }

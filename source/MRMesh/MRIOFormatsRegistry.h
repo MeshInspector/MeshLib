@@ -60,6 +60,20 @@ public:
 
 using ObjectPtr = std::shared_ptr<Object>;
 
+namespace ObjectLoad
+{
+
+using ObjectLoader = Expected<std::vector<ObjectPtr>>( * )( const std::filesystem::path&, std::string*, ProgressCallback );
+
+/// Find an appropriate loader from the registry
+MRMESH_API ObjectLoader getObjectLoader( IOFilter filter );
+/// Add or override a loader in the registry
+MRMESH_API void setObjectLoader( IOFilter filter, ObjectLoader loader );
+/// Get all registered filters
+MRMESH_API IOFilters getFilters();
+
+} // namespace ObjectLoad
+
 namespace AsyncObjectLoad
 {
 

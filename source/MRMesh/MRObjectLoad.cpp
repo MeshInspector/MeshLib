@@ -29,10 +29,28 @@
 #include "MRGltfSerializer.h"
 #endif
 
+namespace
+{
+
+std::optional<MR::IOFilter> findFilter( const MR::IOFilters& filters, const std::string& extension )
+{
+    const auto it = std::find_if( filters.begin(), filters.end(), [&extension] ( const MR::IOFilter& filter )
+    {
+        return std::string::npos != filter.extensions.find( extension );
+    } );
+    if ( it != filters.end() )
+        return *it;
+    else
+        return std::nullopt;
+}
+
+} // namespace
+
 namespace MR
 {
 
 const IOFilters allFilters = SceneFileFilters
+                             | ObjectLoad::getFilters()
                              | MeshLoad::getFilters()
 #if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
                              | VoxelsLoad::Filters
@@ -309,6 +327,11 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
         
         result = std::vector( { *objTree } );
         ( *result )[0]->setName( utf8string( filename.stem() ) );
+    }
+    else if ( const auto filter = findFilter( ObjectLoad::getFilters(), ext ) )
+    {
+        const auto loader = ObjectLoad::getObjectLoader( *filter );
+        return loader( filename, loadWarn, std::move( callback ) );
     }
     else
     {

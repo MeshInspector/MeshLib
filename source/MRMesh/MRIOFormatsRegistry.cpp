@@ -111,6 +111,27 @@ void setMeshStreamLoader( IOFilter filter, MeshStreamLoader streamLoader )
 
 } // namespace MeshLoad
 
+namespace ObjectLoad
+{
+
+ObjectLoader getObjectLoader( IOFilter filter )
+{
+    return FormatRegistry<ObjectLoader>::getLoader( std::move( filter ) );
+}
+
+void setObjectLoader( IOFilter filter, ObjectLoader loader )
+{
+    FormatRegistry<ObjectLoader>::setLoader( std::move( filter ), loader );
+}
+
+IOFilters getFilters()
+{
+    // these filters are not used in file dialogs, no need to prepend AllFilter here
+    return FormatRegistry<ObjectLoader>::getFilters();
+}
+
+} // namespace ObjectLoad
+
 namespace AsyncObjectLoad
 {
 

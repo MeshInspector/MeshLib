@@ -109,6 +109,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PlanarTriangulation, [] ( pybind11::module_&
         "\treturn created mesh" );
 } )
 
+#ifndef MRMESH_NO_LABEL
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolsMesh, [] ( pybind11::module_& m )
 {
     m.def( "addBaseToPlanarMesh", &MR::addBaseToPlanarMesh,
@@ -116,6 +117,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolsMesh, [] ( pybind11::module_& m )
         "Given a planar mesh with boundary on input located in plane XY, packs and extends it along Z on zOffset to make a volumetric closed mesh.\n"
         "Note! zOffset should be > 0.\n" );
 } )
+#endif
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, UndirectedEdgeUndirectedEdge, [] ( pybind11::module_& m )
 {

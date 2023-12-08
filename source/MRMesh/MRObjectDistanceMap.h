@@ -65,6 +65,9 @@ private:
 
     /// this is private function to set default colors of this type (ObjectDistanceMap) in constructor only
     void setDefaultColors_();
+
+    /// set default scene-related properties
+    void setDefaultSceneProperties_();
 };
 
 } // namespace MR

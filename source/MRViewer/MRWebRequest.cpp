@@ -1,6 +1,8 @@
 #include "MRWebRequest.h"
 #ifndef MRMESH_NO_CPR
 #include "MRCommandLoop.h"
+
+#include "MRMesh/MRProgressCallback.h"
 #include "MRPch/MRWasm.h"
 #include "MRPch/MRSpdlog.h"
 
@@ -18,8 +20,10 @@ namespace
 
 struct RequestContext
 {
+    MR::ProgressCallback uploadCallback;
+    MR::ProgressCallback downloadCallback;
 #ifdef __EMSCRIPTEN__
-    MR::WebRequest::ResponseCallback callback;
+    MR::WebRequest::ResponseCallback responseCallback;
 #else
     std::optional<std::ifstream> input;
     std::optional<std::ofstream> output;
@@ -56,6 +60,7 @@ std::string toString( MR::WebRequest::Method method )
 #ifdef __EMSCRIPTEN__
 extern "C"
 {
+
 EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool async, int ctxId )
 {
     using namespace MR;
@@ -69,7 +74,7 @@ EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool asy
         if ( !async )
         {
             auto& ctx = sRequestContextMap.at( ctxId );
-            ctx->callback( resJson );
+            ctx->responseCallback( resJson );
 
             std::unique_lock lock( sRequestContextMutex );
             sRequestContextMap.erase( ctxId );
@@ -79,7 +84,7 @@ EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool asy
             CommandLoop::appendCommand( [resJson, ctxId] ()
             {
                 auto& ctx = sRequestContextMap.at( ctxId );
-                ctx->callback( resJson );
+                ctx->responseCallback( resJson );
 
                 std::unique_lock lock( sRequestContextMutex );
                 sRequestContextMap.erase( ctxId );
@@ -92,6 +97,21 @@ EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool asy
     }
     return 1;
 }
+
+EMSCRIPTEN_KEEPALIVE int emsCallUploadCallback( double v, int ctxId )
+{
+    auto& ctx = sRequestContextMap.at( ctxId );
+    MR::reportProgress( ctx->uploadCallback, (float)v );
+    return 1;
+}
+
+EMSCRIPTEN_KEEPALIVE int emsCallDownloadCallback( double v, int ctxId )
+{
+    auto& ctx = sRequestContextMap.at( ctxId );
+    MR::reportProgress( ctx->downloadCallback, (float)v );
+    return 1;
+}
+
 }
 #else
 namespace
@@ -103,6 +123,19 @@ bool downloadFileCallback( std::string data, intptr_t userdata )
     auto& ctx = sRequestContextMap.at( ctxId );
     assert( ctx->output.has_value() );
     *ctx->output << data;
+    return true;
+}
+
+bool progressCallback( cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cpr::cpr_off_t uploadTotal, cpr::cpr_off_t uploadNow, intptr_t userdata )
+{
+    const auto ctxId = (int)userdata;
+    auto& ctx = sRequestContextMap.at( ctxId );
+    if ( downloadNow < downloadTotal )
+        if ( !MR::reportProgress( ctx->downloadCallback, (float)downloadNow / (float)downloadTotal ) )
+            return false;
+    if ( uploadNow < uploadTotal )
+        if ( !MR::reportProgress( ctx->uploadCallback, (float)uploadNow / (float)uploadTotal ) )
+            return false;
     return true;
 }
 
@@ -131,6 +164,8 @@ void WebRequest::clear()
     formData_ = {};
     body_ = {};
     outputPath_ = {};
+    uploadCallback_ = {};
+    downloadCallback_ = {};
 }
 
 void WebRequest::setMethod( Method method )
@@ -158,6 +193,11 @@ void WebRequest::setInputPath( std::string inputPath )
     inputPath_ = std::move( inputPath );
 }
 
+void WebRequest::setUploadProgressCallback( ProgressCallback callback )
+{
+    uploadCallback_ = std::move( callback );
+}
+
 void WebRequest::setFormData( std::vector<FormData> formData )
 {
     formData_ = std::move( formData );
@@ -171,6 +211,11 @@ void WebRequest::setBody( std::string body )
 void WebRequest::setOutputPath( std::string outputPath )
 {
     outputPath_ = std::move( outputPath );
+}
+
+void WebRequest::setDownloadProgressCallback( ProgressCallback callback )
+{
+    downloadCallback_ = std::move( callback );
 }
 
 void WebRequest::setAsync( bool async )
@@ -263,6 +308,9 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         if ( ctx->output.has_value() )
             session.SetWriteCallback( { &downloadFileCallback, ctxId } );
 
+        if ( ctx->uploadCallback || ctx->downloadCallback )
+            session.SetProgressCallback( { &progressCallback, ctxId } );
+
         switch ( method )
         {
             case Method::Get:
@@ -334,11 +382,15 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         web_req_body = UTF8ToString( $1 );
         web_req_filename = UTF8ToString( $2 );
         web_req_method = UTF8ToString( $3 );
+        web_req_use_upload_callback = $4;
+        web_req_use_download_callback = $5;
     },
         timeout_,
         body_.c_str(),
         inputPath_.c_str(),
-        method.c_str()
+        method.c_str(),
+        (bool)uploadCallback_,
+        (bool)downloadCallback_
     );
 
     for ( const auto& [key, value] : params_ )
@@ -361,7 +413,9 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
     if ( !urlP.empty() && urlP.back() == '/' )
         urlP = urlP.substr( 0, int( urlP.size() ) - 1 );
 
-    ctx->callback = callback;
+    ctx->uploadCallback = uploadCallback_;
+    ctx->downloadCallback = downloadCallback_;
+    ctx->responseCallback = callback;
 
     if ( outputPath_.empty() )
         MAIN_THREAD_EM_ASM( web_req_send( UTF8ToString( $0 ), $1, $2 ), urlP.c_str(), async, ctxId );

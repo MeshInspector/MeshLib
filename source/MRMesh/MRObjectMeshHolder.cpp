@@ -193,6 +193,9 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
         deserializeFromJson( root["SelectionEdgeBitSet"], selectedEdges_ );
         deserializeFromJson( root["MeshCreasesUndirEdgeBitSet"], creases_ );
     }
+
+    if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
+        setDefaultSceneProperties_();
 }
 
 VoidOrErrStr ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
@@ -263,8 +266,7 @@ void ObjectMeshHolder::setDefaultColors_()
 
 ObjectMeshHolder::ObjectMeshHolder()
 {
-    setDefaultColors_();
-    setFlatShading( SceneSettings::get( SceneSettings::Type::MeshFlatShading ) );
+    setDefaultSceneProperties_();
 }
 
 void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc )
@@ -650,6 +652,12 @@ void ObjectMeshHolder::setEdgesColorsForAllViewports( ViewportProperty<Color> va
 {
     edgesColor_ = std::move( val );
     needRedraw_ = true;
+}
+
+void ObjectMeshHolder::setDefaultSceneProperties_()
+{
+    setDefaultColors_();
+    setFlatShading( SceneSettings::get( SceneSettings::Type::MeshFlatShading ) );
 }
 
 } //namespace MR

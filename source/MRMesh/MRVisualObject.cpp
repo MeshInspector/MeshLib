@@ -9,6 +9,7 @@
 #include "MRStringConvert.h"
 #include "MRExpected.h"
 #include "MRParallelFor.h"
+#include "MRSceneSettings.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSuppressWarning.h"
 #include <filesystem>
@@ -20,7 +21,8 @@ MR_ADD_CLASS_FACTORY( VisualObject )
 
 VisualObject::VisualObject()
 {
-    setDefaultColors_();
+    useDefaultScenePropertiesOnDeserialization_ = SceneSettings::get( SceneSettings::Type::UseDefaultScenePropertiesOnDeserialization );
+    setDefaultSceneProperties_();
 }
 
 void VisualObject::setVisualizeProperty( bool value, unsigned type, ViewportMask viewportMask )
@@ -340,6 +342,8 @@ MR_SUPPRESS_WARNING_POP
 
     // append base type
     root["Type"].append( VisualObject::TypeName() );
+
+    root["UseDefaultSceneProperties"] = useDefaultScenePropertiesOnDeserialization_;
 }
 
 void VisualObject::deserializeFields_( const Json::Value& root )
@@ -371,6 +375,9 @@ MR_SUPPRESS_WARNING_POP
     // labels
     deserializeFromJson( root["Colors"]["Labels"], resVec );
     labelsColor_.set( Color( resVec ) );
+
+    if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
+        setDefaultSceneProperties_();
 
     dirty_ = DIRTY_ALL;
 }
@@ -443,6 +450,11 @@ void VisualObject::setDefaultColors_()
 MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
     setLabelsColor( SceneColors::get( SceneColors::Labels ) );
 MR_SUPPRESS_WARNING_POP
+}
+
+void VisualObject::setDefaultSceneProperties_()
+{
+    setDefaultColors_();
 }
 
 } //namespace MR

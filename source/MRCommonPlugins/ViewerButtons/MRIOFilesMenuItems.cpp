@@ -93,7 +93,9 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
         {
             return filter.extensions == "*.*";
         } );
-#ifndef __EMSCRIPTEN_PTHREADS__
+#ifdef __EMSCRIPTEN_PTHREADS__
+        filters_ = filters_ | ObjectLoad::getFilters();
+#else
         filters_ = filters_ | AsyncObjectLoad::getFilters();
 #endif
 #else

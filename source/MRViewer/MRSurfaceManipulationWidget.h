@@ -4,6 +4,7 @@
 #include "MRMesh/MRMeshFwd.h"
 #include "MRViewer.h"
 #include "MRMesh/MRChangeMeshAction.h"
+#include <MRMesh/MRLaplacian.h>
 #include <chrono>
 
 namespace MR
@@ -24,7 +25,8 @@ public:
     {
         Add,
         Remove,
-        Relax
+        Relax,
+        Laplacian
     };
 
     /// Mesh change settings
@@ -36,6 +38,7 @@ public:
         float editForce = 1.f; // the force of changing mesh
         float sharpness = 50.f; // effect of force on points far from center editing area. [0 - 100]
         float relaxForceAfterEdit = 0.25f; //  force of relaxing modified area after editing (add / remove) is complete. [0 - 0.5], 0 - not relax
+        Laplacian::EdgeWeights edgeWeights = Laplacian::EdgeWeights::Cotan; // edge weights for laplacian smoothing
     };
 
     /// initialize widget according ObjectMesh
@@ -68,6 +71,9 @@ private:
     void updateUVmap_( bool set );
     void updateRegion_( const Vector2f& mousePos );
     void abortEdit_();
+    // Laplacian
+    void processPick_( const PointOnFace& pick );
+    void processMove_( const Vector3f& move );
 
     Settings settings_;
 
@@ -82,7 +88,6 @@ private:
     VertScalars editingDistanceMap_;
     VertScalars visualizationDistanceMap_;
     VertUVCoords uvs_;
-    std::shared_ptr<ChangeMeshAction> changeMeshAction_;
     std::shared_ptr<ObjectMesh> oldMesh_;
     bool firstInit_ = true; // need to save settings in re-initial
     bool badRegion_ = false; // in selected region less than 3 points
@@ -94,6 +99,14 @@ private:
     bool ownMeshChangedSignal_ = false;
 
     bool connectionsInitialized_ = false;
+
+    // Laplacian
+    VertId touchVertId; // we fix this vertex in Laplacian and move it manually
+    Vector3f touchVertIniPos; // initial position of fixed vertex
+    Vector2i storedDown_;
+    std::unique_ptr<Laplacian> laplacian_;
+    std::shared_ptr<ChangeMeshAction> historyAction_; // this action is prepared beforehand for better responsiveness, but pushed only on mouse move
+    bool appendHistoryAction_ = false;
 };
 
 }

@@ -1116,6 +1116,9 @@
     <ClInclude Include="MRSphere.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRObjectSave.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1860,6 +1863,9 @@
       <Filter>Source Files\BaseStructures</Filter>
     </ClCompile>
     <ClCompile Include="MRSceneLoad.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRObjectSave.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
   </ItemGroup>

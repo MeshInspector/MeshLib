@@ -44,7 +44,10 @@ void ProgressBar::setup( float scaling )
     constexpr size_t bufSize = 256;
     char buf[bufSize];
 
-    snprintf( buf, bufSize, "%s###GlobalProgressBarPopup", instance.title_.c_str() );
+    {
+        std::unique_lock lock( instance.mutex_ );
+        snprintf( buf, bufSize, "%s###GlobalProgressBarPopup", instance.title_.c_str() );
+    }
     instance.setupId_ = ImGui::GetID( buf );
     const Vector2f windowSize( 440.0f * scaling, 144.0f * scaling );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
@@ -58,20 +61,29 @@ void ProgressBar::setup( float scaling )
             ImGui::PushFont( smallFont );
         ImGui::PushStyleColor( ImGuiCol_Text, StyleConsts::ProgressBar::textColor.getUInt32() );
         ImGui::SetCursorPos( ImVec2( 32.0f * scaling, 20.0f * scaling ) );
-        if ( instance.taskCount_ <= 1 )
-            ImGui::Text( "%s", instance.title_.c_str() );
-        else
         {
-            ImGui::Text( "%s :", instance.title_.c_str() );
-            ImGui::SameLine();
-            snprintf( buf, bufSize, "%s (%d/%d)\n", instance.taskName_.c_str(), instance.currentTask_, instance.taskCount_ );
-            ImGui::Text( "%s", buf );
+            std::unique_lock lock( instance.mutex_ );
+            if ( instance.overrideTaskName_ )
+            {
+                ImGui::Text( "%s : %s", instance.title_.c_str(), instance.taskName_.c_str() );
+            }
+            else if ( instance.taskCount_ > 1 )
+            {
+                ImGui::Text( "%s :", instance.title_.c_str() );
+                ImGui::SameLine();
+                snprintf( buf, bufSize, "%s (%d/%d)\n", instance.taskName_.c_str(), (int)instance.currentTask_, (int)instance.taskCount_ );
+                ImGui::Text( "%s", buf );
+            }
+            else
+            {
+                ImGui::Text( "%s", instance.title_.c_str() );
+            }
         }
         ImGui::PopStyleColor();
         if ( smallFont )
             ImGui::PopFont();
 
-        auto progress = instance.progress_;
+        auto progress = (float)instance.progress_;
         ImGui::SetCursorPos( ImVec2( 32.0f * scaling, 56.0f * scaling ) );
         UI::progressBar( scaling, progress, ImVec2( 380.0f * scaling, 12.0f * scaling ) );
 
@@ -83,6 +95,7 @@ void ProgressBar::setup( float scaling )
             {
                 if ( UI::button( "Cancel", btnSize, ImGuiKey_Escape ) )
                 {
+                    std::unique_lock lock( instance.mutex_ );
                     spdlog::info( "Operation progress: \"{}\" - Canceling", instance.title_ );
                     instance.canceled_ = true;
                 }
@@ -266,7 +279,10 @@ bool ProgressBar::setProgress( float p )
     int newPercents = int( p * 100.0f );
     int percents = instance.percents_;
     if ( percents != newPercents && instance.percents_.compare_exchange_strong( percents, newPercents ) )
+    {
+        std::unique_lock lock( instance.mutex_ );
         spdlog::info( "Operation progress: \"{}\" - {}%", instance.title_, newPercents );
+    }
 
     instance.progress_ = p;
     instance.frameRequest_.requestFrame();
@@ -302,8 +318,27 @@ void ProgressBar::nextTask()
 
 void ProgressBar::nextTask( const char* s )
 {
-    instance_().taskName_ = s;
+    {
+        std::unique_lock lock( instance_().mutex_ );
+        instance_().taskName_ = s;
+    }
     nextTask();
+}
+
+void ProgressBar::forceSetTaskName( std::string taskName )
+{
+    auto& instance = instance_();
+    std::unique_lock lock( instance.mutex_ );
+    instance.taskName_ = std::move( taskName );
+    instance.overrideTaskName_ = true;
+}
+
+void ProgressBar::resetTaskName()
+{
+    auto& instance = instance_();
+    std::unique_lock lock( instance.mutex_ );
+    instance.overrideTaskName_ = false;
+    instance.taskName_.clear();
 }
 
 bool ProgressBar::callBackSetProgress( float p )
@@ -359,7 +394,10 @@ void ProgressBar::initialize_()
     canceled_ = false;
     finished_ = false;
 
-    title_ = deferredInit_->name;
+    {
+        std::unique_lock lock( mutex_ );
+        title_ = deferredInit_->name;
+    }
 
     ImGui::OpenPopup( setupId_ );
     frameRequest_.reset();

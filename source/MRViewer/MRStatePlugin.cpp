@@ -68,9 +68,12 @@ bool StateBasePlugin::enable( bool on )
     {
         if ( onDisable_() )
         {
-            if ( auto window = ImGui::FindWindowByName( plugin_name.c_str() ) )
+            if ( auto window = ImGui::FindWindowByName( uiName().c_str()) )
             {
-                Config::instance().setVector2i( plugin_name + "_position", Vector2i{ int( window->Pos.x ), int( window->Pos.y ) } );
+                auto& config = Config::instance();
+                auto dpJson = config.getJsonValue( "DialogPositions" );
+                serializeToJson( Vector2i{ int( window->Pos.x ), int( window->Pos.y ) }, dpJson[uiName()]);
+                config.setJsonValue( "DialogPositions", dpJson );
             }
 
             isEnabled_ = false;

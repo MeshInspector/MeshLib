@@ -454,12 +454,19 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
             yPos = ( ribMenu->getTopPanelOpenedHeight() - 1.0f ) * menu->menu_scaling();
 
         const std::string configKey = std::string( label ) + std::string( "_position" );
-        const auto& config = MR::Config::instance();
+        auto& config = MR::Config::instance();
         
-        if ( MR::Viewer::instanceRef().areSavedDialogPositionsEnabled() && config.hasVector2i( configKey ) )
+        if ( menu->isSavedDialogPositionsEnabled() && config.hasJsonValue( "DialogPositions" ) )
         {
-            const auto pos = config.getVector2i( configKey );
-            SetNextWindowPos( ImVec2( float( pos.x ), float( pos.y ) ), ImGuiCond_FirstUseEver, ImVec2( 0.f, yPivot ) );
+            auto json = config.getJsonValue( "DialogPositions" )[label];
+            if ( json.empty() )
+            {
+                SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - params.width, yPos ), ImGuiCond_FirstUseEver, ImVec2( 0.f, yPivot ) );
+            }
+            else
+            {
+                SetNextWindowPos( ImVec2( json["x"].asFloat(), json["y"].asFloat() ), ImGuiCond_FirstUseEver, ImVec2(0.f, yPivot));
+            }
         }
         else
         {

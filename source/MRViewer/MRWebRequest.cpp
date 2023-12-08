@@ -20,9 +20,9 @@ namespace
 
 struct RequestContext
 {
-#ifdef __EMSCRIPTEN__
     MR::ProgressCallback uploadCallback;
     MR::ProgressCallback downloadCallback;
+#ifdef __EMSCRIPTEN__
     MR::WebRequest::ResponseCallback responseCallback;
 #else
     std::optional<std::ifstream> input;
@@ -123,6 +123,19 @@ bool downloadFileCallback( std::string data, intptr_t userdata )
     auto& ctx = sRequestContextMap.at( ctxId );
     assert( ctx->output.has_value() );
     *ctx->output << data;
+    return true;
+}
+
+bool progressCallback( cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cpr::cpr_off_t uploadTotal, cpr::cpr_off_t uploadNow, intptr_t userdata )
+{
+    const auto ctxId = (int)userdata;
+    auto& ctx = sRequestContextMap.at( ctxId );
+    if ( downloadNow < downloadTotal )
+        if ( !MR::reportProgress( ctx->downloadCallback, (float)downloadNow / (float)downloadTotal ) )
+            return false;
+    if ( uploadNow < uploadTotal )
+        if ( !MR::reportProgress( ctx->uploadCallback, (float)uploadNow / (float)uploadTotal ) )
+            return false;
     return true;
 }
 
@@ -294,6 +307,9 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
 
         if ( ctx->output.has_value() )
             session.SetWriteCallback( { &downloadFileCallback, ctxId } );
+
+        if ( ctx->uploadCallback || ctx->downloadCallback )
+            session.SetProgressCallback( { &progressCallback, ctxId } );
 
         switch ( method )
         {

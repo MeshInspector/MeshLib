@@ -194,6 +194,8 @@ std::optional<Vector2f> findIntersection( const Vector2f& a, const Vector2f& b, 
     auto abdS = cross( vecA, d - a );
 
     auto sum = abcS + abdS;
+    if ( sum == 0.0f )
+        return std::nullopt;
     auto ratio = abcS / sum;
     return c * ( 1.0f - ratio ) + d * ratio;
 }
@@ -211,7 +213,6 @@ void insertRoundCorner( Contour2f& cont, const CornerParameters& params, float m
     
     if ( !round )
     {
-        //auto halfPoint = AffineXf2f::xfAround( Matrix2f::rotation( params.lrAng * 0.5f ), params.org )( params.lc );
         auto offset = ( params.org - params.lc ).length();
         auto width = std::abs( params.lrAng ) / PI_F * 1.5f;
 
@@ -252,32 +253,54 @@ void insertSharpCorner( Contour2f& cont, const CornerParameters& params, float m
 {
     if ( maxSharpAngle <= 0.0f )
         return;
-    if ( std::abs( params.lrAng ) <= maxSharpAngle )
+
+    bool openAng = cross( params.rc - params.lc, params.rn - params.lc ) * params.lrAng < 0.0f || cross( params.lp - params.rc, params.lc - params.rc ) * params.lrAng < 0.0f;
+    if ( openAng )
+        return;
+
+    auto realAng = findAngle( params.rn, params.rc, params.rc + params.lp - params.lc );
+    if ( params.lrAng < 0.0f )
+        realAng = -PI_F - realAng;
+    else
+        realAng = -PI_F + realAng;
+
+    if ( cross( params.rc - params.rn, params.lc - params.lp ) * params.lrAng < 0.0f )
+        return;
+
+    auto intersection = findIntersection( params.lp, params.lc, params.rn, params.rc );
+    if ( intersection && std::abs( realAng ) <= maxSharpAngle )
     {
-        auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( params.lrAng * 0.5f ), params.org );
-        auto rotPoint = rotXf( params.lc );
-        auto mod = 1.0f / std::max( std::cos( std::abs( params.lrAng ) * 0.5f ), 1e-2f );
-        cont.emplace_back( rotPoint * mod + params.org * ( 1.0f - mod ) );
+        cont.emplace_back( *intersection );
         if ( shiftMap )
             ++( *shiftMap );
     }
     else
     {
-        auto tmpAng = maxSharpAngle;
-        float mod = 1.0f / std::max( std::cos( tmpAng * 0.5f ), 1e-2f );
-        tmpAng = std::copysign( tmpAng, params.lrAng );
+        float leftAngRat = params.lrAng * 0.5f;
+        if ( intersection )
+            leftAngRat = findAngle( params.lc, params.org, *intersection );
 
-
-        auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( tmpAng * 0.5f ), params.org );
+        auto leftAng = leftAngRat - std::copysign( ( std::abs( realAng ) - maxSharpAngle ), realAng ) * leftAngRat / realAng;
+        auto rotXf = AffineXf2f::xfAround( Matrix2f::rotation( leftAng ), params.org );
         auto rotPoint = rotXf( params.lc );
-        cont.emplace_back( rotPoint * mod + params.org * ( 1.0f - mod ) );
+        auto interLeft = findIntersection( params.lp, params.lc, params.org, rotPoint );
+        if ( interLeft )
+        {
+            cont.emplace_back( *interLeft );
+            if ( shiftMap )
+                ++( *shiftMap );
+        }
 
-        rotXf = AffineXf2f::xfAround( Matrix2f::rotation( params.lrAng - tmpAng * 0.5f ), params.org );
-        rotPoint = rotXf( params.lc );
-        cont.emplace_back( rotPoint * mod + params.org * ( 1.0f - mod ) );
-
-        if ( shiftMap )
-            ( *shiftMap ) += 2;
+        auto rightAng = ( params.lrAng - leftAngRat ) - std::copysign( ( std::abs( realAng ) - maxSharpAngle ), realAng ) * ( params.lrAng - leftAngRat ) / realAng;
+        rotXf = AffineXf2f::xfAround( Matrix2f::rotation( -rightAng ), params.org );
+        rotPoint = rotXf( params.rc );
+        auto interRight = findIntersection( params.rn, params.rc, params.org, rotPoint );
+        if ( interRight )
+        {
+            cont.emplace_back( *interRight );
+            if ( shiftMap )
+                ++( *shiftMap );
+        }
     }
 }
 

@@ -66,8 +66,9 @@ private:
     bool tryRun_( const std::function<bool ()>& task );
     bool tryRunWithSehHandler_( const std::function<bool ()>& task );
 
-    float progress_;
-    int currentTask_, taskCount_;
+    std::atomic<float> progress_;
+    std::atomic<int> currentTask_, taskCount_;
+    std::mutex mutex_;
     std::string taskName_, title_;
     bool overrideTaskName_{ false };
 

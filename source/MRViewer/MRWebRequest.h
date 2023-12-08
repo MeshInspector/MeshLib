@@ -47,6 +47,9 @@ public:
     // set path to the file to upload
     MRVIEWER_API void setInputPath( std::string inputPath );
 
+    // set progress callback for upload
+    MRVIEWER_API void setUploadProgressCallback( ProgressCallback callback );
+
     // set payload in multipart/form-data format
     struct FormData
     {
@@ -62,6 +65,9 @@ public:
 
     // prefer to save the response to file
     MRVIEWER_API void setOutputPath( std::string outputPath );
+
+    // set progress callback for download
+    MRVIEWER_API void setDownloadProgressCallback( ProgressCallback callback );
 
     // set async mode (return immediately after sending request)
     MRVIEWER_API void setAsync( bool async );
@@ -90,6 +96,8 @@ private:
     std::vector<FormData> formData_;
     std::string body_;
     std::string outputPath_;
+    ProgressCallback uploadCallback_;
+    ProgressCallback downloadCallback_;
 };
 
 }

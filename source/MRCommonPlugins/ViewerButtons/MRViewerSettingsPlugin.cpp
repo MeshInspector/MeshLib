@@ -236,6 +236,13 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             if ( alphaBoxVal != alphaSortBackUp )
                 viewer->enableAlphaSort( alphaBoxVal );
         }
+
+        bool savedDialogsBackUp = viewer->areSavedDialogPositionsEnabled();
+        bool savedDialogsVal = savedDialogsBackUp;
+        UI::checkbox( "Use Saved Positions of Dialogs", &savedDialogsVal );
+        if ( savedDialogsVal != savedDialogsBackUp )
+            viewer->enableSavedDialogPositions( savedDialogsVal );
+
         if ( viewer->isGLInitialized() )
         {
             if ( maxSamples_ > 1 )

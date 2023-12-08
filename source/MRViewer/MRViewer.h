@@ -334,6 +334,11 @@ public:
     // Returns true if alpha sort is enabled, false otherwise
     bool isAlphaSortEnabled() const { return alphaSortEnabled_; }
 
+    // enables using of saved positions of plugin windows in the config file
+    void enableSavedDialogPositions( bool on ) { savedDialogPositionEnabled_ = on; }
+    // returns true if enabled using of saved positions of plugin windows in the config file, false otherwise
+    bool areSavedDialogPositionsEnabled() const { return savedDialogPositionEnabled_; }
+
     // Returns if scene texture is now bound
     MRVIEWER_API bool isSceneTextureBound()  const;
     // Binds or unbinds scene texture (should be called only with valid window)
@@ -687,6 +692,7 @@ private:
     std::unique_ptr<AlphaSortGL> alphaSorter_;
 
     bool alphaSortEnabled_{false};
+    bool savedDialogPositionEnabled_{ false };
 
     bool glInitialized_{ false };
 

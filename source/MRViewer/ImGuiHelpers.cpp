@@ -16,6 +16,7 @@
 #include "MRColorTheme.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRConfig.h"
 #include "MRUIStyle.h"
 
 namespace ImGui
@@ -451,7 +452,19 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         }
         else if ( ribMenu )
             yPos = ( ribMenu->getTopPanelOpenedHeight() - 1.0f ) * menu->menu_scaling();
-        SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - params.width, yPos ), ImGuiCond_FirstUseEver, ImVec2(0.f, yPivot) );
+
+        const std::string configKey = std::string( label ) + std::string( "_position" );
+        const auto& config = MR::Config::instance();
+        
+        if ( MR::Viewer::instanceRef().areSavedDialogPositionsEnabled() && config.hasVector2i( configKey ) )
+        {
+            const auto pos = config.getVector2i( configKey );
+            SetNextWindowPos( ImVec2( float( pos.x ), float( pos.y ) ), ImGuiCond_FirstUseEver, ImVec2( 0.f, yPivot ) );
+        }
+        else
+        {
+            SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - params.width, yPos ), ImGuiCond_FirstUseEver, ImVec2( 0.f, yPivot ) );
+        }
     }
 
     if ( params.changedSize )

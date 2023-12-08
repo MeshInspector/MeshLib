@@ -4,6 +4,9 @@
 #include "MRMesh/MRSystem.h"
 #include "MRViewer.h"
 #include "MRCommandLoop.h"
+#include "MRMesh/MRConfig.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_internal.h"
 
 namespace MR
 {
@@ -65,6 +68,11 @@ bool StateBasePlugin::enable( bool on )
     {
         if ( onDisable_() )
         {
+            if ( auto window = ImGui::FindWindowByName( plugin_name.c_str() ) )
+            {
+                Config::instance().setVector2i( plugin_name + "_position", Vector2i{ int( window->Pos.x ), int( window->Pos.y ) } );
+            }
+
             isEnabled_ = false;
             dialogIsOpen_ = false;
             onPluginDisable_(); // virtual call from IPluginCloseCheck

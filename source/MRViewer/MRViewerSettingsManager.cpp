@@ -72,6 +72,9 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
 
     viewer.glPickRadius = uint16_t( loadInt( cGLPickRadiusParamKey, viewer.glPickRadius ) );
 
+    if ( auto menu = viewer.getMenuPlugin() )
+        menu->enableSavedDialogPositions( bool( loadInt( "enableSavedDialogPositions", 0 ) ) );
+
     auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>();
     if ( ribbonMenu )
         ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, true ) );
@@ -278,6 +281,9 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     cfg.setBool( cOrthogrphicParamKey, params.orthographic );
 
     saveInt( cGLPickRadiusParamKey, viewer.glPickRadius );
+
+    if ( auto menu = viewer.getMenuPlugin() )
+        saveInt( "enableSavedDialogPositions", menu->isSavedDialogPositionsEnabled() );
 
     auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>();
     if ( ribbonMenu )

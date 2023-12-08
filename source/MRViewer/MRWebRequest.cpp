@@ -215,7 +215,7 @@ void WebRequest::setOutputPath( std::string outputPath )
 
 void WebRequest::setDownloadProgressCallback( ProgressCallback callback )
 {
-    downloadCallback_ = callback;
+    downloadCallback_ = std::move( callback );
 }
 
 void WebRequest::setAsync( bool async )

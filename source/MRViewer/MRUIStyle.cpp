@@ -1035,6 +1035,19 @@ void setTooltipIfHovered( const std::string& text, float scaling )
 
 void separator( float scaling, const std::string& text /*= ""*/, int issueCount /*= -1 */ )
 {
+    separator( 
+        scaling, 
+        text, 
+        issueCount > 0 ? ImVec4{ 0.886f, 0.267f, 0.267f, 1.0f } : ImVec4{ 0.235f, 0.663f, 0.078f, 1.0f },
+        std::to_string( issueCount ) );
+}
+
+void separator( 
+    float scaling, 
+    const std::string& text,
+    const ImVec4& color,
+    const std::string& issue )
+{
     const auto& style = ImGui::GetStyle();
     if ( style.ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
     {
@@ -1051,13 +1064,12 @@ void separator( float scaling, const std::string& text /*= ""*/, int issueCount 
         ImGui::PushFont( MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold ) );
         ImGui::Text( "%s", text.c_str());
         ImGui::SameLine();
-        if ( issueCount >= 0 )
+        if ( !issue.empty() )
         {
-            ImGui::PushStyleColor( ImGuiCol_FrameBg, issueCount > 0 ? ImVec4{ 0.886f, 0.267f, 0.267f, 1.0f} : ImVec4{ 0.235f, 0.663f, 0.078f, 1.0f } );            
+            ImGui::PushStyleColor( ImGuiCol_FrameBg, color );
             ImGui::SetCursorPosY( ImGui::GetCursorPosY() - ImGui::GetTextLineHeight() * 0.5f + style.FramePadding.y * 0.5f );
-            const std::string issue = std::to_string( issueCount );
             const float width = std::max( 20.0f * scaling, ImGui::CalcTextSize( issue.data() ).x + 2.0f * style.FramePadding.x );
-            UI::inputTextCenteredReadOnly( "##IssueCount", issue, width, ImGui::GetStyleColorVec4(ImGuiCol_Text) );
+            UI::inputTextCenteredReadOnly( "##Issue", issue, width, ImGui::GetStyleColorVec4(ImGuiCol_Text) );
             ImGui::PopStyleColor();
         }
         ImGui::PopFont();

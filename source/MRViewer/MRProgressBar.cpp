@@ -58,14 +58,20 @@ void ProgressBar::setup( float scaling )
             ImGui::PushFont( smallFont );
         ImGui::PushStyleColor( ImGuiCol_Text, StyleConsts::ProgressBar::textColor.getUInt32() );
         ImGui::SetCursorPos( ImVec2( 32.0f * scaling, 20.0f * scaling ) );
-        if ( instance.taskCount_ <= 1 )
-            ImGui::Text( "%s", instance.title_.c_str() );
-        else
+        if ( instance.overrideTaskName_ )
+        {
+            ImGui::Text( "%s : %s", instance.title_.c_str(), instance.taskName_.c_str() );
+        }
+        else if ( instance.taskCount_ > 1 )
         {
             ImGui::Text( "%s :", instance.title_.c_str() );
             ImGui::SameLine();
             snprintf( buf, bufSize, "%s (%d/%d)\n", instance.taskName_.c_str(), instance.currentTask_, instance.taskCount_ );
             ImGui::Text( "%s", buf );
+        }
+        else
+        {
+            ImGui::Text( "%s", instance.title_.c_str() );
         }
         ImGui::PopStyleColor();
         if ( smallFont )
@@ -304,6 +310,18 @@ void ProgressBar::nextTask( const char* s )
 {
     instance_().taskName_ = s;
     nextTask();
+}
+
+void ProgressBar::forceSetTaskName( std::string taskName )
+{
+    instance_().taskName_ = std::move( taskName );
+    instance_().overrideTaskName_ = true;
+}
+
+void ProgressBar::resetTaskName()
+{
+    instance_().overrideTaskName_ = false;
+    instance_().taskName_.clear();
 }
 
 bool ProgressBar::callBackSetProgress( float p )

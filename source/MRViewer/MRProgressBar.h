@@ -40,6 +40,10 @@ public:
 
     MRVIEWER_API static void setTaskCount( int n );
 
+    // set the current task's name without auto-updating progress value
+    MRVIEWER_API static void forceSetTaskName( std::string taskName );
+    MRVIEWER_API static void resetTaskName();
+
     MRVIEWER_API static void finish();
 
     // returns true if progress bar was ordered and not finished
@@ -65,6 +69,7 @@ private:
     float progress_;
     int currentTask_, taskCount_;
     std::string taskName_, title_;
+    bool overrideTaskName_{ false };
 
     FrameRedrawRequest frameRequest_;
 

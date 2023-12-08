@@ -178,7 +178,29 @@ private:
     bool initializeQueue_();
     std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f * outCollapseForm = nullptr, Vector3f * outCollapsePos = nullptr ) const;
     void addInQueueIfMissing_( UndirectedEdgeId ue );
-    VertId collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos );
+
+    enum class CollapseStatus
+    {
+        Done,        ///< collapse was successful
+        SharedEdge,  ///< cannot collapse internal edge if its left and right faces share another edge
+        PosFarBd,    ///< new vertex position is too far from collapsing boundary edge
+        MultipleEdge,///< cannot collapse an edge because there is another edge in mesh with same ends
+        Flippable,   ///< cannot collapse a flippable edge incident to a not-flippable edge
+        TouchBd,     ///< prohibit collapse of an inner edge if it brings two boundaries in touch
+        TriAspect,   ///< new triangle aspect ratio would be larger than all of old triangle aspect ratios and larger than allowed in settings
+        LongEdge,    ///< new edge would be longer than all of old edges and longer than allowed in settings
+        NormalFlip,  ///< if at least one triangle normal flips, checks that all new normals are consistent (do not check for degenerate edges)
+        User         ///< user callback prohibits the collapse
+    };
+
+    struct CollapseRes
+    {
+        /// if collapse failed (or it was the last edge) then it is invalid, otherwise it is the remaining vertex
+        VertId v;
+        CollapseStatus status = CollapseStatus::Done;
+    };
+
+    CollapseRes collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos );
 };
 
 MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings )
@@ -427,7 +449,7 @@ void MeshDecimator::addInQueueIfMissing_( UndirectedEdgeId ue )
     }
 }
 
-VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos )
+auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CollapseRes
 {
     auto & topology = mesh_.topology;
     auto vl = topology.left( edgeToCollapse ).valid()  ? topology.dest( topology.next( edgeToCollapse ) ) : VertId{};
@@ -437,9 +459,9 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     if ( vl && vr )
     {
         if ( auto pe = topology.prev( edgeToCollapse ); pe != edgeToCollapse && pe == topology.next( edgeToCollapse ) )
-            return {};
+            return { .status =  CollapseStatus::SharedEdge };
         if ( auto pe = topology.prev( edgeToCollapse.sym() ); pe != edgeToCollapse.sym() && pe == topology.next( edgeToCollapse.sym() ) )
-            return {};
+            return { .status =  CollapseStatus::SharedEdge };
     }
     const bool collapsingFlippable = !settings_.notFlippable || !settings_.notFlippable->test( edgeToCollapse );
 
@@ -463,20 +485,20 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     if ( ( !vl || !vr ) && settings_.maxBdShift < FLT_MAX )
     {
         if ( !smallShift( mesh_.edgeSegment( edgeToCollapse ), collapsePos ) )
-            return {}; // new vertex is too far from collapsing boundary edge
+            return { .status =  CollapseStatus::PosFarBd }; // new vertex is too far from collapsing boundary edge
         if ( !vr )
         {
             if ( !smallShift( LineSegm3f{ mesh_.orgPnt( mesh_.topology.prevLeftBd( edgeToCollapse ) ), collapsePos }, po ) )
-                return {}; // origin of collapsing boundary edge is too far from new boundary segment
+                return { .status =  CollapseStatus::PosFarBd }; // origin of collapsing boundary edge is too far from new boundary segment
             if ( !smallShift( LineSegm3f{ mesh_.destPnt( mesh_.topology.nextLeftBd( edgeToCollapse ) ), collapsePos }, pd ) )
-                return {}; // destination of collapsing boundary edge is too far from new boundary segment
+                return { .status =  CollapseStatus::PosFarBd }; // destination of collapsing boundary edge is too far from new boundary segment
         }
         if ( !vl )
         {
             if ( !smallShift( LineSegm3f{ mesh_.orgPnt( mesh_.topology.prevLeftBd( edgeToCollapse.sym() ) ), collapsePos }, pd ) )
-                return {}; // destination of collapsing boundary edge is too far from new boundary segment
+                return { .status =  CollapseStatus::PosFarBd }; // destination of collapsing boundary edge is too far from new boundary segment
             if ( !smallShift( LineSegm3f{ mesh_.destPnt( mesh_.topology.nextLeftBd( edgeToCollapse.sym() ) ), collapsePos }, po ) )
-                return {}; // origin of collapsing boundary edge is too far from new boundary segment
+                return { .status =  CollapseStatus::PosFarBd }; // origin of collapsing boundary edge is too far from new boundary segment
         }
     }
 
@@ -496,7 +518,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     {
         const auto eDest = topology.dest( e );
         if ( eDest == vd )
-            return {}; // multiple edge found
+            return { .status =  CollapseStatus::MultipleEdge }; // multiple edge found
         if ( eDest != vl && eDest != vr )
             originNeis_.push_back( eDest );
 
@@ -510,7 +532,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
             continue;
         }
         if ( collapsingFlippable && settings_.notFlippable && settings_.notFlippable->test( e ) )
-            return {}; // cannot collapse a flippable edge incident to a not-flippable edge
+            return { .status =  CollapseStatus::Flippable }; // cannot collapse a flippable edge incident to a not-flippable edge
 
         const auto pDest2 = mesh_.destPnt( topology.next( e ) );
         if ( eDest != vr )
@@ -534,7 +556,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     if ( oBdEdge
         && !smallShift( LineSegm3f{ po, mesh_.destPnt( oBdEdge ) }, collapsePos )
         && !smallShift( LineSegm3f{ po, mesh_.orgPnt( topology.prevLeftBd( oBdEdge ) ) }, collapsePos ) )
-            return {}; // new vertex is too far from both existed boundary edges
+            return { .status =  CollapseStatus::PosFarBd }; // new vertex is too far from both existed boundary edges
     std::sort( originNeis_.begin(), originNeis_.end() );
 
     EdgeId dBdEdge; // a boundary edge !right(e) incident to dest( edgeToCollapse )
@@ -543,7 +565,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         const auto eDest = topology.dest( e );
         assert ( eDest != vo );
         if ( std::binary_search( originNeis_.begin(), originNeis_.end(), eDest ) )
-            return {}; // to prevent appearance of multiple edges
+            return { .status =  CollapseStatus::MultipleEdge }; // to prevent appearance of multiple edges
 
         const auto pDest = mesh_.points[eDest];
         maxOldEdgeLenSq = std::max( maxOldEdgeLenSq, ( pd - pDest ).lengthSq() );
@@ -555,7 +577,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
             continue;
         }
         if ( collapsingFlippable && settings_.notFlippable && settings_.notFlippable->test( e ) )
-            return {}; // cannot collapse a flippable edge incident to a not-flippable edge
+            return { .status =  CollapseStatus::Flippable }; // cannot collapse a flippable edge incident to a not-flippable edge
 
         const auto pDest2 = mesh_.destPnt( topology.next( e ) );
         if ( eDest != vl )
@@ -579,16 +601,16 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     if ( dBdEdge
         && !smallShift( LineSegm3f{ pd, mesh_.destPnt( dBdEdge ) }, collapsePos )
         && !smallShift( LineSegm3f{ pd, mesh_.orgPnt( topology.prevLeftBd( dBdEdge ) ) }, collapsePos ) )
-            return {}; // new vertex is too far from both existed boundary edges
+            return { .status =  CollapseStatus::PosFarBd }; // new vertex is too far from both existed boundary edges
 
     if ( vl && vr && oBdEdge && dBdEdge )
-        return {}; // prohibit collapse of an inner edge if it brings two boundaries in touch
+        return { .status =  CollapseStatus::TouchBd }; // prohibit collapse of an inner edge if it brings two boundaries in touch
 
     if ( !tinyEdge && maxNewAspectRatio > maxOldAspectRatio && maxOldAspectRatio <= settings_.criticalTriAspectRatio )
-        return {}; // new triangle aspect ratio would be larger than all of old triangle aspect ratios and larger than allowed in settings
+        return { .status =  CollapseStatus::TriAspect }; // new triangle aspect ratio would be larger than all of old triangle aspect ratios and larger than allowed in settings
 
     if ( maxNewEdgeLenSq > maxOldEdgeLenSq )
-        return {}; // new edge would be longer than all of old edges and longer than allowed in settings
+        return { .status =  CollapseStatus::LongEdge }; // new edge would be longer than all of old edges and longer than allowed in settings
 
     // if at least one triangle normal flips, checks that all new normals are consistent (do not check for degenerate edges)
     if ( normalFlip && !tinyEdge && ( ( po != pd ) || ( po != collapsePos ) ) )
@@ -596,11 +618,11 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         auto n = Vector3f{ sumDblArea_.normalized() };
         for ( const auto da : triDblAreas_ )
             if ( dot( da, n ) < 0 )
-                return {};
+                return { .status =  CollapseStatus::NormalFlip };
     }
 
     if ( settings_.preCollapse && !settings_.preCollapse( edgeToCollapse, collapsePos ) )
-        return {}; // user prohibits the collapse
+        return { .status =  CollapseStatus::User }; // user prohibits the collapse
 
     ++res_.vertsDeleted;
     if ( vl )
@@ -618,7 +640,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     }
     auto eo = collapseEdge( topology, edgeToCollapse, settings_.notFlippable, settings_.onEdgeDel );
     const auto remainingVertex = eo ? vo : VertId{};
-    return remainingVertex;
+    return { .v = remainingVertex };
 }
 
 DecimateResult MeshDecimator::run()
@@ -697,13 +719,14 @@ DecimateResult MeshDecimator::run()
         else
         {
             // edge collapse
-            VertId collapseVert = collapse_( topQE.uedgeId(), collapsePos );
-            if ( !collapseVert )
+            auto collapseRes = collapse_( topQE.uedgeId(), collapsePos );
+            if ( !collapseRes.v )
                 continue;
+            assert( collapseRes.status == CollapseStatus::Done );
 
-            (*pVertForms_)[collapseVert] = collapseForm;
+            (*pVertForms_)[collapseRes.v] = collapseForm;
 
-            for ( EdgeId e : orgRing( mesh_.topology, collapseVert ) )
+            for ( EdgeId e : orgRing( mesh_.topology, collapseRes.v ) )
             {
                 addInQueueIfMissing_( e.undirected() );
                 if ( mesh_.topology.left( e ) )

@@ -48,6 +48,7 @@ public:
     MRVIEWER_API void setInputPath( std::string inputPath );
 
     // set progress callback for upload
+    // NOTE: due to limitations, the upload callback won't work on web platforms when `setOutputPath` method is called
     MRVIEWER_API void setUploadProgressCallback( ProgressCallback callback );
 
     // set payload in multipart/form-data format

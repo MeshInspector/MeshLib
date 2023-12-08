@@ -103,6 +103,11 @@ MRVIEWER_API void setTooltipIfHovered( const std::string& text, float scaling );
 /// If it equals zero - in green color
 /// Otherwise it will not be displayed
 MRVIEWER_API void separator( float scaling, const std::string& text = "", int issueCount = -1 );
+MRVIEWER_API void separator( 
+    float scaling,
+    const std::string& text,
+    const ImVec4& color,
+    const std::string& issueCount );
 
 /// draws progress bar
 /// note that even while scaling is given by argument size should still respect it

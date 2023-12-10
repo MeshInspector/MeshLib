@@ -156,12 +156,20 @@ private:
     VertBitSet myBdVerts_;
     const VertBitSet * pBdVerts_ = nullptr;
 
+    enum class EdgeOp : unsigned int
+    {
+        CollapseOptPos, ///< collapse the edge with target position optimization
+        CollapseEnd,    ///< collapse the edge in one of its current vertices
+        Flip            ///< flip the edge inside quadrangle
+        // one more option is available to fit in 2 bits
+    };
+
     struct QueueElement
     {
         float c = 0;
         struct X {
-            unsigned int flip : 1 = 0;
-            unsigned int uedgeId : 31 = 0;
+            EdgeOp edgeOp : 2 = EdgeOp::CollapseOptPos;
+            unsigned int uedgeId : 30 = 0;
         } x;
         UndirectedEdgeId uedgeId() const { return UndirectedEdgeId{ (int)x.uedgeId }; }
         std::pair<float, int> asPair() const { return { -c, x.uedgeId }; }
@@ -381,6 +389,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
     // prepares res; checks flip metric; returns true if the edge does not collpase and function can return
     auto earlyReturn = [&]( float errSq )
     {
+        EdgeOp edgeOp = settings_.optimizeVertexPos ? EdgeOp::CollapseOptPos : EdgeOp::CollapseEnd;
         bool flip = false;
         if ( settings_.maxAngleChange >= 0 && ( !settings_.notFlippable || !settings_.notFlippable->test( ue ) ) )
         {
@@ -388,15 +397,15 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
             if ( !checkDeloneQuadrangleInMesh( mesh_, ue, deloneSettings_, &deviationSqAfterFlip )
                 && deviationSqAfterFlip < errSq )
             {
-                flip = true;
+                edgeOp = EdgeOp::Flip;
                 errSq = deviationSqAfterFlip;
             }
         }
-        if ( ( flip || !settings_.adjustCollapse ) && errSq > maxErrorSq_ )
+        if ( ( edgeOp == EdgeOp::Flip || !settings_.adjustCollapse ) && errSq > maxErrorSq_ )
             return true;
         res.emplace();
         res->x.uedgeId = (int)ue;
-        res->x.flip = flip;
+        res->x.edgeOp = edgeOp;
         res->c = errSq;
         return flip;
     };
@@ -417,7 +426,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
             return res;
     }
 
-    assert( res && !res->x.flip );
+    assert( res && res->x.edgeOp != EdgeOp::Flip );
     if ( settings_.adjustCollapse )
     {
         const auto pos0 = pos;
@@ -469,7 +478,7 @@ auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapseP
     auto vd = topology.dest( edgeToCollapse );
     auto po = mesh_.points[vo];
     auto pd = mesh_.points[vd];
-    if ( !settings_.optimizeVertexPos && collapsePos == pd )
+    if ( collapsePos == pd )
     {
         // reverse the edge to have its origin in remaining fixed vertex
         edgeToCollapse = edgeToCollapse.sym();
@@ -704,7 +713,7 @@ DecimateResult MeshDecimator::run()
         }
 
         presentInQueue_.reset( topQE.uedgeId() );
-        if ( qe->x.flip )
+        if ( qe->x.edgeOp == EdgeOp::Flip )
         {
             EdgeId e = topQE.uedgeId();
             mesh_.topology.flipEdge( e );

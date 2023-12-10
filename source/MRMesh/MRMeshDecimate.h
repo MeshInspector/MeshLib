@@ -45,7 +45,7 @@ struct DecimateSettings
     /// the algorithm will ignore dihedral angle check if one of triangles had aspect ratio equal or more than this value;
     /// and the algorithm will permit temporary increase in aspect ratio after collapse, if before collapse one of the triangles had larger aspect ratio
     float criticalTriAspectRatio = FLT_MAX;
-    /// edges not longer than this value will be collapsed ignoring normals and aspect ratio checks
+    /// edges not longer than this value will be collapsed even if it results in appearance of a triangle with high aspect ratio
     float tinyEdgeLength = -1;
     /// Small stabilizer is important to achieve good results on completely planar mesh parts,
     /// if your mesh is not-planer everywhere, then you can set it to zero

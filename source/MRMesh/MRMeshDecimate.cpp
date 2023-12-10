@@ -156,12 +156,20 @@ private:
     VertBitSet myBdVerts_;
     const VertBitSet * pBdVerts_ = nullptr;
 
+    enum class EdgeOp : unsigned int
+    {
+        CollapseOptPos, ///< collapse the edge with target position optimization
+        CollapseEnd,    ///< collapse the edge in one of its current vertices
+        Flip            ///< flip the edge inside quadrangle
+        // one more option is available to fit in 2 bits
+    };
+
     struct QueueElement
     {
         float c = 0;
         struct X {
-            unsigned int flip : 1 = 0;
-            unsigned int uedgeId : 31 = 0;
+            EdgeOp edgeOp : 2 = EdgeOp::CollapseOptPos;
+            unsigned int uedgeId : 30 = 0;
         } x;
         UndirectedEdgeId uedgeId() const { return UndirectedEdgeId{ (int)x.uedgeId }; }
         std::pair<float, int> asPair() const { return { -c, x.uedgeId }; }
@@ -176,7 +184,8 @@ private:
     class EdgeMetricCalc;
 
     bool initializeQueue_();
-    std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f * outCollapseForm = nullptr, Vector3f * outCollapsePos = nullptr ) const;
+    std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
+        QuadraticForm3f * outCollapseForm = nullptr, Vector3f * outCollapsePos = nullptr ) const;
     void addInQueueIfMissing_( UndirectedEdgeId ue );
 
     enum class CollapseStatus
@@ -226,6 +235,7 @@ public:
 
     void operator()( const tbb::blocked_range<UndirectedEdgeId> & r ) 
     {
+        const bool optimizeVertexPos = decimator_.settings_.optimizeVertexPos;
         for ( UndirectedEdgeId ue = r.begin(); ue < r.end(); ++ue ) 
         {
             EdgeId e{ ue };
@@ -239,7 +249,7 @@ public:
                 if ( !decimator_.regionEdges_.test( ue ) )
                     continue;
             }
-            if ( auto qe = decimator_.computeQueueElement_( ue ) )
+            if ( auto qe = decimator_.computeQueueElement_( ue, optimizeVertexPos ) )
                 elems_.push_back( *qe );
         }
     }
@@ -367,7 +377,8 @@ bool MeshDecimator::initializeQueue_()
     return true;
 }
 
-auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f * outCollapseForm, Vector3f * outCollapsePos ) const -> std::optional<QueueElement>
+auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
+    QuadraticForm3f * outCollapseForm, Vector3f * outCollapsePos ) const -> std::optional<QueueElement>
 {
     EdgeId e{ ue };
     const auto o = mesh_.topology.org( e );
@@ -381,6 +392,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
     // prepares res; checks flip metric; returns true if the edge does not collpase and function can return
     auto earlyReturn = [&]( float errSq )
     {
+        EdgeOp edgeOp = optimizeVertexPos ? EdgeOp::CollapseOptPos : EdgeOp::CollapseEnd;
         bool flip = false;
         if ( settings_.maxAngleChange >= 0 && ( !settings_.notFlippable || !settings_.notFlippable->test( ue ) ) )
         {
@@ -388,15 +400,15 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
             if ( !checkDeloneQuadrangleInMesh( mesh_, ue, deloneSettings_, &deviationSqAfterFlip )
                 && deviationSqAfterFlip < errSq )
             {
-                flip = true;
+                edgeOp = EdgeOp::Flip;
                 errSq = deviationSqAfterFlip;
             }
         }
-        if ( ( flip || !settings_.adjustCollapse ) && errSq > maxErrorSq_ )
+        if ( ( edgeOp == EdgeOp::Flip || !settings_.adjustCollapse ) && errSq > maxErrorSq_ )
             return true;
         res.emplace();
         res->x.uedgeId = (int)ue;
-        res->x.flip = flip;
+        res->x.edgeOp = edgeOp;
         res->c = errSq;
         return flip;
     };
@@ -409,7 +421,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
 
     QuadraticForm3f qf;
     Vector3f pos;
-    std::tie( qf, pos ) = sum( vo, po, vd, pd, !settings_.optimizeVertexPos );
+    std::tie( qf, pos ) = sum( vo, po, vd, pd, !optimizeVertexPos );
 
     if ( settings_.strategy == DecimateStrategy::MinimizeError )
     {
@@ -417,7 +429,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
             return res;
     }
 
-    assert( res && !res->x.flip );
+    assert( res && res->x.edgeOp != EdgeOp::Flip );
     if ( settings_.adjustCollapse )
     {
         const auto pos0 = pos;
@@ -442,7 +454,7 @@ void MeshDecimator::addInQueueIfMissing_( UndirectedEdgeId ue )
         return;
     if ( presentInQueue_.test( ue ) )
         return;
-    if ( auto qe = computeQueueElement_( ue ) )
+    if ( auto qe = computeQueueElement_( ue, settings_.optimizeVertexPos ) )
     {
         queue_.push( *qe );
         presentInQueue_.set( ue );
@@ -469,7 +481,7 @@ auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapseP
     auto vd = topology.dest( edgeToCollapse );
     auto po = mesh_.points[vo];
     auto pd = mesh_.points[vd];
-    if ( !settings_.optimizeVertexPos && collapsePos == pd )
+    if ( collapsePos == pd )
     {
         // reverse the edge to have its origin in remaining fixed vertex
         edgeToCollapse = edgeToCollapse.sym();
@@ -665,8 +677,9 @@ DecimateResult MeshDecimator::run()
         settings_.region ? (int)settings_.region->count() : mesh_.topology.numValidFaces(), settings_.maxDeletedFaces );
     while ( !queue_.empty() )
     {
-        auto topQE = queue_.top();
-        assert( presentInQueue_.test( topQE.uedgeId() ) );
+        const auto topQE = queue_.top();
+        const auto ue = topQE.uedgeId();
+        assert( presentInQueue_.test( ue ) );
         queue_.pop();
         if ( res_.facesDeleted >= settings_.maxDeletedFaces || res_.vertsDeleted >= settings_.maxDeletedVertices )
         {
@@ -681,19 +694,19 @@ DecimateResult MeshDecimator::run()
             lastProgressFacesDeleted = res_.facesDeleted;
         }
 
-        if ( mesh_.topology.isLoneEdge( topQE.uedgeId() ) )
+        if ( mesh_.topology.isLoneEdge( ue ) )
         {
             // edge has been deleted by this moment
-            presentInQueue_.reset( topQE.uedgeId() );
+            presentInQueue_.reset( ue );
             continue;
         }
 
         QuadraticForm3f collapseForm;
         Vector3f collapsePos;
-        auto qe = computeQueueElement_( topQE.uedgeId(), &collapseForm, &collapsePos );
+        auto qe = computeQueueElement_( ue, topQE.x.edgeOp == EdgeOp::CollapseOptPos, &collapseForm, &collapsePos );
         if ( !qe )
         {
-            presentInQueue_.reset( topQE.uedgeId() );
+            presentInQueue_.reset( ue );
             continue;
         }
 
@@ -703,10 +716,10 @@ DecimateResult MeshDecimator::run()
             continue;
         }
 
-        presentInQueue_.reset( topQE.uedgeId() );
-        if ( qe->x.flip )
+        presentInQueue_.reset( ue );
+        if ( qe->x.edgeOp == EdgeOp::Flip )
         {
-            EdgeId e = topQE.uedgeId();
+            EdgeId e = ue;
             mesh_.topology.flipEdge( e );
             assert( mesh_.topology.left( e ) );
             assert( mesh_.topology.right( e ) );
@@ -719,9 +732,23 @@ DecimateResult MeshDecimator::run()
         else
         {
             // edge collapse
-            auto collapseRes = collapse_( topQE.uedgeId(), collapsePos );
+            auto collapseRes = collapse_( ue, collapsePos );
             if ( !collapseRes.v )
+            {
+                if ( topQE.x.edgeOp == EdgeOp::CollapseOptPos &&
+                    // collapse failed due to a geometric criterion (e.g. bad collapse position)
+                    ( collapseRes.status == CollapseStatus::TriAspect || collapseRes.status == CollapseStatus::NormalFlip ||
+                      collapseRes.status == CollapseStatus::PosFarBd || collapseRes.status == CollapseStatus::LongEdge ) )
+                {
+                    qe = computeQueueElement_( ue, false );
+                    if ( qe )
+                    {
+                        queue_.push( *qe );
+                        presentInQueue_.set( ue );
+                    }
+                }
                 continue;
+            }
             assert( collapseRes.status == CollapseStatus::Done );
 
             (*pVertForms_)[collapseRes.v] = collapseForm;

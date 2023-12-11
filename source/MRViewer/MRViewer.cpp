@@ -989,9 +989,17 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
 
                 assert( result.loadedFiles.size() == 1 );
                 auto filePath = result.loadedFiles.front();
-                if ( result.isSceneConstructed )
+                if ( !result.isSceneConstructed )
+                {
+                    getViewerInstance().onSceneSaved( filePath );
+                }
+                else
+                {
+                    // for constructed scenes, add original file path to the recent files' list and set a new scene extension afterward
+                    getViewerInstance().recentFilesStore.storeFile( filePath );
                     filePath.replace_extension( ".mru" );
-                getViewerInstance().onSceneSaved( filePath, !result.isSceneConstructed );
+                    getViewerInstance().onSceneSaved( filePath, false );
+                }
             }
             else
             {
@@ -1016,7 +1024,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
         if ( !result.errorSummary.empty() )
             showModal( std::string( result.errorSummary ), ImGuiMenu::ModalMessageType::Error );
         else if ( !result.warningSummary.empty() )
-            showModal( std::string( result.warningSummary ), ImGuiMenu::ModalMessageType::Error );
+            showModal( std::string( result.warningSummary ), ImGuiMenu::ModalMessageType::Warning );
     };
 
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )

@@ -154,7 +154,7 @@ Expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA,
     return levelSetDoubleConvertion( mp, AffineXf3f(), params.voxelSize, offsetA, offsetB, 0, params.fwn, params.callBack );
 }
 
-Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, 
+Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
     const OffsetParameters& params, Vector<VoxelId, FaceId> * outMap )
 {
     MR_TIMER;
@@ -176,11 +176,7 @@ Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         vmParams.lessInside = true;
         vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
         vmParams.outVoxelPerFaceMap = outMap;
-        auto meshRes = marchingCubes( volume, vmParams );
-        if ( !meshRes )
-            return unexpectedOperationCanceled();
-
-        return std::move( *meshRes );
+        return marchingCubes( volume, vmParams );
     }
     else
     {
@@ -199,7 +195,7 @@ Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         
         auto volume = meshToDistanceVolume( mesh, msParams );
         if ( !volume )
-            return unexpectedOperationCanceled();
+            return unexpected( std::move( volume.error() ) );
 
         MarchingCubesParams vmParams;
         vmParams.origin = msParams.origin;
@@ -207,10 +203,7 @@ Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
         vmParams.lessInside = true;
         vmParams.outVoxelPerFaceMap = outMap;
-        auto meshRes = marchingCubes( std::move( *volume ), vmParams );
-        if ( !meshRes )
-            return unexpectedOperationCanceled();
-        return std::move( *meshRes );
+        return marchingCubes( std::move( *volume ), vmParams );
     }
 }
 
@@ -238,10 +231,7 @@ Expected<Mesh, std::string> mcShellMeshRegion( const Mesh& mesh, const FaceBitSe
     vmParams.cb = subprogress( params.callBack, 0.5f, 1.0f );
     vmParams.lessInside = true;
     vmParams.outVoxelPerFaceMap = outMap;
-    auto meshRes = marchingCubes( std::move( *volume ), vmParams );
-    if ( !meshRes )
-        return unexpectedOperationCanceled();
-    return std::move( *meshRes );
+    return marchingCubes( std::move( *volume ), vmParams );
 }
 
 Expected<MR::Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float offset, const SharpOffsetParameters& params )

@@ -82,6 +82,7 @@ protected:
   bool clickTrigger_ = false;
   bool showNewSelectedObjects_{ true };
   bool deselectNewHiddenObjects_{ false };
+  bool savedDialogPositionEnabled_{ false };
 
   struct SceneReorder
   {
@@ -291,6 +292,11 @@ public:
   MRVIEWER_API void setShowShortcuts( bool val );
   //return show shortcuts state (enable / disable)
   MRVIEWER_API bool getShowShortcuts() const;
+
+  // enables using of saved positions of plugin windows in the config file
+  void enableSavedDialogPositions( bool on ) { savedDialogPositionEnabled_ = on; }
+  // returns true if enabled using of saved positions of plugin windows in the config file, false otherwise
+  bool isSavedDialogPositionsEnabled() const { return savedDialogPositionEnabled_; }
 
 protected:
     ModalMessageType modalMessageType_{ ModalMessageType::Error };

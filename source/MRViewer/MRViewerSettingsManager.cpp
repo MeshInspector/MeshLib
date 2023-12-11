@@ -35,6 +35,7 @@ const std::string cSpaceMouseSettings = "spaceMouseSettings";
 const std::string cMSAA = "multisampleAntiAliasing";
 const std::string cncMachineSettingsKey = "CNCMachineSettings";
 const std::string cTouchpadSettings = "touchpadSettings";
+const std::string cEnableSavedDialogPositions = "enableSavedDialogPositions";
 }
 
 namespace MR
@@ -71,6 +72,9 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     viewport.setParameters( params );
 
     viewer.glPickRadius = uint16_t( loadInt( cGLPickRadiusParamKey, viewer.glPickRadius ) );
+
+    if ( auto menu = viewer.getMenuPlugin() )
+        menu->enableSavedDialogPositions( bool( loadInt( cEnableSavedDialogPositions, 0 ) ) );
 
     auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>();
     if ( ribbonMenu )
@@ -279,6 +283,9 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     cfg.setBool( cOrthogrphicParamKey, params.orthographic );
 
     saveInt( cGLPickRadiusParamKey, viewer.glPickRadius );
+
+    if ( auto menu = viewer.getMenuPlugin() )
+        saveInt( cEnableSavedDialogPositions, menu->isSavedDialogPositionsEnabled() );
 
     auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>();
     if ( ribbonMenu )

@@ -236,6 +236,15 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             if ( alphaBoxVal != alphaSortBackUp )
                 viewer->enableAlphaSort( alphaBoxVal );
         }
+
+        bool savedDialogsBackUp = viewer->getMenuPlugin()->isSavedDialogPositionsEnabled();
+        bool savedDialogsVal = savedDialogsBackUp;
+        UI::checkbox( "Save Tool Window Positions", &savedDialogsVal );
+        UI::setTooltipIfHovered( "If checked then enables using of saved positions of tool windows in the config file", menuScaling );
+
+        if ( savedDialogsVal != savedDialogsBackUp )
+            viewer->getMenuPlugin()->enableSavedDialogPositions( savedDialogsVal );
+
         if ( viewer->isGLInitialized() )
         {
             if ( maxSamples_ > 1 )

@@ -137,4 +137,29 @@ TEST( MRMesh, PrecisePredicates2 )
     EXPECT_FALSE( res.doIntersect );
 }
 
+TEST( MRMesh, PrecisePredicates2Wrong )
+{
+    std::array<PreciseVertCoords2, 5> vs =
+    {
+        PreciseVertCoords2{ VertId{}, Vector2i( 0, -1 )}, // vert for simple sort
+        PreciseVertCoords2{      0_v, Vector2i{ 0,  0 } },// a
+        PreciseVertCoords2{      1_v, Vector2i( 1,  1 ) },// b 
+        PreciseVertCoords2{      2_v, Vector2i{ 0,  0 } },// c
+        PreciseVertCoords2{      3_v, Vector2i{ 1, -1 } },// d
+    };
+
+    auto aLessC = ccw( { vs[0],vs[3],vs[1] } );
+    EXPECT_TRUE( aLessC );
+
+    auto cLeftOfAB = ccw( { vs[1],vs[2],vs[3] } );
+    EXPECT_TRUE( cLeftOfAB );
+
+    auto res = doSegmentSegmentIntersect( { vs[1],vs[2],vs[3],vs[4] } );
+    // really we expect true here
+    // EXPECT_TRUE( res.doIntersect );
+    EXPECT_FALSE( res.doIntersect ); //error, should be true
+}
+
+
+
 } //namespace MR

@@ -139,13 +139,9 @@ private:
     {
         return std::tuple( pts_[l].x, pts_[l].y, l ) < std::tuple( pts_[r].x, pts_[r].y, r );
     }
-    bool greater_( VertId l, VertId r ) const
-    {
-        return std::tuple( pts_[l].x, pts_[l].y, l ) > std::tuple( pts_[r].x, pts_[r].y, r );
-    }
 
 // INITIALIZATION CLASS BLOCK
-    // if set only marks inside faces as present (for further findng outline)
+    // if set only marks inside faces as present (for further finding outline)
     bool needOutline_ = false;
     // if set fails on first found intersection
     bool abortWhenIntersect_ = false;
@@ -922,17 +918,8 @@ void SweepLineQueue::mergeSamePoints_( const HolesVertIds* holesVertId )
     {
         std::sort( sortedVerts_.begin(), sortedVerts_.end(), [&] ( VertId l, VertId r )
         {
-            if ( less_( l, r ) )
-                return true;
-            if ( greater_( l, r ) )
-                return false;
-            return findRealVertId( l ) < findRealVertId( r );
+            return std::tuple( pts_[l].x, pts_[l].y, findRealVertId( l ) ) < std::tuple( pts_[r].x, pts_[r].y, findRealVertId( r ) );
         } );
-    }
-    if ( needOutline_ )
-    {
-        windingInfo_.resize( tp_.undirectedEdgeSize() );
-        return;
     }
 
     int prevUnique = 0;

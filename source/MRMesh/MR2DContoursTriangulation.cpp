@@ -119,7 +119,8 @@ public:
         const HolesVertIds* holesVertId = nullptr,
         bool abortWhenIntersect = false,
         WindingMode mode = WindingMode::NonZero,
-        bool needOutline = false // if set do not do real triangulation, just marks inside faces as present
+        bool needOutline = false // if set do not do real triangulation, just marks inside faces as present, 
+                                 // also does not merge same vertices
         );
 
     size_t vertSize() const { return tp_.vertSize(); }
@@ -138,13 +139,9 @@ private:
     {
         return std::tuple( pts_[l].x, pts_[l].y, l ) < std::tuple( pts_[r].x, pts_[r].y, r );
     }
-    bool greater_( VertId l, VertId r ) const
-    {
-        return std::tuple( pts_[l].x, pts_[l].y, l ) > std::tuple( pts_[r].x, pts_[r].y, r );
-    }
 
 // INITIALIZATION CLASS BLOCK
-    // if set only marks inside faces as present (for further findng outline)
+    // if set only marks inside faces as present (for further finding outline)
     bool needOutline_ = false;
     // if set fails on first found intersection
     bool abortWhenIntersect_ = false;
@@ -921,13 +918,10 @@ void SweepLineQueue::mergeSamePoints_( const HolesVertIds* holesVertId )
     {
         std::sort( sortedVerts_.begin(), sortedVerts_.end(), [&] ( VertId l, VertId r )
         {
-            if ( less_( l, r ) )
-                return true;
-            if ( greater_( l, r ) )
-                return false;
-            return findRealVertId( l ) < findRealVertId( r );
+            return std::tuple( pts_[l].x, pts_[l].y, findRealVertId( l ) ) < std::tuple( pts_[r].x, pts_[r].y, findRealVertId( r ) );
         } );
     }
+
     int prevUnique = 0;
     for ( int i = 1; i < sortedVerts_.size(); ++i )
     {
@@ -1204,7 +1198,7 @@ HolesVertIds findHoleVertIdsByHoleEdges( const MeshTopology& tp, const std::vect
 Mesh getOutlineMesh( const Contours2f& contours, IntersectionsMap* interMap )
 {
     const auto contsd = copyContours<Contours2d>( contours );
-    SweepLineQueue triangulator( contsd, nullptr, false, WindingMode::Negative );
+    SweepLineQueue triangulator( contsd, nullptr, false, WindingMode::Negative, true );
 
     if ( interMap )
         interMap->shift = triangulator.vertSize();

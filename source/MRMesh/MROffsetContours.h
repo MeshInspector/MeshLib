@@ -2,6 +2,7 @@
 #include "MRMeshFwd.h"
 #include "MRConstants.h"
 #include "MRExpected.h"
+#include <functional>
 #include <string>
 
 namespace MR
@@ -51,7 +52,13 @@ struct OffsetContoursParams
 };
 
 /// offsets 2d contours in plane
-[[nodiscard]] MRMESH_API Expected<Contours2f, std::string> offsetContours( const Contours2f& contours, float offset,
+[[nodiscard]] MRMESH_API Expected<Contours2f> offsetContours( const Contours2f& contours, float offset,
     const OffsetContoursParams& params = {} );
+
+
+using ContoursVariableOffset = std::function<float( int, int )>;
+/// offsets 2d contours in plane
+[[nodiscard]] MRMESH_API Expected<Contours2f> offsetContours( const Contours2f& contours, 
+    ContoursVariableOffset offset, const OffsetContoursParams& params = {} );
 
 }

@@ -181,7 +181,7 @@ Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         return marchingCubes( volume, vmParams );
 #else
         assert( false );
-        return unuexpected( "OpenVDB is not available" );
+        return unexpected( "OpenVDB is not available" );
 #endif
     }
     else

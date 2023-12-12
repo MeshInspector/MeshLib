@@ -1,6 +1,5 @@
 #pragma once
 #include "MRMeshFwd.h"
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRVector3.h"
 #include "MRProgressCallback.h"
 #include "MRSignDetectionMode.h"
@@ -45,4 +44,3 @@ MRMESH_API Expected<SimpleVolume, std::string> meshRegionToIndicatorVolume( cons
     float offset, const DistanceVolumeParams& params );
 
 }
-#endif

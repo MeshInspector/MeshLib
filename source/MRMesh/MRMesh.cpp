@@ -335,6 +335,53 @@ double Mesh::volume( const FaceBitSet* region /*= nullptr */ ) const
     return calc.volume() / 6.0;
 }
 
+double Mesh::holePerimiter( EdgeId e0 ) const
+{
+    double res = 0;
+    if ( topology.left( e0 ) )
+    {
+        assert( false );
+        return res;
+    }
+
+    auto e = e0;
+    do
+    {
+        res += edgeLength( e );
+        e = topology.prev( e.sym() );
+        assert( !topology.left( e ) );
+    } while ( e != e0 );
+    return res;
+}
+
+Vector3d Mesh::holeDirArea( EdgeId e0 ) const
+{
+    Vector3d sum;
+    if ( topology.left( e0 ) )
+    {
+        assert( false );
+        return sum;
+    }
+
+    Vector3d p0{ orgPnt( e0 ) };
+    auto e = topology.prev( e0.sym() );
+    if ( e == e0 )
+    {
+        assert( false );
+        return sum;
+    }
+
+    do
+    {
+        Vector3d p1{ orgPnt( e ) };
+        Vector3d p2{ destPnt( e ) };
+        sum += cross( p2 - p0, p1 - p0 );
+        e = topology.prev( e.sym() );
+        assert( !topology.left( e ) );
+    } while ( e != e0 );
+    return 0.5 * sum;
+}
+
 Vector3f Mesh::dirDblArea( VertId v ) const
 {
     Vector3f sum;

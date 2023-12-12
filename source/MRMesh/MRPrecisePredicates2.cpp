@@ -18,13 +18,13 @@ bool ccw( const Vector2i & a, const Vector2i & b )
     if ( b.x )
         return b.x < 0;
 
-    // a.x = b.x = 0
-
     if ( b.y )
         return b.y > 0;
 
-    // a = b = 0
-    return false;
+    if ( a.x )
+        return a.x > 0;
+
+    return a.y < 0;
 }
 
 bool ccw( const std::array<PreciseVertCoords2, 3> & vs )
@@ -169,10 +169,10 @@ TEST( MRMesh, PrecisePredicates2Wrong )
         PreciseVertCoords2{ 3_v, Vector2i{ 1, 0 } }
     };
 
-    EXPECT_TRUE( ccw( { vs[1],vs[0],vs[2] } ) );
-    EXPECT_TRUE( ccw( { vs[2],vs[3],vs[0] } ) );
+    EXPECT_FALSE( ccw( { vs[1],vs[0],vs[2] } ) );
+    EXPECT_TRUE(  ccw( { vs[2],vs[3],vs[0] } ) );
 
-    EXPECT_FALSE( doSegmentSegmentIntersect( { vs[2],vs[3],vs[1],vs[0] } ).doIntersect );// WRONG
+    EXPECT_FALSE( doSegmentSegmentIntersect( { vs[2],vs[3],vs[1],vs[0] } ).doIntersect );
 }
 
 } //namespace MR

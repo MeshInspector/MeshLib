@@ -316,56 +316,48 @@ bool SetViewportConfigPresetMenuItem::action()
     switch ( type_ )
     {
         case Type::Vertical:
-            rect.min.x = bounds.min.x;
-            rect.min.y = bounds.min.y;
-            rect.max.x = rect.min.x + width * 0.5f;
-            rect.max.y = rect.min.y + height;
+            rect.min = bounds.min;
+            rect.max.x = std::ceil( bounds.min.x + width * 0.5f );
+            rect.max.y = bounds.max.y;
             viewer.viewport().setViewportRect( rect );
 
-            rect.min.x = bounds.min.x + width * 0.5f;
+            rect.min.x = rect.max.x;
             rect.min.y = bounds.min.y;
-            rect.max.x = rect.min.x + width * 0.5f;
-            rect.max.y = rect.min.y + height;
+            rect.max = bounds.max;
             updateMasks( viewer.append_viewport( rect ) );
 
             break;
         case Type::Horizontal:
-            rect.min.x = bounds.min.x;
-            rect.min.y = bounds.min.y;
-            rect.max.x = rect.min.x + width;
-            rect.max.y = rect.min.y + height * 0.5f;
+            rect.min = bounds.min;
+            rect.max.x = bounds.max.x;
+            rect.max.y = std::ceil( rect.min.y + height * 0.5f );
             viewer.viewport().setViewportRect( rect );
 
             rect.min.x = bounds.min.x;
-            rect.min.y = bounds.min.y + height * 0.5f;
-            rect.max.x = rect.min.x + width;
-            rect.max.y = rect.min.y + height * 0.5f;
+            rect.min.y = rect.max.y;
+            rect.max = bounds.max;
             updateMasks( viewer.append_viewport( rect ) );
 
             break;
         case Type::Quad:
-            rect.min.x = bounds.min.x;
-            rect.min.y = bounds.min.y;
-            rect.max.x = rect.min.x + width * 0.5f;
-            rect.max.y = rect.min.y + height * 0.5f;
+            rect.min = bounds.min;
+            rect.max.x = std::ceil( bounds.min.x + width * 0.5f );
+            rect.max.y = std::ceil( bounds.min.y + height * 0.5f );
             viewer.viewport().setViewportRect( rect );
 
-            rect.min.x = bounds.min.x;
-            rect.min.y = bounds.min.y + height * 0.5f;
-            rect.max.x = rect.min.x + width * 0.5f;
-            rect.max.y = rect.min.y + height * 0.5f;
+            rect.min.y = rect.max.y;
+            rect.max.x = rect.max.x;
+            rect.max.y = bounds.max.y;
             updateMasks( viewer.append_viewport( rect ) );
 
-            rect.min.x = bounds.min.x + width * 0.5f;
+            rect.min.x = rect.max.x;
             rect.min.y = bounds.min.y;
-            rect.max.x = rect.min.x + width * 0.5f;
-            rect.max.y = rect.min.y + height * 0.5f;
+            rect.max.x = bounds.max.x;
+            rect.max.y = std::ceil( bounds.min.y + height * 0.5f );
             updateMasks( viewer.append_viewport( rect ) );
 
-            rect.min.x = bounds.min.x + width * 0.5f;
-            rect.min.y = bounds.min.y + height * 0.5f;
-            rect.max.x = rect.min.x + width * 0.5f;
-            rect.max.y = rect.min.y + height * 0.5f;
+            rect.min.y = rect.max.y;
+            rect.max = bounds.max;
             updateMasks( viewer.append_viewport( rect ) );
 
             break;

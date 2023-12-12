@@ -5,24 +5,26 @@
 namespace MR
 {
 
-bool ccw( const Vector2i & a0, const Vector2i & b0 )
+bool ccw( const Vector2i & a, const Vector2i & b )
 {
-    Vector2ll a{ a0 };
-    Vector2ll b{ b0 };
+    if ( auto v = cross( Vector2ll{ a }, Vector2ll{ b } ) )
+        return v > 0; // points are in general position
 
-    auto v = cross( a, b );
-    if ( v ) return v > 0;
+    // points 0, a, b are on the same line
 
-    v = b.x - a.x;
-    if ( v ) return v > 0;
+    // permute points:
+    // da.y >> da.x >> db.y >> db.x > 0
 
-    v = a.y - b.y;
-    if ( v ) return v > 0;
+    if ( b.x )
+        return b.x < 0;
 
-    v = -b.x;
-    if ( v ) return v > 0;
+    // a.x = b.x = 0
 
-    return true;
+    if ( b.y )
+        return b.y > 0;
+
+    // a = b = 0
+    return false;
 }
 
 bool ccw( const std::array<PreciseVertCoords2, 3> & vs )
@@ -137,27 +139,24 @@ TEST( MRMesh, PrecisePredicates2 )
     EXPECT_FALSE( res.doIntersect );
 }
 
-TEST( MRMesh, PrecisePredicates2Wrong )
+TEST( MRMesh, PrecisePredicates2other )
 {
-    std::array<PreciseVertCoords2, 5> vs =
+    std::array<PreciseVertCoords2, 7> vs =
     {
-        PreciseVertCoords2{ VertId{}, Vector2i( 0, -1 )}, // vert for simple sort
-        PreciseVertCoords2{      0_v, Vector2i{ 0,  0 } },// a
-        PreciseVertCoords2{      1_v, Vector2i( 1,  1 ) },// b 
-        PreciseVertCoords2{      2_v, Vector2i{ 0,  0 } },// c
-        PreciseVertCoords2{      3_v, Vector2i{ 1, -1 } },// d
+        PreciseVertCoords2{ 0_v, Vector2i{  0,  0 } },
+        PreciseVertCoords2{ 1_v, Vector2i(  0,  0 ) },
+        PreciseVertCoords2{ 2_v, Vector2i{  0,  1 } },
+        PreciseVertCoords2{ 3_v, Vector2i{  0, -1 } },
+        PreciseVertCoords2{ 4_v, Vector2i{  1,  0 } },
+        PreciseVertCoords2{ 5_v, Vector2i{ -1,  0 } },
+        PreciseVertCoords2{ 6_v, Vector2i{  0,  0 } },
     };
 
-    auto aLessC = ccw( { vs[0],vs[3],vs[1] } );
-    EXPECT_TRUE( aLessC );
-
-    auto cLeftOfAB = ccw( { vs[1],vs[2],vs[3] } );
-    EXPECT_TRUE( cLeftOfAB );
-
-    auto res = doSegmentSegmentIntersect( { vs[1],vs[2],vs[3],vs[4] } );
-    // really we expect true here
-    // EXPECT_TRUE( res.doIntersect );
-    EXPECT_FALSE( res.doIntersect ); //error, should be true
+    EXPECT_FALSE( ccw( { vs[0],vs[1],vs[2] } ) );
+    EXPECT_TRUE(  ccw( { vs[0],vs[1],vs[3] } ) );
+    EXPECT_TRUE(  ccw( { vs[0],vs[1],vs[4] } ) );
+    EXPECT_FALSE( ccw( { vs[0],vs[1],vs[5] } ) );
+    EXPECT_FALSE( ccw( { vs[0],vs[1],vs[6] } ) );
 }
 
 

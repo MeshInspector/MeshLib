@@ -1,5 +1,4 @@
 #include "MROffset.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRMesh.h"
 #include "MRBox.h"
 #include "MRFloatGrid.h"
@@ -161,6 +160,7 @@ Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
     auto meshToLSCb = subprogress( params.callBack, 0.0f, 0.4f );
     if ( params.signDetectionMode == SignDetectionMode::OpenVDB )
     {
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
         auto offsetInVoxels = offset / params.voxelSize;
         auto voxelRes = meshToLevelSet( mesh, AffineXf3f(),
             Vector3f::diagonal( params.voxelSize ),
@@ -177,6 +177,10 @@ Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
         vmParams.outVoxelPerFaceMap = outMap;
         return marchingCubes( volume, vmParams );
+#else
+        assert( false );
+        return unuexpected( "OpenVDB is not available" );
+#endif
     }
     else
     {
@@ -290,4 +294,3 @@ Expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float off
 }
 
 }
-#endif

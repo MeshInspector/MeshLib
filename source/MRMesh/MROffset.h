@@ -1,6 +1,5 @@
 #pragma once
 #include "MRMeshFwd.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRMeshPart.h"
 #include "MRSignDetectionMode.h"
 #include "MRProgressCallback.h"
@@ -87,4 +86,3 @@ struct SharpOffsetParameters : OffsetParameters
 [[nodiscard]] MRMESH_API Expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params = {} );
 
 }
-#endif

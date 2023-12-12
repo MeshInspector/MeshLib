@@ -53,13 +53,13 @@ struct SharpOffsetParameters : OffsetParameters
 /// and then converts back using OpenVDB library (dual marching cubes),
 /// so result mesh is always closed
 [[nodiscard]] MRMESH_API Expected<Mesh, std::string> offsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params = {} );
-#endif
 
 /// in case of positive offset, returns the mesh consisting of offset mesh merged with inversed original mesh (thickening mode);
 /// in case of negative offset, returns the mesh consisting of inversed offset mesh merged with original mesh (hollowing mode);
 /// if your input mesh is closed then please specify params.type == Offset, and you will get closed mesh on output;
 /// if your input mesh is open then please specify params.type == Shell, and you will get open mesh on output
 [[nodiscard]] MRMESH_API Expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const OffsetParameters & params = {} );
+#endif
 
 /// Offsets mesh by converting it to voxels and back two times
 /// only closed meshes allowed (only Offset mode)
@@ -81,10 +81,12 @@ struct SharpOffsetParameters : OffsetParameters
 /// post process result using reference mesh to sharpen features
 [[nodiscard]] MRMESH_API Expected<Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float offset, const SharpOffsetParameters& params = {} );
 
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 /// Offsets polyline by converting it to voxels and building iso-surface
 /// do offset in all directions
 /// so result mesh is always closed
 /// params.type is ignored (always assumed Shell)
 [[nodiscard]] MRMESH_API Expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params = {} );
+#endif
 
 }

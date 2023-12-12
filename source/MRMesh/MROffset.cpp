@@ -93,7 +93,6 @@ Expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, const
 
     return newMesh;
 }
-#endif
 
 Expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const OffsetParameters& params )
 {
@@ -144,6 +143,7 @@ Expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const O
     resMesh.invalidateCaches();
     return res;
 }
+#endif
 
 Expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params /*= {} */ )
 {
@@ -265,6 +265,7 @@ Expected<MR::Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float offset,
     return res;
 }
 
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 Expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER;
@@ -294,5 +295,6 @@ Expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float off
 
     return offsetMesh( mesh, offset, p );
 }
+#endif
 
 }

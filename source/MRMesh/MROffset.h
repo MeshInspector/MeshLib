@@ -47,11 +47,13 @@ struct SharpOffsetParameters : OffsetParameters
     float maxOldVertPosCorrection = 0.5f;
 };
 
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 /// Offsets mesh by converting it to distance field in voxels using OpenVDB library,
 /// signDetectionMode = Unsigned(from OpenVDB) | OpenVDB | HoleWindingRule,
 /// and then converts back using OpenVDB library (dual marching cubes),
 /// so result mesh is always closed
 [[nodiscard]] MRMESH_API Expected<Mesh, std::string> offsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params = {} );
+#endif
 
 /// in case of positive offset, returns the mesh consisting of offset mesh merged with inversed original mesh (thickening mode);
 /// in case of negative offset, returns the mesh consisting of inversed offset mesh merged with original mesh (hollowing mode);

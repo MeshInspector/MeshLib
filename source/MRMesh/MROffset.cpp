@@ -28,6 +28,7 @@ float suggestVoxelSize( const MeshPart & mp, float approxNumVoxels )
     return std::cbrt( vol / approxNumVoxels );
 }
 
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 Expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER
@@ -92,6 +93,7 @@ Expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, const
 
     return newMesh;
 }
+#endif
 
 Expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const OffsetParameters& params )
 {

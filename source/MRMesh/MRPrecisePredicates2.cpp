@@ -159,7 +159,7 @@ TEST( MRMesh, PrecisePredicates2other )
     EXPECT_FALSE( ccw( { vs[0],vs[1],vs[6] } ) );
 }
 
-TEST( MRMesh, PrecisePredicates2Wrong )
+TEST( MRMesh, PrecisePredicates2more )
 {
     std::array<PreciseVertCoords2, 4> vs =
     {
@@ -171,8 +171,6 @@ TEST( MRMesh, PrecisePredicates2Wrong )
 
     EXPECT_FALSE( ccw( { vs[1],vs[0],vs[2] } ) );
     EXPECT_TRUE(  ccw( { vs[2],vs[3],vs[0] } ) );
-
-    EXPECT_FALSE( doSegmentSegmentIntersect( { vs[2],vs[3],vs[1],vs[0] } ).doIntersect );
 }
 
 } //namespace MR

@@ -922,6 +922,12 @@ void SweepLineQueue::mergeSamePoints_( const HolesVertIds* holesVertId )
         } );
     }
 
+    if ( needOutline_ )
+    {
+        windingInfo_.resize( tp_.undirectedEdgeSize() );
+        return;
+    }
+
     int prevUnique = 0;
     for ( int i = 1; i < sortedVerts_.size(); ++i )
     {

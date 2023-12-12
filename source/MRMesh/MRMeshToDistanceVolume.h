@@ -3,6 +3,7 @@
 #include "MRVector3.h"
 #include "MRProgressCallback.h"
 #include "MRSignDetectionMode.h"
+#include "MRSimpleVolume.h"
 #include "MRExpected.h"
 #include <cfloat>
 #include <memory>

@@ -129,9 +129,11 @@ Expected<int, std::string> readVertCoords( VertCoords& vertexCoordinates, const 
     }
     else
     {
-        ParallelFor( vertexCoordinates, [&] ( VertId v )
+        const auto startSpan = vertexCoordinates.vec_.begin() + size_t( start );
+        ParallelFor( startSpan, vertexCoordinates.vec_.end(), [&] ( auto it )
         {
-            vertexCoordinates[start + v] = *( Vector3f* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + v * bufferView.byteStride ] );
+            const size_t i = std::distance( startSpan, it );
+            *it = *( Vector3f* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + i * bufferView.byteStride ] );
         } );
     }
 

@@ -161,6 +161,13 @@ struct [[nodiscard]] Mesh
     /// if region is nullptr - whole mesh is region
     [[nodiscard]] MRMESH_API double volume( const FaceBitSet* region = nullptr ) const;
 
+    /// computes the perimeter of the hole specified by one of its edges with no valid left face (left is hole)
+    [[nodiscard]] MRMESH_API double holePerimiter( EdgeId e ) const;
+
+    /// computes directed area of the hole specified by one of its edges with no valid left face (left is hole);
+    /// if the hole is planar then returned vector is orthogonal to the plane pointing outside and its magnitude is equal to hole area
+    [[nodiscard]] MRMESH_API Vector3d holeDirArea( EdgeId e ) const;
+
     /// computes triangular face normal from its vertices
     [[nodiscard]] Vector3f leftNormal( EdgeId e ) const { return leftDirDblArea( e ).normalized(); }
 

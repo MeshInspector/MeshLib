@@ -143,7 +143,6 @@ Expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const O
     resMesh.invalidateCaches();
     return res;
 }
-#endif
 
 Expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params /*= {} */ )
 {
@@ -154,6 +153,7 @@ Expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA,
     }
     return levelSetDoubleConvertion( mp, AffineXf3f(), params.voxelSize, offsetA, offsetB, 0, params.fwn, params.callBack );
 }
+#endif
 
 Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
     const OffsetParameters& params, Vector<VoxelId, FaceId> * outMap )

@@ -59,12 +59,12 @@ struct SharpOffsetParameters : OffsetParameters
 /// if your input mesh is closed then please specify params.type == Offset, and you will get closed mesh on output;
 /// if your input mesh is open then please specify params.type == Shell, and you will get open mesh on output
 [[nodiscard]] MRMESH_API Expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const OffsetParameters & params = {} );
-#endif
 
 /// Offsets mesh by converting it to voxels and back two times
 /// only closed meshes allowed (only Offset mode)
 /// typically offsetA and offsetB have distinct signs
 [[nodiscard]] MRMESH_API Expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params = {} );
+#endif
 
 /// Offsets mesh by converting it to distance field in voxels (using OpenVDB library if SignDetectionMode::OpenVDB or our implementation otherwise)
 /// and back using standard Marching Cubes, as opposed to Dual Marching Cubes in offsetMesh(...)

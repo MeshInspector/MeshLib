@@ -1039,7 +1039,7 @@ void separator( float scaling, const std::string& text /*= ""*/, int issueCount 
         scaling, 
         text, 
         issueCount > 0 ? ImVec4{ 0.886f, 0.267f, 0.267f, 1.0f } : ImVec4{ 0.235f, 0.663f, 0.078f, 1.0f },
-        std::to_string( issueCount ) );
+        issueCount >= 0 ? std::to_string( issueCount ) : "");
 }
 
 void separator( 

@@ -1,6 +1,5 @@
 #pragma once
 #include "MRMeshFwd.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRMeshPart.h"
 #include "MRSignDetectionMode.h"
 #include "MRProgressCallback.h"
@@ -48,6 +47,7 @@ struct SharpOffsetParameters : OffsetParameters
     float maxOldVertPosCorrection = 0.5f;
 };
 
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 /// Offsets mesh by converting it to distance field in voxels using OpenVDB library,
 /// signDetectionMode = Unsigned(from OpenVDB) | OpenVDB | HoleWindingRule,
 /// and then converts back using OpenVDB library (dual marching cubes),
@@ -64,6 +64,7 @@ struct SharpOffsetParameters : OffsetParameters
 /// only closed meshes allowed (only Offset mode)
 /// typically offsetA and offsetB have distinct signs
 [[nodiscard]] MRMESH_API Expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params = {} );
+#endif
 
 /// Offsets mesh by converting it to distance field in voxels (using OpenVDB library if SignDetectionMode::OpenVDB or our implementation otherwise)
 /// and back using standard Marching Cubes, as opposed to Dual Marching Cubes in offsetMesh(...)
@@ -80,11 +81,12 @@ struct SharpOffsetParameters : OffsetParameters
 /// post process result using reference mesh to sharpen features
 [[nodiscard]] MRMESH_API Expected<Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float offset, const SharpOffsetParameters& params = {} );
 
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 /// Offsets polyline by converting it to voxels and building iso-surface
 /// do offset in all directions
 /// so result mesh is always closed
 /// params.type is ignored (always assumed Shell)
 [[nodiscard]] MRMESH_API Expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params = {} );
+#endif
 
 }
-#endif

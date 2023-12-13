@@ -1,5 +1,4 @@
 #include "MRMarchingCubes.h"
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRIsNaN.h"
 #include "MRMesh.h"
 #include "MRVolumeIndexer.h"
@@ -8,7 +7,9 @@
 #include "MRVDBFloatGrid.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRPch/MROpenvdb.h"
+#endif
 #include <thread>
 
 namespace MR
@@ -455,8 +456,10 @@ bool checkSetValid( const SeparationPointSet& set, int mode )
 }
 
 using namespace MarchingCubesHelper;
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 using ConstAccessor = openvdb::FloatGrid::ConstAccessor;
 using VdbCoord = openvdb::Coord;
+#endif
 
 inline Vector3f voxelPositionerLinearInline( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
 {
@@ -469,6 +472,7 @@ Vector3f voxelPositionerLinear( const Vector3f& pos0, const Vector3f& pos1, floa
     return voxelPositionerLinearInline( pos0, pos1, v0, v1, iso );
 }
 
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 template <bool UseDefaultVoxelPointPositioner>
 bool findSeparationPoint( SeparationPoint& sp, const VdbVolume& volume, const ConstAccessor& acc,
                           const openvdb::Coord& coord, const Vector3i& basePos, float valueB, NeighborDir dir,
@@ -495,6 +499,7 @@ bool findSeparationPoint( SeparationPoint& sp, const VdbVolume& volume, const Co
         sp.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
     return true;
 }
+#endif
 
 template <typename NaNChecker, bool UseDefaultVoxelPointPositioner>
 bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const VolumeIndexer& indexer, VoxelId base,
@@ -560,19 +565,23 @@ template<typename V> auto accessorCtor( const V& v );
 
 template<> auto accessorCtor<SimpleVolume>( const SimpleVolume& ) { return ( void* )nullptr; }
 
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 template<> auto accessorCtor<VdbVolume>( const VdbVolume& v ) { return v.data->getConstAccessor(); }
+#endif
 
 template<> auto accessorCtor<FunctionVolume>( const FunctionVolume& ) { return (void*)nullptr; }
 
 template<typename V, typename NaNChecker, bool UseDefaultVoxelPointPositioner>
 Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker )
 {
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
     if constexpr ( std::is_same_v<V, VdbVolume> )
     {
         if ( !volume.data )
             return unexpected( "No volume data." );
-    }
-    else if constexpr ( std::is_same_v<V, FunctionVolume> )
+    } else
+#endif
+    if constexpr ( std::is_same_v<V, FunctionVolume> )
     {
         if ( !volume.data )
             return unexpected( "Getter function is not specified." );
@@ -585,9 +594,11 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
 
     MR_TIMER
 
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
     VdbCoord minCoord;
     if constexpr ( std::is_same_v<V, VdbVolume> )
         minCoord = volume.data->evalActiveVoxelBoundingBox().min();
+#endif
 
     VolumeIndexer indexer( volume.dims );
 
@@ -629,7 +640,9 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
 
         // vdb version cache
         [[maybe_unused]] auto acc = accessorCtor( volume );
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
         [[maybe_unused]] VdbCoord baseCoord;
+#endif
         [[maybe_unused]] float baseValue{ 0.0f };
 
         if ( std::this_thread::get_id() == mainThreadId && lastSubMap == -1 )
@@ -651,17 +664,22 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
             SeparationPointSet set;
             bool atLeastOneOk = false;
             auto basePos = indexer.toPos( VoxelId( i ) );
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
             if constexpr ( std::is_same_v<V, VdbVolume> )
             {
                 baseCoord = openvdb::Coord{ basePos.x + minCoord.x(), basePos.y + minCoord.y(), basePos.z + minCoord.z() };
                 baseValue = acc.getValue( baseCoord );
             }
+#endif
             for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
             {
                 bool ok = false;
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
                 if constexpr ( std::is_same_v<V, VdbVolume> )
                     ok = findSeparationPoint<UseDefaultVoxelPointPositioner>( set[n], volume, acc, baseCoord, basePos, baseValue, NeighborDir( n ), params );
-                else if constexpr ( std::is_same_v<V, SimpleVolume> )
+                else
+#endif
+                if constexpr ( std::is_same_v<V, SimpleVolume> )
                     ok = findSeparationPoint<NaNChecker, UseDefaultVoxelPointPositioner>( set[n], volume, indexer, VoxelId( i ), basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ) );
                 else if constexpr ( std::is_same_v<V, FunctionVolume> )
                     ok = findSeparationPoint<NaNChecker, UseDefaultVoxelPointPositioner>( set[n], volume, basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ) );
@@ -798,11 +816,13 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
             {
                 auto pos = basePos + cVoxelNeighbors[i];
                 float value{ 0.0f };
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
                 if constexpr ( std::is_same_v<V, VdbVolume> )
                 {
                     value = acc.getValue( { pos.x + minCoord.x(),pos.y + minCoord.y(),pos.z + minCoord.z() } );
-                }
-                else if constexpr ( std::is_same_v<V, SimpleVolume> || std::is_same_v<V, FunctionVolume> )
+                } else
+#endif
+                if constexpr ( std::is_same_v<V, SimpleVolume> || std::is_same_v<V, FunctionVolume> )
                 {
                     if constexpr ( std::is_same_v<V, SimpleVolume> )
                         value = volume.data[ind + cVoxelNeighborsIndexAdd[i]];
@@ -1010,10 +1030,14 @@ Expected<Mesh, std::string> marchingCubes( const SimpleVolume& volume, const Mar
 {
     return volumeToMeshHelper2( volume, params );
 }
+
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 Expected<Mesh, std::string> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {
     return volumeToMeshHelper2( volume, params );
 }
+#endif
+
 Expected<Mesh, std::string> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params )
 {
     return volumeToMeshHelper2( volume, params );
@@ -1024,15 +1048,16 @@ Expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, cons
     return marchingCubes( volume, params );
 }
 
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 Expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const MarchingCubesParams& params )
 {
     return marchingCubes( volume, params );
 }
+#endif
 
 Expected<Mesh, std::string> functionVolumeToMesh( const FunctionVolume& volume, const MarchingCubesParams& params )
 {
     return marchingCubes( volume, params );
 }
 
-}
-#endif
+} //namespace MR

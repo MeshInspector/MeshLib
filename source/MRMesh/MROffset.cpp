@@ -1,5 +1,4 @@
 #include "MROffset.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRMesh.h"
 #include "MRBox.h"
 #include "MRFloatGrid.h"
@@ -29,6 +28,7 @@ float suggestVoxelSize( const MeshPart & mp, float approxNumVoxels )
     return std::cbrt( vol / approxNumVoxels );
 }
 
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 Expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER
@@ -153,6 +153,7 @@ Expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA,
     }
     return levelSetDoubleConvertion( mp, AffineXf3f(), params.voxelSize, offsetA, offsetB, 0, params.fwn, params.callBack );
 }
+#endif
 
 Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
     const OffsetParameters& params, Vector<VoxelId, FaceId> * outMap )
@@ -161,6 +162,7 @@ Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
     auto meshToLSCb = subprogress( params.callBack, 0.0f, 0.4f );
     if ( params.signDetectionMode == SignDetectionMode::OpenVDB )
     {
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
         auto offsetInVoxels = offset / params.voxelSize;
         auto voxelRes = meshToLevelSet( mesh, AffineXf3f(),
             Vector3f::diagonal( params.voxelSize ),
@@ -177,6 +179,10 @@ Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
         vmParams.outVoxelPerFaceMap = outMap;
         return marchingCubes( volume, vmParams );
+#else
+        assert( false );
+        return unexpected( "OpenVDB is not available" );
+#endif
     }
     else
     {
@@ -259,6 +265,7 @@ Expected<MR::Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float offset,
     return res;
 }
 
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 Expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER;
@@ -288,6 +295,6 @@ Expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float off
 
     return offsetMesh( mesh, offset, p );
 }
+#endif
 
 }
-#endif

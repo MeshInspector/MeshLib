@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRAffineXf3.h"
 #include "MRSimpleVolume.h"
 #include "MRProgressCallback.h"
@@ -44,13 +43,14 @@ using VolumeToMeshParams [[deprecated]] = MarchingCubesParams;
 MRMESH_API Expected<Mesh, std::string> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params = {} );
 [[deprecated( "use marchingCubes()" )]] MRMESH_API Expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const MarchingCubesParams& params = {} );
 
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 // makes Mesh from VdbVolume with given settings using Marching Cubes algorithm
 MRMESH_API Expected<Mesh, std::string> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params = {} );
 [[deprecated( "use marchingCubes()" )]] MRMESH_API Expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const MarchingCubesParams& params = {} );
+#endif
 
 // makes Mesh from FunctionVolume with given settings using Marching Cubes algorithm
 MRMESH_API Expected<Mesh, std::string> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params = {} );
 [[deprecated( "use marchingCubes()" )]] MRMESH_API Expected<Mesh, std::string> functionVolumeToMesh( const FunctionVolume& volume, const MarchingCubesParams& params = {} );
 
-}
-#endif
+} //namespace MR

@@ -154,6 +154,8 @@ private:
 
     void init_();
 
+    // faces with aspect ratio more than this is optimized first
+    static constexpr float CriticalAspectRatio = 1e3f;
     FanOptimizerQueueElement calcQueueElement_( int i, float critAngle ) const;
 
     void updateBorderQueueElement_( FanOptimizerQueueElement& res, bool nextEl ) const;
@@ -203,6 +205,13 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
     auto angleProf = trisAngleProfit( a, b, c, d, critAngle );
     // ( deloneProf > 0.0f || angleProf > 0.0f )  strict condition to have more faces options if flip is not profitable
 
+    auto acLengthSq = ( a - c ).lengthSq();
+    if ( ( acLengthSq > ( b - a ).lengthSq() && triangleAspectRatio( a, b, c ) > CriticalAspectRatio ) ||
+        ( acLengthSq > ( d - a ).lengthSq() && triangleAspectRatio( a, c, d ) > CriticalAspectRatio ) )
+    {
+        res.weight = FLT_MAX;
+        return res;
+    }
     // whether abc acd is allowed to be flipped to abd dbc
     bool flipPossibility = false;
     if ( useNeiNormals_ && ( dot( normals_[centerVert_], normals_[fanData_.neighbors[res.id]] ) < 0.0f ) )

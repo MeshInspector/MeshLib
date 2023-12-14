@@ -45,11 +45,11 @@ protected:
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 
-    virtual Expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& ) const override 
-    { return {}; }
+    virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& ) const override 
+        { return {}; }
 
     virtual VoidOrErrStr deserializeModel_( const std::filesystem::path&, ProgressCallback ) override
-    { return {}; }
+        { return {}; }
 
 private:
     void constructMesh_();

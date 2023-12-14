@@ -40,6 +40,7 @@ public:
     MRMESH_API void setCenter( const Vector3f& center );
     /// updates xf to scale size
     MRMESH_API void setSize( float size );
+
 protected:
     LineObject( const LineObject& other ) = default;
 
@@ -48,11 +49,11 @@ protected:
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 
-    virtual Expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& ) const override
-    { return {}; }
+    virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& ) const override
+        { return {}; }
 
     virtual VoidOrErrStr deserializeModel_( const std::filesystem::path&, ProgressCallback ) override
-    { return {}; }
+        { return {}; }
 
 private:
     void constructPolyline_();

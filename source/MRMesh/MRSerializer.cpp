@@ -150,9 +150,10 @@ VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::p
 
     Json::Value root;
     root["FormatVersion"] = "0.0";
-    auto saveModelFutures = object.serializeRecursive( scenePath, root, 0 );
-    if ( !saveModelFutures.has_value() )
-        return unexpected( saveModelFutures.error() );
+    auto expectedSaveModelFutures = object.serializeRecursive( scenePath, root, 0 );
+    if ( !expectedSaveModelFutures.has_value() )
+        return unexpected( expectedSaveModelFutures.error() );
+    auto & saveModelFutures = expectedSaveModelFutures.value();
 
     assert( !object.name().empty() );
     auto paramsFile = scenePath / ( object.name() + ".json" );
@@ -164,41 +165,35 @@ VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::p
 
     ofs.close();
 
-#ifdef __EMSCRIPTEN__
-    for ( auto & f : saveModelFutures.value() )
-        f.get();
-#else
-    reportProgress( progressCb, 0.1f );
-
-    auto allSavesDone = [&]()
-    {
-        for ( auto & f : saveModelFutures.value() )
-            if ( f.wait_for( std::chrono::milliseconds(200) ) == std::future_status::timeout )
-                return false;
-        return true;
-    };
-    auto numFinishedSaves = [&]()
-    {
-        int num = 0;
-        for ( auto & f : saveModelFutures.value() )
-            if ( f.wait_for( std::chrono::milliseconds(0) ) != std::future_status::timeout )
-                ++num;
-        return num;
-    };
+#ifndef __EMSCRIPTEN__
+    if ( !reportProgress( progressCb, 0.1f ) )
+        return unexpectedOperationCanceled();
 
     // wait for all models are saved before making compressed folder
-    while ( !allSavesDone() )
+    BitSet inProgress;
+    inProgress.resize( saveModelFutures.size(), true );
+    while ( inProgress.any() )
     {
-        if ( progressCb )
+        for ( auto i : inProgress )
         {
-            progressCb( 0.1f + 0.8f * numFinishedSaves() / saveModelFutures.value().size() );
+            if ( saveModelFutures[i].wait_for( std::chrono::milliseconds( 200 ) ) != std::future_status::timeout )
+                inProgress.reset( i );
+            if ( !reportProgress( progressCb, 0.1f + 0.8f * inProgress.count() / inProgress.size() ) )
+                return unexpectedOperationCanceled();
         }
     }
 
     if ( !reportProgress( progressCb, 0.9f ) )
         return unexpectedOperationCanceled();
-
 #endif
+
+    for ( auto & f : saveModelFutures )
+    {
+        auto v = f.get();
+        if ( !v )
+            return v;
+    }
+
     if ( preCompress )
         preCompress( scenePath );
 

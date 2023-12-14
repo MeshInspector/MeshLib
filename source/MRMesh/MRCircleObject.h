@@ -44,6 +44,7 @@ public:
     MRMESH_API void setCenter( const Vector3f& center );
     /// updates xf to fit given normal
     MRMESH_API void setNormal( const Vector3f& normal );
+
 protected:
     CircleObject( const CircleObject& other ) = default;
 
@@ -52,11 +53,11 @@ protected:
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 
-    virtual Expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& ) const override
-    { return {}; }
+    virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& ) const override
+        { return {}; }
 
     virtual VoidOrErrStr deserializeModel_( const std::filesystem::path&, ProgressCallback ) override
-    { return {}; }
+        { return {}; }
 
 private:
     void constructPolyline_();

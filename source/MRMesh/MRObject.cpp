@@ -359,7 +359,7 @@ void Object::swapSignals_( Object& other )
     std::swap( worldXfChangedSignal, other.worldXfChangedSignal );
 }
 
-Expected<std::future<void>, std::string> Object::serializeModel_( const std::filesystem::path& ) const
+Expected<std::future<VoidOrErrStr>> Object::serializeModel_( const std::filesystem::path& ) const
 {
     return {};
 }
@@ -457,15 +457,14 @@ std::vector<std::string> Object::getInfoLines() const
     return res;
 }
 
-Expected<std::vector<std::future<void>>, std::string> Object::serializeRecursive( const std::filesystem::path& path, Json::Value& root,
-    int childId ) const
+Expected<std::vector<std::future<VoidOrErrStr>>> Object::serializeRecursive( const std::filesystem::path& path, Json::Value& root, int childId ) const
 {
     std::error_code ec;
     if ( !std::filesystem::is_directory( path, ec ) )
         if ( !std::filesystem::create_directories( path, ec ) )
             return unexpected( "Cannot create directories " + utf8string( path ) );
 
-    std::vector<std::future<void>> res;
+    std::vector<std::future<VoidOrErrStr>> res;
 
     // the key must be unique among all children of same parent
     std::string key = std::to_string( childId ) + "_" + replaceProhibitedChars( name_ );

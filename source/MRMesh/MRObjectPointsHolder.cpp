@@ -183,7 +183,7 @@ Box3f ObjectPointsHolder::computeBoundingBox_() const
     return bb;
 }
 
-Expected<std::future<void>, std::string> ObjectPointsHolder::serializeModel_( const std::filesystem::path& path ) const
+Expected<std::future<VoidOrErrStr>> ObjectPointsHolder::serializeModel_( const std::filesystem::path& path ) const
 {
     if ( ancillary_ || !points_ )
         return {};
@@ -196,7 +196,7 @@ Expected<std::future<void>, std::string> ObjectPointsHolder::serializeModel_( co
         MR::PointsSave::CtmSavePointsOptions settings;
         settings.saveValidOnly = false;
         settings.colors = ptr;
-        MR::PointsSave::toCtm( *points, pathFromUtf8( filename ), settings );
+        return MR::PointsSave::toCtm( *points, pathFromUtf8( filename ), settings );
     } );
 #else
     return std::async( getAsyncLaunchType(),

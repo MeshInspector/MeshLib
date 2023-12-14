@@ -163,7 +163,7 @@ VoidOrErrStr ObjectDistanceMap::deserializeModel_( const std::filesystem::path& 
     return {};
 }
 
-Expected<std::future<void>, std::string> ObjectDistanceMap::serializeModel_( const std::filesystem::path& path ) const
+Expected<std::future<VoidOrErrStr>> ObjectDistanceMap::serializeModel_( const std::filesystem::path& path ) const
 {
     if ( !dmap_ )
         return {};
@@ -171,7 +171,7 @@ Expected<std::future<void>, std::string> ObjectDistanceMap::serializeModel_( con
     return std::async( getAsyncLaunchType(),
         [this, filename = utf8string( path ) + ".raw"] ()
     {
-        DistanceMapSave::toRAW( pathFromUtf8( filename ), *dmap_ );
+        return DistanceMapSave::toRAW( pathFromUtf8( filename ), *dmap_ );
     } );
 }
 

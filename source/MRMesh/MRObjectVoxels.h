@@ -229,7 +229,7 @@ protected:
     MRMESH_API VoidOrErrStr deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
 #endif
 
-    MRMESH_API virtual Expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const override;
+    MRMESH_API virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& path ) const override;
 };
 
 

@@ -169,7 +169,7 @@ void RenderPointsObject::bindPoints_()
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::DrawPoints );
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    if ( auto pointCloud = objPoints_->pointCloud() )
+    if ( auto pointCloud = objPoints_->pointCloud(); objPoints_->hasVisualRepresentation() )
     {
         bindVertexAttribArray( shader, "position", vertPosBuffer_, pointCloud->points.vec_, 3, dirty_ & DIRTY_POSITION );
         bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, pointCloud->normals.vec_, 3, dirty_ & DIRTY_RENDER_NORMALS );
@@ -206,7 +206,7 @@ void RenderPointsObject::bindPointsPicker_()
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Picker );
     GL_EXEC( glBindVertexArray( pointsPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    if ( auto pointCloud = objPoints_->pointCloud() )
+    if ( auto pointCloud = objPoints_->pointCloud(); objPoints_->hasVisualRepresentation() )
         bindVertexAttribArray( shader, "position", vertPosBuffer_, pointCloud->points.vec_, 3, dirty_ & DIRTY_POSITION );
     else
         bindVertexAttribArray( shader, "position", vertPosBuffer_, std::vector<Vector3f>{}, 3, false, vertPosBuffer_.size() != 0 );
@@ -247,7 +247,7 @@ void RenderPointsObject::update_()
 RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_POSITION ) || !objPoints_->pointCloud() )
+    if ( !( dirty_ & DIRTY_POSITION ) || !objPoints_->hasVisualRepresentation() )
         return glBuffer.prepareBuffer<VertId>( validIndicesSize_, !validIndicesBuffer_.valid() );
 
     const auto& points = objPoints_->pointCloud();
@@ -273,7 +273,7 @@ RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
 RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_SELECTION ) || !objPoints_->pointCloud() )
+    if ( !( dirty_ & DIRTY_SELECTION ) || !objPoints_->hasVisualRepresentation() )
         return glBuffer.prepareBuffer<unsigned>( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y, 
             ( dirty_ & DIRTY_SELECTION ) && vertSelectionTextureSize_.x * vertSelectionTextureSize_.y == 0 );
 

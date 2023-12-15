@@ -178,13 +178,10 @@ VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::p
         {
             if ( saveModelFutures[i].wait_for( std::chrono::milliseconds( 200 ) ) != std::future_status::timeout )
                 inProgress.reset( i );
-            if ( !reportProgress( progressCb, 0.1f + 0.8f * inProgress.count() / inProgress.size() ) )
-                return unexpectedOperationCanceled();
         }
+        if ( !reportProgress( subprogress( progressCb, 0.1f, 0.9f ), 1.0f - (float)inProgress.count() / inProgress.size() ) )
+            return unexpectedOperationCanceled();
     }
-
-    if ( !reportProgress( progressCb, 0.9f ) )
-        return unexpectedOperationCanceled();
 #endif
 
     for ( auto & f : saveModelFutures )

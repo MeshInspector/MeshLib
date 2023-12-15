@@ -37,6 +37,9 @@ void RenderPointsObject::render( const RenderParams& renderParams )
     }
     update_();
 
+    if ( auto pointCloud = objPoints_->pointCloud(); !objPoints_->hasVisualRepresentation() )
+        return;
+
     // Initialize uniform
     GL_EXEC( glViewport( ( GLsizei )renderParams.viewport.x, ( GLsizei )renderParams.viewport.y,
         ( GLsizei )renderParams.viewport.z, ( GLsizei )renderParams.viewport.w ) );
@@ -117,6 +120,9 @@ void RenderPointsObject::renderPicker( const BaseRenderParams& parameters, unsig
         return;
     }
     update_();
+
+    if ( auto pointCloud = objPoints_->pointCloud(); !objPoints_->hasVisualRepresentation() )
+        return;
 
     GL_EXEC( glViewport( ( GLsizei )0, ( GLsizei )0, ( GLsizei )parameters.viewport.z, ( GLsizei )parameters.viewport.w ) );
 

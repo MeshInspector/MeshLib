@@ -118,7 +118,7 @@ struct FeatureData
     }
 };
 
-Mesh loadSolid( const TopoDS_Shape& solid )
+std::vector<Triangle3f> loadSolid( const TopoDS_Shape& solid )
 {
     MR_TIMER
 
@@ -206,7 +206,7 @@ Mesh loadSolid( const TopoDS_Shape& solid )
         parts.emplace_back( std::move( region ) );
     }
 
-    return Mesh::fromPointTriples( triples, true );
+    return triples;
 }
 
 #if STEP_READER_FIXED
@@ -330,7 +330,8 @@ Expected<std::shared_ptr<Object>, std::string> stepModelToScene( STEPControl_Rea
     }
     else if ( solids.size() == 1 )
     {
-        auto mesh = loadSolid( solids.front() );
+        const auto triples = loadSolid( solids.front() );
+        auto mesh = Mesh::fromPointTriples( triples, true );
 
         auto result = std::make_shared<ObjectMesh>();
         result->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
@@ -343,18 +344,28 @@ Expected<std::shared_ptr<Object>, std::string> stepModelToScene( STEPControl_Rea
         result->setMesh( std::make_shared<Mesh>() );
 
         auto cb2 = subprogress( cb, 0.90f, 1.0f );
+        tbb::task_arena taskArena;
+        tbb::task_group taskGroup;
+        std::vector<std::vector<Triangle3f>> triples( solids.size() );
         std::vector<std::shared_ptr<Object>> children( solids.size() );
-        const bool normalFinished = ParallelFor( size_t( 0 ), solids.size(), [&] ( size_t i )
+        for ( auto i = 0; i < solids.size(); ++i )
         {
-            auto mesh = loadSolid( solids[i] );
+            triples[i] = loadSolid( solids[i] );
 
-            auto child = std::make_shared<ObjectMesh>();
-            child->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
-            child->setName( fmt::format( "Solid{}", i + 1 ) );
-            children[i] = std::move( child );
-        }, cb2 );
-        if ( !normalFinished )
-            return unexpected( std::string( "Loading canceled" ) );
+            taskArena.enqueue( [i, &triples, &children, &taskGroup]
+            {
+                taskGroup.run( [i, &triples, &children]
+                {
+                    auto mesh = Mesh::fromPointTriples( triples[i], true );
+
+                    auto child = std::make_shared<ObjectMesh>();
+                    child->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
+                    child->setName( fmt::format( "Solid{}", i + 1 ) );
+                    children[i] = std::move( child );
+                } );
+            } );
+        }
+        taskArena.execute( [&] { taskGroup.wait(); } );
 
         for ( auto& child : children )
             result->addChild( std::move( child ), true );

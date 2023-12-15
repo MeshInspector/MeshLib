@@ -37,6 +37,9 @@ void RenderPointsObject::render( const RenderParams& renderParams )
     }
     update_();
 
+    if ( !objPoints_->hasVisualRepresentation() )
+        return;
+
     // Initialize uniform
     GL_EXEC( glViewport( ( GLsizei )renderParams.viewport.x, ( GLsizei )renderParams.viewport.y,
         ( GLsizei )renderParams.viewport.z, ( GLsizei )renderParams.viewport.w ) );
@@ -118,6 +121,9 @@ void RenderPointsObject::renderPicker( const BaseRenderParams& parameters, unsig
     }
     update_();
 
+    if ( !objPoints_->hasVisualRepresentation() )
+        return;
+
     GL_EXEC( glViewport( ( GLsizei )0, ( GLsizei )0, ( GLsizei )parameters.viewport.z, ( GLsizei )parameters.viewport.w ) );
 
     bindPointsPicker_();
@@ -169,8 +175,9 @@ void RenderPointsObject::bindPoints_()
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::DrawPoints );
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    if ( auto pointCloud = objPoints_->pointCloud(); objPoints_->hasVisualRepresentation() )
+    if ( objPoints_->hasVisualRepresentation() )
     {
+        auto pointCloud = objPoints_->pointCloud();
         bindVertexAttribArray( shader, "position", vertPosBuffer_, pointCloud->points.vec_, 3, dirty_ & DIRTY_POSITION );
         bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, pointCloud->normals.vec_, 3, dirty_ & DIRTY_RENDER_NORMALS );
         hasNormalsBackup_ = !pointCloud->normals.empty();
@@ -206,8 +213,8 @@ void RenderPointsObject::bindPointsPicker_()
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Picker );
     GL_EXEC( glBindVertexArray( pointsPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    if ( auto pointCloud = objPoints_->pointCloud(); objPoints_->hasVisualRepresentation() )
-        bindVertexAttribArray( shader, "position", vertPosBuffer_, pointCloud->points.vec_, 3, dirty_ & DIRTY_POSITION );
+    if ( objPoints_->hasVisualRepresentation() )
+        bindVertexAttribArray( shader, "position", vertPosBuffer_, objPoints_->pointCloud()->points.vec_, 3, dirty_ & DIRTY_POSITION );
     else
         bindVertexAttribArray( shader, "position", vertPosBuffer_, std::vector<Vector3f>{}, 3, false, vertPosBuffer_.size() != 0 );
 

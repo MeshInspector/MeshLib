@@ -148,10 +148,7 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         msParams.maxDistSq = sqr( absOffset + params.voxelSize );
         msParams.minDistSq = sqr( std::max( absOffset - params.voxelSize, 0.0f ) );
         msParams.fwn = params.fwn;
-        
-        auto volume = meshToDistanceVolume( mp, msParams );
-        if ( !volume )
-            return unexpected( std::move( volume.error() ) );
+        msParams.precomputeMinMax = !params.memoryEfficient;
 
         MarchingCubesParams vmParams;
         vmParams.origin = msParams.origin;
@@ -159,7 +156,19 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
         vmParams.lessInside = true;
         vmParams.outVoxelPerFaceMap = outMap;
-        return marchingCubes( std::move( *volume ), vmParams );
+
+        if ( params.memoryEfficient )
+        {
+            return
+                meshToDistanceFunctionVolume( mp, msParams )
+                .and_then( [vmParams] ( auto&& volume ) { return marchingCubes( volume, vmParams ); } );
+        }
+        else
+        {
+            return
+                meshToDistanceVolume( mp, msParams )
+                .and_then( [vmParams] ( auto&& volume ) { return marchingCubes( volume, vmParams ); } );
+        }
     }
 }
 

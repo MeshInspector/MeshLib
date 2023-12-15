@@ -30,6 +30,10 @@ struct OffsetParameters : BaseShellParameters
 
     /// defines particular implementation of IFastWindingNumber interface that will compute windings. If it is not specified, default FastWindingNumber is used
     std::shared_ptr<IFastWindingNumber> fwn;
+
+    /// ...
+    /// used only by mcOffsetMesh and sharpOffsetMesh methods
+    bool memoryEfficient = false;
 };
 
 struct SharpOffsetParameters : OffsetParameters

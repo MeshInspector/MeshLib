@@ -48,7 +48,7 @@ void ObjectMeshHolder::setSelectedEdgesColor( const Color& color, ViewportId id 
     needRedraw_ = true;
 }
 
-Expected<std::future<void>, std::string> ObjectMeshHolder::serializeModel_( const std::filesystem::path& path ) const
+Expected<std::future<VoidOrErrStr>> ObjectMeshHolder::serializeModel_( const std::filesystem::path& path ) const
 {
     if ( ancillary_ || !mesh_ )
         return {};
@@ -61,7 +61,7 @@ Expected<std::future<void>, std::string> ObjectMeshHolder::serializeModel_( cons
         options.rearrangeTriangles = false;
         if ( !vertsColorMap_.empty() )
             options.colors = &vertsColorMap_;
-        MR::MeshSave::toCtm( *mesh, pathFromUtf8( filename ), options );
+        return MR::MeshSave::toCtm( *mesh, pathFromUtf8( filename ), options );
     };
 #else
     auto save = [mesh = mesh_, filename = utf8string( path ) + ".mrmesh"]()

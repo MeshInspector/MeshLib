@@ -545,7 +545,7 @@ void ObjectVoxels::serializeFields_( Json::Value& root ) const
     root["Type"].append( ObjectVoxels::TypeName() );
 }
 
-Expected<std::future<void>, std::string> ObjectVoxels::serializeModel_( const std::filesystem::path& path ) const
+Expected<std::future<VoidOrErrStr>> ObjectVoxels::serializeModel_( const std::filesystem::path& path ) const
 {
     if ( ancillary_ || !vdbVolume_.data )
         return {};
@@ -553,7 +553,7 @@ Expected<std::future<void>, std::string> ObjectVoxels::serializeModel_( const st
     return std::async( getAsyncLaunchType(),
         [this, filename = utf8string( path ) + ".raw"] ()
     {
-        MR::VoxelsSave::toRawAutoname( vdbVolume_, pathFromUtf8( filename ) );
+        return MR::VoxelsSave::toRawAutoname( vdbVolume_, pathFromUtf8( filename ) );
     } );
 }
 

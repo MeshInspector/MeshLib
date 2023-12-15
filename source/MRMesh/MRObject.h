@@ -190,8 +190,7 @@ public:
     ///   models in the folder by given path and
     ///   fields in given JSON
     /// \param childId is its ordinal number within the parent
-    Expected<std::vector<std::future<void>>, std::string> serializeRecursive( const std::filesystem::path& path,
-        Json::Value& root, int childId ) const;
+    Expected<std::vector<std::future<VoidOrErrStr>>> serializeRecursive( const std::filesystem::path& path, Json::Value& root, int childId ) const;
 
     /// loads subtree into this Object
     ///   models from the folder by given path and
@@ -233,7 +232,7 @@ protected:
 
     /// Creates future to save object model (e.g. mesh) in given file
     /// path is full filename without extension
-    MRMESH_API virtual Expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const;
+    MRMESH_API virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& path ) const;
 
     /// Write parameters to given Json::Value,
     /// \note if you override this method, please call Base::serializeFields_(root) in the beginning

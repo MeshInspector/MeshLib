@@ -228,7 +228,7 @@ protected:
     /// pls call Parent::swapSignals_ first when overriding this function
     MRMESH_API virtual void swapSignals_( Object& other ) override;
 
-    MRMESH_API virtual Expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const override;
+    MRMESH_API virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& path ) const override;
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 

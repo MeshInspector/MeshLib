@@ -190,6 +190,8 @@ Expected<std::future<VoidOrErrStr>> ObjectPointsHolder::serializeModel_( const s
 
     const auto * colorMapPtr = vertsColorMap_.empty() ? nullptr : &vertsColorMap_;
 #ifndef MRMESH_NO_OPENCTM
+    if ( points_->points.empty() ) // toCtm requires at least one point in the vector
+        return std::async( getAsyncLaunchType(), []{ return VoidOrErrStr{}; } );
     return std::async( getAsyncLaunchType(),
         [points = points_, filename = utf8string( path ) + ".ctm", ptr = colorMapPtr] ()
     {
@@ -209,13 +211,22 @@ Expected<std::future<VoidOrErrStr>> ObjectPointsHolder::serializeModel_( const s
 
 VoidOrErrStr ObjectPointsHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
+    auto fname = path;
+    std::error_code ec;
 #ifndef MRMESH_NO_OPENCTM
-    auto res = PointsLoad::fromCtm( pathFromUtf8( utf8string( path ) + ".ctm" ), &vertsColorMap_, progressCb );
+    fname += ".ctm";
+    if ( !exists( fname, ec ) )
+    {
+        points_ = std::make_shared<PointCloud>();
+        return {};
+    }
+    auto res = PointsLoad::fromCtm( fname, &vertsColorMap_, progressCb );
 #else
-    auto res = PointsLoad::fromPly( pathFromUtf8( utf8string( path ) + ".ply" ), &vertsColorMap_, progressCb );
+    fname += ".ply";
+    auto res = PointsLoad::fromPly( fname, &vertsColorMap_, progressCb );
 #endif
     if ( !res.has_value() )
-        return unexpected( res.error() );
+        return unexpected( std::move( res.error() ) );
 
     if ( !vertsColorMap_.empty() )
         setColoringType( ColoringType::VertsColorMap );

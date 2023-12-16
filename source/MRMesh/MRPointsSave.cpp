@@ -170,6 +170,12 @@ VoidOrErrStr toCtm( const PointCloud& cloud, std::ostream& out, const CtmSavePoi
 {
     MR_TIMER
 
+    if ( (  options.saveValidOnly && !cloud.validPoints.any() ) ||
+         ( !options.saveValidOnly && cloud.points.empty() ) )
+        return unexpected( "Cannot save empty point cloud in CTM format" );
+    // the only fake triangle with point #0 in all 3 vertices
+    std::vector<CTMuint> aIndices{ 0,0,0 };
+
     class ScopedCtmConext
     {
         CTMcontext context_ = ctmNewContext( CTM_EXPORT );
@@ -191,7 +197,6 @@ VoidOrErrStr toCtm( const PointCloud& cloud, std::ostream& out, const CtmSavePoi
     const bool saveNormals = cloud.points.size() <= cloud.normals.size();
     CTMuint aVertexCount = CTMuint( options.saveValidOnly ? cloud.validPoints.count() : cloud.points.size() );
 
-    std::vector<CTMuint> aIndices{ 0,0,0 };
     VertCoords points;
     VertNormals normals;
     NormalXfMatrix normXf( options.xf );

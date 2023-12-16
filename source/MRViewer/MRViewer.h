@@ -6,7 +6,6 @@
 #include "MRMouse.h"
 #include "MRMouseController.h"
 #include "MRTouchesController.h"
-#include "MRSpaceMouseController.h"
 
 #include <boost/signals2/signal.hpp>
 #include <chrono>
@@ -459,7 +458,6 @@ public:
 
     MouseController mouseController;
     TouchesController touchesController;
-    SpaceMouseController spaceMouseController;
 
     float pixelRatio{ 1.0f };
     Vector2i framebufferSize;
@@ -585,6 +583,9 @@ public:
     [[nodiscard]] MRVIEWER_API const TouchpadParameters & getTouchpadParameters() const;
     MRVIEWER_API void setTouchpadParameters( const TouchpadParameters & );
 
+    [[nodiscard]] MRVIEWER_API SpaceMouseParameters getSpaceMouseParameters() const;
+    MRVIEWER_API void setSpaceMouseParameters( const SpaceMouseParameters & );
+
 private:
     Viewer();
     ~Viewer();
@@ -622,6 +623,7 @@ private:
     std::shared_ptr<ImGuiMenu> menuPlugin_;
 
     std::unique_ptr<TouchpadController> touchpadController_;
+    std::unique_ptr<SpaceMouseController> spaceMouseController_;
 
     mutable struct FrameCounter
     {

@@ -18,7 +18,7 @@ void SpaceMouseController::connect()
     viewer.spaceMouseDownSignal.connect( MAKE_SLOT( &SpaceMouseController::spaceMouseDown_ ) );
 }
 
-void SpaceMouseController::setParams( const Params& newParams )
+void SpaceMouseController::setParameters( const SpaceMouseParameters& newParams )
 {
     params = newParams;
     for ( int i = 0; i < 3; ++i )
@@ -32,9 +32,9 @@ void SpaceMouseController::setParams( const Params& newParams )
     }
 }
 
-SpaceMouseController::Params SpaceMouseController::getParams() const
+SpaceMouseParameters SpaceMouseController::getParameters() const
 {
-    Params out = params;
+    SpaceMouseParameters out = params;
     for ( int i = 0; i < 3; ++i )
     {
         float sign = out.translateScale[i] < 0 ? -1.f : 1.f;

@@ -79,7 +79,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     if ( UI::button( "Spacemouse Settings", Vector2f( btnHalfSizeX, 0 ) ) )
     {
         auto& viewerRef = getViewerInstance();
-        spaceMouseParams_ = viewerRef.spaceMouseController.getParams();
+        spaceMouseParams_ = viewerRef.getSpaceMouseParameters();
 #if defined(_WIN32) || defined(__APPLE__)
         if ( auto spaceMouseHandler = viewerRef.getSpaceMouseHandler() )
         {
@@ -531,7 +531,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
     UI::setTooltipIfHovered( "This mode is NOT recommended if you have 3Dconnexion driver installed, which sends mouse wheel fake events resulting in double reaction on SpaceMouse movement and camera tremble.", scaling );
 #endif
     if ( anyChanged )
-        getViewerInstance().spaceMouseController.setParams( spaceMouseParams_ );
+        getViewerInstance().setSpaceMouseParameters( spaceMouseParams_ );
 
     ImGui::PopStyleVar();
     ImGui::EndPopup();

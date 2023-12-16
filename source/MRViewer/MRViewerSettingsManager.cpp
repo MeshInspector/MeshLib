@@ -4,6 +4,7 @@
 #include "MRColorTheme.h"
 #include "MRRibbonMenu.h"
 #include "MRSpaceMouseHandlerHidapi.h"
+#include "MRSpaceMouseParameters.h"
 #include "MRTouchpadController.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRGLMacro.h"
@@ -228,12 +229,12 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     if ( cfg.hasJsonValue( cSpaceMouseSettings ) )
     {
         const auto& paramsJson = cfg.getJsonValue( cSpaceMouseSettings );
-        SpaceMouseController::Params spaceMouseParams;
+        SpaceMouseParameters spaceMouseParams;
         if ( paramsJson.isMember( "translateScale" ) )
             deserializeFromJson( paramsJson["translateScale"], spaceMouseParams.translateScale );
         if ( paramsJson.isMember( "rotateScale" ) )
             deserializeFromJson( paramsJson["rotateScale"], spaceMouseParams.rotateScale );
-        viewer.spaceMouseController.setParams( spaceMouseParams );
+        viewer.setSpaceMouseParameters( spaceMouseParams );
 
 #ifdef _WIN32
         if ( paramsJson.isMember( "activeMouseScrollZoom" ) && paramsJson["activeMouseScrollZoom"].isBool() )
@@ -351,7 +352,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     }
 
     Json::Value spaceMouseParamsJson;
-    SpaceMouseController::Params spaceMouseParams = viewer.spaceMouseController.getParams();
+    SpaceMouseParameters spaceMouseParams = viewer.getSpaceMouseParameters();
     serializeToJson( spaceMouseParams.translateScale, spaceMouseParamsJson["translateScale"] );
     serializeToJson( spaceMouseParams.rotateScale, spaceMouseParamsJson["rotateScale"] );
 #ifdef _WIN32

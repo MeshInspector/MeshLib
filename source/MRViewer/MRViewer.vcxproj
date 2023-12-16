@@ -110,6 +110,7 @@
     <ClInclude Include="MRObjectPointsHistory.h" />
     <ClInclude Include="MRRibbonMenuSearch.h" />
     <ClInclude Include="MRSceneTextureGL.h" />
+    <ClInclude Include="MRSpaceMouseParameters.h" />
     <ClInclude Include="MRToolsLibrary.h" />
     <ClInclude Include="MRLinesShader.h" />
     <ClInclude Include="MRMeshShader.h" />

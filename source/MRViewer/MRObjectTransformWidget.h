@@ -115,7 +115,7 @@ protected:
 private:
     Vector3f center_;
 
-    ControlBit hoveredControl_;
+    ControlBit hoveredControl_{ ControlBit::None };
     bool pickThrough_{ false };
     TransformModesValidator validator_;
 };

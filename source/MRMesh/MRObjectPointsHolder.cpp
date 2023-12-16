@@ -212,10 +212,11 @@ Expected<std::future<VoidOrErrStr>> ObjectPointsHolder::serializeModel_( const s
 VoidOrErrStr ObjectPointsHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     auto fname = path;
-    std::error_code ec;
 #ifndef MRMESH_NO_OPENCTM
     fname += ".ctm";
-    if ( !exists( fname, ec ) )
+    std::error_code ec;
+    if (   !is_regular_file( fname, ec ) // now we do not write a file for empty point cloud
+        || file_size( fname, ec ) == 0 ) // and previously an empty file was created
     {
         points_ = std::make_shared<PointCloud>();
         return {};

@@ -31,7 +31,7 @@ struct FitDataParams : BaseFitParams
 
     FitDataParams( float factor_ = 1.f, bool snapView_ = false, FitMode mode_ = FitMode::Visible,
         const std::vector<std::shared_ptr<VisualObject>>& objsList_ = {} ) :
-        BaseFitParams( factor_, snapView_ ),
+        BaseFitParams{ factor_, snapView_ },
         mode( mode_ ),
         objsList( objsList_ )
     {};
@@ -42,7 +42,7 @@ struct FitBoxParams : BaseFitParams
     Box3f worldBox; // box in world space to fit
 
     FitBoxParams( const Box3f& worldBox_, float factor_ = 1.f, bool snapView_ = false ) :
-        BaseFitParams( factor_, snapView_ ),
+        BaseFitParams{ factor_, snapView_ },
         worldBox( worldBox_ )
     {};
 };

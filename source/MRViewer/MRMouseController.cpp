@@ -2,6 +2,7 @@
 #include "MRViewer.h"
 #include "MRGLMacro.h"
 #include "MRGladGlfw.h"
+#include "MRViewport.h"
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRQuaternion.h"
 #include "MRMesh/MRVisualObject.h"

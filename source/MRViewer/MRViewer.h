@@ -1,8 +1,9 @@
 #pragma once
 
-#include "MRViewport.h"
 #include "MRViewerInstance.h"
 #include "MRMouse.h"
+#include <MRMesh/MRVector2.h>
+#include <MRMesh/MRViewportId.h>
 
 #include <boost/signals2/signal.hpp>
 #include <chrono>

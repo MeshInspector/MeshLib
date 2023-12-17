@@ -1,4 +1,6 @@
 #include "MRPickHoleBorderElement.h"
+#include "MRViewer.h"
+#include "MRViewport.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRVector2.h"
@@ -7,7 +9,6 @@
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRPolylineEdgeIterator.h"
-#include "MRViewer.h"
 
 namespace MR
 {

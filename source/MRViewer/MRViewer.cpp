@@ -21,6 +21,7 @@
 #include "MRMouseController.h"
 #include "MRRecentFilesStore.h"
 #include "MRPointInAllSpaces.h"
+#include "MRViewport.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>

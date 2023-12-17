@@ -4,6 +4,7 @@
 #include "MRCreateShader.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRPlane3.h"
+#include "MRMesh/MRMatrix4.h"
 #include "MRGLMacro.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRVector2.h"

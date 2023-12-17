@@ -4,6 +4,7 @@
 #include "MRMesh/MRTimer.h"
 #include "MRCreateShader.h"
 #include "MRMesh/MRMesh.h"
+#include "MRMesh/MRMatrix4.h"
 #include "MRGLMacro.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRGLStaticHolder.h"

@@ -18,6 +18,7 @@
 #include <MRMesh/MRSceneRoot.h>
 #include "MRColorTheme.h"
 #include "MRCommandLoop.h"
+#include "MRViewport.h"
 #include <GLFW/glfw3.h>
 #include "MRShortcutManager.h"
 #include "MRMesh/MRTimer.h"

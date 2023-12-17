@@ -1,5 +1,6 @@
 #include "MRSurfaceManipulationWidget.h"
 #include "MRMouseController.h"
+#include "MRViewport.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRMesh.h"
 #include "MRViewerInstance.h"

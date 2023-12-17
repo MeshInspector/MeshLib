@@ -5,6 +5,7 @@
 #include "MRViewer/MRSwapRootAction.h"
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRViewer.h"
+#include "MRViewer/MRViewport.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRViewer/MRCommandLoop.h"

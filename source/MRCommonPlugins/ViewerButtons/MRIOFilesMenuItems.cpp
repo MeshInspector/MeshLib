@@ -2,6 +2,7 @@
 #include "MRViewer/MRFileDialog.h"
 #include "MRViewer/MRMouseController.h"
 #include "MRViewer/MRRecentFilesStore.h"
+#include "MRViewer/MRViewport.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRLinesLoad.h"
 #include "MRMesh/MRPointsLoad.h"

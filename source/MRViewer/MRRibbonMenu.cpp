@@ -10,6 +10,7 @@
 #include "MRFileDialog.h"
 #include "MRViewerSettingsManager.h"
 #include "MRUIStyle.h"
+#include "MRViewport.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include <MRMesh/MRString.h>
 #include <MRMesh/MRSystem.h>

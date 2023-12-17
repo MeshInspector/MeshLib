@@ -593,6 +593,9 @@
     <ClInclude Include="MRSelectCurvaturePreference.h">
       <Filter>Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="MRSpaceMouseParameters.h">
+      <Filter>ShortcutManager</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

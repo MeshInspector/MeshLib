@@ -34,6 +34,8 @@ class RibbonMenuItem;
 
 class TouchpadController;
 struct TouchpadParameters;
+class SpaceMouseController;
+struct SpaceMouseParameters;
 
 template<typename ...Connectables>
 class StateListenerPlugin;

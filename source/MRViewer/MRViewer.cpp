@@ -16,6 +16,7 @@
 #include "MRSpaceMouseHandlerHidapi.h"
 #include "MRRenderGLHelpers.h"
 #include "MRTouchpadController.h"
+#include "MRSpaceMouseController.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -661,7 +662,9 @@ int Viewer::launchInit_( const LaunchParams& params )
 
         mouseController.connect();
         touchesController.connect( this );
-        spaceMouseController.connect();
+        if ( !spaceMouseController_ )
+            spaceMouseController_ = std::make_unique<SpaceMouseController>();
+        spaceMouseController_->connect();
         initSpaceMouseHandler_();
         if ( !touchpadController_ )
             touchpadController_ = std::make_unique<TouchpadController>();
@@ -899,6 +902,20 @@ void Viewer::setTouchpadParameters( const TouchpadParameters & ps )
     if ( !touchpadController_ )
         touchpadController_ = std::make_unique<TouchpadController>();
     touchpadController_->setParameters( ps );
+}
+
+SpaceMouseParameters Viewer::getSpaceMouseParameters() const
+{
+    if ( !spaceMouseController_ )
+        return {};
+    return spaceMouseController_->getParameters();
+}
+
+void Viewer::setSpaceMouseParameters( const SpaceMouseParameters & ps )
+{
+    if ( !spaceMouseController_ )
+        spaceMouseController_ = std::make_unique<SpaceMouseController>();
+    spaceMouseController_->setParameters( ps );
 }
 
 Viewer::Viewer() :

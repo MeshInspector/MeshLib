@@ -3,7 +3,7 @@
 #include "MRViewer/MRStatePlugin.h"
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRShadowsGL.h"
-#include "MRViewer/MRSpaceMouseController.h"
+#include "MRViewer/MRSpaceMouseParameters.h"
 #include "MRViewer/MRTouchpadParameters.h"
 #include "MRMesh/MRVector4.h"
 
@@ -49,7 +49,7 @@ private:
     Vector4f shadowColor4f_;
     std::unique_ptr<ShadowsGL> shadowGl_;
 
-    SpaceMouseController::Params spaceMouseParams_;
+    SpaceMouseParameters spaceMouseParams_;
 #if defined(_WIN32) || defined(__APPLE__)
     bool activeMouseScrollZoom_{ false };
 #endif

@@ -20,6 +20,7 @@
 #include "MRTouchesController.h"
 #include "MRMouseController.h"
 #include "MRRecentFilesStore.h"
+#include "MRPointInAllSpaces.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -2135,13 +2136,13 @@ void Viewer::setViewportSettingsManager( std::unique_ptr<IViewerSettingsManager>
     settingsMng_ = std::move( mng );
 }
 
-Viewer::PointInAllSpaces Viewer::getMousePointInfo() const
+PointInAllSpaces Viewer::getMousePointInfo() const
 {
     const auto& currentPos = mouseController_->getMousePos();
     return getPixelPointInfo( Vector3f( float( currentPos.x ), float( currentPos.y ), 0.f ) );
 }
 
-Viewer::PointInAllSpaces Viewer::getPixelPointInfo( const Vector3f& screenPoint ) const
+PointInAllSpaces Viewer::getPixelPointInfo( const Vector3f& screenPoint ) const
 {
     PointInAllSpaces res;
     res.screenSpace = screenPoint;

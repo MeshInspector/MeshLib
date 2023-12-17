@@ -103,6 +103,7 @@
     <ClInclude Include="MRCommandLoop.h" />
     <ClInclude Include="MRCreateShader.h" />
     <ClInclude Include="MRCudaAccessor.h" />
+    <ClInclude Include="MRFitData.h" />
     <ClInclude Include="MRSelectCurvaturePreference.h" />
     <ClInclude Include="MRFrameRedrawRequest.h" />
     <ClInclude Include="MRGetSystemInfoJson.h" />

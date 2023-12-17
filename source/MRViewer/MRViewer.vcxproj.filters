@@ -596,6 +596,9 @@
     <ClInclude Include="MRSpaceMouseParameters.h">
       <Filter>ShortcutManager</Filter>
     </ClInclude>
+    <ClInclude Include="MRFitData.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

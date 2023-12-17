@@ -113,7 +113,7 @@ bool SpaceMouseController::spaceMouseDown_( int key )
     }
     else if ( key == SMB_FIT )
     {
-        getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f, false, Viewport::FitMode::Visible } );
+        getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f, false, FitMode::Visible } );
         return true;
     }
     else if ( key == SMB_TOP )

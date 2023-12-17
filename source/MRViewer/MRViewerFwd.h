@@ -1,10 +1,19 @@
 #pragma once
 
 #include "exports.h"
+#include <MRMesh/MRMeshFwd.h>
 #include <functional>
 
 namespace MR
 {
+
+/// Viewport size
+using ViewportRectangle = Box2f;
+
+enum class FitMode;
+struct BaseFitParams;
+struct FitDataParams;
+struct FitBoxParams;
 
 enum class MouseButton;
 enum class MouseMode;

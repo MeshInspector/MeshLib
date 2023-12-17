@@ -207,7 +207,7 @@ public:
     // Returns the unique id of the newly inserted viewport. There can be a maximum of 31
     //   viewports created in the same viewport. Erasing a viewport does not change the id of
     //   other existing viewports
-    MRVIEWER_API ViewportId append_viewport( Viewport::ViewportRectangle viewportRect, bool append_empty = false );
+    MRVIEWER_API ViewportId append_viewport( const ViewportRectangle & viewportRect, bool append_empty = false );
 
     // Calculates and returns viewports bounds in gl space:
     // (0,0) - lower left angle
@@ -245,8 +245,8 @@ public:
 
     // Calls fitData and change FOV to match the screen size then
     // params - params fit data
-    MRVIEWER_API void preciseFitDataViewport( MR::ViewportMask vpList = MR::ViewportMask::all(),
-                                              const Viewport::FitDataParams& params = Viewport::FitDataParams() );
+    MRVIEWER_API void preciseFitDataViewport( MR::ViewportMask vpList = MR::ViewportMask::all() );
+    MRVIEWER_API void preciseFitDataViewport( MR::ViewportMask vpList, const FitDataParams& param );
 
     size_t getTotalFrames() const { return frameCounter_.totalFrameCounter; }
     size_t getSwappedFrames() const { return frameCounter_.swappedFrameCounter; }

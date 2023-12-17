@@ -187,6 +187,7 @@
     <ClInclude Include="MRWebRequest.h" />
     <ClInclude Include="MRTouchpadController.h" />
     <ClInclude Include="MRSurfaceManipulationWidget.h" />
+    <ClInclude Include="MRPointInAllSpaces.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

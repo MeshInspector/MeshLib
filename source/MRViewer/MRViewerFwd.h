@@ -47,6 +47,7 @@ class SpaceMouseController;
 struct SpaceMouseParameters;
 class TouchesController;
 class MouseController;
+struct PointInAllSpaces;
 
 template<typename ...Connectables>
 class StateListenerPlugin;

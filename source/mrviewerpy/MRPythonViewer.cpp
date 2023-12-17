@@ -79,16 +79,16 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
             "Rotates camera around axis +direction applied to axis point\n"
             "note: this can make camera clip objects (as far as distance to scene center is not fixed)" );
     
-    pybind11::enum_<MR::Viewport::FitMode>( m, "ViewportFitMode", "Fit mode ( types of objects for which the fit is applied )" ).
-        value( "Visible", MR::Viewport::FitMode::Visible, "fit all visible objects" ).
-        value( "SelectedObjects", MR::Viewport::FitMode::SelectedObjects, "fit only selected objects" ).
-        value( "SelectedPrimitives", MR::Viewport::FitMode::SelectedPrimitives, "fit only selected primitives" );
+    pybind11::enum_<MR::FitMode>( m, "ViewportFitMode", "Fit mode ( types of objects for which the fit is applied )" ).
+        value( "Visible", MR::FitMode::Visible, "fit all visible objects" ).
+        value( "SelectedObjects", MR::FitMode::SelectedObjects, "fit only selected objects" ).
+        value( "SelectedPrimitives", MR::FitMode::SelectedPrimitives, "fit only selected primitives" );
 
-    pybind11::class_<MR::Viewport::FitDataParams>( m, "ViewportFitDataParams" ).
+    pybind11::class_<MR::FitDataParams>( m, "ViewportFitDataParams" ).
         def( pybind11::init<>() ).
-        def_readwrite( "factor", &MR::Viewport::FitDataParams::factor, "part of the screen for scene location" ).
-        def_readwrite( "snapView", &MR::Viewport::FitDataParams::snapView, "snapView - to snap camera angle to closest canonical quaternion" ).
-        def_readwrite( "mode", &MR::Viewport::FitDataParams::mode, "fit mode" );
+        def_readwrite( "factor", &MR::FitDataParams::factor, "part of the screen for scene location" ).
+        def_readwrite( "snapView", &MR::FitDataParams::snapView, "snapView - to snap camera angle to closest canonical quaternion" ).
+        def_readwrite( "mode", &MR::FitDataParams::mode, "fit mode" );
 
     pybind11::class_<MR::Viewer, std::unique_ptr<MR::Viewer, pybind11::nodelete>>( m, "Viewer", "GLFW-based mesh viewer" ).
         def( pybind11::init( [] ()
@@ -104,9 +104,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
             pybind11::arg( "swapOnLastOnly" ) = false,
             "Increment number of forced frames to redraw in event loop\n"
             "if `swapOnLastOnly` only last forced frame will be present on screen and all previous will not" ).
-        def( "preciseFitDataViewport", MR::pythonRunFromGUIThread( &MR::Viewer::preciseFitDataViewport ),
+        def( "preciseFitDataViewport", MR::pythonRunFromGUIThread( (void(MR::Viewer::*)( MR::ViewportMask, const MR::FitDataParams& )) &MR::Viewer::preciseFitDataViewport ),
             pybind11::arg( "vpList" ) = MR::ViewportMask::all(),
-            pybind11::arg( "params" ) = MR::Viewport::FitDataParams(),
+            pybind11::arg( "params" ) = MR::FitDataParams(),
             "Calls fitData and change FOV to match the screen size then\n"
             "params - params fit data" ).
         def( "captureScreenShot", &pythonCaptureScreenShot,pybind11::arg("path"),

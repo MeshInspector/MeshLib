@@ -466,7 +466,7 @@ void Viewport::updateSceneBox_()
     sceneBox_ = SceneRoot::get().getWorldTreeBox( id );
 }
 
-void Viewport::setViewportRect( const Viewport::ViewportRectangle& rect )
+void Viewport::setViewportRect( const ViewportRectangle& rect )
 {
     if ( rect == viewportRect_ )
         return;
@@ -475,7 +475,7 @@ void Viewport::setViewportRect( const Viewport::ViewportRectangle& rect )
     initBaseAxes();
 }
 
-const Viewport::ViewportRectangle& Viewport::getViewportRect() const
+const ViewportRectangle& Viewport::getViewportRect() const
 {
     return viewportRect_;
 }

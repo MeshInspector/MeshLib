@@ -1825,7 +1825,7 @@ const MR::Viewport& Viewer::viewport( ViewportId viewport_id ) const
     return viewport_list[viewport_index];
 }
 
-ViewportId Viewer::append_viewport( Viewport::ViewportRectangle viewportRect, bool append_empty /*= false */ )
+ViewportId Viewer::append_viewport( const ViewportRectangle & viewportRect, bool append_empty /*= false */ )
 {
     auto nextId = getFirstAvailableViewportId_();
     if ( !nextId )
@@ -1944,7 +1944,7 @@ void Viewer::fitBoxViewport( const Box3f& box, MR::ViewportMask vpList /*= MR::V
     }
 }
 
-void Viewer::preciseFitDataViewport( MR::ViewportMask vpList, const Viewport::FitDataParams& params )
+void Viewer::preciseFitDataViewport( MR::ViewportMask vpList, const FitDataParams& params )
 {
     for( auto& viewport : viewport_list )
     {
@@ -1953,6 +1953,11 @@ void Viewer::preciseFitDataViewport( MR::ViewportMask vpList, const Viewport::Fi
             viewport.preciseFitDataToScreenBorder( params );
         }
     }
+}
+
+void Viewer::preciseFitDataViewport( MR::ViewportMask vpList )
+{
+    return preciseFitDataViewport( vpList, {} );
 }
 
 void Viewer::incrementForceRedrawFrames( int i /*= 1 */, bool swapOnLastOnly /*= false */)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRViewportGL.h"
+#include "MRFitData.h"
 #include "MRMesh/MRIRenderObject.h"
 #include <MRMesh/MRVector3.h>
 #include <MRMesh/MRPlane3.h>
@@ -20,9 +21,6 @@ using ConstObjAndPick = std::pair<std::shared_ptr<const MR::VisualObject>, MR::P
 
 namespace MR
 {
-
-// Viewport size
-using ViewportRectangle = Box2f;
 
 inline ImVec2 position( const ViewportRectangle& rect )
 {
@@ -361,54 +359,10 @@ public:
     // snapView - to snap camera angle to closest canonical quaternion
     MRVIEWER_API void fitBox( const Box3f& newSceneBox, float fill = 1.0f, bool snapView = true );
 
-    // Fit mode ( types of objects for which the fit is applied )
-    enum class FitMode
-    {
-        Visible, // fit all visible objects
-        SelectedPrimitives, // fit only selected primitives
-        SelectedObjects, // fit only selected objects
-        CustomObjectsList // fit only given objects (need additional objects list)
-    };
-    struct BaseFitParams
-    {
-        float factor{ 1.f }; // part of the screen for scene location
-        // snapView - to snap camera angle to closest canonical quaternion
-        // orthographic view: camera moves a bit, fit FOV by the whole width or height
-        // perspective view: camera is static, fit FOV to closest border.
-        bool snapView{ false };
-
-        // need for fix Clang bug
-        // some as https://stackoverflow.com/questions/43819314/default-member-initializer-needed-within-definition-of-enclosing-class-outside
-        BaseFitParams( float factor_ = 1.f, bool snapView_ = false ) :
-            factor( factor_ ),
-            snapView( snapView_ )
-        {};
-    };
-    struct FitDataParams : BaseFitParams
-    {
-        FitMode mode{ FitMode::Visible }; // fit mode
-        std::vector<std::shared_ptr<VisualObject>> objsList; // custom objects list. used only with CustomObjectsList mode
-
-        // need for fix Clang bug
-        // some as https://stackoverflow.com/questions/43819314/default-member-initializer-needed-within-definition-of-enclosing-class-outside
-        FitDataParams( float factor_ = 1.f, bool snapView_ = false, FitMode mode_ = FitMode::Visible,
-            const std::vector<std::shared_ptr<VisualObject>>& objsList_ = {} ) :
-            BaseFitParams( factor_, snapView_ ),
-            mode( mode_ ),
-            objsList( objsList_ )
-        {};
-    };
-    struct FitBoxParams : BaseFitParams
-    {
-        Box3f worldBox; // box in world space to fit
-
-        // need for fix Clang bug
-        // some as https://stackoverflow.com/questions/43819314/default-member-initializer-needed-within-definition-of-enclosing-class-outside
-        FitBoxParams( const Box3f& worldBox_, float factor_ = 1.f, bool snapView_ = false ) :
-            BaseFitParams( factor_, snapView_ ),
-            worldBox( worldBox_ )
-        {};
-    };
+    using FitMode = MR::FitMode;
+    using BaseFitParams = MR::BaseFitParams;
+    using FitDataParams = MR::FitDataParams;
+    using FitBoxParams = MR::FitBoxParams;
 
     // fit view and proj matrices to match the screen size with given box
     MRVIEWER_API void preciseFitBoxToScreenBorder( const FitBoxParams& params );

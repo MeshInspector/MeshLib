@@ -175,7 +175,7 @@ FitDataMenuItem::FitDataMenuItem() :
 
 bool FitDataMenuItem::action()
 {
-    Viewer::instanceRef().viewport().preciseFitDataToScreenBorder( { 0.9f, false, Viewport::FitMode::Visible } );
+    Viewer::instanceRef().viewport().preciseFitDataToScreenBorder( { 0.9f, false, FitMode::Visible } );
     return false;
 }
 
@@ -196,7 +196,7 @@ FitSelectedObjectsMenuItem::FitSelectedObjectsMenuItem() :
 
 bool FitSelectedObjectsMenuItem::action()
 {
-    Viewer::instanceRef().viewport().preciseFitDataToScreenBorder( { 0.9f, false, Viewport::FitMode::SelectedObjects } );
+    Viewer::instanceRef().viewport().preciseFitDataToScreenBorder( { 0.9f, false, FitMode::SelectedObjects } );
     return false;
 }
 
@@ -217,7 +217,7 @@ FitSelectedPrimitivesMenuItem::FitSelectedPrimitivesMenuItem() :
 
 bool FitSelectedPrimitivesMenuItem::action()
 {
-    Viewer::instanceRef().viewport().preciseFitDataToScreenBorder( { 0.9f, false, Viewport::FitMode::SelectedPrimitives } );
+    Viewer::instanceRef().viewport().preciseFitDataToScreenBorder( { 0.9f, false, FitMode::SelectedPrimitives } );
     return false;
 }
 

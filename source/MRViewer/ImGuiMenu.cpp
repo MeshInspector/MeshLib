@@ -2662,11 +2662,11 @@ void ImGuiMenu::draw_mr_menu()
 
     if ( ImGui::Button( "Fit Data", ImVec2( -1, 0 ) ) )
     {
-        viewer->viewport().preciseFitDataToScreenBorder( { 0.9f, false, Viewport::FitMode::Visible } );
+        viewer->viewport().preciseFitDataToScreenBorder( { 0.9f, false, FitMode::Visible } );
     }
     if ( ImGui::Button( "Fit Selected", ImVec2( -1, 0 ) ) )
     {
-        viewer->viewport().preciseFitDataToScreenBorder( { 0.9f, false, Viewport::FitMode::SelectedPrimitives } );
+        viewer->viewport().preciseFitDataToScreenBorder( { 0.9f, false, FitMode::SelectedPrimitives } );
     }
 
     if ( viewer->isAlphaSortAvailable() )

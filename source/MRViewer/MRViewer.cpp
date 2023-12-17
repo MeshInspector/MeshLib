@@ -17,6 +17,7 @@
 #include "MRRenderGLHelpers.h"
 #include "MRTouchpadController.h"
 #include "MRSpaceMouseController.h"
+#include "MRTouchesController.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -661,11 +662,16 @@ int Viewer::launchInit_( const LaunchParams& params )
         }
 
         mouseController.connect();
-        touchesController.connect( this );
+
+        if ( !touchesController_ )
+            touchesController_ = std::make_unique<TouchesController>();
+        touchesController_->connect( this );
+
         if ( !spaceMouseController_ )
             spaceMouseController_ = std::make_unique<SpaceMouseController>();
         spaceMouseController_->connect();
         initSpaceMouseHandler_();
+
         if ( !touchpadController_ )
             touchpadController_ = std::make_unique<TouchpadController>();
         touchpadController_->connect( this );

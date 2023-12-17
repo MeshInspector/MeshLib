@@ -7,6 +7,7 @@
 #include <boost/signals2/signal.hpp>
 #include <chrono>
 #include <cstdint>
+#include <filesystem>
 
 struct GLFWwindow;
 

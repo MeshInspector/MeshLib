@@ -6,6 +6,7 @@
 #include "MRSpaceMouseHandlerHidapi.h"
 #include "MRSpaceMouseParameters.h"
 #include "MRTouchpadController.h"
+#include "MRMouseController.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRGLMacro.h"
 #include "MRViewer/MRGladGlfw.h"
@@ -95,7 +96,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             int key = controls[modeName].asInt();
             if ( key == -1 )
                 continue;
-            viewer.mouseController.setMouseControl( MouseController::keyToMouseAndMod( key ), mode );
+            viewer.mouseController().setMouseControl( MouseController::keyToMouseAndMod( key ), mode );
         }
     }
 
@@ -298,7 +299,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         MouseMode mode = MouseMode( i );
         if ( mode == MouseMode::None )
             continue;
-        auto control = viewer.mouseController.findControlByMode( mode );
+        auto control = viewer.mouseController().findControlByMode( mode );
         int key = control ? MouseController::mouseAndModToKey( *control ) : -1;
         sceneControls[getMouseModeString( mode )] = key;
     }

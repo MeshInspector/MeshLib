@@ -3,6 +3,7 @@
 #include "ImGuiMenu.h"
 #include "MRGLMacro.h"
 #include "MRGLStaticHolder.h"
+#include "MRMouseController.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRArrow.h>
 #include <MRMesh/MRMakeSphereMesh.h>
@@ -141,7 +142,7 @@ ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& rende
 ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector, uint16_t pickRadius ) const
 {
     auto& viewer = getViewerInstance();
-    const auto& mousePos = viewer.mouseController.getMousePos();
+    const auto& mousePos = viewer.mouseController().getMousePos();
     auto vp = viewer.screenToViewport(
         Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), id );
     if ( pickRadius == 0 )

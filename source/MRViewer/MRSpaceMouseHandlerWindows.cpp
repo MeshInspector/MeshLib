@@ -1,5 +1,6 @@
 #ifdef _WIN32
 #include "MRSpaceMouseHandlerWindows.h"
+#include "MRMouseController.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRViewerInstance.h"
 #include "MRViewer.h"
@@ -230,7 +231,7 @@ void SpaceMouseHandlerWindows::updateConnected( int /*jid*/, int /*event*/ )
 void SpaceMouseHandlerWindows::activateMouseScrollZoom( bool activeMouseScrollZoom )
 {
     activeMouseScrollZoom_ = activeMouseScrollZoom;
-    getViewerInstance().mouseController.setMouseScroll( joystickIndex_ == -1 || activeMouseScrollZoom_ );
+    getViewerInstance().mouseController().setMouseScroll( joystickIndex_ == -1 || activeMouseScrollZoom_ );
 }
 
 void SpaceMouseHandlerWindows::postFocus_( bool focused )
@@ -294,7 +295,7 @@ void SpaceMouseHandlerWindows::updateConnected_()
         startUpdateThread_();
     }
 
-    getViewerInstance().mouseController.setMouseScroll( joystickIndex_ == -1 || activeMouseScrollZoom_ );
+    getViewerInstance().mouseController().setMouseScroll( joystickIndex_ == -1 || activeMouseScrollZoom_ );
 }
 
 void SpaceMouseHandlerWindows::startUpdateThread_()

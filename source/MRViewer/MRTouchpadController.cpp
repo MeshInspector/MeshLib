@@ -1,5 +1,6 @@
 #include "MRTouchpadController.h"
 #include "MRViewer.h"
+#include "MRMouseController.h"
 
 #if defined( __APPLE__ )
 #include "MRTouchpadCocoaHandler.h"
@@ -132,7 +133,7 @@ bool TouchpadController::touchpadSwipeGestureUpdate_( float deltaX, float deltaY
     {
         const auto sceneCenterVpPos = viewport.projectToViewportSpace( sceneCenterPos );
 
-        const auto mousePos = viewer.mouseController.getMousePos();
+        const auto mousePos = viewer.mouseController().getMousePos();
         const auto oldScreenPos = Vector3f( (float)mousePos.x, (float)mousePos.y, sceneCenterVpPos.z );
         const auto newScreenPos = oldScreenPos + swipeDirection;
 
@@ -178,7 +179,7 @@ bool TouchpadController::touchpadZoomGestureBegin_()
 
     initZoomParams_ = viewer.viewport().getParameters();
 
-    viewer.mouseController.setMouseScroll( true );
+    viewer.mouseController().setMouseScroll( true );
 
     return true;
 }
@@ -212,7 +213,7 @@ bool TouchpadController::touchpadZoomGestureEnd_()
 {
     auto& viewer = getViewerInstance();
 
-    viewer.mouseController.setMouseScroll( false );
+    viewer.mouseController().setMouseScroll( false );
 
     return true;
 }

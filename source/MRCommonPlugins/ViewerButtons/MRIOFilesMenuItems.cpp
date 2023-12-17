@@ -1,5 +1,6 @@
 #include "MRIOFilesMenuItems.h"
 #include "MRViewer/MRFileDialog.h"
+#include "MRViewer/MRMouseController.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRLinesLoad.h"
 #include "MRMesh/MRPointsLoad.h"
@@ -151,7 +152,7 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
     if ( menu )
     {
         auto sceneBoxSize = menu->getSceneSize();
-        auto mousePos = viewerRef.mouseController.getMousePos();
+        auto mousePos = viewerRef.mouseController().getMousePos();
         auto headerHeight = viewerRef.framebufferSize.y - sceneBoxSize.y;
         if ( mousePos.x > sceneBoxSize.x || mousePos.y < headerHeight )
         {

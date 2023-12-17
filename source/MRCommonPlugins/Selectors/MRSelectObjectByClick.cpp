@@ -1,4 +1,5 @@
 #include "MRSelectObjectByClick.h"
+#include "MRViewer/MRMouseController.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRMesh/MRObject.h"
@@ -20,8 +21,8 @@ void SelectObjectByClick::drawDialog( float, ImGuiContext* )
     if ( !picked_ )
         return;
     auto drawList = ImGui::GetBackgroundDrawList();
-    auto downPos = getViewerInstance().mouseController.getDownMousePos();
-    auto currPos = getViewerInstance().mouseController.getMousePos();
+    auto downPos = getViewerInstance().mouseController().getDownMousePos();
+    auto currPos = getViewerInstance().mouseController().getMousePos();
     Box2i rect;
     rect.include( downPos );
     rect.include( currPos );
@@ -61,8 +62,8 @@ bool SelectObjectByClick::onMouseMove_( int, int )
 
 void SelectObjectByClick::select_( bool up )
 {
-    auto downPos = getViewerInstance().mouseController.getDownMousePos();
-    auto currPos = getViewerInstance().mouseController.getMousePos();
+    auto downPos = getViewerInstance().mouseController().getDownMousePos();
+    auto currPos = getViewerInstance().mouseController().getMousePos();
 
     std::vector<std::shared_ptr<VisualObject>> newSelection;
     const auto& viewport = viewer->viewport();

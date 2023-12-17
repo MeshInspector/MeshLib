@@ -1,4 +1,5 @@
 #include "MRObjectTransformWidget.h"
+#include "MRMouseController.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRBox.h"
@@ -347,7 +348,7 @@ void ObjectTransformWidget::activeMove_( bool press )
 
 void ObjectTransformWidget::processScaling_( Axis ax, bool press )
 {
-    const auto& mousePos = getViewerInstance().mouseController.getMousePos();
+    const auto& mousePos = getViewerInstance().mouseController().getMousePos();
     auto& viewport = getViewerInstance().viewport();
     auto viewportPoint = getViewerInstance().screenToViewport( Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), viewport.id );
     auto line = viewport.unprojectPixelRay( Vector2f( viewportPoint.x, viewportPoint.y ) );
@@ -390,7 +391,7 @@ void ObjectTransformWidget::processScaling_( Axis ax, bool press )
 
 void ObjectTransformWidget::processTranslation_( Axis ax, bool press )
 {
-    const auto& mousePos = getViewerInstance().mouseController.getMousePos();
+    const auto& mousePos = getViewerInstance().mouseController().getMousePos();
     auto& viewport = getViewerInstance().viewport();
     auto viewportPoint = getViewerInstance().screenToViewport( Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), viewport.id );
     auto line = viewport.unprojectPixelRay( Vector2f( viewportPoint.x, viewportPoint.y ) );
@@ -421,7 +422,7 @@ void ObjectTransformWidget::processTranslation_( Axis ax, bool press )
 
 void ObjectTransformWidget::processRotation_( Axis ax, bool press )
 {
-    const auto& mousePos = getViewerInstance().mouseController.getMousePos();
+    const auto& mousePos = getViewerInstance().mouseController().getMousePos();
     auto& viewport = getViewerInstance().viewport();
     auto viewportPoint = getViewerInstance().screenToViewport( Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), viewport.id );
     auto line = viewport.unprojectPixelRay( Vector2f( viewportPoint.x, viewportPoint.y ) );

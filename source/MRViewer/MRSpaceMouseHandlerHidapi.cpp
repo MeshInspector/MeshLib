@@ -2,6 +2,7 @@
 #include "MRSpaceMouseHandlerHidapi.h"
 #include "MRViewer.h"
 #include "MRGladGlfw.h"
+#include "MRMouseController.h"
 #include "MRMesh/MRSystem.h"
 
 namespace MR
@@ -114,7 +115,7 @@ void SpaceMouseHandlerHidapi::handle()
     if ( !syncThreadLock.try_lock() )
         return;
 
-    getViewerInstance().mouseController.setMouseScroll( !device_ || activeMouseScrollZoom_ );
+    getViewerInstance().mouseController().setMouseScroll( !device_ || activeMouseScrollZoom_ );
 
     if ( packetLength_ <= 0 || !device_ )
     {
@@ -216,7 +217,7 @@ void SpaceMouseHandlerHidapi::postFocus_( bool focused )
 void SpaceMouseHandlerHidapi::activateMouseScrollZoom( bool activeMouseScrollZoom )
 {
     activeMouseScrollZoom_ = activeMouseScrollZoom;
-    getViewerInstance().mouseController.setMouseScroll(  activeMouseScrollZoom );
+    getViewerInstance().mouseController().setMouseScroll(  activeMouseScrollZoom );
 }
 
 

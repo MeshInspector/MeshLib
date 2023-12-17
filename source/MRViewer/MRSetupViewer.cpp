@@ -2,6 +2,7 @@
 #include "MRRibbonMenu.h"
 #include "MRViewer.h"
 #include "MRViewerSettingsManager.h"
+#include "MRMouseController.h"
 #include "MRMesh/MRConfig.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
@@ -45,7 +46,7 @@ void ViewerSetup::setupConfiguration( Viewer* viewer ) const
     viewer->defaultLabelsBasisAxes = true;
     viewer->enableGlobalHistory( true );
 
-    viewer->mouseController.setMouseControl( { MouseButton::Right,0 }, MouseMode::Translation );
+    viewer->mouseController().setMouseControl( { MouseButton::Right,0 }, MouseMode::Translation );
     MouseController::MouseControlKey rotKey = { MouseButton::Middle,0 };
     size_t memLimit = size_t( 2 ) * 1024 * 1024 * 1024;
 #ifdef __APPLE__
@@ -59,9 +60,9 @@ void ViewerSetup::setupConfiguration( Viewer* viewer ) const
     if ( !hasMouse || isMac )
         rotKey = { MouseButton::Left,0 };
 #endif
-    viewer->mouseController.setMouseControl( rotKey, MouseMode::Rotation );
+    viewer->mouseController().setMouseControl( rotKey, MouseMode::Rotation );
     rotKey.mod = GLFW_MOD_CONTROL;
-    viewer->mouseController.setMouseControl( rotKey, MouseMode::Roll );
+    viewer->mouseController().setMouseControl( rotKey, MouseMode::Roll );
     viewer->getGlobalHistoryStore()->setMemoryLimit( memLimit );
 }
 

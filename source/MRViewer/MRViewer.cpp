@@ -18,6 +18,7 @@
 #include "MRTouchpadController.h"
 #include "MRSpaceMouseController.h"
 #include "MRTouchesController.h"
+#include "MRMouseController.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -661,7 +662,7 @@ int Viewer::launchInit_( const LaunchParams& params )
             alphaSorter_->updateTransparencyTexturesSize( width, height );
         }
 
-        mouseController.connect();
+        mouseController_->connect();
 
         if ( !touchesController_ )
             touchesController_ = std::make_unique<TouchesController>();
@@ -926,7 +927,8 @@ void Viewer::setSpaceMouseParameters( const SpaceMouseParameters & ps )
 
 Viewer::Viewer() :
     selected_viewport_index( 0 ),
-    eventQueue_( std::make_unique<ViewerEventQueue>() )
+    eventQueue_( std::make_unique<ViewerEventQueue>() ),
+    mouseController_( std::make_unique<MouseController>() )
 {
     window = nullptr;
 
@@ -1893,7 +1895,7 @@ int Viewer::viewport_index( const ViewportId id ) const
 
 ViewportId Viewer::getHoveredViewportId() const
 {
-    const auto& currentPos = mouseController.getMousePos();
+    const auto& currentPos = mouseController_->getMousePos();
     for ( int i = 0; i < viewport_list.size(); i++ )
     {
         if ( !viewport_list[i].getParameters().selectable )
@@ -1902,9 +1904,9 @@ ViewportId Viewer::getHoveredViewportId() const
         const auto& rect = viewport_list[i].getViewportRect();
 
         if ( ( currentPos.x > rect.min.x ) &&
-             ( currentPos.x < rect.min.x + width( rect ) ) &&
-             ( ( framebufferSize.y - currentPos.y ) > rect.min.y ) &&
-             ( ( framebufferSize.y - currentPos.y ) < rect.min.y + height( rect ) ) )
+                ( currentPos.x < rect.min.x + width( rect ) ) &&
+                ( ( framebufferSize.y - currentPos.y ) > rect.min.y ) &&
+                ( ( framebufferSize.y - currentPos.y ) < rect.min.y + height( rect ) ) )
         {
             return viewport_list[i].id;
         }
@@ -2128,7 +2130,7 @@ void Viewer::setViewportSettingsManager( std::unique_ptr<IViewerSettingsManager>
 
 Viewer::PointInAllSpaces Viewer::getMousePointInfo() const
 {
-    const auto& currentPos = mouseController.getMousePos();
+    const auto& currentPos = mouseController_->getMousePos();
     return getPixelPointInfo( Vector3f( float( currentPos.x ), float( currentPos.y ), 0.f ) );
 }
 

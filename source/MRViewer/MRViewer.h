@@ -2,7 +2,6 @@
 
 #include "MRViewport.h"
 #include "MRViewerInstance.h"
-#include "MRRecentFilesStore.h"
 #include "MRMouse.h"
 
 #include <boost/signals2/signal.hpp>
@@ -451,9 +450,6 @@ public:
     // List of registered plugins
     std::vector<ViewerPlugin*> plugins;
 
-    // Store of recently opened files
-    RecentFilesStore recentFilesStore;
-
     float pixelRatio{ 1.0f };
     Vector2i framebufferSize;
     Vector2i windowSavePos; // pos to save
@@ -584,6 +580,10 @@ public:
     [[nodiscard]] const MouseController &mouseController() const { return *mouseController_; }
     [[nodiscard]] MouseController &mouseController() { return *mouseController_; }
 
+    // Store of recently opened files
+    [[nodiscard]] const RecentFilesStore &recentFilesStore() const { return *recentFilesStore_; }
+    [[nodiscard]] RecentFilesStore &recentFilesStore() { return *recentFilesStore_; }
+
 private:
     Viewer();
     ~Viewer();
@@ -624,6 +624,8 @@ private:
     std::unique_ptr<SpaceMouseController> spaceMouseController_;
     std::unique_ptr<TouchesController> touchesController_;
     std::unique_ptr<MouseController> mouseController_;
+
+    std::unique_ptr<RecentFilesStore> recentFilesStore_;
 
     mutable struct FrameCounter
     {

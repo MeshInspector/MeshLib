@@ -19,6 +19,7 @@
 #include "MRSpaceMouseController.h"
 #include "MRTouchesController.h"
 #include "MRMouseController.h"
+#include "MRRecentFilesStore.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -710,7 +711,7 @@ int Viewer::launchInit_( const LaunchParams& params )
     if ( window )
         glfwSetScrollCallback( window, glfw_mouse_scroll );
     // give it name of app to store in right place
-    recentFilesStore = RecentFilesStore( params.name );
+    *recentFilesStore_ = RecentFilesStore( params.name );
 
     CommandLoop::setState( CommandLoop::StartPosition::AfterPluginInit );
     CommandLoop::processCommands();
@@ -928,7 +929,8 @@ void Viewer::setSpaceMouseParameters( const SpaceMouseParameters & ps )
 Viewer::Viewer() :
     selected_viewport_index( 0 ),
     eventQueue_( std::make_unique<ViewerEventQueue>() ),
-    mouseController_( std::make_unique<MouseController>() )
+    mouseController_( std::make_unique<MouseController>() ),
+    recentFilesStore_( std::make_unique<RecentFilesStore>() )
 {
     window = nullptr;
 
@@ -1021,7 +1023,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
                 else
                 {
                     // for constructed scenes, add original file path to the recent files' list and set a new scene extension afterward
-                    getViewerInstance().recentFilesStore.storeFile( filePath );
+                    getViewerInstance().recentFilesStore().storeFile( filePath );
                     filePath.replace_extension( ".mru" );
                     getViewerInstance().onSceneSaved( filePath, false );
                 }
@@ -1041,7 +1043,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
 
                 auto& viewerInst = getViewerInstance();
                 for ( const auto& file : result.loadedFiles )
-                    viewerInst.recentFilesStore.storeFile( file );
+                    viewerInst.recentFilesStore().storeFile( file );
             }
 
             getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
@@ -2238,7 +2240,7 @@ bool Viewer::globalHistoryRedo()
 void Viewer::onSceneSaved( const std::filesystem::path& savePath, bool storeInRecent )
 {
     if ( !savePath.empty() && storeInRecent )
-        recentFilesStore.storeFile( savePath );
+        recentFilesStore().storeFile( savePath );
 
     if ( !SceneFileFilters.empty() && savePath.extension() == SceneFileFilters.front().extensions.substr( 1 ) )
         SceneRoot::setScenePath(savePath);

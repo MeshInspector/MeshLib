@@ -8,6 +8,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "ImGuiMenu.h"
 #include "MRMeshViewer.h"
+#include "MRRecentFilesStore.h"
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 #include "imgui_fonts_droid_sans.h"
@@ -2590,7 +2591,7 @@ void ImGuiMenu::draw_mr_menu()
                 return[savePath, viewer, success = res.has_value()]()
                 {
                     if ( success )
-                        viewer->recentFilesStore.storeFile( savePath );
+                        viewer->recentFilesStore().storeFile( savePath );
                 };
             } );
         }
@@ -2873,7 +2874,7 @@ void ImGuiMenu::draw_open_recent_button_()
 {
     if ( ImGui::BeginCombo( "##Recently Loaded", "##Recently Loaded", ImGuiComboFlags_NoPreview ) )
     {
-        auto filenames = viewer->recentFilesStore.getStoredFiles();
+        auto filenames = viewer->recentFilesStore().getStoredFiles();
         if ( filenames.empty() )
             ImGui::CloseCurrentPopup();
         const auto storedColor = ImGui::GetStyle().Colors[ImGuiCol_Header];

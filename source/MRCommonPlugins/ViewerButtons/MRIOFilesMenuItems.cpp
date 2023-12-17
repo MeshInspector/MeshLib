@@ -1,6 +1,7 @@
 #include "MRIOFilesMenuItems.h"
 #include "MRViewer/MRFileDialog.h"
 #include "MRViewer/MRMouseController.h"
+#include "MRViewer/MRRecentFilesStore.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRLinesLoad.h"
 #include "MRMesh/MRPointsLoad.h"
@@ -209,13 +210,13 @@ void OpenFilesMenuItem::setupListUpdate_()
         }
     };
 
-    recentStoreConnection_ = getViewerInstance().recentFilesStore.storageUpdateSignal.connect( [this, cutLongFileNames] ( const FileNamesStack& fileNamesStack ) mutable
+    recentStoreConnection_ = getViewerInstance().recentFilesStore().storageUpdateSignal.connect( [this, cutLongFileNames] ( const FileNamesStack& fileNamesStack ) mutable
     {
         recentPathsCache_ = fileNamesStack;
         dropList_.resize( recentPathsCache_.size() );
         cutLongFileNames();
     } );
-    recentPathsCache_ = getViewerInstance().recentFilesStore.getStoredFiles();
+    recentPathsCache_ = getViewerInstance().recentFilesStore().getStoredFiles();
     dropList_.resize( recentPathsCache_.size() );
     cutLongFileNames();    
 }
@@ -319,7 +320,7 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
                 }
 
                 if ( !voxelObjects.empty() )
-                    getViewerInstance().recentFilesStore.storeFile( directory );
+                    getViewerInstance().recentFilesStore().storeFile( directory );
 
                 if ( !errors.empty() )
                     showError( errors );
@@ -358,7 +359,7 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
                         AppendHistory<ChangeSceneAction>( "Open Directory", obj, ChangeSceneAction::Type::AddObject );
                         SceneRoot::get().addChild( obj );
                         getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
-                        getViewerInstance().recentFilesStore.storeFile( directory );
+                        getViewerInstance().recentFilesStore().storeFile( directory );
                     };
                 }
                 else
@@ -519,7 +520,7 @@ bool SaveObjectMenuItem::action()
             return [savePaths = std::move( savePaths )]
             {
                 for ( const auto & sp : savePaths )
-                    getViewerInstance().recentFilesStore.storeFile( sp );
+                    getViewerInstance().recentFilesStore().storeFile( sp );
             };
         } );
     }, { objs[0]->name(), {}, std::move( filters ) } );
@@ -587,7 +588,7 @@ bool SaveSelectedMenuItem::action()
             return[savePath, viewer, res]()
             {
                 if ( res.has_value() )
-                    viewer->recentFilesStore.storeFile( savePath );
+                    viewer->recentFilesStore().storeFile( savePath );
                 else
                 {
                     const auto errStr = "Error saving in MRU-format: " + res.error();
@@ -606,7 +607,7 @@ bool SaveSelectedMenuItem::action()
         if ( !res.has_value() )
             showError( res.error() );
         else
-            getViewerInstance().recentFilesStore.storeFile( savePath );
+            getViewerInstance().recentFilesStore().storeFile( savePath );
     }
     return false;
 }

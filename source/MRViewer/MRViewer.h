@@ -5,7 +5,6 @@
 #include "MRRecentFilesStore.h"
 #include "MRMouse.h"
 #include "MRMouseController.h"
-#include "MRTouchesController.h"
 
 #include <boost/signals2/signal.hpp>
 #include <chrono>
@@ -16,7 +15,7 @@ struct GLFWwindow;
 template<typename MemberFuncPtr, typename BaseClass>
 auto bindSlotCallback( BaseClass* base, MemberFuncPtr func )
 {
-    static_assert( !( std::is_move_assignable_v<BaseClass> || std::is_move_constructible_v<BaseClass> ), 
+    static_assert( !( std::is_move_assignable_v<BaseClass> || std::is_move_constructible_v<BaseClass> ),
                    "MAKE_SLOT requires a non-movable type" );
     return[base, func] ( auto&&... args )
     {
@@ -457,7 +456,6 @@ public:
     RecentFilesStore recentFilesStore;
 
     MouseController mouseController;
-    TouchesController touchesController;
 
     float pixelRatio{ 1.0f };
     Vector2i framebufferSize;
@@ -624,6 +622,7 @@ private:
 
     std::unique_ptr<TouchpadController> touchpadController_;
     std::unique_ptr<SpaceMouseController> spaceMouseController_;
+    std::unique_ptr<TouchesController> touchesController_;
 
     mutable struct FrameCounter
     {

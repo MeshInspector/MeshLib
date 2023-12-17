@@ -79,6 +79,7 @@
 #include "MRUIStyle.h"
 #include "MRRibbonSchema.h"
 #include "MRRibbonMenu.h"
+#include "MRMouseController.h"
 
 #ifndef __EMSCRIPTEN__
 #include "MRMesh/MRObjectVoxels.h"
@@ -184,7 +185,7 @@ void ImGuiMenu::startFrame()
         if ( context_ )
         {
             ImGuiInputEvent e;
-            auto curPos = Vector2f( viewer->mouseController.getMousePos() );
+            auto curPos = Vector2f( viewer->mouseController().getMousePos() );
             if ( !context_->InputEventsQueue.empty() && context_->InputEventsQueue.back().Type == ImGuiInputEventType_MousePos )
             {
                 context_->InputEventsQueue.back().MousePos.PosX = curPos.x;

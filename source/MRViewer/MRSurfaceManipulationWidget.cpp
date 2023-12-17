@@ -1,4 +1,5 @@
 #include "MRSurfaceManipulationWidget.h"
+#include "MRMouseController.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRMesh.h"
 #include "MRViewerInstance.h"
@@ -401,7 +402,7 @@ void SurfaceManipulationWidget::abortEdit_()
 void SurfaceManipulationWidget::processPick_( const PointOnFace& pick )
 {
     appendHistoryAction_ = true;
-    storedDown_ = getViewerInstance().mouseController.getMousePos();
+    storedDown_ = getViewerInstance().mouseController().getMousePos();
     const auto& mesh = *obj_->mesh();
     touchVertId = mesh.getClosestVertex( pick );
     touchVertIniPos = mesh.points[touchVertId];

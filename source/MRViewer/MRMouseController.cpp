@@ -1,10 +1,10 @@
 #include "MRMouseController.h"
-#include "MRMesh/MRConstants.h"
-#include "MRMesh/MRQuaternion.h"
-#include "MRMesh/MRVisualObject.h"
 #include "MRViewer.h"
 #include "MRGLMacro.h"
 #include "MRGladGlfw.h"
+#include "MRMesh/MRConstants.h"
+#include "MRMesh/MRQuaternion.h"
+#include "MRMesh/MRVisualObject.h"
 #include "MRPch/MRWasm.h"
 
 
@@ -15,7 +15,7 @@ extern "C"
 EMSCRIPTEN_KEEPALIVE void emsDropEvents()
 {
     auto& viewer = MR::getViewerInstance();
-    const auto& ctl = viewer.mouseController;
+    const auto& ctl = viewer.mouseController();
     if ( ctl.isPressed( MR::MouseButton::Left ) )
         viewer.mouseUp( MR::MouseButton::Left, 0 );
     if ( ctl.isPressed( MR::MouseButton::Right ) )

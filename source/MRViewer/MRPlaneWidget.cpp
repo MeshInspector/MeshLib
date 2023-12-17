@@ -1,4 +1,5 @@
 #include "MRPlaneWidget.h"
+#include "MRMouseController.h"
 #include "MRMesh/MR2to3.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRObjectsAccess.h"
@@ -147,7 +148,7 @@ bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     }
 
     
-    const auto& mousePos = viewer->mouseController.getMousePos();
+    const auto& mousePos = viewer->mouseController().getMousePos();
     startMousePos_ = endMousePos_ = Vector2f( float ( mousePos.x ), float ( mousePos.y ) );
     pressed_ = true;
 

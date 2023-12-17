@@ -37,6 +37,7 @@ struct TouchpadParameters;
 class SpaceMouseController;
 struct SpaceMouseParameters;
 class TouchesController;
+class MouseController;
 
 template<typename ...Connectables>
 class StateListenerPlugin;

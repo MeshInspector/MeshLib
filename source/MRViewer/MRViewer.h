@@ -4,7 +4,6 @@
 #include "MRViewerInstance.h"
 #include "MRRecentFilesStore.h"
 #include "MRMouse.h"
-#include "MRMouseController.h"
 
 #include <boost/signals2/signal.hpp>
 #include <chrono>
@@ -455,8 +454,6 @@ public:
     // Store of recently opened files
     RecentFilesStore recentFilesStore;
 
-    MouseController mouseController;
-
     float pixelRatio{ 1.0f };
     Vector2i framebufferSize;
     Vector2i windowSavePos; // pos to save
@@ -584,6 +581,9 @@ public:
     [[nodiscard]] MRVIEWER_API SpaceMouseParameters getSpaceMouseParameters() const;
     MRVIEWER_API void setSpaceMouseParameters( const SpaceMouseParameters & );
 
+    [[nodiscard]] const MouseController &mouseController() const { return *mouseController_; }
+    [[nodiscard]] MouseController &mouseController() { return *mouseController_; }
+
 private:
     Viewer();
     ~Viewer();
@@ -623,6 +623,7 @@ private:
     std::unique_ptr<TouchpadController> touchpadController_;
     std::unique_ptr<SpaceMouseController> spaceMouseController_;
     std::unique_ptr<TouchesController> touchesController_;
+    std::unique_ptr<MouseController> mouseController_;
 
     mutable struct FrameCounter
     {

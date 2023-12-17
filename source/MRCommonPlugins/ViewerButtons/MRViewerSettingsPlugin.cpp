@@ -3,6 +3,7 @@
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRColorTheme.h"
 #include "MRViewer/ImGuiHelpers.h"
+#include "MRViewer/MRMouseController.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRViewerSettingsManager.h"
@@ -411,7 +412,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
             continue;
         std::string modeName = getMouseModeString( mode );
         std::string ctrlStr = "None";
-        auto ctrl = viewer->mouseController.findControlByMode( mode );
+        auto ctrl = viewer->mouseController().findControlByMode( mode );
         if ( ctrl )
             ctrlStr = MouseController::getControlString( *ctrl );
 
@@ -448,7 +449,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
                 if ( ImGui::GetIO().KeyShift )
                     modifier |= GLFW_MOD_SHIFT;
 
-                viewer->mouseController.setMouseControl( { clikedBtn,modifier }, mode );
+                viewer->mouseController().setMouseControl( { clikedBtn,modifier }, mode );
             }
         }
     }

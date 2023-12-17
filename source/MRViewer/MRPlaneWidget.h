@@ -1,4 +1,6 @@
 #pragma once
+
+#include "MRViewerEventsListener.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRViewer/MRViewer.h"

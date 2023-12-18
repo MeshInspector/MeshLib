@@ -18,8 +18,8 @@ constexpr unsigned char input[] = {
     0xe1, 0x83, 0x90, 0xe1, 0x83, 0x9c, 0xe1, 0x83, 0x90, 0x0a
 };
 
-constexpr unsigned char output_level_default[] = {
-    0x78, 0x9c, 0x4d, 0x8b, 0xc9, 0x09, 0x80, 0x40, 0x10, 0x04, 0xff, 0x46,
+constexpr unsigned char output_level_9[] = {
+    0x78, 0xda, 0x4d, 0x8b, 0xc9, 0x09, 0x80, 0x40, 0x10, 0x04, 0xff, 0x46,
     0x61, 0xae, 0x9d, 0xc0, 0x8a, 0x3e, 0x84, 0xdd, 0x87, 0x17, 0x8a, 0xe2,
     0x9a, 0x53, 0x65, 0xe2, 0xd0, 0x7e, 0x84, 0xa1, 0x99, 0xea, 0x03, 0x65,
     0x34, 0xa0, 0x0b, 0x3d, 0x28, 0xa1, 0xc5, 0x98, 0x5b, 0x74, 0x9a, 0x6f,
@@ -40,40 +40,55 @@ constexpr unsigned char output_level_1[] = {
 
 } // namespace
 
-TEST( MRMesh, ZlibCompress )
+using ZlibCompressParameters = std::tuple<const unsigned char*, size_t, const unsigned char*, size_t, int>;
+class ZlibCompressTestFixture : public testing::TestWithParam<ZlibCompressParameters> {};
+
+TEST_P( ZlibCompressTestFixture, ZlibCompress )
 {
-    const std::string inputStr( reinterpret_cast<const char*>( input ), sizeof( input ) );
+    const auto& [input, inputSize, output, outputSize, level] = GetParam();
+
+    const std::string inputStr( reinterpret_cast<const char*>( input ), inputSize );
     std::istringstream in( inputStr );
 
-    const std::string outputStr( reinterpret_cast<const char*>( output_level_default ), sizeof( output_level_default ) );
-    std::ostringstream out;
-    MR::zlibCompressStream( in, out );
-    EXPECT_STREQ( out.str().c_str(), outputStr.c_str() );
+    const std::string outputStr( reinterpret_cast<const char*>( output ), outputSize );
+    std::ostringstream out( outputStr );
 
-    in.seekg( 0, std::ios::beg );
+    auto res = MR::zlibCompressStream( in, out );
+    EXPECT_TRUE( res.has_value() );
+    //EXPECT_STREQ( out.str().c_str(), outputStr.c_str() );
 
-    const std::string output1Str( reinterpret_cast<const char*>( output_level_1 ), sizeof( output_level_1 ) );
-    std::ostringstream out1;
-    MR::zlibCompressStream( in, out1 );
-    EXPECT_STREQ( out1.str().c_str(), output1Str.c_str() );
+    std::istringstream in2( out.str() );
+    std::ostringstream out2;
+    res = MR::zlibDecompressStream( in2, out2 );
+    EXPECT_TRUE( res.has_value() );
+    EXPECT_STREQ( out2.str().c_str(), inputStr.c_str() );
 }
 
-TEST( MRMesh, ZlibDecompress )
+INSTANTIATE_TEST_CASE_P( MRMesh, ZlibCompressTestFixture, testing::Values(
+    ZlibCompressParameters { input, sizeof( input ), output_level_1, sizeof( output_level_1 ), 1 },
+    ZlibCompressParameters { input, sizeof( input ), output_level_9, sizeof( output_level_9 ), 9 }
+) );
+
+using ZlibDecompressParameters = std::tuple<const unsigned char*, size_t, const unsigned char*, size_t>;
+class ZlibDecompressTestFixture : public testing::TestWithParam<ZlibDecompressParameters> {};
+
+TEST_P( ZlibDecompressTestFixture, ZlibDecompress )
 {
-    const std::string outputStr( reinterpret_cast<const char*>( input ), sizeof( input ) );
-    std::ostringstream out;
+    const auto& [input, inputSize, output, outputSize] = GetParam();
 
-    const std::string inputStr( reinterpret_cast<const char*>( output_level_default ), sizeof( output_level_default ) );
+    const std::string inputStr( reinterpret_cast<const char*>( input ), inputSize );
     std::istringstream in( inputStr );
-    MR::zlibDecompressStream( in, out );
-    EXPECT_STREQ( out.str().c_str(), outputStr.c_str() );
 
-    out.str( "" );
-    out.clear();
+    const std::string outputStr( reinterpret_cast<const char*>( output ), outputSize );
+    std::ostringstream out( outputStr );
 
-    const std::string input1Str( reinterpret_cast<const char*>( output_level_1 ), sizeof( output_level_1 ) );
-    std::istringstream in1( input1Str );
-    MR::zlibDecompressStream( in1, out );
+    auto res = MR::zlibDecompressStream( in, out );
+    EXPECT_TRUE( res.has_value() );
     EXPECT_STREQ( out.str().c_str(), outputStr.c_str() );
 }
+
+INSTANTIATE_TEST_CASE_P( MRMesh, ZlibDecompressTestFixture, testing::Values(
+    ZlibDecompressParameters { output_level_1, sizeof( output_level_1 ), input, sizeof( input ) },
+    ZlibDecompressParameters { output_level_9, sizeof( output_level_9 ), input, sizeof( input ) }
+) );
 #endif

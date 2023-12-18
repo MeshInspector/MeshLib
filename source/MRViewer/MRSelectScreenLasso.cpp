@@ -1,4 +1,5 @@
 #include "MRSelectScreenLasso.h"
+#include "MRViewport.h"
 #include "MRViewer/MRViewer.h"
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRObjectMesh.h"

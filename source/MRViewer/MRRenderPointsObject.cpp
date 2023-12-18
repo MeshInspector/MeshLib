@@ -1,4 +1,5 @@
 #include "MRRenderPointsObject.h"
+#include "MRMesh/MRMatrix4.h"
 #include "MRMesh/MRObjectPointsHolder.h"
 #include "MRMesh/MRTimer.h"
 #include "MRCreateShader.h"

@@ -1,13 +1,14 @@
 #pragma once
-#include "MRViewerFwd.h"
+
+#include "MRViewer.h"
 #include "MRViewerEventsListener.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRVector3.h"
-#include "MRViewer.h"
 #include "MRMesh/MRHistoryAction.h"
 #include "MRMesh/MRViewportProperty.h"
 #include "MRMesh/MRAxis.h"
 #include <MRMesh/MRObject.h>
+#include <MRMesh/MRColor.h>
 #include <boost/signals2/signal.hpp>
 #include <array>
 #include <functional>

@@ -4,6 +4,7 @@
 #include "MRViewer/MRColorTheme.h"
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRMouseController.h"
+#include "MRViewer/MRViewport.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRViewerSettingsManager.h"

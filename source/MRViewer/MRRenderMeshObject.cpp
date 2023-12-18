@@ -12,6 +12,8 @@
 #include "MRGladGlfw.h"
 #include "MRPch/MRTBB.h"
 #include "MRMesh/MRRegionBoundary.h"
+#include "MRMesh/MRMatrix4.h"
+#include "MRMesh/MRPlane3.h"
 
 namespace MR
 {

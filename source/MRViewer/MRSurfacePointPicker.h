@@ -1,12 +1,12 @@
 #pragma once
-#include "MRViewerFwd.h"
+
+#include "MRViewer.h"
 #include "MRViewerEventsListener.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRVector3.h"
-#include "MRViewer.h"
 #include "MRMesh/MRMeshTriPoint.h"
+#include <MRMesh/MRColor.h>
 #include <functional>
-
 
 namespace MR
 {

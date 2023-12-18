@@ -5,6 +5,7 @@
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRFileDialog.h"
 #include "MRViewer/MRProgressBar.h"
+#include "MRViewer/MRViewport.h"
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRVoxelsLoad.h"
 #include "MRMesh/MRStringConvert.h"

@@ -6,6 +6,8 @@
 #include "MRGladGlfw.h"
 #include "MRGLStaticHolder.h"
 #include "MRMesh/MRFloatGrid.h"
+#include "MRMesh/MRMatrix4.h"
+#include "MRMesh/MRPlane3.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR

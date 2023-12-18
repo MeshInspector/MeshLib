@@ -2,6 +2,7 @@
 #include "MRViewer/MRMouse.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRRibbonMenu.h"
+#include "MRViewer/MRViewport.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRViewer/MRGladGlfw.h"
 #include "MRViewer/MRAppendHistory.h"

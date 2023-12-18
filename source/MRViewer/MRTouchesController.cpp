@@ -1,5 +1,6 @@
 #include "MRTouchesController.h"
 #include "MRViewer.h"
+#include "MRViewport.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRMesh/MR2to3.h"
 #include <chrono>

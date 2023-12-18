@@ -1,4 +1,3 @@
-#pragma once
 #include "MRZlib.h"
 #include "MRDeferred.h"
 

@@ -24,7 +24,6 @@ IF(APPLE)
          spdlog
          mrmeshpy
          ${MR_PYTHON_LIB}
-         z
  )
 ELSE()
   IF (NOT MR_EMSCRIPTEN)
@@ -36,7 +35,6 @@ ELSE()
         gtest
         spdlog
         mrmeshpy
-        z
     )
   ELSE()
     set(CMAKE_EXECUTABLE_SUFFIX ".html")
@@ -44,7 +42,6 @@ ELSE()
         gtest
         zip
         jsoncpp
-        z
         -Wl,--whole-archive
         MRMesh
         MRViewer

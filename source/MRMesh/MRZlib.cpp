@@ -61,7 +61,7 @@ VoidOrErrStr zlibCompressStream( std::istream& in, std::ostream& out, int level 
         in.read( inChunk, cChunkSize );
         if ( in.fail() )
             return unexpected( "I/O error" );
-        stream.avail_in = in.gcount();
+        stream.avail_in = (uint32_t)in.gcount();
 
         const auto flush = in.eof() ? Z_FINISH : Z_NO_FLUSH;
         do
@@ -102,7 +102,7 @@ VoidOrErrStr zlibDecompressStream( std::istream& in, std::ostream& out )
         in.read( inChunk, cChunkSize );
         if ( in.fail() )
             return unexpected( "I/O error" );
-        stream.avail_in = in.gcount();
+        stream.avail_in = (uint32_t)in.gcount();
 
         do
         {

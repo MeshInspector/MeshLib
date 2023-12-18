@@ -8,9 +8,9 @@ namespace MR
 {
 
 /// ...
-VoidOrErrStr zlibCompressStream( std::istream& in, std::ostream& out, int level = -1 );
+MRMESH_API VoidOrErrStr zlibCompressStream( std::istream& in, std::ostream& out, int level = -1 );
 
 /// ...
-VoidOrErrStr zlibDecompressStream( std::istream& in, std::ostream& out );
+MRMESH_API VoidOrErrStr zlibDecompressStream( std::istream& in, std::ostream& out );
 
 } // namespace MR

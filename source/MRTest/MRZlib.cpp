@@ -64,7 +64,7 @@ TEST_P( ZlibCompressTestFixture, ZlibCompress )
     EXPECT_STREQ( out2.str().c_str(), inputStr.c_str() );
 }
 
-INSTANTIATE_TEST_CASE_P( MRMesh, ZlibCompressTestFixture, testing::Values(
+INSTANTIATE_TEST_SUITE_P( MRMesh, ZlibCompressTestFixture, testing::Values(
     ZlibCompressParameters { input, sizeof( input ), output_level_1, sizeof( output_level_1 ), 1 },
     ZlibCompressParameters { input, sizeof( input ), output_level_9, sizeof( output_level_9 ), 9 }
 ) );
@@ -87,7 +87,7 @@ TEST_P( ZlibDecompressTestFixture, ZlibDecompress )
     EXPECT_STREQ( out.str().c_str(), outputStr.c_str() );
 }
 
-INSTANTIATE_TEST_CASE_P( MRMesh, ZlibDecompressTestFixture, testing::Values(
+INSTANTIATE_TEST_SUITE_P( MRMesh, ZlibDecompressTestFixture, testing::Values(
     ZlibDecompressParameters { output_level_1, sizeof( output_level_1 ), input, sizeof( input ) },
     ZlibDecompressParameters { output_level_9, sizeof( output_level_9 ), input, sizeof( input ) }
 ) );

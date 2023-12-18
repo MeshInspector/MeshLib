@@ -59,9 +59,11 @@ VoidOrErrStr zlibCompressStream( std::istream& in, std::ostream& out, int level 
     while ( !in.eof() )
     {
         in.read( inChunk, cChunkSize );
-        if ( in.fail() )
+        if ( in.bad() )
             return unexpected( "I/O error" );
         stream.avail_in = (uint32_t)in.gcount();
+        if ( stream.avail_in == 0 && in.eof() )
+            break;
 
         const auto flush = in.eof() ? Z_FINISH : Z_NO_FLUSH;
         do
@@ -72,7 +74,7 @@ VoidOrErrStr zlibCompressStream( std::istream& in, std::ostream& out, int level 
                 return unexpected( zlibToString( ret ) );
 
             out.write( outChunk, cChunkSize - stream.avail_out );
-            if ( out.fail() )
+            if ( out.bad() )
                 return unexpected( "I/O error" );
         }
         while ( stream.avail_out == 0 );
@@ -100,9 +102,11 @@ VoidOrErrStr zlibDecompressStream( std::istream& in, std::ostream& out )
     while ( !in.eof() )
     {
         in.read( inChunk, cChunkSize );
-        if ( in.fail() )
+        if ( in.bad() )
             return unexpected( "I/O error" );
         stream.avail_in = (uint32_t)in.gcount();
+        if ( stream.avail_in == 0 && in.eof() )
+            break;
 
         do
         {
@@ -112,7 +116,7 @@ VoidOrErrStr zlibDecompressStream( std::istream& in, std::ostream& out )
                 return unexpected( zlibToString( ret ) );
 
             out.write( outChunk, cChunkSize - stream.avail_out );
-            if ( out.fail() )
+            if ( out.bad() )
                 return unexpected( "I/O error" );
 
             if ( Z_STREAM_END == ret )

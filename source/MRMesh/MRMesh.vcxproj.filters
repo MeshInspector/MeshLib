@@ -1119,6 +1119,12 @@
     <ClInclude Include="MRObjectSave.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRDeferred.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClInclude Include="MRZlib.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1866,6 +1872,9 @@
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectSave.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRZlib.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
   </ItemGroup>

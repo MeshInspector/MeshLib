@@ -37,7 +37,7 @@ bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f
     auto metricBD = std::max( circumcircleDiameterSq( b, d, a ), circumcircleDiameterSq( d, b, c ) );
 
     // there should be significant difference in metrics (above floating point error) to return false
-    constexpr float eps = 1e-5f;
+    constexpr float eps = 1e-4f; // 1e-5 was too small here and did not prevent infinite loop during resolveMeshDegenerations
     return metricAC <= metricBD + eps * ( metricAC + metricBD ); // this shall work even if metricAC and metricBD are infinities, unlike ( metricAC - metricBD ), which becomes NaN
 }
 

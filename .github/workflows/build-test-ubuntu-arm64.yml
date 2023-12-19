@@ -63,7 +63,7 @@ jobs:
 
       #Save timing in artifact
       - name: Upload Timings
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: Timing_Logs
           path: time_log/
@@ -89,7 +89,7 @@ jobs:
 
       - name: Upload Ubuntu Developer Distribution
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: Distributives
           path: meshlib-${{matrix.os}}-arm64-dev.deb

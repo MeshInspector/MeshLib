@@ -114,14 +114,14 @@ jobs:
           ${{ matrix.py-cmd }} -m auditwheel repair --plat manylinux_2_31_${{matrix.platform}} ./dist/*.whl
 
       - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: ManyLinux-${{matrix.py-cmd}}-${{matrix.platform}}
           path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
           retention-days: 1
 
       - name: Upload to Release Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: Wheelhouse
           path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
@@ -275,14 +275,14 @@ jobs:
           py -${{matrix.py-version}} -m delvewheel repair --add-path source\x64\Release scripts\wheel\meshlib\dist\$WheelFile
 
       - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: Windows-python${{ matrix.py-version }}
           path: wheelhouse\meshlib-*.whl
           retention-days: 1
 
       - name: Upload to Release Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: Wheelhouse
           path: wheelhouse\meshlib-*.whl
@@ -376,14 +376,14 @@ jobs:
           delocate-wheel -w . -v ./scripts/wheel/meshlib/dist/*.whl
 
       - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: Macos-${{ matrix.py-cmd }}
           path: meshlib-*.whl
           retention-days: 1
 
       - name: Upload to Release Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: Wheelhouse
           path: meshlib-*.whl

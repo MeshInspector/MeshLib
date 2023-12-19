@@ -107,7 +107,7 @@ jobs:
         run: py -3.10 scripts\zip_distribution.py MeshLibDist.zip
 
       - name: Upload Windows Distribution
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: Distributives
           path: MeshLibDist.zip
@@ -204,7 +204,7 @@ jobs:
         run: tar -cvzf time_log.tar.gz ./*.csv
 
       - name: Upload Timing Logs Archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: time_log
           path: time_log.tar.gz

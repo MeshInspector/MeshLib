@@ -68,7 +68,7 @@ jobs:
 
       #Save timing in artifact
       - name: Upload Timings
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: Timing_Logs
           path: time_log/
@@ -94,7 +94,7 @@ jobs:
 
       - name: Upload Fedora Developer Distribution
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.os == 'fedora37' && matrix.config == 'Release' && matrix.compiler == 'Clang'}}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: Distributives
           path: meshlib-dev.rpm

@@ -31,7 +31,8 @@ const std::string& Config::getAppName() const
 void Config::writeToFile()
 {
 #ifndef __EMSCRIPTEN__
-    std::ofstream os( filePath_ );
+    // although json is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
+    std::ofstream os( filePath_, std::ofstream::binary );
     if ( loggerHandle_ )
         loggerHandle_->info( "Saving config file: " + utf8string( filePath_ ) );
     if ( os.is_open() )

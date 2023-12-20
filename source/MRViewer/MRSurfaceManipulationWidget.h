@@ -4,7 +4,8 @@
 #include "MRMesh/MRMeshFwd.h"
 #include "MRViewer.h"
 #include "MRMesh/MRChangeMeshAction.h"
-#include <MRMesh/MRLaplacian.h>
+#include "MRMesh/MRLaplacian.h"
+#include "MRViewer/MRViewport.h"
 #include <chrono>
 
 namespace MR

@@ -280,7 +280,7 @@ VoidOrErrStr readStepData( STEPControl_Reader& reader, const std::filesystem::pa
 
     const auto auxFilePath = getStepTemporaryDirectory() / "auxFile.step";
     {
-        std::ofstream ofs( auxFilePath );
+        std::ofstream ofs( auxFilePath, std::ofstream::binary );
         if ( !sw.Print( ofs ) )
             return unexpected( "Failed to repair STEP model" );
     }

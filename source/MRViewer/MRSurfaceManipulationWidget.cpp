@@ -74,6 +74,9 @@ void SurfaceManipulationWidget::reset()
 
 void SurfaceManipulationWidget::setSettings( const Settings& settings )
 {
+    if ( mousePressed_ )
+        return;
+
     settings_ = settings;
     settings_.radius = std::max( settings_.radius, 1.e-5f );
     settings_.relaxForce = std::clamp( settings_.relaxForce, 0.001f, 0.5f );

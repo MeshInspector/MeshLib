@@ -5,7 +5,7 @@
 
 namespace
 {
-constexpr std::string cPalettePresetKey = "palettePreset";
+inline const std::string cPalettePresetKey = "palettePreset";
 }
 
 namespace MR

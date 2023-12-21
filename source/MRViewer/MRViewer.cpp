@@ -1053,7 +1053,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
         if ( !result.errorSummary.empty() )
             showModal( std::string( result.errorSummary ), ImGuiMenu::ModalMessageType::Error );
         else if ( !result.warningSummary.empty() )
-            showModal( std::string( result.warningSummary ), ImGuiMenu::ModalMessageType::Warning );
+            showModal( std::string( result.warningSummary ), ImGuiMenu::ModalMessageType::Info );
     };
 
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )

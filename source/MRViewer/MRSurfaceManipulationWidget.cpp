@@ -102,6 +102,11 @@ bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*
         if ( !pick.face.valid() )
             return false;
 
+        if ( badRegion_ )
+        {
+            mousePressed_ = false;
+            return false;
+        }
         laplacianPickVert_( pick );
     }
     else
@@ -212,7 +217,7 @@ void SurfaceManipulationWidget::resetConnections_()
 
 void SurfaceManipulationWidget::changeSurface_()
 {
-    if ( !singleEditingRegion_.any() )
+    if ( !singleEditingRegion_.any() || badRegion_ )
         return;
 
     MR_TIMER;

@@ -19,17 +19,17 @@ namespace MeshComponents
 /// returns
 /// 1. the mapping: FaceId -> Root ID in [0, 1, 2, ...)
 /// 2. the total number of roots
-static std::pair<Vector<int, FaceId>, int> getUniqueRootIds( const FaceMap& allRoots, const FaceBitSet& region )
+static std::pair<Face2RegionMap, int> getUniqueRootIds( const FaceMap& allRoots, const FaceBitSet& region )
 {
     MR_TIMER
-    Vector<int, FaceId> uniqueRootsMap( allRoots.size(), -1 );
+    Face2RegionMap uniqueRootsMap( allRoots.size() );
     int k = 0;
     for ( auto f : region )
     {
         auto& uniqIndex = uniqueRootsMap[allRoots[f]];
         if ( uniqIndex < 0 )
         {
-            uniqIndex = k;
+            uniqIndex = RegionId( k );
             ++k;
         }
         uniqueRootsMap[f] = uniqIndex;
@@ -430,7 +430,7 @@ std::vector<FaceBitSet> getAllFlatComponents( const MeshPart& meshPart, float zT
     }, unionFindStruct );
 }
 
-std::pair<Vector<int, FaceId>, int> getAllComponentsMap( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
+std::pair<Face2RegionMap, int> getAllComponentsMap( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
 {
     MR_TIMER
     auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );

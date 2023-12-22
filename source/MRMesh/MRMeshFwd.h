@@ -54,6 +54,7 @@ class MRMESH_CLASS FaceTag;
 class MRMESH_CLASS VertTag;
 class MRMESH_CLASS PixelTag;
 class MRMESH_CLASS VoxelTag;
+class MRMESH_CLASS RegionTag;
 
 template <typename T> class MRMESH_CLASS Id;
 template <typename T, typename I> class MRMESH_CLASS Vector;
@@ -66,6 +67,7 @@ using FaceId = Id<FaceTag>;
 using VertId = Id<VertTag>;
 using PixelId = Id<PixelTag>;
 using VoxelId = Id<VoxelTag>;
+using RegionId = Id<RegionTag>;
 class ViewportId;
 class ViewportMask;
 
@@ -285,6 +287,8 @@ using EdgeMap = Vector<EdgeId, EdgeId>;
 using UndirectedEdgeMap = Vector<UndirectedEdgeId, UndirectedEdgeId>;
 ///  mapping of whole edges: map[e]->f, map[e.sym()]->f.sym(), where only map[e] for even edges is stored
 using WholeEdgeMap = Vector<EdgeId, UndirectedEdgeId>;
+using Face2RegionMap = Vector<RegionId, FaceId>;
+
 using VertCoords = Vector<Vector3f, VertId>;
 using VertNormals = Vector<Vector3f, VertId>;
 using VertUVCoords = Vector<UVCoord, VertId>;

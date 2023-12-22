@@ -42,6 +42,7 @@ public:
     MRVIEWER_API ~DirectionWidget();
     MRVIEWER_API void updateDirection( const Vector3f& dir );
     MRVIEWER_API void updateArrow( const Vector3f& base, float length );
+    MRVIEWER_API void setVisible( bool visible );
 };
 
 }

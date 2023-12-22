@@ -56,6 +56,11 @@ namespace MR
         directionObj_->setXf( AffineXf3f::translation( base_ - oldBase ) * directionObj_->xf() );
     }
 
+    void DirectionWidget::setVisible( bool visible )
+    {
+        directionObj_->setVisible( visible );
+    }
+
     void DirectionWidget::clear_()
     {
         if ( directionObj_ )

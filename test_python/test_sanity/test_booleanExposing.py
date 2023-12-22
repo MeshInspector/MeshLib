@@ -1,4 +1,4 @@
-from test_python.module_helper import *
+from  module_helper import *
 
 
 def is_equal_vector3(a, b):

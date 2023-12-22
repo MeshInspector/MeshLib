@@ -1,4 +1,4 @@
-from test_python.module_helper import *
+from  module_helper import *
 
 
 def test_compute_per_face_normals():

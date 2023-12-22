@@ -1,8 +1,5 @@
-from helper import *
+from module_helper import *
 from meshlib import mrmeshnumpy
-import numpy as np
-import unittest as ut
-import pytest
 
 def test_numpy_voxels():
 	sphere = mrmesh.makeSphere(mrmesh.SphereParams())

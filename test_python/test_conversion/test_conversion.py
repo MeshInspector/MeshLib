@@ -1,7 +1,7 @@
-from test_python.module_helper import *
+from module_helper import *
 from pathlib import Path
-from test_python.constants import test_files_path
-from test_python.helpers.file_helpers import compare_files
+from constants import test_files_path
+from helpers.file_helpers import compare_files
 
 
 @pytest.mark.parametrize("test_mesh_name", ["fox_geometrik", "Crocodile"])

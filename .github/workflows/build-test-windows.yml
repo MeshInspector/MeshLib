@@ -112,6 +112,17 @@ jobs:
       - name: Unit Tests
         run: py -3 scripts\run_unit_test_script.py ${{ matrix.config }}
 
+      - name: Copy autotests data for Python tests from s3
+        uses: keithweaver/aws-s3-github-action@v1.0.0
+        with:
+          command: sync
+          source: s3://data-autotest/test_data
+          destination: .\test_data
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_region: us-east-1
+          flags: --recursive
+
       - name: Python Tests
         working-directory: source\x64\${{ matrix.config }}
         run: py -3 ..\..\..\scripts\run_python_test_script.py

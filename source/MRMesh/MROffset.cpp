@@ -29,7 +29,7 @@ float suggestVoxelSize( const MeshPart & mp, float approxNumVoxels )
 }
 
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
-Expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& params /*= {} */ )
+Expected<Mesh> offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER
     assert( params.signDetectionMode == SignDetectionMode::Unsigned 
@@ -94,7 +94,7 @@ Expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, const
     return newMesh;
 }
 
-Expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const OffsetParameters& params )
+Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const OffsetParameters& params )
 {
     MR_TIMER
     const bool unsignedOffset = params.signDetectionMode == SignDetectionMode::Unsigned;
@@ -144,7 +144,7 @@ Expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const O
     return res;
 }
 
-Expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params /*= {} */ )
+Expected<Mesh> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER
     if ( params.signDetectionMode == SignDetectionMode::Unsigned )
@@ -155,7 +155,7 @@ Expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA,
 }
 #endif
 
-Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
+Expected<Mesh> mcOffsetMesh( const Mesh& mesh, float offset,
     const OffsetParameters& params, Vector<VoxelId, FaceId> * outMap )
 {
     MR_TIMER;
@@ -213,7 +213,7 @@ Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
     }
 }
 
-Expected<Mesh, std::string> mcShellMeshRegion( const Mesh& mesh, const FaceBitSet& region, float offset,
+Expected<Mesh> mcShellMeshRegion( const Mesh& mesh, const FaceBitSet& region, float offset,
     const BaseShellParameters& params, Vector<VoxelId, FaceId> * outMap )
 {
     MR_TIMER
@@ -240,7 +240,7 @@ Expected<Mesh, std::string> mcShellMeshRegion( const Mesh& mesh, const FaceBitSe
     return marchingCubes( std::move( *volume ), vmParams );
 }
 
-Expected<MR::Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float offset, const SharpOffsetParameters& params )
+Expected<Mesh> sharpOffsetMesh( const Mesh& mesh, float offset, const SharpOffsetParameters& params )
 {
     MR_TIMER
     OffsetParameters mcParams = params;
@@ -265,8 +265,26 @@ Expected<MR::Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float offset,
     return res;
 }
 
+Expected<Mesh> generalOffsetMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters& params )
+{
+    switch( params.mode )
+    {
+    default:
+        assert( false );
+        [[fallthrough]];
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
-Expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params /*= {} */ )
+    case GeneralOffsetParameters::Mode::Smooth:
+        return offsetMesh( mesh, offset, params );
+#endif
+    case GeneralOffsetParameters::Mode::Standard:
+        return mcOffsetMesh( mesh, offset, params );
+    case GeneralOffsetParameters::Mode::Sharpening:
+        return sharpOffsetMesh( mesh, offset, params );
+    }
+}
+
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+Expected<Mesh> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER;
 

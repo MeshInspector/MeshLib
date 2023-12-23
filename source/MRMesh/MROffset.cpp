@@ -155,7 +155,7 @@ Expected<Mesh> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offset
 }
 #endif
 
-Expected<Mesh> mcOffsetMesh( const Mesh& mesh, float offset,
+Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
     const OffsetParameters& params, Vector<VoxelId, FaceId> * outMap )
 {
     MR_TIMER;
@@ -164,7 +164,7 @@ Expected<Mesh> mcOffsetMesh( const Mesh& mesh, float offset,
     {
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
         auto offsetInVoxels = offset / params.voxelSize;
-        auto voxelRes = meshToLevelSet( mesh, AffineXf3f(),
+        auto voxelRes = meshToLevelSet( mp, AffineXf3f(),
             Vector3f::diagonal( params.voxelSize ),
             std::abs( offsetInVoxels ) + 2, meshToLSCb );
         if ( !voxelRes )
@@ -188,7 +188,7 @@ Expected<Mesh> mcOffsetMesh( const Mesh& mesh, float offset,
     {
         MeshToDistanceVolumeParams msParams;
         msParams.cb = meshToLSCb;
-        auto box = mesh.getBoundingBox();
+        auto box = mp.mesh.computeBoundingBox( mp.region );
         auto absOffset = std::abs( offset );
         auto expansion = Vector3f::diagonal( 2 * params.voxelSize + absOffset );
         msParams.origin = box.min - expansion;
@@ -199,7 +199,7 @@ Expected<Mesh> mcOffsetMesh( const Mesh& mesh, float offset,
         msParams.minDistSq = sqr( std::max( absOffset - params.voxelSize, 0.0f ) );
         msParams.fwn = params.fwn;
         
-        auto volume = meshToDistanceVolume( mesh, msParams );
+        auto volume = meshToDistanceVolume( mp, msParams );
         if ( !volume )
             return unexpected( std::move( volume.error() ) );
 
@@ -240,13 +240,13 @@ Expected<Mesh> mcShellMeshRegion( const Mesh& mesh, const FaceBitSet& region, fl
     return marchingCubes( std::move( *volume ), vmParams );
 }
 
-Expected<Mesh> sharpOffsetMesh( const Mesh& mesh, float offset, const SharpOffsetParameters& params )
+Expected<Mesh> sharpOffsetMesh( const MeshPart& mp, float offset, const SharpOffsetParameters& params )
 {
     MR_TIMER
     OffsetParameters mcParams = params;
     mcParams.callBack = subprogress( params.callBack, 0.0f, 0.7f );
     Vector<VoxelId, FaceId> map;
-    auto res = mcOffsetMesh( mesh, offset, mcParams, &map );
+    auto res = mcOffsetMesh( mp, offset, mcParams, &map );
     if ( !res.has_value() )
         return res;
 
@@ -258,14 +258,14 @@ Expected<Mesh> sharpOffsetMesh( const Mesh& mesh, float offset, const SharpOffse
     sharpenParams.offset = offset;
     sharpenParams.outSharpEdges = params.outSharpEdges;
 
-    sharpenMarchingCubesMesh( mesh, res.value(), map, sharpenParams );
+    sharpenMarchingCubesMesh( mp, res.value(), map, sharpenParams );
     if ( !reportProgress( params.callBack, 0.99f ) )
         return unexpectedOperationCanceled();
 
     return res;
 }
 
-Expected<Mesh> generalOffsetMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters& params )
+Expected<Mesh> generalOffsetMesh( const MeshPart& mp, float offset, const GeneralOffsetParameters& params )
 {
     switch( params.mode )
     {
@@ -274,12 +274,12 @@ Expected<Mesh> generalOffsetMesh( const Mesh& mesh, float offset, const GeneralO
         [[fallthrough]];
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
     case GeneralOffsetParameters::Mode::Smooth:
-        return offsetMesh( mesh, offset, params );
+        return offsetMesh( mp, offset, params );
 #endif
     case GeneralOffsetParameters::Mode::Standard:
-        return mcOffsetMesh( mesh, offset, params );
+        return mcOffsetMesh( mp, offset, params );
     case GeneralOffsetParameters::Mode::Sharpening:
-        return sharpOffsetMesh( mesh, offset, params );
+        return sharpOffsetMesh( mp, offset, params );
     }
 }
 

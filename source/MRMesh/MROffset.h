@@ -68,7 +68,7 @@ struct SharpOffsetParameters : OffsetParameters
 
 /// Offsets mesh by converting it to distance field in voxels (using OpenVDB library if SignDetectionMode::OpenVDB or our implementation otherwise)
 /// and back using standard Marching Cubes, as opposed to Dual Marching Cubes in offsetMesh(...)
-[[nodiscard]] MRMESH_API Expected<Mesh> mcOffsetMesh( const Mesh& mesh, float offset, 
+[[nodiscard]] MRMESH_API Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset, 
     const OffsetParameters& params = {}, Vector<VoxelId, FaceId>* outMap = nullptr );
 
 /// Constructs a shell around selected mesh region with the properties that every point on the shall must
@@ -79,7 +79,7 @@ struct SharpOffsetParameters : OffsetParameters
 
 /// Offsets mesh by converting it to voxels and back
 /// post process result using reference mesh to sharpen features
-[[nodiscard]] MRMESH_API Expected<Mesh> sharpOffsetMesh( const Mesh& mesh, float offset, const SharpOffsetParameters& params = {} );
+[[nodiscard]] MRMESH_API Expected<Mesh> sharpOffsetMesh( const MeshPart& mp, float offset, const SharpOffsetParameters& params = {} );
 
 /// allows the user to select in the parameters which offset algorithm to call
 struct GeneralOffsetParameters : SharpOffsetParameters
@@ -96,7 +96,7 @@ struct GeneralOffsetParameters : SharpOffsetParameters
 };
 
 /// Offsets mesh by converting it to voxels and back using one of three modes specified in the parameters
-[[nodiscard]] MRMESH_API Expected<Mesh> generalOffsetMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters& params );
+[[nodiscard]] MRMESH_API Expected<Mesh> generalOffsetMesh( const MeshPart& mp, float offset, const GeneralOffsetParameters& params );
 
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 /// Offsets polyline by converting it to voxels and building iso-surface

@@ -428,8 +428,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
         "so result mesh is always closed" );
 
     m.def( "thickenMesh",
-         MR::decorateExpected( [] ( const MR::Mesh& mesh, float offset, MR::OffsetParameters params )
+         MR::decorateExpected( [] ( const MR::Mesh& mesh, float offset, const MR::OffsetParameters & params0 )
     {
+        MR::GeneralOffsetParameters params = { { params0 } };
         if ( params.voxelSize <= 0 )
             params.voxelSize = suggestVoxelSize( mesh, 5e6f );
         return MR::thickenMesh( mesh, offset, params );

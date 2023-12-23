@@ -54,12 +54,6 @@ struct SharpOffsetParameters : OffsetParameters
 /// so result mesh is always closed
 [[nodiscard]] MRMESH_API Expected<Mesh> offsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params = {} );
 
-/// in case of positive offset, returns the mesh consisting of offset mesh merged with inversed original mesh (thickening mode);
-/// in case of negative offset, returns the mesh consisting of inversed offset mesh merged with original mesh (hollowing mode);
-/// if your input mesh is closed then please specify params.type == Offset, and you will get closed mesh on output;
-/// if your input mesh is open then please specify params.type == Shell, and you will get open mesh on output
-[[nodiscard]] MRMESH_API Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const OffsetParameters & params = {} );
-
 /// Offsets mesh by converting it to voxels and back two times
 /// only closed meshes allowed (only Offset mode)
 /// typically offsetA and offsetB have distinct signs
@@ -97,6 +91,12 @@ struct GeneralOffsetParameters : SharpOffsetParameters
 
 /// Offsets mesh by converting it to voxels and back using one of three modes specified in the parameters
 [[nodiscard]] MRMESH_API Expected<Mesh> generalOffsetMesh( const MeshPart& mp, float offset, const GeneralOffsetParameters& params );
+
+/// in case of positive offset, returns the mesh consisting of offset mesh merged with inversed original mesh (thickening mode);
+/// in case of negative offset, returns the mesh consisting of inversed offset mesh merged with original mesh (hollowing mode);
+/// if your input mesh is closed then please specify params.signDetectionMode = SignDetectionMode::Unsigned, and you will get closed mesh on output;
+/// if your input mesh is open then please specify another sign detection mode, and you will get open mesh on output
+[[nodiscard]] MRMESH_API Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters & params = {} );
 
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 /// Offsets polyline by converting it to voxels and building iso-surface

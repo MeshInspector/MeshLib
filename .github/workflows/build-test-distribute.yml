@@ -40,6 +40,7 @@ jobs:
       docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
       app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    secrets: inherit
 
   ubuntu-arm64-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
@@ -48,6 +49,7 @@ jobs:
       docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
       app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    secrets: inherit
 
   ubuntu22-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
@@ -56,6 +58,7 @@ jobs:
       docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
       app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    secrets: inherit
 
   fedora-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
@@ -64,6 +67,7 @@ jobs:
       docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
       app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    secrets: inherit
 
   emscripten-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
@@ -71,6 +75,7 @@ jobs:
     with:
       docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    secrets: inherit
 
   macos-build-test:
     needs: [ versioning-and-release-url ]
@@ -78,6 +83,7 @@ jobs:
     with:
       app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    secrets: inherit
 
   update-win-version:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}

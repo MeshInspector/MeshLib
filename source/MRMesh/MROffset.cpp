@@ -94,11 +94,11 @@ Expected<Mesh> offsetMesh( const MeshPart & mp, float offset, const OffsetParame
     return newMesh;
 }
 
-Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const OffsetParameters& params )
+Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters& params )
 {
     MR_TIMER
     const bool unsignedOffset = params.signDetectionMode == SignDetectionMode::Unsigned;
-    auto res = offsetMesh( mesh, unsignedOffset ? std::abs( offset ) : offset, params );
+    auto res = generalOffsetMesh( mesh, unsignedOffset ? std::abs( offset ) : offset, params );
     if ( !res )
         return res;
 

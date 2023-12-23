@@ -94,56 +94,6 @@ Expected<Mesh> offsetMesh( const MeshPart & mp, float offset, const OffsetParame
     return newMesh;
 }
 
-Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters& params )
-{
-    MR_TIMER
-    const bool unsignedOffset = params.signDetectionMode == SignDetectionMode::Unsigned;
-    auto res = generalOffsetMesh( mesh, unsignedOffset ? std::abs( offset ) : offset, params );
-    if ( !res )
-        return res;
-
-    auto & resMesh = res.value();
-
-    if ( unsignedOffset )
-    {
-        // do not trust degenerate faces with huge aspect ratios
-        auto badFaces = findDegenerateFaces( mesh, 1000 ).value();
-        // do not trust only boundary degenerate faces (excluding touching the boundary only by short edge)
-        BitSetParallelFor( badFaces, [&] ( FaceId f )
-        {
-            float perimeter = 0;
-            float bdLen = 0;
-            for ( EdgeId e : leftRing( mesh.topology, f ) )
-            {
-                auto elen = mesh.edgeLength( e );
-                perimeter += elen;
-                if ( mesh.topology.isBdEdge( e ) )
-                    bdLen += elen;
-            }
-            if ( perimeter * 0.1f >= bdLen )
-                badFaces.reset( f );
-        } );
-        const auto goodFaces = mesh.topology.getValidFaces() - badFaces;
-
-        // for open input mesh, let us find only necessary portion on the shell
-        auto innerFaces = findInnerShellFacesWithSplits( MeshPart{ mesh, &goodFaces }, resMesh, offset > 0 ? Side::Positive : Side::Negative );
-        resMesh.topology.deleteFaces( resMesh.topology.getValidFaces() - innerFaces );
-        resMesh.pack();
-    }
-
-    if ( offset >= 0 )
-        resMesh.addPartByMask( mesh, mesh.topology.getValidFaces(), true ); // true = with flipping
-    else
-    {
-        if ( !unsignedOffset )
-            resMesh.topology.flipOrientation();
-        resMesh.addPart( mesh );
-    }
-
-    resMesh.invalidateCaches();
-    return res;
-}
-
 Expected<Mesh> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER
@@ -281,6 +231,56 @@ Expected<Mesh> generalOffsetMesh( const MeshPart& mp, float offset, const Genera
     case GeneralOffsetParameters::Mode::Sharpening:
         return sharpOffsetMesh( mp, offset, params );
     }
+}
+
+Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters& params )
+{
+    MR_TIMER
+    const bool unsignedOffset = params.signDetectionMode == SignDetectionMode::Unsigned;
+    auto res = generalOffsetMesh( mesh, unsignedOffset ? std::abs( offset ) : offset, params );
+    if ( !res )
+        return res;
+
+    auto & resMesh = res.value();
+
+    if ( unsignedOffset )
+    {
+        // do not trust degenerate faces with huge aspect ratios
+        auto badFaces = findDegenerateFaces( mesh, 1000 ).value();
+        // do not trust only boundary degenerate faces (excluding touching the boundary only by short edge)
+        BitSetParallelFor( badFaces, [&] ( FaceId f )
+        {
+            float perimeter = 0;
+            float bdLen = 0;
+            for ( EdgeId e : leftRing( mesh.topology, f ) )
+            {
+                auto elen = mesh.edgeLength( e );
+                perimeter += elen;
+                if ( mesh.topology.isBdEdge( e ) )
+                    bdLen += elen;
+            }
+            if ( perimeter * 0.1f >= bdLen )
+                badFaces.reset( f );
+        } );
+        const auto goodFaces = mesh.topology.getValidFaces() - badFaces;
+
+        // for open input mesh, let us find only necessary portion on the shell
+        auto innerFaces = findInnerShellFacesWithSplits( MeshPart{ mesh, &goodFaces }, resMesh, offset > 0 ? Side::Positive : Side::Negative );
+        resMesh.topology.deleteFaces( resMesh.topology.getValidFaces() - innerFaces );
+        resMesh.pack();
+    }
+
+    if ( offset >= 0 )
+        resMesh.addPartByMask( mesh, mesh.topology.getValidFaces(), true ); // true = with flipping
+    else
+    {
+        if ( !unsignedOffset )
+            resMesh.topology.flipOrientation();
+        resMesh.addPart( mesh );
+    }
+
+    resMesh.invalidateCaches();
+    return res;
 }
 
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )

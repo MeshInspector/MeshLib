@@ -1,5 +1,6 @@
 #include "MRPointToPointAligningTransform.h"
 #include "MRVector3.h"
+#include "MRSymMatrix3.h"
 #include "MRAffineXf3.h"
 #include "MRQuaternion.h"
 #include "MRToFromEigen.h"
@@ -21,7 +22,7 @@ PointToPointAligningTransform::PointToPointAligningTransform()
 
 inline Matrix4d calculateMatrixP( const Matrix4d & s )
 {
-    return
+    return //symmetric matrix
     {
         { s.x.x + s.y.y + s.z.z,    s.y.z - s.z.y,            s.z.x - s.x.z,            s.x.y - s.y.x },
         { s.y.z - s.z.y,            s.x.x - s.y.y - s.z.z,    s.x.y + s.y.x,            s.z.x + s.x.z },
@@ -30,17 +31,20 @@ inline Matrix4d calculateMatrixP( const Matrix4d & s )
     };
 }
 
-Matrix3d caluclate2DimensionsP( const Matrix4d& P, const Vector4d& d1, const Vector4d& d2 )
+SymMatrix3d caluclate2DimensionsP( const Matrix4d& P, const Vector4d& d1, const Vector4d& d2 )
 {
+    // P must be symmetric
     const auto p0 = P.col( 0 );
     const auto p1 = P * d1;
     const auto p2 = P * d2;
-    return
-    {
-        {          p0.x,          p1.x,          p2.x },
-        { dot( d1, p0 ), dot( d1, p1 ), dot( d1, p2 ) },
-        { dot( d2, p0 ), dot( d2, p1 ), dot( d2, p2 ) }
-    };
+    SymMatrix3d res;
+    res.xx = p0.x;
+    res.xy = p1.x;
+    res.xz = p2.x;
+    res.yy = dot( d1, p1 );
+    res.yz = dot( d1, p2 );
+    res.zz = dot( d2, p2 );
+    return res;
 }
 
 void PointToPointAligningTransform::add( const Vector3d& p1, const Vector3d& p2, double w /*= 1.0*/ )
@@ -134,18 +138,21 @@ AffineXf3d PointToPointAligningTransform::calculateOrthogonalAxisRotation( const
     const auto centroid2 = this->centroid2();
     const auto totalWeight = this->totalWeight();
 
-    Matrix4d s = summary_ - totalWeight * outer( vec4d( centroid1 ), vec4d( centroid2 ) );
-    Matrix4d p = calculateMatrixP( s );
+    const Matrix4d s = summary_ - totalWeight * outer( vec4d( centroid1 ), vec4d( centroid2 ) );
+    const Matrix4d p = calculateMatrixP( s );
 
-    auto [d1, d2] = ort.perpendicular();
-    Eigen::Matrix3d p2d = toEigen( caluclate2DimensionsP( p, Vector4d{0,d1[0],d1[1],d1[2]}, Vector4d{0,d2[0],d2[1],d2[2]} ) );
-    Eigen::Vector3d largestEigenVector = Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d>( p2d ).eigenvectors().col( 2 );
-    Quaterniond q =
-        Quaterniond{ 1,     0,     0,     0 } * largestEigenVector( 0 ) +
-        Quaterniond{ 0, d1[0], d1[1], d1[2] } * largestEigenVector( 1 ) +
-        Quaterniond{ 0, d2[0], d2[1], d2[2] } * largestEigenVector( 2 );
+    const auto [d1, d2] = ort.perpendicular();
+    const SymMatrix3d p2d = caluclate2DimensionsP( p, Vector4d{0,d1[0],d1[1],d1[2]}, Vector4d{0,d2[0],d2[1],d2[2]} );
 
-    Matrix3d r{q};
+    Matrix3d eigenvectors;
+    p2d.eigens( &eigenvectors );
+    const Vector3d largestEigenVector = eigenvectors.z;
+    const Quaterniond q =
+        Quaterniond{ 1,     0,     0,     0 } * largestEigenVector.x +
+        Quaterniond{ 0, d1[0], d1[1], d1[2] } * largestEigenVector.y +
+        Quaterniond{ 0, d2[0], d2[1], d2[2] } * largestEigenVector.z;
+
+    const Matrix3d r{ q };
     const auto shift = centroid2 - r * centroid1;
     return AffineXf3d( r, shift );
 }

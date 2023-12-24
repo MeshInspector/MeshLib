@@ -9,81 +9,69 @@
 namespace MR
 {
 
-static constexpr int X = 0;
-static constexpr int Y = 1;
-static constexpr int Z = 2;
-static constexpr int C = 3;
+static constexpr auto vec4d = []( const Vector3d& v )
+{
+    return Vector4d( v.x, v.y, v.z, 1 );
+};
 
 PointToPointAligningTransform::PointToPointAligningTransform()
+    : summary_( Matrix4d::zero() )
 {
-    summary.setZero();
 }
 
-inline Eigen::Matrix4d calculateMatrixP( const Eigen::Matrix4d & s )
+inline Matrix4d calculateMatrixP( const Matrix4d & s )
 {
-    Eigen::Matrix4d p;
-    p << s( X, X ) + s( Y, Y ) + s( Z, Z ),    s( Y, Z ) - s( Z, Y ),                s( Z, X ) - s( X, Z ),                s( X, Y ) - s( Y, X ),
-         s( Y, Z ) - s( Z, Y ),                s( X, X ) - s( Y, Y ) - s( Z, Z ),    s( X, Y ) + s( Y, X ),                s( Z, X ) + s( X, Z ),
-         s( Z, X ) - s( X, Z ),                s( X, Y ) + s( Y, X ),                s( Y, Y ) - s( X, X ) - s( Z, Z ),    s( Y, Z ) + s( Z, Y ),
-         s( X, Y ) - s( Y, X ),                s( Z, X ) + s( X, Z ),                s( Y, Z ) + s( Z, Y ),                s( Z, Z ) - s( X, X ) - s( Y, Y );
-
-    return p;
+    return
+    {
+        { s.x.x + s.y.y + s.z.z,    s.y.z - s.z.y,            s.z.x - s.x.z,            s.x.y - s.y.x },
+        { s.y.z - s.z.y,            s.x.x - s.y.y - s.z.z,    s.x.y + s.y.x,            s.z.x + s.x.z },
+        { s.z.x - s.x.z,            s.x.y + s.y.x,            s.y.y - s.x.x - s.z.z,    s.y.z + s.z.y },
+        { s.x.y - s.y.x,            s.z.x + s.x.z,            s.y.z + s.z.y,            s.z.z - s.x.x - s.y.y }
+    };
 }
 
-Eigen::Matrix3d caluclate2DimensionsP( const Eigen::Matrix4d& P, const Eigen::Vector4d& d1, const Eigen::Vector4d& d2 )
+Matrix3d caluclate2DimensionsP( const Matrix4d& P, const Vector4d& d1, const Vector4d& d2 )
 {
-    Eigen::Matrix3d twoDimsP;
-    const Eigen::Vector4d d0 = Eigen::Vector4d::Identity();
-    const auto d0T = d0.transpose();
-    const auto d1T = d1.transpose();
-    const auto d2T = d2.transpose();
-    twoDimsP <<
-        d0T* P* d0, d0T* P* d1, d0T* P* d2,
-        d1T* P* d0, d1T* P* d1, d1T* P* d2,
-        d2T* P* d0, d2T* P* d1, d2T* P* d2;
-    
-    return twoDimsP;
+    const auto p0 = P.col( 0 );
+    const auto p1 = P * d1;
+    const auto p2 = P * d2;
+    return
+    {
+        {          p0.x,          p1.x,          p2.x },
+        { dot( d1, p0 ), dot( d1, p1 ), dot( d1, p2 ) },
+        { dot( d2, p0 ), dot( d2, p1 ), dot( d2, p2 ) }
+    };
 }
 
 void PointToPointAligningTransform::add( const Vector3d& p1, const Vector3d& p2, double w /*= 1.0*/ )
 {
-    auto VectorInColumn = []( const Vector3d& v )
-    {
-        return Eigen::Matrix<double, 4, 1>( v.x, v.y, v.z, 1);
-    };
-
-    summary += w * (VectorInColumn( p1 ) * VectorInColumn( p2 ).transpose());
+    summary_ += w *  outer( vec4d( p1 ), vec4d( p2 ) );
 }
 
 
 void PointToPointAligningTransform::add( const PointToPointAligningTransform & other )
 {
-    summary += other.summary;
+    summary_ += other.summary_;
 }
 
 
 void PointToPointAligningTransform::clear()
 {
-    summary.setZero();
+    summary_ = Matrix4d::zero();
 }
 
 Vector3d PointToPointAligningTransform::centroid1() const
 {
-    Vector3d res{ summary( X, C ), summary( Y, C ), summary( Z, C ) };
+    Vector3d res{ summary_.x.w, summary_.y.w, summary_.z.w };
     res /= totalWeight();
     return res;
 }
 
 Vector3d PointToPointAligningTransform::centroid2() const
 {
-    Vector3d res{ summary( C, X ), summary( C, Y ), summary( C, Z ) };
+    Vector3d res{ summary_.w.x, summary_.w.y, summary_.w.z };
     res /= totalWeight();
     return res;
-}
-
-double PointToPointAligningTransform::totalWeight() const
-{
-    return summary( C, C );
 }
 
 AffineXf3d PointToPointAligningTransform::calculateTransformationMatrix() const
@@ -94,10 +82,10 @@ AffineXf3d PointToPointAligningTransform::calculateTransformationMatrix() const
     const auto centroid2 = this->centroid2();
     const auto totalWeight = this->totalWeight();
 
-    Eigen::Matrix4d s = summary - totalWeight * toEigen( centroid1, 1.0 ) * toEigen( centroid2, 1.0 ).transpose();
-    Eigen::Matrix4d p = calculateMatrixP( s );
+    Matrix4d s = summary_ - totalWeight * outer( vec4d( centroid1 ), vec4d( centroid2 ) );
+    Matrix4d p = calculateMatrixP( s );
 
-    Eigen::Vector4d largestEigenVector = Eigen::SelfAdjointEigenSolver<Eigen::Matrix4d>( p ).eigenvectors().col( 3 );
+    Eigen::Vector4d largestEigenVector = Eigen::SelfAdjointEigenSolver<Eigen::Matrix4d>( toEigen( p ) ).eigenvectors().col( 3 );
     Quaterniond q( largestEigenVector[0], largestEigenVector[1], largestEigenVector[2], largestEigenVector[3] );
     Matrix3d r{ q };
     const auto shift = centroid2 - r * centroid1;
@@ -113,24 +101,23 @@ AffineXf3d PointToPointAligningTransform::calculateFixedAxisRotation( const Vect
     const auto centroid2 = this->centroid2();
     const auto totalWeight = this->totalWeight();
 
-    const Eigen::Matrix4d s = summary - totalWeight * toEigen( centroid1, 1.0 ) * toEigen( centroid2, 1.0 ).transpose();
-
+    const Matrix4d s = summary_ - totalWeight * outer( vec4d( centroid1 ), vec4d( centroid2 ) );
     const auto k = axis.normalized();
 
     // a = sum_i( dot( p2_i, cross( k, cross( k, p1_i ) ) )
     const auto a =
-        ( k.x * k.x - 1 ) * s( X, X ) +
-        ( k.y * k.y - 1 ) * s( Y, Y ) +
-        ( k.z * k.z - 1 ) * s( Z, Z ) +
-        ( k.x * k.y ) * ( s( X, Y ) + s( Y, X ) ) +
-        ( k.x * k.z ) * ( s( X, Z ) + s( Z, X ) ) +
-        ( k.y * k.z ) * ( s( Y, Z ) + s( Z, Y ) );
+        ( k.x * k.x - 1 ) * s.x.x +
+        ( k.y * k.y - 1 ) * s.y.y +
+        ( k.z * k.z - 1 ) * s.z.z +
+        ( k.x * k.y ) * ( s.x.y + s.y.x ) +
+        ( k.x * k.z ) * ( s.x.z + s.z.x ) +
+        ( k.y * k.z ) * ( s.y.z + s.z.y );
 
     // b = dot( k, sum_i cross( p1_i, p2_i ) )
     const auto b = 
-        k.x * ( s( Y, Z ) - s( Z, Y ) ) +
-        k.y * ( s( Z, X ) - s( X, Z ) ) +
-        k.z * ( s( X, Y ) - s( Y, X ) );
+        k.x * ( s.y.z - s.z.y ) +
+        k.y * ( s.z.x - s.x.z ) +
+        k.z * ( s.x.y - s.y.x );
 
     const auto phi = atan2( b, -a );
 
@@ -147,15 +134,16 @@ AffineXf3d PointToPointAligningTransform::calculateOrthogonalAxisRotation( const
     const auto centroid2 = this->centroid2();
     const auto totalWeight = this->totalWeight();
 
-    Eigen::Matrix4d s = summary - totalWeight * toEigen( centroid1, 1.0 ) * toEigen( centroid2, 1.0 ).transpose();
-    Eigen::Matrix4d p = calculateMatrixP( s );
+    Matrix4d s = summary_ - totalWeight * outer( vec4d( centroid1 ), vec4d( centroid2 ) );
+    Matrix4d p = calculateMatrixP( s );
 
     auto [d1, d2] = ort.perpendicular();
-
-    Eigen::Matrix3d p2d = caluclate2DimensionsP( p, Eigen::Vector4d{0,d1[0],d1[1],d1[2]}, Eigen::Vector4d{0,d2[0],d2[1],d2[2]} );
-
+    Eigen::Matrix3d p2d = toEigen( caluclate2DimensionsP( p, Vector4d{0,d1[0],d1[1],d1[2]}, Vector4d{0,d2[0],d2[1],d2[2]} ) );
     Eigen::Vector3d largestEigenVector = Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d>( p2d ).eigenvectors().col( 2 );
-    Quaterniond q = Quaterniond{1,0,0,0}*largestEigenVector( 0 ) + Quaterniond{0,d1[0],d1[1],d1[2]}*largestEigenVector( 1 ) + Quaterniond{0,d2[0],d2[1],d2[2]}*largestEigenVector( 2 );
+    Quaterniond q =
+        Quaterniond{ 1,     0,     0,     0 } * largestEigenVector( 0 ) +
+        Quaterniond{ 0, d1[0], d1[1], d1[2] } * largestEigenVector( 1 ) +
+        Quaterniond{ 0, d2[0], d2[1], d2[2] } * largestEigenVector( 2 );
 
     Matrix3d r{q};
     const auto shift = centroid2 - r * centroid1;

@@ -216,7 +216,7 @@
     <ClInclude Include="MRAlignTextToMesh.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
-    <ClInclude Include="MRAligningTransform.h">
+    <ClInclude Include="MRPointToPlaneAligningTransform.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
     <ClInclude Include="miniply.h">
@@ -1119,6 +1119,12 @@
     <ClInclude Include="MRObjectSave.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRPointToPointAligningTransform.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAligningTransform.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1187,7 +1193,7 @@
     <ClCompile Include="MRVoxelPath.cpp">
       <Filter>Source Files\Voxels</Filter>
     </ClCompile>
-    <ClCompile Include="MRAligningTransform.cpp">
+    <ClCompile Include="MRPointToPlaneAligningTransform.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="miniply.cpp">
@@ -1867,6 +1873,9 @@
     </ClCompile>
     <ClCompile Include="MRObjectSave.cpp">
       <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointToPointAligningTransform.cpp">
+      <Filter>Source Files\Math</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

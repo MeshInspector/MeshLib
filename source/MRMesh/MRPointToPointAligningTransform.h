@@ -20,11 +20,11 @@ public:
     MRMESH_API PointToPointAligningTransform();
 
     /// Add one pair of points in the set.
-    [[nodiscard]] MRMESH_API void add( const Vector3d& p1, const Vector3d& p2, double w = 1.0 );
+    MRMESH_API void add( const Vector3d& p1, const Vector3d& p2, double w = 1.0 );
     /// Add another two sets of points.
-    [[nodiscard]] MRMESH_API void add( const PointToPointAligningTransform & other );
+    MRMESH_API void add( const PointToPointAligningTransform & other );
     /// Clear sets.
-    [[nodiscard]] MRMESH_API void clear();
+    MRMESH_API void clear();
 
     /// returns weighted centroid of points p1 accumulated so far
     [[nodiscard]] MRMESH_API Vector3d centroid1() const;

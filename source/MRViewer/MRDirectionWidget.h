@@ -12,13 +12,18 @@ namespace MR
 
 class MRVIEWER_CLASS DirectionWidget : public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener>
 {
+public:
+    using OnDirectionChangedCallback = std::function<void( const Vector3f& )>;
+
+private:
     std::shared_ptr<ObjectMesh> directionObj_;
-    Vector3f& dir_;
+    Vector3f dir_;
     Vector3f base_;
     float length_;
     bool mousePressed_ = false;
     Vector3f worldStartPoint_;
     float viewportStartPointZ_{ 0.0f };
+    OnDirectionChangedCallback onDirectionChanged_;
 
     class ChangeDirAction : public ChangeXfAction
     {
@@ -43,7 +48,7 @@ class MRVIEWER_CLASS DirectionWidget : public MultiListener<MouseDownListener, M
 
 public:
 
-    MRVIEWER_API DirectionWidget( const Vector3f& dir, const Vector3f& base, float length );
+    MRVIEWER_API DirectionWidget( const Vector3f& dir, const Vector3f& base, float length, OnDirectionChangedCallback onDirectionChanged );
     MRVIEWER_API ~DirectionWidget();
     MRVIEWER_API void updateDirection( const Vector3f& dir, bool needHistUpdate );
     MRVIEWER_API void updateArrow( const Vector3f& base, float length );

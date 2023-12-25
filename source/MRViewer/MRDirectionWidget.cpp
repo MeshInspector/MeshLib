@@ -9,9 +9,10 @@
 
 namespace MR
 {
-    DirectionWidget::DirectionWidget( const Vector3f& dir, const Vector3f& base, float length )
+    DirectionWidget::DirectionWidget( const Vector3f& dir, const Vector3f& base, float length, OnDirectionChangedCallback onDirectionChanged )
     : base_( base )
     , length_( length )
+    , onDirectionChanged_( onDirectionChanged )
     {
         connect( &getViewerInstance(), 10, boost::signals2::at_front );
         updateDirection( dir, false );
@@ -99,10 +100,11 @@ namespace MR
         auto viewer = Viewer::instance();
         const auto viewportEnd = viewer->screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewer->viewport().id );
         const auto worldEndPoint = viewer->viewport().unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
-        auto shift = worldEndPoint - worldStartPoint_;
-        shift = directionObj_->worldXf().A.inverse() * shift;
+        const auto newDir = worldEndPoint - base_;
+        updateDirection( newDir, false );
+        if ( onDirectionChanged_ )
+            onDirectionChanged_( newDir );
 
-        updateDirection( worldEndPoint - base_, false );
         return true;
     }
 

@@ -176,8 +176,8 @@ struct CustomStatePluginWindowParameters
     float width{ 0.0f };
     /// window height, usually calculated internally (if value is zero)
     float height{ 0.0f };
-    /// if this parameter set, window located on bottom part of viewport
-    bool isDown{ false };
+    /// start Position
+    std::optional<ImVec2>* position{ nullptr };
     /// menu scaling, needed to proper scaling of internal window parts
     float menuScaling{ 1.0f };
     /// window flags, ImGuiWindowFlags_NoScrollbar and ImGuiWindow_NoScrollingWithMouse are forced inside `BeginCustomStatePlugin` function

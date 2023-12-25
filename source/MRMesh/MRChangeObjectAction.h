@@ -18,7 +18,14 @@ public:
         obj_{ obj },
         name_{name}
     {
-        cloneObj_ = obj->clone();
+        if ( obj )
+        {
+            cloneObj_ = obj->clone();
+
+            /// do not save ClippedByPlane property in Undo, TODO move the login in SectionPlugin
+            if ( auto visObj = cloneObj_->asType<VisualObject>() )
+                visObj->setVisualizeProperty( false, MeshVisualizePropertyType::ClippedByPlane, ViewportMask::all() );
+        }
     }
 
     virtual std::string name() const override { return name_; }
@@ -35,6 +42,11 @@ public:
             child->detachFromParent();
             cloneObj_->addChild( child );
         }
+
+        /// do not save ClippedByPlane property in Undo, TODO move the login in SectionPlugin
+        if ( auto visObj = obj->asType<VisualObject>() )
+            visObj->setVisualizeProperty( false, MeshVisualizePropertyType::ClippedByPlane, ViewportMask::all() );
+
         obj->swap( *cloneObj_ );
         if ( auto visObj = obj->asType<VisualObject>() )
             visObj->setDirtyFlags( DIRTY_ALL );

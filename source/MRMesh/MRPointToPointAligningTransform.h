@@ -2,7 +2,6 @@
 
 #include "MRMeshFwd.h"
 #include "MRAffineXf3.h"
-#include "MRMatrix4.h"
 
 namespace MR
 {
@@ -16,22 +15,19 @@ namespace MR
 class PointToPointAligningTransform
 {
 public:
-    /// Default constructor
-    MRMESH_API PointToPointAligningTransform();
-
     /// Add one pair of points in the set.
     MRMESH_API void add( const Vector3d& p1, const Vector3d& p2, double w = 1.0 );
     /// Add another two sets of points.
     MRMESH_API void add( const PointToPointAligningTransform & other );
     /// Clear sets.
-    MRMESH_API void clear();
+    void clear() { *this = {}; }
 
     /// returns weighted centroid of points p1 accumulated so far
-    [[nodiscard]] MRMESH_API Vector3d centroid1() const;
+    [[nodiscard]] Vector3d centroid1() const { return sum1_ / sumW_; }
     /// returns weighted centroid of points p2 accumulated so far
-    [[nodiscard]] MRMESH_API Vector3d centroid2() const;
+    [[nodiscard]] Vector3d centroid2() const { return sum2_ / sumW_; }
     /// returns summed weight of points accumulated so far
-    [[nodiscard]] double totalWeight() const { return summary_.w.w; }
+    [[nodiscard]] double totalWeight() const { return sumW_; }
 
     /// Compute transformation as the solution to a least squares formulation of the problem:
     /// xf( p1_i ) = p2_i
@@ -44,7 +40,9 @@ public:
     [[nodiscard]] MRMESH_API Vector3d calculateTranslation() const;
 
 private:
-    Matrix4d summary_;
+    Matrix3d sum12_ = Matrix3d::zero();
+    Vector3d sum1_, sum2_;
+    double sumW_ = 0;
 };
 
 /// \}

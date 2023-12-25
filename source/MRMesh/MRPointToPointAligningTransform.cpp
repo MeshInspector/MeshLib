@@ -1,7 +1,7 @@
 #include "MRPointToPointAligningTransform.h"
 #include "MRVector3.h"
 #include "MRSymMatrix3.h"
-#include "MRAffineXf3.h"
+#include "MRMatrix4.h"
 #include "MRQuaternion.h"
 #include "MRToFromEigen.h"
 #include "MRGTest.h"
@@ -10,17 +10,7 @@
 namespace MR
 {
 
-static constexpr auto vec4d = []( const Vector3d& v )
-{
-    return Vector4d( v.x, v.y, v.z, 1 );
-};
-
-PointToPointAligningTransform::PointToPointAligningTransform()
-    : summary_( Matrix4d::zero() )
-{
-}
-
-inline Matrix4d calculateMatrixP( const Matrix4d & s )
+inline Matrix4d calculateMatrixP( const Matrix3d & s )
 {
     return //symmetric matrix
     {
@@ -49,33 +39,18 @@ SymMatrix3d caluclate2DimensionsP( const Matrix4d& P, const Vector4d& d1, const 
 
 void PointToPointAligningTransform::add( const Vector3d& p1, const Vector3d& p2, double w /*= 1.0*/ )
 {
-    summary_ += w *  outer( vec4d( p1 ), vec4d( p2 ) );
+    sum12_ += w * outer( p1, p2 );
+    sum1_ += w * p1;
+    sum2_ += w * p2;
+    sumW_ += w;
 }
-
 
 void PointToPointAligningTransform::add( const PointToPointAligningTransform & other )
 {
-    summary_ += other.summary_;
-}
-
-
-void PointToPointAligningTransform::clear()
-{
-    summary_ = Matrix4d::zero();
-}
-
-Vector3d PointToPointAligningTransform::centroid1() const
-{
-    Vector3d res{ summary_.x.w, summary_.y.w, summary_.z.w };
-    res /= totalWeight();
-    return res;
-}
-
-Vector3d PointToPointAligningTransform::centroid2() const
-{
-    Vector3d res{ summary_.w.x, summary_.w.y, summary_.w.z };
-    res /= totalWeight();
-    return res;
+    sum12_ += other.sum12_;
+    sum1_ += other.sum1_;
+    sum2_ += other.sum2_;
+    sumW_ += other.sumW_;
 }
 
 AffineXf3d PointToPointAligningTransform::calculateTransformationMatrix() const
@@ -86,7 +61,7 @@ AffineXf3d PointToPointAligningTransform::calculateTransformationMatrix() const
     const auto centroid2 = this->centroid2();
     const auto totalWeight = this->totalWeight();
 
-    Matrix4d s = summary_ - totalWeight * outer( vec4d( centroid1 ), vec4d( centroid2 ) );
+    Matrix3d s = sum12_ - totalWeight * outer( centroid1, centroid2 );
     Matrix4d p = calculateMatrixP( s );
 
     Eigen::Vector4d largestEigenVector = Eigen::SelfAdjointEigenSolver<Eigen::Matrix4d>( toEigen( p ) ).eigenvectors().col( 3 );
@@ -105,7 +80,7 @@ AffineXf3d PointToPointAligningTransform::calculateFixedAxisRotation( const Vect
     const auto centroid2 = this->centroid2();
     const auto totalWeight = this->totalWeight();
 
-    const Matrix4d s = summary_ - totalWeight * outer( vec4d( centroid1 ), vec4d( centroid2 ) );
+    const Matrix3d s = sum12_ - totalWeight * outer( centroid1, centroid2 );
     const auto k = axis.normalized();
 
     // a = sum_i( dot( p2_i, cross( k, cross( k, p1_i ) ) )
@@ -138,7 +113,7 @@ AffineXf3d PointToPointAligningTransform::calculateOrthogonalAxisRotation( const
     const auto centroid2 = this->centroid2();
     const auto totalWeight = this->totalWeight();
 
-    const Matrix4d s = summary_ - totalWeight * outer( vec4d( centroid1 ), vec4d( centroid2 ) );
+    const Matrix3d s = sum12_ - totalWeight * outer( centroid1, centroid2 );
     const Matrix4d p = calculateMatrixP( s );
 
     const auto [d1, d2] = ort.perpendicular();

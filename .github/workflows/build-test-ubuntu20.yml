@@ -80,7 +80,7 @@ jobs:
       - name: Copy autotests data for Python tests from s3
         uses: keithweaver/aws-s3-github-action@v1.0.0
         with:
-          command: sync
+          command: cp
           source: s3://data-autotest/test_data
           destination: .\test_data
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}

@@ -14,7 +14,7 @@ namespace MR
 
 constexpr float NoAngleChangeLimit = 2 * PI_F;
 
-bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float maxAngleChange )
+bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange )
 {
     const auto dirABD = dirDblArea( a, b, d );
     const auto dirDBC = dirDblArea( d, b, c );
@@ -37,8 +37,14 @@ bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f
     auto metricBD = std::max( circumcircleDiameterSq( b, d, a ), circumcircleDiameterSq( d, b, c ) );
 
     // there should be significant difference in metrics (above floating point error) to return false
-    constexpr float eps = 1e-4f; // 1e-5 was too small here and did not prevent infinite loop during resolveMeshDegenerations
+    constexpr double eps = 1e-7; // when we computed in floats then even 1e-5f was too small here and did not prevent infinite loop during resolveMeshDegenerations
     return metricAC <= metricBD + eps * ( metricAC + metricBD ); // this shall work even if metricAC and metricBD are infinities, unlike ( metricAC - metricBD ), which becomes NaN
+}
+
+bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float maxAngleChange )
+{
+    // the computation of circumcircle diameter in floats for near-degenerate triangles has too large rounding error
+    return checkDeloneQuadrangle( Vector3d( a ), Vector3d( b ), Vector3d( c ), Vector3d( d ), double( maxAngleChange ) );
 }
 
 bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings, float * deviationSqAfterFlip )

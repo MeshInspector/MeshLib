@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRAligningTransform.h" />
     <ClInclude Include="MRChangeValue.h" />
     <ClInclude Include="MRInTreePathBuilder.h" />
     <ClInclude Include="MRChangeColoringType.h" />
@@ -153,6 +154,8 @@
     <ClInclude Include="MRPointCloudTriangulation.h" />
     <ClInclude Include="MRPointCloudTriangulationHelpers.h" />
     <ClInclude Include="MRPointObject.h" />
+    <ClInclude Include="MRPointToPlaneAligningTransform.h" />
+    <ClInclude Include="MRPointToPointAligningTransform.h" />
     <ClInclude Include="MRPolyline.h" />
     <ClInclude Include="MRPolyline2Collide.h" />
     <ClInclude Include="MRPolyline2Intersect.h" />
@@ -295,7 +298,6 @@
     <ClInclude Include="MRMatrix3.h" />
     <ClInclude Include="MRMesh.h" />
     <ClInclude Include="MRAlignTextToMesh.h" />
-    <ClInclude Include="MRAligningTransform.h" />
     <ClInclude Include="MRMeshBoundary.h" />
     <ClInclude Include="MRMeshDelete.h" />
     <ClInclude Include="MRMeshDelone.h" />
@@ -480,6 +482,8 @@
     <ClCompile Include="MRPointsInBall.cpp" />
     <ClCompile Include="MRPointsLoad.cpp" />
     <ClCompile Include="MRPointsSave.cpp" />
+    <ClCompile Include="MRPointToPlaneAligningTransform.cpp" />
+    <ClCompile Include="MRPointToPointAligningTransform.cpp" />
     <ClCompile Include="MRPolyline.cpp" />
     <ClCompile Include="MRPolyline2Collide.cpp" />
     <ClCompile Include="MRPolyline2Intersect.cpp" />
@@ -560,7 +564,6 @@
     <ClCompile Include="MRMarchingCubes.cpp" />
     <ClCompile Include="MRVoxelsLoad.cpp" />
     <ClCompile Include="MRMesh.cpp" />
-    <ClCompile Include="MRAligningTransform.cpp" />
     <ClCompile Include="MRMeshBoundary.cpp" />
     <ClCompile Include="MRMeshBuildDeleteTest.cpp" />
     <ClCompile Include="MRMeshDelete.cpp" />

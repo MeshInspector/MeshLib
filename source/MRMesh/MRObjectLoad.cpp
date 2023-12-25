@@ -255,6 +255,20 @@ Expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObjectVoxe
 }
 #endif
 
+static std::string makeWarningString( int skippedFaceCount, int duplicatedVertexCount )
+{
+    std::string res;
+    if ( skippedFaceCount )
+        res = fmt::format( "{} triangles were skipped as inconsistent with others.", skippedFaceCount );
+    if ( duplicatedVertexCount )
+    {
+        if ( !res.empty() )
+            res += '\n';
+        res += fmt::format( "{} vertices were duplicated to make them manifold.", duplicatedVertexCount );
+    }
+    return res;
+}
+
 Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFile( const std::filesystem::path& filename,
                                                                                     std::string* loadWarn, ProgressCallback callback )
 {
@@ -309,12 +323,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
             result = objects;
 
             if ( loadWarn )
-            {
-                if ( skippedFaceCount )
-                    *loadWarn = fmt::format( "Skipped faces count: {}", skippedFaceCount );
-                if ( duplicatedVertexCount )
-                    *loadWarn += fmt::format( "{}Duplicated vertices count: {}", loadWarn->empty() ? "" : "\n", duplicatedVertexCount );
-            }
+                *loadWarn = makeWarningString( skippedFaceCount, duplicatedVertexCount );
         }
         else
             result = unexpected( res.error() );
@@ -350,12 +359,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
             (*object)->select( true );
             result = { *object };
             if ( loadWarn )
-            {
-                if ( skippedFaceCount )
-                    *loadWarn = fmt::format( "Skipped faces count: {}", skippedFaceCount );
-                if ( duplicatedVertexCount )
-                    *loadWarn += fmt::format( "{}Duplicated vertices count: {}", loadWarn->empty() ? "" : "\n", duplicatedVertexCount );
-            }
+                *loadWarn = makeWarningString( skippedFaceCount, duplicatedVertexCount );
         }
         else if ( object.error() == "Loading canceled" )
         {

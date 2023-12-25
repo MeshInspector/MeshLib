@@ -51,6 +51,8 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
     obj_->setAncillaryUVCoords( uvs_ );
 
     initConnections_();
+    mousePressed_ = false;
+    mousePos_ = { -1, -1 };
 }
 
 void SurfaceManipulationWidget::reset()
@@ -58,6 +60,7 @@ void SurfaceManipulationWidget::reset()
     oldMesh_.reset();
 
     obj_->clearAncillaryTexture();
+    obj_->setPickable( true );
     obj_.reset();
 
     singleEditingRegion_.clear();
@@ -70,6 +73,7 @@ void SurfaceManipulationWidget::reset()
     uvs_ = {};
 
     resetConnections_();
+    mousePressed_ = false;
 }
 
 void SurfaceManipulationWidget::setSettings( const Settings& settings )
@@ -114,7 +118,15 @@ bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*
         oldMesh_ = std::dynamic_pointer_cast< ObjectMesh >( obj_->clone() );
         oldMesh_->setAncillary( true );
         obj_->setPickable( false );
-        AppendHistory<ChangeMeshAction>( "Edit mesh surface", obj_ );
+        appendHistoryAction_ = true;
+        std::string name = "Brush: ";
+        if ( settings_.workMode == WorkMode::Add )
+            name += "Add";
+        else if ( settings_.workMode == WorkMode::Remove )
+            name += "Remove";
+        else if ( settings_.workMode == WorkMode::Relax )
+            name += "Smooth";
+        historyAction_ = std::make_shared<ChangeMeshAction>( name, obj_ );
         changeSurface_();
     }
 
@@ -186,7 +198,8 @@ void SurfaceManipulationWidget::postDraw_()
         return;
 
     auto drawList = ImGui::GetBackgroundDrawList();
-    drawList->AddCircleFilled( ImVec2( mousePos_.x, mousePos_.y ), 10.f, Color::gray().getUInt32() );
+    const auto& mousePos = Vector2f( getViewerInstance().mouseController().getMousePos() );
+    drawList->AddCircleFilled( ImVec2( mousePos.x, mousePos.y ), 10.f, Color::gray().getUInt32() );
 }
 
 void SurfaceManipulationWidget::initConnections_()
@@ -219,6 +232,12 @@ void SurfaceManipulationWidget::changeSurface_()
 {
     if ( !singleEditingRegion_.any() || badRegion_ )
         return;
+
+    if ( appendHistoryAction_ )
+    {
+        appendHistoryAction_ = false;
+        AppendHistory( std::move( historyAction_ ) );
+    }
 
     MR_TIMER;
 
@@ -362,6 +381,7 @@ void SurfaceManipulationWidget::abortEdit_()
     oldMesh_.reset();
     obj_->setPickable( true );
     obj_->clearAncillaryTexture();
+    appendHistoryAction_ = false;
     historyAction_.reset();
 }
 
@@ -374,7 +394,7 @@ void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
     touchVertIniPos_ = mesh.points[touchVertId_];
     laplacian_ = std::make_unique<Laplacian>( *obj_->varMesh() );
     laplacian_->init( singleEditingRegion_, settings_.edgeWeights );
-    historyAction_ = std::make_shared<ChangeMeshAction>( "Laplacian", obj_ );
+    historyAction_ = std::make_shared<ChangeMeshAction>( "Brush: Laplacian", obj_ );
 }
 
 void SurfaceManipulationWidget::laplacianMoveVert_( const Vector2f& mousePos )
@@ -398,6 +418,7 @@ void SurfaceManipulationWidget::updateVizualizeSelection_( const ObjAndPick& obj
     auto objMeshPtr = oldMesh_ ? oldMesh_ : obj_;
     const auto& mesh = *objMeshPtr->mesh();
     visualizationRegion_.reset();
+    badRegion_ = false;
     if ( objAndPick.first == objMeshPtr )
     {
         PointOnFace pOnFace{ objAndPick.second.face, objAndPick.second.point };

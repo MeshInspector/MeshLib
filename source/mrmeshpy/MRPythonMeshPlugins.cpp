@@ -413,6 +413,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
             "if value is not positive, it is calculated automatically (mesh bounding box is divided to 5e6 voxels)" ).
         def_readwrite( "signDetectionMode", &MR::OffsetParameters::signDetectionMode, "The method to compute distance sign" );
 
+    m.def( "suggestVoxelSize", &MR::suggestVoxelSize, pybind11::arg( "mp" ), pybind11::arg( "approxNumVoxels" ), "computes size of a cubical voxel to get approximately given number of voxels during rasterization" );
+
     m.def( "offsetMesh",
         MR::decorateExpected( []( const MR::MeshPart & mp, float offset, MR::OffsetParameters params )
             {
@@ -424,6 +426,20 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
         "Offsets mesh by converting it to voxels and back\n"
         "use Shell type for non closed meshes\n"
         "so result mesh is always closed" );
+
+    m.def( "thickenMesh",
+         MR::decorateExpected( [] ( const MR::Mesh& mesh, float offset, const MR::OffsetParameters & params0 )
+    {
+        MR::GeneralOffsetParameters params = { { params0 } };
+        if ( params.voxelSize <= 0 )
+            params.voxelSize = suggestVoxelSize( mesh, 5e6f );
+        return MR::thickenMesh( mesh, offset, params );
+    } ),
+        pybind11::arg( "mesh" ), pybind11::arg( "offset" ), pybind11::arg( "params" ) = MR::OffsetParameters{},
+        "in case of positive offset, returns the mesh consisting of offset mesh merged with inversed original mesh (thickening mode);\n"
+        "in case of negative offset, returns the mesh consisting of inversed offset mesh merged with original mesh (hollowing mode);\n"
+        "if your input mesh is closed then please specify params.type == Offset, and you will get closed mesh on output;\n"
+        "if your input mesh is open then please specify params.type == Shell, and you will get open mesh on output" );
 
 })
 #endif

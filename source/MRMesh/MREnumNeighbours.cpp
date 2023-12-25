@@ -39,7 +39,7 @@ VertScalars computeSpaceDistances( const Mesh& mesh, const PointOnFace & start, 
 {
     MR_TIMER
 
-    VertScalars res( mesh.topology.faceSize(), FLT_MAX );
+    VertScalars res( mesh.topology.vertSize(), FLT_MAX );
     EnumNeihbourVertices e;
     e.run( mesh.topology, mesh.getClosestVertex( start ), [&]( VertId v )
     {
@@ -55,7 +55,7 @@ VertBitSet findNeighborVerts( const Mesh& mesh, const PointOnFace& start, float 
 {
     MR_TIMER
 
-    VertBitSet res( mesh.topology.faceSize() );
+    VertBitSet res( mesh.topology.vertSize() );
     EnumNeihbourVertices e;
     e.run( mesh.topology, mesh.getClosestVertex( start ), [&] ( VertId v )
     {

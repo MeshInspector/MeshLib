@@ -1,7 +1,7 @@
 #include "MRPointToPointAligningTransform.h"
 #include "MRVector3.h"
 #include "MRSymMatrix3.h"
-#include "MRAffineXf3.h"
+#include "MRMatrix4.h"
 #include "MRQuaternion.h"
 #include "MRToFromEigen.h"
 #include "MRGTest.h"
@@ -10,17 +10,7 @@
 namespace MR
 {
 
-static constexpr auto vec4d = []( const Vector3d& v )
-{
-    return Vector4d( v.x, v.y, v.z, 1 );
-};
-
-PointToPointAligningTransform::PointToPointAligningTransform()
-    : summary_( Matrix4d::zero() )
-{
-}
-
-inline Matrix4d calculateMatrixP( const Matrix4d & s )
+inline Matrix4d calculateMatrixP( const Matrix3d & s )
 {
     return //symmetric matrix
     {
@@ -49,40 +39,25 @@ SymMatrix3d caluclate2DimensionsP( const Matrix4d& P, const Vector4d& d1, const 
 
 void PointToPointAligningTransform::add( const Vector3d& p1, const Vector3d& p2, double w /*= 1.0*/ )
 {
-    summary_ += w *  outer( vec4d( p1 ), vec4d( p2 ) );
+    sum12_ += w * outer( p1, p2 );
+    sum1_ += w * p1;
+    sum2_ += w * p2;
+    sumW_ += w;
 }
-
 
 void PointToPointAligningTransform::add( const PointToPointAligningTransform & other )
 {
-    summary_ += other.summary_;
-}
-
-
-void PointToPointAligningTransform::clear()
-{
-    summary_ = Matrix4d::zero();
-}
-
-Vector3d PointToPointAligningTransform::centroid1() const
-{
-    Vector3d res{ summary_.x.w, summary_.y.w, summary_.z.w };
-    res /= totalWeight();
-    return res;
-}
-
-Vector3d PointToPointAligningTransform::centroid2() const
-{
-    Vector3d res{ summary_.w.x, summary_.w.y, summary_.w.z };
-    res /= totalWeight();
-    return res;
+    sum12_ += other.sum12_;
+    sum1_ += other.sum1_;
+    sum2_ += other.sum2_;
+    sumW_ += other.sumW_;
 }
 
 auto PointToPointAligningTransform::findPureRotation_() const -> BestRotation
 {
     // for more detail of this algorithm see paragraph "3.3 A solution involving unit quaternions" in 
     // http://graphics.stanford.edu/~smr/ICP/comparison/eggert_comparison_mva97.pdf
-    Matrix4d s = summary_ - totalWeight() * outer( vec4d( centroid1() ), vec4d( centroid2() ) );
+    Matrix3d s = sum12_ - totalWeight() * outer( centroid1(), centroid2() );
     Matrix4d p = calculateMatrixP( s );
 
     const Eigen::SelfAdjointEigenSolver<Eigen::Matrix4d> solver( toEigen( p ) );
@@ -91,23 +66,23 @@ auto PointToPointAligningTransform::findPureRotation_() const -> BestRotation
     return { Matrix3d{ q }, solver.eigenvalues()( 3 ) };
 }
 
-AffineXf3d PointToPointAligningTransform::calculateTransformationMatrix() const
+AffineXf3d PointToPointAligningTransform::findBestRigidXf() const
 {
     const Matrix3d r = findPureRotation_().rot;
     const auto shift = centroid2() - r * centroid1();
     return AffineXf3d( r, shift );
 }
 
-AffineXf3d PointToPointAligningTransform::calculateFixedAxisRotation( const Vector3d & axis ) const
+AffineXf3d PointToPointAligningTransform::findBestRigidXfFixedRotationAxis( const Vector3d & axis ) const
 {
     if ( axis.lengthSq() <= 0 )
-        return calculateTransformationMatrix();
+        return findBestRigidXf();
 
     const auto centroid1 = this->centroid1();
     const auto centroid2 = this->centroid2();
     const auto totalWeight = this->totalWeight();
 
-    const Matrix4d s = summary_ - totalWeight * outer( vec4d( centroid1 ), vec4d( centroid2 ) );
+    const Matrix3d s = sum12_ - totalWeight * outer( centroid1, centroid2 );
     const auto k = axis.normalized();
 
     // a = sum_i( dot( p2_i, cross( k, cross( k, p1_i ) ) )
@@ -132,7 +107,7 @@ AffineXf3d PointToPointAligningTransform::calculateFixedAxisRotation( const Vect
     return AffineXf3d( r, shift );
 }
 
-AffineXf3d PointToPointAligningTransform::calculateOrthogonalAxisRotation( const Vector3d& ort ) const
+AffineXf3d PointToPointAligningTransform::findBestRigidXfOrthogonalRotationAxis( const Vector3d& ort ) const
 {
     // for more detail of this algorithm see paragraph "3.3 A solution involving unit quaternions" in 
     // http://graphics.stanford.edu/~smr/ICP/comparison/eggert_comparison_mva97.pdf
@@ -140,7 +115,7 @@ AffineXf3d PointToPointAligningTransform::calculateOrthogonalAxisRotation( const
     const auto centroid2 = this->centroid2();
     const auto totalWeight = this->totalWeight();
 
-    const Matrix4d s = summary_ - totalWeight * outer( vec4d( centroid1 ), vec4d( centroid2 ) );
+    const Matrix3d s = sum12_ - totalWeight * outer( centroid1, centroid2 );
     const Matrix4d p = calculateMatrixP( s );
 
     const auto [d1, d2] = ort.perpendicular();
@@ -159,7 +134,7 @@ AffineXf3d PointToPointAligningTransform::calculateOrthogonalAxisRotation( const
     return AffineXf3d( r, shift );
 }
 
-Vector3d PointToPointAligningTransform::calculateTranslation() const
+Vector3d PointToPointAligningTransform::findBestTranslation() const
 {
     return centroid2() - centroid1();
 }
@@ -173,19 +148,19 @@ TEST( MRMesh, AligningTransform )
     at1.add( Vector3d::plusX(), Vector3d::plusY() + b );
     at1.add( Vector3d::plusY(), Vector3d::plusZ() + b );
     at1.add( Vector3d::plusZ(), Vector3d::plusX() + b );
-    auto xf1 = at1.calculateTransformationMatrix();
+    auto xf1 = at1.findBestRigidXf();
 
     ASSERT_NEAR( ( xf1( Vector3d::plusX() ) - Vector3d::plusY() - b ).length(), 0., 1e-15 );
     ASSERT_NEAR( ( xf1( Vector3d::plusY() ) - Vector3d::plusZ() - b ).length(), 0., 1e-15 );
     ASSERT_NEAR( ( xf1( Vector3d::plusZ() ) - Vector3d::plusX() - b ).length(), 0., 1e-15 );
 
-    auto xf1_ = at1.calculateFixedAxisRotation( Vector3d{ 1, 1, 1 } );
+    auto xf1_ = at1.findBestRigidXfFixedRotationAxis( Vector3d{ 1, 1, 1 } );
     ASSERT_NEAR( ( xf1_( Vector3d::plusX() ) - Vector3d::plusY() - b ).length(), 0., 1e-15 );
     ASSERT_NEAR( ( xf1_( Vector3d::plusY() ) - Vector3d::plusZ() - b ).length(), 0., 1e-15 );
     ASSERT_NEAR( ( xf1_( Vector3d::plusZ() ) - Vector3d::plusX() - b ).length(), 0., 1e-15 );
 
 
-    auto xf1__ = at1.calculateOrthogonalAxisRotation( Vector3d{1, 0, -1} );
+    auto xf1__ = at1.findBestRigidXfOrthogonalRotationAxis( Vector3d{1, 0, -1} );
     ASSERT_NEAR( ( xf1__( Vector3d::plusX() ) - Vector3d::plusY() - b ).length(), 0., 1e-15 );
     ASSERT_NEAR( ( xf1__( Vector3d::plusY() ) - Vector3d::plusZ() - b ).length(), 0., 1e-15 );
     ASSERT_NEAR( ( xf1__( Vector3d::plusZ() ) - Vector3d::plusX() - b ).length(), 0., 1e-15 );
@@ -204,14 +179,14 @@ TEST( MRMesh, AligningTransform )
     at2.add( p41, p42 );
     at2.add( p51, p52 );
 
-    auto xf2 = at2.calculateTransformationMatrix();
+    auto xf2 = at2.findBestRigidXf();
     EXPECT_NEAR( ( xf2( p11 ) - p12 ).length(), 0., 1e-14 );
     EXPECT_NEAR( ( xf2( p21 ) - p22 ).length(), 0., 1e-14 );
     EXPECT_NEAR( ( xf2( p31 ) - p32 ).length(), 0., 1e-14 );
     EXPECT_NEAR( ( xf2( p41 ) - p42 ).length(), 0., 1e-14 );
     EXPECT_NEAR( ( xf2( p51 ) - p52 ).length(), 0., 1e-14 );
 
-    auto xf2_ = at2.calculateFixedAxisRotation( Vector3d{ -1, 1, -1 } );
+    auto xf2_ = at2.findBestRigidXfFixedRotationAxis( Vector3d{ -1, 1, -1 } );
     EXPECT_NEAR( ( xf2_( p11 ) - p12 ).length(), 0., 1e-14 );
     EXPECT_NEAR( ( xf2_( p21 ) - p22 ).length(), 0., 1e-14 );
     EXPECT_NEAR( ( xf2_( p31 ) - p32 ).length(), 0., 1e-14 );
@@ -231,14 +206,14 @@ TEST( MRMesh, AligningTransform )
     at3.add( p41, p42 );
     at3.add( p51, p52 );
 
-    auto xf3 = at3.calculateTransformationMatrix();
+    auto xf3 = at3.findBestRigidXf();
     EXPECT_NEAR( ( xf3( p11 ) - p12 ).length(), 0., 1e-13 );
     EXPECT_NEAR( ( xf3( p21 ) - p22 ).length(), 0., 1e-13 );
     EXPECT_NEAR( ( xf3( p31 ) - p32 ).length(), 0., 1e-13 );
     EXPECT_NEAR( ( xf3( p41 ) - p42 ).length(), 0., 1e-13 );
     EXPECT_NEAR( ( xf3( p51 ) - p52 ).length(), 0., 1e-13 );
 
-    auto xf3_ = at3.calculateFixedAxisRotation( Vector3d{ 1, 1, 1 } );
+    auto xf3_ = at3.findBestRigidXfFixedRotationAxis( Vector3d{ 1, 1, 1 } );
     EXPECT_NEAR( ( xf3_( p11 ) - p12 ).length(), 0., 1e-13 );
     EXPECT_NEAR( ( xf3_( p21 ) - p22 ).length(), 0., 1e-13 );
     EXPECT_NEAR( ( xf3_( p31 ) - p32 ).length(), 0., 1e-13 );

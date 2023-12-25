@@ -29,13 +29,14 @@ public:
 
     /// Compute transformation as the solution to a least squares optimization problem:
     /// xf( p1_i ) = p2_i
-    MRMESH_API AffineXf3d calculateSolution() const;
+    /// this version searches for best rigid body transformation
+    MRMESH_API AffineXf3d findBestRigidXf() const;
     /// this version searches for best transformation where rotation is allowed only around given axis and with arbitrary translation
-    MRMESH_API AffineXf3d calculateFixedAxisRotation( const Vector3d & axis ) const;
+    MRMESH_API AffineXf3d findBestRigidXfFixedRotationAxis( const Vector3d & axis ) const;
     /// this version searches for best transformation where rotation is allowed only around axes orthogonal to given one
-    MRMESH_API AffineXf3d calculateOrthogonalAxisRotation( const Vector3d& ort ) const;
+    MRMESH_API AffineXf3d findBestRigidXfOrthogonalRotationAxis( const Vector3d& ort ) const;
     /// Returns only shift part relative to given approximation
-    MRMESH_API Vector3d calculateTranslation() const;
+    MRMESH_API Vector3d findBestTranslation() const;
 
     struct Amendment
     {

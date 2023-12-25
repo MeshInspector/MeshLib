@@ -78,21 +78,23 @@ Vector3d PointToPointAligningTransform::centroid2() const
     return res;
 }
 
-AffineXf3d PointToPointAligningTransform::calculateTransformationMatrix() const
+auto PointToPointAligningTransform::findPureRotation_() const -> BestRotation
 {
     // for more detail of this algorithm see paragraph "3.3 A solution involving unit quaternions" in 
     // http://graphics.stanford.edu/~smr/ICP/comparison/eggert_comparison_mva97.pdf
-    const auto centroid1 = this->centroid1();
-    const auto centroid2 = this->centroid2();
-    const auto totalWeight = this->totalWeight();
-
-    Matrix4d s = summary_ - totalWeight * outer( vec4d( centroid1 ), vec4d( centroid2 ) );
+    Matrix4d s = summary_ - totalWeight() * outer( vec4d( centroid1() ), vec4d( centroid2() ) );
     Matrix4d p = calculateMatrixP( s );
 
-    Eigen::Vector4d largestEigenVector = Eigen::SelfAdjointEigenSolver<Eigen::Matrix4d>( toEigen( p ) ).eigenvectors().col( 3 );
+    const Eigen::SelfAdjointEigenSolver<Eigen::Matrix4d> solver( toEigen( p ) );
+    Eigen::Vector4d largestEigenVector = solver.eigenvectors().col( 3 );
     Quaterniond q( largestEigenVector[0], largestEigenVector[1], largestEigenVector[2], largestEigenVector[3] );
-    Matrix3d r{ q };
-    const auto shift = centroid2 - r * centroid1;
+    return { Matrix3d{ q }, solver.eigenvalues()( 3 ) };
+}
+
+AffineXf3d PointToPointAligningTransform::calculateTransformationMatrix() const
+{
+    const Matrix3d r = findPureRotation_().rot;
+    const auto shift = centroid2() - r * centroid1();
     return AffineXf3d( r, shift );
 }
 

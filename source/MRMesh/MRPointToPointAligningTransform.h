@@ -44,6 +44,15 @@ public:
     [[nodiscard]] MRMESH_API Vector3d calculateTranslation() const;
 
 private:
+    struct BestRotation
+    {
+        Matrix3d rot;
+        double err = 0; // discrepancy
+    };
+    /// finds rotation matrix that best aligns centered pairs of points
+    BestRotation findPureRotation_() const;
+
+private:
     Matrix4d summary_;
 };
 

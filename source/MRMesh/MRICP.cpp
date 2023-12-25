@@ -191,13 +191,13 @@ bool MeshICP::p2ptIter_()
 
     AffineXf3f res;
     if ( prop_.icpMode == ICPMode::TranslationOnly )
-        res = AffineXf3f(Matrix3f(), Vector3f(p2pt.calculateTranslation()));
+        res = AffineXf3f(Matrix3f(), Vector3f(p2pt.findBestTranslation()));
     if( prop_.icpMode == ICPMode::AnyRigidXf )
-        res = AffineXf3f( p2pt.calculateTransformationMatrix() );
+        res = AffineXf3f( p2pt.findBestRigidXf() );
     if( prop_.icpMode == ICPMode::FixedAxis )
-        res = AffineXf3f( p2pt.calculateFixedAxisRotation( Vector3d{ prop_.fixedRotationAxis } ) );
+        res = AffineXf3f( p2pt.findBestRigidXfFixedRotationAxis( Vector3d{ prop_.fixedRotationAxis } ) );
     if( prop_.icpMode == ICPMode::OrthogonalAxis )
-        res = AffineXf3f( p2pt.calculateOrthogonalAxisRotation( Vector3d{ prop_.fixedRotationAxis } ) );
+        res = AffineXf3f( p2pt.findBestRigidXfOrthogonalRotationAxis( Vector3d{ prop_.fixedRotationAxis } ) );
 
     if (std::isnan(res.b.x)) //nan check
         return false;
@@ -232,7 +232,7 @@ bool MeshICP::p2plIter_()
     PointToPlaneAligningTransform::Amendment am;
     if( prop_.icpMode == ICPMode::TranslationOnly )
     {
-        res = AffineXf3f( Matrix3f(), Vector3f( p2pl.calculateTranslation() ) );
+        res = AffineXf3f( Matrix3f(), Vector3f( p2pl.findBestTranslation() ) );
     }
     else
     {
@@ -263,7 +263,7 @@ bool MeshICP::p2plIter_()
                 p2plTrans.add(mLimited * Vector3d(v1 - centroidRef), mLimited * Vector3d(v2 - centroidRef),
                     mLimited * Vector3d(vp.normRef), vp.weight);
             }
-            auto transOnly = p2plTrans.calculateTranslation();
+            auto transOnly = p2plTrans.findBestTranslation();
             res = AffineXf3f(Matrix3f(mLimited), Vector3f(transOnly));
         }
         else
@@ -658,7 +658,7 @@ TEST(MRMesh, RegistrationOneIterPointToPoint)
             p2pt.add(pFl, pRef);
         }
 
-        auto xfResP2pt = p2pt.calculateTransformationMatrix();
+        auto xfResP2pt = p2pt.findBestRigidXf();
         EXPECT_NEAR((xfResP2pt.A.x - initXf.A.x).length(), 0., err);
         EXPECT_NEAR((xfResP2pt.A.y - initXf.A.y).length(), 0., err);
         EXPECT_NEAR((xfResP2pt.A.z - initXf.A.z).length(), 0., err);

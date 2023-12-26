@@ -69,7 +69,13 @@ RUN ./scripts/install_thirdparty.sh && \
     sudo ldconfig
 
 # install aws cli
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+RUN ARCH=$(uname -m) && \
+    case $ARCH in \
+        x86_64) ARCH_URL="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" ;; \
+        aarch64) ARCH_URL="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" ;; \
+        *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
+    esac && \
+    curl "$ARCH_URL" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
     sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
 

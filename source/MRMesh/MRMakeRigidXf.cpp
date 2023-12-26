@@ -1,7 +1,7 @@
 #include "MRMakeRigidXf.h"
 #include "MRAffineXf3.h"
 #include "MRMesh.h"
-#include "MRAligningTransform.h"
+#include "MRPointToPointAligningTransform.h"
 
 namespace MR
 {

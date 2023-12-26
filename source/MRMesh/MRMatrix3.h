@@ -38,6 +38,8 @@ struct Matrix3
     /// creates matrix representing rotation from 3 Euler angles: R=R(z)*R(y)*R(x)
     /// see more https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations
     static constexpr Matrix3 rotationFromEuler( const Vector3<T> & eulerAngles ) noexcept;
+    /// returns linear by angles approximation of the rotation matrix, which is close to true rotation matrix for small angles
+    static constexpr Matrix3 approximateLinearRotationMatrixFromEuler( const Vector3<T> & eulerAngles ) noexcept;
     /// constructs a matrix from its 3 rows
     static constexpr Matrix3 fromRows( const Vector3<T> & x, const Vector3<T> & y, const Vector3<T> & z ) noexcept { return Matrix3( x, y, z ); }
     /// constructs a matrix from its 3 columns;
@@ -175,6 +177,19 @@ constexpr Matrix3<T> Matrix3<T>::rotationFromEuler( const Vector3<T> & eulerAngl
         { cy * cz,   cz * sx * sy - cx * sz,   cx * cz * sy + sx * sz },
         { cy * sz,   cx * cz + sx * sy * sz,  -cz * sx + cx * sy * sz },
         {     -sy,   cy * sx,                  cx * cy                }
+    };
+}
+
+template <typename T>
+constexpr Matrix3<T> Matrix3<T>::approximateLinearRotationMatrixFromEuler( const Vector3<T> & eulerAngles ) noexcept
+{
+    const auto alpha = eulerAngles.x;
+    const auto  beta = eulerAngles.y;
+    const auto gamma = eulerAngles.z;
+    return {
+        {  T(1), -gamma,   beta },
+        { gamma,   T(1), -alpha },
+        { -beta,  alpha,   T(1) }
     };
 }
 

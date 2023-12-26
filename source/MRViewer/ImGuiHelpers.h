@@ -177,7 +177,7 @@ struct CustomStatePluginWindowParameters
     /// window height, usually calculated internally (if value is zero)
     float height{ 0.0f };
     /// start Position
-    std::optional<ImVec2>* position{ nullptr };
+    ImVec2* position{ nullptr };
     /// menu scaling, needed to proper scaling of internal window parts
     float menuScaling{ 1.0f };
     /// window flags, ImGuiWindowFlags_NoScrollbar and ImGuiWindow_NoScrollingWithMouse are forced inside `BeginCustomStatePlugin` function
@@ -189,6 +189,9 @@ struct CustomStatePluginWindowParameters
     /// if true esc button closes the plugin
     bool closeWithEscape{ true };
 };
+
+/// returns the position of the window that will be located at the bottom of the viewport
+MRVIEWER_API ImVec2 GetDownPosition( const float width );
 
 /// begin state plugin window with custom style.  if you use this function, you must call EndCustomStatePlugin to close the plugin correctly.
 /// the flags ImGuiWindowFlags_NoScrollbar and ImGuiWindow_NoScrollingWithMouse are forced in the function.

@@ -426,6 +426,11 @@ bool BeginStatePlugin( const char* label, bool* open, float width )
     return Begin( label, open, flags );
 }
 
+ImVec2 GetDownPosition( const float width )
+{
+    return { GetIO().DisplaySize.x - width, GetIO().DisplaySize.y };
+}
+
 bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePluginWindowParameters& params )
 {
     const auto& style = ImGui::GetStyle();    
@@ -448,15 +453,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         float yPivot = 0.0f;
         if ( params.position )
         {
-            if ( params.position->has_value() )
-            {
-                xPos = params.position->value().x;
-                yPos = params.position->value().y;
-            }
-            else
-            {
-                yPos = GetIO().DisplaySize.y;
-            }
+            yPos = params.position->y;
             yPivot = 1.f;
         }
         else if ( ribMenu )

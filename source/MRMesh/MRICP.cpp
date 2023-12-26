@@ -366,6 +366,8 @@ AffineXf3f MeshICP::calculateTransformation()
     }
     if ( iter_ == prop_.iterLimit )
         resultType_ = ExitType::MaxIterations;
+    else
+        iter_++;
     return floatXf_;
 }
 
@@ -438,24 +440,24 @@ void MeshICP::setPairsWeight(const std::vector<float> w)
 
 std::string MeshICP::getLastICPInfo() const
 {
-    std::string result = "ICP done " + std::to_string( iter_ + 1 ) + " iterations.\n";
+    std::string result = "Performed " + std::to_string( iter_ ) + " iterations.\n";
     switch ( resultType_ )
     {
     case MR::MeshICP::ExitType::NotFoundSolution:
         result += "No solution found.";
         break;
     case MR::MeshICP::ExitType::MaxIterations:
-        result += "Limit of iterations.";
+        result += "Limit of iterations reached.";
         break;
     case MR::MeshICP::ExitType::MaxBadIterations:
-        result += "Limit of bad iterations.";
+        result += "No improvement iterations limit reached.";
         break;
     case MR::MeshICP::ExitType::StopMsdReached:
-        result += "Stop mean square deviation reached.";
+        result += "Required mean square deviation reached.";
         break;
     case MR::MeshICP::ExitType::NotStarted:
     default:
-        result = "ICP hasn't started yet.";
+        result = "Not started yet.";
         break;
     }
     return result;

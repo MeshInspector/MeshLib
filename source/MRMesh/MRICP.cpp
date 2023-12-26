@@ -440,7 +440,7 @@ void MeshICP::setPairsWeight(const std::vector<float> w)
 
 std::string MeshICP::getLastICPInfo() const
 {
-    std::string result = "ICP performed " + std::to_string( iter_ ) + " iterations.\n";
+    std::string result = "Performed " + std::to_string( iter_ ) + " iterations.\n";
     switch ( resultType_ )
     {
     case MR::MeshICP::ExitType::NotFoundSolution:
@@ -457,7 +457,7 @@ std::string MeshICP::getLastICPInfo() const
         break;
     case MR::MeshICP::ExitType::NotStarted:
     default:
-        result = "ICP hasn't started yet.";
+        result = "Not started yet.";
         break;
     }
     return result;

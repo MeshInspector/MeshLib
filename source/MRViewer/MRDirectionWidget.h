@@ -65,7 +65,7 @@ public:
 
     /// Updates the direction of the arrow
     MRVIEWER_API void updateDirection( const Vector3f& dir );
-    /// Updates the base and the lengthof the arrow
+    /// Updates the base and the length of the arrow
     MRVIEWER_API void updateArrow( const Vector3f& base, float length );
     /// Sets the visibility of the widget
     MRVIEWER_API void setVisible( bool visible );

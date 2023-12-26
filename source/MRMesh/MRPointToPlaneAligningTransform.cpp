@@ -55,7 +55,7 @@ void PointToPlaneAligningTransform::clear()
     sum_B.setZero();
 }
 
-Vector3d PointToPlaneAligningTransform::calculateTranslation() const
+Vector3d PointToPlaneAligningTransform::findBestTranslation() const
 {
     Eigen::Matrix<double, 3, 3> sum_A_restr;
     Eigen::Matrix<double, 3, 1> sum_B_restr;
@@ -148,21 +148,21 @@ auto PointToPlaneAligningTransform::calculateOrthogonalAxisAmendment( const Vect
     return res;
 }
 
-AffineXf3d PointToPlaneAligningTransform::calculateSolution() const
+AffineXf3d PointToPlaneAligningTransform::findBestRigidXf() const
 {
     const auto ammendment = calculateAmendment();
 
     return AffineXf3d(Quaterniond(ammendment.rotAngles, ammendment.rotAngles.length()), ammendment.shift) * approxTransform;
 }
 
-AffineXf3d PointToPlaneAligningTransform::calculateFixedAxisRotation( const Vector3d & axis ) const
+AffineXf3d PointToPlaneAligningTransform::findBestRigidXfFixedRotationAxis( const Vector3d & axis ) const
 {
     const auto ammendment = calculateFixedAxisAmendment( axis );
 
     return AffineXf3d(Quaterniond(ammendment.rotAngles, ammendment.rotAngles.length()), ammendment.shift) * approxTransform;
 }
 
-AffineXf3d PointToPlaneAligningTransform::calculateOrthogonalAxisRotation( const Vector3d & ort ) const
+AffineXf3d PointToPlaneAligningTransform::findBestRigidXfOrthogonalRotationAxis( const Vector3d & ort ) const
 {
     const auto ammendment = calculateOrthogonalAxisAmendment( ort );
 

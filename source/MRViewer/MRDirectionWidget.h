@@ -15,16 +15,16 @@ class MRVIEWER_CLASS DirectionWidget : public MultiListener<MouseDownListener, M
 {
 public:
     /// This callback is invoked every time when the direction is changed by mouse
-    using OnDirectionChangedCallback = std::function<void( const Vector3f& )>;
+    using OnDirectionChangedCallback = std::function<void( const Vector3f&, bool )>;
 
     /// history action for changing the direction. It should be added to the history stack by user code
     class ChangeDirAction : public ChangeXfAction
     {
     public:
-        ChangeDirAction( DirectionWidget& plugin, const std::shared_ptr<Object>& obj ) :
-            ChangeXfAction( "Change Dir", obj ),
-            widget_{ plugin },
-            dir_{ plugin.dir_ }
+        ChangeDirAction( DirectionWidget& widget ) :
+            ChangeXfAction( "Change Dir", static_pointer_cast<Object>( widget.directionObj_ ) ),
+            widget_{ widget },
+            dir_{ widget.dir_ }
         {}
         virtual void action( Type type ) override
         {
@@ -47,7 +47,7 @@ private:
     float viewportStartPointZ_{ 0.0f };
     OnDirectionChangedCallback onDirectionChanged_;
     Color color_ = Color::red();
-
+    bool needToSaveHistory_ = true;
     void clear_();
 
 public:

@@ -42,13 +42,13 @@ namespace MR
 
     void DirectionWidget::updateArrow( const Vector3f& base, float length )
     {
-        clear_();
-        const auto oldBase = base_;
+        if ( !directionObj_ )
+            return;
+
         base_ = base;
         length_ = length;
-        std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>( makeArrow( base_, base_ + dir_ * length_, length_ * 0.02f, length_ * 0.04f, length_ * 0.08f ) );
-        directionObj_->setMesh( mesh );
-        directionObj_->setXf( AffineXf3f::translation( base_ - oldBase ) * directionObj_->xf() );
+        std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>( makeArrow( {}, dir_ * length_, length_ * 0.02f, length_ * 0.04f, length_ * 0.08f));        
+        directionObj_->setXf( AffineXf3f::translation( base_ ) * directionObj_->xf() );
     }
 
     void DirectionWidget::setVisible( bool visible )
@@ -63,6 +63,8 @@ namespace MR
             directionObj_->detachFromParent();
             directionObj_.reset();
         }
+
+        mousePressed_ = false;
     }
 
     bool DirectionWidget::onMouseDown_( Viewer::MouseButton button, int mod )
@@ -93,8 +95,9 @@ namespace MR
         const auto newDir = worldEndPoint - base_;
         updateDirection( newDir );
         if ( onDirectionChanged_ )
-            onDirectionChanged_( newDir );
-
+            onDirectionChanged_( newDir, needToSaveHistory_ );
+        
+        needToSaveHistory_ = false;
         return true;
     }
 
@@ -107,6 +110,7 @@ namespace MR
             return false;
 
         mousePressed_ = false;
+        needToSaveHistory_ = true;
         return true;
     }
 

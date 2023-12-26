@@ -9,26 +9,16 @@
 namespace MR
 {
 
-// returns linear approximation of the rotation matrix, which is close to true rotation matrix for small angles
-static Matrix3d approximateLinearRotationMatrixFromAngles( double alpha, double beta, double gamma )
-{
-    Vector3d row1 = {   1.0, -gamma,   beta };
-    Vector3d row2 = { gamma,    1.0, -alpha };
-    Vector3d row3 = { -beta,  alpha,    1.0 };
-
-    return Matrix3d( row1, row2, row3 );
-}
-
 PointToPlaneAligningTransform::PointToPlaneAligningTransform( const AffineXf3d& aTransform )
     : approxTransform( aTransform )
 {
-    sum_A.setZero();
-    sum_B.setZero();
+    sumA_.setZero();
+    sumB_.setZero();
 }
 
-void PointToPlaneAligningTransform::add(const Vector3d& s_, const Vector3d& d, const Vector3d& normal2, const double w)
+void PointToPlaneAligningTransform::add(const Vector3d& s0, const Vector3d& d, const Vector3d& normal2, const double w)
 {
-    Vector3d s = approxTransform(s_);
+    Vector3d s = approxTransform(s0);
     Vector3d n = normal2.normalized();
     double k_B = dot(d - s, n);
     double c[6];
@@ -42,17 +32,17 @@ void PointToPlaneAligningTransform::add(const Vector3d& s_, const Vector3d& d, c
     {
         for (size_t j = 0; j < 6; j++)
         {
-            sum_A.coeffRef(i, j) += w * c[i] * c[j];
+            sumA_(i, j) += w * c[i] * c[j];
         }
 
-        sum_B(i, 0) += w * c[i] * k_B;
+        sumB_(i) += w * c[i] * k_B;
     }
 }
 
 void PointToPlaneAligningTransform::clear()
 {
-    sum_A.setZero();
-    sum_B.setZero();
+    sumA_.setZero();
+    sumB_.setZero();
 }
 
 Vector3d PointToPlaneAligningTransform::findBestTranslation() const
@@ -63,10 +53,10 @@ Vector3d PointToPlaneAligningTransform::findBestTranslation() const
     {
         for (size_t j = 0; j < 3; j++)
         {
-            sum_A_restr(i, j) = sum_A(i + 3, j + 3);
+            sum_A_restr(i, j) = sumA_(i + 3, j + 3);
         }
 
-        sum_B_restr(i, 0) = sum_B(i + 3, 0);
+        sum_B_restr(i) = sumB_(i + 3);
     }
     Eigen::LLT<Eigen::MatrixXd> chol(sum_A_restr);
     Eigen::VectorXd solution = chol.solve(sum_B_restr);
@@ -75,8 +65,8 @@ Vector3d PointToPlaneAligningTransform::findBestTranslation() const
 
 auto PointToPlaneAligningTransform::calculateAmendment() const -> Amendment
 {
-    Eigen::LLT<Eigen::MatrixXd> chol(sum_A);
-    Eigen::VectorXd solution = chol.solve(sum_B);
+    Eigen::LLT<Eigen::MatrixXd> chol(sumA_);
+    Eigen::VectorXd solution = chol.solve(sumB_);
 
     Amendment res;
     res.rotAngles = Vector3d{ solution.coeff( 0 ), solution.coeff( 1 ), solution.coeff( 2 ) };
@@ -94,16 +84,16 @@ auto PointToPlaneAligningTransform::calculateFixedAxisAmendment( const Vector3d 
 
     const auto k = toEigen( axis.normalized() );
 
-    A(0,0) = k.transpose() * sum_A.topLeftCorner<3,3>() * k;
+    A(0,0) = k.transpose() * sumA_.topLeftCorner<3,3>() * k;
 
-    const Eigen::Matrix<double, 3, 1> tk = sum_A.bottomLeftCorner<3,3>() * k;
+    const Eigen::Matrix<double, 3, 1> tk = sumA_.bottomLeftCorner<3,3>() * k;
     A.bottomLeftCorner<3,1>() = tk;
     A.topRightCorner<1,3>() = tk.transpose();
 
-    A.bottomRightCorner<3,3>() = sum_A.bottomRightCorner<3,3>();
+    A.bottomRightCorner<3,3>() = sumA_.bottomRightCorner<3,3>();
 
-    b.topRows<1>() = k.transpose() * sum_B.topRows<3>();
-    b.bottomRows<3>() = sum_B.bottomRows<3>();
+    b.topRows<1>() = k.transpose() * sumB_.topRows<3>();
+    b.bottomRows<3>() = sumB_.bottomRows<3>();
 
     Eigen::LLT<Eigen::MatrixXd> chol(A);
     Eigen::VectorXd solution = chol.solve(b);
@@ -127,16 +117,16 @@ auto PointToPlaneAligningTransform::calculateOrthogonalAxisAmendment( const Vect
     k.leftCols<1>() = toEigen( d0 );
     k.rightCols<1>() = toEigen( d1 );
 
-    A.topLeftCorner<2,2>() = k.transpose() * sum_A.topLeftCorner<3,3>() * k;
+    A.topLeftCorner<2,2>() = k.transpose() * sumA_.topLeftCorner<3,3>() * k;
 
-    const Eigen::Matrix<double, 3, 2> tk = sum_A.bottomLeftCorner<3,3>() * k;
+    const Eigen::Matrix<double, 3, 2> tk = sumA_.bottomLeftCorner<3,3>() * k;
     A.bottomLeftCorner<3,2>() = tk;
     A.topRightCorner<2,3>() = tk.transpose();
 
-    A.bottomRightCorner<3,3>() = sum_A.bottomRightCorner<3,3>();
+    A.bottomRightCorner<3,3>() = sumA_.bottomRightCorner<3,3>();
 
-    b.topRows<2>() = k.transpose() * sum_B.topRows<3>();
-    b.bottomRows<3>() = sum_B.bottomRows<3>();
+    b.topRows<2>() = k.transpose() * sumB_.topRows<3>();
+    b.bottomRows<3>() = sumB_.bottomRows<3>();
 
     Eigen::LLT<Eigen::MatrixXd> chol(A);
     Eigen::VectorXd solution = chol.solve(b);
@@ -189,7 +179,7 @@ TEST( MRMesh, PointToPlaneIteration )
     pInit[9]  = { -11.0,   2.5,  3.1 }; n[9] = { -1.1,  0.1,  1.1 };
 
     double alpha = 0.15, beta = 0.23, gamma = -0.17;
-    Matrix3d rotationMatrix = approximateLinearRotationMatrixFromAngles( alpha, beta, gamma );
+    Matrix3d rotationMatrix = Matrix3d::approximateLinearRotationMatrixFromEuler( { alpha, beta, gamma } );
     AffineXf3d xf1( rotationMatrix, Vector3d( 2., 3., -1. ) );
     for( int i = 0; i < 10; i++ )
     {
@@ -208,7 +198,7 @@ TEST( MRMesh, PointToPlaneIteration )
     
     {
         const auto ammendment = ptp1.calculateAmendment();
-        Matrix3d apprRotationMatrix = approximateLinearRotationMatrixFromAngles( ammendment.rotAngles.x, ammendment.rotAngles.y, ammendment.rotAngles.z );
+        Matrix3d apprRotationMatrix = Matrix3d::approximateLinearRotationMatrixFromEuler( ammendment.rotAngles );
         auto xf2 = AffineXf3d( apprRotationMatrix, ammendment.shift );
         EXPECT_NEAR( (xf1.A.x - xf2.A.x).length(), 0., 1e-13 );
         EXPECT_NEAR( (xf1.A.y - xf2.A.y).length(), 0., 1e-13 );
@@ -218,7 +208,7 @@ TEST( MRMesh, PointToPlaneIteration )
 
     {
         const auto ammendment = ptp1.calculateFixedAxisAmendment( 10.0 * Vector3d{ alpha, beta, gamma } );
-        Matrix3d apprRotationMatrix = approximateLinearRotationMatrixFromAngles( ammendment.rotAngles.x, ammendment.rotAngles.y, ammendment.rotAngles.z );
+        Matrix3d apprRotationMatrix = Matrix3d::approximateLinearRotationMatrixFromEuler( ammendment.rotAngles );
         auto xf2 = AffineXf3d( apprRotationMatrix, ammendment.shift );
         EXPECT_NEAR( (xf1.A.x - xf2.A.x).length(), 0., 1e-13 );
         EXPECT_NEAR( (xf1.A.y - xf2.A.y).length(), 0., 1e-13 );
@@ -230,7 +220,7 @@ TEST( MRMesh, PointToPlaneIteration )
         Vector3d axis = Vector3d{ alpha, beta, gamma };
         axis = cross( axis, axis.furthestBasisVector() );
         const auto ammendment = ptp1.calculateOrthogonalAxisAmendment( -12.0 * axis );
-        Matrix3d apprRotationMatrix = approximateLinearRotationMatrixFromAngles( ammendment.rotAngles.x, ammendment.rotAngles.y, ammendment.rotAngles.z );
+        Matrix3d apprRotationMatrix = Matrix3d::approximateLinearRotationMatrixFromEuler( ammendment.rotAngles );
         auto xf2 = AffineXf3d( apprRotationMatrix, ammendment.shift );
         EXPECT_NEAR( (xf1.A.x - xf2.A.x).length(), 0., 1e-13 );
         EXPECT_NEAR( (xf1.A.y - xf2.A.y).length(), 0., 1e-13 );

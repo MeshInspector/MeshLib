@@ -3,22 +3,20 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRArrow.h"
 #include "MRMesh/MRSceneRoot.h"
-#include "MRViewer/MRAppendHistory.h"
-#include "MRMesh/MRChangeObjectAction.h"
 #include "MRViewer/MRViewport.h"
 
 namespace MR
 {
-    DirectionWidget::DirectionWidget( const Vector3f& dir, const Vector3f& base, float length, OnDirectionChangedCallback onDirectionChanged )
-    : base_( base )
-    , length_( length )
-    , onDirectionChanged_( onDirectionChanged )
+    void DirectionWidget::create( const Vector3f& dir, const Vector3f& base, float length, OnDirectionChangedCallback onDirectionChanged )
     {
+        base_ = base;
+        length_ = length;
+        onDirectionChanged_ = onDirectionChanged;
         connect( &getViewerInstance(), 10, boost::signals2::at_front );
         updateDirection( dir );
     }
 
-    DirectionWidget::~DirectionWidget()
+    void DirectionWidget::reset()
     {
         clear_();
         disconnect();
@@ -33,7 +31,7 @@ namespace MR
             directionObj_ = std::make_shared<ObjectMesh>();
             directionObj_->setMesh( mesh );
             directionObj_->setAncillary( true );
-            directionObj_->setFrontColor( Color::red(), false );
+            directionObj_->setFrontColor( color_, false );
             directionObj_->setFlatShading( true );
             SceneRoot::get().addChild( directionObj_ );
         }
@@ -81,8 +79,6 @@ namespace MR
         mousePressed_ = true;
         worldStartPoint_ = directionObj_->worldXf()( pof.point );
         viewportStartPointZ_ = viewer->viewport().projectToViewportSpace( worldStartPoint_ ).z;
-
-        AppendHistory<ChangeDirAction>( *this, directionObj_ );
         return true;
     }
 
@@ -114,4 +110,13 @@ namespace MR
         return true;
     }
 
+    void DirectionWidget::setColor( const Color& color )
+    {
+        color_ = color;
+    }
+
+    const Color& DirectionWidget::getColor() const
+    {
+        return color_;
+    }
 }

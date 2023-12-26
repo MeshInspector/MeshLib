@@ -6,14 +6,36 @@
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRChangeXfAction.h"
+#include "MRMesh/MRColor.h"
 
 namespace MR
 {
-
+/// Widget for visualizing the direction
 class MRVIEWER_CLASS DirectionWidget : public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener>
 {
 public:
+    /// This callback is invoked every time when the direction is changed by mouse
     using OnDirectionChangedCallback = std::function<void( const Vector3f& )>;
+
+    /// history action for changing the direction. It should be added to the history stack by user code
+    class ChangeDirAction : public ChangeXfAction
+    {
+    public:
+        ChangeDirAction( DirectionWidget& plugin, const std::shared_ptr<Object>& obj ) :
+            ChangeXfAction( "Change Dir", obj ),
+            widget_{ plugin },
+            dir_{ plugin.dir_ }
+        {}
+        virtual void action( Type type ) override
+        {
+            ChangeXfAction::action( type );
+            std::swap( dir_, widget_.dir_ );
+
+        }
+    private:
+        DirectionWidget& widget_;
+        Vector3f dir_;
+    };
 
 private:
     std::shared_ptr<ObjectMesh> directionObj_;
@@ -24,35 +46,33 @@ private:
     Vector3f worldStartPoint_;
     float viewportStartPointZ_{ 0.0f };
     OnDirectionChangedCallback onDirectionChanged_;
-
-    class ChangeDirAction : public ChangeXfAction
-    {
-    public:
-        ChangeDirAction( DirectionWidget& plugin, const std::shared_ptr<Object>& obj ) :
-            ChangeXfAction( "Change Dir", obj ),
-            plugin_{ plugin },
-            dir_{ plugin.dir_ }
-        {}
-        virtual void action( Type type ) override
-        {
-            ChangeXfAction::action( type );
-            std::swap( dir_, plugin_.dir_ );
-
-        }
-    private:
-        DirectionWidget& plugin_;
-        Vector3f dir_;
-    };
+    Color color_ = Color::red();
 
     void clear_();
 
 public:
+    /// Creates a new widget for visualizing the direction and adds it to scene
+    /// subscribes to viewer events
+    /// @param dir initial direction
+    /// @param base initial base of the arrow
+    /// @param length length of the arrow
+    /// @param onDirectionChanged callback for the direction change
+    MRVIEWER_API void create( const Vector3f& dir, const Vector3f& base, float length, OnDirectionChangedCallback onDirectionChanged );
 
-    MRVIEWER_API DirectionWidget( const Vector3f& dir, const Vector3f& base, float length, OnDirectionChangedCallback onDirectionChanged );
-    MRVIEWER_API ~DirectionWidget();
+    /// Removes the widget from the scene
+    /// unsubscribes from viewer events
+    MRVIEWER_API void reset();
+
+    /// Updates the direction of the arrow
     MRVIEWER_API void updateDirection( const Vector3f& dir );
+    /// Updates the base and the lengthof the arrow
     MRVIEWER_API void updateArrow( const Vector3f& base, float length );
+    /// Sets the visibility of the widget
     MRVIEWER_API void setVisible( bool visible );
+    /// Sets the color of the widget
+    MRVIEWER_API void setColor( const Color& color );
+    /// Returns the color of the widget
+    MRVIEWER_API const Color& getColor() const;
 
 private:
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;

@@ -15,20 +15,16 @@ namespace MR
     , onDirectionChanged_( onDirectionChanged )
     {
         connect( &getViewerInstance(), 10, boost::signals2::at_front );
-        updateDirection( dir, false );
+        updateDirection( dir );
     }
 
     DirectionWidget::~DirectionWidget()
     {
-        FilterHistoryByCondition( [&] ( const std::shared_ptr<HistoryAction>& action ) -> bool
-        {
-            return bool( std::dynamic_pointer_cast<ChangeDirAction>( action ) );
-        }, true );
         clear_();
         disconnect();
     }
 
-    void DirectionWidget::updateDirection( const Vector3f& dir, bool needHistUpdate )
+    void DirectionWidget::updateDirection( const Vector3f& dir )
     {
         dir_ = dir.normalized();
         if ( !directionObj_ )
@@ -41,8 +37,6 @@ namespace MR
             directionObj_->setFlatShading( true );
             SceneRoot::get().addChild( directionObj_ );
         }
-        if ( needHistUpdate )
-            AppendHistory<ChangeDirAction>( *this, directionObj_ );
 
         auto transform = AffineXf3f::translation(base_) * AffineXf3f::linear(Matrix3f::rotation(Vector3f::plusZ(), dir));
         directionObj_->setXf( transform );
@@ -101,7 +95,7 @@ namespace MR
         const auto viewportEnd = viewer->screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewer->viewport().id );
         const auto worldEndPoint = viewer->viewport().unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
         const auto newDir = worldEndPoint - base_;
-        updateDirection( newDir, false );
+        updateDirection( newDir );
         if ( onDirectionChanged_ )
             onDirectionChanged_( newDir );
 

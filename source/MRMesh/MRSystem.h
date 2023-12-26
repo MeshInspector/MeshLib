@@ -63,6 +63,9 @@ MRMESH_API std::string GetDetailedOSName();
 // returns string identification of the OS
 MRMESH_API std::string getOSNoSpaces();
 
+// sets new handler for operator new if needed for some platforms
+MRMESH_API void setNewHandlerIfNeeded();
+
 using FileNamesStack = std::vector<std::filesystem::path>;
 
 } // namespace MR

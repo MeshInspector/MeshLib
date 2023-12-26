@@ -17,11 +17,11 @@ var addKeyboardEvents = function () {
         keyboardEventsArePresent = true;
     }
     // enforce several frames to toggle animation when popup closed
-    for (var i = 0;i<500;i+=100)
+    for (var i = 0; i < 500; i += 100)
         setTimeout(function () { Module.ccall('emsPostEmptyEvent', 'void', ['number'], [1]); }, i);
 };
 
-var createPopup = function (closeId, label, width, height, center = true) {
+var createPopup = function (closeId, label, width, height, center = true, showCloseButton = true) {
     var popup = document.createElement('div');
 
     popup.addEventListener('touchmove', function (event) {
@@ -48,6 +48,8 @@ var createPopup = function (closeId, label, width, height, center = true) {
     close.innerHTML = '&#x2715;';
     close.setAttribute('style', 'margin-left:' + (width - 26) + 'px;width:24;height:24px;margin-top:7px;cursor:pointer;color:#eef0f5;display: inline-block;');
     close.setAttribute('onclick', 'document.getElementById(\'' + closeId + '\').remove();addKeyboardEvents()');
+    if (!showCloseButton)
+        close.setAttribute('style', 'visibility: hidden;');
 
     popup.appendChild(close);
 
@@ -62,7 +64,7 @@ var createPopup = function (closeId, label, width, height, center = true) {
     return popup;
 }
 
-var createOverlayPopup = function (id, label, width, height, center = true) {
+var createOverlayPopup = function (id, label, width, height, center = true, showCloseButton = true) {
     var overlay = document.createElement('div');
     overlay.setAttribute('style', 'position:absolute;top:0;right:0;bottom:0;left:0;background-color: rgba(0,0,0,0.8);z-index:9999;');
     overlay.setAttribute('id', id);
@@ -78,7 +80,7 @@ var createOverlayPopup = function (id, label, width, height, center = true) {
         lastTouchEnd = now;
     }, false);
 
-    var popup = createPopup(id, label, width, height, center);
+    var popup = createPopup(id, label, width, height, center, showCloseButton);
     overlay.appendChild(popup);
 
     return { overlay, popup };

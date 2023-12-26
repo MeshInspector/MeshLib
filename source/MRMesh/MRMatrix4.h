@@ -114,6 +114,13 @@ inline Vector4<T> operator *( const Matrix4<T> & a, const Vector4<T> & b )
     return { dot( a.x, b ), dot( a.y, b ), dot( a.z, b ), dot( a.w, b ) };
 }
 
+/// double-dot product: x = a : b
+template <typename T>
+inline T dot( const Matrix4<T> & a, const Matrix4<T> & b )
+{
+    return dot( a.x, b.x ) + dot( a.y, b.y ) + dot( a.z, b.z ) + dot( a.w, b.w );
+}
+
 template <typename T>
 inline Vector3<T> Matrix4<T>::operator ()( const Vector3<T> & b ) const
 {

@@ -91,6 +91,13 @@ inline Vector3<T> operator *( const Matrix3<T> & a, const Vector3<T> & b )
     return { dot( a.x, b ), dot( a.y, b ), dot( a.z, b ) };
 }
 
+/// double-dot product: x = a : b
+template <typename T>
+inline T dot( const Matrix3<T> & a, const Matrix3<T> & b )
+{
+    return dot( a.x, b.x ) + dot( a.y, b.y ) + dot( a.z, b.z );
+}
+
 /// product of two matrices
 template <typename T>
 inline Matrix3<T> operator *( const Matrix3<T> & a, const Matrix3<T> & b )

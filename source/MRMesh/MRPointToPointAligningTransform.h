@@ -33,6 +33,8 @@ public:
     /// xf( p1_i ) = p2_i
     /// this version searches for best rigid body transformation
     [[nodiscard]] MRMESH_API AffineXf3d findBestRigidXf() const;
+    /// this version searches for best rigid body transformation with uniform scaling
+    [[nodiscard]] MRMESH_API AffineXf3d findBestRigidScaleXf() const;
     /// this version searches for best transformation where rotation is allowed only around given axis and with arbitrary translation
     [[nodiscard]] MRMESH_API AffineXf3d findBestRigidXfFixedRotationAxis( const Vector3d& axis ) const;
     /// this version searches for best transformation where rotation is allowed only around axes orthogonal to given one
@@ -41,8 +43,18 @@ public:
     [[nodiscard]] MRMESH_API Vector3d findBestTranslation() const;
 
 private:
+    struct BestRotation
+    {
+        Matrix3d rot;
+        double err = 0; // larger value means more discrepancy between points after registration
+    };
+    /// finds rotation matrix that best aligns centered pairs of points
+    BestRotation findPureRotation_() const;
+
+private:
     Matrix3d sum12_ = Matrix3d::zero();
     Vector3d sum1_, sum2_;
+    double sum11_ = 0; ///< used only for scale determination
     double sumW_ = 0;
 };
 

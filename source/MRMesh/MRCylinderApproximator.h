@@ -11,9 +11,6 @@
 
 namespace MR
 {
-namespace
-{
-
 template <typename T>
 class Cylinder3Approximation
 {
@@ -62,7 +59,7 @@ private:
     Eigen::Matrix <T, 6, 6>  precomputedF2_ = {};
 
 public:
-    Cylinder3DApproximation()
+    Cylinder3Approximation()
     {
         reset();
     };
@@ -365,14 +362,12 @@ private:
         }
 
         return minError;
-    }
+    };
 
     T SpecificAxisFit( Eigen::Vector<T, 3>& PC, Eigen::Vector<T, 3>& W, T& resultedRootSquare )
     {
         W = baseCylinderAxis_;
         return G( W, PC, resultedRootSquare );
-    }
-
-};
+    };
 };
 }

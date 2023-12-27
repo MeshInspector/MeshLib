@@ -113,7 +113,7 @@ CylinderObject::CylinderObject( const std::vector<Vector3f>& pointsToApprox )
 
     // calculate cylinder parameters.
     MR::Cylinder3<float> result;
-    auto fit = Cylinder3DApproximation<float>();
+    auto fit = Cylinder3Approximation<float>();
     fit.solveGeneral( pointsToApprox, result, phiResolution, thetaiResolution );
 
     // setup parameters
@@ -197,7 +197,7 @@ TEST( MRMesh, CylinderApproximation )
     /////////////////////////////
 
     Cylinder3<float> result;
-    auto fit = Cylinder3DApproximation<float>();
+    auto fit = Cylinder3Approximation<float>();
     auto approximationRMS = fit.solveGeneral( points, result, phiResolution, thetaiResolution, true );
     std::cout << "multi thread center: " << result.center() << " direction:" << result.direction() << " length:" << result.length << " radius:" << result.radius << " error:" << approximationRMS << std::endl;
 

@@ -193,7 +193,7 @@ struct CustomStatePluginWindowParameters
 };
 
 /// returns the position of the window that will be located at the bottom of the viewport
-/// for a value pivot = ( 0.0f, 0.0f )
+/// for a value pivot = ( 0.0f, 1.0f )
 MRVIEWER_API ImVec2 GetDownPosition( const float width );
 
 /// begin state plugin window with custom style.  if you use this function, you must call EndCustomStatePlugin to close the plugin correctly.

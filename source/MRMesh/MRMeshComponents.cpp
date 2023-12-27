@@ -441,6 +441,41 @@ std::pair<Face2RegionMap, int> getAllComponentsMap( const MeshPart& meshPart, Fa
     return getUniqueRootIds( allRoots, region );
 }
 
+Vector<double, RegionId> getRegionAreas( const MeshPart& meshPart,
+    const Face2RegionMap & regionMap, int numRegions )
+{
+    MR_TIMER
+    Vector<double, RegionId> res( numRegions );
+    for ( auto f : meshPart.mesh.topology.getFaceIds( meshPart.region ) )
+        res[regionMap[f]] += meshPart.mesh.dblArea( f );
+
+    for ( auto & a : res )
+        a *= 0.5;
+
+    return res;
+}
+
+std::pair<FaceBitSet, int> getLargeByAreaRegions( const MeshPart& meshPart,
+    const Face2RegionMap & regionMap, int numRegions, float minArea )
+{
+    MR_TIMER
+    const auto regionAreas = getRegionAreas( meshPart, regionMap, numRegions );
+
+    FaceBitSet largeRegions( meshPart.mesh.topology.faceSize() );
+    BitSetParallelFor( meshPart.mesh.topology.getFaceIds( meshPart.region ), [&]( FaceId f )
+    {
+        if ( regionAreas[regionMap[f]] >= minArea )
+            largeRegions.set( f );
+    } );
+
+    int numLargeRegions = 0;
+    for ( const auto & a : regionAreas )
+        if ( a >= minArea )
+            ++numLargeRegions;
+
+    return { std::move( largeRegions ), numLargeRegions };
+}
+
 static std::vector<VertBitSet> getAllComponentsVerts( UnionFind<VertId>& unionFindStruct, const VertBitSet& vertsRegion, const VertBitSet* doNotOutput )
 {
     MR_TIMER

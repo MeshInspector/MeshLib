@@ -230,38 +230,39 @@ Expected<Mesh, std::string> fromBinaryStl( std::istream& in, const MeshLoadSetti
     if ( !in  )
         return unexpected( std::string( "Binary STL read error" ) );
 
-    size_t readBytes = 0;
-    const float streamSize = float( posEnd - posCur );
+    size_t decodedBytes = 0;
+    const float rStreamSize = 1 / float( posEnd - posCur );
 
-    for ( ;; )
+    while ( !buffer.empty() )
     {
+        // decode previously read buffer in a worked thread
         tbb::task_group taskGroup;
-        bool hasTask = false;
+        taskGroup.run( [&chunk, &vi, &buffer] ()
+        {
+            chunk.resize( buffer.size() );
+            for ( int i = 0; i < buffer.size(); ++i )
+                for ( int j = 0; j < 3; ++j )
+                    chunk[i][j] = buffer[i].vert[j];
+            vi.addTriangles( chunk );
+        } );
+
         if ( vi.numTris() + buffer.size() < numTris )
         {
             const auto itemsInNextChuck = std::min( numTris - (std::uint32_t)( vi.numTris() + buffer.size() ), itemsInBuffer );
             nextBuffer.resize( itemsInNextChuck );
-            hasTask = true;
             const size_t size = sizeof( StlTriangle ) * nextBuffer.size();
-            taskGroup.run( [&in, &nextBuffer, size] ()
-            {
-                in.read( ( char* )nextBuffer.data(), size );
-            } );
-            readBytes += size;
+            // read from stream in the current thread to be compatible with PythonIstreamBuf
+            in.read( ( char* )nextBuffer.data(), size );
         }
+        else
+            nextBuffer.clear();
 
-        chunk.resize( buffer.size() );
-        for ( int i = 0; i < buffer.size(); ++i )
-            for ( int j = 0; j < 3; ++j )
-                chunk[i][j] = buffer[i].vert[j];
-        vi.addTriangles( chunk );
-
-        if ( !hasTask )
-            break;
         taskGroup.wait();
-        if ( !reportProgress( settings.callback , readBytes / streamSize ) )
+        decodedBytes += buffer.size();
+
+        if ( !reportProgress( settings.callback , decodedBytes * rStreamSize ) )
             return unexpected( std::string( "Loading canceled" ) );
-        if ( !in  )
+        if ( !in )
             return unexpected( std::string( "Binary STL read error" ) );
         buffer.swap( nextBuffer );
     }

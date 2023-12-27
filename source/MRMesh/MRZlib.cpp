@@ -1,5 +1,5 @@
 #include "MRZlib.h"
-#include "MRDeferred.h"
+#include "MRFinally.h"
 
 #include <zlib.h>
 
@@ -54,7 +54,9 @@ VoidOrErrStr zlibCompressStream( std::istream& in, std::ostream& out, int level 
     if ( Z_OK != ( ret = deflateInit( &stream, level ) ) )
         return unexpected( zlibToString( ret ) );
 
-    MR_DEFER_INLINE( deflateEnd( &stream ) )
+    MR_FINALLY {
+        deflateEnd( &stream );
+    };
 
     while ( !in.eof() )
     {
@@ -97,7 +99,9 @@ VoidOrErrStr zlibDecompressStream( std::istream& in, std::ostream& out )
     if ( Z_OK != ( ret = inflateInit( &stream ) ) )
         return unexpected( zlibToString( ret ) );
 
-    MR_DEFER_INLINE( inflateEnd( &stream ) )
+    MR_FINALLY {
+        inflateEnd( &stream );
+    };
 
     while ( !in.eof() )
     {

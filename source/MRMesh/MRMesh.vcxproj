@@ -349,7 +349,6 @@
     <ClInclude Include="MRMeshLoadStep.h" />
     <ClInclude Include="MRZip.h" />
     <ClInclude Include="MRObjectSave.h" />
-    <ClInclude Include="MRDeferred.h" />
     <ClInclude Include="MRZlib.h" />
   </ItemGroup>
   <ItemGroup>

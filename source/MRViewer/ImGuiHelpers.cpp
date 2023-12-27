@@ -450,11 +450,10 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         auto ribMenu = std::dynamic_pointer_cast<MR::RibbonMenu>( menu );
         float xPos = GetIO().DisplaySize.x - params.width;
         float yPos = 0.0f;
-        float yPivot = 0.0f;
         if ( params.position )
         {
+            xPos = params.position->x;
             yPos = params.position->y;
-            yPivot = 1.f;
         }
         else if ( ribMenu )
             yPos = ( ribMenu->getTopPanelOpenedHeight() - 1.0f ) * menu->menu_scaling();
@@ -467,16 +466,16 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
             auto json = config.getJsonValue( "DialogPositions" )[label];
             if ( json.empty() )
             {
-                SetNextWindowPos( ImVec2( xPos, yPos ), ImGuiCond_FirstUseEver, ImVec2( 0.f, yPivot ) );
+                SetNextWindowPos( ImVec2( xPos, yPos ), ImGuiCond_FirstUseEver, params.pivot );
             }
             else
             {
-                SetNextWindowPos( ImVec2( json["x"].asFloat(), json["y"].asFloat() ), ImGuiCond_FirstUseEver, ImVec2(0.f, yPivot));
+                SetNextWindowPos( ImVec2( json["x"].asFloat(), json["y"].asFloat() ), ImGuiCond_FirstUseEver, params.pivot );
             }
         }
         else
         {
-            SetNextWindowPos( ImVec2( xPos, yPos ), ImGuiCond_FirstUseEver, ImVec2( 0.f, yPivot ) );
+            SetNextWindowPos( ImVec2( xPos, yPos ), ImGuiCond_FirstUseEver, params.pivot );
         }
     }
 

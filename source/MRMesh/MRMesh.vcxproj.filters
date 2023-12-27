@@ -1125,6 +1125,9 @@
     <ClInclude Include="MRPointToPlaneAligningTransform.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRFinally.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
     <ClInclude Include="MRDeferred.h">
       <Filter>Source Files\Basic</Filter>
     </ClCompile>

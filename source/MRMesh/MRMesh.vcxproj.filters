@@ -1130,6 +1130,9 @@
     </ClInclude>
     <ClInclude Include="MRFinally.h">
       <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClInclude Include="MRZlib.h">
+      <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRCylinderApproximator.h">
       <Filter>Source Files\Math</Filter>
@@ -1891,6 +1894,9 @@
     </ClCompile>
     <ClCompile Include="MRCylinderObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
+    </ClCompile>
+    <ClCompile Include="MRZlib.cpp">
+      <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRFinally.cpp" />
   </ItemGroup>

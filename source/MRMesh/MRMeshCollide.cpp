@@ -220,7 +220,7 @@ static void processSelfSubtasks( const AABBTree & tree,
         }
 }
 
-Expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( const MeshPart & mp, ProgressCallback cb )
+Expected< std::vector<FaceFace>> findSelfCollidingTriangles( const MeshPart & mp, ProgressCallback cb, const Face2RegionMap * regionMap )
 {
     MR_TIMER
     std::vector<FaceFace> res;
@@ -265,7 +265,7 @@ Expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( const 
             mySubtasks.push_back( subtasks[is] );
             std::vector<FaceFace> myRes;
             processSelfSubtasks( tree, mySubtasks, mySubtasks,
-                [&tree, &mp, &myRes]( const NodeNode & s )
+                [&tree, &mp, &myRes, regionMap]( const NodeNode & s )
                 {
                     const auto & aNode = tree[s.aNode];
                     const auto & bNode = tree[s.bNode];
@@ -276,6 +276,8 @@ Expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( const 
                     if ( mp.region && !mp.region->test( bFace ) )
                         return;
                     if ( mp.mesh.topology.sharedEdge( aFace, bFace ) )
+                        return;
+                    if ( regionMap && (*regionMap)[aFace] != (*regionMap)[bFace] )
                         return;
 
                     VertId av[3], bv[3];
@@ -336,11 +338,11 @@ Expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( const 
     return res;
 }
 
-Expected<FaceBitSet, std::string> findSelfCollidingTrianglesBS( const MeshPart & mp, ProgressCallback cb )
+Expected<FaceBitSet> findSelfCollidingTrianglesBS( const MeshPart & mp, ProgressCallback cb, const Face2RegionMap * regionMap )
 {
     MR_TIMER
     
-    auto ffs = findSelfCollidingTriangles( mp, cb );
+    auto ffs = findSelfCollidingTriangles( mp, cb, regionMap );
     if ( !ffs.has_value() )
         return unexpected( ffs.error() );
 

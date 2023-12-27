@@ -13,7 +13,7 @@ std::string zlibToString( int code )
     switch ( code )
     {
         case Z_OK:
-            return "OK";
+            return "ok";
         case Z_STREAM_END:
             return "stream end";
         case Z_NEED_DICT:

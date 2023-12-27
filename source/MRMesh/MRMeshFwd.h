@@ -400,6 +400,7 @@ class LineObject;
 class CircleObject;
 class PlaneObject;
 class SphereObject;
+class CylinderObject;
 
 struct Image;
 

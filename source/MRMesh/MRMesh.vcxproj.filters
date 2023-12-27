@@ -1125,6 +1125,12 @@
     <ClInclude Include="MRPointToPlaneAligningTransform.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRCylinderObject.h">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCylinderApproximator.h">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1876,6 +1882,9 @@
     </ClCompile>
     <ClCompile Include="MRPointToPlaneAligningTransform.cpp">
       <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCylinderObject.cpp">
+      <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

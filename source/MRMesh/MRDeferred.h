@@ -40,6 +40,6 @@ DeferredFunction<F> defer( F&& f )
 
 } // namespace MR
 
-#define MR_DEFER( F ) [[maybe_unused]] const auto MR_CONCAT( deferred, __LINE__ ) = MR::defer( F );
+#define MR_DEFER( F ) [[maybe_unused]] const DeferredFunction MR_CONCAT( deferred, __LINE__ )( F );
 
 #define MR_DEFER_INLINE( F ) MR_DEFER( [&] { F ; } )

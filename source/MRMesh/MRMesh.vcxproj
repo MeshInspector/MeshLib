@@ -15,6 +15,7 @@
     <ClInclude Include="MRChangeValue.h" />
     <ClInclude Include="MRCylinderApproximator.h" />
     <ClInclude Include="MRCylinderObject.h" />
+    <ClInclude Include="MRFinally.h" />
     <ClInclude Include="MRInTreePathBuilder.h" />
     <ClInclude Include="MRChangeColoringType.h" />
     <ClInclude Include="MRChangeColoringActions.h" />
@@ -413,6 +414,7 @@
     <ClCompile Include="MRFillContourByGraphCut.cpp" />
     <ClCompile Include="MRFillContours2D.cpp" />
     <ClCompile Include="MRFilterCreaseEdges.cpp" />
+    <ClCompile Include="MRFinally.cpp" />
     <ClCompile Include="MRFixUndercuts.cpp" />
     <ClCompile Include="MRFloatGrid.cpp" />
     <ClCompile Include="MRFloatGridComponents.cpp" />

@@ -1130,6 +1130,9 @@
     </ClInclude>
     <ClInclude Include="MRCylinderApproximator.h">
       <Filter>Source Files\DataModel\Features</Filter>
+	</ClInclude>
+    <ClInclude Include="MRFinally.h">
+      <Filter>Source Files\Basic</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

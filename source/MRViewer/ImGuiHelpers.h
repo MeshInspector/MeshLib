@@ -178,6 +178,8 @@ struct CustomStatePluginWindowParameters
     float height{ 0.0f };
     /// start Position
     ImVec2* position{ nullptr };
+    /// the position of the starting point of the window
+    std::optional<ImVec2> pivot;
     /// menu scaling, needed to proper scaling of internal window parts
     float menuScaling{ 1.0f };
     /// window flags, ImGuiWindowFlags_NoScrollbar and ImGuiWindow_NoScrollingWithMouse are forced inside `BeginCustomStatePlugin` function

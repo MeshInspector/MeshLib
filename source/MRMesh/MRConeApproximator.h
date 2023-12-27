@@ -1,5 +1,5 @@
 #include "MRMeshFwd.h"
-#include "MRLine.h"
+#include "MRCylinder3.h"
 #include "MRVector.h"
 #include "MRMatrix.h"
 #include <Eigen/Eigenvalues>
@@ -13,62 +13,25 @@ namespace MR
 {
 namespace
 {
-//using T = float;
+
 template <typename T>
-class Cylinder3
-{
-public:
-    Cylinder3()
-    {}
-
-    Cylinder3( const Vector3<T>& inCenter, const Vector3<T>& inDirectoin, T inRadius, T inHeight )
-        :
-        mainAxis( inCenter, inDirectoin ),
-        radius( inRadius ),
-        length( inHeight )
-    {}
-    Cylinder3( const Line3<T>& inAxis, T inRadius, T inHeight )
-        :
-        mainAxis( inAxis ),
-        radius( inRadius ),
-        length( inHeight )
-    {}
-
-    inline MR::Vector3<T>& center( void )
-    {
-        return mainAxis.p;
-    }
-    inline MR::Vector3<T>& direction( void )
-    {
-        return mainAxis.d;
-    }
-
-    MR::Line3<T> mainAxis = {};
-    T radius = 0;
-    T length = 0;
-
-public:
-    bool operator==( Cylinder3 const& cylinder ) const = default;
-
-    bool operator!=( Cylinder3 const& cylinder ) const
-    {
-        return !operator==( cylinder );
-    }
-
-};
-
-//using T = float;  // very usefull for debug in VS.
-template <typename T>
-class Cylinder3DApproximation
+class Cylinder3Approximation
 {
 
 private:
 
     enum class CylinderFitterType
     {
+        // The algorithm implimentation needs an initial approximation to refine the cylinder axis. 
+        // In this option, we sort through several possible options distributed over the hemisphere.
         HemisphereSearchFit,
+
+        // In this case, we assume that there is an external estimate for the cylinder axis. 
+        // Therefore, we specify only the position that is given from the outside
         SpecificAxisFit
+
         // TODO for Meshes try to impliment specific algorithm from https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf
+        // TODO Also, an estimate of the cylinder axis can be obtained by the gravel component method or the like. But this requires additional. experiments.
         // TODO for future try eigen vector covariance   https://www.geometrictools.com/Documentation/RobustEigenSymmetric3x3.pdf
     };
 

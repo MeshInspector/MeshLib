@@ -55,6 +55,7 @@ TEST_P( ZlibCompressTestFixture, ZlibCompress )
 
     auto res = MR::zlibCompressStream( in, out );
     EXPECT_TRUE( res.has_value() );
+    // FIXME: Python and MeshLib output data mismatch; note that MeshLib output is still valid
     //EXPECT_STREQ( out.str().c_str(), outputStr.c_str() );
 
     std::istringstream in2( out.str() );

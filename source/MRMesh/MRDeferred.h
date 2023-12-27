@@ -9,6 +9,7 @@
 namespace MR
 {
 
+/// helper class to call a function at its scope's exit (RAII-style)
 template <typename F>
 class DeferredFunction
 {

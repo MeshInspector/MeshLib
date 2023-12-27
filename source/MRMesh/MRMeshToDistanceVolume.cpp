@@ -139,7 +139,14 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, co
     }
 
     if ( params.precomputeMinMax )
+    {
         std::tie( res.min, res.max ) = parallelMinMax( res.data );
+    }
+    else
+    {
+        res.min = std::numeric_limits<float>::lowest();
+        res.max = std::numeric_limits<float>::max();
+    }
 
     return res;
 }
@@ -238,7 +245,14 @@ Expected<SimpleVolume, std::string> meshRegionToIndicatorVolume( const Mesh& mes
         return unexpectedOperationCanceled();
 
     if ( params.precomputeMinMax )
+    {
         std::tie( res.min, res.max ) = parallelMinMax( res.data );
+    }
+    else
+    {
+        res.min = std::numeric_limits<float>::lowest();
+        res.max = std::numeric_limits<float>::max();
+    }
 
     return res;
 }

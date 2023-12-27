@@ -68,11 +68,11 @@ public:
     {
         thetaResolution_ = 0;
         phiResolution_ = 0;
-        precomputedMu_ = {};
-        precomputedF0_ = {};
-        precomputedF1_ = {};
-        precomputedF2_ = {};
-        normalizedPoints_ = {};
+        precomputedMu_.setZero();
+        precomputedF0_.setZero();
+        precomputedF1_.setZero();
+        precomputedF2_.setZero();
+        normalizedPoints_.clear();
     };
     // Solver for CylinderFitterType::HemisphereSearchFit type 
     // thetaResolution_, phiResolution_  must be positive and as large as it posible. Price is CPU time. (~ 100 gives good results).

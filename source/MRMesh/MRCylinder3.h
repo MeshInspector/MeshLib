@@ -34,7 +34,7 @@ public:
         return mainAxis.d;
     }
 
-    MR::Line3<T> mainAxis = {};
+    MR::Line3<T> mainAxis;
     T radius = 0;
     T length = 0;
 };

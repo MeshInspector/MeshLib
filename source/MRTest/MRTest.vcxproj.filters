@@ -13,6 +13,9 @@
     <ClCompile Include="MRTriangleIntersection.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRZlib.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

@@ -21,13 +21,14 @@ class VoxelsVolumeAccessor<VdbVolume>
 {
 public:
     using VolumeType = VdbVolume;
+    using ValueType = typename VolumeType::ValueType;
 
     explicit VoxelsVolumeAccessor( const VolumeType& volume )
         : accessor_( volume.data->getConstAccessor() )
         , minCoord_( volume.data->evalActiveVoxelBoundingBox().min() )
     {}
 
-    VolumeType::ValueType get( const Vector3i& pos ) const
+    ValueType get( const Vector3i& pos ) const
     {
         const openvdb::Coord coord {
             pos.x + minCoord_.x(),
@@ -48,13 +49,14 @@ class VoxelsVolumeAccessor<VoxelsVolume<std::vector<T>>>
 {
 public:
     using VolumeType = VoxelsVolume<std::vector<T>>;
+    using ValueType = typename VolumeType::ValueType;
 
     explicit VoxelsVolumeAccessor( const VolumeType& volume )
         : data_( volume.data )
           , indexer_( volume.dims )
     {}
 
-    VolumeType::ValueType get( const Vector3i& pos ) const
+    ValueType get( const Vector3i& pos ) const
     {
         return data_[indexer_.toVoxelId( pos )];
     }
@@ -69,12 +71,13 @@ class VoxelsVolumeAccessor<VoxelsVolume<VoxelValueGetter<T>>>
 {
 public:
     using VolumeType = VoxelsVolume<VoxelValueGetter<T>>;
+    using ValueType = typename VolumeType::ValueType;
 
     explicit VoxelsVolumeAccessor( const VolumeType& volume )
         : data_( volume.data )
     {}
 
-    VolumeType::ValueType get( const Vector3i& pos ) const
+    ValueType get( const Vector3i& pos ) const
     {
         return data_( pos );
     }
@@ -88,6 +91,7 @@ template <typename V>
 class VoxelsVolumeCachingAccessor
 {
 public:
+    using VolumeType = V;
     using ValueType = typename V::ValueType;
 
     struct Parameters

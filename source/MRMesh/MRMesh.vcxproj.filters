@@ -1128,6 +1128,9 @@
     <ClInclude Include="MRFinally.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRVoxelsVolumeAccess.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

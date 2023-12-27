@@ -1128,11 +1128,11 @@
     <ClInclude Include="MRCylinderObject.h">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
-    <ClInclude Include="MRCylinderApproximator.h">
-      <Filter>Source Files\DataModel\Features</Filter>
-	</ClInclude>
     <ClInclude Include="MRFinally.h">
       <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCylinderApproximator.h">
+      <Filter>Source Files\Math</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1889,6 +1889,7 @@
     <ClCompile Include="MRCylinderObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
+    <ClCompile Include="MRFinally.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

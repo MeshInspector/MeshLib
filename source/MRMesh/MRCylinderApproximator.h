@@ -47,12 +47,7 @@ public:
     T length = 0;
 
 public:
-    bool operator==( Cylinder3 const& cylinder ) const
-    {
-        return mainAxis == cylinder.mainAxis
-            && radius == cylinder.radius
-            && length == cylinder.length;
-    }
+    bool operator==( Cylinder3 const& cylinder ) const = default;
 
     bool operator!=( Cylinder3 const& cylinder ) const
     {
@@ -274,6 +269,10 @@ private:
         precomputedF2_ = precomputedF2_ / static_cast < T > ( points.size() );
     }
 
+    // Core minimization function.
+    // Functional that needs to be minimized to obtain the optimal value of W (i.e. the cylinder axis)
+    // General definition is formula 94, but for speed up we use formula 99. 
+    // https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf 
     T G( const Eigen::Vector<T, 3>& W, Eigen::Vector<T, 3>& PC, T& rsqr ) const
     {
         Eigen::Matrix<T, 3, 3> P = Eigen::Matrix<T, 3, 3>::Identity() - ( W * W.transpose() ); // P = I - W * W^T

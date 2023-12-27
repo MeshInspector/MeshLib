@@ -3,6 +3,7 @@
 #include "MRVector.h"
 #include "MRMatrix.h"
 #include <Eigen/Eigenvalues>
+#include <tbb/parallel_for.h>
 #include "MRToFromEigen.h"
 #include "MRConstants.h"
 

@@ -24,9 +24,12 @@ MRMESH_API std::pair<FaceBitSet, FaceBitSet> findCollidingTriangleBitsets( const
     const AffineXf3f* rigidB2A = nullptr );
 
 /// finds all pairs of colliding triangles from one mesh or a region
-MRMESH_API Expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( const MeshPart& mp, ProgressCallback cb = {} );
+MRMESH_API Expected< std::vector<FaceFace>> findSelfCollidingTriangles( const MeshPart& mp, ProgressCallback cb = {},
+    const Face2RegionMap * regionMap = nullptr ); ///< if regionMap is provided then only self-intersections within a region are returned
+
 /// the same \ref findSelfCollidingTriangles but returns the union of all self-intersecting faces
-MRMESH_API Expected<FaceBitSet, std::string> findSelfCollidingTrianglesBS( const MeshPart & mp, ProgressCallback cb = {} );
+MRMESH_API Expected<FaceBitSet> findSelfCollidingTrianglesBS( const MeshPart & mp, ProgressCallback cb = {},
+    const Face2RegionMap * regionMap = nullptr ); ///< if regionMap is provided then only self-intersections within a region are returned
  
 /**
  * \brief checks that arbitrary mesh part A is inside of closed mesh part B

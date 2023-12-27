@@ -53,8 +53,8 @@ public:
 
 private:
     AffineXf3d approxTransform;
-    Eigen::Matrix<double, 6, 6> sum_A;
-    Eigen::Matrix<double, 6, 1> sum_B;
+    Eigen::Matrix<double, 6, 6> sumA_;
+    Eigen::Vector<double, 6> sumB_;
 };
 
 /// \}

@@ -9,6 +9,7 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRExpected.h"
+#include "MRMesh/MRMeshToDistanceVolume.h"
 #include <pybind11/functional.h>
 
 
@@ -184,5 +185,18 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         pybind11::arg( "mesh" ),
         pybind11::arg( "params" ) = MR::MeshToVolumeParams{},
         "convert mesh to volume in (0,0,0)-(dim.x,dim.y,dim.z) grid box" );
+
+    pybind11::class_<MR::MeshToDistanceVolumeParams>( m, "MeshToDistanceVolumeParams" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "origin", &MR::MeshToDistanceVolumeParams::origin, "origin point of voxels box" ).
+        def_readwrite( "voxelSize", &MR::MeshToDistanceVolumeParams::voxelSize, "size of voxel on each axis" ).
+        def_readwrite( "dimensions", &MR::MeshToDistanceVolumeParams::dimensions, "num voxels along each axis" ).
+        def_readwrite( "minDistSq", &MR::MeshToDistanceVolumeParams::minDistSq, "minimum squared value in a voxel" ).
+        def_readwrite( "maxDistSq", &MR::MeshToDistanceVolumeParams::maxDistSq, "maximum squared value in a voxel" ).
+        def_readwrite( "signMode", &MR::MeshToDistanceVolumeParams::signMode, "the method to compute distance sign" );
+
+    m.def( "meshToDistanceVolume", MR::decorateExpected( &MR::meshToDistanceVolume ),
+        pybind11::arg( "mesh" ), pybind11::arg( "params" ) = MR::MeshToDistanceVolumeParams{},
+        "makes SimpleVolume filled with (signed or unsigned) distances from Mesh with given settings" );
 } )
 #endif

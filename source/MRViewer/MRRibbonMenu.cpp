@@ -1724,7 +1724,8 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
             Json::Value root;
             serializeTransform( root, { startXf, uniformScale_ } );
 
-            std::ofstream ofs( filename );
+            // although json is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
+            std::ofstream ofs( filename, std::ofstream::binary );
             if ( ofs )
                 ofs << root.toStyledString();
             else

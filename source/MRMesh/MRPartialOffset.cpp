@@ -1,17 +1,16 @@
 #include "MRPartialOffset.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRMesh.h"
 #include "MRMeshBoolean.h"
 
 namespace MR
 {
 
-Expected<Mesh, std::string> partialOffsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params /*= {} */ )
+Expected<Mesh> partialOffsetMesh( const MeshPart& mp, float offset, const GeneralOffsetParameters& params /*= {} */ )
 {
     auto realParams = params;
     realParams.signDetectionMode = SignDetectionMode::Unsigned; // for now only shell can be in partial offset
     realParams.callBack = subprogress( params.callBack, 0.0f, 0.5f );
-    auto offsetPart = offsetMesh( mp, offset, realParams );
+    auto offsetPart = generalOffsetMesh( mp, offset, realParams );
     if ( params.callBack && !params.callBack( 0.5f ) )
         return unexpectedOperationCanceled();
     if ( !offsetPart.has_value() )
@@ -25,4 +24,3 @@ Expected<Mesh, std::string> partialOffsetMesh( const MeshPart& mp, float offset,
 }
 
 } //namespace MR
-#endif //!__EMSCRIPTEN__

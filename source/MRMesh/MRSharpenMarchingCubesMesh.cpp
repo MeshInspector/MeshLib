@@ -9,7 +9,7 @@
 namespace MR
 {
 
-void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, FaceId> & face2voxel,
+void sharpenMarchingCubesMesh( const MeshPart & ref, Mesh & vox, Vector<VoxelId, FaceId> & face2voxel,
     const SharpenMarchingCubesMeshSettings & settings )
 {
     MR_TIMER
@@ -26,7 +26,7 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
             const auto proj = findProjection( vox.points[v], ref );
 
             Vector3f n = ( vox.points[v] - proj.proj.point ).normalized();
-            Vector3f np = ref.pseudonormal( proj.mtp );
+            Vector3f np = ref.mesh.pseudonormal( proj.mtp, ref.region );
             if ( settings.offset == 0 || n.lengthSq() <= 0 )
                 n = np;
             else if ( dot( n, np ) < 0 )

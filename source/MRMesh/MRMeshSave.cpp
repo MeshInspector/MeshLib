@@ -61,7 +61,8 @@ VoidOrErrStr toMrmesh( const Mesh & mesh, std::ostream & out, const SaveSettings
 
 VoidOrErrStr toOff( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
-    std::ofstream out( file );
+    // although .off is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
+    std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
@@ -116,7 +117,8 @@ VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & se
 
 VoidOrErrStr toObj( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, int firstVertId )
 {
-    std::ofstream out( file );
+    // although .obj is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
+    std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 

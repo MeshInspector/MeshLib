@@ -393,7 +393,6 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVert
     auto earlyReturn = [&]( float errSq )
     {
         EdgeOp edgeOp = optimizeVertexPos ? EdgeOp::CollapseOptPos : EdgeOp::CollapseEnd;
-        bool flip = false;
         if ( settings_.maxAngleChange >= 0 && ( !settings_.notFlippable || !settings_.notFlippable->test( ue ) ) )
         {
             float deviationSqAfterFlip = FLT_MAX;
@@ -410,7 +409,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVert
         res->x.uedgeId = (int)ue;
         res->x.edgeOp = edgeOp;
         res->c = errSq;
-        return flip;
+        return edgeOp == EdgeOp::Flip;
     };
 
     if ( settings_.strategy == DecimateStrategy::ShortestEdgeFirst )

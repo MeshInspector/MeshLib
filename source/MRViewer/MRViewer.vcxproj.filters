@@ -310,6 +310,9 @@
     <ClCompile Include="MRSelectCurvaturePreference.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRDirectionWidget.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -601,6 +604,9 @@
     </ClInclude>
     <ClInclude Include="MRPointInAllSpaces.h">
       <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDirectionWidget.h">
+      <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

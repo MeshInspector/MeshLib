@@ -870,7 +870,7 @@ void ImGuiMenu::drawModalMessage_()
 
         const float textWidth = ImGui::CalcTextSize( storedModalMessage_.c_str() ).x;
 
-        if ( textWidth < errorWindowSize.x )
+        if ( textWidth + ImGui::GetStyle().WindowPadding.x * 2.0f < errorWindowSize.x )
         {
             ImGui::SetCursorPosX( ( errorWindowSize.x - textWidth ) * 0.5f );
             ImGui::Text( "%s", storedModalMessage_.c_str() );

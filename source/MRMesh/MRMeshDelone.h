@@ -32,12 +32,14 @@ struct DeloneSettings
 ///   1) between triangles ABD and DBC and
 ///   2) between triangles ABC and ACD
 /// differ more than on maxAngleChange then also returns true to prevent flipping from 1) to 2)
-MRMESH_API bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float maxAngleChange = FLT_MAX );
+[[nodiscard]] MRMESH_API bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange = DBL_MAX );
+/// converts arguments in double and calls above function
+[[nodiscard]] MRMESH_API bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float maxAngleChange = FLT_MAX );
 
 /// consider quadrangle formed by left and right triangles of given edge, and
 /// checks whether this edge satisfies Delone's condition in the quadrangle;
 /// \return false otherwise if flipping the edge does not introduce too large surface deviation (can be returned only for inner edge of the region)
-MRMESH_API bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings = {},
+[[nodiscard]] MRMESH_API bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings = {},
     float * deviationSqAfterFlip = nullptr ); ///< squared surface deviation after flip is written here (at least when the function returns false)
 
 /// improves mesh triangulation by performing flipping of edges to satisfy Delone local property,

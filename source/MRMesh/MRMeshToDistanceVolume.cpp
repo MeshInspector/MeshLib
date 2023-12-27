@@ -14,7 +14,7 @@
 namespace MR
 {
 
-Expected<SimpleVolume, std::string> meshToDistanceVolume( const Mesh& mesh, const MeshToDistanceVolumeParams& params /*= {} */ )
+Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params /*= {} */ )
 {
     MR_TIMER
     assert( params.signMode != SignDetectionMode::OpenVDB );
@@ -29,9 +29,10 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const Mesh& mesh, cons
     
     if ( params.signMode == SignDetectionMode::HoleWindingRule )
     {
+        assert( !mp.region ); // only whole mesh is supported for now
         auto fwn = params.fwn;
         if ( !fwn )
-            fwn = std::make_shared<FastWindingNumber>( mesh );
+            fwn = std::make_shared<FastWindingNumber>( mp.mesh );
 
         auto basis = AffineXf3f::linear( Matrix3f::scale( params.voxelSize ) );
         basis.b = params.origin;
@@ -50,10 +51,10 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const Mesh& mesh, cons
             auto voxelCenter = params.origin + mult( params.voxelSize, coord );
             float dist{ 0.0f };
             if ( params.signMode != SignDetectionMode::ProjectionNormal )
-                dist = std::sqrt( findProjection( voxelCenter, mesh, params.maxDistSq, nullptr, params.minDistSq ).distSq );
+                dist = std::sqrt( findProjection( voxelCenter, mp, params.maxDistSq, nullptr, params.minDistSq ).distSq );
             else
             {
-                auto s = findSignedDistance( voxelCenter, mesh, params.maxDistSq, params.minDistSq );
+                auto s = findSignedDistance( voxelCenter, mp, params.maxDistSq, params.minDistSq );
                 dist = s ? s->dist : cQuietNan;
             }
 
@@ -63,7 +64,7 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const Mesh& mesh, cons
                 if ( params.signMode == SignDetectionMode::WindingRule )
                 {
                     int numInters = 0;
-                    rayMeshIntersectAll( mesh, Line3d( Vector3d( voxelCenter ), Vector3d::plusX() ),
+                    rayMeshIntersectAll( mp, Line3d( Vector3d( voxelCenter ), Vector3d::plusX() ),
                         [&numInters] ( const MeshIntersectionResult& ) mutable
                     {
                         ++numInters;

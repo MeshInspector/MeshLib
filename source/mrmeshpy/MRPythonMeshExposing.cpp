@@ -199,7 +199,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
         def_readwrite( "points", &Mesh::points ).
         def( "triPoint", ( Vector3f( Mesh::* )( const MeshTriPoint& )const )& Mesh::triPoint, pybind11::arg( "p" ), "returns interpolated coordinates of given point" ).
         def( "edgePoint", ( Vector3f( Mesh::* )( const MeshEdgePoint& )const )& Mesh::edgePoint, pybind11::arg( "ep" ), "returns a point on the edge: origin point for f=0 and destination point for f=1" ).
-        def( "invalidateCaches", &Mesh::invalidateCaches, "Invalidates caches (e.g. aabb-tree) after a change in mesh geometry or topology" ).
+        def( "invalidateCaches", &Mesh::invalidateCaches, pybind11::arg( "pointsChanged" ) = true, "Invalidates caches (e.g. aabb-tree) after a change in mesh geometry or topology" ).
         def( "transform", ( void( Mesh::* ) ( const AffineXf3f&, const VertBitSet* ) )& Mesh::transform, pybind11::arg( "xf" ), pybind11::arg( "region" ) = nullptr,
              "applies given transformation to specified vertices\n"
              "if region is nullptr, all valid mesh vertices are used" ).
@@ -528,9 +528,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
         def_readwrite( "aFace", &FaceFace::aFace ).
         def_readwrite( "bFace", &FaceFace::bFace );
 
-    m.def( "findSelfCollidingTriangles", decorateExpected( &findSelfCollidingTriangles ), pybind11::arg( "mp" ), pybind11::arg( "cb" ) = ProgressCallback{}, "finds all pairs of colliding triangles from one mesh or a region" );
+    m.def( "findSelfCollidingTriangles",
+        decorateExpected( []( const MeshPart& mp, ProgressCallback cb ) { return findSelfCollidingTriangles( mp, cb ); } ),
+        pybind11::arg( "mp" ), pybind11::arg( "cb" ) = ProgressCallback{}, "finds all pairs of colliding triangles from one mesh or a region" );
 
-    m.def( "findSelfCollidingTrianglesBS", decorateExpected( &findSelfCollidingTrianglesBS ), pybind11::arg( "mp" ), pybind11::arg( "cb" ) = ProgressCallback{}, "finds union of all self-intersecting faces" );
+    m.def( "findSelfCollidingTrianglesBS",
+        decorateExpected( []( const MeshPart& mp, ProgressCallback cb ) { return findSelfCollidingTrianglesBS( mp, cb ); } ),
+        pybind11::arg( "mp" ), pybind11::arg( "cb" ) = ProgressCallback{}, "finds union of all self-intersecting faces" );
 
     m.def( "findCollidingTriangles", &findCollidingTriangles, 
         pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg( "rigidB2A" ) = nullptr, pybind11::arg( "firstIntersectionOnly" ) = false, 

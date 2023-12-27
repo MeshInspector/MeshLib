@@ -33,7 +33,7 @@ struct SharpenMarchingCubesMeshSettings
 /// 1) correcting positions of all vertices to given offset relative to \param ref mesh (if correctOldVertPos == true);
 /// 2) introducing new vertices in the voxels where the normals change abruptly.
 /// \param face2voxel mapping from Face Id to Voxel Id where it is located
-MRMESH_API void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, FaceId> & face2voxel,
+MRMESH_API void sharpenMarchingCubesMesh( const MeshPart & ref, Mesh & vox, Vector<VoxelId, FaceId> & face2voxel,
     const SharpenMarchingCubesMeshSettings & settings );
 
 } //namespace MR

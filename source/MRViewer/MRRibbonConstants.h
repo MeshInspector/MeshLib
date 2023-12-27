@@ -3,6 +3,11 @@
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRColor.h"
 
+namespace
+{
+inline const std::string cPalettePresetKey = "palettePreset";
+}
+
 namespace MR
 {
 constexpr float cGradientButtonFramePadding = 7.5f;

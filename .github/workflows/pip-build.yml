@@ -202,7 +202,7 @@ jobs:
         working-directory: C:\vcpkg
         run: C:\vcpkg\vcpkg.exe integrate install
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         id: setup-python
         with:
           python-version: ${{matrix.py-version}}
@@ -475,7 +475,7 @@ jobs:
           name: Windows-python${{matrix.py-version}}
 
       - name: Python setup
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.py-version }}
 

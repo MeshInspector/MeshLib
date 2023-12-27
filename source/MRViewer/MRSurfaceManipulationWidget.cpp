@@ -51,6 +51,8 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
     obj_->setAncillaryUVCoords( uvs_ );
 
     initConnections_();
+    mousePressed_ = false;
+    mousePos_ = { -1, -1 };
 }
 
 void SurfaceManipulationWidget::reset()
@@ -58,6 +60,7 @@ void SurfaceManipulationWidget::reset()
     oldMesh_.reset();
 
     obj_->clearAncillaryTexture();
+    obj_->setPickable( true );
     obj_.reset();
 
     singleEditingRegion_.clear();
@@ -70,10 +73,14 @@ void SurfaceManipulationWidget::reset()
     uvs_ = {};
 
     resetConnections_();
+    mousePressed_ = false;
 }
 
 void SurfaceManipulationWidget::setSettings( const Settings& settings )
 {
+    if ( mousePressed_ )
+        return;
+
     settings_ = settings;
     settings_.radius = std::max( settings_.radius, 1.e-5f );
     settings_.relaxForce = std::clamp( settings_.relaxForce, 0.001f, 0.5f );
@@ -99,14 +106,27 @@ bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*
         if ( !pick.face.valid() )
             return false;
 
-        processPick_( pick );
+        if ( badRegion_ )
+        {
+            mousePressed_ = false;
+            return false;
+        }
+        laplacianPickVert_( pick );
     }
     else
     {
         oldMesh_ = std::dynamic_pointer_cast< ObjectMesh >( obj_->clone() );
         oldMesh_->setAncillary( true );
         obj_->setPickable( false );
-        AppendHistory<ChangeMeshAction>( "Edit mesh surface", obj_ );
+        appendHistoryAction_ = true;
+        std::string name = "Brush: ";
+        if ( settings_.workMode == WorkMode::Add )
+            name += "Add";
+        else if ( settings_.workMode == WorkMode::Remove )
+            name += "Remove";
+        else if ( settings_.workMode == WorkMode::Relax )
+            name += "Smooth";
+        historyAction_ = std::make_shared<ChangeMeshAction>( name, obj_ );
         changeSurface_();
     }
 
@@ -157,14 +177,7 @@ bool SurfaceManipulationWidget::onMouseMove_( int mouse_x, int mouse_y )
                 appendHistoryAction_ = false;
                 AppendHistory( std::move( historyAction_ ) );
             }
-
-            auto& viewerRef = getViewerInstance();
-            constexpr float zpos = 0.75f;
-            auto viewportPoint1 = viewerRef.screenToViewport( Vector3f( float( mouse_x ), float( mouse_y ), zpos ), viewerRef.viewport().id );
-            auto pos1 = viewerRef.viewport().unprojectFromViewportSpace( viewportPoint1 );
-            auto viewportPoint0 = viewerRef.screenToViewport( Vector3f( float( storedDown_.x ), float( storedDown_.y ), zpos ), viewerRef.viewport().id );
-            auto pos0 = viewerRef.viewport().unprojectFromViewportSpace( viewportPoint0 );
-            processMove_( obj_->worldXf().A.inverse() * ( pos1 - pos0 ) );
+            laplacianMoveVert_( Vector2( float( mouse_x ), float( mouse_y ) ) );
         }
         else
             updateRegion_( Vector2f{ float( mouse_x ), float( mouse_y ) } );
@@ -185,7 +198,8 @@ void SurfaceManipulationWidget::postDraw_()
         return;
 
     auto drawList = ImGui::GetBackgroundDrawList();
-    drawList->AddCircleFilled( ImVec2( mousePos_.x, mousePos_.y ), 10.f, Color::gray().getUInt32() );
+    const auto& mousePos = Vector2f( getViewerInstance().mouseController().getMousePos() );
+    drawList->AddCircleFilled( ImVec2( mousePos.x, mousePos.y ), 10.f, Color::gray().getUInt32() );
 }
 
 void SurfaceManipulationWidget::initConnections_()
@@ -216,8 +230,14 @@ void SurfaceManipulationWidget::resetConnections_()
 
 void SurfaceManipulationWidget::changeSurface_()
 {
-    if ( !singleEditingRegion_.any() )
+    if ( !singleEditingRegion_.any() || badRegion_ )
         return;
+
+    if ( appendHistoryAction_ )
+    {
+        appendHistoryAction_ = false;
+        AppendHistory( std::move( historyAction_ ) );
+    }
 
     MR_TIMER;
 
@@ -280,7 +300,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
 
     const auto& viewerRef = getViewerInstance();
     std::vector<Vector2f> viewportPoints;
-    if ( !mousePressed_ || ( mousePos - mousePos_ ).lengthSq() < 9.f )
+    if ( !mousePressed_ || ( mousePos - mousePos_ ).lengthSq() < 16.f )
         viewportPoints.push_back( Vector2f( viewerRef.screenToViewport( Vector3f( mousePos ), viewerRef.getHoveredViewportId() ) ) );
     else
     {
@@ -293,6 +313,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
         for ( int i = 0; i < count; ++i )
             viewportPoints[i] = oldMousePos + step * float( i );
     }
+    mousePos_ = mousePos;
 
     auto objMeshPtr = oldMesh_ ? oldMesh_ : obj_;
     // to pick some object, it must have a parent object
@@ -308,46 +329,9 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
         oldMesh_->detachFromParent();
         parent.reset();
     }
-    mousePos_ = mousePos;
 
+    updateVizualizeSelection_( movedPosPick.empty() ? ObjAndPick() : movedPosPick.back() );
     const auto& mesh = *objMeshPtr->mesh();
-    updateUVmap_( false );
-    ObjAndPick curentPosPick = movedPosPick.empty() ? ObjAndPick() : movedPosPick.back();
-    visualizationRegion_.reset();
-    if ( curentPosPick.first == objMeshPtr )
-    {
-        if ( settings_.workMode == WorkMode::Laplacian )
-        {
-            const PointOnFace pOnFace{ curentPosPick.second.face, curentPosPick.second.point };
-            const VertId vert = mesh.getClosestVertex( pOnFace );
-            const PointOnFace vertPOF{ curentPosPick.second.face, mesh.points[vert] };
-            visualizationDistanceMap_ = computeSpaceDistances( mesh, vertPOF, settings_.radius );
-            visualizationRegion_ = findNeighborVerts( mesh, vertPOF, settings_.radius );
-            expand( mesh.topology, visualizationRegion_ );
-            updateUVmap_( true );
-        }
-        else
-        {
-            PointOnFace pOnFace{ curentPosPick.second.face, curentPosPick.second.point };
-            visualizationDistanceMap_ = computeSpaceDistances( mesh, pOnFace, settings_.radius );
-            visualizationRegion_ = findNeighborVerts( mesh, pOnFace, settings_.radius );
-            expand( mesh.topology, visualizationRegion_ );
-            int pointsCount = 0;
-            for ( auto vId : visualizationRegion_ )
-            {
-                if ( visualizationDistanceMap_[vId] <= settings_.radius )
-                    ++pointsCount;
-                if ( pointsCount == 3 )
-                    break;
-            }
-            badRegion_ = pointsCount < 3;
-            if ( !badRegion_ )
-                updateUVmap_( true );
-        }
-    }
-    obj_->setAncillaryUVCoords( uvs_ );
-
-
     if ( !mousePressed_ )
     {
         editingDistanceMap_ = visualizationDistanceMap_;
@@ -397,28 +381,70 @@ void SurfaceManipulationWidget::abortEdit_()
     oldMesh_.reset();
     obj_->setPickable( true );
     obj_->clearAncillaryTexture();
+    appendHistoryAction_ = false;
     historyAction_.reset();
 }
 
-void SurfaceManipulationWidget::processPick_( const PointOnFace& pick )
+void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
 {
     appendHistoryAction_ = true;
     storedDown_ = getViewerInstance().mouseController().getMousePos();
     const auto& mesh = *obj_->mesh();
-    touchVertId = mesh.getClosestVertex( pick );
-    touchVertIniPos = mesh.points[touchVertId];
+    touchVertId_ = mesh.getClosestVertex( pick );
+    touchVertIniPos_ = mesh.points[touchVertId_];
     laplacian_ = std::make_unique<Laplacian>( *obj_->varMesh() );
     laplacian_->init( singleEditingRegion_, settings_.edgeWeights );
-    historyAction_ = std::make_shared<ChangeMeshAction>( "Laplacian", obj_ );
+    historyAction_ = std::make_shared<ChangeMeshAction>( "Brush: Laplacian", obj_ );
 }
 
-void SurfaceManipulationWidget::processMove_( const Vector3f& move )
+void SurfaceManipulationWidget::laplacianMoveVert_( const Vector2f& mousePos )
 {
     ownMeshChangedSignal_ = true;
-    laplacian_->fixVertex( touchVertId, touchVertIniPos + move );
+    auto& viewerRef = getViewerInstance();
+    const float zpos = viewerRef.viewport().projectToViewportSpace( obj_->worldXf()( touchVertIniPos_ ) ).z;
+    auto viewportPoint1 = viewerRef.screenToViewport( Vector3f( mousePos.x, mousePos.y, zpos ), viewerRef.viewport().id );
+    auto pos1 = viewerRef.viewport().unprojectFromViewportSpace( viewportPoint1 );
+    auto viewportPoint0 = viewerRef.screenToViewport( Vector3f( float( storedDown_.x ), float( storedDown_.y ), zpos ), viewerRef.viewport().id );
+    auto pos0 = viewerRef.viewport().unprojectFromViewportSpace( viewportPoint0 );
+    const Vector3f move = obj_->worldXf().A.inverse()* ( pos1 - pos0 );
+    laplacian_->fixVertex( touchVertId_, touchVertIniPos_ + move );
     laplacian_->apply();
-
     obj_->setDirtyFlags( DIRTY_POSITION );
+}
+
+void SurfaceManipulationWidget::updateVizualizeSelection_( const ObjAndPick& objAndPick )
+{
+    updateUVmap_( false );
+    auto objMeshPtr = oldMesh_ ? oldMesh_ : obj_;
+    const auto& mesh = *objMeshPtr->mesh();
+    visualizationRegion_.reset();
+    badRegion_ = false;
+    if ( objAndPick.first == objMeshPtr )
+    {
+        PointOnFace pOnFace{ objAndPick.second.face, objAndPick.second.point };
+        if ( settings_.workMode == WorkMode::Laplacian )
+        {
+            const VertId vert = mesh.getClosestVertex( pOnFace );
+            pOnFace = PointOnFace{ objAndPick.second.face, mesh.points[vert] };
+        }
+        visualizationDistanceMap_ = computeSpaceDistances( mesh, pOnFace, settings_.radius );
+        visualizationRegion_ = findNeighborVerts( mesh, pOnFace, settings_.radius );
+        expand( mesh.topology, visualizationRegion_ );
+        {
+            int pointsCount = 0;
+            for ( auto vId : visualizationRegion_ )
+            {
+                if ( visualizationDistanceMap_[vId] <= settings_.radius )
+                    ++pointsCount;
+                if ( pointsCount == 3 )
+                    break;
+            }
+            badRegion_ = pointsCount < 3;
+        }
+        if ( !badRegion_ )
+            updateUVmap_( true );
+    }
+    obj_->setAncillaryUVCoords( uvs_ );
 }
 
 }

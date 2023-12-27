@@ -52,41 +52,58 @@ struct SharpOffsetParameters : OffsetParameters
 /// signDetectionMode = Unsigned(from OpenVDB) | OpenVDB | HoleWindingRule,
 /// and then converts back using OpenVDB library (dual marching cubes),
 /// so result mesh is always closed
-[[nodiscard]] MRMESH_API Expected<Mesh, std::string> offsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params = {} );
-
-/// in case of positive offset, returns the mesh consisting of offset mesh merged with inversed original mesh (thickening mode);
-/// in case of negative offset, returns the mesh consisting of inversed offset mesh merged with original mesh (hollowing mode);
-/// if your input mesh is closed then please specify params.type == Offset, and you will get closed mesh on output;
-/// if your input mesh is open then please specify params.type == Shell, and you will get open mesh on output
-[[nodiscard]] MRMESH_API Expected<Mesh, std::string> thickenMesh( const Mesh& mesh, float offset, const OffsetParameters & params = {} );
+[[nodiscard]] MRMESH_API Expected<Mesh> offsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params = {} );
 
 /// Offsets mesh by converting it to voxels and back two times
 /// only closed meshes allowed (only Offset mode)
 /// typically offsetA and offsetB have distinct signs
-[[nodiscard]] MRMESH_API Expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params = {} );
+[[nodiscard]] MRMESH_API Expected<Mesh> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params = {} );
 #endif
 
 /// Offsets mesh by converting it to distance field in voxels (using OpenVDB library if SignDetectionMode::OpenVDB or our implementation otherwise)
 /// and back using standard Marching Cubes, as opposed to Dual Marching Cubes in offsetMesh(...)
-[[nodiscard]] MRMESH_API Expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, 
+[[nodiscard]] MRMESH_API Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset, 
     const OffsetParameters& params = {}, Vector<VoxelId, FaceId>* outMap = nullptr );
 
 /// Constructs a shell around selected mesh region with the properties that every point on the shall must
 ///  1. be located not further than given distance from selected mesh part,
 ///  2. be located not closer to not-selected mesh part than to selected mesh part.
-[[nodiscard]] MRMESH_API Expected<Mesh, std::string> mcShellMeshRegion( const Mesh& mesh, const FaceBitSet& region, float offset,
+[[nodiscard]] MRMESH_API Expected<Mesh> mcShellMeshRegion( const Mesh& mesh, const FaceBitSet& region, float offset,
     const BaseShellParameters& params, Vector<VoxelId, FaceId> * outMap = nullptr );
 
 /// Offsets mesh by converting it to voxels and back
 /// post process result using reference mesh to sharpen features
-[[nodiscard]] MRMESH_API Expected<Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float offset, const SharpOffsetParameters& params = {} );
+[[nodiscard]] MRMESH_API Expected<Mesh> sharpOffsetMesh( const MeshPart& mp, float offset, const SharpOffsetParameters& params = {} );
+
+/// allows the user to select in the parameters which offset algorithm to call
+struct GeneralOffsetParameters : SharpOffsetParameters
+{
+    enum class Mode : int
+    {
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+        Smooth,     ///< create mesh using dual marching cubes from OpenVDB library
+#endif
+        Standard,   ///< create mesh using standard marching cubes implemented in MeshLib
+        Sharpening  ///< create mesh using standard marching cubes with additional sharpening implemented in MeshLib
+    };
+    Mode mode = Mode::Standard;
+};
+
+/// Offsets mesh by converting it to voxels and back using one of three modes specified in the parameters
+[[nodiscard]] MRMESH_API Expected<Mesh> generalOffsetMesh( const MeshPart& mp, float offset, const GeneralOffsetParameters& params );
+
+/// in case of positive offset, returns the mesh consisting of offset mesh merged with inversed original mesh (thickening mode);
+/// in case of negative offset, returns the mesh consisting of inversed offset mesh merged with original mesh (hollowing mode);
+/// if your input mesh is closed then please specify params.signDetectionMode = SignDetectionMode::Unsigned, and you will get closed mesh on output;
+/// if your input mesh is open then please specify another sign detection mode, and you will get open mesh on output
+[[nodiscard]] MRMESH_API Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters & params = {} );
 
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 /// Offsets polyline by converting it to voxels and building iso-surface
 /// do offset in all directions
 /// so result mesh is always closed
 /// params.type is ignored (always assumed Shell)
-[[nodiscard]] MRMESH_API Expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params = {} );
+[[nodiscard]] MRMESH_API Expected<Mesh> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params = {} );
 #endif
 
 }

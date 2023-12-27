@@ -4,11 +4,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project (MRTest CXX)
 
-add_executable(${PROJECT_NAME}
-    MRTestApp.cpp
-    MRTriangleIntersection.cpp
-    MRZlib.cpp
-)
+file(GLOB SOURCES "*.cpp")
+
+add_executable(${PROJECT_NAME} ${SOURCES})
 
 IF(MR_EMSCRIPTEN)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --emrun")

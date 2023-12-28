@@ -20,23 +20,27 @@ class PointToPlaneAligningTransform
 {
 public:
     /// Constructor with the known approximation of the aligning transformation.
-    MRMESH_API PointToPlaneAligningTransform( const AffineXf3d& aTransform = {} );
+    PointToPlaneAligningTransform( const AffineXf3d& aTransform = {} ) : approxTransform_( aTransform ) {}
 
     /// Add a pair of corresponding points and the normal of the tangent plane at the second point.
-    MRMESH_API void add(const Vector3d& p1, const Vector3d& p2, const Vector3d& normal2, const double w = 1.);
+    MRMESH_API void add(const Vector3d& p1, const Vector3d& p2, const Vector3d& normal2, const double w = 1. );
+
     /// Clear points and normals data
-    MRMESH_API void clear();
+    void clear() { *this = {}; }
 
     /// Compute transformation as the solution to a least squares optimization problem:
     /// xf( p1_i ) = p2_i
     /// this version searches for best rigid body transformation
-    MRMESH_API AffineXf3d findBestRigidXf() const;
+    [[nodiscard]] MRMESH_API AffineXf3d findBestRigidXf() const;
+
     /// this version searches for best transformation where rotation is allowed only around given axis and with arbitrary translation
-    MRMESH_API AffineXf3d findBestRigidXfFixedRotationAxis( const Vector3d & axis ) const;
+    [[nodiscard]] MRMESH_API AffineXf3d findBestRigidXfFixedRotationAxis( const Vector3d & axis ) const;
+
     /// this version searches for best transformation where rotation is allowed only around axes orthogonal to given one
-    MRMESH_API AffineXf3d findBestRigidXfOrthogonalRotationAxis( const Vector3d& ort ) const;
+    [[nodiscard]] MRMESH_API AffineXf3d findBestRigidXfOrthogonalRotationAxis( const Vector3d& ort ) const;
+
     /// Returns only shift part relative to given approximation
-    MRMESH_API Vector3d findBestTranslation() const;
+    [[nodiscard]] MRMESH_API Vector3d findBestTranslation() const;
 
     struct Amendment
     {
@@ -45,18 +49,20 @@ public:
     };
 
     /// Compute transformation relative to given approximation and return it as angles and shift
-    MRMESH_API Amendment calculateAmendment() const;
+    [[nodiscard]] MRMESH_API Amendment calculateAmendment() const;
+
     /// this version searches for best transformation where rotation is allowed only around given axis and with arbitrary translation
-    MRMESH_API Amendment calculateFixedAxisAmendment( const Vector3d & axis ) const;
+    [[nodiscard]] MRMESH_API Amendment calculateFixedAxisAmendment( const Vector3d & axis ) const;
+
     /// this version searches for best transformation where rotation is allowed only around axes orthogonal to given one
-    MRMESH_API Amendment calculateOrthogonalAxisAmendment( const Vector3d& ort ) const;
+    [[nodiscard]] MRMESH_API Amendment calculateOrthogonalAxisAmendment( const Vector3d& ort ) const;
 
 private:
-    AffineXf3d approxTransform;
-    Eigen::Matrix<double, 6, 6> sumA_;
-    Eigen::Vector<double, 6> sumB_;
+    AffineXf3d approxTransform_;
+    Eigen::Matrix<double, 6, 6> sumA_ = Eigen::Matrix<double, 6, 6>::Zero();
+    Eigen::Vector<double, 6> sumB_ = Eigen::Vector<double, 6>::Zero();
 };
 
 /// \}
 
-}
+} //namespace MR

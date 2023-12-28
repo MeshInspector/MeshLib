@@ -13,6 +13,9 @@
   <ItemGroup>
     <ClInclude Include="MRAligningTransform.h" />
     <ClInclude Include="MRChangeValue.h" />
+    <ClInclude Include="MRCylinder3.h" />
+    <ClInclude Include="MRCylinderApproximator.h" />
+    <ClInclude Include="MRCylinderObject.h" />
     <ClInclude Include="MRFinally.h" />
     <ClInclude Include="MRInTreePathBuilder.h" />
     <ClInclude Include="MRChangeColoringType.h" />
@@ -383,6 +386,7 @@
     <ClCompile Include="MRContoursStitch.cpp" />
     <ClCompile Include="MRConvexHull.cpp" />
     <ClCompile Include="MRCPRTests.cpp" />
+    <ClCompile Include="MRCylinderObject.cpp" />
     <ClCompile Include="MRDenseBox.cpp" />
     <ClCompile Include="MRDistanceMap.cpp" />
     <ClCompile Include="MRAffineXf3.cpp" />

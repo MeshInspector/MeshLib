@@ -1,6 +1,5 @@
 #pragma once
 
-#include "MRMatrix3.h"
 #include "MRSymMatrix3.h"
 #include "MRPlane3.h"
 #include "MRLine3.h"
@@ -43,7 +42,7 @@ public:
 private:
     double sumWeight_ = 0;
     Vector3d momentum1_;
-    Matrix3d momentum2_ = Matrix3d::zero();
+    SymMatrix3d momentum2_;
 };
 
 /// This function accumulate all mesh face centers added there with the weight equal to face area in existing `PointAccumulator`

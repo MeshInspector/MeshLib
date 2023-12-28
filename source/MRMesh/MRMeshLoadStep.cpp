@@ -346,11 +346,11 @@ Expected<std::shared_ptr<Object>, std::string> stepModelToScene( STEPControl_Rea
 
         auto cb2 = subprogress( cb, 0.90f, 1.0f );
         tbb::task_arena taskArena;
-        tbb::task_group taskGroup;
-        std::vector<std::vector<Triangle3f>> triples( solids.size() );
         std::vector<std::shared_ptr<Object>> children( solids.size() );
         taskArena.execute( [&]
         {
+            tbb::task_group taskGroup;
+            std::vector<std::vector<Triangle3f>> triples( solids.size() );
             for ( auto i = 0; i < solids.size(); ++i )
             {
                 triples[i] = loadSolid( solids[i] );

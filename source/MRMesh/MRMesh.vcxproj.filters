@@ -1127,7 +1127,7 @@
     </ClInclude>
     <ClInclude Include="MRFinally.h">
       <Filter>Source Files\Basic</Filter>
-    </ClCompile>
+    </ClInclude>
     <ClInclude Include="MRZlib.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>

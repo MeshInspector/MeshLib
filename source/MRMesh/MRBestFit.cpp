@@ -3,19 +3,10 @@
 #include "MRLine3.h"
 #include "MRAffineXf3.h"
 #include "MRMesh.h"
+#include "MRPointCloud.h"
 #include "MRGTest.h"
+#include "MRTimer.h"
 #include <cassert>
-
-#pragma warning(push)
-#pragma warning(disable:4068) // unknown pragma 'clang'
-#pragma warning(disable:4127)  //conditional expression is constant
-#pragma warning(disable:4464) // relative include path contains '..'
-#pragma warning(disable:5054)  //operator '&': deprecated between enumerations of different types
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"
-#include <Eigen/Eigenvalues>
-#pragma clang diagnostic pop
-#pragma warning(pop)
 
 namespace MR
 {
@@ -24,15 +15,14 @@ void PointAccumulator::addPoint( const Vector3d & pt )
 {
     sumWeight_ += 1;
     momentum1_ += pt;
-    momentum2_ += outer( pt, pt );
+    momentum2_ += outerSquare( pt );
 }
 
 void PointAccumulator::addPoint( const Vector3d & pt, double weight )
 {
     sumWeight_ += weight;
-    auto wpt = weight * pt;
-    momentum1_ += wpt;
-    momentum2_ += outer( wpt, pt );
+    momentum1_ += weight * pt;
+    momentum2_ += weight * outerSquare( pt );
 }
 
 bool PointAccumulator::getCenteredCovarianceEigen( Vector3d & centroid, Matrix3d & eigenvectors, Vector3d & eigenvalues ) const
@@ -43,21 +33,12 @@ bool PointAccumulator::getCenteredCovarianceEigen( Vector3d & centroid, Matrix3d
         return false;
     }
 
-    double rW = 1.0 / sumWeight_;
+    const double rW = 1.0 / sumWeight_;
     centroid = rW * momentum1_;
 
     // covariance matrix relative to centroid
-    auto cov = momentum2_ - outer( rW * momentum1_,  momentum1_ );
-
-    static_assert( sizeof( Vector3d ) == sizeof( Eigen::Vector3d ), "types have distinct memory layout" );
-    static_assert( sizeof( Matrix3d ) == sizeof( Eigen::Matrix3d ), "types have distinct memory layout" );
-
-    const Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> solver( Eigen::Map<Eigen::Matrix3d>{ &cov.x.x } );
-
-    // columns in column-major storage format of Eigen are converted into rows of Matrix3d
-    Eigen::Map<Eigen::Matrix3d>{ &eigenvectors.x.x } = solver.eigenvectors();
-    Eigen::Map<Eigen::Vector3d>{ &eigenvalues.x } = solver.eigenvalues();
-
+    const auto cov = momentum2_ - rW * outerSquare( momentum1_ );
+    eigenvalues = cov.eigens( &eigenvectors );
     return true;
 }
 
@@ -113,6 +94,7 @@ Line3d PointAccumulator::getBestLine() const
 
 void accumulateFaceCenters( PointAccumulator& accum, const MeshPart& mp, const AffineXf3f* xf /*= nullptr */ )
 {
+    MR_TIMER
     const auto& topology = mp.mesh.topology;
     const auto& edgePerFaces = topology.edgePerFace();
     const auto& faceIds = topology.getFaceIds( mp.region );
@@ -131,6 +113,13 @@ void accumulateFaceCenters( PointAccumulator& accum, const MeshPart& mp, const A
             accum.addPoint( center.transformed( xf ), triArea );
         }
     }
+}
+
+void accumulatePoints( PointAccumulator& accum, const PointCloud& pc, const AffineXf3f* xf )
+{
+    MR_TIMER
+    for ( auto v : pc.validPoints )
+        accum.addPoint( pc.points[v].transformed( xf ) );
 }
 
 void PlaneAccumulator::addPlane( const Plane3d & pl )

@@ -349,13 +349,14 @@ Expected<std::shared_ptr<Object>, std::string> stepModelToScene( STEPControl_Rea
         tbb::task_group taskGroup;
         std::vector<std::vector<Triangle3f>> triples( solids.size() );
         std::vector<std::shared_ptr<Object>> children( solids.size() );
+        std::atomic_size_t counter( solids.size() );
         for ( auto i = 0; i < solids.size(); ++i )
         {
             triples[i] = loadSolid( solids[i] );
 
-            taskArena.enqueue( [i, &triples, &children, &taskGroup]
+            taskArena.enqueue( [i, &triples, &children, &taskGroup, &counter]
             {
-                taskGroup.run( [i, &triples, &children]
+                taskGroup.run( [i, &triples, &children, &counter]
                 {
                     auto mesh = Mesh::fromPointTriples( triples[i], true );
 
@@ -363,10 +364,16 @@ Expected<std::shared_ptr<Object>, std::string> stepModelToScene( STEPControl_Rea
                     child->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
                     child->setName( fmt::format( "Solid{}", i + 1 ) );
                     children[i] = std::move( child );
+                    counter.fetch_sub( 1 );
                 } );
             } );
         }
-        taskArena.execute( [&] { taskGroup.wait(); } );
+        taskArena.execute( [&]
+        {
+            while ( counter.load() != 0 )
+                taskGroup.wait();
+        } );
+        assert( counter.load() == 0 );
 
         for ( auto& child : children )
             result->addChild( std::move( child ), true );

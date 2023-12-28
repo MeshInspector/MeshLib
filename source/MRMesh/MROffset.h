@@ -31,8 +31,11 @@ struct OffsetParameters : BaseShellParameters
     /// defines particular implementation of IFastWindingNumber interface that will compute windings. If it is not specified, default FastWindingNumber is used
     std::shared_ptr<IFastWindingNumber> fwn;
 
-    /// use FunctionVolume for voxel grid representation; decreases memory consumption but increases computation time
-    /// used only by mcOffsetMesh and sharpOffsetMesh methods
+    /// use FunctionVolume for voxel grid representation:
+    ///  - memory consumption is approx. (z / (2 * thread_count)) lesser
+    ///  - computation is about 2-3 times slower
+    ///  - custom IFastWindingNumber interface \ref fwn is ignored (CPU-only computation, no CUDA support)
+    /// used only by \ref mcOffsetMesh and \ref sharpOffsetMesh methods
     bool memoryEfficient = false;
 };
 

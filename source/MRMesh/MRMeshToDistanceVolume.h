@@ -22,6 +22,7 @@ struct DistanceVolumeParams
     /// num voxels along each axis
     Vector3i dimensions{ 100,100,100 };
     /// whether to precompute minimum and maximum values
+    /// (requires to iterate through all voxels, which might be computationally expensive for FunctionVolume)
     bool precomputeMinMax = true;
 };
 

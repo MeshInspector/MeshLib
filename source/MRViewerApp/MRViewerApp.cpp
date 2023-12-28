@@ -45,6 +45,8 @@ extern "C" int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance
 
 int main( int argc, char** argv )
 {
+    MR::setNewHandlerIfNeeded();
+
     // Init the viewer
     MR::Viewer::LaunchParams launchParams;
     launchParams.enableTransparentBackground = true;// default false, set true for MR and MRE

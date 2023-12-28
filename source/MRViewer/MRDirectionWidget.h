@@ -39,6 +39,8 @@ public:
 
 private:
     std::shared_ptr<ObjectMesh> directionObj_;
+    VisualObject* parent_;
+
     Vector3f dir_;
     Vector3f base_;
     float length_;
@@ -57,7 +59,7 @@ public:
     /// @param base initial base of the arrow
     /// @param length length of the arrow
     /// @param onDirectionChanged callback for the direction change
-    MRVIEWER_API void create( const Vector3f& dir, const Vector3f& base, float length, OnDirectionChangedCallback onDirectionChanged );
+    MRVIEWER_API void create( const Vector3f& dir, const Vector3f& base, float length, OnDirectionChangedCallback onDirectionChanged, VisualObject* parent = nullptr  );
 
     /// Removes the widget from the scene
     /// unsubscribes from viewer events

@@ -165,12 +165,13 @@ Expected<FunctionVolume> meshToDistanceFunctionVolume( const MeshPart& mp, const
         assert( !mp.region ); // only whole mesh is supported for now
         // CUDA-based implementation is useless for FunctionVolume for obvious reasons
         // using default implementation
-        result.data = [params, fwn = FastWindingNumber( mp.mesh )] ( const Vector3i& pos ) mutable -> float
+        auto fwn = std::make_shared<FastWindingNumber>( mp.mesh );
+        result.data = [params, fwn] ( const Vector3i& pos ) mutable -> float
         {
             const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
             const auto voxelCenter = params.origin + mult( params.voxelSize, coord );
             constexpr float beta = 2;
-            return fwn.calcWithDistances( voxelCenter, beta, params.maxDistSq, params.minDistSq );
+            return fwn->calcWithDistances( voxelCenter, beta, params.maxDistSq, params.minDistSq );
         };
     }
     else
@@ -198,7 +199,7 @@ Expected<FunctionVolume> meshToDistanceFunctionVolume( const MeshPart& mp, const
             }
             return minmax;
         };
-        const auto minmax = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, indexer.size() ), MinMax<float>(), body, MinMax<float>::merge );
+        const auto minmax = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, indexer.size() ), MinMax<float>(), body, &MinMax<float>::merge );
         result.min = minmax.min;
         result.max = minmax.max;
     }

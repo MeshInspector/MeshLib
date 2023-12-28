@@ -8,6 +8,7 @@
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
 #include <numeric>
+#include "MRBestFit.h"
 
 const int MAX_RESAMPLING_VOXEL_NUMBER = 500000;
 namespace MR
@@ -42,6 +43,24 @@ void MeshICP::setFloatXf( const AffineXf3f& fltXf )
 {
     floatXf_ = fltXf;
     float2refXf_ = refXf_.inverse() * floatXf_;
+}
+
+AffineXf3f MeshICP::autoSelectFloatXf()
+{
+    MR_TIMER
+
+    PointAccumulator refAcc;
+    ref_.accumulate( refAcc );
+    const auto refBasisXf = refAcc.getBasicXf3f();
+
+    PointAccumulator floatAcc;
+    floating_.accumulate( floatAcc );
+    // TODO: consider minus directions of principal axes
+    const auto floatBasisXf = floatAcc.getBasicXf3f();
+
+    auto fltXf = refXf_ * refBasisXf * floatBasisXf.inverse();
+    setFloatXf( fltXf );
+    return fltXf;
 }
 
 void MeshICP::recomputeBitSet(const float floatSamplingVoxelSize)

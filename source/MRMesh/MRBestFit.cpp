@@ -3,7 +3,9 @@
 #include "MRLine3.h"
 #include "MRAffineXf3.h"
 #include "MRMesh.h"
+#include "MRPointCloud.h"
 #include "MRGTest.h"
+#include "MRTimer.h"
 #include <cassert>
 
 namespace MR
@@ -92,6 +94,7 @@ Line3d PointAccumulator::getBestLine() const
 
 void accumulateFaceCenters( PointAccumulator& accum, const MeshPart& mp, const AffineXf3f* xf /*= nullptr */ )
 {
+    MR_TIMER
     const auto& topology = mp.mesh.topology;
     const auto& edgePerFaces = topology.edgePerFace();
     const auto& faceIds = topology.getFaceIds( mp.region );
@@ -110,6 +113,13 @@ void accumulateFaceCenters( PointAccumulator& accum, const MeshPart& mp, const A
             accum.addPoint( center.transformed( xf ), triArea );
         }
     }
+}
+
+void accumulatePoints( PointAccumulator& accum, const PointCloud& pc, const AffineXf3f* xf )
+{
+    MR_TIMER
+    for ( auto v : pc.validPoints )
+        accum.addPoint( pc.points[v].transformed( xf ) );
 }
 
 void PlaneAccumulator::addPlane( const Plane3d & pl )

@@ -4,6 +4,8 @@ from logging import getLogger
 
 logger = getLogger(__name__)
 
+MULTIPLE_REFERENCE_FILES_SUFFIX = "_ref"
+
 
 def compare_files(file1: str or Path, file2: str or Path):
     """
@@ -34,3 +36,29 @@ def compare_files(file1: str or Path, file2: str or Path):
             byte1 = f1.read(1)
             byte2 = f2.read(1)
     return True
+
+
+def compare_file_with_multiple_references(test_file, refs_list):
+    """
+    Compare input file with multiple references
+    :param test_file: file to compare
+    :param refs_list: list of references to compare
+    :return: True if the input file is equal to one of reference files
+    """
+    for ref in refs_list:
+        if compare_files(test_file, ref):
+            return True
+    return False
+
+
+def get_reference_files_list(full_file_path: Path):
+    """
+    Get list of reference files for the test file. For file foo.bar it searches for foo_opt1.bar, foo_opt2.bar, etc.
+    :param full_file_path: name of the test file
+    :return: list of reference files
+    """
+    references_list = [full_file_path]
+    for i in full_file_path.parent.glob(f"{full_file_path.stem}{MULTIPLE_REFERENCE_FILES_SUFFIX}*"):
+        logger.debug(f"Found reference file {i}")
+        references_list.append(i)
+    return references_list

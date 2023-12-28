@@ -771,7 +771,7 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
                 }
             }
 
-            if ( runCallback && ( i - begin ) % 1024 == 0 )
+            if ( runCallback && int( i - begin ) % 1024 == 0 )
                 if ( !params.cb( 0.3f * float( i - begin ) / float( end - begin ) ) )
                     keepGoing.store( false, std::memory_order_relaxed );
 
@@ -1053,7 +1053,7 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
                     faceMap.emplace_back( VoxelId{ ind } );
             }
 
-            if ( runCallback && ( ind - begin ) % 1024 == 0 )
+            if ( runCallback && int( ind - begin ) % 1024 == 0 )
                 if ( !subprogress2( float( ind - begin ) / float( end - begin ) ) )
                     keepGoing.store( false, std::memory_order_relaxed );
         }

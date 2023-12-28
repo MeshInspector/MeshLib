@@ -573,7 +573,9 @@ bool findSeparationPoint( SeparationPoint& sp, const V& volume, const Accessor& 
 
     float valueB = accessor.get( basePos );
     float valueD = accessor.get( nextPos );
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
     if constexpr ( !std::is_same_v<V, VdbVolume> )
+#endif
         if ( nanChecker( valueB ) || nanChecker( valueD ) )
             return false;
 
@@ -584,7 +586,9 @@ bool findSeparationPoint( SeparationPoint& sp, const V& volume, const Accessor& 
 
     auto coordF = Vector3f( basePos );
     auto nextCoordF = Vector3f( nextPos );
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
     if constexpr ( !std::is_same_v<V, VdbVolume> )
+#endif
     {
         coordF += Vector3f::diagonal( 0.5f );
         nextCoordF += Vector3f::diagonal( 0.5f );

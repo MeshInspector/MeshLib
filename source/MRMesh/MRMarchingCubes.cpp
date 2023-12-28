@@ -715,7 +715,7 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
             cache.emplace( accessor, indexer, Parameters {
                 .preloadedLayerCount = 2,
             } );
-            cache->preloadLayer( layerBegin );
+            cache->preloadLayer( (int)layerBegin );
         }
 
         const auto begin = layerBegin * layerSize;
@@ -875,7 +875,7 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
             cache.emplace( accessor, indexer, Parameters {
                 .preloadedLayerCount = 2,
             } );
-            cache->preloadLayer( layerBegin );
+            cache->preloadLayer( (int)layerBegin );
         }
 
         const auto begin = layerBegin * layerSize;

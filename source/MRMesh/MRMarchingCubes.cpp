@@ -2,6 +2,7 @@
 #include "MRIsNaN.h"
 #include "MRMesh.h"
 #include "MRVolumeIndexer.h"
+#include "MRVoxelsVolumeAccess.h"
 #include "MRLine3.h"
 #include "MRMeshBuilder.h"
 #include "MRVDBFloatGrid.h"
@@ -561,6 +562,46 @@ bool findSeparationPoint( SeparationPoint& sp, const FunctionVolume& volume, con
     return true;
 }
 
+template <bool UseDefaultVoxelPointPositioner, typename V, typename NaNChecker, typename Accessor>
+bool findSeparationPoint( SeparationPoint& sp, const V& volume, const Accessor& accessor, const Vector3i& basePos, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker )
+
+{
+    auto nextPos = basePos;
+    nextPos[int( dir )] += 1;
+    if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
+        return false;
+
+    float valueB = accessor.get( basePos );
+    float valueD = accessor.get( nextPos );
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+    if constexpr ( !std::is_same_v<V, VdbVolume> )
+#endif
+        if ( nanChecker( valueB ) || nanChecker( valueD ) )
+            return false;
+
+    bool bLower = valueB < params.iso;
+    bool dLower = valueD < params.iso;
+    if ( bLower == dLower )
+        return false;
+
+    auto coordF = Vector3f( basePos );
+    auto nextCoordF = Vector3f( nextPos );
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+    if constexpr ( !std::is_same_v<V, VdbVolume> )
+#endif
+    {
+        coordF += Vector3f::diagonal( 0.5f );
+        nextCoordF += Vector3f::diagonal( 0.5f );
+    }
+    auto bPos = params.origin + mult( volume.voxelSize, coordF );
+    auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
+    if constexpr ( UseDefaultVoxelPointPositioner )
+        sp.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
+    else
+        sp.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
+    return true;
+}
+
 template<typename V> auto accessorCtor( const V& v );
 
 template<> auto accessorCtor<SimpleVolume>( const SimpleVolume& ) { return ( void* )nullptr; }
@@ -600,6 +641,15 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
         minCoord = volume.data->evalActiveVoxelBoundingBox().min();
 #endif
 
+    auto cachingMode = params.cachingMode;
+    if ( cachingMode == MarchingCubesParams::CachingMode::Automatic )
+    {
+        if constexpr ( std::is_same_v<V, FunctionVolume> || std::is_same_v<V, FunctionVolumeU8> )
+            cachingMode = MarchingCubesParams::CachingMode::Normal;
+        else
+            cachingMode = MarchingCubesParams::CachingMode::None;
+    }
+
     VolumeIndexer indexer( volume.dims );
 
     std::atomic<bool> keepGoing{ true };
@@ -612,8 +662,13 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
     if ( threadCount == 0 )
         threadCount = 1;
 
+    const auto layerCount = (size_t)indexer.dims().z;
+    const auto layerSize = indexer.sizeXY();
+    assert( indexer.size() == layerCount * layerSize );
+
     const auto blockCount = threadCount;
-    const auto blockSize = (size_t)std::ceil( (float)indexer.size() / blockCount );
+    const auto layerPerBlockCount = (size_t)std::ceil( (float)layerCount / (float)blockCount );
+    const auto blockSize = layerPerBlockCount * layerSize;
     assert( indexer.size() <= blockSize * blockCount );
 
     std::vector<SeparationPointMap> hmaps( blockCount );
@@ -633,7 +688,7 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
     };
     using PerThreadVertNumeration = std::vector<VertsNumeration>;
     tbb::enumerable_thread_specific<PerThreadVertNumeration> perThreadVertNumeration;
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, blockCount, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), blockCount, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         assert( range.begin() + 1 == range.end() );
         const auto blockIndex = range.begin();
@@ -649,8 +704,22 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
             lastSubMap = int( blockIndex );
         const bool runCallback = params.cb && std::this_thread::get_id() == mainThreadId && lastSubMap == blockIndex;
 
-        const auto begin = blockIndex * blockSize;
-        const auto end = std::min( ( blockIndex + 1 ) * blockSize, indexer.size() );
+        const auto layerBegin = blockIndex * layerPerBlockCount;
+        const auto layerEnd = std::min( ( blockIndex + 1 ) * layerPerBlockCount, layerCount );
+
+        const VoxelsVolumeAccessor<V> accessor( volume );
+        std::optional<VoxelsVolumeCachingAccessor<V>> cache;
+        if ( cachingMode == MarchingCubesParams::CachingMode::Normal )
+        {
+            using Parameters = typename VoxelsVolumeCachingAccessor<V>::Parameters;
+            cache.emplace( accessor, indexer, Parameters {
+                .preloadedLayerCount = 2,
+            } );
+            cache->preloadLayer( (int)layerBegin );
+        }
+
+        const auto begin = layerBegin * layerSize;
+        const auto end = layerEnd * layerSize;
 
         auto& localNumeration = perThreadVertNumeration.local();
         localNumeration.emplace_back( begin, 0 );
@@ -661,9 +730,15 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
             if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
                 break;
 
+            const auto basePos = indexer.toPos( VoxelId( i ) );
+            if ( cache && basePos.z != cache->currentLayer() )
+            {
+                cache->preloadNextLayer();
+                assert( basePos.z == cache->currentLayer() );
+            }
+
             SeparationPointSet set;
             bool atLeastOneOk = false;
-            auto basePos = indexer.toPos( VoxelId( i ) );
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
             if constexpr ( std::is_same_v<V, VdbVolume> )
             {
@@ -674,6 +749,9 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
             for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
             {
                 bool ok = false;
+                if ( cache )
+                    ok = findSeparationPoint<UseDefaultVoxelPointPositioner>( set[n], volume, *cache, basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ) );
+                else
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
                 if constexpr ( std::is_same_v<V, VdbVolume> )
                     ok = findSeparationPoint<UseDefaultVoxelPointPositioner>( set[n], volume, acc, baseCoord, basePos, baseValue, NeighborDir( n ), params );
@@ -767,7 +845,6 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
     };
     using PerThreadTriangulation = std::vector<TriangulationData>;
     auto subprogress2 = MR::subprogress( params.cb, 0.5f, 0.85f );
-    std::atomic<size_t> voxelsDone{0};
 
     const std::array<size_t, 8> cVoxelNeighborsIndexAdd = 
     {
@@ -782,13 +859,35 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
     };
 
     tbb::enumerable_thread_specific<PerThreadTriangulation> triangulationPerThread;
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), blockCount, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
     {
+        assert( range.begin() + 1 == range.end() );
+        const auto blockIndex = range.begin();
+
+        const auto layerBegin = blockIndex * layerPerBlockCount;
+        const auto layerEnd = std::min( ( blockIndex + 1 ) * layerPerBlockCount, layerCount );
+
+        const VoxelsVolumeAccessor<V> accessor( volume );
+        std::optional<VoxelsVolumeCachingAccessor<V>> cache;
+        if ( cachingMode == MarchingCubesParams::CachingMode::Normal )
+        {
+            using Parameters = typename VoxelsVolumeCachingAccessor<V>::Parameters;
+            cache.emplace( accessor, indexer, Parameters {
+                .preloadedLayerCount = 2,
+            } );
+            cache->preloadLayer( (int)layerBegin );
+        }
+
+        const auto begin = layerBegin * layerSize;
+        const auto end = layerEnd * layerSize;
+
+        const bool runCallback = subprogress2 && std::this_thread::get_id() == mainThreadId;
+
         // setup local triangulation
         auto& localTriangulatoinData = triangulationPerThread.local();
         localTriangulatoinData.emplace_back();
         auto& thisTriData = localTriangulatoinData.back();
-        thisTriData.initInd = range.begin();
+        thisTriData.initInd = begin;
         auto& t = thisTriData.t;
         auto& faceMap = thisTriData.faceMap;
 
@@ -799,15 +898,22 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
         ItersArray<7> iters;
         std::array<bool, 7> iterStatus;
         unsigned char voxelConfiguration;
-        for ( size_t ind = range.begin(); ind < range.end(); ++ind )
+        for ( size_t ind = begin; ind < end; ++ind )
         {
             if ( subprogress2 && !keepGoing.load( std::memory_order_relaxed ) )
                 break;
+
             Vector3i basePos = indexer.toPos( VoxelId( ind ) );
             if ( basePos.x + 1 >= volume.dims.x ||
                 basePos.y + 1 >= volume.dims.y ||
                 basePos.z + 1 >= volume.dims.z )
                 continue;
+
+            if ( cache && basePos.z != cache->currentLayer() )
+            {
+                cache->preloadNextLayer();
+                assert( basePos.z == cache->currentLayer() );
+            }
 
             bool voxelValid = true;
             voxelConfiguration = 0;
@@ -819,12 +925,17 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
                 if constexpr ( std::is_same_v<V, VdbVolume> )
                 {
-                    value = acc.getValue( { pos.x + minCoord.x(),pos.y + minCoord.y(),pos.z + minCoord.z() } );
+                    if ( cache )
+                        value = cache->get( pos );
+                    else
+                        value = acc.getValue( { pos.x + minCoord.x(),pos.y + minCoord.y(),pos.z + minCoord.z() } );
                 } else
 #endif
                 if constexpr ( std::is_same_v<V, SimpleVolume> || std::is_same_v<V, FunctionVolume> )
                 {
-                    if constexpr ( std::is_same_v<V, SimpleVolume> )
+                    if ( cache )
+                        value = cache->get( pos );
+                    else if constexpr ( std::is_same_v<V, SimpleVolume> )
                         value = volume.data[ind + cVoxelNeighborsIndexAdd[i]];
                     else
                         value = volume.data( pos );
@@ -851,7 +962,9 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
                             neighPos[posCoord] += ( sign *
                                 ( ( cNeighborsOrder[neighIndex] & ( 1 << posCoord ) ) >> posCoord ) );
                         }
-                        if constexpr ( std::is_same_v<V, SimpleVolume> )
+                        if ( cache )
+                            value = cache->get( neighPos );
+                        else if constexpr ( std::is_same_v<V, SimpleVolume> )
                             value = volume.data[indexer.toVoxelId( neighPos ).get()];
                         else
                             value = volume.data( neighPos );
@@ -939,13 +1052,10 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
                 if ( params.outVoxelPerFaceMap )
                     faceMap.emplace_back( VoxelId{ ind } );
             }
-        }
 
-        if ( subprogress2 )
-        {
-            voxelsDone += range.size();
-            if ( std::this_thread::get_id() == mainThreadId && !subprogress2( float( voxelsDone ) / float( indexer.size() ) ) )
-                keepGoing.store( false, std::memory_order_relaxed );
+            if ( runCallback && ( ind - begin ) % 1024 == 0 )
+                if ( !subprogress2( float( ind - begin ) / float( end - begin ) ) )
+                    keepGoing.store( false, std::memory_order_relaxed );
         }
     } );
 

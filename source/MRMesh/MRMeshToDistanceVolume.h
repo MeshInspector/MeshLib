@@ -42,7 +42,7 @@ using MeshToSimpleVolumeParams [[deprecated]] = MeshToDistanceVolumeParams;
 MRMESH_API Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params = {} );
 
 /// makes FunctionVolume representing (signed or unsigned) distances from Mesh with given settings
-MRMESH_API Expected<FunctionVolume> meshToDistanceFunctionVolume( const Mesh& mesh, const MeshToDistanceVolumeParams& params = {} );
+MRMESH_API Expected<FunctionVolume> meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params = {} );
 
 /// returns a volume filled with the values:
 /// v < 0: this point is within offset distance to region-part of mesh and it is closer to region-part than to not-region-part

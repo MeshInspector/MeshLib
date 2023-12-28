@@ -151,7 +151,7 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, co
     return res;
 }
 
-Expected<FunctionVolume> meshToDistanceFunctionVolume( const Mesh& mesh, const MeshToDistanceVolumeParams& params )
+Expected<FunctionVolume> meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params )
 {
     MR_TIMER
     assert( params.signMode != SignDetectionMode::OpenVDB );
@@ -162,9 +162,10 @@ Expected<FunctionVolume> meshToDistanceFunctionVolume( const Mesh& mesh, const M
     };
     if ( params.signMode == SignDetectionMode::HoleWindingRule )
     {
+        assert( !mp.region ); // only whole mesh is supported for now
         // CUDA-based implementation is useless for FunctionVolume for obvious reasons
         // using default implementation
-        result.data = [params, fwn = FastWindingNumber( mesh )] ( const Vector3i& pos ) mutable -> float
+        result.data = [params, fwn = FastWindingNumber( mp.mesh )] ( const Vector3i& pos ) mutable -> float
         {
             const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
             const auto voxelCenter = params.origin + mult( params.voxelSize, coord );
@@ -174,7 +175,7 @@ Expected<FunctionVolume> meshToDistanceFunctionVolume( const Mesh& mesh, const M
     }
     else
     {
-        result.data = [params, mp = MeshPart( mesh )] ( const Vector3i& pos ) -> float
+        result.data = [params, mp = MeshPart( mp.mesh )] ( const Vector3i& pos ) -> float
         {
             const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
             const auto voxelCenter = params.origin + mult( params.voxelSize, coord );

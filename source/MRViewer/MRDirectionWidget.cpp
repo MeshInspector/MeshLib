@@ -4,14 +4,16 @@
 #include "MRMesh/MRArrow.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRViewer/MRViewport.h"
+#include "MRMesh/MRMatrix3Decompose.h"
 
 namespace MR
 {
-    void DirectionWidget::create( const Vector3f& dir, const Vector3f& base, float length, OnDirectionChangedCallback onDirectionChanged )
+    void DirectionWidget::create( const Vector3f& dir, const Vector3f& base, float length, OnDirectionChangedCallback onDirectionChanged, VisualObject* parent )
     {
         base_ = base;
         length_ = length;
         onDirectionChanged_ = onDirectionChanged;
+        parent_ = parent;
         connect( &getViewerInstance(), 10, boost::signals2::at_front );
         updateDirection( dir );
     }
@@ -33,11 +35,17 @@ namespace MR
             directionObj_->setAncillary( true );
             directionObj_->setFrontColor( color_, false );
             directionObj_->setFlatShading( true );
-            SceneRoot::get().addChild( directionObj_ );
+
+            if ( parent_ )
+                parent_->addChild( directionObj_ );
+            else
+                SceneRoot::get().addChild( directionObj_ );
         }
 
-        auto transform = AffineXf3f::translation(base_) * AffineXf3f::linear(Matrix3f::rotation(Vector3f::plusZ(), dir));
-        directionObj_->setXf( transform );
+        Matrix3f rot, scale;
+        if ( parent_ )
+            decomposeMatrix3( parent_->worldXf().A, rot, scale );
+        directionObj_->setXf( AffineXf3f::translation( base_ ) * AffineXf3f::linear( rot.inverse() * Matrix3f::rotation( Vector3f::plusZ(), dir ) ) );
     }
 
     void DirectionWidget::updateArrow( const Vector3f& base, float length )
@@ -47,7 +55,7 @@ namespace MR
 
         base_ = base;
         length_ = length;
-        std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>( makeArrow( {}, dir_ * length_, length_ * 0.02f, length_ * 0.04f, length_ * 0.08f));        
+        std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>( makeArrow( {}, dir_ * length_, length_ * 0.02f, length_ * 0.04f, length_ * 0.08f));
         directionObj_->setXf( AffineXf3f::translation( base_ ) * directionObj_->xf() );
     }
 
@@ -92,7 +100,7 @@ namespace MR
         auto viewer = Viewer::instance();
         const auto viewportEnd = viewer->screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewer->viewport().id );
         const auto worldEndPoint = viewer->viewport().unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
-        const auto newDir = worldEndPoint - base_;
+        const auto newDir = worldEndPoint - directionObj_->worldXf()( base_ );
         updateDirection( newDir );
         if ( onDirectionChanged_ )
             onDirectionChanged_( newDir, needToSaveHistory_ );

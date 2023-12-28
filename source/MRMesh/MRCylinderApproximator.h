@@ -109,9 +109,9 @@ private:
 
         normalizedPoints_.clear();
         cylinder = Cylinder3<T>();
-        Vector3<T> avgPoint = {};
-        Eigen::Vector<T, 3> bestPC{};
-        Eigen::Vector<T, 3> bestW{}; // cylinder main axis 
+        Vector3<T> avgPoint;
+        Eigen::Vector<T, 3> bestPC;
+        Eigen::Vector<T, 3> bestW; // cylinder main axis 
         T rootSquare = 0;
         T error = 0;
 
@@ -371,3 +371,7 @@ private:
     };
 };
 }
+
+
+
+

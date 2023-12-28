@@ -12,17 +12,17 @@ public:
     Cylinder3()
     {}
 
-    Cylinder3( const Vector3<T>& inCenter, const Vector3<T>& inDirectoin, T inRadius, T inHeight )
+    Cylinder3( const Vector3<T>& inCenter, const Vector3<T>& inDirectoin, T inRadius, T inLength )
         :
         mainAxis( inCenter, inDirectoin ),
         radius( inRadius ),
-        length( inHeight )
+        length( inLength )
     {}
-    Cylinder3( const Line3<T>& inAxis, T inRadius, T inHeight )
+    Cylinder3( const Line3<T>& inAxis, T inRadius, T inLength )
         :
         mainAxis( inAxis ),
         radius( inRadius ),
-        length( inHeight )
+        length( inLength )
     {}
 
     inline MR::Vector3<T>& center( void )
@@ -37,6 +37,7 @@ public:
     MR::Line3<T> mainAxis;
     T radius = 0;
     T length = 0;
+    MR::LineSegm3<T>x; 
 };
 
 } // namespace MR

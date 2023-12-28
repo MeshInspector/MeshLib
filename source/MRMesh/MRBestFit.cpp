@@ -70,6 +70,32 @@ AffineXf3d PointAccumulator::getBasicXf() const
     return res;
 }
 
+std::array<AffineXf3d, 4> PointAccumulator::get4BasicXfs() const
+{
+    Vector3d centroid;
+    Matrix3d eigenvectors;
+    Vector3d eigenvalues;
+    [[maybe_unused]] bool ok = getCenteredCovarianceEigen( centroid, eigenvectors, eigenvalues );
+    assert( ok );
+
+    std::array<AffineXf3d, 4> res;
+    res[0].b = res[1].b = res[2].b = res[3].b = centroid;
+
+    const auto exy = cross( eigenvectors.x, eigenvectors.y );
+    res[0].A.fromColumns(  eigenvectors.x,  eigenvectors.y,  exy );
+    res[1].A.fromColumns(  eigenvectors.x, -eigenvectors.y, -exy );
+    res[2].A.fromColumns( -eigenvectors.x,  eigenvectors.y, -exy );
+    res[3].A.fromColumns( -eigenvectors.x, -eigenvectors.y,  exy );
+
+    return res;
+}
+
+std::array<AffineXf3f, 4> PointAccumulator::get4BasicXfs3f() const
+{
+    const auto ds = get4BasicXfs();
+    return { AffineXf3f( ds[0] ), AffineXf3f( ds[1] ), AffineXf3f( ds[2] ), AffineXf3f( ds[3] ) };
+}
+
 Plane3d PointAccumulator::getBestPlane() const
 {
     Vector3d centroid;

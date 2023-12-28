@@ -49,7 +49,7 @@ private:
     // In https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf page 35-36: 
     // Text below is a direct copy from pdf file: 
     // The sample application that used equation (94) directly was really slow. 
-    // On an Intel® CoreTM i7-6700 CPU at 3.40 GHz, the single - threaded version for 10765 points required 129 seconds 
+    // On an Intel CoreTM i7-6700 CPU at 3.40 GHz, the single - threaded version for 10765 points required 129 seconds 
     // and the multithreaded version using 8 hyperthreads required 22 seconds.The evaluation of G using the precomputed summations is much faster.
     // The single - threaded version required 85 milliseconds and the multithreaded version using 8 hyperthreads required 22 milliseconds.
 

@@ -22,6 +22,9 @@ public:
     /// if toWorld transformation is given then returns minimal bounding box in world space
     [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
 
+    /// Adds in existing PointAccumulator the elements of the contained object
+    MRMESH_API void accumulate( PointAccumulator& accum, const AffineXf3f* xf = nullptr ) const;
+
     /// performs sampling of vertices or points;
     /// subdivides bounding box of the object on voxels of approximately given size and returns at most one vertex per voxel;
     /// returns std::nullopt if it was terminated by the callback

@@ -688,7 +688,7 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
     };
     using PerThreadVertNumeration = std::vector<VertsNumeration>;
     tbb::enumerable_thread_specific<PerThreadVertNumeration> perThreadVertNumeration;
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, blockCount, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), blockCount, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         assert( range.begin() + 1 == range.end() );
         const auto blockIndex = range.begin();
@@ -771,7 +771,7 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
                 }
             }
 
-            if ( runCallback && int( i - begin ) % 1024 == 0 )
+            if ( runCallback && ( i - begin ) % 1024 == 0 )
                 if ( !params.cb( 0.3f * float( i - begin ) / float( end - begin ) ) )
                     keepGoing.store( false, std::memory_order_relaxed );
 
@@ -859,7 +859,7 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
     };
 
     tbb::enumerable_thread_specific<PerThreadTriangulation> triangulationPerThread;
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, blockCount, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), blockCount, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         assert( range.begin() + 1 == range.end() );
         const auto blockIndex = range.begin();
@@ -1053,7 +1053,7 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
                     faceMap.emplace_back( VoxelId{ ind } );
             }
 
-            if ( runCallback && int( ind - begin ) % 1024 == 0 )
+            if ( runCallback && ( ind - begin ) % 1024 == 0 )
                 if ( !subprogress2( float( ind - begin ) / float( end - begin ) ) )
                     keepGoing.store( false, std::memory_order_relaxed );
         }

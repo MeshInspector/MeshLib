@@ -65,6 +65,9 @@ public:
     /// unsubscribes from viewer events
     MRVIEWER_API void reset();
 
+    /// Manually set callback function
+    MRVIEWER_API void setOnDirectionChangedCallback( OnDirectionChangedCallback cb );
+
     /// Updates the direction of the arrow
     MRVIEWER_API void updateDirection( const Vector3f& dir );
     /// Updates the base and the length of the arrow
@@ -75,7 +78,12 @@ public:
     MRVIEWER_API void setColor( const Color& color );
     /// Returns the color of the widget
     MRVIEWER_API const Color& getColor() const;
-
+    /// Returns the base of the widget
+    MRVIEWER_API const Vector3f& getBase() const;
+    /// Returns the direction of the widget
+    MRVIEWER_API const Vector3f& getDirection() const;
+    /// Returns pointer to parent object
+    MRVIEWER_API const VisualObject* getParentPtr() const;
 private:
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;

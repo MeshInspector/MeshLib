@@ -24,6 +24,12 @@ namespace MR
         disconnect();
     }
 
+
+    void DirectionWidget::setOnDirectionChangedCallback( OnDirectionChangedCallback cb )
+    {
+        onDirectionChanged_ = cb;
+    }
+
     void DirectionWidget::updateDirection( const Vector3f& dir )
     {
         dir_ = dir.normalized();
@@ -131,4 +137,22 @@ namespace MR
     {
         return color_;
     }
+
+    const Vector3f& DirectionWidget::getBase() const
+    {
+        return base_;
+    }
+
+
+    const Vector3f& DirectionWidget::getDirection() const
+    {
+        return dir_;
+    }
+
+
+    const VisualObject* DirectionWidget::getParentPtr() const
+    {
+        return parent_;
+    }
+
 }

@@ -29,7 +29,7 @@ var statusElement = document.getElementById("status")
         canvas: function () {
             var e = document.getElementById("canvas");
             return e.addEventListener("webglcontextlost", (function (e) {
-                alert("WebGL context lost. You will need to reload the page."),
+                unexpectedError(),
                     e.preventDefault()
             }
             ), !1),

@@ -73,6 +73,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def( "getVertPairs", &MR::MeshICP::getVertPairs, pybind11::return_value_policy::copy, "used to visualize generated points pairs" ).
         def( "getDistLimitsSq", &MR::MeshICP::getDistLimitsSq, "finds squared minimum and maximum pairs distances" ).
         def( "calculateTransformation", &MR::MeshICP::calculateTransformation, "returns new xf transformation for the floating mesh, which allows to match reference mesh" ).
+        def( "autoSelectFloatXf", &MR::MeshICP::autoSelectFloatXf, "automatically selects initial transformation for the floating object based on covariance matrices of both floating and reference objects; applies the transformation to the floating object and returns it" ).
         def( "updateVertPairs", &MR::MeshICP::updateVertPairs, "recompute point pairs after manual change of transformations or parameters" );
 } )
 

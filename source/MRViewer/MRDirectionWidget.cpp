@@ -47,7 +47,6 @@ namespace MR
             else
                 SceneRoot::get().addChild( directionObj_ );
         }
-
         Matrix3f rot, scale;
         if ( parent_ )
             decomposeMatrix3( parent_->worldXf().A, rot, scale );
@@ -106,7 +105,7 @@ namespace MR
         auto viewer = Viewer::instance();
         const auto viewportEnd = viewer->screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewer->viewport().id );
         const auto worldEndPoint = viewer->viewport().unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
-        const auto newDir = worldEndPoint - directionObj_->worldXf()( base_ );
+        const auto newDir = worldEndPoint - ( parent_ ? parent_->worldXf()( base_ ) : base_ );
         updateDirection( newDir );
         if ( onDirectionChanged_ )
             onDirectionChanged_( newDir, needToSaveHistory_ );

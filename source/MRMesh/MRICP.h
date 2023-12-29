@@ -47,6 +47,14 @@ struct VertPair
     friend bool operator == ( const VertPair&, const VertPair& ) = default;
 };
 
+using VertPairs = std::vector<VertPair>;
+
+/// computes root-mean-square deviation between points
+[[nodiscard]] MRMESH_API float getMeanSqDistToPoint( const VertPairs & pairs );
+
+// computes root-mean-square deviation from points to target planes
+[[nodiscard]] MRMESH_API float getMeanSqDistToPlane( const VertPairs & pairs, const MeshOrPoints & floating, const AffineXf3f & floatXf );
+
 struct ICPProperties
 {
     ICPMethod method = ICPMethod::PointToPlane;
@@ -115,12 +123,20 @@ public:
     const ICPProperties& getParams() const { return prop_; }
     MRMESH_API Vector3f getShiftVector() const; // shows mean pair vector
     MRMESH_API std::string getLastICPInfo() const; // returns status info string
-    MRMESH_API float getMeanSqDistToPoint() const; // computes root-mean-square deviation between points
-    MRMESH_API float getMeanSqDistToPlane() const; // computes root-mean-square deviation from points to target planes
-    const std::vector<VertPair>& getVertPairs() const { return vertPairs_; } // used to visualize generated points pairs
-    MRMESH_API std::pair<float, float> getDistLimitsSq() const; // finds squared minimum and maximum pairs distances
 
-    // returns new xf transformation for the floating mesh, which allows to match reference mesh
+    /// computes root-mean-square deviation between points
+    float getMeanSqDistToPoint() const { return MR::getMeanSqDistToPoint( vertPairs_ ); }
+
+    /// computes root-mean-square deviation from points to target planes
+    float getMeanSqDistToPlane() const { return MR::getMeanSqDistToPlane( vertPairs_, floating_, floatXf_ ); }
+
+    /// used to visualize generated points pairs
+    const std::vector<VertPair>& getVertPairs() const { return vertPairs_; }
+
+    /// finds squared minimum and maximum pairs distances
+    MRMESH_API std::pair<float, float> getDistLimitsSq() const;
+
+    /// returns new xf transformation for the floating mesh, which allows to match reference mesh
     MRMESH_API AffineXf3f calculateTransformation();
 
 private:

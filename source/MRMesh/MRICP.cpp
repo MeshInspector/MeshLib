@@ -390,30 +390,30 @@ AffineXf3f MeshICP::calculateTransformation()
     return floatXf_;
 }
 
-float MeshICP::getMeanSqDistToPoint() const
+float getMeanSqDistToPoint( const VertPairs & pairs )
 {
-    if ( vertPairs_.empty() )
+    if ( pairs.empty() )
         return 0;
     double sum = 0;
-    for ( const auto& vp : vertPairs_ )
+    for ( const auto& vp : pairs )
     {
         sum += vp.vertDist2;
     }
-    return (float)std::sqrt( sum / vertPairs_.size() );
+    return (float)std::sqrt( sum / pairs.size() );
 }
 
-float MeshICP::getMeanSqDistToPlane() const
+float getMeanSqDistToPlane( const VertPairs & pairs, const MeshOrPoints & floating, const AffineXf3f & floatXf )
 {
-    if ( vertPairs_.empty() )
+    if ( pairs.empty() )
         return 0;
-    const VertCoords& points = floating_.points();
+    const VertCoords& points = floating.points();
     double sum = 0;
-    for (const auto& vp : vertPairs_)
+    for ( const auto& vp : pairs )
     {
-        auto v = dot( vp.normRef, vp.refPoint - floatXf_(points[vp.vertId]) );
+        auto v = dot( vp.normRef, vp.refPoint - floatXf(points[vp.vertId]) );
         sum += sqr( v );
     }
-    return (float)std::sqrt( sum / vertPairs_.size() );
+    return (float)std::sqrt( sum / pairs.size() );
 }
 
 Vector3f MeshICP::getShiftVector() const

@@ -14,16 +14,18 @@ void PointToPlaneAligningTransform::add(const Vector3d& s0, const Vector3d& d, c
     Vector3d s = approxTransform_(s0);
     Vector3d n = normal2.normalized();
     double k_B = dot(d - s, n);
-    double c[6];
+    double c[7];
+    // https://www.cs.princeton.edu/~smr/papers/icpstability.pdf
     c[0] = n.z * s.y - n.y * s.z;
     c[1] = n.x * s.z - n.z * s.x;
     c[2] = n.y * s.x - n.x * s.y;
     c[3] = n.x;
     c[4] = n.y;
     c[5] = n.z;
-    for (size_t i = 0; i < 6; i++)
+    c[6] = -dot( s, n );
+    for (size_t i = 0; i < 7; i++)
     {
-        for (size_t j = 0; j < 6; j++)
+        for (size_t j = 0; j < 7; j++)
         {
             sumA_(i, j) += w * c[i] * c[j];
         }
@@ -50,14 +52,26 @@ Vector3d PointToPlaneAligningTransform::findBestTranslation() const
     return Vector3d{ solution.coeff(0), solution.coeff(1), solution.coeff(2) };
 }
 
-auto PointToPlaneAligningTransform::calculateAmendment() const -> Amendment
+auto PointToPlaneAligningTransform::calculateAmendment( bool scaleIsOne ) const -> Amendment
 {
-    Eigen::LLT<Eigen::MatrixXd> chol(sumA_);
-    Eigen::VectorXd solution = chol.solve(sumB_);
-
     Amendment res;
-    res.rotAngles = Vector3d{ solution.coeff( 0 ), solution.coeff( 1 ), solution.coeff( 2 ) };
-    res.shift =     Vector3d{ solution.coeff( 3 ), solution.coeff( 4 ), solution.coeff( 5 ) };
+    if ( scaleIsOne )
+    {
+        Eigen::LLT<Eigen::MatrixXd> chol( sumA_.topLeftCorner<6,6>() );
+        Eigen::VectorXd solution = chol.solve( sumB_.topRows<6>() );
+        
+        res.rotAngles = Vector3d{ solution.coeff( 0 ), solution.coeff( 1 ), solution.coeff( 2 ) };
+        res.shift =     Vector3d{ solution.coeff( 3 ), solution.coeff( 4 ), solution.coeff( 5 ) };
+    }
+    else
+    {
+        Eigen::LLT<Eigen::MatrixXd> chol( sumA_ );
+        Eigen::VectorXd solution = chol.solve( sumB_ );
+        
+        res.scale = solution.coeff( 6 );
+        res.rotAngles = Vector3d{ solution.coeff( 0 ), solution.coeff( 1 ), solution.coeff( 2 ) } / res.scale;
+        res.shift =     Vector3d{ solution.coeff( 3 ), solution.coeff( 4 ), solution.coeff( 5 ) };
+    }
     return res;
 }
 
@@ -73,14 +87,14 @@ auto PointToPlaneAligningTransform::calculateFixedAxisAmendment( const Vector3d 
 
     A(0,0) = k.transpose() * sumA_.topLeftCorner<3,3>() * k;
 
-    const Eigen::Matrix<double, 3, 1> tk = sumA_.bottomLeftCorner<3,3>() * k;
+    const Eigen::Matrix<double, 3, 1> tk = sumA_.block<3,3>(3, 0) * k;
     A.bottomLeftCorner<3,1>() = tk;
     A.topRightCorner<1,3>() = tk.transpose();
 
-    A.bottomRightCorner<3,3>() = sumA_.bottomRightCorner<3,3>();
+    A.bottomRightCorner<3,3>() = sumA_.block<3,3>(3, 3);
 
     b.topRows<1>() = k.transpose() * sumB_.topRows<3>();
-    b.bottomRows<3>() = sumB_.bottomRows<3>();
+    b.bottomRows<3>() = sumB_.middleRows<3>(3);
 
     Eigen::LLT<Eigen::MatrixXd> chol(A);
     Eigen::VectorXd solution = chol.solve(b);
@@ -106,14 +120,14 @@ auto PointToPlaneAligningTransform::calculateOrthogonalAxisAmendment( const Vect
 
     A.topLeftCorner<2,2>() = k.transpose() * sumA_.topLeftCorner<3,3>() * k;
 
-    const Eigen::Matrix<double, 3, 2> tk = sumA_.bottomLeftCorner<3,3>() * k;
+    const Eigen::Matrix<double, 3, 2> tk = sumA_.block<3,3>(3, 0) * k;
     A.bottomLeftCorner<3,2>() = tk;
     A.topRightCorner<2,3>() = tk.transpose();
 
-    A.bottomRightCorner<3,3>() = sumA_.bottomRightCorner<3,3>();
+    A.bottomRightCorner<3,3>() = sumA_.block<3,3>(3, 3);
 
     b.topRows<2>() = k.transpose() * sumB_.topRows<3>();
-    b.bottomRows<3>() = sumB_.bottomRows<3>();
+    b.bottomRows<3>() = sumB_.middleRows<3>(3);
 
     Eigen::LLT<Eigen::MatrixXd> chol(A);
     Eigen::VectorXd solution = chol.solve(b);

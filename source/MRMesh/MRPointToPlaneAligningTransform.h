@@ -46,10 +46,11 @@ public:
     {
         Vector3d rotAngles; ///< rotation angles relative to x,y,z axes
         Vector3d shift;
+        double scale = 1;
     };
 
     /// Compute transformation relative to given approximation and return it as angles and shift
-    [[nodiscard]] MRMESH_API Amendment calculateAmendment() const;
+    [[nodiscard]] MRMESH_API Amendment calculateAmendment( bool scaleIsOne = true ) const;
 
     /// this version searches for best transformation where rotation is allowed only around given axis and with arbitrary translation
     [[nodiscard]] MRMESH_API Amendment calculateFixedAxisAmendment( const Vector3d & axis ) const;
@@ -59,8 +60,8 @@ public:
 
 private:
     AffineXf3d approxTransform_;
-    Eigen::Matrix<double, 6, 6> sumA_ = Eigen::Matrix<double, 6, 6>::Zero();
-    Eigen::Vector<double, 6> sumB_ = Eigen::Vector<double, 6>::Zero();
+    Eigen::Matrix<double, 7, 7> sumA_ = Eigen::Matrix<double, 7, 7>::Zero();
+    Eigen::Vector<double, 7> sumB_ = Eigen::Vector<double, 7>::Zero();
 };
 
 /// \}

@@ -86,7 +86,7 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 
       - name: Copy autotest data from S3 Tests
-        run: aws s3 cp s3://data-autotest/test_data ./test_data --recursive
+        run: aws s3 cp s3://data-autotest/test_data_29-dec-23 ./test_data --recursive
 
       - name: Python Regression Tests
         working-directory: ./build/${{ matrix.config }}/bin

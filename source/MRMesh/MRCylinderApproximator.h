@@ -271,12 +271,12 @@ private:
 
         for ( size_t j = 1; j <= phiResolution_; ++j )
         {
-            T phi = phiStep * static_cast< T >( j ); //  [0 .. pi/2]
+            T phi = phiStep * j; //  [0 .. pi/2]
             T cosPhi = std::cos( phi );
             T sinPhi = std::sin( phi );
             for ( size_t i = 0; i < thetaResolution_; ++i )
             {
-                T theta = theraStep * static_cast< T >( i ); //  [0 .. 2*pi)
+                T theta = theraStep * i; //  [0 .. 2*pi)
                 T cosTheta = std::cos( theta );
                 T sinTheta = std::sin( theta );
                 Eigen::Vector<T, 3> currW{ cosTheta * sinPhi, sinTheta * sinPhi, cosPhi };
@@ -289,6 +289,7 @@ private:
                     resultedRootSquare = rsqr;
                     W = currW;
                     PC = currPC;
+                    std::cout << "i=" << i << " j= " << j << " W=" << W << " PC=" << PC << std::endl;
                 }
             }
         }
@@ -316,27 +317,28 @@ private:
         T minError = G( W, PC, resultedRootSquare );
 
         std::vector<BestHemisphereStoredData> storedData;
-        storedData.resize( phiResolution_ );
+        storedData.resize( phiResolution_ + 1 ); //  [0 .. pi/2] +1 for include upper bound
 
-        tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), phiResolution_ ),
+        tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), phiResolution_ + 1 ),
                            [&] ( const tbb::blocked_range<size_t>& range )
         {
             for ( size_t j = range.begin(); j < range.end(); ++j )
             {
 
-                T phi = phiStep * j; //  [0 .. pi/2]
+                T phi = phiStep * j; // [0 .. pi/2]
                 T cosPhi = std::cos( phi );
                 T sinPhi = std::sin( phi );
                 for ( size_t i = 0; i < thetaResolution_; ++i )
                 {
 
-                    T theta = theraStep * i; //  [0 .. 2*pi)
+                    T theta = theraStep * i; // [0 .. 2*pi)                    
                     T cosTheta = std::cos( theta );
                     T sinTheta = std::sin( theta );
                     Eigen::Vector<T, 3> currW{ cosTheta * sinPhi, sinTheta * sinPhi, cosPhi };
                     Eigen::Vector<T, 3> currPC{};
                     T rsqr;
                     T error = G( currW, currPC, rsqr );
+
                     if ( error < storedData[j].error )
                     {
                         storedData[j].error = error;
@@ -350,7 +352,7 @@ private:
         );
 
 
-        for ( size_t i = 0; i < phiResolution_; ++i )
+        for ( size_t i = 0; i <= phiResolution_; ++i )
         {
             if ( storedData[i].error < minError )
             {

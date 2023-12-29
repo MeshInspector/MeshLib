@@ -289,7 +289,6 @@ private:
                     resultedRootSquare = rsqr;
                     W = currW;
                     PC = currPC;
-                    std::cout << "i=" << i << " j= " << j << " W=" << W << " PC=" << PC << std::endl;
                 }
             }
         }

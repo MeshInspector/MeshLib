@@ -49,18 +49,32 @@ AffineXf3f MeshICP::autoSelectFloatXf()
 {
     MR_TIMER
 
+    auto bestFltXf = floatXf_;
+    float bestDist = getMeanSqDistToPoint();
+
     PointAccumulator refAcc;
     ref_.accumulate( refAcc );
-    const auto refBasisXf = refAcc.getBasicXf3f();
+    const auto refBasisXfs = refAcc.get4BasicXfs3f();
 
     PointAccumulator floatAcc;
     floating_.accumulate( floatAcc );
-    // TODO: consider minus directions of principal axes
     const auto floatBasisXf = floatAcc.getBasicXf3f();
 
-    auto fltXf = refXf_ * refBasisXf * floatBasisXf.inverse();
-    setFloatXf( fltXf );
-    return fltXf;
+    // TODO: perform computations in parallel by calling free functions to measure the distance
+    for ( const auto & refBasisXf : refBasisXfs )
+    {
+        auto fltXf = refXf_ * refBasisXf * floatBasisXf.inverse();
+        setFloatXf( fltXf );
+        updateVertPairs();
+        const float dist = getMeanSqDistToPoint();
+        if ( dist < bestDist )
+        {
+            bestDist = dist;
+            bestFltXf = fltXf;
+        }
+    }
+    setFloatXf( bestFltXf );
+    return bestFltXf;
 }
 
 void MeshICP::recomputeBitSet(const float floatSamplingVoxelSize)
@@ -393,7 +407,7 @@ AffineXf3f MeshICP::calculateTransformation()
 float getMeanSqDistToPoint( const VertPairs & pairs )
 {
     if ( pairs.empty() )
-        return 0;
+        return FLT_MAX;
     double sum = 0;
     for ( const auto& vp : pairs )
     {
@@ -405,7 +419,7 @@ float getMeanSqDistToPoint( const VertPairs & pairs )
 float getMeanSqDistToPlane( const VertPairs & pairs, const MeshOrPoints & floating, const AffineXf3f & floatXf )
 {
     if ( pairs.empty() )
-        return 0;
+        return FLT_MAX;
     const VertCoords& points = floating.points();
     double sum = 0;
     for ( const auto& vp : pairs )

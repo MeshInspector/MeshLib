@@ -82,10 +82,10 @@ std::array<AffineXf3d, 4> PointAccumulator::get4BasicXfs() const
     res[0].b = res[1].b = res[2].b = res[3].b = centroid;
 
     const auto exy = cross( eigenvectors.x, eigenvectors.y );
-    res[0].A.fromColumns(  eigenvectors.x,  eigenvectors.y,  exy );
-    res[1].A.fromColumns(  eigenvectors.x, -eigenvectors.y, -exy );
-    res[2].A.fromColumns( -eigenvectors.x,  eigenvectors.y, -exy );
-    res[3].A.fromColumns( -eigenvectors.x, -eigenvectors.y,  exy );
+    res[0].A = Matrix3d::fromColumns(  eigenvectors.x,  eigenvectors.y,  exy );
+    res[1].A = Matrix3d::fromColumns(  eigenvectors.x, -eigenvectors.y, -exy );
+    res[2].A = Matrix3d::fromColumns( -eigenvectors.x,  eigenvectors.y, -exy );
+    res[3].A = Matrix3d::fromColumns( -eigenvectors.x, -eigenvectors.y,  exy );
 
     return res;
 }

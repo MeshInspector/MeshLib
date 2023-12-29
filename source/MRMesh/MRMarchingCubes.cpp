@@ -705,6 +705,8 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
         const bool runCallback = params.cb && std::this_thread::get_id() == mainThreadId && lastSubMap == blockIndex;
 
         const auto layerBegin = blockIndex * layerPerBlockCount;
+        if ( layerBegin >= layerCount )
+            return;
         const auto layerEnd = std::min( ( blockIndex + 1 ) * layerPerBlockCount, layerCount );
 
         const VoxelsVolumeAccessor<V> accessor( volume );
@@ -865,6 +867,8 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
         const auto blockIndex = range.begin();
 
         const auto layerBegin = blockIndex * layerPerBlockCount;
+        if ( layerBegin >= layerCount )
+            return;
         const auto layerEnd = std::min( ( blockIndex + 1 ) * layerPerBlockCount, layerCount );
 
         const VoxelsVolumeAccessor<V> accessor( volume );

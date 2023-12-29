@@ -74,9 +74,23 @@ jobs:
       - name: Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTest
 
-      - name: Python Tests
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Python Sanity Tests
         working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py
+        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
+
+      - name: Copy autotest data from S3 Tests
+        run: aws s3 cp s3://data-autotest/test_data_29-dec-23 ./test_data --recursive
+
+      - name: Python Regression Tests
+        working-directory: ./build/${{ matrix.config }}/bin
+        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
 
       - name: Create Deb
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler }}

@@ -47,6 +47,14 @@ struct VertPair
     friend bool operator == ( const VertPair&, const VertPair& ) = default;
 };
 
+using VertPairs = std::vector<VertPair>;
+
+/// computes root-mean-square deviation between points
+[[nodiscard]] MRMESH_API float getMeanSqDistToPoint( const VertPairs & pairs );
+
+// computes root-mean-square deviation from points to target planes
+[[nodiscard]] MRMESH_API float getMeanSqDistToPlane( const VertPairs & pairs, const MeshOrPoints & floating, const AffineXf3f & floatXf );
+
 struct ICPProperties
 {
     ICPMethod method = ICPMethod::PointToPlane;
@@ -75,21 +83,21 @@ struct ICPProperties
     float exitVal = 0; // [distance]
 };
 
-// This class allows to match two meshes with almost same geometry using ICP point-to-point or point-to-plane algorithms
+/// This class allows to match two meshes with almost same geometry using ICP point-to-point or point-to-plane algorithms
 class MeshICP
 {
 public:
-    // xf parameters should represent current transformations of meshes
-    // fltXf transform from the local floating basis to the global
-    // refXf transform from the local reference basis to the global
-    // floatBitSet allows to take exact set of vertices from the floating object
+    /// xf parameters should represent current transformations of meshes
+    /// fltXf transform from the local floating basis to the global
+    /// refXf transform from the local reference basis to the global
+    /// floatBitSet allows to take exact set of vertices from the floating object
     MRMESH_API MeshICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
         const VertBitSet& floatBitSet);
     MRMESH_API MeshICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
         float floatSamplingVoxelSize ); // positive value here defines voxel size, and only one vertex per voxel will be selected
     // TODO: add single transform constructor
 
-    // tune algirithm params before run calculateTransformation()
+    /// tune algirithm params before run calculateTransformation()
     void setParams(const ICPProperties& prop) { prop_ = prop; }
     MRMESH_API void setCosineLimit(const float cos);
     MRMESH_API void setDistanceLimit( const float dist );
@@ -97,20 +105,38 @@ public:
     MRMESH_API void setPairsWeight(const std::vector<float> w);
     MRMESH_API void setDistanceFilterSigmaFactor(const float factor);
     MRMESH_API void recomputeBitSet(const float floatSamplingVoxelSize);
+
+    /// sets to-world transformations both for floating and reference objects
     MRMESH_API void setXfs( const AffineXf3f& fltXf, const AffineXf3f& refXf );
+
+    /// sets to-world transformation for the floating object
     MRMESH_API void setFloatXf( const AffineXf3f& fltXf );
-    // recompute point pairs after manual change of transformations or parameters
+
+    /// automatically selects initial transformation for the floating object
+    /// based on covariance matrices of both floating and reference objects;
+    /// applies the transformation to the floating object and returns it
+    MRMESH_API AffineXf3f autoSelectFloatXf();
+
+    /// recompute point pairs after manual change of transformations or parameters
     MRMESH_API void updateVertPairs();
 
     const ICPProperties& getParams() const { return prop_; }
     MRMESH_API Vector3f getShiftVector() const; // shows mean pair vector
     MRMESH_API std::string getLastICPInfo() const; // returns status info string
-    MRMESH_API float getMeanSqDistToPoint() const; // computes root-mean-square deviation between points
-    MRMESH_API float getMeanSqDistToPlane() const; // computes root-mean-square deviation from points to target planes
-    const std::vector<VertPair>& getVertPairs() const { return vertPairs_; } // used to visualize generated points pairs
-    MRMESH_API std::pair<float, float> getDistLimitsSq() const; // finds squared minimum and maximum pairs distances
 
-    // returns new xf transformation for the floating mesh, which allows to match reference mesh
+    /// computes root-mean-square deviation between points
+    float getMeanSqDistToPoint() const { return MR::getMeanSqDistToPoint( vertPairs_ ); }
+
+    /// computes root-mean-square deviation from points to target planes
+    float getMeanSqDistToPlane() const { return MR::getMeanSqDistToPlane( vertPairs_, floating_, floatXf_ ); }
+
+    /// used to visualize generated points pairs
+    const std::vector<VertPair>& getVertPairs() const { return vertPairs_; }
+
+    /// finds squared minimum and maximum pairs distances
+    MRMESH_API std::pair<float, float> getDistLimitsSq() const;
+
+    /// returns new xf transformation for the floating mesh, which allows to match reference mesh
     MRMESH_API AffineXf3f calculateTransformation();
 
 private:

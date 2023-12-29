@@ -11,6 +11,64 @@
 #include "MRParallelFor.h"
 #include <tuple>
 
+namespace
+{
+
+using namespace MR;
+
+float signedDistanceToMesh( const MeshPart& mesh, const Vector3f& p, SignDetectionMode signMode, float maxDistSq, float minDistSq )
+{
+    float dist;
+    if ( signMode != SignDetectionMode::ProjectionNormal )
+    {
+        dist = std::sqrt( findProjection( p, mesh, maxDistSq, nullptr, minDistSq ).distSq );
+    }
+    else
+    {
+        const auto s = findSignedDistance( p, mesh, maxDistSq, minDistSq );
+        dist = s ? s->dist : cQuietNan;
+    }
+    if ( isNanFast( dist ) )
+        return dist;
+
+    if ( signMode == SignDetectionMode::WindingRule )
+    {
+        const IntersectionPrecomputes<double> precomputedInter( Vector3d::plusX() );
+        const Line3d ray( Vector3d( p ), Vector3d::plusX() );
+        int count = 0;
+        rayMeshIntersectAll( mesh, ray, [&count] ( auto&& ) { ++count; return true; } );
+        if ( count % 2 == 1 ) // inside
+            dist = -dist;
+    }
+
+    return dist;
+}
+
+template <typename T>
+struct MinMax
+{
+    T min = std::numeric_limits<T>::max();
+    T max = std::numeric_limits<T>::lowest();
+
+    void update( T v )
+    {
+        if ( v < min )
+            min = v;
+        if ( max < v )
+            max = v;
+    }
+
+    static MinMax<T> merge( const MinMax<T>& a, const MinMax<T>& b )
+    {
+        return {
+            .min = std::min( a.min, b.min ),
+            .max = std::max( a.max, b.max ),
+        };
+    }
+};
+
+} // namespace
+
 namespace MR
 {
 
@@ -80,8 +138,73 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, co
             return unexpectedOperationCanceled();
     }
 
-    std::tie( res.min, res.max ) = parallelMinMax( res.data );
+    if ( params.precomputeMinMax )
+    {
+        std::tie( res.min, res.max ) = parallelMinMax( res.data );
+    }
+    else
+    {
+        res.min = std::numeric_limits<float>::lowest();
+        res.max = std::numeric_limits<float>::max();
+    }
+
     return res;
+}
+
+Expected<FunctionVolume> meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params )
+{
+    MR_TIMER
+    assert( params.signMode != SignDetectionMode::OpenVDB );
+
+    FunctionVolume result {
+        .dims = params.dimensions,
+        .voxelSize = params.voxelSize,
+    };
+    if ( params.signMode == SignDetectionMode::HoleWindingRule )
+    {
+        assert( !mp.region ); // only whole mesh is supported for now
+        // CUDA-based implementation is useless for FunctionVolume for obvious reasons
+        // using default implementation
+        auto fwn = std::make_shared<FastWindingNumber>( mp.mesh );
+        result.data = [params, fwn] ( const Vector3i& pos ) mutable -> float
+        {
+            const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
+            const auto voxelCenter = params.origin + mult( params.voxelSize, coord );
+            constexpr float beta = 2;
+            return fwn->calcWithDistances( voxelCenter, beta, params.maxDistSq, params.minDistSq );
+        };
+    }
+    else
+    {
+        result.data = [params, mp = MeshPart( mp.mesh )] ( const Vector3i& pos ) -> float
+        {
+            const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
+            const auto voxelCenter = params.origin + mult( params.voxelSize, coord );
+            return signedDistanceToMesh( mp, voxelCenter, params.signMode, params.maxDistSq, params.minDistSq );
+        };
+    }
+
+    result.min = std::numeric_limits<float>::lowest();
+    result.max = std::numeric_limits<float>::max();
+    if ( params.precomputeMinMax )
+    {
+        VolumeIndexer indexer( params.dimensions );
+        auto body = [&indexer, &result] ( const tbb::blocked_range<size_t>& range, MinMax<float> minmax )
+        {
+            for ( auto i = range.begin(); i < range.end(); ++i )
+            {
+                const auto pos = indexer.toPos( VoxelId( i ) );
+                const auto value = result.data( pos );
+                minmax.update( value );
+            }
+            return minmax;
+        };
+        const auto minmax = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, indexer.size() ), MinMax<float>(), body, &MinMax<float>::merge );
+        result.min = minmax.min;
+        result.max = minmax.max;
+    }
+
+    return result;
 }
 
 Expected<SimpleVolume, std::string> meshRegionToIndicatorVolume( const Mesh& mesh, const FaceBitSet& region,
@@ -123,7 +246,16 @@ Expected<SimpleVolume, std::string> meshRegionToIndicatorVolume( const Mesh& mes
     }, params.cb ) )
         return unexpectedOperationCanceled();
 
-    std::tie( res.min, res.max ) = parallelMinMax( res.data );
+    if ( params.precomputeMinMax )
+    {
+        std::tie( res.min, res.max ) = parallelMinMax( res.data );
+    }
+    else
+    {
+        res.min = std::numeric_limits<float>::lowest();
+        res.max = std::numeric_limits<float>::max();
+    }
+
     return res;
 }
 

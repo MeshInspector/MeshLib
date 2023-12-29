@@ -353,6 +353,7 @@
     <ClInclude Include="MRZip.h" />
     <ClInclude Include="MRObjectSave.h" />
     <ClInclude Include="MRZlib.h" />
+    <ClInclude Include="MRVoxelsVolumeAccess.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />

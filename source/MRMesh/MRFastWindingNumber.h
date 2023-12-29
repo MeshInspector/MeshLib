@@ -137,6 +137,13 @@ public:
     /// <param name="gridToMeshXf">transform from grid to mesh</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
     MRMESH_API VoidOrErrStr calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb ) override;
+
+    /// calculates distances and winding numbers at \param p
+    /// \param beta determines the precision of the approximation: the more the better, recommended value 2 or more;
+    /// if distance from p to the center of some triangle group is more than beta times the distance from the center to most distance triangle in the group then we use approximate formula
+    /// \param maxDistSq - maximum possible distance
+    /// \param minDistSq - minimum possible distance
+    MRMESH_API float calcWithDistances( const Vector3f& p, float beta, float maxDistSq, float minDistSq );
     /// <summary>
     /// calculates distances and winding numbers for each point in a three-dimensional grid
     /// </summary>

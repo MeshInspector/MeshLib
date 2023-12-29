@@ -1140,6 +1140,9 @@
     <ClInclude Include="MRCylinder3.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRVoxelsVolumeAccess.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

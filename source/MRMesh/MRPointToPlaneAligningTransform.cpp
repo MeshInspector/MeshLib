@@ -9,16 +9,9 @@
 namespace MR
 {
 
-PointToPlaneAligningTransform::PointToPlaneAligningTransform( const AffineXf3d& aTransform )
-    : approxTransform( aTransform )
-{
-    sumA_.setZero();
-    sumB_.setZero();
-}
-
 void PointToPlaneAligningTransform::add(const Vector3d& s0, const Vector3d& d, const Vector3d& normal2, const double w)
 {
-    Vector3d s = approxTransform(s0);
+    Vector3d s = approxTransform_(s0);
     Vector3d n = normal2.normalized();
     double k_B = dot(d - s, n);
     double c[6];
@@ -37,12 +30,6 @@ void PointToPlaneAligningTransform::add(const Vector3d& s0, const Vector3d& d, c
 
         sumB_(i) += w * c[i] * k_B;
     }
-}
-
-void PointToPlaneAligningTransform::clear()
-{
-    sumA_.setZero();
-    sumB_.setZero();
 }
 
 Vector3d PointToPlaneAligningTransform::findBestTranslation() const
@@ -142,21 +129,21 @@ AffineXf3d PointToPlaneAligningTransform::findBestRigidXf() const
 {
     const auto ammendment = calculateAmendment();
 
-    return AffineXf3d(Quaterniond(ammendment.rotAngles, ammendment.rotAngles.length()), ammendment.shift) * approxTransform;
+    return AffineXf3d(Quaterniond(ammendment.rotAngles, ammendment.rotAngles.length()), ammendment.shift) * approxTransform_;
 }
 
 AffineXf3d PointToPlaneAligningTransform::findBestRigidXfFixedRotationAxis( const Vector3d & axis ) const
 {
     const auto ammendment = calculateFixedAxisAmendment( axis );
 
-    return AffineXf3d(Quaterniond(ammendment.rotAngles, ammendment.rotAngles.length()), ammendment.shift) * approxTransform;
+    return AffineXf3d(Quaterniond(ammendment.rotAngles, ammendment.rotAngles.length()), ammendment.shift) * approxTransform_;
 }
 
 AffineXf3d PointToPlaneAligningTransform::findBestRigidXfOrthogonalRotationAxis( const Vector3d & ort ) const
 {
     const auto ammendment = calculateOrthogonalAxisAmendment( ort );
 
-    return AffineXf3d(Quaterniond(ammendment.rotAngles, ammendment.rotAngles.length()), ammendment.shift) * approxTransform;
+    return AffineXf3d(Quaterniond(ammendment.rotAngles, ammendment.rotAngles.length()), ammendment.shift) * approxTransform_;
 }
 
 TEST( MRMesh, PointToPlaneIteration )

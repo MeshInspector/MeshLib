@@ -7,6 +7,21 @@
 #include "MRToFromEigen.h"
 #include "MRConstants.h"
 
+
+
+#pragma warning(push)
+#pragma warning(disable: 4068) // unknown pragmas
+#pragma warning(disable: 4127) // conditional expression is constant
+#pragma warning(disable: 4464) // relative include path contains '..'
+#pragma warning(disable: 4643) // Forward declaring 'tuple' in namespace std is not permitted by the C++ Standard.
+#pragma warning(disable: 5054) // operator '|': deprecated between enumerations of different types
+
+#include <unsupported/Eigen/NonLinearOptimization>
+#include <unsupported/Eigen/NumericalDiff>
+
+#pragma warning(pop)
+
+
 // https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf 
 
 namespace MR
@@ -264,7 +279,6 @@ private:
         T const theraStep = static_cast< T >( 2 * PI ) / thetaResolution_;
         T const phiStep = static_cast< T >( PI2 ) / phiResolution_;
 
-
         // problem in list. 16. => start from pole.
         W = { 0, 0, 1 };
         T minError = G( W, PC, resultedRootSquare );
@@ -310,7 +324,6 @@ private:
         T const theraStep = static_cast< T >( 2 * PI ) / thetaResolution_;
         T const phiStep = static_cast< T >( PI2 ) / phiResolution_;
 
-
         // problem in list. 16. => start from pole.
         W = { 0, 0, 1 };
         T minError = G( W, PC, resultedRootSquare );
@@ -324,13 +337,13 @@ private:
             for ( size_t j = range.begin(); j < range.end(); ++j )
             {
 
-                T phi = phiStep * j; //  [0 .. pi/2]
+                T phi = phiStep * static_cast< T >( j ); //  [0 .. pi/2]
                 T cosPhi = std::cos( phi );
                 T sinPhi = std::sin( phi );
                 for ( size_t i = 0; i < thetaResolution_; ++i )
                 {
 
-                    T theta = theraStep * i; //  [0 .. 2*pi)
+                    T theta = theraStep * static_cast< T >( i ); //  [0 .. 2*pi)
                     T cosTheta = std::cos( theta );
                     T sinTheta = std::sin( theta );
                     Eigen::Vector<T, 3> currW{ cosTheta * sinPhi, sinTheta * sinPhi, cosPhi };
@@ -348,7 +361,6 @@ private:
             }
         }
         );
-
 
         for ( size_t i = 0; i < phiResolution_; ++i )
         {
@@ -370,6 +382,72 @@ private:
         return G( W, PC, resultedRootSquare );
     };
 };
+
+
+
+
+struct PointCloud
+{
+    Eigen::MatrixXd points; // ћатрица размерности n x 3, где n - количество точек
+};
+
+
+class ConicSurfaceModel
+{
+public:
+    typedef double Scalar;
+    typedef Eigen::Matrix<Scalar, 3, 1> InputType;
+    typedef Eigen::Matrix<Scalar, 1, 1> ValueType;
+    typedef Eigen::Matrix<Scalar, 1, 3> JacobianType;
+
+
+
+    int operator()( const Eigen::VectorXd& x, Eigen::VectorXd& fvec ) const
+    {
+        const Scalar a = x[0];
+        const Scalar b = x[1];
+        const Scalar c = x[2];
+
+        for ( int i = 0; i < cloud_.points.rows(); ++i )
+        {
+            const InputType p = cloud_.points.row( i ).transpose();
+            const ValueType residual = ( p.transpose() * A_ * p ) / ( p.transpose() * B_ * p ) - Scalar( 1.0 );
+            fvec[i] = residual( 0 );
+        }
+
+        return 0;
+    }
+
+    int df( const Eigen::VectorXd& x, Eigen::MatrixXd& fjac ) const
+    {
+        const Scalar a = x[0];
+        const Scalar b = x[1];
+        const Scalar c = x[2];
+
+        for ( int i = 0; i < cloud_.points.rows(); ++i )
+        {
+            const InputType p = cloud_.points.row( i ).transpose();
+            const ValueType denominator = p.transpose() * B_ * p;
+            const JacobianType dfda = 2 * ( B_ * p ) * ( p.transpose() * A_ * p ) / ( denominator * denominator );
+            const JacobianType dfdb = -2 * ( B_ * p ) * ( p.transpose() * A_ * p ) / ( denominator * denominator * denominator );
+            const JacobianType dfdc = JacobianType::Zero();
+
+            fjac( i, 0 ) = dfda( 0 );
+            fjac( i, 1 ) = dfdb( 0 );
+            fjac( i, 2 ) = dfdc( 0 );
+        }
+
+        return 0;
+    }
+
+    PointCloud cloud_;
+    InputType A_;
+    InputType B_;
+};
+
+
+
+
 }
 
 

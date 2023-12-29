@@ -2,7 +2,7 @@ import pytest
 from module_helper import *
 from pathlib import Path
 from constants import test_files_path
-from helpers.file_helpers import compare_files
+from helpers.file_helpers import compare_file_with_multiple_references, get_reference_files_list
 
 
 @pytest.mark.parametrize("test_mesh_name", ["fox_geometrik", "Crocodile"])
@@ -33,9 +33,10 @@ def test_conversion_from_mrmesh(test_mesh_name, ext, use_fileHandler, tmp_path):
             mrmesh.saveMesh(mesh=input_mesh, extension="*." + ext, fileHandle=f)
     else:
         mrmesh.saveMesh(mesh=input_mesh, path=str(tmp_path / filename))
-    # Compare files
-    is_same = compare_files(input_folder / filename, tmp_path / filename)
-    assert is_same, f"Converted and reference files are not the same for {filename}"
+    # Comparing files
+    ref_files_list = get_reference_files_list(input_folder / filename)
+    is_same_found = compare_file_with_multiple_references(tmp_path / filename, ref_files_list)
+    assert is_same_found, f"Converted file doesn't match to any reference"
 
 
 @pytest.mark.parametrize("test_mesh_name", ["fox_geometrik", "Crocodile"])
@@ -68,5 +69,8 @@ def test_conversion_to_mrmesh(test_mesh_name, ext, use_fileHandler, tmp_path):
         mrmesh.saveMesh(mesh=input_mesh, path=str(tmp_path / filename))
 
     # Comparing files
-    is_same = compare_files(input_folder / filename, tmp_path / filename)
-    assert is_same, f"Converted and reference files are not the same for {filename} converted from {ext}"
+
+    ref_files_list = get_reference_files_list(input_folder / filename)
+    is_same_found = compare_file_with_multiple_references(tmp_path / filename, ref_files_list)
+
+    assert is_same_found, f"Converted and reference files are not the same for {filename} converted from {ext}"

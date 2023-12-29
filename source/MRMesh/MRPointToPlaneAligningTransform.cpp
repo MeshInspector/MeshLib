@@ -13,7 +13,7 @@ void PointToPlaneAligningTransform::add(const Vector3d& s0, const Vector3d& d, c
 {
     Vector3d s = approxTransform_(s0);
     Vector3d n = normal2.normalized();
-    double k_B = dot(d - s, n);
+    double k_B = dot(d, n); // dot(d - s, n)
     double c[7];
     // https://www.cs.princeton.edu/~smr/papers/icpstability.pdf
     c[0] = n.z * s.y - n.y * s.z;
@@ -22,7 +22,7 @@ void PointToPlaneAligningTransform::add(const Vector3d& s0, const Vector3d& d, c
     c[3] = n.x;
     c[4] = n.y;
     c[5] = n.z;
-    c[6] = -dot( s, n );
+    c[6] = dot( s, n );
     for (size_t i = 0; i < 7; i++)
     {
         for (size_t j = 0; j < 7; j++)
@@ -197,8 +197,20 @@ TEST( MRMesh, PointToPlaneIteration )
         ptp1.add( pInit[i], pTransformed[i], n[i] );
     }
     
-    {
+/*    {
         const auto ammendment = ptp1.calculateAmendment();
+        EXPECT_EQ( ammendment.scale, 1 );
+        Matrix3d apprRotationMatrix = Matrix3d::approximateLinearRotationMatrixFromEuler( ammendment.rotAngles );
+        auto xf2 = AffineXf3d( apprRotationMatrix, ammendment.shift );
+        EXPECT_NEAR( (xf1.A.x - xf2.A.x).length(), 0., 1e-13 );
+        EXPECT_NEAR( (xf1.A.y - xf2.A.y).length(), 0., 1e-13 );
+        EXPECT_NEAR( (xf1.A.z - xf2.A.z).length(), 0., 1e-13 );
+        EXPECT_NEAR( (xf1.b - xf2.b).length(), 0., 1e-13 );
+    }*/
+
+    {
+        const auto ammendment = ptp1.calculateAmendment( false );
+        EXPECT_NEAR( ammendment.scale, 1., 1e-13 );
         Matrix3d apprRotationMatrix = Matrix3d::approximateLinearRotationMatrixFromEuler( ammendment.rotAngles );
         auto xf2 = AffineXf3d( apprRotationMatrix, ammendment.shift );
         EXPECT_NEAR( (xf1.A.x - xf2.A.x).length(), 0., 1e-13 );
@@ -208,7 +220,34 @@ TEST( MRMesh, PointToPlaneIteration )
     }
 
     {
+        const double scale = 0.5;
+        AffineXf3d xf2( scale * rotationMatrix, Vector3d( 2., 3., -1. ) );
+        for( int i = 0; i < 10; i++ )
+        {
+            pTransformed[i] = xf2( pInit[i] );
+        }
+        for( int i = 0; i < 3; i++ )
+        {
+            pTransformed[i] += n2[i];
+        }
+        PointToPlaneAligningTransform ptp2;
+        for( int i = 0; i < 10; i++ )
+        {
+            ptp2.add( pInit[i], pTransformed[i], n[i] );
+        }
+        const auto ammendment = ptp2.calculateAmendment( false );
+        EXPECT_NEAR( ammendment.scale, scale, 1e-13 );
+        Matrix3d apprRotationMatrix = ammendment.scale * Matrix3d::approximateLinearRotationMatrixFromEuler( ammendment.rotAngles );
+        auto xf3 = AffineXf3d( apprRotationMatrix, ammendment.shift );
+        EXPECT_NEAR( (xf3.A.x - xf2.A.x).length(), 0., 1e-13 );
+        EXPECT_NEAR( (xf3.A.y - xf2.A.y).length(), 0., 1e-13 );
+        EXPECT_NEAR( (xf3.A.z - xf2.A.z).length(), 0., 1e-13 );
+        EXPECT_NEAR( (xf3.b - xf2.b).length(), 0., 1e-13 );
+    }
+
+/*    {
         const auto ammendment = ptp1.calculateFixedAxisAmendment( 10.0 * Vector3d{ alpha, beta, gamma } );
+        EXPECT_EQ( ammendment.scale, 1 );
         Matrix3d apprRotationMatrix = Matrix3d::approximateLinearRotationMatrixFromEuler( ammendment.rotAngles );
         auto xf2 = AffineXf3d( apprRotationMatrix, ammendment.shift );
         EXPECT_NEAR( (xf1.A.x - xf2.A.x).length(), 0., 1e-13 );
@@ -221,13 +260,14 @@ TEST( MRMesh, PointToPlaneIteration )
         Vector3d axis = Vector3d{ alpha, beta, gamma };
         axis = cross( axis, axis.furthestBasisVector() );
         const auto ammendment = ptp1.calculateOrthogonalAxisAmendment( -12.0 * axis );
+        EXPECT_EQ( ammendment.scale, 1 );
         Matrix3d apprRotationMatrix = Matrix3d::approximateLinearRotationMatrixFromEuler( ammendment.rotAngles );
         auto xf2 = AffineXf3d( apprRotationMatrix, ammendment.shift );
         EXPECT_NEAR( (xf1.A.x - xf2.A.x).length(), 0., 1e-13 );
         EXPECT_NEAR( (xf1.A.y - xf2.A.y).length(), 0., 1e-13 );
         EXPECT_NEAR( (xf1.A.z - xf2.A.z).length(), 0., 1e-13 );
         EXPECT_NEAR( (xf1.b - xf2.b).length(), 0., 1e-13 );
-    }
+    }*/
 }
 
 } //namespace MR

@@ -218,10 +218,15 @@ VoidOrErrStr toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSetti
         mesh.topology.getTriVerts( f, a, b, c );
         assert( a.valid() && b.valid() && c.valid() );
 
-        const Vector3f ap = applyFloat( settings.xf, mesh.points[a] );
-        const Vector3f bp = applyFloat( settings.xf, mesh.points[b] );
-        const Vector3f cp = applyFloat( settings.xf, mesh.points[c] );
-        Vector3f normal = cross( bp - ap, cp - ap ).normalized();
+        // perform normal computation in double-precision to get exactly the same single-precision result on all platforms
+        const Vector3d ad = applyDouble( settings.xf, mesh.points[a] );
+        const Vector3d bd = applyDouble( settings.xf, mesh.points[b] );
+        const Vector3d cd = applyDouble( settings.xf, mesh.points[c] );
+        const Vector3f normal( cross( bd - ad, cd - ad ).normalized() );
+        const Vector3f ap( ad );
+        const Vector3f bp( bd );
+        const Vector3f cp( cd );
+
         out.write( (const char*)&normal, 12 );
         out.write( (const char*)&ap, 12 );
         out.write( (const char*)&bp, 12 );

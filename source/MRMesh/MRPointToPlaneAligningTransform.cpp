@@ -93,8 +93,8 @@ auto PointToPlaneAligningTransform::calculateFixedAxisAmendment( const Vector3d 
 
     A.bottomRightCorner<3,3>() = sumA_.block<3,3>(3, 3);
 
-    b.topRows<1>() = k.transpose() * sumB_.topRows<3>();
-    b.bottomRows<3>() = sumB_.middleRows<3>(3);
+    b.topRows<1>() = k.transpose() * ( sumB_.topRows<3>() - sumA_.block<3,1>( 0, 6 ) );
+    b.bottomRows<3>() = sumB_.middleRows<3>(3) - sumA_.block<3,1>( 3, 6 );
 
     Eigen::LLT<Eigen::MatrixXd> chol(A);
     Eigen::VectorXd solution = chol.solve(b);
@@ -126,8 +126,8 @@ auto PointToPlaneAligningTransform::calculateOrthogonalAxisAmendment( const Vect
 
     A.bottomRightCorner<3,3>() = sumA_.block<3,3>(3, 3);
 
-    b.topRows<2>() = k.transpose() * sumB_.topRows<3>();
-    b.bottomRows<3>() = sumB_.middleRows<3>(3);
+    b.topRows<2>() = k.transpose() * ( sumB_.topRows<3>() - sumA_.block<3,1>( 0, 6 ) );
+    b.bottomRows<3>() = sumB_.middleRows<3>(3) - sumA_.block<3,1>( 3, 6 );
 
     Eigen::LLT<Eigen::MatrixXd> chol(A);
     Eigen::VectorXd solution = chol.solve(b);
@@ -211,6 +211,30 @@ TEST( MRMesh, PointToPlaneIteration )
     {
         const auto ammendment = ptp1.calculateAmendment( false );
         EXPECT_NEAR( ammendment.scale, 1., 1e-13 );
+        Matrix3d apprRotationMatrix = ammendment.scale * Matrix3d::approximateLinearRotationMatrixFromEuler( ammendment.rotAngles );
+        auto xf2 = AffineXf3d( apprRotationMatrix, ammendment.shift );
+        EXPECT_NEAR( (xf1.A.x - xf2.A.x).length(), 0., 1e-13 );
+        EXPECT_NEAR( (xf1.A.y - xf2.A.y).length(), 0., 1e-13 );
+        EXPECT_NEAR( (xf1.A.z - xf2.A.z).length(), 0., 1e-13 );
+        EXPECT_NEAR( (xf1.b - xf2.b).length(), 0., 1e-13 );
+    }
+
+    {
+        const auto ammendment = ptp1.calculateFixedAxisAmendment( 10.0 * Vector3d{ alpha, beta, gamma } );
+        EXPECT_EQ( ammendment.scale, 1 );
+        Matrix3d apprRotationMatrix = Matrix3d::approximateLinearRotationMatrixFromEuler( ammendment.rotAngles );
+        auto xf2 = AffineXf3d( apprRotationMatrix, ammendment.shift );
+        EXPECT_NEAR( (xf1.A.x - xf2.A.x).length(), 0., 1e-13 );
+        EXPECT_NEAR( (xf1.A.y - xf2.A.y).length(), 0., 1e-13 );
+        EXPECT_NEAR( (xf1.A.z - xf2.A.z).length(), 0., 1e-13 );
+        EXPECT_NEAR( (xf1.b - xf2.b).length(), 0., 1e-13 );
+    }
+
+    {
+        Vector3d axis = Vector3d{ alpha, beta, gamma };
+        axis = cross( axis, axis.furthestBasisVector() );
+        const auto ammendment = ptp1.calculateOrthogonalAxisAmendment( -12.0 * axis );
+        EXPECT_EQ( ammendment.scale, 1 );
         Matrix3d apprRotationMatrix = Matrix3d::approximateLinearRotationMatrixFromEuler( ammendment.rotAngles );
         auto xf2 = AffineXf3d( apprRotationMatrix, ammendment.shift );
         EXPECT_NEAR( (xf1.A.x - xf2.A.x).length(), 0., 1e-13 );
@@ -244,30 +268,6 @@ TEST( MRMesh, PointToPlaneIteration )
         EXPECT_NEAR( (xf3.A.z - xf2.A.z).length(), 0., 1e-13 );
         EXPECT_NEAR( (xf3.b - xf2.b).length(), 0., 1e-13 );
     }
-
-/*    {
-        const auto ammendment = ptp1.calculateFixedAxisAmendment( 10.0 * Vector3d{ alpha, beta, gamma } );
-        EXPECT_EQ( ammendment.scale, 1 );
-        Matrix3d apprRotationMatrix = Matrix3d::approximateLinearRotationMatrixFromEuler( ammendment.rotAngles );
-        auto xf2 = AffineXf3d( apprRotationMatrix, ammendment.shift );
-        EXPECT_NEAR( (xf1.A.x - xf2.A.x).length(), 0., 1e-13 );
-        EXPECT_NEAR( (xf1.A.y - xf2.A.y).length(), 0., 1e-13 );
-        EXPECT_NEAR( (xf1.A.z - xf2.A.z).length(), 0., 1e-13 );
-        EXPECT_NEAR( (xf1.b - xf2.b).length(), 0., 1e-13 );
-    }
-
-    {
-        Vector3d axis = Vector3d{ alpha, beta, gamma };
-        axis = cross( axis, axis.furthestBasisVector() );
-        const auto ammendment = ptp1.calculateOrthogonalAxisAmendment( -12.0 * axis );
-        EXPECT_EQ( ammendment.scale, 1 );
-        Matrix3d apprRotationMatrix = Matrix3d::approximateLinearRotationMatrixFromEuler( ammendment.rotAngles );
-        auto xf2 = AffineXf3d( apprRotationMatrix, ammendment.shift );
-        EXPECT_NEAR( (xf1.A.x - xf2.A.x).length(), 0., 1e-13 );
-        EXPECT_NEAR( (xf1.A.y - xf2.A.y).length(), 0., 1e-13 );
-        EXPECT_NEAR( (xf1.A.z - xf2.A.z).length(), 0., 1e-13 );
-        EXPECT_NEAR( (xf1.b - xf2.b).length(), 0., 1e-13 );
-    }*/
 }
 
 } //namespace MR

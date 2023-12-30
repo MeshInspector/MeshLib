@@ -58,7 +58,7 @@ auto PointToPlaneAligningTransform::calculateAmendment( bool scaleIsOne ) const 
     if ( scaleIsOne )
     {
         Eigen::LLT<Eigen::MatrixXd> chol( sumA_.topLeftCorner<6,6>() );
-        Eigen::VectorXd solution = chol.solve( sumB_.topRows<6>() );
+        Eigen::VectorXd solution = chol.solve( sumB_.topRows<6>() - sumA_.block<6,1>( 0, 6 ) );
         
         res.rotAngles = Vector3d{ solution.coeff( 0 ), solution.coeff( 1 ), solution.coeff( 2 ) };
         res.shift =     Vector3d{ solution.coeff( 3 ), solution.coeff( 4 ), solution.coeff( 5 ) };
@@ -197,7 +197,7 @@ TEST( MRMesh, PointToPlaneIteration )
         ptp1.add( pInit[i], pTransformed[i], n[i] );
     }
     
-/*    {
+    {
         const auto ammendment = ptp1.calculateAmendment();
         EXPECT_EQ( ammendment.scale, 1 );
         Matrix3d apprRotationMatrix = Matrix3d::approximateLinearRotationMatrixFromEuler( ammendment.rotAngles );
@@ -206,7 +206,7 @@ TEST( MRMesh, PointToPlaneIteration )
         EXPECT_NEAR( (xf1.A.y - xf2.A.y).length(), 0., 1e-13 );
         EXPECT_NEAR( (xf1.A.z - xf2.A.z).length(), 0., 1e-13 );
         EXPECT_NEAR( (xf1.b - xf2.b).length(), 0., 1e-13 );
-    }*/
+    }
 
     {
         const auto ammendment = ptp1.calculateAmendment( false );

@@ -47,10 +47,19 @@ public:
         Vector3d rotAngles; ///< rotation angles relative to x,y,z axes
         Vector3d shift;
         double scale = 1;
+
+        /// converts this amendment into rigid (with scale) transformation, which non-linearly depends on angles
+        [[nodiscard]] MRMESH_API AffineXf3d rigidXf() const;
+
+        /// converts this amendment into not-rigid transformation but with matrix, which linearly depends on angles
+        [[nodiscard]] MRMESH_API AffineXf3d linearXf() const;
     };
 
-    /// Compute transformation relative to given approximation and return it as angles and shift
-    [[nodiscard]] MRMESH_API Amendment calculateAmendment( bool scaleIsOne = true ) const;
+    /// Compute transformation relative to given approximation and return it as angles and shift (scale = 1)
+    [[nodiscard]] MRMESH_API Amendment calculateAmendment() const;
+
+    /// Compute transformation relative to given approximation and return it as scale, angles and shift
+    [[nodiscard]] MRMESH_API Amendment calculateAmendmentWithScale() const;
 
     /// this version searches for best transformation where rotation is allowed only around given axis and with arbitrary translation
     [[nodiscard]] MRMESH_API Amendment calculateFixedAxisAmendment( const Vector3d & axis ) const;

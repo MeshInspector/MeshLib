@@ -45,7 +45,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def_readwrite( "badIterStopCount", &MR::ICPProperties::badIterStopCount, "maximum iterations without improvements" ).
         def_readwrite( "exitVal", &MR::ICPProperties::exitVal, "Algorithm target root-mean-square distance. As soon as it is reached, the algorithm stops." );
         
-    pybind11::class_<MR::MeshICP>( m, "MeshICP", "This class allows to match two meshes with almost same geometry throw ICP point-to-point or point-to-plane algorithms" ).
+    pybind11::class_<MR::ICP>( m, "ICP", "This class allows to match two meshes with almost same geometry throw ICP point-to-point or point-to-plane algorithms" ).
         def( pybind11::init<const MR::Mesh&, const MR::Mesh&, const MR::AffineXf3f&, const MR::AffineXf3f&, const MR::VertBitSet&>(),
             pybind11::arg("floatingMesh"), pybind11::arg( "referenceMesh" ), pybind11::arg( "fltMeshXf" ), pybind11::arg( "refMeshXf" ), pybind11::arg( "floatingMeshBitSet" ),
             "xf parameters should represent current transformations of meshes\n"
@@ -58,23 +58,23 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
             "fltMeshXf - transform from the local floatingMesh basis to the global\n"
             "refMeshXf - transform from the local referenceMesh basis to the global\n"
             "floatSamplingVoxelSize = positive value here defines voxel size, and only one vertex per voxel will be selected" ).
-        def( "setParams", &MR::MeshICP::setParams, pybind11::arg( "prop" ), "tune algirithm params before run calculateTransformation()" ).
-        def( "setCosineLimit", &MR::MeshICP::setCosineLimit, pybind11::arg( "cos" ) ).
-        def( "setDistanceLimit", &MR::MeshICP::setDistanceLimit, pybind11::arg( "dist" ) ).
-        def( "setBadIterCount", &MR::MeshICP::setBadIterCount, pybind11::arg( "iter" ) ).
-        def( "setPairsWeight", &MR::MeshICP::setPairsWeight, pybind11::arg( "v" ) ).
-        def( "setDistanceFilterSigmaFactor", &MR::MeshICP::setDistanceFilterSigmaFactor, pybind11::arg( "factor" ) ).
-        def( "recomputeBitSet", &MR::MeshICP::recomputeBitSet, pybind11::arg( "floatSamplingVoxelSize" ) ).
-        def( "getParams", &MR::MeshICP::getParams, pybind11::return_value_policy::copy ).
-        def( "getShiftVector", &MR::MeshICP::getShiftVector, "shows mean pair vector" ).
-        def( "getLastICPInfo", &MR::MeshICP::getLastICPInfo, "returns status info string" ).
-        def( "getMeanSqDistToPoint", &MR::MeshICP::getMeanSqDistToPoint, "computes root-mean-square deviation between points" ).
-        def( "getMeanSqDistToPlane", &MR::MeshICP::getMeanSqDistToPlane, "computes root-mean-square deviation from points to target planes" ).
-        def( "getVertPairs", &MR::MeshICP::getVertPairs, pybind11::return_value_policy::copy, "used to visualize generated points pairs" ).
-        def( "getDistLimitsSq", &MR::MeshICP::getDistLimitsSq, "finds squared minimum and maximum pairs distances" ).
-        def( "calculateTransformation", &MR::MeshICP::calculateTransformation, "returns new xf transformation for the floating mesh, which allows to match reference mesh" ).
-        def( "autoSelectFloatXf", &MR::MeshICP::autoSelectFloatXf, "automatically selects initial transformation for the floating object based on covariance matrices of both floating and reference objects; applies the transformation to the floating object and returns it" ).
-        def( "updateVertPairs", &MR::MeshICP::updateVertPairs, "recompute point pairs after manual change of transformations or parameters" );
+        def( "setParams", &MR::ICP::setParams, pybind11::arg( "prop" ), "tune algirithm params before run calculateTransformation()" ).
+        def( "setCosineLimit", &MR::ICP::setCosineLimit, pybind11::arg( "cos" ) ).
+        def( "setDistanceLimit", &MR::ICP::setDistanceLimit, pybind11::arg( "dist" ) ).
+        def( "setBadIterCount", &MR::ICP::setBadIterCount, pybind11::arg( "iter" ) ).
+        def( "setPairsWeight", &MR::ICP::setPairsWeight, pybind11::arg( "v" ) ).
+        def( "setDistanceFilterSigmaFactor", &MR::ICP::setDistanceFilterSigmaFactor, pybind11::arg( "factor" ) ).
+        def( "recomputeBitSet", &MR::ICP::recomputeBitSet, pybind11::arg( "floatSamplingVoxelSize" ) ).
+        def( "getParams", &MR::ICP::getParams, pybind11::return_value_policy::copy ).
+        def( "getShiftVector", &MR::ICP::getShiftVector, "shows mean pair vector" ).
+        def( "getLastICPInfo", &MR::ICP::getLastICPInfo, "returns status info string" ).
+        def( "getMeanSqDistToPoint", &MR::ICP::getMeanSqDistToPoint, "computes root-mean-square deviation between points" ).
+        def( "getMeanSqDistToPlane", &MR::ICP::getMeanSqDistToPlane, "computes root-mean-square deviation from points to target planes" ).
+        def( "getVertPairs", &MR::ICP::getVertPairs, pybind11::return_value_policy::copy, "used to visualize generated points pairs" ).
+        def( "getDistLimitsSq", &MR::ICP::getDistLimitsSq, "finds squared minimum and maximum pairs distances" ).
+        def( "calculateTransformation", &MR::ICP::calculateTransformation, "returns new xf transformation for the floating mesh, which allows to match reference mesh" ).
+        def( "autoSelectFloatXf", &MR::ICP::autoSelectFloatXf, "automatically selects initial transformation for the floating object based on covariance matrices of both floating and reference objects; applies the transformation to the floating object and returns it" ).
+        def( "updateVertPairs", &MR::ICP::updateVertPairs, "recompute point pairs after manual change of transformations or parameters" );
 } )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorICPVertPair, MR::VertPair )

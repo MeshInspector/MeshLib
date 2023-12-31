@@ -28,7 +28,7 @@
     <ClCompile Include="MRPythonDecimate.cpp" />
     <ClCompile Include="MRPythonIO.cpp" />
     <ClCompile Include="MRPythonMeshExposing.cpp" />
-    <ClCompile Include="MRPythonMeshICPExposing.cpp" />
+    <ClCompile Include="MRPythonICPExposing.cpp" />
     <ClCompile Include="MRPythonMeshAABBOps.cpp" />
     <ClCompile Include="MRPythonMeshPlugins.cpp" />
     <ClCompile Include="MRPythonPointCloudExposing.cpp" />

@@ -4,7 +4,6 @@
 #include "MRQuaternion.h"
 #include "MRToFromEigen.h"
 #include "MRGTest.h"
-#include <Eigen/Eigenvalues>
 
 namespace MR
 {
@@ -23,15 +22,19 @@ void PointToPlaneAligningTransform::add( const Vector3d& s0, const Vector3d& d, 
     c[4] = n.y;
     c[5] = n.z;
     c[6] = dot( s, n );
+    // update upper-right part of sumA_
     for (size_t i = 0; i < 7; i++)
     {
-        for (size_t j = 0; j < 7; j++)
-        {
+        for (size_t j = i; j < 7; j++)
             sumA_(i, j) += w * c[i] * c[j];
-        }
 
         sumB_(i) += w * c[i] * k_B;
     }
+
+    // copy values in lower-left part
+    for (size_t i = 1; i < 7; i++)
+        for (size_t j = 0; j < i; j++)
+            sumA_(i, j) = sumA_(j, i);
 }
 
 void PointToPlaneAligningTransform::clear()

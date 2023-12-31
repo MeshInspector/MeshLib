@@ -4,6 +4,7 @@
 #include "MRQuaternion.h"
 #include "MRToFromEigen.h"
 #include "MRGTest.h"
+#include <Eigen/Cholesky> //LLT
 
 namespace MR
 {

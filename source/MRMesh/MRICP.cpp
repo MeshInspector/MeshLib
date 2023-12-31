@@ -14,7 +14,7 @@ const int MAX_RESAMPLING_VOXEL_NUMBER = 500000;
 namespace MR
 {
 
-MeshICP::MeshICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
+ICP::ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
     const VertBitSet& floatBitSet)
     : floating_( floating )
     , ref_( reference )
@@ -24,7 +24,7 @@ MeshICP::MeshICP(const MeshOrPoints& floating, const MeshOrPoints& reference, co
     updateVertPairs();
 }
 
-MeshICP::MeshICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
+ICP::ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
     float floatSamplingVoxelSize )
     : floating_( floating )
     , ref_( reference )
@@ -33,19 +33,19 @@ MeshICP::MeshICP(const MeshOrPoints& floating, const MeshOrPoints& reference, co
     recomputeBitSet( floatSamplingVoxelSize );
 }
 
-void MeshICP::setXfs( const AffineXf3f& fltXf, const AffineXf3f& refXf )
+void ICP::setXfs( const AffineXf3f& fltXf, const AffineXf3f& refXf )
 {
     refXf_ = refXf;
     setFloatXf( fltXf );
 }
 
-void MeshICP::setFloatXf( const AffineXf3f& fltXf )
+void ICP::setFloatXf( const AffineXf3f& fltXf )
 {
     floatXf_ = fltXf;
     float2refXf_ = refXf_.inverse() * floatXf_;
 }
 
-AffineXf3f MeshICP::autoSelectFloatXf()
+AffineXf3f ICP::autoSelectFloatXf()
 {
     MR_TIMER
 
@@ -77,7 +77,7 @@ AffineXf3f MeshICP::autoSelectFloatXf()
     return bestFltXf;
 }
 
-void MeshICP::recomputeBitSet(const float floatSamplingVoxelSize)
+void ICP::recomputeBitSet(const float floatSamplingVoxelSize)
 {
     auto bboxDiag = floating_.computeBoundingBox().size() / floatSamplingVoxelSize;
     auto nSamples = bboxDiag[0] * bboxDiag[1] * bboxDiag[2];
@@ -89,7 +89,7 @@ void MeshICP::recomputeBitSet(const float floatSamplingVoxelSize)
     updateVertPairs();
 }
 
-void MeshICP::updateVertPairs()
+void ICP::updateVertPairs()
 {
     MR_TIMER;
     const auto& actualBitSet = floatVerts_;
@@ -150,7 +150,7 @@ void MeshICP::updateVertPairs()
     }
 }
 
-void MeshICP::removeInvalidVertPairs_()
+void ICP::removeInvalidVertPairs_()
 {
     // remove border and unprojected cases pairs
     auto newEndIter = std::remove_if(vertPairs_.begin(), vertPairs_.end(), [](const VertPair & vp) {
@@ -159,7 +159,7 @@ void MeshICP::removeInvalidVertPairs_()
     vertPairs_.erase(newEndIter, vertPairs_.end());
 }
 
-void MeshICP::updateVertFilters_()
+void ICP::updateVertFilters_()
 {
     // finding mean value
     float meanVal = 0.f;
@@ -197,7 +197,7 @@ void MeshICP::updateVertFilters_()
     removeInvalidVertPairs_();
 }
 
-std::pair<float,float> MeshICP::getDistLimitsSq() const
+std::pair<float,float> ICP::getDistLimitsSq() const
 {
     float minPairsDist2_ = std::numeric_limits < float>::max();
     float maxPairsDist2_ = 0.f;
@@ -209,7 +209,7 @@ std::pair<float,float> MeshICP::getDistLimitsSq() const
     return std::make_pair(minPairsDist2_, maxPairsDist2_);
 }
 
-bool MeshICP::p2ptIter_()
+bool ICP::p2ptIter_()
 {
     MR_TIMER;
     const VertCoords& points = floating_.points();
@@ -238,7 +238,7 @@ bool MeshICP::p2ptIter_()
     return true;
 }
 
-bool MeshICP::p2plIter_()
+bool ICP::p2plIter_()
 {
     MR_TIMER;
     if ( vertPairs_.empty() )
@@ -312,7 +312,7 @@ bool MeshICP::p2plIter_()
     return true;
 }
 
-AffineXf3f MeshICP::calculateTransformation()
+AffineXf3f ICP::calculateTransformation()
 {
     float curDist = 0;
     float minDist = std::numeric_limits<float>::max();
@@ -430,7 +430,7 @@ float getMeanSqDistToPlane( const VertPairs & pairs, const MeshOrPoints & floati
     return (float)std::sqrt( sum / pairs.size() );
 }
 
-Vector3f MeshICP::getShiftVector() const
+Vector3f ICP::getShiftVector() const
 {
     const VertCoords& points = floating_.points();
     Vector3f vecAcc{ 0.f,0.f,0.f };
@@ -442,27 +442,27 @@ Vector3f MeshICP::getShiftVector() const
     return vertPairs_.size() == 0 ? vecAcc : vecAcc / float(vertPairs_.size());
 }
 
-void MeshICP::setCosineLimit(const float cos)
+void ICP::setCosineLimit(const float cos)
 {
     prop_.cosTreshold = cos;
 }
 
-void MeshICP::setDistanceLimit(const float dist)
+void ICP::setDistanceLimit(const float dist)
 {
     prop_.distTresholdSq = dist * dist;
 }
 
-void MeshICP::setBadIterCount( const int iter )
+void ICP::setBadIterCount( const int iter )
 {
     prop_.badIterStopCount = iter;
 }
 
-void MeshICP::setDistanceFilterSigmaFactor(const float factor)
+void ICP::setDistanceFilterSigmaFactor(const float factor)
 {
     prop_.distStatisticSigmaFactor = factor;
 }
 
-void MeshICP::setPairsWeight(const std::vector<float> w)
+void ICP::setPairsWeight(const std::vector<float> w)
 {
     assert(vertPairs_.size() == w.size());
     for (int i = 0; i < w.size(); i++)
@@ -471,24 +471,24 @@ void MeshICP::setPairsWeight(const std::vector<float> w)
     }
 }
 
-std::string MeshICP::getLastICPInfo() const
+std::string ICP::getLastICPInfo() const
 {
     std::string result = "Performed " + std::to_string( iter_ ) + " iterations.\n";
     switch ( resultType_ )
     {
-    case MR::MeshICP::ExitType::NotFoundSolution:
+    case MR::ICP::ExitType::NotFoundSolution:
         result += "No solution found.";
         break;
-    case MR::MeshICP::ExitType::MaxIterations:
+    case MR::ICP::ExitType::MaxIterations:
         result += "Limit of iterations reached.";
         break;
-    case MR::MeshICP::ExitType::MaxBadIterations:
+    case MR::ICP::ExitType::MaxBadIterations:
         result += "No improvement iterations limit reached.";
         break;
-    case MR::MeshICP::ExitType::StopMsdReached:
+    case MR::ICP::ExitType::StopMsdReached:
         result += "Required mean square deviation reached.";
         break;
-    case MR::MeshICP::ExitType::NotStarted:
+    case MR::ICP::ExitType::NotStarted:
     default:
         result = "Not started yet.";
         break;

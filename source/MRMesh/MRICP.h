@@ -83,17 +83,18 @@ struct ICPProperties
     float exitVal = 0; // [distance]
 };
 
-/// This class allows to match two meshes with almost same geometry using ICP point-to-point or point-to-plane algorithms
-class MeshICP
+/// This class allows you to register two object with similar shape using
+/// Iterative Closest Points (ICP) point-to-point or point-to-plane algorithms
+class ICP
 {
 public:
     /// xf parameters should represent current transformations of meshes
     /// fltXf transform from the local floating basis to the global
     /// refXf transform from the local reference basis to the global
     /// floatBitSet allows to take exact set of vertices from the floating object
-    MRMESH_API MeshICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
+    MRMESH_API ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
         const VertBitSet& floatBitSet);
-    MRMESH_API MeshICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
+    MRMESH_API ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
         float floatSamplingVoxelSize ); // positive value here defines voxel size, and only one vertex per voxel will be selected
     // TODO: add single transform constructor
 
@@ -172,4 +173,6 @@ private:
     bool p2plIter_();
 };
 
-}
+using MeshICP [[deprecated]] = ICP;
+
+} //namespace MR

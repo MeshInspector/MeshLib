@@ -9,11 +9,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         value( "PointToPoint", MR::ICPMethod::PointToPoint, "use it in the cases with big differences, takes more iterations" ).
         value( "PointToPlane", MR::ICPMethod::PointToPlane, "finds solution faster in fewer iterations" );
     
-    pybind11::enum_<MR::ICPMode>( m, "ICPMode", "You could fix any axis(axes) of rotation by using this modes" ).
-        value( "AnyRigidXf", MR::ICPMode::AnyRigidXf, "all 6 degrees of freedom (dof)" ).
-        value( "OrthogonalAxis", MR::ICPMode::OrthogonalAxis, "5 dof, except argument axis" ).
-        value( "FixedAxis", MR::ICPMode::FixedAxis, "4 dof, translation and one argument axis" ).
-        value( "TranslationOnly", MR::ICPMode::TranslationOnly, "3 dof, no rotation" );
+    pybind11::enum_<MR::ICPMode>( m, "ICPMode", "Select the class of transformations you are looking for" ).
+        value( "RigidScale", MR::ICPMode::RigidScale, "rigid body transformation with uniform scaling (7 degrees of freedom)" ).
+        value( "AnyRigidXf", MR::ICPMode::AnyRigidXf, "rigid body transformation (6 degrees of freedom)" ).
+        value( "OrthogonalAxis", MR::ICPMode::OrthogonalAxis, "rigid body transformation with rotation except argument axis (5 degrees of freedom)" ).
+        value( "FixedAxis", MR::ICPMode::FixedAxis, "rigid body transformation with rotation around given axis only (4 degrees of freedom)" ).
+        value( "TranslationOnly", MR::ICPMode::TranslationOnly, "only translation (3 degrees of freedom)" );
 
     pybind11::class_<MR::VertPair>( m, "VertPair" ).
         def( pybind11::init<>() ).

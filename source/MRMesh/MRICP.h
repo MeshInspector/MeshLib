@@ -20,21 +20,22 @@ enum class ICPMethod
 // You could fix any axis(axes) of rotation by using this modes
 enum class ICPMode
 {
-    AnyRigidXf, // all 6 degrees of freedom (dof)
-    OrthogonalAxis, // 5 dof, except argument axis
-    FixedAxis, // 4 dof, translation and one argument axis
-    TranslationOnly // 3 dof, no rotation
+    RigidScale,     ///< rigid body transformation with uniform scaling (7 degrees of freedom)
+    AnyRigidXf,     ///< rigid body transformation (6 degrees of freedom)
+    OrthogonalAxis, ///< rigid body transformation with rotation except argument axis (5 degrees of freedom)
+    FixedAxis,      ///< rigid body transformation with rotation around given axis only (4 degrees of freedom)
+    TranslationOnly ///< only translation (3 degrees of freedom)
 };
 
 struct VertPair
 {
     // coordinates of the closest point on reference mesh (after applying refXf)
     Vector3f refPoint;
-    // surface normal in a vertex on the floating mesh (after applying Xf)
+    // surface normal in a vertex on the floating mesh (after applying fltXf)
     Vector3f norm;
-    // surface normal in a vertex on the reference mesh (after applying Xf)
+    // surface normal in a vertex on the reference mesh (after applying refXf)
     Vector3f normRef;
-    // ID of the floating mesh vertex (usually applying Xf required)
+    // ID of the floating mesh vertex
     VertId vertId;
     // This is cosine between normals in first(floating mesh) and second(reference mesh) points
     // It evaluates how good is this pair

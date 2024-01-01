@@ -98,7 +98,7 @@ This list is not full and updating each day
    - Semi-auto voxel segmentation (volumes classification).
    - Semi-auto mesh segmentation by curvature.
  - Sampling
-   - Mesh sampling. The result is a separate thinned set of vertices, the mesh remains unchanged. 
+   - Mesh sampling. The result is a separate thinned set of vertices, the mesh remains unchanged.
    - Point cloud sampling. The result is a separate thinned set of points, the cloud remains unchanged
       - Uniform cloud sampling,
       - Grid cloud sampling.

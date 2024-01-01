@@ -223,14 +223,27 @@ bool ICP::p2ptIter_()
     }
 
     AffineXf3f res;
-    if ( prop_.icpMode == ICPMode::TranslationOnly )
-        res = AffineXf3f(Matrix3f(), Vector3f(p2pt.findBestTranslation()));
-    if( prop_.icpMode == ICPMode::AnyRigidXf )
+    switch ( prop_.icpMode )
+    {
+    default:
+        assert( false );
+        [[fallthrough]];
+    case ICPMode::RigidScale:
+        res = AffineXf3f( p2pt.findBestRigidScaleXf() );
+        break;
+    case ICPMode::AnyRigidXf:
         res = AffineXf3f( p2pt.findBestRigidXf() );
-    if( prop_.icpMode == ICPMode::FixedAxis )
-        res = AffineXf3f( p2pt.findBestRigidXfFixedRotationAxis( Vector3d{ prop_.fixedRotationAxis } ) );
-    if( prop_.icpMode == ICPMode::OrthogonalAxis )
+        break;
+    case ICPMode::OrthogonalAxis:
         res = AffineXf3f( p2pt.findBestRigidXfOrthogonalRotationAxis( Vector3d{ prop_.fixedRotationAxis } ) );
+        break;
+    case ICPMode::FixedAxis:
+        res = AffineXf3f( p2pt.findBestRigidXfFixedRotationAxis( Vector3d{ prop_.fixedRotationAxis } ) );
+        break;
+    case ICPMode::TranslationOnly:
+        res = AffineXf3f( Matrix3f(), Vector3f( p2pt.findBestTranslation() ) );
+        break;
+    }
 
     if (std::isnan(res.b.x)) //nan check
         return false;
@@ -262,30 +275,36 @@ bool ICP::p2plIter_()
     }
 
     AffineXf3f res;
-    PointToPlaneAligningTransform::Amendment am;
     if( prop_.icpMode == ICPMode::TranslationOnly )
     {
         res = AffineXf3f( Matrix3f(), Vector3f( p2pl.findBestTranslation() ) );
     }
     else
     {
-        if( prop_.icpMode == ICPMode::FixedAxis )
+        PointToPlaneAligningTransform::Amendment am;
+        switch ( prop_.icpMode )
         {
-            am = p2pl.calculateFixedAxisAmendment( Vector3d{ prop_.fixedRotationAxis } );
-        }
-        if( prop_.icpMode == ICPMode::OrthogonalAxis )
-        {
-            am = p2pl.calculateOrthogonalAxisAmendment( Vector3d{ prop_.fixedRotationAxis } );
-        }
-        if( prop_.icpMode == ICPMode::AnyRigidXf )
-        {
+        default:
+            assert( false );
+            [[fallthrough]];
+        case ICPMode::RigidScale:
+            am = p2pl.calculateAmendmentWithScale();
+            break;
+        case ICPMode::AnyRigidXf:
             am = p2pl.calculateAmendment();
+            break;
+        case ICPMode::OrthogonalAxis:
+            am = p2pl.calculateOrthogonalAxisAmendment( Vector3d{ prop_.fixedRotationAxis } );
+            break;
+        case ICPMode::FixedAxis:
+            am = p2pl.calculateFixedAxisAmendment( Vector3d{ prop_.fixedRotationAxis } );
+            break;
         }
 
         auto angle = am.rotAngles.length();
         if (angle > prop_.p2plAngleLimit)
         {
-            Matrix3d mLimited = Quaternion<double>(am.rotAngles, prop_.p2plAngleLimit);
+            Matrix3d mLimited = am.scale * Matrix3d( Quaternion<double>(am.rotAngles, prop_.p2plAngleLimit) );
 
             // recompute translation part
             PointToPlaneAligningTransform p2plTrans;
@@ -301,8 +320,7 @@ bool ICP::p2plIter_()
         }
         else
         {
-            auto xfResD = AffineXf3d(Quaternion<double>(am.rotAngles, am.rotAngles.length()), am.shift);
-            res = AffineXf3f(xfResD);
+            res = AffineXf3f( am.rigidScaleXf() );
         }
     }
 

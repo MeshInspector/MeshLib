@@ -2,6 +2,7 @@
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRMeshBoolean.h"
 #include <pybind11/functional.h>
+#include "MRMesh/MRUniteManyMeshes.h"
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, BooleanExposing, [] ( pybind11::module_& m )
 {
@@ -48,4 +49,22 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, BooleanExposing, [] ( pybind11::module_& m )
         "\tmapper - Optional output structure to map mesh `A` and mesh `B` topology to result mesh topology\n\n"
         "note: Input meshes should have no self-intersections in intersecting zone\n"
         "note: If meshes are not closed in intersecting zone some boolean operations are not allowed (as far as input meshes interior and exterior cannot be determined)" );
+
+    pybind11::class_<MR::UniteManyMeshesParams>( m, "UniteManyMeshesParams", "Parameters structure for uniteManyMeshes function" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "useRandomShifts", &MR::UniteManyMeshesParams::useRandomShifts, "Apply random shift to each mesh, to prevent degenerations on coincident surfaces" ).
+        def_readwrite( "fixDegenerations", &MR::UniteManyMeshesParams::fixDegenerations,
+            "Try fix degenerations after each boolean step, to prevent boolean failure due to high amount of degenerated faces\n"
+            "useful on meshes with many coincident surfaces \n"
+            "(useRandomShifts used for same issue)" ).
+        def_readwrite( "maxAllowedError", &MR::UniteManyMeshesParams::maxAllowedError,
+            "Max allowed random shifts in each direction, and max allowed deviation after degeneration fixing\n"
+            "not used if both flags (useRandomShifts,fixDegenerations) are false" ).
+        def_readwrite( "randomShiftsSeed", &MR::UniteManyMeshesParams::randomShiftsSeed, "Seed that is used for random shifts" ).
+        def_readwrite( "newFaces", &MR::UniteManyMeshesParams::newFaces, "If set, the bitset will store new faces created by boolean operations" );
+
+    m.def( "uniteManyMeshes", MR::decorateExpected( &MR::uniteManyMeshes ), pybind11::arg( "meshes" ), pybind11::arg( "params" ) = MR::UniteManyMeshesParams{},
+        "Computes the surface of objects' union each of which is defined by its own surface mesh\n"
+        "- merge non intersecting meshes first\n"
+        "- unite merged groups" );
 } )

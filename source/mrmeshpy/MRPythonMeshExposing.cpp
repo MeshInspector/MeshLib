@@ -326,6 +326,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshComponents, [] ( pybind11::module_& m )
 } )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorMesh, Mesh )
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorConstMeshPtr, const Mesh* )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
 {

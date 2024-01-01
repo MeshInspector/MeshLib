@@ -5,12 +5,12 @@
 #include "MRTimer.h"
 #include "MRBox.h"
 #include "MRQuaternion.h"
-#include "MRGTest.h"
+#include "MRBestFit.h"
 #include "MRPch/MRTBB.h"
 #include <numeric>
-#include "MRBestFit.h"
 
 const int MAX_RESAMPLING_VOXEL_NUMBER = 500000;
+
 namespace MR
 {
 
@@ -514,130 +514,4 @@ std::string ICP::getLastICPInfo() const
     return result;
 }
 
-TEST(MRMesh, RegistrationOneIterPointToPlane)
-{
-    const auto err = 1e-5;
-    // set points
-    std::vector<Vector3d> pointsFloat = {
-        {   1.0,   1.0, -5.0 },
-        {  14.0,   1.0,  1.0 },
-        {   1.0,  14.0,  2.0 },
-        { -11.0,   2.0,  3.0 },
-        {   1.0, -11.0,  4.0 },
-        {   1.0,   2.0,  8.0 },
-        {   2.0,   1.0, -5.0 },
-        {  15.0,   1.5,  1.0 },
-        {   1.5,  15.0,  2.0 },
-        { -11.0,   2.5,  3.1 },
-    };
-
-    // large absolute value testing
-    AffineXf3d largeShiftXf = AffineXf3d(Matrix3d(), Vector3d(/*10000, - 10000, 0*/));
-    for (auto& pn : pointsFloat) pn = largeShiftXf(pn);
-
-    std::vector<Vector3d> pointsNorm = {
-        {  0.0,  0.0, -1.0 },
-        {  1.0,  0.1,  1.0 },
-        {  0.1,  1.0,  1.2 },
-        { -1.0,  0.1,  1.0 },
-        {  0.1, -1.1,  1.1 },
-        {  0.1,  0.1,  1.0 },
-        {  0.1,  0.0, -1.0 },
-        {  1.1,  0.1,  1.0 },
-        {  0.1,  1.0,  1.2 },
-        { -1.1,  0.1,  1.1 }
-    };
-    for (auto& pn : pointsNorm) pn = pn.normalized();
-
-    // init translation
-    std::vector<AffineXf3d> initP2plXfSet = {
-        // zero xf
-        AffineXf3d(
-            Matrix3d(
-                Vector3d(1, 0, 0),
-                Vector3d(0, 1, 0),
-                Vector3d(0, 0, 1)
-            ),
-            Vector3d(0,0,0)),
-
-        // Rz
-        AffineXf3d(
-            Matrix3d(
-                Vector3d(1, sin(0.5), 0),
-                Vector3d(-sin(0.5), 1, 0),
-                Vector3d(0, 0, 1)
-            ),
-            Vector3d(0,0,0)),
-
-        // Rz + transl
-        AffineXf3d(
-            Matrix3d(
-                Vector3d(1, sin(0.5), 0),
-                Vector3d(-sin(0.5), 1, 0),
-                Vector3d(0, 0, 1)
-            ),
-            Vector3d(2,-2,0)),
-
-        // complex xf
-        AffineXf3d(
-            Matrix3d(
-                Vector3d(1, sin(0.15), -sin(0.1)),
-                Vector3d(-sin(0.15), 1, sin(0.2)),
-                Vector3d(sin(0.1), -sin(0.2), 1)
-            ),
-            Vector3d(2,-20,8)),
-    };
-
-    //std::random_device rd;
-    //std::mt19937 gen(rd());
-    //const double max_rnd = 0.01;
-    //std::uniform_real_distribution<> dis(-max_rnd, max_rnd);
-    for (const auto& initXf : initP2plXfSet)
-    {
-        std::vector<Vector3d> pointsRef = pointsFloat;
-        std::vector<Vector3d> pointsNormT = pointsNorm;
-        // add some noise
-        for (int i = 0; i < pointsRef.size(); i++)
-        {
-            auto& pRef = pointsRef[i];
-            auto& pRefNorm = pointsNormT[i];
-            pRef = initXf(pRef);// +Vector3d(dis(gen), dis(gen), dis(gen));
-            pRefNorm = initXf.A * pRefNorm;
-        }
-
-        PointToPlaneAligningTransform p2pl;
-        for (int i = 0; i < pointsRef.size(); i++)
-        {
-            const auto& pRef = pointsRef[i];
-            const auto& pFl = pointsFloat[i];
-            const auto& pRefNorm = pointsNormT[i];
-
-            p2pl.add(pFl, pRef, pRefNorm);
-        }
-
-        auto am = p2pl.calculateAmendment();
-        AffineXf3d xfResP2pl = AffineXf3d(
-            Matrix3d(
-                Vector3d(1.0, -am.rotAngles[2], am.rotAngles[1]),
-                Vector3d(am.rotAngles[2], 1.0, -am.rotAngles[0]),
-                Vector3d(-am.rotAngles[1], am.rotAngles[0], 1.0)),
-            am.shift);
-
-        auto diffX = xfResP2pl.A.x - initXf.A.x;
-        EXPECT_NEAR(diffX.length(), 0., err);
-
-        auto diffY = xfResP2pl.A.y - initXf.A.y;
-        EXPECT_NEAR(diffY.length(), 0., err);
-
-        auto diffZ = xfResP2pl.A.z - initXf.A.z;
-        EXPECT_NEAR(diffZ.length(), 0., err);
-
-        // otrhogonality check
-        // auto diffOrtho = xfResP2pl.A * xfResP2pl.A.transposed() - Matrix3d();
-        // EXPECT_NEAR(diffOrtho[0].length() + diffOrtho[1].length() + diffOrtho[2].length(), 0., err);
-
-        EXPECT_NEAR((xfResP2pl.b - initXf.b).length(), 0., err);
-    }
-}
-
-}
+} //namespace MR

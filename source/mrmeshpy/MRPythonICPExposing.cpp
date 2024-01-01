@@ -31,9 +31,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
     pybind11::class_<MR::ICPProperties>( m, "ICPProperties" ).
         def( pybind11::init<>() ).
         def_readwrite( "method", &MR::ICPProperties::method ).
-        def_readwrite( "p2plAngleLimit", &MR::ICPProperties::p2plAngleLimit,
-            "rotation part will be limited by this value. If the whole rotation exceed this value, it will be normalized to that.\n"
-            "Note: PointToPlane only!").
+        def_readwrite( "p2plAngleLimit", &MR::ICPProperties::p2plAngleLimit, "Rotation angle during one iteration of PointToPlane will be limited by this value").
+        def_readwrite( "p2plScaleLimit", &MR::ICPProperties::p2plScaleLimit, "Scaling during one iteration of PointToPlane will be limited by this value").
         def_readwrite( "cosTreshold", &MR::ICPProperties::cosTreshold, "Points pair will be counted only if cosine between surface normals in points is higher" ).
         def_readwrite( "distTresholdSq", &MR::ICPProperties::distTresholdSq, "Points pair will be counted only if squared distance between points is lower than" ).
         def_readwrite( "distStatisticSigmaFactor ", &MR::ICPProperties::distStatisticSigmaFactor,

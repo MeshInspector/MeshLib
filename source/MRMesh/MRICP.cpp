@@ -301,10 +301,14 @@ bool ICP::p2plIter_()
             break;
         }
 
-        auto angle = am.rotAngles.length();
-        if (angle > prop_.p2plAngleLimit)
+        const auto angle = am.rotAngles.length();
+        assert( prop_.p2plScaleLimit >= 1 );
+        if ( angle > prop_.p2plAngleLimit || am.scale > prop_.p2plScaleLimit || prop_.p2plScaleLimit * am.scale < 1 )
         {
-            Matrix3d mLimited = am.scale * Matrix3d( Quaternion<double>(am.rotAngles, prop_.p2plAngleLimit) );
+            // limit rotation angle and scale
+            Matrix3d mLimited = 
+                std::clamp( am.scale, 1 / (double)prop_.p2plScaleLimit, (double)prop_.p2plScaleLimit ) *
+                Matrix3d( Quaternion<double>(am.rotAngles, std::min( angle, (double)prop_.p2plAngleLimit ) ) );
 
             // recompute translation part
             PointToPlaneAligningTransform p2plTrans;

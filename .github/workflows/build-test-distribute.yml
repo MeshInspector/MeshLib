@@ -96,7 +96,7 @@ jobs:
           submodules: recursive
 
       - name: Download Windows Binaries Archive
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: WindowsArchive
 
@@ -138,7 +138,7 @@ jobs:
           submodules: recursive
 
       - name: Download All Developer Distributives
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: Distributives
 
@@ -201,7 +201,7 @@ jobs:
 
       # generate timing logs archive
       - name: Download Timing Logs Archive
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: Timing_Logs
 

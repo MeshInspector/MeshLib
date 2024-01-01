@@ -37,7 +37,7 @@ This list is not full and updating each day
  - Math primitives and operations support (Vectors 2D, 3D, 4D; Lines; Planes; Bounding Boxes; Matrices; Affine transformations; Quaternions; Histograms; etc.)
 ### 3D data handling, creation, modification
  - 3D data various representations support: Mesh, Voxel and Point Cloud.
- - Data creation 
+ - Data creation
    - Mesh creation by given vertices and triangles,
    - Surface primitives (e.g. tor, cube, sphere, etc).
  - Representation conversions

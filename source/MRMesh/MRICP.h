@@ -31,11 +31,11 @@ struct VertPair
 {
     // coordinates of the closest point on reference mesh (after applying refXf)
     Vector3f refPoint;
-    // surface normal in a vertex on the floating mesh (after applying Xf)
+    // surface normal in a vertex on the floating mesh (after applying fltXf)
     Vector3f norm;
-    // surface normal in a vertex on the reference mesh (after applying Xf)
+    // surface normal in a vertex on the reference mesh (after applying refXf)
     Vector3f normRef;
-    // ID of the floating mesh vertex (usually applying Xf required)
+    // ID of the floating mesh vertex
     VertId vertId;
     // This is cosine between normals in first(floating mesh) and second(reference mesh) points
     // It evaluates how good is this pair

@@ -131,8 +131,8 @@ void ICP::updateVertPairs()
                     vp.vertDist2 = prj.distSq;
                     vp.weight = floatWeights ? floatWeights(id) : 1.0f;
                     vp.refPoint = refXf_( prj.point );
-                    vp.normRef = prj.normal ? refXf_.A * prj.normal.value() : Vector3f();
-                    vp.norm = floatNormals ? floatXf_.A * floatNormals(id) : Vector3f();
+                    vp.normRef = prj.normal ? ( refXf_.A * prj.normal.value() ).normalized() : Vector3f();
+                    vp.norm = floatNormals ? ( floatXf_.A * floatNormals( id ) ).normalized() : Vector3f();
                     vp.normalsAngleCos = ( prj.normal && floatNormals ) ? dot( vp.normRef, vp.norm ) : 1.0f;
                 }
                 else

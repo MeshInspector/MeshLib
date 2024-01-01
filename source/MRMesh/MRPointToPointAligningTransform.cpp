@@ -154,7 +154,7 @@ Vector3d PointToPointAligningTransform::findBestTranslation() const
 }
 
 
-TEST( MRMesh, AligningTransform )
+TEST( MRMesh, PointToPointAligningTransform1 )
 {
     PointToPointAligningTransform at1;
 
@@ -249,6 +249,87 @@ TEST( MRMesh, AligningTransform )
     ASSERT_NEAR( ( xf4( Vector3d::plusX() ) - scale * Vector3d::plusY() - b ).length(), 0., 1e-15 );
     ASSERT_NEAR( ( xf4( Vector3d::plusY() ) - scale * Vector3d::plusZ() - b ).length(), 0., 1e-15 );
     ASSERT_NEAR( ( xf4( Vector3d::plusZ() ) - scale * Vector3d::plusX() - b ).length(), 0., 1e-15 );
+}
+
+TEST(MRMesh, PointToPointAligningTransform2 )
+{
+    // set points
+    const std::vector<Vector3d> points = {
+        {   1.0,   1.0, -5.0 },
+        {  14.0,   1.0,  1.0 },
+        {   1.0,  14.0,  2.0 },
+        { -11.0,   2.0,  3.0 },
+        {   1.0, -11.0,  4.0 },
+        {   1.0,   2.0,  8.0 },
+        {   2.0,   1.0, -5.0 },
+        {  15.0,   1.5,  1.0 },
+        {   1.5,  15.0,  2.0 },
+        { -11.0,   2.5,  3.1 },
+    };
+    // Point to Point part
+    const std::vector<AffineXf3d> xfs = {
+        // zero xf
+        AffineXf3d(
+            Matrix3d(
+                Vector3d(1, 0, 0),
+                Vector3d(0, 1, 0),
+                Vector3d(0, 0, 1)
+            ),
+            Vector3d(0,0,0)),
+
+        // small Rz
+        AffineXf3d(
+            Matrix3d(
+                Vector3d(0.8, 0.6, 0),
+                Vector3d(-0.6, 0.8, 0),
+                Vector3d(0, 0, 1)
+            ),
+            Vector3d(0,0,0)),
+
+        // small transl
+        AffineXf3d(
+            Matrix3d(
+                Vector3d(0.8, 0.6, 0),
+                Vector3d(-0.6, 0.8, 0),
+                Vector3d(0, 0, 1)
+            ),
+            Vector3d(2,-2,0)),
+
+        // complex xf
+        AffineXf3d(
+            Matrix3d(
+                Vector3d(0.8, 0, -0.6),
+                Vector3d(0, 1, 0),
+                Vector3d(0.6, 0, 0.8)
+            ),
+            Vector3d(200,-200,0)),
+    };
+
+    constexpr auto eps = 5e-14;
+    for ( const auto& xf : xfs )
+    {
+        {
+            PointToPointAligningTransform p2pt;
+            for ( const auto & p : points )
+                p2pt.add( p, xf( p ) );
+
+            auto xfResP2pt = p2pt.findBestRigidXf();
+            EXPECT_NEAR((xfResP2pt.A - xf.A).norm(), 0., eps);
+            EXPECT_NEAR((xfResP2pt.b - xf.b).length(), 0., eps);
+        }
+        {
+            auto scaleXf = xf;
+            scaleXf.A *= 3.0;
+
+            PointToPointAligningTransform p2ptS;
+            for ( const auto & p : points )
+                p2ptS.add( p, scaleXf( p ) );
+
+            auto xfResP2ptS = p2ptS.findBestRigidScaleXf();
+            EXPECT_NEAR((xfResP2ptS.A - scaleXf.A).norm(), 0., eps);
+            EXPECT_NEAR((xfResP2ptS.b - scaleXf.b).length(), 0., eps);
+        }
+    }
 }
 
 } //namespace MR

@@ -59,9 +59,10 @@ using VertPairs = std::vector<VertPair>;
 struct ICPProperties
 {
     ICPMethod method = ICPMethod::PointToPlane;
-    // rotation part will be limited by this value. If the whole rotation exceed this value, it will be normalized to that.
-    // Note: PointToPlane only!
+    // Rotation angle during one iteration of PointToPlane will be limited by this value
     float p2plAngleLimit = PI_F / 6.0f; // [radians]
+    // Scaling during one iteration of PointToPlane will be limited by this value
+    float p2plScaleLimit = 2;
     // Points pair will be counted only if cosine between surface normals in points is higher
     float cosTreshold = 0.7f; // in [-1,1]
     // Points pair will be counted only if squared distance between points is lower than

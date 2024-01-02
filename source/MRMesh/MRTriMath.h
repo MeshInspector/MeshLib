@@ -63,6 +63,27 @@ template <typename T>
     return circumcircleCenter( a - c, b - c ) + c;
 }
 
+/// Given triangle ABC and ball radius, finds two centers of balls each touching all 3 triangle's vertices;
+/// \return false if such balls do not exist (radius is smaller that circumcircle radius)
+template <typename T>
+[[nodiscard]] bool circumballCenters( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c, T radius,
+    Vector3<T> & centerPos, // ball's center from the positive side of triangle
+    Vector3<T> & centerNeg )// ball's center from the negative side of triangle
+{
+    const auto rr = sqr( radius );
+    const auto circRadSq = circumcircleDiameterSq( a, b, c ) / T( 4 );
+    if ( rr < circRadSq )
+        return false;
+
+    const auto x = std::sqrt( rr - circRadSq );
+    const auto xn = x * normal( a, b, c );
+    const auto circCenter = circumcircleCenter( a, b, c );
+    centerPos = circCenter + xn;
+    centerNeg = circCenter - xn;
+
+    return true;
+}
+
 /// Computes sine of minimal angle in ABC triangle, which is equal to ratio of minimal edge length to circumcircle diameter
 /// \ingroup MathGroup
 template <typename T>

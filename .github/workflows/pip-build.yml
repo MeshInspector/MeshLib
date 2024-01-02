@@ -561,7 +561,7 @@ jobs:
         run: python3 -m pip install --upgrade pip twine
 
       - name: Upload to Production PyPi
-        run: twine upload ./meshlib-*.whl -u MeshInspector -p ${{ secrets.PIP_TEST_REPO_PASS }} --skip-existing
+        run: twine upload ./meshlib-*.whl -u MeshInspector -p ${{ secrets.PYPI_MESHINSPECTOR_TOKEN }} --skip-existing
 
   post-release-test:
     needs: upload-to-release

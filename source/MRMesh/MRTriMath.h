@@ -38,6 +38,31 @@ template <typename T>
     return std::sqrt( circumcircleDiameterSq( a, b, c ) );
 }
 
+/// Computes the center of the the triangle's 0AB circumcircle
+template <typename T>
+[[nodiscard]] Vector3<T> circumcircleCenter( const Vector3<T> & a, const Vector3<T> & b )
+{
+    const auto xabSq = cross( a, b ).lengthSq();
+    const auto aa = a.lengthSq();
+    const auto bb = b.lengthSq();
+    if ( xabSq <= 0 )
+    {
+        if ( aa <= 0 )
+            return b / T(2);
+        // else b == 0 || a == b
+        return a / T(2);
+    }
+    const auto ab = dot( a, b );
+    return ( bb * ( aa - ab ) * a + aa * ( bb - ab ) * b ) / ( 2 * xabSq );
+}
+
+/// Computes the center of the the triangle's ABC circumcircle
+template <typename T>
+[[nodiscard]] inline Vector3<T> circumcircleCenter( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c )
+{
+    return circumcircleCenter( a - c, b - c ) + c;
+}
+
 /// Computes sine of minimal angle in ABC triangle, which is equal to ratio of minimal edge length to circumcircle diameter
 /// \ingroup MathGroup
 template <typename T>

@@ -4,17 +4,19 @@
 namespace MR
 {
 
-TEST(MRMesh, posFromTriEdgeLengths)
+TEST( MRMesh, TriMath )
 {
+    EXPECT_EQ( circumcircleCenter( Vector3d{ 0, 0, 0 }, Vector3d{ 1, 0, 0 }, Vector3d{ 0, 1, 0 } ), Vector3d( 0.5, 0.5, 0 ) );
+    EXPECT_EQ( circumcircleCenter( Vector3d{ 0, 0, 1 }, Vector3d{ 0, 0, 0 }, Vector3d{ 0, 0, 0 } ), Vector3d( 0, 0, 0.5 ) );
+    EXPECT_EQ( circumcircleCenter( Vector3d{ 0, 0, 0 }, Vector3d{ 0, 0, 1 }, Vector3d{ 0, 0, 0 } ), Vector3d( 0, 0, 0.5 ) );
+    EXPECT_EQ( circumcircleCenter( Vector3d{ 0, 0, 0 }, Vector3d{ 0, 0, 0 }, Vector3d{ 0, 0, 1 } ), Vector3d( 0, 0, 0.5 ) );
+
     EXPECT_EQ( posFromTriEdgeLengths( 4., 5., 3. ), Vector2d( 4., 0. ) );
     EXPECT_EQ( posFromTriEdgeLengths( 5., 4., 3. ), Vector2d( 4., 3. ) );
     EXPECT_EQ( posFromTriEdgeLengths( 5., 4., 10. ), std::nullopt );
     EXPECT_EQ( posFromTriEdgeLengths( 1., 1., 0. ), Vector2d( 1., 0. ) );
     EXPECT_EQ( posFromTriEdgeLengths( 1., 2., 0. ), std::nullopt );
-}
 
-TEST(MRMesh, quadrangleOtherDiagonal)
-{
     EXPECT_EQ( quadrangleOtherDiagonal( 1., 1., 1., 1., 1. ), std::sqrt( 3. ) );
     EXPECT_EQ( quadrangleOtherDiagonal( 4., 5., 3., 4., 5. ), 8. );
     EXPECT_EQ( quadrangleOtherDiagonal( 5., 4., 3., 5., 4. ), 8. );

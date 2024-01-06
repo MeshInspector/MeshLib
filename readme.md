@@ -148,8 +148,13 @@ Note: following below steps will take about 40Gb of your disk space.
 ### Preparing Third Parties
 Some third parties are taken from vcpkg, while others (missing in vcpkg) are configured as git submodules.
 
-### Cuda
-Please install CUDA (v12.0|v11.4)(Visual Studio 2022|2019) from [official site](https://developer.nvidia.com/cuda-toolkit-archive)
+### CUDA
+Windows version of MeshLib is configured to use 
+* CUDA v11.4 in Visual Studio 2019 and
+* CUDA v12.0 in Visual Studio 2022.
+  
+Please install CUDA from the [official site](https://developer.nvidia.com/cuda-toolkit-archive).
+If you would like to use another version of CUDA, please modify `MRCudaVersion` in `MeshLib/source/platform.props`.
 
 ### Vcpkg
 1. Please install vcpkg, and integrate it into Visual Studio (note that vcpkg requires English language pack in Visual Studio, and vcpkg cannot be installed on FAT volumes, only on NTFS):

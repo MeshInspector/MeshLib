@@ -11,7 +11,7 @@ namespace MR
 {
 
 void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, float radius,
-    Triangulation & appendTris, std::vector<VertId> & tmp )
+    Triangulation & appendTris, std::vector<VertId> & tmp, bool onlyLargerVids )
 {
     MR_TIMER
     assert( radius > 0 );
@@ -26,12 +26,12 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, float radiu
     for ( int i = 0; i + 1 < tmp.size(); ++i )
     {
         const auto ni = tmp[i];
-        if ( ni < v )
+        if ( onlyLargerVids && ni < v )
             continue;
         for ( int j = i + 1; j < tmp.size(); ++j )
         {
             const auto nj = tmp[j];
-            if ( nj < v )
+            if ( onlyLargerVids && nj < v )
                 continue;
             Vector3f centerPos, centerNeg;
             if ( !circumballCenters( cloud.points[v], cloud.points[ni], cloud.points[nj], radius, centerPos, centerNeg ) )
@@ -71,7 +71,7 @@ Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud, float radius
     BitSetParallelFor( cloud.validPoints, [&]( VertId v )
     {
         auto & tls = threadData.local();
-        findAlphaShapeNeiTriangles( cloud, v, radius, tls.tris, tls.tmp );
+        findAlphaShapeNeiTriangles( cloud, v, radius, tls.tris, tls.tmp, true );
     } );
 
     size_t numTris = 0;
@@ -102,23 +102,23 @@ TEST( MRMesh, AlphaShape )
     Triangulation tris;
     std::vector<VertId> tmp;
 
-    findAlphaShapeNeiTriangles( cloud, 3_v, 3, tris, tmp );
+    findAlphaShapeNeiTriangles( cloud, 3_v, 3, tris, tmp, true );
     EXPECT_EQ( tris.size(), 0 );
-    findAlphaShapeNeiTriangles( cloud, 4_v, 3, tris, tmp );
+    findAlphaShapeNeiTriangles( cloud, 4_v, 3, tris, tmp, true );
     EXPECT_EQ( tris.size(), 0 );
-    findAlphaShapeNeiTriangles( cloud, 2_v, 3, tris, tmp );
+    findAlphaShapeNeiTriangles( cloud, 2_v, 3, tris, tmp, true );
     EXPECT_EQ( tris.size(), 2 );
 
     cloud.validPoints.set( 1_v );
     cloud.invalidateCaches();
     tris.clear();
-    findAlphaShapeNeiTriangles( cloud, 2_v, 3, tris, tmp );
+    findAlphaShapeNeiTriangles( cloud, 2_v, 3, tris, tmp, true );
     EXPECT_EQ( tris.size(), 1 );
 
     cloud.validPoints.set( 0_v );
     cloud.invalidateCaches();
     tris.clear();
-    findAlphaShapeNeiTriangles( cloud, 2_v, 3, tris, tmp );
+    findAlphaShapeNeiTriangles( cloud, 2_v, 3, tris, tmp, true );
     EXPECT_EQ( tris.size(), 0 );
 
     const auto allTris = findAlphaShapeAllTriangles( cloud, 3 );

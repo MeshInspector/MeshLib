@@ -9,10 +9,11 @@ namespace MR
 // https://www.cs.jhu.edu/~misha/Fall13b/Papers/Edelsbrunner93.pdf
 
 /// find all triangles of alpha-shape with negative alpha = -1/radius,
-/// where each triangle contains point #v and two other points with larger ids
+/// where each triangle contains point #v and two other points
 void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, float radius,
-    Triangulation & appendTris,  ///< found triagles will be appended here
-    std::vector<VertId> & tmp ); ///< temporary storage to avoid memory allocations
+    Triangulation & appendTris,  ///< found triangles will be appended here
+    std::vector<VertId> & tmp,   ///< temporary storage to avoid memory allocations
+    bool onlyLargerVids );       ///< if true then two other points must have larger ids (to avoid finding same triangles several times)
 
 /// find all triangles of alpha-shape with negative alpha = -1/radius
 Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud, float radius );

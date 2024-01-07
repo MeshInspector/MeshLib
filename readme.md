@@ -157,25 +157,21 @@ Please install CUDA from the [official site](https://developer.nvidia.com/cuda-t
 If you would like to use another version of CUDA, please modify `MRCudaVersion` in `MeshLib/source/platform.props`.
 
 ### Vcpkg
-1. Please install vcpkg, and integrate it into Visual Studio (note that vcpkg requires English language pack in Visual Studio, and vcpkg cannot be installed on FAT volumes, only on NTFS):
+1. Please install `vcpkg`, and integrate it into Visual Studio (note that vcpkg requires English language pack in Visual Studio, and vcpkg cannot be installed on FAT volumes, only on NTFS):
     ```sh
     git clone https://github.com/Microsoft/vcpkg.git
     cd vcpkg
     git checkout 2023.11.20
     .\bootstrap-vcpkg.bat
     .\vcpkg integrate install (with admin rights)
-    cd ..
     ```
     More details here: [vcpkg](https://github.com/microsoft/vcpkg).
 
 2. (Optional, but recommended) Install [AWS CLI v2](https://awscli.amazonaws.com/AWSCLIV2.msi). Once installed, reopen PowerShell or CMD. This will allow you to use the vcpkg binary cache from our aws s3, which will speed up the installation process and reduce the required disk space.
 
-3. Execute `install.bat`
-    ```sh
-    cd vcpkg # or add vcpkg to PATH
-    MeshLib/thirdparty/install.bat
-    ```
-4. Open solution file MeshInspector/source/MeshLib.sln in Visual Studio. Build it and run.
+3. Execute `MeshLib/thirdparty/install.bat` having previously installed `vcpkg` as the current working directory (or simply add `vcpkg` to `PATH` environment variable).
+    
+4. Open solution file `MeshLib/source/MeshLib.sln` in Visual Studio. Build it and run.
 
 ## Build with CMake on Linux
 This installation was checked on Ubuntu 20.04.4.

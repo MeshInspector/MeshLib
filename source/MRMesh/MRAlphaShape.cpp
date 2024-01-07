@@ -15,7 +15,8 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, float radiu
 {
     MR_TIMER
     assert( radius > 0 );
-    const auto rr = sqr( radius );
+    const auto r = double( radius );
+    const auto rr = sqr( r );
     tmp.clear();
     findPointsInBall( cloud, cloud.points[v], 2 * radius,
         [&tmp, v]( VertId n, const Vector3f& )
@@ -33,16 +34,16 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, float radiu
             const auto nj = tmp[j];
             if ( onlyLargerVids && nj < v )
                 continue;
-            Vector3f centerPos, centerNeg;
-            if ( !circumballCenters( cloud.points[v], cloud.points[ni], cloud.points[nj], radius, centerPos, centerNeg ) )
+            Vector3d centerPos, centerNeg;
+            if ( !circumballCenters( Vector3d{ cloud.points[v] }, Vector3d{ cloud.points[ni] }, Vector3d{ cloud.points[nj] }, r, centerPos, centerNeg ) )
                 continue;
-            auto ballEmpty = [&]( const Vector3f & center )
+            auto ballEmpty = [&]( const Vector3d & center )
             {
                 for ( auto n : tmp )
                 {
                     if ( n == ni || n == nj )
                         continue;
-                    if ( ( cloud.points[n] - center ).lengthSq() < rr )
+                    if ( ( Vector3d{ cloud.points[n] } - center ).lengthSq() < rr )
                         return false;
                 }
                 return true;

@@ -10,12 +10,12 @@ namespace MR
 
 /// find all triangles of alpha-shape with negative alpha = -1/radius,
 /// where each triangle contains point #v and two other points
-void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, float radius,
+MRMESH_API void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, float radius,
     Triangulation & appendTris,  ///< found triangles will be appended here
     std::vector<VertId> & tmp,   ///< temporary storage to avoid memory allocations
     bool onlyLargerVids );       ///< if true then two other points must have larger ids (to avoid finding same triangles several times)
 
 /// find all triangles of alpha-shape with negative alpha = -1/radius
-Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud, float radius );
+[[nodiscard]] MRMESH_API Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud, float radius );
 
 } //namespace MR

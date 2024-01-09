@@ -60,7 +60,7 @@ using VertPairs = std::vector<VertPair>;
 struct ICPProperties
 {
     // The method how to update transformation from point pairs
-    ICPMethod method = ICPMethod::PointToPoint;
+    ICPMethod method = ICPMethod::PointToPlane;
     // Rotation angle during one iteration of PointToPlane will be limited by this value
     float p2plAngleLimit = PI_F / 6.0f; // [radians]
     // Scaling during one iteration of PointToPlane will be limited by this value
@@ -80,7 +80,7 @@ struct ICPProperties
     bool freezePairs = false;
 
     // parameters of iterative call
-    int iterLimit = 30; // maximum iterations
+    int iterLimit = 10; // maximum iterations
     int badIterStopCount = 3; // maximum iterations without improvements
 
     // Algorithm target root-mean-square distance. As soon as it is reached, the algorithm stops.

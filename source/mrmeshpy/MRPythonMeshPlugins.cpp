@@ -419,7 +419,36 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
             "if value is not positive, it is calculated automatically (mesh bounding box is divided to 5e6 voxels)" ).
         def_readwrite( "signDetectionMode", &MR::OffsetParameters::signDetectionMode, "The method to compute distance sign" );
 
+    pybind11::class_<MR::SharpOffsetParameters, MR::OffsetParameters>( m, "SharpOffsetParameters" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "outSharpEdges", &MR::SharpOffsetParameters::outSharpEdges, "if non-null then created sharp edges will be saved here" ).
+        def_readwrite( "minNewVertDev", &MR::SharpOffsetParameters::minNewVertDev, "minimal surface deviation to introduce new vertex in a voxel, measured in voxelSize" ).
+        def_readwrite( "maxNewRank2VertDev", &MR::SharpOffsetParameters::maxNewRank2VertDev, "maximal surface deviation to introduce new rank 2 vertex (on intersection of 2 planes), measured in voxelSize" ).
+        def_readwrite( "maxNewRank3VertDev", &MR::SharpOffsetParameters::maxNewRank3VertDev, "maximal surface deviation to introduce new rank 3 vertex (on intersection of 3 planes), measured in voxelSize" ).
+        def_readwrite( "maxOldVertPosCorrection", &MR::SharpOffsetParameters::maxOldVertPosCorrection,
+            "correct positions of the input vertices using reference mesh by not more than this distance, measured in voxelSize;\n"
+            "big correction can be wrong and result from self-intersections in the reference mesh" );
+
+    pybind11::enum_<MR::GeneralOffsetParameters::Mode>( m, "GeneralOffsetParametersMode" ).
+        value( "Smooth", MR::GeneralOffsetParameters::Mode::Smooth, "create mesh using dual marching cubes from OpenVDB library" ).
+        value( "Standard", MR::GeneralOffsetParameters::Mode::Standard, "create mesh using standard marching cubes implemented in MeshLib" ).
+        value( "Sharpening", MR::GeneralOffsetParameters::Mode::Sharpening, "create mesh using standard marching cubes with additional sharpening implemented in MeshLib" );
+
+    pybind11::class_<MR::GeneralOffsetParameters, MR::SharpOffsetParameters>( m, "GeneralOffsetParameters", "allows the user to select in the parameters which offset algorithm to call" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "mode", &MR::GeneralOffsetParameters::mode );
+
     m.def( "suggestVoxelSize", &MR::suggestVoxelSize, pybind11::arg( "mp" ), pybind11::arg( "approxNumVoxels" ), "computes size of a cubical voxel to get approximately given number of voxels during rasterization" );
+
+    m.def( "generalOffsetMesh",
+        MR::decorateExpected( [] ( const MR::MeshPart& mp, float offset, MR::GeneralOffsetParameters params )
+    {
+        if ( params.voxelSize <= 0 )
+            params.voxelSize = suggestVoxelSize( mp, 5e6f );
+        return MR::generalOffsetMesh( mp, offset, params );
+    } ),
+        pybind11::arg( "mp" ), pybind11::arg( "offset" ), pybind11::arg( "params" ) = MR::GeneralOffsetParameters{},
+        "Offsets mesh by converting it to voxels and back using one of three modes specified in the parameters" );
 
     m.def( "offsetMesh",
         MR::decorateExpected( []( const MR::MeshPart & mp, float offset, MR::OffsetParameters params )

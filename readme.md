@@ -136,7 +136,8 @@ pip install meshlib
 See Python Basic Examples [here](https://meshinspector.github.io/MeshLib/html/HowToBasic.html) or search for more complex ones on [stackoverflow.com](https://stackoverflow.com/).
 
 # Build
-## Build with VS2019 or VS2022 on Windows
+## Windows
+MeshLib can be build on Windows using either Visual Studio 2019 or Visual Studio 2022, both of which support c++20 language standard. 
 ```sh
 git clone https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
@@ -173,7 +174,7 @@ If you would like to use another version of CUDA, please modify `MRCudaVersion` 
     
 4. Open solution file `MeshLib/source/MeshLib.sln` in Visual Studio. Build it and run.
 
-## Build with CMake on Linux
+## Linux
 This installation was checked on Ubuntu 20.04.4.
 
 Use automated installation process. It takes ~40 minutes if no required packages are already installed.
@@ -196,7 +197,7 @@ sudo apt install ./distr/meshlib-dev.deb
 
 > **_NOTE:_** You could specify build type to Debug by `export MESHLIB_BUILD_TYPE=Debug`. Release is default.
 
-## Build with Emscripten on Linux
+## WASM/Emscripten
 This installation was checked on Ubuntu 22.04 with Emscripten 3.1.48.
 
 Install Emscripten (find more on [Emscripten official page](https://emscripten.org/docs/getting_started/downloads.html))
@@ -231,7 +232,9 @@ Examples of integration with cmake can be found in the `./examples` directory.
 
 ## MacOS
 Same as for Linux, but requires brew packages to be installed:
-`xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/scripts/macos.txt`
+```
+xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/scripts/macos.txt
+```
 
 
 ## Windows

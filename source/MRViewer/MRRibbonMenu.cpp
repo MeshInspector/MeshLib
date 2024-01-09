@@ -1205,7 +1205,7 @@ RibbonMenu::DrawTabConfig RibbonMenu::setupItemsGroupConfig_( const std::vector<
         std::vector<int> resizableGroups;
         resizableGroups.reserve( groupWidths.size() );
         for ( int i = 0; i < res.size(); ++i )
-            if ( res[i].numBig + res[i].numSmallText > 0 )
+            if ( ( res[i].numBig + res[i].numSmallText > 0 ) && ( res[i].numBig + res[i].numSmallText + res[i].numSmall != 1 ) )
                 resizableGroups.push_back( i );
         if ( resizableGroups.empty() )
             break;

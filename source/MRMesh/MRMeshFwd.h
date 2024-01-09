@@ -401,6 +401,7 @@ class CircleObject;
 class PlaneObject;
 class SphereObject;
 class CylinderObject;
+class ConeObject;
 
 struct Image;
 

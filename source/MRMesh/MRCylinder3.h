@@ -37,7 +37,6 @@ public:
     MR::Line3<T> mainAxis;
     T radius = 0;
     T length = 0;
-    MR::LineSegm3<T>x; 
 };
 
 } // namespace MR

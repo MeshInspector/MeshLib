@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClInclude Include="MRAligningTransform.h" />
     <ClInclude Include="MRChangeValue.h" />
+    <ClInclude Include="MRConeObject.h" />
     <ClInclude Include="MRCylinder3.h" />
     <ClInclude Include="MRCylinderApproximator.h" />
     <ClInclude Include="MRCylinderObject.h" />
@@ -378,6 +379,7 @@
     <ClCompile Include="MRColorMapAggregator.cpp" />
     <ClCompile Include="MRCombinedHistoryAction.cpp" />
     <ClCompile Include="MRComputeBoundingBox.cpp" />
+    <ClCompile Include="MRConeObject.cpp" />
     <ClCompile Include="MRConfig.cpp" />
     <ClCompile Include="MRContour.cpp" />
     <ClCompile Include="MRContoursCut.cpp" />

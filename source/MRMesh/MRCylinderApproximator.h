@@ -15,7 +15,7 @@
 #pragma warning(disable: 4464) // relative include path contains '..'
 #pragma warning(disable: 4643) // Forward declaring 'tuple' in namespace std is not permitted by the C++ Standard.
 #pragma warning(disable: 5054) // operator '|': deprecated between enumerations of different types
-#pragma warning(disable: 4244)
+#pragma warning(disable: 4244) // casting float to double 
 
 #include <unsupported/Eigen/NonLinearOptimization>
 #include <unsupported/Eigen/NumericalDiff>

@@ -240,6 +240,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Relax, [] ( pybind11::module_& m )
         pybind11::arg( "mesh" ), pybind11::arg( "params" ) = MeshRelaxParams{}, pybind11::arg( "cb" ) = ProgressCallback{},
         "applies given number of relaxation iterations to the whole mesh ( or some region if it is specified )\n"
         "return true if was finished successfully, false if was interrupted by progress callback");
+
+    m.def( "relaxKeepVolume", &relaxKeepVolume,
+        pybind11::arg( "mesh" ), pybind11::arg( "params" ) = MeshRelaxParams{}, pybind11::arg( "cb" ) = ProgressCallback{},
+        "applies given number of relaxation iterations to the whole mesh ( or some region if it is specified ) \n"
+        "do not really keeps volume but tries hard \n"
+        "\treturn true if was finished successfully, false if was interrupted by progress callback" );
 } )
 
 // Subdivider Plugin

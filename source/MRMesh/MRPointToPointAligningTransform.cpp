@@ -57,6 +57,8 @@ void PointToPointAligningTransform::add( const PointToPointAligningTransform & o
 
 auto PointToPointAligningTransform::findPureRotation_() const -> BestRotation
 {
+    assert( totalWeight() > 0 );
+
     // for more detail of this algorithm see paragraph "3.3 A solution involving unit quaternions" in 
     // http://graphics.stanford.edu/~smr/ICP/comparison/eggert_comparison_mva97.pdf
     const Matrix3d s = sum12_ - outer( sum1_, centroid2() );
@@ -70,6 +72,8 @@ auto PointToPointAligningTransform::findPureRotation_() const -> BestRotation
 
 AffineXf3d PointToPointAligningTransform::findBestRigidXf() const
 {
+    if ( totalWeight() <= 0 )
+        return {};
     const Matrix3d r = findPureRotation_().rot;
     const auto shift = centroid2() - r * centroid1();
     return AffineXf3d( r, shift );
@@ -77,6 +81,8 @@ AffineXf3d PointToPointAligningTransform::findBestRigidXf() const
 
 AffineXf3d PointToPointAligningTransform::findBestRigidScaleXf() const
 {
+    if ( totalWeight() <= 0 )
+        return {};
     const auto x = findPureRotation_();
 
     const double dev11 = sum11_ - sum1_.lengthSq() / totalWeight();

@@ -32,25 +32,6 @@ MR_ADD_CLASS_FACTORY( CylinderObject )
 
 
 
-void fitConicSurface( PointCloud& cloud )
-{
-    ConicSurfaceModel model;
-    model.cloud_ = cloud;
-    model.A_ = ConicSurfaceModel::InputType::Zero();
-    model.A_( 0 ) = 1.0;
-    model.B_ = ConicSurfaceModel::InputType::Zero();
-    model.B_( 1 ) = 1.0;
-
-    Eigen::NumericalDiff<ConicSurfaceModel> numericalDiff( model );
-    Eigen::LevenbergMarquardt<Eigen::NumericalDiff<ConicSurfaceModel>> lm( numericalDiff );
-    lm.parameters.maxfev = 1000;
-    Eigen::VectorXd x( 3 );
-    x << 1.0, 1.0, 1.0;
-    lm.minimize( x );
-
-    std::cout << "Fitted parameters: " << x.transpose() << std::endl;
-}
-
 
 std::shared_ptr<MR::Mesh> makeFeatureCylinder( int resolution = cDetailLevel, float  startAngle = 0.0f, float  archSize = 2.0f * PI_F )
 {

@@ -50,6 +50,8 @@ void ProgressBar::setup( float scaling )
     }
     instance.setupId_ = ImGui::GetID( buf );
     const Vector2f windowSize( 440.0f * scaling, 144.0f * scaling );
+    auto& viewer = getViewerInstance();
+    ImGui::SetNextWindowPos( 0.5f * ( Vector2f( viewer.framebufferSize ) - windowSize ), ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     if ( ImGui::BeginModalNoAnimation( buf, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
     {

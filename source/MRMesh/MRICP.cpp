@@ -6,7 +6,7 @@
 #include "MRBox.h"
 #include "MRQuaternion.h"
 #include "MRBestFit.h"
-#include "MRPch/MRTBB.h"
+#include "MRParallelFor.h"
 #include <numeric>
 
 const int MAX_RESAMPLING_VOXEL_NUMBER = 500000;
@@ -91,23 +91,16 @@ void ICP::recomputeBitSet(const float floatSamplingVoxelSize)
 
 void ICP::updateVertPairs()
 {
-    MR_TIMER;
-    const auto& actualBitSet = floatVerts_;
-
+    MR_TIMER
     const VertCoords& points = floating_.points();
-    if (!prop_.freezePairs)
+    /// freeze pairs if there is at least one pair
+    const bool freezePairs = prop_.freezePairs && !vertPairs_.empty();
+    if ( !freezePairs )
     {
         vertPairs_.clear();
-        vertPairs_.resize(actualBitSet.count());
-        {
-            size_t i = 0;
-            for (auto id : actualBitSet)
-            {
-                VertPair& vp = vertPairs_[i];
-                vp.vertId = id;
-                i++;
-            }
-        }
+        vertPairs_.reserve( floatVerts_.count() );
+        for ( auto id : floatVerts_ )
+            vertPairs_.emplace_back().vertId = id;
     }
 
     const auto floatNormals = floating_.normals();
@@ -115,37 +108,33 @@ void ICP::updateVertPairs()
     const auto refProjector = ref_.projector();
 
     // calculate pairs
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, vertPairs_.size()),
-        [&](const tbb::blocked_range<size_t>& range)
-        {
-            for (size_t idx = range.begin(); idx < range.end(); ++idx)
-            {
-                VertPair& vp = vertPairs_[idx];
-                auto& id = vp.vertId;
-                const auto& p = points[id];
-                const auto prj = refProjector( float2refXf_(p) );
-
-                // projection should be found and if point projects on the border it will be ignored
-                if ( !prj.isBd )
-                {
-                    vp.vertDist2 = prj.distSq;
-                    vp.weight = floatWeights ? floatWeights(id) : 1.0f;
-                    vp.refPoint = refXf_( prj.point );
-                    vp.normRef = prj.normal ? ( refXf_.A * prj.normal.value() ).normalized() : Vector3f();
-                    vp.norm = floatNormals ? ( floatXf_.A * floatNormals( id ) ).normalized() : Vector3f();
-                    vp.normalsAngleCos = ( prj.normal && floatNormals ) ? dot( vp.normRef, vp.norm ) : 1.0f;
-                }
-                else
-                {
-                    vp.vertId = VertId(); //invalid
-                }
-            }
-        });
-
-    removeInvalidVertPairs_();
-
-    if (!prop_.freezePairs)
+    ParallelFor( vertPairs_, [&] ( size_t idx )
     {
+        VertPair& vp = vertPairs_[idx];
+        auto& id = vp.vertId;
+        const auto& p = points[id];
+        const auto prj = refProjector( float2refXf_( p ) );
+
+        // projection should be found and if point projects on the border it will be ignored
+        // unless we are in freezePairs mode
+        if ( freezePairs || !prj.isBd )
+        {
+            vp.vertDist2 = prj.distSq;
+            vp.weight = floatWeights ? floatWeights( id ) : 1.0f;
+            vp.refPoint = refXf_( prj.point );
+            vp.normRef = prj.normal ? ( refXf_.A * prj.normal.value() ).normalized() : Vector3f();
+            vp.norm = floatNormals ? ( floatXf_.A * floatNormals( id ) ).normalized() : Vector3f();
+            vp.normalsAngleCos = ( prj.normal && floatNormals ) ? dot( vp.normRef, vp.norm ) : 1.0f;
+        }
+        else
+        {
+            vp.vertId = VertId(); //invalid
+        }
+    } );
+
+    if ( !freezePairs )
+    {
+        removeInvalidVertPairs_();
         updateVertFilters_();
     }
 }

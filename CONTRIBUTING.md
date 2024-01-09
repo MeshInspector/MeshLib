@@ -19,7 +19,7 @@ public:
     void doSomething( int exampleArgA, int exampleArgB = 1 ){}
 }
 
-// return mesh if a 
+// if a.a is not zero
 MR::Expected<MR::Mesh> foo(const A& a)
 {
     if (a.a != 0) return MR::Mesh{};
@@ -34,7 +34,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, classA, [] ( pybind11::module_& m )
         def_readwrite( "b", &A::b, "example field 2" ).
         def( "doSomething", &A::doSomething, pybind11::arg( "exampleArgA" ), pybind11::arg( "exampleArgB" ) = 1, " example empty function" );
 
-    m.def( "foo", MR::decorateExpected( &foo ), pybind11::arg( a ), "return mesh if a" );
+    m.def( "foo", MR::decorateExpected( &foo ), pybind11::arg( a ), "if a.a is not zero" );
 } )
 ```
 
@@ -48,7 +48,7 @@ def test_a_exposing():
     a.a = 1
     a.doSomething(0)
     resMesh = mrmesh.foo(a)
-    # usualy here needs some assert, but in this case we assert (True) becausle exemption was not thrown
+    # usually here some assertions are placed about computation results
     assert (True)
 ```
 

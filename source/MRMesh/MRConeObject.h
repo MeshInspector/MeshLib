@@ -40,11 +40,11 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     /// calculates radius from xf
-    MRMESH_API float getRadius() const;
+    MRMESH_API float getAngle() const;
     /// calculates center from xf
     MRMESH_API Vector3f getCenter() const;
     /// updates xf to fit given radius
-    MRMESH_API void setRadius( float radius );
+    MRMESH_API void setAngle( float radius );
     /// updates xf to fit given center
     MRMESH_API void setCenter( const Vector3f& center );
     /// calculates main axis direction from xf
@@ -79,6 +79,9 @@ protected:
 
 private:
     void constructMesh_();
+
+    // Featue Radius fully controll by cone angle, but its need for speedup internal calculation (not use tan / atan from each estimation).
+    float getNormalyzedFeatueRadius( void ) const;
 };
 
 }

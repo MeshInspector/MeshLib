@@ -612,12 +612,12 @@ mFFunction = [this] ( GVector<T> const& P, GVector<T>& F )
     }
 };
 #endif
-using T = float;
-//template <typename T>
-class ApprCone3
+//using T = float;
+template <typename T>
+class Cone3Approximation
 {
 public:
-    ApprCone3()
+    Cone3Approximation()
     {
 
 
@@ -656,11 +656,19 @@ public:
         fittedParams[1] = cone.apex().y;
         fittedParams[2] = cone.apex().z;
 
+
         // The initial guess for the weighted cone axis.
         T coneCosAngle = std::cos( cone.angle );
+
         fittedParams[3] = cone.direction().x / coneCosAngle;
         fittedParams[4] = cone.direction().y / coneCosAngle;
         fittedParams[5] = cone.direction().z / coneCosAngle;
+
+        //fittedParams[3] = cone.direction().x;
+        //fittedParams[4] = cone.direction().y;
+        //fittedParams[5] = cone.direction().z;
+
+
     }
 
 
@@ -671,8 +679,9 @@ public:
     {
         ConeFittingFunctor<T> coneFittingFunctor;
         Eigen::LevenbergMarquardt<ConeFittingFunctor<T>, T> lm( coneFittingFunctor );
-        MR::Vector3<T>  coneVertex, coneAxis;
-        T coneAngle;
+        MR::Vector3<T>& coneVertex = cone.apex();
+        MR::Vector3<T>& coneAxis = cone.direction();
+        T& coneAngle = cone.angle;
 
         /*
         if ( useConeInputAsInitialGuess )
@@ -683,21 +692,26 @@ public:
         */
         {
             ComputeInitialCone( points, coneVertex, coneAxis, coneAngle );
+            //           ComputeInitialCone( points, cone.apex(), cone.direction(), cone.angle() );
         }
 
-        Eigen::Vector<T, Eigen::Dynamic> fittedParams( 6 );
+        Eigen::VectorX<T> fittedParams( 6 );
         coneToFitParams( cone, fittedParams );
-        auto result = lm.minimize( fittedParams );
-        if ( result == Eigen::LevenbergMarquardtSpace::ImproperInputParameters )
+        [[maybe_unused]] Eigen::LevenbergMarquardtSpace::Status result = lm.minimize( fittedParams );
+
+        // Looks like a bug in Eigen. Eigen::LevenbergMarquardtSpace::Status have error codes only. Not return value for Success minimization. 
+        // So just log status 
+#if 0
+        if ( result == Eigen::LevenbergMarquardtSpace::Status::Success )
         {
-            // LOG ME 
-            return;
+            std::cout << "Converged to solution: " << fittedParams.transpose() << std::endl;
         }
-        else if ( result == Eigen::LevenbergMarquardtSpace::RelativeReductionTooSmall )
+        else
         {
-            // LOG ME 
-            return;
+            std::cout << "Levenberg-Marquardt optimization failed." << std::endl;
         }
+#endif 
+
         //auto result = minimizer( initial, maxIterations, updateLengthTolerance,
         //    errorDifferenceTolerance, lambdaFactor, lambdaAdjust, maxAdjustments );
 
@@ -715,6 +729,8 @@ public:
         T const one_v = static_cast< T >( 1 );
         auto coneCosAngle = std::min( one_v / coneAxis.length(), one_v );
         cone.angle = std::acos( coneCosAngle );
+
+        cone.length = 5.0f; // TODO solve cone length as smth.
 
         return;
     }

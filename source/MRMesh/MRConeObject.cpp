@@ -1,4 +1,6 @@
 #include "MRConeObject.h"
+#include "MRCylinderObject.h" // TODO. Remove it. Just for develope 
+
 #include "MRMatrix3.h"
 #include "MRCylinder.h"
 #include "MRMesh.h"
@@ -13,15 +15,20 @@
 #include <iostream>
 #include "MRMeshNormals.h"
 #include "MRMeshSubdivide.h"
+#include "MRArrow.h"
 namespace
 {
 constexpr int cDetailLevel = 2048;
+constexpr float thicknessArrow = 0.01f;
 constexpr float cBaseRadius = 1.0f;
 constexpr float cBaseLength = 1.0f;
 
 constexpr float epsilonForCylinderTopBottomDetection = 0.01f;
 constexpr int phiResolution = 180;
 constexpr int thetaiResolution = 180;
+
+constexpr MR::Vector3f base = { 0,0,1 };
+constexpr MR::Vector3f apex = { 0,0,0 };
 
 }
 
@@ -33,9 +40,12 @@ MR_ADD_CLASS_FACTORY( ConeObject )
 
 
 
-std::shared_ptr<MR::Mesh> makeFeatureCone( int resolution = cDetailLevel, float  startAngle = 0.0f, float  archSize = 2.0f * PI_F )
+std::shared_ptr<MR::Mesh> makeFeatureCone( int resolution = cDetailLevel )
 {
-    auto mesh = std::make_shared<MR::Mesh>( makeCylinderAdvanced( cBaseRadius, cBaseRadius, startAngle, archSize, cBaseLength, resolution ) );
+
+    auto mesh = std::make_shared<MR::Mesh>( makeArrow( base, apex, thicknessArrow, cBaseRadius, cBaseLength, resolution ) );
+
+    /*
     MR::AffineXf3f shift;
     shift.b = MR::Vector3f( 0.0f, 0.0f, -cBaseLength / 2.0f );
     mesh->transform( shift );
@@ -51,7 +61,7 @@ std::shared_ptr<MR::Mesh> makeFeatureCone( int resolution = cDetailLevel, float 
             facesForDelete.autoResizeSet( f, true );
     }
     mesh->topology.deleteFaces( facesForDelete );
-
+    */
     return mesh;
 }
 
@@ -63,20 +73,36 @@ float ConeObject::getLength() const
 void ConeObject::setLength( float length )
 {
     auto currentXf = xf();
-    auto radius = getRadius();
-    currentXf.A = Matrix3f::scale( radius, radius, length );
+    auto radius = getNormalyzedFeatueRadius();
+    currentXf.A = Matrix3f::scale( radius * length, radius * length, length );
     setXf( currentXf );
 }
 
-float ConeObject::getRadius() const
+
+float getFeatureRediusByAngle( float angle )
 {
-    return ( xf().A.toScale().x + xf().A.toScale().y ) / 2.0f;
+    return cBaseLength * std::tan( angle );
+}
+float getAngleByFeatureRedius( float fRadius )
+{
+    return std::atan( fRadius / cBaseLength );
 }
 
-void ConeObject::setRadius( float radius )
+float ConeObject::getNormalyzedFeatueRadius( void ) const
+{
+    return ( xf().A.toScale().x + xf().A.toScale().y ) / 2.0f / getLength();
+}
+float ConeObject::getAngle() const
+{
+    return getAngleByFeatureRedius( getNormalyzedFeatueRadius() );
+}
+
+void ConeObject::setAngle( float angle )
 {
     auto currentXf = xf();
-    currentXf.A = Matrix3f::scale( radius, radius, getLength() );
+    auto featureRedius = getFeatureRediusByAngle( angle );
+    auto length = getLength();
+    currentXf.A = Matrix3f::scale( featureRedius * length, featureRedius * length, length );
     setXf( currentXf );
 }
 
@@ -115,15 +141,16 @@ ConeObject::ConeObject( const std::vector<Vector3f>& pointsToApprox )
     constructMesh_();
 
     // calculate cylinder parameters.
-    MR::Cylinder3<float> result;
-    auto fit = Cylinder3Approximation<float>();
-    fit.solveGeneral( pointsToApprox, result, phiResolution, thetaiResolution );
+    MR::Cone3<float> result;
+    auto fit = Cone3Approximation<float>();
+    fit.solve( pointsToApprox, result );
 
     // setup parameters
-    setRadius( result.radius );
-    setLength( result.length );
     setDirection( result.direction() );
     setCenter( result.center() );
+    setAngle( result.angle );
+    setLength( result.length );
+
 }
 
 std::shared_ptr<Object> ConeObject::shallowClone() const

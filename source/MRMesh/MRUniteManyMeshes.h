@@ -23,6 +23,10 @@ struct UniteManyMeshesParams
     unsigned int randomShiftsSeed{ 0 };
     // If set, the bitset will store new faces created by boolean operations
     FaceBitSet* newFaces{ nullptr };
+
+    // By default function separate nested meshes and remove them, just like union operation should do
+    // If set than unite all intersecting meshes and merge ones that does not intersect
+    bool mergeAllNonIntersecting{ false };
 };
 
 // Computes the surface of objects' union each of which is defined by its own surface mesh

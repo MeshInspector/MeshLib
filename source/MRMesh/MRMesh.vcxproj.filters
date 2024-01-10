@@ -1146,6 +1146,9 @@
     <ClInclude Include="MRAlphaShape.h">
       <Filter>Source Files\Triangulation</Filter>
     </ClInclude>
+    <ClInclude Include="MRSymMatrix4.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

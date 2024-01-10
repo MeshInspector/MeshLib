@@ -13,6 +13,10 @@
 #include <iostream>
 #include "MRMeshNormals.h"
 #include "MRMeshSubdivide.h"
+
+namespace MR
+{
+
 namespace
 {
 constexpr int cDetailLevel = 2048;
@@ -23,15 +27,10 @@ constexpr float epsilonForCylinderTopBottomDetection = 0.01f;
 constexpr int phiResolution = 180;
 constexpr int thetaiResolution = 180;
 
-}
-
-namespace MR
+MR::Matrix3f getRotationMatrix( const Vector3f& normal )
 {
-
-MR_ADD_CLASS_FACTORY( CylinderObject )
-
-
-
+    return Matrix3f::rotation( Vector3f::plusZ(), normal );
+}
 
 std::shared_ptr<MR::Mesh> makeFeatureCylinder( int resolution = cDetailLevel, float  startAngle = 0.0f, float  archSize = 2.0f * PI_F )
 {
@@ -41,7 +40,7 @@ std::shared_ptr<MR::Mesh> makeFeatureCylinder( int resolution = cDetailLevel, fl
     mesh->transform( shift );
 
     // remove cylinder top and bottom;
-    MR::Vector3f zDirection{ 0,0,1 };
+    MR::Vector3f zDirection = Vector3f::plusZ();
     MR::FaceBitSet facesForDelete;
     auto normals = computePerFaceNormals( *mesh );
 
@@ -55,15 +54,21 @@ std::shared_ptr<MR::Mesh> makeFeatureCylinder( int resolution = cDetailLevel, fl
     return mesh;
 }
 
+}
+
+
+MR_ADD_CLASS_FACTORY( CylinderObject )
+
 float CylinderObject::getLength() const
 {
     return xf().A.toScale().z;
 }
 void CylinderObject::setLength( float length )
 {
+    auto direction = getDirection();
     auto currentXf = xf();
     auto radius = getRadius();
-    currentXf.A = Matrix3f::scale( radius, radius, length );
+    currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, length );
     setXf( currentXf );
 }
 
@@ -74,8 +79,9 @@ float CylinderObject::getRadius() const
 
 void CylinderObject::setRadius( float radius )
 {
+    auto direction = getDirection();
     auto currentXf = xf();
-    currentXf.A = Matrix3f::scale( radius, radius, getLength() );
+    currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, getLength() );
     setXf( currentXf );
 }
 
@@ -92,7 +98,7 @@ Vector3f CylinderObject::getCenter() const
 void CylinderObject::setDirection( const Vector3f& normal )
 {
     auto currentXf = xf();
-    currentXf.A = Matrix3f::rotation( Vector3f::plusZ(), normal ) * Matrix3f::scale( currentXf.A.toScale() );
+    currentXf.A = getRotationMatrix( normal ) * Matrix3f::scale( currentXf.A.toScale() );
     setXf( currentXf );
 }
 

@@ -15,50 +15,20 @@
 #include "MRMeshNormals.h"
 #include "MRMeshSubdivide.h"
 #include "MRArrow.h"
-namespace
-{
-constexpr int cDetailLevel = 128;
-constexpr float thicknessArrow = 0.01f;
-constexpr float cBaseRadius = 1.0f;
-constexpr float cBaseLength = 1.0f;
-
-constexpr float epsilonForCylinderTopBottomDetection = 0.01f;
-constexpr int phiResolution = 180;
-constexpr int thetaiResolution = 180;
-
-constexpr MR::Vector3f base = { 0,0,1 };
-constexpr MR::Vector3f apex = { 0,0,0 };
-
-}
 
 namespace MR
 {
 
-MR_ADD_CLASS_FACTORY( ConeObject )
-
-
-
-
-std::shared_ptr<MR::Mesh> makeFeatureCone( int resolution = cDetailLevel )
+namespace
 {
+constexpr int cDetailLevel = 64;
+constexpr float thicknessArrow = 0.01f;
+constexpr float cBaseRadius = 1.0f;
+constexpr float cBaseLength = 1.0f;
 
-    auto mesh = std::make_shared<MR::Mesh>( makeArrow( base, apex, thicknessArrow, cBaseRadius, cBaseLength, resolution ) );
+constexpr MR::Vector3f base = MR::Vector3f::plusZ();
+constexpr MR::Vector3f apex = { 0,0,0 };
 
-    return mesh;
-}
-
-
-float ConeObject::getLength() const
-{
-    return xf().A.toScale().z;
-}
-void ConeObject::setLength( float length )
-{
-    auto currentXf = xf();
-    auto radius = getNormalyzedFeatueRadius();
-    currentXf.A = Matrix3f::scale( radius * length, radius * length, length );
-    setXf( currentXf );
-}
 
 
 float getFeatureRediusByAngle( float angle )
@@ -69,6 +39,49 @@ float getAngleByFeatureRedius( float fRadius )
 {
     return std::atan( fRadius / cBaseLength );
 }
+
+
+MR::Matrix3f getRotationMatrix( const Vector3f& normal )
+{
+    return Matrix3f::rotation( Vector3f::plusZ(), normal );
+}
+
+
+std::shared_ptr<MR::Mesh> makeFeatureCone( int resolution = cDetailLevel )
+{
+
+    auto mesh = std::make_shared<MR::Mesh>( makeArrow( base, apex, thicknessArrow, cBaseRadius, cBaseLength, resolution ) );
+
+    return mesh;
+}
+
+}
+
+MR_ADD_CLASS_FACTORY( ConeObject )
+
+Vector3f ConeObject::getDirection() const
+{
+    return ( xf().A * Vector3f::plusZ() ).normalized();
+}
+
+Vector3f ConeObject::getCenter() const
+{
+    return xf().b;
+}
+
+float ConeObject::getLength() const
+{
+    return xf().A.toScale().z;
+}
+void ConeObject::setLength( float length )
+{
+    auto direction = getDirection();
+    auto currentXf = xf();
+    auto radius = getNormalyzedFeatueRadius();
+    currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius * length, radius * length, length );
+    setXf( currentXf );
+}
+
 
 float ConeObject::getNormalyzedFeatueRadius( void ) const
 {
@@ -81,27 +94,18 @@ float ConeObject::getAngle() const
 
 void ConeObject::setAngle( float angle )
 {
+    auto direction = getDirection();
     auto currentXf = xf();
     auto featureRedius = getFeatureRediusByAngle( angle );
     auto length = getLength();
-    currentXf.A = Matrix3f::scale( featureRedius * length, featureRedius * length, length );
+    currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( featureRedius * length, featureRedius * length, length );
     setXf( currentXf );
-}
-
-Vector3f ConeObject::getDirection() const
-{
-    return ( xf().A * Vector3f::plusZ() ).normalized();
-}
-
-Vector3f ConeObject::getCenter() const
-{
-    return xf().b;
 }
 
 void ConeObject::setDirection( const Vector3f& normal )
 {
     auto currentXf = xf();
-    currentXf.A = Matrix3f::rotation( Vector3f::plusZ(), normal ) * Matrix3f::scale( currentXf.A.toScale() );
+    currentXf.A = getRotationMatrix( normal ) * Matrix3f::scale( currentXf.A.toScale() );
     setXf( currentXf );
 }
 
@@ -173,82 +177,5 @@ void ConeObject::constructMesh_()
     selectEdges( {} );
     setDirtyFlags( DIRTY_ALL );
 }
-
-
-
-#if 0 
-TEST( MRMesh, CylinderApproximation )
-{
-    float originalRadius = 1.5f;
-    float originalLength = 10.0f;
-    float startAngle = 0.0f;
-    float archSize = PI_F / 1.5f;
-    int  resolution = 100;
-
-    MR::AffineXf3f testXf;
-    MR::Vector3f center{ 1,2,3 };
-    MR::Vector3f direction = ( MR::Vector3f{ 3,2,1 } ).normalized();
-
-    testXf = MR::AffineXf3f::translation( { 1,2,3 } );
-    testXf.A = Matrix3f::rotation( Vector3f::plusZ(), direction ) * MR::Matrix3f::scale( { originalRadius , originalRadius  ,originalLength } );
-
-    std::vector<MR::Vector3f> points;
-
-    float angleStep = archSize / resolution;
-    float zStep = 1.0f / resolution;
-    for ( int i = 0; i < resolution; ++i )
-    {
-        float angle = startAngle + i * angleStep;
-        float z = i * zStep - 0.5f;
-        points.emplace_back( testXf( MR::Vector3f{ cosf( angle )  , sinf( angle ) , z } ) );
-        points.emplace_back( testXf( MR::Vector3f{ cosf( angle )  , sinf( angle ) ,  -z } ) );
-    }
-
-    /////////////////////////////
-    // General multithread test 
-    /////////////////////////////
-
-    Cylinder3<float> result;
-    auto fit = Cylinder3Approximation<float>();
-    auto approximationRMS = fit.solveGeneral( points, result, phiResolution, thetaiResolution, true );
-    std::cout << "multi thread center: " << result.center() << " direction:" << result.direction() << " length:" << result.length << " radius:" << result.radius << " error:" << approximationRMS << std::endl;
-
-    EXPECT_LE( approximationRMS, 0.1f );
-    EXPECT_NEAR( result.radius, originalRadius, 0.1f );
-    EXPECT_NEAR( result.length, originalLength, 0.1f );
-    EXPECT_LE( ( result.center() - center ).length(), 0.1f );
-    EXPECT_GT( MR::dot( direction, result.direction() ), 0.9f );
-
-    ///////////////////////////////////////
-    // Compare single thread vs multithread 
-    ///////////////////////////////////////
-
-    Cylinder3<float> resultST;
-    auto approximationRMS_ST = fit.solveGeneral( points, resultST, phiResolution, thetaiResolution, false );
-    std::cout << "single thread center: " << result.center() << " direction:" << result.direction() << " length:" << result.length << " radius:" << result.radius << " error:" << approximationRMS << std::endl;
-
-    EXPECT_NEAR( approximationRMS, approximationRMS_ST, 0.01f );
-    EXPECT_NEAR( result.radius, resultST.radius, 0.01f );
-    EXPECT_NEAR( result.length, resultST.length, 0.01f );
-    EXPECT_LE( ( result.center() - resultST.center() ).length(), 0.01f );
-    EXPECT_GT( MR::dot( resultST.direction(), result.direction() ), 0.99f );
-
-    //////////////////////////////////////////
-    // Test usage with SpecificAxisFit (SAF)
-    //////////////////////////////////////////
-
-    Cylinder3<float> resultSAF;
-    MR::Vector3f noice{ 0.002f , -0.003f , 0.01f };
-
-    auto approximationRMS_SAF = fit.solveSpecificAxis( points, resultSAF, direction + noice );
-    std::cout << "SpecificAxisFit center: " << resultSAF.center() << " direction:" << resultSAF.direction() << " length:" << resultSAF.length << " radius:" << resultSAF.radius << " error:" << approximationRMS_SAF << std::endl;
-
-    EXPECT_LE( approximationRMS_SAF, 0.1f );
-    EXPECT_NEAR( resultSAF.radius, originalRadius, 0.1f );
-    EXPECT_NEAR( resultSAF.length, originalLength, 0.1f );
-    EXPECT_LE( ( resultSAF.center() - center ).length(), 0.1f );
-    EXPECT_GT( MR::dot( direction, resultSAF.direction() ), 0.9f );
-}
-#endif 
 
 }

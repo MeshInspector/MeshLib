@@ -6,7 +6,7 @@
 #include "MRPch/MRTBB.h"
 #include "MRToFromEigen.h"
 #include "MRConstants.h"
-
+#include <algorithm>
 
 
 #pragma warning(push)
@@ -111,36 +111,8 @@ class Cone3Approximation
 public:
     Cone3Approximation() = default;
 
-
-    void fitParamsToCone( Eigen::Vector<T, Eigen::Dynamic>& fittedParams, Cone3<T>& cone )
-    {
-        cone.apex().x = fittedParams[0];
-        cone.apex().y = fittedParams[1];
-        cone.apex().z = fittedParams[2];
-
-        cone.direction().x = fittedParams[3];
-        cone.direction().y = fittedParams[4];
-        cone.direction().z = fittedParams[5];
-    }
-    void coneToFitParams( Cone3<T>& cone, Eigen::Vector<T, Eigen::Dynamic>& fittedParams )
-    {
-        // The fittedParams guess for the cone vertex.
-        fittedParams[0] = cone.apex().x;
-        fittedParams[1] = cone.apex().y;
-        fittedParams[2] = cone.apex().z;
-
-
-        // The initial guess for the weighted cone axis.
-        T coneCosAngle = std::cos( cone.angle );
-        fittedParams[3] = cone.direction().x / coneCosAngle;
-        fittedParams[4] = cone.direction().y / coneCosAngle;
-        fittedParams[5] = cone.direction().z / coneCosAngle;
-    }
-
-
-
     void solve( const std::vector<MR::Vector3<T>>& points,
-            Cone3<T>& cone  /*, bool useConeInputAsInitialGuess = false */ )
+            Cone3<T>& cone, bool useConeInputAsInitialGuess = false )
 
     {
         ConeFittingFunctor<T> coneFittingFunctor;
@@ -149,16 +121,14 @@ public:
         MR::Vector3<T>& coneAxis = cone.direction();
         T& coneAngle = cone.angle;
 
-        /*
+
         if ( useConeInputAsInitialGuess )
         {
-            Normalize( coneAxis );
+            coneAxis = coneAxis.normalized();
         }
         else
-        */
         {
             ComputeInitialCone( points, coneVertex, coneAxis, coneAngle );
-            //           ComputeInitialCone( points, cone.apex(), cone.direction(), cone.angle() );
         }
 
         Eigen::VectorX<T> fittedParams( 6 );
@@ -167,44 +137,28 @@ public:
 
         // Looks like a bug in Eigen. Eigen::LevenbergMarquardtSpace::Status have error codes only. Not return value for Success minimization. 
         // So just log status 
-#if 0
-        if ( result == Eigen::LevenbergMarquardtSpace::Status::Success )
-        {
-            std::cout << "Converged to solution: " << fittedParams.transpose() << std::endl;
-        }
-        else
-        {
-            std::cout << "Levenberg-Marquardt optimization failed." << std::endl;
-        }
-#endif 
-
-        //auto result = minimizer( initial, maxIterations, updateLengthTolerance,
-        //    errorDifferenceTolerance, lambdaFactor, lambdaAdjust, maxAdjustments );
-
-        // No test is made for result.converged so that we return some
-        // estimates of the cone. The caller can decide how to respond
-        // when result.converged is false.
 
         fitParamsToCone( fittedParams, cone );
 
-
-        // We know that coneCosAngle will be nonnegative. The std::min
-        // call guards against rounding errors leading to a number
-        // slightly larger than 1. The clamping ensures std::acos will
-        // not return a NaN.
         T const one_v = static_cast< T >( 1 );
-        auto coneCosAngle = std::min( one_v / coneAxis.length(), one_v );
-        cone.angle = std::acos( coneCosAngle );
+        auto cosAngle = std::clamp( one_v / coneAxis.length(), static_cast< T >( 0 ), one_v );
+        cone.angle = std::acos( cosAngle );
         cone.direction() = cone.direction().normalized();
-        cone.length = 5.0f; // TODO solve cone length as smth.
+        cone.length = calculateConeLength( points, cone );
 
         return;
     }
 
-
-
 private:
-
+    T calculateConeLength( const std::vector<MR::Vector3<T>>& points, Cone3<T>& cone )
+    {
+        T length = static_cast< T > ( 0 );
+        for ( auto i = 0; i < points.size(); ++i )
+        {
+            length = std::max( length, std::abs( MR::dot( points[i] - cone.apex(), cone.direction() ) ) );
+        }
+        return length;
+    }
 
     // Function for finding the best approximation of a straight line in general form y = a*x + b
     void findBestFitLine( const std::vector<MR::Vector2<T>>& xyPairs, T& lineA, T& lineB, MR::Vector2<T>* avg = nullptr )
@@ -239,45 +193,29 @@ private:
 
     }
 
-    /*
-    void findLineApproximation( const std::vector<Vector2<T>>& xyPairs, T& xAvr, T& yAvr, T& a )
+    void fitParamsToCone( Eigen::Vector<T, Eigen::Dynamic>& fittedParams, Cone3<T>& cone )
     {
-        using Matrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
-        using Vector = Eigen::Matrix<T, Eigen::Dynamic, 1>;
+        cone.apex().x = fittedParams[0];
+        cone.apex().y = fittedParams[1];
+        cone.apex().z = fittedParams[2];
 
-        auto  m = xyPairs.size();
-
-        // Шаг 1: Вычисление средних значений
-        xAvr = 0;
-        yAvr = 0;
-        for ( const auto& pair : xyPairs )
-        {
-            xAvr += pair.x;
-            yAvr += pair.y;
-        }
-        xAvr /= m;
-        yAvr /= m;
-
-        // Создание матрицы A и столбца b
-        Matrix A( m, 2 );
-        Vector b( m );
-
-        // Шаги 2-4: Заполнение матрицы A и столбца b
-        for ( int i = 0; i < m; ++i )
-        {
-            A( i, 0 ) = xyPairs[i].x - xAvr;
-            A( i, 1 ) = 1;
-            b( i ) = xyPairs[i].y - yAvr;
-        }
-
-        // Шаг 5: Решение линейной системы
-        Vector x = A.fullPivLu().solve( b );
-
-        // Шаг 6: Получение значений a и c
-        a = x( 0 );
+        cone.direction().x = fittedParams[3];
+        cone.direction().y = fittedParams[4];
+        cone.direction().z = fittedParams[5];
     }
-    */
+    void coneToFitParams( Cone3<T>& cone, Eigen::Vector<T, Eigen::Dynamic>& fittedParams )
+    {
+        // The fittedParams guess for the cone vertex.
+        fittedParams[0] = cone.apex().x;
+        fittedParams[1] = cone.apex().y;
+        fittedParams[2] = cone.apex().z;
 
+        // The initial guess for the weighted cone axis.
+        T coneCosAngle = std::cos( cone.angle );
+        fittedParams[3] = cone.direction().x / coneCosAngle;
+        fittedParams[4] = cone.direction().y / coneCosAngle;
+        fittedParams[5] = cone.direction().z / coneCosAngle;
+    }
 
     void ComputeInitialCone( const std::vector<MR::Vector3<T>>& points, MR::Vector3<T>& coneVertex, MR::Vector3<T>& coneAxis, T& coneAngle )
     {
@@ -353,18 +291,6 @@ private:
         coneVertex = center - offset * coneAxis;
     }
 };
-
-
-
-
-
-
-
-
-
-
-
-
 
 }
 

@@ -13,6 +13,8 @@
   <ItemGroup>
     <ClInclude Include="MRAligningTransform.h" />
     <ClInclude Include="MRChangeValue.h" />
+    <ClInclude Include="MRCone3.h" />
+    <ClInclude Include="MRConeApproximator.h" />
     <ClInclude Include="MRConeObject.h" />
     <ClInclude Include="MRCylinder3.h" />
     <ClInclude Include="MRCylinderApproximator.h" />

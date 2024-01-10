@@ -1,5 +1,4 @@
 #include "MRConeObject.h"
-#include "MRCylinderObject.h" // TODO. Remove it. Just for develope 
 
 #include "MRMatrix3.h"
 #include "MRCylinder.h"
@@ -7,7 +6,7 @@
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
 #include <Eigen/Dense>
-#include "MRCylinderApproximator.h"
+#include "MRConeApproximator.h"
 #include "MRMeshFwd.h"
 #include "MRLine.h"
 #include "MRGTest.h"
@@ -18,7 +17,7 @@
 #include "MRArrow.h"
 namespace
 {
-constexpr int cDetailLevel = 2048;
+constexpr int cDetailLevel = 128;
 constexpr float thicknessArrow = 0.01f;
 constexpr float cBaseRadius = 1.0f;
 constexpr float cBaseLength = 1.0f;
@@ -45,23 +44,6 @@ std::shared_ptr<MR::Mesh> makeFeatureCone( int resolution = cDetailLevel )
 
     auto mesh = std::make_shared<MR::Mesh>( makeArrow( base, apex, thicknessArrow, cBaseRadius, cBaseLength, resolution ) );
 
-    /*
-    MR::AffineXf3f shift;
-    shift.b = MR::Vector3f( 0.0f, 0.0f, -cBaseLength / 2.0f );
-    mesh->transform( shift );
-
-    // remove cylinder top and bottom;
-    MR::Vector3f zDirection{ 0,0,1 };
-    MR::FaceBitSet facesForDelete;
-    auto normals = computePerFaceNormals( *mesh );
-
-    for ( auto f : mesh->topology.getValidFaces() )
-    {
-        if ( MR::cross( normals[f], zDirection ).lengthSq() < epsilonForCylinderTopBottomDetection )
-            facesForDelete.autoResizeSet( f, true );
-    }
-    mesh->topology.deleteFaces( facesForDelete );
-    */
     return mesh;
 }
 

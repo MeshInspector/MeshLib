@@ -14,8 +14,10 @@ namespace MR
 enum class ICPMethod
 {
     Combined = 0,     ///< PointToPoint for the first 2 iterations, and PointToPlane for the remaining iterations
-    PointToPoint = 1, ///< select transformation that minimizes mean squared distance between two points in each, it is the safest approach but can converge slowly
-    PointToPlane = 2  ///< select transformation that minimizes mean squared distance between a point and a plane via the other point in each pair, converge much faster in case of many good pairs
+    PointToPoint = 1, ///< select transformation that minimizes mean squared distance between two points in each pair,
+                      ///< it is the safest approach but can converge slowly
+    PointToPlane = 2  ///< select transformation that minimizes mean squared distance between a point and a plane via the other point in each pair,
+                      ///< converge much faster than PointToPoint in case of many good (with not all points/normals in one plane) pairs
 };
 
 /// The group of transformations, each with its own degrees of freedom

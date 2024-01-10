@@ -5,15 +5,16 @@
 #include "MRTimer.h"
 #include "MRBox.h"
 #include "MRQuaternion.h"
-#include "MRGTest.h"
-#include "MRPch/MRTBB.h"
+#include "MRBestFit.h"
+#include "MRParallelFor.h"
 #include <numeric>
 
 const int MAX_RESAMPLING_VOXEL_NUMBER = 500000;
+
 namespace MR
 {
 
-MeshICP::MeshICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
+ICP::ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
     const VertBitSet& floatBitSet)
     : floating_( floating )
     , ref_( reference )
@@ -23,7 +24,7 @@ MeshICP::MeshICP(const MeshOrPoints& floating, const MeshOrPoints& reference, co
     updateVertPairs();
 }
 
-MeshICP::MeshICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
+ICP::ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
     float floatSamplingVoxelSize )
     : floating_( floating )
     , ref_( reference )
@@ -32,19 +33,51 @@ MeshICP::MeshICP(const MeshOrPoints& floating, const MeshOrPoints& reference, co
     recomputeBitSet( floatSamplingVoxelSize );
 }
 
-void MeshICP::setXfs( const AffineXf3f& fltXf, const AffineXf3f& refXf )
+void ICP::setXfs( const AffineXf3f& fltXf, const AffineXf3f& refXf )
 {
     refXf_ = refXf;
     setFloatXf( fltXf );
 }
 
-void MeshICP::setFloatXf( const AffineXf3f& fltXf )
+void ICP::setFloatXf( const AffineXf3f& fltXf )
 {
     floatXf_ = fltXf;
     float2refXf_ = refXf_.inverse() * floatXf_;
 }
 
-void MeshICP::recomputeBitSet(const float floatSamplingVoxelSize)
+AffineXf3f ICP::autoSelectFloatXf()
+{
+    MR_TIMER
+
+    auto bestFltXf = floatXf_;
+    float bestDist = getMeanSqDistToPoint();
+
+    PointAccumulator refAcc;
+    ref_.accumulate( refAcc );
+    const auto refBasisXfs = refAcc.get4BasicXfs3f();
+
+    PointAccumulator floatAcc;
+    floating_.accumulate( floatAcc );
+    const auto floatBasisXf = floatAcc.getBasicXf3f();
+
+    // TODO: perform computations in parallel by calling free functions to measure the distance
+    for ( const auto & refBasisXf : refBasisXfs )
+    {
+        auto fltXf = refXf_ * refBasisXf * floatBasisXf.inverse();
+        setFloatXf( fltXf );
+        updateVertPairs();
+        const float dist = getMeanSqDistToPoint();
+        if ( dist < bestDist )
+        {
+            bestDist = dist;
+            bestFltXf = fltXf;
+        }
+    }
+    setFloatXf( bestFltXf );
+    return bestFltXf;
+}
+
+void ICP::recomputeBitSet(const float floatSamplingVoxelSize)
 {
     auto bboxDiag = floating_.computeBoundingBox().size() / floatSamplingVoxelSize;
     auto nSamples = bboxDiag[0] * bboxDiag[1] * bboxDiag[2];
@@ -56,25 +89,18 @@ void MeshICP::recomputeBitSet(const float floatSamplingVoxelSize)
     updateVertPairs();
 }
 
-void MeshICP::updateVertPairs()
+void ICP::updateVertPairs()
 {
-    MR_TIMER;
-    const auto& actualBitSet = floatVerts_;
-
+    MR_TIMER
     const VertCoords& points = floating_.points();
-    if (!prop_.freezePairs)
+    /// freeze pairs if there is at least one pair
+    const bool freezePairs = prop_.freezePairs && !vertPairs_.empty();
+    if ( !freezePairs )
     {
         vertPairs_.clear();
-        vertPairs_.resize(actualBitSet.count());
-        {
-            size_t i = 0;
-            for (auto id : actualBitSet)
-            {
-                VertPair& vp = vertPairs_[i];
-                vp.vertId = id;
-                i++;
-            }
-        }
+        vertPairs_.reserve( floatVerts_.count() );
+        for ( auto id : floatVerts_ )
+            vertPairs_.emplace_back().vertId = id;
     }
 
     const auto floatNormals = floating_.normals();
@@ -82,42 +108,38 @@ void MeshICP::updateVertPairs()
     const auto refProjector = ref_.projector();
 
     // calculate pairs
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, vertPairs_.size()),
-        [&](const tbb::blocked_range<size_t>& range)
-        {
-            for (size_t idx = range.begin(); idx < range.end(); ++idx)
-            {
-                VertPair& vp = vertPairs_[idx];
-                auto& id = vp.vertId;
-                const auto& p = points[id];
-                const auto prj = refProjector( float2refXf_(p) );
-
-                // projection should be found and if point projects on the border it will be ignored
-                if ( !prj.isBd )
-                {
-                    vp.vertDist2 = prj.distSq;
-                    vp.weight = floatWeights ? floatWeights(id) : 1.0f;
-                    vp.refPoint = refXf_( prj.point );
-                    vp.normRef = prj.normal ? refXf_.A * prj.normal.value() : Vector3f();
-                    vp.norm = floatNormals ? floatXf_.A * floatNormals(id) : Vector3f();
-                    vp.normalsAngleCos = ( prj.normal && floatNormals ) ? dot( vp.normRef, vp.norm ) : 1.0f;
-                }
-                else
-                {
-                    vp.vertId = VertId(); //invalid
-                }
-            }
-        });
-
-    removeInvalidVertPairs_();
-
-    if (!prop_.freezePairs)
+    ParallelFor( vertPairs_, [&] ( size_t idx )
     {
+        VertPair& vp = vertPairs_[idx];
+        auto& id = vp.vertId;
+        const auto& p = points[id];
+        const auto prj = refProjector( float2refXf_( p ) );
+
+        // projection should be found and if point projects on the border it will be ignored
+        // unless we are in freezePairs mode
+        if ( freezePairs || !prj.isBd )
+        {
+            vp.vertDist2 = prj.distSq;
+            vp.weight = floatWeights ? floatWeights( id ) : 1.0f;
+            vp.refPoint = refXf_( prj.point );
+            vp.normRef = prj.normal ? ( refXf_.A * prj.normal.value() ).normalized() : Vector3f();
+            vp.norm = floatNormals ? ( floatXf_.A * floatNormals( id ) ).normalized() : Vector3f();
+            vp.normalsAngleCos = ( prj.normal && floatNormals ) ? dot( vp.normRef, vp.norm ) : 1.0f;
+        }
+        else
+        {
+            vp.vertId = VertId(); //invalid
+        }
+    } );
+
+    if ( !freezePairs )
+    {
+        removeInvalidVertPairs_();
         updateVertFilters_();
     }
 }
 
-void MeshICP::removeInvalidVertPairs_()
+void ICP::removeInvalidVertPairs_()
 {
     // remove border and unprojected cases pairs
     auto newEndIter = std::remove_if(vertPairs_.begin(), vertPairs_.end(), [](const VertPair & vp) {
@@ -126,7 +148,7 @@ void MeshICP::removeInvalidVertPairs_()
     vertPairs_.erase(newEndIter, vertPairs_.end());
 }
 
-void MeshICP::updateVertFilters_()
+void ICP::updateVertFilters_()
 {
     // finding mean value
     float meanVal = 0.f;
@@ -164,7 +186,7 @@ void MeshICP::updateVertFilters_()
     removeInvalidVertPairs_();
 }
 
-std::pair<float,float> MeshICP::getDistLimitsSq() const
+std::pair<float,float> ICP::getDistLimitsSq() const
 {
     float minPairsDist2_ = std::numeric_limits < float>::max();
     float maxPairsDist2_ = 0.f;
@@ -176,7 +198,7 @@ std::pair<float,float> MeshICP::getDistLimitsSq() const
     return std::make_pair(minPairsDist2_, maxPairsDist2_);
 }
 
-bool MeshICP::p2ptIter_()
+bool ICP::p2ptIter_()
 {
     MR_TIMER;
     const VertCoords& points = floating_.points();
@@ -190,14 +212,27 @@ bool MeshICP::p2ptIter_()
     }
 
     AffineXf3f res;
-    if ( prop_.icpMode == ICPMode::TranslationOnly )
-        res = AffineXf3f(Matrix3f(), Vector3f(p2pt.findBestTranslation()));
-    if( prop_.icpMode == ICPMode::AnyRigidXf )
+    switch ( prop_.icpMode )
+    {
+    default:
+        assert( false );
+        [[fallthrough]];
+    case ICPMode::RigidScale:
+        res = AffineXf3f( p2pt.findBestRigidScaleXf() );
+        break;
+    case ICPMode::AnyRigidXf:
         res = AffineXf3f( p2pt.findBestRigidXf() );
-    if( prop_.icpMode == ICPMode::FixedAxis )
-        res = AffineXf3f( p2pt.findBestRigidXfFixedRotationAxis( Vector3d{ prop_.fixedRotationAxis } ) );
-    if( prop_.icpMode == ICPMode::OrthogonalAxis )
+        break;
+    case ICPMode::OrthogonalAxis:
         res = AffineXf3f( p2pt.findBestRigidXfOrthogonalRotationAxis( Vector3d{ prop_.fixedRotationAxis } ) );
+        break;
+    case ICPMode::FixedAxis:
+        res = AffineXf3f( p2pt.findBestRigidXfFixedRotationAxis( Vector3d{ prop_.fixedRotationAxis } ) );
+        break;
+    case ICPMode::TranslationOnly:
+        res = AffineXf3f( Matrix3f(), Vector3f( p2pt.findBestTranslation() ) );
+        break;
+    }
 
     if (std::isnan(res.b.x)) //nan check
         return false;
@@ -205,7 +240,7 @@ bool MeshICP::p2ptIter_()
     return true;
 }
 
-bool MeshICP::p2plIter_()
+bool ICP::p2plIter_()
 {
     MR_TIMER;
     if ( vertPairs_.empty() )
@@ -229,30 +264,40 @@ bool MeshICP::p2plIter_()
     }
 
     AffineXf3f res;
-    PointToPlaneAligningTransform::Amendment am;
     if( prop_.icpMode == ICPMode::TranslationOnly )
     {
         res = AffineXf3f( Matrix3f(), Vector3f( p2pl.findBestTranslation() ) );
     }
     else
     {
-        if( prop_.icpMode == ICPMode::FixedAxis )
+        PointToPlaneAligningTransform::Amendment am;
+        switch ( prop_.icpMode )
         {
-            am = p2pl.calculateFixedAxisAmendment( Vector3d{ prop_.fixedRotationAxis } );
-        }
-        if( prop_.icpMode == ICPMode::OrthogonalAxis )
-        {
-            am = p2pl.calculateOrthogonalAxisAmendment( Vector3d{ prop_.fixedRotationAxis } );
-        }
-        if( prop_.icpMode == ICPMode::AnyRigidXf )
-        {
+        default:
+            assert( false );
+            [[fallthrough]];
+        case ICPMode::RigidScale:
+            am = p2pl.calculateAmendmentWithScale();
+            break;
+        case ICPMode::AnyRigidXf:
             am = p2pl.calculateAmendment();
+            break;
+        case ICPMode::OrthogonalAxis:
+            am = p2pl.calculateOrthogonalAxisAmendment( Vector3d{ prop_.fixedRotationAxis } );
+            break;
+        case ICPMode::FixedAxis:
+            am = p2pl.calculateFixedAxisAmendment( Vector3d{ prop_.fixedRotationAxis } );
+            break;
         }
 
-        auto angle = am.rotAngles.length();
-        if (angle > prop_.p2plAngleLimit)
+        const auto angle = am.rotAngles.length();
+        assert( prop_.p2plScaleLimit >= 1 );
+        if ( angle > prop_.p2plAngleLimit || am.scale > prop_.p2plScaleLimit || prop_.p2plScaleLimit * am.scale < 1 )
         {
-            Matrix3d mLimited = Quaternion<double>(am.rotAngles, prop_.p2plAngleLimit);
+            // limit rotation angle and scale
+            Matrix3d mLimited = 
+                std::clamp( am.scale, 1 / (double)prop_.p2plScaleLimit, (double)prop_.p2plScaleLimit ) *
+                Matrix3d( Quaternion<double>(am.rotAngles, std::min( angle, (double)prop_.p2plAngleLimit ) ) );
 
             // recompute translation part
             PointToPlaneAligningTransform p2plTrans;
@@ -268,8 +313,7 @@ bool MeshICP::p2plIter_()
         }
         else
         {
-            auto xfResD = AffineXf3d(Quaternion<double>(am.rotAngles, am.rotAngles.length()), am.shift);
-            res = AffineXf3f(xfResD);
+            res = AffineXf3f( am.rigidScaleXf() );
         }
     }
 
@@ -279,7 +323,7 @@ bool MeshICP::p2plIter_()
     return true;
 }
 
-AffineXf3f MeshICP::calculateTransformation()
+AffineXf3f ICP::calculateTransformation()
 {
     float curDist = 0;
     float minDist = std::numeric_limits<float>::max();
@@ -371,33 +415,33 @@ AffineXf3f MeshICP::calculateTransformation()
     return floatXf_;
 }
 
-float MeshICP::getMeanSqDistToPoint() const
+float getMeanSqDistToPoint( const VertPairs & pairs )
 {
-    if ( vertPairs_.empty() )
-        return 0;
+    if ( pairs.empty() )
+        return FLT_MAX;
     double sum = 0;
-    for ( const auto& vp : vertPairs_ )
+    for ( const auto& vp : pairs )
     {
         sum += vp.vertDist2;
     }
-    return (float)std::sqrt( sum / vertPairs_.size() );
+    return (float)std::sqrt( sum / pairs.size() );
 }
 
-float MeshICP::getMeanSqDistToPlane() const
+float getMeanSqDistToPlane( const VertPairs & pairs, const MeshOrPoints & floating, const AffineXf3f & floatXf )
 {
-    if ( vertPairs_.empty() )
-        return 0;
-    const VertCoords& points = floating_.points();
+    if ( pairs.empty() )
+        return FLT_MAX;
+    const VertCoords& points = floating.points();
     double sum = 0;
-    for (const auto& vp : vertPairs_)
+    for ( const auto& vp : pairs )
     {
-        auto v = dot( vp.normRef, vp.refPoint - floatXf_(points[vp.vertId]) );
+        auto v = dot( vp.normRef, vp.refPoint - floatXf(points[vp.vertId]) );
         sum += sqr( v );
     }
-    return (float)std::sqrt( sum / vertPairs_.size() );
+    return (float)std::sqrt( sum / pairs.size() );
 }
 
-Vector3f MeshICP::getShiftVector() const
+Vector3f ICP::getShiftVector() const
 {
     const VertCoords& points = floating_.points();
     Vector3f vecAcc{ 0.f,0.f,0.f };
@@ -409,27 +453,27 @@ Vector3f MeshICP::getShiftVector() const
     return vertPairs_.size() == 0 ? vecAcc : vecAcc / float(vertPairs_.size());
 }
 
-void MeshICP::setCosineLimit(const float cos)
+void ICP::setCosineLimit(const float cos)
 {
     prop_.cosTreshold = cos;
 }
 
-void MeshICP::setDistanceLimit(const float dist)
+void ICP::setDistanceLimit(const float dist)
 {
     prop_.distTresholdSq = dist * dist;
 }
 
-void MeshICP::setBadIterCount( const int iter )
+void ICP::setBadIterCount( const int iter )
 {
     prop_.badIterStopCount = iter;
 }
 
-void MeshICP::setDistanceFilterSigmaFactor(const float factor)
+void ICP::setDistanceFilterSigmaFactor(const float factor)
 {
     prop_.distStatisticSigmaFactor = factor;
 }
 
-void MeshICP::setPairsWeight(const std::vector<float> w)
+void ICP::setPairsWeight(const std::vector<float> w)
 {
     assert(vertPairs_.size() == w.size());
     for (int i = 0; i < w.size(); i++)
@@ -438,24 +482,24 @@ void MeshICP::setPairsWeight(const std::vector<float> w)
     }
 }
 
-std::string MeshICP::getLastICPInfo() const
+std::string ICP::getLastICPInfo() const
 {
     std::string result = "Performed " + std::to_string( iter_ ) + " iterations.\n";
     switch ( resultType_ )
     {
-    case MR::MeshICP::ExitType::NotFoundSolution:
+    case MR::ICP::ExitType::NotFoundSolution:
         result += "No solution found.";
         break;
-    case MR::MeshICP::ExitType::MaxIterations:
+    case MR::ICP::ExitType::MaxIterations:
         result += "Limit of iterations reached.";
         break;
-    case MR::MeshICP::ExitType::MaxBadIterations:
+    case MR::ICP::ExitType::MaxBadIterations:
         result += "No improvement iterations limit reached.";
         break;
-    case MR::MeshICP::ExitType::StopMsdReached:
+    case MR::ICP::ExitType::StopMsdReached:
         result += "Required mean square deviation reached.";
         break;
-    case MR::MeshICP::ExitType::NotStarted:
+    case MR::ICP::ExitType::NotStarted:
     default:
         result = "Not started yet.";
         break;
@@ -463,209 +507,4 @@ std::string MeshICP::getLastICPInfo() const
     return result;
 }
 
-TEST(MRMesh, RegistrationOneIterPointToPlane)
-{
-    const auto err = 1e-5;
-    // set points
-    std::vector<Vector3d> pointsFloat = {
-        {   1.0,   1.0, -5.0 },
-        {  14.0,   1.0,  1.0 },
-        {   1.0,  14.0,  2.0 },
-        { -11.0,   2.0,  3.0 },
-        {   1.0, -11.0,  4.0 },
-        {   1.0,   2.0,  8.0 },
-        {   2.0,   1.0, -5.0 },
-        {  15.0,   1.5,  1.0 },
-        {   1.5,  15.0,  2.0 },
-        { -11.0,   2.5,  3.1 },
-    };
-
-    // large absolute value testing
-    AffineXf3d largeShiftXf = AffineXf3d(Matrix3d(), Vector3d(/*10000, - 10000, 0*/));
-    for (auto& pn : pointsFloat) pn = largeShiftXf(pn);
-
-    std::vector<Vector3d> pointsNorm = {
-        {  0.0,  0.0, -1.0 },
-        {  1.0,  0.1,  1.0 },
-        {  0.1,  1.0,  1.2 },
-        { -1.0,  0.1,  1.0 },
-        {  0.1, -1.1,  1.1 },
-        {  0.1,  0.1,  1.0 },
-        {  0.1,  0.0, -1.0 },
-        {  1.1,  0.1,  1.0 },
-        {  0.1,  1.0,  1.2 },
-        { -1.1,  0.1,  1.1 }
-    };
-    for (auto& pn : pointsNorm) pn = pn.normalized();
-
-    // init translation
-    std::vector<AffineXf3d> initP2plXfSet = {
-        // zero xf
-        AffineXf3d(
-            Matrix3d(
-                Vector3d(1, 0, 0),
-                Vector3d(0, 1, 0),
-                Vector3d(0, 0, 1)
-            ),
-            Vector3d(0,0,0)),
-
-        // Rz
-        AffineXf3d(
-            Matrix3d(
-                Vector3d(1, sin(0.5), 0),
-                Vector3d(-sin(0.5), 1, 0),
-                Vector3d(0, 0, 1)
-            ),
-            Vector3d(0,0,0)),
-
-        // Rz + transl
-        AffineXf3d(
-            Matrix3d(
-                Vector3d(1, sin(0.5), 0),
-                Vector3d(-sin(0.5), 1, 0),
-                Vector3d(0, 0, 1)
-            ),
-            Vector3d(2,-2,0)),
-
-        // complex xf
-        AffineXf3d(
-            Matrix3d(
-                Vector3d(1, sin(0.15), -sin(0.1)),
-                Vector3d(-sin(0.15), 1, sin(0.2)),
-                Vector3d(sin(0.1), -sin(0.2), 1)
-            ),
-            Vector3d(2,-20,8)),
-    };
-
-    //std::random_device rd;
-    //std::mt19937 gen(rd());
-    //const double max_rnd = 0.01;
-    //std::uniform_real_distribution<> dis(-max_rnd, max_rnd);
-    for (const auto& initXf : initP2plXfSet)
-    {
-        std::vector<Vector3d> pointsRef = pointsFloat;
-        std::vector<Vector3d> pointsNormT = pointsNorm;
-        // add some noise
-        for (int i = 0; i < pointsRef.size(); i++)
-        {
-            auto& pRef = pointsRef[i];
-            auto& pRefNorm = pointsNormT[i];
-            pRef = initXf(pRef);// +Vector3d(dis(gen), dis(gen), dis(gen));
-            pRefNorm = initXf.A * pRefNorm;
-        }
-
-        PointToPlaneAligningTransform p2pl;
-        for (int i = 0; i < pointsRef.size(); i++)
-        {
-            const auto& pRef = pointsRef[i];
-            const auto& pFl = pointsFloat[i];
-            const auto& pRefNorm = pointsNormT[i];
-
-            p2pl.add(pFl, pRef, pRefNorm);
-        }
-
-        auto am = p2pl.calculateAmendment();
-        AffineXf3d xfResP2pl = AffineXf3d(
-            Matrix3d(
-                Vector3d(1.0, -am.rotAngles[2], am.rotAngles[1]),
-                Vector3d(am.rotAngles[2], 1.0, -am.rotAngles[0]),
-                Vector3d(-am.rotAngles[1], am.rotAngles[0], 1.0)),
-            am.shift);
-
-        auto diffX = xfResP2pl.A.x - initXf.A.x;
-        EXPECT_NEAR(diffX.length(), 0., err);
-
-        auto diffY = xfResP2pl.A.y - initXf.A.y;
-        EXPECT_NEAR(diffY.length(), 0., err);
-
-        auto diffZ = xfResP2pl.A.z - initXf.A.z;
-        EXPECT_NEAR(diffZ.length(), 0., err);
-
-        // otrhogonality check
-        // auto diffOrtho = xfResP2pl.A * xfResP2pl.A.transposed() - Matrix3d();
-        // EXPECT_NEAR(diffOrtho[0].length() + diffOrtho[1].length() + diffOrtho[2].length(), 0., err);
-
-        EXPECT_NEAR((xfResP2pl.b - initXf.b).length(), 0., err);
-    }
-}
-
-TEST(MRMesh, RegistrationOneIterPointToPoint)
-{
-    const auto err = 1e-10;
-    // set points
-    std::vector<Vector3d> pointsFloat = {
-        {   1.0,   1.0, -5.0 },
-        {  14.0,   1.0,  1.0 },
-        {   1.0,  14.0,  2.0 },
-        { -11.0,   2.0,  3.0 },
-        {   1.0, -11.0,  4.0 },
-        {   1.0,   2.0,  8.0 },
-        {   2.0,   1.0, -5.0 },
-        {  15.0,   1.5,  1.0 },
-        {   1.5,  15.0,  2.0 },
-        { -11.0,   2.5,  3.1 },
-    };
-    // Point to Point part
-    std::vector<AffineXf3d> initP2ptXfSet = {
-        // zero xf
-        AffineXf3d(
-            Matrix3d(
-                Vector3d(1, 0, 0),
-                Vector3d(0, 1, 0),
-                Vector3d(0, 0, 1)
-            ),
-            Vector3d(0,0,0)),
-
-        // small Rz
-        AffineXf3d(
-            Matrix3d(
-                Vector3d(0.8, 0.6, 0),
-                Vector3d(-0.6, 0.8, 0),
-                Vector3d(0, 0, 1)
-            ),
-            Vector3d(0,0,0)),
-
-        // small transl
-        AffineXf3d(
-            Matrix3d(
-                Vector3d(0.8, 0.6, 0),
-                Vector3d(-0.6, 0.8, 0),
-                Vector3d(0, 0, 1)
-            ),
-            Vector3d(2,-2,0)),
-
-        // complex xf
-        AffineXf3d(
-            Matrix3d(
-                Vector3d(0.8, 0, -0.6),
-                Vector3d(0, 1, 0),
-                Vector3d(0.6, 0, 0.8)
-            ),
-            Vector3d(200,-200,0)),
-    };
-    for (const auto& initXf : initP2ptXfSet)
-    {
-        std::vector<Vector3d> pointsRef = pointsFloat;
-        for (int i = 0; i < pointsRef.size(); i++)
-        {
-            auto& pRef = pointsRef[i];
-            pRef = initXf(pRef);
-        }
-
-        PointToPointAligningTransform p2pt;
-        for (int i = 0; i < pointsRef.size(); i++)
-        {
-            const auto& pRef = pointsRef[i];
-            const auto& pFl = pointsFloat[i];
-            p2pt.add(pFl, pRef);
-        }
-
-        auto xfResP2pt = p2pt.findBestRigidXf();
-        EXPECT_NEAR((xfResP2pt.A.x - initXf.A.x).length(), 0., err);
-        EXPECT_NEAR((xfResP2pt.A.y - initXf.A.y).length(), 0., err);
-        EXPECT_NEAR((xfResP2pt.A.z - initXf.A.z).length(), 0., err);
-        EXPECT_NEAR((xfResP2pt.b - initXf.b).length(), 0., err);
-    }
-}
-
-}
+} //namespace MR

@@ -156,6 +156,13 @@ using SymMatrix3ll= SymMatrix3<long long>;
 using SymMatrix3f = SymMatrix3<float>;
 using SymMatrix3d = SymMatrix3<double>;
 
+template <typename T> struct SymMatrix4;
+using SymMatrix4b = SymMatrix4<bool>;
+using SymMatrix4i = SymMatrix4<int>;
+using SymMatrix4ll= SymMatrix4<long long>;
+using SymMatrix4f = SymMatrix4<float>;
+using SymMatrix4d = SymMatrix4<double>;
+
 template <typename V> struct AffineXf;
 template <typename T> using AffineXf2 = AffineXf<Vector2<T>>;
 using AffineXf2f = AffineXf2<float>;

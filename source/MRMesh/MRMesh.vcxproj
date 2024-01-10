@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAligningTransform.h" />
+    <ClInclude Include="MRAlphaShape.h" />
     <ClInclude Include="MRChangeValue.h" />
     <ClInclude Include="MRCone3.h" />
     <ClInclude Include="MRConeApproximator.h" />
@@ -184,6 +185,7 @@
     <ClInclude Include="MRSceneLoad.h" />
     <ClInclude Include="MRSolarRadiation.h" />
     <ClInclude Include="MRSphere.h" />
+    <ClInclude Include="MRSymMatrix4.h" />
     <ClInclude Include="MRTiffIO.h" />
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
@@ -356,6 +358,7 @@
     <ClInclude Include="MRZip.h" />
     <ClInclude Include="MRObjectSave.h" />
     <ClInclude Include="MRZlib.h" />
+    <ClInclude Include="MRVoxelsVolumeAccess.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -369,6 +372,7 @@
     <ClCompile Include="MRAffineXf2.cpp" />
     <ClCompile Include="MRAggregateFlow.cpp" />
     <ClCompile Include="MRAlignTextToMesh.cpp" />
+    <ClCompile Include="MRAlphaShape.cpp" />
     <ClCompile Include="MRArrow.cpp" />
     <ClCompile Include="MRBasinVolume.cpp" />
     <ClCompile Include="MRBestFitQuadric.cpp" />

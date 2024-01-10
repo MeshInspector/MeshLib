@@ -53,12 +53,12 @@ struct SymMatrix3
     /// computes not-unit eigenvector corresponding to a not-repeating eigenvalue
     Vector3<T> eigenvector( T eigenvalue ) const;
 
-    /// solves the equation M*x = b and returns x;
-    /// if M is degenerate then returns the solution closest to origin point;
+    /// for not-degenerate matrix returns just inverse matrix, otherwise
+    /// returns degenerate matrix, which performs inversion on not-kernel subspace;
     /// \param tol relative epsilon-tolerance for too small number detection
     /// \param rank optional output for this matrix rank according to given tolerance
-    /// \param space rank=1: unit normal to solution plane, rank=2: unit direction of solution line, rank=3: zero vector
-    Vector3<T> solve( const Vector3<T> & b, T tol = std::numeric_limits<T>::epsilon(), int * rank = nullptr, Vector3<T> * space = nullptr ) const;
+    /// \param space rank=1: unit direction of solution line, rank=2: unit normal to solution plane, rank=3: zero vector
+    SymMatrix3<T> pseudoinverse( T tol = std::numeric_limits<T>::epsilon(), int * rank = nullptr, Vector3<T> * space = nullptr ) const;
 };
 
 /// \related SymMatrix3
@@ -87,6 +87,21 @@ inline SymMatrix3<T> outerSquare( const Vector3<T> & a )
     res.yy = a.y * a.y;
     res.yz = a.y * a.z;
     res.zz = a.z * a.z;
+    return res;
+}
+
+/// x = k * a * a^T
+template <typename T>
+inline SymMatrix3<T> outerSquare( T k, const Vector3<T> & a )
+{
+    const auto ka = k * a;
+    SymMatrix3<T> res;
+    res.xx = ka.x * a.x;
+    res.xy = ka.x * a.y;
+    res.xz = ka.x * a.z;
+    res.yy = ka.y * a.y;
+    res.yz = ka.y * a.z;
+    res.zz = ka.z * a.z;
     return res;
 }
 
@@ -248,18 +263,18 @@ Vector3<T> SymMatrix3<T>::eigenvector( T eigenvalue ) const
 }
 
 template <typename T>
-Vector3<T> SymMatrix3<T>::solve( const Vector3<T> & b, T tol, int * rank, Vector3<T> * space ) const
+SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * space ) const
 {
+    SymMatrix3<T> res;
     Matrix3<T> eigenvectors;
     const auto eigenvalues = eigens( &eigenvectors );
     const auto threshold = std::max( std::abs( eigenvalues[0] ), std::abs( eigenvalues[2] ) ) * tol;
-    Vector3<T> res;
     int myRank = 0;
     for ( int i = 0; i < 3; ++i )
     {
         if ( std::abs( eigenvalues[i] ) <= threshold )
             continue;
-        res += dot( b, eigenvectors[i] ) / eigenvalues[i] * eigenvectors[i];
+        res += outerSquare( 1 / eigenvalues[i], eigenvectors[i] );
         ++myRank;
         if ( space )
         {

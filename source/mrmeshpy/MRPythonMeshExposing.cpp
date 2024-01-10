@@ -20,8 +20,10 @@
 #include "MRMesh/MRMakeSphereMesh.h"
 #include "MRMesh/MRCylinder.h"
 #include "MRMesh/MRExpected.h"
-#include <pybind11/functional.h>
 #include "MRMesh/MRPartMapping.h"
+#include "MRMesh/MRBuffer.h"
+#include <pybind11/functional.h>
+
 using namespace MR;
 
 Mesh pythonGetSelectedMesh()
@@ -176,6 +178,7 @@ Mesh pythonCopyMeshFunction( const Mesh& mesh )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
 {
+    pybind11::class_<PackMapping>( m, "PackMapping", "Not fully exposed, for now dummy class" );
     pybind11::class_<Mesh>( m, "Mesh" ).
         def( pybind11::init<>() ).
         def( "computeBoundingBox", ( Box3f( Mesh::* )( const FaceBitSet*, const AffineXf3f* ) const )& Mesh::computeBoundingBox,
@@ -192,6 +195,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
         def( "pack", &Mesh::pack, pybind11::arg( "outFmap" ) = nullptr, pybind11::arg( "outVmap" ) = nullptr, pybind11::arg( "outEmap" ) = nullptr, pybind11::arg( "rearrangeTriangles" ) = false,
             "tightly packs all arrays eliminating lone edges and invalid face, verts and points,\n"
             "optionally returns mappings: old.id -> new.id" ).
+        def( "packOptimally", &Mesh::packOptimally, pybind11::arg( "preserveAABBTree" ) = true, 
+            "packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices\n"
+            "\tpreserveAABBTree whether to keep valid mesh's AABB tree after return (it will take longer to compute and it will occupy more memory)" ).
         def( "discreteMeanCurvature", ( float( Mesh::* )( VertId ) const ) &Mesh::discreteMeanCurvature, pybind11::arg( "v" ),
             "computes discrete mean curvature in given vertex measures in length^-1;\n"
             "0 for planar regions, positive for convex surface, negative for concave surface" ).
@@ -326,6 +332,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshComponents, [] ( pybind11::module_& m )
 } )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorMesh, Mesh )
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorConstMeshPtr, const Mesh* )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
 {

@@ -23,7 +23,20 @@ def hasOverhangs( mesh : mm.Mesh, layerStep : float, width : float )->bool:
 	oParams.maxOverhangDistance = width
 	return mrmesh.findOverhangs(mesh,oParams).size() > 0
 
-def heal( mesh : mm.Mesh, voxelSize : float )->mm.Mesh:
-	oParams = mm.OffsetParameters()
+def heal( mesh : mm.Mesh, voxelSize : float, decimate : bool = True )->mm.Mesh:
+	numHoles = mm.findRightBoundary( mesh.topology ).size()
+	oParams = mm.GeneralOffsetParameters()
+	if (numHoles != 0):
+		oParams.signDetectionMode = mm.SignDetectionMode.HoleWindingRule
 	oParams.voxelSize = voxelSize
-	return mm.offsetMesh( mesh, 0.0, oParams)
+	resMesh = mm.generalOffsetMesh( mesh, 0.0, oParams)
+	if ( decimate ):
+		resMesh.packOptimally(False)
+		dSettings = mm.DecimateSettings()
+		dSettings.maxError = 0.25 * voxelSize
+		dSettings.tinyEdgeLength = mesh.computeBoundingBox().diagonal() * 1e-4
+		dSettings.stabilizer = 1e-5
+		dSettings.packMesh = True
+		dSettings.subdivideParts = 64
+		mm.decimateMesh(resMesh,dSettings)
+	return resMesh

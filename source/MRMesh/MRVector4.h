@@ -13,6 +13,7 @@ struct Vector4
 {
     using ValueType = T;
     using MatrixType = Matrix4<T>;
+    using SymMatrixType = SymMatrix4<T>;
     static constexpr int elements = 4;
 
     T x, y, z, w;

@@ -1,7 +1,7 @@
 #include "MRPointToPointAligningTransform.h"
 #include "MRVector3.h"
 #include "MRSymMatrix3.h"
-#include "MRMatrix4.h"
+#include "MRSymMatrix4.h"
 #include "MRQuaternion.h"
 #include "MRToFromEigen.h"
 #include "MRGTest.h"
@@ -10,21 +10,19 @@
 namespace MR
 {
 
-inline Matrix4d calculateMatrixP( const Matrix3d & s )
+inline SymMatrix4d calculateMatrixP( const Matrix3d & s )
 {
-    return //symmetric matrix
-    {
-        { s.x.x + s.y.y + s.z.z,    s.y.z - s.z.y,            s.z.x - s.x.z,            s.x.y - s.y.x },
-        { s.y.z - s.z.y,            s.x.x - s.y.y - s.z.z,    s.x.y + s.y.x,            s.z.x + s.x.z },
-        { s.z.x - s.x.z,            s.x.y + s.y.x,            s.y.y - s.x.x - s.z.z,    s.y.z + s.z.y },
-        { s.x.y - s.y.x,            s.z.x + s.x.z,            s.y.z + s.z.y,            s.z.z - s.x.x - s.y.y }
-    };
+    SymMatrix4d P;
+    P.xx = s.x.x + s.y.y + s.z.z;  P.xy = s.y.z - s.z.y;          P.xz = s.z.x - s.x.z;          P.xw = s.x.y - s.y.x;
+                                   P.yy = s.x.x - s.y.y - s.z.z;  P.yz = s.x.y + s.y.x,          P.yw = s.z.x + s.x.z;
+                                                                  P.zz = s.y.y - s.x.x - s.z.z;  P.zw = s.y.z + s.z.y;
+                                                                                                 P.ww = s.z.z - s.x.x - s.y.y;
+    return P;
 }
 
-SymMatrix3d caluclate2DimensionsP( const Matrix4d& P, const Vector4d& d1, const Vector4d& d2 )
+SymMatrix3d caluclate2DimensionsP( const SymMatrix4d& P, const Vector4d& d1, const Vector4d& d2 )
 {
-    // P must be symmetric
-    const auto p0 = P.col( 0 );
+    const Vector4d p0{ P.xx, P.xy, P.xz, P.xw };
     const auto p1 = P * d1;
     const auto p2 = P * d2;
     SymMatrix3d res;
@@ -62,7 +60,7 @@ auto PointToPointAligningTransform::findPureRotation_() const -> BestRotation
     // for more detail of this algorithm see paragraph "3.3 A solution involving unit quaternions" in 
     // http://graphics.stanford.edu/~smr/ICP/comparison/eggert_comparison_mva97.pdf
     const Matrix3d s = sum12_ - outer( sum1_, centroid2() );
-    const Matrix4d p = calculateMatrixP( s );
+    const SymMatrix4d p = calculateMatrixP( s );
 
     const Eigen::SelfAdjointEigenSolver<Eigen::Matrix4d> solver( toEigen( p ) );
     Eigen::Vector4d largestEigenVector = solver.eigenvectors().col( 3 );
@@ -136,7 +134,7 @@ AffineXf3d PointToPointAligningTransform::findBestRigidXfOrthogonalRotationAxis(
     const auto centroid2 = this->centroid2();
 
     const Matrix3d s = sum12_ - outer( sum1_, centroid2 );
-    const Matrix4d p = calculateMatrixP( s );
+    const SymMatrix4d p = calculateMatrixP( s );
 
     const auto [d1, d2] = ort.perpendicular();
     const SymMatrix3d p2d = caluclate2DimensionsP( p, Vector4d{0,d1[0],d1[1],d1[2]}, Vector4d{0,d2[0],d2[1],d2[2]} );

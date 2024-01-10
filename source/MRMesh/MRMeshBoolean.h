@@ -81,6 +81,9 @@ struct BooleanParameters
     BooleanPreCutResult* outPreCutA = nullptr;
     /// Optional precut output of meshB, if present - does not perform boolean and just return them
     BooleanPreCutResult* outPreCutB = nullptr;
+    /// By default produce valid operation on disconnected components
+    /// if set merge all non-intersecting components
+    bool mergeAllNonIntersectingComponents = false;
     ProgressCallback cb = {};
 };
 

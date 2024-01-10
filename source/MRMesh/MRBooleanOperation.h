@@ -91,7 +91,7 @@ struct BooleanResultMapper
 MRMESH_API Expected<Mesh, std::string> doBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut,
                                                                const std::vector<EdgePath>& cutEdgesA, const std::vector<EdgePath>& cutEdgesB,
                                                                BooleanOperation operation, const AffineXf3f* rigidB2A = nullptr,
-                                                               BooleanResultMapper* mapper = nullptr );
+                                                               BooleanResultMapper* mapper = nullptr, bool mergeAllNonIntersectingComponents = false );
 
 /// \}
 

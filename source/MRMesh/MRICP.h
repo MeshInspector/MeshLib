@@ -10,14 +10,17 @@
 namespace MR
 {
 
+/// The method how to update transformation from point pairs
 enum class ICPMethod
 {
-    Combined = 0, // PointToPoint for the first 2 iterations, PointToPlane then
-    PointToPoint = 1, // use it in the cases with big differences, takes more iterations
-    PointToPlane = 2 // finds solution faster in fewer iterations
+    Combined = 0,     ///< PointToPoint for the first 2 iterations, and PointToPlane for the remaining iterations
+    PointToPoint = 1, ///< select transformation that minimizes mean squared distance between two points in each pair,
+                      ///< it is the safest approach but can converge slowly
+    PointToPlane = 2  ///< select transformation that minimizes mean squared distance between a point and a plane via the other point in each pair,
+                      ///< converge much faster than PointToPoint in case of many good (with not all points/normals in one plane) pairs
 };
 
-// You could fix any axis(axes) of rotation by using this modes
+/// The group of transformations, each with its own degrees of freedom
 enum class ICPMode
 {
     RigidScale,     ///< rigid body transformation with uniform scaling (7 degrees of freedom)
@@ -58,6 +61,7 @@ using VertPairs = std::vector<VertPair>;
 
 struct ICPProperties
 {
+    // The method how to update transformation from point pairs
     ICPMethod method = ICPMethod::PointToPlane;
     // Rotation angle during one iteration of PointToPlane will be limited by this value
     float p2plAngleLimit = PI_F / 6.0f; // [radians]

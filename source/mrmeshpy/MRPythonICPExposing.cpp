@@ -4,12 +4,16 @@
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
 {
-    pybind11::enum_<MR::ICPMethod>( m, "ICPMethod" ).
-        value( "Combined", MR::ICPMethod::Combined, "PointToPoint for the first 2 iterations, PointToPlane then" ).
-        value( "PointToPoint", MR::ICPMethod::PointToPoint, "use it in the cases with big differences, takes more iterations" ).
-        value( "PointToPlane", MR::ICPMethod::PointToPlane, "finds solution faster in fewer iterations" );
+    pybind11::enum_<MR::ICPMethod>( m, "ICPMethod", "The method how to update transformation from point pairs" ).
+        value( "Combined", MR::ICPMethod::Combined, "PointToPoint for the first 2 iterations, and PointToPlane for the remaining iterations" ).
+        value( "PointToPoint", MR::ICPMethod::PointToPoint,
+            "select transformation that minimizes mean squared distance between two points in each pair, "
+            "it is the safest approach but can converge slowly" ).
+        value( "PointToPlane", MR::ICPMethod::PointToPlane,
+            "select transformation that minimizes mean squared distance between a point and a plane via the other point in each pair, "
+            "converge much faster than PointToPoint in case of many good (with not all points/normals in one plane) pairs" );
     
-    pybind11::enum_<MR::ICPMode>( m, "ICPMode", "Select the class of transformations you are looking for" ).
+    pybind11::enum_<MR::ICPMode>( m, "ICPMode", "The group of transformations, each with its own degrees of freedom" ).
         value( "RigidScale", MR::ICPMode::RigidScale, "rigid body transformation with uniform scaling (7 degrees of freedom)" ).
         value( "AnyRigidXf", MR::ICPMode::AnyRigidXf, "rigid body transformation (6 degrees of freedom)" ).
         value( "OrthogonalAxis", MR::ICPMode::OrthogonalAxis, "rigid body transformation with rotation except argument axis (5 degrees of freedom)" ).
@@ -30,7 +34,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
 
     pybind11::class_<MR::ICPProperties>( m, "ICPProperties" ).
         def( pybind11::init<>() ).
-        def_readwrite( "method", &MR::ICPProperties::method ).
+        def_readwrite( "method", &MR::ICPProperties::method, "The method how to update transformation from point pairs" ).
         def_readwrite( "p2plAngleLimit", &MR::ICPProperties::p2plAngleLimit, "Rotation angle during one iteration of PointToPlane will be limited by this value").
         def_readwrite( "p2plScaleLimit", &MR::ICPProperties::p2plScaleLimit, "Scaling during one iteration of PointToPlane will be limited by this value").
         def_readwrite( "cosTreshold", &MR::ICPProperties::cosTreshold, "Points pair will be counted only if cosine between surface normals in points is higher" ).

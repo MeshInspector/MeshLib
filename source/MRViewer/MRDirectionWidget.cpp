@@ -82,7 +82,7 @@ namespace MR
 
     bool DirectionWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     {
-        if ( button != Viewer::MouseButton::Left || mod != 0 )
+        if ( button != Viewer::MouseButton::Left || mod != 0 || blockedMouse_ )
             return false;
 
         auto viewer = Viewer::instance();
@@ -130,6 +130,8 @@ namespace MR
     void DirectionWidget::setColor( const Color& color )
     {
         color_ = color;
+        if ( directionObj_ )
+            directionObj_->setFrontColor( color_, false );
     }
 
     const Color& DirectionWidget::getColor() const

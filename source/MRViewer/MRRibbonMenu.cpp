@@ -2309,6 +2309,10 @@ void RibbonMenu::highlightBlocking_()
         // Fix ImGui.
         // The logic is set inside the library that if the program got there, 
         // then the command buffer should be at least one, but possibly empty.
+        // there is a blocking window that is not currently displayed. 
+        // at some point, when trying to open another window, a crash occurs 
+        // (it is worth switching applications during playback so that the system makes the 
+        // window of another application active).
         if ( drawList->CmdBuffer.Size > 0)
         {
             drawList->PushClipRect( ImVec2( 0, 0 ), ImGui::GetIO().DisplaySize );

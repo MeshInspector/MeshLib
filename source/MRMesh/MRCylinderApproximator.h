@@ -6,6 +6,7 @@
 #include "MRPch/MRTBB.h"
 #include "MRToFromEigen.h"
 #include "MRConstants.h"
+#include "MRPch/MRSpdlog.h"
 
 // https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf 
 
@@ -105,6 +106,11 @@ private:
     // main solver. 
     T solve( const std::vector<MR::Vector3<T>>& points, Cylinder3<T>& cylinder )
     {
+        if ( points.size() < 6 )
+        {
+            spdlog::warn( "Cylinder3Approximation :: Too low point for cylinder approximation count={}" , points.size() );
+            return -1;
+        }
         assert( points.size() >= 6 ); // "At least 6 points needs for correct fitting requires ."
 
         normalizedPoints_.clear();
@@ -133,6 +139,7 @@ private:
         }
         else
         {
+            spdlog::warn( "Cylinder3Approximation :: unsupported fitter" );
             assert( false ); // unsupported fitter
             return -1;
         }

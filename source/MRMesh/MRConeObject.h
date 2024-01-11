@@ -43,8 +43,8 @@ public:
     MRMESH_API float getAngle() const;
     /// calculates center from xf
     MRMESH_API Vector3f getCenter() const;
-    /// updates xf to fit given radius
-    MRMESH_API void setAngle( float radius );
+    /// updates xf to fit given cone angle
+    MRMESH_API void setAngle( float angle );
     /// updates xf to fit given center
     MRMESH_API void setCenter( const Vector3f& center );
     /// calculates main axis direction from xf

@@ -117,9 +117,7 @@ public:
     {
         ConeFittingFunctor<T> coneFittingFunctor;
         Eigen::LevenbergMarquardt<ConeFittingFunctor<T>, T> lm( coneFittingFunctor );
-        MR::Vector3<T>& coneVertex = cone.apex();
         MR::Vector3<T>& coneAxis = cone.direction();
-        T& coneAngle = cone.angle;
 
 
         if ( useConeInputAsInitialGuess )

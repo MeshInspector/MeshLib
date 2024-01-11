@@ -13,6 +13,10 @@ public:
     Cone3()
     {}
 
+    // inAxis -- apex position and main axis direction.  For any cone point dot( point , direction ) >=0
+    // inAngle -- cone angle, main axis vs side
+    // inHeight -- cone inHeight
+    // main axis direction could be non normalized.
     Cone3( const Line3<T>& inAxis, T inAngle, T inHeight )
         :
         axis( inAxis ),

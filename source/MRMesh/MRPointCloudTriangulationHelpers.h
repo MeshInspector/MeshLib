@@ -42,9 +42,16 @@ MRMESH_API void filterNeighbors( const VertNormals& normals, VertId v, std::vect
  */
 struct TriangulatedFanData
 {
-    std::vector<VertId> neighbors; ///< algorithm reorders this vector to be optimized (each pair is fan triangle)
-    std::vector<std::pair<double, int>> cacheAngleOrder; ///< cache vector for ordering neighbors
-    VertId border; ///< First border edge (triangle associated with this point is absent)
+    /// clockwise points around center point in (optimized) triangle fan,
+    /// each pair of points (as well as back()-front() pair) together with the center form a fan triangle
+    std::vector<VertId> neighbors;
+
+    /// temporary reusable storage to avoid allocations for each point
+    std::vector<std::pair<double, int>> cacheAngleOrder;
+
+    /// first border edge (invalid if the center point is not on the boundary)
+    /// triangle associated with this point is absent
+    VertId border;
 };
 
 /** 

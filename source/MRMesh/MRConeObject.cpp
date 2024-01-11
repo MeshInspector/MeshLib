@@ -30,11 +30,11 @@ constexpr MR::Vector3f apex = { 0,0,0 };
 
 
 
-float getFeatureRediusByAngle( float angle )
+float getFeatureRadiusByAngle( float angle )
 {
     return cBaseHeight * std::tan( angle );
 }
-float getAngleByFeatureRedius( float fRadius )
+float getAngleByFeatureRadius( float fRadius )
 {
     return std::atan( fRadius / cBaseHeight );
 }
@@ -88,14 +88,14 @@ float ConeObject::getNormalyzedFeatueRadius( void ) const
 }
 float ConeObject::getAngle() const
 {
-    return getAngleByFeatureRedius( getNormalyzedFeatueRadius() );
+    return getAngleByFeatureRadius( getNormalyzedFeatueRadius() );
 }
 
 void ConeObject::setAngle( float angle )
 {
     auto direction = getDirection();
     auto currentXf = xf();
-    auto featureRedius = getFeatureRediusByAngle( angle );
+    auto featureRedius = getFeatureRadiusByAngle( angle );
     auto length = getLength();
     currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( featureRedius * length, featureRedius * length, length );
     setXf( currentXf );

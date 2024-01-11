@@ -2306,6 +2306,9 @@ void RibbonMenu::highlightBlocking_()
         Color highlightColor = Color( 255, 161, 13, 255 );
         ImGui::FocusWindow( window );
         auto drawList = window->DrawList;
+        // Fix ImGui.
+        // The logic is set inside the library that if the program got there, 
+        // then the command buffer should be at least one, but possibly empty.
         if ( drawList->CmdBuffer.Size > 0)
         {
             drawList->PushClipRect( ImVec2( 0, 0 ), ImGui::GetIO().DisplaySize );

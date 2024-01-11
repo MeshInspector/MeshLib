@@ -34,23 +34,23 @@ _Pragma("warning(disable:4459)") \
 _Pragma("warning(pop)")
 
 #define MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, Type ) \
-static std::optional<pybind11::class_<Type>> class##name;              \
-MR_ADD_PYTHON_CUSTOM_DEF( moduleName, decl##name, [] ( pybind11::module_& module ) \
-{                                                                      \
-    class##name.emplace( module, #name );  \
+static std::optional<pybind11::class_<Type>> name##_class_;       \
+MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_decl_, [] ( pybind11::module_& module ) \
+{                                                                 \
+    name##_class_.emplace( module, #name );                       \
 }, MR::PythonExport::Priority::Declaration )
 
 #define MR_ADD_PYTHON_CUSTOM_CLASS_DECL_ARGS( moduleName, name, Type, ... ) \
-static std::optional<pybind11::class_<Type>> class##name;              \
-MR_ADD_PYTHON_CUSTOM_DEF( moduleName, decl##name, [] ( pybind11::module_& module ) \
-{                                                                      \
-    class##name.emplace( module, #name, __VA_ARGS__ );  \
+static std::optional<pybind11::class_<Type>> name##_class_;                 \
+MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_decl_, [] ( pybind11::module_& module ) \
+{                                                                           \
+    name##_class_.emplace( module, #name, __VA_ARGS__ );                    \
 }, MR::PythonExport::Priority::Declaration )
 
 #define MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( moduleName, name, ... ) \
-MR_ADD_PYTHON_CUSTOM_DEF( moduleName, impl##name, [] ( pybind11::module_& ) \
+MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_impl_, [] ( pybind11::module_& ) \
 {                                                                \
-    __VA_ARGS__ ( *class##name );                                \
+    __VA_ARGS__ ( *name##_class_ );                              \
 }, MR::PythonExport::Priority::Implementation )
 
 // !!! Its important to add vec after adding type

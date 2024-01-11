@@ -73,9 +73,15 @@ struct Settings
     float critAngle = PI2_F;
     /// whether to use oriented normals of neighbor points
     bool useNeiNormals = true;
+    /// automatic increase of the radius if points outside can make triangles from original radius not-Delone
+    bool automaticRadiusIncrease = true;
+    /// the maximum number of optimization steps (removals) in local triangulation
+    int maxRemoves = INT_MAX;
+    /// optional output of considered neighbor points after filtering but before triangulation/optimization
+    std::vector<VertId> * allNeighbors = nullptr;
 };
 
-/// constructs local triangulation around given point with automatic increase of the radius
+/// constructs local triangulation around given point
 MRMESH_API void buildLocalTriangulation( const PointCloud& cloud, VertId v, const VertCoords& normals, const Settings & settings,
     TriangulatedFanData & fanData );
 

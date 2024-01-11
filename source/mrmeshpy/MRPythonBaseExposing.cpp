@@ -89,10 +89,12 @@ MR_ADD_PYTHON_BOX( Box2d, MR::Vector2d )
 MR_ADD_PYTHON_BOX( Box3d, MR::Vector3d )
 
 #define MR_ADD_PYTHON_VECTOR2(name, type) \
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, name, MR::Vector2<type> ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, name, [] ( auto& cls ) \
 {\
     using VectorType = MR::Vector2<type>;\
-    pybind11::class_<VectorType>( m, #name, "two-dimensional vector" ).\
+    cls.doc() = "two-dimensional vector";\
+    cls.\
         def( pybind11::init<>() ).\
         def( pybind11::init<type, type>(), pybind11::arg( "x" ), pybind11::arg( "y" ) ).\
         /*def( pybind11::init<const MR::Vector2i&>(), pybind11::arg( "v" ) ).\
@@ -127,6 +129,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
             ss << #name << "[" << data.x << ", " << data.y << "]";\
             return ss.str();\
         } );\
+} )\
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
+{\
+    using VectorType = MR::Vector2<type>;\
     m.def( "dot", ( type( * )( const VectorType&, const VectorType& ) )& MR::dot<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "dot product" );\
     m.def( "cross", ( type( * )( const VectorType&, const VectorType& ) )& MR::cross<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "cross product" );\
 } )
@@ -140,11 +146,13 @@ MR_ADD_PYTHON_VEC( mrmeshpy, Contours2f, MR::Contour2f )
 MR_ADD_PYTHON_VEC( mrmeshpy, Contour2d, MR::Vector2d )
 MR_ADD_PYTHON_VEC( mrmeshpy, Contours2d, MR::Contour2d )
 
-#define MR_ADD_PYTHON_VECTOR3(name, type) \
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
+#define MR_ADD_PYTHON_VECTOR3(name, type)\
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, name, MR::Vector3<type> )\
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, name, [] ( auto& cls )\
 {\
     using VectorType = MR::Vector3<type>;\
-    auto vectorClass = pybind11::class_<VectorType>( m, #name, "three-dimensional vector" ).\
+    cls.doc() = "three-dimensional vector";\
+    cls.\
         def( pybind11::init<>() ).\
         def( pybind11::init<type, type, type>(), pybind11::arg( "x" ), pybind11::arg( "y" ), pybind11::arg( "z" ) ).\
         /*def( pybind11::init<const MR::Vector2i&>(), pybind11::arg( "v" ) ).\
@@ -176,17 +184,24 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
         } );\
     if constexpr ( !std::is_same_v<type, int> ) \
     {\
-        vectorClass.def( "length", &VectorType::length ).\
-        def( "normalized", &VectorType::normalized );\
-        m.def( "angle", ( type( * )( const VectorType&, const VectorType& ) )& MR::angle<type>,\
-            pybind11::arg( "a" ), pybind11::arg( "b" ), "angle in radians between two vectors" );\
+        cls.\
+            def( "length", &VectorType::length ).\
+            def( "normalized", &VectorType::normalized );\
     }\
-\
+} )\
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
+{\
+    using VectorType = MR::Vector3<type>;\
     m.def( "dot", ( type( * )( const VectorType&, const VectorType& ) )& MR::dot<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "dot product" );\
     m.def( "cross", ( VectorType( * )( const VectorType&, const VectorType& ) )& MR::cross<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "cross product" );\
     m.def( "mixed", ( type( * )( const VectorType&, const VectorType&, const VectorType& ) )& MR::mixed<type>,\
         pybind11::arg( "a" ), pybind11::arg( "b" ),pybind11::arg( "c" ), "mixed product" );\
     m.def( "mult", ( VectorType( * )( const VectorType&, const VectorType& ) )& MR::mult<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "per component multiplication" );\
+    if constexpr ( !std::is_same_v<type, int> ) \
+    {\
+        m.def( "angle", ( type( * )( const VectorType&, const VectorType& ) )& MR::angle<type>,\
+            pybind11::arg( "a" ), pybind11::arg( "b" ), "angle in radians between two vectors" );\
+    }\
 } )
 
 MR_ADD_PYTHON_VECTOR3( Vector3i, int )
@@ -285,23 +300,32 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointOnFace, [] ( pybind11::module_& m )
         def_readwrite( "point", &MR::PointOnFace::point );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, AffineXf3f, [] ( pybind11::module_& m )
-{
-    pybind11::class_<MR::AffineXf3f>( m, "AffineXf3f", "affine transformation: y = A*x + b, where A in VxV, and b in V" ).
-        def( pybind11::init<>() ).
-        def_readwrite( "A", &MR::AffineXf3f::A ).
-        def_readwrite( "b", &MR::AffineXf3f::b ).
-        def_static( "translation", &MR::AffineXf3f::translation, pybind11::arg( "b" ), "creates translation-only transformation (with identity linear component)" ).
-        def_static( "linear", &MR::AffineXf3f::linear, pybind11::arg( "A" ), "creates linear-only transformation (without translation)" ).
-        def_static( "xfAround", &MR::AffineXf3f::xfAround, pybind11::arg( "A" ), pybind11::arg( "stable" ), "creates transformation with given linear part with given stable point" ).
-        def( "linearOnly", &MR::AffineXf3f::linearOnly, pybind11::arg( "x" ),
-            "applies only linear part of the transformation to given vector (e.g. to normal) skipping adding shift (b)\n"
-            "for example if this is a rigid transformation, then only rotates input vector" ).
-        def( "inverse", &MR::AffineXf3f::inverse, "computes inverse transformation" ).
-        def( "__call__", &MR::AffineXf3f::operator(), "application of the transformation to a point" ).
-        def( pybind11::self* pybind11::self ).
-        def( pybind11::self == pybind11::self );
+#define MR_ADD_PYTHON_AFFINE_XF( name ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, name, MR::name ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, name, [] ( auto& cls ) \
+{                                       \
+    using AffineXfType = MR::name;      \
+    cls.doc() = "affine transformation: y = A*x + b, where A in VxV, and b in V";       \
+    cls.                                \
+        def( pybind11::init<>() ).      \
+        def_readwrite( "A", &AffineXfType::A ).                                         \
+        def_readwrite( "b", &AffineXfType::b ).                                         \
+        def_static( "translation", &AffineXfType::translation, pybind11::arg( "b" ), "creates translation-only transformation (with identity linear component)" ). \
+        def_static( "linear", &AffineXfType::linear, pybind11::arg( "A" ), "creates linear-only transformation (without translation)" ).                           \
+        def_static( "xfAround", &AffineXfType::xfAround, pybind11::arg( "A" ), pybind11::arg( "stable" ), "creates transformation with given linear part with given stable point" ). \
+        def( "linearOnly", &AffineXfType::linearOnly, pybind11::arg( "x" ),                                                                                        \
+            "applies only linear part of the transformation to given vector (e.g. to normal) skipping adding shift (b)\n"                                          \
+            "for example if this is a rigid transformation, then only rotates input vector" ).                                                                     \
+        def( "inverse", &AffineXfType::inverse, "computes inverse transformation" ).                                                                               \
+        def( "__call__", &AffineXfType::operator(), "application of the transformation to a point" ).                                                              \
+        def( pybind11::self* pybind11::self ).                                          \
+        def( pybind11::self == pybind11::self );                                        \
 } )
+
+MR_ADD_PYTHON_AFFINE_XF( AffineXf2f )
+MR_ADD_PYTHON_AFFINE_XF( AffineXf3f )
+MR_ADD_PYTHON_AFFINE_XF( AffineXf2d )
+MR_ADD_PYTHON_AFFINE_XF( AffineXf3d )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Line3, [] ( pybind11::module_& m )
 {

@@ -33,11 +33,18 @@ _Pragma("warning(disable:4459)") \
     static MR::PythonFunctionAdder name##_adder_( #moduleName, __VA_ARGS__ ); \
 _Pragma("warning(pop)")
 
-#define MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, Type, ... ) \
+#define MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, Type ) \
 static std::optional<pybind11::class_<Type>> class##name;              \
 MR_ADD_PYTHON_CUSTOM_DEF( moduleName, decl##name, [] ( pybind11::module_& module ) \
 {                                                                      \
-    class##name.emplace( module, #name __VA_OPT__( , ) __VA_ARGS__ );  \
+    class##name.emplace( module, #name );  \
+}, MR::PythonExport::Priority::Declaration )
+
+#define MR_ADD_PYTHON_CUSTOM_CLASS_DECL_ARGS( moduleName, name, Type, ... ) \
+static std::optional<pybind11::class_<Type>> class##name;              \
+MR_ADD_PYTHON_CUSTOM_DEF( moduleName, decl##name, [] ( pybind11::module_& module ) \
+{                                                                      \
+    class##name.emplace( module, #name, __VA_ARGS__ );  \
 }, MR::PythonExport::Priority::Declaration )
 
 #define MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( moduleName, name, ... ) \

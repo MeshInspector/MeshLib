@@ -207,11 +207,11 @@ void ImGuiMenu::startFrame()
         style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 0.0f, 0.0f, 0.0f, 0.8f );
     else
     {
-        if ( modalMessageType_ == ModalMessageType::Error )
+        if ( modalMessageType_ == NotificationType::Error )
             style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 1.0f, 0.2f, 0.2f, 0.5f );
-        else if ( modalMessageType_ == ModalMessageType::Warning )
+        else if ( modalMessageType_ == NotificationType::Warning )
             style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 1.0f, 0.86f, 0.4f, 0.5f );
-        else // if ( modalMessageType_ == ModalMessageType::Info )
+        else // if ( modalMessageType_ == MessageType::Info )
             style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 0.9f, 0.9f, 0.9f, 0.5f );
 
     }
@@ -833,11 +833,11 @@ void ImGuiMenu::drawModalMessage_()
     ImGui::PushStyleColor( ImGuiCol_ModalWindowDimBg, ImVec4( 1, 0.125f, 0.125f, ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg].w ) );
 
     std::string title;
-    if ( modalMessageType_ == ModalMessageType::Error )
+    if ( modalMessageType_ == NotificationType::Error )
         title = "Error";
-    else if ( modalMessageType_ == ModalMessageType::Warning )
+    else if ( modalMessageType_ == NotificationType::Warning )
         title = "Warning";
-    else //if ( modalMessageType_ == ModalMessageType::Info )
+    else //if ( modalMessageType_ == MessageType::Info )
         title = "Info";
 
     const std::string titleImGui = " " + title + "##modal";
@@ -899,13 +899,13 @@ void ImGuiMenu::setDrawTimeMillisecThreshold( long long maxGoodTimeMillisec )
     frameTimeMillisecThreshold_ = maxGoodTimeMillisec;
 }
 
-void ImGuiMenu::showModalMessage( const std::string& msg, ModalMessageType msgType )
+void ImGuiMenu::showModalMessage( const std::string& msg, NotificationType msgType )
 {
-    if ( msgType == ModalMessageType::Error )
+    if ( msgType == NotificationType::Error )
         spdlog::error( "Error Modal Dialog: {}", msg );
-    else if ( msgType == ModalMessageType::Warning )
+    else if ( msgType == NotificationType::Warning )
         spdlog::warn( "Warning Modal Dialog: {}", msg );
-    else // if ( msgType == ModalMessageType::Info )
+    else // if ( msgType == MessageType::Info )
         spdlog::info( "Info Modal Dialog: {}", msg );
     showRenameModal_ = false;
     modalMessageType_ = msgType;
@@ -2275,7 +2275,7 @@ void ImGuiMenu::reorderSceneIfNeeded_()
         bool detachSuccess = sourcePtr->detachFromParent();
         if ( !detachSuccess )
         {
-            showModalMessage( "Cannot perform such reorder", ModalMessageType::Error );
+            showModalMessage( "Cannot perform such reorder", NotificationType::Error );
             dragOrDropFailed = true;
             break;
         }
@@ -2289,7 +2289,7 @@ void ImGuiMenu::reorderSceneIfNeeded_()
         if ( !attachSucess )
         {
             detachAction->action( HistoryAction::Type::Undo );
-            showModalMessage( "Cannot perform such reorder", ModalMessageType::Error );
+            showModalMessage( "Cannot perform such reorder", NotificationType::Error );
             dragOrDropFailed = true;
             break;
         }
@@ -3021,17 +3021,17 @@ const std::vector<StateBasePlugin*>& ImGuiMenu::PluginsCache::getTabPlugins( Sta
     return sortedCustomPlufins_[int( tab )];
 }
 
-void showModal( const std::string& msg, ImGuiMenu::ModalMessageType type )
+void showModal( const std::string& msg, NotificationType type )
 {
     if ( auto menu = getViewerInstance().getMenuPlugin() )
         menu->showModalMessage( msg, type );
     else
     {
-        if ( type == ImGuiMenu::ModalMessageType::Error )
+        if ( type == NotificationType::Error )
             spdlog::error( "Show Error: {}", msg );
-        else if ( type == ImGuiMenu::ModalMessageType::Warning )
+        else if ( type == NotificationType::Warning )
             spdlog::warn( "Show Warning: {}", msg );
-        else //if ( type == ImGuiMenu::ModalMessageType::Info )
+        else //if ( type == MessageType::Info )
             spdlog::info( "Show Info: {}", msg );
     }
 }

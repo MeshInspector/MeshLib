@@ -13,6 +13,7 @@
 #include <iostream>
 #include "MRMeshNormals.h"
 #include "MRMeshSubdivide.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -122,7 +123,12 @@ CylinderObject::CylinderObject( const std::vector<Vector3f>& pointsToApprox )
     // calculate cylinder parameters.
     MR::Cylinder3<float> result;
     auto fit = Cylinder3Approximation<float>();
-    fit.solveGeneral( pointsToApprox, result, phiResolution, thetaiResolution );
+    auto approxResult = fit.solveGeneral( pointsToApprox, result, phiResolution, thetaiResolution );
+    if ( approxResult < 0 )
+    {
+        spdlog::warn( "CylinderObject :: unable to creater feature object cylinder." );
+        return;
+    }
 
     // setup parameters
     setRadius( result.radius );

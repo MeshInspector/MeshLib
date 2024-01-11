@@ -25,11 +25,22 @@ public:
         length( inLength )
     {}
 
-    inline MR::Vector3<T>& center( void )
+    MR::Vector3<T>& center( void )
     {
         return mainAxis.p;
     }
-    inline MR::Vector3<T>& direction( void )
+
+    const MR::Vector3<T>& center( void ) const
+    {
+        return mainAxis.p;
+    }
+
+    MR::Vector3<T>& direction( void )
+    {
+        return mainAxis.d;
+    }
+
+    const MR::Vector3<T>& direction( void ) const
     {
         return mainAxis.d;
     }

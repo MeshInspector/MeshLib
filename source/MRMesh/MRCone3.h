@@ -13,29 +13,47 @@ public:
     Cone3()
     {}
 
-    Cone3( const Line3<T>& inAxis, T inAngle, T inLength )
+    Cone3( const Line3<T>& inAxis, T inAngle, T inHeight )
         :
-        position( inAxis ),
+        axis( inAxis ),
         angle( inAngle ),
-        length( inLength )
+        height( inHeight )
     {}
 
-    inline MR::Vector3<T>& center( void )
+    MR::Vector3<T>& center( void )
     {
-        return position.p;
+        return axis.p;
     }
-    inline MR::Vector3<T>& direction( void )
+
+    const MR::Vector3<T>& center( void ) const 
     {
-        return position.d;
+        return axis.p;
     }
-    inline MR::Vector3<T>& apex( void )
+
+    MR::Vector3<T>& direction( void )
+    {
+        return axis.d;
+    }
+
+    const MR::Vector3<T>& direction( void ) const 
+    {
+        return axis.d;
+    }
+
+    MR::Vector3<T>& apex( void )
     {
         return center();
     }
 
-    MR::Line3<T> position; // the combination of the apex of the cone and the direction of its main axis in space
-    T angle = 0; // cone angle
-    T length = 0; // cone length
+    const MR::Vector3<T>& apex( void ) const 
+    {
+        return center();
+    }
+
+    MR::Line3<T> axis; // the combination of the apex of the cone and the direction of its main axis in space. 
+    // for any cone point dot( point , direction ) >=0
+    T angle = 0;       // cone angle, main axis vs side
+    T height = 0;      // cone height
 };
 
 

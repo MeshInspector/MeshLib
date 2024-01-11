@@ -5,14 +5,14 @@
 namespace MR
 {
 
-/// Object to show Cylinder feature, position and radius are controlled by xf
+/// Object to show Cone feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
 class MRMESH_CLASS ConeObject : public ObjectMeshHolder
 {
 public:
-    /// Creates simple Cylinder object with center in zero and radius - 1
+    /// Creates simple Cone object with center in zero and radius - 1
     MRMESH_API ConeObject();
-    /// Finds best Cylinder to approx given points
+    /// Finds best Cone to approx given points
     MRMESH_API ConeObject( const std::vector<Vector3f>& pointsToApprox );
 
     ConeObject( ConeObject&& ) noexcept = default;
@@ -33,7 +33,7 @@ public:
 
     virtual std::string getClassName() const override
     {
-        return "Cylinder";
+        return "Cone";
     }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;

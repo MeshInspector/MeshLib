@@ -1,7 +1,6 @@
 #include "MRConeObject.h"
 
 #include "MRMatrix3.h"
-#include "MRCylinder.h"
 #include "MRMesh.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
@@ -24,7 +23,7 @@ namespace
 constexpr int cDetailLevel = 64;
 constexpr float thicknessArrow = 0.01f;
 constexpr float cBaseRadius = 1.0f;
-constexpr float cBaseLength = 1.0f;
+constexpr float cBaseHeight = 1.0f;
 
 constexpr MR::Vector3f base = MR::Vector3f::plusZ();
 constexpr MR::Vector3f apex = { 0,0,0 };
@@ -33,11 +32,11 @@ constexpr MR::Vector3f apex = { 0,0,0 };
 
 float getFeatureRediusByAngle( float angle )
 {
-    return cBaseLength * std::tan( angle );
+    return cBaseHeight * std::tan( angle );
 }
 float getAngleByFeatureRedius( float fRadius )
 {
-    return std::atan( fRadius / cBaseLength );
+    return std::atan( fRadius / cBaseHeight );
 }
 
 
@@ -50,7 +49,7 @@ MR::Matrix3f getRotationMatrix( const Vector3f& normal )
 std::shared_ptr<MR::Mesh> makeFeatureCone( int resolution = cDetailLevel )
 {
 
-    auto mesh = std::make_shared<MR::Mesh>( makeArrow( base, apex, thicknessArrow, cBaseRadius, cBaseLength, resolution ) );
+    auto mesh = std::make_shared<MR::Mesh>( makeArrow( base, apex, thicknessArrow, cBaseRadius, cBaseHeight, resolution ) );
 
     return mesh;
 }
@@ -126,7 +125,7 @@ ConeObject::ConeObject( const std::vector<Vector3f>& pointsToApprox )
     // create mesh
     constructMesh_();
 
-    // calculate cylinder parameters.
+    // calculate cone parameters.
     MR::Cone3<float> result;
     auto fit = Cone3Approximation<float>();
     fit.solve( pointsToApprox, result );
@@ -135,7 +134,7 @@ ConeObject::ConeObject( const std::vector<Vector3f>& pointsToApprox )
     setDirection( result.direction() );
     setCenter( result.center() );
     setAngle( result.angle );
-    setLength( result.length );
+    setLength( result.height );
 
 }
 

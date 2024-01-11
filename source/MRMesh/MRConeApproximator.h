@@ -128,29 +128,32 @@ public:
         }
         else
         {
-            ComputeInitialCone( points, coneVertex, coneAxis, coneAngle );
+            cone = computeInitialCone_( points );
         }
 
         Eigen::VectorX<T> fittedParams( 6 );
-        coneToFitParams( cone, fittedParams );
+        coneToFitParams_( cone, fittedParams );
         [[maybe_unused]] Eigen::LevenbergMarquardtSpace::Status result = lm.minimize( fittedParams );
 
         // Looks like a bug in Eigen. Eigen::LevenbergMarquardtSpace::Status have error codes only. Not return value for Success minimization. 
         // So just log status 
 
-        fitParamsToCone( fittedParams, cone );
+        fitParamsToCone_( fittedParams, cone );
 
         T const one_v = static_cast< T >( 1 );
         auto cosAngle = std::clamp( one_v / coneAxis.length(), static_cast< T >( 0 ), one_v );
         cone.angle = std::acos( cosAngle );
         cone.direction() = cone.direction().normalized();
-        cone.length = calculateConeLength( points, cone );
+        cone.height = calculateConeHeight_( points, cone );
 
         return;
     }
 
+
 private:
-    T calculateConeLength( const std::vector<MR::Vector3<T>>& points, Cone3<T>& cone )
+
+    // Calculate and return a length of cone based on set of initil points and inifinite cone surface given by cone param. 
+    T calculateConeHeight_( const std::vector<MR::Vector3<T>>& points, Cone3<T>& cone )
     {
         T length = static_cast< T > ( 0 );
         for ( auto i = 0; i < points.size(); ++i )
@@ -159,9 +162,88 @@ private:
         }
         return length;
     }
+    // Calculates the initial parameters of the cone, which will later be used for minimization.
+    Cone3<T> computeInitialCone_( const std::vector<MR::Vector3<T>>& points )
+    {
+        Cone3<T> result;
+        MR::Vector3<T>& coneApex = result.apex();
+        MR::Vector3<T>& U = result.direction();  // coneAxis
+        T& coneAngle = result.angle;
 
+        // Compute the average of the sample points.
+        MR::Vector3<T> center{ 0, 0, 0 };  // C in pdf 
+        for ( auto i = 0; i < points.size(); ++i )
+        {
+            center += points[i];
+        }
+        center = center / static_cast< T >( points.size() );
+
+        // The cone axis is estimated from ZZTZ (see the https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf, formula 120).
+        U = { 0, 0, 0 };  // U in pdf 
+        for ( auto i = 0; i < points.size(); ++i )
+        {
+            Vector3<T> Z = points[i] - center;
+            U += Z * MR::dot( Z, Z );
+        }
+        U = U.normalized();
+
+        // C is center, U is coneAxis, X is points
+        // Compute the signed heights of the points along the cone axis relative to C.
+        // These are the projections of the points onto the line C+t*U. Also compute
+        // the radial distances of the points from the line C+t*U
+
+        std::vector<Vector2<T>> hrPairs( points.size() );
+        T hMin = std::numeric_limits<T>::max(), hMax = -hMin;
+        for ( auto i = 0; i < points.size(); ++i )
+        {
+            MR::Vector3<T> delta = points[i] - center;
+            T h = MR::dot( U, delta );
+            hMin = std::min( hMin, h );
+            hMax = std::max( hMax, h );
+            Vector3<T> projection = delta - MR::dot( U, delta ) * U;
+            T r = projection.length();
+            hrPairs[i] = { h, r };
+        }
+
+        // The radial distance is considered to be a function of height. Fit the
+        // (h,r) pairs with a line: r = rAverage = hrSlope * (h = hAverage);
+
+        MR::Vector2<T> avgPoint;
+        T a, b; // line y=a*x+b
+        findBestFitLine_( hrPairs, a, b, &avgPoint );
+        T hAverage = avgPoint.x;
+        T rAverage = avgPoint.y;
+        T hrSlope = a;
+
+        // If U is directed so that r increases as h increases, U is the correct
+        // cone axis estimate. However, if r decreases as h increases, -U is the
+        // correct cone axis estimate.
+        if ( hrSlope < 0 )
+        {
+            U = -U;
+            hrSlope = -hrSlope;
+            std::swap( hMin, hMax );
+            hMin = -hMin;
+            hMax = -hMax;
+        }
+
+        // Compute the extreme radial distance values for the points.
+        T rMin = rAverage + hrSlope * ( hMin - hAverage );
+        T rMax = rAverage + hrSlope * ( hMax - hAverage );
+        T hRange = hMax - hMin;
+        T rRange = rMax - rMin;
+
+        // Using trigonometry and right triangles, compute the tangent function of the cone angle.
+        T tanAngle = rRange / hRange;
+        coneAngle = std::atan2( rRange, hRange );
+
+        // Compute the cone vertex.
+        T offset = rMax / tanAngle - hMax;
+        coneApex = center - offset * U;
+        return result;
+    }
     // Function for finding the best approximation of a straight line in general form y = a*x + b
-    void findBestFitLine( const std::vector<MR::Vector2<T>>& xyPairs, T& lineA, T& lineB, MR::Vector2<T>* avg = nullptr )
+    void findBestFitLine_( const std::vector<MR::Vector2<T>>& xyPairs, T& lineA, T& lineB, MR::Vector2<T>* avg = nullptr )
     {
         auto numPoints = xyPairs.size();
         Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> A( numPoints, 2 );
@@ -190,10 +272,9 @@ private:
             *avg = *avg / static_cast < T > ( xyPairs.size() );
             avg->y = lineA * avg->x + lineB;
         }
-
     }
-
-    void fitParamsToCone( Eigen::Vector<T, Eigen::Dynamic>& fittedParams, Cone3<T>& cone )
+    // Convert data from Eigen minimizator representation to cone params. 
+    void fitParamsToCone_( Eigen::Vector<T, Eigen::Dynamic>& fittedParams, Cone3<T>& cone )
     {
         cone.apex().x = fittedParams[0];
         cone.apex().y = fittedParams[1];
@@ -203,7 +284,8 @@ private:
         cone.direction().y = fittedParams[4];
         cone.direction().z = fittedParams[5];
     }
-    void coneToFitParams( Cone3<T>& cone, Eigen::Vector<T, Eigen::Dynamic>& fittedParams )
+    // Convert data from cone params to Eigen minimizator representation. 
+    void coneToFitParams_( Cone3<T>& cone, Eigen::Vector<T, Eigen::Dynamic>& fittedParams )
     {
         // The fittedParams guess for the cone vertex.
         fittedParams[0] = cone.apex().x;
@@ -217,79 +299,7 @@ private:
         fittedParams[5] = cone.direction().z / coneCosAngle;
     }
 
-    void ComputeInitialCone( const std::vector<MR::Vector3<T>>& points, MR::Vector3<T>& coneVertex, MR::Vector3<T>& coneAxis, T& coneAngle )
-    {
-        // Compute the average of the sample points.
-        MR::Vector3<T> center{ 0, 0, 0 };
-        for ( auto i = 0; i < points.size(); ++i )
-        {
-            center += points[i];
-        }
-        center = center / static_cast< T >( points.size() );
 
-        // The cone axis is estimated from ZZTZ (see the PDF).
-        coneAxis = { 0, 0, 0 };
-        for ( auto i = 0; i < points.size(); ++i )
-        {
-            Vector3<T> delta = points[i] - center;
-            coneAxis += delta * MR::dot( delta, delta );
-        }
-        coneAxis = coneAxis.normalized();
-
-        // Compute the signed heights of the points along the cone axis
-        // relative to C. These are the projections of the points onto the
-        // line C+t*U. Also compute the radial distances of the points
-        // from the line C+t*U.
-        std::vector<Vector2<T>> hrPairs( points.size() );
-        T hMin = std::numeric_limits<T>::max(), hMax = -hMin;
-        for ( auto i = 0; i < points.size(); ++i )
-        {
-            MR::Vector3<T> delta = points[i] - center;
-            T h = MR::dot( coneAxis, delta );
-            hMin = std::min( hMin, h );
-            hMax = std::max( hMax, h );
-            Vector3<T> projection = delta - MR::dot( coneAxis, delta ) * coneAxis;
-            T r = projection.length();
-            hrPairs[i] = { h, r };
-        }
-
-        // The radial distance is considered to be a function of height.
-        // Fit the (h,r) pairs with a line:
-        //   r - rAverage = hrSlope * (h - hAverage)
-        MR::Vector2<T> avgPoint;
-        T a, b; // line y=a*x+b
-        findBestFitLine( hrPairs, a, b, &avgPoint );
-        T hAverage = avgPoint.x;
-        T rAverage = avgPoint.y;
-        T hrSlope = a;
-
-        // If U is directed so that r increases as h increases, U is the
-        // correct cone axis estimate. However, if r decreases as h
-        // increases, -U is the correct cone axis estimate.
-        if ( hrSlope < 0 )
-        {
-            coneAxis = -coneAxis;
-            hrSlope = -hrSlope;
-            std::swap( hMin, hMax );
-            hMin = -hMin;
-            hMax = -hMax;
-        }
-
-        // Compute the extreme radial distance values for the points.
-        T rMin = rAverage + hrSlope * ( hMin - hAverage );
-        T rMax = rAverage + hrSlope * ( hMax - hAverage );
-        T hRange = hMax - hMin;
-        T rRange = rMax - rMin;
-
-        // Using trigonometry and right triangles, compute the tangent
-        // function of the cone angle.
-        T tanAngle = rRange / hRange;
-        coneAngle = std::atan2( rRange, hRange );
-
-        // Compute the cone vertex.
-        T offset = rMax / tanAngle - hMax;
-        coneVertex = center - offset * coneAxis;
-    }
 };
 
 }

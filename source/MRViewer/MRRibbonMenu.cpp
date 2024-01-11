@@ -2306,12 +2306,15 @@ void RibbonMenu::highlightBlocking_()
         Color highlightColor = Color( 255, 161, 13, 255 );
         ImGui::FocusWindow( window );
         auto drawList = window->DrawList;
-        drawList->PushClipRect( ImVec2( 0, 0 ), ImGui::GetIO().DisplaySize );
-        drawList->AddRect(
-            ImVec2( window->Pos.x - 2.0f * scaling, window->Pos.y - 2.0f * scaling ),
-            ImVec2( window->Pos.x + window->Size.x + 2.0f * scaling, window->Pos.y + window->Size.y + 2.0f * scaling ),
-            highlightColor.getUInt32(), 0.0f, 0, 2.0f * scaling );
-        drawList->PopClipRect();
+        if ( drawList->CmdBuffer.Size > 0)
+        {
+            drawList->PushClipRect( ImVec2( 0, 0 ), ImGui::GetIO().DisplaySize );
+            drawList->AddRect(
+                ImVec2( window->Pos.x - 2.0f * scaling, window->Pos.y - 2.0f * scaling ),
+                ImVec2( window->Pos.x + window->Size.x + 2.0f * scaling, window->Pos.y + window->Size.y + 2.0f * scaling ),
+                highlightColor.getUInt32(), 0.0f, 0, 2.0f * scaling );
+            drawList->PopClipRect();
+        }
     }
     getViewerInstance().incrementForceRedrawFrames();
     blockingHighlightTimer_ -= ImGui::GetIO().DeltaTime;

@@ -552,7 +552,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
 
 
     m.def( "makeDegenerateBandAroundRegion",
-        [=] ( Mesh& mesh, const FaceBitSet& faces ) { makeDegenerateBandAroundRegion( mesh, faces ); },
+        [] ( Mesh& mesh, const FaceBitSet& faces ) { makeDegenerateBandAroundRegion( mesh, faces ); },
         pybind11::arg( "mesh" ), pybind11::arg( "region" ),
         "creates a band of degenerate faces along the border of the specified region and the rest of the mesh\n"
         "the function is useful for extruding the region without changing the existing faces and creating holes\n"

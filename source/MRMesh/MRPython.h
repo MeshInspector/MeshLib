@@ -18,8 +18,9 @@ PYBIND11_MODULE( moduleName, m )\
 {\
     precall();\
     auto& adders = MR::PythonExport::instance().functions( #moduleName );\
-    for ( auto& f : adders )\
-        f( m );\
+    for ( auto& fs : adders )\
+        for ( auto& f : fs )\
+            f( m );\
 }\
 static MR::PythonFunctionAdder moduleName##_init_( #moduleName, &PyInit_##moduleName );
 
@@ -31,6 +32,19 @@ _Pragma("warning(push)") \
 _Pragma("warning(disable:4459)") \
     static MR::PythonFunctionAdder name##_adder_( #moduleName, __VA_ARGS__ ); \
 _Pragma("warning(pop)")
+
+#define MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, Type, ... ) \
+static std::optional<pybind11::class_<Type>> class##name;              \
+MR_ADD_PYTHON_CUSTOM_DEF( moduleName, decl##name, [] ( pybind11::module_& module ) \
+{                                                                      \
+    class##name.emplace( module, #name __VA_OPT__( , ) __VA_ARGS__ );  \
+}, MR::PythonExport::Priority::Declaration )
+
+#define MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( moduleName, name, ... ) \
+MR_ADD_PYTHON_CUSTOM_DEF( moduleName, impl##name, [] ( pybind11::module_& ) \
+{                                                                \
+    __VA_ARGS__ ( *class##name );                                \
+}, MR::PythonExport::Priority::Implementation )
 
 // !!! Its important to add vec after adding type
 // otherwise embedded python will not be able to re-import module (due to some issues with vector types in pybind11)
@@ -105,26 +119,33 @@ public:
 
     using PythonRegisterFuncton = std::function<void( pybind11::module_& m )>;
 
+    enum class Priority
+    {
+        Declaration,
+        Implementation,
+        Count,
+    };
+
     struct ModuleData
     {
         PyObject* ( *initFncPointer )( void );
-        std::vector<PythonRegisterFuncton> functions;
+        std::array<std::vector<PythonRegisterFuncton>, size_t( Priority::Count )> functions;
     };
 
-    void addFunc( const std::string& moduleName, PythonRegisterFuncton func )
+    void addFunc( const std::string& moduleName, PythonRegisterFuncton func, Priority priority )
     {
         auto& mod = moduleData_[moduleName];
-        mod.functions.push_back( func );
+        mod.functions[size_t( priority )].push_back( func );
     }
     void setInitFuncPtr( const std::string& moduleName, PyObject* ( *initFncPointer )( void ) )
     {
         auto& mod = moduleData_[moduleName];
         mod.initFncPointer = initFncPointer;
     }
-    const std::vector<PythonRegisterFuncton>& functions( const std::string& moduleName ) const
+    const std::array<std::vector<PythonRegisterFuncton>, size_t( Priority::Count )>& functions( const std::string& moduleName ) const
     {
         auto it = moduleData_.find( moduleName );
-        const static std::vector<PythonRegisterFuncton> empty;
+        const static std::array<std::vector<PythonRegisterFuncton>, size_t( Priority::Count )> empty;
         if ( it == moduleData_.end() )
             return empty;
         return it->second.functions;
@@ -143,7 +164,7 @@ private:
 
 struct PythonFunctionAdder
 {
-    MRMESH_API PythonFunctionAdder( const std::string& moduleName, std::function<void( pybind11::module_& m )> func );
+    MRMESH_API PythonFunctionAdder( const std::string& moduleName, std::function<void( pybind11::module_& m )> func, PythonExport::Priority priority = PythonExport::Priority::Implementation );
     MRMESH_API PythonFunctionAdder( const std::string& moduleName, PyObject* ( *initFncPointer )( void ) );
 };
 

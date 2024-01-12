@@ -33,19 +33,27 @@ _Pragma("warning(disable:4459)") \
     static MR::PythonFunctionAdder name##_adder_( #moduleName, __VA_ARGS__ ); \
 _Pragma("warning(pop)")
 
-#define MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, Type ) \
-static std::optional<pybind11::class_<Type>> name##_class_;       \
-MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_decl_, [] ( pybind11::module_& module ) \
-{                                                                 \
-    name##_class_.emplace( module, #name );                       \
+#define MR_ADD_PYTHON_CUSTOM_CLASS_DECL_0( moduleName, name, type ) \
+static std::optional<pybind11::class_<type>> name##_class_;
+
+#define MR_ADD_PYTHON_CUSTOM_CLASS_DECL_1( moduleName, name, type, ... ) \
+static std::optional<pybind11::class_<type, __VA_ARGS__>> name##_class_;
+
+#define MR_ADD_PYTHON_CUSTOM_CLASS_INST_0( moduleName, name ) \
+MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_inst_, [] ( pybind11::module_& module ) \
+{                                                             \
+    name##_class_.emplace( module, #name );                   \
 }, MR::PythonExport::Priority::Declaration )
 
-#define MR_ADD_PYTHON_CUSTOM_CLASS_DECL_ARGS( moduleName, name, Type, ... ) \
-static std::optional<pybind11::class_<Type>> name##_class_;                 \
-MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_decl_, [] ( pybind11::module_& module ) \
-{                                                                           \
-    name##_class_.emplace( module, #name, __VA_ARGS__ );                    \
+#define MR_ADD_PYTHON_CUSTOM_CLASS_INST_1( moduleName, name, ... ) \
+MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_inst_, [] ( pybind11::module_& module ) \
+{                                                                  \
+    name##_class_ = __VA_ARGS__;                                   \
 }, MR::PythonExport::Priority::Declaration )
+
+#define MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, type ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL_0( moduleName, name, type )       \
+MR_ADD_PYTHON_CUSTOM_CLASS_INST_0( moduleName, name )
 
 #define MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( moduleName, name, ... ) \
 MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_impl_, [] ( pybind11::module_& ) \

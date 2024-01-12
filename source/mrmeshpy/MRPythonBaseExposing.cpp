@@ -500,6 +500,15 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, ViewportMask, [] ( auto& cls )
         def_static( "any", &MR::ViewportMask::any, "mask meaning all or any viewports" );
 } )
 
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, SegmPointf, MR::SegmPointf )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SegmPointf, [] ( pybind11::module_& )
+{
+    (*MR_PYTHON_CUSTOM_CLASS( SegmPointf )).
+        def( pybind11::init<>() ).
+        def( pybind11::init<float>(), pybind11::arg( "a" ) ).
+        def_readwrite( "a", &MR::SegmPointf::a, "< a in [0,1], a=0 => point is in v0, a=1 => point is in v1" );
+} )
+
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, EdgePoint, MR::EdgePoint )
 MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, EdgePoint, [] ( auto& cls )
 {

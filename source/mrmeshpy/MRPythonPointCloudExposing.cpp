@@ -6,9 +6,11 @@
 #include <pybind11/stl.h>
 #include <pybind11/functional.h>
 
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, PointCloud, MR::PointCloud )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointCloud, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::PointCloud>( m, "PointCloud" ).
+    (*MR_PYTHON_CUSTOM_CLASS( PointCloud )).
         def( pybind11::init<>() ).
         def_readwrite( "points", &MR::PointCloud::points ).
         def_readwrite( "normals", &MR::PointCloud::normals ).

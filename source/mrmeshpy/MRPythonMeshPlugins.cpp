@@ -313,6 +313,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         def_readwrite( "maxValue", &MR::MeshToDistanceMapParams::maxValue, "Using of this parameter depends on useDistanceLimits" ).
         def_readwrite( "resolution", &MR::MeshToDistanceMapParams::resolution, "resolution of distance map" );
 
+    pybind11::class_<MR::ContourToDistanceMapParams>( m, "ContourToDistanceMapParams" ).
+        def( pybind11::init<>() );
+
     pybind11::class_<MR::DistanceMapToWorld>( m, "DistanceMapToWorld", "This structure store data to transform distance map to world coordinates" ).
         def( pybind11::init<>(), "Default ctor init all fields with zeros, make sure to fill them manually" ).
         def( pybind11::init<const MR::MeshToDistanceMapParams&>(), "Init fields by `MeshToDistanceMapParams` struct" ).

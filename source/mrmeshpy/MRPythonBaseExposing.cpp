@@ -244,46 +244,94 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Color, [] ( auto& cls )
 } )
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorColor, MR::Color )
 
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Matrix3f, MR::Matrix3f )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Matrix3f, [] ( auto& cls )
-{
-    cls.doc() =
-        "arbitrary 3x3 matrix";
-    cls.
-        def( pybind11::init<>() ).
-        def_readwrite( "x", &MR::Matrix3f::x, "rows, identity matrix by default" ).
-        def_readwrite( "y", &MR::Matrix3f::y ).
-        def_readwrite( "z", &MR::Matrix3f::z ).
-        def_static( "zero", &MR::Matrix3f::zero ).
-        def_static( "scale", ( MR::Matrix3f( * )( float ) noexcept )& MR::Matrix3f::scale, pybind11::arg( "s" ), "returns a matrix that scales uniformly" ).
-        def_static( "scale", ( MR::Matrix3f( * )( float, float, float ) noexcept )& MR::Matrix3f::scale,
-            pybind11::arg( "x" ), pybind11::arg( "y" ), pybind11::arg( "z" ), "returns a matrix that has its own scale along each axis" ).
-        def_static( "rotation", ( MR::Matrix3f( * )( const MR::Vector3f&, float ) noexcept )& MR::Matrix3f::rotation,
-            pybind11::arg( "axis" ), pybind11::arg( "angle" ),"creates matrix representing rotation around given axis on given angle").
-        def_static( "rotation", ( MR::Matrix3f( * )( const MR::Vector3f&, const MR::Vector3f& ) noexcept )& MR::Matrix3f::rotation,
-            pybind11::arg( "from" ), pybind11::arg( "to" ), "creates matrix representing rotation that after application to (from) makes (to) vector" ).
-        def_static( "rotationFromEuler", &MR::Matrix3f::rotationFromEuler, pybind11::arg( "eulerAngles" ), 
-            "creates matrix representing rotation from 3 Euler angles: R=R(z)*R(y)*R(x)\n"
-            "see more https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations" ).
-        def( "normSq", &MR::Matrix3f::normSq, "compute sum of squared matrix elements" ).
-        def( "norm", &MR::Matrix3f::norm ).
-        def( "det", &MR::Matrix3f::det, "computes determinant of the matrix" ).
-        def( "inverse", &MR::Matrix3f::inverse, "computes inverse matrix" ).
-        def( "transposed", &MR::Matrix3f::transposed, "computes transposed matrix" ).
-        def( "toEulerAngles", &MR::Matrix3f::toEulerAngles, "returns 3 Euler angles, assuming this is a rotation matrix composed as follows: R=R(z)*R(y)*R(x)" ).
-        def( pybind11::self + pybind11::self ).
-        def( pybind11::self - pybind11::self ).
-        def( pybind11::self* float() ).
-        def( pybind11::self* MR::Vector3f() ).
-        def( pybind11::self* pybind11::self ).
-        def( float()* pybind11::self ).
-        def( pybind11::self / float() ).
-        def( pybind11::self += pybind11::self ).
-        def( pybind11::self -= pybind11::self ).
-        def( pybind11::self *= float() ).
-        def( pybind11::self /= float() ).
-        def( pybind11::self == pybind11::self );
+#define MR_ADD_PYTHON_MATRIX3( name, type ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, name, type ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, name, [] ( auto& cls ) \
+{ \
+    using ValueType = typename type::ValueType; \
+    using VectorType = typename type::VectorType;       \
+    cls.doc() = \
+        "arbitrary 3x3 matrix"; \
+    cls. \
+        def( pybind11::init<>() ). \
+        def_readwrite( "x", &type::x, "rows, identity matrix by default" ). \
+        def_readwrite( "y", &type::y ). \
+        def_readwrite( "z", &type::z ). \
+        def_static( "zero", &type::zero ). \
+        def_static( "scale", ( type( * )( ValueType ) noexcept )& type::scale, pybind11::arg( "s" ), "returns a matrix that scales uniformly" ). \
+        def_static( "scale", ( type( * )( ValueType, ValueType, ValueType ) noexcept )& type::scale, \
+            pybind11::arg( "x" ), pybind11::arg( "y" ), pybind11::arg( "z" ), "returns a matrix that has its own scale along each axis" ). \
+        def_static( "rotation", ( type( * )( const VectorType&, ValueType ) noexcept )& type::rotation, \
+            pybind11::arg( "axis" ), pybind11::arg( "angle" ),"creates matrix representing rotation around given axis on given angle"). \
+        def_static( "rotation", ( type( * )( const VectorType&, const VectorType& ) noexcept )& type::rotation, \
+            pybind11::arg( "from" ), pybind11::arg( "to" ), "creates matrix representing rotation that after application to (from) makes (to) vector" ). \
+        def_static( "rotationFromEuler", &type::rotationFromEuler, pybind11::arg( "eulerAngles" ),  \
+            "creates matrix representing rotation from 3 Euler angles: R=R(z)*R(y)*R(x)\n" \
+            "see more https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations" ). \
+        def( "normSq", &type::normSq, "compute sum of squared matrix elements" ). \
+        def( "norm", &type::norm ). \
+        def( "det", &type::det, "computes determinant of the matrix" ). \
+        def( "inverse", &type::inverse, "computes inverse matrix" ). \
+        def( "transposed", &type::transposed, "computes transposed matrix" ). \
+        def( "toEulerAngles", &type::toEulerAngles, "returns 3 Euler angles, assuming this is a rotation matrix composed as follows: R=R(z)*R(y)*R(x)" ). \
+        def( pybind11::self + pybind11::self ). \
+        def( pybind11::self - pybind11::self ). \
+        def( pybind11::self * ValueType() ). \
+        def( pybind11::self * VectorType() ). \
+        def( pybind11::self * pybind11::self ). \
+        def( ValueType() * pybind11::self ). \
+        def( pybind11::self / ValueType() ). \
+        def( pybind11::self += pybind11::self ). \
+        def( pybind11::self -= pybind11::self ). \
+        def( pybind11::self *= ValueType() ). \
+        def( pybind11::self /= ValueType() ). \
+        def( pybind11::self == pybind11::self ); \
 } )
+
+MR_ADD_PYTHON_MATRIX3( Matrix3f, MR::Matrix3f )
+MR_ADD_PYTHON_MATRIX3( Matrix3d, MR::Matrix3d )
+
+#define MR_ADD_PYTHON_MATRIX2( name, type ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, name, type ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, name, [] ( auto& cls ) \
+{ \
+    using ValueType = typename type::ValueType; \
+    using VectorType = typename type::VectorType; \
+    cls.doc() = \
+        "arbitrary 2x2 matrix"; \
+    cls. \
+        def( pybind11::init<>() ). \
+        def_readwrite( "x", &type::x, "rows, identity matrix by default" ). \
+        def_readwrite( "y", &type::y ). \
+        def_static( "zero", &type::zero ). \
+        def_static( "scale", ( type( * )( ValueType ) noexcept )& type::scale, pybind11::arg( "s" ), "returns a matrix that scales uniformly" ). \
+        def_static( "scale", ( type( * )( ValueType, ValueType ) noexcept )& type::scale, \
+                    pybind11::arg( "x" ), pybind11::arg( "y" ), "returns a matrix that has its own scale along each axis" ). \
+        def_static( "rotation", ( type( * )( ValueType ) noexcept )& type::rotation, \
+                    pybind11::arg( "angle" ),"creates matrix representing rotation around origin on given angle"). \
+        def_static( "rotation", ( type( * )( const VectorType&, const VectorType& ) noexcept )& type::rotation, \
+                    pybind11::arg( "from" ), pybind11::arg( "to" ), "creates matrix representing rotation that after application to (from) makes (to) vector" ). \
+        def( "normSq", &type::normSq, "compute sum of squared matrix elements" ). \
+        def( "norm", &type::norm ). \
+        def( "det", &type::det, "computes determinant of the matrix" ). \
+        def( "inverse", &type::inverse, "computes inverse matrix" ). \
+        def( "transposed", &type::transposed, "computes transposed matrix" ). \
+        def( pybind11::self + pybind11::self ). \
+        def( pybind11::self - pybind11::self ). \
+        def( pybind11::self * ValueType() ). \
+        def( pybind11::self * VectorType() ). \
+        def( pybind11::self * pybind11::self ). \
+        def( ValueType() * pybind11::self ). \
+        def( pybind11::self / ValueType() ). \
+        def( pybind11::self += pybind11::self ). \
+        def( pybind11::self -= pybind11::self ). \
+        def( pybind11::self *= ValueType() ). \
+        def( pybind11::self /= ValueType() ). \
+        def( pybind11::self == pybind11::self ); \
+} )
+
+MR_ADD_PYTHON_MATRIX2( Matrix2f, MR::Matrix2f )
+MR_ADD_PYTHON_MATRIX2( Matrix2d, MR::Matrix2d )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, LineSegm2f, MR::LineSegm2f )
 MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, LineSegm2f, [] ( auto& cls )

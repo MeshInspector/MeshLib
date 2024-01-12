@@ -29,8 +29,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def_readwrite( "normRef", &MR::VertPair::normRef, "surface normal in a vertex on the reference mesh (after applying Xf)" ).
         def_readwrite( "vertId", &MR::VertPair::vertId, "ID of the floating mesh vertex (usually applying Xf required)" ).
         def_readwrite( "normalsAngleCos", &MR::VertPair::normalsAngleCos,
-                       "This is cosine between normals in first(floating mesh) and second(reference mesh) points\n"
-                       "It evaluates how good is this pair" ).
+            "This is cosine between normals in first(floating mesh) and second(reference mesh) points\n"
+            "It evaluates how good is this pair" ).
         def_readwrite( "vertDist2", &MR::VertPair::vertDist2, "Storing squared distance between vertices" ).
         def_readwrite( "weight", &MR::VertPair::weight, "weight of the pair with respect to the sum of adjoining triangles square" );
 

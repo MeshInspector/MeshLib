@@ -145,6 +145,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PartMapping, [] ( pybind11::module_& )
         def_readwrite( "tgt2srcEdges", &PartMapping::tgt2srcEdges, "this.id -> from.id" );
 } )
 
+
 MeshTopology topologyFromTriangles( const Triangulation& t, const MeshBuilder::BuildSettings& s )
 {
     return MeshBuilder::fromTriangles( t, s );

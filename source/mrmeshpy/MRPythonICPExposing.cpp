@@ -3,9 +3,9 @@
 #include "MRMesh/MRMesh.h"
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, VertPair, MR::VertPair )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, VertPair, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, VertPair, [] ( pybind11::module_& )
 {
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( VertPair )).
         def( pybind11::init<>() ).
         def_readwrite( "refPoint", &MR::VertPair::refPoint, "coordinates of the closest point on reference mesh (after applying refXf)" ).
         def_readwrite( "norm", &MR::VertPair::norm, "surface normal in a vertex on the floating mesh (after applying Xf)" ).

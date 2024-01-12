@@ -32,18 +32,18 @@ MR_INIT_PYTHON_MODULE( mrmeshpy )
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorFloat, float )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, ExpectedVoid, MR::VoidOrErrStr )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, ExpectedVoid, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ExpectedVoid, [] ( pybind11::module_& )
 {
     using expectedType = MR::VoidOrErrStr;
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( ExpectedVoid )).
         def( "has_value", &expectedType::has_value ).
         def( "error", ( const std::string& ( expectedType::* )( )const& )& expectedType::error );
 } )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Path, std::filesystem::path )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Path, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Path, [] ( pybind11::module_& )
 {
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( Path )).
         def( pybind11::init( [] ( const std::string& s )
         {
             return MR::pathFromUtf8( s );
@@ -56,12 +56,12 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Path, [] ( auto& cls )
 
 #define MR_ADD_PYTHON_BOX( name, VectorType ) \
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, name, MR::Box<VectorType> ) \
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, name, [] ( auto& cls )      \
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )      \
 {\
     using BoxType = MR::Box<VectorType>;      \
-    cls.doc() =                               \
+    (*MR_PYTHON_CUSTOM_CLASS( name )).doc() =                               \
         "Box given by its min- and max- corners";                      \
-    cls.                                      \
+    (*MR_PYTHON_CUSTOM_CLASS( name )).                                      \
         def( pybind11::init<>() ).\
         def_readwrite( "min", &BoxType::min, "create invalid box by default" ).\
         def_readwrite( "max", &BoxType::max ).\
@@ -82,10 +82,6 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, name, [] ( auto& cls )      \
         def( "insignificantlyExpanded", &BoxType::insignificantlyExpanded, "expands min and max to their closest representable value" ).\
         def( pybind11::self == pybind11::self ).\
         def( pybind11::self != pybind11::self );\
-} )                                           \
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )  \
-{                                             \
-    using BoxType = MR::Box<VectorType>;      \
     m.def( "transformed", ( BoxType( * )( const BoxType&, const MR::AffineXf<VectorType>& ) ) &MR::transformed<VectorType>, pybind11::arg( "box" ), pybind11::arg( "xf" ),\
         "find the tightest box enclosing this one after transformation" );\
     m.def( "transformed", ( BoxType( * )( const BoxType&, const MR::AffineXf<VectorType>* ) ) &MR::transformed<VectorType>, pybind11::arg( "box" ), pybind11::arg( "xf" ),\
@@ -99,11 +95,11 @@ MR_ADD_PYTHON_BOX( Box3d, MR::Vector3d )
 
 #define MR_ADD_PYTHON_VECTOR2(name, type) \
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, name, MR::Vector2<type> ) \
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, name, [] ( auto& cls ) \
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m ) \
 {\
     using VectorType = MR::Vector2<type>;\
-    cls.doc() = "two-dimensional vector";\
-    cls.\
+    (*MR_PYTHON_CUSTOM_CLASS( name )).doc() = "two-dimensional vector";\
+    (*MR_PYTHON_CUSTOM_CLASS( name )).\
         def( pybind11::init<>() ).\
         def( pybind11::init<type, type>(), pybind11::arg( "x" ), pybind11::arg( "y" ) ).\
         /*def( pybind11::init<const MR::Vector2i&>(), pybind11::arg( "v" ) ).\
@@ -138,10 +134,6 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, name, [] ( auto& cls ) \
             ss << #name << "[" << data.x << ", " << data.y << "]";\
             return ss.str();\
         } );\
-} )\
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
-{\
-    using VectorType = MR::Vector2<type>;\
     m.def( "dot", ( type( * )( const VectorType&, const VectorType& ) )& MR::dot<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "dot product" );\
     m.def( "cross", ( type( * )( const VectorType&, const VectorType& ) )& MR::cross<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "cross product" );\
 } )
@@ -157,11 +149,11 @@ MR_ADD_PYTHON_VEC( mrmeshpy, Contours2d, MR::Contour2d )
 
 #define MR_ADD_PYTHON_VECTOR3(name, type)\
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, name, MR::Vector3<type> )\
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, name, [] ( auto& cls )\
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
 {\
     using VectorType = MR::Vector3<type>;\
-    cls.doc() = "three-dimensional vector";\
-    cls.\
+    (*MR_PYTHON_CUSTOM_CLASS( name )).doc() = "three-dimensional vector";\
+    (*MR_PYTHON_CUSTOM_CLASS( name )).\
         def( pybind11::init<>() ).\
         def( pybind11::init<type, type, type>(), pybind11::arg( "x" ), pybind11::arg( "y" ), pybind11::arg( "z" ) ).\
         /*def( pybind11::init<const MR::Vector2i&>(), pybind11::arg( "v" ) ).\
@@ -193,14 +185,10 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, name, [] ( auto& cls )\
         } );\
     if constexpr ( !std::is_same_v<type, int> ) \
     {\
-        cls.\
+        (*MR_PYTHON_CUSTOM_CLASS( name )).\
             def( "length", &VectorType::length ).\
             def( "normalized", &VectorType::normalized );\
     }\
-} )\
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
-{\
-    using VectorType = MR::Vector3<type>;\
     m.def( "dot", ( type( * )( const VectorType&, const VectorType& ) )& MR::dot<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "dot product" );\
     m.def( "cross", ( VectorType( * )( const VectorType&, const VectorType& ) )& MR::cross<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "cross product" );\
     m.def( "mixed", ( type( * )( const VectorType&, const VectorType&, const VectorType& ) )& MR::mixed<type>,\
@@ -223,9 +211,9 @@ MR_ADD_PYTHON_VEC( mrmeshpy, Contour3d, MR::Vector3d )
 MR_ADD_PYTHON_VEC( mrmeshpy, Contours3d, MR::Contour3d )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Color, MR::Color )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Color, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Color, [] ( pybind11::module_& )
 {
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( Color )).
         def( pybind11::init<>() ).
         def( pybind11::init<int, int, int, int>(),
             pybind11::arg( "r" ), pybind11::arg( "g" ), pybind11::arg( "b" ), pybind11::arg( "a" ) = 255 ).
@@ -246,13 +234,13 @@ MR_ADD_PYTHON_VEC( mrmeshpy, vectorColor, MR::Color )
 
 #define MR_ADD_PYTHON_MATRIX3( name, type ) \
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, name, type ) \
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, name, [] ( auto& cls ) \
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& ) \
 { \
     using ValueType = typename type::ValueType; \
     using VectorType = typename type::VectorType;       \
-    cls.doc() = \
+    (*MR_PYTHON_CUSTOM_CLASS( name )).doc() = \
         "arbitrary 3x3 matrix"; \
-    cls. \
+    (*MR_PYTHON_CUSTOM_CLASS( name )). \
         def( pybind11::init<>() ). \
         def_readwrite( "x", &type::x, "rows, identity matrix by default" ). \
         def_readwrite( "y", &type::y ). \
@@ -293,13 +281,13 @@ MR_ADD_PYTHON_MATRIX3( Matrix3d, MR::Matrix3d )
 
 #define MR_ADD_PYTHON_MATRIX2( name, type ) \
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, name, type ) \
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, name, [] ( auto& cls ) \
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& ) \
 { \
     using ValueType = typename type::ValueType; \
     using VectorType = typename type::VectorType; \
-    cls.doc() = \
+    (*MR_PYTHON_CUSTOM_CLASS( name )).doc() = \
         "arbitrary 2x2 matrix"; \
-    cls. \
+    (*MR_PYTHON_CUSTOM_CLASS( name )). \
         def( pybind11::init<>() ). \
         def_readwrite( "x", &type::x, "rows, identity matrix by default" ). \
         def_readwrite( "y", &type::y ). \
@@ -334,11 +322,11 @@ MR_ADD_PYTHON_MATRIX2( Matrix2f, MR::Matrix2f )
 MR_ADD_PYTHON_MATRIX2( Matrix2d, MR::Matrix2d )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, LineSegm2f, MR::LineSegm2f )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, LineSegm2f, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LineSegm2f, [] ( pybind11::module_& )
 {
-    cls.doc() =
+    (*MR_PYTHON_CUSTOM_CLASS( LineSegm2f )).doc() =
         "a segment of 2-dimensional line";
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( LineSegm2f )).
         def( pybind11::init<>() ).
         def( pybind11::init<const MR::Vector2f&, const MR::Vector2f&>() ).
         def_readwrite( "a", &MR::LineSegm2f::a ).
@@ -346,11 +334,11 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, LineSegm2f, [] ( auto& cls )
 } )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, LineSegm3f, MR::LineSegm3f )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, LineSegm3f, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LineSegm3f, [] ( pybind11::module_& )
 {
-    cls.doc() =
+    (*MR_PYTHON_CUSTOM_CLASS( LineSegm3f )).doc() =
         "a segment of 3-dimensional line";
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( LineSegm3f )).
         def( pybind11::init<>() ).
         def( pybind11::init<const MR::Vector3f&, const MR::Vector3f&>() ).
         def_readwrite( "a", &MR::LineSegm3f::a ).
@@ -366,11 +354,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LineSegm, [] ( pybind11::module_& m )
 } )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, PointOnFace, MR::PointOnFace )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, PointOnFace, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointOnFace, [] ( pybind11::module_& )
 {
-    cls.doc() =
+    (*MR_PYTHON_CUSTOM_CLASS( PointOnFace )).doc() =
         "point located on some mesh face";
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( PointOnFace )).
         def( pybind11::init<>() ).
         def_readwrite( "face", &MR::PointOnFace::face ).
         def_readwrite( "point", &MR::PointOnFace::point );
@@ -378,11 +366,11 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, PointOnFace, [] ( auto& cls )
 
 #define MR_ADD_PYTHON_AFFINE_XF( name ) \
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, name, MR::name ) \
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, name, [] ( auto& cls ) \
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& ) \
 {                                       \
     using AffineXfType = MR::name;      \
-    cls.doc() = "affine transformation: y = A*x + b, where A in VxV, and b in V";       \
-    cls.                                \
+    (*MR_PYTHON_CUSTOM_CLASS( name )).doc() = "affine transformation: y = A*x + b, where A in VxV, and b in V";       \
+    (*MR_PYTHON_CUSTOM_CLASS( name )).                                \
         def( pybind11::init<>() ).      \
         def_readwrite( "A", &AffineXfType::A ).                                         \
         def_readwrite( "b", &AffineXfType::b ).                                         \
@@ -404,11 +392,11 @@ MR_ADD_PYTHON_AFFINE_XF( AffineXf2d )
 MR_ADD_PYTHON_AFFINE_XF( AffineXf3d )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Line3f, MR::Line3f )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Line3f, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Line3f, [] ( pybind11::module_& )
 {
-    cls.doc() =
+    (*MR_PYTHON_CUSTOM_CLASS( Line3f )).doc() =
         "3-dimensional line: cross( x - p, d ) = 0";
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( Line3f )).
         def( pybind11::init<>() ).
         def( pybind11::init<const MR::Vector3f&, const MR::Vector3f&>(), pybind11::arg( "p" ), pybind11::arg( "d" ) ).
         def_readwrite( "p", &MR::Line3f::p ).
@@ -419,11 +407,11 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Line3f, [] ( auto& cls )
 } )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Line3d, MR::Line3d )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Line3d, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Line3d, [] ( pybind11::module_& )
 {
-    cls.doc() =
+    (*MR_PYTHON_CUSTOM_CLASS( Line3d )).doc() =
         "3-dimensional line: cross( x - p, d ) = 0";
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( Line3d )).
         def( pybind11::init<>() ).
         def( pybind11::init<const MR::Vector3d&, const MR::Vector3d&>(), pybind11::arg( "p" ), pybind11::arg( "d" ) ).
         def_readwrite( "p", &MR::Line3d::p ).
@@ -434,20 +422,20 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Line3d, [] ( auto& cls )
 } )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Plane3f, MR::Plane3f )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Plane3f, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Plane3f, [] ( pybind11::module_& )
 {
-    cls.doc() =
+    (*MR_PYTHON_CUSTOM_CLASS( Plane3f )).doc() =
         "3-dimensional plane: dot(n,x) - d = 0";
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( Plane3f )).
         def( pybind11::init<>() ).
         def_readwrite( "n", &MR::Plane3f::n ).
         def_readwrite( "d", &MR::Plane3f::d );
 } )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, FaceId, MR::FaceId )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, FaceId, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FaceId, [] ( pybind11::module_& )
 {
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( FaceId )).
         def( pybind11::init<>() ).
         def( pybind11::init<int>() ).
         def( "valid", &MR::FaceId::valid ).
@@ -455,9 +443,9 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, FaceId, [] ( auto& cls )
 } )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, VertId, MR::VertId )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, VertId, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, VertId, [] ( pybind11::module_& )
 {
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( VertId )).
         def( pybind11::init<>() ).
         def( pybind11::init<int>() ).
         def( "valid", &MR::VertId::valid ).
@@ -465,9 +453,9 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, VertId, [] ( auto& cls )
 } )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, UndirectedEdgeId, MR::UndirectedEdgeId )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, UndirectedEdgeId, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, UndirectedEdgeId, [] ( pybind11::module_& )
 {
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( UndirectedEdgeId )).
         def( pybind11::init<>() ).
         def( pybind11::init<int>() ).
         def( "valid", &MR::UndirectedEdgeId::valid ).
@@ -475,12 +463,12 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, UndirectedEdgeId, [] ( auto& cls )
 } )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, ViewportId, MR::ViewportId )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, ViewportId, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ViewportId, [] ( pybind11::module_& )
 {
-    cls.doc() =
+    (*MR_PYTHON_CUSTOM_CLASS( ViewportId )).doc() =
         "stores unique identifier of a viewport, which is power of two;\n"
         "id=0 has a special meaning of default viewport in some contexts";
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( ViewportId )).
         def( pybind11::init<>() ).
         def( pybind11::init<unsigned>() ).
         def( "value", &MR::ViewportId::value ).
@@ -488,11 +476,11 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, ViewportId, [] ( auto& cls )
 } )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, ViewportMask, MR::ViewportMask )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, ViewportMask, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ViewportMask, [] ( pybind11::module_& )
 {
-    cls.doc() =
+    (*MR_PYTHON_CUSTOM_CLASS( ViewportMask )).doc() =
         "stores mask of viewport unique identifiers";
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( ViewportMask )).
         def( pybind11::init<>() ).
         def( pybind11::init<unsigned>() ).
         def( pybind11::init<MR::ViewportId>() ).
@@ -510,11 +498,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SegmPointf, [] ( pybind11::module_& )
 } )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, EdgePoint, MR::EdgePoint )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, EdgePoint, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgePoint, [] ( pybind11::module_& )
 {
-    cls.doc() =
+    (*MR_PYTHON_CUSTOM_CLASS( EdgePoint )).doc() =
         "encodes a point on a mesh edge";
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( EdgePoint )).
         def( pybind11::init<>() ).
         def( pybind11::init<MR::EdgeId, float>(), pybind11::arg( "e" ), pybind11::arg( "a" ) ).
         def_readwrite( "e", &MR::EdgePoint::e ).
@@ -531,12 +519,12 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, EdgePoint, [] ( auto& cls )
 } )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, TriPointf, MR::TriPointf )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, TriPointf, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, TriPointf, [] ( pybind11::module_& )
 {
-    cls.doc() =
+    (*MR_PYTHON_CUSTOM_CLASS( TriPointf )).doc() =
         "encodes a point inside a triangle using barycentric coordinates\n"
         "\tNotations used below: v0, v1, v2 - points of the triangle";
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( TriPointf )).
         def( pybind11::init<>() ).
         def( pybind11::init<float, float>(), pybind11::arg( "a" ), pybind11::arg( "b" ) ).
         def( pybind11::init<const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&>(),
@@ -553,15 +541,15 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, TriPointf, [] ( auto& cls )
 } )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, MeshTriPoint, MR::MeshTriPoint )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, MeshTriPoint, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTriPoint, [] ( pybind11::module_& )
 {
-    cls.doc() =
+    (*MR_PYTHON_CUSTOM_CLASS( MeshTriPoint )).doc() =
         "encodes a point inside a triangular mesh face using barycentric coordinates\n"
         "\tNotations used below:\n" 
         "\t v0 - the value in org( e )\n"
         "\t v1 - the value in dest( e )\n"
         "\t v2 - the value in dest( next( e ) )" ;
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( MeshTriPoint )).
         def( pybind11::init<>() ).
         def( pybind11::init<MR::EdgeId, MR::TriPointf>(), pybind11::arg( "e" ), pybind11::arg( "bary" ) ).
         def( pybind11::init<const MR::EdgePoint&>(), pybind11::arg( "ep" ) ).
@@ -582,9 +570,9 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, MeshTriPoint, [] ( auto& cls )
 } )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, EdgeId, MR::EdgeId )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, EdgeId, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeId, [] ( pybind11::module_& )
 {
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( EdgeId )).
         def( pybind11::init<>() ).
         def( pybind11::init<int>() ).
         def( pybind11::init<MR::UndirectedEdgeId>() ).
@@ -607,10 +595,10 @@ MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaces, MR::FaceId )
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorEdgePath, MR::EdgePath )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, BoostBitSet, boost::dynamic_bitset<uint64_t> )
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, BoostBitSet, [] ( auto& cls )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, BoostBitSet, [] ( pybind11::module_& )
 {
     using type = boost::dynamic_bitset<uint64_t>;
-    cls.
+    (*MR_PYTHON_CUSTOM_CLASS( BoostBitSet )).
         def( "size", &type::size ).
         def( "count", &type::count );
 } )
@@ -618,9 +606,9 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, BoostBitSet, [] ( auto& cls )
 #define ADD_PYTHON_BITSET( name, type ) \
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL_1( mrmeshpy, name, type, boost::dynamic_bitset<uint64_t> ) \
 MR_ADD_PYTHON_CUSTOM_CLASS_INST_0( mrmeshpy, name )                                        \
-MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, name, [] ( auto& cls )                          \
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& )                          \
 {\
-    cls.\
+    (*MR_PYTHON_CUSTOM_CLASS( name )).\
         def( pybind11::init<>() ).\
         def( "test", &type::test ).\
         def( "resize", &type::resize ).\

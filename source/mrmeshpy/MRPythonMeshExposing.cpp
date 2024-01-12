@@ -267,9 +267,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
     m.def( "copyMesh", &pythonCopyMeshFunction, pybind11::arg( "mesh" ), "returns copy of input mesh" );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPart, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, MeshPart, MR::MeshPart )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, MeshPart, [] ( auto& cls )
 {
-    pybind11::class_<MeshPart>( m, "MeshPart", "stores reference on whole mesh (if region is nullptr) or on its part (if region pointer is valid)" ).
+    cls.doc() =
+        "stores reference on whole mesh (if region is nullptr) or on its part (if region pointer is valid)";
+    cls.
         def( pybind11::init<const Mesh&, const FaceBitSet*>(), pybind11::arg( "mesh" ), pybind11::arg( "region" ) = nullptr ).
         def_readwrite( "region", &MeshPart::region, "nullptr here means whole mesh" );
 

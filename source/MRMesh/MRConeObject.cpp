@@ -177,4 +177,207 @@ void ConeObject::constructMesh_()
     setDirtyFlags( DIRTY_ALL );
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//////////////////
+///// TESTS //////
+//////////////////
+
+// 1 LM eigen minimizator test 
+
+#if 0
+
+struct testLMfunctor
+{
+    // 'm' pairs of (x, f(x))
+    Eigen::MatrixXf measuredValues;
+
+    // Compute 'm' errors, one for each data point, for the given parameter values in 'x'
+    int operator()( const Eigen::VectorXf& x, Eigen::VectorXf& fvec ) const
+    {
+        // 'x' has dimensions n x 1
+        // It contains the current estimates for the parameters.
+
+        // 'fvec' has dimensions m x 1
+        // It will contain the error for each data point.
+
+        float aParam = x( 0 );
+        float bParam = x( 1 );
+        float cParam = x( 2 );
+
+        for ( int i = 0; i < values(); i++ )
+        {
+            float xValue = measuredValues( i, 0 );
+            float yValue = measuredValues( i, 1 );
+
+            fvec( i ) = yValue - ( aParam * xValue * xValue + bParam * xValue + cParam );
+        }
+        return 0;
+    }
+
+    // Compute the jacobian of the errors
+    int df( const Eigen::VectorXf& x, Eigen::MatrixXf& fjac ) const
+    {
+        // 'x' has dimensions n x 1
+        // It contains the current estimates for the parameters.
+
+        // 'fjac' has dimensions m x n
+        // It will contain the jacobian of the errors, calculated numerically in this case.
+
+        float epsilon;
+        epsilon = 1e-5f;
+
+        for ( int i = 0; i < x.size(); i++ )
+        {
+            Eigen::VectorXf xPlus( x );
+            xPlus( i ) += epsilon;
+            Eigen::VectorXf xMinus( x );
+            xMinus( i ) -= epsilon;
+
+            Eigen::VectorXf fvecPlus( values() );
+            operator()( xPlus, fvecPlus );
+
+            Eigen::VectorXf fvecMinus( values() );
+            operator()( xMinus, fvecMinus );
+
+            Eigen::VectorXf fvecDiff( values() );
+            fvecDiff = ( fvecPlus - fvecMinus ) / ( 2.0f * epsilon );
+
+            fjac.block( 0, i, values(), 1 ) = fvecDiff;
+        }
+
+        return 0;
+    }
+
+    // Number of data points, i.e. values.
+    int m;
+
+    // Returns 'm', the number of values.
+    int values() const
+    {
+        return m;
+    }
+
+    // The number of parameters, i.e. inputs.
+    int n;
+
+    // Returns 'n', the number of inputs.
+    int inputs() const
+    {
+        return n;
+    }
+
+};
+#endif 
+
+#if  0
+
+#pragma warning(push)
+#pragma warning(disable: 4068) // unknown pragmas
+#pragma warning(disable: 4127) // conditional expression is constant
+#pragma warning(disable: 4464) // relative include path contains '..'
+#pragma warning(disable: 4643) // Forward declaring 'tuple' in namespace std is not permitted by the C++ Standard.
+#pragma warning(disable: 5054) // operator '|': deprecated between enumerations of different types
+#pragma warning(disable: 4244) // casting float to double 
+
+#include <unsupported/Eigen/NonLinearOptimization>
+#include <unsupported/Eigen/NumericalDiff>
+
+#pragma warning(pop)
+
+
+// Rosenbrock function (https://habr.com/ru/articles/308626/)
+struct RosenbrockFunctor
+{
+    using InputType = Eigen::Matrix<double, Eigen::Dynamic, 1>;
+    using ValueType = Eigen::Matrix<double, Eigen::Dynamic, 1>;
+    using JacobianType = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>;
+
+
+
+    double rosenbrock2( const Eigen::Matrix<double, 2, 1>& x )
+    {
+        constexpr int rA = 1;
+        constexpr int rB = 10;
+
+        auto first = ( rA - x( 0 ) );
+        auto second = x( 1 ) - x( 0 ) * x( 0 );
+        return first * first + rB * second * second;
+    }
+
+
+    void rosenbrock( const Eigen::Matrix<double, 2, 1>& x, Eigen::Matrix<double, 2, 1>& f )
+    {
+        double a = 1.0;
+        double b = 100.0;
+        f( 0 ) = a * ( 1 - x( 0 ) );
+        f( 1 ) = b * ( x( 1 ) - x( 0 ) * x( 0 ) );
+    };
+
+    // Rosenbrock function jacobian
+    void rosenbrockJacobian( const Eigen::Matrix<double, 2, 1>& x, Eigen::Matrix<double, 2, 2>& jacobian )
+    {
+        double a = 1.0;
+        double b = 100.0;
+        jacobian( 0, 0 ) = -a;
+        jacobian( 0, 1 ) = 0;
+        jacobian( 1, 0 ) = 2 * b * x( 0 );
+        jacobian( 1, 1 ) = b;
+    };
+    int operator()( const InputType& x, ValueType& f ) const
+    {
+        double a = 1.0;
+        double b = 100.0;
+        f( 0 ) = a * ( 1 - x( 0 ) );
+        f( 1 ) = b * ( x( 1 ) - x( 0 ) * x( 0 ) );
+        return 0;
+    };
+    // Compute the jacobian of the errors
+    int df( const InputType& x, JacobianType& jacobian ) const
+    {
+        double a = 1.0;
+        double b = 100.0;
+        jacobian( 0, 0 ) = -a;
+        jacobian( 0, 1 ) = 0;
+        jacobian( 1, 0 ) = 2 * b * x( 0 );
+        jacobian( 1, 1 ) = b;
+        return 0;
+    }
+
+};
+// GTest test to check the optimization of the Rosenbrock function
+TEST( MRMesh, LevenbergMarquardtTestRosenbrockOptimization )
+{
+    Eigen::VectorX<double> x( 2 );
+    x( 0 ) = 2.0;
+    x( 1 ) = 2.0;
+
+    // Initialize the LevenbergMarquardt optimization object
+    RosenbrockFunctor rosenbrockFunctor;
+    Eigen::LevenbergMarquardt<RosenbrockFunctor, double> lm( rosenbrockFunctor );
+    lm.parameters.maxfev = 1000; // Maximum number of iterations
+    lm.parameters.ftol = 1e-6; // Convergence threshold
+
+    // optimization
+    auto result = lm.minimize( x );
+    std::cout << "Optimization result: " << result << " x0:" << x( 0 ) << " x1:" << x( 1 ) << std::endl;
+
+    // Checking the optimization result
+    EXPECT_NEAR( x( 0 ), 1.0, 1e-3 ); // Проверка значения x1
+    EXPECT_NEAR( x( 1 ), 1.0, 1e-3 ); // Проверка значения x2
+}
+#endif 
+
 }

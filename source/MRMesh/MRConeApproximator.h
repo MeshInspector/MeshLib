@@ -38,11 +38,19 @@ struct ConeFittingFunctor
 {
     using Scalar = T;
     using InputType = Eigen::Matrix<T, Eigen::Dynamic, 1>;
-    using InputType2 = Eigen::Vector<T, Eigen::Dynamic>;
     using ValueType = Eigen::Matrix<T, Eigen::Dynamic, 1>;
     using JacobianType = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
 
     std::vector <Eigen::Vector3<T>> points;
+
+    void setPoints( const std::vector<MR::Vector3<T>>& pointsMR )
+    {
+        points.reserve( pointsMR.size() );
+        for ( auto i = 0; i < pointsMR.size(); ++i )
+        {
+            points.push_back( toEigen( pointsMR[i] ) );
+        }
+    }
 
     int inputs() const
     {
@@ -58,8 +66,15 @@ struct ConeFittingFunctor
     // where: D = V - X[i] and P = (V,W) 
     int operator()( const InputType& x, ValueType& F ) const
     {
-        Eigen::Vector3<T> V = x.head<3>();
-        Eigen::Vector3<T> W = x.segment<3>( 3 );
+        Eigen::Vector3<T> V;
+        V( 0 ) = x( 0 );
+        V( 1 ) = x( 1 );
+        V( 2 ) = x( 2 );
+
+        Eigen::Vector3<T> W;
+        W( 0 ) = x( 3 );
+        W( 1 ) = x( 4 );
+        W( 2 ) = x( 5 );
 
         for ( int i = 0; i < points.size(); ++i )
         {
@@ -74,8 +89,16 @@ struct ConeFittingFunctor
     // function name requested by Eigen lib.
     int df( const InputType& x, JacobianType& J ) const
     {
-        Eigen::Vector3<T> V = x.head<3>();
-        Eigen::Vector3<T> W = x.segment<3>( 3 ).normalized();
+
+        Eigen::Vector3<T> V;
+        V( 0 ) = x( 0 );
+        V( 1 ) = x( 1 );
+        V( 2 ) = x( 2 );
+
+        Eigen::Vector3<T> W;
+        W( 0 ) = x( 3 );
+        W( 1 ) = x( 4 );
+        W( 2 ) = x( 5 );
 
         for ( int i = 0; i < points.size(); ++i )
         {
@@ -116,10 +139,11 @@ public:
 
     {
         ConeFittingFunctor<T> coneFittingFunctor;
+        coneFittingFunctor.setPoints( points );
         Eigen::LevenbergMarquardt<ConeFittingFunctor<T>, T> lm( coneFittingFunctor );
+
+
         MR::Vector3<T>& coneAxis = cone.direction();
-
-
         if ( useConeInputAsInitialGuess )
         {
             coneAxis = coneAxis.normalized();

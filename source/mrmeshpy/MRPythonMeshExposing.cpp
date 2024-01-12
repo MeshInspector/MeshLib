@@ -22,6 +22,7 @@
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRPartMapping.h"
 #include "MRMesh/MRBuffer.h"
+#include "MRMesh/MRMeshExtrude.h"
 #include <pybind11/functional.h>
 
 using namespace MR;
@@ -563,6 +564,15 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
         "finds all pairs of colliding triangles from two meshes or two mesh regions\n"
         "\trigidB2A - rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation\n"
         "\tfirstIntersectionOnly - if true then the function returns at most one pair of intersecting triangles and returns faster" );
+
+
+    m.def( "makeDegenerateBandAroundRegion",
+        [] ( Mesh& mesh, const FaceBitSet& faces ) { makeDegenerateBandAroundRegion( mesh, faces ); },
+        pybind11::arg( "mesh" ), pybind11::arg( "region" ),
+        "creates a band of degenerate faces along the border of the specified region and the rest of the mesh\n"
+        "the function is useful for extruding the region without changing the existing faces and creating holes\n"
+        "\tmesh - the target mesh\n"
+        "\tregion - the region required to be separated by a band of degenerate faces" );
 } )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaceFace, FaceFace )

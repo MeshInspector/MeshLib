@@ -39,22 +39,22 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
-    /// calculates radius from xf
+    /// calculates cone angle from xf. It is an angle betweeh main axis and side.
     MRMESH_API float getAngle() const;
-    /// calculates center from xf
-    MRMESH_API Vector3f getCenter() const;
-    /// updates xf to fit given cone angle
+    /// updates xf to fit given cone angle.  It is an angle betweeh main axis and side
     MRMESH_API void setAngle( float angle );
-    /// updates xf to fit given center
+    /// calculates center from xf. Center is the apex of the cone.
+    MRMESH_API Vector3f getCenter() const;
+    /// updates xf to fit given center.  Center is the apex of the cone.
     MRMESH_API void setCenter( const Vector3f& center );
     /// calculates main axis direction from xf
     MRMESH_API Vector3f getDirection() const;
     /// updates xf to fit main axis
     MRMESH_API void setDirection( const Vector3f& normal );
-    /// calculates cylinder length from xf
-    MRMESH_API float getLength() const;
-    /// updates xf to fit cylinder length
-    MRMESH_API void setLength( float length );
+    /// calculates cone height from xf
+    MRMESH_API float getHeight() const;
+    /// updates xf to fit cone height
+    MRMESH_API void setHeight( float height );
 
 
 

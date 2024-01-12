@@ -24,37 +24,38 @@ public:
         height( inHeight )
     {}
 
-    MR::Vector3<T>& center( void )
+    // now we use an apex as center of the cone. 
+    Vector3<T>& center( void )
     {
         return axis.p;
     }
-
-    const MR::Vector3<T>& center( void ) const 
+    // now we use an apex as center of the cone. 
+    const Vector3<T>& center( void ) const 
     {
         return axis.p;
     }
-
-    MR::Vector3<T>& direction( void )
+    // main axis direction. It could be non normalized. For any cone point dot( point , direction ) >=0
+    Vector3<T>& direction( void )
     {
         return axis.d;
     }
-
-    const MR::Vector3<T>& direction( void ) const 
+    // main axis direction. It could be non normalized. For any cone point dot( point , direction ) >=0
+    const Vector3<T>& direction( void ) const 
     {
         return axis.d;
     }
-
-    MR::Vector3<T>& apex( void )
+    // return cone apex position 
+    Vector3<T>& apex( void )
+    {
+        return center();
+    }
+    // return cone apex position
+    const Vector3<T>& apex( void ) const 
     {
         return center();
     }
 
-    const MR::Vector3<T>& apex( void ) const 
-    {
-        return center();
-    }
-
-    MR::Line3<T> axis; // the combination of the apex of the cone and the direction of its main axis in space. 
+    Line3<T> axis; // the combination of the apex of the cone and the direction of its main axis in space. 
     // for any cone point dot( point , direction ) >=0
     T angle = 0;       // cone angle, main axis vs side
     T height = 0;      // cone height

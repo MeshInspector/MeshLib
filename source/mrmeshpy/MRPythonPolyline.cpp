@@ -16,11 +16,12 @@
 #define CONCAT(a, b) 
 
 #define MR_ADD_PYTHON_POLYLINE(dimension) \
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Polyline##dimension, []( pybind11::module_& m )\
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Polyline##dimension, MR::Polyline<MR::Vector##dimension<float>> ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Polyline##dimension, [] ( auto& cls )                             \
 {\
     using VectorType = MR::Vector##dimension<float>;\
     using PolylineType = MR::Polyline<VectorType>;\
-    pybind11::class_<PolylineType>( m, "Polyline"#dimension ).\
+    cls.\
 /*        def_readwrite( "topology", &PolylineType::topology ).*/\
         def_readwrite( "points", &PolylineType::points ).\
 \
@@ -119,9 +120,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolsMesh, [] ( pybind11::module_& m )
 } )
 #endif
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, UndirectedEdgeUndirectedEdge, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, UndirectedEdgeUndirectedEdge, MR::UndirectedEdgeUndirectedEdge )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, UndirectedEdgeUndirectedEdge, [] ( auto& cls )
 {
-    pybind11::class_<MR::UndirectedEdgeUndirectedEdge>( m, "UndirectedEdgeUndirectedEdge" ).
+    cls.
         def( pybind11::init<>() ).
         def( pybind11::init<MR::UndirectedEdgeId, MR::UndirectedEdgeId>(), pybind11::arg( "a" ), pybind11::arg( "b" ) ).
         def_readwrite( "aUndirEdge", &MR::UndirectedEdgeUndirectedEdge::aUndirEdge ).

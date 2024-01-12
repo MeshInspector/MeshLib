@@ -580,7 +580,9 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, name, [] ( auto& cls )               
 } )
 
 ADD_PYTHON_BITSET( VertBitSet, MR::VertBitSet )
-
+ADD_PYTHON_BITSET( UndirectedEdgeBitSet, MR::UndirectedEdgeBitSet )
 ADD_PYTHON_BITSET( EdgeBitSet, MR::EdgeBitSet )
-
 ADD_PYTHON_BITSET( FaceBitSet, MR::FaceBitSet )
+
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorVertBitSet, MR::VertBitSet )
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaceBitSet, MR::FaceBitSet )

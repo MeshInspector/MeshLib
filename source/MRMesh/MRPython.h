@@ -90,7 +90,8 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( moduleName, name, [] ( auto& cls )             
 } )
 
 #define MR_ADD_PYTHON_EXPECTED( moduleName, name, type, errorType ) \
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, MR::Expected<type, errorType> ) \
+using name##_expected_type_ = MR::Expected<type, errorType>;        \
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, name##_expected_type_ ) \
 MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( moduleName, name, [] ( auto& cls ) \
 {\
     using expectedType = Expected<type,errorType>;\

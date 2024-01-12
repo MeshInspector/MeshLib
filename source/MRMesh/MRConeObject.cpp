@@ -4,15 +4,12 @@
 #include "MRMesh.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
-#include <Eigen/Dense>
 #include "MRConeApproximator.h"
 #include "MRMeshFwd.h"
 #include "MRLine.h"
 #include "MRGTest.h"
 
 #include <iostream>
-#include "MRMeshNormals.h"
-#include "MRMeshSubdivide.h"
 #include "MRArrow.h"
 
 namespace MR

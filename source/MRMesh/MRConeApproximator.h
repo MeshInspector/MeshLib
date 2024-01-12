@@ -12,7 +12,8 @@
 #pragma warning(disable: 4643) // Forward declaring 'tuple' in namespace std is not permitted by the C++ Standard.
 #pragma warning(disable: 5054) // operator '|': deprecated between enumerations of different types
 #pragma warning(disable: 4244) // casting float to double 
-#elif defined(__GNUC__) && !defined(__clang__)
+#elif defined(__clang__)
+#elif defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif 
@@ -22,7 +23,8 @@
 
 #ifdef _MSC_VER
 #pragma warning(pop)
-#elif defined(__GNUC__) && !defined(__clang__)
+#elif defined(__clang__)
+#elif defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif 
 

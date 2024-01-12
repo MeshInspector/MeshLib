@@ -234,7 +234,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadMesh, [] ( pybind11::module_& m )
 
     m.def( "loadMesh",
         MR::decorateExpected( ( Expected<MR::Mesh, std::string>( * )( const std::filesystem::path&, const MeshLoadSettings& ) )& MR::MeshLoad::fromAnySupportedFormat),
-        pybind11::arg( "path" ), pybind11::arg( "settings" ) = MeshLoadSettings(),
+        pybind11::arg( "path" ), pybind11::arg_v( "settings", MeshLoadSettings(), "MeshLoadSettings()" ),
         "detects the format from file extension and loads mesh from it" );
     m.def( "loadMesh",
         MR::decorateExpected( ( Expected<MR::Mesh, std::string>( * )( pybind11::object, const std::string& ) )& pythonLoadMeshFromAnyFormat ),

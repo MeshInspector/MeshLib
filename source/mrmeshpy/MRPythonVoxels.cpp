@@ -183,7 +183,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
     m.def( "meshToVolume",
         MR::decorateExpected( &MR::meshToVolume ),
         pybind11::arg( "mesh" ),
-        pybind11::arg( "params" ) = MR::MeshToVolumeParams{},
+        pybind11::arg_v( "params", MR::MeshToVolumeParams(), "MeshToVolumeParams()" ),
         "convert mesh to volume in (0,0,0)-(dim.x,dim.y,dim.z) grid box" );
 
     pybind11::class_<MR::MeshToDistanceVolumeParams>( m, "MeshToDistanceVolumeParams" ).
@@ -196,7 +196,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         def_readwrite( "signMode", &MR::MeshToDistanceVolumeParams::signMode, "the method to compute distance sign" );
 
     m.def( "meshToDistanceVolume", MR::decorateExpected( &MR::meshToDistanceVolume ),
-        pybind11::arg( "mesh" ), pybind11::arg( "params" ) = MR::MeshToDistanceVolumeParams{},
+        pybind11::arg( "mesh" ), pybind11::arg_v( "params", MR::MeshToDistanceVolumeParams(), "MeshToDistanceVolumeParams()" ),
         "makes SimpleVolume filled with (signed or unsigned) distances from Mesh with given settings" );
 } )
 #endif

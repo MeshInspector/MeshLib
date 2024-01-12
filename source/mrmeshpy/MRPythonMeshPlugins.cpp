@@ -237,12 +237,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Relax, [] ( pybind11::module_& m )
         def_readwrite( "hardSmoothTetrahedrons", &MeshRelaxParams::hardSmoothTetrahedrons, "smooth tetrahedron verts (with complete three edges ring) to base triangle (based on its edges destinations)" );
 
     m.def( "relax", ( bool( * )( Mesh&, const MeshRelaxParams&, ProgressCallback ) )& relax,
-        pybind11::arg( "mesh" ), pybind11::arg( "params" ) = MeshRelaxParams{}, pybind11::arg( "cb" ) = ProgressCallback{},
+        pybind11::arg( "mesh" ), pybind11::arg_v( "params", MeshRelaxParams(), "MeshRelaxParams()" ), pybind11::arg( "cb" ) = ProgressCallback{},
         "applies given number of relaxation iterations to the whole mesh ( or some region if it is specified )\n"
         "return true if was finished successfully, false if was interrupted by progress callback");
 
     m.def( "relaxKeepVolume", &relaxKeepVolume,
-        pybind11::arg( "mesh" ), pybind11::arg( "params" ) = MeshRelaxParams{}, pybind11::arg( "cb" ) = ProgressCallback{},
+        pybind11::arg( "mesh" ), pybind11::arg_v( "params", MeshRelaxParams(), "MeshRelaxParams()" ), pybind11::arg( "cb" ) = ProgressCallback{},
         "applies given number of relaxation iterations to the whole mesh ( or some region if it is specified ) \n"
         "do not really keeps volume but tries hard \n"
         "\treturn true if was finished successfully, false if was interrupted by progress callback" );
@@ -273,7 +273,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
             "In case of activated smoothMode, the smoothness is locally deactivated at the edges having dihedral angle at least this value" );
 
     m.def( "subdivideMesh", &MR::subdivideMesh,
-        pybind11::arg( "mesh" ), pybind11::arg( "settings" ) = MR::SubdivideSettings{},
+        pybind11::arg( "mesh" ), pybind11::arg_v( "settings", MR::SubdivideSettings(), "SubdivideSettings()" ),
         "Split edges in mesh region according to the settings;\n"
         "return The total number of edge splits performed" );
 
@@ -447,7 +447,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
             params.voxelSize = suggestVoxelSize( mp, 5e6f );
         return MR::generalOffsetMesh( mp, offset, params );
     } ),
-        pybind11::arg( "mp" ), pybind11::arg( "offset" ), pybind11::arg( "params" ) = MR::GeneralOffsetParameters{},
+        pybind11::arg( "mp" ), pybind11::arg( "offset" ), pybind11::arg_v( "params", MR::GeneralOffsetParameters(), "GeneralOffsetParameters()" ),
         "Offsets mesh by converting it to voxels and back using one of three modes specified in the parameters" );
 
     m.def( "offsetMesh",
@@ -457,7 +457,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
                     params.voxelSize = suggestVoxelSize( mp, 5e6f );
                 return MR::offsetMesh( mp, offset, params );
             } ),
-        pybind11::arg( "mp" ), pybind11::arg( "offset" ), pybind11::arg( "params" ) = MR::OffsetParameters{},
+        pybind11::arg( "mp" ), pybind11::arg( "offset" ), pybind11::arg_v( "params", MR::OffsetParameters(), "OffsetParameters()" ),
         "Offsets mesh by converting it to voxels and back\n"
         "use Shell type for non closed meshes\n"
         "so result mesh is always closed" );
@@ -470,7 +470,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
             params.voxelSize = suggestVoxelSize( mesh, 5e6f );
         return MR::thickenMesh( mesh, offset, params );
     } ),
-        pybind11::arg( "mesh" ), pybind11::arg( "offset" ), pybind11::arg( "params" ) = MR::OffsetParameters{},
+        pybind11::arg( "mesh" ), pybind11::arg( "offset" ), pybind11::arg_v( "params", MR::OffsetParameters(), "OffsetParameters()" ),
         "in case of positive offset, returns the mesh consisting of offset mesh merged with inversed original mesh (thickening mode);\n"
         "in case of negative offset, returns the mesh consisting of inversed offset mesh merged with original mesh (hollowing mode);\n"
         "if your input mesh is closed then please specify params.type == Offset, and you will get closed mesh on output;\n"

@@ -63,7 +63,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, BooleanExposing, [] ( pybind11::module_& m )
         def_readwrite( "randomShiftsSeed", &MR::UniteManyMeshesParams::randomShiftsSeed, "Seed that is used for random shifts" ).
         def_readwrite( "newFaces", &MR::UniteManyMeshesParams::newFaces, "If set, the bitset will store new faces created by boolean operations" );
 
-    m.def( "uniteManyMeshes", MR::decorateExpected( &MR::uniteManyMeshes ), pybind11::arg( "meshes" ), pybind11::arg( "params" ) = MR::UniteManyMeshesParams{},
+    m.def( "uniteManyMeshes", MR::decorateExpected( &MR::uniteManyMeshes ), pybind11::arg( "meshes" ), pybind11::arg_v( "params", MR::UniteManyMeshesParams(), "UniteManyMeshesParams()" ),
         "Computes the surface of objects' union each of which is defined by its own surface mesh\n"
         "- merge non intersecting meshes first\n"
         "- unite merged groups" );

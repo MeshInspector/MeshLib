@@ -30,7 +30,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointCloud, [] ( pybind11::module_& m )
             "If value is subzero it is set automaticly to 0.7*bbox.diagonal()" );
 
     m.def( "triangulatePointCloud", &MR::triangulatePointCloud,
-        pybind11::arg( "pointCloud" ), pybind11::arg( "params" ) = MR::TriangulationParameters{}, pybind11::arg( "progressCb" ) = MR::ProgressCallback{},
+        pybind11::arg( "pointCloud" ), pybind11::arg_v( "params", MR::TriangulationParameters(), "TriangulationParameters()" ), pybind11::arg( "progressCb" ) = MR::ProgressCallback{},
         "Creates mesh from given point cloud according params\n"
         "Returns empty optional if was interrupted by progress bar" );
 

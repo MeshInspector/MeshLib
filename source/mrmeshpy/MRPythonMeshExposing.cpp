@@ -172,7 +172,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, []( pybind11::module_& m )
 
     m.def( "topologyFromTriangles",
         ( MeshTopology( * )( const Triangulation&, const MeshBuilder::BuildSettings& ) )& topologyFromTriangles,
-        pybind11::arg( "triangulation" ), pybind11::arg( "settings" ) = MeshBuilder::BuildSettings{},
+        pybind11::arg( "triangulation" ), pybind11::arg_v( "settings", MeshBuilder::BuildSettings(), "MeshBuilderSettings()" ),
         "construct mesh topology from a set of triangles with given ids;\n"
         "if skippedTris is given then it receives all input triangles not added in the resulting topology" );
 } )
@@ -256,7 +256,7 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Mesh, [] ( auto& cls )
             "\tnew2Old receive mapping from newly appeared triangle to its original triangle (part to full)" ).
 
         def( "addPartByMask", ( void( Mesh::* )( const Mesh&, const FaceBitSet&, const PartMapping& ) )& Mesh::addPartByMask,
-            pybind11::arg( "from" ), pybind11::arg( "fromFaces" ) = nullptr, pybind11::arg( "map" ) = PartMapping{},
+            pybind11::arg( "from" ), pybind11::arg( "fromFaces" ) = nullptr, pybind11::arg_v( "map", PartMapping(), "PartMapping()" ),
             "appends mesh (from) in addition to this mesh: creates new edges, faces, verts and points\n"
             "copies only portion of (from) specified by fromFaces" ).
 
@@ -411,7 +411,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
         def_readwrite( "outNewFaces", &StitchHolesParams::outNewFaces, "If not nullptr accumulate new faces" );
 
     m.def( "fillHole", &fillHole,
-        pybind11::arg( "mesh" ), pybind11::arg( "a" ), pybind11::arg( "params" ) = FillHoleParams{},
+        pybind11::arg( "mesh" ), pybind11::arg( "a" ), pybind11::arg_v( "params", FillHoleParams(), "FillHoleParams()" ),
         "Fills given hole represented by one of its edges (having no valid left face),\n"
         "uses fillHoleTrivially if cannot fill hole without multiple edges,\n"
         "default metric: CircumscribedFillMetric\n"
@@ -420,7 +420,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
         "\tparams - parameters of hole filling" );
 
     m.def( "buildCylinderBetweenTwoHoles", ( void ( * )( Mesh&, EdgeId, EdgeId, const StitchHolesParams& ) )& buildCylinderBetweenTwoHoles,
-        pybind11::arg( "mesh" ), pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg( "params" ) = StitchHolesParams{},
+        pybind11::arg( "mesh" ), pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg_v( "params", StitchHolesParams(), "StitchHolesParams()" ),
         "Build cylindrical patch to fill space between two holes represented by one of their edges each,\n"
         "default metric: ComplexStitchMetric\n"
         "\tmesh - mesh with hole\n"
@@ -429,7 +429,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
         "\tparams - parameters of holes stitching" );
 
     m.def( "buildCylinderBetweenTwoHoles", ( bool ( * )( Mesh&, const StitchHolesParams& ) )& buildCylinderBetweenTwoHoles,
-       pybind11::arg( "mesh" ), pybind11::arg( "params" ) = StitchHolesParams{},
+       pybind11::arg( "mesh" ), pybind11::arg_v( "params", StitchHolesParams(), "StitchHolesParams()" ),
        "this version finds holes in the mesh by itself and returns false if they are not found" );
 } )
 

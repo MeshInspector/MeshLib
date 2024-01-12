@@ -356,44 +356,55 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Plane3f, [] ( pybind11::module_& m )
         def_readwrite( "d", &MR::Plane3f::d );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FaceId, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, FaceId, MR::FaceId )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, FaceId, [] ( auto& cls )
 {
-    pybind11::class_<MR::FaceId>( m, "FaceId" ).
+    cls.
         def( pybind11::init<>() ).
         def( pybind11::init<int>() ).
         def( "valid", &MR::FaceId::valid ).
         def( "get", &MR::FaceId::operator int );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, VertId, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, VertId, MR::VertId )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, VertId, [] ( auto& cls )
 {
-    pybind11::class_<MR::VertId>( m, "VertId" ).
+    cls.
         def( pybind11::init<>() ).
         def( pybind11::init<int>() ).
         def( "valid", &MR::VertId::valid ).
         def( "get", &MR::VertId::operator int );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, UndirectedEdgeId, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, UndirectedEdgeId, MR::UndirectedEdgeId )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, UndirectedEdgeId, [] ( auto& cls )
 {
-    pybind11::class_<MR::UndirectedEdgeId>( m, "UndirectedEdgeId" ).
+    cls.
         def( pybind11::init<>() ).
         def( pybind11::init<int>() ).
         def( "valid", &MR::UndirectedEdgeId::valid ).
         def( "get", &MR::UndirectedEdgeId::operator int );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ViewportId, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, ViewportId, MR::ViewportId )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, ViewportId, [] ( auto& cls )
 {
-    pybind11::class_<MR::ViewportId>( m, "ViewportId",
+    cls.doc() =
         "stores unique identifier of a viewport, which is power of two;\n"
-        "id=0 has a special meaning of default viewport in some contexts" ).
+        "id=0 has a special meaning of default viewport in some contexts";
+    cls.
         def( pybind11::init<>() ).
         def( pybind11::init<unsigned>() ).
         def( "value", &MR::ViewportId::value ).
         def( "valid", &MR::ViewportId::valid );
+} )
 
-    pybind11::class_<MR::ViewportMask>( m, "ViewportMask", "stores mask of viewport unique identifiers" ).
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, ViewportMask, MR::ViewportMask )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, ViewportMask, [] ( auto& cls )
+{
+    cls.doc() =
+        "stores mask of viewport unique identifiers";
+    cls.
         def( pybind11::init<>() ).
         def( pybind11::init<unsigned>() ).
         def( pybind11::init<MR::ViewportId>() ).
@@ -401,9 +412,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ViewportId, [] ( pybind11::module_& m )
         def_static( "any", &MR::ViewportMask::any, "mask meaning all or any viewports" );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPoint, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, EdgePoint, MR::EdgePoint )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, EdgePoint, [] ( auto& cls )
 {
-    pybind11::class_<MR::EdgePoint>( m, "EdgePoint", "encodes a point on a mesh edge" ).
+    cls.doc() =
+        "encodes a point on a mesh edge";
+    cls.
         def( pybind11::init<>() ).
         def( pybind11::init<MR::EdgeId, float>(), pybind11::arg( "e" ), pybind11::arg( "a" ) ).
         def_readwrite( "e", &MR::EdgePoint::e ).
@@ -417,10 +431,15 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPoint, [] ( pybind11::module_& m )
         def( "getClosestVertex", ( MR::VertId( MR::EdgePoint::* )( const MR::PolylineTopology & ) const )& MR::EdgePoint::getClosestVertex, pybind11::arg( "topology" ), "returns one of two edge vertices, closest to this point" ).
         def( "sym", &MR::EdgePoint::sym, "represents the same point relative to sym edge in" ).
         def( pybind11::self == pybind11::self );
+} )
 
-    pybind11::class_<MR::TriPointf>( m, "TriPointf", 
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, TriPointf, MR::TriPointf )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, TriPointf, [] ( auto& cls )
+{
+    cls.doc() =
         "encodes a point inside a triangle using barycentric coordinates\n"
-        "\tNotations used below: v0, v1, v2 - points of the triangle").
+        "\tNotations used below: v0, v1, v2 - points of the triangle";
+    cls.
         def( pybind11::init<>() ).
         def( pybind11::init<float, float>(), pybind11::arg( "a" ), pybind11::arg( "b" ) ).
         def( pybind11::init<const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&>(),
@@ -434,13 +453,18 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPoint, [] ( pybind11::module_& m )
             "\ta+b in [0,1], a+b=0 => point is in v0, a+b=1 => point is on [v1,v2] edge\n"
             "a in [0,1], a=0 => point is on [v2,v0] edge, a=1 => point is in v1" ).
         def_readwrite( "b", &MR::TriPointf::b, "b in [0,1], b=0 => point is on [v0,v1] edge, b=1 => point is in v2" );
+} )
 
-    pybind11::class_<MR::MeshTriPoint>( m, "MeshTriPoint",
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, MeshTriPoint, MR::MeshTriPoint )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, MeshTriPoint, [] ( auto& cls )
+{
+    cls.doc() =
         "encodes a point inside a triangular mesh face using barycentric coordinates\n"
         "\tNotations used below:\n" 
         "\t v0 - the value in org( e )\n"
         "\t v1 - the value in dest( e )\n"
-        "\t v2 - the value in dest( next( e ) )" ).
+        "\t v2 - the value in dest( next( e ) )" ;
+    cls.
         def( pybind11::init<>() ).
         def( pybind11::init<MR::EdgeId, MR::TriPointf>(), pybind11::arg( "e" ), pybind11::arg( "bary" ) ).
         def( pybind11::init<const MR::EdgePoint&>(), pybind11::arg( "ep" ) ).
@@ -460,9 +484,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPoint, [] ( pybind11::module_& m )
         def( "isBd", &MR::MeshTriPoint::isBd, pybind11::arg( "topology" ), pybind11::arg( "region" ) = nullptr, "returns true if the point is in vertex on on edge, and that location is on the boundary of the region" );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeId, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, EdgeId, MR::EdgeId )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, EdgeId, [] ( auto& cls )
 {
-    pybind11::class_<MR::EdgeId>( m, "EdgeId" ).
+    cls.
         def( pybind11::init<>() ).
         def( pybind11::init<int>() ).
         def( pybind11::init<MR::UndirectedEdgeId>() ).

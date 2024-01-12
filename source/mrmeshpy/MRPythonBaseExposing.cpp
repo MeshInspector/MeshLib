@@ -31,32 +31,37 @@ MR_INIT_PYTHON_MODULE( mrmeshpy )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorFloat, float )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ExpectedVoid, []( pybind11::module_& m )\
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, ExpectedVoid, MR::VoidOrErrStr )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, ExpectedVoid, [] ( auto& cls )
 {
     using expectedType = MR::VoidOrErrStr;
-    pybind11::class_<expectedType>( m, "ExpectedVoid" ).
+    cls.
         def( "has_value", &expectedType::has_value ).
         def( "error", ( const std::string& ( expectedType::* )( )const& )& expectedType::error );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Path, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Path, std::filesystem::path )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Path, [] ( auto& cls )
 {
-    pybind11::class_<std::filesystem::path>( m, "Path" ).
+    cls.
         def( pybind11::init( [] ( const std::string& s )
-    {
-        return MR::pathFromUtf8( s );
-    } ) );
+        {
+            return MR::pathFromUtf8( s );
+        } ) );
     pybind11::implicitly_convertible<std::string, std::filesystem::path>();
     // it could be simlier, but bug in clang 14 does not work with it:
     // def( pybind11::init<const std::u8string&>() );
     // pybind11::implicitly_convertible<std::u8string, std::filesystem::path>();
 } )
 
-#define MR_ADD_PYTHON_BOX(name, VectorType ) \
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
+#define MR_ADD_PYTHON_BOX( name, VectorType ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, name, MR::Box<VectorType> ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, name, [] ( auto& cls )      \
 {\
-    using BoxType = MR::Box<VectorType>;\
-    pybind11::class_<BoxType>( m, #name, "Box given by its min- and max- corners" ).\
+    using BoxType = MR::Box<VectorType>;      \
+    cls.doc() =                               \
+        "Box given by its min- and max- corners";                      \
+    cls.                                      \
         def( pybind11::init<>() ).\
         def_readwrite( "min", &BoxType::min, "create invalid box by default" ).\
         def_readwrite( "max", &BoxType::max ).\
@@ -77,6 +82,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
         def( "insignificantlyExpanded", &BoxType::insignificantlyExpanded, "expands min and max to their closest representable value" ).\
         def( pybind11::self == pybind11::self ).\
         def( pybind11::self != pybind11::self );\
+} )                                           \
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )  \
+{                                             \
+    using BoxType = MR::Box<VectorType>;      \
     m.def( "transformed", ( BoxType( * )( const BoxType&, const MR::AffineXf<VectorType>& ) ) &MR::transformed<VectorType>, pybind11::arg( "box" ), pybind11::arg( "xf" ),\
         "find the tightest box enclosing this one after transformation" );\
     m.def( "transformed", ( BoxType( * )( const BoxType&, const MR::AffineXf<VectorType>* ) ) &MR::transformed<VectorType>, pybind11::arg( "box" ), pybind11::arg( "xf" ),\
@@ -213,9 +222,10 @@ MR_ADD_PYTHON_VEC( mrmeshpy, Contours3f, MR::Contour3f )
 MR_ADD_PYTHON_VEC( mrmeshpy, Contour3d, MR::Vector3d )
 MR_ADD_PYTHON_VEC( mrmeshpy, Contours3d, MR::Contour3d )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Color, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Color, MR::Color )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Color, [] ( auto& cls )
 {
-    pybind11::class_<MR::Color>( m, "Color" ).
+    cls.
         def( pybind11::init<>() ).
         def( pybind11::init<int, int, int, int>(),
             pybind11::arg( "r" ), pybind11::arg( "g" ), pybind11::arg( "b" ), pybind11::arg( "a" ) = 255 ).
@@ -234,9 +244,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Color, [] ( pybind11::module_& m )
 } )
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorColor, MR::Color )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Matrix3f, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Matrix3f, MR::Matrix3f )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Matrix3f, [] ( auto& cls )
 {
-    pybind11::class_<MR::Matrix3f>( m, "Matrix3f", "arbitrary 3x3 matrix" ).
+    cls.doc() =
+        "arbitrary 3x3 matrix";
+    cls.
         def( pybind11::init<>() ).
         def_readwrite( "x", &MR::Matrix3f::x, "rows, identity matrix by default" ).
         def_readwrite( "y", &MR::Matrix3f::y ).
@@ -272,29 +285,44 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Matrix3f, [] ( pybind11::module_& m )
         def( pybind11::self == pybind11::self );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LineSegm, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, LineSegm2f, MR::LineSegm2f )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, LineSegm2f, [] ( auto& cls )
 {
-    pybind11::class_<MR::LineSegm2f>( m, "LineSegm2f", "a segment of 2-dimensional line" ).
+    cls.doc() =
+        "a segment of 2-dimensional line";
+    cls.
         def( pybind11::init<>() ).
         def( pybind11::init<const MR::Vector2f&, const MR::Vector2f&>() ).
         def_readwrite( "a", &MR::LineSegm2f::a ).
         def_readwrite( "b", &MR::LineSegm2f::b );
+} )
 
-    pybind11::class_<MR::LineSegm3f>( m, "LineSegm3f", "a segment of 3-dimensional line" ).
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, LineSegm3f, MR::LineSegm3f )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, LineSegm3f, [] ( auto& cls )
+{
+    cls.doc() =
+        "a segment of 3-dimensional line";
+    cls.
         def( pybind11::init<>() ).
         def( pybind11::init<const MR::Vector3f&, const MR::Vector3f&>() ).
         def_readwrite( "a", &MR::LineSegm3f::a ).
         def_readwrite( "b", &MR::LineSegm3f::b );
+} )
 
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LineSegm, [] ( pybind11::module_& m )
+{
     m.def( "intersection", ( std::optional<MR::Vector2f>( * )( const MR::LineSegm2f&, const MR::LineSegm2f& ) )& MR::intersection,
         pybind11::arg( "segm1" ), pybind11::arg( "segm2" ),
         "finds an intersection between a segm1 and a segm2\n"
         "return null if they don't intersect (even if they match)" );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointOnFace, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, PointOnFace, MR::PointOnFace )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, PointOnFace, [] ( auto& cls )
 {
-    pybind11::class_<MR::PointOnFace>( m, "PointOnFace", "point located on some mesh face" ).
+    cls.doc() =
+        "point located on some mesh face";
+    cls.
         def( pybind11::init<>() ).
         def_readwrite( "face", &MR::PointOnFace::face ).
         def_readwrite( "point", &MR::PointOnFace::point );
@@ -327,9 +355,12 @@ MR_ADD_PYTHON_AFFINE_XF( AffineXf3f )
 MR_ADD_PYTHON_AFFINE_XF( AffineXf2d )
 MR_ADD_PYTHON_AFFINE_XF( AffineXf3d )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Line3, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Line3f, MR::Line3f )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Line3f, [] ( auto& cls )
 {
-    pybind11::class_<MR::Line3f>( m, "Line3f", "3-dimensional line: cross( x - p, d ) = 0" ).
+    cls.doc() =
+        "3-dimensional line: cross( x - p, d ) = 0";
+    cls.
         def( pybind11::init<>() ).
         def( pybind11::init<const MR::Vector3f&, const MR::Vector3f&>(), pybind11::arg( "p" ), pybind11::arg( "d" ) ).
         def_readwrite( "p", &MR::Line3f::p ).
@@ -337,8 +368,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Line3, [] ( pybind11::module_& m )
         def( "distanceSq", &MR::Line3f::distanceSq, pybind11::arg( "x" ), "returns squared distance from given point to this line" ).
         def( "normalized", &MR::Line3f::normalized, "returns same line represented with unit d-vector" ).
         def( "project", &MR::Line3f::project, pybind11::arg( "x" ), "finds the closest point on line" );
+} )
 
-    pybind11::class_<MR::Line3d>( m, "Line3d", "3-dimensional line: cross( x - p, d ) = 0" ).
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Line3d, MR::Line3d )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Line3d, [] ( auto& cls )
+{
+    cls.doc() =
+        "3-dimensional line: cross( x - p, d ) = 0";
+    cls.
         def( pybind11::init<>() ).
         def( pybind11::init<const MR::Vector3d&, const MR::Vector3d&>(), pybind11::arg( "p" ), pybind11::arg( "d" ) ).
         def_readwrite( "p", &MR::Line3d::p ).
@@ -348,9 +385,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Line3, [] ( pybind11::module_& m )
         def( "project", &MR::Line3d::project, pybind11::arg( "x" ), "finds the closest point on line" );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Plane3f, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Plane3f, MR::Plane3f )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Plane3f, [] ( auto& cls )
 {
-    pybind11::class_<MR::Plane3f>( m, "Plane3f", "3-dimensional plane: dot(n,x) - d = 0" ).
+    cls.doc() =
+        "3-dimensional plane: dot(n,x) - d = 0";
+    cls.
         def( pybind11::init<>() ).
         def_readwrite( "n", &MR::Plane3f::n ).
         def_readwrite( "d", &MR::Plane3f::d );

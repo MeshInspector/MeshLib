@@ -80,6 +80,7 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( moduleName, name, [] ( auto& cls )             
 } )
 
 #define MR_ADD_PYTHON_MAP( moduleName, name, mapType ) \
+PYBIND11_MAKE_OPAQUE( mapType )                        \
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL_1( moduleName, name, mapType, std::unique_ptr<mapType> ) \
 MR_ADD_PYTHON_CUSTOM_CLASS_INST_1( moduleName, name, [] ( pybind11::module_& module ) { return pybind11::bind_map<mapType>( module, #name ); } ) \
 MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( moduleName, name, [] ( auto& cls )                      \

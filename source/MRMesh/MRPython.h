@@ -48,7 +48,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_inst_, [] ( pybind11::module_& modu
 #define MR_ADD_PYTHON_CUSTOM_CLASS_INST_1( moduleName, name, ... ) \
 MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_inst_, [] ( pybind11::module_& module ) \
 {                                                                  \
-    name##_class_ = __VA_ARGS__;                                   \
+    name##_class_ = __VA_ARGS__ ( module );                        \
 }, MR::PythonExport::Priority::Declaration )
 
 #define MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, type ) \
@@ -61,14 +61,16 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_impl_, [] ( pybind11::module_& ) \
     __VA_ARGS__ ( *name##_class_ );                              \
 }, MR::PythonExport::Priority::Implementation )
 
-// !!! Its important to add vec after adding type
+// !!! It's important to add vec after adding type
 // otherwise embedded python will not be able to re-import module (due to some issues with vector types in pybind11)
-#define MR_ADD_PYTHON_VEC( moduleName , name , type)\
-PYBIND11_MAKE_OPAQUE( std::vector<type> )\
-MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
+#define MR_ADD_PYTHON_VEC( moduleName, name, type) \
+PYBIND11_MAKE_OPAQUE( std::vector<type> )          \
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL_1( moduleName, name, std::vector<type>, std::unique_ptr<std::vector<type>> ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_INST_1( moduleName, name, [] ( pybind11::module_& module ) { return pybind11::bind_vector<std::vector<type>>( module, #name ); } ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( moduleName, name, [] ( auto& cls )                                          \
 {\
     using vecType = std::vector<type>;\
-    pybind11::bind_vector<vecType>(m, #name ).\
+    cls.\
         def( pybind11::init<>() ).\
         def( pybind11::init<size_t>(), pybind11::arg( "size" ) ).\
         def( "empty", &vecType::empty ).\
@@ -77,19 +79,22 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
         def( "clear", &vecType::clear ); \
 } )
 
-#define MR_ADD_PYTHON_MAP( moduleName , name , mapType)\
-MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
+#define MR_ADD_PYTHON_MAP( moduleName, name, mapType ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL_1( moduleName, name, mapType, std::unique_ptr<mapType> ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_INST_1( moduleName, name, [] ( pybind11::module_& module ) { return pybind11::bind_map<mapType>( module, #name ); } ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( moduleName, name, [] ( auto& cls )                      \
 {\
-    pybind11::bind_map<mapType>(m, #name ).\
+    cls.\
         def( pybind11::init<>() ).\
         def( "size", &mapType::size );\
 } )
 
-#define MR_ADD_PYTHON_EXPECTED( moduleName, name, type, errorType )\
-MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
+#define MR_ADD_PYTHON_EXPECTED( moduleName, name, type, errorType ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, MR::Expected<type, errorType> ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( moduleName, name, [] ( auto& cls ) \
 {\
     using expectedType = Expected<type,errorType>;\
-    pybind11::class_<expectedType>(m, #name ).\
+    cls.\
         def( "has_value", []() \
         { PyErr_WarnEx(PyExc_DeprecationWarning, ".has_value is deprecated. Please use 'try - except ValueError'", 1); \
             return &expectedType::has_value; \

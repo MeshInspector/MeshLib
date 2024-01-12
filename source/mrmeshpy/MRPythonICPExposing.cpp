@@ -44,7 +44,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def_readwrite( "p2plScaleLimit", &MR::ICPProperties::p2plScaleLimit, "Scaling during one iteration of PointToPlane will be limited by this value").
         def_readwrite( "cosTreshold", &MR::ICPProperties::cosTreshold, "Points pair will be counted only if cosine between surface normals in points is higher" ).
         def_readwrite( "distTresholdSq", &MR::ICPProperties::distTresholdSq, "Points pair will be counted only if squared distance between points is lower than" ).
-        def_readwrite( "distStatisticSigmaFactor ", &MR::ICPProperties::distStatisticSigmaFactor,
+        def_readwrite( "distStatisticSigmaFactor", &MR::ICPProperties::distStatisticSigmaFactor,
             "Sigma multiplier for statistic throw of paints pair based on the distance\n"
             "Default: all pairs in the interval the (distance = mean +- 3*sigma) are passed" ).
         def_readwrite( "icpMode", &MR::ICPProperties::icpMode, "Finds only translation. Rotation part is identity matrix" ).

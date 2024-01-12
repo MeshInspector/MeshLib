@@ -25,27 +25,27 @@ public:
         length( inLength )
     {}
 
-    MR::Vector3<T>& center( void )
+    Vector3<T>& center( void )
     {
         return mainAxis.p;
     }
 
-    const MR::Vector3<T>& center( void ) const
+    const Vector3<T>& center( void ) const
     {
         return mainAxis.p;
     }
 
-    MR::Vector3<T>& direction( void )
+    Vector3<T>& direction( void )
     {
         return mainAxis.d;
     }
 
-    const MR::Vector3<T>& direction( void ) const
+    const Vector3<T>& direction( void ) const
     {
         return mainAxis.d;
     }
 
-    MR::Line3<T> mainAxis;
+    Line3<T> mainAxis;
     T radius = 0;
     T length = 0;
 };

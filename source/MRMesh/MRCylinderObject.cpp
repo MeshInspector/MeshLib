@@ -25,26 +25,26 @@ constexpr float epsilonForCylinderTopBottomDetection = 0.01f;
 constexpr int phiResolution = 180;
 constexpr int thetaiResolution = 180;
 
-MR::Matrix3f getRotationMatrix( const Vector3f& normal )
+Matrix3f getRotationMatrix( const Vector3f& normal )
 {
     return Matrix3f::rotation( Vector3f::plusZ(), normal );
 }
 
-std::shared_ptr<MR::Mesh> makeFeatureCylinder( int resolution = cDetailLevel, float  startAngle = 0.0f, float  archSize = 2.0f * PI_F )
+std::shared_ptr<Mesh> makeFeatureCylinder( int resolution = cDetailLevel, float  startAngle = 0.0f, float  archSize = 2.0f * PI_F )
 {
-    auto mesh = std::make_shared<MR::Mesh>( makeCylinderAdvanced( cBaseRadius, cBaseRadius, startAngle, archSize, cBaseLength, resolution ) );
-    MR::AffineXf3f shift;
-    shift.b = MR::Vector3f( 0.0f, 0.0f, -cBaseLength / 2.0f );
+    auto mesh = std::make_shared<Mesh>( makeCylinderAdvanced( cBaseRadius, cBaseRadius, startAngle, archSize, cBaseLength, resolution ) );
+    AffineXf3f shift;
+    shift.b = Vector3f( 0.0f, 0.0f, -cBaseLength / 2.0f );
     mesh->transform( shift );
 
     // remove cylinder top and bottom;
-    MR::Vector3f zDirection = Vector3f::plusZ();
-    MR::FaceBitSet facesForDelete;
+    Vector3f zDirection = Vector3f::plusZ();
+    FaceBitSet facesForDelete;
     auto normals = computePerFaceNormals( *mesh );
 
     for ( auto f : mesh->topology.getValidFaces() )
     {
-        if ( MR::cross( normals[f], zDirection ).lengthSq() < epsilonForCylinderTopBottomDetection )
+        if ( cross( normals[f], zDirection ).lengthSq() < epsilonForCylinderTopBottomDetection )
             facesForDelete.autoResizeSet( f, true );
     }
     mesh->topology.deleteFaces( facesForDelete );
@@ -118,7 +118,7 @@ CylinderObject::CylinderObject( const std::vector<Vector3f>& pointsToApprox )
     constructMesh_();
 
     // calculate cylinder parameters.
-    MR::Cylinder3<float> result;
+    Cylinder3<float> result;
     auto fit = Cylinder3Approximation<float>();
     fit.solveGeneral( pointsToApprox, result, phiResolution, thetaiResolution );
 
@@ -179,14 +179,14 @@ TEST( MRMesh, CylinderApproximation )
     float archSize = PI_F / 1.5f;
     int  resolution = 100;
 
-    MR::AffineXf3f testXf;
-    MR::Vector3f center{ 1,2,3 };
-    MR::Vector3f direction = ( MR::Vector3f{ 3,2,1 } ).normalized();
+    AffineXf3f testXf;
+    Vector3f center{ 1,2,3 };
+    Vector3f direction = ( Vector3f{ 3,2,1 } ).normalized();
 
-    testXf = MR::AffineXf3f::translation( { 1,2,3 } );
-    testXf.A = Matrix3f::rotation( Vector3f::plusZ(), direction ) * MR::Matrix3f::scale( { originalRadius , originalRadius  ,originalLength } );
+    testXf = AffineXf3f::translation( { 1,2,3 } );
+    testXf.A = Matrix3f::rotation( Vector3f::plusZ(), direction ) * Matrix3f::scale( { originalRadius , originalRadius  ,originalLength } );
 
-    std::vector<MR::Vector3f> points;
+    std::vector<Vector3f> points;
 
     float angleStep = archSize / resolution;
     float zStep = 1.0f / resolution;
@@ -194,8 +194,8 @@ TEST( MRMesh, CylinderApproximation )
     {
         float angle = startAngle + i * angleStep;
         float z = i * zStep - 0.5f;
-        points.emplace_back( testXf( MR::Vector3f{ cosf( angle )  , sinf( angle ) , z } ) );
-        points.emplace_back( testXf( MR::Vector3f{ cosf( angle )  , sinf( angle ) ,  -z } ) );
+        points.emplace_back( testXf( Vector3f{ cosf( angle )  , sinf( angle ) , z } ) );
+        points.emplace_back( testXf( Vector3f{ cosf( angle )  , sinf( angle ) ,  -z } ) );
     }
 
     /////////////////////////////
@@ -211,7 +211,7 @@ TEST( MRMesh, CylinderApproximation )
     EXPECT_NEAR( result.radius, originalRadius, 0.1f );
     EXPECT_NEAR( result.length, originalLength, 0.1f );
     EXPECT_LE( ( result.center() - center ).length(), 0.1f );
-    EXPECT_GT( MR::dot( direction, result.direction() ), 0.9f );
+    EXPECT_GT( dot( direction, result.direction() ), 0.9f );
 
     ///////////////////////////////////////
     // Compare single thread vs multithread 
@@ -225,14 +225,14 @@ TEST( MRMesh, CylinderApproximation )
     EXPECT_NEAR( result.radius, resultST.radius, 0.01f );
     EXPECT_NEAR( result.length, resultST.length, 0.01f );
     EXPECT_LE( ( result.center() - resultST.center() ).length(), 0.01f );
-    EXPECT_GT( MR::dot( resultST.direction(), result.direction() ), 0.99f );
+    EXPECT_GT( dot( resultST.direction(), result.direction() ), 0.99f );
 
     //////////////////////////////////////////
     // Test usage with SpecificAxisFit (SAF)
     //////////////////////////////////////////
 
     Cylinder3<float> resultSAF;
-    MR::Vector3f noice{ 0.002f , -0.003f , 0.01f };
+    Vector3f noice{ 0.002f , -0.003f , 0.01f };
 
     auto approximationRMS_SAF = fit.solveSpecificAxis( points, resultSAF, direction + noice );
     std::cout << "SpecificAxisFit center: " << resultSAF.center() << " direction:" << resultSAF.direction() << " length:" << resultSAF.length << " radius:" << resultSAF.radius << " error:" << approximationRMS_SAF << std::endl;
@@ -241,7 +241,7 @@ TEST( MRMesh, CylinderApproximation )
     EXPECT_NEAR( resultSAF.radius, originalRadius, 0.1f );
     EXPECT_NEAR( resultSAF.length, originalLength, 0.1f );
     EXPECT_LE( ( resultSAF.center() - center ).length(), 0.1f );
-    EXPECT_GT( MR::dot( direction, resultSAF.direction() ), 0.9f );
+    EXPECT_GT( dot( direction, resultSAF.direction() ), 0.9f );
 }
 
 

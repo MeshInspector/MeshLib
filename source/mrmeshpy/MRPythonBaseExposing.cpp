@@ -509,18 +509,21 @@ MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaces, MR::FaceId )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorEdgePath, MR::EdgePath )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, BoostBitSet, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, BoostBitSet, boost::dynamic_bitset<uint64_t> )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, BoostBitSet, [] ( auto& cls )
 {
     using type = boost::dynamic_bitset<uint64_t>;
-    pybind11::class_<type>( m, "BoostBitSet" ).
+    cls.
         def( "size", &type::size ).
         def( "count", &type::count );
 } )
 
-#define  ADD_PYTHON_BITSET(name,type)\
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] (pybind11::module_& m)\
+#define ADD_PYTHON_BITSET( name, type ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL_1( mrmeshpy, name, type, boost::dynamic_bitset<uint64_t> ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_INST_0( mrmeshpy, name )                                        \
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, name, [] ( auto& cls )                          \
 {\
-    pybind11::class_<type,boost::dynamic_bitset<uint64_t>>( m, #name ).\
+    cls.\
         def( pybind11::init<>() ).\
         def( "test", &type::test ).\
         def( "resize", &type::resize ).\

@@ -13,10 +13,13 @@
 #include "MRMesh/MRFaceFace.h"
 #include "MRMesh/MRPolyline2Collide.h"
 
-#define CONCAT(a, b) 
+#define CONCAT(a, b)
+
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, PolylineTopology, MR::PolylineTopology )
 
 #define MR_ADD_PYTHON_POLYLINE(dimension) \
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Polyline##dimension, MR::Polyline<MR::Vector##dimension<float>> ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, AABBTreePolyline##dimension, MR::AABBTreePolyline##dimension )    \
 MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Polyline##dimension, [] ( auto& cls )                             \
 {\
     using VectorType = MR::Vector##dimension<float>;\

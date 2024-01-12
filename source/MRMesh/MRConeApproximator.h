@@ -290,7 +290,7 @@ private:
             *avg = *avg / static_cast < T > ( xyPairs.size() );
         }
         // Solve the system of equations Ax = b using the least squares method
-        Eigen::Matrix<T, Eigen::Dynamic, 1> x = A.bdcSvd( Eigen::ComputeThinU | Eigen::ComputeThinV ).solve( b );
+        auto x = A.bdcSvd( Eigen::ComputeThinU | Eigen::ComputeThinV ).solve( b );
 
         lineA = x( 0 );
         lineB = x( 1 );

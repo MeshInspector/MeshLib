@@ -397,7 +397,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
         value( "CotanTimesLength", Laplacian::EdgeWeights::CotanTimesLength, "edge weight is equal to edge length times cotangent weight" );
 
     m.def( "positionVertsSmoothly", &MR::positionVertsSmoothly,
-        pybind11::arg( "mesh" ), pybind11::arg( "verts" ), pybind11::arg( "edgeWeightsType" ) = MR::Laplacian::EdgeWeights::Cotan,
+        pybind11::arg( "mesh" ), pybind11::arg( "verts" ), pybind11::arg_v( "edgeWeightsType", MR::Laplacian::EdgeWeights::Cotan, "LaplacianEdgeWeightsParam.Cotan" ),
         pybind11::arg( "fixedSharpVertices" ) = nullptr,
         "Puts given vertices in such positions to make smooth surface both inside verts-region and on its boundary" );
 } )

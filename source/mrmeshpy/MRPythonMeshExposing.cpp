@@ -324,14 +324,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshComponents, [] ( pybind11::module_& m )
     m.def( "getAllComponents", []( const MeshPart& meshPart, MeshComponents::FaceIncidence incidence )
         { return MeshComponents::getAllComponents( meshPart, incidence ); },
         pybind11::arg( "meshPart" ),
-        pybind11::arg( "incidence" ) = MeshComponents::FaceIncidence::PerEdge,
+        pybind11::arg_v( "incidence", MeshComponents::FaceIncidence::PerEdge, "FaceIncidence.PerEdge" ),
         "gets all connected components of mesh part" );
 
      m.def( "getComponent", []( const MeshPart& meshPart, FaceId id, MeshComponents::FaceIncidence incidence )
         { return MeshComponents::getComponent( meshPart, id, incidence ); },
         pybind11::arg( "meshPart" ),
         pybind11::arg( "faceId" ),
-        pybind11::arg( "incidence" ) = MeshComponents::FaceIncidence::PerEdge,
+        pybind11::arg_v( "incidence", MeshComponents::FaceIncidence::PerEdge, "FaceIncidence.PerEdge" ),
         "returns one connected component containing given face,\n"
         "not effective to call more than once, if several components are needed use getAllComponents" );
 
@@ -345,7 +345,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshComponents, [] ( pybind11::module_& m )
      m.def( "getLargestComponent", []( const MeshPart& meshPart, MeshComponents::FaceIncidence incidence )
         { return MeshComponents::getLargestComponent( meshPart, incidence ); },
         pybind11::arg( "meshPart" ),
-        pybind11::arg( "incidence" ) = MeshComponents::FaceIncidence::PerEdge,
+        pybind11::arg_v( "incidence", MeshComponents::FaceIncidence::PerEdge, "FaceIncidence.PerEdge" ),
         "returns largest by surface area component" );
 
     m.def( "getLargestComponentVerts", &MeshComponents::getLargestComponentVerts,

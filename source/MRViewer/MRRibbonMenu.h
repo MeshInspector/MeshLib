@@ -11,6 +11,7 @@
 #include <boost/signals2/signal.hpp>
 #include <type_traits>
 #include <array>
+#include "MRRibbonNotification.h"
 
 namespace MR
 {
@@ -81,6 +82,10 @@ public:
     void setActiveListPos( const ImVec2& pos ) { activeListPos_ = pos; }
     /// set active plugins list showed
     void showActiveList() { activeListPressed_ = true; };
+
+    /// adds new notification to notifier list
+    /// draws it first
+    MRVIEWER_API void pushNotification( const RibbonNotification& notification );
 
     /// clones given objects with sub-objects (except for ancillary and unrecognized children) and undo
     MRVIEWER_API static void cloneTree( const std::vector<std::shared_ptr<Object>>& selectedObjects );
@@ -240,6 +245,7 @@ private:
     RibbonButtonDrawer buttonDrawer_;
 
     Toolbar toolbar_;
+    RibbonNotifier notifier_;
 #ifndef __EMSCRIPTEN__
     AsyncRequest asyncRequest_;
 #endif // !__EMSCRIPTEN__

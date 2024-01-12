@@ -45,9 +45,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Path, [] ( pybind11::module_& )
 {
     (*MR_PYTHON_CUSTOM_CLASS( Path )).
         def( pybind11::init( [] ( const std::string& s )
-        {
-            return MR::pathFromUtf8( s );
-        } ) );
+    {
+        return MR::pathFromUtf8( s );
+    } ) );
     pybind11::implicitly_convertible<std::string, std::filesystem::path>();
     // it could be simlier, but bug in clang 14 does not work with it:
     // def( pybind11::init<const std::u8string&>() );
@@ -188,17 +188,15 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
         (*MR_PYTHON_CUSTOM_CLASS( name )).\
             def( "length", &VectorType::length ).\
             def( "normalized", &VectorType::normalized );\
+        m.def( "angle", ( type( * )( const VectorType&, const VectorType& ) )& MR::angle<type>,\
+            pybind11::arg( "a" ), pybind11::arg( "b" ), "angle in radians between two vectors" );\
     }\
+\
     m.def( "dot", ( type( * )( const VectorType&, const VectorType& ) )& MR::dot<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "dot product" );\
     m.def( "cross", ( VectorType( * )( const VectorType&, const VectorType& ) )& MR::cross<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "cross product" );\
     m.def( "mixed", ( type( * )( const VectorType&, const VectorType&, const VectorType& ) )& MR::mixed<type>,\
         pybind11::arg( "a" ), pybind11::arg( "b" ),pybind11::arg( "c" ), "mixed product" );\
     m.def( "mult", ( VectorType( * )( const VectorType&, const VectorType& ) )& MR::mult<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "per component multiplication" );\
-    if constexpr ( !std::is_same_v<type, int> ) \
-    {\
-        m.def( "angle", ( type( * )( const VectorType&, const VectorType& ) )& MR::angle<type>,\
-            pybind11::arg( "a" ), pybind11::arg( "b" ), "angle in radians between two vectors" );\
-    }\
 } )
 
 MR_ADD_PYTHON_VECTOR3( Vector3i, int )
@@ -322,7 +320,9 @@ MR_ADD_PYTHON_MATRIX2( Matrix2f, MR::Matrix2f )
 MR_ADD_PYTHON_MATRIX2( Matrix2d, MR::Matrix2d )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, LineSegm2f, MR::LineSegm2f )
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LineSegm2f, [] ( pybind11::module_& )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, LineSegm3f, MR::LineSegm3f )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LineSegm, [] ( pybind11::module_& m )
 {
     (*MR_PYTHON_CUSTOM_CLASS( LineSegm2f )).doc() =
         "a segment of 2-dimensional line";
@@ -331,11 +331,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LineSegm2f, [] ( pybind11::module_& )
         def( pybind11::init<const MR::Vector2f&, const MR::Vector2f&>() ).
         def_readwrite( "a", &MR::LineSegm2f::a ).
         def_readwrite( "b", &MR::LineSegm2f::b );
-} )
 
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, LineSegm3f, MR::LineSegm3f )
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LineSegm3f, [] ( pybind11::module_& )
-{
     (*MR_PYTHON_CUSTOM_CLASS( LineSegm3f )).doc() =
         "a segment of 3-dimensional line";
     (*MR_PYTHON_CUSTOM_CLASS( LineSegm3f )).
@@ -343,10 +339,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LineSegm3f, [] ( pybind11::module_& )
         def( pybind11::init<const MR::Vector3f&, const MR::Vector3f&>() ).
         def_readwrite( "a", &MR::LineSegm3f::a ).
         def_readwrite( "b", &MR::LineSegm3f::b );
-} )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LineSegm, [] ( pybind11::module_& m )
-{
     m.def( "intersection", ( std::optional<MR::Vector2f>( * )( const MR::LineSegm2f&, const MR::LineSegm2f& ) )& MR::intersection,
         pybind11::arg( "segm1" ), pybind11::arg( "segm2" ),
         "finds an intersection between a segm1 and a segm2\n"
@@ -392,7 +385,9 @@ MR_ADD_PYTHON_AFFINE_XF( AffineXf2d )
 MR_ADD_PYTHON_AFFINE_XF( AffineXf3d )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Line3f, MR::Line3f )
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Line3f, [] ( pybind11::module_& )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Line3d, MR::Line3d )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Line, [] ( pybind11::module_& )
 {
     (*MR_PYTHON_CUSTOM_CLASS( Line3f )).doc() =
         "3-dimensional line: cross( x - p, d ) = 0";
@@ -404,11 +399,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Line3f, [] ( pybind11::module_& )
         def( "distanceSq", &MR::Line3f::distanceSq, pybind11::arg( "x" ), "returns squared distance from given point to this line" ).
         def( "normalized", &MR::Line3f::normalized, "returns same line represented with unit d-vector" ).
         def( "project", &MR::Line3f::project, pybind11::arg( "x" ), "finds the closest point on line" );
-} )
 
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Line3d, MR::Line3d )
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Line3d, [] ( pybind11::module_& )
-{
     (*MR_PYTHON_CUSTOM_CLASS( Line3d )).doc() =
         "3-dimensional line: cross( x - p, d ) = 0";
     (*MR_PYTHON_CUSTOM_CLASS( Line3d )).
@@ -463,6 +454,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, UndirectedEdgeId, [] ( pybind11::module_& )
 } )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, ViewportId, MR::ViewportId )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, ViewportMask, MR::ViewportMask )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ViewportId, [] ( pybind11::module_& )
 {
     (*MR_PYTHON_CUSTOM_CLASS( ViewportId )).doc() =
@@ -473,11 +466,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ViewportId, [] ( pybind11::module_& )
         def( pybind11::init<unsigned>() ).
         def( "value", &MR::ViewportId::value ).
         def( "valid", &MR::ViewportId::valid );
-} )
 
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, ViewportMask, MR::ViewportMask )
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ViewportMask, [] ( pybind11::module_& )
-{
     (*MR_PYTHON_CUSTOM_CLASS( ViewportMask )).doc() =
         "stores mask of viewport unique identifiers";
     (*MR_PYTHON_CUSTOM_CLASS( ViewportMask )).
@@ -498,7 +487,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SegmPointf, [] ( pybind11::module_& )
 } )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, EdgePoint, MR::EdgePoint )
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgePoint, [] ( pybind11::module_& )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, TriPointf, MR::TriPointf )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, MeshTriPoint, MR::MeshTriPoint )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPoint, [] ( pybind11::module_& )
 {
     (*MR_PYTHON_CUSTOM_CLASS( EdgePoint )).doc() =
         "encodes a point on a mesh edge";
@@ -516,11 +508,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgePoint, [] ( pybind11::module_& )
         def( "getClosestVertex", ( MR::VertId( MR::EdgePoint::* )( const MR::PolylineTopology & ) const )& MR::EdgePoint::getClosestVertex, pybind11::arg( "topology" ), "returns one of two edge vertices, closest to this point" ).
         def( "sym", &MR::EdgePoint::sym, "represents the same point relative to sym edge in" ).
         def( pybind11::self == pybind11::self );
-} )
 
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, TriPointf, MR::TriPointf )
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, TriPointf, [] ( pybind11::module_& )
-{
     (*MR_PYTHON_CUSTOM_CLASS( TriPointf )).doc() =
         "encodes a point inside a triangle using barycentric coordinates\n"
         "\tNotations used below: v0, v1, v2 - points of the triangle";
@@ -538,11 +526,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, TriPointf, [] ( pybind11::module_& )
             "\ta+b in [0,1], a+b=0 => point is in v0, a+b=1 => point is on [v1,v2] edge\n"
             "a in [0,1], a=0 => point is on [v2,v0] edge, a=1 => point is in v1" ).
         def_readwrite( "b", &MR::TriPointf::b, "b in [0,1], b=0 => point is on [v0,v1] edge, b=1 => point is in v2" );
-} )
 
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, MeshTriPoint, MR::MeshTriPoint )
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTriPoint, [] ( pybind11::module_& )
-{
     (*MR_PYTHON_CUSTOM_CLASS( MeshTriPoint )).doc() =
         "encodes a point inside a triangular mesh face using barycentric coordinates\n"
         "\tNotations used below:\n" 

@@ -33,16 +33,14 @@ MR_ADD_PYTHON_VOXELS_VOLUME( SimpleVolume, "vector of float" )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL_1( mrmeshpy, FloatGrid, MR::OpenVdbFloatGrid, MR::FloatGrid )
 MR_ADD_PYTHON_CUSTOM_CLASS_INST_0( mrmeshpy, FloatGrid )
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FloatGrid, [] ( pybind11::module_& )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
 {
     (*MR_PYTHON_CUSTOM_CLASS( FloatGrid )).doc() =
         "Smart pointer to OpenVdbFloatGrid";
     (*MR_PYTHON_CUSTOM_CLASS( FloatGrid )).
         def( pybind11::init<>() );
-} )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
-{
     m.def( "meshToLevelSet", &MR::meshToLevelSet,
         pybind11::arg( "mp" ), pybind11::arg( "xf" ), pybind11::arg( "voxelSize" ), pybind11::arg( "surfaceOffset" ) = 3, pybind11::arg( "cb" ) = MR::ProgressCallback{},
         "Closed surface is required.\n"

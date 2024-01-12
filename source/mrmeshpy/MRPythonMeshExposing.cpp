@@ -81,20 +81,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& )
 } )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, VectorFloatByVert, MR::VertScalars )
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, VectorFloatByVert, [] ( pybind11::module_& )
-{
-    (*MR_PYTHON_CUSTOM_CLASS( VectorFloatByVert )).
-        def( pybind11::init<>() ).
-        def_readwrite( "vec", &VertScalars::vec_ );
-} )
-
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, VertColorMap, MR::VertColors )
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, VertColorMap, [] ( pybind11::module_& )
-{
-    (*MR_PYTHON_CUSTOM_CLASS( VertColorMap )).
-        def( pybind11::init<>() ).
-        def_readwrite( "vec", &VertColors::vec_ );
-} )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
 {
@@ -122,6 +109,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def_readwrite( "vec", &EdgeMap::vec_ );
 
+    (*MR_PYTHON_CUSTOM_CLASS( VectorFloatByVert )).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &VertScalars::vec_ );
+
     pybind11::class_<FaceNormals>( m, "FaceNormals" ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &FaceNormals::vec_ );
@@ -129,6 +120,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
     pybind11::class_<Vector<Vector2f, VertId>>( m, "VertCoords2" ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &Vector<Vector2f, VertId>::vec_ );
+
+    (*MR_PYTHON_CUSTOM_CLASS( VertColorMap )).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &VertColors::vec_ );
 } )
 
 MR_ADD_PYTHON_MAP( mrmeshpy, FaceHashMap, FaceHashMap )
@@ -156,18 +151,15 @@ MeshTopology topologyFromTriangles( const Triangulation& t, const MeshBuilder::B
 }
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, ThreeVertIds, MR::ThreeVertIds )
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ThreeVertIds, [] ( pybind11::module_& )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, []( pybind11::module_& m )
 {
     (*MR_PYTHON_CUSTOM_CLASS( ThreeVertIds )).
         def( pybind11::init( [] ( VertId v0, VertId v1, VertId v2 ) -> ThreeVertIds
         {
             return { v0, v1, v2 };
         } ) );
-} )
-MR_ADD_PYTHON_VEC( mrmeshpy, vectorThreeVertIds, ThreeVertIds )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, []( pybind11::module_& m )
-{
     pybind11::class_<Triangulation>( m, "Triangulation" ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &Triangulation::vec_ );
@@ -185,21 +177,21 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, []( pybind11::module_& m )
         "if skippedTris is given then it receives all input triangles not added in the resulting topology" );
 } )
 
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorThreeVertIds, ThreeVertIds )
+
 Mesh pythonCopyMeshFunction( const Mesh& mesh )
 {
     return mesh;
 }
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, PackMapping, MR::PackMapping )
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PackMapping, [] ( pybind11::module_& )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Mesh, MR::Mesh )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
 {
     (*MR_PYTHON_CUSTOM_CLASS( PackMapping )).doc() =
         "Not fully exposed, for now dummy class";
-} )
 
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Mesh, MR::Mesh )
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
-{
     (*MR_PYTHON_CUSTOM_CLASS( Mesh )).
         def( pybind11::init<>() ).
         def( "computeBoundingBox", ( Box3f( Mesh::* )( const FaceBitSet*, const AffineXf3f* ) const )& Mesh::computeBoundingBox,
@@ -269,6 +261,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
             "copies only portion of (from) specified by fromFaces" ).
 
         def( pybind11::self == pybind11::self, "compare that two meshes are exactly the same" );
+
     m.def( "copyMesh", &pythonCopyMeshFunction, pybind11::arg( "mesh" ), "returns copy of input mesh" );
 } )
 
@@ -467,15 +460,6 @@ FaceBitSet getFacesByMinEdgeLength( const Mesh& mesh, float minLength )
 }
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, FaceFace, MR::FaceFace )
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FaceFace, [] ( pybind11::module_& )
-{
-    (*MR_PYTHON_CUSTOM_CLASS( FaceFace )).
-        def( pybind11::init<>() ).
-        def( pybind11::init<FaceId, FaceId>(), pybind11::arg( "a" ), pybind11::arg( "b" ) ).
-        def_readwrite( "aFace", &FaceFace::aFace ).
-        def_readwrite( "bFace", &FaceFace::bFace );
-} )
-MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaceFace, FaceFace )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
 {
@@ -559,6 +543,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
         "creates torus with empty sectors\n"
         "main application - testing Components" );
 
+    (*MR_PYTHON_CUSTOM_CLASS( FaceFace )).
+        def( pybind11::init<>() ).
+        def( pybind11::init<FaceId, FaceId>(), pybind11::arg( "a" ), pybind11::arg( "b" ) ).
+        def_readwrite( "aFace", &FaceFace::aFace ).
+        def_readwrite( "bFace", &FaceFace::bFace );
+
     m.def( "findSelfCollidingTriangles",
         decorateExpected( []( const MeshPart& mp, ProgressCallback cb ) { return findSelfCollidingTriangles( mp, cb ); } ),
         pybind11::arg( "mp" ), pybind11::arg( "cb" ) = ProgressCallback{}, "finds all pairs of colliding triangles from one mesh or a region" );
@@ -573,3 +563,5 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
         "\trigidB2A - rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation\n"
         "\tfirstIntersectionOnly - if true then the function returns at most one pair of intersecting triangles and returns faster" );
 } )
+
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaceFace, FaceFace )

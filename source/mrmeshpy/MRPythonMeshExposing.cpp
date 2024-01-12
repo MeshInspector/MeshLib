@@ -80,6 +80,22 @@ MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, MeshTopology, [] ( auto& cls )
         def( pybind11::self == pybind11::self, "compare that two topologies are exactly the same" );
 } )
 
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, VectorFloatByVert, MR::VertScalars )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, VectorFloatByVert, [] ( auto& cls )
+{
+    cls.
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &VertScalars::vec_ );
+} )
+
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, VertColorMap, MR::VertColors )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, VertColorMap, [] ( auto& cls )
+{
+    cls.
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &VertColors::vec_ );
+} )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
 {
     pybind11::class_<VertCoords>( m, "VertCoords" ).
@@ -106,10 +122,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def_readwrite( "vec", &EdgeMap::vec_ );
 
-    pybind11::class_<VertScalars>( m, "VectorFloatByVert" ).
-        def( pybind11::init<>() ).
-        def_readwrite( "vec", &VertScalars::vec_ );
-
     pybind11::class_<FaceNormals>( m, "FaceNormals" ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &FaceNormals::vec_ );
@@ -117,10 +129,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
     pybind11::class_<Vector<Vector2f, VertId>>( m, "VertCoords2" ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &Vector<Vector2f, VertId>::vec_ );
-
-    pybind11::class_<VertColors>( m, "VertColorMap" ).
-        def( pybind11::init<>() ).
-        def_readwrite( "vec", &VertColors::vec_ );
 } )
 
 MR_ADD_PYTHON_MAP( mrmeshpy, FaceHashMap, FaceHashMap )

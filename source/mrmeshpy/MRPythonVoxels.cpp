@@ -14,9 +14,12 @@
 
 
 #define MR_ADD_PYTHON_VOXELS_VOLUME( Type, TypeText ) \
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Type, []( pybind11::module_& m ) \
-{\
-    pybind11::class_<MR::Type>( m, #Type, "Voxels representation as " #TypeText ).\
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Type, MR::Type ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, Type, [] ( auto& cls ) \
+{                                                     \
+    cls.doc() =                                       \
+        "Voxels representation as " #TypeText;        \
+    cls.                                              \
         def( pybind11::init<>() ).\
         def_readwrite( "data", &MR::Type::data ).\
         def_readwrite( "dims", &MR::Type::dims, "Size of voxels space" ).\
@@ -28,11 +31,18 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Type, []( pybind11::module_& m ) \
 MR_ADD_PYTHON_VOXELS_VOLUME( VdbVolume, "VDB FloatGrid" )
 MR_ADD_PYTHON_VOXELS_VOLUME( SimpleVolume, "vector of float" )
 
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL_1( mrmeshpy, FloatGrid, MR::OpenVdbFloatGrid, MR::FloatGrid )
+MR_ADD_PYTHON_CUSTOM_CLASS_INST_0( mrmeshpy, FloatGrid )
+MR_ADD_PYTHON_CUSTOM_CLASS_IMPL( mrmeshpy, FloatGrid, [] ( auto& cls )
+{
+    cls.doc() =
+        "Smart pointer to OpenVdbFloatGrid";
+    cls.
+        def( pybind11::init<>() );
+} )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
 {
-    pybind11::class_<MR::OpenVdbFloatGrid, MR::FloatGrid>( m, "FloatGrid", "Smart pointer to OpenVdbFloatGrid" ).
-        def( pybind11::init<>() );
-
     m.def( "meshToLevelSet", &MR::meshToLevelSet,
         pybind11::arg( "mp" ), pybind11::arg( "xf" ), pybind11::arg( "voxelSize" ), pybind11::arg( "surfaceOffset" ) = 3, pybind11::arg( "cb" ) = MR::ProgressCallback{},
         "Closed surface is required.\n"

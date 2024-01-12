@@ -36,6 +36,8 @@ namespace MR
 OpenRawVoxelsPlugin::OpenRawVoxelsPlugin():
     StatePlugin( "Open RAW Voxels" )
 {
+    parameters_.dimensions = { 256, 256, 256 };
+    parameters_.voxelSize = { 1.0f, 1.0f, 1.0f };
 }
 
 void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
@@ -142,8 +144,6 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
 bool OpenRawVoxelsPlugin::onEnable_()
 {
-    parameters_ = VoxelsLoad::RawParameters();
-    autoMode_ = true;
     return true;
 }
 

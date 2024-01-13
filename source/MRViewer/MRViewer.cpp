@@ -1051,9 +1051,9 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
             getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
         }
         if ( !result.errorSummary.empty() )
-            showModal( std::string( result.errorSummary ), ImGuiMenu::ModalMessageType::Error );
+            showModal( std::string( result.errorSummary ), NotificationType::Error );
         else if ( !result.warningSummary.empty() )
-            showModal( std::string( result.warningSummary ), ImGuiMenu::ModalMessageType::Info );
+            showModal( std::string( result.warningSummary ), NotificationType::Info );
     };
 
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )

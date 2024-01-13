@@ -133,6 +133,7 @@ void RibbonMenu::init( MR::Viewer* _viewer )
 
         draw_helpers();
         drawVersionWindow_();
+        notifier_.drawNotifications( menu_scaling() );
     };
 
     buttonDrawer_.setMenu( this );
@@ -912,6 +913,11 @@ bool RibbonMenu::drawGroupUngroupButton_( const std::vector<std::shared_ptr<Obje
     }
 
     return someChanges;
+}
+
+void RibbonMenu::pushNotification( const RibbonNotification& notification )
+{
+    notifier_.pushNotification( notification );
 }
 
 void RibbonMenu::cloneTree( const std::vector<std::shared_ptr<Object>>& selectedObjects )

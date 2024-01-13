@@ -37,7 +37,7 @@ private:
     std::vector<NotificationWithTimer> notifications_;
     void filterInvalid_( int numInvalid = -1 );
 #ifndef __EMSCRIPTEN__
-    Time requrestedTime_{ Time::max() };
+    Time requestedTime_{ Time::max() };
     AsyncRequest asyncRequest_;
 #endif
     void requestClosestRedraw_();

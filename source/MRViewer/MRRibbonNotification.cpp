@@ -74,7 +74,7 @@ void RibbonNotifier::filterInvalid_( int numInvalid )
     }
     if ( changed )
     {
-        requrestedTime_ = Time::max();
+        requestedTime_ = Time::max();
         requestClosestRedraw_();
     }
 }
@@ -92,15 +92,15 @@ void RibbonNotifier::requestClosestRedraw_()
         return;
 #ifndef __EMSCRIPTEN__
     Time neededTime = std::chrono::system_clock::now() + std::chrono::milliseconds( std::llround( minTimeReq * 1000 ) + 100 );
-    if ( requrestedTime_ < neededTime )
+    if ( requestedTime_ < neededTime )
         return;
-    requrestedTime_ = neededTime;
-    asyncRequest_.request( requrestedTime_, [&] ()
+    requestedTime_ = neededTime;
+    asyncRequest_.request( requestedTime_, [&] ()
     {
         CommandLoop::appendCommand( [&] ()
         {
             getViewerInstance().incrementForceRedrawFrames();
-            requrestedTime_ = Time::max();
+            requestedTime_ = Time::max();
         } );
     } );
 #else

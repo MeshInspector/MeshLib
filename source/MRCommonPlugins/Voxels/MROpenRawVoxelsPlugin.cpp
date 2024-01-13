@@ -26,7 +26,8 @@ const std::vector<std::string> cScalarTypeNames =
     "UInt64",
     "Int64",
     "Float32",
-    "Float64"
+    "Float64",
+    "4 x Float32"
 };
 }
 

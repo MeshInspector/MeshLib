@@ -2,6 +2,7 @@
 #include "MRCommandLoop.h"
 #include "MRViewer.h"
 #include "ImGuiHelpers.h"
+#include "MRPch/MRWasm.h"
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -74,7 +75,9 @@ void RibbonNotifier::filterInvalid_( int numInvalid )
     }
     if ( changed )
     {
+#ifndef __EMSCRIPTEN__
         requestedTime_ = Time::max();
+#endif
         requestClosestRedraw_();
     }
 }

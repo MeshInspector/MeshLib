@@ -42,31 +42,28 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
     if ( settings.region )
         *settings.region &= mesh.topology.getValidFaces();
 
-    auto addInQueue = [&]( UndirectedEdgeId e )
+    auto addInQueue = [&]( UndirectedEdgeId ue )
     {
-        bool canSubdivide = settings.subdivideBorder ? mesh.topology.isInnerOrBdEdge( e, settings.region ) : mesh.topology.isInnerEdge( e, settings.region );
-        if ( !settings.subdivideBorder && canSubdivide )
+        EdgeId e( ue );
+        if ( settings.subdivideBorder ? !mesh.topology.isInnerOrBdEdge( e, settings.region )
+                                      : !mesh.topology.isInnerEdge( e, settings.region ) )
+            return;
+        if ( settings.maxTriAspectRatio < FLT_MAX )
         {
-            EdgeId eDir = EdgeId( e << 1 );
-            auto f = mesh.topology.left( eDir );
             Vector3f vp[3];
-            if ( f.valid() )
+            if ( auto f = mesh.topology.left( e ) )
             {
                 mesh.getTriPoints( f, vp[0], vp[1], vp[2] );
-                canSubdivide = triangleAspectRatio( vp[0], vp[1], vp[2] ) < settings.critAspectRatio;
+                if ( triangleAspectRatio( vp[0], vp[1], vp[2] ) > settings.maxTriAspectRatio )
+                    return;
             }
-            if ( canSubdivide )
+            if ( auto f = mesh.topology.right( e ) )
             {
-                f = mesh.topology.right( eDir );
-                if ( f.valid() )
-                {
-                    mesh.getTriPoints( f, vp[0], vp[1], vp[2] );
-                    canSubdivide = triangleAspectRatio( vp[0], vp[1], vp[2] ) < settings.critAspectRatio;
-                }
+                mesh.getTriPoints( f, vp[0], vp[1], vp[2] );
+                if ( triangleAspectRatio( vp[0], vp[1], vp[2] ) > settings.maxTriAspectRatio )
+                    return;
             }
         }
-        if ( !canSubdivide )
-            return;
         float lenSq = mesh.edgeLengthSq( e );
         if ( lenSq < maxEdgeLenSq )
             return;

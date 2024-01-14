@@ -76,7 +76,7 @@ jobs:
           gh pr create --title "Bump vcpkg to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
                        --body "This PR updates the vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
                        --base master \
-                       --head ${new_branch}
+                       --head ${new_branch} \
                        --reviewer MaxRayskiy,Grantim
 
           

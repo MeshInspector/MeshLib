@@ -75,7 +75,7 @@ jobs:
           # Create a pull request using GitHub CLI
           gh pr create --title "Bump vcpkg to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
                        --body "This PR updates the vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
-                       --base main \
+                       --base master \
                        --head ${new_branch}
 
           

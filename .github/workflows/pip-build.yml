@@ -398,10 +398,6 @@ jobs:
           path: meshlib-*.whl
           retention-days: 1
 
-      - name: Deactivate virtualenv
-        if: always()
-        run: deactivate
-
   manylinux-pip-test:
     needs: [setup, manylinux-pip-build]
     timeout-minutes: 20
@@ -567,11 +563,6 @@ jobs:
       - name: Run Python tests
         working-directory: test_python
         run: ${{ matrix.py-cmd }} -m pytest -s -v
-
-      - name: Deactivate virtualenv
-        if: always()
-        run: |
-          deactivate
 
 #  upload-to-release:
 #    needs: [manylinux-pip-test, windows-pip-test, macos-pip-test]

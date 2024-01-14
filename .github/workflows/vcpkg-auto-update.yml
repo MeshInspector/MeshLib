@@ -71,7 +71,6 @@ jobs:
           git push origin ${new_branch}
       
           # Create a pull request using GitHub CLI
-          echo ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }} | gh auth login --with-token
           gh pr create --title "Bump vcpkg to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
                        --body "This PR updates the vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
                        --base main \

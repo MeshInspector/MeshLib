@@ -37,7 +37,8 @@ jobs:
           current_tag="${{ steps.extract-tag.outputs.current_vcpkg_tag }}"
           latest_tag="${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"
           
-          if [ ${#current_tag} -gt 12 ] || [ "${current_tag}" < "${latest_tag}" ]; then
+          echo -e "${current_tag}\n${latest_tag}" | sort -V | uniq -u | read diff
+          if [ -n "$diff" ]; then
             echo "Tags are different. Creating a new branch and opening a pull request."
             echo "need_vcpkg_update=true" >> $GITHUB_OUTPUT
           else
@@ -48,11 +49,13 @@ jobs:
 
       - name: Bump vcpkg
         if: ${{ steps.compare.outputs.need_vcpkg_update == 'true' }}
-        id: bunp-vcpkg
+        id: bunmp-vcpkg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git checkout -b vcpkg-${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}
+          # Create new branch
+          new_branch="vcpkg-update-${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"
+          git checkout -b ${new_branch}
 
           # Search and replace in all files except /thirdparty folder
           find . -type f -not -path './thirdparty*' ! -path './thirdparty/install.bat' -exec \
@@ -61,8 +64,14 @@ jobs:
           # Commit the changes
           git commit -am "Update vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"
 
-          # Push the changes to your repository
-          git push origin vcpkg-${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}
+           # Push the changes
+          git push origin ${new_branch}
+      
+          # Create a pull request using GitHub CLI
+          gh pr create --title "Bump vcpkg to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
+                       --body "This PR updates the vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
+                       --base main \
+                       --head ${new_branch}
 
           
 

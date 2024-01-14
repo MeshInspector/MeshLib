@@ -13,7 +13,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: 'origin/master'
+          ref: "master"
 
       - name: Search for Tag in Readme
         id: extract-tag

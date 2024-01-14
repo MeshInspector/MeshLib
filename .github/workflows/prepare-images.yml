@@ -87,7 +87,7 @@ jobs:
       - name: Checking whether to start image rebuild
         if: ${{ contains(github.event.pull_request.labels.*.name, 'bump-vcpkg') }}
         run: |
-          echo "need_windows_rebuild='true'" >> $GITHUB_OUTPUT
+          echo "need_windows_rebuild=true" >> $GITHUB_OUTPUT
 
         #                    [os,     runner-label ]
         # for MeshLib:       [ubuntu, ubuntu-latest], [fedora, ubuntu-latest], [windows, windows-2019]

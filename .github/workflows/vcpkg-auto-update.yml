@@ -46,7 +46,12 @@ jobs:
             echo "need_vcpkg_update=false" >> $GITHUB_OUTPUT
           fi
 
-
+      - name: Configure Git
+        if: ${{ steps.compare.outputs.need_vcpkg_update == 'true' }}
+        run: |
+          git config --global user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}"
+          git config --global user.name "meshinspector-bot"
+          
       - name: Bump vcpkg
         if: ${{ steps.compare.outputs.need_vcpkg_update == 'true' }}
         id: bunmp-vcpkg

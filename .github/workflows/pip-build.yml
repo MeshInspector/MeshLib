@@ -340,6 +340,12 @@ jobs:
           rm -rf /Library/Frameworks/Python.framework/
           brew install --force python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew link --overwrite python@${{ matrix.py-version }}
 
+      - name: Create virtualenv
+        run: |
+          ${{ matrix.py-cmd }} -m venv .venv
+          . .venv/bin/activate
+          echo PATH=$PATH >> $GITHUB_ENV
+      
       - name: Python setup
         run: |
           curl -sS https://bootstrap.pypa.io/get-pip.py | ${{ matrix.py-cmd }}
@@ -391,6 +397,10 @@ jobs:
           name: Wheelhouse
           path: meshlib-*.whl
           retention-days: 1
+
+      - name: Deactivate virtualenv
+        if: always()
+        run: deactivate
 
   manylinux-pip-test:
     needs: [setup, manylinux-pip-build]
@@ -533,6 +543,12 @@ jobs:
         if: ${{ !(matrix.platform == 'x86' && ( matrix.py-version == '3.11' || matrix.py-version == '3.12' ) ) }}
         run: brew install python@${{matrix.py-version}}
 
+      - name: Create virtualenv
+        run: |
+          ${{ matrix.py-cmd }} -m venv .venv
+          . .venv/bin/activate
+          echo PATH=$PATH >> $GITHUB_ENV
+
       - name: Pip setup
         run: |
           ${{ matrix.py-cmd }} -m pip install --upgrade pip
@@ -551,6 +567,11 @@ jobs:
       - name: Run Python tests
         working-directory: test_python
         run: ${{ matrix.py-cmd }} -m pytest -s -v
+
+      - name: Deactivate virtualenv
+        if: always()
+        run: |
+          deactivate
 
 #  upload-to-release:
 #    needs: [manylinux-pip-test, windows-pip-test, macos-pip-test]

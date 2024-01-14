@@ -45,12 +45,6 @@ jobs:
             echo "Tags are the same. No action needed."
             echo "need_vcpkg_update=false" >> $GITHUB_OUTPUT
           fi
-
-      - name: Configure Git
-        if: ${{ steps.compare.outputs.need_vcpkg_update == 'true' }}
-        run: |
-          git config --global user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
-          git config --global user.name "meshinspector-bot"
           
       - name: Bump vcpkg
         if: ${{ steps.compare.outputs.need_vcpkg_update == 'true' }}
@@ -58,6 +52,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }}
         run: |
+          git config --global user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
+          git config --global user.name "meshinspector-bot"
+          
           # Create new branch
           new_branch="vcpkg-update-${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"
           git checkout -b ${new_branch}
@@ -69,7 +66,8 @@ jobs:
           # Commit the changes
           git commit -am "Update vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"
 
-           # Push the changes
+          # Push the changes
+          git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $(echo -n x-access-token:${GITHUB_TOKEN} | base64)"
           git push origin ${new_branch}
       
           # Create a pull request using GitHub CLI

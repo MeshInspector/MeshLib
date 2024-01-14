@@ -37,7 +37,7 @@ jobs:
           current_tag="${{ steps.extract-tag.outputs.current_vcpkg_tag }}"
           latest_tag="${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"
           
-          echo -e "${current_tag}\n${latest_tag}" | sort -V | uniq -u | read diff
+          diff=$(echo -e "${current_tag}\n${latest_tag}" | sort -V | uniq -u)
           if [ -n "$diff" ]; then
             echo "Tags are different. Creating a new branch and opening a pull request."
             echo "need_vcpkg_update=true" >> $GITHUB_OUTPUT

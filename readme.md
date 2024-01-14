@@ -162,7 +162,7 @@ If you would like to use another version of CUDA, please modify `MRCudaVersion` 
     ```sh
     git clone https://github.com/Microsoft/vcpkg.git
     cd vcpkg
-    git checkout 2023.11.20
+    git checkout 2024.01.12
     .\bootstrap-vcpkg.bat
     .\vcpkg integrate install (with admin rights)
     ```

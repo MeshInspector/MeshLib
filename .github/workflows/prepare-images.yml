@@ -85,7 +85,7 @@ jobs:
           echo "need_windows_rebuild=${{steps.windows-changes.outputs.src == 'true'}}" >> $GITHUB_OUTPUT
 
       - name: Checking whether to start image rebuild
-        if: ${{ contains(github.event.pull_request.labels.*.name, 'bump-vcpkg' }}
+        if: ${{ contains(github.event.pull_request.labels.*.name, 'bump-vcpkg') }}
         run: |
           echo "need_windows_rebuild='true'" >> $GITHUB_OUTPUT
 

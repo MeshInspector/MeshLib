@@ -1,6 +1,6 @@
 #pragma once
 
-#include <MRMesh\MRViewportId.h>
+#include "MRMesh/MRViewportId.h"
 #include "MRViewer/MRUIStyle.h"
 
 #include <functional>

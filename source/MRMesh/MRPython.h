@@ -33,6 +33,33 @@ _Pragma("warning(disable:4459)") \
     static MR::PythonFunctionAdder name##_adder_( #moduleName, __VA_ARGS__ ); \
 _Pragma("warning(pop)")
 
+/**
+ * For the proper stub file generation, a class must be defined prior to its depending methods.
+ * To achieve it, declare the class *before* the \ref MR_ADD_PYTHON_CUSTOM_DEF block
+ * either with \ref MR_ADD_PYTHON_CUSTOM_CLASS_DECL macro for simple cases
+ * or with \ref MR_ADD_PYTHON_CUSTOM_CLASS_DECL_ONLY_ARGS and \ref MR_ADD_PYTHON_CUSTOM_CLASS_INST_ONLY_ARGS macros
+ * if any customizations are required (custom holder, custom container binding, etc.). Both latter macros have
+ * an ARGS-less version for trivial declaration or instantiation. Also replace the class declaration
+ * within the \ref MR_ADD_PYTHON_CUSTOM_DEF block with the (*(MR_PYTHON_CUSTOM_CLASS( class-name )) construction.
+ * Usual class definition:
+ * @code
+ * MR_ADD_PYTHON_CUSTOM_DEF( moduleName, scopeName, [] ( pybind11::module_& m )
+ * {
+ *     pybind11::class_<cppType>( m, pythonTypeName ).
+ *         def( pybind11::init<>() );
+ * }
+ * @endcode
+ * Pre-declared class definition:
+ * @code
+ * MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, pythonTypeName, cppTypeName )
+ * MR_ADD_PYTHON_CUSTOM_DEF( moduleName, scopeName, [] ( pybind11::module_& m )
+ * {
+ *     (*(MR_PYTHON_CUSTOM_CLASS( pythonTypeName )).
+ *         def( pybind11::init<>() );
+ * }
+ * @endcode
+ * See also \ref MR_ADD_PYTHON_VEC and \ref MR_ADD_PYTHON_MAP macros for customized class definition examples.
+ */
 #define MR_PYTHON_CUSTOM_CLASS( name ) name##_class_
 
 #define MR_ADD_PYTHON_CUSTOM_CLASS_DECL_ONLY( moduleName, name, type ) \
@@ -43,18 +70,18 @@ static std::optional<pybind11::class_<type, __VA_ARGS__>> MR_PYTHON_CUSTOM_CLASS
 
 #define MR_ADD_PYTHON_CUSTOM_CLASS_INST_ONLY( moduleName, name ) \
 MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_inst_, [] ( pybind11::module_& module ) \
-{                                                             \
-    MR_PYTHON_CUSTOM_CLASS( name ).emplace( module, #name );                   \
+{                                                                \
+    MR_PYTHON_CUSTOM_CLASS( name ).emplace( module, #name );     \
 }, MR::PythonExport::Priority::Declaration )
 
 #define MR_ADD_PYTHON_CUSTOM_CLASS_INST_ONLY_ARGS( moduleName, name, ... ) \
 MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_inst_, [] ( pybind11::module_& module ) \
-{                                                                  \
-    MR_PYTHON_CUSTOM_CLASS( name ) = __VA_ARGS__ ( module );                        \
+{                                                                          \
+    MR_PYTHON_CUSTOM_CLASS( name ) = __VA_ARGS__ ( module );               \
 }, MR::PythonExport::Priority::Declaration )
 
 #define MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, type ) \
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL_ONLY( moduleName, name, type )       \
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL_ONLY( moduleName, name, type )    \
 MR_ADD_PYTHON_CUSTOM_CLASS_INST_ONLY( moduleName, name )
 
 // !!! It's important to add vec after adding type

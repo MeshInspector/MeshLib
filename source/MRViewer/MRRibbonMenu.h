@@ -1,5 +1,6 @@
 #pragma once
 #include "MRMenu.h"
+#include "MRCustomCheckBox.h"
 #include "MRRibbonMenuItem.h"
 #include "MRRibbonMenuSearch.h"
 #include "MRRibbonFontManager.h"
@@ -25,6 +26,12 @@ class Object;
 class MRVIEWER_CLASS RibbonMenu : public ImGuiMenu
 {
 public:
+    using CheckboxCallback = std::function<void( bool chcked, ViewportId id )>;
+    void setCustomCheckbox(
+        const std::string& name,
+        std::function<void( std::shared_ptr<Object> object, ViewportId id, bool checked )> set,
+        std::function<bool( std::shared_ptr<Object> object, ViewportId id )> get );
+
     MRVIEWER_API virtual void init( MR::Viewer* _viewer ) override;
 
     MRVIEWER_API virtual void shutdown() override;
@@ -189,6 +196,7 @@ private:
     void drawSearchButton_();
     void drawCollapseButton_();
     void drawHelpButton_();
+    bool drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected );
 
     void sortObjectsRecursive_( std::shared_ptr<Object> object );
 
@@ -243,6 +251,8 @@ private:
     int activeTabIndex_{ 0 };
     RibbonFontManager fontManager_;
     RibbonButtonDrawer buttonDrawer_;
+
+    std::unordered_map<std::string, CustomCheckBox> customCheckBox_;
 
     Toolbar toolbar_;
     RibbonNotifier notifier_;

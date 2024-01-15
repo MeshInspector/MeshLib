@@ -105,6 +105,7 @@
     <ClInclude Include="MRCommandLoop.h" />
     <ClInclude Include="MRCreateShader.h" />
     <ClInclude Include="MRCudaAccessor.h" />
+    <ClInclude Include="MRCustomCheckBox.h" />
     <ClInclude Include="MRDirectionWidget.h" />
     <ClInclude Include="MRFitData.h" />
     <ClInclude Include="MRNotificationType.h" />

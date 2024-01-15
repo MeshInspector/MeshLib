@@ -1,6 +1,5 @@
 #pragma once
 #include "MRMenu.h"
-#include "MRCustomCheckBox.h"
 #include "MRRibbonMenuItem.h"
 #include "MRRibbonMenuSearch.h"
 #include "MRRibbonFontManager.h"
@@ -25,12 +24,18 @@ class Object;
 // menu structure is provided by `menuItemsStructure.json` file (parsed on init)
 class MRVIEWER_CLASS RibbonMenu : public ImGuiMenu
 {
+    struct CustomContextMenuCheckbox
+    {
+        using Setter = std::function<bool( std::shared_ptr<Object> object, ViewportId id )>;
+        using Getter = std::function<void( std::shared_ptr<Object> object, ViewportId id, bool checked )>;
+        Setter getter;
+        Getter setter;
+    };
+
 public:
-    using CheckboxCallback = std::function<void( bool chcked, ViewportId id )>;
     void setCustomCheckbox(
         const std::string& name,
-        std::function<void( std::shared_ptr<Object> object, ViewportId id, bool checked )> set,
-        std::function<bool( std::shared_ptr<Object> object, ViewportId id )> get );
+        CustomContextMenuCheckbox customContextMenuCheckbox );
 
     MRVIEWER_API virtual void init( MR::Viewer* _viewer ) override;
 
@@ -252,7 +257,7 @@ private:
     RibbonFontManager fontManager_;
     RibbonButtonDrawer buttonDrawer_;
 
-    std::unordered_map<std::string, CustomCheckBox> customCheckBox_;
+    std::unordered_map<std::string, CustomContextMenuCheckbox> customCheckBox_;
 
     Toolbar toolbar_;
     RibbonNotifier notifier_;

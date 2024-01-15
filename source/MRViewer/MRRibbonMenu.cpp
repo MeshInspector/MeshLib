@@ -100,11 +100,10 @@ void changeSelection( bool selectNext, int mod )
 }
 
 void RibbonMenu::setCustomCheckbox( 
-    const std::string& name, 
-    std::function<void( std::shared_ptr<Object> object, ViewportId id, bool checked )> set,
-    std::function<bool( std::shared_ptr<Object> object, ViewportId id )> get)
+    const std::string& name,
+    CustomContextMenuCheckbox customContextMenuCheckbox )
 {
-    customCheckBox_[name] = CustomCheckBox( set, get );
+    customCheckBox_[name] = customContextMenuCheckbox;
 }
 
 void RibbonMenu::init( MR::Viewer* _viewer ) 

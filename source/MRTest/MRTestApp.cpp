@@ -28,8 +28,22 @@ TEST(MRMesh, QuadraticForm)
 
 } //namespace MR
 
-int main(int argc, char **argv)
+int main( int argc, char** argv )
 {
+    //! If `flag` exists in `argv`, returns true and removes it from there.
+    auto consumeFlag = [&]( std::string_view flag ) -> bool
+    {
+        if ( argc < 1 )
+            return false;
+        char **end = argv + argc;
+        auto it = std::find( argv + 1, end, flag );
+        if ( it == end )
+            return false;
+        *std::rotate( it, it + 1, end ) = nullptr;
+        argc--;
+        return true;
+    };
+
     MR::loadMeshDll();
     MR::loadMRViewerDll();
 
@@ -49,27 +63,29 @@ int main(int argc, char **argv)
 #endif
     spdlog::info( "System info:\n{}", MR::GetSystemInfoJson().toStyledString() );
 #ifndef __EMSCRIPTEN__
-    //Test python mrmeshpy
+    if ( !consumeFlag( "--no-python-tests" ) )
     {
-        MR::EmbeddedPython::init();
-        auto str = "import mrmeshpy\n"
-            "print( \"List of python module functions available in mrmeshpy:\\n\" )\n"
-            "funcs = dir( mrmeshpy )\n"
-            "for f in funcs :\n"
-            " if not f.startswith( '_' ) :\n"
-            "  print( \"mrmeshpy.\" + f )\n"
-            "print( \"\\n\" )";
+        //Test python mrmeshpy
+        {
+            MR::EmbeddedPython::init();
+            auto str = "import mrmeshpy\n"
+                "print( \"List of python module functions available in mrmeshpy:\\n\" )\n"
+                "funcs = dir( mrmeshpy )\n"
+                "for f in funcs :\n"
+                " if not f.startswith( '_' ) :\n"
+                "  print( \"mrmeshpy.\" + f )\n"
+                "print( \"\\n\" )";
 
-        if ( !MR::EmbeddedPython::runString( str ) )
+            if ( !MR::EmbeddedPython::runString( str ) )
+                return 1;
+        }
+
+        if ( StderrPyRedirector::getNumWritten() > 0 )
+        {
+            spdlog::error( "Some errors reported from python" );
             return 1;
+        }
     }
-
-    if ( StderrPyRedirector::getNumWritten() > 0 )
-    {
-        spdlog::error( "Some errors reported from python" );
-        return 1;
-    }
-
 #endif
 
     std::vector<std::string> xs{"text0", "text1"};

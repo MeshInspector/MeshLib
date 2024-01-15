@@ -1149,6 +1149,9 @@
     <ClInclude Include="MRSymMatrix4.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRPrimitiveDistances.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1910,6 +1913,9 @@
     <ClCompile Include="MRFinally.cpp" />
     <ClCompile Include="MRAlphaShape.cpp">
       <Filter>Source Files\Triangulation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPrimitiveDistances.cpp">
+      <Filter>Source Files\Math</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

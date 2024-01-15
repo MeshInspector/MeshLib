@@ -174,6 +174,7 @@
     <ClInclude Include="MRPolylineTopology.h" />
     <ClInclude Include="MRPrecipitationSimulator.h" />
     <ClInclude Include="MRPrecisePredicates2.h" />
+    <ClInclude Include="MRPrimitiveDistances.h" />
     <ClInclude Include="MRPrimitiveMapsComposition.h" />
     <ClInclude Include="MRPrism.h" />
     <ClInclude Include="MRProgressReadWrite.h" />
@@ -514,6 +515,7 @@
     <ClCompile Include="MRLaplacian.cpp" />
     <ClCompile Include="MRMathInstatiate.cpp" />
     <ClCompile Include="MRMeshCollide.cpp" />
+    <ClCompile Include="MRPrimitiveDistances.cpp" />
     <ClCompile Include="MRPrism.cpp" />
     <ClCompile Include="MRProgressReadWrite.cpp" />
     <ClCompile Include="MRSaveSettings.cpp" />

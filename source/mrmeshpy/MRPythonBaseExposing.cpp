@@ -588,8 +588,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, BoostBitSet, [] ( pybind11::module_& )
 } )
 
 #define ADD_PYTHON_BITSET( name, type ) \
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL_1( mrmeshpy, name, type, boost::dynamic_bitset<uint64_t> ) \
-MR_ADD_PYTHON_CUSTOM_CLASS_INST_0( mrmeshpy, name )                                        \
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL_ONLY_ARGS( mrmeshpy, name, type, boost::dynamic_bitset<uint64_t> ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_INST_ONLY( mrmeshpy, name )                                        \
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& )                          \
 {\
     (*MR_PYTHON_CUSTOM_CLASS( name )).\

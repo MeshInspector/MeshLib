@@ -31,8 +31,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Type, [] ( pybind11::module_& ) \
 MR_ADD_PYTHON_VOXELS_VOLUME( VdbVolume, "VDB FloatGrid" )
 MR_ADD_PYTHON_VOXELS_VOLUME( SimpleVolume, "vector of float" )
 
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL_1( mrmeshpy, FloatGrid, MR::OpenVdbFloatGrid, MR::FloatGrid )
-MR_ADD_PYTHON_CUSTOM_CLASS_INST_0( mrmeshpy, FloatGrid )
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL_ONLY_ARGS( mrmeshpy, FloatGrid, MR::OpenVdbFloatGrid, MR::FloatGrid )
+MR_ADD_PYTHON_CUSTOM_CLASS_INST_ONLY( mrmeshpy, FloatGrid )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
 {

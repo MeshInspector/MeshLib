@@ -86,7 +86,7 @@ public:
     // Binds and draws viewport additional points
     void drawPoints( const RenderParams& params ) const;
     // Binds and draws viewport border
-    void drawBorder( const BaseRenderParams& params, const Color& color ) const;
+    void drawBorder( const Box2f& rect, const Color& color ) const;
 
     // Returns visual points with corresponding colors (pair<vector<Vector3f>,vector<Vector4f>>)
     const ViewportPointsWithColors& getPointsWithColors() const;
@@ -99,7 +99,7 @@ public:
     void setLinesWithColors( const ViewportLinesWithColors& linesWithColors );
 
     // Fills viewport with given color (clear frame buffer)
-    void fillViewport( const Vector4i& viewport, const Color& color ) const;
+    void fillViewport( const Box2f& rect, const Color& color ) const;
 
     // Check that members have been initialized
     bool checkInit() const;

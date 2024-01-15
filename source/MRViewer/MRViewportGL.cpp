@@ -15,6 +15,15 @@ static_assert( sizeof( Vector4f ) == 4 * sizeof( float ), "wrong size of Vector4
 static_assert( sizeof( LineSegm3f ) == 6 * sizeof( float ), "wrong size of LineSegm3f" );
 static_assert( sizeof( SegmEndColors ) == 8 * sizeof( float ), "wrong size of SegmEndColors" );
 
+static Box2i roundBox( const Box2f & rectf )
+{
+    return
+    {
+        { (int)std::lround( rectf.min.x ), (int)std::lround( rectf.min.y ) },
+        { (int)std::lround( rectf.max.x ), (int)std::lround( rectf.max.y ) }
+    };
+}
+
 ViewportGL& ViewportGL::operator=( ViewportGL&& other ) noexcept
 {
     free();
@@ -231,7 +240,7 @@ void ViewportGL::drawPoints( const RenderParams& params ) const
     points_dirty = false;
 }
 
-void ViewportGL::drawBorder( const BaseRenderParams& params, const Color& color ) const
+void ViewportGL::drawBorder( const Box2f& rectf, const Color& color ) const
 {
     if ( !inited_ )
         return;
@@ -247,9 +256,10 @@ void ViewportGL::drawBorder( const BaseRenderParams& params, const Color& color 
         -1.f,-1.f,0.f,
     };
 
+    const auto rect = roundBox( rectf );
     GL_EXEC( glDisable( GL_DEPTH_TEST ) );
-    GL_EXEC( glViewport( (GLsizei) params.viewport.x, (GLsizei) params.viewport.y, 
-                         (GLsizei) params.viewport.z, (GLsizei) params.viewport.w ) );
+    GL_EXEC( glViewport( (GLsizei) rect.min.x, (GLsizei) rect.min.y,
+                         (GLsizei) width( rect ), (GLsizei) height( rect ) ) );
 
     // Send lines data to GL, install lines properties 
     GL_EXEC( glBindVertexArray( border_line_vao ) );
@@ -303,13 +313,16 @@ void ViewportGL::setLinesWithColors( const ViewportLinesWithColors& linesWithCol
     lines_dirty = true;
 }
 
-void ViewportGL::fillViewport( const Vector4i& viewport, const Color& color ) const
+void ViewportGL::fillViewport( const Box2f& rectf, const Color& color ) const
 {
     if ( !inited_ )
         return;
+
+    const auto rect = roundBox( rectf );
     // The glScissor call ensures we only clear this core's buffers,
     // (in case the user wants different background colors in each viewport.)
-    GL_EXEC( glScissor( (GLsizei) viewport.x, (GLsizei) viewport.y, (GLsizei) viewport.z, (GLsizei) viewport.w ) );
+    GL_EXEC( glScissor( (GLsizei) rect.min.x, (GLsizei) rect.min.y,
+                        (GLsizei) width( rect ), (GLsizei) height( rect ) ) );
     GL_EXEC( glEnable( GL_SCISSOR_TEST ) );
     auto backgroundColor = Vector4f( color );
     GL_EXEC( glClearColor( backgroundColor[0],

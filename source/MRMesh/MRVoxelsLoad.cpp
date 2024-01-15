@@ -315,8 +315,8 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
             res.xf.A.y[i] = float( atOri.GetValue( 3 + i ) );
     }
 
-    res.xf.A.x.normalized();
-    res.xf.A.y.normalized();
+    res.xf.A.x = res.xf.A.x.normalized();
+    res.xf.A.y = res.xf.A.y.normalized();
     res.xf.A.z = cross( res.xf.A.x, res.xf.A.y );
     res.xf.A = res.xf.A.transposed();
 

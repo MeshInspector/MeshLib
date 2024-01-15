@@ -109,6 +109,7 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install auditwheel wheel setuptools pybind11-stubgen
           ${{ matrix.py-cmd }} ./scripts/wheel/setup_workspace.py 
           cd ./scripts/wheel/meshlib
+          PYTHONPATH=. ${{ matrix.py-cmd }} --version
           PYTHONPATH=. ${{ matrix.py-cmd }} $(which pybind11-stubgen) --output-dir . meshlib.mrmeshpy
           PYTHONPATH=. ${{ matrix.py-cmd }} $(which pybind11-stubgen) --output-dir . meshlib.mrmeshnumpy
           PYTHONPATH=. ${{ matrix.py-cmd }} $(which pybind11-stubgen) --output-dir . meshlib.mrviewerpy

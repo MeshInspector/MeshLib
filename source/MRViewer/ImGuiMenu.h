@@ -12,6 +12,7 @@
 #include "MRMeshViewerPlugin.h"
 #include "MRViewerEventsListener.h"
 #include "MRStatePlugin.h"
+#include "MRNotificationType.h"
 #include <unordered_map>
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -211,14 +212,8 @@ public:
 
   ImGuiWindow* getLastFocusedPlugin() const { return prevFrameFocusPlugin_; };
 
-  enum class ModalMessageType
-  {
-      Error,
-      Warning,
-      Info
-  };
   // opens Error / Warning / Info modal window with message text
-  MRVIEWER_API void showModalMessage( const std::string& msg, ModalMessageType msgType );
+  MRVIEWER_API void showModalMessage( const std::string& msg, NotificationType msgType );
 
   MRVIEWER_API virtual std::filesystem::path getMenuFontPath() const;
 
@@ -299,7 +294,7 @@ public:
   bool isSavedDialogPositionsEnabled() const { return savedDialogPositionEnabled_; }
 
 protected:
-    ModalMessageType modalMessageType_{ ModalMessageType::Error };
+    NotificationType modalMessageType_{ NotificationType::Error };
 
     MRVIEWER_API virtual void drawModalMessage_();
 
@@ -382,10 +377,10 @@ protected:
 
 
 // Check if menu is available and if it is, shows modal window
-MRVIEWER_API void showModal( const std::string& error, ImGuiMenu::ModalMessageType type );
+MRVIEWER_API void showModal( const std::string& error, NotificationType type );
 inline  void showError( const std::string& error )
 {
-    showModal( error, ImGuiMenu::ModalMessageType::Error );
+    showModal( error, NotificationType::Error );
 }
 
 } // end namespace

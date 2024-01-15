@@ -8,6 +8,7 @@
 #include "MRConstants.h"
 #include "MRPch/MRSpdlog.h"
 
+
 // https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf 
 
 namespace MR
@@ -271,7 +272,6 @@ private:
         T const theraStep = static_cast< T >( 2 * PI ) / thetaResolution_;
         T const phiStep = static_cast< T >( PI2 ) / phiResolution_;
 
-
         // problem in list. 16. => start from pole.
         W = { 0, 0, 1 };
         T minError = G( W, PC, resultedRootSquare );
@@ -317,7 +317,6 @@ private:
         T const theraStep = static_cast< T >( 2 * PI ) / thetaResolution_;
         T const phiStep = static_cast< T >( PI2 ) / phiResolution_;
 
-
         // problem in list. 16. => start from pole.
         W = { 0, 0, 1 };
         T minError = G( W, PC, resultedRootSquare );
@@ -357,7 +356,6 @@ private:
         }
         );
 
-
         for ( size_t i = 0; i <= phiResolution_; ++i )
         {
             if ( storedData[i].error < minError )
@@ -378,6 +376,7 @@ private:
         return G( W, PC, resultedRootSquare );
     };
 };
+
 }
 
 

@@ -6,7 +6,10 @@
 #include "MRMesh/MRSphere.h"
 #include "MRMesh/MRVector3.h"
 
-namespace MR::PrimitiveDistances
+#include <optional>
+#include <variant>
+
+namespace MR::Features
 {
 
 namespace Primitives
@@ -47,6 +50,8 @@ namespace Primitives
     // This doesn't have to be normalized, we will normalize it internally.
     // The sign of the normal doesn't matter.
     using Plane = Plane3<float>;
+
+    using Variant = std::variant<Sphere, ConeSegment, Plane>;
 }
 
 // Those map various MR types to our primitives. Some of those are identity functions.
@@ -68,15 +73,19 @@ namespace Primitives
 //! Constructs a plane from a point and a normal. Or you could construct the plane type directly from a normal and an offset.
 [[nodiscard]] MRMESH_API Primitives::Plane primitivePlane( Vector3f point, Vector3f normal );
 
+[[nodiscard]] MRMESH_API std::optional<Primitives::Variant> primitiveFromObject( const Object& object );
+
 //! Stores the distance between two objects, and the closest points on them.
 struct DistanceResult
 {
     enum class Status
     {
         ok = 0,
-        // Algorithms set this if this specific configuration of primitives is unsupported.
-        unsupported,
-        // This is set automatically if either `distance` or at least one of the points isn't finite. But you can set this from an algorithm too.
+        //! Algorithms set this if this when something isn't yet implemented.
+        not_implemented,
+        //! Algorithms set this when the calculation doesn't make sense for those object types.
+        not_applicable,
+        //! This is set automatically if either `distance` or at least one of the points isn't finite. But you can set this from an algorithm too.
         not_finite,
     };
     Status status = Status::ok;
@@ -94,46 +103,77 @@ struct DistanceResult
 namespace Traits
 {
 
+template <typename T>
+struct Unary {};
+template <>
+struct Unary<Primitives::Sphere>
+{
+    MRMESH_API std::string name( const Primitives::Sphere& prim ) const;
+};
+template <>
+struct Unary<Primitives::ConeSegment>
+{
+    MRMESH_API std::string name( const Primitives::ConeSegment& prim ) const;
+};
+template <>
+struct Unary<Primitives::Plane>
+{
+    MRMESH_API std::string name( const Primitives::Plane& prim ) const;
+};
+
 template <typename A, typename B>
-struct Distance {};
+struct Binary {};
 
 //! Whether we have traits to get distance from A to B.
 //! This is for internal use because it's asymmetrical, we a have a symmetrical version below.
 template <typename A, typename B>
-concept DistanceSupportedOneWay = requires( const Distance<A, B>& t, const A& a, const B& b )
+concept DistanceSupportedOneWay = requires( const Binary<A, B>& t, const A& a, const B& b )
 {
-    { t( a, b ) } -> std::same_as<DistanceResult>;
+    { t.distance( a, b ) } -> std::same_as<DistanceResult>;
 };
 
 // ?? <-> Sphere
 template <>
-struct Distance<Primitives::Sphere, Primitives::Sphere>
+struct Binary<Primitives::Sphere, Primitives::Sphere>
 {
-    MRMESH_API DistanceResult operator()( const Primitives::Sphere& a, const Primitives::Sphere& b ) const;
+    MRMESH_API DistanceResult distance( const Primitives::Sphere& a, const Primitives::Sphere& b ) const;
 };
 template <>
-struct Distance<Primitives::ConeSegment, Primitives::Sphere>
+struct Binary<Primitives::ConeSegment, Primitives::Sphere>
 {
-    MRMESH_API DistanceResult operator()( const Primitives::ConeSegment& a, const Primitives::Sphere& b ) const;
+    MRMESH_API DistanceResult distance( const Primitives::ConeSegment& a, const Primitives::Sphere& b ) const;
 };
 template <>
-struct Distance<Primitives::Plane, Primitives::Sphere>
+struct Binary<Primitives::Plane, Primitives::Sphere>
 {
-    MRMESH_API DistanceResult operator()( const Primitives::Plane& a, const Primitives::Sphere& b ) const;
+    MRMESH_API DistanceResult distance( const Primitives::Plane& a, const Primitives::Sphere& b ) const;
 };
 
 // ?? <-> Cone
 template <>
-struct Distance<Primitives::ConeSegment, Primitives::ConeSegment>
+struct Binary<Primitives::ConeSegment, Primitives::ConeSegment>
 {
-    MRMESH_API DistanceResult operator()( const Primitives::ConeSegment& a, const Primitives::ConeSegment& b ) const;
+    MRMESH_API DistanceResult distance( const Primitives::ConeSegment& a, const Primitives::ConeSegment& b ) const;
 };
 template <>
-struct Distance<Primitives::Plane, Primitives::ConeSegment>
+struct Binary<Primitives::Plane, Primitives::ConeSegment>
 {
-    MRMESH_API DistanceResult operator()( const Primitives::Plane& a, const Primitives::ConeSegment& b ) const;
+    MRMESH_API DistanceResult distance( const Primitives::Plane& a, const Primitives::ConeSegment& b ) const;
 };
 
+// ?? <-> Plane
+template <>
+struct Binary<Primitives::Plane, Primitives::Plane>
+{
+    MRMESH_API DistanceResult distance( const Primitives::Plane& a, const Primitives::Plane& b ) const;
+};
+
+}
+
+template <typename T>
+[[nodiscard]] std::string name( const T& primitive )
+{
+    return Traits::Unary<T>{}.name( primitive );
 }
 
 // Whether the distance can be computed between primitives.
@@ -147,7 +187,7 @@ requires DistanceSupported<A, B>
 {
     if constexpr ( Traits::DistanceSupportedOneWay<A, B> )
     {
-        DistanceResult ret = Traits::Distance<A, B>{}( a, b );
+        DistanceResult ret = Traits::Binary<A, B>{}.distance( a, b );
 
         if ( ret && ( !std::isfinite( ret.distance ) || !ret.closestPointA.isFinite() || !ret.closestPointB.isFinite() ) )
         {
@@ -164,7 +204,7 @@ requires DistanceSupported<A, B>
     else
     {
         static_assert( Traits::DistanceSupportedOneWay<B, A>, "This should never fail." );
-        DistanceResult ret = Traits::Distance<B, A>{}( b, a );
+        DistanceResult ret = (distance)( b, a );
         std::swap( ret.closestPointA, ret.closestPointB );
         return ret;
     }

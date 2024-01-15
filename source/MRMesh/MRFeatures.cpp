@@ -1,10 +1,17 @@
-#include "MRPrimitiveDistances.h"
+#include "MRFeatures.h"
 
-#include "MRGTest.h"
+#include "MRMesh/MRGTest.h"
+
+#include "MRMesh/MRCircleObject.h"
+#include "MRMesh/MRCylinderObject.h"
+#include "MRMesh/MRLineObject.h"
+#include "MRMesh/MRPlaneObject.h"
+#include "MRMesh/MRPointObject.h"
+#include "MRMesh/MRSphereObject.h"
 
 // The tests in this file should be checked in debug builds too!
 
-namespace MR::PrimitiveDistances
+namespace MR::Features
 {
 
 Primitives::ConeSegment primitiveCircle( Vector3f point, Vector3f normal, float rad )
@@ -41,10 +48,102 @@ Primitives::Plane primitivePlane( Vector3f point, Vector3f normal )
     return Plane3f::fromDirAndPt( normal, point );
 }
 
+std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
+{
+    if ( auto point = dynamic_cast<const PointObject*>( &object ) )
+    {
+        return toPrimitive( point->parent()->worldXf()( point->getPoint() ) );
+    }
+    else if ( auto line = dynamic_cast<const LineObject*>( &object ) )
+    {
+        auto parentXf = line->parent()->worldXf();
+        return toPrimitive( Line( parentXf( line->getCenter() ), parentXf.A * line->getDirection() ) );
+    }
+    else if ( auto plane = dynamic_cast<const PlaneObject*>( &object ) )
+    {
+        auto parentXf = plane->parent()->worldXf();
+        return primitivePlane( parentXf( plane->getCenter() ), parentXf.A * plane->getNormal() );
+    }
+    else if ( auto sphere = dynamic_cast<const SphereObject*>( &object ) )
+    {
+        auto parentXf = sphere->parent()->worldXf();
+        Vector3f scaleVec = parentXf.A.toScale();
+        float scale = ( scaleVec.x + scaleVec.y + scaleVec.z ) / 3;
+        return toPrimitive( Sphere( parentXf( sphere->getCenter() ), sphere->getRadius() * scale ) );
+    }
+    else if ( auto circle = dynamic_cast<const CircleObject*>( &object ) )
+    {
+        auto parentXf = circle->parent()->worldXf();
+        Vector3f scaleVec = parentXf.A.toScale();
+        float scale = ( scaleVec.x + scaleVec.y + scaleVec.z ) / 3;
+        Primitives::ConeSegment ret{
+            .center = parentXf( circle->getCenter() ),
+            .dir = parentXf.A * circle->getNormal(),
+            .positiveSideRadius = circle->getRadius() * scale,
+            .negativeSideRadius = ret.positiveSideRadius,
+            .hollow = true,
+        };
+        return ret;
+    }
+    else if ( auto cyl = dynamic_cast<const CylinderObject*>( &object ) )
+    {
+        auto parentXf = cyl->parent()->worldXf();
+        Vector3f scaleVec = parentXf.A.toScale();
+        float scale = ( scaleVec.x + scaleVec.y + scaleVec.z ) / 3;
+        Primitives::ConeSegment ret{
+            .center = parentXf( cyl->getCenter() ),
+            .dir = parentXf.A * cyl->getDirection(),
+            .positiveSideRadius = cyl->getRadius() * scale,
+            .negativeSideRadius = ret.positiveSideRadius,
+            .positiveLength = cyl->getLength() / 2 * scale,
+            .negativeLength = ret.positiveLength,
+            .hollow = true, // I guess?
+        };
+        return ret;
+    }
+
+    return {};
+}
+
 namespace Traits
 {
 
-DistanceResult Distance<Primitives::Sphere, Primitives::Sphere>::operator()( const Primitives::Sphere& a, const Primitives::Sphere& b ) const
+std::string Unary<Primitives::Sphere>::name( const Primitives::Sphere& prim ) const
+{
+    if ( prim.radius == 0 )
+        return "Point";
+    else
+        return "Sphere";
+}
+
+std::string Unary<Primitives::ConeSegment>::name( const Primitives::ConeSegment& prim ) const
+{
+    if ( prim.positiveLength == -prim.negativeLength && std::isfinite( prim.positiveLength ) )
+        return "Circle";
+
+    if ( prim.positiveSideRadius == prim.negativeSideRadius )
+    {
+        int numInf = !std::isfinite( prim.positiveLength ) + !std::isfinite( prim.negativeLength );
+
+        if ( prim.positiveSideRadius == 0 )
+            return std::array{ "Line segment", "Ray", "Line" }[numInf];
+        else
+            return std::array{ "Cylinder", "Half-infinite cylinder", "Infinite cylinder" }[numInf];
+    }
+
+    if ( prim.positiveSideRadius == 0 || prim.negativeSideRadius == 0 )
+        return "Cone";
+    else
+        return "Truncated cone";
+}
+
+std::string Unary<Primitives::Plane>::name( const Primitives::Plane& prim ) const
+{
+    (void)prim;
+    return "Plane";
+}
+
+DistanceResult Binary<Primitives::Sphere, Primitives::Sphere>::distance( const Primitives::Sphere& a, const Primitives::Sphere& b ) const
 {
     DistanceResult ret;
     Vector3f dir = b.center - a.center;
@@ -59,7 +158,7 @@ DistanceResult Distance<Primitives::Sphere, Primitives::Sphere>::operator()( con
     return ret;
 }
 
-DistanceResult Distance<Primitives::ConeSegment, Primitives::Sphere>::operator()( const Primitives::ConeSegment& a, const Primitives::Sphere& b ) const
+DistanceResult Binary<Primitives::ConeSegment, Primitives::Sphere>::distance( const Primitives::ConeSegment& a, const Primitives::Sphere& b ) const
 {
     Vector3f centerDelta = b.center - a.center;
 
@@ -169,7 +268,7 @@ DistanceResult Distance<Primitives::ConeSegment, Primitives::Sphere>::operator()
     return ret;
 }
 
-DistanceResult Distance<Primitives::Plane, Primitives::Sphere>::operator()( const Primitives::Plane& a, const Primitives::Sphere& b ) const
+DistanceResult Binary<Primitives::Plane, Primitives::Sphere>::distance( const Primitives::Plane& a, const Primitives::Sphere& b ) const
 {
     auto normalizedA = a.normalized();
 
@@ -182,7 +281,7 @@ DistanceResult Distance<Primitives::Plane, Primitives::Sphere>::operator()( cons
     return ret;
 }
 
-DistanceResult Distance<Primitives::ConeSegment, Primitives::ConeSegment>::operator()( const Primitives::ConeSegment& a, const Primitives::ConeSegment& b ) const
+DistanceResult Binary<Primitives::ConeSegment, Primitives::ConeSegment>::distance( const Primitives::ConeSegment& a, const Primitives::ConeSegment& b ) const
 {
     if ( a.isZeroRadius() && b.isZeroRadius() )
     {
@@ -213,14 +312,14 @@ DistanceResult Distance<Primitives::ConeSegment, Primitives::ConeSegment>::opera
     else
     {
         // TODO: Support more cone types.
-        return { .status = DistanceResult::Status::unsupported };
+        return { .status = DistanceResult::Status::not_implemented };
     }
 }
 
-DistanceResult Distance<Primitives::Plane, Primitives::ConeSegment>::operator()( const Primitives::Plane& a, const Primitives::ConeSegment& b ) const
+DistanceResult Binary<Primitives::Plane, Primitives::ConeSegment>::distance( const Primitives::Plane& a, const Primitives::ConeSegment& b ) const
 {
     if ( !std::isfinite( b.positiveLength ) && !std::isfinite( b.negativeLength ) )
-        return { .status = DistanceResult::Status::unsupported };
+        return { .status = DistanceResult::Status::not_applicable };
 
     auto normalizedA = a.normalized();
 
@@ -320,11 +419,19 @@ DistanceResult Distance<Primitives::Plane, Primitives::ConeSegment>::operator()(
     return ret;
 }
 
+DistanceResult Binary<Primitives::Plane, Primitives::Plane>::distance( const Primitives::Plane& a, const Primitives::Plane& b ) const
+{
+    (void)a;
+    (void)b;
+    // We're not going to check for parallel-ness with some epsilon. You can just pick a point on one of the planes instead.
+    return { .status = DistanceResult::Status::not_applicable };
+}
+
 } // namespace Traits
 
 static constexpr float testEps = 0.0001f;
 
-TEST( PrimitiveDistances, PrimitiveConstruction )
+TEST( Features, PrimitiveConstruction )
 {
     { // Infinite line to cone segment.
         Vector3f pos( 10, 20, 35 );
@@ -379,7 +486,7 @@ TEST( PrimitiveDistances, PrimitiveConstruction )
     }
 }
 
-TEST( PrimitiveDistances, Sphere_Sphere )
+TEST( Features, Sphere_Sphere )
 {
     { // Point-point.
         { // Overlap.
@@ -442,7 +549,7 @@ TEST( PrimitiveDistances, Sphere_Sphere )
     }
 }
 
-TEST( PrimitiveDistances, ConeSegment_Sphere )
+TEST( Features, ConeSegment_Sphere )
 {
     { // Line to sphere.
         for ( bool lineIsInfinite : { true, false } )
@@ -561,7 +668,7 @@ TEST( PrimitiveDistances, ConeSegment_Sphere )
                     }
                 }
 
-                // Cap edges. 
+                // Cap edges.
                 for ( bool positive : { true, false } )
                 {
                     Vector3f point = positive ? Vector3f( 20, 8, 0 ) : Vector3f( -10, 14, 0 );
@@ -583,9 +690,9 @@ TEST( PrimitiveDistances, ConeSegment_Sphere )
                         for ( float dist : { 0.f, 2.f, 3.f, 4.f } )
                             testPoint( point + dir * dist, dist - 3, point );
                     }
-                
+
                     // Internal cutoff point: cap to conical surface.
-                    if ( !hollowCone ) 
+                    if ( !hollowCone )
                     {
                         float cutoffOffset = 0.001f;
 
@@ -627,7 +734,7 @@ TEST( PrimitiveDistances, ConeSegment_Sphere )
     }
 }
 
-TEST( PrimitiveDistances, Plane_Sphere )
+TEST( Features, Plane_Sphere )
 {
     Vector3f planeCenter = Vector3f( 100, 50, 7 );
     Primitives::Plane plane = primitivePlane( planeCenter, Vector3f( 42, 0, 0 ) );
@@ -656,7 +763,7 @@ TEST( PrimitiveDistances, Plane_Sphere )
     }
 }
 
-TEST( PrimitiveDistances, ConeSegment_ConeSegment )
+TEST( Features, ConeSegment_ConeSegment )
 {
     { // Line-line.
         { // Infinite lines.
@@ -694,7 +801,7 @@ TEST( PrimitiveDistances, ConeSegment_ConeSegment )
                 ASSERT_EQ( r.status, DistanceResult::Status::not_finite );
             }
         }
-        
+
         { // Finite lines.
             { // Skew lines (not parallel and not intersecting).
                 Vector3f p1( 100, 50, 10 ), p2 = p1 + Vector3f( 1, 2, 5 ), d1( 1, 0, 0 ), d2 = Vector3f( 1, -1, 0 );
@@ -711,7 +818,7 @@ TEST( PrimitiveDistances, ConeSegment_ConeSegment )
     }
 }
 
-TEST( PrimitiveDistances, Plane_ConeSegment )
+TEST( Features, Plane_ConeSegment )
 {
     auto testPlane = [&]( Primitives::ConeSegment originalCone, Vector3f surfacePoint, Vector3f offsetIntoCone,
         // Our surface points may or may not be offset by one of those vectors, if specified:
@@ -815,7 +922,7 @@ TEST( PrimitiveDistances, Plane_ConeSegment )
             auto plane = primitivePlane( Vector3f( 1, 2, 3 ), Vector3f( 5, 6, 7 ) );
 
             auto r = distance( line, plane );
-            ASSERT_EQ( r.status, DistanceResult::Status::unsupported );
+            ASSERT_EQ( r.status, DistanceResult::Status::not_applicable );
         }
 
         { // Finite.
@@ -862,4 +969,4 @@ TEST( PrimitiveDistances, Plane_ConeSegment )
     }
 }
 
-} // namespace MR::PrimitiveDistances
+} // namespace MR::Features

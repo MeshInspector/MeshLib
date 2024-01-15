@@ -1149,7 +1149,7 @@
     <ClInclude Include="MRSymMatrix4.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
-    <ClInclude Include="MRPrimitiveDistances.h">
+    <ClInclude Include="MRFeatures.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
   </ItemGroup>
@@ -1914,7 +1914,7 @@
     <ClCompile Include="MRAlphaShape.cpp">
       <Filter>Source Files\Triangulation</Filter>
     </ClCompile>
-    <ClCompile Include="MRPrimitiveDistances.cpp">
+    <ClCompile Include="MRFeatures.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
   </ItemGroup>

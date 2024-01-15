@@ -76,6 +76,11 @@ struct Vector3
             if ( (*this)[i] == 0.f && std::signbit( (*this)[i] ) )
                 (*this)[i] = 0.f;
     }
+
+    [[nodiscard]] bool isFinite() const
+    {
+        return std::isfinite( x ) && std::isfinite( y ) && std::isfinite( z );
+    }
 };
 
 /// \related Vector3

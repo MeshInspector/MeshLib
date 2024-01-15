@@ -40,8 +40,12 @@ namespace Primitives
 
         // If true, the cone has no caps and no volume, and all distances (to the conical surface, that is) are positive.
         bool hollow = false;
+
+        [[nodiscard]] bool isZeroRadius() const { return positiveSideRadius == 0 && negativeSideRadius == 0; }
     };
 
+    // This doesn't have to be normalized, we will normalize it internally.
+    // The sign of the normal doesn't matter.
     using Plane = Plane3<float>;
 }
 
@@ -61,13 +65,29 @@ namespace Primitives
 [[nodiscard]] MRMESH_API Primitives::ConeSegment primitiveCylinder( Vector3f a, Vector3f b, float rad );
 //! `a` is the center of the base, `b` is the pointy end.
 [[nodiscard]] MRMESH_API Primitives::ConeSegment primitiveCone( Vector3f a, Vector3f b, float rad );
+//! Constructs a plane from a point and a normal. Or you could construct the plane type directly from a normal and an offset.
+[[nodiscard]] MRMESH_API Primitives::Plane primitivePlane( Vector3f point, Vector3f normal );
 
 //! Stores the distance between two objects, and the closest points on them.
 struct DistanceResult
 {
+    enum class Status
+    {
+        ok = 0,
+        // Algorithms set this if this specific configuration of primitives is unsupported.
+        unsupported,
+        // This is set automatically if either `distance` or at least one of the points isn't finite. But you can set this from an algorithm too.
+        not_finite,
+    };
+    Status status = Status::ok;
+
+    // This is a separate field because it can be negative.
     float distance = 0;
+
     Vector3f closestPointA;
     Vector3f closestPointB;
+
+    [[nodiscard]] operator bool() const { return status == Status::ok; }
 };
 
 //! Traits that determine how the primitives are related.
@@ -85,16 +105,33 @@ concept DistanceSupportedOneWay = requires( const Distance<A, B>& t, const A& a,
     { t( a, b ) } -> std::same_as<DistanceResult>;
 };
 
+// ?? <-> Sphere
 template <>
 struct Distance<Primitives::Sphere, Primitives::Sphere>
 {
     MRMESH_API DistanceResult operator()( const Primitives::Sphere& a, const Primitives::Sphere& b ) const;
 };
-
 template <>
 struct Distance<Primitives::ConeSegment, Primitives::Sphere>
 {
     MRMESH_API DistanceResult operator()( const Primitives::ConeSegment& a, const Primitives::Sphere& b ) const;
+};
+template <>
+struct Distance<Primitives::Plane, Primitives::Sphere>
+{
+    MRMESH_API DistanceResult operator()( const Primitives::Plane& a, const Primitives::Sphere& b ) const;
+};
+
+// ?? <-> Cone
+template <>
+struct Distance<Primitives::ConeSegment, Primitives::ConeSegment>
+{
+    MRMESH_API DistanceResult operator()( const Primitives::ConeSegment& a, const Primitives::ConeSegment& b ) const;
+};
+template <>
+struct Distance<Primitives::Plane, Primitives::ConeSegment>
+{
+    MRMESH_API DistanceResult operator()( const Primitives::Plane& a, const Primitives::ConeSegment& b ) const;
 };
 
 }
@@ -111,9 +148,17 @@ requires DistanceSupported<A, B>
     if constexpr ( Traits::DistanceSupportedOneWay<A, B> )
     {
         DistanceResult ret = Traits::Distance<A, B>{}( a, b );
+
+        if ( ret && ( !std::isfinite( ret.distance ) || !ret.closestPointA.isFinite() || !ret.closestPointB.isFinite() ) )
+        {
+            ret.status = DistanceResult::Status::not_finite;
+            return ret;
+        }
+
         // Check that we got the correct distance here.
         // Note that the distance is signed, so we apply `abs` to it to compare it properly.
         assert( std::abs( ( ret.closestPointB - ret.closestPointA ).length() - std::abs( ret.distance ) ) < 0.0001f );
+
         return ret;
     }
     else

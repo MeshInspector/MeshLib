@@ -48,6 +48,9 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         if ( settings.subdivideBorder ? !mesh.topology.isInnerOrBdEdge( e, settings.region )
                                       : !mesh.topology.isInnerEdge( e, settings.region ) )
             return;
+        const float lenSq = mesh.edgeLengthSq( e );
+        if ( lenSq < maxEdgeLenSq )
+            return;
         if ( settings.minTriAspectRatio > 1 || settings.maxTriAspectRatio < FLT_MAX )
         {
             if ( auto f = mesh.topology.left( e ) )
@@ -63,9 +66,6 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
                     return;
             }
         }
-        float lenSq = mesh.edgeLengthSq( e );
-        if ( lenSq < maxEdgeLenSq )
-            return;
         queue.emplace( e, lenSq );
     };
 

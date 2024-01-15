@@ -61,7 +61,7 @@ public:
 
     // Discrete: bar consists of single colored rectangles for each initial color
     // Linear (default): color is changing from one to another during initial color list
-    MRVIEWER_API void draw( const ImVec2& pose, const ImVec2& size );
+    MRVIEWER_API void draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size );
 
     // structure for label
     struct MRVIEWER_CLASS Label

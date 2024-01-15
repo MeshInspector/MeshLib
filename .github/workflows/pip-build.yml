@@ -375,9 +375,10 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install --upgrade wheel setuptools delocate pybind11-stubgen
           ${{ matrix.py-cmd }} ./scripts/wheel/setup_workspace.py
           cd ./scripts/wheel/meshlib
-          PYTHONPATH=. pybind11-stubgen --output-dir . meshlib.mrmeshpy
-          PYTHONPATH=. pybind11-stubgen --output-dir . meshlib.mrmeshnumpy
-          PYTHONPATH=. pybind11-stubgen --output-dir . meshlib.mrviewerpy
+          # FIXME: incorrect interpreter version
+          #PYTHONPATH=. pybind11-stubgen --output-dir . meshlib.mrmeshpy
+          #PYTHONPATH=. pybind11-stubgen --output-dir . meshlib.mrmeshnumpy
+          #PYTHONPATH=. pybind11-stubgen --output-dir . meshlib.mrviewerpy
           ${{ matrix.py-cmd }} setup.py bdist_wheel --plat-name=${{matrix.plat-name}} --python-tag=${{matrix.py-tag}} --version ${{needs.setup.outputs.version_tag}}
           delocate-path meshlib
           cd ../../..

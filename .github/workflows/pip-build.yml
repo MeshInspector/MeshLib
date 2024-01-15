@@ -271,9 +271,10 @@ jobs:
           py -${{matrix.py-version}} -m pip install wheel setuptools delvewheel pybind11-stubgen
           py -${{matrix.py-version}} .\scripts\wheel\setup_workspace.py
           cd scripts\wheel\meshlib
-          PYTHONPATH=. pybind11-stubgen --output-dir . meshlib.mrmeshpy
-          PYTHONPATH=. pybind11-stubgen --output-dir . meshlib.mrmeshnumpy
-          PYTHONPATH=. pybind11-stubgen --output-dir . meshlib.mrviewerpy
+          set PYTHONPATH=.
+          pybind11-stubgen --output-dir . meshlib.mrmeshpy
+          pybind11-stubgen --output-dir . meshlib.mrmeshnumpy
+          pybind11-stubgen --output-dir . meshlib.mrviewerpy
           py -${{matrix.py-version}} setup.py bdist_wheel --plat-name=win-amd64 --python-tag=${{matrix.py-tag}} --version ${{needs.setup.outputs.version_tag}}
           cd ..\..\..
           $WheelFile = (powershell -Command Get-ChildItem -Path scripts\wheel\meshlib\dist\*.whl -Name) 

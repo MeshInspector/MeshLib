@@ -99,7 +99,7 @@ public:
     void setLinesWithColors( const ViewportLinesWithColors& linesWithColors );
 
     // Fills viewport with given color (clear frame buffer)
-    void fillViewport( const Vector4i& viewport, const Color& color ) const;
+    void fillViewport( const Box2f& rect, const Color& color ) const;
 
     // Check that members have been initialized
     bool checkInit() const;

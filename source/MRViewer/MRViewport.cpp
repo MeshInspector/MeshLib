@@ -108,7 +108,7 @@ void Viewport::clearFramebuffers()
 {
     if ( !viewportGL_.checkInit() )
         viewportGL_.init();
-    viewportGL_.fillViewport( toVec4<int>( viewportRect_ ), params_.backgroundColor );
+    viewportGL_.fillViewport( viewportRect_, params_.backgroundColor );
 }
 
 ObjAndPick Viewport::pick_render_object( uint16_t pickRadius ) const

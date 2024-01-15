@@ -559,7 +559,7 @@ jobs:
   delete-artifacts:
     timeout-minutes: 5
     runs-on: ubuntu-20.04
-    needs: upload-to-release
+    needs: [manylinux-pip-test, windows-pip-test, macos-pip-test]
     if: always()
     steps:
       - name: Delete Wheelhouse

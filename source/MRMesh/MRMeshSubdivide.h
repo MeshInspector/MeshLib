@@ -35,9 +35,12 @@ struct SubdivideSettings
     /// If false do not touch border edges (cannot subdivide lone faces)\n
     /// use \ref MR::findRegionOuterFaces to find boundary faces
     bool subdivideBorder = true;
-    /// If subdivideBorder is off subdivider can produce narrow triangles near border\n
-    /// this parameter prevents subdivision of such triangles
-    float critAspectRatio = 20.0f;
+    /// An edge is subdivided only of its left or right triangle has aspect ratio above or equal to this value.
+    /// Please set it to a larger value if you would like to subdivide edges near degenerate triangles only
+    float minTriAspectRatio = 1;
+    /// An edge is subdivided only of its left or right triangle has aspect ratio below or equal to this value.
+    /// Please set it to a smaller value only if subdivideBorder==false, otherwise many narrow triangles can appear near border
+    float maxTriAspectRatio = FLT_MAX;
     /// Puts new vertices so that they form a smooth surface together with existing vertices.
     /// This option works best for natural surfaces without sharp edges in between triangles
     bool smoothMode = false;

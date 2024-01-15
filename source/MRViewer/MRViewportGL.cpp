@@ -231,7 +231,7 @@ void ViewportGL::drawPoints( const RenderParams& params ) const
     points_dirty = false;
 }
 
-void ViewportGL::drawBorder( const BaseRenderParams& params, const Color& color ) const
+void ViewportGL::drawBorder( const Box2i& rect, const Color& color ) const
 {
     if ( !inited_ )
         return;
@@ -248,8 +248,8 @@ void ViewportGL::drawBorder( const BaseRenderParams& params, const Color& color 
     };
 
     GL_EXEC( glDisable( GL_DEPTH_TEST ) );
-    GL_EXEC( glViewport( (GLsizei) params.viewport.x, (GLsizei) params.viewport.y, 
-                         (GLsizei) params.viewport.z, (GLsizei) params.viewport.w ) );
+    GL_EXEC( glViewport( (GLsizei) rect.min.x, (GLsizei) rect.min.y,
+                         (GLsizei) width( rect ), (GLsizei) height( rect ) ) );
 
     // Send lines data to GL, install lines properties 
     GL_EXEC( glBindVertexArray( border_line_vao ) );

@@ -25,19 +25,29 @@ public:
         length( inLength )
     {}
 
-    inline MR::Vector3<T>& center( void )
+    Vector3<T>& center( void )
     {
         return mainAxis.p;
     }
-    inline MR::Vector3<T>& direction( void )
+
+    const Vector3<T>& center( void ) const
+    {
+        return mainAxis.p;
+    }
+
+    Vector3<T>& direction( void )
     {
         return mainAxis.d;
     }
 
-    MR::Line3<T> mainAxis;
+    const Vector3<T>& direction( void ) const
+    {
+        return mainAxis.d;
+    }
+
+    Line3<T> mainAxis;
     T radius = 0;
     T length = 0;
-    MR::LineSegm3<T>x; 
 };
 
 } // namespace MR

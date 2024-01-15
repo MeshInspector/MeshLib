@@ -269,7 +269,7 @@ jobs:
           py -${{matrix.py-version}} -m pip install wheel setuptools delvewheel pybind11-stubgen
           py -${{matrix.py-version}} .\scripts\wheel\setup_workspace.py
           cd scripts\wheel\meshlib
-          set PYTHONPATH=.
+          set PYTHONPATH=$PWD.Path
           pybind11-stubgen --output-dir . meshlib.mrmeshpy
           pybind11-stubgen --output-dir . meshlib.mrmeshnumpy
           pybind11-stubgen --output-dir . meshlib.mrviewerpy

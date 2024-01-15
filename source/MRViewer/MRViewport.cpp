@@ -588,7 +588,7 @@ void Viewport::draw_points( void ) const
 
 void Viewport::draw_border() const
 {
-    viewportGL_.drawBorder( Box2i( viewportRect_ ), params_.borderColor );
+    viewportGL_.drawBorder( viewportRect_, params_.borderColor );
 }
 
 // ================================================================

@@ -231,7 +231,7 @@ void ViewportGL::drawPoints( const RenderParams& params ) const
     points_dirty = false;
 }
 
-void ViewportGL::drawBorder( const Box2i& rect, const Color& color ) const
+void ViewportGL::drawBorder( const Box2f& rectf, const Color& color ) const
 {
     if ( !inited_ )
         return;
@@ -246,6 +246,10 @@ void ViewportGL::drawBorder( const Box2i& rect, const Color& color ) const
         1.f,-1.f,0.f,
         -1.f,-1.f,0.f,
     };
+
+    Box2i rect(
+        { std::lround( rectf.min.x ), std::lround( rectf.min.y ) },
+        { std::lround( rectf.max.x ), std::lround( rectf.max.y ) } );
 
     GL_EXEC( glDisable( GL_DEPTH_TEST ) );
     GL_EXEC( glViewport( (GLsizei) rect.min.x, (GLsizei) rect.min.y,

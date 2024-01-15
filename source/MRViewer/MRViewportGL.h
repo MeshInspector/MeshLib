@@ -86,7 +86,7 @@ public:
     // Binds and draws viewport additional points
     void drawPoints( const RenderParams& params ) const;
     // Binds and draws viewport border
-    void drawBorder( const Box2i& rect, const Color& color ) const;
+    void drawBorder( const Box2f& rect, const Color& color ) const;
 
     // Returns visual points with corresponding colors (pair<vector<Vector3f>,vector<Vector4f>>)
     const ViewportPointsWithColors& getPointsWithColors() const;

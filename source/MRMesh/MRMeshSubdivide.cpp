@@ -48,19 +48,18 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         if ( settings.subdivideBorder ? !mesh.topology.isInnerOrBdEdge( e, settings.region )
                                       : !mesh.topology.isInnerEdge( e, settings.region ) )
             return;
-        if ( settings.maxTriAspectRatio < FLT_MAX )
+        if ( settings.minTriAspectRatio > 1 || settings.maxTriAspectRatio < FLT_MAX )
         {
-            Vector3f vp[3];
             if ( auto f = mesh.topology.left( e ) )
             {
-                mesh.getTriPoints( f, vp[0], vp[1], vp[2] );
-                if ( triangleAspectRatio( vp[0], vp[1], vp[2] ) > settings.maxTriAspectRatio )
+                const auto a = mesh.triangleAspectRatio( f );
+                if ( a < settings.minTriAspectRatio || a > settings.maxTriAspectRatio )
                     return;
             }
             if ( auto f = mesh.topology.right( e ) )
             {
-                mesh.getTriPoints( f, vp[0], vp[1], vp[2] );
-                if ( triangleAspectRatio( vp[0], vp[1], vp[2] ) > settings.maxTriAspectRatio )
+                const auto a = mesh.triangleAspectRatio( f );
+                if ( a < settings.minTriAspectRatio || a > settings.maxTriAspectRatio )
                     return;
             }
         }

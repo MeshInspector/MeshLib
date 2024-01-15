@@ -39,12 +39,6 @@ ViewportGL& ViewportGL::operator=( ViewportGL&& other ) noexcept
     border_line_vbo = other.border_line_vbo;
     border_line_vao = other.border_line_vao;
 
-    previewLines_ = other.previewLines_;
-    previewPoints_ = other.previewPoints_;
-
-    lines_dirty = true;
-    points_dirty = true;
-
     inited_ = other.inited_;
 
     other.inited_ = false;
@@ -94,9 +88,6 @@ void ViewportGL::free()
     if ( !Viewer::constInstance()->isGLInitialized() || !loadGL() )
         return;
 
-    setLinesWithColors( { {},{} } );
-    setPointsWithColors( { {},{} } );
-
     GL_EXEC( glDeleteVertexArrays( 1, &add_line_vao ) );
     GL_EXEC( glDeleteBuffers( 1, &add_line_vbo ) );
     GL_EXEC( glDeleteBuffers( 1, &add_line_colors_vbo ) );
@@ -110,134 +101,6 @@ void ViewportGL::free()
 
     pickFBO_.del();
     inited_ = false;
-}
-
-void ViewportGL::drawLines( const RenderParams& params ) const
-{
-    if ( previewLines_.lines.empty() )
-        return;
-
-    if ( !inited_ )
-    {
-        lines_dirty = false;
-        return;
-    }
-    // set GL_DEPTH_TEST specified for lines
-    if ( params.depthTest )
-    {
-        GL_EXEC( glEnable( GL_DEPTH_TEST ) );
-    }
-    else
-    {
-        GL_EXEC( glDisable( GL_DEPTH_TEST ) );
-    }
-
-    GL_EXEC( glViewport( (GLsizei) params.viewport.x, (GLsizei) params.viewport.y,
-                         (GLsizei) params.viewport.z, (GLsizei) params.viewport.w ) );
-    // Send lines data to GL, install lines properties
-    GL_EXEC( glBindVertexArray( add_line_vao ) );
-
-    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::AdditionalLines );
-    GL_EXEC( glUseProgram( shader ) );
-
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, params.viewMatrix.data() ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, params.projMatrix.data() ) );
-
-    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "offset" ), params.zOffset * params.cameraZoom ) );
-
-    GL_EXEC( GLint colorsId = glGetAttribLocation( shader, "color" ) );
-
-    GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, add_line_colors_vbo ) );
-    if ( lines_dirty )
-    {
-        GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( SegmEndColors ) * previewLines_.colors.size(), previewLines_.colors.data(), GL_DYNAMIC_DRAW ) );
-    }
-    GL_EXEC( glVertexAttribPointer( colorsId, 4, GL_FLOAT, GL_FALSE, 0, 0 ) );
-    GL_EXEC( glEnableVertexAttribArray( colorsId ) );
-
-
-    GL_EXEC( GLint positionId = glGetAttribLocation( shader, "position" ) );
-    GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, add_line_vbo ) );
-    if ( lines_dirty )
-    {
-        GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( LineSegm3f ) * previewLines_.lines.size(), previewLines_.lines.data(), GL_DYNAMIC_DRAW ) );
-    }
-    GL_EXEC( glVertexAttribPointer( positionId, 3, GL_FLOAT, GL_FALSE, 0, 0 ) );
-    GL_EXEC( glEnableVertexAttribArray( positionId ) );
-
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineArraySize, previewLines_.lines.size() );
-    GL_EXEC( glBindVertexArray( add_line_vao ) );
-    GL_EXEC( glLineWidth( static_cast <GLfloat> ( params.width ) ) );
-    GL_EXEC( glDrawArrays( GL_LINES, 0, static_cast <GLsizei> ( previewLines_.lines.size() * 2 ) ) );
-
-    lines_dirty = false;
-}
-
-void ViewportGL::drawPoints( const RenderParams& params ) const
-{
-    if ( previewPoints_.points.empty() )
-        return;
-
-    if ( !inited_ )
-    {
-        points_dirty = false;
-        return;
-    }
-    // set GL_DEPTH_TEST specified for points 
-    if ( params.depthTest )
-    {
-        GL_EXEC( glEnable( GL_DEPTH_TEST ) );
-    }
-    else
-    {
-        GL_EXEC( glDisable( GL_DEPTH_TEST ) );
-    }
-
-    GL_EXEC( glViewport( (GLsizei) params.viewport.x, (GLsizei) params.viewport.y,
-                         (GLsizei) params.viewport.z, (GLsizei) params.viewport.w ) );
-    // Send points data to GL, install points properties 
-    GL_EXEC( glBindVertexArray( add_point_vao ) );
-
-    // AdditionalPointsNoOffset exists for old intel gpu (Intel HD 4000)
-    auto shader = params.zOffset == 0.0f ? GLStaticHolder::getShaderId( GLStaticHolder::AdditionalPointsNoOffset ) : GLStaticHolder::getShaderId( GLStaticHolder::AdditionalPoints );
-    GL_EXEC( glUseProgram( shader ) );
-
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, params.viewMatrix.data() ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, params.projMatrix.data() ) );
-
-    if ( params.zOffset != 0.0f )
-    {
-        GL_EXEC( glUniform1f( glGetUniformLocation( shader, "offset" ), params.zOffset * params.cameraZoom ) );
-    }
-
-    GL_EXEC( GLint colorsId = glGetAttribLocation( shader, "color" ) );
-    GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, add_point_colors_vbo ) );
-    if ( points_dirty )
-    {
-        GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( Vector4f ) * previewPoints_.colors.size(), previewPoints_.colors.data(), GL_DYNAMIC_DRAW ) );
-    }
-    GL_EXEC( glVertexAttribPointer( colorsId, 4, GL_FLOAT, GL_FALSE, 0, 0 ) );
-    GL_EXEC( glEnableVertexAttribArray( colorsId ) );
-
-    GL_EXEC( GLint positionId = glGetAttribLocation( shader, "position" ) );
-    GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, add_point_vbo ) );
-    if ( points_dirty )
-    {
-        GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( Vector3f ) * previewPoints_.points.size(), previewPoints_.points.data(), GL_DYNAMIC_DRAW ) );
-    }
-    GL_EXEC( glVertexAttribPointer( positionId, 3, GL_FLOAT, GL_FALSE, 0, 0 ) );
-    GL_EXEC( glEnableVertexAttribArray( positionId ) );
-
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::PointArraySize, previewPoints_.points.size() );
-
-    GL_EXEC( glBindVertexArray( add_point_vao ) );
-#ifdef __EMSCRIPTEN__
-    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "pointSize" ), params.width ) );
-#else
-    GL_EXEC( glPointSize( params.width ) );
-#endif
-    GL_EXEC( glDrawArrays( GL_POINTS, 0, static_cast <GLsizei> ( previewPoints_.points.size() ) ) );
-    points_dirty = false;
 }
 
 void ViewportGL::drawBorder( const Box2f& rectf, const Color& color ) const
@@ -285,32 +148,6 @@ void ViewportGL::drawBorder( const Box2f& rectf, const Color& color ) const
     GL_EXEC( glEnableVertexAttribArray( 0 ) );
     GL_EXEC( glBindVertexArray( border_line_vao ) );
     GL_EXEC( glDrawArrays( GL_LINES, 0, static_cast <GLsizei> ( 8 ) ) );
-}
-
-const ViewportPointsWithColors& ViewportGL::getPointsWithColors() const
-{
-    return previewPoints_;
-}
-
-const ViewportLinesWithColors& ViewportGL::getLinesWithColors() const
-{
-    return previewLines_;
-}
-
-void ViewportGL::setPointsWithColors( const ViewportPointsWithColors& pointsWithColors )
-{
-    if ( previewPoints_ == pointsWithColors )
-        return;
-    previewPoints_ = pointsWithColors;
-    points_dirty = true;
-}
-
-void ViewportGL::setLinesWithColors( const ViewportLinesWithColors& linesWithColors )
-{
-    if ( previewLines_ == linesWithColors )
-        return;
-    previewLines_ = linesWithColors;
-    lines_dirty = true;
 }
 
 void ViewportGL::fillViewport( const Box2f& rectf, const Color& color ) const

@@ -87,52 +87,6 @@ public:
     MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f & projM, 
          DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const;
 
-    // Returns visual points with corresponding colors (pair<vector<Vector3f>,vector<Vector4f>>)
-    MRVIEWER_API const ViewportPointsWithColors& getPointsWithColors() const;
-    // Returns visual lines segments with corresponding colors (pair<vector<LineSegm3f>,vector<SegmEndColors>>)
-    [[deprecated]]
-    MRVIEWER_API const ViewportLinesWithColors& getLinesWithColors() const;
-
-    // Sets visual points with corresponding colors (pair<vector<Vector3f>,vector<Vector4f>>)
-    // calls 'beforeSetPointsWithColors' lambda if it is present
-    [[deprecated]]
-    MRVIEWER_API void setPointsWithColors( const ViewportPointsWithColors& pointsWithColors );
-
-    // Sets visual lines segments with corresponding colors (pair<vector<LineSegm3f>,vector<SegmEndColors>>)
-    // calls 'beforeSetLinesWithColors' lambda if it is present
-    [[deprecated]]
-    MRVIEWER_API void setLinesWithColors( const ViewportLinesWithColors& linesWithColors );
-
-    // Add line to draw from start_point position to fin_point position.
-    [[deprecated]]
-    MRVIEWER_API void  add_line( const Vector3f& start_pos, const Vector3f& fin_pos,
-                                 const Color& color_start = Color::black(), const Color& color_fin = Color::black() );
-    // Add lines from points. 
-    [[deprecated]]
-    MRVIEWER_API void  add_lines( const std::vector<Vector3f>& points, const Color& color = Color::black() );
-    [[deprecated]]
-    MRVIEWER_API void  add_lines( const std::vector<Vector3f>& points, const std::vector<Color>& colors );
-    // Remove all lines selected for draw
-    [[deprecated]]
-    MRVIEWER_API void  remove_lines();
-    // Add point to draw-list  as a  "pos" position. 
-    [[deprecated]]
-    MRVIEWER_API void  add_point( const Vector3f& pos, const Color& color = Color::black() );
-    // Remove all lines selected for draw
-    [[deprecated]]
-    MRVIEWER_API void  remove_points();
-    // Is there a need to use depth_test for preview lines. (default: false)
-    [[deprecated]]
-    MRVIEWER_API void setPreviewLinesDepthTest( bool on );
-    // Is there a need to use depth_test for preview points. (default: false)
-    [[deprecated]]
-    MRVIEWER_API void setPreviewPointsDepthTest( bool on );
-
-    [[deprecated]]
-    bool getPreviewLinesDepthTest() const { return previewLinesDepthTest_; }
-    [[deprecated]]
-    bool getPreviewPointsDepthTest() const { return previewPointsDepthTest_; }
-
     // Point size in pixels
     float point_size{4.0f};
     // Line width in pixels
@@ -142,12 +96,6 @@ public:
     // note that z buffer is not linear and common values are in range [0..1]
     float linesZoffset{0.0f};
     float pointsZoffset{0.0f};
-
-    // This lambda is called before each change of visual points
-    std::function<void( const ViewportLinesWithColors& curr, const ViewportLinesWithColors& next )> beforeSetLinesWithColors{};
-    // This lambda is called before each change of visual lines
-    std::function<void( const ViewportPointsWithColors& curr, const ViewportPointsWithColors& next )> beforeSetPointsWithColors{};
-
 
     // This function allows to pick point in scene by GL
     // use default pick radius
@@ -446,8 +394,6 @@ private:
     bool previewLinesDepthTest_ = false;
     bool previewPointsDepthTest_ = false;
 
-    void draw_lines() const;
-    void draw_points() const;
     void draw_border() const;
     void draw_rotation_center() const;
     void draw_clipping_plane() const;

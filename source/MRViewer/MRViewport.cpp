@@ -402,32 +402,6 @@ std::vector<ConstObjAndPick> Viewport::constMultiPickObjects( const std::vector<
     return res;
 }
 
-const ViewportPointsWithColors& Viewport::getPointsWithColors() const
-{
-    return viewportGL_.getPointsWithColors();
-}
-
-const ViewportLinesWithColors& Viewport::getLinesWithColors() const
-{
-    return viewportGL_.getLinesWithColors();
-}
-
-void Viewport::setPointsWithColors( const ViewportPointsWithColors& pointsWithColors )
-{
-    if ( beforeSetPointsWithColors )
-        beforeSetPointsWithColors( getPointsWithColors(), pointsWithColors );
-    viewportGL_.setPointsWithColors( pointsWithColors );
-}
-
-void Viewport::setLinesWithColors( const ViewportLinesWithColors& linesWithColors )
-{
-    MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
-    if ( beforeSetLinesWithColors )
-        beforeSetLinesWithColors( getLinesWithColors(), linesWithColors );
-    MR_SUPPRESS_WARNING_POP
-    viewportGL_.setLinesWithColors( linesWithColors );
-}
-
 void Viewport::setupView()
 {
     setupViewMatrix_();
@@ -439,10 +413,6 @@ void Viewport::preDraw()
 {
     if ( !viewportGL_.checkInit() )
         viewportGL_.init();
-    if( previewLinesDepthTest_ )
-        draw_lines();
-    if( previewPointsDepthTest_ )
-        draw_points();
     draw_rotation_center();
     draw_global_basis();
 }
@@ -451,11 +421,6 @@ void Viewport::postDraw() const
 {
     draw_border();
     draw_clipping_plane();
-
-    if( !previewLinesDepthTest_ )
-        draw_lines();
-    if( !previewPointsDepthTest_ )
-        draw_points();
 
     // important to be last
     drawAxes();
@@ -575,17 +540,6 @@ void Viewport::setAxesPos( const int pixelXoffset, const int pixelYoffset )
 // ================================================================
 // GL functions part
 
-void Viewport::draw_points( void ) const
-{
-    ViewportGL::RenderParams params{getBaseRenderParams()};
-    params.cameraZoom = params_.cameraZoom;
-    params.zOffset = pointsZoffset;
-    params.depthTest = previewPointsDepthTest_;
-    params.width = point_size;
-
-    viewportGL_.drawPoints( params );
-}
-
 void Viewport::draw_border() const
 {
     viewportGL_.drawBorder( viewportRect_, params_.borderColor );
@@ -653,110 +607,6 @@ void Viewport::draw_global_basis() const
         return;
 
     draw( *Viewer::constInstance()->globalBasisAxes, params_.globalBasisAxesXf() );
-}
-
-void Viewport::draw_lines( void ) const
-{
-    ViewportGL::RenderParams params{getBaseRenderParams()};
-    params.cameraZoom = params_.cameraZoom;
-    params.zOffset = linesZoffset;
-    params.depthTest = previewLinesDepthTest_;
-    params.width = line_width;
-
-    viewportGL_.drawLines( params );
-}
-
-void  Viewport::add_line( const Vector3f& start_pos, const Vector3f& fin_pos,
-                                 const Color& color_start, const Color& color_fin )
-{
-    auto [newLines, newColors] = viewportGL_.getLinesWithColors();
-    newLines.push_back( { start_pos, fin_pos } );
-    newColors.push_back( { Vector4f( color_start ),Vector4f( color_fin ) } );
-    MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
-    setLinesWithColors( { newLines,newColors } );
-    MR_SUPPRESS_WARNING_POP
-    needRedraw_ = viewportGL_.lines_dirty;
-}
-
-void Viewport::add_lines( const std::vector<Vector3f>& points, const std::vector<Color>& colorsArg )
-{
-    if ( points.size() < 2 )
-        return;
-    auto lc = viewportGL_.getLinesWithColors();
-    auto& newLines = lc.lines;
-    auto& newColors = lc.colors;
-
-    auto oldSize = newLines.size();
-    newLines.resize( oldSize + ( points.size() - 1 ) );
-    newColors.resize( newLines.size() );
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, points.size() - 1 ),
-        [&] ( const tbb::blocked_range<size_t>& range )
-    {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            const auto& start_pos = points[i];
-            const auto& fin_pos = points[i + 1];
-            auto ind = oldSize + i;
-
-            newLines[ind] = LineSegm3f{ start_pos, fin_pos };
-            newColors[ind] = { Vector4f( colorsArg[i] ),Vector4f( colorsArg[i + 1] ) };
-        }
-    } );
-    MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
-    setLinesWithColors( { newLines,newColors } );
-    MR_SUPPRESS_WARNING_POP
-    needRedraw_ = viewportGL_.lines_dirty;
-}
-
-void Viewport::add_lines( const std::vector<Vector3f>& points, const Color& color )
-{
-    std::vector<Color> colors( points.size(), color );
-    MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
-    add_lines( points, colors );
-    MR_SUPPRESS_WARNING_POP
-}
-
-void  Viewport::remove_lines(  )
-{
-    MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
-    setLinesWithColors( { {},{} } );
-    MR_SUPPRESS_WARNING_POP
-    needRedraw_ = viewportGL_.lines_dirty;
-}
-
-void  Viewport::add_point ( const Vector3f& pos, const Color& color )
-{
-    auto [newPoints, newColors] = viewportGL_.getPointsWithColors();
-    newPoints.push_back( pos );
-    newColors.push_back( Vector4f( color ) );
-    MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 );
-    setPointsWithColors( { newPoints,newColors } );
-    MR_SUPPRESS_WARNING_POP
-    needRedraw_ = viewportGL_.points_dirty;
-} 
-
-void  Viewport::remove_points()
-{
-    MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
-    setPointsWithColors( { {},{} } );
-    MR_SUPPRESS_WARNING_POP
-    needRedraw_ = viewportGL_.points_dirty;
-}
-
-void Viewport::setPreviewLinesDepthTest( bool on )
-{
-    if ( previewLinesDepthTest_ == on )
-        return;
-    previewLinesDepthTest_ = on;
-    needRedraw_ = true;
-}
-
-void Viewport::setPreviewPointsDepthTest( bool on )
-{
-    if ( previewPointsDepthTest_ == on )
-        return;
-    previewPointsDepthTest_ = on;
-    needRedraw_ = true;
 }
 
 bool Viewport::Parameters::operator==( const Viewport::Parameters& other ) const

@@ -53,18 +53,25 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
             return;
         if ( settings.minTriAspectRatio > 1 || settings.maxTriAspectRatio < FLT_MAX )
         {
+            bool belowMinTriAspectRatio = true;
             if ( auto f = mesh.topology.left( e ) )
             {
                 const auto a = mesh.triangleAspectRatio( f );
-                if ( a < settings.minTriAspectRatio || a > settings.maxTriAspectRatio )
+                if ( a > settings.maxTriAspectRatio )
                     return;
+                if ( a >= settings.minTriAspectRatio )
+                    belowMinTriAspectRatio = false;
             }
             if ( auto f = mesh.topology.right( e ) )
             {
                 const auto a = mesh.triangleAspectRatio( f );
-                if ( a < settings.minTriAspectRatio || a > settings.maxTriAspectRatio )
+                if ( a > settings.maxTriAspectRatio )
                     return;
+                if ( a >= settings.minTriAspectRatio )
+                    belowMinTriAspectRatio = false;
             }
+            if ( belowMinTriAspectRatio )
+                return;
         }
         queue.emplace( e, lenSq );
     };

@@ -115,13 +115,11 @@ void RibbonMenuSearch::draw( const Parameters& params )
         ImGui::PushStyleColor( ImGuiCol_ButtonActive,
                                ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActive ).getUInt32() );
         ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-//        int uniqueBtnCounter = 0;
         for ( int i = 0; i < resultsList.size(); ++i )
         {
             const auto& foundItem = resultsList[i];
             if ( !foundItem.item )
                 continue;
-            //auto pos = ImGui::GetCursorPos();
             auto width = params.btnDrawer.calcItemWidth( *foundItem.item, DrawButtonParams::SizeType::SmallText );
             DrawButtonParams dbParams;
             dbParams.sizeType = DrawButtonParams::SizeType::SmallText;
@@ -131,7 +129,6 @@ void RibbonMenuSearch::draw( const Parameters& params )
             dbParams.forceHovered = hightlightedSearchItem_ == i;
             dbParams.forcePressed = dbParams.forceHovered &&
                 ( ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter ) );
-            //ImGui::SetCursorPosY( pos.y );
             params.btnDrawer.drawButtonItem( *foundItem.item, dbParams );
         }
         ImGui::PopStyleVar( 1 );
@@ -185,7 +182,7 @@ void RibbonMenuSearch::drawMenuUI()
     }
     else
     {
-        ImGui::SetNextItemWidth( 285.f * scaling );
+        ImGui::SetNextItemWidth( getWidthMenuUI() * scaling );
         const bool wasEmpty = searchLine_.empty();
         if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
             searchResult_ = RibbonSchemaHolder::search( searchLine_ );
@@ -205,7 +202,7 @@ bool RibbonMenuSearch::isSmallUI()
 
 float RibbonMenuSearch::getWidthMenuUI()
 {
-    return isSmallUI() ? 40.f : 300.f;
+    return isSmallUI() ? 40.f : 200.f;
 }
 
 }

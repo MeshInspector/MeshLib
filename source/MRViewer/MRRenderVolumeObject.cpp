@@ -26,16 +26,14 @@ RenderVolumeObject::~RenderVolumeObject()
     freeBuffers_();
 }
 
-void RenderVolumeObject::render( const RenderParams& renderParams )
+void RenderVolumeObject::render( const ModelRenderParams& renderParams )
 {
     render_( renderParams, unsigned( ~0 ) );
 }
 
-void RenderVolumeObject::renderPicker( const BaseRenderParams& renderParams, unsigned geomId )
+void RenderVolumeObject::renderPicker( const ModelRenderParams& renderParams, unsigned geomId )
 {
-    Vector3f ligthPos;
-    RenderParams params{ renderParams, ligthPos };
-    render_( params, geomId );
+    render_( renderParams, geomId );
 }
 
 size_t RenderVolumeObject::heapBytes() const
@@ -90,7 +88,7 @@ RenderBufferRef<unsigned> RenderVolumeObject::loadActiveVoxelsTextureBuffer_()
     return buffer;
 }
 
-void RenderVolumeObject::render_( const RenderParams& renderParams, unsigned geomId )
+void RenderVolumeObject::render_( const ModelRenderParams& renderParams, unsigned geomId )
 {
     if ( !getViewerInstance().isGLInitialized() )
     {

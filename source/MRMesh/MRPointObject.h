@@ -1,13 +1,14 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRObjectPointsHolder.h"
+#include "MRFeatureObjectSharedProperties.h"
 
 namespace MR
 {
 
 /// Object to show point feature
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS PointObject : public ObjectPointsHolder
+class MRMESH_CLASS PointObject : public ObjectPointsHolder, public FeatureObjectWithSharedProperties
 {
 public:
     /// Creates simple point object with zero position
@@ -34,6 +35,8 @@ public:
     MRMESH_API Vector3f getPoint() const;
     /// updates xf to fit given point
     MRMESH_API void setPoint( const Vector3f& point );
+
+    MRMESH_API virtual  std::vector<FeatureObjectSharedProperty> getAllSharedProperties( void ) override;
 protected:
     PointObject( const PointObject& other ) = default;
 

@@ -97,8 +97,9 @@ void Viewport::draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix
 
     ModelRenderParams params
     {
-        viewM_, modelTemp, projM, &normM,
-        id, params_.clippingPlane, toVec4<int>( viewportRect_ ),depthFunc,
+        { viewM_, projM, id, toVec4<int>( viewportRect_ ) },
+        modelTemp, &normM,
+        params_.clippingPlane, depthFunc,
         params_.lightPosition, alphaSort
     };
     obj.render( params );
@@ -195,10 +196,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
     if ( viewportPoints.empty() )
         return {};
     std::vector<Vector2i> picks( viewportPoints.size() );
-    ViewportGL::PickParameters params{
-        renderVector,
-        {viewM_,projM_,toVec4<int>( viewportRect_ )},
-        params_.clippingPlane,id};
+    ViewportGL::PickParameters params{ renderVector, getBaseRenderParams(), params_.clippingPlane };
 
     for ( int i = 0; i < viewportPoints.size(); ++i )
         picks[i] = Vector2i( viewportPoints[i] );
@@ -286,10 +284,7 @@ std::vector<std::shared_ptr<MR::VisualObject>> Viewport::findObjectsInRect( cons
     VisualObjectTreeDataVector renderVector;
     getPickerDataVector( SceneRoot::get(), id, renderVector );
 
-    ViewportGL::PickParameters params{
-        renderVector,
-        {viewM_,projM_,toVec4<int>( viewportRect_ )},
-        params_.clippingPlane,id };
+    ViewportGL::PickParameters params{ renderVector, getBaseRenderParams(), params_.clippingPlane };
 
     auto viewportRect = Box2i( Vector2i( 0, 0 ), Vector2i( int( width( viewportRect_ ) ), int( height( viewportRect_ ) ) ) );
     auto pickResult = viewportGL_.findUniqueObjectsInRect( params, rect.intersection( viewportRect ), maxRenderResolutionSide );
@@ -310,10 +305,7 @@ std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> Viewport::fi
     VisualObjectTreeDataVector renderVector;
     getPickerDataVector( SceneRoot::get(), id, renderVector );
 
-    ViewportGL::PickParameters params{
-        renderVector,
-        { viewM_,projM_,toVec4<int>( viewportRect_ ) },
-            params_.clippingPlane, id };
+    ViewportGL::PickParameters params{ renderVector, getBaseRenderParams(), params_.clippingPlane };
 
     int width = int( MR::width( viewportRect_ ) );
     int height = int( MR::height( viewportRect_ ) );

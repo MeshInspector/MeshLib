@@ -22,15 +22,21 @@ enum class DepthFuncion
     Default = 8 // usually "Less" but may differ for different object types
 };
 
-struct ModelRenderParams
+/// describes basic rendering parameters in a viewport
+struct BaseRenderParams
 {
     const Matrix4f& viewMatrix;
-    const Matrix4f& modelMatrix;
     const Matrix4f& projMatrix;
-    const Matrix4f* normMatrixPtr{ nullptr }; // normal matrix, necessary for triangles rendering
-    ViewportId viewportId;       // id of current viewport
-    const Plane3f& clipPlane;    // viewport clip plane (it is not applied while object does not have clipping flag set)
+    ViewportId viewportId;       // id of the viewport
     Vector4i viewport;           // viewport x0, y0, width, height
+};
+
+/// describes parameters necessary to render an object
+struct ModelRenderParams : BaseRenderParams
+{
+    const Matrix4f& modelMatrix;
+    const Matrix4f* normMatrixPtr{ nullptr }; // normal matrix, only necessary for triangles rendering
+    const Plane3f& clipPlane;    // viewport clip plane (it is not applied while object does not have clipping flag set)
     DepthFuncion depthFunction = DepthFuncion::Default;
     Vector3f lightPos;           // position of light source, unused for picker
     bool alphaSort{ false };     // if this flag is true shader for alpha sorting is used, unused for picker

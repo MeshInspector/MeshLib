@@ -7,6 +7,7 @@
 #include "MRMesh/MRLineSegm3.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRViewportId.h"
+#include "MRMesh/MRIRenderObject.h"
 
 namespace MR
 {
@@ -66,13 +67,6 @@ public:
     // Free all GL data
     void free();
 
-    struct BaseRenderParams
-    {
-        const Matrix4f& viewMatrix;
-        const Matrix4f& projMatrix;
-        Vector4i viewport;          // viewport x0, y0, width, height
-    };
-
     // Binds and draws viewport border
     void drawBorder( const Box2f& rect, const Color& color ) const;
 
@@ -88,7 +82,6 @@ public:
         const std::vector<VisualObject*>& renderVector;       // objects to pick
         BaseRenderParams baseRenderParams;                    // parameters for rendering pick object 
         Plane3f clippingPlane;                                // viewport clip plane (it is not applied while object does not have clipping flag set)
-        ViewportId viewportId;                                // viewport id
     };
     struct BasePickResult
     {

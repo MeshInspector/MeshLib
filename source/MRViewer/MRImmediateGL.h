@@ -3,6 +3,7 @@
 #include "MRViewportGL.h"
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRMatrix4.h"
+#include "MRMesh/MRIRenderObject.h"
 
 namespace MR
 {
@@ -11,14 +12,14 @@ namespace ImmediateGL
 {
 
 // Immediate render params for lines and points
-struct RenderParams : ViewportGL::BaseRenderParams
+struct RenderParams : BaseRenderParams
 {
     float width{1.0f};
     bool depthTest{ true };
 };
 
 // Immediate render params for quads
-struct TriRenderParams : ViewportGL::BaseRenderParams
+struct TriRenderParams : BaseRenderParams
 {
     bool depthTest{ true };
     Vector3f lightPos;

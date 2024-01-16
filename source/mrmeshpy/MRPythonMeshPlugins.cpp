@@ -515,7 +515,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, GeodesicPath, [] ( pybind11::module_& m )
     );
 })
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ConvexHull, [] ( pybind11::module_& m ))
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ConvexHull, [] ( pybind11::module_& m )
 {
     m.def( "makeConvexHull",  ( Mesh ( * ) ( const VertCoords&, const VertBitSet& ) )&  makeConvexHull, 
         pybind11::arg( "points" ), pybind11::arg( "validPoints" ),
@@ -528,4 +528,4 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ConvexHull, [] ( pybind11::module_& m ))
     m.def( "makeConvexHull",  ( Mesh ( * ) ( const PointCloud& ) )&  makeConvexHull, 
         pybind11::arg( "pointCloud" ),
         "Computes the Mesh of convex hull from given input `PointCloud`" );
-}
+} )

@@ -31,6 +31,7 @@
 #include "MRMesh/MRContour.h"
 #include "MRMesh/MRMeshOverhangs.h"
 #include "MRMesh/MRConvexHull.h"
+#include "MRMesh/MRPointCloud.h"
 #include <pybind11/functional.h>
 
 using namespace MR;

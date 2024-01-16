@@ -129,10 +129,10 @@ void PlaneObject::constructMesh_()
     // create object Mesh cube
     Mesh meshObj;
     meshObj.topology = MeshBuilder::fromTriangles( t );
-    meshObj.points.emplace_back( -1, -1, 0 ); // VertId{0}
-    meshObj.points.emplace_back( 1, -1, 0 ); // VertId{1}
-    meshObj.points.emplace_back( -1, 1, 0 ); // VertId{2}
-    meshObj.points.emplace_back( 1, 1, 0 ); // VertId{3}
+    meshObj.points.emplace_back( -0.5f, -0.5f, 0 ); // VertId{0}
+    meshObj.points.emplace_back(  0.5f, -0.5f, 0 ); // VertId{1}
+    meshObj.points.emplace_back( -0.5f,  0.5f, 0 ); // VertId{2}
+    meshObj.points.emplace_back(  0.5f,  0.5f, 0 ); // VertId{3}
 
     mesh_ = std::make_shared<Mesh>( meshObj );
 

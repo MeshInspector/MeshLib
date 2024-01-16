@@ -35,7 +35,7 @@ class MRVIEWER_CLASS RibbonMenu : public ImGuiMenu
 public:
     // adds a custom checkBox to the context menu
     // it is applied to the selected objects
-    MRVIEWER_API void setCustomCheckbox(
+    MRVIEWER_API void setCustomContextCheckbox(
         const std::string& name,
         CustomContextMenuCheckbox customContextMenuCheckbox );
 

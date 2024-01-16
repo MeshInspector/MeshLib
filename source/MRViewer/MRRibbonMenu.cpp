@@ -99,7 +99,7 @@ void changeSelection( bool selectNext, int mod )
     }
 }
 
-void RibbonMenu::setCustomCheckbox( 
+void RibbonMenu::setCustomContextCheckbox(
     const std::string& name,
     CustomContextMenuCheckbox customContextMenuCheckbox )
 {

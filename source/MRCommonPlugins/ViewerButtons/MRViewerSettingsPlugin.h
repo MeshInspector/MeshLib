@@ -25,13 +25,23 @@ private:
     virtual bool onEnable_() override;
     virtual bool onDisable_() override;
 
-    void drawMouseSceneControlsSettings_( float menuScaling );
+    void drawSettingsTab_( float menuWidth, float menuScaling );
+    void drawViewportTab_( float menuWidth, float menuScaling );
+    void drawViewTab_( float menuWidth, float menuScaling );
+    void drawControlTab_( float menuWidth, float menuScaling );
 
-    void drawSpaceMouseSettings_( float menuScaling );
-
-    void drawTouchpadSettings_( float menuScaling );
-
-    void drawModalExitButton_( float menuScaling );
+    void drawMouseSceneControlsSettings_( float menuWidth, float menuScaling );
+    void drawSpaceMouseSettings_( float menuWidth, float menuScaling );
+    void drawTouchpadSettings_();
+   
+    enum class TabType
+    {
+        Settings,
+        Viewport,
+        View,
+        Control,
+        Count
+    } activeTab_{ TabType::Settings };
 
     int curSamples_{ 0 };
     int storedSamples_{ 0 };

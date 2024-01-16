@@ -149,7 +149,20 @@ void drawTris( const std::vector<Triangle3f>& tris, const std::vector<TriCornerC
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, params.modelMatrix.data() ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, params.viewMatrix.data() ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, params.projMatrix.data() ) );
-    auto normM = params.modelMatrix.inverse().transposed();
+    auto normM = ( params.viewMatrix * params.modelMatrix ).inverse().transposed();
+    if ( normM.det() == 0 )
+    {
+        auto norm = normM.norm();
+        if ( std::isnormal( norm ) )
+        {
+            normM /= norm;
+            normM.w = { 0, 0, 0, 1 };
+        }
+        else
+        {
+            spdlog::warn( "Object transform is degenerate" );
+        }
+    }
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "normal_matrix" ), 1, GL_TRUE, normM.data() ) );
 
     GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &params.lightPos.x ) );

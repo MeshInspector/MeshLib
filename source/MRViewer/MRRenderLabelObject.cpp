@@ -42,7 +42,7 @@ RenderLabelObject::~RenderLabelObject()
     freeBuffers_();
 }
 
-void RenderLabelObject::render( const RenderParams& renderParams )
+void RenderLabelObject::render( const ModelRenderParams& renderParams )
 {
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
@@ -142,7 +142,7 @@ void RenderLabelObject::render( const RenderParams& renderParams )
     GL_EXEC( glDepthFunc( GL_LESS ) );
 }
 
-void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams )
+void RenderLabelObject::renderSourcePoint_( const ModelRenderParams& renderParams )
 {
     GL_EXEC( glBindVertexArray( srcArrayObjId_ ) );
 
@@ -188,7 +188,7 @@ void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams )
     dirtySrc_ = false;
 }
 
-void RenderLabelObject::renderBackground_( const RenderParams& renderParams )
+void RenderLabelObject::renderBackground_( const ModelRenderParams& renderParams )
 {
     GL_EXEC( glBindVertexArray( bgArrayObjId_ ) );
 
@@ -243,7 +243,7 @@ void RenderLabelObject::renderBackground_( const RenderParams& renderParams )
     dirtyBg_ = false;
 }
 
-void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams )
+void RenderLabelObject::renderLeaderLine_( const ModelRenderParams& renderParams )
 {
     GL_EXEC( glBindVertexArray( llineArrayObjId_ ) );
 
@@ -335,7 +335,7 @@ void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams )
     dirtyLLine_ = false;
 }
 
-void RenderLabelObject::renderPicker( const BaseRenderParams&, unsigned )
+void RenderLabelObject::renderPicker( const ModelRenderParams&, unsigned )
 {
     // no picker for labels
 }

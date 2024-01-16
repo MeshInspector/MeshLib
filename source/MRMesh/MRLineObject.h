@@ -41,7 +41,7 @@ public:
     MRMESH_API void setCenter( const Vector3f& center );
     /// updates xf to scale size
     MRMESH_API void setSize( const float& size );
-    /// get line size
+    /// calculates line size from xf
     MRMESH_API float getSize( void ) const;
 
     MRMESH_API virtual  std::vector<FeatureObjectSharedProperty> getAllSharedProperties( void ) override;

@@ -36,11 +36,29 @@ void PlaneObject::setCenter( const Vector3f& center )
     setXf( currentXf );
 }
 
-void PlaneObject::setSize( float size )
+void PlaneObject::setSize( const float& size )
 {
     auto currentXf = xf();
     currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( Vector3f::diagonal( size ) );
     setXf( currentXf );
+}
+
+float PlaneObject::getSize( void ) const
+{
+    auto currentXf = xf();
+    auto scale = currentXf.A.toScale();
+    return  ( scale.x + scale.y + scale.z ) / 3.0f;
+}
+
+std::vector<FeatureObjectSharedProperty> PlaneObject::getAllSharedProperties( void )
+{
+    std::vector<FeatureObjectSharedProperty> featureObjectProperties;
+    featureObjectProperties.reserve( 3 );
+    featureObjectProperties.emplace_back( "Center", &PlaneObject::getCenter, &PlaneObject::setCenter, this );
+    featureObjectProperties.emplace_back( "Normal", &PlaneObject::getNormal, &PlaneObject::setNormal, this );
+
+    featureObjectProperties.emplace_back( "Size", &PlaneObject::getSize, &PlaneObject::setSize, this );
+    return featureObjectProperties;
 }
 
 PlaneObject::PlaneObject()

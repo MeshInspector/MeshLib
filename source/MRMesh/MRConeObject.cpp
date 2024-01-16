@@ -69,7 +69,7 @@ float ConeObject::getHeight() const
 {
     return xf().A.toScale().z;
 }
-void ConeObject::setHeight( float height )
+void ConeObject::setHeight( const float& height )
 {
     auto direction = getDirection();
     auto currentXf = xf();
@@ -88,7 +88,7 @@ float ConeObject::getAngle() const
     return getAngleByFeatureRadius( getNormalyzedFeatueRadius() );
 }
 
-void ConeObject::setAngle( float angle )
+void ConeObject::setAngle( const float& angle )
 {
     auto direction = getDirection();
     auto currentXf = xf();
@@ -172,6 +172,19 @@ void ConeObject::constructMesh_()
     selectFaces( {} );
     selectEdges( {} );
     setDirtyFlags( DIRTY_ALL );
+}
+
+std::vector<FeatureObjectSharedProperty> ConeObject::getAllSharedProperties( void )
+{
+    std::vector<FeatureObjectSharedProperty> featureObjectProperties;
+
+    featureObjectProperties.emplace_back( "Angle", &ConeObject::getAngle, &ConeObject::setAngle, this );
+    featureObjectProperties.emplace_back( "Height", &ConeObject::getHeight, &ConeObject::setHeight, this );
+
+    featureObjectProperties.emplace_back( "Center", &ConeObject::getCenter, &ConeObject::setCenter, this );
+    featureObjectProperties.emplace_back( "Main axis", &ConeObject::getDirection, &ConeObject::setDirection, this );
+
+    return featureObjectProperties;
 }
 
 //////////////////

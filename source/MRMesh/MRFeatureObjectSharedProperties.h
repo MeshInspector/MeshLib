@@ -41,6 +41,7 @@ struct FeatureObjectSharedProperty {
 
 using FeatureObjectSharedProperties = std::vector<FeatureObjectSharedProperty>;
 
+
 struct  FeatureObjectWithSharedProperties {
 public:
     FeatureObjectWithSharedProperties( void ) noexcept = default;
@@ -49,10 +50,7 @@ public:
     FeatureObjectWithSharedProperties& operator = ( FeatureObjectWithSharedProperties&& ) noexcept = default;
     virtual ~FeatureObjectWithSharedProperties() = default;
 
-    virtual FeatureObjectSharedProperties getAllSharedProperties( void )
-    {
-        return {};
-    };
+    virtual FeatureObjectSharedProperties getAllSharedProperties( void ) = 0;
 };
 
 }

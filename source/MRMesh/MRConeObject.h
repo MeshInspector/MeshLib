@@ -1,13 +1,13 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRObjectMeshHolder.h"
-
+#include "MRFeatureObjectSharedProperties.h"
 namespace MR
 {
 
 /// Object to show Cone feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS ConeObject : public ObjectMeshHolder
+class MRMESH_CLASS ConeObject : public ObjectMeshHolder, public FeatureObjectWithSharedProperties
 {
 public:
     /// Creates simple Cone object with center in zero and radius - 1
@@ -42,7 +42,7 @@ public:
     /// calculates cone angle from xf. It is an angle betweeh main axis and side.
     MRMESH_API float getAngle() const;
     /// updates xf to fit given cone angle.  It is an angle betweeh main axis and side
-    MRMESH_API void setAngle( float angle );
+    MRMESH_API void setAngle( const float& angle );
     /// calculates center from xf. Center is the apex of the cone.
     MRMESH_API Vector3f getCenter() const;
     /// updates xf to fit given center.  Center is the apex of the cone.
@@ -54,7 +54,7 @@ public:
     /// calculates cone height from xf
     MRMESH_API float getHeight() const;
     /// updates xf to fit cone height
-    MRMESH_API void setHeight( float height );
+    MRMESH_API void setHeight( const float& height );
 
 
 
@@ -76,9 +76,11 @@ protected:
     {
         return {};
     }
+    MRMESH_API virtual  std::vector<FeatureObjectSharedProperty> getAllSharedProperties( void ) override;
 
 private:
     void constructMesh_();
+
 
     // Featue Radius fully controll by cone angle, but its need for speedup internal calculation (not use tan / atan from each estimation).
     float getNormalyzedFeatueRadius( void ) const;

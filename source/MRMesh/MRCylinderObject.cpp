@@ -173,6 +173,7 @@ void CylinderObject::constructMesh_()
     selectEdges( {} );
     setDirtyFlags( DIRTY_ALL );
 }
+
 std::vector<FeatureObjectSharedProperty> CylinderObject::getAllSharedProperties( void )
 {
     std::vector<FeatureObjectSharedProperty> featureObjectProperties;

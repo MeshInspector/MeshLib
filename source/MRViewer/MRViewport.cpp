@@ -95,10 +95,10 @@ void Viewport::draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix
     }
     auto normM = normTemp.inverse().transposed();
 
-    RenderParams params
+    ModelRenderParams params
     {
-        {viewM_, modelTemp, projM, &normM,
-        id, params_.clippingPlane, toVec4<int>( viewportRect_ ),depthFunc},
+        viewM_, modelTemp, projM, &normM,
+        id, params_.clippingPlane, toVec4<int>( viewportRect_ ),depthFunc,
         params_.lightPosition, alphaSort
     };
     obj.render( params );

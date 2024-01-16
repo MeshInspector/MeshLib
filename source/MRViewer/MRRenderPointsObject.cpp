@@ -29,7 +29,7 @@ RenderPointsObject::~RenderPointsObject()
     freeBuffers_();
 }
 
-void RenderPointsObject::render( const RenderParams& renderParams )
+void RenderPointsObject::render( const ModelRenderParams& renderParams )
 {
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
@@ -113,7 +113,7 @@ void RenderPointsObject::render( const RenderParams& renderParams )
     GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
 }
 
-void RenderPointsObject::renderPicker( const BaseRenderParams& parameters, unsigned geomId )
+void RenderPointsObject::renderPicker( const ModelRenderParams& parameters, unsigned geomId )
 {
     if ( !Viewer::constInstance()->isGLInitialized() )
     {

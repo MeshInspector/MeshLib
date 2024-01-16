@@ -180,7 +180,7 @@ std::vector<FeatureObjectSharedProperty> CylinderObject::getAllSharedProperties(
     featureObjectProperties.reserve( 4 );
 
     featureObjectProperties.emplace_back( "Radius", &CylinderObject::getRadius, &CylinderObject::setRadius, this );
-    featureObjectProperties.emplace_back( "Length", &CylinderObject::getRadius, &CylinderObject::setRadius, this );
+    featureObjectProperties.emplace_back( "Length", &CylinderObject::getLength, &CylinderObject::setLength, this );
 
     featureObjectProperties.emplace_back( "Center", &CylinderObject::getCenter, &CylinderObject::setCenter, this );
     featureObjectProperties.emplace_back( "Main axis", &CylinderObject::getDirection, &CylinderObject::setDirection, this );

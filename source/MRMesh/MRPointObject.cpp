@@ -48,6 +48,14 @@ void PointObject::setPoint( const Vector3f& point )
     setXf( AffineXf3f::translation( point ) );
 }
 
+std::vector<FeatureObjectSharedProperty> PointObject::getAllSharedProperties( void )
+{
+    std::vector<FeatureObjectSharedProperty> featureObjectProperties;
+    featureObjectProperties.reserve( 1 );
+    featureObjectProperties.emplace_back( "Point", &PointObject::getPoint, &PointObject::setPoint, this );
+    return featureObjectProperties;
+}
+
 void PointObject::swapBase_( Object& other )
 {
     if ( auto pointObject = other.asType<PointObject>() )

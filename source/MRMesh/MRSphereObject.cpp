@@ -27,7 +27,7 @@ Vector3f SphereObject::getCenter() const
     return xf().b;
 }
 
-void SphereObject::setRadius( float radius )
+void SphereObject::setRadius( const float& radius )
 {
     auto currentXf = xf();
     currentXf.A = Matrix3f::scale( radius );
@@ -39,6 +39,16 @@ void SphereObject::setCenter( const Vector3f& center )
     auto currentXf = xf();
     currentXf.b = center;
     setXf( currentXf );
+}
+
+
+std::vector<FeatureObjectSharedProperty> SphereObject::getAllSharedProperties( void )
+{
+    std::vector<FeatureObjectSharedProperty> featureObjectProperties;
+    featureObjectProperties.reserve( 2 );
+    featureObjectProperties.emplace_back( "Radius", &SphereObject::getRadius, &SphereObject::setRadius, this );
+    featureObjectProperties.emplace_back( "Center", &SphereObject::getCenter, &SphereObject::setCenter, this );
+    return featureObjectProperties;
 }
 
 SphereObject::SphereObject()

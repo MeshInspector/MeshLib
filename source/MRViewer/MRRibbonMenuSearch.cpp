@@ -5,9 +5,14 @@
 #include "MRRibbonConstants.h"
 #include "MRRibbonButtonDrawer.h"
 #include <imgui_internal.h>
+#include "MRViewerInstance.h"
+#include "MRViewer/MRViewer.h"
+#include "MRRibbonMenu.h"
 
 namespace MR
 {
+
+constexpr float SearchSize = 300.0f;
 
 void RibbonMenuSearch::pushRecentItem( const std::shared_ptr<RibbonMenuItem>& item )
 {
@@ -43,6 +48,19 @@ void RibbonMenuSearch::pushRecentItem( const std::shared_ptr<RibbonMenuItem>& it
 
 void RibbonMenuSearch::draw( const Parameters& params )
 {
+    if ( !ImGui::IsPopupOpen( windowName() ) )
+    {
+        if ( popupWasOpen_ )
+        {
+            searchLine_.clear();
+            searchResult_.clear();
+            hightlightedSearchItem_ = -1;
+            popupWasOpen_ = false;
+        }
+        return;
+    }
+
+    popupWasOpen_ = true;
     if ( ImGuiWindow* menuWindow = ImGui::FindWindowByName( windowName() ) )
         if ( menuWindow->WasActive )
         {
@@ -58,21 +76,20 @@ void RibbonMenuSearch::draw( const Parameters& params )
 
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | 
         ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove;
-    if ( ImGui::Begin( windowName(), NULL, window_flags) )
+    if ( ImGui::Begin( windowName(), NULL, window_flags ) )
     {
         // Search line
         bool appearing = ImGui::IsWindowAppearing();
         if ( appearing )
-        {
-            searchLine_.clear();
-            searchResult_.clear();
-            hightlightedSearchItem_ = -1;
             ImGui::SetKeyboardFocusHere();
+
+        const float minSearchSize = SearchSize * params.scaling;
+        if ( isSmallUI() )
+        {
+            ImGui::SetNextItemWidth( minSearchSize );
+            if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
+                searchResult_ = RibbonSchemaHolder::search( searchLine_ );
         }
-        float minSearchSize = 300.0f * params.scaling;
-        ImGui::SetNextItemWidth( minSearchSize );
-        if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
-            searchResult_ = RibbonSchemaHolder::search( searchLine_ );
 
         const auto& resultsList = searchLine_.empty() ? recentItems_ : searchResult_;
 
@@ -142,6 +159,73 @@ void RibbonMenuSearch::draw( const Parameters& params )
         ImGui::PopFont();
         ImGui::EndPopup();
     }
+}
+
+void RibbonMenuSearch::drawMenuUI()
+{
+    auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
+    const auto scaling = ribbonMenu ? ribbonMenu->menu_scaling() : 1.f;
+
+    if ( isSmallUI() )
+    {
+        bool popupOpened = ImGui::IsPopupOpen( windowName() );
+
+        ImFont* font = nullptr;
+        if ( ribbonMenu )
+            font = ribbonMenu->getFontManager().getFontByType( RibbonFontManager::FontType::Icons );
+        if ( font )
+            font->Scale = 0.7f;
+
+        ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * scaling );
+        ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+        if ( popupOpened )
+            ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
+        else
+            ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
+        ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
+        ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
+        ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
+
+        float btnSize = scaling * cTopPanelAditionalButtonSize;
+        if ( font )
+            ImGui::PushFont( font );
+        auto pressed = ImGui::Button( "\xef\x80\x82", ImVec2( btnSize, btnSize ) );
+        if ( font )
+        {
+            ImGui::PopFont();
+            font->Scale = 1.0f;
+        }
+
+        ImGui::PopStyleColor( 4 );
+        ImGui::PopStyleVar( 2 );
+
+        // manage search popup
+        if ( pressed && !popupOpened )
+            ImGui::OpenPopup( windowName() );
+    }
+    else
+    {
+        ImGui::SetNextItemWidth( 285.f * scaling );
+        const bool wasEmpty = searchLine_.empty();
+        if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
+            searchResult_ = RibbonSchemaHolder::search( searchLine_ );
+
+        if ( wasEmpty && !searchLine_.empty() )
+            ImGui::OpenPopup( windowName() );
+    }
+
+}
+
+bool RibbonMenuSearch::isSmallUI()
+{
+    auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
+    const auto scaling = ribbonMenu ? ribbonMenu->menu_scaling() : 1.f;
+    return getViewerInstance().framebufferSize.x < 1200 * scaling;
+}
+
+float RibbonMenuSearch::getWidthMenuUI()
+{
+    return isSmallUI() ? 40.f : 300.f;
 }
 
 }

@@ -28,11 +28,18 @@ public:
     };
     // draws search popup window with its logic
     MRVIEWER_API void draw( const Parameters& params );
+
+    MRVIEWER_API void drawMenuUI();
+
+    MRVIEWER_API bool isSmallUI();
+
+    MRVIEWER_API float getWidthMenuUI();
 private:
     std::string searchLine_;
     std::vector<RibbonSchemaHolder::SearchResult> searchResult_;
     std::vector<RibbonSchemaHolder::SearchResult> recentItems_;
     int hightlightedSearchItem_{ -1 };
+    bool popupWasOpen_ = false;
 };
 
 }

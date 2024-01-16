@@ -53,6 +53,8 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
     {
         BitSetParallelForAll( mesh.topology.getFaceIds( settings.region ), [&]( FaceId f )
         {
+            if ( !mesh.topology.hasFace( f ) )
+                return;
             const auto a = mesh.triangleAspectRatio( f );
             if ( !belowMinTriAspectRatio.empty() && a >= settings.minTriAspectRatio )
                 belowMinTriAspectRatio.reset( f );
@@ -158,9 +160,9 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
                     continue;
                 const auto a = mesh.triangleAspectRatio( f );
                 if ( !belowMinTriAspectRatio.empty() )
-                    belowMinTriAspectRatio[f] = a < settings.minTriAspectRatio;
+                    belowMinTriAspectRatio.autoResizeSet( f, a < settings.minTriAspectRatio );
                 if ( !aboveMaxTriAspectRatio.empty() )
-                    aboveMaxTriAspectRatio[f] = a > settings.maxTriAspectRatio;
+                    aboveMaxTriAspectRatio.autoResizeSet( f, a > settings.maxTriAspectRatio );
             }
         }
 

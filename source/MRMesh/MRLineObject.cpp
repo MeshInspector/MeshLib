@@ -116,7 +116,7 @@ void LineObject::constructPolyline_()
     // create object Polyline
     Polyline3 lineObj;
     const std::vector<Vector3f> points = { Vector3f::minusX(), Vector3f::plusX() };
-    lineObj.addFromPoints( points.data(), 2 );
+    lineObj.addFromPoints( points.data(), 1 );
 
     polyline_ = std::make_shared<Polyline3>( lineObj );
 

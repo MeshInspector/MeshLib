@@ -1,7 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRObjectLinesHolder.h"
-
+#include "MRFeatureObjectSharedProperties.h"
 namespace MR
 {
 /// \defgroup FeaturesGroup Features
@@ -9,7 +9,7 @@ namespace MR
 
 /// Object to show sphere feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS CircleObject : public ObjectLinesHolder
+class MRMESH_CLASS CircleObject : public ObjectLinesHolder, public FeatureObjectWithSharedProperties
 {
 public:
     /// Creates simple sphere object with center in zero and radius - 1
@@ -39,11 +39,13 @@ public:
     /// calculates normal from xf
     MRMESH_API Vector3f getNormal() const;
     /// updates xf to fit given radius
-    MRMESH_API void setRadius( float radius );
+    MRMESH_API void setRadius( const float& radius );
     /// updates xf to fit given center
     MRMESH_API void setCenter( const Vector3f& center );
     /// updates xf to fit given normal
     MRMESH_API void setNormal( const Vector3f& normal );
+
+    MRMESH_API virtual  std::vector<FeatureObjectSharedProperty> getAllSharedProperties( void ) override;
 
 protected:
     CircleObject( const CircleObject& other ) = default;

@@ -177,7 +177,7 @@ void ConeObject::constructMesh_()
 std::vector<FeatureObjectSharedProperty> ConeObject::getAllSharedProperties( void )
 {
     std::vector<FeatureObjectSharedProperty> featureObjectProperties;
-
+    featureObjectProperties.reserve( 4 );
     featureObjectProperties.emplace_back( "Angle", &ConeObject::getAngle, &ConeObject::setAngle, this );
     featureObjectProperties.emplace_back( "Height", &ConeObject::getHeight, &ConeObject::setHeight, this );
 

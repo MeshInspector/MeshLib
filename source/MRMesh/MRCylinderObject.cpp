@@ -177,6 +177,7 @@ void CylinderObject::constructMesh_()
 std::vector<FeatureObjectSharedProperty> CylinderObject::getAllSharedProperties( void )
 {
     std::vector<FeatureObjectSharedProperty> featureObjectProperties;
+    featureObjectProperties.reserve( 4 );
 
     featureObjectProperties.emplace_back( "Radius", &CylinderObject::getRadius, &CylinderObject::setRadius, this );
     featureObjectProperties.emplace_back( "Length", &CylinderObject::getRadius, &CylinderObject::setRadius, this );

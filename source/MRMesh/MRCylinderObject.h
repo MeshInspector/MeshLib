@@ -57,7 +57,7 @@ public:
     /// updates xf to fit cylinder length
     MRMESH_API void setLength( const float& length );
 
-    MRMESH_API virtual FeatureObjectSharedProperties getAllSharedProperties( void ) override;
+    MRMESH_API virtual std::vector<FeatureObjectSharedProperty> getAllSharedProperties( void ) override;
 
 
 protected:

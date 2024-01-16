@@ -32,7 +32,7 @@ Vector3f CircleObject::getNormal() const
     return ( xf().A * Vector3f::plusZ() ).normalized();
 }
 
-void CircleObject::setRadius( float radius )
+void CircleObject::setRadius( const float& radius )
 {
     auto currentXf = xf();
     currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( radius );
@@ -51,6 +51,18 @@ void CircleObject::setNormal( const Vector3f& normal )
     auto currentXf = xf();
     currentXf.A = Matrix3f::rotation( Vector3f::plusZ(), normal ) * Matrix3f::scale( currentXf.A.toScale() );
     setXf( currentXf );
+}
+
+std::vector<FeatureObjectSharedProperty> CircleObject::getAllSharedProperties( void )
+{
+    std::vector<FeatureObjectSharedProperty> featureObjectProperties;
+    featureObjectProperties.reserve( 3 );
+    featureObjectProperties.emplace_back( "Radius", &CircleObject::getRadius, &CircleObject::setRadius, this );
+
+    featureObjectProperties.emplace_back( "Center", &CircleObject::getCenter, &CircleObject::setCenter, this );
+    featureObjectProperties.emplace_back( "Normal", &CircleObject::getNormal, &CircleObject::setNormal, this );
+
+    return featureObjectProperties;
 }
 
 CircleObject::CircleObject()

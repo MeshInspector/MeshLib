@@ -1,13 +1,48 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRObjectMeshHolder.h"
+#include <variant>
 
 namespace MR
 {
 
+
+using FeatureObjectsSettersVariant = std::variant<float, Vector3f >;
+
+enum class FeatureObjectSharedPropertyExpectedType {
+    flt,
+    v3f
+};
+
+struct  FeatureObjectSharedProperty {
+    std::string propertyName;
+    FeatureObjectSharedPropertyExpectedType expectedType;
+    std::function<void( FeatureObjectsSettersVariant )>setter;
+    std::function<FeatureObjectsSettersVariant( void )>getter;
+};
+
+using FeatureObjectSharedProperties = std::vector<FeatureObjectSharedProperty>;
+
+
+
+struct  FeatureObjectWithSharedProperties {
+public:
+    FeatureObjectWithSharedProperties( void ) noexcept = default;
+    FeatureObjectWithSharedProperties( const FeatureObjectWithSharedProperties& ) noexcept = default;
+    FeatureObjectWithSharedProperties( FeatureObjectWithSharedProperties&& ) noexcept = default;
+    FeatureObjectWithSharedProperties& operator = ( FeatureObjectWithSharedProperties&& ) noexcept = default;
+    virtual ~FeatureObjectWithSharedProperties() = default;
+
+    virtual FeatureObjectSharedProperties getAllSharedProperties( void )
+    {
+        return {};
+    };
+};
+
+
 /// Object to show Cylinder feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS CylinderObject : public ObjectMeshHolder
+class MRMESH_CLASS CylinderObject : public ObjectMeshHolder, public FeatureObjectWithSharedProperties
 {
 public:
     /// Creates simple Cylinder object with center in zero and radius - 1
@@ -56,7 +91,7 @@ public:
     /// updates xf to fit cylinder length
     MRMESH_API void setLength( float length );
 
-
+    MRMESH_API virtual FeatureObjectSharedProperties getAllSharedProperties( void ) override;
 
 
 protected:

@@ -71,6 +71,8 @@ void CylinderObject::setLength( float length )
     setXf( currentXf );
 }
 
+
+
 float CylinderObject::getRadius() const
 {
     return ( xf().A.toScale().x + xf().A.toScale().y ) / 2.0f;
@@ -173,8 +175,31 @@ void CylinderObject::constructMesh_()
     selectEdges( {} );
     setDirtyFlags( DIRTY_ALL );
 }
+std::vector<FeatureObjectSharedProperty> CylinderObject::getAllSharedProperties( void ) {
+    std::vector<FeatureObjectSharedProperty> featureObjectProperties;
 
+    featureObjectProperties.push_back({
+        "Radius",FeatureObjectSharedPropertyExpectedType::flt,
+        [this](FeatureObjectsSettersVariant value) {
+            if (std::holds_alternative<float>(value)) {
+                setRadius(std::get<float>(value));
+            }
+        },
+        [this] (){ return getRadius();}
+    });
 
+    featureObjectProperties.push_back({
+        "Center",FeatureObjectSharedPropertyExpectedType::v3f,
+        [this](FeatureObjectsSettersVariant value) {
+            if (std::holds_alternative<Vector3f>(value)) {
+                setCenter(std::get<Vector3f>(value));
+            }
+        },
+        [this] (){ return getCenter();}
+    });
+
+    return featureObjectProperties;
+}
 
 
 TEST( MRMesh, CylinderApproximation )
@@ -249,6 +274,80 @@ TEST( MRMesh, CylinderApproximation )
     EXPECT_LE( ( resultSAF.center() - center ).length(), 0.1f );
     EXPECT_GT( dot( direction, resultSAF.direction() ), 0.9f );
 }
+
+
+
+
+
+void updateFeaturePropertyVector3f( FeatureObjectSharedProperty& featureProperty, std::string objName )
+{
+    const char* tooltipsTranslation[3] = {
+        "Ox-coordinate",
+        "Oy-coordinate",
+        "Oz-coordinate"
+    };
+
+    float trSpeed = 0.01f;
+    float min = std::numeric_limits<float>::lowest();
+    float max = std::numeric_limits<float>::max();
+
+    MR::Vector3f value = std::get<Vector3f>( featureProperty.getter() );
+    std::string dragFloatName = featureProperty.propertyName + "##" + objName + std::to_string( static_cast< float >( value.x + value.y + value.z ) );
+
+    if ( ImGui::DragFloatValid3( dragFloatName.c_str(), &value.x, trSpeed, min, max, "%.3f", 0, &tooltipsTranslation ) )
+    {
+        featureProperty.setter( value );
+    }
+}
+
+void updateFeaturePropertyFloat( FeatureObjectSharedProperty& featureProperty, std::string objName )
+{
+    float trSpeed = 0.01f;
+    float min = std::numeric_limits<float>::lowest();
+    float max = std::numeric_limits<float>::max();
+
+    float value = std::get<float>( featureProperty.getter() );
+    std::string dragFloatName = featureProperty.propertyName + "##" + objName + std::to_string( static_cast< float >( value ) );
+
+    if ( ImGui::DragFloatValid( dragFloatName.c_str(), &value, trSpeed, min, max ) )
+    {
+        featureProperty.setter( value );
+    }
+}
+
+
+
+void drawUpdateFeatureDialog( FeatureObjectWithSharedProperties* object, std::string name )
+{
+    for ( auto& prop : object->getAllSharedProperties() )
+    {
+        if ( prop.expectedType == FeatureObjectSharedPropertyExpectedType::flt )
+        {
+            updateFeaturePropertyFloat( prop, name );
+        }
+        if ( prop.expectedType == FeatureObjectSharedPropertyExpectedType::v3f )
+        {
+            updateFeaturePropertyVector3f( prop, name );
+        }
+    }
+
+}
+
+
+#if 0 
+/// <summary>
+/// in drawDialog
+/// </summary>
+
+for ( auto& obj : getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected ) )
+{
+    auto fo = std::dynamic_pointer_cast< FeatureObjectWithSharedProperties >( obj );
+    if ( fo )
+    {
+        drawUpdateFeatureDialog( fo.get(), obj->name() );
+    }
+}
+#endif 
 
 
 }

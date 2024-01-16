@@ -36,12 +36,21 @@ void LineObject::setCenter( const Vector3f& center )
     setXf( currentXf );
 }
 
-void LineObject::setSize( float size )
+void LineObject::setSize( const float& size )
 {
     auto currentXf = xf();
     currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( Vector3f::diagonal( size ) );
     setXf( currentXf );
 }
+
+float LineObject::getSize( void ) const
+{
+    auto currentXf = xf();
+    auto scale = currentXf.A.toScale();
+    return  ( scale.x + scale.y + scale.z ) / 3.0f; 
+}
+
+
 
 LineObject::LineObject()
 {
@@ -112,6 +121,17 @@ void LineObject::constructPolyline_()
     polyline_ = std::make_shared<Polyline3>( lineObj );
 
     setDirtyFlags( DIRTY_ALL );
+}
+
+std::vector<FeatureObjectSharedProperty> LineObject::getAllSharedProperties( void )
+{
+    std::vector<FeatureObjectSharedProperty> featureObjectProperties;
+    featureObjectProperties.reserve( 3 );
+    featureObjectProperties.emplace_back( "Center", &LineObject::getCenter, &LineObject::setCenter, this );
+    featureObjectProperties.emplace_back( "Direction", &LineObject::getDirection, &LineObject::setDirection, this );
+
+    featureObjectProperties.emplace_back( "Size", &LineObject::getSize, &LineObject::setSize, this );
+    return featureObjectProperties;
 }
 
 }

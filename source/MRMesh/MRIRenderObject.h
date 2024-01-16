@@ -22,22 +22,18 @@ enum class DepthFuncion
     Default = 8 // usually "Less" but may differ for different object types
 };
 
-struct BaseRenderParams
+struct ModelRenderParams
 {
     const Matrix4f& viewMatrix;
     const Matrix4f& modelMatrix;
     const Matrix4f& projMatrix;
-    const Matrix4f* normMatrixPtr{ nullptr }; // optional normal matrix
+    const Matrix4f* normMatrixPtr{ nullptr }; // normal matrix, necessary for triangles rendering
     ViewportId viewportId;       // id of current viewport
     const Plane3f& clipPlane;    // viewport clip plane (it is not applied while object does not have clipping flag set)
     Vector4i viewport;           // viewport x0, y0, width, height
     DepthFuncion depthFunction = DepthFuncion::Default;
-};
-
-struct RenderParams : BaseRenderParams
-{
-    const Vector3f& lightPos; // position of light source
-    bool alphaSort{ false };    // if this flag is true shader for alpha sorting is used
+    Vector3f lightPos;           // position of light source, unused for picker
+    bool alphaSort{ false };     // if this flag is true shader for alpha sorting is used, unused for picker
 };
 
 class IRenderObject
@@ -48,8 +44,8 @@ public:
     // 1) bind data
     // 2) pass shaders arguments
     // 3) draw data
-    virtual void render( const RenderParams& params ) = 0;
-    virtual void renderPicker( const BaseRenderParams& params, unsigned geomId ) = 0;
+    virtual void render( const ModelRenderParams& params ) = 0;
+    virtual void renderPicker( const ModelRenderParams& params, unsigned geomId ) = 0;
     /// returns the amount of memory this object occupies on heap
     virtual size_t heapBytes() const = 0;
     /// returns the amount of memory this object allocated in OpenGL

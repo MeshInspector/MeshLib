@@ -1,44 +1,10 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRObjectMeshHolder.h"
-#include <variant>
+#include "MRFeatureObjectSharedProperties.h"
 
 namespace MR
 {
-
-
-using FeatureObjectsSettersVariant = std::variant<float, Vector3f >;
-
-enum class FeatureObjectSharedPropertyExpectedType {
-    flt,
-    v3f
-};
-
-struct  FeatureObjectSharedProperty {
-    std::string propertyName;
-    FeatureObjectSharedPropertyExpectedType expectedType;
-    std::function<void( FeatureObjectsSettersVariant )>setter;
-    std::function<FeatureObjectsSettersVariant( void )>getter;
-};
-
-using FeatureObjectSharedProperties = std::vector<FeatureObjectSharedProperty>;
-
-
-
-struct  FeatureObjectWithSharedProperties {
-public:
-    FeatureObjectWithSharedProperties( void ) noexcept = default;
-    FeatureObjectWithSharedProperties( const FeatureObjectWithSharedProperties& ) noexcept = default;
-    FeatureObjectWithSharedProperties( FeatureObjectWithSharedProperties&& ) noexcept = default;
-    FeatureObjectWithSharedProperties& operator = ( FeatureObjectWithSharedProperties&& ) noexcept = default;
-    virtual ~FeatureObjectWithSharedProperties() = default;
-
-    virtual FeatureObjectSharedProperties getAllSharedProperties( void )
-    {
-        return {};
-    };
-};
-
 
 /// Object to show Cylinder feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
@@ -79,7 +45,7 @@ public:
     /// calculates center from xf
     MRMESH_API Vector3f getCenter() const;
     /// updates xf to fit given radius
-    MRMESH_API void setRadius( float radius );
+    MRMESH_API void setRadius( const float& radius );
     /// updates xf to fit given center
     MRMESH_API void setCenter( const Vector3f& center );
     /// calculates main axis direction from xf
@@ -89,7 +55,7 @@ public:
     /// calculates cylinder length from xf
     MRMESH_API float getLength() const;
     /// updates xf to fit cylinder length
-    MRMESH_API void setLength( float length );
+    MRMESH_API void setLength( const float& length );
 
     MRMESH_API virtual FeatureObjectSharedProperties getAllSharedProperties( void ) override;
 

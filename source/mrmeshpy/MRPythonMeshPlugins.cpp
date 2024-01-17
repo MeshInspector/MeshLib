@@ -30,6 +30,8 @@
 #include "MRMesh/MRExtractIsolines.h"
 #include "MRMesh/MRContour.h"
 #include "MRMesh/MRMeshOverhangs.h"
+#include "MRMesh/MRConvexHull.h"
+#include "MRMesh/MRPointCloud.h"
 #include <pybind11/functional.h>
 
 using namespace MR;
@@ -514,3 +516,17 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, GeodesicPath, [] ( pybind11::module_& m )
     );
 })
 
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ConvexHull, [] ( pybind11::module_& m )
+{
+    m.def( "makeConvexHull",  ( Mesh ( * ) ( const VertCoords&, const VertBitSet& ) )&  makeConvexHull, 
+        pybind11::arg( "points" ), pybind11::arg( "validPoints" ),
+        "Computes the Mesh of convex hull from given input points" );
+
+    m.def( "makeConvexHull",  ( Mesh ( * ) ( const Mesh& ) )&  makeConvexHull, 
+        pybind11::arg( "mesh" ),
+        "Computes the Mesh of convex hull from given input `Mesh`" );
+
+    m.def( "makeConvexHull",  ( Mesh ( * ) ( const PointCloud& ) )&  makeConvexHull, 
+        pybind11::arg( "pointCloud" ),
+        "Computes the Mesh of convex hull from given input `PointCloud`" );
+} )

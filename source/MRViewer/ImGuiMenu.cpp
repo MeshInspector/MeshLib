@@ -234,7 +234,7 @@ void ImGuiMenu::finishFrame()
             }
         }
     }
-
+    ProgressBar::onFrameEnd();
     if ( viewer->isGLInitialized() )
     {
         ImGui::Render();

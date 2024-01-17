@@ -64,47 +64,6 @@ void Viewport::shut()
     viewportGL_.free();
 }
 
-// ================================================================
-// draw functions part
-
-
-void Viewport::draw(const VisualObject& obj, const AffineXf3f& xf, 
-     DepthFuncion depthFunc, bool alphaSort ) const
-{
-    draw( obj, xf, projM_, depthFunc, alphaSort );
-}
-
-void Viewport::draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f& projM,
-     DepthFuncion depthFunc, bool alphaSort ) const
-{
-    auto modelTemp = Matrix4f( xf );
-    auto normTemp = viewM_ * modelTemp;
-    if ( normTemp.det() == 0 )
-    {
-        auto norm = normTemp.norm();
-        if ( std::isnormal( norm ) )
-        {
-            normTemp /= norm;
-            normTemp.w = { 0, 0, 0, 1 };
-        }
-        else
-        {
-            spdlog::warn( "Object transform is degenerate" );
-            return;
-        }
-    }
-    auto normM = normTemp.inverse().transposed();
-
-    ModelRenderParams params
-    {
-        { viewM_, projM, id, toVec4<int>( viewportRect_ ) },
-        modelTemp, &normM,
-        params_.clippingPlane, depthFunc,
-        params_.lightPosition, alphaSort
-    };
-    obj.render( params );
-}
-
 void Viewport::clearFramebuffers()
 {
     if ( !viewportGL_.checkInit() )

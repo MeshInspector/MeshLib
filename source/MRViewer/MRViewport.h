@@ -103,10 +103,19 @@ public:
     void drawLines( const std::vector<LineSegm3f>& lines, const std::vector<SegmEndColors>& colors, float width = 1, bool depthTest = true )
         { drawLines( lines, colors, { getBaseRenderParams(), width, depthTest } ); }
 
-    // Draw points immediately
+    /// Draw points immediately
     MRVIEWER_API void drawPoints( const std::vector<Vector3f>& points, const std::vector<Vector4f>& colors, const LinePointImmediateRenderParams & params );
     void drawPoints( const std::vector<Vector3f>& points, const std::vector<Vector4f>& colors, float width = 1, bool depthTest = true )
         { drawPoints( points, colors, { getBaseRenderParams(), width, depthTest } ); }
+
+    struct TriCornerColors
+    {
+        Vector4f a, b, c;
+    };
+
+    /// Draw triangles immediately (flat shaded)
+    MRVIEWER_API void drawTris( const std::vector<Triangle3f>& tris, const std::vector<TriCornerColors>& colors, const ModelRenderParams& params, bool depthTest = true );
+    MRVIEWER_API void drawTris( const std::vector<Triangle3f>& tris, const std::vector<TriCornerColors>& colors, const Matrix4f& modelM = {}, bool depthTest = true );
 
     /// Prepares base rendering parameters for this viewport
     [[nodiscard]] BaseRenderParams getBaseRenderParams() const { return getBaseRenderParams( projM_ ); }

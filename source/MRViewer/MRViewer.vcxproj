@@ -61,7 +61,6 @@
     <ClCompile Include="MRSplashWindow.cpp" />
     <ClCompile Include="MRStatePlugin.cpp" />
     <ClCompile Include="MRDemoPlugin.cpp" />
-    <ClCompile Include="MRImmediateGL.cpp" />
     <ClCompile Include="MRStatePluginUpdate.cpp" />
     <ClCompile Include="MRSurfacePointPicker.cpp" />
     <ClCompile Include="MRTouchpadWin32Handler.cpp" />
@@ -154,7 +153,6 @@
     <ClInclude Include="MRStatePlugin.h" />
     <ClInclude Include="MRDemoPlugin.h" />
     <ClInclude Include="MRGLMacro.h" />
-    <ClInclude Include="MRImmediateGL.h" />
     <ClInclude Include="MRMeshViewer.h" />
     <ClInclude Include="MRMeshViewerPlugin.h" />
     <ClInclude Include="MRMeshViewport.h" />

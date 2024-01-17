@@ -86,6 +86,7 @@
     <ClCompile Include="MRSetupViewer.cpp" />
     <ClCompile Include="MRViewerEventsListener.cpp" />
     <ClCompile Include="MRViewerSettingsManager.cpp" />
+    <ClCompile Include="MRViewportDraw.cpp" />
     <ClCompile Include="MRViewportGL.cpp" />
     <ClCompile Include="MRVolumeShader.cpp" />
     <ClCompile Include="MRWebRequest.cpp" />

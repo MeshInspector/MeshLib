@@ -67,6 +67,10 @@ void Viewport::shut()
 // ================================================================
 // draw functions part
 
+void Viewport::draw( const VisualObject& obj, DepthFuncion depthFunc, bool alphaSort ) const
+{
+    draw( obj, obj.worldXf( id ), projM_, depthFunc, alphaSort );
+}
 
 void Viewport::draw(const VisualObject& obj, const AffineXf3f& xf, 
      DepthFuncion depthFunc, bool alphaSort ) const
@@ -77,8 +81,14 @@ void Viewport::draw(const VisualObject& obj, const AffineXf3f& xf,
 void Viewport::draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f& projM,
      DepthFuncion depthFunc, bool alphaSort ) const
 {
-    auto modelTemp = Matrix4f( xf );
-    auto normTemp = viewM_ * modelTemp;
+    Matrix4f normM;
+    obj.render( getModelRenderParams( xf, projM, normM, depthFunc, alphaSort ) );
+}
+
+ModelRenderParams Viewport::getModelRenderParams( const Matrix4f & modelM, const Matrix4f & projM,
+    Matrix4f & normM, DepthFuncion depthFunc, bool alphaSort ) const
+{
+    auto normTemp = viewM_ * modelM;
     if ( normTemp.det() == 0 )
     {
         auto norm = normTemp.norm();
@@ -90,19 +100,17 @@ void Viewport::draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix
         else
         {
             spdlog::warn( "Object transform is degenerate" );
-            return;
         }
     }
-    auto normM = normTemp.inverse().transposed();
+    normM = normTemp.inverse().transposed();
 
-    ModelRenderParams params
+    return ModelRenderParams
     {
         { viewM_, projM, id, toVec4<int>( viewportRect_ ) },
-        modelTemp, &normM,
+        modelM, &normM,
         params_.clippingPlane, depthFunc,
         params_.lightPosition, alphaSort
     };
-    obj.render( params );
 }
 
 void Viewport::clearFramebuffers()

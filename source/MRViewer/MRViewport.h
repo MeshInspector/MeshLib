@@ -103,16 +103,6 @@ public:
          Matrix4f & normM, ///< this matrix of normals transformation will be computed and referenced in the result
          DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const;
 
-    // Point size in pixels
-    float point_size{4.0f};
-    // Line width in pixels
-    float line_width{1.0f};
-    // Line and points z buffer offset
-    // negative offset make it closer to camera
-    // note that z buffer is not linear and common values are in range [0..1]
-    float linesZoffset{0.0f};
-    float pointsZoffset{0.0f};
-
     // This function allows to pick point in scene by GL
     // use default pick radius
     // comfortable usage:

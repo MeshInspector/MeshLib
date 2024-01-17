@@ -29,6 +29,9 @@
 #include "MRGltfSerializer.h"
 #endif
 
+namespace MR
+{
+
 namespace
 {
 
@@ -44,10 +47,36 @@ std::optional<MR::IOFilter> findFilter( const MR::IOFilters& filters, const std:
         return std::nullopt;
 }
 
-} // namespace
-
-namespace MR
+// Detect if mesh has enough sharp edges (>25 degrees):
+// sum length of all sharp edges greater than 1.0 * (diagonal of the bounding box)
+bool detectSharpEdges( const Mesh& mesh )
 {
+    double lenSum = 0.0;
+    double maxLenSum = mesh.getBoundingBox().diagonal();
+    constexpr int angle = 25; // Degrees
+    float angleCos = std::cos( angle * PI_F / 180 );
+    for ( UndirectedEdgeId e{ 0 }; e < mesh.topology.undirectedEdgeSize(); e++ )
+        if ( !mesh.topology.isLoneEdge( e ) )
+            if ( mesh.dihedralAngleCos( e ) < angleCos ) // dihedralAngleCos returns 1 for boundary edges
+                lenSum += mesh.edgeLength( e );
+    return lenSum > maxLenSum;
+}
+
+// Prepare object after it has been imported from external format (not .mru)
+void postImportObject( const std::shared_ptr<Object> &o, std::filesystem::path filename )
+{
+    if ( std::shared_ptr<ObjectMesh> mesh = std::dynamic_pointer_cast< ObjectMesh >( o ) )
+    {
+        // Detect flat shading needed
+        bool flat = filename.extension() == ".step" || filename.extension() == ".stp" ||
+            ( mesh->mesh() && detectSharpEdges( *mesh->mesh().get() ) );
+        mesh->setVisualizeProperty( flat, MeshVisualizePropertyType::FlatShading, ViewportMask::all() );
+    }
+    for ( const std::shared_ptr<Object>& child : o->children() )
+        postImportObject( child, filename );
+}
+
+} // namespace
 
 const IOFilters allFilters = SceneFileFilters
                              | ObjectLoad::getFilters()
@@ -276,6 +305,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
         return unexpected( std::string( "Saving canceled" ) );
 
     Expected<std::vector<std::shared_ptr<Object>>, std::string> result;
+    bool loadedFromSceneFile = false;
 
     auto ext = std::string( "*" ) + utf8string( filename.extension().u8string() );
     for ( auto& c : ext )
@@ -336,11 +366,12 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
         
         result = std::vector( { *objTree } );
         ( *result )[0]->setName( utf8string( filename.stem() ) );
+        loadedFromSceneFile = true;
     }
     else if ( const auto filter = findFilter( ObjectLoad::getFilters(), ext ) )
     {
         const auto loader = ObjectLoad::getObjectLoader( *filter );
-        return loader( filename, loadWarn, std::move( callback ) );
+        result = loader( filename, loadWarn, std::move( callback ) );
     }
     else
     {
@@ -435,6 +466,10 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
             }
         }
     }
+
+    if ( result.has_value() && !loadedFromSceneFile )
+        for ( const std::shared_ptr<Object>& o : result.value() )
+            postImportObject( o, filename );
 
     if ( !result.has_value() )
         spdlog::error( result.error() );
@@ -668,7 +703,7 @@ Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( 
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    auto res = unexpected( std::string( "unsupported file extension" ) );
+    Expected<std::shared_ptr<Object>, std::string> res = unexpected( std::string( "unsupported file extension" ) );
 
     auto itF = std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const IOFilter& filter )
     {
@@ -679,27 +714,31 @@ Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( 
 
     if ( ext == "*.mru" )
     {
-        return deserializeObjectTree( path, {}, callback );
+        res = deserializeObjectTree( path, {}, callback );
     }
 #ifndef MRMESH_NO_GLTF
     else if ( ext == "*.gltf" || ext == "*.glb" )
     {
-        return deserializeObjectTreeFromGltf( path, callback );
+        res = deserializeObjectTreeFromGltf( path, callback );
     }
 #endif
 #ifndef MRMESH_NO_OPENCASCADE
     else if ( ext == "*.step" || ext == "*.stp" )
     {
-        return MeshLoad::fromSceneStepFile( path, { .callback = callback } );
+        res = MeshLoad::fromSceneStepFile( path, { .callback = callback } );
     }
 #endif
     else if ( ext == "*.zip" )
     {
         auto result = makeObjectTreeFromZip( path, callback );
-        if ( !result )
-            return unexpected( result.error() );
-        return std::make_shared<Object>( std::move( *result ) );
+        if ( result )
+            res = std::make_shared<Object>( std::move( *result ) );
+        else
+            res = unexpected( result.error() );
     }
+
+    if ( res.has_value() && ( ext != "*.mru" && ext != "*.zip" ) )
+        postImportObject( res.value(), path );
 
     return res;
 }

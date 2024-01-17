@@ -5,6 +5,7 @@
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
 #include <Eigen/Dense>
+#include "MRMatrix3Decompose.h"
 
 namespace
 {
@@ -19,7 +20,9 @@ MR_ADD_CLASS_FACTORY( SphereObject )
 
 float SphereObject::getRadius() const
 {
-    return xf().A.toScale().x;
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    return s.x.x;
 }
 
 Vector3f SphereObject::getCenter() const

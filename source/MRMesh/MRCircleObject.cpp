@@ -6,6 +6,7 @@
 #include <Eigen/Dense>
 #include "MRConstants.h"
 #include "MRBestFit.h"
+#include "MRMatrix3Decompose.h"
 
 namespace
 {
@@ -19,7 +20,9 @@ MR_ADD_CLASS_FACTORY( CircleObject )
 
 float CircleObject::getRadius() const
 {
-    return xf().A.toScale().x;
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    return s.x.x;
 }
 
 Vector3f CircleObject::getCenter() const
@@ -49,7 +52,9 @@ void CircleObject::setCenter( const Vector3f& center )
 void CircleObject::setNormal( const Vector3f& normal )
 {
     auto currentXf = xf();
-    currentXf.A = Matrix3f::rotation( Vector3f::plusZ(), normal ) * Matrix3f::scale( currentXf.A.toScale() );
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    currentXf.A = Matrix3f::rotation( Vector3f::plusZ(), normal ) * s;
     setXf( currentXf );
 }
 

@@ -6,6 +6,7 @@
 #include "MRPch/MRJson.h"
 #include "MRMatrix3.h"
 #include "MRVector3.h"
+#include "MRMatrix3Decompose.h"
 
 namespace MR
 {
@@ -25,7 +26,9 @@ Vector3f LineObject::getCenter() const
 void LineObject::setDirection( const Vector3f& normal )
 {
     auto currentXf = xf();
-    currentXf.A = Matrix3f::rotation( Vector3f::plusX(), normal ) * Matrix3f::scale( currentXf.A.toScale() );
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    currentXf.A = Matrix3f::rotation( Vector3f::plusX(), normal ) * s;
     setXf( currentXf );
 }
 
@@ -46,8 +49,9 @@ void LineObject::setSize( float size )
 float LineObject::getSize( void ) const
 {
     auto currentXf = xf();
-    auto scale = currentXf.A.toScale();
-    return  ( scale.x + scale.y + scale.z ) / 3.0f; 
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    return  s.x.x; 
 }
 
 

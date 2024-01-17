@@ -11,6 +11,7 @@
 
 #include <iostream>
 #include "MRArrow.h"
+#include "MRMatrix3Decompose.h"
 
 namespace MR
 {
@@ -67,7 +68,9 @@ Vector3f ConeObject::getCenter() const
 
 float ConeObject::getHeight() const
 {
-    return xf().A.toScale().z;
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    return s.z.z;
 }
 void ConeObject::setHeight( float height )
 {
@@ -81,7 +84,9 @@ void ConeObject::setHeight( float height )
 
 float ConeObject::getNormalyzedFeatueRadius( void ) const
 {
-    return ( xf().A.toScale().x + xf().A.toScale().y ) / 2.0f / getHeight();
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    return s.x.x / getHeight();
 }
 float ConeObject::getAngle() const
 {
@@ -101,7 +106,9 @@ void ConeObject::setAngle( float angle )
 void ConeObject::setDirection( const Vector3f& normal )
 {
     auto currentXf = xf();
-    currentXf.A = getRotationMatrix( normal ) * Matrix3f::scale( currentXf.A.toScale() );
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    currentXf.A = getRotationMatrix( normal ) * s;
     setXf( currentXf );
 }
 

@@ -6,6 +6,7 @@
 #include "MRPch/MRJson.h"
 #include "MRMatrix3.h"
 #include "MRVector3.h"
+#include "MRMatrix3Decompose.h"
 
 namespace MR
 {
@@ -25,7 +26,9 @@ Vector3f PlaneObject::getCenter() const
 void PlaneObject::setNormal( const Vector3f& normal )
 {
     auto currentXf = xf();
-    currentXf.A = Matrix3f::rotation( Vector3f::plusZ(), normal ) * Matrix3f::scale( currentXf.A.toScale() );
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    currentXf.A = Matrix3f::rotation( Vector3f::plusZ(), normal ) * s;
     setXf( currentXf );
 }
 

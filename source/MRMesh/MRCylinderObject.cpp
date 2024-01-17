@@ -12,6 +12,7 @@
 
 #include <iostream>
 #include "MRMeshNormals.h"
+#include "MRMatrix3Decompose.h"
 
 namespace MR
 {
@@ -26,10 +27,12 @@ constexpr float epsilonForCylinderTopBottomDetection = 0.01f;
 constexpr int phiResolution = 180;
 constexpr int thetaiResolution = 180;
 
+
 Matrix3f getRotationMatrix( const Vector3f& normal )
 {
     return Matrix3f::rotation( Vector3f::plusZ(), normal );
 }
+
 
 std::shared_ptr<Mesh> makeFeatureCylinder( int resolution = cDetailLevel, float  startAngle = 0.0f, float  archSize = 2.0f * PI_F )
 {
@@ -59,36 +62,41 @@ MR_ADD_CLASS_FACTORY( CylinderObject )
 
 float CylinderObject::getLength() const
 {
-    return xf().A.toScale().z;
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    return s.z.z;
 }
 
 void CylinderObject::setLength( float length )
 {
     auto direction = getDirection();
     auto currentXf = xf();
-    currentXf.A.z = (getRotationMatrix( direction ) * Matrix3f::scale( 1.0f, 1.0f, length )).z; // use z component only. So we could not calculate radius;
+    auto radius = getRadius();
+    currentXf.A = ( getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, length ) ); // use z component only. So we could not calculate radius;
     setXf( currentXf );
 }
 
 float CylinderObject::getRadius() const
 {
-    // it is bad idea to use statement like this ( xf().A.toScale().x + xf().A.toScale().y ) / 2.0f; it increases instability. radius is changing during length update.
-    return  xf().A.toScale().x;
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    // it is bad idea to use statement like this ( x + y ) / 2.0f; it increases instability. radius is changing during length update.
+    return  s.x.x;
 }
 
 void CylinderObject::setRadius( float radius )
 {
     auto direction = getDirection();
     auto currentXf = xf();
-    auto newA = getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, 1.0f ); // will use x,y components only. So we could not calculate length.
-    newA.z = currentXf.A.z;
-    currentXf.A = newA;
+    currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, getLength() ); // will use x,y components only. So we could not calculate length.
     setXf( currentXf );
 }
 
 Vector3f CylinderObject::getDirection() const
 {
-    return ( xf().A * Vector3f::plusZ() ).normalized();
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    return ( r * Vector3f::plusZ() ).normalized();
 }
 
 Vector3f CylinderObject::getCenter() const
@@ -99,8 +107,9 @@ Vector3f CylinderObject::getCenter() const
 void CylinderObject::setDirection( const Vector3f& normal )
 {
     auto currentXf = xf();
-    currentXf.A = getRotationMatrix( normal ) * Matrix3f::scale( currentXf.A.toScale() );
-    setXf( currentXf );
+    Matrix3f r, s;
+    decomposeMatrix3( currentXf.A, r, s );
+    currentXf.A = getRotationMatrix( normal.normalized() ) * s;
 }
 
 void CylinderObject::setCenter( const Vector3f& center )

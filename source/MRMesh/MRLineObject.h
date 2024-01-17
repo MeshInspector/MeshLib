@@ -19,23 +19,14 @@ public:
     LineObject( LineObject&& ) noexcept = default;
     LineObject& operator = ( LineObject&& ) noexcept = default;
 
-    constexpr static const char* TypeName() noexcept
-    {
-        return "LineObject";
-    }
-    virtual const char* typeName() const override
-    {
-        return TypeName();
-    }
+    constexpr static const char* TypeName() noexcept { return "LineObject"; }
+    virtual const char* typeName() const override { return TypeName(); }
 
     /// \note this ctor is public only for std::make_shared used inside clone()
     LineObject( ProtectedStruct, const LineObject& obj ) : LineObject( obj )
     {}
 
-    virtual std::string getClassName() const override
-    {
-        return "Line";
-    }
+    virtual std::string getClassName() const override { return "Line"; }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
@@ -64,14 +55,10 @@ protected:
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 
     virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& ) const override
-    {
-        return {};
-    }
+        { return {}; }
 
     virtual VoidOrErrStr deserializeModel_( const std::filesystem::path&, ProgressCallback ) override
-    {
-        return {};
-    }
+        { return {}; }
 
 private:
     void constructPolyline_();

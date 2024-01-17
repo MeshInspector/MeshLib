@@ -72,7 +72,7 @@ void CylinderObject::setLength( float length )
 
 float CylinderObject::getRadius() const
 {
-    // it is bad idea to use statement like this ( xf().A.toScale().x + xf().A.toScale().y ) / 2.0f;  it increase instabilite. radius is changing during length update.
+    // it is bad idea to use statement like this ( xf().A.toScale().x + xf().A.toScale().y ) / 2.0f; it increases instability. radius is changing during length update.
     return  xf().A.toScale().x;
 }
 

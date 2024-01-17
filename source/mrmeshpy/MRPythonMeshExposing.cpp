@@ -52,10 +52,10 @@ MR_ADD_PYTHON_FUNCTION( mrmeshpy, getSelectedMesh, pythonGetSelectedMesh, "copy 
 
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, setMeshToSelected, pythonSetMeshToSelected, "add mesh to scene tree and select it" )
 
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, MeshTopology, MR::MeshTopology )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, MeshTopology, MR::MeshTopology )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& )
 {
-    (*MR_PYTHON_CUSTOM_CLASS( MeshTopology )).
+    MR_PYTHON_CUSTOM_CLASS( MeshTopology ).
         def( pybind11::init<>() ).
         def( "numValidFaces", &MeshTopology::numValidFaces, "returns the number of valid faces" ).
         def( "numValidVerts", &MeshTopology::numValidVerts, "returns the number of valid vertices" ).
@@ -81,8 +81,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& )
         def( pybind11::self == pybind11::self, "compare that two topologies are exactly the same" );
 } )
 
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, VectorFloatByVert, MR::VertScalars )
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, VertColorMap, MR::VertColors )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VectorFloatByVert, MR::VertScalars )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertColorMap, MR::VertColors )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
 {
@@ -110,7 +110,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def_readwrite( "vec", &EdgeMap::vec_ );
 
-    (*MR_PYTHON_CUSTOM_CLASS( VectorFloatByVert )).
+    MR_PYTHON_CUSTOM_CLASS( VectorFloatByVert ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &VertScalars::vec_ );
 
@@ -122,7 +122,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def_readwrite( "vec", &Vector<Vector2f, VertId>::vec_ );
 
-    (*MR_PYTHON_CUSTOM_CLASS( VertColorMap )).
+    MR_PYTHON_CUSTOM_CLASS( VertColorMap ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &VertColors::vec_ );
 } )
@@ -131,12 +131,12 @@ MR_ADD_PYTHON_MAP( mrmeshpy, FaceHashMap, FaceHashMap )
 MR_ADD_PYTHON_MAP( mrmeshpy, VertHashMap, VertHashMap )
 MR_ADD_PYTHON_MAP( mrmeshpy, WholeEdgeHashMap, WholeEdgeHashMap )
 
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, PartMapping, MR::PartMapping )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, PartMapping, MR::PartMapping )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PartMapping, [] ( pybind11::module_& )
 {
-    (*MR_PYTHON_CUSTOM_CLASS( PartMapping )).doc() =
+    MR_PYTHON_CUSTOM_CLASS( PartMapping ).doc() =
         "mapping among elements of source mesh, from which a part is taken, and target (this) mesh";
-    (*MR_PYTHON_CUSTOM_CLASS( PartMapping )).
+    MR_PYTHON_CUSTOM_CLASS( PartMapping ).
         def( pybind11::init<>() ).
         def_readwrite( "src2tgtFaces", &PartMapping::src2tgtFaces, "from.id -> this.id" ).
         def_readwrite( "src2tgtVerts", &PartMapping::src2tgtVerts, "from.id -> this.id" ).
@@ -152,11 +152,11 @@ MeshTopology topologyFromTriangles( const Triangulation& t, const MeshBuilder::B
     return MeshBuilder::fromTriangles( t, s );
 }
 
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, ThreeVertIds, MR::ThreeVertIds )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, ThreeVertIds, MR::ThreeVertIds )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, []( pybind11::module_& m )
 {
-    (*MR_PYTHON_CUSTOM_CLASS( ThreeVertIds )).
+    MR_PYTHON_CUSTOM_CLASS( ThreeVertIds ).
         def( pybind11::init( [] ( VertId v0, VertId v1, VertId v2 ) -> ThreeVertIds
         {
             return { v0, v1, v2 };
@@ -186,15 +186,15 @@ Mesh pythonCopyMeshFunction( const Mesh& mesh )
     return mesh;
 }
 
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, PackMapping, MR::PackMapping )
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, Mesh, MR::Mesh )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, PackMapping, MR::PackMapping )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, Mesh, MR::Mesh )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
 {
-    (*MR_PYTHON_CUSTOM_CLASS( PackMapping )).doc() =
+    MR_PYTHON_CUSTOM_CLASS( PackMapping ).doc() =
         "Not fully exposed, for now dummy class";
 
-    (*MR_PYTHON_CUSTOM_CLASS( Mesh )).
+    MR_PYTHON_CUSTOM_CLASS( Mesh ).
         def( pybind11::init<>() ).
         def( "computeBoundingBox", ( Box3f( Mesh::* )( const FaceBitSet*, const AffineXf3f* ) const )& Mesh::computeBoundingBox,
             pybind11::arg( "region" ) = nullptr, pybind11::arg( "toWorld" ) = nullptr,
@@ -267,12 +267,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
     m.def( "copyMesh", &pythonCopyMeshFunction, pybind11::arg( "mesh" ), "returns copy of input mesh" );
 } )
 
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, MeshPart, MR::MeshPart )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, MeshPart, MR::MeshPart )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPart, [] ( pybind11::module_& )
 {
-    (*MR_PYTHON_CUSTOM_CLASS( MeshPart )).doc() =
+    MR_PYTHON_CUSTOM_CLASS( MeshPart ).doc() =
         "stores reference on whole mesh (if region is nullptr) or on its part (if region pointer is valid)";
-    (*MR_PYTHON_CUSTOM_CLASS( MeshPart )).
+    MR_PYTHON_CUSTOM_CLASS( MeshPart ).
         def( pybind11::init<const Mesh&, const FaceBitSet*>(), pybind11::arg( "mesh" ), pybind11::arg( "region" ) = nullptr ).
         def_readwrite( "region", &MeshPart::region, "nullptr here means whole mesh" );
 
@@ -461,7 +461,7 @@ FaceBitSet getFacesByMinEdgeLength( const Mesh& mesh, float minLength )
     return resultFaces;
 }
 
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, FaceFace, MR::FaceFace )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, FaceFace, MR::FaceFace )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
 {
@@ -545,7 +545,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
         "creates torus with empty sectors\n"
         "main application - testing Components" );
 
-    (*MR_PYTHON_CUSTOM_CLASS( FaceFace )).
+    MR_PYTHON_CUSTOM_CLASS( FaceFace ).
         def( pybind11::init<>() ).
         def( pybind11::init<FaceId, FaceId>(), pybind11::arg( "a" ), pybind11::arg( "b" ) ).
         def_readwrite( "aFace", &FaceFace::aFace ).

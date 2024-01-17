@@ -293,10 +293,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveVoxels, [] ( pybind11::module_& m )
         "Save raw voxels file, writing parameters in name." );
 } )
 
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, LoadDCMResult, MR::VoxelsLoad::LoadDCMResult )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, LoadDCMResult, MR::VoxelsLoad::LoadDCMResult )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadDCMResult, [] ( pybind11::module_& )
 {
-    (*MR_PYTHON_CUSTOM_CLASS( LoadDCMResult )).
+    MR_PYTHON_CUSTOM_CLASS( LoadDCMResult ).
         def_readwrite( "vdbVolume", &MR::VoxelsLoad::LoadDCMResult::vdbVolume ).
         def_readwrite( "name", &MR::VoxelsLoad::LoadDCMResult::name ).
         def_readwrite( "xf", &MR::VoxelsLoad::LoadDCMResult::xf );

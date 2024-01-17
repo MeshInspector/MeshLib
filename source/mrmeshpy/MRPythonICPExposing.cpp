@@ -2,7 +2,7 @@
 #include "MRMesh/MRICP.h"
 #include "MRMesh/MRMesh.h"
 
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, VertPair, MR::VertPair )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertPair, MR::VertPair )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
 {
@@ -22,7 +22,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         value( "FixedAxis", MR::ICPMode::FixedAxis, "rigid body transformation with rotation around given axis only (4 degrees of freedom)" ).
         value( "TranslationOnly", MR::ICPMode::TranslationOnly, "only translation (3 degrees of freedom)" );
 
-    (*MR_PYTHON_CUSTOM_CLASS( VertPair )).
+    MR_PYTHON_CUSTOM_CLASS( VertPair ).
         def( pybind11::init<>() ).
         def_readwrite( "refPoint", &MR::VertPair::refPoint, "coordinates of the closest point on reference mesh (after applying refXf)" ).
         def_readwrite( "norm", &MR::VertPair::norm, "surface normal in a vertex on the floating mesh (after applying Xf)" ).

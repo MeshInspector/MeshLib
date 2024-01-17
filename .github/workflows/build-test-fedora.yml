@@ -41,6 +41,9 @@ jobs:
             compiler: GCC
             cxx-compiler: /usr/bin/g++
             MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF -DBUILD_TESTING=OFF"
+    permissions:
+      id-token: write # This is required for requesting the JWT
+      contents: read  # This is required for actions/checkout
 
     steps:
       - name: Checkout
@@ -81,16 +84,15 @@ jobs:
         if: ${{ matrix.compiler == 'Clang' || matrix.config == 'Debug' }}
         run: ./build/${{ matrix.config }}/bin/MRTest
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
       - name: Python Sanity Tests
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+          aws-region: us-east-1
 
       - name: Copy autotest data from S3 Tests
         run: aws s3 cp s3://data-autotest/test_data_29-dec-23 ./test_data --recursive

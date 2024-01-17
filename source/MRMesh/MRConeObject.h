@@ -41,21 +41,20 @@ public:
 
     /// calculates cone angle from xf. It is an angle betweeh main axis and side.
     MRMESH_API float getAngle() const;
-    /// updates xf to fit given cone angle.  It is an angle betweeh main axis and side
-    MRMESH_API void setAngle( const float& angle );
     /// calculates center from xf. Center is the apex of the cone.
     MRMESH_API Vector3f getCenter() const;
-    /// updates xf to fit given center.  Center is the apex of the cone.
-    MRMESH_API void setCenter( const Vector3f& center );
-    /// calculates main axis direction from xf
-    MRMESH_API Vector3f getDirection() const;
-    /// updates xf to fit main axis
-    MRMESH_API void setDirection( const Vector3f& normal );
     /// calculates cone height from xf
     MRMESH_API float getHeight() const;
+    /// calculates main axis direction from xf
+    MRMESH_API Vector3f getDirection() const;
+    /// updates xf to fit given center.  Center is the apex of the cone.
+    MRMESH_API void setCenter( const Vector3f& center );
+    /// updates xf to fit main axis
+    MRMESH_API void setDirection( const Vector3f& normal );
     /// updates xf to fit cone height
-    MRMESH_API void setHeight( const float& height );
-
+    MRMESH_API void setHeight( float height );
+    /// updates xf to fit given cone angle.  It is an angle betweeh main axis and side
+    MRMESH_API void setAngle( float angle );
 
 
 

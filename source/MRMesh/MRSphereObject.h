@@ -35,7 +35,7 @@ public:
     /// calculates center from xf
     MRMESH_API Vector3f getCenter() const;
     /// updates xf to fit given radius
-    MRMESH_API void setRadius( const float& radius );
+    MRMESH_API void setRadius( float radius );
     /// updates xf to fit given center
     MRMESH_API void setCenter( const Vector3f& center );
 

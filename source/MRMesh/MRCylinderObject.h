@@ -45,7 +45,7 @@ public:
     /// calculates center from xf
     MRMESH_API Vector3f getCenter() const;
     /// updates xf to fit given radius
-    MRMESH_API void setRadius( const float& radius );
+    MRMESH_API void setRadius( float radius );
     /// updates xf to fit given center
     MRMESH_API void setCenter( const Vector3f& center );
     /// calculates main axis direction from xf
@@ -55,7 +55,7 @@ public:
     /// calculates cylinder length from xf
     MRMESH_API float getLength() const;
     /// updates xf to fit cylinder length
-    MRMESH_API void setLength( const float& length );
+    MRMESH_API void setLength( float length );
 
     MRMESH_API virtual std::vector<FeatureObjectSharedProperty> getAllSharedProperties( void ) override;
 

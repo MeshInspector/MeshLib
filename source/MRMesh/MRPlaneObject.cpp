@@ -36,7 +36,7 @@ void PlaneObject::setCenter( const Vector3f& center )
     setXf( currentXf );
 }
 
-void PlaneObject::setSize( const float& size )
+void PlaneObject::setSize( float size )
 {
     auto currentXf = xf();
     currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( Vector3f::diagonal( size ) );

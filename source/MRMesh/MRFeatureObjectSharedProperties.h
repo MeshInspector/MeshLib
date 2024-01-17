@@ -21,22 +21,35 @@ struct FeatureObjectSharedProperty {
     std::function<FeaturesPropertyTypesVariant()> getter;
     std::function<void( FeaturesPropertyTypesVariant )> setter;
 
-    template <typename T, typename C>
-    FeatureObjectSharedProperty( std::string name, T( C::* m_getter )( ) const, void ( C::* m_setter )( const T& ), C* obj )
-        : propertyName( std::move( name ) ),
+    template <typename T, typename C, typename SetterFunc>
+    FeatureObjectSharedProperty(
+        std::string name,
+        T( C::* m_getter )( ) const,
+        SetterFunc m_setter,
+        C* obj
+    ) : propertyName( std::move( name ) ),
         getter( [obj, m_getter] () -> FeaturesPropertyTypesVariant
     {
         return std::invoke( m_getter, obj );
-    } ),
-        setter( [obj, m_setter] ( FeaturesPropertyTypesVariant v )
-    {
-        assert( std::holds_alternative<T>( v ) );
-        if ( std::holds_alternative<T>( v ) )
-        {
-            std::invoke( m_setter, obj, std::get<T>( v ) );
-        }
     } )
-    {};
+    {
+        if constexpr ( ( std::is_same_v<SetterFunc, void ( C::* )( const T& )> )
+            || ( std::is_same_v<SetterFunc, void ( C::* )( T )> ) )
+        {
+            setter = [obj, m_setter] ( FeaturesPropertyTypesVariant v )
+            {
+                assert( std::holds_alternative<T>( v ) );
+                if ( std::holds_alternative<T>( v ) )
+                {
+                    std::invoke( m_setter, obj, std::get<T>( v ) );
+                }
+            };
+        }
+        else
+        {
+            static_assert( std::is_same_v<SetterFunc, T>, "Setter function signature unsupported" );
+        }
+    };
 };
 
 /// An interface class which allows feature objects to share setters and getters on their main properties, for convenient presentation in the UI

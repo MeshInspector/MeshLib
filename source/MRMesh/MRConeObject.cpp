@@ -69,7 +69,7 @@ float ConeObject::getHeight() const
 {
     return xf().A.toScale().z;
 }
-void ConeObject::setHeight( const float& height )
+void ConeObject::setHeight( float height )
 {
     auto direction = getDirection();
     auto currentXf = xf();
@@ -88,7 +88,7 @@ float ConeObject::getAngle() const
     return getAngleByFeatureRadius( getNormalyzedFeatueRadius() );
 }
 
-void ConeObject::setAngle( const float& angle )
+void ConeObject::setAngle( float angle )
 {
     auto direction = getDirection();
     auto currentXf = xf();
@@ -244,7 +244,7 @@ TEST( MRMesh, ConeApproximation )
 
     Cone3<float> noicedCone;
     Vector3f noiceVector = { 0.3234f , -0.2341f, 0.1234f };
-    noicedCone.direction() = (direction + noiceVector).normalized();
+    noicedCone.direction() = ( direction + noiceVector ).normalized();
     fit.solve( points, noicedCone, true );
     std::cout << "Noiced cone apex: " << noicedCone.center() << " direction:" << noicedCone.direction() << " heigh:" << noicedCone.height << " angle:" << noicedCone.angle * 180.0f / PI_F << " (degree)" << std::endl;
 

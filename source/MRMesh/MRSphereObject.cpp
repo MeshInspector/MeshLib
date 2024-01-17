@@ -27,7 +27,7 @@ Vector3f SphereObject::getCenter() const
     return xf().b;
 }
 
-void SphereObject::setRadius( const float& radius )
+void SphereObject::setRadius( float radius )
 {
     auto currentXf = xf();
     currentXf.A = Matrix3f::scale( radius );

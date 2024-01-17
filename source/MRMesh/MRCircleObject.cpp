@@ -32,7 +32,7 @@ Vector3f CircleObject::getNormal() const
     return ( xf().A * Vector3f::plusZ() ).normalized();
 }
 
-void CircleObject::setRadius( const float& radius )
+void CircleObject::setRadius( float radius )
 {
     auto currentXf = xf();
     currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( radius );

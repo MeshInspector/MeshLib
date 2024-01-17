@@ -62,7 +62,7 @@ float CylinderObject::getLength() const
     return xf().A.toScale().z;
 }
 
-void CylinderObject::setLength( const float& length )
+void CylinderObject::setLength( float length )
 {
     auto direction = getDirection();
     auto currentXf = xf();
@@ -76,7 +76,7 @@ float CylinderObject::getRadius() const
     return ( xf().A.toScale().x + xf().A.toScale().y ) / 2.0f;
 }
 
-void CylinderObject::setRadius( const float& radius )
+void CylinderObject::setRadius( float radius )
 {
     auto direction = getDirection();
     auto currentXf = xf();

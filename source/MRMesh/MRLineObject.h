@@ -40,7 +40,7 @@ public:
     /// updates xf to fit given center
     MRMESH_API void setCenter( const Vector3f& center );
     /// updates xf to scale size
-    MRMESH_API void setSize( const float& size );
+    MRMESH_API void setSize( float size );
     /// calculates line size from xf
     MRMESH_API float getSize( void ) const;
 

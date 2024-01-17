@@ -42,15 +42,8 @@ _Pragma("warning(pop)")
 
 /// Explicitly declare the Python class wrapper
 /// \sa MR_ADD_PYTHON_CUSTOM_CLASS
-#define MR_ADD_PYTHON_CUSTOM_CLASS_DECL_ONLY( moduleName, name, type ) \
-static std::optional<pybind11::class_<type>> _MR_PYTHON_CUSTOM_CLASS_HOLDER_NAME( name );
-
-/// Explicitly declare the Python class wrapper with custom parameters (holder type, base type, etc.)
-/// \sa MR_ADD_PYTHON_CUSTOM_CLASS
-/// \sa MR_ADD_PYTHON_VEC
-/// \sa MR_ADD_PYTHON_MAP
-#define MR_ADD_PYTHON_CUSTOM_CLASS_DECL_ONLY_ARGS( moduleName, name, type, ... ) \
-static std::optional<pybind11::class_<type, __VA_ARGS__>> _MR_PYTHON_CUSTOM_CLASS_HOLDER_NAME( name );
+#define MR_ADD_PYTHON_CUSTOM_CLASS_DECL_ONLY( moduleName, name, ... ) \
+static std::optional<pybind11::class_<__VA_ARGS__>> _MR_PYTHON_CUSTOM_CLASS_HOLDER_NAME( name );
 
 /// Explicitly instantiate the Python class wrapper
 /// \sa MR_ADD_PYTHON_CUSTOM_CLASS
@@ -76,7 +69,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_inst_, [] ( pybind11::module_& modu
  * To achieve it, declare the class *before* the \ref MR_ADD_PYTHON_CUSTOM_DEF block:
  *  - for simple cases use \ref MR_ADD_PYTHON_CUSTOM_CLASS macro;
  *  - to customize class declaration or instantiation (custom holder, custom container binding, etc.), use
- *    \ref MR_ADD_PYTHON_CUSTOM_CLASS_DECL_ONLY_ARGS and \ref MR_ADD_PYTHON_CUSTOM_CLASS_INST_ONLY_ARGS macros
+ *    \ref MR_ADD_PYTHON_CUSTOM_CLASS_DECL_ONLY and \ref MR_ADD_PYTHON_CUSTOM_CLASS_INST_ONLY_ARGS macros
  * Finally replace the former class declaration within the \ref MR_ADD_PYTHON_CUSTOM_DEF with the
  * MR_PYTHON_CUSTOM_CLASS( class-name ) construction.
  * @code
@@ -99,9 +92,9 @@ MR_ADD_PYTHON_CUSTOM_CLASS_INST_ONLY( moduleName, name )
 // otherwise embedded python will not be able to re-import module (due to some issues with vector types in pybind11)
 #define MR_ADD_PYTHON_VEC( moduleName, name, type) \
 PYBIND11_MAKE_OPAQUE( std::vector<type> )          \
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL_ONLY_ARGS( moduleName, name, std::vector<type>, std::unique_ptr<std::vector<type>> ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL_ONLY( moduleName, name, std::vector<type>, std::unique_ptr<std::vector<type>> ) \
 MR_ADD_PYTHON_CUSTOM_CLASS_INST_ONLY_ARGS( moduleName, name, [] ( pybind11::module_& module ) { return pybind11::bind_vector<std::vector<type>>( module, #name ); } ) \
-MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] ( pybind11::module_& )                                        \
+MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] ( pybind11::module_& )                                           \
 {\
     using vecType = std::vector<type>;\
     MR_PYTHON_CUSTOM_CLASS( name ).\
@@ -115,9 +108,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] ( pybind11::module_& )           
 
 #define MR_ADD_PYTHON_MAP( moduleName, name, mapType ) \
 PYBIND11_MAKE_OPAQUE( mapType )                        \
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL_ONLY_ARGS( moduleName, name, mapType, std::unique_ptr<mapType> ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL_ONLY( moduleName, name, mapType, std::unique_ptr<mapType> ) \
 MR_ADD_PYTHON_CUSTOM_CLASS_INST_ONLY_ARGS( moduleName, name, [] ( pybind11::module_& module ) { return pybind11::bind_map<mapType>( module, #name ); } ) \
-MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] ( pybind11::module_& )                    \
+MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] ( pybind11::module_& )                       \
 {\
     MR_PYTHON_CUSTOM_CLASS( name ).\
         def( pybind11::init<>() ).\

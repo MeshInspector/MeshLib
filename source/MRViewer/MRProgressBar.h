@@ -16,6 +16,8 @@ public:
     using TaskWithMainThreadPostProcessing = std::function< std::function<void()>() >;
     // this function should be called only once for each frame (it is called in MR::Menu (MR::RibbonMenu))
     MRVIEWER_API static void setup( float scaling );
+    // call this function on frame end
+    MRVIEWER_API static void onFrameEnd();
 
     // this shall be called in order to start concurrent task execution with progress bar display
     MRVIEWER_API static void order(const char * name, const std::function<void()>& task, int taskCount = 1 );

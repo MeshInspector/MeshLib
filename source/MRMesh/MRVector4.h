@@ -75,6 +75,11 @@ struct Vector4
     {
         return { x / w, y / w, z / w };
     }
+
+    [[nodiscard]] bool isFinite() const
+    {
+        return std::isfinite( x ) && std::isfinite( y ) && std::isfinite( z ) && std::isfinite( w );
+    }
 };
 
 /// \related Vector4

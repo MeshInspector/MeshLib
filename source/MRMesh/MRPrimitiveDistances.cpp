@@ -2,6 +2,8 @@
 
 #include "MRGTest.h"
 
+// The tests in this file should be checked in debug builds too!
+
 namespace MR::PrimitiveDistances
 {
 
@@ -32,6 +34,11 @@ Primitives::ConeSegment primitiveCone( Vector3f a, Vector3f b, float rad )
         .negativeSideRadius = rad,
         .positiveLength = bLen,
     };
+}
+
+Primitives::Plane primitivePlane( Vector3f point, Vector3f normal )
+{
+    return Plane3f::fromDirAndPt( normal, point );
 }
 
 namespace Traits
@@ -159,6 +166,157 @@ DistanceResult Distance<Primitives::ConeSegment, Primitives::Sphere>::operator()
     ret.closestPointA = a.center + a.dir * ( positiveCapIsCloser ? a.positiveLength : -a.negativeLength )
         + axisToSphereCenterDir * ( positiveCapIsCloser ? a.positiveSideRadius : a.negativeSideRadius );
     ret.closestPointB = b.center - ( a.dir * distanceAlongAxis + axisToSphereCenterDir * distanceTowardsAxis ).normalized() * b.radius;
+    return ret;
+}
+
+DistanceResult Distance<Primitives::Plane, Primitives::Sphere>::operator()( const Primitives::Plane& a, const Primitives::Sphere& b ) const
+{
+    auto normalizedA = a.normalized();
+
+    float signedCenterDist = normalizedA.distance( b.center );
+
+    DistanceResult ret;
+    ret.distance = std::abs( signedCenterDist ) - b.radius;
+    ret.closestPointA = normalizedA.project( b.center );
+    ret.closestPointB = b.center - normalizedA.n * ( b.radius * ( signedCenterDist >= 0 ? 1 : -1 ) );
+    return ret;
+}
+
+DistanceResult Distance<Primitives::ConeSegment, Primitives::ConeSegment>::operator()( const Primitives::ConeSegment& a, const Primitives::ConeSegment& b ) const
+{
+    if ( a.isZeroRadius() && b.isZeroRadius() )
+    {
+        // https://math.stackexchange.com/a/4764188
+
+        Vector3f nDenorm = cross( a.dir, b.dir );
+        Vector3f n = nDenorm.normalized();
+        Vector3f centerDelta = b.center - a.center;
+
+        float signedDist = dot( n, centerDelta );
+
+        Vector3f bCenterFixed = b.center - n * signedDist;
+
+        float tFac = 1.f / nDenorm.lengthSq();
+
+        float ta = dot( cross( bCenterFixed - a.center, b.dir ), nDenorm ) * tFac;
+        float tb = dot( cross( bCenterFixed - a.center, a.dir ), nDenorm ) * tFac;
+
+        ta = std::clamp( ta, -a.negativeLength, a.positiveLength );
+        tb = std::clamp( tb, -b.negativeLength, b.positiveLength );
+
+        DistanceResult ret;
+        ret.closestPointA = a.center + a.dir * ta;
+        ret.closestPointB = b.center + b.dir * tb;
+        ret.distance = ( ret.closestPointB - ret.closestPointA ).length();
+        return ret;
+    }
+    else
+    {
+        // TODO: Support more cone types.
+        return { .status = DistanceResult::Status::unsupported };
+    }
+}
+
+DistanceResult Distance<Primitives::Plane, Primitives::ConeSegment>::operator()( const Primitives::Plane& a, const Primitives::ConeSegment& b ) const
+{
+    if ( !std::isfinite( b.positiveLength ) && !std::isfinite( b.negativeLength ) )
+        return { .status = DistanceResult::Status::unsupported };
+
+    auto normalizedA = a.normalized();
+
+    // A normal to the cone axis, parallel to the plane normal. The sign of this is unspecified.
+    Vector3f sideDir = cross( cross( a.n, b.dir ), b.dir ).normalized();
+    if ( sideDir == Vector3f() || !sideDir.isFinite() )
+        sideDir = cross( b.dir, b.dir.furthestBasisVector() ).normalized(); // An arbitrary direction.
+
+    Vector3f positiveCapCenter = b.center + b.dir * b.positiveLength;
+    Vector3f negativeCapCenter = b.center - b.dir * b.negativeLength;
+
+    bool first = true;
+    bool havePositivePoints = false, haveNegativePoints = false;
+
+    float maxDist = 0, minDist = 0;
+    Vector3f maxDistPoint, minDistPoint;
+
+    for ( bool positiveSide : { true, false } )
+    {
+        if ( !std::isfinite( positiveSide ? b.positiveLength : b.negativeLength ) )
+        {
+            float dirDot = dot( a.n, b.dir * ( positiveSide ? 1.f : -1.f ) );
+
+            float dist = 0;
+            if ( dirDot == 0 )
+            {
+                // Shrug. This fixes an edge case, but I'm not sure if I should even bother with this.
+                continue;
+            }
+            else if ( dirDot < 0 )
+            {
+                haveNegativePoints = true;
+                dist = -INFINITY;
+            }
+            else
+            {
+                havePositivePoints = true;
+                dist = INFINITY;
+            }
+
+            if ( first || dist < minDist )
+                minDist = dist;
+            if ( first || dist > maxDist )
+                maxDist = dist;
+
+            first = false;
+
+            continue;
+        }
+
+        Vector3f capCenter = positiveSide ? positiveCapCenter : negativeCapCenter;
+        float sideRadius = positiveSide ? b.positiveSideRadius : b.negativeSideRadius;
+
+        for ( Vector3f point : {
+            capCenter + sideDir * sideRadius,
+            capCenter - sideDir * sideRadius,
+        } )
+        {
+            float dist = normalizedA.distance( point );
+            ( dist < 0 ? haveNegativePoints : havePositivePoints ) = true;
+
+            if ( first || dist < minDist )
+            {
+                minDist = dist;
+                minDistPoint = point;
+            }
+            if ( first || dist > maxDist )
+            {
+                maxDist = dist;
+                maxDistPoint = point;
+            }
+
+            first = false;
+        }
+    }
+
+    assert( havePositivePoints || haveNegativePoints );
+
+    DistanceResult ret;
+    if ( !havePositivePoints || ( haveNegativePoints && maxDist < -minDist ) )
+    {
+        ret.distance = maxDist;
+        ret.closestPointB = maxDistPoint;
+    }
+    else
+    {
+        ret.distance = minDist;
+        ret.closestPointB = minDistPoint;
+    }
+
+    ret.distance = std::abs( ret.distance );
+    if ( havePositivePoints && haveNegativePoints )
+        ret.distance = -ret.distance;
+
+    ret.closestPointA = normalizedA.project( ret.closestPointB );
+
     return ret;
 }
 
@@ -465,6 +623,241 @@ TEST( PrimitiveDistances, ConeSegment_Sphere )
                     }
                 }
             }
+        }
+    }
+}
+
+TEST( PrimitiveDistances, Plane_Sphere )
+{
+    Vector3f planeCenter = Vector3f( 100, 50, 7 );
+    Primitives::Plane plane = primitivePlane( planeCenter, Vector3f( 42, 0, 0 ) );
+    Vector3f planeDir = plane.n.normalized();
+    Vector3f sideOffset( 0, -13, 71 );
+
+    for ( float dist : { -4.f, -2.f, 0.f, 2.f, 4.f } )
+    {
+        Primitives::Sphere sphere( planeCenter + sideOffset + planeDir * dist, 3.f );
+        auto r = distance( plane, sphere );
+
+        ASSERT_NEAR( r.distance, std::abs( dist ) - sphere.radius, testEps );
+        ASSERT_LE( ( r.closestPointA - ( planeCenter + sideOffset ) ).length(), testEps );
+
+        if ( dist == 0.f )
+        {
+            ASSERT_TRUE(
+                ( r.closestPointB - ( sphere.center + planeDir * sphere.radius ) ).length() < testEps ||
+                ( r.closestPointB - ( sphere.center - planeDir * sphere.radius ) ).length() < testEps
+            );
+        }
+        else
+        {
+            ASSERT_LE( ( r.closestPointB - ( sphere.center - planeDir * sphere.radius * ( dist > 0 ? 1.f : -1.f ) ) ).length(), testEps );
+        }
+    }
+}
+
+TEST( PrimitiveDistances, ConeSegment_ConeSegment )
+{
+    { // Line-line.
+        { // Infinite lines.
+            { // Skew lines (not parallel and not intersecting).
+                Vector3f p1( 100, 50, 10 ), p2 = p1 + Vector3f( 1, 1, 10 ), d1( 1, 0, 0 ), d2 = Vector3f( 1, -1, 0 ).normalized();
+
+                auto l1 = toPrimitive( Line3f( p1, d1 ) );
+                auto l2 = toPrimitive( Line3f( p2, d2 ) );
+
+                auto r = distance( l1, l2 );
+                ASSERT_NEAR( r.distance, 10, testEps );
+                ASSERT_LE( ( r.closestPointA - Vector3f( 102, 50, 10 ) ).length(), testEps );
+                ASSERT_LE( ( r.closestPointB - Vector3f( 102, 50, 20 ) ).length(), testEps );
+            }
+
+            { // An exact intersection.
+                Vector3f p1( 100, 50, 10 ), p2 = p1 + Vector3f( 1, 1, 0 ), d1( 1, 0, 0 ), d2 = Vector3f( 1, -1, 0 ).normalized();
+
+                auto l1 = toPrimitive( Line3f( p1, d1 ) );
+                auto l2 = toPrimitive( Line3f( p2, d2 ) );
+
+                auto r = distance( l1, l2 );
+                ASSERT_LE( r.distance, testEps );
+                ASSERT_LE( ( r.closestPointA - Vector3f( 102, 50, 10 ) ).length(), testEps );
+                ASSERT_LE( ( r.closestPointB - r.closestPointA ).length(), testEps );
+            }
+
+            { // Parallel.
+                Vector3f p1( 100, 50, 10 ), p2 = p1 + Vector3f( 1, 1, 0 ), d1( 1, 0, 0 ), d2 = d1;
+
+                auto l1 = toPrimitive( Line3f( p1, d1 ) );
+                auto l2 = toPrimitive( Line3f( p2, d2 ) );
+
+                auto r = distance( l1, l2 );
+                ASSERT_EQ( r.status, DistanceResult::Status::not_finite );
+            }
+        }
+        
+        { // Finite lines.
+            { // Skew lines (not parallel and not intersecting).
+                Vector3f p1( 100, 50, 10 ), p2 = p1 + Vector3f( 1, 2, 5 ), d1( 1, 0, 0 ), d2 = Vector3f( 1, -1, 0 );
+
+                auto l1 = toPrimitive( LineSegm3f( p1, p1 + d1 ) );
+                auto l2 = toPrimitive( LineSegm3f( p2 + d2, p2 ) ); // Backwards, why not.
+
+                auto r = distance( l1, l2 );
+                ASSERT_NEAR( r.distance, std::sqrt( 1 + 1 + 5*5 ), testEps );
+                ASSERT_LE( ( r.closestPointA - Vector3f( 101, 50, 10 ) ).length(), testEps );
+                ASSERT_LE( ( r.closestPointB - Vector3f( 102, 51, 15 ) ).length(), testEps );
+            }
+        }
+    }
+}
+
+TEST( PrimitiveDistances, Plane_ConeSegment )
+{
+    auto testPlane = [&]( Primitives::ConeSegment originalCone, Vector3f surfacePoint, Vector3f offsetIntoCone,
+        // Our surface points may or may not be offset by one of those vectors, if specified:
+        Vector3f surfacePointSlideA = {}, Vector3f surfacePointSlideB = {},
+        bool distIsAbs = false
+    )
+    {
+        auto checkCone = [&]( const Primitives::ConeSegment& cone )
+        {
+            for ( float fac : { 0.f, 1.f, -2.f } )
+            {
+                Vector3f closestPlanePoint = surfacePoint + offsetIntoCone * fac;
+
+                auto checkPlane = [&]( const Primitives::Plane& plane )
+                {
+                    float expectedDist = -fac * offsetIntoCone.length();
+                    if ( distIsAbs )
+                        expectedDist = std::abs( expectedDist );
+
+                    auto r = distance( cone, plane );
+                    ASSERT_NEAR( r.distance, expectedDist, testEps );
+
+                    Vector3f slide;
+                    ASSERT_TRUE(
+                        ( r.closestPointA - surfacePoint ).length() < testEps ||
+                        ( r.closestPointA - surfacePoint - ( slide = surfacePointSlideA ) ).length() < testEps ||
+                        ( r.closestPointA - surfacePoint - ( slide = surfacePointSlideB ) ).length() < testEps
+                    );
+                    ASSERT_LE( ( r.closestPointB - closestPlanePoint - slide ).length(), testEps );
+                };
+
+                Vector3f randomPlaneCenterSlide = cross( offsetIntoCone, offsetIntoCone.furthestBasisVector() ) * 42.f;
+                auto plane = primitivePlane( closestPlanePoint + randomPlaneCenterSlide, offsetIntoCone );
+
+                checkPlane( plane );
+                checkPlane( -plane );
+            }
+        };
+
+        checkCone( originalCone );
+
+        originalCone.dir = -originalCone.dir;
+        std::swap( originalCone.positiveLength, originalCone.negativeLength );
+        std::swap( originalCone.positiveSideRadius, originalCone.negativeSideRadius );
+        checkCone( originalCone );
+    };
+
+    { // Finite cone.
+        Primitives::ConeSegment cone{
+            .center = Vector3f( 100, 50, 10 ),
+            .dir = Vector3f( 1, 0, 0 ),
+            .positiveSideRadius = 8,
+            .negativeSideRadius = 14,
+            .positiveLength = 20,
+            .negativeLength = 10,
+        };
+
+        testPlane( cone, cone.center + Vector3f( 20, 0, 0 ), Vector3f( -1, 0, 0 ), Vector3f( 0, 8, 0 ), Vector3f( 0, -8, 0 ) );
+
+        testPlane( cone, cone.center + Vector3f( 20, 8, 0 ), Vector3f( -1, 0, 0 ), Vector3f( 0, -16, 0 ) );
+        testPlane( cone, cone.center + Vector3f( 20, 8, 0 ), Vector3f( -1, -1, 0 ) );
+        testPlane( cone, cone.center + Vector3f( 20, 8, 0 ), Vector3f( -1, -2, 0 ) );
+
+        testPlane( cone, cone.center + Vector3f( -10, 14, 0 ), Vector3f( 1, -2, 0 ) );
+        testPlane( cone, cone.center + Vector3f( -10, 14, 0 ), Vector3f( 1, -1, 0 ) );
+        testPlane( cone, cone.center + Vector3f( -10, 14, 0 ), Vector3f( 1, 0, 0 ), Vector3f( 0, -28, 0 ) );
+
+        testPlane( cone, cone.center + Vector3f( -10, 0, 0 ), Vector3f( 1, 0, 0 ), Vector3f( 0, 14, 0 ), Vector3f( 0, -14, 0 ) );
+    }
+
+    { // Half-infinite cone.
+        Primitives::ConeSegment cone{
+            .center = Vector3f( 100, 50, 10 ),
+            .dir = Vector3f( 1, 0, 0 ),
+            .positiveSideRadius = 8,
+            .negativeSideRadius = 8,
+            .positiveLength = 20,
+            .negativeLength = INFINITY,
+        };
+
+        testPlane( cone, cone.center + Vector3f( 20, 0, 0 ), Vector3f( -1, 0, 0 ), Vector3f( 0, 8, 0 ), Vector3f( 0, -8, 0 ) );
+
+        testPlane( cone, cone.center + Vector3f( 20, 8, 0 ), Vector3f( -1, -1, 0 ) );
+        testPlane( cone, cone.center + Vector3f( 20, 8, 0 ), Vector3f( -100, -200, 0 ) );
+
+        testPlane( cone, cone.center + Vector3f( 20, 8, 0 ), Vector3f( 0, -1, 0 ) );
+        testPlane( cone, cone.center + Vector3f( -40, 8, 0 ), Vector3f( 0, -1, 0 ), Vector3f( 60, 0, 0 ) );
+    }
+
+    { // A line.
+        { // Infinite.
+            Primitives::ConeSegment line{
+                .center = Vector3f( 100, 50, 10 ),
+                .dir = Vector3f( 1, 0, 0 ),
+                .positiveSideRadius = 0,
+                .negativeSideRadius = 0,
+                .positiveLength = INFINITY,
+                .negativeLength = INFINITY,
+            };
+
+            auto plane = primitivePlane( Vector3f( 1, 2, 3 ), Vector3f( 5, 6, 7 ) );
+
+            auto r = distance( line, plane );
+            ASSERT_EQ( r.status, DistanceResult::Status::unsupported );
+        }
+
+        { // Finite.
+            Primitives::ConeSegment line{
+                .center = Vector3f( 100, 50, 10 ),
+                .dir = Vector3f( 1, 0, 0 ),
+                .positiveSideRadius = 0,
+                .negativeSideRadius = 0,
+                .positiveLength = 20,
+                .negativeLength = 10,
+            };
+
+            testPlane( line, Vector3f( 120, 50, 10 ), Vector3f( -1, 0, 0 ) );
+            testPlane( line, Vector3f( 120, 50, 10 ), Vector3f( -1, -1, 0 ) );
+            testPlane( line, Vector3f( 120, 50, 10 ), Vector3f( -4, -3, 0 ) );
+            testPlane( line, Vector3f( 120, 50, 10 ), Vector3f( 0, -1, 0 ), Vector3f( -30, 0, 0 ), {}, true );
+
+            testPlane( line, Vector3f( 100, 50, 10 ), Vector3f( 0, -1, 0 ), Vector3f( 20, 0, 0 ), Vector3f( -10, 0, 0 ), true );
+
+            testPlane( line, Vector3f( 90, 50, 10 ), Vector3f( 1, 0, 0 ) );
+            testPlane( line, Vector3f( 90, 50, 10 ), Vector3f( 1, -1, 0 ) );
+            testPlane( line, Vector3f( 90, 50, 10 ), Vector3f( 4, -3, 0 ) );
+            testPlane( line, Vector3f( 90, 50, 10 ), Vector3f( 0, -1, 0 ), Vector3f( 30, 0, 0 ), {}, true );
+        }
+
+        { // Half-finite.
+            Primitives::ConeSegment line{
+                .center = Vector3f( 100, 50, 10 ),
+                .dir = Vector3f( 1, 0, 0 ),
+                .positiveSideRadius = 0,
+                .negativeSideRadius = 0,
+                .positiveLength = 20,
+                .negativeLength = INFINITY,
+            };
+
+            testPlane( line, Vector3f( 120, 50, 10 ), Vector3f( -1, 0, 0 ) );
+            testPlane( line, Vector3f( 120, 50, 10 ), Vector3f( -1, -1, 0 ) );
+            testPlane( line, Vector3f( 120, 50, 10 ), Vector3f( -100, -200, 0 ) );
+            testPlane( line, Vector3f( 120, 50, 10 ), Vector3f( 0, -1, 0 ), {}, {}, true );
+
+            testPlane( line, Vector3f( 100, 50, 10 ), Vector3f( 0, -1, 0 ), Vector3f( 20, 0, 0 ), {}, true );
+            testPlane( line, Vector3f( 30, 50, 10 ), Vector3f( 0, -1, 0 ), Vector3f( 90, 0, 0 ), {}, true );
         }
     }
 }

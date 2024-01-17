@@ -11,6 +11,7 @@
 #include "MRPositionVertsSmoothly.h"
 #include "MRRegionBoundary.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include <queue>
 
 namespace MR
@@ -19,10 +20,10 @@ namespace MR
 struct EdgeLength
 {
     UndirectedEdgeId edge;
-    float lenSq = 0; // at the moment the edge was put in the queue
-
-    EdgeLength() = default;
-    EdgeLength( UndirectedEdgeId edge, float lenSq ) : edge( edge ), lenSq( lenSq ) {}
+    float lenSq; // at the moment the edge was put in the queue
+    EdgeLength( UndirectedEdgeId edge = {}, float lenSq = 0 ) : edge( edge ), lenSq( lenSq ) {}
+    EdgeLength( NoInit ) : edge( noInit ) {}
+    explicit operator bool() const { return edge.valid(); }
 };
 
 inline bool operator < ( const EdgeLength & a, const EdgeLength & b )
@@ -35,7 +36,6 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
     MR_TIMER;
 
     const float maxEdgeLenSq = sqr( settings.maxEdgeLen );
-    std::priority_queue<EdgeLength> queue;
 
     // region is changed during subdivision,
     // so if it has invalid faces (they can become valid later) some collisions can occur
@@ -61,42 +61,52 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         } );
     }
 
-    auto addInQueue = [&]( UndirectedEdgeId ue )
+    auto getQueueElem = [&]( UndirectedEdgeId ue )
     {
+        EdgeLength x;
         EdgeId e( ue );
         if ( settings.subdivideBorder ? !mesh.topology.isInnerOrBdEdge( e, settings.region )
                                       : !mesh.topology.isInnerEdge( e, settings.region ) )
-            return;
+            return x;
         const float lenSq = mesh.edgeLengthSq( e );
         if ( lenSq < maxEdgeLenSq )
-            return;
+            return x;
         if ( !belowMinTriAspectRatio.empty() || !aboveMaxTriAspectRatio.empty() )
         {
             bool below = !belowMinTriAspectRatio.empty();
             if ( auto f = mesh.topology.left( e ) )
             {
                 if ( aboveMaxTriAspectRatio.test( f ) )
-                    return;
+                    return x;
                 if ( !belowMinTriAspectRatio.test( f ) )
                     below = false;
             }
             if ( auto f = mesh.topology.right( e ) )
             {
                 if ( aboveMaxTriAspectRatio.test( f ) )
-                    return;
+                    return x;
                 if ( !belowMinTriAspectRatio.test( f ) )
                     below = false;
             }
             if ( below )
-                return;
+                return x;
         }
-        queue.emplace( e, lenSq );
+        x.edge = ue;
+        x.lenSq = lenSq;
+        return x;
     };
 
-    for ( UndirectedEdgeId e : undirectedEdges( mesh.topology ) )
+    Vector<EdgeLength, UndirectedEdgeId> evec;
+    evec.resizeNoInit( mesh.topology.undirectedEdgeSize() );
+    ParallelFor( evec, [&]( UndirectedEdgeId ue )
     {
-        addInQueue( e );
-    }
+        EdgeLength x;
+        if ( !mesh.topology.isLoneEdge( ue ) )
+            x = getQueueElem( ue );
+        evec[ue] = x;
+    } );
+    std::erase_if( evec.vec_, []( const EdgeLength & x ) { return !x; } );
+    std::priority_queue<EdgeLength> queue( std::less<EdgeLength>(), std::move( evec.vec_ ) );
 
     if ( settings.progressCallback && !settings.progressCallback( 0.25f ) )
         return 0;
@@ -154,7 +164,7 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
             for ( auto ei : orgRing( mesh.topology, e ) )
             {
                 const auto f = mesh.topology.left( ei );
-                if ( !f )
+                if ( !MR::contains( settings.region, f ) )
                     continue;
                 const auto a = mesh.triangleAspectRatio( f );
                 if ( !belowMinTriAspectRatio.empty() )
@@ -165,7 +175,8 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         }
 
         for ( auto ei : orgRing( mesh.topology, e ) )
-            addInQueue( ei.undirected() );
+            if ( auto x = getQueueElem( ei ) )
+                queue.push( std::move( x ) );
     }
 
     if ( settings.smoothMode )

@@ -16,10 +16,11 @@ using FeaturesPropertyTypesVariant = std::variant<float, Vector3f >;
 // getter and setter signatures.The getter lambda invokes the getter method on the object, and the setter lambda ensures the correct variant type is passed before 
 // invoking the setter method.
 
-struct FeatureObjectSharedProperty {
+struct FeatureObjectSharedProperty 
+{
     std::string propertyName;
     std::function<FeaturesPropertyTypesVariant()> getter;
-    std::function<void( FeaturesPropertyTypesVariant )> setter;
+    std::function<void( const FeaturesPropertyTypesVariant& )> setter;
 
     template <typename T, typename C, typename SetterFunc>
     FeatureObjectSharedProperty(
@@ -36,7 +37,7 @@ struct FeatureObjectSharedProperty {
         if constexpr ( ( std::is_same_v<SetterFunc, void ( C::* )( const T& )> )
             || ( std::is_same_v<SetterFunc, void ( C::* )( T )> ) )
         {
-            setter = [obj, m_setter] ( FeaturesPropertyTypesVariant v )
+            setter = [obj, m_setter] ( const FeaturesPropertyTypesVariant& v )
             {
                 assert( std::holds_alternative<T>( v ) );
                 if ( std::holds_alternative<T>( v ) )
@@ -47,13 +48,14 @@ struct FeatureObjectSharedProperty {
         }
         else
         {
-            static_assert( std::is_same_v<SetterFunc, T>, "Setter function signature unsupported" );
+            static_assert( dependent_false, "Setter function signature unsupported" );
         }
     }
 };
 
 /// An interface class which allows feature objects to share setters and getters on their main properties, for convenient presentation in the UI
-struct  FeatureObjectWithSharedProperties {
+struct  FeatureObjectWithSharedProperties 
+{
 public:
     FeatureObjectWithSharedProperties( void ) noexcept = default;
     FeatureObjectWithSharedProperties( const FeatureObjectWithSharedProperties& ) noexcept = default;

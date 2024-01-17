@@ -49,7 +49,7 @@ struct FeatureObjectSharedProperty {
         {
             static_assert( std::is_same_v<SetterFunc, T>, "Setter function signature unsupported" );
         }
-    };
+    }
 };
 
 /// An interface class which allows feature objects to share setters and getters on their main properties, for convenient presentation in the UI

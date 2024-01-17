@@ -131,10 +131,9 @@ MR::Mesh makeCylinderAdvanced( float radius0, float radius1, float start_angle,
     return Mesh::fromTriangles( std::move(points), t );
 }
 
-MRMESH_API Mesh makeCone( float radius, float length, int resolution )
+MR::Mesh makeCone( float radius0, float length, int resolution )
 {
-    return makeCylinderAdvanced( radius, 0, 0.f, 2.0f * PI_F, length, resolution );
-
+    return makeCylinderAdvanced( radius0, 0.f, 0.f, 2.0f * PI_F, length, resolution );
 }
 
 }

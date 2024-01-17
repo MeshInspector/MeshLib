@@ -79,12 +79,28 @@ public:
     // Clear the frame buffers
     MRVIEWER_API void clearFramebuffers();
 
-    /// Draw given object
-    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, 
+    /// Immediate draw of given object with transformation to world taken from object's scene
+    MRVIEWER_API void draw( const VisualObject& obj,
         DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const;
 
-    /// Draw given object with given projection matrix
-    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f & projM, 
+    /// Immediate draw of given object with given transformation to world
+    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf,
+        DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const;
+
+    /// Immediate draw of given object with given transformation to world and given projection matrix
+    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f & projM,
+         DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const;
+
+    /// Prepares rendering parameters to draw a model with given transformation in this viewport
+    [[nodiscard]] MRVIEWER_API ModelRenderParams getModelRenderParams(
+         const Matrix4f & modelM, ///< model to world transformation, this matrix will be referenced in the result
+         Matrix4f & normM, ///< this matrix of normals transformation will be computed and referenced in the result
+         DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const
+        { return getModelRenderParams( modelM, projM_, normM, depthFunc, alphaSort ); }
+
+    /// Prepares rendering parameters to draw a model with given transformation in this viewport with custom projection matrix
+    [[nodiscard]] MRVIEWER_API ModelRenderParams getModelRenderParams( const Matrix4f & modelM, const Matrix4f & projM,
+         Matrix4f & normM, ///< this matrix of normals transformation will be computed and referenced in the result
          DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const;
 
     // Point size in pixels

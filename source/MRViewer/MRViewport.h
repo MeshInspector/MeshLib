@@ -79,23 +79,53 @@ public:
     // Clear the frame buffers
     MRVIEWER_API void clearFramebuffers();
 
-    /// Draw given object
-    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, 
+    /// Immediate draw of given object with transformation to world taken from object's scene
+    MRVIEWER_API void draw( const VisualObject& obj,
         DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const;
 
-    /// Draw given object with given projection matrix
-    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f & projM, 
+    /// Immediate draw of given object with given transformation to world
+    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf,
+        DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const;
+
+    /// Immediate draw of given object with given transformation to world and given projection matrix
+    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f & projM,
          DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const;
 
-    // Point size in pixels
-    float point_size{4.0f};
-    // Line width in pixels
-    float line_width{1.0f};
-    // Line and points z buffer offset
-    // negative offset make it closer to camera
-    // note that z buffer is not linear and common values are in range [0..1]
-    float linesZoffset{0.0f};
-    float pointsZoffset{0.0f};
+    /// Rendering parameters for immediate drawing of lines and points
+    struct LinePointImmediateRenderParams : BaseRenderParams
+    {
+        float width{1.0f};
+        bool depthTest{ true };
+    };
+
+    /// Draw lines immediately
+    MRVIEWER_API void drawLines( const std::vector<LineSegm3f>& lines, const std::vector<SegmEndColors>& colors, const LinePointImmediateRenderParams & params );
+    void drawLines( const std::vector<LineSegm3f>& lines, const std::vector<SegmEndColors>& colors, float width = 1, bool depthTest = true )
+        { drawLines( lines, colors, { getBaseRenderParams(), width, depthTest } ); }
+
+    // Draw points immediately
+    MRVIEWER_API void drawPoints( const std::vector<Vector3f>& points, const std::vector<Vector4f>& colors, const LinePointImmediateRenderParams & params );
+    void drawPoints( const std::vector<Vector3f>& points, const std::vector<Vector4f>& colors, float width = 1, bool depthTest = true )
+        { drawPoints( points, colors, { getBaseRenderParams(), width, depthTest } ); }
+
+    /// Prepares base rendering parameters for this viewport
+    [[nodiscard]] BaseRenderParams getBaseRenderParams() const { return getBaseRenderParams( projM_ ); }
+
+    /// Prepares base rendering parameters for this viewport with custom projection matrix
+    [[nodiscard]] BaseRenderParams getBaseRenderParams( const Matrix4f & projM ) const
+        { return { viewM_, projM, id, toVec4<int>( viewportRect_ ) }; }
+
+    /// Prepares rendering parameters to draw a model with given transformation in this viewport
+    [[nodiscard]] ModelRenderParams getModelRenderParams(
+         const Matrix4f & modelM, ///< model to world transformation, this matrix will be referenced in the result
+         Matrix4f * normM, ///< if not null, this matrix of normals transformation will be computed and referenced in the result
+         DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const
+        { return getModelRenderParams( modelM, projM_, normM, depthFunc, alphaSort ); }
+
+    /// Prepares rendering parameters to draw a model with given transformation in this viewport with custom projection matrix
+    [[nodiscard]] MRVIEWER_API ModelRenderParams getModelRenderParams( const Matrix4f & modelM, const Matrix4f & projM,
+         Matrix4f * normM, ///< if not null, this matrix of normals transformation will be computed and referenced in the result
+         DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const;
 
     // This function allows to pick point in scene by GL
     // use default pick radius
@@ -161,12 +191,8 @@ public:
     // and call transformView( xf ), then the user will see exactly the same picture
     MRVIEWER_API void transformView( const AffineXf3f & xf );
 
-    // returns base render params for immediate draw and for internal lines and points draw
-    ViewportGL::BaseRenderParams getBaseRenderParams() const { return { viewM_, projM_, toVec4<int>( viewportRect_ ) }; }
-
     bool getRedrawFlag() const { return needRedraw_; }
     void resetRedrawFlag() { needRedraw_ = false; }
-    // ------------------- Properties
 
     // Unique identifier
     ViewportId id{ 1};

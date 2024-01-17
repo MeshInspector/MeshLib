@@ -316,6 +316,9 @@
     <ClCompile Include="MRRibbonNotification.cpp">
       <Filter>RibbonMenu</Filter>
     </ClCompile>
+    <ClCompile Include="MRViewportDraw.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">

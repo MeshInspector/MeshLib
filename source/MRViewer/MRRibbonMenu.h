@@ -24,20 +24,8 @@ class Object;
 // menu structure is provided by `menuItemsStructure.json` file (parsed on init)
 class MRVIEWER_CLASS RibbonMenu : public ImGuiMenu
 {
-    struct CustomContextMenuCheckbox
-    {
-        using Setter = std::function<bool( std::shared_ptr<Object> object, ViewportId id )>;
-        using Getter = std::function<void( std::shared_ptr<Object> object, ViewportId id, bool checked )>;
-        Setter getter;
-        Getter setter;
-    };
 
 public:
-    // adds a custom checkBox to the context menu
-    // it is applied to the selected objects
-    MRVIEWER_API void setCustomContextCheckbox(
-        const std::string& name,
-        CustomContextMenuCheckbox customContextMenuCheckbox );
 
     MRVIEWER_API virtual void init( MR::Viewer* _viewer ) override;
 
@@ -258,8 +246,6 @@ private:
     int activeTabIndex_{ 0 };
     RibbonFontManager fontManager_;
     RibbonButtonDrawer buttonDrawer_;
-
-    std::unordered_map<std::string, CustomContextMenuCheckbox> customCheckBox_;
 
     Toolbar toolbar_;
     RibbonNotifier notifier_;

@@ -99,13 +99,6 @@ void changeSelection( bool selectNext, int mod )
     }
 }
 
-void RibbonMenu::setCustomContextCheckbox(
-    const std::string& name,
-    CustomContextMenuCheckbox customContextMenuCheckbox )
-{
-    customCheckBox_[name] = customContextMenuCheckbox;
-}
-
 void RibbonMenu::init( MR::Viewer* _viewer ) 
 {
     ImGuiMenu::init( _viewer );

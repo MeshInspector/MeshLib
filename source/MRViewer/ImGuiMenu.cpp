@@ -127,6 +127,13 @@ void selectRecursive( Object& obj )
             selectRecursive( *child );
 }
 
+void ImGuiMenu::setCustomContextCheckbox(
+    const std::string& name,
+    CustomContextMenuCheckbox customContextMenuCheckbox )
+{
+    customCheckBox_[name] = customContextMenuCheckbox;
+}
+
 void ImGuiMenu::init( MR::Viewer* _viewer )
 {
     ViewerPlugin::init( _viewer );

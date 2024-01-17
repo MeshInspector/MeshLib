@@ -45,6 +45,14 @@ class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin,
         TouchpadZoomGestureBeginListener, TouchpadZoomGestureUpdateListener, TouchpadZoomGestureEndListener,
         PostResizeListener, PostRescaleListener>;
 protected:
+
+  struct CustomContextMenuCheckbox
+  {
+      using Setter = std::function<void( std::shared_ptr<Object> object, ViewportId id, bool checked )>;
+      using Getter = std::function<bool( std::shared_ptr<Object> object, ViewportId id )>;
+      Setter setter;
+      Getter getter;
+  };
   // Hidpi scaling to be used for text rendering.
   float hidpi_scaling_;
 
@@ -152,8 +160,16 @@ protected:
   MRVIEWER_API virtual void updateSceneWindowScrollIfNeeded_();
   // menu will change objects' colors in this viewport
   ViewportId selectedViewport_ = {};
+  //
+  std::unordered_map<std::string, CustomContextMenuCheckbox> customCheckBox_;
 
 public:
+  // adds a custom checkBox to the context menu
+  // it is applied to the selected objects
+  MRVIEWER_API void setCustomContextCheckbox(
+      const std::string& name,
+      CustomContextMenuCheckbox customContextMenuCheckbox );
+
   MRVIEWER_API virtual void init(MR::Viewer *_viewer) override;
 
   // inits glfw and glsl backend

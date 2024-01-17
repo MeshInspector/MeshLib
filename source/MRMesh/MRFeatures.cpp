@@ -545,7 +545,7 @@ DistanceResult Binary<Primitives::Plane, Primitives::ConeSegment>::distance( con
             float dirDot = dot( a.normal, b.dir * ( positiveSide ? 1.f : -1.f ) );
 
             float dist = 0;
-            if ( dirDot < 0.00001f ) // TODO move the epsilon to a constant?
+            if ( std::abs( dirDot ) < 0.00001f ) // TODO move the epsilon to a constant?
             {
                 // Shrug. This fixes an edge case, but I'm not sure if I should even bother with this.
                 continue;
@@ -1068,8 +1068,8 @@ TEST( Features, Plane_ConeSegment )
                     ASSERT_LE( ( r.closestPointB - closestPlanePoint - slide ).length(), testEps );
                 };
 
-                Vector3f randomPlaneCenterSlide = cross( offsetIntoCone, offsetIntoCone.furthestBasisVector() ) * 42.f;
-                Primitives::Plane plane( closestPlanePoint + randomPlaneCenterSlide, offsetIntoCone );
+                Vector3f randomPlaneCenterSlide = cross( offsetIntoCone, offsetIntoCone.furthestBasisVector() ).normalized() * 42.f;
+                Primitives::Plane plane( closestPlanePoint + randomPlaneCenterSlide, offsetIntoCone.normalized() );
 
                 checkPlane( plane );
                 plane.normal = -plane.normal;

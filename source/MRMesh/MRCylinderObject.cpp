@@ -67,20 +67,23 @@ void CylinderObject::setLength( float length )
     auto direction = getDirection();
     auto currentXf = xf();
     auto radius = getRadius();
-    currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, length );
+    currentXf.A.z = (getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, length )).z;
     setXf( currentXf );
 }
 
 float CylinderObject::getRadius() const
 {
-    return ( xf().A.toScale().x + xf().A.toScale().y ) / 2.0f;
+    // it is bad idea to use statement like this ( xf().A.toScale().x + xf().A.toScale().y ) / 2.0f;  it increase instabilite. radius is changing during length update.
+    return  xf().A.toScale().x;
 }
 
 void CylinderObject::setRadius( float radius )
 {
     auto direction = getDirection();
     auto currentXf = xf();
-    currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, getLength() );
+    auto newA = getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, getLength() );
+    newA.z = currentXf.A.z;
+    currentXf.A = newA;
     setXf( currentXf );
 }
 

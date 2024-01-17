@@ -78,7 +78,7 @@ Primitives::Sphere Primitives::ConeSegment::basePoint( bool negative ) const
 Primitives::Plane Primitives::ConeSegment::basePlane( bool negative ) const
 {
     assert( std::isfinite( negative ? negativeLength : positiveLength ) );
-    return Primitives::Plane( basePoint( negative ).center, negative ? -dir : dir );
+    return { .center = basePoint( negative ).center, .normal = negative ? -dir : dir };
 }
 
 Primitives::ConeSegment Primitives::ConeSegment::baseCircle( bool negative ) const
@@ -136,7 +136,7 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
     else if ( auto plane = dynamic_cast<const PlaneObject*>( &object ) )
     {
         auto parentXf = plane->parent()->worldXf();
-        return Primitives::Plane( parentXf( plane->getCenter() ), ( parentXf.A * plane->getNormal() ).normalized() );
+        return Primitives::Plane{ .center = parentXf( plane->getCenter() ), .normal = ( parentXf.A * plane->getNormal() ).normalized() };
     }
     else if ( auto sphere = dynamic_cast<const SphereObject*>( &object ) )
     {
@@ -150,30 +150,31 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
         auto parentXf = circle->parent()->worldXf();
         Vector3f scaleVec = parentXf.A.toScale();
         float scale = ( scaleVec.x + scaleVec.y + scaleVec.z ) / 3;
-        Primitives::ConeSegment ret{
+        float radius = circle->getRadius() * scale;
+        return Primitives::ConeSegment{
             .center = parentXf( circle->getCenter() ),
             .dir = parentXf.A * circle->getNormal(),
-            .positiveSideRadius = circle->getRadius() * scale,
-            .negativeSideRadius = ret.positiveSideRadius,
+            .positiveSideRadius = radius,
+            .negativeSideRadius = radius,
             .hollow = true,
         };
-        return ret;
     }
     else if ( auto cyl = dynamic_cast<const CylinderObject*>( &object ) )
     {
         auto parentXf = cyl->parent()->worldXf();
         Vector3f scaleVec = parentXf.A.toScale();
         float scale = ( scaleVec.x + scaleVec.y + scaleVec.z ) / 3;
-        Primitives::ConeSegment ret{
+        float radius = cyl->getRadius() * scale;
+        float halfLen = cyl->getLength() / 2 * scale;
+        return Primitives::ConeSegment{
             .center = parentXf( cyl->getCenter() ),
             .dir = parentXf.A * cyl->getDirection(),
-            .positiveSideRadius = cyl->getRadius() * scale,
-            .negativeSideRadius = ret.positiveSideRadius,
-            .positiveLength = cyl->getLength() / 2 * scale,
-            .negativeLength = ret.positiveLength,
+            .positiveSideRadius = radius,
+            .negativeSideRadius = radius,
+            .positiveLength = halfLen,
+            .negativeLength = halfLen,
             .hollow = true, // I guess?
         };
-        return ret;
     }
     else if ( auto cone = dynamic_cast<const ConeObject*>( &object ) )
     {
@@ -956,7 +957,7 @@ TEST( Features, ConeSegment_Sphere )
 TEST( Features, Plane_Sphere )
 {
     Vector3f planeCenter = Vector3f( 100, 50, 7 );
-    Primitives::Plane plane( planeCenter, Vector3f( 1, 0, 0 ) );
+    Primitives::Plane plane{ .center = planeCenter, .normal = Vector3f( 1, 0, 0 ) };
     Vector3f sideOffset( 0, -13, 71 );
 
     for ( float dist : { -4.f, -2.f, 0.f, 2.f, 4.f } )
@@ -1069,7 +1070,7 @@ TEST( Features, Plane_ConeSegment )
                 };
 
                 Vector3f randomPlaneCenterSlide = cross( offsetIntoCone, offsetIntoCone.furthestBasisVector() ).normalized() * 42.f;
-                Primitives::Plane plane( closestPlanePoint + randomPlaneCenterSlide, offsetIntoCone.normalized() );
+                Primitives::Plane plane{ .center = closestPlanePoint + randomPlaneCenterSlide, .normal = offsetIntoCone.normalized() };
 
                 checkPlane( plane );
                 plane.normal = -plane.normal;
@@ -1138,7 +1139,7 @@ TEST( Features, Plane_ConeSegment )
                 .negativeLength = INFINITY,
             };
 
-            Primitives::Plane plane( Vector3f( 1, 2, 3 ), Vector3f( 5, 6, 7 ) );
+            Primitives::Plane plane{ .center = Vector3f( 1, 2, 3 ), .normal = Vector3f( 5, 6, 7 ) };
 
             auto r = distance( line, plane );
             ASSERT_EQ( r.status, DistanceResult::Status::not_applicable );

@@ -8,6 +8,7 @@
 #include "MRMesh/MRSphere.h"
 #include "MRMesh/MRVector3.h"
 
+#include <cassert>
 #include <optional>
 #include <variant>
 

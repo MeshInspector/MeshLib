@@ -73,19 +73,19 @@ void ConeObject::setHeight( float height )
 {
     auto direction = getDirection();
     auto currentXf = xf();
-    auto radius = getNormalizedRadius();
+    auto radius = getNormalizedRadius_();
     currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius * height, radius * height, height );
     setXf( currentXf );
 }
 
 
-float ConeObject::getNormalizedRadius( void ) const
+float ConeObject::getNormalizedRadius_( void ) const
 {
     return getRadius() / getHeight();
 }
 float ConeObject::getAngle() const
 {
-    return getAngleByNormalizedRadius( getNormalizedRadius() );
+    return getAngleByNormalizedRadius( getNormalizedRadius_() );
 }
 
 void ConeObject::setAngle( float angle )

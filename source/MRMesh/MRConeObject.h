@@ -83,7 +83,7 @@ private:
     void constructMesh_();
 
     // Featue Radius fully controll by cone angle, but its need for speedup internal calculation (not use tan / atan from each estimation).
-    float getNormalizedRadius() const;
+    float getNormalizedRadius_() const;
 };
 
 }

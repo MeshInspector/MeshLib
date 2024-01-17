@@ -99,7 +99,14 @@ void changeSelection( bool selectNext, int mod )
     }
 }
 
-void RibbonMenu::init( MR::Viewer* _viewer )
+void RibbonMenu::setCustomContextCheckbox(
+    const std::string& name,
+    CustomContextMenuCheckbox customContextMenuCheckbox )
+{
+    customCheckBox_[name] = customContextMenuCheckbox;
+}
+
+void RibbonMenu::init( MR::Viewer* _viewer ) 
 {
     ImGuiMenu::init( _viewer );
     // should init instance before load schema (as far as some font are used inside)
@@ -399,6 +406,45 @@ void RibbonMenu::drawHelpButton_()
 
     ImGui::PopStyleColor( 3 );
     ImGui::PopStyleVar( 2 );
+}
+
+bool RibbonMenu::drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected )
+{
+    bool res = false;
+    bool atLeastOneTrue = false;
+    bool allTrue = true;
+    for ( auto& [name, custom] : customCheckBox_ )
+    {
+        for ( auto& obj : selected )
+        {
+            if ( !obj )
+            {
+                continue;
+            }
+
+            bool isThisTrue = custom.getter( obj, viewer->viewport().id );
+            atLeastOneTrue = atLeastOneTrue || isThisTrue;
+            allTrue = allTrue && isThisTrue;
+        }
+
+        std::pair<bool, bool> realRes{ atLeastOneTrue, allTrue };
+
+        if ( UI::checkboxMixed( name.c_str(), &realRes.first, !realRes.second && realRes.first ) )
+        {
+            for ( auto& obj : selected )
+            {
+                if ( !obj )
+                {
+                    continue;
+                }
+
+                custom.setter( obj, viewer->viewport().id, realRes.first );
+            }
+            res = true;
+        }
+    }
+
+    return res;
 }
 
 void RibbonMenu::sortObjectsRecursive_( std::shared_ptr<Object> object )
@@ -1604,6 +1650,7 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
             ImGui::TableNextColumn();
             wasChanged |= drawGeneralOptions_( selected );
             wasChanged |= drawDrawOptionsCheckboxes_( selectedVisualObjs );
+            wasChanged |= drawCustomCheckBox_( selected );
             wasChanged |= drawAdvancedOptions_( selectedVisualObjs );
             ImGui::TableNextColumn();
             wasChanged |= drawDrawOptionsColors_( selectedVisualObjs );

@@ -36,7 +36,7 @@ void LineObject::setCenter( const Vector3f& center )
     setXf( currentXf );
 }
 
-void LineObject::setSize( float size )
+void LineObject::setLength( float size )
 {
     auto currentXf = xf();
     currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( Vector3f::diagonal( size ) );
@@ -69,7 +69,7 @@ LineObject::LineObject( const std::vector<Vector3f>& pointsToApprox )
 
     setDirection( dir );
     setCenter( box.center() );
-    setSize( box.diagonal() * 2.f );
+    setLength( box.diagonal() * 4 );
 }
 
 std::shared_ptr<Object> LineObject::shallowClone() const
@@ -106,7 +106,7 @@ void LineObject::constructPolyline_()
 {
     // create object Polyline
     Polyline3 lineObj;
-    const std::vector<Vector3f> points = { Vector3f::minusX() / 2.f, Vector3f::plusX() / 2.f };
+    const std::vector<Vector3f> points = { Vector3f::minusX(), Vector3f::plusX() };
     lineObj.addFromPoints( points.data(), 2 );
 
     polyline_ = std::make_shared<Polyline3>( lineObj );

@@ -249,7 +249,7 @@ std::shared_ptr<VisualObject> primitiveToObject( const Primitives::Variant& prim
                 {
                     // Finite or fully infinite.
                     newLine->setCenter( cone.centerPoint().center );
-                    newLine->setSize( posFinite ? cone.length() : infiniteExtent );
+                    newLine->setLength( posFinite ? cone.length() : infiniteExtent );
                 }
                 else
                 {
@@ -258,7 +258,7 @@ std::shared_ptr<VisualObject> primitiveToObject( const Primitives::Variant& prim
                         ? cone.basePoint( false ).center - cone.dir * ( infiniteExtent / 2 )
                         : cone.basePoint( true ).center + cone.dir * ( infiniteExtent / 2 )
                     );
-                    newLine->setSize( infiniteExtent );
+                    newLine->setLength( infiniteExtent );
                 }
 
                 return newLine;

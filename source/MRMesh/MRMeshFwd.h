@@ -199,6 +199,14 @@ template <typename T> using LineSegm3 = LineSegm<Vector3<T>>;
 using LineSegm3f = LineSegm3<float>;
 using LineSegm3d = LineSegm3<double>;
 
+template <typename T> class Cylinder3;
+using Cylinder3f = Cylinder3<float>;
+using Cylinder3d = Cylinder3<double>;
+
+template <typename T> class Cone3;
+using Cone3f = Cone3<float>;
+using Cone3d = Cone3<double>;
+
 template <typename V> using Contour = std::vector<V>;
 template <typename T> using Contour2 = Contour<Vector2<T>>;
 template <typename T> using Contour3 = Contour<Vector3<T>>;

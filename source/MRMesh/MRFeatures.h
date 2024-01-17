@@ -1,5 +1,7 @@
 #pragma once
 
+#include "MRMesh/MRCone3.h"
+#include "MRMesh/MRCylinder3.h"
 #include "MRMesh/MRLine3.h"
 #include "MRMesh/MRLineSegm3.h"
 #include "MRMesh/MRPlane3.h"
@@ -56,6 +58,9 @@ namespace Primitives
         [[nodiscard]] bool isZeroRadius() const { return positiveSideRadius == 0 && negativeSideRadius == 0; }
         [[nodiscard]] bool isCircle() const { return positiveLength == -negativeLength && std::isfinite( positiveLength ); }
 
+        // Returns the length. Can be infinite.
+        [[nodiscard]] float length() const { return positiveLength + negativeLength; }
+
         // Returns the center point (unlike `center`, which can actually be off-center).
         // This doesn't work for half-infinite objects.
         [[nodiscard]] MRMESH_API Sphere centerPoint() const;
@@ -90,10 +95,26 @@ namespace Primitives
 
 [[nodiscard]] inline Primitives::ConeSegment toPrimitive( const Line3f& line ) { return { .center = line.p, .dir = line.d.normalized(), .positiveLength = INFINITY, .negativeLength = INFINITY }; }
 [[nodiscard]] inline Primitives::ConeSegment toPrimitive( const LineSegm3f& segm ) { return { .center = segm.a, .dir = segm.dir().normalized(), .positiveLength = segm.length() }; }
-// TODO support cylinders and cones.
 
-[[nodiscard]] inline Primitives::Plane toPrimitive( const Plane3f& plane ) { auto p = plane.normalized(); return { .center = p.n * p.d, .normal = p.n }; }
-
+[[nodiscard]] inline Primitives::ConeSegment toPrimitive( const Cylinder3f& cyl )
+{
+    Primitives::ConeSegment ret{
+        .center = cyl.center(),
+        .dir = cyl.direction().normalized(),
+        .positiveSideRadius = cyl.radius, .negativeSideRadius = ret.negativeSideRadius,
+        .positiveLength = cyl.length / 2, .negativeLength = ret.positiveLength,
+    };
+    return ret;
+}
+[[nodiscard]] inline Primitives::ConeSegment toPrimitive( const Cone3f& cone )
+{
+    return{
+        .center = cone.center(),
+        .dir = cone.direction().normalized(),
+        .positiveSideRadius = std::tan( cone.angle ) * cone.height, .negativeSideRadius = 0,
+        .positiveLength = cone.height, .negativeLength = 0,
+    };
+}
 
 //! `normal` doesn't need to be normalized.
 [[nodiscard]] MRMESH_API Primitives::ConeSegment primitiveCircle( const Vector3f& point, const Vector3f& normal, float rad );

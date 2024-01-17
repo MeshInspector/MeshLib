@@ -3,6 +3,7 @@
 #include "MRMesh/MRGTest.h"
 
 #include "MRMesh/MRCircleObject.h"
+#include "MRMesh/MRConeObject.h"
 #include "MRMesh/MRCylinderObject.h"
 #include "MRMesh/MRLineObject.h"
 #include "MRMesh/MRPlaneObject.h"
@@ -57,7 +58,7 @@ Primitives::ConeSegment Primitives::ConeSegment::untruncateCone() const
 
     ConeSegment ret = *this;
 
-    float shift = std::min( positiveSideRadius, negativeSideRadius ) * ( positiveLength + negativeLength ) / std::abs( positiveSideRadius - negativeSideRadius );
+    float shift = std::min( positiveSideRadius, negativeSideRadius ) * length() / std::abs( positiveSideRadius - negativeSideRadius );
     ( positiveSideRadius < negativeSideRadius ? ret.positiveLength : ret.negativeLength ) += shift;
     return ret;
 }
@@ -174,7 +175,22 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
         };
         return ret;
     }
-    // TODO support cones.
+    else if ( auto cone = dynamic_cast<const ConeObject*>( &object ) )
+    {
+        auto parentXf = cone->parent()->worldXf();
+        Vector3f scaleVec = parentXf.A.toScale();
+        float scale = ( scaleVec.x + scaleVec.y + scaleVec.z ) / 3;
+        Primitives::ConeSegment ret{
+            .center = parentXf( cone->getCenter() ),
+            .dir = parentXf.A * cone->getDirection(),
+            .positiveSideRadius = cone->getRadius() * scale,
+            .negativeSideRadius = 0,
+            .positiveLength = cone->getHeight(),
+            .negativeLength = 0,
+            .hollow = true, // I guess?
+        };
+        return ret;
+    }
 
     return {};
 }
@@ -212,7 +228,7 @@ std::shared_ptr<VisualObject> primitiveToObject( const Primitives::Variant& prim
             {
                 if ( cone.isZeroRadius() )
                     return primitiveToObject( cone.basePoint( false ), infiniteExtent ); // This isn't really valid, but let's support it.
-                
+
                 auto newCircle = std::make_shared<CircleObject>();
                 newCircle->setCenter( cone.basePoint( false ).center );
                 newCircle->setNormal( cone.dir );
@@ -230,16 +246,18 @@ std::shared_ptr<VisualObject> primitiveToObject( const Primitives::Variant& prim
 
                 if ( posFinite == negFinite )
                 {
+                    // Finite or fully infinite.
                     newLine->setCenter( cone.centerPoint().center );
-                    newLine->setSize( ( posFinite ? cone.positiveLength + cone.negativeLength : infiniteExtent ) / 2 );
+                    newLine->setSize( posFinite ? cone.length() : infiniteExtent );
                 }
                 else
                 {
+                    // Half-infinite.
                     newLine->setCenter( posFinite
                         ? cone.basePoint( false ).center - cone.dir * ( infiniteExtent / 2 )
                         : cone.basePoint( true ).center + cone.dir * ( infiniteExtent / 2 )
                     );
-                    newLine->setSize( infiniteExtent / 2 );
+                    newLine->setSize( infiniteExtent );
                 }
 
                 return newLine;
@@ -254,7 +272,7 @@ std::shared_ptr<VisualObject> primitiveToObject( const Primitives::Variant& prim
                 if ( posFinite == negFinite )
                 {
                     newCylinder->setCenter( cone.centerPoint().center );
-                    newCylinder->setLength( posFinite ? cone.positiveLength + cone.negativeLength : infiniteExtent );
+                    newCylinder->setLength( posFinite ? cone.length() : infiniteExtent );
                 }
                 else
                 {
@@ -268,7 +286,25 @@ std::shared_ptr<VisualObject> primitiveToObject( const Primitives::Variant& prim
                 return newCylinder;
             }
 
-            // TODO support cones.
+            if ( cone.positiveSideRadius == 0 || cone.negativeSideRadius == 0 )
+            {
+                // A non-truncated cone.
+
+                bool flip = cone.positiveSideRadius == 0;
+
+                // Sanity check.
+                if ( flip ? posFinite : negFinite )
+                {
+                    auto newCone = std::make_shared<ConeObject>();
+                    newCone->setCenter( cone.basePoint( !flip ).center );
+                    newCone->setDirection( cone.dir * ( flip ? -1.f : 1.f ) );
+                    newCone->setHeight( ( flip ? negFinite : posFinite ) ? cone.length() : infiniteExtent / 2 );
+                    newCone->setRadius( flip ? cone.negativeSideRadius : cone.positiveSideRadius );
+                    return newCone;
+                }
+            }
+
+            // TODO support truncated cones, when we have an object for them?
             return nullptr;
         },
     }, primitive );

@@ -55,8 +55,10 @@ public:
     MRMESH_API float getHeight() const;
     /// updates xf to fit cone height
     MRMESH_API void setHeight( float height );
-
-
+    /// Computes the radius from the xf.
+    MRMESH_API float getRadius() const;
+    // Updates the xf for the new radius.
+    MRMESH_API void setRadius( float radius );
 
 
 protected:
@@ -81,7 +83,7 @@ private:
     void constructMesh_();
 
     // Featue Radius fully controll by cone angle, but its need for speedup internal calculation (not use tan / atan from each estimation).
-    float getNormalyzedFeatueRadius( void ) const;
+    float getNormalizedRadius() const;
 };
 
 }

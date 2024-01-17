@@ -139,7 +139,9 @@ void ProgressBar::onFrameEnd()
 {
     // this is needed to prevent unexpected closing on progress bar window in:
     // ImGui::NewFrame() / ImGui::UpdateMouseMovingWindowNewFrame() / ImGui::FocusWindow()
-    // that can happen if progress bar is ordered on clicking to the window
+    // that can happen if progress bar is ordered on clicking to the window 
+    // (for example on finish editing some InputFloat, clicking on window makes ImGui think this window is moving
+    //  and close progress bar modal before it starts, task of progress bar is going but post-processing is not)
     auto& inst = instance_();
     if ( !inst.isOrdered_ )
         return;

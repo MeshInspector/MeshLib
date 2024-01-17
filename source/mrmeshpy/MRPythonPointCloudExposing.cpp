@@ -6,9 +6,11 @@
 #include <pybind11/stl.h>
 #include <pybind11/functional.h>
 
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, PointCloud, MR::PointCloud )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointCloud, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::PointCloud>( m, "PointCloud" ).
+    MR_PYTHON_CUSTOM_CLASS( PointCloud ).
         def( pybind11::init<>() ).
         def_readwrite( "points", &MR::PointCloud::points ).
         def_readwrite( "normals", &MR::PointCloud::normals ).
@@ -30,7 +32,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointCloud, [] ( pybind11::module_& m )
             "If value is subzero it is set automaticly to 0.7*bbox.diagonal()" );
 
     m.def( "triangulatePointCloud", &MR::triangulatePointCloud,
-        pybind11::arg( "pointCloud" ), pybind11::arg( "params" ) = MR::TriangulationParameters{}, pybind11::arg( "progressCb" ) = MR::ProgressCallback{},
+        pybind11::arg( "pointCloud" ), pybind11::arg_v( "params", MR::TriangulationParameters(), "TriangulationParameters()" ), pybind11::arg( "progressCb" ) = MR::ProgressCallback{},
         "Creates mesh from given point cloud according params\n"
         "Returns empty optional if was interrupted by progress bar" );
 

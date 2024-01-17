@@ -41,6 +41,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Decimate, [] ( pybind11::module_& m )
         def_readwrite( "facesDeleted", &MR::DecimateResult::facesDeleted, "Number deleted faces" ).
         def_readwrite( "errorIntroduced", &MR::DecimateResult::errorIntroduced, "estimated distance deviation of decimated mesh from the original mesh" ); // only comment about default strategy
 
-    m.def( "decimateMesh", MR::decimateMesh, pybind11::arg( "mesh" ), pybind11::arg( "settings" ) = MR::DecimateSettings{}, 
+    m.def( "decimateMesh", MR::decimateMesh, pybind11::arg( "mesh" ), pybind11::arg_v( "settings", MR::DecimateSettings(), "DecimateSettings()" ),
         "Collapse edges in mesh region according to the settings" );
 } )

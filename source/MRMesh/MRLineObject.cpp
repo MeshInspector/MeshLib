@@ -39,7 +39,7 @@ void LineObject::setCenter( const Vector3f& center )
 void LineObject::setLength( float size )
 {
     auto currentXf = xf();
-    currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( Vector3f::diagonal( size ) );
+    currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( Vector3f::diagonal( size / 2.f ) );
     setXf( currentXf );
 }
 

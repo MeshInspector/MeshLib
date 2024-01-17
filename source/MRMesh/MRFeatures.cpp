@@ -14,7 +14,85 @@
 namespace MR::Features
 {
 
-Primitives::ConeSegment primitiveCircle( Vector3f point, Vector3f normal, float rad )
+Primitives::Sphere Primitives::ConeSegment::centerPoint() const
+{
+    bool posInf = std::isfinite( positiveLength );
+    bool negInf = std::isfinite( negativeLength );
+    assert( posInf == negInf );
+
+    return toPrimitive( posInf || negInf ? center + dir * ( ( positiveLength - negativeLength ) / 2 ) : center );
+}
+
+Primitives::ConeSegment Primitives::ConeSegment::extendToInfinity( bool negative ) const
+{
+    ConeSegment ret = *this;
+    if ( negative )
+    {
+        ret.negativeSideRadius = ret.positiveSideRadius;
+        ret.negativeLength = INFINITY;
+    }
+    else
+    {
+        ret.positiveSideRadius = ret.negativeSideRadius;
+        ret.positiveLength = INFINITY;
+    }
+    return ret;
+}
+
+Primitives::ConeSegment Primitives::ConeSegment::extendToInfinity() const
+{
+    assert( positiveSideRadius == negativeSideRadius );
+    return extendToInfinity( false ).extendToInfinity( true );
+}
+
+Primitives::ConeSegment Primitives::ConeSegment::untruncateCone() const
+{
+    bool isCone = !isCircle() && positiveSideRadius != negativeSideRadius;
+    assert( isCone );
+    if ( !isCone )
+        return *this; // Not a cone.
+
+    if ( positiveSideRadius == 0 || negativeSideRadius == 0 )
+        return *this; // Already truncated.
+
+    ConeSegment ret = *this;
+
+    float shift = std::min( positiveSideRadius, negativeSideRadius ) * ( positiveLength + negativeLength ) / std::abs( positiveSideRadius - negativeSideRadius );
+    ( positiveSideRadius < negativeSideRadius ? ret.positiveLength : ret.negativeLength ) += shift;
+    return ret;
+}
+
+Primitives::ConeSegment Primitives::ConeSegment::axis() const
+{
+    ConeSegment ret = *this;
+    ret.positiveSideRadius = ret.negativeSideRadius = 0;
+    return ret;
+}
+
+Primitives::Sphere Primitives::ConeSegment::basePoint( bool negative ) const
+{
+    return toPrimitive( center + dir * ( negative ? -negativeLength : positiveLength ) );
+}
+
+Primitives::Plane Primitives::ConeSegment::basePlane( bool negative ) const
+{
+    assert( std::isfinite( negative ? negativeLength : positiveLength ) );
+    return Primitives::Plane( basePoint( negative ).center, negative ? -dir : dir );
+}
+
+Primitives::ConeSegment Primitives::ConeSegment::baseCircle( bool negative ) const
+{
+    assert( std::isfinite( negative ? negativeLength : positiveLength ) );
+
+    ConeSegment ret = *this;
+    ret.center = basePoint( negative ).center;
+    ret.positiveLength = ret.negativeLength = 0;
+    if ( negative )
+        ret.dir = -ret.dir;
+    return ret;
+}
+
+Primitives::ConeSegment primitiveCircle( const Vector3f& point, const Vector3f& normal, float rad )
 {
     return {
         .center = point,
@@ -24,28 +102,23 @@ Primitives::ConeSegment primitiveCircle( Vector3f point, Vector3f normal, float 
     };
 }
 
-Primitives::ConeSegment primitiveCylinder( Vector3f a, Vector3f b, float rad )
+Primitives::ConeSegment primitiveCylinder( const Vector3f& a, const Vector3f& b, float rad )
 {
     auto ret = primitiveCone( a, b, rad );
     ret.positiveSideRadius = ret.negativeSideRadius;
     return ret;
 }
 
-Primitives::ConeSegment primitiveCone( Vector3f a, Vector3f b, float rad )
+Primitives::ConeSegment primitiveCone( const Vector3f& a, const Vector3f& b, float rad )
 {
-    b -= a;
-    float bLen = b.length();
+    Vector3f delta = b - a;
+    float deltaLen = delta.length();
     return {
         .center = a,
-        .dir = b / ( bLen > 0 ? bLen : 1 ),
+        .dir = delta / ( deltaLen > 0 ? deltaLen : 1 ),
         .negativeSideRadius = rad,
-        .positiveLength = bLen,
+        .positiveLength = deltaLen,
     };
-}
-
-Primitives::Plane primitivePlane( Vector3f point, Vector3f normal )
-{
-    return Plane3f::fromDirAndPt( normal, point );
 }
 
 std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
@@ -62,7 +135,7 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
     else if ( auto plane = dynamic_cast<const PlaneObject*>( &object ) )
     {
         auto parentXf = plane->parent()->worldXf();
-        return primitivePlane( parentXf( plane->getCenter() ), parentXf.A * plane->getNormal() );
+        return Primitives::Plane( parentXf( plane->getCenter() ), ( parentXf.A * plane->getNormal() ).normalized() );
     }
     else if ( auto sphere = dynamic_cast<const SphereObject*>( &object ) )
     {
@@ -101,8 +174,104 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
         };
         return ret;
     }
+    // TODO support cones.
 
     return {};
+}
+
+std::shared_ptr<VisualObject> primitiveToObject( const Primitives::Variant& primitive, float infiniteExtent )
+{
+    return std::visit( overloaded{
+        []( const Primitives::Sphere& sphere ) -> std::shared_ptr<VisualObject>
+        {
+            if ( sphere.radius == 0 )
+            {
+                auto newPoint = std::make_shared<PointObject>();
+                newPoint->setPoint( sphere.center );
+                return newPoint;
+            }
+            else
+            {
+                auto newSphere = std::make_shared<SphereObject>();
+                newSphere->setCenter( sphere.center );
+                newSphere->setRadius( sphere.radius );
+                return newSphere;
+            }
+        },
+        [infiniteExtent]( const Primitives::Plane& plane ) -> std::shared_ptr<VisualObject>
+        {
+            auto newPlane = std::make_shared<PlaneObject>();
+            newPlane->setCenter( plane.center );
+            newPlane->setNormal( plane.normal );
+            newPlane->setSize( infiniteExtent );
+            return newPlane;
+        },
+        [infiniteExtent]( const Primitives::ConeSegment& cone ) -> std::shared_ptr<VisualObject>
+        {
+            if ( cone.isCircle() )
+            {
+                if ( cone.isZeroRadius() )
+                    return primitiveToObject( cone.basePoint( false ), infiniteExtent ); // This isn't really valid, but let's support it.
+                
+                auto newCircle = std::make_shared<CircleObject>();
+                newCircle->setCenter( cone.basePoint( false ).center );
+                newCircle->setNormal( cone.dir );
+                newCircle->setRadius( cone.positiveSideRadius );
+                return newCircle;
+            }
+
+            bool posFinite = std::isfinite( cone.positiveLength );
+            bool negFinite = std::isfinite( cone.negativeLength );
+
+            if ( cone.isZeroRadius() )
+            {
+                auto newLine = std::make_shared<LineObject>();
+                newLine->setDirection( cone.dir );
+
+                if ( posFinite == negFinite )
+                {
+                    newLine->setCenter( cone.centerPoint().center );
+                    newLine->setSize( ( posFinite ? cone.positiveLength + cone.negativeLength : infiniteExtent ) / 2 );
+                }
+                else
+                {
+                    newLine->setCenter( posFinite
+                        ? cone.basePoint( false ).center - cone.dir * ( infiniteExtent / 2 )
+                        : cone.basePoint( true ).center + cone.dir * ( infiniteExtent / 2 )
+                    );
+                    newLine->setSize( infiniteExtent / 2 );
+                }
+
+                return newLine;
+            }
+
+            if ( cone.positiveSideRadius == cone.negativeSideRadius )
+            {
+                auto newCylinder = std::make_shared<CylinderObject>();
+                newCylinder->setDirection( cone.dir );
+                newCylinder->setRadius( cone.positiveSideRadius );
+
+                if ( posFinite == negFinite )
+                {
+                    newCylinder->setCenter( cone.centerPoint().center );
+                    newCylinder->setLength( posFinite ? cone.positiveLength + cone.negativeLength : infiniteExtent );
+                }
+                else
+                {
+                    newCylinder->setCenter( posFinite
+                        ? cone.basePoint( false ).center - cone.dir * ( infiniteExtent / 2 )
+                        : cone.basePoint( true ).center + cone.dir * ( infiniteExtent / 2 )
+                    );
+                    newCylinder->setLength( infiniteExtent );
+                }
+
+                return newCylinder;
+            }
+
+            // TODO support cones.
+            return nullptr;
+        },
+    }, primitive );
 }
 
 namespace Traits
@@ -118,7 +287,7 @@ std::string Unary<Primitives::Sphere>::name( const Primitives::Sphere& prim ) co
 
 std::string Unary<Primitives::ConeSegment>::name( const Primitives::ConeSegment& prim ) const
 {
-    if ( prim.positiveLength == -prim.negativeLength && std::isfinite( prim.positiveLength ) )
+    if ( prim.isCircle() )
         return "Circle";
 
     if ( prim.positiveSideRadius == prim.negativeSideRadius )
@@ -270,14 +439,12 @@ DistanceResult Binary<Primitives::ConeSegment, Primitives::Sphere>::distance( co
 
 DistanceResult Binary<Primitives::Plane, Primitives::Sphere>::distance( const Primitives::Plane& a, const Primitives::Sphere& b ) const
 {
-    auto normalizedA = a.normalized();
-
-    float signedCenterDist = normalizedA.distance( b.center );
+    float signedCenterDist = dot( a.normal, b.center - a.center );
 
     DistanceResult ret;
     ret.distance = std::abs( signedCenterDist ) - b.radius;
-    ret.closestPointA = normalizedA.project( b.center );
-    ret.closestPointB = b.center - normalizedA.n * ( b.radius * ( signedCenterDist >= 0 ? 1 : -1 ) );
+    ret.closestPointA = b.center - a.normal * signedCenterDist;
+    ret.closestPointB = b.center - a.normal * ( b.radius * ( signedCenterDist >= 0 ? 1 : -1 ) );
     return ret;
 }
 
@@ -321,10 +488,8 @@ DistanceResult Binary<Primitives::Plane, Primitives::ConeSegment>::distance( con
     if ( !std::isfinite( b.positiveLength ) && !std::isfinite( b.negativeLength ) )
         return { .status = DistanceResult::Status::not_applicable };
 
-    auto normalizedA = a.normalized();
-
     // A normal to the cone axis, parallel to the plane normal. The sign of this is unspecified.
-    Vector3f sideDir = cross( cross( a.n, b.dir ), b.dir ).normalized();
+    Vector3f sideDir = cross( cross( a.normal, b.dir ), b.dir ).normalized();
     if ( sideDir == Vector3f() || !sideDir.isFinite() )
         sideDir = cross( b.dir, b.dir.furthestBasisVector() ).normalized(); // An arbitrary direction.
 
@@ -341,10 +506,10 @@ DistanceResult Binary<Primitives::Plane, Primitives::ConeSegment>::distance( con
     {
         if ( !std::isfinite( positiveSide ? b.positiveLength : b.negativeLength ) )
         {
-            float dirDot = dot( a.n, b.dir * ( positiveSide ? 1.f : -1.f ) );
+            float dirDot = dot( a.normal, b.dir * ( positiveSide ? 1.f : -1.f ) );
 
             float dist = 0;
-            if ( dirDot == 0 )
+            if ( dirDot < 0.00001f ) // TODO move the epsilon to a constant?
             {
                 // Shrug. This fixes an edge case, but I'm not sure if I should even bother with this.
                 continue;
@@ -378,7 +543,7 @@ DistanceResult Binary<Primitives::Plane, Primitives::ConeSegment>::distance( con
             capCenter - sideDir * sideRadius,
         } )
         {
-            float dist = normalizedA.distance( point );
+            float dist = dot( a.normal, point - a.center );
             ( dist < 0 ? haveNegativePoints : havePositivePoints ) = true;
 
             if ( first || dist < minDist )
@@ -414,7 +579,7 @@ DistanceResult Binary<Primitives::Plane, Primitives::ConeSegment>::distance( con
     if ( havePositivePoints && haveNegativePoints )
         ret.distance = -ret.distance;
 
-    ret.closestPointA = normalizedA.project( ret.closestPointB );
+    ret.closestPointA = ret.closestPointB - a.normal * dot( a.normal, ret.closestPointB - a.center );
 
     return ret;
 }
@@ -483,6 +648,24 @@ TEST( Features, PrimitiveConstruction )
         ASSERT_LE( ( cone.dir - Vector3f( 0, -1, 0 ) ).length(), testEps );
         ASSERT_NEAR( cone.positiveLength, 3, testEps );
         ASSERT_NEAR( cone.negativeLength, 0, testEps );
+    }
+}
+
+TEST( Features, PrimitiveOps_ConeSegment )
+{
+    { // Untruncate.
+        Primitives::ConeSegment cone{
+            .center = Vector3f( 100, 50, 10 ),
+            .dir = Vector3f( 1, 0, 0 ),
+            .positiveSideRadius = 10,
+            .negativeSideRadius = 15,
+            .positiveLength = 2,
+            .negativeLength = 4,
+        };
+
+        ASSERT_EQ( cone.untruncateCone().positiveLength, 14 );
+        std::swap( cone.positiveSideRadius, cone.negativeSideRadius );
+        ASSERT_EQ( cone.untruncateCone().negativeLength, 16 );
     }
 }
 
@@ -737,13 +920,12 @@ TEST( Features, ConeSegment_Sphere )
 TEST( Features, Plane_Sphere )
 {
     Vector3f planeCenter = Vector3f( 100, 50, 7 );
-    Primitives::Plane plane = primitivePlane( planeCenter, Vector3f( 42, 0, 0 ) );
-    Vector3f planeDir = plane.n.normalized();
+    Primitives::Plane plane( planeCenter, Vector3f( 1, 0, 0 ) );
     Vector3f sideOffset( 0, -13, 71 );
 
     for ( float dist : { -4.f, -2.f, 0.f, 2.f, 4.f } )
     {
-        Primitives::Sphere sphere( planeCenter + sideOffset + planeDir * dist, 3.f );
+        Primitives::Sphere sphere( planeCenter + sideOffset + plane.normal * dist, 3.f );
         auto r = distance( plane, sphere );
 
         ASSERT_NEAR( r.distance, std::abs( dist ) - sphere.radius, testEps );
@@ -752,13 +934,13 @@ TEST( Features, Plane_Sphere )
         if ( dist == 0.f )
         {
             ASSERT_TRUE(
-                ( r.closestPointB - ( sphere.center + planeDir * sphere.radius ) ).length() < testEps ||
-                ( r.closestPointB - ( sphere.center - planeDir * sphere.radius ) ).length() < testEps
+                ( r.closestPointB - ( sphere.center + plane.normal * sphere.radius ) ).length() < testEps ||
+                ( r.closestPointB - ( sphere.center - plane.normal * sphere.radius ) ).length() < testEps
             );
         }
         else
         {
-            ASSERT_LE( ( r.closestPointB - ( sphere.center - planeDir * sphere.radius * ( dist > 0 ? 1.f : -1.f ) ) ).length(), testEps );
+            ASSERT_LE( ( r.closestPointB - ( sphere.center - plane.normal * sphere.radius * ( dist > 0 ? 1.f : -1.f ) ) ).length(), testEps );
         }
     }
 }
@@ -851,10 +1033,11 @@ TEST( Features, Plane_ConeSegment )
                 };
 
                 Vector3f randomPlaneCenterSlide = cross( offsetIntoCone, offsetIntoCone.furthestBasisVector() ) * 42.f;
-                auto plane = primitivePlane( closestPlanePoint + randomPlaneCenterSlide, offsetIntoCone );
+                Primitives::Plane plane( closestPlanePoint + randomPlaneCenterSlide, offsetIntoCone );
 
                 checkPlane( plane );
-                checkPlane( -plane );
+                plane.normal = -plane.normal;
+                checkPlane( plane );
             }
         };
 
@@ -919,7 +1102,7 @@ TEST( Features, Plane_ConeSegment )
                 .negativeLength = INFINITY,
             };
 
-            auto plane = primitivePlane( Vector3f( 1, 2, 3 ), Vector3f( 5, 6, 7 ) );
+            Primitives::Plane plane( Vector3f( 1, 2, 3 ), Vector3f( 5, 6, 7 ) );
 
             auto r = distance( line, plane );
             ASSERT_EQ( r.status, DistanceResult::Status::not_applicable );

@@ -17,6 +17,14 @@ namespace Primitives
     // Doubles as a point when the radius is zero.
     using Sphere = Sphere3<float>;
 
+    struct Plane
+    {
+        Vector3f center;
+
+        // This must be normalized. The sign doesn't matter.
+        Vector3f normal;
+    };
+
     //! Can have infinite length in one or two directions.
     //! The top and/or bottom can be flat or pointy.
     //! Doubles as a cylinder, line (finite or infinite), and a circle.
@@ -28,6 +36,7 @@ namespace Primitives
         // * If they are equal (both zero) or at least one of them is infinite, `positiveSideRadius` must be equal to `negativeSideRadius`.
         // * Both `positiveSideRadius` and `negativeSideRadius` must be non-negative.
 
+        // This isn't necessarily the true center point. Use `centerPoint()` instead.
         Vector3f center;
         Vector3f dir; //< Must be normalized.
 
@@ -45,35 +54,59 @@ namespace Primitives
         bool hollow = false;
 
         [[nodiscard]] bool isZeroRadius() const { return positiveSideRadius == 0 && negativeSideRadius == 0; }
-    };
+        [[nodiscard]] bool isCircle() const { return positiveLength == -negativeLength && std::isfinite( positiveLength ); }
 
-    // This doesn't have to be normalized, we will normalize it internally.
-    // The sign of the normal doesn't matter.
-    using Plane = Plane3<float>;
+        // Returns the center point (unlike `center`, which can actually be off-center).
+        // This doesn't work for half-infinite objects.
+        [[nodiscard]] MRMESH_API Sphere centerPoint() const;
+
+        // Extends the object to infinity in one direction. The radius in the extended direction becomes equal to the radius in the opposite direction.
+        [[nodiscard]] MRMESH_API ConeSegment extendToInfinity( bool negative ) const;
+        // Extends the object to infinity in both directions. This is equivalent to `.extendToInfinity(false).extendToInfinity(true)`,
+        // except that calling it with `positiveSideRadius != negativeSideRadius` is illegal and triggers an assertion.
+        [[nodiscard]] MRMESH_API ConeSegment extendToInfinity() const;
+
+        // Untruncates a truncated cone. If it's not a cone at all, returns the object unchanged and triggers an assertion.
+        [[nodiscard]] MRMESH_API ConeSegment untruncateCone() const;
+
+        // Returns a finite axis. For circles, you might want to immediately `extendToInfinity()` it.
+        [[nodiscard]] MRMESH_API ConeSegment axis() const;
+
+        // Returns a center of one of the two base circles.
+        [[nodiscard]] MRMESH_API Sphere basePoint( bool negative ) const;
+        // Returns one of the two base planes.
+        [[nodiscard]] MRMESH_API Plane basePlane( bool negative ) const;
+        // Returns one of the two base circles.
+        [[nodiscard]] MRMESH_API ConeSegment baseCircle( bool negative ) const;
+    };
 
     using Variant = std::variant<Sphere, ConeSegment, Plane>;
 }
 
 // Those map various MR types to our primitives. Some of those are identity functions.
 
-[[nodiscard]] inline Primitives::Sphere toPrimitive( Vector3f point ) { return { point, 0 }; }
-[[nodiscard]] inline Primitives::Sphere toPrimitive( Sphere3<float> sphere ) { return sphere; }
+[[nodiscard]] inline Primitives::Sphere toPrimitive( const Vector3f& point ) { return { point, 0 }; }
+[[nodiscard]] inline Primitives::Sphere toPrimitive( const Sphere3f& sphere ) { return sphere; }
 
-[[nodiscard]] inline Primitives::ConeSegment toPrimitive( Line3f line ) { return { .center = line.p, .dir = line.d.normalized(), .positiveLength = INFINITY, .negativeLength = INFINITY }; }
-[[nodiscard]] inline Primitives::ConeSegment toPrimitive( LineSegm3f segm ) { return { .center = segm.a, .dir = segm.dir().normalized(), .positiveLength = segm.length() }; }
+[[nodiscard]] inline Primitives::ConeSegment toPrimitive( const Line3f& line ) { return { .center = line.p, .dir = line.d.normalized(), .positiveLength = INFINITY, .negativeLength = INFINITY }; }
+[[nodiscard]] inline Primitives::ConeSegment toPrimitive( const LineSegm3f& segm ) { return { .center = segm.a, .dir = segm.dir().normalized(), .positiveLength = segm.length() }; }
+// TODO support cylinders and cones.
 
-[[nodiscard]] inline Primitives::Plane toPrimitive( Plane3<float> plane ) { return plane; }
+[[nodiscard]] inline Primitives::Plane toPrimitive( const Plane3f& plane ) { auto p = plane.normalized(); return { .center = p.n * p.d, .normal = p.n }; }
+
 
 //! `normal` doesn't need to be normalized.
-[[nodiscard]] MRMESH_API Primitives::ConeSegment primitiveCircle( Vector3f point, Vector3f normal, float rad );
+[[nodiscard]] MRMESH_API Primitives::ConeSegment primitiveCircle( const Vector3f& point, const Vector3f& normal, float rad );
 //! `a` and `b` are centers of the sides.
-[[nodiscard]] MRMESH_API Primitives::ConeSegment primitiveCylinder( Vector3f a, Vector3f b, float rad );
+[[nodiscard]] MRMESH_API Primitives::ConeSegment primitiveCylinder( const Vector3f& a, const Vector3f& b, float rad );
 //! `a` is the center of the base, `b` is the pointy end.
-[[nodiscard]] MRMESH_API Primitives::ConeSegment primitiveCone( Vector3f a, Vector3f b, float rad );
-//! Constructs a plane from a point and a normal. Or you could construct the plane type directly from a normal and an offset.
-[[nodiscard]] MRMESH_API Primitives::Plane primitivePlane( Vector3f point, Vector3f normal );
+[[nodiscard]] MRMESH_API Primitives::ConeSegment primitiveCone( const Vector3f& a, const Vector3f& b, float rad );
 
+// Returns null if the object type is unknown.
 [[nodiscard]] MRMESH_API std::optional<Primitives::Variant> primitiveFromObject( const Object& object );
+// Can return null on some primitive configurations.
+// `infiniteExtend` is how large we make "infinite" objects. Half-infinite objects divide this by 2.
+[[nodiscard]] MRMESH_API std::shared_ptr<VisualObject> primitiveToObject( const Primitives::Variant& primitive, float infiniteExtent );
 
 //! Stores the distance between two objects, and the closest points on them.
 struct DistanceResult

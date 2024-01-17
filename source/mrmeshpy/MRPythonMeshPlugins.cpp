@@ -263,9 +263,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
         def_readwrite( "subdivideBorder", &SubdivideSettings::subdivideBorder,
             "If false do not touch border edges (cannot subdivide lone faces)\n"
             "use findRegionOuterFaces to find boundary faces" ).
-        def_readwrite( "critAspectRatio", &SubdivideSettings::critAspectRatio,
-            "If subdivideBorder is off subdivider can produce narrow triangles near border\n"
-            "this parameter prevents subdivision of such triangles" ).
+        def_readwrite( "minTriAspectRatio", &SubdivideSettings::minTriAspectRatio,
+            "An edge is subdivided only if its left or right triangle has aspect ratio above or equal to this value. "
+            "Please set it to a larger value if you would like to subdivide edges near degenerate triangles only" ).
+        def_readwrite( "maxTriAspectRatio", &SubdivideSettings::maxTriAspectRatio,
+            "An edge is subdivided only if both its left and right triangles have aspect ratio below or equal to this value. "
+            "Please set it to a smaller value only if subdivideBorder==false, otherwise many narrow triangles can appear near border" ).
         def_readwrite( "smoothMode", &SubdivideSettings::smoothMode,
             "Puts new vertices so that they form a smooth surface together with existing vertices.\n"
             "This option works best for natural surfaces without sharp edges in between triangles" ).

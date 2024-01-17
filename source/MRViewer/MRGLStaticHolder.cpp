@@ -393,8 +393,10 @@ void GLStaticHolder::createShader_( ShaderType type )
                 MR_GLSL_VERSION_LINE R"(
                 precision highp float;
             precision highp int;
+  uniform mat4 model;
   uniform mat4 view;
   uniform mat4 proj;
+  uniform mat4 normal_matrix;
 
   in vec3 position;
   in vec3 normal;         // (in from base) vert normal
@@ -406,8 +408,8 @@ void GLStaticHolder::createShader_( ShaderType type )
 
   void main()
   {
-    position_eye = vec3 (view * vec4 (position, 1.0));
-    normal_eye = normalize(vec3 (view * vec4 (normal, 0.0)));
+    position_eye = vec3 (view * (model * vec4 (position, 1.0)));
+    normal_eye = normalize(vec3 (normal_matrix * vec4 (normal, 0.0)));
     gl_Position = proj * vec4 (position_eye, 1.0); //proj * view * vec4(position, 1.0);"
     color_frag = color;
   }

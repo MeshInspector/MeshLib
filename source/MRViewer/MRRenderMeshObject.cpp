@@ -31,7 +31,7 @@ RenderMeshObject::~RenderMeshObject()
     freeBuffers_();
 }
 
-void RenderMeshObject::render( const RenderParams& renderParams )
+void RenderMeshObject::render( const ModelRenderParams& renderParams )
 {
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
@@ -147,7 +147,7 @@ void RenderMeshObject::render( const RenderParams& renderParams )
     }
 }
 
-void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigned geomId )
+void RenderMeshObject::renderPicker( const ModelRenderParams& parameters, unsigned geomId )
 {
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
@@ -210,7 +210,7 @@ void RenderMeshObject::forceBindAll()
     bindBorders_();
 }
 
-void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, const Color& colorChar, uint32_t dirtyFlag )
+void RenderMeshObject::renderEdges_( const ModelRenderParams& renderParams, GLuint vao, const Color& colorChar, uint32_t dirtyFlag )
 {
     // Send lines data to GL, install lines properties
     GL_EXEC( glBindVertexArray( vao ) );
@@ -270,7 +270,7 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
     dirty_ &= ~dirtyFlag;
 }
 
-void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )
+void RenderMeshObject::renderMeshEdges_( const ModelRenderParams& renderParams )
 {
     // Send lines data to GL, install lines properties
     GL_EXEC( glBindVertexArray( edgesArrayObjId_ ) );

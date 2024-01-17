@@ -13,12 +13,13 @@
 #pragma warning(push)
 
 #pragma warning(disable:4005) // 'M_PI': macro redefinition
+#pragma warning(disable:4127)
 #pragma warning(disable:4146)
 #pragma warning(disable:4180) // qualifier applied to function type has no meaning; ignored
+#pragma warning(disable:4242) // '=': conversion from 'int' to 'char', possible loss of data
 #pragma warning(disable:4244)
 #pragma warning(disable:4251)
 #pragma warning(disable:4275)
-#pragma warning(disable:4127)
 #pragma warning(disable:4355) //'this': used in base member initializer list
 #pragma warning(disable:4459) //declaration of 'compare' hides global declaration
 #pragma warning(disable:4464) //relative include path contains '..'

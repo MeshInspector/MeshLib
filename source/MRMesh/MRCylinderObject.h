@@ -1,7 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRObjectMeshHolder.h"
-#include "MRFeatureObjectSharedProperties.h"
+#include "MRFeatureObject.h"
 
 namespace MR
 {
@@ -57,7 +57,7 @@ public:
     /// updates xf to fit cylinder length
     MRMESH_API void setLength( float length );
 
-    MRMESH_API virtual std::vector<FeatureObjectSharedProperty> getAllSharedProperties( void ) override;
+    MRMESH_API virtual std::vector<FeatureObjectSharedProperty> getAllSharedProperties() const override;
 
 
 protected:

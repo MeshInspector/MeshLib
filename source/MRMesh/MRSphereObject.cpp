@@ -45,13 +45,13 @@ void SphereObject::setCenter( const Vector3f& center )
 }
 
 
-std::vector<FeatureObjectSharedProperty> SphereObject::getAllSharedProperties( void )
+std::vector<FeatureObjectSharedProperty> SphereObject::getAllSharedProperties() const
 {
-    std::vector<FeatureObjectSharedProperty> featureObjectProperties;
-    featureObjectProperties.reserve( 2 );
-    featureObjectProperties.emplace_back( "Radius", &SphereObject::getRadius, &SphereObject::setRadius, this );
-    featureObjectProperties.emplace_back( "Center", &SphereObject::getCenter, &SphereObject::setCenter, this );
-    return featureObjectProperties;
+    static std::vector<FeatureObjectSharedProperty> ret = {
+       {"Radius", &SphereObject::getRadius, &SphereObject::setRadius},
+       {"Center", &SphereObject::getCenter, &SphereObject::setCenter}
+    };
+    return ret;
 }
 
 SphereObject::SphereObject()

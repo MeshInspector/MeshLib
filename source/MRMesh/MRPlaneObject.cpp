@@ -62,15 +62,14 @@ float PlaneObject::getSize( void ) const
     return  s.x.x;
 }
 
-std::vector<FeatureObjectSharedProperty> PlaneObject::getAllSharedProperties( void )
+std::vector<FeatureObjectSharedProperty> PlaneObject::getAllSharedProperties() const
 {
-    std::vector<FeatureObjectSharedProperty> featureObjectProperties;
-    featureObjectProperties.reserve( 3 );
-    featureObjectProperties.emplace_back( "Center", &PlaneObject::getCenter, &PlaneObject::setCenter, this );
-    featureObjectProperties.emplace_back( "Normal", &PlaneObject::getNormal, &PlaneObject::setNormal, this );
-
-    featureObjectProperties.emplace_back( "Size", &PlaneObject::getSize, &PlaneObject::setSize, this );
-    return featureObjectProperties;
+    static std::vector<FeatureObjectSharedProperty> ret = {
+        {"Center", &PlaneObject::getCenter,&PlaneObject::setCenter},
+        {"Normal", &PlaneObject::getNormal,&PlaneObject::setNormal},
+        {"Size"  , &PlaneObject::getSize,  &PlaneObject::setSize  }
+    };
+    return ret;
 }
 
 PlaneObject::PlaneObject()

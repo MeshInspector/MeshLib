@@ -1,7 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRObjectLinesHolder.h"
-#include "MRFeatureObjectSharedProperties.h"
+#include "MRFeatureObject.h"
 
 namespace MR
 {
@@ -44,7 +44,7 @@ public:
     /// calculates line size from xf
     MRMESH_API float getSize() const;
 
-    MRMESH_API virtual  std::vector<FeatureObjectSharedProperty> getAllSharedProperties() override;
+    MRMESH_API virtual std::vector<FeatureObjectSharedProperty> getAllSharedProperties() const override;
 
 protected:
     LineObject( const LineObject& other ) = default;

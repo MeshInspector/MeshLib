@@ -186,18 +186,15 @@ void CylinderObject::constructMesh_()
     setDirtyFlags( DIRTY_ALL );
 }
 
-std::vector<FeatureObjectSharedProperty> CylinderObject::getAllSharedProperties( void )
+std::vector<FeatureObjectSharedProperty> CylinderObject::getAllSharedProperties() const
 {
-    std::vector<FeatureObjectSharedProperty> featureObjectProperties;
-    featureObjectProperties.reserve( 4 );
-
-    featureObjectProperties.emplace_back( "Radius", &CylinderObject::getRadius, &CylinderObject::setRadius, this );
-    featureObjectProperties.emplace_back( "Length", &CylinderObject::getLength, &CylinderObject::setLength, this );
-
-    featureObjectProperties.emplace_back( "Center", &CylinderObject::getCenter, &CylinderObject::setCenter, this );
-    featureObjectProperties.emplace_back( "Main axis", &CylinderObject::getDirection, &CylinderObject::setDirection, this );
-
-    return featureObjectProperties;
+    static std::vector<FeatureObjectSharedProperty> ret = {
+       {"Radius", &CylinderObject::getRadius, &CylinderObject::setRadius},
+       {"Length", &CylinderObject::getLength, &CylinderObject::setLength},
+       {"Center", &CylinderObject::getCenter, &CylinderObject::setCenter},
+       {"Main axis", &CylinderObject::getDirection, &CylinderObject::setDirection},
+    };
+    return ret;
 }
 
 

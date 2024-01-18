@@ -181,23 +181,20 @@ void ConeObject::constructMesh_()
     setDirtyFlags( DIRTY_ALL );
 }
 
-std::vector<FeatureObjectSharedProperty> ConeObject::getAllSharedProperties( void )
+std::vector<FeatureObjectSharedProperty> ConeObject::getAllSharedProperties() const
 {
-    std::vector<FeatureObjectSharedProperty> featureObjectProperties;
-    featureObjectProperties.reserve( 4 );
-    featureObjectProperties.emplace_back( "Angle", &ConeObject::getAngle, &ConeObject::setAngle, this );
-    featureObjectProperties.emplace_back( "Height", &ConeObject::getHeight, &ConeObject::setHeight, this );
-
-    featureObjectProperties.emplace_back( "Center bla bla", &ConeObject::getCenter, &ConeObject::setCenter, this );
-    featureObjectProperties.emplace_back( "Main axis", &ConeObject::getDirection, &ConeObject::setDirection, this );
-
-    return featureObjectProperties;
+    static std::vector<FeatureObjectSharedProperty> ret = {
+       {"Angle",  &ConeObject::getAngle , &ConeObject::setAngle},
+       {"Height", &ConeObject::getHeight, &ConeObject::setHeight},
+       {"Center", &ConeObject::getCenter, &ConeObject::setCenter},
+       {"Main axis", &ConeObject::getDirection, &ConeObject::setDirection},
+    };
+    return ret;
 }
 
 //////////////////
 ///// TESTS //////
 //////////////////
-
 
 TEST( MRMesh, ConeApproximation )
 {

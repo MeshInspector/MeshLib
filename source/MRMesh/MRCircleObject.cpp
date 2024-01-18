@@ -58,16 +58,14 @@ void CircleObject::setNormal( const Vector3f& normal )
     setXf( currentXf );
 }
 
-std::vector<FeatureObjectSharedProperty> CircleObject::getAllSharedProperties( void )
+std::vector<FeatureObjectSharedProperty> CircleObject::getAllSharedProperties() const
 {
-    std::vector<FeatureObjectSharedProperty> featureObjectProperties;
-    featureObjectProperties.reserve( 3 );
-    featureObjectProperties.emplace_back( "Radius", &CircleObject::getRadius, &CircleObject::setRadius, this );
-
-    featureObjectProperties.emplace_back( "Center", &CircleObject::getCenter, &CircleObject::setCenter, this );
-    featureObjectProperties.emplace_back( "Normal", &CircleObject::getNormal, &CircleObject::setNormal, this );
-
-    return featureObjectProperties;
+    static std::vector<FeatureObjectSharedProperty> ret = {
+      {"Radius", &CircleObject::getRadius, &CircleObject::setRadius},
+      {"Center", &CircleObject::getCenter, &CircleObject::setCenter},
+      {"Normal", &CircleObject::getNormal, &CircleObject::setNormal}
+    };
+    return ret;
 }
 
 CircleObject::CircleObject()

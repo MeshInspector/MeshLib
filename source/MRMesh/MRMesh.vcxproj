@@ -20,7 +20,7 @@
     <ClInclude Include="MRCylinder3.h" />
     <ClInclude Include="MRCylinderApproximator.h" />
     <ClInclude Include="MRCylinderObject.h" />
-    <ClInclude Include="MRFeatureObjectSharedProperties.h" />
+    <ClInclude Include="MRFeatureObject.h" />
     <ClInclude Include="MRFinally.h" />
     <ClInclude Include="MRInTreePathBuilder.h" />
     <ClInclude Include="MRChangeColoringType.h" />

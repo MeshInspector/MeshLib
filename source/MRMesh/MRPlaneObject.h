@@ -1,7 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRObjectMeshHolder.h"
-#include "MRFeatureObjectSharedProperties.h"
+#include "MRFeatureObject.h"
 namespace MR
 {
 
@@ -41,9 +41,9 @@ public:
     /// updates xf to scale size
     MRMESH_API void setSize( float size );
     /// calculates plane size from xf
-    MRMESH_API float getSize( void ) const;
+    MRMESH_API float getSize() const;
 
-    MRMESH_API virtual  std::vector<FeatureObjectSharedProperty> getAllSharedProperties( void ) override;
+    MRMESH_API virtual std::vector<FeatureObjectSharedProperty> getAllSharedProperties() const override;
 protected:
     PlaneObject( const PlaneObject& other ) = default;
 

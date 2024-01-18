@@ -130,15 +130,14 @@ void LineObject::constructPolyline_()
     setDirtyFlags( DIRTY_ALL );
 }
 
-std::vector<FeatureObjectSharedProperty> LineObject::getAllSharedProperties( void )
+std::vector<FeatureObjectSharedProperty> LineObject::getAllSharedProperties() const
 {
-    std::vector<FeatureObjectSharedProperty> featureObjectProperties;
-    featureObjectProperties.reserve( 3 );
-    featureObjectProperties.emplace_back( "Center", &LineObject::getCenter, &LineObject::setCenter, this );
-    featureObjectProperties.emplace_back( "Direction", &LineObject::getDirection, &LineObject::setDirection, this );
-
-    featureObjectProperties.emplace_back( "Size", &LineObject::getSize, &LineObject::setSize, this );
-    return featureObjectProperties;
+    static std::vector<FeatureObjectSharedProperty> ret = {
+       {"Center"   , &LineObject::getCenter   , &LineObject::setCenter},
+       {"Direction", &LineObject::getDirection, &LineObject::setDirection},
+       {"Size"     , &LineObject::getSize     , &LineObject::setSize} 
+    };
+    return ret;
 }
 
 }

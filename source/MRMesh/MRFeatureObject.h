@@ -6,6 +6,7 @@ namespace MR
 {
 
 using FeaturesPropertyTypesVariant = std::variant<float, Vector3f >;
+struct  FeatureObject;
 
 // FeatureObjectSharedProperty struct is designed to represent a shared property of a feature object, enabling the use of generalized getter and setter methods for property manipulation.
 // propertyName: A string representing the name of the property.
@@ -15,34 +16,33 @@ using FeaturesPropertyTypesVariant = std::variant<float, Vector3f >;
 // The constructor initializes the propertyName and uses lambdas to adapt the member function pointers into std::function objects that conform to the expected 
 // getter and setter signatures.The getter lambda invokes the getter method on the object, and the setter lambda ensures the correct variant type is passed before 
 // invoking the setter method.
-
 struct FeatureObjectSharedProperty
 {
     std::string propertyName;
-    std::function<FeaturesPropertyTypesVariant()> getter;
-    std::function<void( const FeaturesPropertyTypesVariant& )> setter;
+    // due to getAllSharedProperties in FeatureObject returns static vector, we need externaly setup object to invoke setter ad getter.
+    std::function<FeaturesPropertyTypesVariant( const FeatureObject* objectToInvoke )> getter;
+    std::function<void( const FeaturesPropertyTypesVariant&, FeatureObject* objectToInvoke )> setter;
 
     template <typename T, typename C, typename SetterFunc>
     FeatureObjectSharedProperty(
         std::string name,
         T( C::* m_getter )( ) const,
-        SetterFunc m_setter,
-        C* obj
+        SetterFunc m_setter
     ) : propertyName( std::move( name ) ),
-        getter( [obj, m_getter] () -> FeaturesPropertyTypesVariant
+        getter( [m_getter] ( const FeatureObject* objectToInvoke ) -> FeaturesPropertyTypesVariant
     {
-        return std::invoke( m_getter, obj );
+        return std::invoke( m_getter, dynamic_cast< const C* > ( objectToInvoke ) );
     } )
     {
         if constexpr ( ( std::is_same_v<SetterFunc, void ( C::* )( const T& )> )
             || ( std::is_same_v<SetterFunc, void ( C::* )( T )> ) )
         {
-            setter = [obj, m_setter] ( const FeaturesPropertyTypesVariant& v )
+            setter = [m_setter] ( const FeaturesPropertyTypesVariant& v, FeatureObject* objectToInvoke )
             {
                 assert( std::holds_alternative<T>( v ) );
                 if ( std::holds_alternative<T>( v ) )
                 {
-                    std::invoke( m_setter, obj, std::get<T>( v ) );
+                    std::invoke( m_setter, dynamic_cast< C* > ( objectToInvoke ), std::get<T>( v ) );
                 }
             };
         }
@@ -64,7 +64,7 @@ public:
     virtual ~FeatureObject() = default;
 
     /// Create and generate list of bounded getters and setters for the main properties of feature object, together with prop. name for display and edit into UI.
-    virtual std::vector<FeatureObjectSharedProperty> getAllSharedProperties( void ) = 0;
+    virtual std::vector<FeatureObjectSharedProperty> getAllSharedProperties() const = 0;
 };
 
 }

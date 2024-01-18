@@ -1,7 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRObjectPointsHolder.h"
-#include "MRFeatureObjectSharedProperties.h"
+#include "MRFeatureObject.h"
 
 namespace MR
 {
@@ -36,7 +36,7 @@ public:
     /// updates xf to fit given point
     MRMESH_API void setPoint( const Vector3f& point );
 
-    MRMESH_API virtual  std::vector<FeatureObjectSharedProperty> getAllSharedProperties( void ) override;
+    MRMESH_API virtual  std::vector<FeatureObjectSharedProperty> getAllSharedProperties() const override;
 protected:
     PointObject( const PointObject& other ) = default;
 

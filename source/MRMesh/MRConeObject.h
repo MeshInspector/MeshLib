@@ -1,7 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRObjectMeshHolder.h"
-#include "MRFeatureObjectSharedProperties.h"
+#include "MRFeatureObject.h"
 
 namespace MR
 {
@@ -57,6 +57,7 @@ public:
     /// updates xf to fit given cone angle.  It is an angle betweeh main axis and side
     MRMESH_API void setAngle( float angle );
 
+    MRMESH_API virtual std::vector<FeatureObjectSharedProperty> getAllSharedProperties() const override;
 
 
 protected:
@@ -76,7 +77,6 @@ protected:
     {
         return {};
     }
-    MRMESH_API virtual  std::vector<FeatureObjectSharedProperty> getAllSharedProperties( void ) override;
 
 private:
     void constructMesh_();

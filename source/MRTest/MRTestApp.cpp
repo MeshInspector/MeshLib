@@ -31,7 +31,7 @@ TEST(MRMesh, QuadraticForm)
 int main( int argc, char** argv )
 {
     //! If `flag` exists in `argv`, returns true and removes it from there.
-    auto consumeFlag = [&]( std::string_view flag ) -> bool
+    [[maybe_unused]] auto consumeFlag = [&]( std::string_view flag ) -> bool
     {
         if ( argc < 1 )
             return false;

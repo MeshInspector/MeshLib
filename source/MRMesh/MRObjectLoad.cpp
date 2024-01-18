@@ -24,6 +24,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRMeshLoadSettings.h"
 #include "MRZip.h"
+#include "MRPch/MRTBB.h"
 
 #ifndef MRMESH_NO_GLTF
 #include "MRGltfSerializer.h"
@@ -51,14 +52,27 @@ std::optional<MR::IOFilter> findFilter( const MR::IOFilters& filters, const std:
 // sum length of all sharp edges greater than 1.0 * (diagonal of the bounding box)
 bool detectSharpEdges( const Mesh& mesh )
 {
-    double lenSum = 0.0;
+    std::atomic<double> lenSum = 0.0;
     double maxLenSum = mesh.getBoundingBox().diagonal();
     constexpr int angle = 25; // Degrees
-    float angleCos = std::cos( angle * PI_F / 180 );
-    for ( UndirectedEdgeId e{ 0 }; e < mesh.topology.undirectedEdgeSize(); e++ )
-        if ( !mesh.topology.isLoneEdge( e ) )
-            if ( mesh.dihedralAngleCos( e ) < angleCos ) // dihedralAngleCos returns 1 for boundary edges
-                lenSum += mesh.edgeLength( e );
+    const float critCos = std::cos( angle * PI_F / 180 );
+    parallel_for( tbb::blocked_range<UndirectedEdgeId>(
+        0_ue, UndirectedEdgeId{ mesh.topology.undirectedEdgeSize() } ),
+        [&mesh, &lenSum, critCos, maxLenSum] ( const tbb::blocked_range<UndirectedEdgeId>& r )
+        {
+            for ( UndirectedEdgeId ue = r.begin(); ue < r.end(); ++ue )
+            {
+                if ( mesh.topology.isLoneEdge( ue ) )
+                    continue;
+                float dihedralCos = mesh.dihedralAngleCos( ue );
+                if ( dihedralCos <= critCos )
+                {
+                    double currentSum = lenSum.fetch_add( mesh.edgeLength( ue ) );
+                    if ( currentSum > maxLenSum )
+                        break; // Already reached threshold, stop
+                }
+            }
+        } );
     return lenSum > maxLenSum;
 }
 

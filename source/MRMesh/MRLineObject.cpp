@@ -49,7 +49,7 @@ void LineObject::setLength( float size )
     setXf( currentXf );
 }
 
-float LineObject::getSize( void ) const
+float LineObject::getLength( void ) const
 {
     auto currentXf = xf();
     Matrix3f r, s;
@@ -135,7 +135,7 @@ const std::vector<FeatureObjectSharedProperty>& LineObject::getAllSharedProperti
     static std::vector<FeatureObjectSharedProperty> ret = {
        {"Center"   , &LineObject::getCenter   , &LineObject::setCenter},
        {"Direction", &LineObject::getDirection, &LineObject::setDirection},
-       {"Size"     , &LineObject::getSize     , &LineObject::setSize} 
+       {"Length"   , &LineObject::getLength   , &LineObject::setLength} 
     };
     return ret;
 }

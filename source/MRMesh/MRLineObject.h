@@ -42,7 +42,7 @@ public:
     /// updates xf to scale size
     MRMESH_API void setLength( float size );
     /// calculates line size from xf
-    MRMESH_API float getSize() const;
+    MRMESH_API float getLength() const;
 
     [[deprecated("This confusingly sets half-length. Use `setLength(halfLen * 2)` instead.")]]
     void setSize( float halfLen ) { setLength( halfLen * 2 ); }

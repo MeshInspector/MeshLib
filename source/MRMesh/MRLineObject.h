@@ -44,7 +44,7 @@ public:
     /// calculates line size from xf
     MRMESH_API float getSize() const;
 
-    MRMESH_API virtual  std::vector<FeatureObjectSharedProperty> getAllSharedProperties( void ) override;
+    MRMESH_API virtual  std::vector<FeatureObjectSharedProperty> getAllSharedProperties() override;
 
 protected:
     LineObject( const LineObject& other ) = default;
@@ -60,7 +60,7 @@ protected:
     virtual VoidOrErrStr deserializeModel_( const std::filesystem::path&, ProgressCallback ) override
         { return {}; }
 
-private:
+private: 
     void constructPolyline_();
 };
 

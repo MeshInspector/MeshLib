@@ -16,7 +16,7 @@ using FeaturesPropertyTypesVariant = std::variant<float, Vector3f >;
 // getter and setter signatures.The getter lambda invokes the getter method on the object, and the setter lambda ensures the correct variant type is passed before 
 // invoking the setter method.
 
-struct FeatureObjectSharedProperty 
+struct FeatureObjectSharedProperty
 {
     std::string propertyName;
     std::function<FeaturesPropertyTypesVariant()> getter;
@@ -48,13 +48,13 @@ struct FeatureObjectSharedProperty
         }
         else
         {
-            static_assert( dependent_false, "Setter function signature unsupported" );
+            static_assert( dependent_false<T>, "Setter function signature unsupported" );
         }
     }
 };
 
 /// An interface class which allows feature objects to share setters and getters on their main properties, for convenient presentation in the UI
-struct  FeatureObjectWithSharedProperties 
+struct  FeatureObjectWithSharedProperties
 {
 public:
     FeatureObjectWithSharedProperties( void ) noexcept = default;

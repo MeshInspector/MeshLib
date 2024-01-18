@@ -2,6 +2,7 @@
 #include "MRMeshFwd.h"
 #include "MRObjectMeshHolder.h"
 #include "MRFeatureObjectSharedProperties.h"
+
 namespace MR
 {
 

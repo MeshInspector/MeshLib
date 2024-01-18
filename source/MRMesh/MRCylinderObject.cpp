@@ -109,7 +109,8 @@ void CylinderObject::setDirection( const Vector3f& normal )
     auto currentXf = xf();
     Matrix3f r, s;
     decomposeMatrix3( currentXf.A, r, s );
-    currentXf.A = getRotationMatrix( normal.normalized() ) * s;
+    currentXf.A = getRotationMatrix( normal ) * s;
+    setXf( currentXf );
 }
 
 void CylinderObject::setCenter( const Vector3f& center )

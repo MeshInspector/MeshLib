@@ -11,6 +11,9 @@
 namespace MR
 {
 
+// default length of line. Historically it eq. 2 (but 1 looks better). Left as is for compatibility.
+size_t baseLineOblectLength_ = 2;
+
 MR_ADD_CLASS_FACTORY( LineObject )
 
 Vector3f LineObject::getDirection() const
@@ -42,7 +45,7 @@ void LineObject::setCenter( const Vector3f& center )
 void LineObject::setSize( float size )
 {
     auto currentXf = xf();
-    currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( Vector3f::diagonal( size ) );
+    currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( Vector3f::diagonal( size / baseLineOblectLength_ ) );
     setXf( currentXf );
 }
 
@@ -51,7 +54,7 @@ float LineObject::getSize( void ) const
     auto currentXf = xf();
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
-    return  s.x.x; 
+    return  s.x.x * baseLineOblectLength_;
 }
 
 
@@ -120,7 +123,7 @@ void LineObject::constructPolyline_()
     // create object Polyline
     Polyline3 lineObj;
     const std::vector<Vector3f> points = { Vector3f::minusX(), Vector3f::plusX() };
-    lineObj.addFromPoints( points.data(), 1 );
+    lineObj.addFromPoints( points.data(), baseLineOblectLength_ );
 
     polyline_ = std::make_shared<Polyline3>( lineObj );
 

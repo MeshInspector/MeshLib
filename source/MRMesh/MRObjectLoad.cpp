@@ -52,27 +52,27 @@ std::optional<MR::IOFilter> findFilter( const MR::IOFilters& filters, const std:
 // sum length of all sharp edges greater than 1.0 * (diagonal of the bounding box)
 bool detectSharpEdges( const Mesh& mesh )
 {
-    std::atomic<double> lenSum = 0.0;
     double maxLenSum = mesh.getBoundingBox().diagonal();
-    constexpr int angle = 25; // Degrees
-    const float critCos = std::cos( angle * PI_F / 180 );
-    parallel_for( tbb::blocked_range<UndirectedEdgeId>(
-        0_ue, UndirectedEdgeId{ mesh.topology.undirectedEdgeSize() } ),
-        [&mesh, &lenSum, critCos, maxLenSum] ( const tbb::blocked_range<UndirectedEdgeId>& r )
+
+    constexpr int angle = 25; // Critical angle from planar, degrees
+    UndirectedEdgeBitSet creases = mesh.findCreaseEdges( angle * PI_F / 180 );
+
+    double lenSum = parallel_deterministic_reduce(
+        tbb::blocked_range( 0_ue, UndirectedEdgeId{ mesh.topology.undirectedEdgeSize() }, 1024 ),
+        0.0,
+        [&mesh, &creases, maxLenSum] ( const auto& range, double currentLength )
         {
-            for ( UndirectedEdgeId ue = r.begin(); ue < r.end(); ++ue )
-            {
-                if ( mesh.topology.isLoneEdge( ue ) )
-                    continue;
-                float dihedralCos = mesh.dihedralAngleCos( ue );
-                if ( dihedralCos <= critCos )
+            for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
+                if ( creases.test( ue ) )
                 {
-                    double currentSum = lenSum.fetch_add( mesh.edgeLength( ue ) );
-                    if ( currentSum > maxLenSum )
+                    currentLength += mesh.edgeLength( ue );
+                    if ( currentLength > maxLenSum )
                         break; // Already reached threshold, stop
                 }
-            }
-        } );
+            return currentLength;
+        },
+        std::plus<double>() );
+
     return lenSum > maxLenSum;
 }
 
@@ -717,7 +717,7 @@ Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( 
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    Expected<std::shared_ptr<Object>, std::string> res = unexpected( std::string( "unsupported file extension" ) );
+    Expected<std::shared_ptr<Object>> res = unexpected( std::string( "unsupported file extension" ) );
 
     auto itF = std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const IOFilter& filter )
     {

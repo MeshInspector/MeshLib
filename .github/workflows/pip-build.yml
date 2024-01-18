@@ -73,6 +73,12 @@ jobs:
           rm -rf /Library/Frameworks/Python.framework/
           brew install --force python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew link --overwrite python@${{ matrix.py-version }}
 
+      - name: Create virtualenv
+        run: |
+          ${{ matrix.py-cmd }} -m venv .venv
+          . .venv/bin/activate
+          echo PATH=$PATH >> $GITHUB_ENV
+      
       - name: Python setup
         run: |
           curl -sS https://bootstrap.pypa.io/get-pip.py | ${{ matrix.py-cmd }}
@@ -160,6 +166,12 @@ jobs:
       - name: Python setup
         if: ${{ !(matrix.platform == 'x86' && matrix.py-version == '3.11') }}
         run: brew install python@${{matrix.py-version}}
+
+      - name: Create virtualenv
+        run: |
+          ${{ matrix.py-cmd }} -m venv .venv
+          . .venv/bin/activate
+          echo PATH=$PATH >> $GITHUB_ENV
 
       - name: Pip setup
         run: |

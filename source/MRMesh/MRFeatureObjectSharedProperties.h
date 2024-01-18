@@ -54,14 +54,14 @@ struct FeatureObjectSharedProperty
 };
 
 /// An interface class which allows feature objects to share setters and getters on their main properties, for convenient presentation in the UI
-struct  FeatureObjectWithSharedProperties
+struct  FeatureObject
 {
 public:
-    FeatureObjectWithSharedProperties( void ) noexcept = default;
-    FeatureObjectWithSharedProperties( const FeatureObjectWithSharedProperties& ) noexcept = default;
-    FeatureObjectWithSharedProperties( FeatureObjectWithSharedProperties&& ) noexcept = default;
-    FeatureObjectWithSharedProperties& operator = ( FeatureObjectWithSharedProperties&& ) noexcept = default;
-    virtual ~FeatureObjectWithSharedProperties() = default;
+    FeatureObject( void ) noexcept = default;
+    FeatureObject( const FeatureObject& ) noexcept = default;
+    FeatureObject( FeatureObject&& ) noexcept = default;
+    FeatureObject& operator = ( FeatureObject&& ) noexcept = default;
+    virtual ~FeatureObject() = default;
 
     /// Create and generate list of bounded getters and setters for the main properties of feature object, together with prop. name for display and edit into UI.
     virtual std::vector<FeatureObjectSharedProperty> getAllSharedProperties( void ) = 0;

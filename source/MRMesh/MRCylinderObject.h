@@ -8,7 +8,7 @@ namespace MR
 
 /// Object to show Cylinder feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS CylinderObject : public ObjectMeshHolder, public FeatureObjectWithSharedProperties
+class MRMESH_CLASS CylinderObject : public ObjectMeshHolder, public FeatureObject
 {
 public:
     /// Creates simple Cylinder object with center in zero and radius - 1

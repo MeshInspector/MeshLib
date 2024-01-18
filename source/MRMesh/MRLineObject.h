@@ -8,7 +8,7 @@ namespace MR
 
 /// Object to show plane feature
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS LineObject : public ObjectLinesHolder, public FeatureObjectWithSharedProperties
+class MRMESH_CLASS LineObject : public ObjectLinesHolder, public FeatureObject
 {
 public:
     /// Creates simple plane object

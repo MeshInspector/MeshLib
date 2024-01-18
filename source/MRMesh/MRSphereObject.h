@@ -8,7 +8,7 @@ namespace MR
 
 /// Object to show sphere feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS SphereObject : public ObjectMeshHolder, public FeatureObjectWithSharedProperties
+class MRMESH_CLASS SphereObject : public ObjectMeshHolder, public FeatureObject
 {
 public:
     /// Creates simple sphere object with center in zero and radius - 1

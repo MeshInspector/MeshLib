@@ -188,7 +188,7 @@ std::vector<FeatureObjectSharedProperty> ConeObject::getAllSharedProperties( voi
     featureObjectProperties.emplace_back( "Angle", &ConeObject::getAngle, &ConeObject::setAngle, this );
     featureObjectProperties.emplace_back( "Height", &ConeObject::getHeight, &ConeObject::setHeight, this );
 
-    featureObjectProperties.emplace_back( "Center", &ConeObject::getCenter, &ConeObject::setCenter, this );
+    featureObjectProperties.emplace_back( "Center bla bla", &ConeObject::getCenter, &ConeObject::setCenter, this );
     featureObjectProperties.emplace_back( "Main axis", &ConeObject::getDirection, &ConeObject::setDirection, this );
 
     return featureObjectProperties;

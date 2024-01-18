@@ -172,7 +172,7 @@ Vector3d PointToPlaneAligningTransform::findBestTranslation() const
     return Vector3d{ solution.coeff(0), solution.coeff(1), solution.coeff(2) };
 }
 
-TEST( MRMesh, PointToPlaneIteration )
+TEST( MRMesh, PointToPlaneAligningTransform1 )
 {
     std::vector<Vector3d> pInit, n, n2;
     pInit.resize( 10 );
@@ -286,6 +286,118 @@ TEST( MRMesh, PointToPlaneIteration )
         const auto ptp = preparePt2Pl( xf );
         const auto shift = ptp.findBestTranslation();
         EXPECT_NEAR( ( b - shift ).length(), 0., eps );
+    }
+}
+
+TEST( MRMesh, PointToPlaneAligningTransform2 )
+{
+    // set points
+    const std::vector<Vector3d> points = {
+        {   1.0,   1.0, -5.0 },
+        {  14.0,   1.0,  1.0 },
+        {   1.0,  14.0,  2.0 },
+        { -11.0,   2.0,  3.0 },
+        {   1.0, -11.0,  4.0 },
+        {   1.0,   2.0,  8.0 },
+        {   2.0,   1.0, -5.0 },
+        {  15.0,   1.5,  1.0 },
+        {   1.5,  15.0,  2.0 },
+        { -11.0,   2.5,  3.1 },
+    };
+
+    // large absolute value testing
+    //AffineXf3d largeShiftXf = AffineXf3d(Matrix3d(), Vector3d(/*10000, - 10000, 0*/));
+    //for (auto& pn : points) pn = largeShiftXf(pn);
+
+    const std::vector<Vector3d> pointsNorm = {
+        Vector3d{  0.0,  0.0, -1.0 }.normalized(),
+        Vector3d{  1.0,  0.1,  1.0 }.normalized(),
+        Vector3d{  0.1,  1.0,  1.2 }.normalized(),
+        Vector3d{ -1.0,  0.1,  1.0 }.normalized(),
+        Vector3d{  0.1, -1.1,  1.1 }.normalized(),
+        Vector3d{  0.1,  0.1,  1.0 }.normalized(),
+        Vector3d{  0.1,  0.0, -1.0 }.normalized(),
+        Vector3d{  1.1,  0.1,  1.0 }.normalized(),
+        Vector3d{  0.1,  1.0,  1.2 }.normalized(),
+        Vector3d{ -1.1,  0.1,  1.1 }.normalized()
+    };
+
+    // init translation
+    const std::vector<AffineXf3d> xfs = {
+        // zero xf
+        AffineXf3d(
+            Matrix3d(
+                Vector3d(1, 0, 0),
+                Vector3d(0, 1, 0),
+                Vector3d(0, 0, 1)
+            ),
+            Vector3d(0,0,0)),
+
+        // Rz
+        AffineXf3d(
+            Matrix3d(
+                Vector3d(1, sin(0.5), 0),
+                Vector3d(-sin(0.5), 1, 0),
+                Vector3d(0, 0, 1)
+            ),
+            Vector3d(0,0,0)),
+
+        // Rz + transl
+        AffineXf3d(
+            Matrix3d(
+                Vector3d(1, sin(0.5), 0),
+                Vector3d(-sin(0.5), 1, 0),
+                Vector3d(0, 0, 1)
+            ),
+            Vector3d(2,-2,0)),
+
+        // complex xf
+        AffineXf3d(
+            Matrix3d(
+                Vector3d(1, sin(0.15), -sin(0.1)),
+                Vector3d(-sin(0.15), 1, sin(0.2)),
+                Vector3d(sin(0.1), -sin(0.2), 1)
+            ),
+            Vector3d(2,-20,8)),
+    };
+
+    //std::random_device rd;
+    //std::mt19937 gen(rd());
+    //const double max_rnd = 0.01;
+    //std::uniform_real_distribution<> dis(-max_rnd, max_rnd);
+    for (const auto& xf : xfs)
+    {
+        constexpr double eps = 5e-13;
+        {
+            PointToPlaneAligningTransform p2pl;
+            for (int i = 0; i < points.size(); i++)
+            {
+                p2pl.add( points[i],
+                    xf( points[i] ), // +Vector3d(dis(gen), dis(gen), dis(gen))
+                    xf.A * pointsNorm[i] );
+            }
+            auto am = p2pl.calculateAmendment();
+            AffineXf3d xfResP2pl = am.linearXf();
+
+            EXPECT_NEAR((xfResP2pl.A - xf.A).norm(), 0., eps);
+            EXPECT_NEAR((xfResP2pl.b - xf.b).length(), 0., eps);
+        }
+        {
+            auto scaleXf = xf;
+            scaleXf.A *= 0.3;
+            PointToPlaneAligningTransform p2pl;
+            for (int i = 0; i < points.size(); i++)
+            {
+                p2pl.add( points[i],
+                    scaleXf( points[i] ), // +Vector3d(dis(gen), dis(gen), dis(gen))
+                    xf.A * pointsNorm[i] );
+            }
+            auto am = p2pl.calculateAmendmentWithScale();
+            AffineXf3d xfResP2pl = am.linearXf();
+
+            EXPECT_NEAR((xfResP2pl.A - scaleXf.A).norm(), 0., eps);
+            EXPECT_NEAR((xfResP2pl.b - scaleXf.b).length(), 0., eps);
+        }
     }
 }
 

@@ -79,75 +79,62 @@ public:
     // Clear the frame buffers
     MRVIEWER_API void clearFramebuffers();
 
-    /// Draw given object
-    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, 
+    /// Immediate draw of given object with transformation to world taken from object's scene
+    MRVIEWER_API void draw( const VisualObject& obj,
         DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const;
 
-    /// Draw given object with given projection matrix
-    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f & projM, 
+    /// Immediate draw of given object with given transformation to world
+    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf,
+        DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const;
+
+    /// Immediate draw of given object with given transformation to world and given projection matrix
+    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f & projM,
          DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const;
 
-    // Returns visual points with corresponding colors (pair<vector<Vector3f>,vector<Vector4f>>)
-    MRVIEWER_API const ViewportPointsWithColors& getPointsWithColors() const;
-    // Returns visual lines segments with corresponding colors (pair<vector<LineSegm3f>,vector<SegmEndColors>>)
-    [[deprecated]]
-    MRVIEWER_API const ViewportLinesWithColors& getLinesWithColors() const;
+    /// Rendering parameters for immediate drawing of lines and points
+    struct LinePointImmediateRenderParams : BaseRenderParams
+    {
+        float width{1.0f};
+        bool depthTest{ true };
+    };
 
-    // Sets visual points with corresponding colors (pair<vector<Vector3f>,vector<Vector4f>>)
-    // calls 'beforeSetPointsWithColors' lambda if it is present
-    [[deprecated]]
-    MRVIEWER_API void setPointsWithColors( const ViewportPointsWithColors& pointsWithColors );
+    /// Draw lines immediately
+    MRVIEWER_API void drawLines( const std::vector<LineSegm3f>& lines, const std::vector<SegmEndColors>& colors, const LinePointImmediateRenderParams & params );
+    void drawLines( const std::vector<LineSegm3f>& lines, const std::vector<SegmEndColors>& colors, float width = 1, bool depthTest = true )
+        { drawLines( lines, colors, { getBaseRenderParams(), width, depthTest } ); }
 
-    // Sets visual lines segments with corresponding colors (pair<vector<LineSegm3f>,vector<SegmEndColors>>)
-    // calls 'beforeSetLinesWithColors' lambda if it is present
-    [[deprecated]]
-    MRVIEWER_API void setLinesWithColors( const ViewportLinesWithColors& linesWithColors );
+    /// Draw points immediately
+    MRVIEWER_API void drawPoints( const std::vector<Vector3f>& points, const std::vector<Vector4f>& colors, const LinePointImmediateRenderParams & params );
+    void drawPoints( const std::vector<Vector3f>& points, const std::vector<Vector4f>& colors, float width = 1, bool depthTest = true )
+        { drawPoints( points, colors, { getBaseRenderParams(), width, depthTest } ); }
 
-    // Add line to draw from start_point position to fin_point position.
-    [[deprecated]]
-    MRVIEWER_API void  add_line( const Vector3f& start_pos, const Vector3f& fin_pos,
-                                 const Color& color_start = Color::black(), const Color& color_fin = Color::black() );
-    // Add lines from points. 
-    [[deprecated]]
-    MRVIEWER_API void  add_lines( const std::vector<Vector3f>& points, const Color& color = Color::black() );
-    [[deprecated]]
-    MRVIEWER_API void  add_lines( const std::vector<Vector3f>& points, const std::vector<Color>& colors );
-    // Remove all lines selected for draw
-    [[deprecated]]
-    MRVIEWER_API void  remove_lines();
-    // Add point to draw-list  as a  "pos" position. 
-    [[deprecated]]
-    MRVIEWER_API void  add_point( const Vector3f& pos, const Color& color = Color::black() );
-    // Remove all lines selected for draw
-    [[deprecated]]
-    MRVIEWER_API void  remove_points();
-    // Is there a need to use depth_test for preview lines. (default: false)
-    [[deprecated]]
-    MRVIEWER_API void setPreviewLinesDepthTest( bool on );
-    // Is there a need to use depth_test for preview points. (default: false)
-    [[deprecated]]
-    MRVIEWER_API void setPreviewPointsDepthTest( bool on );
+    struct TriCornerColors
+    {
+        Vector4f a, b, c;
+    };
 
-    [[deprecated]]
-    bool getPreviewLinesDepthTest() const { return previewLinesDepthTest_; }
-    [[deprecated]]
-    bool getPreviewPointsDepthTest() const { return previewPointsDepthTest_; }
+    /// Draw triangles immediately (flat shaded)
+    MRVIEWER_API void drawTris( const std::vector<Triangle3f>& tris, const std::vector<TriCornerColors>& colors, const ModelRenderParams& params, bool depthTest = true );
+    MRVIEWER_API void drawTris( const std::vector<Triangle3f>& tris, const std::vector<TriCornerColors>& colors, const Matrix4f& modelM = {}, bool depthTest = true );
 
-    // Point size in pixels
-    float point_size{4.0f};
-    // Line width in pixels
-    float line_width{1.0f};
-    // Line and points z buffer offset
-    // negative offset make it closer to camera
-    // note that z buffer is not linear and common values are in range [0..1]
-    float linesZoffset{0.0f};
-    float pointsZoffset{0.0f};
+    /// Prepares base rendering parameters for this viewport
+    [[nodiscard]] BaseRenderParams getBaseRenderParams() const { return getBaseRenderParams( projM_ ); }
 
-    // This lambda is called before each change of visual points
-    std::function<void( const ViewportLinesWithColors& curr, const ViewportLinesWithColors& next )> beforeSetLinesWithColors{};
-    // This lambda is called before each change of visual lines
-    std::function<void( const ViewportPointsWithColors& curr, const ViewportPointsWithColors& next )> beforeSetPointsWithColors{};
+    /// Prepares base rendering parameters for this viewport with custom projection matrix
+    [[nodiscard]] BaseRenderParams getBaseRenderParams( const Matrix4f & projM ) const
+        { return { viewM_, projM, id, toVec4<int>( viewportRect_ ) }; }
 
+    /// Prepares rendering parameters to draw a model with given transformation in this viewport
+    [[nodiscard]] ModelRenderParams getModelRenderParams(
+         const Matrix4f & modelM, ///< model to world transformation, this matrix will be referenced in the result
+         Matrix4f * normM, ///< if not null, this matrix of normals transformation will be computed and referenced in the result
+         DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const
+        { return getModelRenderParams( modelM, projM_, normM, depthFunc, alphaSort ); }
+
+    /// Prepares rendering parameters to draw a model with given transformation in this viewport with custom projection matrix
+    [[nodiscard]] MRVIEWER_API ModelRenderParams getModelRenderParams( const Matrix4f & modelM, const Matrix4f & projM,
+         Matrix4f * normM, ///< if not null, this matrix of normals transformation will be computed and referenced in the result
+         DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const;
 
     // This function allows to pick point in scene by GL
     // use default pick radius
@@ -213,12 +200,8 @@ public:
     // and call transformView( xf ), then the user will see exactly the same picture
     MRVIEWER_API void transformView( const AffineXf3f & xf );
 
-    // returns base render params for immediate draw and for internal lines and points draw
-    ViewportGL::BaseRenderParams getBaseRenderParams() const { return { viewM_, projM_, toVec4<int>( viewportRect_ ) }; }
-
     bool getRedrawFlag() const { return needRedraw_; }
     void resetRedrawFlag() { needRedraw_ = false; }
-    // ------------------- Properties
 
     // Unique identifier
     ViewportId id{ 1};
@@ -446,8 +429,6 @@ private:
     bool previewLinesDepthTest_ = false;
     bool previewPointsDepthTest_ = false;
 
-    void draw_lines() const;
-    void draw_points() const;
     void draw_border() const;
     void draw_rotation_center() const;
     void draw_clipping_plane() const;

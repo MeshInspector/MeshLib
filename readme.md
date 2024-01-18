@@ -37,7 +37,7 @@ This list is not full and updating each day
  - Math primitives and operations support (Vectors 2D, 3D, 4D; Lines; Planes; Bounding Boxes; Matrices; Affine transformations; Quaternions; Histograms; etc.)
 ### 3D data handling, creation, modification
  - 3D data various representations support: Mesh, Voxel and Point Cloud.
- - Data creation 
+ - Data creation
    - Mesh creation by given vertices and triangles,
    - Surface primitives (e.g. tor, cube, sphere, etc).
  - Representation conversions
@@ -98,7 +98,7 @@ This list is not full and updating each day
    - Semi-auto voxel segmentation (volumes classification).
    - Semi-auto mesh segmentation by curvature.
  - Sampling
-   - Mesh sampling. The result is a separate thinned set of vertices, the mesh remains unchanged. 
+   - Mesh sampling. The result is a separate thinned set of vertices, the mesh remains unchanged.
    - Point cloud sampling. The result is a separate thinned set of points, the cloud remains unchanged
       - Uniform cloud sampling,
       - Grid cloud sampling.
@@ -136,7 +136,8 @@ pip install meshlib
 See Python Basic Examples [here](https://meshinspector.github.io/MeshLib/html/HowToBasic.html) or search for more complex ones on [stackoverflow.com](https://stackoverflow.com/).
 
 # Build
-## Build with VS2019 or VS2022 on Windows
+## Windows
+MeshLib can be build on Windows using either Visual Studio 2019 or Visual Studio 2022, both of which support c++20 language standard. 
 ```sh
 git clone https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
@@ -148,31 +149,32 @@ Note: following below steps will take about 40Gb of your disk space.
 ### Preparing Third Parties
 Some third parties are taken from vcpkg, while others (missing in vcpkg) are configured as git submodules.
 
-### Cuda
-Please install CUDA (v12.0|v11.4)(Visual Studio 2022|2019) from [official site](https://developer.nvidia.com/cuda-toolkit-archive)
+### CUDA
+Windows version of MeshLib is configured to use 
+* CUDA v11.4 in Visual Studio 2019 and
+* CUDA v12.0 in Visual Studio 2022.
+  
+Please install CUDA from the [official site](https://developer.nvidia.com/cuda-toolkit-archive).
+If you would like to use another version of CUDA, please modify `MRCudaVersion` in `MeshLib/source/platform.props`.
 
 ### Vcpkg
-1. Please install vcpkg, and integrate it into Visual Studio (note that vcpkg requires English language pack in Visual Studio, and vcpkg cannot be installed on FAT volumes, only on NTFS):
+1. Please install `vcpkg`, and integrate it into Visual Studio (note that vcpkg requires English language pack in Visual Studio, and vcpkg cannot be installed on FAT volumes, only on NTFS):
     ```sh
     git clone https://github.com/Microsoft/vcpkg.git
     cd vcpkg
-    git checkout 2023.11.20
+    git checkout 2024.01.12
     .\bootstrap-vcpkg.bat
     .\vcpkg integrate install (with admin rights)
-    cd ..
     ```
     More details here: [vcpkg](https://github.com/microsoft/vcpkg).
 
 2. (Optional, but recommended) Install [AWS CLI v2](https://awscli.amazonaws.com/AWSCLIV2.msi). Once installed, reopen PowerShell or CMD. This will allow you to use the vcpkg binary cache from our aws s3, which will speed up the installation process and reduce the required disk space.
 
-3. Execute `install.bat`
-    ```sh
-    cd vcpkg # or add vcpkg to PATH
-    MeshLib/thirdparty/install.bat
-    ```
-4. Open solution file MeshInspector/source/MeshLib.sln in Visual Studio. Build it and run.
+3. Execute `MeshLib/thirdparty/install.bat` having previously installed `vcpkg` as the current working directory (or simply add `vcpkg` to `PATH` environment variable).
+    
+4. Open solution file `MeshLib/source/MeshLib.sln` in Visual Studio. Build it and run.
 
-## Build with CMake on Linux
+## Linux
 This installation was checked on Ubuntu 20.04.4.
 
 Use automated installation process. It takes ~40 minutes if no required packages are already installed.
@@ -195,7 +197,7 @@ sudo apt install ./distr/meshlib-dev.deb
 
 > **_NOTE:_** You could specify build type to Debug by `export MESHLIB_BUILD_TYPE=Debug`. Release is default.
 
-## Build with Emscripten on Linux
+## WASM/Emscripten
 This installation was checked on Ubuntu 22.04 with Emscripten 3.1.48.
 
 Install Emscripten (find more on [Emscripten official page](https://emscripten.org/docs/getting_started/downloads.html))
@@ -230,7 +232,9 @@ Examples of integration with cmake can be found in the `./examples` directory.
 
 ## MacOS
 Same as for Linux, but requires brew packages to be installed:
-`xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/scripts/macos.txt`
+```
+xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/scripts/macos.txt
+```
 
 
 ## Windows

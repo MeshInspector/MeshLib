@@ -6,6 +6,8 @@
 #include "MRPch/MRTBB.h"
 #include "MRToFromEigen.h"
 #include "MRConstants.h"
+#include "MRPch/MRSpdlog.h"
+
 
 // https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf 
 
@@ -105,6 +107,11 @@ private:
     // main solver. 
     T solve( const std::vector<MR::Vector3<T>>& points, Cylinder3<T>& cylinder )
     {
+        if ( points.size() < 6 )
+        {
+            spdlog::warn( "Cylinder3Approximation :: Too low point for cylinder approximation count={}" , points.size() );
+            return -1;
+        }
         assert( points.size() >= 6 ); // "At least 6 points needs for correct fitting requires ."
 
         normalizedPoints_.clear();
@@ -133,6 +140,7 @@ private:
         }
         else
         {
+            spdlog::warn( "Cylinder3Approximation :: unsupported fitter" );
             assert( false ); // unsupported fitter
             return -1;
         }
@@ -264,7 +272,6 @@ private:
         T const theraStep = static_cast< T >( 2 * PI ) / thetaResolution_;
         T const phiStep = static_cast< T >( PI2 ) / phiResolution_;
 
-
         // problem in list. 16. => start from pole.
         W = { 0, 0, 1 };
         T minError = G( W, PC, resultedRootSquare );
@@ -310,7 +317,6 @@ private:
         T const theraStep = static_cast< T >( 2 * PI ) / thetaResolution_;
         T const phiStep = static_cast< T >( PI2 ) / phiResolution_;
 
-
         // problem in list. 16. => start from pole.
         W = { 0, 0, 1 };
         T minError = G( W, PC, resultedRootSquare );
@@ -350,7 +356,6 @@ private:
         }
         );
 
-
         for ( size_t i = 0; i <= phiResolution_; ++i )
         {
             if ( storedData[i].error < minError )
@@ -371,6 +376,7 @@ private:
         return G( W, PC, resultedRootSquare );
     };
 };
+
 }
 
 

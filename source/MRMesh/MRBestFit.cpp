@@ -156,7 +156,7 @@ void PlaneAccumulator::addPlane( const Plane3d & pl )
 
 Vector3d PlaneAccumulator::findBestCrossPoint( const Vector3d & p0, double tol, int * rank, Vector3d * space ) const
 {
-    return p0 + mat_.solve( rhs_ - mat_ * p0, tol, rank, space );
+    return p0 + mat_.pseudoinverse( tol, rank, space ) * ( rhs_ - mat_ * p0 );
 }
 
 Vector3f PlaneAccumulator::findBestCrossPoint( const Vector3f & p0, float tol, int * rank, Vector3f * space ) const

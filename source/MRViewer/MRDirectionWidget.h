@@ -45,6 +45,8 @@ private:
     Vector3f base_;
     float length_;
     bool mousePressed_ = false;
+    // if blocked cannot be moved with mouse
+    bool blockedMouse_{ false };
     Vector3f worldStartPoint_;
     float viewportStartPointZ_{ 0.0f };
     OnDirectionChangedCallback onDirectionChanged_;
@@ -84,6 +86,10 @@ public:
     MRVIEWER_API const Vector3f& getDirection() const;
     /// Returns pointer to parent object
     MRVIEWER_API const VisualObject* getParentPtr() const;
+
+    /// Block or allow mouse editing (allowed by default)
+    bool isMouseBlocked() const { return blockedMouse_; }
+    void setMouseBlocked( bool blocked ) { blockedMouse_ = blocked; }
 private:
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;

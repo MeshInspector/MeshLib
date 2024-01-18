@@ -1140,8 +1140,23 @@
     <ClInclude Include="MRCylinder3.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRConeObject.h">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCone3.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRConeApproximator.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
     <ClInclude Include="MRVoxelsVolumeAccess.h">
       <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAlphaShape.h">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSymMatrix4.h">
+      <Filter>Source Files\Math</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1902,6 +1917,12 @@
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRFinally.cpp" />
+    <ClCompile Include="MRConeObject.cpp">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAlphaShape.cpp">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

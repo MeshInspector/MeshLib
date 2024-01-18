@@ -94,7 +94,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshProjection, [] ( pybind11::module_& m )
     m.def( "findProjection", &MR::findProjection,
         pybind11::arg( "pt" ), pybind11::arg( "mp" ),
         pybind11::arg( "upDistLimitSq" ) = FLT_MAX, pybind11::arg( "xf" ) = nullptr,
-        pybind11::arg( "loDistLimitSq" ) = 0.0f, pybind11::arg( "skipFace" ) = FaceId{},
+        pybind11::arg( "loDistLimitSq" ) = 0.0f, pybind11::arg_v( "skipFace", FaceId(), "FaceId()" ),
         "computes the closest point on mesh (or its region) to given point\n"
         "\tupDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exits returning upDistLimitSq and no valid point\n"
         "\txf mesh-to-point transformation, if not specified then identity transformation is assumed\n"

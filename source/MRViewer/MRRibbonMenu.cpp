@@ -99,7 +99,14 @@ void changeSelection( bool selectNext, int mod )
     }
 }
 
-void RibbonMenu::init( MR::Viewer* _viewer )
+void RibbonMenu::setCustomContextCheckbox(
+    const std::string& name,
+    CustomContextMenuCheckbox customContextMenuCheckbox )
+{
+    customCheckBox_[name] = customContextMenuCheckbox;
+}
+
+void RibbonMenu::init( MR::Viewer* _viewer ) 
 {
     ImGuiMenu::init( _viewer );
     // should init instance before load schema (as far as some font are used inside)
@@ -133,6 +140,7 @@ void RibbonMenu::init( MR::Viewer* _viewer )
 
         draw_helpers();
         drawVersionWindow_();
+        notifier_.drawNotifications( menu_scaling() );
     };
 
     buttonDrawer_.setMenu( this );
@@ -431,6 +439,45 @@ void RibbonMenu::drawHelpButton_()
 
     ImGui::PopStyleColor( 3 );
     ImGui::PopStyleVar( 2 );
+}
+
+bool RibbonMenu::drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected )
+{
+    bool res = false;
+    bool atLeastOneTrue = false;
+    bool allTrue = true;
+    for ( auto& [name, custom] : customCheckBox_ )
+    {
+        for ( auto& obj : selected )
+        {
+            if ( !obj )
+            {
+                continue;
+            }
+
+            bool isThisTrue = custom.getter( obj, viewer->viewport().id );
+            atLeastOneTrue = atLeastOneTrue || isThisTrue;
+            allTrue = allTrue && isThisTrue;
+        }
+
+        std::pair<bool, bool> realRes{ atLeastOneTrue, allTrue };
+
+        if ( UI::checkboxMixed( name.c_str(), &realRes.first, !realRes.second && realRes.first ) )
+        {
+            for ( auto& obj : selected )
+            {
+                if ( !obj )
+                {
+                    continue;
+                }
+
+                custom.setter( obj, viewer->viewport().id, realRes.first );
+            }
+            res = true;
+        }
+    }
+
+    return res;
 }
 
 void RibbonMenu::sortObjectsRecursive_( std::shared_ptr<Object> object )
@@ -914,6 +961,11 @@ bool RibbonMenu::drawGroupUngroupButton_( const std::vector<std::shared_ptr<Obje
     return someChanges;
 }
 
+void RibbonMenu::pushNotification( const RibbonNotification& notification )
+{
+    notifier_.pushNotification( notification );
+}
+
 void RibbonMenu::cloneTree( const std::vector<std::shared_ptr<Object>>& selectedObjects )
 {
     const std::regex pattern( R"(.* Clone(?:| \([0-9]+\))$)" );
@@ -1205,7 +1257,7 @@ RibbonMenu::DrawTabConfig RibbonMenu::setupItemsGroupConfig_( const std::vector<
         std::vector<int> resizableGroups;
         resizableGroups.reserve( groupWidths.size() );
         for ( int i = 0; i < res.size(); ++i )
-            if ( res[i].numBig + res[i].numSmallText > 0 )
+            if ( ( res[i].numBig + res[i].numSmallText > 0 ) && ( res[i].numBig + res[i].numSmallText + res[i].numSmall != 1 ) )
                 resizableGroups.push_back( i );
         if ( resizableGroups.empty() )
             break;
@@ -1629,6 +1681,7 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
             ImGui::TableNextColumn();
             wasChanged |= drawGeneralOptions_( selected );
             wasChanged |= drawDrawOptionsCheckboxes_( selectedVisualObjs );
+            wasChanged |= drawCustomCheckBox_( selected );
             wasChanged |= drawAdvancedOptions_( selectedVisualObjs );
             ImGui::TableNextColumn();
             wasChanged |= drawDrawOptionsColors_( selectedVisualObjs );
@@ -2306,12 +2359,22 @@ void RibbonMenu::highlightBlocking_()
         Color highlightColor = Color( 255, 161, 13, 255 );
         ImGui::FocusWindow( window );
         auto drawList = window->DrawList;
-        drawList->PushClipRect( ImVec2( 0, 0 ), ImGui::GetIO().DisplaySize );
-        drawList->AddRect(
-            ImVec2( window->Pos.x - 2.0f * scaling, window->Pos.y - 2.0f * scaling ),
-            ImVec2( window->Pos.x + window->Size.x + 2.0f * scaling, window->Pos.y + window->Size.y + 2.0f * scaling ),
-            highlightColor.getUInt32(), 0.0f, 0, 2.0f * scaling );
-        drawList->PopClipRect();
+        // Fix ImGui.
+        // The logic is set inside the library that if the program got there, 
+        // then the command buffer should be at least one, but possibly empty.
+        // there is a blocking window that is not currently displayed. 
+        // at some point, when trying to open another window, a crash occurs 
+        // (it is worth switching applications during playback so that the system makes the 
+        // window of another application active).
+        if ( drawList->CmdBuffer.Size > 0)
+        {
+            drawList->PushClipRect( ImVec2( 0, 0 ), ImGui::GetIO().DisplaySize );
+            drawList->AddRect(
+                ImVec2( window->Pos.x - 2.0f * scaling, window->Pos.y - 2.0f * scaling ),
+                ImVec2( window->Pos.x + window->Size.x + 2.0f * scaling, window->Pos.y + window->Size.y + 2.0f * scaling ),
+                highlightColor.getUInt32(), 0.0f, 0, 2.0f * scaling );
+            drawList->PopClipRect();
+        }
     }
     getViewerInstance().incrementForceRedrawFrames();
     blockingHighlightTimer_ -= ImGui::GetIO().DeltaTime;

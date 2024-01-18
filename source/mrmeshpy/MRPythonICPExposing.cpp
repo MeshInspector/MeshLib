@@ -2,20 +2,27 @@
 #include "MRMesh/MRICP.h"
 #include "MRMesh/MRMesh.h"
 
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertPair, MR::VertPair )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
 {
-    pybind11::enum_<MR::ICPMethod>( m, "ICPMethod" ).
-        value( "Combined", MR::ICPMethod::Combined, "PointToPoint for the first 2 iterations, PointToPlane then" ).
-        value( "PointToPoint", MR::ICPMethod::PointToPoint, "use it in the cases with big differences, takes more iterations" ).
-        value( "PointToPlane", MR::ICPMethod::PointToPlane, "finds solution faster in fewer iterations" );
+    pybind11::enum_<MR::ICPMethod>( m, "ICPMethod", "The method how to update transformation from point pairs" ).
+        value( "Combined", MR::ICPMethod::Combined, "PointToPoint for the first 2 iterations, and PointToPlane for the remaining iterations" ).
+        value( "PointToPoint", MR::ICPMethod::PointToPoint,
+            "select transformation that minimizes mean squared distance between two points in each pair, "
+            "it is the safest approach but can converge slowly" ).
+        value( "PointToPlane", MR::ICPMethod::PointToPlane,
+            "select transformation that minimizes mean squared distance between a point and a plane via the other point in each pair, "
+            "converge much faster than PointToPoint in case of many good (with not all points/normals in one plane) pairs" );
     
-    pybind11::enum_<MR::ICPMode>( m, "ICPMode", "You could fix any axis(axes) of rotation by using this modes" ).
-        value( "AnyRigidXf", MR::ICPMode::AnyRigidXf, "all 6 degrees of freedom (dof)" ).
-        value( "OrthogonalAxis", MR::ICPMode::OrthogonalAxis, "5 dof, except argument axis" ).
-        value( "FixedAxis", MR::ICPMode::FixedAxis, "4 dof, translation and one argument axis" ).
-        value( "TranslationOnly", MR::ICPMode::TranslationOnly, "3 dof, no rotation" );
+    pybind11::enum_<MR::ICPMode>( m, "ICPMode", "The group of transformations, each with its own degrees of freedom" ).
+        value( "RigidScale", MR::ICPMode::RigidScale, "rigid body transformation with uniform scaling (7 degrees of freedom)" ).
+        value( "AnyRigidXf", MR::ICPMode::AnyRigidXf, "rigid body transformation (6 degrees of freedom)" ).
+        value( "OrthogonalAxis", MR::ICPMode::OrthogonalAxis, "rigid body transformation with rotation except argument axis (5 degrees of freedom)" ).
+        value( "FixedAxis", MR::ICPMode::FixedAxis, "rigid body transformation with rotation around given axis only (4 degrees of freedom)" ).
+        value( "TranslationOnly", MR::ICPMode::TranslationOnly, "only translation (3 degrees of freedom)" );
 
-    pybind11::class_<MR::VertPair>( m, "VertPair" ).
+    MR_PYTHON_CUSTOM_CLASS( VertPair ).
         def( pybind11::init<>() ).
         def_readwrite( "refPoint", &MR::VertPair::refPoint, "coordinates of the closest point on reference mesh (after applying refXf)" ).
         def_readwrite( "norm", &MR::VertPair::norm, "surface normal in a vertex on the floating mesh (after applying Xf)" ).
@@ -29,13 +36,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
 
     pybind11::class_<MR::ICPProperties>( m, "ICPProperties" ).
         def( pybind11::init<>() ).
-        def_readwrite( "method", &MR::ICPProperties::method ).
-        def_readwrite( "p2plAngleLimit", &MR::ICPProperties::p2plAngleLimit,
-            "rotation part will be limited by this value. If the whole rotation exceed this value, it will be normalized to that.\n"
-            "Note: PointToPlane only!").
+        def_readwrite( "method", &MR::ICPProperties::method, "The method how to update transformation from point pairs" ).
+        def_readwrite( "p2plAngleLimit", &MR::ICPProperties::p2plAngleLimit, "Rotation angle during one iteration of PointToPlane will be limited by this value").
+        def_readwrite( "p2plScaleLimit", &MR::ICPProperties::p2plScaleLimit, "Scaling during one iteration of PointToPlane will be limited by this value").
         def_readwrite( "cosTreshold", &MR::ICPProperties::cosTreshold, "Points pair will be counted only if cosine between surface normals in points is higher" ).
         def_readwrite( "distTresholdSq", &MR::ICPProperties::distTresholdSq, "Points pair will be counted only if squared distance between points is lower than" ).
-        def_readwrite( "distStatisticSigmaFactor ", &MR::ICPProperties::distStatisticSigmaFactor,
+        def_readwrite( "distStatisticSigmaFactor", &MR::ICPProperties::distStatisticSigmaFactor,
             "Sigma multiplier for statistic throw of paints pair based on the distance\n"
             "Default: all pairs in the interval the (distance = mean +- 3*sigma) are passed" ).
         def_readwrite( "icpMode", &MR::ICPProperties::icpMode, "Finds only translation. Rotation part is identity matrix" ).

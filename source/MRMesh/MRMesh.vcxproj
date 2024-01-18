@@ -12,7 +12,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAligningTransform.h" />
+    <ClInclude Include="MRAlphaShape.h" />
     <ClInclude Include="MRChangeValue.h" />
+    <ClInclude Include="MRCone3.h" />
+    <ClInclude Include="MRConeApproximator.h" />
+    <ClInclude Include="MRConeObject.h" />
     <ClInclude Include="MRCylinder3.h" />
     <ClInclude Include="MRCylinderApproximator.h" />
     <ClInclude Include="MRCylinderObject.h" />
@@ -181,6 +185,7 @@
     <ClInclude Include="MRSceneLoad.h" />
     <ClInclude Include="MRSolarRadiation.h" />
     <ClInclude Include="MRSphere.h" />
+    <ClInclude Include="MRSymMatrix4.h" />
     <ClInclude Include="MRTiffIO.h" />
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
@@ -367,6 +372,7 @@
     <ClCompile Include="MRAffineXf2.cpp" />
     <ClCompile Include="MRAggregateFlow.cpp" />
     <ClCompile Include="MRAlignTextToMesh.cpp" />
+    <ClCompile Include="MRAlphaShape.cpp" />
     <ClCompile Include="MRArrow.cpp" />
     <ClCompile Include="MRBasinVolume.cpp" />
     <ClCompile Include="MRBestFitQuadric.cpp" />
@@ -379,6 +385,7 @@
     <ClCompile Include="MRColorMapAggregator.cpp" />
     <ClCompile Include="MRCombinedHistoryAction.cpp" />
     <ClCompile Include="MRComputeBoundingBox.cpp" />
+    <ClCompile Include="MRConeObject.cpp" />
     <ClCompile Include="MRConfig.cpp" />
     <ClCompile Include="MRContour.cpp" />
     <ClCompile Include="MRContoursCut.cpp" />

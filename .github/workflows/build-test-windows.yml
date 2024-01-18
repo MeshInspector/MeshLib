@@ -8,7 +8,7 @@ on:
         type: boolean
 
 env:
-  VCPKG-VERSION: '2023.11.20'
+  VCPKG-VERSION: '2024.01.12'
 
 jobs:
   windows-build-test:
@@ -29,6 +29,9 @@ jobs:
             CUDA-VERSION: '11.4.2.47141'
             CUDA-MAJOR: '11'
             CUDA-MINOR: '4'
+    permissions:
+      id-token: write # This is required for requesting the JWT
+      contents: read  # This is required for actions/checkout
 
     steps:
       - name: Checkout
@@ -53,8 +56,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
           aws-region: us-east-1
 
       - name: Update vcpkg packages

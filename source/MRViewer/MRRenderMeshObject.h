@@ -14,8 +14,8 @@ public:
     MRVIEWER_API RenderMeshObject( const VisualObject& visObj );
     MRVIEWER_API virtual ~RenderMeshObject();
 
-    MRVIEWER_API virtual void render( const RenderParams& params ) override;
-    MRVIEWER_API virtual void renderPicker( const BaseRenderParams& params, unsigned geomId ) override;
+    MRVIEWER_API virtual void render( const ModelRenderParams& params ) override;
+    MRVIEWER_API virtual void renderPicker( const ModelRenderParams& params, unsigned geomId ) override;
     MRVIEWER_API virtual size_t heapBytes() const override;
     MRVIEWER_API virtual size_t glBytes() const override;
     MRVIEWER_API virtual void forceBindAll() override;
@@ -73,9 +73,9 @@ protected:
 
     int maxTexSize_{ 0 };
 
-    MRVIEWER_API virtual void renderEdges_( const RenderParams& parameters, GLuint vao, const Color& color, uint32_t dirtyFlag );
+    MRVIEWER_API virtual void renderEdges_( const ModelRenderParams& parameters, GLuint vao, const Color& color, uint32_t dirtyFlag );
 
-    MRVIEWER_API virtual void renderMeshEdges_( const RenderParams& parameters );
+    MRVIEWER_API virtual void renderMeshEdges_( const ModelRenderParams& parameters );
 
     MRVIEWER_API virtual void bindMesh_( bool alphaSort );
     

@@ -253,7 +253,7 @@ std::shared_ptr<Object> VisualObject::shallowClone() const
     return clone();
 }
 
-void VisualObject::render( const RenderParams& params ) const
+void VisualObject::render( const ModelRenderParams& params ) const
 {
     setupRenderObject_();
     if ( !renderObj_ )
@@ -262,7 +262,7 @@ void VisualObject::render( const RenderParams& params ) const
     renderObj_->render( params );
 }
 
-void VisualObject::renderForPicker( const BaseRenderParams& params, unsigned id) const
+void VisualObject::renderForPicker( const ModelRenderParams& params, unsigned id) const
 {
     setupRenderObject_();
     if ( !renderObj_ )

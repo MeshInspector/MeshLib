@@ -8,6 +8,7 @@
 #include "MRSphere.h"
 #include "MRSymMatrix2.h"
 #include "MRSymMatrix3.h"
+#include "MRSymMatrix4.h"
 #include "MRTriPoint.h"
 #include "MRVector2.h"
 #include "MRVector3.h"
@@ -58,6 +59,9 @@ template struct SymMatrix2<double>;
 
 template struct SymMatrix3<float>;
 template struct SymMatrix3<double>;
+
+template struct SymMatrix4<float>;
+template struct SymMatrix4<double>;
 
 template struct TriPoint<float>;
 template struct TriPoint<double>;

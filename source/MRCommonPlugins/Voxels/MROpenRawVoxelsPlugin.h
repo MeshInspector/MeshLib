@@ -17,7 +17,7 @@ private:
     virtual bool onEnable_() override;
     virtual bool onDisable_() override;
 
-    bool autoMode_{ true };
+    bool autoMode_{ false };
     VoxelsLoad::RawParameters parameters_;
 };
 }

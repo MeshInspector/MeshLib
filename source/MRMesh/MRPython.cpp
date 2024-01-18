@@ -57,9 +57,9 @@ PythonExport& PythonExport::instance()
     return instance_;
 }
 
-PythonFunctionAdder::PythonFunctionAdder( const std::string& moduleName, std::function<void( pybind11::module_& m )> func )
+PythonFunctionAdder::PythonFunctionAdder( const std::string& moduleName, std::function<void( pybind11::module_& m )> func, PythonExport::Priority priority )
 {
-    PythonExport::instance().addFunc( moduleName, func );
+    PythonExport::instance().addFunc( moduleName, func, priority );
 }
 
 PythonFunctionAdder::PythonFunctionAdder( const std::string& moduleName, PyObject* ( *initFncPointer )( void ) )

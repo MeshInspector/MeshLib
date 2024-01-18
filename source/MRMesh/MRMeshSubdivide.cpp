@@ -10,6 +10,8 @@
 #include "MRGTest.h"
 #include "MRPositionVertsSmoothly.h"
 #include "MRRegionBoundary.h"
+#include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include <queue>
 
 namespace MR
@@ -18,10 +20,10 @@ namespace MR
 struct EdgeLength
 {
     UndirectedEdgeId edge;
-    float lenSq = 0; // at the moment the edge was put in the queue
-
-    EdgeLength() = default;
-    EdgeLength( UndirectedEdgeId edge, float lenSq ) : edge( edge ), lenSq( lenSq ) {}
+    float lenSq; // at the moment the edge was put in the queue
+    EdgeLength( UndirectedEdgeId edge = {}, float lenSq = 0 ) : edge( edge ), lenSq( lenSq ) {}
+    EdgeLength( NoInit ) : edge( noInit ) {}
+    explicit operator bool() const { return edge.valid(); }
 };
 
 inline bool operator < ( const EdgeLength & a, const EdgeLength & b )
@@ -34,7 +36,6 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
     MR_TIMER;
 
     const float maxEdgeLenSq = sqr( settings.maxEdgeLen );
-    std::priority_queue<EdgeLength> queue;
 
     // region is changed during subdivision,
     // so if it has invalid faces (they can become valid later) some collisions can occur
@@ -42,41 +43,70 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
     if ( settings.region )
         *settings.region &= mesh.topology.getValidFaces();
 
-    auto addInQueue = [&]( UndirectedEdgeId e )
+    FaceBitSet belowMinTriAspectRatio, aboveMaxTriAspectRatio;
+    if ( settings.minTriAspectRatio > 1 )
+        belowMinTriAspectRatio.resize( mesh.topology.faceSize(), true );
+    if ( settings.maxTriAspectRatio < FLT_MAX )
+        aboveMaxTriAspectRatio.resize( mesh.topology.faceSize(), false );
+
+    if ( !belowMinTriAspectRatio.empty() || !aboveMaxTriAspectRatio.empty() )
     {
-        bool canSubdivide = settings.subdivideBorder ? mesh.topology.isInnerOrBdEdge( e, settings.region ) : mesh.topology.isInnerEdge( e, settings.region );
-        if ( !settings.subdivideBorder && canSubdivide )
+        BitSetParallelFor( mesh.topology.getFaceIds( settings.region ), [&]( FaceId f )
         {
-            EdgeId eDir = EdgeId( e << 1 );
-            auto f = mesh.topology.left( eDir );
-            Vector3f vp[3];
-            if ( f.valid() )
-            {
-                mesh.getTriPoints( f, vp[0], vp[1], vp[2] );
-                canSubdivide = triangleAspectRatio( vp[0], vp[1], vp[2] ) < settings.critAspectRatio;
-            }
-            if ( canSubdivide )
-            {
-                f = mesh.topology.right( eDir );
-                if ( f.valid() )
-                {
-                    mesh.getTriPoints( f, vp[0], vp[1], vp[2] );
-                    canSubdivide = triangleAspectRatio( vp[0], vp[1], vp[2] ) < settings.critAspectRatio;
-                }
-            }
-        }
-        if ( !canSubdivide )
-            return;
-        float lenSq = mesh.edgeLengthSq( e );
+            const auto a = mesh.triangleAspectRatio( f );
+            if ( !belowMinTriAspectRatio.empty() && a >= settings.minTriAspectRatio )
+                belowMinTriAspectRatio.reset( f );
+            if ( !aboveMaxTriAspectRatio.empty() && a > settings.maxTriAspectRatio )
+                aboveMaxTriAspectRatio.set( f );
+        } );
+    }
+
+    auto getQueueElem = [&]( UndirectedEdgeId ue )
+    {
+        EdgeLength x;
+        EdgeId e( ue );
+        if ( settings.subdivideBorder ? !mesh.topology.isInnerOrBdEdge( e, settings.region )
+                                      : !mesh.topology.isInnerEdge( e, settings.region ) )
+            return x;
+        const float lenSq = mesh.edgeLengthSq( e );
         if ( lenSq < maxEdgeLenSq )
-            return;
-        queue.emplace( e, lenSq );
+            return x;
+        if ( !belowMinTriAspectRatio.empty() || !aboveMaxTriAspectRatio.empty() )
+        {
+            bool below = !belowMinTriAspectRatio.empty();
+            if ( auto f = mesh.topology.left( e ) )
+            {
+                if ( aboveMaxTriAspectRatio.test( f ) )
+                    return x;
+                if ( !belowMinTriAspectRatio.test( f ) )
+                    below = false;
+            }
+            if ( auto f = mesh.topology.right( e ) )
+            {
+                if ( aboveMaxTriAspectRatio.test( f ) )
+                    return x;
+                if ( !belowMinTriAspectRatio.test( f ) )
+                    below = false;
+            }
+            if ( below )
+                return x;
+        }
+        x.edge = ue;
+        x.lenSq = lenSq;
+        return x;
     };
 
-    for ( UndirectedEdgeId e : undirectedEdges( mesh.topology ) )
+    Vector<EdgeLength, UndirectedEdgeId> evec;
+    evec.resizeNoInit( mesh.topology.undirectedEdgeSize() );
+    ParallelFor( evec, [&]( UndirectedEdgeId ue )
     {
-        addInQueue( e );
-    }
+        EdgeLength x;
+        if ( !mesh.topology.isLoneEdge( ue ) )
+            x = getQueueElem( ue );
+        evec[ue] = x;
+    } );
+    std::erase_if( evec.vec_, []( const EdgeLength & x ) { return !x; } );
+    std::priority_queue<EdgeLength> queue( std::less<EdgeLength>(), std::move( evec.vec_ ) );
 
     if ( settings.progressCallback && !settings.progressCallback( 0.25f ) )
         return 0;
@@ -128,8 +158,25 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
             .criticalTriAspectRatio = settings.criticalAspectRatioFlip,
             .region = settings.region,
             .notFlippable = settings.notFlippable } );
+
+        if ( !belowMinTriAspectRatio.empty() || !aboveMaxTriAspectRatio.empty() )
+        {
+            for ( auto ei : orgRing( mesh.topology, e ) )
+            {
+                const auto f = mesh.topology.left( ei );
+                if ( !MR::contains( settings.region, f ) )
+                    continue;
+                const auto a = mesh.triangleAspectRatio( f );
+                if ( !belowMinTriAspectRatio.empty() )
+                    belowMinTriAspectRatio.autoResizeSet( f, a < settings.minTriAspectRatio );
+                if ( !aboveMaxTriAspectRatio.empty() )
+                    aboveMaxTriAspectRatio.autoResizeSet( f, a > settings.maxTriAspectRatio );
+            }
+        }
+
         for ( auto ei : orgRing( mesh.topology, e ) )
-            addInQueue( ei.undirected() );
+            if ( auto x = getQueueElem( ei ) )
+                queue.push( std::move( x ) );
     }
 
     if ( settings.smoothMode )

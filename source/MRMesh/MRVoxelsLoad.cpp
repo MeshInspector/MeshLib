@@ -183,6 +183,11 @@ std::function<float( char* )> getTypeConverter( const RawParameters::ScalarType&
         {
             return float( *(double*) ( c ) );
         };
+    case RawParameters::ScalarType::Float32_4:
+        return []( char* c )
+        {
+            return ( (float*)c )[3];
+        };
     case RawParameters::ScalarType::Unknown:
     case RawParameters::ScalarType::Count:
         break;
@@ -310,8 +315,8 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
             res.xf.A.y[i] = float( atOri.GetValue( 3 + i ) );
     }
 
-    res.xf.A.x.normalized();
-    res.xf.A.y.normalized();
+    res.xf.A.x = res.xf.A.x.normalized();
+    res.xf.A.y = res.xf.A.y.normalized();
     res.xf.A.z = cross( res.xf.A.x, res.xf.A.y );
     res.xf.A = res.xf.A.transposed();
 
@@ -1158,6 +1163,9 @@ Expected<VdbVolume, std::string> fromRaw( std::istream& in, const RawParameters&
         break;
     case RawParameters::ScalarType::Float64:
         unitSize = 8;
+        break;
+    case RawParameters::ScalarType::Float32_4:
+        unitSize = 16;
         break;
     default:
         assert( false );

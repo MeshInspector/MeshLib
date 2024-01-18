@@ -99,13 +99,13 @@ namespace Primitives
 
 [[nodiscard]] inline Primitives::ConeSegment toPrimitive( const Cylinder3f& cyl )
 {
-    Primitives::ConeSegment ret{
+    float halfLen = cyl.length / 2;
+    return{
         .center = cyl.center(),
         .dir = cyl.direction().normalized(),
-        .positiveSideRadius = cyl.radius, .negativeSideRadius = ret.negativeSideRadius,
-        .positiveLength = cyl.length / 2, .negativeLength = ret.positiveLength,
+        .positiveSideRadius = cyl.radius, .negativeSideRadius = cyl.radius,
+        .positiveLength = halfLen, .negativeLength = halfLen,
     };
-    return ret;
 }
 [[nodiscard]] inline Primitives::ConeSegment toPrimitive( const Cone3f& cone )
 {

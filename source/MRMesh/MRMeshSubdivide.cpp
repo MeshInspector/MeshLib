@@ -166,11 +166,23 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
                 const auto f = mesh.topology.left( ei );
                 if ( !MR::contains( settings.region, f ) )
                     continue;
+                bool addOpp = false;
                 const auto a = mesh.triangleAspectRatio( f );
                 if ( !belowMinTriAspectRatio.empty() )
-                    belowMinTriAspectRatio.autoResizeSet( f, a < settings.minTriAspectRatio );
+                {
+                    const bool v = a < settings.minTriAspectRatio;
+                    if ( v != belowMinTriAspectRatio.autoResizeTestSet( f, v ) )
+                        addOpp = true;
+                }
                 if ( !aboveMaxTriAspectRatio.empty() )
-                    aboveMaxTriAspectRatio.autoResizeSet( f, a > settings.maxTriAspectRatio );
+                {
+                    const bool v = a > settings.maxTriAspectRatio;
+                    if ( v != aboveMaxTriAspectRatio.autoResizeTestSet( f, v ) )
+                        addOpp = true;
+                }
+                if ( addOpp )
+                    if ( auto x = getQueueElem( mesh.topology.prev( ei.sym() ) ) )
+                        queue.push( std::move( x ) );
             }
         }
 

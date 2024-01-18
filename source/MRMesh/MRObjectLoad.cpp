@@ -316,7 +316,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                                                                                     std::string* loadWarn, ProgressCallback callback )
 {
     if ( callback && !callback( 0.f ) )
-        return unexpected( std::string( "Saving canceled" ) );
+        return unexpected( std::string( "Loading canceled" ) );
 
     Expected<std::vector<std::shared_ptr<Object>>, std::string> result;
     bool loadedFromSceneFile = false;

@@ -51,7 +51,6 @@ void LineObject::setLength( float size )
 
 float LineObject::getLength( void ) const
 {
-    auto currentXf = xf();
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
     return  s.x.x * baseLineOblectLength_;

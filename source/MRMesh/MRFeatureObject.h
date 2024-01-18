@@ -30,10 +30,13 @@ struct FeatureObjectSharedProperty
         T( C::* m_getter )( ) const,
         SetterFunc m_setter
     ) : propertyName( std::move( name ) ),
-        getter( [m_getter] ( const FeatureObject* objectToInvoke ) -> FeaturesPropertyTypesVariant
-    {
-        return std::invoke( m_getter, dynamic_cast< const C* > ( objectToInvoke ) );
-    } )
+        getter
+        ( 
+            [m_getter] ( const FeatureObject* objectToInvoke ) -> FeaturesPropertyTypesVariant
+            {
+                return std::invoke( m_getter, dynamic_cast< const C* > ( objectToInvoke ) );
+            } 
+        )
     {
         if constexpr ( ( std::is_same_v<SetterFunc, void ( C::* )( const T& )> )
             || ( std::is_same_v<SetterFunc, void ( C::* )( T )> ) )
@@ -58,7 +61,7 @@ struct FeatureObjectSharedProperty
 struct  FeatureObject
 {
 public:
-    FeatureObject( void ) noexcept = default;
+    FeatureObject() noexcept = default;
     FeatureObject( const FeatureObject& ) noexcept = default;
     FeatureObject( FeatureObject&& ) noexcept = default;
     FeatureObject& operator = ( FeatureObject&& ) noexcept = default;

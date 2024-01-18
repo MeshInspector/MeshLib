@@ -116,7 +116,9 @@ void ConeObject::setCenter( const Vector3f& center )
 
 float ConeObject::getRadius() const
 {
-    return ( xf().A.toScale().x + xf().A.toScale().y ) / 2.0f;
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    return s.x.x;
 }
 
 void ConeObject::setRadius( float radius )

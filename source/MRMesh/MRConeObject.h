@@ -56,7 +56,7 @@ public:
     MRMESH_API void setHeight( float height );
     /// updates xf to fit given cone angle.  It is an angle betweeh main axis and side
     MRMESH_API void setAngle( float angle );
-    /// Computes the radius from the xf.
+    /// Computes the base radius from the xf.
     MRMESH_API float getRadius() const;
     // Updates the xf for the new radius.
     MRMESH_API void setRadius( float radius );

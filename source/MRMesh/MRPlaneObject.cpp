@@ -56,7 +56,6 @@ void PlaneObject::setSize( float size )
 
 float PlaneObject::getSize( void ) const
 {
-    auto currentXf = xf();
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
     return  s.x.x;

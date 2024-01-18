@@ -6,9 +6,13 @@
 #include "MRPch/MRJson.h"
 #include "MRMatrix3.h"
 #include "MRVector3.h"
+#include "MRMatrix3Decompose.h"
 
 namespace MR
 {
+
+// default length of line. Historically it eq. 2 (but 1 looks better). Left as is for compatibility.
+size_t baseLineOblectLength_ = 2;
 
 MR_ADD_CLASS_FACTORY( LineObject )
 
@@ -25,7 +29,9 @@ Vector3f LineObject::getCenter() const
 void LineObject::setDirection( const Vector3f& normal )
 {
     auto currentXf = xf();
-    currentXf.A = Matrix3f::rotation( Vector3f::plusX(), normal ) * Matrix3f::scale( currentXf.A.toScale() );
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    currentXf.A = Matrix3f::rotation( Vector3f::plusX(), normal ) * s;
     setXf( currentXf );
 }
 
@@ -39,9 +45,18 @@ void LineObject::setCenter( const Vector3f& center )
 void LineObject::setLength( float size )
 {
     auto currentXf = xf();
-    currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( Vector3f::diagonal( size / 2.f ) );
+    currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( Vector3f::diagonal( size / baseLineOblectLength_ ) );
     setXf( currentXf );
 }
+
+float LineObject::getLength( void ) const
+{
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    return  s.x.x * baseLineOblectLength_;
+}
+
+
 
 LineObject::LineObject()
 {
@@ -107,11 +122,21 @@ void LineObject::constructPolyline_()
     // create object Polyline
     Polyline3 lineObj;
     const std::vector<Vector3f> points = { Vector3f::minusX(), Vector3f::plusX() };
-    lineObj.addFromPoints( points.data(), 2 );
+    lineObj.addFromPoints( points.data(), baseLineOblectLength_ );
 
     polyline_ = std::make_shared<Polyline3>( lineObj );
 
     setDirtyFlags( DIRTY_ALL );
+}
+
+const std::vector<FeatureObjectSharedProperty>& LineObject::getAllSharedProperties() const
+{
+    static std::vector<FeatureObjectSharedProperty> ret = {
+       {"Center"   , &LineObject::getCenter   , &LineObject::setCenter},
+       {"Direction", &LineObject::getDirection, &LineObject::setDirection},
+       {"Length"   , &LineObject::getLength   , &LineObject::setLength} 
+    };
+    return ret;
 }
 
 }

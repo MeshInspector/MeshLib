@@ -70,7 +70,10 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
         if ( isSmallUI() )
         {
             if ( !isSmallUILast_ )
+            {
+                windowInputWasActive_ = false;
                 ImGui::SetKeyboardFocusHere();
+            }
             ImGui::SetNextItemWidth( minSearchSize );
             if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
             {
@@ -78,6 +81,9 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
                 hightlightedSearchItem_ = -1;
             }
             windowInputWasActive_ |= ImGui::IsItemActive();
+            if ( windowInputWasActive_ &&
+                !(ImGui::IsWindowFocused() || ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) ) )
+                deactivateSearch_();
         }
         else
         {
@@ -163,20 +169,22 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
         if ( ImGui::IsItemActivated() )
             active_ = true;
         mainInputActive_ = ImGui::IsItemActive();
+        if ( isSmallUILast_ && active_ )
+            mainInputActive_ = true;
     }
     if ( active_ )
         drawWindow_( params );
     isSmallUILast_ = isSmallUI();
 }
 
-bool RibbonMenuSearch::isSmallUI()
+bool RibbonMenuSearch::isSmallUI() const
 {
     auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
     const auto scaling = ribbonMenu ? ribbonMenu->menu_scaling() : 1.f;
     return getViewerInstance().framebufferSize.x < 1000 * scaling;
 }
 
-float RibbonMenuSearch::getWidthMenuUI()
+float RibbonMenuSearch::getWidthMenuUI() const
 {
     return isSmallUI() ? 40.f : cSearchSize + 16.f;
 }

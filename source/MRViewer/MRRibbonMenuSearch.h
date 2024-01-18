@@ -30,9 +30,11 @@ public:
     // draws search elements and window with its logic
     MRVIEWER_API void drawMenuUI( const Parameters& params );
 
-    MRVIEWER_API bool isSmallUI();
+    // get mode visualization in top panel (true - small button, false - input string) 
+    MRVIEWER_API bool isSmallUI() const;
 
-    MRVIEWER_API float getWidthMenuUI();
+    // get width ui element in top panel 
+    MRVIEWER_API float getWidthMenuUI() const;
 private:
     bool smallSearchButton_( const Parameters& params );
 
@@ -44,7 +46,6 @@ private:
     std::vector<RibbonSchemaHolder::SearchResult> searchResult_;
     std::vector<RibbonSchemaHolder::SearchResult> recentItems_;
     int hightlightedSearchItem_{ -1 };
-    bool popupWasOpen_ = false;
 
     bool active_ = false;
     bool isSmallUILast_ = false;

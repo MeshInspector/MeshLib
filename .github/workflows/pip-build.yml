@@ -523,7 +523,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["arm64", "x86"]
-        py-version: ["3.8", "3.9", "3.10", "3.11"]
+        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         include:
           - platform: "x86"
             plat-name: macosx_12_0_x86_64

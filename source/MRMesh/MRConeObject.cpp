@@ -28,11 +28,11 @@ constexpr Vector3f apex = { 0,0,0 };
 
 
 
-float getFeatureRadiusByAngle( float angle )
+float getNormalizedRadiusByAngle( float angle )
 {
     return cBaseHeight * std::tan( angle );
 }
-float getAngleByFeatureRadius( float fRadius )
+float getAngleByNormalizedRadius( float fRadius )
 {
     return std::atan( fRadius / cBaseHeight );
 }
@@ -76,13 +76,13 @@ void ConeObject::setHeight( float height )
 {
     auto direction = getDirection();
     auto currentXf = xf();
-    auto radius = getNormalyzedFeatueRadius();
+    auto radius = getNormalizedRadius_();
     currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius * height, radius * height, height );
     setXf( currentXf );
 }
 
 
-float ConeObject::getNormalyzedFeatueRadius( void ) const
+float ConeObject::getNormalizedRadius_( void ) const
 {
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
@@ -90,17 +90,12 @@ float ConeObject::getNormalyzedFeatueRadius( void ) const
 }
 float ConeObject::getAngle() const
 {
-    return getAngleByFeatureRadius( getNormalyzedFeatueRadius() );
+    return getAngleByNormalizedRadius( getNormalizedRadius_() );
 }
 
 void ConeObject::setAngle( float angle )
 {
-    auto direction = getDirection();
-    auto currentXf = xf();
-    auto featureRedius = getFeatureRadiusByAngle( angle );
-    auto length = getHeight();
-    currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( featureRedius * length, featureRedius * length, length );
-    setXf( currentXf );
+    setRadius( getNormalizedRadiusByAngle( angle ) * getHeight() );
 }
 
 void ConeObject::setDirection( const Vector3f& normal )
@@ -116,6 +111,20 @@ void ConeObject::setCenter( const Vector3f& center )
 {
     auto currentXf = xf();
     currentXf.b = center;
+    setXf( currentXf );
+}
+
+float ConeObject::getRadius() const
+{
+    return ( xf().A.toScale().x + xf().A.toScale().y ) / 2.0f;
+}
+
+void ConeObject::setRadius( float radius )
+{
+    auto direction = getDirection();
+    auto currentXf = xf();
+    auto length = getHeight();
+    currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, length );
     setXf( currentXf );
 }
 
@@ -175,7 +184,7 @@ void ConeObject::serializeFields_( Json::Value& root ) const
 void ConeObject::constructMesh_()
 {
     mesh_ = makeFeatureCone();
-    setFlatShading( false );
+    setFlatShading( true );
     selectFaces( {} );
     selectEdges( {} );
     setDirtyFlags( DIRTY_ALL );
@@ -204,7 +213,7 @@ TEST( MRMesh, ConeApproximation )
     int  resolution = 100;
     float coneAngle = 12.0 * PI_F / 180.0; // 12 degree
     float noiseMaxV = 1e-3f;
-    auto radius = getFeatureRadiusByAngle( coneAngle );
+    auto radius = getNormalizedRadiusByAngle( coneAngle );
 
     Vector3f coneApex{ 1,2,3 };
     Vector3f direction = ( Vector3f{ 3,2,1 } ).normalized();
@@ -223,13 +232,13 @@ TEST( MRMesh, ConeApproximation )
         float z = i * zStep;
         float radius1 = cos( coneAngle ) * z;
         float radius2 = cos( coneAngle ) * ( 1.0f - z );
-        float noise = sin( z ) * noiseMaxV;   // use noise = 0 in case of test falling for more obviouse results. 
+        float noise = sin( z ) * noiseMaxV;   // use noise = 0 in case of test falling for more obviouse results.
         points.emplace_back( testXf( Vector3f{ cosf( angle ) * radius1 + noise , sinf( angle ) * radius1 - noise , z + noise } ) );
         points.emplace_back( testXf( Vector3f{ cosf( angle ) * radius2 - noise , sinf( angle ) * radius2 + noise ,  1.0f - z - noise } ) );
     }
 
     //////////////////
-    // General test // 
+    // General test //
     //////////////////
 
     Cone3<float> resultCone;
@@ -243,7 +252,7 @@ TEST( MRMesh, ConeApproximation )
     EXPECT_GT( dot( direction, resultCone.direction() ), 0.9f );
 
     //////////////////////////
-    // Use cone params test // 
+    // Use cone params test //
     //////////////////////////
 
     Cone3<float> noicedCone;

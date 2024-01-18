@@ -56,6 +56,10 @@ public:
     MRMESH_API void setHeight( float height );
     /// updates xf to fit given cone angle.  It is an angle betweeh main axis and side
     MRMESH_API void setAngle( float angle );
+    /// Computes the radius from the xf.
+    MRMESH_API float getRadius() const;
+    // Updates the xf for the new radius.
+    MRMESH_API void setRadius( float radius );
 
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 
@@ -83,7 +87,7 @@ private:
 
 
     // Featue Radius fully controll by cone angle, but its need for speedup internal calculation (not use tan / atan from each estimation).
-    float getNormalyzedFeatueRadius( void ) const;
+    float getNormalizedRadius_() const;
 };
 
 }

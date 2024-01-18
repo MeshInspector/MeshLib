@@ -534,7 +534,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
 
     for( const auto& obj : objs )
     {
-        if( obj->globalVisibilty( id ) )
+        if( obj->globalVisibility( id ) )
         {
             // object space to camera space
             auto xf = obj->worldXf();

@@ -184,7 +184,7 @@ std::string FitDataMenuItem::isAvailable( const std::vector<std::shared_ptr<cons
 {
     auto allObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Any );
     for ( const auto& obj : allObjs )
-        if ( obj->globalVisibilty() )
+        if ( obj->globalVisibility() )
             return "";
 
     return "There are no visible objects.";
@@ -205,7 +205,7 @@ std::string FitSelectedObjectsMenuItem::isAvailable( const std::vector<std::shar
 {
     auto allObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     for ( const auto& obj : allObjs )
-        if ( obj->globalVisibilty() )
+        if ( obj->globalVisibility() )
             return "";
 
     return "There are no visible selected objects.";
@@ -226,7 +226,7 @@ std::string FitSelectedPrimitivesMenuItem::isAvailable( const std::vector<std::s
 {
     auto allObjs = getAllObjectsInTree<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Any );
     for ( const auto& obj : allObjs )
-        if ( obj->globalVisibilty() && obj->mesh() && ( obj->getSelectedEdges().any() || obj->getSelectedFaces().any() ) )
+        if ( obj->globalVisibility() && obj->mesh() && ( obj->getSelectedEdges().any() || obj->getSelectedFaces().any() ) )
             return "";
 
     return "There are no visible selected primitives.";

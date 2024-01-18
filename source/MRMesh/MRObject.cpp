@@ -140,7 +140,7 @@ ViewportMask Object::globalVisibilityMask() const
     return res;
 }
 
-void Object::setGlobalVisibilty( bool on, ViewportMask viewportMask /*= ViewportMask::any() */ )
+void Object::setGlobalVisibility( bool on, ViewportMask viewportMask /*= ViewportMask::any() */ )
 {
     setVisible( on, viewportMask );
     if ( !on )

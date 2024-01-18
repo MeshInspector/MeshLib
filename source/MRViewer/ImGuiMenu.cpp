@@ -234,7 +234,7 @@ void ImGuiMenu::finishFrame()
             }
         }
     }
-
+    ProgressBar::onFrameEnd();
     if ( viewer->isGLInitialized() )
     {
         ImGui::Render();
@@ -611,7 +611,7 @@ MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
 
     for ( const auto& viewport : viewer->viewport_list )
     {
-        if ( !obj.globalVisibilty( viewport.id ) )
+        if ( !obj.globalVisibility( viewport.id ) )
             continue;
         AffineXf3f xf = obj.worldXf();
         bool clip = obj.getVisualizeProperty( VisualizeMaskType::CropLabelsByViewportRect, viewport.id );
@@ -1161,7 +1161,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
                         const bool select = ImGui::GetIO().KeyShift || !sel->isSelected();
                         sel->select( select );
                         if ( showNewSelectedObjects_ && select )
-                            sel->setGlobalVisibilty( true );
+                            sel->setGlobalVisibility( true );
                     }
                 }
                 else
@@ -1176,7 +1176,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
                     {
                         sel->select( true );
                         if ( showNewSelectedObjects_ )
-                            sel->setGlobalVisibilty( true );
+                            sel->setGlobalVisibility( true );
                     }
                 }
             }

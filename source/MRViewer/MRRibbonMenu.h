@@ -26,10 +26,10 @@ class MRVIEWER_CLASS RibbonMenu : public ImGuiMenu
 {
     struct CustomContextMenuCheckbox
     {
-        using Setter = std::function<bool( std::shared_ptr<Object> object, ViewportId id )>;
-        using Getter = std::function<void( std::shared_ptr<Object> object, ViewportId id, bool checked )>;
-        Setter getter;
-        Getter setter;
+        using Setter = std::function<void( std::shared_ptr<Object> object, ViewportId id, bool checked )>;
+        using Getter = std::function<bool( std::shared_ptr<Object> object, ViewportId id )>;
+        Setter setter;
+        Getter getter;
     };
 
 public:

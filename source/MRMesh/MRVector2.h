@@ -69,6 +69,11 @@ struct Vector2
         else
             return *this *= ( 1 / b );
     }
+
+    [[nodiscard]] bool isFinite() const
+    {
+        return std::isfinite( x ) && std::isfinite( y );
+    }
 };
 
 /// \related Vector2

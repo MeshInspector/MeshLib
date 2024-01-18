@@ -234,7 +234,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadMesh, [] ( pybind11::module_& m )
 
     m.def( "loadMesh",
         MR::decorateExpected( ( Expected<MR::Mesh, std::string>( * )( const std::filesystem::path&, const MeshLoadSettings& ) )& MR::MeshLoad::fromAnySupportedFormat),
-        pybind11::arg( "path" ), pybind11::arg( "settings" ) = MeshLoadSettings(),
+        pybind11::arg( "path" ), pybind11::arg_v( "settings", MeshLoadSettings(), "MeshLoadSettings()" ),
         "detects the format from file extension and loads mesh from it" );
     m.def( "loadMesh",
         MR::decorateExpected( ( Expected<MR::Mesh, std::string>( * )( pybind11::object, const std::string& ) )& pythonLoadMeshFromAnyFormat ),
@@ -293,9 +293,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveVoxels, [] ( pybind11::module_& m )
         "Save raw voxels file, writing parameters in name." );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadDCMResult, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, LoadDCMResult, MR::VoxelsLoad::LoadDCMResult )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadDCMResult, [] ( pybind11::module_& )
 {
-    pybind11::class_<MR::VoxelsLoad::LoadDCMResult>( m, "LoadDCMResult" ).
+    MR_PYTHON_CUSTOM_CLASS( LoadDCMResult ).
         def_readwrite( "vdbVolume", &MR::VoxelsLoad::LoadDCMResult::vdbVolume ).
         def_readwrite( "name", &MR::VoxelsLoad::LoadDCMResult::name ).
         def_readwrite( "xf", &MR::VoxelsLoad::LoadDCMResult::xf );

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <MRMesh/MRVector2.h>
+#include <MRMesh/MRColor.h>
 
 #ifdef _WIN32
 #   ifdef MRIMGUI_EXPORT
@@ -21,6 +22,11 @@ IMGUI_API ImGuiContext*& MyImGuiTLS();
     constexpr ImVec2( const MR::Vector2f & v ) noexcept : x( v.x ), y( v.y ) {} \
     constexpr operator MR::Vector2f() const noexcept { return { x, y }; }
 
+#define IM_VEC4_CLASS_EXTRA \
+    constexpr ImVec4( const MR::Vector4f & v ) noexcept : x( v.x ), y( v.y ), z( v.z ), w( v.w ) {} \
+    constexpr ImVec4( const MR::Color & c ) noexcept : ImVec4( MR::Vector4f( c ) ) {} \
+    constexpr operator MR::Vector4f() const noexcept { return { x, y, z, w }; } \
+    constexpr operator MR::Color() const noexcept { return MR::Color( operator MR::Vector4f() ); }
 
 #ifndef MR_FILTER_IMGUI_INPUT_CHARS
 // This block is needed to prevent filtering alphabet characters from input

@@ -1161,6 +1161,9 @@
     <ClInclude Include="MRFeatureObject.h">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
+    <ClInclude Include="MRFeatures.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1925,6 +1928,9 @@
     </ClCompile>
     <ClCompile Include="MRAlphaShape.cpp">
       <Filter>Source Files\Triangulation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFeatures.cpp">
+      <Filter>Source Files\Math</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

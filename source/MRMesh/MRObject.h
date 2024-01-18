@@ -110,9 +110,9 @@ public:
     /// returns all viewports where this object is visible together with all its parents
     MRMESH_API ViewportMask globalVisibilityMask() const;
     /// returns true if this object is visible together with all its parents in any of given viewports
-    bool globalVisibilty( ViewportMask viewportMask = ViewportMask::any() ) const { return !( globalVisibilityMask() & viewportMask ).empty(); }
+    bool globalVisibility( ViewportMask viewportMask = ViewportMask::any() ) const { return !( globalVisibilityMask() & viewportMask ).empty(); }
     /// if true sets all predecessors visible, otherwise sets this object invisible
-    MRMESH_API void setGlobalVisibilty( bool on, ViewportMask viewportMask = ViewportMask::any() );
+    MRMESH_API void setGlobalVisibility( bool on, ViewportMask viewportMask = ViewportMask::any() );
 
     /// object properties lock for UI
     bool isLocked() const { return locked_; }

@@ -58,7 +58,7 @@ void CircleObject::setNormal( const Vector3f& normal )
     setXf( currentXf );
 }
 
-std::vector<FeatureObjectSharedProperty> CircleObject::getAllSharedProperties() const
+std::vector<FeatureObjectSharedProperty>& CircleObject::getAllSharedProperties() const
 {
     static std::vector<FeatureObjectSharedProperty> ret = {
       {"Radius", &CircleObject::getRadius, &CircleObject::setRadius},

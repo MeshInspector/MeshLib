@@ -57,7 +57,7 @@ public:
     /// updates xf to fit given cone angle.  It is an angle betweeh main axis and side
     MRMESH_API void setAngle( float angle );
 
-    MRMESH_API virtual std::vector<FeatureObjectSharedProperty> getAllSharedProperties() const override;
+    MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 
 
 protected:

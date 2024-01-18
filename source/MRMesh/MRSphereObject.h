@@ -39,7 +39,7 @@ public:
     /// updates xf to fit given center
     MRMESH_API void setCenter( const Vector3f& center );
 
-    MRMESH_API virtual std::vector<FeatureObjectSharedProperty> getAllSharedProperties() const override;
+    MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 protected:
     SphereObject( const SphereObject& other ) = default;
 

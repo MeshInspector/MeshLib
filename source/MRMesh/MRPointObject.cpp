@@ -48,7 +48,7 @@ void PointObject::setPoint( const Vector3f& point )
     setXf( AffineXf3f::translation( point ) );
 }
 
-std::vector<FeatureObjectSharedProperty> PointObject::getAllSharedProperties() const
+std::vector<FeatureObjectSharedProperty>& PointObject::getAllSharedProperties() const
 {
     static std::vector<FeatureObjectSharedProperty> ret = {
        {"Point", &PointObject::getPoint, &PointObject::setPoint}

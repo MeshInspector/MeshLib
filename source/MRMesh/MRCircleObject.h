@@ -46,7 +46,7 @@ public:
     /// updates xf to fit given normal
     MRMESH_API void setNormal( const Vector3f& normal );
 
-    MRMESH_API virtual  std::vector<FeatureObjectSharedProperty> getAllSharedProperties() const override;
+    MRMESH_API virtual  std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 
 protected:
     CircleObject( const CircleObject& other ) = default;

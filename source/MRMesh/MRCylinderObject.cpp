@@ -186,7 +186,7 @@ void CylinderObject::constructMesh_()
     setDirtyFlags( DIRTY_ALL );
 }
 
-std::vector<FeatureObjectSharedProperty> CylinderObject::getAllSharedProperties() const
+const std::vector<FeatureObjectSharedProperty>& CylinderObject::getAllSharedProperties() const
 {
     static std::vector<FeatureObjectSharedProperty> ret = {
        {"Radius", &CylinderObject::getRadius, &CylinderObject::setRadius},

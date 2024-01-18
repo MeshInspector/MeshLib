@@ -6,6 +6,7 @@ namespace MR
 {
 
 using FeaturesPropertyTypesVariant = std::variant<float, Vector3f >;
+
 struct  FeatureObject;
 
 // FeatureObjectSharedProperty struct is designed to represent a shared property of a feature object, enabling the use of generalized getter and setter methods for property manipulation.
@@ -61,10 +62,12 @@ public:
     FeatureObject( const FeatureObject& ) noexcept = default;
     FeatureObject( FeatureObject&& ) noexcept = default;
     FeatureObject& operator = ( FeatureObject&& ) noexcept = default;
+    FeatureObject& operator = ( const FeatureObject& ) noexcept = default;
+
     virtual ~FeatureObject() = default;
 
     /// Create and generate list of bounded getters and setters for the main properties of feature object, together with prop. name for display and edit into UI.
-    virtual std::vector<FeatureObjectSharedProperty> getAllSharedProperties() const = 0;
+    virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const = 0;
 };
 
 }

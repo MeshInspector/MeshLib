@@ -181,7 +181,7 @@ void ConeObject::constructMesh_()
     setDirtyFlags( DIRTY_ALL );
 }
 
-std::vector<FeatureObjectSharedProperty> ConeObject::getAllSharedProperties() const
+const std::vector<FeatureObjectSharedProperty>& ConeObject::getAllSharedProperties() const
 {
     static std::vector<FeatureObjectSharedProperty> ret = {
        {"Angle",  &ConeObject::getAngle , &ConeObject::setAngle},

@@ -2,6 +2,7 @@
 #include "MRMeshFwd.h"
 #include "MRObjectLinesHolder.h"
 #include "MRFeatureObjectSharedProperties.h"
+
 namespace MR
 {
 /// \defgroup FeaturesGroup Features

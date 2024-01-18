@@ -48,3 +48,16 @@ def test_boolean_exposing():
 
     assert (brmmAA.count() == 1)
     assert (brmmBB.count() == 1)
+
+def test_unite_may_meshes():
+    size = mrmesh.Vector3f.diagonal(2)
+    poses = [mrmesh.Vector3f.diagonal(-1),mrmesh.Vector3f.diagonal(0),mrmesh.Vector3f.diagonal(1),mrmesh.Vector3f.diagonal(2)]
+    meshes = []
+    vecMeshes = mrmesh.vectorConstMeshPtr()
+    vecMeshes.resize(len(poses))
+    for i in range(len(poses)):
+        meshes.append(mrmesh.makeCube(size, poses[i]))
+        vecMeshes[i] = meshes[i]
+    resMesh = mrmesh.uniteManyMeshes(vecMeshes)
+    assert ( resMesh.topology.numValidFaces() > 0 )
+    assert ( resMesh.topology.findHoleRepresentiveEdges().size() == 0 )

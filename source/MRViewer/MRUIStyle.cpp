@@ -287,7 +287,7 @@ bool checkbox( const char* label, bool* value )
             texture->getImTextureId(),
             bb.Min, bb.Max,
             ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
-            Color::white().getUInt32(), style.FrameRounding );
+            Color::white().getUInt32(), style.FrameRounding * 0.5f );
 
     //code of this lambda is copied from ImGui::Checkbox in order to decrease thickness and change appearance of the check mark
     auto drawCustomCheckbox = [bgColor] ( const char* label, bool* v )
@@ -325,9 +325,7 @@ bool checkbox( const char* label, bool* value )
         const ImRect check_bb( pos, ImVec2( pos.x + square_sz, pos.y + square_sz ) );
         ImGui::RenderNavHighlight( total_bb, id );
 
-        if ( *v )
-            ImGui::RenderFrame( check_bb.Min, check_bb.Max, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg ), true, style.FrameRounding * 0.5f );
-        else
+        if ( !*v )
             ImGui::RenderFrame( check_bb.Min, check_bb.Max, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : bgColor ), true, style.FrameRounding * 0.5f );
 
         ImU32 check_col = ImGui::GetColorU32( ImGuiCol_CheckMark );

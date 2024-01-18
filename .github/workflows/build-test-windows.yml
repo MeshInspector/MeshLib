@@ -8,7 +8,7 @@ on:
         type: boolean
 
 env:
-  VCPKG-VERSION: '2023.11.20'
+  VCPKG-VERSION: '2024.01.12'
 
 jobs:
   windows-build-test:
@@ -29,6 +29,9 @@ jobs:
             CUDA-VERSION: '11.4.2.47141'
             CUDA-MAJOR: '11'
             CUDA-MINOR: '4'
+    permissions:
+      id-token: write # This is required for requesting the JWT
+      contents: read  # This is required for actions/checkout
 
     steps:
       - name: Checkout
@@ -53,8 +56,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
           aws-region: us-east-1
 
       - name: Update vcpkg packages
@@ -112,9 +114,16 @@ jobs:
       - name: Unit Tests
         run: py -3 scripts\run_unit_test_script.py ${{ matrix.config }}
 
-      - name: Python Tests
+      - name: Python Sanity Tests
         working-directory: source\x64\${{ matrix.config }}
-        run: py -3 ..\..\..\scripts\run_python_test_script.py
+        run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_python'
+
+      - name: Copy autotest data from S3 Tests
+        run: aws s3 cp s3://data-autotest/test_data_29-dec-23 .\test_data --recursive
+
+      - name: Python Regression Tests
+        working-directory: source\x64\${{ matrix.config }}
+        run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_regression'
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.runner == 'windows-2019' }}

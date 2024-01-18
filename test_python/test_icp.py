@@ -16,7 +16,7 @@ def test_icp():
     xf = mrmesh.AffineXf3f.translation(
         trans) * mrmesh.AffineXf3f.linear(mrmesh.Matrix3f.rotation(axis, 0.2))
 
-    icp = mrmesh.MeshICP(
+    icp = mrmesh.ICP(
         torusMove,
         torusRef,
         xf,

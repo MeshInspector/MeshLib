@@ -78,6 +78,7 @@ struct RawParameters
         Int64,
         Float32,
         Float64,
+        Float32_4, ///< the last value from float[4]
         Unknown,
         Count
     } scalarType{ ScalarType::Float32 };

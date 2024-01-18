@@ -54,9 +54,12 @@ struct SymMatrix2
     /// computes not-unit eigenvector corresponding to maximum eigenvalue
     Vector2<T> maxEigenvector() const;
 
-    /// solves the equation M*x = b and returns x;
-    /// if M is degenerate then returns the solution closest to origin point
-    Vector2<T> solve( const Vector2<T> & b, T tol = std::numeric_limits<T>::epsilon() ) const;
+    /// for not-degenerate matrix returns just inverse matrix, otherwise
+    /// returns degenerate matrix, which performs inversion on not-kernel subspace;
+    /// \param tol relative epsilon-tolerance for too small number detection
+    /// \param rank optional output for this matrix rank according to given tolerance
+    /// \param space rank=1: unit direction of solution line, rank=2: zero vector
+    SymMatrix2<T> pseudoinverse( T tol = std::numeric_limits<T>::epsilon(), int * rank = nullptr, Vector2<T> * space = nullptr ) const;
 };
 
 /// \related SymMatrix2
@@ -81,6 +84,18 @@ inline SymMatrix2<T> outerSquare( const Vector2<T> & a )
     res.xx = a.x * a.x;
     res.xy = a.x * a.y;
     res.yy = a.y * a.y;
+    return res;
+}
+
+/// x = k * a * a^T
+template <typename T> 
+inline SymMatrix2<T> outerSquare( T k, const Vector2<T> & a )
+{
+    const auto ka = k * a;
+    SymMatrix2<T> res;
+    res.xx = ka.x * a.x;
+    res.xy = ka.x * a.y;
+    res.yy = ka.y * a.y;
     return res;
 }
 
@@ -182,18 +197,29 @@ Vector2<T> SymMatrix2<T>::maxEigenvector() const
 }
 
 template <typename T> 
-Vector2<T> SymMatrix2<T>::solve( const Vector2<T> & b, T tol ) const
+SymMatrix2<T> SymMatrix2<T>::pseudoinverse( T tol, int * rank, Vector2<T> * space ) const
 {
+    SymMatrix2<T> res;
     Matrix2<T> eigenvectors;
     const auto eigenvalues = eigens( &eigenvectors );
     const auto threshold = std::max( std::abs( eigenvalues[0] ), std::abs( eigenvalues[1] ) ) * tol;
-    Vector2<T> res;
+    int myRank = 0;
     for ( int i = 0; i < 2; ++i )
     {
         if ( std::abs( eigenvalues[i] ) <= threshold )
             continue;
-        res += dot( b, eigenvectors[i] ) / eigenvalues[i] * eigenvectors[i];
+        res += outerSquare( 1 / eigenvalues[i], eigenvectors[i] );
+        ++myRank;
+        if ( space )
+        {
+            if ( myRank == 1 )
+                *space = eigenvectors[i];
+            else
+                *space = Vector2<T>{};
+        }
     }
+    if ( rank )
+        *rank = myRank;
     return res;
 }
 

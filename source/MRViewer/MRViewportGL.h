@@ -7,6 +7,7 @@
 #include "MRMesh/MRLineSegm3.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRViewportId.h"
+#include "MRMesh/MRIRenderObject.h"
 
 namespace MR
 {
@@ -66,40 +67,11 @@ public:
     // Free all GL data
     void free();
 
-    struct BaseRenderParams
-    {
-        const Matrix4f& viewMatrix;
-        const Matrix4f& projMatrix;
-        Vector4i viewport;          // viewport x0, y0, width, height
-    };
-
-    struct RenderParams : BaseRenderParams
-    {
-        bool depthTest;       // depth dest of primitive
-        float zOffset{0.0f};  // offset of fragments in camera z-coords
-        float cameraZoom;     // camera scale factor, needed to normalize z offset
-        float width;          // width of primitive
-    };
-
-    // Binds and draws viewport additional lines
-    void drawLines( const RenderParams& params ) const;
-    // Binds and draws viewport additional points
-    void drawPoints( const RenderParams& params ) const;
     // Binds and draws viewport border
-    void drawBorder( const BaseRenderParams& params, const Color& color ) const;
-
-    // Returns visual points with corresponding colors (pair<vector<Vector3f>,vector<Vector4f>>)
-    const ViewportPointsWithColors& getPointsWithColors() const;
-    // Returns visual lines segments with corresponding colors (pair<vector<LineSegm3f>,vector<SegmEndColors>>)
-    const ViewportLinesWithColors& getLinesWithColors() const;
-
-    // Sets visual points with corresponding colors (pair<vector<Vector3f>,vector<Vector4f>>)
-    void setPointsWithColors( const ViewportPointsWithColors& pointsWithColors );
-    // Sets visual lines segments with corresponding colors (pair<vector<LineSegm3f>,vector<SegmEndColors>>)
-    void setLinesWithColors( const ViewportLinesWithColors& linesWithColors );
+    void drawBorder( const Box2f& rect, const Color& color ) const;
 
     // Fills viewport with given color (clear frame buffer)
-    void fillViewport( const Vector4i& viewport, const Color& color ) const;
+    void fillViewport( const Box2f& rect, const Color& color ) const;
 
     // Check that members have been initialized
     bool checkInit() const;
@@ -110,7 +82,6 @@ public:
         const std::vector<VisualObject*>& renderVector;       // objects to pick
         BaseRenderParams baseRenderParams;                    // parameters for rendering pick object 
         Plane3f clippingPlane;                                // viewport clip plane (it is not applied while object does not have clipping flag set)
-        ViewportId viewportId;                                // viewport id
     };
     struct BasePickResult
     {
@@ -140,9 +111,6 @@ public:
     // if maxRenderResolutionSide less then current rect size, downscale rendering for better performance
     ScaledPickRes pickObjectsInRect( const PickParameters& params, const Box2i& rect,
         int maxRenderResolutionSide ) const;
-
-    mutable bool lines_dirty = true;
-    mutable bool points_dirty = true;
 
 private:
     struct PickColor
@@ -177,10 +145,6 @@ private:
 
     GLuint border_line_vbo = 0;
     GLuint border_line_vao = 0;
-
-    // Additional lines and points list
-    ViewportLinesWithColors previewLines_;
-    ViewportPointsWithColors previewPoints_;
 };
 
 }

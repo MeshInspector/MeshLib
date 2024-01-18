@@ -29,7 +29,7 @@ RenderLinesObject::~RenderLinesObject()
     freeBuffers_();
 }
 
-void RenderLinesObject::render( const RenderParams& renderParams )
+void RenderLinesObject::render( const ModelRenderParams& renderParams )
 {
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
@@ -61,7 +61,7 @@ void RenderLinesObject::render( const RenderParams& renderParams )
         render_( renderParams, true );
 }
 
-void RenderLinesObject::renderPicker( const BaseRenderParams& parameters, unsigned geomId )
+void RenderLinesObject::renderPicker( const ModelRenderParams& parameters, unsigned geomId )
 {
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
@@ -99,7 +99,7 @@ void RenderLinesObject::forceBindAll()
     bindLines_( GLStaticHolder::LinesJoint );
 }
 
-void RenderLinesObject::render_( const RenderParams& renderParams, bool points )
+void RenderLinesObject::render_( const ModelRenderParams& renderParams, bool points )
 {
     auto shaderType = points ? GLStaticHolder::LinesJoint : GLStaticHolder::Lines;
     bindLines_( shaderType );
@@ -157,7 +157,7 @@ void RenderLinesObject::render_( const RenderParams& renderParams, bool points )
     }
 }
 
-void RenderLinesObject::renderPicker_( const BaseRenderParams& parameters, unsigned geomId, bool points )
+void RenderLinesObject::renderPicker_( const ModelRenderParams& parameters, unsigned geomId, bool points )
 {
     auto shaderType = points ? GLStaticHolder::LinesJointPicker : GLStaticHolder::LinesPicker;
     bindLinesPicker_( shaderType );

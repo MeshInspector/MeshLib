@@ -7,6 +7,7 @@
 #include "MRPointsProject.h"
 #include "MRObjectMesh.h"
 #include "MRObjectPoints.h"
+#include "MRBestFit.h"
 
 namespace MR
 {
@@ -16,6 +17,14 @@ Box3f MeshOrPoints::computeBoundingBox( const AffineXf3f * toWorld ) const
     return std::visit( overloaded{
         [toWorld]( const MeshPart & mp ) { return mp.mesh.computeBoundingBox( mp.region, toWorld ); },
         [toWorld]( const PointCloud * pc ) { return pc->computeBoundingBox( toWorld ); }
+    }, var_ );
+}
+
+void MeshOrPoints::accumulate( PointAccumulator& accum, const AffineXf3f* xf ) const
+{
+    return std::visit( overloaded{
+        [&accum, xf]( const MeshPart & mp ) { accumulateFaceCenters( accum, mp, xf ); },
+        [&accum, xf]( const PointCloud * pc ) { accumulatePoints( accum, *pc, xf ); }
     }, var_ );
 }
 

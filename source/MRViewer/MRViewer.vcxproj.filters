@@ -127,9 +127,6 @@
     <ClCompile Include="MRAlphaSortGL.cpp">
       <Filter>Render</Filter>
     </ClCompile>
-    <ClCompile Include="MRImmediateGL.cpp">
-      <Filter>Render</Filter>
-    </ClCompile>
     <ClCompile Include="MRViewportGL.cpp">
       <Filter>Render</Filter>
     </ClCompile>
@@ -310,6 +307,15 @@
     <ClCompile Include="MRSelectCurvaturePreference.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRDirectionWidget.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRibbonNotification.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewportDraw.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -386,9 +392,6 @@
       <Filter>Render</Filter>
     </ClInclude>
     <ClInclude Include="MRGLMacro.h">
-      <Filter>Render</Filter>
-    </ClInclude>
-    <ClInclude Include="MRImmediateGL.h">
       <Filter>Render</Filter>
     </ClInclude>
     <ClInclude Include="MRViewportGL.h">
@@ -601,6 +604,15 @@
     </ClInclude>
     <ClInclude Include="MRPointInAllSpaces.h">
       <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDirectionWidget.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRibbonNotification.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRNotificationType.h">
+      <Filter>RibbonMenu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

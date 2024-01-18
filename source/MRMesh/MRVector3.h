@@ -42,7 +42,7 @@ struct Vector3
     T lengthSq() const { return x * x + y * y + z * z; }
     T length() const { return std::sqrt( lengthSq() ); }
 
-    Vector3 normalized() const 
+    [[nodiscard]] Vector3 normalized() const 
     {
         if constexpr ( std::is_floating_point_v<T> )
         {

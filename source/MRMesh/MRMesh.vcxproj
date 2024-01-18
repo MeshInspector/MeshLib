@@ -12,7 +12,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAligningTransform.h" />
+    <ClInclude Include="MRAlphaShape.h" />
     <ClInclude Include="MRChangeValue.h" />
+    <ClInclude Include="MRCone3.h" />
+    <ClInclude Include="MRConeApproximator.h" />
+    <ClInclude Include="MRConeObject.h" />
+    <ClInclude Include="MRCylinder3.h" />
+    <ClInclude Include="MRCylinderApproximator.h" />
+    <ClInclude Include="MRCylinderObject.h" />
+    <ClInclude Include="MRFinally.h" />
     <ClInclude Include="MRInTreePathBuilder.h" />
     <ClInclude Include="MRChangeColoringType.h" />
     <ClInclude Include="MRChangeColoringActions.h" />
@@ -177,6 +185,7 @@
     <ClInclude Include="MRSceneLoad.h" />
     <ClInclude Include="MRSolarRadiation.h" />
     <ClInclude Include="MRSphere.h" />
+    <ClInclude Include="MRSymMatrix4.h" />
     <ClInclude Include="MRTiffIO.h" />
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
@@ -348,6 +357,8 @@
     <ClInclude Include="MRMeshLoadStep.h" />
     <ClInclude Include="MRZip.h" />
     <ClInclude Include="MRObjectSave.h" />
+    <ClInclude Include="MRZlib.h" />
+    <ClInclude Include="MRVoxelsVolumeAccess.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -361,6 +372,7 @@
     <ClCompile Include="MRAffineXf2.cpp" />
     <ClCompile Include="MRAggregateFlow.cpp" />
     <ClCompile Include="MRAlignTextToMesh.cpp" />
+    <ClCompile Include="MRAlphaShape.cpp" />
     <ClCompile Include="MRArrow.cpp" />
     <ClCompile Include="MRBasinVolume.cpp" />
     <ClCompile Include="MRBestFitQuadric.cpp" />
@@ -373,6 +385,7 @@
     <ClCompile Include="MRColorMapAggregator.cpp" />
     <ClCompile Include="MRCombinedHistoryAction.cpp" />
     <ClCompile Include="MRComputeBoundingBox.cpp" />
+    <ClCompile Include="MRConeObject.cpp" />
     <ClCompile Include="MRConfig.cpp" />
     <ClCompile Include="MRContour.cpp" />
     <ClCompile Include="MRContoursCut.cpp" />
@@ -380,6 +393,7 @@
     <ClCompile Include="MRContoursStitch.cpp" />
     <ClCompile Include="MRConvexHull.cpp" />
     <ClCompile Include="MRCPRTests.cpp" />
+    <ClCompile Include="MRCylinderObject.cpp" />
     <ClCompile Include="MRDenseBox.cpp" />
     <ClCompile Include="MRDistanceMap.cpp" />
     <ClCompile Include="MRAffineXf3.cpp" />
@@ -410,6 +424,7 @@
     <ClCompile Include="MRFillContourByGraphCut.cpp" />
     <ClCompile Include="MRFillContours2D.cpp" />
     <ClCompile Include="MRFilterCreaseEdges.cpp" />
+    <ClCompile Include="MRFinally.cpp" />
     <ClCompile Include="MRFixUndercuts.cpp" />
     <ClCompile Include="MRFloatGrid.cpp" />
     <ClCompile Include="MRFloatGridComponents.cpp" />
@@ -600,6 +615,7 @@
     <ClCompile Include="MRMeshLoadStep.cpp" />
     <ClCompile Include="MRZip.cpp" />
     <ClCompile Include="MRObjectSave.cpp" />
+    <ClCompile Include="MRZlib.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\laz-perf\laz-perf.vcxproj">

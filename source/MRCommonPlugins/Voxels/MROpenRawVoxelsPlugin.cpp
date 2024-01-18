@@ -26,7 +26,8 @@ const std::vector<std::string> cScalarTypeNames =
     "UInt64",
     "Int64",
     "Float32",
-    "Float64"
+    "Float64",
+    "4 x Float32"
 };
 }
 
@@ -36,6 +37,8 @@ namespace MR
 OpenRawVoxelsPlugin::OpenRawVoxelsPlugin():
     StatePlugin( "Open RAW Voxels" )
 {
+    parameters_.dimensions = { 256, 256, 256 };
+    parameters_.voxelSize = { 1.0f, 1.0f, 1.0f };
 }
 
 void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
@@ -65,7 +68,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     }
     if ( UI::button( "Open file", Vector2f( -1, 0 ) ) )
     {
-        auto path = openFileDialog( { {},{},{{"RAW File","*.raw"}} } );
+        auto path = openFileDialog( { {},{},{{"RAW File","*.raw;*.bin"}} } );
         if ( !path.empty() )
         {
             ProgressBar::orderWithMainThreadPostProcessing( "Load voxels", [params = parameters_, path, autoMode = autoMode_] ()->std::function<void()>
@@ -142,8 +145,6 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
 bool OpenRawVoxelsPlugin::onEnable_()
 {
-    parameters_ = VoxelsLoad::RawParameters();
-    autoMode_ = true;
     return true;
 }
 

@@ -550,4 +550,16 @@ std::string getOSNoSpaces()
     #endif
 }
 
+void setNewHandlerIfNeeded()
+{
+#ifdef __EMSCRIPTEN__
+    std::set_new_handler( []
+    {
+        MAIN_THREAD_EM_ASM( notEnoughMemoryError() );
+        // Default Emscripten behaviour if exceptions are disabled
+        std::abort();
+    } );
+#endif
+}
+
 } //namespace MR

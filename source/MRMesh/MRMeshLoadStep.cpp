@@ -280,7 +280,8 @@ VoidOrErrStr readStepData( STEPControl_Reader& reader, const std::filesystem::pa
 
     const auto auxFilePath = getStepTemporaryDirectory() / "auxFile.step";
     {
-        std::ofstream ofs( auxFilePath, std::ofstream::binary );
+        // NOTE: opening the file in binary mode and passing to the StepData_StepWriter object lead to segfault
+        std::ofstream ofs( auxFilePath );
         if ( !sw.Print( ofs ) )
             return unexpected( "Failed to repair STEP model" );
     }
@@ -345,15 +346,14 @@ Expected<std::shared_ptr<Object>, std::string> stepModelToScene( STEPControl_Rea
 
         auto cb2 = subprogress( cb, 0.90f, 1.0f );
         tbb::task_arena taskArena;
-        tbb::task_group taskGroup;
-        std::vector<std::vector<Triangle3f>> triples( solids.size() );
         std::vector<std::shared_ptr<Object>> children( solids.size() );
-        for ( auto i = 0; i < solids.size(); ++i )
+        taskArena.execute( [&]
         {
-            triples[i] = loadSolid( solids[i] );
-
-            taskArena.enqueue( [i, &triples, &children, &taskGroup]
+            tbb::task_group taskGroup;
+            std::vector<std::vector<Triangle3f>> triples( solids.size() );
+            for ( auto i = 0; i < solids.size(); ++i )
             {
+                triples[i] = loadSolid( solids[i] );
                 taskGroup.run( [i, &triples, &children]
                 {
                     auto mesh = Mesh::fromPointTriples( triples[i], true );
@@ -363,9 +363,9 @@ Expected<std::shared_ptr<Object>, std::string> stepModelToScene( STEPControl_Rea
                     child->setName( fmt::format( "Solid{}", i + 1 ) );
                     children[i] = std::move( child );
                 } );
-            } );
-        }
-        taskArena.execute( [&] { taskGroup.wait(); } );
+            }
+            taskGroup.wait();
+        } );
 
         for ( auto& child : children )
             result->addChild( std::move( child ), true );

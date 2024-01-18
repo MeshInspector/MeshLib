@@ -323,7 +323,7 @@ void Palette::setFilterType( FilterType type )
     resetLabels();
 }
 
-void Palette::draw( const ImVec2& pose, const ImVec2& size )
+void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size )
 {
     float maxTextSize = 0.0f;
     for ( const auto& label : labels_ )
@@ -339,12 +339,12 @@ void Palette::draw( const ImVec2& pose, const ImVec2& size )
     const auto& windowSize = viewer.viewport().getViewportRect();
     const auto fontSize = ImGui::GetFontSize();
     
-    ImGui::SetNextWindowPos( pose, ImGuiCond_FirstUseEver );
+    ImGui::SetNextWindowPos( pose, ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( size, ImGuiCond_Appearing );
 
-    ImGui::SetNextWindowSizeConstraints( { maxTextSize + style.WindowPadding.x + style.FramePadding.x, 2 * fontSize }, { width( windowSize ), height( windowSize ) }, &resizeCallback_, ( void* )this );
+    ImGui::SetNextWindowSizeConstraints( { maxTextSize + style.WindowPadding.x + style.FramePadding.x + 20.0f * menu->menu_scaling(), 2 * fontSize }, { width( windowSize ), height( windowSize ) }, &resizeCallback_, ( void* )this );
     
-    auto paletteWindow = ImGui::FindWindowByName( "Gradient palette" );
+    auto paletteWindow = ImGui::FindWindowByName( windowName.c_str() );
 
     if ( paletteWindow )
     {
@@ -365,8 +365,8 @@ void Palette::draw( const ImVec2& pose, const ImVec2& size )
            }
     }
 
-    ImGui::Begin( "Gradient palette", &isWindowOpen_,
-        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBackground );    
+    ImGui::Begin( windowName.c_str(), &isWindowOpen_,
+        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBackground );
 
     // draw gradient palette
     ImDrawList* drawList = ImGui::GetWindowDrawList();

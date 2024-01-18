@@ -1,7 +1,7 @@
 #include "MRMakeRigidXf.h"
 #include "MRAffineXf3.h"
 #include "MRMesh.h"
-#include "MRAligningTransform.h"
+#include "MRPointToPointAligningTransform.h"
 
 namespace MR
 {
@@ -15,7 +15,7 @@ AffineXf3d makeRigidXf( const MeshPart & mp, const AffineXf3d & meshXf )
         const double a = mp.mesh.area( f );
         calc.add( p, meshXf( p ), a );
     }
-    return calc.calculateTransformationMatrix();
+    return calc.findBestRigidXf();
 }
 
 AffineXf3f makeRigidXf( const MeshPart & mp, const AffineXf3f & meshXf )

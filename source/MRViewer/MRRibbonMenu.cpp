@@ -289,9 +289,7 @@ void RibbonMenu::drawActiveNonBlockingDialogs_()
 
 void RibbonMenu::drawSearchButton_()
 {
-    searcher_.drawMenuUI();
-    auto absMinPos = ImGui::GetCurrentContext()->CurrentWindow->DC.CursorPos;
-    searcher_.draw( { buttonDrawer_,absMinPos,[this] ( int i ) { changeTab_( i ); }, menu_scaling() } );
+    searcher_.drawMenuUI( { buttonDrawer_, fontManager_, [this] ( int i ) { changeTab_( i ); }, menu_scaling() } );
 }
 
 void RibbonMenu::drawCollapseButton_()
@@ -674,7 +672,7 @@ void RibbonMenu::drawHeaderPannel_()
         drawActiveListButton_( activeBtnSize );
     }
 
-    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - ( 70.f + searcherWidth ) * menuScaling, cTabYOffset* menuScaling ) );
+    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - ( 70.f + searcherWidth ) * menuScaling, cTabYOffset * menuScaling ) );
     drawSearchButton_();
 
     ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 70.0f * menuScaling, cTabYOffset* menuScaling ) );

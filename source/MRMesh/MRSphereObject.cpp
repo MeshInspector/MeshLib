@@ -4,8 +4,26 @@
 #include "MRMesh.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
-#include <Eigen/Dense>
 #include "MRMatrix3Decompose.h"
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:5054)  //operator '&': deprecated between enumerations of different types
+#pragma warning(disable:4127)  //C4127. "Consider using 'if constexpr' statement instead"
+#elif defined(__clang__)
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif 
+
+#include <Eigen/Dense>
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#elif defined(__clang__)
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif 
 
 namespace
 {

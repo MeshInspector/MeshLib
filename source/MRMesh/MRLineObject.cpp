@@ -36,10 +36,10 @@ void LineObject::setCenter( const Vector3f& center )
     setXf( currentXf );
 }
 
-void LineObject::setSize( float size )
+void LineObject::setLength( float size )
 {
     auto currentXf = xf();
-    currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( Vector3f::diagonal( size ) );
+    currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( Vector3f::diagonal( size / 2.f ) );
     setXf( currentXf );
 }
 
@@ -69,7 +69,7 @@ LineObject::LineObject( const std::vector<Vector3f>& pointsToApprox )
 
     setDirection( dir );
     setCenter( box.center() );
-    setSize( box.diagonal() * 2.f );
+    setLength( box.diagonal() * 4 );
 }
 
 std::shared_ptr<Object> LineObject::shallowClone() const

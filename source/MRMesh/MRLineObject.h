@@ -39,7 +39,10 @@ public:
     /// updates xf to fit given center
     MRMESH_API void setCenter( const Vector3f& center );
     /// updates xf to scale size
-    MRMESH_API void setSize( float size );
+    MRMESH_API void setLength( float size );
+
+    [[deprecated("This confusingly sets half-length. Use `setLength(halfLen * 2)` instead.")]]
+    void setSize( float halfLen ) { setLength( halfLen * 2 ); }
 
 protected:
     LineObject( const LineObject& other ) = default;

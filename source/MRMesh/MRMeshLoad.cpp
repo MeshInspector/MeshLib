@@ -231,7 +231,8 @@ Expected<Mesh, std::string> fromBinaryStl( std::istream& in, const MeshLoadSetti
         return unexpected( std::string( "Binary STL read error" ) );
 
     size_t decodedBytes = 0;
-    const float rStreamSize = 1 / float( posEnd - posCur );
+    // 0.5 because fromTrianglesDuplicatingNonManifoldVertices takes at least half of time
+    const float rStreamSize = 0.5f * sizeof( StlTriangle ) / float( posEnd - posCur );
 
     while ( !buffer.empty() )
     {
@@ -294,6 +295,8 @@ Expected<Mesh, std::string> fromBinaryStl( std::istream& in, const MeshLoadSetti
         *settings.duplicatedVertexCount = int( dups.size() );
     if ( settings.skippedFaceCount )
         *settings.skippedFaceCount = int( skippedFaces.count() );
+    if ( !reportProgress( settings.callback , 1.0f ) )
+        return unexpected( std::string( "Loading canceled" ) );
     return res;
 }
 

@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 env:
-  VCPKG-VERSION: '2023.11.20'
+  VCPKG-VERSION: '2024.01.12'
 
 jobs:
   image-select:
@@ -82,7 +82,11 @@ jobs:
         id: need-rebuild
         run: |
           echo "need_linux_rebuild=${{steps.linux-changes.outputs.src == 'true'}}" >> $GITHUB_OUTPUT
-          echo "need_windows_rebuild=${{steps.windows-changes.outputs.src == 'true'}}" >> $GITHUB_OUTPUT
+          if [[ ${{ steps.windows-changes.outputs.src == 'true' }} == 'true' || ${{ contains(github.event.pull_request.labels.*.name, 'bump-vcpkg') }} == 'true' ]]; then
+            echo "need_windows_rebuild=true" >> $GITHUB_OUTPUT
+          else
+            echo "need_windows_rebuild=false" >> $GITHUB_OUTPUT
+          fi
 
         #                    [os,     runner-label ]
         # for MeshLib:       [ubuntu, ubuntu-latest], [fedora, ubuntu-latest], [windows, windows-2019]

@@ -1,7 +1,7 @@
 #include "MRPointToPointAligningTransform.h"
 #include "MRVector3.h"
 #include "MRSymMatrix3.h"
-#include "MRAffineXf3.h"
+#include "MRSymMatrix4.h"
 #include "MRQuaternion.h"
 #include "MRToFromEigen.h"
 #include "MRGTest.h"
@@ -10,31 +10,19 @@
 namespace MR
 {
 
-static constexpr auto vec4d = []( const Vector3d& v )
+inline SymMatrix4d calculateMatrixP( const Matrix3d & s )
 {
-    return Vector4d( v.x, v.y, v.z, 1 );
-};
-
-PointToPointAligningTransform::PointToPointAligningTransform()
-    : summary_( Matrix4d::zero() )
-{
+    SymMatrix4d P;
+    P.xx = s.x.x + s.y.y + s.z.z;  P.xy = s.y.z - s.z.y;          P.xz = s.z.x - s.x.z;          P.xw = s.x.y - s.y.x;
+                                   P.yy = s.x.x - s.y.y - s.z.z;  P.yz = s.x.y + s.y.x,          P.yw = s.z.x + s.x.z;
+                                                                  P.zz = s.y.y - s.x.x - s.z.z;  P.zw = s.y.z + s.z.y;
+                                                                                                 P.ww = s.z.z - s.x.x - s.y.y;
+    return P;
 }
 
-inline Matrix4d calculateMatrixP( const Matrix4d & s )
+SymMatrix3d caluclate2DimensionsP( const SymMatrix4d& P, const Vector4d& d1, const Vector4d& d2 )
 {
-    return //symmetric matrix
-    {
-        { s.x.x + s.y.y + s.z.z,    s.y.z - s.z.y,            s.z.x - s.x.z,            s.x.y - s.y.x },
-        { s.y.z - s.z.y,            s.x.x - s.y.y - s.z.z,    s.x.y + s.y.x,            s.z.x + s.x.z },
-        { s.z.x - s.x.z,            s.x.y + s.y.x,            s.y.y - s.x.x - s.z.z,    s.y.z + s.z.y },
-        { s.x.y - s.y.x,            s.z.x + s.x.z,            s.y.z + s.z.y,            s.z.z - s.x.x - s.y.y }
-    };
-}
-
-SymMatrix3d caluclate2DimensionsP( const Matrix4d& P, const Vector4d& d1, const Vector4d& d2 )
-{
-    // P must be symmetric
-    const auto p0 = P.col( 0 );
+    const Vector4d p0{ P.xx, P.xy, P.xz, P.xw };
     const auto p1 = P * d1;
     const auto p2 = P * d2;
     SymMatrix3d res;
@@ -49,63 +37,71 @@ SymMatrix3d caluclate2DimensionsP( const Matrix4d& P, const Vector4d& d1, const 
 
 void PointToPointAligningTransform::add( const Vector3d& p1, const Vector3d& p2, double w /*= 1.0*/ )
 {
-    summary_ += w *  outer( vec4d( p1 ), vec4d( p2 ) );
+    sum12_ += w * outer( p1, p2 );
+    sum1_ += w * p1;
+    sum2_ += w * p2;
+    sum11_ += w * p1.lengthSq();
+    sumW_ += w;
 }
-
 
 void PointToPointAligningTransform::add( const PointToPointAligningTransform & other )
 {
-    summary_ += other.summary_;
+    sum12_ += other.sum12_;
+    sum1_ += other.sum1_;
+    sum2_ += other.sum2_;
+    sum11_ += other.sum11_;
+    sumW_ += other.sumW_;
 }
 
-
-void PointToPointAligningTransform::clear()
+auto PointToPointAligningTransform::findPureRotation_() const -> BestRotation
 {
-    summary_ = Matrix4d::zero();
-}
+    assert( totalWeight() > 0 );
 
-Vector3d PointToPointAligningTransform::centroid1() const
-{
-    Vector3d res{ summary_.x.w, summary_.y.w, summary_.z.w };
-    res /= totalWeight();
-    return res;
-}
-
-Vector3d PointToPointAligningTransform::centroid2() const
-{
-    Vector3d res{ summary_.w.x, summary_.w.y, summary_.w.z };
-    res /= totalWeight();
-    return res;
-}
-
-AffineXf3d PointToPointAligningTransform::calculateTransformationMatrix() const
-{
     // for more detail of this algorithm see paragraph "3.3 A solution involving unit quaternions" in 
     // http://graphics.stanford.edu/~smr/ICP/comparison/eggert_comparison_mva97.pdf
-    const auto centroid1 = this->centroid1();
-    const auto centroid2 = this->centroid2();
-    const auto totalWeight = this->totalWeight();
+    const Matrix3d s = sum12_ - outer( sum1_, centroid2() );
+    const SymMatrix4d p = calculateMatrixP( s );
 
-    Matrix4d s = summary_ - totalWeight * outer( vec4d( centroid1 ), vec4d( centroid2 ) );
-    Matrix4d p = calculateMatrixP( s );
-
-    Eigen::Vector4d largestEigenVector = Eigen::SelfAdjointEigenSolver<Eigen::Matrix4d>( toEigen( p ) ).eigenvectors().col( 3 );
+    const Eigen::SelfAdjointEigenSolver<Eigen::Matrix4d> solver( toEigen( p ) );
+    Eigen::Vector4d largestEigenVector = solver.eigenvectors().col( 3 );
     Quaterniond q( largestEigenVector[0], largestEigenVector[1], largestEigenVector[2], largestEigenVector[3] );
-    Matrix3d r{ q };
-    const auto shift = centroid2 - r * centroid1;
+    return { Matrix3d{ q }, solver.eigenvalues()( 3 ) };
+}
+
+AffineXf3d PointToPointAligningTransform::findBestRigidXf() const
+{
+    if ( totalWeight() <= 0 )
+        return {};
+    const Matrix3d r = findPureRotation_().rot;
+    const auto shift = centroid2() - r * centroid1();
     return AffineXf3d( r, shift );
 }
 
-AffineXf3d PointToPointAligningTransform::calculateFixedAxisRotation( const Vector3d & axis ) const
+AffineXf3d PointToPointAligningTransform::findBestRigidScaleXf() const
+{
+    if ( totalWeight() <= 0 )
+        return {};
+    const auto x = findPureRotation_();
+
+    const double dev11 = sum11_ - sum1_.lengthSq() / totalWeight();
+    assert( x.err > 0 );
+    assert( dev11 > 0 );
+    const auto scale = x.err / dev11;
+
+    const Matrix3d m = x.rot * scale;
+    const auto shift = centroid2() - m * centroid1();
+    return AffineXf3d( m, shift );
+}
+
+AffineXf3d PointToPointAligningTransform::findBestRigidXfFixedRotationAxis( const Vector3d & axis ) const
 {
     if ( axis.lengthSq() <= 0 )
-        return calculateTransformationMatrix();
+        return findBestRigidXf();
 
     const auto centroid1 = this->centroid1();
     const auto centroid2 = this->centroid2();
-    const auto totalWeight = this->totalWeight();
 
-    const Matrix4d s = summary_ - totalWeight * outer( vec4d( centroid1 ), vec4d( centroid2 ) );
+    const Matrix3d s = sum12_ - outer( sum1_, centroid2 );
     const auto k = axis.normalized();
 
     // a = sum_i( dot( p2_i, cross( k, cross( k, p1_i ) ) )
@@ -130,16 +126,15 @@ AffineXf3d PointToPointAligningTransform::calculateFixedAxisRotation( const Vect
     return AffineXf3d( r, shift );
 }
 
-AffineXf3d PointToPointAligningTransform::calculateOrthogonalAxisRotation( const Vector3d& ort ) const
+AffineXf3d PointToPointAligningTransform::findBestRigidXfOrthogonalRotationAxis( const Vector3d& ort ) const
 {
     // for more detail of this algorithm see paragraph "3.3 A solution involving unit quaternions" in 
     // http://graphics.stanford.edu/~smr/ICP/comparison/eggert_comparison_mva97.pdf
     const auto centroid1 = this->centroid1();
     const auto centroid2 = this->centroid2();
-    const auto totalWeight = this->totalWeight();
 
-    const Matrix4d s = summary_ - totalWeight * outer( vec4d( centroid1 ), vec4d( centroid2 ) );
-    const Matrix4d p = calculateMatrixP( s );
+    const Matrix3d s = sum12_ - outer( sum1_, centroid2 );
+    const SymMatrix4d p = calculateMatrixP( s );
 
     const auto [d1, d2] = ort.perpendicular();
     const SymMatrix3d p2d = caluclate2DimensionsP( p, Vector4d{0,d1[0],d1[1],d1[2]}, Vector4d{0,d2[0],d2[1],d2[2]} );
@@ -157,13 +152,13 @@ AffineXf3d PointToPointAligningTransform::calculateOrthogonalAxisRotation( const
     return AffineXf3d( r, shift );
 }
 
-Vector3d PointToPointAligningTransform::calculateTranslation() const
+Vector3d PointToPointAligningTransform::findBestTranslation() const
 {
     return centroid2() - centroid1();
 }
 
 
-TEST( MRMesh, AligningTransform )
+TEST( MRMesh, PointToPointAligningTransform1 )
 {
     PointToPointAligningTransform at1;
 
@@ -171,22 +166,26 @@ TEST( MRMesh, AligningTransform )
     at1.add( Vector3d::plusX(), Vector3d::plusY() + b );
     at1.add( Vector3d::plusY(), Vector3d::plusZ() + b );
     at1.add( Vector3d::plusZ(), Vector3d::plusX() + b );
-    auto xf1 = at1.calculateTransformationMatrix();
 
+    auto xf1 = at1.findBestRigidXf();
+    ASSERT_NEAR( ( xf1( Vector3d::plusX() ) - Vector3d::plusY() - b ).length(), 0., 1e-15 );
+    ASSERT_NEAR( ( xf1( Vector3d::plusY() ) - Vector3d::plusZ() - b ).length(), 0., 1e-15 );
+    ASSERT_NEAR( ( xf1( Vector3d::plusZ() ) - Vector3d::plusX() - b ).length(), 0., 1e-15 );
+ 
+    xf1 = at1.findBestRigidScaleXf();
     ASSERT_NEAR( ( xf1( Vector3d::plusX() ) - Vector3d::plusY() - b ).length(), 0., 1e-15 );
     ASSERT_NEAR( ( xf1( Vector3d::plusY() ) - Vector3d::plusZ() - b ).length(), 0., 1e-15 );
     ASSERT_NEAR( ( xf1( Vector3d::plusZ() ) - Vector3d::plusX() - b ).length(), 0., 1e-15 );
 
-    auto xf1_ = at1.calculateFixedAxisRotation( Vector3d{ 1, 1, 1 } );
-    ASSERT_NEAR( ( xf1_( Vector3d::plusX() ) - Vector3d::plusY() - b ).length(), 0., 1e-15 );
-    ASSERT_NEAR( ( xf1_( Vector3d::plusY() ) - Vector3d::plusZ() - b ).length(), 0., 1e-15 );
-    ASSERT_NEAR( ( xf1_( Vector3d::plusZ() ) - Vector3d::plusX() - b ).length(), 0., 1e-15 );
+    xf1 = at1.findBestRigidXfFixedRotationAxis( Vector3d{ 1, 1, 1 } );
+    ASSERT_NEAR( ( xf1( Vector3d::plusX() ) - Vector3d::plusY() - b ).length(), 0., 1e-15 );
+    ASSERT_NEAR( ( xf1( Vector3d::plusY() ) - Vector3d::plusZ() - b ).length(), 0., 1e-15 );
+    ASSERT_NEAR( ( xf1( Vector3d::plusZ() ) - Vector3d::plusX() - b ).length(), 0., 1e-15 );
 
-
-    auto xf1__ = at1.calculateOrthogonalAxisRotation( Vector3d{1, 0, -1} );
-    ASSERT_NEAR( ( xf1__( Vector3d::plusX() ) - Vector3d::plusY() - b ).length(), 0., 1e-15 );
-    ASSERT_NEAR( ( xf1__( Vector3d::plusY() ) - Vector3d::plusZ() - b ).length(), 0., 1e-15 );
-    ASSERT_NEAR( ( xf1__( Vector3d::plusZ() ) - Vector3d::plusX() - b ).length(), 0., 1e-15 );
+    xf1 = at1.findBestRigidXfOrthogonalRotationAxis( Vector3d{1, 0, -1} );
+    ASSERT_NEAR( ( xf1( Vector3d::plusX() ) - Vector3d::plusY() - b ).length(), 0., 1e-15 );
+    ASSERT_NEAR( ( xf1( Vector3d::plusY() ) - Vector3d::plusZ() - b ).length(), 0., 1e-15 );
+    ASSERT_NEAR( ( xf1( Vector3d::plusZ() ) - Vector3d::plusX() - b ).length(), 0., 1e-15 );
 
     // Second test
     PointToPointAligningTransform at2;
@@ -202,14 +201,14 @@ TEST( MRMesh, AligningTransform )
     at2.add( p41, p42 );
     at2.add( p51, p52 );
 
-    auto xf2 = at2.calculateTransformationMatrix();
+    auto xf2 = at2.findBestRigidXf();
     EXPECT_NEAR( ( xf2( p11 ) - p12 ).length(), 0., 1e-14 );
     EXPECT_NEAR( ( xf2( p21 ) - p22 ).length(), 0., 1e-14 );
     EXPECT_NEAR( ( xf2( p31 ) - p32 ).length(), 0., 1e-14 );
     EXPECT_NEAR( ( xf2( p41 ) - p42 ).length(), 0., 1e-14 );
     EXPECT_NEAR( ( xf2( p51 ) - p52 ).length(), 0., 1e-14 );
 
-    auto xf2_ = at2.calculateFixedAxisRotation( Vector3d{ -1, 1, -1 } );
+    auto xf2_ = at2.findBestRigidXfFixedRotationAxis( Vector3d{ -1, 1, -1 } );
     EXPECT_NEAR( ( xf2_( p11 ) - p12 ).length(), 0., 1e-14 );
     EXPECT_NEAR( ( xf2_( p21 ) - p22 ).length(), 0., 1e-14 );
     EXPECT_NEAR( ( xf2_( p31 ) - p32 ).length(), 0., 1e-14 );
@@ -229,19 +228,112 @@ TEST( MRMesh, AligningTransform )
     at3.add( p41, p42 );
     at3.add( p51, p52 );
 
-    auto xf3 = at3.calculateTransformationMatrix();
+    auto xf3 = at3.findBestRigidXf();
     EXPECT_NEAR( ( xf3( p11 ) - p12 ).length(), 0., 1e-13 );
     EXPECT_NEAR( ( xf3( p21 ) - p22 ).length(), 0., 1e-13 );
     EXPECT_NEAR( ( xf3( p31 ) - p32 ).length(), 0., 1e-13 );
     EXPECT_NEAR( ( xf3( p41 ) - p42 ).length(), 0., 1e-13 );
     EXPECT_NEAR( ( xf3( p51 ) - p52 ).length(), 0., 1e-13 );
 
-    auto xf3_ = at3.calculateFixedAxisRotation( Vector3d{ 1, 1, 1 } );
+    auto xf3_ = at3.findBestRigidXfFixedRotationAxis( Vector3d{ 1, 1, 1 } );
     EXPECT_NEAR( ( xf3_( p11 ) - p12 ).length(), 0., 1e-13 );
     EXPECT_NEAR( ( xf3_( p21 ) - p22 ).length(), 0., 1e-13 );
     EXPECT_NEAR( ( xf3_( p31 ) - p32 ).length(), 0., 1e-13 );
     EXPECT_NEAR( ( xf3_( p41 ) - p42 ).length(), 0., 1e-13 );
     EXPECT_NEAR( ( xf3_( p51 ) - p52 ).length(), 0., 1e-13 );
+
+
+    PointToPointAligningTransform at4;
+    double scale = 0.25;
+    at4.add( Vector3d::plusX(), scale * Vector3d::plusY() + b );
+    at4.add( Vector3d::plusY(), scale * Vector3d::plusZ() + b );
+    at4.add( Vector3d::plusZ(), scale * Vector3d::plusX() + b );
+
+    auto xf4 = at4.findBestRigidScaleXf();
+    ASSERT_NEAR( ( xf4( Vector3d::plusX() ) - scale * Vector3d::plusY() - b ).length(), 0., 1e-15 );
+    ASSERT_NEAR( ( xf4( Vector3d::plusY() ) - scale * Vector3d::plusZ() - b ).length(), 0., 1e-15 );
+    ASSERT_NEAR( ( xf4( Vector3d::plusZ() ) - scale * Vector3d::plusX() - b ).length(), 0., 1e-15 );
+}
+
+TEST(MRMesh, PointToPointAligningTransform2 )
+{
+    // set points
+    const std::vector<Vector3d> points = {
+        {   1.0,   1.0, -5.0 },
+        {  14.0,   1.0,  1.0 },
+        {   1.0,  14.0,  2.0 },
+        { -11.0,   2.0,  3.0 },
+        {   1.0, -11.0,  4.0 },
+        {   1.0,   2.0,  8.0 },
+        {   2.0,   1.0, -5.0 },
+        {  15.0,   1.5,  1.0 },
+        {   1.5,  15.0,  2.0 },
+        { -11.0,   2.5,  3.1 },
+    };
+    // Point to Point part
+    const std::vector<AffineXf3d> xfs = {
+        // zero xf
+        AffineXf3d(
+            Matrix3d(
+                Vector3d(1, 0, 0),
+                Vector3d(0, 1, 0),
+                Vector3d(0, 0, 1)
+            ),
+            Vector3d(0,0,0)),
+
+        // small Rz
+        AffineXf3d(
+            Matrix3d(
+                Vector3d(0.8, 0.6, 0),
+                Vector3d(-0.6, 0.8, 0),
+                Vector3d(0, 0, 1)
+            ),
+            Vector3d(0,0,0)),
+
+        // small transl
+        AffineXf3d(
+            Matrix3d(
+                Vector3d(0.8, 0.6, 0),
+                Vector3d(-0.6, 0.8, 0),
+                Vector3d(0, 0, 1)
+            ),
+            Vector3d(2,-2,0)),
+
+        // complex xf
+        AffineXf3d(
+            Matrix3d(
+                Vector3d(0.8, 0, -0.6),
+                Vector3d(0, 1, 0),
+                Vector3d(0.6, 0, 0.8)
+            ),
+            Vector3d(200,-200,0)),
+    };
+
+    constexpr auto eps = 5e-14;
+    for ( const auto& xf : xfs )
+    {
+        {
+            PointToPointAligningTransform p2pt;
+            for ( const auto & p : points )
+                p2pt.add( p, xf( p ) );
+
+            auto xfResP2pt = p2pt.findBestRigidXf();
+            EXPECT_NEAR((xfResP2pt.A - xf.A).norm(), 0., eps);
+            EXPECT_NEAR((xfResP2pt.b - xf.b).length(), 0., eps);
+        }
+        {
+            auto scaleXf = xf;
+            scaleXf.A *= 3.0;
+
+            PointToPointAligningTransform p2ptS;
+            for ( const auto & p : points )
+                p2ptS.add( p, scaleXf( p ) );
+
+            auto xfResP2ptS = p2ptS.findBestRigidScaleXf();
+            EXPECT_NEAR((xfResP2ptS.A - scaleXf.A).norm(), 0., eps);
+            EXPECT_NEAR((xfResP2ptS.b - scaleXf.b).length(), 0., eps);
+        }
+    }
 }
 
 } //namespace MR

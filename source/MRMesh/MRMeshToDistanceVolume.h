@@ -21,6 +21,9 @@ struct DistanceVolumeParams
     Vector3f voxelSize{ 1.0f,1.0f,1.0f };
     /// num voxels along each axis
     Vector3i dimensions{ 100,100,100 };
+    /// whether to precompute minimum and maximum values
+    /// (requires to iterate through all voxels, which might be computationally expensive for FunctionVolume)
+    bool precomputeMinMax = true;
 };
 
 struct MeshToDistanceVolumeParams : DistanceVolumeParams
@@ -38,6 +41,9 @@ using MeshToSimpleVolumeParams [[deprecated]] = MeshToDistanceVolumeParams;
 
 /// makes SimpleVolume filled with (signed or unsigned) distances from Mesh with given settings
 MRMESH_API Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params = {} );
+
+/// makes FunctionVolume representing (signed or unsigned) distances from Mesh with given settings
+MRMESH_API Expected<FunctionVolume> meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params = {} );
 
 /// returns a volume filled with the values:
 /// v < 0: this point is within offset distance to region-part of mesh and it is closer to region-part than to not-region-part

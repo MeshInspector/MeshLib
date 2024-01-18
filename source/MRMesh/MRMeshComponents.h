@@ -73,6 +73,16 @@ enum FaceIncidence
 [[nodiscard]] MRMESH_API std::pair<Face2RegionMap, int> getAllComponentsMap( const MeshPart& meshPart,
     FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {} );
 
+/// computes the area of each region given via the map
+[[nodiscard]] MRMESH_API Vector<double, RegionId> getRegionAreas( const MeshPart& meshPart,
+    const Face2RegionMap & regionMap, int numRegions );
+
+/// returns
+/// 1. the union of all regions with area >= minArea
+/// 2. the number of such regions
+[[nodiscard]] MRMESH_API std::pair<FaceBitSet, int> getLargeByAreaRegions( const MeshPart& meshPart,
+    const Face2RegionMap & regionMap, int numRegions, float minArea );
+
 /// gets all connected components of mesh part
 [[nodiscard]] MRMESH_API std::vector<VertBitSet> getAllComponentsVerts( const Mesh& mesh, const VertBitSet* region = nullptr );
 

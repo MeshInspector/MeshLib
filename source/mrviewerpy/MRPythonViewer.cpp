@@ -96,7 +96,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
         return std::unique_ptr<MR::Viewer, pybind11::nodelete>( MR::Viewer::instance() );
     } ) ).
         def( "viewport", ( MR::Viewport& ( MR::Viewer::* )( MR::ViewportId ) )& MR::Viewer::viewport,
-            pybind11::arg( "viewportId" ) = MR::ViewportId{}, pybind11::return_value_policy::reference_internal,
+            pybind11::arg_v( "viewportId", MR::ViewportId(), "meshlib.mrmeshpy.ViewportId()" ), pybind11::return_value_policy::reference_internal,
             "Return the current viewport, or the viewport corresponding to a given unique identifier\n"
             "\tviewportId - unique identifier corresponding to the desired viewport (current viewport if 0)" ).
         def( "incrementForceRedrawFrames", MR::pythonRunFromGUIThread( &MR::Viewer::incrementForceRedrawFrames ),
@@ -105,8 +105,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
             "Increment number of forced frames to redraw in event loop\n"
             "if `swapOnLastOnly` only last forced frame will be present on screen and all previous will not" ).
         def( "preciseFitDataViewport", MR::pythonRunFromGUIThread( (void(MR::Viewer::*)( MR::ViewportMask, const MR::FitDataParams& )) &MR::Viewer::preciseFitDataViewport ),
-            pybind11::arg( "vpList" ) = MR::ViewportMask::all(),
-            pybind11::arg( "params" ) = MR::FitDataParams(),
+            pybind11::arg_v( "vpList", MR::ViewportMask::all(), "meshlib.mrmeshpy.ViewportMask.all()" ),
+            pybind11::arg_v( "params", MR::FitDataParams(), "ViewportFitDataParams()" ),
             "Calls fitData and change FOV to match the screen size then\n"
             "params - params fit data" ).
         def( "captureScreenShot", &pythonCaptureScreenShot,pybind11::arg("path"),
@@ -114,7 +114,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
         def( "shutdown", MR::pythonRunFromGUIThread( &MR::Viewer::stopEventLoop ), "sets stop event loop flag (this flag is glfwShouldWindowClose equivalent)" );
 
     m.def( "launch", &pythonLaunch, 
-        pybind11::arg( "params" ) = MR::Viewer::LaunchParams{},
-        pybind11::arg( "setup" ) = MR::ViewerSetup{},
+        pybind11::arg_v( "params", MR::Viewer::LaunchParams(), "ViewerLaunchParams()" ),
+        pybind11::arg_v( "setup", MR::ViewerSetup(), "ViewerSetup()" ),
         "starts default viewer with given params and setup" );
 } )

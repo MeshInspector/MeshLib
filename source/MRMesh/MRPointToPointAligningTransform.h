@@ -2,7 +2,6 @@
 
 #include "MRMeshFwd.h"
 #include "MRAffineXf3.h"
-#include "MRMatrix4.h"
 
 namespace MR
 {
@@ -16,35 +15,47 @@ namespace MR
 class PointToPointAligningTransform
 {
 public:
-    /// Default constructor
-    MRMESH_API PointToPointAligningTransform();
-
     /// Add one pair of points in the set.
     MRMESH_API void add( const Vector3d& p1, const Vector3d& p2, double w = 1.0 );
     /// Add another two sets of points.
     MRMESH_API void add( const PointToPointAligningTransform & other );
     /// Clear sets.
-    MRMESH_API void clear();
+    void clear() { *this = {}; }
 
     /// returns weighted centroid of points p1 accumulated so far
-    [[nodiscard]] MRMESH_API Vector3d centroid1() const;
+    [[nodiscard]] Vector3d centroid1() const { return sum1_ / sumW_; }
     /// returns weighted centroid of points p2 accumulated so far
-    [[nodiscard]] MRMESH_API Vector3d centroid2() const;
+    [[nodiscard]] Vector3d centroid2() const { return sum2_ / sumW_; }
     /// returns summed weight of points accumulated so far
-    [[nodiscard]] double totalWeight() const { return summary_.w.w; }
+    [[nodiscard]] double totalWeight() const { return sumW_; }
 
     /// Compute transformation as the solution to a least squares formulation of the problem:
     /// xf( p1_i ) = p2_i
-    [[nodiscard]] MRMESH_API AffineXf3d calculateTransformationMatrix() const;
+    /// this version searches for best rigid body transformation
+    [[nodiscard]] MRMESH_API AffineXf3d findBestRigidXf() const;
+    /// this version searches for best rigid body transformation with uniform scaling
+    [[nodiscard]] MRMESH_API AffineXf3d findBestRigidScaleXf() const;
     /// this version searches for best transformation where rotation is allowed only around given axis and with arbitrary translation
-    [[nodiscard]] MRMESH_API AffineXf3d calculateFixedAxisRotation( const Vector3d& axis ) const;
+    [[nodiscard]] MRMESH_API AffineXf3d findBestRigidXfFixedRotationAxis( const Vector3d& axis ) const;
     /// this version searches for best transformation where rotation is allowed only around axes orthogonal to given one
-    [[nodiscard]] MRMESH_API AffineXf3d calculateOrthogonalAxisRotation( const Vector3d& ort ) const;
+    [[nodiscard]] MRMESH_API AffineXf3d findBestRigidXfOrthogonalRotationAxis( const Vector3d& ort ) const;
     /// Simplified solution for translational part only
-    [[nodiscard]] MRMESH_API Vector3d calculateTranslation() const;
+    [[nodiscard]] MRMESH_API Vector3d findBestTranslation() const;
 
 private:
-    Matrix4d summary_;
+    struct BestRotation
+    {
+        Matrix3d rot;
+        double err = 0; // larger value means more discrepancy between points after registration
+    };
+    /// finds rotation matrix that best aligns centered pairs of points
+    BestRotation findPureRotation_() const;
+
+private:
+    Matrix3d sum12_ = Matrix3d::zero();
+    Vector3d sum1_, sum2_;
+    double sum11_ = 0; ///< used only for scale determination
+    double sumW_ = 0;
 };
 
 /// \}

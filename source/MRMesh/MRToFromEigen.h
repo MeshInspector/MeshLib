@@ -6,6 +6,7 @@
 #include "MRVector4.h"
 #include "MRSymMatrix2.h"
 #include "MRSymMatrix3.h"
+#include "MRSymMatrix4.h"
 #include "MRMatrix2.h"
 #include "MRMatrix3.h"
 #include "MRMatrix4.h"
@@ -96,6 +97,17 @@ template <typename T>
         { m( 1, 0 ), m( 1, 1 ), m( 1, 2 ) },
         { m( 2, 0 ), m( 2, 1 ), m( 2, 2 ) }
     };
+}
+
+template <typename T>
+[[nodiscard]] inline Eigen::Matrix<T, 4, 4> toEigen( const SymMatrix4<T> & m )
+{
+    Eigen::Matrix<T, 4, 4> res;
+    res << m.xx, m.xy, m.xz, m.xw,
+           m.xy, m.yy, m.yz, m.yw,
+           m.xz, m.yz, m.zz, m.zw,
+           m.xw, m.yw, m.zw, m.ww;
+    return res;
 }
 
 template <typename T>

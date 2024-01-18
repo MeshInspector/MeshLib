@@ -14,9 +14,12 @@
 
 
 #define MR_ADD_PYTHON_VOXELS_VOLUME( Type, TypeText ) \
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Type, []( pybind11::module_& m ) \
-{\
-    pybind11::class_<MR::Type>( m, #Type, "Voxels representation as " #TypeText ).\
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, Type, MR::Type ) \
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Type, [] ( pybind11::module_& ) \
+{                                                     \
+    MR_PYTHON_CUSTOM_CLASS( Type ).doc() =                                       \
+        "Voxels representation as " #TypeText;        \
+    MR_PYTHON_CUSTOM_CLASS( Type ).                                              \
         def( pybind11::init<>() ).\
         def_readwrite( "data", &MR::Type::data ).\
         def_readwrite( "dims", &MR::Type::dims, "Size of voxels space" ).\
@@ -28,9 +31,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Type, []( pybind11::module_& m ) \
 MR_ADD_PYTHON_VOXELS_VOLUME( VdbVolume, "VDB FloatGrid" )
 MR_ADD_PYTHON_VOXELS_VOLUME( SimpleVolume, "vector of float" )
 
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, FloatGrid, MR::OpenVdbFloatGrid, MR::FloatGrid )
+MR_ADD_PYTHON_CUSTOM_CLASS_INST( mrmeshpy, FloatGrid )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
 {
-    pybind11::class_<MR::OpenVdbFloatGrid, MR::FloatGrid>( m, "FloatGrid", "Smart pointer to OpenVdbFloatGrid" ).
+    MR_PYTHON_CUSTOM_CLASS( FloatGrid ).doc() =
+        "Smart pointer to OpenVdbFloatGrid";
+    MR_PYTHON_CUSTOM_CLASS( FloatGrid ).
         def( pybind11::init<>() );
 
     m.def( "meshToLevelSet", &MR::meshToLevelSet,
@@ -183,7 +191,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
     m.def( "meshToVolume",
         MR::decorateExpected( &MR::meshToVolume ),
         pybind11::arg( "mesh" ),
-        pybind11::arg( "params" ) = MR::MeshToVolumeParams{},
+        pybind11::arg_v( "params", MR::MeshToVolumeParams(), "MeshToVolumeParams()" ),
         "convert mesh to volume in (0,0,0)-(dim.x,dim.y,dim.z) grid box" );
 
     pybind11::class_<MR::MeshToDistanceVolumeParams>( m, "MeshToDistanceVolumeParams" ).
@@ -196,7 +204,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         def_readwrite( "signMode", &MR::MeshToDistanceVolumeParams::signMode, "the method to compute distance sign" );
 
     m.def( "meshToDistanceVolume", MR::decorateExpected( &MR::meshToDistanceVolume ),
-        pybind11::arg( "mesh" ), pybind11::arg( "params" ) = MR::MeshToDistanceVolumeParams{},
+        pybind11::arg( "mesh" ), pybind11::arg_v( "params", MR::MeshToDistanceVolumeParams(), "MeshToDistanceVolumeParams()" ),
         "makes SimpleVolume filled with (signed or unsigned) distances from Mesh with given settings" );
 } )
 #endif

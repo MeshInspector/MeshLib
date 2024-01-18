@@ -519,7 +519,7 @@ auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapseP
     float maxOldEdgeLenSq = std::max( sqr( settings_.maxEdgeLen ), edgeLenSq );
     float maxNewEdgeLenSq = 0;
 
-    bool normalFlip = false; // at least one triangle flips its normal
+    bool normalFlip = false; // at least one triangle flips its normal or a degenerate triangle becomes not-degenerate
     originNeis_.clear();
     triDblAreas_.clear();
     Vector3d sumDblArea_;
@@ -551,7 +551,7 @@ auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapseP
             if ( !normalFlip )
             {
                 const auto oldA = cross( pDest - po, pDest2 - po );
-                if ( dot( da, oldA ) < 0 )
+                if ( dot( da, oldA ) <= 0 )
                     normalFlip = true;
             }
             triDblAreas_.push_back( da );
@@ -596,7 +596,7 @@ auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapseP
             if ( !normalFlip )
             {
                 const auto oldA = cross( pDest - pd, pDest2 - pd );
-                if ( dot( da, oldA ) < 0 )
+                if ( dot( da, oldA ) <= 0 )
                     normalFlip = true;
             }
             triDblAreas_.push_back( da );

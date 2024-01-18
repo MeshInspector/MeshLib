@@ -237,9 +237,9 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     /// draws this object for visualization
-    MRMESH_API virtual void render( const RenderParams& ) const;
+    MRMESH_API virtual void render( const ModelRenderParams& ) const;
     /// draws this object for picking
-    MRMESH_API virtual void renderForPicker( const BaseRenderParams&, unsigned ) const;
+    MRMESH_API virtual void renderForPicker( const ModelRenderParams&, unsigned ) const;
     // Binds all graphical data to GPU and allows to clear this object CPU representation to free memory
     // note that object without CPU model is not really valid and the model will be lost on serialization, also some caches will lost with CPU model
     MRMESH_API virtual void bindAllVisualization() const;

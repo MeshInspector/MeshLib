@@ -26,6 +26,12 @@ elif platform_system == "Linux":
 elif platform_system == "Darwin":
     LIBS_EXTENSION = "so"
 
+MODULES = [
+    "mrmeshnumpy",
+    "mrmeshpy",
+    "mrviewerpy",
+]
+
 here = pathlib.Path(__file__).parent.resolve()
 # Get the long description from the readme file
 long_description = (here / "readme.md").read_text(encoding="utf-8")
@@ -41,7 +47,11 @@ setuptools.setup(
     url="https://github.com/MeshInspector/MeshLib",
     license_files=('LICENSE',),
     packages=['meshlib'],
-    package_data={'meshlib': ['mrmeshnumpy.{}'.format(LIBS_EXTENSION), 'mrmeshpy.{}'.format(LIBS_EXTENSION), 'mrviewerpy.{}'.format(LIBS_EXTENSION)]},
+    package_data={
+        'meshlib':
+            [f"{module}.{LIBS_EXTENSION}" for module in MODULES] +
+            [f"{module}.pyi" for module in MODULES]
+    },
     include_package_data=True,
     classifiers=[
         'Programming Language :: Python :: 3.8',

@@ -11,13 +11,13 @@ namespace MR
 {
 
 void positionVertsSmoothly( Mesh& mesh, const VertBitSet& verts,
-    Laplacian::EdgeWeights egdeWeightsType,
+    Laplacian::EdgeWeights edgeWeightsType,
     const VertBitSet * fixedSharpVertices )
 {
     MR_TIMER
 
     Laplacian laplacian( mesh );
-    laplacian.init( verts, egdeWeightsType, Laplacian::RememberShape::No );
+    laplacian.init( verts, edgeWeightsType, Laplacian::RememberShape::No );
     if ( fixedSharpVertices )
         for ( auto v : *fixedSharpVertices )
             laplacian.fixVertex( v, false );

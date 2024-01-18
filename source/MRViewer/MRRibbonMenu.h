@@ -11,6 +11,7 @@
 #include <boost/signals2/signal.hpp>
 #include <type_traits>
 #include <array>
+#include "MRRibbonNotification.h"
 
 namespace MR
 {
@@ -23,7 +24,21 @@ class Object;
 // menu structure is provided by `menuItemsStructure.json` file (parsed on init)
 class MRVIEWER_CLASS RibbonMenu : public ImGuiMenu
 {
+    struct CustomContextMenuCheckbox
+    {
+        using Setter = std::function<void( std::shared_ptr<Object> object, ViewportId id, bool checked )>;
+        using Getter = std::function<bool( std::shared_ptr<Object> object, ViewportId id )>;
+        Setter setter;
+        Getter getter;
+    };
+
 public:
+    // adds a custom checkBox to the context menu
+    // it is applied to the selected objects
+    MRVIEWER_API void setCustomContextCheckbox(
+        const std::string& name,
+        CustomContextMenuCheckbox customContextMenuCheckbox );
+
     MRVIEWER_API virtual void init( MR::Viewer* _viewer ) override;
 
     MRVIEWER_API virtual void shutdown() override;
@@ -81,6 +96,10 @@ public:
     void setActiveListPos( const ImVec2& pos ) { activeListPos_ = pos; }
     /// set active plugins list showed
     void showActiveList() { activeListPressed_ = true; };
+
+    /// adds new notification to notifier list
+    /// draws it first
+    MRVIEWER_API void pushNotification( const RibbonNotification& notification );
 
     /// clones given objects with sub-objects (except for ancillary and unrecognized children) and undo
     MRVIEWER_API static void cloneTree( const std::vector<std::shared_ptr<Object>>& selectedObjects );
@@ -184,6 +203,7 @@ private:
     void drawSearchButton_();
     void drawCollapseButton_();
     void drawHelpButton_();
+    bool drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected );
 
     void sortObjectsRecursive_( std::shared_ptr<Object> object );
 
@@ -239,7 +259,10 @@ private:
     RibbonFontManager fontManager_;
     RibbonButtonDrawer buttonDrawer_;
 
+    std::unordered_map<std::string, CustomContextMenuCheckbox> customCheckBox_;
+
     Toolbar toolbar_;
+    RibbonNotifier notifier_;
 #ifndef __EMSCRIPTEN__
     AsyncRequest asyncRequest_;
 #endif // !__EMSCRIPTEN__

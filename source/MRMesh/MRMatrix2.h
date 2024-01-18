@@ -81,6 +81,13 @@ inline Vector2<T> operator *( const Matrix2<T> & a, const Vector2<T> & b )
     return { dot( a.x, b ), dot( a.y, b ) };
 }
 
+/// double-dot product: x = a : b
+template <typename T>
+inline T dot( const Matrix2<T> & a, const Matrix2<T> & b )
+{
+    return dot( a.x, b.x ) + dot( a.y, b.y );
+}
+
 /// product of two matrices
 template <typename T>
 inline Matrix2<T> operator *( const Matrix2<T> & a, const Matrix2<T> & b )

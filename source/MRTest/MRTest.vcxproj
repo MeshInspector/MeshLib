@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClCompile Include="MRTestApp.cpp" />
     <ClCompile Include="MRTriangleIntersection.cpp" />
+    <ClCompile Include="MRZlib.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\mrmeshpy\mrmeshpy.vcxproj">

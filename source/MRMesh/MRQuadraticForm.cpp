@@ -33,7 +33,7 @@ std::pair< QuadraticForm<V>, V > sum(
     else
     {
         const auto center = T(0.5) * ( x0 + x1 );
-        x2 = q2.A.solve( q0.A * ( x0 - center ) + q1.A * ( x1 - center ) ) + center;
+        x2 = q2.A.pseudoinverse() * ( q0.A * ( x0 - center ) + q1.A * ( x1 - center ) ) + center;
         q2.c = q0.eval( x0 - x2 ) + q1.eval( x1 - x2 );
     }
 

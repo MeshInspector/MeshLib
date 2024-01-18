@@ -14,8 +14,8 @@ public:
     RenderVolumeObject( const VisualObject& visObj );
     ~RenderVolumeObject();
 
-    virtual void render( const RenderParams& params ) override;
-    virtual void renderPicker( const BaseRenderParams& params, unsigned geomId ) override;
+    virtual void render( const ModelRenderParams& params ) override;
+    virtual void renderPicker( const ModelRenderParams& params, unsigned geomId ) override;
     virtual size_t heapBytes() const override;
     virtual size_t glBytes() const override;
     virtual void forceBindAll() override;
@@ -35,7 +35,7 @@ private:
     GlTexture2 activeVoxelsTex_;
     int maxTexSize_{ 0 };
 
-    void render_( const RenderParams& params, unsigned geomId );
+    void render_( const ModelRenderParams& params, unsigned geomId );
     void bindVolume_( bool picker );
 
     // Create a new set of OpenGL buffer objects

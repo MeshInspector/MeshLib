@@ -72,7 +72,7 @@ void CylinderObject::setLength( float length )
     auto direction = getDirection();
     auto currentXf = xf();
     auto radius = getRadius();
-    currentXf.A = ( getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, length ) ); // use z component only. So we could not calculate radius;
+    currentXf.A = ( getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, length ) );
     setXf( currentXf );
 }
 
@@ -88,7 +88,7 @@ void CylinderObject::setRadius( float radius )
 {
     auto direction = getDirection();
     auto currentXf = xf();
-    currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, getLength() ); // will use x,y components only. So we could not calculate length.
+    currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, getLength() );
     setXf( currentXf );
 }
 

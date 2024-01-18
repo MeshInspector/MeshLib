@@ -84,26 +84,13 @@ bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSe
     auto cp = mesh.points[c];
     auto dp = mesh.points[d];
 
-    bool degenInputTris = false; // whether triangles ACD and ABC are degenerate based on their aspect ratio
-    if ( settings.criticalTriAspectRatio < FLT_MAX &&
-         ( deviationSqAfterFlip || settings.maxDeviationAfterFlip < FLT_MAX || settings.maxAngleChange < NoAngleChangeLimit ) )
-    {
-        const auto maxAspect = std::max( triangleAspectRatio( ap, cp, dp ), triangleAspectRatio( cp, ap, bp ) );
-        if ( maxAspect > settings.criticalTriAspectRatio )
-            degenInputTris = true;
-    }
-
     if ( deviationSqAfterFlip || settings.maxDeviationAfterFlip < FLT_MAX )
     {
-        float distSq = 0;
-        if ( !degenInputTris )
-        {
-            Vector3f vec, closestOnAC, closestOnBD;
-            SegPoints( vec, closestOnAC, closestOnBD,
-                ap, cp - ap,   // first diagonal segment
-                bp, dp - bp ); // second diagonal segment
-            distSq = ( closestOnAC - closestOnBD ).lengthSq();
-        }
+        Vector3f vec, closestOnAC, closestOnBD;
+        SegPoints( vec, closestOnAC, closestOnBD,
+            ap, cp - ap,   // first diagonal segment
+            bp, dp - bp ); // second diagonal segment
+        const auto distSq = ( closestOnAC - closestOnBD ).lengthSq();
         if ( deviationSqAfterFlip )
             *deviationSqAfterFlip = distSq;
         if ( distSq > sqr( settings.maxDeviationAfterFlip ) )
@@ -113,7 +100,18 @@ bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSe
     if ( !isUnfoldQuadrangleConvex( ap, bp, cp, dp ) )
         return true; // cannot flip because 2d quadrangle is concave
 
-    return checkDeloneQuadrangle( ap, bp, cp, dp, degenInputTris ? NoAngleChangeLimit : settings.maxAngleChange );
+    auto maxAngleChange = settings.maxAngleChange;
+    if ( settings.criticalTriAspectRatio < FLT_MAX && maxAngleChange < NoAngleChangeLimit )
+    {
+        const auto maxAspect = std::max( triangleAspectRatio( ap, cp, dp ), triangleAspectRatio( cp, ap, bp ) );
+        if ( maxAspect > settings.criticalTriAspectRatio )
+        {
+            // triangle ACD or ABC is degenerate based on their aspect ratio
+            maxAngleChange = NoAngleChangeLimit;
+        }
+    }
+
+    return checkDeloneQuadrangle( ap, bp, cp, dp, maxAngleChange );
 }
 
 int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIters, ProgressCallback progressCallback )

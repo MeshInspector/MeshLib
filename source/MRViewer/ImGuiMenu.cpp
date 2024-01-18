@@ -203,7 +203,7 @@ void ImGuiMenu::startFrame()
         ImGui::GetIO().DisplaySize = ImVec2( float( viewer->framebufferSize.x ), float( viewer->framebufferSize.y ) );
     }
     auto& style = ImGui::GetStyle();
-    if ( storedModalMessage_.empty() )
+    if ( !needModalBgChange_ )
         style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 0.0f, 0.0f, 0.0f, 0.8f );
     else
     {
@@ -842,10 +842,11 @@ void ImGuiMenu::drawModalMessage_()
 
     const std::string titleImGui = " " + title + "##modal";
 
-    if ( !storedModalMessage_.empty() &&
+    if ( showInfoModal_ &&
         !ImGui::IsPopupOpen( " Error##modal" ) && !ImGui::IsPopupOpen( " Warning##modal" ) && !ImGui::IsPopupOpen( " Info##modal" ) )
     {
         ImGui::OpenPopup( titleImGui.c_str() );
+        showInfoModal_ = false;
     }
 
     const auto menuScaling = menu_scaling();
@@ -884,11 +885,15 @@ void ImGuiMenu::drawModalMessage_()
         if ( UI::button( "Okay", Vector2f( -1, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Enter ) ||
            ( ImGui::IsMouseClicked( 0 ) && !ImGui::IsWindowAppearing() && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) ) ) )
         {
-            storedModalMessage_.clear();
             ImGui::CloseCurrentPopup();
         }
         ImGui::PopStyleVar();
         ImGui::EndPopup();
+        needModalBgChange_ = true;
+    }
+    else
+    {
+        needModalBgChange_ = false;
     }
     ImGui::PopStyleVar( 2 );
     ImGui::PopStyleColor();
@@ -908,6 +913,8 @@ void ImGuiMenu::showModalMessage( const std::string& msg, NotificationType msgTy
     else // if ( msgType == MessageType::Info )
         spdlog::info( "Info Modal Dialog: {}", msg );
     showRenameModal_ = false;
+    showInfoModal_ = true;
+    needModalBgChange_ = true;
     modalMessageType_ = msgType;
     ImGui::CloseCurrentPopup();
     storedModalMessage_ = msg;

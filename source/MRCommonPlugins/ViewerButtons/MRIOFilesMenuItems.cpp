@@ -149,8 +149,25 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
     // if drop to menu scene window -> add objects
     // if drop to viewport -> replace objects
     auto& viewerRef = getViewerInstance();
-    SCOPED_HISTORY( "Drag and drop files" );
     auto menu = viewerRef.getMenuPluginAs<RibbonMenu>();
+
+    if ( ProgressBar::isOrdered() )
+    {
+        if ( menu )
+        {
+            menu->pushNotification( {
+                .drawContentFunc = [] ( float ,float )
+            {
+                ImGui::TextWrapped( "Another operation in progress." );
+                return true;
+            },
+                .lifeTimeSec = 3.0f
+                } );
+        }
+        return true;
+    }
+
+    SCOPED_HISTORY( "Drag and drop files" );
     if ( menu )
     {
         auto sceneBoxSize = menu->getSceneSize();
@@ -167,7 +184,7 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
         }
     }
 
-    getViewerInstance().loadFiles( paths );
+    viewerRef.loadFiles( paths );
     return true;
 }
 

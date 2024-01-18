@@ -66,7 +66,10 @@ protected:
   bool showRenameModal_{ false };
   std::string renameBuffer_;
   std::string popUpRenameBuffer_;
+  bool needModalBgChange_{ false };
+  bool showInfoModal_{ false };
   std::string storedModalMessage_;
+  NotificationType modalMessageType_{ NotificationType::Error };
   std::shared_ptr<ShortcutManager> shortcutManager_;
 
   ImVec2 sceneWindowPos_;
@@ -294,8 +297,6 @@ public:
   bool isSavedDialogPositionsEnabled() const { return savedDialogPositionEnabled_; }
 
 protected:
-    NotificationType modalMessageType_{ NotificationType::Error };
-
     MRVIEWER_API virtual void drawModalMessage_();
 
     bool capturedMouse_{ false };

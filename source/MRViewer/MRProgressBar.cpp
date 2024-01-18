@@ -406,6 +406,8 @@ void ProgressBar::initialize_()
     if ( isFinished() && thread_.joinable() )
         thread_.join();
 
+    ImGui::CloseCurrentPopup();
+
     progress_ = 0.0f;
 
     taskCount_ = deferredInit_->taskCount;

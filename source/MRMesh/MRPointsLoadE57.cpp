@@ -28,6 +28,9 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
 {
     MR_TIMER
     std::vector<NamedCloud> res;
+    std::optional<AffineXf3d> xf0; // returned transformation of the first not-empty cloud
+    if ( settings.identityXf )
+        xf0.emplace();
 
     try
     {
@@ -45,16 +48,18 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
             e57::Data3D scanHeader;
             eReader.ReadData3D( scanIndex, scanHeader );
             nc.name = scanHeader.name;
-            AffineXf3d xf( 
+            const AffineXf3d e57Xf(
                 Quaterniond( scanHeader.pose.rotation.w, scanHeader.pose.rotation.x, scanHeader.pose.rotation.y, scanHeader.pose.rotation.z ),
                 Vector3d( scanHeader.pose.translation.x, scanHeader.pose.translation.y, scanHeader.pose.translation.z )
             );
 
-            std::optional<Vector3d> offset;
-            //if ( !outXf )
-                offset.emplace();
+            std::optional<AffineXf3d> aXf; // will be applied to all points
+            if ( settings.identityXf )
+                aXf = e57Xf;
+            else if ( settings.combineAllObjects && xf0 )
+                aXf = xf0->inverse() * e57Xf;
 
-            if ( !offset )
+            if ( !aXf )
             {
                 const auto& bounds = scanHeader.cartesianBounds;
                 const Box3d box {
@@ -62,7 +67,7 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
                     { bounds.xMaximum, bounds.yMaximum, bounds.zMaximum },
                 };
                 if ( box.valid() )
-                    offset = box.center();
+                    aXf = AffineXf3d::translation( -box.center() );
             }
 
             int64_t nColumn = 0;
@@ -118,18 +123,19 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
                     if ( hasInputColors )
                         colors.reserve( nPointsSize );
                 }
-                if ( !offset )
+                if ( !aXf )
                 {
-                    offset = {
-                        buffers.cartesianX[0],
-                        buffers.cartesianY[0],
-                        buffers.cartesianZ[0],
-                    };
+                    aXf = AffineXf3d::translation( 
+                    {
+                        -buffers.cartesianX[0],
+                        -buffers.cartesianY[0],
+                        -buffers.cartesianZ[0],
+                    } );
                 }
                 for ( unsigned long i = 0; i < size; ++i )
                 {
-                    const auto p = xf( Vector3d( buffers.cartesianX[i], buffers.cartesianY[i], buffers.cartesianZ[i] ) );
-                    cloud.points.emplace_back( p - *offset );
+                    const auto p = Vector3d( buffers.cartesianX[i], buffers.cartesianY[i], buffers.cartesianZ[i] );
+                    cloud.points.emplace_back( Vector3f( (*aXf)( p ) ) );
                     if ( hasInputColors )
                     {
                         colors.emplace_back(
@@ -145,6 +151,10 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
             cloud.validPoints.resize( cloud.points.size(), true );
 
             dataReader.close();
+            nc.xf = ( settings.identityXf || !aXf ) ? AffineXf3f() :
+                AffineXf3f( e57Xf * aXf->inverse() );
+            if ( !xf0 && aXf )
+                xf0 = e57Xf * aXf->inverse();
         }
     }
     catch( const e57::E57Exception & e )
@@ -182,6 +192,8 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
     assert( res[0].cloud.points.size() == totalPoints );
     assert( !keepColors || res[0].colors.size() == totalPoints );
     res[0].cloud.validPoints.resize( res[0].cloud.points.size(), true );
+    if ( xf0 )
+        res[0].xf = AffineXf3f( *xf0 );
 
     return res;
 }

@@ -22,9 +22,9 @@ public:
         {
             cloneObj_ = obj->clone();
 
-            /// do not save ClippedByPlane property in Undo, TODO move the login in SectionPlugin
+            // do not save ClippedByPlane property in Undo, TODO move the logic in SectionPlugin
             if ( auto visObj = cloneObj_->asType<VisualObject>() )
-                visObj->setVisualizeProperty( false, MeshVisualizePropertyType::ClippedByPlane, ViewportMask::all() );
+                visObj->setVisualizeProperty( false, VisualizeMaskType::ClippedByPlane, ViewportMask::all() );
         }
     }
 
@@ -43,9 +43,9 @@ public:
             cloneObj_->addChild( child );
         }
 
-        /// do not save ClippedByPlane property in Undo, TODO move the login in SectionPlugin
+        // do not save ClippedByPlane property in Undo, TODO move the logic in SectionPlugin
         if ( auto visObj = obj->asType<VisualObject>() )
-            visObj->setVisualizeProperty( false, MeshVisualizePropertyType::ClippedByPlane, ViewportMask::all() );
+            visObj->setVisualizeProperty( false, VisualizeMaskType::ClippedByPlane, ViewportMask::all() );
 
         obj->swap( *cloneObj_ );
         if ( auto visObj = obj->asType<VisualObject>() )

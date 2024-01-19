@@ -367,7 +367,8 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
             ( dirty_ & DIRTY_SELECTION ) && vertSelectionTextureSize_.x * vertSelectionTextureSize_.y == 0 );
 
     const auto& points = objPoints_->pointCloud();
-    const auto numV = points->validPoints.find_last() + 1;
+    const auto step = objPoints_->getRenderDiscretization();
+    const auto numV = ( points->validPoints.find_last() + 1 ) / int( step );
     auto size = numV / 32 + 1;
     vertSelectionTextureSize_ = calcTextureRes( size, maxTexSize_ );
     assert( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y >= size );
@@ -380,12 +381,24 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
         for ( int r = range.begin(); r < range.end(); ++r )
         {
             auto& block = buffer[r];
-            if ( r / 2 >= selection.size() )
+            if ( r * step / 2 >= selection.size() )
             {
                 block = 0;
                 continue;
             }
-            block = selectionData[r];
+
+            if ( step == 1 )
+            {
+                block = selectionData[r];
+                continue;
+            }
+
+            for ( int bit = 0; bit < 32; ++bit )
+            {
+                const auto selectionBit = std::div( ( r * 32 + bit ) * int( step ), 32 );                
+                if ( selectionData[selectionBit.quot] & ( 1 << ( selectionBit.rem ) ) )
+                    block |= 1 << bit;
+            }
         }
     } );
 

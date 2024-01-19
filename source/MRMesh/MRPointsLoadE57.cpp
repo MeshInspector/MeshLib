@@ -1,10 +1,10 @@
 #include "MRPointsLoadE57.h"
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
-#include "MRAffineXf3.h"
 #include "MRBox.h"
 #include "MRColor.h"
 #include "MRPointCloud.h"
 #include "MRStringConvert.h"
+#include "MRQuaternion.h"
 #include "MRTimer.h"
 #include <MRPch/MRFmt.h>
 
@@ -24,14 +24,10 @@ namespace MR
 namespace PointsLoad
 {
 
-Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path& file, bool combineAllObjects,
-                                                               AffineXf3f* outXf, ProgressCallback progress )
+Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path& file, bool combineAllObjects, ProgressCallback progress )
 {
     MR_TIMER
     std::vector<NamedCloud> res;
-    std::optional<Vector3d> offset;
-    if ( !outXf )
-        offset.emplace();
 
     try
     {
@@ -49,6 +45,14 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
             e57::Data3D scanHeader;
             eReader.ReadData3D( scanIndex, scanHeader );
             nc.name = scanHeader.name;
+            AffineXf3d xf( 
+                Quaterniond( scanHeader.pose.rotation.w, scanHeader.pose.rotation.x, scanHeader.pose.rotation.y, scanHeader.pose.rotation.z ),
+                Vector3d( scanHeader.pose.translation.x, scanHeader.pose.translation.y, scanHeader.pose.translation.z )
+            );
+
+            std::optional<Vector3d> offset;
+            //if ( !outXf )
+                offset.emplace();
 
             if ( !offset )
             {
@@ -124,11 +128,8 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
                 }
                 for ( unsigned long i = 0; i < size; ++i )
                 {
-                    cloud.points.emplace_back(
-                        buffers.cartesianX[i] - offset->x,
-                        buffers.cartesianY[i] - offset->y,
-                        buffers.cartesianZ[i] - offset->z
-                    );
+                    const auto p = xf( Vector3d( buffers.cartesianX[i], buffers.cartesianY[i], buffers.cartesianZ[i] ) );
+                    cloud.points.emplace_back( p - *offset );
                     if ( hasInputColors )
                     {
                         colors.emplace_back(
@@ -145,9 +146,6 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
 
             dataReader.close();
         }
-
-        if ( outXf )
-            *outXf = AffineXf3f::translation( Vector3f( *offset ) );
     }
     catch( const e57::E57Exception & e )
     {

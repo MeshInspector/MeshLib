@@ -483,7 +483,7 @@ Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCallbac
 Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, VertColors* colors, AffineXf3f* outXf,
                                            ProgressCallback progress )
 {
-    auto x = fromSceneE57File( file, true, outXf, progress );
+    auto x = fromSceneE57File( file, true, progress );
     if ( !x )
         return unexpected( std::move( x.error() ) );
     if ( x->empty() )
@@ -491,6 +491,8 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
     assert( x->size() == 1 );
     if ( colors )
         *colors = std::move( (*x)[0].colors );
+    if ( outXf )
+        *outXf = AffineXf3f();
     return std::move( (*x)[0].cloud );
 }
 

@@ -95,7 +95,7 @@ float ConeObject::getAngle() const
 
 void ConeObject::setAngle( float angle )
 {
-    setRadius( getNormalizedRadiusByAngle( angle ) * getHeight() );
+    setBaseRadius( getNormalizedRadiusByAngle( angle ) * getHeight() );
 }
 
 void ConeObject::setDirection( const Vector3f& normal )
@@ -121,7 +121,7 @@ float ConeObject::getRadius() const
     return s.x.x;
 }
 
-void ConeObject::setRadius( float radius )
+void ConeObject::setBaseRadius( float radius )
 {
     auto direction = getDirection();
     auto currentXf = xf();

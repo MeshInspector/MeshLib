@@ -59,7 +59,7 @@ public:
     /// Computes the base radius from the xf.
     MRMESH_API float getRadius() const;
     // Updates the xf for the new radius.
-    MRMESH_API void setRadius( float radius );
+    MRMESH_API void setBaseRadius( float radius );
 
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 

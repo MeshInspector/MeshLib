@@ -300,7 +300,7 @@ std::shared_ptr<VisualObject> primitiveToObject( const Primitives::Variant& prim
                     newCone->setCenter( cone.basePoint( !flip ).center );
                     newCone->setDirection( cone.dir * ( flip ? -1.f : 1.f ) );
                     newCone->setHeight( ( flip ? negFinite : posFinite ) ? cone.length() : infiniteExtent / 2 );
-                    newCone->setRadius( flip ? cone.negativeSideRadius : cone.positiveSideRadius );
+                    newCone->setBaseRadius( flip ? cone.negativeSideRadius : cone.positiveSideRadius );
                     return newCone;
                 }
             }

@@ -184,7 +184,7 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
         Primitives::ConeSegment ret{
             .center = parentXf( cone->getCenter() ),
             .dir = parentXf.A * cone->getDirection(),
-            .positiveSideRadius = cone->getRadius() * scale,
+            .positiveSideRadius = cone->getBaseRadius() * scale,
             .negativeSideRadius = 0,
             .positiveLength = cone->getHeight(),
             .negativeLength = 0,

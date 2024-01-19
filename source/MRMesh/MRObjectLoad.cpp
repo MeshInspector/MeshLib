@@ -50,40 +50,54 @@ std::optional<MR::IOFilter> findFilter( const MR::IOFilters& filters, const std:
 
 // Detect if mesh has enough sharp edges (>25 degrees):
 // sum length of all sharp edges greater than 1.0 * (diagonal of the bounding box)
-bool detectSharpEdges( const Mesh& mesh )
+bool detectFlatShading( const Mesh& mesh )
 {
-    double maxLenSum = mesh.getBoundingBox().diagonal();
+    MR_TIMER
 
-    constexpr int angle = 25; // Critical angle from planar, degrees
-    UndirectedEdgeBitSet creases = mesh.findCreaseEdges( angle * PI_F / 180 );
+    constexpr float sharpAngle = 25 * PI_F / 180; // Critical angle from planar, degrees
+    const float sharpAngleCos = std::cos( sharpAngle );
 
-    double lenSum = parallel_deterministic_reduce(
-        tbb::blocked_range( 0_ue, UndirectedEdgeId{ mesh.topology.undirectedEdgeSize() }, 1024 ),
-        0.0,
-        [&mesh, &creases, maxLenSum] ( const auto& range, double currentLength )
+    struct Data
+    {
+        double sumLen = 0;
+        double sumSharpLen = 0;
+        Data operator + ( const Data & b ) const 
+        {
+            return { sumLen + b.sumLen, sumSharpLen + b.sumSharpLen };
+        }
+    };
+
+    auto total = parallel_deterministic_reduce(
+        tbb::blocked_range( 0_ue, UndirectedEdgeId{ mesh.topology.undirectedEdgeSize() } ),
+        Data(),
+        [&mesh, sharpAngleCos] ( const auto& range, Data current )
         {
             for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
-                if ( creases.test( ue ) )
-                {
-                    currentLength += mesh.edgeLength( ue );
-                    if ( currentLength > maxLenSum )
-                        break; // Already reached threshold, stop
-                }
-            return currentLength;
+            {
+                if ( mesh.topology.isLoneEdge( ue ) )
+                    continue;
+                const auto len = mesh.edgeLength( ue );
+                current.sumLen += len;
+                auto dihedralCos = mesh.dihedralAngleCos( ue );
+                if ( dihedralCos <= sharpAngleCos )
+                    current.sumSharpLen += len;
+            }
+            return current;
         },
-        std::plus<double>() );
+        std::plus<Data>() );
 
-    return lenSum > maxLenSum;
+    // more than 5% of edges are sharp
+    return total.sumSharpLen > 0.05 * total.sumLen;
 }
 
 // Prepare object after it has been imported from external format (not .mru)
-void postImportObject( const std::shared_ptr<Object> &o, std::filesystem::path filename )
+void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::path &filename )
 {
     if ( std::shared_ptr<ObjectMesh> mesh = std::dynamic_pointer_cast< ObjectMesh >( o ) )
     {
         // Detect flat shading needed
         bool flat = filename.extension() == ".step" || filename.extension() == ".stp" ||
-            ( mesh->mesh() && detectSharpEdges( *mesh->mesh().get() ) );
+            ( mesh->mesh() && detectFlatShading( *mesh->mesh().get() ) );
         mesh->setVisualizeProperty( flat, MeshVisualizePropertyType::FlatShading, ViewportMask::all() );
     }
     for ( const std::shared_ptr<Object>& child : o->children() )

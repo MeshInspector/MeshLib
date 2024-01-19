@@ -55,6 +55,7 @@
 #include "MRMesh/MRPointsSave.h"
 #include "MRMesh/MRLinesSave.h"
 #include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRObjectSave.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectLines.h"
@@ -2585,23 +2586,21 @@ void ImGuiMenu::draw_mr_menu()
 
         if ( ImGui::Button( "Save Scene##Main", ImVec2( ( w - p ) / 2.f, 0 ) ) )
         {
-            auto savePath = saveFileDialog( { {},{},SceneFileFilters } );
+            auto savePath = saveFileDialog( { {}, {}, SceneFileWriteFilters } );
 
-            ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [savePath, &root = SceneRoot::get(), viewer = this->viewer]()->std::function<void()>
-            {
-                auto res = serializeObjectTree( root, savePath, [] ( float progress )
+            if ( !savePath.empty() )
+                ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [savePath, &root = SceneRoot::get(), viewer = this->viewer]()->std::function<void()>
                 {
-                    return ProgressBar::setProgress( progress );
+                    auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
+
+                    return[viewer, savePath, res] ()
+                    {
+                        if ( res )
+                            viewer->recentFilesStore().storeFile( savePath );
+                        else
+                            showError( "Error saving scene: " + res.error() );
+                    };
                 } );
-                if ( !res.has_value() )
-                    spdlog::error( res.error() );
-
-                return[savePath, viewer, success = res.has_value()]()
-                {
-                    if ( success )
-                        viewer->recentFilesStore().storeFile( savePath );
-                };
-            } );
         }
 
         if ( ImGui::Button( "New Issue##Main", ImVec2( w, 0 ) ) )

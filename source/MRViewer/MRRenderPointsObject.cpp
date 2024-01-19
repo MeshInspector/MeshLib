@@ -178,9 +178,11 @@ RenderBufferRef<Vector3f> RenderPointsObject::loadVertPosBuffer_()
     if ( !( dirty_ & DIRTY_POSITION ) || !objPoints_->pointCloud() )
         return glBuffer.prepareBuffer<Vector3f>( vertPosSize_, false );
 
+    const auto step = objPoints_->getRenderDiscretization();
     const auto& points = objPoints_->pointCloud()->points;
     const auto num = objPoints_->pointCloud()->validPoints.find_last() + 1;
-    const auto step = objPoints_->getRenderDiscretization();
+    if ( step == 1 )
+        return RenderBufferRef<Vector3f>( points.vec_.data(), vertPosSize_ = num, true );
     auto buffer = glBuffer.prepareBuffer<Vector3f>( vertPosSize_ = int( num / step ) );
 
     ParallelFor( VertId( 0 ), VertId( vertPosSize_ ), [&] ( VertId v )

@@ -84,7 +84,7 @@ public:
         renderDiscretization_ = val;
     }
 
-    /// returns rendering discretization. Each N-th point will be displayed on screen
+    /// returns rendering discretization, each N-th point will be displayed on screen
     int getRenderDiscretization() const
     {
         return renderDiscretization_;

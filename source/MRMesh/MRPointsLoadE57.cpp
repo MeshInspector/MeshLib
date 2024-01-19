@@ -24,7 +24,7 @@ namespace MR
 namespace PointsLoad
 {
 
-Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path& file, bool combineAllObjects, ProgressCallback progress )
+Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path& file, const E57LoadSettings & settings )
 {
     MR_TIMER
     std::vector<NamedCloud> res;
@@ -40,7 +40,7 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
         res.resize( numScans );
         for ( int scanIndex = 0; scanIndex < numScans; ++scanIndex )
         {
-            auto sp = subprogress( progress, float( scanIndex ) / numScans, float( scanIndex + 1 ) / numScans );
+            auto sp = subprogress( settings.progress, float( scanIndex ) / numScans, float( scanIndex + 1 ) / numScans );
             auto & nc = res[scanIndex];
             e57::Data3D scanHeader;
             eReader.ReadData3D( scanIndex, scanHeader );
@@ -153,7 +153,7 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
             e57::Utilities::errorCodeToString( e.errorCode() ), utf8string( file ) ) );
     }
 
-    if ( !combineAllObjects || res.size() <= 1 )
+    if ( !settings.combineAllObjects || res.size() <= 1 )
         return res;
 
     size_t totalPoints = 0;

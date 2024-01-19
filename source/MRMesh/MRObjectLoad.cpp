@@ -21,6 +21,7 @@
 #include "MRMeshLoadStep.h"
 #include "MRSerializer.h"
 #include "MRDirectory.h"
+#include "MRSceneSettings.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRMeshLoadSettings.h"
 #include "MRZip.h"
@@ -96,7 +97,9 @@ void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::
     if ( std::shared_ptr<ObjectMesh> mesh = std::dynamic_pointer_cast< ObjectMesh >( o ) )
     {
         // Detect flat shading needed
-        bool flat = filename.extension() == ".step" || filename.extension() == ".stp" ||
+        bool flat =
+            SceneSettings::get( SceneSettings::Type::MeshFlatShading ) ||
+            filename.extension() == ".step" || filename.extension() == ".stp" ||
             ( mesh->mesh() && detectFlatShading( *mesh->mesh().get() ) );
         mesh->setVisualizeProperty( flat, MeshVisualizePropertyType::FlatShading, ViewportMask::all() );
     }

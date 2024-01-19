@@ -192,6 +192,53 @@ RenderBufferRef<Vector3f> RenderPointsObject::loadVertPosBuffer_()
 
     return buffer;
 }
+
+
+RenderBufferRef<Vector3f> RenderPointsObject::loadVertNormalsBuffer_()
+{
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
+    if ( !( dirty_ & DIRTY_RENDER_NORMALS ) || !objPoints_->pointCloud() )
+        return glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_, false );
+
+    const auto& normals = objPoints_->pointCloud()->normals;
+    const auto num = objPoints_->pointCloud()->validPoints.find_last() + 1;
+    const auto step = objPoints_->getRenderDiscretization();
+    auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = int( num / step ) );
+
+    tbb::parallel_for( tbb::blocked_range<VertId>( VertId( 0 ), VertId{ vertNormalsSize_ } ), [&] ( const tbb::blocked_range<VertId>& range )
+    {
+        for ( VertId v = range.begin(); v != range.end(); ++v )
+        {
+            buffer[v] = normals[VertId( v * step )];
+        }
+    } );
+
+    return buffer;
+}
+
+RenderBufferRef<Color> RenderPointsObject::loadVertColorsBuffer_()
+{
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
+    if ( !( dirty_ & DIRTY_VERTS_COLORMAP ) || !objPoints_->pointCloud() )
+        return glBuffer.prepareBuffer<Color>( vertColorsSize_, false );
+
+    const auto& colors = objPoints_->getVertsColorMap();
+    const auto num = objPoints_->pointCloud()->validPoints.find_last() + 1;
+    const auto step = objPoints_->getRenderDiscretization();
+    auto buffer = glBuffer.prepareBuffer<Color>( vertColorsSize_ = int( num / step ) );
+
+    tbb::parallel_for( tbb::blocked_range<VertId>( VertId( 0 ), VertId{ vertColorsSize_ } ), [&] ( const tbb::blocked_range<VertId>& range )
+    {
+        for ( VertId v = range.begin(); v != range.end(); ++v )
+        {
+            buffer[v] = colors[VertId( v * step )];
+        }
+    } );
+
+    return buffer;
+}
+
+
 void RenderPointsObject::bindPoints_()
 {
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::DrawPoints );
@@ -200,9 +247,12 @@ void RenderPointsObject::bindPoints_()
     if ( objPoints_->hasVisualRepresentation() )
     {
         auto pointCloud = objPoints_->pointCloud();
-        bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, pointCloud->normals.vec_, 3, dirty_ & DIRTY_RENDER_NORMALS );
-        const auto positions = loadVertPosBuffer_();
-        bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, dirty_ & DIRTY_POSITION );
+        
+        const auto positions = loadVertPosBuffer_();        
+        bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
+        
+        const auto normals = loadVertNormalsBuffer_();
+        bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, normals, 3, normals.dirty(), normals.glSize() != 0 );
         hasNormalsBackup_ = !pointCloud->normals.empty();
     }
     else
@@ -210,7 +260,9 @@ void RenderPointsObject::bindPoints_()
         bindVertexAttribArray( shader, "position", vertPosBuffer_, std::vector<Vector3f>{}, 3, false, vertPosBuffer_.size() != 0 );
         bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, std::vector<Vector3f>{}, 3, false, vertNormalsBuffer_.size() != 0 );
     }
-    bindVertexAttribArray( shader, "K", vertColorsBuffer_, objPoints_->getVertsColorMap().vec_, 4, dirty_ & DIRTY_VERTS_COLORMAP );
+
+    const auto colors = loadVertColorsBuffer_();
+    bindVertexAttribArray( shader, "K", vertColorsBuffer_, colors, 4, colors.dirty(), colors.glSize() != 0 );
 
     auto validIndices = loadValidIndicesBuffer_();
     validIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, validIndices.dirty(), validIndices );
@@ -237,7 +289,10 @@ void RenderPointsObject::bindPointsPicker_()
     GL_EXEC( glBindVertexArray( pointsPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
     if ( objPoints_->hasVisualRepresentation() )
-        bindVertexAttribArray( shader, "position", vertPosBuffer_, objPoints_->pointCloud()->points.vec_, 3, dirty_ & DIRTY_POSITION );
+    {
+        const auto positions = loadVertPosBuffer_();
+        bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
+    }
     else
         bindVertexAttribArray( shader, "position", vertPosBuffer_, std::vector<Vector3f>{}, 3, false, vertPosBuffer_.size() != 0 );
 
@@ -281,7 +336,8 @@ RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
         return glBuffer.prepareBuffer<VertId>( validIndicesSize_, !validIndicesBuffer_.valid() );
 
     const auto& points = objPoints_->pointCloud();
-    validIndicesSize_ = (int)points->points.size();
+    const auto step = objPoints_->getRenderDiscretization();
+    validIndicesSize_ = int( points->points.size() / step );
     auto buffer = glBuffer.prepareBuffer<VertId>( validIndicesSize_ );
 
     const auto& validPoints = points->validPoints;
@@ -290,10 +346,13 @@ RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
     {
         BitSetParallelForAll( validPoints, [&] ( VertId v )
         {
+            if ( v % step != 0 )
+                return;
+
             if ( validPoints.test( v ) )
-                buffer[v] = v;
+                buffer[v / step] = v;
             else
-                buffer[v] = firstValid;
+                buffer[v / step] = firstValid;
         });
     }
 

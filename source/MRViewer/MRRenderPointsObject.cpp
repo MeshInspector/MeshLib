@@ -182,7 +182,8 @@ RenderBufferRef<Vector3f> RenderPointsObject::loadVertPosBuffer_()
     const auto& points = objPoints_->pointCloud()->points;
     const auto num = objPoints_->pointCloud()->validPoints.find_last() + 1;
     if ( step == 1 )
-        return RenderBufferRef<Vector3f>( points.vec_.data(), vertPosSize_ = num, true );
+        // we are sure that points will not be changed, so can do const_cast
+        return RenderBufferRef<Vector3f>( const_cast<Vector3f*>( points.data() ), vertPosSize_ = num, true); 
     auto buffer = glBuffer.prepareBuffer<Vector3f>( vertPosSize_ = int( num / step ) );
 
     ParallelFor( VertId( 0 ), VertId( vertPosSize_ ), [&] ( VertId v )
@@ -203,6 +204,10 @@ RenderBufferRef<Vector3f> RenderPointsObject::loadVertNormalsBuffer_()
     const auto& normals = objPoints_->pointCloud()->normals;
     const auto num = objPoints_->pointCloud()->validPoints.find_last() + 1;
     const auto step = objPoints_->getRenderDiscretization();
+    if ( step == 1 )
+        // we are sure that normals will not be changed, so can do const_cast
+        return RenderBufferRef<Vector3f>( const_cast< Vector3f* >( normals.vec_.data() ), vertNormalsSize_ = num, true );
+
     auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = int( num / step ) );
 
     ParallelFor( VertId( 0 ), VertId( vertNormalsSize_ ), [&] ( VertId v )
@@ -222,6 +227,10 @@ RenderBufferRef<Color> RenderPointsObject::loadVertColorsBuffer_()
     const auto& colors = objPoints_->getVertsColorMap();
     const auto num = objPoints_->pointCloud()->validPoints.find_last() + 1;
     const auto step = objPoints_->getRenderDiscretization();
+    if ( step == 1 )
+        // we are sure that colors will not be changed, so can do const_cast
+        return RenderBufferRef<Color>( const_cast<Color*>( colors.vec_.data() ), vertColorsSize_ = num, true );
+
     auto buffer = glBuffer.prepareBuffer<Color>( vertColorsSize_ = int( num / step ) );
 
     ParallelFor( VertId( 0 ), VertId( vertColorsSize_ ), [&] ( VertId v )

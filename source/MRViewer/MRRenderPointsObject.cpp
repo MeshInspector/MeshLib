@@ -219,7 +219,7 @@ RenderBufferRef<Vector3f> RenderPointsObject::loadVertNormalsBuffer_()
 RenderBufferRef<Color> RenderPointsObject::loadVertColorsBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_VERTS_COLORMAP ) || !objPoints_->pointCloud() )
+    if ( !( dirty_ & DIRTY_VERTS_COLORMAP ) || !objPoints_->pointCloud() || objPoints_->getVertsColorMap().empty() )
         return glBuffer.prepareBuffer<Color>( vertColorsSize_, false );
 
     const auto& colors = objPoints_->getVertsColorMap();
@@ -350,7 +350,7 @@ RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
                 return;
 
             if ( validPoints.test( v ) )
-                buffer[v / step] = v;
+                buffer[v / step] = VertId( v / step );
             else
                 buffer[v / step] = firstValid;
         });
@@ -398,6 +398,8 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
                 const auto selectionBit = std::div( ( r * 32 + bit ) * int( step ), 32 );                
                 if ( selectionData[selectionBit.quot] & ( 1 << ( selectionBit.rem ) ) )
                     block |= 1 << bit;
+                else
+                    block &= ~( 1 << bit );
             }
         }
     } );

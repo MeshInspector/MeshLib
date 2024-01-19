@@ -78,7 +78,7 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
-    /// sets rendering discretization. Each \param val -th point will be displayed on screen
+    /// sets rendering discretization, each \param val -th point will be displayed on screen
     void setRenderDiscretization( int val )
     {
         renderDiscretization_ = val;

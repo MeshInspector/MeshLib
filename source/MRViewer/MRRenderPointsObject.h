@@ -26,6 +26,8 @@ private:
     int validIndicesSize_{ 0 };
     Vector2i vertSelectionTextureSize_;
 
+    int cachedRenderDiscretization_{ 1 };
+
     RenderBufferRef<Vector3f> loadVertPosBuffer_();
     RenderBufferRef<Vector3f> loadVertNormalsBuffer_();
     RenderBufferRef<Color> loadVertColorsBuffer_();

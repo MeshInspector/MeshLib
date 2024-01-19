@@ -12,6 +12,7 @@
 #include "MRRenderHelpers.h"
 #include "MRMeshViewer.h"
 #include "MRGladGlfw.h"
+#include "MRMesh/MRParallelFor.h"
 
 namespace MR
 {
@@ -182,12 +183,9 @@ RenderBufferRef<Vector3f> RenderPointsObject::loadVertPosBuffer_()
     const auto step = objPoints_->getRenderDiscretization();
     auto buffer = glBuffer.prepareBuffer<Vector3f>( vertPosSize_ = int( num / step ) );
 
-    tbb::parallel_for( tbb::blocked_range<VertId>( VertId( 0 ), VertId{ vertPosSize_ } ), [&] ( const tbb::blocked_range<VertId>& range )
-    {
-        for ( VertId v = range.begin(); v != range.end(); ++v )
-        {
+    ParallelFor( VertId( 0 ), VertId( vertPosSize_ ), [&] ( VertId v )
+    {       
             buffer[v] = points[VertId( v * step )];
-        }
     } );
 
     return buffer;
@@ -205,12 +203,9 @@ RenderBufferRef<Vector3f> RenderPointsObject::loadVertNormalsBuffer_()
     const auto step = objPoints_->getRenderDiscretization();
     auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = int( num / step ) );
 
-    tbb::parallel_for( tbb::blocked_range<VertId>( VertId( 0 ), VertId{ vertNormalsSize_ } ), [&] ( const tbb::blocked_range<VertId>& range )
+    ParallelFor( VertId( 0 ), VertId( vertNormalsSize_ ), [&] ( VertId v )
     {
-        for ( VertId v = range.begin(); v != range.end(); ++v )
-        {
-            buffer[v] = normals[VertId( v * step )];
-        }
+        buffer[v] = normals[VertId( v * step )];        
     } );
 
     return buffer;
@@ -227,12 +222,9 @@ RenderBufferRef<Color> RenderPointsObject::loadVertColorsBuffer_()
     const auto step = objPoints_->getRenderDiscretization();
     auto buffer = glBuffer.prepareBuffer<Color>( vertColorsSize_ = int( num / step ) );
 
-    tbb::parallel_for( tbb::blocked_range<VertId>( VertId( 0 ), VertId{ vertColorsSize_ } ), [&] ( const tbb::blocked_range<VertId>& range )
+    ParallelFor( VertId( 0 ), VertId( vertColorsSize_ ), [&] ( VertId v )
     {
-        for ( VertId v = range.begin(); v != range.end(); ++v )
-        {
-            buffer[v] = colors[VertId( v * step )];
-        }
+        buffer[v] = colors[VertId( v * step )];        
     } );
 
     return buffer;
@@ -325,6 +317,15 @@ void RenderPointsObject::freeBuffers_()
 
 void RenderPointsObject::update_()
 {
+    if ( cachedRenderDiscretization_ != objPoints_->getRenderDiscretization() )
+    {
+        cachedRenderDiscretization_ = objPoints_->getRenderDiscretization();
+        dirty_ |= DIRTY_POSITION;
+        dirty_ |= DIRTY_RENDER_NORMALS;
+        dirty_ |= DIRTY_VERTS_COLORMAP;
+        dirty_ |= DIRTY_SELECTION;
+    }
+
     dirty_ |= objPoints_->getDirtyFlags();
     objPoints_->resetDirty();
 }
@@ -376,32 +377,29 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
 
     const auto& selection = objPoints_->getSelectedPoints().m_bits;
     const unsigned* selectionData = (unsigned*) selection.data();
-    tbb::parallel_for( tbb::blocked_range<int>( 0, (int)buffer.size() ), [&]( const tbb::blocked_range<int>& range )
-    {
-        for ( int r = range.begin(); r < range.end(); ++r )
+    ParallelFor( 0, ( int )buffer.size(), [&]( int r )
+    {       
+        auto& block = buffer[r];
+        if ( r * step / 2 >= selection.size() )
         {
-            auto& block = buffer[r];
-            if ( r * step / 2 >= selection.size() )
-            {
-                block = 0;
-                continue;
-            }
-
-            if ( step == 1 )
-            {
-                block = selectionData[r];
-                continue;
-            }
-
-            for ( int bit = 0; bit < 32; ++bit )
-            {
-                const auto selectionBit = std::div( ( r * 32 + bit ) * int( step ), 32 );                
-                if ( selectionData[selectionBit.quot] & ( 1 << ( selectionBit.rem ) ) )
-                    block |= 1 << bit;
-                else
-                    block &= ~( 1 << bit );
-            }
+            block = 0;
+            return;
         }
+
+        if ( step == 1 )
+        {
+            block = selectionData[r];
+            return;
+        }
+
+        for ( int bit = 0; bit < 32; ++bit )
+        {
+            const auto selectionBit = std::div( ( r * 32 + bit ) * int( step ), 32 );                
+            if ( selectionData[selectionBit.quot] & ( 1 << ( selectionBit.rem ) ) )
+                block |= 1 << bit;
+            else
+                block &= ~( 1 << bit );
+        }        
     } );
 
     return buffer;

@@ -321,26 +321,34 @@ Expected<std::shared_ptr<Object>, std::string> stepModelToScene( STEPControl_Rea
     // TODO: preserve shape-solid hierarchy? (not sure about actual shape count in real models)
     std::deque<TopoDS_Shape> solids;
     for ( const auto& shape : shapes )
+    {
+        size_t solidCount = 0;
         for ( auto explorer = TopExp_Explorer( shape, TopAbs_SOLID ); explorer.More(); explorer.Next() )
+        {
             solids.emplace_back( explorer.Current() );
+            ++solidCount;
+        }
+        // import the whole shape if it doesn't consist of solids
+        if ( solidCount == 0 )
+            solids.emplace_back( shape );
+    }
     shapes.clear();
 
+    auto result = std::make_shared<ObjectMesh>();
     if ( solids.empty() )
     {
-        return {};
+        return result;
     }
     else if ( solids.size() == 1 )
     {
         const auto triples = loadSolid( solids.front() );
         auto mesh = Mesh::fromPointTriples( triples, true );
 
-        auto result = std::make_shared<ObjectMesh>();
         result->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
         return result;
     }
     else
     {
-        auto result = std::make_shared<ObjectMesh>();
         // create empty parent mesh
         result->setMesh( std::make_shared<Mesh>() );
 

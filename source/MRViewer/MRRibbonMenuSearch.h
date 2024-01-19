@@ -9,7 +9,6 @@ namespace MR
 {
 
 class RibbonButtonDrawer;
-class RibbonFontManager;
 
 // separate class for search in ribbon menu
 class MRVIEWER_CLASS RibbonMenuSearch
@@ -23,34 +22,17 @@ public:
     struct Parameters
     {
         RibbonButtonDrawer& btnDrawer;
-        RibbonFontManager& fontManager;
+        Vector2f absMinPos;
         std::function<void( int )> changeTabFunc;
         float scaling;
     };
-    // draws search elements and window with its logic
-    MRVIEWER_API void drawMenuUI( const Parameters& params );
-
-    // get mode visualization in top panel (true - small button, false - input string) 
-    MRVIEWER_API bool isSmallUI() const;
-
-    // get width ui element in top panel 
-    MRVIEWER_API float getWidthMenuUI() const;
+    // draws search popup window with its logic
+    MRVIEWER_API void draw( const Parameters& params );
 private:
-    bool smallSearchButton_( const Parameters& params );
-
-    void drawWindow_( const Parameters& params );
-
-    void deactivateSearch_();
-
     std::string searchLine_;
     std::vector<RibbonSchemaHolder::SearchResult> searchResult_;
     std::vector<RibbonSchemaHolder::SearchResult> recentItems_;
     int hightlightedSearchItem_{ -1 };
-
-    bool active_ = false;
-    bool isSmallUILast_ = false;
-    bool windowInputWasActive_ = false;
-    bool mainInputActive_ = false;
 };
 
 }

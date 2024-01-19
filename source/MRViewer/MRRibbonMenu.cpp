@@ -289,7 +289,42 @@ void RibbonMenu::drawActiveNonBlockingDialogs_()
 
 void RibbonMenu::drawSearchButton_()
 {
-    searcher_.drawMenuUI( { buttonDrawer_, fontManager_, [this] ( int i ) { changeTab_( i ); }, menu_scaling() } );
+    bool popupOpened = ImGui::IsPopupOpen( searcher_.windowName() );
+
+    const auto scaling = menu_scaling();
+    auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
+    font->Scale = 0.7f;
+
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * scaling );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+    if ( popupOpened )
+        ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
+    else
+        ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
+    ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
+
+    auto absMinPos = ImGui::GetCurrentContext()->CurrentWindow->DC.CursorPos;
+
+    float btnSize = scaling * cTopPanelAditionalButtonSize;
+    ImGui::PushFont( font );
+    auto pressed = ImGui::Button( "\xef\x80\x82", ImVec2( btnSize, btnSize ) );
+    ImGui::PopFont();
+
+    font->Scale = 1.0f;
+
+    ImGui::PopStyleColor( 4 );
+    ImGui::PopStyleVar( 2 );
+
+    // manage search popup
+    if ( pressed && !popupOpened )
+        ImGui::OpenPopup( searcher_.windowName() );
+
+    if ( !popupOpened )
+        return;
+
+    searcher_.draw( { buttonDrawer_,absMinPos,[this] ( int i ) { changeTab_( i ); }, scaling } );
 }
 
 void RibbonMenu::drawCollapseButton_()
@@ -540,8 +575,7 @@ void RibbonMenu::drawHeaderPannel_()
     // 40 - help button size
     // 40 - search button size
     // 40 - collapse button size
-    const float searcherWidth = searcher_.getWidthMenuUI();
-    auto availWidth = ImGui::GetContentRegionAvail().x - ( ( needActive ? 3 : 2 ) * 40.0f + searcherWidth ) * menuScaling;
+    auto availWidth = ImGui::GetContentRegionAvail().x - ( needActive ? 4 : 3 ) * 40.0f * menuScaling;
 
     float scrollMax = summaryTabPannelSize - availWidth;
     bool needScroll = scrollMax > 0.0f;
@@ -667,16 +701,15 @@ void RibbonMenu::drawHeaderPannel_()
 
     if ( needActive )
     {
-        ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) -
-            ( 110 + searcherWidth ) * menuScaling, cTabYOffset * menuScaling ) );
+        ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 150.0f * menuScaling, cTabYOffset * menuScaling ) );
         drawActiveListButton_( activeBtnSize );
     }
 
-    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - ( 70.f + searcherWidth ) * menuScaling, cTabYOffset * menuScaling ) );
-    drawSearchButton_();
+    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 110.0f * menuScaling, cTabYOffset* menuScaling ) );
+    drawHelpButton_();
 
     ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 70.0f * menuScaling, cTabYOffset* menuScaling ) );
-    drawHelpButton_();
+    drawSearchButton_();
 
     ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 30.0f * menuScaling, cTabYOffset * menuScaling ) );
     drawCollapseButton_();

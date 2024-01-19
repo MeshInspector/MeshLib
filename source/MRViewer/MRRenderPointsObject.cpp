@@ -171,6 +171,27 @@ void RenderPointsObject::forceBindAll()
     bindPoints_();
 }
 
+RenderBufferRef<Vector3f> RenderPointsObject::loadVertPosBuffer_()
+{
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
+    if ( !( dirty_ & DIRTY_POSITION ) || !objPoints_->pointCloud() )
+        return glBuffer.prepareBuffer<Vector3f>( vertPosSize_, false );
+
+    const auto& points = objPoints_->pointCloud()->points;
+    const auto num = objPoints_->pointCloud()->validPoints.find_last() + 1;
+    const auto step = objPoints_->getRenderDiscretization();
+    auto buffer = glBuffer.prepareBuffer<Vector3f>( vertPosSize_ = int( num / step ) );
+
+    tbb::parallel_for( tbb::blocked_range<VertId>( VertId( 0 ), VertId{ vertPosSize_ } ), [&] ( const tbb::blocked_range<VertId>& range )
+    {
+        for ( VertId v = range.begin(); v != range.end(); ++v )
+        {
+            buffer[v] = points[VertId( v * step )];
+        }
+    } );
+
+    return buffer;
+}
 void RenderPointsObject::bindPoints_()
 {
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::DrawPoints );
@@ -179,8 +200,9 @@ void RenderPointsObject::bindPoints_()
     if ( objPoints_->hasVisualRepresentation() )
     {
         auto pointCloud = objPoints_->pointCloud();
-        bindVertexAttribArray( shader, "position", vertPosBuffer_, pointCloud->points.vec_, 3, dirty_ & DIRTY_POSITION );
         bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, pointCloud->normals.vec_, 3, dirty_ & DIRTY_RENDER_NORMALS );
+        const auto positions = loadVertPosBuffer_();
+        bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, dirty_ & DIRTY_POSITION );
         hasNormalsBackup_ = !pointCloud->normals.empty();
     }
     else

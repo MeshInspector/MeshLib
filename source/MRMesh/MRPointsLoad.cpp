@@ -9,6 +9,7 @@
 #include "MRIOParsing.h"
 #include "MRParallelFor.h"
 #include "MRComputeBoundingBox.h"
+#include "MRPointsLoadE57.h"
 #include <fstream>
 
 #ifndef MRMESH_NO_OPENCTM
@@ -476,6 +477,26 @@ Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCallbac
     cloud.validPoints.resize( cloud.points.size(), true );
     return std::move( cloud );
 }
+
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
+
+Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, VertColors* colors, AffineXf3f* outXf,
+                                           ProgressCallback progress )
+{
+    auto x = fromSceneE57File( file, { .combineAllObjects = true, .identityXf = !outXf, .progress = progress } );
+    if ( !x )
+        return unexpected( std::move( x.error() ) );
+    if ( x->empty() )
+        return PointCloud();
+    assert( x->size() == 1 );
+    if ( colors )
+        *colors = std::move( (*x)[0].colors );
+    if ( outXf )
+        *outXf = (*x)[0].xf;
+    return std::move( (*x)[0].cloud );
+}
+
+#endif
 
 Expected<MR::PointCloud, std::string> fromDxf( const std::filesystem::path& file, ProgressCallback callback )
 {

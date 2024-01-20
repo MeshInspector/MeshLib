@@ -7,6 +7,8 @@
 #include <filesystem>
 #include <string>
 
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
+
 namespace MR
 {
 
@@ -40,3 +42,5 @@ MRMESH_API Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesy
 } // namespace PointsLoad
 
 } // namespace MR
+
+#endif //!defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )

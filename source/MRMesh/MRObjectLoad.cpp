@@ -25,6 +25,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRMeshLoadSettings.h"
 #include "MRZip.h"
+#include "MRPointsLoadE57.h"
 #include "MRPch/MRTBB.h"
 
 #ifndef MRMESH_NO_GLTF
@@ -389,6 +390,37 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
         else
             result = unexpected( res.error() );
     }
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
+    else if ( ext == "*.e57" )
+    {
+        auto enclouds = PointsLoad::fromSceneE57File( filename, { .progress = callback } );
+        if ( enclouds.has_value() )
+        {
+            auto& nclouds = *enclouds;
+            std::vector<std::shared_ptr<Object>> objects( nclouds.size() );
+            for ( int i = 0; i < objects.size(); ++i )
+            {
+                auto objectPoints = std::make_shared<ObjectPoints>();
+                if ( nclouds[i].name.empty() )
+                    objectPoints->setName( utf8string( filename.stem() ) );
+                else
+                    objectPoints->setName( std::move( nclouds[i].name ) );
+                objectPoints->select( true );
+                objectPoints->setPointCloud( std::make_shared<PointCloud>( std::move( nclouds[i].cloud ) ) );
+                objectPoints->setXf( nclouds[i].xf );
+                if ( !nclouds[i].colors.empty() )
+                {
+                    objectPoints->setVertsColorMap( std::move( nclouds[i].colors ) );
+                    objectPoints->setColoringType( ColoringType::VertsColorMap );
+                }
+                objects[i] = std::dynamic_pointer_cast< Object >( std::move( objectPoints ) );
+            }
+            result = std::move( objects );
+        }
+        else
+            result = unexpected( std::move( enclouds.error() ) );
+    }
+#endif //!defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
     else if ( std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const auto& filter ) { return filter.extensions.find( ext ) != std::string::npos; }) != SceneFileFilters.end() )
     {
         const auto objTree = loadSceneFromAnySupportedFormat( filename, callback );

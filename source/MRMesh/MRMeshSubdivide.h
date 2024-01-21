@@ -36,10 +36,11 @@ struct SubdivideSettings
     /// use \ref MR::findRegionOuterFaces to find boundary faces
     bool subdivideBorder = true;
     /// The subdivision stops as soon as all triangles (in the region) have aspect ratio below or equal to this value
-    float minTriAspectRatio = 0;
+    float maxTriAspectRatio = 0;
     /// An edge is subdivided only if both its left and right triangles have aspect ratio below or equal to this value.
+    /// So this is a maximum aspect ratio of a triangle that can be split on two before Delone optimization.
     /// Please set it to a smaller value only if subdivideBorder==false, otherwise many narrow triangles can appear near border
-    float maxTriAspectRatio = FLT_MAX;
+    float maxSplittableTriAspectRatio = FLT_MAX;
     /// Puts new vertices so that they form a smooth surface together with existing vertices.
     /// This option works best for natural surfaces without sharp edges in between triangles
     bool smoothMode = false;

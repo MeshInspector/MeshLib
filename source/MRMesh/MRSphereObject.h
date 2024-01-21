@@ -1,13 +1,14 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRObjectMeshHolder.h"
+#include "MRFeatureObject.h"
 
 namespace MR
 {
 
 /// Object to show sphere feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS SphereObject : public ObjectMeshHolder
+class MRMESH_CLASS SphereObject : public ObjectMeshHolder, public FeatureObject
 {
 public:
     /// Creates simple sphere object with center in zero and radius - 1
@@ -37,6 +38,8 @@ public:
     MRMESH_API void setRadius( float radius );
     /// updates xf to fit given center
     MRMESH_API void setCenter( const Vector3f& center );
+
+    MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 protected:
     SphereObject( const SphereObject& other ) = default;
 

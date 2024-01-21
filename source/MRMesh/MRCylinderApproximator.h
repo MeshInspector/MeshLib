@@ -2,11 +2,30 @@
 #include "MRCylinder3.h"
 #include "MRVector.h"
 #include "MRMatrix.h"
-#include <Eigen/Eigenvalues>
 #include "MRPch/MRTBB.h"
 #include "MRToFromEigen.h"
 #include "MRConstants.h"
 #include "MRPch/MRSpdlog.h"
+
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:5054)  //operator '&': deprecated between enumerations of different types
+#pragma warning(disable:4127)  //C4127. "Consider using 'if constexpr' statement instead"
+#elif defined(__clang__)
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif 
+
+#include <Eigen/Eigenvalues>
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#elif defined(__clang__)
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif 
 
 
 // https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf 

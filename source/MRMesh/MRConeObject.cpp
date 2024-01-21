@@ -11,6 +11,7 @@
 
 #include <iostream>
 #include "MRArrow.h"
+#include "MRMatrix3Decompose.h"
 
 namespace MR
 {
@@ -67,7 +68,9 @@ Vector3f ConeObject::getCenter() const
 
 float ConeObject::getHeight() const
 {
-    return xf().A.toScale().z;
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    return s.z.z;
 }
 void ConeObject::setHeight( float height )
 {
@@ -81,7 +84,9 @@ void ConeObject::setHeight( float height )
 
 float ConeObject::getNormalizedRadius_( void ) const
 {
-    return getRadius() / getHeight();
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    return s.x.x / getHeight();
 }
 float ConeObject::getAngle() const
 {
@@ -96,7 +101,9 @@ void ConeObject::setAngle( float angle )
 void ConeObject::setDirection( const Vector3f& normal )
 {
     auto currentXf = xf();
-    currentXf.A = getRotationMatrix( normal ) * Matrix3f::scale( currentXf.A.toScale() );
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    currentXf.A = getRotationMatrix( normal ) * s;
     setXf( currentXf );
 }
 
@@ -109,7 +116,9 @@ void ConeObject::setCenter( const Vector3f& center )
 
 float ConeObject::getRadius() const
 {
-    return ( xf().A.toScale().x + xf().A.toScale().y ) / 2.0f;
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    return s.x.x;
 }
 
 void ConeObject::setRadius( float radius )
@@ -183,10 +192,20 @@ void ConeObject::constructMesh_()
     setDirtyFlags( DIRTY_ALL );
 }
 
+const std::vector<FeatureObjectSharedProperty>& ConeObject::getAllSharedProperties() const
+{
+    static std::vector<FeatureObjectSharedProperty> ret = {
+       {"Angle",  &ConeObject::getAngle , &ConeObject::setAngle},
+       {"Height", &ConeObject::getHeight, &ConeObject::setHeight},
+       {"Center", &ConeObject::getCenter, &ConeObject::setCenter},
+       {"Main axis", &ConeObject::getDirection, &ConeObject::setDirection},
+    };
+    return ret;
+}
+
 //////////////////
 ///// TESTS //////
 //////////////////
-
 
 TEST( MRMesh, ConeApproximation )
 {
@@ -240,7 +259,7 @@ TEST( MRMesh, ConeApproximation )
 
     Cone3<float> noicedCone;
     Vector3f noiceVector = { 0.3234f , -0.2341f, 0.1234f };
-    noicedCone.direction() = (direction + noiceVector).normalized();
+    noicedCone.direction() = ( direction + noiceVector ).normalized();
     fit.solve( points, noicedCone, true );
     std::cout << "Noiced cone apex: " << noicedCone.center() << " direction:" << noicedCone.direction() << " heigh:" << noicedCone.height << " angle:" << noicedCone.angle * 180.0f / PI_F << " (degree)" << std::endl;
 

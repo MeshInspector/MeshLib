@@ -21,13 +21,19 @@
 #include "MRMeshLoadStep.h"
 #include "MRSerializer.h"
 #include "MRDirectory.h"
+#include "MRSceneSettings.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRMeshLoadSettings.h"
 #include "MRZip.h"
+#include "MRPointsLoadE57.h"
+#include "MRPch/MRTBB.h"
 
 #ifndef MRMESH_NO_GLTF
 #include "MRGltfSerializer.h"
 #endif
+
+namespace MR
+{
 
 namespace
 {
@@ -44,10 +50,65 @@ std::optional<MR::IOFilter> findFilter( const MR::IOFilters& filters, const std:
         return std::nullopt;
 }
 
-} // namespace
-
-namespace MR
+// Detect if mesh has enough sharp edges (>25 degrees):
+// sum length of all sharp edges greater than 1.0 * (diagonal of the bounding box)
+bool detectFlatShading( const Mesh& mesh )
 {
+    MR_TIMER
+
+    constexpr float sharpAngle = 25 * PI_F / 180; // Critical angle from planar, degrees
+    const float sharpAngleCos = std::cos( sharpAngle );
+
+    struct Data
+    {
+        double sumLen = 0;
+        double sumSharpLen = 0;
+        Data operator + ( const Data & b ) const 
+        {
+            return { sumLen + b.sumLen, sumSharpLen + b.sumSharpLen };
+        }
+    };
+
+    auto total = parallel_deterministic_reduce(
+        tbb::blocked_range( 0_ue, UndirectedEdgeId{ mesh.topology.undirectedEdgeSize() } ),
+        Data(),
+        [&mesh, sharpAngleCos] ( const auto& range, Data current )
+        {
+            for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
+            {
+                if ( mesh.topology.isLoneEdge( ue ) )
+                    continue;
+                const auto len = mesh.edgeLength( ue );
+                current.sumLen += len;
+                auto dihedralCos = mesh.dihedralAngleCos( ue );
+                if ( dihedralCos <= sharpAngleCos )
+                    current.sumSharpLen += len;
+            }
+            return current;
+        },
+        std::plus<Data>() );
+
+    // more than 5% of edges are sharp
+    return total.sumSharpLen > 0.05 * total.sumLen;
+}
+
+// Prepare object after it has been imported from external format (not .mru)
+void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::path &filename )
+{
+    if ( std::shared_ptr<ObjectMesh> mesh = std::dynamic_pointer_cast< ObjectMesh >( o ) )
+    {
+        // Detect flat shading needed
+        bool flat =
+            SceneSettings::get( SceneSettings::Type::MeshFlatShading ) ||
+            filename.extension() == ".step" || filename.extension() == ".stp" ||
+            ( mesh->mesh() && detectFlatShading( *mesh->mesh().get() ) );
+        mesh->setVisualizeProperty( flat, MeshVisualizePropertyType::FlatShading, ViewportMask::all() );
+    }
+    for ( const std::shared_ptr<Object>& child : o->children() )
+        postImportObject( child, filename );
+}
+
+} // namespace
 
 const IOFilters allFilters = SceneFileFilters
                              | ObjectLoad::getFilters()
@@ -273,9 +334,10 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                                                                                     std::string* loadWarn, ProgressCallback callback )
 {
     if ( callback && !callback( 0.f ) )
-        return unexpected( std::string( "Saving canceled" ) );
+        return unexpected( std::string( "Loading canceled" ) );
 
     Expected<std::vector<std::shared_ptr<Object>>, std::string> result;
+    bool loadedFromSceneFile = false;
 
     auto ext = std::string( "*" ) + utf8string( filename.extension().u8string() );
     for ( auto& c : ext )
@@ -328,6 +390,37 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
         else
             result = unexpected( res.error() );
     }
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
+    else if ( ext == "*.e57" )
+    {
+        auto enclouds = PointsLoad::fromSceneE57File( filename, { .progress = callback } );
+        if ( enclouds.has_value() )
+        {
+            auto& nclouds = *enclouds;
+            std::vector<std::shared_ptr<Object>> objects( nclouds.size() );
+            for ( int i = 0; i < objects.size(); ++i )
+            {
+                auto objectPoints = std::make_shared<ObjectPoints>();
+                if ( nclouds[i].name.empty() )
+                    objectPoints->setName( utf8string( filename.stem() ) );
+                else
+                    objectPoints->setName( std::move( nclouds[i].name ) );
+                objectPoints->select( true );
+                objectPoints->setPointCloud( std::make_shared<PointCloud>( std::move( nclouds[i].cloud ) ) );
+                objectPoints->setXf( nclouds[i].xf );
+                if ( !nclouds[i].colors.empty() )
+                {
+                    objectPoints->setVertsColorMap( std::move( nclouds[i].colors ) );
+                    objectPoints->setColoringType( ColoringType::VertsColorMap );
+                }
+                objects[i] = std::dynamic_pointer_cast< Object >( std::move( objectPoints ) );
+            }
+            result = std::move( objects );
+        }
+        else
+            result = unexpected( std::move( enclouds.error() ) );
+    }
+#endif //!defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
     else if ( std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const auto& filter ) { return filter.extensions.find( ext ) != std::string::npos; }) != SceneFileFilters.end() )
     {
         const auto objTree = loadSceneFromAnySupportedFormat( filename, callback );
@@ -336,11 +429,12 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
         
         result = std::vector( { *objTree } );
         ( *result )[0]->setName( utf8string( filename.stem() ) );
+        loadedFromSceneFile = true;
     }
     else if ( const auto filter = findFilter( ObjectLoad::getFilters(), ext ) )
     {
         const auto loader = ObjectLoad::getObjectLoader( *filter );
-        return loader( filename, loadWarn, std::move( callback ) );
+        result = loader( filename, loadWarn, std::move( callback ) );
     }
     else
     {
@@ -435,6 +529,10 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
             }
         }
     }
+
+    if ( result.has_value() && !loadedFromSceneFile )
+        for ( const std::shared_ptr<Object>& o : result.value() )
+            postImportObject( o, filename );
 
     if ( !result.has_value() )
         spdlog::error( result.error() );
@@ -668,7 +766,7 @@ Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( 
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    auto res = unexpected( std::string( "unsupported file extension" ) );
+    Expected<std::shared_ptr<Object>> res = unexpected( std::string( "unsupported file extension" ) );
 
     auto itF = std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const IOFilter& filter )
     {
@@ -679,27 +777,31 @@ Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( 
 
     if ( ext == "*.mru" )
     {
-        return deserializeObjectTree( path, {}, callback );
+        res = deserializeObjectTree( path, {}, callback );
     }
 #ifndef MRMESH_NO_GLTF
     else if ( ext == "*.gltf" || ext == "*.glb" )
     {
-        return deserializeObjectTreeFromGltf( path, callback );
+        res = deserializeObjectTreeFromGltf( path, callback );
     }
 #endif
 #ifndef MRMESH_NO_OPENCASCADE
     else if ( ext == "*.step" || ext == "*.stp" )
     {
-        return MeshLoad::fromSceneStepFile( path, { .callback = callback } );
+        res = MeshLoad::fromSceneStepFile( path, { .callback = callback } );
     }
 #endif
     else if ( ext == "*.zip" )
     {
         auto result = makeObjectTreeFromZip( path, callback );
-        if ( !result )
-            return unexpected( result.error() );
-        return std::make_shared<Object>( std::move( *result ) );
+        if ( result )
+            res = std::make_shared<Object>( std::move( *result ) );
+        else
+            res = unexpected( result.error() );
     }
+
+    if ( res.has_value() && ( ext != "*.mru" && ext != "*.zip" ) )
+        postImportObject( res.value(), path );
 
     return res;
 }

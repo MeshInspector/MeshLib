@@ -259,7 +259,7 @@ void ObjectTransformWidget::preDraw_()
     }
 }
 
-void ObjectTransformWidget::draw_()
+void ObjectTransformWidget::postDraw_()
 {
     if ( !picked_ )
         return;

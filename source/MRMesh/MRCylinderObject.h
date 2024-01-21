@@ -1,13 +1,14 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRObjectMeshHolder.h"
+#include "MRFeatureObject.h"
 
 namespace MR
 {
 
 /// Object to show Cylinder feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS CylinderObject : public ObjectMeshHolder
+class MRMESH_CLASS CylinderObject : public ObjectMeshHolder, public FeatureObject
 {
 public:
     /// Creates simple Cylinder object with center in zero and radius - 1
@@ -56,7 +57,7 @@ public:
     /// updates xf to fit cylinder length
     MRMESH_API void setLength( float length );
 
-
+    MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 
 
 protected:

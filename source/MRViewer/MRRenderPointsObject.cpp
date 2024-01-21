@@ -183,7 +183,7 @@ RenderBufferRef<Vector3f> RenderPointsObject::loadVertPosBuffer_()
     const auto num = objPoints_->pointCloud()->validPoints.find_last() + 1;
     if ( step == 1 )
         // we are sure that points will not be changed, so can do const_cast
-        return RenderBufferRef<Vector3f>( const_cast<Vector3f*>( points.data() ), vertPosSize_ = num, true); 
+        return RenderBufferRef<Vector3f>( const_cast< Vector3f* >( points.data() ), vertPosSize_ = num, !points.empty() );
     auto buffer = glBuffer.prepareBuffer<Vector3f>( vertPosSize_ = int( num / step ) );
 
     ParallelFor( VertId( 0 ), VertId( vertPosSize_ ), [&] ( VertId v )
@@ -202,11 +202,13 @@ RenderBufferRef<Vector3f> RenderPointsObject::loadVertNormalsBuffer_()
         return glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_, false );
 
     const auto& normals = objPoints_->pointCloud()->normals;
-    const auto num = objPoints_->pointCloud()->validPoints.find_last() + 1;
+    int num = int( objPoints_->pointCloud()->validPoints.find_last() ) + 1;
+    if ( normals.size() < num )
+        num = 0;
     const auto step = objPoints_->getRenderDiscretization();
     if ( step == 1 )
         // we are sure that normals will not be changed, so can do const_cast
-        return RenderBufferRef<Vector3f>( const_cast< Vector3f* >( normals.vec_.data() ), vertNormalsSize_ = num, true );
+        return RenderBufferRef<Vector3f>( const_cast< Vector3f* >( normals.data() ), vertNormalsSize_ = num, !normals.empty() );
 
     auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = int( num / step ) );
 
@@ -229,7 +231,7 @@ RenderBufferRef<Color> RenderPointsObject::loadVertColorsBuffer_()
     const auto step = objPoints_->getRenderDiscretization();
     if ( step == 1 )
         // we are sure that colors will not be changed, so can do const_cast
-        return RenderBufferRef<Color>( const_cast<Color*>( colors.vec_.data() ), vertColorsSize_ = num, true );
+        return RenderBufferRef<Color>( const_cast< Color* >( colors.data() ), vertColorsSize_ = num, !colors.empty() );
 
     auto buffer = glBuffer.prepareBuffer<Color>( vertColorsSize_ = int( num / step ) );
 

@@ -35,9 +35,8 @@ struct SubdivideSettings
     /// If false do not touch border edges (cannot subdivide lone faces)\n
     /// use \ref MR::findRegionOuterFaces to find boundary faces
     bool subdivideBorder = true;
-    /// An edge is subdivided only if its left or right triangle has aspect ratio above or equal to this value.
-    /// Please set it to a larger value if you would like to subdivide edges near degenerate triangles only
-    float minTriAspectRatio = 1;
+    /// The subdivision stops as soon as all triangles (in the region) have aspect ratio below or equal to this value
+    float minTriAspectRatio = 0;
     /// An edge is subdivided only if both its left and right triangles have aspect ratio below or equal to this value.
     /// Please set it to a smaller value only if subdivideBorder==false, otherwise many narrow triangles can appear near border
     float maxTriAspectRatio = FLT_MAX;

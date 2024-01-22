@@ -18,6 +18,8 @@ public:
         MeshFlatShading,
         /// on deserialization replace object properties with default values from SceneSettings and SceneColors
         UseDefaultScenePropertiesOnDeserialization,
+        /// automatically detect flat shading on imported mesh objects
+        DetectMeshFlatShading,
         /// total count
         Count
     };
@@ -33,7 +35,7 @@ private:
 
     static SceneSettings& instance_();
 
-    std::array<bool, size_t( Type::Count ) > settings_{ false, true };
+    std::array<bool, size_t( Type::Count ) > settings_{ false, true, true };
     CNCMachineSettings cncMachineSettings_;
 };
 

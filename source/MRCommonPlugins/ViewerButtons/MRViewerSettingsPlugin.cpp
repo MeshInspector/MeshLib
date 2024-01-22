@@ -147,11 +147,20 @@ void ViewerSettingsPlugin::drawSettingsTab_( float menuWidth, float menuScaling 
             UI::setTooltipIfHovered( "Close scene context menu on any change", menuScaling );
         }
 
-        bool flatShading = SceneSettings::get( SceneSettings::Type::MeshFlatShading );
-        bool flatShadingBackup = flatShading;
-        UI::checkbox( "Default Shading Flat", &flatShading );
-        if ( flatShadingBackup != flatShading )
-            SceneSettings::set( SceneSettings::Type::MeshFlatShading, flatShading );
+        static std::vector<std::string> flatModes = { "Auto Detect", "Smooth", "Flat" };
+        int flatMode = SceneSettings::get( SceneSettings::Type::DetectMeshFlatShading ) ? 0 :
+            SceneSettings::get( SceneSettings::Type::MeshFlatShading ) ? 2 : 1;
+        int flatModeBackup = flatMode;
+        ImGui::SetNextItemWidth( 120.0f * menuScaling );
+        UI::combo( "Default Shading Mode", &flatMode, flatModes );
+        UI::setTooltipIfHovered( "Shading mode for mesh objects imported from files\n"
+            "Detection depends on source format and mesh shape\n"
+            "This setting also affects some tools", menuScaling );
+        if ( flatModeBackup != flatMode )
+        {
+            SceneSettings::set( SceneSettings::Type::DetectMeshFlatShading, flatMode == 0 );
+            SceneSettings::set( SceneSettings::Type::MeshFlatShading, flatMode == 2 ); // Defaults to smooth in Auto mode
+        }
 
         ImGui::SetNextItemWidth( 100.0f * menuScaling );
         int pickRadius = int( getViewerInstance().glPickRadius );

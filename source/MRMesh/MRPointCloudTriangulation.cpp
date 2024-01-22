@@ -74,7 +74,7 @@ private:
     struct PerThreadData
     {
         TriangulationHelpers::TriangulatedFanData fanData;
-        HashMap<VertTriplet, int, VertTripletHasher> map;
+        std::vector<VertTriplet> triplets;
     };
     tbb::enumerable_thread_specific<PerThreadData> tls_;
 };
@@ -118,18 +118,13 @@ bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
             localData.fanData );
 
         const auto& disc = localData.fanData;
-        auto& map = localData.map;
+        auto& triplets = localData.triplets;
         for ( int i = 0; i < disc.neighbors.size(); ++i )
         {
-            if ( disc.border.valid() && disc.neighbors[i] == disc.border )
+            if ( disc.neighbors[i] == disc.border )
                 continue;
-
             auto next = disc.neighbors[( i + 1 ) % disc.neighbors.size()];
-
-            VertTriplet triplet{ v,next,disc.neighbors[i] };
-            auto [mIt, inserted] = map.insert( { VertTriplet{v,next,disc.neighbors[i]},1 } );
-            if ( !inserted )
-                ++mIt->second;
+            triplets.push_back( { v,next,disc.neighbors[i] } );
         }
     };
 
@@ -145,20 +140,14 @@ std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progr
     int numMap = 0;
     for ( auto& threadInfo : tls_ )
     {
-        if ( numMap++ == 0 )
+        auto& triplets = threadInfo.triplets;
+        for( const auto& triplet : triplets )
         {
-            map.merge( std::move( threadInfo.map ) );
+            auto [it, inserted] = map.insert( std::make_pair( triplet, 1 ) );
+            if ( !inserted )
+                ++it->second;
         }
-        else
-        {
-            for ( const auto& keyVal : threadInfo.map )
-            {
-                auto [it, inserted] = map.insert( keyVal );
-                if ( !inserted )
-                    it->second += keyVal.second;
-            }
-            threadInfo.map.clear();
-        }
+        threadInfo = {}; //free memory
         if ( sp && !sp( float( numMap ) / float( tls_.size() ) ) ) // 50% - 60%
             return {};
     }

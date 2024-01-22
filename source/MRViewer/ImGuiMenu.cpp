@@ -1581,6 +1581,23 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
         obj->setSpecularStrength( value );
     } );
 
+    bool allIsObjPoints = !selectedObjs.empty() &&
+        std::all_of( selectedObjs.cbegin(), selectedObjs.cend(), []( const std::shared_ptr<VisualObject>& obj )
+    {
+        return obj && obj->asType<ObjectPointsHolder>();
+    } );
+
+    if ( allIsObjPoints )
+    {
+        make_points_discretization( selectedObjs, "Render Discretization", [&] ( const ObjectPointsHolder* data )
+        {
+            return data->getRenderDiscretization();
+        }, [&] ( ObjectPointsHolder* data, const int val )
+        {
+            data->setRenderDiscretization( val );
+        } );
+    }
+
     return closePopup;
 }
 
@@ -2225,6 +2242,38 @@ void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedV
     if ( value != valueConstForComparation )
         for ( const auto& data : selectedVisualObjs )
             setter( data->asType<ObjType>(), value );
+}
+
+void ImGuiMenu::make_points_discretization( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
+    std::function<int( const ObjectPointsHolder* )> getter,
+    std::function<void( ObjectPointsHolder*, const int& )> setter )
+{
+    auto objPoints = selectedVisualObjs[0]->asType<ObjectPointsHolder>();
+    auto value = getter( objPoints );
+    bool isAllTheSame = true;
+    for ( int i = 1; i < selectedVisualObjs.size(); ++i )
+        if ( getter( selectedVisualObjs[i]->asType<ObjectPointsHolder>() ) != value )
+        {
+            isAllTheSame = false;
+            break;
+        }
+
+    auto backUpTextColor = ImGui::GetStyle().Colors[ImGuiCol_Text];
+    if ( !isAllTheSame )
+    {
+        value = 1;
+        ImGui::GetStyle().Colors[ImGuiCol_Text] = undefined;
+    }
+    const auto valueConstForComparation = value;
+
+    ImGui::PushItemWidth( 40 * menu_scaling() );
+    ImGui::SliderInt( label, &value, 1, 256, "%d", ImGuiSliderFlags_AlwaysClamp );
+
+    ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
+    ImGui::PopItemWidth();
+    if ( value != valueConstForComparation )
+        for ( const auto& data : selectedVisualObjs )
+            setter( data->asType<ObjectPointsHolder>(), value);
 }
 
 void ImGuiMenu::reorderSceneIfNeeded_()

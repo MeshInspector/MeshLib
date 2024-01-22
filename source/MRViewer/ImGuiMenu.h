@@ -264,6 +264,10 @@ public:
     std::function<uint8_t( const VisualObject* )> getter,
     std::function<void( VisualObject*, uint8_t )> setter );
 
+  void make_points_discretization( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
+  std::function<int( const ObjectPointsHolder* )> getter,
+  std::function<void( ObjectPointsHolder*, const int& )> setter );
+
   MRVIEWER_API void draw_custom_plugins();
 
   void setShowNewSelectedObjects( bool show ) { showNewSelectedObjects_ = show; };

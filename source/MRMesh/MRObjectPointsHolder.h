@@ -81,7 +81,10 @@ public:
     /// sets rendering discretization, each \param val -th point will be displayed on screen
     void setRenderDiscretization( int val )
     {
+        if ( renderDiscretization_ == val)
+            return;
         renderDiscretization_ = val;
+        needRedraw_ = true;
     }
 
     /// returns rendering discretization, each N-th point will be displayed on screen

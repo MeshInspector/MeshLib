@@ -56,15 +56,25 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& m )
 {
     pybind11::class_<MeshTopology>( m, "MeshTopology" ).
         def( pybind11::init<>() ).
-        def( "numValidFaces", &MeshTopology::numValidFaces, "returns the number of valid faces" ).
-        def( "numValidVerts", &MeshTopology::numValidVerts, "returns the number of valid vertices" ).
+        def( "numValidFaces", &MeshTopology::numValidFaces, "Returns the number of valid faces." ).
+        def( "getAllTriVerts", &MeshTopology::getAllTriVerts, "Returns three vertex ids for valid triangles, invalid triangles are skipped.").
+        def( "numValidVerts", &MeshTopology::numValidVerts, "Returns the number of valid vertices." ).
         def( "getValidFaces", &MeshTopology::getValidFaces, pybind11::return_value_policy::copy, "returns cached set of all valid faces" ).
         def( "getValidVerts", &MeshTopology::getValidVerts, pybind11::return_value_policy::copy, "returns cached set of all valid vertices" ).
         def( "flip", (void (MeshTopology::*)(FaceBitSet&)const)&MeshTopology::flip, pybind11::arg( "fs" ), "sets in (fs) all valid faces that were not selected before the call, and resets other bits" ).
         def( "flip", (void (MeshTopology::*)(VertBitSet&)const)&MeshTopology::flip, pybind11::arg( "vs" ), "sets in (vs) all valid vertices that were not selected before the call, and resets other bits" ).
         def( "flipOrientation", &MeshTopology::flipOrientation, "flip orientation (normals) of all faces" ).
-        def( "org", &MeshTopology::org, pybind11::arg( "he" ), "returns origin vertex of half-edge" ).
-        def( "dest", &MeshTopology::dest, pybind11::arg( "he" ), "returns destination vertex of half-edge" ).
+        def( "hasEdge", &MeshTopology::hasEdge, pybind11::arg( "he" ), "Returns true if given edge is within valid range and not-lone" ).
+        def( "next", &MeshTopology::next, pybind11::arg( "he" ), "Next (counter clock wise) half-edge in the origin ring" ).
+        def( "prev", &MeshTopology::prev, pybind11::arg( "he" ), "Previous (clock wise) half-edge in the origin ring" ).
+        def( "org", &MeshTopology::org, pybind11::arg( "he" ), "Returns origin vertex of half-edge." ).
+        def( "dest", &MeshTopology::dest, pybind11::arg( "he" ), "Returns destination vertex of half-edge." ).
+        def( "left", &MeshTopology::left, pybind11::arg( "he" ), "Returns left face of half-edge." ).
+        def( "right", &MeshTopology::right, pybind11::arg( "he" ), "Returns right face of half-edge." ).
+        def( "getOrgDegree", &MeshTopology::getOrgDegree, pybind11::arg( "he" ), "Returns the number of edges around the origin vertex, returns 1 for lone edges." ).
+        def( "getVertDegree", &MeshTopology::getVertDegree, pybind11::arg( "v" ), "Returns the number of edges around the given vertex." ).
+        def( "getLeftDegree", &MeshTopology::getLeftDegree, pybind11::arg( "he" ), " Returns the number of edges around the left face: 3 for triangular faces, ..." ).
+        def( "getFaceDegree", &MeshTopology::getFaceDegree, pybind11::arg( "f" ), "Returns the number of edges around the given face: 3 for triangular faces, ..." ).
         def( "findBoundaryFaces", &MeshTopology::findBoundaryFaces, "returns all boundary faces, having at least one boundary edge" ).
         def( "findBoundaryEdges", &MeshTopology::findBoundaryEdges, "returns all boundary edges, where each edge does not have valid left face" ).
         def( "findBoundaryVerts", &MeshTopology::findBoundaryVerts, "returns all boundary vertices, incident to at least one boundary edge" ).

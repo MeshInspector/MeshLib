@@ -94,8 +94,8 @@ bool detectFlatShading( const Mesh& mesh )
 
 int chooseRenderDiscretization( size_t pointCount )
 {
-    if ( pointCount > 2'000'000 )
-        return pointCount / 1'000'000;
+    if ( int( pointCount ) > 2'000'000 )
+        return int( pointCount )/ 1'000'000;
     return 1;
 }
 

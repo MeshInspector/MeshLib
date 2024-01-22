@@ -2267,7 +2267,7 @@ void ImGuiMenu::make_points_discretization( std::vector<std::shared_ptr<VisualOb
     const auto valueConstForComparation = value;
 
     ImGui::PushItemWidth( 40 * menu_scaling() );
-    ImGui::SliderInt( label, &value, 1, 32, "%d", ImGuiSliderFlags_AlwaysClamp );
+    ImGui::SliderInt( label, &value, 1, 256, "%d", ImGuiSliderFlags_AlwaysClamp );
 
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
     ImGui::PopItemWidth();

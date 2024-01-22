@@ -50,10 +50,10 @@ struct VertTripletHasher
 {
     size_t operator()( const VertTriplet& triplet ) const
     {
-        auto h1 = std::hash<int>{}( int( triplet.a ) );
-        auto h2 = std::hash<int>{}( int( triplet.b ) );
-        auto h3 = std::hash<int>{}( int( triplet.c ) );
-        return h1 ^ ( h2 << 1 ) ^ ( h3 << 3 );
+        return 
+            2 * size_t( triplet.a ) +
+            3 * size_t( triplet.b ) +
+            5 * size_t( triplet.c );
     }
 };
 

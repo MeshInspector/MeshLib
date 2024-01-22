@@ -92,6 +92,21 @@ bool detectFlatShading( const Mesh& mesh )
     return total.sumSharpLen > 0.05 * total.sumLen;
 }
 
+int chooseRenderDiscretization( size_t pointCount )
+{
+    if ( pointCount > 10'000'000 )
+        return 32;
+    if ( pointCount > 5'000'000 )
+        return 16;
+    if ( pointCount > 2'000'000 )
+        return 8;
+    if ( pointCount > 1'000'000 )
+        return 4;
+    if ( pointCount > 500'000 )
+        return 2;
+    return 1;
+}
+
 // Prepare object after it has been imported from external format (not .mru)
 void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::path &filename )
 {
@@ -172,6 +187,8 @@ Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std
         auto objectPoints = std::make_unique<ObjectPoints>();
         objectPoints->setName( utf8string( file.stem() ) );
         objectPoints->setPointCloud( pointCloud );
+        objectPoints->setRenderDiscretization( chooseRenderDiscretization(pointCloud->points.size() ) );
+
         if ( !colors.empty() )
         {
             objectPoints->setVertsColorMap( std::move( colors ) );
@@ -226,6 +243,7 @@ Expected<ObjectPoints, std::string> makeObjectPointsFromFile( const std::filesys
 
     ObjectPoints objectPoints;
     objectPoints.setName( utf8string( file.stem() ) );
+    objectPoints.setRenderDiscretization( chooseRenderDiscretization( pointsCloud->points.size() ) );
     objectPoints.setPointCloud( std::make_shared<MR::PointCloud>( std::move( pointsCloud.value() ) ) );
     objectPoints.setXf( xf );
     if ( !colors.empty() )

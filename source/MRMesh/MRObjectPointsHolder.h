@@ -82,6 +82,7 @@ public:
     void setRenderDiscretization( int val )
     {
         renderDiscretization_ = val;
+        needRedraw_ = true;
     }
 
     /// returns rendering discretization, each N-th point will be displayed on screen

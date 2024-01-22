@@ -155,7 +155,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m 
             "Y: In symbol size: 1.0f adds one base height, 0.5 adds half base height" ).
         def_readwrite( "pathToFontFile", &TextMeshAlignParams::pathToFontFile, "Path to font file" );
 
-    m.def( "createSymbolsMesh", &MR::createSymbolsMesh, pybind11::arg( "params" ), "converts text string into Z-facing symbol mesh" );
+    m.def( "createSymbolsMesh", MR::decorateExpected( [] ( const SymbolMeshParams& params )->Expected<Mesh>
+    {
+        auto res = MR::createSymbolsMesh( params );
+        if ( res.has_value() )
+            return *res;
+        else
+            return unexpected( "Symbol at position " + std::to_string( res.error() ) + " missed in font" );
+    } ), pybind11::arg( "params" ), "converts text string into Z-facing symbol mesh" );
 
     pybind11::class_<TextMeshAlignParams, SymbolMeshParams>( m, "TextAlignParams" ).
         def( pybind11::init<>() ).
@@ -166,7 +173,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m 
         def_readwrite( "surfaceOffset", &TextMeshAlignParams::surfaceOffset, "Text mesh inside and outside offset of input mesh" ).
         def_readwrite( "textMaximumMovement", &TextMeshAlignParams::textMaximumMovement, "Maximum possible movement of text mesh alignment, meters" );
 
-    m.def( "alignTextToMesh", &alignTextToMesh, pybind11::arg( "mesh" ), pybind11::arg( "params" ),
+    m.def( "alignTextToMesh", MR::decorateExpected( &MR::alignTextToMesh ), pybind11::arg( "mesh" ), pybind11::arg( "params" ),
         "create text on mesh" );
 } )
 #endif

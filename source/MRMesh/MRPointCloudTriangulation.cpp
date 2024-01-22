@@ -141,7 +141,7 @@ std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progr
 
     // accumulate triplets
     ParallelHashMap<VertTriplet, int, VertTripletHasher> map;
-    ParallelFor( size_t(0), map.subcnt(), [&]( size_t myPartId )
+    if ( !ParallelFor( size_t(0), map.subcnt(), [&]( size_t myPartId )
     {
         for ( const auto& threadInfo : tls_ )
         {
@@ -167,7 +167,8 @@ std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progr
                 }
             }
         }
-    }, subprogress( progressCb, 0.5f, 0.6f ), 1 );
+    }, subprogress( progressCb, 0.5f, 0.6f ), 1 ) )
+        return {};
 
     Mesh mesh;
     mesh.points = pointCloud_.points;

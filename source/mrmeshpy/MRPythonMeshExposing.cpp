@@ -433,7 +433,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
        "this version finds holes in the mesh by itself and returns false if they are not found" );
 } )
 
-Mesh pythonMergeMehses( const pybind11::list& meshes )
+Mesh pythonMergeMeshes( const pybind11::list& meshes )
 {
     Mesh res;
     for ( int i = 0; i < pybind11::len( meshes ); ++i )
@@ -467,7 +467,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
 {
     m.def( "computePerVertNormals", &computePerVertNormals, pybind11::arg( "mesh" ), "returns a vector with vertex normals in every element for valid mesh vertices" );
     m.def( "computePerFaceNormals", &computePerFaceNormals, pybind11::arg( "mesh" ), "returns a vector with face-normal in every element for valid mesh faces" );
-    m.def( "mergeMehses", &pythonMergeMehses, pybind11::arg( "meshes" ), "merge python list of meshes to one mesh" );
+    m.def( "mergeMeshes", &pythonMergeMeshes, pybind11::arg( "meshes" ), "merge python list of meshes to one mesh" );
     m.def( "getFacesByMinEdgeLength", &getFacesByMinEdgeLength, pybind11::arg( "mesh" ), pybind11::arg( "minLength" ), "return faces with at least one edge longer than min edge length" );
     m.def( "buildBottom", &buildBottom, pybind11::arg( "mesh" ), pybind11::arg( "a" ), pybind11::arg( "dir" ), pybind11::arg( "holeExtension" ), pybind11::arg( "outNewFaces" ) = nullptr,
         "adds cylindrical extension of given hole represented by one of its edges (having no valid left face)\n"

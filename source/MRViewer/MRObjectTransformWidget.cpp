@@ -250,7 +250,7 @@ void ObjectTransformWidget::preDraw_()
     if ( !controlsRoot_ )
         return;
     if ( auto parent = visibilityParent_.lock() )
-        controlsRoot_->setVisibilityMask( parent->visibilityMask() );
+        controlsRoot_->setVisibilityMask( parent->globalVisibilityMask() );
     auto vpmask = controlsRoot_->visibilityMask() & getViewerInstance().getPresentViewports();
     for ( auto vpId : vpmask )
     {

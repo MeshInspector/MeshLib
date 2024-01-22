@@ -125,15 +125,15 @@ void ResetSceneMenuItem::preDraw_()
 
             ImGui::CloseCurrentPopup();
             if ( !savePath.empty() )
-                ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [this, savePath, &root = SceneRoot::get(), viewer = Viewer::instance()]()->std::function<void()>
+                ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [this, savePath, &root = SceneRoot::get()]()->std::function<void()>
                 {
                     auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
 
-                    return[this, savePath, viewer, res]()
+                    return[this, savePath, res]()
                     {
                         if ( res )
                         {
-                            viewer->onSceneSaved( savePath );
+                            getViewerInstance().onSceneSaved( savePath );
                             resetScene_();
                         }
                         else

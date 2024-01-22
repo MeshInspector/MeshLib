@@ -2589,14 +2589,14 @@ void ImGuiMenu::draw_mr_menu()
             auto savePath = saveFileDialog( { {}, {}, SceneFileWriteFilters } );
 
             if ( !savePath.empty() )
-                ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [savePath, &root = SceneRoot::get(), viewer = this->viewer]()->std::function<void()>
+                ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [savePath, &root = SceneRoot::get()]()->std::function<void()>
                 {
                     auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
 
-                    return[viewer, savePath, res] ()
+                    return[savePath, res] ()
                     {
                         if ( res )
-                            viewer->recentFilesStore().storeFile( savePath );
+                            getViewerInstance().recentFilesStore().storeFile( savePath );
                         else
                             showError( "Error saving scene: " + res.error() );
                     };

@@ -93,15 +93,15 @@ void SaveOnClosePlugin::preDraw_()
 
             ImGui::CloseCurrentPopup();
             if ( !savePath.empty() )
-                ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [&shouldClose = shouldClose_, savePath, &root = SceneRoot::get(), viewer = Viewer::instance()]()->std::function<void()>
+                ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [&shouldClose = shouldClose_, savePath, &root = SceneRoot::get()]()->std::function<void()>
                 {
                     auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
 
-                    return[&shouldClose = shouldClose, savePath, viewer, res]()
+                    return[&shouldClose = shouldClose, savePath, res]()
                     {
                         if ( res )
                         {
-                            viewer->onSceneSaved( savePath );
+                            getViewerInstance().onSceneSaved( savePath );
                             glfwSetWindowShouldClose( Viewer::instance()->window, true );
                             shouldClose = true;
                         }

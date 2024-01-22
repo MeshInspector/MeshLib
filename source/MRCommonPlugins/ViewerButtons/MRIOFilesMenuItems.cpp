@@ -598,14 +598,14 @@ bool SaveSelectedMenuItem::action()
         for ( auto& child : children )
             removeUnselectedRecursive( *child );
 
-        ProgressBar::orderWithMainThreadPostProcessing( "Saving selected", [savePath, rootShallowClone, viewer = Viewer::instance()]()->std::function<void()>
+        ProgressBar::orderWithMainThreadPostProcessing( "Saving selected", [savePath, rootShallowClone]()->std::function<void()>
         {
             auto res = ObjectSave::toAnySupportedSceneFormat( *rootShallowClone, savePath, ProgressBar::callBackSetProgress );
 
-            return[savePath, viewer, res]()
+            return[savePath, res]()
             {
                 if ( res )
-                    viewer->recentFilesStore().storeFile( savePath );
+                    getViewerInstance().recentFilesStore().storeFile(savePath);
                 else
                     showError( "Error saving selected: " + res.error() );
             };
@@ -617,14 +617,14 @@ bool SaveSelectedMenuItem::action()
         for ( auto obj : selectedMeshes )
             objs.push_back( MeshSave::NamedXfMesh{ obj->name(),obj->worldXf(),obj->mesh() } );
 
-        ProgressBar::orderWithMainThreadPostProcessing( "Saving selected", [savePath, objs, viewer = Viewer::instance()] ()->std::function<void()>
+        ProgressBar::orderWithMainThreadPostProcessing( "Saving selected", [savePath, objs] ()->std::function<void()>
         {
             auto res = MeshSave::sceneToObj( objs, savePath );
 
-            return[savePath, viewer, res] ()
+            return[savePath, res] ()
             {
                 if ( res.has_value() )
-                    viewer->recentFilesStore().storeFile( savePath );
+                    getViewerInstance().recentFilesStore().storeFile( savePath );
                 else
                     showError( "Error saving selected: " + res.error() );
             };

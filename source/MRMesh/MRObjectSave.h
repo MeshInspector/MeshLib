@@ -8,7 +8,7 @@
 namespace MR::ObjectSave
 {
 
-/// save a scene object to a given file
+/// save an object tree to a given file
 /// file format must be scene-capable
 MRMESH_API Expected<void> toAnySupportedSceneFormat( const Object& object, const std::filesystem::path& file,
                                                      ProgressCallback callback = {} );

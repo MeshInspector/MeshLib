@@ -71,10 +71,17 @@ private:
 
     const PointCloud& pointCloud_;
     TriangulationParameters params_;
+    struct FanRecord
+    {
+        VertId center;
+        VertId border;
+        std::uint32_t firstNei;
+    };
     struct PerThreadData
     {
         TriangulationHelpers::TriangulatedFanData fanData;
-        std::vector<VertTriplet> triplets;
+        std::vector<VertId> neighbors;
+        std::vector<FanRecord> fanRecords;
     };
     tbb::enumerable_thread_specific<PerThreadData> tls_;
 };
@@ -114,18 +121,11 @@ bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
     auto body = [&] ( VertId v )
     {
         auto& localData = tls_.local();
-        TriangulationHelpers::buildLocalTriangulation( pointCloud_, v, normals, { .radius = radius, .critAngle = params_.critAngle },
-            localData.fanData );
+        auto& disc = localData.fanData;
+        TriangulationHelpers::buildLocalTriangulation( pointCloud_, v, normals, { .radius = radius, .critAngle = params_.critAngle }, disc );
 
-        const auto& disc = localData.fanData;
-        auto& triplets = localData.triplets;
-        for ( int i = 0; i < disc.neighbors.size(); ++i )
-        {
-            if ( disc.neighbors[i] == disc.border )
-                continue;
-            auto next = disc.neighbors[( i + 1 ) % disc.neighbors.size()];
-            triplets.push_back( { v,next,disc.neighbors[i] } );
-        }
+        localData.fanRecords.push_back( { v, disc.border, (std::uint32_t)localData.neighbors.size() } );
+        localData.neighbors.insert( localData.neighbors.end(), disc.neighbors.begin(), disc.neighbors.end() );
     };
 
     return BitSetParallelFor( pointCloud_.validPoints, body, subprogress( progressCb, startProgress, 0.5f ) );
@@ -140,12 +140,22 @@ std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progr
     int numMap = 0;
     for ( auto& threadInfo : tls_ )
     {
-        auto& triplets = threadInfo.triplets;
-        for( const auto& triplet : triplets )
+        threadInfo.fanRecords.push_back( { {}, {}, (std::uint32_t)threadInfo.neighbors.size() } );
+        for ( int i = 0; i + 1 < threadInfo.fanRecords.size(); ++i )
         {
-            auto [it, inserted] = map.insert( std::make_pair( triplet, 1 ) );
-            if ( !inserted )
-                ++it->second;
+            const auto v = threadInfo.fanRecords[i].center;
+            const auto border = threadInfo.fanRecords[i].border;
+            const auto nbeg = threadInfo.fanRecords[i].firstNei;
+            const auto nend = threadInfo.fanRecords[i+1].firstNei;
+            for ( auto n = nbeg; n < nend; ++n )
+            {
+                if ( threadInfo.neighbors[n] == border )
+                    continue;
+                auto next = threadInfo.neighbors[n + 1 < nend ? n + 1 : nbeg];
+                auto [it, inserted] = map.insert( { VertTriplet{ v, next, threadInfo.neighbors[n] }, 1 } );
+                if ( !inserted )
+                    ++it->second;
+            }
         }
         threadInfo = {}; //free memory
         if ( sp && !sp( float( numMap ) / float( tls_.size() ) ) ) // 50% - 60%

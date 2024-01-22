@@ -12,13 +12,26 @@ class ChangeVertsColorMapAction : public HistoryAction
 {
 public:
     using Obj = VisualObject;
-    /// Constructed from original obj
+
+    /// use this constructor to remember object's vertex colors before making any changes in them
     ChangeVertsColorMapAction( const std::string& name, const std::shared_ptr<VisualObject>& obj ) :
-        obj_{ obj },        
+        obj_{ obj },
         name_{ name }
     {
         if ( obj )
             vertsColorMap_ = obj->getVertsColorMap();
+    }
+
+    /// use this constructor to remember object's vertex colors and immediate set new value
+    ChangeVertsColorMapAction( const std::string& name, const std::shared_ptr<VisualObject>& obj, VertColors&& newVertsColorMap ) :
+        obj_{ obj },
+        name_{ name }
+    {
+        if ( obj_ )
+        {
+            vertsColorMap_ = std::move( newVertsColorMap );
+            obj_->updateVertsColorMap( vertsColorMap_ );
+        }
     }
 
     virtual std::string name() const override

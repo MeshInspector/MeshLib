@@ -25,6 +25,17 @@ public:
         selection_ = objMesh_->getSelectedFaces();
     }
 
+    /// use this constructor to remember object's face selection and immediate set new value
+    ChangeMeshFaceSelectionAction( const std::string& name, const std::shared_ptr<ObjectMesh>& objMesh, FaceBitSet&& newSelection ):
+        name_{name},
+        objMesh_{objMesh}
+    {
+        if ( !objMesh_ )
+            return; 
+        selection_ = objMesh_->getSelectedFaces();
+        objMesh_->selectFaces( std::move( newSelection ) );
+    }
+
     virtual std::string name() const override { return name_; }
 
     virtual void action( Type ) override

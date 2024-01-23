@@ -170,7 +170,21 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, []( pybind11::module_& m )
         def( pybind11::init( [] ( VertId v0, VertId v1, VertId v2 ) -> ThreeVertIds
         {
             return { v0, v1, v2 };
-        } ) );
+        } ) ).
+        def( "__getitem__", [] ( const ThreeVertIds& self, int key )->VertId
+        {
+            return self[key];
+        } ).
+        def( "__setitem__", [] ( ThreeVertIds& self, int key, VertId val )
+        {
+            self[key] = val;
+        } ).
+        def( "__len__", &ThreeVertIds::size ).
+        def( "__iter__", [] ( ThreeVertIds& self )
+        {
+            return pybind11::make_iterator<pybind11::return_value_policy::reference_internal, ThreeVertIds::iterator, ThreeVertIds::iterator, ThreeVertIds::value_type&>(
+                self.begin(), self.end() );
+        }, pybind11::keep_alive<0, 1>() /* Essential: keep list alive while iterator exists */ );
 
     pybind11::class_<Triangulation>( m, "Triangulation" ).
         def( pybind11::init<>() ).

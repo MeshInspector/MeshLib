@@ -177,8 +177,8 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
 
 bool RibbonMenuSearch::isSmallUI() const
 {
-    auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
-    const auto scaling = ribbonMenu ? ribbonMenu->menu_scaling() : 1.f;
+    auto menu = getViewerInstance().getMenuPlugin();
+    const auto scaling = menu ? menu->menu_scaling() : 1.f;
     return getViewerInstance().framebufferSize.x < 1000 * scaling;
 }
 

@@ -33,7 +33,8 @@ public:
     // get mode visualization in top panel (true - small button, false - input string) 
     MRVIEWER_API bool isSmallUI() const;
 
-    // get width ui element in top panel 
+    // get width ui element in top panel
+    // return unscaled value 
     MRVIEWER_API float getWidthMenuUI() const;
 private:
     bool smallSearchButton_( const Parameters& params );

@@ -1590,7 +1590,7 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
 
     if ( allIsObjPoints )
     {
-        make_points_discretization( selectedObjs, "Render Discretization", [&] ( const ObjectPointsHolder* data )
+        make_points_discretization( selectedObjs, "Point Sampling", [&] ( const ObjectPointsHolder* data )
         {
             return data->getRenderDiscretization();
         }, [&] ( ObjectPointsHolder* data, const int val )
@@ -2268,7 +2268,7 @@ void ImGuiMenu::make_points_discretization( std::vector<std::shared_ptr<VisualOb
     const auto valueConstForComparation = value;
 
     ImGui::PushItemWidth( 40 * menu_scaling() );
-    ImGui::SliderInt( label, &value, 1, 256, "%d", ImGuiSliderFlags_AlwaysClamp );
+    ImGui::DragInt( label, &value, 0.1f, 1, 256 );
 
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
     ImGui::PopItemWidth();

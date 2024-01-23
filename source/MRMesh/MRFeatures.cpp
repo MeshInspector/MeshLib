@@ -142,7 +142,7 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
     else if ( auto line = dynamic_cast<const LineObject*>( &object ) )
     {
         auto parentXf = line->parent()->worldXf();
-        return toPrimitive( Line( parentXf( line->getCenter() ), parentXf.A * line->getDirection() ) );
+        return toPrimitive( LineSegm3f( parentXf( line->getPointA() ), parentXf( line->getPointB() ) ) );
     }
     else if ( auto plane = dynamic_cast<const PlaneObject*>( &object ) )
     {
@@ -320,6 +320,14 @@ std::shared_ptr<VisualObject> primitiveToObject( const Primitives::Variant& prim
             return nullptr;
         },
     }, primitive );
+}
+
+float MeasureResult::Angle::computeAngleInRadians() const
+{
+    float ret = std::acos( std::clamp( dot( dirA, dirB ), -1.f, 1.f ) );
+    if ( isSurfaceNormalA != isSurfaceNormalB )
+        ret = MR::PI2_F - ret;
+    return ret;
 }
 
 void MeasureResult::swapObjects()
@@ -791,30 +799,32 @@ MeasureResult Binary<Primitives::Plane, Primitives::ConeSegment>::measure( const
         ret.angle.isSurfaceNormalA = true;
         ret.angle.isSurfaceNormalB = b.isCircle();
 
-        if ( !ret.distance )
+        // If the absolute value of `cos()` is smaller than this, we don't try to look for the intersection point, since it can be far away.
+        float cosThreshold = 0.008f; // 90 +- ~0.5 degrees
+        if ( b.isCircle()
+            ? cross( ret.angle.dirA, ret.angle.dirB ).lengthSq() < cosThreshold * cosThreshold
+            : std::abs( dot( ret.angle.dirA, ret.angle.dirB ) ) < cosThreshold
+        )
         {
-            ret.angle.pointA = a.center;
-            ret.angle.pointB = b.centerPoint().center;
-        }
-        else
-        {
-            // If the `sin()` is less than this, we don't try to look for the intersection point, since it can be far away.
-            float sinThreshold = 0.08f; // This is ~4.6 degrees.
-            if ( !( havePositivePoints && haveNegativePoints ) || cross( ret.angle.dirA, ret.angle.dirB ).lengthSq() < sinThreshold * sinThreshold )
+            if ( ret.distance )
             {
                 ret.angle.pointA = ret.distance.closestPointA;
                 ret.angle.pointB = ret.distance.closestPointB;
             }
-            else if ( b.isCircle() )
-            {
-                ret.angle.pointA = ret.angle.pointB = b.basePlane( false ).intersectWithPlane( a ).center;
-            }
             else
             {
-                ret.angle.pointA = ret.angle.pointB = a.intersectWithLine( b ).center;
+                ret.angle.pointA = a.center;
+                ret.angle.pointB = b.centerPoint().center;
             }
         }
-
+        else if ( b.isCircle() )
+        {
+            ret.angle.pointA = ret.angle.pointB = b.basePlane( false ).intersectWithPlane( a ).center;
+        }
+        else
+        {
+            ret.angle.pointA = ret.angle.pointB = a.intersectWithLine( b ).center;
+        }
     }
 
     return ret;
@@ -1664,15 +1674,15 @@ TEST( Features, Angle_Plane_ConeSegment )
             ASSERT_FALSE( r.isSurfaceNormalB );
         }
 
-        { // Non-intersecting.
+        { // Non-intersecting, but we still extend to the intersection point.
             auto line = toPrimitive( LineSegm3f( Vector3f( 101, 60, 10 ), Vector3f( 104, 63, 10 ) ) );
 
             auto r = measure( plane, line ).angle;
 
             ASSERT_EQ( r.status, MeasureResult::Status::ok );
 
-            ASSERT_LE( ( r.pointA - Vector3f( 100, 60, 10 ) ).length(), testEps );
-            ASSERT_LE( ( r.pointB - Vector3f( 101, 60, 10 ) ).length(), testEps );
+            ASSERT_EQ( r.pointA, r.pointB );
+            ASSERT_LE( ( r.pointA - Vector3f( 100, 59, 10 ) ).length(), testEps );
 
             ASSERT_LE( ( r.dirA - plane.normal ).length(), testEps );
             ASSERT_LE( ( r.dirB - line.dir ).length(), testEps );
@@ -1722,15 +1732,15 @@ TEST( Features, Angle_Plane_ConeSegment )
             ASSERT_TRUE( r.isSurfaceNormalB );
         }
 
-        { // Non-intersecting.
-            auto circle = primitiveCircle( Vector3f( 110, 60, 10 ), Vector3f( 4, -3, 0 ), 5 );
+        { // Non-intersecting, but we still extend to the intersection point.
+            auto circle = primitiveCircle( Vector3f( 109, 60, 10 ), Vector3f( 4, -3, 0 ), 5 );
 
             auto r = measure( plane, circle ).angle;
 
             ASSERT_EQ( r.status, MeasureResult::Status::ok );
 
-            ASSERT_LE( ( r.pointA - Vector3f( 100, 56, 10 ) ).length(), testEps );
-            ASSERT_LE( ( r.pointB - Vector3f( 107, 56, 10 ) ).length(), testEps );
+            ASSERT_EQ( r.pointA, r.pointB );
+            ASSERT_LE( ( r.pointA - Vector3f( 100, 48, 10 ) ).length(), testEps );
 
             ASSERT_LE( ( r.dirA - plane.normal ).length(), testEps );
             ASSERT_LE( ( r.dirB - circle.dir ).length(), testEps );

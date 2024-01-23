@@ -170,6 +170,8 @@ struct MeasureResult
 
         Vector3f closestPointA;
         Vector3f closestPointB;
+
+        [[nodiscard]] Vector3f closestPointFor( bool b ) const { return b ? closestPointB : closestPointA; }
     };
     Distance distance;
 
@@ -177,21 +179,19 @@ struct MeasureResult
     {
         Vector3f pointA;
         Vector3f pointB;
+        [[nodiscard]] Vector3f pointFor( bool b ) const { return b ? pointB : pointA; }
 
         Vector3f dirA; // Normalized.
         Vector3f dirB; // ^
+        [[nodiscard]] Vector3f dirFor( bool b ) const { return b ? dirB : dirA; }
 
         /// Whether `dir{A,B}` is a surface normal or a line direction.
         bool isSurfaceNormalA = false;
         bool isSurfaceNormalB = false;
 
-        [[nodiscard]] float computeAngle() const
-        {
-            float ret = std::abs( dot( dirA, dirB ) );
-            if ( isSurfaceNormalA != isSurfaceNormalB )
-                ret = MR::PI2_F - ret;
-            return ret;
-        }
+        [[nodiscard]] bool isSurfaceNormalFor( bool b ) const { return b ? isSurfaceNormalB : isSurfaceNormalA; }
+
+        [[nodiscard]] MRMESH_API float computeAngleInRadians() const;
     };
     Angle angle;
 

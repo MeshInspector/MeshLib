@@ -48,7 +48,8 @@ void RibbonMenuSearch::pushRecentItem( const std::shared_ptr<RibbonMenuItem>& it
 
 void RibbonMenuSearch::drawWindow_( const Parameters& params )
 {
-    if ( !isSmallUI() && searchResult_.empty() )
+    const auto& resultsList = searchLine_.empty() ? recentItems_ : searchResult_;
+    if ( !isSmallUI() && resultsList.empty() )
         return;
 
     const float screenWidth = float( getViewerInstance().framebufferSize.x );
@@ -69,35 +70,28 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
         const float minSearchSize = cSearchSize * params.scaling;
         if ( isSmallUI() )
         {
-            if ( !isSmallUILast_ )
-            {
-                windowInputWasActive_ = false;
+            if ( !isSmallUILast_ || ImGui::IsWindowAppearing() )
                 ImGui::SetKeyboardFocusHere();
-            }
             ImGui::SetNextItemWidth( minSearchSize );
             if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
             {
                 searchResult_ = RibbonSchemaHolder::search( searchLine_ );
                 hightlightedSearchItem_ = -1;
             }
-            windowInputWasActive_ |= ImGui::IsItemActive();
-            if ( windowInputWasActive_ &&
-                !(ImGui::IsWindowFocused() || ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) ) )
+            if ( !ImGui::IsWindowAppearing() &&
+                !( ImGui::IsWindowFocused() || ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) ) )
                 deactivateSearch_();
         }
         else
         {
-            if ( !mainInputActive_ &&
-                !( ImGui::IsWindowHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_ChildWindows ) ||
-                ImGui::IsWindowFocused() || ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) ) )
+            if ( !mainInputFocused_ && !isSmallUILast_ &&
+                !( ImGui::IsWindowFocused() || ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) ) )
                 deactivateSearch_();
         }
 
-        const auto& resultsList = searchLine_.empty() ? recentItems_ : searchResult_;
         if ( resultsList.empty() )
             hightlightedSearchItem_ = -1;
-
-        if ( !searchResult_.empty() )
+        else
         {
             if ( ImGui::IsKeyPressed( ImGuiKey_DownArrow ) && hightlightedSearchItem_ + 1 < resultsList.size() )
                 hightlightedSearchItem_++;
@@ -142,7 +136,6 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
 void RibbonMenuSearch::deactivateSearch_()
 {
     active_ = false;
-    windowInputWasActive_ = false;
     searchLine_.clear();
     searchResult_.clear();
     hightlightedSearchItem_ = -1;
@@ -152,7 +145,7 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
 {
     if ( isSmallUI() )
     {
-        if ( smallSearchButton_( params ) )
+        if ( smallSearchButton_( params ) && !( !active_ && activeLast_ ) )
             active_ = !active_;
     }
     else
@@ -165,15 +158,20 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
             searchResult_ = RibbonSchemaHolder::search( searchLine_ );
             hightlightedSearchItem_ = -1;
         }
-
+        if ( mainInputFocused_ && !ImGui::IsItemFocused() && !searchLine_.empty() && searchResult_.empty() )
+            deactivateSearch_();
+        mainInputFocused_ = ImGui::IsItemFocused(); 
         if ( ImGui::IsItemActivated() )
             active_ = true;
-        mainInputActive_ = ImGui::IsItemActive();
-        if ( isSmallUILast_ && active_ )
-            mainInputActive_ = true;
+        if ( ImGui::IsItemDeactivated() )
+        {
+            if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
+                deactivateSearch_();
+        }
     }
     if ( active_ )
         drawWindow_( params );
+    activeLast_ = active_;
     isSmallUILast_ = isSmallUI();
 }
 

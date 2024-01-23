@@ -48,9 +48,9 @@ private:
     int hightlightedSearchItem_{ -1 };
 
     bool active_ = false;
+    bool activeLast_ = false;
     bool isSmallUILast_ = false;
-    bool windowInputWasActive_ = false;
-    bool mainInputActive_ = false;
+    bool mainInputFocused_ = false;
 };
 
 }

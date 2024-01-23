@@ -85,6 +85,32 @@ struct Settings
 MRMESH_API void buildLocalTriangulation( const PointCloud& cloud, VertId v, const VertCoords& normals, const Settings & settings,
     TriangulatedFanData & fanData );
 
+/// describes one fan of triangles around a point
+struct FanRecord
+{
+    /// center point in the fan
+    VertId center;
+
+    /// first border edge (invalid if the center point is not on the boundary);
+    /// triangle associated with this point is absent
+    VertId border;
+
+    /// the position of first neigbor in LocalTriangulations::neighbours
+    std::uint32_t firstNei;
+};
+
+/// describes a number of local triangulations of some points (assigned to a thread)
+struct LocalTriangulations
+{
+    std::vector<VertId> neighbors;
+    std::vector<FanRecord> fanRecords;
+};
+
+/// computes all local triangulations of all points in the cloud, and returns them distributed among
+/// a set of LocalTriangulations objects
+[[nodiscard]] MRMESH_API std::optional<std::vector<LocalTriangulations>> buildLocalTriangulations(
+    const PointCloud& cloud, const VertCoords& normals, const Settings & settings, const ProgressCallback & progress = {} );
+
 /**
  * \brief Checks if given vertex is on boundary of the point cloud
  * \details The vertex is considered as boundary if its neighbor ring has angle more than \param boundaryAngle degrees

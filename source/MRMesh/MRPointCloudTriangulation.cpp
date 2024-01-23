@@ -72,19 +72,7 @@ private:
 
     const PointCloud& pointCloud_;
     TriangulationParameters params_;
-    struct FanRecord
-    {
-        VertId center;
-        VertId border;
-        std::uint32_t firstNei;
-    };
-    struct PerThreadData
-    {
-        TriangulationHelpers::TriangulatedFanData fanData;
-        std::vector<VertId> neighbors;
-        std::vector<FanRecord> fanRecords;
-    };
-    tbb::enumerable_thread_specific<PerThreadData> tls_;
+    std::vector<TriangulationHelpers::LocalTriangulations> localTriangulations_;
 };
 
 PointCloudTriangulator::PointCloudTriangulator( const PointCloud& pointCloud, const TriangulationParameters& params ) :
@@ -119,31 +107,23 @@ bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
     }
     const VertCoords& normals = pointCloud_.normals.empty() ? myNormals : pointCloud_.normals;
 
-    auto body = [&] ( VertId v )
-    {
-        auto& localData = tls_.local();
-        auto& disc = localData.fanData;
-        TriangulationHelpers::buildLocalTriangulation( pointCloud_, v, normals, { .radius = radius, .critAngle = params_.critAngle }, disc );
-
-        localData.fanRecords.push_back( { v, disc.border, (std::uint32_t)localData.neighbors.size() } );
-        localData.neighbors.insert( localData.neighbors.end(), disc.neighbors.begin(), disc.neighbors.end() );
-    };
-
-    return BitSetParallelFor( pointCloud_.validPoints, body, subprogress( progressCb, startProgress, 0.5f ) );
+    auto optLocalTriangulations = TriangulationHelpers::buildLocalTriangulations( pointCloud_, normals,
+        { .radius = radius, .critAngle = params_.critAngle }, subprogress( progressCb, startProgress, 0.5f ) );
+    if ( !optLocalTriangulations )
+        return false;
+    localTriangulations_ = std::move( *optLocalTriangulations );
+    return true;
 }
 
 std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progressCb )
 {
     MR_TIMER
 
-    for ( auto& threadInfo : tls_ )
-        threadInfo.fanRecords.push_back( { {}, {}, (std::uint32_t)threadInfo.neighbors.size() } );
-
     // accumulate triplets
     ParallelHashMap<VertTriplet, int, VertTripletHasher> map;
     if ( !ParallelFor( size_t(0), map.subcnt(), [&]( size_t myPartId )
     {
-        for ( const auto& threadInfo : tls_ )
+        for ( const auto& threadInfo : localTriangulations_ )
         {
             for ( int i = 0; i + 1 < threadInfo.fanRecords.size(); ++i )
             {

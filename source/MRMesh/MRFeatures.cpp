@@ -1557,7 +1557,7 @@ TEST( Features, Angle_Plane_Sphere )
 {
     { // Reject a point.
         Primitives::Sphere point( Vector3f( 100, 50, 10 ), 0 );
-        Primitives::Plane plane( Vector3f( 120, 58.01f, 10 ), Vector3f( 0, 1, 0 ) );
+        Primitives::Plane plane{ .center = Vector3f( 120, 58.01f, 10 ), .normal = Vector3f( 0, 1, 0 ) };
 
         auto r = measure( point, plane ).angle;
         ASSERT_EQ( r.status, MeasureResult::Status::badFeaturePair );
@@ -1568,7 +1568,7 @@ TEST( Features, Angle_Plane_Sphere )
     { // No collision.
         for ( bool sign : { false, true } )
         {
-            Primitives::Plane plane( Vector3f( 120, 58.01f, 10 ), Vector3f( 0, sign ? -1.f : 1.f, 0 ) );
+            Primitives::Plane plane{ .center = Vector3f( 120, 58.01f, 10 ), .normal = Vector3f( 0, sign ? -1.f : 1.f, 0 ) };
             ASSERT_EQ( measure( sphere, plane ).angle.status, MeasureResult::Status::badRelativeLocation );
         }
     }
@@ -1576,7 +1576,7 @@ TEST( Features, Angle_Plane_Sphere )
     { // Collision.
         for ( bool sign : { false, true } )
         {
-            Primitives::Plane plane( Vector3f( 120, 54, 10 ), Vector3f( 0, sign ? -1.f : 1.f, 0 ) );
+            Primitives::Plane plane{ .center = Vector3f( 120, 54, 10 ), .normal = Vector3f( 0, sign ? -1.f : 1.f, 0 ) };
             auto r = measure( sphere, plane ).angle;
 
             ASSERT_EQ( r.status, MeasureResult::Status::ok );
@@ -1595,7 +1595,7 @@ TEST( Features, Angle_Plane_Sphere )
     }
 
     { // Plane on sphere center.
-        Primitives::Plane plane( Vector3f( 120, 50, 10 ), Vector3f( 0, 1, 0 ) );
+        Primitives::Plane plane{ .center = Vector3f( 120, 50, 10 ), .normal = Vector3f( 0, 1, 0 ) };
         auto r = measure( sphere, plane ).angle;
 
         ASSERT_EQ( r.status, MeasureResult::Status::ok );
@@ -1613,7 +1613,7 @@ TEST( Features, Angle_Plane_Sphere )
     }
     
     { // Exact center overlap.
-        Primitives::Plane plane( Vector3f( 120, 50, 10 ), Vector3f( 0, 1, 0 ) );
+        Primitives::Plane plane{ .center = Vector3f( 120, 50, 10 ), .normal = Vector3f( 0, 1, 0 ) };
         auto r = measure( sphere, plane ).angle;
 
         ASSERT_EQ( r.status, MeasureResult::Status::ok );
@@ -1655,7 +1655,7 @@ TEST( Features, Angle_ConeSegment_ConeSegment )
 TEST( Features, Angle_Plane_ConeSegment )
 {
     { // Line to plane.
-        Primitives::Plane plane( Vector3f( 100, 50, 10 ), Vector3f( 1, 0, 0 ) );
+        Primitives::Plane plane{ .center = Vector3f( 100, 50, 10 ), .normal = Vector3f( 1, 0, 0 ) };
 
         { // Intersecting.
             auto line = toPrimitive( LineSegm3f( Vector3f( 99, 60, 10 ), Vector3f( 102, 63, 10 ) ) );
@@ -1713,7 +1713,7 @@ TEST( Features, Angle_Plane_ConeSegment )
     }
 
     { // Circle to plane.
-        Primitives::Plane plane( Vector3f( 100, 50, 10 ), Vector3f( 1, 0, 0 ) );
+        Primitives::Plane plane{ .center = Vector3f( 100, 50, 10 ), .normal = Vector3f( 1, 0, 0 ) };
 
         { // Intersecting.
             auto circle = primitiveCircle( Vector3f( 101, 60, 10 ), Vector3f( 1, -1, 0 ), 4 );
@@ -1771,10 +1771,10 @@ TEST( Features, Angle_Plane_ConeSegment )
 
 TEST( Features, Angle_Plane_Plane )
 {
-    Primitives::Plane a( Vector3f( 100, 50, 10 ), Vector3f( 1, 0, 0 ) );
+    Primitives::Plane a{ .center = Vector3f( 100, 50, 10 ), .normal = Vector3f( 1, 0, 0 ) };
 
     { // Intersecting.
-        Primitives::Plane b( Vector3f( 102, 51, 10 ), Vector3f( 1, 1, 0 ).normalized() );
+        Primitives::Plane b{ .center = Vector3f( 102, 51, 10 ), .normal = Vector3f( 1, 1, 0 ).normalized() };
 
         auto r = measure( a, b ).angle;
 

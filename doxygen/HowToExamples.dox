@@ -634,7 +634,7 @@ meshA = mrmeshpy.loadMesh( "meshAwithHole.stl" )
 meshB = mrmeshpy.loadMesh( "meshBwithHole.stl" )
 
 # Unite meshes
-mesh = mrmeshpy.mergeMehses( [ meshA, meshB ] )
+mesh = mrmeshpy.mergeMeshes( [ meshA, meshB ] )
 
 # Find holes
 edges = mesh.topology.findHoleRepresentiveEdges()

@@ -86,7 +86,7 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     root["OnlyOddFragments"] = onlyOddFragments_.value();
     root["PolygonOffset"] = polygonOffset_.value();
     root["ShadingEnabled"] = shadingEnabled_.value();
-    root["FaceBased"] = !flatShading_.empty();
+    root["FaceBased"] = flatShading_.contains( MR::ViewportId( 1 ) );
     switch( coloringType_ )
     {
     case ColoringType::VertsColorMap:

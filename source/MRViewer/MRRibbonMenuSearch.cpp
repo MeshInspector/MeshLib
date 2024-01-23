@@ -5,9 +5,14 @@
 #include "MRRibbonConstants.h"
 #include "MRRibbonButtonDrawer.h"
 #include <imgui_internal.h>
+#include "MRViewerInstance.h"
+#include "MRViewer/MRViewer.h"
+#include "MRRibbonMenu.h"
 
 namespace MR
 {
+
+constexpr float cSearchSize = 250.f;
 
 void RibbonMenuSearch::pushRecentItem( const std::shared_ptr<RibbonMenuItem>& item )
 {
@@ -41,49 +46,54 @@ void RibbonMenuSearch::pushRecentItem( const std::shared_ptr<RibbonMenuItem>& it
     }
 }
 
-void RibbonMenuSearch::draw( const Parameters& params )
+void RibbonMenuSearch::drawWindow_( const Parameters& params )
 {
-    if ( ImGuiWindow* menuWindow = ImGui::FindWindowByName( windowName() ) )
-        if ( menuWindow->WasActive )
-        {
-            ImRect frame;
-            frame.Min = params.absMinPos;
-            frame.Max = ImVec2( frame.Min.x + ImGui::GetFrameHeight(), frame.Min.y + ImGui::GetFrameHeight() );
-            ImVec2 expectedSize = ImGui::CalcWindowNextAutoFitSize( menuWindow );
-            menuWindow->AutoPosLastDirection = ImGuiDir_Down;
-            ImRect rectOuter = ImGui::GetPopupAllowedExtentRect( menuWindow );
-            ImVec2 pos = ImGui::FindBestWindowPosForPopupEx( frame.GetBL(), expectedSize, &menuWindow->AutoPosLastDirection, rectOuter, frame, ImGuiPopupPositionPolicy_ComboBox );
-            ImGui::SetNextWindowPos( pos );
-        }
+    const auto& resultsList = searchLine_.empty() ? recentItems_ : searchResult_;
+    if ( !isSmallUI() && resultsList.empty() )
+        return;
 
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | 
-        ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove;
-    if ( ImGui::Begin( windowName(), NULL, window_flags) )
+    const float screenWidth = float( getViewerInstance().framebufferSize.x );
+    const float windowPaddingX = ImGui::GetStyle().WindowPadding.x;
+    ImVec2 pos;
+    pos.x = std::max( screenWidth - ( 70.f + cSearchSize + 16.f ) * params.scaling - windowPaddingX, 0.f );
+    pos.y = ( cTabYOffset + cTabHeight ) * params.scaling;
+    ImGui::SetNextWindowPos( pos );
+    ImGui::SetNextWindowSize( ImVec2( ( cSearchSize + 20 ) * params.scaling, -1 ) );
+
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoFocusOnAppearing;
+    if ( ImGui::Begin( windowName(), NULL, window_flags ) )
     {
-        // Search line
-        bool appearing = ImGui::IsWindowAppearing();
-        if ( appearing )
-        {
-            searchLine_.clear();
-            searchResult_.clear();
-            hightlightedSearchItem_ = -1;
-            ImGui::SetKeyboardFocusHere();
-        }
-        float minSearchSize = 300.0f * params.scaling;
-        ImGui::SetNextItemWidth( minSearchSize );
-        if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
-            searchResult_ = RibbonSchemaHolder::search( searchLine_ );
+        if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
+            deactivateSearch_();
 
-        const auto& resultsList = searchLine_.empty() ? recentItems_ : searchResult_;
+        const float minSearchSize = cSearchSize * params.scaling;
+        if ( isSmallUI() )
+        {
+            if ( !isSmallUILast_ || ImGui::IsWindowAppearing() )
+                ImGui::SetKeyboardFocusHere();
+            ImGui::SetNextItemWidth( minSearchSize );
+            if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
+            {
+                searchResult_ = RibbonSchemaHolder::search( searchLine_ );
+                hightlightedSearchItem_ = -1;
+            }
+            if ( !ImGui::IsWindowAppearing() &&
+                !( ImGui::IsWindowFocused() || ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) ) )
+                deactivateSearch_();
+        }
+        else
+        {
+            if ( !mainInputFocused_ && !isSmallUILast_ &&
+                !( ImGui::IsWindowFocused() || ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) ) )
+                deactivateSearch_();
+        }
 
         if ( resultsList.empty() )
             hightlightedSearchItem_ = -1;
-
-        if ( !appearing )
+        else
         {
-            if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
-                ImGui::CloseCurrentPopup();
-            else if ( ImGui::IsKeyPressed( ImGuiKey_DownArrow ) && hightlightedSearchItem_ + 1 < resultsList.size() )
+            if ( ImGui::IsKeyPressed( ImGuiKey_DownArrow ) && hightlightedSearchItem_ + 1 < resultsList.size() )
                 hightlightedSearchItem_++;
             else if ( ImGui::IsKeyPressed( ImGuiKey_UpArrow ) && hightlightedSearchItem_ > 0 )
                 hightlightedSearchItem_--;
@@ -97,34 +107,11 @@ void RibbonMenuSearch::draw( const Parameters& params )
         ImGui::PushStyleColor( ImGuiCol_ButtonActive,
                                ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActive ).getUInt32() );
         ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-        int uniqueBtnCounter = 0;
         for ( int i = 0; i < resultsList.size(); ++i )
         {
             const auto& foundItem = resultsList[i];
             if ( !foundItem.item )
                 continue;
-            auto pos = ImGui::GetCursorPos();
-            if ( foundItem.tabIndex != -1 )
-            {
-                const auto& tabName = RibbonSchemaHolder::schema().tabsOrder[foundItem.tabIndex].name;
-                auto label = "##SearchTabBtn" + tabName + std::to_string( ++uniqueBtnCounter );
-                auto labelSize = ImGui::CalcTextSize( tabName.c_str() );
-                if ( ImGui::Button( label.c_str(), ImVec2( labelSize.x + 2 * cRibbonButtonWindowPaddingX * params.scaling, ySize ) ) )
-                {
-                    if ( params.changeTabFunc )
-                        params.changeTabFunc( foundItem.tabIndex );
-                    ImGui::CloseCurrentPopup();
-                }
-                ImVec2 textPos = pos;
-                textPos.x += cRibbonButtonWindowPaddingX * params.scaling;
-                textPos.y += ( ySize - labelSize.y ) * 0.5f;
-                ImGui::SetCursorPos( textPos );
-                ImGui::Text( "%s", tabName.c_str() );
-                ImGui::SameLine( 0.0f, cRibbonButtonWindowPaddingX * params.scaling + ImGui::GetStyle().ItemSpacing.x );
-                ImGui::SetCursorPosX( minSearchSize * 0.3f );
-                ImGui::Text( ">" );
-                ImGui::SameLine( 0.0f, cRibbonButtonWindowPaddingX * params.scaling + ImGui::GetStyle().ItemSpacing.x );
-            }
             auto width = params.btnDrawer.calcItemWidth( *foundItem.item, DrawButtonParams::SizeType::SmallText );
             DrawButtonParams dbParams;
             dbParams.sizeType = DrawButtonParams::SizeType::SmallText;
@@ -134,14 +121,111 @@ void RibbonMenuSearch::draw( const Parameters& params )
             dbParams.forceHovered = hightlightedSearchItem_ == i;
             dbParams.forcePressed = dbParams.forceHovered &&
                 ( ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter ) );
-            ImGui::SetCursorPosY( pos.y );
+            const bool pluginActive = foundItem.item->item->isActive();
             params.btnDrawer.drawButtonItem( *foundItem.item, dbParams );
+            if ( foundItem.item->item->isActive() != pluginActive )
+                deactivateSearch_();
         }
         ImGui::PopStyleVar( 1 );
         ImGui::PopStyleColor( 3 );
         ImGui::PopFont();
-        ImGui::EndPopup();
+        ImGui::End();
     }
+}
+
+void RibbonMenuSearch::deactivateSearch_()
+{
+    active_ = false;
+    searchLine_.clear();
+    searchResult_.clear();
+    hightlightedSearchItem_ = -1;
+}
+
+void RibbonMenuSearch::drawMenuUI( const Parameters& params )
+{
+    if ( isSmallUI() )
+    {
+        if ( smallSearchButton_( params ) )
+        {
+            if ( blockSearchBtn_ )
+                blockSearchBtn_ = false;
+            else
+                active_ = true;
+        }
+        if ( ImGui::IsItemActivated() && active_ )
+            blockSearchBtn_ = true;
+    }
+    else
+    {
+
+        if ( isSmallUILast_ && active_ )
+            ImGui::SetKeyboardFocusHere();
+        ImGui::SetNextItemWidth( cSearchSize * params.scaling );
+        if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
+        {
+            searchResult_ = RibbonSchemaHolder::search( searchLine_ );
+            hightlightedSearchItem_ = -1;
+        }
+        if ( mainInputFocused_ && !ImGui::IsItemFocused() && !searchLine_.empty() && searchResult_.empty() )
+            deactivateSearch_();
+        mainInputFocused_ = ImGui::IsItemFocused(); 
+        if ( ImGui::IsItemActivated() )
+            active_ = true;
+        if ( ImGui::IsItemDeactivated() )
+        {
+            if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
+                deactivateSearch_();
+        }
+    }
+    
+    if ( active_ )
+        drawWindow_( params );
+
+    isSmallUILast_ = isSmallUI();
+}
+
+bool RibbonMenuSearch::isSmallUI() const
+{
+    auto menu = getViewerInstance().getMenuPlugin();
+    const auto scaling = menu ? menu->menu_scaling() : 1.f;
+    return getViewerInstance().framebufferSize.x < 1000 * scaling;
+}
+
+float RibbonMenuSearch::getWidthMenuUI() const
+{
+    return isSmallUI() ? 40.f : cSearchSize + 16.f;
+}
+
+bool RibbonMenuSearch::smallSearchButton_( const Parameters& params )
+{
+    ImFont* font = params.fontManager.getFontByType( RibbonFontManager::FontType::Icons );
+    if ( font )
+        font->Scale = 0.7f;
+
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * params.scaling );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+    if ( active_ )
+        ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
+    else
+        ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
+    ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
+
+    float btnSize = params.scaling * cTopPanelAditionalButtonSize;
+    if ( font )
+        ImGui::PushFont( font );
+    bool pressed = ImGui::Button( "\xef\x80\x82", ImVec2( btnSize, btnSize ) ) ;
+    if ( font )
+    {
+        ImGui::PopFont();
+        font->Scale = 1.0f;
+    }
+
+    ImGui::PopStyleColor( 4 );
+    ImGui::PopStyleVar( 2 );
+
+    return pressed;
 }
 
 }

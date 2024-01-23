@@ -55,6 +55,7 @@
 #include "MRMesh/MRPointsSave.h"
 #include "MRMesh/MRLinesSave.h"
 #include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRObjectSave.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectLines.h"
@@ -203,7 +204,7 @@ void ImGuiMenu::startFrame()
         ImGui::GetIO().DisplaySize = ImVec2( float( viewer->framebufferSize.x ), float( viewer->framebufferSize.y ) );
     }
     auto& style = ImGui::GetStyle();
-    if ( storedModalMessage_.empty() )
+    if ( !needModalBgChange_ )
         style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 0.0f, 0.0f, 0.0f, 0.8f );
     else
     {
@@ -234,7 +235,7 @@ void ImGuiMenu::finishFrame()
             }
         }
     }
-
+    ProgressBar::onFrameEnd();
     if ( viewer->isGLInitialized() )
     {
         ImGui::Render();
@@ -611,7 +612,7 @@ MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
 
     for ( const auto& viewport : viewer->viewport_list )
     {
-        if ( !obj.globalVisibilty( viewport.id ) )
+        if ( !obj.globalVisibility( viewport.id ) )
             continue;
         AffineXf3f xf = obj.worldXf();
         bool clip = obj.getVisualizeProperty( VisualizeMaskType::CropLabelsByViewportRect, viewport.id );
@@ -842,10 +843,11 @@ void ImGuiMenu::drawModalMessage_()
 
     const std::string titleImGui = " " + title + "##modal";
 
-    if ( !storedModalMessage_.empty() &&
+    if ( showInfoModal_ &&
         !ImGui::IsPopupOpen( " Error##modal" ) && !ImGui::IsPopupOpen( " Warning##modal" ) && !ImGui::IsPopupOpen( " Info##modal" ) )
     {
         ImGui::OpenPopup( titleImGui.c_str() );
+        showInfoModal_ = false;
     }
 
     const auto menuScaling = menu_scaling();
@@ -884,11 +886,15 @@ void ImGuiMenu::drawModalMessage_()
         if ( UI::button( "Okay", Vector2f( -1, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Enter ) ||
            ( ImGui::IsMouseClicked( 0 ) && !ImGui::IsWindowAppearing() && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) ) ) )
         {
-            storedModalMessage_.clear();
             ImGui::CloseCurrentPopup();
         }
         ImGui::PopStyleVar();
         ImGui::EndPopup();
+        needModalBgChange_ = true;
+    }
+    else
+    {
+        needModalBgChange_ = false;
     }
     ImGui::PopStyleVar( 2 );
     ImGui::PopStyleColor();
@@ -908,6 +914,8 @@ void ImGuiMenu::showModalMessage( const std::string& msg, NotificationType msgTy
     else // if ( msgType == MessageType::Info )
         spdlog::info( "Info Modal Dialog: {}", msg );
     showRenameModal_ = false;
+    showInfoModal_ = true;
+    needModalBgChange_ = true;
     modalMessageType_ = msgType;
     ImGui::CloseCurrentPopup();
     storedModalMessage_ = msg;
@@ -1161,7 +1169,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
                         const bool select = ImGui::GetIO().KeyShift || !sel->isSelected();
                         sel->select( select );
                         if ( showNewSelectedObjects_ && select )
-                            sel->setGlobalVisibilty( true );
+                            sel->setGlobalVisibility( true );
                     }
                 }
                 else
@@ -1176,7 +1184,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
                     {
                         sel->select( true );
                         if ( showNewSelectedObjects_ )
-                            sel->setGlobalVisibilty( true );
+                            sel->setGlobalVisibility( true );
                     }
                 }
             }
@@ -1573,6 +1581,23 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
     {
         obj->setSpecularStrength( value );
     } );
+
+    bool allIsObjPoints = !selectedObjs.empty() &&
+        std::all_of( selectedObjs.cbegin(), selectedObjs.cend(), []( const std::shared_ptr<VisualObject>& obj )
+    {
+        return obj && obj->asType<ObjectPointsHolder>();
+    } );
+
+    if ( allIsObjPoints )
+    {
+        make_points_discretization( selectedObjs, "Render Discretization", [&] ( const ObjectPointsHolder* data )
+        {
+            return data->getRenderDiscretization();
+        }, [&] ( ObjectPointsHolder* data, const int val )
+        {
+            data->setRenderDiscretization( val );
+        } );
+    }
 
     return closePopup;
 }
@@ -2220,6 +2245,38 @@ void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedV
             setter( data->asType<ObjType>(), value );
 }
 
+void ImGuiMenu::make_points_discretization( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
+    std::function<int( const ObjectPointsHolder* )> getter,
+    std::function<void( ObjectPointsHolder*, const int& )> setter )
+{
+    auto objPoints = selectedVisualObjs[0]->asType<ObjectPointsHolder>();
+    auto value = getter( objPoints );
+    bool isAllTheSame = true;
+    for ( int i = 1; i < selectedVisualObjs.size(); ++i )
+        if ( getter( selectedVisualObjs[i]->asType<ObjectPointsHolder>() ) != value )
+        {
+            isAllTheSame = false;
+            break;
+        }
+
+    auto backUpTextColor = ImGui::GetStyle().Colors[ImGuiCol_Text];
+    if ( !isAllTheSame )
+    {
+        value = 1;
+        ImGui::GetStyle().Colors[ImGuiCol_Text] = undefined;
+    }
+    const auto valueConstForComparation = value;
+
+    ImGui::PushItemWidth( 40 * menu_scaling() );
+    ImGui::SliderInt( label, &value, 1, 256, "%d", ImGuiSliderFlags_AlwaysClamp );
+
+    ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
+    ImGui::PopItemWidth();
+    if ( value != valueConstForComparation )
+        for ( const auto& data : selectedVisualObjs )
+            setter( data->asType<ObjectPointsHolder>(), value);
+}
+
 void ImGuiMenu::reorderSceneIfNeeded_()
 {
     if ( !allowSceneReorder_ )
@@ -2578,23 +2635,21 @@ void ImGuiMenu::draw_mr_menu()
 
         if ( ImGui::Button( "Save Scene##Main", ImVec2( ( w - p ) / 2.f, 0 ) ) )
         {
-            auto savePath = saveFileDialog( { {},{},SceneFileFilters } );
+            auto savePath = saveFileDialog( { {}, {}, SceneFileWriteFilters } );
 
-            ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [savePath, &root = SceneRoot::get(), viewer = this->viewer]()->std::function<void()>
-            {
-                auto res = serializeObjectTree( root, savePath, [] ( float progress )
+            if ( !savePath.empty() )
+                ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [savePath, &root = SceneRoot::get()]()->std::function<void()>
                 {
-                    return ProgressBar::setProgress( progress );
+                    auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
+
+                    return[savePath, res] ()
+                    {
+                        if ( res )
+                            getViewerInstance().recentFilesStore().storeFile( savePath );
+                        else
+                            showError( "Error saving scene: " + res.error() );
+                    };
                 } );
-                if ( !res.has_value() )
-                    spdlog::error( res.error() );
-
-                return[savePath, viewer, success = res.has_value()]()
-                {
-                    if ( success )
-                        viewer->recentFilesStore().storeFile( savePath );
-                };
-            } );
         }
 
         if ( ImGui::Button( "New Issue##Main", ImVec2( w, 0 ) ) )

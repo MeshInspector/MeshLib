@@ -17,7 +17,7 @@ public:
         AddObject,
         RemoveObject
     };
-    /// Constructed before removal or addiction
+    /// Constructed before removal or addition
     MRMESH_API ChangeSceneAction( const std::string& name, const std::shared_ptr<Object>& obj, Type type );
 
     virtual std::string name() const override { return name_; }

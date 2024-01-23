@@ -72,7 +72,7 @@ void selectAndShowOnlyNeighborhood( bool selectNext = true )
             obj->select( false );
         }
         newSelection->select( true );
-        newSelection->setGlobalVisibilty( true );
+        newSelection->setGlobalVisibility( true );
     }
 }
 

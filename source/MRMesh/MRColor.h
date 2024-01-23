@@ -69,7 +69,7 @@ struct Color
     {}
 
     template<typename T>
-    explicit operator Vector4<T>() const noexcept { 
+    explicit constexpr operator Vector4<T>() const noexcept { 
         if constexpr ( std::is_same_v<T, int> )
         {
             return Vector4i( r, g, b, a );

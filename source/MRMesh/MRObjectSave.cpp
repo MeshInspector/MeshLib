@@ -130,22 +130,29 @@ Polyline3 mergeToLines( const Object& object )
 namespace MR::ObjectSave
 {
 
+Expected<void> toAnySupportedSceneFormat( const Object& object, const std::filesystem::path& file,
+                                     ProgressCallback callback )
+{
+    const auto extension = toLower( utf8string( file.extension() ) );
+    if ( extension == ".mru" )
+        return serializeObjectTree( object, file, callback );
+#ifndef MRMESH_NO_GLTF
+    else if ( extension == ".glb" || extension == ".gltf" )
+        return serializeObjectTreeToGltf( object, file, callback );
+#endif
+    else
+        return unexpected( "unsupported file format" );
+}
+
 Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem::path& file,
                                      ProgressCallback callback )
 {
     // NOTE: single-char string literal may break due to the GCC bug:
     // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
     const auto extension = '*' + toLower( utf8string( file.extension() ) );
-    if ( hasExtension( SceneFileFilters, extension ) )
+    if ( hasExtension( SceneFileWriteFilters, extension ) )
     {
-        if ( extension == "*.mru" )
-            return serializeObjectTree( object, file, callback );
-#ifndef MRMESH_NO_GLTF
-        else if ( extension == "*.glb" || extension == "*.gltf" )
-            return serializeObjectTreeToGltf( object, file, callback );
-#endif
-        else
-            return unexpected( "unsupported file format" );
+        return toAnySupportedSceneFormat( object, file, callback );
     }
     else if ( hasExtension( MeshSave::Filters, extension ) )
     {

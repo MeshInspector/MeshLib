@@ -47,16 +47,23 @@ void RibbonNotifier::drawNotifications( float scaling )
         ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, 10.0f * scaling );
         ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 15.0f * scaling, 15.0f * scaling ) );
         if ( i + 1 == cNotificationNumberLimit )
-            ImGui::SetNextWindowBgAlpha( 0.7f );
+            ImGui::SetNextWindowBgAlpha( 0.5f );
         ImGui::Begin( name.c_str(), nullptr, flags );
         if ( notification.drawContentFunc )
             if ( !notification.drawContentFunc( width, scaling ) )
                 numInvalid = i;
         auto window = ImGui::GetCurrentContext()->CurrentWindow;
-        ImGui::End();
-        ImGui::PopStyleVar( 3 );
         if ( !ImGui::IsWindowHovered() )
             timer += ImGui::GetIO().DeltaTime;
+        else
+        {
+            auto drawList = window->DrawList;
+            drawList->PushClipRectFullScreen();
+            drawList->AddRect( window->Rect().Min, window->Rect().Max, ImGui::GetColorU32( ImGuiCol_Text ), 10.0f * scaling, 0, scaling );
+            drawList->PopClipRect();
+        }
+        ImGui::End();
+        ImGui::PopStyleVar( 3 );
         currentPos.y -= window->Size.y;
     }
     filterInvalid_( numInvalid );

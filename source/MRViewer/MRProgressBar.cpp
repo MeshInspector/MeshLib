@@ -14,6 +14,7 @@
 #include "MRRibbonFontManager.h"
 #include <thread>
 #include <GLFW/glfw3.h>
+#include "imgui_internal.h"
 
 #ifdef _WIN32
 #include <excpt.h>
@@ -132,6 +133,26 @@ void ProgressBar::setup( float scaling )
         ImGui::EndPopup();
     }
     instance.isInit_ = true;
+}
+
+void ProgressBar::onFrameEnd()
+{
+    // this is needed to prevent unexpected closing on progress bar window in:
+    // ImGui::NewFrame() / ImGui::UpdateMouseMovingWindowNewFrame() / ImGui::FocusWindow()
+    // that can happen if progress bar is ordered on clicking to the window 
+    // (for example on finish editing some InputFloat, clicking on window makes ImGui think this window is moving
+    //  and close progress bar modal before it starts, task of progress bar is going but post-processing is not)
+    auto& inst = instance_();
+    if ( !inst.isOrdered_ )
+        return;
+    auto ctx = ImGui::GetCurrentContext();
+    if ( !ctx )
+        return;
+    if ( !ctx->MovingWindow )
+        return;
+    if ( std::string( ctx->MovingWindow->Name ).ends_with( "###GlobalProgressBarPopup" ) )
+        return;
+    ctx->MovingWindow = nullptr;
 }
 
 void ProgressBar::order( const char* name, const std::function<void()>& task, int taskCount )
@@ -384,6 +405,8 @@ void ProgressBar::initialize_()
 
     if ( isFinished() && thread_.joinable() )
         thread_.join();
+
+    ImGui::CloseCurrentPopup();
 
     progress_ = 0.0f;
 

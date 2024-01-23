@@ -18,8 +18,9 @@ PYBIND11_MODULE( moduleName, m )\
 {\
     precall();\
     auto& adders = MR::PythonExport::instance().functions( #moduleName );\
-    for ( auto& f : adders )\
-        f( m );\
+    for ( auto& fs : adders )\
+        for ( auto& f : fs )\
+            f( m );\
 }\
 static MR::PythonFunctionAdder moduleName##_init_( #moduleName, &PyInit_##moduleName );
 
@@ -32,14 +33,71 @@ _Pragma("warning(disable:4459)") \
     static MR::PythonFunctionAdder name##_adder_( #moduleName, __VA_ARGS__ ); \
 _Pragma("warning(pop)")
 
-// !!! Its important to add vec after adding type
+/// Python class wrapper name; for internal use only
+#define _MR_PYTHON_CUSTOM_CLASS_HOLDER_NAME( name ) name##_class_
+
+/// Python class wrapper accessor
+/// \sa MR_ADD_PYTHON_CUSTOM_CLASS
+#define MR_PYTHON_CUSTOM_CLASS( name ) ( *_MR_PYTHON_CUSTOM_CLASS_HOLDER_NAME( name ) )
+
+/// Explicitly declare the Python class wrapper
+/// \sa MR_ADD_PYTHON_CUSTOM_CLASS
+#define MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, ... ) \
+static std::optional<pybind11::class_<__VA_ARGS__>> _MR_PYTHON_CUSTOM_CLASS_HOLDER_NAME( name );
+
+/// Explicitly instantiate the Python class wrapper
+/// \sa MR_ADD_PYTHON_CUSTOM_CLASS
+#define MR_ADD_PYTHON_CUSTOM_CLASS_INST( moduleName, name ) \
+MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_inst_, [] ( pybind11::module_& module ) \
+{                                                                \
+    _MR_PYTHON_CUSTOM_CLASS_HOLDER_NAME( name ).emplace( module, #name );            \
+}, MR::PythonExport::Priority::Declaration )
+
+/// Explicitly instantiate the Python class wrapper with a custom function
+/// (pybind11::bind_vector, pybind11::bind_map, etc.)
+/// \sa MR_ADD_PYTHON_CUSTOM_CLASS
+/// \sa MR_ADD_PYTHON_VEC
+/// \sa MR_ADD_PYTHON_MAP
+#define MR_ADD_PYTHON_CUSTOM_CLASS_INST_FUNC( moduleName, name, ... ) \
+MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_inst_, [] ( pybind11::module_& module ) \
+{                                                                          \
+    _MR_PYTHON_CUSTOM_CLASS_HOLDER_NAME( name ) = __VA_ARGS__ ( module );  \
+}, MR::PythonExport::Priority::Declaration )
+
+/**
+ * For the proper stub file generation, a class must be defined prior to its depending methods.
+ * To achieve it, declare the class *before* the \ref MR_ADD_PYTHON_CUSTOM_DEF block:
+ *  - for simple cases use \ref MR_ADD_PYTHON_CUSTOM_CLASS macro;
+ *  - to customize class declaration or instantiation (custom holder, custom container binding, etc.), use
+ *    \ref MR_ADD_PYTHON_CUSTOM_CLASS_DECL and \ref MR_ADD_PYTHON_CUSTOM_CLASS_INST_FUNC macros
+ * Finally replace the former class declaration within the \ref MR_ADD_PYTHON_CUSTOM_DEF with the
+ * MR_PYTHON_CUSTOM_CLASS( class-name ) construction.
+ * @code
+ * MR_ADD_PYTHON_CUSTOM_CLASS( moduleName, pythonTypeName, cppTypeName )
+ * MR_ADD_PYTHON_CUSTOM_DEF( moduleName, scopeName, [] ( pybind11::module_& m )
+ * {
+ *     MR_PYTHON_CUSTOM_CLASS( pythonTypeName )
+ *         .doc() = "Class description";
+ *     MR_PYTHON_CUSTOM_CLASS( pythonTypeName )
+ *         .def( pybind11::init<>() );
+ * }
+ * @endcode
+ * See also \ref MR_ADD_PYTHON_VEC and \ref MR_ADD_PYTHON_MAP macros for customized class definition examples.
+ */
+#define MR_ADD_PYTHON_CUSTOM_CLASS( moduleName, name, type ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, type ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_INST( moduleName, name )
+
+// !!! It's important to add vec after adding type
 // otherwise embedded python will not be able to re-import module (due to some issues with vector types in pybind11)
-#define MR_ADD_PYTHON_VEC( moduleName , name , type)\
-PYBIND11_MAKE_OPAQUE( std::vector<type> )\
-MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
+#define MR_ADD_PYTHON_VEC( moduleName, name, type) \
+PYBIND11_MAKE_OPAQUE( std::vector<type> )          \
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, std::vector<type>, std::unique_ptr<std::vector<type>> ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_INST_FUNC( moduleName, name, [] ( pybind11::module_& module ) { return pybind11::bind_vector<std::vector<type>>( module, #name ); } ) \
+MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] ( pybind11::module_& )                                           \
 {\
     using vecType = std::vector<type>;\
-    pybind11::bind_vector<vecType>(m, #name ).\
+    MR_PYTHON_CUSTOM_CLASS( name ).\
         def( pybind11::init<>() ).\
         def( pybind11::init<size_t>(), pybind11::arg( "size" ) ).\
         def( "empty", &vecType::empty ).\
@@ -48,19 +106,24 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
         def( "clear", &vecType::clear ); \
 } )
 
-#define MR_ADD_PYTHON_MAP( moduleName , name , mapType)\
-MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
+#define MR_ADD_PYTHON_MAP( moduleName, name, mapType ) \
+PYBIND11_MAKE_OPAQUE( mapType )                        \
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, mapType, std::unique_ptr<mapType> ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_INST_FUNC( moduleName, name, [] ( pybind11::module_& module ) { return pybind11::bind_map<mapType>( module, #name ); } ) \
+MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] ( pybind11::module_& )                       \
 {\
-    pybind11::bind_map<mapType>(m, #name ).\
+    MR_PYTHON_CUSTOM_CLASS( name ).\
         def( pybind11::init<>() ).\
         def( "size", &mapType::size );\
 } )
 
-#define MR_ADD_PYTHON_EXPECTED( moduleName, name, type, errorType )\
-MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
+#define MR_ADD_PYTHON_EXPECTED( moduleName, name, type, errorType ) \
+using name##_expected_type_ = MR::Expected<type, errorType>;        \
+MR_ADD_PYTHON_CUSTOM_CLASS( moduleName, name, name##_expected_type_ ) \
+MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] ( pybind11::module_& )      \
 {\
     using expectedType = Expected<type,errorType>;\
-    pybind11::class_<expectedType>(m, #name ).\
+    MR_PYTHON_CUSTOM_CLASS( name ).\
         def( "has_value", []() \
         { PyErr_WarnEx(PyExc_DeprecationWarning, ".has_value is deprecated. Please use 'try - except ValueError'", 1); \
             return &expectedType::has_value; \
@@ -105,26 +168,33 @@ public:
 
     using PythonRegisterFuncton = std::function<void( pybind11::module_& m )>;
 
+    enum class Priority
+    {
+        Declaration,
+        Implementation,
+        Count,
+    };
+
     struct ModuleData
     {
         PyObject* ( *initFncPointer )( void );
-        std::vector<PythonRegisterFuncton> functions;
+        std::array<std::vector<PythonRegisterFuncton>, size_t( Priority::Count )> functions;
     };
 
-    void addFunc( const std::string& moduleName, PythonRegisterFuncton func )
+    void addFunc( const std::string& moduleName, PythonRegisterFuncton func, Priority priority )
     {
         auto& mod = moduleData_[moduleName];
-        mod.functions.push_back( func );
+        mod.functions[size_t( priority )].push_back( func );
     }
     void setInitFuncPtr( const std::string& moduleName, PyObject* ( *initFncPointer )( void ) )
     {
         auto& mod = moduleData_[moduleName];
         mod.initFncPointer = initFncPointer;
     }
-    const std::vector<PythonRegisterFuncton>& functions( const std::string& moduleName ) const
+    const std::array<std::vector<PythonRegisterFuncton>, size_t( Priority::Count )>& functions( const std::string& moduleName ) const
     {
         auto it = moduleData_.find( moduleName );
-        const static std::vector<PythonRegisterFuncton> empty;
+        const static std::array<std::vector<PythonRegisterFuncton>, size_t( Priority::Count )> empty;
         if ( it == moduleData_.end() )
             return empty;
         return it->second.functions;
@@ -143,7 +213,7 @@ private:
 
 struct PythonFunctionAdder
 {
-    MRMESH_API PythonFunctionAdder( const std::string& moduleName, std::function<void( pybind11::module_& m )> func );
+    MRMESH_API PythonFunctionAdder( const std::string& moduleName, std::function<void( pybind11::module_& m )> func, PythonExport::Priority priority = PythonExport::Priority::Implementation );
     MRMESH_API PythonFunctionAdder( const std::string& moduleName, PyObject* ( *initFncPointer )( void ) );
 };
 

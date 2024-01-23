@@ -6,9 +6,16 @@
 #include "MRPch/MRJson.h"
 #include "MRMatrix3.h"
 #include "MRVector3.h"
+#include "MRMatrix3Decompose.h"
 
 namespace MR
 {
+
+// Offset in positive and negative directions along the X and Y axes when constructing a base object. 
+// Historically it eq. 1,  which means that original plane have a 2x2 size.  
+// basePlaneObjectHalfEdgeLength_=0.5 looks better. 
+// But left as is for compatibility.
+constexpr float basePlaneObjectHalfEdgeLength_ = 1.0f;
 
 MR_ADD_CLASS_FACTORY( PlaneObject )
 
@@ -25,7 +32,9 @@ Vector3f PlaneObject::getCenter() const
 void PlaneObject::setNormal( const Vector3f& normal )
 {
     auto currentXf = xf();
-    currentXf.A = Matrix3f::rotation( Vector3f::plusZ(), normal ) * Matrix3f::scale( currentXf.A.toScale() );
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    currentXf.A = Matrix3f::rotation( Vector3f::plusZ(), normal ) * s;
     setXf( currentXf );
 }
 
@@ -39,8 +48,27 @@ void PlaneObject::setCenter( const Vector3f& center )
 void PlaneObject::setSize( float size )
 {
     auto currentXf = xf();
-    currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( Vector3f::diagonal( size ) );
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    currentXf.A = r * Matrix3f::scale( Vector3f::diagonal( size / basePlaneObjectHalfEdgeLength_ ) );
     setXf( currentXf );
+}
+
+float PlaneObject::getSize( void ) const
+{
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    return  s.x.x;
+}
+
+const std::vector<FeatureObjectSharedProperty>& PlaneObject::getAllSharedProperties() const
+{
+    static std::vector<FeatureObjectSharedProperty> ret = {
+        {"Center", &PlaneObject::getCenter,&PlaneObject::setCenter},
+        {"Normal", &PlaneObject::getNormal,&PlaneObject::setNormal},
+        {"Size"  , &PlaneObject::getSize,  &PlaneObject::setSize  }
+    };
+    return ret;
 }
 
 PlaneObject::PlaneObject()
@@ -111,10 +139,10 @@ void PlaneObject::constructMesh_()
     // create object Mesh cube
     Mesh meshObj;
     meshObj.topology = MeshBuilder::fromTriangles( t );
-    meshObj.points.emplace_back( -1, -1, 0 ); // VertId{0}
-    meshObj.points.emplace_back( 1, -1, 0 ); // VertId{1}
-    meshObj.points.emplace_back( -1, 1, 0 ); // VertId{2}
-    meshObj.points.emplace_back( 1, 1, 0 ); // VertId{3}
+    meshObj.points.emplace_back( -basePlaneObjectHalfEdgeLength_, -basePlaneObjectHalfEdgeLength_, 0 ); // VertId{0}
+    meshObj.points.emplace_back(  basePlaneObjectHalfEdgeLength_, -basePlaneObjectHalfEdgeLength_, 0 ); // VertId{1}
+    meshObj.points.emplace_back( -basePlaneObjectHalfEdgeLength_,  basePlaneObjectHalfEdgeLength_, 0 ); // VertId{2}
+    meshObj.points.emplace_back(  basePlaneObjectHalfEdgeLength_,  basePlaneObjectHalfEdgeLength_, 0 ); // VertId{3}
 
     mesh_ = std::make_shared<Mesh>( meshObj );
 

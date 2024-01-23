@@ -3,6 +3,7 @@
 #include "MRMesh.h"
 #include "MRMeshBuilder.h"
 #include "MRObjectMesh.h"
+#include "MRObjectsAccess.h"
 #include "MRParallelFor.h"
 #include "MRStringConvert.h"
 #include "MRTimer.h"
@@ -321,29 +322,37 @@ Expected<std::shared_ptr<Object>, std::string> stepModelToScene( STEPControl_Rea
     // TODO: preserve shape-solid hierarchy? (not sure about actual shape count in real models)
     std::deque<TopoDS_Shape> solids;
     for ( const auto& shape : shapes )
+    {
+        size_t solidCount = 0;
         for ( auto explorer = TopExp_Explorer( shape, TopAbs_SOLID ); explorer.More(); explorer.Next() )
+        {
             solids.emplace_back( explorer.Current() );
+            ++solidCount;
+        }
+        // import the whole shape if it doesn't consist of solids
+        if ( solidCount == 0 )
+            solids.emplace_back( shape );
+    }
     shapes.clear();
 
     if ( solids.empty() )
     {
-        return {};
+        auto rootObject = std::make_shared<Object>();
+        rootObject->select( true );
+        return rootObject;
     }
     else if ( solids.size() == 1 )
     {
         const auto triples = loadSolid( solids.front() );
         auto mesh = Mesh::fromPointTriples( triples, true );
 
-        auto result = std::make_shared<ObjectMesh>();
-        result->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
-        return result;
+        auto rootObject = std::make_shared<ObjectMesh>();
+        rootObject->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
+        rootObject->select( true );
+        return rootObject;
     }
     else
     {
-        auto result = std::make_shared<ObjectMesh>();
-        // create empty parent mesh
-        result->setMesh( std::make_shared<Mesh>() );
-
         auto cb2 = subprogress( cb, 0.90f, 1.0f );
         tbb::task_arena taskArena;
         std::vector<std::shared_ptr<Object>> children( solids.size() );
@@ -361,15 +370,21 @@ Expected<std::shared_ptr<Object>, std::string> stepModelToScene( STEPControl_Rea
                     auto child = std::make_shared<ObjectMesh>();
                     child->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
                     child->setName( fmt::format( "Solid{}", i + 1 ) );
+                    child->select( true );
                     children[i] = std::move( child );
                 } );
             }
             taskGroup.wait();
         } );
 
+        auto rootObject = std::make_shared<Object>();
+        rootObject->select( true );
         for ( auto& child : children )
-            result->addChild( std::move( child ), true );
-        return result;
+            rootObject->addChild( std::move( child ), true );
+
+        auto sceneObject = std::make_shared<Object>();
+        sceneObject->addChild( rootObject );
+        return sceneObject;
     }
 }
 
@@ -396,8 +411,12 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::fil
 
     if ( auto& obj = *result )
     {
+        const auto defaultName = utf8string( path.stem() );
         if ( obj->name().empty() )
-            obj->setName( utf8string( path.stem() ) );
+            obj->setName( defaultName );
+        for ( auto& child : getAllObjectsInTree( *obj ) )
+            if ( child->name().empty() )
+                child->setName( defaultName );
     }
 
     return result;

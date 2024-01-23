@@ -92,6 +92,15 @@ const IOFilters SceneFileFilters =
     { "ZIP files (.zip)","*.zip" },
 };
 
+const IOFilters SceneFileWriteFilters =
+{
+    {"MeshInspector scene (.mru)","*.mru"},
+#ifndef MRMESH_NO_GLTF
+    {"glTF JSON scene (.gltf)","*.gltf"},
+    {"glTF binary scene (.glb)","*.glb"},
+#endif
+};
+
 Expected<Json::Value, std::string> deserializeJsonValue( const std::string& str )
 {
     Json::Value root;

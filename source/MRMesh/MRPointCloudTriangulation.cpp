@@ -16,6 +16,7 @@
 #include "MRTimer.h"
 #include "MRPointCloudTriangulationHelpers.h"
 #include "MRRegionBoundary.h"
+#include "MRParallelFor.h"
 #include <parallel_hashmap/phmap.h>
 
 namespace MR
@@ -49,10 +50,10 @@ struct VertTripletHasher
 {
     size_t operator()( const VertTriplet& triplet ) const
     {
-        auto h1 = std::hash<int>{}( int( triplet.a ) );
-        auto h2 = std::hash<int>{}( int( triplet.b ) );
-        auto h3 = std::hash<int>{}( int( triplet.c ) );
-        return h1 ^ ( h2 << 1 ) ^ ( h3 << 3 );
+        return 
+            2 * size_t( triplet.a ) +
+            3 * size_t( triplet.b ) +
+            5 * size_t( triplet.c );
     }
 };
 
@@ -71,10 +72,17 @@ private:
 
     const PointCloud& pointCloud_;
     TriangulationParameters params_;
+    struct FanRecord
+    {
+        VertId center;
+        VertId border;
+        std::uint32_t firstNei;
+    };
     struct PerThreadData
     {
         TriangulationHelpers::TriangulatedFanData fanData;
-        HashMap<VertTriplet, int, VertTripletHasher> map;
+        std::vector<VertId> neighbors;
+        std::vector<FanRecord> fanRecords;
     };
     tbb::enumerable_thread_specific<PerThreadData> tls_;
 };
@@ -114,23 +122,11 @@ bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
     auto body = [&] ( VertId v )
     {
         auto& localData = tls_.local();
-        TriangulationHelpers::buildLocalTriangulation( pointCloud_, v, normals, { .radius = radius, .critAngle = params_.critAngle },
-            localData.fanData );
+        auto& disc = localData.fanData;
+        TriangulationHelpers::buildLocalTriangulation( pointCloud_, v, normals, { .radius = radius, .critAngle = params_.critAngle }, disc );
 
-        const auto& disc = localData.fanData;
-        auto& map = localData.map;
-        for ( int i = 0; i < disc.neighbors.size(); ++i )
-        {
-            if ( disc.border.valid() && disc.neighbors[i] == disc.border )
-                continue;
-
-            auto next = disc.neighbors[( i + 1 ) % disc.neighbors.size()];
-
-            VertTriplet triplet{ v,next,disc.neighbors[i] };
-            auto [mIt, inserted] = map.insert( { VertTriplet{v,next,disc.neighbors[i]},1 } );
-            if ( !inserted )
-                ++mIt->second;
-        }
+        localData.fanRecords.push_back( { v, disc.border, (std::uint32_t)localData.neighbors.size() } );
+        localData.neighbors.insert( localData.neighbors.end(), disc.neighbors.begin(), disc.neighbors.end() );
     };
 
     return BitSetParallelFor( pointCloud_.validPoints, body, subprogress( progressCb, startProgress, 0.5f ) );
@@ -138,30 +134,41 @@ bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
 
 std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progressCb )
 {
-    MR_TIMER;
-    auto sp = subprogress( progressCb, 0.5f, 0.6f );
-    // accumulate triplets
-    HashMap<VertTriplet, int, VertTripletHasher> map;
-    int numMap = 0;
+    MR_TIMER
+
     for ( auto& threadInfo : tls_ )
+        threadInfo.fanRecords.push_back( { {}, {}, (std::uint32_t)threadInfo.neighbors.size() } );
+
+    // accumulate triplets
+    ParallelHashMap<VertTriplet, int, VertTripletHasher> map;
+    if ( !ParallelFor( size_t(0), map.subcnt(), [&]( size_t myPartId )
     {
-        if ( numMap++ == 0 )
+        for ( const auto& threadInfo : tls_ )
         {
-            map.merge( std::move( threadInfo.map ) );
-        }
-        else
-        {
-            for ( const auto& keyVal : threadInfo.map )
+            for ( int i = 0; i + 1 < threadInfo.fanRecords.size(); ++i )
             {
-                auto [it, inserted] = map.insert( keyVal );
-                if ( !inserted )
-                    it->second += keyVal.second;
+                const auto v = threadInfo.fanRecords[i].center;
+                const auto border = threadInfo.fanRecords[i].border;
+                const auto nbeg = threadInfo.fanRecords[i].firstNei;
+                const auto nend = threadInfo.fanRecords[i+1].firstNei;
+                for ( auto n = nbeg; n < nend; ++n )
+                {
+                    if ( threadInfo.neighbors[n] == border )
+                        continue;
+                    const auto next = threadInfo.neighbors[n + 1 < nend ? n + 1 : nbeg];
+                    const VertTriplet triplet{ v, next, threadInfo.neighbors[n] };
+                    const auto hashval = map.hash( triplet );
+                    const auto idx = map.subidx( hashval );
+                    if ( idx != myPartId )
+                        continue;
+                    auto [it, inserted] = map.insert( { triplet, 1 } );
+                    if ( !inserted )
+                        ++it->second;
+                }
             }
-            threadInfo.map.clear();
         }
-        if ( sp && !sp( float( numMap ) / float( tls_.size() ) ) ) // 50% - 60%
-            return {};
-    }
+    }, subprogress( progressCb, 0.5f, 0.6f ), 1 ) )
+        return {};
 
     Mesh mesh;
     mesh.points = pointCloud_.points;

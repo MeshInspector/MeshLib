@@ -14,6 +14,7 @@
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRViewer/MRProgressBar.h"
 #include "MRMesh/MRVoxelsLoad.h"
+#include "MRMesh/MRObjectSave.h"
 #include "MRMesh/MRMeshSave.h"
 #include "MRMesh/MRLinesSave.h"
 #include "MRMesh/MRPointsSave.h"
@@ -149,8 +150,25 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
     // if drop to menu scene window -> add objects
     // if drop to viewport -> replace objects
     auto& viewerRef = getViewerInstance();
-    SCOPED_HISTORY( "Drag and drop files" );
     auto menu = viewerRef.getMenuPluginAs<RibbonMenu>();
+
+    if ( ProgressBar::isOrdered() )
+    {
+        if ( menu )
+        {
+            menu->pushNotification( {
+                .drawContentFunc = [] ( float ,float )
+            {
+                ImGui::TextWrapped( "Another operation in progress." );
+                return true;
+            },
+                .lifeTimeSec = 3.0f
+                } );
+        }
+        return true;
+    }
+
+    SCOPED_HISTORY( "Drag and drop files" );
     if ( menu )
     {
         auto sceneBoxSize = menu->getSceneSize();
@@ -167,7 +185,7 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
         }
     }
 
-    getViewerInstance().loadFiles( paths );
+    viewerRef.loadFiles( paths );
     return true;
 }
 
@@ -560,10 +578,10 @@ bool SaveSelectedMenuItem::action()
     auto selectedMeshes = getAllObjectsInTree<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     auto selectedObjs = getAllObjectsInTree<Object>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     
-    auto filters = SceneFileFilters;
+    IOFilters filters = SceneFileWriteFilters;
     // allow obj format only if all selected objects are meshes
     if ( selectedMeshes.size() == selectedObjs.size() )
-        filters = SceneFileFilters | IOFilters{ IOFilter{"OBJ meshes (.obj)","*.obj"} };
+        filters = SceneFileWriteFilters | IOFilters{ IOFilter{"OBJ meshes (.obj)","*.obj"} };
     
     auto savePath = saveFileDialog( { {},{},filters } );
     if ( savePath.empty() )
@@ -573,42 +591,44 @@ bool SaveSelectedMenuItem::action()
     for ( auto& c : ext )
         c = ( char ) tolower( c );
 
-    if ( ext == u8".mru" )
+    if ( ext != u8".obj" )
     {
         auto rootShallowClone = SceneRoot::get().shallowCloneTree();
         auto children = rootShallowClone->children();
         for ( auto& child : children )
             removeUnselectedRecursive( *child );
 
-        ProgressBar::orderWithMainThreadPostProcessing( "Saving selected", [savePath, rootShallowClone, viewer = Viewer::instance()]()->std::function<void()>
+        ProgressBar::orderWithMainThreadPostProcessing( "Saving selected", [savePath, rootShallowClone]()->std::function<void()>
         {
-            auto res = serializeObjectTree( *rootShallowClone, savePath, ProgressBar::callBackSetProgress );
-            if ( !res.has_value() )
-                spdlog::error( res.error() );
+            auto res = ObjectSave::toAnySupportedSceneFormat( *rootShallowClone, savePath, ProgressBar::callBackSetProgress );
 
-            return[savePath, viewer, res]()
+            return[savePath, res]()
             {
-                if ( res.has_value() )
-                    viewer->recentFilesStore().storeFile( savePath );
+                if ( res )
+                    getViewerInstance().recentFilesStore().storeFile(savePath);
                 else
-                {
-                    const auto errStr = "Error saving in MRU-format: " + res.error();
-                    showError( errStr );
-                }
+                    showError( "Error saving selected: " + res.error() );
             };
         } );
     }
-    else if ( ext == u8".obj" )
+    else // if ( ext == u8".obj" )
     {
         std::vector<MeshSave::NamedXfMesh> objs;
         for ( auto obj : selectedMeshes )
             objs.push_back( MeshSave::NamedXfMesh{ obj->name(),obj->worldXf(),obj->mesh() } );
 
-        auto res = MeshSave::sceneToObj( objs, savePath );
-        if ( !res.has_value() )
-            showError( res.error() );
-        else
-            getViewerInstance().recentFilesStore().storeFile( savePath );
+        ProgressBar::orderWithMainThreadPostProcessing( "Saving selected", [savePath, objs] ()->std::function<void()>
+        {
+            auto res = MeshSave::sceneToObj( objs, savePath );
+
+            return[savePath, res] ()
+            {
+                if ( res.has_value() )
+                    getViewerInstance().recentFilesStore().storeFile( savePath );
+                else
+                    showError( "Error saving selected: " + res.error() );
+            };
+        } );
     }
     return false;
 }
@@ -622,18 +642,14 @@ void SaveSceneAsMenuItem::saveScene_( const std::filesystem::path& savePath )
 {
     ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [savePath, &root = SceneRoot::get()]()->std::function<void()>
     {
-        auto res = savePath.extension() == u8".mru" ? serializeObjectTree( root, savePath, ProgressBar::callBackSetProgress ) :
-            serializeObjectTreeToGltf( root, savePath, ProgressBar::callBackSetProgress );
+        auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
 
         return[savePath, res]()
         {
-            if ( res.has_value() )
+            if ( res )
                 getViewerInstance().onSceneSaved( savePath );
             else
-            {
-                const auto errStr = "Error saving in MRU-format: " + res.error();
-                showError( errStr );
-            }
+                showError( "Error saving scene: " + res.error() );
         };
     } );
 }
@@ -644,7 +660,7 @@ bool SaveSceneAsMenuItem::action()
     {
         if ( !savePath.empty() )
             saveScene_( savePath );
-    }, { {}, {}, SceneFileFilters } );
+    }, { {}, {}, SceneFileWriteFilters } );
     return false;
 }
 
@@ -657,7 +673,7 @@ bool SaveSceneMenuItem::action()
 {   
     auto savePath = SceneRoot::getScenePath();
     if ( savePath.empty() )
-        savePath = saveFileDialog( { {}, {},SceneFileFilters } );
+        savePath = saveFileDialog( { {}, {}, SceneFileWriteFilters } );
     if ( !savePath.empty() )
         saveScene_( savePath );
     return false;

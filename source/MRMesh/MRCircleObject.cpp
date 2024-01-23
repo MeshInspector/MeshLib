@@ -3,9 +3,29 @@
 #include "MRPolyline.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
-#include <Eigen/Dense>
 #include "MRConstants.h"
 #include "MRBestFit.h"
+#include "MRMatrix3Decompose.h"
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:5054)  //operator '&': deprecated between enumerations of different types
+#pragma warning(disable:4127)  //C4127. "Consider using 'if constexpr' statement instead"
+#elif defined(__clang__)
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif 
+
+#include <Eigen/Dense>
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#elif defined(__clang__)
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif 
+
 
 namespace
 {
@@ -19,7 +39,9 @@ MR_ADD_CLASS_FACTORY( CircleObject )
 
 float CircleObject::getRadius() const
 {
-    return xf().A.toScale().x;
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    return s.x.x;
 }
 
 Vector3f CircleObject::getCenter() const
@@ -49,8 +71,20 @@ void CircleObject::setCenter( const Vector3f& center )
 void CircleObject::setNormal( const Vector3f& normal )
 {
     auto currentXf = xf();
-    currentXf.A = Matrix3f::rotation( Vector3f::plusZ(), normal ) * Matrix3f::scale( currentXf.A.toScale() );
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    currentXf.A = Matrix3f::rotation( Vector3f::plusZ(), normal ) * s;
     setXf( currentXf );
+}
+
+const std::vector<FeatureObjectSharedProperty>& CircleObject::getAllSharedProperties() const
+{
+    static std::vector<FeatureObjectSharedProperty> ret = {
+      {"Radius", &CircleObject::getRadius, &CircleObject::setRadius},
+      {"Center", &CircleObject::getCenter, &CircleObject::setCenter},
+      {"Normal", &CircleObject::getNormal, &CircleObject::setNormal}
+    };
+    return ret;
 }
 
 CircleObject::CircleObject()

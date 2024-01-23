@@ -1,13 +1,14 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRObjectLinesHolder.h"
+#include "MRFeatureObject.h"
 
 namespace MR
 {
 
 /// Object to show plane feature
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS LineObject : public ObjectLinesHolder
+class MRMESH_CLASS LineObject : public ObjectLinesHolder, public FeatureObject
 {
 public:
     /// Creates simple plane object
@@ -39,7 +40,14 @@ public:
     /// updates xf to fit given center
     MRMESH_API void setCenter( const Vector3f& center );
     /// updates xf to scale size
-    MRMESH_API void setSize( float size );
+    MRMESH_API void setLength( float size );
+    /// calculates line size from xf
+    MRMESH_API float getLength() const;
+
+    [[deprecated("This confusingly sets half-length. Use `setLength(halfLen * 2)` instead.")]]
+    void setSize( float halfLen ) { setLength( halfLen * 2 ); }
+
+    MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 
 protected:
     LineObject( const LineObject& other ) = default;
@@ -55,7 +63,7 @@ protected:
     virtual VoidOrErrStr deserializeModel_( const std::filesystem::path&, ProgressCallback ) override
         { return {}; }
 
-private:
+private: 
     void constructPolyline_();
 };
 

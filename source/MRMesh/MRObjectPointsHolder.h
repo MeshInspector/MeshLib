@@ -77,6 +77,21 @@ public:
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
+
+    /// sets rendering discretization, each \param val -th point will be displayed on screen
+    void setRenderDiscretization( int val )
+    {
+        if ( renderDiscretization_ == val)
+            return;
+        renderDiscretization_ = val;
+        needRedraw_ = true;
+    }
+
+    /// returns rendering discretization, each N-th point will be displayed on screen
+    int getRenderDiscretization() const
+    {
+        return renderDiscretization_;
+    }
     
 protected:
     VertBitSet selectedPoints_;
@@ -107,6 +122,8 @@ protected:
     MRMESH_API virtual void deserializeFields_( const Json::Value& root ) override;
 
     MRMESH_API virtual void setupRenderObject_() const override;
+
+    int renderDiscretization_ = 1;
 
 
 private:

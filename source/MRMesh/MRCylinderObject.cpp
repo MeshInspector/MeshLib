@@ -5,6 +5,7 @@
 #include "MRMesh.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
+#include "MRMatrix3Decompose.h"
 #include "MRCylinderApproximator.h"
 #include "MRMeshFwd.h"
 #include "MRLine.h"
@@ -26,10 +27,12 @@ constexpr float epsilonForCylinderTopBottomDetection = 0.01f;
 constexpr int phiResolution = 180;
 constexpr int thetaiResolution = 180;
 
+
 Matrix3f getRotationMatrix( const Vector3f& normal )
 {
     return Matrix3f::rotation( Vector3f::plusZ(), normal );
 }
+
 
 std::shared_ptr<Mesh> makeFeatureCylinder( int resolution = cDetailLevel, float  startAngle = 0.0f, float  archSize = 2.0f * PI_F )
 {
@@ -53,27 +56,32 @@ std::shared_ptr<Mesh> makeFeatureCylinder( int resolution = cDetailLevel, float 
     return mesh;
 }
 
-}
-
+} // namespace 
 
 MR_ADD_CLASS_FACTORY( CylinderObject )
 
 float CylinderObject::getLength() const
 {
-    return xf().A.toScale().z;
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    return s.z.z;
 }
+
 void CylinderObject::setLength( float length )
 {
     auto direction = getDirection();
     auto currentXf = xf();
     auto radius = getRadius();
-    currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, length );
+    currentXf.A = ( getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, length ) );
     setXf( currentXf );
 }
 
 float CylinderObject::getRadius() const
 {
-    return ( xf().A.toScale().x + xf().A.toScale().y ) / 2.0f;
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    // it is bad idea to use statement like this ( x + y ) / 2.0f; it increases instability. radius is changing during length update.
+    return  s.x.x;
 }
 
 void CylinderObject::setRadius( float radius )
@@ -86,7 +94,9 @@ void CylinderObject::setRadius( float radius )
 
 Vector3f CylinderObject::getDirection() const
 {
-    return ( xf().A * Vector3f::plusZ() ).normalized();
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    return ( r * Vector3f::plusZ() ).normalized();
 }
 
 Vector3f CylinderObject::getCenter() const
@@ -97,7 +107,9 @@ Vector3f CylinderObject::getCenter() const
 void CylinderObject::setDirection( const Vector3f& normal )
 {
     auto currentXf = xf();
-    currentXf.A = getRotationMatrix( normal ) * Matrix3f::scale( currentXf.A.toScale() );
+    Matrix3f r, s;
+    decomposeMatrix3( currentXf.A, r, s );
+    currentXf.A = getRotationMatrix( normal ) * s;
     setXf( currentXf );
 }
 
@@ -174,7 +186,16 @@ void CylinderObject::constructMesh_()
     setDirtyFlags( DIRTY_ALL );
 }
 
-
+const std::vector<FeatureObjectSharedProperty>& CylinderObject::getAllSharedProperties() const
+{
+    static std::vector<FeatureObjectSharedProperty> ret = {
+       {"Radius", &CylinderObject::getRadius, &CylinderObject::setRadius},
+       {"Length", &CylinderObject::getLength, &CylinderObject::setLength},
+       {"Center", &CylinderObject::getCenter, &CylinderObject::setCenter},
+       {"Main axis", &CylinderObject::getDirection, &CylinderObject::setDirection},
+    };
+    return ret;
+}
 
 
 TEST( MRMesh, CylinderApproximation )
@@ -250,5 +271,4 @@ TEST( MRMesh, CylinderApproximation )
     EXPECT_GT( dot( direction, resultSAF.direction() ), 0.9f );
 }
 
-
-}
+} // namespace MR 

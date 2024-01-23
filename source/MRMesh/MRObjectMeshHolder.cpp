@@ -262,6 +262,7 @@ void ObjectMeshHolder::setDefaultColors_()
     setSelectedFacesColor( SceneColors::get( SceneColors::SelectedFaces ) );
     setSelectedEdgesColor( SceneColors::get( SceneColors::SelectedEdges ) );
     setEdgesColor( SceneColors::get( SceneColors::Edges ) );
+    setBordersColor( SceneColors::get( SceneColors::Labels ) );
 }
 
 ObjectMeshHolder::ObjectMeshHolder()

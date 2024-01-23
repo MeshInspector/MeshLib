@@ -188,7 +188,7 @@ private:
 
 // Visual widget to modify transform
 // present in scene (ancillary), subscribes to viewer events
-class MRVIEWER_CLASS ObjectTransformWidget : public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener, PreDrawListener, DrawListener>
+class MRVIEWER_CLASS ObjectTransformWidget : public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener, PreDrawListener, PostDrawListener>
 {
 public:
     // Creates transform widget around given box and applies given xf
@@ -249,9 +249,9 @@ public:
     void setStopModifyCallback( std::function<void()> callback ) { stopModifyCallback_ = callback; }
     // Sets callback that will be called when modification of widget starts
     void setStartModifyCallback( std::function<void()> callback ) { startModifyCallback_ = callback; }
-    // Sets callback that will be called when widget gets addictive transform
+    // Sets callback that will be called when widget gets additive transform
     void setAddXfCallback( std::function<void( const AffineXf3f& )> callback ) { addXfCallback_ = callback; }
-    // Sets callback that will be called when widget gets addictive transform
+    // Sets callback that will be called when widget gets additive transform
     // The callback should return true to approve transform and false to reject it
     void setApproveXfCallback( std::function<bool( const AffineXf3f& )> callback ) { approveXfCallback_ = callback; }
 
@@ -302,7 +302,7 @@ private:
     MRVIEWER_API virtual bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseMove_( int mouse_x, int mouse_y ) override;
     MRVIEWER_API virtual void preDraw_() override;
-    MRVIEWER_API virtual void draw_() override;
+    MRVIEWER_API virtual void postDraw_() override;
 
     void activeMove_( bool press = false );
 

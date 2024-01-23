@@ -30,6 +30,8 @@
 #include "MRMesh/MRExtractIsolines.h"
 #include "MRMesh/MRContour.h"
 #include "MRMesh/MRMeshOverhangs.h"
+#include "MRMesh/MRConvexHull.h"
+#include "MRMesh/MRPointCloud.h"
 #include <pybind11/functional.h>
 
 using namespace MR;
@@ -153,7 +155,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m 
             "Y: In symbol size: 1.0f adds one base height, 0.5 adds half base height" ).
         def_readwrite( "pathToFontFile", &TextMeshAlignParams::pathToFontFile, "Path to font file" );
 
-    m.def( "createSymbolsMesh", &MR::createSymbolsMesh, pybind11::arg( "params" ), "converts text string into Z-facing symbol mesh" );
+    m.def( "createSymbolsMesh", MR::decorateExpected( [] ( const SymbolMeshParams& params )->Expected<Mesh>
+    {
+        auto res = MR::createSymbolsMesh( params );
+        if ( res.has_value() )
+            return *res;
+        else
+            return unexpected( "Symbol at position " + std::to_string( res.error() ) + " missed in font" );
+    } ), pybind11::arg( "params" ), "converts text string into Z-facing symbol mesh" );
 
     pybind11::class_<TextMeshAlignParams, SymbolMeshParams>( m, "TextAlignParams" ).
         def( pybind11::init<>() ).
@@ -164,7 +173,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m 
         def_readwrite( "surfaceOffset", &TextMeshAlignParams::surfaceOffset, "Text mesh inside and outside offset of input mesh" ).
         def_readwrite( "textMaximumMovement", &TextMeshAlignParams::textMaximumMovement, "Maximum possible movement of text mesh alignment, meters" );
 
-    m.def( "alignTextToMesh", &alignTextToMesh, pybind11::arg( "mesh" ), pybind11::arg( "params" ),
+    m.def( "alignTextToMesh", MR::decorateExpected( &MR::alignTextToMesh ), pybind11::arg( "mesh" ), pybind11::arg( "params" ),
         "create text on mesh" );
 } )
 #endif
@@ -237,12 +246,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Relax, [] ( pybind11::module_& m )
         def_readwrite( "hardSmoothTetrahedrons", &MeshRelaxParams::hardSmoothTetrahedrons, "smooth tetrahedron verts (with complete three edges ring) to base triangle (based on its edges destinations)" );
 
     m.def( "relax", ( bool( * )( Mesh&, const MeshRelaxParams&, ProgressCallback ) )& relax,
-        pybind11::arg( "mesh" ), pybind11::arg( "params" ) = MeshRelaxParams{}, pybind11::arg( "cb" ) = ProgressCallback{},
+        pybind11::arg( "mesh" ), pybind11::arg_v( "params", MeshRelaxParams(), "MeshRelaxParams()" ), pybind11::arg( "cb" ) = ProgressCallback{},
         "applies given number of relaxation iterations to the whole mesh ( or some region if it is specified )\n"
         "return true if was finished successfully, false if was interrupted by progress callback");
 
     m.def( "relaxKeepVolume", &relaxKeepVolume,
-        pybind11::arg( "mesh" ), pybind11::arg( "params" ) = MeshRelaxParams{}, pybind11::arg( "cb" ) = ProgressCallback{},
+        pybind11::arg( "mesh" ), pybind11::arg_v( "params", MeshRelaxParams(), "MeshRelaxParams()" ), pybind11::arg( "cb" ) = ProgressCallback{},
         "applies given number of relaxation iterations to the whole mesh ( or some region if it is specified ) \n"
         "do not really keeps volume but tries hard \n"
         "\treturn true if was finished successfully, false if was interrupted by progress callback" );
@@ -263,11 +272,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
         def_readwrite( "subdivideBorder", &SubdivideSettings::subdivideBorder,
             "If false do not touch border edges (cannot subdivide lone faces)\n"
             "use findRegionOuterFaces to find boundary faces" ).
-        def_readwrite( "minTriAspectRatio", &SubdivideSettings::minTriAspectRatio,
-            "An edge is subdivided only if its left or right triangle has aspect ratio above or equal to this value. "
-            "Please set it to a larger value if you would like to subdivide edges near degenerate triangles only" ).
         def_readwrite( "maxTriAspectRatio", &SubdivideSettings::maxTriAspectRatio,
+            "The subdivision stops as soon as all triangles (in the region) have aspect ratio below or equal to this value" ).
+        def_readwrite( "maxSplittableTriAspectRatio", &SubdivideSettings::maxSplittableTriAspectRatio,
             "An edge is subdivided only if both its left and right triangles have aspect ratio below or equal to this value. "
+            "So this is a maximum aspect ratio of a triangle that can be split on two before Delone optimization. "
             "Please set it to a smaller value only if subdivideBorder==false, otherwise many narrow triangles can appear near border" ).
         def_readwrite( "smoothMode", &SubdivideSettings::smoothMode,
             "Puts new vertices so that they form a smooth surface together with existing vertices.\n"
@@ -276,7 +285,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
             "In case of activated smoothMode, the smoothness is locally deactivated at the edges having dihedral angle at least this value" );
 
     m.def( "subdivideMesh", &MR::subdivideMesh,
-        pybind11::arg( "mesh" ), pybind11::arg( "settings" ) = MR::SubdivideSettings{},
+        pybind11::arg( "mesh" ), pybind11::arg_v( "settings", MR::SubdivideSettings(), "SubdivideSettings()" ),
         "Split edges in mesh region according to the settings;\n"
         "return The total number of edge splits performed" );
 
@@ -315,6 +324,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         def_readwrite( "minValue", &MR::MeshToDistanceMapParams::minValue, "Using of this parameter depends on useDistanceLimits" ).
         def_readwrite( "maxValue", &MR::MeshToDistanceMapParams::maxValue, "Using of this parameter depends on useDistanceLimits" ).
         def_readwrite( "resolution", &MR::MeshToDistanceMapParams::resolution, "resolution of distance map" );
+
+    pybind11::class_<MR::ContourToDistanceMapParams>( m, "ContourToDistanceMapParams" ).
+        def( pybind11::init<>() );
 
     pybind11::class_<MR::DistanceMapToWorld>( m, "DistanceMapToWorld", "This structure store data to transform distance map to world coordinates" ).
         def( pybind11::init<>(), "Default ctor init all fields with zeros, make sure to fill them manually" ).
@@ -400,7 +412,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
         value( "CotanTimesLength", Laplacian::EdgeWeights::CotanTimesLength, "edge weight is equal to edge length times cotangent weight" );
 
     m.def( "positionVertsSmoothly", &MR::positionVertsSmoothly,
-        pybind11::arg( "mesh" ), pybind11::arg( "verts" ), pybind11::arg( "egdeWeightsType" ) = MR::Laplacian::EdgeWeights::Cotan,
+        pybind11::arg( "mesh" ), pybind11::arg( "verts" ), pybind11::arg_v( "edgeWeightsType", MR::Laplacian::EdgeWeights::Cotan, "LaplacianEdgeWeightsParam.Cotan" ),
         pybind11::arg( "fixedSharpVertices" ) = nullptr,
         "Puts given vertices in such positions to make smooth surface both inside verts-region and on its boundary" );
 } )
@@ -450,7 +462,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
             params.voxelSize = suggestVoxelSize( mp, 5e6f );
         return MR::generalOffsetMesh( mp, offset, params );
     } ),
-        pybind11::arg( "mp" ), pybind11::arg( "offset" ), pybind11::arg( "params" ) = MR::GeneralOffsetParameters{},
+        pybind11::arg( "mp" ), pybind11::arg( "offset" ), pybind11::arg_v( "params", MR::GeneralOffsetParameters(), "GeneralOffsetParameters()" ),
         "Offsets mesh by converting it to voxels and back using one of three modes specified in the parameters" );
 
     m.def( "offsetMesh",
@@ -460,7 +472,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
                     params.voxelSize = suggestVoxelSize( mp, 5e6f );
                 return MR::offsetMesh( mp, offset, params );
             } ),
-        pybind11::arg( "mp" ), pybind11::arg( "offset" ), pybind11::arg( "params" ) = MR::OffsetParameters{},
+        pybind11::arg( "mp" ), pybind11::arg( "offset" ), pybind11::arg_v( "params", MR::OffsetParameters(), "OffsetParameters()" ),
         "Offsets mesh by converting it to voxels and back\n"
         "use Shell type for non closed meshes\n"
         "so result mesh is always closed" );
@@ -473,7 +485,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
             params.voxelSize = suggestVoxelSize( mesh, 5e6f );
         return MR::thickenMesh( mesh, offset, params );
     } ),
-        pybind11::arg( "mesh" ), pybind11::arg( "offset" ), pybind11::arg( "params" ) = MR::OffsetParameters{},
+        pybind11::arg( "mesh" ), pybind11::arg( "offset" ), pybind11::arg_v( "params", MR::OffsetParameters(), "OffsetParameters()" ),
         "in case of positive offset, returns the mesh consisting of offset mesh merged with inversed original mesh (thickening mode);\n"
         "in case of negative offset, returns the mesh consisting of inversed offset mesh merged with original mesh (hollowing mode);\n"
         "if your input mesh is closed then please specify params.type == Offset, and you will get closed mesh on output;\n"
@@ -514,3 +526,17 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, GeodesicPath, [] ( pybind11::module_& m )
     );
 })
 
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ConvexHull, [] ( pybind11::module_& m )
+{
+    m.def( "makeConvexHull",  ( Mesh ( * ) ( const VertCoords&, const VertBitSet& ) )&  makeConvexHull, 
+        pybind11::arg( "points" ), pybind11::arg( "validPoints" ),
+        "Computes the Mesh of convex hull from given input points" );
+
+    m.def( "makeConvexHull",  ( Mesh ( * ) ( const Mesh& ) )&  makeConvexHull, 
+        pybind11::arg( "mesh" ),
+        "Computes the Mesh of convex hull from given input `Mesh`" );
+
+    m.def( "makeConvexHull",  ( Mesh ( * ) ( const PointCloud& ) )&  makeConvexHull, 
+        pybind11::arg( "pointCloud" ),
+        "Computes the Mesh of convex hull from given input `PointCloud`" );
+} )

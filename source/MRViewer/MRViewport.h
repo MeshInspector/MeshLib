@@ -91,16 +91,49 @@ public:
     MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f & projM,
          DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const;
 
+    /// Rendering parameters for immediate drawing of lines and points
+    struct LinePointImmediateRenderParams : BaseRenderParams
+    {
+        float width{1.0f};
+        bool depthTest{ true };
+    };
+
+    /// Draw lines immediately
+    MRVIEWER_API void drawLines( const std::vector<LineSegm3f>& lines, const std::vector<SegmEndColors>& colors, const LinePointImmediateRenderParams & params );
+    void drawLines( const std::vector<LineSegm3f>& lines, const std::vector<SegmEndColors>& colors, float width = 1, bool depthTest = true )
+        { drawLines( lines, colors, { getBaseRenderParams(), width, depthTest } ); }
+
+    /// Draw points immediately
+    MRVIEWER_API void drawPoints( const std::vector<Vector3f>& points, const std::vector<Vector4f>& colors, const LinePointImmediateRenderParams & params );
+    void drawPoints( const std::vector<Vector3f>& points, const std::vector<Vector4f>& colors, float width = 1, bool depthTest = true )
+        { drawPoints( points, colors, { getBaseRenderParams(), width, depthTest } ); }
+
+    struct TriCornerColors
+    {
+        Vector4f a, b, c;
+    };
+
+    /// Draw triangles immediately (flat shaded)
+    MRVIEWER_API void drawTris( const std::vector<Triangle3f>& tris, const std::vector<TriCornerColors>& colors, const ModelRenderParams& params, bool depthTest = true );
+    MRVIEWER_API void drawTris( const std::vector<Triangle3f>& tris, const std::vector<TriCornerColors>& colors, const Matrix4f& modelM = {}, bool depthTest = true );
+
+    /// Prepares base rendering parameters for this viewport
+    [[nodiscard]] BaseRenderParams getBaseRenderParams() const { return getBaseRenderParams( projM_ ); }
+
+    /// Prepares base rendering parameters for this viewport with custom projection matrix
+    [[nodiscard]] BaseRenderParams getBaseRenderParams( const Matrix4f & projM ) const
+        { return { viewM_, projM, id, toVec4<int>( viewportRect_ ) }; }
+
     /// Prepares rendering parameters to draw a model with given transformation in this viewport
-    [[nodiscard]] MRVIEWER_API ModelRenderParams getModelRenderParams(
+    [[nodiscard]] ModelRenderParams getModelRenderParams(
          const Matrix4f & modelM, ///< model to world transformation, this matrix will be referenced in the result
-         Matrix4f & normM, ///< this matrix of normals transformation will be computed and referenced in the result
+         Matrix4f * normM, ///< if not null, this matrix of normals transformation will be computed and referenced in the result
          DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const
         { return getModelRenderParams( modelM, projM_, normM, depthFunc, alphaSort ); }
 
     /// Prepares rendering parameters to draw a model with given transformation in this viewport with custom projection matrix
     [[nodiscard]] MRVIEWER_API ModelRenderParams getModelRenderParams( const Matrix4f & modelM, const Matrix4f & projM,
-         Matrix4f & normM, ///< this matrix of normals transformation will be computed and referenced in the result
+         Matrix4f * normM, ///< if not null, this matrix of normals transformation will be computed and referenced in the result
          DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const;
 
     // This function allows to pick point in scene by GL
@@ -167,12 +200,8 @@ public:
     // and call transformView( xf ), then the user will see exactly the same picture
     MRVIEWER_API void transformView( const AffineXf3f & xf );
 
-    // returns base render params for immediate draw and for internal lines and points draw
-    BaseRenderParams getBaseRenderParams() const { return { viewM_, projM_, id, toVec4<int>( viewportRect_ ) }; }
-
     bool getRedrawFlag() const { return needRedraw_; }
     void resetRedrawFlag() { needRedraw_ = false; }
-    // ------------------- Properties
 
     // Unique identifier
     ViewportId id{ 1};

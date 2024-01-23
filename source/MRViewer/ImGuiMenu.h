@@ -66,7 +66,10 @@ protected:
   bool showRenameModal_{ false };
   std::string renameBuffer_;
   std::string popUpRenameBuffer_;
+  bool needModalBgChange_{ false };
+  bool showInfoModal_{ false };
   std::string storedModalMessage_;
+  NotificationType modalMessageType_{ NotificationType::Error };
   std::shared_ptr<ShortcutManager> shortcutManager_;
 
   ImVec2 sceneWindowPos_;
@@ -261,6 +264,10 @@ public:
     std::function<uint8_t( const VisualObject* )> getter,
     std::function<void( VisualObject*, uint8_t )> setter );
 
+  void make_points_discretization( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
+  std::function<int( const ObjectPointsHolder* )> getter,
+  std::function<void( ObjectPointsHolder*, const int& )> setter );
+
   MRVIEWER_API void draw_custom_plugins();
 
   void setShowNewSelectedObjects( bool show ) { showNewSelectedObjects_ = show; };
@@ -294,8 +301,6 @@ public:
   bool isSavedDialogPositionsEnabled() const { return savedDialogPositionEnabled_; }
 
 protected:
-    NotificationType modalMessageType_{ NotificationType::Error };
-
     MRVIEWER_API virtual void drawModalMessage_();
 
     bool capturedMouse_{ false };

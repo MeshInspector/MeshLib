@@ -206,7 +206,7 @@ bool ObjectTransformWidget::onMouseDown_( Viewer::MouseButton button, int )
         return false;
     if ( !controlsRoot_ )
         return false;
-    if ( !controlsRoot_->globalVisibilty( getViewerInstance().getHoveredViewportId() ) )
+    if ( !controlsRoot_->globalVisibility( getViewerInstance().getHoveredViewportId() ) )
         return false;
 
     if ( startModifyCallback_ )
@@ -236,7 +236,7 @@ bool ObjectTransformWidget::onMouseMove_( int, int )
 {
     if ( !controlsRoot_ )
         return false;
-    if ( !controlsRoot_->globalVisibilty( getViewerInstance().getHoveredViewportId() ) )
+    if ( !controlsRoot_->globalVisibility( getViewerInstance().getHoveredViewportId() ) )
         return false;
     if ( picked_ )
         activeMove_();
@@ -250,7 +250,7 @@ void ObjectTransformWidget::preDraw_()
     if ( !controlsRoot_ )
         return;
     if ( auto parent = visibilityParent_.lock() )
-        controlsRoot_->setVisibilityMask( parent->visibilityMask() );
+        controlsRoot_->setVisibilityMask( parent->globalVisibilityMask() );
     auto vpmask = controlsRoot_->visibilityMask() & getViewerInstance().getPresentViewports();
     for ( auto vpId : vpmask )
     {
@@ -259,7 +259,7 @@ void ObjectTransformWidget::preDraw_()
     }
 }
 
-void ObjectTransformWidget::draw_()
+void ObjectTransformWidget::postDraw_()
 {
     if ( !picked_ )
         return;

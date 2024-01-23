@@ -1,13 +1,13 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRObjectMeshHolder.h"
-
+#include "MRFeatureObject.h"
 namespace MR
 {
 
 /// Object to show plane feature
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS PlaneObject : public ObjectMeshHolder
+class MRMESH_CLASS PlaneObject : public ObjectMeshHolder, public FeatureObject
 {
 public:
     /// Creates simple plane object 
@@ -40,6 +40,10 @@ public:
     MRMESH_API void setCenter( const Vector3f& center );
     /// updates xf to scale size
     MRMESH_API void setSize( float size );
+    /// calculates plane size from xf
+    MRMESH_API float getSize() const;
+
+    MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 protected:
     PlaneObject( const PlaneObject& other ) = default;
 

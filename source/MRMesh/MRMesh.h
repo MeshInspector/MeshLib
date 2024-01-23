@@ -91,6 +91,15 @@ struct [[nodiscard]] Mesh
     /// returns the centroid of given triangle
     [[nodiscard]] MRMESH_API Vector3f triCenter( FaceId f ) const;
 
+    /// returns aspect ratio of given mesh triangle equal to the ratio of the circum-radius to twice its in-radius
+    [[nodiscard]] MRMESH_API float triangleAspectRatio( FaceId f ) const;
+    
+    /// returns squared circumcircle diameter of given mesh triangle
+    [[nodiscard]] MRMESH_API float circumcircleDiameterSq( FaceId f ) const;
+
+    /// returns circumcircle diameter of given mesh triangle
+    [[nodiscard]] MRMESH_API float circumcircleDiameter( FaceId f ) const;
+
     /// converts vertex into barycentric representation
     [[nodiscard]] MRMESH_API MeshTriPoint toTriPoint( VertId v ) const;
 
@@ -135,9 +144,6 @@ struct [[nodiscard]] Mesh
 
     /// returns the area of given face
     [[nodiscard]] float area( FaceId f ) const { return 0.5f * dblArea( f ); }
-
-    /// returns aspect ratio of a triangle equal to the ratio of the circum-radius to twice its in-radius
-    [[nodiscard]] MRMESH_API float triangleAspectRatio( FaceId f ) const;
 
     /// computes the area of given face-region
     [[nodiscard]] MRMESH_API double area( const FaceBitSet & fs ) const;

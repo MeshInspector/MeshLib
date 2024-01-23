@@ -20,6 +20,8 @@
     <ClInclude Include="MRCylinder3.h" />
     <ClInclude Include="MRCylinderApproximator.h" />
     <ClInclude Include="MRCylinderObject.h" />
+    <ClInclude Include="MRFeatureObject.h" />
+    <ClInclude Include="MRFeatures.h" />
     <ClInclude Include="MRFinally.h" />
     <ClInclude Include="MRInTreePathBuilder.h" />
     <ClInclude Include="MRChangeColoringType.h" />
@@ -119,6 +121,7 @@
     <ClInclude Include="MRPointOnObject.h" />
     <ClInclude Include="MROverlappingTris.h" />
     <ClInclude Include="MRObjectGcode.h" />
+    <ClInclude Include="MRPointsLoadE57.h" />
     <ClInclude Include="MRPointsProject.h" />
     <ClInclude Include="MRPointsToMeshProjector.h" />
     <ClInclude Include="MRIntersection.h" />
@@ -419,6 +422,7 @@
     <ClCompile Include="MRExtractIsolines.cpp" />
     <ClCompile Include="MRExtractIsolinesTests.cpp" />
     <ClCompile Include="MRFastWindingNumber.cpp" />
+    <ClCompile Include="MRFeatures.cpp" />
     <ClCompile Include="MRFile.cpp" />
     <ClCompile Include="MRFillContour.cpp" />
     <ClCompile Include="MRFillContourByGraphCut.cpp" />

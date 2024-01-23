@@ -457,7 +457,7 @@ Expected<Contours2f> offsetContours( const Contours2f& contours, ContoursVariabl
 
             if ( params.endType == OffsetContoursParams::EndType::Round )
             {
-                int lastAddiction = 0;
+                int lastAddition = 0;
                 assert( intermediateRes.back().size() > 1 );
                 assert( backward.size() > 1 );
                 CornerParameters cParams;
@@ -469,11 +469,11 @@ Expected<Contours2f> offsetContours( const Contours2f& contours, ContoursVariabl
                 cParams.rn = backward[1];
                 cParams.lrAng = -PI_F;
                 if ( cParams.lc != cParams.org )
-                    insertRoundCorner( intermediateRes.back(), cParams, params.minAnglePrecision, params.indicesMap ? &lastAddiction : nullptr );
+                    insertRoundCorner( intermediateRes.back(), cParams, params.minAnglePrecision, params.indicesMap ? &lastAddition : nullptr );
 
                 if ( params.indicesMap )
                     for ( int smi = int( contours[i].size() ) - 1; smi < shiftsMap.back().map.size(); ++smi )
-                        shiftsMap.back().map[smi] += lastAddiction;
+                        shiftsMap.back().map[smi] += lastAddition;
                 intermediateRes.back().insert( intermediateRes.back().end(), backward.begin(), backward.end() );
 
                 cParams.lp = intermediateRes.back()[intermediateRes.back().size() - 2];

@@ -92,6 +92,10 @@ std::string ShortcutManager::getKeyString( int key )
     {
         return { char( key ) };
     }
+    else if ( key >= GLFW_KEY_KP_0 && key <= GLFW_KEY_KP_9 )
+    {
+        return std::string( "Num " ) + std::to_string( key - GLFW_KEY_KP_0 );
+    }
     else
     {
         switch ( key )

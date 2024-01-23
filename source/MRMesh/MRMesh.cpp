@@ -242,6 +242,22 @@ float Mesh::triangleAspectRatio( FaceId f ) const
     return MR::triangleAspectRatio( ap, bp, cp );
 }
 
+float Mesh::circumcircleDiameterSq( FaceId f ) const
+{
+    VertId a, b, c;
+    topology.getTriVerts( f, a, b, c );
+    assert( a.valid() && b.valid() && c.valid() );
+    const auto & ap = points[a];
+    const auto & bp = points[b];
+    const auto & cp = points[c];
+    return MR::circumcircleDiameterSq( ap, bp, cp );
+}
+
+float Mesh::circumcircleDiameter( FaceId f ) const
+{
+    return std::sqrt( circumcircleDiameterSq( f ) );
+}
+
 double Mesh::area( const FaceBitSet & fs ) const
 {
     MR_TIMER

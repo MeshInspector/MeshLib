@@ -3,8 +3,8 @@
 #include "MRVector.h"
 #include "MRId.h"
 #include "MRConstants.h"
-#include <list>
 #include <climits>
+#include <optional>
 
 namespace MR
 {

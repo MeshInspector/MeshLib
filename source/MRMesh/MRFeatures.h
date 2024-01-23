@@ -32,9 +32,12 @@ namespace Primitives
         // This must be normalized. The sign doesn't matter.
         Vector3f normal = Vector3f( 1, 0, 0 );
 
+        // Returns an infinite line, with the center in a sane location.
         [[nodiscard]] MRMESH_API ConeSegment intersectWithPlane( const Plane& other ) const;
 
-        // Intersects the plane with a line. Only `center` and `dir` are used from `line`.
+        // Intersects the plane with a line, returns a point (zero radius sphere).
+        // Only `center` and `dir` are used from `line` (so if `line` is a cone/cylinder, its axis is used,
+        // and the line is extended to infinity).
         [[nodiscard]] MRMESH_API Sphere intersectWithLine( const ConeSegment& line ) const;
     };
 

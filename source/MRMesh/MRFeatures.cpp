@@ -393,8 +393,8 @@ MeasureResult Binary<Primitives::Sphere, Primitives::Sphere>::measure( const Pri
     }
     else
     {
-        float s = ( ret.distance.distance + a.radius + b.radius ) / 2; // https://en.wikipedia.org/wiki/Altitude_(triangle)
-        float intersectionSideOffset = std::sqrt( s * ( s - ret.distance.distance ) * ( s - a.radius ) * ( s - b.radius ) ) * 2 / ret.distance.distance;
+        float s = ( dirLen + a.radius + b.radius ) / 2; // https://en.wikipedia.org/wiki/Altitude_(triangle)
+        float intersectionSideOffset = std::sqrt( s * ( s - dirLen ) * ( s - a.radius ) * ( s - b.radius ) ) * 2 / dirLen;
         if ( !std::isfinite( intersectionSideOffset ) )
         {
             ret.angle.status = MeasureResult::Status::badRelativeLocation;
@@ -532,14 +532,22 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::Sphere>::measure( cons
     }
 
 
-    // Now the angle.
+    // Now the angle. (only for lines/segments <-> spheres, only if they collide)
 
-    if ( !a.isZeroRadius() || b.radius > 0 )
+    if ( !a.isZeroRadius() || b.radius == 0 )
     {
         ret.angle.status = MeasureResult::Status::badFeaturePair;
     }
     else if ( ret.distance.distance >= 0 )
     {
+        // Line is outside the sphere.
+        ret.angle.status = MeasureResult::Status::badRelativeLocation;
+    }
+    else if ( std::isfinite( a.positiveLength ) && std::isfinite( a.negativeLength ) &&
+        ( a.basePoint( false ).center - b.center ).lengthSq() < b.radius * b.radius &&
+        ( a.basePoint( true ).center - b.center ).lengthSq() < b.radius * b.radius )
+    {
+        // Line is inside the sphere.
         ret.angle.status = MeasureResult::Status::badRelativeLocation;
     }
     else
@@ -549,11 +557,11 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::Sphere>::measure( cons
         Vector3f overlapMidpoint = b.center - axisToSphereCenterDir * axisToSphereCenterDist;
 
         bool backward = std::isfinite( a.positiveLength ) == std::isfinite( a.negativeLength )
-            ? dot( b.center - a.centerPoint().center, a.dir ) < 0 : std::isfinite( a.positiveLength );
+            ? dot( a.centerPoint().center - b.center, a.dir ) < 0 : std::isfinite( a.positiveLength );
 
-        ret.angle.pointA = ret.angle.pointB =  +
+        ret.angle.pointA = ret.angle.pointB = overlapMidpoint +
             a.dir * ( std::sqrt( std::max( 0.f, b.radius * b.radius - axisToSphereCenterDist * axisToSphereCenterDist ) ) * ( backward ? -1.f : 1.f ) );
-        ret.angle.dirA = axisToSphereCenterDir;
+        ret.angle.dirA = backward ? -a.dir : a.dir;
         ret.angle.dirB = ( ret.angle.pointB - b.center ).normalized();
         ret.angle.isSurfaceNormalA = false;
         ret.angle.isSurfaceNormalB = true;
@@ -576,7 +584,7 @@ MeasureResult Binary<Primitives::Plane, Primitives::Sphere>::measure( const Prim
     {
         ret.angle.status = MeasureResult::Status::badFeaturePair;
     }
-    else if ( ret.distance > 0 )
+    else if ( ret.distance.distance > 0 )
     {
         ret.angle.status = MeasureResult::Status::badRelativeLocation;
     }
@@ -586,9 +594,9 @@ MeasureResult Binary<Primitives::Plane, Primitives::Sphere>::measure( const Prim
         Vector3f sideDir = cross( a.normal, a.normal.furthestBasisVector() ).normalized();
 
         ret.angle.status = MeasureResult::Status::ok;
-        ret.angle.pointA = ret.angle.pointB = a.center + sideDir * sideOffset;
+        ret.angle.pointA = ret.angle.pointB = b.center - dot( a.normal, b.center - a.center ) * a.normal + sideDir * sideOffset;
         ret.angle.dirA = signedCenterDist > 0 ? a.normal : -a.normal;
-        ret.angle.dirB = ret.angle.pointB - b.center;
+        ret.angle.dirB = ( ret.angle.pointB - b.center ).normalized();
         ret.angle.isSurfaceNormalA = ret.angle.isSurfaceNormalB = true;
     }
 
@@ -634,8 +642,7 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::ConeSegment>::measure(
 
     auto isConeSuitableForAngle = [&] ( const Primitives::ConeSegment& cone )
     {
-        return cone.isCircle() || cone.isZeroRadius() ||
-            ( cone.positiveSideRadius == cone.negativeSideRadius && !std::isfinite( cone.positiveLength ) && !std::isfinite( cone.negativeLength ) );
+        return cone.positiveSideRadius == cone.negativeSideRadius;
     };
     if ( !isConeSuitableForAngle( a ) || !isConeSuitableForAngle( b ) )
     {
@@ -664,8 +671,6 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::ConeSegment>::measure(
 
 MeasureResult Binary<Primitives::Plane, Primitives::ConeSegment>::measure( const Primitives::Plane& a, const Primitives::ConeSegment& b ) const
 {
-    // TODO Angle here for circles, lines, and cylinders. Cones = nope.
-
     MeasureResult ret;
 
     bool havePositivePoints = false, haveNegativePoints = false;
@@ -1344,7 +1349,7 @@ TEST( Features, Distance_Plane_ConeSegment )
                 .negativeLength = INFINITY,
             };
 
-            Primitives::Plane plane{ .center = Vector3f( 1, 2, 3 ), .normal = Vector3f( 5, 6, 7 ) };
+            Primitives::Plane plane{ .center = Vector3f( 1, 2, 3 ), .normal = Vector3f( 5, 6, 7 ).normalized() };
 
             auto r = measure( line, plane ).distance;
             ASSERT_EQ( r.status, MeasureResult::Status::badFeaturePair );
@@ -1402,9 +1407,378 @@ TEST( Features, Angle_Sphere_Sphere )
 
         auto r = measure( a, b );
         ASSERT_EQ( r.angle.status, MeasureResult::Status::ok );
+
+        ASSERT_EQ( r.angle.pointA, r.angle.pointB );
+
+        ASSERT_NEAR( r.angle.pointA.x, 104, testEps );
+        ASSERT_NEAR( ( r.angle.pointA - Vector3f( 104, 50, 10 ) ).length(), 3, testEps );
+
+        ASSERT_LE( ( r.angle.dirA - ( r.angle.pointA - a.center ).normalized() ).length(), testEps );
+        ASSERT_LE( ( r.angle.dirB - ( r.angle.pointB - b.center ).normalized() ).length(), testEps );
+
+        ASSERT_TRUE( r.angle.isSurfaceNormalA );
+        ASSERT_TRUE( r.angle.isSurfaceNormalB );
     }
 
-    // One inside another, or outside
+    { // Spheres not colliding.
+        { // Outside.
+            Primitives::Sphere a( Vector3f( 100, 50, 10 ), 5 );
+            Primitives::Sphere b( Vector3f( 108.01f, 50, 10 ), 3 );
+
+            auto r = measure( a, b );
+            ASSERT_EQ( r.angle.status, MeasureResult::Status::badRelativeLocation );
+        }
+
+        { // Inside.
+            Primitives::Sphere a( Vector3f( 100, 50, 10 ), 5 );
+            Primitives::Sphere b( Vector3f( 101.99f, 50, 10 ), 3 );
+
+            auto r = measure( a, b );
+            ASSERT_EQ( r.angle.status, MeasureResult::Status::badRelativeLocation );
+        }
+    }
+
+    { // One of the spheres is a point.
+        Primitives::Sphere a( Vector3f( 100, 50, 10 ), 5 );
+        Primitives::Sphere b( Vector3f( 108.01f, 50, 10 ), 0 );
+
+        auto r = measure( a, b );
+        ASSERT_EQ( r.angle.status, MeasureResult::Status::badFeaturePair );
+    }
+}
+
+TEST( Features, Angle_ConeSegment_Sphere )
+{
+    { // Normal.
+        Primitives::Sphere a( Vector3f( 100, 50, 10 ), 8 );
+
+        { // To infinite line.
+            for ( bool backward : { false, true } )
+            {
+                auto b = toPrimitive( Line3f( Vector3f( 100.f + ( backward ? -1.f : 1.f ), 54, 10 ), Vector3f( 1, 0, 0 ) ) );
+
+                auto r = measure( a, b );
+
+                ASSERT_EQ( r.angle.status, MeasureResult::Status::ok );
+
+                ASSERT_EQ( r.angle.pointA, r.angle.pointB );
+                Vector3f dir( std::sin( MR::PI_F / 3 ) * ( backward ? -1.f : 1.f ), 0.5f, 0 );
+                Vector3f expectedPointA = a.center + Vector3f( dir * a.radius );
+                ASSERT_LE( ( r.angle.pointA - expectedPointA ).length(), testEps );
+
+                ASSERT_LE( ( r.angle.dirA - dir ).length(), testEps );
+                // `dir` being conditionally flipped here is a bit arbitrary, but looks good to me.
+                ASSERT_LE( ( r.angle.dirB - b.dir * ( backward ? -1.f : 1.f ) ).length(), testEps );
+
+                ASSERT_TRUE( r.angle.isSurfaceNormalA );
+                ASSERT_FALSE( r.angle.isSurfaceNormalB );
+            }
+        }
+
+        { // To half-infinite line.
+            for ( bool backward : { false, true } )
+            {
+                auto b = toPrimitive( Line3f( Vector3f( 100.f + ( backward ? -1.f : 1.f ), 54, 10 ), Vector3f( 1, 0, 0 ) ) );
+                b.negativeLength = 1;
+
+                auto r = measure( a, b );
+
+                ASSERT_EQ( r.angle.status, MeasureResult::Status::ok );
+
+                ASSERT_EQ( r.angle.pointA, r.angle.pointB );
+                Vector3f dir( std::sin( MR::PI_F / 3 ), 0.5f, 0 );
+                Vector3f expectedPointA = a.center + Vector3f( dir * a.radius );
+                ASSERT_LE( ( r.angle.pointA - expectedPointA ).length(), testEps );
+
+                ASSERT_LE( ( r.angle.dirA - dir ).length(), testEps );
+                ASSERT_LE( ( r.angle.dirB - b.dir ).length(), testEps );
+
+                ASSERT_TRUE( r.angle.isSurfaceNormalA );
+                ASSERT_FALSE( r.angle.isSurfaceNormalB );
+            }
+        }
+
+        { // To finite line.
+            for ( bool backward : { false, true } )
+            {
+                Vector3f lineStart( 100.f + ( backward ? -1.f : 1.f ), 54, 10 );
+                auto b = toPrimitive( LineSegm3f( lineStart + Vector3f( 10, 0, 0 ), lineStart ) );
+
+                auto r = measure( a, b );
+
+                ASSERT_EQ( r.angle.status, MeasureResult::Status::ok );
+
+                ASSERT_EQ( r.angle.pointA, r.angle.pointB );
+                Vector3f dir( std::sin( MR::PI_F / 3 ), 0.5f, 0 );
+                Vector3f expectedPointA = a.center + Vector3f( dir * a.radius );
+                ASSERT_LE( ( r.angle.pointA - expectedPointA ).length(), testEps );
+
+                ASSERT_LE( ( r.angle.dirA - dir ).length(), testEps );
+                ASSERT_LE( ( r.angle.dirB - -b.dir ).length(), testEps ); // Inverted `dir` here.
+
+                ASSERT_TRUE( r.angle.isSurfaceNormalA );
+                ASSERT_FALSE( r.angle.isSurfaceNormalB );
+            }
+        }
+    }
+
+    { // No intersection.
+        Primitives::Sphere a( Vector3f( 100, 50, 10 ), 8 );
+
+        { // Line outside.
+            auto b = toPrimitive( Line3f( Vector3f( 100, 58.01f, 10 ), Vector3f( 1, 0, 0 ) ) );
+
+            auto r = measure( a, b );
+
+            ASSERT_EQ( r.angle.status, MeasureResult::Status::badRelativeLocation );
+        }
+
+        { // Line segment inside.
+            auto b = toPrimitive( LineSegm3f( Vector3f( 100, 52, 8 ), Vector3f( 100, 52, 12 ) ) );
+
+            auto r = measure( a, b );
+
+            ASSERT_EQ( r.angle.status, MeasureResult::Status::badRelativeLocation );
+        }
+    }
+}
+
+TEST( Features, Angle_Plane_Sphere )
+{
+    { // Reject a point.
+        Primitives::Sphere point( Vector3f( 100, 50, 10 ), 0 );
+        Primitives::Plane plane( Vector3f( 120, 58.01f, 10 ), Vector3f( 0, 1, 0 ) );
+
+        auto r = measure( point, plane ).angle;
+        ASSERT_EQ( r.status, MeasureResult::Status::badFeaturePair );
+    }
+
+    Primitives::Sphere sphere( Vector3f( 100, 50, 10 ), 8 );
+    
+    { // No collision.
+        for ( bool sign : { false, true } )
+        {
+            Primitives::Plane plane( Vector3f( 120, 58.01f, 10 ), Vector3f( 0, sign ? -1.f : 1.f, 0 ) );
+            ASSERT_EQ( measure( sphere, plane ).angle.status, MeasureResult::Status::badRelativeLocation );
+        }
+    }
+
+    { // Collision.
+        for ( bool sign : { false, true } )
+        {
+            Primitives::Plane plane( Vector3f( 120, 54, 10 ), Vector3f( 0, sign ? -1.f : 1.f, 0 ) );
+            auto r = measure( sphere, plane ).angle;
+
+            ASSERT_EQ( r.status, MeasureResult::Status::ok );
+
+            ASSERT_EQ( r.pointA, r.pointB );
+
+            ASSERT_NEAR( r.pointA.y, 54, testEps );
+            ASSERT_NEAR( ( r.pointA - Vector3f( 100, 54, 10 ) ).length(), std::sin( MR::PI_F / 3 ) * sphere.radius, testEps );
+
+            ASSERT_LE( ( r.dirA - ( r.pointA - Vector3f( 100, 50, 10 ) ).normalized() ).length(), testEps );
+            ASSERT_LE( ( r.dirB - Vector3f( 0, -1, 0 ) ).length(), testEps );
+
+            ASSERT_TRUE( r.isSurfaceNormalA );
+            ASSERT_TRUE( r.isSurfaceNormalB );
+        }
+    }
+
+    { // Plane on sphere center.
+        Primitives::Plane plane( Vector3f( 120, 50, 10 ), Vector3f( 0, 1, 0 ) );
+        auto r = measure( sphere, plane ).angle;
+
+        ASSERT_EQ( r.status, MeasureResult::Status::ok );
+
+        ASSERT_EQ( r.pointA, r.pointB );
+
+        ASSERT_NEAR( r.pointA.y, 50, testEps );
+        ASSERT_NEAR( ( r.pointA - Vector3f( 100, 50, 10 ) ).length(), sphere.radius, testEps );
+
+        ASSERT_LE( ( r.dirA - ( r.pointA - Vector3f( 100, 50, 10 ) ).normalized() ).length(), testEps );
+        ASSERT_TRUE( r.dirB == Vector3f( 0, 1, 0 ) || r.dirB == Vector3f( 0, -1, 0 ) );
+
+        ASSERT_TRUE( r.isSurfaceNormalA );
+        ASSERT_TRUE( r.isSurfaceNormalB );
+    }
+    
+    { // Exact center overlap.
+        Primitives::Plane plane( Vector3f( 120, 50, 10 ), Vector3f( 0, 1, 0 ) );
+        auto r = measure( sphere, plane ).angle;
+
+        ASSERT_EQ( r.status, MeasureResult::Status::ok );
+
+        ASSERT_EQ( r.pointA, r.pointB );
+
+        ASSERT_NEAR( r.pointA.y, 50, testEps );
+        ASSERT_NEAR( ( r.pointA - Vector3f( 100, 50, 10 ) ).length(), sphere.radius, testEps );
+
+        ASSERT_LE( ( r.dirA - ( r.pointA - Vector3f( 100, 50, 10 ) ).normalized() ).length(), testEps );
+        ASSERT_TRUE( r.dirB == Vector3f( 0, 1, 0 ) || r.dirB == Vector3f( 0, -1, 0 ) );
+
+        ASSERT_TRUE( r.isSurfaceNormalA );
+        ASSERT_TRUE( r.isSurfaceNormalB );
+    }
+}
+
+TEST( Features, Angle_ConeSegment_ConeSegment )
+{
+    { // Line to line.
+        auto a = toPrimitive( Line3f( Vector3f( 100, 50, 10 ), Vector3f( 1, 0, 0 ) ) );
+        auto b = toPrimitive( Line3f( Vector3f( 101, 51, 20 ), Vector3f( 1, -1, 0 ) ) );
+
+        auto r = measure( a, b ).angle;
+
+        ASSERT_EQ( r.status, MeasureResult::Status::ok );
+
+        ASSERT_LE( ( r.pointA - Vector3f( 102, 50, 10 ) ).length(), testEps );
+        ASSERT_LE( ( r.pointB - Vector3f( 102, 50, 20 ) ).length(), testEps );
+
+        ASSERT_LE( ( r.dirA - a.dir ).length(), testEps );
+        ASSERT_LE( ( r.dirB - b.dir ).length(), testEps );
+
+        ASSERT_FALSE( r.isSurfaceNormalA );
+        ASSERT_FALSE( r.isSurfaceNormalB );
+    }
+}
+
+TEST( Features, Angle_Plane_ConeSegment )
+{
+    { // Line to plane.
+        Primitives::Plane plane( Vector3f( 100, 50, 10 ), Vector3f( 1, 0, 0 ) );
+
+        { // Intersecting.
+            auto line = toPrimitive( LineSegm3f( Vector3f( 99, 60, 10 ), Vector3f( 102, 63, 10 ) ) );
+
+            auto r = measure( plane, line ).angle;
+
+            ASSERT_EQ( r.status, MeasureResult::Status::ok );
+
+            ASSERT_EQ( r.pointA, r.pointB );
+            ASSERT_LE( ( r.pointA - Vector3f( 100, 61, 10 ) ).length(), testEps );
+
+            ASSERT_LE( ( r.dirA - plane.normal ).length(), testEps );
+            ASSERT_LE( ( r.dirB - line.dir ).length(), testEps );
+
+            ASSERT_TRUE( r.isSurfaceNormalA );
+            ASSERT_FALSE( r.isSurfaceNormalB );
+        }
+
+        { // Non-intersecting.
+            auto line = toPrimitive( LineSegm3f( Vector3f( 101, 60, 10 ), Vector3f( 104, 63, 10 ) ) );
+
+            auto r = measure( plane, line ).angle;
+
+            ASSERT_EQ( r.status, MeasureResult::Status::ok );
+
+            ASSERT_LE( ( r.pointA - Vector3f( 100, 60, 10 ) ).length(), testEps );
+            ASSERT_LE( ( r.pointB - Vector3f( 101, 60, 10 ) ).length(), testEps );
+
+            ASSERT_LE( ( r.dirA - plane.normal ).length(), testEps );
+            ASSERT_LE( ( r.dirB - line.dir ).length(), testEps );
+
+            ASSERT_TRUE( r.isSurfaceNormalA );
+            ASSERT_FALSE( r.isSurfaceNormalB );
+        }
+
+        { // Parallel.
+            auto line = toPrimitive( LineSegm3f( Vector3f( 101, 60, 10 ), Vector3f( 101, 63, 10 ) ) );
+
+            auto r = measure( plane, line ).angle;
+
+            ASSERT_EQ( r.status, MeasureResult::Status::ok );
+
+            Vector3f expectedPoint;
+            ASSERT_TRUE( ( r.pointA - ( expectedPoint = Vector3f( 100, 60, 10 ) ) ).length() < testEps
+                || ( r.pointA - ( expectedPoint = Vector3f( 100, 63, 10 ) ) ).length() < testEps
+            );
+            ASSERT_LE( ( r.pointB - ( expectedPoint + Vector3f( 1, 0, 0 ) ) ).length(), testEps );
+
+            ASSERT_LE( ( r.dirA - plane.normal ).length(), testEps );
+            ASSERT_LE( ( r.dirB - line.dir ).length(), testEps );
+
+            ASSERT_TRUE( r.isSurfaceNormalA );
+            ASSERT_FALSE( r.isSurfaceNormalB );
+        }
+    }
+
+    { // Circle to plane.
+        Primitives::Plane plane( Vector3f( 100, 50, 10 ), Vector3f( 1, 0, 0 ) );
+
+        { // Intersecting.
+            auto circle = primitiveCircle( Vector3f( 101, 60, 10 ), Vector3f( 1, -1, 0 ), 4 );
+
+            auto r = measure( plane, circle ).angle;
+
+            ASSERT_EQ( r.status, MeasureResult::Status::ok );
+
+            ASSERT_EQ( r.pointA, r.pointB );
+            ASSERT_LE( ( r.pointA - Vector3f( 100, 59, 10 ) ).length(), testEps );
+
+            ASSERT_LE( ( r.dirA - plane.normal ).length(), testEps );
+            ASSERT_LE( ( r.dirB - circle.dir ).length(), testEps );
+
+            ASSERT_TRUE( r.isSurfaceNormalA );
+            ASSERT_TRUE( r.isSurfaceNormalB );
+        }
+
+        { // Non-intersecting.
+            auto circle = primitiveCircle( Vector3f( 110, 60, 10 ), Vector3f( 4, -3, 0 ), 5 );
+
+            auto r = measure( plane, circle ).angle;
+
+            ASSERT_EQ( r.status, MeasureResult::Status::ok );
+
+            ASSERT_LE( ( r.pointA - Vector3f( 100, 56, 10 ) ).length(), testEps );
+            ASSERT_LE( ( r.pointB - Vector3f( 107, 56, 10 ) ).length(), testEps );
+
+            ASSERT_LE( ( r.dirA - plane.normal ).length(), testEps );
+            ASSERT_LE( ( r.dirB - circle.dir ).length(), testEps );
+
+            ASSERT_TRUE( r.isSurfaceNormalA );
+            ASSERT_TRUE( r.isSurfaceNormalB );
+        }
+
+        { // Parallel.
+            auto circle = primitiveCircle( Vector3f( 110, 60, 10 ), Vector3f( 1, 0, 0 ), 5 );
+
+            auto r = measure( plane, circle ).angle;
+
+            ASSERT_EQ( r.status, MeasureResult::Status::ok );
+
+            ASSERT_NEAR( r.pointA.x, 100, testEps );
+            ASSERT_NEAR( ( r.pointA - Vector3f( 100, 60, 10 ) ).length(), circle.positiveSideRadius, testEps );
+            ASSERT_LE( ( r.pointB - ( r.pointA + Vector3f( 10, 0, 0 ) ) ).length(), testEps );
+
+            ASSERT_LE( ( r.dirA - plane.normal ).length(), testEps );
+            ASSERT_LE( ( r.dirB - circle.dir ).length(), testEps );
+
+            ASSERT_TRUE( r.isSurfaceNormalA );
+            ASSERT_TRUE( r.isSurfaceNormalB );
+        }
+    }
+}
+
+TEST( Features, Angle_Plane_Plane )
+{
+    Primitives::Plane a( Vector3f( 100, 50, 10 ), Vector3f( 1, 0, 0 ) );
+
+    { // Intersecting.
+        Primitives::Plane b( Vector3f( 102, 51, 10 ), Vector3f( 1, 1, 0 ).normalized() );
+
+        auto r = measure( a, b ).angle;
+
+        ASSERT_EQ( r.status, MeasureResult::Status::ok );
+
+        ASSERT_EQ( r.pointA, r.pointB );
+        ASSERT_LE( ( r.pointA - Vector3f( 100, 53, 10 ) ).length(), testEps );
+
+        ASSERT_LE( ( r.dirA - Vector3f( 1, 0, 0 ) ).length(), testEps );
+        ASSERT_LE( ( r.dirB - Vector3f( 1, 1, 0 ).normalized() ).length(), testEps );
+
+        ASSERT_TRUE( r.isSurfaceNormalA );
+        ASSERT_TRUE( r.isSurfaceNormalB );
+    }
 }
 
 } // namespace MR::Features

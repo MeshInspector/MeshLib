@@ -5,6 +5,7 @@
 #include "MRConstants.h"
 #include <climits>
 #include <optional>
+#include <cstdint>
 
 namespace MR
 {

@@ -145,11 +145,19 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
 {
     if ( isSmallUI() )
     {
-        if ( smallSearchButton_( params ) && !( !active_ && activeLast_ ) )
-            active_ = !active_;
+        if ( smallSearchButton_( params ) )
+        {
+            if ( blockSearchBtn_ )
+                blockSearchBtn_ = false;
+            else
+                active_ = true;
+        }
+        if ( ImGui::IsItemActivated() && active_ )
+            blockSearchBtn_ = true;
     }
     else
     {
+
         if ( isSmallUILast_ && active_ )
             ImGui::SetKeyboardFocusHere();
         ImGui::SetNextItemWidth( cSearchSize * params.scaling );
@@ -169,9 +177,10 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
                 deactivateSearch_();
         }
     }
+    
     if ( active_ )
         drawWindow_( params );
-    activeLast_ = active_;
+
     isSmallUILast_ = isSmallUI();
 }
 

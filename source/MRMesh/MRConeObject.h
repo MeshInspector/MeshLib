@@ -56,10 +56,10 @@ public:
     MRMESH_API void setHeight( float height );
     /// updates xf to fit given cone angle.  It is an angle betweeh main axis and side
     MRMESH_API void setAngle( float angle );
-    /// Computes the base radius from the xf.
-    MRMESH_API float getRadius() const;
-    // Updates the xf for the new radius.
-    MRMESH_API void setRadius( float radius );
+    /// Computes the base base radius from the xf.
+    MRMESH_API float getBaseRadius() const;
+    /// Updates the xf for the new base radius.
+    MRMESH_API void setBaseRadius( float radius );
 
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 

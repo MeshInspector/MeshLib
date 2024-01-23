@@ -184,7 +184,7 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
         Primitives::ConeSegment ret{
             .center = parentXf( cone->getCenter() ),
             .dir = parentXf.A * cone->getDirection(),
-            .positiveSideRadius = cone->getRadius() * scale,
+            .positiveSideRadius = cone->getBaseRadius() * scale,
             .negativeSideRadius = 0,
             .positiveLength = cone->getHeight(),
             .negativeLength = 0,
@@ -300,7 +300,7 @@ std::shared_ptr<VisualObject> primitiveToObject( const Primitives::Variant& prim
                     newCone->setCenter( cone.basePoint( !flip ).center );
                     newCone->setDirection( cone.dir * ( flip ? -1.f : 1.f ) );
                     newCone->setHeight( ( flip ? negFinite : posFinite ) ? cone.length() : infiniteExtent / 2 );
-                    newCone->setRadius( flip ? cone.negativeSideRadius : cone.positiveSideRadius );
+                    newCone->setBaseRadius( flip ? cone.negativeSideRadius : cone.positiveSideRadius );
                     return newCone;
                 }
             }

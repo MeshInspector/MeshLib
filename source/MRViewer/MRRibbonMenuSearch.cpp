@@ -14,6 +14,38 @@ namespace MR
 
 constexpr float cSearchSize = 250.f;
 
+bool searchInputText( const char* label, std::string& str, RibbonFontManager& fontManager )
+{
+    ImGui::PushStyleColor( ImGuiCol_FrameBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::RibbonButtonHovered ).getUInt32() );
+    const bool res = ImGui::InputText( label, str );
+    ImGui::PopStyleColor();
+
+    ImGui::SameLine();
+    ImGui::SetCursorPosX( ImGui::GetCursorPosX() - 40.f );
+
+    int colorNum = 0;
+    if ( !ImGui::IsItemActive() )
+    {
+        ImGui::PushStyleColor( ImGuiCol_Text, Color::gray().getUInt32() );
+        ++colorNum;
+    }
+    ImFont* font = fontManager.getFontByType( RibbonFontManager::FontType::Icons );
+    if ( font )
+        font->Scale = 0.7f;
+    if ( font )
+        ImGui::PushFont( font );
+    ImGui::Text( "%s", "\xef\x80\x82" );
+    if ( font )
+    {
+        ImGui::PopFont();
+        font->Scale = 1.0f;
+    }
+    if ( colorNum )
+        ImGui::PopStyleColor( colorNum );
+
+    return res;
+}
+
 void RibbonMenuSearch::pushRecentItem( const std::shared_ptr<RibbonMenuItem>& item )
 {
     if ( !item )
@@ -164,7 +196,7 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
             setMainInputFocus_ = false;
         }
         ImGui::SetNextItemWidth( cSearchSize * params.scaling );
-        if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
+        if ( searchInputText( "##SearchLine", searchLine_, params.fontManager ) )
         {
             searchResult_ = RibbonSchemaHolder::search( searchLine_ );
             hightlightedSearchItem_ = -1;

@@ -20,8 +20,12 @@ MRMESH_API void shrink( const MeshTopology & topology, FaceBitSet & region, int 
 /// removes from the region all vertices within given number of hops (stars) from the initial region boundary
 MRMESH_API void shrink( const MeshTopology & topology, VertBitSet & region, int hops = 1 );
 
-/// returns given region and all faces sharing an edge with a region face;
+/// returns given region with all faces sharing an edge with a region face;
 /// \param stopEdges - neighborhood via this edges will be ignored
 [[nodiscard]] MRMESH_API FaceBitSet expandFaces( const MeshTopology & topology, const FaceBitSet & region, const UndirectedEdgeBitSet * stopEdges = nullptr );
+
+/// returns given region without all faces sharing an edge with not-region face;
+/// \param stopEdges - neighborhood via this edges will be ignored
+[[nodiscard]] MRMESH_API FaceBitSet shrinkFaces( const MeshTopology & topology, const FaceBitSet & region, const UndirectedEdgeBitSet * stopEdges = nullptr );
 
 } //namespace MR

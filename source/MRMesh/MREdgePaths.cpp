@@ -438,11 +438,11 @@ EdgeLoop extractLongestClosedLoop( const Mesh & mesh, const std::vector<EdgeId> 
 bool dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, FaceBitSet & region, float dilation, ProgressCallback callback )
 {
     MR_TIMER
-    auto vertRegion = getIncidentVerts( topology, region );
+    auto vertRegion = getRegionBoundaryVerts( topology, region );
     if ( !dilateRegionByMetric( topology, metric, vertRegion, dilation, callback ) )
         return false;
 
-    region = getInnerFaces( topology, vertRegion );
+    region |= getInnerFaces( topology, vertRegion );
     return true;
 }
 
@@ -484,11 +484,11 @@ bool dilateRegionByMetric( const MeshTopology& topology, const EdgeMetric& metri
 bool erodeRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, FaceBitSet & region, float dilation, ProgressCallback callback )
 {
     MR_TIMER
-    region = topology.getValidFaces() - region;
-    if ( !dilateRegionByMetric( topology, metric, region, dilation, callback ) )
+    auto vertRegion = getRegionBoundaryVerts( topology, region );
+    if ( !dilateRegionByMetric( topology, metric, vertRegion, dilation, callback ) )
         return false;
 
-    region = topology.getValidFaces() - region;
+    region -= getInnerFaces( topology, vertRegion );
     return true;
 }
 

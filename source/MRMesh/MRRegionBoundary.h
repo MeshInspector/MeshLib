@@ -51,6 +51,9 @@ namespace MR
 [[nodiscard]] MRMESH_API VertBitSet getInnerVerts( const MeshTopology & topology, const FaceBitSet & region );
 // composes the set of all boundary vertices for given region (or whole mesh if !region)
 [[nodiscard]] MRMESH_API VertBitSet getBoundaryVerts( const MeshTopology & topology, const FaceBitSet * region = nullptr );
+// composes the set of all boundary vertices for given region,
+// unlike getBoundaryVerts the vertices of mesh boundary having no incident not-region faces are not returned
+[[nodiscard]] MRMESH_API VertBitSet getRegionBoundaryVerts( const MeshTopology & topology, const FaceBitSet & region );
 
 // composes the set of all faces incident to given vertices
 [[nodiscard]] MRMESH_API FaceBitSet getIncidentFaces( const MeshTopology & topology, const VertBitSet & verts );

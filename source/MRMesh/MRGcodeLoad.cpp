@@ -38,7 +38,7 @@ Expected<GcodeSource, std::string> fromGcode( const std::filesystem::path& file,
     return fromGcode( filestream, callback );
 }
 
-Expected<MR::GcodeSource, std::string> fromGcode( std::istream& in, ProgressCallback callback /*= {} */ )
+Expected<MR::GcodeSource, std::string> fromGcode( std::istream& in, ProgressCallback /*= {} */ )
 {
     std::stringstream buffer;
     buffer << in.rdbuf();

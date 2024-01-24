@@ -11,7 +11,7 @@ template<typename T>
 struct UniquePtr : std::unique_ptr<T>
 {
     UniquePtr() noexcept = default;
-    UniquePtr( const UniquePtr& ) noexcept {}
+    UniquePtr( const UniquePtr& ) noexcept : std::unique_ptr<T>() {}
     UniquePtr( UniquePtr&& ) noexcept = default;
     UniquePtr& operator =( const UniquePtr& ) noexcept { return *this; }
     UniquePtr& operator =( UniquePtr&& ) noexcept = default;

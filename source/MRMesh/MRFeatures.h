@@ -17,6 +17,11 @@ namespace MR::Features
 
 namespace Primitives
 {
+    struct Plane;
+    struct ConeSegment;
+
+    // ---
+
     // Doubles as a point when the radius is zero.
     using Sphere = Sphere3<float>;
 
@@ -25,7 +30,15 @@ namespace Primitives
         Vector3f center;
 
         // This must be normalized. The sign doesn't matter.
-        Vector3f normal;
+        Vector3f normal = Vector3f( 1, 0, 0 );
+
+        // Returns an infinite line, with the center in a sane location.
+        [[nodiscard]] MRMESH_API ConeSegment intersectWithPlane( const Plane& other ) const;
+
+        // Intersects the plane with a line, returns a point (zero radius sphere).
+        // Only `center` and `dir` are used from `line` (so if `line` is a cone/cylinder, its axis is used,
+        // and the line is extended to infinity).
+        [[nodiscard]] MRMESH_API Sphere intersectWithLine( const ConeSegment& line ) const;
     };
 
     //! Can have infinite length in one or two directions.
@@ -130,28 +143,63 @@ namespace Primitives
 // `infiniteExtend` is how large we make "infinite" objects. Half-infinite objects divide this by 2.
 [[nodiscard]] MRMESH_API std::shared_ptr<VisualObject> primitiveToObject( const Primitives::Variant& primitive, float infiniteExtent );
 
-//! Stores the distance between two objects, and the closest points on them.
-struct DistanceResult
+//! Stores the results of measuring two objects relative to one another.
+struct MeasureResult
 {
     enum class Status
     {
         ok = 0,
         //! Algorithms set this if this when something isn't yet implemented.
-        not_implemented,
+        notImplemented,
         //! Algorithms set this when the calculation doesn't make sense for those object types.
-        not_applicable,
-        //! This is set automatically if either `distance` or at least one of the points isn't finite. But you can set this from an algorithm too.
-        not_finite,
+        //! This result can be based on object parameters, but not on their relative location.
+        badFeaturePair,
+        //! Can't be computed because of how the objects are located relative to each other.
+        badRelativeLocation,
+        //! The result was not finite. This is set automatically if you return non-finite values, but you can also set this manually.
+        notFinite,
     };
-    Status status = Status::ok;
 
-    // This is a separate field because it can be negative.
-    float distance = 0;
+    struct BasicPart
+    {
+        Status status = Status::notImplemented;
+        [[nodiscard]] operator bool() const { return status == Status::ok; }
+    };
 
-    Vector3f closestPointA;
-    Vector3f closestPointB;
+    struct Distance : BasicPart
+    {
+        // This is a separate field because it can be negative.
+        float distance = 0;
 
-    [[nodiscard]] operator bool() const { return status == Status::ok; }
+        Vector3f closestPointA;
+        Vector3f closestPointB;
+
+        [[nodiscard]] Vector3f closestPointFor( bool b ) const { return b ? closestPointB : closestPointA; }
+    };
+    Distance distance;
+
+    struct Angle : BasicPart
+    {
+        Vector3f pointA;
+        Vector3f pointB;
+        [[nodiscard]] Vector3f pointFor( bool b ) const { return b ? pointB : pointA; }
+
+        Vector3f dirA; // Normalized.
+        Vector3f dirB; // ^
+        [[nodiscard]] Vector3f dirFor( bool b ) const { return b ? dirB : dirA; }
+
+        /// Whether `dir{A,B}` is a surface normal or a line direction.
+        bool isSurfaceNormalA = false;
+        bool isSurfaceNormalB = false;
+
+        [[nodiscard]] bool isSurfaceNormalFor( bool b ) const { return b ? isSurfaceNormalB : isSurfaceNormalA; }
+
+        [[nodiscard]] MRMESH_API float computeAngleInRadians() const;
+    };
+    Angle angle;
+
+    // Modifies the object to swap A and B;
+    MRMESH_API void swapObjects();
 };
 
 //! Traits that determine how the primitives are related.
@@ -182,45 +230,45 @@ struct Binary {};
 //! Whether we have traits to get distance from A to B.
 //! This is for internal use because it's asymmetrical, we a have a symmetrical version below.
 template <typename A, typename B>
-concept DistanceSupportedOneWay = requires( const Binary<A, B>& t, const A& a, const B& b )
+concept MeasureSupportedOneWay = requires( const Binary<A, B>& t, const A& a, const B& b )
 {
-    { t.distance( a, b ) } -> std::same_as<DistanceResult>;
+    { t.measure( a, b ) } -> std::same_as<MeasureResult>;
 };
 
 // ?? <-> Sphere
 template <>
 struct Binary<Primitives::Sphere, Primitives::Sphere>
 {
-    MRMESH_API DistanceResult distance( const Primitives::Sphere& a, const Primitives::Sphere& b ) const;
+    MRMESH_API MeasureResult measure( const Primitives::Sphere& a, const Primitives::Sphere& b ) const;
 };
 template <>
 struct Binary<Primitives::ConeSegment, Primitives::Sphere>
 {
-    MRMESH_API DistanceResult distance( const Primitives::ConeSegment& a, const Primitives::Sphere& b ) const;
+    MRMESH_API MeasureResult measure( const Primitives::ConeSegment& a, const Primitives::Sphere& b ) const;
 };
 template <>
 struct Binary<Primitives::Plane, Primitives::Sphere>
 {
-    MRMESH_API DistanceResult distance( const Primitives::Plane& a, const Primitives::Sphere& b ) const;
+    MRMESH_API MeasureResult measure( const Primitives::Plane& a, const Primitives::Sphere& b ) const;
 };
 
 // ?? <-> Cone
 template <>
 struct Binary<Primitives::ConeSegment, Primitives::ConeSegment>
 {
-    MRMESH_API DistanceResult distance( const Primitives::ConeSegment& a, const Primitives::ConeSegment& b ) const;
+    MRMESH_API MeasureResult measure( const Primitives::ConeSegment& a, const Primitives::ConeSegment& b ) const;
 };
 template <>
 struct Binary<Primitives::Plane, Primitives::ConeSegment>
 {
-    MRMESH_API DistanceResult distance( const Primitives::Plane& a, const Primitives::ConeSegment& b ) const;
+    MRMESH_API MeasureResult measure( const Primitives::Plane& a, const Primitives::ConeSegment& b ) const;
 };
 
 // ?? <-> Plane
 template <>
 struct Binary<Primitives::Plane, Primitives::Plane>
 {
-    MRMESH_API DistanceResult distance( const Primitives::Plane& a, const Primitives::Plane& b ) const;
+    MRMESH_API MeasureResult measure( const Primitives::Plane& a, const Primitives::Plane& b ) const;
 };
 
 }
@@ -231,36 +279,42 @@ template <typename T>
     return Traits::Unary<T>{}.name( primitive );
 }
 
-// Whether the distance can be computed between primitives.
+// Whether you can measure two primitives relative to one another.
 template <typename A, typename B>
-concept DistanceSupported = Traits::DistanceSupportedOneWay<A, B> || Traits::DistanceSupportedOneWay<B, A>;
+concept MeasureSupported = Traits::MeasureSupportedOneWay<A, B> || Traits::MeasureSupportedOneWay<B, A>;
 
-// Computes the distance between two primitives.
+// Measures stuff between two primitives.
 template <typename A, typename B>
-requires DistanceSupported<A, B>
-[[nodiscard]] DistanceResult distance( const A& a, const B& b )
+requires MeasureSupported<A, B>
+[[nodiscard]] MeasureResult measure( const A& a, const B& b )
 {
-    if constexpr ( Traits::DistanceSupportedOneWay<A, B> )
+    if constexpr ( Traits::MeasureSupportedOneWay<A, B> )
     {
-        DistanceResult ret = Traits::Binary<A, B>{}.distance( a, b );
+        MeasureResult ret = Traits::Binary<A, B>{}.measure( a, b );
 
-        if ( ret && ( !std::isfinite( ret.distance ) || !ret.closestPointA.isFinite() || !ret.closestPointB.isFinite() ) )
-        {
-            ret.status = DistanceResult::Status::not_finite;
-            return ret;
-        }
+        // Catch non-finite distance.
+        if ( ret.distance && ( !std::isfinite( ret.distance.distance ) || !ret.distance.closestPointA.isFinite() || !ret.distance.closestPointB.isFinite() ) )
+            ret.distance.status = MeasureResult::Status::badRelativeLocation;
 
         // Check that we got the correct distance here.
         // Note that the distance is signed, so we apply `abs` to it to compare it properly.
-        assert( std::abs( ( ret.closestPointB - ret.closestPointA ).length() - std::abs( ret.distance ) ) < 0.0001f );
+        assert( ret.distance <= ( std::abs( ( ret.distance.closestPointB - ret.distance.closestPointA ).length() - std::abs( ret.distance.distance ) ) < 0.0001f ) );
+
+        // Catch non-finite angle.
+        if ( ret.angle && ( !ret.angle.pointA.isFinite() || !ret.angle.pointB.isFinite() || !ret.angle.dirA.isFinite() || !ret.angle.dirB.isFinite() ) )
+            ret.angle.status = MeasureResult::Status::badRelativeLocation;
+
+        // Check that the angle normals are normalized.
+        assert( ret.angle <= ( std::abs( 1 - ret.angle.dirA.length() ) < 0.0001f ) );
+        assert( ret.angle <= ( std::abs( 1 - ret.angle.dirB.length() ) < 0.0001f ) );
 
         return ret;
     }
     else
     {
-        static_assert( Traits::DistanceSupportedOneWay<B, A>, "This should never fail." );
-        DistanceResult ret = (distance)( b, a );
-        std::swap( ret.closestPointA, ret.closestPointB );
+        static_assert( Traits::MeasureSupportedOneWay<B, A>, "This should never fail." );
+        MeasureResult ret = ( measure )( b, a );
+        ret.swapObjects();
         return ret;
     }
 }

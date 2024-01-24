@@ -409,10 +409,10 @@ void RibbonMenu::drawHelpButton_()
 bool RibbonMenu::drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected )
 {
     bool res = false;
-    bool atLeastOneTrue = false;
-    bool allTrue = true;
     for ( auto& [name, custom] : customCheckBox_ )
     {
+        bool atLeastOneTrue = false;
+        bool allTrue = true;
         for ( auto& obj : selected )
         {
             if ( !obj )

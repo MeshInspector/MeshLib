@@ -51,7 +51,7 @@ Expected<Polyline3, std::string> fromMrLines( std::istream & in, ProgressCallbac
     if ( !in )
         return unexpected( std::string( "Error reading  points from lines-file" ) );
 
-    return std::move( polyline );
+    return polyline;
 }
 
 Expected<MR::Polyline3, std::string> fromPts( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
@@ -123,7 +123,7 @@ Expected<MR::Polyline3, std::string> fromPts( std::istream& in, ProgressCallback
     if ( isPolylineBlock )
         return unexpected( "Not valid .pts format" );
 
-    return std::move( polyline );
+    return polyline;
 }
 
 Expected<Polyline3, std::string> fromAnySupportedFormat( const std::filesystem::path& file, ProgressCallback callback )

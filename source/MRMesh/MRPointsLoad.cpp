@@ -359,7 +359,7 @@ Expected<MR::PointCloud, std::string> fromPly( std::istream& in, VertColors* col
         }
     }
 
-    return std::move( res );
+    return res;
 }
 
 Expected<MR::PointCloud, std::string> fromObj( const std::filesystem::path& file, ProgressCallback callback )
@@ -411,7 +411,7 @@ Expected<MR::PointCloud, std::string> fromObj( std::istream& in, ProgressCallbac
     }
 
     cloud.validPoints.resize( cloud.points.size(), true );
-    return std::move( cloud );
+    return cloud;
 }
 
 Expected<MR::PointCloud, std::string> fromAsc( const std::filesystem::path& file, ProgressCallback callback )
@@ -475,7 +475,7 @@ Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCallbac
     }
 
     cloud.validPoints.resize( cloud.points.size(), true );
-    return std::move( cloud );
+    return cloud;
 }
 
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )

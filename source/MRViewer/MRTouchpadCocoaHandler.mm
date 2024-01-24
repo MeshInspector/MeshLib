@@ -130,7 +130,7 @@ TouchpadCocoaHandler::~TouchpadCocoaHandler()
     [magnificationGestureRecognizer_ release];
 }
 
-void TouchpadCocoaHandler::onMagnificationGestureEvent( NSView* view, SEL cmd, NSMagnificationGestureRecognizer* recognizer )
+void TouchpadCocoaHandler::onMagnificationGestureEvent( NSView* view, SEL, NSMagnificationGestureRecognizer* recognizer )
 {
     auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
     if ( !handler )
@@ -141,7 +141,7 @@ void TouchpadCocoaHandler::onMagnificationGestureEvent( NSView* view, SEL cmd, N
         handler->zoom( 1.f + recognizer.magnification, false, *state );
 }
 
-void TouchpadCocoaHandler::onRotationGestureEvent( NSView* view, SEL cmd, NSRotationGestureRecognizer* recognizer )
+void TouchpadCocoaHandler::onRotationGestureEvent( NSView* view, SEL, NSRotationGestureRecognizer* recognizer )
 {
     auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
     if ( !handler )
@@ -152,7 +152,7 @@ void TouchpadCocoaHandler::onRotationGestureEvent( NSView* view, SEL cmd, NSRota
         handler->rotate( recognizer.rotation, *state );
 }
 
-void TouchpadCocoaHandler::onScrollEvent( NSView* view, SEL cmd, NSEvent* event )
+void TouchpadCocoaHandler::onScrollEvent( NSView* view, SEL, NSEvent* event )
 {
     auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
     if ( !handler )

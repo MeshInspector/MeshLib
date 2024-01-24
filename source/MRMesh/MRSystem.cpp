@@ -86,10 +86,10 @@ void SetCurrentThreadName( const char * name )
     #pragma warning(pop)
 #elif defined(__APPLE__) && defined(__MACH__)
     pthread_setname_np(name);
+#elif defined(__EMSCRIPTEN__)
+    (void)name;
 #else
-#ifndef __EMSCRIPTEN__
     pthread_setname_np( pthread_self(), name);
-#endif
 #endif
 }
 

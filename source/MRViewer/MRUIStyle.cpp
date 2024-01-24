@@ -269,8 +269,6 @@ bool checkbox( const char* label, bool* value )
     if ( !texture )
         return ImGui::Checkbox( label, value );
 
-    const auto bgColor = ImGui::GetColorU32( ImGuiCol_FrameBg );
-
     sh.addColor( ImGuiCol_FrameBg, Color::transparent() );
     sh.addColor( ImGuiCol_CheckMark, Color::white() );
     sh.addVar( ImGuiStyleVar_FrameBorderSize, 1.5f );
@@ -290,7 +288,7 @@ bool checkbox( const char* label, bool* value )
             Color::white().getUInt32(), style.FrameRounding * 0.5f );
 
     //code of this lambda is copied from ImGui::Checkbox in order to decrease thickness and change appearance of the check mark
-    auto drawCustomCheckbox = [bgColor] ( const char* label, bool* v )
+    auto drawCustomCheckbox = [] ( const char* label, bool* v )
     {
         if ( !ImGui::GetCurrentContext() || !v )
             return false;
@@ -326,7 +324,7 @@ bool checkbox( const char* label, bool* value )
         ImGui::RenderNavHighlight( total_bb, id );
 
         if ( !*v )
-            ImGui::RenderFrame( check_bb.Min, check_bb.Max, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : bgColor ), true, style.FrameRounding * 0.5f );
+            ImGui::RenderFrame( check_bb.Min, check_bb.Max, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg ), true, style.FrameRounding * 0.5f );
 
         ImU32 check_col = ImGui::GetColorU32( ImGuiCol_CheckMark );
         bool mixed_value = ( g.LastItemData.InFlags & ImGuiItemFlags_MixedValue ) != 0;
@@ -427,8 +425,6 @@ bool radioButton( const char* label, int* value, int valButton )
         return res;
     }
 
-    const auto bgColor = ImGui::GetColorU32( ImGuiCol_FrameBg );
-
     sh.addColor( ImGuiCol_FrameBg, Color::transparent() );
     sh.addColor( ImGuiCol_CheckMark, Color::white() );
     sh.addVar( ImGuiStyleVar_FrameBorderSize, 1.0f );
@@ -448,7 +444,7 @@ bool radioButton( const char* label, int* value, int valButton )
             Color::white().getUInt32(), clickSize * 0.5f );
 
     //code of this lambda is copied from ImGui::RadioBitton in order to decrease size of the central circle
-    auto drawCustomRadioButton = [bgColor, scaling, clickSize, &style] ( const char* label, int* v, int v_button )
+    auto drawCustomRadioButton = [scaling, clickSize, &style] ( const char* label, int* v, int v_button )
     {
         if ( !ImGui::GetCurrentContext() || !v )
             return false;
@@ -491,7 +487,7 @@ bool radioButton( const char* label, int* value, int valButton )
         }
         else
         {
-            window->DrawList->AddCircleFilled( center, radius, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : bgColor ), 16 );
+            window->DrawList->AddCircleFilled( center, radius, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg ), 16 );
             if ( style.FrameBorderSize > 0.0f )
             {
                 const float thickness = 1.5f * scaling;

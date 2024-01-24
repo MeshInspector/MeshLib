@@ -373,6 +373,7 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         requestThread.detach();
     }
 #else
+    (void)logName;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
     const auto method = toString( method_ );

@@ -68,7 +68,7 @@ Expected<Mesh, std::string> fromMrmesh( std::istream& in, const MeshLoadSettings
     if ( !in )
         return unexpected( std::string( "Error reading  points from mrmesh-file" ) );
 
-    return std::move( mesh );
+    return mesh;
 }
 
 Expected<Mesh, std::string> fromOff( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )

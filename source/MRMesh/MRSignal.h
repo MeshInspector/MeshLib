@@ -14,7 +14,7 @@ template<typename T>
 struct Signal : boost::signals2::signal<T>
 {
     Signal() noexcept = default;
-    Signal( const Signal& ) noexcept {}
+    Signal( const Signal& ) noexcept : boost::signals2::signal<T>() {}
     Signal( Signal&& ) noexcept = default;
     Signal& operator =( const Signal& ) noexcept { return *this; }
     Signal& operator =( Signal&& ) noexcept = default;

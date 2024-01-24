@@ -178,7 +178,7 @@ void ObjectLabel::buildMesh_() const
         auto contours = createSymbolContours( params );
         if ( !contours.has_value() )
         {
-            spdlog::error( contours.error() );
+            spdlog::error( std::move( contours.error() ) );
             assert( false );
             continue;
         }

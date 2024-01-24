@@ -17,7 +17,7 @@ Expected<Mesh, std::string>  alignTextToMesh(
 
     if ( !meshOrError.has_value() )
     {
-        return unexpected( meshOrError.error() );
+        return unexpected( std::move( meshOrError.error() ) );
     }
 
     auto& textMesh = meshOrError.value();

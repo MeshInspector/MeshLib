@@ -304,7 +304,7 @@ Expected<Mesh> triangulateSymbolContours( const SymbolMeshParams& params )
     auto contours = createSymbolContours( params );
     if ( !contours.has_value() )
     {
-        return unexpected( contours.error() );
+        return unexpected( std::move( contours.error() ) );
     }
 
     return PlanarTriangulation::triangulateContours( contours.value() );
@@ -347,7 +347,7 @@ Expected<Mesh> createSymbolsMesh( const SymbolMeshParams& params )
     auto mesh = triangulateSymbolContours( params );
     if( !mesh.has_value() )
     {
-        return unexpected( mesh.error() );
+        return unexpected( std::move( mesh.error() ) );
     }
     addBaseToPlanarMesh( mesh.value() );
     return mesh.value();

@@ -1,0 +1,372 @@
+#include "MRSurfaceContoursWidget.h"
+#include "MRViewport.h"
+#include "MRMesh/MRHistoryAction.h"
+#include "MRAppendHistory.h"
+#include <GLFW/glfw3.h>
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRSphereObject.h"
+#include "MRMesh/MRObjectMesh.h"
+
+namespace MR
+{
+
+
+void updateBaseColor( std::shared_ptr<SurfacePointWidget> point, const Color& color )
+{
+    auto params = point->getParameters();
+    params.baseColor = color;
+    point->setParameters( params );
+}
+
+class AddPointActionPickerPoint : public HistoryAction
+{
+public:
+    AddPointActionPickerPoint( SurfaceContoursWidget& plugin, const std::shared_ptr<MR::ObjectMeshHolder> obj, const MeshTriPoint& point ) :
+        plugin_{ plugin },
+        obj_{ obj },
+        point_{ point }
+    {};
+
+    virtual std::string name() const override
+    {
+        return "Add Point";
+    }
+    virtual void action( Type actionType ) override
+    {
+        if ( !plugin_.isPickerActive_ )
+            return;
+        if ( actionType == Type::Undo )
+        {
+            plugin_.pickedPoints_[obj_].pop_back();
+
+            if ( !plugin_.pickedPoints_[obj_].empty() )
+                updateBaseColor( plugin_.pickedPoints_[obj_].back(), Color::green() );
+
+            plugin_.activeIndex_ = int( plugin_.pickedPoints_[obj_].size() );
+            plugin_.activeObject_ = obj_;
+
+            plugin_.onPointRemove_( obj_ );
+        }
+        else
+        {
+            if ( !plugin_.pickedPoints_[obj_].empty() )
+                updateBaseColor( plugin_.pickedPoints_[obj_].back(), Color::gray() );
+
+            plugin_.pickedPoints_[obj_].push_back( plugin_.createPickWidget_( obj_, point_ ) );
+
+            updateBaseColor( plugin_.pickedPoints_[obj_].back(), Color::green() );
+
+
+            plugin_.onPointAdd_( obj_ );
+        }
+
+    }
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return 0; //this undo action will be deleted in plugin disable
+    }
+private:
+    SurfaceContoursWidget& plugin_;
+    const std::shared_ptr<MR::ObjectMeshHolder> obj_;
+    MeshTriPoint point_;
+};
+
+class RemovePointActionPickerPoint : public HistoryAction
+{
+public:
+    RemovePointActionPickerPoint( SurfaceContoursWidget& plugin, const std::shared_ptr<MR::ObjectMeshHolder> obj, const MeshTriPoint& point, int index ) :
+        plugin_{ plugin },
+        obj_{ obj },
+        point_{ point },
+        index_{ index }
+    {};
+
+    virtual std::string name() const override
+    {
+        return "Remove Point";
+    }
+    virtual void action( Type actionType ) override
+    {
+        if ( !plugin_.isPickerActive_ )
+            return;
+
+        if ( actionType == Type::Undo )
+        {
+            if ( index_ == plugin_.pickedPoints_[obj_].size() && !plugin_.pickedPoints_[obj_].empty() )
+                updateBaseColor( plugin_.pickedPoints_[obj_].back(), Color::gray() );
+
+            plugin_.pickedPoints_[obj_].insert( plugin_.pickedPoints_[obj_].begin() + index_, plugin_.createPickWidget_( obj_, point_ ) );
+
+            if ( index_ + 1 == plugin_.pickedPoints_[obj_].size() )
+                updateBaseColor( plugin_.pickedPoints_[obj_].back(), Color::green() );
+            plugin_.activeIndex_ = index_;
+            plugin_.activeObject_ = obj_;
+
+            plugin_.pickedPoints_[obj_].back()->setHovered( false );
+            plugin_.onPointAdd_( obj_ );
+        }
+        else
+        {
+            plugin_.pickedPoints_[obj_].erase( plugin_.pickedPoints_[obj_].begin() + index_ );
+
+            if ( index_ == plugin_.pickedPoints_[obj_].size() && !plugin_.pickedPoints_[obj_].empty() )
+                updateBaseColor( plugin_.pickedPoints_[obj_].back(), Color::green() );
+
+            plugin_.activeIndex_ = index_;
+            plugin_.activeObject_ = obj_;
+
+            plugin_.onPointRemove_( obj_ );
+        }
+    }
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return 0; //this undo action will be deleted in plugin disable
+    }
+private:
+    SurfaceContoursWidget& plugin_;
+    const std::shared_ptr<MR::ObjectMeshHolder> obj_;
+    MeshTriPoint point_;
+    int index_;
+};
+
+class ChangePointActionPickerPoint : public HistoryAction
+{
+public:
+    ChangePointActionPickerPoint( SurfaceContoursWidget& plugin, const std::shared_ptr<MR::ObjectMeshHolder> obj, const MeshTriPoint& point, int index ) :
+        plugin_{ plugin },
+        obj_{ obj },
+        point_{ point },
+        index_{ index }
+    {};
+
+    virtual std::string name() const override
+    {
+        return "Move Point";
+    }
+    virtual void action( Type ) override
+    {
+        if ( !plugin_.isPickerActive_ )
+            return;
+
+        plugin_.pickedPoints_[obj_][index_]->updateCurrentPosition( point_ );
+        plugin_.activeIndex_ = index_;
+        plugin_.activeObject_ = obj_;
+        plugin_.onPointMoveFinish_( obj_ );
+    }
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return 0; //this undo action will be deleted in plugin disable
+    }
+private:
+    SurfaceContoursWidget& plugin_;
+    const std::shared_ptr<MR::ObjectMeshHolder> obj_;
+    MeshTriPoint point_;
+    int index_;
+};
+
+
+
+std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( const std::shared_ptr<MR::ObjectMeshHolder> obj_, const MeshTriPoint& pt )
+{
+    auto newPoint = std::make_shared<SurfacePointWidget>();
+    newPoint->setAutoHover( false );
+    auto objMesh = std::dynamic_pointer_cast< MR::ObjectMesh > ( obj_ );
+    if ( objMesh )
+        newPoint->create( objMesh, pt );
+    else
+    {
+        assert( 1 > 2 ); // due to surfacePointWidget unable to work with non ObjectMesh objects.
+        return {};
+    }
+    std::weak_ptr<SurfacePointWidget> curentPoint = newPoint;
+    newPoint->setStartMoveCallback( [this, obj_, curentPoint] ( const MeshTriPoint& point )
+    {
+        const bool closedPath = pickedPoints_.size() > 1 && pickedPoints_[obj_][0]->getCurrentPosition() == pickedPoints_[obj_].back()->getCurrentPosition();
+        if ( closedPath && curentPoint.lock() == pickedPoints_[obj_][0] )
+        {
+            SCOPED_HISTORY( "Change Point" );
+            AppendHistory<ChangePointActionPickerPoint>( *this, obj_, point, activeIndex_ );
+            AppendHistory<ChangePointActionPickerPoint>( *this, obj_, point, int( pickedPoints_[obj_].size() ) - 1 );
+            moveClosedPoint_ = true;
+        }
+        else if ( !closedPath || curentPoint.lock() != pickedPoints_[obj_].back() )
+        {
+            AppendHistory<ChangePointActionPickerPoint>( *this, obj_, point, activeIndex_ );
+        }
+        activeChange_ = true;
+        onPointMove_( obj_ );
+
+    } );
+    newPoint->setEndMoveCallback( [this, obj_, curentPoint] ( const MeshTriPoint& point )
+    {
+        if ( moveClosedPoint_ && curentPoint.lock() == pickedPoints_[obj_][0] )
+        {
+            pickedPoints_[obj_].back()->updateCurrentPosition( point );
+        }
+        activeChange_ = false;
+        onPointMoveFinish_( obj_ );
+    } );
+
+    return newPoint;
+}
+
+
+bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
+{
+    if ( !isPickerActive_ )
+        return false;
+
+    if ( button != Viewer::MouseButton::Left )
+        return false;
+
+    auto [obj, pick] = getViewerInstance().viewport().pick_render_object();
+    auto objMesh = std::dynamic_pointer_cast< ObjectMeshHolder >( obj );
+    if ( !objMesh )
+        return false;
+
+    const bool closedPath = pickedPoints_.size() > 1 && pickedPoints_[objMesh][0]->getCurrentPosition() == pickedPoints_[objMesh].back()->getCurrentPosition();
+
+    auto addPoint = [&] ( const std::shared_ptr<ObjectMeshHolder> obj, const MeshTriPoint& triPoint, bool close )
+    {
+        if ( !pickedPoints_[obj].empty() )
+            updateBaseColor( pickedPoints_[obj].back(), Color::gray() );
+
+        AppendHistory<AddPointActionPickerPoint>( *this, obj, triPoint );
+
+        updateBaseColor( pickedPoints_[obj].back(), close ? Color::transparent() : Color::green() );
+
+        pickedPoints_[obj].push_back( createPickWidget_( obj, triPoint ) );
+        onPointAdd_( obj );
+    };
+    auto removePoint = [&] ( const std::shared_ptr<ObjectMeshHolder> obj, int pickedIndex )
+    {
+        if ( pickedIndex == int( pickedPoints_[obj].size() ) - 1 && pickedPoints_[obj].size() > 1 )
+        {
+            SurfacePointWidget::Parameters params;
+            params.baseColor = Color::green();
+            pickedPoints_[obj][pickedIndex - 1]->setParameters( params );
+        }
+
+        AppendHistory<RemovePointActionPickerPoint>( *this, obj, pickedPoints_[obj][pickedIndex]->getCurrentPosition(), pickedIndex );
+        pickedPoints_[obj].erase( pickedPoints_[obj].begin() + pickedIndex );
+        activeIndex_ = pickedIndex;
+        activeObject_ = obj;
+        onPointRemove_( obj );
+    };
+
+    if ( !mod )
+    {
+        if ( closedPath )
+            return false;
+
+        assert( objMesh != nullptr ); // contoursWidget_ can join for mesh objects only
+
+        auto triPoint = objMesh->mesh()->toTriPoint( pick );
+        addPoint( objMesh, triPoint, false );
+        return true;
+    }
+    else if ( mod == GLFW_MOD_CONTROL ) // close contour case 
+    {
+        if ( closedPath )
+            return false;
+
+        assert( objMesh != nullptr ); // contoursWidget_ can join for mesh objects only
+
+        if ( pickedPoints_[objMesh].size() <= 2 || obj != pickedPoints_[objMesh][0]->getPickSphere() )
+            return false;
+
+        auto triPoint = pickedPoints_[objMesh][0]->getCurrentPosition();
+        addPoint( objMesh, triPoint, true );
+        return true;
+    }
+    else if ( mod == GLFW_MOD_SHIFT )  // remove point case 
+    {
+        if ( pickedPoints_.empty() )
+            return false;
+
+        int pickedIndex = -1;
+        std::shared_ptr<MR::ObjectMeshHolder> pickedObj = nullptr;
+
+        for ( auto contour : pickedPoints_ )
+            for ( int i = 0; i < contour.second.size(); ++i )
+            {
+                const auto& point = contour.second[i];
+                if ( obj == point->getPickSphere() )
+                {
+                    pickedIndex = i;
+                    pickedObj = contour.first;
+                    break;
+                }
+
+            }
+
+        if ( ( pickedIndex == -1 ) || ( pickedObj == nullptr ) )
+            return false;
+
+        if ( closedPath )
+        {
+            assert( pickedIndex >= 0 );
+            assert( pickedObj != nullptr );
+
+            SCOPED_HISTORY( "Remove Point" );
+            if ( pickedPoints_.size() == 4 || pickedIndex == 0 ) // 4 points - minimal non-trivial closed path
+                removePoint( objMesh, ( int )pickedPoints_[objMesh].size() - 1 );
+
+            removePoint( pickedObj, pickedIndex );
+            if ( pickedPoints_[pickedObj].size() > 2 && pickedIndex == 0 )
+                addPoint( pickedObj, pickedPoints_[pickedObj][0]->getCurrentPosition(), true );
+        }
+        else
+            removePoint( pickedObj, pickedIndex );
+    }
+    return false;
+}
+
+bool SurfaceContoursWidget::onMouseMove_( int, int )
+{
+    if ( !isPickerActive_ )
+        return false;
+
+    if ( pickedPoints_.empty() || activeChange_ )
+        return false;
+
+    auto [obj, pick] = getViewerInstance().viewport().pick_render_object();
+    if ( !obj )
+        return false;
+
+    for ( auto contour : pickedPoints_ )
+        for ( int i = 0; i < contour.second.size(); ++i )
+        {
+            const auto& point = contour.second[i];
+            bool hovered = obj == point->getPickSphere();
+            point->setHovered( hovered );
+            if ( hovered )
+            {
+                activeIndex_ = i;
+                activeObject_ = contour.first;
+            }
+        }
+    return false;
+}
+
+
+void SurfaceContoursWidget::reset()
+{
+    clear();
+    enable( false );
+
+    FilterHistoryByCondition( [&] ( const std::shared_ptr<HistoryAction>& action )
+    {
+        bool res = bool( std::dynamic_pointer_cast< AddPointActionPickerPoint >( action ) ) ||
+            bool( std::dynamic_pointer_cast< RemovePointActionPickerPoint >( action ) ) ||
+            bool( std::dynamic_pointer_cast< ChangePointActionPickerPoint >( action ) );
+        return res;
+    } );
+
+    disconnect();
+}
+
+
+} // namespace MR 

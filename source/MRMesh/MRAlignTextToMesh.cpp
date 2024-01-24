@@ -17,7 +17,7 @@ Expected<Mesh, std::string>  alignTextToMesh(
 
     if ( !meshOrError.has_value() )
     {
-        return unexpected( "Font does not contain symbol at position " + std::to_string( meshOrError.error() ) );
+        return unexpected( meshOrError.error() );
     }
 
     auto& textMesh = meshOrError.value();

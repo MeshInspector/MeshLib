@@ -103,7 +103,7 @@ void OutlineDecomposer::clearLast()
     }
 }
 
-Expected<Contours2d, size_t> createSymbolContours( const SymbolMeshParams& params )
+Expected<Contours2d> createSymbolContours( const SymbolMeshParams& params )
 {
     MR_TIMER
     // Begin
@@ -113,12 +113,16 @@ Expected<Contours2d, size_t> createSymbolContours( const SymbolMeshParams& param
 #ifdef _WIN32
     // on Windows, FT_New_Face cannot open files with Unicode names
     std::error_code ec;
+    if ( !std::filesystem::is_regular_file( params.pathToFontFile, ec ) )
+        return unexpected( "Cannot find file with font" );
     const auto fileSize = std::filesystem::file_size( params.pathToFontFile, ec );
     Buffer<char> buffer( fileSize );
     std::ifstream in( params.pathToFontFile, std::ifstream::binary );
     in.read( buffer.data(), buffer.size() );
     assert( in );
-    FT_New_Memory_Face( library, (const FT_Byte *)buffer.data(), (FT_Long)buffer.size(), 0, &face );
+    auto error = FT_New_Memory_Face( library, (const FT_Byte *)buffer.data(), (FT_Long)buffer.size(), 0, &face );
+    if ( error != 0 )
+        return unexpected( "Font file is not valid" );
 #else
     FT_New_Face( library, utf8string( params.pathToFontFile ).c_str(), 0, &face );
 #endif
@@ -193,7 +197,7 @@ Expected<Contours2d, size_t> createSymbolContours( const SymbolMeshParams& param
         }
         else if(index == 0)
         {
-            return unexpected(static_cast<size_t>(i));
+            return unexpected( "Font does not contain symbol at position " + std::to_string( i ) );
         }
         if ( FT_Load_Glyph( face, index, FT_LOAD_NO_BITMAP ) )
             continue;
@@ -294,7 +298,7 @@ Expected<Contours2d, size_t> createSymbolContours( const SymbolMeshParams& param
     return std::move( decomposer.contours );
 }
 
-Expected<Mesh, size_t> triangulateSymbolContours( const SymbolMeshParams& params )
+Expected<Mesh> triangulateSymbolContours( const SymbolMeshParams& params )
 {
     MR_TIMER
     auto contours = createSymbolContours( params );
@@ -337,7 +341,7 @@ void addBaseToPlanarMesh( Mesh & mesh, float zOffset )
     }
 }
 
-Expected<Mesh, size_t> createSymbolsMesh( const SymbolMeshParams& params )
+Expected<Mesh> createSymbolsMesh( const SymbolMeshParams& params )
 {
     MR_TIMER
     auto mesh = triangulateSymbolContours( params );

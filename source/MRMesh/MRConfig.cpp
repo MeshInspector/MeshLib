@@ -217,29 +217,29 @@ void Config::setVector2i( const std::string& key, const Vector2i& keyValue )
     serializeToJson( keyValue, config_[key] );
 }
 
-bool MR::Config::hasEnum( Enum enumeration, const std::string& key ) const
+bool MR::Config::hasEnum( const Enum& enumeration, const std::string& key ) const
 {
     if ( !config_[key].isString() )
         return false;
-    Json::String value = config_[key].asString();
+    std::string value = config_[key].asString();
     for ( const char* e : enumeration )
         if ( value == e )
             return true;
     return false;
 }
 
-int MR::Config::getEnum( Enum enumeration, const std::string& key, int defaultValue ) const
+int MR::Config::getEnum( const Enum& enumeration, const std::string& key, int defaultValue ) const
 {
     if ( !config_[key].isString() )
         return defaultValue;
-    Json::String value = config_[key].asString();
+    std::string value = config_[key].asString();
     for ( size_t i = 0; i < enumeration.size(); i++ )
         if ( value == enumeration[i] )
             return ( int )i;
     return defaultValue;
 }
 
-void MR::Config::setEnum( Enum enumeration, const std::string& key, int keyValue )
+void MR::Config::setEnum( const Enum& enumeration, const std::string& key, int keyValue )
 {
     config_[key] = enumeration[keyValue];
 }

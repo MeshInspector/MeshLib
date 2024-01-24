@@ -418,6 +418,9 @@ MeasureResult Binary<Primitives::Sphere, Primitives::Sphere>::measure( const Pri
             ret.angle.dirA = ( ret.angle.pointA - a.center ).normalized();
             ret.angle.dirB = ( ret.angle.pointB - b.center ).normalized();
             ret.angle.isSurfaceNormalA = ret.angle.isSurfaceNormalB = true;
+
+            // The circle at the intersection.
+            ret.intersections.push_back( primitiveCircle( a.center + dir * intersectionFwdOffset, dir, intersectionSideOffset ) );
         }
     }
 
@@ -563,16 +566,30 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::Sphere>::measure( cons
         ret.angle.status = MeasureResult::Status::ok;
 
         Vector3f overlapMidpoint = b.center - axisToSphereCenterDir * axisToSphereCenterDist;
+        float overlapHalfLen = std::sqrt( std::max( 0.f, b.radius * b.radius - axisToSphereCenterDist * axisToSphereCenterDist ) );
 
         bool backward = std::isfinite( a.positiveLength ) == std::isfinite( a.negativeLength )
             ? dot( a.centerPoint().center - b.center, a.dir ) < 0 : std::isfinite( a.positiveLength );
 
-        ret.angle.pointA = ret.angle.pointB = overlapMidpoint +
-            a.dir * ( std::sqrt( std::max( 0.f, b.radius * b.radius - axisToSphereCenterDist * axisToSphereCenterDist ) ) * ( backward ? -1.f : 1.f ) );
+        ret.angle.pointA = ret.angle.pointB = overlapMidpoint + a.dir * ( overlapHalfLen * ( backward ? -1.f : 1.f ) );
         ret.angle.dirA = backward ? -a.dir : a.dir;
         ret.angle.dirB = ( ret.angle.pointB - b.center ).normalized();
         ret.angle.isSurfaceNormalA = false;
         ret.angle.isSurfaceNormalB = true;
+
+        { // The intersection segment.
+            Vector3f segmA = ret.angle.pointA;
+            Vector3f segmB;
+
+            if ( std::isfinite( a.positiveLength ) && ( a.basePoint( false ).center - b.center ).lengthSq() < b.radius * b.radius )
+                segmB = a.basePoint( false ).center;
+            else if ( std::isfinite( a.negativeLength ) && ( a.basePoint( true ).center - b.center ).lengthSq() < b.radius * b.radius )
+                segmB = a.basePoint( true ).center;
+            else
+                segmB = overlapMidpoint + a.dir * ( overlapHalfLen * ( backward ? 1.f : -1.f ) );
+
+            ret.intersections.push_back( toPrimitive( LineSegm3f( segmA, segmB ) ) );
+        }
     }
 
     return ret;
@@ -601,11 +618,15 @@ MeasureResult Binary<Primitives::Plane, Primitives::Sphere>::measure( const Prim
         float sideOffset = std::sqrt( std::max( 0.f, b.radius * b.radius - signedCenterDist * signedCenterDist ) );
         Vector3f sideDir = cross( a.normal, a.normal.furthestBasisVector() ).normalized();
 
+        Vector3f intersectionCircleCenter = b.center - dot( a.normal, b.center - a.center ) * a.normal;
+
         ret.angle.status = MeasureResult::Status::ok;
-        ret.angle.pointA = ret.angle.pointB = b.center - dot( a.normal, b.center - a.center ) * a.normal + sideDir * sideOffset;
+        ret.angle.pointA = ret.angle.pointB = intersectionCircleCenter + sideDir * sideOffset;
         ret.angle.dirA = signedCenterDist > 0 ? a.normal : -a.normal;
         ret.angle.dirB = ( ret.angle.pointB - b.center ).normalized();
         ret.angle.isSurfaceNormalA = ret.angle.isSurfaceNormalB = true;
+
+        ret.intersections.push_back( primitiveCircle( intersectionCircleCenter, ret.angle.dirA, sideOffset ) );
     }
 
     return ret;
@@ -819,11 +840,15 @@ MeasureResult Binary<Primitives::Plane, Primitives::ConeSegment>::measure( const
         }
         else if ( b.isCircle() )
         {
-            ret.angle.pointA = ret.angle.pointB = b.basePlane( false ).intersectWithPlane( a ).center;
+            auto intersectionLine = b.basePlane( false ).intersectWithPlane( a );
+            ret.angle.pointA = ret.angle.pointB = intersectionLine.center;
+            ret.intersections.push_back( std::move( intersectionLine ) );
         }
         else
         {
-            ret.angle.pointA = ret.angle.pointB = a.intersectWithLine( b ).center;
+            auto intersectionPoint = a.intersectWithLine( b );
+            ret.angle.pointA = ret.angle.pointB = intersectionPoint.center;
+            ret.intersections.push_back( std::move( intersectionPoint ) );
         }
     }
 
@@ -840,11 +865,16 @@ MeasureResult Binary<Primitives::Plane, Primitives::Plane>::measure( const Primi
 
     // Angle.
 
+    auto intersectionLine = a.intersectWithPlane( b );
+
     ret.angle.status = MeasureResult::Status::ok;
-    ret.angle.pointA = ret.angle.pointB = a.intersectWithPlane( b ).center;
+    ret.angle.pointA = ret.angle.pointB = intersectionLine.center;
     ret.angle.dirA = a.normal;
     ret.angle.dirB = b.normal;
     ret.angle.isSurfaceNormalA = ret.angle.isSurfaceNormalB = true;
+
+    if ( std::abs( dot( a.normal, b.normal ) ) < 0.99995f ) // ~0.5 degrees
+        ret.intersections.push_back( std::move( intersectionLine ) );
 
     return ret;
 }

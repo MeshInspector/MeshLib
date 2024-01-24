@@ -103,7 +103,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     }
 
     // SceneSettings
-    if ( cfg.getJsonValue( cShadingModeParamKey ) )
+    if ( cfg.hasJsonValue( cShadingModeParamKey ) )
         SceneSettings::setDefaultShadingMode( ( SceneSettings::ShadingMode )cfg.getEnum( cShadingModeEnum, cShadingModeParamKey ) );
     else
         SceneSettings::setDefaultShadingMode( cfg.getBool( cFlatShadingParamKey ) ?

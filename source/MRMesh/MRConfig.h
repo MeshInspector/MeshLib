@@ -74,9 +74,9 @@ public:
     typedef const std::vector<const char*>& Enum;
 
     // returns true if given enumeration value with this key exists and is correct
-    MRMESH_API bool hasEnum( Enum enumeration, const std::string& key );
+    MRMESH_API bool hasEnum( Enum enumeration, const std::string& key ) const;
     // returns custom enumeration value
-    MRMESH_API int getEnum( Enum enumeration, const std::string& key, int defaultValue = 0 );
+    MRMESH_API int getEnum( Enum enumeration, const std::string& key, int defaultValue = 0 ) const;
     // sets custom enumeration value
     MRMESH_API void setEnum( Enum enumeration, const std::string& key, int keyValue );
 

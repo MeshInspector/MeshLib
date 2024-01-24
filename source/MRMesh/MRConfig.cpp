@@ -217,12 +217,7 @@ void Config::setVector2i( const std::string& key, const Vector2i& keyValue )
     serializeToJson( keyValue, config_[key] );
 }
 
-bool Config::hasJsonValue( const std::string& key )
-{
-    return config_.isMember( key );
-}
-
-MRMESH_API bool MR::Config::hasEnum( Enum enumeration, const std::string& key )
+bool MR::Config::hasEnum( Enum enumeration, const std::string& key ) const
 {
     if ( !config_[key].isString() )
         return false;
@@ -233,7 +228,7 @@ MRMESH_API bool MR::Config::hasEnum( Enum enumeration, const std::string& key )
     return false;
 }
 
-MRMESH_API int MR::Config::getEnum( Enum enumeration, const std::string& key, int defaultValue )
+int MR::Config::getEnum( Enum enumeration, const std::string& key, int defaultValue ) const
 {
     if ( !config_[key].isString() )
         return defaultValue;
@@ -244,9 +239,14 @@ MRMESH_API int MR::Config::getEnum( Enum enumeration, const std::string& key, in
     return defaultValue;
 }
 
-MRMESH_API void MR::Config::setEnum( Enum enumeration, const std::string& key, int keyValue )
+void MR::Config::setEnum( Enum enumeration, const std::string& key, int keyValue )
 {
     config_[key] = enumeration[keyValue];
+}
+
+bool Config::hasJsonValue( const std::string& key )
+{
+    return config_.isMember( key );
 }
 
 Json::Value Config::getJsonValue( const std::string& key, const Json::Value& defaultValue /*= {} */ )

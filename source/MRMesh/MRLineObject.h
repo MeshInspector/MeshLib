@@ -42,7 +42,12 @@ public:
     /// updates xf to scale size
     MRMESH_API void setLength( float size );
     /// calculates line size from xf
-    MRMESH_API float getLength() const;
+    [[nodiscard]] MRMESH_API float getLength() const;
+
+    /// Returns the starting point, aka `center - dir * len/2`.
+    [[nodiscard]] MRMESH_API Vector3f getPointA() const;
+    /// Returns the finishing point, aka `center + dir * len/2`.
+    [[nodiscard]] MRMESH_API Vector3f getPointB() const;
 
     [[deprecated("This confusingly sets half-length. Use `setLength(halfLen * 2)` instead.")]]
     void setSize( float halfLen ) { setLength( halfLen * 2 ); }

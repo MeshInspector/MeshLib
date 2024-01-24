@@ -49,13 +49,22 @@ void LineObject::setLength( float size )
     setXf( currentXf );
 }
 
-float LineObject::getLength( void ) const
+float LineObject::getLength() const
 {
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
     return  s.x.x * baseLineOblectLength_;
 }
 
+Vector3f LineObject::getPointA() const
+{
+    return getCenter() - getDirection() * ( getLength() / 2 );
+}
+
+Vector3f LineObject::getPointB() const
+{
+    return getCenter() + getDirection() * ( getLength() / 2 );
+}
 
 
 LineObject::LineObject()

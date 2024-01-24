@@ -714,14 +714,28 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
         ++loopEdgesCounter;
     } while ( a != a0 );
 
-    if ( loopEdgesCounter < 3 )
+    if ( loopEdgesCounter < 2 )
+    {
+        // loop hole
+        assert( false );
         return;
+    }
 
     if ( params.makeDegenerateBand )
     {
         a = a0 = makeDegenerateBandAroundHole( mesh, a0, params.outNewFaces );
         for ( unsigned i = 0; i < loopEdgesCounter; ++i )
             a = mesh.topology.prev( a.sym() );
+    }
+
+    if ( loopEdgesCounter == 2 )
+    {
+        EdgeId a1 = mesh.topology.next( a0 );
+        EdgeId a2 = mesh.topology.prev( a1.sym() );
+        mesh.topology.splice( a0, a1 );
+        mesh.topology.splice( a2, a1.sym() );
+        assert( mesh.topology.isLoneEdge( a1 ) );
+        return;
     }
 
     auto plan = getFillHolePlan( mesh, a0, params );

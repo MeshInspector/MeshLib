@@ -32,7 +32,10 @@ struct MultiListener : Connectables...
 
     virtual ~MultiListener() = default;
 
-    virtual void connect( Viewer* viewer, int group = 0, boost::signals2::connect_position pos = boost::signals2::connect_position::at_back )
+    virtual void connect( 
+        [[maybe_unused]] Viewer* viewer, // unused if Connectables is empty
+        [[maybe_unused]] int group = 0,
+        [[maybe_unused]] boost::signals2::connect_position pos = boost::signals2::connect_position::at_back )
     {
         ( Connectables::connect( viewer, group, pos ), ... );
     }

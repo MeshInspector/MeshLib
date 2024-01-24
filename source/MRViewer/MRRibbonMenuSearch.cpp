@@ -190,7 +190,7 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
     else
     {
 
-        if ( isSmallUILast_ && active_ || setMainInputFocus_ )
+        if ( ( isSmallUILast_ && active_ ) || setMainInputFocus_ )
         {
             ImGui::SetKeyboardFocusHere();
             setMainInputFocus_ = false;

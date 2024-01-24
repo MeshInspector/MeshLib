@@ -158,8 +158,11 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
     else
     {
 
-        if ( isSmallUILast_ && active_ )
+        if ( isSmallUILast_ && active_ || setMainInputFocus_ )
+        {
             ImGui::SetKeyboardFocusHere();
+            setMainInputFocus_ = false;
+        }
         ImGui::SetNextItemWidth( cSearchSize * params.scaling );
         if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
         {
@@ -194,6 +197,13 @@ bool RibbonMenuSearch::isSmallUI() const
 float RibbonMenuSearch::getWidthMenuUI() const
 {
     return isSmallUI() ? 40.f : cSearchSize + 16.f;
+}
+
+void RibbonMenuSearch::activate()
+{
+    active_ = true;
+    if ( !isSmallUI() )
+        setMainInputFocus_ = true;
 }
 
 bool RibbonMenuSearch::smallSearchButton_( const Parameters& params )

@@ -36,6 +36,9 @@ public:
     // get width ui element in top panel
     // return unscaled value 
     MRVIEWER_API float getWidthMenuUI() const;
+
+    // activate search from outside (i.e. shortcut)
+    MRVIEWER_API void activate();
 private:
     bool smallSearchButton_( const Parameters& params );
 
@@ -52,6 +55,7 @@ private:
     bool isSmallUILast_ = false;
     bool mainInputFocused_ = false;
     bool blockSearchBtn_ = false;
+    bool setMainInputFocus_ = false;
 };
 
 }

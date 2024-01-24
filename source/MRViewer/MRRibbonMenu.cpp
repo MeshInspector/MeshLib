@@ -1918,6 +1918,10 @@ void RibbonMenu::setupShortcuts_()
         for ( const auto& sel : selected )
             sel->toggleVisualizeProperty( MeshVisualizePropertyType::FlatShading, viewportid );
     } } );
+    shortcutManager_->setShortcut( { GLFW_KEY_F, GLFW_MOD_CONTROL }, { ShortcutManager::Category::Info, "Search plugin by name or description",[this] ()
+    {
+        searcher_.activate();
+    } } );
     shortcutManager_->setShortcut( { GLFW_KEY_I,0 }, { ShortcutManager::Category::View, "Invert normals of selected objects",[] ()
     {
         auto& viewport = getViewerInstance().viewport();
@@ -1965,7 +1969,7 @@ void RibbonMenu::setupShortcuts_()
     } }  );
 
     addRibbonItemShortcut_( "Ribbon Scene Select all", { GLFW_KEY_A, GLFW_MOD_CONTROL }, ShortcutManager::Category::Objects );
-    addRibbonItemShortcut_( "Fit data", { GLFW_KEY_F, GLFW_MOD_CONTROL }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Fit data", { GLFW_KEY_F, GLFW_MOD_CONTROL | GLFW_MOD_ALT }, ShortcutManager::Category::View );
     addRibbonItemShortcut_( "Select objects", { GLFW_KEY_Q, GLFW_MOD_CONTROL }, ShortcutManager::Category::Objects );
     addRibbonItemShortcut_( "Open files", { GLFW_KEY_O, GLFW_MOD_CONTROL }, ShortcutManager::Category::Scene );
     addRibbonItemShortcut_( "Save Scene", { GLFW_KEY_S, GLFW_MOD_CONTROL }, ShortcutManager::Category::Scene );

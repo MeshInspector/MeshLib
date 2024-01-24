@@ -515,6 +515,8 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth, float scali
         }
     }
     UI::setTooltipIfHovered( "This mode is NOT recommended if you have 3Dconnexion driver installed, which sends mouse wheel fake events resulting in double reaction on SpaceMouse movement and camera tremble.", scaling );
+#else
+    (void)scaling;
 #endif
     if ( anyChanged )
         getViewerInstance().setSpaceMouseParameters( spaceMouseParams_ );

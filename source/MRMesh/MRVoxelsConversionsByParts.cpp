@@ -233,7 +233,7 @@ volumeToMeshByParts( const VolumePartBuilder<Volume> &builder, const Vector3i &d
         if ( !res.has_value() )
             return unexpected( res.error() );
     }
-    return std::move( result );
+    return result;
 }
 
 TEST( MRMesh, volumeToMeshByParts )

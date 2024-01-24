@@ -222,6 +222,33 @@ bool Config::hasJsonValue( const std::string& key )
     return config_.isMember( key );
 }
 
+MRMESH_API bool MR::Config::hasEnum( Enum enumeration, const std::string& key )
+{
+    if ( !config_[key].isString() )
+        return false;
+    Json::String value = config_[key].asString();
+    for ( const char* e : enumeration )
+        if ( value == e )
+            return true;
+    return false;
+}
+
+MRMESH_API int MR::Config::getEnum( Enum enumeration, const std::string& key, int defaultValue )
+{
+    if ( !config_[key].isString() )
+        return defaultValue;
+    Json::String value = config_[key].asString();
+    for ( size_t i = 0; i < enumeration.size(); i++ )
+        if ( value == enumeration[i] )
+            return ( int )i;
+    return defaultValue;
+}
+
+MRMESH_API void MR::Config::setEnum( Enum enumeration, const std::string& key, int keyValue )
+{
+    config_[key] = enumeration[keyValue];
+}
+
 Json::Value Config::getJsonValue( const std::string& key, const Json::Value& defaultValue /*= {} */ )
 {
     if ( hasJsonValue( key ) )

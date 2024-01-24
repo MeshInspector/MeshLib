@@ -106,11 +106,11 @@ void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::
     {
         // Detect flat shading needed
         bool flat;
-        if ( SceneSettings::get( SceneSettings::Type::DetectMeshFlatShading ) )
+        if ( SceneSettings::getDefaultShadingMode() == SceneSettings::ShadingMode::AutoDetect )
             flat = filename.extension() == ".step" || filename.extension() == ".stp" ||
-                    ( mesh->mesh() && detectFlatShading( *mesh->mesh().get() ) );
+                   ( mesh->mesh() && detectFlatShading( *mesh->mesh().get() ) );
         else
-            flat = SceneSettings::get( SceneSettings::Type::MeshFlatShading );
+            flat = SceneSettings::getDefaultShadingMode() == SceneSettings::ShadingMode::Flat;
         mesh->setVisualizeProperty( flat, MeshVisualizePropertyType::FlatShading, ViewportMask::all() );
     }
     for ( const std::shared_ptr<Object>& child : o->children() )

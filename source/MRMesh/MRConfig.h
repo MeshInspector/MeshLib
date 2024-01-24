@@ -70,6 +70,16 @@ public:
     // sets Vector2i for presented key
     MRMESH_API void setVector2i( const std::string& key, const Vector2i& keyValue );
 
+    // Decription of a enumeration as a map between [0...N) and N strings
+    typedef const std::vector<const char*>& Enum;
+
+    // returns true if given enumeration value with this key exists and is correct
+    MRMESH_API bool hasEnum( Enum enumeration, const std::string& key );
+    // returns custom enumeration value
+    MRMESH_API int getEnum( Enum enumeration, const std::string& key, int defaultValue = 0 );
+    // sets custom enumeration value
+    MRMESH_API void setEnum( Enum enumeration, const std::string& key, int keyValue );
+
     // returns true if json value with this key exists
     MRMESH_API bool hasJsonValue( const std::string& key );
     // returns custom json value

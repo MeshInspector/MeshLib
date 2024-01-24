@@ -658,7 +658,7 @@ void ObjectMeshHolder::setEdgesColorsForAllViewports( ViewportProperty<Color> va
 void ObjectMeshHolder::setDefaultSceneProperties_()
 {
     setDefaultColors_();
-    setFlatShading( SceneSettings::get( SceneSettings::Type::MeshFlatShading ) );
+    setFlatShading( SceneSettings::getDefaultShadingMode() == SceneSettings::ShadingMode::Flat );
 }
 
 } //namespace MR

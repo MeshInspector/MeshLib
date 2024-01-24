@@ -2695,11 +2695,12 @@ void ImGuiMenu::draw_mr_menu()
         ImGui::Checkbox( "Orthographic view", &orth );
         viewer->viewport().setOrthographic( orth );
 
-        bool flatShading = SceneSettings::get( SceneSettings::Type::MeshFlatShading );
-        bool flatShadingBackup = flatShading;
-        ImGui::Checkbox( "Default shading flat", &flatShading );
-        if ( flatShadingBackup != flatShading )
-            SceneSettings::set( SceneSettings::Type::MeshFlatShading, flatShading );
+        static std::vector<std::string> shadingModes = { "Auto Detect", "Smooth", "Flat" };
+        SceneSettings::ShadingMode shadingMode = SceneSettings::getDefaultShadingMode();
+        ImGui::SetNextItemWidth( 120.0f * menu_scaling() );
+        UI::combo( "Default Shading Mode", ( int* )&shadingMode, shadingModes );
+        if ( shadingMode != SceneSettings::getDefaultShadingMode() )
+            SceneSettings::setDefaultShadingMode( shadingMode );
         ImGui::PopItemWidth();
 
         bool showAxes = viewer->basisAxes->isVisible( viewer->viewport().id );

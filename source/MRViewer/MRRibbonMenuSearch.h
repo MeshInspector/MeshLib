@@ -46,6 +46,8 @@ private:
 
     void deactivateSearch_();
 
+    bool searchInputText_( const char* label, std::string& str, const RibbonMenuSearch::Parameters& params );
+
     std::string searchLine_;
     std::vector<RibbonSchemaHolder::SearchResult> searchResult_;
     std::vector<RibbonSchemaHolder::SearchResult> recentItems_;

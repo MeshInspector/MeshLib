@@ -226,21 +226,20 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     if ( !objMesh )
         return false;
 
-    const bool closedPath = pickedPoints_.size() > 1 && pickedPoints_[objMesh][0]->getCurrentPosition() == pickedPoints_[objMesh].back()->getCurrentPosition();
 
-    auto addPoint = [&] ( const std::shared_ptr<ObjectMeshHolder> obj, const MeshTriPoint& triPoint, bool close )
+     bool closedPath = pickedPoints_[objMesh].size() > 1 && pickedPoints_[objMesh][0]->getCurrentPosition() == pickedPoints_[objMesh].back()->getCurrentPosition();
+
+    auto addPoint = [this] ( const std::shared_ptr<ObjectMeshHolder> obj, const MeshTriPoint& triPoint, bool close )
     {
         if ( !pickedPoints_[obj].empty() )
             updateBaseColor( pickedPoints_[obj].back(), Color::gray() );
 
         AppendHistory<AddPointActionPickerPoint>( *this, obj, triPoint );
-
-        updateBaseColor( pickedPoints_[obj].back(), close ? Color::transparent() : Color::green() );
-
         pickedPoints_[obj].push_back( createPickWidget_( obj, triPoint ) );
+        updateBaseColor( pickedPoints_[obj].back(), close ? Color::transparent() : Color::green() );
         onPointAdd_( obj );
     };
-    auto removePoint = [&] ( const std::shared_ptr<ObjectMeshHolder> obj, int pickedIndex )
+    auto removePoint = [this] ( const std::shared_ptr<ObjectMeshHolder> obj, int pickedIndex )
     {
         if ( pickedIndex == int( pickedPoints_[obj].size() ) - 1 && pickedPoints_[obj].size() > 1 )
         {
@@ -274,11 +273,23 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
         assert( objMesh != nullptr ); // contoursWidget_ can join for mesh objects only
 
-        if ( pickedPoints_[objMesh].size() <= 2 || obj != pickedPoints_[objMesh][0]->getPickSphere() )
+        auto isFirstPointOnCountourClicked = false;
+        std::shared_ptr<ObjectMeshHolder> objectToCloseCoutour = nullptr;
+        for ( const auto& [parentObj, contour] : pickedPoints_ )
+        {
+            if ( contour.size() > 2 && obj == contour[0]->getPickSphere() )
+            {
+                isFirstPointOnCountourClicked = true;
+                objectToCloseCoutour = parentObj;
+                break;
+            }
+        }
+        if ( !isFirstPointOnCountourClicked )
             return false;
 
-        auto triPoint = pickedPoints_[objMesh][0]->getCurrentPosition();
-        addPoint( objMesh, triPoint, true );
+        assert( objectToCloseCoutour !=nullptr);
+        auto triPoint = pickedPoints_[objectToCloseCoutour][0]->getCurrentPosition();
+        addPoint( objectToCloseCoutour, triPoint, true );
         return true;
     }
     else if ( mod == GLFW_MOD_SHIFT )  // remove point case 
@@ -311,8 +322,11 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
             assert( pickedObj != nullptr );
 
             SCOPED_HISTORY( "Remove Point" );
-            if ( pickedPoints_.size() == 4 || pickedIndex == 0 ) // 4 points - minimal non-trivial closed path
-                removePoint( objMesh, ( int )pickedPoints_[objMesh].size() - 1 );
+            // 4 points - minimal non-trivial closed path
+            // last on is a "pseudo" point to close contour
+
+            if ( pickedPoints_[pickedObj].size() == 4 || pickedIndex == 0 ) 
+                removePoint( pickedObj, ( int )pickedPoints_[pickedObj].size() - 1 );
 
             removePoint( pickedObj, pickedIndex );
             if ( pickedPoints_[pickedObj].size() > 2 && pickedIndex == 0 )

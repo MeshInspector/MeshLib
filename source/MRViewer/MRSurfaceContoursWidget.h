@@ -60,7 +60,6 @@ private:
     // creates point widget for add to contour.
     [[nodiscard]] std::shared_ptr<SurfacePointWidget> createPickWidget_( std::shared_ptr<MR::ObjectMeshHolder> obj_, const MeshTriPoint& pt );
 
-
     // SurfaceContoursWidget interlal variables 
     bool moveClosedPoint_ = false;
     bool activeChange_ = false;

@@ -37,7 +37,7 @@ public:
     MRVIEWER_API void reset();
 
     // return contour for specific object.
-    [[nodiscard]] const SurfaceContour& getSurfaceContour( const std::shared_ptr<MR::ObjectMeshHolder> obj )
+    [[nodiscard]] const SurfaceContour& getSurfaceContour( const std::shared_ptr<MR::ObjectMeshHolder>& obj )
     {
         return pickedPoints_[obj];
     }
@@ -49,16 +49,16 @@ public:
     }
 
     // chech is contour closed for particular object.
-    [[nodiscard]] bool isClosedCountour( const std::shared_ptr<ObjectMeshHolder> obj );
+    [[nodiscard]] bool isClosedCountour( const std::shared_ptr<ObjectMeshHolder>& obj );
 
     // shared variables. which need getters and setters.
-    int activeIndex_{ 0 };
-    std::shared_ptr<MR::ObjectMeshHolder> activeObject_ = nullptr;
+    int activeIndex{ 0 };
+    std::shared_ptr<MR::ObjectMeshHolder> activeObject = nullptr;
 
 private:
 
     // creates point widget for add to contour.
-    [[nodiscard]] std::shared_ptr<SurfacePointWidget> createPickWidget_( std::shared_ptr<MR::ObjectMeshHolder> obj_, const MeshTriPoint& pt );
+    [[nodiscard]] std::shared_ptr<SurfacePointWidget> createPickWidget_( const std::shared_ptr<MR::ObjectMeshHolder>& obj, const MeshTriPoint& pt );
 
     // SurfaceContoursWidget interlal variables 
     bool moveClosedPoint_ = false;

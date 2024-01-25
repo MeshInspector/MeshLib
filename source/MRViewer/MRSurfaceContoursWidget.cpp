@@ -21,7 +21,7 @@ void updateBaseColor( std::shared_ptr<SurfacePointWidget> point, const Color& co
 class AddPointActionPickerPoint : public HistoryAction
 {
 public:
-    AddPointActionPickerPoint( SurfaceContoursWidget& plugin, const std::shared_ptr<MR::ObjectMeshHolder> obj, const MeshTriPoint& point ) :
+    AddPointActionPickerPoint( SurfaceContoursWidget& plugin, const std::shared_ptr<MR::ObjectMeshHolder>& obj, const MeshTriPoint& point ) :
         plugin_{ plugin },
         obj_{ obj },
         point_{ point }
@@ -42,8 +42,8 @@ public:
             if ( !plugin_.pickedPoints_[obj_].empty() )
                 updateBaseColor( plugin_.pickedPoints_[obj_].back(), Color::green() );
 
-            plugin_.activeIndex_ = int( plugin_.pickedPoints_[obj_].size() );
-            plugin_.activeObject_ = obj_;
+            plugin_.activeIndex = int( plugin_.pickedPoints_[obj_].size() );
+            plugin_.activeObject = obj_;
 
             plugin_.onPointRemove_( obj_ );
         }
@@ -74,7 +74,7 @@ private:
 class RemovePointActionPickerPoint : public HistoryAction
 {
 public:
-    RemovePointActionPickerPoint( SurfaceContoursWidget& plugin, const std::shared_ptr<MR::ObjectMeshHolder> obj, const MeshTriPoint& point, int index ) :
+    RemovePointActionPickerPoint( SurfaceContoursWidget& plugin, const std::shared_ptr<MR::ObjectMeshHolder>& obj, const MeshTriPoint& point, int index ) :
         plugin_{ plugin },
         obj_{ obj },
         point_{ point },
@@ -99,8 +99,8 @@ public:
 
             if ( index_ + 1 == plugin_.pickedPoints_[obj_].size() )
                 updateBaseColor( plugin_.pickedPoints_[obj_].back(), Color::green() );
-            plugin_.activeIndex_ = index_;
-            plugin_.activeObject_ = obj_;
+            plugin_.activeIndex = index_;
+            plugin_.activeObject = obj_;
 
             plugin_.pickedPoints_[obj_].back()->setHovered( false );
             plugin_.onPointAdd_( obj_ );
@@ -112,8 +112,8 @@ public:
             if ( index_ == plugin_.pickedPoints_[obj_].size() && !plugin_.pickedPoints_[obj_].empty() )
                 updateBaseColor( plugin_.pickedPoints_[obj_].back(), Color::green() );
 
-            plugin_.activeIndex_ = index_;
-            plugin_.activeObject_ = obj_;
+            plugin_.activeIndex = index_;
+            plugin_.activeObject = obj_;
 
             plugin_.onPointRemove_( obj_ );
         }
@@ -133,7 +133,7 @@ private:
 class ChangePointActionPickerPoint : public HistoryAction
 {
 public:
-    ChangePointActionPickerPoint( SurfaceContoursWidget& plugin, const std::shared_ptr<MR::ObjectMeshHolder> obj, const MeshTriPoint& point, int index ) :
+    ChangePointActionPickerPoint( SurfaceContoursWidget& plugin, const std::shared_ptr<MR::ObjectMeshHolder>& obj, const MeshTriPoint& point, int index ) :
         plugin_{ plugin },
         obj_{ obj },
         point_{ point },
@@ -150,8 +150,8 @@ public:
             return;
 
         plugin_.pickedPoints_[obj_][index_]->updateCurrentPosition( point_ );
-        plugin_.activeIndex_ = index_;
-        plugin_.activeObject_ = obj_;
+        plugin_.activeIndex = index_;
+        plugin_.activeObject = obj_;
         plugin_.onPointMoveFinish_( obj_ );
     }
 
@@ -173,11 +173,11 @@ void SurfaceContoursWidget::enable( bool isEnaled )
         pickedPoints_.clear();
 }
 
-std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( const std::shared_ptr<MR::ObjectMeshHolder> obj_, const MeshTriPoint& pt )
+std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( const std::shared_ptr<MR::ObjectMeshHolder>& obj, const MeshTriPoint& pt )
 {
     auto newPoint = std::make_shared<SurfacePointWidget>();
     newPoint->setAutoHover( false );
-    auto objMesh = std::dynamic_pointer_cast< MR::ObjectMesh > ( obj_ );
+    auto objMesh = std::dynamic_pointer_cast< MR::ObjectMesh > ( obj );
     if ( objMesh )
         newPoint->create( objMesh, pt );
     else
@@ -186,38 +186,39 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
         return {};
     }
     std::weak_ptr<SurfacePointWidget> curentPoint = newPoint;
-    newPoint->setStartMoveCallback( [this, obj_, curentPoint] ( const MeshTriPoint& point )
+    newPoint->setStartMoveCallback( [this, obj, curentPoint] ( const MeshTriPoint& point )
     {
-        const bool closedPath = pickedPoints_.size() > 1 && pickedPoints_[obj_][0]->getCurrentPosition() == pickedPoints_[obj_].back()->getCurrentPosition();
-        if ( closedPath && curentPoint.lock() == pickedPoints_[obj_][0] )
+        const bool closedPath = isClosedCountour( obj );
+
+        if ( closedPath && curentPoint.lock() == pickedPoints_[obj][0] )
         {
             SCOPED_HISTORY( "Change Point" );
-            AppendHistory<ChangePointActionPickerPoint>( *this, obj_, point, activeIndex_ );
-            AppendHistory<ChangePointActionPickerPoint>( *this, obj_, point, int( pickedPoints_[obj_].size() ) - 1 );
+            AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, activeIndex );
+            AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, int( pickedPoints_[obj].size() ) - 1 );
             moveClosedPoint_ = true;
         }
-        else if ( !closedPath || curentPoint.lock() != pickedPoints_[obj_].back() )
+        else if ( !closedPath || curentPoint.lock() != pickedPoints_[obj].back() )
         {
-            AppendHistory<ChangePointActionPickerPoint>( *this, obj_, point, activeIndex_ );
+            AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, activeIndex );
         }
         activeChange_ = true;
-        onPointMove_( obj_ );
+        onPointMove_( obj );
 
     } );
-    newPoint->setEndMoveCallback( [this, obj_, curentPoint] ( const MeshTriPoint& point )
+    newPoint->setEndMoveCallback( [this, obj, curentPoint] ( const MeshTriPoint& point )
     {
-        if ( moveClosedPoint_ && curentPoint.lock() == pickedPoints_[obj_][0] )
+        if ( moveClosedPoint_ && curentPoint.lock() == pickedPoints_[obj][0] )
         {
-            pickedPoints_[obj_].back()->updateCurrentPosition( point );
+            pickedPoints_[obj].back()->updateCurrentPosition( point );
         }
         activeChange_ = false;
-        onPointMoveFinish_( obj_ );
+        onPointMoveFinish_( obj );
     } );
 
     return newPoint;
 }
 
-bool SurfaceContoursWidget::isClosedCountour( const std::shared_ptr<ObjectMeshHolder> obj )
+bool SurfaceContoursWidget::isClosedCountour( const std::shared_ptr<ObjectMeshHolder>& obj )
 {
     return pickedPoints_[obj].size() > 1
         && pickedPoints_[obj][0]->getCurrentPosition() == pickedPoints_[obj].back()->getCurrentPosition();
@@ -254,8 +255,8 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
         AppendHistory<RemovePointActionPickerPoint>( *this, obj, pickedPoints_[obj][pickedIndex]->getCurrentPosition(), pickedIndex );
         pickedPoints_[obj].erase( pickedPoints_[obj].begin() + pickedIndex );
-        activeIndex_ = pickedIndex;
-        activeObject_ = obj;
+        activeIndex = pickedIndex;
+        activeObject = obj;
         onPointRemove_( obj );
     };
 
@@ -374,8 +375,8 @@ bool SurfaceContoursWidget::onMouseMove_( int, int )
             point->setHovered( hovered );
             if ( hovered )
             {
-                activeIndex_ = i;
-                activeObject_ = contour.first;
+                activeIndex = i;
+                activeObject = contour.first;
             }
         }
     return false;
@@ -397,8 +398,8 @@ void SurfaceContoursWidget::create( PickerPointCallBack onPointAdd, PickerPointC
 void SurfaceContoursWidget::clear()
 {
     pickedPoints_.clear();
-    activeIndex_ = 0;
-    activeObject_ = nullptr;
+    activeIndex = 0;
+    activeObject = nullptr;
 }
 
 void SurfaceContoursWidget::reset()

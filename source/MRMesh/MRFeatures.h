@@ -198,6 +198,9 @@ struct MeasureResult
     };
     Angle angle;
 
+    // The primitives obtained from intersecting those two.
+    std::vector<Primitives::Variant> intersections;
+
     // Modifies the object to swap A and B;
     MRMESH_API void swapObjects();
 };

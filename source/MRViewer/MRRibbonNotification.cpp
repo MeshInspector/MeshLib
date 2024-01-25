@@ -136,14 +136,16 @@ void RibbonNotifier::drawNotifications( float scaling )
         ImGui::EndTable();       
 
         auto window = ImGui::GetCurrentContext()->CurrentWindow;
-        if ( !ImGui::IsWindowHovered() )
+        const bool isHovered = ImGui::IsWindowHovered();
+        if ( !isHovered )
             timer += ImGui::GetIO().DeltaTime;
         
-        if ( notification.type == NotificationType::Error || notification.type == NotificationType::Warning )
+        if ( notification.type == NotificationType::Error || notification.type == NotificationType::Warning || isHovered )
         {
             auto drawList = window->DrawList;
             drawList->PushClipRectFullScreen();
-            drawList->AddRect( window->Rect().Min, window->Rect().Max, notificationParams[int( notification.type )].second, 4.0f * scaling, 0, 2.0f * scaling );
+            const ImU32 color = isHovered ? ImGui::GetColorU32( ImGuiCol_Text ) : notificationParams[int( notification.type )].second;
+            drawList->AddRect( window->Rect().Min, window->Rect().Max, color, 4.0f * scaling, 0, 2.0f * scaling );
             drawList->PopClipRect();
         }
 

@@ -25,12 +25,7 @@ public:
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
 
     // enable or disable widget
-    MRVIEWER_API void enable( bool isEnaled )
-    {
-        isPickerActive_ = isEnaled;
-        if ( !isPickerActive_ )
-            pickedPoints_.clear();
-    }
+    MRVIEWER_API void enable( bool isEnaled );
 
     // create a widget and connect it. 
     MRVIEWER_API void create( PickerPointCallBack onPointAdd, PickerPointCallBack onPointMove, PickerPointCallBack onPointMoveFinish, PickerPointCallBack onPointRemove );

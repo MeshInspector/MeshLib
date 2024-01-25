@@ -166,6 +166,13 @@ private:
     int index_;
 };
 
+void SurfaceContoursWidget::enable( bool isEnaled )
+{
+    isPickerActive_ = isEnaled;
+    if ( !isPickerActive_ )
+        pickedPoints_.clear();
+}
+
 std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( const std::shared_ptr<MR::ObjectMeshHolder> obj_, const MeshTriPoint& pt )
 {
     auto newPoint = std::make_shared<SurfacePointWidget>();

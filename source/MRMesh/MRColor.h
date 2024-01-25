@@ -10,7 +10,7 @@ struct Color
     uint8_t r, g, b, a;
 
     constexpr Color() noexcept : r{ 0 }, g{ 0 }, b{ 0 }, a{ 255 } {}
-    explicit constexpr Color( NoInit ) noexcept {}
+    explicit Color( NoInit ) noexcept {}
     constexpr Color( int r, int g, int b, int a = 255 ) noexcept :
         r{uint8_t(r)}, 
         g{uint8_t(g)}, 

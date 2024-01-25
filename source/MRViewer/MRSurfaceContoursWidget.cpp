@@ -220,8 +220,9 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
 
 bool SurfaceContoursWidget::isClosedCountour( const std::shared_ptr<ObjectMeshHolder>& obj )
 {
-    return pickedPoints_[obj].size() > 1
-        && pickedPoints_[obj][0]->getCurrentPosition() == pickedPoints_[obj].back()->getCurrentPosition();
+    return ( ( pickedPoints_.count( obj ) > 0 )
+        && ( pickedPoints_[obj].size() > 1 )
+        && ( pickedPoints_[obj][0]->getCurrentPosition() == pickedPoints_[obj].back()->getCurrentPosition() ) );
 }
 
 bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )

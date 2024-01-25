@@ -6,6 +6,7 @@
 #include "MRMesh/MRConeObject.h"
 #include "MRMesh/MRCylinderObject.h"
 #include "MRMesh/MRLineObject.h"
+#include "MRMesh/MRMatrix3Decompose.h"
 #include "MRMesh/MRPlaneObject.h"
 #include "MRMesh/MRPointObject.h"
 #include "MRMesh/MRSphereObject.h"
@@ -135,6 +136,15 @@ Primitives::ConeSegment primitiveCone( const Vector3f& a, const Vector3f& b, flo
 
 std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
 {
+    // Extracts a uniform scale factor from a matrix.
+    // If the scaling isn't actually uniform, returns some unspecified average scaling, which is hopefully better than just taking an arbitrary axis.
+    static constexpr auto getUniformScale = [&]( const Matrix3f& m ) -> float
+    {
+        Matrix3f r, s;
+        decomposeMatrix3( m, r, s );
+        return ( s.x.x + s.y.y + s.z.z ) / 3;
+    };
+
     if ( auto point = dynamic_cast<const PointObject*>( &object ) )
     {
         return toPrimitive( point->parent()->worldXf()( point->getPoint() ) );
@@ -152,16 +162,12 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
     else if ( auto sphere = dynamic_cast<const SphereObject*>( &object ) )
     {
         auto parentXf = sphere->parent()->worldXf();
-        Vector3f scaleVec = parentXf.A.toScale();
-        float scale = ( scaleVec.x + scaleVec.y + scaleVec.z ) / 3;
-        return toPrimitive( Sphere( parentXf( sphere->getCenter() ), sphere->getRadius() * scale ) );
+        return toPrimitive( Sphere( parentXf( sphere->getCenter() ), sphere->getRadius() * getUniformScale( parentXf.A ) ) );
     }
     else if ( auto circle = dynamic_cast<const CircleObject*>( &object ) )
     {
         auto parentXf = circle->parent()->worldXf();
-        Vector3f scaleVec = parentXf.A.toScale();
-        float scale = ( scaleVec.x + scaleVec.y + scaleVec.z ) / 3;
-        float radius = circle->getRadius() * scale;
+        float radius = circle->getRadius() * getUniformScale( parentXf.A );
         return Primitives::ConeSegment{
             .center = parentXf( circle->getCenter() ),
             .dir = parentXf.A * circle->getNormal(),
@@ -173,8 +179,7 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
     else if ( auto cyl = dynamic_cast<const CylinderObject*>( &object ) )
     {
         auto parentXf = cyl->parent()->worldXf();
-        Vector3f scaleVec = parentXf.A.toScale();
-        float scale = ( scaleVec.x + scaleVec.y + scaleVec.z ) / 3;
+        float scale = getUniformScale( parentXf.A );
         float radius = cyl->getRadius() * scale;
         float halfLen = cyl->getLength() / 2 * scale;
         return Primitives::ConeSegment{
@@ -190,12 +195,10 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
     else if ( auto cone = dynamic_cast<const ConeObject*>( &object ) )
     {
         auto parentXf = cone->parent()->worldXf();
-        Vector3f scaleVec = parentXf.A.toScale();
-        float scale = ( scaleVec.x + scaleVec.y + scaleVec.z ) / 3;
         Primitives::ConeSegment ret{
             .center = parentXf( cone->getCenter() ),
             .dir = parentXf.A * cone->getDirection(),
-            .positiveSideRadius = cone->getBaseRadius() * scale,
+            .positiveSideRadius = cone->getBaseRadius() * getUniformScale( parentXf.A ),
             .negativeSideRadius = 0,
             .positiveLength = cone->getHeight(),
             .negativeLength = 0,
@@ -1594,7 +1597,7 @@ TEST( Features, Angle_Plane_Sphere )
     }
 
     Primitives::Sphere sphere( Vector3f( 100, 50, 10 ), 8 );
-    
+
     { // No collision.
         for ( bool sign : { false, true } )
         {
@@ -1641,7 +1644,7 @@ TEST( Features, Angle_Plane_Sphere )
         ASSERT_TRUE( r.isSurfaceNormalA );
         ASSERT_TRUE( r.isSurfaceNormalB );
     }
-    
+
     { // Exact center overlap.
         Primitives::Plane plane{ .center = Vector3f( 120, 50, 10 ), .normal = Vector3f( 0, 1, 0 ) };
         auto r = measure( sphere, plane ).angle;

@@ -19,7 +19,7 @@ struct Vector4
     T x, y, z, w;
 
     constexpr Vector4() noexcept : x( 0 ), y( 0 ), z( 0 ), w( 0 ) { }
-    explicit constexpr Vector4( NoInit ) noexcept { }
+    explicit Vector4( NoInit ) noexcept { }
     constexpr Vector4( T x, T y, T z, T w ) noexcept : x( x ), y( y ), z( z ), w( w ) { }
     static constexpr Vector4 diagonal( T a ) noexcept
     {

@@ -14,6 +14,8 @@ struct RibbonNotification
     using OnButtonClick = std::function<void()>;
     OnButtonClick onButtonClick;
 
+    // Name of button that will be drawn if callback is enabled
+    std::string buttonName = "OK";
     // Header of notification
     std::string header;
     // Text of notification

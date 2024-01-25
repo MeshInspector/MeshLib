@@ -58,15 +58,24 @@ void RibbonNotifier::drawNotifications( float scaling )
         ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 0.0f );
         ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, 4.0f * scaling );
         ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 10.0f * scaling, 12.0f * scaling ) );
+        ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, { 0, 0 } );
         ImGui::PushStyleColor( ImGuiCol_WindowBg, MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::FrameBackground ).getUInt32() );
 
         if ( i + 1 == cNotificationNumberLimit )
             ImGui::SetNextWindowBgAlpha( 0.5f );
         ImGui::Begin( name.c_str(), nullptr, flags );
-        ImGui::BeginTable( "##NotificationTable", 2, ImGuiTableFlags_SizingFixedFit );
+        const int columnCount = notification.onButtonClick ? 3 : 2;
+        const float firstColumnWidth = 28.0f * scaling;
+        auto& style = ImGui::GetStyle();
+        const float buttonWidth = notification.onButtonClick ?
+            ImGui::CalcTextSize( notification.buttonName.c_str() ).x + 2.0f * style.FramePadding.x + 2.0f * style.WindowPadding.x : 0;
 
-        ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, 28.0f * scaling );
-        ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, 285.0f * scaling );
+        ImGui::BeginTable( "##NotificationTable", columnCount, ImGuiTableFlags_SizingFixedFit );
+
+        ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, firstColumnWidth );
+        ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, width - firstColumnWidth - buttonWidth );
+        if ( notification.onButtonClick )
+            ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, buttonWidth );
 
         ImGui::TableNextColumn();
         auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
@@ -77,6 +86,8 @@ void RibbonNotifier::drawNotifications( float scaling )
         }
 
         ImGui::PushStyleColor( ImGuiCol_Text, notificationParams[int(notification.type)].second );
+        if ( notification.onButtonClick )
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + style.FramePadding.y * 0.5f );
         ImGui::Text( "%s", notificationParams[int(notification.type)].first );
         ImGui::PopStyleColor();
 
@@ -95,6 +106,8 @@ void RibbonNotifier::drawNotifications( float scaling )
                 ImGui::PushFont( boldFont );
             
             ImGui::SetCursorPosX( 40.0f * scaling );
+            if ( notification.onButtonClick )
+                ImGui::SetCursorPosY( ImGui::GetCursorPosY() + style.FramePadding.y * 0.5f );
             ImGui::TextWrapped( "%s", notification.header.c_str() );
 
             if ( boldFont )
@@ -106,14 +119,21 @@ void RibbonNotifier::drawNotifications( float scaling )
             ImGui::PushFont( bigFont );
         
         ImGui::SetCursorPosX( 40.0f * scaling );
+        if ( notification.onButtonClick )
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + style.FramePadding.y * 0.5f );
         ImGui::TextWrapped( "%s", notification.text.c_str() );
         
         if ( bigFont )
             ImGui::PopFont();
-        
-        ImGui::EndTable();
-        if ( notification.onButtonClick && UI::button( "OK", { -1, 0 } ) )
-            notification.onButtonClick();
+        ImGui::SameLine();
+
+        if ( notification.onButtonClick )
+        {
+            ImGui::TableNextColumn();
+            if ( UI::buttonCommonSize( notification.buttonName.c_str() ) )
+                notification.onButtonClick();
+        }
+        ImGui::EndTable();       
 
         auto window = ImGui::GetCurrentContext()->CurrentWindow;
         if ( !ImGui::IsWindowHovered() )
@@ -129,7 +149,7 @@ void RibbonNotifier::drawNotifications( float scaling )
 
         ImGui::End();
         ImGui::PopStyleColor();
-        ImGui::PopStyleVar( 3 );
+        ImGui::PopStyleVar( 4 );
         currentPos.y -= window->Size.y;
     }
     filterInvalid_( numInvalid );

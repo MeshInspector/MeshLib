@@ -2,7 +2,6 @@
 #include "MRViewport.h"
 #include "MRMesh/MRHistoryAction.h"
 #include "MRAppendHistory.h"
-#include <GLFW/glfw3.h>
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRSphereObject.h"
 #include "MRMesh/MRObjectMesh.h"
@@ -237,6 +236,9 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
     auto addPoint = [this] ( const std::shared_ptr<ObjectMeshHolder> obj, const MeshTriPoint& triPoint, bool close )
     {
+        if ( !isObjectValidToPick_( obj ) )
+            return;
+
         if ( !pickedPoints_[obj].empty() )
             updateBaseColor( pickedPoints_[obj].back(), Color::gray() );
 
@@ -277,7 +279,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         addPoint( objMesh, triPoint, false );
         return true;
     }
-    else if ( mod == GLFW_MOD_CONTROL ) // close contour case 
+    else if ( mod == params.widgetContourCloseMod ) // close contour case 
     {
         // Try to find parent object 
         auto isFirstPointOnCountourClicked = false;
@@ -302,7 +304,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         addPoint( objectToCloseCoutour, triPoint, true );
         return true;
     }
-    else if ( mod == GLFW_MOD_SHIFT )  // remove point case 
+    else if ( mod == params.widgetDeletePointMod )  // remove point case 
     {
         if ( pickedPoints_.empty() )
             return false;
@@ -383,12 +385,19 @@ bool SurfaceContoursWidget::onMouseMove_( int, int )
     return false;
 }
 
-void SurfaceContoursWidget::create( PickerPointCallBack onPointAdd, PickerPointCallBack onPointMove, PickerPointCallBack onPointMoveFinish, PickerPointCallBack onPointRemove )
+void SurfaceContoursWidget::create(
+        PickerPointCallBack onPointAdd,
+        PickerPointCallBack onPointMove,
+        PickerPointCallBack onPointMoveFinish,
+        PickerPointCallBack onPointRemove,
+        PickerPointObjectChecker isObjectValidToPick
+)
 {
     onPointAdd_ = std::move( onPointAdd );
     onPointMove_ = std::move( onPointMove );
     onPointMoveFinish_ = std::move( onPointMoveFinish );
     onPointRemove_ = std::move( onPointRemove );
+    isObjectValidToPick_ = std::move( isObjectValidToPick );
 
     clear();
 

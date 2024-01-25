@@ -56,13 +56,13 @@ public:
     // reset widget, clear internal variables and detach from signals.
     MRVIEWER_API void reset();
 
-    // return contour for specific object.
+    // return contour for specific object, i.e. ordered vector of surface points
     [[nodiscard]] const SurfaceContour& getSurfaceContour( const std::shared_ptr<MR::ObjectMeshHolder>& obj )
     {
         return pickedPoints_[obj];
     }
 
-    // return all contours. 
+    // return all contours, i.e. per object umap of ordered surface points [vestor].
     [[nodiscard]] const SurfaceContours& getSurfaceContours() const
     {
         return pickedPoints_;
@@ -104,6 +104,65 @@ private:
     friend class ChangePointActionPickerPoint;
 };
 
+
+// History classes;
+class AddPointActionPickerPoint : public HistoryAction
+{
+public:
+    AddPointActionPickerPoint( SurfaceContoursWidget& widget, const std::shared_ptr<MR::ObjectMeshHolder>& obj, const MeshTriPoint& point ) :
+        widget_{ widget },
+        obj_{ obj },
+        point_{ point }
+    {};
+
+    virtual std::string name() const override;
+    virtual void action( Type actionType ) override;
+    [[nodiscard]] virtual size_t heapBytes() const override;
+private:
+    SurfaceContoursWidget& widget_;
+    const std::shared_ptr<MR::ObjectMeshHolder> obj_;
+    MeshTriPoint point_;
+};
+
+class RemovePointActionPickerPoint : public HistoryAction
+{
+public:
+    RemovePointActionPickerPoint( SurfaceContoursWidget& widget, const std::shared_ptr<MR::ObjectMeshHolder>& obj, const MeshTriPoint& point, int index ) :
+        widget_{ widget },
+        obj_{ obj },
+        point_{ point },
+        index_{ index }
+    {};
+
+    virtual std::string name() const override;
+    virtual void action( Type actionType ) override;
+    [[nodiscard]] virtual size_t heapBytes() const override;
+private:
+    SurfaceContoursWidget& widget_;
+    const std::shared_ptr<MR::ObjectMeshHolder> obj_;
+    MeshTriPoint point_;
+    int index_;
+};
+
+class ChangePointActionPickerPoint : public HistoryAction
+{
+public:
+    ChangePointActionPickerPoint( SurfaceContoursWidget& widget, const std::shared_ptr<MR::ObjectMeshHolder>& obj, const MeshTriPoint& point, int index ) :
+        widget_{ widget },
+        obj_{ obj },
+        point_{ point },
+        index_{ index }
+    {};
+
+    virtual std::string name() const override;
+    virtual void action( Type ) override;
+    [[nodiscard]] virtual size_t heapBytes() const override;
+private:
+    SurfaceContoursWidget& widget_;
+    const std::shared_ptr<MR::ObjectMeshHolder> obj_;
+    MeshTriPoint point_;
+    int index_;
+};
 
 
 

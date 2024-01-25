@@ -17,154 +17,112 @@ void updateBaseColor( std::shared_ptr<SurfacePointWidget> point, const Color& co
 }
 
 // History classes;
-class AddPointActionPickerPoint : public HistoryAction
+
+std::string AddPointActionPickerPoint::name() const
 {
-public:
-    AddPointActionPickerPoint( SurfaceContoursWidget& widget, const std::shared_ptr<MR::ObjectMeshHolder>& obj, const MeshTriPoint& point ) :
-        widget_{ widget },
-        obj_{ obj },
-        point_{ point }
-    {};
+    return "Add Point";
+}
 
-    virtual std::string name() const override
+void AddPointActionPickerPoint::action( Type actionType )
+{
+    if ( !widget_.isPickerActive_ )
+        return;
+    if ( actionType == Type::Undo )
     {
-        return "Add Point";
-    }
-    virtual void action( Type actionType ) override
-    {
-        if ( !widget_.isPickerActive_ )
-            return;
-        if ( actionType == Type::Undo )
-        {
-            widget_.pickedPoints_[obj_].pop_back();
+        widget_.pickedPoints_[obj_].pop_back();
 
-            if ( !widget_.pickedPoints_[obj_].empty() )
-                updateBaseColor( widget_.pickedPoints_[obj_].back(), widget_.params.lastPoitColor );
-
-            widget_.activeIndex = int( widget_.pickedPoints_[obj_].size() );
-            widget_.activeObject = obj_;
-
-            widget_.onPointRemove_( obj_ );
-        }
-        else
-        {
-            if ( !widget_.pickedPoints_[obj_].empty() )
-                updateBaseColor( widget_.pickedPoints_[obj_].back(), widget_.params.ordinaryPointColor );
-
-            widget_.pickedPoints_[obj_].push_back( widget_.createPickWidget_( obj_, point_ ) );
-
+        if ( !widget_.pickedPoints_[obj_].empty() )
             updateBaseColor( widget_.pickedPoints_[obj_].back(), widget_.params.lastPoitColor );
 
+        widget_.activeIndex = int( widget_.pickedPoints_[obj_].size() );
+        widget_.activeObject = obj_;
 
-            widget_.onPointAdd_( obj_ );
-        }
-
+        widget_.onPointRemove_( obj_ );
     }
-    [[nodiscard]] virtual size_t heapBytes() const override
+    else
     {
-        return 0; //this undo action will be deleted in widget disable
-    }
-private:
-    SurfaceContoursWidget& widget_;
-    const std::shared_ptr<MR::ObjectMeshHolder> obj_;
-    MeshTriPoint point_;
-};
+        if ( !widget_.pickedPoints_[obj_].empty() )
+            updateBaseColor( widget_.pickedPoints_[obj_].back(), widget_.params.ordinaryPointColor );
 
-class RemovePointActionPickerPoint : public HistoryAction
+        widget_.pickedPoints_[obj_].push_back( widget_.createPickWidget_( obj_, point_ ) );
+
+        updateBaseColor( widget_.pickedPoints_[obj_].back(), widget_.params.lastPoitColor );
+
+
+        widget_.onPointAdd_( obj_ );
+    }
+
+}
+size_t AddPointActionPickerPoint::heapBytes() const
 {
-public:
-    RemovePointActionPickerPoint( SurfaceContoursWidget& widget, const std::shared_ptr<MR::ObjectMeshHolder>& obj, const MeshTriPoint& point, int index ) :
-        widget_{ widget },
-        obj_{ obj },
-        point_{ point },
-        index_{ index }
-    {};
+    return 0; //this undo action will be deleted in widget disable
+}
 
-    virtual std::string name() const override
-    {
-        return "Remove Point";
-    }
-    virtual void action( Type actionType ) override
-    {
-        if ( !widget_.isPickerActive_ )
-            return;
 
-        if ( actionType == Type::Undo )
-        {
-            if ( index_ == widget_.pickedPoints_[obj_].size() && !widget_.pickedPoints_[obj_].empty() )
-                updateBaseColor( widget_.pickedPoints_[obj_].back(), widget_.params.ordinaryPointColor );
 
-            widget_.pickedPoints_[obj_].insert( widget_.pickedPoints_[obj_].begin() + index_, widget_.createPickWidget_( obj_, point_ ) );
-
-            if ( index_ + 1 == widget_.pickedPoints_[obj_].size() )
-                updateBaseColor( widget_.pickedPoints_[obj_].back(), widget_.params.lastPoitColor );
-            widget_.activeIndex = index_;
-            widget_.activeObject = obj_;
-
-            widget_.onPointAdd_( obj_ );
-            widget_.pickedPoints_[obj_].back()->setHovered( false );
-
-        }
-        else
-        {
-            widget_.pickedPoints_[obj_].erase( widget_.pickedPoints_[obj_].begin() + index_ );
-
-            if ( index_ == widget_.pickedPoints_[obj_].size() && !widget_.pickedPoints_[obj_].empty() )
-                updateBaseColor( widget_.pickedPoints_[obj_].back(), widget_.params.lastPoitColor );
-
-            widget_.activeIndex = index_;
-            widget_.activeObject = obj_;
-
-            widget_.onPointRemove_( obj_ );
-        }
-    }
-
-    [[nodiscard]] virtual size_t heapBytes() const override
-    {
-        return 0; //this undo action will be deleted in widget disable
-    }
-private:
-    SurfaceContoursWidget& widget_;
-    const std::shared_ptr<MR::ObjectMeshHolder> obj_;
-    MeshTriPoint point_;
-    int index_;
-};
-
-class ChangePointActionPickerPoint : public HistoryAction
+std::string RemovePointActionPickerPoint::name() const
 {
-public:
-    ChangePointActionPickerPoint( SurfaceContoursWidget& widget, const std::shared_ptr<MR::ObjectMeshHolder>& obj, const MeshTriPoint& point, int index ) :
-        widget_{ widget },
-        obj_{ obj },
-        point_{ point },
-        index_{ index }
-    {};
+    return "Remove Point";
+}
+void RemovePointActionPickerPoint::action( Type actionType )
+{
+    if ( !widget_.isPickerActive_ )
+        return;
 
-    virtual std::string name() const override
+    if ( actionType == Type::Undo )
     {
-        return "Move Point";
-    }
-    virtual void action( Type ) override
-    {
-        if ( !widget_.isPickerActive_ )
-            return;
+        if ( index_ == widget_.pickedPoints_[obj_].size() && !widget_.pickedPoints_[obj_].empty() )
+            updateBaseColor( widget_.pickedPoints_[obj_].back(), widget_.params.ordinaryPointColor );
 
-        widget_.pickedPoints_[obj_][index_]->updateCurrentPosition( point_ );
+        widget_.pickedPoints_[obj_].insert( widget_.pickedPoints_[obj_].begin() + index_, widget_.createPickWidget_( obj_, point_ ) );
+
+        if ( index_ + 1 == widget_.pickedPoints_[obj_].size() )
+            updateBaseColor( widget_.pickedPoints_[obj_].back(), widget_.params.lastPoitColor );
         widget_.activeIndex = index_;
         widget_.activeObject = obj_;
-        widget_.onPointMoveFinish_( obj_ );
-    }
 
-    [[nodiscard]] virtual size_t heapBytes() const override
-    {
-        return 0; //this undo action will be deleted in widget disable
+        widget_.onPointAdd_( obj_ );
+        widget_.pickedPoints_[obj_].back()->setHovered( false );
+
     }
-private:
-    SurfaceContoursWidget& widget_;
-    const std::shared_ptr<MR::ObjectMeshHolder> obj_;
-    MeshTriPoint point_;
-    int index_;
-};
+    else
+    {
+        widget_.pickedPoints_[obj_].erase( widget_.pickedPoints_[obj_].begin() + index_ );
+
+        if ( index_ == widget_.pickedPoints_[obj_].size() && !widget_.pickedPoints_[obj_].empty() )
+            updateBaseColor( widget_.pickedPoints_[obj_].back(), widget_.params.lastPoitColor );
+
+        widget_.activeIndex = index_;
+        widget_.activeObject = obj_;
+
+        widget_.onPointRemove_( obj_ );
+    }
+}
+
+size_t RemovePointActionPickerPoint::heapBytes() const
+{
+    return 0; //this undo action will be deleted in widget disable
+}
+
+std::string ChangePointActionPickerPoint::name() const
+{
+    return "Move Point";
+}
+void ChangePointActionPickerPoint::action( Type )
+{
+    if ( !widget_.isPickerActive_ )
+        return;
+
+    widget_.pickedPoints_[obj_][index_]->updateCurrentPosition( point_ );
+    widget_.activeIndex = index_;
+    widget_.activeObject = obj_;
+    widget_.onPointMoveFinish_( obj_ );
+}
+
+size_t ChangePointActionPickerPoint::heapBytes() const
+{
+    return 0; //this undo action will be deleted in widget disable
+}
 
 void SurfaceContoursWidget::enable( bool isEnaled )
 {
@@ -212,7 +170,7 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
     } );
     newPoint->setEndMoveCallback( [this, obj, curentPoint] ( const MeshTriPoint& point )
     {
-        if ( moveClosedPoint_ && curentPoint.lock() == pickedPoints_[obj][0]  )
+        if ( moveClosedPoint_ && curentPoint.lock() == pickedPoints_[obj][0] )
         {
             pickedPoints_[obj].back()->updateCurrentPosition( point );
             moveClosedPoint_ = false;

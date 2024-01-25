@@ -39,7 +39,7 @@ public:
             widget_.pickedPoints_[obj_].pop_back();
 
             if ( !widget_.pickedPoints_[obj_].empty() )
-                updateBaseColor( widget_.pickedPoints_[obj_].back(), Color::green() );
+                updateBaseColor( widget_.pickedPoints_[obj_].back(), widget_.params.lastPoitColor );
 
             widget_.activeIndex = int( widget_.pickedPoints_[obj_].size() );
             widget_.activeObject = obj_;
@@ -49,11 +49,11 @@ public:
         else
         {
             if ( !widget_.pickedPoints_[obj_].empty() )
-                updateBaseColor( widget_.pickedPoints_[obj_].back(), Color::gray() );
+                updateBaseColor( widget_.pickedPoints_[obj_].back(), widget_.params.ordinaryPointColor );
 
             widget_.pickedPoints_[obj_].push_back( widget_.createPickWidget_( obj_, point_ ) );
 
-            updateBaseColor( widget_.pickedPoints_[obj_].back(), Color::green() );
+            updateBaseColor( widget_.pickedPoints_[obj_].back(), widget_.params.lastPoitColor );
 
 
             widget_.onPointAdd_( obj_ );
@@ -92,24 +92,25 @@ public:
         if ( actionType == Type::Undo )
         {
             if ( index_ == widget_.pickedPoints_[obj_].size() && !widget_.pickedPoints_[obj_].empty() )
-                updateBaseColor( widget_.pickedPoints_[obj_].back(), Color::gray() );
+                updateBaseColor( widget_.pickedPoints_[obj_].back(), widget_.params.ordinaryPointColor );
 
             widget_.pickedPoints_[obj_].insert( widget_.pickedPoints_[obj_].begin() + index_, widget_.createPickWidget_( obj_, point_ ) );
 
             if ( index_ + 1 == widget_.pickedPoints_[obj_].size() )
-                updateBaseColor( widget_.pickedPoints_[obj_].back(), Color::green() );
+                updateBaseColor( widget_.pickedPoints_[obj_].back(), widget_.params.lastPoitColor );
             widget_.activeIndex = index_;
             widget_.activeObject = obj_;
 
-            widget_.pickedPoints_[obj_].back()->setHovered( false );
             widget_.onPointAdd_( obj_ );
+            widget_.pickedPoints_[obj_].back()->setHovered( false );
+
         }
         else
         {
             widget_.pickedPoints_[obj_].erase( widget_.pickedPoints_[obj_].begin() + index_ );
 
             if ( index_ == widget_.pickedPoints_[obj_].size() && !widget_.pickedPoints_[obj_].empty() )
-                updateBaseColor( widget_.pickedPoints_[obj_].back(), Color::green() );
+                updateBaseColor( widget_.pickedPoints_[obj_].back(), widget_.params.lastPoitColor );
 
             widget_.activeIndex = index_;
             widget_.activeObject = obj_;
@@ -176,6 +177,7 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
 {
     auto newPoint = std::make_shared<SurfacePointWidget>();
     newPoint->setAutoHover( false );
+    newPoint->setParameters( params.surfacePointParams );
     auto objMesh = std::dynamic_pointer_cast< MR::ObjectMesh > ( obj );
     if ( objMesh )
         newPoint->create( objMesh, pt );
@@ -191,14 +193,18 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
 
         if ( closedPath && curentPoint.lock() == pickedPoints_[obj][0] )
         {
-            SCOPED_HISTORY( "Change Point" );
-            AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, activeIndex );
-            AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, int( pickedPoints_[obj].size() ) - 1 );
+            if ( params.writeHistory )
+            {
+                SCOPED_HISTORY( "Change Point" );
+                AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, activeIndex );
+                AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, int( pickedPoints_[obj].size() ) - 1 );
+            }
             moveClosedPoint_ = true;
         }
         else if ( !closedPath || curentPoint.lock() != pickedPoints_[obj].back() )
         {
-            AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, activeIndex );
+            if ( params.writeHistory )
+                AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, activeIndex );
         }
         activeChange_ = true;
         onPointMove_( obj );
@@ -206,9 +212,10 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
     } );
     newPoint->setEndMoveCallback( [this, obj, curentPoint] ( const MeshTriPoint& point )
     {
-        if ( moveClosedPoint_ && curentPoint.lock() == pickedPoints_[obj][0] )
+        if ( moveClosedPoint_ && curentPoint.lock() == pickedPoints_[obj][0]  )
         {
             pickedPoints_[obj].back()->updateCurrentPosition( point );
+            moveClosedPoint_ = false;
         }
         activeChange_ = false;
         onPointMoveFinish_( obj );
@@ -240,23 +247,29 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
             return;
 
         if ( !pickedPoints_[obj].empty() )
-            updateBaseColor( pickedPoints_[obj].back(), Color::gray() );
+            updateBaseColor( pickedPoints_[obj].back(), params.ordinaryPointColor );
 
-        AppendHistory<AddPointActionPickerPoint>( *this, obj, triPoint );
+        if ( params.writeHistory )
+            AppendHistory<AddPointActionPickerPoint>( *this, obj, triPoint );
+
         pickedPoints_[obj].push_back( createPickWidget_( obj, triPoint ) );
-        updateBaseColor( pickedPoints_[obj].back(), close ? Color::transparent() : Color::green() );
+        updateBaseColor( pickedPoints_[obj].back(), close ? params.closeContourPointColor : params.lastPoitColor );
+
+        activeIndex = static_cast< int >( pickedPoints_[obj].size() - 1 );
+        activeObject = obj;
+
         onPointAdd_( obj );
     };
     auto removePoint = [this] ( const std::shared_ptr<ObjectMeshHolder> obj, int pickedIndex )
     {
         if ( pickedIndex == int( pickedPoints_[obj].size() ) - 1 && pickedPoints_[obj].size() > 1 )
         {
-            SurfacePointWidget::Parameters params;
-            params.baseColor = Color::green();
-            pickedPoints_[obj][pickedIndex - 1]->setParameters( params );
+            updateBaseColor( pickedPoints_[obj][pickedIndex - 1], params.lastPoitColor );
         }
 
-        AppendHistory<RemovePointActionPickerPoint>( *this, obj, pickedPoints_[obj][pickedIndex]->getCurrentPosition(), pickedIndex );
+        if ( params.writeHistory )
+            AppendHistory<RemovePointActionPickerPoint>( *this, obj, pickedPoints_[obj][pickedIndex]->getCurrentPosition(), pickedIndex );
+
         pickedPoints_[obj].erase( pickedPoints_[obj].begin() + pickedIndex );
         activeIndex = pickedIndex;
         activeObject = obj;
@@ -335,7 +348,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
             assert( pickedObj != nullptr );
             assert( pickedIndex != pickedPoints_[pickedObj].size() - 1 ); // unable to pick point which is close countour
 
-            SCOPED_HISTORY( "Remove Point" );
+            if ( params.writeHistory ) SCOPED_HISTORY( "Remove Point" );
 
             // 4 points - minimal non-trivial closed path
             // last on is a "pseudo" point to close contour
@@ -417,13 +430,17 @@ void SurfaceContoursWidget::reset()
     clear();
     enable( false );
 
-    FilterHistoryByCondition( [&] ( const std::shared_ptr<HistoryAction>& action )
+    if ( ( params.writeHistory ) && ( params.flashHistoryAtEnd ) )
     {
-        bool res = bool( std::dynamic_pointer_cast< AddPointActionPickerPoint >( action ) ) ||
-            bool( std::dynamic_pointer_cast< RemovePointActionPickerPoint >( action ) ) ||
-            bool( std::dynamic_pointer_cast< ChangePointActionPickerPoint >( action ) );
-        return res;
-    } );
+        FilterHistoryByCondition( [&] ( const std::shared_ptr<HistoryAction>& action )
+        {
+            bool res =
+                bool( std::dynamic_pointer_cast< AddPointActionPickerPoint >( action ) ) ||
+                bool( std::dynamic_pointer_cast< RemovePointActionPickerPoint >( action ) ) ||
+                bool( std::dynamic_pointer_cast< ChangePointActionPickerPoint >( action ) );
+            return res;
+        } );
+    }
 
     disconnect();
 }

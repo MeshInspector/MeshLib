@@ -5,8 +5,8 @@
 #include "MRMesh/MRMeshFwd.h"
 #include "MRSurfacePointPicker.h"
 #include "MRMesh/MRObjectMeshHolder.h"
-
-#include <GLFW/glfw3.h>
+#include "MRMesh/MRHistoryStore.h"
+#include "MRViewer/MRGladGlfw.h"
 #include <unordered_map>
 
 namespace MR
@@ -21,9 +21,13 @@ public:
     struct SurfaceContoursWidgetParams {
         int widgetContourCloseMod = GLFW_MOD_CONTROL;
         int widgetDeletePointMod = GLFW_MOD_SHIFT;
-
+        bool writeHistory = true;
+        bool flashHistoryAtEnd = true;
+        SurfacePointWidget::Parameters surfacePointParams;
+        MR::Color ordinaryPointColor = Color::gray();
+        MR::Color lastPoitColor = Color::green();
+        MR::Color closeContourPointColor = Color::transparent();
     };
-
 
     using PickerPointCallBack = std::function<void( std::shared_ptr<MR::ObjectMeshHolder> )>;
     using PickerPointObjectChecker = std::function<bool( std::shared_ptr<MR::ObjectMeshHolder> )>;

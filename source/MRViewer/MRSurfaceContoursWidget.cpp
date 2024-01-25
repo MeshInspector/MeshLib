@@ -227,7 +227,6 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         return false;
 
 
-     bool closedPath = pickedPoints_[objMesh].size() > 1 && pickedPoints_[objMesh][0]->getCurrentPosition() == pickedPoints_[objMesh].back()->getCurrentPosition();
 
     auto addPoint = [this] ( const std::shared_ptr<ObjectMeshHolder> obj, const MeshTriPoint& triPoint, bool close )
     {
@@ -257,6 +256,9 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
     if ( !mod )
     {
+        // all pick in point (without mod) must not comes here. Point widget must "eat" them. 
+        const bool closedPath = pickedPoints_[objMesh].size() > 1 && pickedPoints_[objMesh][0]->getCurrentPosition() == pickedPoints_[objMesh].back()->getCurrentPosition();
+
         if ( closedPath )
             return false;
 
@@ -268,11 +270,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     }
     else if ( mod == GLFW_MOD_CONTROL ) // close contour case 
     {
-        if ( closedPath )
-            return false;
-
-        assert( objMesh != nullptr ); // contoursWidget_ can join for mesh objects only
-
+        // Try to find parent object 
         auto isFirstPointOnCountourClicked = false;
         std::shared_ptr<ObjectMeshHolder> objectToCloseCoutour = nullptr;
         for ( const auto& [parentObj, contour] : pickedPoints_ )
@@ -285,6 +283,12 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
             }
         }
         if ( !isFirstPointOnCountourClicked )
+            return false;
+
+        bool closedPath = pickedPoints_[objectToCloseCoutour].size() > 1 
+            && pickedPoints_[objectToCloseCoutour][0]->getCurrentPosition() == pickedPoints_[objectToCloseCoutour].back()->getCurrentPosition();
+
+        if ( closedPath )
             return false;
 
         assert( objectToCloseCoutour !=nullptr);
@@ -300,6 +304,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         int pickedIndex = -1;
         std::shared_ptr<MR::ObjectMeshHolder> pickedObj = nullptr;
 
+        // try to find point to remove 
         for ( auto contour : pickedPoints_ )
             for ( int i = 0; i < contour.second.size(); ++i )
             {
@@ -316,19 +321,31 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         if ( ( pickedIndex == -1 ) || ( pickedObj == nullptr ) )
             return false;
 
+
+        bool closedPath = pickedPoints_[pickedObj].size() > 1
+            && pickedPoints_[pickedObj][0]->getCurrentPosition() == pickedPoints_[pickedObj].back()->getCurrentPosition();
+
         if ( closedPath )
         {
             assert( pickedIndex >= 0 );
             assert( pickedObj != nullptr );
+            assert( pickedIndex != pickedPoints_[pickedObj].size() - 1 ); // unable to pick point which is close countour
 
             SCOPED_HISTORY( "Remove Point" );
+            
             // 4 points - minimal non-trivial closed path
             // last on is a "pseudo" point to close contour
-
+            // so remove last point which is close contour in case of: 
+            // 1) Contour can no longer been closed (only 2 valid point left ) 
+            // 2) First point need to be remove. Last point will be restored later.  
             if ( pickedPoints_[pickedObj].size() == 4 || pickedIndex == 0 ) 
-                removePoint( pickedObj, ( int )pickedPoints_[pickedObj].size() - 1 );
-
+                removePoint( pickedObj, ( int )pickedPoints_[pickedObj].size() - 1 )
+                ;
+            
+            // Remove point marked to be removed. 
             removePoint( pickedObj, pickedIndex );
+
+            // Restore close countour. 
             if ( pickedPoints_[pickedObj].size() > 2 && pickedIndex == 0 )
                 addPoint( pickedObj, pickedPoints_[pickedObj][0]->getCurrentPosition(), true );
         }

@@ -155,16 +155,7 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
     if ( ProgressBar::isOrdered() )
     {
         if ( menu )
-        {
-            menu->pushNotification( {
-                .drawContentFunc = [] ( float ,float )
-            {
-                ImGui::TextWrapped( "Another operation in progress." );
-                return true;
-            },
-                .lifeTimeSec = 3.0f
-                } );
-        }
+            menu->pushNotification( { .text = "Another operation in progress.", .lifeTimeSec = 3.0f } );
         return true;
     }
 

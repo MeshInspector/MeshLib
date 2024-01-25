@@ -1,7 +1,11 @@
 #include "MRRibbonNotification.h"
 #include "MRCommandLoop.h"
 #include "MRViewer.h"
+#include "MRColorTheme.h"
+#include "MRRibbonFontManager.h"
+#include "MRUIStyle.h"
 #include "ImGuiHelpers.h"
+#include "MRMesh/MRColor.h"
 #include "MRPch/MRWasm.h"
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -9,6 +13,14 @@
 namespace
 {
 constexpr int cNotificationNumberLimit = 10;
+
+constexpr std::array< std::pair<const char*, ImU32>, int( MR::NotificationType::Count )> notificationParams
+{
+    std::pair<const char*, ImU32> { "\xef\x81\xaa", ::MR::Color( 217, 0, 0 ).getUInt32() },
+    std::pair<const char*, ImU32> { "\xef\x81\xb1", ::MR::Color( 255, 146, 0 ).getUInt32() },
+    std::pair<const char*, ImU32> { "\xef\x83\xb3", ::MR::Color( 39, 119, 214 ).getUInt32() }
+};
+
 }
 
 namespace MR
@@ -26,7 +38,7 @@ void RibbonNotifier::drawNotifications( float scaling )
 {
     Vector2f currentPos = Vector2f( getViewerInstance().framebufferSize );
     const Vector2f padding = Vector2f( 0.0f, 20.0f * scaling );
-    const float width = 250.0f * scaling;
+    const float width = 337.0f * scaling;
     currentPos.x -= padding.y;
 
     int numInvalid = -1;
@@ -44,25 +56,79 @@ void RibbonNotifier::drawNotifications( float scaling )
             ImGuiWindowFlags_NoMove;
         std::string name = "##notification" + std::to_string( i );
         ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 0.0f );
-        ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, 10.0f * scaling );
-        ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 15.0f * scaling, 15.0f * scaling ) );
+        ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, 4.0f * scaling );
+        ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 10.0f * scaling, 12.0f * scaling ) );
+        ImGui::PushStyleColor( ImGuiCol_WindowBg, MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::FrameBackground ).getUInt32() );
+
         if ( i + 1 == cNotificationNumberLimit )
             ImGui::SetNextWindowBgAlpha( 0.5f );
         ImGui::Begin( name.c_str(), nullptr, flags );
-        if ( notification.drawContentFunc )
-            if ( !notification.drawContentFunc( width, scaling ) )
-                numInvalid = i;
+        ImGui::BeginTable( "##NotificationTable", 2, ImGuiTableFlags_SizingFixedFit );
+
+        ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, 28.0f * scaling );
+        ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, 285.0f * scaling );
+
+        ImGui::TableNextColumn();
+        auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
+        if ( iconsFont )
+        {
+            iconsFont->Scale = 0.7f;
+            ImGui::PushFont( iconsFont );
+        }
+
+        ImGui::PushStyleColor( ImGuiCol_Text, notificationParams[int(notification.type)].second );
+        ImGui::Text( "%s", notificationParams[int(notification.type)].first );
+        ImGui::PopStyleColor();
+
+        if ( iconsFont )
+        {
+            iconsFont->Scale = 1.0f;
+            ImGui::PopFont();
+        }
+
+        ImGui::TableNextColumn();
+
+        if ( !notification.header.empty() )
+        {
+            auto boldFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::BigSemiBold );
+            if ( boldFont )
+                ImGui::PushFont( boldFont );
+            
+            ImGui::SetCursorPosX( 40.0f * scaling );
+            ImGui::TextWrapped( "%s", notification.header.c_str() );
+
+            if ( boldFont )
+                ImGui::PopFont();
+        }
+
+        auto bigFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Big );
+        if ( bigFont )
+            ImGui::PushFont( bigFont );
+        
+        ImGui::SetCursorPosX( 40.0f * scaling );
+        ImGui::TextWrapped( "%s", notification.text.c_str() );
+        
+        if ( bigFont )
+            ImGui::PopFont();
+        
+        ImGui::EndTable();
+        if ( notification.onButtonClick && UI::button( "OK", { -1, 0 } ) )
+            notification.onButtonClick();
+
         auto window = ImGui::GetCurrentContext()->CurrentWindow;
         if ( !ImGui::IsWindowHovered() )
             timer += ImGui::GetIO().DeltaTime;
-        else
+        
+        if ( notification.type == NotificationType::Error || notification.type == NotificationType::Warning )
         {
             auto drawList = window->DrawList;
             drawList->PushClipRectFullScreen();
-            drawList->AddRect( window->Rect().Min, window->Rect().Max, ImGui::GetColorU32( ImGuiCol_Text ), 10.0f * scaling, 0, scaling );
+            drawList->AddRect( window->Rect().Min, window->Rect().Max, notificationParams[int( notification.type )].second, 4.0f * scaling, 0, 2.0f * scaling );
             drawList->PopClipRect();
         }
+
         ImGui::End();
+        ImGui::PopStyleColor();
         ImGui::PopStyleVar( 3 );
         currentPos.y -= window->Size.y;
     }

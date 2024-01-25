@@ -562,10 +562,10 @@ if mrmeshpy.findRightBoundary(mesh.topology).empty():
 
 # Make offset mesh
 offset = mesh.computeBoundingBox().diagonal() * 0.05
-offseted_mesh = mrmeshpy.offsetMesh(mesh, offset, params)
+result_mesh = mrmeshpy.offsetMesh(mesh, offset, params)
 
 # Save result
-mrmeshpy.saveMesh(offseted_mesh, "offsetedMesh.stl")
+mrmeshpy.saveMesh(result_mesh, "offsetMesh.stl")
 \endcode
 
 Example of mesh ICP
@@ -581,7 +581,7 @@ meshFixed = mrmeshpy.loadMesh("meshB.stl")
 diagonal = meshFixed.getBoundingBox().diagonal()
 icp_sampling_voxel_size = diagonal * 0.01  # To sample points from object
 icp_params = mrmeshpy.ICPProperties()
-icp_params.distTresholdSq = (diagonal * 0.1) ** 2  # Select points pairs that is not too far
+icp_params.distTresholdSq = (diagonal * 0.1) ** 2  # Use points pairs with maximum distance specified
 icp_params.exitVal = diagonal * 0.003  # Stop when this distance reached
 
 # Calculate transformation

@@ -24,8 +24,7 @@ public:
     MRVIEWER_API bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
 
-    MRVIEWER_API std::shared_ptr<SurfacePointWidget> createPickWidget_( std::shared_ptr<MR::ObjectMeshHolder> obj_, const MeshTriPoint& pt );
-
+    // enable or disable widget
     MRVIEWER_API void enable( bool isEnaled )
     {
         isPickerActive_ = isEnaled;
@@ -33,62 +32,55 @@ public:
             pickedPoints_.clear();
     }
 
-    MRVIEWER_API void create( PickerPointCallBack onPointAdd, PickerPointCallBack onPointMove, PickerPointCallBack onPointMoveFinish, PickerPointCallBack onPointRemove )
-    {
-        onPointAdd_ = std::move( onPointAdd );
-        onPointMove_ = std::move( onPointMove );
-        onPointMoveFinish_ = std::move( onPointMoveFinish );
-        onPointRemove_ = std::move( onPointRemove );
+    // create a widget and connect it. 
+    MRVIEWER_API void create( PickerPointCallBack onPointAdd, PickerPointCallBack onPointMove, PickerPointCallBack onPointMoveFinish, PickerPointCallBack onPointRemove );
 
-        clear();
+    // clear temp internal variables.
+    MRVIEWER_API void clear();
 
-        // 10 group to imitate plugins behavior
-        connect( &getViewerInstance(), 10, boost::signals2::at_front );
-    }
-
-    MRVIEWER_API void clear()
-    {
-        pickedPoints_.clear();
-        activeIndex_ = 0;
-        activeObject_ = nullptr;
-    }
-
+    // reset widget, clear internal variables and detach from signals.
     MRVIEWER_API void reset();
 
-    [[nodiscard]] const SurfaceContour& getSurfaceContour( const std::shared_ptr<MR::ObjectMeshHolder> obj ) 
+    // return contour for specific object.
+    [[nodiscard]] const SurfaceContour& getSurfaceContour( const std::shared_ptr<MR::ObjectMeshHolder> obj )
     {
         return pickedPoints_[obj];
     }
 
+    // return all contours. 
     [[nodiscard]] const SurfaceContours& getSurfaceContours() const
     {
         return pickedPoints_;
     }
 
+    // chech is contour closed for particular object.
+    [[nodiscard]] bool isClosedCountour( const std::shared_ptr<ObjectMeshHolder> obj );
 
+    // shared variables. which need getters and setters.
     int activeIndex_{ 0 };
     std::shared_ptr<MR::ObjectMeshHolder> activeObject_ = nullptr;
 
-    // TODO move ti to private !!!!! 
+private:
+
+    // creates point widget for add to contour.
+    [[nodiscard]] std::shared_ptr<SurfacePointWidget> createPickWidget_( std::shared_ptr<MR::ObjectMeshHolder> obj_, const MeshTriPoint& pt );
+
+
+    // SurfaceContoursWidget interlal variables 
+    bool moveClosedPoint_ = false;
+    bool activeChange_ = false;
     bool isPickerActive_ = false;
+
+    // data storage
+    SurfaceContours pickedPoints_;
+
+    // CallBack functions
     PickerPointCallBack onPointAdd_;
     PickerPointCallBack onPointMove_;
     PickerPointCallBack onPointMoveFinish_;
     PickerPointCallBack onPointRemove_;
-    // data storage
-    SurfaceContours pickedPoints_;
 
-private:
-
-    // SurfaceContoursWidget interlal variables 
-
-    bool moveClosedPoint_ = false;
-    bool activeChange_ = false;
-
-
-
-
-    friend class AddPointActionBestPickerPoint;
+    friend class AddPointActionPickerPoint;
     friend class RemovePointActionPickerPoint;
     friend class ChangePointActionPickerPoint;
 };

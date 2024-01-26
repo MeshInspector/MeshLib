@@ -1,7 +1,7 @@
 import pytest
 from module_helper import *
-from pathlib import Path
 from constants import test_files_path
+from pathlib import Path
 from helpers.file_helpers import compare_file_with_multiple_references, get_reference_files_list
 
 

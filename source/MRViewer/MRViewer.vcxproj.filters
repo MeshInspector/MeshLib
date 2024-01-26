@@ -316,6 +316,9 @@
     <ClCompile Include="MRViewportDraw.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
+    <ClCompile Include="MRSurfaceContoursWidget.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -613,6 +616,9 @@
     </ClInclude>
     <ClInclude Include="MRNotificationType.h">
       <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSurfaceContoursWidget.h">
+      <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

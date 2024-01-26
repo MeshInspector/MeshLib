@@ -62,8 +62,8 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
         SearchResult itemRes;
         itemRes.tabIndex = t;
         itemRes.item = &item;
-        const auto pos—E = findSubstringCaseInsensitive( caption, searchStr );
-        if ( pos—E != std::string::npos )
+        const auto posCE = findSubstringCaseInsensitive( caption, searchStr );
+        if ( posCE != std::string::npos )
         {
             if ( !exactMatch )
             {
@@ -71,7 +71,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
                 exactMatch = true;
             }
             itemRes.captionWeight = 0.f;
-            itemRes.weight = float( pos—E ) / caption.size();
+            itemRes.weight = float( posCE ) / caption.size();
             res.push_back( itemRes );
             return;
         }

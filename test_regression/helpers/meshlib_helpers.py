@@ -10,7 +10,6 @@ def relative_hausdorff(mesh1: mrmesh.Mesh or pathlib.Path or mrmesh.Path or str,
     1.0 means that the meshes are equal, 0.0 means that they are completely different.
     The value is in range [0.0, 1.0]
 
-    Please note that function doesn't check on
     :param mesh1: first mesh or path to it
     :param mesh2: second mesh or path to it
     """
@@ -25,5 +24,6 @@ def relative_hausdorff(mesh1: mrmesh.Mesh or pathlib.Path or mrmesh.Path or str,
     distance = mrmesh.findMaxDistanceSq(mesh1, mesh2) ** 0.5
     diagonal = min(mesh1.getBoundingBox().diagonal(), mesh2.getBoundingBox().diagonal())
     val = 1.0 - (distance / diagonal)
-    val = 0.0 if val < 0.0 else val  # there are some specific cases when metric can be below zero, but we have
+    val = 0.0 if val < 0.0 else val  # there are some specific cases when metric can be below zero,
+    # but exact values have no practical meaning, any value beyond zero means "completely different"
     return val

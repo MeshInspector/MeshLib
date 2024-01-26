@@ -7,9 +7,11 @@ def list_compare_2d(list1, list2):
     :return: True if lists are equal, False otherwise.
     :rtype: bool
     """
-    assert len(list1) == len(list2)
+    if len(list1) != len(list2):
+        return False
     for i in range(len(list1)):
-        assert len(list1[i]) == len(list2[i])
+        if len(list1[i]) != len(list2[i]):
+            return False
         for j in range(len(list1[i])):
             if list1[i][j] != list2[i][j]:
                 return False

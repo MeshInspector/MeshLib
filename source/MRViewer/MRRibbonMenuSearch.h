@@ -58,6 +58,9 @@ private:
     bool mainInputFocused_ = false;
     bool blockSearchBtn_ = false;
     bool setMainInputFocus_ = false;
+#ifndef NDEBUG
+    bool showResultWeight_ = false;
+#endif
 };
 
 }

@@ -69,6 +69,9 @@ public:
     {
         int tabIndex{ -1 }; // -1 is default value if item has no tab
         const MenuItemInfo* item{ nullptr }; // item info to show correct caption
+        float weight{ -1.f };
+        float captionWeight{ -1.f };
+        float tooltipWeight{ -1.f };
     };
     MRVIEWER_API static std::vector<SearchResult> search( const std::string& searchStr );
 private:

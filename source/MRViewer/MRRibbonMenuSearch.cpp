@@ -66,6 +66,10 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
     {
         if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
             deactivateSearch_();
+#ifndef NDEBUG
+        if ( ImGui::IsKeyPressed( ImGuiKey_F11 ) )
+            showResultWeight_ = !showResultWeight_;
+#endif
 
         const float minSearchSize = cSearchSize * params.scaling;
         if ( isSmallUI() )
@@ -125,6 +129,15 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             params.btnDrawer.drawButtonItem( *foundItem.item, dbParams );
             if ( foundItem.item->item->isActive() != pluginActive )
                 deactivateSearch_();
+#ifndef NDEBUG
+            if ( showResultWeight_ )
+            {
+                ImGui::SameLine();
+                ImGui::Text( "%.3f", foundItem.weight );
+                if ( ImGui::IsItemHovered() )
+                    ImGui::SetTooltip( "caption = %.3f\ntooltip = %.3f", foundItem.captionWeight, foundItem.tooltipWeight );
+            }
+#endif
         }
         ImGui::PopStyleVar( 1 );
         ImGui::PopStyleColor( 3 );

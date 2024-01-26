@@ -36,6 +36,12 @@ body {
     background-color: #1c1f24
 }
 
+/*@media (prefers-color-scheme: light) {
+    .dark-theme.adaptive-theme {
+        background-color: #eef0f5
+    }
+}*/
+
 .emscripten {
     padding-right: 0;
     margin-left: auto;
@@ -146,6 +152,12 @@ canvas.emscripten {
 .dark-progress {
     background-color: #000;
 }
+
+/*@media (prefers-color-scheme: light) {
+    .dark-progress.adaptive-progress {
+        background-color: #dbdde5
+    }
+}*/
 
 .progress {
     position: relative;

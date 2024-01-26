@@ -67,12 +67,13 @@ struct Matrix3
     /// returns 3 Euler angles, assuming this is a rotation matrix composed as follows: R=R(z)*R(y)*R(x)
     constexpr Vector3<T> toEulerAngles() const noexcept;
     /// returns scaling factors by axes (Ox, Oy, Oz)
+    [[deprecated("Prefer `decomposeMatrix3()`.")]]
     constexpr Vector3<T> toScale() const noexcept;
 
     Matrix3 & operator +=( const Matrix3<T> & b ) { x += b.x; y += b.y; z += b.z; return * this; }
     Matrix3 & operator -=( const Matrix3<T> & b ) { x -= b.x; y -= b.y; z -= b.z; return * this; }
     Matrix3 & operator *=( T b ) { x *= b; y *= b; z *= b; return * this; }
-    Matrix3 & operator /=( T b ) 
+    Matrix3 & operator /=( T b )
     {
         if constexpr ( std::is_integral_v<T> )
             { x /= b; y /= b; z /= b; return * this; }

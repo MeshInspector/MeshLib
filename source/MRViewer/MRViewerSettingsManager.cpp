@@ -19,7 +19,9 @@
 namespace
 {
 const std::string cOrthogrphicParamKey = "orthographic";
-const std::string cFlatShadingParamKey = "flatShading";
+const std::string cFlatShadingParamKey = "flatShading"; // Legacy
+const std::string cShadingModeParamKey = "defaultMeshShading";
+const MR::Config::Enum cShadingModeEnum = { "AutoDetect", "Smooth", "Flat" }; // SceneSettings::ShadingMode
 const std::string cGLPickRadiusParamKey = "glPickRadius";
 const std::string cColorThemeParamKey = "colorTheme";
 const std::string cSceneControlParamKey = "sceneControls";
@@ -101,7 +103,11 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     }
 
     // SceneSettings
-    SceneSettings::set( SceneSettings::Type::MeshFlatShading, cfg.getBool( cFlatShadingParamKey, SceneSettings::get( SceneSettings::Type::MeshFlatShading ) ) );
+    if ( cfg.hasJsonValue( cShadingModeParamKey ) )
+        SceneSettings::setDefaultShadingMode( ( SceneSettings::ShadingMode )cfg.getEnum( cShadingModeEnum, cShadingModeParamKey ) );
+    else
+        SceneSettings::setDefaultShadingMode( cfg.getBool( cFlatShadingParamKey ) ?
+            SceneSettings::ShadingMode::Flat : SceneSettings::ShadingMode::AutoDetect );
     SceneSettings::set( SceneSettings::Type::UseDefaultScenePropertiesOnDeserialization, false );
     if ( cfg.hasJsonValue( cncMachineSettingsKey ) )
     {
@@ -306,7 +312,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     cfg.setJsonValue( cSceneControlParamKey, sceneControls );
 
     // SceneSettings
-    cfg.setBool( cFlatShadingParamKey, SceneSettings::get( SceneSettings::Type::MeshFlatShading ) );
+    cfg.setEnum( cShadingModeEnum, cShadingModeParamKey, ( int )SceneSettings::getDefaultShadingMode() );
     Json::Value cnfCNCSettings = SceneSettings::getCNCMachineSettings().saveToJson();
     cfg.setJsonValue( cncMachineSettingsKey, cnfCNCSettings );
 

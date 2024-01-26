@@ -13,6 +13,16 @@ void SceneSettings::set( Type type, bool value )
     instance_().settings_[int( type )] = value;
 }
 
+SceneSettings::ShadingMode SceneSettings::getDefaultShadingMode()
+{
+    return instance_().defaultShadingMode_;
+}
+
+void SceneSettings::setDefaultShadingMode( SceneSettings::ShadingMode mode )
+{
+    instance_().defaultShadingMode_ = mode;
+}
+
 const CNCMachineSettings& SceneSettings::getCNCMachineSettings()
 {
     return instance_().cncMachineSettings_;

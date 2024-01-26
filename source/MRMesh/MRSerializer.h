@@ -54,6 +54,7 @@ private:
 };
 
 MRMESH_API extern const IOFilters SceneFileFilters;
+MRMESH_API extern const IOFilters SceneFileWriteFilters;
 
 MRMESH_API Expected<Json::Value, std::string> deserializeJsonValue( const std::string& str );
 MRMESH_API Expected<Json::Value, std::string> deserializeJsonValue( const std::filesystem::path& path );

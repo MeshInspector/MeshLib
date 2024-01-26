@@ -8,6 +8,7 @@
 #include "MRViewer/MRViewport.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRObjectMesh.h"
+#include "MRMesh/MRObjectSave.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRFileDialog.h"
 #include "MRMesh/MRSerializer.h"
@@ -120,21 +121,25 @@ void ResetSceneMenuItem::preDraw_()
         {
             auto savePath = SceneRoot::getScenePath();
             if ( savePath.empty() )
-                savePath = saveFileDialog( { {}, {},SceneFileFilters } );
+                savePath = saveFileDialog( { {}, {}, SceneFileWriteFilters } );
 
             ImGui::CloseCurrentPopup();
-            ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [this, savePath, &root = SceneRoot::get()]()->std::function<void()>
-            {
-                auto res = serializeObjectTree( root, savePath, ProgressBar::callBackSetProgress );
-                if ( !res.has_value() )
-                    spdlog::error( res.error() );
-
-                return[this, savePath, success = res.has_value()]()
+            if ( !savePath.empty() )
+                ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [this, savePath, &root = SceneRoot::get()]()->std::function<void()>
                 {
-                    if ( success )
-                        resetScene_();
-                };
-            } );
+                    auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
+
+                    return[this, savePath, res]()
+                    {
+                        if ( res )
+                        {
+                            getViewerInstance().onSceneSaved( savePath );
+                            resetScene_();
+                        }
+                        else
+                            showError( "Error saving scene: " + res.error() );
+                    };
+                } );
         }
 
         UI::setTooltipIfHovered( "Save current scene and then remove all objects", scaling );

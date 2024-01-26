@@ -45,18 +45,14 @@ struct SymbolMeshParams
 };
 
 // converts text string into set of contours
-// return: the contour if successful
-// return: the position of the first undefined symbol in case of an error
-MRMESH_API Expected<Contours2d, size_t> createSymbolContours( const SymbolMeshParams& params );
+MRMESH_API Expected<Contours2d> createSymbolContours( const SymbolMeshParams& params );
 
 // given a planar mesh with boundary on input located in plane XY, packs and extends it along Z on zOffset to make a volumetric closed mesh
 // zOffset should be > 0
 MRMESH_API void addBaseToPlanarMesh( Mesh& mesh, float zOffset = 1.0f );
 
 // converts text string into Z-facing symbol mesh
-// return: the mesh if successful
-// return: the position of the first undefined symbol in case of an error
-MRMESH_API Expected<Mesh, size_t> createSymbolsMesh( const SymbolMeshParams& params );
+MRMESH_API Expected<Mesh> createSymbolsMesh( const SymbolMeshParams& params );
 
 }
 #endif

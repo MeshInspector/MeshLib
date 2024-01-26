@@ -7,6 +7,8 @@
 #include "MRPlane3.h"
 #include "MRTriMath.h"
 #include "MRGeodesicPath.h"
+#include "MRTimer.h"
+#include "MRBitSetParallelFor.h"
 #include <algorithm>
 #include <queue>
 #include <numeric>
@@ -424,6 +426,39 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const VertCoord
             trianglulateFan( cloud.points, v, fanData, normals, settings.critAngle, settings.useNeiNormals, settings.maxRemoves );
         }
     }
+}
+
+std::optional<std::vector<LocalTriangulations>> buildLocalTriangulations(
+    const PointCloud& cloud, const VertCoords& normals, const Settings & settings, const ProgressCallback & progress )
+{
+    MR_TIMER
+
+    struct PerThreadData : LocalTriangulations
+    {
+        TriangulationHelpers::TriangulatedFanData fanData;
+    };
+    tbb::enumerable_thread_specific<PerThreadData> threadData;
+
+    if ( !BitSetParallelFor( cloud.validPoints, [&]( VertId v )
+    {
+        auto& localData = threadData.local();
+        auto& disc = localData.fanData;
+        TriangulationHelpers::buildLocalTriangulation( cloud, v, normals, settings, disc );
+
+        localData.fanRecords.push_back( { v, disc.border, (std::uint32_t)localData.neighbors.size() } );
+        localData.neighbors.insert( localData.neighbors.end(), disc.neighbors.begin(), disc.neighbors.end() );
+    }, progress ) )
+        return {};
+
+    std::vector<LocalTriangulations> res;
+    res.reserve( threadData.size() );
+    for ( auto & td : threadData )
+    {
+        td.fanRecords.push_back( { {}, {}, (std::uint32_t)td.neighbors.size() } );
+        res.push_back( std::move( td ) );
+    }
+
+    return res;
 }
 
 bool isBoundaryPoint( const PointCloud& pointCloud, const VertCoords& normals,

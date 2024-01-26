@@ -57,15 +57,25 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& )
 {
     MR_PYTHON_CUSTOM_CLASS( MeshTopology ).
         def( pybind11::init<>() ).
-        def( "numValidFaces", &MeshTopology::numValidFaces, "returns the number of valid faces" ).
-        def( "numValidVerts", &MeshTopology::numValidVerts, "returns the number of valid vertices" ).
+        def( "numValidFaces", &MeshTopology::numValidFaces, "Returns the number of valid faces." ).
+        def( "getAllTriVerts", &MeshTopology::getAllTriVerts, "Returns three vertex ids for valid triangles, invalid triangles are skipped.").
+        def( "numValidVerts", &MeshTopology::numValidVerts, "Returns the number of valid vertices." ).
         def( "getValidFaces", &MeshTopology::getValidFaces, pybind11::return_value_policy::copy, "returns cached set of all valid faces" ).
         def( "getValidVerts", &MeshTopology::getValidVerts, pybind11::return_value_policy::copy, "returns cached set of all valid vertices" ).
         def( "flip", (void (MeshTopology::*)(FaceBitSet&)const)&MeshTopology::flip, pybind11::arg( "fs" ), "sets in (fs) all valid faces that were not selected before the call, and resets other bits" ).
         def( "flip", (void (MeshTopology::*)(VertBitSet&)const)&MeshTopology::flip, pybind11::arg( "vs" ), "sets in (vs) all valid vertices that were not selected before the call, and resets other bits" ).
         def( "flipOrientation", &MeshTopology::flipOrientation, "flip orientation (normals) of all faces" ).
-        def( "org", &MeshTopology::org, pybind11::arg( "he" ), "returns origin vertex of half-edge" ).
-        def( "dest", &MeshTopology::dest, pybind11::arg( "he" ), "returns destination vertex of half-edge" ).
+        def( "hasEdge", &MeshTopology::hasEdge, pybind11::arg( "he" ), "Returns true if given edge is within valid range and not-lone" ).
+        def( "next", &MeshTopology::next, pybind11::arg( "he" ), "Next (counter clock wise) half-edge in the origin ring" ).
+        def( "prev", &MeshTopology::prev, pybind11::arg( "he" ), "Previous (clock wise) half-edge in the origin ring" ).
+        def( "org", &MeshTopology::org, pybind11::arg( "he" ), "Returns origin vertex of half-edge." ).
+        def( "dest", &MeshTopology::dest, pybind11::arg( "he" ), "Returns destination vertex of half-edge." ).
+        def( "left", &MeshTopology::left, pybind11::arg( "he" ), "Returns left face of half-edge." ).
+        def( "right", &MeshTopology::right, pybind11::arg( "he" ), "Returns right face of half-edge." ).
+        def( "getOrgDegree", &MeshTopology::getOrgDegree, pybind11::arg( "he" ), "Returns the number of edges around the origin vertex, returns 1 for lone edges." ).
+        def( "getVertDegree", &MeshTopology::getVertDegree, pybind11::arg( "v" ), "Returns the number of edges around the given vertex." ).
+        def( "getLeftDegree", &MeshTopology::getLeftDegree, pybind11::arg( "he" ), " Returns the number of edges around the left face: 3 for triangular faces, ..." ).
+        def( "getFaceDegree", &MeshTopology::getFaceDegree, pybind11::arg( "f" ), "Returns the number of edges around the given face: 3 for triangular faces, ..." ).
         def( "findBoundaryFaces", &MeshTopology::findBoundaryFaces, "returns all boundary faces, having at least one boundary edge" ).
         def( "findBoundaryEdges", &MeshTopology::findBoundaryEdges, "returns all boundary edges, where each edge does not have valid left face" ).
         def( "findBoundaryVerts", &MeshTopology::findBoundaryVerts, "returns all boundary vertices, incident to at least one boundary edge" ).
@@ -160,7 +170,21 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, []( pybind11::module_& m )
         def( pybind11::init( [] ( VertId v0, VertId v1, VertId v2 ) -> ThreeVertIds
         {
             return { v0, v1, v2 };
-        } ) );
+        } ) ).
+        def( "__getitem__", [] ( const ThreeVertIds& self, int key )->VertId
+        {
+            return self[key];
+        } ).
+        def( "__setitem__", [] ( ThreeVertIds& self, int key, VertId val )
+        {
+            self[key] = val;
+        } ).
+        def( "__len__", &ThreeVertIds::size ).
+        def( "__iter__", [] ( ThreeVertIds& self )
+        {
+            return pybind11::make_iterator<pybind11::return_value_policy::reference_internal, ThreeVertIds::iterator, ThreeVertIds::iterator, ThreeVertIds::value_type&>(
+                self.begin(), self.end() );
+        }, pybind11::keep_alive<0, 1>() /* Essential: keep list alive while iterator exists */ );
 
     pybind11::class_<Triangulation>( m, "Triangulation" ).
         def( pybind11::init<>() ).
@@ -433,7 +457,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
        "this version finds holes in the mesh by itself and returns false if they are not found" );
 } )
 
-Mesh pythonMergeMehses( const pybind11::list& meshes )
+Mesh pythonMergeMeshes( const pybind11::list& meshes )
 {
     Mesh res;
     for ( int i = 0; i < pybind11::len( meshes ); ++i )
@@ -467,7 +491,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
 {
     m.def( "computePerVertNormals", &computePerVertNormals, pybind11::arg( "mesh" ), "returns a vector with vertex normals in every element for valid mesh vertices" );
     m.def( "computePerFaceNormals", &computePerFaceNormals, pybind11::arg( "mesh" ), "returns a vector with face-normal in every element for valid mesh faces" );
-    m.def( "mergeMehses", &pythonMergeMehses, pybind11::arg( "meshes" ), "merge python list of meshes to one mesh" );
+    m.def( "mergeMeshes", &pythonMergeMeshes, pybind11::arg( "meshes" ), "merge python list of meshes to one mesh" );
     m.def( "getFacesByMinEdgeLength", &getFacesByMinEdgeLength, pybind11::arg( "mesh" ), pybind11::arg( "minLength" ), "return faces with at least one edge longer than min edge length" );
     m.def( "buildBottom", &buildBottom, pybind11::arg( "mesh" ), pybind11::arg( "a" ), pybind11::arg( "dir" ), pybind11::arg( "holeExtension" ), pybind11::arg( "outNewFaces" ) = nullptr,
         "adds cylindrical extension of given hole represented by one of its edges (having no valid left face)\n"

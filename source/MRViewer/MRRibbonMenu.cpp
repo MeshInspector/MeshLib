@@ -289,42 +289,7 @@ void RibbonMenu::drawActiveNonBlockingDialogs_()
 
 void RibbonMenu::drawSearchButton_()
 {
-    bool popupOpened = ImGui::IsPopupOpen( searcher_.windowName() );
-
-    const auto scaling = menu_scaling();
-    auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
-    font->Scale = 0.7f;
-
-    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * scaling );
-    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-    if ( popupOpened )
-        ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
-    else
-        ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
-    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
-    ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
-    ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
-
-    auto absMinPos = ImGui::GetCurrentContext()->CurrentWindow->DC.CursorPos;
-
-    float btnSize = scaling * cTopPanelAditionalButtonSize;
-    ImGui::PushFont( font );
-    auto pressed = ImGui::Button( "\xef\x80\x82", ImVec2( btnSize, btnSize ) );
-    ImGui::PopFont();
-
-    font->Scale = 1.0f;
-
-    ImGui::PopStyleColor( 4 );
-    ImGui::PopStyleVar( 2 );
-
-    // manage search popup
-    if ( pressed && !popupOpened )
-        ImGui::OpenPopup( searcher_.windowName() );
-
-    if ( !popupOpened )
-        return;
-
-    searcher_.draw( { buttonDrawer_,absMinPos,[this] ( int i ) { changeTab_( i ); }, scaling } );
+    searcher_.drawMenuUI( { buttonDrawer_, fontManager_, [this] ( int i ) { changeTab_( i ); }, menu_scaling() } );
 }
 
 void RibbonMenu::drawCollapseButton_()
@@ -444,10 +409,10 @@ void RibbonMenu::drawHelpButton_()
 bool RibbonMenu::drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected )
 {
     bool res = false;
-    bool atLeastOneTrue = false;
-    bool allTrue = true;
     for ( auto& [name, custom] : customCheckBox_ )
     {
+        bool atLeastOneTrue = false;
+        bool allTrue = true;
         for ( auto& obj : selected )
         {
             if ( !obj )
@@ -575,7 +540,8 @@ void RibbonMenu::drawHeaderPannel_()
     // 40 - help button size
     // 40 - search button size
     // 40 - collapse button size
-    auto availWidth = ImGui::GetContentRegionAvail().x - ( needActive ? 4 : 3 ) * 40.0f * menuScaling;
+    const float searcherWidth = searcher_.getWidthMenuUI();
+    auto availWidth = ImGui::GetContentRegionAvail().x - ( ( needActive ? 3 : 2 ) * 40.0f + searcherWidth ) * menuScaling;
 
     float scrollMax = summaryTabPannelSize - availWidth;
     bool needScroll = scrollMax > 0.0f;
@@ -701,15 +667,16 @@ void RibbonMenu::drawHeaderPannel_()
 
     if ( needActive )
     {
-        ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 150.0f * menuScaling, cTabYOffset * menuScaling ) );
+        ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) -
+            ( 110 + searcherWidth ) * menuScaling, cTabYOffset * menuScaling ) );
         drawActiveListButton_( activeBtnSize );
     }
 
-    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 110.0f * menuScaling, cTabYOffset* menuScaling ) );
-    drawHelpButton_();
+    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - ( 70.f + searcherWidth ) * menuScaling, cTabYOffset * menuScaling ) );
+    drawSearchButton_();
 
     ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 70.0f * menuScaling, cTabYOffset* menuScaling ) );
-    drawSearchButton_();
+    drawHelpButton_();
 
     ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 30.0f * menuScaling, cTabYOffset * menuScaling ) );
     drawCollapseButton_();
@@ -1951,6 +1918,10 @@ void RibbonMenu::setupShortcuts_()
         for ( const auto& sel : selected )
             sel->toggleVisualizeProperty( MeshVisualizePropertyType::FlatShading, viewportid );
     } } );
+    shortcutManager_->setShortcut( { GLFW_KEY_F, GLFW_MOD_CONTROL }, { ShortcutManager::Category::Info, "Search plugin by name or description",[this] ()
+    {
+        searcher_.activate();
+    } } );
     shortcutManager_->setShortcut( { GLFW_KEY_I,0 }, { ShortcutManager::Category::View, "Invert normals of selected objects",[] ()
     {
         auto& viewport = getViewerInstance().viewport();
@@ -1998,7 +1969,7 @@ void RibbonMenu::setupShortcuts_()
     } }  );
 
     addRibbonItemShortcut_( "Ribbon Scene Select all", { GLFW_KEY_A, GLFW_MOD_CONTROL }, ShortcutManager::Category::Objects );
-    addRibbonItemShortcut_( "Fit data", { GLFW_KEY_F, GLFW_MOD_CONTROL }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Fit data", { GLFW_KEY_F, GLFW_MOD_CONTROL | GLFW_MOD_ALT }, ShortcutManager::Category::View );
     addRibbonItemShortcut_( "Select objects", { GLFW_KEY_Q, GLFW_MOD_CONTROL }, ShortcutManager::Category::Objects );
     addRibbonItemShortcut_( "Open files", { GLFW_KEY_O, GLFW_MOD_CONTROL }, ShortcutManager::Category::Scene );
     addRibbonItemShortcut_( "Save Scene", { GLFW_KEY_S, GLFW_MOD_CONTROL }, ShortcutManager::Category::Scene );

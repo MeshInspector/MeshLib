@@ -20,7 +20,7 @@ struct TriPoint
     static constexpr auto eps = SegmPoint<T>::eps;
 
     constexpr TriPoint() noexcept : a( 0 ), b( 0 ) { }
-    explicit constexpr TriPoint( NoInit ) noexcept { }
+    explicit TriPoint( NoInit ) noexcept { }
     constexpr TriPoint( T a, T b ) noexcept : a( a ), b( b ) { }
     template <typename U>
     constexpr TriPoint( const TriPoint<U> & s ) : a( T( s.a ) ), b( T( s.b ) ) { }

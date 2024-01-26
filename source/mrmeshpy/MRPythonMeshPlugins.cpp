@@ -155,7 +155,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m 
             "Y: In symbol size: 1.0f adds one base height, 0.5 adds half base height" ).
         def_readwrite( "pathToFontFile", &TextMeshAlignParams::pathToFontFile, "Path to font file" );
 
-    m.def( "createSymbolsMesh", &MR::createSymbolsMesh, pybind11::arg( "params" ), "converts text string into Z-facing symbol mesh" );
+    m.def( "createSymbolsMesh", MR::decorateExpected( &MR::createSymbolsMesh ), pybind11::arg( "params" ), "converts text string into Z-facing symbol mesh" );
 
     pybind11::class_<TextMeshAlignParams, SymbolMeshParams>( m, "TextAlignParams" ).
         def( pybind11::init<>() ).
@@ -166,8 +166,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m 
         def_readwrite( "surfaceOffset", &TextMeshAlignParams::surfaceOffset, "Text mesh inside and outside offset of input mesh" ).
         def_readwrite( "textMaximumMovement", &TextMeshAlignParams::textMaximumMovement, "Maximum possible movement of text mesh alignment, meters" );
 
-    m.def( "alignTextToMesh", &alignTextToMesh, pybind11::arg( "mesh" ), pybind11::arg( "params" ),
-        "create text on mesh" );
+    m.def( "alignTextToMesh", MR::decorateExpected( &MR::alignTextToMesh ), pybind11::arg( "mesh" ), pybind11::arg( "params" ),
+        "Creates symbol mesh and aligns it to given surface" );
 } )
 #endif
 
@@ -191,13 +191,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshSignedDistanceResult, [] ( pybind11::mod
 
     m.def("findMaxDistanceSqOneWay",&MR::findMaxDistanceSqOneWay, 
         pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg( "rigidB2A" ) = nullptr, pybind11::arg( "upDistLimitSq" ) = FLT_MAX,
-        "returns the maximum of the distances from each B-mesh point to A-mesh\n"
+        "returns the maximum of the squared distances from each B-mesh vertex to A-mesh\n"
         "\trigidB2A - rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation\n"
         "\tmaxDistanceSq - upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq" );
 
     m.def( "findMaxDistanceSq", &MR::findMaxDistanceSq,
         pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg( "rigidB2A" ) = nullptr, pybind11::arg( "upDistLimitSq" ) = FLT_MAX,
-        "returns the maximum of the distances from each mesh point to another mesh in both directions\n"
+        "returns the squared Hausdorff distance between two meshes, that is the maximum of squared distances from each mesh vertex to the other mesh (in both directions)\n"
         "\trigidB2A - rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation\n"
         "\tmaxDistanceSq - upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq" );
 } )

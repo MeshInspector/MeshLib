@@ -10,10 +10,16 @@ namespace MR
 struct RibbonNotification
 {
     // Callback for notification
-    // return true to stay open, false to close
-    // args: float windowWidth, float menuScaling
-    using DrawContentFunc = std::function<bool( float, float )>;
-    DrawContentFunc drawContentFunc;
+    // if it is not null, a button will be drawn, and callback will be invoked on button click
+    using OnButtonClick = std::function<void()>;
+    OnButtonClick onButtonClick;
+
+    // Name of button that will be drawn if callback is enabled
+    std::string buttonName = "OK";
+    // Header of notification
+    std::string header;
+    // Text of notification
+    std::string text;
     // Type of notification
     NotificationType type{ NotificationType::Info };
     // Time that notification stays visible

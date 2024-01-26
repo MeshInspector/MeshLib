@@ -1402,6 +1402,7 @@ void Viewer::recursiveDraw_( const Viewport& vp, const Object& obj, const Affine
 void Viewer::draw( bool force )
 {
 #ifdef __EMSCRIPTEN__
+    (void)force;
 #ifdef MR_EMSCRIPTEN_ASYNCIFY
     if ( draw_( true ) )
     {

@@ -84,9 +84,7 @@ void ConeObject::setHeight( float height )
 
 float ConeObject::getNormalizedRadius_( void ) const
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    return s.x.x / getHeight();
+    return getBaseRadius() / getHeight();
 }
 float ConeObject::getAngle() const
 {
@@ -95,7 +93,7 @@ float ConeObject::getAngle() const
 
 void ConeObject::setAngle( float angle )
 {
-    setRadius( getNormalizedRadiusByAngle( angle ) * getHeight() );
+    setBaseRadius( getNormalizedRadiusByAngle( angle ) * getHeight() );
 }
 
 void ConeObject::setDirection( const Vector3f& normal )
@@ -114,14 +112,14 @@ void ConeObject::setCenter( const Vector3f& center )
     setXf( currentXf );
 }
 
-float ConeObject::getRadius() const
+float ConeObject::getBaseRadius() const
 {
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
     return s.x.x;
 }
 
-void ConeObject::setRadius( float radius )
+void ConeObject::setBaseRadius( float radius )
 {
     auto direction = getDirection();
     auto currentXf = xf();

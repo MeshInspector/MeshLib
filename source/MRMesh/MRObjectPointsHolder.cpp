@@ -233,6 +233,8 @@ VoidOrErrStr ObjectPointsHolder::deserializeModel_( const std::filesystem::path&
         setColoringType( ColoringType::VertsColorMap );
 
     points_ = std::make_shared<PointCloud>( std::move( res.value() ) );
+    if ( int pointCount = int( points_->points.size() ); pointCount > 2'000'000 )
+        setRenderDiscretization( pointCount / 1'000'000 );
     return {};
 }
 

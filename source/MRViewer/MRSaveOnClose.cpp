@@ -6,6 +6,7 @@
 #include "MRRibbonFontManager.h"
 #include <MRMesh/MRHistoryStore.h>
 #include <MRMesh/MRSerializer.h>
+#include <MRMesh/MRObjectSave.h>
 #include <MRMesh/MRSceneRoot.h>
 #include "ImGuiHelpers.h"
 #include "MRPch/MRSpdlog.h"
@@ -88,24 +89,27 @@ void SaveOnClosePlugin::preDraw_()
         {
             auto savePath = SceneRoot::getScenePath();
             if ( savePath.empty() )
-                savePath = saveFileDialog( { {}, {},SceneFileFilters } );
+                savePath = saveFileDialog( { {}, {}, SceneFileWriteFilters } );
 
-            ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [savePath, &root = SceneRoot::get(), viewer = Viewer::instance()]()->std::function<void()>
-            {
-                auto res = serializeObjectTree( root, savePath, ProgressBar::callBackSetProgress );
-                if ( !res.has_value() )
-                    spdlog::error( res.error() );
-
-                return[savePath, viewer, success = res.has_value()]()
+            ImGui::CloseCurrentPopup();
+            if ( !savePath.empty() )
+                ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [&shouldClose = shouldClose_, savePath, &root = SceneRoot::get()]()->std::function<void()>
                 {
-                    if ( success )
+                    auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
+
+                    return[&shouldClose = shouldClose, savePath, res]()
                     {
-                        viewer->onSceneSaved( savePath );
-                        glfwSetWindowShouldClose( Viewer::instance()->window, true );
-                    }
-                };
-            } );
-        }
+                        if ( res )
+                        {
+                            getViewerInstance().onSceneSaved( savePath );
+                            glfwSetWindowShouldClose( Viewer::instance()->window, true );
+                            shouldClose = true;
+                        }
+                        else
+                            showError( "Error saving scene: " + res.error() );
+                    };
+                } );
+            }
 
 
         UI::setTooltipIfHovered( "Save the current scene and close the application", scaling );

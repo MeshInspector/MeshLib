@@ -55,6 +55,7 @@
 #include "MRMesh/MRPointsSave.h"
 #include "MRMesh/MRLinesSave.h"
 #include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRObjectSave.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectLines.h"
@@ -1589,7 +1590,7 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
 
     if ( allIsObjPoints )
     {
-        make_points_discretization( selectedObjs, "Render Discretization", [&] ( const ObjectPointsHolder* data )
+        make_points_discretization( selectedObjs, "Point Sampling", [&] ( const ObjectPointsHolder* data )
         {
             return data->getRenderDiscretization();
         }, [&] ( ObjectPointsHolder* data, const int val )
@@ -2267,7 +2268,7 @@ void ImGuiMenu::make_points_discretization( std::vector<std::shared_ptr<VisualOb
     const auto valueConstForComparation = value;
 
     ImGui::PushItemWidth( 40 * menu_scaling() );
-    ImGui::SliderInt( label, &value, 1, 256, "%d", ImGuiSliderFlags_AlwaysClamp );
+    ImGui::DragInt( label, &value, 0.1f, 1, 256 );
 
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
     ImGui::PopItemWidth();
@@ -2634,23 +2635,21 @@ void ImGuiMenu::draw_mr_menu()
 
         if ( ImGui::Button( "Save Scene##Main", ImVec2( ( w - p ) / 2.f, 0 ) ) )
         {
-            auto savePath = saveFileDialog( { {},{},SceneFileFilters } );
+            auto savePath = saveFileDialog( { {}, {}, SceneFileWriteFilters } );
 
-            ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [savePath, &root = SceneRoot::get(), viewer = this->viewer]()->std::function<void()>
-            {
-                auto res = serializeObjectTree( root, savePath, [] ( float progress )
+            if ( !savePath.empty() )
+                ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [savePath, &root = SceneRoot::get()]()->std::function<void()>
                 {
-                    return ProgressBar::setProgress( progress );
+                    auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
+
+                    return[savePath, res] ()
+                    {
+                        if ( res )
+                            getViewerInstance().recentFilesStore().storeFile( savePath );
+                        else
+                            showError( "Error saving scene: " + res.error() );
+                    };
                 } );
-                if ( !res.has_value() )
-                    spdlog::error( res.error() );
-
-                return[savePath, viewer, success = res.has_value()]()
-                {
-                    if ( success )
-                        viewer->recentFilesStore().storeFile( savePath );
-                };
-            } );
         }
 
         if ( ImGui::Button( "New Issue##Main", ImVec2( w, 0 ) ) )
@@ -2696,11 +2695,12 @@ void ImGuiMenu::draw_mr_menu()
         ImGui::Checkbox( "Orthographic view", &orth );
         viewer->viewport().setOrthographic( orth );
 
-        bool flatShading = SceneSettings::get( SceneSettings::Type::MeshFlatShading );
-        bool flatShadingBackup = flatShading;
-        ImGui::Checkbox( "Default shading flat", &flatShading );
-        if ( flatShadingBackup != flatShading )
-            SceneSettings::set( SceneSettings::Type::MeshFlatShading, flatShading );
+        static std::vector<std::string> shadingModes = { "Auto Detect", "Smooth", "Flat" };
+        SceneSettings::ShadingMode shadingMode = SceneSettings::getDefaultShadingMode();
+        ImGui::SetNextItemWidth( 120.0f * menu_scaling() );
+        UI::combo( "Default Shading Mode", ( int* )&shadingMode, shadingModes );
+        if ( shadingMode != SceneSettings::getDefaultShadingMode() )
+            SceneSettings::setDefaultShadingMode( shadingMode );
         ImGui::PopItemWidth();
 
         bool showAxes = viewer->basisAxes->isVisible( viewer->viewport().id );

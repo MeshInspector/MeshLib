@@ -82,4 +82,24 @@ FaceBitSet expandFaces( const MeshTopology & topology, const FaceBitSet & region
     return res;
 }
 
+FaceBitSet shrinkFaces( const MeshTopology & topology, const FaceBitSet & region, const UndirectedEdgeBitSet * stopEdges )
+{
+    MR_TIMER
+    FaceBitSet res = topology.getValidFaces() & region;
+    BitSetParallelFor( res, [&]( FaceId f )
+    {
+        for ( EdgeId e : leftRing( topology, f ) )
+        {
+            if ( stopEdges && stopEdges->test( e ) )
+                continue; // skip stop edges
+            if ( auto r = topology.right( e ); r && !region.test( r ) )
+            {
+                res.reset( f );
+                return; // a neighbor face exists and not in the region
+            }
+        }
+    } );
+    return res;
+}
+
 } //namespace MR

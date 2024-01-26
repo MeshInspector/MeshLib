@@ -29,6 +29,15 @@ public:
         }
     }
 
+    /// use this constructor to remember object's mesh and immediately set new mesh
+    ChangeMeshAction( std::string name, const std::shared_ptr<ObjectMesh>& obj, std::shared_ptr<Mesh> newMesh ) :
+        objMesh_{ obj },
+        name_{ std::move( name ) }
+    {
+        if ( obj )
+            cloneMesh_ = objMesh_->updateMesh( std::move( newMesh ) );
+    }
+
     virtual std::string name() const override
     {
         return name_;
@@ -66,7 +75,7 @@ class ChangeMeshUVCoordsAction : public HistoryAction
 public:
     using Obj = ObjectMeshHolder;
 
-    /// use this constructor to remember object's mesh before making any changes in it
+    /// use this constructor to remember object's uv-coordinates before making any changes in them
     ChangeMeshUVCoordsAction( std::string name, const std::shared_ptr<ObjectMeshHolder>& obj ) :
         objMesh_{ obj },
         name_{ std::move( name ) }
@@ -74,6 +83,18 @@ public:
         if ( obj )
         {
             uvCoords_ = obj->getUVCoords();
+        }
+    }
+
+    /// use this constructor to remember object's uv-coordinates and immediate set new value
+    ChangeMeshUVCoordsAction( std::string name, const std::shared_ptr<ObjectMeshHolder>& obj, VertUVCoords&& newUvCoords ) :
+        objMesh_{ obj },
+        name_{ std::move( name ) }
+    {
+        if ( obj )
+        {
+            uvCoords_ = std::move( newUvCoords );
+            obj->updateUVCoords( uvCoords_ );
         }
     }
 

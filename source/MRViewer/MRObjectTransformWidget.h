@@ -249,9 +249,9 @@ public:
     void setStopModifyCallback( std::function<void()> callback ) { stopModifyCallback_ = callback; }
     // Sets callback that will be called when modification of widget starts
     void setStartModifyCallback( std::function<void()> callback ) { startModifyCallback_ = callback; }
-    // Sets callback that will be called when widget gets addictive transform
+    // Sets callback that will be called when widget gets additive transform
     void setAddXfCallback( std::function<void( const AffineXf3f& )> callback ) { addXfCallback_ = callback; }
-    // Sets callback that will be called when widget gets addictive transform
+    // Sets callback that will be called when widget gets additive transform
     // The callback should return true to approve transform and false to reject it
     void setApproveXfCallback( std::function<bool( const AffineXf3f& )> callback ) { approveXfCallback_ = callback; }
 

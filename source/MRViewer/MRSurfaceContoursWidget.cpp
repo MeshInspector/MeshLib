@@ -192,12 +192,41 @@ bool SurfaceContoursWidget::isClosedCountour( const std::shared_ptr<ObjectMeshHo
     return pointsIt->second.size() > 1 && pointsIt->second[0]->getCurrentPosition() == pointsIt->second.back()->getCurrentPosition();
 }
 
-void SurfaceContoursWidget::updateAllPointsWidgetParams( const SurfacePointWidget::Parameters& p )
+void SurfaceContoursWidget::updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p )
 {
-    params.surfacePointParams = p;
+    const auto& oldParams = params;
+
     for ( auto& [parentObj, contour] : pickedPoints_ )
         for ( auto& point : contour )
-            point->setParameters( p );
+        {
+            auto pointParams = point->getParameters();
+            point->setParameters( p.surfacePointParams );
+
+            if ( pointParams.baseColor == oldParams.ordinaryPointColor)
+                updateBaseColor( point , p.ordinaryPointColor );
+            else if ( pointParams.baseColor == oldParams.lastPoitColor )
+                updateBaseColor( point, p.lastPoitColor );
+            else if ( pointParams.baseColor == oldParams.closeContourPointColor )
+                updateBaseColor( point, p.closeContourPointColor );
+        }
+
+    params = p;
+}
+
+std::pair<std::shared_ptr<MR::ObjectMeshHolder>, int> SurfaceContoursWidget::getActivePoint()
+{
+    return std::pair<std::shared_ptr<MR::ObjectMeshHolder>, int>( activeObject , activeIndex );
+}
+
+void SurfaceContoursWidget::setActivePoint( std::shared_ptr<MR::ObjectMeshHolder> obj, int index )
+{
+    assert( pickedPoints_[obj].size() < index );
+
+    updateBaseColor( pickedPoints_[obj][index], params.lastPoitColor );
+    updateBaseColor( pickedPoints_[activeObject][activeIndex], params.ordinaryPointColor );
+
+    activeIndex = index; 
+    activeObject = obj;
 }
 
 bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )

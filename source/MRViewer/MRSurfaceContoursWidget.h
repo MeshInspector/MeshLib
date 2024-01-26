@@ -28,20 +28,23 @@ public:
         // Indicates whether to write history of the contours
         bool writeHistory = true;
 
-        // Indicates whether to flash history at the end of the operation
+        // Indicates whether to flash history on reset call
         bool filterHistoryonReset = true;
 
         // Parameters for configuring the surface point widget
-        // Parameters affect to future points only, if need update existing one use void updateAllPointsWidgetParams( const SurfacePointWidget::Parameters& p )
+        // Parameters affect to future points only, if need update existing one use void  updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p )
         SurfacePointWidget::Parameters surfacePointParams;
 
         // Color for ordinary points in the contour
+        // Parameters affect to future points only, if need update existing one use void  updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p )
         MR::Color ordinaryPointColor = Color::gray();
 
         // Color for the last modified point in the contour
+        // Parameters affect to future points only, if need update existing one use void  updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p )
         MR::Color lastPoitColor = Color::green();
 
         // Color for the special point used to close a contour. Better do not change it. 
+        // Parameters affect to future points only, if need update existing one use void  updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p )
         MR::Color closeContourPointColor = Color::transparent();
     };
 
@@ -92,11 +95,11 @@ public:
     [[nodiscard]] bool isClosedCountour( const std::shared_ptr<ObjectMeshHolder>& obj );
 
     // updates the parameters of all existing points ( SurfacePointWidget ) in the contours, and also sets their points that will be created later
-    void updateAllPointsWidgetParams( const SurfacePointWidget::Parameters& p );
+    MRVIEWER_API  void updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p );
 
     // shared variables. which need getters and setters.
-    int activeIndex{ 0 };
-    std::shared_ptr<MR::ObjectMeshHolder> activeObject = nullptr;
+    MRVIEWER_API std::pair <std::shared_ptr<MR::ObjectMeshHolder>, int > getActivePoint();
+    MRVIEWER_API void setActivePoint( std::shared_ptr<MR::ObjectMeshHolder> obj, int index );
 
     // configuration params
     SurfaceContoursWidgetParams params;
@@ -112,6 +115,10 @@ private:
     bool moveClosedPoint_ = false;
     bool activeChange_ = false;
     bool isPickerActive_ = false;
+
+    // active point
+    int activeIndex{ 0 };
+    std::shared_ptr<MR::ObjectMeshHolder> activeObject = nullptr;
 
     // data storage
     SurfaceContours pickedPoints_;

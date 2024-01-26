@@ -19,13 +19,29 @@ class SurfaceContoursWidget : public MultiListener<
 public:
 
     struct SurfaceContoursWidgetParams {
+        // Modifier key for closing a contour (ordered vector of points) using the widget
         int widgetContourCloseMod = GLFW_MOD_CONTROL;
+
+        // Modifier key for deleting a point using the widget
         int widgetDeletePointMod = GLFW_MOD_SHIFT;
+
+        // Indicates whether to write history of the contours
         bool writeHistory = true;
-        bool flashHistoryAtEnd = true;
+
+        // Indicates whether to flash history at the end of the operation
+        bool filterHistoryonReset = true;
+
+        // Parameters for configuring the surface point widget
+        // Parameters affect to future points only, if need update existing one use void updateAllPointsWidgetParams( const SurfacePointWidget::Parameters& p )
         SurfacePointWidget::Parameters surfacePointParams;
+
+        // Color for ordinary points in the contour
         MR::Color ordinaryPointColor = Color::gray();
+
+        // Color for the last modified point in the contour
         MR::Color lastPoitColor = Color::green();
+
+        // Color for the special point used to close a contour. Better do not change it. 
         MR::Color closeContourPointColor = Color::transparent();
     };
 
@@ -35,19 +51,23 @@ public:
     using SurfaceContour = std::vector<std::shared_ptr<SurfacePointWidget>>;
     using SurfaceContours = std::unordered_map <std::shared_ptr<MR::ObjectMeshHolder>, SurfaceContour>;
 
-    MRVIEWER_API bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
-    MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
-
     // enable or disable widget
     MRVIEWER_API void enable( bool isEnaled );
 
     // create a widget and connect it. 
-    MRVIEWER_API void create( 
-        PickerPointCallBack onPointAdd, 
-        PickerPointCallBack onPointMove, 
-        PickerPointCallBack onPointMoveFinish, 
-        PickerPointCallBack onPointRemove,
-        PickerPointObjectChecker isObjectValidToPick
+    // To create a widget, you need to provide 4 callbacks and one function that determines whether this object can be used to place points.
+    // All callback takes a shared pointer to an MR::ObjectMeshHolder as an argument.
+    // onPointAdd: This callback is invoked when a point is added.
+    // onPointMove : This callback is triggered when a point is being start  moved or dragge.
+    // onPointMoveFinish : This callback is called when the movement of a point is completed.
+    // onPointRemove : This callback is executed when a point is removed.
+    // isObjectValidToPick : Must returh true or false. This callback is used to determine whether an object is valid for picking.
+    MRVIEWER_API void create(
+            PickerPointCallBack onPointAdd,
+            PickerPointCallBack onPointMove,
+            PickerPointCallBack onPointMoveFinish,
+            PickerPointCallBack onPointRemove,
+            PickerPointObjectChecker isObjectValidToPick
     );
 
     // clear temp internal variables.
@@ -71,15 +91,19 @@ public:
     // chech is contour closed for particular object.
     [[nodiscard]] bool isClosedCountour( const std::shared_ptr<ObjectMeshHolder>& obj );
 
+    // updates the parameters of all existing points ( SurfacePointWidget ) in the contours, and also sets their points that will be created later
+    void updateAllPointsWidgetParams( const SurfacePointWidget::Parameters& p );
+
     // shared variables. which need getters and setters.
     int activeIndex{ 0 };
     std::shared_ptr<MR::ObjectMeshHolder> activeObject = nullptr;
 
-
     // configuration params
     SurfaceContoursWidgetParams params;
-
 private:
+
+    MRVIEWER_API bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
+    MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
 
     // creates point widget for add to contour.
     [[nodiscard]] std::shared_ptr<SurfacePointWidget> createPickWidget_( const std::shared_ptr<MR::ObjectMeshHolder>& obj, const MeshTriPoint& pt );

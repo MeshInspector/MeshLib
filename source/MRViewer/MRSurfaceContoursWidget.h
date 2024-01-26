@@ -28,6 +28,9 @@ public:
         // Indicates whether to write history of the contours
         bool writeHistory = true;
 
+        // specification of history actions
+        std::string historySpecification = "surface contours widget";
+
         // Indicates whether to flash history on reset call
         bool filterHistoryonReset = true;
 

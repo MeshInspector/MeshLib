@@ -20,7 +20,7 @@ void updateBaseColor( std::shared_ptr<SurfacePointWidget> point, const Color& co
 
 std::string AddPointActionPickerPoint::name() const
 {
-    return "Add Point ";
+    return "Add Point " + widget_.params.historySpecification;
 }
 
 void AddPointActionPickerPoint::action( Type actionType )
@@ -64,7 +64,7 @@ size_t AddPointActionPickerPoint::heapBytes() const
 
 std::string RemovePointActionPickerPoint::name() const
 {
-    return "Remove Point";
+    return "Remove Point " + widget_.params.historySpecification;
 }
 void RemovePointActionPickerPoint::action( Type actionType )
 {
@@ -108,7 +108,7 @@ size_t RemovePointActionPickerPoint::heapBytes() const
 
 std::string ChangePointActionPickerPoint::name() const
 {
-    return "Move Point";
+    return "Move Point " + widget_.params.historySpecification;
 }
 void ChangePointActionPickerPoint::action( Type )
 {
@@ -157,8 +157,8 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
             if ( curentPoint.lock() == contour[0] )
             {
                 if ( params.writeHistory )
-                {
-                    SCOPED_HISTORY( "Change Point" );
+                {            
+                    SCOPED_HISTORY( "Change Point " + params.historySpecification );
                     AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, activeIndex );
                     AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, int( contour.size() ) - 1 );
                 }
@@ -359,7 +359,8 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
             auto& contour = pickedPoints_[pickedObj];
             assert( pickedIndex != contour.size() - 1 ); // unable to pick point which is close countour
 
-            if ( params.writeHistory ) SCOPED_HISTORY( "Remove Point" );
+            if ( params.writeHistory ) 
+                SCOPED_HISTORY( "Remove Point" + params.historySpecification );
 
             // 4 points - minimal non-trivial closed path
             // last on is a "pseudo" point to close contour

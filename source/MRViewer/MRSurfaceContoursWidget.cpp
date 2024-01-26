@@ -157,15 +157,20 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
             if ( curentPoint.lock() == contour[0] )
             {
                 if ( params.writeHistory )
-                {            
-                    SCOPED_HISTORY( "Change Point " + params.historySpecification );
+                {
+                    SCOPED_HISTORY( "Move Point " + params.historySpecification );
                     AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, activeIndex_ );
                     AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, int( contour.size() ) - 1 );
                 }
                 moveClosedPoint_ = true;
             }
+            else
+            {
+                if ( params.writeHistory )
+                    AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, activeIndex_ );
+            }
         }
-        else if (  curentPoint.lock() != pickedPoints_[obj].back() )
+        else
         {
             if ( params.writeHistory )
                 AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, activeIndex_ );
@@ -324,6 +329,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         assert( objectToCloseCoutour != nullptr );
         auto triPoint = pickedPoints_[objectToCloseCoutour][0]->getCurrentPosition();
         addPoint( objectToCloseCoutour, triPoint, true );
+        activeIndex_ = 0;
         return true;
     }
     else if ( mod == params.widgetDeletePointMod )  // remove point case 
@@ -359,7 +365,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
             auto& contour = pickedPoints_[pickedObj];
             assert( pickedIndex != contour.size() - 1 ); // unable to pick point which is close countour
 
-            if ( params.writeHistory ) 
+            if ( params.writeHistory )
                 SCOPED_HISTORY( "Remove Point" + params.historySpecification );
 
             // 4 points - minimal non-trivial closed path
@@ -432,6 +438,10 @@ void SurfaceContoursWidget::create(
 
 void SurfaceContoursWidget::clear()
 {
+    SCOPED_HISTORY( "Remove All Point" + params.historySpecification );
+    for ( auto& [obj, contour] : pickedPoints_ )
+        for ( int i = static_cast< int >( contour.size() - 1 ); i >= 0; --i )        
+            AppendHistory<RemovePointActionPickerPoint>( *this, obj, contour[i]->getCurrentPosition(), i );  
     pickedPoints_.clear();
     activeIndex_ = 0;
     activeObject_ = nullptr;

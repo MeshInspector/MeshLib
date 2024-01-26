@@ -120,8 +120,8 @@ private:
     bool isPickerActive_ = false;
 
     // active point
-    int activeIndex{ 0 };
-    std::shared_ptr<MR::ObjectMeshHolder> activeObject = nullptr;
+    int activeIndex_{ 0 };
+    std::shared_ptr<MR::ObjectMeshHolder> activeObject_ = nullptr;
 
     // data storage
     SurfaceContours pickedPoints_;

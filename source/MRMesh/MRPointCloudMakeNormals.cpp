@@ -12,6 +12,7 @@
 #include "MRPointsProject.h"
 #include "MRHeap.h"
 #include "MRBuffer.h"
+#include "MRPointCloudTriangulationHelpers.h"
 #include <cfloat>
 
 namespace MR
@@ -172,6 +173,26 @@ bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, const Bu
             for ( ; p < pEnd && *p; ++p )
                 callback( *p );
         }, progress );
+}
+
+bool orientNormalsUsingLocalTriangulations( const PointCloud& pointCloud, VertNormals& normals, float radius,
+     const ProgressCallback & progress )
+{
+    MR_TIMER
+
+    auto optTriangs = TriangulationHelpers::buildOrderedLocalTriangulations( pointCloud, normals,
+        { .radius = radius, .useNeiNormals = false }, subprogress( progress, 0.0f, 0.5f ) );
+    if ( !optTriangs )
+        return false;
+
+    return orientNormalsCore( pointCloud, normals,
+        [&triangs = *optTriangs]( VertId v, auto callback )
+        {
+            const auto * p = triangs.neighbors.data() + triangs.fanRecords[v].firstNei;
+            const auto * pEnd = triangs.neighbors.data() + triangs.fanRecords[v+1].firstNei;
+            for ( ; p < pEnd; ++p )
+                callback( *p );
+        }, subprogress( progress, 0.5f, 1.0f ) );
 }
 
 std::optional<VertNormals> makeOrientedNormals( const PointCloud& pointCloud,

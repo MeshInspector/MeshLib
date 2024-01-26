@@ -20,14 +20,24 @@ namespace MR
 [[nodiscard]] MRMESH_API std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud,
     const Buffer<VertId> & closeVerts, int numNei, const ProgressCallback & progress = {} );
 
-/// \brief Select consistent orientation of given normals to make directions of close points consistent;
+/// \brief Select orientation of given normals to make directions of close points consistent;
 /// \param radius of neighborhood to consider
 /// \return false if progress returned false
 /// \ingroup PointCloudGroup
 MRMESH_API bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, float radius,
     const ProgressCallback & progress = {} );
 
-/// \brief Select consistent orientation of given normals to make directions of close points consistent;
+/// \brief Select orientation of given normals to make directions of close points consistent;
+/// \param radius of neighborhood to consider
+/// \return false if progress returned false
+/// Unlike simple orientNormals this method constructs local triangulations around each point
+/// (with most neighbours within given radius and all neighbours within 2*radius)
+/// and considers all triangulation neighbors and not other points from the ball around each point.
+/// \ingroup PointCloudGroup
+MRMESH_API bool orientNormalsUsingLocalTriangulations( const PointCloud& pointCloud, VertNormals& normals, float radius,
+    const ProgressCallback & progress = {} );
+
+/// \brief Select orientation of given normals to make directions of close points consistent;
 /// \param closeVerts a buffer where for every valid point #i its neighbours are stored at indices [i*numNei; (i+1)*numNei)
 /// \return false if progress returned false
 /// \ingroup PointCloudGroup

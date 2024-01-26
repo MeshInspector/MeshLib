@@ -54,6 +54,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
         return std::clamp( sumWeight / float( searchWords.size() ), 0.0f, 1.0f );
     };
 
+    const float maxWeight = 0.25f;
     bool exactMatch = false;
     auto checkItem = [&] ( const MenuItemInfo& item, int t )
     {
@@ -90,7 +91,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
         itemRes.tooltipWeight = enweight( words, tooltip );
         float captionOrderWeight = 0.f;
         float tooltipOrderWeight = 0.f;
-        if ( itemRes.captionWeight > 0.1f && itemRes.tooltipWeight > 0.1f )
+        if ( itemRes.captionWeight > maxWeight && itemRes.tooltipWeight > maxWeight )
             return;
         for ( const auto& word : words )
         {
@@ -169,12 +170,12 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     } );
     if ( !res.empty() && res[0].captionWeight > 0.f )
     {
-        const float maxWeight = std::min( res[0].captionWeight, res[0].tooltipWeight ) * 3.f;
-        if ( maxWeight < 0.1f && res.back().captionWeight > maxWeight && res.back().tooltipWeight > maxWeight )
+        const float maxWeightNew = std::min( res[0].captionWeight, res[0].tooltipWeight ) * 3.f;
+        if ( maxWeightNew < maxWeight && res.back().captionWeight > maxWeightNew && res.back().tooltipWeight > maxWeightNew )
         {
             auto tailIt = std::find_if( res.begin(), res.end(), [&] ( const auto& a )
             {
-                return a.captionWeight > maxWeight && a.tooltipWeight > maxWeight;
+                return a.captionWeight > maxWeightNew && a.tooltipWeight > maxWeightNew;
             } );
             res.erase( tailIt, res.end() );
         }

@@ -438,10 +438,13 @@ void SurfaceContoursWidget::create(
 
 void SurfaceContoursWidget::clear()
 {
-    SCOPED_HISTORY( "Remove All Point" + params.historySpecification );
-    for ( auto& [obj, contour] : pickedPoints_ )
-        for ( int i = static_cast< int >( contour.size() - 1 ); i >= 0; --i )        
-            AppendHistory<RemovePointActionPickerPoint>( *this, obj, contour[i]->getCurrentPosition(), i );  
+    if ( params.writeHistory )
+    {
+        SCOPED_HISTORY( "Remove All Point" + params.historySpecification );
+        for ( auto& [obj, contour] : pickedPoints_ )
+            for ( int i = static_cast< int >( contour.size() - 1 ); i >= 0; --i )
+                AppendHistory<RemovePointActionPickerPoint>( *this, obj, contour[i]->getCurrentPosition(), i );
+    }
     pickedPoints_.clear();
     activeIndex_ = 0;
     activeObject_ = nullptr;

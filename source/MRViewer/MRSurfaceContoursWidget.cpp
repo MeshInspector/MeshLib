@@ -20,7 +20,7 @@ void updateBaseColor( std::shared_ptr<SurfacePointWidget> point, const Color& co
 
 std::string AddPointActionPickerPoint::name() const
 {
-    return "Add Point";
+    return "Add Point ";
 }
 
 void AddPointActionPickerPoint::action( Type actionType )
@@ -151,17 +151,21 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
     {
         const bool closedPath = isClosedCountour( obj );
 
-        if ( closedPath && curentPoint.lock() == pickedPoints_[obj][0] )
+        if ( closedPath )
         {
-            if ( params.writeHistory )
+            const auto& contour = pickedPoints_[obj];
+            if ( curentPoint.lock() == contour[0] )
             {
-                SCOPED_HISTORY( "Change Point" );
-                AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, activeIndex );
-                AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, int( pickedPoints_[obj].size() ) - 1 );
+                if ( params.writeHistory )
+                {
+                    SCOPED_HISTORY( "Change Point" );
+                    AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, activeIndex );
+                    AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, int( contour.size() ) - 1 );
+                }
+                moveClosedPoint_ = true;
             }
-            moveClosedPoint_ = true;
         }
-        else if ( !closedPath || curentPoint.lock() != pickedPoints_[obj].back() )
+        else if (  curentPoint.lock() != pickedPoints_[obj].back() )
         {
             if ( params.writeHistory )
                 AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, activeIndex );
@@ -172,10 +176,14 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
     } );
     newPoint->setEndMoveCallback( [this, obj, curentPoint] ( const MeshTriPoint& point )
     {
-        if ( moveClosedPoint_ && curentPoint.lock() == pickedPoints_[obj][0] )
+        if ( moveClosedPoint_ )
         {
-            pickedPoints_[obj].back()->updateCurrentPosition( point );
-            moveClosedPoint_ = false;
+            const auto& contour = pickedPoints_[obj];
+            if ( curentPoint.lock() == contour[0] )
+            {
+                contour.back()->updateCurrentPosition( point );
+                moveClosedPoint_ = false;
+            }
         }
         activeChange_ = false;
         onPointMoveFinish_( obj );
@@ -202,8 +210,8 @@ void SurfaceContoursWidget::updateAllPointsWidgetParams( const SurfaceContoursWi
             auto pointParams = point->getParameters();
             point->setParameters( p.surfacePointParams );
 
-            if ( pointParams.baseColor == oldParams.ordinaryPointColor)
-                updateBaseColor( point , p.ordinaryPointColor );
+            if ( pointParams.baseColor == oldParams.ordinaryPointColor )
+                updateBaseColor( point, p.ordinaryPointColor );
             else if ( pointParams.baseColor == oldParams.lastPoitColor )
                 updateBaseColor( point, p.lastPoitColor );
             else if ( pointParams.baseColor == oldParams.closeContourPointColor )
@@ -215,7 +223,7 @@ void SurfaceContoursWidget::updateAllPointsWidgetParams( const SurfaceContoursWi
 
 std::pair<std::shared_ptr<MR::ObjectMeshHolder>, int> SurfaceContoursWidget::getActivePoint()
 {
-    return std::pair<std::shared_ptr<MR::ObjectMeshHolder>, int>( activeObject , activeIndex );
+    return std::pair<std::shared_ptr<MR::ObjectMeshHolder>, int>( activeObject, activeIndex );
 }
 
 void SurfaceContoursWidget::setActivePoint( std::shared_ptr<MR::ObjectMeshHolder> obj, int index )
@@ -225,7 +233,7 @@ void SurfaceContoursWidget::setActivePoint( std::shared_ptr<MR::ObjectMeshHolder
     updateBaseColor( pickedPoints_[obj][index], params.lastPoitColor );
     updateBaseColor( pickedPoints_[activeObject][activeIndex], params.ordinaryPointColor );
 
-    activeIndex = index; 
+    activeIndex = index;
     activeObject = obj;
 }
 
@@ -347,7 +355,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         {
             assert( pickedIndex >= 0 );
             assert( pickedObj != nullptr );
-            
+
             auto& contour = pickedPoints_[pickedObj];
             assert( pickedIndex != contour.size() - 1 ); // unable to pick point which is close countour
 

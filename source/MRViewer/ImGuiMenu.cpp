@@ -98,74 +98,6 @@ namespace
 {
 // translation multiplier that limits its maximum value depending on object size
 constexpr float cMaxTranslationMultiplier = 0xC00;
-
-namespace FeaturePropertyUpdateGui
-{
-
-// Draws a Vector3f properties editor for feature object.
-// returns is it need history checkpoint add?
-bool updateFeaturePropertyVector3f( const FeatureObjectSharedProperty& featureProperty, FeatureObject* object, MR::Vector3f& value )
-{
-    const char* tooltipsTranslation[3] = {
-        "Ox-coordinate",
-        "Oy-coordinate",
-        "Oz-coordinate"
-    };
-
-    float speed = 0.01f;
-    float min = std::numeric_limits<float>::lowest();
-    float max = std::numeric_limits<float>::max();
-
-    if ( ImGui::DragFloatValid3( featureProperty.propertyName.c_str(), &value.x, speed, min, max, "%.3f", 0, &tooltipsTranslation ) )
-        featureProperty.setter( value, object );
-
-    return ImGui::IsItemActivated();
-}
-
-// Draws a float properties editor for feature object.
-// returns is it need history checkpoint add?
-bool updateFeaturePropertyFloat( const FeatureObjectSharedProperty& featureProperty, FeatureObject* object, float value )
-{
-    float speedCount = 0.01f;
-    auto speed = std::max( value * speedCount, 1e-3f );
-
-    float min = std::numeric_limits<float>::lowest();
-    float max = std::numeric_limits<float>::max();
-
-    if ( ImGui::DragFloatValid( featureProperty.propertyName.c_str(), &value, speed, min, max ) )
-        featureProperty.setter( value, object );
-
-    return ImGui::IsItemActivated();
-}
-
-// Draws a block with all the settings for the Feature object of the corresponding type
-// returns is it need history checkpoint add?
-bool drawUpdateFeatureDialog( FeatureObject* object )
-{
-    bool ret = false;
-
-    const auto& list = object->getAllSharedProperties();
-    if ( !list.empty() )
-        ImGui::Spacing();
-
-    for ( auto& prop : list )
-    {
-        auto value = prop.getter( object );
-        std::visit( overloaded{
-            [&]( Vector3f arg )
-            {
-                ret = updateFeaturePropertyVector3f( prop, object, arg ) || ret;
-            },
-            [&] ( float arg )
-            {
-                ret = updateFeaturePropertyFloat( prop, object, arg ) || ret;
-            }
-        }, value );
-    }
-
-    return ret;
-}
-} // namespace FeaturePropertyUpdateGui
 } // namespace
 
 constexpr std::array<const char*, size_t( MR::Viewer::EventType::Count )> cGLPrimitivesCounterNames =
@@ -1541,25 +1473,94 @@ float ImGuiMenu::drawSelectionInformation_()
     }
 
     // Feature object properties.
+    bool haveFeatureProperties = false;
     if ( selectedObjs.size() == 1 )
     {
-        if ( auto fo = std::dynamic_pointer_cast<FeatureObject>( selectedObjs.front() ) )
+        if ( dynamic_cast<FeatureObject *>( selectedObjs.front().get() ) )
         {
             ImGui::PushItemWidth( getSceneInfoItemWidth_( 1 ) ); // ??
             MR_FINALLY{ ImGui::PopItemWidth(); };
 
-            if ( FeaturePropertyUpdateGui::drawUpdateFeatureDialog( fo.get() ) )
-            {
-                AppendHistory<ChangeXfAction>( selectedObjs.front()->name() + " change feature prop", selectedObjs.front() ); // save feature oldXf
-            }
+            haveFeatureProperties = true;
+            drawFeaturePropertiesEditor_( selectedObjs.front() );
         }
     }
+    if ( !haveFeatureProperties )
+        editedFeatureObject_.reset();
 
     // This looks a bit better.
     for ( int i = 0; i < 5; i++ )
         ImGui::Spacing();
 
     return resultingHeight();
+}
+
+void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& object )
+{
+    auto& featureObject = dynamic_cast<FeatureObject&>( *object );
+
+    const auto& list = featureObject.getAllSharedProperties();
+    if ( !list.empty() )
+        ImGui::Spacing();
+
+    bool anyActive = false;
+
+    std::size_t index = 0;
+
+    for ( auto& prop : list )
+    {
+        std::visit( [&]( auto arg )
+        {
+            using ArgType = std::remove_cvref_t<decltype(arg)>;
+            constexpr bool isVec3 = std::is_same_v<ArgType, Vector3f>;
+
+            float speed = 0.01f;
+            float min = std::numeric_limits<float>::lowest();
+            float max = std::numeric_limits<float>::max();
+
+            bool alreadyWasEditing = editedFeatureObject_.lock() == object;
+
+            float* argPtr = nullptr;
+            if constexpr ( isVec3 )
+                argPtr = &arg.x;
+            else
+                argPtr = &arg;
+
+            bool ret = false;
+            if constexpr ( isVec3 )
+                ret = bool( ImGui::DragFloatValid3( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), argPtr, speed, min, max ) );
+            else
+                ret = bool( ImGui::DragFloatValid( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), argPtr, speed, min, max ) );
+
+            if ( ret )
+            {
+                if ( !alreadyWasEditing  )
+                {
+                    editedFeatureObject_ = object;
+                    editedFeatureObjectOldXf_ = object->xf();
+                }
+
+                prop.setter( arg, &featureObject );
+            }
+
+            if ( ImGui::IsItemDeactivatedAfterEdit() && editedFeatureObject_.lock() == object )
+            {
+                // Temporarily roll back the xf to write to the history.
+                auto newXf = object->xf();
+                object->setXf( editedFeatureObjectOldXf_ );
+                AppendHistory<ChangeXfAction>( object->name() + " change feature prop", object );
+                object->setXf( newXf );
+            }
+
+            if ( ImGui::IsItemActive() )
+                anyActive = true;
+        }, prop.getter( &featureObject ) );
+
+        index++;
+    }
+
+    if ( !anyActive )
+        editedFeatureObject_.reset();
 }
 
 bool ImGuiMenu::drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>& selectedObjs )

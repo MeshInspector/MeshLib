@@ -73,6 +73,8 @@
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRChangeLabelAction.h"
 #include "MRMesh/MRMatrix3Decompose.h"
+#include "MRMesh/MRFeatureObject.h"
+#include "MRMesh/MRFinally.h"
 
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRSceneSettings.h"
@@ -89,14 +91,82 @@
 #include <fmt/chrono.h>
 #endif
 
+namespace MR
+{
+
 namespace
 {
 // translation multiplier that limits its maximum value depending on object size
 constexpr float cMaxTranslationMultiplier = 0xC00;
+
+namespace FeaturePropertyUpdateGui
+{
+
+// Draws a Vector3f properties editor for feature object.
+// returns is it need history checkpoint add?
+bool updateFeaturePropertyVector3f( const FeatureObjectSharedProperty& featureProperty, FeatureObject* object, MR::Vector3f& value )
+{
+    const char* tooltipsTranslation[3] = {
+        "Ox-coordinate",
+        "Oy-coordinate",
+        "Oz-coordinate"
+    };
+
+    float speed = 0.01f;
+    float min = std::numeric_limits<float>::lowest();
+    float max = std::numeric_limits<float>::max();
+
+    if ( ImGui::DragFloatValid3( featureProperty.propertyName.c_str(), &value.x, speed, min, max, "%.3f", 0, &tooltipsTranslation ) )
+        featureProperty.setter( value, object );
+
+    return ImGui::IsItemActivated();
 }
 
-namespace MR
+// Draws a float properties editor for feature object.
+// returns is it need history checkpoint add?
+bool updateFeaturePropertyFloat( const FeatureObjectSharedProperty& featureProperty, FeatureObject* object, float value )
 {
+    float speedCount = 0.01f;
+    auto speed = std::max( value * speedCount, 1e-3f );
+
+    float min = std::numeric_limits<float>::lowest();
+    float max = std::numeric_limits<float>::max();
+
+    if ( ImGui::DragFloatValid( featureProperty.propertyName.c_str(), &value, speed, min, max ) )
+        featureProperty.setter( value, object );
+
+    return ImGui::IsItemActivated();
+}
+
+// Draws a block with all the settings for the Feature object of the corresponding type
+// returns is it need history checkpoint add?
+bool drawUpdateFeatureDialog( FeatureObject* object )
+{
+    bool ret = false;
+
+    const auto& list = object->getAllSharedProperties();
+    if ( !list.empty() )
+        ImGui::Spacing();
+
+    for ( auto& prop : list )
+    {
+        auto value = prop.getter( object );
+        std::visit( overloaded{
+            [&]( Vector3f arg )
+            {
+                ret = updateFeaturePropertyVector3f( prop, object, arg ) || ret;
+            },
+            [&] ( float arg )
+            {
+                ret = updateFeaturePropertyFloat( prop, object, arg ) || ret;
+            }
+        }, value );
+    }
+
+    return ret;
+}
+} // namespace FeaturePropertyUpdateGui
+} // namespace
 
 constexpr std::array<const char*, size_t( MR::Viewer::EventType::Count )> cGLPrimitivesCounterNames =
 {
@@ -630,7 +700,7 @@ MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
                 viewport,
                 xf( obj.getBoundingBox().center() ),
                 Vector3f( 0.0f, 0.0f, 0.0f ),
-                obj.name(), 
+                obj.name(),
                  obj.getLabelsColor(),
                 clip );
     }
@@ -653,7 +723,7 @@ void ImGuiMenu::draw_text(
 
   // Draw text labels slightly bigger than normal text
   ImDrawList* drawList = ImGui::GetWindowDrawList();
-  ImVec4 clipRect( viewportRect.min.x, 
+  ImVec4 clipRect( viewportRect.min.x,
                    viewer->framebufferSize.y - ( viewportRect.min.y + height( viewportRect ) ),
                    viewportRect.min.x + width( viewportRect ),
                    viewer->framebufferSize.y - viewportRect.min.y );
@@ -730,7 +800,7 @@ void ImGuiMenu::draw_helpers()
         const float posY = getViewerInstance().framebufferSize.y - fpsWindowHeight;
         ImGui::SetNextWindowPos( ImVec2( posX, posY ), ImGuiCond_Appearing );
         ImGui::SetNextWindowSize( ImVec2( fpsWindowWidth, fpsWindowHeight ) );
-        ImGui::Begin( "##FPS", nullptr, ImGuiWindowFlags_AlwaysAutoResize | //ImGuiWindowFlags_NoInputs | 
+        ImGui::Begin( "##FPS", nullptr, ImGuiWindowFlags_AlwaysAutoResize | //ImGuiWindowFlags_NoInputs |
                       ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );
         for ( int i = 0; i<int( Viewer::GLPrimitivesType::Count ); ++i )
             ImGui::Text( "%s: %zu", cGLPrimitivesCounterNames[i], viewer->getLastFrameGLPrimitivesCount( Viewer::GLPrimitivesType( i ) ) );
@@ -771,7 +841,7 @@ void ImGuiMenu::draw_helpers()
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { 2.0f * cDefaultInnerSpacing * menuScaling, cDefaultInnerSpacing * menuScaling } );
-    
+
     ImVec2 windowSize( cModalWindowWidth * menuScaling, 0.0f );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
 
@@ -1188,7 +1258,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
                     }
                 }
             }
-              
+
         }
 
         if ( isSelected )
@@ -1250,9 +1320,14 @@ float ImGuiMenu::drawSelectionInformation_()
 
     auto& style = ImGui::GetStyle();
 
-    float resultHeight = ImGui::GetTextLineHeight() + style.FramePadding.y * 2 + style.ItemSpacing.y;
+    float baseCursorScreenPos = ImGui::GetCursorScreenPos().y;
+    auto resultingHeight = [&]
+    {
+        return ImGui::GetCursorScreenPos().y - baseCursorScreenPos;
+    };
+
     if ( !drawCollapsingHeader_( "Information", ImGuiTreeNodeFlags_DefaultOpen ) || selectedObjs.empty() )
-        return resultHeight;
+        return resultingHeight();
 
     // Points info
     size_t totalPoints = 0;
@@ -1320,47 +1395,20 @@ float ImGuiMenu::drawSelectionInformation_()
 #endif
     }
 
-    int elementFieldsCount = 0;
-    int sizeFieldsCount = 3;
-    int doubleSpaceCount = 1;
-    if ( totalPoints )
-        ++elementFieldsCount;
-    if ( totalVerts )
-        ++elementFieldsCount;
-    if ( totalFaces )
-        ++elementFieldsCount;
-    if ( selectedObjs.size() == 1 && std::dynamic_pointer_cast< ObjectLabel >( selectedObjs[0] ) )
-    {
-        ++elementFieldsCount;
-        ++doubleSpaceCount;
-    }
-    if ( elementFieldsCount )
-        ++doubleSpaceCount;
     if ( selectionWorldBox_.valid() )
     {
         bsize = selectionBbox_.size();
         bsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", bsize.x, bsize.y, bsize.z );
         wbsize = selectionWorldBox_.size();
         wbsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", wbsize.x, wbsize.y, wbsize.z );
-        if ( bsizeStr != wbsizeStr )
-            ++sizeFieldsCount;
     }
-#ifndef __EMSCRIPTEN__
-    if ( dimensions.x > 0 && dimensions.y > 0 && dimensions.z > 0 )
-    {
-        ++sizeFieldsCount;
-    }
-#endif
 
     ImGui::PushStyleVar( ImGuiStyleVar_ScrollbarSize, 12.0f );
-    const float smallItemSpacingY = 0.25f * cDefaultItemSpacing * menu_scaling();
-    const int fieldCount = elementFieldsCount + sizeFieldsCount + 1;
-    const float infoHeight = ImGui::GetTextLineHeight() * fieldCount + style.FramePadding.y * fieldCount * 2 +
-        smallItemSpacingY * fieldCount + smallItemSpacingY * 2 * doubleSpaceCount +
-        style.ItemSpacing.y;
-    resultHeight += infoHeight + style.ItemSpacing.y;
+    MR_FINALLY{ ImGui::PopStyleVar(); };
 
-    ImGui::BeginChild( "SceneInformation", ImVec2( 0, infoHeight ), false, ImGuiWindowFlags_HorizontalScrollbar );
+    const float smallItemSpacingY = std::round( 0.25f * cDefaultItemSpacing * menu_scaling() );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, smallItemSpacingY } );
+    MR_FINALLY{ ImGui::PopStyleVar(); };
 
     auto drawPrimitivesInfo = [this] ( std::string title, size_t value, size_t selected = 0 )
     {
@@ -1379,8 +1427,6 @@ float ImGuiMenu::drawSelectionInformation_()
             UI::inputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x * menu_scaling() );
         }
     };
-
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, smallItemSpacingY } );
 
     if ( selectedObjs.size() > 1 )
     {
@@ -1420,7 +1466,8 @@ float ImGuiMenu::drawSelectionInformation_()
                 oldLabelParams_.labelBuffer = oldLabelParams_.lastLabel;
             }
 
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 2 * smallItemSpacingY );
+            ImGui::Spacing();
+            ImGui::Spacing();
 
             if ( ImGui::InputText( "Label", oldLabelParams_.labelBuffer, ImGuiInputTextFlags_AutoSelectAll ) )
                 pObjLabel->setLabel( { oldLabelParams_.labelBuffer, pObjLabel->getLabel().position } );
@@ -1446,17 +1493,26 @@ float ImGuiMenu::drawSelectionInformation_()
     else
         lastRenameObj_.reset();
 
-    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 2 * smallItemSpacingY );
-
-    drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces );
-    drawPrimitivesInfo( "Vertices", totalVerts );
-    drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints );
-
-    if ( elementFieldsCount )
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 2 * smallItemSpacingY );
-
-    auto drawVec3 = [&style] ( std::string title, auto& value, float width, const char* formatStr )
+    if ( totalFaces || totalVerts || totalPoints )
     {
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces );
+        drawPrimitivesInfo( "Vertices", totalVerts );
+        drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints );
+    }
+
+    bool firstField = true;
+    auto drawVec3 = [&style, &firstField] ( std::string title, auto& value, float width, const char* formatStr )
+    {
+        if ( firstField )
+        {
+            firstField = false;
+            ImGui::Spacing();
+            ImGui::Spacing();
+        }
+
         UI::inputTextCenteredReadOnly( ( "##" + title + "_x" ).c_str(), fmt::format( runtimeFmt( formatStr ), value.x ), width );
         ImGui::SameLine(0.f, style.ItemInnerSpacing.x);
         UI::inputTextCenteredReadOnly( ( "##" + title + "_y" ).c_str(), fmt::format( runtimeFmt( formatStr ), value.y ), width );
@@ -1484,12 +1540,26 @@ float ImGuiMenu::drawSelectionInformation_()
             drawVec3( "World box size", wbsize, fieldWidth, "{:.3f}" );
     }
 
-    ImGui::PopStyleVar();
-    ImGui::Dummy( ImVec2( 0, 0 ) );
-    ImGui::EndChild();
-    ImGui::PopStyleVar();
+    // Feature object properties.
+    if ( selectedObjs.size() == 1 )
+    {
+        if ( auto fo = std::dynamic_pointer_cast<FeatureObject>( selectedObjs.front() ) )
+        {
+            ImGui::PushItemWidth( getSceneInfoItemWidth_( 1 ) ); // ??
+            MR_FINALLY{ ImGui::PopItemWidth(); };
 
-    return resultHeight;
+            if ( FeaturePropertyUpdateGui::drawUpdateFeatureDialog( fo.get() ) )
+            {
+                AppendHistory<ChangeXfAction>( selectedObjs.front()->name() + " change feature prop", selectedObjs.front() ); // save feature oldXf
+            }
+        }
+    }
+
+    // This looks a bit better.
+    for ( int i = 0; i < 5; i++ )
+        ImGui::Spacing();
+
+    return resultingHeight();
 }
 
 bool ImGuiMenu::drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>& selectedObjs )
@@ -1688,7 +1758,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
         {
             auto meshObj = visObj->asType<ObjectMeshHolder>();
             assert( meshObj );
-            allHaveTexture = allHaveTexture && 
+            allHaveTexture = allHaveTexture &&
                 ( !meshObj->getTexture().pixels.empty() && !meshObj->getUVCoords().empty() );
             if ( !allHaveTexture )
                 break;
@@ -2176,7 +2246,7 @@ void ImGuiMenu::make_light_strength( std::vector<std::shared_ptr<VisualObject>> 
 }
 
 
-void ImGuiMenu::make_uint8_slider( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, 
+void ImGuiMenu::make_uint8_slider( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
     std::function<uint8_t( const VisualObject* )> getter, std::function<void( VisualObject*, uint8_t )> setter )
 {
     if ( selectedVisualObjs.empty() )
@@ -2211,7 +2281,7 @@ void ImGuiMenu::make_uint8_slider( std::vector<std::shared_ptr<VisualObject>> se
 }
 
 template<typename ObjType>
-void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, 
+void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
     std::function<float( const ObjType* )> getter,
     std::function<void( ObjType*, const float& )> setter,
     bool lineWidth )

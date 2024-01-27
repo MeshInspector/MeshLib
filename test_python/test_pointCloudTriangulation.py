@@ -1,5 +1,5 @@
-from helper import *
 import pytest
+from helper import *
 
 
 def test_point_cloud_triangulation():
@@ -9,6 +9,6 @@ def test_point_cloud_triangulation():
     params = mrmesh.TriangulationParameters()
     restored = mrmesh.triangulatePointCloud(torusPointCloud, params)
 
-    assert (len(restored.points.vec) == 1024)
-    assert (restored.topology.getValidVerts().count() == 1024)
-    assert (restored.topology.findHoleRepresentiveEdges().size() == 0)
+    assert len(restored.points.vec) == 1024
+    assert restored.topology.getValidVerts().count() == 1024
+    assert restored.topology.findHoleRepresentiveEdges().size() == 0

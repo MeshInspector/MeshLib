@@ -6,7 +6,6 @@
 #include "MRBuffer.h"
 #include <climits>
 #include <optional>
-#include <cstdint>
 
 namespace MR
 {

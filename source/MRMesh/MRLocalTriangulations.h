@@ -3,6 +3,7 @@
 #include "MRId.h"
 #include "MRVector.h"
 #include "MRBuffer.h"
+#include <cstdint>
 #include <optional>
 
 namespace MR
@@ -15,7 +16,7 @@ struct FanRecord
     /// triangle associated with this point is absent
     VertId border;
 
-    /// the position of first neigbor in SomeLocalTriangulations::neighbours
+    /// the position of first neigbor in LocalTriangulations::neighbours
     std::uint32_t firstNei;
 
     FanRecord( VertId b = {}, std::uint32_t fn = 0 ) : border( b ), firstNei( fn ) {}

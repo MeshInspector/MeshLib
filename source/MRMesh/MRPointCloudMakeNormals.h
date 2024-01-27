@@ -34,7 +34,7 @@ MRMESH_API bool orientNormals( const PointCloud& pointCloud, VertNormals& normal
 /// (with most neighbours within given radius and all neighbours within 2*radius)
 /// and considers all triangulation neighbors and not other points from the ball around each point.
 /// \ingroup PointCloudGroup
-MRMESH_API bool orientNormalsUsingLocalTriangulations( const PointCloud& pointCloud, VertNormals& normals, float radius,
+MRMESH_API bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, const AllLocalTriangulations& triangs,
     const ProgressCallback & progress = {} );
 
 /// \brief Select orientation of given normals to make directions of close points consistent;

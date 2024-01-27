@@ -9,7 +9,7 @@
 #include "MRGeodesicPath.h"
 #include "MRTimer.h"
 #include "MRBitSetParallelFor.h"
-#include "MRParallelFor.h"
+#include "MRLocalTriangulations.h"
 #include <algorithm>
 #include <queue>
 #include <numeric>
@@ -429,12 +429,12 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const VertCoord
     }
 }
 
-std::optional<std::vector<LocalTriangulations>> buildLocalTriangulations(
+std::optional<std::vector<SomeLocalTriangulations>> buildLocalTriangulations(
     const PointCloud& cloud, const VertCoords& normals, const Settings & settings, const ProgressCallback & progress )
 {
     MR_TIMER
 
-    struct PerThreadData : LocalTriangulations
+    struct PerThreadData : SomeLocalTriangulations
     {
         TriangulationHelpers::TriangulatedFanData fanData;
     };
@@ -451,7 +451,7 @@ std::optional<std::vector<LocalTriangulations>> buildLocalTriangulations(
     }, progress ) )
         return {};
 
-    std::vector<LocalTriangulations> res;
+    std::vector<SomeLocalTriangulations> res;
     res.reserve( threadData.size() );
     for ( auto & td : threadData )
     {
@@ -462,7 +462,7 @@ std::optional<std::vector<LocalTriangulations>> buildLocalTriangulations(
     return res;
 }
 
-std::optional<OrderedLocalTriangulations> buildOrderedLocalTriangulations(
+std::optional<AllLocalTriangulations> buildUnitedLocalTriangulations(
     const PointCloud& cloud, const VertCoords& normals, const Settings & settings, const ProgressCallback & progress )
 {
     MR_TIMER
@@ -470,47 +470,8 @@ std::optional<OrderedLocalTriangulations> buildOrderedLocalTriangulations(
     const auto optPerThreadTriangs = buildLocalTriangulations( cloud, normals, settings, subprogress( progress, 0.0f, 0.9f ) );
     if ( !optPerThreadTriangs )
         return {};
-    const auto & perThreadTriangs = *optPerThreadTriangs;
 
-    OrderedLocalTriangulations res;
-    res.fanRecords.resize( cloud.points.size() + 1 );
-    Buffer<const VertId*, VertId> firstNeiSrc( cloud.points.size() + 1 );
-
-    // temporary write in firstNei the _number_ of neighbours and fill firstNeiSrc
-    for ( const auto& threadInfo : perThreadTriangs )
-    {
-        for ( int i = 0; i + 1 < threadInfo.fanRecords.size(); ++i )
-        {
-            const auto v = threadInfo.fanRecords[i].center;
-            res.fanRecords[v].border = threadInfo.fanRecords[i].border;
-            res.fanRecords[v].firstNei = threadInfo.fanRecords[i+1].firstNei - threadInfo.fanRecords[i].firstNei;
-            firstNeiSrc[v] = threadInfo.neighbors.data() + threadInfo.fanRecords[i].firstNei;
-        }
-    }
-
-    // rewrite firstNei with the position in res.neighbors
-    std::uint32_t numNei = 0;
-    for ( auto & fan : res.fanRecords )
-    {
-        auto num = fan.firstNei;
-        fan.firstNei = numNei;
-        numNei += num;
-    }
-    assert( res.fanRecords.back().firstNei == numNei );
-    res.neighbors.resize( numNei );
-
-    // copy neighbours of each fan
-    if ( !ParallelFor( 0_v, res.fanRecords.backId(), [&]( VertId v )
-    {
-        const auto * src = firstNeiSrc[v];
-        auto i = res.fanRecords[v].firstNei;
-        auto iEnd = res.fanRecords[v + 1].firstNei;
-        for ( ; i < iEnd; ++i )
-            res.neighbors[i] = *src++;
-    }, subprogress( progress, 0.9f, 1.0f ) ) )
-        return {};
-
-    return res;
+    return uniteLocalTriangulations( *optPerThreadTriangs );
 }
 
 bool isBoundaryPoint( const PointCloud& pointCloud, const VertCoords& normals,

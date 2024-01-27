@@ -87,51 +87,13 @@ struct Settings
 MRMESH_API void buildLocalTriangulation( const PointCloud& cloud, VertId v, const VertCoords& normals, const Settings & settings,
     TriangulatedFanData & fanData );
 
-/// describes one fan of triangles around a point excluding the point
-struct FanRecord
-{
-    /// first border edge (invalid if the center point is not on the boundary);
-    /// triangle associated with this point is absent
-    VertId border;
-
-    /// the position of first neigbor in LocalTriangulations::neighbours
-    std::uint32_t firstNei;
-
-    FanRecord( VertId b = {}, std::uint32_t fn = 0 ) : border( b ), firstNei( fn ) {}
-    FanRecord( NoInit ) : border( noInit ) {}
-};
-
-/// describes one fan of triangles around a point including the point
-struct FanRecordWithCenter : FanRecord
-{
-    /// center point in the fan
-    VertId center;
-
-    FanRecordWithCenter( VertId c = {}, VertId b = {}, std::uint32_t fn = 0 ) : FanRecord( b, fn ), center( c ) {}
-    FanRecordWithCenter( NoInit ) : FanRecord( noInit ), center( noInit ) {}
-};
-
-/// describes a number of local triangulations of some points (assigned to a thread)
-struct LocalTriangulations
-{
-    std::vector<VertId> neighbors;
-    std::vector<FanRecordWithCenter> fanRecords;
-};
-
 /// computes all local triangulations of all points in the cloud, and returns them distributed among
-/// a set of LocalTriangulations objects
-[[nodiscard]] MRMESH_API std::optional<std::vector<LocalTriangulations>> buildLocalTriangulations(
+/// a set of SomeLocalTriangulations objects
+[[nodiscard]] MRMESH_API std::optional<std::vector<SomeLocalTriangulations>> buildLocalTriangulations(
     const PointCloud& cloud, const VertCoords& normals, const Settings & settings, const ProgressCallback & progress = {} );
 
-/// triangulations for all points sorted according to VertId
-struct OrderedLocalTriangulations
-{
-    Buffer<VertId> neighbors;
-    Vector<FanRecord, VertId> fanRecords;
-};
-
-//// computes all local triangulations of all points in the cloud
-[[nodiscard]] MRMESH_API std::optional<OrderedLocalTriangulations> buildOrderedLocalTriangulations(
+//// computes local triangulations of all points in the cloud united in one struct
+[[nodiscard]] MRMESH_API std::optional<AllLocalTriangulations> buildUnitedLocalTriangulations(
     const PointCloud& cloud, const VertCoords& normals, const Settings & settings, const ProgressCallback & progress = {} );
 
 /**

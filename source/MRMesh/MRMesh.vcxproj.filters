@@ -1167,6 +1167,9 @@
     <ClInclude Include="MRPointsLoadE57.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRLocalTriangulations.h">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1934,6 +1937,9 @@
     </ClCompile>
     <ClCompile Include="MRFeatures.cpp">
       <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRLocalTriangulations.cpp">
+      <Filter>Source Files\Triangulation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

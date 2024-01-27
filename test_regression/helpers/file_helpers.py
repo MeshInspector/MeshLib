@@ -14,10 +14,11 @@ def compare_files(file1: str or Path, file2: str or Path):
     :param file2: second file to compare
     :return: True if the files are equal, False otherwise
     """
+
     if not os.path.exists(file1):
         logger.error(f"File {file1} does not exist")
         return False
-    if not os.path.isfile(file2):
+    if not os.path.exists(file2):
         logger.error(f"File {file2} does not exist")
         return False
 
@@ -25,7 +26,6 @@ def compare_files(file1: str or Path, file2: str or Path):
     size2 = os.path.getsize(file2)
     if size1 != size2:
         return False
-
     # algorithm below valid only if files have same size (it's checked above)
     with open(file1, 'rb') as f1, open(file2, 'rb') as f2:
         byte1 = f1.read(1)
@@ -62,3 +62,20 @@ def get_reference_files_list(full_file_path: Path):
         logger.debug(f"Found reference file {i}")
         references_list.append(i)
     return references_list
+
+
+def is_file_same_as_reference(file_path: Path, reference_file_path: Path, multi_ref=True):
+    """
+    Check if file is same as one of reference files.
+    If multi_ref is True, it compares file with multiple references. Extra reference must have names like
+    ref-file_{MULTIPLE_REFERENCE_FILES_SUFFIX}_{Anytext}.ext
+    For example for fox.stl reference file can be fox_ref_2.stl fox_ref_ubuntu20.stl
+    If multi_ref is False, it compares file with single reference.
+    :param file_path: file to check
+    :param reference_file_path: reference file to check
+    :return: True if file is same as reference file, False otherwise
+    """
+    if multi_ref:
+        return compare_file_with_multiple_references(file_path, get_reference_files_list(reference_file_path))
+    else:
+        return compare_files(file_path, reference_file_path)

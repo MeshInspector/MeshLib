@@ -133,7 +133,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m ) \
             std::stringstream ss;\
             ss << #name << "[" << data.x << ", " << data.y << "]";\
             return ss.str();\
-        } );\
+        } ).\
+         def( "__iter__", [](VectorType& data) {\
+            return pybind11::make_iterator<pybind11::return_value_policy::reference_internal>( begin( data ), end( data ) );\
+        }, pybind11::keep_alive<0, 1>() );\
     m.def( "dot", ( type( * )( const VectorType&, const VectorType& ) )& MR::dot<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "dot product" );\
     m.def( "cross", ( type( * )( const VectorType&, const VectorType& ) )& MR::cross<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "cross product" );\
 } )
@@ -182,7 +185,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
             std::stringstream ss;\
             ss << #name << "[" << data.x << ", " << data.y << ", " << data.z << "]";\
             return ss.str();\
-        } );\
+        } ).\
+        def( "__iter__", [](VectorType& data) {\
+            return pybind11::make_iterator<pybind11::return_value_policy::reference_internal>( begin( data ), end( data ) );\
+        }, pybind11::keep_alive<0, 1>() );\
     if constexpr ( !std::is_same_v<type, int> ) \
     {\
         MR_PYTHON_CUSTOM_CLASS( name ).\

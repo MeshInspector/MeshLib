@@ -17,6 +17,7 @@
 #include "MRPointCloudTriangulationHelpers.h"
 #include "MRRegionBoundary.h"
 #include "MRParallelFor.h"
+#include "MRLocalTriangulations.h"
 #include <parallel_hashmap/phmap.h>
 
 namespace MR
@@ -72,7 +73,7 @@ private:
 
     const PointCloud& pointCloud_;
     TriangulationParameters params_;
-    std::vector<TriangulationHelpers::LocalTriangulations> localTriangulations_;
+    std::vector<SomeLocalTriangulations> localTriangulations_;
 };
 
 PointCloudTriangulator::PointCloudTriangulator( const PointCloud& pointCloud, const TriangulationParameters& params ) :

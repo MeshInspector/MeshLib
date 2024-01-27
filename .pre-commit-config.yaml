@@ -1,0 +1,18 @@
+minimum_pre_commit_version: 1.17.0
+default_stages: [commit,push]
+
+repos:
+  - repo: local
+    hooks:
+      - id: black
+        name: Black
+        description: Uncompromising Python code formatter
+        entry: black
+        language: system
+        types: [python]
+      - id: isort
+        name: isort
+        description: Import sorting
+        entry: isort --profile black
+        language: system
+        types: [python]

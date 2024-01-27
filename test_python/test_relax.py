@@ -34,7 +34,7 @@ def test_relax_approx():
 
     params = mrmesh.MeshApproxRelaxParams()
     params.iterations = 5
-    res = mrmesh.relaxKeepVolume(torus, params)
+    res = mrmesh.relaxApprox(torus, params)
 
     assert res
 
@@ -44,7 +44,8 @@ def test_smooth_region_boundary():
     R2_2 = 2.5
     keep_volume_torus = mrmesh.makeTorusWithSpikes(R1, R2_1, R2_2, 10, 12, None)
 
-    smooth_region = keep_volume_torus.topology.getValidFaces()
+    smooth_region = mrmesh.FaceBitSet()
+    smooth_region.resize( 6, True )
 
     # This just checks that the function exists and can be called.
     mrmesh.smoothRegionBoundary(keep_volume_torus, smooth_region)

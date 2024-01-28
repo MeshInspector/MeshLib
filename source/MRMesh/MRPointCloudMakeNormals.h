@@ -14,6 +14,13 @@ namespace MR
     float radius, const ProgressCallback & progress = {} );
 
 /// \brief Makes normals for valid points of given point cloud by directing them along the normal (in one of two sides arbitrary) of best plane through the neighbours
+/// \triangs triangulation neighbours of each point
+/// \return nullopt if progress returned false
+/// \ingroup PointCloudGroup
+[[nodiscard]] MRMESH_API std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud,
+    const AllLocalTriangulations& triangs, const ProgressCallback & progress = {} );
+
+/// \brief Makes normals for valid points of given point cloud by directing them along the normal (in one of two sides arbitrary) of best plane through the neighbours
 /// \param closeVerts a buffer where for every valid point #i its neighbours are stored at indices [i*numNei; (i+1)*numNei)
 /// \return nullopt if progress returned false
 /// \ingroup PointCloudGroup
@@ -50,6 +57,13 @@ MRMESH_API bool orientNormals( const PointCloud& pointCloud, VertNormals& normal
 /// \ingroup PointCloudGroup
 [[nodiscard]] MRMESH_API std::optional<VertNormals> makeOrientedNormals( const PointCloud& pointCloud,
     float radius, const ProgressCallback & progress = {} );
+
+/// \brief Makes normals for valid points of given point cloud; directions of close points are selected to be consistent;
+/// \triangs triangulation neighbours of each point
+/// \return nullopt if progress returned false
+/// \ingroup PointCloudGroup
+[[nodiscard]] MRMESH_API std::optional<VertNormals> makeOrientedNormals( const PointCloud& pointCloud,
+    const AllLocalTriangulations& triangs, const ProgressCallback & progress = {} );
 
 /// \brief Makes consistent normals for valid points of given point cloud
 /// \param avgNeighborhoodSize avg num of neighbors of each individual point

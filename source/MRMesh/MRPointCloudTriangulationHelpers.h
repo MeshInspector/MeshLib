@@ -72,7 +72,7 @@ struct Settings
     float radius = 0;
     /// max allowed angle for triangles in fan
     float critAngle = PI2_F;
-    /// if oriented normals are known, they will be used for neighbour points selection
+    /// if oriented normals are known, they will be used for neighbor points selection
     const VertCoords* trustedNormals = nullptr;
     /// automatic increase of the radius if points outside can make triangles from original radius not-Delone
     bool automaticRadiusIncrease = true;

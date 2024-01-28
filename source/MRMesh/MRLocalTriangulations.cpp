@@ -14,9 +14,10 @@ std::optional<AllLocalTriangulations> uniteLocalTriangulations( const std::vecto
     VertId maxVertId;
     for ( const auto& lt : in )
     {
-        if ( lt.fanRecords.empty() )
+        if ( lt.fanRecords.size() <= 1 )
             continue;
-        maxVertId = std::max( maxVertId, lt.fanRecords.back().center );
+        assert( !lt.fanRecords.back().center );
+        maxVertId = std::max( maxVertId, lt.fanRecords[lt.fanRecords.size() - 2].center );
     }
 
     if ( !reportProgress( progress, 0.0f ) )

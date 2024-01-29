@@ -49,13 +49,13 @@ public:
         if ( !res.has_value() )
         {
             // TODO: user-defined error format
-            errorSummary_ << ( !isEmpty( errorSummary_ ) ? "\n\n" : "" ) << fileName << ":\n" << res.error() << "\n";
+            errorSummary_ << ( !isEmpty( errorSummary_ ) ? "\n" : "" ) << "\n" << fileName << ":\n" << res.error() << "\n";
             return;
         }
         if ( !warningText.empty() )
         {
             // TODO: user-defined warning format
-            warningSummary_ << ( !isEmpty( warningSummary_ ) ? "\n\n" : "" ) << fileName << ":\n" << warningText << "\n";
+            warningSummary_ << ( !isEmpty( warningSummary_ ) ? "\n" : "" ) << "\n" << fileName << ":\n" << warningText << "\n";
         }
 
         const auto prevObjectCount = loadedObjects_.size();

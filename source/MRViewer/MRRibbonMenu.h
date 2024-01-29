@@ -11,6 +11,7 @@
 #include <boost/signals2/signal.hpp>
 #include <type_traits>
 #include <array>
+#include "MRRibbonNotification.h"
 
 namespace MR
 {
@@ -98,7 +99,7 @@ public:
 
     /// adds new notification to notifier list
     /// draws it first
-    MRVIEWER_API void pushNotification( const RibbonNotification& notification ) override;
+    MRVIEWER_API void pushNotification( const RibbonNotification& notification );
 
     /// clones given objects with sub-objects (except for ancillary and unrecognized children) and undo
     MRVIEWER_API static void cloneTree( const std::vector<std::shared_ptr<Object>>& selectedObjects );

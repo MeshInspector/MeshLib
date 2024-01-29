@@ -2156,11 +2156,6 @@ bool ImGuiMenu::drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags fla
 void ImGuiMenu::draw_custom_tree_object_properties( Object& )
 {}
 
-void ImGuiMenu::pushNotification( const RibbonNotification& notification )
-{
-    showModal( notification.text, notification.type );
-}
-
 bool ImGuiMenu::make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, unsigned type, MR::ViewportMask viewportid, bool invert /*= false*/ )
 {
     auto realRes = getRealValue( selectedVisualObjs, type, viewportid, invert );

@@ -3,8 +3,8 @@ import meshlib.mrmeshpy as mrmesh
 import pathlib
 
 
-def relative_hausdorff(mesh1: mrmesh.Mesh or pathlib.Path or mrmesh.Path or str,
-                       mesh2: mrmesh.Mesh or pathlib.Path or mrmesh.Path or str):
+def relative_hausdorff(mesh1: mrmesh.Mesh or pathlib.Path or str,
+                       mesh2: mrmesh.Mesh or pathlib.Path or str):
     """
     Calculate Hausdorff distance between two meshes, normalized on smallest bounding box diagonal.
     1.0 means that the meshes are equal, 0.0 means that they are completely different.
@@ -15,12 +15,8 @@ def relative_hausdorff(mesh1: mrmesh.Mesh or pathlib.Path or mrmesh.Path or str,
     """
     if isinstance(mesh1, str) or isinstance(mesh1, pathlib.Path):
         mesh1 = mrmesh.loadMesh(str(mesh1))
-    elif isinstance(mesh1, mrmesh.Path):
-        mesh1 = mrmesh.loadMesh(mesh1)
     if isinstance(mesh2, str) or isinstance(mesh2, pathlib.Path):
         mesh2 = mrmesh.loadMesh(str(mesh2))
-    elif isinstance(mesh2, mrmesh.Path):
-        mesh2 = mrmesh.loadMesh(mesh2)
     distance = mrmesh.findMaxDistanceSq(mesh1, mesh2) ** 0.5
     diagonal = min(mesh1.getBoundingBox().diagonal(), mesh2.getBoundingBox().diagonal())
     val = 1.0 - (distance / diagonal)

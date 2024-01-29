@@ -26,6 +26,10 @@
 #include "MRMesh/MRExpected.h"
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
+#pragma warning(push)
+#pragma warning(disable: 4464) // relative include path contains '..'
+#include <pybind11/stl/filesystem.h>
+#pragma warning(pop)
 
 MR_INIT_PYTHON_MODULE( mrmeshpy )
 
@@ -38,20 +42,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ExpectedVoid, [] ( pybind11::module_& )
     MR_PYTHON_CUSTOM_CLASS( ExpectedVoid ).
         def( "has_value", &expectedType::has_value ).
         def( "error", ( const std::string& ( expectedType::* )( )const& )& expectedType::error );
-} )
-
-MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, Path, std::filesystem::path )
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Path, [] ( pybind11::module_& )
-{
-    MR_PYTHON_CUSTOM_CLASS( Path ).
-        def( pybind11::init( [] ( const std::string& s )
-    {
-        return MR::pathFromUtf8( s );
-    } ) );
-    pybind11::implicitly_convertible<std::string, std::filesystem::path>();
-    // it could be simlier, but bug in clang 14 does not work with it:
-    // def( pybind11::init<const std::u8string&>() );
-    // pybind11::implicitly_convertible<std::u8string, std::filesystem::path>();
 } )
 
 #define MR_ADD_PYTHON_BOX( name, VectorType ) \

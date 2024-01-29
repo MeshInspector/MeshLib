@@ -1054,11 +1054,9 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
 
         auto menu = getMenuPluginAs<RibbonMenu>();
         if ( !result.errorSummary.empty() )
-            menu ? menu->pushNotification( { .text = result.errorSummary.substr(1), .type = NotificationType::Error})
-            : showModal(std::string(result.errorSummary), NotificationType::Error);
+            pushNotification( { .text = result.errorSummary, .type = NotificationType::Error } );
         else if ( !result.warningSummary.empty() )
-            menu ? menu->pushNotification( { .text = result.warningSummary.substr(1), .type = NotificationType::Warning})
-            : showModal( std::string( result.warningSummary ), NotificationType::Warning );
+            pushNotification( { .text = result.warningSummary, .type = NotificationType::Warning } );
     };
 
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )

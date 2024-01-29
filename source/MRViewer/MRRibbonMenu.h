@@ -268,6 +268,9 @@ private:
 #endif // !__EMSCRIPTEN__
 };
 
+MRVIEWER_API void pushNotification( const RibbonNotification& notification);
+
+
 template<typename T>
 struct RibbonMenuItemAdder
 {

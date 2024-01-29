@@ -1,6 +1,6 @@
 var postWasmLoad = function () {
     setTimeout(registerResize);
-    setupColorTheme();
+    //setupColorTheme();
     updateCalculateMouseEvent();
     registerErrorHandling();
     registerSafeDecoder();

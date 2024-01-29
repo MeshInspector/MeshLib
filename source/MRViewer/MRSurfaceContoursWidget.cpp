@@ -47,6 +47,8 @@ void AddPointActionPickerPoint::action( Type actionType )
             updateBaseColor( contour.back(), widget_.params.ordinaryPointColor );
 
         contour.push_back( widget_.createPickWidget_( obj_, point_ ) );
+        widget_.activeIndex_ = int( contour.size()-1 );
+        widget_.activeObject_ = obj_;
 
         updateBaseColor( contour.back(), widget_.params.lastPoitColor );
 

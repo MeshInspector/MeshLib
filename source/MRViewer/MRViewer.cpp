@@ -1003,7 +1003,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
     if ( filesList.empty() )
         return false;
 
-    const auto postProcess = [this] ( const SceneLoad::SceneLoadResult& result )
+    const auto postProcess = [] ( const SceneLoad::SceneLoadResult& result )
     {
         assert( result.scene );
         const auto childCount = result.scene->children().size();
@@ -1052,13 +1052,10 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
             getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
         }
 
-        auto menu = getMenuPluginAs<RibbonMenu>();
         if ( !result.errorSummary.empty() )
-            menu ? menu->pushNotification( { .text = result.errorSummary.substr(1), .type = NotificationType::Error})
-            : showModal(std::string(result.errorSummary), NotificationType::Error);
+            getViewerInstance().getMenuPlugin()->pushNotification( { .text = result.errorSummary, .type = NotificationType::Error } );
         else if ( !result.warningSummary.empty() )
-            menu ? menu->pushNotification( { .text = result.warningSummary.substr(1), .type = NotificationType::Warning})
-            : showModal( std::string( result.warningSummary ), NotificationType::Warning );
+            getViewerInstance().getMenuPlugin()->pushNotification( { .text = result.warningSummary, .type = NotificationType::Warning } );
     };
 
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )

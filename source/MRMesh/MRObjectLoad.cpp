@@ -548,7 +548,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
             postImportObject( o, filename );
             if ( auto objectPoints = o->asType<ObjectPoints>(); objectPoints && !objectPoints->pointCloud()->hasNormals() && loadWarn )
             {
-                *loadWarn += "Object " + o->name() + " has no normals.\n";
+                *loadWarn += "Point cloud " + o->name() + " has no normals.\n";
             }
         }
 

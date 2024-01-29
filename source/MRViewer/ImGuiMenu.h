@@ -13,6 +13,7 @@
 #include "MRViewerEventsListener.h"
 #include "MRStatePlugin.h"
 #include "MRNotificationType.h"
+#include "MRRibbonNotification.h"
 #include <unordered_map>
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -224,6 +225,8 @@ public:
   MRVIEWER_API void showModalMessage( const std::string& msg, NotificationType msgType );
 
   MRVIEWER_API virtual std::filesystem::path getMenuFontPath() const;
+
+  MRVIEWER_API virtual void pushNotification( const RibbonNotification& notification );
 
   // setup maximum good time for frame rendering (if rendering is slower it will become red in statistics window)
   MRVIEWER_API void setDrawTimeMillisecThreshold( long long maxGoodTimeMillisec );

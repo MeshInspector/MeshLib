@@ -1004,9 +1004,10 @@ void ImGuiMenu::draw_selection_properties_content( std::vector<std::shared_ptr<O
 
     if ( allHaveVisualisation && drawCollapsingHeader_( "Draw Options" ) )
     {
-        drawDrawOptionsCheckboxes_( selectedVisualObjs );
+        auto selectedType = getTyeSelectedObject( selectedObjs );
+        drawDrawOptionsCheckboxes_( selectedVisualObjs, selectedType );
         drawDrawOptionsColors_( selectedVisualObjs );
-        drawAdvancedOptions_( selectedVisualObjs );
+        drawAdvancedOptions_( selectedVisualObjs, selectedType );
     }
 
     draw_custom_selection_properties( selectedObjs );
@@ -1527,7 +1528,7 @@ bool ImGuiMenu::drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>&
     return someChanges;
 }
 
-bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs )
+bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedType selectedType )
 {
     if ( selectedObjs.empty() )
         return false;
@@ -1545,11 +1546,7 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
 
     const auto& viewportid = viewer->viewport().id;
 
-    bool allIsObjMesh = !selectedObjs.empty() &&
-        std::all_of( selectedObjs.cbegin(), selectedObjs.cend(), [] ( const std::shared_ptr<VisualObject>& obj )
-    {
-        return obj && obj->asType<ObjectMeshHolder>();
-    } );
+    bool allIsObjMesh = selectedType & SelectedItemType::VisualObjectMesh;
 
     bool closePopup = false;
 
@@ -1582,11 +1579,7 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
         obj->setSpecularStrength( value );
     } );
 
-    bool allIsObjPoints = !selectedObjs.empty() &&
-        std::all_of( selectedObjs.cbegin(), selectedObjs.cend(), []( const std::shared_ptr<VisualObject>& obj )
-    {
-        return obj && obj->asType<ObjectPointsHolder>();
-    } );
+    bool allIsObjPoints = selectedType & SelectedItemType::VisualObjectPoint;
 
     if ( allIsObjPoints )
     {
@@ -1644,32 +1637,16 @@ bool ImGuiMenu::drawRemoveButton_( const std::vector<std::shared_ptr<Object>>& s
     return someChanges;
 }
 
-bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<VisualObject>>& selectedVisualObjs )
+bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<VisualObject>>& selectedVisualObjs, SelectedType selectedType )
 {
     bool someChanges = false;
     if ( selectedVisualObjs.empty() )
         return someChanges;
 
-    bool allIsObjMesh = !selectedVisualObjs.empty() &&
-        std::all_of( selectedVisualObjs.cbegin(), selectedVisualObjs.cend(), [] ( const std::shared_ptr<VisualObject>& obj )
-    {
-        return obj && obj->asType<ObjectMeshHolder>();
-    } );
-    bool allIsObjLines = !selectedVisualObjs.empty() &&
-        std::all_of( selectedVisualObjs.cbegin(), selectedVisualObjs.cend(), [] ( const std::shared_ptr<VisualObject>& obj )
-    {
-        return obj && obj->asType<ObjectLinesHolder>();
-    } );
-    bool allIsObjPoints = !selectedVisualObjs.empty() &&
-        std::all_of( selectedVisualObjs.cbegin(), selectedVisualObjs.cend(), [] ( const std::shared_ptr<VisualObject>& obj )
-    {
-        return obj && obj->asType<ObjectPointsHolder>();
-    } );
-    bool allIsObjLabels = !selectedVisualObjs.empty() &&
-        std::all_of( selectedVisualObjs.cbegin(), selectedVisualObjs.cend(), [] ( const std::shared_ptr<VisualObject>& obj )
-    {
-        return obj && obj->asType<ObjectLabel>();
-    } );
+    bool allIsObjMesh = selectedType & SelectedItemType::VisualObjectMesh;
+    bool allIsObjLines = selectedType & SelectedItemType::VisualObjectLine;
+    bool allIsObjPoints = selectedType & SelectedItemType::VisualObjectPoint;
+    bool allIsObjLabels = selectedType & SelectedItemType::VisualObjectLabel;
 
     const auto& viewportid = viewer->viewport().id;
 
@@ -2983,6 +2960,55 @@ void ImGuiMenu::drawShortcutsWindow_()
             ImGui::Text( "%s - %s", ShortcutManager::getKeyFullString( key ).c_str(), name.c_str() );
     }
     ImGui::End();
+}
+
+SelectedType ImGuiMenu::getTyeSelectedObject( const std::vector<std::shared_ptr<Object>>& selectedObjs )
+{
+    SelectedType res = 0;
+    if ( selectedObjs.empty() )
+        return res;
+
+    bool allIsObjMesh = std::any_of( selectedObjs.cbegin(), selectedObjs.cend(), [] ( const std::shared_ptr<Object>& obj )
+    {
+        return obj && obj->asType<ObjectMeshHolder>();
+    } );
+    if ( allIsObjMesh )
+    {
+        res |= SelectedItemType::VisualObjectMesh;
+    }
+
+    bool allIsObjLines = !selectedObjs.empty() &&
+        std::any_of( selectedObjs.cbegin(), selectedObjs.cend(), [] ( const std::shared_ptr<Object>& obj )
+    {
+        return obj && obj->asType<ObjectLinesHolder>();
+    } );
+
+    if ( allIsObjLines )
+    {
+        res |= SelectedItemType::VisualObjectLine;
+    }
+
+    bool allIsObjPoints = !selectedObjs.empty() &&
+        std::any_of( selectedObjs.cbegin(), selectedObjs.cend(), [] ( const std::shared_ptr<Object>& obj )
+    {
+        return obj && obj->asType<ObjectPointsHolder>();
+    } );
+    if ( allIsObjPoints )
+    {
+        res |= SelectedItemType::VisualObjectPoint;
+    }
+
+    bool allIsObjLabels = !selectedObjs.empty() &&
+        std::any_of( selectedObjs.cbegin(), selectedObjs.cend(), [] ( const std::shared_ptr<Object>& obj )
+    {
+        return obj && obj->asType<ObjectLabel>();
+    } );
+    if ( allIsObjLabels )
+    {
+        res |= SelectedItemType::VisualObjectLabel;
+    }
+
+    return res;
 }
 
 float ImGuiMenu::getSceneInfoItemWidth_( int itemCount )

@@ -30,6 +30,7 @@ class MRVIEWER_CLASS RibbonMenu : public ImGuiMenu
         using Getter = std::function<bool( std::shared_ptr<Object> object, ViewportId id )>;
         Setter setter;
         Getter getter;
+        SelectedType selectedType = SelectedType ( -1 );
     };
 
 public:
@@ -203,7 +204,7 @@ private:
     void drawSearchButton_();
     void drawCollapseButton_();
     void drawHelpButton_();
-    bool drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected );
+    bool drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected, SelectedType selectedType );
 
     void sortObjectsRecursive_( std::shared_ptr<Object> object );
 

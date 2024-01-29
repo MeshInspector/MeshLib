@@ -26,6 +26,15 @@ namespace MR
 class ShortcutManager;
 class MeshModifier;
 
+using SelectedType = uint64_t;
+enum SelectedItemType : SelectedType
+{
+    VisualObjectPoint = 1 << 0,
+    VisualObjectLine = 1 << 1,
+    VisualObjectMesh = 1 << 2,
+    VisualObjectLabel = 1 << 3,
+};
+
 class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin, 
     public MultiListener<
     MouseDownListener, MouseMoveListener, MouseUpListener, MouseScrollListener, CursorEntranceListener,
@@ -350,10 +359,10 @@ protected:
 
     MRVIEWER_API float drawSelectionInformation_();
     MRVIEWER_API bool drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>& selectedObjs );
-    MRVIEWER_API bool drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );
+    MRVIEWER_API bool drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedType selectedType );
 
     MRVIEWER_API bool drawRemoveButton_( const std::vector<std::shared_ptr<Object>>& selectedObjs );
-    MRVIEWER_API bool drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );
+    MRVIEWER_API bool drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedType selectedType );
     MRVIEWER_API bool drawDrawOptionsColors_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );
 
     MRVIEWER_API virtual void draw_custom_selection_properties( const std::vector<std::shared_ptr<Object>>& selected );
@@ -376,8 +385,10 @@ protected:
 
     // A virtual function for drawing of the dialog with shortcuts. It can be overriden in the inherited classes
     MRVIEWER_API virtual void drawShortcutsWindow_();
-    //returns width of items in Scene Info window
+    // returns width of items in Scene Info window
     MRVIEWER_API float getSceneInfoItemWidth_( int itemCount  = 1 );
+    // getting the mask of the list of selected objects
+    MRVIEWER_API SelectedType getTyeSelectedObject( const std::vector<std::shared_ptr<Object>>& selectedObjs );
 };
 
 

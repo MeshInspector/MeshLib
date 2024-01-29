@@ -76,6 +76,9 @@ using ThreeVertIds = std::array<VertId, 3>;
 /// mapping from FaceId to a triple of vertex indices
 using Triangulation = Vector<ThreeVertIds, FaceId>;
 
+struct SomeLocalTriangulations;
+struct AllLocalTriangulations;
+
 using EdgePath = std::vector<EdgeId>;
 using EdgeLoop = std::vector<EdgeId>;
 

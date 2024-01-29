@@ -31,6 +31,7 @@
     <ClInclude Include="MRFewSmallest.h" />
     <ClInclude Include="MRFilterCreaseEdges.h" />
     <ClInclude Include="MRImproveSampling.h" />
+    <ClInclude Include="MRLocalTriangulations.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
     <ClInclude Include="MRAggregateFlow.h" />
@@ -435,6 +436,7 @@
     <ClCompile Include="MRGcodeProcessor.cpp" />
     <ClCompile Include="MRGcodeLoad.cpp" />
     <ClCompile Include="MRImage.cpp" />
+    <ClCompile Include="MRLocalTriangulations.cpp" />
     <ClCompile Include="MRMapEdge.cpp" />
     <ClCompile Include="MRGraph.cpp" />
     <ClCompile Include="MRGridSampling.cpp" />

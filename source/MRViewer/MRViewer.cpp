@@ -11,6 +11,7 @@
 #include "MRViewerSettingsManager.h"
 #include "MRGladGlfw.h"
 #include "ImGuiMenu.h"
+#include "MRRibbonMenu.h"
 #include "MRGetSystemInfoJson.h"
 #include "MRSpaceMouseHandler.h"
 #include "MRSpaceMouseHandlerHidapi.h"
@@ -1050,10 +1051,11 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
 
             getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
         }
+
         if ( !result.errorSummary.empty() )
-            showModal( std::string( result.errorSummary ), NotificationType::Error );
+            pushNotification( { .text = result.errorSummary, .type = NotificationType::Error } );
         else if ( !result.warningSummary.empty() )
-            showModal( std::string( result.warningSummary ), NotificationType::Info );
+            pushNotification( { .text = result.warningSummary, .type = NotificationType::Warning } );
     };
 
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )

@@ -106,15 +106,17 @@ void OutlineDecomposer::clearLast()
 Expected<Contours2d> createSymbolContours( const SymbolMeshParams& params )
 {
     MR_TIMER
+
+    std::error_code ec;
+    if ( !std::filesystem::is_regular_file( params.pathToFontFile, ec ) )
+        return unexpected( "Cannot find file with font" );
+
     // Begin
     FT_Library library;
     FT_Face face;
     FT_Init_FreeType( &library );
 #ifdef _WIN32
     // on Windows, FT_New_Face cannot open files with Unicode names
-    std::error_code ec;
-    if ( !std::filesystem::is_regular_file( params.pathToFontFile, ec ) )
-        return unexpected( "Cannot find file with font" );
     const auto fileSize = std::filesystem::file_size( params.pathToFontFile, ec );
     Buffer<char> buffer( fileSize );
     std::ifstream in( params.pathToFontFile, std::ifstream::binary );

@@ -3,9 +3,9 @@
 #include "MRVector.h"
 #include "MRId.h"
 #include "MRConstants.h"
+#include "MRBuffer.h"
 #include <climits>
 #include <optional>
-#include <cstdint>
 
 namespace MR
 {
@@ -60,11 +60,11 @@ struct TriangulatedFanData
  * \ingroup TriangulationHelpersGroup
  * 
  * \param critAngle max allowed angle for triangles in fan
- * \param useNeiNormals whether to use oriented normals of neighbor points
+ * \param trustedNormals if not null, contains valid oriented normals of all points
  * \param steps max optimization steps (INT_MAX - default)
  */
 MRMESH_API void trianglulateFan( const VertCoords& points, VertId v, TriangulatedFanData& triangulationData,
-    const VertCoords& normals, float critAngle, bool useNeiNormals = true, int steps = INT_MAX );
+    const VertCoords* trustedNormals, float critAngle, int steps = INT_MAX );
 
 struct Settings
 {
@@ -72,8 +72,8 @@ struct Settings
     float radius = 0;
     /// max allowed angle for triangles in fan
     float critAngle = PI2_F;
-    /// whether to use oriented normals of neighbor points
-    bool useNeiNormals = true;
+    /// if oriented normals are known, they will be used for neighbor points selection
+    const VertCoords* trustedNormals = nullptr;
     /// automatic increase of the radius if points outside can make triangles from original radius not-Delone
     bool automaticRadiusIncrease = true;
     /// the maximum number of optimization steps (removals) in local triangulation
@@ -83,34 +83,17 @@ struct Settings
 };
 
 /// constructs local triangulation around given point
-MRMESH_API void buildLocalTriangulation( const PointCloud& cloud, VertId v, const VertCoords& normals, const Settings & settings,
+MRMESH_API void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings & settings,
     TriangulatedFanData & fanData );
 
-/// describes one fan of triangles around a point
-struct FanRecord
-{
-    /// center point in the fan
-    VertId center;
-
-    /// first border edge (invalid if the center point is not on the boundary);
-    /// triangle associated with this point is absent
-    VertId border;
-
-    /// the position of first neigbor in LocalTriangulations::neighbours
-    std::uint32_t firstNei;
-};
-
-/// describes a number of local triangulations of some points (assigned to a thread)
-struct LocalTriangulations
-{
-    std::vector<VertId> neighbors;
-    std::vector<FanRecord> fanRecords;
-};
-
 /// computes all local triangulations of all points in the cloud, and returns them distributed among
-/// a set of LocalTriangulations objects
-[[nodiscard]] MRMESH_API std::optional<std::vector<LocalTriangulations>> buildLocalTriangulations(
-    const PointCloud& cloud, const VertCoords& normals, const Settings & settings, const ProgressCallback & progress = {} );
+/// a set of SomeLocalTriangulations objects
+[[nodiscard]] MRMESH_API std::optional<std::vector<SomeLocalTriangulations>> buildLocalTriangulations(
+    const PointCloud& cloud, const Settings & settings, const ProgressCallback & progress = {} );
+
+//// computes local triangulations of all points in the cloud united in one struct
+[[nodiscard]] MRMESH_API std::optional<AllLocalTriangulations> buildUnitedLocalTriangulations(
+    const PointCloud& cloud, const Settings & settings, const ProgressCallback & progress = {} );
 
 /**
  * \brief Checks if given vertex is on boundary of the point cloud

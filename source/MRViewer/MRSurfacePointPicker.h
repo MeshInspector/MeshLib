@@ -42,7 +42,7 @@ public:
 
     // creates control sphere in start pos
     // returns updated pos if it was moved according to PositionType
-    MRVIEWER_API const MeshTriPoint& create( const std::shared_ptr<ObjectMesh>& surface, const MeshTriPoint& startPos );
+    MRVIEWER_API const MeshTriPoint& create( const std::shared_ptr<ObjectMeshHolder>& surface, const MeshTriPoint& startPos );
     // resets whole widget
     MRVIEWER_API void reset();
     // returns object of control sphere
@@ -71,7 +71,7 @@ public:
     // this callback is called when modification ends if it is set
     void setEndMoveCallback( std::function<void( const MeshTriPoint& )> endMove ) { endMove_ = endMove; }
 
-    std::shared_ptr<ObjectMesh> getBaseSurface() { return baseSurface_; }
+    std::shared_ptr<ObjectMeshHolder> getBaseSurface() { return baseSurface_; }
 
 private:
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
@@ -88,7 +88,7 @@ private:
     MeshTriPoint currentPos_;
 
     std::shared_ptr<SphereObject> pickSphere_;
-    std::shared_ptr<ObjectMesh> baseSurface_;
+    std::shared_ptr<ObjectMeshHolder> baseSurface_;
 
     std::function<void( const MeshTriPoint& )> startMove_;
     std::function<void( const MeshTriPoint& )> onMove_;

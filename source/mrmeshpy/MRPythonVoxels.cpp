@@ -11,6 +11,10 @@
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRMeshToDistanceVolume.h"
 #include <pybind11/functional.h>
+#pragma warning(push)
+#pragma warning(disable: 4464) // relative include path contains '..'
+#include <pybind11/stl/filesystem.h>
+#pragma warning(pop)
 
 
 #define MR_ADD_PYTHON_VOXELS_VOLUME( Type, TypeText ) \

@@ -12,6 +12,7 @@
 #include "MRPointsProject.h"
 #include "MRHeap.h"
 #include "MRBuffer.h"
+#include "MRLocalTriangulations.h"
 #include <cfloat>
 
 namespace MR
@@ -30,7 +31,28 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, 
         {
             accum.addPoint( Vector3d( coord ) );
         } );
-        normals[vid] = Vector3f( accum.getBestPlane().n ).normalized();
+        normals[vid] = Vector3f( accum.getBestPlane().n );
+    }, progress ) )
+        return {};
+
+    return normals;
+}
+
+std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, const AllLocalTriangulations& triangs, const ProgressCallback & progress )
+{
+    MR_TIMER
+
+    VertNormals normals;
+    normals.resizeNoInit( pointCloud.points.size() );
+    if ( !BitSetParallelFor( pointCloud.validPoints, [&]( VertId v )
+    {
+        PointAccumulator accum;
+        accum.addPoint( pointCloud.points[v] );
+        const auto * p = triangs.neighbors.data() + triangs.fanRecords[v].firstNei;
+        const auto * pEnd = triangs.neighbors.data() + triangs.fanRecords[v+1].firstNei;
+        for ( ; p < pEnd; ++p )
+            accum.addPoint( pointCloud.points[*p] );
+        normals[v] = Vector3f( accum.getBestPlane().n );
     }, progress ) )
         return {};
 
@@ -52,7 +74,7 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud,
         const VertId * pEnd = p + numNei;
         for ( ; p < pEnd && *p; ++p )
             accum.addPoint( pointCloud.points[*p] );
-        normals[vid] = Vector3f( accum.getBestPlane().n ).normalized();
+        normals[vid] = Vector3f( accum.getBestPlane().n );
     }, progress ) )
         return {};
 
@@ -174,6 +196,20 @@ bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, const Bu
         }, progress );
 }
 
+bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, const AllLocalTriangulations& triangs,
+     const ProgressCallback & progress )
+{
+    MR_TIMER
+    return orientNormalsCore( pointCloud, normals,
+        [&triangs]( VertId v, auto callback )
+        {
+            const auto * p = triangs.neighbors.data() + triangs.fanRecords[v].firstNei;
+            const auto * pEnd = triangs.neighbors.data() + triangs.fanRecords[v+1].firstNei;
+            for ( ; p < pEnd; ++p )
+                callback( *p );
+        }, progress );
+}
+
 std::optional<VertNormals> makeOrientedNormals( const PointCloud& pointCloud,
     float radius, const ProgressCallback & progress )
 {
@@ -184,6 +220,21 @@ std::optional<VertNormals> makeOrientedNormals( const PointCloud& pointCloud,
         return optNormals;
 
     if ( !orientNormals( pointCloud, *optNormals, radius, subprogress( progress, 0.1f, 1.0f ) ) )
+        optNormals.reset();
+
+    return optNormals;
+}
+
+std::optional<VertNormals> makeOrientedNormals( const PointCloud& pointCloud,
+    const AllLocalTriangulations& triangs, const ProgressCallback & progress )
+{
+    MR_TIMER
+
+    auto optNormals = makeUnorientedNormals( pointCloud, triangs, subprogress( progress, 0.0f, 0.1f ) );
+    if ( !optNormals )
+        return optNormals;
+
+    if ( !orientNormals( pointCloud, *optNormals, triangs, subprogress( progress, 0.1f, 1.0f ) ) )
         optNormals.reset();
 
     return optNormals;

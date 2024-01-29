@@ -7,11 +7,8 @@ from helper import *
 def test_text_mesh():
     params = mrmesh.SymbolMeshParams()
     params.text = "Hello World"
-    params.pathToFontFile = mrmesh.Path(
-        os.path.dirname(os.path.abspath(__file__))
-        + "/../thirdparty/Noto_Sans/NotoSans-Regular.ttf"
-    )
-    textMesh = mrmesh.createSymbolsMesh(params)
+    params.pathToFontFile = os.path.join( os.path.dirname(os.path.abspath(__file__)), "../thirdparty/Noto_Sans/NotoSans-Regular.ttf" )
+    textMesh = mrmesh.createSymbolsMesh( params )
     assert textMesh.volume() > 0
 
 
@@ -23,10 +20,7 @@ def test_aligned_text_mesh():
     params.direction = mrmesh.Vector3f(1, 0, 0)
     params.text = "Hello World"
     params.fontHeight = 0.02
-    params.pathToFontFile = mrmesh.Path(
-        os.path.dirname(os.path.abspath(__file__))
-        + "/../thirdparty/Noto_Sans/NotoSans-Regular.ttf"
-    )
+    params.pathToFontFile = os.path.join( os.path.dirname(os.path.abspath(__file__)), "../thirdparty/Noto_Sans/NotoSans-Regular.ttf" )
     # how deep to engrave
     params.surfaceOffset = 0.1
     alignedMesh = mrmesh.alignTextToMesh(sphere, params)

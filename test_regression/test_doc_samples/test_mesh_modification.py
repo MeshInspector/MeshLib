@@ -10,7 +10,7 @@ def test_mesh_modification(tmp_path):
     # === Code sample
 
     import meshlib.mrmeshpy as mrmeshpy
-    mesh = mrmeshpy.loadMesh(mrmeshpy.Path(str(input_folder / "beethoven_in.stl")))
+    mesh = mrmeshpy.loadMesh(str(input_folder / "beethoven_in.stl"))
     # assert (expectedMesh.has_value())
     # mesh = expectedMesh.value()
 

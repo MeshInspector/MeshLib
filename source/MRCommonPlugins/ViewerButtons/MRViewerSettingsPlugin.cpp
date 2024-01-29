@@ -484,7 +484,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth, float scali
         int valueAbs = int( std::fabs( value ) );
         bool inverse = value < 0.f;
         ImGui::SetNextItemWidth( menuWidth * 0.6f );
-        bool changed = ImGui::SliderInt( label, &valueAbs, 1, 100 );
+        bool changed = UI::sliderInt( label, &valueAbs, 1, 100 );
         ImGui::SameLine( menuWidth * 0.78f );
         const float cursorPosY = ImGui::GetCursorPosY();
         ImGui::SetCursorPosY( cursorPosY + 3 );

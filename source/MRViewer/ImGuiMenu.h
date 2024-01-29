@@ -30,10 +30,10 @@ using SelectedType = uint64_t;
 enum SelectedTypesMask : SelectedType
 {
     ObjectBit = 1 << 0,
-    ObjectPointBit = 1 << 0,
-    ObjectLineBit = 1 << 1,
-    ObjectMeshBit = 1 << 2,
-    ObjectLabelBit = 1 << 3,
+    ObjectPointBit = 1 << 1,
+    ObjectLineBit = 1 << 2,
+    ObjectMeshBit = 1 << 3,
+    ObjectLabelBit = 1 << 4,
 };
 
 class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin, 

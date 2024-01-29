@@ -12,7 +12,7 @@
 namespace MR
 {
 
-class SurfaceContoursWidget : public MultiListener<
+class MRVIEWER_CLASS SurfaceContoursWidget : public MultiListener<
     MouseDownListener,
     MouseMoveListener>
 {

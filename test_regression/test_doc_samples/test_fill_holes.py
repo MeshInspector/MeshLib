@@ -11,7 +11,7 @@ def test_fill_holes(tmp_path):
     import meshlib.mrmeshpy as mrmeshpy
 
     # Load mesh
-    mesh = mrmeshpy.loadMesh(mrmesh.Path(str(input_folder / "detail_with_holes.ctm")))
+    mesh = mrmeshpy.loadMesh(str(input_folder / "detail_with_holes.ctm"))
 
     # Find single edge for each hole in mesh
     holeEdges = mesh.topology.findHoleRepresentiveEdges()

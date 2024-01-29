@@ -1,15 +1,12 @@
 ## Contribution Instructions
 
 
-1. Install the required linting packages: `pip3 install pre-commit black isort`
-2. Make sure to run `pre-commit install` to install the commit hook to automatically check for linting on commiting.
+1. Install the linting packages: `pip3 install pre-commit black isort`
 3. When commiting the black & isort check should automatically reformat any edited python code.
 
 To run this yourself you can do:
 - `black ./test_python`
 - `isort ./test_python/ --profile black`
-
-As an extra check there is also a workflow (`python-lint.yml`) that automatically checks if the linting is satisfied on creating a PR.
 
 
 ## Setup Instructions

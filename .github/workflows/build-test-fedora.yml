@@ -1,4 +1,4 @@
-name: Build and test Fedora
+name: Build and test Fedora 39
 
 on:
   workflow_call:
@@ -18,29 +18,19 @@ jobs:
     timeout-minutes: 40
     runs-on: ubuntu-latest
     container:
-      image: meshlib/meshlib-${{matrix.os}}:${{inputs.docker_image_tag}}
+      image: meshlib/meshlib-fedora39:${{inputs.docker_image_tag}}
       options: --user root
     strategy:
       matrix:
-        os: [fedora37, fedora39]
         config: [Debug, Release]
-        compiler: [Clang]
+        compiler: [Clang 17, GCC 13]
         include:
-          - os: fedora37
-            cxx-compiler: /usr/bin/clang++-15
-          - os: fedora39
+          - compiler: Clang 17
             cxx-compiler: /usr/bin/clang++-17
-            MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF"
-          - os: fedora39
-            config: 'Debug'
-            compiler: GCC
+            c-compiler: /usr/bin/clang-17
+          - compiler: GCC 13
             cxx-compiler: /usr/bin/g++
-            MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF"
-          - os: fedora39
-            config: 'Release'
-            compiler: GCC
-            cxx-compiler: /usr/bin/g++
-            MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF -DBUILD_TESTING=OFF"
+            c-compiler: /usr/bin/gcc
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -67,7 +57,7 @@ jobs:
           MR_CMAKE_OPTIONS: ${{ matrix.MR_CMAKE_OPTIONS }}
 
       - name: Collect Timings
-        run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.compiler}}"
+        run: ./scripts/devops/collect_timing_logs.sh fedora39 ${{matrix.config}} "${{matrix.compiler}}"
 
       #Save timing in artifact
       - name: Upload Timings
@@ -80,8 +70,7 @@ jobs:
         run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
 
       - name: Unit Tests
-        # don't run unit tests for GCC Release configuration as unit tests are not built for it
-        if: ${{ matrix.compiler == 'Clang' || matrix.config == 'Debug' }}
+        if: ${{ matrix.config == 'Debug' }}
         run: ./build/${{ matrix.config }}/bin/MRTest
 
       - name: Python Sanity Tests
@@ -105,14 +94,14 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
 
       - name: Create RPM
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.os == 'fedora37' && matrix.config == 'Release' && matrix.compiler == 'Clang'}}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 17'}}
         run: ./scripts/distribution_rpm.sh ${{inputs.app_version}}
         env:
           MESHLIB_BUILD_RELEASE: ON
           MESHLIB_BUILD_DEBUG: OFF
 
       - name: Upload Fedora Developer Distribution
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.os == 'fedora37' && matrix.config == 'Release' && matrix.compiler == 'Clang'}}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 17'}}
         uses: actions/upload-artifact@v3
         with:
           name: Distributives

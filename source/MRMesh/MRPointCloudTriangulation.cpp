@@ -108,8 +108,8 @@ bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
     }
     const VertCoords& normals = pointCloud_.normals.empty() ? myNormals : pointCloud_.normals;
 
-    auto optLocalTriangulations = TriangulationHelpers::buildLocalTriangulations( pointCloud_, normals,
-        { .radius = radius, .critAngle = params_.critAngle }, subprogress( progressCb, startProgress, 0.5f ) );
+    auto optLocalTriangulations = TriangulationHelpers::buildLocalTriangulations( pointCloud_,
+        { .radius = radius, .critAngle = params_.critAngle, .trustedNormals = &normals }, subprogress( progressCb, startProgress, 0.5f ) );
     if ( !optLocalTriangulations )
         return false;
     localTriangulations_ = std::move( *optLocalTriangulations );

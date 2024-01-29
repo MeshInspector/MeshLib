@@ -2,6 +2,7 @@
 #include "MRTimer.h"
 #include "MRParallelFor.h"
 #include "MRProgressCallback.h"
+#include "MRVector3.h"
 #include <algorithm>
 #include <cassert>
 
@@ -64,6 +65,41 @@ std::optional<AllLocalTriangulations> uniteLocalTriangulations( const std::vecto
         return {};
 
     return res;
+}
+
+void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertNormals & normals )
+{
+    MR_TIMER
+    if ( triangs.fanRecords.size() <= 1 )
+        return;
+    ParallelFor( 0_v, triangs.fanRecords.backId(), [&]( VertId c )
+    {
+        const auto nbeg = triangs.fanRecords[c].firstNei;
+        const auto nend = triangs.fanRecords[c + 1].firstNei;
+        if ( nbeg >= nend )
+            return;
+
+        const VertId bd = triangs.fanRecords[c].border;
+        const Vector3f cp = coords[c];
+        Vector3f sum;
+        VertId otherBd;
+        for ( auto n = nbeg; n < nend; ++n )
+        {
+            const auto curr = triangs.neighbors[n];
+            const auto next = triangs.neighbors[n + 1 < nend ? n + 1 : nbeg];
+            if ( curr == bd )
+            {
+                otherBd = bd;
+                continue;
+            }
+            sum += cross( coords[next] - cp, coords[curr] - cp );
+        }
+        if ( dot( sum, normals[c] ) >= 0 )
+            return; // already oriented properly
+        // reverse the orientation
+        std::reverse( triangs.neighbors.data() + nbeg, triangs.neighbors.data() + nend );
+        triangs.fanRecords[c].border = otherBd;
+    } );
 }
 
 } //namespace MR

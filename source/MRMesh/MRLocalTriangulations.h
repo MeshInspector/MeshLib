@@ -52,4 +52,7 @@ struct AllLocalTriangulations
 /// into one AllLocalTriangulations with records for all points
 [[nodiscard]] MRMESH_API std::optional<AllLocalTriangulations> uniteLocalTriangulations( const std::vector<SomeLocalTriangulations> & in, const ProgressCallback & progress = {} );
 
+/// orient neighbors around each point so they will be in clockwise order if look from the top of target normal
+MRMESH_API void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertNormals & normals );
+
 } //namespace MR

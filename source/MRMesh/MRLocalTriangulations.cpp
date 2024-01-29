@@ -2,6 +2,7 @@
 #include "MRTimer.h"
 #include "MRParallelFor.h"
 #include "MRProgressCallback.h"
+#include <algorithm>
 #include <cassert>
 
 namespace MR
@@ -11,14 +12,11 @@ std::optional<AllLocalTriangulations> uniteLocalTriangulations( const std::vecto
 {
     MR_TIMER
 
-    VertId maxVertId;
-    for ( const auto& lt : in )
-    {
-        if ( lt.fanRecords.size() <= 1 )
-            continue;
-        assert( !lt.fanRecords.back().center );
-        maxVertId = std::max( maxVertId, lt.fanRecords[lt.fanRecords.size() - 2].center );
-    }
+    if ( in.empty() )
+        return {};
+
+    const VertId maxVertId = std::max_element( in.begin(), in.end(),
+        [&]( const SomeLocalTriangulations & a, const SomeLocalTriangulations & b ) { return a.maxCenterId < b.maxCenterId; } )->maxCenterId;
 
     if ( !reportProgress( progress, 0.0f ) )
         return {};

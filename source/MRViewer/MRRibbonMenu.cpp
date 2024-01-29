@@ -2351,4 +2351,12 @@ void RibbonMenu::highlightBlocking_()
     blockingHighlightTimer_ -= ImGui::GetIO().DeltaTime;
 }
 
+void pushNotification( const RibbonNotification& notification )
+{
+    if ( auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>() )
+        return ribbonMenu->pushNotification( notification );
+
+    showModal( notification.text, notification.type );
+}
+
 }

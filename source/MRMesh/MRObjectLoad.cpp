@@ -544,7 +544,13 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
 
     if ( result.has_value() && !loadedFromSceneFile )
         for ( const std::shared_ptr<Object>& o : result.value() )
+        {
             postImportObject( o, filename );
+            if ( auto objectPoints = o->asType<ObjectPoints>(); objectPoints && !objectPoints->pointCloud()->hasNormals() && loadWarn )
+            {
+                *loadWarn += "Point cloud " + o->name() + " has no normals.\n";
+            }
+        }
 
     if ( !result.has_value() )
         spdlog::error( result.error() );

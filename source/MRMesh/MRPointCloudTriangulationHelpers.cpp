@@ -457,6 +457,7 @@ std::optional<std::vector<SomeLocalTriangulations>> buildLocalTriangulations(
 
         localData.fanRecords.push_back( { v, disc.border, (std::uint32_t)localData.neighbors.size() } );
         localData.neighbors.insert( localData.neighbors.end(), disc.neighbors.begin(), disc.neighbors.end() );
+        localData.maxCenterId = std::max( localData.maxCenterId, v );
     }, progress ) )
         return {};
 

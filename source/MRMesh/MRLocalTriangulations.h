@@ -38,6 +38,7 @@ struct SomeLocalTriangulations
 {
     std::vector<VertId> neighbors;
     std::vector<FanRecordWithCenter> fanRecords;
+    VertId maxCenterId; //in fanRecords
 };
 
 /// triangulations for all points, with easy access by VertId

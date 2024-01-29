@@ -13,7 +13,7 @@ SurfacePointWidget::~SurfacePointWidget()
     reset();
 }
 
-const MeshTriPoint& SurfacePointWidget::create( const std::shared_ptr<ObjectMesh>& surface, const MeshTriPoint& startPos )
+const MeshTriPoint& SurfacePointWidget::create( const std::shared_ptr<ObjectMeshHolder>& surface, const MeshTriPoint& startPos )
 {
     reset();
     if ( !surface || !surface->mesh() )

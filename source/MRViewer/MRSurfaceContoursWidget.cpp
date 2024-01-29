@@ -138,14 +138,8 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
     auto newPoint = std::make_shared<SurfacePointWidget>();
     newPoint->setAutoHover( false );
     newPoint->setParameters( params.surfacePointParams );
-    auto objMesh = std::dynamic_pointer_cast< MR::ObjectMesh > ( obj );
-    if ( objMesh )
-        newPoint->create( objMesh, pt );
-    else
-    {
-        assert( 1 > 2 ); // due to surfacePointWidget unable to work with non ObjectMesh objects.
-        return {};
-    }
+    newPoint->create( obj, pt );
+
     std::weak_ptr<SurfacePointWidget> curentPoint = newPoint;
     newPoint->setStartMoveCallback( [this, obj, curentPoint] ( const MeshTriPoint& point )
     {

@@ -156,6 +156,11 @@ protected:
   // menu will change objects' colors in this viewport
   ViewportId selectedViewport_ = {};
 
+  // When editing feature properties, this is the target object.
+  std::weak_ptr<Object> editedFeatureObject_;
+  // When editing feature properties, this is the original xf of the target object, for history purposes.
+  AffineXf3f editedFeatureObjectOldXf_;
+
 public:
   MRVIEWER_API virtual void init(MR::Viewer *_viewer) override;
 
@@ -349,6 +354,7 @@ protected:
     MRVIEWER_API void draw_object_recurse_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all );
 
     MRVIEWER_API float drawSelectionInformation_();
+    MRVIEWER_API void drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& object );
     MRVIEWER_API bool drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>& selectedObjs );
     MRVIEWER_API bool drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );
 

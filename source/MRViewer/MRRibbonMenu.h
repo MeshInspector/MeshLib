@@ -268,6 +268,7 @@ private:
 #endif // !__EMSCRIPTEN__
 };
 
+// Checks if RibbonMenu is available, if it is - forwards notification to RibbonNotifier. Otherwise - calls showModal() function
 MRVIEWER_API void pushNotification( const RibbonNotification& notification);
 
 

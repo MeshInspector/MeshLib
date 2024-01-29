@@ -1003,7 +1003,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
     if ( filesList.empty() )
         return false;
 
-    const auto postProcess = [this] ( const SceneLoad::SceneLoadResult& result )
+    const auto postProcess = [] ( const SceneLoad::SceneLoadResult& result )
     {
         assert( result.scene );
         const auto childCount = result.scene->children().size();
@@ -1052,7 +1052,6 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
             getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
         }
 
-        auto menu = getMenuPluginAs<RibbonMenu>();
         if ( !result.errorSummary.empty() )
             pushNotification( { .text = result.errorSummary, .type = NotificationType::Error } );
         else if ( !result.warningSummary.empty() )

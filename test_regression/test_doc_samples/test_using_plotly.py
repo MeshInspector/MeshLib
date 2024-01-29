@@ -12,7 +12,7 @@ def test_using_plotly(tmp_path):
     import numpy as np
 
     # load mesh
-    mesh = mm.loadMesh(mm.Path(str(Path(input_folder / "fox_geometrik.stl"))))
+    mesh = mm.loadMesh(str(Path(input_folder / "fox_geometrik.stl")))
     # extract numpy arrays
     verts = mn.getNumpyVerts(mesh)
     faces = mn.getNumpyFaces(mesh.topology)

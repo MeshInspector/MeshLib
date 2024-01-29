@@ -36,7 +36,7 @@ void AddPointActionPickerPoint::action( Type actionType )
         if ( !contour.empty() )
             updateBaseColor( contour.back(), widget_.params.lastPoitColor );
 
-        widget_.activeIndex_ = int( contour.size() );
+        widget_.activeIndex_ = int( contour.size() - 1 );
         widget_.activeObject_ = obj_;
 
         widget_.onPointRemove_( obj_ );
@@ -47,7 +47,7 @@ void AddPointActionPickerPoint::action( Type actionType )
             updateBaseColor( contour.back(), widget_.params.ordinaryPointColor );
 
         contour.push_back( widget_.createPickWidget_( obj_, point_ ) );
-        widget_.activeIndex_ = int( contour.size()-1 );
+        widget_.activeIndex_ = int( contour.size() - 1 );
         widget_.activeObject_ = obj_;
 
         updateBaseColor( contour.back(), widget_.params.lastPoitColor );
@@ -229,7 +229,13 @@ std::pair<std::shared_ptr<MR::ObjectMeshHolder>, int> SurfaceContoursWidget::get
 
 void SurfaceContoursWidget::setActivePoint( std::shared_ptr<MR::ObjectMeshHolder> obj, int index )
 {
-    assert( pickedPoints_[obj].size() < index );
+    assert( pickedPoints_[obj].size() > index );
+
+    // last point in closed contour are nonVisible and equal to first point. => 
+    if ( isClosedCountour( obj ) && ( index >= pickedPoints_[obj].size() - 1 ) )
+    {
+        index = 0;
+    }
 
     updateBaseColor( pickedPoints_[obj][index], params.lastPoitColor );
     updateBaseColor( pickedPoints_[activeObject_][activeIndex_], params.ordinaryPointColor );

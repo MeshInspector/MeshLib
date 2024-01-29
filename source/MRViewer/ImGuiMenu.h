@@ -360,10 +360,10 @@ protected:
 
     MRVIEWER_API float drawSelectionInformation_();
     MRVIEWER_API bool drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>& selectedObjs );
-    MRVIEWER_API bool drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedType selectedType );
+    MRVIEWER_API bool drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedTypesMask selectedType );
 
     MRVIEWER_API bool drawRemoveButton_( const std::vector<std::shared_ptr<Object>>& selectedObjs );
-    MRVIEWER_API bool drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedType selectedType );
+    MRVIEWER_API bool drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedTypesMask selectedType );
     MRVIEWER_API bool drawDrawOptionsColors_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );
 
     MRVIEWER_API virtual void draw_custom_selection_properties( const std::vector<std::shared_ptr<Object>>& selected );
@@ -389,7 +389,7 @@ protected:
     // returns width of items in Scene Info window
     MRVIEWER_API float getSceneInfoItemWidth_( int itemCount  = 1 );
     // getting the mask of the list of selected objects
-    MRVIEWER_API SelectedType calcSelectedTypesMask( const std::vector<std::shared_ptr<Object>>& selectedObjs );
+    MRVIEWER_API SelectedTypesMask calcSelectedTypesMask( const std::vector<std::shared_ptr<Object>>& selectedObjs );
 };
 
 

@@ -1528,7 +1528,7 @@ bool ImGuiMenu::drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>&
     return someChanges;
 }
 
-bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedType selectedType )
+bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedTypesMask selectedType )
 {
     if ( selectedObjs.empty() )
         return false;
@@ -1637,7 +1637,7 @@ bool ImGuiMenu::drawRemoveButton_( const std::vector<std::shared_ptr<Object>>& s
     return someChanges;
 }
 
-bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<VisualObject>>& selectedVisualObjs, SelectedType selectedType )
+bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<VisualObject>>& selectedVisualObjs, SelectedTypesMask selectedType )
 {
     bool someChanges = false;
     if ( selectedVisualObjs.empty() )
@@ -2962,11 +2962,11 @@ void ImGuiMenu::drawShortcutsWindow_()
     ImGui::End();
 }
 
-SelectedType ImGuiMenu::calcSelectedTypesMask( const std::vector<std::shared_ptr<Object>>& selectedObjs )
+SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::shared_ptr<Object>>& selectedObjs )
 {
     SelectedType res = 0;
     if ( selectedObjs.empty() )
-        return res;
+        return SelectedTypesMask( res );
 
     bool anyIsObjMesh = std::any_of( selectedObjs.cbegin(), selectedObjs.cend(), [] ( const std::shared_ptr<Object>& obj )
     {
@@ -3008,7 +3008,7 @@ SelectedType ImGuiMenu::calcSelectedTypesMask( const std::vector<std::shared_ptr
         res |= SelectedTypesMask::ObjectLabelBit;
     }
 
-    return res;
+    return SelectedTypesMask( res );
 }
 
 float ImGuiMenu::getSceneInfoItemWidth_( int itemCount )

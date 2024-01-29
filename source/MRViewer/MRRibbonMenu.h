@@ -32,7 +32,7 @@ class MRVIEWER_CLASS RibbonMenu : public ImGuiMenu
         Getter getter;
         // display a checkBox when any of these objects are selected
         // by default, it is always hidden
-        SelectedType selectedType = SelectedType ( -1 );
+        SelectedTypesMask selectedType = SelectedTypesMask( -1 );
     };
 
 public:

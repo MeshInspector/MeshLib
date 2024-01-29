@@ -931,6 +931,28 @@ void endCombo( bool showPreview /*= true*/ )
         ImGui::PopItemWidth();
 }
 
+bool sliderFloat( const char* label, float* v, float v_min, float v_max, const char* format, ImGuiSliderFlags flags )
+{
+    const auto& style = ImGui::GetStyle();
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, style.FramePadding.y + 3 ) );
+
+    bool result = ImGui::SliderFloat( label, v, v_min, v_max, format, flags );
+
+    ImGui::PopStyleVar();
+    return result;
+}
+
+bool sliderInt( const char* label, int* v, int v_min, int v_max, const char* format, ImGuiSliderFlags flags )
+{
+    const auto& style = ImGui::GetStyle();
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, style.FramePadding.y + 3 ) );
+
+    bool result = ImGui::SliderInt( label, v, v_min, v_max, format, flags );
+
+    ImGui::PopStyleVar();
+    return result;
+}
+
 bool inputTextCentered( const char* label, std::string& str, float width /*= 0.0f*/,
     ImGuiInputTextFlags flags /*= 0*/, ImGuiInputTextCallback callback /*= NULL*/, void* user_data /*= NULL */ )
 {
@@ -1128,6 +1150,55 @@ void progressBar( float scaling, float fraction, const Vector2f& sizeArg /*= Vec
     ImVec2 realTextSize = ImGui::CalcTextSize( textBuf );
 
     ImGui::RenderText( ImVec2( bb.Max.x - realTextSize.x, bb.Min.y + ( size.y - realTextSize.y ) * 0.5f ), textBuf );
+}
+
+bool beginTabBar( const char* str_id, ImGuiTabBarFlags flags )
+{
+    const auto& style = ImGui::GetStyle();
+    // Adjust tabs size
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x + 2, style.FramePadding.y + 4 ) );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, MR::StyleConsts::pluginItemSpacing );
+
+    bool result = ImGui::BeginTabBar( str_id, flags );
+
+    ImGui::PopStyleVar( 2 );
+    return result;
+}
+
+void endTabBar()
+{
+    ImGui::EndTabBar();
+}
+
+bool beginTabItem( const char* label, bool* p_open, ImGuiTabItemFlags flags )
+{
+    // Set colors
+    ImGuiTabBar* tab_bar = ImGui::GetCurrentTabBar();
+    assert( tab_bar );
+    ImGuiID itemId = ImGui::GetCurrentWindowRead()->GetID( label );
+    bool active = tab_bar->VisibleTabId == itemId;
+    ImGui::PushStyleColor( ImGuiCol_Text,
+        ColorTheme::getRibbonColor( active ? ColorTheme::RibbonColorsType::DialogTabActiveText :
+                                             ColorTheme::RibbonColorsType::DialogTabText ) );
+    ImGui::PushStyleColor( ImGuiCol_TabHovered,
+        ColorTheme::getRibbonColor( active ? ColorTheme::RibbonColorsType::DialogTabActiveHovered : 
+                                             ColorTheme::RibbonColorsType::DialogTabHovered ) );
+    const auto& style = ImGui::GetStyle();
+    // Adjust tab size
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x + 2, style.FramePadding.y + 4 ) );
+    // Set spacing between tabs
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( style.ItemInnerSpacing.x - 1, style.ItemInnerSpacing.y ) );
+
+    bool result = ImGui::BeginTabItem( label, p_open, flags );
+
+    ImGui::PopStyleVar( 2 );
+    ImGui::PopStyleColor( 2 );
+    return result;
+}
+
+void endTabItem()
+{
+    ImGui::EndTabItem();
 }
 
 } // namespace UI

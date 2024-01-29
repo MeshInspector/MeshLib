@@ -27,12 +27,13 @@ class ShortcutManager;
 class MeshModifier;
 
 using SelectedType = uint64_t;
-enum SelectedItemType : SelectedType
+enum SelectedTypesMask : SelectedType
 {
-    VisualObjectPoint = 1 << 0,
-    VisualObjectLine = 1 << 1,
-    VisualObjectMesh = 1 << 2,
-    VisualObjectLabel = 1 << 3,
+    ObjectBit = 1 << 0,
+    ObjectPointBit = 1 << 0,
+    ObjectLineBit = 1 << 1,
+    ObjectMeshBit = 1 << 2,
+    ObjectLabelBit = 1 << 3,
 };
 
 class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin, 
@@ -388,7 +389,7 @@ protected:
     // returns width of items in Scene Info window
     MRVIEWER_API float getSceneInfoItemWidth_( int itemCount  = 1 );
     // getting the mask of the list of selected objects
-    MRVIEWER_API SelectedType getTyeSelectedObject( const std::vector<std::shared_ptr<Object>>& selectedObjs );
+    MRVIEWER_API SelectedType calcSelectedTypesMask( const std::vector<std::shared_ptr<Object>>& selectedObjs );
 };
 
 

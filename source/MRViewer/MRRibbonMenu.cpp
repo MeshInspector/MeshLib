@@ -1638,7 +1638,7 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
     const auto selectedVisualObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     if ( ImGui::BeginPopupContextItem() )
     {
-        auto selectedTypes = getTyeSelectedObject( selected );
+        auto selectedTypes = calcSelectedTypesMask( selected );
         ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, ImGui::GetStyle().WindowPadding );
         [[maybe_unused]] bool wasChanged = false, wasAction = false;
         if ( selectedVisualObjs.empty() )

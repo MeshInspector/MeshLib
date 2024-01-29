@@ -1004,7 +1004,7 @@ void ImGuiMenu::draw_selection_properties_content( std::vector<std::shared_ptr<O
 
     if ( allHaveVisualisation && drawCollapsingHeader_( "Draw Options" ) )
     {
-        auto selectedType = getTyeSelectedObject( selectedObjs );
+        auto selectedType = calcSelectedTypesMask( selectedObjs );
         drawDrawOptionsCheckboxes_( selectedVisualObjs, selectedType );
         drawDrawOptionsColors_( selectedVisualObjs );
         drawAdvancedOptions_( selectedVisualObjs, selectedType );
@@ -1546,7 +1546,7 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
 
     const auto& viewportid = viewer->viewport().id;
 
-    bool allIsObjMesh = selectedType & SelectedItemType::VisualObjectMesh;
+    bool allIsObjMesh = selectedType == SelectedTypesMask::ObjectMeshBit;
 
     bool closePopup = false;
 
@@ -1579,7 +1579,7 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
         obj->setSpecularStrength( value );
     } );
 
-    bool allIsObjPoints = selectedType & SelectedItemType::VisualObjectPoint;
+    bool allIsObjPoints = selectedType == SelectedTypesMask::ObjectPointBit;
 
     if ( allIsObjPoints )
     {
@@ -1643,10 +1643,10 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
     if ( selectedVisualObjs.empty() )
         return someChanges;
 
-    bool allIsObjMesh = selectedType & SelectedItemType::VisualObjectMesh;
-    bool allIsObjLines = selectedType & SelectedItemType::VisualObjectLine;
-    bool allIsObjPoints = selectedType & SelectedItemType::VisualObjectPoint;
-    bool allIsObjLabels = selectedType & SelectedItemType::VisualObjectLabel;
+    bool allIsObjMesh = selectedType == SelectedTypesMask::ObjectMeshBit;
+    bool allIsObjLines = selectedType == SelectedTypesMask::ObjectLineBit;
+    bool allIsObjPoints = selectedType == SelectedTypesMask::ObjectPointBit;
+    bool allIsObjLabels = selectedType == SelectedTypesMask::ObjectLabelBit;
 
     const auto& viewportid = viewer->viewport().id;
 
@@ -2962,50 +2962,50 @@ void ImGuiMenu::drawShortcutsWindow_()
     ImGui::End();
 }
 
-SelectedType ImGuiMenu::getTyeSelectedObject( const std::vector<std::shared_ptr<Object>>& selectedObjs )
+SelectedType ImGuiMenu::calcSelectedTypesMask( const std::vector<std::shared_ptr<Object>>& selectedObjs )
 {
     SelectedType res = 0;
     if ( selectedObjs.empty() )
         return res;
 
-    bool allIsObjMesh = std::any_of( selectedObjs.cbegin(), selectedObjs.cend(), [] ( const std::shared_ptr<Object>& obj )
+    bool anyIsObjMesh = std::any_of( selectedObjs.cbegin(), selectedObjs.cend(), [] ( const std::shared_ptr<Object>& obj )
     {
         return obj && obj->asType<ObjectMeshHolder>();
     } );
-    if ( allIsObjMesh )
+    if ( anyIsObjMesh )
     {
-        res |= SelectedItemType::VisualObjectMesh;
+        res |= SelectedTypesMask::ObjectMeshBit;
     }
 
-    bool allIsObjLines = !selectedObjs.empty() &&
+    bool anyIsObjLines = !selectedObjs.empty() &&
         std::any_of( selectedObjs.cbegin(), selectedObjs.cend(), [] ( const std::shared_ptr<Object>& obj )
     {
         return obj && obj->asType<ObjectLinesHolder>();
     } );
 
-    if ( allIsObjLines )
+    if ( anyIsObjLines )
     {
-        res |= SelectedItemType::VisualObjectLine;
+        res |= SelectedTypesMask::ObjectLineBit;
     }
 
-    bool allIsObjPoints = !selectedObjs.empty() &&
+    bool anyIsObjPoints = !selectedObjs.empty() &&
         std::any_of( selectedObjs.cbegin(), selectedObjs.cend(), [] ( const std::shared_ptr<Object>& obj )
     {
         return obj && obj->asType<ObjectPointsHolder>();
     } );
-    if ( allIsObjPoints )
+    if ( anyIsObjPoints )
     {
-        res |= SelectedItemType::VisualObjectPoint;
+        res |= SelectedTypesMask::ObjectPointBit;
     }
 
-    bool allIsObjLabels = !selectedObjs.empty() &&
+    bool anyIsObjLabels = !selectedObjs.empty() &&
         std::any_of( selectedObjs.cbegin(), selectedObjs.cend(), [] ( const std::shared_ptr<Object>& obj )
     {
         return obj && obj->asType<ObjectLabel>();
     } );
-    if ( allIsObjLabels )
+    if ( anyIsObjLabels )
     {
-        res |= SelectedItemType::VisualObjectLabel;
+        res |= SelectedTypesMask::ObjectLabelBit;
     }
 
     return res;

@@ -30,6 +30,8 @@ class MRVIEWER_CLASS RibbonMenu : public ImGuiMenu
         using Getter = std::function<bool( std::shared_ptr<Object> object, ViewportId id )>;
         Setter setter;
         Getter getter;
+        // display a checkBox when any of these objects are selected
+        // by default, it is always hidden
         SelectedType selectedType = SelectedType ( -1 );
     };
 

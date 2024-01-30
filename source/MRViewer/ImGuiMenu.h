@@ -26,8 +26,8 @@ namespace MR
 class ShortcutManager;
 class MeshModifier;
 
-using SelectedType = uint64_t;
-enum SelectedTypesMask : SelectedType
+using SelectedTypesMask = uint64_t;
+enum SelectedTypeBit : SelectedTypesMask
 {
     ObjectBit = 1 << 0,
     ObjectPointBit = 1 << 1,

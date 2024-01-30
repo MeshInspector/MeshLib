@@ -32,7 +32,7 @@ class MRVIEWER_CLASS RibbonMenu : public ImGuiMenu
         Getter getter;
         // display a checkBox when any of these objects are selected
         // by default, it is always hidden
-        SelectedTypesMask selectedType = SelectedTypesMask( -1 );
+        SelectedTypesMask selectedMask = SelectedTypesMask( -1 );
     };
 
 public:
@@ -206,7 +206,7 @@ private:
     void drawSearchButton_();
     void drawCollapseButton_();
     void drawHelpButton_();
-    bool drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected, SelectedType selectedType );
+    bool drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected, SelectedTypesMask selectedType );
 
     void sortObjectsRecursive_( std::shared_ptr<Object> object );
 

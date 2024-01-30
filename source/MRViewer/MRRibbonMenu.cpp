@@ -406,12 +406,12 @@ void RibbonMenu::drawHelpButton_()
     ImGui::PopStyleVar( 2 );
 }
 
-bool RibbonMenu::drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected, SelectedType selectedType )
+bool RibbonMenu::drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected, SelectedTypesMask selectedType )
 {
     bool res = false;
     for ( auto& [name, custom] : customCheckBox_ )
     {
-        if ( !(custom.selectedType & selectedType) )
+        if ( !(custom.selectedMask & selectedType) )
         {
             continue;
         }

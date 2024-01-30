@@ -1546,7 +1546,7 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
 
     const auto& viewportid = viewer->viewport().id;
 
-    bool allIsObjMesh = selectedType == SelectedTypesMask::ObjectMeshBit;
+    bool allIsObjMesh = selectedType == SelectedTypeBit::ObjectMeshBit;
 
     bool closePopup = false;
 
@@ -1579,7 +1579,7 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
         obj->setSpecularStrength( value );
     } );
 
-    bool allIsObjPoints = selectedType == SelectedTypesMask::ObjectPointBit;
+    bool allIsObjPoints = selectedType == SelectedTypeBit::ObjectPointBit;
 
     if ( allIsObjPoints )
     {
@@ -1643,10 +1643,10 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
     if ( selectedVisualObjs.empty() )
         return someChanges;
 
-    bool allIsObjMesh = selectedType == SelectedTypesMask::ObjectMeshBit;
-    bool allIsObjLines = selectedType == SelectedTypesMask::ObjectLineBit;
-    bool allIsObjPoints = selectedType == SelectedTypesMask::ObjectPointBit;
-    bool allIsObjLabels = selectedType == SelectedTypesMask::ObjectLabelBit;
+    bool allIsObjMesh = selectedType == SelectedTypeBit::ObjectMeshBit;
+    bool allIsObjLines = selectedType == SelectedTypeBit::ObjectLineBit;
+    bool allIsObjPoints = selectedType == SelectedTypeBit::ObjectPointBit;
+    bool allIsObjLabels = selectedType == SelectedTypeBit::ObjectLabelBit;
 
     const auto& viewportid = viewer->viewport().id;
 
@@ -2964,9 +2964,9 @@ void ImGuiMenu::drawShortcutsWindow_()
 
 SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::shared_ptr<Object>>& selectedObjs )
 {
-    SelectedType res = 0;
+    SelectedTypesMask res = 0;
     if ( selectedObjs.empty() )
-        return SelectedTypesMask( res );
+        return SelectedTypeBit( res );
 
     bool anyIsObjMesh = std::any_of( selectedObjs.cbegin(), selectedObjs.cend(), [] ( const std::shared_ptr<Object>& obj )
     {
@@ -2974,7 +2974,7 @@ SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::share
     } );
     if ( anyIsObjMesh )
     {
-        res |= SelectedTypesMask::ObjectMeshBit;
+        res |= SelectedTypeBit::ObjectMeshBit;
     }
 
     bool anyIsObjLines = !selectedObjs.empty() &&
@@ -2985,7 +2985,7 @@ SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::share
 
     if ( anyIsObjLines )
     {
-        res |= SelectedTypesMask::ObjectLineBit;
+        res |= SelectedTypeBit::ObjectLineBit;
     }
 
     bool anyIsObjPoints = !selectedObjs.empty() &&
@@ -2995,7 +2995,7 @@ SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::share
     } );
     if ( anyIsObjPoints )
     {
-        res |= SelectedTypesMask::ObjectPointBit;
+        res |= SelectedTypeBit::ObjectPointBit;
     }
 
     bool anyIsObjLabels = !selectedObjs.empty() &&
@@ -3005,15 +3005,15 @@ SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::share
     } );
     if ( anyIsObjLabels )
     {
-        res |= SelectedTypesMask::ObjectLabelBit;
+        res |= SelectedTypeBit::ObjectLabelBit;
     }
 
     if ( res == 0 )
     {
-        res |= SelectedTypesMask::ObjectBit;
+        res |= SelectedTypeBit::ObjectBit;
     }
 
-    return SelectedTypesMask( res );
+    return SelectedTypeBit( res );
 }
 
 float ImGuiMenu::getSceneInfoItemWidth_( int itemCount )

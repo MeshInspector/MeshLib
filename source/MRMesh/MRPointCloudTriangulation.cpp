@@ -93,7 +93,10 @@ std::optional<Mesh> PointCloudTriangulator::triangulate( ProgressCallback progre
 bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
 {
     MR_TIMER
-    float radius = findAvgPointsRadius( pointCloud_, params_.avgNumNeighbours );
+    assert( ( params_.avgNumNeighbours <= 0 && params_.radius > 0 )
+         || ( params_.avgNumNeighbours > 0 && params_.radius <= 0 ) );
+
+    float radius = params_.radius > 0 ? params_.radius : findAvgPointsRadius( pointCloud_, params_.avgNumNeighbours );
 
     auto optLocalTriangulations = TriangulationHelpers::buildUnitedLocalTriangulations( pointCloud_,
         {

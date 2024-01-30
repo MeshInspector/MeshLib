@@ -21,7 +21,7 @@ namespace MR
 struct TriangulationParameters
 {
     /**
-     * \brief Average number of neighbors for optimazed local triangulation
+     * \brief Average number of neighbors for optimized local triangulation
      * \details The triangulation calculates the radius at which the average
      * number of neighboring points is closest to this parameter.
      * This radius is used to determine the local triangulation zone.
@@ -37,6 +37,14 @@ struct TriangulationParameters
         </table>
      */
     int avgNumNeighbours{40};
+
+    /**
+     * Radius of neighborhood around each point to consider for building local triangulation.
+     * This is an alternative to avgNumNeighbours parameter.
+     * Please set to positive value only one of them.
+     */
+    float radius{0};
+
     /**
      * \brief Critical angle of triangles in local triangulation (angle between triangles in fan should be less then this value)
      *
@@ -49,6 +57,7 @@ struct TriangulationParameters
         </table>
      */
     float critAngle{PI2_F};
+
     /**
      * \brief Critical length of hole (all holes with length less then this value will be filled)
      * \details If value is subzero it is set automaticly to 0.7*bbox.diagonal()

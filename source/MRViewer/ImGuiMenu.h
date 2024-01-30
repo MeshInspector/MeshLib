@@ -30,8 +30,8 @@ using SelectedTypesMask = uint64_t;
 enum SelectedTypeBit : SelectedTypesMask
 {
     ObjectBit = 1 << 0,
-    ObjectPointBit = 1 << 1,
-    ObjectLineBit = 1 << 2,
+    ObjectPointsBit = 1 << 1,
+    ObjectLinesBit = 1 << 2,
     ObjectMeshBit = 1 << 3,
     ObjectLabelBit = 1 << 4,
 };

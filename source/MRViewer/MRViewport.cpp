@@ -193,7 +193,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
         {
             if ( auto pc = pointObj->pointCloud() )
             {
-                auto vid = VertId( int( pickRes.primId ) );
+                auto vid = VertId( int( pickRes.primId ) * pointObj->getRenderDiscretization() );
                 if ( !pc->validPoints.test( vid ) )
                     continue;
                 res.point = pc->points[vid];

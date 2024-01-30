@@ -241,17 +241,38 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Relax, [] ( pybind11::module_& m )
     pybind11::class_<MeshRelaxParams, RelaxParams>( m, "MeshRelaxParams" ).
         def( pybind11::init<>() ).
         def_readwrite( "hardSmoothTetrahedrons", &MeshRelaxParams::hardSmoothTetrahedrons, "smooth tetrahedron verts (with complete three edges ring) to base triangle (based on its edges destinations)" );
+    
+    pybind11::class_<MeshApproxRelaxParams, MeshRelaxParams>( m, "MeshApproxRelaxParams" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "surfaceDilateRadius", &MeshApproxRelaxParams::surfaceDilateRadius, "Radius to find neighbors by surface. `0.0f - default = 1e-3 * sqrt(surface area)`" ).
+        def_readwrite( "RelaxApproxType", &MeshApproxRelaxParams::type, "" );
+
+    pybind11::enum_<MR::RelaxApproxType>( m, "RelaxApproxType", "Approximation strategy to use during `relaxApprox`" ).
+        value( "Planar", MR::RelaxApproxType::Planar, "Projects the new neighborhood points onto a best approximating plane." ).
+        value( "Quadric", MR::RelaxApproxType::Quadric, "Projects the new neighborhood points onto a best quadratic approximating." );
 
     m.def( "relax", ( bool( * )( Mesh&, const MeshRelaxParams&, ProgressCallback ) )& relax,
         pybind11::arg( "mesh" ), pybind11::arg_v( "params", MeshRelaxParams(), "MeshRelaxParams()" ), pybind11::arg( "cb" ) = ProgressCallback{},
-        "applies given number of relaxation iterations to the whole mesh ( or some region if it is specified )\n"
-        "return true if was finished successfully, false if was interrupted by progress callback");
+        "Applies the given number of relaxation iterations to the whole mesh (or some region if it is specified in the params).\n"
+        "\tReturns `True` if the operation completed succesfully, and `False` if it was interrupted by the progress callback." );
 
     m.def( "relaxKeepVolume", &relaxKeepVolume,
         pybind11::arg( "mesh" ), pybind11::arg_v( "params", MeshRelaxParams(), "MeshRelaxParams()" ), pybind11::arg( "cb" ) = ProgressCallback{},
-        "applies given number of relaxation iterations to the whole mesh ( or some region if it is specified ) \n"
+        "Applies the given number of relaxation iterations to the whole mesh (or some region if it is specified in the params).\n"
         "do not really keeps volume but tries hard \n"
-        "\treturn true if was finished successfully, false if was interrupted by progress callback" );
+        "\tReturns `True` if the operation completed succesfully, and `False` if it was interrupted by the progress callback." );
+
+    m.def( "relaxApprox", &relaxApprox,
+        pybind11::arg( "mesh" ), pybind11::arg_v( "params", MeshApproxRelaxParams(), "MeshApproxRelaxParams()" ), pybind11::arg( "cb" ) = ProgressCallback{},
+        "Applies the given number of relaxation iterations to the whole mesh (or some region if it is specified through the params).\n"
+        "The algorithm looks at approx neighborhoods to smooth the mesh\n"
+        "\tReturns `True` if the operation completed succesfully, and `False` if it was interrupted by the progress callback." );
+
+    m.def( "smoothRegionBoundary", &smoothRegionBoundary,
+        pybind11::arg( "mesh" ), pybind11::arg( "regionFaces" ), 
+        pybind11::arg_v( "numIterations", 4, "Number of smoothing iterations. An even number is recommended due to ocscillation of the algoritm"),
+        "Given a region of faces on the mesh, moves boundary vertices of the region\n",
+        "to make the region contour much smoother with minor optimiziztion of mesh topology near region boundary.");
 } )
 
 // Subdivider Plugin

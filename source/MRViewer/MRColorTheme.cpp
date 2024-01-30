@@ -440,7 +440,7 @@ void ColorTheme::resetImGuiStyle()
 
     style.ScrollbarRounding = 4.0f;
     style.FrameRounding = 5.0f;
-    style.GrabRounding = 4.0f;
+    style.GrabRounding = 3.0f;
     style.GrabMinSize = 16.0f;
     style.FramePadding.y = 5.0f;
     style.ItemSpacing.y = 6.0f;

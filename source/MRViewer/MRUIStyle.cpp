@@ -931,26 +931,119 @@ void endCombo( bool showPreview /*= true*/ )
         ImGui::PopItemWidth();
 }
 
+// copy from ImGui::SliderScalar with some changed visual parameters
+static bool sliderScalar( const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags )
+{
+    using namespace ImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    if ( window->SkipItems )
+        return false;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+    const float styleFramePaddingY = style.FramePadding.y + 2.5f; // EDITED
+    const ImGuiID id = window->GetID( label );
+    const float w = CalcItemWidth();
+
+    const ImVec2 label_size = CalcTextSize( label, NULL, true );
+    const ImRect frame_bb( window->DC.CursorPos, window->DC.CursorPos + ImVec2( w, label_size.y + styleFramePaddingY * 2.0f ) );
+    const ImRect total_bb( frame_bb.Min, frame_bb.Max + ImVec2( label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f ) );
+
+    const bool temp_input_allowed = ( flags & ImGuiSliderFlags_NoInput ) == 0;
+    ItemSize( total_bb, styleFramePaddingY );
+    if ( !ItemAdd( total_bb, id, &frame_bb, temp_input_allowed ? ImGuiItemFlags_Inputable : 0 ) )
+        return false;
+
+    // Default format string when passing NULL
+    if ( format == NULL )
+        format = DataTypeGetInfo( data_type )->PrintFmt;
+
+    const bool hovered = ItemHoverable( frame_bb, id, g.LastItemData.InFlags );
+    bool temp_input_is_active = temp_input_allowed && TempInputIsActive( id );
+    if ( !temp_input_is_active )
+    {
+        // Tabbing or CTRL-clicking on Slider turns it into an input box
+        const bool input_requested_by_tabbing = temp_input_allowed && ( g.LastItemData.StatusFlags & ImGuiItemStatusFlags_FocusedByTabbing ) != 0;
+        const bool clicked = hovered && IsMouseClicked( 0, id );
+        const bool make_active = ( input_requested_by_tabbing || clicked || g.NavActivateId == id );
+        if ( make_active && clicked )
+            SetKeyOwner( ImGuiKey_MouseLeft, id );
+        if ( make_active && temp_input_allowed )
+            if ( input_requested_by_tabbing || ( clicked && g.IO.KeyCtrl ) || ( g.NavActivateId == id && ( g.NavActivateFlags & ImGuiActivateFlags_PreferInput ) ) )
+                temp_input_is_active = true;
+
+        if ( make_active && !temp_input_is_active )
+        {
+            SetActiveID( id, window );
+            SetFocusID( id, window );
+            FocusWindow( window );
+            g.ActiveIdUsingNavDirMask |= ( 1 << ImGuiDir_Left ) | ( 1 << ImGuiDir_Right );
+        }
+    }
+
+    if ( temp_input_is_active )
+    {
+        // Only clamp CTRL+Click input when ImGuiSliderFlags_AlwaysClamp is set
+        const bool is_clamp_input = ( flags & ImGuiSliderFlags_AlwaysClamp ) != 0;
+        return TempInputScalar( frame_bb, id, label, data_type, p_data, format, is_clamp_input ? p_min : NULL, is_clamp_input ? p_max : NULL );
+    }
+
+    // Draw frame
+    const ImU32 frame_col = GetColorU32( g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg );
+    RenderNavHighlight( frame_bb, id );
+    RenderFrame( frame_bb.Min, frame_bb.Max, frame_col, true, g.Style.FrameRounding );
+
+    // Slider behavior
+    ImRect grab_bb;
+    const bool value_changed = SliderBehavior( frame_bb, id, data_type, p_data, p_min, p_max, format, flags, &grab_bb );
+    if ( value_changed )
+        MarkItemEdited( id );
+
+    // EDITED: Render grab
+    grab_bb.Min.y += 1.0f;
+    grab_bb.Max.y -= 1.0f;
+    if ( grab_bb.Max.x <= grab_bb.Min.x )
+        grab_bb.Max.x = grab_bb.Min.x + 1.0f;
+    auto& texture = getTexture( TextureType::GradientBtn );
+    if ( texture )
+    {
+        const float textureU = 0.125f + ( g.ActiveId == id ? 0.5f : hovered ? 0.25f : 0.f );
+        window->DrawList->AddImageRounded(
+            texture->getImTextureId(),
+            grab_bb.Min, grab_bb.Max,
+            ImVec2( textureU, 0.25f ), ImVec2( textureU, 0.75f ),
+            Color::white().getUInt32(), style.GrabRounding );
+    }
+    else
+    {
+        window->DrawList->AddRectFilled( grab_bb.Min, grab_bb.Max, GetColorU32( g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab ), style.GrabRounding );
+        const ImGuiCol colIdx = ( g.ActiveId != id ? ImGuiCol_TextDisabled : ( temp_input_is_active && hovered ) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button );
+        const ImU32 col = ImGui::GetColorU32( colIdx );
+        ImGui::RenderFrame( grab_bb.Min, grab_bb.Max, col, true, style.FrameRounding );
+    }
+
+    // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
+    char value_buf[64];
+    const char* value_buf_end = value_buf + DataTypeFormatString( value_buf, IM_ARRAYSIZE( value_buf ), data_type, p_data, format );
+    if ( g.LogEnabled )
+        LogSetNextTextDecoration( "{", "}" );
+    RenderTextClipped( frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2( 0.5f, 0.5f ) );
+
+    if ( label_size.x > 0.0f )
+        RenderText( ImVec2( frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + styleFramePaddingY ), label );
+
+    IMGUI_TEST_ENGINE_ITEM_INFO( id, label, g.LastItemData.StatusFlags | ( temp_input_allowed ? ImGuiItemStatusFlags_Inputable : 0 ) );
+    return value_changed;
+}
+
 bool sliderFloat( const char* label, float* v, float v_min, float v_max, const char* format, ImGuiSliderFlags flags )
 {
-    const auto& style = ImGui::GetStyle();
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, style.FramePadding.y + 3 ) );
-
-    bool result = ImGui::SliderFloat( label, v, v_min, v_max, format, flags );
-
-    ImGui::PopStyleVar();
-    return result;
+    return sliderScalar( label, ImGuiDataType_Float, v, &v_min, &v_max, format, flags );
 }
 
 bool sliderInt( const char* label, int* v, int v_min, int v_max, const char* format, ImGuiSliderFlags flags )
 {
-    const auto& style = ImGui::GetStyle();
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, style.FramePadding.y + 3 ) );
-
-    bool result = ImGui::SliderInt( label, v, v_min, v_max, format, flags );
-
-    ImGui::PopStyleVar();
-    return result;
+    return sliderScalar( label, ImGuiDataType_S32, v, &v_min, &v_max, format, flags );
 }
 
 bool inputTextCentered( const char* label, std::string& str, float width /*= 0.0f*/,

@@ -406,12 +406,12 @@ void RibbonMenu::drawHelpButton_()
     ImGui::PopStyleVar( 2 );
 }
 
-bool RibbonMenu::drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected, SelectedTypesMask selectedType )
+bool RibbonMenu::drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected, SelectedTypesMask selectedMask )
 {
     bool res = false;
     for ( auto& [name, custom] : customCheckBox_ )
     {
-        if ( !(custom.selectedMask & selectedType) )
+        if ( ~custom.selectedMask & selectedMask )
         {
             continue;
         }
@@ -1638,7 +1638,7 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
     const auto selectedVisualObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     if ( ImGui::BeginPopupContextItem() )
     {
-        auto selectedTypes = calcSelectedTypesMask( selected );
+        auto selectedMask = calcSelectedTypesMask( selected );
         ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, ImGui::GetStyle().WindowPadding );
         [[maybe_unused]] bool wasChanged = false, wasAction = false;
         if ( selectedVisualObjs.empty() )
@@ -1653,9 +1653,9 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
         {
             ImGui::TableNextColumn();
             wasChanged |= drawGeneralOptions_( selected );
-            wasChanged |= drawDrawOptionsCheckboxes_( selectedVisualObjs, selectedTypes );
-            wasChanged |= drawCustomCheckBox_( selected, selectedTypes );
-            wasChanged |= drawAdvancedOptions_( selectedVisualObjs, selectedTypes );
+            wasChanged |= drawDrawOptionsCheckboxes_( selectedVisualObjs, selectedMask );
+            wasChanged |= drawCustomCheckBox_( selected, selectedMask );
+            wasChanged |= drawAdvancedOptions_( selectedVisualObjs, selectedMask );
             ImGui::TableNextColumn();
             wasChanged |= drawDrawOptionsColors_( selectedVisualObjs );
             wasAction |= drawRemoveButton_( selected );

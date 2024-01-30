@@ -206,7 +206,7 @@ private:
     void drawSearchButton_();
     void drawCollapseButton_();
     void drawHelpButton_();
-    bool drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected, SelectedTypesMask selectedType );
+    bool drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected, SelectedTypesMask selectedMask );
 
     void sortObjectsRecursive_( std::shared_ptr<Object> object );
 

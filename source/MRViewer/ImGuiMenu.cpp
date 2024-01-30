@@ -1004,10 +1004,10 @@ void ImGuiMenu::draw_selection_properties_content( std::vector<std::shared_ptr<O
 
     if ( allHaveVisualisation && drawCollapsingHeader_( "Draw Options" ) )
     {
-        auto selectedType = calcSelectedTypesMask( selectedObjs );
-        drawDrawOptionsCheckboxes_( selectedVisualObjs, selectedType );
+        auto selectedMask = calcSelectedTypesMask( selectedObjs );
+        drawDrawOptionsCheckboxes_( selectedVisualObjs, selectedMask );
         drawDrawOptionsColors_( selectedVisualObjs );
-        drawAdvancedOptions_( selectedVisualObjs, selectedType );
+        drawAdvancedOptions_( selectedVisualObjs, selectedMask );
     }
 
     draw_custom_selection_properties( selectedObjs );
@@ -3013,7 +3013,7 @@ SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::share
         res |= SelectedTypeBit::ObjectBit;
     }
 
-    return SelectedTypeBit( res );
+    return res;
 }
 
 float ImGuiMenu::getSceneInfoItemWidth_( int itemCount )

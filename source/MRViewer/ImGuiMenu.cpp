@@ -2272,7 +2272,7 @@ void ImGuiMenu::make_uint8_slider( std::vector<std::shared_ptr<VisualObject>> se
     const auto valueConstForComparation = value;
 
     ImGui::PushItemWidth( 100 * menu_scaling() );
-    ImGui::SliderInt( label, &value, 0, 255, "%d", ImGuiSliderFlags_AlwaysClamp );
+    UI::sliderInt( label, &value, 0, 255, "%d", ImGuiSliderFlags_AlwaysClamp );
 
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
     ImGui::PopItemWidth();

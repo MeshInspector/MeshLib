@@ -320,9 +320,15 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
         "TabActive",
         "TabActiveHovered",
         "TabActiveClicked",
-
         "TabText",
         "TabActiveText",
+
+        "DialogTab",
+        "DialogTabHovered",
+        "DialogTabActive",
+        "DialogTabActiveHovered",
+        "DialogTabText",
+        "DialogTabActiveText",
 
         "ToolbarHovered",
         "ToolbarClicked",
@@ -416,6 +422,9 @@ void ColorTheme::resetImGuiStyle()
     Vector4f headerBg = Vector4f( getRibbonColor( RibbonColorsType::CollapseHeaderBackground ) );
     Vector4f textSelBg = Vector4f( getRibbonColor( RibbonColorsType::TextSelectedBg ) );
     Vector4f popupBg = Vector4f( getRibbonColor( RibbonColorsType::TopPanelBackground ) );
+    Vector4f tabBg = Vector4f( getRibbonColor( RibbonColorsType::DialogTab ) );
+    Vector4f tabBgActive = Vector4f( getRibbonColor( RibbonColorsType::DialogTabActive ) );
+    Vector4f tabBgHovered = Vector4f( getRibbonColor( RibbonColorsType::DialogTabActiveHovered ) );
 
     style.Colors[ImGuiCol_WindowBg] = ImVec4( bg.x, bg.y, bg.z, bg.w );
     style.Colors[ImGuiCol_Text] = ImVec4( text.x, text.y, text.z, text.w );
@@ -425,10 +434,14 @@ void ColorTheme::resetImGuiStyle()
     style.Colors[ImGuiCol_TextSelectedBg] = ImVec4( textSelBg.x, textSelBg.y, textSelBg.z, textSelBg.w );
     style.Colors[ImGuiCol_ScrollbarBg] = ImVec4( 0, 0, 0, 0 );
     style.Colors[ImGuiCol_PopupBg] = ImVec4( popupBg.x, popupBg.y, popupBg.z, popupBg.w );
+    style.Colors[ImGuiCol_Tab] = ImVec4( tabBg.x, tabBg.y, tabBg.z, tabBg.w );
+    style.Colors[ImGuiCol_TabActive] = ImVec4( tabBgActive.x, tabBgActive.y, tabBgActive.z, tabBgActive.w );
+    style.Colors[ImGuiCol_TabHovered] = ImVec4( tabBgHovered.x, tabBgHovered.y, tabBgHovered.z, tabBgHovered.w );
 
     style.ScrollbarRounding = 4.0f;
     style.FrameRounding = 5.0f;
-    style.GrabRounding = style.FrameRounding;
+    style.GrabRounding = 4.0f;
+    style.GrabMinSize = 16.0f;
     style.FramePadding.y = 5.0f;
     style.ItemSpacing.y = 6.0f;
 

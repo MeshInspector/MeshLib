@@ -59,38 +59,35 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     auto menuWidth = 380.0f * menuScaling;
     if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
         return;
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, MR::StyleConsts::pluginItemSpacing );
 
-    if ( ImGui::BeginTabBar( "##MainTabs" ) )
+    if ( UI::beginTabBar( "##MainTabs" ) )
     {
-        if ( ImGui::BeginTabItem( "Settings" ) )
+        if ( UI::beginTabItem( "Settings" ) )
         {
             activeTab_ = TabType::Settings;
             drawSettingsTab_( menuWidth, menuScaling );
-            ImGui::EndTabItem();
+            UI::endTabItem();
         }
-        if ( ImGui::BeginTabItem( "Viewport" ) )
+        if ( UI::beginTabItem( "Viewport" ) )
         {
             activeTab_ = TabType::Viewport;
             drawViewportTab_( menuWidth, menuScaling );
-            ImGui::EndTabItem();
+            UI::endTabItem();
         }
-        if ( ImGui::BeginTabItem( "View" ) )
+        if ( UI::beginTabItem( "View" ) )
         {
             activeTab_ = TabType::View;
             drawViewTab_( menuWidth, menuScaling );
-            ImGui::EndTabItem();
+            UI::endTabItem();
         }
-        if ( ImGui::BeginTabItem( "Control" ) )
+        if ( UI::beginTabItem( "Control" ) )
         {
             activeTab_ = TabType::Control;
             drawControlTab_( menuWidth, menuScaling );
-            ImGui::EndTabItem();
+            UI::endTabItem();
         }
-        ImGui::EndTabBar();
+        UI::endTabBar();
     }
-
-    ImGui::PopStyleVar();
 
     ImGui::EndCustomStatePlugin();
 }
@@ -487,7 +484,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth, float scali
         int valueAbs = int( std::fabs( value ) );
         bool inverse = value < 0.f;
         ImGui::SetNextItemWidth( menuWidth * 0.6f );
-        bool changed = ImGui::SliderInt( label, &valueAbs, 1, 100 );
+        bool changed = UI::sliderInt( label, &valueAbs, 1, 100 );
         ImGui::SameLine( menuWidth * 0.78f );
         const float cursorPosY = ImGui::GetCursorPosY();
         ImGui::SetCursorPosY( cursorPosY + 3 );

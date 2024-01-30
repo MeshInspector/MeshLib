@@ -82,6 +82,9 @@ MRVIEWER_API bool beginCombo( const char* label, const std::string& text = "Not 
 MRVIEWER_API void endCombo( bool showPreview = true );
 
 
+/// draw slider
+MRVIEWER_API bool sliderFloat( const char* label, float* v, float v_min, float v_max, const char* format = "%.3f", ImGuiSliderFlags flags = 0 );
+MRVIEWER_API bool sliderInt( const char* label, int* v, int v_min, int v_max, const char* format = "%d", ImGuiSliderFlags flags = 0 );
 
 
 /// draw input text box with text aligned by center
@@ -114,6 +117,12 @@ MRVIEWER_API void separator(
 /// size: x(y)  < 0 - take all available width(height)
 ///       x(y) == 0 - use default width(height)
 MRVIEWER_API void progressBar( float scaling, float fraction, const Vector2f& size = Vector2f( -1, 0 ) );
+
+// create and append items into a TabBar: see corresponding ImGui:: functions
+MRVIEWER_API bool beginTabBar( const char* str_id, ImGuiTabBarFlags flags = 0 );
+MRVIEWER_API void endTabBar();
+MRVIEWER_API bool beginTabItem( const char* label, bool* p_open = NULL, ImGuiTabItemFlags flags = 0 );
+MRVIEWER_API void endTabItem();
 
 } // namespace UI
 

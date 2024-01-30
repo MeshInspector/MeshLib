@@ -76,13 +76,18 @@ public:
 
         TabHovered,
         TabClicked,
-
         TabActive,
         TabActiveHovered,
         TabActiveClicked,
-
         TabText,
         TabActiveText,
+
+        DialogTab,
+        DialogTabHovered,
+        DialogTabActive,
+        DialogTabActiveHovered,
+        DialogTabText,
+        DialogTabActiveText,
 
         ToolbarHovered,
         ToolbarClicked,

@@ -406,11 +406,16 @@ void RibbonMenu::drawHelpButton_()
     ImGui::PopStyleVar( 2 );
 }
 
-bool RibbonMenu::drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected )
+bool RibbonMenu::drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected, SelectedTypesMask selectedMask )
 {
     bool res = false;
     for ( auto& [name, custom] : customCheckBox_ )
     {
+        if ( !selectedMask || ~custom.selectedMask & selectedMask )
+        {
+            continue;
+        }
+
         bool atLeastOneTrue = false;
         bool allTrue = true;
         for ( auto& obj : selected )
@@ -1633,6 +1638,7 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
     const auto selectedVisualObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     if ( ImGui::BeginPopupContextItem() )
     {
+        auto selectedMask = calcSelectedTypesMask( selected );
         ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, ImGui::GetStyle().WindowPadding );
         [[maybe_unused]] bool wasChanged = false, wasAction = false;
         if ( selectedVisualObjs.empty() )
@@ -1647,9 +1653,9 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
         {
             ImGui::TableNextColumn();
             wasChanged |= drawGeneralOptions_( selected );
-            wasChanged |= drawDrawOptionsCheckboxes_( selectedVisualObjs );
-            wasChanged |= drawCustomCheckBox_( selected );
-            wasChanged |= drawAdvancedOptions_( selectedVisualObjs );
+            wasChanged |= drawDrawOptionsCheckboxes_( selectedVisualObjs, selectedMask );
+            wasChanged |= drawCustomCheckBox_( selected, selectedMask );
+            wasChanged |= drawAdvancedOptions_( selectedVisualObjs, selectedMask );
             ImGui::TableNextColumn();
             wasChanged |= drawDrawOptionsColors_( selectedVisualObjs );
             wasAction |= drawRemoveButton_( selected );

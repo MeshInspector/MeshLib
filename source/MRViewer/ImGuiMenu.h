@@ -26,6 +26,16 @@ namespace MR
 class ShortcutManager;
 class MeshModifier;
 
+using SelectedTypesMask = uint64_t;
+enum SelectedTypeBit : SelectedTypesMask
+{
+    ObjectBit = 1 << 0,
+    ObjectPointsBit = 1 << 1,
+    ObjectLinesBit = 1 << 2,
+    ObjectMeshBit = 1 << 3,
+    ObjectLabelBit = 1 << 4,
+};
+
 class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin, 
     public MultiListener<
     MouseDownListener, MouseMoveListener, MouseUpListener, MouseScrollListener, CursorEntranceListener,
@@ -356,10 +366,10 @@ protected:
     MRVIEWER_API float drawSelectionInformation_();
     MRVIEWER_API void drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& object );
     MRVIEWER_API bool drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>& selectedObjs );
-    MRVIEWER_API bool drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );
+    MRVIEWER_API bool drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedTypesMask selectedMask );
 
     MRVIEWER_API bool drawRemoveButton_( const std::vector<std::shared_ptr<Object>>& selectedObjs );
-    MRVIEWER_API bool drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );
+    MRVIEWER_API bool drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedTypesMask selectedMask );
     MRVIEWER_API bool drawDrawOptionsColors_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );
 
     MRVIEWER_API virtual void draw_custom_selection_properties( const std::vector<std::shared_ptr<Object>>& selected );
@@ -382,8 +392,10 @@ protected:
 
     // A virtual function for drawing of the dialog with shortcuts. It can be overriden in the inherited classes
     MRVIEWER_API virtual void drawShortcutsWindow_();
-    //returns width of items in Scene Info window
+    // returns width of items in Scene Info window
     MRVIEWER_API float getSceneInfoItemWidth_( int itemCount  = 1 );
+    // getting the mask of the list of selected objects
+    MRVIEWER_API SelectedTypesMask calcSelectedTypesMask( const std::vector<std::shared_ptr<Object>>& selectedObjs );
 };
 
 

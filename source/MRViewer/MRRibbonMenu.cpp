@@ -411,7 +411,7 @@ bool RibbonMenu::drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>
     bool res = false;
     for ( auto& [name, custom] : customCheckBox_ )
     {
-        if ( ~custom.selectedMask & selectedMask && !selectedMask )
+        if ( !selectedMask || ~custom.selectedMask & selectedMask )
         {
             continue;
         }

@@ -1,5 +1,5 @@
-from helper import *
 import pytest
+from helper import *
 
 
 def test_make_cube():
@@ -8,8 +8,8 @@ def test_make_cube():
     pos2 = mrmesh.Vector3f.diagonal(3)
 
     cube = mrmesh.makeCube(size, pos1)
-    assert(cube.topology.numValidVerts() == 8)
-    assert(cube.topology.numValidFaces() == 12)
+    assert cube.topology.numValidVerts() == 8
+    assert cube.topology.numValidFaces() == 12
 
     cube2 = mrmesh.makeCube(size, pos2)
 
@@ -23,7 +23,8 @@ def test_make_cube():
     xf = mrmesh.AffineXf3f()
     cube1 = cube
     pairs = mrmesh.findCollidingTriangles(
-        mrmesh.MeshPart(cube1), mrmesh.MeshPart(cube2), None, False)
+        mrmesh.MeshPart(cube1), mrmesh.MeshPart(cube2), None, False
+    )
 
     # at least 100 triangles should collide for that transforms
-    assert (len(pairs) < 23)
+    assert len(pairs) < 23

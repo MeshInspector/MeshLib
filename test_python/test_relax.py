@@ -1,5 +1,5 @@
-from helper import *
 import pytest
+from helper import *
 
 
 def test_relax():
@@ -12,7 +12,8 @@ def test_relax():
     params.iterations = 5
     res = mrmesh.relax(torus, params)
 
-    assert (res)
+    assert res
+
 
 def test_relax_keep_volume():
     R1 = 2
@@ -24,4 +25,4 @@ def test_relax_keep_volume():
     params.iterations = 5
     res = mrmesh.relaxKeepVolume(keep_volume_torus, params)
 
-    assert (res)
+    assert res

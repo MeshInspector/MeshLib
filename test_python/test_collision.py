@@ -1,5 +1,5 @@
-from helper import *
 import pytest
+from helper import *
 
 
 def test_collision():
@@ -16,6 +16,7 @@ def test_collision():
     xf = mrmesh.AffineXf3f()
     torus1 = torus
     pairs = mrmesh.findCollidingTriangles(
-        mrmesh.MeshPart(torus1), mrmesh.MeshPart(torus2))
-# at least 100 triangles should collide for that transforms
-    assert (len(pairs) > 103)
+        mrmesh.MeshPart(torus1), mrmesh.MeshPart(torus2)
+    )
+    # at least 100 triangles should collide for that transforms
+    assert len(pairs) > 103

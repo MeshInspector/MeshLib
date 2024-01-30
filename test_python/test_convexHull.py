@@ -1,5 +1,5 @@
-from helper import *
 import pytest
+from helper import *
 
 
 def test_convexHull():
@@ -7,6 +7,6 @@ def test_convexHull():
 
     # Create the convex hull
     hull = mrmesh.makeConvexHull(torus)
-    
+
     # test hull volume
     assert abs(hull.volume() - 43.184) < 0.01

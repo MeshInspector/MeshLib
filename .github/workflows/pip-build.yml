@@ -186,7 +186,7 @@ jobs:
           git checkout ${{env.VCPKG-VERSION}}
 
       - name: Restore Vcpkg Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: vcpkg-cache
         with:
           key: vcpkg-cache-${{env.VCPKG-VERSION}}
@@ -226,7 +226,7 @@ jobs:
           tar -xf python-embed.zip ${{matrix.py-file}}.zip
 
       - name: Restore CUDA Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cuda-cache
         with:
           key: cuda-${{env.CUDA-VERSION}}

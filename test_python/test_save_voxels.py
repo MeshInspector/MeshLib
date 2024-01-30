@@ -1,6 +1,8 @@
-from helper import *
-import pytest
 import shutil
+
+import pytest
+from helper import *
+
 
 def test_save_voxels():
     mesh = mrmesh.makeTorus()
@@ -8,13 +10,13 @@ def test_save_voxels():
     mtvParams.type = mrmesh.MeshToVolumeParamsType.Signed
     mtvParams.surfaceOffset = 3
     meshBox = mesh.computeBoundingBox()
-    boxSize = meshBox.max-meshBox.min
+    boxSize = meshBox.max - meshBox.min
     mtvParams.voxelSize = boxSize / 27.0
-    voxels = mrmesh.meshToVolume(mesh,mtvParams)
+    voxels = mrmesh.meshToVolume(mesh, mtvParams)
 
     vsParams = mrmesh.VoxelsSaveSavingSettings()
     os.mkdir("save_voxels_dir_test")
     vsParams.path = "save_voxels_dir_test"
     vsParams.slicePlane = mrmesh.SlicePlane.XY
-    mrmesh.saveAllSlicesToImage(voxels,vsParams)
+    mrmesh.saveAllSlicesToImage(voxels, vsParams)
     shutil.rmtree("save_voxels_dir_test")

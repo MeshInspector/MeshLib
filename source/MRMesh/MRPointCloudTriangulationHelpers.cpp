@@ -9,6 +9,7 @@
 #include "MRGeodesicPath.h"
 #include "MRTimer.h"
 #include "MRBitSetParallelFor.h"
+#include "MRLocalTriangulations.h"
 #include <algorithm>
 #include <queue>
 #include <numeric>
@@ -134,12 +135,11 @@ struct FanOptimizerQueueElement
 class FanOptimizer
 {
 public:
-    FanOptimizer( const VertCoords& points, const VertCoords& normals, TriangulatedFanData& fanData, VertId centerVert, bool useNeiNormals ):
+    FanOptimizer( const VertCoords& points, const VertCoords* trustedNormals, TriangulatedFanData& fanData, VertId centerVert ):
         centerVert_{ centerVert },
         fanData_{ fanData },
         points_{ points },
-        normals_{ normals },
-        useNeiNormals_{ useNeiNormals }
+        trustedNormals_{ trustedNormals }
     {
         init_();
     }
@@ -151,8 +151,7 @@ private:
     VertId centerVert_;
     TriangulatedFanData& fanData_;
     const VertCoords& points_;
-    const VertCoords& normals_;
-    bool useNeiNormals_ = true;
+    const VertCoords* trustedNormals_ = nullptr;
 
     void init_();
 
@@ -216,7 +215,7 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
     }
     // whether abc acd is allowed to be flipped to abd dbc
     bool flipPossibility = false;
-    if ( useNeiNormals_ && ( dot( normals_[centerVert_], normals_[fanData_.neighbors[res.id]] ) < 0.0f ) )
+    if ( trustedNormals_ && ( dot( (*trustedNormals_)[centerVert_], (*trustedNormals_)[fanData_.neighbors[res.id]] ) < 0.0f ) )
         flipPossibility = true;
     else
         flipPossibility = isUnfoldQuadrangleConvex( a, b, c, d );
@@ -234,10 +233,10 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
 
     res.weight += planeDist / normVal;
 
-    if ( useNeiNormals_ )
+    if ( trustedNormals_ )
     {
-        const auto cNorm = normals_[fanData_.neighbors[res.id]];
-        res.weight += 5.0f * ( 1.0f - dot( normals_[centerVert_], cNorm ) );
+        const auto cNorm = (*trustedNormals_)[fanData_.neighbors[res.id]];
+        res.weight += 5.0f * ( 1.0f - dot( (*trustedNormals_)[centerVert_], cNorm ) );
 
         auto abcNorm = cross( b - a, c - a );
         auto acdNorm = cross( c - a, d - a );
@@ -350,8 +349,19 @@ void FanOptimizer::updateBorder( float angle )
 
 void FanOptimizer::init_()
 {
-    Vector3f centerProj = points_[centerVert_];
-    plane_ = Plane3f::fromDirAndPt( normals_[centerVert_], centerProj );
+    const Vector3f centerProj = points_[centerVert_];
+    Vector3f centerNorm;
+    if ( trustedNormals_ )
+        centerNorm = (*trustedNormals_)[centerVert_];
+    else
+    {
+        PointAccumulator accum;
+        accum.addPoint( centerProj );
+        for ( auto nid : fanData_.neighbors )
+            accum.addPoint( points_[nid] );
+        centerNorm = Vector3f( accum.getBestPlane().n );
+    }
+    plane_ = Plane3f::fromDirAndPt( centerNorm, centerProj );
 
     Vector3f firstProj = plane_.project( points_[fanData_.neighbors.front()] );
     Vector3f baseVec = ( firstProj - centerProj ).normalized();
@@ -392,23 +402,23 @@ void FanOptimizer::init_()
 }
 
 void trianglulateFan( const VertCoords& points, VertId centerVert, TriangulatedFanData& triangulationData,
-    const VertCoords& normals, float critAngle, bool useNeiNormals, int steps )
+    const VertCoords* trustedNormals, float critAngle, int steps )
 {
     if ( triangulationData.neighbors.empty() )
         return;
-    FanOptimizer optimizer( points, normals, triangulationData, centerVert, useNeiNormals );
+    FanOptimizer optimizer( points, trustedNormals, triangulationData, centerVert );
     optimizer.optimize( steps, critAngle );
 }
 
-void buildLocalTriangulation( const PointCloud& cloud, VertId v, const VertCoords& normals, const Settings & settings,
+void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings & settings,
     TriangulatedFanData & fanData )
 {
     findNeighbors( cloud, v, settings.radius, fanData.neighbors );
-    if ( settings.useNeiNormals )
-        filterNeighbors( normals, v, fanData.neighbors );
+    if ( settings.trustedNormals )
+        filterNeighbors( *settings.trustedNormals, v, fanData.neighbors );
     if ( settings.allNeighbors )
         *settings.allNeighbors = fanData.neighbors;
-    trianglulateFan( cloud.points, v, fanData, normals, settings.critAngle, settings.useNeiNormals, settings.maxRemoves );
+    trianglulateFan( cloud.points, v, fanData, settings.trustedNormals, settings.critAngle, settings.maxRemoves );
 
     if ( settings.automaticRadiusIncrease )
     {
@@ -419,21 +429,21 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const VertCoord
         {
             // update triangulation if radius was increased
             findNeighbors( cloud, v, maxRadius, fanData.neighbors );
-            if ( settings.useNeiNormals )
-                filterNeighbors( normals, v, fanData.neighbors );
+            if ( settings.trustedNormals )
+                filterNeighbors( *settings.trustedNormals, v, fanData.neighbors );
             if ( settings.allNeighbors )
                 *settings.allNeighbors = fanData.neighbors;
-            trianglulateFan( cloud.points, v, fanData, normals, settings.critAngle, settings.useNeiNormals, settings.maxRemoves );
+            trianglulateFan( cloud.points, v, fanData, settings.trustedNormals, settings.critAngle, settings.maxRemoves );
         }
     }
 }
 
-std::optional<std::vector<LocalTriangulations>> buildLocalTriangulations(
-    const PointCloud& cloud, const VertCoords& normals, const Settings & settings, const ProgressCallback & progress )
+std::optional<std::vector<SomeLocalTriangulations>> buildLocalTriangulations(
+    const PointCloud& cloud, const Settings & settings, const ProgressCallback & progress )
 {
     MR_TIMER
 
-    struct PerThreadData : LocalTriangulations
+    struct PerThreadData : SomeLocalTriangulations
     {
         TriangulationHelpers::TriangulatedFanData fanData;
     };
@@ -443,14 +453,15 @@ std::optional<std::vector<LocalTriangulations>> buildLocalTriangulations(
     {
         auto& localData = threadData.local();
         auto& disc = localData.fanData;
-        TriangulationHelpers::buildLocalTriangulation( cloud, v, normals, settings, disc );
+        TriangulationHelpers::buildLocalTriangulation( cloud, v, settings, disc );
 
         localData.fanRecords.push_back( { v, disc.border, (std::uint32_t)localData.neighbors.size() } );
         localData.neighbors.insert( localData.neighbors.end(), disc.neighbors.begin(), disc.neighbors.end() );
+        localData.maxCenterId = std::max( localData.maxCenterId, v );
     }, progress ) )
         return {};
 
-    std::vector<LocalTriangulations> res;
+    std::vector<SomeLocalTriangulations> res;
     res.reserve( threadData.size() );
     for ( auto & td : threadData )
     {
@@ -461,6 +472,18 @@ std::optional<std::vector<LocalTriangulations>> buildLocalTriangulations(
     return res;
 }
 
+std::optional<AllLocalTriangulations> buildUnitedLocalTriangulations(
+    const PointCloud& cloud, const Settings & settings, const ProgressCallback & progress )
+{
+    MR_TIMER
+
+    const auto optPerThreadTriangs = buildLocalTriangulations( cloud, settings, subprogress( progress, 0.0f, 0.9f ) );
+    if ( !optPerThreadTriangs )
+        return {};
+
+    return uniteLocalTriangulations( *optPerThreadTriangs );
+}
+
 bool isBoundaryPoint( const PointCloud& pointCloud, const VertCoords& normals,
     VertId v, float radius, float angle, TriangulatedFanData& triangulationData )
 {
@@ -468,7 +491,7 @@ bool isBoundaryPoint( const PointCloud& pointCloud, const VertCoords& normals,
     triangulationData.border = {};
     if ( triangulationData.neighbors.size() < 3 )
         return true;
-    FanOptimizer optimizer( pointCloud.points, normals, triangulationData, v, true );
+    FanOptimizer optimizer( pointCloud.points, &normals, triangulationData, v );
     optimizer.updateBorder( angle );
     return triangulationData.border.valid();
 }

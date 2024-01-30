@@ -1,3 +1,16 @@
+## Contribution Instructions
+
+
+1. Install the linting packages: `pip3 install pre-commit black isort`
+3. When commiting the black & isort check should automatically reformat any edited python code.
+
+To run this yourself you can do:
+- `black ./test_python`
+- `isort ./test_python/ --profile black`
+
+
+## Setup Instructions
+
 To run these tests please build MeshLib first, then do following commands
 on linux or mac:
 ```sh

@@ -25,7 +25,7 @@ public:
         // Modifier key for deleting a point using the widget
         int widgetDeletePointMod = GLFW_MOD_SHIFT;
 
-        // Indicates whether to write history of the contours
+        // Indicates whether to write history of the contours_
         bool writeHistory = true;
 
         // specification of history actions
@@ -44,7 +44,7 @@ public:
 
         // Color for the last modified point in the contour
         // Parameters affect to future points only, if need update existing one use void  updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p )
-        MR::Color lastPoitColor = Color::green();
+        MR::Color activePointColor = Color::green();
 
         // Color for the special point used to close a contour. Better do not change it. 
         // Parameters affect to future points only, if need update existing one use void  updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p )
@@ -88,7 +88,7 @@ public:
         return pickedPoints_[obj];
     }
 
-    // return all contours, i.e. per object umap of ordered surface points [vestor].
+    // return all contours_, i.e. per object umap of ordered surface points [vestor].
     [[nodiscard]] const SurfaceContours& getSurfaceContours() const
     {
         return pickedPoints_;
@@ -97,7 +97,7 @@ public:
     // chech is contour closed for particular object.
     [[nodiscard]] bool isClosedCountour( const std::shared_ptr<ObjectMeshHolder>& obj );
 
-    // updates the parameters of all existing points ( SurfacePointWidget ) in the contours, and also sets their points that will be created later
+    // updates the parameters of all existing points ( SurfacePointWidget ) in the contours_, and also sets their points that will be created later
     MRVIEWER_API  void updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p );
 
     // shared variables. which need getters and setters.
@@ -113,6 +113,9 @@ private:
 
     // creates point widget for add to contour.
     [[nodiscard]] std::shared_ptr<SurfacePointWidget> createPickWidget_( const std::shared_ptr<MR::ObjectMeshHolder>& obj, const MeshTriPoint& pt );
+    
+    // visualization only. Colorize all points with selected colors as ordinary. 
+    void deselectAllPoints_(); 
 
     // SurfaceContoursWidget interlal variables 
     bool moveClosedPoint_ = false;

@@ -34,10 +34,9 @@ void AddPointActionPickerPoint::action( Type actionType )
         contour.pop_back();
 
         if ( !contour.empty() )
-            updateBaseColor( contour.back(), widget_.params.lastPoitColor );
+            updateBaseColor( contour.back(), widget_.params.activePointColor );
 
-        widget_.activeIndex_ = int( contour.size() - 1 );
-        widget_.activeObject_ = obj_;
+        widget_.setActivePoint( obj_, static_cast< int > ( contour.size() - 1 ) );
 
         widget_.onPointRemove_( obj_ );
     }
@@ -47,11 +46,7 @@ void AddPointActionPickerPoint::action( Type actionType )
             updateBaseColor( contour.back(), widget_.params.ordinaryPointColor );
 
         contour.push_back( widget_.createPickWidget_( obj_, point_ ) );
-        widget_.activeIndex_ = int( contour.size() - 1 );
-        widget_.activeObject_ = obj_;
-
-        updateBaseColor( contour.back(), widget_.params.lastPoitColor );
-
+        widget_.setActivePoint( obj_, static_cast< int >( contour.size() - 1 ) );
 
         widget_.onPointAdd_( obj_ );
     }
@@ -81,9 +76,9 @@ void RemovePointActionPickerPoint::action( Type actionType )
         contour.insert( contour.begin() + index_, widget_.createPickWidget_( obj_, point_ ) );
 
         if ( index_ + 1 == contour.size() )
-            updateBaseColor( contour.back(), widget_.params.lastPoitColor );
-        widget_.activeIndex_ = index_;
-        widget_.activeObject_ = obj_;
+            updateBaseColor( contour.back(), widget_.params.activePointColor );
+
+        widget_.setActivePoint( obj_, index_ );
 
         widget_.onPointAdd_( obj_ );
         contour.back()->setHovered( false );
@@ -94,10 +89,9 @@ void RemovePointActionPickerPoint::action( Type actionType )
         contour.erase( contour.begin() + index_ );
 
         if ( index_ == contour.size() && !contour.empty() )
-            updateBaseColor( contour.back(), widget_.params.lastPoitColor );
+            updateBaseColor( contour.back(), widget_.params.activePointColor );
 
-        widget_.activeIndex_ = index_;
-        widget_.activeObject_ = obj_;
+        widget_.setActivePoint( obj_, index_ );
 
         widget_.onPointRemove_( obj_ );
     }
@@ -118,8 +112,7 @@ void ChangePointActionPickerPoint::action( Type )
         return;
 
     widget_.pickedPoints_[obj_][index_]->updateCurrentPosition( point_ );
-    widget_.activeIndex_ = index_;
-    widget_.activeObject_ = obj_;
+    widget_.setActivePoint( obj_, index_ );
     widget_.onPointMoveFinish_( obj_ );
 }
 
@@ -187,10 +180,20 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
             }
         }
         activeChange_ = false;
+        //deselectAllPoints_();
+        //setActivePoint( obj, activeIndex_ );
         onPointMoveFinish_( obj );
     } );
 
     return newPoint;
+}
+
+void SurfaceContoursWidget::deselectAllPoints_()
+{
+    for ( auto& [obj, contour] : pickedPoints_ )
+        for ( auto& point : contour )
+            if ( point->getParameters().baseColor == params.activePointColor )
+                updateBaseColor( point, params.ordinaryPointColor );
 }
 
 bool SurfaceContoursWidget::isClosedCountour( const std::shared_ptr<ObjectMeshHolder>& obj )
@@ -213,8 +216,8 @@ void SurfaceContoursWidget::updateAllPointsWidgetParams( const SurfaceContoursWi
 
             if ( pointParams.baseColor == oldParams.ordinaryPointColor )
                 updateBaseColor( point, p.ordinaryPointColor );
-            else if ( pointParams.baseColor == oldParams.lastPoitColor )
-                updateBaseColor( point, p.lastPoitColor );
+            else if ( pointParams.baseColor == oldParams.activePointColor )
+                updateBaseColor( point, p.activePointColor );
             else if ( pointParams.baseColor == oldParams.closeContourPointColor )
                 updateBaseColor( point, p.closeContourPointColor );
         }
@@ -236,9 +239,9 @@ void SurfaceContoursWidget::setActivePoint( std::shared_ptr<MR::ObjectMeshHolder
     {
         index = 0;
     }
-
-    updateBaseColor( pickedPoints_[obj][index], params.lastPoitColor );
-    updateBaseColor( pickedPoints_[activeObject_][activeIndex_], params.ordinaryPointColor );
+    if ( activeIndex_ < pickedPoints_[obj].size() )
+        updateBaseColor( pickedPoints_[activeObject_][activeIndex_], params.ordinaryPointColor );
+    updateBaseColor( pickedPoints_[obj][index], params.activePointColor );
 
     activeIndex_ = index;
     activeObject_ = obj;
@@ -267,7 +270,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
             AppendHistory<AddPointActionPickerPoint>( *this, obj, triPoint );
 
         contour.push_back( createPickWidget_( obj, triPoint ) );
-        updateBaseColor( contour.back(), close ? params.closeContourPointColor : params.lastPoitColor );
+        updateBaseColor( contour.back(), close ? params.closeContourPointColor : params.activePointColor );
 
         activeIndex_ = static_cast< int >( contour.size() - 1 );
         activeObject_ = obj;
@@ -280,7 +283,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
         if ( pickedIndex == int( contour.size() ) - 1 && contour.size() > 1 )
         {
-            updateBaseColor( contour[pickedIndex - 1], params.lastPoitColor );
+            updateBaseColor( contour[pickedIndex - 1], params.activePointColor );
         }
 
         if ( params.writeHistory )
@@ -411,8 +414,7 @@ bool SurfaceContoursWidget::onMouseMove_( int, int )
             point->setHovered( hovered );
             if ( hovered )
             {
-                activeIndex_ = i;
-                activeObject_ = contour.first;
+                setActivePoint( contour.first , i);
             }
         }
     return false;

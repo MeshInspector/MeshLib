@@ -192,8 +192,8 @@ bool SurfaceContoursWidget::isClosedCountour( const std::shared_ptr<ObjectMeshHo
 void SurfaceContoursWidget::highlightLastPoint( const std::shared_ptr<ObjectMeshHolder>& obj )
 {
     auto& contour = pickedPoints_[obj];
-    int lastPointId = contour.size();
-    if ( lastPointId > 1 )
+    int lastPointId = static_cast< int > ( contour.size() - 1 );
+    if ( lastPointId > 0 )
     {
         updateBaseColor( contour[lastPointId - 1], params.ordinaryPointColor );
         if ( !isClosedCountour( obj ) )

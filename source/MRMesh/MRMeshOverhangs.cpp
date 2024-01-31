@@ -120,17 +120,28 @@ Expected<std::vector<FaceBitSet>> findOverhangs( const Mesh& mesh, const FindOve
     auto allBds = findRightBoundary( mesh.topology, faces );
     if ( !reportProgress( settings.progressCb, 0.4f ) )
         return unexpectedOperationCanceled();
+
+    const auto maxBasementCos = -std::cos( settings.maxBasementAngle );
     auto keepGoing = ParallelFor( regions, [&] ( size_t i )
     {
         auto& region = regions[i];
         const auto axisBox = mesh.computeBoundingBox( &region, &axisXf );
         if ( axisBox.size().z > settings.layerHeight )
             return;
-        // don't include the basement region
-        if ( axisBox.min.z == axisMeshBox.min.z )
+        // filter out basement faces
+        if ( settings.maxBasementAngle >= 0.f && axisBox.min.z == axisMeshBox.min.z )
         {
-            region.clear();
-            return;
+            auto basementOverhangs = region;
+            BitSetParallelFor( region, [&] ( FaceId f )
+            {
+                const auto normal = mesh.normal( f );
+                const auto cos = dot( settings.axis, xf.A * normal );
+                if ( cos < maxBasementCos )
+                    basementOverhangs.reset( f );
+            } );
+            if ( basementOverhangs.none() )
+                return;
+            std::swap( region, basementOverhangs );
         }
         std::vector<int> thisBds;
         for ( int bdI = 0; bdI < allBds.size(); ++bdI )

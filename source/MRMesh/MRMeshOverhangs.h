@@ -20,6 +20,11 @@ struct FindOverhangsSettings
     int hops = 0;
     /// mesh transform
     const AffineXf3f* xf = nullptr;
+    /// maximum basement incline angle (in radians)
+    /// the default value is 2 * pi (the entire region is considered as a basement)
+    /// set to a negative value to disable the basement filtering out
+    float maxBasementAngle = 2 * PI_F;
+    /// progress callback
     ProgressCallback progressCb;
 };
 

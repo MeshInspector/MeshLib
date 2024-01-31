@@ -1463,16 +1463,6 @@ float ImGuiMenu::drawSelectionInformation_()
         drawVec3( "Dimensions", dimensions, fieldWidth,"{}" );
     }
 #endif
-    if ( selectionBbox_.valid() )
-    {
-        drawVec3( "Box min", selectionBbox_.min, fieldWidth, "{:.3f}" );
-        drawVec3( "Box max", selectionBbox_.max, fieldWidth, "{:.3f}" );
-        drawVec3( "Box size", bsize, fieldWidth, "{:.3f}" );
-
-        if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
-            drawVec3( "World box size", wbsize, fieldWidth, "{:.3f}" );
-    }
-
     // Feature object properties.
     bool haveFeatureProperties = false;
     if ( selectedObjs.size() == 1 )
@@ -1488,6 +1478,20 @@ float ImGuiMenu::drawSelectionInformation_()
     }
     if ( !haveFeatureProperties )
         editedFeatureObject_.reset();
+
+    // Bounding box.
+    if ( selectionBbox_.valid()
+        // We were asked to hide the bounding box for features.
+        && !haveFeatureProperties
+    )
+    {
+        drawVec3( "Box min", selectionBbox_.min, fieldWidth, "{:.3f}" );
+        drawVec3( "Box max", selectionBbox_.max, fieldWidth, "{:.3f}" );
+        drawVec3( "Box size", bsize, fieldWidth, "{:.3f}" );
+
+        if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
+            drawVec3( "World box size", wbsize, fieldWidth, "{:.3f}" );
+    }
 
     // This looks a bit better.
     for ( int i = 0; i < 5; i++ )

@@ -168,7 +168,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m 
         def_readwrite( "direction", &TextMeshAlignParams::direction, "Direction of text" ).
         def_readwrite( "fontHeight", &TextMeshAlignParams::fontHeight, "Font height, meters" ).
         def_readwrite( "surfaceOffset", &TextMeshAlignParams::surfaceOffset, "Text mesh inside and outside offset of input mesh" ).
-        def_readwrite( "textMaximumMovement", &TextMeshAlignParams::textMaximumMovement, "Maximum possible movement of text mesh alignment, meters" );
+        def_readwrite( "textMaximumMovement", &TextMeshAlignParams::textMaximumMovement, "Maximum possible movement of text mesh alignment, meters" ).
+        def_readwrite( "fontBasedSizeCalc", &TextMeshAlignParams::fontBasedSizeCalc, "If true then size of each symbol will be calculated from font height, otherwise - on bounding box of the text" );
 
     m.def( "alignTextToMesh", MR::decorateExpected( &MR::alignTextToMesh ), pybind11::arg( "mesh" ), pybind11::arg( "params" ),
         "Creates symbol mesh and aligns it to given surface" );

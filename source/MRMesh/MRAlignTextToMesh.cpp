@@ -39,6 +39,7 @@ Expected<Mesh, std::string>  alignTextToMesh(
     const auto vecy = cross( vecx, -norm ).normalized();
 
     const Vector3f pivotCoord{ bbox.min.x + diagonal.x * params.pivotPoint.x,
+                               params.fontBasedSizeCalc ? ( 1 - numLines ) * params.MaxGeneratedFontHeight * ( 1 - params.pivotPoint.y ) + params.MaxGeneratedFontHeight * params.pivotPoint.y :
                                bbox.min.y + diagonal.y * params.pivotPoint.y,
                                0.0f };
 
@@ -54,7 +55,9 @@ Expected<Mesh, std::string>  alignTextToMesh(
     else
         rotQ = Quaternionf( newY, vecy ) * rotQ;
     AffineXf3f rot = AffineXf3f::linear( rotQ );
-    float scale = ( params.fontHeight * numLines * ( 1.0f + params.symbolsDistanceAdditionalOffset.y ) ) / diagonal.y;
+
+    const float symbolDependentMultiplier = params.fontBasedSizeCalc ? diagonal.y / params.MaxGeneratedFontHeight / numLines : 1.0f;
+    float scale = symbolDependentMultiplier * ( params.fontHeight * numLines * ( 1.0f + params.symbolsDistanceAdditionalOffset.y ) ) / diagonal.y;
     auto translation = mesh.triPoint( params.startPoint );
 
     transform = 

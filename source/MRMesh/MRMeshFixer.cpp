@@ -361,7 +361,12 @@ FaceBitSet findHoleComplicatingFaces( const MeshTopology & topology )
         findHoleComplicatingFaces( topology, holes[i], threadData.local() );
     } );
 
-    res.resize( topology.faceSize() );
+    FaceId maxFace;
+    for ( const auto & fs : threadData )
+        for ( FaceId f : fs )
+            maxFace = std::max( maxFace, f );
+
+    res.resize( maxFace + 1 );
     for ( const auto & fs : threadData )
         for ( FaceId f : fs )
             res.set( f );

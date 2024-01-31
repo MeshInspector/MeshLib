@@ -18,6 +18,7 @@
 #include "MRRegionBoundary.h"
 #include "MRParallelFor.h"
 #include "MRLocalTriangulations.h"
+#include "MRMeshFixer.h"
 #include <parallel_hashmap/phmap.h>
 
 namespace MR
@@ -193,6 +194,9 @@ std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progr
     MeshBuilder::addTriangles( mesh.topology, t3, { .region = &region2, .allowNonManifoldEdge = false } );
     if ( !reportProgress( progressCb, 0.4f ) )
         return {};
+
+    // remove bad triangles
+    mesh.deleteFaces( findHoleComplicatingFaces( mesh.topology ) );
 
     // fill small holes
     const auto bigLength = params_.critHoleLength >= 0.0f ? params_.critHoleLength : pointCloud_.getBoundingBox().diagonal() * 0.7f;

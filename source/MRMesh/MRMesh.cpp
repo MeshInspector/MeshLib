@@ -1012,6 +1012,8 @@ PackMapping Mesh::packOptimally( bool preserveAABBTree )
 
 void Mesh::deleteFaces( const FaceBitSet& fs )
 {
+    if ( fs.none() )
+        return;
     topology.deleteFaces( fs );
     invalidateCaches(); // some points can be deleted as well
 }

@@ -53,6 +53,16 @@
 namespace MR
 {
 
+#ifndef _WIN32
+// If true, the resources should be loaded from the executable directory, rather than from the system directories.
+[[nodiscard]] static bool resourcesAreNearExe()
+{
+    auto opt = std::getenv("MR_LOCAL_RESOURCES");
+    return opt && std::string_view(opt) == "1";
+}
+#endif
+
+
 void SetCurrentThreadName( const char * name )
 {
 #ifdef _MSC_VER
@@ -139,9 +149,7 @@ std::filesystem::path GetResourcesDirectory()
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
-    // "build" in path means that MeshInspector is not installed to system
-    // so all resources are near executable file
-    if ( std::find( exePath.begin(), exePath.end(), "build" ) != exePath.end() )
+    if ( resourcesAreNearExe() )
         return exePath;
     #ifdef __APPLE__
         #ifdef MR_FRAMEWORK
@@ -161,9 +169,7 @@ std::filesystem::path GetFontsDirectory()
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
-    // "build" in path means that MeshInspector is not installed to system
-    // so all fonts are near executable file
-    if ( std::find( exePath.begin(), exePath.end(), "build" ) != exePath.end() )
+    if ( resourcesAreNearExe() )
         return exePath;
     #ifdef __APPLE__
     return GetResourcesDirectory() / "fonts/";
@@ -179,9 +185,7 @@ std::filesystem::path GetLibsDirectory()
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
-    // "build" in path means that MeshInspector is not installed to system
-    // so all libs are near executable file
-    if ( std::find( exePath.begin(), exePath.end(), "build" ) != exePath.end() )
+    if ( resourcesAreNearExe() )
         return exePath;
     #ifdef __APPLE__
         #ifdef MR_FRAMEWORK
@@ -451,7 +455,7 @@ std::string GetCpuId()
         else if ( CPUBrandString[i] != '\0' )
             break;
     }
-            
+
     auto res = std::string( CPUBrandString );
     return res.substr( res.find_first_not_of(' ') );
 #endif

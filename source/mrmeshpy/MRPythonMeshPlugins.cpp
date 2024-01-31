@@ -159,11 +159,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m 
             "Y: In symbol size: 1.0f adds one base height, 0.5 adds half base height" ).
         def_readwrite( "pathToFontFile", &TextMeshAlignParams::pathToFontFile, "Path to font file" );
 
-    pybind11::class_<SymbolMeshOutParams>( m, "SymbolMeshOutParams" ).
-        def( pybind11::init<>() ).
-        def_readwrite( "yShift", &SymbolMeshOutParams::yShift, "Vertical shift of the text from baseline" );
-
-    m.def( "createSymbolsMesh", MR::decorateExpected( &MR::createSymbolsMesh ), pybind11::arg( "params" ), pybind11::arg( "outParams" ), "converts text string into Z - facing symbol mesh" );
+    m.def( "createSymbolsMesh", MR::decorateExpected( &MR::createSymbolsMesh ), pybind11::arg( "params" ), "converts text string into Z-facing symbol mesh" );
 
     pybind11::class_<TextMeshAlignParams, SymbolMeshParams>( m, "TextAlignParams" ).
         def( pybind11::init<>() ).

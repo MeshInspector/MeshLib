@@ -77,7 +77,7 @@ jobs:
           path: time_log/
 
       - name: Run Tests
-        run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
+        run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
 
       - name: Unit Tests
         # don't run unit tests for GCC Release configuration as unit tests are not built for it

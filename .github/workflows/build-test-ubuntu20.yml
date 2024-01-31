@@ -68,7 +68,7 @@ jobs:
           path: time_log/
 
       - name: Run Tests
-        run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
+        run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
 
       - name: Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTest
@@ -76,7 +76,7 @@ jobs:
       - name: Python Sanity Tests
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
-        
+
       - name: Configure AWS Credentials
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
         uses: aws-actions/configure-aws-credentials@v4

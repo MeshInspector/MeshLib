@@ -254,11 +254,11 @@
 			"r": 0
 		},
 
-		"TextRectangle": {
+		"TextContrastBackground": {
 			"a": 204,
 			"b": 249,
 			"g": 246,
-			"r": 245,
+			"r": 245
 		},
 
 		"GradBtnStart": {

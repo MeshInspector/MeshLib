@@ -1029,7 +1029,7 @@ static bool sliderScalar( const char* label, ImGuiDataType data_type, void* p_da
     const ImVec2 text_size = CalcTextSize( value_buf, value_buf_end, false );
     const ImVec2 text_rect_half_size{ text_size.x * 0.5f + 4.0f, frame_bb.GetHeight() * 0.5f - 4.0f };
     window->DrawList->AddRectFilled( frame_bb.GetCenter() - text_rect_half_size, frame_bb.GetCenter() + text_rect_half_size,
-        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TextRectangle ).getUInt32(),
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TextContrastBackground ).getUInt32(),
         style.FrameRounding );
     if ( g.LogEnabled )
         LogSetNextTextDecoration( "{", "}" );

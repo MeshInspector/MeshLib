@@ -254,7 +254,7 @@
 			"r": 0
 		},
 
-		"TextRectangle": {
+		"TextContrastBackground": {
 			"a": 0,
 			"b": 0,
 			"g": 0,

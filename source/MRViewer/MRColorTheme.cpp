@@ -355,7 +355,7 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
         "GradientStart",
         "GradientEnd",
 
-        "TextRectangle",
+        "TextContrastBackground",
 
         "GradBtnStart",
         "GradBtnHoverStart",

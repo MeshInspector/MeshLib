@@ -72,7 +72,7 @@ jobs:
           path: time_log/
 
       - name: Run Tests
-        run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
+        run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
 
       - name: Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTest
@@ -91,7 +91,7 @@ jobs:
       - name: Copy autotest data from S3 Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
         run: aws s3 cp s3://data-autotest/test_data_29-dec-23 ./test_data --recursive
-        
+
       - name: Python Regression Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
         working-directory: ./build/${{ matrix.config }}/bin

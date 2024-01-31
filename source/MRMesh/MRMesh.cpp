@@ -1010,6 +1010,12 @@ PackMapping Mesh::packOptimally( bool preserveAABBTree )
     return map;
 }
 
+void Mesh::deleteFaces( const FaceBitSet& fs )
+{
+    topology.deleteFaces( fs );
+    invalidateCaches(); // some points can be deleted as well
+}
+
 bool Mesh::projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const
 {
     auto proj = findProjection( point, { *this, region }, maxDistSq, xf );

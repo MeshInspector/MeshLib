@@ -3,8 +3,8 @@
 #include "MRTimer.h"
 #include "MRRingIterator.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRTriMath.h"
-#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -326,6 +326,45 @@ int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & region, FaceB
         if ( res == x )
             break;
     }
+    return res;
+}
+
+void findHoleComplicatingFaces( const MeshTopology & topology, EdgeId holeEdge, std::vector<FaceId> & complicatingFaces )
+{
+    assert( !topology.left( holeEdge ) );
+    for ( EdgeId e : leftRing( topology, holeEdge ) )
+    {
+        assert( !topology.left( e ) );
+        auto r = topology.right( e );
+        if ( !r )
+            continue;
+        EdgeId e1 = topology.prev( e ).sym();
+        if ( topology.left( e1 ) )
+            continue;
+        if ( topology.next( e ).sym() == e1 )
+            continue; // e1,e is simple boundary
+        if ( topology.fromSameLeftRing( e, e1 ) )
+            complicatingFaces.push_back( r ); // e1 and e pertain to the same hole boundary, but they do not follow one another
+    }
+}
+
+FaceBitSet findHoleComplicatingFaces( const MeshTopology & topology )
+{
+    MR_TIMER
+    FaceBitSet res;
+    const auto holes = topology.findHoleRepresentiveEdges();
+    if ( holes.empty() )
+        return res;
+    tbb::enumerable_thread_specific<std::vector<FaceId>> threadData;
+    ParallelFor( holes, [&]( size_t i )
+    {
+        findHoleComplicatingFaces( topology, holes[i], threadData.local() );
+    } );
+
+    res.resize( topology.faceSize() );
+    for ( const auto & fs : threadData )
+        for ( FaceId f : fs )
+            res.set( f );
     return res;
 }
 

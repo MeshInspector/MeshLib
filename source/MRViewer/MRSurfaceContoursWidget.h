@@ -97,6 +97,11 @@ public:
     // chech is contour closed for particular object.
     [[nodiscard]] bool isClosedCountour( const std::shared_ptr<ObjectMeshHolder>& obj );
 
+    // Correctly selects the last point in the contours.
+    // If obj == nullptr then the check will be in all circuits.
+    // If specified, then only in the contour on specyfied object 
+    void highlightLastPoint( const std::shared_ptr<ObjectMeshHolder>& obj );
+
     // updates the parameters of all existing points ( SurfacePointWidget ) in the contours, and also sets their points that will be created later
     MRVIEWER_API  void updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p );
 

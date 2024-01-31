@@ -62,6 +62,10 @@ MRMESH_API EdgeId eliminateDegree3Dest( MeshTopology& topology, EdgeId e, FaceBi
 /// \return the number of vertices eliminated
 MRMESH_API int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & region, FaceBitSet * fs = nullptr );
 
+/// if given vertex is present on the boundary of some hole several times then returns an edge of this hole (without left);
+/// returns invalid edge otherwise (not a boundary vertex, or it is present only once on the boundary of each hole it pertains to)
+[[nodiscard]] MRMESH_API EdgeId isVertexRepeatedOnHoleBd( const MeshTopology& topology, VertId v );
+
 /// finds all faces that complicate hole given by one of its edges (without left);
 /// hole is complicated if it passes via one vertex more than once;
 /// \param complicatingFaces complicating faces will be appended here

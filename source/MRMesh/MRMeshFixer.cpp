@@ -329,6 +329,24 @@ int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & region, FaceB
     return res;
 }
 
+EdgeId isVertexRepeatedOnHoleBd( const MeshTopology& topology, VertId v )
+{
+    for ( EdgeId e0 : orgRing( topology, v ) )
+    {
+        if ( topology.left( e0 ) )
+            continue;
+        // not very optional in case of many boundary edges, but it shall be rare
+        for ( EdgeId e1 : orgRing0( topology, e0 ) )
+        {
+            if ( topology.left( e1 ) )
+                continue;
+            if ( topology.fromSameLeftRing( e0, e1 ) )
+                return e0;
+        }
+    }
+    return {};
+}
+
 void findHoleComplicatingFaces( const MeshTopology & topology, EdgeId holeEdge, std::vector<FaceId> & complicatingFaces )
 {
     assert( !topology.left( holeEdge ) );

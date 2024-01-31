@@ -113,7 +113,6 @@ Expected<std::vector<FaceBitSet>> findOverhangs( const Mesh& mesh, const FindOve
 
     // filter out face regions with too small overhang distance
     auto regions = MeshComponents::getAllComponents( { mesh, &faces }, MeshComponents::PerVertex );
-
     if ( !reportProgress( settings.progressCb, 0.3f ) )
         return unexpectedOperationCanceled();
 
@@ -121,45 +120,78 @@ Expected<std::vector<FaceBitSet>> findOverhangs( const Mesh& mesh, const FindOve
     if ( !reportProgress( settings.progressCb, 0.4f ) )
         return unexpectedOperationCanceled();
 
-    const auto maxBasementCos = -std::cos( settings.maxBasementAngle );
+    std::vector<Box3f> axisBoxes( regions.size() );
     auto keepGoing = ParallelFor( regions, [&] ( size_t i )
     {
+        axisBoxes[i] = mesh.computeBoundingBox( &regions[i], &axisXf );
+    }, subprogress( settings.progressCb, 0.4f, 0.5f ) );
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
+
+    // filter out basement faces
+    if ( settings.maxBasementAngle >= 0.f )
+    {
+        const auto maxBasementCos = -std::cos( settings.maxBasementAngle );
+        const auto regionCount = regions.size();
+        for ( auto i = 0; i < regionCount; ++i )
+        {
+            auto& region = regions[i];
+            auto& axisBox = axisBoxes[i];
+            // TODO: basement layer error
+            if ( axisBox.min.z == axisMeshBox.min.z )
+            {
+                auto basementOverhangs = region;
+                BitSetParallelFor( region, [&] ( FaceId f )
+                {
+                    const auto normal = mesh.normal( f );
+                    const auto cos = dot( settings.axis, xf.A * normal );
+                    if ( cos < maxBasementCos )
+                        basementOverhangs.reset( f );
+                } );
+
+                region.clear();
+                if ( basementOverhangs.none() )
+                    continue;
+
+                auto basementRegions = MeshComponents::getAllComponents( { mesh, &basementOverhangs }, MeshComponents::PerVertex );
+                if ( basementRegions.size() == 1 )
+                {
+                    axisBox = mesh.computeBoundingBox( &basementOverhangs, &xf );
+                    std::swap( region, basementOverhangs );
+                }
+                else for ( auto& subregion : basementRegions )
+                {
+                    axisBoxes.emplace_back( mesh.computeBoundingBox( &subregion, &xf ) );
+                    regions.emplace_back( std::move( subregion ) );
+                }
+            }
+        }
+    }
+    if ( !reportProgress( settings.progressCb, 0.6f ) )
+        return unexpectedOperationCanceled();
+
+    keepGoing = ParallelFor( regions, [&] ( size_t i )
+    {
         auto& region = regions[i];
-        const auto axisBox = mesh.computeBoundingBox( &region, &axisXf );
+        if ( region.none() )
+            return;
+
+        auto& axisBox = axisBoxes[i];
         if ( axisBox.size().z > settings.layerHeight )
             return;
-        // filter out basement faces
-        if ( settings.maxBasementAngle >= 0.f && axisBox.min.z == axisMeshBox.min.z )
-        {
-            auto basementOverhangs = region;
-            BitSetParallelFor( region, [&] ( FaceId f )
-            {
-                const auto normal = mesh.normal( f );
-                const auto cos = dot( settings.axis, xf.A * normal );
-                if ( cos < maxBasementCos )
-                    basementOverhangs.reset( f );
-            } );
-            if ( basementOverhangs.none() )
-                return;
-            std::swap( region, basementOverhangs );
-        }
+
         std::vector<int> thisBds;
         for ( int bdI = 0; bdI < allBds.size(); ++bdI )
             if ( region.test( mesh.topology.right( allBds[bdI].front() ) ) )
                 thisBds.push_back( bdI );
-        auto width = regionWidth( { mesh,&region }, settings.axis, allBds, thisBds );
+        auto width = regionWidth( { mesh, &region }, settings.axis, allBds, thisBds );
         if ( width < settings.maxOverhangDistance )
             region.clear();
-    }, subprogress( settings.progressCb, 0.4f, 0.95f ) );
-    
+    }, subprogress( settings.progressCb, 0.6f, 0.95f ) );
     if ( !keepGoing )
         return unexpectedOperationCanceled();
 
-    regions.erase( std::remove_if( regions.begin(), regions.end(), [] ( const auto& r )
-    {
-        return r.empty();
-    } ), regions.end() );
-
+    std::erase_if( regions, [] ( const auto& r ) { return r.none(); } );
     if ( !reportProgress( settings.progressCb, 1.0f ) )
         return unexpectedOperationCanceled();
 

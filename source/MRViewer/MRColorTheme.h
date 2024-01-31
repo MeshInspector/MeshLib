@@ -116,6 +116,8 @@ public:
         GradientStart,
         GradientEnd,
 
+        TextContrastBackground,
+
         GradBtnStart,
         GradBtnHoverStart,
         GradBtnActiveStart,

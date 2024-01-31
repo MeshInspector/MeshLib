@@ -19,6 +19,13 @@
 #include <MRMesh/MRObjectsAccess.h>
 #include <MRMesh/MRChangeXfAction.h>
 #include <MRMesh/MRObjectLabel.h>
+#include <MRMesh/MRPointObject.h>
+#include <MRMesh/MRLineObject.h>
+#include <MRMesh/MRPlaneObject.h>
+#include <MRMesh/MRCircleObject.h>
+#include <MRMesh/MRSphereObject.h>
+#include <MRMesh/MRConeObject.h>
+#include <MRMesh/MRCylinderObject.h>
 #include <MRMesh/MRChangeSceneObjectsOrder.h>
 #include <MRMesh/MRChangeSceneAction.h>
 #include <MRMesh/MRChangeObjectFields.h>
@@ -1839,6 +1846,14 @@ const char* RibbonMenu::getSceneItemIconByTypeName_( const std::string& typeName
         return "\xef\xa1\x8c";
     if ( typeName == ObjectLabel::TypeName() )
         return "\xef\x81\xb5";
+    if ( ( typeName == SphereObject::TypeName() ) ||
+        ( typeName == PointObject::TypeName() ) ||
+        ( typeName == PlaneObject::TypeName() ) ||
+        ( typeName == LineObject::TypeName() ) ||
+        ( typeName == CylinderObject::TypeName() ) ||
+        ( typeName == ConeObject::TypeName() )
+        )
+        return "\xef\x98\x9f";
     return "\xef\x88\xad";
 }
 

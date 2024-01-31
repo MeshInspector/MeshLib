@@ -103,7 +103,7 @@ void OutlineDecomposer::clearLast()
     }
 }
 
-Expected<Contours2d> createSymbolContours( const SymbolMeshParams& params )
+Expected<Contours2d> createSymbolContours( const SymbolMeshParams& params, SymbolMeshOutParams* outParams )
 {
     MR_TIMER
 
@@ -177,6 +177,9 @@ Expected<Contours2d> createSymbolContours( const SymbolMeshParams& params )
     FT_Pos yOffset{ 0 };
     FT_UInt previous = 0;
     FT_Bool kerning = FT_HAS_KERNING( face );
+    if (outParams )
+        outParams->yShift = 128 << 6;
+
     for ( int i = 0; i < wideStr.length(); ++i )
     {
         if ( wideStr[i] == '\n' )
@@ -211,6 +214,8 @@ Expected<Contours2d> createSymbolContours( const SymbolMeshParams& params )
 
         ++currentLineLength;
         xOffset += ( face->glyph->advance.x + addOffsetX );
+        if ( outParams )
+            outParams->yShift = std::min( outParams->yShift, face->glyph->metrics.horiBearingY - face->glyph->metrics.height );
         previous = index;
     }
     numSymbols.x = std::max( numSymbols.x, currentLineLength );
@@ -300,10 +305,10 @@ Expected<Contours2d> createSymbolContours( const SymbolMeshParams& params )
     return std::move( decomposer.contours );
 }
 
-Expected<Mesh> triangulateSymbolContours( const SymbolMeshParams& params )
+Expected<Mesh> triangulateSymbolContours( const SymbolMeshParams& params, SymbolMeshOutParams* outParams )
 {
     MR_TIMER
-    auto contours = createSymbolContours( params );
+    auto contours = createSymbolContours( params, outParams );
     if ( !contours.has_value() )
     {
         return unexpected( std::move( contours.error() ) );
@@ -343,10 +348,10 @@ void addBaseToPlanarMesh( Mesh & mesh, float zOffset )
     }
 }
 
-Expected<Mesh> createSymbolsMesh( const SymbolMeshParams& params )
+Expected<Mesh> createSymbolsMesh( const SymbolMeshParams& params, SymbolMeshOutParams* outParams )
 {
     MR_TIMER
-    auto mesh = triangulateSymbolContours( params );
+    auto mesh = triangulateSymbolContours( params, outParams );
     if( !mesh.has_value() )
     {
         return unexpected( std::move( mesh.error() ) );

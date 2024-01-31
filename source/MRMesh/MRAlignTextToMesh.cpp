@@ -13,7 +13,8 @@ namespace MR
 Expected<Mesh, std::string>  alignTextToMesh( 
     const Mesh& mesh, const TextMeshAlignParams& params )
 {
-    auto meshOrError = createSymbolsMesh( params );
+    SymbolMeshOutParams outParams;
+    auto meshOrError = createSymbolsMesh( params, &outParams );
 
     if ( !meshOrError.has_value() )
     {
@@ -39,7 +40,7 @@ Expected<Mesh, std::string>  alignTextToMesh(
     const auto vecy = cross( vecx, -norm ).normalized();
 
     const Vector3f pivotCoord{ bbox.min.x + diagonal.x * params.pivotPoint.x,
-                               bbox.min.y + diagonal.y * params.pivotPoint.y,
+                               bbox.min.y + diagonal.y * params.pivotPoint.y - params.MaxGeneratedFontHeight * float( outParams.yShift ) / ( 128 << 6 ),
                                0.0f };
 
     auto rotQ = Quaternionf( Vector3f::plusX(), vecx );
@@ -54,7 +55,9 @@ Expected<Mesh, std::string>  alignTextToMesh(
     else
         rotQ = Quaternionf( newY, vecy ) * rotQ;
     AffineXf3f rot = AffineXf3f::linear( rotQ );
-    float scale = ( params.fontHeight * numLines * ( 1.0f + params.symbolsDistanceAdditionalOffset.y ) ) / diagonal.y;
+
+    const float symbolDependentMultiplier = params.keepFontSizeSame ? diagonal.y / params.MaxGeneratedFontHeight : 1.0f;
+    float scale = symbolDependentMultiplier * ( params.fontHeight * numLines * ( 1.0f + params.symbolsDistanceAdditionalOffset.y ) ) / diagonal.y;
     auto translation = mesh.triPoint( params.startPoint );
 
     transform = 

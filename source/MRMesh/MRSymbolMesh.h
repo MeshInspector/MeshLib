@@ -44,15 +44,22 @@ struct SymbolMeshParams
     static constexpr float MaxGeneratedFontHeight = 5826.0f * 1e-3f;
 };
 
+// Optional output parameters for createSymbolContours
+struct SymbolMeshOutParams
+{
+    // contours shift in vertical direction
+    long yShift{ 0 };
+};
+
 // converts text string into set of contours
-MRMESH_API Expected<Contours2d> createSymbolContours( const SymbolMeshParams& params );
+MRMESH_API Expected<Contours2d> createSymbolContours( const SymbolMeshParams& params, SymbolMeshOutParams* outParams = nullptr );
 
 // given a planar mesh with boundary on input located in plane XY, packs and extends it along Z on zOffset to make a volumetric closed mesh
 // zOffset should be > 0
 MRMESH_API void addBaseToPlanarMesh( Mesh& mesh, float zOffset = 1.0f );
 
 // converts text string into Z-facing symbol mesh
-MRMESH_API Expected<Mesh> createSymbolsMesh( const SymbolMeshParams& params );
+MRMESH_API Expected<Mesh> createSymbolsMesh( const SymbolMeshParams& params, SymbolMeshOutParams* outParams = nullptr );
 
 }
 #endif

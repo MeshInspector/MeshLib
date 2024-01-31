@@ -28,6 +28,8 @@ struct TextMeshAlignParams : SymbolMeshParams
     float surfaceOffset{1.0f};
     // Maximum possible movement of text mesh alignment, meters
     float textMaximumMovement{2.5f};
+    // Keep  font size the same for different sized symbols
+    bool keepFontSizeSame{ false };
 };
 
 // Creates symbol mesh and aligns it to given surface

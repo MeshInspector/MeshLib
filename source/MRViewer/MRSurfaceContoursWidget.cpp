@@ -33,9 +33,7 @@ void AddPointActionPickerPoint::action( Type actionType )
     {
         contour.pop_back();
 
-        if ( !contour.empty() )
-            updateBaseColor( contour.back(), widget_.params.lastPoitColor );
-
+        widget_.highlightLastPoint( obj_ );
         widget_.activeIndex_ = int( contour.size() - 1 );
         widget_.activeObject_ = obj_;
 
@@ -43,15 +41,11 @@ void AddPointActionPickerPoint::action( Type actionType )
     }
     else
     {
-        if ( !contour.empty() )
-            updateBaseColor( contour.back(), widget_.params.ordinaryPointColor );
-
         contour.push_back( widget_.createPickWidget_( obj_, point_ ) );
+
         widget_.activeIndex_ = int( contour.size() - 1 );
         widget_.activeObject_ = obj_;
-
-        updateBaseColor( contour.back(), widget_.params.lastPoitColor );
-
+        widget_.highlightLastPoint( obj_ );
 
         widget_.onPointAdd_( obj_ );
     }
@@ -75,16 +69,11 @@ void RemovePointActionPickerPoint::action( Type actionType )
     auto& contour = widget_.pickedPoints_[obj_];
     if ( actionType == Type::Undo )
     {
-        if ( index_ == contour.size() && !contour.empty() )
-            updateBaseColor( contour.back(), widget_.params.ordinaryPointColor );
-
         contour.insert( contour.begin() + index_, widget_.createPickWidget_( obj_, point_ ) );
 
-        if ( index_ + 1 == contour.size() )
-            updateBaseColor( contour.back(), widget_.params.lastPoitColor );
         widget_.activeIndex_ = index_;
         widget_.activeObject_ = obj_;
-
+        widget_.highlightLastPoint( obj_ );
         widget_.onPointAdd_( obj_ );
         contour.back()->setHovered( false );
 
@@ -93,12 +82,9 @@ void RemovePointActionPickerPoint::action( Type actionType )
     {
         contour.erase( contour.begin() + index_ );
 
-        if ( index_ == contour.size() && !contour.empty() )
-            updateBaseColor( contour.back(), widget_.params.lastPoitColor );
-
         widget_.activeIndex_ = index_;
         widget_.activeObject_ = obj_;
-
+        widget_.highlightLastPoint( obj_ );
         widget_.onPointRemove_( obj_ );
     }
 }
@@ -201,6 +187,25 @@ bool SurfaceContoursWidget::isClosedCountour( const std::shared_ptr<ObjectMeshHo
     return pointsIt->second.size() > 1 && pointsIt->second[0]->getCurrentPosition() == pointsIt->second.back()->getCurrentPosition();
 }
 
+
+
+void SurfaceContoursWidget::highlightLastPoint( const std::shared_ptr<ObjectMeshHolder>& obj )
+{
+    auto& contour = pickedPoints_[obj];
+    int lastPointId = contour.size();
+    if ( lastPointId > 1 )
+    {
+        updateBaseColor( contour[lastPointId - 1], params.ordinaryPointColor );
+        if ( !isClosedCountour( obj ) )
+            updateBaseColor( contour[lastPointId], params.lastPoitColor );
+        else
+            updateBaseColor( contour[lastPointId], params.closeContourPointColor );
+    }
+    else
+        if ( lastPointId == 0 )
+            updateBaseColor( contour[0], params.lastPoitColor ); // only one point in contour
+}
+
 void SurfaceContoursWidget::updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p )
 {
     const auto& oldParams = params;
@@ -237,9 +242,6 @@ void SurfaceContoursWidget::setActivePoint( std::shared_ptr<MR::ObjectMeshHolder
         index = 0;
     }
 
-    updateBaseColor( pickedPoints_[obj][index], params.lastPoitColor );
-    updateBaseColor( pickedPoints_[activeObject_][activeIndex_], params.ordinaryPointColor );
-
     activeIndex_ = index;
     activeObject_ = obj;
 }
@@ -254,21 +256,18 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
     auto [obj, pick] = getViewerInstance().viewport().pick_render_object();
 
-    auto addPoint = [this] ( const std::shared_ptr<ObjectMeshHolder> obj, const MeshTriPoint& triPoint, bool close )
+    auto addPoint = [this] ( const std::shared_ptr<ObjectMeshHolder> obj, const MeshTriPoint& triPoint )
     {
         if ( !isObjectValidToPick_( obj ) )
             return;
 
         auto& contour = pickedPoints_[obj];
-        if ( !contour.empty() )
-            updateBaseColor( contour.back(), params.ordinaryPointColor );
 
         if ( params.writeHistory )
             AppendHistory<AddPointActionPickerPoint>( *this, obj, triPoint );
 
         contour.push_back( createPickWidget_( obj, triPoint ) );
-        updateBaseColor( contour.back(), close ? params.closeContourPointColor : params.lastPoitColor );
-
+        highlightLastPoint( obj );
         activeIndex_ = static_cast< int >( contour.size() - 1 );
         activeObject_ = obj;
 
@@ -278,17 +277,13 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     {
         auto& contour = pickedPoints_[obj];
 
-        if ( pickedIndex == int( contour.size() ) - 1 && contour.size() > 1 )
-        {
-            updateBaseColor( contour[pickedIndex - 1], params.lastPoitColor );
-        }
-
         if ( params.writeHistory )
             AppendHistory<RemovePointActionPickerPoint>( *this, obj, contour[pickedIndex]->getCurrentPosition(), pickedIndex );
 
         contour.erase( contour.begin() + pickedIndex );
         activeIndex_ = pickedIndex;
         activeObject_ = obj;
+        highlightLastPoint( obj );
         onPointRemove_( obj );
     };
 
@@ -305,7 +300,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         assert( objMesh != nullptr ); // contoursWidget_ can join for mesh objects only
 
         auto triPoint = objMesh->mesh()->toTriPoint( pick );
-        addPoint( objMesh, triPoint, false );
+        addPoint( objMesh, triPoint );
         return true;
     }
     else if ( mod == params.widgetContourCloseMod ) // close contour case 
@@ -330,7 +325,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
         assert( objectToCloseCoutour != nullptr );
         auto triPoint = pickedPoints_[objectToCloseCoutour][0]->getCurrentPosition();
-        addPoint( objectToCloseCoutour, triPoint, true );
+        addPoint( objectToCloseCoutour, triPoint );
         activeIndex_ = 0;
         return true;
     }
@@ -383,7 +378,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
             // Restore close countour. 
             if ( contour.size() > 2 && pickedIndex == 0 )
-                addPoint( pickedObj, contour[0]->getCurrentPosition(), true );
+                addPoint( pickedObj, contour[0]->getCurrentPosition() );
         }
         else
             removePoint( pickedObj, pickedIndex );

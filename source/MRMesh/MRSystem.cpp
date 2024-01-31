@@ -53,7 +53,7 @@
 namespace MR
 {
 
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
 // If true, the resources should be loaded from the executable directory, rather than from the system directories.
 [[nodiscard]] static bool resourcesAreNearExe()
 {

@@ -1023,11 +1023,16 @@ static bool sliderScalar( const char* label, ImGuiDataType data_type, void* p_da
     }
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
+    // EDITED: added small rectangle under text
     char value_buf[64];
     const char* value_buf_end = value_buf + DataTypeFormatString( value_buf, IM_ARRAYSIZE( value_buf ), data_type, p_data, format );
+    const ImVec2 text_size = CalcTextSize( value_buf, value_buf_end, false );
+    const ImVec2 text_rect_half_size{ text_size.x * 0.5f + 4.0f, frame_bb.GetHeight() * 0.5f - 4.0f };
     if ( g.LogEnabled )
         LogSetNextTextDecoration( "{", "}" );
-    RenderTextClipped( frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2( 0.5f, 0.5f ) );
+    window->DrawList->AddRectFilled( frame_bb.GetCenter() - text_rect_half_size, frame_bb.GetCenter() + text_rect_half_size,
+        GetColorU32( ImGuiCol_FrameBg, 0.8f ), style.FrameRounding );
+    RenderTextClipped( frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, &text_size, ImVec2( 0.5f, 0.5f ) );
 
     if ( label_size.x > 0.0f )
         RenderText( ImVec2( frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + styleFramePaddingY ), label );

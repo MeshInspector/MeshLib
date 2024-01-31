@@ -254,6 +254,13 @@
 			"r": 0
 		},
 
+		"TextRectangle": {
+			"a": 0,
+			"b": 0,
+			"g": 0,
+			"r": 0
+		},
+
 		"GradBtnStart": {
 			"a": 255,
 			"b": 255,

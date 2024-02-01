@@ -346,6 +346,7 @@ EdgeId isVertexRepeatedOnHoleBd( const MeshTopology& topology, VertId v )
     return {};
 }
 
+/// adds in complicatingFaces the faces not from the wedge with largest angle of faces connected by edges incident to given vertex
 static void findHoleComplicatingFaces( const Mesh & mesh, VertId v, std::vector<FaceId> & complicatingFaces )
 {
     EdgeId bd;

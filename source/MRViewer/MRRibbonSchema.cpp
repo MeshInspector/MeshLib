@@ -32,12 +32,13 @@ bool RibbonSchemaHolder::addItem( std::shared_ptr<RibbonMenuItem> item )
     return true;
 }
 
-std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const std::string& searchStr )
+std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const std::string& searchStr,
+    std::vector<SearchResultWeight>* weights /*= nullptr*/ )
 {
-    std::vector<SearchResult> res;
+    std::vector<std::pair<SearchResult, SearchResultWeight>> rawResult;
     
     if ( searchStr.empty() )
-        return res;
+        return {};
     auto words = split( searchStr, " " );
     std::erase_if( words, [] ( const auto& str ) { return str.empty(); } );
     auto calcWeight = [&words] ( const std::string& sourceStr )->Vector2f
@@ -90,20 +91,20 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     {
         const auto& caption = item.caption.empty() ? item.item->name() : item.caption;
         const auto& tooltip = item.tooltip;
-        SearchResult itemRes;
-        itemRes.tabIndex = t;
-        itemRes.item = &item;
+        std::pair<SearchResult, SearchResultWeight> itemRes;
+        itemRes.first.tabIndex = t;
+        itemRes.first.item = &item;
         const auto posCE = findSubstringCaseInsensitive( caption, searchStr );
         if ( posCE != std::string::npos )
         {
             if ( !exactMatch )
             {
-                res.clear();
+                rawResult.clear();
                 exactMatch = true;
             }
-            itemRes.captionWeight = 0.f;
-            itemRes.captionOrderWeight = float( posCE ) / caption.size();
-            res.push_back( itemRes );
+            itemRes.second.captionWeight = 0.f;
+            itemRes.second.captionOrderWeight = float( posCE ) / caption.size();
+            rawResult.push_back( itemRes );
             return;
         }
         else if ( exactMatch )
@@ -111,21 +112,21 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
             const auto posTE = findSubstringCaseInsensitive( tooltip, searchStr );
             if ( posTE == std::string::npos )
                 return;
-            itemRes.tooltipWeight = 0.f;
-            itemRes.tooltipOrderWeight = float( posTE ) / tooltip.size();
-            res.push_back( itemRes );
+            itemRes.second.tooltipWeight = 0.f;
+            itemRes.second.tooltipOrderWeight = float( posTE ) / tooltip.size();
+            rawResult.push_back( itemRes );
             return;
         }
 
         Vector2f weightEP = calcWeight( caption );
-        itemRes.captionWeight = weightEP.x;
-        itemRes.captionOrderWeight = weightEP.y;
+        itemRes.second.captionWeight = weightEP.x;
+        itemRes.second.captionOrderWeight = weightEP.y;
         weightEP = calcWeight( tooltip );
-        itemRes.tooltipWeight = weightEP.x;
-        itemRes.tooltipOrderWeight = weightEP.y;
-        if ( itemRes.captionWeight > maxWeight && itemRes.tooltipWeight > maxWeight )
+        itemRes.second.tooltipWeight = weightEP.x;
+        itemRes.second.tooltipOrderWeight = weightEP.y;
+        if ( itemRes.second.captionWeight > maxWeight && itemRes.second.tooltipWeight > maxWeight )
             return;
-        res.push_back( itemRes );
+        rawResult.push_back( itemRes );
     };
     const auto& schema = RibbonSchemaHolder::schema();
     auto lookUpMenuItemList = [&] ( const MenuItemsList& list, int t )
@@ -171,48 +172,58 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     lookUpMenuItemList( schema.sceneButtonsList, -1 );
 
     // clear duplicated results
-    std::sort( res.begin(), res.end(), [] ( const auto& a, const auto& b )
+    std::sort( rawResult.begin(), rawResult.end(), [] ( const auto& a, const auto& b )
     {
-        return intptr_t( a.item ) < intptr_t( b.item );
+        return intptr_t( a.first.item ) < intptr_t( b.first.item );
     } );
-    res.erase(
-        std::unique( res.begin(), res.end(),
+    rawResult.erase(
+        std::unique( rawResult.begin(), rawResult.end(),
             [] ( const auto& a, const auto& b )
     {
-        return a.item == b.item;
+        return a.first.item == b.first.item;
     } ),
-        res.end() );
+        rawResult.end() );
 
-    std::sort( res.begin(), res.end(), [] ( const auto& a, const auto& b )
+    std::sort( rawResult.begin(), rawResult.end(), [] ( const auto& a, const auto& b )
     {
-        if ( a.captionWeight < b.captionWeight )
+        if ( a.second.captionWeight < b.second.captionWeight )
             return true;
-        else if ( a.captionWeight > b.captionWeight )
+        else if ( a.second.captionWeight > b.second.captionWeight )
             return false;
-        else if ( a.captionOrderWeight < b.captionOrderWeight )
+        else if ( a.second.captionOrderWeight < b.second.captionOrderWeight )
             return true;
-        else if ( a.captionOrderWeight > b.captionOrderWeight )
+        else if ( a.second.captionOrderWeight > b.second.captionOrderWeight )
             return false;
-        else if ( a.tooltipWeight < b.tooltipWeight )
+        else if ( a.second.tooltipWeight < b.second.tooltipWeight )
             return true;
-        else if ( a.tooltipWeight > b.tooltipWeight )
+        else if ( a.second.tooltipWeight > b.second.tooltipWeight )
             return false;
-        else if ( a.tooltipOrderWeight < b.tooltipOrderWeight )
+        else if ( a.second.tooltipOrderWeight < b.second.tooltipOrderWeight )
             return true;
         else
             return false;
     } );
-    if ( !res.empty() && res[0].captionWeight < maxWeight / 3.f )
+    if ( !rawResult.empty() && rawResult[0].second.captionWeight < maxWeight / 3.f )
     {
-        const float maxWeightNew = res[0].captionWeight * 3.f;
-        if ( res.back().captionWeight > maxWeightNew )
+        const float maxWeightNew = rawResult[0].second.captionWeight * 3.f;
+        if ( rawResult.back().second.captionWeight > maxWeightNew )
         {
-            auto tailIt = std::find_if( res.begin(), res.end(), [&] ( const auto& a )
+            auto tailIt = std::find_if( rawResult.begin(), rawResult.end(), [&] ( const auto& a )
             {
-                return a.captionWeight > maxWeightNew && a.tooltipWeight > maxWeightNew;
+                return a.second.captionWeight > maxWeightNew && a.second.tooltipWeight > maxWeightNew;
             } );
-            res.erase( tailIt, res.end() );
+            rawResult.erase( tailIt, rawResult.end() );
         }
+    }
+
+    std::vector<SearchResult> res( rawResult.size() );
+    if ( weights )
+        *weights = std::vector<SearchResultWeight>( rawResult.size() );
+    for ( int i = 0; i < rawResult.size(); ++i )
+    {
+        res[i] = rawResult[i].first;
+        if ( weights )
+            ( *weights )[i] = rawResult[i].second;
     }
 
     return res;

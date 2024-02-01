@@ -79,7 +79,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             ImGui::SetNextItemWidth( minSearchSize );
             if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
             {
-                searchResult_ = RibbonSchemaHolder::search( searchLine_ );
+                searchResult_ = RibbonSchemaHolder::search( searchLine_, &searchResultWeight_ );
                 hightlightedSearchItem_ = -1;
             }
             if ( !ImGui::IsWindowAppearing() &&
@@ -130,14 +130,15 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             if ( foundItem.item->item->isActive() != pluginActive )
                 deactivateSearch_();
 #ifndef NDEBUG
-            if ( showResultWeight_ )
+            if ( showResultWeight_ && !searchLine_.empty() )
             {
+                const auto& weights = searchResultWeight_[i];
                 ImGui::SameLine();
                 ImGui::Text( "%s", "(?)" );
                 if ( ImGui::IsItemHovered() )
                     ImGui::SetTooltip( "caption = %.3f\ncaption order = %.3f\ntooltip = %.3f\ntooltip order = %.3f",
-                        foundItem.captionWeight, foundItem.captionOrderWeight,
-                        foundItem.tooltipWeight, foundItem.tooltipOrderWeight );
+                        weights.captionWeight, weights.captionOrderWeight,
+                        weights.tooltipWeight, weights.tooltipOrderWeight );
             }
 #endif
         }
@@ -179,7 +180,7 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
         }
         if ( searchInputText_( "##SearchLine", searchLine_, params ) )
         {
-            searchResult_ = RibbonSchemaHolder::search( searchLine_ );
+            searchResult_ = RibbonSchemaHolder::search( searchLine_, &searchResultWeight_ );
             hightlightedSearchItem_ = -1;
         }
         if ( mainInputFocused_ && !ImGui::IsItemFocused() )

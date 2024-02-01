@@ -1053,7 +1053,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
         }
 
         if ( !result.errorSummary.empty() )
-            pushNotification( { .text = result.errorSummary, .type = NotificationType::Error } );
+            showModal( result.errorSummary, NotificationType::Error );
         else if ( !result.warningSummary.empty() )
             pushNotification( { .text = result.warningSummary, .type = NotificationType::Warning } );
     };

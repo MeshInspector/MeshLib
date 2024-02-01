@@ -35,23 +35,53 @@ bool RibbonSchemaHolder::addItem( std::shared_ptr<RibbonMenuItem> item )
 std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const std::string& searchStr )
 {
     std::vector<SearchResult> res;
+    
     if ( searchStr.empty() )
         return res;
     auto words = split( searchStr, " " );
     std::erase_if( words, [] ( const auto& str ) { return str.empty(); } );
-    auto enweight = [] ( const std::vector<std::string>& searchWords, const std::string& testLine )->float
+    auto calcWeight = [&words] ( const std::string& sourceStr )->Vector2f
     {
-        if ( testLine.empty() )
-            return 1.0f;
-        float sumWeight = 0.0f;
-        for ( const auto& word : searchWords )
+        if ( sourceStr.empty() )
+            return { 1.0f, 1.f };
+        
+        auto sourceWords = split( sourceStr, " " );
+        std::erase_if( sourceWords, [] ( const auto& str ) { return str.empty(); } );
+        if ( sourceWords.empty() )
+            return { 1.0f, 1.f };
+
+        const int sourceWordsSize = int( sourceWords.size() );
+        //std::vector<int> errorArr( words.size() * sourceWordsSize, -1 );
+        std::vector<bool> busyWord( sourceWordsSize, false );
+        int sumError = 0;
+        int searchCharCount = 0;
+        int posWeight = sourceWordsSize;
+        for ( int i = 0; i < words.size(); ++i )
         {
-            int minDistance = std::abs( int( word.size() ) - int( testLine.size() ) );
-            int maxDistance = std::max( int( word.size() ), int( testLine.size() ) );
-            int distance = calcDamerauLevenshteinDistance( word, testLine, false );
-            sumWeight += float( distance - minDistance ) / ( maxDistance - minDistance );
+            searchCharCount += int( words[i].size() );
+            int minError = int( words[i].size() );
+            int minErrorIndex = -1;
+            for ( int j = 0; j < sourceWordsSize; ++j )
+            {
+                if ( busyWord[j] )
+                    continue;
+                int error = calcDamerauLevenshteinDistance( words[i], sourceWords[j], false );
+                if ( i == words.size() - 1 )
+                    error -= std::max( int( sourceWords[j].size() ) - int( words[i].size() ), 0 );
+                if ( error < minError )
+                {
+                    minError = error;
+                    minErrorIndex = j;
+                }
+            }
+            if ( minErrorIndex != -1 )
+            {
+                busyWord[minErrorIndex] = true;
+                posWeight += minErrorIndex;
+            }
+            sumError += minError;
         }
-        return std::clamp( sumWeight / float( searchWords.size() ), 0.0f, 1.0f );
+        return { std::clamp( float( sumError ) / searchCharCount, 0.0f, 1.0f ), float( posWeight ) / sourceWordsSize / words.size()};
     };
 
     const float maxWeight = 0.25f;
@@ -72,7 +102,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
                 exactMatch = true;
             }
             itemRes.captionWeight = 0.f;
-            itemRes.weight = float( posCE ) / caption.size();
+            itemRes.captionOrderWeight = float( posCE ) / caption.size();
             res.push_back( itemRes );
             return;
         }
@@ -82,31 +112,41 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
             if ( posTE == std::string::npos )
                 return;
             itemRes.tooltipWeight = 0.f;
-            itemRes.weight = 1.f + float( posTE ) / tooltip.size();
+            itemRes.tooltipOrderWeight = float( posTE ) / tooltip.size();
             res.push_back( itemRes );
             return;
         }
-        
-        itemRes.captionWeight = enweight( words, caption );
-        itemRes.tooltipWeight = enweight( words, tooltip );
-        float captionOrderWeight = 0.f;
-        float tooltipOrderWeight = 0.f;
+
+        Vector2f weightEP = calcWeight( caption );
+        itemRes.captionWeight = weightEP.x;
+        itemRes.captionOrderWeight = weightEP.y;
+        weightEP = calcWeight( tooltip );
+        itemRes.tooltipWeight = weightEP.x;
+        itemRes.tooltipOrderWeight = weightEP.y;
         if ( itemRes.captionWeight > maxWeight && itemRes.tooltipWeight > maxWeight )
             return;
-        for ( const auto& word : words )
-        {
-            auto posC = findSubstringCaseInsensitive( caption, word );
-            auto posT = findSubstringCaseInsensitive( tooltip, word );
-            if ( posC == std::string::npos )
-                captionOrderWeight += 10.0f;
-            else
-                captionOrderWeight += 0.5f * ( float( posC ) / caption.size() );
-            if ( posT == std::string::npos )
-                tooltipOrderWeight += 10.0f;
-            else
-                tooltipOrderWeight += 0.5f * ( float( posT ) / tooltip.size() );
-        }
-        itemRes.weight = itemRes.captionWeight + captionOrderWeight + 0.5f * ( itemRes.tooltipWeight + tooltipOrderWeight );
+
+
+        //itemRes.captionWeight = enweight( words, caption );
+        //itemRes.tooltipWeight = enweight( words, tooltip );
+        //float captionOrderWeight = 0.f;
+        //float tooltipOrderWeight = 0.f;
+        //if ( itemRes.captionWeight > maxWeight && itemRes.tooltipWeight > maxWeight )
+        //    return;
+        //for ( const auto& word : words )
+        //{
+        //    auto posC = findSubstringCaseInsensitive( caption, word );
+        //    auto posT = findSubstringCaseInsensitive( tooltip, word );
+        //    if ( posC == std::string::npos )
+        //        captionOrderWeight += 10.0f;
+        //    else
+        //        captionOrderWeight += 0.5f * ( float( posC ) / caption.size() );
+        //    if ( posT == std::string::npos )
+        //        tooltipOrderWeight += 10.0f;
+        //    else
+        //        tooltipOrderWeight += 0.5f * ( float( posT ) / tooltip.size() );
+        //}
+        //itemRes.weight = itemRes.captionWeight + captionOrderWeight + 0.5f * ( itemRes.tooltipWeight + tooltipOrderWeight );
         res.push_back( itemRes );
     };
     const auto& schema = RibbonSchemaHolder::schema();
@@ -152,6 +192,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     lookUpMenuItemList( schema.headerQuickAccessList, -1 );
     lookUpMenuItemList( schema.sceneButtonsList, -1 );
 
+    // clear duplicated results
     std::sort( res.begin(), res.end(), [] ( const auto& a, const auto& b )
     {
         return intptr_t( a.item ) < intptr_t( b.item );
@@ -166,12 +207,27 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
 
     std::sort( res.begin(), res.end(), [] ( const auto& a, const auto& b )
     {
-        return a.weight < b.weight;
+        if ( a.captionWeight < b.captionWeight )
+            return true;
+        else if ( a.captionWeight > b.captionWeight )
+            return false;
+        else if ( a.captionOrderWeight < b.captionOrderWeight )
+            return true;
+        else if ( a.captionOrderWeight > b.captionOrderWeight )
+            return false;
+        else if ( a.tooltipWeight < b.tooltipWeight )
+            return true;
+        else if ( a.tooltipWeight > b.tooltipWeight )
+            return false;
+        else if ( a.tooltipOrderWeight < b.tooltipOrderWeight )
+            return true;
+        else
+            return false;
     } );
-    if ( !res.empty() && res[0].captionWeight > 0.f )
+    if ( !res.empty() && res[0].captionWeight < maxWeight / 3.f )
     {
-        const float maxWeightNew = std::min( res[0].captionWeight, res[0].tooltipWeight ) * 3.f;
-        if ( maxWeightNew < maxWeight && res.back().captionWeight > maxWeightNew && res.back().tooltipWeight > maxWeightNew )
+        const float maxWeightNew = res[0].captionWeight * 3.f;
+        if ( res.back().captionWeight > maxWeightNew )
         {
             auto tailIt = std::find_if( res.begin(), res.end(), [&] ( const auto& a )
             {

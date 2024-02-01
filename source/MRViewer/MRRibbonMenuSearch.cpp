@@ -133,9 +133,11 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             if ( showResultWeight_ )
             {
                 ImGui::SameLine();
-                ImGui::Text( "%.3f", foundItem.weight );
+                ImGui::Text( "%s", "(?)" );
                 if ( ImGui::IsItemHovered() )
-                    ImGui::SetTooltip( "caption = %.3f\ntooltip = %.3f", foundItem.captionWeight, foundItem.tooltipWeight );
+                    ImGui::SetTooltip( "caption = %.3f\ncaption order = %.3f\ntooltip = %.3f\ntooltip order = %.3f",
+                        foundItem.captionWeight, foundItem.captionOrderWeight,
+                        foundItem.tooltipWeight, foundItem.tooltipOrderWeight );
             }
 #endif
         }

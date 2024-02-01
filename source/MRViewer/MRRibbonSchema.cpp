@@ -87,6 +87,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
 
     const float maxWeight = 0.25f;
     bool exactMatch = false;
+    // check item (calc difference from search item) and add item to raw results if difference less than threshold
     auto checkItem = [&] ( const MenuItemInfo& item, int t )
     {
         const auto& caption = item.caption.empty() ? item.item->name() : item.caption;
@@ -203,6 +204,8 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
         else
             return false;
     } );
+
+    // filter results with error threshold as 3x minimum caption error 
     if ( !rawResult.empty() && rawResult[0].second.captionWeight < maxWeight / 3.f )
     {
         const float maxWeightNew = rawResult[0].second.captionWeight * 3.f;

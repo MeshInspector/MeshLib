@@ -125,28 +125,6 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
         itemRes.tooltipOrderWeight = weightEP.y;
         if ( itemRes.captionWeight > maxWeight && itemRes.tooltipWeight > maxWeight )
             return;
-
-
-        //itemRes.captionWeight = enweight( words, caption );
-        //itemRes.tooltipWeight = enweight( words, tooltip );
-        //float captionOrderWeight = 0.f;
-        //float tooltipOrderWeight = 0.f;
-        //if ( itemRes.captionWeight > maxWeight && itemRes.tooltipWeight > maxWeight )
-        //    return;
-        //for ( const auto& word : words )
-        //{
-        //    auto posC = findSubstringCaseInsensitive( caption, word );
-        //    auto posT = findSubstringCaseInsensitive( tooltip, word );
-        //    if ( posC == std::string::npos )
-        //        captionOrderWeight += 10.0f;
-        //    else
-        //        captionOrderWeight += 0.5f * ( float( posC ) / caption.size() );
-        //    if ( posT == std::string::npos )
-        //        tooltipOrderWeight += 10.0f;
-        //    else
-        //        tooltipOrderWeight += 0.5f * ( float( posT ) / tooltip.size() );
-        //}
-        //itemRes.weight = itemRes.captionWeight + captionOrderWeight + 0.5f * ( itemRes.tooltipWeight + tooltipOrderWeight );
         res.push_back( itemRes );
     };
     const auto& schema = RibbonSchemaHolder::schema();

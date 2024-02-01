@@ -49,7 +49,7 @@ void RibbonMenuSearch::pushRecentItem( const std::shared_ptr<RibbonMenuItem>& it
 void RibbonMenuSearch::drawWindow_( const Parameters& params )
 {
     const auto& resultsList = searchLine_.empty() ? recentItems_ : searchResult_;
-    if ( !isSmallUI() && resultsList.empty() )
+    if ( !isSmallUI_ && resultsList.empty() )
         return;
 
     const float screenWidth = float( getViewerInstance().framebufferSize.x );
@@ -72,7 +72,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
 #endif
 
         const float minSearchSize = cSearchSize * params.scaling;
-        if ( isSmallUI() )
+        if ( isSmallUI_ )
         {
             if ( !isSmallUILast_ || ImGui::IsWindowAppearing() )
                 ImGui::SetKeyboardFocusHere();
@@ -159,7 +159,7 @@ void RibbonMenuSearch::deactivateSearch_()
 
 void RibbonMenuSearch::drawMenuUI( const Parameters& params )
 {
-    if ( isSmallUI() )
+    if ( isSmallUI_ )
     {
         if ( smallSearchButton_( params ) )
         {
@@ -201,25 +201,23 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
     if ( active_ )
         drawWindow_( params );
 
-    isSmallUILast_ = isSmallUI();
-}
-
-bool RibbonMenuSearch::isSmallUI() const
-{
-    auto menu = getViewerInstance().getMenuPlugin();
-    const auto scaling = menu ? menu->menu_scaling() : 1.f;
-    return getViewerInstance().framebufferSize.x < 1000 * scaling;
+    isSmallUILast_ = isSmallUI_;
 }
 
 float RibbonMenuSearch::getWidthMenuUI() const
 {
-    return isSmallUI() ? 40.f : cSearchSize + 16.f;
+    return isSmallUI_ ? 40.f : cSearchSize + 16.f;
+}
+
+float RibbonMenuSearch::getSearchStringWidth() const
+{
+    return cSearchSize + 16.f;
 }
 
 void RibbonMenuSearch::activate()
 {
     active_ = true;
-    if ( !isSmallUI() )
+    if ( !isSmallUI_ )
         setMainInputFocus_ = true;
 }
 

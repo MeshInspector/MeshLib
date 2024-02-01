@@ -3,7 +3,6 @@
 #include "MRTimer.h"
 #include "MRRingIterator.h"
 #include "MRBitSetParallelFor.h"
-#include "MRParallelFor.h"
 #include "MRTriMath.h"
 
 namespace MR
@@ -347,36 +346,60 @@ EdgeId isVertexRepeatedOnHoleBd( const MeshTopology& topology, VertId v )
     return {};
 }
 
-void findHoleComplicatingFaces( const MeshTopology & topology, EdgeId holeEdge, std::vector<FaceId> & complicatingFaces )
+static void findHoleComplicatingFaces( const Mesh & mesh, VertId v, std::vector<FaceId> & complicatingFaces )
 {
-    assert( !topology.left( holeEdge ) );
-    for ( EdgeId e : leftRing( topology, holeEdge ) )
+    EdgeId bd;
+    float bdAngle = -1;
+    
+    auto angle = [&]( EdgeId e )
     {
-        assert( !topology.left( e ) );
-        auto r = topology.right( e );
-        if ( !r )
+        assert( !mesh.topology.left( e ) );
+        float res = 0;
+        while ( mesh.topology.right( e ) )
+        {
+            auto d1 = mesh.edgeVector( e );
+            auto d0 = mesh.edgeVector( e = mesh.topology.prev( e ) );
+            res += MR::angle( d0, d1 );
+        }
+        return res;
+    };
+
+    auto report = [&]( EdgeId e )
+    {
+        assert( !mesh.topology.left( e ) );
+        while ( auto r = mesh.topology.right( e ) )
+        {
+            complicatingFaces.push_back( r );
+            e = mesh.topology.prev( e );
+        }
+    };
+
+    for ( EdgeId e : orgRing( mesh.topology, v ) )
+    {
+        if ( mesh.topology.left( e ) )
             continue;
-        EdgeId e1 = topology.prev( e ).sym();
-        if ( topology.left( e1 ) )
-            continue;
-        if ( topology.next( e ).sym() == e1 )
-            continue; // e1,e is simple boundary
-        if ( topology.fromSameLeftRing( e, e1 ) )
-            complicatingFaces.push_back( r ); // e1 and e pertain to the same hole boundary, but they do not follow one another
+        auto eAngle = angle( e );
+        if ( eAngle <= bdAngle )
+            report( e );
+        else
+        {
+            if ( bd )
+                report( bd );
+            bd = e;
+            bdAngle = eAngle;
+        }
     }
 }
 
-FaceBitSet findHoleComplicatingFaces( const MeshTopology & topology )
+FaceBitSet findHoleComplicatingFaces( const Mesh & mesh )
 {
     MR_TIMER
-    FaceBitSet res;
-    const auto holes = topology.findHoleRepresentiveEdges();
-    if ( holes.empty() )
-        return res;
     tbb::enumerable_thread_specific<std::vector<FaceId>> threadData;
-    ParallelFor( holes, [&]( size_t i )
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
-        findHoleComplicatingFaces( topology, holes[i], threadData.local() );
+        if ( !isVertexRepeatedOnHoleBd( mesh.topology, v ) )
+            return;
+        findHoleComplicatingFaces( mesh, v, threadData.local() );
     } );
 
     FaceId maxFace;
@@ -384,6 +407,7 @@ FaceBitSet findHoleComplicatingFaces( const MeshTopology & topology )
         for ( FaceId f : fs )
             maxFace = std::max( maxFace, f );
 
+    FaceBitSet res;
     res.resize( maxFace + 1 );
     for ( const auto & fs : threadData )
         for ( FaceId f : fs )

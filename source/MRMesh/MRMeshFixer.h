@@ -66,15 +66,10 @@ MRMESH_API int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & re
 /// returns invalid edge otherwise (not a boundary vertex, or it is present only once on the boundary of each hole it pertains to)
 [[nodiscard]] MRMESH_API EdgeId isVertexRepeatedOnHoleBd( const MeshTopology& topology, VertId v );
 
-/// finds all faces that complicate hole given by one of its edges (without left);
-/// hole is complicated if it passes via one vertex more than once;
-/// \param complicatingFaces complicating faces will be appended here
-MRMESH_API void findHoleComplicatingFaces( const MeshTopology & topology, EdgeId holeEdge, std::vector<FaceId> & complicatingFaces );
-
 /// returns all faces that complicate one of mesh holes;
 /// hole is complicated if it passes via one vertex more than once;
 /// deleting such faces simplifies the holes and makes them easier to fill
-[[nodiscard]] MRMESH_API FaceBitSet findHoleComplicatingFaces( const MeshTopology & topology );
+[[nodiscard]] MRMESH_API FaceBitSet findHoleComplicatingFaces( const Mesh & mesh );
 
 /// \}
 

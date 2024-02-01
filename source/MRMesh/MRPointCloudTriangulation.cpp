@@ -196,7 +196,7 @@ std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progr
         return {};
 
     // remove bad triangles
-    mesh.deleteFaces( findHoleComplicatingFaces( mesh.topology ) );
+    mesh.deleteFaces( findHoleComplicatingFaces( mesh ) );
 
     // fill small holes
     const auto bigLength = params_.critHoleLength >= 0.0f ? params_.critHoleLength : pointCloud_.getBoundingBox().diagonal() * 0.7f;

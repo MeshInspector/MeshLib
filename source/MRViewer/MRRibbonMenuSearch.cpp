@@ -66,6 +66,10 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
     {
         if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
             deactivateSearch_();
+#ifndef NDEBUG
+        if ( ImGui::IsKeyPressed( ImGuiKey_F11 ) )
+            showResultWeight_ = !showResultWeight_;
+#endif
 
         const float minSearchSize = cSearchSize * params.scaling;
         if ( isSmallUI() )
@@ -75,7 +79,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             ImGui::SetNextItemWidth( minSearchSize );
             if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
             {
-                searchResult_ = RibbonSchemaHolder::search( searchLine_ );
+                searchResult_ = RibbonSchemaHolder::search( searchLine_, &searchResultWeight_ );
                 hightlightedSearchItem_ = -1;
             }
             if ( !ImGui::IsWindowAppearing() &&
@@ -125,6 +129,18 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             params.btnDrawer.drawButtonItem( *foundItem.item, dbParams );
             if ( foundItem.item->item->isActive() != pluginActive )
                 deactivateSearch_();
+#ifndef NDEBUG
+            if ( showResultWeight_ && !searchLine_.empty() )
+            {
+                const auto& weights = searchResultWeight_[i];
+                ImGui::SameLine();
+                ImGui::Text( "%s", "(?)" );
+                if ( ImGui::IsItemHovered() )
+                    ImGui::SetTooltip( "caption = %.3f\ncaption order = %.3f\ntooltip = %.3f\ntooltip order = %.3f",
+                        weights.captionWeight, weights.captionOrderWeight,
+                        weights.tooltipWeight, weights.tooltipOrderWeight );
+            }
+#endif
         }
         ImGui::PopStyleVar( 1 );
         ImGui::PopStyleColor( 3 );
@@ -164,7 +180,7 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
         }
         if ( searchInputText_( "##SearchLine", searchLine_, params ) )
         {
-            searchResult_ = RibbonSchemaHolder::search( searchLine_ );
+            searchResult_ = RibbonSchemaHolder::search( searchLine_, &searchResultWeight_ );
             hightlightedSearchItem_ = -1;
         }
         if ( mainInputFocused_ && !ImGui::IsItemFocused() )

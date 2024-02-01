@@ -50,6 +50,7 @@ private:
 
     std::string searchLine_;
     std::vector<RibbonSchemaHolder::SearchResult> searchResult_;
+    std::vector<RibbonSchemaHolder::SearchResultWeight> searchResultWeight_;
     std::vector<RibbonSchemaHolder::SearchResult> recentItems_;
     int hightlightedSearchItem_{ -1 };
 
@@ -58,6 +59,9 @@ private:
     bool mainInputFocused_ = false;
     bool blockSearchBtn_ = false;
     bool setMainInputFocus_ = false;
+#ifndef NDEBUG
+    bool showResultWeight_ = false;
+#endif
 };
 
 }

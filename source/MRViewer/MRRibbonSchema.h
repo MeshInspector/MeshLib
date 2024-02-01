@@ -70,7 +70,15 @@ public:
         int tabIndex{ -1 }; // -1 is default value if item has no tab
         const MenuItemInfo* item{ nullptr }; // item info to show correct caption
     };
-    MRVIEWER_API static std::vector<SearchResult> search( const std::string& searchStr );
+    // ancillary struct to hold information for search result order
+    struct SearchResultWeight
+    {
+        float captionWeight{ 1.f };
+        float captionOrderWeight{ 1.f };
+        float tooltipWeight{ 1.f };
+        float tooltipOrderWeight{ 1.f };
+    };
+    MRVIEWER_API static std::vector<SearchResult> search( const std::string& searchStr, std::vector<SearchResultWeight>* weights = nullptr );
 private:
     RibbonSchemaHolder() = default;
 };

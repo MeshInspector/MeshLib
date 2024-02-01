@@ -237,6 +237,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
         def( "packOptimally", &Mesh::packOptimally, pybind11::arg( "preserveAABBTree" ) = true, 
             "packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices\n"
             "\tpreserveAABBTree whether to keep valid mesh's AABB tree after return (it will take longer to compute and it will occupy more memory)" ).
+        def( "deleteFaces", &Mesh::deleteFaces, pybind11::arg( "fs" ), "deletes multiple given faces" ).
         def( "discreteMeanCurvature", ( float( Mesh::* )( VertId ) const ) &Mesh::discreteMeanCurvature, pybind11::arg( "v" ),
             "computes discrete mean curvature in given vertex measures in length^-1;\n"
             "0 for planar regions, positive for convex surface, negative for concave surface" ).

@@ -30,12 +30,15 @@ public:
     // draws search elements and window with its logic
     MRVIEWER_API void drawMenuUI( const Parameters& params );
 
-    // get mode visualization in top panel (true - small button, false - input string) 
-    MRVIEWER_API bool isSmallUI() const;
+    // set draw mode (true - small button, false - input string )
+    void setSmallUI( bool on ) { isSmallUI_ = on; }
 
     // get width ui element in top panel
     // return unscaled value 
     MRVIEWER_API float getWidthMenuUI() const;
+
+    // get search string width (+ item spacing)
+    MRVIEWER_API float getSearchStringWidth() const;
 
     // activate search from outside (i.e. shortcut)
     MRVIEWER_API void activate();
@@ -54,6 +57,7 @@ private:
     std::vector<RibbonSchemaHolder::SearchResult> recentItems_;
     int hightlightedSearchItem_{ -1 };
 
+    bool isSmallUI_ = false;
     bool active_ = false;
     bool isSmallUILast_ = false;
     bool mainInputFocused_ = false;

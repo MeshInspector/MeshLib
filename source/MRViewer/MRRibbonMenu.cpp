@@ -552,8 +552,10 @@ void RibbonMenu::drawHeaderPannel_()
     // 40 - help button size
     // 40 - search button size
     // 40 - collapse button size
+    auto availWidth = ImGui::GetContentRegionAvail().x - ( ( needActive ? 3 : 2 ) * 40.0f ) * menuScaling;
+    searcher_.setSmallUI( availWidth - summaryTabPannelSize < searcher_.getSearchStringWidth() * menuScaling );
     const float searcherWidth = searcher_.getWidthMenuUI();
-    auto availWidth = ImGui::GetContentRegionAvail().x - ( ( needActive ? 3 : 2 ) * 40.0f + searcherWidth ) * menuScaling;
+    availWidth -= searcherWidth * menuScaling;
 
     float scrollMax = summaryTabPannelSize - availWidth;
     bool needScroll = scrollMax > 0.0f;

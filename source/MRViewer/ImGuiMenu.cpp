@@ -2315,7 +2315,6 @@ void ImGuiMenu::make_points_discretization( std::vector<std::shared_ptr<VisualOb
     if ( !isAllTheSame )
     {
         value = 1;
-        ImGui::GetStyle().Colors[ImGuiCol_Text] = undefined;
     }
     const auto valueConstForComparation = value;
 

@@ -43,46 +43,64 @@ EMSCRIPTEN_KEEPALIVE int emsChangeColorTheme( int theme )
 namespace MR
 {
 
-void ColorTheme::setupFromJson( const Json::Value& root )
+void ColorTheme::setupFromJson( const Json::Value& root, Type type )
 {
     auto& instance = ColorTheme::instance_();
 
-    bool success = true;
+    bool valid = true, defined = true;
 
-    if ( instance.sceneColors_.size() < SceneColors::Count )
-        instance.sceneColors_.resize( SceneColors::Count );
-    for ( int i = 0; i < SceneColors::Count; ++i )
+    Preset themePreset{};
+    if ( root["ImGuiPreset"].isString() )
+        themePreset = root["ImGuiPreset"].asString() == getPresetName( Preset::Light ) ? Preset::Light : Preset::Dark;
+    else
+        valid = false;
+    // Start with fallback theme - newly introduced colors will be filled from built-in theme
+    if ( type == Type::User )
     {
-        auto name = SceneColors::getName( SceneColors::Type( i ) );
-        if ( !root[name].isObject() )
+        std::string saveThemeName = instance.themeName_;
+        if ( themePreset == Preset::Dark )
+            setupDefaultDark();
+        else
+            setupDefaultLight();
+        instance.themeName_ = saveThemeName;
+    }
+    instance.themePreset_ = themePreset;
+    instance.type_ = type;
+
+    if ( valid )
+    {
+        if ( instance.sceneColors_.size() < SceneColors::Count )
+            instance.sceneColors_.resize( SceneColors::Count );
+
+        for ( int i = 0; i < SceneColors::Count; ++i )
         {
-            success = false;
-            break;
+            auto name = SceneColors::getName( SceneColors::Type( i ) );
+            if ( root[name].isObject() )
+                deserializeFromJson( root[name], instance.sceneColors_[i] );
+            else
+                defined = false;
         }
-        deserializeFromJson( root[name], instance.sceneColors_[i] );
     }
 
-    if ( success )
+    if ( valid )
     {
         if ( root["Ribbon Colors"].isObject() )
         {
             const auto& ribColors = root["Ribbon Colors"];
             for ( int i = 0; i < int( RibbonColorsType::Count ); ++i )
             {
-                auto name =getRibbonColorTypeName( RibbonColorsType( i ) );
-                if ( !ribColors[name].isObject() )
-                {
-                    success = false;
-                    break;
-                }
-                deserializeFromJson( ribColors[name], instance.newUIColors_[i] );
+                auto name = getRibbonColorTypeName( RibbonColorsType( i ) );
+                if ( ribColors[name].isObject() )
+                    deserializeFromJson( ribColors[name], instance.newUIColors_[i] );
+                else
+                    defined = false;
             }
         }
         else
-            success = false;
+            defined = false;
     }
 
-    if ( success )
+    if ( valid )
     {
         if ( root["Viewport Colors"].isObject() )
         {
@@ -90,44 +108,31 @@ void ColorTheme::setupFromJson( const Json::Value& root )
             for ( int i = 0; i < int( ViewportColorsType::Count ); ++i )
             {
                 auto name = getViewportColorTypeName( ViewportColorsType( i ) );
-                if ( !viewportColors[name].isObject() )
-                {
-                    success = false;
-                    break;
-                }
-                deserializeFromJson( viewportColors[name], instance.viewportColors_[i] );
+                if ( viewportColors[name].isObject() )
+                    deserializeFromJson( viewportColors[name], instance.viewportColors_[i] );
+                else
+                    defined = false;
             }
         }
         else
-            success = false;
+            defined = false;
     }
 
-    if ( success )
-    {
-        if ( root["ImGuiPreset"].isString() )
-            instance.themePreset_ = root["ImGuiPreset"].asString() == getPresetName( Preset::Light ) ? Preset::Light : Preset::Dark;
-        else
-            success = false;
-    }
-
-    if ( !success )
+    if ( !valid || ( type == Type::Default && !defined ) )
     {
         spdlog::error( "Color theme deserialization failed: invalid json schema." );
         instance.sceneColors_.clear();
     }
 }
 
-void ColorTheme::setupFromFile( const std::filesystem::path& path )
+void ColorTheme::setupFromFile( const std::filesystem::path& path, Type type )
 {
     auto res = deserializeJsonValue( path );
     if ( !res )
-    {
         spdlog::error( "Color theme deserialization failed: {}", res.error() );
-        return;
-    }
 
-    const auto& root = res.value();
-    return setupFromJson( root );
+    const auto root = res ? std::move( res.value() ) : Json::Value(); // Handle fail in `setupFromJson`
+    return setupFromJson( root, type );
 }
 
 void ColorTheme::serializeCurrentToFile( const std::filesystem::path& path )
@@ -277,25 +282,22 @@ void ColorTheme::setupByTypeName( Type type, const std::string& name )
 void ColorTheme::setupDefaultDark()
 {
     spdlog::info( "Setup dark color theme." );
-    instance_().type_ = Type::Default;
     instance_().themeName_ = getPresetName( Preset::Dark );
-    setupFromFile( MR::GetResourcesDirectory() / "MRDarkTheme.json" );
+    setupFromFile( MR::GetResourcesDirectory() / "MRDarkTheme.json", Type::Default );
 }
 
 void ColorTheme::setupDefaultLight()
 {
     spdlog::info( "Setup light color theme." );
-    instance_().type_ = Type::Default;
     instance_().themeName_ = getPresetName( Preset::Light );
-    setupFromFile( MR::GetResourcesDirectory() / "MRLightTheme.json" );
+    setupFromFile( MR::GetResourcesDirectory() / "MRLightTheme.json", Type::Default );
 }
 
 void ColorTheme::setupUserTheme( const std::string& themeName )
 {
     spdlog::info( "Setup user color theme: {}", themeName );
-    instance_().type_ = Type::User;
     instance_().themeName_ = themeName;
-    setupFromFile( getUserThemesDirectory() / ( asU8String( themeName ) + u8".json" ) );
+    setupFromFile( getUserThemesDirectory() / ( asU8String( themeName ) + u8".json" ), Type::User );
 }
 
 ColorTheme& ColorTheme::instance_()

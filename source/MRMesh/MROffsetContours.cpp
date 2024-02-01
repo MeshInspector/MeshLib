@@ -100,17 +100,20 @@ void fillResultIndicesMap(
     const Contours2f& intermediateRes,
     const IntermediateIndicesMaps& intermediateMap,
     const PlanarTriangulation::ContoursIdMap& outlineMap,
-    ContoursVertMaps& outMaps )
+    OffsetContoursVertMaps& outMaps )
 {
     std::vector<int> intermediateToIdShifts( intermediateRes.size() );
     for ( int i = 0; i < intermediateToIdShifts.size(); ++i )
         intermediateToIdShifts[i] = int( intermediateRes[i].size() ) - 1 + ( i > 0 ? intermediateToIdShifts[i - 1] : 0 );
 
-    auto outlineVertIdToContoursVertId = [&] ( int vertId )->ContoursVertId
+    auto outlineVertIdToContoursVertId = [&] ( int vertId )->OffsetContourIndex
     {
-        ContoursVertId res;
+        OffsetContourIndex res;
         if ( vertId == -1 )
+        {
+            assert( false );
             return res;
+        }
         for ( int i = 0; i < intermediateToIdShifts.size(); ++i )
         {
             if ( vertId < intermediateToIdShifts[i] )
@@ -134,21 +137,16 @@ void fillResultIndicesMap(
         ParallelFor( outMap, [&] ( size_t ind )
         {
             auto inVal = inMap[ind];
-            if ( !inVal.lDest.valid() )
+            auto& outMapI = outMap[ind];
+            outMapI.lOrg = outlineVertIdToContoursVertId( int( inVal.lOrg ) );
+            if ( inVal.isIntersection() )
             {
-                outMap[ind] = outlineVertIdToContoursVertId( int( inVal.lOrg ) );
-                return;
+                outMapI.lDest = outlineVertIdToContoursVertId( int( inVal.lDest ) );
+                outMapI.uOrg = outlineVertIdToContoursVertId( int( inVal.uOrg ) );
+                outMapI.uDest = outlineVertIdToContoursVertId( int( inVal.uDest ) );
+                outMapI.lRatio = inVal.lRatio;
+                outMapI.uRatio = inVal.uRatio;
             }
-            auto lOrg = outlineVertIdToContoursVertId( int( inVal.lOrg ) );
-            auto lDest = outlineVertIdToContoursVertId( int( inVal.lDest ) );
-            auto uOrg = outlineVertIdToContoursVertId( int( inVal.uOrg ) );
-            auto uDest = outlineVertIdToContoursVertId( int( inVal.uDest ) );
-            if ( lOrg == lDest || lOrg == uOrg || lOrg == uDest )
-                outMap[ind] = lOrg;
-            else if ( lDest == uOrg || lDest == uDest )
-                outMap[ind] = lDest;
-            else if ( uOrg == uDest )
-                outMap[ind] = uOrg;
         } );
     }
 }

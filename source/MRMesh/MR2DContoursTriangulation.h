@@ -31,6 +31,15 @@ struct IntersectionInfo
     VertId lOrg, lDest;
     /// ids of upper intersection edge vertices
     VertId uOrg, uDest;
+
+    // ratio of intersection
+    // 0.0 -> point is lOrg
+    // 1.0 -> point is lDest
+    float lRatio = 0.0f;
+    // 0.0 -> point is uOrg
+    // 1.0 -> point is uDest
+    float uRatio = 0.0f;
+    bool isIntersection() const { return lDest.valid(); }
 };
 
 using ContourIdMap = std::vector<IntersectionInfo>;

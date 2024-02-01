@@ -41,9 +41,9 @@ public:
     MRVIEWER_API static void setupDefaultLight();
     MRVIEWER_API static void setupUserTheme( const std::string& themeName );
     // Setup this struct from serialized color-theme file
-    MRVIEWER_API static void setupFromFile( const std::filesystem::path& path );
+    MRVIEWER_API static void setupFromFile( const std::filesystem::path& path, Type type = Type::User );
     // Setup this struct from Json value
-    MRVIEWER_API static void setupFromJson( const Json::Value& value );
+    MRVIEWER_API static void setupFromJson( const Json::Value& value, Type type = Type::User );
 
     // Setup this struct from current application colors, and serialize them to file
     // gets scene colors from first ObjectMesh, if it is present

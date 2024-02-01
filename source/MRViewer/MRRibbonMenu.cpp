@@ -2375,7 +2375,14 @@ void RibbonMenu::highlightBlocking_()
 void pushNotification( const RibbonNotification& notification )
 {
     if ( auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>() )
-        return ribbonMenu->pushNotification( notification );
+    {
+        if ( notification.text.back() != '\n' )
+            return ribbonMenu->pushNotification( notification );
+        
+        auto notificationCopy = notification;
+        notificationCopy.text.pop_back();
+        return ribbonMenu->pushNotification( notificationCopy );
+    }
 
     showModal( notification.text, notification.type );
 }

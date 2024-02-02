@@ -95,7 +95,7 @@ jobs:
 
       - name: Run MeshViewer
         if: always()
-        run: MR_LOCAL_RESOURCES=1 xvfb-run -a MeshViewer -hidden -noEventLoop
+        run: xvfb-run -a MeshViewer -hidden -noEventLoop
 
       - name: Show meshconv help
         if: always()

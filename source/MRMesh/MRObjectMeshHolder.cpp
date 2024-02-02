@@ -66,7 +66,7 @@ Expected<std::future<VoidOrErrStr>> ObjectMeshHolder::serializeModel_( const std
 #else
     auto save = [mesh = mesh_, filename = utf8string( path ) + ".mrmesh"]()
     {
-        MR::MeshSave::toMrmesh( *mesh, pathFromUtf8( filename ) );
+        return MR::MeshSave::toMrmesh( *mesh, pathFromUtf8( filename ) );
     };
 #endif
 
@@ -204,7 +204,7 @@ VoidOrErrStr ObjectMeshHolder::deserializeModel_( const std::filesystem::path& p
 #ifndef MRMESH_NO_OPENCTM
     auto res = MeshLoad::fromCtm( pathFromUtf8( utf8string( path ) + ".ctm" ), { .colors = &vertsColorMap_, .callback = progressCb } );
 #else
-    auto res = MeshLoad::fromMrmesh( pathFromUtf8( utf8string( path ) + ".mrmesh" ), &vertsColorMap_, progressCb );
+    auto res = MeshLoad::fromMrmesh( pathFromUtf8( utf8string( path ) + ".mrmesh" ), { .colors = &vertsColorMap_, .callback = progressCb } );
 #endif
     if ( !res.has_value() )
         return unexpected( res.error() );

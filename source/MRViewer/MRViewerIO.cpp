@@ -38,7 +38,7 @@ VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& f
     std::string copySuffix = ".tmpcopy";
     if ( settings.backupOriginalFile && std::filesystem::is_regular_file( filename, ec ) )
     {
-        copyPath = filename.string() + copySuffix;
+        copyPath = utf8string( filename ) + copySuffix;
         spdlog::info( "copy file {} into {}", utf8string( filename ), utf8string( copyPath.value() ) );
         std::filesystem::copy_file( filename, copyPath.value(), ec );
         if ( ec )

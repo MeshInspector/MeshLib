@@ -310,20 +310,27 @@ void ImGuiMenu::load_font(int font_size)
         addMenuFontRanges_( builder );
         builder.BuildRanges( &ranges );
 
-        io.Fonts->AddFontFromFileTTF(
+        if ( !io.Fonts->AddFontFromFileTTF(
             utf8string( fontPath ).c_str(), font_size * menu_scaling(),
-            nullptr, ranges.Data );
+            nullptr, ranges.Data ) )
+        {
+            assert( false && "Failed to load font!" );
+            spdlog::error( "Failed to load font from `{}`.", utf8string( fontPath ) );
+
+            ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
+                droid_sans_compressed_size, font_size * hidpi_scaling_ );
+        }
         io.Fonts->Build();
     }
     else
     {
         ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
-      droid_sans_compressed_size, font_size * hidpi_scaling_ );
+            droid_sans_compressed_size, font_size * hidpi_scaling_ );
         ImGui::GetIO().Fonts[0].Build();
     }
 #else
     ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
-      droid_sans_compressed_size, font_size * hidpi_scaling_);
+        droid_sans_compressed_size, font_size * hidpi_scaling_);
     //TODO: expand for non-Windows systems
 #endif
 }

@@ -7,6 +7,7 @@
 #include "MRViewerInstance.h"
 #include "MRViewer.h"
 #include "MRRibbonMenu.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {

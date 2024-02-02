@@ -310,9 +310,14 @@ void ImGuiMenu::load_font(int font_size)
         addMenuFontRanges_( builder );
         builder.BuildRanges( &ranges );
 
-        io.Fonts->AddFontFromFileTTF(
+        if ( !io.Fonts->AddFontFromFileTTF(
             utf8string( fontPath ).c_str(), font_size * menu_scaling(),
-            nullptr, ranges.Data );
+            nullptr, ranges.Data ) )
+        {
+            assert( false && "Failed to load font!" );
+            spdlog::error( "Failed to load font from `{}`.", fontPath.string() );
+            std::terminate();
+        }
         io.Fonts->Build();
     }
     else

@@ -315,7 +315,7 @@ void ImGuiMenu::load_font(int font_size)
             nullptr, ranges.Data ) )
         {
             assert( false && "Failed to load font!" );
-            spdlog::error( "Failed to load font from `{}`.", fontPath.string() );
+            spdlog::error( "Failed to load font from `{}`.", utf8string( fontPath ) );
 
             ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
                 droid_sans_compressed_size, font_size * hidpi_scaling_ );

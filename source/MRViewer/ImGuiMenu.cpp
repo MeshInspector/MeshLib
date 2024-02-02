@@ -316,19 +316,21 @@ void ImGuiMenu::load_font(int font_size)
         {
             assert( false && "Failed to load font!" );
             spdlog::error( "Failed to load font from `{}`.", fontPath.string() );
-            std::terminate();
+
+            ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
+                droid_sans_compressed_size, font_size * hidpi_scaling_ );
         }
         io.Fonts->Build();
     }
     else
     {
         ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
-      droid_sans_compressed_size, font_size * hidpi_scaling_ );
+            droid_sans_compressed_size, font_size * hidpi_scaling_ );
         ImGui::GetIO().Fonts[0].Build();
     }
 #else
     ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
-      droid_sans_compressed_size, font_size * hidpi_scaling_);
+        droid_sans_compressed_size, font_size * hidpi_scaling_);
     //TODO: expand for non-Windows systems
 #endif
 }

@@ -17,7 +17,9 @@ static void loadFontChecked( const char* filename, float size_pixels, const ImFo
     {
         assert( false && "Failed to load font!" );
         spdlog::error( "Failed to load font from `{}`.", filename );
-        std::terminate();
+
+        ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
+            droid_sans_compressed_size, size_pixels, font_cfg, glyph_ranges );
     }
 }
 

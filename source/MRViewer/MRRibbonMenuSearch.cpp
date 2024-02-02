@@ -60,6 +60,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
     ImGui::SetNextWindowPos( pos );
     ImGui::SetNextWindowSize( ImVec2( ( cSearchSize + 20 ) * params.scaling, -1 ) );
 
+    ImGui::SetNextFrameWantCaptureKeyboard( true );
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
         ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoFocusOnAppearing;
     if ( ImGui::Begin( windowName(), NULL, window_flags ) )
@@ -74,8 +75,11 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
         const float minSearchSize = cSearchSize * params.scaling;
         if ( isSmallUI_ )
         {
-            if ( !isSmallUILast_ || ImGui::IsWindowAppearing() )
+            if ( !isSmallUILast_ || ImGui::IsWindowAppearing() || setInputFocus_ )
+            {
                 ImGui::SetKeyboardFocusHere();
+                setInputFocus_ = false;
+            }
             ImGui::SetNextItemWidth( minSearchSize );
             if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
             {
@@ -85,6 +89,12 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             if ( !ImGui::IsWindowAppearing() &&
                 !( ImGui::IsWindowFocused() || ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) ) )
                 deactivateSearch_();
+
+            if ( ImGui::IsItemDeactivated() )
+            {
+                if ( ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter ) )
+                    setInputFocus_ = true;
+            }
         }
         else
         {
@@ -154,6 +164,8 @@ void RibbonMenuSearch::deactivateSearch_()
     active_ = false;
     searchLine_.clear();
     searchResult_.clear();
+    searchResultWeight_.clear();
+    setInputFocus_ = false;
     hightlightedSearchItem_ = -1;
 }
 
@@ -173,10 +185,10 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
     }
     else
     {
-        if ( ( isSmallUILast_ && active_ ) || setMainInputFocus_ )
+        if ( ( isSmallUILast_ && active_ ) || setInputFocus_ )
         {
             ImGui::SetKeyboardFocusHere();
-            setMainInputFocus_ = false;
+            setInputFocus_ = false;
         }
         if ( searchInputText_( "##SearchLine", searchLine_, params ) )
         {
@@ -195,6 +207,8 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
         {
             if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
                 deactivateSearch_();
+            if ( ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter ) )
+                setInputFocus_ = true;
         }
     }
     
@@ -218,7 +232,7 @@ void RibbonMenuSearch::activate()
 {
     active_ = true;
     if ( !isSmallUI_ )
-        setMainInputFocus_ = true;
+        setInputFocus_ = true;
 }
 
 bool RibbonMenuSearch::smallSearchButton_( const Parameters& params )

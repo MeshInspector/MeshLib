@@ -62,7 +62,7 @@ private:
     bool isSmallUILast_ = false;
     bool mainInputFocused_ = false;
     bool blockSearchBtn_ = false;
-    bool setMainInputFocus_ = false;
+    bool setInputFocus_ = false;
 #ifndef NDEBUG
     bool showResultWeight_ = false;
 #endif

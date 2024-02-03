@@ -211,8 +211,10 @@ Expected<std::future<VoidOrErrStr>> ObjectPointsHolder::serializeModel_( const s
 
 VoidOrErrStr ObjectPointsHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
-    const auto modelPath = findPathWithExtension( path );
+    auto modelPath = pathFromUtf8( utf8string( path ) + ".ctm" ); //quick path for most used format
     std::error_code ec;
+    if ( !is_regular_file( modelPath, ec ) )
+        modelPath = findPathWithExtension( path );
     if ( modelPath.empty()                   // now we do not write a file for empty point cloud
         || file_size( modelPath, ec ) == 0 ) // and previously an empty file was created
     {

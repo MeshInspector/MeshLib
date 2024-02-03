@@ -201,9 +201,14 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
 VoidOrErrStr ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     vertsColorMap_.clear();
-    const auto modelPath = findPathWithExtension( path );
-    if ( modelPath.empty() )
-        return unexpected( "No mesh file found: " + utf8string( path ) );
+    auto modelPath = pathFromUtf8( utf8string( path ) + ".ctm" ); //quick path for most used format
+    std::error_code ec;
+    if ( !is_regular_file( modelPath, ec ) )
+    {
+        modelPath = findPathWithExtension( path );
+        if ( modelPath.empty() )
+            return unexpected( "No mesh file found: " + utf8string( path ) );
+    }
     auto res = MeshLoad::fromAnySupportedFormat( modelPath, { .colors = &vertsColorMap_, .callback = progressCb } );
     if ( !res.has_value() )
         return unexpected( res.error() );

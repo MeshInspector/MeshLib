@@ -505,4 +505,107 @@ Expected<Contours2f> offsetContours( const Contours2f& contours, ContoursVariabl
     return res;
 }
 
+Expected<Contours3f> offsetContours( const Contours3f& contours, float offset, const OffsetContoursParams& params /*= {} */, const OffsetContoursRestoreZParams& zParmas /*= {} */)
+{
+    return offsetContours( contours, [offset] ( int, int )
+    {
+        return offset;
+    }, params, zParmas );
+}
+
+Expected<Contours3f> offsetContours( const Contours3f& contours, ContoursVariableOffset offset, const OffsetContoursParams& params /*= {} */, const OffsetContoursRestoreZParams& zParmas /*= {} */ )
+{
+    MR_TIMER;
+
+    // copy contours to 2d
+    float maxOffset = 0.0f;
+    Contours2f conts2d( contours.size() );
+    for ( int i = 0; i < contours.size(); ++i )
+    {
+        const auto& cont3d = contours[i];
+        auto& cont2d = conts2d[i];
+        cont2d.resize( cont3d.size() );
+        for ( int j = 0; j < cont3d.size(); ++j )
+        {
+            cont2d[j] = to2dim( cont3d[j] );
+            auto offsetVal = std::abs( offset( i, j ) );
+            if ( offsetVal > maxOffset )
+                maxOffset = offsetVal;
+        }
+    }
+    auto paramsCpy = params;
+    OffsetContoursVertMaps tempMap;
+    if ( !paramsCpy.indicesMap )
+        paramsCpy.indicesMap = &tempMap;
+    // create 2d offset
+    auto offset2dRes = offsetContours( conts2d, offset, paramsCpy );
+    if ( !offset2dRes.has_value() )
+        return unexpected( std::move( offset2dRes.error() ) );
+
+    const auto& map = *paramsCpy.indicesMap;
+    Contours3f result( offset2dRes->size() );
+    for ( int i = 0; i < result.size(); ++i )
+    {
+        auto& res3I = result[i];
+        const auto& res2I = ( *offset2dRes )[i];
+        res3I.resize( res2I.size() );
+        ParallelFor( 0, int( res3I.size() ), [&] ( int j )
+        {
+            res3I[j] = to3dim( res2I[j] );
+            const auto& mapVal = map[i][j];
+            if ( zParmas.zCallback )
+            {
+                res3I[j].z = zParmas.zCallback( res2I[j], mapVal );
+            }
+            else
+            {
+                Line3f line( res3I[j], Vector3f::plusZ() );
+                assert( mapVal.valid() );
+                if ( !mapVal.isIntersection() )
+                {
+                    res3I[j].z = contours[mapVal.lOrg.contourId][mapVal.lOrg.vertId].z;
+                }
+                else
+                {
+                    float lzorg = contours[mapVal.lOrg.contourId][mapVal.lOrg.vertId].z;
+                    float lzdest = contours[mapVal.lDest.contourId][mapVal.lDest.vertId].z;
+                    float uzorg = contours[mapVal.uOrg.contourId][mapVal.uOrg.vertId].z;
+                    float uzdest = contours[mapVal.uDest.contourId][mapVal.uDest.vertId].z;
+                    res3I[j].z =
+                        ( ( 1 - mapVal.lRatio ) * lzorg + mapVal.lRatio * lzdest +
+                        ( 1 - mapVal.uRatio ) * uzorg + mapVal.uRatio * uzdest ) * 0.5f;
+                }
+            }
+        } );
+    }
+
+    if ( zParmas.relaxIterations <= 0 )
+        return result;
+    for ( int i = 0; i < result.size(); ++i )
+    {
+        for ( int it = 0; it < zParmas.relaxIterations; ++it )
+        {
+            auto points = result[i];
+            auto& refPoints = result[i];
+            std::swap( points, refPoints );
+            ParallelFor( 0, int( points.size() ), [&] ( int j )
+            {
+                int prevInd = ( j - 1 + int( points.size() ) ) % int( points.size() );
+                int nextInd = ( j + 1 ) % int( points.size() );
+                if ( prevInd + 1 == points.size() )
+                    --prevInd;
+                if ( nextInd == 0 )
+                    ++nextInd;
+                const auto& prevP = to2dim( points[prevInd] );
+                const auto& curP = to2dim( points[j] );
+                const auto& nextP = to2dim( points[nextInd] );
+                float ratio = std::clamp( dot( curP - prevP, nextP - prevP ) / ( nextP - prevP ).lengthSq(), 0.0f, 1.0f );
+                float targetZ = ( 1 - ratio ) * points[prevInd].z + ratio * points[nextInd].z;
+                refPoints[j].z = ( targetZ + points[j].z ) * 0.5f;
+            } );
+        }
+    }
+    return result;
+}
+
 }

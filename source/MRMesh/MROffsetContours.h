@@ -86,4 +86,23 @@ using ContoursVariableOffset = std::function<float( int, int )>;
 [[nodiscard]] MRMESH_API Expected<Contours2f> offsetContours( const Contours2f& contours, 
     ContoursVariableOffset offset, const OffsetContoursParams& params = {} );
 
+/// Parameters of restoring Z coordinate of XY offset 3d contours
+struct OffsetContoursRestoreZParams
+{
+    /// if callback is set it is called to restore Z value
+    /// please note that this callback may be called in parallel
+    using OriginZCallback = std::function<float( const Vector2f& offsetPoint, const OffsetContoursOrigins& origingContourMapoing)>;
+    OriginZCallback zCallback;
+    /// if > 0 z coordinate will be relaxed this many iterations
+    int relaxIterations = 1;
+};
+
+/// offsets 3d contours in XY plane
+[[nodiscard]] MRMESH_API Expected<Contours3f> offsetContours( const Contours3f& contours, float offset,
+    const OffsetContoursParams& params = {}, const OffsetContoursRestoreZParams& zParmas = {} );
+
+/// offsets 3d contours in XY plane
+[[nodiscard]] MRMESH_API Expected<Contours3f> offsetContours( const Contours3f& contours,
+    ContoursVariableOffset offset, const OffsetContoursParams& params = {}, const OffsetContoursRestoreZParams& zParmas = {} );
+
 }

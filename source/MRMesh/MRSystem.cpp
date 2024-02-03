@@ -84,7 +84,7 @@ namespace
 #endif
 #endif
 
-[[nodiscard]] std::vector<std::filesystem::path> filterDirs_( std::initializer_list<std::filesystem::path> dirs )
+[[nodiscard]] std::vector<std::filesystem::path> filterDirs( std::initializer_list<std::filesystem::path> dirs )
 {
     std::vector<std::filesystem::path> results;
     std::error_code ec;
@@ -107,12 +107,20 @@ using namespace MR;
     if ( forceLocalResourcePath() )
         return { GetExeDirectory() };
 
+    const auto exePath = GetExeDirectory();
     #ifdef MR_FRAMEWORK
-        // TODO: find a way to retrieve relative path
-        return { "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/Resources/" };
+        // TODO: use dladdr(3)
+        return filterDirs( {
+            // TODO: drop absolute path usage
+            "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/Resources/",
+        } );
     #else
-        // TODO: use relative path
-        return { "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/Resources/" };
+        return filterDirs( {
+           exePath,
+           exePath / ".." / "Resources",
+           // TODO: drop absolute path usage
+           "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/Resources/",
+       } );
     #endif
 #else
     if ( forceLocalResourcePath() )
@@ -124,7 +132,7 @@ using namespace MR;
     // TODO: XDG_DATA_DIRS support
     const std::filesystem::path systemPath( "/usr/" );
 
-    return filterDirs_( {
+    return filterDirs( {
         exePath,
         exePath / ".." / "share",
         userDataPath() / projectPath,
@@ -147,12 +155,20 @@ using namespace MR;
     if ( forceLocalResourcePath() )
         return { GetExeDirectory() };
 
+    const auto exePath = GetExeDirectory();
     #ifdef MR_FRAMEWORK
-        // TODO: find a way to retrieve relative path
-        return { "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/Resources/fonts/" };
+        // TODO: use dladdr(3)
+        return filterDirs( {
+            // TODO: drop absolute path usage
+            "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/Resources/fonts/",
+        } );
     #else
-        // TODO: use relative path
-        return { "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/Resources/fonts/" };
+        return filterDirs( {
+            exePath,
+            exePath / ".." / "Resources" / "fonts",
+            // TODO: drop absolute path usage
+            "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/Resources/fonts/",
+        } );
     #endif
 #else
     if ( forceLocalResourcePath() )
@@ -188,12 +204,20 @@ using namespace MR;
     if ( forceLocalResourcePath() )
         return { GetExeDirectory() };
 
+    const auto exePath = GetExeDirectory();
     #ifdef MR_FRAMEWORK
-        // TODO: find a way to retrieve relative path
-        return { "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/lib/" };
+        // TODO: use dladdr(3)
+        return filterDirs( {
+            // TODO: drop absolute path usage
+            "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/lib/",
+        } );
     #else
-        // TODO: use relative path
-        return { "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/lib/" };
+        return filterDirs( {
+            exePath,
+            exePath / ".." / "libs",
+            // TODO: drop absolute path usage
+            "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/libs/",
+        } );
     #endif
 #else
     if ( forceLocalResourcePath() )

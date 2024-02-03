@@ -65,11 +65,21 @@ namespace
 #if !defined( __APPLE__ )
 [[nodiscard]] std::filesystem::path userDataPath()
 {
-    std::filesystem::path result( std::getenv( "XDG_DATA_HOME" ) );
-    std::error_code ec;
-    if ( result.empty() || !std::filesystem::exists( result, ec ) )
-        result = std::filesystem::path( std::getenv( "HOME" ) ) / ".local" / "share";
-    return result;
+    if ( const auto* xdgDataHome = std::getenv( "XDG_DATA_HOME" ) )
+    {
+        std::filesystem::path result( xdgDataHome );
+        std::error_code ec;
+        if ( !result.empty() && std::filesystem::is_directory( result, ec ) )
+            return result;
+    }
+    if ( const auto* home = std::getenv( "HOME" ) )
+    {
+        std::filesystem::path result( home );
+        std::error_code ec;
+        if ( !result.empty() && std::filesystem::is_directory( result, ec ) )
+            return result;
+    }
+    return {};
 }
 #endif
 #endif

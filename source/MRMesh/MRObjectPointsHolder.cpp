@@ -6,11 +6,11 @@
 #include "MRSceneColors.h"
 #include "MRHeapBytes.h"
 #include "MRSerializer.h"
+#include "MRStringConvert.h"
+#include "MRDirectory.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
-#include "MRStringConvert.h"
-#include <filesystem>
 
 namespace MR
 {
@@ -211,21 +211,15 @@ Expected<std::future<VoidOrErrStr>> ObjectPointsHolder::serializeModel_( const s
 
 VoidOrErrStr ObjectPointsHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
-    auto fname = path;
-#ifndef MRMESH_NO_OPENCTM
-    fname += ".ctm";
+    const auto modelPath = findPathWithExtension( path );
     std::error_code ec;
-    if (   !is_regular_file( fname, ec ) // now we do not write a file for empty point cloud
-        || file_size( fname, ec ) == 0 ) // and previously an empty file was created
+    if ( modelPath.empty()                   // now we do not write a file for empty point cloud
+        || file_size( modelPath, ec ) == 0 ) // and previously an empty file was created
     {
         points_ = std::make_shared<PointCloud>();
         return {};
     }
-    auto res = PointsLoad::fromCtm( fname, &vertsColorMap_, progressCb );
-#else
-    fname += ".ply";
-    auto res = PointsLoad::fromPly( fname, &vertsColorMap_, progressCb );
-#endif
+    auto res = PointsLoad::fromAnySupportedFormat( modelPath, &vertsColorMap_, nullptr, progressCb );
     if ( !res.has_value() )
         return unexpected( std::move( res.error() ) );
 

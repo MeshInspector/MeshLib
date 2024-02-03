@@ -399,6 +399,7 @@
     <ClCompile Include="MRCPRTests.cpp" />
     <ClCompile Include="MRCylinderObject.cpp" />
     <ClCompile Include="MRDenseBox.cpp" />
+    <ClCompile Include="MRDirectory.cpp" />
     <ClCompile Include="MRDistanceMap.cpp" />
     <ClCompile Include="MRAffineXf3.cpp" />
     <ClCompile Include="MRBestFit.cpp" />

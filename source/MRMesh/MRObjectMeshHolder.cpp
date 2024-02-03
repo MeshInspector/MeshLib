@@ -13,9 +13,9 @@
 #include "MRStringConvert.h"
 #include "MRTimer.h"
 #include "MRParallelFor.h"
+#include "MRDirectory.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRAsyncLaunchType.h"
-#include <filesystem>
 
 namespace MR
 {
@@ -201,11 +201,10 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
 VoidOrErrStr ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     vertsColorMap_.clear();
-#ifndef MRMESH_NO_OPENCTM
-    auto res = MeshLoad::fromCtm( pathFromUtf8( utf8string( path ) + ".ctm" ), { .colors = &vertsColorMap_, .callback = progressCb } );
-#else
-    auto res = MeshLoad::fromMrmesh( pathFromUtf8( utf8string( path ) + ".mrmesh" ), { .colors = &vertsColorMap_, .callback = progressCb } );
-#endif
+    const auto modelPath = findPathWithExtension( path );
+    if ( modelPath.empty() )
+        return unexpected( "No mesh file found: " + utf8string( path ) );
+    auto res = MeshLoad::fromAnySupportedFormat( modelPath, { .colors = &vertsColorMap_, .callback = progressCb } );
     if ( !res.has_value() )
         return unexpected( res.error() );
 

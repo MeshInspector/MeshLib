@@ -34,7 +34,7 @@ jobs:
           submodules: recursive
 
       - name: Filter Linux paths
-        uses: dorny/paths-filter@v2
+        uses: dorny/paths-filter@v3
         id: linux-changes
         with:
           filters: |
@@ -49,7 +49,7 @@ jobs:
               - 'thirdparty/!(install.bat|vcpkg/**)'
 
       - name: Filter Windows paths
-        uses: dorny/paths-filter@v2
+        uses: dorny/paths-filter@v3
         id: windows-changes
         with:
           filters: |

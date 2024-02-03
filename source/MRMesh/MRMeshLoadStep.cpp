@@ -258,8 +258,9 @@ VoidOrErrStr readStepData( STEPControl_Reader& reader, std::istream& in, const P
 std::filesystem::path getStepTemporaryDirectory()
 {
     const auto path = std::filesystem::temp_directory_path() / "MeshLib_MeshLoadStep";
-    if ( !std::filesystem::exists( path ) )
-        std::filesystem::create_directory( path );
+    std::error_code ec;
+    if ( !std::filesystem::exists( path, ec ) )
+        std::filesystem::create_directory( path, ec );
     return path;
 }
 

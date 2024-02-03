@@ -1941,6 +1941,9 @@
     <ClCompile Include="MRLocalTriangulations.cpp">
       <Filter>Source Files\Triangulation</Filter>
     </ClCompile>
+    <ClCompile Include="MRDirectory.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

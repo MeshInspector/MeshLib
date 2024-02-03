@@ -55,7 +55,8 @@ namespace MR
 
 #if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
 // If true, the resources should be loaded from the executable directory, rather than from the system directories.
-[[nodiscard]] static bool resourcesAreNearExe()
+// TODO: deprecate the method
+[[nodiscard]] static bool forceLocalResourcePath()
 {
     auto opt = std::getenv("MR_LOCAL_RESOURCES");
     return opt && std::string_view(opt) == "1";
@@ -143,13 +144,146 @@ std::filesystem::path GetExeDirectory()
     return res;
 }
 
+std::filesystem::path findResourcePath( const std::filesystem::path& path )
+{
+#if defined( __EMSCRIPTEN__ )
+    return GetExeDirectory() / path;
+#elif defined( _WIN32 )
+    // TODO: support user paths
+    return GetExeDirectory() / path;
+#elif defined( __APPLE__ )
+    if ( resourcesAreNearExe() )
+        return GetExeDirectory() / path;
+
+    #ifdef MR_FRAMEWORK
+        // TODO: find a way to retrieve relative path
+        return "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/Resources/";
+    #else
+        // TODO: use relative path
+        return "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/Resources/";
+    #endif
+#else
+    if ( forceLocalResourcePath() )
+        return GetExeDirectory() / path;
+
+    using Path = std::filesystem::path;
+    // TODO: make it customizable?
+    const Path projectPath( MR_PROJECT_NAME );
+    const auto exePath = GetExeDirectory();
+    Path userDataDir( std::getenv( "XDG_DATA_HOME" ) );
+    std::error_code ec;
+    if ( userDataDir.empty() || !std::filesystem::exists( userDataDir, ec ) )
+        userDataDir = Path( std::getenv( "HOME" ) ) / Path( ".local/share/" );
+    // TODO: XDG_DATA_DIRS support
+
+    const std::array lookupPaths {
+        exePath,
+        exePath / Path( "../share/" ),
+        userDataDir / projectPath,
+        Path( "/usr/local/share/" ) / projectPath,
+        Path( "/usr/share/" ) / projectPath,
+        // TODO: deprecate the non-standard path
+        Path( "/usr/local/etc/" ) / projectPath,
+    };
+    for ( const auto& dir : lookupPaths )
+        if ( std::filesystem::exists( dir / path ) )
+            return dir / path;
+
+    return {};
+#endif
+}
+
+std::filesystem::path findFontPath( const std::filesystem::path& path )
+{
+#if defined( __EMSCRIPTEN__ )
+    return GetExeDirectory() / path;
+#elif defined( _WIN32 )
+    // TODO: support user paths
+    return GetExeDirectory() / path;
+#elif defined( __APPLE__ )
+    if ( resourcesAreNearExe() )
+        return GetExeDirectory() / path;
+
+    return findResourcePath( std::filesystem::path( "fonts/" ) / path );
+#else
+    if ( forceLocalResourcePath() )
+        return GetExeDirectory() / path;
+
+    using Path = std::filesystem::path;
+    // TODO: make it customizable?
+    const Path projectPath( MR_PROJECT_NAME );
+    const auto exePath = GetExeDirectory();
+    Path userDataDir( std::getenv( "XDG_DATA_HOME" ) );
+    std::error_code ec;
+    if ( userDataDir.empty() || !std::filesystem::exists( userDataDir, ec ) )
+        userDataDir = Path( std::getenv( "HOME" ) ) / Path( ".local/share/" );
+    // TODO: XDG_DATA_DIRS support
+
+    const std::array lookupPaths {
+        exePath,
+        exePath / Path( "../share/fonts/" ),
+        userDataDir / projectPath / Path( "fonts/" ),
+        Path( "/usr/local/share/" ) / projectPath / Path( "fonts/" ),
+        Path( "/usr/share/" ) / projectPath / Path( "fonts/" ),
+        Path( "/usr/local/share/fonts/" ),
+        Path( "/usr/share/fonts/" ),
+    };
+    for ( const auto& dir : lookupPaths )
+        if ( std::filesystem::exists( dir / path ) )
+            return dir / path;
+
+    return {};
+#endif
+}
+
+std::filesystem::path findLibraryPath( const std::filesystem::path& path )
+{
+#if defined( __EMSCRIPTEN__ )
+    return GetExeDirectory() / path;
+#elif defined( _WIN32 )
+    // TODO: support user paths
+    return GetExeDirectory() / path;
+#elif defined( __APPLE__ )
+    if ( resourcesAreNearExe() )
+        return GetExeDirectory() / path;
+
+    #ifdef MR_FRAMEWORK
+        // TODO: find a way to retrieve relative path
+        return "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/lib/";
+    #else
+        // TODO: use relative path
+        return "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/lib/";
+    #endif
+#else
+    if ( forceLocalResourcePath() )
+        return GetExeDirectory() / path;
+
+    using Path = std::filesystem::path;
+    // TODO: make it customizable?
+    const Path projectPath( MR_PROJECT_NAME );
+    const auto exePath = GetExeDirectory();
+
+    const std::array lookupPaths {
+        exePath,
+        exePath / Path( "../lib/" ),
+        Path( "/usr/local/lib/" ) / projectPath,
+        Path( "/usr/lib/" ) / projectPath,
+    };
+    for ( const auto& dir : lookupPaths )
+        if ( std::filesystem::exists( dir / path ) )
+            return dir / path;
+
+    return {};
+#endif
+}
+
 std::filesystem::path GetResourcesDirectory()
 {
     auto exePath = GetExeDirectory();
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
-    if ( resourcesAreNearExe() )
+    if ( forceLocalResourcePath() )
         return exePath;
     #ifdef __APPLE__
         #ifdef MR_FRAMEWORK
@@ -169,7 +303,7 @@ std::filesystem::path GetFontsDirectory()
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
-    if ( resourcesAreNearExe() )
+    if ( forceLocalResourcePath() )
         return exePath;
     #ifdef __APPLE__
     return GetResourcesDirectory() / "fonts/";
@@ -185,7 +319,7 @@ std::filesystem::path GetLibsDirectory()
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
-    if ( resourcesAreNearExe() )
+    if ( forceLocalResourcePath() )
         return exePath;
     #ifdef __APPLE__
         #ifdef MR_FRAMEWORK

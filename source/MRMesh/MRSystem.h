@@ -13,16 +13,28 @@ MRMESH_API void SetCurrentThreadName( const char * name );
 // returns path of current exe directory
 MRMESH_API std::filesystem::path GetExeDirectory();
 
+/// find and return path to a resource file (.json, .png)
+MRMESH_API std::filesystem::path findResourcePath( const std::filesystem::path& path );
+
+/// find and return path to a font file (.ttf)
+MRMESH_API std::filesystem::path findFontPath( const std::filesystem::path& path );
+
+/// find and return path to a library file (.dll, .so)
+MRMESH_API std::filesystem::path findLibraryPath( const std::filesystem::path& path );
+
 // returns path of resource files directory
 // .json and .png files
+[[deprecated( "use findResourcePath( filename )" )]]
 MRMESH_API std::filesystem::path GetResourcesDirectory();
 
 // returns path of font files directory
 // .ttf files
+[[deprecated( "use findFontPath( filename )" )]]
 MRMESH_API std::filesystem::path GetFontsDirectory();
 
 // returns path of lib files directory
 // .dll .so files
+[[deprecated( "use findLibraryPath( filename )" )]]
 MRMESH_API std::filesystem::path GetLibsDirectory();
 
 // return path to the folder with user config file(s)

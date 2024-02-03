@@ -72,7 +72,7 @@ jobs:
       - name: Create Release
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
         id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: mikepenz/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
           RELEASE_PATH: https://github.com/${{github.repository}}/releases/download/${{steps.version-tag.outputs.short_version}}

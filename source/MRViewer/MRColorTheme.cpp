@@ -283,14 +283,14 @@ void ColorTheme::setupDefaultDark()
 {
     spdlog::info( "Setup dark color theme." );
     instance_().themeName_ = getPresetName( Preset::Dark );
-    setupFromFile( MR::GetResourcesDirectory() / "MRDarkTheme.json", Type::Default );
+    setupFromFile( findResourcePath( "MRDarkTheme.json" ), Type::Default );
 }
 
 void ColorTheme::setupDefaultLight()
 {
     spdlog::info( "Setup light color theme." );
     instance_().themeName_ = getPresetName( Preset::Light );
-    setupFromFile( MR::GetResourcesDirectory() / "MRLightTheme.json", Type::Default );
+    setupFromFile( findResourcePath( "MRLightTheme.json" ), Type::Default );
 }
 
 void ColorTheme::setupUserTheme( const std::string& themeName )

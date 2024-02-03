@@ -72,10 +72,13 @@ void ViewerSetup::setupExtendedLibraries() const
     // get library names and their loading priority from *.ui.json files
     std::vector<std::pair<std::string, int>> lib2priority;
     std::error_code ec;
-    for ( auto entry : Directory{ GetResourcesDirectory(), ec } )
+    for ( const auto& resourceDir : getResourceDirectories() )
     {
-        if ( entry.path().u8string().ends_with( asU8String( ".ui.json" ) ) )
+        for ( auto entry : Directory{ resourceDir, ec } )
         {
+            if ( !entry.path().u8string().ends_with( asU8String( ".ui.json" ) ) )
+                continue;
+
             auto fileJson = deserializeJsonValue( entry.path() );
             if ( !fileJson  )
             {
@@ -95,16 +98,17 @@ void ViewerSetup::setupExtendedLibraries() const
     // sort by ascending priority
     std::sort( lib2priority.begin(), lib2priority.end(), []( auto& lhv, auto& rhv) { return lhv.second < rhv.second; } );
 
-    for (const auto& [libName, priority] : lib2priority) {
-        std::filesystem::path pluginPath = GetLibsDirectory();
+    for ( const auto& [libName, priority] : lib2priority )
+    {
+        std::string pluginFileName;
 #if _WIN32
-        pluginPath /= libName + ".dll" ;
+        pluginFileName = libName + ".dll";
 #elif defined __APPLE__
-        pluginPath /= "lib" + libName + ".dylib" ;
+        pluginFileName = "lib" + libName + ".dylib";
 #else
-        pluginPath /= "lib" + libName + ".so";
+        pluginFileName = "lib" + libName + ".so";
 #endif
-        if ( exists(pluginPath) )
+        if ( const auto pluginPath = findLibraryPath( pluginFileName ); !pluginPath.empty() )
         {
             spdlog::info( "Loading library {} with priority {}", utf8string( libName ), priority );
 #if _WIN32

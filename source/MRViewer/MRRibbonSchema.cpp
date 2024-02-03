@@ -390,13 +390,16 @@ std::vector<std::filesystem::path> RibbonSchemaLoader::getStructureFiles_( const
 {
     std::vector<std::filesystem::path> files;
     std::error_code ec;
-    for ( auto entry : Directory{ GetResourcesDirectory(), ec } )
+    for ( const auto& resourceDir : getResourceDirectories() )
     {
-        auto filename = entry.path().filename().u8string();
-        for ( auto& c : filename )
-            c = ( char ) tolower( c );
-        if ( filename.ends_with( asU8String( fileExtension ) ) )
-            files.push_back( entry.path() );
+        for ( auto entry : Directory{ resourceDir, ec } )
+        {
+            auto filename = entry.path().filename().u8string();
+            for ( auto& c : filename )
+                c = ( char ) tolower( c );
+            if ( filename.ends_with( asU8String( fileExtension ) ) )
+                files.push_back( entry.path() );
+        }
     }
     return files;
 }

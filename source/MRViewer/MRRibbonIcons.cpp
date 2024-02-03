@@ -85,10 +85,8 @@ RibbonIcons::Sizes RibbonIcons::findRequiredSize_( float width, IconType iconTyp
 void RibbonIcons::load_( IconType type )
 {
     bool ribbonIconType = type == IconType::RibbonItemIcon;
-    std::filesystem::path path = ribbonIconType ?
-        GetResourcesDirectory() / "resource" / "icons" :
-        GetResourcesDirectory() / "resource" / "object_icons";
-    int minSize = ribbonIconType ? 
+    auto iconPath = std::filesystem::path( "resource" ) / ( ribbonIconType ? "icons" : "object_icons" );
+    int minSize = ribbonIconType ?
         int( Sizes::MinRibbonItemIconSize ) : int( Sizes::MinObjectTypeIconSize );
     int maxSize = ribbonIconType ?
         int( Sizes::MaxRibbonItemIconSize ) : int( Sizes::MaxObjectTypeIconSize );
@@ -100,57 +98,61 @@ void RibbonIcons::load_( IconType type )
 
     for ( int sz = minSize; sz <= maxSize; ++sz )
     {
-        auto dirPath = path / sizeSubFolder_( Sizes( sz ) );
+        auto dirPath = iconPath / sizeSubFolder_( Sizes( sz ) );
 
-        std::error_code ec;
-        if ( !std::filesystem::is_directory( dirPath, ec ) )
+        bool foundDir = false;
+        for ( const auto& resourceDir : getResourceDirectories() )
         {
-            spdlog::error( "icons path {} is not directory", utf8string( dirPath ) );
-            continue;
-        }
-
-        for ( auto entry : Directory{ dirPath, ec } )
-        {
-            if ( !entry.is_regular_file( ec ) )
+            std::error_code ec;
+            if ( !std::filesystem::is_directory( resourceDir / dirPath, ec ) )
                 continue;
-            auto ext = entry.path().extension().u8string();
-            for ( auto& c : ext )
-                c = ( char ) tolower( c );
-            if ( ext != u8".png" )
-                continue;
-            auto image = ImageLoad::fromPng( entry.path() );
-            if ( !image.has_value() )
-                continue;
-            Icons icons;
+            foundDir = true;
 
-            if ( ribbonIconType )
-                icons.colored = std::make_unique<ImGuiImage>();
-
-            icons.white = std::make_unique<ImGuiImage>();
-            MeshTexture whiteTexture = { std::move( *image ) };
-            if ( sz != int( Sizes::X0_5 ) )
-                whiteTexture.filter = FilterType::Linear;
-
-            if ( ribbonIconType )
-                icons.colored->update( whiteTexture );
-
-            tbb::parallel_for( tbb::blocked_range<int>( 0, int( whiteTexture.pixels.size() ) ),
-                               [&] ( const  tbb::blocked_range<int>& range )
+            for ( auto entry : Directory{ resourceDir / dirPath, ec } )
             {
-                for ( int i = range.begin(); i < range.end(); ++i )
+                if ( !entry.is_regular_file( ec ) )
+                    continue;
+                auto ext = entry.path().extension().u8string();
+                for ( auto& c : ext )
+                    c = ( char ) tolower( c );
+                if ( ext != u8".png" )
+                    continue;
+                auto image = ImageLoad::fromPng( entry.path() );
+                if ( !image.has_value() )
+                    continue;
+                Icons icons;
+
+                if ( ribbonIconType )
+                    icons.colored = std::make_unique<ImGuiImage>();
+
+                icons.white = std::make_unique<ImGuiImage>();
+                MeshTexture whiteTexture = { std::move( *image ) };
+                if ( sz != int( Sizes::X0_5 ) )
+                    whiteTexture.filter = FilterType::Linear;
+
+                if ( ribbonIconType )
+                    icons.colored->update( whiteTexture );
+
+                tbb::parallel_for( tbb::blocked_range<int>( 0, int( whiteTexture.pixels.size() ) ),
+                                   [&] ( const  tbb::blocked_range<int>& range )
                 {
-                    auto alpha = whiteTexture.pixels[i].a;
-                    whiteTexture.pixels[i] = Color::white();
-                    whiteTexture.pixels[i].a = alpha;
-                }
-            } );
+                    for ( int i = range.begin(); i < range.end(); ++i )
+                    {
+                        auto alpha = whiteTexture.pixels[i].a;
+                        whiteTexture.pixels[i] = Color::white();
+                        whiteTexture.pixels[i].a = alpha;
+                    }
+                } );
 
-            if ( loadedSizes[sz] == 0 )
-                loadedSizes[sz] = whiteTexture.resolution.x;
+                if ( loadedSizes[sz] == 0 )
+                    loadedSizes[sz] = whiteTexture.resolution.x;
 
-            icons.white->update( std::move( whiteTexture ) );
-            map[utf8string( entry.path().stem() )][sz] = std::move( icons );
+                icons.white->update( std::move( whiteTexture ) );
+                map[utf8string( entry.path().stem() )][sz] = std::move( icons );
+            }
         }
+        if ( !foundDir )
+            spdlog::error( "icons path {} is not directory", utf8string( dirPath ) );
     }
 }
 

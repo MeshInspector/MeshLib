@@ -544,8 +544,7 @@ void SetClipboardText( const std::string& text )
 std::string GetMRVersionString()
 {
 #ifndef __EMSCRIPTEN__
-    auto directory = GetResourcesDirectory();
-    auto versionFilePath = directory / "mr.version";
+    auto versionFilePath = findResourcePath( "mr.version" );
     std::error_code ec;
     std::string configPrefix = "";
 #ifndef NDEBUG

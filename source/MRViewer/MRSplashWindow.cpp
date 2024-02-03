@@ -172,7 +172,7 @@ void DefaultSplashWindow::setup_() const
 
 void DefaultSplashWindow::postInit_()
 {
-    auto imgRes = ImageLoad::fromPng( GetResourcesDirectory() / "MRSplash.png" );
+    auto imgRes = ImageLoad::fromPng( findResourcePath( "MRSplash.png" ) );
     if ( !imgRes )
     {
         spdlog::error( "No splash image found" );

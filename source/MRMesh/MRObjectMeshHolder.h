@@ -195,7 +195,7 @@ public:
     [[nodiscard]] const char * saveMeshFormat() const { return saveMeshFormat_; }
 
     /// sets file extension used to serialize the mesh: must be not null and must start from '.'
-    [[nodiscard]] MRMESH_API void setSaveMeshFormat( const char * newFormat );
+    MRMESH_API void setSaveMeshFormat( const char * newFormat );
 
     /// signal about face selection changing, triggered in selectFaces
     using SelectionChangedSignal = Signal<void()>;

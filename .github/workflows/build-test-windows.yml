@@ -134,8 +134,8 @@ jobs:
 
       - name: Upload Windows Binaries Archive
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.runner == 'windows-2019' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: WindowsArchive
-          path: MREDist_${{ matrix.config }}.zip
+          name: WindowsArchive${{matrix.config}
+          path: MREDist_${{matrix.config}}.zip
           retention-days: 1

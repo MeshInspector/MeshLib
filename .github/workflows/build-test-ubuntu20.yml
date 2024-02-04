@@ -62,9 +62,9 @@ jobs:
 
       #Save timing in artifact
       - name: Upload Timings
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: Timing_Logs
+          name: Timing_Logs_ubuntu20_${{matrix.config}}-x86_${{matrix.compiler}}
           path: time_log/
 
       - name: Run Tests
@@ -104,8 +104,8 @@ jobs:
 
       - name: Upload Ubuntu Developer Distribution
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: Distributives
+          name: Distributives_ubuntu20-x86
           path: meshlib-ubuntu20-dev.deb
           retention-days: 1

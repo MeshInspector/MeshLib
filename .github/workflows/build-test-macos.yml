@@ -83,7 +83,7 @@ jobs:
 
       - name: Upload Macos Distribution
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Distributives
           path: meshlib_${{matrix.os}}.pkg

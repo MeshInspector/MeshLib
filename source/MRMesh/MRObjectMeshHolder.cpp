@@ -53,23 +53,15 @@ Expected<std::future<VoidOrErrStr>> ObjectMeshHolder::serializeModel_( const std
     if ( ancillary_ || !mesh_ )
         return {};
 
-#ifndef MRMESH_NO_OPENCTM
-    auto save = [mesh = mesh_, filename = utf8string( path ) + ".ctm", this]()
+    SaveSettings saveSettings;
+    saveSettings.saveValidOnly = false;
+    saveSettings.rearrangeTriangles = false;
+    if ( !vertsColorMap_.empty() )
+        saveSettings.colors = &vertsColorMap_;
+    auto save = [mesh = mesh_, filename = std::filesystem::path( path ) += saveMeshFormat_, saveSettings]()
     {
-        MR::MeshSave::CtmSaveOptions options;
-        options.saveValidOnly = false;
-        options.rearrangeTriangles = false;
-        if ( !vertsColorMap_.empty() )
-            options.colors = &vertsColorMap_;
-        return MR::MeshSave::toCtm( *mesh, pathFromUtf8( filename ), options );
+        return MR::MeshSave::toAnySupportedFormat( *mesh, filename, saveSettings );
     };
-#else
-    auto save = [mesh = mesh_, filename = utf8string( path ) + ".mrmesh"]()
-    {
-        return MR::MeshSave::toMrmesh( *mesh, pathFromUtf8( filename ) );
-    };
-#endif
-
     return std::async( getAsyncLaunchType(), save );
 }
 
@@ -507,6 +499,16 @@ size_t ObjectMeshHolder::heapBytes() const
         + ancillaryUVCoordinates_.heapBytes()
         + facesColorMap_.heapBytes()
         + MR::heapBytes( mesh_ );
+}
+
+void ObjectMeshHolder::setSaveMeshFormat( const char * newFormat )
+{
+    if ( !newFormat || *newFormat != '.' )
+    {
+        assert( false );
+        return;
+    }
+    saveMeshFormat_ = newFormat;
 }
 
 size_t ObjectMeshHolder::numUndirectedEdges() const

@@ -32,7 +32,7 @@ bool RibbonSchemaHolder::addItem( std::shared_ptr<RibbonMenuItem> item )
     return true;
 }
 
-std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const std::string& searchStr,
+std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const std::string& searchStr, int* captionCount /*= nullptr*/,
     std::vector<SearchResultWeight>* weights /*= nullptr*/ )
 {
     std::vector<std::pair<SearchResult, SearchResultWeight>> rawResult;
@@ -185,24 +185,36 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     } ),
         rawResult.end() );
 
-    std::sort( rawResult.begin(), rawResult.end(), [] ( const auto& a, const auto& b )
+    std::sort( rawResult.begin(), rawResult.end(), [maxWeight] ( const auto& a, const auto& b )
     {
-        if ( a.second.captionWeight < b.second.captionWeight )
-            return true;
-        else if ( a.second.captionWeight > b.second.captionWeight )
-            return false;
-        else if ( a.second.captionOrderWeight < b.second.captionOrderWeight )
-            return true;
-        else if ( a.second.captionOrderWeight > b.second.captionOrderWeight )
-            return false;
-        else if ( a.second.tooltipWeight < b.second.tooltipWeight )
-            return true;
-        else if ( a.second.tooltipWeight > b.second.tooltipWeight )
-            return false;
-        else if ( a.second.tooltipOrderWeight < b.second.tooltipOrderWeight )
-            return true;
+        if ( a.second.captionWeight <= maxWeight )
+        {
+            if ( b.second.captionWeight <= maxWeight )
+            {
+                if ( a.second.captionWeight < b.second.captionWeight )
+                    return true;
+                else if ( a.second.captionWeight > b.second.captionWeight )
+                    return false;
+                else
+                    return a.second.captionOrderWeight < b.second.captionOrderWeight;
+            }
+            else
+                return true;
+        }
         else
-            return false;
+        {
+            if ( b.second.captionWeight <= maxWeight )
+                return false;
+            else
+            {
+                if ( a.second.tooltipWeight < b.second.tooltipWeight )
+                    return true;
+                else if ( a.second.tooltipWeight > b.second.tooltipWeight )
+                    return false;
+                else
+                    return a.second.tooltipOrderWeight < b.second.tooltipOrderWeight;
+            }
+        }
     } );
 
     // filter results with error threshold as 3x minimum caption error 
@@ -222,9 +234,16 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     std::vector<SearchResult> res( rawResult.size() );
     if ( weights )
         *weights = std::vector<SearchResultWeight>( rawResult.size() );
+    if ( captionCount )
+        *captionCount = -1;
     for ( int i = 0; i < rawResult.size(); ++i )
     {
+        if ( !rawResult[i].first.item )
+            continue;
         res[i] = rawResult[i].first;
+        if ( captionCount && rawResult[i].second.captionWeight > maxWeight &&
+            ( i == 0 || i > 0 && rawResult[i-1].second.captionWeight <= maxWeight ) )
+            *captionCount = i;
         if ( weights )
             ( *weights )[i] = rawResult[i].second;
     }

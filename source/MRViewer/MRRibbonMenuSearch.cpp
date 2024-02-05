@@ -8,6 +8,7 @@
 #include "MRViewerInstance.h"
 #include "MRViewer/MRViewer.h"
 #include "MRRibbonMenu.h"
+#include "MRUIStyle.h"
 
 namespace MR
 {
@@ -82,10 +83,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             }
             ImGui::SetNextItemWidth( minSearchSize );
             if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
-            {
-                searchResult_ = RibbonSchemaHolder::search( searchLine_, &searchResultWeight_ );
-                hightlightedSearchItem_ = -1;
-            }
+                updateSearchResult_();
             if ( !ImGui::IsWindowAppearing() &&
                 !( ImGui::IsWindowFocused() || ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) ) )
                 deactivateSearch_();
@@ -103,14 +101,19 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
                 deactivateSearch_();
         }
 
-        if ( resultsList.empty() )
-            hightlightedSearchItem_ = -1;
-        else
+        bool scroll = false;
+        if ( !resultsList.empty() )
         {
             if ( ImGui::IsKeyPressed( ImGuiKey_DownArrow ) && hightlightedSearchItem_ + 1 < resultsList.size() )
+            {
                 hightlightedSearchItem_++;
+                scroll = true;
+            }
             else if ( ImGui::IsKeyPressed( ImGuiKey_UpArrow ) && hightlightedSearchItem_ > 0 )
+            {
                 hightlightedSearchItem_--;
+                scroll = true;
+            }
         }
 
         ImGui::PushFont( RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Small ) );
@@ -121,11 +124,34 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
         ImGui::PushStyleColor( ImGuiCol_ButtonActive,
                                ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActive ).getUInt32() );
         ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+        bool openChild = false;
+        if ( isSmallUI_ && !resultsList.empty() )
+        {
+            openChild = true;
+            const int itemCount = int( resultsList.size() ) + ( captionCount_ >= 0 ? 1 : 0 );
+            float height = ySize * itemCount + ImGui::GetStyle().ItemSpacing.y * ( itemCount - 1 );
+            height = std::min( height, getViewerInstance().framebufferSize.y - pos.y - ImGui::GetCursorPosY() - ImGui::GetStyle().WindowPadding.y );
+            ImGui::BeginChild( "Search result list", ImVec2( -1, height ) );
+        }
         for ( int i = 0; i < resultsList.size(); ++i )
         {
             const auto& foundItem = resultsList[i];
-            if ( !foundItem.item )
-                continue;
+            const auto& weights = searchResultWeight_[i];
+            if ( captionCount_ == i )
+            {
+                if ( ImGui::BeginTable( "##Extended Search separator", 2, ImGuiTableFlags_SizingFixedFit) )
+                {
+                    ImGui::TableNextColumn();
+                    ImGui::Text( "%s", "Extended Search" );
+                    ImGui::TableNextColumn();
+                    auto width = ImGui::GetWindowWidth();
+                    ImGui::SetCursorPos( { width - ImGui::GetStyle().WindowPadding.x, ImGui::GetCursorPosY() + std::round( ImGui::GetTextLineHeight() * 0.5f ) } );
+                    ImGui::Separator();
+                    ImGui::EndTable();
+                }
+            }
+            if ( scroll && hightlightedSearchItem_ == i )
+                ImGui::SetScrollHereY();
             auto width = params.btnDrawer.calcItemWidth( *foundItem.item, DrawButtonParams::SizeType::SmallText );
             DrawButtonParams dbParams;
             dbParams.sizeType = DrawButtonParams::SizeType::SmallText;
@@ -142,7 +168,6 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
 #ifndef NDEBUG
             if ( showResultWeight_ && !searchLine_.empty() )
             {
-                const auto& weights = searchResultWeight_[i];
                 ImGui::SameLine();
                 ImGui::Text( "%s", "(?)" );
                 if ( ImGui::IsItemHovered() )
@@ -152,6 +177,8 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             }
 #endif
         }
+        if ( openChild )
+            ImGui::EndChild();
         ImGui::PopStyleVar( 1 );
         ImGui::PopStyleColor( 3 );
         ImGui::PopFont();
@@ -166,7 +193,7 @@ void RibbonMenuSearch::deactivateSearch_()
     searchResult_.clear();
     searchResultWeight_.clear();
     setInputFocus_ = false;
-    hightlightedSearchItem_ = -1;
+    hightlightedSearchItem_ = 0;
 }
 
 void RibbonMenuSearch::drawMenuUI( const Parameters& params )
@@ -191,10 +218,7 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
             setInputFocus_ = false;
         }
         if ( searchInputText_( "##SearchLine", searchLine_, params ) )
-        {
-            searchResult_ = RibbonSchemaHolder::search( searchLine_, &searchResultWeight_ );
-            hightlightedSearchItem_ = -1;
-        }
+            updateSearchResult_();
         if ( mainInputFocused_ && !ImGui::IsItemFocused() )
         {
             if ( ( !searchLine_.empty() && searchResult_.empty() ) || ( searchLine_.empty() && recentItems_.empty() ) )
@@ -316,6 +340,12 @@ bool RibbonMenuSearch::searchInputText_( const char* label, std::string& str, co
     ImGui::PopID();
 
     return res;
+}
+
+void RibbonMenuSearch::updateSearchResult_()
+{
+    searchResult_ = RibbonSchemaHolder::search( searchLine_, &captionCount_, &searchResultWeight_ );
+    hightlightedSearchItem_ = 0;
 }
 
 }

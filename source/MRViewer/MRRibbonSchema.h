@@ -78,7 +78,10 @@ public:
         float tooltipWeight{ 1.f };
         float tooltipOrderWeight{ 1.f };
     };
-    MRVIEWER_API static std::vector<SearchResult> search( const std::string& searchStr, std::vector<SearchResultWeight>* weights = nullptr );
+    // 
+    MRVIEWER_API static std::vector<SearchResult> search( const std::string& searchStr, int* captionCount = nullptr,
+        std::vector<SearchResultWeight>* weights = nullptr );
+
 private:
     RibbonSchemaHolder() = default;
 };

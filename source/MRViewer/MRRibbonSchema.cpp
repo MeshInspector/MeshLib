@@ -242,7 +242,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
             continue;
         res[i] = rawResult[i].first;
         if ( captionCount && rawResult[i].second.captionWeight > maxWeight &&
-            ( i == 0 || i > 0 && rawResult[i-1].second.captionWeight <= maxWeight ) )
+            ( i == 0 || ( i > 0 && rawResult[i-1].second.captionWeight <= maxWeight ) ) )
             *captionCount = i;
         if ( weights )
             ( *weights )[i] = rawResult[i].second;

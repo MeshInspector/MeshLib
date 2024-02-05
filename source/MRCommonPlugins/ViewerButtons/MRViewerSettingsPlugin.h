@@ -21,6 +21,17 @@ public:
 
     // call this function if you save/delete color theme, or change current theme outside of this plugin
     void updateThemes();
+
+    struct ComboSettings
+    {
+        std::string name;
+        int value;
+        std::vector<std::string> options;
+        std::function<void(int)> action;
+    };
+
+    void addComboSettings( const ComboSettings& settings);
+
 private:
     virtual bool onEnable_() override;
     virtual bool onDisable_() override;
@@ -65,6 +76,8 @@ private:
 #endif
 
     TouchpadParameters touchpadParameters_;
+
+    std::vector<ComboSettings> comboSettings_;
 };
 
 }

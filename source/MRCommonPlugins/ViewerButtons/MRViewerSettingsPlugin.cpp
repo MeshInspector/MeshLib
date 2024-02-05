@@ -92,6 +92,11 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::EndCustomStatePlugin();
 }
 
+void ViewerSettingsPlugin::addComboSettings( const ComboSettings& settings )
+{
+    comboSettings_.push_back( settings );
+}
+
 bool ViewerSettingsPlugin::onEnable_()
 {
     backgroundColor_.w = -1.0f;
@@ -171,6 +176,14 @@ void ViewerSettingsPlugin::drawSettingsTab_( float menuWidth, float menuScaling 
         UI::setTooltipIfHovered( "If checked then enables using of saved positions of tool windows in the config file", menuScaling );
         if ( savedDialogsVal != savedDialogsBackUp )
             viewer->getMenuPlugin()->enableSavedDialogPositions( savedDialogsVal );
+
+        for ( auto& settings : comboSettings_ )
+        {
+            if ( UI::combo( settings.name.c_str(), &settings.value, settings.options ) )
+            {
+                settings.action( settings.value );
+            }
+        }
     }
 }
 

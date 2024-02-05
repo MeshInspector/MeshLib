@@ -92,7 +92,13 @@ public:
     {
         return renderDiscretization_;
     }
-    
+
+    /// returns file extension used to serialize the points
+    [[nodiscard]] const char * savePointsFormat() const { return savePointsFormat_; }
+
+    /// sets file extension used to serialize the points: must be not null and must start from '.'
+    MRMESH_API void setSavePointsFormat( const char * newFormat );
+
 protected:
     VertBitSet selectedPoints_;
     mutable std::optional<size_t> numValidPoints_;
@@ -133,6 +139,12 @@ private:
 
     /// set default scene-related properties
     void setDefaultSceneProperties_();
+
+#ifndef MRMESH_NO_OPENCTM
+    const char * savePointsFormat_ = ".ctm";
+#else
+    const char * savePointsFormat_ = ".ply";
+#endif
 };
 
 }

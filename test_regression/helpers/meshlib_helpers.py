@@ -1,4 +1,6 @@
+from constants import DEFAULT_RHAUSDORF_THRESHOLD
 from module_helper import *
+from pytest_check import check
 import meshlib.mrmeshpy as mrmesh
 import pathlib
 
@@ -23,3 +25,34 @@ def relative_hausdorff(mesh1: mrmesh.Mesh or pathlib.Path or str,
     val = 0.0 if val < 0.0 else val  # there are some specific cases when metric can be below zero,
     # but exact values have no practical meaning, any value beyond zero means "completely different"
     return val
+
+
+def compare_meshes_similarity(mesh1: mrmesh.Mesh, mesh2: mrmesh.Mesh,
+                              rhsdr_thresh=DEFAULT_RHAUSDORF_THRESHOLD,
+                              vol_thresh=0.001,
+                              area_thresh=0.001,
+                              verts_thresh=0.001):
+    """
+    Compare two meshes and assert them to similarity by different params.
+    Similarity calcs as (mesh1.param - mesh2.param) / min(mesh1.param, mesh2.param) < param_threshold
+    If one of difference is more than threshold - fail on assert
+    :param mesh1: first mesh
+    :param mesh2: second mesh
+    :param rhsdr_thresh: relative Hausdorff distance threshold
+    :param vol_thresh: volume difference threshold
+    :param area_thresh: area difference threshold
+    :param verts_thresh: vertices difference threshold
+    """
+    with check:
+        #  check on meshes relative Hausdorff distance
+        assert relative_hausdorff(mesh1, mesh2) > rhsdr_thresh
+    with check:
+        #  check on meshes volume
+        assert (mesh1.volume() - mesh2.volume()) / min(mesh1.volume(), mesh2.volume()) < vol_thresh
+    with check:
+        #  check on meshes area
+        assert (mesh1.area() - mesh2.area()) / min(mesh1.area(), mesh2.area()) < area_thresh
+        #  check on meshes vertices number
+    with (check):
+        assert (mesh1.topology.numValidVerts() - mesh2.topology.numValidVerts()) / min(mesh1.topology.numValidVerts(),
+                                                                        mesh2.topology.numValidVerts()) < verts_thresh

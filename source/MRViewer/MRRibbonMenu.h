@@ -113,6 +113,9 @@ public:
     /// this signal is called when active tab changes
     TabChangedSignal tabChangedSignal;
 
+    bool getAutoCloseBlockingPlugins() { return autoCloseBlockingPlugins_; }
+    void setAutoCloseBlockingPlugins( bool value ) { autoCloseBlockingPlugins_ = value; }
+
 protected:
     // draw single item
     MRVIEWER_API virtual void drawBigButtonItem_( const MenuItemInfo& item );
@@ -247,6 +250,8 @@ private:
 
     // current scroll position of tabs panel
     float tabPanelScroll_{ 0.0f };
+
+    bool autoCloseBlockingPlugins_{ false };
 
     enum class CollapseState
     {

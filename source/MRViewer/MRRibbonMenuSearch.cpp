@@ -136,7 +136,6 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
         for ( int i = 0; i < resultsList.size(); ++i )
         {
             const auto& foundItem = resultsList[i];
-            const auto& weights = searchResultWeight_[i];
             if ( captionCount_ == i )
             {
                 if ( ImGui::BeginTable( "##Extended Search separator", 2, ImGuiTableFlags_SizingFixedFit) )
@@ -168,6 +167,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
 #ifndef NDEBUG
             if ( showResultWeight_ && !searchLine_.empty() )
             {
+                const auto& weights = searchResultWeight_[i];
                 ImGui::SameLine();
                 ImGui::Text( "(?)" );
                 if ( ImGui::IsItemHovered() )

@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#include "MRMesh/MRFlagOperators.h"
 #include "MRProgressCallback.h"
 #include <functional>
 
@@ -13,7 +14,7 @@ namespace MR
 
 using VoxelsMetric = std::function<float( size_t from, size_t to )>;
 
-enum QuarterBit : char
+enum class QuarterBit : char
 {
     LeftLeft = 0b1,
     LeftRight = 0b10,
@@ -21,6 +22,7 @@ enum QuarterBit : char
     RightRight = 0b1000,
     All = 0b1111
 };
+MR_MAKE_FLAG_OPERATORS( QuarterBit )
 
 /// Plane of slice in which to find path
 enum SlicePlane
@@ -28,17 +30,17 @@ enum SlicePlane
     YZ, ///< = 0 cause main axis is x - [0]
     ZX, ///< = 1 cause main axis is y - [1]
     XY, ///< = 2 cause main axis is z - [2]
-    None ///< special value not to limit path in one slice 
+    None ///< special value not to limit path in one slice
 };
 
 /// Parameters for building metric function
 struct VoxelMetricParameters
 {
     size_t start; ///< start voxel index
-    size_t stop;  ///< stop voxel index 
-    float maxDistRatio{1.5f}; ///< max distance ratio: if (dist^2(next,start) + dist^2(next,stop) > maxDistRatio^2*dist^2(start,stop)) - candidate is not processed 
+    size_t stop;  ///< stop voxel index
+    float maxDistRatio{1.5f}; ///< max distance ratio: if (dist^2(next,start) + dist^2(next,stop) > maxDistRatio^2*dist^2(start,stop)) - candidate is not processed
     SlicePlane plane{None}; ///< if not None - builds path in one slice of voxels (make sure start and stop has same main axis coordinate)
-    char quatersMask{QuarterBit::All}; ///< quarter of building path, if plane is selected, it should be (LeftLeft | LeftRigth) or (RigthLeft | RightRight) or All
+    QuarterBit quatersMask{QuarterBit::All}; ///< quarter of building path, if plane is selected, it should be (LeftLeft | LeftRigth) or (RigthLeft | RightRight) or All
 };
 
 /// e^(modifier*(dens1+dens2))

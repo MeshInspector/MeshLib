@@ -1628,10 +1628,10 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
 
     const auto& viewportid = viewer->viewport().id;
 
-    bool allIsObjMesh = 
-        selectedMask == SelectedTypeBit::ObjectMeshBit || 
-        selectedMask == SelectedTypeBit::ObjectMeshHolderBit ||
-        selectedMask == (SelectedTypeBit::ObjectMeshBit | SelectedTypeBit::ObjectMeshHolderBit);
+    bool allIsObjMesh =
+        selectedMask == SelectedTypesMask::ObjectMeshBit ||
+        selectedMask == SelectedTypesMask::ObjectMeshHolderBit ||
+        selectedMask == (SelectedTypesMask::ObjectMeshBit | SelectedTypesMask::ObjectMeshHolderBit);
 
     bool closePopup = false;
 
@@ -1664,7 +1664,7 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
         obj->setSpecularStrength( value );
     } );
 
-    bool allIsObjPoints = selectedMask == SelectedTypeBit::ObjectPointsHolderBit;
+    bool allIsObjPoints = selectedMask == SelectedTypesMask::ObjectPointsHolderBit;
 
     if ( allIsObjPoints )
     {
@@ -1729,12 +1729,12 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
         return someChanges;
 
     bool allIsObjMesh =
-        selectedMask == SelectedTypeBit::ObjectMeshBit ||
-        selectedMask == SelectedTypeBit::ObjectMeshHolderBit ||
-        selectedMask == ( SelectedTypeBit::ObjectMeshBit | SelectedTypeBit::ObjectMeshHolderBit );
-    bool allIsObjLines = selectedMask == SelectedTypeBit::ObjectLinesHolderBit;
-    bool allIsObjPoints = selectedMask == SelectedTypeBit::ObjectPointsHolderBit;
-    bool allIsObjLabels = selectedMask == SelectedTypeBit::ObjectLabelBit;
+        selectedMask == SelectedTypesMask::ObjectMeshBit ||
+        selectedMask == SelectedTypesMask::ObjectMeshHolderBit ||
+        selectedMask == ( SelectedTypesMask::ObjectMeshBit | SelectedTypesMask::ObjectMeshHolderBit );
+    bool allIsObjLines = selectedMask == SelectedTypesMask::ObjectLinesHolderBit;
+    bool allIsObjPoints = selectedMask == SelectedTypesMask::ObjectPointsHolderBit;
+    bool allIsObjLabels = selectedMask == SelectedTypesMask::ObjectLabelBit;
 
     const auto& viewportid = viewer->viewport().id;
 
@@ -3051,7 +3051,7 @@ void ImGuiMenu::drawShortcutsWindow_()
 
 SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::shared_ptr<Object>>& selectedObjs )
 {
-    SelectedTypesMask res = 0;
+    SelectedTypesMask res{};
     if ( selectedObjs.empty() )
         return res;
 
@@ -3063,29 +3063,29 @@ SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::share
         }
         else if ( obj->asType<ObjectMesh>() )
         {
-            res |= SelectedTypeBit::ObjectMeshBit;
+            res |= SelectedTypesMask::ObjectMeshBit;
         }
         else if ( obj->asType<ObjectMeshHolder>() )
         {
-            res |= SelectedTypeBit::ObjectMeshHolderBit;
+            res |= SelectedTypesMask::ObjectMeshHolderBit;
         }
         else if ( obj->asType<ObjectLinesHolder>() )
         {
-            res |= SelectedTypeBit::ObjectLinesHolderBit;
+            res |= SelectedTypesMask::ObjectLinesHolderBit;
         }
         else if ( obj->asType<ObjectPointsHolder>() )
         {
-            res |= SelectedTypeBit::ObjectPointsHolderBit;
+            res |= SelectedTypesMask::ObjectPointsHolderBit;
         }
         else if ( obj->asType<ObjectLabel>() )
         {
-            res |= SelectedTypeBit::ObjectLabelBit;
+            res |= SelectedTypesMask::ObjectLabelBit;
         }
     }
 
-    if ( res == 0 )
+    if ( res == SelectedTypesMask{} )
     {
-        res |= SelectedTypeBit::ObjectBit;
+        res |= SelectedTypesMask::ObjectBit;
     }
 
     return res;

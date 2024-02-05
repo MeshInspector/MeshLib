@@ -142,7 +142,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
                 if ( ImGui::BeginTable( "##Extended Search separator", 2, ImGuiTableFlags_SizingFixedFit) )
                 {
                     ImGui::TableNextColumn();
-                    ImGui::Text( "%s", "Extended Search" );
+                    ImGui::Text( "Extended Search" );
                     ImGui::TableNextColumn();
                     auto width = ImGui::GetWindowWidth();
                     ImGui::SetCursorPos( { width - ImGui::GetStyle().WindowPadding.x, ImGui::GetCursorPosY() + std::round( ImGui::GetTextLineHeight() * 0.5f ) } );
@@ -169,7 +169,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             if ( showResultWeight_ && !searchLine_.empty() )
             {
                 ImGui::SameLine();
-                ImGui::Text( "%s", "(?)" );
+                ImGui::Text( "(?)" );
                 if ( ImGui::IsItemHovered() )
                     ImGui::SetTooltip( "caption = %.3f\ncaption order = %.3f\ntooltip = %.3f\ntooltip order = %.3f",
                         weights.captionWeight, weights.captionOrderWeight,

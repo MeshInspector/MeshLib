@@ -1,5 +1,3 @@
-from constants import DEFAULT_RHAUSDORF_THRESHOLD
-from helpers.file_helpers import get_reference_files_list
 from module_helper import *
 from pytest_check import check
 import meshlib.mrmeshpy as mrmesh

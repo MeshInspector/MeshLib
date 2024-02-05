@@ -285,6 +285,8 @@ VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, ProgressCal
     res.data = simpleVolumeToDenseGrid( simpleVolume, cb );
     res.dims = simpleVolume.dims;
     res.voxelSize = simpleVolume.voxelSize;
+    res.min = simpleVolume.min;
+    res.max = simpleVolume.max;
     return res;
 }
 

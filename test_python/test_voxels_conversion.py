@@ -24,6 +24,7 @@ def test_voxels_conversion():
     # Create initial volume object
     volume0 = mrmeshnumpy.simpleVolumeFrom3Darray(np_array)
     volume0.voxelSize = mrmeshpy.Vector3f(0.5, 1, 1)
+    volume0.min, volume0.max = 0.0, max_value
 
     # Test conversion functions
     vdb_volume = mrmeshpy.simpleVolumeToVdbVolume(volume0)
@@ -32,9 +33,8 @@ def test_voxels_conversion():
     # Basic results validation
     assert volume0.dims == vdb_volume.dims == volume.dims
     assert volume0.voxelSize == vdb_volume.voxelSize == volume.voxelSize
-    # min/max not preserved
-    # assert volume0.min == vdb_volume.min == volume.min
-    # assert volume0.max == vdb_volume.max == volume.max
+    assert volume0.min == vdb_volume.min == volume.min
+    assert volume0.max == vdb_volume.max == volume.max
 
     # Test mesh build functions
     radius = 15 * mul

@@ -57,6 +57,9 @@ MRMESH_API VdbVolume floatGridToVdbVolume( const FloatGrid& grid );
 MRMESH_API FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume, ProgressCallback cb = {} );
 MRMESH_API VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, ProgressCallback cb = {} );
 
+// make SimpleVolume from VdbVolume
+MRMESH_API SimpleVolume vdbVolumeToSimpleVolume( const VdbVolume& vdbVolume, ProgressCallback cb = {} );
+
 /// parameters of OpenVDB Grid to Mesh conversion using Dual Marching Cubes algorithm
 struct GridToMeshSettings
 {

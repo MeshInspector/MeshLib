@@ -288,6 +288,45 @@ VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, ProgressCal
     return res;
 }
 
+SimpleVolume vdbVolumeToSimpleVolume( const VdbVolume& vdbVolume, ProgressCallback cb )
+{
+    SimpleVolume res;
+
+    res.dims = vdbVolume.dims;
+    res.voxelSize = vdbVolume.voxelSize;
+    res.min = vdbVolume.min;
+    res.max = vdbVolume.max;
+
+    VolumeIndexer indexer( res.dims );
+    res.data.resize( indexer.size() );
+
+    const auto mainThreadId = std::this_thread::get_id();
+    std::atomic<bool> cancelled{ false };
+    std::atomic<size_t> finishedVoxels{ 0 };
+
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+    {
+        auto accessor = vdbVolume.data->getConstAccessor();
+        for ( size_t i = range.begin(); i < range.end(); ++i )
+        {
+            if ( cb && cancelled.load( std::memory_order_relaxed ) )
+                return;
+            auto coord = indexer.toPos( VoxelId( i ) );
+            res.data[i] = accessor.getValue( openvdb::Coord( coord.x, coord.y, coord.z ) );
+        }
+        if ( cb )
+        {
+            finishedVoxels.fetch_add( range.size(), std::memory_order_relaxed );
+            if ( std::this_thread::get_id() == mainThreadId &&
+                !cb( float( finishedVoxels.load( std::memory_order_relaxed ) / float( indexer.size() ) ) ) )
+                cancelled.store( true, std::memory_order_relaxed );
+        }
+    } );
+    if ( cancelled )
+        return {};
+    return res;
+}
+
 Expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const GridToMeshSettings & settings )
 {
     MR_TIMER;

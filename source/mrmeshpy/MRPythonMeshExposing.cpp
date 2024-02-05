@@ -201,6 +201,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, []( pybind11::module_& m )
         pybind11::arg( "triangulation" ), pybind11::arg_v( "settings", MeshBuilder::BuildSettings(), "MeshBuilderSettings()" ),
         "construct mesh topology from a set of triangles with given ids;\n"
         "if skippedTris is given then it receives all input triangles not added in the resulting topology" );
+
+    m.def( "uniteCloseVertices", &MR::MeshBuilder::uniteCloseVertices,
+        pybind11::arg( "mesh" ), pybind11::arg( "closeDist" ), pybind11::arg( "uniteOnlyBd" ) = true, pybind11::arg( "optionalVertOldToNew" ) = nullptr,
+        "the function finds groups of mesh vertices located closer to each other than closeDist, and unites such vertices in one;\n"
+        "then the mesh is rebuilt from the remaining triangles\n"
+        "\toptionalVertOldToNew is the mapping of vertices: before -> after\n"
+        "\tuniteOnlyBd if true then only boundary vertices can be united, all internal vertices (even close ones) will remain\n"
+        "returns the number of vertices united, 0 means no change in the mesh" );
 } )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorThreeVertIds, ThreeVertIds )

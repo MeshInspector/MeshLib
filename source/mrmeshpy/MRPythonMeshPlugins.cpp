@@ -271,10 +271,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Relax, [] ( pybind11::module_& m )
         "\tReturns `True` if the operation completed succesfully, and `False` if it was interrupted by the progress callback." );
 
     m.def( "smoothRegionBoundary", &smoothRegionBoundary,
-        pybind11::arg( "mesh" ), pybind11::arg( "regionFaces" ), 
-        pybind11::arg_v( "numIterations", 4, "Number of smoothing iterations. An even number is recommended due to ocscillation of the algoritm"),
-        "Given a region of faces on the mesh, moves boundary vertices of the region\n",
-        "to make the region contour much smoother with minor optimiziztion of mesh topology near region boundary.");
+        pybind11::arg( "mesh" ), pybind11::arg( "regionFaces" ), pybind11::arg( "numIterations" ) = 4,
+        "Given a region of faces on the mesh, moves boundary vertices of the region\n"
+        "to make the region contour much smoother with minor optimization of mesh topology near region boundary.\n"
+        "\tnumIterations - number of smoothing iterations. An even number is recommended due to oscillation of the algorithm" );
 } )
 
 // Subdivider Plugin

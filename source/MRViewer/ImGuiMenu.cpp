@@ -3049,7 +3049,7 @@ SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::share
     if ( selectedObjs.empty() )
         return res;
 
-    for ( const auto obj : selectedObjs )
+    for ( const auto& obj : selectedObjs )
     {
         if ( !obj )
         {

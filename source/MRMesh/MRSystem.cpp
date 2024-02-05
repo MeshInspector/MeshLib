@@ -62,6 +62,16 @@ namespace
     return opt && std::string_view( opt ) == "1";
 }
 
+[[nodiscard]] std::vector<std::filesystem::path> filterDirs( std::initializer_list<std::filesystem::path> dirs )
+{
+    std::vector<std::filesystem::path> results;
+    std::error_code ec;
+    for ( const auto& dir : dirs )
+        if ( std::filesystem::is_directory( dir, ec ) )
+            results.emplace_back( dir );
+    return results;
+}
+
 #if !defined( __APPLE__ )
 [[nodiscard]] std::filesystem::path userDataPath()
 {
@@ -83,16 +93,6 @@ namespace
 }
 #endif
 #endif
-
-[[nodiscard]] std::vector<std::filesystem::path> filterDirs( std::initializer_list<std::filesystem::path> dirs )
-{
-    std::vector<std::filesystem::path> results;
-    std::error_code ec;
-    for ( const auto& dir : dirs )
-        if ( std::filesystem::is_directory( dir, ec ) )
-            results.emplace_back( dir );
-    return results;
-}
 
 using namespace MR;
 

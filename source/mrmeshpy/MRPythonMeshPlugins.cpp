@@ -268,7 +268,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Relax, [] ( pybind11::module_& m )
         pybind11::arg( "mesh" ), pybind11::arg_v( "params", MeshApproxRelaxParams(), "MeshApproxRelaxParams()" ), pybind11::arg( "cb" ) = ProgressCallback{},
         "Applies the given number of relaxation iterations to the whole mesh (or some region if it is specified through the params).\n"
         "The algorithm looks at approx neighborhoods to smooth the mesh\n"
-        "\tReturns `True` if the operation completed succesfully, and `False` if it was interrupted by the progress callback." );
+        "\tReturns `True` if the operation completed successfully, and `False` if it was interrupted by the progress callback." );
 
     m.def( "smoothRegionBoundary", &smoothRegionBoundary,
         pybind11::arg( "mesh" ), pybind11::arg( "regionFaces" ), pybind11::arg( "numIterations" ) = 4,

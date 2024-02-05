@@ -1628,7 +1628,10 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
 
     const auto& viewportid = viewer->viewport().id;
 
-    bool allIsObjMesh = selectedMask == SelectedTypeBit::ObjectMeshBit;
+    bool allIsObjMesh = 
+        selectedMask == SelectedTypeBit::ObjectMeshBit || 
+        selectedMask == SelectedTypeBit::ObjectMeshHolderBit ||
+        selectedMask == (SelectedTypeBit::ObjectMeshBit | SelectedTypeBit::ObjectMeshHolderBit);
 
     bool closePopup = false;
 
@@ -1661,7 +1664,7 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
         obj->setSpecularStrength( value );
     } );
 
-    bool allIsObjPoints = selectedMask == SelectedTypeBit::ObjectPointsBit;
+    bool allIsObjPoints = selectedMask == SelectedTypeBit::ObjectPointsHolderBit;
 
     if ( allIsObjPoints )
     {
@@ -1725,9 +1728,12 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
     if ( selectedVisualObjs.empty() )
         return someChanges;
 
-    bool allIsObjMesh = selectedMask == SelectedTypeBit::ObjectMeshBit;
-    bool allIsObjLines = selectedMask == SelectedTypeBit::ObjectLinesBit;
-    bool allIsObjPoints = selectedMask == SelectedTypeBit::ObjectPointsBit;
+    bool allIsObjMesh =
+        selectedMask == SelectedTypeBit::ObjectMeshBit ||
+        selectedMask == SelectedTypeBit::ObjectMeshHolderBit ||
+        selectedMask == ( SelectedTypeBit::ObjectMeshBit | SelectedTypeBit::ObjectMeshHolderBit );
+    bool allIsObjLines = selectedMask == SelectedTypeBit::ObjectLinesHolderBit;
+    bool allIsObjPoints = selectedMask == SelectedTypeBit::ObjectPointsHolderBit;
     bool allIsObjLabels = selectedMask == SelectedTypeBit::ObjectLabelBit;
 
     const auto& viewportid = viewer->viewport().id;
@@ -3047,46 +3053,34 @@ SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::share
 {
     SelectedTypesMask res = 0;
     if ( selectedObjs.empty() )
-        return SelectedTypeBit( res );
+        return res;
 
-    bool anyIsObjMesh = std::any_of( selectedObjs.cbegin(), selectedObjs.cend(), [] ( const std::shared_ptr<Object>& obj )
+    for ( const auto& obj : selectedObjs )
     {
-        return obj && obj->asType<ObjectMeshHolder>();
-    } );
-    if ( anyIsObjMesh )
-    {
-        res |= SelectedTypeBit::ObjectMeshBit;
-    }
-
-    bool anyIsObjLines = !selectedObjs.empty() &&
-        std::any_of( selectedObjs.cbegin(), selectedObjs.cend(), [] ( const std::shared_ptr<Object>& obj )
-    {
-        return obj && obj->asType<ObjectLinesHolder>();
-    } );
-
-    if ( anyIsObjLines )
-    {
-        res |= SelectedTypeBit::ObjectLinesBit;
-    }
-
-    bool anyIsObjPoints = !selectedObjs.empty() &&
-        std::any_of( selectedObjs.cbegin(), selectedObjs.cend(), [] ( const std::shared_ptr<Object>& obj )
-    {
-        return obj && obj->asType<ObjectPointsHolder>();
-    } );
-    if ( anyIsObjPoints )
-    {
-        res |= SelectedTypeBit::ObjectPointsBit;
-    }
-
-    bool anyIsObjLabels = !selectedObjs.empty() &&
-        std::any_of( selectedObjs.cbegin(), selectedObjs.cend(), [] ( const std::shared_ptr<Object>& obj )
-    {
-        return obj && obj->asType<ObjectLabel>();
-    } );
-    if ( anyIsObjLabels )
-    {
-        res |= SelectedTypeBit::ObjectLabelBit;
+        if ( !obj )
+        {
+            continue;
+        }
+        else if ( obj->asType<ObjectMesh>() )
+        {
+            res |= SelectedTypeBit::ObjectMeshBit;
+        }
+        else if ( obj->asType<ObjectMeshHolder>() )
+        {
+            res |= SelectedTypeBit::ObjectMeshHolderBit;
+        }
+        else if ( obj->asType<ObjectLinesHolder>() )
+        {
+            res |= SelectedTypeBit::ObjectLinesHolderBit;
+        }
+        else if ( obj->asType<ObjectPointsHolder>() )
+        {
+            res |= SelectedTypeBit::ObjectPointsHolderBit;
+        }
+        else if ( obj->asType<ObjectLabel>() )
+        {
+            res |= SelectedTypeBit::ObjectLabelBit;
+        }
     }
 
     if ( res == 0 )

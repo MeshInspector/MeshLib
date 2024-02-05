@@ -39,6 +39,18 @@ struct DirectoryIterator
     auto operator *() const { return *it; }
 };
 
+/// given file name without final extension, finds in the same folder an existing file with same stem and any extension
+[[nodiscard]] MRMESH_API std::filesystem::path findPathWithExtension( const std::filesystem::path & pathWithoutExtension );
+
+/// recursive iterator of directory items that will save any errors in (ec) instead of throwing exceptions
+struct DirectoryRecursiveIterator
+{
+    std::filesystem::recursive_directory_iterator it;
+    std::error_code & ec;
+    DirectoryRecursiveIterator & operator ++() { it.increment( ec ); return * this; }
+    auto operator *() const { return *it; }
+};
+
 [[nodiscard]] inline DirectoryIterator begin( const Directory & sd )
 {
     return DirectoryIterator{ std::filesystem::directory_iterator( sd.dir, sd.ec ), sd.ec };
@@ -53,15 +65,6 @@ struct DirectoryIterator
 {
     return !a.ec && a.it != b;
 }
-
-/// recursive iterator of directory items that will save any errors in (ec) instead of throwing exceptions
-struct DirectoryRecursiveIterator
-{
-    std::filesystem::recursive_directory_iterator it;
-    std::error_code & ec;
-    DirectoryRecursiveIterator & operator ++() { it.increment( ec ); return * this; }
-    auto operator *() const { return *it; }
-};
 
 [[nodiscard]] inline DirectoryRecursiveIterator begin( const DirectoryRecursive & sd )
 {

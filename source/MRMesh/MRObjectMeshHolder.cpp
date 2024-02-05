@@ -13,9 +13,9 @@
 #include "MRStringConvert.h"
 #include "MRTimer.h"
 #include "MRParallelFor.h"
+#include "MRDirectory.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRAsyncLaunchType.h"
-#include <filesystem>
 
 namespace MR
 {
@@ -53,23 +53,15 @@ Expected<std::future<VoidOrErrStr>> ObjectMeshHolder::serializeModel_( const std
     if ( ancillary_ || !mesh_ )
         return {};
 
-#ifndef MRMESH_NO_OPENCTM
-    auto save = [mesh = mesh_, filename = utf8string( path ) + ".ctm", this]()
+    SaveSettings saveSettings;
+    saveSettings.saveValidOnly = false;
+    saveSettings.rearrangeTriangles = false;
+    if ( !vertsColorMap_.empty() )
+        saveSettings.colors = &vertsColorMap_;
+    auto save = [mesh = mesh_, filename = std::filesystem::path( path ) += saveMeshFormat_, saveSettings]()
     {
-        MR::MeshSave::CtmSaveOptions options;
-        options.saveValidOnly = false;
-        options.rearrangeTriangles = false;
-        if ( !vertsColorMap_.empty() )
-            options.colors = &vertsColorMap_;
-        return MR::MeshSave::toCtm( *mesh, pathFromUtf8( filename ), options );
+        return MR::MeshSave::toAnySupportedFormat( *mesh, filename, saveSettings );
     };
-#else
-    auto save = [mesh = mesh_, filename = utf8string( path ) + ".mrmesh"]()
-    {
-        return MR::MeshSave::toMrmesh( *mesh, pathFromUtf8( filename ) );
-    };
-#endif
-
     return std::async( getAsyncLaunchType(), save );
 }
 
@@ -201,11 +193,15 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
 VoidOrErrStr ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     vertsColorMap_.clear();
-#ifndef MRMESH_NO_OPENCTM
-    auto res = MeshLoad::fromCtm( pathFromUtf8( utf8string( path ) + ".ctm" ), { .colors = &vertsColorMap_, .callback = progressCb } );
-#else
-    auto res = MeshLoad::fromMrmesh( pathFromUtf8( utf8string( path ) + ".mrmesh" ), { .colors = &vertsColorMap_, .callback = progressCb } );
-#endif
+    auto modelPath = pathFromUtf8( utf8string( path ) + ".ctm" ); //quick path for most used format
+    std::error_code ec;
+    if ( !is_regular_file( modelPath, ec ) )
+    {
+        modelPath = findPathWithExtension( path );
+        if ( modelPath.empty() )
+            return unexpected( "No mesh file found: " + utf8string( path ) );
+    }
+    auto res = MeshLoad::fromAnySupportedFormat( modelPath, { .colors = &vertsColorMap_, .callback = progressCb } );
     if ( !res.has_value() )
         return unexpected( res.error() );
 
@@ -503,6 +499,16 @@ size_t ObjectMeshHolder::heapBytes() const
         + ancillaryUVCoordinates_.heapBytes()
         + facesColorMap_.heapBytes()
         + MR::heapBytes( mesh_ );
+}
+
+void ObjectMeshHolder::setSaveMeshFormat( const char * newFormat )
+{
+    if ( !newFormat || *newFormat != '.' )
+    {
+        assert( false );
+        return;
+    }
+    saveMeshFormat_ = newFormat;
 }
 
 size_t ObjectMeshHolder::numUndirectedEdges() const

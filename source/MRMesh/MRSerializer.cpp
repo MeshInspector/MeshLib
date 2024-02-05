@@ -133,9 +133,10 @@ Expected<Json::Value, std::string> deserializeJsonValue( const std::filesystem::
     return deserializeJsonValue( str );
 }
 
-VoidOrErrStr serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection /*= nullptr */ )
+VoidOrErrStr serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection, const char * saveMeshFormat )
 {
     ObjectMesh obj;
+    obj.setSaveMeshFormat( saveMeshFormat );
     obj.setMesh( std::make_shared<Mesh>( mesh ) );
     if ( selection )
         obj.selectFaces( *selection );

@@ -67,8 +67,6 @@ struct CtmSaveOptions : SaveSettings
     float vertexPrecision = 1.0f / 1024.0f; //~= 0.00098
     /// LZMA compression: 0 - minimal compression, but fast; 9 - maximal compression, but slow
     int compressionLevel = 1; 
-    /// if it is turned on, then higher compression ratios are reached but the order of triangles is changed
-    bool rearrangeTriangles = true;
     /// comment saved in the file
     const char * comment = "MeshInspector.com";
 };

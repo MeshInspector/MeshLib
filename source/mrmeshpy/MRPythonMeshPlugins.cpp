@@ -243,15 +243,15 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Relax, [] ( pybind11::module_& m )
     pybind11::class_<MeshRelaxParams, RelaxParams>( m, "MeshRelaxParams" ).
         def( pybind11::init<>() ).
         def_readwrite( "hardSmoothTetrahedrons", &MeshRelaxParams::hardSmoothTetrahedrons, "smooth tetrahedron verts (with complete three edges ring) to base triangle (based on its edges destinations)" );
-    
-    pybind11::class_<MeshApproxRelaxParams, MeshRelaxParams>( m, "MeshApproxRelaxParams" ).
-        def( pybind11::init<>() ).
-        def_readwrite( "surfaceDilateRadius", &MeshApproxRelaxParams::surfaceDilateRadius, "Radius to find neighbors by surface. `0.0f - default = 1e-3 * sqrt(surface area)`" ).
-        def_readwrite( "RelaxApproxType", &MeshApproxRelaxParams::type, "" );
 
     pybind11::enum_<MR::RelaxApproxType>( m, "RelaxApproxType", "Approximation strategy to use during `relaxApprox`" ).
         value( "Planar", MR::RelaxApproxType::Planar, "Projects the new neighborhood points onto a best approximating plane." ).
         value( "Quadric", MR::RelaxApproxType::Quadric, "Projects the new neighborhood points onto a best quadratic approximating." );
+    
+    pybind11::class_<MeshApproxRelaxParams, MeshRelaxParams>( m, "MeshApproxRelaxParams" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "surfaceDilateRadius", &MeshApproxRelaxParams::surfaceDilateRadius, "Radius to find neighbors by surface. `0.0f - default = 1e-3 * sqrt(surface area)`" ).
+        def_readwrite( "type", &MeshApproxRelaxParams::type, "" );
 
     m.def( "relax", ( bool( * )( Mesh&, const MeshRelaxParams&, ProgressCallback ) )& relax,
         pybind11::arg( "mesh" ), pybind11::arg_v( "params", MeshRelaxParams(), "MeshRelaxParams()" ), pybind11::arg( "cb" ) = ProgressCallback{},

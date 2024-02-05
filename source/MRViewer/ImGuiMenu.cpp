@@ -1628,7 +1628,10 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
 
     const auto& viewportid = viewer->viewport().id;
 
-    bool allIsObjMesh = selectedMask == SelectedTypeBit::ObjectMeshBit || selectedMask == SelectedTypeBit::ObjectMeshHolderBit;
+    bool allIsObjMesh = 
+        selectedMask == SelectedTypeBit::ObjectMeshBit || 
+        selectedMask == SelectedTypeBit::ObjectMeshHolderBit ||
+        selectedMask == (SelectedTypeBit::ObjectMeshBit | SelectedTypeBit::ObjectMeshHolderBit);
 
     bool closePopup = false;
 
@@ -1725,7 +1728,10 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
     if ( selectedVisualObjs.empty() )
         return someChanges;
 
-    bool allIsObjMesh = selectedMask == SelectedTypeBit::ObjectMeshBit || selectedMask == SelectedTypeBit::ObjectMeshHolderBit;
+    bool allIsObjMesh =
+        selectedMask == SelectedTypeBit::ObjectMeshBit ||
+        selectedMask == SelectedTypeBit::ObjectMeshHolderBit ||
+        selectedMask == ( SelectedTypeBit::ObjectMeshBit | SelectedTypeBit::ObjectMeshHolderBit );
     bool allIsObjLines = selectedMask == SelectedTypeBit::ObjectLinesHolderBit;
     bool allIsObjPoints = selectedMask == SelectedTypeBit::ObjectPointsHolderBit;
     bool allIsObjLabels = selectedMask == SelectedTypeBit::ObjectLabelBit;
@@ -3055,32 +3061,27 @@ SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::share
         {
             continue;
         }
-
-        if ( obj->asType<ObjectMesh>() )
+        else if ( obj->asType<ObjectMesh>() )
         {
             res |= SelectedTypeBit::ObjectMeshBit;
             continue;
         }
-
-        if ( obj->asType<ObjectMeshHolder>() )
+        else if ( obj->asType<ObjectMeshHolder>() )
         {
             res |= SelectedTypeBit::ObjectMeshHolderBit;
             continue;
         }
-
-        if ( obj->asType<ObjectLinesHolder>() )
+        else if ( obj->asType<ObjectLinesHolder>() )
         {
             res |= SelectedTypeBit::ObjectLinesHolderBit;
             continue;
         }
-
-        if ( obj->asType<ObjectPointsHolder>() )
+        else if ( obj->asType<ObjectPointsHolder>() )
         {
             res |= SelectedTypeBit::ObjectPointsHolderBit;
             continue;
         }
-
-        if ( obj->asType<ObjectLabel>() )
+        else if ( obj->asType<ObjectLabel>() )
         {
             res |= SelectedTypeBit::ObjectLabelBit;
             continue;

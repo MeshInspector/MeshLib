@@ -3081,11 +3081,10 @@ SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::share
         {
             res |= SelectedTypesMask::ObjectLabelBit;
         }
-    }
-
-    if ( res == SelectedTypesMask{} )
-    {
-        res |= SelectedTypesMask::ObjectBit;
+        else
+        {
+            res |= SelectedTypeBit::ObjectBit;
+        }
     }
 
     return res;

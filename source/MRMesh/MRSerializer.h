@@ -93,8 +93,11 @@ MRMESH_API Expected<std::shared_ptr<Object>, std::string> deserializeObjectTree(
 MRMESH_API Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
     ProgressCallback progressCb = {} );
 
-/// saves mesh with optional selection to mru format
-MRMESH_API VoidOrErrStr serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection = nullptr );
+/// saves mesh with optional selection to mru format;
+/// this is very convenient for saving intermediate states during algorithm debugging;
+/// ".mrmesh" save mesh format is not space efficient, but guaranties no changes in the topology after loading
+MRMESH_API VoidOrErrStr serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection = nullptr,
+    const char * saveMeshFormat = ".mrmesh" );
 
 /// saves an object into json value
 MRMESH_API void serializeToJson( const Vector2i& vec, Json::Value& root );

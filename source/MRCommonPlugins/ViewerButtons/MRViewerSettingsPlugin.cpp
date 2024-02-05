@@ -146,6 +146,7 @@ void ViewerSettingsPlugin::drawSettingsTab_( float menuWidth, float menuScaling 
             UI::checkbox( "Close Plugins on Activating Another Plugin", 
                                                   std::bind( &RibbonMenu::getAutoCloseBlockingPlugins, ribbonMenu_ ), 
                                                   std::bind( &RibbonMenu::setAutoCloseBlockingPlugins, ribbonMenu_, std::placeholders::_1 ) );
+            UI::setTooltipIfHovered( "Automatically close plugins when another plugin is activated", menuScaling );
         }
 
         static std::vector<std::string> shadingModes = { "Auto Detect", "Smooth", "Flat" };

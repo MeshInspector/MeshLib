@@ -113,7 +113,9 @@ public:
     /// this signal is called when active tab changes
     TabChangedSignal tabChangedSignal;
 
-    bool getAutoCloseBlockingPlugins() { return autoCloseBlockingPlugins_; }
+    /// returns flag defining if closing plugin on opening another one is enabled
+    bool getAutoCloseBlockingPlugins() const { return autoCloseBlockingPlugins_; }
+    /// sets flag defining if closing plugin on opening another one is enabled or not
     void setAutoCloseBlockingPlugins( bool value ) { autoCloseBlockingPlugins_ = value; }
 
 protected:

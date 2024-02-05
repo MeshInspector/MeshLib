@@ -1351,14 +1351,24 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
         {
             spdlog::info( "Cannot activate item: \"{}\", Active: \"{}\"", name, activeBlockingItem_.item->name() );
             blockingHighlightTimer_ = 2.0f;
-            pushNotification( RibbonNotification{ .text = "Another plugin is active\nYou can activate 'Close Plugins on Activating Another Plugin' option in Viewer Settings", .type = NotificationType::Info } );
+            pushNotification( {
+                .onButtonClick = []
+                {
+                    auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
+                    if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
+                        return;
+                    if ( viewerSettingsIt->second.item && !viewerSettingsIt->second.item->isActive() )
+                        viewerSettingsIt->second.item->action();
+                },
+                .buttonName = "Open Viewer Settings",  
+                .text = "Another plugin is active\nYou can activate 'Close Plugins on Activating Another Plugin' option in Viewer Settings", 
+                .type = NotificationType::Info } );
             return;
         }
 
         if ( auto plugin = std::dynamic_pointer_cast< StateBasePlugin >( activeBlockingItem_.item ); plugin )
         {
-            plugin->shutdown();
-            activeBlockingItem_ = { nullptr,false };
+            plugin->enable( false );
         }
     }
     if ( !wasActive && !available )

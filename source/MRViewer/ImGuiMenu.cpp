@@ -3064,27 +3064,22 @@ SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::share
         else if ( obj->asType<ObjectMesh>() )
         {
             res |= SelectedTypeBit::ObjectMeshBit;
-            continue;
         }
         else if ( obj->asType<ObjectMeshHolder>() )
         {
             res |= SelectedTypeBit::ObjectMeshHolderBit;
-            continue;
         }
         else if ( obj->asType<ObjectLinesHolder>() )
         {
             res |= SelectedTypeBit::ObjectLinesHolderBit;
-            continue;
         }
         else if ( obj->asType<ObjectPointsHolder>() )
         {
             res |= SelectedTypeBit::ObjectPointsHolderBit;
-            continue;
         }
         else if ( obj->asType<ObjectLabel>() )
         {
             res |= SelectedTypeBit::ObjectLabelBit;
-            continue;
         }
     }
 

@@ -3052,6 +3052,7 @@ void ImGuiMenu::drawShortcutsWindow_()
 SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::shared_ptr<Object>>& selectedObjs )
 {
     SelectedTypesMask res{};
+
     if ( selectedObjs.empty() )
         return res;
 

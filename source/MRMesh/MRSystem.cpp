@@ -180,7 +180,7 @@ using namespace MR;
     // TODO: XDG_DATA_DIRS support
     const std::filesystem::path systemPath( "/usr/" );
 
-    return filterDirs_( {
+    return filterDirs( {
         exePath,
         exePath / "fonts",
         exePath / ".." / "share" / "fonts",
@@ -229,7 +229,7 @@ using namespace MR;
     // TODO: XDG_DATA_DIRS support
     const std::filesystem::path systemPath( "/usr/" );
 
-    return filterDirs_( {
+    return filterDirs( {
         exePath,
         exePath / ".." / "lib",
         systemPath / "local" / "lib" / projectPath,

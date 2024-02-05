@@ -8,6 +8,7 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 
 ////////////////////////////////////////////////////////////////////////////////
+#include "MRMesh/MRFlagOperators.h"
 #include "MRMeshViewer.h"
 #include "MRMeshViewerPlugin.h"
 #include "MRViewerEventsListener.h"
@@ -26,8 +27,7 @@ namespace MR
 class ShortcutManager;
 class MeshModifier;
 
-using SelectedTypesMask = uint64_t;
-enum SelectedTypeBit : SelectedTypesMask
+enum class SelectedTypesMask
 {
     ObjectBit = 1 << 0,
     ObjectPointsHolderBit = 1 << 1,
@@ -36,8 +36,9 @@ enum SelectedTypeBit : SelectedTypesMask
     ObjectLabelBit = 1 << 4,
     ObjectMeshBit = 1 << 5,
 };
+MR_MAKE_FLAG_OPERATORS( SelectedTypesMask )
 
-class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin, 
+class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin,
     public MultiListener<
     MouseDownListener, MouseMoveListener, MouseUpListener, MouseScrollListener, CursorEntranceListener,
     CharPressedListener, KeyDownListener, KeyUpListener, KeyRepeatListener,
@@ -69,7 +70,7 @@ protected:
   ImGuiWindow* prevFrameFocusPlugin_ = nullptr;
 
   // if true, then pre_draw will start from polling glfw events
-  bool pollEventsInPreDraw = false; // be careful here with true, this can cause infinite recurse 
+  bool pollEventsInPreDraw = false; // be careful here with true, this can cause infinite recurse
 
   bool showShortcuts_{ false };
   bool showStatistics_{ false };
@@ -105,7 +106,7 @@ protected:
       Object* to{ nullptr }; // address object
       bool before{ false }; // if false "who" will be attached to "to" as last child, otherwise "who" will be attached to "to"'s parent as child before "to"
   } sceneReorderCommand_;
-  
+
   std::weak_ptr<Object> lastRenameObj_;
   Box3f selectionBbox_; // updated in drawSelectionInformation_
   Box3f selectionWorldBox_;

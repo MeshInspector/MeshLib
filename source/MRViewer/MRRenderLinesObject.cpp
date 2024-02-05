@@ -136,7 +136,7 @@ void RenderLinesObject::render_( const ModelRenderParams& renderParams, bool poi
 
         GL_EXEC( glDepthFunc( getDepthFunctionLEqual( renderParams.depthFunction ) ) );
         GL_EXEC( glDrawArrays( GL_TRIANGLES, 0, lineIndicesSize_ * 6 ) );
-        GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
+        GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
     }
     else
     {
@@ -153,7 +153,7 @@ void RenderLinesObject::render_( const ModelRenderParams& renderParams, bool poi
 
         GL_EXEC( glDepthFunc( getDepthFunctionLEqual( renderParams.depthFunction ) ) );
         GL_EXEC( glDrawArrays( GL_POINTS, 0, lineIndicesSize_ * 2 ) );
-        GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
+        GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
     }
 }
 
@@ -188,7 +188,7 @@ void RenderLinesObject::renderPicker_( const ModelRenderParams& parameters, unsi
 
         GL_EXEC( glDepthFunc( getDepthFunctionLEqual( parameters.depthFunction ) ) );
         GL_EXEC( glDrawArrays( GL_TRIANGLES, 0, lineIndicesSize_ * 6 ) );
-        GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
+        GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
     }
     else
     {
@@ -205,7 +205,7 @@ void RenderLinesObject::renderPicker_( const ModelRenderParams& parameters, unsi
 
         GL_EXEC( glDepthFunc( getDepthFunctionLess( parameters.depthFunction ) ) );
         GL_EXEC( glDrawArrays( GL_POINTS, 0, lineIndicesSize_ * 2 ) );
-        GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
+        GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
     }
 }
 

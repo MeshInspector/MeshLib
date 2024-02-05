@@ -57,7 +57,7 @@ jobs:
           ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
 
       - name: Setup python requirements
-        run: python3 -m pip install -r .\requirements\python.txt
+        run: python3 -m pip install -r ./requirements/python.txt
 
       - name: Build
         run: ./scripts/build_source.sh

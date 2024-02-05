@@ -3,6 +3,7 @@
 #include "MRParallelFor.h"
 #include "MRProgressCallback.h"
 #include "MRVector3.h"
+#include <parallel_hashmap/phmap.h>
 #include <algorithm>
 #include <cassert>
 
@@ -100,6 +101,66 @@ void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoor
         std::reverse( triangs.neighbors.data() + nbeg, triangs.neighbors.data() + nend );
         triangs.fanRecords[c].border = otherBd;
     } );
+}
+
+struct UnorientedTriangle : ThreeVertIds
+{
+    UnorientedTriangle( const ThreeVertIds & inVs ) : ThreeVertIds( inVs )
+    {
+        std::sort( begin(), end() );
+    }
+    friend bool operator==( const UnorientedTriangle& a, const UnorientedTriangle& b ) = default;
+};
+
+
+struct UnorientedTriangleHasher
+{
+    size_t operator()( const UnorientedTriangle& triplet ) const
+    {
+        return 
+            2 * size_t( triplet[0] ) +
+            3 * size_t( triplet[1] ) +
+            5 * size_t( triplet[2] );
+    }
+};
+
+Votes computeTriangleVotes( const AllLocalTriangulations & triangs )
+{
+    MR_TIMER
+
+    // accumulate triplets
+    ParallelHashMap<UnorientedTriangle, int, UnorientedTriangleHasher> map;
+    ParallelFor( size_t(0), map.subcnt(), [&]( size_t myPartId )
+    {
+        for ( VertId v = 0_v; v + 1 < triangs.fanRecords.size(); ++v )
+        {
+            const auto border = triangs.fanRecords[v].border;
+            const auto nbeg = triangs.fanRecords[v].firstNei;
+            const auto nend = triangs.fanRecords[v+1].firstNei;
+            for ( auto n = nbeg; n < nend; ++n )
+            {
+                if ( triangs.neighbors[n] == border )
+                    continue;
+                const auto next = triangs.neighbors[n + 1 < nend ? n + 1 : nbeg];
+                const UnorientedTriangle triplet({ v, next, triangs.neighbors[n] });
+                const auto hashval = map.hash( triplet );
+                const auto idx = map.subidx( hashval );
+                if ( idx != myPartId )
+                    continue;
+                auto [it, inserted] = map.insert( { triplet, 1 } );
+                if ( !inserted )
+                    ++it->second;
+            }
+        }
+    } );
+
+    Votes res{};
+    for ( auto & [key, val] : map )
+    {
+        assert( val >= 1 && val <= 3 );
+        ++res[val - 1];
+    }
+    return res;
 }
 
 } //namespace MR

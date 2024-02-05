@@ -3,6 +3,7 @@
 #include "MRId.h"
 #include "MRVector.h"
 #include "MRBuffer.h"
+#include <array>
 #include <cstdint>
 #include <optional>
 
@@ -54,5 +55,8 @@ struct AllLocalTriangulations
 
 /// orient neighbors around each point so they will be in clockwise order if look from the top of target normal
 MRMESH_API void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertNormals & normals );
+
+using Votes = std::array<int, 3>;
+[[nodiscard]] MRMESH_API Votes computeTriangleVotes( const AllLocalTriangulations & triangs );
 
 } //namespace MR

@@ -33,6 +33,7 @@
 #include "MRMesh/MRConvexHull.h"
 #include "MRMesh/MRPointCloud.h"
 #include <pybind11/functional.h>
+#include <pybind11/stl.h>
 #pragma warning(push)
 #pragma warning(disable: 4464) // relative include path contains '..'
 #include <pybind11/stl/filesystem.h>

@@ -191,6 +191,12 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
+    /// returns file extension used to serialize the mesh
+    [[nodiscard]] const char * saveMeshFormat() const { return saveMeshFormat_; }
+
+    /// sets file extension used to serialize the mesh: must be not null and must start from '.'
+    MRMESH_API void setSaveMeshFormat( const char * newFormat );
+
     /// signal about face selection changing, triggered in selectFaces
     using SelectionChangedSignal = Signal<void()>;
     SelectionChangedSignal faceSelectionChangedSignal;
@@ -271,6 +277,12 @@ private:
 
     /// set default scene-related properties
     void setDefaultSceneProperties_();
+
+#ifndef MRMESH_NO_OPENCTM
+    const char * saveMeshFormat_ = ".ctm";
+#else
+    const char * saveMeshFormat_ = ".mrmesh";
+#endif
 };
 
 } // namespace MR

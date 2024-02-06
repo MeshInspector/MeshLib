@@ -157,7 +157,7 @@ namespace MR::ImGuiMeasurementIndicators
         float outlineWidth = params.outlineWidth * menuScaling;
         float arrowLen = params.arrowLen * menuScaling;
 
-        forEachElement( elem, [&]( Element elem )
+        forEachElement( elem, [&]( Element thisElem )
         {
             ImVec2 points[2] = {a, b};
 
@@ -172,22 +172,22 @@ namespace MR::ImGuiMeasurementIndicators
                 switch ( thisCap )
                 {
                 case LineCap::nothing:
-                    if ( elem == Element::outline )
+                    if ( thisElem == Element::outline )
                         point += d * outlineWidth;
                     break;
                 case LineCap::arrow:
-                    arrowTriangle( elem, menuScaling, params, point, d );
+                    arrowTriangle( thisElem, menuScaling, params, point, d );
                     point += d * ( -arrowLen + 1 ); // +1 is to avoid a hairline gap here, we intentionally don't multiply it by `menuScaling`.
                     break;
                 }
             }
 
-            params.list->PathLineTo(points[0]);
-            for ( ImVec2 elem : lineParams.midPoints )
-                params.list->PathLineTo(elem);
-            params.list->PathLineTo(points[1]);
+            params.list->PathLineTo( points[0] );
+            for ( ImVec2 point : lineParams.midPoints )
+                params.list->PathLineTo( point );
+            params.list->PathLineTo( points[1] );
 
-            params.list->PathStroke( ( elem == Element::main ? params.colorMain : params.colorOutline ).getUInt32(), 0, lineWidth + ( outlineWidth * 2 ) * ( elem == Element::outline ) );
+            params.list->PathStroke( ( thisElem == Element::main ? params.colorMain : params.colorOutline ).getUInt32(), 0, lineWidth + ( outlineWidth * 2 ) * ( thisElem == Element::outline ) );
         } );
     }
 
@@ -269,22 +269,22 @@ namespace MR::ImGuiMeasurementIndicators
             gapB = b + dir * invertedOverhang;
         }
 
-        forEachElement( elem, [&]( Element elem )
+        forEachElement( elem, [&]( Element thisElem )
         {
             if ( !useInvertedStyle && ( string.isEmpty() || drawTextOutOfLine ) )
             {
-                line( elem, menuScaling, params, a, b, { .capA = LineCap::arrow, .capB = LineCap::arrow } );
+                line( thisElem, menuScaling, params, a, b, { .capA = LineCap::arrow, .capB = LineCap::arrow } );
             }
             else
             {
-                line( elem, menuScaling, params, gapA, a, { .capB = LineCap::arrow } );
-                line( elem, menuScaling, params, gapB, b, { .capB = LineCap::arrow } );
+                line( thisElem, menuScaling, params, gapA, a, { .capB = LineCap::arrow } );
+                line( thisElem, menuScaling, params, gapB, b, { .capB = LineCap::arrow } );
 
                 if ( useInvertedStyle )
-                    line( elem, menuScaling, params, a - dir * ( arrowLen / 2 ), b + dir * ( arrowLen / 2 ), { .flags = LineFlags::narrow } );
+                    line( thisElem, menuScaling, params, a - dir * ( arrowLen / 2 ), b + dir * ( arrowLen / 2 ), { .flags = LineFlags::narrow } );
             }
 
-            text( elem, menuScaling, params, center, string, drawTextOutOfLine ? n : ImVec2{} );
+            text( thisElem, menuScaling, params, center, string, drawTextOutOfLine ? n : ImVec2{} );
         } );
     }
 
@@ -307,11 +307,11 @@ namespace MR::ImGuiMeasurementIndicators
         ImVec2 pointB = point - dir * length;
         ImVec2 pointA = pointB - dir2 * leaderLineLen;
 
-        forEachElement( elem, [&]( Element elem )
+        forEachElement( elem, [&]( Element thisElem )
         {
-            line( elem, menuScaling, params, pointA, point, { .capB = LineCap::arrow, .midPoints = { &pointB, 1 } } );
+            line( thisElem, menuScaling, params, pointA, point, { .capB = LineCap::arrow, .midPoints = { &pointB, 1 } } );
 
-            text( elem, menuScaling, params, pointA, string, -dir2 );
+            text( thisElem, menuScaling, params, pointA, string, -dir2 );
         } );
     }
 }

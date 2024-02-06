@@ -199,6 +199,9 @@
     <ClCompile Include="ImGuiHelpers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRImGuiMeasurementIndicators.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRPickHoleBorderElement.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
@@ -322,6 +325,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRImGuiMeasurementIndicators.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="ImGuiMenu.h">

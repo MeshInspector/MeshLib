@@ -92,6 +92,7 @@
     <ClCompile Include="MRWebRequest.cpp" />
     <ClCompile Include="MRTouchpadController.cpp" />
     <ClCompile Include="MRSurfaceManipulationWidget.cpp" />
+    <ClCompile Include="MRImGuiMeasurementIndicators.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -195,6 +196,7 @@
     <ClInclude Include="MRSurfaceManipulationWidget.h" />
     <ClInclude Include="MRPointInAllSpaces.h" />
     <ClInclude Include="MRImGuiVectorOperators.h" />
+    <ClInclude Include="MRImGuiMeasurementIndicators.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

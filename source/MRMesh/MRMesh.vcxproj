@@ -364,6 +364,9 @@
     <ClInclude Include="MRZlib.h" />
     <ClInclude Include="MRVoxelsVolumeAccess.h" />
     <ClInclude Include="MRFlagOperators.h" />
+    <ClInclude Include="MRMeasurementObject.h" />
+    <ClInclude Include="MRRadiusMeasurementObject.h" />
+    <ClInclude Include="MRDefaultMeasurementObjects.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -624,6 +627,8 @@
     <ClCompile Include="MRZip.cpp" />
     <ClCompile Include="MRObjectSave.cpp" />
     <ClCompile Include="MRZlib.cpp" />
+    <ClCompile Include="MRRadiusMeasurementObject.cpp" />
+    <ClCompile Include="MRDefaultMeasurementObjects.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\laz-perf\laz-perf.vcxproj">

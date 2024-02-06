@@ -290,7 +290,7 @@ std::pair<bool, bool> getRealValue( const std::vector<std::shared_ptr<MR::Visual
 void ImGuiMenu::addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const
 {
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesCyrillic() );
-    builder.AddChar( 0x2116 ); // number sign
+    builder.AddChar( 0x2116 ); // NUMERO SIGN (shift+3 on cyrillic keyboards)
 #ifndef __EMSCRIPTEN__
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesChineseSimplifiedCommon() );
 #endif

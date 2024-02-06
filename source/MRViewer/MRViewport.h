@@ -252,7 +252,7 @@ public:
     // Starts or stop rotation
     MRVIEWER_API void setRotation( bool state );
 
-
+    // Note, Y is up for this box.
     MRVIEWER_API const ViewportRectangle& getViewportRect() const;
 
     // finds length between near pixels on zNear plane

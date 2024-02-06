@@ -1,16 +1,11 @@
 #include "MRVDBConversions.h"
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
-#include "MRVDBFloatGrid.h"
 #include "MRMesh.h"
 #include "MRMeshBuilder.h"
 #include "MRTimer.h"
-#include "MRSimpleVolume.h"
 #include "MRPch/MROpenvdb.h"
-#include "MRBox.h"
 #include "MRFastWindingNumber.h"
-#include "MRVolumeIndexer.h"
 #include "MRRegionBoundary.h"
-#include "MRParallelFor.h"
 #include "MRVDBProgressInterrupter.h"
 
 namespace MR

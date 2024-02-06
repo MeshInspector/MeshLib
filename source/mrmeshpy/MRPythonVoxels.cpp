@@ -63,7 +63,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         pybind11::arg( "simpleVolume" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
         "Make VdbVolume from SimpleVolume. Make copy of data.\n"
         "Grid can be used to make iso-surface later with gridToMesh function." );
-    m.def( "vdbVolumeToSimpleVolume", ( MR::SimpleVolume( * )( const MR::VdbVolume&, MR::ProgressCallback ) )& MR::vdbVolumeToSimpleVolume,
+    m.def( "vdbVolumeToSimpleVolume",
+        []( const MR::VdbVolume& volume, MR::ProgressCallback cb ) { return vdbVolumeToSimpleVolume<float>( volume, {}, cb ); },
         pybind11::arg( "vdbVolume" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
         "Make SimpleVolume from VdbVolume. Make copy of data." );
 

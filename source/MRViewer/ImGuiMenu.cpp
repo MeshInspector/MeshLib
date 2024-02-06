@@ -3084,7 +3084,7 @@ SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::share
         }
         else
         {
-            res |= SelectedTypeBit::ObjectBit;
+            res |= SelectedTypesMask::ObjectBit;
         }
     }
 

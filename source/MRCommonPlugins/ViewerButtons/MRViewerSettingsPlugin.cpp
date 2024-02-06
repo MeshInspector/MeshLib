@@ -142,6 +142,11 @@ void ViewerSettingsPlugin::drawSettingsTab_( float menuWidth, float menuScaling 
                                                   std::bind( &RibbonMenu::getCloseContextOnChange, ribbonMenu_ ),
                                                   std::bind( &RibbonMenu::setCloseContextOnChange, ribbonMenu_, std::placeholders::_1 ) );
             UI::setTooltipIfHovered( "Close scene context menu on any change", menuScaling );
+            
+            UI::checkbox( "Close Plugins on Activating Another Plugin", 
+                                                  std::bind( &RibbonMenu::getAutoCloseBlockingPlugins, ribbonMenu_ ), 
+                                                  std::bind( &RibbonMenu::setAutoCloseBlockingPlugins, ribbonMenu_, std::placeholders::_1 ) );
+            UI::setTooltipIfHovered( "Automatically close plugins when another blocking plugin is activated", menuScaling );
         }
 
         static std::vector<std::string> shadingModes = { "Auto Detect", "Smooth", "Flat" };

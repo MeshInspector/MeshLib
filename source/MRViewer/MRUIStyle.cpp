@@ -10,16 +10,8 @@
 #include "ImGuiMenu.h"
 #include "imgui_internal.h"
 #include "MRMesh/MRVector4.h"
+#include "MRViewer/MRImGuiVectorOperators.h"
 
-
-ImVec2 operator+( const ImVec2& a, const ImVec2& b )
-{
-    return ImVec2( a.x + b.x, a.y + b.y );
-}
-ImVec2 operator-( const ImVec2& a, const ImVec2& b )
-{
-    return ImVec2( a.x - b.x, a.y - b.y );
-}
 
 namespace MR
 {
@@ -87,7 +79,7 @@ bool checkKey( ImGuiKey passedKey )
     bool pressed = false;
     if ( passedKey == ImGuiKey_Enter || passedKey == ImGuiKey_KeypadEnter )
         pressed =  ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter );
-    else 
+    else
         pressed = ImGui::IsKeyPressed( passedKey );
     return pressed && ImGui::GetIO().KeyMods == ImGuiMod_None;
 }
@@ -160,7 +152,7 @@ void init()
     textureR->update( data );
 }
 
-bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/, 
+bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/,
     ImGuiButtonFlags flags /*= ImGuiButtonFlags_None*/, const ButtonCustomizationParams& custmParams )
 {
     // copy from ImGui::ButtonEx and replaced visualize part
@@ -1150,15 +1142,15 @@ void setTooltipIfHovered( const std::string& text, float scaling )
 
 void separator( float scaling, const std::string& text /*= ""*/, int issueCount /*= -1 */ )
 {
-    separator( 
-        scaling, 
-        text, 
+    separator(
+        scaling,
+        text,
         issueCount > 0 ? ImVec4{ 0.886f, 0.267f, 0.267f, 1.0f } : ImVec4{ 0.235f, 0.663f, 0.078f, 1.0f },
         issueCount >= 0 ? std::to_string( issueCount ) : "");
 }
 
-void separator( 
-    float scaling, 
+void separator(
+    float scaling,
     const std::string& text,
     const ImVec4& color,
     const std::string& issue )
@@ -1168,7 +1160,7 @@ void separator(
     {
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling );
     }
-    
+
     if ( text.empty() )
     {
         ImGui::Separator();
@@ -1280,7 +1272,7 @@ bool beginTabItem( const char* label, bool* p_open, ImGuiTabItemFlags flags )
         ColorTheme::getRibbonColor( active ? ColorTheme::RibbonColorsType::DialogTabActiveText :
                                              ColorTheme::RibbonColorsType::DialogTabText ) );
     ImGui::PushStyleColor( ImGuiCol_TabHovered,
-        ColorTheme::getRibbonColor( active ? ColorTheme::RibbonColorsType::DialogTabActiveHovered : 
+        ColorTheme::getRibbonColor( active ? ColorTheme::RibbonColorsType::DialogTabActiveHovered :
                                              ColorTheme::RibbonColorsType::DialogTabHovered ) );
     const auto& style = ImGui::GetStyle();
     // Adjust tab size

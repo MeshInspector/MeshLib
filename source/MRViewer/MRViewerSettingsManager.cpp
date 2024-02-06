@@ -40,6 +40,7 @@ const std::string cMSAA = "multisampleAntiAliasing";
 const std::string cncMachineSettingsKey = "CNCMachineSettings";
 const std::string cTouchpadSettings = "touchpadSettings";
 const std::string cEnableSavedDialogPositions = "enableSavedDialogPositions";
+const std::string cAutoClosePlugins = "autoClosePlugins";
 }
 
 namespace MR
@@ -82,7 +83,10 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
 
     auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>();
     if ( ribbonMenu )
+    {
         ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, true ) );
+        ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins ) );
+    }
 
     if ( cfg.hasJsonValue( cSceneControlParamKey ) )
     {
@@ -297,7 +301,10 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
 
     auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>();
     if ( ribbonMenu )
+    {
         cfg.setBool( cTopPanelPinnedKey, ribbonMenu->isTopPannelPinned() );
+        cfg.setBool( cAutoClosePlugins, ribbonMenu->getAutoCloseBlockingPlugins() );
+    }
 
     Json::Value sceneControls;
     for ( int i = 0; i < int( MouseMode::Count ); ++i )

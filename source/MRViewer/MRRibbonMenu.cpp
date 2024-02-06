@@ -1354,7 +1354,8 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
         {
             spdlog::info( "Cannot activate item: \"{}\", Active: \"{}\"", name, activeBlockingItem_.item->name() );
             blockingHighlightTimer_ = 2.0f;
-            pushNotification( {
+            if ( closesd )
+                pushNotification( {
                 .onButtonClick = []
                 {
                     auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );

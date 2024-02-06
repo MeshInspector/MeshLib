@@ -9,12 +9,12 @@
 namespace MR
 {
 
-void attachDefaultMeasurementsToObject( Object& object, AttachMeasurementsFlags flags )
+void attachDefaultMeasurementsToObject( Object& object, const AttachDefaultMeasurementsParams& params )
 {
     if ( auto circle = dynamic_cast<CircleObject *>( &object ) )
     {
         if ( auto radius = object.find<RadiusMeasurementObject>();
-            bool( radius ) /*implies*/<= bool( flags & AttachMeasurementsFlags::overwrite )
+            bool( radius ) /*implies*/<= params.overwrite
         )
         {
             if ( radius )
@@ -33,7 +33,7 @@ void attachDefaultMeasurementsToObject( Object& object, AttachMeasurementsFlags 
     if ( auto cylinder = dynamic_cast<CylinderObject *>( &object ) )
     {
         if ( auto radius = object.find<RadiusMeasurementObject>();
-            bool( radius ) /*implies*/<= bool( flags & AttachMeasurementsFlags::overwrite )
+            bool( radius ) /*implies*/<= params.overwrite
         )
         {
             if ( radius )
@@ -52,7 +52,7 @@ void attachDefaultMeasurementsToObject( Object& object, AttachMeasurementsFlags 
     if ( auto cone = dynamic_cast<ConeObject *>( &object ) )
     {
         if ( auto radius = object.find<RadiusMeasurementObject>();
-            bool( radius ) /*implies*/<= bool( flags & AttachMeasurementsFlags::overwrite )
+            bool( radius ) /*implies*/<= params.overwrite
         )
         {
             if ( radius )
@@ -72,7 +72,7 @@ void attachDefaultMeasurementsToObject( Object& object, AttachMeasurementsFlags 
     if ( auto sphere = dynamic_cast<SphereObject *>( &object ) )
     {
         if ( auto radius = object.find<RadiusMeasurementObject>();
-            bool( radius ) /*implies*/<= bool( flags & AttachMeasurementsFlags::overwrite )
+            bool( radius ) /*implies*/<= params.overwrite
         )
         {
             if ( radius )

@@ -6,13 +6,24 @@
 #include "MRViewer/MRSpaceMouseParameters.h"
 #include "MRViewer/MRTouchpadParameters.h"
 #include "MRMesh/MRVector4.h"
+#include "MRCommonPlugins/exports.h"
 
 namespace MR
 {
 
-class ViewerSettingsPlugin : public StatePlugin
+class MRCOMMONPLUGINS_CLASS ViewerSettingsPlugin : public StatePlugin
 {
 public:
+
+    enum class TabType
+    {
+        Settings,
+        Viewport,
+        View,
+        Control,
+        Count
+    } activeTab_{ TabType::Settings };
+
     ViewerSettingsPlugin();
 
     virtual void drawDialog( float menuScaling, ImGuiContext* ctx ) override;
@@ -22,15 +33,15 @@ public:
     // call this function if you save/delete color theme, or change current theme outside of this plugin
     void updateThemes();
 
-    struct ComboSettings
+    class ComboSettings
     {
-        std::string name;
-        int value;
-        std::vector<std::string> options;
-        std::function<void(int)> action;
+    public:
+        virtual ~ComboSettings() {}
+        virtual const std::string& getName() = 0;
+        virtual void draw() = 0;
     };
-
-    void addComboSettings( const ComboSettings& settings);
+    // move
+    MRCOMMONPLUGINS_API void addComboSettings( const TabType tab, std::shared_ptr<ComboSettings> settings);
 
 private:
     virtual bool onEnable_() override;
@@ -44,15 +55,6 @@ private:
     void drawMouseSceneControlsSettings_( float menuWidth, float menuScaling );
     void drawSpaceMouseSettings_( float menuWidth, float menuScaling );
     void drawTouchpadSettings_();
-   
-    enum class TabType
-    {
-        Settings,
-        Viewport,
-        View,
-        Control,
-        Count
-    } activeTab_{ TabType::Settings };
 
     int curSamples_{ 0 };
     int storedSamples_{ 0 };
@@ -77,7 +79,7 @@ private:
 
     TouchpadParameters touchpadParameters_;
 
-    std::vector<ComboSettings> comboSettings_;
+    std::unordered_map< TabType, std::vector<std::shared_ptr<ComboSettings>>> comboSettings_;
 };
 
 }

@@ -92,9 +92,9 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::EndCustomStatePlugin();
 }
 
-void ViewerSettingsPlugin::addComboSettings( const ComboSettings& settings )
+void ViewerSettingsPlugin::addComboSettings( const TabType tab, std::shared_ptr<ComboSettings> settings )
 {
-    comboSettings_.push_back( settings );
+    comboSettings_[tab].push_back( settings );
 }
 
 bool ViewerSettingsPlugin::onEnable_()
@@ -177,11 +177,11 @@ void ViewerSettingsPlugin::drawSettingsTab_( float menuWidth, float menuScaling 
         if ( savedDialogsVal != savedDialogsBackUp )
             viewer->getMenuPlugin()->enableSavedDialogPositions( savedDialogsVal );
 
-        for ( auto& settings : comboSettings_ )
+        for ( auto& [key, tabSettings] : comboSettings_ )
         {
-            if ( UI::combo( settings.name.c_str(), &settings.value, settings.options ) )
+            for ( auto& settings : tabSettings )
             {
-                settings.action( settings.value );
+                settings->draw();
             }
         }
     }

@@ -130,6 +130,7 @@ void RibbonNotifier::drawNotifications( float scaling )
         if ( notification.onButtonClick )
         {
             ImGui::TableNextColumn();
+            ImGui::SetCursorPosY( ImGui::GetWindowHeight() - style.WindowPadding.y - ImGui::GetTextLineHeight() - 2.0f * style.FramePadding.y );
             if ( UI::buttonCommonSize( notification.buttonName.c_str() ) )
                 notification.onButtonClick();
         }

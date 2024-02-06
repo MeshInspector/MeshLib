@@ -76,7 +76,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
         const float minSearchSize = cSearchSize * params.scaling;
         if ( isSmallUI_ )
         {
-            if ( !isSmallUILast_ || ImGui::IsWindowAppearing() || setInputFocus_ || ( active_ && ImGui::IsMouseReleased( ImGuiMouseButton_Left ) ) )
+            if ( !isSmallUILast_ || ImGui::IsWindowAppearing() || setInputFocus_ )
             {
                 ImGui::SetKeyboardFocusHere();
                 setInputFocus_ = false;
@@ -128,7 +128,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
         if ( isSmallUI_ && !resultsList.empty() )
         {
             openChild = true;
-            const int itemCount = int( resultsList.size() ) + ( !searchLine_.empty() && captionCount_ >= 0 ? 1 : 0 );
+            const int itemCount = int( resultsList.size() ) + ( captionCount_ >= 0 ? 1 : 0 );
             float height = ySize * itemCount + ImGui::GetStyle().ItemSpacing.y * ( itemCount - 1 );
             height = std::min( height, getViewerInstance().framebufferSize.y - pos.y - ImGui::GetCursorPosY() - ImGui::GetStyle().WindowPadding.y );
             ImGui::BeginChild( "Search result list", ImVec2( -1, height ) );
@@ -212,7 +212,7 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
     }
     else
     {
-        if ( ( isSmallUILast_ && active_ ) || setInputFocus_ || ( active_ && ImGui::IsMouseReleased( ImGuiMouseButton_Left ) ) )
+        if ( ( isSmallUILast_ && active_ ) || setInputFocus_ )
         {
             ImGui::SetKeyboardFocusHere();
             setInputFocus_ = false;

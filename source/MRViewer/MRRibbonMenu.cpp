@@ -1354,20 +1354,22 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
         {
             spdlog::info( "Cannot activate item: \"{}\", Active: \"{}\"", name, activeBlockingItem_.item->name() );
             blockingHighlightTimer_ = 2.0f;
-            if ( closesd )
-                pushNotification( {
-                .onButtonClick = []
-                {
-                    auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
-                    if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
-                        return;
-                    if ( viewerSettingsIt->second.item && !viewerSettingsIt->second.item->isActive() )
-                        viewerSettingsIt->second.item->action();
-                },
-                .buttonName = "Open Viewer Settings",  
-                .text = "Another plugin is active\nYou can activate 'Close Plugins on Activating Another Plugin' option in Viewer Settings", 
-                .type = NotificationType::Info } );
             return;
+        }
+        if ( closed && autoCloseBlockingPlugins_ )
+        {
+            pushNotification( {
+            .onButtonClick = []
+            {
+                auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
+                if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
+                    return;
+                if ( viewerSettingsIt->second.item && !viewerSettingsIt->second.item->isActive() )
+                    viewerSettingsIt->second.item->action();
+            },
+            .buttonName = "Open Viewer Settings",  
+            .text = "That plugin was closed due to other plugin start.\nIt can be changed in Viewer Settings.", 
+            .type = NotificationType::Info } );
         }
 
         if ( auto plugin = std::dynamic_pointer_cast< StateBasePlugin >( activeBlockingItem_.item ); plugin )

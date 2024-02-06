@@ -88,7 +88,7 @@ void RadiusMeasurementObject::swapBase_( Object& other )
 
 void RadiusMeasurementObject::serializeFields_( Json::Value& root ) const
 {
-    Object::serializeFields_( root );
+    MeasurementObject::serializeFields_( root );
     root["Type"].append( TypeName() );
 
     root["DrawAsDiameter"] = drawAsDiameter_;
@@ -98,14 +98,14 @@ void RadiusMeasurementObject::serializeFields_( Json::Value& root ) const
 
 void RadiusMeasurementObject::deserializeFields_( const Json::Value& root )
 {
-    Object::deserializeFields_( root );
+    MeasurementObject::deserializeFields_( root );
 
     if ( const auto& json = root["DrawAsDiameter"]; json.isBool() )
         drawAsDiameter_ = json.asBool();
     if ( const auto& json = root["IsSpherical"]; json.isBool() )
         isSpherical_ = json.asBool();
     if ( const auto& json = root["VisualLengthMultiplier"]; json.isDouble() )
-        visualLengthMultiplier_ = json.asDouble();
+        visualLengthMultiplier_ = float( json.asDouble() );
 }
 
 } // namespace MR

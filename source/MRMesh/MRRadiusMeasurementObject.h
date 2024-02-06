@@ -5,8 +5,7 @@
 namespace MR
 {
 
-// A common base class for measurement objects.
-// Can't be constructed directly.
+// Represents a radius measurement.
 class MRMESH_CLASS RadiusMeasurementObject : public MeasurementObject
 {
 public:

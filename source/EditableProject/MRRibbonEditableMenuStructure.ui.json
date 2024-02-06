@@ -1,0 +1,20 @@
+{
+	"Order": 999,
+	"LibName": "EditableProject",
+	"Tabs": [
+		{
+			"Name": "Editable",
+			"Priority": 20,
+			"Groups": [
+				{
+					"Name": "Primal",
+					"List": [
+						{
+							"Name": "Hello World"
+						}
+					]
+				}
+			]
+		}
+	]
+}

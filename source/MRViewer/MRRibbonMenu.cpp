@@ -1350,26 +1350,57 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
         bool closed = true;
         if ( autoCloseBlockingPlugins_ )
             closed = activeBlockingItem_.item->action();
-        if ( !autoCloseBlockingPlugins_ || !closed )
+
+        if ( !closed )
         {
-            spdlog::info( "Cannot activate item: \"{}\", Active: \"{}\"", name, activeBlockingItem_.item->name() );
             blockingHighlightTimer_ = 2.0f;
-            return;
+            return pushNotification( {
+                .text = "Unable to close this plugin",
+                .type = NotificationType::Info } );
         }
-        if ( closed && autoCloseBlockingPlugins_ )
+
+        if ( !autoCloseBlockingPlugins_ )
         {
-            pushNotification( {
-            .onButtonClick = []
+            blockingHighlightTimer_ = 2.0f;
+
+            static bool alreadyShown = false;
+            if ( alreadyShown )
+                return;
+
+            alreadyShown = true;
+            return pushNotification( {
+                .onButtonClick = []
+                {
+                    auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
+                    if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
+                        return;
+                    if ( viewerSettingsIt->second.item && !viewerSettingsIt->second.item->isActive() )
+                        viewerSettingsIt->second.item->action();
+                },
+                .buttonName = "Open Viewer Settings",
+                .text = "Unable to activate this plugin because another blocking plugin is already active.\nIt can be changed in Viewer Settings.",
+                .type = NotificationType::Info } );
+        }
+        else
+        {
+            static bool alreadyShown = false;
+            if ( !alreadyShown )
             {
-                auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
-                if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
-                    return;
-                if ( viewerSettingsIt->second.item && !viewerSettingsIt->second.item->isActive() )
-                    viewerSettingsIt->second.item->action();
-            },
-            .buttonName = "Open Viewer Settings",  
-            .text = "That plugin was closed due to other plugin start.\nIt can be changed in Viewer Settings.", 
-            .type = NotificationType::Info } );
+                alreadyShown = true;
+
+                pushNotification( {
+                .onButtonClick = []
+                {
+                    auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
+                    if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
+                        return;
+                    if ( viewerSettingsIt->second.item && !viewerSettingsIt->second.item->isActive() )
+                        viewerSettingsIt->second.item->action();
+                },
+                .buttonName = "Open Viewer Settings",
+                .text = "That plugin was closed due to other plugin start.\nIt can be changed in Viewer Settings.",
+                .type = NotificationType::Info } );
+            }
         }
 
         if ( auto plugin = std::dynamic_pointer_cast< StateBasePlugin >( activeBlockingItem_.item ); plugin )

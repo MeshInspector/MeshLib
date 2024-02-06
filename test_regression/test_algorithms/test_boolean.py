@@ -36,6 +36,4 @@ def test_boolean(tmp_path, operation_type, input_case):
         compare_meshes_similarity(ref_mesh, result_mesh)
     # check saved file is same as reference
     with check:
-        mrmesh.saveMesh(result_mesh, tmp_path / f"bool_{operation_type}.mrmesh")
-        is_file_same_as_reference(tmp_path / f"bool_{operation_type}.mrmesh",
-                                  input_folder / f"bool_{operation_type}.mrmesh")
+        assert result_mesh == ref_mesh

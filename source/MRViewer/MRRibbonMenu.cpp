@@ -1347,9 +1347,62 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
     auto name = item->name();
     if ( !wasActive && available && ( activeBlockingItem_.item && item->blocking() ) )
     {
-        spdlog::info( "Cannot activate item: \"{}\", Active: \"{}\"", name, activeBlockingItem_.item->name() );
-        blockingHighlightTimer_ = 2.0f;
-        return;
+        bool closed = true;
+        if ( autoCloseBlockingPlugins_ )
+            closed = activeBlockingItem_.item->action();
+
+        if ( !closed )
+        {
+            blockingHighlightTimer_ = 2.0f;
+            return pushNotification( {
+                .text = "Unable to close this plugin",
+                .type = NotificationType::Warning } );
+        }
+
+        if ( !autoCloseBlockingPlugins_ )
+        {
+            blockingHighlightTimer_ = 2.0f;
+            spdlog::info( "Cannot activate item: \"{}\", Active: \"{}\"", name, activeBlockingItem_.item->name() );
+            static bool alreadyShown = false;
+            if ( alreadyShown )
+                return;
+
+            alreadyShown = true;
+            return pushNotification( {
+                .onButtonClick = []
+                {
+                    auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
+                    if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
+                        return;
+                    if ( viewerSettingsIt->second.item && !viewerSettingsIt->second.item->isActive() )
+                        viewerSettingsIt->second.item->action();
+                },
+                .buttonName = "Open Viewer Settings",
+                .text = "Unable to activate this tool because another blocking tool is already active.\nIt can be changed in Viewer Settings.",
+                .type = NotificationType::Info } );
+        }
+        else
+        {
+            static bool alreadyShown = false;
+            spdlog::info( "Activated item: \"{}\", Closed item: \"{}\"", name, activeBlockingItem_.item->name() );
+            if ( !alreadyShown )
+            {
+                alreadyShown = true;
+
+                pushNotification( {
+                .onButtonClick = []
+                {
+                    auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
+                    if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
+                        return;
+                    if ( viewerSettingsIt->second.item && !viewerSettingsIt->second.item->isActive() )
+                        viewerSettingsIt->second.item->action();
+                },
+                .buttonName = "Open Viewer Settings",
+                .text = "That tool was closed due to other tool start.\nIt can be changed in Viewer Settings.",
+                .type = NotificationType::Info } );
+            }
+        }
     }
     if ( !wasActive && !available )
         return;

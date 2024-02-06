@@ -1378,7 +1378,7 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
                         viewerSettingsIt->second.item->action();
                 },
                 .buttonName = "Open Viewer Settings",
-                .text = "Unable to activate this plugin because another blocking plugin is already active.\nIt can be changed in Viewer Settings.",
+                .text = "Unable to activate this tool because another blocking tool is already active.\nIt can be changed in Viewer Settings.",
                 .type = NotificationType::Info } );
         }
         else
@@ -1399,7 +1399,7 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
                         viewerSettingsIt->second.item->action();
                 },
                 .buttonName = "Open Viewer Settings",
-                .text = "That plugin was closed due to other plugin start.\nIt can be changed in Viewer Settings.",
+                .text = "That tool was closed due to other tool start.\nIt can be changed in Viewer Settings.",
                 .type = NotificationType::Info } );
             }
         }

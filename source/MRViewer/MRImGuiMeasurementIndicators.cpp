@@ -46,6 +46,8 @@ namespace MR::ImGuiMeasurementIndicators
         case StringIcon::diameter:
             return std::round( ImGui::GetTextLineHeight() );
         }
+        assert( false && "Invalid icon enum." );
+        return 0;
     }
 
     ImVec2 StringWithIcon::calcTextSize() const

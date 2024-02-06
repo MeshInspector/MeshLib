@@ -1347,6 +1347,7 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
     auto name = item->name();
     if ( !wasActive && available && ( activeBlockingItem_.item && item->blocking() ) )
     {
+        const auto blockingItemName = activeBlockingItem_.item->name();
         bool closed = true;
         if ( autoCloseBlockingPlugins_ )
             closed = activeBlockingItem_.item->action();
@@ -1362,7 +1363,7 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
         if ( !autoCloseBlockingPlugins_ )
         {
             blockingHighlightTimer_ = 2.0f;
-            spdlog::info( "Cannot activate item: \"{}\", Active: \"{}\"", name, activeBlockingItem_.item->name() );
+            spdlog::info( "Cannot activate item: \"{}\", Active: \"{}\"", name, blockingItemName );
             static bool alreadyShown = false;
             if ( alreadyShown )
                 return;
@@ -1384,7 +1385,7 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
         else
         {
             static bool alreadyShown = false;
-            spdlog::info( "Activated item: \"{}\", Closed item: \"{}\"", name, activeBlockingItem_.item->name() );
+            spdlog::info( "Activated item: \"{}\", Closed item: \"{}\"", name, blockingItemName );
             if ( !alreadyShown )
             {
                 alreadyShown = true;

@@ -18,7 +18,7 @@ namespace MR::ImGuiMeasurementIndicators
             b += ( da - db ) / std::abs( dot( da, rot90( db ) ) ) * value;
             c += ( db - dc ) / std::abs( dot( db, rot90( dc ) ) ) * value;
         }
-    };
+    }
 
     template <typename F>
     static void forEachElement( Element elem, F&& func )

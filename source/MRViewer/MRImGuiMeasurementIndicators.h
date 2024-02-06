@@ -70,9 +70,9 @@ namespace MR::ImGuiMeasurementIndicators
         constexpr StringWithIcon() {}
 
         // Need a bunch of constructors to allow implicit conversions when this is used as a function parameter.
-        constexpr StringWithIcon( const char* string ) : string(string) {}
-        constexpr StringWithIcon( const std::string& string ) : string(string) {}
-        constexpr StringWithIcon( std::string_view string ) : string(string) {}
+        constexpr StringWithIcon( const char* string ) : string( string ) {}
+        StringWithIcon( const std::string& string ) : string( string ) {} // GCC 10 doesn't like `constexpr` here.
+        constexpr StringWithIcon( std::string_view string ) : string( string ) {}
 
         constexpr StringWithIcon( StringIcon icon, std::size_t iconPos, std::string_view string )
             : icon( icon ), iconPos( iconPos ), string( string )

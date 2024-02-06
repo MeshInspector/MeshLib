@@ -638,7 +638,7 @@ QuadraticForm3f Mesh::quadraticForm( VertId v, const FaceBitSet * region ) const
             // otherwise it penalizes the shift proportionally to the distance from the line containing the edge
             qf.addDistToLine( edgeVector( e ).normalized() );
         }
-        if ( topology.isLeftInRegion( e, region ) )
+        if ( topology.left( e ) ) // intentionally do not check that left face is in region to respect its plane as well
         {
             // zero-area triangle is treated as no triangle with no penalty at all,
             // otherwise it penalizes the shift proportionally to the distance from the plane containing the triangle

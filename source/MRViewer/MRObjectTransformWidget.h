@@ -2,6 +2,7 @@
 
 #include "MRViewer.h"
 #include "MRViewerEventsListener.h"
+#include "MRMesh/MRFlagOperators.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRHistoryAction.h"
@@ -30,10 +31,11 @@ enum class ControlBit
     MoveMask = MoveX | MoveY | MoveZ,
     FullMask = RotMask | MoveMask
 };
+MR_MAKE_FLAG_OPERATORS( ControlBit )
 
 // This lambda is called in each frame, and returns transform mode mask for this frame in given viewport
 // if not set, full mask is return
-using TransformModesValidator = std::function<uint8_t( const Vector3f& center, const AffineXf3f& xf, ViewportId )>;
+using TransformModesValidator = std::function<ControlBit( const Vector3f& center, const AffineXf3f& xf, ViewportId )>;
 
 
 // Interface class for ObjectTransformWidget custom visualization
@@ -41,7 +43,7 @@ class MRVIEWER_CLASS ITransformControls
 {
 public:
     virtual ~ITransformControls() = default;
-    
+
     // get center of the widget in local space
     const Vector3f& getCenter() const { return center_; }
     MRVIEWER_API void setCenter( const Vector3f& center );
@@ -62,7 +64,7 @@ public:
 
     // Called once on widget created to init internal objects
     virtual void init( std::shared_ptr<Object> parent ) = 0;
-    // Called right after init and can be called on some internal actions to recreate 
+    // Called right after init and can be called on some internal actions to recreate
     // objects visualization
     virtual void update() = 0;
     // Called for hover checks
@@ -71,7 +73,7 @@ public:
     void stopModify() { stopModify_(); hover(); }
 
     // Called each frame for each viewport to update available transformation modes
-    MRVIEWER_API void updateVisualTransformMode( uint8_t showMask, ViewportMask viewportMask, const AffineXf3f& xf );
+    MRVIEWER_API void updateVisualTransformMode( ControlBit showMask, ViewportMask viewportMask, const AffineXf3f& xf );
 
     // One have to implement these functions to have visualization of translation and rotation
     virtual void updateTranslation( Axis ax, const Vector3f& startMove, const Vector3f& endMove ) = 0;
@@ -88,7 +90,7 @@ public:
 
         virtual std::string name() const override { return name_; }
 
-        virtual void action( HistoryAction::Type ) override 
+        virtual void action( HistoryAction::Type ) override
         {
             auto center = controls_.getCenter();
             controls_.setCenter( center_ );
@@ -112,7 +114,7 @@ protected:
     virtual void stopModify_() = 0;
     // one have to implement this function
     // it can be called in each frame (each viewport if needed) to update transform mode in different viewports
-    virtual void updateVisualTransformMode_( uint8_t showMask, ViewportMask viewportMask ) = 0;
+    virtual void updateVisualTransformMode_( ControlBit showMask, ViewportMask viewportMask ) = 0;
 private:
     Vector3f center_;
 
@@ -162,13 +164,13 @@ public:
 
     MRVIEWER_API virtual void updateTranslation( Axis ax, const Vector3f& startMove, const Vector3f& endMove ) override;
     MRVIEWER_API virtual void updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle ) override;
-    
+
     // returns TransformModesValidator by threshold dot value (this value is duty for hiding widget controls that have small projection on screen)
     MRVIEWER_API static TransformModesValidator ThresholdDotValidator( float thresholdDot );
 private:
     MRVIEWER_API virtual ControlBit hover_( bool pickThrough ) override;
     MRVIEWER_API virtual void stopModify_() override;
-    MRVIEWER_API virtual void updateVisualTransformMode_( uint8_t showMask, ViewportMask viewportMask ) override;
+    MRVIEWER_API virtual void updateVisualTransformMode_( ControlBit showMask, ViewportMask viewportMask ) override;
 
     VisualParams params_;
 
@@ -201,9 +203,9 @@ public:
     MRVIEWER_API void reset();
 
     // Returns current transform mode mask
-    uint8_t getTransformModeMask( ViewportId id = {} ) const { return transformModeMask_.get( id ); }
+    ControlBit getTransformModeMask( ViewportId id = {} ) const { return transformModeMask_.get( id ); }
     // Sets transform mode mask (enabling or disabling corresponding widget controls)
-    MRVIEWER_API void setTransformMode( uint8_t mask, ViewportId id = {} );
+    MRVIEWER_API void setTransformMode( ControlBit mask, ViewportId id = {} );
 
     // Transform operation applying to object while dragging an axis. This parameter does not apply to active operation.
     enum AxisTransformMode
@@ -333,7 +335,7 @@ private:
     };
     ActiveEditMode activeEditMode_{ TranslationMode };
 
-    // Initial box diagonal vector (before transformation), 
+    // Initial box diagonal vector (before transformation),
     // it is needed to correctly convert non-uniform scaling to uniform one and apply it to this widget
     Vector3f boxDiagonal_;
     // same as controlsRoot_->xf() but with non uniform scaling applied
@@ -349,7 +351,7 @@ private:
     float startAngle_ = 0;
     float accumAngle_ = 0;
 
-    ViewportProperty<uint8_t> transformModeMask_{ uint8_t( ControlBit::FullMask ) };
+    ViewportProperty<ControlBit> transformModeMask_{ ControlBit::FullMask };
     bool picked_{ false };
 
     std::function<void( float )> scaleTooltipCallback_;

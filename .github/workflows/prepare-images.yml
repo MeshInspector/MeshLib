@@ -34,7 +34,7 @@ jobs:
           submodules: recursive
 
       - name: Filter Linux paths
-        uses: dorny/paths-filter@v2
+        uses: dorny/paths-filter@v3
         id: linux-changes
         with:
           filters: |
@@ -42,14 +42,14 @@ jobs:
               - 'docker/ubuntu**'
               - 'docker/fedora**'
               - 'docker/emscripten**'
-              - 'requirements/!(windows.txt|macos.txt)'              
+              - 'requirements/!(windows.txt|macos.txt|python.txt)'              
               - 'scripts/build_thirdparty.sh'    
               - 'scripts/install_apt_requirements.sh'
               - 'scripts/install_dnf_requirements.sh'
               - 'thirdparty/!(install.bat|vcpkg/**)'
 
       - name: Filter Windows paths
-        uses: dorny/paths-filter@v2
+        uses: dorny/paths-filter@v3
         id: windows-changes
         with:
           filters: |

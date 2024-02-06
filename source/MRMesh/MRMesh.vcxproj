@@ -363,6 +363,7 @@
     <ClInclude Include="MRObjectSave.h" />
     <ClInclude Include="MRZlib.h" />
     <ClInclude Include="MRVoxelsVolumeAccess.h" />
+    <ClInclude Include="MRFlagOperators.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -399,6 +400,7 @@
     <ClCompile Include="MRCPRTests.cpp" />
     <ClCompile Include="MRCylinderObject.cpp" />
     <ClCompile Include="MRDenseBox.cpp" />
+    <ClCompile Include="MRDirectory.cpp" />
     <ClCompile Include="MRDistanceMap.cpp" />
     <ClCompile Include="MRAffineXf3.cpp" />
     <ClCompile Include="MRBestFit.cpp" />

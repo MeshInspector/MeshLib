@@ -1170,6 +1170,9 @@
     <ClInclude Include="MRLocalTriangulations.h">
       <Filter>Source Files\Triangulation</Filter>
     </ClInclude>
+    <ClInclude Include="MRFlagOperators.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1940,6 +1943,9 @@
     </ClCompile>
     <ClCompile Include="MRLocalTriangulations.cpp">
       <Filter>Source Files\Triangulation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRDirectory.cpp">
+      <Filter>Source Files\System</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

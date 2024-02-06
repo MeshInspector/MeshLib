@@ -143,6 +143,11 @@ public:
     MRMESH_API virtual AllVisualizeProperties getAllVisualizeProperties() const override;
     /// returns mask of viewports where given property is set
     MRMESH_API virtual const ViewportMask& getVisualizePropertyMask( unsigned type ) const override;
+
+    /// Loads font, and converts the symbols of text into mesh;
+    /// since this operation is time consuming, one can call this method in parallel for several ObjectLabels before rendering
+    MRMESH_API void buildMeshFromText() const;
+
 protected:
     PositionedText label_;
     std::filesystem::path pathToFont_;
@@ -185,8 +190,6 @@ private:
 
     /// set default scene-related properties
     void setDefaultSceneProperties_();
-
-    void buildMesh_() const;
 
     void updatePivotShift_() const;
 

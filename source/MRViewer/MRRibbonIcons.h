@@ -52,8 +52,8 @@ private:
         MaxRibbonItemIconSize = X3,
         MaxObjectTypeIconSize = X3
     };
-    std::array<int, size_t( Sizes::Count )> loadedRibbonItemIconSizes_ = { 0,0,0 };
-    std::array<int, size_t( Sizes::Count )> loadedObjectTypeIconSizes_ = { 0,0,0 };
+    std::array<int, size_t( Sizes::Count )> loadedRibbonItemIconSizes_ = {};
+    std::array<int, size_t( Sizes::Count )> loadedObjectTypeIconSizes_ = {};
 
     using SizedIcons = std::array<Icons, size_t( Sizes::Count )>;
 

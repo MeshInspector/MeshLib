@@ -9,26 +9,26 @@
 namespace MR
 {
 
-void Viewport::draw( const VisualObject& obj, DepthFuncion depthFunc, bool alphaSort ) const
+void Viewport::draw( const VisualObject& obj, DepthFunction depthFunc, bool alphaSort ) const
 {
     draw( obj, obj.worldXf( id ), projM_, depthFunc, alphaSort );
 }
 
 void Viewport::draw(const VisualObject& obj, const AffineXf3f& xf,
-     DepthFuncion depthFunc, bool alphaSort ) const
+     DepthFunction depthFunc, bool alphaSort ) const
 {
     draw( obj, xf, projM_, depthFunc, alphaSort );
 }
 
 void Viewport::draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f& projM,
-     DepthFuncion depthFunc, bool alphaSort ) const
+     DepthFunction depthFunc, bool alphaSort ) const
 {
     Matrix4f normM;
     obj.render( getModelRenderParams( xf, projM, &normM, depthFunc, alphaSort ) );
 }
 
 ModelRenderParams Viewport::getModelRenderParams( const Matrix4f & modelM, const Matrix4f & projM,
-    Matrix4f * normM, DepthFuncion depthFunc, bool alphaSort ) const
+    Matrix4f * normM, DepthFunction depthFunc, bool alphaSort ) const
 {
     if ( normM )
     {
@@ -62,7 +62,7 @@ void Viewport::drawLines( const std::vector<LineSegm3f>& lines, const std::vecto
 {
     if ( !Viewer::constInstance()->isGLInitialized() )
         return;
-    // set GL_DEPTH_TEST specified for points 
+    // set GL_DEPTH_TEST specified for points
     GLuint lineVAO;
     GL_EXEC( glGenVertexArrays( 1, &lineVAO ) );
     GlBuffer lineBuffer, lineColorBuffer;
@@ -79,7 +79,7 @@ void Viewport::drawLines( const std::vector<LineSegm3f>& lines, const std::vecto
 
     GL_EXEC( glViewport( ( GLsizei )params.viewport.x, ( GLsizei )params.viewport.y,
         ( GLsizei )params.viewport.z, ( GLsizei )params.viewport.w ) );
-    // Send lines data to GL, install lines properties 
+    // Send lines data to GL, install lines properties
     GL_EXEC( glBindVertexArray( lineVAO ) );
 
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::AdditionalLines );
@@ -113,9 +113,9 @@ void Viewport::drawPoints( const std::vector<Vector3f>& points, const std::vecto
 {
     if ( !Viewer::constInstance()->isGLInitialized() )
         return;
-    // set GL_DEPTH_TEST specified for points 
+    // set GL_DEPTH_TEST specified for points
     GLuint pointVAO;
-    // points 
+    // points
     GL_EXEC( glGenVertexArrays( 1, &pointVAO ) );
     GlBuffer pointBuffer, pointColorBuffer;
 
@@ -130,7 +130,7 @@ void Viewport::drawPoints( const std::vector<Vector3f>& points, const std::vecto
 
     GL_EXEC( glViewport( ( GLsizei )params.viewport.x, ( GLsizei )params.viewport.y,
         ( GLsizei )params.viewport.z, ( GLsizei )params.viewport.w ) );
-    // Send points data to GL, install points properties 
+    // Send points data to GL, install points properties
     GL_EXEC( glBindVertexArray( pointVAO ) );
 
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::AdditionalPoints );
@@ -168,7 +168,7 @@ void Viewport::drawTris( const std::vector<Triangle3f>& tris, const std::vector<
 {
     if ( !Viewer::constInstance()->isGLInitialized() )
         return;
-    // set GL_DEPTH_TEST specified for points 
+    // set GL_DEPTH_TEST specified for points
     GLuint quadVAO;
     GL_EXEC( glGenVertexArrays( 1, &quadVAO ) );
     GlBuffer quadBuffer, quadColorBuffer, quadNormalBuffer;
@@ -185,7 +185,7 @@ void Viewport::drawTris( const std::vector<Triangle3f>& tris, const std::vector<
 
     GL_EXEC( glViewport( ( GLsizei )params.viewport.x, ( GLsizei )params.viewport.y,
         ( GLsizei )params.viewport.z, ( GLsizei )params.viewport.w ) );
-    // Send lines data to GL, install lines properties 
+    // Send lines data to GL, install lines properties
     GL_EXEC( glBindVertexArray( quadVAO ) );
 
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::AdditionalQuad );

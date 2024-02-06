@@ -67,7 +67,7 @@ RenderBufferRef<unsigned> RenderVolumeObject::loadActiveVoxelsTextureBuffer_()
     assert( activeVoxelsTextureSize_.x * activeVoxelsTextureSize_.y >= size );
     auto buffer = glBuffer.prepareBuffer<unsigned>( activeVoxelsTextureSize_.x * activeVoxelsTextureSize_.y );
 
-    
+
     if ( objVoxels_->getVolumeRenderActiveVoxels().empty() )
     {
         tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
@@ -200,7 +200,7 @@ void RenderVolumeObject::render_( const ModelRenderParams& renderParams, unsigne
 
     GL_EXEC( glBindVertexArray( volumeArrayObjId_ ) );
     bindVertexAttribArray( shader, "position", volumeVertsBuffer_, cubePoints, 3, !volumeVertsBuffer_.valid() );
-    volumeIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, !volumeIndicesBuffer_.valid(), 
+    volumeIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, !volumeIndicesBuffer_.valid(),
         cubeTriangles.data(), cubeTriangles.size() );
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 12 );
@@ -209,9 +209,9 @@ void RenderVolumeObject::render_( const ModelRenderParams& renderParams, unsigne
     GL_EXEC( glCullFace( GL_BACK ) );
 
     // currently only less supported for volume rendering
-    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Less ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Less ) ) );
     GL_EXEC( glDrawElements( GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr ) );
-    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
 
     GL_EXEC( glDisable( GL_CULL_FACE ) );
     GL_EXEC( glEnable( GL_MULTISAMPLE ) );
@@ -312,10 +312,10 @@ void RenderVolumeObject::bindVolume_( bool picker )
             }
         }
         denseMap_.loadData(
-            { 
+            {
                 .resolution = Vector2i( (int)denseMap.size(), 1 ),
-                .internalFormat = GL_RGBA8, 
-                .format = GL_RGBA, 
+                .internalFormat = GL_RGBA8,
+                .format = GL_RGBA,
                 .type = GL_UNSIGNED_BYTE,
                 .filter = FilterType::Linear },
             denseMap );

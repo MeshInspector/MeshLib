@@ -1393,7 +1393,7 @@ void Viewer::recursiveDraw_( const Viewport& vp, const Object& obj, const Affine
     if ( visObj && ( renderType == getObjRenderType_( visObj, vp.id ) ) )
     {
         bool alphaNeed = renderType == VisualObjectRenderType::Transparent && alphaSortEnabled_;
-        vp.draw( *visObj, xfCopy, DepthFuncion::Default, alphaNeed );
+        vp.draw( *visObj, xfCopy, DepthFunction::Default, alphaNeed );
         if ( numDraws )
             ++( *numDraws );
     }
@@ -1752,7 +1752,7 @@ void Viewer::initRotationCenterObject_()
 
 void Viewer::initSpaceMouseHandler_()
 {
-    
+
 
     #if defined(__EMSCRIPTEN__)
         spaceMouseHandler_ = std::make_unique<SpaceMouseHandler>();
@@ -2038,10 +2038,10 @@ Image Viewer::captureSceneScreenShot( const Vector2i& resolution )
 
     fd.copyTextureBindDef();
     fd.bindTexture();
-    
+
 #ifdef __EMSCRIPTEN__
     GLuint fbo;
-    GL_EXEC( glGenFramebuffers(1, &fbo) ); 
+    GL_EXEC( glGenFramebuffers(1, &fbo) );
     GL_EXEC( glBindFramebuffer(GL_FRAMEBUFFER, fbo) );
     GL_EXEC( glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fd.getTexture(), 0) );
 

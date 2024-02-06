@@ -1,4 +1,5 @@
 #pragma once
+#include "MRMesh/MRFlagOperators.h"
 #include "MRMeshFwd.h"
 #include "MRViewportId.h"
 #include "MRVector4.h"
@@ -9,7 +10,7 @@
 namespace MR
 {
 
-enum class DepthFuncion
+enum class DepthFunction
 {
     Never = 0,
     Less = 1,
@@ -21,6 +22,7 @@ enum class DepthFuncion
     Always = Less | Equal | Greater,
     Default = 8 // usually "Less" but may differ for different object types
 };
+MR_MAKE_FLAG_OPERATORS( DepthFunction )
 
 /// describes basic rendering parameters in a viewport
 struct BaseRenderParams
@@ -37,7 +39,7 @@ struct ModelRenderParams : BaseRenderParams
     const Matrix4f& modelMatrix;
     const Matrix4f* normMatrixPtr{ nullptr }; // normal matrix, only necessary for triangles rendering
     const Plane3f& clipPlane;    // viewport clip plane (it is not applied while object does not have clipping flag set)
-    DepthFuncion depthFunction = DepthFuncion::Default;
+    DepthFunction depthFunction = DepthFunction::Default;
     Vector3f lightPos;           // position of light source, unused for picker
     bool alphaSort{ false };     // if this flag is true shader for alpha sorting is used, unused for picker
 };

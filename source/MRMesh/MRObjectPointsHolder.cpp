@@ -6,11 +6,11 @@
 #include "MRSceneColors.h"
 #include "MRHeapBytes.h"
 #include "MRSerializer.h"
+#include "MRStringConvert.h"
+#include "MRDirectory.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
-#include "MRStringConvert.h"
-#include <filesystem>
 
 namespace MR
 {
@@ -160,6 +160,16 @@ size_t ObjectPointsHolder::heapBytes() const
         + MR::heapBytes( points_ );
 }
 
+void ObjectPointsHolder::setSavePointsFormat( const char * newFormat )
+{
+    if ( !newFormat || *newFormat != '.' )
+    {
+        assert( false );
+        return;
+    }
+    savePointsFormat_ = newFormat;
+}
+
 void ObjectPointsHolder::swapBase_( Object& other )
 {
     if ( auto otherPointsHolder = other.asType<ObjectPointsHolder>() )
@@ -188,44 +198,34 @@ Expected<std::future<VoidOrErrStr>> ObjectPointsHolder::serializeModel_( const s
     if ( ancillary_ || !points_ )
         return {};
 
-    const auto * colorMapPtr = vertsColorMap_.empty() ? nullptr : &vertsColorMap_;
-#ifndef MRMESH_NO_OPENCTM
-    if ( points_->points.empty() ) // toCtm requires at least one point in the vector
+    if ( points_->points.empty() ) // some formats (e.g. .ctm) require at least one point in the vector
         return std::async( getAsyncLaunchType(), []{ return VoidOrErrStr{}; } );
-    return std::async( getAsyncLaunchType(),
-        [points = points_, filename = utf8string( path ) + ".ctm", ptr = colorMapPtr] ()
+
+    SaveSettings saveSettings;
+    saveSettings.saveValidOnly = false;
+    saveSettings.rearrangeTriangles = false;
+    if ( !vertsColorMap_.empty() )
+        saveSettings.colors = &vertsColorMap_;
+    auto save = [points = points_, filename = std::filesystem::path( path ) += savePointsFormat_, saveSettings]()
     {
-        MR::PointsSave::CtmSavePointsOptions settings;
-        settings.saveValidOnly = false;
-        settings.colors = ptr;
-        return MR::PointsSave::toCtm( *points, pathFromUtf8( filename ), settings );
-    } );
-#else
-    return std::async( getAsyncLaunchType(),
-        [points = points_, filename = utf8string( path ) + ".ply", ptr = colorMapPtr] ()
-    {
-        MR::PointsSave::toPly( *points, pathFromUtf8( filename ), MR::PointsSave::Settings{ .saveValidOnly = false, .colors = ptr } );
-    } );
-#endif
+        return MR::PointsSave::toAnySupportedFormat( *points, filename, saveSettings );
+    };
+    return std::async( getAsyncLaunchType(), save );
 }
 
 VoidOrErrStr ObjectPointsHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
-    auto fname = path;
-#ifndef MRMESH_NO_OPENCTM
-    fname += ".ctm";
+    auto modelPath = pathFromUtf8( utf8string( path ) + ".ctm" ); //quick path for most used format
     std::error_code ec;
-    if (   !is_regular_file( fname, ec ) // now we do not write a file for empty point cloud
-        || file_size( fname, ec ) == 0 ) // and previously an empty file was created
+    if ( !is_regular_file( modelPath, ec ) )
+        modelPath = findPathWithExtension( path );
+    if ( modelPath.empty()                   // now we do not write a file for empty point cloud
+        || file_size( modelPath, ec ) == 0 ) // and previously an empty file was created
     {
         points_ = std::make_shared<PointCloud>();
         return {};
     }
-    auto res = PointsLoad::fromCtm( fname, &vertsColorMap_, progressCb );
-#else
-    fname += ".ply";
-    auto res = PointsLoad::fromPly( fname, &vertsColorMap_, progressCb );
-#endif
+    auto res = PointsLoad::fromAnySupportedFormat( modelPath, &vertsColorMap_, nullptr, progressCb );
     if ( !res.has_value() )
         return unexpected( std::move( res.error() ) );
 

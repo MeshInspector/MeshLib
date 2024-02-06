@@ -194,6 +194,7 @@
     <ClInclude Include="MRTouchpadController.h" />
     <ClInclude Include="MRSurfaceManipulationWidget.h" />
     <ClInclude Include="MRPointInAllSpaces.h" />
+    <ClInclude Include="MRImGuiVectorOperators.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

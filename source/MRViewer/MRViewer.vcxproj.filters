@@ -620,6 +620,9 @@
     <ClInclude Include="MRSurfaceContoursWidget.h">
       <Filter>Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="MRImGuiVectorOperators.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

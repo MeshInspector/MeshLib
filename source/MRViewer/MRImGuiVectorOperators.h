@@ -61,22 +61,9 @@ namespace MR::ImGuiMath
         }
         else
         {
-            // Not using `[]`, since the direct calculations on the address could mess with compiler optimizations?
-
-            if ( i == 0 )
-                return value.x;
-            if ( i == 1 )
-                return value.y;
-
-            if constexpr ( std::is_same_v<std::remove_cvref_t<T>, ImVec4> )
-            {
-                if ( i == 2 )
-                    return value.z;
-                if ( i == 3 )
-                    return value.w;
-            }
-
-            assert( false && "Element index is out of range." );
+            // Technically UB, but helps with optimizations on MSVC for some reason, compared to an if-else chain.
+            // GCC and Clang optimize both in the same manner.
+            return ( &value.x )[i];
         }
     }
 

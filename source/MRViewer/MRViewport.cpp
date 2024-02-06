@@ -183,7 +183,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
         auto voxObj = renderVector[pickRes.geomId]->asType<ObjectVoxels>();
         if ( voxObj && voxObj->isVolumeRenderingEnabled() )
         {
-            res.point = renderVector[pickRes.geomId]->worldXf( id ).inverse()( 
+            res.point = renderVector[pickRes.geomId]->worldXf( id ).inverse()(
                 unprojectFromViewportSpace( Vector3f( viewportPoints[i].x, viewportPoints[i].y, pickRes.zBuffer ) ) );
             // TODO: support VoxelId
         }
@@ -256,7 +256,7 @@ std::vector<std::shared_ptr<MR::VisualObject>> Viewport::findObjectsInRect( cons
     return result;
 }
 
-std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> Viewport::findVisibleFaces( const BitSet& includePixBs, 
+std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> Viewport::findVisibleFaces( const BitSet& includePixBs,
     int maxRenderResolutionSide /*= 512 */ ) const
 {
     MR_TIMER;
@@ -297,7 +297,7 @@ std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> Viewport::fi
         Vector2i coord = realRect.min + Vector2i( mult( downscaledPosRatio, Vector2f( realRect.size() ) ) );
         assert( coord.x < width );
         assert( coord.y < height );
-        
+
         int realId = coord.x + coord.y * width;
         if ( !includePixBs.test( realId ) )
             continue;
@@ -408,7 +408,7 @@ void Viewport::setBackgroundColor( const Color& color )
 {
     if ( params_.backgroundColor == color )
         return;
-    params_.backgroundColor = color; 
+    params_.backgroundColor = color;
     needRedraw_ = true;
 }
 
@@ -416,7 +416,7 @@ void Viewport::setClippingPlane( const Plane3f& plane )
 {
     if ( params_.clippingPlane == plane )
         return;
-    params_.clippingPlane = plane; 
+    params_.clippingPlane = plane;
     needRedraw_ = true;
 }
 
@@ -530,7 +530,7 @@ void Viewport::drawAxes() const
 
         float scale = (transSide - transBase).length();
         const auto basisAxesXf = AffineXf3f( Matrix3f::scale( scale ), transBase );
-        draw( *Viewer::constInstance()->basisAxes, basisAxesXf, staticProj_, DepthFuncion::Always );
+        draw( *Viewer::constInstance()->basisAxes, basisAxesXf, staticProj_, DepthFunction::Always );
         draw( *Viewer::constInstance()->basisAxes, basisAxesXf, staticProj_ );
         for ( const auto& child : getViewerInstance().basisAxes->children() )
         {

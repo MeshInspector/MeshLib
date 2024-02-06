@@ -7,6 +7,7 @@
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 
+#include "MRMesh/MRFlagOperators.h"
 #include "exports.h"
 #include "ImGuiTraits.h"
 #include "MRMesh/MRVector2.h"
@@ -235,6 +236,7 @@ enum class PaletteChanges
     Ranges,                // 0b10
     All = Texture | Ranges // 0b11
 };
+MR_MAKE_FLAG_OPERATORS( PaletteChanges )
 
 /// Helper palette widget, allows to change palette ranges and filter type \n
 /// can load and save palette preset.
@@ -242,7 +244,7 @@ enum class PaletteChanges
 /// \param fixZero if present shows checkbox to fix zero symmetrical palette
 /// \return mask of changes, if it has PaletteChanges::Texture bit - object requires texture update,
 /// if it has PaletteChanges::Ranges uv coordinates should be recalculated and updated in object
-MRVIEWER_API PaletteChanges Palette( 
+MRVIEWER_API PaletteChanges Palette(
     const char* label,
     MR::Palette& palette,
     std::string& presetName,
@@ -266,7 +268,7 @@ MRVIEWER_API void Image( const MR::ImGuiImage& image, const ImVec2& size, const 
 
 /// get image coordinates under cursor considering Y-direction flipping
 MRVIEWER_API MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& size, const ImVec2& imagePos );
- 
+
 
 /// draw spinner in given place, radius with respect to scaling
 MRVIEWER_API void Spinner( float radius, float scaling );

@@ -1170,6 +1170,9 @@
     <ClInclude Include="MRLocalTriangulations.h">
       <Filter>Source Files\Triangulation</Filter>
     </ClInclude>
+    <ClInclude Include="MRFlagOperators.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

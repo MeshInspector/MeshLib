@@ -105,7 +105,7 @@ public:
     template<typename C>
     void loadData( const Settings & settings, const C & cont ) {
         assert( cont.size() >= settings.size() );
-        loadData( settings, (const char *)cont.data() ); 
+        loadData( settings, (const char *)cont.data() );
     }
 
     // binds current texture to OpenGL context, optionally refreshing its data
@@ -168,7 +168,7 @@ public:
     template<typename C>
     void loadData( const Settings & settings, const C & cont ) {
         assert( cont.size() >= settings.size() );
-        loadData( settings, (const char *)cont.data() ); 
+        loadData( settings, (const char *)cont.data() );
     }
 
     // binds current texture to OpenGL context, optionally refreshing its data
@@ -253,39 +253,39 @@ inline GLint bindVertexAttribArray(
     return bindVertexAttribArray( settings );
 }
 
-// return real GL value for DepthFuncion
+// return real GL value for DepthFunction
 // default is less
-inline int getDepthFunctionLess( DepthFuncion funcType )
+inline int getDepthFunctionLess( DepthFunction funcType )
 {
     switch ( funcType )
     {
-    case DepthFuncion::Default:
-    case DepthFuncion::Less:
+    case DepthFunction::Default:
+    case DepthFunction::Less:
         return GL_LESS;
-    case DepthFuncion::Never:
+    case DepthFunction::Never:
         return GL_NEVER;
-    case DepthFuncion::LessOrEqual:
+    case DepthFunction::LessOrEqual:
         return GL_LEQUAL;
-    case DepthFuncion::Equal:
+    case DepthFunction::Equal:
         return GL_EQUAL;
-    case DepthFuncion::GreaterOrEqual:
+    case DepthFunction::GreaterOrEqual:
         return GL_GEQUAL;
-    case DepthFuncion::Greater:
+    case DepthFunction::Greater:
         return GL_GREATER;
-    case DepthFuncion::Always:
+    case DepthFunction::Always:
         return GL_ALWAYS;
-    case DepthFuncion::NotEqual:
+    case DepthFunction::NotEqual:
         return GL_NOTEQUAL;
     default:
         return 0;
     }
 }
 
-// return real GL value for DepthFuncion
+// return real GL value for DepthFunction
 // default is less or equal
-inline int getDepthFunctionLEqual( DepthFuncion funcType )
+inline int getDepthFunctionLEqual( DepthFunction funcType )
 {
-    if ( funcType == DepthFuncion::Default )
+    if ( funcType == DepthFunction::Default )
         return GL_LEQUAL;
     return getDepthFunctionLess( funcType );
 }

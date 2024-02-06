@@ -1356,13 +1356,13 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
             blockingHighlightTimer_ = 2.0f;
             return pushNotification( {
                 .text = "Unable to close this plugin",
-                .type = NotificationType::Info } );
+                .type = NotificationType::Warning } );
         }
 
         if ( !autoCloseBlockingPlugins_ )
         {
             blockingHighlightTimer_ = 2.0f;
-
+            spdlog::info( "Cannot activate item: \"{}\", Active: \"{}\"", name, activeBlockingItem_.item->name() );
             static bool alreadyShown = false;
             if ( alreadyShown )
                 return;
@@ -1384,6 +1384,7 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
         else
         {
             static bool alreadyShown = false;
+            spdlog::info( "Activated item: \"{}\", Closed item: \"{}\"", name, activeBlockingItem_.item->name() );
             if ( !alreadyShown )
             {
                 alreadyShown = true;
@@ -1401,11 +1402,6 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
                 .text = "That plugin was closed due to other plugin start.\nIt can be changed in Viewer Settings.",
                 .type = NotificationType::Info } );
             }
-        }
-
-        if ( auto plugin = std::dynamic_pointer_cast< StateBasePlugin >( activeBlockingItem_.item ); plugin )
-        {
-            plugin->enable( false );
         }
     }
     if ( !wasActive && !available )

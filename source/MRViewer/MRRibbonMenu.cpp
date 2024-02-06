@@ -1347,7 +1347,10 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
     auto name = item->name();
     if ( !wasActive && available && ( activeBlockingItem_.item && item->blocking() ) )
     {
-        if ( !autoCloseBlockingPlugins_ )
+        bool closed = true;
+        if ( autoCloseBlockingPlugins_ )
+            closed = activeBlockingItem_.item->action();
+        if ( !autoCloseBlockingPlugins_ || !closed )
         {
             spdlog::info( "Cannot activate item: \"{}\", Active: \"{}\"", name, activeBlockingItem_.item->name() );
             blockingHighlightTimer_ = 2.0f;

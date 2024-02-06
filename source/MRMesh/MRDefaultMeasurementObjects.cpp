@@ -11,7 +11,7 @@ namespace MR
 
 void attachDefaultMeasurementsToObject( Object& object, const AttachDefaultMeasurementsParams& params )
 {
-    if ( auto circle = dynamic_cast<CircleObject *>( &object ) )
+    if ( dynamic_cast<CircleObject *>( &object ) )
     {
         if ( auto radius = object.find<RadiusMeasurementObject>();
             bool( radius ) /*implies*/<= params.overwrite
@@ -30,7 +30,7 @@ void attachDefaultMeasurementsToObject( Object& object, const AttachDefaultMeasu
         return;
     }
 
-    if ( auto cylinder = dynamic_cast<CylinderObject *>( &object ) )
+    if ( dynamic_cast<CylinderObject *>( &object ) )
     {
         if ( auto radius = object.find<RadiusMeasurementObject>();
             bool( radius ) /*implies*/<= params.overwrite
@@ -49,7 +49,7 @@ void attachDefaultMeasurementsToObject( Object& object, const AttachDefaultMeasu
         return;
     }
 
-    if ( auto cone = dynamic_cast<ConeObject *>( &object ) )
+    if ( dynamic_cast<ConeObject *>( &object ) )
     {
         if ( auto radius = object.find<RadiusMeasurementObject>();
             bool( radius ) /*implies*/<= params.overwrite
@@ -69,7 +69,7 @@ void attachDefaultMeasurementsToObject( Object& object, const AttachDefaultMeasu
         return;
     }
 
-    if ( auto sphere = dynamic_cast<SphereObject *>( &object ) )
+    if ( dynamic_cast<SphereObject *>( &object ) )
     {
         if ( auto radius = object.find<RadiusMeasurementObject>();
             bool( radius ) /*implies*/<= params.overwrite

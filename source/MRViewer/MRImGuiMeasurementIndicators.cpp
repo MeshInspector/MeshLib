@@ -18,10 +18,14 @@ static void expandTriangle( ImVec2& a, ImVec2& b, ImVec2& c, float value )
         float fa = std::abs( dot( dc, rot90( da ) ) );
         float fb = std::abs( dot( da, rot90( db ) ) );
         float fc = std::abs( dot( db, rot90( dc ) ) );
-        assert( fa != 0 && fb != 0 && fc != 0 ); // A degenerate triangle?
-        a += ( dc - da ) / fa * value;
-        b += ( da - db ) / fb * value;
-        c += ( db - dc ) / fc * value;
+
+        // If this is false, we have a degenerate triangle.
+        if ( fa != 0 && fb != 0 && fc != 0 )
+        {
+            a += ( dc - da ) / fa * value;
+            b += ( da - db ) / fb * value;
+            c += ( db - dc ) / fc * value;
+        }
     }
 }
 

@@ -125,10 +125,10 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
                                ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActive ).getUInt32() );
         ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
         bool openChild = false;
-        if ( isSmallUI_ && !resultsList.empty() )
+        if ( !resultsList.empty() )
         {
             openChild = true;
-            const int itemCount = int( resultsList.size() ) + ( !searchLine_.empty() && captionCount_ >= 0 ? 1 : 0 );
+            const int itemCount = std::min( int( resultsList.size() ) + ( !searchLine_.empty() && captionCount_ >= 0 ? 1 : 0 ), 15 );
             float height = ySize * itemCount + ImGui::GetStyle().ItemSpacing.y * ( itemCount - 1 );
             height = std::min( height, getViewerInstance().framebufferSize.y - pos.y - ImGui::GetCursorPosY() - ImGui::GetStyle().WindowPadding.y );
             ImGui::BeginChild( "Search result list", ImVec2( -1, height ) );

@@ -289,7 +289,7 @@ bool ObjectVoxels::prepareDataForVolumeRendering( ProgressCallback cb /*= {} */ 
 {
     if ( !vdbVolume_.data )
         return false;
-    auto res = vdbVolumeToSimpleVolume<uint16_t>( vdbVolume_, getActiveBounds(), cb );
+    auto res = vdbVolumeToSimpleVolumeU16( vdbVolume_, getActiveBounds(), cb );
     if ( !res || res->data.empty() )
     {
         volumeRenderingData_.reset();

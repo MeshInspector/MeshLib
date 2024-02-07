@@ -51,11 +51,15 @@ private:
 
     bool searchInputText_( const char* label, std::string& str, const RibbonMenuSearch::Parameters& params );
 
+    void updateSearchResult_();
+
     std::string searchLine_;
     std::vector<RibbonSchemaHolder::SearchResult> searchResult_;
     std::vector<RibbonSchemaHolder::SearchResultWeight> searchResultWeight_;
     std::vector<RibbonSchemaHolder::SearchResult> recentItems_;
-    int hightlightedSearchItem_{ -1 };
+    int hightlightedSearchItem_{ 0 };
+    int captionCount_ = 0;
+
 
     bool isSmallUI_ = false;
     bool active_ = false;

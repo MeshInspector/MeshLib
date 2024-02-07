@@ -8,10 +8,11 @@
 #include "MRMeshLoad.h"
 #include "MRStringConvert.h"
 #include "MR2DContoursTriangulation.h"
+#include "MRString.h"
+#include "MRTimer.h"
+#include "MRPch/MRSpdlog.h"
 #include "MRPch/MRAsyncLaunchType.h"
 #include "MRPch/MRJson.h"
-#include "MRString.h"
-#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -150,7 +151,14 @@ void ObjectLabel::setupRenderObject_() const
         renderObj_ = createRenderObject<ObjectLabel>( *this );
 
     if ( needRebuild_ && !label_.text.empty() && !pathToFont_.empty() )
-        buildMesh_();
+        buildMeshFromText();
+
+    if ( mesh_ && renderObj_ )
+    {
+        // we can always clear cpu model for labels
+        renderObj_->forceBindAll();
+        mesh_.reset();
+    }
 }
 
 void ObjectLabel::setDefaultColors_()
@@ -162,8 +170,9 @@ void ObjectLabel::setDefaultColors_()
     setContourColor( Color::gray() );
 }
 
-void ObjectLabel::buildMesh_() const
+void ObjectLabel::buildMeshFromText() const
 {
+    MR_TIMER
     std::vector<std::string> splited = split( label_.text, "\n" );
 
     mesh_ = std::make_shared<Mesh>();
@@ -196,10 +205,6 @@ void ObjectLabel::buildMesh_() const
 
     // important to call before bindAllVisualization to avoid recursive calls
     needRebuild_ = false;
-
-    // we can always clear cpu model for labels
-    bindAllVisualization();
-    mesh_.reset();
 }
 
 void ObjectLabel::updatePivotShift_() const

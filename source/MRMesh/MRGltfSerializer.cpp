@@ -111,8 +111,16 @@ Expected<int, std::string> readVertCoords( VertCoords& vertexCoordinates, const 
     if ( posAttrib == primitive.attributes.end() )
         return unexpected( "No vertex data" );
 
+    if ( posAttrib->second >= model.accessors.size() )
+        return unexpected( "Invalid accessor index" );
     const auto& accessor = model.accessors[posAttrib->second];
+
+    if ( accessor.bufferView >= model.bufferViews.size() )
+        return unexpected( "Invalid bufferView index" );
     const auto& bufferView = model.bufferViews[accessor.bufferView];
+
+    if ( bufferView.buffer >= model.buffers.size() )
+        return unexpected( "Invalid buffer index" );
     const auto& buffer = model.buffers[bufferView.buffer];
 
     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT || accessor.type != TINYGLTF_TYPE_VEC3 )

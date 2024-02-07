@@ -113,7 +113,7 @@ void RibbonMenu::setCustomContextCheckbox(
     customCheckBox_[name] = customContextMenuCheckbox;
 }
 
-void RibbonMenu::init( MR::Viewer* _viewer ) 
+void RibbonMenu::init( MR::Viewer* _viewer )
 {
     ImGuiMenu::init( _viewer );
     // should init instance before load schema (as far as some font are used inside)
@@ -140,7 +140,7 @@ void RibbonMenu::init( MR::Viewer* _viewer )
         toolbar_.drawCustomize();
         drawRibbonSceneList_();
         drawRibbonViewportsLabels_();
-        
+
         drawActiveList_();
 
         drawWelcomeWindow_();
@@ -418,7 +418,7 @@ bool RibbonMenu::drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>
     bool res = false;
     for ( auto& [name, custom] : customCheckBox_ )
     {
-        if ( !selectedMask || ~custom.selectedMask & selectedMask )
+        if ( !bool( selectedMask ) || bool( ~custom.selectedMask & selectedMask ) )
         {
             continue;
         }
@@ -534,8 +534,8 @@ void RibbonMenu::drawHeaderPannel_()
 
     ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::SemiBold ) );
     // TODO_store: this needs recalc only on scaling change, no need to calc each frame
-    std::vector<float> textSizes( RibbonSchemaHolder::schema().tabsOrder.size() );// TODO_store: add to some store at the beginning not to calc each time  
-    std::vector<float> tabSizes( RibbonSchemaHolder::schema().tabsOrder.size() );// TODO_store: add to some store at the beginning not to calc each time  
+    std::vector<float> textSizes( RibbonSchemaHolder::schema().tabsOrder.size() );// TODO_store: add to some store at the beginning not to calc each time
+    std::vector<float> tabSizes( RibbonSchemaHolder::schema().tabsOrder.size() );// TODO_store: add to some store at the beginning not to calc each time
     auto summaryTabPannelSize = 2 * 12.0f * menuScaling - cTabsInterval * menuScaling; // init shift (by eye, not defined in current design maket)
     for ( int i = 0; i < tabSizes.size(); ++i )
     {
@@ -623,7 +623,7 @@ void RibbonMenu::drawHeaderPannel_()
 
         if ( activeTabIndex_ == i || hovered || pressed )
         {
-            Color tabRectColor; 
+            Color tabRectColor;
             if ( activeTabIndex_ == i )
             {
                 if ( pressed )
@@ -759,12 +759,12 @@ void RibbonMenu::drawActiveList_()
             ImGui::SetNextWindowPos( pos );
         }
 
-    ImGuiWindowFlags window_flags = 
-        ImGuiWindowFlags_AlwaysAutoResize | 
-        ImGuiWindowFlags_Popup | 
-        ImGuiWindowFlags_NoTitleBar | 
-        ImGuiWindowFlags_NoResize | 
-        ImGuiWindowFlags_NoSavedSettings | 
+    ImGuiWindowFlags window_flags =
+        ImGuiWindowFlags_AlwaysAutoResize |
+        ImGuiWindowFlags_Popup |
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoSavedSettings |
         ImGuiWindowFlags_NoMove;
     ImGui::PushStyleVar( ImGuiStyleVar_PopupBorderSize, 0.0f );
     ImGui::PushStyleColor( ImGuiCol_PopupBg, ImVec4( 0, 0, 0, 0 ) );
@@ -826,7 +826,7 @@ void RibbonMenu::drawActiveList_()
             center.x += dotShift - winPadding.x;
             center.y += dotShift - winPadding.y;
             ImGui::GetWindowDrawList()->AddCircleFilled( center, 2 * scaling, Color( 60, 169, 20, 255 ).getUInt32() );
-            
+
             ImGui::SetCursorPosX( dotShift + 2 * scaling + itemSpacing.x );
             auto savedPos = ImGui::GetCursorPosY();
             ImGui::SetCursorPosY( 0.5f * ( blockSize.y - ImGui::GetFontSize() ) );
@@ -1347,9 +1347,63 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
     auto name = item->name();
     if ( !wasActive && available && ( activeBlockingItem_.item && item->blocking() ) )
     {
-        spdlog::info( "Cannot activate item: \"{}\", Active: \"{}\"", name, activeBlockingItem_.item->name() );
-        blockingHighlightTimer_ = 2.0f;
-        return;
+        const auto blockingItemName = activeBlockingItem_.item->name();
+        bool closed = true;
+        if ( autoCloseBlockingPlugins_ )
+            closed = activeBlockingItem_.item->action();
+
+        if ( !closed )
+        {
+            blockingHighlightTimer_ = 2.0f;
+            return pushNotification( {
+                .text = "Unable to close this plugin",
+                .type = NotificationType::Warning } );
+        }
+
+        if ( !autoCloseBlockingPlugins_ )
+        {
+            blockingHighlightTimer_ = 2.0f;
+            spdlog::info( "Cannot activate item: \"{}\", Active: \"{}\"", name, blockingItemName );
+            static bool alreadyShown = false;
+            if ( alreadyShown )
+                return;
+
+            alreadyShown = true;
+            return pushNotification( {
+                .onButtonClick = []
+                {
+                    auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
+                    if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
+                        return;
+                    if ( viewerSettingsIt->second.item && !viewerSettingsIt->second.item->isActive() )
+                        viewerSettingsIt->second.item->action();
+                },
+                .buttonName = "Open Viewer Settings",
+                .text = "Unable to activate this tool because another blocking tool is already active.\nIt can be changed in Viewer Settings.",
+                .type = NotificationType::Info } );
+        }
+        else
+        {
+            static bool alreadyShown = false;
+            spdlog::info( "Activated item: \"{}\", Closed item: \"{}\"", name, blockingItemName );
+            if ( !alreadyShown )
+            {
+                alreadyShown = true;
+
+                pushNotification( {
+                .onButtonClick = []
+                {
+                    auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
+                    if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
+                        return;
+                    if ( viewerSettingsIt->second.item && !viewerSettingsIt->second.item->isActive() )
+                        viewerSettingsIt->second.item->action();
+                },
+                .buttonName = "Open Viewer Settings",
+                .text = "That tool was closed due to other tool start.\nIt can be changed in Viewer Settings.",
+                .type = NotificationType::Info } );
+            }
+        }
     }
     if ( !wasActive && !available )
         return;
@@ -1570,7 +1624,7 @@ Vector2f RibbonMenu::drawRibbonSceneResizeLine_()
     rectHover.Min.x += size.x - 3.5f * scaling;
     rectHover.Max.x += size.x + 3.5f * scaling;
     rectHover.Max.y += size.y;
-    
+
     rectDraw = rectHover;
     rectDraw.Min.x += 1.5f * scaling;
     rectDraw.Max.x -= 1.5f * scaling;
@@ -2085,7 +2139,7 @@ void RibbonMenu::drawShortcutsWindow_()
         ImGui::PopItemWidth();
         ImGui::PopStyleVar();
     };
-    
+
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cDefaultItemSpacing * scaling );
 
     ImGui::BeginChild( "##Hotkeys_table_chalid" );
@@ -2354,11 +2408,11 @@ void RibbonMenu::highlightBlocking_()
         ImGui::FocusWindow( window );
         auto drawList = window->DrawList;
         // Fix ImGui.
-        // The logic is set inside the library that if the program got there, 
+        // The logic is set inside the library that if the program got there,
         // then the command buffer should be at least one, but possibly empty.
-        // there is a blocking window that is not currently displayed. 
-        // at some point, when trying to open another window, a crash occurs 
-        // (it is worth switching applications during playback so that the system makes the 
+        // there is a blocking window that is not currently displayed.
+        // at some point, when trying to open another window, a crash occurs
+        // (it is worth switching applications during playback so that the system makes the
         // window of another application active).
         if ( drawList->CmdBuffer.Size > 0)
         {
@@ -2380,7 +2434,7 @@ void pushNotification( const RibbonNotification& notification )
     {
         if ( notification.text.back() != '\n' )
             return ribbonMenu->pushNotification( notification );
-        
+
         auto notificationCopy = notification;
         notificationCopy.text.pop_back();
         return ribbonMenu->pushNotification( notificationCopy );

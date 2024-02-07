@@ -81,6 +81,12 @@ public:
     MRMESH_API std::shared_ptr<const Object> find( const std::string_view & name ) const;
     std::shared_ptr<Object> find( const std::string_view & name ) { return std::const_pointer_cast<Object>( const_cast<const Object*>( this )->find( name ) ); }
 
+    /// finds a direct child by type
+    template <typename T>
+    std::shared_ptr<const T> find() const;
+    template <typename T>
+    std::shared_ptr<T> find() { return std::const_pointer_cast<T>( const_cast<const Object*>( this )->find<T>() ); }
+
     /// finds a direct child by name and type
     template <typename T>
     std::shared_ptr<const T> find( const std::string_view & name ) const;
@@ -255,6 +261,15 @@ protected:
 
     void propagateWorldXfChangedSignal_();
 };
+
+template <typename T>
+std::shared_ptr<const T> Object::find() const
+{
+    for ( const auto & child : children_ )
+        if ( auto res = std::dynamic_pointer_cast<T>( child ) )
+            return res;
+    return {}; // not found
+}
 
 template <typename T>
 std::shared_ptr<const T> Object::find( const std::string_view & name ) const

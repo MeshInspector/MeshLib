@@ -289,12 +289,14 @@ bool ObjectVoxels::prepareDataForVolumeRendering( ProgressCallback cb /*= {} */ 
 {
     if ( !vdbVolume_.data )
         return false;
-    volumeRenderingData_ = std::make_unique<SimpleVolumeU16>(
-        vdbVolumeToSimpleVolume<uint16_t>( vdbVolume_, getActiveBounds(), cb ) );
-    if ( !volumeRenderingData_->data.empty() )
-        return true;
-    volumeRenderingData_.reset();
-    return false;
+    auto res = vdbVolumeToSimpleVolume<uint16_t>( vdbVolume_, getActiveBounds(), cb );
+    if ( !res || res->data.empty() )
+    {
+        volumeRenderingData_.reset();
+        return false;
+    }
+    volumeRenderingData_ = std::make_unique<SimpleVolumeU16>( std::move( *res ) );
+    return true;
 }
 
 void ObjectVoxels::enableVolumeRendering( bool on )

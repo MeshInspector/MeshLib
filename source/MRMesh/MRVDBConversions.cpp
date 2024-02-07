@@ -285,29 +285,6 @@ VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, ProgressCal
     return res;
 }
 
-SimpleVolume vdbVolumeToSimpleVolume( const VdbVolume& vdbVolume, ProgressCallback cb )
-{
-    SimpleVolume res;
-
-    res.dims = vdbVolume.dims;
-    res.voxelSize = vdbVolume.voxelSize;
-    res.min = vdbVolume.min;
-    res.max = vdbVolume.max;
-
-    VolumeIndexer indexer( res.dims );
-    res.data.resize( indexer.size() );
-
-    tbb::enumerable_thread_specific accessorPerThread( vdbVolume.data->getConstAccessor() );
-    if ( !ParallelFor( size_t( 0 ), indexer.size(), [&] ( size_t i )
-    {
-        auto& accessor = accessorPerThread.local();
-        auto coord = indexer.toPos( VoxelId( i ) );
-        res.data[i] = accessor.getValue( openvdb::Coord( coord.x, coord.y, coord.z ) );
-    }, cb ) )
-        return {};
-    return res;
-}
-
 Expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const GridToMeshSettings & settings )
 {
     MR_TIMER;

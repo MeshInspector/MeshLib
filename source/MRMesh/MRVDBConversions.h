@@ -66,7 +66,8 @@ MRMESH_API VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, 
 // if VoxelsVolume values type is integral, performs mapping from [vdbVolume.min, vdbVolume.max] to
 // nonnegative range of target type
 template<typename T>
-VoxelsVolume<std::vector<T>> vdbVolumeToSimpleVolume( const VdbVolume& vdbVolume, const Box3i &activeBox = Box3i(), ProgressCallback cb = {})
+Expected<VoxelsVolume<std::vector<T>>, std::string> vdbVolumeToSimpleVolume(
+    const VdbVolume& vdbVolume, const Box3i &activeBox = Box3i(), ProgressCallback cb = {})
 {
     constexpr bool isFloat = std::is_same_v<float, T> || std::is_same_v<double, T> || std::is_same_v<long double, T>;
 
@@ -107,9 +108,9 @@ VoxelsVolume<std::vector<T>> vdbVolumeToSimpleVolume( const VdbVolume& vdbVolume
         if constexpr ( isFloat )
             res.data[i] = value;
         else
-            res.data[i] = uint16_t( std::clamp( ( value - vdbVolume.min ) * k, 0.0f, oMax ) );
+            res.data[i] = T( std::clamp( ( value - vdbVolume.min ) * k, 0.0f, oMax ) );
     }, cb ) )
-        return {};
+        return unexpectedOperationCanceled();
     return res;
 }
 

@@ -69,17 +69,17 @@ struct StringWithIcon
 
     std::string string;
 
-    constexpr StringWithIcon() {}
+    StringWithIcon() {}
 
     // Need a bunch of constructors to allow implicit conversions when this is used as a function parameter.
     StringWithIcon( const char* string ) : string( string ) {}
     StringWithIcon( std::string string ) : string( std::move( string ) ) {}
 
-    constexpr StringWithIcon( StringIcon icon, std::size_t iconPos, std::string_view string )
-        : icon( icon ), iconPos( iconPos ), string( string )
+    StringWithIcon( StringIcon icon, std::size_t iconPos, std::string string )
+        : icon( icon ), iconPos( iconPos ), string( std::move( string ) )
     {}
 
-    [[nodiscard]] constexpr bool isEmpty() const { return icon == StringIcon::none && string.empty(); }
+    [[nodiscard]] bool isEmpty() const { return icon == StringIcon::none && string.empty(); }
 
     // Returns the icon width, already scaled to the current scale.
     [[nodiscard]] MRVIEWER_API float getIconWidth() const;

@@ -38,7 +38,9 @@ public:
     {
     public:
         virtual ~ExternalSettings() {}
+        // returns the name of the setting, which is a unique value
         virtual const std::string& getName() = 0;
+        // the function of drawing the configuration UI
         virtual void draw() = 0;
     };
     // add external settings with UI combo box 

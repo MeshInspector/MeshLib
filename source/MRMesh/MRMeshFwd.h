@@ -76,6 +76,7 @@ using ThreeVertIds = std::array<VertId, 3>;
 /// mapping from FaceId to a triple of vertex indices
 using Triangulation = Vector<ThreeVertIds, FaceId>;
 
+struct UnorientedTriangle;
 struct SomeLocalTriangulations;
 struct AllLocalTriangulations;
 

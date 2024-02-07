@@ -293,6 +293,7 @@
     <ClInclude Include="MRUnionFind.h" />
     <ClInclude Include="MRUniquePtr.h" />
     <ClInclude Include="MRUniteManyMeshes.h" />
+    <ClInclude Include="MRUnorientedTriangle.h" />
     <ClInclude Include="MRUVSphere.h" />
     <ClInclude Include="MRVDBFloatGrid.h" />
     <ClInclude Include="MRVDBProgressInterrupter.h" />

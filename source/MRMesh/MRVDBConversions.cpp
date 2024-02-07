@@ -6,7 +6,6 @@
 #include "MRTimer.h"
 #include "MRSimpleVolume.h"
 #include "MRPch/MROpenvdb.h"
-#include "MRBox.h"
 #include "MRFastWindingNumber.h"
 #include "MRVolumeIndexer.h"
 #include "MRRegionBoundary.h"
@@ -285,7 +284,70 @@ VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, ProgressCal
     res.data = simpleVolumeToDenseGrid( simpleVolume, cb );
     res.dims = simpleVolume.dims;
     res.voxelSize = simpleVolume.voxelSize;
+    res.min = simpleVolume.min;
+    res.max = simpleVolume.max;
     return res;
+}
+
+// make VoxelsVolume (e.g. SimpleVolume or SimpleVolumeU16) from VdbVolume
+// if VoxelsVolume values type is integral, performs mapping from [vdbVolume.min, vdbVolume.max] to
+// nonnegative range of target type
+template<typename T>
+Expected<VoxelsVolume<std::vector<T>>, std::string> vdbVolumeToSimpleVolumeImpl(
+    const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} )
+{
+    constexpr bool isFloat = std::is_same_v<float, T> || std::is_same_v<double, T> || std::is_same_v<long double, T>;
+
+    VoxelsVolume<std::vector<T>> res;
+
+    res.dims = !activeBox.valid() ? vdbVolume.dims : activeBox.size();
+    Vector3i org = activeBox.valid() ? activeBox.min : Vector3i{};
+    res.voxelSize = vdbVolume.voxelSize;
+    if constexpr ( isFloat )
+    {
+        res.min = vdbVolume.min;
+        res.max = vdbVolume.max;
+    }
+    else
+    {
+        res.min = 0;
+        res.max = std::numeric_limits<T>::max();
+    }
+    [[maybe_unused]] const float oMax = float( res.max );
+    [[maybe_unused]] const float k =
+        vdbVolume.max > vdbVolume.min ? oMax / ( vdbVolume.max - vdbVolume.min ) : 0.0f;
+
+    VolumeIndexer indexer( res.dims );
+    res.data.resize( indexer.size() );
+
+    if ( !vdbVolume.data )
+    {
+        std::fill( res.data.begin(), res.data.end(), T{} );
+        return res;
+    }
+
+    tbb::enumerable_thread_specific accessorPerThread( vdbVolume.data->getConstAccessor() );
+    if ( !ParallelFor( size_t( 0 ), indexer.size(), [&] ( size_t i )
+    {
+        auto& accessor = accessorPerThread.local();
+        auto coord = indexer.toPos( VoxelId( i ) );
+        float value = accessor.getValue( openvdb::Coord( coord.x + org.x, coord.y + org.y, coord.z + org.z ) );
+        if constexpr ( isFloat )
+            res.data[i] = T( value );
+        else
+            res.data[i] = T( std::clamp( ( value - vdbVolume.min ) * k, 0.0f, oMax ) );
+    }, cb ) )
+        return unexpectedOperationCanceled();
+    return res;
+}
+
+Expected<SimpleVolume, std::string> vdbVolumeToSimpleVolume( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
+{
+    return vdbVolumeToSimpleVolumeImpl<float>( vdbVolume, activeBox, cb );
+}
+Expected<SimpleVolumeU16, std::string> vdbVolumeToSimpleVolumeU16( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
+{
+    return vdbVolumeToSimpleVolumeImpl<uint16_t>( vdbVolume, activeBox, cb );
 }
 
 Expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const GridToMeshSettings & settings )

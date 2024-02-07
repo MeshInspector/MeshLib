@@ -112,7 +112,7 @@ public:
     const VolumeIndexer& getVolumeIndexer() const { return indexer_; }
 
     // prepare data for volume rendering
-    // returns false if canceled
+    // returns false if canceled or voxel data is empty
     MRMESH_API bool prepareDataForVolumeRendering( ProgressCallback cb = {} ) const;
 
     bool isVolumeRenderingEnabled() const { return volumeRendering_; }

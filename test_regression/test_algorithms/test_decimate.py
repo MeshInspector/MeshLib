@@ -2,7 +2,7 @@ from module_helper import *
 from pathlib import Path
 from pytest_check import check
 from constants import test_files_path
-from helpers.meshlib_helpers import compare_meshes_similarity
+from helpers.meshlib_helpers import compare_meshes_similarity, compare_mesh
 import meshlib.mrmeshpy as mlpy
 
 import pytest
@@ -110,11 +110,11 @@ def test_decimate(tmp_path, dec_params):
     mlpy.decimateMesh(mesh, settings)
 
     # === Verification
-    mlpy.saveMesh(mesh, tmp_path / f"{case_name}.mrmesh")
-    ref_mesh = mlpy.loadMesh(input_folder / f"{case_name}.mrmesh")
+    ref_mesh_path = input_folder / f"{case_name}.mrmesh"
+    ref_mesh = mlpy.loadMesh(ref_mesh_path)
     #  check meshes similarity (for extra details on fail)
     with check:
         compare_meshes_similarity(mesh, ref_mesh)
     # check saved file is same as reference
     with check:
-        assert mesh == ref_mesh
+        assert compare_mesh(mesh, ref_mesh_path)

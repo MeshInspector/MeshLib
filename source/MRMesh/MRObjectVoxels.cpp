@@ -289,47 +289,14 @@ bool ObjectVoxels::prepareDataForVolumeRendering( ProgressCallback cb /*= {} */ 
 {
     if ( !vdbVolume_.data )
         return false;
-    volumeRenderingData_ = std::make_unique<SimpleVolumeU16>();
-    auto& res = *volumeRenderingData_;
-    res.max = std::numeric_limits<uint16_t>::max();
-    res.min = 0;
-    const auto oMax = float( res.max );
-    const auto iMin = vdbVolume_.min;
-    const float k = oMax / ( vdbVolume_.max - vdbVolume_.min );
-
-    res.voxelSize = vdbVolume_.voxelSize;
-    auto activeBox = getActiveBounds();
-    res.dims = activeBox.size();
-    VolumeIndexer indexer( res.dims );
-    res.data.resize( indexer.size() );
-
-    const auto mainThreadId = std::this_thread::get_id();
-    std::atomic<bool> cancelled{ false };
-    std::atomic<size_t> finishedVoxels{ 0 };
-
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+    auto res = vdbVolumeToSimpleVolumeU16( vdbVolume_, getActiveBounds(), cb );
+    if ( !res || res->data.empty() )
     {
-        auto accessor = vdbVolume_.data->getConstAccessor();
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            if ( cb && cancelled.load( std::memory_order_relaxed ) )
-                return;
-            auto coord = indexer.toPos( VoxelId( i ) );
-            auto vdbCoord = openvdb::Coord( coord.x + activeBox.min.x, coord.y + activeBox.min.y, coord.z + activeBox.min.z );
-            res.data[i] = uint16_t( std::clamp( ( accessor.getValue( vdbCoord ) - iMin ) * k, 0.0f, oMax ) );
-        }
-        if ( cb )
-        {
-            finishedVoxels.fetch_add( range.size(), std::memory_order_relaxed );
-            if ( std::this_thread::get_id() == mainThreadId &&
-                !cb( float( finishedVoxels.load( std::memory_order_relaxed ) / float( indexer.size() ) ) ) )
-                cancelled.store( true, std::memory_order_relaxed );
-        }
-    } );
-    if ( !cancelled )
-        return true;
-    volumeRenderingData_.reset();
-    return false;
+        volumeRenderingData_.reset();
+        return false;
+    }
+    volumeRenderingData_ = std::make_unique<SimpleVolumeU16>( std::move( *res ) );
+    return true;
 }
 
 void ObjectVoxels::enableVolumeRendering( bool on )

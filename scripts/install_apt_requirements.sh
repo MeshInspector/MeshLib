@@ -14,7 +14,7 @@ function checkPackage {
     fi
 }
 
-BASEDIR=$(dirname "$0")
+BASEDIR=$(dirname $(realpath "$0"))
 REQUIREMENTS_FILE="$BASEDIR"/../requirements/ubuntu.txt
 
 for req in `cat $REQUIREMENTS_FILE`; do

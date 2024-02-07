@@ -56,6 +56,8 @@ private:
     void drawSpaceMouseSettings_( float menuWidth, float menuScaling );
     void drawTouchpadSettings_();
 
+    void drawCustomSettinds_( TabType tabType );
+
     int curSamples_{ 0 };
     int storedSamples_{ 0 };
     int maxSamples_{ 0 };

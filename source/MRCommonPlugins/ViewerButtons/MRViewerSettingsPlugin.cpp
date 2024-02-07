@@ -66,24 +66,28 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         {
             activeTab_ = TabType::Settings;
             drawSettingsTab_( menuWidth, menuScaling );
+            drawCustomSettinds_( activeTab_ );
             UI::endTabItem();
         }
         if ( UI::beginTabItem( "Viewport" ) )
         {
             activeTab_ = TabType::Viewport;
             drawViewportTab_( menuWidth, menuScaling );
+            drawCustomSettinds_( activeTab_ );
             UI::endTabItem();
         }
         if ( UI::beginTabItem( "View" ) )
         {
             activeTab_ = TabType::View;
             drawViewTab_( menuWidth, menuScaling );
+            drawCustomSettinds_( activeTab_ );
             UI::endTabItem();
         }
         if ( UI::beginTabItem( "Control" ) )
         {
             activeTab_ = TabType::Control;
             drawControlTab_( menuWidth, menuScaling );
+            drawCustomSettinds_( activeTab_ );
             UI::endTabItem();
         }
         UI::endTabBar();
@@ -176,14 +180,6 @@ void ViewerSettingsPlugin::drawSettingsTab_( float menuWidth, float menuScaling 
         UI::setTooltipIfHovered( "If checked then enables using of saved positions of tool windows in the config file", menuScaling );
         if ( savedDialogsVal != savedDialogsBackUp )
             viewer->getMenuPlugin()->enableSavedDialogPositions( savedDialogsVal );
-
-        for ( auto& [key, tabSettings] : comboSettings_ )
-        {
-            for ( auto& settings : tabSettings )
-            {
-                settings->draw();
-            }
-        }
     }
 }
 
@@ -558,6 +554,14 @@ void ViewerSettingsPlugin::drawTouchpadSettings_()
         updateSettings = true;
     if ( updateSettings )
         viewer->setTouchpadParameters( touchpadParameters_ );
+}
+
+void ViewerSettingsPlugin::drawCustomSettinds_( TabType tabType )
+{
+    for ( auto& settings : comboSettings_[tabType] )
+    {
+        settings->draw();
+    }
 }
 
 MR_REGISTER_RIBBON_ITEM( ViewerSettingsPlugin )

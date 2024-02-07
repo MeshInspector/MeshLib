@@ -8,6 +8,8 @@ namespace MR
 // Represents a radius measurement.
 class MRMESH_CLASS RadiusMeasurementObject : public MeasurementObject
 {
+    // The xf encodes the radius: the origin is the center point, and (1,0,0) is the end point.
+    // For non-spherical radiuses, (0,0,1) is the circle normal.
 public:
     RadiusMeasurementObject() {}
 
@@ -18,8 +20,7 @@ public:
     const char* typeName() const override { return TypeName(); }
 
     // For `std::make_shared()` in `clone()`.
-    RadiusMeasurementObject( ProtectedStruct, const RadiusMeasurementObject& obj ) : RadiusMeasurementObject( obj )
-    {}
+    RadiusMeasurementObject( ProtectedStruct, const RadiusMeasurementObject& obj ) : RadiusMeasurementObject( obj ) {}
 
     std::string getClassName() const override { return "Radius"; }
 

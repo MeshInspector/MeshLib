@@ -22,7 +22,7 @@ public:
         View,
         Control,
         Count
-    } activeTab_{ TabType::Settings };
+    };
 
     ViewerSettingsPlugin();
 
@@ -40,7 +40,7 @@ public:
         virtual const std::string& getName() = 0;
         virtual void draw() = 0;
     };
-    // move
+    // add external settings with UI combo box 
     MRCOMMONPLUGINS_API void addComboSettings( const TabType tab, std::shared_ptr<ComboSettings> settings);
 
 private:
@@ -81,7 +81,9 @@ private:
 
     TouchpadParameters touchpadParameters_;
 
-    std::unordered_map< TabType, std::vector<std::shared_ptr<ComboSettings>>> comboSettings_;
+    TabType activeTab_ = TabType::Settings;
+
+    std::array<std::vector<std::shared_ptr<ComboSettings>>, size_t(TabType::Count)> comboSettings_;
 };
 
 }

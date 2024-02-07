@@ -5,6 +5,7 @@
 
 #include <imgui.h>
 
+#include <optional>
 #include <span>
 
 namespace MR::ImGuiMeasurementIndicators
@@ -97,10 +98,16 @@ MRVIEWER_API void text( Element elem, float menuScaling, const Params& params, I
 // Draws a triangle from an arrow.
 MRVIEWER_API void arrowTriangle( Element elem, float menuScaling, const Params& params, ImVec2 point, ImVec2 dir );
 
-enum class LineCap
+struct LineCap
 {
-    nothing,
-    arrow,
+    enum class Decoration
+    {
+        none,
+        arrow,
+    };
+    Decoration decoration{};
+
+    StringWithIcon text;
 };
 
 enum class LineFlags
@@ -122,13 +129,14 @@ struct LineParams
 // Draws a line or an arrow.
 MRVIEWER_API void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, const LineParams& lineParams = {} );
 
+struct DistanceParams
+{
+    // If this is set, the text is moved from the middle of the line to one of the line ends (false = A, true = B).
+    std::optional<bool> moveTextToLineEndIndex;
+};
+
 // Draws a distance arrow between two points, automatically selecting the best visual style.
 // The `string` is optional.
-MRVIEWER_API void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, StringWithIcon string );
-
-// Draws an arrow of length `length`, ending at `point`. The starting point has a little leader line, attaching the text to it.
-// If `length` is negative, `dir` is automatically flipped.
-// Don't forget to multiply your `length` by the `menuScaling`!
-MRVIEWER_API void radiusArrow( Element elem, float menuScaling, const Params& params, ImVec2 point, ImVec2 dir, float length, StringWithIcon string );
+MRVIEWER_API void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, StringWithIcon string, const DistanceParams& distanceParams = {} );
 
 } // namespace MR::ImGuiMeasurementIndicators

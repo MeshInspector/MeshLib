@@ -6,13 +6,24 @@
 #include "MRViewer/MRSpaceMouseParameters.h"
 #include "MRViewer/MRTouchpadParameters.h"
 #include "MRMesh/MRVector4.h"
+#include "MRCommonPlugins/exports.h"
 
 namespace MR
 {
 
-class ViewerSettingsPlugin : public StatePlugin
+class MRCOMMONPLUGINS_CLASS ViewerSettingsPlugin : public StatePlugin
 {
 public:
+
+    enum class TabType
+    {
+        Settings,
+        Viewport,
+        View,
+        Control,
+        Count
+    };
+
     ViewerSettingsPlugin();
 
     virtual void drawDialog( float menuScaling, ImGuiContext* ctx ) override;
@@ -21,6 +32,20 @@ public:
 
     // call this function if you save/delete color theme, or change current theme outside of this plugin
     void updateThemes();
+
+    // basic class of external settings
+    class ExternalSettings
+    {
+    public:
+        virtual ~ExternalSettings() {}
+        // returns the name of the setting, which is a unique value
+        virtual const std::string& getName() = 0;
+        // the function of drawing the configuration UI
+        virtual void draw() = 0;
+    };
+    // add external settings with UI combo box 
+    MRCOMMONPLUGINS_API void addComboSettings( const TabType tab, std::shared_ptr<ExternalSettings> settings);
+
 private:
     virtual bool onEnable_() override;
     virtual bool onDisable_() override;
@@ -33,15 +58,8 @@ private:
     void drawMouseSceneControlsSettings_( float menuWidth, float menuScaling );
     void drawSpaceMouseSettings_( float menuWidth, float menuScaling );
     void drawTouchpadSettings_();
-   
-    enum class TabType
-    {
-        Settings,
-        Viewport,
-        View,
-        Control,
-        Count
-    } activeTab_{ TabType::Settings };
+
+    void drawCustomSettinds_( TabType tabType );
 
     int curSamples_{ 0 };
     int storedSamples_{ 0 };
@@ -65,6 +83,10 @@ private:
 #endif
 
     TouchpadParameters touchpadParameters_;
+
+    TabType activeTab_ = TabType::Settings;
+
+    std::array<std::vector<std::shared_ptr<ExternalSettings>>, size_t(TabType::Count)> comboSettings_;
 };
 
 }

@@ -66,30 +66,39 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         {
             activeTab_ = TabType::Settings;
             drawSettingsTab_( menuWidth, menuScaling );
+            drawCustomSettinds_( activeTab_ );
             UI::endTabItem();
         }
         if ( UI::beginTabItem( "Viewport" ) )
         {
             activeTab_ = TabType::Viewport;
             drawViewportTab_( menuWidth, menuScaling );
+            drawCustomSettinds_( activeTab_ );
             UI::endTabItem();
         }
         if ( UI::beginTabItem( "View" ) )
         {
             activeTab_ = TabType::View;
             drawViewTab_( menuWidth, menuScaling );
+            drawCustomSettinds_( activeTab_ );
             UI::endTabItem();
         }
         if ( UI::beginTabItem( "Control" ) )
         {
             activeTab_ = TabType::Control;
             drawControlTab_( menuWidth, menuScaling );
+            drawCustomSettinds_( activeTab_ );
             UI::endTabItem();
         }
         UI::endTabBar();
     }
 
     ImGui::EndCustomStatePlugin();
+}
+
+void ViewerSettingsPlugin::addComboSettings( const TabType tab, std::shared_ptr<ExternalSettings> settings )
+{
+    comboSettings_[size_t( tab )].push_back( settings );
 }
 
 bool ViewerSettingsPlugin::onEnable_()
@@ -545,6 +554,14 @@ void ViewerSettingsPlugin::drawTouchpadSettings_()
         updateSettings = true;
     if ( updateSettings )
         viewer->setTouchpadParameters( touchpadParameters_ );
+}
+
+void ViewerSettingsPlugin::drawCustomSettinds_( TabType tabType )
+{
+    for ( auto& settings : comboSettings_[size_t( tabType )] )
+    {
+        settings->draw();
+    }
 }
 
 MR_REGISTER_RIBBON_ITEM( ViewerSettingsPlugin )

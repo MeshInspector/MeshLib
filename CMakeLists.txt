@@ -121,7 +121,8 @@ ELSE()
 
     # check version (major)
     file(STRINGS /etc/os-release version_id REGEX "^VERSION_ID=")
-    string(REGEX REPLACE "VERSION_ID=\"(.*)\"" "\\1" version_id "${version_id}")
+    string(REGEX REPLACE "VERSION_ID=(.*)" "\\1" version_id "${version_id}")
+    string(REGEX REPLACE "\"(.*)\"" "\\1" version_id "${version_id}")
 
     IF( ${distro} STREQUAL "Ubuntu")
         string(FIND ${version_id} "." dot-pos)

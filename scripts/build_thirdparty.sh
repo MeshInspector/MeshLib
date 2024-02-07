@@ -8,8 +8,7 @@ set -eo pipefail
 
 dt=$(date '+%d-%m-%Y_%H:%M:%S');
 logfile="`pwd`/install_thirdparty_${dt}.log"
-echo "Thirdparty build script started."
-echo "You could find output in ${logfile}"
+printf "Thirdparty build script started.\nYou could find output in ${logfile}\n"
 
 
 if [[ $OSTYPE == 'darwin'* ]]; then
@@ -28,7 +27,7 @@ else
 fi
 
 MR_EMSCRIPTEN_SINGLETHREAD=0
-if [[ $OSTYPE == "linux"* ]] && [[ "${MR_STATE}" != "DOCKER_BUILD" ]]; then
+if [[ $OSTYPE == "linux"* ]] && [ "${MR_STATE}" != "DOCKER_BUILD" ]; then
   if [ ! -n "$MR_EMSCRIPTEN" ]; then
     read -t 5 -p "Build with emscripten? Press (y) in 5 seconds to build (y/s/N) (s - singlethreaded)" -rsn 1
     echo;
@@ -50,7 +49,7 @@ else
 fi
 echo "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}"
 
-if [[ $MR_EMSCRIPTEN == "ON" ]]; then
+if [ $MR_EMSCRIPTEN == "ON" ]; then
   if [[ $MR_EMSCRIPTEN_SINGLE == "ON" ]]; then
     MR_EMSCRIPTEN_SINGLETHREAD=1
   fi
@@ -67,7 +66,7 @@ MR_THIRDPARTY_BUILD_DIR="thirdparty_build"
 MR_THIRDPARTY_LIB_DIR="lib/"
 MR_THIRDPARTY_INCLUDE_DIR="include/"
 
-# build Third party
+#build Third party
 rm -rf "${MR_THIRDPARTY_BUILD_DIR}"
 rm -rf "${MR_THIRDPARTY_LIB_DIR}"
 rm -rf "${MR_THIRDPARTY_INCLUDE_DIR}"
@@ -79,7 +78,7 @@ mkdir -p "${MR_THIRDPARTY_INCLUDE_DIR}"
 # build
 echo "Starting build..."
 cd "${MR_THIRDPARTY_BUILD_DIR}"
-if [[ "${MR_EMSCRIPTEN}" == "ON" ]]; then
+if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   emcmake cmake -DMR_EMSCRIPTEN=1 -DMR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} ../${MR_THIRDPARTY_DIR} -DCMAKE_INSTALL_PREFIX=../
   emmake make -j `nproc` #VERBOSE=1
   make install
@@ -94,10 +93,10 @@ cd ..
 echo "Copying thirdparty libs.."
 if [[ $OSTYPE == 'darwin'* ]]; then
   cp "${MR_THIRDPARTY_BUILD_DIR}"/*.dylib "${MR_THIRDPARTY_LIB_DIR}"/
-elif [[ "${MR_EMSCRIPTEN}" == "ON" ]]; then
+elif [ "${MR_EMSCRIPTEN}" = "ON" ]; then
   cp "${MR_THIRDPARTY_BUILD_DIR}"/*.a "${MR_THIRDPARTY_LIB_DIR}"/
 else
   cp "${MR_THIRDPARTY_BUILD_DIR}"/*.so "${MR_THIRDPARTY_LIB_DIR}"/
 fi
 
-echo "Thirdparty build script successfully finished. Required libs located in ./lib folder. You could run ./scripts/build_source.sh\n"
+printf "\rThirdparty build script successfully finished. Required libs located in ./lib folder. You could run ./scripts/build_source.sh\n\n"

@@ -163,42 +163,72 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
     float lineWidth = ( bool( lineParams.flags & LineFlags::narrow ) ? params.smallWidth : params.width ) * menuScaling;
     float outlineWidth = params.outlineWidth * menuScaling;
     float arrowLen = params.arrowLen * menuScaling;
+    float leaderLineLen = params.leaderLineLen * menuScaling;
+    float invertedOverhang = params.invertedOverhang * menuScaling;
 
     forEachElement( elem, [&]( Element thisElem )
     {
         ImVec2 points[2] = {a, b};
 
+        // Those are added on the ends of the line, if specified.
+        std::optional<ImVec2> extraPoints[2];
+
         for ( bool front : { false, true } )
         {
             ImVec2& point = points[front];
+            std::optional<ImVec2>& extraPoint = extraPoints[front];
             ImVec2 d = front
                 ? normalize( b - ( lineParams.midPoints.empty() ? a : lineParams.midPoints.back() ) )
                 : normalize( a - ( lineParams.midPoints.empty() ? b : lineParams.midPoints.front() ) );
-            LineCap thisCap = front ? lineParams.capB : lineParams.capA;
 
-            switch ( thisCap )
+            const LineCap& thisCap = front ? lineParams.capB : lineParams.capA;
+            switch ( thisCap.decoration )
             {
-            case LineCap::nothing:
-                if ( thisElem == Element::outline )
-                    point += d * outlineWidth;
+            case LineCap::Decoration::none:
+                // Nothing.
                 break;
-            case LineCap::arrow:
+            case LineCap::Decoration::arrow:
                 arrowTriangle( thisElem, menuScaling, params, point, d );
-                point += d * ( -arrowLen + 1 ); // +1 is to avoid a hairline gap here, we intentionally don't multiply it by `menuScaling`.
+                if ( thisCap.text.isEmpty() )
+                    point += d * ( -arrowLen + 1 ); // +1 is to avoid a hairline gap here, we intentionally don't multiply it by `menuScaling`.
+                else
+                    point += d * invertedOverhang; // Extend the line instead of shortening it, to prepare for a leader line.
+                break;
+            }
+
+            if ( !thisCap.text.isEmpty() )
+            {
+                ImVec2 leaderDir( ( d.x > 0 ? 1.f : -1.f ), 0 );
+                extraPoint = points[front] + leaderDir * leaderLineLen;
+                text( thisElem, menuScaling, params, *extraPoint, thisCap.text, leaderDir );
+            }
+
+            switch ( thisCap.decoration )
+            {
+            case LineCap::Decoration::none:
+                if ( thisElem == Element::outline )
+                    ( extraPoint ? *extraPoint : point ) += ( extraPoint ? normalize( *extraPoint - point ) : d ) * outlineWidth;
+                break;
+            case LineCap::Decoration::arrow:
+                // Nothing.
                 break;
             }
         }
 
+        if ( extraPoints[0] )
+            params.list->PathLineTo( *extraPoints[0] );
         params.list->PathLineTo( points[0] );
         for ( ImVec2 point : lineParams.midPoints )
             params.list->PathLineTo( point );
         params.list->PathLineTo( points[1] );
+        if ( extraPoints[1] )
+            params.list->PathLineTo( *extraPoints[1] );
 
         params.list->PathStroke( ( thisElem == Element::main ? params.colorMain : params.colorOutline ).getUInt32(), 0, lineWidth + ( outlineWidth * 2 ) * ( thisElem == Element::outline ) );
     } );
 }
 
-void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, StringWithIcon string )
+void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, StringWithIcon string, const DistanceParams& distanceParams )
 {
     if ( ( elem & Element::both ) == Element{} )
         return; // Nothing to draw.
@@ -220,7 +250,8 @@ void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, 
 
     ImVec2 gapA, gapB;
 
-    if ( !string.isEmpty() && !useInvertedStyle )
+    // Try to cram the string into the middle of the line.
+    if ( !string.isEmpty() && !useInvertedStyle && !distanceParams.moveTextToLineEndIndex )
     {
         ImVec2 textSize = string.calcTextSize();
         ImVec2 textPos = a + ( ( b - a ) - textSize ) / 2.f;
@@ -278,47 +309,35 @@ void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, 
 
     forEachElement( elem, [&]( Element thisElem )
     {
-        if ( !useInvertedStyle && ( string.isEmpty() || drawTextOutOfLine ) )
+        if ( !useInvertedStyle && ( string.isEmpty() || drawTextOutOfLine || distanceParams.moveTextToLineEndIndex ) )
         {
-            line( thisElem, menuScaling, params, a, b, { .capA = LineCap::arrow, .capB = LineCap::arrow } );
+            LineParams lineParams{
+                .capA = LineCap{ .decoration = LineCap::Decoration::arrow },
+                .capB = LineCap{ .decoration = LineCap::Decoration::arrow },
+            };
+            if ( distanceParams.moveTextToLineEndIndex )
+                ( *distanceParams.moveTextToLineEndIndex ? lineParams.capB : lineParams.capA ).text = string;
+            line( thisElem, menuScaling, params, a, b, lineParams );
         }
         else
         {
-            line( thisElem, menuScaling, params, gapA, a, { .capB = LineCap::arrow } );
-            line( thisElem, menuScaling, params, gapB, b, { .capB = LineCap::arrow } );
+            auto drawLineEnd = [&]( bool front )
+            {
+                LineParams lineParams{ .capB = LineCap{ .decoration = LineCap::Decoration::arrow } };
+                if ( useInvertedStyle && distanceParams.moveTextToLineEndIndex && *distanceParams.moveTextToLineEndIndex == front )
+                    lineParams.capA.text = string;
+                line( thisElem, menuScaling, params, front ? gapB : gapA, front ? b : a, lineParams );
+            };
+
+            drawLineEnd( false );
+            drawLineEnd( true );
 
             if ( useInvertedStyle )
                 line( thisElem, menuScaling, params, a - dir * ( arrowLen / 2 ), b + dir * ( arrowLen / 2 ), { .flags = LineFlags::narrow } );
         }
 
-        text( thisElem, menuScaling, params, center, string, drawTextOutOfLine ? n : ImVec2{} );
-    } );
-}
-
-void radiusArrow( Element elem, float menuScaling, const Params& params, ImVec2 point, ImVec2 dir, float length, StringWithIcon string )
-{
-    if ( ( elem & Element::both ) == Element{} )
-        return; // Nothing to draw.
-
-    float leaderLineLen = params.leaderLineLen * menuScaling;
-
-    if ( length < 0 )
-    {
-        length = -length;
-        dir = -dir;
-    }
-
-    dir = normalize( dir );
-    ImVec2 dir2 = ImVec2( dir.x < 0 ? -1.f : 1.f, 0 );
-
-    ImVec2 pointB = point - dir * length;
-    ImVec2 pointA = pointB - dir2 * leaderLineLen;
-
-    forEachElement( elem, [&]( Element thisElem )
-    {
-        line( thisElem, menuScaling, params, pointA, point, { .capB = LineCap::arrow, .midPoints = { &pointB, 1 } } );
-
-        text( thisElem, menuScaling, params, pointA, string, -dir2 );
+        if ( !distanceParams.moveTextToLineEndIndex )
+            text( thisElem, menuScaling, params, center, string, drawTextOutOfLine ? n : ImVec2{} );
     } );
 }
 

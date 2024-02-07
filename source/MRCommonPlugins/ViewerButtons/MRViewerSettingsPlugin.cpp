@@ -96,7 +96,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::EndCustomStatePlugin();
 }
 
-void ViewerSettingsPlugin::addComboSettings( const TabType tab, std::shared_ptr<ComboSettings> settings )
+void ViewerSettingsPlugin::addComboSettings( const TabType tab, std::shared_ptr<ExternalSettings> settings )
 {
     comboSettings_[size_t( tab )].push_back( settings );
 }

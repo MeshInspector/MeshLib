@@ -33,15 +33,16 @@ public:
     // call this function if you save/delete color theme, or change current theme outside of this plugin
     void updateThemes();
 
-    class ComboSettings
+    // basic class of external settings
+    class ExternalSettings
     {
     public:
-        virtual ~ComboSettings() {}
+        virtual ~ExternalSettings() {}
         virtual const std::string& getName() = 0;
         virtual void draw() = 0;
     };
     // add external settings with UI combo box 
-    MRCOMMONPLUGINS_API void addComboSettings( const TabType tab, std::shared_ptr<ComboSettings> settings);
+    MRCOMMONPLUGINS_API void addComboSettings( const TabType tab, std::shared_ptr<ExternalSettings> settings);
 
 private:
     virtual bool onEnable_() override;
@@ -83,7 +84,7 @@ private:
 
     TabType activeTab_ = TabType::Settings;
 
-    std::array<std::vector<std::shared_ptr<ComboSettings>>, size_t(TabType::Count)> comboSettings_;
+    std::array<std::vector<std::shared_ptr<ExternalSettings>>, size_t(TabType::Count)> comboSettings_;
 };
 
 }

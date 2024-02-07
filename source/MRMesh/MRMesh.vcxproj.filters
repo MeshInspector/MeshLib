@@ -1188,6 +1188,9 @@
     <ClInclude Include="MRDefaultMeasurementObjects.h">
       <Filter>Source Files\DataModel\Measurements</Filter>
     </ClInclude>
+    <ClInclude Include="MRUnorientedTriangle.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

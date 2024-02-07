@@ -3,6 +3,7 @@
 #include "MRId.h"
 #include "MRVector.h"
 #include "MRBuffer.h"
+#include <array>
 #include <cstdint>
 #include <optional>
 
@@ -54,5 +55,16 @@ struct AllLocalTriangulations
 
 /// orient neighbors around each point so they will be in clockwise order if look from the top of target normal
 MRMESH_API void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertNormals & normals );
+
+/// TrianglesRepetitions[0] contains the number of unoriented triangles that appear in one local triangulation only
+/// TrianglesRepetitions[1] contains the number of unoriented triangles that appear in exactly two local triangulations
+/// TrianglesRepetitions[2] contains the number of unoriented triangles that appear in three local triangulations
+using VotesForTriangles = std::array<int, 3>;
+
+/// computes statistics about the number of triangle repetitions in local triangulations
+[[nodiscard]] MRMESH_API VotesForTriangles computeTrianglesRepetitions( const AllLocalTriangulations & triangs );
+
+/// from local triangulations returns all unoriented with given number of repetitions each in [0,2]
+[[nodiscard]] MRMESH_API std::vector<UnorientedTriangle> findRepeatedTriangles( const AllLocalTriangulations & triangs, int repetitions );
 
 } //namespace MR

@@ -80,6 +80,8 @@ struct Settings
     int maxRemoves = INT_MAX;
     /// optional output of considered neighbor points after filtering but before triangulation/optimization
     std::vector<VertId> * allNeighbors = nullptr;
+    /// optional output: actual radius of neighbor search (after increase if any)
+    float * actualRadius = nullptr;
 };
 
 /// constructs local triangulation around given point

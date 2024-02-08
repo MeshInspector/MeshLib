@@ -46,6 +46,7 @@ void PlaneWidget::definePlane()
     planeObj_->setVisualizeProperty( true, MeshVisualizePropertyType::BordersHighlight, ViewportMask::all() );
     planeObj_->setFrontColor( Color::gray(), false );
     planeObj_->setBackColor( Color::gray() );
+    planeObj_->setVisible( showPlaneByDefault_ );
     SceneRoot::get().addChild( planeObj_ );
 
     updateWidget_();

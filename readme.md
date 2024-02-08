@@ -184,16 +184,21 @@ This approach is useful for new MR developers
 ```sh
 git clone https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
-sudo ./scripts/build_thirdparty.sh # need sudo to check and install dependencies
-./scripts/install_thirdparty.sh
-./scripts/build_sources.sh
+git submodule update --init --recursive
+./scripts/build_thirdparty.sh # also installs the system dependencies when it is possible
+./scripts/build_source.sh
+./build/Release/bin/MRTest
+# create and install package for Ubuntu
 ./scripts/distribution.sh
 sudo apt install ./distr/meshlib-dev.deb
+# create and install package for Fedora
+./scripts/distribution_rpm.sh
+sudo apt install ./distr/meshlib-dev.rpm
 ```
 
 > **_NOTE:_** `./scripts/install*.sh` scripts could be used as well, but apt install is preferable.
 
-> **_NOTE:_** `./scripts/install*.sh` scripts copy MR files directly to `/usr/local/lib`. Remove this directory manually if exists before apt install deb package.
+> **_NOTE:_** `./scripts/install_thirdparty.sh` script copies MR files directly to `/usr/local/lib`. Remove this directory manually if exists before apt install deb package.
 
 > **_NOTE:_** You could specify build type to Debug by `export MESHLIB_BUILD_TYPE=Debug`. Release is default.
 
@@ -214,7 +219,7 @@ Build
 ```
 cd ~/MeshLib
 ./scripts/build_thirdparty.sh # select Emscripten in the corresponding question
-./scripts/build_sorces.sh # select Emscripten in the corresponding question
+./scripts/build_source.sh # select Emscripten in the corresponding question
 ```
 
 Run

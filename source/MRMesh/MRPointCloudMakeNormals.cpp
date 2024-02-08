@@ -46,13 +46,7 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, 
     normals.resizeNoInit( pointCloud.points.size() );
     if ( !BitSetParallelFor( pointCloud.validPoints, [&]( VertId v )
     {
-        PointAccumulator accum;
-        accum.addPoint( pointCloud.points[v] );
-        const auto * p = triangs.neighbors.data() + triangs.fanRecords[v].firstNei;
-        const auto * pEnd = triangs.neighbors.data() + triangs.fanRecords[v+1].firstNei;
-        for ( ; p < pEnd; ++p )
-            accum.addPoint( pointCloud.points[*p] );
-        normals[v] = Vector3f( accum.getBestPlane().n );
+        normals[v] = computeNormal( triangs, pointCloud.points, v );
     }, progress ) )
         return {};
 

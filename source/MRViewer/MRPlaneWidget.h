@@ -24,7 +24,7 @@ class MRVIEWER_CLASS PlaneWidget : public MultiListener<MouseDownListener, Mouse
     OnPlaneUpdateCallback onPlaneUpdate_;
 
     bool pressed_ = false;
-    bool showPlane_ = false;
+    bool showPlane_ = true;
     Vector2f startMousePos_;
     Vector2f endMousePos_;
 

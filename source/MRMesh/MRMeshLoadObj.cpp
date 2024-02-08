@@ -534,8 +534,9 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
     auto parseVertex = [&] ( size_t li ) -> Expected<Vector3d, std::string>
     {
         Vector3d v;
+        Vector3d c;
         std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-        auto res = parseObjCoordinate( line, v );
+        auto res = parseObjCoordinate( line, v, c );
         if ( !res.has_value() )
             return unexpected( std::move( res.error() ) );
         return v;
@@ -548,24 +549,30 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
         const size_t newSize = points.size() + ( end - begin );
         texCoords.resize( newSize, -1 );
 
-        points.resize( newSize );        
+        points.resize( newSize );
+        if ( settings.colors )
+            settings.colors->resize( newSize );
         uvCoords.resize( newSize );
 
         tbb::task_group_context ctx;
         tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
         {
             Vector3d v;
+            Vector3d c;
             for ( auto li = range.begin(); li < range.end(); li++ )
             {
                 std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-                auto res = parseObjCoordinate( line, v );
+                auto res = parseObjCoordinate( line, v, c );
                 if ( !res.has_value() )
                 {
                     if ( ctx.cancel_group_execution() )
                         parseError = std::move( res.error() );
                     return;
                 }
-                points[offset + ( li - begin )] = pointOffset ? Vector3f( v - *pointOffset ) : Vector3f( v );
+                const auto n = offset + ( li - begin );
+                points[n] = pointOffset ? Vector3f( v - *pointOffset ) : Vector3f( v );
+                if ( settings.colors )
+                    (*settings.colors)[VertId(n)] = Color( c );
             }
         }, ctx );
     };

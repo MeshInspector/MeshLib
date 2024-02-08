@@ -109,17 +109,19 @@ VoidOrErrStr parseTextCoordinate( const std::string_view& str, Vector3<T>& v )
 }
 
 template <typename T>
-VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3<T>& v )
+VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>& c )
 {
     using namespace boost::spirit::x3;
 
     int i = 0;
     auto coord = [&] ( auto& ctx ) { v[i++] = _attr( ctx ); };
+    int j = 0;
+    auto color = [&] ( auto& ctx ) { c[j++] = _attr( ctx ); };
 
     bool r = phrase_parse(
         str.begin(),
         str.end(),
-        ( 'v' >> floatT[coord] >> floatT[coord] >> floatT[coord] ),
+        ( 'v' >> floatT[coord] >> floatT[coord] >> floatT[coord] >> floatT[color] >> floatT[color] >> floatT[color] ),
         ascii::space
     );
     if ( !r )
@@ -198,7 +200,7 @@ template VoidOrErrStr parsePtsCoordinate<double>( const std::string_view& str, V
 template VoidOrErrStr parseTextCoordinate<float>( const std::string_view& str, Vector3f& v );
 template VoidOrErrStr parseTextCoordinate<double>( const std::string_view& str, Vector3d& v );
 
-template VoidOrErrStr parseObjCoordinate<float>( const std::string_view& str, Vector3f& v );
-template VoidOrErrStr parseObjCoordinate<double>( const std::string_view& str, Vector3d& v );
+template VoidOrErrStr parseObjCoordinate<float>( const std::string_view& str, Vector3f& v, Vector3f& c );
+template VoidOrErrStr parseObjCoordinate<double>( const std::string_view& str, Vector3d& v, Vector3d& c );
 
 }

@@ -24,6 +24,7 @@ class MRVIEWER_CLASS PlaneWidget : public MultiListener<MouseDownListener, Mouse
     OnPlaneUpdateCallback onPlaneUpdate_;
 
     bool pressed_ = false;
+    bool showPlane_ = false;
     Vector2f startMousePos_;
     Vector2f endMousePos_;
 
@@ -49,6 +50,8 @@ public:
     bool isInLocalMode() const { return localMode_; }
     void setLocalShift( float shift ) { localShift_ = shift; }
     float getLocalShift() const { return localShift_; }
+    MRVIEWER_API bool getShowPlane() const;
+    MRVIEWER_API void setShowPlane( bool show );
 
     // returns plane
     MRVIEWER_API const Plane3f& getPlane() const;

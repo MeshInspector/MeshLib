@@ -46,6 +46,7 @@ void PlaneWidget::definePlane()
     planeObj_->setVisualizeProperty( true, MeshVisualizePropertyType::BordersHighlight, ViewportMask::all() );
     planeObj_->setFrontColor( Color::gray(), false );
     planeObj_->setBackColor( Color::gray() );
+    planeObj_->setVisible( showPlane_ );
     SceneRoot::get().addChild( planeObj_ );
 
     updateWidget_();
@@ -65,6 +66,18 @@ void PlaneWidget::setLocalMode( bool on )
     localMode_ = on;
     if ( localMode_ )
         localShift_ = 0.0f;
+}
+
+bool PlaneWidget::getShowPlane() const
+{
+    return showPlane_;
+}
+
+void PlaneWidget::setShowPlane( bool show )
+{
+    showPlane_ = show;
+    if ( planeObj_ )
+        planeObj_->setVisible( show );
 }
 
 const Plane3f& PlaneWidget::getPlane() const

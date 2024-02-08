@@ -1363,9 +1363,9 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     if ( planeObj )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, MR::cCheckboxPadding * menuScaling } );
-        bool showPlane = planeWidget.getPlaneObject()->isVisible();
+        bool showPlane = planeWidget.getShowPlane();
         if ( MR::UI::checkbox( "Show Plane", &showPlane ) )
-            planeWidget.getPlaneObject()->setVisible( showPlane );
+            planeWidget.setShowPlane( showPlane );
         ImGui::PopStyleVar();
     }
 

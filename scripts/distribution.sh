@@ -58,9 +58,6 @@ BASEDIR=$(dirname "$0")
 UBUNTU_MAJOR_VERSION=${DISTRIB_RELEASE%.*}
 
 requirements_file="$BASEDIR"/../requirements/ubuntu.txt
-if [ "$UBUNTU_MAJOR_VERSION" == "22" ]; then
-  requirements_file="$BASEDIR"/../requirements/ubuntu22.txt
-fi
 
 for req in `cat $requirements_file`
 do

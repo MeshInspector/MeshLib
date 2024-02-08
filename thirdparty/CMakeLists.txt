@@ -50,28 +50,15 @@ ENDIF()
 IF(APPLE OR MR_EMSCRIPTEN)
     add_subdirectory(./expected ./expected)
 ELSE()
-    # get distro ID
-    file(STRINGS /etc/os-release DISTRO_ID REGEX "^ID=")
-    string(REGEX REPLACE "ID=(.*)" "\\1" DISTRO_ID "${DISTRO_ID}")
-    string(REGEX REPLACE "\"(.*)\"" "\\1" DISTRO_ID "${DISTRO_ID}")
-
-    file(STRINGS /etc/os-release DISTRO_ID_LIKE REGEX "^ID_LIKE=")
-    string(REGEX REPLACE "ID_LIKE=(.*)" "\\1" DISTRO_ID_LIKE "${DISTRO_ID_LIKE}")
-    string(REGEX REPLACE "\"(.*)\"" "\\1" DISTRO_ID_LIKE "${DISTRO_ID_LIKE}")
-    string(REPLACE " " ";" DISTRO_ID_LIKE "${DISTRO_ID_LIKE}")
-
-    IF((${DISTRO_ID} STREQUAL "Ubuntu") OR ("ubuntu" IN_LIST ${DISTRO_ID_LIKE}))
-        SET(MR_OPENVDB TRUE)
-
-        # Ubuntu 20.04 compatibility
-        find_package(Boost REQUIRED)
-        find_package(TBB REQUIRED)
-        IF((${Boost_VERSION} VERSION_LESS "1.73") OR (${TBB_VERSION} VERSION_LESS "2020.2"))
-            SET(MR_OPENVDB_9 TRUE)
-        ENDIF()
-    ENDIF() # Ubuntu
-
-    IF(MR_OPENVDB)
+    # TODO: correct OpenVDB module search
+    list(APPEND CMAKE_MODULE_PATH
+        "/usr/lib/cmake/OpenVDB/"
+        "/usr/lib/x86_64-linux-gnu/cmake/OpenVDB/"
+        "/usr/lib/aarch64-linux-gnu/cmake/OpenVDB/"
+        "/usr/lib64/cmake/OpenVDB/"
+    )
+    find_package(OpenVDB 9 COMPONENTS openvdb)
+    IF(NOT OpenVDB_FOUND)
         set(OPENVDB_ENABLE_UNINSTALL OFF)
         set(OPENVDB_ENABLE_INSTALL OFF)
         set(OPENVDB_CORE_SHARED "ON")
@@ -80,7 +67,10 @@ ELSE()
         set(OPENVDB_BUILD_VDB_PRINT OFF)
         set(USE_EXPLICIT_INSTANTIATION OFF)
 
-        IF(MR_OPENVDB_9)
+        # Ubuntu 20.04 compatibility
+        find_package(Boost 1.73)
+        find_package(TBB 2020.2)
+        IF(NOT Boost_FOUND OR NOT TBB_FOUND)
             add_subdirectory(./openvdb/v9/openvdb)
         ELSE()
             add_subdirectory(./openvdb/v10/openvdb)

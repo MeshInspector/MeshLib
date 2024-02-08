@@ -423,7 +423,8 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings 
 
     if ( settings.automaticRadiusIncrease )
     {
-        float maxRadius = ( fanData.neighbors.size() < 2 ) ? settings.radius * 2 :
+        // if triangulation in original radius has border then we increase radius as well to find more neighbours
+        float maxRadius = ( fanData.neighbors.size() < 2 || fanData.border ) ? settings.radius * 2 :
             updateNeighborsRadius( cloud.points, v, fanData.border, fanData.neighbors, settings.radius );
 
         if ( maxRadius > settings.radius )

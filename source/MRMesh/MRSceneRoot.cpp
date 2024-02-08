@@ -32,7 +32,6 @@ SceneRoot::SceneRoot()
 {
     root_ = std::make_shared<Object>();
     root_->setName( "Root" );
-    root_->setAncillary( true );
 }
 
 const Object& SceneRoot::constGet()

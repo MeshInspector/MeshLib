@@ -555,7 +555,7 @@ Expected<Contours3f> offsetContours( const Contours3f& contours, ContoursVariabl
             const auto& mapVal = map[i][j];
             if ( zParmas.zCallback )
             {
-                res3I[j].z = zParmas.zCallback( res2I[j], mapVal );
+                res3I[j].z = zParmas.zCallback( *offset2dRes, { .contourId = i,.vertId = j }, mapVal );
             }
             else
             {

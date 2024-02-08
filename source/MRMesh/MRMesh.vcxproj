@@ -293,6 +293,7 @@
     <ClInclude Include="MRUnionFind.h" />
     <ClInclude Include="MRUniquePtr.h" />
     <ClInclude Include="MRUniteManyMeshes.h" />
+    <ClInclude Include="MRUnorientedTriangle.h" />
     <ClInclude Include="MRUVSphere.h" />
     <ClInclude Include="MRVDBFloatGrid.h" />
     <ClInclude Include="MRVDBProgressInterrupter.h" />
@@ -366,6 +367,7 @@
     <ClInclude Include="MRFlagOperators.h" />
     <ClInclude Include="MRMeasurementObject.h" />
     <ClInclude Include="MRRadiusMeasurementObject.h" />
+    <ClInclude Include="MRDistanceMeasurementObject.h" />
     <ClInclude Include="MRDefaultMeasurementObjects.h" />
   </ItemGroup>
   <ItemGroup>
@@ -628,6 +630,7 @@
     <ClCompile Include="MRObjectSave.cpp" />
     <ClCompile Include="MRZlib.cpp" />
     <ClCompile Include="MRRadiusMeasurementObject.cpp" />
+    <ClCompile Include="MRDistanceMeasurementObject.cpp" />
     <ClCompile Include="MRDefaultMeasurementObjects.cpp" />
   </ItemGroup>
   <ItemGroup>

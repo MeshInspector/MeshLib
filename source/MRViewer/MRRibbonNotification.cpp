@@ -3,6 +3,7 @@
 #include "MRViewer.h"
 #include "MRColorTheme.h"
 #include "MRRibbonFontManager.h"
+#include "MRRibbonConstants.h"
 #include "MRUIStyle.h"
 #include "ImGuiHelpers.h"
 #include "MRMesh/MRColor.h"
@@ -64,7 +65,7 @@ void RibbonNotifier::drawNotifications( float scaling )
         if ( i + 1 == cNotificationNumberLimit )
             ImGui::SetNextWindowBgAlpha( 0.5f );
         ImGui::Begin( name.c_str(), nullptr, flags );
-        const int columnCount = notification.onButtonClick ? 3 : 2;
+        const int columnCount = 2;
         const float firstColumnWidth = 28.0f * scaling;
         auto& style = ImGui::GetStyle();
         const float buttonWidth = notification.onButtonClick ?
@@ -73,9 +74,7 @@ void RibbonNotifier::drawNotifications( float scaling )
         ImGui::BeginTable( "##NotificationTable", columnCount, ImGuiTableFlags_SizingFixedFit );
 
         ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, firstColumnWidth );
-        ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, width - firstColumnWidth - buttonWidth );
-        if ( notification.onButtonClick )
-            ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, buttonWidth );
+        ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, width - firstColumnWidth );
 
         ImGui::TableNextColumn();
         auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
@@ -125,13 +124,11 @@ void RibbonNotifier::drawNotifications( float scaling )
         
         if ( bigFont )
             ImGui::PopFont();
-        ImGui::SameLine();
 
         if ( notification.onButtonClick )
         {
-            ImGui::TableNextColumn();
-            ImGui::SetCursorPosY( ImGui::GetWindowHeight() - style.WindowPadding.y - ImGui::GetTextLineHeight() - 2.0f * style.FramePadding.y );
-            if ( UI::buttonCommonSize( notification.buttonName.c_str() ) )
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cSeparateBlocksSpacing * scaling );
+            if ( UI::buttonCommonSize( notification.buttonName.c_str(), { buttonWidth, 0 } ) )
                 notification.onButtonClick();
         }
         ImGui::EndTable();       

@@ -3,6 +3,7 @@
 #include "MRMesh/MRCircleObject.h"
 #include "MRMesh/MRConeObject.h"
 #include "MRMesh/MRCylinderObject.h"
+#include "MRMesh/MRDistanceMeasurementObject.h"
 #include "MRMesh/MRRadiusMeasurementObject.h"
 #include "MRMesh/MRSphereObject.h"
 
@@ -46,6 +47,20 @@ void attachDefaultMeasurementsToObject( Object& object, const AttachDefaultMeasu
             radius->setIsSpherical( false );
         }
 
+        if ( auto height = object.find<DistanceMeasurementObject>();
+            bool( height ) /*implies*/<= params.overwrite
+        )
+        {
+            if ( height )
+                height->detachFromParent();
+
+            height = std::make_shared<DistanceMeasurementObject>();
+            object.addChild( height );
+            height->setName( "Distance" );
+            height->setLocalPoint( Vector3f( 0, 0, -0.5f ) );
+            height->setLocalDelta( Vector3f( 0, 0, 1 ) );
+        }
+
         return;
     }
 
@@ -64,6 +79,19 @@ void attachDefaultMeasurementsToObject( Object& object, const AttachDefaultMeasu
             radius->setLocalCenter( Vector3f( 0, 0, 1 ) );
             radius->setDrawAsDiameter( true );
             radius->setIsSpherical( false );
+        }
+
+        if ( auto height = object.find<DistanceMeasurementObject>();
+            bool( height ) /*implies*/<= params.overwrite
+        )
+        {
+            if ( height )
+                height->detachFromParent();
+
+            height = std::make_shared<DistanceMeasurementObject>();
+            object.addChild( height );
+            height->setName( "Distance" );
+            height->setLocalDelta( Vector3f( 0, 0, 1 ) );
         }
 
         return;

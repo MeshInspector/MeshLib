@@ -64,6 +64,9 @@
     <Filter Include="Source Files\DataModel\Features">
       <UniqueIdentifier>{f6ea3197-3e0d-44ec-9b3e-6b8fe7e0bc15}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\DataModel\Measurements">
+      <UniqueIdentifier>{744e0637-b69b-442b-b0f8-19f0f815c033}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source Files\DataModel\ModelHolder">
       <UniqueIdentifier>{2e5c8a08-b968-4732-be0c-9b07bb4b051e}</UniqueIdentifier>
     </Filter>
@@ -1174,13 +1177,19 @@
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
     <ClInclude Include="MRMeasurementObject.h">
-      <Filter>Source Files\DataModel</Filter>
+      <Filter>Source Files\DataModel\Measurements</Filter>
     </ClInclude>
     <ClInclude Include="MRRadiusMeasurementObject.h">
-      <Filter>Source Files\DataModel</Filter>
+      <Filter>Source Files\DataModel\Measurements</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDistanceMeasurementObject.h">
+      <Filter>Source Files\DataModel\Measurements</Filter>
     </ClInclude>
     <ClInclude Include="MRDefaultMeasurementObjects.h">
-      <Filter>Source Files\DataModel</Filter>
+      <Filter>Source Files\DataModel\Measurements</Filter>
+    </ClInclude>
+    <ClInclude Include="MRUnorientedTriangle.h">
+      <Filter>Source Files\Mesh</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1957,10 +1966,16 @@
       <Filter>Source Files\System</Filter>
     </ClCompile>
     <ClCompile Include="MRRadiusMeasurementObject.cpp">
-      <Filter>Source Files\DataModel</Filter>
+      <Filter>Source Files\DataModel\Measurements</Filter>
+    </ClCompile>
+    <ClCompile Include="MRDistanceMeasurementObject.cpp">
+      <Filter>Source Files\DataModel\Measurements</Filter>
+    </ClCompile>
+    <ClCompile Include="MRDistanceMeasurementObject.cpp">
+      <Filter>Source Files\DataModel\Measurements</Filter>
     </ClCompile>
     <ClCompile Include="MRDefaultMeasurementObjects.cpp">
-      <Filter>Source Files\DataModel</Filter>
+      <Filter>Source Files\DataModel\Measurements</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

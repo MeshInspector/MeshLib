@@ -413,7 +413,8 @@ void trianglulateFan( const VertCoords& points, VertId centerVert, TriangulatedF
 void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings & settings,
     TriangulatedFanData & fanData )
 {
-    findNeighbors( cloud, v, settings.radius, fanData.neighbors );
+    float actualRadius = settings.radius;
+    findNeighbors( cloud, v, actualRadius, fanData.neighbors );
     if ( settings.trustedNormals )
         filterNeighbors( *settings.trustedNormals, v, fanData.neighbors );
     if ( settings.allNeighbors )
@@ -422,13 +423,15 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings 
 
     if ( settings.automaticRadiusIncrease )
     {
-        float maxRadius = ( fanData.neighbors.size() < 2 ) ? settings.radius * 2 :
+        // if triangulation in original radius has border then we increase radius as well to find more neighbours
+        float maxRadius = ( fanData.neighbors.size() < 2 || fanData.border ) ? settings.radius * 2 :
             updateNeighborsRadius( cloud.points, v, fanData.border, fanData.neighbors, settings.radius );
 
         if ( maxRadius > settings.radius )
         {
             // update triangulation if radius was increased
-            findNeighbors( cloud, v, maxRadius, fanData.neighbors );
+            actualRadius = maxRadius;
+            findNeighbors( cloud, v, actualRadius, fanData.neighbors );
             if ( settings.trustedNormals )
                 filterNeighbors( *settings.trustedNormals, v, fanData.neighbors );
             if ( settings.allNeighbors )
@@ -436,6 +439,8 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings 
             trianglulateFan( cloud.points, v, fanData, settings.trustedNormals, settings.critAngle, settings.maxRemoves );
         }
     }
+    if ( settings.actualRadius )
+        *settings.actualRadius = actualRadius;
 }
 
 std::optional<std::vector<SomeLocalTriangulations>> buildLocalTriangulations(

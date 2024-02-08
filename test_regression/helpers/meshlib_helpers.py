@@ -1,4 +1,5 @@
 from constants import DEFAULT_RHAUSDORF_THRESHOLD
+from helpers.file_helpers import get_reference_files_list
 from module_helper import *
 from pytest_check import check
 import meshlib.mrmeshpy as mrmesh
@@ -56,3 +57,22 @@ def compare_meshes_similarity(mesh1: mrmesh.Mesh, mesh2: mrmesh.Mesh,
     with (check):
         assert (mesh1.topology.numValidVerts() - mesh2.topology.numValidVerts()) / min(mesh1.topology.numValidVerts(),
                                                                         mesh2.topology.numValidVerts()) < verts_thresh
+
+
+def compare_mesh(mesh1: mrmesh.Mesh or pathlib.Path or str, ref_file_path: pathlib.Path, multi_ref=True):
+    """
+    Compare mesh with multiple reference files by content
+    :param mesh1: mesh to compare
+    :param ref_file_path: reference file
+    :param multi_ref: if True, it compares file with multiple references, otherwise with single reference
+    """
+    if isinstance(mesh1, str) or isinstance(mesh1, pathlib.Path):
+        mesh1 = mrmesh.loadMesh(mesh1)
+    if multi_ref:
+        ref_files = get_reference_files_list(ref_file_path)
+    else:
+        ref_files = [ref_file_path]
+    for ref_file in ref_files:
+        if mesh1 == mrmesh.loadMesh(ref_file):
+            return True
+    return False

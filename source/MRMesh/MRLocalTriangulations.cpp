@@ -105,7 +105,7 @@ void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoor
 
         const VertId bd = triangs.fanRecords[c].border;
         const Vector3f cp = coords[c];
-        Vector3f sum;
+        int sum = 0;
         VertId otherBd;
         for ( auto n = nbeg; n < nend; ++n )
         {
@@ -116,9 +116,13 @@ void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoor
                 otherBd = bd;
                 continue;
             }
-            sum += cross( coords[next] - cp, coords[curr] - cp );
+            const auto d = dot( normals[c], cross( coords[next] - cp, coords[curr] - cp ) );
+            if ( d > 0 )
+                ++sum;
+            else if ( d < 0 )
+                --sum;
         }
-        if ( dot( sum, normals[c] ) >= 0 )
+        if ( sum >= 0 )
             return; // already oriented properly
         // reverse the orientation
         std::reverse( triangs.neighbors.data() + nbeg, triangs.neighbors.data() + nend );

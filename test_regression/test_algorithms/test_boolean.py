@@ -35,4 +35,4 @@ def test_boolean(tmp_path, operation_type, input_case):
         compare_meshes_similarity(ref_mesh, result_mesh)
     # check result mesh is same as one of reference
     with check:
-        compare_mesh(result_mesh, ref_mesh_path)
+        assert compare_mesh(result_mesh, ref_mesh_path)

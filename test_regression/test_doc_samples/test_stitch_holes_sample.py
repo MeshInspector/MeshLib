@@ -4,7 +4,7 @@ from module_helper import *
 from pathlib import Path
 
 
-def test_stitch_holes(tmp_path):
+def test_stitch_holes_sample(tmp_path):
     input_folder = Path(test_files_path) / "doc_samples" / "stitch_holes"
 
     # === Sample code

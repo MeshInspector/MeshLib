@@ -90,7 +90,7 @@ import pytest
          "maxError": 0.25
      }},
 ])
-def test_decimate(tmp_path, dec_params):
+def test_decimate_sample(tmp_path, dec_params):
     """
     Test boolean algorithm with all operation types
     """

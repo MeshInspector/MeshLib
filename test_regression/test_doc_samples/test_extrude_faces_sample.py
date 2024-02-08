@@ -4,7 +4,7 @@ from module_helper import *
 from pathlib import Path
 
 
-def test_extrude_faces(tmp_path):
+def test_extrude_faces_sample(tmp_path):
     input_folder = Path(test_files_path) / "doc_samples" / "extrude_faces"
 
     # === Sample code

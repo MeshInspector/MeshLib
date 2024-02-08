@@ -3,7 +3,8 @@ from helpers.meshlib_helpers import relative_hausdorff
 from module_helper import *
 from pathlib import Path
 
-def test_fill_holes(tmp_path):
+
+def test_fill_holes_sample(tmp_path):
     input_folder = Path(test_files_path) / "doc_samples" / "fill_holes"
 
     # === Sample code

@@ -2,7 +2,7 @@ from helpers.common_helpers import list_compare_2d
 from module_helper import *
 
 
-def test_create_mesh_get_primitives():
+def test_create_mesh_get_primitives_sample():
     # === Code sample
 
     import numpy as np

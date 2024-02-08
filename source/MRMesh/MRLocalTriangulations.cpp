@@ -69,6 +69,28 @@ std::optional<AllLocalTriangulations> uniteLocalTriangulations( const std::vecto
     return res;
 }
 
+Vector3f computeNormal( const AllLocalTriangulations & triangs, const VertCoords & points, VertId v )
+{
+    assert( v && v + 1 < triangs.fanRecords.size() );
+    const auto border = triangs.fanRecords[v].border;
+    const auto nbeg = triangs.fanRecords[v].firstNei;
+    const auto nend = triangs.fanRecords[v+1].firstNei;
+    const auto pv = points[v];
+    Vector3f sum;
+    for ( auto n = nbeg; n < nend; ++n )
+    {
+        const auto curr = triangs.neighbors[n];
+        if ( curr == border )
+            continue;
+        const auto next = triangs.neighbors[n + 1 < nend ? n + 1 : nbeg]; // in cw order
+        auto d0 = points[next] - pv;
+        auto d1 = points[curr] - pv;
+        auto angle = MR::angle( d0, d1 );
+        sum += angle * cross( d0, d1 ).normalized();
+    }
+    return sum.normalized();
+}
+
 void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertNormals & normals )
 {
     MR_TIMER

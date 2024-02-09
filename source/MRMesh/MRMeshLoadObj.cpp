@@ -538,7 +538,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
         Vector3d v;
         Vector3d c;
         std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-        auto res = parseObjCoordinate( line, v, c );
+        auto res = parseObjCoordinate( line, v, &c );
         if ( !res.has_value() )
             return unexpected( std::move( res.error() ) );
         return v;
@@ -563,7 +563,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
             for ( auto li = range.begin(); li < range.end(); li++ )
             {
                 std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-                auto res = parseObjCoordinate( line, v, c );
+                auto res = parseObjCoordinate( line, v, &c );
                 if ( !res.has_value() )
                 {
                     if ( ctx.cancel_group_execution() )

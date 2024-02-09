@@ -25,10 +25,13 @@ jobs:
             runner: [ self-hosted, linux-arm64 ]
           - os: "ubuntu:20.04"
             name: "ubuntu20"
+            cxx-compiler: /usr/bin/g++-10
           - os: "ubuntu:22.04"
             name: "ubuntu22"
+            cxx-compiler: /usr/bin/g++-11
           - os: "fedora:37"
             name: "fedora37"
+            cxx-compiler: /usr/bin/g++-12
         exclude:
           - os: "fedora:37"
             platform: 'arm64'
@@ -86,6 +89,11 @@ jobs:
           dnf -y install ./*.rpm
           python3 -m pip install --upgrade -r ./requirements/python.txt
 
+      - name: Install supported compiler
+        if: ${{ matrix.os == 'ubuntu:20.04' }}
+        run: |
+          apt-get -y install g++-10
+
       - name: Debug output
         if: always()
         run: sudo cat /etc/ld.so.conf.d/meshlib_libs.conf
@@ -104,7 +112,7 @@ jobs:
         run: |
           mkdir build && \
           cd build && \
-          cmake .. && \
+          cmake .. -DCMAKE_CXX_COMPILER=${{matrix.cxx-compiler}} && \
           cmake --build . && \
           ./cmake-example
 

@@ -25,13 +25,10 @@ jobs:
             runner: [ self-hosted, linux-arm64 ]
           - os: "ubuntu:20.04"
             name: "ubuntu20"
-            cxx-compiler: /usr/bin/clang++-11
           - os: "ubuntu:22.04"
             name: "ubuntu22"
-            cxx-compiler: /usr/bin/clang++-14
           - os: "fedora:37"
             name: "fedora37"
-            cxx-compiler: /usr/bin/clang++-15
         exclude:
           - os: "fedora:37"
             platform: 'arm64'
@@ -107,7 +104,7 @@ jobs:
         run: |
           mkdir build && \
           cd build && \
-          cmake .. -DCMAKE_CXX_COMPILER=${{matrix.cxx-compiler}} && \
+          cmake .. && \
           cmake --build . && \
           ./cmake-example
 

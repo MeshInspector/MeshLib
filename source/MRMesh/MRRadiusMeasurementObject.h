@@ -33,7 +33,7 @@ public:
 
     // Get the center in world coordinates.
     [[nodiscard]] MRMESH_API Vector3f getWorldCenter() const;
-    // Get the center in parent coordinates.
+    // Get the center in local coordinates.
     [[nodiscard]] MRMESH_API Vector3f getLocalCenter() const;
 
     // The length of this vector is the radius, and the direction is the preferred line drawing direction.

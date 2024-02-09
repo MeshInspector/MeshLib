@@ -41,7 +41,7 @@ Vector3f DistanceMeasurementObject::getWorldDelta() const
 
 Vector3f DistanceMeasurementObject::getLocalDelta() const
 {
-    return xf().A.col(0);
+    return xf().A.col( 0 );
 }
 
 void DistanceMeasurementObject::setLocalPoint( const MR::Vector3f& point )

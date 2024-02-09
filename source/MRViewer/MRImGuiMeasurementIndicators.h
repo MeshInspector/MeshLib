@@ -44,6 +44,9 @@ struct Params
     // The length of the leader lines (short lines attaching text to other things).
     float leaderLineLen = 20;
 
+    // A small perpendicular line at the end of some arrows.
+    float notchHalfLen = 8;
+
     // This picks the colors based on the current color theme.
     MRVIEWER_API Params();
 };
@@ -158,7 +161,8 @@ struct PreparedCurve
 };
 
 // Calculates points for a custom curve, from a function you provide. You can then draw this curve as a `line()`.
-//     The points are appended into `pointBuffer`, but you're not supposed to read it after the call, use the return value instead.
+//     The points are appended into `pointBuffer` (and for convenience the new points are also returned as `.midPoints`;
+//         the first and the last point are not inserted into the vector and are not included in `.midPoints`, they sit in `.a` and `.b`).
 //     You should reuse `pointBuffer` between calls for better performance (and `.clear()` it each time you finish drawing the resulting curve,
 //         which conveniently preserves vector capacity). Or, if you don't care, just pass an empty vector, and keep it alive as long as you need the curve.
 //     `stateA` and `stateB` can have any type, they describe the beginning and the end of the curve respectively. They might often be `0.f` and `1.f`.
@@ -205,7 +209,7 @@ template <typename A, typename B, typename F, typename G, typename H = std::null
 
     PreparedCurve ret{ .a = firstPoint, .b = pointBuffer.back() };
     pointBuffer.pop_back();
-    ret.midPoints = { pointBuffer.begin() + firstIndex, pointBuffer.end() };
+    ret.midPoints = { pointBuffer.data() + firstIndex, pointBuffer.data() + pointBuffer.size() };
     return ret;
 }
 

@@ -1,7 +1,6 @@
 #include "MRImGuiMeasurementIndicators.h"
 
 #include "MRViewer/MRColorTheme.h"
-#include "MRViewer/MRImGuiVectorOperators.h"
 
 namespace MR::ImGuiMeasurementIndicators
 {
@@ -116,6 +115,7 @@ void text( Element elem, float menuScaling, const Params& params, ImVec2 center,
 
     if ( push != ImVec2{} )
     {
+        push = normalize( push );
         ImVec2 point = ImVec2( push.x > 0 ? textPos.x - textToLineSpacingA.x : textPos.x + textSize.x + textToLineSpacingB.x, push.y > 0 ? textPos.y - textToLineSpacingA.y : textPos.y + textSize.y + textToLineSpacingB.y );
         textPos += push * ( -dot( push, point - center ) + textToLineSpacingRadius );
     }
@@ -161,12 +161,56 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
     if ( ( elem & Element::both ) == Element{} )
         return; // Nothing to draw.
 
-    if ( a == b )
+    float arrowLen = params.arrowLen * menuScaling;
+
+    auto midpointsFixed = lineParams.midPoints;
+
+    // Prune `midPoints` that are inside the arrow caps. This improves the arrow cap rendering on curves.
+    if ( !midpointsFixed.empty() )
+    {
+        for ( bool front : { false, true } )
+        {
+            float capLength = 0;
+            switch ( ( front ? lineParams.capB : lineParams.capA ).decoration )
+            {
+            case LineCap::Decoration::none:
+                // Nothing.
+                break;
+            case LineCap::Decoration::arrow:
+                capLength = arrowLen;
+                break;
+            }
+
+            if ( capLength <= 0 )
+                continue; // No cap here, nothing to do.
+
+            float remainingLength = capLength;
+            ImVec2 curPoint = front ? b : a;
+
+            while ( !midpointsFixed.empty() )
+            {
+                ImVec2 nextPoint = front ? midpointsFixed.back()/*sic*/ : midpointsFixed.front()/*sic*/;
+                float segLengthSq = lengthSq( nextPoint - curPoint );
+                if ( segLengthSq >= remainingLength * remainingLength )
+                    break; // We're outside of the cap.
+
+                // Pop the point.
+                midpointsFixed = midpointsFixed.subspan( front ? 0 : 1, midpointsFixed.size() - 1 );
+
+                curPoint = nextPoint;
+
+                remainingLength -= std::sqrt( segLengthSq );
+                if ( remainingLength <= 0 )
+                    break; // Just in case.
+            }
+        }
+    }
+
+    if ( a == b && midpointsFixed.empty() )
         return;
 
     float lineWidth = ( bool( lineParams.flags & LineFlags::narrow ) ? params.smallWidth : params.width ) * menuScaling;
     float outlineWidth = params.outlineWidth * menuScaling;
-    float arrowLen = params.arrowLen * menuScaling;
     float leaderLineLen = params.leaderLineLen * menuScaling;
     float invertedOverhang = params.invertedOverhang * menuScaling;
 
@@ -182,8 +226,8 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
             ImVec2& point = points[front];
             std::optional<ImVec2>& extraPoint = extraPoints[front];
             ImVec2 d = front
-                ? normalize( b - ( lineParams.midPoints.empty() ? a : lineParams.midPoints.back() ) )
-                : normalize( a - ( lineParams.midPoints.empty() ? b : lineParams.midPoints.front() ) );
+                ? normalize( b - ( midpointsFixed.empty() ? a : midpointsFixed.back() ) )
+                : normalize( a - ( midpointsFixed.empty() ? b : midpointsFixed.front() ) );
 
             const LineCap& thisCap = front ? lineParams.capB : lineParams.capA;
             switch ( thisCap.decoration )
@@ -222,7 +266,7 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
         if ( extraPoints[0] )
             params.list->PathLineTo( *extraPoints[0] );
         params.list->PathLineTo( points[0] );
-        for ( ImVec2 point : lineParams.midPoints )
+        for ( ImVec2 point : midpointsFixed )
             params.list->PathLineTo( point );
         params.list->PathLineTo( points[1] );
         if ( extraPoints[1] )

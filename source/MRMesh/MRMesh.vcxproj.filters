@@ -1185,6 +1185,9 @@
     <ClInclude Include="MRDistanceMeasurementObject.h">
       <Filter>Source Files\DataModel\Measurements</Filter>
     </ClInclude>
+    <ClInclude Include="MRAngleMeasurementObject.h">
+      <Filter>Source Files\DataModel\Measurements</Filter>
+    </ClInclude>
     <ClInclude Include="MRDefaultMeasurementObjects.h">
       <Filter>Source Files\DataModel\Measurements</Filter>
     </ClInclude>
@@ -1971,7 +1974,7 @@
     <ClCompile Include="MRDistanceMeasurementObject.cpp">
       <Filter>Source Files\DataModel\Measurements</Filter>
     </ClCompile>
-    <ClCompile Include="MRDistanceMeasurementObject.cpp">
+    <ClCompile Include="MRAngleMeasurementObject.cpp">
       <Filter>Source Files\DataModel\Measurements</Filter>
     </ClCompile>
     <ClCompile Include="MRDefaultMeasurementObjects.cpp">

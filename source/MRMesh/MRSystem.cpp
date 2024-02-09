@@ -399,6 +399,40 @@ void OpenLink( const std::string& url )
 #endif // _WIN32
 }
 
+// Opens given file in associated application
+bool OpenDocument( const std::filesystem::path& path )
+{
+#ifdef _WIN32
+    HINSTANCE result = ShellExecuteW( NULL, L"open", path.c_str(), NULL, NULL, SW_SHOWNORMAL);
+    // "If the function succeeds, it returns a value greater than 32"
+    if ( ( INT_PTR )result <= 32 )
+    {
+        spdlog::warn( "Error opening {}, error code {}", path.string().c_str(), ( int )( INT_PTR )result );
+        return false;
+    }
+    return true;
+
+#else
+#ifdef __EMSCRIPTEN__
+    ( void )path;
+    return false;
+#else
+    std::ostringstream arg = std::quoted( path.string(), '\'' );
+#ifdef __APPLE__
+    auto openres = system( ( "open " + arg.str() ).c_str() );
+#else
+    auto openres = system( ( "xdg-open " + arg.str() ).c_str() );
+#endif
+    if ( openres == -1 )
+    {
+        spdlog::warn( "Error opening {}", path );
+        return false;
+    }
+    return true;
+#endif
+#endif // _WIN32
+}
+
 #ifdef _WIN32
 std::filesystem::path GetWindowsInstallDirectory()
 {

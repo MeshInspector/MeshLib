@@ -98,11 +98,11 @@ jobs:
       - name: Python Regression Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
         working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' --basetemp='/temp/pytest'
+        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
 
       - name: Copy temporary test data to S3 Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
-        run: aws s3 cp /temp/pytest s3://data-autotest/temp/m/${{github.run_id}} --recursive
+        run: aws s3 cp ../pytest_temp s3://data-autotest/temp/m/${{github.run_id}} --recursive
 
       - name: Create Deb
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler }}

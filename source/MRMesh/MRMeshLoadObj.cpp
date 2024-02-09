@@ -374,6 +374,8 @@ namespace
             result.emplace( std::move( currentMaterialName ), std::move( currentMaterial ) );
         return result;
     }
+
+    constexpr Vector3d cInvalidColor = { -1., -1., -1. };
 }
 
 namespace MR
@@ -424,6 +426,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
     Triangulation t;
     VertUVCoords uvCoords;
     VertColors colors;
+    std::atomic_flag hasColors = ATOMIC_FLAG_INIT;
     Expected<MtlLibrary, std::string> mtl;
     std::string currentMaterialName;
     std::optional<Vector3d> pointOffset;
@@ -464,7 +467,12 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
             }
             result.mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices(
                 VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), t, &dups, buildSettings );
-            result.colors = std::move( colors );
+            if ( hasColors.test() )
+            {
+                result.colors = std::move( colors );
+                colors = {};
+                hasColors.clear();
+            }
             if ( settings.duplicatedVertexCount )
                 *settings.duplicatedVertexCount = int( dups.size() );
             if ( settings.skippedFaceCount )
@@ -558,7 +566,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
         tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
         {
             Vector3d v;
-            Vector3d c;
+            Vector3d c { cInvalidColor };
             for ( auto li = range.begin(); li < range.end(); li++ )
             {
                 std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
@@ -571,8 +579,11 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
                 }
                 const auto n = offset + ( li - begin );
                 points[n] = pointOffset ? Vector3f( v - *pointOffset ) : Vector3f( v );
-                if ( !colors.empty() )
+                if ( !colors.empty() && c != cInvalidColor )
+                {
                     colors[VertId(n)] = Color( c );
+                    hasColors.test_and_set();
+                }
             }
         }, ctx );
     };

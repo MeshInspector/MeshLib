@@ -79,7 +79,7 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
 
       - name: Copy temporary test data to S3 Tests
-        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
+        if: always()
         run: aws s3 cp ./pytest_temp s3://data-autotest/temp/m/${{github.run_id}} --recursive
 
       - name: Create Pkg

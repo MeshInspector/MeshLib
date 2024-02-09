@@ -536,9 +536,8 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
     auto parseVertex = [&] ( size_t li ) -> Expected<Vector3d, std::string>
     {
         Vector3d v;
-        Vector3d c;
         std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-        auto res = parseObjCoordinate( line, v, &c );
+        auto res = parseObjCoordinate( line, v );
         if ( !res.has_value() )
             return unexpected( std::move( res.error() ) );
         return v;

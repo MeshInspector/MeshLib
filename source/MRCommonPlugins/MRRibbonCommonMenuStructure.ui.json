@@ -61,12 +61,6 @@
 							"Name": "Fit data"
 						},
 						{
-							"Name": "Select objects"
-						},
-						{
-							"Name": "Move object"
-						},
-						{
 							"Name": "Capture screenshot"
 						},
 						{
@@ -127,8 +121,36 @@
 			]
 		},
 		{
+			"Name": "Select",
+			"Priority": 2,
+			"Groups": [
+				{
+					"Name": "Basic",
+					"List": [
+						{
+							"Name": "Select objects"
+						}
+					]
+				}
+			]
+		},
+		{
+			"Name": "Transform",
+			"Priority": 3,
+			"Groups": [
+				{
+					"Name": "Transform",
+					"List": [
+						{
+							"Name": "Move object"
+						}
+					]
+				}
+			]
+		},
+		{
 			"Name": "Voxel",
-			"Priority": 8,
+			"Priority": 3,
 			"Groups": [
 				{
 					"Name": "Open",

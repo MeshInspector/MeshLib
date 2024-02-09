@@ -20,7 +20,7 @@ if [ $? -ne 0 ] ; then
 fi
 set -e
 
-$PYTHON_EXECUTABLE -m pip install --upgrade --requirement ./requirements/python.txt
+$PYTHON_EXECUTABLE -m pip install --upgrade --requirement ./requirements/distribution_python.txt
 $PYTHON_EXECUTABLE -m pip install auditwheel wheel setuptools pybind11-stubgen
 $PYTHON_EXECUTABLE ./scripts/wheel/setup_workspace.py
 pushd ./scripts/wheel/meshlib/

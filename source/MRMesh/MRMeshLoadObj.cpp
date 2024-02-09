@@ -420,9 +420,10 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
     std::string currentObjName;
     std::vector<Vector3f> points;
     std::vector<UVCoord> textureVertices;
-    std::vector<int> texCoords( points.size(), -1 );
+    std::vector<int> texCoords;
     Triangulation t;
     VertUVCoords uvCoords;
+    VertColors colors;
     Expected<MtlLibrary, std::string> mtl;
     std::string currentMaterialName;
     std::optional<Vector3d> pointOffset;
@@ -463,6 +464,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
             }
             result.mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices(
                 VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), t, &dups, buildSettings );
+            result.colors = std::move( colors );
             if ( settings.duplicatedVertexCount )
                 *settings.duplicatedVertexCount = int( dups.size() );
             if ( settings.skippedFaceCount )
@@ -550,8 +552,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
         texCoords.resize( newSize, -1 );
 
         points.resize( newSize );
-        if ( settings.colors )
-            settings.colors->resize( newSize );
+        colors.resize( newSize ); /// TODO: resize only if there are colors
         uvCoords.resize( newSize );
 
         tbb::task_group_context ctx;
@@ -571,8 +572,8 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
                 }
                 const auto n = offset + ( li - begin );
                 points[n] = pointOffset ? Vector3f( v - *pointOffset ) : Vector3f( v );
-                if ( settings.colors )
-                    (*settings.colors)[VertId(n)] = Color( c );
+                if ( !colors.empty() )
+                    colors[VertId(n)] = Color( c );
             }
         }, ctx );
     };

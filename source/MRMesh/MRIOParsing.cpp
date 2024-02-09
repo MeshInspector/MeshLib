@@ -118,6 +118,7 @@ VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3<T>& v, Vec
     int j = 0;
     auto color = [&] ( auto& ctx ) { c[j++] = _attr( ctx ); };
 
+    // TODO: support obj without colors
     bool r = phrase_parse(
         str.begin(),
         str.end(),

@@ -29,7 +29,7 @@ struct ButtonCustomizationParams
 };
 
 /// draw gradient button, which can be disabled (active = false)
-MRVIEWER_API bool buttonEx( const char* label, bool active, const Vector2f& size = Vector2f( 0, 0 ), 
+MRVIEWER_API bool buttonEx( const char* label, bool active, const Vector2f& size = Vector2f( 0, 0 ),
     ImGuiButtonFlags flags = ImGuiButtonFlags_None, const ButtonCustomizationParams& custmParams = {} );
 /// draw gradient button, which can be disabled (active = false)
 /// returns true if button is clicked in this frame, or key is pressed (optional)
@@ -55,8 +55,8 @@ MRVIEWER_API bool checkboxValid( const char* label, bool* value, bool valid );
 /// draw gradient checkbox with mixed state
 MRVIEWER_API bool checkboxMixed( const char* label, bool* value, bool mixed );
 /// draw gradient checkbox
-template<typename Getter, typename Setter>
-inline bool checkbox( const char* label, Getter get, Setter set )
+template <typename Getter, typename Setter>
+bool checkbox( const char* label, Getter get, Setter set )
 {
     bool value = get();
     bool ret = checkbox( label, &value );
@@ -64,6 +64,22 @@ inline bool checkbox( const char* label, Getter get, Setter set )
     return ret;
 }
 
+/// Draw a checkbox toggling one or more bits in the mask.
+template <typename T>
+bool checkboxFlags( const char* label, T& target, T flags )
+{
+    bool value = bool( target & flags );
+    bool mixed = value && ( target & flags ) != flags;
+    if ( checkboxMixed( label, &value, mixed ) )
+    {
+        if ( value )
+            target |= flags;
+        else
+            target &= ~flags;
+        return true;
+    }
+    return false;
+}
 
 
 /// draw gradient radio button
@@ -101,12 +117,12 @@ MRVIEWER_API void transparentTextWrapped( const char* fmt, ... );
 /// draw tooltip only if current item is hovered
 MRVIEWER_API void setTooltipIfHovered( const std::string& text, float scaling );
 
-/// add text with separator line 
-/// if issueCount is greater than zero, this number will be displayed in red color after the text. 
+/// add text with separator line
+/// if issueCount is greater than zero, this number will be displayed in red color after the text.
 /// If it equals zero - in green color
 /// Otherwise it will not be displayed
 MRVIEWER_API void separator( float scaling, const std::string& text = "", int issueCount = -1 );
-MRVIEWER_API void separator( 
+MRVIEWER_API void separator(
     float scaling,
     const std::string& text,
     const ImVec4& color,

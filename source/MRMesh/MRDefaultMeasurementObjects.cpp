@@ -11,59 +11,28 @@
 namespace MR
 {
 
-void attachDefaultMeasurementsToObject( Object& object, AttachDefaultMeasurementsFlags flags )
+void attachDefaultMeasurementsToObject( Object& object, const AttachDefaultMeasurementsParams& params )
 {
-    auto addRadius = [&]( auto lambda )
+    auto addBasic = [&]<typename T>( DefaultMeasurementKinds bit, auto lambda )
     {
-        if ( bool( flags & AttachDefaultMeasurementsFlags::Radiuses ) )
+        if ( bool( params.enabledKinds & bit ) )
         {
-            if ( auto radius = object.find<RadiusMeasurementObject>();
-                bool( radius ) /*implies*/<= bool( flags & AttachDefaultMeasurementsFlags::Overwrite )
-            )
+            if ( auto measurement = object.find<T>(); bool( measurement ) /*implies*/<= params.overwrite )
             {
-                if ( radius )
-                    radius->detachFromParent();
+                if ( measurement )
+                    measurement->detachFromParent();
 
-                radius = std::make_shared<RadiusMeasurementObject>();
-                object.addChild( radius );
-                lambda( std::move( radius ) );
+                measurement = std::make_shared<T>();
+                object.addChild( measurement );
+                measurement->setVisible( bool( params.defaultVisibleKinds & bit ) );
+                lambda( std::move( measurement ) );
             }
         }
     };
-    auto addDistance = [&]( auto lambda )
-    {
-        if ( bool( flags & AttachDefaultMeasurementsFlags::Distances ) )
-        {
-            if ( auto distance = object.find<DistanceMeasurementObject>();
-                bool( distance ) /*implies*/<= bool( flags & AttachDefaultMeasurementsFlags::Overwrite )
-            )
-            {
-                if ( distance )
-                    distance->detachFromParent();
 
-                distance = std::make_shared<DistanceMeasurementObject>();
-                object.addChild( distance );
-                lambda( std::move( distance ) );
-            }
-        }
-    };
-    auto addAngle = [&]( auto lambda )
-    {
-        if ( bool( flags & AttachDefaultMeasurementsFlags::Angles ) )
-        {
-            if ( auto angle = object.find<AngleMeasurementObject>();
-                bool( angle ) /*implies*/<= bool( flags & AttachDefaultMeasurementsFlags::Overwrite )
-            )
-            {
-                if ( angle )
-                    angle->detachFromParent();
-
-                angle = std::make_shared<AngleMeasurementObject>();
-                object.addChild( angle );
-                lambda( std::move( angle ) );
-            }
-        }
-    };
+    auto addRadius = [&]( auto lambda ) { addBasic.operator()<RadiusMeasurementObject>( DefaultMeasurementKinds::Radiuses, std::move( lambda ) ); };
+    auto addDistance = [&]( auto lambda ) { addBasic.operator()<DistanceMeasurementObject>( DefaultMeasurementKinds::Distances, std::move( lambda ) ); };
+    auto addAngle = [&]( auto lambda ) { addBasic.operator()<AngleMeasurementObject>( DefaultMeasurementKinds::Angles, std::move( lambda ) ); };
 
     if ( dynamic_cast<CircleObject *>( &object ) )
     {
@@ -88,7 +57,7 @@ void attachDefaultMeasurementsToObject( Object& object, AttachDefaultMeasurement
 
         addDistance( [&]( auto height )
         {
-            height->setName( "Distance" );
+            height->setName( "Height" );
             height->setLocalPoint( Vector3f( 0, 0, -0.5f ) );
             height->setLocalDelta( Vector3f( 0, 0, 1 ) );
         } );
@@ -108,7 +77,7 @@ void attachDefaultMeasurementsToObject( Object& object, AttachDefaultMeasurement
 
         addDistance( [&]( auto height )
         {
-            height->setName( "Distance" );
+            height->setName( "Height" );
             height->setLocalDelta( Vector3f( 0, 0, 1 ) );
         } );
 

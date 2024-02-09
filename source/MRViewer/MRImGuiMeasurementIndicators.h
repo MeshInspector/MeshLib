@@ -209,7 +209,7 @@ template <typename A, typename B, typename F, typename G, typename H = std::null
 
     PreparedCurve ret{ .a = firstPoint, .b = pointBuffer.back() };
     pointBuffer.pop_back();
-    ret.midPoints = { pointBuffer.begin() + firstIndex, pointBuffer.end() };
+    ret.midPoints = { pointBuffer.data() + firstIndex, pointBuffer.data() + pointBuffer.size() };
     return ret;
 }
 

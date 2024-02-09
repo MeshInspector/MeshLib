@@ -118,13 +118,25 @@ VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3<T>& v, Vec
     int j = 0;
     auto color = [&] ( auto& ctx ) { if ( c ) ( *c )[j++] = _attr( ctx ); };
 
-    // TODO: support obj without colors
-    bool r = phrase_parse(
-        str.begin(),
-        str.end(),
-        ( 'v' >> floatT[coord] >> floatT[coord] >> floatT[coord] >> floatT[color] >> floatT[color] >> floatT[color] ),
-        ascii::space
-    );
+    bool r;
+    if ( c != nullptr )
+    {
+        r = phrase_parse(
+            str.begin(),
+            str.end(),
+            ( 'v' >> floatT[coord] >> floatT[coord] >> floatT[coord] >> -( floatT[color] >> floatT[color] >> floatT[color] ) ),
+            ascii::space
+        );
+    }
+    else
+    {
+        r = phrase_parse(
+            str.begin(),
+            str.end(),
+            ( 'v' >> floatT[coord] >> floatT[coord] >> floatT[coord] ),
+            ascii::space
+        );
+    }
     if ( !r )
         return unexpected( "Failed to parse vertex" );
 

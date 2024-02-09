@@ -162,32 +162,30 @@ struct PreparedCurve
 //     You should reuse `pointBuffer` between calls for better performance (and `.clear()` it each time you finish drawing the resulting curve,
 //         which conveniently preserves vector capacity). Or, if you don't care, just pass an empty vector, and keep it alive as long as you need the curve.
 //     `stateA` and `stateB` can have any type, they describe the beginning and the end of the curve respectively. They might often be `0.f` and `1.f`.
-//     Let `S` be the type of `stateA`/`stateB` (aka `std::remove_cvref_t<A>` and same for `B`, the resulting types must be the same).
+//     Let `S` be the type of `stateA`/`stateB` (more on that belw).
 //     `stateToPoint` is a lambda `(const S &s) -> ImVec2`. It converts a state into a curve point coordinates.
 //     `bisectState` is a lambda `(const S &a, const S &b, int depth) -> S`. Given two states, it produces the state between them. `depth` starts at `0`.
-//     `onInsertPoint`, if specified, is a lambda `(ImVec2 point, int depth) -> void`. It's called right before a point is added into the list.
+//     `onInsertPoint`, if specified, is a lambda `(ImVec2 point, const S &state) -> void`. It's called right before a point is added into the list.
+//     It's actually possible to have multiple state types instead of a single `S`, and template your functions (e.g. to track bisection depth in the type system, etc).
 // Example usage:
 //     prepareCurve( params, buf, 0, PI*2, [](float x){return std::sin(x);}, [](float a, float b, int /*depth*/){return (a+b)/2;} )
 template <typename A, typename B, typename F, typename G, typename H = std::nullptr_t>
-requires std::is_same_v<std::remove_cvref_t<A>, std::remove_cvref_t<B>>
-[[nodiscard]] PreparedCurve prepareCurve( const CurveParams& curveParams, std::vector<ImVec2>& pointBuffer, A&& stateA, B&& stateB,
+[[nodiscard]] PreparedCurve prepareCurve( const CurveParams& curveParams, std::vector<ImVec2>& pointBuffer, const A& stateA, const B& stateB,
     F&& stateToPoint, G&& bisectState, H&& onInsertPoint = nullptr
 )
 {
-    using StateType = std::remove_cvref_t<A>;
-
     const float pixelStepSq = curveParams.subdivisionStepPixels * curveParams.subdivisionStepPixels;
 
     std::size_t firstIndex = pointBuffer.size();
 
-    auto makeCurve = [&]( auto makeCurve, int depth, const StateType& stateA, const StateType& stateB, ImVec2 pointA, ImVec2 pointB ) -> void
+    auto makeCurve = [&]( auto makeCurve, int depth, const auto& stateA, const auto& stateB, ImVec2 pointA, ImVec2 pointB ) -> void
     {
         // Check if we need to subdivide.
         if ( depth < curveParams.maxSubdivisionDepth && ( depth < curveParams.minSubdivisionDepth || ImGuiMath::lengthSq( pointB - pointA ) > pixelStepSq ) )
         {
             // Do subdivide.
 
-            const StateType midState = bisectState( stateA, stateB, int( depth ) ); // A cast to prevent modification.
+            auto midState = bisectState( stateA, stateB, int( depth ) ); // A cast to prevent modification.
             ImVec2 midPoint = stateToPoint( midState );
 
             makeCurve( makeCurve, depth + 1, stateA, midState, pointA, midPoint );
@@ -197,7 +195,7 @@ requires std::is_same_v<std::remove_cvref_t<A>, std::remove_cvref_t<B>>
         {
             // No subdivide.
 
-            onInsertPoint( pointB, int( depth ) ); // A cast to prevent modification.
+            onInsertPoint( pointB, stateB );
             pointBuffer.push_back( pointB );
         }
 

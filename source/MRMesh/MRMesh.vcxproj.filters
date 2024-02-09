@@ -1182,6 +1182,9 @@
     <ClInclude Include="MRDefaultMeasurementObjects.h">
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
+    <ClInclude Include="MRPointsComponents.h">
+      <Filter>Source Files\Components</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1961,6 +1964,9 @@
     </ClCompile>
     <ClCompile Include="MRDefaultMeasurementObjects.cpp">
       <Filter>Source Files\DataModel</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointsComponents.cpp">
+      <Filter>Source Files\Components</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

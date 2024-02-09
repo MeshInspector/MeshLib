@@ -253,7 +253,7 @@ private:
     // current scroll position of tabs panel
     float tabPanelScroll_{ 0.0f };
 
-    bool autoCloseBlockingPlugins_{ false };
+    bool autoCloseBlockingPlugins_{ true };
 
     enum class CollapseState
     {

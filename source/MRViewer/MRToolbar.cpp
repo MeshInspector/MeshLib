@@ -235,7 +235,7 @@ void Toolbar::drawCustomizeModal_()
         return;
     }
 
-    if ( ImGui::ModalBigTitle( "Toolbar Customize", scaling_ ) )
+    if ( ImGui::ModalBigTitle( "Customize Viewport Toolbar", scaling_ ) )
     {
         ImGui::CloseCurrentPopup();
         searchString_.clear();
@@ -365,11 +365,11 @@ void Toolbar::drawCustomizeModal_()
     }
 
     ImGui::PopStyleVar();
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( ImGui::GetStyle().ItemSpacing.x, 12 ) );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( ImGui::GetStyle().ItemSpacing.x, 12 * scaling_ ) );
     ImGui::EndChild();
     ImGui::PopStyleVar();
 
-    ImGui::BeginChild( "##QuickAccessCustomizeTabsList", ImVec2( 130, -1 ) );
+    ImGui::BeginChild( "##QuickAccessCustomizeTabsList", ImVec2( 130 * scaling_, -1 ) );
     drawCustomizeTabsList_();
     ImGui::EndChild();
 
@@ -382,7 +382,7 @@ void Toolbar::drawCustomizeModal_()
     const float searchWidth = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x - buttonWidth;
     
     ImGui::SetNextItemWidth( searchWidth );
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2(style.FramePadding.x, 8) );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, 8 * scaling_ ) );
     if ( ImGui::InputText( "##QuickAccessSearch", searchString_ ) )
     {
         searchResult_.clear();
@@ -397,7 +397,7 @@ void Toolbar::drawCustomizeModal_()
     }
     ImGui::PopStyleVar();
     ImGui::SameLine();
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( ImGui::GetStyle().ItemSpacing.x, 12 ) );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( ImGui::GetStyle().ItemSpacing.x, 12 * scaling_ ) );
     if ( UI::button( "Reset to default", Vector2f( buttonWidth, 0 ) ) )
     {
         resetItemsList();
@@ -487,7 +487,7 @@ void Toolbar::drawCustomizeTabsList_()
             ImGui::SameLine();
             ImVec2 pos = ImGui::GetCursorScreenPos();
             pos.y += circleShiftY;
-            ImGui::GetForegroundDrawList()->AddCircleFilled( pos, 2, colorActive );
+            ImGui::GetWindowDrawList()->AddCircleFilled( pos, 2 * scaling_, colorActive );
             ImGui::NewLine();
         }
         if ( changedColor )

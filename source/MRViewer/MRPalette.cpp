@@ -349,7 +349,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     if ( paletteWindow )
     {
         const auto currentPos = paletteWindow->Pos;
-        const auto currentSize = paletteWindow->Size;
+        auto currentSize = paletteWindow->Size;
         constexpr float cornerSize = 50.0f;
         const auto ctx = ImGui::GetCurrentContext();
 
@@ -363,6 +363,14 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
            {
                 ctx->IO.MouseClickedCount[0] = 1; // prevent double-click on the corner to change window size
            }
+        if ( prevMaxLabelWidth_ == 0.0f )
+            prevMaxLabelWidth_ = maxTextSize;
+        if ( prevMaxLabelWidth_ != maxTextSize )
+        {
+            currentSize.x += ( maxTextSize - prevMaxLabelWidth_ );
+            ImGui::SetNextWindowSize( currentSize, ImGuiCond_Always );
+            prevMaxLabelWidth_ = maxTextSize;
+        }
     }
 
     ImGui::Begin( windowName.c_str(), &isWindowOpen_,

@@ -24,6 +24,7 @@ class MRVIEWER_CLASS PlaneWidget : public MultiListener<MouseDownListener, Mouse
     OnPlaneUpdateCallback onPlaneUpdate_;
 
     bool pressed_ = false;
+    bool showPlaneByDefault_ = true;
     Vector2f startMousePos_;
     Vector2f endMousePos_;
 
@@ -64,6 +65,11 @@ public:
     MRVIEWER_API bool importPlaneMode() const;
     // sets the flag importPlaneMode_, if it is true you can use a plain object from the scene
     MRVIEWER_API void setImportPlaneMode( bool val );
+
+    // returns the flag that is true if the plane is shown by default
+    bool getShowPlaneByDefault() const { return showPlaneByDefault_; }
+    // sets the flag that is true if the plane is shown by default
+    void setShowPlaneByDefault( bool val ) { showPlaneByDefault_ = val; }
 
 private:
     MRVIEWER_API void updateWidget_( bool updateCameraRotation = true );

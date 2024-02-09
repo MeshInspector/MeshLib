@@ -101,8 +101,8 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
 
       - name: Copy temporary test data to S3 Tests
-        if: always()
-        run: aws s3 cp ../pytest_temp s3://data-autotest/temp/m/${{github.run_id}} --recursive
+        if: '!cancelled()'
+        run: aws s3 cp ./pytest_temp s3://test-artifacts-git/temp/m/${{github.run_id}} --recursive
 
       - name: Create Deb
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler }}

@@ -110,6 +110,7 @@ def test_decimate(tmp_path, dec_params):
     mlpy.decimateMesh(mesh, settings)
 
     # === Verification
+    mlpy.saveMesh(mesh, tmp_path / f"{case_name}.mrmesh")
     ref_mesh_path = input_folder / f"{case_name}.mrmesh"
     ref_mesh = mlpy.loadMesh(ref_mesh_path)
     #  check meshes similarity (for extra details on fail)

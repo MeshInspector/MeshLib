@@ -25,6 +25,7 @@ def test_boolean(tmp_path, operation_type, input_case):
     result_mesh = result.mesh
 
     # === Verification
+    mrmeshpy.saveMesh(result_mesh, tmp_path / f"{operation_type}.mrmesh")
     ref_mesh_path = input_folder / f"bool_{operation_type}.mrmesh"
     ref_mesh = mrmeshpy.loadMesh(ref_mesh_path)
     # no self colliding triangles

@@ -152,6 +152,9 @@ void ViewerSettingsPlugin::drawSettingsTab_( float menuWidth, float menuScaling 
                                                   std::bind( &RibbonMenu::setCloseContextOnChange, ribbonMenu_, std::placeholders::_1 ) );
             UI::setTooltipIfHovered( "Close scene context menu on any change", menuScaling );
             
+            UI::checkbox( "Show Experimental Features", &RibbonSchemaHolder::schema().experimentalFeatures );
+            UI::setTooltipIfHovered( "Show experimental ribbon tabs", menuScaling );
+
             UI::checkbox( "Close Plugins on Activating Another Plugin", 
                                                   std::bind( &RibbonMenu::getAutoCloseBlockingPlugins, ribbonMenu_ ), 
                                                   std::bind( &RibbonMenu::setAutoCloseBlockingPlugins, ribbonMenu_, std::placeholders::_1 ) );

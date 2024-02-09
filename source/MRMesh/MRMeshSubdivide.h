@@ -25,6 +25,7 @@ struct SubdivideSettings
     float maxAngleChangeAfterFlip = FLT_MAX;
     /// If this value is less than FLT_MAX then edge flips will
     /// ignore dihedral angle check if one of triangles has aspect ratio more than this value
+    /// Unit: rad
     float criticalAspectRatioFlip = 1000.0f;
     /// Region on mesh to be subdivided, it is updated during the operation
     FaceBitSet * region = nullptr;

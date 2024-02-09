@@ -7,7 +7,7 @@
 namespace MR
 {
 
-namespace PointClodComponents
+namespace PointCloudComponents
 {
 
 std::vector<MR::VertBitSet> getAllComponents( const PointCloud& pointCloud, float maxDist )
@@ -16,7 +16,7 @@ std::vector<MR::VertBitSet> getAllComponents( const PointCloud& pointCloud, floa
 
     assert( maxDist > 0.f );
     const auto& validPoints = pointCloud.validPoints;
-    auto unionSstructs = PointClodComponents::getUnionFindStructureVerts( pointCloud, maxDist );
+    auto unionSstructs = PointCloudComponents::getUnionFindStructureVerts( pointCloud, maxDist );
     auto allRoots = unionSstructs.roots();
     std::vector<VertBitSet> components;
     std::vector<VertId> componentRoots;
@@ -51,12 +51,11 @@ MR::UnionFind<MR::VertId> getUnionFindStructureVerts( const PointCloud& pointClo
 
     VertBitSet vertsRegion = pointCloud.validPoints;
     if ( region )
-        vertsRegion |= *region;
+        vertsRegion &= *region;
 
     if ( !vertsRegion.any() )
         return {};
 
-    static_assert( VertBitSet::npos + 1 == 0 );
     UnionFind<VertId> unionFindStructure( vertsRegion.find_last() + 1 );
 
     VertId v1;

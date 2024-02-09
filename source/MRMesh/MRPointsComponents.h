@@ -5,7 +5,7 @@
 namespace MR
 {
 
-namespace PointClodComponents
+namespace PointCloudComponents
 {
 
 /// \defgroup PointClodComponentsGroup PointClodComponents
@@ -13,10 +13,10 @@ namespace PointClodComponents
 /// \{
 
 /// get all point cloud components connected by a distance no greater than \param maxDist
-std::vector<VertBitSet> getAllComponents( const PointCloud& pointCloud, float maxDist );
+MRMESH_API std::vector<VertBitSet> getAllComponents( const PointCloud& pointCloud, float maxDist );
 
 /// gets union - find structure for vertices in \param region connected by a distance no greater than \param maxDist 
-UnionFind<VertId> getUnionFindStructureVerts( const PointCloud& pointCloud, float maxDist, const VertBitSet* region = nullptr );
+MRMESH_API UnionFind<VertId> getUnionFindStructureVerts( const PointCloud& pointCloud, float maxDist, const VertBitSet* region = nullptr );
 
 /// \}
 } // namespace PointClodComponents

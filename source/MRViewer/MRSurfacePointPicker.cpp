@@ -19,7 +19,7 @@ const MeshTriPoint& SurfacePointWidget::create( const std::shared_ptr<ObjectMesh
     if ( !surface || !surface->mesh() )
         return startPos;
     baseSurface_ = surface;
-    
+
     pickSphere_ = std::make_shared<SphereObject>();
     pickSphere_->setName( "Pick Sphere" );
     pickSphere_->setAncillary( true );
@@ -85,7 +85,11 @@ void SurfacePointWidget::setHovered( bool on )
 
 bool SurfacePointWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 {
-    if ( button != MouseButton::Left || mod != 0 || !isHovered_ )
+    if ( button != MouseButton::Left || !isHovered_ )
+        return false;
+
+    // check if modifier present and if there are exception for it.
+    if ( ( mod != 0 ) && ( !params_.customModifiers.contains( mod ) ) )
         return false;
 
     pickSphere_->setPickable( false );
@@ -98,7 +102,7 @@ bool SurfacePointWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
 bool SurfacePointWidget::onMouseUp_( Viewer::MouseButton button, int )
 {
-    if ( button != MouseButton::Left || !isOnMove_)
+    if ( button != MouseButton::Left || !isOnMove_ )
         return false;
     isOnMove_ = false;
     pickSphere_->setPickable( true );

@@ -7,6 +7,7 @@
 #include "MRMesh/MRMeshTriPoint.h"
 #include <MRMesh/MRColor.h>
 #include <functional>
+#include <unordered_set>
 
 namespace MR
 {
@@ -38,6 +39,9 @@ public:
         Color activeColor{ { Color::red() } };
         // radius of control sphere, if <= 0.0f it is equal to 5e-3*box.diagonal()
         float radius{0.0f};
+        // Typically, the widget does not respond to actions with a modifier. 
+        // If the parameter is set, then custom modifiers located in the container will be ignored and the widget will work with them as usual.
+        std::unordered_set<int> customModifiers;
     };
 
     // creates control sphere in start pos

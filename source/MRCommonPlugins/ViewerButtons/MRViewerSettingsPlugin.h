@@ -41,7 +41,7 @@ public:
         // returns the name of the setting, which is a unique value
         virtual const std::string& getName() = 0;
         // the function of drawing the configuration UI
-        virtual void draw() = 0;
+        virtual void draw( float menuScaling ) = 0;
     };
     // add external settings with UI combo box 
     MRCOMMONPLUGINS_API void addComboSettings( const TabType tab, std::shared_ptr<ExternalSettings> settings);
@@ -50,6 +50,7 @@ private:
     virtual bool onEnable_() override;
     virtual bool onDisable_() override;
 
+    void drawTab_( TabType tab, float menuWidth, float menuScaling );
     void drawSettingsTab_( float menuWidth, float menuScaling );
     void drawViewportTab_( float menuWidth, float menuScaling );
     void drawViewTab_( float menuWidth, float menuScaling );
@@ -59,7 +60,7 @@ private:
     void drawSpaceMouseSettings_( float menuWidth, float menuScaling );
     void drawTouchpadSettings_();
 
-    void drawCustomSettinds_( TabType tabType );
+    void drawCustomSettinds_( TabType tabType, float scaling );
 
     int curSamples_{ 0 };
     int storedSamples_{ 0 };

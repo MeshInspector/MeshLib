@@ -79,10 +79,23 @@ float updateNeighborsRadius( const VertCoords& points, VertId v, VertId borderV,
         auto next = cycleNext( fan, i );
         if ( fan[i] == borderV )
             continue;
-        maxRadius = std::max( maxRadius, circumcircleDiameter( 
-            points[v],
-            points[fan[i]],
-            points[fan[next]] ) );
+
+        const auto & a = points[v];
+        const auto & b = points[fan[i]];
+        const auto & c = points[fan[next]];
+        const auto cdSq = circumcircleDiameterSq( a, b, c );
+        if ( sqr( maxRadius ) >= cdSq )
+            continue;
+
+        const auto cc = circumcircleCenter( b - a, c - a );
+
+        const auto cl = cc.length(); // distance between point[v] and the center of circumcicle
+        const auto cr = 0.5f * std::sqrt( cdSq ); // radius
+        // the center of circumcicle must be within its radius from point[v]
+        // assert( cl <= cr ); may be wrong due to floating-point errors
+
+        // circumcicle must be fully within the ball around point[v]
+        maxRadius = std::max( maxRadius, cl + cr );
     }
 
     return std::min( maxRadius, 2.0f * baseRadius );

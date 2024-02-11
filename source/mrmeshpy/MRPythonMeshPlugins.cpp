@@ -418,13 +418,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
         "if your input mesh is open then please specify params.type == Shell, and you will get open mesh on output" );
 
 
-    m.def( "doubleOffsetMesh", MR::decorateExpected( [] ( const MR::MeshPart& mp, float offsetA, float offsetB, const MR::OffsetParameters& params0 )
+    m.def( "doubleOffsetMesh", 
+        MR::decorateExpected( [] ( const MR::MeshPart& mp, float offsetA, float offsetB, MR::OffsetParameters params )
     {
-        MR::OffsetParameters params = { { params0 } };
         if ( params.voxelSize <= 0 )
             params.voxelSize = suggestVoxelSize( mp, 5e6f );
         return MR::doubleOffsetMesh( mp, offsetA, offsetB, params );
-    } ), pybind11::arg( "mp" ), pybind11::arg( "offsetA" ), pybind11::arg( "offsetB" ), pybind11::arg_v( "params", MR::OffsetParameters(), "OffsetParameters()" ),
+    } ), 
+        pybind11::arg( "mp" ), pybind11::arg( "offsetA" ), pybind11::arg( "offsetB" ), pybind11::arg_v( "params", MR::OffsetParameters(), "OffsetParameters()" ),
         "Offsets mesh by converting it to voxels and back two times\n"
         "only closed meshes allowed (only Offset mode)\n"
         "typically offsetA and offsetB have distinct signs" );

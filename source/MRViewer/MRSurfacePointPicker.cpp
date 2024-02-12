@@ -146,65 +146,65 @@ void SurfacePointWidget::updatePositionAndRadius_()
     FaceId fId = mesh.topology.left( currentPos_.e );
     switch ( params_.positionType )
     {
-    case PositionType::FaceCenters:
-    {
-        currentPos_ = mesh.toTriPoint( fId, mesh.triCenter( fId ) );
-        break;
-    }
-    case PositionType::Edges:
-    {
-        if ( !currentPos_.onEdge( mesh.topology ) )
+        case PositionType::FaceCenters:
+        {
+            currentPos_ = mesh.toTriPoint( fId, mesh.triCenter( fId ) );
+            break;
+        }
+        case PositionType::Edges:
+        {
+            if ( !currentPos_.onEdge( mesh.topology ) )
+            {
+                auto closestEdge = EdgeId( mesh.getClosestEdge( PointOnFace{ fId,mesh.triPoint( currentPos_ ) } ) );
+                if ( mesh.topology.left( closestEdge ) != fId )
+                    closestEdge = closestEdge.sym();
+                if ( currentPos_.e == closestEdge )
+                    currentPos_.bary.b = 0.0f;
+                else if ( currentPos_.e == mesh.topology.next( closestEdge ).sym() )
+                {
+                    currentPos_.e = closestEdge;
+                    currentPos_.bary.a = currentPos_.bary.b;
+                    currentPos_.bary.b = 0.0f;
+                }
+                else
+                {
+                    currentPos_.e = closestEdge;
+                    currentPos_.bary.a = 1.0f - currentPos_.bary.b;
+                    currentPos_.bary.b = 0.0f;
+                }
+            }
+            break;
+        }
+        case PositionType::EdgeCeneters:
         {
             auto closestEdge = EdgeId( mesh.getClosestEdge( PointOnFace{ fId,mesh.triPoint( currentPos_ ) } ) );
             if ( mesh.topology.left( closestEdge ) != fId )
                 closestEdge = closestEdge.sym();
-            if ( currentPos_.e == closestEdge )
-                currentPos_.bary.b = 0.0f;
-            else if ( currentPos_.e == mesh.topology.next( closestEdge ).sym() )
-            {
-                currentPos_.e = closestEdge;
-                currentPos_.bary.a = currentPos_.bary.b;
-                currentPos_.bary.b = 0.0f;
-            }
-            else
-            {
-                currentPos_.e = closestEdge;
-                currentPos_.bary.a = 1.0f - currentPos_.bary.b;
-                currentPos_.bary.b = 0.0f;
-            }
+            currentPos_.e = closestEdge;
+            currentPos_.bary.a = 0.5f;
+            currentPos_.bary.b = 0.0f;
+            break;
         }
-        break;
-    }
-    case PositionType::EdgeCeneters:
-    {
-        auto closestEdge = EdgeId( mesh.getClosestEdge( PointOnFace{ fId,mesh.triPoint( currentPos_ ) } ) );
-        if ( mesh.topology.left( closestEdge ) != fId )
-            closestEdge = closestEdge.sym();
-        currentPos_.e = closestEdge;
-        currentPos_.bary.a = 0.5f;
-        currentPos_.bary.b = 0.0f;
-        break;
-    }
-    case PositionType::Verts:
-    {
-        if ( !currentPos_.inVertex() )
+        case PositionType::Verts:
         {
-            auto closestVert = mesh.getClosestVertex( PointOnFace{ fId,mesh.triPoint( currentPos_ ) } );
-            for ( auto e : orgRing( mesh.topology, closestVert ) )
+            if ( !currentPos_.inVertex() )
             {
-                if ( mesh.topology.left( e ) == fId )
+                auto closestVert = mesh.getClosestVertex( PointOnFace{ fId,mesh.triPoint( currentPos_ ) } );
+                for ( auto e : orgRing( mesh.topology, closestVert ) )
                 {
-                    currentPos_.e = e;
-                    currentPos_.bary.a = 0.0f;
-                    currentPos_.bary.b = 0.0f;
-                    break;
+                    if ( mesh.topology.left( e ) == fId )
+                    {
+                        currentPos_.e = e;
+                        currentPos_.bary.a = 0.0f;
+                        currentPos_.bary.b = 0.0f;
+                        break;
+                    }
                 }
             }
+            break;
         }
-        break;
-    }
-    default:
-        break;
+        default:
+            break;
     }
     float radius = params_.radius <= 0.0f ? mesh.getBoundingBox().diagonal() * 5e-3f : params_.radius;
     pickSphere_->setCenter( mesh.triPoint( currentPos_ ) );

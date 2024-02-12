@@ -13,7 +13,7 @@ namespace MR
 
 MR_ADD_CLASS_FACTORY( Object )
 
-ObjectChildrenHolder::ObjectChildrenHolder( ObjectChildrenHolder && b ) noexcept 
+ObjectChildrenHolder::ObjectChildrenHolder( ObjectChildrenHolder && b ) noexcept
     : children_( std::move( b.children_ ) )
     , bastards_( std::move( b.bastards_ ) )
 {
@@ -297,7 +297,7 @@ void Object::sortChildren()
         const auto& lhs = a->name();
         const auto& rhs = b->name();
         // used for case insensitive sorting
-        const auto result = std::mismatch( lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), 
+        const auto result = std::mismatch( lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(),
             [] ( const unsigned char lhsc, const unsigned char rhsc )
         {
             return std::tolower( lhsc ) == std::tolower( rhsc );
@@ -334,9 +334,9 @@ void Object::setVisible( bool on, ViewportMask viewportMask /*= ViewportMask::al
     if ( ( visibilityMask_ & viewportMask ) == ( on ? viewportMask : ViewportMask{} ) )
         return;
 
-    if ( on ) 
-        setVisibilityMask( visibilityMask_ | viewportMask ); 
-    else 
+    if ( on )
+        setVisibilityMask( visibilityMask_ | viewportMask );
+    else
         setVisibilityMask( visibilityMask_ & ~viewportMask );
 }
 
@@ -370,6 +370,7 @@ void Object::serializeFields_( Json::Value& root ) const
     root["Visibility"] = visibilityMask_.value();
     root["Selected"] = selected_;
     root["Locked"] = locked_;
+    root["ParentLocked"] = parentLocked_;
 
     // xf
     serializeToJson( xf_.get(), root["XF"] );
@@ -402,6 +403,8 @@ void Object::deserializeFields_( const Json::Value& root )
         deserializeFromJson( root["XF"], xf_.get() );
     if ( root["Locked"].isBool() )
         locked_ = root["Locked"].asBool();
+    if ( const auto& json = root["ParentLocked"]; json.isBool() )
+        parentLocked_ = json.asBool();
 }
 
  void Object::propagateWorldXfChangedSignal_()
@@ -475,7 +478,7 @@ Expected<std::vector<std::future<VoidOrErrStr>>> Object::serializeRecursive( con
     if ( model.value().valid() )
         res.push_back( std::move( model.value() ) );
     serializeFields_( root );
-    
+
     root["Key"] = key;
 
     if ( !children_.empty() )

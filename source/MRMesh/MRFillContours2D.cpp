@@ -171,7 +171,7 @@ TEST( MRMesh, fillContours2D )
     sphereSmall.topology.flipOrientation();
     sphereBig.addPart( std::move( sphereSmall ) );
 
-    trimWithPlane( sphereBig, Plane3f::fromDirAndPt( Vector3f::plusZ(), Vector3f() ) );
+    trimWithPlane( sphereBig, TrimWithPlaneParams{ .plane = Plane3f::fromDirAndPt( Vector3f::plusZ(), Vector3f() ) } );
     sphereBig.pack();
 
     auto firstNewFace = sphereBig.topology.lastValidFace() + 1;

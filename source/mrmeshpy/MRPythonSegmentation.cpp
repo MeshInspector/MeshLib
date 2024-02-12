@@ -17,7 +17,7 @@ namespace MR
 static void myTrimWithPlane( Mesh& mesh, const Plane3f & plane, MR::FaceMap* mapNew2Old )
 {
     FaceHashMap new2OldHashMap;
-    trimWithPlane( mesh, plane, (UndirectedEdgeBitSet *)nullptr, mapNew2Old ? &new2OldHashMap : nullptr );
+    trimWithPlane( mesh, { .plane = plane }, { .new2Old = mapNew2Old ? &new2OldHashMap : nullptr } );
     if ( mapNew2Old )
     {
         for ( auto & [newF, oldF] : new2OldHashMap )

@@ -89,7 +89,7 @@ bool SurfacePointWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         return false;
 
     // check if modifier present and if there are exception for it.
-    if ( ( mod != 0 ) && ( !params_.customModifiers.contains( mod ) ) )
+    if ( ( mod != 0 ) && ( ( mod & params_.customModifiers ) == mod ) )
         return false;
 
     pickSphere_->setPickable( false );
@@ -209,10 +209,11 @@ void SurfacePointWidget::updatePositionAndRadius_()
     float radius = params_.radius <= 0.0f ? mesh.getBoundingBox().diagonal() * 5e-3f : params_.radius;
     pickSphere_->setCenter( mesh.triPoint( currentPos_ ) );
     pickSphere_->setRadius( radius );
+    setPointRadius_();
 }
 
 
-void SurfacePointWidget::setPointSize_()
+void SurfacePointWidget::setPointRadius_()
 {
     float radius = 0;
     if ( params_.radiusSizeType == SurfacePointWidget::Parameters::PointSizeType::Pixel )
@@ -231,7 +232,7 @@ void SurfacePointWidget::setPointSize_()
 
 void SurfacePointWidget::preDraw_()
 {
-    setPointSize_();
+    setPointRadius_();
 }
 
 void SurfacePointWidget::updateCurrentPosition( const MeshTriPoint& pos )

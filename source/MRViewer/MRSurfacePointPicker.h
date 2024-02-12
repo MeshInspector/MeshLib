@@ -46,8 +46,8 @@ public:
         // radius of control sphere, if <= 0.0f it is equal to 5e-3*box.diagonal()
         float radius{ 0.0f };
         // Typically, the widget does not respond to actions with a modifier. 
-        // If the parameter is set, then custom modifiers located in the container will be ignored and the widget will work with them as usual.
-        std::unordered_set<int> customModifiers;
+        // If the parameter is set, then custom modifiers located in this GLFW bitmask will be ignored and the widget will work with them as usual.
+        int customModifiers; // GLFW modifier bitmask
     };
 
     // creates control sphere in start pos
@@ -134,7 +134,7 @@ private:
     std::function<void( const MeshTriPoint& )> endMove_;
 
     // Depending on the type of selected size, sets the point size
-    void setPointSize_();
+    void setPointRadius_();
 
 };
 

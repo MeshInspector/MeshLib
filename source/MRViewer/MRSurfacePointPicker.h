@@ -13,7 +13,7 @@ namespace MR
 {
 
 // Widget for controlling point on surface with mouse
-class MRVIEWER_CLASS SurfacePointWidget : public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener>
+class MRVIEWER_CLASS SurfacePointWidget : public MultiListener<PreDrawListener, MouseDownListener, MouseMoveListener, MouseUpListener>
 {
 public:
     MRVIEWER_API ~SurfacePointWidget();
@@ -29,6 +29,10 @@ public:
 
     struct Parameters
     {
+        enum class PointSizeType {
+            Metrical , // point size in mm 
+            Pixel   // point size in pixels 
+        };
         // type of point positioning, look at PositionType comments for more info
         PositionType positionType{ PositionType::Faces };
         // basic color of control sphere
@@ -37,8 +41,10 @@ public:
         Color hoveredColor{ Color::red() };
         // color of control sphere when it is in move
         Color activeColor{ { Color::red() } };
+        // how to set the size of the dots in mm or in pixels.
+        PointSizeType radiusSizeType;
         // radius of control sphere, if <= 0.0f it is equal to 5e-3*box.diagonal()
-        float radius{0.0f};
+        float radius{ 0.0f };
         // Typically, the widget does not respond to actions with a modifier. 
         // If the parameter is set, then custom modifiers located in the container will be ignored and the widget will work with them as usual.
         std::unordered_set<int> customModifiers;
@@ -50,32 +56,59 @@ public:
     // resets whole widget
     MRVIEWER_API void reset();
     // returns object of control sphere
-    std::shared_ptr<SphereObject> getPickSphere() const { return pickSphere_; }
+    std::shared_ptr<SphereObject> getPickSphere() const
+    {
+        return pickSphere_;
+    }
     // get current setup of this widget
-    const Parameters& getParameters() const { return params_; }
+    const Parameters& getParameters() const
+    {
+        return params_;
+    }
     // set parameters for this widget
     MRVIEWER_API void setParameters( const Parameters& params );
 
     // if auto hover is enabled, pick_render_object() is used
     // !note: disabling it is useful if there are many widgets, not to call `pick_render_object()` for each of them separately
-    bool getAutoHover()const { return autoHover_; }
-    void setAutoHover( bool on ) { autoHover_ = on; }
+    bool getAutoHover()const
+    {
+        return autoHover_;
+    }
+    void setAutoHover( bool on )
+    {
+        autoHover_ = on;
+    }
     // function for manual enable and disable hover mode
     // use it if auto hover is disabled
     MRVIEWER_API void setHovered( bool on );
-    
+
     // returns stored position of this widget
-    const MeshTriPoint& getCurrentPosition() const { return currentPos_; }
+    const MeshTriPoint& getCurrentPosition() const
+    {
+        return currentPos_;
+    }
     MRVIEWER_API void updateCurrentPosition( const MeshTriPoint& pos );
 
     // this callback is called when modification starts if it is set
-    void setStartMoveCallback( std::function<void( const MeshTriPoint& )> startMove ) { startMove_ = startMove; }
+    void setStartMoveCallback( std::function<void( const MeshTriPoint& )> startMove )
+    {
+        startMove_ = startMove;
+    }
     // this callback is called on modification if it is set
-    void setOnMoveCallback( std::function<void( const MeshTriPoint& )> onMove ) { onMove_ = onMove; }
+    void setOnMoveCallback( std::function<void( const MeshTriPoint& )> onMove )
+    {
+        onMove_ = onMove;
+    }
     // this callback is called when modification ends if it is set
-    void setEndMoveCallback( std::function<void( const MeshTriPoint& )> endMove ) { endMove_ = endMove; }
+    void setEndMoveCallback( std::function<void( const MeshTriPoint& )> endMove )
+    {
+        endMove_ = endMove;
+    }
 
-    std::shared_ptr<ObjectMeshHolder> getBaseSurface() { return baseSurface_; }
+    std::shared_ptr<ObjectMeshHolder> getBaseSurface()
+    {
+        return baseSurface_;
+    }
 
 private:
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
@@ -89,6 +122,8 @@ private:
     bool autoHover_{ true };
     bool isOnMove_{ false };
     bool isHovered_{ false };
+    MRVIEWER_API void preDraw_() override;
+
     MeshTriPoint currentPos_;
 
     std::shared_ptr<SphereObject> pickSphere_;
@@ -97,6 +132,10 @@ private:
     std::function<void( const MeshTriPoint& )> startMove_;
     std::function<void( const MeshTriPoint& )> onMove_;
     std::function<void( const MeshTriPoint& )> endMove_;
+
+    // Depending on the type of selected size, sets the point size
+    void setPointSize_();
+
 };
 
 }

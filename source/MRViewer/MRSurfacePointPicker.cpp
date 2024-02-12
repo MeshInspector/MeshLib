@@ -119,7 +119,7 @@ bool SurfacePointWidget::onMouseMove_( int, int )
         auto [obj, pick] = getViewerInstance().viewport().pick_render_object();
         if ( obj != baseSurface_ )
             return false;
-        
+
         currentPos_ = baseSurface_->mesh()->toTriPoint( pick );
         updatePositionAndRadius_();
         if ( onMove_ )
@@ -146,69 +146,92 @@ void SurfacePointWidget::updatePositionAndRadius_()
     FaceId fId = mesh.topology.left( currentPos_.e );
     switch ( params_.positionType )
     {
-        case PositionType::FaceCenters:
-        {
-            currentPos_ = mesh.toTriPoint( fId, mesh.triCenter( fId ) );
-            break;
-        }
-        case PositionType::Edges:
-        {
-            if ( !currentPos_.onEdge( mesh.topology ) )
-            {
-                auto closestEdge = EdgeId( mesh.getClosestEdge( PointOnFace{ fId,mesh.triPoint( currentPos_ ) } ) );
-                if ( mesh.topology.left( closestEdge ) != fId )
-                    closestEdge = closestEdge.sym();
-                if ( currentPos_.e == closestEdge )
-                    currentPos_.bary.b = 0.0f;
-                else if ( currentPos_.e == mesh.topology.next( closestEdge ).sym() )
-                {
-                    currentPos_.e = closestEdge;
-                    currentPos_.bary.a = currentPos_.bary.b;
-                    currentPos_.bary.b = 0.0f;
-                }
-                else
-                {
-                    currentPos_.e = closestEdge;
-                    currentPos_.bary.a = 1.0f - currentPos_.bary.b;
-                    currentPos_.bary.b = 0.0f;
-                }
-            }
-            break;
-        }
-        case PositionType::EdgeCeneters:
+    case PositionType::FaceCenters:
+    {
+        currentPos_ = mesh.toTriPoint( fId, mesh.triCenter( fId ) );
+        break;
+    }
+    case PositionType::Edges:
+    {
+        if ( !currentPos_.onEdge( mesh.topology ) )
         {
             auto closestEdge = EdgeId( mesh.getClosestEdge( PointOnFace{ fId,mesh.triPoint( currentPos_ ) } ) );
             if ( mesh.topology.left( closestEdge ) != fId )
                 closestEdge = closestEdge.sym();
-            currentPos_.e = closestEdge;
-            currentPos_.bary.a = 0.5f;
-            currentPos_.bary.b = 0.0f;
-            break;
-        }
-        case PositionType::Verts:
-        {
-            if ( !currentPos_.inVertex() )
+            if ( currentPos_.e == closestEdge )
+                currentPos_.bary.b = 0.0f;
+            else if ( currentPos_.e == mesh.topology.next( closestEdge ).sym() )
             {
-                auto closestVert = mesh.getClosestVertex( PointOnFace{ fId,mesh.triPoint( currentPos_ ) } );
-                for ( auto e : orgRing( mesh.topology, closestVert ) )
+                currentPos_.e = closestEdge;
+                currentPos_.bary.a = currentPos_.bary.b;
+                currentPos_.bary.b = 0.0f;
+            }
+            else
+            {
+                currentPos_.e = closestEdge;
+                currentPos_.bary.a = 1.0f - currentPos_.bary.b;
+                currentPos_.bary.b = 0.0f;
+            }
+        }
+        break;
+    }
+    case PositionType::EdgeCeneters:
+    {
+        auto closestEdge = EdgeId( mesh.getClosestEdge( PointOnFace{ fId,mesh.triPoint( currentPos_ ) } ) );
+        if ( mesh.topology.left( closestEdge ) != fId )
+            closestEdge = closestEdge.sym();
+        currentPos_.e = closestEdge;
+        currentPos_.bary.a = 0.5f;
+        currentPos_.bary.b = 0.0f;
+        break;
+    }
+    case PositionType::Verts:
+    {
+        if ( !currentPos_.inVertex() )
+        {
+            auto closestVert = mesh.getClosestVertex( PointOnFace{ fId,mesh.triPoint( currentPos_ ) } );
+            for ( auto e : orgRing( mesh.topology, closestVert ) )
+            {
+                if ( mesh.topology.left( e ) == fId )
                 {
-                    if ( mesh.topology.left( e ) == fId )
-                    {
-                        currentPos_.e = e;
-                        currentPos_.bary.a = 0.0f;
-                        currentPos_.bary.b = 0.0f;
-                        break;
-                    }
+                    currentPos_.e = e;
+                    currentPos_.bary.a = 0.0f;
+                    currentPos_.bary.b = 0.0f;
+                    break;
                 }
             }
-            break;
         }
-        default:
-            break;
+        break;
+    }
+    default:
+        break;
     }
     float radius = params_.radius <= 0.0f ? mesh.getBoundingBox().diagonal() * 5e-3f : params_.radius;
     pickSphere_->setCenter( mesh.triPoint( currentPos_ ) );
     pickSphere_->setRadius( radius );
+}
+
+
+void SurfacePointWidget::setPointSize_()
+{
+    float radius = 0;
+    if ( params_.radiusSizeType == SurfacePointWidget::Parameters::PointSizeType::Pixel )
+    {
+        const auto& vParams = Viewer::instanceRef().viewport().getParameters();
+        auto w = MR::height( Viewer::instanceRef().viewport().getViewportRect() );
+        auto scale = tan( vParams.cameraViewAngle / 360.0f * PI_F ) / vParams.cameraZoom / w;
+        radius = params_.radius * scale;
+    }
+    else
+    {
+        radius = params_.radius <= 0.0f ? baseSurface_->mesh()->getBoundingBox().diagonal() * 5e-3f : params_.radius;
+    }
+    pickSphere_->setRadius( radius );
+}
+
+void SurfacePointWidget::preDraw_()
+{
+    setPointSize_();
 }
 
 void SurfacePointWidget::updateCurrentPosition( const MeshTriPoint& pos )

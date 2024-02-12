@@ -89,7 +89,7 @@ bool SurfacePointWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         return false;
 
     // check if modifier present and if there are exception for it.
-    if ( ( mod != 0 ) && ( ( mod & params_.customModifiers ) == mod ) )
+    if ( ( mod != 0 ) && ( ( mod & params_.customModifiers ) != mod ) )
         return false;
 
     pickSphere_->setPickable( false );

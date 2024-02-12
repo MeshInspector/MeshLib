@@ -27,6 +27,7 @@ void attachDefaultMeasurementsToObject( Object& object, const AttachDefaultMeasu
                 measurement = std::make_shared<T>();
                 object.addChild( measurement );
                 measurement->setVisible( bool( params.defaultVisibleKinds & bit ) );
+                measurement->setParentLocked( true );
                 lambda( std::move( measurement ) );
             }
         }

@@ -1031,6 +1031,10 @@ void ImGuiMenu::makeDragDropSource_( const std::vector<std::shared_ptr<Object>>&
 {
     if ( !allowSceneReorder_ || payload.empty() )
         return;
+
+    if ( std::any_of( payload.begin(), payload.end(), std::mem_fn( &Object::isParentLocked ) ) )
+        return; // Those objects don't want their parents to be changed.
+
     if ( ImGui::BeginDragDropSource( ImGuiDragDropFlags_AcceptNoDrawDefaultRect ) )
     {
         dragTrigger_ = true;

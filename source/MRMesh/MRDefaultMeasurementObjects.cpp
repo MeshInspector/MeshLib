@@ -13,8 +13,10 @@ namespace MR
 
 void attachDefaultMeasurementsToObject( Object& object, const AttachDefaultMeasurementsParams& params )
 {
-    auto addBasic = [&]<typename T>( DefaultMeasurementKinds bit, auto lambda )
+    auto addBasic = [&]( auto typeTag, DefaultMeasurementKinds bit, auto lambda )
     {
+        using T = typename decltype(typeTag)::type;
+
         if ( bool( params.enabledKinds & bit ) )
         {
             if ( auto measurement = object.find<T>(); bool( measurement ) /*implies*/<= params.overwrite )
@@ -30,9 +32,9 @@ void attachDefaultMeasurementsToObject( Object& object, const AttachDefaultMeasu
         }
     };
 
-    auto addRadius = [&]( auto lambda ) { addBasic.operator()<RadiusMeasurementObject>( DefaultMeasurementKinds::Radiuses, std::move( lambda ) ); };
-    auto addDistance = [&]( auto lambda ) { addBasic.operator()<DistanceMeasurementObject>( DefaultMeasurementKinds::Distances, std::move( lambda ) ); };
-    auto addAngle = [&]( auto lambda ) { addBasic.operator()<AngleMeasurementObject>( DefaultMeasurementKinds::Angles, std::move( lambda ) ); };
+    auto addRadius = [&]( auto lambda ) { addBasic( std::type_identity<RadiusMeasurementObject>{}, DefaultMeasurementKinds::Radiuses, std::move( lambda ) ); };
+    auto addDistance = [&]( auto lambda ) { addBasic( std::type_identity<DistanceMeasurementObject>{}, DefaultMeasurementKinds::Distances, std::move( lambda ) ); };
+    auto addAngle = [&]( auto lambda ) { addBasic( std::type_identity<AngleMeasurementObject>{}, DefaultMeasurementKinds::Angles, std::move( lambda ) ); };
 
     if ( dynamic_cast<CircleObject *>( &object ) )
     {

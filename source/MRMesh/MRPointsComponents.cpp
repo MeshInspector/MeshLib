@@ -47,7 +47,8 @@ Expected<std::vector<MR::VertBitSet>> getLargestComponents( const PointCloud& po
         }
 
         components[componentId].set( v );
-        if ( !reportProgress( subPc, ++counter / counterMax, counter, counterDivider ) )
+        ++counter;
+        if ( !reportProgress( subPc, counter / counterMax, counter, counterDivider ) )
             return unexpected( std::string( "Operation canceled" ) );
     }
 
@@ -78,6 +79,7 @@ Expected<UnionFind<MR::VertId>> getUnionFindStructureVerts( const PointCloud& po
     int counter = 0;
     const float counterMax = float( vertsRegion.count() );
     const int counterDivider = int( vertsRegion.count() ) / 100;
+
     for ( auto v0 : vertsRegion )
     {
         findPointsInBall( pointCloud.getAABBTree(), pointCloud.points[v0], maxDist,
@@ -86,7 +88,8 @@ Expected<UnionFind<MR::VertId>> getUnionFindStructureVerts( const PointCloud& po
             if ( v1.valid() && vertsRegion.test( v1 ) && v1 < v0 )
                 unionFindStructure.unite( v0, v1 );
         } );
-        if ( !reportProgress( pc, ++counter / counterMax, counter, counterDivider ) )
+        ++counter;
+        if ( !reportProgress( pc, counter / counterMax, counter, counterDivider ) )
             return unexpected( std::string( "Operation canceled" ) );
     }
     return unionFindStructure;

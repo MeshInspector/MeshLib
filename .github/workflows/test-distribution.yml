@@ -25,13 +25,13 @@ jobs:
             runner: [ self-hosted, linux-arm64 ]
           - os: "ubuntu:20.04"
             name: "ubuntu20"
-            cxx-compiler: /usr/bin/g++-10
+            cxx-compiler: /usr/bin/clang++-11
           - os: "ubuntu:22.04"
             name: "ubuntu22"
-            cxx-compiler: /usr/bin/g++-11
+            cxx-compiler: /usr/bin/clang++-14
           - os: "fedora:37"
             name: "fedora37"
-            cxx-compiler: /usr/bin/g++-12
+            cxx-compiler: /usr/bin/clang++-15
         exclude:
           - os: "fedora:37"
             platform: 'arm64'
@@ -92,7 +92,12 @@ jobs:
       - name: Install supported compiler
         if: ${{ matrix.os == 'ubuntu:20.04' }}
         run: |
-          apt-get -y install g++-10
+          apt-get -y install clang-11
+
+      - name: Install supported compiler
+        if: ${{ matrix.os == 'ubuntu:22.04' }}
+        run: |
+          apt-get -y install clang-14
 
       - name: Debug output
         if: always()

@@ -56,7 +56,7 @@ MR_ADD_CLASS_FACTORY( SceneRootObject )
 SceneRootObject::SceneRootObject()
 {
     setName( "Root" );
-    setAncillary( true );
+    setAncillary( false );
 }
 
 void SceneRootObject::serializeFields_( Json::Value& root ) const
@@ -71,6 +71,7 @@ void SceneRootObject::deserializeFields_( const Json::Value& root )
     Object::deserializeFields_( root );
     Object::select( false );
     setName( "Root" );
+    setAncillary( false );
 }
 
 }

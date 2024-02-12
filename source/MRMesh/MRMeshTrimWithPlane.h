@@ -67,6 +67,13 @@ struct TrimOptionalOutput
     std::vector<EdgeLoop>* otherOutCutContours;
 };
 
+/** \brief trim mesh by plane
+  *
+  * This function cuts mesh with plane, leaving only part of mesh that lay in positive direction of normal
+  * \param mesh Input mesh that will be cut
+  * \param params stores basic params for trimWithPlane function
+  * \param optOut stores optional output params for trimWithPlane function
+  */
 MRMESH_API void trimWithPlane( Mesh& mesh, const TrimWithPlaneParams& params, const TrimOptionalOutput& optOut = {} );
 
 } //namespace MR

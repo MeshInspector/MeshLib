@@ -129,12 +129,17 @@ FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap *
     return positiveFaces;
 }
 
-void trimWithPlane( Mesh& mesh, const Plane3f & plane, UndirectedEdgeBitSet * outCutEdges, FaceHashMap * new2Old, float eps, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
+void trimWithPlane( Mesh& mesh, const Plane3f & plane, UndirectedEdgeBitSet * outCutEdges, FaceHashMap * new2Old, float eps, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback, Mesh* leftMesh )
 {
     MR_TIMER
     const auto posFaces = subdivideWithPlane( mesh, plane, new2Old, eps, onEdgeSplitCallback );
     if ( outCutEdges )
         *outCutEdges = findRegionBoundaryUndirectedEdgesInsideMesh( mesh.topology, posFaces );
+    if ( leftMesh )
+    {
+        *leftMesh = mesh;
+        leftMesh->topology.deleteFaces( posFaces );
+    }
     mesh.topology.deleteFaces( mesh.topology.getValidFaces() - posFaces );
 #ifndef NDEBUG
     if ( outCutEdges )
@@ -153,7 +158,7 @@ void trimWithPlane( Mesh& mesh, const Plane3f & plane, UndirectedEdgeBitSet * ou
     }
 }
 
-void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * outCutContours, FaceHashMap * new2Old, float eps, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
+void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * outCutContours, FaceHashMap * new2Old, float eps, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback, Mesh* leftMesh )
 {
     MR_TIMER
     const auto posFaces = subdivideWithPlane( mesh, plane, new2Old, eps, onEdgeSplitCallback );
@@ -169,6 +174,11 @@ void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * o
                 assert( !contains( posFaces, mesh.topology.right( e ) ) );
             }
 #endif
+    }
+    if ( leftMesh )
+    {
+        *leftMesh = mesh;
+        leftMesh->topology.deleteFaces( posFaces );
     }
     mesh.topology.deleteFaces( mesh.topology.getValidFaces() - posFaces );
 #ifndef NDEBUG

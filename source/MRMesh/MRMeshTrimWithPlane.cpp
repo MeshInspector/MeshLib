@@ -159,12 +159,12 @@ void trimWithPlane( Mesh& mesh, const TrimWithPlaneParams& params, const TrimOpt
             }
 #endif
     }
+    
+    const auto otherFaces = mesh.topology.getValidFaces() - posFaces;
     if ( optOut.otherPart )
     {
-        *optOut.otherPart = Mesh();
-        const auto otherFaces = mesh.topology.getValidFaces() - posFaces;
-        optOut.otherPart->addPartByMask( mesh, otherFaces );
-
+        *optOut.otherPart = mesh;        
+        mesh.topology.deleteFaces( posFaces );
         if ( optOut.otherOutCutContours )
         {
             *optOut.otherOutCutContours = findLeftBoundaryInsideMesh( optOut.otherPart->topology, otherFaces );
@@ -180,10 +180,15 @@ void trimWithPlane( Mesh& mesh, const TrimWithPlaneParams& params, const TrimOpt
         }
 
         if ( optOut.otherOutCutEdges )
+        {
+            if ( optOut.outCutEdges )
+                *optOut.otherOutCutEdges = *optOut.outCutEdges;
+
             *optOut.otherOutCutEdges = findRegionBoundaryUndirectedEdgesInsideMesh( optOut.otherPart->topology, otherFaces );
+        }
 
     }
-    mesh.topology.deleteFaces( mesh.topology.getValidFaces() - posFaces );
+    mesh.topology.deleteFaces( otherFaces );
 #ifndef NDEBUG
     if ( optOut.outCutContours )
     {

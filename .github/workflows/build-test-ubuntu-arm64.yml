@@ -102,7 +102,7 @@ jobs:
 
       - name: Copy temporary test data to S3 Tests
         if: '!cancelled()'
-        run: aws s3 cp ./pytest_temp s3://test-artifacts-git/temp/m/${{github.run_id}} --recursive
+        run: aws s3 cp ./pytest_temp s3://test-artifacts-git/temp/u/${{github.run_id}} --recursive
 
       - name: Create Deb
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler }}

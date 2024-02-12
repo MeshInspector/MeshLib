@@ -12,7 +12,7 @@ namespace MR
 namespace PointCloudComponents
 {
 
-Expected<std::vector<MR::VertBitSet>> getBigComponents( const PointCloud& pointCloud, float maxDist, int minSize /*= -1*/, ProgressCallback pc /*= {}*/ )
+Expected<std::vector<MR::VertBitSet>> getLargestComponents( const PointCloud& pointCloud, float maxDist, int minSize /*= -1*/, ProgressCallback pc /*= {}*/ )
 {
     MR_TIMER
 
@@ -26,8 +26,8 @@ Expected<std::vector<MR::VertBitSet>> getBigComponents( const PointCloud& pointC
         return unexpected( unionStructsRes.error() );
     auto& unionStructs = *unionStructsRes;
     auto allRoots = unionStructs.roots();
+    HashMap<VertId, int> rootMap;
     std::vector<VertBitSet> components;
-    std::vector<VertId> componentRoots;
 
     subPc = pc ? subprogress( pc, 0.9f, 1.f ) : pc;
     int counter = 0;
@@ -35,20 +35,15 @@ Expected<std::vector<MR::VertBitSet>> getBigComponents( const PointCloud& pointC
     const int counterDivider = int( validPoints.count() ) / 100;
     for ( auto v : validPoints )
     {
-        auto componentId = -1;
         VertId root = allRoots[v];
-        for ( int i = 0; i < componentRoots.size(); ++i )
-            if ( componentRoots[i] == root )
-            {
-                componentId = i;
-                break;
-            }
-
-        if ( componentId == -1 )
+        int componentId = -1;
+        if ( rootMap.contains( root ) )
+            componentId = rootMap[root];
+        else
         {
-            componentRoots.push_back( root );
+            componentId = int( components.size() );
+            rootMap[root] = componentId;
             components.push_back( VertBitSet( validPoints.find_last() + 1 ) );
-            componentId = int( componentRoots.size() ) - 1;
         }
 
         components[componentId].set( v );

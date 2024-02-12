@@ -86,7 +86,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     if ( ribbonMenu )
     {
         ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, true ) );
-        ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins ) );
+        ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, true ) );
     }
 
     if ( cfg.hasJsonValue( cSceneControlParamKey ) )

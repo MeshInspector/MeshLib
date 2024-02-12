@@ -162,12 +162,8 @@ void trimWithPlane( Mesh& mesh, const TrimWithPlaneParams& params, const TrimOpt
     if ( optOut.otherPart )
     {
         *optOut.otherPart = Mesh();
-        PartMapping map;
         const auto otherFaces = mesh.topology.getValidFaces() - posFaces;
-        optOut.otherPart->addPartByMask( mesh, otherFaces, map );
-
-        if ( optOut.otherNew2Old )
-            *optOut.otherNew2Old = *map.src2tgtFaces;
+        optOut.otherPart->addPartByMask( mesh, otherFaces );
 
         if ( optOut.otherOutCutContours )
         {
@@ -227,18 +223,12 @@ void trimWithPlane( Mesh& mesh, const TrimWithPlaneParams& params, const TrimOpt
             if ( mesh.topology.hasFace( it->first ) )
                 ++it;
             else
-                it = optOut.new2Old->erase( it );
-    }
+            {
+                if ( optOut.otherNew2Old )
+                    optOut.otherNew2Old->insert_or_assign( it->first, it->second );
 
-    if ( optOut.otherPart && optOut.otherNew2Old )
-    {
-        for ( auto it = optOut.otherNew2Old->begin(); it != optOut.otherNew2Old->end(); )
-        {
-            if ( optOut.otherPart->topology.hasFace( it->first ) )
-                ++it;
-            else
-                it = optOut.otherNew2Old->erase( it );
-        }
+                it = optOut.new2Old->erase( it );
+            }
     }
 }
 

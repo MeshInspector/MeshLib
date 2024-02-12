@@ -40,6 +40,8 @@ constexpr unsigned char cOutputLevel1[] = {
 
 } // namespace
 
+#ifndef __EMSCRIPTEN__
+
 using ZlibCompressParameters = std::tuple<const unsigned char*, size_t, const unsigned char*, size_t, int>;
 class ZlibCompressTestFixture : public testing::TestWithParam<ZlibCompressParameters> {};
 
@@ -92,4 +94,7 @@ INSTANTIATE_TEST_SUITE_P( MRMesh, ZlibDecompressTestFixture, testing::Values(
     ZlibDecompressParameters { cOutputLevel1, sizeof( cOutputLevel1 ), cInput, sizeof( cInput ) },
     ZlibDecompressParameters { cOutputLevel9, sizeof( cOutputLevel9 ), cInput, sizeof( cInput ) }
 ) );
-#endif
+
+#endif // __EMSCRIPTEN__
+
+#endif // MRMESH_NO_ZLIB

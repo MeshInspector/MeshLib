@@ -129,71 +129,28 @@ FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap *
     return positiveFaces;
 }
 
-void trimWithPlane( Mesh& mesh, const Plane3f & plane, UndirectedEdgeBitSet * outCutEdges, FaceHashMap * new2Old, float eps, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback,
-    Mesh* otherMesh, UndirectedEdgeBitSet* otherOutCutEdges, FaceHashMap* otherNew2Old )
+void trimWithPlane( Mesh& mesh, const Plane3f & plane, UndirectedEdgeBitSet * outCutEdges, FaceHashMap * new2Old, float eps, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
 {
-    MR_TIMER
-    const auto posFaces = subdivideWithPlane( mesh, plane, new2Old, eps, onEdgeSplitCallback );
-    if ( outCutEdges )
-        *outCutEdges = findRegionBoundaryUndirectedEdgesInsideMesh( mesh.topology, posFaces );
-    if ( otherMesh )
-    {
-        *otherMesh = Mesh();
-        PartMapping map;
-        const auto otherFaces = mesh.topology.getValidFaces() - posFaces;
-        otherMesh->addPartByMask( mesh, otherFaces, map );
-
-        if ( otherNew2Old )
-            otherNew2Old = map.src2tgtFaces;
-
-        if ( otherOutCutEdges )
-            *otherOutCutEdges = findRegionBoundaryUndirectedEdgesInsideMesh( mesh.topology, otherFaces );
-    }
-    mesh.topology.deleteFaces( mesh.topology.getValidFaces() - posFaces );
-#ifndef NDEBUG
-    if ( outCutEdges )
-    {
-        for ( [[maybe_unused]] EdgeId e : *outCutEdges )
-            assert( mesh.topology.left( e ).valid() !=mesh.topology.right( e ).valid() );
-    }
-
-    if ( otherMesh && otherOutCutEdges )
-    {
-        for ( [[maybe_unused]] EdgeId e : *otherOutCutEdges )
-            assert( otherMesh->topology.left( e ).valid() != otherMesh->topology.right( e ).valid() );
-    }
-#endif
-    if ( new2Old )
-    {
-        for ( auto it = new2Old->begin(); it != new2Old->end(); )
-            if ( mesh.topology.hasFace( it->first ) )
-                ++it;
-            else
-                it = new2Old->erase( it );
-    }
-
-    if ( otherMesh && otherNew2Old )
-    {
-        for ( auto it = otherNew2Old->begin(); it != otherNew2Old->end(); )
-        {
-            if ( otherMesh->topology.hasFace( it->first ) )
-                ++it;
-            else
-                it = otherNew2Old->erase( it );
-        }
-    }
+    return trimWithPlane( mesh, TrimWithPlaneParams{ .plane = plane, .eps = eps, .onEdgeSplitCallback = onEdgeSplitCallback }, TrimOptionalOutput{ .outCutEdges = outCutEdges, .new2Old = new2Old } );
 }
 
-void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * outCutContours, FaceHashMap * new2Old, float eps, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback,
-    Mesh* otherMesh, std::vector<EdgeLoop>* otherOutCutContours, FaceHashMap* otherNew2Old )
+void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * outCutContours, FaceHashMap * new2Old, float eps, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
+{
+    return trimWithPlane( mesh, TrimWithPlaneParams{ .plane = plane, .eps = eps, .onEdgeSplitCallback = onEdgeSplitCallback }, TrimOptionalOutput{ .outCutContours = outCutContours, .new2Old = new2Old } );
+}
+
+void trimWithPlane( Mesh& mesh, const TrimWithPlaneParams& params, const TrimOptionalOutput& optOut )
 {
     MR_TIMER
-    const auto posFaces = subdivideWithPlane( mesh, plane, new2Old, eps, onEdgeSplitCallback );
-    if ( outCutContours )
+    const auto posFaces = subdivideWithPlane( mesh, params.plane, optOut.new2Old, params.eps, params.onEdgeSplitCallback );
+    if ( optOut.outCutEdges )
+        *optOut.outCutEdges = findRegionBoundaryUndirectedEdgesInsideMesh( mesh.topology, posFaces );
+
+    if ( optOut.outCutContours )
     {
-        *outCutContours = findLeftBoundaryInsideMesh( mesh.topology, posFaces );
+        *optOut.outCutContours = findLeftBoundaryInsideMesh( mesh.topology, posFaces );
 #ifndef NDEBUG
-        for ( const auto & c : *outCutContours )
+        for ( const auto& c : *optOut.outCutContours )
             for ( [[maybe_unused]] EdgeId e : c )
             {
                 assert( contains( posFaces, mesh.topology.left( e ) ) );
@@ -202,36 +159,39 @@ void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * o
             }
 #endif
     }
-    if ( otherMesh )
+    if ( optOut.otherPart )
     {
-        *otherMesh = Mesh();
+        *optOut.otherPart = Mesh();
         PartMapping map;
         const auto otherFaces = mesh.topology.getValidFaces() - posFaces;
-        otherMesh->addPartByMask( mesh, otherFaces, map );
+        optOut.otherPart->addPartByMask( mesh, otherFaces, map );
 
-        if ( otherNew2Old )
-            otherNew2Old = map.src2tgtFaces;
+        if ( optOut.otherNew2Old )
+            *optOut.otherNew2Old = *map.src2tgtFaces;
 
-        if ( otherOutCutContours )
+        if ( optOut.otherOutCutContours )
         {
-            *otherOutCutContours = findLeftBoundaryInsideMesh( otherMesh->topology, otherFaces );
+            *optOut.otherOutCutContours = findLeftBoundaryInsideMesh( optOut.otherPart->topology, otherFaces );
 #ifndef NDEBUG
-            for ( const auto& c : *otherOutCutContours )
+            for ( const auto& c : *optOut.otherOutCutContours )
                 for ( [[maybe_unused]] EdgeId e : c )
                 {
-                    assert( contains( posFaces, otherMesh->topology.left( e ) ) );
-                    assert( otherMesh->topology.right( e ) );
-                    assert( !contains( posFaces, otherMesh->topology.right( e ) ) );
+                    assert( contains( posFaces, optOut.otherPart->topology.left( e ) ) );
+                    assert( optOut.otherPart->topology.right( e ) );
+                    assert( !contains( posFaces, optOut.otherPart->topology.right( e ) ) );
                 }
 #endif
         }
 
+        if ( optOut.otherOutCutEdges )
+            *optOut.otherOutCutEdges = findRegionBoundaryUndirectedEdgesInsideMesh( optOut.otherPart->topology, otherFaces );
+
     }
     mesh.topology.deleteFaces( mesh.topology.getValidFaces() - posFaces );
 #ifndef NDEBUG
-    if ( outCutContours )
+    if ( optOut.outCutContours )
     {
-        for ( const auto & c : *outCutContours )
+        for ( const auto& c : *optOut.outCutContours )
             for ( [[maybe_unused]] EdgeId e : c )
             {
                 assert( mesh.topology.left( e ) );
@@ -239,33 +199,45 @@ void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * o
             }
     }
 
-    if ( otherMesh && otherOutCutContours )
+    if ( optOut.otherPart && optOut.otherOutCutContours )
     {
-        for ( const auto& c : *otherOutCutContours )
+        for ( const auto& c : *optOut.otherOutCutContours )
             for ( [[maybe_unused]] EdgeId e : c )
             {
-                assert( otherMesh->topology.left( e ) );
-                assert( !otherMesh->topology.right( e ) );
+                assert( optOut.otherPart->topology.left( e ) );
+                assert( !optOut.otherPart->topology.right( e ) );
             }
     }
-#endif
-    if ( new2Old )
+
+    if ( optOut.outCutEdges )
     {
-        for ( auto it = new2Old->begin(); it != new2Old->end(); )
+        for ( [[maybe_unused]] EdgeId e : *optOut.outCutEdges )
+            assert( mesh.topology.left( e ).valid() != mesh.topology.right( e ).valid() );
+    }
+
+    if ( optOut.otherPart && optOut.otherOutCutEdges )
+    {
+        for ( [[maybe_unused]] EdgeId e : *optOut.otherOutCutEdges )
+            assert( optOut.otherPart->topology.left( e ).valid() != optOut.otherPart->topology.right( e ).valid() );
+    }
+#endif
+    if ( optOut.new2Old )
+    {
+        for ( auto it = optOut.new2Old->begin(); it != optOut.new2Old->end(); )
             if ( mesh.topology.hasFace( it->first ) )
                 ++it;
             else
-                it = new2Old->erase( it );
+                it = optOut.new2Old->erase( it );
     }
 
-    if ( otherMesh && otherNew2Old )
+    if ( optOut.otherPart && optOut.otherNew2Old )
     {
-        for ( auto it = otherNew2Old->begin(); it != otherNew2Old->end(); )
+        for ( auto it = optOut.otherNew2Old->begin(); it != optOut.otherNew2Old->end(); )
         {
-            if ( otherMesh->topology.hasFace( it->first ) )
+            if ( optOut.otherPart->topology.hasFace( it->first ) )
                 ++it;
             else
-                it = otherNew2Old->erase( it );
+                it = optOut.otherNew2Old->erase( it );
         }
     }
 }

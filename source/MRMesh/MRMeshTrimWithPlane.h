@@ -61,8 +61,6 @@ struct TrimOptionalOutput
     FaceHashMap* new2Old = nullptr;
     // left part of the trimmed mesh
     Mesh* otherPart = nullptr;
-    // newly appeared hole boundary edges in otherPart
-    UndirectedEdgeBitSet* otherOutCutEdges = nullptr;
     // mapping from newly appeared triangle to its original triangle (part to full) in otherPart
     FaceHashMap* otherNew2Old = nullptr;
     // newly appeared hole contours where each edge does not have right face in otherPart

@@ -178,15 +178,6 @@ void trimWithPlane( Mesh& mesh, const TrimWithPlaneParams& params, const TrimOpt
                 }
 #endif
         }
-
-        if ( optOut.otherOutCutEdges )
-        {
-            if ( optOut.outCutEdges )
-                *optOut.otherOutCutEdges = *optOut.outCutEdges;
-
-            *optOut.otherOutCutEdges = findRegionBoundaryUndirectedEdgesInsideMesh( optOut.otherPart->topology, otherFaces );
-        }
-
     }
     mesh.topology.deleteFaces( otherFaces );
 #ifndef NDEBUG
@@ -214,12 +205,6 @@ void trimWithPlane( Mesh& mesh, const TrimWithPlaneParams& params, const TrimOpt
     {
         for ( [[maybe_unused]] EdgeId e : *optOut.outCutEdges )
             assert( mesh.topology.left( e ).valid() != mesh.topology.right( e ).valid() );
-    }
-
-    if ( optOut.otherPart && optOut.otherOutCutEdges )
-    {
-        for ( [[maybe_unused]] EdgeId e : *optOut.otherOutCutEdges )
-            assert( optOut.otherPart->topology.left( e ).valid() != optOut.otherPart->topology.right( e ).valid() );
     }
 #endif
     if ( optOut.new2Old )

@@ -2,6 +2,7 @@
 #include "MRIOFormatsRegistry.h"
 #include "MRObjectLoad.h"
 #include "MRStringConvert.h"
+#include "MRSceneRoot.h"
 
 #include <MRPch/MRSpdlog.h>
 
@@ -71,9 +72,7 @@ public:
     // construct a scene object
     SceneLoad::SceneLoadResult construct() const
     {
-        auto scene = std::make_shared<Object>();
-        scene->setName( "Root" );
-        scene->setAncillary( true );
+        auto scene = std::make_shared<SceneRootObject>();
 
         bool constructed;
         if ( loadedObjects_.size() == 1 )
@@ -82,12 +81,13 @@ public:
             if ( object->typeName() == Object::TypeName() )
             {
                 constructed = false;
-                scene = object;
-                // fix for some buggy scene files
-                if ( scene->name().empty() )
+                auto children = object->children();
+                for ( auto& child : children )
                 {
-                    scene->setName( "Root" );
-                    scene->setAncillary( true );
+                    if ( !child )
+                        continue;
+                    child->detachFromParent();
+                    scene->addChild( child );
                 }
             }
             else

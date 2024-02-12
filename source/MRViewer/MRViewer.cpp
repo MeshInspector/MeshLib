@@ -1653,7 +1653,7 @@ void Viewer::postRescale( float x, float y )
     postRescaleSignal( x, y );
 }
 
-void Viewer::set_root( Object& newRoot )
+void Viewer::set_root( SceneRootObject& newRoot )
 {
     std::swap( SceneRoot::get(), newRoot );
 }

@@ -46,7 +46,7 @@ public:
     }
 
 private:
-    std::shared_ptr<Object> root_;
+    std::shared_ptr<SceneRootObject> root_;
     std::filesystem::path scenePath_;
     std::string name_;
 };

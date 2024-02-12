@@ -1,16 +1,18 @@
 #include "MRSceneRoot.h"
+#include "MRObjectFactory.h"
+#include "MRPch/MRJson.h"
 
 namespace MR
 {
 
 #ifndef MR_SCENEROOT_CONST
 
-Object& SceneRoot::get()
+SceneRootObject& SceneRoot::get()
 {
     return *instace_().root_;
 }
 
-std::shared_ptr<Object>& SceneRoot::getSharedPtr()
+std::shared_ptr<SceneRootObject>& SceneRoot::getSharedPtr()
 {
     return instace_().root_;
 }
@@ -30,23 +32,45 @@ SceneRoot& SceneRoot::instace_()
 
 SceneRoot::SceneRoot()
 {
-    root_ = std::make_shared<Object>();
+    root_ = std::make_shared<SceneRootObject>();
     root_->setName( "Root" );
 }
 
-const Object& SceneRoot::constGet()
+const SceneRootObject& SceneRoot::constGet()
 {
     return *instace_().root_;
 }
 
-std::shared_ptr<const Object> SceneRoot::constGetSharedPtr()
+std::shared_ptr<const SceneRootObject> SceneRoot::constGetSharedPtr()
 {
-    return std::const_pointer_cast<const Object>( instace_().root_ ); 
+    return std::const_pointer_cast<const SceneRootObject >( instace_().root_ );
 }
 
 const std::filesystem::path& SceneRoot::getScenePath()
 {
     return instace_().scenePath_;
+}
+
+MR_ADD_CLASS_FACTORY( SceneRootObject )
+
+SceneRootObject::SceneRootObject()
+{
+    setName( "Root" );
+    setAncillary( true );
+}
+
+void SceneRootObject::serializeFields_( Json::Value& root ) const
+{
+    Object::serializeFields_( root );
+    // append base type
+    root["Type"].append( SceneRootObject::TypeName() );
+}
+
+void SceneRootObject::deserializeFields_( const Json::Value& root )
+{
+    Object::deserializeFields_( root );
+    Object::select( false );
+    setName( "Root" );
 }
 
 }

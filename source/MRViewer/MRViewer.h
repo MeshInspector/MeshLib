@@ -182,7 +182,7 @@ public:
     ////////////////////////
 
     // reset objectRoot with newRoot, append all RenderObjects and basis objects
-    MRVIEWER_API void set_root( Object& newRoot );
+    MRVIEWER_API void set_root( SceneRootObject& newRoot );
 
     // removes all objects from scene
     MRVIEWER_API void clearScene();

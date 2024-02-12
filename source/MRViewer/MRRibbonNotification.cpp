@@ -8,6 +8,7 @@
 #include "ImGuiHelpers.h"
 #include "MRMesh/MRColor.h"
 #include "MRPch/MRWasm.h"
+#include "MRProgressBar.h"
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -65,6 +66,8 @@ void RibbonNotifier::drawNotifications( float scaling )
         if ( i + 1 == cNotificationNumberLimit )
             ImGui::SetNextWindowBgAlpha( 0.5f );
         ImGui::Begin( name.c_str(), nullptr, flags );
+        if ( ImGui::IsWindowAppearing() && !ProgressBar::isOrdered() )
+            ImGui::SetWindowFocus();
         const int columnCount = 2;
         const float firstColumnWidth = 28.0f * scaling;
         auto& style = ImGui::GetStyle();

@@ -42,3 +42,15 @@ def test_thicken_mesh():
         print(e)
         assert False
     assert cube_thicken.topology.findHoleRepresentiveEdges().size() == 2
+
+def test_double_offset_mesh():
+    cube = mrmesh.makeCube()
+    params = mrmesh.OffsetParameters()
+    params.voxelSize = mrmesh.suggestVoxelSize(cube, 5e6)
+    try:
+        cube_offset = mrmesh.doubleOffsetMesh(cube, -0.2, 0.2)
+    except ValueError as e:
+        print(e)
+        assert False
+
+    assert cube_offset.volume() / cube.volume() < 1.0

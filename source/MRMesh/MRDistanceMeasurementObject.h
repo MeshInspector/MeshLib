@@ -8,7 +8,7 @@ namespace MR
 // Represents a distance measurement.
 class MRMESH_CLASS DistanceMeasurementObject : public MeasurementObject
 {
-    // The xf encodes the distance: the origin is one point point, and (1,0,0) is another.
+    // The xf encodes the distance: the origin is one point, and (1,0,0) is another.
 public:
     DistanceMeasurementObject() {}
 
@@ -28,7 +28,7 @@ public:
 
     // Get the starting point in world coordinates.
     [[nodiscard]] MRMESH_API Vector3f getWorldPoint() const;
-    // Get the starting point in parent coordinates.
+    // Get the starting point in local coordinates.
     [[nodiscard]] MRMESH_API Vector3f getLocalPoint() const;
 
     // The delta from the starting point to the other point.

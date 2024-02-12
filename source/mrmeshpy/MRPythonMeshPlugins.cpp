@@ -284,7 +284,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
         def_readwrite( "maxEdgeLen", &SubdivideSettings::maxEdgeLen, "Maximal possible edge length created during decimation" ).
         def_readwrite( "maxEdgeSplits", &SubdivideSettings::maxEdgeSplits, "Maximum number of edge splits allowed" ).
         def_readwrite( "maxDeviationAfterFlip", &SubdivideSettings::maxDeviationAfterFlip, "Improves local mesh triangulation by doing edge flips if it does not make too big surface deviation" ).
-        def_readwrite( "maxAngleChangeAfterFlip", &SubdivideSettings::maxAngleChangeAfterFlip, "Improves local mesh triangulation by doing edge flips if it does change dihedral angle more than on this value" ).
+        def_readwrite( "maxAngleChangeAfterFlip", &SubdivideSettings::maxAngleChangeAfterFlip, "Improves local mesh triangulation by doing edge flips if it does change dihedral angle more than on this value. Unit: rad" ).
         def_readwrite( "criticalAspectRatioFlip", &SubdivideSettings::criticalAspectRatioFlip, "If this value is less than FLT_MAX then edge flips will ignore dihedral angle check if one of triangles has aspect ratio more than this value" ).
         def_readwrite( "region", &SubdivideSettings::region, "Region on mesh to be subdivided, it is updated during the operation" ).
         def_readwrite( "newVerts", &SubdivideSettings::newVerts, "New vertices appeared during subdivision will be added here" ).
@@ -417,6 +417,18 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
         "if your input mesh is closed then please specify params.type == Offset, and you will get closed mesh on output;\n"
         "if your input mesh is open then please specify params.type == Shell, and you will get open mesh on output" );
 
+
+    m.def( "doubleOffsetMesh", 
+        MR::decorateExpected( [] ( const MR::MeshPart& mp, float offsetA, float offsetB, MR::OffsetParameters params )
+    {
+        if ( params.voxelSize <= 0 )
+            params.voxelSize = suggestVoxelSize( mp, 5e6f );
+        return MR::doubleOffsetMesh( mp, offsetA, offsetB, params );
+    } ), 
+        pybind11::arg( "mp" ), pybind11::arg( "offsetA" ), pybind11::arg( "offsetB" ), pybind11::arg_v( "params", MR::OffsetParameters(), "OffsetParameters()" ),
+        "Offsets mesh by converting it to voxels and back two times\n"
+        "only closed meshes allowed (only Offset mode)\n"
+        "typically offsetA and offsetB have distinct signs" );
 })
 #endif
 

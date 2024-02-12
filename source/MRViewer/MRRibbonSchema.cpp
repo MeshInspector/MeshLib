@@ -158,6 +158,8 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     };
     for ( int t = 0; t < schema.tabsOrder.size(); ++t )
     {
+        if ( schema.tabsOrder[t].experimental && !schema.experimentalFeatures )
+            continue;
         auto tabItem = schema.tabsMap.find( schema.tabsOrder[t].name );
         if ( tabItem == schema.tabsMap.end() )
             continue;
@@ -540,6 +542,9 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
         auto tab = tabs[i];
         auto tabName = tab["Name"];
         auto tabPriorityJSON = tab["Priority"];
+        bool experementalTab = false;
+        if ( tab["Experimental"].isBool() )
+            experementalTab = tab["Experimental"].asBool();
         int tabPriority{ 0 };
         if ( tabPriorityJSON.isInt() )
             tabPriority = tabPriorityJSON.asInt();
@@ -614,7 +619,7 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
         auto& tabRef = RibbonSchemaHolder::schema().tabsMap[tabName.asString()];
         if ( tabRef.empty() )
         {
-            RibbonSchemaHolder::schema().tabsOrder.push_back( { tabName.asString(),tabPriority } );
+            RibbonSchemaHolder::schema().tabsOrder.push_back( { tabName.asString(),tabPriority,experementalTab } );
             tabRef = std::move( newGroupsVec );
         }
         else
@@ -622,7 +627,7 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
             auto it = std::find_if( 
                 RibbonSchemaHolder::schema().tabsOrder.begin(), 
                 RibbonSchemaHolder::schema().tabsOrder.end(),
-                [&] ( const TabNamePriority& tnp ) { return tnp.name == tabName.asString(); } );
+                [&] ( const RibbonTab& tnp ) { return tnp.name == tabName.asString(); } );
 
             if ( it != RibbonSchemaHolder::schema().tabsOrder.end() && tabPriority != 0 )
                 it->priority = tabPriority;

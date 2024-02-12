@@ -1,7 +1,8 @@
 #pragma once
 
 #include "MRId.h"
-#include <algorithm>
+#include <cassert>
+#include <utility>
 
 namespace MR
 {
@@ -10,9 +11,26 @@ namespace MR
 /// irrespective of vertex order (clockwise or counterclockwise)
 struct UnorientedTriangle : ThreeVertIds
 {
-    UnorientedTriangle( const ThreeVertIds & inVs ) : ThreeVertIds( inVs )
+    UnorientedTriangle( const ThreeVertIds & inVs,
+        bool * outFlipped = nullptr ) ///< optional output: true if the orientation of the triangle has flipped
+        : ThreeVertIds( inVs )
     {
-        std::sort( begin(), end() );
+        bool flipped = false;
+        auto checkSwap = [this, &flipped]( int i, int j )
+        {
+            assert( i < j );
+            assert( (*this)[i] != (*this)[j] );
+            if ( (*this)[i] > (*this)[j] )
+            {
+                flipped = !flipped;
+                std::swap( (*this)[i], (*this)[j] );
+            }
+        };
+        checkSwap( 0, 1 );
+        checkSwap( 0, 2 );
+        checkSwap( 1, 2 );
+        if ( outFlipped )
+            *outFlipped = flipped;
     }
     friend bool operator==( const UnorientedTriangle& a, const UnorientedTriangle& b ) = default;
 };

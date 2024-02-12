@@ -7,7 +7,6 @@
 #include "MRMesh/MRMeshTriPoint.h"
 #include <MRMesh/MRColor.h>
 #include <functional>
-#include <unordered_set>
 
 namespace MR
 {

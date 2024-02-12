@@ -3,6 +3,8 @@
 #include <MRMesh/MRGTest.h>
 #include <MRMesh/MRZlib.h>
 
+#ifndef __EMSCRIPTEN__
+
 namespace
 {
 
@@ -39,8 +41,6 @@ constexpr unsigned char cOutputLevel1[] = {
 };
 
 } // namespace
-
-#ifndef __EMSCRIPTEN__
 
 using ZlibCompressParameters = std::tuple<const unsigned char*, size_t, const unsigned char*, size_t, int>;
 class ZlibCompressTestFixture : public testing::TestWithParam<ZlibCompressParameters> {};

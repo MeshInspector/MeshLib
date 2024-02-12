@@ -3,6 +3,7 @@
 #include "MRBitSet.h"
 #include "MRTimer.h"
 #include "MRPointsInBall.h"
+#include "MRProgressCallback.h"
 //#include <algorithm>
 
 namespace MR
@@ -11,7 +12,7 @@ namespace MR
 namespace PointCloudComponents
 {
 
-std::vector<MR::VertBitSet> getBigComponents( const PointCloud& pointCloud, float maxDist, int minSize /*= -1*/ )
+Expected<std::vector<MR::VertBitSet>> getBigComponents( const PointCloud& pointCloud, float maxDist, int minSize /*= -1*/, ProgressCallback pc /*= {}*/ )
 {
     MR_TIMER
 
@@ -19,11 +20,19 @@ std::vector<MR::VertBitSet> getBigComponents( const PointCloud& pointCloud, floa
     const auto& validPoints = pointCloud.validPoints;
     if ( minSize < 0 )
         minSize = std::max( int( validPoints.count() ) / 100, 1 );
-    auto unionSstructs = PointCloudComponents::getUnionFindStructureVerts( pointCloud, maxDist );
-    auto allRoots = unionSstructs.roots();
+    ProgressCallback subPc = pc ? subprogress( pc, 0.f, 0.9f ) : pc;
+    auto unionStructsRes = PointCloudComponents::getUnionFindStructureVerts( pointCloud, maxDist, nullptr, subPc );
+    if ( !unionStructsRes.has_value() )
+        return unexpected( unionStructsRes.error() );
+    auto& unionStructs = *unionStructsRes;
+    auto allRoots = unionStructs.roots();
     std::vector<VertBitSet> components;
     std::vector<VertId> componentRoots;
 
+    subPc = pc ? subprogress( pc, 0.9f, 1.f ) : pc;
+    int counter = 0;
+    const float counterMax = float( validPoints.count() );
+    const int counterDivider = int( validPoints.count() ) / 100;
     for ( auto v : validPoints )
     {
         auto componentId = -1;
@@ -43,6 +52,8 @@ std::vector<MR::VertBitSet> getBigComponents( const PointCloud& pointCloud, floa
         }
 
         components[componentId].set( v );
+        if ( !reportProgress( subPc, ++counter / counterMax, counter, counterDivider ) )
+            return unexpected( std::string( "Operation canceled" ) );
     }
 
     std::vector<VertBitSet> result;
@@ -55,7 +66,7 @@ std::vector<MR::VertBitSet> getBigComponents( const PointCloud& pointCloud, floa
     return result;
 }
 
-MR::UnionFind<MR::VertId> getUnionFindStructureVerts( const PointCloud& pointCloud, float maxDist, const VertBitSet* region /*= nullptr*/ )
+Expected<UnionFind<MR::VertId>> getUnionFindStructureVerts( const PointCloud& pointCloud, float maxDist, const VertBitSet* region /*= nullptr*/, ProgressCallback pc /*= {}*/ )
 {
     MR_TIMER
 
@@ -69,6 +80,9 @@ MR::UnionFind<MR::VertId> getUnionFindStructureVerts( const PointCloud& pointClo
     UnionFind<VertId> unionFindStructure( vertsRegion.find_last() + 1 );
 
     VertId v1;
+    int counter = 0;
+    const float counterMax = float( vertsRegion.count() );
+    const int counterDivider = int( vertsRegion.count() ) / 100;
     for ( auto v0 : vertsRegion )
     {
         findPointsInBall( pointCloud.getAABBTree(), pointCloud.points[v0], maxDist,
@@ -77,6 +91,8 @@ MR::UnionFind<MR::VertId> getUnionFindStructureVerts( const PointCloud& pointClo
             if ( v1.valid() && vertsRegion.test( v1 ) && v1 < v0 )
                 unionFindStructure.unite( v0, v1 );
         } );
+        if ( !reportProgress( pc, ++counter / counterMax, counter, counterDivider ) )
+            return unexpected( std::string( "Operation canceled" ) );
     }
     return unionFindStructure;
 }

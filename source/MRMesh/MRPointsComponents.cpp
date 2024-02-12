@@ -3,6 +3,7 @@
 #include "MRBitSet.h"
 #include "MRTimer.h"
 #include "MRPointsInBall.h"
+//#include <algorithm>
 
 namespace MR
 {
@@ -10,12 +11,14 @@ namespace MR
 namespace PointCloudComponents
 {
 
-std::vector<MR::VertBitSet> getAllComponents( const PointCloud& pointCloud, float maxDist )
+std::vector<MR::VertBitSet> getBigComponents( const PointCloud& pointCloud, float maxDist, int minSize /*= -1*/ )
 {
     MR_TIMER
 
     assert( maxDist > 0.f );
     const auto& validPoints = pointCloud.validPoints;
+    if ( minSize < 0 )
+        minSize = std::max( int( validPoints.count() ) / 100, 1 );
     auto unionSstructs = PointCloudComponents::getUnionFindStructureVerts( pointCloud, maxDist );
     auto allRoots = unionSstructs.roots();
     std::vector<VertBitSet> components;
@@ -42,7 +45,14 @@ std::vector<MR::VertBitSet> getAllComponents( const PointCloud& pointCloud, floa
         components[componentId].set( v );
     }
 
-    return components;
+    std::vector<VertBitSet> result;
+    for ( int i = 0; i < components.size(); ++i )
+    {
+        if ( components[i].count() > size_t( minSize ) )
+            result.push_back( components[i] );
+    }
+
+    return result;
 }
 
 MR::UnionFind<MR::VertId> getUnionFindStructureVerts( const PointCloud& pointCloud, float maxDist, const VertBitSet* region /*= nullptr*/ )

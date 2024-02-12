@@ -174,10 +174,10 @@ void ViewerSettingsPlugin::drawSettingsTab_( float menuWidth, float menuScaling 
             UI::checkbox( "Show Experimental Features", &RibbonSchemaHolder::schema().experimentalFeatures );
             UI::setTooltipIfHovered( "Show experimental ribbon tabs", menuScaling );
 
-            UI::checkbox( "Close Plugins on Activating Another Plugin", 
+            UI::checkbox( "Close Tool on Activating Another One", 
                                                   std::bind( &RibbonMenu::getAutoCloseBlockingPlugins, ribbonMenu_ ), 
                                                   std::bind( &RibbonMenu::setAutoCloseBlockingPlugins, ribbonMenu_, std::placeholders::_1 ) );
-            UI::setTooltipIfHovered( "Automatically close plugins when another blocking plugin is activated", menuScaling );
+            UI::setTooltipIfHovered( "Automatically close blocking tool when another blocking tool is activated", menuScaling );
         }
 
         static std::vector<std::string> shadingModes = { "Auto Detect", "Smooth", "Flat" };

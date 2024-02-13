@@ -313,6 +313,11 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
         {
             spdlog::warn( "GTK dialog failed" );
         }
+#if defined( __APPLE__ )
+        // on macOS the main window remains unfocused after the file dialog is closed
+        auto* window = glfwGetCurrentContext();
+        glfwFocusWindow( window );
+#endif
     };
 #if defined( __APPLE__ )
     onResponse( dialog.run() );

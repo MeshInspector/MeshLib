@@ -77,7 +77,7 @@ Expected<MR::VertBitSet> getLargestComponentsUnion( const PointCloud& pointCloud
     MR_TIMER
 
     assert( maxDist > 0.f );
-    assert( minSize > 0 );
+    assert( minSize > 1 );
     const auto& validPoints = pointCloud.validPoints;
     ProgressCallback subPc = subprogress( pc, 0.f, 0.9f );
     auto unionStructsRes = getUnionFindStructureVerts( pointCloud, maxDist, nullptr, subPc );
@@ -103,7 +103,7 @@ Expected<MR::VertBitSet> getLargestComponentsUnion( const PointCloud& pointCloud
     VertBitSet result( validPoints.find_last() + 1 );
     for ( auto v : validPoints )
     {
-        if ( root2size[allRoots[v]] > minSize )
+        if ( root2size[allRoots[v]] >= minSize )
             result.set( v );
         if ( !reportProgress( subPc, counter / counterMax, counter, counterDivider ) )
             return unexpectedOperationCanceled();
@@ -116,9 +116,7 @@ Expected<UnionFind<MR::VertId>> getUnionFindStructureVerts( const PointCloud& po
 {
     MR_TIMER
 
-    VertBitSet vertsRegion = pointCloud.validPoints;
-    if ( region )
-        vertsRegion &= *region;
+    const VertBitSet& vertsRegion = region ? *region : pointCloud.validPoints;
 
     if ( !vertsRegion.any() )
         return unexpected( std::string( "Chosen region empty" ));
@@ -133,25 +131,34 @@ Expected<UnionFind<MR::VertId>> getUnionFindStructureVerts( const PointCloud& po
     if ( numThreads > 1 )
     {
         bdVerts.resize( numVerts );
-        subPc = subprogress( pc, 0.f, 0.7f );
-        const bool keepGoing = BitSetParallelForAllEx( vertsRegion, [&] ( VertId v0, VertId, VertId vEnd )
-        {
-            if ( !contains( vertsRegion, v0 ) )
-                return;
+        lastPassVerts = &bdVerts;
+        const int endBlock = int( bdVerts.size() + bdVerts.bits_per_block - 1 ) / bdVerts.bits_per_block;
+        const auto bitsPerThread = ( endBlock + numThreads - 1 ) / numThreads * BitSet::bits_per_block;
 
-            findPointsInBall( pointCloud.getAABBTree(), pointCloud.points[v0], maxDist,
-                [&] ( VertId v1, const Vector3f& )
+        tbb::parallel_for( tbb::blocked_range<int>( 0, numThreads ),
+            [&] ( const tbb::blocked_range<int>& range )
+        {
+            const VertId vBeg{ range.begin() * bitsPerThread };
+            const VertId vEnd{ range.end() < numThreads ? range.end() * bitsPerThread : bdVerts.size() };
+            for ( auto v0 = vBeg; v0 < vEnd; ++v0 )
             {
-                if ( v0 < v1 && contains( vertsRegion, v1 ) )
+                if ( !contains( vertsRegion, v0 ) )
+                    continue;
+
+                findPointsInBall( pointCloud.getAABBTree(), pointCloud.points[v0], maxDist,
+                    [&] ( VertId v1, const Vector3f& )
                 {
-                    if ( v1 >= vEnd )
-                        bdVerts.set( v0 ); // remember vert to unite later
-                    else
-                        unionFindStructure.unite( v0, v1 );
-                }
-            } );
-        }, subPc );
-        if ( !keepGoing )
+                    if ( v0 < v1 && contains( vertsRegion, v1 ) )
+                    {
+                        if ( v1 >= vEnd )
+                            bdVerts.set( v0 );
+                        else
+                            unionFindStructure.unite( v0, v1 );
+                    }
+                } );
+            }
+        } );
+        if ( !reportProgress( subPc, 0.7f ) )
             return unexpectedOperationCanceled();
         subPc = subprogress( pc, 0.7f, 1.f );
     }

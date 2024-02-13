@@ -170,8 +170,6 @@ bool Object::isAncestor( const Object* ancestor ) const
 
 Object* Object::findCommonAncestor( Object& other )
 {
-    assert( &other ); // Duh.
-
     // Some common cases first.
     if ( this == &other )
         return this;

@@ -1318,7 +1318,7 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     auto plane = planeWidget.getPlane();
 
     ImGui::SetNextItemWidth( 200.0f * menuScaling );
-    ImGui::DragFloatValid3( "Norm", &plane.n.x, 0.001f );
+    ImGui::DragFloatValid3( "Normal", &plane.n.x, 0.001f );
     ImGui::PushButtonRepeat( true );
 
     const float arrowButtonSize = 2.0f * MR::cGradientButtonFramePadding * menuScaling + ImGui::GetTextLineHeight();

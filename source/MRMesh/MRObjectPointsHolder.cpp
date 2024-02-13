@@ -77,10 +77,23 @@ void ObjectPointsHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
     }
 }
 
+
+void ObjectPointsHolder::swapSignals_( Object& other )
+{
+    VisualObject::swapSignals_( other );
+    if ( auto otherMesh = other.asType<ObjectPointsHolder>() )
+    {
+        std::swap( pointsSelectionChangedSignal, otherMesh->pointsSelectionChangedSignal );
+    }
+    else
+        assert( false );
+}
+
 void ObjectPointsHolder::selectPoints( VertBitSet newSelection )
 {
     selectedPoints_ = std::move( newSelection );
     numSelectedPoints_.reset();
+    pointsSelectionChangedSignal();
     dirty_ |= DIRTY_SELECTION;
 }
 

@@ -1,4 +1,6 @@
 #include "MRFileDialog.h"
+#include "MRCommandLoop.h"
+#include "MRViewer.h"
 #include "MRMesh/MRConfig.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
@@ -313,6 +315,13 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
         {
             spdlog::warn( "GTK dialog failed" );
         }
+#if defined( __APPLE__ )
+        // on macOS the main window remains unfocused after the file dialog is closed
+        MR::CommandLoop::appendCommand( []
+        {
+            glfwFocusWindow( MR::Viewer::instance()->window );
+        } );
+#endif
     };
 #if defined( __APPLE__ )
     onResponse( dialog.run() );

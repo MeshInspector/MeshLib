@@ -164,6 +164,16 @@ MeshTopology topologyFromTriangles( const Triangulation& t, const MeshBuilder::B
 
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, ThreeVertIds, MR::ThreeVertIds )
 
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, MeshBuilderSettings, MeshBuilder::BuildSettings )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilderSettings, [] ( pybind11::module_& )
+{
+    MR_PYTHON_CUSTOM_CLASS( MeshBuilderSettings ).
+        def( pybind11::init<>() ).
+        def_readwrite( "region", &MeshBuilder::BuildSettings::region, "if region is given then on input it contains the faces to be added, and on output the faces failed to be added" ).
+        def_readwrite( "shiftFaceId", &MeshBuilder::BuildSettings::shiftFaceId, "this value to be added to every faceId before its inclusion in the topology" ).
+        def_readwrite( "allowNonManifoldEdge", &MeshBuilder::BuildSettings::allowNonManifoldEdge, "whether to permit non-manifold edges in the resulting topology" );
+} )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, []( pybind11::module_& m )
 {
     MR_PYTHON_CUSTOM_CLASS( ThreeVertIds ).
@@ -189,12 +199,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, []( pybind11::module_& m )
     pybind11::class_<Triangulation>( m, "Triangulation" ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &Triangulation::vec_ );
-
-    pybind11::class_<MeshBuilder::BuildSettings>( m, "MeshBuilderSettings" ).
-        def( pybind11::init<>() ).
-        def_readwrite( "region", &MeshBuilder::BuildSettings::region, "if region is given then on input it contains the faces to be added, and on output the faces failed to be added" ).
-        def_readwrite( "shiftFaceId", &MeshBuilder::BuildSettings::shiftFaceId, "this value to be added to every faceId before its inclusion in the topology" ).
-        def_readwrite( "allowNonManifoldEdge", &MeshBuilder::BuildSettings::allowNonManifoldEdge, "whether to permit non-manifold edges in the resulting topology" );
 
     m.def( "topologyFromTriangles",
         ( MeshTopology( * )( const Triangulation&, const MeshBuilder::BuildSettings& ) )& topologyFromTriangles,

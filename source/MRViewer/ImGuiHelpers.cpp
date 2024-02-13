@@ -1268,7 +1268,7 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     auto setDefaultPlane = [&] ( const MR::Vector3f& normal )
     {
         planeWidget.definePlane();
-        planeWidget.updatePlane( MR::Plane3f::fromDirAndPt( normal, planeWidget.box().min - normal * dragspeed ) );
+        planeWidget.updatePlane( MR::Plane3f::fromDirAndPt( normal, planeWidget.box().min + normal * dragspeed ) );
         if ( planeWidget.isInLocalMode() )
             planeWidget.setLocalShift( 0.0f );
     };

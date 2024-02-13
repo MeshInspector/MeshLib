@@ -168,6 +168,61 @@ bool Object::isAncestor( const Object* ancestor ) const
     return false;
 }
 
+Object* Object::findCommonAncestor( Object& other )
+{
+    // Some common cases first.
+    if ( this == &other )
+        return this;
+    if ( parent() == other.parent() )
+        return parent();
+
+    // Visits all parents of `cur`. Writes the number of them into `depth`.
+    // Returns the topmost parent.
+    auto visitParents = []( Object& object, int &depth ) -> Object&
+    {
+        Object* cur = &object;
+        while ( true )
+        {
+            if ( auto parent = cur->parent() )
+            {
+                cur = parent;
+                depth++;
+            }
+            else
+            {
+                return *cur;
+            }
+        }
+    };
+
+    int depthA = 0;
+    int depthB = 0;
+    if ( &visitParents( *this, depthA ) != &visitParents( other, depthB ) )
+        return nullptr; // No common ancestor.
+
+    Object* curA = this;
+    Object* curB = &other;
+
+    while ( depthA > depthB )
+    {
+        curA = curA->parent();
+        depthA--;
+    }
+    while ( depthA < depthB )
+    {
+        curB = curB->parent();
+        depthB--;
+    }
+
+    while ( curA != curB )
+    {
+        curA = curA->parent();
+        curB = curB->parent();
+    }
+
+    return curA;
+}
+
 bool Object::detachFromParent()
 {
     if ( !parent_ )

@@ -164,7 +164,6 @@ void trimWithPlane( Mesh& mesh, const TrimWithPlaneParams& params, const TrimOpt
     if ( optOut.otherPart )
     {
         *optOut.otherPart = mesh;        
-        mesh.topology.deleteFaces( posFaces );
         if ( optOut.otherOutCutContours )
         {
             *optOut.otherOutCutContours = findLeftBoundaryInsideMesh( optOut.otherPart->topology, otherFaces );
@@ -172,12 +171,13 @@ void trimWithPlane( Mesh& mesh, const TrimWithPlaneParams& params, const TrimOpt
             for ( const auto& c : *optOut.otherOutCutContours )
                 for ( [[maybe_unused]] EdgeId e : c )
                 {
-                    assert( contains( posFaces, optOut.otherPart->topology.left( e ) ) );
+                    assert( contains( otherFaces, optOut.otherPart->topology.left( e ) ) );
                     assert( optOut.otherPart->topology.right( e ) );
-                    assert( !contains( posFaces, optOut.otherPart->topology.right( e ) ) );
+                    assert( !contains( otherFaces, optOut.otherPart->topology.right( e ) ) );
                 }
 #endif
         }
+        optOut.otherPart->topology.deleteFaces( posFaces );
     }
     mesh.topology.deleteFaces( otherFaces );
 #ifndef NDEBUG

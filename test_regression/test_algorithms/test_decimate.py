@@ -112,5 +112,5 @@ def test_decimate(tmp_path, dec_params):
     with check:
         compare_meshes_similarity(mesh, ref_mesh)
     with check:
-        self_col_tri = mlpy.findSelfCollidingTriangles(mesh)
+        self_col_tri = mlpy.findSelfCollidingTriangles(mesh).size()
         assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"

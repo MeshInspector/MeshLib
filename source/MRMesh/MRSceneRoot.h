@@ -6,7 +6,7 @@
 namespace MR
 {
 
-/// Object that has is parent of all scene
+/// Object that is parent of all scene
 class MRMESH_CLASS SceneRootObject final : public Object
 {
 public:
@@ -14,6 +14,12 @@ public:
     constexpr static const char* TypeName() noexcept { return "RootObject"; }
     virtual const char* typeName() const override { return TypeName(); }
     virtual void setAncillary( bool ) override { Object::setAncillary( false ); }
+    virtual bool isAncillary() const override { return false; }
+    virtual bool select( bool ) override { return Object::select( false ); }
+    virtual bool isSelected() const override { return false; }
+    // force "Root" name
+    MRMESH_API virtual const std::string& name() const override;
+    virtual void setName( std::string ) override { Object::setName( "Root" ); }
 protected:
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;

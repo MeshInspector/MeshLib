@@ -33,7 +33,6 @@ SceneRoot& SceneRoot::instace_()
 SceneRoot::SceneRoot()
 {
     root_ = std::make_shared<SceneRootObject>();
-    root_->setName( "Root" );
 }
 
 const SceneRootObject& SceneRoot::constGet()
@@ -55,8 +54,16 @@ MR_ADD_CLASS_FACTORY( SceneRootObject )
 
 SceneRootObject::SceneRootObject()
 {
+    // this changes are required as root object has fixed properties
     setName( "Root" );
     setAncillary( false );
+    select( false );
+}
+
+const std::string& SceneRootObject::name() const
+{
+    static std::string sRootName = "Root";
+    return sRootName;
 }
 
 void SceneRootObject::serializeFields_( Json::Value& root ) const
@@ -69,9 +76,10 @@ void SceneRootObject::serializeFields_( Json::Value& root ) const
 void SceneRootObject::deserializeFields_( const Json::Value& root )
 {
     Object::deserializeFields_( root );
-    Object::select( false );
+    // this changes are required as root object has fixed properties
     setName( "Root" );
     setAncillary( false );
+    select( false );
 }
 
 }

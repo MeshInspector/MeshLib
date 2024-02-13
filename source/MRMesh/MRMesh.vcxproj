@@ -122,6 +122,7 @@
     <ClInclude Include="MRPointOnObject.h" />
     <ClInclude Include="MROverlappingTris.h" />
     <ClInclude Include="MRObjectGcode.h" />
+    <ClInclude Include="MRPointsComponents.h" />
     <ClInclude Include="MRPointsLoadE57.h" />
     <ClInclude Include="MRPointsProject.h" />
     <ClInclude Include="MRPointsToMeshProjector.h" />
@@ -479,6 +480,7 @@
     <ClCompile Include="MROffsetContours.cpp" />
     <ClCompile Include="MROverlappingTris.cpp" />
     <ClCompile Include="MRObjectGcode.cpp" />
+    <ClCompile Include="MRPointsComponents.cpp" />
     <ClCompile Include="MRPointsLoadE57.cpp" />
     <ClCompile Include="MRPointsLoadLas.cpp" />
     <ClCompile Include="MRPointsProject.cpp" />

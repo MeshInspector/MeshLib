@@ -17,6 +17,8 @@ public:
     virtual void setAncillary( bool ) override { Object::setAncillary( false ); }
     virtual bool select( bool ) override { return Object::select( false ); }
     virtual void setName( std::string ) override { Object::setName( SceneRootObject::RootName() ); }
+    /// same as clone but returns correct type
+    MRMESH_API std::shared_ptr<SceneRootObject> cloneRoot() const;
 protected:
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;

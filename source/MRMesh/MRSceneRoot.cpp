@@ -60,6 +60,11 @@ SceneRootObject::SceneRootObject()
     select( false );
 }
 
+std::shared_ptr<SceneRootObject> SceneRootObject::cloneRoot() const
+{
+    return std::dynamic_pointer_cast< SceneRootObject >( clone() );
+}
+
 void SceneRootObject::serializeFields_( Json::Value& root ) const
 {
     Object::serializeFields_( root );

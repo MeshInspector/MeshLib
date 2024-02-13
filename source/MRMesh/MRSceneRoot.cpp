@@ -54,7 +54,7 @@ MR_ADD_CLASS_FACTORY( SceneRootObject )
 
 SceneRootObject::SceneRootObject()
 {
-    // this changes are required as root object has fixed properties
+    // these changes are required as root object has fixed properties
     setName( SceneRootObject::RootName() );
     setAncillary( false );
     select( false );
@@ -75,7 +75,7 @@ void SceneRootObject::serializeFields_( Json::Value& root ) const
 void SceneRootObject::deserializeFields_( const Json::Value& root )
 {
     Object::deserializeFields_( root );
-    // this changes are required as root object has fixed properties
+    // these changes are required as root object has fixed properties
     setName( SceneRootObject::RootName() );
     setAncillary( false );
     select( false );

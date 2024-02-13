@@ -83,7 +83,7 @@ void SceneRootObject::deserializeFields_( const Json::Value& root )
 
 std::shared_ptr<SceneRootObject> createRootFormObject( std::shared_ptr<Object> obj )
 {
-    std::shared_ptr<SceneRootObject> root;
+    std::shared_ptr<SceneRootObject> root = std::make_shared<SceneRootObject>();
     auto children = obj->children();
     for ( auto child : children )
     {

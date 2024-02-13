@@ -389,7 +389,7 @@ void OpenLink( const std::string& url )
 #ifdef __APPLE__
     auto openres = system( ( "open " + url ).c_str() );
 #else
-    auto openres = system( ( "xdg-open " + url ).c_str() );
+    auto openres = system( ( "xdg-open " + url + " &" ).c_str() );
 #endif
     if ( openres == -1 )
     {
@@ -417,12 +417,13 @@ bool OpenDocument( const std::filesystem::path& path )
     ( void )path;
     return false;
 #else
-    std::ostringstream arg = std::quoted( path.string(), '\'' );
+    std::ostringstream command;
 #ifdef __APPLE__
-    auto openres = system( ( "open " + arg.str() ).c_str() );
+    command << "open " << std::quoted( path.string(), '\'' );
 #else
-    auto openres = system( ( "xdg-open " + arg.str() ).c_str() );
+    command << "xdg-open " << std::quoted( path.string(), '\'' ) << " &";
 #endif
+    auto openres = system( command.str().c_str() );
     if ( openres == -1 )
     {
         spdlog::warn( "Error opening {}", path );

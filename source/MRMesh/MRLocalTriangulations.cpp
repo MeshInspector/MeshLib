@@ -91,7 +91,12 @@ Vector3f computeNormal( const AllLocalTriangulations & triangs, const VertCoords
     return sum.normalized();
 }
 
-void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertNormals & normals )
+void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertNormals & targetDir )
+{
+    return orientLocalTriangulations( triangs, coords, [&targetDir]( VertId v ) { return targetDir[v]; } );
+}
+
+void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const std::function<Vector3f(VertId)> & targetDir )
 {
     MR_TIMER
     if ( triangs.fanRecords.size() <= 1 )
@@ -116,7 +121,7 @@ void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoor
                 otherBd = next;
                 continue;
             }
-            const auto d = dot( normals[c], cross( coords[next] - cp, coords[curr] - cp ) );
+            const auto d = dot( targetDir( c ), cross( coords[next] - cp, coords[curr] - cp ) );
             if ( d > 0 )
                 ++sum;
             else if ( d < 0 )

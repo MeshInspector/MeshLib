@@ -426,7 +426,7 @@ bool OpenDocument( const std::filesystem::path& path )
     auto openres = system( command.str().c_str() );
     if ( openres == -1 )
     {
-        spdlog::warn( "Error opening {}", path );
+        spdlog::warn( "Error opening {}", path.string() );
         return false;
     }
     return true;

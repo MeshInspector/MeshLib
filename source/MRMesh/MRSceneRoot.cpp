@@ -55,15 +55,9 @@ MR_ADD_CLASS_FACTORY( SceneRootObject )
 SceneRootObject::SceneRootObject()
 {
     // this changes are required as root object has fixed properties
-    setName( "Root" );
+    setName( SceneRootObject::RootName() );
     setAncillary( false );
     select( false );
-}
-
-const std::string& SceneRootObject::name() const
-{
-    static std::string sRootName = "Root";
-    return sRootName;
 }
 
 void SceneRootObject::serializeFields_( Json::Value& root ) const
@@ -77,9 +71,21 @@ void SceneRootObject::deserializeFields_( const Json::Value& root )
 {
     Object::deserializeFields_( root );
     // this changes are required as root object has fixed properties
-    setName( "Root" );
+    setName( SceneRootObject::RootName() );
     setAncillary( false );
     select( false );
+}
+
+std::shared_ptr<SceneRootObject> createRootFormObject( std::shared_ptr<Object> obj )
+{
+    std::shared_ptr<SceneRootObject> root;
+    auto children = obj->children();
+    for ( auto child : children )
+    {
+        child->detachFromParent();
+        root->addChild( child );
+    }
+    return root;
 }
 
 }

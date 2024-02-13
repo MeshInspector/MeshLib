@@ -74,7 +74,7 @@ public:
     template <typename T>
     const T * asType() const { return dynamic_cast<const T*>( this ); }
 
-    virtual const std::string & name() const { return name_; }
+    const std::string & name() const { return name_; }
     virtual void setName( std::string name ) { name_ = std::move( name ); }
 
     /// finds a direct child by name
@@ -161,12 +161,12 @@ public:
 
     /// selects the object, returns true if value changed, otherwise returns false
     MRMESH_API virtual bool select( bool on );
-    virtual bool isSelected() const { return selected_; }
+    bool isSelected() const { return selected_; }
 
     /// ancillary object is an object hidden (in scene menu) from a regular user
     /// such objects cannot be selected, and if it has been selected, it is unselected when turn ancillary
     MRMESH_API virtual void setAncillary( bool ancillary );
-    virtual bool isAncillary() const { return ancillary_; }
+    bool isAncillary() const { return ancillary_; }
 
     /// sets the object visible in the viewports specified by the mask (by default in all viewports)
     MRMESH_API void setVisible( bool on, ViewportMask viewportMask = ViewportMask::all() );

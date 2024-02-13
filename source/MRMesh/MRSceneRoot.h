@@ -12,18 +12,19 @@ class MRMESH_CLASS SceneRootObject final : public Object
 public:
     MRMESH_API SceneRootObject();
     constexpr static const char* TypeName() noexcept { return "RootObject"; }
+    constexpr static const char* RootName() noexcept { return "Root"; }
     virtual const char* typeName() const override { return TypeName(); }
     virtual void setAncillary( bool ) override { Object::setAncillary( false ); }
-    virtual bool isAncillary() const override { return false; }
     virtual bool select( bool ) override { return Object::select( false ); }
-    virtual bool isSelected() const override { return false; }
-    // force "Root" name
-    MRMESH_API virtual const std::string& name() const override;
-    virtual void setName( std::string ) override { Object::setName( "Root" ); }
+    virtual void setName( std::string ) override { Object::setName( SceneRootObject::RootName() ); }
 protected:
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 };
+
+/// Removes all `obj` children and attaches it to newly created `SceneRootObject`
+/// note that it does not respect `obj` xf
+MRMESH_API std::shared_ptr<SceneRootObject> createRootFormObject( std::shared_ptr<Object> obj );
 
 /// Singleton to store scene root object
 /// \ingroup DataModelGroup

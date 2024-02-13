@@ -80,15 +80,8 @@ public:
             const auto& object = loadedObjects_.front();
             if ( object->typeName() == Object::TypeName() && object->xf() == AffineXf3f() )
             {
+                scene = createRootFormObject( object );
                 constructed = false;
-                auto children = object->children();
-                for ( auto& child : children )
-                {
-                    if ( !child )
-                        continue;
-                    child->detachFromParent();
-                    scene->addChild( child );
-                }
             }
             else
             {

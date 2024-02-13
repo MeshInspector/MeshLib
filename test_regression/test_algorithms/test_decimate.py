@@ -17,24 +17,19 @@ import pytest
         "params": {
             "maxError": 0.25
         }},
-    {"name": "target_triangles_40000",
+    {"name": "target_triangles_200",
         "params": {
-            "maxDeletedFaces": 50464,  # tuned to crocodile mesh
-            "maxError": 0.05
-        }},
-    {"name": "target_triangles_10000",
-        "params": {
-            "maxDeletedFaces": 70464,  # tuned to crocodile mesh
+            "maxDeletedFaces": 200,  # tuned to R0003C_V4-16aug19 mesh
             "maxError": 0.05
         }},
     {"name": "maxEdgeLen_245",
         "params": {
             "maxEdgeLen": 245,
-            "maxError": 0.25  # tuned to crocodile mesh
+            "maxError": 0.25  # tuned to R0003C_V4-16aug19 mesh
         }},
-    {"name": "maxEdgeLen_1",
+    {"name": "maxEdgeLen_0.4",
         "params": {
-            "maxEdgeLen": 0.5,  # tuned to crocodile mesh
+            "maxEdgeLen": 0.4,  # tuned to R0003C_V4-16aug19 mesh
             "maxError": 0.20
         }},
     {"name": "maxTriangleAspectRatio_20",
@@ -47,15 +42,15 @@ import pytest
          "maxTriangleAspectRatio": 1,
          "maxError": 0.25
      }},
-    {"name": "stabilizer_0.00001",
+    {"name": "stabilizer_0.001",
         "params": {
-            "stabilizer": 0.00001,
-            "maxError": 0.25
+            "stabilizer": 0.001,
+            "maxError": 0.05
         }},
     {"name": "stabilizer_0",
         "params": {
             "stabilizer": 0,
-            "maxError": 0.25
+            "maxError": 0.05
 
         }},
     {"name": "strategy_ShortestEdgeFirst",
@@ -95,7 +90,7 @@ def test_decimate(tmp_path, dec_params):
     Test boolean algorithm with all operation types
     """
     #  Load input meshes
-    input_folder = Path(test_files_path) / "algorithms" / "decimate" / "crocodile"
+    input_folder = Path(test_files_path) / "algorithms" / "decimate" / "R0003C_V4-16aug19"
     case_name = dec_params["name"]
     mesh = mlpy.loadMesh(input_folder / "input.mrmesh")
 
@@ -116,6 +111,6 @@ def test_decimate(tmp_path, dec_params):
     #  check meshes similarity (for extra details on fail)
     with check:
         compare_meshes_similarity(mesh, ref_mesh)
-    # check saved file is same as reference
     with check:
-        assert compare_mesh(mesh, ref_mesh_path)
+        self_col_tri = mlpy.findSelfCollidingTriangles(mesh)
+        assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"

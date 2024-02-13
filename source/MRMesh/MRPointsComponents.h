@@ -9,18 +9,18 @@ namespace MR
 namespace PointCloudComponents
 {
 
-/// \defgroup PointClodComponentsGroup PointClodComponents
+/// \defgroup PointCloudComponentsGroup PointCloudComponents
 /// \ingroup ComponentsGroup
 /// \{
 
 
-///  returns the union of point cloud components containing more then \param minSize points and connected by a distance no greater than \param maxDist
+///  returns the union of point cloud components containing more than \param minSize points and connected by a distance no greater than \param maxDist
 MRMESH_API Expected<VertBitSet> getLargestComponentsUnion( const PointCloud& pointCloud, float maxDist, int minSize, ProgressCallback pc = {} );
 
 /// gets union - find structure for vertices in \param region connected by a distance no greater than \param maxDist 
 MRMESH_API Expected<UnionFind<VertId>> getUnionFindStructureVerts( const PointCloud& pointCloud, float maxDist, const VertBitSet* region = nullptr, ProgressCallback pc = {} );
 
 /// \}
-} // namespace PointClodComponents
+} // namespace PointCloudComponents
 
 }

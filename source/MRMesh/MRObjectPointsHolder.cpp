@@ -81,9 +81,9 @@ void ObjectPointsHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 void ObjectPointsHolder::swapSignals_( Object& other )
 {
     VisualObject::swapSignals_( other );
-    if ( auto otherMesh = other.asType<ObjectPointsHolder>() )
+    if ( auto otherPoints = other.asType<ObjectPointsHolder>() )
     {
-        std::swap( pointsSelectionChangedSignal, otherMesh->pointsSelectionChangedSignal );
+        std::swap( pointsSelectionChangedSignal, otherPoints->pointsSelectionChangedSignal );
     }
     else
         assert( false );

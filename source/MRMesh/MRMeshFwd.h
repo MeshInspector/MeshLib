@@ -404,6 +404,7 @@ class DistanceMap;
 using GcodeSource = std::vector<std::string>;
 
 class Object;
+class SceneRootObject;
 class VisualObject;
 class ObjectMeshHolder;
 class ObjectMesh;

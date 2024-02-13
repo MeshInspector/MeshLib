@@ -389,12 +389,47 @@ void OpenLink( const std::string& url )
 #ifdef __APPLE__
     auto openres = system( ( "open " + url ).c_str() );
 #else
-    auto openres = system( ( "xdg-open " + url ).c_str() );
+    auto openres = system( ( "xdg-open " + url + " &" ).c_str() );
 #endif
     if ( openres == -1 )
     {
         spdlog::warn( "Error opening {}", url );
     }
+#endif
+#endif // _WIN32
+}
+
+// Opens given file in associated application
+bool OpenDocument( const std::filesystem::path& path )
+{
+#ifdef _WIN32
+    HINSTANCE result = ShellExecuteW( NULL, L"open", path.c_str(), NULL, NULL, SW_SHOWNORMAL);
+    // "If the function succeeds, it returns a value greater than 32"
+    if ( ( INT_PTR )result <= 32 )
+    {
+        spdlog::warn( "Error opening {}, error code {}", path.string().c_str(), ( int )( INT_PTR )result );
+        return false;
+    }
+    return true;
+
+#else
+#ifdef __EMSCRIPTEN__
+    ( void )path;
+    return false;
+#else
+    std::ostringstream command;
+#ifdef __APPLE__
+    command << "open " << std::quoted( path.string(), '\'' );
+#else
+    command << "xdg-open " << std::quoted( path.string(), '\'' ) << " &";
+#endif
+    auto openres = system( command.str().c_str() );
+    if ( openres == -1 )
+    {
+        spdlog::warn( "Error opening {}", path.string() );
+        return false;
+    }
+    return true;
 #endif
 #endif // _WIN32
 }

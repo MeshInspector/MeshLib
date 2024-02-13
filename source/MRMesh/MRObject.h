@@ -136,6 +136,15 @@ public:
     /// return true if given object is ancestor of this one, false otherwise
     MRMESH_API bool isAncestor( const Object* ancestor ) const;
 
+    /// Find a common ancestor between this object and the other one.
+    /// Returns null on failure (which is impossible if both are children of the scene root).
+    /// Will return `this` if `other` matches `this`.
+    [[nodiscard]] MRMESH_API Object* findCommonAncestor( Object& other );
+    [[nodiscard]] const Object* findCommonAncestor( const Object& other ) const
+    {
+        return const_cast<Object &>( *this ).findCommonAncestor( const_cast<Object &>( other ) );
+    }
+
     /// removes this from its parent children list
     /// returns false if it was already orphan
     MRMESH_API virtual bool detachFromParent();

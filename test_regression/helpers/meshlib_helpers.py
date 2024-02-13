@@ -68,7 +68,7 @@ def compare_meshes_similarity(mesh1: mrmesh.Mesh, mesh2: mrmesh.Mesh,
 
 def compare_mesh(mesh1: mrmesh.Mesh or pathlib.Path or str, ref_file_path: pathlib.Path, multi_ref=True):
     """
-    Compare mesh with multiple reference files by content
+    Compare mesh by full equality with multiple reference files by content
     :param mesh1: mesh to compare
     :param ref_file_path: reference file
     :param multi_ref: if True, it compares file with multiple references, otherwise with single reference

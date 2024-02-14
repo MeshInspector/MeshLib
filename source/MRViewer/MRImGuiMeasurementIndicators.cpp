@@ -40,9 +40,11 @@ static void forEachElement( Element elem, F&& func )
 Params::Params()
 {
     bool isDark = ColorTheme::getPreset() == ColorTheme::Preset::Dark;
-    colorMain = isDark ? Color( 1.f, 1.f, 1.f, 1.f ) : Color( 0.f, 0.f, 0.f, 1.f );
-    colorOutline = isDark ? Color( 0.f, 0.f, 0.f, 0.5f ) : Color( 1.f, 1.f, 1.f, 0.5f );
-    colorText = colorMain;
+    colorText = isDark ? Color( 1.f, 1.f, 1.f, 1.f ) : Color( 0.f, 0.f, 0.f, 1.f );
+    colorTextOutline = isDark ? Color( 0.f, 0.f, 0.f, 0.5f ) : Color( 1.f, 1.f, 1.f, 0.5f );
+
+    colorMain = colorText;
+    colorOutline = colorTextOutline;
 }
 
 float StringWithIcon::getIconWidth() const
@@ -121,7 +123,7 @@ void text( Element elem, float menuScaling, const Params& params, ImVec2 center,
     }
 
     if ( bool( elem & Element::outline ) )
-        params.list->AddRectFilled( round( textPos ) - textToLineSpacingA - textOutlineWidth, textPos + textSize + textToLineSpacingB + textOutlineWidth, params.colorOutline.getUInt32(), textOutlineRounding );
+        params.list->AddRectFilled( round( textPos ) - textToLineSpacingA - textOutlineWidth, textPos + textSize + textToLineSpacingB + textOutlineWidth, params.colorTextOutline.getUInt32(), textOutlineRounding );
     if ( bool( elem & Element::main ) )
         string.draw( *params.list, menuScaling, round( textPos ), params.colorText.getUInt32() );
 }

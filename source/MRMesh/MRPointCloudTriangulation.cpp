@@ -111,12 +111,14 @@ bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
 
     if ( !pointCloud_.hasNormals() )
     {
-        auto optNormals = makeOrientedNormals( pointCloud_, localTriangulations_, subprogress( progressCb, 0.6f, 0.9f ) );
-        if ( !optNormals )
-            return false;
-        orientLocalTriangulations( localTriangulations_, pointCloud_.points, *optNormals );
-        if ( !reportProgress( progressCb, 1.0f ) )
-            return false;
+        //auto optNormals = makeOrientedNormals( pointCloud_, localTriangulations_, subprogress( progressCb, 0.6f, 0.9f ) );
+        //if ( !optNormals )
+        //    return false;
+        TrianglesRepetitions{};
+        auto x = computeTrianglesRepetitions( localTriangulations_ );
+        orientLocalTriangulationsByTriangles( pointCloud_, localTriangulations_, subprogress( progressCb, 0.6f, 1.0f ) );
+        auto y = computeTrianglesRepetitions( localTriangulations_ );
+        y = y;
     }
     return true;
 }

@@ -313,7 +313,21 @@ bool orientLocalTriangulationsByTriangles( const PointCloud & pointCloud, AllLoc
         ++visitedCount;
         const auto nbeg = triangs.fanRecords[base].firstNei;
         const auto nend = triangs.fanRecords[base+1].firstNei;
-        VertId otherBd;
+        const auto border = triangs.fanRecords[base].border;
+        for ( auto n = nbeg; n < nend; ++n )
+        {
+            const auto curr = triangs.neighbors[n];
+            const auto next = triangs.neighbors[n + 1 < nend ? n + 1 : nbeg];
+            if ( curr == border )
+                continue;
+            bool flipped = false;
+            const UnorientedTriangle triplet( { base, next, curr }, &flipped );
+            Repetitions & r = map[triplet];
+            if ( flipped )
+                ++r.oppositeOriented;
+            else
+                ++r.sameOriented;
+        }
         for ( auto n = nbeg; n < nend; ++n )
         {
             const auto v = triangs.neighbors[n];

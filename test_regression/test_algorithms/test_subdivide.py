@@ -3,16 +3,6 @@ from pathlib import Path
 from pytest_check import check
 from constants import test_files_path
 from helpers.meshlib_helpers import compare_meshes_similarity, compare_mesh
-import meshlib.mrmeshpy as mrmeshpy
-
-import pytest
-
-
-from module_helper import *
-from pathlib import Path
-from pytest_check import check
-from constants import test_files_path
-from helpers.meshlib_helpers import compare_meshes_similarity, compare_mesh
 import meshlib.mrmeshpy as mlpy
 
 import pytest
@@ -50,7 +40,7 @@ import pytest
 ])
 def test_subdivide(tmp_path, subdivide_params):
     """
-    Test boolean algorithm with all operation types
+    Test subdivide algorithm with all settings, available in UI
     """
     #  Load input meshes
     input_folder = Path(test_files_path) / "algorithms" / "subdivide" / "fox"
@@ -63,13 +53,13 @@ def test_subdivide(tmp_path, subdivide_params):
         settings.__setattr__(key, subdivide_params["params"][key])
     mlpy.subdivideMesh(mesh, settings)
 
-    mlpy.saveMesh(mesh, tmp_path / f"{case_name}.mrmesh")
     # === Verification
-    # ref_mesh_path = input_folder / f"{case_name}.mrmesh"
-    # ref_mesh = mlpy.loadMesh(ref_mesh_path)
-    # #  check meshes similarity (for extra details on fail)
-    # with check:
-    #     compare_meshes_similarity(mesh, ref_mesh)
-    # # check saved file is same as reference
-    # with check:
-    #     assert compare_mesh(mesh, ref_mesh_path)
+    mlpy.saveMesh(mesh, tmp_path / f"{case_name}.mrmesh")  # used to store
+    ref_mesh_path = input_folder / f"{case_name}.mrmesh"
+    ref_mesh = mlpy.loadMesh(ref_mesh_path)
+    #  check meshes similarity (for extra details on fail)
+    with check:
+        compare_meshes_similarity(mesh, ref_mesh)
+    with check:
+        self_col_tri = mlpy.findSelfCollidingTriangles(mesh).size()
+        assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"

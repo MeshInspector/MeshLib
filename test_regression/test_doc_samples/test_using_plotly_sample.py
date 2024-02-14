@@ -3,7 +3,7 @@ from pathlib import Path
 from constants import test_files_path
 
 
-def test_using_plotly(tmp_path):
+def test_using_plotly_sample(tmp_path):
     input_folder = Path(test_files_path) / "doc_samples" / "plotly"
 
     # === Sample code

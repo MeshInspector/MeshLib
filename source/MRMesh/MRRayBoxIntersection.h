@@ -1,4 +1,9 @@
 #pragma once
+
+#ifdef __EMSCRIPTEN__
+#include <wasm_simd128.h>
+#endif
+
 #include "MRBox.h"
 #include "MRIntersectionPrecomputes.h"
 

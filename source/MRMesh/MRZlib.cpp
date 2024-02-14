@@ -66,8 +66,6 @@ VoidOrErrStr zlibCompressStream( std::istream& in, std::ostream& out, int level 
         stream.next_in = reinterpret_cast<uint8_t*>( inChunk.data() );
         stream.avail_in = (uint32_t)in.gcount();
         assert( stream.avail_in <= inChunk.size() );
-        if ( stream.avail_in == 0 && in.eof() )
-            break;
 
         const auto flush = in.eof() ? Z_FINISH : Z_NO_FLUSH;
         do
@@ -113,8 +111,6 @@ VoidOrErrStr zlibDecompressStream( std::istream& in, std::ostream& out )
         stream.next_in = reinterpret_cast<uint8_t*>( inChunk.data() );
         stream.avail_in = (uint32_t)in.gcount();
         assert( stream.avail_in <= inChunk.size() );
-        if ( stream.avail_in == 0 && in.eof() )
-            break;
 
         do
         {

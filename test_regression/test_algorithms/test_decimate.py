@@ -15,7 +15,7 @@ import pytest
         }},
     {"name": "maxError_0.25",
         "params": {
-            "maxError": 0.25
+            "maxError": 0.2
         }},
     {"name": "target_triangles_200",
         "params": {
@@ -25,64 +25,58 @@ import pytest
     {"name": "maxEdgeLen_245",
         "params": {
             "maxEdgeLen": 245,
-            "maxError": 0.25  # tuned to R0003C_V4-16aug19 mesh
+            "maxError": 0.03  # tuned to R0003C_V4-16aug19 mesh
         }},
     {"name": "maxEdgeLen_0.4",
         "params": {
             "maxEdgeLen": 0.4,  # tuned to R0003C_V4-16aug19 mesh
-            "maxError": 0.20
+            "maxError": 0.05
         }},
-    {"name": "maxTriangleAspectRatio_20",
+    {"name": "maxTriangleAspectRatio_5",
      "params": {
-         "maxTriangleAspectRatio": 20,
-         "maxError": 0.25
-     }},
-    {"name": "maxTriangleAspectRatio_1",
-     "params": {
-         "maxTriangleAspectRatio": 1,
-         "maxError": 0.25
+         "maxTriangleAspectRatio": 5,
+         "maxError": 0.15
      }},
     {"name": "stabilizer_0.001",
         "params": {
             "stabilizer": 0.001,
-            "maxError": 0.05
+            "maxError": 0.03
         }},
     {"name": "stabilizer_0",
         "params": {
             "stabilizer": 0,
-            "maxError": 0.05
-
+            "maxError": 0.03
         }},
     {"name": "strategy_ShortestEdgeFirst",
      "params": {
          "strategy": "ShortestEdgeFirst",
-         "maxError": 0.25
+         "maxError": 0.05
      }},
     {"name": "strategy_MinimizeError",
      "params": {
          "strategy": "MinimizeError",
-         "maxError": 0.25
+         "maxError": 0.05
      }},
     {"name": "touchBdVertices_true",
      "params": {
          "touchBdVertices": True,
-         "maxError": 0.25
+         "maxError": 0.05
      }},
     {"name": "touchBdVertices_false",
      "params": {
          "touchBdVertices": False,
-         "maxError": 0.25
+         "maxError": 0.05
      }},
     {"name": "optimizeVertexPos_false",
      "params": {
          "optimizeVertexPos": False,
-         "maxError": 0.25
+         "maxError": 0.05
 
      }},
     {"name": "optimizeVertexPos_true",
      "params": {
          "optimizeVertexPos": True,
-         "maxError": 0.25
+         "maxError": 0.05
      }},
 ])
 def test_decimate(tmp_path, dec_params):

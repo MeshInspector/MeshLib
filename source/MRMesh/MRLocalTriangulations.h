@@ -61,6 +61,9 @@ struct AllLocalTriangulations
 MRMESH_API void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertNormals & targetDir );
 MRMESH_API void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const std::function<Vector3f(VertId)> & targetDir );
 
+/// orient neighbors around each point so there will be as many triangles with same (and not opposite) orientation as possible
+MRMESH_API bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTriangulations & triangs, ProgressCallback progress );
+
 /// TrianglesRepetitions[0] contains the number of triangles that appear in different local triangulations with opposite orientations
 /// TrianglesRepetitions[1] contains the number of unoriented triangles that appear in one local triangulation only
 /// TrianglesRepetitions[2] contains the number of unoriented triangles that appear in exactly two local triangulations

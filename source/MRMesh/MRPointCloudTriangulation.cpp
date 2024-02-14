@@ -110,14 +110,7 @@ bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
     localTriangulations_ = std::move( *optLocalTriangulations );
 
     if ( !pointCloud_.hasNormals() )
-    {
-        auto optNormals = makeOrientedNormals( pointCloud_, localTriangulations_, subprogress( progressCb, 0.6f, 0.9f ) );
-        if ( !optNormals )
-            return false;
-        orientLocalTriangulations( localTriangulations_, pointCloud_.points, *optNormals );
-        if ( !reportProgress( progressCb, 1.0f ) )
-            return false;
-    }
+        autoOrientLocalTriangulations( pointCloud_, localTriangulations_, subprogress( progressCb, 0.6f, 1.0f ) );
     return true;
 }
 

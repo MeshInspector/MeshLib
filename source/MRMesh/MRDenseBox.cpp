@@ -1,6 +1,5 @@
 #include "MRDenseBox.h"
 #include "MRMesh.h"
-#include "MRPointCloud.h"
 
 namespace MR
 {
@@ -24,7 +23,7 @@ void DenseBox::include( const MeshPart& meshPart, const AffineXf3f* xf /*= nullp
     box_.include( meshPart.mesh.computeBoundingBox( meshPart.region, &tempXf ) );
 }
 
-void DenseBox::include( const PointCloud& points, const AffineXf3f* xf = nullptr )
+void DenseBox::include( const PointCloud& points, const AffineXf3f* xf )
 {
     accumulatePoints( accum_, points, xf );
     if ( !accum_.valid() )

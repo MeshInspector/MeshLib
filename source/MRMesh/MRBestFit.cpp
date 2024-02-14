@@ -141,6 +141,29 @@ void accumulateFaceCenters( PointAccumulator& accum, const MeshPart& mp, const A
     }
 }
 
+void accumulateLineCenters( PointAccumulator& , const Polyline3& , const AffineXf3f* )
+{
+    //MR_TIMER
+    //    const auto& topology = pl.topology;
+    //const auto& edgePerFaces = topology.edgePerFace();
+    //const auto& faceIds = topology.getFaceIds( mp.region );
+    //for ( auto f : faceIds )
+    //{
+    //    if ( mp.region && !topology.hasFace( f ) )
+    //        continue; // skip region-faces, which does not actually exist
+    //    auto edge = edgePerFaces[f];
+    //    if ( edge.valid() )
+    //    {
+    //        VertId v0, v1, v2;
+    //        topology.getLeftTriVerts( edge, v0, v1, v2 );
+    //        //area of triangle corresponds to the weight of each point
+    //        float triArea = mp.mesh.leftDirDblArea( edge ).length();
+    //        auto center = ( 1 / 3.0f ) * Vector3f{ mp.mesh.points[v0] + mp.mesh.points[v1] + mp.mesh.points[v2] };
+    //        accum.addPoint( center.transformed( xf ), triArea );
+    //    }
+    //}
+}
+
 void accumulatePoints( PointAccumulator& accum, const PointCloud& pc, const AffineXf3f* xf )
 {
     MR_TIMER

@@ -2,6 +2,7 @@
 #include "MRBox.h"
 #include "MRAffineXf3.h"
 #include "MRBestFit.h"
+#include "MRPointCloud.h"
 
 namespace MR
 {
@@ -15,8 +16,8 @@ struct DenseBox
     /// Include mesh part into this dense box
     MRMESH_API DenseBox();
     /// Include mesh part into this dense box
-    void include( const MeshPart& meshPart, const AffineXf3f* xf = nullptr );
-    void include( const PointCloud& points, const AffineXf3f* xf = nullptr );
+    MRMESH_API void include( const MeshPart& meshPart, const AffineXf3f* xf = nullptr );
+    MRMESH_API void include( const PointCloud& points, const AffineXf3f* xf = nullptr );
 
     /// returns center of dense box
     MRMESH_API Vector3f center() const;

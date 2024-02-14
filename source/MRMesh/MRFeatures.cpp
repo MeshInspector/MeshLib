@@ -101,6 +101,10 @@ Primitives::ConeSegment Primitives::ConeSegment::baseCircle( bool negative ) con
     ret.center = basePoint( negative ).center;
     ret.positiveLength = ret.negativeLength = 0;
     if ( negative )
+        ret.positiveSideRadius = ret.negativeSideRadius;
+    else
+        ret.negativeSideRadius = ret.positiveSideRadius;
+    if ( negative )
         ret.dir = -ret.dir;
     return ret;
 }

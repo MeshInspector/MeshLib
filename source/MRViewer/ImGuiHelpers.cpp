@@ -1268,9 +1268,9 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     auto setDefaultPlane = [&] ( const MR::Vector3f& normal )
     {
         planeWidget.definePlane();
-        planeWidget.updatePlane( MR::Plane3f::fromDirAndPt( normal, planeWidget.box().min - normal * dragspeed ) );
+        planeWidget.updatePlane( MR::Plane3f::fromDirAndPt( normal, planeWidget.box().min + normal * dragspeed ) );
         if ( planeWidget.isInLocalMode() )
-            planeWidget.setLocalShift( 0.0f );
+            planeWidget.setLocalShift( dragspeed );
     };
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { MR::cDefaultItemSpacing * menuScaling, MR::cDefaultWindowPaddingY * menuScaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { MR::cDefaultItemSpacing * menuScaling, MR::cDefaultItemSpacing * menuScaling } );
@@ -1318,7 +1318,7 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     auto plane = planeWidget.getPlane();
 
     ImGui::SetNextItemWidth( 200.0f * menuScaling );
-    ImGui::DragFloatValid3( "Norm", &plane.n.x, 0.001f );
+    ImGui::DragFloatValid3( "Normal", &plane.n.x, 0.001f );
     ImGui::PushButtonRepeat( true );
 
     const float arrowButtonSize = 2.0f * MR::cGradientButtonFramePadding * menuScaling + ImGui::GetTextLineHeight();

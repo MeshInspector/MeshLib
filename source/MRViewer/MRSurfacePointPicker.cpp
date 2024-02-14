@@ -19,7 +19,7 @@ const MeshTriPoint& SurfacePointWidget::create( const std::shared_ptr<ObjectMesh
     if ( !surface || !surface->mesh() )
         return startPos;
     baseSurface_ = surface;
-    
+
     pickSphere_ = std::make_shared<SphereObject>();
     pickSphere_->setName( "Pick Sphere" );
     pickSphere_->setAncillary( true );
@@ -85,7 +85,11 @@ void SurfacePointWidget::setHovered( bool on )
 
 bool SurfacePointWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 {
-    if ( button != MouseButton::Left || mod != 0 || !isHovered_ )
+    if ( button != MouseButton::Left || !isHovered_ )
+        return false;
+
+    // check if modifier present and if there are exception for it.
+    if ( ( mod != 0 ) && ( ( mod & params_.customModifiers ) != mod ) )
         return false;
 
     pickSphere_->setPickable( false );
@@ -98,7 +102,7 @@ bool SurfacePointWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
 bool SurfacePointWidget::onMouseUp_( Viewer::MouseButton button, int )
 {
-    if ( button != MouseButton::Left || !isOnMove_)
+    if ( button != MouseButton::Left || !isOnMove_ )
         return false;
     isOnMove_ = false;
     pickSphere_->setPickable( true );
@@ -115,7 +119,7 @@ bool SurfacePointWidget::onMouseMove_( int, int )
         auto [obj, pick] = getViewerInstance().viewport().pick_render_object();
         if ( obj != baseSurface_ )
             return false;
-        
+
         currentPos_ = baseSurface_->mesh()->toTriPoint( pick );
         updatePositionAndRadius_();
         if ( onMove_ )
@@ -205,6 +209,30 @@ void SurfacePointWidget::updatePositionAndRadius_()
     float radius = params_.radius <= 0.0f ? mesh.getBoundingBox().diagonal() * 5e-3f : params_.radius;
     pickSphere_->setCenter( mesh.triPoint( currentPos_ ) );
     pickSphere_->setRadius( radius );
+    setPointRadius_();
+}
+
+
+void SurfacePointWidget::setPointRadius_()
+{
+    float radius = 0;
+    if ( params_.radiusSizeType == SurfacePointWidget::Parameters::PointSizeType::Pixel )
+    {
+        const auto& vParams = Viewer::instanceRef().viewport().getParameters();
+        auto w = MR::height( Viewer::instanceRef().viewport().getViewportRect() );
+        auto scale = tan( vParams.cameraViewAngle / 360.0f * PI_F ) / vParams.cameraZoom / w;
+        radius = params_.radius * scale;
+    }
+    else
+    {
+        radius = params_.radius <= 0.0f ? baseSurface_->mesh()->getBoundingBox().diagonal() * 5e-3f : params_.radius;
+    }
+    pickSphere_->setRadius( radius );
+}
+
+void SurfacePointWidget::preDraw_()
+{
+    setPointRadius_();
 }
 
 void SurfacePointWidget::updateCurrentPosition( const MeshTriPoint& pos )

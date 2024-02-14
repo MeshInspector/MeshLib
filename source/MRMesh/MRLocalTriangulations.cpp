@@ -91,7 +91,12 @@ Vector3f computeNormal( const AllLocalTriangulations & triangs, const VertCoords
     return sum.normalized();
 }
 
-void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertNormals & normals )
+void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertNormals & targetDir )
+{
+    return orientLocalTriangulations( triangs, coords, [&targetDir]( VertId v ) { return targetDir[v]; } );
+}
+
+void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const std::function<Vector3f(VertId)> & targetDir )
 {
     MR_TIMER
     if ( triangs.fanRecords.size() <= 1 )
@@ -113,10 +118,10 @@ void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoor
             const auto next = triangs.neighbors[n + 1 < nend ? n + 1 : nbeg];
             if ( curr == bd )
             {
-                otherBd = bd;
+                otherBd = next;
                 continue;
             }
-            const auto d = dot( normals[c], cross( coords[next] - cp, coords[curr] - cp ) );
+            const auto d = dot( targetDir( c ), cross( coords[next] - cp, coords[curr] - cp ) );
             if ( d > 0 )
                 ++sum;
             else if ( d < 0 )
@@ -130,11 +135,19 @@ void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoor
     } );
 }
 
-static ParallelHashMap<UnorientedTriangle, int, UnorientedTriangleHasher> makeTriangleHashMap( const AllLocalTriangulations & triangs )
+struct Repetitions
+{
+    unsigned char sameOriented : 4 = 0;
+    unsigned char oppositeOriented : 4 = 0;
+};
+
+static_assert( sizeof( Repetitions ) == 1 );
+
+static ParallelHashMap<UnorientedTriangle, Repetitions, UnorientedTriangleHasher> makeTriangleHashMap( const AllLocalTriangulations & triangs )
 {
     MR_TIMER
 
-    ParallelHashMap<UnorientedTriangle, int, UnorientedTriangleHasher> map;
+    ParallelHashMap<UnorientedTriangle, Repetitions, UnorientedTriangleHasher> map;
     ParallelFor( size_t(0), map.subcnt(), [&]( size_t myPartId )
     {
         for ( VertId v = 0_v; v + 1 < triangs.fanRecords.size(); ++v )
@@ -147,31 +160,37 @@ static ParallelHashMap<UnorientedTriangle, int, UnorientedTriangleHasher> makeTr
                 if ( triangs.neighbors[n] == border )
                     continue;
                 const auto next = triangs.neighbors[n + 1 < nend ? n + 1 : nbeg];
-                const UnorientedTriangle triplet({ v, next, triangs.neighbors[n] });
+                bool flippped = false;
+                const UnorientedTriangle triplet( { v, next, triangs.neighbors[n] }, &flippped );
                 const auto hashval = map.hash( triplet );
                 const auto idx = map.subidx( hashval );
                 if ( idx != myPartId )
                     continue;
-                auto [it, inserted] = map.insert( { triplet, 0 } );
-                if ( !inserted )
-                    ++it->second;
+                Repetitions & r = map[triplet];
+                if ( flippped )
+                    ++r.oppositeOriented;
+                else
+                    ++r.sameOriented;
             }
         }
     } );
     return map;
 }
 
-VotesForTriangles computeTrianglesRepetitions( const AllLocalTriangulations & triangs )
+TrianglesRepetitions computeTrianglesRepetitions( const AllLocalTriangulations & triangs )
 {
     MR_TIMER
 
     const auto map = makeTriangleHashMap( triangs );
 
-    VotesForTriangles res{};
+    TrianglesRepetitions res{};
     for ( auto & [key, val] : map )
     {
-        assert( val >= 0 && val <= 2 );
-        ++res[val];
+        int c = val.sameOriented + val.oppositeOriented;
+        assert( c >= 1 && c <= 3 );
+        ++res[c];
+        if ( val.sameOriented >= 1 && val.oppositeOriented >= 1 )
+            ++res[0];
     }
     return res;
 }
@@ -179,15 +198,16 @@ VotesForTriangles computeTrianglesRepetitions( const AllLocalTriangulations & tr
 std::vector<UnorientedTriangle> findRepeatedTriangles( const AllLocalTriangulations & triangs, int repetitions )
 {
     MR_TIMER
-    assert( repetitions >= 0 && repetitions <= 2 );
+    assert( repetitions >= 1 && repetitions <= 3 );
 
     const auto map = makeTriangleHashMap( triangs );
 
     std::vector<UnorientedTriangle> res;
     for ( auto & [key, val] : map )
     {
-        assert( val >= 0 && val <= 2 );
-        if ( val == repetitions )
+        int c = val.sameOriented + val.oppositeOriented;
+        assert( c >= 1 && c <= 3 );
+        if ( c == repetitions )
             res.push_back( key );
     }
     return res;

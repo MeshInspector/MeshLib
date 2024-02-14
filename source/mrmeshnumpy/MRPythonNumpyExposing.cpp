@@ -23,7 +23,7 @@ MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
 } )
 
 
-MR::Mesh fromFV( const pybind11::buffer& faces, const pybind11::buffer& verts )
+MR::Mesh fromFV( const pybind11::buffer& faces, const pybind11::buffer& verts, const MR::MeshBuilder::BuildSettings & settings )
 {
     pybind11::buffer_info infoFaces = faces.request();
     pybind11::buffer_info infoVerts = verts.request();
@@ -64,7 +64,7 @@ MR::Mesh fromFV( const pybind11::buffer& faces, const pybind11::buffer& verts )
     }
     else
         throw std::runtime_error( "dtype of input python vector 'faces' should be int32 or int64" );
-    res.topology = MR::MeshBuilder::fromTriangles( t );
+    res.topology = MR::MeshBuilder::fromTriangles( t, settings );
 
     // verts to points part
     auto strideV0 = infoVerts.strides[0] / infoVerts.itemsize;
@@ -234,7 +234,7 @@ MR::Mesh fromUVPoints( const pybind11::buffer& xArray, const pybind11::buffer& y
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyMesh, [] ( pybind11::module_& m )
 {
-    m.def( "meshFromFacesVerts", &fromFV, pybind11::arg( "faces" ), pybind11::arg( "verts" ),
+    m.def( "meshFromFacesVerts", &fromFV, pybind11::arg( "faces" ), pybind11::arg( "verts" ), pybind11::arg_v( "settings", MR::MeshBuilder::BuildSettings(), "MeshBuilderSettings()" ),
             "constructs mesh from given numpy ndarrays of faces (N VertId x3, FaceId x1), verts (M vec3 x3)" );
     m.def( "meshFromUVPoints", &fromUVPoints, pybind11::arg( "xArray" ), pybind11::arg( "yArray" ), pybind11::arg( "zArray" ),
             "constructs mesh from three 2d numpy ndarrays with x,y,z positions of mesh" );

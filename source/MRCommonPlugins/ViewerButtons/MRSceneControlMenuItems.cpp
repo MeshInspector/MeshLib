@@ -166,7 +166,7 @@ void ResetSceneMenuItem::preDraw_()
 
 void ResetSceneMenuItem::resetScene_()
 {
-    auto rootClone = SceneRoot::get().clone();
+    auto rootClone = SceneRoot::get().cloneRoot();
     std::swap( rootClone, SceneRoot::getSharedPtr() );
     getViewerInstance().setSceneDirty();
     if ( const auto& store = getViewerInstance().getGlobalHistoryStore() )

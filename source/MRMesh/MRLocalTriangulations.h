@@ -5,6 +5,7 @@
 #include "MRBuffer.h"
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <optional>
 
 namespace MR
@@ -56,8 +57,9 @@ struct AllLocalTriangulations
 /// compute normal at point by averaging neighbor triangle normals weighted by triangle's angle at the point
 [[nodiscard]] MRMESH_API Vector3f computeNormal( const AllLocalTriangulations & triangs, const VertCoords & points, VertId v );
 
-/// orient neighbors around each point so they will be in clockwise order if look from the top of target normal
-MRMESH_API void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertNormals & normals );
+/// orient neighbors around each point so they will be in clockwise order if look from the tip of target direction
+MRMESH_API void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertNormals & targetDir );
+MRMESH_API void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const std::function<Vector3f(VertId)> & targetDir );
 
 /// TrianglesRepetitions[0] contains the number of triangles that appear in different local triangulations with opposite orientations
 /// TrianglesRepetitions[1] contains the number of unoriented triangles that appear in one local triangulation only

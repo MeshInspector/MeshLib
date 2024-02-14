@@ -4,6 +4,10 @@
 #include "MRProgressCallback.h"
 #include "MRVector3.h"
 #include "MRUnorientedTriangle.h"
+#include "MRPointCloud.h"
+#include "MRBox.h"
+#include "MRHeap.h"
+#include "MRBitSetParallelFor.h"
 #include <parallel_hashmap/phmap.h>
 #include <algorithm>
 #include <cassert>
@@ -211,6 +215,98 @@ std::vector<UnorientedTriangle> findRepeatedTriangles( const AllLocalTriangulati
             res.push_back( key );
     }
     return res;
+}
+
+bool orientLocalTriangulationsByTriangles( const PointCloud & pointCloud, AllLocalTriangulations & triangs, ProgressCallback progress )
+{
+    MR_TIMER
+
+    const auto bbox = pointCloud.computeBoundingBox();
+    if ( !reportProgress( progress, 0.025f ) )
+        return false;
+
+    const auto center = bbox.center();
+    const auto maxDistSqToCenter = bbox.size().lengthSq() / 4;
+
+    constexpr auto InvalidWeight = -FLT_MAX;
+    using HeapT = Heap<float, VertId>;
+    std::vector<HeapT::Element> elements;
+    const auto sz = pointCloud.points.size();
+    elements.reserve( sz );
+    for ( VertId v = 0_v; v < sz; ++v )
+        elements.push_back( { v, InvalidWeight } );
+
+    if ( !reportProgress( progress, 0.025f ) )
+        return false;
+
+    orientLocalTriangulations( triangs, pointCloud.points, [&]( VertId v )
+    {
+        return pointCloud.points[v] - center;
+    } );
+
+    if ( !reportProgress( progress, 0.05f ) )
+        return false;
+
+    // fill elements with negative weights: larger weight (smaller by magnitude) for points further from the center
+    if ( !BitSetParallelFor( pointCloud.validPoints, [&]( VertId v )
+    {
+        const auto dcenter = pointCloud.points[v] - center;
+        const auto w = dcenter.lengthSq() - maxDistSqToCenter;
+        assert( w <= 0 );
+        elements[(int)v].val = w;
+    }, subprogress( progress, 0.05f, 0.075f ) ) )
+        return false;
+
+    HeapT heap( std::move( elements ) );
+
+    if ( !reportProgress( progress, 0.1f ) )
+        return false;
+
+    progress = subprogress( progress, 0.1f, 1.0f );
+
+    auto enweight = [&]( VertId base, VertId candidate )
+    {
+        // give positive weight to neighbours, with larger value to close points with close normal directions
+        const Vector3f cb = pointCloud.points[base] - pointCloud.points[candidate];
+        const auto d = 0.01f * cb.lengthSq() + sqr( dot( cb, normals[base] ) ) + sqr( dot( cb, normals[candidate] ) );
+        return d > 0 ? 1 / d : FLT_MAX;
+    };
+
+    VertBitSet notVisited = pointCloud.validPoints;
+    const auto totalCount = notVisited.count();
+    size_t visitedCount = 0;
+
+    auto enqueueNeighbors = [&]( VertId base )
+    {
+        assert( notVisited.test( base ) );
+        notVisited.reset( base );
+        ++visitedCount;
+        enumNeis( base, [&]( VertId v )
+        {
+            assert ( v != base );
+            if ( !notVisited.test( v ) )
+                return;
+            float weight = enweight( base, v );
+            if ( weight > heap.value( v ) )
+            {
+                heap.setLargerValue( v, weight );
+                if ( dot( normals[base], normals[v] ) < 0 )
+                    normals[v] = -normals[v];
+            }
+        } );
+    };
+
+    for (;;)
+    {
+        auto [v, weight] = heap.top();
+        if ( weight == InvalidWeight )
+            break;
+        heap.setSmallerValue( v, InvalidWeight );
+        enqueueNeighbors( v );
+        if ( !reportProgress( progress, [&] { return (float)visitedCount / totalCount; }, visitedCount, 0x10000 ) )
+            return false;
+    }
+    return true;
 }
 
 } //namespace MR

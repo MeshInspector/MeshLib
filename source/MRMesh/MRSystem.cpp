@@ -201,15 +201,24 @@ std::filesystem::path GetLibsDirectory()
 
 std::filesystem::path getUserConfigDir()
 {
-#ifdef _WIN32
+#if defined( _WIN32 )
     std::filesystem::path filepath( _wgetenv( L"APPDATA" ) );
 #else
-    struct passwd* pw = getpwuid( getuid() );
-    if ( !pw )
+#if defined( __EMSCRIPTEN__ )
+    std::filesystem::path filepath( "/" );
+#else
+    std::filesystem::path filepath;
+    const auto* pw = getpwuid( getuid() );
+    if ( pw )
+    {
+        filepath = pw->pw_dir;
+    }
+    else
     {
         spdlog::error( "getpwuid error! errno: {}", errno );
+        filepath = std::getenv( "HOME" );
     }
-    std::filesystem::path filepath( pw->pw_dir );
+#endif
     filepath /= ".local";
     filepath /= "share";
 #endif

@@ -3,8 +3,6 @@
 #include <MRMesh/MRGTest.h>
 #include <MRMesh/MRZlib.h>
 
-#ifndef __EMSCRIPTEN__
-
 namespace
 {
 
@@ -94,7 +92,4 @@ INSTANTIATE_TEST_SUITE_P( MRMesh, ZlibDecompressTestFixture, testing::Values(
     ZlibDecompressParameters { cOutputLevel1, sizeof( cOutputLevel1 ), cInput, sizeof( cInput ) },
     ZlibDecompressParameters { cOutputLevel9, sizeof( cOutputLevel9 ), cInput, sizeof( cInput ) }
 ) );
-
-#endif // __EMSCRIPTEN__
-
-#endif // MRMESH_NO_ZLIB
+#endif

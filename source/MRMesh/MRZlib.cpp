@@ -1,4 +1,5 @@
 #include "MRZlib.h"
+#include "MRBuffer.h"
 #include "MRFinally.h"
 
 #include <zlib.h>
@@ -44,7 +45,7 @@ namespace MR
 
 VoidOrErrStr zlibCompressStream( std::istream& in, std::ostream& out, int level )
 {
-    std::array<char, cChunkSize> inChunk, outChunk;
+    Buffer<char> inChunk( cChunkSize ), outChunk( cChunkSize );
     z_stream stream {
         .zalloc = Z_NULL,
         .zfree = Z_NULL,
@@ -89,7 +90,7 @@ VoidOrErrStr zlibCompressStream( std::istream& in, std::ostream& out, int level 
 
 VoidOrErrStr zlibDecompressStream( std::istream& in, std::ostream& out )
 {
-    std::array<char, cChunkSize> inChunk, outChunk;
+    Buffer<char> inChunk( cChunkSize ), outChunk( cChunkSize );
     z_stream stream {
         .zalloc = Z_NULL,
         .zfree = Z_NULL,

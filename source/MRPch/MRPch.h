@@ -94,7 +94,6 @@
 #pragma warning(disable:4191) //'reinterpret_cast': unsafe conversion from 'PyObject *(__cdecl *)(PyObject *,PyObject *,PyObject *)' to 'void (__cdecl *)(void)'
 #pragma warning(disable:4355) //'this': used in base member initializer list
 #pragma warning(disable:4464) //relative include path contains '..'
-#pragma warning(disable:4686) //'pybind11::detail::descr<10,T,pybind11::str>::types': possible change in behavior, change in UDT return calling convention
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include <pybind11/stl_bind.h>

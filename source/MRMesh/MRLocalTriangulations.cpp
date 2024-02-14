@@ -11,6 +11,7 @@
 #include <parallel_hashmap/phmap.h>
 #include <algorithm>
 #include <cassert>
+#include <cfloat>
 
 namespace MR
 {

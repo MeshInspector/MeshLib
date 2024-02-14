@@ -3,6 +3,8 @@
 
 #include <zlib.h>
 
+#include <cassert>
+
 namespace
 {
 
@@ -42,10 +44,8 @@ namespace MR
 
 VoidOrErrStr zlibCompressStream( std::istream& in, std::ostream& out, int level )
 {
-    char inChunk[cChunkSize], outChunk[cChunkSize];
+    std::array<char, cChunkSize> inChunk, outChunk;
     z_stream stream {
-        .next_in = reinterpret_cast<uint8_t*>( inChunk ),
-        .next_out = reinterpret_cast<uint8_t*>( outChunk ),
         .zalloc = Z_NULL,
         .zfree = Z_NULL,
         .opaque = Z_NULL,
@@ -60,22 +60,26 @@ VoidOrErrStr zlibCompressStream( std::istream& in, std::ostream& out, int level 
 
     while ( !in.eof() )
     {
-        in.read( inChunk, cChunkSize );
+        in.read( inChunk.data(), inChunk.size() );
         if ( in.bad() )
             return unexpected( "I/O error" );
+        stream.next_in = reinterpret_cast<uint8_t*>( inChunk.data() );
         stream.avail_in = (uint32_t)in.gcount();
+        assert( stream.avail_in <= inChunk.size() );
         if ( stream.avail_in == 0 && in.eof() )
             break;
 
         const auto flush = in.eof() ? Z_FINISH : Z_NO_FLUSH;
         do
         {
-            stream.avail_out = cChunkSize;
+            stream.next_out = reinterpret_cast<uint8_t*>( outChunk.data() );
+            stream.avail_out = outChunk.size();
             ret = deflate( &stream, flush );
             if ( Z_OK != ret && Z_STREAM_END != ret )
                 return unexpected( zlibToString( ret ) );
 
-            out.write( outChunk, cChunkSize - stream.avail_out );
+            assert( stream.avail_out <= outChunk.size() );
+            out.write( outChunk.data(), outChunk.size() - stream.avail_out );
             if ( out.bad() )
                 return unexpected( "I/O error" );
         }
@@ -87,10 +91,8 @@ VoidOrErrStr zlibCompressStream( std::istream& in, std::ostream& out, int level 
 
 VoidOrErrStr zlibDecompressStream( std::istream& in, std::ostream& out )
 {
-    char inChunk[cChunkSize], outChunk[cChunkSize];
+    std::array<char, cChunkSize> inChunk, outChunk;
     z_stream stream {
-        .next_in = reinterpret_cast<uint8_t*>( inChunk ),
-        .next_out = reinterpret_cast<uint8_t*>( outChunk ),
         .zalloc = Z_NULL,
         .zfree = Z_NULL,
         .opaque = Z_NULL,
@@ -105,21 +107,25 @@ VoidOrErrStr zlibDecompressStream( std::istream& in, std::ostream& out )
 
     while ( !in.eof() )
     {
-        in.read( inChunk, cChunkSize );
+        in.read( inChunk.data(), inChunk.size() );
         if ( in.bad() )
             return unexpected( "I/O error" );
+        stream.next_in = reinterpret_cast<uint8_t*>( inChunk.data() );
         stream.avail_in = (uint32_t)in.gcount();
+        assert( stream.avail_in <= inChunk.size() );
         if ( stream.avail_in == 0 && in.eof() )
             break;
 
         do
         {
-            stream.avail_out = cChunkSize;
+            stream.next_out = reinterpret_cast<uint8_t*>( outChunk.data() );
+            stream.avail_out = outChunk.size();
             ret = inflate( &stream, Z_NO_FLUSH );
             if ( Z_OK != ret && Z_STREAM_END != ret )
                 return unexpected( zlibToString( ret ) );
 
-            out.write( outChunk, cChunkSize - stream.avail_out );
+            assert( stream.avail_out <= outChunk.size() );
+            out.write( outChunk.data(), outChunk.size() - stream.avail_out );
             if ( out.bad() )
                 return unexpected( "I/O error" );
 

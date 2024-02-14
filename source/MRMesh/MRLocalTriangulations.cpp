@@ -164,14 +164,14 @@ static ParallelHashMap<UnorientedTriangle, Repetitions, UnorientedTriangleHasher
                 if ( triangs.neighbors[n] == border )
                     continue;
                 const auto next = triangs.neighbors[n + 1 < nend ? n + 1 : nbeg];
-                bool flippped = false;
-                const UnorientedTriangle triplet( { v, next, triangs.neighbors[n] }, &flippped );
+                bool flipped = false;
+                const UnorientedTriangle triplet( { v, next, triangs.neighbors[n] }, &flipped );
                 const auto hashval = map.hash( triplet );
                 const auto idx = map.subidx( hashval );
                 if ( idx != myPartId )
                     continue;
                 Repetitions & r = map[triplet];
-                if ( flippped )
+                if ( flipped )
                     ++r.oppositeOriented;
                 else
                     ++r.sameOriented;
@@ -264,12 +264,42 @@ bool orientLocalTriangulationsByTriangles( const PointCloud & pointCloud, AllLoc
 
     progress = subprogress( progress, 0.1f, 1.0f );
 
-    auto enweight = [&]( VertId base, VertId candidate )
+    ParallelHashMap<UnorientedTriangle, Repetitions, UnorientedTriangleHasher> map;
+
+    auto computeVertWeight = [&triangs, &map]( VertId v )
     {
-        // give positive weight to neighbours, with larger value to close points with close normal directions
-        const Vector3f cb = pointCloud.points[base] - pointCloud.points[candidate];
-        const auto d = 0.01f * cb.lengthSq() + sqr( dot( cb, normals[base] ) ) + sqr( dot( cb, normals[candidate] ) );
-        return d > 0 ? 1 / d : FLT_MAX;
+        int sameOriented = 0;
+        int oppositeOriented = 0;
+        const auto border = triangs.fanRecords[v].border;
+        const auto nbeg = triangs.fanRecords[v].firstNei;
+        const auto nend = triangs.fanRecords[v+1].firstNei;
+        VertId otherBd;
+        for ( auto n = nbeg; n < nend; ++n )
+        {
+            const auto curr = triangs.neighbors[n];
+            const auto next = triangs.neighbors[n + 1 < nend ? n + 1 : nbeg];
+            if ( curr == border )
+            {
+                otherBd = next;
+                continue;
+            }
+            bool flipped = false;
+            const UnorientedTriangle triplet( { v, next, curr }, &flipped );
+            auto it = map.find( triplet );
+            if ( it == map.end() )
+                continue;
+            if ( it->second.sameOriented == 0 && it->second.oppositeOriented > 0 )
+                flipped ? ++sameOriented : ++oppositeOriented;
+            if ( it->second.sameOriented > 0 && it->second.oppositeOriented == 0 )
+                flipped ? ++oppositeOriented : ++sameOriented;
+        }
+        if ( oppositeOriented > sameOriented )
+        {
+            // reverse the orientation
+            std::reverse( triangs.neighbors.data() + nbeg, triangs.neighbors.data() + nend );
+            triangs.fanRecords[v].border = otherBd;
+        }
+        return std::abs( sameOriented - oppositeOriented );
     };
 
     VertBitSet notVisited = pointCloud.validPoints;

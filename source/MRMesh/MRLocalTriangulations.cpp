@@ -311,19 +311,15 @@ bool orientLocalTriangulationsByTriangles( const PointCloud & pointCloud, AllLoc
         assert( notVisited.test( base ) );
         notVisited.reset( base );
         ++visitedCount;
-        enumNeis( base, [&]( VertId v )
+        const auto nbeg = triangs.fanRecords[base].firstNei;
+        const auto nend = triangs.fanRecords[base+1].firstNei;
+        VertId otherBd;
+        for ( auto n = nbeg; n < nend; ++n )
         {
-            assert ( v != base );
-            if ( !notVisited.test( v ) )
-                return;
-            float weight = enweight( base, v );
-            if ( weight > heap.value( v ) )
-            {
-                heap.setLargerValue( v, weight );
-                if ( dot( normals[base], normals[v] ) < 0 )
-                    normals[v] = -normals[v];
-            }
-        } );
+            const auto v = triangs.neighbors[n];
+            if ( notVisited.test( v ) )
+                heap.setValue( v, float( computeVertWeight( v ) ) );
+        }
     };
 
     for (;;)

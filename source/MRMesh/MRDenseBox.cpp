@@ -20,12 +20,12 @@ void DenseBox::include( const MeshPart& meshPart, const AffineXf3f* xf /*= nullp
     if ( xf )
         tempXf = basisXfInv_ * ( *xf );
 
-    box_.include( meshPart.mesh.computeBoundingBox( meshPart.region, &tempXf ) );
+    box_.include( meshPart.mesh.computeBoundingBox( &tempXf ) );
 }
 
 void DenseBox::include( const PointCloud& points, const AffineXf3f* xf )
 {
-    accumulatePoints( accum_, points, xf );
+    accumulatePoints( accum_, points, xf ); 
     if ( !accum_.valid() )
         return;
     basisXf_ = AffineXf3f( accum_.getBasicXf() );
@@ -35,6 +35,20 @@ void DenseBox::include( const PointCloud& points, const AffineXf3f* xf )
         tempXf = basisXfInv_ * ( *xf );
 
     box_.include( points.computeBoundingBox( &tempXf ) );
+}
+
+void DenseBox::include( const Polyline3& line, const AffineXf3f* xf )
+{
+    accumulateLineCenters( accum_, line, xf );
+    if ( !accum_.valid() )
+        return;
+    basisXf_ = AffineXf3f( accum_.getBasicXf() );
+    basisXfInv_ = basisXf_.inverse();
+    auto tempXf = basisXfInv_;
+    if ( xf )
+        tempXf = basisXfInv_ * ( *xf );
+
+    box_.include( line.computeBoundingBox( &tempXf ) );
 }
 
 Vector3f DenseBox::center() const

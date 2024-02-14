@@ -217,7 +217,7 @@ std::vector<UnorientedTriangle> findRepeatedTriangles( const AllLocalTriangulati
     return res;
 }
 
-bool orientLocalTriangulationsByTriangles( const PointCloud & pointCloud, AllLocalTriangulations & triangs, ProgressCallback progress )
+bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTriangulations & triangs, ProgressCallback progress )
 {
     MR_TIMER
 

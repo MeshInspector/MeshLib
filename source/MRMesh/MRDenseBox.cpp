@@ -1,12 +1,13 @@
 #include "MRDenseBox.h"
 #include "MRMesh.h"
+#include "MRPointCloud.h"
 
 namespace MR
 {
 
-DenseBox::DenseBox( const MeshPart& meshPart, const AffineXf3f* xf )
+DenseBox::DenseBox()
 {
-    include( meshPart, xf );
+
 }
 
 void DenseBox::include( const MeshPart& meshPart, const AffineXf3f* xf /*= nullptr */ )
@@ -21,6 +22,20 @@ void DenseBox::include( const MeshPart& meshPart, const AffineXf3f* xf /*= nullp
         tempXf = basisXfInv_ * ( *xf );
 
     box_.include( meshPart.mesh.computeBoundingBox( meshPart.region, &tempXf ) );
+}
+
+void DenseBox::include( const PointCloud& points, const AffineXf3f* xf = nullptr )
+{
+    accumulatePoints( accum_, points, xf );
+    if ( !accum_.valid() )
+        return;
+    basisXf_ = AffineXf3f( accum_.getBasicXf() );
+    basisXfInv_ = basisXf_.inverse();
+    auto tempXf = basisXfInv_;
+    if ( xf )
+        tempXf = basisXfInv_ * ( *xf );
+
+    box_.include( points.computeBoundingBox( &tempXf ) );
 }
 
 Vector3f DenseBox::center() const

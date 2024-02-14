@@ -11,15 +11,21 @@ class MRMESH_CLASS SceneRootObject final : public Object
 {
 public:
     MRMESH_API SceneRootObject();
+    SceneRootObject( SceneRootObject&& ) noexcept = default;
+    SceneRootObject& operator = ( SceneRootObject&& ) noexcept = default;
+    /// \note this ctor is public only for std::make_shared used inside clone()
+    SceneRootObject( ProtectedStruct, const SceneRootObject& obj ) : SceneRootObject( obj ) {}
     constexpr static const char* TypeName() noexcept { return "RootObject"; }
     constexpr static const char* RootName() noexcept { return "Root"; }
     virtual const char* typeName() const override { return TypeName(); }
     virtual void setAncillary( bool ) override { Object::setAncillary( false ); }
     virtual bool select( bool ) override { return Object::select( false ); }
     virtual void setName( std::string ) override { Object::setName( SceneRootObject::RootName() ); }
+    MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     /// same as clone but returns correct type
     MRMESH_API std::shared_ptr<SceneRootObject> cloneRoot() const;
 protected:
+    SceneRootObject( const SceneRootObject& other ) = default;
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 };

@@ -17,7 +17,7 @@ struct RayOrigin
 };
 
 /* CPU(X86_64) - AMD64 / Intel64 / x86_64 64-bit */
-#if defined(__x86_64__) || defined(_M_X64)
+#if defined(__x86_64__) || defined(_M_X64) || EMSCRIPTEN
 template<>
 struct RayOrigin<float>
 {

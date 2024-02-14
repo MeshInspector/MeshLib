@@ -81,7 +81,7 @@ import pytest
 ])
 def test_decimate(tmp_path, dec_params):
     """
-    Test boolean algorithm with all operation types
+    Test decimate algorithm with all settings, avaliable in UI
     """
     #  Load input meshes
     input_folder = Path(test_files_path) / "algorithms" / "decimate" / "R0003C_V4-16aug19"

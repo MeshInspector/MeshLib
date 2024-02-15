@@ -110,7 +110,7 @@ public:
     void pop_back() { vec_.pop_back(); }
 
     template<typename... Args>
-    auto emplace_back( Args&&... args ) { return vec_.emplace_back( std::forward<Args>(args)... ); }
+    decltype(auto) emplace_back( Args&&... args ) { return vec_.emplace_back( std::forward<Args>(args)... ); }
 
     [[nodiscard]] const_reference front() const { return vec_.front(); }
     [[nodiscard]]       reference front()       { return vec_.front(); }

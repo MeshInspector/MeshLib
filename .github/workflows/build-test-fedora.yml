@@ -107,6 +107,10 @@ jobs:
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
 
+      - name: Copy test artifacts to S3
+        if: ${{ (failure() || success()) && contains(github.event.pull_request.labels.*.name, 'upload-test-artifacts')}}
+        run: aws s3 cp ./pytest_temp s3://test-artifacts-git/tests/${{github.run_id}}/fedora --recursive
+
       - name: Create RPM
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.os == 'fedora37' && matrix.config == 'Release' && matrix.compiler == 'Clang'}}
         run: ./scripts/distribution_rpm.sh ${{inputs.app_version}}

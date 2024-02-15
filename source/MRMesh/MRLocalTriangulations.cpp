@@ -148,11 +148,11 @@ struct Repetitions
 
 static_assert( sizeof( Repetitions ) == 1 );
 
-static ParallelHashMap<UnorientedTriangle, Repetitions, UnorientedTriangleHasher> makeTriangleHashMap( const AllLocalTriangulations & triangs )
+static ParallelHashMap<UnorientedTriangle, Repetitions> makeTriangleHashMap( const AllLocalTriangulations & triangs )
 {
     MR_TIMER
 
-    ParallelHashMap<UnorientedTriangle, Repetitions, UnorientedTriangleHasher> map;
+    ParallelHashMap<UnorientedTriangle, Repetitions> map;
     ParallelFor( size_t(0), map.subcnt(), [&]( size_t myPartId )
     {
         for ( VertId v = 0_v; v + 1 < triangs.fanRecords.size(); ++v )
@@ -266,7 +266,7 @@ bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTrian
     progress = subprogress( progress, 0.1f, 1.0f );
 
     // HashMap is about 10% faster than ParallelHashMap here
-    HashMap<UnorientedTriangle, Repetitions, UnorientedTriangleHasher> map;
+    HashMap<UnorientedTriangle, Repetitions> map;
 
     auto computeVertWeight = [&triangs, &map]( VertId v )
     {

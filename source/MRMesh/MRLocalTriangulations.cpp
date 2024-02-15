@@ -265,7 +265,8 @@ bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTrian
 
     progress = subprogress( progress, 0.1f, 1.0f );
 
-    ParallelHashMap<UnorientedTriangle, Repetitions, UnorientedTriangleHasher> map;
+    // HashMap is about 10% faster than ParallelHashMap here
+    HashMap<UnorientedTriangle, Repetitions, UnorientedTriangleHasher> map;
 
     auto computeVertWeight = [&triangs, &map]( VertId v )
     {

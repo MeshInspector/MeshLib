@@ -36,7 +36,7 @@ public:
 
         // Parameters for configuring the surface point widget
         // Parameters affect to future points only, if need update existing one use void  updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p )
-        SurfacePointWidget::Parameters surfacePointParams;
+        PointWidgetInterface::Parameters surfacePointParams;
 
         // Color for ordinary points in the contour
         // Parameters affect to future points only, if need update existing one use void  updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p )

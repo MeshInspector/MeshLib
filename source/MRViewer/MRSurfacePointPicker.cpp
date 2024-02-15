@@ -8,12 +8,12 @@
 namespace MR
 {
 
-SurfacePointWidget::~SurfacePointWidget()
+PointWidgetInterface::~PointWidgetInterface()
 {
     reset();
 }
 
-const MeshTriPoint& SurfacePointWidget::create( const std::shared_ptr<ObjectMeshHolder>& surface, const MeshTriPoint& startPos )
+const MeshTriPoint& PointWidgetInterface::create( const std::shared_ptr<ObjectMeshHolder>& surface, const MeshTriPoint& startPos )
 {
     reset();
     if ( !surface || !surface->mesh() )
@@ -34,7 +34,7 @@ const MeshTriPoint& SurfacePointWidget::create( const std::shared_ptr<ObjectMesh
     return currentPos_;
 }
 
-void SurfacePointWidget::reset()
+void PointWidgetInterface::reset()
 {
     if ( !pickSphere_ )
         return;
@@ -54,7 +54,7 @@ void SurfacePointWidget::reset()
     endMove_ = {};
 }
 
-void SurfacePointWidget::setParameters( const Parameters& params )
+void PointWidgetInterface::setParameters( const Parameters& params )
 {
     if ( pickSphere_ )
     {
@@ -74,7 +74,7 @@ void SurfacePointWidget::setParameters( const Parameters& params )
     params_ = params;
 }
 
-void SurfacePointWidget::setHovered( bool on )
+void PointWidgetInterface::setHovered( bool on )
 {
     if ( !isOnMove_ && isHovered_ != on )
     {
@@ -83,7 +83,7 @@ void SurfacePointWidget::setHovered( bool on )
     }
 }
 
-bool SurfacePointWidget::onMouseDown_( Viewer::MouseButton button, int mod )
+bool PointWidgetInterface::onMouseDown_( Viewer::MouseButton button, int mod )
 {
     if ( button != MouseButton::Left || !isHovered_ )
         return false;
@@ -100,7 +100,7 @@ bool SurfacePointWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     return true;
 }
 
-bool SurfacePointWidget::onMouseUp_( Viewer::MouseButton button, int )
+bool PointWidgetInterface::onMouseUp_( Viewer::MouseButton button, int )
 {
     if ( button != MouseButton::Left || !isOnMove_ )
         return false;
@@ -112,7 +112,7 @@ bool SurfacePointWidget::onMouseUp_( Viewer::MouseButton button, int )
     return true;
 }
 
-bool SurfacePointWidget::onMouseMove_( int, int )
+bool PointWidgetInterface::onMouseMove_( int, int )
 {
     if ( isOnMove_ )
     {
@@ -137,7 +137,7 @@ bool SurfacePointWidget::onMouseMove_( int, int )
     return false;
 }
 
-void SurfacePointWidget::updatePositionAndRadius_()
+void PointWidgetInterface::updatePositionAndRadius_()
 {
     assert( pickSphere_ );
     assert( baseSurface_ );
@@ -213,10 +213,10 @@ void SurfacePointWidget::updatePositionAndRadius_()
 }
 
 
-void SurfacePointWidget::setPointRadius_()
+void PointWidgetInterface::setPointRadius_()
 {
     float radius = 0;
-    if ( params_.radiusSizeType == SurfacePointWidget::Parameters::PointSizeType::Pixel )
+    if ( params_.radiusSizeType == PointWidgetInterface::Parameters::PointSizeType::Pixel )
     {
         const auto& vParams = Viewer::instanceRef().viewport().getParameters();
         auto w = MR::height( Viewer::instanceRef().viewport().getViewportRect() );
@@ -230,12 +230,12 @@ void SurfacePointWidget::setPointRadius_()
     pickSphere_->setRadius( radius );
 }
 
-void SurfacePointWidget::preDraw_()
+void PointWidgetInterface::preDraw_()
 {
     setPointRadius_();
 }
 
-void SurfacePointWidget::updateCurrentPosition( const MeshTriPoint& pos )
+void PointWidgetInterface::updateCurrentPosition( const MeshTriPoint& pos )
 {
     currentPos_ = pos;
     updatePositionAndRadius_();

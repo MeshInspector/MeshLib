@@ -12,10 +12,10 @@ namespace MR
 {
 
 // Widget for controlling point on surface with mouse
-class MRVIEWER_CLASS SurfacePointWidget : public MultiListener<PreDrawListener, MouseDownListener, MouseMoveListener, MouseUpListener>
+class MRVIEWER_CLASS PointWidgetInterface : public MultiListener<PreDrawListener, MouseDownListener, MouseMoveListener, MouseUpListener>
 {
 public:
-    MRVIEWER_API ~SurfacePointWidget();
+    MRVIEWER_API ~PointWidgetInterface();
 
     enum class PositionType
     {
@@ -123,6 +123,14 @@ private:
     bool isHovered_{ false };
     MRVIEWER_API void preDraw_() override;
 
+    // Depending on the type of selected size, sets the point size
+    void setPointRadius_();
+
+};
+
+class MRVIEWER_CLASS SurfacePointWidget : public PointWidgetInterface {
+
+private:
     MeshTriPoint currentPos_;
 
     std::shared_ptr<SphereObject> pickSphere_;
@@ -131,10 +139,7 @@ private:
     std::function<void( const MeshTriPoint& )> startMove_;
     std::function<void( const MeshTriPoint& )> onMove_;
     std::function<void( const MeshTriPoint& )> endMove_;
-
-    // Depending on the type of selected size, sets the point size
-    void setPointRadius_();
-
 };
+
 
 }

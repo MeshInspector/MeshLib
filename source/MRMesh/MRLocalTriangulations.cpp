@@ -324,6 +324,12 @@ bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTrian
                 continue;
             bool flipped = false;
             const UnorientedTriangle triplet( { base, next, curr }, &flipped );
+            if ( !notVisited.test( curr ) && !notVisited.test( next ) )
+            {
+                /// all three vertices of the triangle have been visited, it will never be searched for again
+                map.erase( triplet );
+                continue;
+            }
             Repetitions & r = map[triplet];
             if ( flipped )
                 ++r.oppositeOriented;

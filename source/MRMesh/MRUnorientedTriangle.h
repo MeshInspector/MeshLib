@@ -32,6 +32,10 @@ struct UnorientedTriangle : ThreeVertIds
         if ( outFlipped )
             *outFlipped = flipped;
     }
+
+    /// returns this triangle with the opposite orientation
+    ThreeVertIds getFlipped() const { return { (*this)[1], (*this)[0], (*this)[2] }; }
+
     friend bool operator==( const UnorientedTriangle& a, const UnorientedTriangle& b ) = default;
 };
 

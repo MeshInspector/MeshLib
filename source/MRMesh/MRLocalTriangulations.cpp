@@ -218,7 +218,8 @@ std::vector<UnorientedTriangle> findRepeatedTriangles( const AllLocalTriangulati
     return res;
 }
 
-bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTriangulations & triangs, ProgressCallback progress )
+bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTriangulations & triangs, ProgressCallback progress,
+    Triangulation * outRep3, Triangulation * outRep2 )
 {
     MR_TIMER
 
@@ -324,17 +325,39 @@ bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTrian
                 continue;
             bool flipped = false;
             const UnorientedTriangle triplet( { base, next, curr }, &flipped );
-            if ( !notVisited.test( curr ) && !notVisited.test( next ) )
+
+            /// all three vertices of the triangle have been visited, it will never be searched for again
+            const bool del = !notVisited.test( curr ) && !notVisited.test( next );
+            if ( !outRep2 && !outRep3 && del )
             {
-                /// all three vertices of the triangle have been visited, it will never be searched for again
                 map.erase( triplet );
                 continue;
             }
-            Repetitions & r = map[triplet];
+            auto it = map.insert( { triplet, Repetitions{} } ).first;
+            Repetitions & r = it->second;
             if ( flipped )
                 ++r.oppositeOriented;
             else
                 ++r.sameOriented;
+            if ( del )
+            {
+                if ( outRep2 )
+                {
+                    if ( r.sameOriented == 2 )
+                        outRep2->push_back( triplet );
+                    else if ( r.oppositeOriented == 2 )
+                        outRep2->push_back( triplet.getFlipped() );
+                }
+                if ( outRep3 )
+                {
+                    if ( r.sameOriented == 3 )
+                        outRep3->push_back( triplet );
+                    else if ( r.oppositeOriented == 3 )
+                        outRep3->push_back( triplet.getFlipped() );
+                }
+                /// all three vertices of the triangle have been visited, it will never be searched for again
+                map.erase( it );
+            }
         }
         for ( auto n = nbeg; n < nend; ++n )
         {
@@ -354,6 +377,21 @@ bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTrian
         if ( !reportProgress( progress, [&] { return (float)visitedCount / totalCount; }, visitedCount, 0x10000 ) )
             return false;
     }
+
+    if ( outRep2 )
+    {
+        for ( const auto & [triplet, r] : map )
+        {
+            assert( r.sameOriented < 3 );
+            assert( r.oppositeOriented < 3 );
+            assert( r.sameOriented + r.oppositeOriented >= 1 );
+            if ( r.sameOriented == 2 )
+                outRep2->push_back( triplet );
+            else if ( r.oppositeOriented == 2 )
+                outRep2->push_back( triplet.getFlipped() );
+        }
+    }
+
     return true;
 }
 

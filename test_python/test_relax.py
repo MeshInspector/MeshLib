@@ -50,3 +50,14 @@ def test_smooth_region_boundary():
 
     # This just checks that the function exists and can be called.
     mrmesh.smoothRegionBoundary(keep_volume_torus, smooth_region)
+
+def test_straighten_boundary():
+    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
+    faceBitSetToDelete = mrmesh.FaceBitSet()
+    faceBitSetToDelete.resize(5, False)
+    faceBitSetToDelete.set(mrmesh.FaceId(1), True)
+
+    torus.topology.deleteFaces(faceBitSetToDelete)
+
+    holes = torus.topology.findHoleRepresentiveEdges()
+    mrmesh.straightenBoundary(torus, holes[0], 13, 5)

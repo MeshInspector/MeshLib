@@ -146,7 +146,6 @@ void accumulateLineCenters( PointAccumulator& accum, const Polyline3& pl, const 
 {
     MR_TIMER
     const auto& topology = pl.topology;
-    const auto points = pl.points;
     for ( auto edge : undirectedEdges(topology) )
     {
         const auto& p1 = pl.orgPnt( edge );

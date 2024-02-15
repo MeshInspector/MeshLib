@@ -39,11 +39,11 @@ struct DenseBox
 private:
 
     /// Include mesh part into this dense box
-    void include( const MeshPart& meshPart, const AffineXf3f* xf = nullptr );
+    void include_( const MeshPart& meshPart, const AffineXf3f* xf = nullptr );
     /// Include point into this dense box
-    void include( const PointCloud& points, const AffineXf3f* xf = nullptr );
+    void include_( const PointCloud& points, const AffineXf3f* xf = nullptr );
     /// Include line into this dense box
-    void include( const Polyline3& line, const AffineXf3f* xf = nullptr );
+    void include_( const Polyline3& line, const AffineXf3f* xf = nullptr );
 
     Box3f box_;
     AffineXf3f basisXf_;

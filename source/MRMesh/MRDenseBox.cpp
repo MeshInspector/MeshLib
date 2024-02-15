@@ -6,17 +6,17 @@ namespace MR
 
 DenseBox::DenseBox( const MeshPart& meshPart, const AffineXf3f* xf /*= nullptr*/ )
 {
-    include( meshPart, xf );
+    include_( meshPart, xf );
 }
 
 DenseBox::DenseBox( const PointCloud& points, const AffineXf3f* xf /*= nullptr*/ )
 {
-    include( points, xf );
+    include_( points, xf );
 }
 
 DenseBox::DenseBox( const Polyline3& line, const AffineXf3f* xf /*= nullptr*/ )
 {
-    include( line, xf );
+    include_( line, xf );
 }
 
 Vector3f DenseBox::center() const
@@ -37,7 +37,7 @@ bool DenseBox::contains( const Vector3f& pt ) const
     return box_.contains( basisXfInv_( pt ) );
 }
 
-void DenseBox::include( const MeshPart& meshPart, const AffineXf3f* xf /*= nullptr */ )
+void DenseBox::include_( const MeshPart& meshPart, const AffineXf3f* xf /*= nullptr */ )
 {
     PointAccumulator accum;
     accumulateFaceCenters( accum, meshPart, xf );
@@ -52,7 +52,7 @@ void DenseBox::include( const MeshPart& meshPart, const AffineXf3f* xf /*= nullp
     box_.include( meshPart.mesh.computeBoundingBox( &tempXf ) );
 }
 
-void DenseBox::include( const PointCloud& points, const AffineXf3f* xf )
+void DenseBox::include_( const PointCloud& points, const AffineXf3f* xf )
 {
     PointAccumulator accum;
     accumulatePoints( accum, points, xf );
@@ -67,7 +67,7 @@ void DenseBox::include( const PointCloud& points, const AffineXf3f* xf )
     box_.include( points.computeBoundingBox( &tempXf ) );
 }
 
-void DenseBox::include( const Polyline3& line, const AffineXf3f* xf )
+void DenseBox::include_( const Polyline3& line, const AffineXf3f* xf )
 {
     PointAccumulator accum;
     accumulateLineCenters( accum, line, xf );

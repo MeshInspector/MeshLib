@@ -6,6 +6,9 @@
 namespace MR
 {
 
+MRMESH_API VertBitSet subdivideWithPlane( const PointCloud& pc, const Plane3f& plane );
+
+MRMESH_API void trimWithPlane( PointCloud& points, const Plane3f& plane, PointCloud* otherPart = nullptr );
 /// subdivides all triangles intersected by given plane, leaving smaller triangles that only touch the plane;
 /// \return all triangles on the positive side of the plane
 /// \param new2Old receive mapping from newly appeared triangle to its original triangle (part to full)

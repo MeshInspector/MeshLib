@@ -6,6 +6,7 @@
 #include "MRPointCloud.h"
 #include "MRGTest.h"
 #include "MRTimer.h"
+#include "MRPolylineEdgeIterator.h"
 #include <cassert>
 
 namespace MR
@@ -141,25 +142,18 @@ void accumulateFaceCenters( PointAccumulator& accum, const MeshPart& mp, const A
     }
 }
 
-void accumulateLineCenters( PointAccumulator& v, const Polyline3& pl, const AffineXf3f* xf )
+void accumulateLineCenters( PointAccumulator& accum, const Polyline3& pl, const AffineXf3f* xf )
 {
     MR_TIMER
-        const auto& topology = pl.topology;
-    const auto& faceIds = topology.getFaceIds( mp.region );
-    for ( auto f : faceIds )
+    const auto& topology = pl.topology;
+    const auto points = pl.points;
+    for ( auto edge : undirectedEdges(topology) )
     {
-        if ( mp.region && !topology.hasFace( f ) )
-            continue; // skip region-faces, which does not actually exist
-        auto edge = edgePerFaces[f];
-        if ( edge.valid() )
-        {
-            VertId v0, v1, v2;
-            topology.getLeftTriVerts( edge, v0, v1, v2 );
-            //area of triangle corresponds to the weight of each point
-            float triArea = mp.mesh.leftDirDblArea( edge ).length();
-            auto center = ( 1 / 3.0f ) * Vector3f{ mp.mesh.points[v0] + mp.mesh.points[v1] + mp.mesh.points[v2] };
-            c.addPoint( center.transformed( xf ), triArea );
-        }
+        const auto& p1 = pl.orgPnt( edge );
+        const auto& p2 = pl.destPnt( edge );
+        auto center = (p1 + p2) / 2.0f;
+        const float length = ( p1 - p2 ).length();
+        accum.addPoint( center.transformed( xf ), length );
     }
 }
 

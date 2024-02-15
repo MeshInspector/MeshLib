@@ -14,13 +14,11 @@ namespace MR
 struct DenseBox
 {
     /// Include mesh part into this dense box
-    MRMESH_API DenseBox();
-    /// Include mesh part into this dense box
-    void include( const MeshPart& meshPart, const AffineXf3f* xf = nullptr );
+    MRMESH_API DenseBox( const MeshPart& meshPart, const AffineXf3f* xf = nullptr );
     /// Include point into this dense box
-    void include( const PointCloud& points, const AffineXf3f* xf = nullptr );
+    MRMESH_API DenseBox( const PointCloud& points, const AffineXf3f* xf = nullptr );
     /// Include line into this dense box
-    void include( const Polyline3& line, const AffineXf3f* xf = nullptr );
+    MRMESH_API DenseBox( const Polyline3& line, const AffineXf3f* xf = nullptr );
     
     /// returns center of dense box
     MRMESH_API Vector3f center() const;
@@ -40,10 +38,16 @@ struct DenseBox
     const AffineXf3f& basisXfInv() const { return basisXfInv_; }
 private:
 
+    /// Include mesh part into this dense box
+    void include( const MeshPart& meshPart, const AffineXf3f* xf = nullptr );
+    /// Include point into this dense box
+    void include( const PointCloud& points, const AffineXf3f* xf = nullptr );
+    /// Include line into this dense box
+    void include( const Polyline3& line, const AffineXf3f* xf = nullptr );
+
     Box3f box_;
     AffineXf3f basisXf_;
     AffineXf3f basisXfInv_;
-    PointAccumulator accum_;
 };
 
 }

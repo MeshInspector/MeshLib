@@ -91,7 +91,7 @@ public:
     }
 
     // return current position transformed to Vector3f 
-    MR::Vector3f toVector3f() const;
+    MRVIEWER_API Vector3f toVector3f() const;
 
     // returns stored position in MeshTriPointFormat if it is possible
     std::optional<MeshTriPoint> getCurrentPositionMeshTriPoint() const

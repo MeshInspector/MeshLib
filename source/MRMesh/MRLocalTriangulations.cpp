@@ -113,7 +113,7 @@ void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoor
             const auto next = triangs.neighbors[n + 1 < nend ? n + 1 : nbeg];
             if ( curr == bd )
             {
-                otherBd = bd;
+                otherBd = next;
                 continue;
             }
             const auto d = dot( normals[c], cross( coords[next] - cp, coords[curr] - cp ) );

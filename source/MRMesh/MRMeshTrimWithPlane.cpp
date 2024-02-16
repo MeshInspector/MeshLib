@@ -26,14 +26,13 @@ void trimWithPlane( PointCloud& pc, const Plane3f& plane, PointCloud* otherPart 
 {
     MR_TIMER
     const auto posVerts = subdivideWithPlane( pc, plane );
-    const auto otherVerts = pc.validPoints - posVerts;
 
     PointCloud res;
     res.addPartByMask( pc, posVerts );
     if ( otherPart )
     {
         *otherPart = PointCloud{};
-        otherPart->addPartByMask( pc, otherVerts );
+        otherPart->addPartByMask( pc, pc.validPoints - posVerts );
     }
     pc = std::move( res );
 }

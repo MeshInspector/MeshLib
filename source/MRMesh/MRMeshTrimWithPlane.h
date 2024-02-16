@@ -5,10 +5,17 @@
 #include <functional>
 namespace MR
 {
-
+/// \return All vertices on the positive side of the plane
+/// \param pc Input point cloud that will be cut by the plane
+/// \param plane Input plane to cut mesh with
 MRMESH_API VertBitSet subdivideWithPlane( const PointCloud& pc, const Plane3f& plane );
 
+/// This function cuts a point cloud with a plane, leaving only the part of mesh that lay in positive direction of normal
+/// \param pc Input point cloud that will be cut by the plane
+/// \param plane Input plane to cut mesh with
+/// \param otherPart Optional return other part of te point cloud
 MRMESH_API void trimWithPlane( PointCloud& points, const Plane3f& plane, PointCloud* otherPart = nullptr );
+
 /// subdivides all triangles intersected by given plane, leaving smaller triangles that only touch the plane;
 /// \return all triangles on the positive side of the plane
 /// \param new2Old receive mapping from newly appeared triangle to its original triangle (part to full)

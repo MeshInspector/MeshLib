@@ -38,6 +38,8 @@ bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d
 
     // there should be significant difference in metrics (above floating point error) to return false
     constexpr double eps = 1e-7; // when we computed in floats then even 1e-5f was too small here and did not prevent infinite loop during resolveMeshDegenerations
+    if ( !std::isfinite( metricAC ) )
+        return metricAC <= metricBD; // below line returns true if metricAC is +infinity
     return metricAC <= metricBD + eps * ( metricAC + metricBD ); // this shall work even if metricAC and metricBD are infinities, unlike ( metricAC - metricBD ), which becomes NaN
 }
 

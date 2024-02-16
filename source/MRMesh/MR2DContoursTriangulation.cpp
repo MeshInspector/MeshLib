@@ -17,6 +17,7 @@
 #include "MR2to3.h"
 #include "MRBitSetParallelFor.h"
 #include "MRPrecisePredicates2.h"
+#include "MRGTest.h"
 #include <queue>
 #include <algorithm>
 #include <limits>
@@ -1312,6 +1313,24 @@ std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, con
     return triangulateDisjointContours( contsd, holeVertsIds );
 }
 
+}
+
+TEST( MRMesh, PlanarTriangulation )
+{
+    // Create a quadrangle with three points on a straight line
+    Contour2f cont;
+    cont.push_back( Vector2f( 1.f, 0.f ) );
+    cont.push_back( Vector2f( 0.f, 0.f ) );
+    cont.push_back( Vector2f( 0.f, 1.f ) );
+    cont.push_back( Vector2f( 0.f, 2.f ) );
+    cont.push_back( Vector2f( 1.f, 0.f ) );
+
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    mesh.pack();
+    EXPECT_TRUE( mesh.topology.lastValidFace() == 1_f );
+    // Must not contain degenerate faces
+    EXPECT_TRUE( mesh.triangleAspectRatio( 0_f ) < 10.0f );
+    EXPECT_TRUE( mesh.triangleAspectRatio( 1_f ) < 10.0f );
 }
 
 }

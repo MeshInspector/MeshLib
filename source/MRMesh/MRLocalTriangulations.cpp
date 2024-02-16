@@ -333,7 +333,15 @@ bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTrian
                 map.erase( triplet );
                 continue;
             }
-            auto it = map.insert( { triplet, Repetitions{} } ).first;
+            HashMap<UnorientedTriangle, Repetitions>::iterator it;
+            if ( del )
+            {
+                it = map.find( triplet );
+                if ( it == map.end() )
+                    continue; // no record in the map exists, so the number of repetitions is 1
+            }
+            else
+                it = map.insert( { triplet, Repetitions{} } ).first;
             Repetitions & r = it->second;
             if ( flipped )
                 ++r.oppositeOriented;

@@ -8,7 +8,7 @@
 #include "MRMesh/MRObjectPointsHolder.h"
 #include "MRMesh/MRObjectLines.h"
 
-#include "MRMesh/MRTriPoint.h"
+#include "MRMesh/MRMeshTriPoint.h"
 #include "MRMesh/MREdgePoint.h"
 #include "MRMesh/MRPointOnObject.h"
 
@@ -29,7 +29,7 @@ const PickedPoint& SurfacePointWidget::create( const std::shared_ptr<VisualObjec
         currentPos_ = -1;
         return currentPos_;
     }
-    return create( surface, pointOnObjectToPickedPoint( baseSurface_.get(), startPos ) );
+    return create( surface, pointOnObjectToPickedPoint( baseObject_.get(), startPos ) );
 }
 
 const PickedPoint& SurfacePointWidget::create( const std::shared_ptr<VisualObject>& surface, const PickedPoint& startPos )
@@ -40,14 +40,14 @@ const PickedPoint& SurfacePointWidget::create( const std::shared_ptr<VisualObjec
         currentPos_ = -1;
         return currentPos_;
     }
-    baseSurface_ = surface;
+    baseObject_ = surface;
 
     pickSphere_ = std::make_shared<SphereObject>();
     pickSphere_->setName( "Pick Sphere" );
     pickSphere_->setAncillary( true );
     pickSphere_->setFrontColor( params_.baseColor, false );
     pickSphere_->setBackColor( Color::transparent() );
-    baseSurface_->addChild( pickSphere_ );
+    baseObject_->addChild( pickSphere_ );
     currentPos_ = startPos;
     updatePositionAndRadius_();
 
@@ -66,7 +66,7 @@ void SurfacePointWidget::reset()
     pickSphere_->detachFromParent();
     pickSphere_.reset();
 
-    baseSurface_.reset();
+    baseObject_.reset();
 
     params_ = Parameters();
     isOnMove_ = false;
@@ -140,10 +140,10 @@ bool SurfacePointWidget::onMouseMove_( int, int )
     if ( isOnMove_ )
     {
         auto [obj, pick] = getViewerInstance().viewport().pick_render_object();
-        if ( obj != baseSurface_ )
+        if ( obj != baseObject_ )
             return false;
 
-        currentPos_ = pointOnObjectToPickedPoint( obj.get(), pick ); // baseSurface_->mesh()->toTriPoint( pick );
+        currentPos_ = pointOnObjectToPickedPoint( obj.get(), pick );
         updatePositionAndRadius_();
         if ( onMove_ )
             onMove_( currentPos_ );
@@ -162,7 +162,7 @@ bool SurfacePointWidget::onMouseMove_( int, int )
 
 MR::Vector3f SurfacePointWidget::toVector3f() const
 {
-    return pickedPointToVector3( baseSurface_.get(), currentPos_ );
+    return pickedPointToVector3( baseObject_.get(), currentPos_ );
 }
 
 
@@ -182,7 +182,7 @@ void SurfacePointWidget::updatePositionAndRadiusLines_( const EdgePoint& /* ep *
 void SurfacePointWidget::updatePositionAndRadiusMesh_( MeshTriPoint mtp )
 {
     assert( pickSphere_ );
-    auto baseSurface = std::dynamic_pointer_cast< ObjectMeshHolder >( baseSurface_ );
+    auto baseSurface = std::dynamic_pointer_cast< ObjectMeshHolder >( baseObject_ );
     assert( baseSurface );
     assert( baseSurface->mesh() );
     const auto& mesh = *baseSurface->mesh();
@@ -290,7 +290,7 @@ void SurfacePointWidget::setPointRadius_()
     }
     else
     {
-        radius = params_.radius <= 0.0f ? baseSurface_->getBoundingBox().diagonal() * 5e-3f : params_.radius;
+        radius = params_.radius <= 0.0f ? baseObject_->getBoundingBox().diagonal() * 5e-3f : params_.radius;
     }
     pickSphere_->setRadius( radius );
 }
@@ -302,7 +302,7 @@ void SurfacePointWidget::preDraw_()
 
 void SurfacePointWidget::updateCurrentPosition( const PointOnObject& pos )
 {
-    currentPos_ = pointOnObjectToPickedPoint( baseSurface_.get(), pos );
+    currentPos_ = pointOnObjectToPickedPoint( baseObject_.get(), pos );
     updatePositionAndRadius_();
 }
 

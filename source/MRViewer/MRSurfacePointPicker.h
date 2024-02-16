@@ -85,16 +85,16 @@ public:
     MRVIEWER_API void setHovered( bool on );
 
     // returns stored position of this widget
-    MRVIEWER_API const PickedPoint& getCurrentPosition() const
+    const PickedPoint& getCurrentPosition() const
     {
         return currentPos_;
     }
 
     // return current position transformed to Vector3f 
-    MRVIEWER_API MR::Vector3f toVector3f() const;
+    MR::Vector3f toVector3f() const;
 
     // returns stored position in MeshTriPointFormat if it is possible
-    MRVIEWER_API std::optional<MeshTriPoint> getCurrentPositionMeshTriPoint() const
+    std::optional<MeshTriPoint> getCurrentPositionMeshTriPoint() const
     {
         if ( const MeshTriPoint* triPoint = std::get_if<MeshTriPoint>( &currentPos_ ) )
             return *triPoint;
@@ -123,7 +123,7 @@ public:
 
     std::shared_ptr<VisualObject>& getBaseSurface()
     {
-        return baseSurface_;
+        return baseObject_;
     }
 
 private:
@@ -146,7 +146,7 @@ private:
     PickedPoint currentPos_;
 
     std::shared_ptr<SphereObject> pickSphere_;
-    std::shared_ptr<VisualObject> baseSurface_;
+    std::shared_ptr<VisualObject> baseObject_;
 
     std::function<void( const PickedPoint& )> startMove_;
     std::function<void( const PickedPoint& )> onMove_;

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "MRPointOnFace.h"
+#include "MRMeshTriPoint.h"
+#include "MREdgePoint.h"
 
 namespace MR
 {
@@ -37,9 +39,9 @@ struct PointOnObject
 using PickedPoint = std::variant<MeshTriPoint, EdgePoint, VertId, int>;
 
 // Converts pickedPoint coordinates depending on the object type into a 3D Vector3 
-MRMESH_API MR::Vector3f pickedPointToVector3( const VisualObject* surface, const PickedPoint& point );
+MRMESH_API MR::Vector3f pickedPointToVector3( const VisualObject* object, const PickedPoint& point );
 
 // Converts PointOnObject coordinates depending on the object type to the PickedPoint variant
-MRMESH_API PickedPoint pointOnObjectToPickedPoint( const VisualObject* surface, const PointOnObject& pos );
+MRMESH_API PickedPoint pointOnObjectToPickedPoint( const VisualObject* object, const PointOnObject& pos );
 
 } //namespace MR

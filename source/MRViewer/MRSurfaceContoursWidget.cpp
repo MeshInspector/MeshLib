@@ -466,6 +466,4 @@ void SurfaceContoursWidget::reset()
 
     disconnect();
 }
-
-
 } // namespace MR 

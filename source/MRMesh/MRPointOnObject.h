@@ -33,8 +33,8 @@ struct PointOnObject
 
 using PickedPoint = std::variant<MeshTriPoint, EdgePoint, VertId, int>;
 
-MRMESH_API MR::Vector3f getPickedPointCenter3D( const VisualObject* surface, const PickedPoint& point );
-MRMESH_API PickedPoint pointOnObject2PickedPoint( const VisualObject* surface, const PointOnObject& pos );
+MRMESH_API MR::Vector3f pickedPointToVector3( const VisualObject* surface, const PickedPoint& point );
+MRMESH_API PickedPoint pointOnObjectToPickedPoint( const VisualObject* surface, const PointOnObject& pos );
 
 
 } //namespace MR

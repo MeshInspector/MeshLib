@@ -9,7 +9,7 @@
 
 namespace MR
 {
-PickedPoint pointOnObject2PickedPoint( const VisualObject* surface, const PointOnObject& pos )
+PickedPoint pointOnObjectToPickedPoint( const VisualObject* surface, const PointOnObject& pos )
 {
     const ObjectMeshHolder* objMesh = dynamic_cast< const ObjectMeshHolder* >( surface );
     if ( objMesh )
@@ -21,21 +21,17 @@ PickedPoint pointOnObject2PickedPoint( const VisualObject* surface, const PointO
     {
         return pos.vert;
     }
-    
-    /////// TODO 
 
-    /*
     const ObjectLinesHolder* objLines = dynamic_cast< const ObjectLinesHolder* >( surface );
     if ( objLines )
     {
-        return objLines->polyline()->
+        return objLines->polyline()->toEdgePoint( MR::EdgeId( pos.uedge ), pos.point );
     }
-    */
 
     return -1;
 }
 
-MR::Vector3f getPickedPointCenter3D( const VisualObject* surface, const PickedPoint& point )
+MR::Vector3f pickedPointToVector3( const VisualObject* surface, const PickedPoint& point )
 {
 
     if ( const MeshTriPoint* triPoint = std::get_if<MeshTriPoint>( &point ) )
@@ -62,7 +58,7 @@ MR::Vector3f getPickedPointCenter3D( const VisualObject* surface, const PickedPo
         assert( objLines );
         if ( objLines )
         {
-            return objLines->polyline()->edgePoint( edgePoint->e , edgePoint->a );
+            return objLines->polyline()->edgePoint( *edgePoint );
         }
     }
     else if ( const int* intValue = std::get_if<int>( &point ) )
@@ -72,7 +68,7 @@ MR::Vector3f getPickedPointCenter3D( const VisualObject* surface, const PickedPo
     }
 
     assert( false ); // not supported type in PickedPoint variant
-    return {}; 
+    return {};
 }
 
 } //namespace MR

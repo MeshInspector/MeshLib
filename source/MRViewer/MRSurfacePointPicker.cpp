@@ -29,7 +29,7 @@ const PickedPoint& SurfacePointWidget::create( const std::shared_ptr<VisualObjec
         currentPos_ = -1;
         return currentPos_;
     }
-    return create( surface, pointOnObject2PickedPoint( baseSurface_.get(), startPos ) );
+    return create( surface, pointOnObjectToPickedPoint( baseSurface_.get(), startPos ) );
 }
 
 const PickedPoint& SurfacePointWidget::create( const std::shared_ptr<VisualObject>& surface, const PickedPoint& startPos )
@@ -143,7 +143,7 @@ bool SurfacePointWidget::onMouseMove_( int, int )
         if ( obj != baseSurface_ )
             return false;
 
-        currentPos_ = pointOnObject2PickedPoint( obj.get(), pick ); // baseSurface_->mesh()->toTriPoint( pick );
+        currentPos_ = pointOnObjectToPickedPoint( obj.get(), pick ); // baseSurface_->mesh()->toTriPoint( pick );
         updatePositionAndRadius_();
         if ( onMove_ )
             onMove_( currentPos_ );
@@ -162,7 +162,7 @@ bool SurfacePointWidget::onMouseMove_( int, int )
 
 MR::Vector3f SurfacePointWidget::toVector3f() const
 {
-    return getPickedPointCenter3D( baseSurface_.get(), currentPos_ );
+    return pickedPointToVector3( baseSurface_.get(), currentPos_ );
 }
 
 
@@ -302,7 +302,7 @@ void SurfacePointWidget::preDraw_()
 
 void SurfacePointWidget::updateCurrentPosition( const PointOnObject& pos )
 {
-    currentPos_ = pointOnObject2PickedPoint( baseSurface_.get(), pos );
+    currentPos_ = pointOnObjectToPickedPoint( baseSurface_.get(), pos );
     updatePositionAndRadius_();
 }
 

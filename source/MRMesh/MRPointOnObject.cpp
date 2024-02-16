@@ -62,7 +62,7 @@ MR::Vector3f pickedPointToVector3( const VisualObject* object, const PickedPoint
             return objLines->polyline()->edgePoint( *edgePoint );
         }
     }
-    else if ( const int* intValue = std::get_if<int>( &point ) )
+    else if ( std::get_if<int>( &point ) )
     {
         assert( false ); // not valid object for pick points
         return {};

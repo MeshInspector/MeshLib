@@ -11,32 +11,6 @@
 namespace MR
 {
 
-VertBitSet subdivideWithPlane( const PointCloud& pc, const Plane3f& plane )
-{
-    MR_TIMER
-    VertBitSet result( pc.validPoints.find_last() + 1 );
-    BitSetParallelFor( pc.validPoints, [&] ( VertId v )
-    {
-        result.set( v, plane.distance( pc.points[v] ) > 0 );
-    } );
-    return result;
-}
-
-void trimWithPlane( PointCloud& pc, const Plane3f& plane, PointCloud* otherPart )
-{
-    MR_TIMER
-    const auto posVerts = subdivideWithPlane( pc, plane );
-
-    PointCloud res;
-    res.addPartByMask( pc, posVerts );
-    if ( otherPart )
-    {
-        *otherPart = PointCloud{};
-        otherPart->addPartByMask( pc, pc.validPoints - posVerts );
-    }
-    pc = std::move( res );
-}
-
 FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap * new2Old, float eps, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
 {
     MR_TIMER

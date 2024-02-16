@@ -3,6 +3,8 @@
 #include "MRPointOnObject.h"
 #include "MRObjectMeshHolder.h"
 #include "MRObjectPointsHolder.h"
+#include "MRObjectLinesHolder.h"
+
 #include "MRMesh.h"
 
 namespace MR
@@ -19,13 +21,14 @@ PickedPoint pointOnObject2PickedPoint( const VisualObject* surface, const PointO
     {
         return pos.vert;
     }
+    
+    /////// TODO 
 
-    //////// TO DO  //////
     /*
-    const ObjectLines* objLines = dynamic_cast< const ObjectLines* >( surface );
-    if ( objPoints )
+    const ObjectLinesHolder* objLines = dynamic_cast< const ObjectLinesHolder* >( surface );
+    if ( objLines )
     {
-        return -1; // TODO support Lines
+        return objLines->polyline()->
     }
     */
 
@@ -37,31 +40,39 @@ MR::Vector3f getPickedPointCenter3D( const VisualObject* surface, const PickedPo
 
     if ( const MeshTriPoint* triPoint = std::get_if<MeshTriPoint>( &point ) )
     {
-        const ObjectMeshHolder* objMesh = dynamic_cast< const ObjectMeshHolder* >( surface );
+        const auto objMesh = dynamic_cast< const ObjectMeshHolder* >( surface );
         assert( objMesh );
         if ( objMesh )
         {
             return objMesh->mesh()->triPoint( *triPoint );
         }
     }
-    else if ( const EdgePoint* edgePoint = std::get_if<EdgePoint>( &point ) )
-    {
-        // TODO  Handle EdgePoint
-        // ...
-    }
     else if ( const VertId* vertId = std::get_if<VertId>( &point ) )
     {
-        // TODO  Handle VertId
-        // ...
+        const auto objPoints = dynamic_cast< const ObjectPointsHolder* >( surface );
+        assert( objPoints );
+        if ( objPoints )
+        {
+            return objPoints->pointCloud()->points[*vertId];
+        }
+    }
+    else if ( const EdgePoint* edgePoint = std::get_if<EdgePoint>( &point ) )
+    {
+        const auto objLines = dynamic_cast< const ObjectLinesHolder* >( surface );
+        assert( objLines );
+        if ( objLines )
+        {
+            return objLines->polyline()->edgePoint( edgePoint->e , edgePoint->a );
+        }
     }
     else if ( const int* intValue = std::get_if<int>( &point ) )
     {
-        //  TODO Handle int
-        // ...
+        assert( false ); // not valid object for pick points
+        return {};
     }
 
-    assert( false );
-    return {};
+    assert( false ); // not supported type in PickedPoint variant
+    return {}; 
 }
 
 } //namespace MR

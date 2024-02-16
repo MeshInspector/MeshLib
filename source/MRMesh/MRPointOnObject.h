@@ -2,10 +2,6 @@
 
 #include "MRPointOnFace.h"
 
-#include <variant>
-#include "MRMesh/MRMeshTriPoint.h"   // TODO REMOVE IT 
-#include "MRMesh/MREdgePoint.h" // TODO REMOVE IT  
-
 namespace MR
 {
 
@@ -45,6 +41,5 @@ MRMESH_API MR::Vector3f pickedPointToVector3( const VisualObject* surface, const
 
 // Converts PointOnObject coordinates depending on the object type to the PickedPoint variant
 MRMESH_API PickedPoint pointOnObjectToPickedPoint( const VisualObject* surface, const PointOnObject& pos );
-
 
 } //namespace MR

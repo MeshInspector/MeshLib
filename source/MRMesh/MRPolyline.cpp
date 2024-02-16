@@ -162,6 +162,20 @@ void Polyline<V>::pack( VertMap * outVmap, WholeEdgeMap * outEmap )
 }
 
 template<typename V>
+EdgePoint Polyline<V>::toEdgePoint( EdgeId e, const V & p ) const
+{
+    const auto & po = points[ topology.org( e ) ];
+    const auto & pd = points[ topology.dest( e ) ];
+    const auto dt = dot( p - po , pd - po );
+    const auto edgeLenSq = ( pd - po ).lengthSq();
+    if ( dt <= 0 || edgeLenSq <= 0 )
+        return { e, 0 };
+    if ( dt >= edgeLenSq )
+        return { e, 1 };
+    return { e, dt / edgeLenSq };
+}
+
+template<typename V>
 float Polyline<V>::totalLength() const
 {
     MR_TIMER

@@ -2,6 +2,10 @@
 
 #include "MRPointOnFace.h"
 
+#include <variant>
+#include "MRMesh/MRMeshTriPoint.h"   // TODO REMOVE IT 
+#include "MRMesh/MREdgePoint.h" // TODO REMOVE IT  
+
 namespace MR
 {
 
@@ -26,5 +30,11 @@ struct PointOnObject
     };
     [[nodiscard]] operator PointOnFace() const { return { .face = face, .point = point }; }
 };
+
+using PickedPoint = std::variant<MeshTriPoint, EdgePoint, VertId, int>;
+
+MRMESH_API MR::Vector3f getPickedPointCenter3D( const VisualObject* surface, const PickedPoint& point );
+MRMESH_API PickedPoint pointOnObject2PickedPoint( const VisualObject* surface, const PointOnObject& pos );
+
 
 } //namespace MR

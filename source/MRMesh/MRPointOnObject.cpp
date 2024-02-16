@@ -1,5 +1,3 @@
-#pragma once
-
 #include "MRPointOnObject.h"
 #include "MRObjectMeshHolder.h"
 #include "MRObjectPointsHolder.h"

@@ -191,9 +191,8 @@ Run the following in terminal:
 ```sh
 git clone --recurse-submodules https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
-# do not select emscripten in the corresponding question
-sudo ./scripts/build_thirdparty.sh  # need sudo to check and install dependencies
-./scripts/build_source.sh
+./scripts/build_thirdparty.sh  # do not select emscripten in the corresponding question
+./scripts/build_source.sh  # do not select emscripten in the corresponding question
 ./scripts/distribution.sh
 sudo apt install ./distr/meshlib-dev.deb
 ```

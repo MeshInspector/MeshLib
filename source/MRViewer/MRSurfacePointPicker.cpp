@@ -271,7 +271,7 @@ void SurfacePointWidget::updatePositionAndRadius_()
     {
         updatePositionAndRadiusPoints_( *vertId );
     }
-    else if ( const int* intValue = std::get_if<int>( &currentPos_ ) )
+    else if ( std::get_if<int>( &currentPos_ ) )
     {
         return; // pick in empty space
     }

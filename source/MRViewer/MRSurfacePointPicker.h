@@ -2,12 +2,15 @@
 
 #include "MRViewer.h"
 #include "MRViewerEventsListener.h"
+
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRMeshTriPoint.h"
 #include <MRMesh/MRColor.h>
-#include <functional>
 #include "MRMesh/MRPointOnObject.h"
+
+#include <functional>
+#include <optional>
 
 namespace MR
 {

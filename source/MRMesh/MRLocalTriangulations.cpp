@@ -200,7 +200,7 @@ TrianglesRepetitions computeTrianglesRepetitions( const AllLocalTriangulations &
     return res;
 }
 
-std::vector<UnorientedTriangle> findRepeatedTriangles( const AllLocalTriangulations & triangs, int repetitions )
+std::vector<UnorientedTriangle> findRepeatedUnorientedTriangles( const AllLocalTriangulations & triangs, int repetitions )
 {
     MR_TIMER
     assert( repetitions >= 1 && repetitions <= 3 );
@@ -216,6 +216,56 @@ std::vector<UnorientedTriangle> findRepeatedTriangles( const AllLocalTriangulati
             res.push_back( key );
     }
     return res;
+}
+
+Triangulation findRepeatedOrientedTriangles( const AllLocalTriangulations & triangs, int repetitions )
+{
+    MR_TIMER
+    assert( repetitions >= 1 && repetitions <= 3 );
+
+    const auto map = makeTriangleHashMap( triangs );
+
+    Triangulation res;
+    for ( auto & [triplet, r] : map )
+    {
+        assert( r.sameOriented >= 0 && r.sameOriented <= 3 );
+        assert( r.oppositeOriented >= 0 && r.oppositeOriented <= 3 );
+        assert( r.sameOriented + r.oppositeOriented >= 1 );
+        if ( r.sameOriented == repetitions )
+            res.push_back( triplet );
+        if ( r.oppositeOriented == repetitions )
+            res.push_back( triplet.getFlipped() );
+    }
+    return res;
+}
+
+void findRepeatedOrientedTriangles( const AllLocalTriangulations & triangs, Triangulation * outRep3, Triangulation * outRep2 )
+{
+    MR_TIMER
+    assert( outRep3 || outRep2 );
+
+    const auto map = makeTriangleHashMap( triangs );
+
+    for ( auto & [triplet, r] : map )
+    {
+        assert( r.sameOriented >= 0 && r.sameOriented <= 3 );
+        assert( r.oppositeOriented >= 0 && r.oppositeOriented <= 3 );
+        assert( r.sameOriented + r.oppositeOriented >= 1 );
+        if ( outRep3 )
+        {
+            if ( r.sameOriented == 3 )
+                outRep3->push_back( triplet );
+            else if ( r.oppositeOriented == 3 )
+                outRep3->push_back( triplet.getFlipped() );
+        }
+        if ( outRep2 )
+        {
+            if ( r.sameOriented == 2 )
+                outRep2->push_back( triplet );
+            else if ( r.oppositeOriented == 2 )
+                outRep2->push_back( triplet.getFlipped() );
+        }
+    }
 }
 
 bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTriangulations & triangs, ProgressCallback progress,

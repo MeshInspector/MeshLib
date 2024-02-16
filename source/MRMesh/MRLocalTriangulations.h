@@ -75,7 +75,16 @@ using TrianglesRepetitions = std::array<int, 4>;
 /// computes statistics about the number of triangle repetitions in local triangulations
 [[nodiscard]] MRMESH_API TrianglesRepetitions computeTrianglesRepetitions( const AllLocalTriangulations & triangs );
 
-/// from local triangulations returns all unoriented with given number of repetitions each in [1,3]
-[[nodiscard]] MRMESH_API std::vector<UnorientedTriangle> findRepeatedTriangles( const AllLocalTriangulations & triangs, int repetitions );
+/// from local triangulations returns all unoriented triangles with given number of repetitions each in [1,3]
+[[nodiscard]] MRMESH_API std::vector<UnorientedTriangle> findRepeatedUnorientedTriangles( const AllLocalTriangulations & triangs, int repetitions );
+
+/// from local triangulations returns all oriented triangles with given number of repetitions each in [1,3]
+[[nodiscard]] MRMESH_API Triangulation findRepeatedOrientedTriangles( const AllLocalTriangulations & triangs, int repetitions );
+
+/// from local triangulations returns all oriented triangles with 3 or 2 repetitions each;
+/// if both outRep3 and outRep2 are necessary then it is faster to call this function than above one
+MRMESH_API void findRepeatedOrientedTriangles( const AllLocalTriangulations & triangs,
+    Triangulation * outRep3,    ///< optional output with all oriented triangles that appear in three local triangulations
+    Triangulation * outRep2 );  ///< optional output with all oriented triangles that appear in exactly two local triangulations
 
 } //namespace MR

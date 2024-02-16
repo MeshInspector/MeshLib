@@ -14,5 +14,4 @@ MRMESH_API VertBitSet findHalfSpacePoints( const PointCloud& pc, const Plane3f& 
 /// \param plane Input plane to cut point cloud with
 /// \param otherPart Optional return other part of the point cloud
 MRMESH_API PointCloud divideWithPlane( const PointCloud& points, const Plane3f& plane, PointCloud* otherPart = nullptr );
-
 }

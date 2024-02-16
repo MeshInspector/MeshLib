@@ -39,6 +39,8 @@ namespace Primitives
         // Only `center` and `dir` are used from `line` (so if `line` is a cone/cylinder, its axis is used,
         // and the line is extended to infinity).
         [[nodiscard]] MRMESH_API Sphere intersectWithLine( const ConeSegment& line ) const;
+
+        friend bool operator==( const Plane&, const Plane& ) = default;
     };
 
     //! Can have infinite length in one or two directions.
@@ -68,6 +70,8 @@ namespace Primitives
 
         // If true, the cone has no caps and no volume, and all distances (to the conical surface, that is) are positive.
         bool hollow = false;
+
+        friend bool operator==( const ConeSegment&, const ConeSegment& ) = default;
 
         [[nodiscard]] bool isZeroRadius() const { return positiveSideRadius == 0 && negativeSideRadius == 0; }
         [[nodiscard]] bool isCircle() const { return positiveLength == -negativeLength && std::isfinite( positiveLength ); }

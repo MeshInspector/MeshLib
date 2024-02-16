@@ -59,11 +59,11 @@ MRMESH_API bool orientNormals( const PointCloud& pointCloud, VertNormals& normal
     float radius, const ProgressCallback & progress = {} );
 
 /// \brief Makes normals for valid points of given point cloud; directions of close points are selected to be consistent;
-/// \triangs triangulation neighbours of each point
+/// \triangs triangulation neighbours of each point, which are oriented during the call as well
 /// \return nullopt if progress returned false
 /// \ingroup PointCloudGroup
 [[nodiscard]] MRMESH_API std::optional<VertNormals> makeOrientedNormals( const PointCloud& pointCloud,
-    const AllLocalTriangulations& triangs, const ProgressCallback & progress = {} );
+    AllLocalTriangulations& triangs, const ProgressCallback & progress = {} );
 
 /// \brief Makes consistent normals for valid points of given point cloud
 /// \param avgNeighborhoodSize avg num of neighbors of each individual point

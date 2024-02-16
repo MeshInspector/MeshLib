@@ -490,6 +490,8 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::Sphere>::measure( cons
     float slopedSignedDistToPositiveCap = ( projectedSpherePos - positiveCapPos ) / lengthFac;
     // Signed distance from the sphere center to the negative cap edge, measured in parallel to the conical surface (positive if beyond the edge).
     float slopedSignedDistToNegativeCap = ( negativeCapPos - projectedSpherePos ) / lengthFac;
+    // Whether the positive cap edge is closer to the sphere center than the negative one, measured in parallel to the conical surface.
+    bool positiveCapIsSlopedCloser = slopedSignedDistToPositiveCap > slopedSignedDistToNegativeCap;
 
     // Distance between the conical surface and the cone axis, measured along the normal from the conical surface to the spehre center.
     float axisToSurfaceSlopedDist = coneLengthIsFinite
@@ -499,11 +501,16 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::Sphere>::measure( cons
     // Signed distance from the sphere center to the conical surface (positive if outside).
     float signedDistToSurface = axisToSphereCenterDist * lengthFac - axisToSurfaceSlopedDist;
 
+    // Signed distance from the sphere center to the positive cap, measured along the cap normal.
+    float signedDistToPositiveCap = signedDistAlongAxis - a.positiveLength;
+    // Signed distance from the sphere center to the negative cap, measured along the cap normal.
+    float signedDistToNegativeCap = -a.negativeLength - signedDistAlongAxis;
+
     // Whether we're closer to the positive cap than the negative cap.
-    bool positiveCapIsCloser = slopedSignedDistToPositiveCap >= slopedSignedDistToNegativeCap;
+    bool positiveCapIsCloser = signedDistToPositiveCap > signedDistToNegativeCap;
 
     // Signed distance from the sphere center to the closest cap (positive if outside).
-    float signedDistToClosestCap = positiveCapIsCloser ? signedDistAlongAxis - a.positiveLength : -a.negativeLength - signedDistAlongAxis;
+    float signedDistToClosestCap = positiveCapIsCloser ? signedDistToPositiveCap : signedDistToNegativeCap;
 
     MeasureResult ret;
     ret.distance.status = MeasureResult::Status::ok;
@@ -512,7 +519,7 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::Sphere>::measure( cons
 
     if ( a.hollow || signedDistToSurface > signedDistToClosestCap )
     {
-        if ( signedDistToClosestCap <= 0 )
+        if ( slopedSignedDistToPositiveCap <= 0 && slopedSignedDistToNegativeCap <= 0 )
         {
             // Near the conical surface.
             ret.distance.distance = ( a.hollow ? std::abs( signedDistToSurface ) : signedDistToSurface ) - b.radius;
@@ -537,13 +544,13 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::Sphere>::measure( cons
     if ( !haveDistance )
     {
         // Distance from the sphere center to the cap edge, projected onto the normal to the cone axis.
-        float distanceTowardsAxis = axisToSphereCenterDist - ( positiveCapIsCloser ? a.positiveSideRadius : a.negativeSideRadius );
+        float distanceTowardsAxis = axisToSphereCenterDist - ( positiveCapIsSlopedCloser ? a.positiveSideRadius : a.negativeSideRadius );
         // Distance from the sphere center to the cap, projected onto the cone axis.
-        float distanceAlongAxis = signedDistAlongAxis - ( positiveCapIsCloser ? a.positiveLength : -a.negativeLength );
+        float distanceAlongAxis = signedDistAlongAxis - ( positiveCapIsSlopedCloser ? a.positiveLength : -a.negativeLength );
 
         ret.distance.distance = std::sqrt( distanceAlongAxis * distanceAlongAxis + distanceTowardsAxis * distanceTowardsAxis ) - b.radius;
-        ret.distance.closestPointA = a.center + a.dir * ( positiveCapIsCloser ? a.positiveLength : -a.negativeLength )
-            + axisToSphereCenterDir * ( positiveCapIsCloser ? a.positiveSideRadius : a.negativeSideRadius );
+        ret.distance.closestPointA = a.center + a.dir * ( positiveCapIsSlopedCloser ? a.positiveLength : -a.negativeLength )
+            + axisToSphereCenterDir * ( positiveCapIsSlopedCloser ? a.positiveSideRadius : a.negativeSideRadius );
         ret.distance.closestPointB = b.center - ( a.dir * distanceAlongAxis + axisToSphereCenterDir * distanceTowardsAxis ).normalized() * b.radius;
 
         haveDistance = true;

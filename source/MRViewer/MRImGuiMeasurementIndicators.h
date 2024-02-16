@@ -18,6 +18,7 @@ struct Params
     Color colorMain;
     Color colorOutline;
     Color colorText;
+    Color colorTextOutline;
 
     float width = 1.5f;
     float smallWidth = 0.75f;

@@ -4,9 +4,14 @@
 #include "MRProgressCallback.h"
 #include "MRVector3.h"
 #include "MRUnorientedTriangle.h"
+#include "MRPointCloud.h"
+#include "MRBox.h"
+#include "MRHeap.h"
+#include "MRBitSetParallelFor.h"
 #include <parallel_hashmap/phmap.h>
 #include <algorithm>
 #include <cassert>
+#include <cfloat>
 
 namespace MR
 {
@@ -143,11 +148,11 @@ struct Repetitions
 
 static_assert( sizeof( Repetitions ) == 1 );
 
-static ParallelHashMap<UnorientedTriangle, Repetitions, UnorientedTriangleHasher> makeTriangleHashMap( const AllLocalTriangulations & triangs )
+static ParallelHashMap<UnorientedTriangle, Repetitions> makeTriangleHashMap( const AllLocalTriangulations & triangs )
 {
     MR_TIMER
 
-    ParallelHashMap<UnorientedTriangle, Repetitions, UnorientedTriangleHasher> map;
+    ParallelHashMap<UnorientedTriangle, Repetitions> map;
     ParallelFor( size_t(0), map.subcnt(), [&]( size_t myPartId )
     {
         for ( VertId v = 0_v; v + 1 < triangs.fanRecords.size(); ++v )
@@ -160,14 +165,14 @@ static ParallelHashMap<UnorientedTriangle, Repetitions, UnorientedTriangleHasher
                 if ( triangs.neighbors[n] == border )
                     continue;
                 const auto next = triangs.neighbors[n + 1 < nend ? n + 1 : nbeg];
-                bool flippped = false;
-                const UnorientedTriangle triplet( { v, next, triangs.neighbors[n] }, &flippped );
+                bool flipped = false;
+                const UnorientedTriangle triplet( { v, next, triangs.neighbors[n] }, &flipped );
                 const auto hashval = map.hash( triplet );
                 const auto idx = map.subidx( hashval );
                 if ( idx != myPartId )
                     continue;
                 Repetitions & r = map[triplet];
-                if ( flippped )
+                if ( flipped )
                     ++r.oppositeOriented;
                 else
                     ++r.sameOriented;
@@ -195,7 +200,7 @@ TrianglesRepetitions computeTrianglesRepetitions( const AllLocalTriangulations &
     return res;
 }
 
-std::vector<UnorientedTriangle> findRepeatedTriangles( const AllLocalTriangulations & triangs, int repetitions )
+std::vector<UnorientedTriangle> findRepeatedUnorientedTriangles( const AllLocalTriangulations & triangs, int repetitions )
 {
     MR_TIMER
     assert( repetitions >= 1 && repetitions <= 3 );
@@ -211,6 +216,241 @@ std::vector<UnorientedTriangle> findRepeatedTriangles( const AllLocalTriangulati
             res.push_back( key );
     }
     return res;
+}
+
+Triangulation findRepeatedOrientedTriangles( const AllLocalTriangulations & triangs, int repetitions )
+{
+    MR_TIMER
+    assert( repetitions >= 1 && repetitions <= 3 );
+
+    const auto map = makeTriangleHashMap( triangs );
+
+    Triangulation res;
+    for ( auto & [triplet, r] : map )
+    {
+        assert( r.sameOriented >= 0 && r.sameOriented <= 3 );
+        assert( r.oppositeOriented >= 0 && r.oppositeOriented <= 3 );
+        assert( r.sameOriented + r.oppositeOriented >= 1 );
+        if ( r.sameOriented == repetitions )
+            res.push_back( triplet );
+        if ( r.oppositeOriented == repetitions )
+            res.push_back( triplet.getFlipped() );
+    }
+    return res;
+}
+
+void findRepeatedOrientedTriangles( const AllLocalTriangulations & triangs, Triangulation * outRep3, Triangulation * outRep2 )
+{
+    MR_TIMER
+    assert( outRep3 || outRep2 );
+
+    const auto map = makeTriangleHashMap( triangs );
+
+    for ( auto & [triplet, r] : map )
+    {
+        assert( r.sameOriented >= 0 && r.sameOriented <= 3 );
+        assert( r.oppositeOriented >= 0 && r.oppositeOriented <= 3 );
+        assert( r.sameOriented + r.oppositeOriented >= 1 );
+        if ( outRep3 )
+        {
+            if ( r.sameOriented == 3 )
+                outRep3->push_back( triplet );
+            else if ( r.oppositeOriented == 3 )
+                outRep3->push_back( triplet.getFlipped() );
+        }
+        if ( outRep2 )
+        {
+            if ( r.sameOriented == 2 )
+                outRep2->push_back( triplet );
+            else if ( r.oppositeOriented == 2 )
+                outRep2->push_back( triplet.getFlipped() );
+        }
+    }
+}
+
+bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTriangulations & triangs, ProgressCallback progress,
+    Triangulation * outRep3, Triangulation * outRep2 )
+{
+    MR_TIMER
+
+    const auto bbox = pointCloud.computeBoundingBox();
+    if ( !reportProgress( progress, 0.025f ) )
+        return false;
+
+    const auto center = bbox.center();
+    const auto maxDistSqToCenter = bbox.size().lengthSq() / 4;
+
+    constexpr auto InvalidWeight = -FLT_MAX;
+    using HeapT = Heap<float, VertId>;
+    std::vector<HeapT::Element> elements;
+    const auto sz = pointCloud.points.size();
+    elements.reserve( sz );
+    for ( VertId v = 0_v; v < sz; ++v )
+        elements.push_back( { v, InvalidWeight } );
+
+    if ( !reportProgress( progress, 0.025f ) )
+        return false;
+
+    orientLocalTriangulations( triangs, pointCloud.points, [&]( VertId v )
+    {
+        return pointCloud.points[v] - center;
+    } );
+
+    if ( !reportProgress( progress, 0.05f ) )
+        return false;
+
+    // fill elements with negative weights: larger weight (smaller by magnitude) for points further from the center
+    if ( !BitSetParallelFor( pointCloud.validPoints, [&]( VertId v )
+    {
+        const auto dcenter = pointCloud.points[v] - center;
+        const auto w = dcenter.lengthSq() - maxDistSqToCenter;
+        assert( w <= 0 );
+        elements[(int)v].val = w;
+    }, subprogress( progress, 0.05f, 0.075f ) ) )
+        return false;
+
+    HeapT heap( std::move( elements ) );
+
+    if ( !reportProgress( progress, 0.1f ) )
+        return false;
+
+    progress = subprogress( progress, 0.1f, 1.0f );
+
+    // HashMap is about 10% faster than ParallelHashMap here
+    HashMap<UnorientedTriangle, Repetitions> map;
+
+    auto computeVertWeight = [&triangs, &map]( VertId v )
+    {
+        int sameOriented = 0;
+        int oppositeOriented = 0;
+        const auto border = triangs.fanRecords[v].border;
+        const auto nbeg = triangs.fanRecords[v].firstNei;
+        const auto nend = triangs.fanRecords[v+1].firstNei;
+        VertId otherBd;
+        for ( auto n = nbeg; n < nend; ++n )
+        {
+            const auto curr = triangs.neighbors[n];
+            const auto next = triangs.neighbors[n + 1 < nend ? n + 1 : nbeg];
+            if ( curr == border )
+            {
+                otherBd = next;
+                continue;
+            }
+            bool flipped = false;
+            const UnorientedTriangle triplet( { v, next, curr }, &flipped );
+            auto it = map.find( triplet );
+            if ( it == map.end() )
+                continue;
+            if ( it->second.sameOriented == 0 && it->second.oppositeOriented > 0 )
+                flipped ? ++sameOriented : ++oppositeOriented;
+            if ( it->second.sameOriented > 0 && it->second.oppositeOriented == 0 )
+                flipped ? ++oppositeOriented : ++sameOriented;
+        }
+        if ( oppositeOriented > sameOriented )
+        {
+            // reverse the orientation
+            std::reverse( triangs.neighbors.data() + nbeg, triangs.neighbors.data() + nend );
+            triangs.fanRecords[v].border = otherBd;
+        }
+        return std::abs( sameOriented - oppositeOriented );
+    };
+
+    VertBitSet notVisited = pointCloud.validPoints;
+    const auto totalCount = notVisited.count();
+    size_t visitedCount = 0;
+
+    auto enqueueNeighbors = [&]( VertId base )
+    {
+        assert( notVisited.test( base ) );
+        notVisited.reset( base );
+        ++visitedCount;
+        const auto nbeg = triangs.fanRecords[base].firstNei;
+        const auto nend = triangs.fanRecords[base+1].firstNei;
+        const auto border = triangs.fanRecords[base].border;
+        for ( auto n = nbeg; n < nend; ++n )
+        {
+            const auto curr = triangs.neighbors[n];
+            const auto next = triangs.neighbors[n + 1 < nend ? n + 1 : nbeg];
+            if ( curr == border )
+                continue;
+            bool flipped = false;
+            const UnorientedTriangle triplet( { base, next, curr }, &flipped );
+
+            /// all three vertices of the triangle have been visited, it will never be searched for again
+            const bool del = !notVisited.test( curr ) && !notVisited.test( next );
+            if ( !outRep2 && !outRep3 && del )
+            {
+                map.erase( triplet );
+                continue;
+            }
+            HashMap<UnorientedTriangle, Repetitions>::iterator it;
+            if ( del )
+            {
+                it = map.find( triplet );
+                if ( it == map.end() )
+                    continue; // no record in the map exists, so the number of repetitions is 1
+            }
+            else
+                it = map.insert( { triplet, Repetitions{} } ).first;
+            Repetitions & r = it->second;
+            if ( flipped )
+                ++r.oppositeOriented;
+            else
+                ++r.sameOriented;
+            if ( del )
+            {
+                if ( outRep2 )
+                {
+                    if ( r.sameOriented == 2 )
+                        outRep2->push_back( triplet );
+                    else if ( r.oppositeOriented == 2 )
+                        outRep2->push_back( triplet.getFlipped() );
+                }
+                if ( outRep3 )
+                {
+                    if ( r.sameOriented == 3 )
+                        outRep3->push_back( triplet );
+                    else if ( r.oppositeOriented == 3 )
+                        outRep3->push_back( triplet.getFlipped() );
+                }
+                /// all three vertices of the triangle have been visited, it will never be searched for again
+                map.erase( it );
+            }
+        }
+        for ( auto n = nbeg; n < nend; ++n )
+        {
+            const auto v = triangs.neighbors[n];
+            if ( notVisited.test( v ) )
+                heap.setValue( v, float( computeVertWeight( v ) ) );
+        }
+    };
+
+    for (;;)
+    {
+        auto [v, weight] = heap.top();
+        if ( weight == InvalidWeight )
+            break;
+        heap.setSmallerValue( v, InvalidWeight );
+        enqueueNeighbors( v );
+        if ( !reportProgress( progress, [&] { return (float)visitedCount / totalCount; }, visitedCount, 0x10000 ) )
+            return false;
+    }
+
+    if ( outRep2 )
+    {
+        for ( const auto & [triplet, r] : map )
+        {
+            assert( r.sameOriented < 3 );
+            assert( r.oppositeOriented < 3 );
+            assert( r.sameOriented + r.oppositeOriented >= 1 );
+            if ( r.sameOriented == 2 )
+                outRep2->push_back( triplet );
+            else if ( r.oppositeOriented == 2 )
+                outRep2->push_back( triplet.getFlipped() );
+        }
+    }
+
+    return true;
 }
 
 } //namespace MR

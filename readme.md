@@ -175,19 +175,24 @@ If you would like to use another version of CUDA, please modify `MRCudaVersion` 
 4. Open solution file `MeshLib/source/MeshLib.sln` in Visual Studio. Build it and run.
 
 ## Linux
-This installation was checked on Ubuntu 20.04.4.
+This installation was checked on Ubuntu 22.04.3 (WSL) with CMake 3.28.3
+
+**Install/Build dependencies. Build project. Run Test Application**
+
+Install CUDA v12.0 from [official site](https://developer.nvidia.com/cuda-toolkit-archive)
+
+Make sure CMake version at least 3.25.2 is installed
 
 Use automated installation process. It takes ~40 minutes if no required packages are already installed.
 This approach is useful for new MR developers
-**Install/Build dependencies. Build project. Run Test Application** Run the following in terminal:
+
+Run the following in terminal:
 
 ```sh
-git clone https://github.com/MeshInspector/MeshLib.git
+git clone --recurse-submodules https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
-git submodule update --init --recursive
-./scripts/build_thirdparty.sh # also installs the system dependencies when it is possible
-./scripts/build_source.sh
-./build/Release/bin/MRTest
+./scripts/build_thirdparty.sh  # do not select emscripten in the corresponding question
+./scripts/build_source.sh  # do not select emscripten in the corresponding question
 # create and install package for Ubuntu
 ./scripts/distribution.sh
 sudo apt install ./distr/meshlib-dev.deb
@@ -200,7 +205,8 @@ sudo apt install ./distr/meshlib-dev.rpm
 
 > **_NOTE:_** `./scripts/install_thirdparty.sh` script copies MR files directly to `/usr/local/lib`. Remove this directory manually if exists before apt install deb package.
 
-> **_NOTE:_** You could specify build type to Debug by `export MESHLIB_BUILD_TYPE=Debug`. Release is default.
+> **_NOTE:_** You could specify build type to Debug by `export MESHLIB_BUILD_TYPE=Debug`. Release is default. Set `MESHLIB_KEEP_BUILD=ON` to suppress full rebuild
+
 
 ## WASM/Emscripten
 This installation was checked on Ubuntu 22.04 with Emscripten 3.1.48.
@@ -221,6 +227,7 @@ cd ~/MeshLib
 ./scripts/build_thirdparty.sh # select Emscripten in the corresponding question
 ./scripts/build_source.sh # select Emscripten in the corresponding question
 ```
+> **_NOTE:_** Set `MESHLIB_KEEP_BUILD=ON` to suppress full rebuild
 
 Run
 ```

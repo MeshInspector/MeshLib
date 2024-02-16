@@ -220,18 +220,15 @@ std::optional<VertNormals> makeOrientedNormals( const PointCloud& pointCloud,
 }
 
 std::optional<VertNormals> makeOrientedNormals( const PointCloud& pointCloud,
-    const AllLocalTriangulations& triangs, const ProgressCallback & progress )
+    AllLocalTriangulations& triangs, const ProgressCallback & progress )
 {
     MR_TIMER
 
-    auto optNormals = makeUnorientedNormals( pointCloud, triangs, subprogress( progress, 0.0f, 0.1f ) );
-    if ( !optNormals )
-        return optNormals;
+    if ( !autoOrientLocalTriangulations( pointCloud, triangs, subprogress( progress, 0.0f, 0.9f ) ) )
+        return {};
 
-    if ( !orientNormals( pointCloud, *optNormals, triangs, subprogress( progress, 0.1f, 1.0f ) ) )
-        optNormals.reset();
-
-    return optNormals;
+    // since triangulations are oriented then normals will be oriented as well
+    return makeUnorientedNormals( pointCloud, triangs, subprogress( progress, 0.9f, 1.0f ) );
 }
 
 VertNormals makeNormals( const PointCloud& pointCloud, int avgNeighborhoodSize )

@@ -32,13 +32,22 @@ struct UnorientedTriangle : ThreeVertIds
         if ( outFlipped )
             *outFlipped = flipped;
     }
+
+    /// returns this triangle with the opposite orientation
+    ThreeVertIds getFlipped() const { return { (*this)[0], (*this)[2], (*this)[1] }; } // id #0 remains the lowest
+
     friend bool operator==( const UnorientedTriangle& a, const UnorientedTriangle& b ) = default;
 };
 
-/// defines hash function for UnorientedTriangle
-struct UnorientedTriangleHasher
+} //namespace MR
+
+namespace std
 {
-    size_t operator()( const UnorientedTriangle& triplet ) const
+
+template <>
+struct hash<MR::UnorientedTriangle>
+{
+    size_t operator() ( const MR::UnorientedTriangle& triplet ) const noexcept
     {
         return 
             2 * size_t( triplet[0] ) +
@@ -47,4 +56,4 @@ struct UnorientedTriangleHasher
     }
 };
 
-} //namespace MR
+} //namespace std

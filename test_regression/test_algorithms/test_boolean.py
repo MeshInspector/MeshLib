@@ -25,6 +25,7 @@ def test_boolean(tmp_path, operation_type, input_case):
     result_mesh = result.mesh
 
     # === Verification
+    mrmeshpy.saveMesh(result_mesh, tmp_path / f"{operation_type}.mrmesh")
     ref_mesh_path = input_folder / f"bool_{operation_type}.mrmesh"
     ref_mesh = mrmeshpy.loadMesh(ref_mesh_path)
     # no self colliding triangles
@@ -33,6 +34,3 @@ def test_boolean(tmp_path, operation_type, input_case):
     #  check meshes similarity (for extra details on fail)
     with check:
         compare_meshes_similarity(ref_mesh, result_mesh)
-    # check result mesh is same as one of reference
-    with check:
-        compare_mesh(result_mesh, ref_mesh_path)

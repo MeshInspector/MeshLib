@@ -60,6 +60,11 @@ SceneRootObject::SceneRootObject()
     select( false );
 }
 
+std::shared_ptr<Object> SceneRootObject::clone() const
+{
+    return std::make_shared<SceneRootObject>( ProtectedStruct{}, *this );
+}
+
 std::shared_ptr<SceneRootObject> SceneRootObject::cloneRoot() const
 {
     return std::dynamic_pointer_cast< SceneRootObject >( clone() );

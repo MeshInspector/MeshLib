@@ -33,7 +33,7 @@ void trimWithPlane( PointCloud& pc, const Plane3f& plane, PointCloud* otherPart 
     if ( otherPart )
     {
         *otherPart = PointCloud{};
-        otherPart->addPartByMask( *otherPart, otherVerts );
+        otherPart->addPartByMask( pc, otherVerts );
     }
     pc = std::move( res );
 }

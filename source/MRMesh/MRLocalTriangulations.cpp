@@ -148,11 +148,11 @@ struct Repetitions
 
 static_assert( sizeof( Repetitions ) == 1 );
 
-static ParallelHashMap<UnorientedTriangle, Repetitions, UnorientedTriangleHasher> makeTriangleHashMap( const AllLocalTriangulations & triangs )
+static ParallelHashMap<UnorientedTriangle, Repetitions> makeTriangleHashMap( const AllLocalTriangulations & triangs )
 {
     MR_TIMER
 
-    ParallelHashMap<UnorientedTriangle, Repetitions, UnorientedTriangleHasher> map;
+    ParallelHashMap<UnorientedTriangle, Repetitions> map;
     ParallelFor( size_t(0), map.subcnt(), [&]( size_t myPartId )
     {
         for ( VertId v = 0_v; v + 1 < triangs.fanRecords.size(); ++v )
@@ -265,7 +265,8 @@ bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTrian
 
     progress = subprogress( progress, 0.1f, 1.0f );
 
-    ParallelHashMap<UnorientedTriangle, Repetitions, UnorientedTriangleHasher> map;
+    // HashMap is about 10% faster than ParallelHashMap here
+    HashMap<UnorientedTriangle, Repetitions> map;
 
     auto computeVertWeight = [&triangs, &map]( VertId v )
     {
@@ -323,6 +324,12 @@ bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTrian
                 continue;
             bool flipped = false;
             const UnorientedTriangle triplet( { base, next, curr }, &flipped );
+            if ( !notVisited.test( curr ) && !notVisited.test( next ) )
+            {
+                /// all three vertices of the triangle have been visited, it will never be searched for again
+                map.erase( triplet );
+                continue;
+            }
             Repetitions & r = map[triplet];
             if ( flipped )
                 ++r.oppositeOriented;

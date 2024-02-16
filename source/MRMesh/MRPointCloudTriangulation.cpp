@@ -41,16 +41,18 @@ struct VertTriplet
         }
     }
     VertId a, b, c;
+    friend bool operator==( const VertTriplet& a, const VertTriplet& b ) = default;
 };
 
-bool operator==( const VertTriplet& a, const VertTriplet& b )
-{
-    return( a.a == b.a && a.b == b.b && a.c == b.c );
-}
+} // namespace MR
 
-struct VertTripletHasher
+namespace std
 {
-    size_t operator()( const VertTriplet& triplet ) const
+
+template <>
+struct hash<MR::VertTriplet>
+{
+    size_t operator() ( const MR::VertTriplet& triplet ) const noexcept
     {
         return 
             2 * size_t( triplet.a ) +
@@ -58,6 +60,11 @@ struct VertTripletHasher
             5 * size_t( triplet.c );
     }
 };
+
+} //namespace std
+
+namespace MR
+{
 
 class PointCloudTriangulator
 {
@@ -119,7 +126,7 @@ std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progr
     MR_TIMER
 
     // accumulate triplets
-    ParallelHashMap<VertTriplet, int, VertTripletHasher> map;
+    ParallelHashMap<VertTriplet, int> map;
     if ( !ParallelFor( size_t(0), map.subcnt(), [&]( size_t myPartId )
     {
         for ( VertId v = 0_v; v + 1 < localTriangulations_.fanRecords.size(); ++v )

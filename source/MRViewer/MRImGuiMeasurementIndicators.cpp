@@ -39,12 +39,15 @@ static void forEachElement( Element elem, F&& func )
 
 Params::Params()
 {
-    bool isDark = ColorTheme::getPreset() == ColorTheme::Preset::Dark;
-    colorText = isDark ? Color( 1.f, 1.f, 1.f, 1.f ) : Color( 0.f, 0.f, 0.f, 1.f );
-    colorTextOutline = isDark ? Color( 0.f, 0.f, 0.f, 0.5f ) : Color( 1.f, 1.f, 1.f, 0.5f );
+    colorMain = Color( 1.f, 1.f, 1.f, 1.f );
+    colorOutline = Color( 0.f, 0.f, 0.f, 0.5f );
 
-    colorMain = colorText;
-    colorOutline = colorTextOutline;
+    colorText = colorMain;
+    colorTextOutline = colorOutline;
+
+    bool isDark = ColorTheme::getPreset() == ColorTheme::Preset::Dark;
+    if ( !isDark )
+        std::swap( colorText, colorTextOutline );
 }
 
 float StringWithIcon::getIconWidth() const

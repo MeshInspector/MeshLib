@@ -335,12 +335,9 @@ void FanOptimizer::optimize( int steps, float critAng )
         queue_.emplace( calcQueueElement_( topEl.prevId, critAng ) );
     }
 
-    fanData_.neighbors.erase(
-        std::remove_if( fanData_.neighbors.begin(), fanData_.neighbors.end(), [] ( VertId  v )
-    {
-        return !v.valid();
-    } ),
-        fanData_.neighbors.end() );
+    erase_if( fanData_.neighbors, []( VertId v ) { return !v.valid(); } );
+    if ( fanData_.neighbors.size() < 2 )
+        fanData_.neighbors.clear();
 }
 
 void FanOptimizer::updateBorder( float angle )
@@ -421,6 +418,7 @@ void trianglulateFan( const VertCoords& points, VertId centerVert, TriangulatedF
         return;
     FanOptimizer optimizer( points, trustedNormals, triangulationData, centerVert );
     optimizer.optimize( steps, critAngle );
+    assert( triangulationData.neighbors.empty() || triangulationData.neighbors.size() > 1 );
 }
 
 void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings & settings,

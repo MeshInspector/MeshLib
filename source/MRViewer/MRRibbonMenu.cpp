@@ -2031,7 +2031,7 @@ void RibbonMenu::setupShortcuts_()
         auto& viewport = getViewerInstance().viewport();
         viewport.setOrthographic( !viewport.getParameters().orthographic );
     } }  );
-    shortcutManager_->setShortcut( { GLFW_KEY_T,0 }, { ShortcutManager::Category::View, "Toggle faces on selected meshes",[] ()
+    shortcutManager_->setShortcut( { GLFW_KEY_X,0 }, { ShortcutManager::Category::View, "Toggle faces on selected meshes",[] ()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;

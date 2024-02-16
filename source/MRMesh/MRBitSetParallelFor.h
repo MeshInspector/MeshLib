@@ -57,12 +57,12 @@ void BitSetParallelForAll( const BS & bs, F f )
 /// reports progress from calling thread only;
 /// \return false if the processing was canceled by progressCb
 template <typename BS, typename F> 
-bool BitSetParallelForAllRanged( const BS& bs, F f, ProgressCallback progressCb, size_t reportProgressEveryBit = 1024 )
+bool BitSetParallelForAllRanged( const BS& bs, F f, ProgressCallback progressCb = {}, size_t reportProgressEveryBit = 1024 )
 {
     using IndexType = typename BS::IndexType;
     if ( !progressCb )
     {
-        BitSetParallelForAll( bs, [&] ( VertId v )
+        BitSetParallelForAll( bs, [&] ( IndexType v )
         {
             f( v, IndexType( 0 ), IndexType( bs.size() ) );
         } );

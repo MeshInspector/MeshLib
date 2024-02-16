@@ -6,7 +6,6 @@
 #include "MRRingIterator.h"
 #include "MRRegionBoundary.h"
 #include "MRTimer.h"
-#include "MRPointCloud.h"
 
 namespace MR
 {

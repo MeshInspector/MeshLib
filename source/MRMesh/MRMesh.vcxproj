@@ -20,7 +20,6 @@
     <ClInclude Include="MRCylinder3.h" />
     <ClInclude Include="MRCylinderApproximator.h" />
     <ClInclude Include="MRCylinderObject.h" />
-    <ClInclude Include="MRDivideWithPlane.h" />
     <ClInclude Include="MRFeatureObject.h" />
     <ClInclude Include="MRFeatures.h" />
     <ClInclude Include="MRFinally.h" />
@@ -422,7 +421,6 @@
     <ClCompile Include="MRDistanceMapParams.cpp" />
     <ClCompile Include="MRDistanceMapSave.cpp" />
     <ClCompile Include="MRDistanceMapTests.cpp" />
-    <ClCompile Include="MRDivideWithPlane.cpp" />
     <ClCompile Include="MREdgeMetric.cpp" />
     <ClCompile Include="MREdgePaths.cpp" />
     <ClCompile Include="MREmbeddedPython.cpp" />
@@ -487,6 +485,7 @@
     <ClCompile Include="MRPointsLoadLas.cpp" />
     <ClCompile Include="MRPointsProject.cpp" />
     <ClCompile Include="MRPointsToMeshProjector.cpp" />
+    <ClCompile Include="MRMeshTrimWithPlane.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
     <ClCompile Include="MRMeshDecimateParallel.cpp" />
     <ClCompile Include="MRMeshDirMax.cpp" />

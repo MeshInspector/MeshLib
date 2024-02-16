@@ -1,4 +1,4 @@
-#include "MRDivideWithPlane.h"
+#include "MRMeshTrimWithPlane.h"
 #include "MRMesh.h"
 #include "MRPlane3.h"
 #include "MRVector2.h"
@@ -11,10 +11,10 @@
 namespace MR
 {
 
-VertBitSet findHalfSpacePoints( const PointCloud& pc, const Plane3f& plane )
+VertBitSet subdivideWithPlane( const PointCloud& pc, const Plane3f& plane )
 {
     MR_TIMER
-        VertBitSet result( pc.validPoints.find_last() + 1 );
+    VertBitSet result( pc.validPoints.find_last() + 1 );
     BitSetParallelFor( pc.validPoints, [&] ( VertId v )
     {
         result.set( v, plane.distance( pc.points[v] ) > 0 );
@@ -22,10 +22,10 @@ VertBitSet findHalfSpacePoints( const PointCloud& pc, const Plane3f& plane )
     return result;
 }
 
-void divideWithPlane( PointCloud& pc, const Plane3f& plane, PointCloud* otherPart )
+void trimWithPlane( PointCloud& pc, const Plane3f& plane, PointCloud* otherPart )
 {
     MR_TIMER
-        const auto posVerts = findHalfSpacePoints( pc, plane );
+    const auto posVerts = subdivideWithPlane( pc, plane );
 
     PointCloud res;
     res.addPartByMask( pc, posVerts );
@@ -37,15 +37,15 @@ void divideWithPlane( PointCloud& pc, const Plane3f& plane, PointCloud* otherPar
     pc = std::move( res );
 }
 
-FaceBitSet subdivideWithPlane( Mesh& mesh, const Plane3f& plane, FaceHashMap* new2Old, float eps, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
+FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap * new2Old, float eps, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
 {
     MR_TIMER
-        assert( eps >= 0 );
+    assert( eps >= 0 );
 
     VertBitSet positiveVerts( mesh.topology.vertSize() );
     VertBitSet negativeVerts( positiveVerts.size() );
 
-    BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
         const auto d = plane.distance( mesh.points[v] );
         if ( d > 0 )
@@ -55,7 +55,7 @@ FaceBitSet subdivideWithPlane( Mesh& mesh, const Plane3f& plane, FaceHashMap* ne
     } );
 
     UndirectedEdgeBitSet edgesToCut( mesh.topology.undirectedEdgeSize() );
-    BitSetParallelForAll( edgesToCut, [&] ( UndirectedEdgeId ue )
+    BitSetParallelForAll( edgesToCut, [&]( UndirectedEdgeId ue )
     {
         const VertId o = mesh.topology.org( ue );
         if ( !o )
@@ -69,7 +69,7 @@ FaceBitSet subdivideWithPlane( Mesh& mesh, const Plane3f& plane, FaceHashMap* ne
     } );
 
     FaceBitSet positiveFaces( mesh.topology.lastValidFace() + 1 );
-    BitSetParallelFor( mesh.topology.getValidFaces(), [&] ( FaceId f )
+    BitSetParallelFor( mesh.topology.getValidFaces(), [&]( FaceId f )
     {
         VertId vs[3];
         mesh.topology.getTriVerts( f, vs );
@@ -88,10 +88,8 @@ FaceBitSet subdivideWithPlane( Mesh& mesh, const Plane3f& plane, FaceHashMap* ne
 
     MR_WRITER( mesh );
     const VertId firstNewVert( mesh.topology.vertSize() );
-    auto isNewVert = [firstNewVert] ( VertId v )
-    {
-        return v >= firstNewVert;
-    };
+    auto isNewVert = [firstNewVert]( VertId v )
+        { return v >= firstNewVert; };
     for ( EdgeId e : edgesToCut )
     {
         VertId vo = mesh.topology.org( e );
@@ -107,7 +105,7 @@ FaceBitSet subdivideWithPlane( Mesh& mesh, const Plane3f& plane, FaceHashMap* ne
             e = e.sym();
             std::swap( vo, vd );
             std::swap( po, pd );
-            std::swap( o, d );
+            std::swap(  o,  d );
         }
         assert( o > 0 && d < 0 );
         if ( o <= eps )
@@ -158,12 +156,12 @@ FaceBitSet subdivideWithPlane( Mesh& mesh, const Plane3f& plane, FaceHashMap* ne
     return positiveFaces;
 }
 
-void trimWithPlane( Mesh& mesh, const Plane3f& plane, UndirectedEdgeBitSet* outCutEdges, FaceHashMap* new2Old, float eps, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
+void trimWithPlane( Mesh& mesh, const Plane3f & plane, UndirectedEdgeBitSet * outCutEdges, FaceHashMap * new2Old, float eps, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
 {
     return trimWithPlane( mesh, TrimWithPlaneParams{ .plane = plane, .eps = eps, .onEdgeSplitCallback = onEdgeSplitCallback }, TrimOptionalOutput{ .outCutEdges = outCutEdges, .new2Old = new2Old } );
 }
 
-void trimWithPlane( Mesh& mesh, const Plane3f& plane, std::vector<EdgeLoop>* outCutContours, FaceHashMap* new2Old, float eps, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
+void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * outCutContours, FaceHashMap * new2Old, float eps, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
 {
     return trimWithPlane( mesh, TrimWithPlaneParams{ .plane = plane, .eps = eps, .onEdgeSplitCallback = onEdgeSplitCallback }, TrimOptionalOutput{ .outCutContours = outCutContours, .new2Old = new2Old } );
 }
@@ -171,7 +169,7 @@ void trimWithPlane( Mesh& mesh, const Plane3f& plane, std::vector<EdgeLoop>* out
 void trimWithPlane( Mesh& mesh, const TrimWithPlaneParams& params, const TrimOptionalOutput& optOut )
 {
     MR_TIMER
-        const auto posFaces = subdivideWithPlane( mesh, params.plane, optOut.new2Old, params.eps, params.onEdgeSplitCallback );
+    const auto posFaces = subdivideWithPlane( mesh, params.plane, optOut.new2Old, params.eps, params.onEdgeSplitCallback );
     if ( optOut.outCutEdges )
         *optOut.outCutEdges = findRegionBoundaryUndirectedEdgesInsideMesh( mesh.topology, posFaces );
 
@@ -188,11 +186,11 @@ void trimWithPlane( Mesh& mesh, const TrimWithPlaneParams& params, const TrimOpt
             }
 #endif
     }
-
+    
     const auto otherFaces = mesh.topology.getValidFaces() - posFaces;
     if ( optOut.otherPart )
     {
-        *optOut.otherPart = mesh;
+        *optOut.otherPart = mesh;        
         if ( optOut.otherOutCutContours )
         {
             *optOut.otherOutCutContours = findLeftBoundaryInsideMesh( optOut.otherPart->topology, otherFaces );

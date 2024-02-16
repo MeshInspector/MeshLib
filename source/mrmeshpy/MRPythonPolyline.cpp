@@ -48,7 +48,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Polyline##dimension, [] ( pybind11::module_&
 \
         def( "orgPnt", &PolylineType::orgPnt, pybind11::arg( "e" ), "Returns coordinates of the edge origin." ).\
         def( "destPnt", &PolylineType::destPnt, pybind11::arg( "e" ), "Returns coordinates of the edge destination." ).\
-        def( "edgePoint", &PolylineType::edgePoint, pybind11::arg( "e" ), pybind11::arg( "f" ), "Returns a point on the edge: origin point for f=0 and destination point for f=1." ).\
+        def( "edgePoint", ( VectorType( PolylineType::* )( MR::EdgeId, float )const )&PolylineType::edgePoint, pybind11::arg( "e" ), pybind11::arg( "f" ), "Returns a point on the edge: origin point for f=0 and destination point for f=1." ).\
+        def( "edgePoint", ( VectorType( PolylineType::* )( const MR::EdgePoint& )const )&PolylineType::edgePoint, pybind11::arg( "ep" ), "Computes coordinates of point given as edge and relative position on it." ).\
         def( "edgeCenter", &PolylineType::edgeCenter, pybind11::arg( "e" ), "Returns edge's centroid." ).\
 \
         def( "edgeVector", &PolylineType::edgeVector, pybind11::arg( "e" ), "Returns vector equal to edge destination point minus edge origin point." ).\

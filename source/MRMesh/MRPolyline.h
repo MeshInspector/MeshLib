@@ -77,6 +77,12 @@ public:
     /// returns line segment of given edge
     [[nodiscard]] LineSegm<V> edgeSegment( EdgeId e ) const { return LineSegm<V>( orgPnt( e ), destPnt( e ) ); }
 
+    /// converts vertex into edge-point representation
+    [[nodiscard]] EdgePoint toEdgePoint( VertId v ) const { return EdgePoint( topology, v ); }
+
+    /// converts edge and point's coordinates into edge-point representation
+    [[nodiscard]] MRMESH_API EdgePoint toEdgePoint( EdgeId e, const V & p ) const;
+
     /// returns Euclidean length of the edge
     [[nodiscard]] float edgeLength( EdgeId e ) const { return edgeVector( e ).length(); }
 

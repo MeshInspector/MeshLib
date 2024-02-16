@@ -1,4 +1,4 @@
-#include "MRPointCLoudDivideWithPlane.h"
+#include "MRPointCloudDivideWithPlane.h"
 
 #include "MRTimer.h"
 #include "MRPointCloud.h"

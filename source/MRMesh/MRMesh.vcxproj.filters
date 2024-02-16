@@ -1197,7 +1197,7 @@
     <ClInclude Include="MRPointsComponents.h">
       <Filter>Source Files\Components</Filter>
     </ClInclude>
-    <ClInclude Include="MRPointCLoudDivideWithPlane.h">
+    <ClInclude Include="MRPointCloudDivideWithPlane.h">
       <Filter>Source Files\PointCloud</Filter>
     </ClInclude>
   </ItemGroup>

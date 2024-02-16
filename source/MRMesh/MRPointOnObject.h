@@ -3,6 +3,7 @@
 #include "MRPointOnFace.h"
 #include "MRMeshTriPoint.h"
 #include "MREdgePoint.h"
+#include <variant>
 
 namespace MR
 {

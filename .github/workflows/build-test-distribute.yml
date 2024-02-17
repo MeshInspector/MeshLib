@@ -98,7 +98,7 @@ jobs:
       - name: Download Windows Binaries Archive
         uses: actions/download-artifact@v4
         with:
-          name: WindowsArchive*
+          pattern: WindowsArchive*
           merge-multiple: true
 
       - name: Extract Windows Binaries

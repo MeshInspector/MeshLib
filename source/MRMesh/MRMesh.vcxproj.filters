@@ -1989,6 +1989,9 @@
     <ClCompile Include="MRPointsComponents.cpp">
       <Filter>Source Files\Components</Filter>
     </ClCompile>
+    <ClCompile Include="MRPointOnObject.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
     <ClCompile Include="MRPointCloudDivideWithPlane.cpp">
       <Filter>Source Files\PointCloud</Filter>
     </ClCompile>

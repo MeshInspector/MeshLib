@@ -20,6 +20,20 @@
 #include "MRMesh/MRDirectory.h"
 #include <MRMesh/MRSceneRoot.h>
 
+namespace
+{
+const char* getViewerSettingTabName( MR::ViewerSettingsPlugin::TabType tab )
+{
+    constexpr std::array<const char*, size_t( MR::ViewerSettingsPlugin::TabType::Count )> tabNames{
+        "Settings",
+        "Viewport",
+        "View",
+        "Control"
+    };
+    return tabNames[int( tab )];
+}
+}
+
 namespace MR
 {
 
@@ -62,34 +76,26 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
     if ( UI::beginTabBar( "##MainTabs" ) )
     {
-        if ( UI::beginTabItem( "Settings" ) )
+        for ( int i = 0; i<int( TabType::Count ); ++i )
         {
-            activeTab_ = TabType::Settings;
-            drawSettingsTab_( menuWidth, menuScaling );
-            UI::endTabItem();
-        }
-        if ( UI::beginTabItem( "Viewport" ) )
-        {
-            activeTab_ = TabType::Viewport;
-            drawViewportTab_( menuWidth, menuScaling );
-            UI::endTabItem();
-        }
-        if ( UI::beginTabItem( "View" ) )
-        {
-            activeTab_ = TabType::View;
-            drawViewTab_( menuWidth, menuScaling );
-            UI::endTabItem();
-        }
-        if ( UI::beginTabItem( "Control" ) )
-        {
-            activeTab_ = TabType::Control;
-            drawControlTab_( menuWidth, menuScaling );
-            UI::endTabItem();
+            auto tab = TabType( i );
+            if ( UI::beginTabItem( getViewerSettingTabName( tab ) ) )
+            {
+                activeTab_ = tab;
+                drawTab_( tab, menuWidth, menuScaling );
+                drawCustomSettinds_( tab, menuScaling );
+                UI::endTabItem();
+            }
         }
         UI::endTabBar();
     }
 
     ImGui::EndCustomStatePlugin();
+}
+
+void ViewerSettingsPlugin::addComboSettings( const TabType tab, std::shared_ptr<ExternalSettings> settings )
+{
+    comboSettings_[size_t( tab )].push_back( settings );
 }
 
 bool ViewerSettingsPlugin::onEnable_()
@@ -120,6 +126,28 @@ bool ViewerSettingsPlugin::onDisable_()
     return true;
 }
 
+void ViewerSettingsPlugin::drawTab_( TabType tab, float menuWidth, float menuScaling )
+{
+    switch ( tab )
+    {
+    case MR::ViewerSettingsPlugin::TabType::Settings:
+        drawSettingsTab_( menuWidth, menuScaling );
+        break;
+    case MR::ViewerSettingsPlugin::TabType::Viewport:
+        drawViewportTab_( menuWidth, menuScaling );
+        break;
+    case MR::ViewerSettingsPlugin::TabType::View:
+        drawViewTab_( menuWidth, menuScaling );
+        break;
+    case MR::ViewerSettingsPlugin::TabType::Control:
+        drawControlTab_( menuWidth, menuScaling );
+        break;
+    case MR::ViewerSettingsPlugin::TabType::Count:
+    default:
+        break;
+    }
+}
+
 void ViewerSettingsPlugin::drawSettingsTab_( float menuWidth, float menuScaling )
 {
     auto& style = ImGui::GetStyle();
@@ -142,6 +170,14 @@ void ViewerSettingsPlugin::drawSettingsTab_( float menuWidth, float menuScaling 
                                                   std::bind( &RibbonMenu::getCloseContextOnChange, ribbonMenu_ ),
                                                   std::bind( &RibbonMenu::setCloseContextOnChange, ribbonMenu_, std::placeholders::_1 ) );
             UI::setTooltipIfHovered( "Close scene context menu on any change", menuScaling );
+            
+            UI::checkbox( "Show Experimental Features", &RibbonSchemaHolder::schema().experimentalFeatures );
+            UI::setTooltipIfHovered( "Show experimental ribbon tabs", menuScaling );
+
+            UI::checkbox( "Close Tool on Activating Another One", 
+                                                  std::bind( &RibbonMenu::getAutoCloseBlockingPlugins, ribbonMenu_ ), 
+                                                  std::bind( &RibbonMenu::setAutoCloseBlockingPlugins, ribbonMenu_, std::placeholders::_1 ) );
+            UI::setTooltipIfHovered( "Automatically close blocking tool when another blocking tool is activated", menuScaling );
         }
 
         static std::vector<std::string> shadingModes = { "Auto Detect", "Smooth", "Flat" };
@@ -540,6 +576,14 @@ void ViewerSettingsPlugin::drawTouchpadSettings_()
         updateSettings = true;
     if ( updateSettings )
         viewer->setTouchpadParameters( touchpadParameters_ );
+}
+
+void ViewerSettingsPlugin::drawCustomSettinds_( TabType tabType, float scaling )
+{
+    for ( auto& settings : comboSettings_[size_t( tabType )] )
+    {
+        settings->draw( scaling );
+    }
 }
 
 MR_REGISTER_RIBBON_ITEM( ViewerSettingsPlugin )

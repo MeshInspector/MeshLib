@@ -119,9 +119,11 @@
     <ClInclude Include="MRNormalDenoising.h" />
     <ClInclude Include="MRNormalsToPoints.h" />
     <ClInclude Include="MROffsetContours.h" />
+    <ClInclude Include="MRPointCloudDivideWithPlane.h" />
     <ClInclude Include="MRPointOnObject.h" />
     <ClInclude Include="MROverlappingTris.h" />
     <ClInclude Include="MRObjectGcode.h" />
+    <ClInclude Include="MRPointsComponents.h" />
     <ClInclude Include="MRPointsLoadE57.h" />
     <ClInclude Include="MRPointsProject.h" />
     <ClInclude Include="MRPointsToMeshProjector.h" />
@@ -293,6 +295,7 @@
     <ClInclude Include="MRUnionFind.h" />
     <ClInclude Include="MRUniquePtr.h" />
     <ClInclude Include="MRUniteManyMeshes.h" />
+    <ClInclude Include="MRUnorientedTriangle.h" />
     <ClInclude Include="MRUVSphere.h" />
     <ClInclude Include="MRVDBFloatGrid.h" />
     <ClInclude Include="MRVDBProgressInterrupter.h" />
@@ -363,6 +366,12 @@
     <ClInclude Include="MRObjectSave.h" />
     <ClInclude Include="MRZlib.h" />
     <ClInclude Include="MRVoxelsVolumeAccess.h" />
+    <ClInclude Include="MRFlagOperators.h" />
+    <ClInclude Include="MRMeasurementObject.h" />
+    <ClInclude Include="MRRadiusMeasurementObject.h" />
+    <ClInclude Include="MRDistanceMeasurementObject.h" />
+    <ClInclude Include="MRAngleMeasurementObject.h" />
+    <ClInclude Include="MRDefaultMeasurementObjects.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -472,6 +481,9 @@
     <ClCompile Include="MROffsetContours.cpp" />
     <ClCompile Include="MROverlappingTris.cpp" />
     <ClCompile Include="MRObjectGcode.cpp" />
+    <ClCompile Include="MRPointOnObject.cpp" />
+    <ClCompile Include="MRPointCloudDivideWithPlane.cpp" />
+    <ClCompile Include="MRPointsComponents.cpp" />
     <ClCompile Include="MRPointsLoadE57.cpp" />
     <ClCompile Include="MRPointsLoadLas.cpp" />
     <ClCompile Include="MRPointsProject.cpp" />
@@ -623,6 +635,10 @@
     <ClCompile Include="MRZip.cpp" />
     <ClCompile Include="MRObjectSave.cpp" />
     <ClCompile Include="MRZlib.cpp" />
+    <ClCompile Include="MRRadiusMeasurementObject.cpp" />
+    <ClCompile Include="MRDistanceMeasurementObject.cpp" />
+    <ClCompile Include="MRAngleMeasurementObject.cpp" />
+    <ClCompile Include="MRDefaultMeasurementObjects.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\laz-perf\laz-perf.vcxproj">

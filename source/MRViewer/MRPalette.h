@@ -148,6 +148,8 @@ private:
 
     int maxLabelCount_ = 0;
 
+    float prevMaxLabelWidth_ = 0.0f;
+
     static void resizeCallback_( ImGuiSizeCallbackData* data );
 };
 

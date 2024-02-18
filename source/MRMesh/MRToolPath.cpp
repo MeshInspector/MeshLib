@@ -254,9 +254,6 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsoline
             if ( !orgVertId.valid() || !dstVertId.valid() )
                 continue;
 
-            // if removed then warning C4686: 'MR::findProjectionOnPolyline2': possible change in behavior, change in UDT return calling convention
-            static PolylineProjectionResult3 unused;
-
             auto proj = findProjectionOnPolyline( res.meshAfterCut.points[orgVertId], startPolyline );
             float dist = sqrt( proj.distSq );
             startVerticesWithDists.insert_or_assign( orgVertId, dist );

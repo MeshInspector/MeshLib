@@ -38,3 +38,21 @@ def test_numpy_meshbuild():
     assert mesh.points.vec.size() == 4
     np.testing.assert_almost_equal(mesh.points.vec[0].z, 0.0)
     np.testing.assert_almost_equal(mesh.points.vec[2].x, 1.0)
+
+
+def test_numpy_makeManifold():
+
+    # Create a non-manifold mesh
+    verts = np.array([[1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 0], [0.5, 0.5, 0]])
+    faces = np.array([[0, 1, 2], [0, 3, 1], [0, 3, 1], [0, 4, 1]])
+
+    # Build the mesh allowing non-manifold edges
+    m1 = mrmeshnumpy.meshFromFacesVerts(faces, verts)
+    assert m1.topology.getValidFaces().count() == 3
+
+    # Build the mesh again without allowing manifold edges
+    settings = mrmesh.MeshBuilderSettings()
+    settings.allowNonManifoldEdge = False
+
+    m2 = mrmeshnumpy.meshFromFacesVerts(faces, verts, settings)
+    assert m2.topology.getValidFaces().count() == 2

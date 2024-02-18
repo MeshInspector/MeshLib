@@ -389,6 +389,11 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                     objectMesh->setTexture( { image.value(), FilterType::Linear } );
                     objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
                 }
+                if ( !resValue[i].colors.empty() )
+                {
+                    objectMesh->setVertsColorMap( std::move( resValue[i].colors ) );
+                    objectMesh->setColoringType( ColoringType::VertsColorMap );
+                }
 
                 objectMesh->setXf( xf );
 

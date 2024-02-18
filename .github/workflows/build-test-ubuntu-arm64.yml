@@ -50,6 +50,9 @@ jobs:
           ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
           ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
 
+      - name: Setup python requirements
+        run: python3 -m pip install -r ./requirements/python.txt
+
       - name: Build
         run: ./scripts/build_source.sh
         env:
@@ -66,9 +69,9 @@ jobs:
 
       #Save timing in artifact
       - name: Upload Timings
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: Timing_Logs
+          name: Timing_Logs_${{matrix.os}}-arm64_${{matrix.config}}_${{matrix.compiler}}
           path: time_log/
 
       - name: Run Tests
@@ -108,8 +111,8 @@ jobs:
 
       - name: Upload Ubuntu Developer Distribution
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: Distributives
+          name: Distributives_${{matrix.os}}_arm64
           path: meshlib-${{matrix.os}}-arm64-dev.deb
           retention-days: 1

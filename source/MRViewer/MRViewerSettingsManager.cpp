@@ -40,6 +40,8 @@ const std::string cMSAA = "multisampleAntiAliasing";
 const std::string cncMachineSettingsKey = "CNCMachineSettings";
 const std::string cTouchpadSettings = "touchpadSettings";
 const std::string cEnableSavedDialogPositions = "enableSavedDialogPositions";
+const std::string cAutoClosePlugins = "autoClosePlugins";
+const std::string cShowExperimentalFeatures = "showExperimentalFeatures";
 }
 
 namespace MR
@@ -82,7 +84,10 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
 
     auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>();
     if ( ribbonMenu )
+    {
         ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, true ) );
+        ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, true ) );
+    }
 
     if ( cfg.hasJsonValue( cSceneControlParamKey ) )
     {
@@ -213,6 +218,8 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             ribbonMenu->setDeselectNewHiddenObjects( cfg.getBool( cDeselectNewHiddenObjects ) );
         if ( cfg.hasBool( cCloseContextOnChange ) )
             ribbonMenu->setCloseContextOnChange( cfg.getBool( cCloseContextOnChange ) );
+
+        RibbonSchemaHolder::schema().experimentalFeatures = cfg.getBool( cShowExperimentalFeatures, false );
     }
 
     ColorTheme::setupByTypeName( colorThemeType, colorThemeName );
@@ -297,7 +304,10 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
 
     auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>();
     if ( ribbonMenu )
+    {
         cfg.setBool( cTopPanelPinnedKey, ribbonMenu->isTopPannelPinned() );
+        cfg.setBool( cAutoClosePlugins, ribbonMenu->getAutoCloseBlockingPlugins() );
+    }
 
     Json::Value sceneControls;
     for ( int i = 0; i < int( MouseMode::Count ); ++i )
@@ -356,6 +366,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         cfg.setBool( cShowSelectedObjects, ribbonMenu->getShowNewSelectedObjects() );
         cfg.setBool( cDeselectNewHiddenObjects, ribbonMenu->getDeselectNewHiddenObjects() );
         cfg.setBool( cCloseContextOnChange, ribbonMenu->getCloseContextOnChange() );
+        cfg.setBool( cShowExperimentalFeatures, RibbonSchemaHolder::schema().experimentalFeatures );
     }
 
     Json::Value spaceMouseParamsJson;

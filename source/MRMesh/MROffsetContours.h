@@ -91,7 +91,7 @@ struct OffsetContoursRestoreZParams
 {
     /// if callback is set it is called to restore Z value
     /// please note that this callback may be called in parallel
-    using OriginZCallback = std::function<float( const Vector2f& offsetPoint, const OffsetContoursOrigins& origingContourMapoing)>;
+    using OriginZCallback = std::function<float( const Contours2f& offsetCont, const OffsetContourIndex& offsetIndex, const OffsetContoursOrigins& origingContourMapoing)>;
     OriginZCallback zCallback;
     /// if > 0 z coordinate will be relaxed this many iterations
     int relaxIterations = 1;

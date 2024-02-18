@@ -5,6 +5,7 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRSphereObject.h"
 #include "MRMesh/MRObjectMesh.h"
+#include "MRMesh/MRPointOnObject.h"
 
 namespace MR
 {
@@ -121,7 +122,7 @@ void SurfaceContoursWidget::enable( bool isEnaled )
         pickedPoints_.clear();
 }
 
-std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( const std::shared_ptr<MR::ObjectMeshHolder>& obj, const MeshTriPoint& pt )
+std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& pt )
 {
     auto newPoint = std::make_shared<SurfacePointWidget>();
     newPoint->setAutoHover( false );
@@ -129,7 +130,7 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
     newPoint->create( obj, pt );
 
     std::weak_ptr<SurfacePointWidget> curentPoint = newPoint;
-    newPoint->setStartMoveCallback( [this, obj, curentPoint] ( const MeshTriPoint& point )
+    newPoint->setStartMoveCallback( [this, obj, curentPoint] ( const PickedPoint& point )
     {
         const bool closedPath = isClosedCountour( obj );
 
@@ -161,7 +162,7 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
         onPointMove_( obj );
 
     } );
-    newPoint->setEndMoveCallback( [this, obj, curentPoint] ( const MeshTriPoint& point )
+    newPoint->setEndMoveCallback( [this, obj, curentPoint] ( const PickedPoint& point )
     {
         if ( moveClosedPoint_ )
         {
@@ -179,7 +180,7 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
     return newPoint;
 }
 
-bool SurfaceContoursWidget::isClosedCountour( const std::shared_ptr<ObjectMeshHolder>& obj )
+bool SurfaceContoursWidget::isClosedCountour( const std::shared_ptr<VisualObject>& obj )
 {
     auto pointsIt = pickedPoints_.find( obj );
     if ( pointsIt == pickedPoints_.end() )
@@ -189,7 +190,7 @@ bool SurfaceContoursWidget::isClosedCountour( const std::shared_ptr<ObjectMeshHo
 
 
 
-void SurfaceContoursWidget::highlightLastPoint( const std::shared_ptr<ObjectMeshHolder>& obj )
+void SurfaceContoursWidget::highlightLastPoint( const std::shared_ptr<VisualObject>& obj )
 {
     auto& contour = pickedPoints_[obj];
     int lastPointId = static_cast< int > ( contour.size() - 1 );
@@ -227,12 +228,12 @@ void SurfaceContoursWidget::updateAllPointsWidgetParams( const SurfaceContoursWi
     params = p;
 }
 
-std::pair<std::shared_ptr<MR::ObjectMeshHolder>, int> SurfaceContoursWidget::getActivePoint()
+std::pair<std::shared_ptr<MR::VisualObject>, int> SurfaceContoursWidget::getActivePoint()
 {
-    return std::pair<std::shared_ptr<MR::ObjectMeshHolder>, int>( activeObject_, activeIndex_ );
+    return std::pair<std::shared_ptr<MR::VisualObject>, int>( activeObject_, activeIndex_ );
 }
 
-void SurfaceContoursWidget::setActivePoint( std::shared_ptr<MR::ObjectMeshHolder> obj, int index )
+void SurfaceContoursWidget::setActivePoint( std::shared_ptr<MR::VisualObject> obj, int index )
 {
     assert( pickedPoints_[obj].size() > index );
 
@@ -256,7 +257,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
     auto [obj, pick] = getViewerInstance().viewport().pick_render_object();
 
-    auto addPoint = [this] ( const std::shared_ptr<ObjectMeshHolder> obj, const MeshTriPoint& triPoint )
+    auto addPoint = [this] ( const std::shared_ptr<VisualObject> obj, const PickedPoint& triPoint )
     {
         if ( !isObjectValidToPick_( obj ) )
             return;
@@ -273,7 +274,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
         onPointAdd_( obj );
     };
-    auto removePoint = [this] ( const std::shared_ptr<ObjectMeshHolder> obj, int pickedIndex )
+    auto removePoint = [this] ( const std::shared_ptr<VisualObject> obj, int pickedIndex )
     {
         auto& contour = pickedPoints_[obj];
 
@@ -289,25 +290,24 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
     if ( !mod ) // just add new point 
     {
-        auto objMesh = std::dynamic_pointer_cast< ObjectMeshHolder >( obj );
-        if ( !objMesh )
+        auto objVisual = std::dynamic_pointer_cast< VisualObject >( obj );
+        if ( !objVisual )
             return false;
 
         // all pick in point (without mod) must not comes here. Point widget must "eat" them. 
-        if ( isClosedCountour( objMesh ) )
+        if ( isClosedCountour( objVisual ) )
             return false;
 
-        assert( objMesh != nullptr ); // contoursWidget_ can join for mesh objects only
+        assert( objVisual != nullptr ); // contoursWidget_ can join for mesh objects only
 
-        auto triPoint = objMesh->mesh()->toTriPoint( pick );
-        addPoint( objMesh, triPoint );
+        addPoint( objVisual, pointOnObjectToPickedPoint( objVisual.get(), pick ) );
         return true;
     }
     else if ( mod == params.widgetContourCloseMod ) // close contour case 
     {
         // Try to find parent object 
         auto isFirstPointOnCountourClicked = false;
-        std::shared_ptr<ObjectMeshHolder> objectToCloseCoutour = nullptr;
+        std::shared_ptr<VisualObject> objectToCloseCoutour = nullptr;
         for ( const auto& [parentObj, contour] : pickedPoints_ )
         {
             if ( contour.size() > 2 && obj == contour[0]->getPickSphere() )
@@ -335,7 +335,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
             return false;
 
         int pickedIndex = -1;
-        std::shared_ptr<MR::ObjectMeshHolder> pickedObj = nullptr;
+        std::shared_ptr<MR::VisualObject> pickedObj = nullptr;
 
         // try to find point to remove 
         for ( const auto& [parentObj, contour] : pickedPoints_ )
@@ -466,6 +466,4 @@ void SurfaceContoursWidget::reset()
 
     disconnect();
 }
-
-
 } // namespace MR 

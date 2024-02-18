@@ -4,7 +4,7 @@ from constants import test_files_path, DEFAULT_RHAUSDORF_THRESHOLD
 from pathlib import Path
 
 
-def test_mesh_modification(tmp_path):
+def test_mesh_modification_sample(tmp_path):
     input_folder = Path(test_files_path) / "doc_samples" / "mesh_modify"
 
     # === Code sample

@@ -41,6 +41,9 @@ jobs:
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh
 
+      - name: Setup python requirements
+        run: python3 -m pip install -r ./requirements/python.txt
+
       - name: Build
         run: ./scripts/build_source.sh
         env:
@@ -83,8 +86,8 @@ jobs:
 
       - name: Upload Macos Distribution
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: Distributives
+          name: Distributives_macos-${{matrix.os}}
           path: meshlib_${{matrix.os}}.pkg
           retention-days: 1

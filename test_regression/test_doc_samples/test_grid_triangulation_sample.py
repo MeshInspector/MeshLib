@@ -4,7 +4,7 @@ from module_helper import *
 from pathlib import Path
 
 
-def test_grid_traingulation(tmp_path):
+def test_grid_traingulation_samlpe(tmp_path):
     input_folder = Path(test_files_path) / "doc_samples" / "grid_triangulation"
 
     # === Sample code

@@ -164,6 +164,16 @@ MeshTopology topologyFromTriangles( const Triangulation& t, const MeshBuilder::B
 
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, ThreeVertIds, MR::ThreeVertIds )
 
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, MeshBuilderSettings, MeshBuilder::BuildSettings )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilderSettings, [] ( pybind11::module_& )
+{
+    MR_PYTHON_CUSTOM_CLASS( MeshBuilderSettings ).
+        def( pybind11::init<>() ).
+        def_readwrite( "region", &MeshBuilder::BuildSettings::region, "if region is given then on input it contains the faces to be added, and on output the faces failed to be added" ).
+        def_readwrite( "shiftFaceId", &MeshBuilder::BuildSettings::shiftFaceId, "this value to be added to every faceId before its inclusion in the topology" ).
+        def_readwrite( "allowNonManifoldEdge", &MeshBuilder::BuildSettings::allowNonManifoldEdge, "whether to permit non-manifold edges in the resulting topology" );
+} )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, []( pybind11::module_& m )
 {
     MR_PYTHON_CUSTOM_CLASS( ThreeVertIds ).
@@ -190,17 +200,19 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, []( pybind11::module_& m )
         def( pybind11::init<>() ).
         def_readwrite( "vec", &Triangulation::vec_ );
 
-    pybind11::class_<MeshBuilder::BuildSettings>( m, "MeshBuilderSettings" ).
-        def( pybind11::init<>() ).
-        def_readwrite( "region", &MeshBuilder::BuildSettings::region, "if region is given then on input it contains the faces to be added, and on output the faces failed to be added" ).
-        def_readwrite( "shiftFaceId", &MeshBuilder::BuildSettings::shiftFaceId, "this value to be added to every faceId before its inclusion in the topology" ).
-        def_readwrite( "allowNonManifoldEdge", &MeshBuilder::BuildSettings::allowNonManifoldEdge, "whether to permit non-manifold edges in the resulting topology" );
-
     m.def( "topologyFromTriangles",
         ( MeshTopology( * )( const Triangulation&, const MeshBuilder::BuildSettings& ) )& topologyFromTriangles,
         pybind11::arg( "triangulation" ), pybind11::arg_v( "settings", MeshBuilder::BuildSettings(), "MeshBuilderSettings()" ),
         "construct mesh topology from a set of triangles with given ids;\n"
         "if skippedTris is given then it receives all input triangles not added in the resulting topology" );
+
+    m.def( "uniteCloseVertices", &MR::MeshBuilder::uniteCloseVertices,
+        pybind11::arg( "mesh" ), pybind11::arg( "closeDist" ), pybind11::arg( "uniteOnlyBd" ) = true, pybind11::arg( "optionalVertOldToNew" ) = nullptr,
+        "the function finds groups of mesh vertices located closer to each other than closeDist, and unites such vertices in one;\n"
+        "then the mesh is rebuilt from the remaining triangles\n"
+        "\toptionalVertOldToNew is the mapping of vertices: before -> after\n"
+        "\tuniteOnlyBd if true then only boundary vertices can be united, all internal vertices (even close ones) will remain\n"
+        "returns the number of vertices united, 0 means no change in the mesh" );
 } )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorThreeVertIds, ThreeVertIds )
@@ -244,6 +256,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
         def_readwrite( "topology", &Mesh::topology ).
         def_readwrite( "points", &Mesh::points ).
         def( "triPoint", ( Vector3f( Mesh::* )( const MeshTriPoint& )const )& Mesh::triPoint, pybind11::arg( "p" ), "returns interpolated coordinates of given point" ).
+        def( "edgePoint", ( Vector3f( Mesh::* )( EdgeId, float )const )&Mesh::edgePoint, pybind11::arg( "e" ), pybind11::arg( "f" ), "Returns a point on the edge: origin point for f=0 and destination point for f=1." ).\
         def( "edgePoint", ( Vector3f( Mesh::* )( const MeshEdgePoint& )const )& Mesh::edgePoint, pybind11::arg( "ep" ), "returns a point on the edge: origin point for f=0 and destination point for f=1" ).
         def( "invalidateCaches", &Mesh::invalidateCaches, pybind11::arg( "pointsChanged" ) = true, "Invalidates caches (e.g. aabb-tree) after a change in mesh geometry or topology" ).
         def( "transform", ( void( Mesh::* ) ( const AffineXf3f&, const VertBitSet* ) )& Mesh::transform, pybind11::arg( "xf" ), pybind11::arg( "region" ) = nullptr,

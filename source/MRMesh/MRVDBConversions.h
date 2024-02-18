@@ -6,6 +6,7 @@
 #include "MRProgressCallback.h"
 #include "MRAffineXf3.h"
 #include "MRExpected.h"
+#include "MRBox.h"
 #include <climits>
 #include <string>
 
@@ -56,6 +57,15 @@ MRMESH_API VdbVolume floatGridToVdbVolume( const FloatGrid& grid );
 // grid can be used to make iso-surface later with gridToMesh function
 MRMESH_API FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume, ProgressCallback cb = {} );
 MRMESH_API VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, ProgressCallback cb = {} );
+
+// make SimpleVolume from VdbVolume
+// make copy of data
+MRMESH_API Expected<SimpleVolume, std::string> vdbVolumeToSimpleVolume(
+    const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} );
+// make SimpleVolumeU16 from VdbVolume
+// performs mapping from [vdbVolume.min, vdbVolume.max] to nonnegative range of uint16_t
+MRMESH_API Expected<SimpleVolumeU16, std::string> vdbVolumeToSimpleVolumeU16(
+    const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} );
 
 /// parameters of OpenVDB Grid to Mesh conversion using Dual Marching Cubes algorithm
 struct GridToMeshSettings

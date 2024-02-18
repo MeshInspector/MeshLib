@@ -92,13 +92,27 @@ public:
     {
         return renderDiscretization_;
     }
-    
+
+    /// returns file extension used to serialize the points
+    [[nodiscard]] const char * savePointsFormat() const { return savePointsFormat_; }
+
+    /// sets file extension used to serialize the points: must be not null and must start from '.'
+    MRMESH_API void setSavePointsFormat( const char * newFormat );
+
+    /// signal about points selection changing, triggered in selectPoints
+    using SelectionChangedSignal = Signal<void()>;
+    SelectionChangedSignal pointsSelectionChangedSignal;
+
 protected:
     VertBitSet selectedPoints_;
     mutable std::optional<size_t> numValidPoints_;
     mutable std::optional<size_t> numSelectedPoints_;
     ViewportProperty<Color> selectedVerticesColor_;
     ViewportMask showSelectedVertices_ = ViewportMask::all();
+
+    /// swaps signals, used in `swap` function to return back signals after `swapBase_`
+    /// pls call Parent::swapSignals_ first when overriding this function
+    MRMESH_API virtual void swapSignals_( Object& other ) override;
 
     std::shared_ptr<PointCloud> points_;
     mutable ViewportProperty<XfBasedCache<Box3f>> worldBox_;
@@ -133,6 +147,12 @@ private:
 
     /// set default scene-related properties
     void setDefaultSceneProperties_();
+
+#ifndef MRMESH_NO_OPENCTM
+    const char * savePointsFormat_ = ".ctm";
+#else
+    const char * savePointsFormat_ = ".ply";
+#endif
 };
 
 }

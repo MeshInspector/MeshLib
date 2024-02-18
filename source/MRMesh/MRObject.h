@@ -81,6 +81,12 @@ public:
     MRMESH_API std::shared_ptr<const Object> find( const std::string_view & name ) const;
     std::shared_ptr<Object> find( const std::string_view & name ) { return std::const_pointer_cast<Object>( const_cast<const Object*>( this )->find( name ) ); }
 
+    /// finds a direct child by type
+    template <typename T>
+    std::shared_ptr<const T> find() const;
+    template <typename T>
+    std::shared_ptr<T> find() { return std::const_pointer_cast<T>( const_cast<const Object*>( this )->find<T>() ); }
+
     /// finds a direct child by name and type
     template <typename T>
     std::shared_ptr<const T> find( const std::string_view & name ) const;
@@ -118,12 +124,26 @@ public:
     bool isLocked() const { return locked_; }
     virtual void setLocked( bool on ) { locked_ = on; }
 
+    /// If true, the scene tree GUI doesn't allow you to drag'n'drop this object into a different parent.
+    /// Defaults to false.
+    [[nodiscard]] bool isParentLocked() const { return parentLocked_; }
+    virtual void setParentLocked( bool lock ) { parentLocked_ = lock; }
+
     /// returns parent object in the tree
     const Object * parent() const { return static_cast<const Object *>( parent_ ); }
     Object * parent() { return static_cast<Object *>( parent_ ); }
 
     /// return true if given object is ancestor of this one, false otherwise
     MRMESH_API bool isAncestor( const Object* ancestor ) const;
+
+    /// Find a common ancestor between this object and the other one.
+    /// Returns null on failure (which is impossible if both are children of the scene root).
+    /// Will return `this` if `other` matches `this`.
+    [[nodiscard]] MRMESH_API Object* findCommonAncestor( Object& other );
+    [[nodiscard]] const Object* findCommonAncestor( const Object& other ) const
+    {
+        return const_cast<Object &>( *this ).findCommonAncestor( const_cast<Object &>( other ) );
+    }
 
     /// removes this from its parent children list
     /// returns false if it was already orphan
@@ -249,12 +269,22 @@ protected:
     ViewportProperty<AffineXf3f> xf_;
     ViewportMask visibilityMask_ = ViewportMask::all();
     bool locked_ = false;
+    bool parentLocked_ = false;
     bool selected_{ false };
     bool ancillary_{ false };
     mutable bool needRedraw_{false};
 
     void propagateWorldXfChangedSignal_();
 };
+
+template <typename T>
+std::shared_ptr<const T> Object::find() const
+{
+    for ( const auto & child : children_ )
+        if ( auto res = std::dynamic_pointer_cast<T>( child ) )
+            return res;
+    return {}; // not found
+}
 
 template <typename T>
 std::shared_ptr<const T> Object::find( const std::string_view & name ) const

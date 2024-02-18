@@ -54,6 +54,9 @@ MRMESH_API std::string GetMRVersionString();
 // Opens given link in default browser
 MRMESH_API void OpenLink( const std::string& url );
 
+// Opens given file (or directory) in associated application
+MRMESH_API bool OpenDocument( const std::filesystem::path& path );
+
 // returns string identification of the CPU
 MRMESH_API std::string GetCpuId();
 

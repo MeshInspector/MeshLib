@@ -4,7 +4,7 @@ from constants import test_files_path, DEFAULT_RHAUSDORF_THRESHOLD
 from helpers.meshlib_helpers import relative_hausdorff
 
 
-def test_boolean(tmp_path):
+def test_boolean_sample(tmp_path):
     input_folder = Path(test_files_path) / "doc_samples" / "boolean"
 
     # === Sample code

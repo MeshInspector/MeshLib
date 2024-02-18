@@ -126,7 +126,7 @@ void RenderMeshObject::render( const ModelRenderParams& renderParams )
 
         GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
         drawMesh_( true, renderParams.viewportId );
-        GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
+        GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
     }
     // Render wireframe
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Edges, renderParams.viewportId ) )
@@ -175,7 +175,7 @@ void RenderMeshObject::renderPicker( const ModelRenderParams& parameters, unsign
 
     GL_EXEC( glDepthFunc( getDepthFunctionLess( parameters.depthFunction ) ) );
     drawMesh_( true, parameters.viewportId, true );
-    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
 }
 
 size_t RenderMeshObject::heapBytes() const
@@ -265,7 +265,7 @@ void RenderMeshObject::renderEdges_( const ModelRenderParams& renderParams, GLui
 
     GL_EXEC( glDepthFunc( getDepthFunctionLEqual( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawArrays( GL_TRIANGLES, 0, size * 6 ) );
-    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
 
     dirty_ &= ~dirtyFlag;
 }
@@ -314,7 +314,7 @@ void RenderMeshObject::renderMeshEdges_( const ModelRenderParams& renderParams )
 
     GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawArrays( GL_TRIANGLES, 0, edgeSize_ * 6 ) );
-    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
 }
 
 void RenderMeshObject::bindMesh_( bool alphaSort )
@@ -526,7 +526,7 @@ void RenderMeshObject::drawMesh_( bool /*solid*/, ViewportId viewportId, bool pi
          | objMesh_->getVisualizePropertyMask( MeshVisualizePropertyType::PolygonOffsetFromCamera )
        // intentionally do not check selected edges and borders since they are typically thicker and include not all edges
        //  | objMesh_->getVisualizePropertyMask( MeshVisualizePropertyType::SelectedEdges )
-       //  | objMesh_->getVisualizePropertyMask( MeshVisualizePropertyType::BordersHighlight ) 
+       //  | objMesh_->getVisualizePropertyMask( MeshVisualizePropertyType::BordersHighlight )
         ).contains( viewportId ) )
     {
         // offset triangles further with factor depending on triangle orientation to clearly see edges on top of them

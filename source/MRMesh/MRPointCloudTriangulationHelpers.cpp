@@ -79,10 +79,23 @@ float updateNeighborsRadius( const VertCoords& points, VertId v, VertId borderV,
         auto next = cycleNext( fan, i );
         if ( fan[i] == borderV )
             continue;
-        maxRadius = std::max( maxRadius, circumcircleDiameter( 
-            points[v],
-            points[fan[i]],
-            points[fan[next]] ) );
+
+        const auto & a = points[v];
+        const auto & b = points[fan[i]];
+        const auto & c = points[fan[next]];
+        const auto cdSq = circumcircleDiameterSq( a, b, c );
+        if ( sqr( maxRadius ) >= cdSq )
+            continue;
+
+        const auto cc = circumcircleCenter( b - a, c - a );
+
+        const auto cl = cc.length(); // distance between point[v] and the center of circumcicle
+        const auto cr = 0.5f * std::sqrt( cdSq ); // radius
+        // the center of circumcicle must be within its radius from point[v]
+        // assert( cl <= cr ); may be wrong due to floating-point errors
+
+        // circumcicle must be fully within the ball around point[v]
+        maxRadius = std::max( maxRadius, cl + cr );
     }
 
     return std::min( maxRadius, 2.0f * baseRadius );
@@ -322,12 +335,9 @@ void FanOptimizer::optimize( int steps, float critAng )
         queue_.emplace( calcQueueElement_( topEl.prevId, critAng ) );
     }
 
-    fanData_.neighbors.erase(
-        std::remove_if( fanData_.neighbors.begin(), fanData_.neighbors.end(), [] ( VertId  v )
-    {
-        return !v.valid();
-    } ),
-        fanData_.neighbors.end() );
+    erase_if( fanData_.neighbors, []( VertId v ) { return !v.valid(); } );
+    if ( fanData_.neighbors.size() < 2 )
+        fanData_.neighbors.clear();
 }
 
 void FanOptimizer::updateBorder( float angle )
@@ -408,12 +418,14 @@ void trianglulateFan( const VertCoords& points, VertId centerVert, TriangulatedF
         return;
     FanOptimizer optimizer( points, trustedNormals, triangulationData, centerVert );
     optimizer.optimize( steps, critAngle );
+    assert( triangulationData.neighbors.empty() || triangulationData.neighbors.size() > 1 );
 }
 
 void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings & settings,
     TriangulatedFanData & fanData )
 {
-    findNeighbors( cloud, v, settings.radius, fanData.neighbors );
+    float actualRadius = settings.radius;
+    findNeighbors( cloud, v, actualRadius, fanData.neighbors );
     if ( settings.trustedNormals )
         filterNeighbors( *settings.trustedNormals, v, fanData.neighbors );
     if ( settings.allNeighbors )
@@ -422,13 +434,15 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings 
 
     if ( settings.automaticRadiusIncrease )
     {
-        float maxRadius = ( fanData.neighbors.size() < 2 ) ? settings.radius * 2 :
+        // if triangulation in original radius has border then we increase radius as well to find more neighbours
+        float maxRadius = ( fanData.neighbors.size() < 2 || fanData.border ) ? settings.radius * 2 :
             updateNeighborsRadius( cloud.points, v, fanData.border, fanData.neighbors, settings.radius );
 
         if ( maxRadius > settings.radius )
         {
             // update triangulation if radius was increased
-            findNeighbors( cloud, v, maxRadius, fanData.neighbors );
+            actualRadius = maxRadius;
+            findNeighbors( cloud, v, actualRadius, fanData.neighbors );
             if ( settings.trustedNormals )
                 filterNeighbors( *settings.trustedNormals, v, fanData.neighbors );
             if ( settings.allNeighbors )
@@ -436,6 +450,8 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings 
             trianglulateFan( cloud.points, v, fanData, settings.trustedNormals, settings.critAngle, settings.maxRemoves );
         }
     }
+    if ( settings.actualRadius )
+        *settings.actualRadius = actualRadius;
 }
 
 std::optional<std::vector<SomeLocalTriangulations>> buildLocalTriangulations(

@@ -38,6 +38,9 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+      
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh
 

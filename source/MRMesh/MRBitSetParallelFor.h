@@ -54,18 +54,36 @@ void BitSetParallelForAll( const BS & bs, F f )
 /// executes given function f( IndexId, rangeBeginId, rangeEndId ) for each bit in bs in parallel threads;
 /// rangeBeginId, rangeEndId - boundaries of thread range in parallel processing
 /// it is guaranteed that every individual block in bit-set is processed by one thread only;
+template <typename BS, typename F>
+void BitSetParallelForAllRanged( const BS& bs, F f )
+{
+    using IndexType = typename BS::IndexType;
+
+    const size_t endBlock = ( bs.size() + BS::bits_per_block - 1 ) / BS::bits_per_block;
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, endBlock ),
+        [&] ( const tbb::blocked_range<size_t>& range )
+    {
+        const IndexType idBegin{ range.begin() * BS::bits_per_block };
+        const IndexType idEnd{ range.end() < endBlock ? range.end() * BS::bits_per_block : bs.size() };
+        for ( IndexType id = idBegin; id < idEnd; ++id )
+        {
+            f( id, idBegin, idEnd );
+        }
+    } );
+}
+
+/// executes given function f( IndexId, rangeBeginId, rangeEndId ) for each bit in bs in parallel threads;
+/// rangeBeginId, rangeEndId - boundaries of thread range in parallel processing
+/// it is guaranteed that every individual block in bit-set is processed by one thread only;
 /// reports progress from calling thread only;
 /// \return false if the processing was canceled by progressCb
 template <typename BS, typename F> 
-bool BitSetParallelForAllRanged( const BS& bs, F f, ProgressCallback progressCb = {}, size_t reportProgressEveryBit = 1024 )
+bool BitSetParallelForAllRanged( const BS& bs, F f, ProgressCallback progressCb, size_t reportProgressEveryBit = 1024 )
 {
     using IndexType = typename BS::IndexType;
     if ( !progressCb )
     {
-        BitSetParallelForAll( bs, [&] ( IndexType v )
-        {
-            f( v, IndexType( 0 ), IndexType( bs.size() ) );
-        } );
+        BitSetParallelForAllRanged( bs, f );
         return true;
     }
 

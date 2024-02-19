@@ -84,7 +84,7 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 
       - name: Configure AWS Credentials
-        if: ${{ env.UPLOAD_ARTIFACTS && env.INTERNAL_BUILD }}
+        if: ${{ env.UPLOAD_TEST_ARTIFACTS && env.INTERNAL_BUILD }}
         uses: aws-actions/configure-aws-credentials@v4
         env:
           AWS_CREDS_IS_SET: true
@@ -102,7 +102,7 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
 
       - name: Copy test artifacts to S3
-        if: ${{ env.UPLOAD_ARTIFACTS && env.INTERNAL_BUILD && !cancelled() }}
+        if: ${{ env.UPLOAD_TEST_ARTIFACTS && env.INTERNAL_BUILD && !cancelled() }}
         run: aws s3 cp ./pytest_temp s3://test-artifacts-git/tests/${{github.run_id}}/ubuntu20/${{matrix.config}}/${{matrix.compiler}} --recursive
 
       - name: Create Deb

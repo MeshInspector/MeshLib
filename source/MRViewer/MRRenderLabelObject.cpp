@@ -4,6 +4,7 @@
 #include "MRMesh/MRTimer.h"
 #include "MRCreateShader.h"
 #include "MRMesh/MRMesh.h"
+#include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRMatrix4.h"
 #include "MRGLMacro.h"
 #include "MRMesh/MRBitSetParallelFor.h"
@@ -51,6 +52,13 @@ void RenderLabelObject::render( const ModelRenderParams& renderParams )
     }
 
     update_();
+
+    if ( objLabel_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) )
+    {
+        Vector3f pos = renderParams.modelMatrix( objLabel_->getLabel().position );
+        if ( dot( pos, renderParams.clipPlane.n ) > renderParams.clipPlane.d )
+            return;
+    }
 
     GL_EXEC( glDepthMask( GL_TRUE ) );
     GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );

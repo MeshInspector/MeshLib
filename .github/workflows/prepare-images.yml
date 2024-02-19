@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 env:
-  VCPKG-VERSION: '2024.01.12'
+  VCPKG-VERSION: '2024.02.14'
 
 jobs:
   image-select:
@@ -61,7 +61,7 @@ jobs:
       - name: Get branch names
         if: ${{steps.linux-changes.outputs.src == 'true' || steps.windows-changes.outputs.src == 'true'}}
         id: branch-name
-        uses: tj-actions/branch-names@v8.0.0
+        uses: tj-actions/branch-names@v8.0.1
 
       # if nothing to rebuild: "latest"
       # else: $branch-name | sed -r 's/[^a-zA-Z0-9._-]+/-/

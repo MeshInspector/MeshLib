@@ -86,8 +86,8 @@ jobs:
 
       - name: Upload Macos Distribution
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: Distributives
+          name: Distributives_macos-${{matrix.os}}
           path: meshlib_${{matrix.os}}.pkg
           retention-days: 1

@@ -8,7 +8,7 @@ on:
         type: boolean
 
 env:
-  VCPKG-VERSION: '2024.01.12'
+  VCPKG-VERSION: '2024.02.14'
 
 jobs:
   windows-build-test:
@@ -134,8 +134,8 @@ jobs:
 
       - name: Upload Windows Binaries Archive
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.runner == 'windows-2019' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: WindowsArchive
-          path: MREDist_${{ matrix.config }}.zip
+          name: WindowsArchive_${{matrix.config}}
+          path: MREDist_${{matrix.config}}.zip
           retention-days: 1

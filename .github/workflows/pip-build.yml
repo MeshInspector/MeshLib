@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  VCPKG-VERSION: '2024.01.12'
+  VCPKG-VERSION: '2024.02.14'
   CUDA-VERSION: '11.4.2.47141'
   CUDA-MAJOR: '11'
   CUDA-MINOR: '4'
@@ -117,16 +117,9 @@ jobs:
           ${{ matrix.py-cmd }} -m auditwheel repair --plat manylinux_2_31_${{matrix.platform}} ./dist/*.whl
 
       - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ManyLinux-${{matrix.py-cmd}}-${{matrix.platform}}
-          path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
-          retention-days: 1
-
-      - name: Upload to Release Artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: Wheelhouse
           path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
           retention-days: 1
 
@@ -285,16 +278,9 @@ jobs:
           py -${{matrix.py-version}} -m delvewheel repair --add-path source\x64\Release scripts\wheel\meshlib\dist\$WheelFile
 
       - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Windows-python${{ matrix.py-version }}
-          path: wheelhouse\meshlib-*.whl
-          retention-days: 1
-
-      - name: Upload to Release Artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: Wheelhouse
           path: wheelhouse\meshlib-*.whl
           retention-days: 1
 
@@ -398,16 +384,9 @@ jobs:
           delocate-wheel -w . -v ./scripts/wheel/meshlib/dist/*.whl
 
       - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: Macos-${{ matrix.py-cmd }}
-          path: meshlib-*.whl
-          retention-days: 1
-
-      - name: Upload to Release Artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: Wheelhouse
+          name: Macos-${{matrix.py-cmd}}-${{matrix.platform}}
           path: meshlib-*.whl
           retention-days: 1
 
@@ -466,9 +445,10 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install pytest
 
       - name: Download Meshlib wheel from Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ManyLinux-${{matrix.py-cmd}}-${{matrix.platform}}
+          merge-multiple: true
 
       - name: Meshlib wheel install
         run: ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} ./meshlib-*.whl
@@ -492,9 +472,10 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Meshlib wheel from Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: Windows-python${{matrix.py-version}}
+          merge-multiple: true
 
       - name: Python setup
         uses: actions/setup-python@v5
@@ -566,9 +547,10 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install pytest
 
       - name: Download Meshlib wheel from Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: Macos-${{ matrix.py-cmd }}
+          merge-multiple: true
 
       - name: Meshlib wheel install
         run: ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} ./meshlib-*${{matrix.platform}}*.whl
@@ -583,9 +565,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download Wheels Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: Wheelhouse
+          name: ManyLinux-*
+          merge-multiple: true
+
+      - name: Download Wheels Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Windows-*
+          merge-multiple: true
+
+      - name: Download Wheels Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Macos-*
+          merge-multiple: true
 
       - name: Install twine
         run: python3 -m pip install --upgrade pip twine
@@ -603,12 +598,6 @@ jobs:
     needs: upload-to-release
     if: always()
     steps:
-      - name: Delete Wheelhouse
-        uses: geekyeggo/delete-artifact@v2
-        with:
-          name: Wheelhouse
-          failOnError: false
-
       - name: Delete all ManyLinux
         uses: geekyeggo/delete-artifact@v2
         with:

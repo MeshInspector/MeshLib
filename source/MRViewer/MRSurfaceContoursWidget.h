@@ -109,6 +109,19 @@ public:
     MRVIEWER_API std::pair <std::shared_ptr<MR::VisualObject>, int > getActivePoint();
     MRVIEWER_API void setActivePoint( std::shared_ptr<MR::VisualObject> obj, int index );
 
+    // Add a point to the end of non closed contour connected with obj.
+    // With carefull it is possile to use it in CallBack.
+    MRVIEWER_API bool appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint );
+
+    // Remove point with pickedIndex index from contour connected with obj.
+    // With carefull it is possile to use it in CallBack.
+    MRVIEWER_API bool removePoint( const std::shared_ptr<VisualObject>& obj, int pickedIndex );
+
+    // Add a special transperent point contour to the end of contour connected with objectToCloseCoutour.
+    // A coordinated of this special transperent point will be equal to the firs point in contour, 
+    // which will means that contour is closed.
+    MRVIEWER_API bool closeContour( const std::shared_ptr<VisualObject>& objectToCloseCoutour );
+
     // configuration params
     SurfaceContoursWidgetParams params;
 private:

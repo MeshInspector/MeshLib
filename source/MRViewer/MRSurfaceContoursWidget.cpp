@@ -248,7 +248,8 @@ void SurfaceContoursWidget::setActivePoint( std::shared_ptr<MR::VisualObject> ob
     activeIndex_ = index;
     activeObject_ = obj;
 }
-bool SurfaceContoursWidget::addPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint )
+
+bool SurfaceContoursWidget::appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint )
 {
 
     if ( !isObjectValidToPick_( obj ) )
@@ -281,7 +282,7 @@ bool SurfaceContoursWidget::addPoint( const std::shared_ptr<VisualObject>& obj, 
         onAddPointAction();
 
     return true;
-};
+}
 
 bool SurfaceContoursWidget::removePoint( const std::shared_ptr<VisualObject>& obj, int pickedIndex )
 {
@@ -312,8 +313,7 @@ bool SurfaceContoursWidget::removePoint( const std::shared_ptr<VisualObject>& ob
         onRemovePointAction();
 
     return true;
-};
-
+}
 
 bool SurfaceContoursWidget::closeContour( const std::shared_ptr<VisualObject>& objectToCloseCoutour )
 {
@@ -322,7 +322,7 @@ bool SurfaceContoursWidget::closeContour( const std::shared_ptr<VisualObject>& o
 
     assert( objectToCloseCoutour != nullptr );
     auto triPoint = pickedPoints_[objectToCloseCoutour][0]->getCurrentPosition();
-    addPoint( objectToCloseCoutour, triPoint );
+    appendPoint( objectToCloseCoutour, triPoint );
     activeIndex_ = 0;
     return true;
 }
@@ -351,7 +351,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
         assert( objVisual != nullptr ); // contoursWidget_ can join for mesh objects only
 
-        addPoint( objVisual, pointOnObjectToPickedPoint( objVisual.get(), pick ) );
+        appendPoint( objVisual, pointOnObjectToPickedPoint( objVisual.get(), pick ) );
         return true;
     }
     else if ( mod == params.widgetContourCloseMod ) // close contour case 
@@ -421,7 +421,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
             // Restore close countour. 
             if ( contour.size() > 2 && pickedIndex == 0 )
-                addPoint( pickedObj, contour[0]->getCurrentPosition() );
+                appendPoint( pickedObj, contour[0]->getCurrentPosition() );
         }
         else
             removePoint( pickedObj, pickedIndex );

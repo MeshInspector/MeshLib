@@ -111,7 +111,7 @@ public:
 
     // Add a point to the end of non closed contour connected with obj.
     // With carefull it is possile to use it in CallBack.
-    MRVIEWER_API bool addPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint );
+    MRVIEWER_API bool appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint );
 
     // Remove point with pickedIndex index from contour connected with obj.
     // With carefull it is possile to use it in CallBack.

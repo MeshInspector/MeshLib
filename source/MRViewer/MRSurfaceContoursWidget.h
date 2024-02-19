@@ -18,6 +18,18 @@ class MRVIEWER_CLASS SurfaceContoursWidget : public MultiListener<
 {
 public:
 
+    struct SurfaceContoursCallBackParams {
+        enum class SurfaceContoursCallBackType {
+            AddPoint,
+            MovePointStart,
+            MovePointFinish,
+            RemovePoint
+        };
+        std::shared_ptr<MR::VisualObject> object;
+        SurfaceContoursCallBackType actionType;
+        int index;
+    };
+
     struct SurfaceContoursWidgetParams {
         // Modifier key for closing a contour (ordered vector of points) using the widget
         int widgetContourCloseMod = GLFW_MOD_CONTROL;
@@ -51,7 +63,7 @@ public:
         MR::Color closeContourPointColor = Color::transparent();
     };
 
-    using PickerPointCallBack = std::function<void( std::shared_ptr<MR::VisualObject> )>;
+    using PickerPointCallBack = std::function<void( const SurfaceContoursCallBackParams& callBackParams )>;
     using PickerPointObjectChecker = std::function<bool( std::shared_ptr<MR::VisualObject> )>;
 
     using SurfaceContour = std::vector<std::shared_ptr<SurfacePointWidget>>;
@@ -69,10 +81,7 @@ public:
     // onPointRemove : This callback is executed when a point is removed.
     // isObjectValidToPick : Must returh true or false. This callback is used to determine whether an object is valid for picking.
     MRVIEWER_API void create(
-            PickerPointCallBack onPointAdd,
-            PickerPointCallBack onPointMove,
-            PickerPointCallBack onPointMoveFinish,
-            PickerPointCallBack onPointRemove,
+            PickerPointCallBack onContourChange,
             PickerPointObjectChecker isObjectValidToPick
     );
 
@@ -109,6 +118,10 @@ public:
     MRVIEWER_API std::pair <std::shared_ptr<MR::VisualObject>, int > getActivePoint();
     MRVIEWER_API void setActivePoint( std::shared_ptr<MR::VisualObject> obj, int index );
 
+
+    MRVIEWER_API bool addPoint( const std::shared_ptr<VisualObject> obj, const PickedPoint& triPoint );
+    MRVIEWER_API bool removePoint( const std::shared_ptr<VisualObject> obj, int pickedIndex );
+
     // configuration params
     SurfaceContoursWidgetParams params;
 private:
@@ -132,10 +145,8 @@ private:
     SurfaceContours pickedPoints_;
 
     // CallBack functions
-    PickerPointCallBack onPointAdd_;
-    PickerPointCallBack onPointMove_;
-    PickerPointCallBack onPointMoveFinish_;
-    PickerPointCallBack onPointRemove_;
+
+    PickerPointCallBack onContourChange_;
     PickerPointObjectChecker isObjectValidToPick_;
 
     friend class AddPointActionPickerPoint;

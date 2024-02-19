@@ -1,6 +1,8 @@
 #include "MRSurfaceContoursWidget.h"
 #include "MRViewport.h"
 #include "MRMesh/MRHistoryAction.h"
+#include "MRMesh/MRHistoryStore.h"
+
 #include "MRAppendHistory.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRSphereObject.h"
@@ -38,7 +40,8 @@ void AddPointActionPickerPoint::action( Type actionType )
         widget_.activeIndex_ = int( contour.size() - 1 );
         widget_.activeObject_ = obj_;
 
-        widget_.onPointRemove_( obj_ );
+        widget_.onContourChange_( { obj_,SurfaceContoursWidget::SurfaceContoursCallBackParams::SurfaceContoursCallBackType::AddPoint, int( contour.size() - 1 ) } );
+
     }
     else
     {
@@ -48,7 +51,8 @@ void AddPointActionPickerPoint::action( Type actionType )
         widget_.activeObject_ = obj_;
         widget_.highlightLastPoint( obj_ );
 
-        widget_.onPointAdd_( obj_ );
+        widget_.onContourChange_( { obj_,SurfaceContoursWidget::SurfaceContoursCallBackParams::SurfaceContoursCallBackType::AddPoint, int( contour.size() - 1 ) } );
+
     }
 
 }
@@ -75,7 +79,7 @@ void RemovePointActionPickerPoint::action( Type actionType )
         widget_.activeIndex_ = index_;
         widget_.activeObject_ = obj_;
         widget_.highlightLastPoint( obj_ );
-        widget_.onPointAdd_( obj_ );
+        widget_.onContourChange_( { obj_,SurfaceContoursWidget::SurfaceContoursCallBackParams::SurfaceContoursCallBackType::AddPoint, index_ } );
         contour.back()->setHovered( false );
 
     }
@@ -86,7 +90,7 @@ void RemovePointActionPickerPoint::action( Type actionType )
         widget_.activeIndex_ = index_;
         widget_.activeObject_ = obj_;
         widget_.highlightLastPoint( obj_ );
-        widget_.onPointRemove_( obj_ );
+        widget_.onContourChange_( { obj_,SurfaceContoursWidget::SurfaceContoursCallBackParams::SurfaceContoursCallBackType::RemovePoint, index_ } );
     }
 }
 
@@ -107,7 +111,7 @@ void ChangePointActionPickerPoint::action( Type )
     widget_.pickedPoints_[obj_][index_]->updateCurrentPosition( point_ );
     widget_.activeIndex_ = index_;
     widget_.activeObject_ = obj_;
-    widget_.onPointMoveFinish_( obj_ );
+    widget_.onContourChange_( { obj_,SurfaceContoursWidget::SurfaceContoursCallBackParams::SurfaceContoursCallBackType::MovePointFinish, index_ } );
 }
 
 size_t ChangePointActionPickerPoint::heapBytes() const
@@ -159,7 +163,8 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
                 AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, activeIndex_ );
         }
         activeChange_ = true;
-        onPointMove_( obj );
+        onContourChange_( { obj,SurfaceContoursCallBackParams::SurfaceContoursCallBackType::MovePointStart, activeIndex_ } );
+
 
     } );
     newPoint->setEndMoveCallback( [this, obj, curentPoint] ( const PickedPoint& point )
@@ -174,7 +179,7 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
             }
         }
         activeChange_ = false;
-        onPointMoveFinish_( obj );
+        onContourChange_( { obj,SurfaceContoursCallBackParams::SurfaceContoursCallBackType::MovePointFinish, activeIndex_ } );
     } );
 
     return newPoint;
@@ -247,6 +252,56 @@ void SurfaceContoursWidget::setActivePoint( std::shared_ptr<MR::VisualObject> ob
     activeObject_ = obj;
 }
 
+bool SurfaceContoursWidget::addPoint( const std::shared_ptr<VisualObject> obj, const PickedPoint& triPoint )
+{
+    if ( !isObjectValidToPick_( obj ) )
+        return false;
+
+    auto& contour = pickedPoints_[obj];
+
+
+
+    //if ( getViewerInstance().getGlobalHistoryStore()->getScopeBlockPtr() != nullptr )
+
+        //SCOPED_HISTORY( "Add Point" + params.historySpecification );
+
+    if ( params.writeHistory )
+    {
+        AppendHistory<AddPointActionPickerPoint>( *this, obj, triPoint );
+    }
+
+    contour.push_back( createPickWidget_( obj, triPoint ) );
+    highlightLastPoint( obj );
+    activeIndex_ = static_cast< int >( contour.size() - 1 );
+    activeObject_ = obj;
+
+    onContourChange_( { obj,SurfaceContoursCallBackParams::SurfaceContoursCallBackType::AddPoint, activeIndex_ } );
+
+    return true;
+};
+
+bool SurfaceContoursWidget::removePoint( const std::shared_ptr<VisualObject> obj, int pickedIndex )
+{
+    auto& contour = pickedPoints_[obj];
+
+
+    //if ( getViewerInstance().getGlobalHistoryStore()->getScopeBlockPtr() != nullptr )
+
+        //SCOPED_HISTORY( "Remove Point" + params.historySpecification );
+
+    if ( params.writeHistory )
+    {
+        AppendHistory<RemovePointActionPickerPoint>( *this, obj, contour[pickedIndex]->getCurrentPosition(), pickedIndex );
+    }
+    contour.erase( contour.begin() + pickedIndex );
+    activeIndex_ = pickedIndex;
+    activeObject_ = obj;
+    highlightLastPoint( obj );
+    onContourChange_( { obj,SurfaceContoursCallBackParams::SurfaceContoursCallBackType::RemovePoint, pickedIndex } );
+
+    return true;
+};
+
 bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 {
     if ( !isPickerActive_ )
@@ -256,37 +311,6 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         return false;
 
     auto [obj, pick] = getViewerInstance().viewport().pick_render_object();
-
-    auto addPoint = [this] ( const std::shared_ptr<VisualObject> obj, const PickedPoint& triPoint )
-    {
-        if ( !isObjectValidToPick_( obj ) )
-            return;
-
-        auto& contour = pickedPoints_[obj];
-
-        if ( params.writeHistory )
-            AppendHistory<AddPointActionPickerPoint>( *this, obj, triPoint );
-
-        contour.push_back( createPickWidget_( obj, triPoint ) );
-        highlightLastPoint( obj );
-        activeIndex_ = static_cast< int >( contour.size() - 1 );
-        activeObject_ = obj;
-
-        onPointAdd_( obj );
-    };
-    auto removePoint = [this] ( const std::shared_ptr<VisualObject> obj, int pickedIndex )
-    {
-        auto& contour = pickedPoints_[obj];
-
-        if ( params.writeHistory )
-            AppendHistory<RemovePointActionPickerPoint>( *this, obj, contour[pickedIndex]->getCurrentPosition(), pickedIndex );
-
-        contour.erase( contour.begin() + pickedIndex );
-        activeIndex_ = pickedIndex;
-        activeObject_ = obj;
-        highlightLastPoint( obj );
-        onPointRemove_( obj );
-    };
 
     if ( !mod ) // just add new point 
     {
@@ -414,17 +438,11 @@ bool SurfaceContoursWidget::onMouseMove_( int, int )
 }
 
 void SurfaceContoursWidget::create(
-        PickerPointCallBack onPointAdd,
-        PickerPointCallBack onPointMove,
-        PickerPointCallBack onPointMoveFinish,
-        PickerPointCallBack onPointRemove,
+        PickerPointCallBack onContourChange,
         PickerPointObjectChecker isObjectValidToPick
 )
 {
-    onPointAdd_ = std::move( onPointAdd );
-    onPointMove_ = std::move( onPointMove );
-    onPointMoveFinish_ = std::move( onPointMoveFinish );
-    onPointRemove_ = std::move( onPointRemove );
+    onContourChange_ = std::move( onContourChange );
     isObjectValidToPick_ = std::move( isObjectValidToPick );
 
     clear();

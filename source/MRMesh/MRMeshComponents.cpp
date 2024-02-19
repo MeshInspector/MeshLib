@@ -315,31 +315,23 @@ static void getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const U
     {
         bdFaces.resize( numFaces );
         lastPassFaces = &bdFaces;
-        const int endBlock = int( bdFaces.size() + bdFaces.bits_per_block - 1 ) / bdFaces.bits_per_block;
-        const auto bitsPerThread = ( endBlock + numThreads - 1 ) / numThreads * BitSet::bits_per_block;
 
-        tbb::parallel_for( tbb::blocked_range<int>( 0, numThreads ),
-            [&] ( const tbb::blocked_range<int>& range )
+        BitSetParallelForAllRanged( region, [&] ( FaceId f0, FaceId, FaceId fEnd )
         {
-            const FaceId fBeg{ range.begin() * bitsPerThread };
-            const FaceId fEnd{ range.end() < numThreads ? range.end() * bitsPerThread : bdFaces.size() };
-            for ( auto f0 = fBeg; f0 < fEnd; ++f0 )
+            if ( !contains( region, f0 ) )
+                return;
+            EdgeId e[3];
+            mesh.topology.getTriEdges( f0, e );
+            for ( int i = 0; i < 3; ++i )
             {
-                if ( !contains( region, f0 ) )
-                    continue;
-                EdgeId e[3];
-                mesh.topology.getTriEdges( f0, e );
-                for ( int i = 0; i < 3; ++i )
+                assert( mesh.topology.left( e[i] ) == f0 );
+                FaceId f1 = mesh.topology.right( e[i] );
+                if ( f0 < f1 && contains( meshPart.region, f1 ) )
                 {
-                    assert( mesh.topology.left( e[i] ) == f0 );
-                    FaceId f1 = mesh.topology.right( e[i] );
-                    if ( f0 < f1 && contains( meshPart.region, f1 ) )
-                    {
-                        if ( f1 >= fEnd )
-                            bdFaces.set( f0 ); // remember the face to unite later in a sequential region
-                        else if ( !isCompBd || !isCompBd( e[i].undirected() ) )
-                            res.unite( f0, f1 ); // our region
-                    }
+                    if ( f1 >= fEnd )
+                        bdFaces.set( f0 ); // remember the face to unite later in a sequential region
+                    else if ( !isCompBd || !isCompBd( e[i].undirected() ) )
+                        res.unite( f0, f1 ); // our region
                 }
             }
         } );

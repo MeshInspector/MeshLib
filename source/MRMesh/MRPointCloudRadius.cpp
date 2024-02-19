@@ -7,7 +7,7 @@
 #include "MRPointsProject.h"
 #include "MRFewSmallest.h"
 #include "MRTimer.h"
-#include <algorithm>
+#include <numeric>
 
 namespace MR
 {

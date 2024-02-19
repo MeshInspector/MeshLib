@@ -106,7 +106,7 @@ jobs:
 
       - name: Copy test artifacts to S3
         if: ${{ env.UPLOAD_TEST_ARTIFACTS && env.INTERNAL_BUILD && !cancelled() }}
-        run: aws s3 cp ./pytest_temp s3://test-artifacts-git/tests/${{github.run_id}}/ubuntu_arm64//${{matrix.os}} --recursive
+        run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/ubuntu_arm64//${{matrix.os}}' --recursive
 
       - name: Create Deb
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler }}

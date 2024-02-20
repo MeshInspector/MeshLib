@@ -84,7 +84,7 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 
       - name: Configure AWS Credentials
-        if: ${{ env.UPLOAD_TEST_ARTIFACTS && env.INTERNAL_BUILD }}
+        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
         env:
           AWS_CREDS_IS_SET: true
@@ -102,20 +102,8 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
 
       - name: Copy test artifacts to S3
-        if: ${{ env.UPLOAD_TEST_ARTIFACTS && env.INTERNAL_BUILD && '!cancelled()' }}
-        env:
-          LOCAL_UP: ${{ env.UPLOAD_TEST_ARTIFACTS }} && ${{ env.INTERNAL_BUILD }}
-          LOCAL_1: ${{ env.UPLOAD_TEST_ARTIFACTS }}
-          LOCAL_2: ${{ env.INTERNAL_BUILD }}
-          LOCAL_3: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' }}
-        run: | 
-          echo "$UPLOAD_TEST_ARTIFACTS"
-          echo "$INTERNAL_BUILD"
-          echo "$LOCAL_UP"
-          echo "$LOCAL_1"
-          echo "$LOCAL_2" 
-          echo "$LOCAL_3" 
-          aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/ubuntu20/${{matrix.config}}/${{matrix.compiler}}' --recursive
+        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && '!cancelled()' }}
+        run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/ubuntu20/${{matrix.config}}/${{matrix.compiler}}' --recursive
 
       - name: Create Deb
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}

@@ -107,7 +107,7 @@ jobs:
           LOCAL_UP: ${{ env.UPLOAD_TEST_ARTIFACTS }} && ${{ env.INTERNAL_BUILD }}
           LOCAL_1: ${{ env.UPLOAD_TEST_ARTIFACTS }}
           LOCAL_2: ${{ env.INTERNAL_BUILD }}
-          LOCAL_3: ${{ ${{ env.UPLOAD_TEST_ARTIFACTS }} && ${{ env.INTERNAL_BUILD }} }}
+          LOCAL_3: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' }}
         run: | 
           echo "$UPLOAD_TEST_ARTIFACTS"
           echo "$INTERNAL_BUILD"

@@ -104,7 +104,7 @@ jobs:
       - name: Copy test artifacts to S3
         if: ${{ env.UPLOAD_TEST_ARTIFACTS && env.INTERNAL_BUILD && !cancelled() }}
         env:
-          LOCAL_UP = ${{ env.UPLOAD_TEST_ARTIFACTS && env.INTERNAL_BUILD }}
+          LOCAL_UP: ${{ env.UPLOAD_TEST_ARTIFACTS && env.INTERNAL_BUILD }}
         run: | 
           echo "$UPLOAD_TEST_ARTIFACTS"
           echo "$INTERNAL_BUILD"

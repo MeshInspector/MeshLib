@@ -93,6 +93,18 @@ public:
         return renderDiscretization_;
     }
 
+    /// returns maximal number of points that will be rendered
+    /// if actual count of valid points is greater then the points will be sampled
+    /// This value is used only for automatic discretization
+    /// It can be changed manually by calling setRenderDiscretization
+    MRMESH_API int getMaxAutoRenderingPoints() const;
+
+    /// sets maximal number of points that will be rendered
+    /// INT_MAX means lack of limit
+    /// This value is used only for automatic discretization
+    /// It can be changed manually by calling setRenderDiscretization
+    MRMESH_API void setMaxAutoRenderingPoints( int val );
+
     /// returns file extension used to serialize the points
     [[nodiscard]] const char * savePointsFormat() const { return savePointsFormat_; }
 
@@ -138,7 +150,8 @@ protected:
     MRMESH_API virtual void setupRenderObject_() const override;
 
     int renderDiscretization_ = 1;
-
+    int maxRenderingPoints_ = 1'000'000;
+    int chooseRenderDiscretization_();
 
 private:
 

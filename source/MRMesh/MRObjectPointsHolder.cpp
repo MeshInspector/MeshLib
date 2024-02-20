@@ -66,7 +66,10 @@ void ObjectPointsHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
     VisualObject::setDirtyFlags( mask, invalidateCaches );
 
     if ( mask & DIRTY_FACE )
+    {
         numValidPoints_.reset();
+        setRenderDiscretization( chooseRenderDiscretization_() );
+    }
 
     if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
     {
@@ -246,8 +249,7 @@ VoidOrErrStr ObjectPointsHolder::deserializeModel_( const std::filesystem::path&
         setColoringType( ColoringType::VertsColorMap );
 
     points_ = std::make_shared<PointCloud>( std::move( res.value() ) );
-    if ( int pointCount = int( points_->points.size() ); pointCount > 2'000'000 )
-        setRenderDiscretization( pointCount / 1'000'000 );
+    setRenderDiscretization( chooseRenderDiscretization_() );
     return {};
 }
 
@@ -303,6 +305,24 @@ void ObjectPointsHolder::setSelectedVerticesColorsForAllViewports( ViewportPrope
 void ObjectPointsHolder::setDefaultSceneProperties_()
 {
     setDefaultColors_();
+}
+
+int ObjectPointsHolder::chooseRenderDiscretization_()
+{
+    return std::max( 1, int( numValidPoints() ) / maxRenderingPoints_ );
+}
+
+int ObjectPointsHolder::getMaxAutoRenderingPoints() const
+{
+    return maxRenderingPoints_;
+}
+
+void ObjectPointsHolder::setMaxAutoRenderingPoints( int val )
+{
+    if ( maxRenderingPoints_ == val )
+        return;
+    maxRenderingPoints_ = val;
+    setRenderDiscretization( chooseRenderDiscretization_() );
 }
 
 }

@@ -1672,7 +1672,7 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
 
     if ( allIsObjPoints )
     {
-        make_points_discretization( selectedObjs, "Point Sampling", [&] ( const ObjectPointsHolder* data )
+        make_points_discretization( selectedObjs, "Visual Sampling", [&] ( const ObjectPointsHolder* data )
         {
             return data->getRenderDiscretization();
         }, [&] ( ObjectPointsHolder* data, const int val )

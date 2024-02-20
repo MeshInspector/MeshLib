@@ -95,20 +95,15 @@ public:
 
     /// returns maximal number of points that will be rendered
     /// if actual count of valid points is greater then the points will be sampled
-    int getMaxRenderingPoints() const
-    {
-        return maxRenderingPoints_;
-    }
+    /// This value is used onl for automatic discretization
+    /// It can be changed manually by calling setRenderDiscretization
+    int getMaxAutoRenderingPoints() const;
 
     /// sets maximal number of points that will be rendered
     /// INT_MAX means lack of limit
-    void setMaxRenderingPoints( int val )
-    {
-        if ( maxRenderingPoints_ == val )
-            return;
-        maxRenderingPoints_ = val;
-        needRedraw_ = true;
-    }
+    /// This value is used onl for automatic discretization
+    /// It can be changed manually by calling setRenderDiscretization
+    void setMaxAutoRenderingPoints( int val );
 
     /// returns file extension used to serialize the points
     [[nodiscard]] const char * savePointsFormat() const { return savePointsFormat_; }

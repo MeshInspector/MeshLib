@@ -312,4 +312,17 @@ int ObjectPointsHolder::chooseRenderDiscretization_()
     return std::max( 1, int( numValidPoints() ) / maxRenderingPoints_ );
 }
 
+int ObjectPointsHolder::getMaxAutoRenderingPoints() const
+{
+    return maxRenderingPoints_;
+}
+
+void ObjectPointsHolder::setMaxAutoRenderingPoints( int val )
+{
+    if ( maxRenderingPoints_ == val )
+        return;
+    maxRenderingPoints_ = val;
+    setRenderDiscretization( chooseRenderDiscretization_() );
+}
+
 }

@@ -20,12 +20,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointCloud, [] ( pybind11::module_& m )
 
     pybind11::class_<MR::TriangulationParameters>( m, "TriangulationParameters", "Parameters of point cloud triangulation" ).
         def( pybind11::init<>() ).
-        def_readwrite( "avgNumNeighbours", &MR::TriangulationParameters::avgNumNeighbours,
-            "The triangulation calculates the radius at which the average\n"
-            "number of neighboring points is closest to this parameter.\n"
-            "This radius is used to determine the local triangulation zone.\n"
+        def_readwrite( "numNeighbours", &MR::TriangulationParameters::numNeighbours,
+            "The number of nearest neighbor points to use for building of local triangulation.\n"
             "note: Too small value can make not optimal triangulation and additional holes\n"
-            "Too big value increases difficulty of optimization and can make local optimum of local triangulation" ).
+            "Too big value increases difficulty of optimization and decreases performance" ).
         def_readwrite( "critAngle", &MR::TriangulationParameters::critAngle, "Critical angle of triangles in local triangulation (angle between triangles in fan should be less then this value)" ).
         def_readwrite( "critHoleLength", &MR::TriangulationParameters::critHoleLength,
             "Critical length of hole (all holes with length less then this value will be filled)\n"

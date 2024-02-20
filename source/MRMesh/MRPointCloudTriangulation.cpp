@@ -48,14 +48,13 @@ PointCloudTriangulator::PointCloudTriangulator( const PointCloud& pointCloud, co
 std::optional<Mesh> PointCloudTriangulator::triangulate( ProgressCallback progressCb )
 {
     MR_TIMER
-    assert( ( params_.avgNumNeighbours <= 0 && params_.radius > 0 )
-         || ( params_.avgNumNeighbours > 0 && params_.radius <= 0 ) );
-
-    float radius = params_.radius > 0 ? params_.radius : findAvgPointsRadius( pointCloud_, params_.avgNumNeighbours );
+    assert( ( params_.numNeighbours <= 0 && params_.radius > 0 )
+         || ( params_.numNeighbours > 0 && params_.radius <= 0 ) );
 
     auto optLocalTriangulations = TriangulationHelpers::buildUnitedLocalTriangulations( pointCloud_,
         {
-            .radius = radius,
+            .radius = params_.radius,
+            .numNeis = params_.numNeighbours,
             .critAngle = params_.critAngle,
             .trustedNormals = pointCloud_.hasNormals() ? &pointCloud_.normals : nullptr
         }, subprogress( progressCb, 0.0f, pointCloud_.hasNormals() ? 0.4f : 0.3f ) );

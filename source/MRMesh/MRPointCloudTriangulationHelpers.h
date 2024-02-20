@@ -4,6 +4,8 @@
 #include "MRId.h"
 #include "MRConstants.h"
 #include "MRBuffer.h"
+#include "MRPointsProject.h"
+#include "MRFewSmallest.h"
 #include <climits>
 #include <optional>
 
@@ -29,7 +31,7 @@ MRMESH_API float updateNeighborsRadius( const VertCoords& points, VertId v, Vert
  * \brief Finds all neighbors of v in given radius (v excluded)
  * \ingroup TriangulationHelpersGroup
  */
-MRMESH_API void findNeighbors( const PointCloud& pointCloud, VertId v, float radius, std::vector<VertId>& neighbors );
+MRMESH_API void findNeighborsInBall( const PointCloud& pointCloud, VertId v, float radius, std::vector<VertId>& neighbors );
 
 /**
  * \brief Filter neighbors with crossing normals
@@ -53,6 +55,9 @@ struct TriangulatedFanData
     /// first border edge (invalid if the center point is not on the boundary)
     /// triangle associated with this point is absent
     VertId border;
+
+    /// the storage to collect n-nearest neighbours, here to avoid allocations for each point
+    FewSmallest<PointsProjectionResult> nearesetPoints;
 };
 
 /** 
@@ -68,18 +73,29 @@ MRMESH_API void trianglulateFan( const VertCoords& points, VertId v, Triangulate
 
 struct Settings
 {
-    /// initial radius of search for neighbours, it can be increased automatically
+    /// initial radius of search for neighbours, it can be increased automatically;
+    /// if radius is positive then numNeis must be zero
     float radius = 0;
+
+    /// initially selects given number of nearest neighbours;
+    /// if numNeis is positive then radius must be zero
+    int numNeis = 0;
+
     /// max allowed angle for triangles in fan
     float critAngle = PI2_F;
+
     /// if oriented normals are known, they will be used for neighbor points selection
     const VertCoords* trustedNormals = nullptr;
+
     /// automatic increase of the radius if points outside can make triangles from original radius not-Delone
     bool automaticRadiusIncrease = true;
+
     /// the maximum number of optimization steps (removals) in local triangulation
     int maxRemoves = INT_MAX;
+
     /// optional output of considered neighbor points after filtering but before triangulation/optimization
     std::vector<VertId> * allNeighbors = nullptr;
+
     /// optional output: actual radius of neighbor search (after increase if any)
     float * actualRadius = nullptr;
 };

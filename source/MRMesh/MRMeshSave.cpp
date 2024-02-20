@@ -140,7 +140,15 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & 
         if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
             continue;
         auto p = applyDouble( settings.xf, mesh.points[i] );
-        out << fmt::format( "v {} {} {}\n", p.x, p.y, p.z );
+        if ( settings.colors )
+        {
+            const auto c = (Vector4f)( *settings.colors )[i];
+            out << fmt::format( "v {} {} {} {} {} {}\n", p.x, p.y, p.z, c[0], c[1], c[2] );
+        }
+        else
+        {
+            out << fmt::format( "v {} {} {}\n", p.x, p.y, p.z );
+        }
         ++numSaved;
         if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / numPoints * 0.5f ) )
             return unexpected( std::string( "Saving canceled" ) );

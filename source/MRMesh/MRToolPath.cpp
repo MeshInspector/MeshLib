@@ -87,7 +87,7 @@ Expected<Mesh, std::string> preprocessMesh( const Mesh& inputMesh, const ToolPat
         offsetParams.callBack = subprogress( params.cb, 0.0f, 0.15f );
         const auto offsetRes = offsetMesh( inputMesh, params.millRadius, offsetParams );
         if ( !offsetRes )
-            return unexpectedOperationCanceled();
+            return unexpected( offsetRes.error() );
 
         meshCopy = *offsetRes;
     }

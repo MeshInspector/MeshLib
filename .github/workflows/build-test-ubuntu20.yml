@@ -107,12 +107,14 @@ jobs:
           LOCAL_UP: ${{ env.UPLOAD_TEST_ARTIFACTS }} && ${{ env.INTERNAL_BUILD }}
           LOCAL_1: ${{ env.UPLOAD_TEST_ARTIFACTS }}
           LOCAL_2: ${{ env.INTERNAL_BUILD }}
+          LOCAL_3: ${{ {{ env.UPLOAD_TEST_ARTIFACTS }} && ${{ env.INTERNAL_BUILD }} }}
         run: | 
           echo "$UPLOAD_TEST_ARTIFACTS"
           echo "$INTERNAL_BUILD"
           echo "$LOCAL_UP"
           echo "$LOCAL_1"
           echo "$LOCAL_2" 
+          echo "$LOCAL_3" 
           aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/ubuntu20/${{matrix.config}}/${{matrix.compiler}}' --recursive
 
       - name: Create Deb

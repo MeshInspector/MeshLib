@@ -12,35 +12,65 @@ namespace MR
             return {};
 
         Plane3f planePos( plane.n, plane.d + eps );
-        Plane3f planeNeg( plane.n, plane.d - eps );
+        Plane3f planeNeg( -plane.n, -plane.d + eps );
+
+        struct PointPosition
+        {
+            Vector3f p;
+            float distFromPosPlane = {};
+            float distFromNegPlane = {};
+        };
         
         for ( EdgeId e = EdgeId(0); e < edges.size(); ++e )
         {
             const auto& edgeRecord = edges[e];
             if ( !edgeRecord.next.valid() || !edgeRecord.org.valid() )
                 continue;
+            
+            PointPosition p1{ .p = polyline.orgPnt( e ), .distFromPosPlane = planePos.distance( p1.p ), .distFromNegPlane = planeNeg.distance( p1.p ) };
+            PointPosition p2{ .p = polyline.destPnt( e ), .distFromPosPlane = planePos.distance( p2.p ), .distFromNegPlane = planeNeg.distance( p2.p ) };
 
-            const auto p1 = polyline.orgPnt( e );
-            const auto p2 = polyline.destPnt( e );
+            bool isP1Between = p1.distFromNegPlane < 0 && p1.distFromPosPlane < 0;
+            bool isP2Between = p2.distFromNegPlane < 0 && p2.distFromPosPlane < 0;
 
-            float distPos1 = planePos.distance( p1 );
-            float distPos2 = planePos.distance( p2 );
-            float distNeg1 = planeNeg.distance( p1 );
-            float distNeg2 = planeNeg.distance( p2 );
-
-            bool isP1Between = ( distPos1 > 0 ) ^ ( distNeg1 > 0 );
-            bool isP2Between = ( distPos2 > 0 ) ^ ( distNeg2 > 0 );
-
-
+            std::pair<EdgePoint, EdgePoint> segment( EdgePoint( e, 0.0f ), EdgePoint( e, 0.0f ) );
 
             if ( isP1Between && isP2Between )
-                result.push_back( { EdgePoint( e, 0.0f ), EdgePoint( e, 1.0f ) } );
+                segment.second.a = 1.0f;
 
             if ( isP1Between )
             {
-                result.push_back( { EdgePoint( e, 0.0f ), EdgePoint( e, distPos2 > 0 ? distPos1 / ( distPos1 - distPos2 ) : distNeg1 / ( distNeg1 - distNeg2 ) } ) );
+                segment.second.a = p2.distFromPosPlane > 0 ? p1.distFromPosPlane / ( p1.distFromPosPlane - p2.distFromPosPlane )
+                                                           : p1.distFromNegPlane / ( p1.distFromNegPlane - p2.distFromNegPlane );
+                result.push_back( segment );
             }
 
+            if ( isP2Between )
+            {
+                segment.first.a = p1.distFromPosPlane > 0 ? p1.distFromPosPlane / ( p1.distFromPosPlane - p2.distFromPosPlane )
+                                                          : p1.distFromNegPlane / ( p1.distFromNegPlane - p2.distFromNegPlane );
+                segment.second.a = 1.0f;
+                result.push_back( segment );
+            }
+
+            if ( p1.distFromPosPlane * p2.distFromPosPlane < 0 )
+            {
+                if ( p1.distFromPosPlane > 0 )
+                {
+                    const float det = 2 * p2.distFromNegPlane * ( p1.distFromPosPlane + eps );
+                    segment.first.a = p1.distFromPosPlane * p1.distFromPosPlane / det;
+                    segment.second.a = segment.first.a + 2 * eps / det;
+                }
+                else
+                {
+                    const float det = 2 * p2.distFromPosPlane * ( p1.distFromNegPlane + eps );
+                    segment.first.a = p1.distFromNegPlane * p1.distFromNegPlane / det;
+                    segment.second.a = segment.first.a + 2 * eps / det;
+                }
+                result.push_back( segment );
+            }
         }
+
+        return result;
     }
 }

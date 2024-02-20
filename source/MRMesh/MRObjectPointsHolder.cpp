@@ -66,7 +66,11 @@ void ObjectPointsHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
     VisualObject::setDirtyFlags( mask, invalidateCaches );
 
     if ( mask & DIRTY_FACE )
+    {
         numValidPoints_.reset();
+        const int validPointsCount = int( numValidPoints() );
+        setRenderDiscretization( validPointsCount > 2'000'000 ? validPointsCount / 1'000'000 : 1 );
+    }
 
     if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
     {
@@ -246,7 +250,7 @@ VoidOrErrStr ObjectPointsHolder::deserializeModel_( const std::filesystem::path&
         setColoringType( ColoringType::VertsColorMap );
 
     points_ = std::make_shared<PointCloud>( std::move( res.value() ) );
-    if ( int pointCount = int( points_->points.size() ); pointCount > 2'000'000 )
+    if ( int pointCount = int( points_->validPoints.count() ); pointCount > 2'000'000 )
         setRenderDiscretization( pointCount / 1'000'000 );
     return {};
 }

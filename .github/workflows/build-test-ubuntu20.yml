@@ -102,13 +102,17 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
 
       - name: Copy test artifacts to S3
-        if: ${{ 'env.UPLOAD_TEST_ARTIFACTS' && 'env.INTERNAL_BUILD' && !cancelled() }}
+        if: ${{ env.UPLOAD_TEST_ARTIFACTS && env.INTERNAL_BUILD && '!cancelled()' }}
         env:
-          LOCAL_UP: ${{ 'env.UPLOAD_TEST_ARTIFACTS' && 'env.INTERNAL_BUILD' }}
+          LOCAL_UP: ${{ env.UPLOAD_TEST_ARTIFACTS && env.INTERNAL_BUILD }}
+          LOCAL_1: ${{ env.UPLOAD_TEST_ARTIFACTS }}
+          LOCAL_2: ${{ env.INTERNAL_BUILD }}
         run: | 
           echo "$UPLOAD_TEST_ARTIFACTS"
           echo "$INTERNAL_BUILD"
           echo "$LOCAL_UP"
+          echo "$LOCAL_1"
+          echo "$LOCAL_2" 
           aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/ubuntu20/${{matrix.config}}/${{matrix.compiler}}' --recursive
 
       - name: Create Deb

@@ -20,7 +20,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointCloud, [] ( pybind11::module_& m )
 
     pybind11::class_<MR::TriangulationParameters>( m, "TriangulationParameters", "Parameters of point cloud triangulation" ).
         def( pybind11::init<>() ).
-        def_readwrite( "avgNumNeighbours", &MR::TriangulationParameters::avgNumNeighbours,
+        def_readwrite( "numNeighbours", &MR::TriangulationParameters::numNeighbours,
             "The triangulation calculates the radius at which the average\n"
             "number of neighboring points is closest to this parameter.\n"
             "This radius is used to determine the local triangulation zone.\n"

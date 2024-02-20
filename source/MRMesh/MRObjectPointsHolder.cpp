@@ -12,11 +12,6 @@
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
 
-static int chooseRenderDiscretization( size_t numValidPoints )
-{
-    return std::max( 1, int ( numValidPoints / 1'000'000 ) );
-}
-
 namespace MR
 {
 
@@ -73,7 +68,7 @@ void ObjectPointsHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
     if ( mask & DIRTY_FACE )
     {
         numValidPoints_.reset();
-        setRenderDiscretization( chooseRenderDiscretization( numValidPoints() ) );
+        setRenderDiscretization( chooseRenderDiscretization_() );
     }
 
     if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
@@ -254,7 +249,7 @@ VoidOrErrStr ObjectPointsHolder::deserializeModel_( const std::filesystem::path&
         setColoringType( ColoringType::VertsColorMap );
 
     points_ = std::make_shared<PointCloud>( std::move( res.value() ) );
-    setRenderDiscretization( chooseRenderDiscretization( numValidPoints() ) );
+    setRenderDiscretization( chooseRenderDiscretization_() );
     return {};
 }
 
@@ -310,6 +305,11 @@ void ObjectPointsHolder::setSelectedVerticesColorsForAllViewports( ViewportPrope
 void ObjectPointsHolder::setDefaultSceneProperties_()
 {
     setDefaultColors_();
+}
+
+int ObjectPointsHolder::chooseRenderDiscretization_()
+{
+    return std::max( 1, int( numValidPoints() ) / maxRenderingPoints_ );
 }
 
 }

@@ -87,8 +87,6 @@ jobs:
       - name: Configure AWS Credentials
         if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
-        env:
-          AWS_CREDS_IS_SET: true
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
           aws-region: us-east-1

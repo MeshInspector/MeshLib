@@ -11,11 +11,13 @@ MR_ADD_CLASS_FACTORY( PointObject )
 PointObject::PointObject()
 {
     constructPointCloud_();
+
+    setNameTagParams( { .screenOffset = Vector2f( 0, 0.1f ) } );
 }
 
 PointObject::PointObject( const std::vector<Vector3f>& pointsToApprox )
+    : PointObject()
 {
-    constructPointCloud_();
     Vector3d center;
     for ( auto& p : pointsToApprox )
         center += Vector3d( p );

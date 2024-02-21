@@ -61,6 +61,16 @@ void VisualObject::setAllVisualizeProperties( const AllVisualizeProperties& prop
         setVisualizePropertyMask( unsigned( i ), properties[i] );
 }
 
+const NameTagParams& VisualObject::nameTagParams() const
+{
+    return nameTagParams_;
+}
+
+void VisualObject::setNameTagParams( NameTagParams params )
+{
+    nameTagParams_ = std::move( params );
+}
+
 AllVisualizeProperties VisualObject::getAllVisualizeProperties() const
 {
     AllVisualizeProperties res;
@@ -272,7 +282,7 @@ void VisualObject::renderForPicker( const ModelRenderParams& params, unsigned id
 }
 
 void VisualObject::swapBase_( Object& other )
-{    
+{
     if ( auto otherVis = other.asType<VisualObject>() )
         std::swap( *this, *otherVis );
     else
@@ -319,7 +329,7 @@ MR_SUPPRESS_WARNING_POP
     auto writeColors = [&root]( const char * fieldName, const Color& val )
     {
         auto& colors = root["Colors"]["Faces"][fieldName];
-        serializeToJson( Vector4f( val ), colors["Diffuse"] );// To support old version 
+        serializeToJson( Vector4f( val ), colors["Diffuse"] );// To support old version
     };
 
     writeColors( "SelectedMode", selectedColor_.get() );
@@ -327,6 +337,19 @@ MR_SUPPRESS_WARNING_POP
     writeColors( "BackFaces", backFacesColor_.get() );
 
     root["Colors"]["GlobalAlpha"] = globalAlpha_.get();
+
+    root["ShowName"] = showName_.value();
+
+    serializeToJson( nameTagParams_.point, root["NameTagParams"]["Point"] );
+    serializeToJson( nameTagParams_.localOffset, root["NameTagParams"]["LocalOffset"] );
+    serializeToJson( nameTagParams_.screenOffset, root["NameTagParams"]["ScreenOffset"] );
+
+    if ( nameTagParams_.rotateToScreenPlaneAroundSphereCenter )
+        serializeToJson( *nameTagParams_.rotateToScreenPlaneAroundSphereCenter, root["NameTagParams"]["RotateToScreenPlaneAroundSphereCenter"] );
+    else
+        root["NameTagParams"]["RotateToScreenPlaneAroundSphereCenter"] = Json::nullValue;
+
+    root["NameTagParams"]["RotateLocalOffset90Degrees"] = nameTagParams_.rotateLocalOffset90Degrees;
 
     // labels
     serializeToJson( Vector4f( labelsColor_.get() ), root["Colors"]["Labels"] );
@@ -361,6 +384,27 @@ MR_SUPPRESS_WARNING_POP
 
     if ( root["Colors"]["GlobalAlpha"].isUInt() )
         globalAlpha_.get() = uint8_t( root["Colors"]["GlobalAlpha"].asUInt() );
+
+    if ( const auto& showNameJson = root["ShowName"]; showNameJson.isUInt() )
+        showName_ = ViewportMask( showNameJson.isUInt() );
+
+    if ( const auto& nameTagParamsJson = root["NameTagParams"]; nameTagParamsJson.isObject() )
+    {
+        deserializeFromJson( nameTagParamsJson["Point"], nameTagParams_.point );
+        deserializeFromJson( nameTagParamsJson["LocalOffset"], nameTagParams_.localOffset );
+        deserializeFromJson( nameTagParamsJson["ScreenOffset"], nameTagParams_.screenOffset );
+
+        if ( nameTagParamsJson.isMember( "RotateToScreenPlaneAroundSphereCenter" ) )
+        {
+            if ( const auto& centerJson = nameTagParamsJson["RotateToScreenPlaneAroundSphereCenter"]; centerJson.isNull() )
+                nameTagParams_.rotateToScreenPlaneAroundSphereCenter = {};
+            else
+                deserializeFromJson( centerJson, nameTagParams_.rotateToScreenPlaneAroundSphereCenter.emplace() );
+        }
+
+        if ( const auto& json = nameTagParamsJson["RotateLocalOffset90Degrees"]; json.isBool() )
+            nameTagParams_.rotateLocalOffset90Degrees = json.asBool();
+    }
 
     Vector4f resVec;
     // labels

@@ -15,7 +15,7 @@
 #elif defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif 
+#endif
 
 #include <Eigen/Dense>
 
@@ -24,7 +24,7 @@
 #elif defined(__clang__)
 #elif defined(__GNUC__)
 #pragma GCC diagnostic pop
-#endif 
+#endif
 
 
 namespace
@@ -90,12 +90,19 @@ const std::vector<FeatureObjectSharedProperty>& CircleObject::getAllSharedProper
 CircleObject::CircleObject()
 {
     constructPolyline_();
+
+    // More or less an arbitrary direction. Just something that's not +X to avoid overlaps with other stuff.
+    Vector3f nameTagDir = Vector3f( -1, -1, 0 ).normalized();
+
+    setNameTagParams( {
+        .point = nameTagDir,
+        .localOffset = nameTagDir * 2.f / 3.f,
+    } );
 }
 
 CircleObject::CircleObject( const std::vector<Vector3f>& pointsToApprox )
+    : CircleObject()
 {
-    constructPolyline_();
-
     PointAccumulator pa;
     for ( const auto& p : pointsToApprox )
         pa.addPoint( p );

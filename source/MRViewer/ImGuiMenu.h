@@ -173,6 +173,17 @@ protected:
   // When editing feature properties, this is the original xf of the target object, for history purposes.
   AffineXf3f editedFeatureObjectOldXf_;
 
+  struct ClickableName
+  {
+      // Position.
+      ImVec2 a;
+      ImVec2 b;
+      // The target object.
+      std::weak_ptr<Object> object;
+  };
+  // This is repopulated every frame by `draw_object_names()`, and `onMouseDown_()` consults this on click.
+  std::vector<ClickableName> clickableNames_;
+
 public:
   MRVIEWER_API virtual void init(MR::Viewer *_viewer) override;
 
@@ -211,6 +222,7 @@ public:
   std::function<void(void)> callback_draw_custom_window;
 
   void draw_labels_window();
+  void draw_object_names();
 
   void draw_labels( const VisualObject& obj );
 
@@ -316,6 +328,10 @@ public:
   void enableSavedDialogPositions( bool on ) { savedDialogPositionEnabled_ = on; }
   // returns true if enabled using of saved positions of plugin windows in the config file, false otherwise
   bool isSavedDialogPositionsEnabled() const { return savedDialogPositionEnabled_; }
+
+  /// If true, clicking an object name will select the object.
+  /// This changes the name rendering mechanism a bit, disable it if it interferes with your input.
+  bool clickingObjectNameSelectsObject = true;
 
 protected:
     MRVIEWER_API virtual void drawModalMessage_();

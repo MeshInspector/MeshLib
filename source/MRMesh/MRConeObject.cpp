@@ -131,13 +131,19 @@ void ConeObject::setBaseRadius( float radius )
 ConeObject::ConeObject()
 {
     constructMesh_();
+
+// More or less an arbitrary direction. Just something that's not +X to avoid overlaps with other stuff.
+    Vector3f nameTagDir = Vector3f( -1, -1, 0 ).normalized();
+
+    setNameTagParams( {
+        .point = Vector3f( 0, 0, 1 ) + nameTagDir,
+        .localOffset = nameTagDir * 2.f / 3.f,
+    } );
 }
 
 ConeObject::ConeObject( const std::vector<Vector3f>& pointsToApprox )
+    : ConeObject()
 {
-    // create mesh
-    constructMesh_();
-
     // calculate cone parameters.
     Cone3<float> result;
     auto fit = Cone3Approximation<float>();

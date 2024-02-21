@@ -14,7 +14,7 @@
 #elif defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif 
+#endif
 
 #include <Eigen/Dense>
 
@@ -23,7 +23,7 @@
 #elif defined(__clang__)
 #elif defined(__GNUC__)
 #pragma GCC diagnostic pop
-#endif 
+#endif
 
 namespace
 {
@@ -75,11 +75,20 @@ const std::vector<FeatureObjectSharedProperty>& SphereObject::getAllSharedProper
 SphereObject::SphereObject()
 {
     constructMesh_();
+
+    // More or less an arbitrary direction. Just something that's not +X to avoid overlaps with other stuff.
+    Vector3f nameTagDir = Vector3f( -1, -1, -1 ).normalized();
+
+    setNameTagParams( {
+        .point = nameTagDir,
+        .localOffset = nameTagDir * 2.f / 3.f,
+        .rotateToScreenPlaneAroundSphereCenter = Vector3f( 0, 0, 0 ),
+    } );
 }
 
 SphereObject::SphereObject( const std::vector<Vector3f>& pointsToApprox )
+    : SphereObject()
 {
-    constructMesh_();
     // find best radius and center
     Eigen::Matrix<double, 4, 4> accumA_;
     Eigen::Matrix<double, 4, 1> accumB_;

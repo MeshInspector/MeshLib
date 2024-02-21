@@ -56,7 +56,7 @@ std::shared_ptr<Mesh> makeFeatureCylinder( int resolution = cDetailLevel, float 
     return mesh;
 }
 
-} // namespace 
+} // namespace
 
 MR_ADD_CLASS_FACTORY( CylinderObject )
 
@@ -123,13 +123,19 @@ void CylinderObject::setCenter( const Vector3f& center )
 CylinderObject::CylinderObject()
 {
     constructMesh_();
+
+    // More or less an arbitrary direction. Just something that's not +X to avoid overlaps with other stuff.
+    Vector3f nameTagDir = Vector3f( -1, -1, 0 ).normalized();
+
+    setNameTagParams( {
+        .point = nameTagDir,
+        .localOffset = nameTagDir * 2.f / 3.f,
+    } );
 }
 
 CylinderObject::CylinderObject( const std::vector<Vector3f>& pointsToApprox )
+    : CylinderObject()
 {
-    // create mesh
-    constructMesh_();
-
     // calculate cylinder parameters.
     Cylinder3<float> result;
     auto fit = Cylinder3Approximation<float>();
@@ -226,7 +232,7 @@ TEST( MRMesh, CylinderApproximation )
     }
 
     /////////////////////////////
-    // General multithread test 
+    // General multithread test
     /////////////////////////////
 
     Cylinder3<float> result;
@@ -241,7 +247,7 @@ TEST( MRMesh, CylinderApproximation )
     EXPECT_GT( dot( direction, result.direction() ), 0.9f );
 
     ///////////////////////////////////////
-    // Compare single thread vs multithread 
+    // Compare single thread vs multithread
     ///////////////////////////////////////
 
     Cylinder3<float> resultST;
@@ -271,4 +277,4 @@ TEST( MRMesh, CylinderApproximation )
     EXPECT_GT( dot( direction, resultSAF.direction() ), 0.9f );
 }
 
-} // namespace MR 
+} // namespace MR

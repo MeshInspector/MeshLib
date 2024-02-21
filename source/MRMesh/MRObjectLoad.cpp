@@ -50,8 +50,7 @@ std::optional<MR::IOFilter> findFilter( const MR::IOFilters& filters, const std:
         return std::nullopt;
 }
 
-// Detect if mesh has enough sharp edges (>25 degrees):
-// sum length of all sharp edges greater than 1.0 * (diagonal of the bounding box)
+/// finds if given mesh has enough sharp edges (>25 degrees) to recommend flat shading
 bool detectFlatShading( const Mesh& mesh )
 {
     MR_TIMER
@@ -61,11 +60,11 @@ bool detectFlatShading( const Mesh& mesh )
 
     struct Data
     {
-        double sumLen = 0;
-        double sumSharpLen = 0;
+        double sumDblArea = 0;
+        double sumSharpDblArea = 0;
         Data operator + ( const Data & b ) const 
         {
-            return { sumLen + b.sumLen, sumSharpLen + b.sumSharpLen };
+            return { sumDblArea + b.sumDblArea, sumSharpDblArea + b.sumSharpDblArea };
         }
     };
 
@@ -76,20 +75,23 @@ bool detectFlatShading( const Mesh& mesh )
         {
             for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
             {
-                if ( mesh.topology.isLoneEdge( ue ) )
+                const EdgeId e = ue;
+                const auto l = mesh.topology.left( e );
+                const auto r = mesh.topology.right( e );
+                if ( !l || !r )
                     continue;
-                const auto len = mesh.edgeLength( ue );
-                current.sumLen += len;
+                const auto da = mesh.dblArea( l ) + mesh.dblArea( r );
+                current.sumDblArea += da;
                 auto dihedralCos = mesh.dihedralAngleCos( ue );
                 if ( dihedralCos <= sharpAngleCos )
-                    current.sumSharpLen += len;
+                    current.sumSharpDblArea += da;
             }
             return current;
         },
         std::plus<Data>() );
 
-    // more than 5% of edges are sharp
-    return total.sumSharpLen > 0.05 * total.sumLen;
+    // triangles' area near sharp edges is more than 5% of total area
+    return total.sumSharpDblArea > 0.05 * total.sumDblArea;
 }
 
 int chooseRenderDiscretization( size_t pointCount )

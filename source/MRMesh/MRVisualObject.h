@@ -241,7 +241,7 @@ public:
     /// draws this object for picking
     MRMESH_API virtual void renderForPicker( const ModelRenderParams&, unsigned ) const;
     /// draws this object for 2d UI
-    MRMESH_API virtual void renderUi( const UiRenderParams& params, IRenderObject::UiTaskList& tasks ) const;
+    MRMESH_API virtual void renderUi( const UiRenderParams& params ) const;
 
     /// is object has any visual representation (faces, edges, etc.)
     virtual bool hasVisualRepresentation() const { return false; }

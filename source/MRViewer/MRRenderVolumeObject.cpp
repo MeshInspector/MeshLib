@@ -364,7 +364,7 @@ void RenderVolumeObject::update_()
     objVoxels_->resetDirty();
 }
 
-MR_REGISTER_RENDER_OBJECT_IMPL( ObjectVoxels, RenderDefaultUiMixin<RenderVolumeObject> )
+MR_REGISTER_RENDER_OBJECT_IMPL( ObjectVoxels, RenderDefaultUiObject<RenderVolumeObject> )
 
 }
 #endif

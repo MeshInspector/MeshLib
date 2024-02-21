@@ -8,42 +8,39 @@
 namespace MR
 {
 
-class RenderPointFeatureObject : public RenderDefaultUiMixin<RenderPointsObject>
+class RenderPointFeatureObject : public RenderDefaultUiObject<RenderPointsObject>
 {
 public:
     MRVIEWER_API RenderPointFeatureObject( const VisualObject& object );
 };
 
-class RenderLineFeatureObject : public RenderDefaultUiMixin<RenderLinesObject>
+class RenderLineFeatureObject : public RenderDefaultUiObject<RenderLinesObject>
 {
 public:
     MRVIEWER_API RenderLineFeatureObject( const VisualObject& object );
 };
 
-class RenderPlaneFeatureObject : public RenderDefaultUiMixin<RenderMeshObject>
-{
-    using RenderDefaultUiMixin::RenderDefaultUiMixin;
-};
+// No `class RenderPlaneFeatureObject` for now, because planes look ok with default parameters.
 
-class RenderCircleFeatureObject : public RenderDefaultUiMixin<RenderLinesObject>
+class RenderCircleFeatureObject : public RenderDefaultUiObject<RenderLinesObject>
 {
 public:
     MRVIEWER_API RenderCircleFeatureObject( const VisualObject& object );
 };
 
-class RenderSphereFeatureObject : public RenderDefaultUiMixin<RenderMeshObject>
+class RenderSphereFeatureObject : public RenderDefaultUiObject<RenderMeshObject>
 {
 public:
     MRVIEWER_API RenderSphereFeatureObject( const VisualObject& object );
 };
 
-class RenderCylinderFeatureObject : public RenderDefaultUiMixin<RenderMeshObject>
+class RenderCylinderFeatureObject : public RenderDefaultUiObject<RenderMeshObject>
 {
 public:
     MRVIEWER_API RenderCylinderFeatureObject( const VisualObject& object );
 };
 
-class RenderConeFeatureObject : public RenderDefaultUiMixin<RenderMeshObject>
+class RenderConeFeatureObject : public RenderDefaultUiObject<RenderMeshObject>
 {
 public:
     MRVIEWER_API RenderConeFeatureObject( const VisualObject& object );

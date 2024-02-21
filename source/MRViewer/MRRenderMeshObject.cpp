@@ -854,6 +854,6 @@ RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
     return buffer;
 }
 
-MR_REGISTER_RENDER_OBJECT_IMPL( ObjectMeshHolder, RenderDefaultUiMixin<RenderMeshObject> )
+MR_REGISTER_RENDER_OBJECT_IMPL( ObjectMeshHolder, RenderDefaultUiObject<RenderMeshObject> )
 
 }

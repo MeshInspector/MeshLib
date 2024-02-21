@@ -13,9 +13,9 @@
 namespace MR
 {
 
-void RenderNameObject::Task::earlyBackwardPass( bool& mouseHoverConsumed )
+void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& params )
 {
-    if ( mouseHoverConsumed )
+    if ( params.mouseHoverConsumed )
         return;
 
     // If it wasn't clipped to nothing...
@@ -24,7 +24,7 @@ void RenderNameObject::Task::earlyBackwardPass( bool& mouseHoverConsumed )
         // React to hover and possibly click.
         if ( ImGuiMath::CompareAll( ImGui::GetMousePos() ) >= windowCornerA && ImGuiMath::CompareAll( ImGui::GetMousePos() ) < windowCornerB )
         {
-            mouseHoverConsumed = true;
+            params.mouseHoverConsumed = true;
             isHovered = true;
 
             if ( ImGui::IsMouseDown( ImGuiMouseButton_Left ) )
@@ -127,14 +127,14 @@ void RenderNameObject::Task::renderPass()
     isActive = false;
 }
 
-void RenderNameObject::renderUi( const UiRenderParams& params, UiTaskList& tasks )
+void RenderNameObject::renderUi( const UiRenderParams& params )
 {
-    task.params = &params;
+    task_.params = &params;
 
-    task.isHovered = false;
-    task.isActive = false;
+    task_.isHovered = false;
+    task_.isActive = false;
 
-    if ( !task.object->getVisualizeProperty( unsigned( VisualizeMaskType::Name ), params.viewport->id ) )
+    if ( !task_.object->getVisualizeProperty( unsigned( VisualizeMaskType::Name ), params.viewportId ) )
         return; // The name is hidden in this viewport.
 
     const float
@@ -143,10 +143,10 @@ void RenderNameObject::renderUi( const UiRenderParams& params, UiTaskList& tasks
         buttonSpacingToPoint = 8 * params.scale;
 
 
-    task.paddingA = ImGuiMath::round( ImVec2( 4, 2 ) * params.scale ),
-    task.paddingB = ImGuiMath::round( ImVec2( 4, 4 ) * params.scale );
+    task_.paddingA = ImGuiMath::round( ImVec2( 4, 2 ) * params.scale ),
+    task_.paddingB = ImGuiMath::round( ImVec2( 4, 4 ) * params.scale );
 
-    auto xf = task.object->worldXf();
+    auto xf = task_.object->worldXf();
 
     Vector3f localPoint = nameUiPoint;
 
@@ -154,15 +154,20 @@ void RenderNameObject::renderUi( const UiRenderParams& params, UiTaskList& tasks
     Vector3f worldPoint2 = xf( localPoint + nameUiLocalOffset );
     ImVec2 point3Offset = ImVec2( nameUiScreenOffset ) * params.scale;
 
-    task.text = task.object->name();
-    task.textSize = ImGui::CalcTextSize( task.text.c_str() );
+    task_.text = task_.object->name();
+    task_.textSize = ImGui::CalcTextSize( task_.text.c_str() );
+
+    Viewport& viewportRef = getViewerInstance().viewport( params.viewportId );
+
+    ImVec2 viewportCornerA( params.viewport.x, ImGui::GetIO().DisplaySize.y - params.viewport.y - params.viewport.w );
+    ImVec2 viewportCornerB( params.viewport.x + params.viewport.z, ImGui::GetIO().DisplaySize.y - params.viewport.y );
 
     auto toScreenCoords = [&]( Vector3f point, float* depthOutput = nullptr ) -> ImVec2
     {
-        auto result = params.viewport->projectToViewportSpace( point );
+        auto result = viewportRef.projectToViewportSpace( point );
         if ( depthOutput )
             *depthOutput = result.z;
-        return ImVec2( result.x, result.y ) + ImVec2( params.viewportCornerA );
+        return ImVec2( result.x, result.y ) + viewportCornerA;
     };
 
     Vector3f fixedWorldPoint = worldPoint;
@@ -178,7 +183,7 @@ void RenderNameObject::renderUi( const UiRenderParams& params, UiTaskList& tasks
         {
             deltaLen = std::sqrt( deltaLen );
 
-            Vector3f dirTowardsCamera = params.viewport->getViewXf().A.z.normalized();
+            Vector3f dirTowardsCamera = Vector3f( params.viewMatrix.z.x, params.viewMatrix.z.y, params.viewMatrix.z.z ).normalized();
 
             Vector3f fixedDelta;
             fixedDelta = delta - dot( delta, dirTowardsCamera ) * dirTowardsCamera;
@@ -190,29 +195,29 @@ void RenderNameObject::renderUi( const UiRenderParams& params, UiTaskList& tasks
         }
     }
 
-    task.point = toScreenCoords( fixedWorldPoint );
-    task.point2 = toScreenCoords( fixedWorldPoint2, &task.renderTaskDepth );
+    task_.point = toScreenCoords( fixedWorldPoint );
+    task_.point2 = toScreenCoords( fixedWorldPoint2, &task_.renderTaskDepth );
 
     if ( nameUiRotateLocalOffset90Degrees )
-        task.point2 = task.point + ImGuiMath::rot90( task.point2 - task.point );
+        task_.point2 = task_.point + ImGuiMath::rot90( task_.point2 - task_.point );
 
-    ImVec2 point3 = task.point2 + point3Offset;
+    ImVec2 point3 = task_.point2 + point3Offset;
 
     ImVec2 lastSegmentOffset;
     if ( point3Offset != ImVec2{} )
         lastSegmentOffset = point3Offset;
-    else if ( ImVec2 d = point3 - task.point; d != ImVec2{} )
+    else if ( ImVec2 d = point3 - task_.point; d != ImVec2{} )
         lastSegmentOffset = d;
 
-    task.textCenter = point3;
-    task.textPos = task.textCenter - task.textSize / 2;
+    task_.textCenter = point3;
+    task_.textPos = task_.textCenter - task_.textSize / 2;
 
     if ( lastSegmentOffset != ImVec2{} )
     {
         ImVec2 prevPoint = point3 - lastSegmentOffset;
 
-        ImVec2 pointA = task.textPos - task.paddingA - buttonSpacingToPoint;
-        ImVec2 pointB = task.textPos + task.textSize + task.paddingB + buttonSpacingToPoint;
+        ImVec2 pointA = task_.textPos - task_.paddingA - buttonSpacingToPoint;
+        ImVec2 pointB = task_.textPos + task_.textSize + task_.paddingB + buttonSpacingToPoint;
 
         if ( ImGuiMath::CompareAll( prevPoint ) >= pointA && ImGuiMath::CompareAll( prevPoint ) < pointB )
         {
@@ -239,18 +244,18 @@ void RenderNameObject::renderUi( const UiRenderParams& params, UiTaskList& tasks
             else if ( offsetDir.y < 0 )
                 delta.y = -absOffset.y;
 
-            task.textPos += delta;
-            task.textCenter += delta;
+            task_.textPos += delta;
+            task_.textCenter += delta;
         }
     }
 
-    task.textPos = ImGuiMath::round( task.textPos );
+    task_.textPos = ImGuiMath::round( task_.textPos );
 
-    task.windowCornerA = ImGuiMath::clamp( task.textPos - task.paddingA, ImVec2( params.viewportCornerA ), ImVec2( params.viewportCornerB ) );
-    task.windowCornerB = ImGuiMath::clamp( task.textPos + task.textSize + task.paddingB, ImVec2( params.viewportCornerA ), ImVec2( params.viewportCornerB ) );
+    task_.windowCornerA = ImGuiMath::clamp( task_.textPos - task_.paddingA, viewportCornerA, viewportCornerB );
+    task_.windowCornerB = ImGuiMath::clamp( task_.textPos + task_.textSize + task_.paddingB, viewportCornerA, viewportCornerB );
 
-    // A non-owning pointer to our task.
-    tasks.push_back( { std::shared_ptr<void>{}, &task } );
+    // A non-owning pointer to our task_.
+    params.tasks->push_back( { std::shared_ptr<void>{}, &task_ } );
 }
 
 }

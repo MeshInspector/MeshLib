@@ -34,14 +34,14 @@ class RenderNameObject : public virtual IRenderObject
         bool isHovered = false;
         bool isActive = false;
 
-        MRVIEWER_API void earlyBackwardPass( bool& mouseHoverConsumed ) override;
+        MRVIEWER_API void earlyBackwardPass( const BackwardPassParams& params ) override;
         MRVIEWER_API void renderPass() override;
     };
-    Task task;
+    Task task_;
 public:
-    RenderNameObject( const VisualObject& object ) { task.object = &object; }
+    RenderNameObject( const VisualObject& object ) { task_.object = &object; }
 
-    MRVIEWER_API void renderUi( const UiRenderParams& params, UiTaskList& tasks ) override;
+    MRVIEWER_API void renderUi( const UiRenderParams& params ) override;
 
     // The name tag is displayed as a text bubble, attached to a specific point on the model with at most 2-segment line.
     // The first segment offset is specified in 3d model coordinates, and the second offset is in screen coordinates.

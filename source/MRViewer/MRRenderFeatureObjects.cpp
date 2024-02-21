@@ -14,14 +14,14 @@ namespace MR
 
 MR_REGISTER_RENDER_OBJECT_IMPL( PointObject, RenderPointFeatureObject )
 RenderPointFeatureObject::RenderPointFeatureObject( const VisualObject& object )
-    : RenderDefaultUiMixin( object )
+    : RenderObjectCombinator( object )
 {
     nameUiScreenOffset = Vector2f( 0, 0.1f );
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( LineObject, RenderLineFeatureObject )
 RenderLineFeatureObject::RenderLineFeatureObject( const VisualObject& object )
-    : RenderDefaultUiMixin( object )
+    : RenderObjectCombinator( object )
 {
     nameUiLocalOffset = Vector3f( 0.1f, 0, 0 );
     nameUiRotateLocalOffset90Degrees = true;
@@ -29,7 +29,7 @@ RenderLineFeatureObject::RenderLineFeatureObject( const VisualObject& object )
 
 MR_REGISTER_RENDER_OBJECT_IMPL( CircleObject, RenderCircleFeatureObject )
 RenderCircleFeatureObject::RenderCircleFeatureObject( const VisualObject& object )
-    : RenderDefaultUiMixin( object )
+    : RenderObjectCombinator( object )
 {
     // More or less an arbitrary direction. Just something that's not +X to avoid overlaps with other stuff.
     Vector3f nameTagDir = Vector3f( -1, -1, 0 ).normalized();
@@ -40,7 +40,7 @@ RenderCircleFeatureObject::RenderCircleFeatureObject( const VisualObject& object
 
 MR_REGISTER_RENDER_OBJECT_IMPL( SphereObject, RenderSphereFeatureObject )
 RenderSphereFeatureObject::RenderSphereFeatureObject( const VisualObject& object )
-    : RenderDefaultUiMixin( object )
+    : RenderObjectCombinator( object )
 {
     // More or less an arbitrary direction. Just something that's not +X to avoid overlaps with other stuff.
     Vector3f nameTagDir = Vector3f( -1, -1, 0 ).normalized();
@@ -52,7 +52,7 @@ RenderSphereFeatureObject::RenderSphereFeatureObject( const VisualObject& object
 
 MR_REGISTER_RENDER_OBJECT_IMPL( CylinderObject, RenderCylinderFeatureObject )
 RenderCylinderFeatureObject::RenderCylinderFeatureObject( const VisualObject& object )
-    : RenderDefaultUiMixin( object )
+    : RenderObjectCombinator( object )
 {
     // More or less an arbitrary direction. Just something that's not +X to avoid overlaps with other stuff.
     Vector3f nameTagDir = Vector3f( -1, -1, 0 ).normalized();
@@ -63,7 +63,7 @@ RenderCylinderFeatureObject::RenderCylinderFeatureObject( const VisualObject& ob
 
 MR_REGISTER_RENDER_OBJECT_IMPL( ConeObject, RenderConeFeatureObject )
 RenderConeFeatureObject::RenderConeFeatureObject( const VisualObject& object )
-    : RenderDefaultUiMixin( object )
+    : RenderObjectCombinator( object )
 {
     // More or less an arbitrary direction. Just something that's not +X to avoid overlaps with other stuff.
     Vector3f nameTagDir = Vector3f( -1, -1, 0 ).normalized();

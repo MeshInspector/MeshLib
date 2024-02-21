@@ -830,6 +830,13 @@ void ImGuiMenu::draw_helpers()
     drawModalMessage_();
 }
 
+UiRenderManager& ImGuiMenu::getUiRenderManager()
+{
+    if ( !uiRenderManager_ )
+        uiRenderManager_ = std::make_unique<UiRenderManagerImpl>();
+    return *uiRenderManager_;
+}
+
 void ImGuiMenu::drawModalMessage_()
 {
     ImGui::PushStyleColor( ImGuiCol_ModalWindowDimBg, ImVec4( 1, 0.125f, 0.125f, ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg].w ) );
@@ -3177,6 +3184,30 @@ StateBasePlugin* ImGuiMenu::PluginsCache::findEnabled() const
 const std::vector<StateBasePlugin*>& ImGuiMenu::PluginsCache::getTabPlugins( StatePluginTabs tab ) const
 {
     return sortedCustomPlufins_[int( tab )];
+}
+
+void ImGuiMenu::UiRenderManagerImpl::preRenderViewport( ViewportId viewport )
+{
+    const auto& v = getViewerInstance().viewport( viewport );
+    auto rect = v.getViewportRect();
+
+    ImVec2 cornerA( rect.min.x, ImGui::GetIO().DisplaySize.y - rect.max.y );
+    ImVec2 cornerB( rect.max.x, ImGui::GetIO().DisplaySize.y - rect.min.y );
+
+    ImGui::GetBackgroundDrawList()->PushClipRect( cornerA, cornerB );
+    ImGui::GetForegroundDrawList()->PushClipRect( cornerA, cornerB );
+}
+
+void ImGuiMenu::UiRenderManagerImpl::postRenderViewport( ViewportId viewport )
+{
+    (void)viewport;
+    ImGui::GetBackgroundDrawList()->PopClipRect();
+    ImGui::GetForegroundDrawList()->PopClipRect();
+}
+
+BasicUiRenderTask::BackwardPassParams ImGuiMenu::UiRenderManagerImpl::getBackwardPassParams()
+{
+    return { .mouseHoverConsumed = ImGui::GetIO().WantCaptureMouse };
 }
 
 void showModal( const std::string& msg, NotificationType type )

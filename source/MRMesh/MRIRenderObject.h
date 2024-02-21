@@ -12,8 +12,6 @@
 namespace MR
 {
 
-class Viewport;
-
 enum class DepthFunction
 {
     Never = 0,
@@ -48,19 +46,6 @@ struct ModelRenderParams : BaseRenderParams
     bool alphaSort{ false };     // if this flag is true shader for alpha sorting is used, unused for picker
 };
 
-struct UiRenderParams
-{
-    /// Multiply all your sizes by this amount. Unless they are already premultipled, e.g. come from `ImGui::GetStyle()`.
-    float scale = 1;
-
-    /// The current viewport.
-    const Viewport* viewport = nullptr;
-
-    /// For convenience, the viewport corner coordinates (with Y going down).
-    Vector2f viewportCornerA;
-    Vector2f viewportCornerB;
-};
-
 struct BasicUiRenderTask
 {
     virtual ~BasicUiRenderTask() = default;
@@ -69,15 +54,42 @@ struct BasicUiRenderTask
     BasicUiRenderTask( const BasicUiRenderTask& ) = delete;
     BasicUiRenderTask& operator=( const BasicUiRenderTask& ) = delete;
 
-    /// The tasks are sorted by this depth.
+    /// The tasks are sorted by this depth, descending (larger depth = further away).
     float renderTaskDepth = 0;
+
+    struct BackwardPassParams
+    {
+        mutable bool mouseHoverConsumed = false;
+    };
 
     /// This is an optional early pass, where you can claim exclusive control over the mouse.
     /// If you want to handle clicks or hovers, do it here, only if the argument is false. Then set it to true, if you handled the click/hover.
-    virtual void earlyBackwardPass( bool& mouseHoverConsumed ) { (void)mouseHoverConsumed; }
+    virtual void earlyBackwardPass( const BackwardPassParams& params ) { (void)params; }
 
     /// This is the main rendering pass.
     virtual void renderPass() = 0;
+};
+
+struct UiRenderParams : BaseRenderParams
+{
+    /// Multiply all your sizes by this amount. Unless they are already premultipled, e.g. come from `ImGui::GetStyle()`.
+    float scale = 1;
+
+    using UiTaskList = std::vector<std::shared_ptr<BasicUiRenderTask>>;
+
+    // Those are Z-sorted and then executed.
+    UiTaskList* tasks = nullptr;
+};
+
+struct UiRenderManager
+{
+    virtual ~UiRenderManager() = default;
+
+    virtual void preRenderViewport( ViewportId viewport ) { (void)viewport; }
+    virtual void postRenderViewport( ViewportId viewport ) { (void)viewport; }
+
+    // Call this once per viewport.
+    virtual BasicUiRenderTask::BackwardPassParams getBackwardPassParams() { return {}; }
 };
 
 class IRenderObject
@@ -91,19 +103,37 @@ public:
     virtual void render( const ModelRenderParams& params ) = 0;
     virtual void renderPicker( const ModelRenderParams& params, unsigned geomId ) = 0;
     /// returns the amount of memory this object occupies on heap
-    virtual size_t heapBytes() const { return 0; }
+    virtual size_t heapBytes() const = 0;
     /// returns the amount of memory this object allocated in OpenGL
-    virtual size_t glBytes() const { return 0; }
+    virtual size_t glBytes() const = 0;
     /// binds all data for this render object, not to bind ever again (until object becomes dirty)
     virtual void forceBindAll() {}
 
-    using UiTaskList = std::vector<std::shared_ptr<BasicUiRenderTask>>;
-
-    /// Render the ImGui UI. This is repeated for each viewport.
-    /// Here you're supposed to only insert tasks into `tasks`, instead of rendering things directly.
+    /// Render the UI. This is repeated for each viewport.
+    /// Here you can either render immediately, or insert a task into `params.tasks`, which get Z-sorted.
     /// * `params` will remain alive as long as the tasks are used.
     /// * You'll have at most one living task at a time, so you can write a non-owning pointer to an internal task.
-    virtual void renderUi( const UiRenderParams& params, UiTaskList& tasks ) { (void)params; (void)tasks; }
+    virtual void renderUi( const UiRenderParams& params ) { (void)params; }
+};
+// Those dummy definitions remove undefined references in `RenderObjectCombinator` when it calls non-overridden pure virtual methods.
+// We could check in `RenderObjectCombinator` if they're overridden or not, but it's easier to just define them.
+inline size_t IRenderObject::heapBytes() const { return 0; }
+inline size_t IRenderObject::glBytes() const { return 0; }
+
+// Combines several different `IRenderObject`s into one in a meaningful way.
+template <typename ...Bases>
+requires ( ( std::derived_from<Bases, IRenderObject> && !std::same_as<Bases, IRenderObject> ) && ... )
+class RenderObjectCombinator : public Bases...
+{
+public:
+    RenderObjectCombinator( const VisualObject& object )
+        : Bases( object )...
+    {}
+
+    size_t heapBytes() const override { return ( std::size_t{} + ... + Bases::heapBytes() ); }
+    size_t glBytes() const override { return ( std::size_t{} + ... + Bases::glBytes() ); }
+    void forceBindAll() override { ( Bases::forceBindAll(), ... ); }
+    void renderUi( const UiRenderParams& params ) override { ( Bases::renderUi( params ), ... ); }
 };
 
 MRMESH_API std::unique_ptr<IRenderObject> createRenderObject( const VisualObject& visObj, const std::type_index& type );

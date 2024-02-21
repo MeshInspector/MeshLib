@@ -1465,30 +1465,19 @@ void Viewer::drawUiRenderObjects_()
     // Currently, a part of the contract of `IRenderObject::renderUi()` is that at most rendering task is in flight at any given time.
     // That's why each viewport is being drawn separately.
 
+    UiRenderManager& uiRenderManager = getMenuPlugin()->getUiRenderManager();
+
     for ( Viewport& viewport : getViewerInstance().viewport_list )
     {
-        UiRenderParams renderParams;
+        UiRenderParams renderParams{ viewport.getBaseRenderParams() };
         renderParams.scale = menuPlugin_->menu_scaling();
-        renderParams.viewport = &viewport;
 
-        auto rawViewportRect = viewport.getViewportRect();
-        renderParams.viewportCornerA = rawViewportRect.min;
-        renderParams.viewportCornerB = rawViewportRect.max;
-        renderParams.viewportCornerA.y = ImGui::GetIO().DisplaySize.y - renderParams.viewportCornerA.y;
-        renderParams.viewportCornerB.y = ImGui::GetIO().DisplaySize.y - renderParams.viewportCornerB.y;
-        std::swap( renderParams.viewportCornerA.y, renderParams.viewportCornerB.y );
+        uiRenderManager.preRenderViewport( viewport.id );
+        MR_FINALLY{ uiRenderManager.postRenderViewport( viewport.id ); };
 
-        // Set up clipping as a courtesy.
-        ImDrawList* drawLists[] = { ImGui::GetBackgroundDrawList(), ImGui::GetForegroundDrawList() };
-        for ( ImDrawList* list : drawLists )
-            list->PushClipRect( renderParams.viewportCornerA, renderParams.viewportCornerB );
-        MR_FINALLY{
-            for ( ImDrawList* list : drawLists )
-                list->PopClipRect();
-        };
-
-        IRenderObject::UiTaskList tasks;
+        UiRenderParams::UiTaskList tasks;
         tasks.reserve( 50 );
+        renderParams.tasks = &tasks;
 
         auto lambda = [&]( auto& lambda, Object& object ) -> void
         {
@@ -1496,7 +1485,7 @@ void Viewer::drawUiRenderObjects_()
                 return;
 
             if ( auto visual = dynamic_cast<VisualObject*>( &object ) )
-                visual->renderUi( renderParams, tasks );
+                visual->renderUi( renderParams );
 
             for ( const auto& child : object.children() )
                 lambda( lambda, *child );
@@ -1505,11 +1494,11 @@ void Viewer::drawUiRenderObjects_()
 
         std::sort( tasks.begin(), tasks.end(), []( const auto& a, const auto& b ){ return a->renderTaskDepth > b->renderTaskDepth; } );
 
-        bool mouseHoverConsumed = false;
+        auto backwardPassParams = uiRenderManager.getBackwardPassParams();
         for ( auto it = tasks.end(); it != tasks.begin(); )
         {
             --it;
-            ( *it )->earlyBackwardPass( mouseHoverConsumed );
+            ( *it )->earlyBackwardPass( backwardPassParams );
         }
 
         for ( const auto& task : tasks )

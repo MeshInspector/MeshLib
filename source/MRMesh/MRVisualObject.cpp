@@ -271,13 +271,13 @@ void VisualObject::renderForPicker( const ModelRenderParams& params, unsigned id
     renderObj_->renderPicker( params, id );
 }
 
-void VisualObject::renderUi( const UiRenderParams& params, IRenderObject::UiTaskList& tasks ) const
+void VisualObject::renderUi( const UiRenderParams& params ) const
 {
     setupRenderObject_();
     if ( !renderObj_ )
         return;
 
-    renderObj_->renderUi( params, tasks );
+    renderObj_->renderUi( params );
 }
 
 void VisualObject::swapBase_( Object& other )

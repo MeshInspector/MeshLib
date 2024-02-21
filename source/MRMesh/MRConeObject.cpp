@@ -131,14 +131,6 @@ void ConeObject::setBaseRadius( float radius )
 ConeObject::ConeObject()
 {
     constructMesh_();
-
-// More or less an arbitrary direction. Just something that's not +X to avoid overlaps with other stuff.
-    Vector3f nameTagDir = Vector3f( -1, -1, 0 ).normalized();
-
-    setNameTagParams( {
-        .point = Vector3f( 0, 0, 1 ) + nameTagDir,
-        .localOffset = nameTagDir * 2.f / 3.f,
-    } );
 }
 
 ConeObject::ConeObject( const std::vector<Vector3f>& pointsToApprox )
@@ -154,7 +146,6 @@ ConeObject::ConeObject( const std::vector<Vector3f>& pointsToApprox )
     setCenter( result.center() );
     setAngle( result.angle );
     setHeight( result.height );
-
 }
 
 std::shared_ptr<Object> ConeObject::shallowClone() const
@@ -185,6 +176,12 @@ void ConeObject::serializeFields_( Json::Value& root ) const
 {
     ObjectMeshHolder::serializeFields_( root );
     root["Type"].append( ConeObject::TypeName() );
+}
+
+void ConeObject::setupRenderObject_() const
+{
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype(*this)>( *this );
 }
 
 void ConeObject::constructMesh_()

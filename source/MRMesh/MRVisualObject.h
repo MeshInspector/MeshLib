@@ -85,29 +85,6 @@ struct Dirty
     Dirty& operator =( uint32_t b ) noexcept { f = b; return *this; }
 };
 
-struct NameTagParams
-{
-    // The name tag is displayed as a text bubble, attached to a specific point on the model with at most 2-segment line.
-    // The first segment offset is specified in 3d model coordinates, and the second offset is in screen coordinates.
-    // The offsets can be tiny, since any non-zero offset is automatically extended to make sure the text bubble doesn't overlap the attachment point.
-
-    /// The attachment point in model space.
-    Vector3f point;
-    /// Which way the name is moved relative to the `point`, in model space. The length is respected.
-    Vector3f localOffset;
-    /// Which way the name is moved relative to the `point`, in screen space (Y is down). The length is respected.
-    /// This is automatically multiplied by the global GUI scale.
-    Vector2f screenOffset;
-
-    /// If true, the `point` is rotated to be in the screen plane, around this point. `localOffset` is also rotated by the same amount.
-    /// Good for having the name on a spherical surface.
-    std::optional<Vector3f> rotateToScreenPlaneAroundSphereCenter;
-
-    /// If true, the `localOffset` is rotated 90 degrees CW after projecting it to screen space.
-    /// This is great if you have some axis or line that you don't want the name to overlap.
-    bool rotateLocalOffset90Degrees = false;
-};
-
 /// Visual Object
 class MRMESH_CLASS VisualObject : public Object
 {
@@ -147,10 +124,6 @@ public:
     void showName( bool on ) { return setVisualizeProperty( on, unsigned( VisualizeMaskType::Name ), ViewportMask::all() ); }
     /// returns whether object name is shown in any viewport
     bool showName() const { return getVisualizeProperty( unsigned( VisualizeMaskType::Name ), ViewportMask::any() ); }
-
-    /// Describes how the object name should be dislpayed.
-    [[nodiscard]] MRMESH_API const NameTagParams& nameTagParams() const;
-    MRMESH_API virtual void setNameTagParams( NameTagParams params );
 
     /// returns color of object when it is selected/not-selected (depending on argument) in given viewport
     MRMESH_API const Color& getFrontColor( bool selected = true, ViewportId viewportId = {} ) const;
@@ -267,6 +240,8 @@ public:
     MRMESH_API virtual void render( const ModelRenderParams& ) const;
     /// draws this object for picking
     MRMESH_API virtual void renderForPicker( const ModelRenderParams&, unsigned ) const;
+    /// draws this object for 2d UI
+    MRMESH_API virtual void renderUi( const UiRenderParams& params, IRenderObject::UiTaskList& tasks ) const;
 
     /// is object has any visual representation (faces, edges, etc.)
     virtual bool hasVisualRepresentation() const { return false; }
@@ -324,8 +299,6 @@ protected:
     ViewportProperty<Color> unselectedColor_;
     ViewportProperty<Color> backFacesColor_;
     ViewportProperty<uint8_t> globalAlpha_{ 255 };
-
-    NameTagParams nameTagParams_;
 
     std::vector<PositionedText> labels_;
 

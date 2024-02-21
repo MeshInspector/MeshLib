@@ -53,7 +53,7 @@ public:
     struct LaunchParams
     {
         bool fullscreen{ false }; // if true starts fullscreen
-        int width{ 0 }; 
+        int width{ 0 };
         int height{ 0 };
         enum WindowMode
         {
@@ -90,7 +90,7 @@ public:
     MRVIEWER_API void launchEventLoop();
     // Terminate window
     MRVIEWER_API void launchShut();
-    
+
     bool isLaunched() const { return isLaunched_; }
 
     // provides non const access to viewer
@@ -338,7 +338,7 @@ public:
     // note that it does not clear framebuffer
     MRVIEWER_API void bindSceneTexture( bool bind );
 
-    // Sets manager of viewer settings which loads user personal settings on beginning of app 
+    // Sets manager of viewer settings which loads user personal settings on beginning of app
     // and saves it in app's ending
     MRVIEWER_API void setViewportSettingsManager( std::unique_ptr<IViewerSettingsManager> mng );
     MRVIEWER_API const std::unique_ptr<IViewerSettingsManager>& getViewportSettingsManager() const { return settingsMng_; }
@@ -380,7 +380,7 @@ public:
     MRVIEWER_API bool globalHistoryRedo();
     // Returns global history store
     const std::shared_ptr<HistoryStore>& getGlobalHistoryStore() const { return globalHistoryStore_; }
-    // Return spacemouse handler 
+    // Return spacemouse handler
     const std::shared_ptr<SpaceMouseHandler>& getSpaceMouseHandler() const { return spaceMouseHandler_; }
 
     // This method is called after successful scene saving to update scene root, window title and undo
@@ -446,7 +446,7 @@ public:
     float scrollForce{ 1.0f };
     // opengl-based pick window radius in pixels
     uint16_t glPickRadius{ 0 };
-    
+
     std::unique_ptr<ObjectMesh> basisAxes;
     std::unique_ptr<ObjectMesh> globalBasisAxes;
     std::unique_ptr<ObjectMesh> rotationSphere;
@@ -583,6 +583,8 @@ private:
 #endif
     // returns true if was swapped
     bool draw_( bool force );
+
+    void drawUiRenderObjects_();
 
     // the minimum number of frames to be rendered even if the scene is unchanged
     int forceRedrawFrames_{ 0 };

@@ -1,4 +1,5 @@
 #include "MRViewer.h"
+#include "MRMesh/MRFinally.h"
 #include "MRViewerEventQueue.h"
 #include "MRSceneTextureGL.h"
 #include "MRAlphaSortGL.h"
@@ -1459,6 +1460,60 @@ bool Viewer::draw_( bool force )
     return ( window && swapped );
 }
 
+void Viewer::drawUiRenderObjects_()
+{
+    for ( Viewport& viewport : getViewerInstance().viewport_list )
+    {
+        UiRenderParams renderParams;
+        renderParams.scale = menuPlugin_->menu_scaling();
+        renderParams.viewport = &viewport;
+
+        auto rawViewportRect = viewport.getViewportRect();
+        renderParams.viewportCornerA = rawViewportRect.min;
+        renderParams.viewportCornerB = rawViewportRect.max;
+        renderParams.viewportCornerA.y = ImGui::GetIO().DisplaySize.y - renderParams.viewportCornerA.y;
+        renderParams.viewportCornerB.y = ImGui::GetIO().DisplaySize.y - renderParams.viewportCornerB.y;
+        std::swap( renderParams.viewportCornerA.y, renderParams.viewportCornerB.y );
+
+        // Set up clipping as a courtesy.
+        ImDrawList* drawLists[] = { ImGui::GetBackgroundDrawList(), ImGui::GetForegroundDrawList() };
+        for ( ImDrawList* list : drawLists )
+            list->PushClipRect( renderParams.viewportCornerA, renderParams.viewportCornerB );
+        MR_FINALLY{
+            for ( ImDrawList* list : drawLists )
+                list->PopClipRect();
+        };
+
+        IRenderObject::UiTaskList tasks;
+        tasks.reserve( 50 );
+
+        auto lambda = [&]( auto& lambda, Object& object ) -> void
+        {
+            if ( !object.isVisible( viewport.id ) )
+                return;
+
+            if ( auto visual = dynamic_cast<VisualObject*>( &object ) )
+                visual->renderUi( renderParams, tasks );
+
+            for ( const auto& child : object.children() )
+                lambda( lambda, *child );
+        };
+        lambda( lambda, SceneRoot::get() );
+
+        std::sort( tasks.begin(), tasks.end(), []( const auto& a, const auto& b ){ return a->renderTaskDepth > b->renderTaskDepth; } );
+
+        bool mouseHoverConsumed = false;
+        for ( auto it = tasks.end(); it != tasks.begin(); )
+        {
+            --it;
+            ( *it )->earlyBackwardPass( mouseHoverConsumed );
+        }
+
+        for ( const auto& task : tasks )
+            task->renderPass();
+    }
+}
+
 void Viewer::drawFull( bool dirtyScene )
 {
     // unbind to clean main framebuffer
@@ -1494,7 +1549,10 @@ void Viewer::drawFull( bool dirtyScene )
         sceneTexture_->draw(); // always draw scene texture
     }
     if ( menuPlugin_ )
+    {
+        drawUiRenderObjects_();
         menuPlugin_->finishFrame();
+    }
 }
 
 void Viewer::drawScene()

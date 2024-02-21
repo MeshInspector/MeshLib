@@ -7,7 +7,7 @@
 
 namespace MR
 {
-class RenderLabelObject : public IRenderObject
+class RenderLabelObject : public virtual IRenderObject
 {
 public:
     RenderLabelObject( const VisualObject& visObj );

@@ -11,8 +11,6 @@ MR_ADD_CLASS_FACTORY( PointObject )
 PointObject::PointObject()
 {
     constructPointCloud_();
-
-    setNameTagParams( { .screenOffset = Vector2f( 0, 0.1f ) } );
 }
 
 PointObject::PointObject( const std::vector<Vector3f>& pointsToApprox )
@@ -70,6 +68,12 @@ void PointObject::serializeFields_( Json::Value& root ) const
 {
     ObjectPointsHolder::serializeFields_( root );
     root["Type"].append( PointObject::TypeName() );
+}
+
+void PointObject::setupRenderObject_() const
+{
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype(*this)>( *this );
 }
 
 void PointObject::constructPointCloud_()

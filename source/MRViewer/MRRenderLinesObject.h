@@ -9,7 +9,7 @@
 
 namespace MR
 {
-class RenderLinesObject : public IRenderObject
+class RenderLinesObject : public virtual IRenderObject
 {
 public:
     RenderLinesObject( const VisualObject& visObj );

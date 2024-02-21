@@ -90,14 +90,6 @@ const std::vector<FeatureObjectSharedProperty>& CircleObject::getAllSharedProper
 CircleObject::CircleObject()
 {
     constructPolyline_();
-
-    // More or less an arbitrary direction. Just something that's not +X to avoid overlaps with other stuff.
-    Vector3f nameTagDir = Vector3f( -1, -1, 0 ).normalized();
-
-    setNameTagParams( {
-        .point = nameTagDir,
-        .localOffset = nameTagDir * 2.f / 3.f,
-    } );
 }
 
 CircleObject::CircleObject( const std::vector<Vector3f>& pointsToApprox )
@@ -168,6 +160,12 @@ void CircleObject::swapBase_( Object& other )
         std::swap( *this, *sphereObject );
     else
         assert( false );
+}
+
+void CircleObject::setupRenderObject_() const
+{
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype(*this)>( *this );
 }
 
 void CircleObject::serializeFields_( Json::Value& root ) const

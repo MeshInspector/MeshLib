@@ -13,6 +13,7 @@
 #include "MRMeshViewer.h"
 #include "MRGladGlfw.h"
 #include "MRMesh/MRParallelFor.h"
+#include "MRViewer/MRRenderDefaultUiObject.h"
 
 namespace MR
 {
@@ -418,6 +419,6 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
     return buffer;
 }
 
-MR_REGISTER_RENDER_OBJECT_IMPL( ObjectPointsHolder, RenderPointsObject )
+MR_REGISTER_RENDER_OBJECT_IMPL( ObjectPointsHolder, RenderDefaultUiMixin<RenderPointsObject> )
 
 }

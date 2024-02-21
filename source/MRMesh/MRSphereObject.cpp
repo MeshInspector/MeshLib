@@ -75,15 +75,6 @@ const std::vector<FeatureObjectSharedProperty>& SphereObject::getAllSharedProper
 SphereObject::SphereObject()
 {
     constructMesh_();
-
-    // More or less an arbitrary direction. Just something that's not +X to avoid overlaps with other stuff.
-    Vector3f nameTagDir = Vector3f( -1, -1, -1 ).normalized();
-
-    setNameTagParams( {
-        .point = nameTagDir,
-        .localOffset = nameTagDir * 2.f / 3.f,
-        .rotateToScreenPlaneAroundSphereCenter = Vector3f( 0, 0, 0 ),
-    } );
 }
 
 SphereObject::SphereObject( const std::vector<Vector3f>& pointsToApprox )
@@ -140,6 +131,12 @@ void SphereObject::serializeFields_( Json::Value& root ) const
 {
     ObjectMeshHolder::serializeFields_( root );
     root["Type"].append( SphereObject::TypeName() );
+}
+
+void SphereObject::setupRenderObject_() const
+{
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype(*this)>( *this );
 }
 
 void SphereObject::constructMesh_()

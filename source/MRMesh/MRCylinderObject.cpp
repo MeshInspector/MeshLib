@@ -123,14 +123,6 @@ void CylinderObject::setCenter( const Vector3f& center )
 CylinderObject::CylinderObject()
 {
     constructMesh_();
-
-    // More or less an arbitrary direction. Just something that's not +X to avoid overlaps with other stuff.
-    Vector3f nameTagDir = Vector3f( -1, -1, 0 ).normalized();
-
-    setNameTagParams( {
-        .point = nameTagDir,
-        .localOffset = nameTagDir * 2.f / 3.f,
-    } );
 }
 
 CylinderObject::CylinderObject( const std::vector<Vector3f>& pointsToApprox )
@@ -181,6 +173,12 @@ void CylinderObject::serializeFields_( Json::Value& root ) const
 {
     ObjectMeshHolder::serializeFields_( root );
     root["Type"].append( CylinderObject::TypeName() );
+}
+
+void CylinderObject::setupRenderObject_() const
+{
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype(*this)>( *this );
 }
 
 void CylinderObject::constructMesh_()

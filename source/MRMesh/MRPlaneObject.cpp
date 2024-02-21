@@ -74,8 +74,6 @@ const std::vector<FeatureObjectSharedProperty>& PlaneObject::getAllSharedPropert
 PlaneObject::PlaneObject()
 {
     constructMesh_();
-
-    // Unlike other feature objects, a plane doesn't do `setNameTagParams()`. The defaults should be good enough?
 }
 
 PlaneObject::PlaneObject( const std::vector<Vector3f>& pointsToApprox )
@@ -128,6 +126,12 @@ void PlaneObject::serializeFields_( Json::Value& root ) const
 {
     ObjectMeshHolder::serializeFields_( root );
     root["Type"].append( PlaneObject::TypeName() );
+}
+
+void PlaneObject::setupRenderObject_() const
+{
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype(*this)>( *this );
 }
 
 void PlaneObject::constructMesh_()

@@ -51,6 +51,8 @@ protected:
     virtual VoidOrErrStr deserializeModel_( const std::filesystem::path&, ProgressCallback ) override
         { return {}; }
 
+    MRMESH_API void setupRenderObject_() const override;
+
 private:
     void constructPointCloud_();
 };

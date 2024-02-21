@@ -70,11 +70,6 @@ Vector3f LineObject::getPointB() const
 LineObject::LineObject()
 {
     constructPolyline_();
-
-    setNameTagParams( {
-        .localOffset = Vector3f( 0.2f / baseLineObjectLength_, 0, 0 ),
-        .rotateLocalOffset90Degrees = true,
-    } );
 }
 
 LineObject::LineObject( const std::vector<Vector3f>& pointsToApprox )
@@ -128,6 +123,12 @@ void LineObject::serializeFields_( Json::Value& root ) const
 {
     ObjectLinesHolder::serializeFields_( root );
     root["Type"].append( LineObject::TypeName() );
+}
+
+void LineObject::setupRenderObject_() const
+{
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype(*this)>( *this );
 }
 
 void LineObject::constructPolyline_()

@@ -105,6 +105,10 @@ void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest
     float upDistLimitSq, const AffineXf3f* xf, float loDistLimitSq )
 {
     const auto& tree = pc.getAABBTree();
+    // must come after getAABBTree() to avoid situations when the same thread executing getAABBTree enters recursively
+    // in this function and appends to not-empty res
+    res.clear();
+
     const auto& orderedPoints = tree.orderedPoints();
 
     if ( tree.nodes().empty() )

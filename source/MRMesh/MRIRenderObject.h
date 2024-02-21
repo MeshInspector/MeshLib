@@ -46,6 +46,7 @@ struct ModelRenderParams : BaseRenderParams
     bool alphaSort{ false };     // if this flag is true shader for alpha sorting is used, unused for picker
 };
 
+/// `IRenderObject::renderUi()` can emit zero or more or more of those tasks. They are sorted by depth every frame.
 struct BasicUiRenderTask
 {
     virtual ~BasicUiRenderTask() = default;
@@ -59,11 +60,12 @@ struct BasicUiRenderTask
 
     struct BackwardPassParams
     {
+        /// If this is false, you can claim mouse hover for your object. Then set it to true.
         mutable bool mouseHoverConsumed = false;
     };
 
     /// This is an optional early pass, where you can claim exclusive control over the mouse.
-    /// If you want to handle clicks or hovers, do it here, only if the argument is false. Then set it to true, if you handled the click/hover.
+    /// This pass is executed in reverse draw order.
     virtual void earlyBackwardPass( const BackwardPassParams& params ) { (void)params; }
 
     /// This is the main rendering pass.
@@ -72,7 +74,7 @@ struct BasicUiRenderTask
 
 struct UiRenderParams : BaseRenderParams
 {
-    /// Multiply all your sizes by this amount. Unless they are already premultipled, e.g. come from `ImGui::GetStyle()`.
+    /// Multiply all your hardcoded sizes by this amount.
     float scale = 1;
 
     using UiTaskList = std::vector<std::shared_ptr<BasicUiRenderTask>>;
@@ -85,10 +87,13 @@ struct UiRenderManager
 {
     virtual ~UiRenderManager() = default;
 
+    // This is called before doing `IRenderObject::renderUi()` on even object in a viewport. Each viewport is rendered separately.
     virtual void preRenderViewport( ViewportId viewport ) { (void)viewport; }
+    // This is called after doing `IRenderObject::renderUi()` on even object in a viewport. Each viewport is rendered separately.
     virtual void postRenderViewport( ViewportId viewport ) { (void)viewport; }
 
-    // Call this once per viewport.
+    // Returns the parameters for the `IRenderObject::earlyBackwardPass()`.
+    // This will be called exactly once per viewport, each time the UI in it is rendered.
     virtual BasicUiRenderTask::BackwardPassParams getBackwardPassParams() { return {}; }
 };
 

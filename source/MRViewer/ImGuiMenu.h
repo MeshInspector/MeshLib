@@ -317,6 +317,7 @@ public:
   // returns true if enabled using of saved positions of plugin windows in the config file, false otherwise
   bool isSavedDialogPositionsEnabled() const { return savedDialogPositionEnabled_; }
 
+  // This class helps the viewer to `renderUi()` from `IRenderObject`s.
   MRVIEWER_API virtual UiRenderManager& getUiRenderManager();
 
 protected:
@@ -407,6 +408,7 @@ protected:
         MRVIEWER_API void postRenderViewport( ViewportId viewport ) override;
         MRVIEWER_API BasicUiRenderTask::BackwardPassParams getBackwardPassParams() override;
     };
+    // This class helps the viewer to `renderUi()` from `IRenderObject`s.
     std::unique_ptr<UiRenderManager> uiRenderManager_;
 };
 

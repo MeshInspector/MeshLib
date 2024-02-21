@@ -34,7 +34,7 @@ class RenderNameObject : public virtual IRenderObject
         bool isHovered = false;
         bool isActive = false;
 
-        MRVIEWER_API void earlyBackwardPass( const BackwardPassParams& params ) override;
+        MRVIEWER_API void earlyBackwardPass( const BackwardPassParams& backParams ) override;
         MRVIEWER_API void renderPass() override;
     };
     Task task_;

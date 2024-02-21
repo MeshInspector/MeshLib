@@ -13,9 +13,9 @@
 namespace MR
 {
 
-void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& params )
+void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backParams )
 {
-    if ( params.mouseHoverConsumed )
+    if ( backParams.mouseHoverConsumed )
         return;
 
     // If it wasn't clipped to nothing...
@@ -24,7 +24,7 @@ void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& params
         // React to hover and possibly click.
         if ( ImGuiMath::CompareAll( ImGui::GetMousePos() ) >= windowCornerA && ImGuiMath::CompareAll( ImGui::GetMousePos() ) < windowCornerB )
         {
-            params.mouseHoverConsumed = true;
+            backParams.mouseHoverConsumed = true;
             isHovered = true;
 
             if ( ImGui::IsMouseDown( ImGuiMouseButton_Left ) )
@@ -159,8 +159,8 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
 
     Viewport& viewportRef = getViewerInstance().viewport( params.viewportId );
 
-    ImVec2 viewportCornerA( params.viewport.x, ImGui::GetIO().DisplaySize.y - params.viewport.y - params.viewport.w );
-    ImVec2 viewportCornerB( params.viewport.x + params.viewport.z, ImGui::GetIO().DisplaySize.y - params.viewport.y );
+    ImVec2 viewportCornerA( float( params.viewport.x ), float( ImGui::GetIO().DisplaySize.y - params.viewport.y - params.viewport.w ) );
+    ImVec2 viewportCornerB( float( params.viewport.x + params.viewport.z ), float( ImGui::GetIO().DisplaySize.y - params.viewport.y ) );
 
     auto toScreenCoords = [&]( Vector3f point, float* depthOutput = nullptr ) -> ImVec2
     {

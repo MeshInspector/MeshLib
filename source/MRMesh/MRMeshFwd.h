@@ -541,6 +541,6 @@ struct VertDuplication;
 #       define MR_UNREACHABLE_NO_RETURN __builtin_unreachable();
 #   else
 #       define MR_UNREACHABLE { assert( false ); return {}; }
-#       define MR_UNREACHABLE_NO_RETURN { assert( false ); }
+#       define MR_UNREACHABLE_NO_RETURN assert( false );
 #   endif
 #endif

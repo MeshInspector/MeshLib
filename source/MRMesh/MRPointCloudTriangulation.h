@@ -77,10 +77,4 @@ struct TriangulationParameters
 MRMESH_API std::optional<Mesh> triangulatePointCloud( const PointCloud& pointCloud, const TriangulationParameters& params = {},
     ProgressCallback progressCb = {} );
 
-/// Returns bit set of points that are considered as boundary 
-/// the vertex is considered as boundary if its neighbor ring has angle more than \param boundaryAngle degrees
-/// returns nullopt if operation was canceled
-MRMESH_API std::optional<VertBitSet> findBoundaryPoints( const PointCloud& pointCloud, float radius, float boundaryAngle,
-    ProgressCallback cb = {} );
-
 } //namespace MR

@@ -156,8 +156,8 @@ public:
     {
         init_();
     }
-    void optimize( int steps, float critAngle );
-    void updateBorder( float angle = 0.9 * MR::PI_F );
+    void optimize( int steps, float critAngle, float boundaryAngle );
+    void updateBorder( float angle );
 private:
     Plane3f plane_;
 
@@ -294,9 +294,9 @@ void FanOptimizer::updateBorderQueueElement_( FanOptimizerQueueElement& res, boo
     res.weight = std::numeric_limits<float>::max();
 }
 
-void FanOptimizer::optimize( int steps, float critAng )
+void FanOptimizer::optimize( int steps, float critAng, float boundaryAngle )
 {
-    updateBorder();
+    updateBorder( boundaryAngle );
     if ( steps == 0 )
         return;
 
@@ -411,13 +411,13 @@ void FanOptimizer::init_()
     }
 }
 
-void trianglulateFan( const VertCoords& points, VertId centerVert, TriangulatedFanData& triangulationData,
-    const VertCoords* trustedNormals, float critAngle, int steps )
+static void trianglulateFan( const VertCoords& points, VertId centerVert, TriangulatedFanData& triangulationData,
+    const Settings & settings )
 {
     if ( triangulationData.neighbors.empty() )
         return;
-    FanOptimizer optimizer( points, trustedNormals, triangulationData, centerVert );
-    optimizer.optimize( steps, critAngle );
+    FanOptimizer optimizer( points, settings.trustedNormals, triangulationData, centerVert );
+    optimizer.optimize( settings.maxRemoves, settings.critAngle, settings.boundaryAngle );
     assert( triangulationData.neighbors.empty() || triangulationData.neighbors.size() > 1 );
 }
 
@@ -445,7 +445,7 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings 
         filterNeighbors( *settings.trustedNormals, v, fanData.neighbors );
     if ( settings.allNeighbors )
         *settings.allNeighbors = fanData.neighbors;
-    trianglulateFan( cloud.points, v, fanData, settings.trustedNormals, settings.critAngle, settings.maxRemoves );
+    trianglulateFan( cloud.points, v, fanData, settings );
 
     if ( settings.automaticRadiusIncrease && actualRadius > 0 )
     {
@@ -462,7 +462,7 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings 
                 filterNeighbors( *settings.trustedNormals, v, fanData.neighbors );
             if ( settings.allNeighbors )
                 *settings.allNeighbors = fanData.neighbors;
-            trianglulateFan( cloud.points, v, fanData, settings.trustedNormals, settings.critAngle, settings.maxRemoves );
+            trianglulateFan( cloud.points, v, fanData, settings );
         }
     }
     if ( settings.actualRadius )
@@ -515,17 +515,30 @@ std::optional<AllLocalTriangulations> buildUnitedLocalTriangulations(
     return uniteLocalTriangulations( *optPerThreadTriangs );
 }
 
-bool isBoundaryPoint( const PointCloud& pointCloud, const VertCoords& normals,
-    VertId v, float radius, float angle, TriangulatedFanData& triangulationData )
+bool isBoundaryPoint( const PointCloud& cloud, VertId v, const Settings & settings,
+    TriangulatedFanData & fanData )
 {
-    TriangulationHelpers::findNeighborsInBall( pointCloud, v, radius, triangulationData.neighbors );
-    triangulationData.border = {};
-    if ( triangulationData.neighbors.size() < 3 )
-        return true;
-    FanOptimizer optimizer( pointCloud.points, &normals, triangulationData, v );
-    optimizer.updateBorder( angle );
-    return triangulationData.border.valid();
+    buildLocalTriangulation( cloud, v, settings, fanData );
+    return fanData.border.valid();
+}
+
+std::optional<VertBitSet> findBoundaryPoints( const PointCloud& pointCloud, const Settings & settings,
+    ProgressCallback cb )
+{
+    MR_TIMER
+
+    VertBitSet borderPoints( pointCloud.validPoints.size() );
+    tbb::enumerable_thread_specific<TriangulatedFanData> tls;
+    if ( !BitSetParallelFor( pointCloud.validPoints, [&] ( VertId v )
+    {
+        auto& fanData = tls.local();
+        if ( isBoundaryPoint( pointCloud, v, settings, fanData ) )
+            borderPoints.set( v );
+    }, cb ) )
+        return {};
+    return borderPoints;
 }
 
 } //namespace TriangulationHelpers
+
 } //namespace MR

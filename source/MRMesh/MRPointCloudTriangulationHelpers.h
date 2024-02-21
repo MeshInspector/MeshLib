@@ -60,17 +60,6 @@ struct TriangulatedFanData
     FewSmallest<PointsProjectionResult> nearesetPoints;
 };
 
-/** 
- * \brief Creates local triangulation by sorting and optimizing neighbors fan (normal of v is needed for consistent fan orientation)
- * \ingroup TriangulationHelpersGroup
- * 
- * \param critAngle max allowed angle for triangles in fan
- * \param trustedNormals if not null, contains valid oriented normals of all points
- * \param steps max optimization steps (INT_MAX - default)
- */
-MRMESH_API void trianglulateFan( const VertCoords& points, VertId v, TriangulatedFanData& triangulationData,
-    const VertCoords* trustedNormals, float critAngle, int steps = INT_MAX );
-
 struct Settings
 {
     /// initial radius of search for neighbours, it can be increased automatically;
@@ -83,6 +72,9 @@ struct Settings
 
     /// max allowed angle for triangles in fan
     float critAngle = PI2_F;
+
+    /// the vertex is considered as boundary if its neighbor ring has angle more than this value
+    float boundaryAngle = 0.9f * PI_F;
 
     /// if oriented normals are known, they will be used for neighbor points selection
     const VertCoords* trustedNormals = nullptr;
@@ -114,19 +106,22 @@ MRMESH_API void buildLocalTriangulation( const PointCloud& cloud, VertId v, cons
     const PointCloud& cloud, const Settings & settings, const ProgressCallback & progress = {} );
 
 /**
- * \brief Checks if given vertex is on boundary of the point cloud
- * \details The vertex is considered as boundary if its neighbor ring has angle more than \param boundaryAngle degrees
+ * \brief Checks if given vertex is on boundary of the point cloud, by constructing local triangulation around it
  * \ingroup TriangulationHelpersGroup
- * \param pointCloud input point cloud
- * \param normals non-oriented normals for the point cloud
+ * \param cloud input point cloud
  * \param v vertex id to check
- * \param radius radius to find neighbors in
- * \param triangulationData cache structure for neighbors, not to allocate for multiple calls
+ * \param settings all parameters of the computation
+ * \param fanData cache structure for neighbors, not to allocate for multiple calls
  * \returns true if vertex is boundary, false otherwise
  */
-MRMESH_API bool isBoundaryPoint( const PointCloud& pointCloud, const VertCoords& normals, 
-    VertId v, float radius, float boundaryAngle,
-    TriangulatedFanData& triangulationData );
-}
+[[nodiscard]] MRMESH_API bool isBoundaryPoint( const PointCloud& cloud, VertId v, const Settings & settings,
+    TriangulatedFanData & fanData );
+
+/// Returns bit set of points that are considered as boundary by calling isBoundaryPoint in each
+[[nodiscard]] MRMESH_API std::optional<VertBitSet> findBoundaryPoints( const PointCloud& pointCloud, const Settings & settings,
+    ProgressCallback cb = {} );
+
+
+} //namespace TriangulationHelpers
 
 } //namespace MR

@@ -139,8 +139,11 @@ bool SurfacePointWidget::onMouseMove_( int, int )
 {
     if ( isOnMove_ )
     {
-        auto [obj, pick] = getViewerInstance().viewport().pick_render_object();
+        auto [obj, pick] = getViewerInstance().viewport().pick_render_object( params_.pickInBackFaceObject );
         if ( obj != baseObject_ )
+            return false;
+
+        if ( ( params_.pickInBackFaceObject == false ) && ( isPickIntoBackFace( obj, pick, getViewerInstance().viewport().getCameraPoint() ) ) )
             return false;
 
         currentPos_ = pointOnObjectToPickedPoint( obj.get(), pick );
@@ -310,6 +313,36 @@ void SurfacePointWidget::updateCurrentPosition( const PickedPoint& pos )
 {
     currentPos_ = pos;
     updatePositionAndRadius_();
+}
+
+bool SurfacePointWidget::isPickIntoBackFace( const std::shared_ptr<MR::VisualObject>& obj, const MR::PointOnObject& pick, const Vector3f& cameraEye )
+{
+    const auto& xf = obj->worldXf();
+
+    if ( auto objMesh = std::dynamic_pointer_cast< const ObjectMeshHolder >( obj ) )
+    {
+        const auto& n = objMesh->mesh()->dirDblArea( pick.face );
+        if ( dot( xf.A * n, cameraEye ) < 0 )
+            return true;
+        else
+            return false;
+    }
+
+
+    if ( auto objPoints = std::dynamic_pointer_cast< const ObjectPointsHolder >( obj ) )
+    {
+        if ( objPoints->pointCloud()->normals.size() > static_cast< int > ( pick.vert ) )
+        {
+            const auto& n = objPoints->pointCloud()->normals[pick.vert];
+            auto dt = dot( xf.A * n, cameraEye );
+            if ( dt < 0 )
+                return true;
+            else
+                return false;
+        }
+    }
+
+    return false;
 }
 
 }

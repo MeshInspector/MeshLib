@@ -45,6 +45,14 @@ jobs:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
 
+    env:
+      UPLOAD_TEST_ARTIFACTS: ${{ contains(github.event.pull_request.labels.*.name, 'upload-test-artifacts') }}
+      INTERNAL_BUILD: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
+      # Disables AWS Instance Metadata Service (IMDS), that not in use.
+      # Workaround for aws cli s3 copy - it doesn't work anonymously without this. Specific for Ubuntu 20 and Fedora.
+      # https://github.com/aws/aws-cli/issues/5623#issuecomment-801240811
+      AWS_EC2_METADATA_DISABLED: true
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -92,7 +100,7 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 
       - name: Configure AWS Credentials
-        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
+        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
@@ -100,12 +108,16 @@ jobs:
 
       - name: Copy autotest data from S3 Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
-        run: aws s3 cp s3://data-autotest/test_data_29-dec-23 ./test_data --recursive
+        run: aws s3 cp s3://data-autotest/test_data_29-dec-23 ./test_data --recursive --no-sign-request
 
       - name: Python Regression Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
+
+      - name: Copy test artifacts to S3
+        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && '!cancelled()' }}
+        run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/fedora/${{matrix.os}}/${{matrix.config}}' --recursive
 
       - name: Create RPM
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.os == 'fedora37' && matrix.config == 'Release' && matrix.compiler == 'Clang'}}

@@ -7,12 +7,6 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 ////////////////////////////////////////////////////////////////////////////////
 #include "ImGuiMenu.h"
-#include "MRMesh/MRCircleObject.h"
-#include "MRMesh/MRConeObject.h"
-#include "MRMesh/MRCylinderObject.h"
-#include "MRMesh/MRLineObject.h"
-#include "MRMesh/MRPointObject.h"
-#include "MRMesh/MRSphereObject.h"
 #include "MRMeshViewer.h"
 #include "MRRecentFilesStore.h"
 #include <backends/imgui_impl_glfw.h>
@@ -91,7 +85,6 @@
 #include "MRRibbonSchema.h"
 #include "MRRibbonMenu.h"
 #include "MRMouseController.h"
-#include "MRImGuiVectorOperators.h"
 
 #ifndef __EMSCRIPTEN__
 #include "MRMesh/MRObjectVoxels.h"
@@ -226,9 +219,6 @@ void ImGuiMenu::startFrame()
 
     }
     ImGui::NewFrame();
-
-    // Object names.
-    draw_object_names();
 }
 
 void ImGuiMenu::finishFrame()
@@ -461,43 +451,11 @@ void ImGuiMenu::rescaleStyle_()
 }
 
 // Mouse IO
-bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier )
+bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
 {
     ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
     capturedMouse_ = ImGui::GetIO().WantCaptureMouse;
-    if ( capturedMouse_ )
-        return true;
-
-    // Click an object name.
-    if ( clickingObjectNameSelectsObject )
-    {
-        for ( const ClickableName& elem : clickableNames_ )
-        {
-            if ( ImGuiMath::CompareAll( ImGui::GetMousePos() ) >= elem.a && ImGuiMath::CompareAll( ImGui::GetMousePos() ) < elem.b )
-            {
-                if ( auto object = elem.object.lock() )
-                {
-                    if ( ImGui::GetIO().KeyCtrl )
-                    {
-                        object->select( !object->isSelected() );
-                    }
-                    else
-                    {
-                        auto selectOne = [&]( auto selectOne, Object& target ) -> void
-                        {
-                            target.select( &target == object.get() );
-                            for ( const auto& child : target.children() )
-                                selectOne( selectOne, *child );
-                        };
-                        selectOne( selectOne, SceneRoot::get() );
-                    }
-                    return true;
-                }
-            }
-        }
-    }
-
-    return false;
+    return ImGui::GetIO().WantCaptureMouse;
 }
 
 bool ImGuiMenu::onMouseUp_( Viewer::MouseButton button, int modifier )
@@ -654,11 +612,6 @@ void ImGuiMenu::draw_labels_window()
   ImGui::End();
   ImGui::PopStyleColor();
   ImGui::PopStyleVar();
-}
-
-void ImGuiMenu::draw_object_names()
-{
-
 }
 
 void ImGuiMenu::draw_labels( const VisualObject& obj )

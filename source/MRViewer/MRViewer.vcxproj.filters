@@ -322,6 +322,9 @@
     <ClCompile Include="MRSurfaceContoursWidget.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRRenderFeatureObjects.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
     <ClCompile Include="MRRenderNameObject.cpp">
       <Filter>Render\Implementations</Filter>
     </ClCompile>
@@ -632,10 +635,13 @@
     <ClInclude Include="MRImGuiVectorOperators.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="MRRenderNameObject.h">
+    <ClInclude Include="MRRenderDefaultUiObject.h">
       <Filter>Render\Implementations</Filter>
     </ClInclude>
-    <ClInclude Include="RenderDefaultUiObject.h">
+    <ClInclude Include="MRRenderFeatureObjects.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderNameObject.h">
       <Filter>Render\Implementations</Filter>
     </ClInclude>
   </ItemGroup>

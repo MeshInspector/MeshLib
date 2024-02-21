@@ -1462,6 +1462,9 @@ bool Viewer::draw_( bool force )
 
 void Viewer::drawUiRenderObjects_()
 {
+    // Currently, a part of the contract of `IRenderObject::renderUi()` is that at most rendering task is in flight at any given time.
+    // That's why each viewport is being drawn separately.
+
     for ( Viewport& viewport : getViewerInstance().viewport_list )
     {
         UiRenderParams renderParams;

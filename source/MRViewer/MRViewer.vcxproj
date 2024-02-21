@@ -93,6 +93,8 @@
     <ClCompile Include="MRTouchpadController.cpp" />
     <ClCompile Include="MRSurfaceManipulationWidget.cpp" />
     <ClCompile Include="MRImGuiMeasurementIndicators.cpp" />
+    <ClCompile Include="MRRenderFeatureObjects.cpp" />
+    <ClCompile Include="MRRenderNameObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -197,6 +199,9 @@
     <ClInclude Include="MRPointInAllSpaces.h" />
     <ClInclude Include="MRImGuiVectorOperators.h" />
     <ClInclude Include="MRImGuiMeasurementIndicators.h" />
+    <ClInclude Include="MRRenderDefaultUiObject.h" />
+    <ClInclude Include="MRRenderFeatureObjects.h" />
+    <ClInclude Include="MRRenderNameObject.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

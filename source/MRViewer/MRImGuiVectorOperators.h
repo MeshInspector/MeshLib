@@ -122,18 +122,28 @@ namespace MR::ImGuiMath
 {
     // Misc functions.
 
-    template <detail::Vector A> [[nodiscard]] constexpr A round( A a ) { return applyElementwise( []( auto x ){ return std::round( x ); }, a ); }
-    template <detail::Vector A> [[nodiscard]] constexpr A floor( A a ) { return applyElementwise( []( auto x ){ return std::floor( x ); }, a ); }
-    template <detail::Vector A> [[nodiscard]] constexpr A ceil( A a ) { return applyElementwise( []( auto x ){ return std::ceil( x ); }, a ); }
+    template <detail::Vector A> [[nodiscard]] constexpr A round( A a ) { return (applyElementwise)( []( auto x ){ return std::round( x ); }, a ); }
+    template <detail::Vector A> [[nodiscard]] constexpr A floor( A a ) { return (applyElementwise)( []( auto x ){ return std::floor( x ); }, a ); }
+    template <detail::Vector A> [[nodiscard]] constexpr A ceil( A a ) { return (applyElementwise)( []( auto x ){ return std::ceil( x ); }, a ); }
 
     template <detail::Vector A> [[nodiscard]] constexpr auto dot( A a, A b ) { return reduce( std::plus{}, a * b ); }
 
-    template <detail::Vector A> [[nodiscard]] constexpr auto lengthSq( A a ) { return dot( a, a ); }
+    template <detail::Vector A> [[nodiscard]] constexpr auto lengthSq( A a ) { return (dot)( a, a ); }
     template <detail::Vector A> [[nodiscard]] constexpr auto length( A a ) { return std::sqrt( lengthSq( a ) ); }
 
     template <detail::Vector A> [[nodiscard]] constexpr A normalize( A a ) { auto l = length( a ); return l ? a / l : a; }
 
     [[nodiscard]] constexpr ImVec2 rot90( ImVec2 a ) { return ImVec2( -a.y, a.x ); }
+
+    template <detail::Vector A, detail::Scalar B> [[nodiscard]] constexpr A mix( B t, A a, A b ) { return a * ( 1 - t ) + b * t; }
+
+    template <typename A, typename B> requires detail::ValidOperands<A, B>
+    [[nodiscard]] constexpr auto min( A a, B b ) { return (applyElementwise)( []( auto x, auto y ){ return x < y ? x : y; }, a, b ); }
+    template <typename A, typename B> requires detail::ValidOperands<A, B>
+    [[nodiscard]] constexpr auto max( A a, B b ) { return (applyElementwise)( []( auto x, auto y ){ return x > y ? x : y; }, a, b ); }
+
+    template <detail::Vector T, typename A, typename B> requires detail::ValidOperands<T, A, B>
+    [[nodiscard]] constexpr T clamp( T value, A a, B b ) { return (max)( (min)( value, b ), a ); }
 
     // Comparison helpers.
 

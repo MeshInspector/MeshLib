@@ -181,9 +181,9 @@ public:
     /// to get world bounding box of the object with all child objects, please call Object::getWorldTreeBox method
     MRMESH_API virtual Box3f getWorldBox( ViewportId = {} ) const override;
     /// returns true if the object must be redrawn (due to dirty flags) in one of specified viewports
-    virtual bool getRedrawFlag( ViewportMask viewportMask ) const override 
+    virtual bool getRedrawFlag( ViewportMask viewportMask ) const override
     {
-        return Object::getRedrawFlag( viewportMask ) || 
+        return Object::getRedrawFlag( viewportMask ) ||
             ( isVisible( viewportMask ) &&
               ( dirty_ & ( ~( DIRTY_CACHES ) ) ) );
     }
@@ -240,6 +240,8 @@ public:
     MRMESH_API virtual void render( const ModelRenderParams& ) const;
     /// draws this object for picking
     MRMESH_API virtual void renderForPicker( const ModelRenderParams&, unsigned ) const;
+    /// draws this object for 2d UI
+    MRMESH_API virtual void renderUi( const UiRenderParams& params ) const;
 
     /// is object has any visual representation (faces, edges, etc.)
     virtual bool hasVisualRepresentation() const { return false; }
@@ -279,8 +281,8 @@ protected:
     ViewportMask clipByPlane_;
     ViewportMask showLabels_;
     ViewportMask showName_;
-    ViewportMask cropLabels_ = ViewportMask::all(); 
-    ViewportMask pickable_ = ViewportMask::all(); ///< enable picking by gl    
+    ViewportMask cropLabels_ = ViewportMask::all();
+    ViewportMask pickable_ = ViewportMask::all(); ///< enable picking by gl
     ViewportMask invertNormals_; ///< invert mesh normals
     ViewportMask depthTest_ = ViewportMask::all();
 

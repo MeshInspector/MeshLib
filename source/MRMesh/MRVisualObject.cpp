@@ -262,7 +262,7 @@ void VisualObject::render( const ModelRenderParams& params ) const
     renderObj_->render( params );
 }
 
-void VisualObject::renderForPicker( const ModelRenderParams& params, unsigned id) const
+void VisualObject::renderForPicker( const ModelRenderParams& params, unsigned id ) const
 {
     setupRenderObject_();
     if ( !renderObj_ )
@@ -271,8 +271,17 @@ void VisualObject::renderForPicker( const ModelRenderParams& params, unsigned id
     renderObj_->renderPicker( params, id );
 }
 
+void VisualObject::renderUi( const UiRenderParams& params ) const
+{
+    setupRenderObject_();
+    if ( !renderObj_ )
+        return;
+
+    renderObj_->renderUi( params );
+}
+
 void VisualObject::swapBase_( Object& other )
-{    
+{
     if ( auto otherVis = other.asType<VisualObject>() )
         std::swap( *this, *otherVis );
     else
@@ -319,7 +328,7 @@ MR_SUPPRESS_WARNING_POP
     auto writeColors = [&root]( const char * fieldName, const Color& val )
     {
         auto& colors = root["Colors"]["Faces"][fieldName];
-        serializeToJson( Vector4f( val ), colors["Diffuse"] );// To support old version 
+        serializeToJson( Vector4f( val ), colors["Diffuse"] );// To support old version
     };
 
     writeColors( "SelectedMode", selectedColor_.get() );
@@ -327,6 +336,8 @@ MR_SUPPRESS_WARNING_POP
     writeColors( "BackFaces", backFacesColor_.get() );
 
     root["Colors"]["GlobalAlpha"] = globalAlpha_.get();
+
+    root["ShowName"] = showName_.value();
 
     // labels
     serializeToJson( Vector4f( labelsColor_.get() ), root["Colors"]["Labels"] );
@@ -361,6 +372,9 @@ MR_SUPPRESS_WARNING_POP
 
     if ( root["Colors"]["GlobalAlpha"].isUInt() )
         globalAlpha_.get() = uint8_t( root["Colors"]["GlobalAlpha"].asUInt() );
+
+    if ( const auto& showNameJson = root["ShowName"]; showNameJson.isUInt() )
+        showName_ = ViewportMask( showNameJson.isUInt() );
 
     Vector4f resVec;
     // labels

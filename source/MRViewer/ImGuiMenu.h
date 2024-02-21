@@ -317,6 +317,9 @@ public:
   // returns true if enabled using of saved positions of plugin windows in the config file, false otherwise
   bool isSavedDialogPositionsEnabled() const { return savedDialogPositionEnabled_; }
 
+  // This class helps the viewer to `renderUi()` from `IRenderObject`s.
+  MRVIEWER_API virtual UiRenderManager& getUiRenderManager();
+
 protected:
     MRVIEWER_API virtual void drawModalMessage_();
 
@@ -398,6 +401,15 @@ protected:
     MRVIEWER_API float getSceneInfoItemWidth_( int itemCount  = 1 );
     // getting the mask of the list of selected objects
     MRVIEWER_API SelectedTypesMask calcSelectedTypesMask( const std::vector<std::shared_ptr<Object>>& selectedObjs );
+
+    class UiRenderManagerImpl : public UiRenderManager
+    {
+        MRVIEWER_API void preRenderViewport( ViewportId viewport ) override;
+        MRVIEWER_API void postRenderViewport( ViewportId viewport ) override;
+        MRVIEWER_API BasicUiRenderTask::BackwardPassParams getBackwardPassParams() override;
+    };
+    // This class helps the viewer to `renderUi()` from `IRenderObject`s.
+    std::unique_ptr<UiRenderManager> uiRenderManager_;
 };
 
 

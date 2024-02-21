@@ -8,7 +8,7 @@
 
 namespace MR
 {
-class MRVIEWER_CLASS RenderMeshObject : public IRenderObject
+class MRVIEWER_CLASS RenderMeshObject : public virtual IRenderObject
 {
 public:
     MRVIEWER_API RenderMeshObject( const VisualObject& visObj );
@@ -78,7 +78,7 @@ protected:
     MRVIEWER_API virtual void renderMeshEdges_( const ModelRenderParams& parameters );
 
     MRVIEWER_API virtual void bindMesh_( bool alphaSort );
-    
+
     MRVIEWER_API virtual void bindMeshPicker_();
 
     MRVIEWER_API virtual void bindEdges_();

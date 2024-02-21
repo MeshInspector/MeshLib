@@ -11,9 +11,9 @@
 namespace MR
 {
 
-// Offset in positive and negative directions along the X and Y axes when constructing a base object. 
-// Historically it eq. 1,  which means that original plane have a 2x2 size.  
-// basePlaneObjectHalfEdgeLength_=0.5 looks better. 
+// Offset in positive and negative directions along the X and Y axes when constructing a base object.
+// Historically it eq. 1,  which means that original plane have a 2x2 size.
+// basePlaneObjectHalfEdgeLength_=0.5 looks better.
 // But left as is for compatibility.
 constexpr float basePlaneObjectHalfEdgeLength_ = 1.0f;
 
@@ -77,9 +77,8 @@ PlaneObject::PlaneObject()
 }
 
 PlaneObject::PlaneObject( const std::vector<Vector3f>& pointsToApprox )
+    : PlaneObject()
 {
-    constructMesh_();
-
     PointAccumulator pa;
     Box3f box;
     for ( const auto& p : pointsToApprox )
@@ -127,6 +126,12 @@ void PlaneObject::serializeFields_( Json::Value& root ) const
 {
     ObjectMeshHolder::serializeFields_( root );
     root["Type"].append( PlaneObject::TypeName() );
+}
+
+void PlaneObject::setupRenderObject_() const
+{
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype(*this)>( *this );
 }
 
 void PlaneObject::constructMesh_()

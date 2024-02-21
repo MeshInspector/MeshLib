@@ -15,7 +15,7 @@
 #elif defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif 
+#endif
 
 #include <Eigen/Dense>
 
@@ -24,7 +24,7 @@
 #elif defined(__clang__)
 #elif defined(__GNUC__)
 #pragma GCC diagnostic pop
-#endif 
+#endif
 
 
 namespace
@@ -93,9 +93,8 @@ CircleObject::CircleObject()
 }
 
 CircleObject::CircleObject( const std::vector<Vector3f>& pointsToApprox )
+    : CircleObject()
 {
-    constructPolyline_();
-
     PointAccumulator pa;
     for ( const auto& p : pointsToApprox )
         pa.addPoint( p );
@@ -161,6 +160,12 @@ void CircleObject::swapBase_( Object& other )
         std::swap( *this, *sphereObject );
     else
         assert( false );
+}
+
+void CircleObject::setupRenderObject_() const
+{
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype(*this)>( *this );
 }
 
 void CircleObject::serializeFields_( Json::Value& root ) const

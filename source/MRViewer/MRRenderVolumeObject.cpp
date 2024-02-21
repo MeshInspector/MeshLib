@@ -9,6 +9,7 @@
 #include "MRMesh/MRMatrix4.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRPch/MRTBB.h"
+#include "MRViewer/MRRenderDefaultUiObject.h"
 
 namespace MR
 {
@@ -363,7 +364,7 @@ void RenderVolumeObject::update_()
     objVoxels_->resetDirty();
 }
 
-MR_REGISTER_RENDER_OBJECT_IMPL( ObjectVoxels, RenderVolumeObject )
+MR_REGISTER_RENDER_OBJECT_IMPL( ObjectVoxels, RenderDefaultUiObject<RenderVolumeObject> )
 
 }
 #endif

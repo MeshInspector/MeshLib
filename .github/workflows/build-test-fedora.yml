@@ -48,6 +48,8 @@ jobs:
     env:
       UPLOAD_TEST_ARTIFACTS: ${{ contains(github.event.pull_request.labels.*.name, 'upload-test-artifacts') }}
       INTERNAL_BUILD: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
+      # Disables AWS Instance Metadata Service (IMDS), that not in use.
+      # Workaround for aws cli s3 copy - it doesn't work anonymously without this. Specific for Ubuntu 20 and Fedora.
       AWS_EC2_METADATA_DISABLED: true
 
     steps:

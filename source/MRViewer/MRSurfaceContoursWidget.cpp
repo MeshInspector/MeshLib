@@ -6,7 +6,6 @@
 #include "MRMesh/MRSphereObject.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRPointOnObject.h"
-#include "MRMesh/MRObjectPointsHolder.h"
 
 namespace MR
 {

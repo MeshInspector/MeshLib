@@ -113,8 +113,8 @@ std::shared_ptr<Object> LineObject::clone() const
 
 void LineObject::swapBase_( Object& other )
 {
-    if ( auto planeObject = other.asType<LineObject>() )
-        std::swap( *this, *planeObject );
+    if ( auto lineObject = other.asType<LineObject>() )
+        std::swap( *this, *lineObject );
     else
         assert( false );
 }

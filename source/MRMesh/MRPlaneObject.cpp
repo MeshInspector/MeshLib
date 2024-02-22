@@ -50,7 +50,7 @@ void PlaneObject::setSize( float size )
     auto currentXf = xf();
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
-    currentXf.A = r * Matrix3f::scale( Vector3f::diagonal( size / basePlaneObjectHalfEdgeLength_ ) );
+    currentXf.A = r * Matrix3f::scale( Vector3f::diagonal( size / basePlaneObjectHalfEdgeLength_ / 2.0f ) );
     setXf( currentXf );
 }
 
@@ -58,7 +58,7 @@ float PlaneObject::getSize( void ) const
 {
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
-    return  s.x.x;
+    return  s.x.x * basePlaneObjectHalfEdgeLength_ * 2.0f;
 }
 
 const std::vector<FeatureObjectSharedProperty>& PlaneObject::getAllSharedProperties() const
@@ -95,7 +95,7 @@ PlaneObject::PlaneObject( const std::vector<Vector3f>& pointsToApprox )
 
     setNormal( normal );
     setCenter( plane.project( box.center() ) );
-    setSize( box.diagonal() * 2.f );
+    setSize( box.diagonal() );
 }
 
 std::shared_ptr<Object> PlaneObject::shallowClone() const

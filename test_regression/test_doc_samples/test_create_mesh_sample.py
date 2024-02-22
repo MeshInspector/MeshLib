@@ -27,3 +27,7 @@ def test_create_mesh_get_primitives_sample():
 
     assert list_compare_2d(outVerts, [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]])
     assert list_compare_2d(outFaces, [[0, 1, 2], [2, 3, 0]])
+
+    # another option
+    outVerts1 = mrmeshnumpy.toNumpyArray(mesh.points)
+    assert list_compare_2d(outVerts1, [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]])

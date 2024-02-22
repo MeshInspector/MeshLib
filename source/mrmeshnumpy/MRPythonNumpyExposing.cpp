@@ -377,11 +377,11 @@ pybind11::array_t<int> getNumpyFaces( const MR::MeshTopology& topology )
         freeWhenDone ); // numpy array references this parent
 }
 
-// returns numpy array shapes [num verts,3] which represents coordinates of mesh valid points
-pybind11::array_t<double> getNumpyVerts( const MR::Mesh& mesh )
+// returns numpy array shapes [num verts,3] which represents coordinates from given vector
+pybind11::array_t<double> toNumpyArray( const MR::VertCoords& coords )
 {
     using namespace MR;
-    int numVerts = mesh.topology.lastValidVert() + 1;
+    int numVerts = (int)coords.size();
     // Allocate and initialize some data;
     const int size = numVerts * 3;
     double* data = new double[size];
@@ -392,7 +392,7 @@ pybind11::array_t<double> getNumpyVerts( const MR::Mesh& mesh )
         {
             int ind = 3 * i;
             for ( int vi = 0; vi < 3; ++vi )
-                data[ind + vi] = mesh.points.vec_[i][vi];
+                data[ind + vi] = coords.vec_[i][vi];
         }
     } );
 
@@ -409,6 +409,12 @@ pybind11::array_t<double> getNumpyVerts( const MR::Mesh& mesh )
         { 3 * sizeof( double ), sizeof( double ) }, // C-style contiguous strides for double
         data, // the data pointer
         freeWhenDone ); // numpy array references this parent
+}
+
+// returns numpy array shapes [num verts,3] which represents coordinates of all mesh points (including invalid ones)
+pybind11::array_t<double> getNumpyVerts( const MR::Mesh& mesh )
+{
+    return toNumpyArray( mesh.points );
 }
 
 pybind11::array_t<bool> getNumpyBitSet( const boost::dynamic_bitset<std::uint64_t>& bitSet )
@@ -520,8 +526,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyMeshData, [] ( pybind11::module_& m 
     m.def( "getNumpyCurvature", &getNumpyCurvature, pybind11::arg( "mesh" ), "retunrs numpy array with curvature for each valid vertex of given mesh" );
     m.def( "getNumpyCurvatureGradient", &getNumpyCurvatureGradient, pybind11::arg( "mesh" ), "returns numpy array shapes [num verts,3] which represents gradient of mean curvature of mesh valid points" );
     m.def( "getNumpyFaces", &getNumpyFaces, pybind11::arg( "topology" ), "returns numpy array shapes [num faces,3] which represents vertices of mesh valid faces " );
-    m.def( "getNumpyVerts", &getNumpyVerts, pybind11::arg( "mesh" ), "returns numpy array shapes [num verts,3] which represents coordinates of mesh valid points" );
+    m.def( "getNumpyVerts", &getNumpyVerts, pybind11::arg( "mesh" ), "returns numpy array shapes [num verts,3] which represents coordinates of all mesh points (including invalid ones)" );
     m.def( "getNumpyBitSet", &getNumpyBitSet, pybind11::arg( "bitset" ), "returns numpy array with bools for each bit of given bitset" );
+    m.def( "toNumpyArray", &toNumpyArray, pybind11::arg( "coords" ), "// returns numpy array shapes [num verts,3] which represents coordinates from given vector" );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, PointCloudFromPoints, [] ( pybind11::module_& m )

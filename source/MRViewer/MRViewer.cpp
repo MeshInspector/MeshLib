@@ -1494,12 +1494,13 @@ void Viewer::drawUiRenderObjects_()
 
         std::sort( tasks.begin(), tasks.end(), []( const auto& a, const auto& b ){ return a->renderTaskDepth > b->renderTaskDepth; } );
 
-        auto backwardPassParams = uiRenderManager.getBackwardPassParams();
+        auto backwardPassParams = uiRenderManager.beginBackwardPass();
         for ( auto it = tasks.end(); it != tasks.begin(); )
         {
             --it;
             ( *it )->earlyBackwardPass( backwardPassParams );
         }
+        uiRenderManager.finishBackwardPass( backwardPassParams );
 
         for ( const auto& task : tasks )
             task->renderPass();

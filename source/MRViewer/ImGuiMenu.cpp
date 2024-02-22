@@ -455,7 +455,7 @@ bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
 {
     ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
     capturedMouse_ = ImGui::GetIO().WantCaptureMouse;
-    return ImGui::GetIO().WantCaptureMouse;
+    return ImGui::GetIO().WantCaptureMouse || uiRenderManager_->ownsMouseHover();
 }
 
 bool ImGuiMenu::onMouseUp_( Viewer::MouseButton button, int modifier )
@@ -3205,9 +3205,19 @@ void ImGuiMenu::UiRenderManagerImpl::postRenderViewport( ViewportId viewport )
     ImGui::GetForegroundDrawList()->PopClipRect();
 }
 
-BasicUiRenderTask::BackwardPassParams ImGuiMenu::UiRenderManagerImpl::getBackwardPassParams()
+BasicUiRenderTask::BackwardPassParams ImGuiMenu::UiRenderManagerImpl::beginBackwardPass()
 {
     return { .mouseHoverConsumed = ImGui::GetIO().WantCaptureMouse };
+}
+
+void ImGuiMenu::UiRenderManagerImpl::finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params )
+{
+    mouseIsBlocked_ = params.mouseHoverConsumed;
+}
+
+bool ImGuiMenu::UiRenderManagerImpl::ownsMouseHover() const
+{
+    return mouseIsBlocked_;
 }
 
 void showModal( const std::string& msg, NotificationType type )

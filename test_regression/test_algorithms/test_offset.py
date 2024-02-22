@@ -46,13 +46,13 @@ def test_offset_thickening(tmp_path, test_params):
     offset_params.signDetectionMode = mlib.SignDetectionMode.__members__[sign_mode]
     thicked_mesh = mlib.thickenMesh(mesh=mesh, offset=test_params["params"]["offset"], params=offset_params)
 
-    # # === Verification
+    # === Verification
     mlib.saveMesh(thicked_mesh, tmp_path / f"{case_name}.mrmesh")
     ref_mesh_path = input_folder / f"{case_name}.mrmesh"
     ref_mesh = mlib.loadMesh(ref_mesh_path)
-    # #  check meshes similarity (for extra details on fail)
+    #  check meshes similarity
     with check:
-        compare_meshes_similarity(thicked_mesh, ref_mesh)  # diff vs reference usually about 5 verts on 800 overall
+        compare_meshes_similarity(thicked_mesh, ref_mesh)
     with check:
         if "skip_self-intsc_verif" in test_params.keys() and not test_params["skip_self-intsc_verif"]:
             self_col_tri = mlib.findSelfCollidingTriangles(thicked_mesh).size()
@@ -121,9 +121,9 @@ def test_offset_double(tmp_path, test_params):
     mlib.saveMesh(offseted_mesh, tmp_path / f"{case_name}.mrmesh")
     ref_mesh_path = input_folder / f"{case_name}.mrmesh"
     ref_mesh = mlib.loadMesh(ref_mesh_path)
-    # #  check meshes similarity (for extra details on fail)
+    # #  check meshes similarity
     with check:
-        compare_meshes_similarity(offseted_mesh, ref_mesh)  # diff vs reference usually about 5 verts on 800 overall
+        compare_meshes_similarity(offseted_mesh, ref_mesh)
     with check:
         if "skip_self-intsc_verif" in test_params.keys() and not test_params["skip_self-intsc_verif"]:
             self_col_tri = mlib.findSelfCollidingTriangles(offseted_mesh).size()
@@ -161,13 +161,13 @@ def test_offset_shell(tmp_path, test_params):
     new_mesh = mlib.offsetMesh(mp=mesh, offset=test_params["params"]["offset"],
                                params=offset_params)
 
-    # # === Verification
+    # === Verification
     mlib.saveMesh(new_mesh, tmp_path / f"{case_name}.mrmesh")
     ref_mesh_path = input_folder / f"{case_name}.mrmesh"
     ref_mesh = mlib.loadMesh(ref_mesh_path)
-    # #  check meshes similarity (for extra details on fail)
+    #  check meshes similarity
     with check:
-        compare_meshes_similarity(new_mesh, ref_mesh)  # diff vs reference usually about 5 verts on 800 overall
+        compare_meshes_similarity(new_mesh, ref_mesh)
     with check:
         if "skip_self-intsc_verif" in test_params.keys() and not test_params["skip_self-intsc_verif"]:
             self_col_tri = mlib.findSelfCollidingTriangles(new_mesh).size()
@@ -254,13 +254,13 @@ def test_offset_general(tmp_path, test_params):
     new_mesh = mlib.generalOffsetMesh(mp=mesh, offset=test_params["params"]["offset"],
                                       params=offset_params)
 
-    # # === Verification
+    # === Verification
     mlib.saveMesh(new_mesh, tmp_path / f"{case_name}.mrmesh")
     ref_mesh_path = input_folder / f"{case_name}.mrmesh"
     ref_mesh = mlib.loadMesh(ref_mesh_path)
-    # #  check meshes similarity (for extra details on fail)
+    #  check meshes similarity
     with check:
-        compare_meshes_similarity(new_mesh, ref_mesh)  # diff vs reference usually about 5 verts on 800 overall
+        compare_meshes_similarity(new_mesh, ref_mesh)
     with check:
         if "skip_self-intsc_verif" in test_params.keys() and not test_params["skip_self-intsc_verif"]:
             self_col_tri = mlib.findSelfCollidingTriangles(new_mesh).size()

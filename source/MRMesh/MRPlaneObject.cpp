@@ -50,7 +50,7 @@ void PlaneObject::setSize( float size )
     auto currentXf = xf();
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
-    currentXf.A = r * Matrix3f::scale( Vector3f::diagonal( size / basePlaneObjectHalfEdgeLength_ ) );
+    currentXf.A = r * Matrix3f::scale( Vector3f::diagonal( size / basePlaneObjectHalfEdgeLength_ / 2.0f ) );
     setXf( currentXf );
 }
 
@@ -95,7 +95,7 @@ PlaneObject::PlaneObject( const std::vector<Vector3f>& pointsToApprox )
 
     setNormal( normal );
     setCenter( plane.project( box.center() ) );
-    setSize( box.diagonal() * 2.f );
+    setSize( box.diagonal() );
 }
 
 std::shared_ptr<Object> PlaneObject::shallowClone() const
@@ -139,9 +139,9 @@ void PlaneObject::constructMesh_()
     Mesh meshObj;
     meshObj.topology = MeshBuilder::fromTriangles( t );
     meshObj.points.emplace_back( -basePlaneObjectHalfEdgeLength_, -basePlaneObjectHalfEdgeLength_, 0 ); // VertId{0}
-    meshObj.points.emplace_back(  basePlaneObjectHalfEdgeLength_, -basePlaneObjectHalfEdgeLength_, 0 ); // VertId{1}
-    meshObj.points.emplace_back( -basePlaneObjectHalfEdgeLength_,  basePlaneObjectHalfEdgeLength_, 0 ); // VertId{2}
-    meshObj.points.emplace_back(  basePlaneObjectHalfEdgeLength_,  basePlaneObjectHalfEdgeLength_, 0 ); // VertId{3}
+    meshObj.points.emplace_back( basePlaneObjectHalfEdgeLength_, -basePlaneObjectHalfEdgeLength_, 0 ); // VertId{1}
+    meshObj.points.emplace_back( -basePlaneObjectHalfEdgeLength_, basePlaneObjectHalfEdgeLength_, 0 ); // VertId{2}
+    meshObj.points.emplace_back( basePlaneObjectHalfEdgeLength_, basePlaneObjectHalfEdgeLength_, 0 ); // VertId{3}
 
     mesh_ = std::make_shared<Mesh>( meshObj );
 

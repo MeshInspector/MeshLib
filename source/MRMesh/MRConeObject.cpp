@@ -2,6 +2,7 @@
 
 #include "MRMatrix3.h"
 #include "MRMesh.h"
+#include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
 #include "MRConeApproximator.h"
@@ -130,6 +131,7 @@ void ConeObject::setBaseRadius( float radius )
 
 ConeObject::ConeObject()
 {
+    setDefaultFeatureObjectParams( *this );
     constructMesh_();
 }
 

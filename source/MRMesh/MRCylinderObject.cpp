@@ -1,3 +1,4 @@
+#include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRCylinderObject.h"
 #include "MRMatrix3.h"
@@ -122,6 +123,7 @@ void CylinderObject::setCenter( const Vector3f& center )
 
 CylinderObject::CylinderObject()
 {
+    setDefaultFeatureObjectParams( *this );
     constructMesh_();
 }
 

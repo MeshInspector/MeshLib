@@ -2,6 +2,7 @@
 #include "MRMatrix3.h"
 #include "MRMakeSphereMesh.h"
 #include "MRMesh.h"
+#include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
 #include "MRMatrix3Decompose.h"
@@ -74,6 +75,7 @@ const std::vector<FeatureObjectSharedProperty>& SphereObject::getAllSharedProper
 
 SphereObject::SphereObject()
 {
+    setDefaultFeatureObjectParams( *this );
     constructMesh_();
 }
 

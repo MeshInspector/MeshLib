@@ -94,7 +94,14 @@ struct UiRenderManager
 
     // Returns the parameters for the `IRenderObject::earlyBackwardPass()`.
     // This will be called exactly once per viewport, each time the UI in it is rendered.
-    virtual BasicUiRenderTask::BackwardPassParams getBackwardPassParams() { return {}; }
+    virtual BasicUiRenderTask::BackwardPassParams beginBackwardPass() { return {}; }
+    // After the backward pass is performed, the parameters should be passed back into this function.
+    virtual void finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params ) { (void)params; }
+
+    // This should return true when the mouse hover is owned by one of the rendered objects.
+    // It's expected that this will be equal to `params.mouseHoverConsumed` from the last `finishBackwardPass()`,
+    // but you can also add your own arbitrary conditions.
+    virtual bool ownsMouseHover() const { return false; }
 };
 
 class IRenderObject

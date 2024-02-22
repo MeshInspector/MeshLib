@@ -404,9 +404,20 @@ protected:
 
     class UiRenderManagerImpl : public UiRenderManager
     {
+    public:
         MRVIEWER_API void preRenderViewport( ViewportId viewport ) override;
         MRVIEWER_API void postRenderViewport( ViewportId viewport ) override;
-        MRVIEWER_API BasicUiRenderTask::BackwardPassParams getBackwardPassParams() override;
+        MRVIEWER_API BasicUiRenderTask::BackwardPassParams beginBackwardPass() override;
+        MRVIEWER_API void finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params ) override;
+        MRVIEWER_API bool ownsMouseHover() const override;
+
+    private:
+        // `finishBackwardPass()` sets this to true when some object's UI is hovered.
+        // We then read it in `onMouseDown_()` and return true to eat that event.
+        // We intentionally don't block other events with this, especially not scrolling events, as it's
+        //   very annoying when the zoom breaks because you randomly hovered something.
+        // It also would be unwise to block `onMouseUp_()`, as you could make some plugin stuck assuming that the mouse is held.
+        bool mouseIsBlocked_ = false;
     };
     // This class helps the viewer to `renderUi()` from `IRenderObject`s.
     std::unique_ptr<UiRenderManager> uiRenderManager_;

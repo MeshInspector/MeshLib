@@ -261,6 +261,8 @@ void ObjectPointsHolder::serializeFields_( Json::Value& root ) const
     serializeToJson( selectedPoints_, root["SelectionVertBitSet"] );
     if ( points_ )
         serializeToJson( points_->validPoints, root["ValidVertBitSet"] );
+
+    root["PointSize"] = pointSize_;
 }
 
 void ObjectPointsHolder::deserializeFields_( const Json::Value& root )
@@ -277,6 +279,9 @@ void ObjectPointsHolder::deserializeFields_( const Json::Value& root )
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
         setDefaultSceneProperties_();
+
+    if ( const auto& pointSizeJson = root["PointSize"]; pointSizeJson.isDouble() )
+        pointSize_ = float( pointSizeJson.asDouble() );
 }
 
 void ObjectPointsHolder::setupRenderObject_() const

@@ -217,7 +217,7 @@ void ObjectLinesHolder::deserializeBaseFields_( const Json::Value& root )
         setDefaultSceneProperties_();
 
     if ( const auto& lineWidthJson = root["LineWidth"]; lineWidthJson.isDouble() )
-        lineWidth_ = lineWidthJson.asDouble();
+        lineWidth_ = float( lineWidthJson.asDouble() );
 }
 
 void ObjectLinesHolder::deserializeFields_( const Json::Value& root )

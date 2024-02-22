@@ -281,7 +281,7 @@ void ObjectPointsHolder::deserializeFields_( const Json::Value& root )
         setDefaultSceneProperties_();
 
     if ( const auto& pointSizeJson = root["PointSize"]; pointSizeJson.isDouble() )
-        pointSize_ = pointSizeJson.asDouble();
+        pointSize_ = float( pointSizeJson.asDouble() );
 }
 
 void ObjectPointsHolder::setupRenderObject_() const

@@ -151,7 +151,7 @@ public:
     MRVIEWER_API static std::filesystem::path getUserThemesDirectory();
 
     // Find available custom themes
-    MRVIEWER_API static void findUserThemes();
+    MRVIEWER_API static void updateUserThemesList();
     // Return list of found custom themes
     MRVIEWER_API static std::vector<std::string> foundUserThemes();
 

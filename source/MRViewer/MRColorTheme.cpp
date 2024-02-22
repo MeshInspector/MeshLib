@@ -463,7 +463,7 @@ void ColorTheme::resetImGuiStyle()
     }
 }
 
-void ColorTheme::findUserThemes()
+void ColorTheme::updateUserThemesList()
 {
     auto& instance = ColorTheme::instance_();
     instance.foundUserThemes_.clear();

@@ -128,12 +128,6 @@ void PlaneObject::serializeFields_( Json::Value& root ) const
     root["Type"].append( PlaneObject::TypeName() );
 }
 
-void PlaneObject::setupRenderObject_() const
-{
-    if ( !renderObj_ )
-        renderObj_ = createRenderObject<decltype(*this)>( *this );
-}
-
 void PlaneObject::constructMesh_()
 {
     Triangulation t{

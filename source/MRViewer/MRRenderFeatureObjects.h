@@ -21,6 +21,7 @@ public:
 };
 
 // No `class RenderPlaneFeatureObject` for now, because planes look ok with default parameters.
+// If you add it, don't forget to add `setupRenderObject_()` to `PlaneObject`, like other features do.
 
 class RenderCircleFeatureObject : public RenderDefaultUiObject<RenderLinesObject>
 {

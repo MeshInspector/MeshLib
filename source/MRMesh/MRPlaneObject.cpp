@@ -1,5 +1,6 @@
 #include "MRPlaneObject.h"
 #include "MRMesh.h"
+#include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRMeshBuilder.h"
 #include "MRBestFit.h"
 #include "MRObjectFactory.h"
@@ -73,6 +74,7 @@ const std::vector<FeatureObjectSharedProperty>& PlaneObject::getAllSharedPropert
 
 PlaneObject::PlaneObject()
 {
+    setDefaultFeatureObjectParams( *this );
     constructMesh_();
 }
 

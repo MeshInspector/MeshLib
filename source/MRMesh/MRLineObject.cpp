@@ -1,5 +1,6 @@
 #include "MRLineObject.h"
 #include "MRMesh.h"
+#include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRMeshBuilder.h"
 #include "MRBestFit.h"
 #include "MRObjectFactory.h"
@@ -69,6 +70,7 @@ Vector3f LineObject::getPointB() const
 
 LineObject::LineObject()
 {
+    setDefaultFeatureObjectParams( *this );
     constructPolyline_();
 }
 

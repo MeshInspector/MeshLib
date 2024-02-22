@@ -1200,6 +1200,9 @@
     <ClInclude Include="MRPointCloudDivideWithPlane.h">
       <Filter>Source Files\PointCloud</Filter>
     </ClInclude>
+    <ClInclude Include="MRDefaultFeatureObjectParams.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1994,6 +1997,9 @@
     </ClCompile>
     <ClCompile Include="MRPointCloudDivideWithPlane.cpp">
       <Filter>Source Files\PointCloud</Filter>
+    </ClCompile>
+    <ClCompile Include="MRDefaultFeatureObjectParams.cpp">
+      <Filter>Source Files\DataModel</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -372,6 +372,7 @@
     <ClInclude Include="MRDistanceMeasurementObject.h" />
     <ClInclude Include="MRAngleMeasurementObject.h" />
     <ClInclude Include="MRDefaultMeasurementObjects.h" />
+    <ClInclude Include="MRDefaultFeatureObjectParams.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -639,6 +640,7 @@
     <ClCompile Include="MRDistanceMeasurementObject.cpp" />
     <ClCompile Include="MRAngleMeasurementObject.cpp" />
     <ClCompile Include="MRDefaultMeasurementObjects.cpp" />
+    <ClCompile Include="MRDefaultFeatureObjectParams.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\laz-perf\laz-perf.vcxproj">

@@ -1,4 +1,5 @@
 #include "MRPointObject.h"
+#include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
 #include "MRVector3.h"
@@ -10,6 +11,7 @@ MR_ADD_CLASS_FACTORY( PointObject )
 
 PointObject::PointObject()
 {
+    setDefaultFeatureObjectParams( *this );
     constructPointCloud_();
 }
 

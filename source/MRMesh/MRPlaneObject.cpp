@@ -58,7 +58,7 @@ float PlaneObject::getSize( void ) const
 {
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
-    return  s.x.x;
+    return  s.x.x * basePlaneObjectHalfEdgeLength_ * 2.0f;
 }
 
 const std::vector<FeatureObjectSharedProperty>& PlaneObject::getAllSharedProperties() const
@@ -139,9 +139,9 @@ void PlaneObject::constructMesh_()
     Mesh meshObj;
     meshObj.topology = MeshBuilder::fromTriangles( t );
     meshObj.points.emplace_back( -basePlaneObjectHalfEdgeLength_, -basePlaneObjectHalfEdgeLength_, 0 ); // VertId{0}
-    meshObj.points.emplace_back( basePlaneObjectHalfEdgeLength_, -basePlaneObjectHalfEdgeLength_, 0 ); // VertId{1}
-    meshObj.points.emplace_back( -basePlaneObjectHalfEdgeLength_, basePlaneObjectHalfEdgeLength_, 0 ); // VertId{2}
-    meshObj.points.emplace_back( basePlaneObjectHalfEdgeLength_, basePlaneObjectHalfEdgeLength_, 0 ); // VertId{3}
+    meshObj.points.emplace_back(  basePlaneObjectHalfEdgeLength_, -basePlaneObjectHalfEdgeLength_, 0 ); // VertId{1}
+    meshObj.points.emplace_back( -basePlaneObjectHalfEdgeLength_,  basePlaneObjectHalfEdgeLength_, 0 ); // VertId{2}
+    meshObj.points.emplace_back(  basePlaneObjectHalfEdgeLength_,  basePlaneObjectHalfEdgeLength_, 0 ); // VertId{3}
 
     mesh_ = std::make_shared<Mesh>( meshObj );
 

@@ -23,7 +23,7 @@ MR_REGISTER_RENDER_OBJECT_IMPL( LineObject, RenderLineFeatureObject )
 RenderLineFeatureObject::RenderLineFeatureObject( const VisualObject& object )
     : RenderObjectCombinator( object )
 {
-    nameUiLocalOffset = Vector3f( 0.1f, 0, 0 );
+    nameUiLocalOffset = Vector3f( 0.01f, 0, 0 );
     nameUiRotateLocalOffset90Degrees = true;
 }
 

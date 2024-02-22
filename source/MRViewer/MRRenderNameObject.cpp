@@ -66,12 +66,12 @@ void RenderNameObject::Task::renderPass()
     const ImU32 colorOutline = ImGui::ColorConvertFloat4ToU32( isDark ? ImVec4( 0, 0, 0, 0.5f ) : ImVec4( 1, 1, 1, 0.5f ) );
 
     ImVec4 colorMainFloat = ImVec4( object->getFrontColor( object->isSelected() ) );
-    colorMainFloat = ImGuiMath::mix( 0.2f, colorMainFloat, ImVec4( 0, 0, 0, 1 ) );
+    colorMainFloat = ImGuiMath::mix( 0.1f, colorMainFloat, ImVec4( 0, 0, 0, 1 ) );
     colorMainFloat.w = 1;
     ImU32 colorMain = ImGui::ColorConvertFloat4ToU32( colorMainFloat );
 
     ImVec4 colorHoveredFloat = ImVec4( object->getFrontColor( object->isSelected() ) );
-    colorHoveredFloat = ImGuiMath::mix( 0.3f, colorHoveredFloat, ImVec4( 0, 0, 0, 1 ) );
+    colorHoveredFloat = ImGuiMath::mix( 0.2f, colorHoveredFloat, ImVec4( 0, 0, 0, 1 ) );
     colorHoveredFloat.w = 1;
     ImU32 colorHovered = ImGui::ColorConvertFloat4ToU32( colorHoveredFloat );
 

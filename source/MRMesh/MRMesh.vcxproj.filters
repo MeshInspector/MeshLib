@@ -1201,7 +1201,7 @@
       <Filter>Source Files\PointCloud</Filter>
     </ClInclude>
     <ClInclude Include="MRDefaultFeatureObjectParams.h">
-      <Filter>Source Files\DataModel</Filter>
+      <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1999,7 +1999,7 @@
       <Filter>Source Files\PointCloud</Filter>
     </ClCompile>
     <ClCompile Include="MRDefaultFeatureObjectParams.cpp">
-      <Filter>Source Files\DataModel</Filter>
+      <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

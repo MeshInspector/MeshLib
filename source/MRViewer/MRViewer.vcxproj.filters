@@ -412,9 +412,6 @@
     <ClInclude Include="MRViewportGL.h">
       <Filter>Render</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshViewer.h">
-      <Filter>Viewer</Filter>
-    </ClInclude>
     <ClInclude Include="MRMeshViewerPlugin.h">
       <Filter>Viewer</Filter>
     </ClInclude>

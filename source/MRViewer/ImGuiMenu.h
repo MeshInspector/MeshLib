@@ -9,7 +9,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 #include "MRMesh/MRFlagOperators.h"
-#include "MRMeshViewer.h"
+#include "MRViewer.h"
 #include "MRMeshViewerPlugin.h"
 #include "MRViewerEventsListener.h"
 #include "MRStatePlugin.h"

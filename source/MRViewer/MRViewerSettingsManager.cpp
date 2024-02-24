@@ -1,6 +1,6 @@
 #include "MRViewerSettingsManager.h"
 #include "MRMeshViewport.h"
-#include "MRMeshViewer.h"
+#include "MRViewer.h"
 #include "MRColorTheme.h"
 #include "MRRibbonMenu.h"
 #include "MRSpaceMouseHandlerHidapi.h"

@@ -4,6 +4,7 @@
 #include "MRProgressBar.h"
 #include "MRRibbonButtonDrawer.h"
 #include "MRRibbonFontManager.h"
+#include "MRViewer.h"
 #include <MRMesh/MRHistoryStore.h>
 #include <MRMesh/MRSerializer.h>
 #include <MRMesh/MRObjectSave.h>

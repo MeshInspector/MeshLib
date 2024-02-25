@@ -94,6 +94,11 @@
 namespace MR
 {
 
+const std::shared_ptr<ImGuiMenu>& ImGuiMenu::instance()
+{
+    return getViewerInstance().getMenuPlugin();
+}
+
 namespace
 {
 // translation multiplier that limits its maximum value depending on object size

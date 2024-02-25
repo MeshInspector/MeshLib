@@ -1,5 +1,5 @@
 #pragma once
-#include "MRMeshViewerPlugin.h"
+#include "MRViewerPlugin.h"
 #include "MRViewer.h"
 #include "exports.h"
 #include "MRViewerEventsListener.h"

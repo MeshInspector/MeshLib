@@ -158,7 +158,6 @@
     <ClInclude Include="MRStatePlugin.h" />
     <ClInclude Include="MRDemoPlugin.h" />
     <ClInclude Include="MRGLMacro.h" />
-    <ClInclude Include="MRMeshViewerPlugin.h" />
     <ClInclude Include="MRPythonAppendCommand.h" />
     <ClInclude Include="MRRecentFilesStore.h" />
     <ClInclude Include="MRRenderGLHelpers.h" />

@@ -11,7 +11,6 @@
 #include "MRBitSetParallelFor.h"
 #include "MRLocalTriangulations.h"
 #include <algorithm>
-#include <queue>
 #include <numeric>
 #include <limits>
 
@@ -133,30 +132,6 @@ void filterNeighbors( const VertNormals& normals, VertId v, std::vector<VertId>&
         return dot( vNorm, normals[nv] ) < -0.3f;
     } ), neighbors.end() );
 }
-
-struct FanOptimizerQueueElement
-{
-    float weight{ 0.0f }; // profit of flipping this edge
-    int id{ -1 }; // index
-
-    // needed to remove outdated queue elements
-    int prevId{ -1 }; // id of prev neighbor
-    int nextId{ -1 }; // id of next neighbor
-
-    bool stable{ false }; // if this flag is true, edge cannot be flipped
-    bool operator < ( const FanOptimizerQueueElement& other ) const
-    {
-        if ( stable == other.stable )
-            return weight < other.weight;
-        return stable;
-    }
-    bool operator==( const FanOptimizerQueueElement& other ) const = default;
-
-    bool isOutdated( const std::vector<VertId>& neighbors ) const
-    {
-        return !neighbors[nextId].valid() || !neighbors[prevId].valid();
-    }
-};
 
 class FanOptimizer
 {
@@ -313,17 +288,20 @@ void FanOptimizer::optimize( int steps, float critAng, float boundaryAngle )
     if ( steps == 0 )
         return;
 
-    std::priority_queue<FanOptimizerQueueElement> queue_;
+    auto & queue = fanData_.queue;
+    while ( !queue.empty() )
+        queue.pop();
+
     for ( int i = 0; i < fanData_.neighbors.size(); ++i )
-        queue_.emplace( calcQueueElement_( i, critAng ) );
+        queue.emplace( calcQueueElement_( i, critAng ) );
 
     // optimize fan
     int allRemoves = 0;
     int currentFanSize = int( fanData_.neighbors.size() );
-    while ( !queue_.empty() )
+    while ( !queue.empty() )
     {
-        auto topEl = queue_.top();
-        queue_.pop();
+        auto topEl = queue.top();
+        queue.pop();
         if ( !fanData_.neighbors[topEl.id].valid() )
             continue; // this vert was erased
         if ( topEl.isOutdated( fanData_.neighbors ) )
@@ -344,8 +322,8 @@ void FanOptimizer::optimize( int steps, float critAng, float boundaryAngle )
         }
         if ( oldNei == fanData_.border )
             fanData_.border = fanData_.neighbors[topEl.prevId];
-        queue_.emplace( calcQueueElement_( topEl.nextId, critAng ) );
-        queue_.emplace( calcQueueElement_( topEl.prevId, critAng ) );
+        queue.emplace( calcQueueElement_( topEl.nextId, critAng ) );
+        queue.emplace( calcQueueElement_( topEl.prevId, critAng ) );
     }
 
     erase_if( fanData_.neighbors, []( VertId v ) { return !v.valid(); } );

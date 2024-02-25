@@ -8,6 +8,7 @@
 #include "MRFewSmallest.h"
 #include <climits>
 #include <optional>
+#include <queue>
 
 namespace MR
 {
@@ -49,6 +50,30 @@ MRMESH_API float findNumNeighbors( const PointCloud& pointCloud, VertId v, int n
  */
 MRMESH_API void filterNeighbors( const VertNormals& normals, VertId v, std::vector<VertId>& neighbors );
 
+struct FanOptimizerQueueElement
+{
+    float weight{ 0.0f }; // profit of flipping this edge
+    int id{ -1 }; // index
+
+    // needed to remove outdated queue elements
+    int prevId{ -1 }; // id of prev neighbor
+    int nextId{ -1 }; // id of next neighbor
+
+    bool stable{ false }; // if this flag is true, edge cannot be flipped
+    bool operator < ( const FanOptimizerQueueElement& other ) const
+    {
+        if ( stable == other.stable )
+            return weight < other.weight;
+        return stable;
+    }
+    bool operator==( const FanOptimizerQueueElement& other ) const = default;
+
+    bool isOutdated( const std::vector<VertId>& neighbors ) const
+    {
+        return !neighbors[nextId].valid() || !neighbors[prevId].valid();
+    }
+};
+
 /**
  * \brief Data with caches for optimizing fan triangulation
  * \ingroup TriangulationHelpersGroup
@@ -68,6 +93,9 @@ struct TriangulatedFanData
 
     /// the storage to collect n-nearest neighbours, here to avoid allocations for each point
     FewSmallest<PointsProjectionResult> nearesetPoints;
+
+    /// the queue to optimize local triangulation, here to avoid allocations for each point
+    std::priority_queue<FanOptimizerQueueElement> queue;
 };
 
 struct Settings

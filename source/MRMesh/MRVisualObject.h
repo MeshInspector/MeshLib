@@ -243,9 +243,6 @@ public:
     /// draws this object for 2d UI
     MRMESH_API virtual void renderUi( const UiRenderParams& params ) const;
 
-    /// is object has any visual representation (faces, edges, etc.)
-    virtual bool hasVisualRepresentation() const { return false; }
-
     /// this ctor is public only for std::make_shared used inside clone()
     VisualObject( ProtectedStruct, const VisualObject& obj ) : VisualObject( obj ) {}
 

@@ -2,6 +2,7 @@
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRCommandLoop.h"
+#include "MRViewer/MRViewer.h"
 
 namespace MR
 {

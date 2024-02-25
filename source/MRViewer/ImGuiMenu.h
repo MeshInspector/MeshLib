@@ -7,15 +7,12 @@
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 
-////////////////////////////////////////////////////////////////////////////////
 #include "MRMesh/MRFlagOperators.h"
-#include "MRViewer.h"
 #include "MRViewerPlugin.h"
 #include "MRViewerEventsListener.h"
 #include "MRStatePlugin.h"
 #include "MRNotificationType.h"
 #include <unordered_map>
-////////////////////////////////////////////////////////////////////////////////
 
 // Forward declarations
 struct ImGuiContext;
@@ -174,6 +171,8 @@ protected:
   AffineXf3f editedFeatureObjectOldXf_;
 
 public:
+  MRVIEWER_API static const std::shared_ptr<ImGuiMenu>& instance();
+
   MRVIEWER_API virtual void init(MR::Viewer *_viewer) override;
 
   // inits glfw and glsl backend
@@ -325,8 +324,8 @@ protected:
 
     bool capturedMouse_{ false };
     // Mouse IO
-    MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
-    MRVIEWER_API virtual bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;
+    MRVIEWER_API virtual bool onMouseDown_( MouseButton button, int modifier ) override;
+    MRVIEWER_API virtual bool onMouseUp_( MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseMove_( int mouse_x, int mouse_y ) override;
     MRVIEWER_API virtual bool onMouseScroll_( float delta_y ) override;
     MRVIEWER_API virtual void cursorEntrance_( bool entered ) override;

@@ -10,6 +10,7 @@
 #include "MRMesh/MRVector2.h"
 #include "imgui/imgui_internal.h"
 #include "MRUIStyle.h"
+#include "MRViewer.h"
 
 namespace MR
 {

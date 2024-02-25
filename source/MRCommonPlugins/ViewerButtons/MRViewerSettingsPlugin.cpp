@@ -11,6 +11,7 @@
 #include "MRViewer/MRGLMacro.h"
 #include "MRViewer/MRGladGlfw.h"
 #include "MRViewer/MRRibbonConstants.h"
+#include "MRViewer/MRViewer.h"
 #include "MRMesh/MRSystem.h"
 #include "MRViewer/MRSpaceMouseHandlerHidapi.h"
 #include "MRPch/MRSpdlog.h"

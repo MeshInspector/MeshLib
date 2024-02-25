@@ -15,7 +15,7 @@ namespace MR
 
 float getScaling()
 {
-    const auto menu = getViewerInstance().getMenuPlugin();
+    const auto menu = ImGuiMenu::instance();
     if ( menu )
         return menu->menu_scaling();
     return 1.f;

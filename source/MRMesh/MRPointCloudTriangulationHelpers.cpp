@@ -112,6 +112,19 @@ void findNeighborsInBall( const PointCloud& pointCloud, VertId v, float radius, 
     } );
 }
 
+float findNumNeighbors( const PointCloud& pointCloud, VertId v, int numNeis, std::vector<VertId>& neighbors,
+    FewSmallest<PointsProjectionResult> & tmp, float upDistLimitSq )
+{
+    tmp.reset( numNeis + 1 );
+    findFewClosestPoints( pointCloud.points[v], pointCloud, tmp, upDistLimitSq );
+    auto maxDistSq = tmp.empty() ? 0.0f : tmp.top().distSq;
+    neighbors.clear();
+    for ( const auto & n : tmp.get() )
+        if ( n.vId != v )
+            neighbors.push_back( n.vId );
+    return maxDistSq;
+}
+
 void filterNeighbors( const VertNormals& normals, VertId v, std::vector<VertId>& neighbors )
 {
     const auto& vNorm = normals[v];
@@ -427,20 +440,12 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings 
     float actualRadius = settings.radius;
     assert( ( settings.radius > 0 && settings.numNeis == 0 )
          || ( settings.radius == 0 && settings.numNeis > 0 ) );
+
     if ( settings.radius > 0 )
-    {
         findNeighborsInBall( cloud, v, actualRadius, fanData.neighbors );
-    }
     else
-    {
-        fanData.nearesetPoints.reset( settings.numNeis + 1 );
-        findFewClosestPoints( cloud.points[v], cloud, fanData.nearesetPoints );
-        actualRadius = fanData.nearesetPoints.empty() ? 0.0f : std::sqrt( fanData.nearesetPoints.top().distSq );
-        fanData.neighbors.clear();
-        for ( const auto & n : fanData.nearesetPoints.get() )
-            if ( n.vId != v )
-                fanData.neighbors.push_back( n.vId );
-    }
+        actualRadius = std::sqrt( findNumNeighbors( cloud, v, settings.numNeis, fanData.neighbors, fanData.nearesetPoints ) );
+
     if ( settings.trustedNormals )
         filterNeighbors( *settings.trustedNormals, v, fanData.neighbors );
     if ( settings.allNeighbors )
@@ -457,7 +462,16 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings 
         {
             // update triangulation if radius was increased
             actualRadius = maxRadius;
-            findNeighborsInBall( cloud, v, actualRadius, fanData.neighbors );
+            if ( settings.radius > 0 )
+                findNeighborsInBall( cloud, v, actualRadius, fanData.neighbors );
+            else
+            {
+                // if the center point is an outlier then there may be too many points withing the ball of maxRadius;
+                // so limit the search both by radius and by the number of neighbours
+                actualRadius = std::sqrt( findNumNeighbors( cloud, v, std::max( 2 * settings.numNeis, 100 ),
+                    fanData.neighbors, fanData.nearesetPoints, sqr( maxRadius ) ) );
+            }
+
             if ( settings.trustedNormals )
                 filterNeighbors( *settings.trustedNormals, v, fanData.neighbors );
             if ( settings.allNeighbors )

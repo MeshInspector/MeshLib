@@ -34,6 +34,16 @@ MRMESH_API float updateNeighborsRadius( const VertCoords& points, VertId v, Vert
 MRMESH_API void findNeighborsInBall( const PointCloud& pointCloud, VertId v, float radius, std::vector<VertId>& neighbors );
 
 /**
+ * \brief Finds at most given number of neighbors of v (v excluded)
+ * \param tmp temporary storage to avoid its allocation
+ * \param upDistLimitSq upper limit on the distance in question, points with larger distance than it will not be returned
+ * \return maxDistSq to the furthest returned neighbor (or 0 if no neighbours are returned)
+ * \ingroup TriangulationHelpersGroup
+ */
+MRMESH_API float findNumNeighbors( const PointCloud& pointCloud, VertId v, int numNeis, std::vector<VertId>& neighbors,
+    FewSmallest<PointsProjectionResult> & tmp, float upDistLimitSq = FLT_MAX );
+
+/**
  * \brief Filter neighbors with crossing normals
  * \ingroup TriangulationHelpersGroup
  */

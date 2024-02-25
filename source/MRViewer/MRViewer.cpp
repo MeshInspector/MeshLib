@@ -24,6 +24,7 @@
 #include "MRRecentFilesStore.h"
 #include "MRPointInAllSpaces.h"
 #include "MRViewport.h"
+#include "MRFrameCounter.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -934,7 +935,8 @@ Viewer::Viewer() :
     selected_viewport_index( 0 ),
     eventQueue_( std::make_unique<ViewerEventQueue>() ),
     mouseController_( std::make_unique<MouseController>() ),
-    recentFilesStore_( std::make_unique<RecentFilesStore>() )
+    recentFilesStore_( std::make_unique<RecentFilesStore>() ),
+    frameCounter_( std::make_unique<FrameCounter>() )
 {
     window = nullptr;
 
@@ -1436,7 +1438,7 @@ bool Viewer::draw_( bool force )
         return false;
     }
 
-    frameCounter_.startDraw();
+    frameCounter_->startDraw();
 
     glPrimitivesCounter_.reset();
 
@@ -1455,7 +1457,7 @@ bool Viewer::draw_( bool force )
     }
     if ( window && swapped )
         glfwSwapBuffers( window );
-    frameCounter_.endDraw( swapped );
+    frameCounter_->endDraw( swapped );
     isInDraw_ = false;
     return ( window && swapped );
 }
@@ -2016,6 +2018,26 @@ void Viewer::preciseFitDataViewport( MR::ViewportMask vpList )
     return preciseFitDataViewport( vpList, {} );
 }
 
+size_t Viewer::getTotalFrames() const
+{
+    return frameCounter_->totalFrameCounter;
+}
+
+size_t Viewer::getSwappedFrames() const
+{
+    return frameCounter_->swappedFrameCounter;
+}
+
+size_t Viewer::getFPS() const
+{
+    return frameCounter_->fps;
+}
+
+double Viewer::getPrevFrameDrawTimeMillisec() const
+{
+    return frameCounter_->drawTimeMilliSec.count();
+}
+
 void Viewer::incrementForceRedrawFrames( int i /*= 1 */, bool swapOnLastOnly /*= false */)
 {
     if ( isInDraw_ )
@@ -2329,38 +2351,6 @@ void Viewer::setMenuPlugin( std::shared_ptr<ImGuiMenu> menu )
 size_t Viewer::getStaticGLBufferSize() const
 {
     return GLStaticHolder::getStaticGLBuffer().heapBytes();
-}
-
-void Viewer::FrameCounter::startDraw()
-{
-    startDrawTime_ = std::chrono::high_resolution_clock::now();
-}
-
-void Viewer::FrameCounter::endDraw( bool swapped )
-{
-    ++totalFrameCounter;
-    if ( swapped )
-    {
-        ++swappedFrameCounter;
-        const auto nowTP = std::chrono::high_resolution_clock::now();
-        const auto nowSec = std::chrono::time_point_cast<std::chrono::seconds>( nowTP ).time_since_epoch().count();
-        drawTimeMilliSec =  ( nowTP - startDrawTime_ ) * 1000;
-        if ( nowSec > startFPSTime_ )
-        {
-            startFPSTime_ = nowSec;
-            fps = swappedFrameCounter - startFrameNum;
-            startFrameNum = swappedFrameCounter;
-        }
-    }
-}
-
-void Viewer::FrameCounter::reset()
-{
-    totalFrameCounter = 0;
-    swappedFrameCounter = 0;
-    startFPSTime_ = 0;
-    fps = 0;
-    startFrameNum = 0;
 }
 
 void Viewer::EventsCounter::reset()

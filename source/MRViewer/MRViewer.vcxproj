@@ -21,6 +21,7 @@
     <ClCompile Include="MRCreateShader.cpp" />
     <ClCompile Include="MRCudaAccessor.cpp" />
     <ClCompile Include="MRDirectionWidget.cpp" />
+    <ClCompile Include="MRFrameCounter.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
     <ClCompile Include="MRSelectCurvaturePreference.cpp" />
     <ClCompile Include="MRFrameRedrawRequest.cpp" />
@@ -111,6 +112,7 @@
     <ClInclude Include="MRCudaAccessor.h" />
     <ClInclude Include="MRDirectionWidget.h" />
     <ClInclude Include="MRFitData.h" />
+    <ClInclude Include="MRFrameCounter.h" />
     <ClInclude Include="MRNotificationType.h" />
     <ClInclude Include="MRRibbonNotification.h" />
     <ClInclude Include="MRSelectCurvaturePreference.h" />

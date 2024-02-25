@@ -328,6 +328,9 @@
     <ClCompile Include="MRRenderNameObject.cpp">
       <Filter>Render\Implementations</Filter>
     </ClCompile>
+    <ClCompile Include="MRFrameCounter.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -634,6 +637,9 @@
     </ClInclude>
     <ClInclude Include="MRRenderNameObject.h">
       <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFrameCounter.h">
+      <Filter>Viewer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

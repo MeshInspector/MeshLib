@@ -1,5 +1,5 @@
 #include "MRViewerSettingsManager.h"
-#include "MRMeshViewport.h"
+#include "MRViewport.h"
 #include "MRViewer.h"
 #include "MRColorTheme.h"
 #include "MRRibbonMenu.h"

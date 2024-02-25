@@ -415,9 +415,6 @@
     <ClInclude Include="MRMeshViewerPlugin.h">
       <Filter>Viewer</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshViewport.h">
-      <Filter>Viewer</Filter>
-    </ClInclude>
     <ClInclude Include="MRPythonAppendCommand.h">
       <Filter>Python</Filter>
     </ClInclude>

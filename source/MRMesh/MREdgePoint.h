@@ -56,6 +56,18 @@ struct EdgePointPair
     bool operator==( const EdgePointPair& rhs ) const = default;
 };
 
+struct EdgeSegment
+{
+    EdgeId e;
+    SegmPointf a{ 0.0f };
+    SegmPointf b{ 1.0f };
+    [[nodiscard]] EdgeSegment() = default;
+    [[nodiscard]] EdgeSegment( EdgeId e, float a = 0.0f, float b = 1.0f ) : e( e ), a( a ), b( b ) { assert( a <= b ); };
+
+    [[nodiscard]] EdgePoint edgePointA() const { return { e, a }; }
+    [[nodiscard]] EdgePoint edgePointB() const { return { e, b }; }
+};
+
 /// returns true if points a and b are located on a boundary of the same triangle;
 /// \details if true a.e and b.e are updated to have that triangle on the left
 /// \related EdgePoint

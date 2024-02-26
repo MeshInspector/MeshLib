@@ -275,6 +275,7 @@ template <typename T> struct SegmPoint;
 using SegmPointf = SegmPoint<float>;
 using SegmPointd = SegmPoint<double>;
 struct EdgePoint;
+struct EdgeSegment;
 using MeshEdgePoint = EdgePoint;
 using SurfacePath = std::vector<MeshEdgePoint>;
 using SurfacePaths = std::vector<SurfacePath>;

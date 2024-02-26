@@ -1,5 +1,6 @@
 #include "MRPolylineTrimWithPlane.h"
 #include "MRPolyline.h"
+#include "MRPolylineEdgeIterator.h"
 #include "MRPlane3.h"
 
 namespace MR
@@ -136,11 +137,9 @@ namespace MR
             float distFromNegPlane = {};
         };
         
-        for ( EdgeId e = EdgeId(0); e < edges.size(); e+=2 )
+        for ( auto ue : undirectedEdges( polyline.topology ) )
         {
-            const auto& edgeRecord = edges[e];
-            if ( !edgeRecord.next.valid() || !edgeRecord.org.valid() )
-                continue;
+            const EdgeId e( ue );
             
             PointPosition p1{ .p = polyline.orgPnt( e ), .distFromPosPlane = planePos.distance( p1.p ), .distFromNegPlane = planeNeg.distance( p1.p ) };
             PointPosition p2{ .p = polyline.destPnt( e ), .distFromPosPlane = planePos.distance( p2.p ), .distFromNegPlane = planeNeg.distance( p2.p ) };
@@ -172,8 +171,9 @@ namespace MR
                                                                   p1.distFromNegPlane + p2.distFromPosPlane + 2 * eps;
                 if ( p1.distFromPosPlane > 0 )
                 {
-                    segment.a = p1.distFromPosPlane / denom;
-                    segment.b = p2.distFromNegPlane / denom;
+                    segment.e = segment.e.sym();
+                    segment.a = 1 - p1.distFromPosPlane / denom;
+                    segment.b = 1 - p2.distFromNegPlane / denom;
                 }
                 else
                 {

@@ -293,7 +293,8 @@ void FanOptimizer::optimize( int steps, float critAng, float boundaryAngle )
         queue.pop();
 
     for ( int i = 0; i < fanData_.neighbors.size(); ++i )
-        queue.emplace( calcQueueElement_( i, critAng ) );
+        if ( auto x = calcQueueElement_( i, critAng ); !x.stable )
+            queue.emplace( std::move( x ) );
 
     // optimize fan
     int allRemoves = 0;
@@ -301,13 +302,12 @@ void FanOptimizer::optimize( int steps, float critAng, float boundaryAngle )
     while ( !queue.empty() )
     {
         auto topEl = queue.top();
+        assert( !topEl.stable );
         queue.pop();
         if ( !fanData_.neighbors[topEl.id].valid() )
             continue; // this vert was erased
         if ( topEl.isOutdated( fanData_.neighbors ) )
             continue; // topEl is not valid, because its neighbor was erased
-        if ( topEl.stable )
-            break; // topEl valid and fan is stable
 
         auto oldNei = fanData_.neighbors[topEl.id];
         fanData_.neighbors[topEl.id] = {};
@@ -322,8 +322,12 @@ void FanOptimizer::optimize( int steps, float critAng, float boundaryAngle )
         }
         if ( oldNei == fanData_.border )
             fanData_.border = fanData_.neighbors[topEl.prevId];
-        queue.emplace( calcQueueElement_( topEl.nextId, critAng ) );
-        queue.emplace( calcQueueElement_( topEl.prevId, critAng ) );
+
+        if ( auto x = calcQueueElement_( topEl.nextId, critAng ); !x.stable )
+            queue.emplace( std::move( x ) );
+
+        if ( auto x = calcQueueElement_( topEl.prevId, critAng ); !x.stable )
+            queue.emplace( std::move( x ) );
     }
 
     erase_if( fanData_.neighbors, []( VertId v ) { return !v.valid(); } );

@@ -152,6 +152,7 @@ const ViewportMask& ObjectLinesHolder::getVisualizePropertyMask( AnyVisualizeMas
         case LinesVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
         }
         assert( false && "Invalid enum." );
+        return visibilityMask_;
     }
     else
     {

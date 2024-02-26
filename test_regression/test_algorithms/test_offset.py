@@ -68,14 +68,16 @@ def test_offset_thickening(tmp_path, test_params):
      "params": {
          "signDetectionMode": "OpenVDB",
          "offset": 2.0,
-     }
+         "voxelSize": 0.2
+        }
      },
     {"name": "double_minus_OpenVDB",
      "mesh": "morphed.mrmesh",
      "params": {
          "signDetectionMode": "OpenVDB",
          "offset": -2.0,
-     }
+         "voxelSize": 0.2
+        }
      },
     {"name": "double_self-intersected_WindingRule",
      "mesh": "self-intersected.mrmesh",
@@ -83,7 +85,8 @@ def test_offset_thickening(tmp_path, test_params):
      "params": {
          "signDetectionMode": "WindingRule",
          "offset": -5.0,
-     }
+         "voxelSize": 0.5
+        }
      },
 ])
 def test_offset_double(tmp_path, test_params):
@@ -99,10 +102,11 @@ def test_offset_double(tmp_path, test_params):
     offset_params = mlib.OffsetParameters()
     sign_mode = test_params["params"]["signDetectionMode"]
     offset_params.signDetectionMode = mlib.SignDetectionMode.__members__[sign_mode]
+    offset_params.voxelSize = test_params["params"]["voxelSize"]
 
     offseted_mesh = mlib.doubleOffsetMesh(mp=mesh,
                                          offsetA=test_params["params"]["offset"],
-                                         offsetB=0,
+                                         offsetB=-test_params["params"]["offset"],
                                          params=offset_params)
 
     # # === Verification

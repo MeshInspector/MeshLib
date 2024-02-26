@@ -82,23 +82,19 @@ Expected<std::vector<VertBitSet>> getLargestComponents( const PointCloud& pointC
     subPc = subprogress( pc, 0.95f, 1.f );
     counter = 0;
     std::vector<VertBitSet> result;
-    HashMap<VertId, int> root2index;
+    HashMap<VertId, size_t> root2index;
     const size_t validPointsSize = validPoints.find_last() + 1;
     for ( auto v : validPoints )
     {
         const VertId root = allRoots[v];
         if ( root2size[root] >= minSize )
         {
-            int index = -1;
-            if ( root2index.contains( root ) )
-                index = root2index[root];
-            else
+            auto [it, inserted] = root2index.insert( { root, result.size() } );
+            if ( inserted )
             {
-                index = int( result.size() );
-                root2index[root] = index;
                 result.push_back( VertBitSet( validPointsSize ) );
             }
-            result[index].set( v );
+            result[it->second].set( v );
         }
         if ( !reportProgress( subPc, counter / counterMax, counter, counterDivider ) )
             return unexpectedOperationCanceled();

@@ -310,7 +310,9 @@ const ViewportMask& VisualObject::getVisualizePropertyMask( AnyVisualizeMaskEnum
             return cropLabels_;
         case VisualizeMaskType::DepthTest:
             return depthTest_;
+        case VisualizeMaskType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
         }
+        assert( false && "Invalid enum." );
     }
     else
     {

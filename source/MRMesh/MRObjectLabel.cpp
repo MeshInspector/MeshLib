@@ -279,7 +279,9 @@ const ViewportMask &ObjectLabel::getVisualizePropertyMask( AnyVisualizeMaskEnum 
             return contour_;
         case LabelVisualizePropertyType::LeaderLine:
             return leaderLine_;
+        case LabelVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
         }
+        assert( false && "Invalid enum." );
     }
     else
     {

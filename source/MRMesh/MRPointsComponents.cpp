@@ -13,7 +13,7 @@ namespace MR
 namespace PointCloudComponents
 {
 
-Expected<MR::VertBitSet> getLargestComponentsUnion( const PointCloud& pointCloud, float maxDist, int minSize, ProgressCallback pc /*= {}*/ )
+Expected<VertBitSet> getLargestComponentsUnion( const PointCloud& pointCloud, float maxDist, int minSize, ProgressCallback pc /*= {}*/ )
 {
     MR_TIMER
 
@@ -53,7 +53,57 @@ Expected<MR::VertBitSet> getLargestComponentsUnion( const PointCloud& pointCloud
     return result;
 }
 
-Expected<UnionFind<MR::VertId>> getUnionFindStructureVerts( const PointCloud& pointCloud, float maxDist, const VertBitSet* region /*= nullptr*/, ProgressCallback pc /*= {}*/ )
+Expected<std::vector<VertBitSet>> getLargestComponents( const PointCloud& pointCloud, float maxDist, int minSize, ProgressCallback pc /*= {} */ )
+{
+    MR_TIMER
+
+    assert( maxDist > 0.f );
+    assert( minSize > 1 );
+    const auto& validPoints = pointCloud.validPoints;
+    ProgressCallback subPc = subprogress( pc, 0.f, 0.9f );
+    auto unionStructsRes = getUnionFindStructureVerts( pointCloud, maxDist, nullptr, subPc );
+    if ( !unionStructsRes.has_value() )
+        return unexpectedOperationCanceled();
+    auto& unionStructs = *unionStructsRes;
+    const auto& allRoots = unionStructs.roots();
+
+    subPc = subprogress( pc, 0.9f, 0.95f );
+    int counter = 0;
+    const float counterMax = float( validPoints.count() );
+    const int counterDivider = int( validPoints.count() ) / 100;
+    HashMap<VertId, int> root2size;
+    for ( auto v : validPoints )
+    {
+        ++root2size[allRoots[v]];
+        if ( !reportProgress( subPc, counter / counterMax, counter, counterDivider ) )
+            return unexpectedOperationCanceled();
+    }
+
+    subPc = subprogress( pc, 0.95f, 1.f );
+    counter = 0;
+    std::vector<VertBitSet> result;
+    HashMap<VertId, size_t> root2index;
+    const size_t validPointsSize = validPoints.find_last() + 1;
+    for ( auto v : validPoints )
+    {
+        const VertId root = allRoots[v];
+        if ( root2size[root] >= minSize )
+        {
+            auto [it, inserted] = root2index.insert( { root, result.size() } );
+            if ( inserted )
+            {
+                result.push_back( VertBitSet( validPointsSize ) );
+            }
+            result[it->second].set( v );
+        }
+        if ( !reportProgress( subPc, counter / counterMax, counter, counterDivider ) )
+            return unexpectedOperationCanceled();
+    }
+
+    return result;
+}
+
+Expected<UnionFind<VertId>> getUnionFindStructureVerts( const PointCloud& pointCloud, float maxDist, const VertBitSet* region /*= nullptr*/, ProgressCallback pc /*= {}*/ )
 {
     MR_TIMER
 

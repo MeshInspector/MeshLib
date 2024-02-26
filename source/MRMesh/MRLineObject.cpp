@@ -1,5 +1,6 @@
 #include "MRLineObject.h"
 #include "MRMesh.h"
+#include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRMeshBuilder.h"
 #include "MRBestFit.h"
 #include "MRObjectFactory.h"
@@ -12,7 +13,7 @@ namespace MR
 {
 
 // default length of line. Historically it eq. 2 (but 1 looks better). Left as is for compatibility.
-size_t baseLineOblectLength_ = 2;
+size_t baseLineObjectLength_ = 2;
 
 MR_ADD_CLASS_FACTORY( LineObject )
 
@@ -45,7 +46,7 @@ void LineObject::setCenter( const Vector3f& center )
 void LineObject::setLength( float size )
 {
     auto currentXf = xf();
-    currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( Vector3f::diagonal( size / baseLineOblectLength_ ) );
+    currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( Vector3f::diagonal( size / baseLineObjectLength_ ) );
     setXf( currentXf );
 }
 
@@ -53,7 +54,7 @@ float LineObject::getLength() const
 {
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
-    return  s.x.x * baseLineOblectLength_;
+    return s.x.x * baseLineObjectLength_;
 }
 
 Vector3f LineObject::getPointA() const
@@ -69,13 +70,13 @@ Vector3f LineObject::getPointB() const
 
 LineObject::LineObject()
 {
+    setDefaultFeatureObjectParams( *this );
     constructPolyline_();
 }
 
 LineObject::LineObject( const std::vector<Vector3f>& pointsToApprox )
+    : LineObject()
 {
-    constructPolyline_();
-
     PointAccumulator pa;
     Box3f box;
     for ( const auto& p : pointsToApprox )
@@ -114,8 +115,8 @@ std::shared_ptr<Object> LineObject::clone() const
 
 void LineObject::swapBase_( Object& other )
 {
-    if ( auto planeObject = other.asType<LineObject>() )
-        std::swap( *this, *planeObject );
+    if ( auto lineObject = other.asType<LineObject>() )
+        std::swap( *this, *lineObject );
     else
         assert( false );
 }
@@ -126,12 +127,18 @@ void LineObject::serializeFields_( Json::Value& root ) const
     root["Type"].append( LineObject::TypeName() );
 }
 
+void LineObject::setupRenderObject_() const
+{
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype(*this)>( *this );
+}
+
 void LineObject::constructPolyline_()
 {
     // create object Polyline
     Polyline3 lineObj;
     const std::vector<Vector3f> points = { Vector3f::minusX(), Vector3f::plusX() };
-    lineObj.addFromPoints( points.data(), baseLineOblectLength_ );
+    lineObj.addFromPoints( points.data(), baseLineObjectLength_ );
 
     polyline_ = std::make_shared<Polyline3>( lineObj );
 
@@ -143,7 +150,7 @@ const std::vector<FeatureObjectSharedProperty>& LineObject::getAllSharedProperti
     static std::vector<FeatureObjectSharedProperty> ret = {
        {"Center"   , &LineObject::getCenter   , &LineObject::setCenter},
        {"Direction", &LineObject::getDirection, &LineObject::setDirection},
-       {"Length"   , &LineObject::getLength   , &LineObject::setLength} 
+       {"Length"   , &LineObject::getLength   , &LineObject::setLength}
     };
     return ret;
 }

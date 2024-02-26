@@ -162,6 +162,8 @@ void ObjectLinesHolder::serializeBaseFields_( Json::Value& root ) const
 
     root["ColoringType"] = ( coloringType_ == ColoringType::LinesColorMap ) ? "PerLine" : "Solid";
     serializeToJson( linesColorMap_.vec_, root["LineColors"] );
+
+    root["LineWidth"] = lineWidth_;
 }
 
 void ObjectLinesHolder::serializeFields_( Json::Value& root ) const
@@ -213,6 +215,9 @@ void ObjectLinesHolder::deserializeBaseFields_( const Json::Value& root )
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
         setDefaultSceneProperties_();
+
+    if ( const auto& lineWidthJson = root["LineWidth"]; lineWidthJson.isDouble() )
+        lineWidth_ = float( lineWidthJson.asDouble() );
 }
 
 void ObjectLinesHolder::deserializeFields_( const Json::Value& root )

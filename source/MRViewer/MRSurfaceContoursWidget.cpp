@@ -337,7 +337,14 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     if ( button != Viewer::MouseButton::Left )
         return false;
 
-    auto [obj, pick] = getViewerInstance().viewport().pick_render_object();
+    auto allowExactPickFirst = params.surfacePointParams.pickInBackFaceObject;
+    auto [obj, pick] = getViewerInstance().viewport().pick_render_object( allowExactPickFirst );
+
+    if ( !obj )
+        return false;
+
+    if ( ( params.surfacePointParams.pickInBackFaceObject == false ) && ( SurfacePointWidget::isPickIntoBackFace( obj, pick, getViewerInstance().viewport().getCameraPoint() ) ) )
+        return false;
 
     if ( !mod ) // just add new point 
     {
@@ -437,8 +444,12 @@ bool SurfaceContoursWidget::onMouseMove_( int, int )
     if ( pickedPoints_.empty() || activeChange_ )
         return false;
 
-    auto [obj, pick] = getViewerInstance().viewport().pick_render_object();
+    auto allowExactPickFirst = params.surfacePointParams.pickInBackFaceObject;
+    auto [obj, pick] = getViewerInstance().viewport().pick_render_object( allowExactPickFirst );
     if ( !obj )
+        return false;
+
+    if ( ( params.surfacePointParams.pickInBackFaceObject == false ) && ( SurfacePointWidget::isPickIntoBackFace( obj, pick, getViewerInstance().viewport().getCameraPoint() ) ) )
         return false;
 
     for ( auto contour : pickedPoints_ )

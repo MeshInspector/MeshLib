@@ -78,6 +78,8 @@ protected:
         return {};
     }
 
+    MRMESH_API void setupRenderObject_() const override;
+
 private:
     void constructMesh_();
 };

@@ -1,3 +1,4 @@
+#include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRCylinderObject.h"
 #include "MRMatrix3.h"
@@ -56,7 +57,7 @@ std::shared_ptr<Mesh> makeFeatureCylinder( int resolution = cDetailLevel, float 
     return mesh;
 }
 
-} // namespace 
+} // namespace
 
 MR_ADD_CLASS_FACTORY( CylinderObject )
 
@@ -122,14 +123,13 @@ void CylinderObject::setCenter( const Vector3f& center )
 
 CylinderObject::CylinderObject()
 {
+    setDefaultFeatureObjectParams( *this );
     constructMesh_();
 }
 
 CylinderObject::CylinderObject( const std::vector<Vector3f>& pointsToApprox )
+    : CylinderObject()
 {
-    // create mesh
-    constructMesh_();
-
     // calculate cylinder parameters.
     Cylinder3<float> result;
     auto fit = Cylinder3Approximation<float>();
@@ -175,6 +175,12 @@ void CylinderObject::serializeFields_( Json::Value& root ) const
 {
     ObjectMeshHolder::serializeFields_( root );
     root["Type"].append( CylinderObject::TypeName() );
+}
+
+void CylinderObject::setupRenderObject_() const
+{
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype(*this)>( *this );
 }
 
 void CylinderObject::constructMesh_()
@@ -226,7 +232,7 @@ TEST( MRMesh, CylinderApproximation )
     }
 
     /////////////////////////////
-    // General multithread test 
+    // General multithread test
     /////////////////////////////
 
     Cylinder3<float> result;
@@ -241,7 +247,7 @@ TEST( MRMesh, CylinderApproximation )
     EXPECT_GT( dot( direction, result.direction() ), 0.9f );
 
     ///////////////////////////////////////
-    // Compare single thread vs multithread 
+    // Compare single thread vs multithread
     ///////////////////////////////////////
 
     Cylinder3<float> resultST;
@@ -271,4 +277,4 @@ TEST( MRMesh, CylinderApproximation )
     EXPECT_GT( dot( direction, resultSAF.direction() ), 0.9f );
 }
 
-} // namespace MR 
+} // namespace MR

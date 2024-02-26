@@ -8,7 +8,7 @@
 
 namespace MR
 {
-class MRVIEWER_CLASS RenderVolumeObject : public IRenderObject
+class MRVIEWER_CLASS RenderVolumeObject : public virtual IRenderObject
 {
 public:
     RenderVolumeObject( const VisualObject& visObj );

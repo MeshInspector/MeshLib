@@ -1,4 +1,5 @@
 #include "MRPointObject.h"
+#include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
 #include "MRVector3.h"
@@ -10,12 +11,13 @@ MR_ADD_CLASS_FACTORY( PointObject )
 
 PointObject::PointObject()
 {
+    setDefaultFeatureObjectParams( *this );
     constructPointCloud_();
 }
 
 PointObject::PointObject( const std::vector<Vector3f>& pointsToApprox )
+    : PointObject()
 {
-    constructPointCloud_();
     Vector3d center;
     for ( auto& p : pointsToApprox )
         center += Vector3d( p );
@@ -68,6 +70,12 @@ void PointObject::serializeFields_( Json::Value& root ) const
 {
     ObjectPointsHolder::serializeFields_( root );
     root["Type"].append( PointObject::TypeName() );
+}
+
+void PointObject::setupRenderObject_() const
+{
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype(*this)>( *this );
 }
 
 void PointObject::constructPointCloud_()

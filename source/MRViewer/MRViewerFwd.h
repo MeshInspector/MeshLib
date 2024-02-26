@@ -23,6 +23,7 @@ class ColorTheme;
 class ImGuiImage;
 class ImGuiMenu;
 class IViewerSettingsManager;
+class FrameCounter;
 class MarkedVoxelSlice;
 class Palette;
 class RecentFilesStore;

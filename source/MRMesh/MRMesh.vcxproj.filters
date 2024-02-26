@@ -1203,6 +1203,9 @@
     <ClInclude Include="MRPolylineTrimWithPlane.h">
       <Filter>Source Files\Polyline</Filter>
     </ClInclude>
+    <ClInclude Include="MRDefaultFeatureObjectParams.h">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2000,6 +2003,9 @@
     </ClCompile>
     <ClCompile Include="MRPolylineTrimWithPlane.cpp">
       <Filter>Source Files\Polyline</Filter>
+    </ClCompile>
+    <ClCompile Include="MRDefaultFeatureObjectParams.cpp">
+      <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

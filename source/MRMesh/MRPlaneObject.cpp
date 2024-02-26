@@ -1,5 +1,6 @@
 #include "MRPlaneObject.h"
 #include "MRMesh.h"
+#include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRMeshBuilder.h"
 #include "MRBestFit.h"
 #include "MRObjectFactory.h"
@@ -11,9 +12,9 @@
 namespace MR
 {
 
-// Offset in positive and negative directions along the X and Y axes when constructing a base object. 
-// Historically it eq. 1,  which means that original plane have a 2x2 size.  
-// basePlaneObjectHalfEdgeLength_=0.5 looks better. 
+// Offset in positive and negative directions along the X and Y axes when constructing a base object.
+// Historically it eq. 1,  which means that original plane have a 2x2 size.
+// basePlaneObjectHalfEdgeLength_=0.5 looks better.
 // But left as is for compatibility.
 constexpr float basePlaneObjectHalfEdgeLength_ = 1.0f;
 
@@ -50,7 +51,7 @@ void PlaneObject::setSize( float size )
     auto currentXf = xf();
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
-    currentXf.A = r * Matrix3f::scale( Vector3f::diagonal( size / basePlaneObjectHalfEdgeLength_ ) );
+    currentXf.A = r * Matrix3f::scale( Vector3f::diagonal( size / basePlaneObjectHalfEdgeLength_ / 2.0f ) );
     setXf( currentXf );
 }
 
@@ -58,7 +59,7 @@ float PlaneObject::getSize( void ) const
 {
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
-    return  s.x.x;
+    return  s.x.x * basePlaneObjectHalfEdgeLength_ * 2.0f;
 }
 
 const std::vector<FeatureObjectSharedProperty>& PlaneObject::getAllSharedProperties() const
@@ -73,13 +74,13 @@ const std::vector<FeatureObjectSharedProperty>& PlaneObject::getAllSharedPropert
 
 PlaneObject::PlaneObject()
 {
+    setDefaultFeatureObjectParams( *this );
     constructMesh_();
 }
 
 PlaneObject::PlaneObject( const std::vector<Vector3f>& pointsToApprox )
+    : PlaneObject()
 {
-    constructMesh_();
-
     PointAccumulator pa;
     Box3f box;
     for ( const auto& p : pointsToApprox )
@@ -96,7 +97,7 @@ PlaneObject::PlaneObject( const std::vector<Vector3f>& pointsToApprox )
 
     setNormal( normal );
     setCenter( plane.project( box.center() ) );
-    setSize( box.diagonal() * 2.f );
+    setSize( box.diagonal() );
 }
 
 std::shared_ptr<Object> PlaneObject::shallowClone() const

@@ -11,7 +11,6 @@
 #include "MRBitSetParallelFor.h"
 #include "MRLocalTriangulations.h"
 #include <algorithm>
-#include <queue>
 #include <numeric>
 #include <limits>
 
@@ -112,6 +111,19 @@ void findNeighborsInBall( const PointCloud& pointCloud, VertId v, float radius, 
     } );
 }
 
+float findNumNeighbors( const PointCloud& pointCloud, VertId v, int numNeis, std::vector<VertId>& neighbors,
+    FewSmallest<PointsProjectionResult> & tmp, float upDistLimitSq )
+{
+    tmp.reset( numNeis + 1 );
+    findFewClosestPoints( pointCloud.points[v], pointCloud, tmp, upDistLimitSq );
+    auto maxDistSq = tmp.empty() ? 0.0f : tmp.top().distSq;
+    neighbors.clear();
+    for ( const auto & n : tmp.get() )
+        if ( n.vId != v )
+            neighbors.push_back( n.vId );
+    return maxDistSq;
+}
+
 void filterNeighbors( const VertNormals& normals, VertId v, std::vector<VertId>& neighbors )
 {
     const auto& vNorm = normals[v];
@@ -120,30 +132,6 @@ void filterNeighbors( const VertNormals& normals, VertId v, std::vector<VertId>&
         return dot( vNorm, normals[nv] ) < -0.3f;
     } ), neighbors.end() );
 }
-
-struct FanOptimizerQueueElement
-{
-    float weight{ 0.0f }; // profit of flipping this edge
-    int id{ -1 }; // index
-
-    // needed to remove outdated queue elements
-    int prevId{ -1 }; // id of prev neighbor
-    int nextId{ -1 }; // id of next neighbor
-
-    bool stable{ false }; // if this flag is true, edge cannot be flipped
-    bool operator < ( const FanOptimizerQueueElement& other ) const
-    {
-        if ( stable == other.stable )
-            return weight < other.weight;
-        return stable;
-    }
-    bool operator==( const FanOptimizerQueueElement& other ) const = default;
-
-    bool isOutdated( const std::vector<VertId>& neighbors ) const
-    {
-        return !neighbors[nextId].valid() || !neighbors[prevId].valid();
-    }
-};
 
 class FanOptimizer
 {
@@ -156,8 +144,8 @@ public:
     {
         init_();
     }
-    void optimize( int steps, float critAngle );
-    void updateBorder( float angle = 0.9 * MR::PI_F );
+    void optimize( int steps, float critAngle, float boundaryAngle );
+    void updateBorder( float angle );
 private:
     Plane3f plane_;
 
@@ -294,23 +282,26 @@ void FanOptimizer::updateBorderQueueElement_( FanOptimizerQueueElement& res, boo
     res.weight = std::numeric_limits<float>::max();
 }
 
-void FanOptimizer::optimize( int steps, float critAng )
+void FanOptimizer::optimize( int steps, float critAng, float boundaryAngle )
 {
-    updateBorder();
+    updateBorder( boundaryAngle );
     if ( steps == 0 )
         return;
 
-    std::priority_queue<FanOptimizerQueueElement> queue_;
+    auto & queue = fanData_.queue;
+    while ( !queue.empty() )
+        queue.pop();
+
     for ( int i = 0; i < fanData_.neighbors.size(); ++i )
-        queue_.emplace( calcQueueElement_( i, critAng ) );
+        queue.emplace( calcQueueElement_( i, critAng ) );
 
     // optimize fan
     int allRemoves = 0;
     int currentFanSize = int( fanData_.neighbors.size() );
-    while ( !queue_.empty() )
+    while ( !queue.empty() )
     {
-        auto topEl = queue_.top();
-        queue_.pop();
+        auto topEl = queue.top();
+        queue.pop();
         if ( !fanData_.neighbors[topEl.id].valid() )
             continue; // this vert was erased
         if ( topEl.isOutdated( fanData_.neighbors ) )
@@ -331,8 +322,8 @@ void FanOptimizer::optimize( int steps, float critAng )
         }
         if ( oldNei == fanData_.border )
             fanData_.border = fanData_.neighbors[topEl.prevId];
-        queue_.emplace( calcQueueElement_( topEl.nextId, critAng ) );
-        queue_.emplace( calcQueueElement_( topEl.prevId, critAng ) );
+        queue.emplace( calcQueueElement_( topEl.nextId, critAng ) );
+        queue.emplace( calcQueueElement_( topEl.prevId, critAng ) );
     }
 
     erase_if( fanData_.neighbors, []( VertId v ) { return !v.valid(); } );
@@ -411,13 +402,13 @@ void FanOptimizer::init_()
     }
 }
 
-void trianglulateFan( const VertCoords& points, VertId centerVert, TriangulatedFanData& triangulationData,
-    const VertCoords* trustedNormals, float critAngle, int steps )
+static void trianglulateFan( const VertCoords& points, VertId centerVert, TriangulatedFanData& triangulationData,
+    const Settings & settings )
 {
     if ( triangulationData.neighbors.empty() )
         return;
-    FanOptimizer optimizer( points, trustedNormals, triangulationData, centerVert );
-    optimizer.optimize( steps, critAngle );
+    FanOptimizer optimizer( points, settings.trustedNormals, triangulationData, centerVert );
+    optimizer.optimize( settings.maxRemoves, settings.critAngle, settings.boundaryAngle );
     assert( triangulationData.neighbors.empty() || triangulationData.neighbors.size() > 1 );
 }
 
@@ -427,25 +418,17 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings 
     float actualRadius = settings.radius;
     assert( ( settings.radius > 0 && settings.numNeis == 0 )
          || ( settings.radius == 0 && settings.numNeis > 0 ) );
+
     if ( settings.radius > 0 )
-    {
         findNeighborsInBall( cloud, v, actualRadius, fanData.neighbors );
-    }
     else
-    {
-        fanData.nearesetPoints.reset( settings.numNeis + 1 );
-        findFewClosestPoints( cloud.points[v], cloud, fanData.nearesetPoints );
-        actualRadius = fanData.nearesetPoints.empty() ? 0.0f : std::sqrt( fanData.nearesetPoints.top().distSq );
-        fanData.neighbors.clear();
-        for ( const auto & n : fanData.nearesetPoints.get() )
-            if ( n.vId != v )
-                fanData.neighbors.push_back( n.vId );
-    }
+        actualRadius = std::sqrt( findNumNeighbors( cloud, v, settings.numNeis, fanData.neighbors, fanData.nearesetPoints ) );
+
     if ( settings.trustedNormals )
         filterNeighbors( *settings.trustedNormals, v, fanData.neighbors );
     if ( settings.allNeighbors )
         *settings.allNeighbors = fanData.neighbors;
-    trianglulateFan( cloud.points, v, fanData, settings.trustedNormals, settings.critAngle, settings.maxRemoves );
+    trianglulateFan( cloud.points, v, fanData, settings );
 
     if ( settings.automaticRadiusIncrease && actualRadius > 0 )
     {
@@ -457,12 +440,21 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings 
         {
             // update triangulation if radius was increased
             actualRadius = maxRadius;
-            findNeighborsInBall( cloud, v, actualRadius, fanData.neighbors );
+            if ( settings.radius > 0 )
+                findNeighborsInBall( cloud, v, actualRadius, fanData.neighbors );
+            else
+            {
+                // if the center point is an outlier then there may be too many points withing the ball of maxRadius;
+                // so limit the search both by radius and by the number of neighbours
+                actualRadius = std::sqrt( findNumNeighbors( cloud, v, std::max( 2 * settings.numNeis, 100 ),
+                    fanData.neighbors, fanData.nearesetPoints, sqr( maxRadius ) ) );
+            }
+
             if ( settings.trustedNormals )
                 filterNeighbors( *settings.trustedNormals, v, fanData.neighbors );
             if ( settings.allNeighbors )
                 *settings.allNeighbors = fanData.neighbors;
-            trianglulateFan( cloud.points, v, fanData, settings.trustedNormals, settings.critAngle, settings.maxRemoves );
+            trianglulateFan( cloud.points, v, fanData, settings );
         }
     }
     if ( settings.actualRadius )
@@ -515,17 +507,30 @@ std::optional<AllLocalTriangulations> buildUnitedLocalTriangulations(
     return uniteLocalTriangulations( *optPerThreadTriangs );
 }
 
-bool isBoundaryPoint( const PointCloud& pointCloud, const VertCoords& normals,
-    VertId v, float radius, float angle, TriangulatedFanData& triangulationData )
+bool isBoundaryPoint( const PointCloud& cloud, VertId v, const Settings & settings,
+    TriangulatedFanData & fanData )
 {
-    TriangulationHelpers::findNeighborsInBall( pointCloud, v, radius, triangulationData.neighbors );
-    triangulationData.border = {};
-    if ( triangulationData.neighbors.size() < 3 )
-        return true;
-    FanOptimizer optimizer( pointCloud.points, &normals, triangulationData, v );
-    optimizer.updateBorder( angle );
-    return triangulationData.border.valid();
+    buildLocalTriangulation( cloud, v, settings, fanData );
+    return fanData.border.valid();
+}
+
+std::optional<VertBitSet> findBoundaryPoints( const PointCloud& pointCloud, const Settings & settings,
+    ProgressCallback cb )
+{
+    MR_TIMER
+
+    VertBitSet borderPoints( pointCloud.validPoints.size() );
+    tbb::enumerable_thread_specific<TriangulatedFanData> tls;
+    if ( !BitSetParallelFor( pointCloud.validPoints, [&] ( VertId v )
+    {
+        auto& fanData = tls.local();
+        if ( isBoundaryPoint( pointCloud, v, settings, fanData ) )
+            borderPoints.set( v );
+    }, cb ) )
+        return {};
+    return borderPoints;
 }
 
 } //namespace TriangulationHelpers
+
 } //namespace MR

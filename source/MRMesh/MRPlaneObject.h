@@ -10,7 +10,7 @@ namespace MR
 class MRMESH_CLASS PlaneObject : public ObjectMeshHolder, public FeatureObject
 {
 public:
-    /// Creates simple plane object 
+    /// Creates simple plane object
     MRMESH_API PlaneObject();
     /// Finds best plane to approx given points
     MRMESH_API PlaneObject( const std::vector<Vector3f>& pointsToApprox );

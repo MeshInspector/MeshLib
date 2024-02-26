@@ -2,6 +2,7 @@
 
 #include "MRMatrix3.h"
 #include "MRMesh.h"
+#include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
 #include "MRConeApproximator.h"
@@ -130,14 +131,13 @@ void ConeObject::setBaseRadius( float radius )
 
 ConeObject::ConeObject()
 {
+    setDefaultFeatureObjectParams( *this );
     constructMesh_();
 }
 
 ConeObject::ConeObject( const std::vector<Vector3f>& pointsToApprox )
+    : ConeObject()
 {
-    // create mesh
-    constructMesh_();
-
     // calculate cone parameters.
     Cone3<float> result;
     auto fit = Cone3Approximation<float>();
@@ -148,7 +148,6 @@ ConeObject::ConeObject( const std::vector<Vector3f>& pointsToApprox )
     setCenter( result.center() );
     setAngle( result.angle );
     setHeight( result.height );
-
 }
 
 std::shared_ptr<Object> ConeObject::shallowClone() const
@@ -179,6 +178,12 @@ void ConeObject::serializeFields_( Json::Value& root ) const
 {
     ObjectMeshHolder::serializeFields_( root );
     root["Type"].append( ConeObject::TypeName() );
+}
+
+void ConeObject::setupRenderObject_() const
+{
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype(*this)>( *this );
 }
 
 void ConeObject::constructMesh_()

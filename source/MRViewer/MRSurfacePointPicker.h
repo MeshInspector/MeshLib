@@ -51,6 +51,8 @@ public:
         // Typically, the widget does not respond to actions with a modifier. 
         // If the parameter is set, then custom modifiers located in this GLFW bitmask will be ignored and the widget will work with them as usual.
         int customModifiers; // GLFW modifier bitmask
+        // pick_render_object parameters. Allow to use object in whick pick exactly fell, inshead of closer object in pick radius.
+        bool pickInBackFaceObject = true;
     };
 
     // creates control sphere in start pos
@@ -128,6 +130,9 @@ public:
     {
         return baseObject_;
     }
+
+    // Checks whether the current peak is a peak in the invisible (reverse) side of the mesh or cloud point.
+    [[nodiscard]] static bool isPickIntoBackFace( const std::shared_ptr<MR::VisualObject>& obj, const MR::PointOnObject& pick, const Vector3f& cameraEye );
 
 private:
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;

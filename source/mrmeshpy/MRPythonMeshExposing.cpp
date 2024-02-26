@@ -263,6 +263,18 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
              "applies given transformation to specified vertices\n"
              "if region is nullptr, all valid mesh vertices are used" ).
 
+        def( "leftNormal", &Mesh::leftNormal, pybind11::arg( "e" ), "computes triangular face normal from its vertices" ).
+        def( "normal", ( Vector3f( Mesh::* )( FaceId )const )&Mesh::normal, pybind11::arg( "f" ), "computes triangular face normal from its vertices" ).
+        def( "normal", ( Vector3f( Mesh::* )( VertId )const )&Mesh::normal, pybind11::arg( "v" ), "computes normal in a vertex using sum of directed areas of neighboring triangles" ).
+        def( "normal", ( Vector3f( Mesh::* )( const MeshTriPoint & )const )&Mesh::normal, pybind11::arg( "p" ), "computes normal in three vertices of p's triangle, then interpolates them using barycentric coordinates" ).
+
+        def( "pseudonormal", ( Vector3f( Mesh::* )( VertId, const FaceBitSet* )const )&Mesh::pseudonormal,
+            pybind11::arg( "v" ), pybind11::arg( "region" ) = nullptr, "computes pseudo-normals for signed distance calculation at vertex, only region faces will be considered" ).
+        def( "pseudonormal", ( Vector3f( Mesh::* )( UndirectedEdgeId, const FaceBitSet* )const )&Mesh::pseudonormal,
+            pybind11::arg( "e" ), pybind11::arg( "region" ) = nullptr, "computes pseudo-normals for signed distance calculation at edge (middle of two face normals), only region faces will be considered" ).
+        def( "pseudonormal", ( Vector3f( Mesh::* )( const MeshTriPoint &, const FaceBitSet* )const )&Mesh::pseudonormal,
+            pybind11::arg( "p" ), pybind11::arg( "region" ) = nullptr, "computes pseudo-normals for signed distance calculation in corresponding face/edge/vertex, only region faces will be considered; unlike normal( MeshTriPoint ), this is not a smooth function" ).
+
         def( "splitEdge", ( EdgeId( Mesh::* )( EdgeId, const Vector3f&, FaceBitSet*, FaceHashMap* ) )& Mesh::splitEdge, 
             pybind11::arg( "e" ), pybind11::arg( "newVertPos" ), pybind11::arg( "region" ) = nullptr, pybind11::arg( "new2Old" ) = nullptr,
             "split given edge on two parts:\n"
@@ -504,6 +516,7 @@ MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, FaceFace, MR::FaceFace )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
 {
     m.def( "computePerVertNormals", &computePerVertNormals, pybind11::arg( "mesh" ), "returns a vector with vertex normals in every element for valid mesh vertices" );
+    m.def( "computePerVertPseudoNormals", &computePerVertPseudoNormals, pybind11::arg( "mesh" ), "returns a vector with vertex pseudonormals in every element for valid mesh vertices" );
     m.def( "computePerFaceNormals", &computePerFaceNormals, pybind11::arg( "mesh" ), "returns a vector with face-normal in every element for valid mesh faces" );
     m.def( "mergeMeshes", &pythonMergeMeshes, pybind11::arg( "meshes" ), "merge python list of meshes to one mesh" );
     m.def( "getFacesByMinEdgeLength", &getFacesByMinEdgeLength, pybind11::arg( "mesh" ), pybind11::arg( "minLength" ), "return faces with at least one edge longer than min edge length" );

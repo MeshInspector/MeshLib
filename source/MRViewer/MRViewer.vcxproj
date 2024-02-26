@@ -21,6 +21,7 @@
     <ClCompile Include="MRCreateShader.cpp" />
     <ClCompile Include="MRCudaAccessor.cpp" />
     <ClCompile Include="MRDirectionWidget.cpp" />
+    <ClCompile Include="MRFrameCounter.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
     <ClCompile Include="MRSelectCurvaturePreference.cpp" />
     <ClCompile Include="MRFrameRedrawRequest.cpp" />
@@ -93,6 +94,8 @@
     <ClCompile Include="MRTouchpadController.cpp" />
     <ClCompile Include="MRSurfaceManipulationWidget.cpp" />
     <ClCompile Include="MRImGuiMeasurementIndicators.cpp" />
+    <ClCompile Include="MRRenderFeatureObjects.cpp" />
+    <ClCompile Include="MRRenderNameObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -109,6 +112,7 @@
     <ClInclude Include="MRCudaAccessor.h" />
     <ClInclude Include="MRDirectionWidget.h" />
     <ClInclude Include="MRFitData.h" />
+    <ClInclude Include="MRFrameCounter.h" />
     <ClInclude Include="MRNotificationType.h" />
     <ClInclude Include="MRRibbonNotification.h" />
     <ClInclude Include="MRSelectCurvaturePreference.h" />
@@ -156,9 +160,6 @@
     <ClInclude Include="MRStatePlugin.h" />
     <ClInclude Include="MRDemoPlugin.h" />
     <ClInclude Include="MRGLMacro.h" />
-    <ClInclude Include="MRMeshViewer.h" />
-    <ClInclude Include="MRMeshViewerPlugin.h" />
-    <ClInclude Include="MRMeshViewport.h" />
     <ClInclude Include="MRPythonAppendCommand.h" />
     <ClInclude Include="MRRecentFilesStore.h" />
     <ClInclude Include="MRRenderGLHelpers.h" />
@@ -197,6 +198,9 @@
     <ClInclude Include="MRPointInAllSpaces.h" />
     <ClInclude Include="MRImGuiVectorOperators.h" />
     <ClInclude Include="MRImGuiMeasurementIndicators.h" />
+    <ClInclude Include="MRRenderDefaultUiObject.h" />
+    <ClInclude Include="MRRenderFeatureObjects.h" />
+    <ClInclude Include="MRRenderNameObject.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

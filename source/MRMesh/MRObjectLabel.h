@@ -8,18 +8,15 @@
 namespace MR
 {
 
-struct LabelVisualizePropertyType : VisualizeMaskType
+enum class LabelVisualizePropertyType
 {
-    enum : unsigned
-    {
-        SourcePoint = VisualizeMaskType::VisualizePropsCount,
-        LeaderLine,
-        Background,
-        Contour,
-
-        LabelVisualizePropsCount
-    };
+    SourcePoint,
+    LeaderLine,
+    Background,
+    Contour,
+    _count [[maybe_unused]],
 };
+template <> struct IsVisualizeMaskEnum<LabelVisualizePropertyType> : std::true_type {};
 
 /// This object type renders label in scene
 /// \details default pivot point = (0, 0)
@@ -139,10 +136,12 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
-    /// get all visualize properties masks as array
-    MRMESH_API virtual AllVisualizeProperties getAllVisualizeProperties() const override;
+    /// get all visualize properties masks
+    MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
+    /// set all visualize properties masks
+    MRMESH_API void setAllVisualizeProperties( const AllVisualizeProperties& properties ) override;
     /// returns mask of viewports where given property is set
-    MRMESH_API virtual const ViewportMask& getVisualizePropertyMask( unsigned type ) const override;
+    MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
 
     /// Loads font, and converts the symbols of text into mesh;
     /// since this operation is time consuming, one can call this method in parallel for several ObjectLabels before rendering

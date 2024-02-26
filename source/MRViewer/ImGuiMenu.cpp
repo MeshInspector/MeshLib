@@ -275,8 +275,8 @@ const ImVec4 undefined = ImVec4( 0.5f, 0.5f, 0.5f, 0.5f );
 
 // at least one of selected is true - first,
 // all selected are true - second
-std::pair<bool, bool> getRealValue( const std::vector<std::shared_ptr<MR::VisualObject>>& selected,
-                                    unsigned type, MR::ViewportMask viewportId, bool inverseInput = false )
+static std::pair<bool, bool> getRealValue( const std::vector<std::shared_ptr<MR::VisualObject>>& selected,
+                                    AnyVisualizeMaskEnum type, MR::ViewportMask viewportId, bool inverseInput = false )
 {
     bool atLeastOneTrue = false;
     bool allTrue = true;
@@ -2158,7 +2158,7 @@ bool ImGuiMenu::drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags fla
 void ImGuiMenu::draw_custom_tree_object_properties( Object& )
 {}
 
-bool ImGuiMenu::make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, unsigned type, MR::ViewportMask viewportid, bool invert /*= false*/ )
+bool ImGuiMenu::make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, AnyVisualizeMaskEnum type, MR::ViewportMask viewportid, bool invert /*= false*/ )
 {
     auto realRes = getRealValue( selectedVisualObjs, type, viewportid, invert );
     bool checked = realRes.first;

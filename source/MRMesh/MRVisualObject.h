@@ -26,23 +26,62 @@ enum class ColoringType
     VertsColorMap  ///< Use different color (taken from verts colormap) for each vert
 };
 
-struct VisualizeMaskType
+enum class VisualizeMaskType
 {
-    enum : unsigned
-    {
-        Visibility,
-        InvertedNormals,
-        Name,
-        Labels,
-        CropLabelsByViewportRect,
-        ClippedByPlane,
-        DepthTest,
-
-        VisualizePropsCount
-    };
+    Visibility,
+    InvertedNormals,
+    Name,
+    Labels,
+    CropLabelsByViewportRect,
+    ClippedByPlane,
+    DepthTest,
+    _count [[maybe_unused]],
 };
 
-using AllVisualizeProperties = std::vector<ViewportMask>;
+// If a type derived from `VisualObject` wants to extend `VisualizeMaskType`, it must create a separate enum and specialize this to `true` for it.
+// NOTE! All those enums can start from 0, don't worry about collisions.
+template <typename T> struct IsVisualizeMaskEnum : std::false_type {};
+template <> struct IsVisualizeMaskEnum<VisualizeMaskType> : std::true_type {};
+
+// Wraps `IsVisualizeMaskEnum` and adds some sanity checks.
+template <typename T>
+concept AnyVisualizeMaskEnumType =
+    IsVisualizeMaskEnum<T>::value &&
+    std::is_same_v<std::underlying_type_t<T>, int> &&
+    std::is_same_v<T, std::remove_cvref_t<T>> &&
+    requires{ T::_count > T{}; };
+
+// Stores a `VisualizeMaskType` or any other enum that extends it (i.e. which specializes `IsVisualizeMaskEnum`).
+// To extract the value, do this:
+//     if ( auto value = x.tryGet<MyEnum>() )
+//     {
+//         switch ( *value )
+//         {
+//             case MyEnum::foo: ...
+//             case MyEnum::bar: ...
+//         }
+//     }
+//     else // forward to the parent class
+class AnyVisualizeMaskEnum
+{
+    std::type_index type_;
+    int value_ = 0;
+
+public:
+    template <AnyVisualizeMaskEnumType T>
+    AnyVisualizeMaskEnum( T value ) : type_( typeid(T) ), value_( decltype(value_)( value ) ) {}
+
+    template <AnyVisualizeMaskEnumType T>
+    [[nodiscard]] std::optional<T> tryGet() const
+    {
+        if ( type_ == typeid(T) )
+            return T( value_ );
+        else
+            return {};
+    }
+};
+
+using AllVisualizeProperties = std::unordered_map<std::type_index, std::vector<ViewportMask>>;
 
 enum DirtyFlags
 {
@@ -99,31 +138,31 @@ public:
     virtual const char* typeName() const override { return TypeName(); }
 
     /// set visual property in all viewports specified by the mask
-    MRMESH_API void setVisualizeProperty( bool value, unsigned type, ViewportMask viewportMask );
+    MRMESH_API void setVisualizeProperty( bool value, AnyVisualizeMaskEnum type, ViewportMask viewportMask );
     /// set visual property mask
-    MRMESH_API virtual void setVisualizePropertyMask( unsigned type, ViewportMask viewportMask );
+    MRMESH_API virtual void setVisualizePropertyMask( AnyVisualizeMaskEnum type, ViewportMask viewportMask );
     /// returns true if the property is set at least in one viewport specified by the mask
-    MRMESH_API bool getVisualizeProperty( unsigned type, ViewportMask viewportMask ) const;
+    MRMESH_API bool getVisualizeProperty( AnyVisualizeMaskEnum type, ViewportMask viewportMask ) const;
     /// returns mask of viewports where given property is set
-    MRMESH_API virtual const ViewportMask& getVisualizePropertyMask( unsigned type ) const;
+    MRMESH_API virtual const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const;
     /// toggle visual property in all viewports specified by the mask
-    MRMESH_API void toggleVisualizeProperty( unsigned type, ViewportMask viewportMask );
+    MRMESH_API void toggleVisualizeProperty( AnyVisualizeMaskEnum type, ViewportMask viewportMask );
 
-    /// get all visualize properties masks as array
+    /// get all visualize properties masks
     MRMESH_API virtual AllVisualizeProperties getAllVisualizeProperties() const;
-    /// set all visualize properties masks from array
+    /// set all visualize properties masks
     MRMESH_API virtual void setAllVisualizeProperties( const AllVisualizeProperties& properties );
 
     /// shows/hides labels
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    void showLabels( bool on ) { return setVisualizeProperty( on, unsigned( VisualizeMaskType::Labels ), ViewportMask::all() ); }
+    void showLabels( bool on ) { return setVisualizeProperty( on, VisualizeMaskType::Labels, ViewportMask::all() ); }
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    bool showLabels() const { return getVisualizeProperty( unsigned( VisualizeMaskType::Labels ), ViewportMask::any() ); }
+    bool showLabels() const { return getVisualizeProperty( VisualizeMaskType::Labels, ViewportMask::any() ); }
 
     /// shows/hides object name in all viewports
-    void showName( bool on ) { return setVisualizeProperty( on, unsigned( VisualizeMaskType::Name ), ViewportMask::all() ); }
+    void showName( bool on ) { return setVisualizeProperty( on, VisualizeMaskType::Name, ViewportMask::all() ); }
     /// returns whether object name is shown in any viewport
-    bool showName() const { return getVisualizeProperty( unsigned( VisualizeMaskType::Name ), ViewportMask::any() ); }
+    bool showName() const { return getVisualizeProperty( VisualizeMaskType::Name, ViewportMask::any() ); }
 
     /// returns color of object when it is selected/not-selected (depending on argument) in given viewport
     MRMESH_API const Color& getFrontColor( bool selected = true, ViewportId viewportId = {} ) const;
@@ -301,7 +340,7 @@ protected:
 
     bool useDefaultScenePropertiesOnDeserialization_{ false };
 
-    MRMESH_API ViewportMask& getVisualizePropertyMask_( unsigned type );
+    MRMESH_API ViewportMask& getVisualizePropertyMask_( AnyVisualizeMaskEnum type );
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 
@@ -311,6 +350,29 @@ protected:
 
     /// adds information about bounding box in res
     MRMESH_API void boundingBoxToInfoLines_( std::vector<std::string> & res ) const;
+
+    // Derived classes should use this to implement `setAllVisualizeProperties()`.
+    template <AnyVisualizeMaskEnumType T>
+    void setAllVisualizePropertiesForEnum( const AllVisualizeProperties& properties )
+    {
+        if ( auto iter = properties.find( typeid( T ) ); iter != properties.end() )
+        {
+            for ( int i = 0; i < iter->second.size(); ++i )
+                setVisualizePropertyMask( T( i ), iter->second[i] );
+        }
+    }
+    // Derived classes should use this to implement `getAllVisualizeProperties()`.
+    template <AnyVisualizeMaskEnumType T>
+    void getAllVisualizePropertiesForEnum( AllVisualizeProperties& properties ) const
+    {
+        auto [iter, ok] = properties.try_emplace( typeid(T) );
+        assert( ok );
+        if ( !ok )
+            return;
+        iter->second.resize( std::size_t( T::_count ) );
+        for ( int i = 0; i < iter->second.size(); ++i )
+            iter->second[i] = getVisualizePropertyMask( T( i ) );
+    }
 
 private:
     mutable Box3f boundingBoxCache_;

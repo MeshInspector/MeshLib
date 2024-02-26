@@ -110,20 +110,29 @@ void ObjectPointsHolder::setSelectedVerticesColor( const Color& color, ViewportI
 
 AllVisualizeProperties ObjectPointsHolder::getAllVisualizeProperties() const
 {
-    AllVisualizeProperties res;
-    res.resize( PointsVisualizePropertyType::PointsVisualizePropsCount );
-    for ( int i = 0; i < res.size(); ++i )
-        res[i] = getVisualizePropertyMask( unsigned( i ) );
-    return res;
+    AllVisualizeProperties ret = VisualObject::getAllVisualizeProperties();
+    getAllVisualizePropertiesForEnum<PointsVisualizePropertyType>( ret );
+    return ret;
 }
 
-const ViewportMask& ObjectPointsHolder::getVisualizePropertyMask( unsigned type ) const
+void ObjectPointsHolder::setAllVisualizeProperties( const AllVisualizeProperties& properties )
 {
-    switch ( type )
+    setAllVisualizePropertiesForEnum<PointsVisualizePropertyType>( properties );
+    VisualObject::setAllVisualizeProperties( properties );
+}
+
+const ViewportMask &ObjectPointsHolder::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
+{
+    if ( auto value = type.tryGet<PointsVisualizePropertyType>() )
     {
-    case PointsVisualizePropertyType::SelectedVertices:
-        return showSelectedVertices_;
-    default:
+        switch ( *value )
+        {
+        case PointsVisualizePropertyType::SelectedVertices:
+            return showSelectedVertices_;
+        }
+    }
+    else
+    {
         return VisualObject::getVisualizePropertyMask( type );
     }
 }

@@ -6,14 +6,12 @@
 namespace MR
 {
 
-struct PointsVisualizePropertyType : VisualizeMaskType
+enum class PointsVisualizePropertyType
 {
-    enum : unsigned
-    {
-        SelectedVertices = VisualizeMaskType::VisualizePropsCount,
-        PointsVisualizePropsCount
-    };
+    SelectedVertices,
+    _count [[maybe_unused]],
 };
+template <> struct IsVisualizeMaskEnum<PointsVisualizePropertyType> : std::true_type {};
 
 /// an object that stores a points
 /// \ingroup ModelHolderGroup
@@ -32,14 +30,14 @@ public:
 
     MRMESH_API virtual bool hasVisualRepresentation() const override;
 
-    const std::shared_ptr<const PointCloud>& pointCloud() const 
+    const std::shared_ptr<const PointCloud>& pointCloud() const
     { return reinterpret_cast< const std::shared_ptr<const PointCloud>& >( points_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
-    
+
     const VertBitSet& getSelectedPoints() const { return selectedPoints_; }
     MRMESH_API virtual void selectPoints( VertBitSet newSelection );
     /// returns colors of selected vertices
@@ -53,11 +51,13 @@ public:
     MRMESH_API const ViewportProperty<Color>& getSelectedVerticesColorsForAllViewports() const;
     MRMESH_API virtual void setSelectedVerticesColorsForAllViewports( ViewportProperty<Color> val );
 
-    /// get all visualize properties masks as array
-    MRMESH_API virtual AllVisualizeProperties getAllVisualizeProperties() const override;
+    /// get all visualize properties masks
+    MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
+    /// set all visualize properties masks
+    MRMESH_API void setAllVisualizeProperties( const AllVisualizeProperties& properties ) override;
     /// returns mask of viewports where given property is set
-    MRMESH_API virtual const ViewportMask& getVisualizePropertyMask( unsigned type ) const override;
-    
+    MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
+
     /// sets size of points on screen in pixels
     MRMESH_API virtual void setPointSize( float size );
     /// returns size of points on screen in pixels

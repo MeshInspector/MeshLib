@@ -74,8 +74,12 @@ bool improveSampling( const PointCloud & cloud, VertBitSet & samples, int numIte
     // produce new samples
     samples.clear();
     samples.resize( cloud.points.size() );
-    for ( auto v : sm2pt )
-        samples.set( v );
+    for ( VertId i = 0_v; i < sm2pt.size(); ++i )
+    {
+        if ( cnt[i] < 5 )
+            continue;
+        samples.set( sm2pt[i] );
+    }
     return true;
 }
 

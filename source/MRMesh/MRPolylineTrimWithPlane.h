@@ -12,7 +12,7 @@ namespace MR
 MRMESH_API Polyline3 dividePolylineWithPlane( const Polyline3& polyline, const Plane3f& plane, Polyline3* otherPart = nullptr );
 
 /// This function cuts polyline with a plane
-/// \return Edge segments tha arecloser to the plane than \param eps
+/// \return Edge segments tha are closer to the plane than \param eps
 /// \param polyline Input polyline that will be cut by the plane
 /// \param plane Input plane to cut polyline with
 /// \param eps Maximal distance from the plane

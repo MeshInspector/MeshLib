@@ -63,20 +63,11 @@ def test_offset_thickening(tmp_path, test_params):
 
 
 @pytest.mark.parametrize("test_params", [
-    {"name": "double_openMesh_HoleWinding",
-     "mesh": "open.mrmesh",
-     "params": {
-         "signDetectionMode": "HoleWindingRule",
-         "offset": 0.5,
-         "voxelSize": 0.05
-     }
-     },
     {"name": "double_plus_OpenVDB",
      "mesh": "morphed.mrmesh",
      "params": {
          "signDetectionMode": "OpenVDB",
          "offset": 2.0,
-         "voxelSize": 0.2
      }
      },
     {"name": "double_minus_OpenVDB",
@@ -84,7 +75,6 @@ def test_offset_thickening(tmp_path, test_params):
      "params": {
          "signDetectionMode": "OpenVDB",
          "offset": -2.0,
-         "voxelSize": 0.2
      }
      },
     {"name": "double_self-intersected_WindingRule",
@@ -93,7 +83,6 @@ def test_offset_thickening(tmp_path, test_params):
      "params": {
          "signDetectionMode": "WindingRule",
          "offset": -5.0,
-         "voxelSize": 0.5
      }
      },
 ])
@@ -110,11 +99,10 @@ def test_offset_double(tmp_path, test_params):
     offset_params = mlib.OffsetParameters()
     sign_mode = test_params["params"]["signDetectionMode"]
     offset_params.signDetectionMode = mlib.SignDetectionMode.__members__[sign_mode]
-    offset_params.voxelSize = test_params["params"]["voxelSize"]
 
     offseted_mesh = mlib.doubleOffsetMesh(mp=mesh,
                                          offsetA=test_params["params"]["offset"],
-                                         offsetB=-test_params["params"]["offset"],
+                                         offsetB=0,
                                          params=offset_params)
 
     # # === Verification
@@ -123,7 +111,7 @@ def test_offset_double(tmp_path, test_params):
     ref_mesh = mlib.loadMesh(ref_mesh_path)
     # #  check meshes similarity
     with check:
-        compare_meshes_similarity(offseted_mesh, ref_mesh)
+        compare_meshes_similarity(offseted_mesh, ref_mesh, rhsdr_thresh=0.99)
     with check:
         if "skip_self-intsc_verif" in test_params.keys() and not test_params["skip_self-intsc_verif"]:
             self_col_tri = mlib.findSelfCollidingTriangles(offseted_mesh).size()

@@ -8,16 +8,16 @@
 namespace MR
 {
 
-bool improveSampling( const PointCloud & cloud, VertBitSet & samples, int numIters, const ProgressCallback & progress )
+bool improveSampling( const PointCloud & cloud, VertBitSet & samples, const ImproveSamplingSettings & settings )
 {
     MR_TIMER
-    assert( numIters >= 1 );
+    assert( settings.numIters >= 1 );
 
     // create point-cloud from initial samples
     PointCloud cloudOfSamples;
     cloudOfSamples.addPartByMask( cloud, samples );
 
-    if ( !reportProgress( progress, 0.1f ) )
+    if ( !reportProgress( settings.progress, 0.1f ) )
         return false;
 
     VertMap pt2sm( cloud.points.size() );
@@ -25,9 +25,10 @@ bool improveSampling( const PointCloud & cloud, VertBitSet & samples, int numIte
     Vector<Vector3f, VertId> sumPos( sampleSz );
     Vector<int, VertId> cnt( sampleSz );
 
-    for ( int i = 0; i < numIters; ++i )
+    for ( int i = 0; i < settings.numIters; ++i )
     {
-        auto cb = subprogress( subprogress( progress, 0.1f, 0.9f ), float( i ) / numIters, float( i + 1 ) / numIters );
+        auto cb = subprogress( subprogress( settings.progress, 0.1f, 0.9f ),
+            float( i ) / settings.numIters, float( i + 1 ) / settings.numIters );
 
         // find the closest sample for each point of the cloud
         if ( !BitSetParallelFor( cloud.validPoints, [&]( VertId v )
@@ -68,7 +69,7 @@ bool improveSampling( const PointCloud & cloud, VertBitSet & samples, int numIte
     if ( !ParallelFor( 0_v, sumPos.endId(), [&]( VertId sm )
         {
             sm2pt[sm] = findProjectionOnPoints( cloudOfSamples.points[sm], cloud ).vId;
-        }, subprogress( progress, 0.9f, 0.99f ) ) )
+        }, subprogress( settings.progress, 0.9f, 0.99f ) ) )
         return false;
 
     // produce new samples
@@ -76,7 +77,7 @@ bool improveSampling( const PointCloud & cloud, VertBitSet & samples, int numIte
     samples.resize( cloud.points.size() );
     for ( VertId i = 0_v; i < sm2pt.size(); ++i )
     {
-        if ( cnt[i] < 5 )
+        if ( cnt[i] < settings.minPointsInSample )
             continue;
         samples.set( sm2pt[i] );
     }

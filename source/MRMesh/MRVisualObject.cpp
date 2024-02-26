@@ -25,7 +25,7 @@ VisualObject::VisualObject()
     setDefaultSceneProperties_();
 }
 
-void VisualObject::setVisualizeProperty( bool value, unsigned type, ViewportMask viewportMask )
+void VisualObject::setVisualizeProperty( bool value, AnyVisualizeMaskEnum type, ViewportMask viewportMask )
 {
     auto res = getVisualizePropertyMask( type );
     if ( value )
@@ -36,7 +36,7 @@ void VisualObject::setVisualizeProperty( bool value, unsigned type, ViewportMask
     setVisualizePropertyMask( type, res );
 }
 
-void VisualObject::setVisualizePropertyMask( unsigned type, ViewportMask viewportMask )
+void VisualObject::setVisualizePropertyMask( AnyVisualizeMaskEnum type, ViewportMask viewportMask )
 {
     auto& mask = getVisualizePropertyMask_( type );
     if ( mask == viewportMask )
@@ -45,28 +45,25 @@ void VisualObject::setVisualizePropertyMask( unsigned type, ViewportMask viewpor
     needRedraw_ = true;
 }
 
-bool VisualObject::getVisualizeProperty( unsigned type, ViewportMask viewportMask ) const
+bool VisualObject::getVisualizeProperty( AnyVisualizeMaskEnum type, ViewportMask viewportMask ) const
 {
     return !( getVisualizePropertyMask( type ) & viewportMask ).empty();
 }
 
-void VisualObject::toggleVisualizeProperty( unsigned type, ViewportMask viewportMask )
+void VisualObject::toggleVisualizeProperty( AnyVisualizeMaskEnum type, ViewportMask viewportMask )
 {
     setVisualizePropertyMask( type, getVisualizePropertyMask( type ) ^ viewportMask );
 }
 
-void VisualObject::setAllVisualizeProperties( const AllVisualizeProperties& properties )
+void VisualObject::setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos )
 {
-    for ( int i = 0; i < properties.size(); ++i )
-        setVisualizePropertyMask( unsigned( i ), properties[i] );
+    setAllVisualizePropertiesForEnum<VisualizeMaskType>( properties, pos );
 }
 
 AllVisualizeProperties VisualObject::getAllVisualizeProperties() const
 {
     AllVisualizeProperties res;
-    res.resize( VisualizeMaskType::VisualizePropsCount );
-    for ( int i = 0; i < res.size(); ++i )
-        res[i] = getVisualizePropertyMask( unsigned( i ) );
+    getAllVisualizePropertiesForEnum<VisualizeMaskType>( res );
     return res;
 }
 
@@ -288,31 +285,39 @@ void VisualObject::swapBase_( Object& other )
         assert( false );
 }
 
-ViewportMask& VisualObject::getVisualizePropertyMask_( unsigned type )
+ViewportMask& VisualObject::getVisualizePropertyMask_( AnyVisualizeMaskEnum type )
 {
     return const_cast< ViewportMask& >( getVisualizePropertyMask( type ) );
 }
 
-const ViewportMask& VisualObject::getVisualizePropertyMask( unsigned type ) const
+const ViewportMask& VisualObject::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
 {
-    switch ( type )
+    if ( auto value = type.tryGet<VisualizeMaskType>() )
     {
-    case VisualizeMaskType::Visibility:
+        switch ( *value )
+        {
+        case VisualizeMaskType::Visibility:
+            return visibilityMask_;
+        case VisualizeMaskType::InvertedNormals:
+            return invertNormals_;
+        case VisualizeMaskType::Labels:
+            return showLabels_;
+        case VisualizeMaskType::ClippedByPlane:
+            return clipByPlane_;
+        case VisualizeMaskType::Name:
+            return showName_;
+        case VisualizeMaskType::CropLabelsByViewportRect:
+            return cropLabels_;
+        case VisualizeMaskType::DepthTest:
+            return depthTest_;
+        case VisualizeMaskType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
+        }
+        assert( false && "Invalid enum." );
         return visibilityMask_;
-    case VisualizeMaskType::InvertedNormals:
-        return invertNormals_;
-    case VisualizeMaskType::Labels:
-        return showLabels_;
-    case VisualizeMaskType::ClippedByPlane:
-        return clipByPlane_;
-    case VisualizeMaskType::Name:
-        return showName_;
-    case VisualizeMaskType::CropLabelsByViewportRect:
-        return cropLabels_;
-    case VisualizeMaskType::DepthTest:
-        return depthTest_;
-    default:
-        assert( false );
+    }
+    else
+    {
+        assert( false && "Unknown `AnyVisualizeMaskEnum`." );
         return visibilityMask_;
     }
 }

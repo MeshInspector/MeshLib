@@ -261,7 +261,7 @@ public:
   // override this to have custom UI in "Scene" window (under opened(expanded) object line)
   MRVIEWER_API virtual void draw_custom_tree_object_properties( Object& obj );
 
-  bool make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, unsigned type, MR::ViewportMask viewportid, bool invert = false );
+  bool make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, AnyVisualizeMaskEnum type, MR::ViewportMask viewportid, bool invert = false );
   template<typename ObjectT>
   void make_color_selector( std::vector<std::shared_ptr<ObjectT>> selectedVisualObjs, const char* label,
                             std::function<Vector4f( const ObjectT* )> getter,

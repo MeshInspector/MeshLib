@@ -134,7 +134,7 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
     task_.isHovered = false;
     task_.isActive = false;
 
-    if ( !task_.object->getVisualizeProperty( unsigned( VisualizeMaskType::Name ), params.viewportId ) )
+    if ( !task_.object->getVisualizeProperty( VisualizeMaskType::Name, params.viewportId ) )
         return; // The name is hidden in this viewport.
 
     const float

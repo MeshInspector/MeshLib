@@ -328,6 +328,9 @@
     <ClCompile Include="MRRenderNameObject.cpp">
       <Filter>Render\Implementations</Filter>
     </ClCompile>
+    <ClCompile Include="MRMeshBoundarySelectionWidget.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -643,6 +646,9 @@
     </ClInclude>
     <ClInclude Include="MRRenderNameObject.h">
       <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshBoundarySelectionWidget.h">
+      <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

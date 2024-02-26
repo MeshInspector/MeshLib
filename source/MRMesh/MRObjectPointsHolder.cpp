@@ -115,10 +115,10 @@ AllVisualizeProperties ObjectPointsHolder::getAllVisualizeProperties() const
     return ret;
 }
 
-void ObjectPointsHolder::setAllVisualizeProperties( const AllVisualizeProperties& properties )
+void ObjectPointsHolder::setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos )
 {
-    setAllVisualizePropertiesForEnum<PointsVisualizePropertyType>( properties );
-    VisualObject::setAllVisualizeProperties( properties );
+    VisualObject::setAllVisualizeProperties_( properties, pos );
+    setAllVisualizePropertiesForEnum<PointsVisualizePropertyType>( properties, pos );
 }
 
 const ViewportMask &ObjectPointsHolder::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const

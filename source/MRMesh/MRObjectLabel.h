@@ -138,8 +138,6 @@ public:
 
     /// get all visualize properties masks
     MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
-    /// set all visualize properties masks
-    MRMESH_API void setAllVisualizeProperties( const AllVisualizeProperties& properties ) override;
     /// returns mask of viewports where given property is set
     MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
 
@@ -182,8 +180,11 @@ protected:
     MRMESH_API virtual void deserializeFields_( const Json::Value& root ) override;
 
     MRMESH_API virtual void setupRenderObject_() const override;
-private:
 
+    /// set all visualize properties masks
+    MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;
+
+private:
     /// this is private function to set default colors of this type (ObjectLabel) in constructor only
     void setDefaultColors_();
 

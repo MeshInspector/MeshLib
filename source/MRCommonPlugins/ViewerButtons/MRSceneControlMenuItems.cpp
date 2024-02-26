@@ -312,11 +312,8 @@ bool SetViewportConfigPresetMenuItem::action()
         for ( auto& obj : allObjs )
         {
             auto masks = obj->getAllVisualizeProperties();
-            for ( auto& typedMasks : masks )
-            {
-                for ( auto& mask : typedMasks.second )
-                    mask.set( newVpId, mask.contains( activeViewportId ) );
-            }
+            for ( auto& mask : masks )
+                mask.set( newVpId, mask.contains( activeViewportId ) );
 
             obj->setAllVisualizeProperties( masks );
         }

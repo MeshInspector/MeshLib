@@ -223,10 +223,10 @@ AllVisualizeProperties ObjectMeshHolder::getAllVisualizeProperties() const
     return ret;
 }
 
-void ObjectMeshHolder::setAllVisualizeProperties( const AllVisualizeProperties& properties )
+void ObjectMeshHolder::setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos )
 {
-    setAllVisualizePropertiesForEnum<MeshVisualizePropertyType>( properties );
-    VisualObject::setAllVisualizeProperties( properties );
+    VisualObject::setAllVisualizeProperties_( properties, pos );
+    setAllVisualizePropertiesForEnum<MeshVisualizePropertyType>( properties, pos );
 }
 
 const ViewportMask &ObjectMeshHolder::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const

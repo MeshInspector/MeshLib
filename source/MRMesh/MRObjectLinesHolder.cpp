@@ -133,10 +133,10 @@ AllVisualizeProperties ObjectLinesHolder::getAllVisualizeProperties() const
     return ret;
 }
 
-void ObjectLinesHolder::setAllVisualizeProperties( const AllVisualizeProperties& properties )
+void ObjectLinesHolder::setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos )
 {
-    setAllVisualizePropertiesForEnum<LinesVisualizePropertyType>( properties );
-    VisualObject::setAllVisualizeProperties( properties );
+    VisualObject::setAllVisualizeProperties_( properties, pos );
+    setAllVisualizePropertiesForEnum<LinesVisualizePropertyType>( properties, pos );
 }
 
 const ViewportMask& ObjectLinesHolder::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const

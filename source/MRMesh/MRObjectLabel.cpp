@@ -259,10 +259,10 @@ AllVisualizeProperties ObjectLabel::getAllVisualizeProperties() const
     return ret;
 }
 
-void ObjectLabel::setAllVisualizeProperties( const AllVisualizeProperties& properties )
+void ObjectLabel::setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos )
 {
-    setAllVisualizePropertiesForEnum<LabelVisualizePropertyType>( properties );
-    VisualObject::setAllVisualizeProperties( properties );
+    VisualObject::setAllVisualizeProperties_( properties, pos );
+    setAllVisualizePropertiesForEnum<LabelVisualizePropertyType>( properties, pos );
 }
 
 const ViewportMask &ObjectLabel::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const

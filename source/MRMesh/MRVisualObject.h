@@ -81,7 +81,7 @@ public:
     }
 };
 
-using AllVisualizeProperties = std::unordered_map<std::type_index, std::vector<ViewportMask>>;
+using AllVisualizeProperties = std::vector<ViewportMask>;
 
 enum DirtyFlags
 {
@@ -151,7 +151,11 @@ public:
     /// get all visualize properties masks
     MRMESH_API virtual AllVisualizeProperties getAllVisualizeProperties() const;
     /// set all visualize properties masks
-    MRMESH_API virtual void setAllVisualizeProperties( const AllVisualizeProperties& properties );
+    void setAllVisualizeProperties( const AllVisualizeProperties& properties )
+    {
+        std::size_t counter = 0;
+        setAllVisualizeProperties_( properties, counter );
+    }
 
     /// shows/hides labels
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
@@ -351,27 +355,22 @@ protected:
     /// adds information about bounding box in res
     MRMESH_API void boundingBoxToInfoLines_( std::vector<std::string> & res ) const;
 
+    MRMESH_API virtual void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos );
+
     // Derived classes should use this to implement `setAllVisualizeProperties()`.
     template <AnyVisualizeMaskEnumType T>
-    void setAllVisualizePropertiesForEnum( const AllVisualizeProperties& properties )
+    void setAllVisualizePropertiesForEnum( const AllVisualizeProperties& properties, std::size_t& pos )
     {
-        if ( auto iter = properties.find( typeid( T ) ); iter != properties.end() )
-        {
-            for ( int i = 0; i < iter->second.size(); ++i )
-                setVisualizePropertyMask( T( i ), iter->second[i] );
-        }
+        for ( int i = 0; i < int( T::_count ); i++ )
+            setVisualizePropertyMask( T( i ), properties[pos++] );
     }
     // Derived classes should use this to implement `getAllVisualizeProperties()`.
     template <AnyVisualizeMaskEnumType T>
     void getAllVisualizePropertiesForEnum( AllVisualizeProperties& properties ) const
     {
-        auto [iter, ok] = properties.try_emplace( typeid(T) );
-        assert( ok );
-        if ( !ok )
-            return;
-        iter->second.resize( std::size_t( T::_count ) );
-        for ( int i = 0; i < iter->second.size(); ++i )
-            iter->second[i] = getVisualizePropertyMask( T( i ) );
+        properties.reserve( properties.size() + std::size_t( T::_count ) );
+        for ( int i = 0; i < int( ( T::_count ) ); i++ )
+            properties.push_back( getVisualizePropertyMask( T( i ) ) );
     }
 
 private:

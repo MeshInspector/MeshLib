@@ -54,8 +54,6 @@ public:
 
     /// get all visualize properties masks
     MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
-    /// set all visualize properties masks
-    MRMESH_API void setAllVisualizeProperties( const AllVisualizeProperties& properties ) override;
     /// returns mask of viewports where given property is set
     MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
 
@@ -90,6 +88,9 @@ protected:
     MRMESH_API virtual Box3f computeBoundingBox_() const override;
 
     MRMESH_API virtual void setupRenderObject_() const override;
+
+    /// set all visualize properties masks
+    MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;
 
     mutable std::optional<size_t> numComponents_;
     mutable std::optional<float> totalLength_;

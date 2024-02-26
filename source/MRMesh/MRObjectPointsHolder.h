@@ -53,8 +53,6 @@ public:
 
     /// get all visualize properties masks
     MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
-    /// set all visualize properties masks
-    MRMESH_API void setAllVisualizeProperties( const AllVisualizeProperties& properties ) override;
     /// returns mask of viewports where given property is set
     MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
 
@@ -148,6 +146,9 @@ protected:
     MRMESH_API virtual void deserializeFields_( const Json::Value& root ) override;
 
     MRMESH_API virtual void setupRenderObject_() const override;
+
+    /// set all visualize properties masks
+    MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;
 
     int renderDiscretization_ = 1;
     int maxRenderingPoints_ = 1'000'000;

@@ -55,9 +55,9 @@ void VisualObject::toggleVisualizeProperty( AnyVisualizeMaskEnum type, ViewportM
     setVisualizePropertyMask( type, getVisualizePropertyMask( type ) ^ viewportMask );
 }
 
-void VisualObject::setAllVisualizeProperties( const AllVisualizeProperties& properties )
+void VisualObject::setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos )
 {
-    setAllVisualizePropertiesForEnum<VisualizeMaskType>( properties );
+    setAllVisualizePropertiesForEnum<VisualizeMaskType>( properties, pos );
 }
 
 AllVisualizeProperties VisualObject::getAllVisualizeProperties() const

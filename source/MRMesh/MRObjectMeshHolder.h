@@ -90,8 +90,6 @@ public:
 
     /// get all visualize properties masks
     MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
-    /// set all visualize properties masks
-    MRMESH_API void setAllVisualizeProperties( const AllVisualizeProperties& properties ) override;
     /// returns mask of viewports where given property is set
     MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
 
@@ -240,6 +238,9 @@ protected:
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
     MRMESH_API VoidOrErrStr deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
+
+    /// set all visualize properties masks
+    MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;
 
     MRMESH_API virtual Box3f computeBoundingBox_() const override;
 

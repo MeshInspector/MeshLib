@@ -69,14 +69,15 @@ struct Color
     {}
 
     template<typename T>
-    explicit constexpr operator Vector4<T>() const noexcept { 
-        if constexpr ( std::is_same_v<T, int> )
+    explicit constexpr operator Vector4<T>() const noexcept
+    {
+        if constexpr ( std::is_integral_v<T> )
         {
-            return Vector4i( r, g, b, a );
+            return Vector4<T>( T( r ), T( g ), T( b ), T( a ) );
         }
         else
         {
-            return Vector4<T>( T( r ) / T( 255 ), T( g ) / T( 255 ), T( b ) / T( 255 ), T( a ) / T( 255 ) );
+            return Vector4<T>( T( r ), T( g ), T( b ), T( a ) ) / T( 255 );
         }
     }
 

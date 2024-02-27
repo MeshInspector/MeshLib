@@ -66,8 +66,7 @@ struct EdgeSegment
     // end of the segment
     SegmPointf b{ 1.0f };
     [[nodiscard]] EdgeSegment() = default;
-    [[nodiscard]] EdgeSegment( EdgeId e, float a = 0.0f, float b = 1.0f ) : e( e ), a( a ), b( b ) { assert( a <= b ); };
-
+    [[nodiscard]] EdgeSegment( EdgeId e, float a = 0.0f, float b = 1.0f ) : e( e ), a( a ), b( b ) { assert( valid() ); };
     // returns starting EdgePoint
     [[nodiscard]] EdgePoint edgePointA() const { return { e, a }; }
     // returns ending EdgePoint

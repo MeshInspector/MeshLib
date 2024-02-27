@@ -23,7 +23,7 @@ namespace MR
 
     UndirectedEdgeBitSet fillPolylineLeft( const Polyline3& polyline, const EdgeBitSet& orgEdges )
     {
-        const size_t numEdges = polyline.topology.lastValidVert() + 1;
+        const size_t numEdges = polyline.topology.lastNotLoneEdge().undirected() + 1;
         UndirectedEdgeBitSet res( numEdges );
         UndirectedEdgeBitSet visited( numEdges );
 
@@ -73,7 +73,7 @@ namespace MR
 
         if ( otherPart )
         {
-            const size_t numEdges = polyline.topology.lastValidVert() + 1;
+            const size_t numEdges = polyline.topology.lastNotLoneEdge().undirected() + 1;
             UndirectedEdgeBitSet otherPartEdges( numEdges );
             for ( auto ue : undirectedEdges( polyline.topology ) )
             {

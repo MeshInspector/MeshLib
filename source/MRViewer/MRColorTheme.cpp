@@ -336,7 +336,7 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
         "ToolbarHovered",
         "ToolbarClicked",
 
-        "ToolbarCustomizeBg",
+        "ModalBackground",
 
         "Text",
         "TextEnabled",
@@ -426,7 +426,7 @@ void ColorTheme::resetImGuiStyle()
     Vector4f frameBg = Vector4f( getRibbonColor( RibbonColorsType::FrameBackground ) );
     Vector4f headerBg = Vector4f( getRibbonColor( RibbonColorsType::CollapseHeaderBackground ) );
     Vector4f textSelBg = Vector4f( getRibbonColor( RibbonColorsType::TextSelectedBg ) );
-    Vector4f popupBg = Vector4f( getRibbonColor( RibbonColorsType::TopPanelBackground ) );
+    Vector4f popupBg = Vector4f( getRibbonColor( RibbonColorsType::ModalBackground ) );
     Vector4f tabBg = Vector4f( getRibbonColor( RibbonColorsType::DialogTab ) );
     Vector4f tabBgActive = Vector4f( getRibbonColor( RibbonColorsType::DialogTabActive ) );
     Vector4f tabBgHovered = Vector4f( getRibbonColor( RibbonColorsType::DialogTabActiveHovered ) );

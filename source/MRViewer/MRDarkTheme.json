@@ -163,11 +163,11 @@
 			"g": 99,
 			"r": 95
 		},
-		"ToolbarCustomizeBg": {
+		"ModalBackground": {
 			"a": 255,
-			"b": 30,
-			"g": 30,
-			"r": 30
+			"b": 36,
+			"g": 31,
+			"r": 28
 		},
 		"Text": {
 			"a": 255,

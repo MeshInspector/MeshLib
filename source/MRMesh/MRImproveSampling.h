@@ -15,6 +15,21 @@ struct ImproveSamplingSettings
     /// it can be used to remove outliers
     int minPointsInSample = 1;
 
+    /// optional output: mapping from input point id to sample id
+    VertMap * pt2sm = nullptr;
+
+    /// optional output: new cloud containing averaged points and normals for each sample
+    PointCloud * cloudOfSamples = nullptr;
+
+    /// optional output: the number of points in each sample
+    Vector<int, VertId> * ptsInSm = nullptr;
+
+    /// optional input: colors of input points
+    const VertColors * ptColors = nullptr;
+
+    /// optional output: averaged colors of samples
+    VertColors * smColors = nullptr;
+
     /// output progress status and receive cancel signal
     ProgressCallback progress;
 };

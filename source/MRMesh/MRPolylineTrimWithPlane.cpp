@@ -5,119 +5,82 @@
 
 namespace MR
 {
-    std::vector<std::vector<EdgePoint>> dividePolylineWithPlane( const Polyline3& polyline, const Plane3f& plane, std::vector<std::vector<EdgePoint>>* otherPartSegments )
+    EdgeBitSet subdividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane )
     {
-        std::vector<std::vector<EdgePoint>> result;
-        const auto& edges = polyline.topology.edges();
-        if ( edges.empty() )
-            return result;
+        if ( polyline.topology.numValidVerts() == 0 )
+            return {};
 
-        float lastDistance = 0; // I gave you my heart...
-        std::vector<EdgePoint>* currSegment = nullptr;
-        std::vector<EdgePoint>* otherSegment = nullptr;
-
-        if ( edges.front().org.valid() )
+        EdgeBitSet res;
+        const auto sectionPoints = extractSectionsFromPolyline( polyline, plane, 0.0f );
+        for ( const auto& sectionPoint : sectionPoints )
         {
-            const auto p = polyline.points[edges.front().org];
-            lastDistance = plane.distance( p );
-            if ( lastDistance >= 0 )
-            {
-                result.emplace_back();
-                currSegment = &result.back();
-                currSegment->emplace_back( EdgeId(0), 0 );
-            }
-            else if ( otherPartSegments )
-            {
-                otherPartSegments->emplace_back();
-                otherSegment = &otherPartSegments->back();
-                otherSegment->emplace_back( EdgeId(0), 0 );
-            }
-        }        
-
-        for ( EdgeId e = EdgeId(0); e < edges.size(); e+=2 )
-        {
-            const auto p = polyline.destPnt( e );
-            const auto dist = plane.distance( p );
-            if ( dist < 0 )
-            {
-                if ( currSegment )
-                {
-                    currSegment->emplace_back( e, lastDistance / ( lastDistance - dist ) );
-                    currSegment = nullptr;
-                }
-
-                if ( otherPartSegments )
-                {
-                    if ( !otherSegment )
-                    {
-                        otherPartSegments->emplace_back();
-                        otherSegment = &otherPartSegments->back();
-                        otherSegment->emplace_back( e, lastDistance / ( lastDistance - dist ) );
-                    }
-                    else
-                    {
-                        otherSegment->emplace_back( e, 1 );
-                    }                    
-                }                
-            }
-            else
-            {
-                if ( !currSegment )
-                {
-                    result.emplace_back();
-                    currSegment = &result.back();
-                    currSegment->emplace_back( e, lastDistance / ( lastDistance - dist ) );
-                }
-                else
-                {
-                    currSegment->emplace_back( e, 1 );
-                }
-
-                if ( otherPartSegments && otherSegment )
-                {
-                    otherSegment->emplace_back( e, lastDistance / ( lastDistance - dist ) );
-                    otherSegment = nullptr;
-                }
-            }
-
-            lastDistance = dist;
-        }
-
-        return result;
-    }
-
-    Polyline3 dividePolylineWithPlane( const Polyline3& polyline, const Plane3f& plane, Polyline3* otherPart )
-    {
-        std::vector<std::vector<EdgePoint>> otherPartSections;
-        const auto sections = dividePolylineWithPlane( polyline, plane, otherPart ? &otherPartSections : nullptr );
-        Polyline3 res;        
-
-        for ( const auto& section : sections )
-        {
-            std::vector<Vector3f> points;
-            points.reserve( section.size() );
-            for ( const auto& ep : section )
-            {
-                points.push_back( polyline.edgePoint( ep ) );
-            }
-            res.addFromPoints( points.data(), points.size() );
-        }
-
-        if ( otherPart )
-        {
-            for ( const auto& otherPartSection : otherPartSections )
-            {
-                std::vector<Vector3f> points;
-                points.reserve( otherPartSection.size() );
-                for ( const auto& ep : otherPartSection )
-                {
-                    points.push_back( polyline.edgePoint( ep ) );
-                }
-                otherPart->addFromPoints( points.data(), points.size() );
-            }
+            polyline.splitEdge( sectionPoint.e, polyline.edgePoint( sectionPoint.edgePointA() ) );
+            res.autoResizeSet( sectionPoint.e );
         }
 
         return res;
+    }
+
+    UndirectedEdgeBitSet fillPolylineLeft( const Polyline3& polyline, const EdgeBitSet& orgEdges )
+    {
+        UndirectedEdgeBitSet res;
+        UndirectedEdgeBitSet visited;
+        for ( auto e : orgEdges )
+        {
+            if ( visited.test( e ) )
+                continue;
+            
+            auto e0 = e;
+            for ( ;;)
+            {
+                if ( !e0.valid() )
+                    break;
+
+                res.autoResizeSet( e0.undirected() );
+                if ( orgEdges.test( e0.sym() ) )
+                {
+                    visited.autoResizeSet( e0.sym() );
+                    break;
+                }              
+                e0 = polyline.topology.next( e0.sym() );
+            }
+        }
+        return res;
+    }
+
+    void dividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, Polyline3* otherPart )
+    {
+        if ( polyline.points.empty() )
+            return;
+
+        const auto newEdges = subdividePolylineWithPlane( polyline, plane );
+        if ( newEdges.empty() )
+        {            
+            if ( plane.distance( polyline.points.front() ) < 0 )
+            {
+                if ( otherPart )
+                    *otherPart = polyline;
+                polyline = Polyline3{};
+            }
+            return;
+        }
+
+        const auto posEdges = fillPolylineLeft( polyline, newEdges );
+        Polyline3 res;
+        res.addPartByMask( polyline, posEdges );
+
+        if ( otherPart )
+        {
+            UndirectedEdgeBitSet otherPartEdges;
+            for ( auto ue : undirectedEdges( polyline.topology ) )
+            {
+                if ( !posEdges.test( ue ) )
+                    otherPartEdges.autoResizeSet( ue );
+            }
+
+            otherPart->addPartByMask( polyline, otherPartEdges );
+        }
+        polyline = res;
     }
 
     std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline, const Plane3f& plane, float eps )
@@ -169,17 +132,19 @@ namespace MR
             {
                 const float denom = ( p1.distFromPosPlane > 0 ) ? p1.distFromPosPlane + p2.distFromNegPlane + 2 * eps :
                                                                   p1.distFromNegPlane + p2.distFromPosPlane + 2 * eps;
-                if ( p1.distFromPosPlane > 0 )
-                {
-                    segment.e = segment.e.sym();
-                    segment.a = 1 - p1.distFromPosPlane / denom;
-                    segment.b = 1 - p2.distFromNegPlane / denom;
-                }
-                else
-                {
-                    segment.a = p1.distFromNegPlane / denom;
-                    segment.b = p2.distFromPosPlane / denom;
-                }
+                if ( denom != 0 )
+                    if ( p1.distFromPosPlane > 0 )
+                    {
+                        segment.e = segment.e.sym();
+                        segment.a = 1 - p1.distFromPosPlane / denom;
+                        segment.b = p2.distFromNegPlane / denom;
+                    }
+                    else
+                    {
+                        segment.a = p1.distFromNegPlane / denom;
+                        segment.b = 1 - p2.distFromPosPlane / denom;
+                    }
+
                 result.push_back( segment );
             }
         }

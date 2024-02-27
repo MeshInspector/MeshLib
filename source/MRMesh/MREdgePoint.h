@@ -72,6 +72,8 @@ struct EdgeSegment
     [[nodiscard]] EdgePoint edgePointA() const { return { e, a }; }
     // returns ending EdgePoint
     [[nodiscard]] EdgePoint edgePointB() const { return { e, b }; }
+    // returns true if the edge is valid and start point is less than end point
+    [[nodiscard]] bool valid() const { return e.valid() && a <= b; }
 };
 
 /// returns true if points a and b are located on a boundary of the same triangle;

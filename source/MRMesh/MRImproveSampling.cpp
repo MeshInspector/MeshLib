@@ -131,9 +131,11 @@ bool improveSampling( const PointCloud & cloud, VertBitSet & samples, const Impr
             sumCol[s] += Vector4f( (*settings.ptColors)[v] );
         }
         settings.smColors->resizeNoInit( sampleSz );
-        BitSetParallelFor( cloudOfSamples.validPoints, [&]( VertId s )
+        // cloudOfSamples may be already moved before
+        ParallelFor( sumCol, [&]( VertId s )
         {
-            (*settings.smColors)[s] = Color( sumCol[s] / float( ptsInSm[s] ) );
+            if ( ptsInSm[s] > 0 )
+                (*settings.smColors)[s] = Color( sumCol[s] / float( ptsInSm[s] ) );
         } );
     }
 

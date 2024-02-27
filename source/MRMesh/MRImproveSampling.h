@@ -11,7 +11,8 @@ struct ImproveSamplingSettings
     /// the number of algorithm iterations to perform
     int numIters = 1;
 
-    /// if a sample represents less than this number of input points than such sample will be discarded
+    /// if a sample represents less than this number of input points then such sample will be discarded;
+    /// it can be used to remove outliers
     int minPointsInSample = 1;
 
     /// output progress status and receive cancel signal

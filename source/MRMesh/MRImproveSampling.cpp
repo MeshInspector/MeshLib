@@ -3,6 +3,8 @@
 #include "MRParallelFor.h"
 #include "MRBitSetParallelFor.h"
 #include "MRPointsProject.h"
+#include "MRVector4.h"
+#include "MRColor.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -109,7 +111,7 @@ bool improveSampling( const PointCloud & cloud, VertBitSet & samples, const Impr
                 auto s = pt2sm[v];
                 sumPos[s] += cloud.normals[v];
             }
-            cloudOfSamples.normals.resizeNoInit( cloudOfSamples.points.size() );
+            cloudOfSamples.normals.resizeNoInit( sampleSz );
             BitSetParallelFor( cloudOfSamples.validPoints, [&]( VertId s )
             {
                 cloudOfSamples.normals[s] = sumPos[s].normalized();
@@ -117,6 +119,22 @@ bool improveSampling( const PointCloud & cloud, VertBitSet & samples, const Impr
         }
 
         *settings.cloudOfSamples = std::move( cloudOfSamples );
+    }
+
+    if ( settings.ptColors && settings.smColors )
+    {
+        Vector<Vector4f, VertId> sumCol( sampleSz );
+        sumCol.resize( sampleSz );
+        for ( auto v : cloud.validPoints )
+        {
+            auto s = pt2sm[v];
+            sumCol[s] += Vector4f( (*settings.ptColors)[v] );
+        }
+        settings.smColors->resizeNoInit( sampleSz );
+        BitSetParallelFor( cloudOfSamples.validPoints, [&]( VertId s )
+        {
+            (*settings.smColors)[s] = Color( sumCol[s] / float( ptsInSm[s] ) );
+        } );
     }
 
     if ( settings.ptsInSm )

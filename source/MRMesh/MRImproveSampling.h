@@ -24,6 +24,12 @@ struct ImproveSamplingSettings
     /// optional output: the number of points in each sample
     Vector<int, VertId> * ptsInSm = nullptr;
 
+    /// optional input: colors of input points
+    const VertColors * ptColors = nullptr;
+
+    /// optional output: averaged colors of samples
+    VertColors * smColors = nullptr;
+
     /// output progress status and receive cancel signal
     ProgressCallback progress;
 };

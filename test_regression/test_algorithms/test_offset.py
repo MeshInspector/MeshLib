@@ -50,16 +50,16 @@ def test_offset_thickening(tmp_path, test_params):
     mlib.saveMesh(thicked_mesh, tmp_path / f"{case_name}.mrmesh")
     ref_mesh_path = input_folder / f"{case_name}.mrmesh"
     ref_mesh = mlib.loadMesh(ref_mesh_path)
-    #  check meshes similarity
+
     with check:
         compare_meshes_similarity(thicked_mesh, ref_mesh)
     with check:
         if "skip_self-intsc_verif" in test_params.keys() and not test_params["skip_self-intsc_verif"]:
             self_col_tri = mlib.findSelfCollidingTriangles(thicked_mesh).size()
             assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"
-        if "skip_self-intsc_verif" not in test_params.keys():
-            self_col_tri = mlib.findSelfCollidingTriangles(thicked_mesh).size()
-            assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"
+    with check:
+        degen_faces = mlib.findDegenerateFaces(mesh).count()
+        assert degen_faces == 0, f"Mesh should have no degenerate faces, actual value is {degen_faces}"
 
 
 @pytest.mark.parametrize("test_params", [
@@ -113,16 +113,16 @@ def test_offset_double(tmp_path, test_params):
     mlib.saveMesh(offseted_mesh, tmp_path / f"{case_name}.mrmesh")
     ref_mesh_path = input_folder / f"{case_name}.mrmesh"
     ref_mesh = mlib.loadMesh(ref_mesh_path)
-    # #  check meshes similarity
+
     with check:
         compare_meshes_similarity(offseted_mesh, ref_mesh, rhsdr_thresh=0.99)
     with check:
         if "skip_self-intsc_verif" in test_params.keys() and not test_params["skip_self-intsc_verif"]:
             self_col_tri = mlib.findSelfCollidingTriangles(offseted_mesh).size()
             assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"
-        if "skip_self-intsc_verif" not in test_params.keys():
-            self_col_tri = mlib.findSelfCollidingTriangles(offseted_mesh).size()
-            assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"
+    with check:
+        degen_faces = mlib.findDegenerateFaces(mesh).count()
+        assert degen_faces == 0, f"Mesh should have no degenerate faces, actual value is {degen_faces}"
 
 
 @pytest.mark.parametrize("test_params", [
@@ -157,16 +157,16 @@ def test_offset_shell(tmp_path, test_params):
     mlib.saveMesh(new_mesh, tmp_path / f"{case_name}.mrmesh")
     ref_mesh_path = input_folder / f"{case_name}.mrmesh"
     ref_mesh = mlib.loadMesh(ref_mesh_path)
-    #  check meshes similarity
+
     with check:
         compare_meshes_similarity(new_mesh, ref_mesh)
     with check:
         if "skip_self-intsc_verif" in test_params.keys() and not test_params["skip_self-intsc_verif"]:
             self_col_tri = mlib.findSelfCollidingTriangles(new_mesh).size()
             assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"
-        if "skip_self-intsc_verif" not in test_params.keys():
-            self_col_tri = mlib.findSelfCollidingTriangles(new_mesh).size()
-            assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"
+    with check:
+        degen_faces = mlib.findDegenerateFaces(mesh).count()
+        assert degen_faces == 0, f"Mesh should have no degenerate faces, actual value is {degen_faces}"
 
 
 @pytest.mark.parametrize("test_params", [
@@ -250,13 +250,14 @@ def test_offset_general(tmp_path, test_params):
     mlib.saveMesh(new_mesh, tmp_path / f"{case_name}.mrmesh")
     ref_mesh_path = input_folder / f"{case_name}.mrmesh"
     ref_mesh = mlib.loadMesh(ref_mesh_path)
-    #  check meshes similarity
+
     with check:
         compare_meshes_similarity(new_mesh, ref_mesh)
+
     with check:
         if "skip_self-intsc_verif" in test_params.keys() and not test_params["skip_self-intsc_verif"]:
             self_col_tri = mlib.findSelfCollidingTriangles(new_mesh).size()
             assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"
-        if "skip_self-intsc_verif" not in test_params.keys():
-            self_col_tri = mlib.findSelfCollidingTriangles(new_mesh).size()
-            assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"
+    with check:
+        degen_faces = mlib.findDegenerateFaces(mesh).count()
+        assert degen_faces == 0, f"Mesh should have no degenerate faces, actual value is {degen_faces}"

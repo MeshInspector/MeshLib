@@ -129,7 +129,13 @@ IF(NOT MR_EMSCRIPTEN)
 				ApplicationFramework
 				DataExchange
 		)
-		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES TKMesh TKSTEP)
+		foreach(LIBRARY_NAME ${OpenCASCADE_LIBRARIES})
+			set(LIBRARY "OpenCASCADE_LIBRARY_${LIBRARY_NAME}")
+			find_library(${LIBRARY} NAMES ${LIBRARY_NAME} PATHS ${OpenCASCADE_LIBRARY_DIR})
+			if (NOT ${LIBRARY} STREQUAL "${LIBRARY}-NOTFOUND")
+				list(APPEND MRMESH_OPTIONAL_DEPENDENCIES ${${LIBRARY}})
+			endif()
+		endforeach()
 		list(APPEND MRMESH_OPTIONAL_INCLUDE_DIRS ${OpenCASCADE_INCLUDE_DIR})
 	ENDIF()
 
@@ -184,7 +190,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
 	IF (APPLE)
 		find_library(COCOA_LIBRARY Cocoa ONLY)
 		target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
-		target_include_directories(${PROJECT_NAME} PRIVATE
+		target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
 			${MRMESH_OPTIONAL_INCLUDE_DIRS}
 		)
 		target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -198,7 +204,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
 			${COCOA_LIBRARY}
 		)
 	ELSE()
-		target_include_directories(${PROJECT_NAME} PRIVATE
+		target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
 			${MRMESH_OPTIONAL_INCLUDE_DIRS}
 		)
 		target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -214,7 +220,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
 	ENDIF()
 ELSE()
 	find_package(tl-expected REQUIRED)
-	target_include_directories(${PROJECT_NAME} PRIVATE
+	target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
 		${MRMESH_OPTIONAL_INCLUDE_DIRS}
 	)
 	target_link_libraries(${PROJECT_NAME} PRIVATE

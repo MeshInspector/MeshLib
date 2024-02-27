@@ -133,6 +133,7 @@ namespace MR
                 const float denom = ( p1.distFromPosPlane > 0 ) ? p1.distFromPosPlane + p2.distFromNegPlane + 2 * eps :
                                                                   p1.distFromNegPlane + p2.distFromPosPlane + 2 * eps;
                 if ( denom != 0 )
+                {
                     if ( p1.distFromPosPlane > 0 )
                     {
                         segment.e = segment.e.sym();
@@ -144,7 +145,7 @@ namespace MR
                         segment.a = p1.distFromNegPlane / denom;
                         segment.b = 1 - p2.distFromPosPlane / denom;
                     }
-
+                }
                 result.push_back( segment );
             }
         }

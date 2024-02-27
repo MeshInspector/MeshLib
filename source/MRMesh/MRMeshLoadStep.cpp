@@ -12,7 +12,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRSuppressWarning.h"
 
-#if !defined( __GNUC__ ) || __GNUC__ >= 11
+#if !defined( __GNUC__ ) || defined( __clang__ ) || __GNUC__ >= 11
 MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
 #endif
 MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-enum-enum-conversion", 5054 )
@@ -35,7 +35,7 @@ MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-enum-enum-conversion", 5054 )
 #include <TopoDS.hxx>
 #pragma warning( pop )
 MR_SUPPRESS_WARNING_POP
-#if !defined( __GNUC__ ) || __GNUC__ >= 11
+#if !defined( __GNUC__ ) || defined( __clang__ ) || __GNUC__ >= 11
 MR_SUPPRESS_WARNING_POP
 #endif
 

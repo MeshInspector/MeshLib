@@ -12,6 +12,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRSuppressWarning.h"
 
+MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
 MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-enum-enum-conversion", 5054 )
 #pragma warning( push )
 #pragma warning( disable: 5220 ) // a non-static data member with a volatile qualified type no longer implies that compiler generated copy/move constructors and copy/move assignment operators are not trivial
@@ -31,6 +32,7 @@ MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-enum-enum-conversion", 5054 )
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
 #pragma warning( pop )
+MR_SUPPRESS_WARNING_POP
 MR_SUPPRESS_WARNING_POP
 
 namespace

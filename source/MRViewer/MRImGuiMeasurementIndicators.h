@@ -158,6 +158,9 @@ struct PreparedCurve
 {
     ImVec2 a; // The first point.
     ImVec2 b; // The last point.
+
+    [[nodiscard]] ImVec2 endPoint( bool second ) const { return second ? b : a; }
+
     std::span<ImVec2> midPoints; // All the points in between.
 };
 

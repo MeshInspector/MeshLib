@@ -34,7 +34,7 @@ jobs:
             docker-image: meshlib/meshlib-ubuntu22-arm64:${{inputs.docker_image_tag}}
             cxx-compiler: /usr/bin/clang++-14
             c-compiler: /usr/bin/clang-14
-            use-cpp-23: "OFF"
+            use-cpp-23: "ON"
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout

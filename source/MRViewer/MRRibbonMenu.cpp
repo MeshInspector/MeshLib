@@ -2444,6 +2444,12 @@ void RibbonMenu::highlightBlocking_()
     blockingHighlightTimer_ -= ImGui::GetIO().DeltaTime;
 }
 
+const MenuItemsListMigrations& RibbonMenu::toolbarItemsListMigrations_() const
+{
+    static const MenuItemsListMigrations migrations;
+    return migrations;
+}
+
 void pushNotification( const RibbonNotification& notification )
 {
     if ( auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>() )

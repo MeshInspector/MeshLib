@@ -197,17 +197,14 @@ void Toolbar::drawCustomize()
     ImGui::End();
 }
 
-void Toolbar::readItemsList( const Json::Value& root, const MenuItemsListMigrations* migrations )
+void Toolbar::readItemsList( const Json::Value& root, const MenuItemsListMigrations& migrations )
 {
     RibbonSchemaLoader::readMenuItemsList( root, itemsList_ );
-    if ( migrations )
+    for ( auto it = migrations.upper_bound( itemsListVersion_ ); it != migrations.end(); ++it )
     {
-        for ( auto it = migrations->upper_bound( itemsListVersion_ ); it != migrations->end(); ++it )
-        {
-            const auto& [migrationVersion, migrationRule] = *it;
-            migrationRule( itemsList_ );
-            itemsListVersion_ = migrationVersion;
-        }
+        const auto& [migrationVersion, migrationRule] = *it;
+        migrationRule( itemsList_ );
+        itemsListVersion_ = migrationVersion;
     }
 }
 

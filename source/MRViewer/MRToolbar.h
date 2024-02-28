@@ -31,7 +31,7 @@ public:
 
     /// read toolbar items from json
     /// \param migrations - (optional) list of rules for upgrading the item list
-    void readItemsList( const Json::Value& root, const MenuItemsListMigrations* migrations = nullptr );
+    void readItemsList( const Json::Value& root, const MenuItemsListMigrations& migrations = {} );
     /// reset items list to default value
     /// \details default value is taken from RibbonSchemaHolder
     void resetItemsList();

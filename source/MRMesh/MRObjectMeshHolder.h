@@ -7,7 +7,7 @@
 namespace MR
 {
 
-enum class MeshVisualizePropertyType
+enum class MRMESH_CLASS MeshVisualizePropertyType
 {
     Faces,
     Texture,

@@ -26,7 +26,9 @@ enum class ColoringType
     VertsColorMap  ///< Use different color (taken from verts colormap) for each vert
 };
 
-enum class VisualizeMaskType
+// Note! Must use `MRMESH_CLASS` on this enum and all enums that extend this one,
+// otherwise you'll get silent wrong behavior on Mac.
+enum class MRMESH_CLASS VisualizeMaskType
 {
     Visibility,
     InvertedNormals,

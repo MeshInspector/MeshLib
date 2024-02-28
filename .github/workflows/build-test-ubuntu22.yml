@@ -27,7 +27,7 @@ jobs:
           - compiler: Clang 14
             cxx-compiler: /usr/bin/clang++-14
             c-compiler: /usr/bin/clang-14
-            use-cpp-23: "OFF"
+            use-cpp-23: "ON"
           - compiler: GCC 12
             cxx-compiler: /usr/bin/g++-12
             c-compiler: /usr/bin/gcc-12

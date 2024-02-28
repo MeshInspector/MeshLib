@@ -1209,6 +1209,9 @@
     <ClInclude Include="MRDistanceVolumeParams.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
+    <ClInclude Include="MRPointsToDistanceVolume.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2009,6 +2012,9 @@
     </ClCompile>
     <ClCompile Include="MRDefaultFeatureObjectParams.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointsToDistanceVolume.cpp">
+      <Filter>Source Files\Voxels</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

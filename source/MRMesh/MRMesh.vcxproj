@@ -127,6 +127,7 @@
     <ClInclude Include="MRPointsComponents.h" />
     <ClInclude Include="MRPointsLoadE57.h" />
     <ClInclude Include="MRPointsProject.h" />
+    <ClInclude Include="MRPointsToDistanceVolume.h" />
     <ClInclude Include="MRPointsToMeshProjector.h" />
     <ClInclude Include="MRIntersection.h" />
     <ClInclude Include="MRIntersectionContour.h" />
@@ -490,6 +491,7 @@
     <ClCompile Include="MRPointsLoadE57.cpp" />
     <ClCompile Include="MRPointsLoadLas.cpp" />
     <ClCompile Include="MRPointsProject.cpp" />
+    <ClCompile Include="MRPointsToDistanceVolume.cpp" />
     <ClCompile Include="MRPointsToMeshProjector.cpp" />
     <ClCompile Include="MRMeshTrimWithPlane.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />

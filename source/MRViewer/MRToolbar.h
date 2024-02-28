@@ -38,6 +38,8 @@ public:
     const MenuItemsList& getItemsList() const { return itemsList_; }
     /// get item list version
     int getItemsListVersion() const { return itemsListVersion_; }
+    /// set item list version
+    void setItemsListVersion( int version ) { itemsListVersion_ = version; }
 
     void setScaling( float scale ) { scaling_ = scale; }
 private:

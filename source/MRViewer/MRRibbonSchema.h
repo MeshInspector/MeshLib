@@ -33,6 +33,7 @@ struct MenuItemInfo
 using ItemMap = HashMap<std::string, MenuItemInfo>;
 using TabsGroupsMap = HashMap<std::string, std::vector<std::string>>;
 using GroupsItemsMap = TabsGroupsMap;
+using MenuItemsList = std::vector<std::string>;
 struct RibbonTab
 {
     std::string name;
@@ -97,10 +98,8 @@ public:
     // Loads schema from files
     MRVIEWER_API virtual void loadSchema() const;
 
-    /// Reads schema items list from `root` to `list`
-    /// \param version - get the read item list version
-    /// \param migrations - apply migrations to the result item list
-    MRVIEWER_API static void readMenuItemsList( const Json::Value& root, MenuItemsList& list, int* version = nullptr, const MenuItemsListMigrations* migrations = nullptr );
+    // Reads schema items list from `root` to `list`
+    MRVIEWER_API static void readMenuItemsList( const Json::Value& root, MenuItemsList& list );
 
     // Recalc items sizes
     MRVIEWER_API static void recalcItemSizes();

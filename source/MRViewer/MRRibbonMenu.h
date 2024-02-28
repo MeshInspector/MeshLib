@@ -68,6 +68,8 @@ public:
     void setCloseContextOnChange( bool deselect ) { closeContextOnChange_ = deselect; }
     bool getCloseContextOnChange() { return closeContextOnChange_; }
 
+    /// set quick access menu item list version
+    MRVIEWER_API virtual void setQuickAccessListVersion( int version );
     /// read quick access menu items list from json
     MRVIEWER_API virtual void readQuickAccessList( const Json::Value& root );
 

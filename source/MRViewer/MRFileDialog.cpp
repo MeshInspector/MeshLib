@@ -11,7 +11,7 @@
 
 #ifndef _WIN32
   #ifndef __EMSCRIPTEN__
-    #include <gtkmm.h>
+    #include <nfd.hpp>
   #endif
 #else
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -227,6 +227,101 @@ std::vector<std::filesystem::path> windowsDialog( const FileDialogParameters& pa
 }
 #else
 #ifndef __EMSCRIPTEN__
+std::vector<std::filesystem::path> nfdDialog( const FileDialogParameters& params = {} )
+{
+    const auto currentDir = getCurrentFolder( params );
+
+    std::vector<std::filesystem::path> results;
+    nfdresult_t rc;
+    if ( params.folderDialog )
+    {
+        NFD::UniquePath path;
+        // NOTE: only single dir open dialog is supported
+        assert( !params.multiselect );
+        assert( !params.saveDialog );
+        rc = NFD::PickFolder( path, currentDir.c_str() );
+        if ( rc == NFD_OKAY )
+            results.emplace_back( path.get() );
+    }
+    else
+    {
+        std::vector<nfdfilteritem_t> filters;
+        std::vector<std::string> filterSpecs;
+        filters.reserve( params.filters.size() );
+        filterSpecs.reserve( params.filters.size() );
+        for ( const auto& filter : params.filters )
+        {
+            std::ostringstream oss;
+            size_t separatorPos = 0;
+            for (;;)
+            {
+                auto nextSeparatorPos = filter.extensions.find( ";", separatorPos );
+                auto ext = filter.extensions.substr( separatorPos, nextSeparatorPos - separatorPos );
+                if ( separatorPos != 0 )
+                    oss << ",";
+                assert( ext.size() >= 3 );
+                assert( ext[0] == '*' );
+                assert( ext[1] == '.' );
+                oss << ext.substr( 2 );
+                if ( nextSeparatorPos == std::string::npos )
+                    break;
+                separatorPos = nextSeparatorPos + 1;
+            }
+            const auto& spec = filterSpecs.emplace_back( oss.str() );
+
+            filters.emplace_back( filter.name.c_str(), spec.c_str() );
+        }
+
+        if ( params.multiselect )
+        {
+            NFD::UniquePathSet pathSet;
+            assert( !params.saveDialog );
+            rc = NFD::OpenDialogMultiple( pathSet, filters.data(), filters.size(), currentDir.c_str() );
+            if ( rc == NFD_OKAY )
+            {
+                nfdpathsetsize_t pathCount;
+                NFD::PathSet::Count( pathSet, pathCount );
+                results.reserve( pathCount );
+
+                NFD::UniquePathSetPath path;
+                for ( auto i = 0; i < pathCount; ++i )
+                {
+                    NFD::PathSet::GetPath( pathSet, i, path );
+                    results.emplace_back( path.get() );
+                }
+            }
+        }
+        else
+        {
+            NFD::UniquePath path;
+            if ( params.saveDialog )
+                rc = NFD::SaveDialog( path, filters.data(), filters.size(), currentDir.c_str(), params.fileName.c_str() );
+            else
+                rc = NFD::OpenDialog( path, filters.data(), filters.size(), currentDir.c_str() );
+            if ( rc == NFD_OKAY )
+                results.emplace_back( path.get() );
+        }
+    }
+
+    switch ( rc )
+    {
+        case NFD_OKAY:
+        {
+            assert( !results.empty() );
+            auto& cfg = MR::Config::instance();
+            cfg.setJsonValue( cLastUsedDirKey, results.front().parent_path().string() );
+        }
+            return results;
+        case NFD_CANCEL:
+            return {};
+        case NFD_ERROR:
+            spdlog::warn( "File dialog failed" );
+            return {};
+    }
+    MR_UNREACHABLE
+}
+
+# if 0
 std::string gtkDialogTitle( Gtk::FileChooserAction action, bool multiple = false )
 {
     switch ( action )
@@ -336,6 +431,7 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
 
     return results;
 }
+#endif
 #else
 std::string webAccumFilter( const MR::IOFilters& filters )
 {
@@ -376,7 +472,7 @@ std::filesystem::path openFileDialog( const FileParameters& params )
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
 #elif !defined( __EMSCRIPTEN__ )
-    results = gtkDialog( parameters );
+    results = nfdDialog( parameters );
 #endif
     if ( results.size() == 1 )
         return results[0];
@@ -415,7 +511,7 @@ std::vector<std::filesystem::path> openFilesDialog( const FileParameters& params
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
 #elif !defined( __EMSCRIPTEN__ )
-    results = gtkDialog( parameters );
+    results = nfdDialog( parameters );
 #endif
     return results;
 }
@@ -450,7 +546,7 @@ std::filesystem::path openFolderDialog( std::filesystem::path baseFolder )
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
 #elif !defined( __EMSCRIPTEN__ )
-    results = gtkDialog( parameters );
+    results = nfdDialog( parameters );
 #endif
     if ( results.size() == 1 )
         return results[0];
@@ -472,7 +568,7 @@ std::vector<std::filesystem::path> openFoldersDialog( std::filesystem::path base
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
 #elif !defined( __EMSCRIPTEN__ )
-    results = gtkDialog( parameters );
+    results = nfdDialog( parameters );
 #endif
     return results;
 }
@@ -490,7 +586,7 @@ std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
 #elif !defined( __EMSCRIPTEN__ )
-    results = gtkDialog( parameters );
+    results = nfdDialog( parameters );
 #endif
     if ( results.size() == 1 )
         return results[0];
@@ -518,6 +614,24 @@ void saveFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
     EM_ASM( download_file_dialog_popup( UTF8ToString( $0 ), UTF8ToString( $1 ) ), params.fileName.c_str(), accumFilter.c_str() );
 #pragma clang diagnostic pop
+#endif
+}
+
+bool initFileDialog()
+{
+#if defined( _WIN32 ) || defined( __EMSCRIPTEN__ )
+    return true;
+#else
+    return ( NFD_OKAY == NFD::Init() );
+#endif
+}
+
+void shutdownFileDialog()
+{
+#if defined( _WIN32 ) || defined( __EMSCRIPTEN__ )
+    // do nothing
+#else
+    NFD::Quit();
 #endif
 }
 

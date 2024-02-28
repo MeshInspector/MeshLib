@@ -163,3 +163,13 @@ install(DIRECTORY imgui/misc DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui
 install(DIRECTORY eigen/Eigen DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 install(DIRECTORY eigen/unsupported DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 
+if(NOT MR_EMSCRIPTEN AND NOT MINGW)
+  set(BUILD_SHARED_LIBS ON)
+  set(NFD_BUILD_TESTS OFF)
+  set(NFD_INSTALL ON)
+  # TODO: build with both GTK and portal support
+  set(NFD_PORTAL OFF)
+  # TODO: `allowedContentTypes` property support on macOS
+  set(NFD_USE_ALLOWEDCONTENTTYPES_IF_AVAILABLE OFF)
+  add_subdirectory(nativefiledialog-extended)
+endif()

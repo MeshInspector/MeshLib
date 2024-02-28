@@ -17,13 +17,6 @@ ENDIF() # MR_EMSCRIPTEN
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
-IF(NOT MR_EMSCRIPTEN)
-pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
-if(GTKMM_FOUND)
-  target_include_directories( ${PROJECT_NAME} PUBLIC ${GTKMM_INCLUDE_DIRS})
-endif()
-ENDIF() # NOT MR_EMSCRIPTEN
-
 file(GLOB JSONS "*.json")
 IF(MR_EMSCRIPTEN)
 	file(COPY ${JSONS} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
@@ -40,53 +33,52 @@ IF(MR_EMSCRIPTEN)
 			glfw
 			)
 ELSE() # MR_EMSCRIPTEN
-IF(APPLE)
-	add_definitions("-x objective-c++")
-	find_library(APPKIT_LIBRARY AppKit)
-	IF(NOT APPKIT_LIBRARY)
-		message(FATAL_ERROR "AppKit not found")
-	ENDIF()
-    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
-	target_link_libraries(${PROJECT_NAME} PRIVATE
-			MRMesh
-			GTest::gtest
-			fmt
-			tbb
-			OpenVDB
-			spdlog
-			jsoncpp
-			cpr
-			sigc-3.0
-			glib-2.0
-			glibmm-2.4
-			imgui
-			glad
-			glfw
-			gtkmm-3.0
-			hidapi
-			${APPKIT_LIBRARY}
-			)
-ELSE() # NOT APPLE
-	target_link_libraries(${PROJECT_NAME} PRIVATE
-			MRMesh
-			gtest
-			dl
-			cpr
-			imgui
-			glad
-			glfw
-			gtkmm-3.0
-			glib-2.0
-			glibmm-2.4
-			sigc-2.0
-			hidapi-hidraw
-			jsoncpp
-			spdlog
-			fmt
-			openvdb
-			tbb
-			)
-ENDIF() # APPLE
+	# TODO: CMAKE_PREFIX_PATH for thirdparty
+	#find_package(nfd REQUIRED)
+
+	IF(APPLE)
+		add_definitions("-x objective-c++")
+		find_library(APPKIT_LIBRARY AppKit)
+		IF(NOT APPKIT_LIBRARY)
+			message(FATAL_ERROR "AppKit not found")
+		ENDIF()
+	    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
+		target_link_libraries(${PROJECT_NAME} PRIVATE
+				MRMesh
+				GTest::gtest
+				fmt
+				tbb
+				OpenVDB
+				spdlog
+				jsoncpp
+				cpr
+				imgui
+				glad
+				glfw
+				#nfd::nfd
+				nfd
+				hidapi
+				${APPKIT_LIBRARY}
+				)
+	ELSE() # NOT APPLE
+		target_link_libraries(${PROJECT_NAME} PRIVATE
+				MRMesh
+				gtest
+				dl
+				cpr
+				imgui
+				glad
+				glfw
+				#nfd::nfd
+				nfd
+				hidapi-hidraw
+				jsoncpp
+				spdlog
+				fmt
+				openvdb
+				tbb
+				)
+	ENDIF() # APPLE
 ENDIF() # MR_EMSCRIPTEN
 
 file(GLOB JSONS "*.json")

@@ -25,6 +25,7 @@
 #include "MRPointInAllSpaces.h"
 #include "MRViewport.h"
 #include "MRFrameCounter.h"
+#include "MRFileDialog.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -658,6 +659,8 @@ int Viewer::launchInit_( const LaunchParams& params )
 #endif
         glfw_window_scale( window, xscale, yscale );
 
+        initFileDialog();
+
         enableAlphaSort( true );
         if ( sceneTexture_ )
             sceneTexture_->reset( { width, height }, -1 );
@@ -814,6 +817,8 @@ void Viewer::launchShut()
 
     if ( touchpadController_ )
         touchpadController_->reset();
+
+    shutdownFileDialog();
 
     glfwDestroyWindow( window );
     glfwTerminate();

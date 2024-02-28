@@ -340,8 +340,8 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         Json::Value qaList = Json::arrayValue;
         qaList.resize( int( quickAccessList.size() ) + 1 );
         qaList[0]["Version"] = toolbar.getItemsListVersion();
-        for ( int i = 1; i < quickAccessList.size(); ++i )
-            qaList[i]["Name"] = quickAccessList[i];
+        for ( int i = 0; i < quickAccessList.size(); ++i )
+            qaList[i + 1]["Name"] = quickAccessList[i];
         cfg.setJsonValue( cQuickAccesListKey, qaList );
 
         cfg.setVector2i( cRibbonLeftWindowSize, ribbonMenu->getSceneSize() );

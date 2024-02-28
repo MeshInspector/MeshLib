@@ -279,16 +279,36 @@ void RibbonSchemaLoader::loadSchema() const
     }
 }
 
-void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsList& list )
+void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsList& list, int* version, const MenuItemsListMigrations* migrations )
 {
     if ( !root.isArray() )
         return;
 
     list.clear();
 
+    int versionStub = 1;
+    if ( !version )
+        version = &versionStub;
+
     for ( int i = 0; i <int( root.size() ); ++i )
     {
         auto& item = root[i];
+
+        static const std::string cVersionKey( "Version" );
+        if ( const auto* itemVersion = item.find( cVersionKey.data(), cVersionKey.data() + cVersionKey.size() ) )
+        {
+            if ( itemVersion->isInt() )
+            {
+                *version = itemVersion->asInt();
+                assert( *version >= 1 );
+                continue;
+            }
+            else
+            {
+                spdlog::warn( "\"Version\" field is invalid in \"Quick Access\" {}", i );
+            }
+        }
+
         auto& itemName = item["Name"];
         if ( !itemName.isString() )
         {
@@ -305,6 +325,17 @@ void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsLi
         }
         list.push_back( itemName.asString() );
     }
+
+    if ( migrations )
+    {
+        for ( auto it = migrations->upper_bound( *version ); it != migrations->end(); ++it )
+        {
+            const auto& [migrationVersion, migrationRule] = *it;
+            migrationRule( list );
+            *version = migrationVersion;
+        }
+    }
+
     recalcItemSizes();
 }
 

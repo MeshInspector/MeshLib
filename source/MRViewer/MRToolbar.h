@@ -1,11 +1,12 @@
 #pragma once
-#include "MRMesh/MRMeshFwd.h"
+
+#include "MRViewerFwd.h"
+
 #include "MRMesh/MRColor.h"
 #include "MRPch/MRJson.h"
 
 namespace MR
 {
-using MenuItemsList = std::vector<std::string>;
 
 class RibbonMenu;
 
@@ -29,12 +30,14 @@ public:
     void drawCustomize();
 
     /// read toolbar items from json
-    void readItemsList( const Json::Value& root );
+    void readItemsList( const Json::Value& root, const MenuItemsListMigrations* migrations = nullptr );
     /// reset items list to default value
     /// \details default value is taken from RibbonSchemaHolder
     void resetItemsList();
     /// get acces to items
     const MenuItemsList& getItemsList() const { return itemsList_; }
+    /// get item list version
+    int getItemsListVersion() const { return itemsListVersion_; }
 
     void setScaling( float scale ) { scaling_ = scale; }
 private:
@@ -54,7 +57,7 @@ private:
 
     MenuItemsList itemsList_; // toolbar items list
     MenuItemsList itemsListCustomize_; // toolbar preview items list for Toolbar Customize window
-
+    int itemsListVersion_{ 1 }; // items list version
 
     float currentWidth_{ 0.0f };
     bool dragDrop_ = false; // active drag&drop in Toolbar Customize window

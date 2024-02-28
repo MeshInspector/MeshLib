@@ -1,8 +1,11 @@
 #pragma once
 
 #include "exports.h"
+
 #include <MRMesh/MRMeshFwd.h>
+
 #include <functional>
+#include <map>
 
 namespace MR
 {
@@ -41,6 +44,10 @@ class ViewerEventQueue;
 class Viewport;
 class RibbonMenu;
 class RibbonMenuItem;
+
+using MenuItemsList = std::vector<std::string>;
+using MenuItemsListMigration = std::function<void ( MenuItemsList& )>;
+using MenuItemsListMigrations = std::map<int, MenuItemsListMigration>;
 
 class TouchpadController;
 struct TouchpadParameters;

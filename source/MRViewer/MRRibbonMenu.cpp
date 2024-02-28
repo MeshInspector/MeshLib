@@ -210,7 +210,7 @@ bool RibbonMenu::isTopPannelPinned() const
 
 void RibbonMenu::readQuickAccessList( const Json::Value& root )
 {
-    toolbar_.readItemsList( root );
+    toolbar_.readItemsList( root, toolbarItemsListMigrations_() );
 }
 
 void RibbonMenu::resetQuickAccessList()

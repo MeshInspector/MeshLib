@@ -197,9 +197,9 @@ void Toolbar::drawCustomize()
     ImGui::End();
 }
 
-void Toolbar::readItemsList( const Json::Value& root )
+void Toolbar::readItemsList( const Json::Value& root, const MenuItemsListMigrations* migrations )
 {
-    RibbonSchemaLoader::readMenuItemsList( root, itemsList_ );
+    RibbonSchemaLoader::readMenuItemsList( root, itemsList_, &itemsListVersion_, migrations );
 }
 
 void Toolbar::resetItemsList()

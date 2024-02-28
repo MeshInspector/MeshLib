@@ -1,7 +1,6 @@
 #pragma once
-#include "MRMeshFwd.h"
-#include "MRVector3.h"
-#include "MRProgressCallback.h"
+
+#include "MRDistanceVolumeParams.h"
 #include "MRSignDetectionMode.h"
 #include "MRSimpleVolume.h"
 #include "MRExpected.h"
@@ -10,21 +9,6 @@
 
 namespace MR
 {
-
-struct DistanceVolumeParams
-{
-    /// origin point of voxels box
-    Vector3f origin;
-    /// progress callback
-    ProgressCallback cb;
-    /// size of voxel on each axis
-    Vector3f voxelSize{ 1.0f,1.0f,1.0f };
-    /// num voxels along each axis
-    Vector3i dimensions{ 100,100,100 };
-    /// whether to precompute minimum and maximum values
-    /// (requires to iterate through all voxels, which might be computationally expensive for FunctionVolume)
-    bool precomputeMinMax = true;
-};
 
 struct MeshToDistanceVolumeParams : DistanceVolumeParams
 {
@@ -37,7 +21,6 @@ struct MeshToDistanceVolumeParams : DistanceVolumeParams
 
     std::shared_ptr<IFastWindingNumber> fwn;
 };
-using MeshToSimpleVolumeParams [[deprecated]] = MeshToDistanceVolumeParams;
 
 /// makes SimpleVolume filled with (signed or unsigned) distances from Mesh with given settings
 MRMESH_API Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params = {} );
@@ -50,4 +33,4 @@ MRMESH_API Expected<FunctionVolume> meshToDistanceFunctionVolume( const MeshPart
 MRMESH_API Expected<SimpleVolume, std::string> meshRegionToIndicatorVolume( const Mesh& mesh, const FaceBitSet& region,
     float offset, const DistanceVolumeParams& params );
 
-}
+} //namespace MR

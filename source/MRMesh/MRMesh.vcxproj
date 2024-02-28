@@ -20,6 +20,7 @@
     <ClInclude Include="MRCylinder3.h" />
     <ClInclude Include="MRCylinderApproximator.h" />
     <ClInclude Include="MRCylinderObject.h" />
+    <ClInclude Include="MRDistanceVolumeParams.h" />
     <ClInclude Include="MRFeatureObject.h" />
     <ClInclude Include="MRFeatures.h" />
     <ClInclude Include="MRFinally.h" />

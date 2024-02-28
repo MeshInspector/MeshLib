@@ -1206,6 +1206,9 @@
     <ClInclude Include="MRDefaultFeatureObjectParams.h">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
+    <ClInclude Include="MRDistanceVolumeParams.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

@@ -13,7 +13,7 @@ import pytest
 @pytest.mark.parametrize("input", ["torus", "crocodile"])
 def test_stitch(tmp_path, input, metric):
     """
-    Test stich algorithm
+    Test stitch holes algorithm
     """
     #  Load input meshes
     input_folder = Path(test_files_path) / "algorithms" / "stitch" / input
@@ -32,6 +32,6 @@ def test_stitch(tmp_path, input, metric):
     mlib.saveMesh(mesh, tmp_path / f"{case_name}.mrmesh")  # used to store
     ref_mesh_path = input_folder / f"{case_name}.mrmesh"
     ref_mesh = mlib.loadMesh(ref_mesh_path)
-    #  check meshes similarity (for extra details on fail)
+
     with check:
         compare_meshes_similarity(mesh, ref_mesh)

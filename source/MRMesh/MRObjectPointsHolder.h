@@ -6,7 +6,7 @@
 namespace MR
 {
 
-enum class PointsVisualizePropertyType
+enum class MRMESH_CLASS PointsVisualizePropertyType
 {
     SelectedVertices,
     _count [[maybe_unused]],

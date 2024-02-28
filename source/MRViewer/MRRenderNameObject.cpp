@@ -62,8 +62,7 @@ void RenderNameObject::Task::renderPass()
         lineOutlineWidth = 1 * params->scale,
         buttonOutlineWidth = 1 * params->scale;
 
-    const bool isDark = ColorTheme::getPreset() == ColorTheme::Preset::Dark;
-    const ImU32 colorOutline = ImGui::ColorConvertFloat4ToU32( isDark ? ImVec4( 0, 0, 0, 0.5f ) : ImVec4( 1, 1, 1, 0.5f ) );
+    const ImU32 colorOutline = ImGui::ColorConvertFloat4ToU32( ImVec4( 0, 0, 0, 0.5f ) );
 
     ImVec4 colorMainFloat = ImVec4( object->getFrontColor( object->isSelected() ) );
     colorMainFloat = ImGuiMath::mix( 0.1f, colorMainFloat, ImVec4( 0, 0, 0, 1 ) );

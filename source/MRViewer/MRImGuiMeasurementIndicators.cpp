@@ -47,7 +47,13 @@ Params::Params()
 
     bool isDark = ColorTheme::getPreset() == ColorTheme::Preset::Dark;
     if ( !isDark )
-        std::swap( colorText, colorTextOutline );
+    {
+        // Swap text color and text outline color, but preserve alpha.
+        std::swap( colorText.r, colorTextOutline.r );
+        std::swap( colorText.g, colorTextOutline.g );
+        std::swap( colorText.b, colorTextOutline.b );
+    }
+
 }
 
 float StringWithIcon::getIconWidth() const

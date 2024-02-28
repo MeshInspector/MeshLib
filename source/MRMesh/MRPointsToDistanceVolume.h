@@ -13,6 +13,9 @@ struct PointsToDistanceVolumeParams : DistanceVolumeParams
 
     /// signed distance is truncated (reaches its maximum or minimum) at this distance
     float truncationRadius = 0;
+
+    /// minimum number of points located within influenceRadius for a voxel to get a value
+    int minInfluencePoints = 1;
 };
 
 /// makes SimpleVolume filled with signed distances to points with normals

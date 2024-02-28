@@ -22,6 +22,7 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     p2vParams.dimensions = Vector3i( ( box.max + expansion - p2vParams.origin ) / params.voxelSize ) + Vector3i::diagonal( 1 );
     p2vParams.influenceRadius = params.influenceRadius;
     p2vParams.truncationRadius = params.truncationRadius;
+    p2vParams.minInfluencePoints = params.minInfluencePoints;
 
     MarchingCubesParams vmParams;
     vmParams.origin = p2vParams.origin;

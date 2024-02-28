@@ -15,6 +15,7 @@ Expected<SimpleVolume> pointsToDistanceVolume( const PointCloud & cloud, const P
     MR_TIMER
     assert( params.truncationRadius > 0 );
     assert( params.influenceRadius >= params.truncationRadius );
+    assert( params.minInfluencePoints >= 1 );
     assert( cloud.hasNormals() );
 
     SimpleVolume res;
@@ -38,7 +39,7 @@ Expected<SimpleVolume> pointsToDistanceVolume( const PointCloud & cloud, const P
             ++num;
         } );
 
-        if ( num > 0 )
+        if ( num >= params.minInfluencePoints )
             res.data[i] = sumDist / num;
     }, params.cb ) )
         return unexpectedOperationCanceled();

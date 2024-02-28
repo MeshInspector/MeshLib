@@ -14,6 +14,9 @@ struct PointsToMeshParameters
     /// signed distance is truncated (reaches its maximum or minimum) at this distance
     float truncationRadius = 0;
 
+    /// minimum number of points located within influenceRadius for a voxel to get a value
+    int minInfluencePoints = 1;
+
     /// Size of voxel in grid conversions;
     /// The user is responsible for setting some positive value here
     float voxelSize = 0;

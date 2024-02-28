@@ -1,4 +1,5 @@
 #include "MRPointsToDistanceVolume.h"
+#include "MRSimpleVolume.h"
 #include "MRVolumeIndexer.h"
 #include "MRParallelFor.h"
 #include "MRPointCloud.h"

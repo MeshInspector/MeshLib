@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRDistanceVolumeParams.h"
-#include "MRSimpleVolume.h"
 #include "MRExpected.h"
 
 namespace MR

@@ -8,19 +8,21 @@ namespace MR
 /// \return New edges with origin on the plane and oriented to the positive direction
 /// \param polyline Input polyline that will be cut by the plane
 /// \param plane Input plane to cut polyline with
-MRMESH_API EdgeBitSet subdividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane );
+/// \param new2OldVerts Optional return, map of new vertices to old
+MRMESH_API EdgeBitSet subdividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, VertHashMap* new2OldVerts = nullptr );
 
 /// This function divides polyline with a plane
 /// \param polyline Input polyline that will be cut by the plane
 /// \param plane Input plane to cut polyline with
 /// \param otherPart Optional return, polyline composed from edges on the negative side of the plane
-MRMESH_API void dividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, Polyline3* otherPart = nullptr );
+MRMESH_API void dividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, Polyline3* otherPart = nullptr, VertHashMap* new2OldVerts = nullptr );
 
 /// This function cuts polyline with a plane
 /// \return Edge segments tha are closer to the plane than \param eps
 /// \param polyline Input polyline that will be cut by the plane
 /// \param plane Input plane to cut polyline with
 /// \param eps Maximal distance from the plane
+/// \param new2OldVerts Optional return, map of new vertices to old
 MRMESH_API std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline, const Plane3f& plane, float eps );
 
 }

@@ -5,7 +5,7 @@
 
 namespace MR
 {
-    EdgeBitSet subdividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane )
+    EdgeBitSet subdividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, VertHashMap* new2OldVerts )
     {
         if ( polyline.topology.numValidVerts() == 0 )
             return {};
@@ -14,8 +14,11 @@ namespace MR
         const auto sectionPoints = extractSectionsFromPolyline( polyline, plane, 0.0f );
         for ( const auto& sectionPoint : sectionPoints )
         {
+            VertId oldVert = polyline.topology.org( sectionPoint.e );
             polyline.splitEdge( sectionPoint.e, polyline.edgePoint( sectionPoint.edgePointA() ) );
             res.autoResizeSet( sectionPoint.e );
+            if ( new2OldVerts )
+                new2OldVerts->insert_or_assign( oldVert, polyline.topology.org( sectionPoint.e ) );
         }
 
         return res;
@@ -50,12 +53,12 @@ namespace MR
         return res;
     }
 
-    void dividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, Polyline3* otherPart )
+    void dividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, Polyline3* otherPart, VertHashMap* new2OldVerts )
     {
         if ( polyline.points.empty() )
             return;
 
-        const auto newEdges = subdividePolylineWithPlane( polyline, plane );
+        const auto newEdges = subdividePolylineWithPlane( polyline, plane, new2OldVerts );
         if ( newEdges.empty() )
         {            
             if ( plane.distance( polyline.points.front() ) < 0 )

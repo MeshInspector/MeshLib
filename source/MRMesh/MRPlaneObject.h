@@ -60,6 +60,7 @@ protected:
 
 private:
     void constructMesh_();
+    void orientateFollowMainAxis_();
 };
 
 }

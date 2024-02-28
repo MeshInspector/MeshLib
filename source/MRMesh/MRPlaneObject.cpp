@@ -78,6 +78,26 @@ PlaneObject::PlaneObject()
     constructMesh_();
 }
 
+
+void PlaneObject::orientateFollowMainAxis_()
+{
+    auto axis = Vector3f::plusZ();
+    auto vector = cross( axis, getNormal() );
+
+    constexpr float parallelVectorLimitSq = 1e-6f;
+    if ( vector.lengthSq() < parallelVectorLimitSq )
+        vector = Vector3f( { axis.y , axis.z , axis.x } );
+    vector = vector.normalized();
+
+    auto x = (xf().A * MR::Vector3f::plusX() ).normalized();
+    //auto angle = std::acos( dot( vector, x) );
+    auto angle = std::atan2(  cross( vector, x ).length() , dot( vector, x ) );
+    auto A = Matrix3f::rotation( MR::Vector3f::plusZ(), angle );
+    auto currXf = xf();
+    currXf.A = currXf.A * A;
+    setXf( currXf );
+}
+
 PlaneObject::PlaneObject( const std::vector<Vector3f>& pointsToApprox )
     : PlaneObject()
 {
@@ -96,6 +116,9 @@ PlaneObject::PlaneObject( const std::vector<Vector3f>& pointsToApprox )
         normal *= -1.f;
 
     setNormal( normal );
+
+    orientateFollowMainAxis_();
+
     setCenter( plane.project( box.center() ) );
     setSize( box.diagonal() );
 }

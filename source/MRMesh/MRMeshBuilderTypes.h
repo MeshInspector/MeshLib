@@ -26,7 +26,7 @@ struct Triangle
     }
 };
 
-struct BuildSettings
+struct MRMESH_CLASS BuildSettings
 {
     /// if region is given then on input it contains the faces to be added, and on output the faces failed to be added
     FaceBitSet * region = nullptr;

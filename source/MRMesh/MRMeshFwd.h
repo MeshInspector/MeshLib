@@ -22,6 +22,8 @@
     #endif
 #endif
 
+#define PYBIND11_DETAILED_ERROR_MESSAGES
+
 #include <array>
 #include <vector>
 #include <string>

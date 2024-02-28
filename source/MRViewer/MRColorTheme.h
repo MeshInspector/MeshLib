@@ -92,7 +92,7 @@ public:
         ToolbarHovered,
         ToolbarClicked,
 
-        ToolbarCustomizeBg,
+        ModalBackground,
 
         Text,
         TextEnabled,

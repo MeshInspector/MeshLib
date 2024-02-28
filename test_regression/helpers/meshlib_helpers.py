@@ -46,7 +46,8 @@ def compare_meshes_similarity(mesh1: mrmesh.Mesh, mesh2: mrmesh.Mesh,
     """
     with check:
         #  check on meshes relative Hausdorff distance
-        assert relative_hausdorff(mesh1, mesh2) > rhsdr_thresh
+        rhsdr = relative_hausdorff(mesh1, mesh2)
+        assert rhsdr > rhsdr_thresh, f"Relative hausdorff is lower than threshold: {rhsdr}, threshold is {rhsdr_thresh}"
     with (check):
         #  check on meshes volume
         assert abs(mesh1.volume() - mesh2.volume()) / min(mesh1.volume(), mesh2.volume()) < vol_thresh, (

@@ -381,7 +381,7 @@ MR_SUPPRESS_WARNING_POP
         globalAlpha_.get() = uint8_t( root["Colors"]["GlobalAlpha"].asUInt() );
 
     if ( const auto& showNameJson = root["ShowName"]; showNameJson.isUInt() )
-        showName_ = ViewportMask( showNameJson.isUInt() );
+        showName_ = ViewportMask( showNameJson.asUInt() );
 
     Vector4f resVec;
     // labels

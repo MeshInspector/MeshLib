@@ -59,11 +59,10 @@ void RenderNameObject::Task::renderPass()
         // Button rounding.
         rounding = 4 * params->scale,
         lineWidth = 2 * params->scale,
-        lineOutlineWidth = 2 * params->scale,
-        buttonOutlineWidth = 2 * params->scale;
+        lineOutlineWidth = 1 * params->scale,
+        buttonOutlineWidth = 1 * params->scale;
 
-    const bool isDark = ColorTheme::getPreset() == ColorTheme::Preset::Dark;
-    const ImU32 colorOutline = ImGui::ColorConvertFloat4ToU32( isDark ? ImVec4( 0, 0, 0, 0.5f ) : ImVec4( 1, 1, 1, 0.5f ) );
+    const ImU32 colorOutline = ImGui::ColorConvertFloat4ToU32( ImVec4( 0, 0, 0, 0.5f ) );
 
     ImVec4 colorMainFloat = ImVec4( object->getFrontColor( object->isSelected() ) );
     colorMainFloat = ImGuiMath::mix( 0.1f, colorMainFloat, ImVec4( 0, 0, 0, 1 ) );
@@ -140,7 +139,7 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
     const float
         // When offsetting the button relative to a point, this is the gap to the point (or rather to an imaginary line passing through the point,
         //   perpendicular to the offset direction).
-        buttonSpacingToPoint = 8 * params.scale;
+        buttonSpacingToPoint = 30 * params.scale;
 
 
     task_.paddingA = ImGuiMath::round( ImVec2( 4, 2 ) * params.scale ),

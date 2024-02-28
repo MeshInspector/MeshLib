@@ -5,7 +5,7 @@
 
 namespace MR
 {
-    EdgeBitSet subdividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane )
+    EdgeBitSet subdividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
     {
         if ( polyline.topology.numValidVerts() == 0 )
             return {};
@@ -14,8 +14,10 @@ namespace MR
         const auto sectionPoints = extractSectionsFromPolyline( polyline, plane, 0.0f );
         for ( const auto& sectionPoint : sectionPoints )
         {
-            polyline.splitEdge( sectionPoint.e, polyline.edgePoint( sectionPoint.edgePointA() ) );
+            const auto eNew = polyline.splitEdge( sectionPoint.e, polyline.edgePoint( sectionPoint.edgePointA() ) );            
             res.autoResizeSet( sectionPoint.e );
+            if ( onEdgeSplitCallback )
+                onEdgeSplitCallback( sectionPoint.e, eNew, sectionPoint.a );
         }
 
         return res;
@@ -50,12 +52,12 @@ namespace MR
         return res;
     }
 
-    void dividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, Polyline3* otherPart )
+    void dividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, Polyline3* otherPart, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
     {
         if ( polyline.points.empty() )
             return;
 
-        const auto newEdges = subdividePolylineWithPlane( polyline, plane );
+        const auto newEdges = subdividePolylineWithPlane( polyline, plane, onEdgeSplitCallback );
         if ( newEdges.empty() )
         {            
             if ( plane.distance( polyline.points.front() ) < 0 )

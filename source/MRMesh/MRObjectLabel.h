@@ -8,7 +8,7 @@
 namespace MR
 {
 
-enum class LabelVisualizePropertyType
+enum class MRMESH_CLASS LabelVisualizePropertyType
 {
     SourcePoint,
     LeaderLine,

@@ -43,6 +43,12 @@ public:
     /// calculates plane size from xf
     MRMESH_API float getSize() const;
 
+    MRMESH_API float getSizeX() const;
+    MRMESH_API float getSizeY() const;
+
+    MRMESH_API void setSizeX( float size );
+    MRMESH_API void setSizeY( float size );
+
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 protected:
     PlaneObject( const PlaneObject& other ) = default;

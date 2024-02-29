@@ -22,7 +22,9 @@ MR_ADD_CLASS_FACTORY( PlaneObject )
 
 Vector3f PlaneObject::getNormal() const
 {
-    return ( xf().A * Vector3f::plusZ() ).normalized();
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    return ( r * Vector3f::plusZ() ).normalized();
 }
 
 Vector3f PlaneObject::getCenter() const
@@ -37,6 +39,8 @@ void PlaneObject::setNormal( const Vector3f& normal )
     decomposeMatrix3( xf().A, r, s );
     currentXf.A = Matrix3f::rotation( Vector3f::plusZ(), normal ) * s;
     setXf( currentXf );
+    orientateFollowMainAxis_();
+
 }
 
 void PlaneObject::setCenter( const Vector3f& center )
@@ -55,11 +59,57 @@ void PlaneObject::setSize( float size )
     setXf( currentXf );
 }
 
+/*
+void CylinderObject::setLength( float length )
+{
+    auto direction = getDirection();
+    auto currentXf = xf();
+    auto radius = getRadius();
+    currentXf.A = ( getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, length ) );
+    setXf( currentXf );
+}
+*/
+
+void PlaneObject::setSizeX( float size )
+{
+    size = size / basePlaneObjectHalfEdgeLength_ / 2.0f; // normalization for base figure dimentions
+    auto currentXf = xf();
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    currentXf.A = r * Matrix3f::scale( size, s.y.y, 1.0f );
+    setXf( currentXf );
+}
+
+void PlaneObject::setSizeY( float size )
+{
+    size = size / basePlaneObjectHalfEdgeLength_ / 2.0f; // normalization for base figure dimentions
+    auto currentXf = xf();
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    currentXf.A = r * Matrix3f::scale( s.x.x, size, 1.0f );
+    setXf( currentXf );
+}
+
+
 float PlaneObject::getSize( void ) const
 {
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
     return  s.x.x * basePlaneObjectHalfEdgeLength_ * 2.0f;
+}
+
+float PlaneObject::getSizeX( void ) const
+{
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    return  s.x.x * basePlaneObjectHalfEdgeLength_ * 2.0f;
+}
+
+float PlaneObject::getSizeY( void ) const
+{
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    return  s.y.y * basePlaneObjectHalfEdgeLength_ * 2.0f;
 }
 
 const std::vector<FeatureObjectSharedProperty>& PlaneObject::getAllSharedProperties() const
@@ -84,17 +134,21 @@ void PlaneObject::orientateFollowMainAxis_()
     auto axis = Vector3f::plusZ();
     auto vector = cross( axis, getNormal() );
 
-    constexpr float parallelVectorLimitSq = 1e-6f;
+    constexpr float parallelVectorLimitSq = 1e-4f;
     if ( vector.lengthSq() < parallelVectorLimitSq )
         vector = Vector3f( { axis.y , axis.z , axis.x } );
     vector = vector.normalized();
 
-    auto x = (xf().A * MR::Vector3f::plusX() ).normalized();
-    //auto angle = std::acos( dot( vector, x) );
-    auto angle = std::atan2(  cross( vector, x ).length() , dot( vector, x ) );
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    auto x = ( r * MR::Vector3f::plusX() ).normalized();
+
+    auto angle = std::atan2( cross( x, vector ).length(), dot( x, vector ) );
     auto A = Matrix3f::rotation( MR::Vector3f::plusZ(), angle );
+    angle = angle * 180.0f / PI_F;
+
     auto currXf = xf();
-    currXf.A = currXf.A * A;
+    currXf.A = r * A * s;
     setXf( currXf );
 }
 
@@ -117,10 +171,52 @@ PlaneObject::PlaneObject( const std::vector<Vector3f>& pointsToApprox )
 
     setNormal( normal );
 
-    orientateFollowMainAxis_();
-
     setCenter( plane.project( box.center() ) );
-    setSize( box.diagonal() );
+    //setSize( box.diagonal() );
+
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+
+
+
+    MR::Vector3f min( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
+    MR::Vector3f max( -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
+
+    auto oX = ( r * Vector3f::plusX() ).normalized();
+    auto oY = ( r * Vector3f::plusY() ).normalized();
+    auto oZ = ( r * Vector3f::plusZ() ).normalized();
+
+
+
+    for ( const auto& p : pointsToApprox )
+    {
+        auto dX = MR::dot( oX, p );
+        if ( dX < min.x )
+            min.x = dX;
+        if ( dX > max.x )
+            max.x = dX;
+
+        auto dY = MR::dot( oY, p );
+        if ( dY < min.y )
+            min.y = dY;
+        if ( dY > max.y )
+            max.y = dY;
+
+        auto dZ = MR::dot( oZ, p );
+        if ( dZ < min.z )
+            min.z = dZ;
+        if ( dZ > max.z )
+            max.z = dZ;
+
+    }
+
+    auto sX = std::abs( max.x - min.x );
+    auto sY = std::abs( max.y - min.y );
+    auto sZ = std::abs( max.z - min.z );
+
+    sZ = sZ;
+    setSizeX( sX );
+    setSizeY( sY );
 }
 
 std::shared_ptr<Object> PlaneObject::shallowClone() const
@@ -164,9 +260,9 @@ void PlaneObject::constructMesh_()
     Mesh meshObj;
     meshObj.topology = MeshBuilder::fromTriangles( t );
     meshObj.points.emplace_back( -basePlaneObjectHalfEdgeLength_, -basePlaneObjectHalfEdgeLength_, 0 ); // VertId{0}
-    meshObj.points.emplace_back(  basePlaneObjectHalfEdgeLength_, -basePlaneObjectHalfEdgeLength_, 0 ); // VertId{1}
-    meshObj.points.emplace_back( -basePlaneObjectHalfEdgeLength_,  basePlaneObjectHalfEdgeLength_, 0 ); // VertId{2}
-    meshObj.points.emplace_back(  basePlaneObjectHalfEdgeLength_,  basePlaneObjectHalfEdgeLength_, 0 ); // VertId{3}
+    meshObj.points.emplace_back( basePlaneObjectHalfEdgeLength_, -basePlaneObjectHalfEdgeLength_, 0 ); // VertId{1}
+    meshObj.points.emplace_back( -basePlaneObjectHalfEdgeLength_, basePlaneObjectHalfEdgeLength_, 0 ); // VertId{2}
+    meshObj.points.emplace_back( basePlaneObjectHalfEdgeLength_, basePlaneObjectHalfEdgeLength_, 0 ); // VertId{3}
 
     mesh_ = std::make_shared<Mesh>( meshObj );
 

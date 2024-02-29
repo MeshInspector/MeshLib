@@ -26,7 +26,7 @@ def test_fill_holes(tmp_path, input, metric):
     # Connect two holes
     params = mlib.FillHoleParams()
     params.metric = getattr(mlib, metric)(mesh)
-    params.maxPolygonSubdivisions = 100
+    params.maxPolygonSubdivisions = 20
     mlib.fillHole(mesh, edges[0], params)
 
     # === Verification

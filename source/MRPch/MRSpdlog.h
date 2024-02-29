@@ -1,5 +1,24 @@
 #pragma once
 
+namespace spdlog {
+namespace sinks {
+
+// we need to make default visibility of sinks for dynamic_cast
+// to be able to find objects from other shared libraries (particularity on Apple)
+#ifndef _WIN32
+template<typename Mutex>
+class __attribute__((visibility("default"))) rotating_file_sink;
+
+template<typename Mutex, typename FileNameCalc>
+class __attribute__((visibility("default"))) daily_file_sink;
+
+template<typename Mutex>
+class __attribute__((visibility("default"))) basic_file_sink;
+#endif
+
+} //namespace sinks
+} //namespace spdlog
+
 #include "MRFmt.h"
 
 #if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)

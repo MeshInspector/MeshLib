@@ -67,6 +67,7 @@ protected:
 private:
     void constructMesh_();
     void orientateFollowMainAxis_();
+    void setupPlaneSize2DByOriginalPoints_( const std::vector<Vector3f>& pointsToApprox );
 };
 
 }

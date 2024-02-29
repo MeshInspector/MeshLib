@@ -52,23 +52,12 @@ void PlaneObject::setCenter( const Vector3f& center )
 
 void PlaneObject::setSize( float size )
 {
-    auto currentXf = xf();
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    currentXf.A = r * Matrix3f::scale( Vector3f::diagonal( size / basePlaneObjectHalfEdgeLength_ / 2.0f ) );
-    setXf( currentXf );
-}
+    auto xSize = getSizeX();
+    auto ySize = getSizeY();
 
-/*
-void CylinderObject::setLength( float length )
-{
-    auto direction = getDirection();
-    auto currentXf = xf();
-    auto radius = getRadius();
-    currentXf.A = ( getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, length ) );
-    setXf( currentXf );
+    setSizeX( 2.0f * size / ( 1.0f + ySize / xSize ) );
+    setSizeY( 2.0f * size / ( 1.0f + xSize / ySize ) );
 }
-*/
 
 void PlaneObject::setSizeX( float size )
 {
@@ -93,9 +82,7 @@ void PlaneObject::setSizeY( float size )
 
 float PlaneObject::getSize( void ) const
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    return  s.x.x * basePlaneObjectHalfEdgeLength_ * 2.0f;
+    return  ( getSizeX() + getSizeY() ) / 2.0f;
 }
 
 float PlaneObject::getSizeX( void ) const
@@ -117,7 +104,9 @@ const std::vector<FeatureObjectSharedProperty>& PlaneObject::getAllSharedPropert
     static std::vector<FeatureObjectSharedProperty> ret = {
         {"Center", &PlaneObject::getCenter,&PlaneObject::setCenter},
         {"Normal", &PlaneObject::getNormal,&PlaneObject::setNormal},
-        {"Size"  , &PlaneObject::getSize,  &PlaneObject::setSize  }
+        {"Size"  , &PlaneObject::getSize,  &PlaneObject::setSize  },
+        {"SizeX"  , &PlaneObject::getSizeX,  &PlaneObject::setSizeX  },
+        {"SizeY"  , &PlaneObject::getSizeY,  &PlaneObject::setSizeY  },
     };
     return ret;
 }
@@ -132,62 +121,60 @@ PlaneObject::PlaneObject()
 void PlaneObject::orientateFollowMainAxis_()
 {
     auto axis = Vector3f::plusZ();
-    auto vector = cross( axis, getNormal() );
+    auto planeVectorInXY = cross( axis, getNormal() );
 
-    constexpr float parallelVectorLimitSq = 1e-4f;
-    if ( vector.lengthSq() < parallelVectorLimitSq )
-        vector = Vector3f( { axis.y , axis.z , axis.x } );
-    vector = vector.normalized();
-
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    auto x = ( r * MR::Vector3f::plusX() ).normalized();
-
-    auto angle = std::atan2( cross( x, vector ).length(), dot( x, vector ) );
-    auto A = Matrix3f::rotation( MR::Vector3f::plusZ(), angle );
-    angle = angle * 180.0f / PI_F;
-
-    auto currXf = xf();
-    currXf.A = r * A * s;
-    setXf( currXf );
-}
-
-PlaneObject::PlaneObject( const std::vector<Vector3f>& pointsToApprox )
-    : PlaneObject()
-{
-    PointAccumulator pa;
-    Box3f box;
-    for ( const auto& p : pointsToApprox )
+    // if plane approx. parallel to XY plane, orentate it using XZ plane
+    constexpr float parallelVectorsSinusAngleLimit = 9e-2f; // ~5 degree 
+    if ( planeVectorInXY.length() < parallelVectorsSinusAngleLimit )
     {
-        pa.addPoint( p );
-        box.include( p );
+        axis = Vector3f::plusY();
+        planeVectorInXY = cross( axis, getNormal() );
     }
 
-    // make a normal vector from center directed against a point (0, 0, 0)
-    Plane3f plane = pa.getBestPlanef();
-    Vector3f normal = plane.n.normalized();
-    if ( plane.d < 0 )
-        normal *= -1.f;
+    planeVectorInXY = planeVectorInXY.normalized();
 
-    setNormal( normal );
+    // TODO. For XY plane we need this loop, deu to problems in first rotation. 
+    for ( auto i = 0; i < 10; ++i )
+    {
+        // calculate current feature oX-axis direction. 
+        Matrix3f r, s;
+        decomposeMatrix3( xf().A, r, s );
+        auto featureDirectionX = ( r * MR::Vector3f::plusX() ).normalized();
 
-    setCenter( plane.project( box.center() ) );
-    //setSize( box.diagonal() );
+        // both featureDirectionX and planeVectorInXY must be perpendicular to plane normal. 
+        // calculate an angle to rotate around plane normal (oZ-axis) for move feature oX axis into plane, which paralell to globe XY plane. 
+        auto angle = std::atan2( cross( featureDirectionX, planeVectorInXY ).length(), dot( featureDirectionX, planeVectorInXY ) );
+        auto A = Matrix3f::rotation( MR::Vector3f::plusZ(), angle );
 
+        // create new xf matrix
+        auto currXf = xf();
+        currXf.A = r * A * s;
+        setXf( currXf );
+
+        // checking result
+        decomposeMatrix3( xf().A, r, s );
+        auto newFeatureDirectionX = ( r * MR::Vector3f::plusX() ).normalized();
+
+        if ( MR::dot( newFeatureDirectionX, planeVectorInXY ) > 0.99f )
+            return;
+    }
+
+}
+
+
+void PlaneObject::setupPlaneSize2DByOriginalPoints_( const std::vector<Vector3f>& pointsToApprox )
+{
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
 
+    MR::Vector3f min( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), 1.0f );
+    MR::Vector3f max( -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -1.0f );
 
-
-    MR::Vector3f min( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
-    MR::Vector3f max( -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
-
+    // calculate feature oX and oY direction in world (parent) coordinate system.
     auto oX = ( r * Vector3f::plusX() ).normalized();
     auto oY = ( r * Vector3f::plusY() ).normalized();
-    auto oZ = ( r * Vector3f::plusZ() ).normalized();
 
-
-
+    // calculate 2D bounding box in oX, oY coordinate.
     for ( const auto& p : pointsToApprox )
     {
         auto dX = MR::dot( oX, p );
@@ -201,22 +188,37 @@ PlaneObject::PlaneObject( const std::vector<Vector3f>& pointsToApprox )
             min.y = dY;
         if ( dY > max.y )
             max.y = dY;
-
-        auto dZ = MR::dot( oZ, p );
-        if ( dZ < min.z )
-            min.z = dZ;
-        if ( dZ > max.z )
-            max.z = dZ;
-
     }
 
+    // setup sizes
     auto sX = std::abs( max.x - min.x );
     auto sY = std::abs( max.y - min.y );
-    auto sZ = std::abs( max.z - min.z );
 
-    sZ = sZ;
     setSizeX( sX );
     setSizeY( sY );
+}
+
+PlaneObject::PlaneObject( const std::vector<Vector3f>& pointsToApprox )
+    : PlaneObject()
+{
+    PointAccumulator pa;
+    Box3f box;
+    for ( const auto& p : pointsToApprox )
+    {
+        pa.addPoint( p );
+        box.include( p );
+    }
+
+    // make a normal planeVectorInXY from center directed against a point (0, 0, 0)
+    Plane3f plane = pa.getBestPlanef();
+    Vector3f normal = plane.n.normalized();
+    if ( plane.d < 0 )
+        normal *= -1.f;
+
+    setNormal( normal );
+
+    setCenter( plane.project( box.center() ) );
+    setupPlaneSize2DByOriginalPoints_( pointsToApprox );
 }
 
 std::shared_ptr<Object> PlaneObject::shallowClone() const

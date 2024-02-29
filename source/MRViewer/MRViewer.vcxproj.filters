@@ -638,6 +638,9 @@
     <ClInclude Include="MRRenderNameObject.h">
       <Filter>Render\Implementations</Filter>
     </ClInclude>
+    <ClInclude Include="MRRenderWrapObject.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
     <ClInclude Include="MRFrameCounter.h">
       <Filter>Viewer</Filter>
     </ClInclude>

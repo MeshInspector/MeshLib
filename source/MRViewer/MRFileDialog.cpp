@@ -269,7 +269,7 @@ std::vector<std::filesystem::path> nfdDialog( const FileDialogParameters& params
             }
             const auto& spec = filterSpecs.emplace_back( oss.str() );
 
-            filters.emplace_back( filter.name.c_str(), spec.c_str() );
+            filters.emplace_back( nfdfilteritem_t { filter.name.c_str(), spec.c_str() } );
         }
 
         if ( params.multiselect )

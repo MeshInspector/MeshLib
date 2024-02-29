@@ -9,13 +9,14 @@
 #include <GLFW/glfw3.h>
 #include <clocale>
 
-#ifndef _WIN32
-  #ifndef __EMSCRIPTEN__
+#if defined( _WIN32 )
+    #define GLFW_EXPOSE_NATIVE_WIN32
+#elif defined( __APPLE__ )
     #include <nfd.hpp>
-  #endif
-#else
-#define GLFW_EXPOSE_NATIVE_WIN32
+#elif !defined( __EMSCRIPTEN__)
+    #include <gtkmm.h>
 #endif
+
 #ifndef __EMSCRIPTEN__
 #include <GLFW/glfw3native.h>
 #endif
@@ -58,7 +59,6 @@ EMSCRIPTEN_KEEPALIVE int emsSaveFile( const char* filename )
 }
 
 }
-
 #endif
 
 namespace
@@ -91,7 +91,7 @@ std::string getCurrentFolder( const FileDialogParameters& params )
 }
 #endif
 
-#ifdef  _WIN32
+#if defined( _WIN32 )
 std::vector<std::filesystem::path> windowsDialog( const FileDialogParameters& params = {} )
 {
     std::vector<std::filesystem::path> res;
@@ -225,8 +225,7 @@ std::vector<std::filesystem::path> windowsDialog( const FileDialogParameters& pa
 
     return res;
 }
-#else
-#ifndef __EMSCRIPTEN__
+#elif defined( __APPLE__ )
 std::vector<std::filesystem::path> nfdDialog( const FileDialogParameters& params = {} )
 {
     const auto currentDir = getCurrentFolder( params );
@@ -320,8 +319,7 @@ std::vector<std::filesystem::path> nfdDialog( const FileDialogParameters& params
     }
     MR_UNREACHABLE
 }
-
-# if 0
+#elif !defined( __EMSCRIPTEN__ )
 std::string gtkDialogTitle( Gtk::FileChooserAction action, bool multiple = false )
 {
     switch ( action )
@@ -410,28 +408,16 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
         {
             spdlog::warn( "GTK dialog failed" );
         }
-#if defined( __APPLE__ )
-        // on macOS the main window remains unfocused after the file dialog is closed
-        MR::CommandLoop::appendCommand( []
-        {
-            glfwFocusWindow( MR::Viewer::instance()->window );
-        } );
-#endif
     };
-#if defined( __APPLE__ )
-    onResponse( dialog.run() );
-#else // __APPLE__
-    dialog.signal_response().connect([&] ( int responseId )
+    dialog.signal_response().connect( [&] ( int responseId )
     {
         onResponse( responseId );
         dialog.hide();
-    });
+    } );
     kit->run( dialog );
-#endif // __APPLE__
 
     return results;
 }
-#endif
 #else
 std::string webAccumFilter( const MR::IOFilters& filters )
 {
@@ -453,7 +439,6 @@ std::string webAccumFilter( const MR::IOFilters& filters )
     return accumFilter;
 }
 #endif
-#endif
 }
 
 namespace MR
@@ -471,8 +456,10 @@ std::filesystem::path openFileDialog( const FileParameters& params )
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
-#elif !defined( __EMSCRIPTEN__ )
+#elif defined( __APPLE__ )
     results = nfdDialog( parameters );
+#elif !defined( __EMSCRIPTEN__ )
+    results = gtkDialog( parameters );
 #endif
     if ( results.size() == 1 )
         return results[0];
@@ -510,8 +497,10 @@ std::vector<std::filesystem::path> openFilesDialog( const FileParameters& params
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
-#elif !defined( __EMSCRIPTEN__ )
+#elif defined( __APPLE__ )
     results = nfdDialog( parameters );
+#elif !defined( __EMSCRIPTEN__ )
+    results = gtkDialog( parameters );
 #endif
     return results;
 }
@@ -545,8 +534,10 @@ std::filesystem::path openFolderDialog( std::filesystem::path baseFolder )
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
-#elif !defined( __EMSCRIPTEN__ )
+#elif defined( __APPLE__ )
     results = nfdDialog( parameters );
+#elif !defined( __EMSCRIPTEN__ )
+    results = gtkDialog( parameters );
 #endif
     if ( results.size() == 1 )
         return results[0];
@@ -567,8 +558,10 @@ std::vector<std::filesystem::path> openFoldersDialog( std::filesystem::path base
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
-#elif !defined( __EMSCRIPTEN__ )
+#elif defined( __APPLE__ )
     results = nfdDialog( parameters );
+#elif !defined( __EMSCRIPTEN__ )
+    results = gtkDialog( parameters );
 #endif
     return results;
 }
@@ -585,8 +578,10 @@ std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
-#elif !defined( __EMSCRIPTEN__ )
+#elif defined( __APPLE__ )
     results = nfdDialog( parameters );
+#elif !defined( __EMSCRIPTEN__ )
+    results = gtkDialog( parameters );
 #endif
     if ( results.size() == 1 )
         return results[0];
@@ -619,18 +614,16 @@ void saveFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
 
 bool initFileDialog()
 {
-#if defined( _WIN32 ) || defined( __EMSCRIPTEN__ )
-    return true;
-#else
+#ifdef __APPLE__
     return ( NFD_OKAY == NFD::Init() );
+#else
+    return true;
 #endif
 }
 
 void shutdownFileDialog()
 {
-#if defined( _WIN32 ) || defined( __EMSCRIPTEN__ )
-    // do nothing
-#else
+#ifdef __APPLE__
     NFD::Quit();
 #endif
 }

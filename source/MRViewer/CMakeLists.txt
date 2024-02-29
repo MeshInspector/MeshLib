@@ -33,51 +33,57 @@ IF(MR_EMSCRIPTEN)
 			glfw
 			)
 ELSE() # MR_EMSCRIPTEN
-	# TODO: CMAKE_PREFIX_PATH for thirdparty
-	#find_package(nfd REQUIRED)
-
 	IF(APPLE)
+		# TODO: CMAKE_PREFIX_PATH for thirdparty
+		#find_package(nfd REQUIRED)
+		find_library(APPKIT_LIBRARY AppKit REQUIRED)
+
 		add_definitions("-x objective-c++")
-		find_library(APPKIT_LIBRARY AppKit)
-		IF(NOT APPKIT_LIBRARY)
-			message(FATAL_ERROR "AppKit not found")
-		ENDIF()
-	    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
+		target_compile_definitions(${PROJECT_NAME} PRIVATE
+			_GNU_SOURCE
+		)
 		target_link_libraries(${PROJECT_NAME} PRIVATE
-				MRMesh
-				GTest::gtest
-				fmt
-				tbb
-				OpenVDB
-				spdlog
-				jsoncpp
-				cpr
-				imgui
-				glad
-				glfw
-				#nfd::nfd
-				nfd
-				hidapi
-				${APPKIT_LIBRARY}
-				)
+			MRMesh
+			GTest::gtest
+			fmt
+			tbb
+			OpenVDB
+			spdlog
+			jsoncpp
+			cpr
+			imgui
+			glad
+			glfw
+			#nfd::nfd
+			nfd
+			hidapi
+			${APPKIT_LIBRARY}
+		)
 	ELSE() # NOT APPLE
+		pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
+
 		target_link_libraries(${PROJECT_NAME} PRIVATE
-				MRMesh
-				gtest
-				dl
-				cpr
-				imgui
-				glad
-				glfw
-				#nfd::nfd
-				nfd
-				hidapi-hidraw
-				jsoncpp
-				spdlog
-				fmt
-				openvdb
-				tbb
-				)
+			MRMesh
+			gtest
+			dl
+			cpr
+			imgui
+			glad
+			glfw
+			gtkmm-3.0
+			glib-2.0
+			glibmm-2.4
+			sigc-2.0
+			hidapi-hidraw
+			jsoncpp
+			spdlog
+			fmt
+			openvdb
+			tbb
+		)
+		target_include_directories(${PROJECT_NAME} PRIVATE
+			${GTKMM_INCLUDE_DIRS}
+		)
 	ENDIF() # APPLE
 ENDIF() # MR_EMSCRIPTEN
 

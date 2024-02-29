@@ -16,12 +16,15 @@ namespace detail
     };
 }
 
-// The first template argument of `Wrapper` can inherit from this to do some extra customization.
-struct IWrappedObject
+// The first template argument of `Wrapper` can inherit from this to know the object we're wrapping.
+class BasicWrapperTarget
 {
-    virtual ~IWrappedObject() = default;
+protected:
+    ~BasicWrapperTarget() = default;
+    const VisualObject* target_ = nullptr;
 
-    virtual void setTargetObject( const VisualObject& object ) { (void)object; }
+public:
+    void setTargetObject( const VisualObject& object ) { target_ = &object; }
 };
 
 // An `IRenderObject` that embeds a data model object and another render object in it.
@@ -33,7 +36,7 @@ public:
     Wrapper( const VisualObject& object )
         : RenderObjectType( detail::SubobjectStorage<ObjectType>::subobject )
     {
-        if constexpr ( std::derived_from<ObjectType, IWrappedObject> )
+        if constexpr ( std::derived_from<ObjectType, BasicWrapperTarget> )
             this->subobject.setTargetObject( object );
     }
 
@@ -43,16 +46,9 @@ public:
 
 // This can act as the first parameter for `Wrapper` to copy most common visual properties into this subobject from the owner object.
 template <typename ObjectType>
-class CopyVisualProperties : public ObjectType, public IWrappedObject
+class CopyVisualProperties : public ObjectType, public BasicWrapperTarget
 {
-    const VisualObject* target_ = nullptr;
-
 public:
-    void setTargetObject( const VisualObject& object ) override
-    {
-        target_ = &object;
-    }
-
     bool isSelected() const override
     {
         return target_->isSelected();

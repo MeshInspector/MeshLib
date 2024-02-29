@@ -1,12 +1,13 @@
 #pragma once
-
-#include "MRViewerFwd.h"
-
+#include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRColor.h"
 #include "MRPch/MRJson.h"
 
 namespace MR
 {
+using MenuItemsList = std::vector<std::string>;
+using MenuItemsListMigration = std::function<void ( MenuItemsList& )>;
+using MenuItemsListMigrations = std::map<int, MenuItemsListMigration>;
 
 class RibbonMenu;
 
@@ -30,8 +31,7 @@ public:
     void drawCustomize();
 
     /// read toolbar items from json
-    /// \param migrations - (optional) list of rules for upgrading the item list
-    void readItemsList( const Json::Value& root, const MenuItemsListMigrations& migrations = {} );
+    void readItemsList( const Json::Value& root );
     /// reset items list to default value
     /// \details default value is taken from RibbonSchemaHolder
     void resetItemsList();
@@ -41,8 +41,11 @@ public:
     int getItemsListVersion() const { return itemsListVersion_; }
     /// set item list version
     void setItemsListVersion( int version ) { itemsListVersion_ = version; }
+    /// set item list's upgrade rules
+    void setItemsListMigrations( const MenuItemsListMigrations& migrations ) { itemsListMigrations_ = migrations; }
 
     void setScaling( float scale ) { scaling_ = scale; }
+
 private:
     /// draw toolbar customize modal
     void drawCustomizeModal_();
@@ -61,6 +64,7 @@ private:
     MenuItemsList itemsList_; // toolbar items list
     MenuItemsList itemsListCustomize_; // toolbar preview items list for Toolbar Customize window
     int itemsListVersion_{ 1 }; // items list version
+    MenuItemsListMigrations itemsListMigrations_; // items list's upgrade rules
 
     float currentWidth_{ 0.0f };
     bool dragDrop_ = false; // active drag&drop in Toolbar Customize window

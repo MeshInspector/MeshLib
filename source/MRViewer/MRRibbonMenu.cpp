@@ -215,7 +215,7 @@ void RibbonMenu::setQuickAccessListVersion( int version )
 
 void RibbonMenu::readQuickAccessList( const Json::Value& root )
 {
-    toolbar_.readItemsList( root, toolbarItemsListMigrations_ );
+    toolbar_.readItemsList( root );
 }
 
 void RibbonMenu::resetQuickAccessList()

@@ -197,10 +197,10 @@ void Toolbar::drawCustomize()
     ImGui::End();
 }
 
-void Toolbar::readItemsList( const Json::Value& root, const MenuItemsListMigrations& migrations )
+void Toolbar::readItemsList( const Json::Value& root )
 {
     RibbonSchemaLoader::readMenuItemsList( root, itemsList_ );
-    for ( auto it = migrations.upper_bound( itemsListVersion_ ); it != migrations.end(); ++it )
+    for ( auto it = itemsListMigrations_.upper_bound( itemsListVersion_ ); it != itemsListMigrations_.end(); ++it )
     {
         const auto& [migrationVersion, migrationRule] = *it;
         migrationRule( itemsList_ );

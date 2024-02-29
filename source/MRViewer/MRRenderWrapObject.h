@@ -31,7 +31,7 @@ class Wrapper : public detail::SubobjectStorage<ObjectType>, public RenderObject
 {
 public:
     Wrapper( const VisualObject& object )
-        : RenderObjectType( this->subobject )
+        : RenderObjectType( detail::SubobjectStorage<ObjectType>::subobject )
     {
         if constexpr ( std::derived_from<ObjectType, IWrappedObject> )
             this->subobject.setTargetObject( object );
@@ -48,7 +48,7 @@ class CopyVisualProperties : public ObjectType, public IWrappedObject
     const VisualObject* target_ = nullptr;
 
 public:
-    void setTargetObject(const VisualObject &object) override
+    void setTargetObject( const VisualObject& object ) override
     {
         target_ = &object;
     }

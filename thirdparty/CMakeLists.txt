@@ -169,7 +169,5 @@ if(NOT MR_EMSCRIPTEN AND NOT MINGW)
   set(NFD_INSTALL ON)
   # TODO: build with both GTK and portal support
   set(NFD_PORTAL OFF)
-  # TODO: `allowedContentTypes` property support on macOS
-  set(NFD_USE_ALLOWEDCONTENTTYPES_IF_AVAILABLE OFF)
   add_subdirectory(nativefiledialog-extended)
 endif()

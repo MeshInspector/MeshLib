@@ -1,14 +1,15 @@
 #pragma once
+
 #include "MRMeshFwd.h"
-#include "MRObjectMeshHolder.h"
 #include "MRFeatureObject.h"
+#include "MRVisualObject.h"
 
 namespace MR
 {
 
 /// Object to show Cone feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS ConeObject : public ObjectMeshHolder, public FeatureObject
+class MRMESH_CLASS ConeObject : public VisualObject, public FeatureObject
 {
 public:
     /// Creates simple Cone object with center in zero and radius - 1
@@ -85,9 +86,6 @@ protected:
     MRMESH_API void setupRenderObject_() const override;
 
 private:
-    void constructMesh_();
-
-
     // Featue Radius fully controll by cone angle, but its need for speedup internal calculation (not use tan / atan from each estimation).
     float getNormalizedRadius_() const;
 };

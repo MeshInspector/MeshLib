@@ -69,7 +69,8 @@ AllVisualizeProperties VisualObject::getAllVisualizeProperties() const
 
 const Color& VisualObject::getFrontColor( bool selected /*= true */, ViewportId viewportId /*= {} */ ) const
 {
-    return selected ? selectedColor_.get( viewportId ) : unselectedColor_.get( viewportId );
+    // Calling the getter in case it's overridden.
+    return getFrontColorsForAllViewports( selected ).get( viewportId );
 }
 
 void VisualObject::setFrontColor( const Color& color, bool selected, ViewportId viewportId )
@@ -109,7 +110,8 @@ void VisualObject::setBackColorsForAllViewports( ViewportProperty<Color> val )
 
 const Color& VisualObject::getBackColor( ViewportId viewportId ) const
 {
-    return backFacesColor_.get( viewportId );
+    // Calling the getter in case it's overridden.
+    return getBackColorsForAllViewports().get( viewportId );
 }
 
 void VisualObject::setBackColor( const Color& color, ViewportId viewportId )
@@ -122,7 +124,8 @@ void VisualObject::setBackColor( const Color& color, ViewportId viewportId )
 
 const uint8_t& VisualObject::getGlobalAlpha( ViewportId viewportId /*= {} */ ) const
 {
-    return globalAlpha_.get( viewportId );
+    // Calling the getter in case it's overridden.
+    return getGlobalAlphaForAllViewports().get( viewportId );
 }
 
 void VisualObject::setGlobalAlpha( uint8_t alpha, ViewportId viewportId /*= {} */ )

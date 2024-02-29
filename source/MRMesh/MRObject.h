@@ -170,7 +170,7 @@ public:
 
     /// selects the object, returns true if value changed, otherwise returns false
     MRMESH_API virtual bool select( bool on );
-    bool isSelected() const { return selected_; }
+    virtual bool isSelected() const { return selected_; }
 
     /// ancillary object is an object hidden (in scene menu) from a regular user
     /// such objects cannot be selected, and if it has been selected, it is unselected when turn ancillary

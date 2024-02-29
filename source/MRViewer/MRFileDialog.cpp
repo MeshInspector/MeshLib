@@ -248,6 +248,7 @@ std::vector<std::filesystem::path> nfdDialog( const FileDialogParameters& params
         std::vector<std::string> filterSpecs;
         filters.reserve( params.filters.size() );
         filterSpecs.reserve( params.filters.size() );
+        std::string defaultExtension;
         for ( const auto& filter : params.filters )
         {
             std::ostringstream oss;
@@ -262,6 +263,8 @@ std::vector<std::filesystem::path> nfdDialog( const FileDialogParameters& params
                 assert( ext[0] == '*' );
                 assert( ext[1] == '.' );
                 oss << ext.substr( 2 );
+                if ( defaultExtension.empty() )
+                    defaultExtension = ext.substr( 1 );
                 if ( nextSeparatorPos == std::string::npos )
                     break;
                 separatorPos = nextSeparatorPos + 1;
@@ -298,7 +301,16 @@ std::vector<std::filesystem::path> nfdDialog( const FileDialogParameters& params
             else
                 rc = NFD::OpenDialog( path, filters.data(), filters.size(), currentDir.c_str() );
             if ( rc == NFD_OKAY )
-                results.emplace_back( path.get() );
+            {
+                std::filesystem::path result = path.get();
+                if ( params.saveDialog && !result.has_extension() )
+                {
+                    // FIXME: cannot choose file type on macOS
+                    // using the first suggested extension by default
+                    result.replace_extension( defaultExtension );
+                }
+                results.emplace_back( std::move( result ) );
+            }
         }
     }
 

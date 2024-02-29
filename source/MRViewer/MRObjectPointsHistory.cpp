@@ -46,7 +46,7 @@ static void packPointsWithHistoryCore( const std::shared_ptr<ObjectPoints>& objP
         objPoints->setVertsColorMap( std::move( newColors ) );
     }
 
-    // update faces in the selection
+    // update points in the selection
     const auto & oldSel = objPoints->getSelectedPoints();
     if ( oldSel.any() )
     {

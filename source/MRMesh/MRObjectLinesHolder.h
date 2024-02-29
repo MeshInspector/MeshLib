@@ -6,7 +6,7 @@
 namespace MR
 {
 
-enum class LinesVisualizePropertyType
+enum class MRMESH_CLASS LinesVisualizePropertyType
 {
     Points,
     Smooth,

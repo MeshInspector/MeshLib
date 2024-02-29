@@ -27,6 +27,7 @@ const std::string cColorThemeParamKey = "colorTheme";
 const std::string cSceneControlParamKey = "sceneControls";
 const std::string cTopPanelPinnedKey = "topPanelPinned";
 const std::string cQuickAccesListKey = "quickAccesList";
+const std::string cQuickAccessListVersionKey = "quickAccessListVersion";
 const std::string cMainWindowSize = "mainWindowSize";
 const std::string cMainWindowPos = "mainWindowPos";
 const std::string cMainWindowMaximized = "mainWindowMaximized";
@@ -200,6 +201,9 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
 #endif
     if ( ribbonMenu )
     {
+        if ( cfg.hasJsonValue( cQuickAccessListVersionKey ) )
+            ribbonMenu->setQuickAccessListVersion( cfg.getJsonValue( cQuickAccessListVersionKey ).asInt() );
+
         if ( cfg.hasJsonValue( cQuickAccesListKey ) )
             ribbonMenu->readQuickAccessList( cfg.getJsonValue( cQuickAccesListKey ) );
 
@@ -335,11 +339,13 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
 
     if ( ribbonMenu )
     {
-        auto& quickAccessList = ribbonMenu->getToolbar().getItemsList();
+        const auto& toolbar = ribbonMenu->getToolbar();
+        const auto& quickAccessList = toolbar.getItemsList();
         Json::Value qaList = Json::arrayValue;
         qaList.resize( int( quickAccessList.size() ) );
         for ( int i = 0; i < quickAccessList.size(); ++i )
             qaList[i]["Name"] = quickAccessList[i];
+        cfg.setJsonValue( cQuickAccessListVersionKey, toolbar.getItemsListVersion() );
         cfg.setJsonValue( cQuickAccesListKey, qaList );
 
         cfg.setVector2i( cRibbonLeftWindowSize, ribbonMenu->getSceneSize() );

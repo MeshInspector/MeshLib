@@ -280,7 +280,8 @@ private:
         Eigen::Vector<T, 3> beta = Q * alpha;
         T error = ( pVec.dot( precomputedF2_ * pVec ) - 4 * alpha.dot( beta ) + 4 * beta.dot( precomputedF0_ * beta ) ) / static_cast< T >( normalizedPoints_.size() );
 
-        // some times appears floating points calculation errors. 
+        // some times appears floating points calculation errors. Error is a non negative value by default, so, make it positive.
+        // absolute value (instead of error=0) is used to avoid collisions for near-null values and subsequent ambiguous work, since this code can be used in parallel algorithms
         if ( error < 0 )
             error = std::abs( error );
 

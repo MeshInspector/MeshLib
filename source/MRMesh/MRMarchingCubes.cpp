@@ -1099,7 +1099,7 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
     }
     result.topology = MeshBuilder::fromTriangles( std::move( resTriangulation ) );
     result.points.resize( result.topology.lastValidVert() + 1 );
-    assert( result.points.size() == totalVertices );
+    assert( result.points.size() <= totalVertices ); // totalVertices may contain inconsistent NaN neighbor that cannot be present in topology
 
     if ( params.cb && !params.cb( 0.95f ) )
         return unexpectedOperationCanceled();

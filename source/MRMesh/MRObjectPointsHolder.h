@@ -83,6 +83,7 @@ public:
             return;
         renderDiscretization_ = val;
         needRedraw_ = true;
+        renderDiscretizationChangedSignal();
     }
 
     /// returns rendering discretization, each N-th point will be displayed on screen
@@ -112,6 +113,9 @@ public:
     /// signal about points selection changing, triggered in selectPoints
     using SelectionChangedSignal = Signal<void()>;
     SelectionChangedSignal pointsSelectionChangedSignal;
+
+    /// signal about render discretization changing, triggered in setRenderDiscretization
+    Signal<void()> renderDiscretizationChangedSignal;
 
 protected:
     VertBitSet selectedPoints_;

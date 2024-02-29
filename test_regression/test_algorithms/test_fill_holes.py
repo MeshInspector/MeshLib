@@ -11,7 +11,7 @@ import pytest
 @pytest.mark.parametrize("metric", ["getMinAreaMetric", "getUniversalMetric",
                                     "getEdgeLengthStitchMetric", "getCircumscribedMetric"])
 @pytest.mark.parametrize("input", ["torus", "crocodile"])
-def test_stitch(tmp_path, input, metric):
+def test_fill_holes(tmp_path, input, metric):
     """
     Test fill holes algorithm
     """

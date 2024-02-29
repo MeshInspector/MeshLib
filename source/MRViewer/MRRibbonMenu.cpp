@@ -215,7 +215,7 @@ void RibbonMenu::setQuickAccessListVersion( int version )
 
 void RibbonMenu::readQuickAccessList( const Json::Value& root )
 {
-    toolbar_.readItemsList( root, toolbarItemsListMigrations_() );
+    toolbar_.readItemsList( root, toolbarItemsListMigrations_ );
 }
 
 void RibbonMenu::resetQuickAccessList()
@@ -2442,12 +2442,6 @@ void RibbonMenu::highlightBlocking_()
     }
     getViewerInstance().incrementForceRedrawFrames();
     blockingHighlightTimer_ -= ImGui::GetIO().DeltaTime;
-}
-
-const MenuItemsListMigrations& RibbonMenu::toolbarItemsListMigrations_() const
-{
-    static const MenuItemsListMigrations migrations;
-    return migrations;
 }
 
 void pushNotification( const RibbonNotification& notification )

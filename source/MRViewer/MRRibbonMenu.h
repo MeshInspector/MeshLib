@@ -205,8 +205,8 @@ protected:
     // draw welcome screen
     MRVIEWER_API virtual void drawWelcomeWindow_();
 
-    // get a migration rulebook applicable to the toolbar's item list
-    MRVIEWER_API virtual const MenuItemsListMigrations& toolbarItemsListMigrations_() const;
+    // migration rulebook applicable to the toolbar's item list
+    MenuItemsListMigrations toolbarItemsListMigrations_;
 
 private:
     void changeTab_( int newTab );

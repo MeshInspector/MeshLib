@@ -280,6 +280,10 @@ private:
         Eigen::Vector<T, 3> beta = Q * alpha;
         T error = ( pVec.dot( precomputedF2_ * pVec ) - 4 * alpha.dot( beta ) + 4 * beta.dot( precomputedF0_ * beta ) ) / static_cast< T >( normalizedPoints_.size() );
 
+        // some times appears floating points calculation errors. Error is a non negative value by default, so, make it positive.
+        if ( error < 0 )
+            error = std::abs( error );
+
         PC = beta;
         rsqr = pVec.dot( precomputedMu_ ) + beta.dot( beta );
 

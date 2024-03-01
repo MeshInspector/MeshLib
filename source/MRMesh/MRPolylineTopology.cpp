@@ -460,8 +460,13 @@ void PolylineTopology::addPartByMask( const PolylineTopology& from, const Undire
     for ( auto ue : mask )
     {
         auto e = EdgeId( ue );
-        edges_[emap[e]].next = emap[fromEdges[e].next];
-        edges_[emap[e.sym()]].next = emap[fromEdges[e.sym()].next];
+        auto ne = emap[fromEdges[e].next];
+        if ( ne.valid() )
+            edges_[emap[e]].next = ne;
+
+        ne = emap[fromEdges[e.sym()].next];
+        if ( ne.valid() )
+            edges_[emap[e.sym()]].next = ne;
         
         edges_[emap[e]].org = vmap[fromEdges[e].org];
         edges_[emap[e.sym()]].org = vmap[fromEdges[e.sym()].org];

@@ -8,6 +8,7 @@
 #include "MRFewSmallest.h"
 #include <climits>
 #include <optional>
+#include <queue>
 
 namespace MR
 {
@@ -34,10 +35,44 @@ MRMESH_API float updateNeighborsRadius( const VertCoords& points, VertId v, Vert
 MRMESH_API void findNeighborsInBall( const PointCloud& pointCloud, VertId v, float radius, std::vector<VertId>& neighbors );
 
 /**
+ * \brief Finds at most given number of neighbors of v (v excluded)
+ * \param tmp temporary storage to avoid its allocation
+ * \param upDistLimitSq upper limit on the distance in question, points with larger distance than it will not be returned
+ * \return maxDistSq to the furthest returned neighbor (or 0 if no neighbours are returned)
+ * \ingroup TriangulationHelpersGroup
+ */
+MRMESH_API float findNumNeighbors( const PointCloud& pointCloud, VertId v, int numNeis, std::vector<VertId>& neighbors,
+    FewSmallest<PointsProjectionResult> & tmp, float upDistLimitSq = FLT_MAX );
+
+/**
  * \brief Filter neighbors with crossing normals
  * \ingroup TriangulationHelpersGroup
  */
 MRMESH_API void filterNeighbors( const VertNormals& normals, VertId v, std::vector<VertId>& neighbors );
+
+struct FanOptimizerQueueElement
+{
+    float weight{ 0.0f }; // profit of flipping this edge
+    int id{ -1 }; // index
+
+    // needed to remove outdated queue elements
+    int prevId{ -1 }; // id of prev neighbor
+    int nextId{ -1 }; // id of next neighbor
+
+    bool stable{ false }; // if this flag is true, edge cannot be flipped
+    bool operator < ( const FanOptimizerQueueElement& other ) const
+    {
+        if ( stable == other.stable )
+            return weight < other.weight;
+        return stable;
+    }
+    bool operator==( const FanOptimizerQueueElement& other ) const = default;
+
+    bool isOutdated( const std::vector<VertId>& neighbors ) const
+    {
+        return !neighbors[nextId].valid() || !neighbors[prevId].valid();
+    }
+};
 
 /**
  * \brief Data with caches for optimizing fan triangulation
@@ -58,6 +93,9 @@ struct TriangulatedFanData
 
     /// the storage to collect n-nearest neighbours, here to avoid allocations for each point
     FewSmallest<PointsProjectionResult> nearesetPoints;
+
+    /// the queue to optimize local triangulation, here to avoid allocations for each point
+    std::priority_queue<FanOptimizerQueueElement> queue;
 };
 
 struct Settings

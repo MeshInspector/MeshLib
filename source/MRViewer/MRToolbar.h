@@ -6,6 +6,8 @@
 namespace MR
 {
 using MenuItemsList = std::vector<std::string>;
+using MenuItemsListMigration = std::function<void ( MenuItemsList& )>;
+using MenuItemsListMigrations = std::map<int, MenuItemsListMigration>;
 
 class RibbonMenu;
 
@@ -35,8 +37,15 @@ public:
     void resetItemsList();
     /// get acces to items
     const MenuItemsList& getItemsList() const { return itemsList_; }
+    /// get item list version
+    int getItemsListVersion() const { return itemsListVersion_; }
+    /// set item list version
+    void setItemsListVersion( int version ) { itemsListVersion_ = version; }
+    /// set item list's upgrade rules
+    void setItemsListMigrations( const MenuItemsListMigrations& migrations ) { itemsListMigrations_ = migrations; }
 
     void setScaling( float scale ) { scaling_ = scale; }
+
 private:
     /// draw toolbar customize modal
     void drawCustomizeModal_();
@@ -54,7 +63,8 @@ private:
 
     MenuItemsList itemsList_; // toolbar items list
     MenuItemsList itemsListCustomize_; // toolbar preview items list for Toolbar Customize window
-
+    int itemsListVersion_{ 1 }; // items list version
+    MenuItemsListMigrations itemsListMigrations_; // items list's upgrade rules
 
     float currentWidth_{ 0.0f };
     bool dragDrop_ = false; // active drag&drop in Toolbar Customize window

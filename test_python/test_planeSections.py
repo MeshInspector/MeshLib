@@ -7,6 +7,7 @@ def test_plane_sections():
     plane = mrmesh.Plane3f()
     plane.n = mrmesh.Vector3f(0, 0, 1)
     plane.d = 0
+    # virtually extract the section without modifying the mesh
     sections = mrmesh.extractPlaneSections(cube, plane)
     contours = mrmesh.planeSectionsToContours2f(cube, sections, mrmesh.AffineXf3f())
 
@@ -17,3 +18,11 @@ def test_plane_sections():
 
     area = mrmesh.calcOrientedArea(contours[0])
     assert abs(area - 1) < 1e-5
+
+    # actually trim the mesh, introducing new vertices and making invalid some old ones
+    mrmesh.cutMeshWithPlane(cube, plane);
+    # check that all valid vertices are on not-negative side of the plane
+    validVerts = cube.topology.getValidVerts()
+    for v in range(validVerts.size()):
+        if validVerts.test(mrmesh.VertId(v)):
+            assert cube.points.vec[v].z >= 0

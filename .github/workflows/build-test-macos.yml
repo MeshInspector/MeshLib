@@ -83,7 +83,7 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
 
       - name: Copy test artifacts to S3
-        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && '!cancelled()' }}
+        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}
         run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/macos/${{matrix.os}}' --recursive
 
       - name: Create Pkg

@@ -3,7 +3,7 @@
 #include "config.h"
 
 // Not zero _ITERATOR_DEBUG_LEVEL in Microsoft STL greatly reduce the performance of STL containers.
-// So we change its value to zero by default. A huge restriction with this is that 
+// So we change its value to zero by default. A huge restriction with this is that
 // all other linked DLL's and LIBS' also need to define this symbol to remove STL debugging, see
 // 1) vcpkg/triplets/x64-windows-meshlib.cmake and
 // 2) MeshLib/source/common.props
@@ -37,7 +37,9 @@
 #   define MRMESH_CLASS
 #else
 #   define MRMESH_API   __attribute__((visibility("default")))
-// to fix undefined reference to `typeinfo/vtable
+// to fix undefined reference to `typeinfo/vtable`
+// Also it's important to use this on any type for which `typeid` is used in multiple shared libraries, and then passed across library boundaries.
+//   Otherwise on Mac the resulting typeids will incorrectly compare not equal.
 #   define MRMESH_CLASS __attribute__((visibility("default")))
 #endif
 
@@ -275,6 +277,7 @@ template <typename T> struct SegmPoint;
 using SegmPointf = SegmPoint<float>;
 using SegmPointd = SegmPoint<double>;
 struct EdgePoint;
+struct EdgeSegment;
 using MeshEdgePoint = EdgePoint;
 using SurfacePath = std::vector<MeshEdgePoint>;
 using SurfacePaths = std::vector<SurfacePath>;
@@ -296,7 +299,7 @@ template <typename T> struct IntersectionPrecomputes;
 
 template <typename I> struct IteratorRange;
 
-/// Coordinates on texture 
+/// Coordinates on texture
 /// \param x,y should be in range [0..1], otherwise result depends on wrap type of texture (no need to clamp it, it is done on GPU if wrap type is "Clamp" )
 using UVCoord = Vector2f;
 
@@ -509,7 +512,7 @@ constexpr inline T sqr( T x ) noexcept { return x * x; }
 template <typename T>
 constexpr inline int sgn( T x ) noexcept { return x > 0 ? 1 : ( x < 0 ? -1 : 0 ); }
 
-template<typename...> 
+template<typename...>
 inline constexpr bool dependent_false = false;
 
 template<class... Ts>

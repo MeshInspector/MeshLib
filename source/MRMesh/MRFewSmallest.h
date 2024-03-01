@@ -19,7 +19,7 @@ public:
     void reset( size_t maxElms );
 
     /// returns the maximum number of elements to be stored here
-    size_t maxElms() const { return heap_.capacity(); }
+    size_t maxElms() const { return maxElms_; }
 
     /// returns whether the container is currently empty
     bool empty() const { return heap_.empty(); }
@@ -43,23 +43,19 @@ public:
     void push( T t );
 
     /// removes all stored elements
-    void clear();
+    void clear() { heap_.clear(); }
 
 private:
     std::vector<T> heap_;
+    size_t maxElms_ = 0;
 };
 
 template<typename T>
 void FewSmallest<T>::reset( size_t maxElms )
 {
-    if ( heap_.capacity() == maxElms )
-        heap_.clear();
-    else
-    {
-        heap_ = {};
-        heap_.reserve( maxElms );
-    }
-    assert( this->maxElms() == maxElms );
+    heap_.clear();
+    heap_.reserve( maxElms );
+    maxElms_ = maxElms;
 }
 
 template<typename T>
@@ -79,16 +75,6 @@ void FewSmallest<T>::push( T t )
     }
     heap_.push_back( std::move( t ) );
     std::push_heap( heap_.begin(), heap_.end() );
-}
-
-template<typename T>
-void FewSmallest<T>::clear()
-{
-#ifndef NDEBUG
-    const auto beforeMaxElms = maxElms();
-#endif
-    heap_.clear();
-    assert( beforeMaxElms == maxElms() );
 }
 
 } //namespace MR

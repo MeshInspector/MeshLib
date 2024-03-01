@@ -12,6 +12,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGuiHelpers.cpp" />
+    <ClCompile Include="MRAncillaryLabels.cpp" />
+    <ClCompile Include="MRAncillaryLines.cpp" />
+    <ClCompile Include="MRAncillaryMesh.cpp" />
+    <ClCompile Include="MRAncillaryPoints.cpp" />
     <ClCompile Include="MRAppendHistory.cpp" />
     <ClCompile Include="MRAlphaSortGL.cpp" />
     <ClCompile Include="ImGuiMenu.cpp" />
@@ -22,6 +26,7 @@
     <ClCompile Include="MRCudaAccessor.cpp" />
     <ClCompile Include="MRDirectionWidget.cpp" />
     <ClCompile Include="MRMeshBoundarySelectionWidget.cpp" />
+    <ClCompile Include="MRFrameCounter.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
     <ClCompile Include="MRSelectCurvaturePreference.cpp" />
     <ClCompile Include="MRFrameRedrawRequest.cpp" />
@@ -99,6 +104,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
+    <ClInclude Include="MRAncillaryLabels.h" />
+    <ClInclude Include="MRAncillaryLines.h" />
+    <ClInclude Include="MRAncillaryMesh.h" />
+    <ClInclude Include="MRAncillaryPoints.h" />
     <ClInclude Include="MRAppendHistory.h" />
     <ClInclude Include="exports.h" />
     <ClInclude Include="ImGuiHelpers.h" />
@@ -113,6 +122,7 @@
     <ClInclude Include="MRDirectionWidget.h" />
     <ClInclude Include="MRFitData.h" />
     <ClInclude Include="MRMeshBoundarySelectionWidget.h" />
+    <ClInclude Include="MRFrameCounter.h" />
     <ClInclude Include="MRNotificationType.h" />
     <ClInclude Include="MRRibbonNotification.h" />
     <ClInclude Include="MRSelectCurvaturePreference.h" />
@@ -160,9 +170,6 @@
     <ClInclude Include="MRStatePlugin.h" />
     <ClInclude Include="MRDemoPlugin.h" />
     <ClInclude Include="MRGLMacro.h" />
-    <ClInclude Include="MRMeshViewer.h" />
-    <ClInclude Include="MRMeshViewerPlugin.h" />
-    <ClInclude Include="MRMeshViewport.h" />
     <ClInclude Include="MRPythonAppendCommand.h" />
     <ClInclude Include="MRRecentFilesStore.h" />
     <ClInclude Include="MRRenderGLHelpers.h" />
@@ -204,6 +211,7 @@
     <ClInclude Include="MRRenderDefaultUiObject.h" />
     <ClInclude Include="MRRenderFeatureObjects.h" />
     <ClInclude Include="MRRenderNameObject.h" />
+    <ClInclude Include="MRRenderWrapObject.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

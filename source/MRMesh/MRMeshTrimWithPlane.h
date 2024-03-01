@@ -56,7 +56,7 @@ struct TrimOptionalOutput
     // newly appeared hole boundary edges
     UndirectedEdgeBitSet* outCutEdges = nullptr;
     // newly appeared hole contours where each edge does not have right face
-    std::vector<EdgeLoop>* outCutContours;
+    std::vector<EdgeLoop>* outCutContours = nullptr;
     // mapping from newly appeared triangle to its original triangle (part to full)
     FaceHashMap* new2Old = nullptr;
     // left part of the trimmed mesh
@@ -64,7 +64,7 @@ struct TrimOptionalOutput
     // mapping from newly appeared triangle to its original triangle (part to full) in otherPart
     FaceHashMap* otherNew2Old = nullptr;
     // newly appeared hole contours where each edge does not have right face in otherPart
-    std::vector<EdgeLoop>* otherOutCutContours;
+    std::vector<EdgeLoop>* otherOutCutContours = nullptr;
 };
 
 /** \brief trim mesh by plane

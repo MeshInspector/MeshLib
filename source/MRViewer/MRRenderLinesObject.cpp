@@ -10,7 +10,7 @@
 #include "MRMesh/MRVector2.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
-#include "MRMeshViewer.h"
+#include "MRViewer.h"
 #include "MRGladGlfw.h"
 #include "MRViewer/MRRenderDefaultUiObject.h"
 
@@ -389,6 +389,6 @@ const Vector2f& GetAvailableLineWidthRange()
     return availableWidth;
 }
 
-MR_REGISTER_RENDER_OBJECT_IMPL( ObjectLinesHolder, RenderDefaultUiObject<RenderLinesObject> )
+MR_REGISTER_RENDER_OBJECT_IMPL( ObjectLinesHolder, RenderObjectCombinator<RenderDefaultUiObject, RenderLinesObject> )
 
 }

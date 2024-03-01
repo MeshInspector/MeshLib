@@ -11,7 +11,6 @@
 #include "MRBitSetParallelFor.h"
 #include "MRLocalTriangulations.h"
 #include <algorithm>
-#include <queue>
 #include <numeric>
 #include <limits>
 
@@ -112,6 +111,19 @@ void findNeighborsInBall( const PointCloud& pointCloud, VertId v, float radius, 
     } );
 }
 
+float findNumNeighbors( const PointCloud& pointCloud, VertId v, int numNeis, std::vector<VertId>& neighbors,
+    FewSmallest<PointsProjectionResult> & tmp, float upDistLimitSq )
+{
+    tmp.reset( numNeis + 1 );
+    findFewClosestPoints( pointCloud.points[v], pointCloud, tmp, upDistLimitSq );
+    auto maxDistSq = tmp.empty() ? 0.0f : tmp.top().distSq;
+    neighbors.clear();
+    for ( const auto & n : tmp.get() )
+        if ( n.vId != v )
+            neighbors.push_back( n.vId );
+    return maxDistSq;
+}
+
 void filterNeighbors( const VertNormals& normals, VertId v, std::vector<VertId>& neighbors )
 {
     const auto& vNorm = normals[v];
@@ -120,30 +132,6 @@ void filterNeighbors( const VertNormals& normals, VertId v, std::vector<VertId>&
         return dot( vNorm, normals[nv] ) < -0.3f;
     } ), neighbors.end() );
 }
-
-struct FanOptimizerQueueElement
-{
-    float weight{ 0.0f }; // profit of flipping this edge
-    int id{ -1 }; // index
-
-    // needed to remove outdated queue elements
-    int prevId{ -1 }; // id of prev neighbor
-    int nextId{ -1 }; // id of next neighbor
-
-    bool stable{ false }; // if this flag is true, edge cannot be flipped
-    bool operator < ( const FanOptimizerQueueElement& other ) const
-    {
-        if ( stable == other.stable )
-            return weight < other.weight;
-        return stable;
-    }
-    bool operator==( const FanOptimizerQueueElement& other ) const = default;
-
-    bool isOutdated( const std::vector<VertId>& neighbors ) const
-    {
-        return !neighbors[nextId].valid() || !neighbors[prevId].valid();
-    }
-};
 
 class FanOptimizer
 {
@@ -300,23 +288,26 @@ void FanOptimizer::optimize( int steps, float critAng, float boundaryAngle )
     if ( steps == 0 )
         return;
 
-    std::priority_queue<FanOptimizerQueueElement> queue_;
+    auto & queue = fanData_.queue;
+    while ( !queue.empty() )
+        queue.pop();
+
     for ( int i = 0; i < fanData_.neighbors.size(); ++i )
-        queue_.emplace( calcQueueElement_( i, critAng ) );
+        if ( auto x = calcQueueElement_( i, critAng ); !x.stable )
+            queue.emplace( std::move( x ) );
 
     // optimize fan
     int allRemoves = 0;
     int currentFanSize = int( fanData_.neighbors.size() );
-    while ( !queue_.empty() )
+    while ( !queue.empty() )
     {
-        auto topEl = queue_.top();
-        queue_.pop();
+        auto topEl = queue.top();
+        assert( !topEl.stable );
+        queue.pop();
         if ( !fanData_.neighbors[topEl.id].valid() )
             continue; // this vert was erased
         if ( topEl.isOutdated( fanData_.neighbors ) )
             continue; // topEl is not valid, because its neighbor was erased
-        if ( topEl.stable )
-            break; // topEl valid and fan is stable
 
         auto oldNei = fanData_.neighbors[topEl.id];
         fanData_.neighbors[topEl.id] = {};
@@ -331,8 +322,12 @@ void FanOptimizer::optimize( int steps, float critAng, float boundaryAngle )
         }
         if ( oldNei == fanData_.border )
             fanData_.border = fanData_.neighbors[topEl.prevId];
-        queue_.emplace( calcQueueElement_( topEl.nextId, critAng ) );
-        queue_.emplace( calcQueueElement_( topEl.prevId, critAng ) );
+
+        if ( auto x = calcQueueElement_( topEl.nextId, critAng ); !x.stable )
+            queue.emplace( std::move( x ) );
+
+        if ( auto x = calcQueueElement_( topEl.prevId, critAng ); !x.stable )
+            queue.emplace( std::move( x ) );
     }
 
     erase_if( fanData_.neighbors, []( VertId v ) { return !v.valid(); } );
@@ -427,20 +422,12 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings 
     float actualRadius = settings.radius;
     assert( ( settings.radius > 0 && settings.numNeis == 0 )
          || ( settings.radius == 0 && settings.numNeis > 0 ) );
+
     if ( settings.radius > 0 )
-    {
         findNeighborsInBall( cloud, v, actualRadius, fanData.neighbors );
-    }
     else
-    {
-        fanData.nearesetPoints.reset( settings.numNeis + 1 );
-        findFewClosestPoints( cloud.points[v], cloud, fanData.nearesetPoints );
-        actualRadius = fanData.nearesetPoints.empty() ? 0.0f : std::sqrt( fanData.nearesetPoints.top().distSq );
-        fanData.neighbors.clear();
-        for ( const auto & n : fanData.nearesetPoints.get() )
-            if ( n.vId != v )
-                fanData.neighbors.push_back( n.vId );
-    }
+        actualRadius = std::sqrt( findNumNeighbors( cloud, v, settings.numNeis, fanData.neighbors, fanData.nearesetPoints ) );
+
     if ( settings.trustedNormals )
         filterNeighbors( *settings.trustedNormals, v, fanData.neighbors );
     if ( settings.allNeighbors )
@@ -457,7 +444,16 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings 
         {
             // update triangulation if radius was increased
             actualRadius = maxRadius;
-            findNeighborsInBall( cloud, v, actualRadius, fanData.neighbors );
+            if ( settings.radius > 0 )
+                findNeighborsInBall( cloud, v, actualRadius, fanData.neighbors );
+            else
+            {
+                // if the center point is an outlier then there may be too many points withing the ball of maxRadius;
+                // so limit the search both by radius and by the number of neighbours
+                actualRadius = std::sqrt( findNumNeighbors( cloud, v, std::max( 2 * settings.numNeis, 100 ),
+                    fanData.neighbors, fanData.nearesetPoints, sqr( maxRadius ) ) );
+            }
+
             if ( settings.trustedNormals )
                 filterNeighbors( *settings.trustedNormals, v, fanData.neighbors );
             if ( settings.allNeighbors )

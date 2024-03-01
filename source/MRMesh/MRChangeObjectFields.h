@@ -13,7 +13,7 @@ class ChangeVisualizePropertyAction : public HistoryAction
 public:
     using Obj = VisualObject;
     /// Constructed from original obj
-    ChangeVisualizePropertyAction( const std::string& name, const std::shared_ptr<VisualObject>& obj, unsigned visualizeMaskType ) :
+    ChangeVisualizePropertyAction( const std::string& name, const std::shared_ptr<VisualObject>& obj, AnyVisualizeMaskEnum visualizeMaskType ) :
         obj_{ obj },
         maskType_{ visualizeMaskType },
         name_{ name }
@@ -46,7 +46,7 @@ public:
 private:
     std::shared_ptr<VisualObject> obj_;
     ViewportMask visualMask_;
-    unsigned maskType_;
+    AnyVisualizeMaskEnum maskType_;
     std::string name_;
 };
 

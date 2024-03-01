@@ -216,31 +216,52 @@ Box3f ObjectMeshHolder::computeBoundingBox_() const
     return mesh_->computeBoundingBox();
 }
 
-const ViewportMask& ObjectMeshHolder::getVisualizePropertyMask( unsigned type ) const
+AllVisualizeProperties ObjectMeshHolder::getAllVisualizeProperties() const
 {
-    switch ( type )
+    AllVisualizeProperties ret = VisualObject::getAllVisualizeProperties();
+    getAllVisualizePropertiesForEnum<MeshVisualizePropertyType>( ret );
+    return ret;
+}
+
+void ObjectMeshHolder::setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos )
+{
+    VisualObject::setAllVisualizeProperties_( properties, pos );
+    setAllVisualizePropertiesForEnum<MeshVisualizePropertyType>( properties, pos );
+}
+
+const ViewportMask &ObjectMeshHolder::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
+{
+    if ( auto value = type.tryGet<MeshVisualizePropertyType>() )
     {
-    case MeshVisualizePropertyType::Faces:
-        return showFaces_;
-    case MeshVisualizePropertyType::Texture:
-        return showTexture_;
-    case MeshVisualizePropertyType::Edges:
-        return showEdges_;
-    case MeshVisualizePropertyType::FlatShading:
-        return flatShading_;
-    case MeshVisualizePropertyType::EnableShading:
-        return shadingEnabled_;
-    case MeshVisualizePropertyType::OnlyOddFragments:
-        return onlyOddFragments_;
-    case MeshVisualizePropertyType::BordersHighlight:
-        return showBordersHighlight_;
-    case MeshVisualizePropertyType::SelectedEdges:
-        return showSelectedEdges_;
-    case MeshVisualizePropertyType::SelectedFaces:
-        return showSelectedFaces_;
-    case MeshVisualizePropertyType::PolygonOffsetFromCamera:
-        return polygonOffset_;
-    default:
+        switch ( *value )
+        {
+            case MeshVisualizePropertyType::Faces:
+                return showFaces_;
+            case MeshVisualizePropertyType::Texture:
+                return showTexture_;
+            case MeshVisualizePropertyType::Edges:
+                return showEdges_;
+            case MeshVisualizePropertyType::FlatShading:
+                return flatShading_;
+            case MeshVisualizePropertyType::EnableShading:
+                return shadingEnabled_;
+            case MeshVisualizePropertyType::OnlyOddFragments:
+                return onlyOddFragments_;
+            case MeshVisualizePropertyType::BordersHighlight:
+                return showBordersHighlight_;
+            case MeshVisualizePropertyType::SelectedEdges:
+                return showSelectedEdges_;
+            case MeshVisualizePropertyType::SelectedFaces:
+                return showSelectedFaces_;
+            case MeshVisualizePropertyType::PolygonOffsetFromCamera:
+                return polygonOffset_;
+            case MeshVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
+        }
+        assert( false && "Invalid enum." );
+        return visibilityMask_;
+    }
+    else
+    {
         return VisualObject::getVisualizePropertyMask( type );
     }
 }
@@ -294,7 +315,7 @@ void ObjectMeshHolder::clearAncillaryTexture()
     if ( !ancillaryTexture_.pixels.empty() )
         setAncillaryTexture( {} );
     if ( !ancillaryUVCoordinates_.empty() )
-        setAncillaryUVCoords( {} ); 
+        setAncillaryUVCoords( {} );
 }
 
 uint32_t ObjectMeshHolder::getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const
@@ -542,7 +563,7 @@ size_t ObjectMeshHolder::numHandles() const
 
 void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
-    // selected faces and edges can be changed only by the methods of this class, 
+    // selected faces and edges can be changed only by the methods of this class,
     // which set dirty flags appropriately
     mask &= ~( DIRTY_SELECTION | DIRTY_EDGES_SELECTION );
 
@@ -606,15 +627,6 @@ void ObjectMeshHolder::swapSignals_( Object& other )
     }
     else
         assert( false );
-}
-
-AllVisualizeProperties ObjectMeshHolder::getAllVisualizeProperties() const
-{
-    AllVisualizeProperties res;
-    res.resize( MeshVisualizePropertyType::MeshVisualizePropsCount );
-    for ( int i = 0; i < res.size(); ++i )
-        res[i] = getVisualizePropertyMask( unsigned( i ) );
-    return res;
 }
 
 const ViewportProperty<Color>& ObjectMeshHolder::getSelectedEdgesColorsForAllViewports() const

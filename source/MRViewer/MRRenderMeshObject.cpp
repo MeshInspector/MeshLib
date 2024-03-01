@@ -8,7 +8,7 @@
 #include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
-#include "MRMeshViewer.h"
+#include "MRViewer.h"
 #include "MRGladGlfw.h"
 #include "MRPch/MRTBB.h"
 #include "MRMesh/MRRegionBoundary.h"
@@ -854,6 +854,6 @@ RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
     return buffer;
 }
 
-MR_REGISTER_RENDER_OBJECT_IMPL( ObjectMeshHolder, RenderDefaultUiObject<RenderMeshObject> )
+MR_REGISTER_RENDER_OBJECT_IMPL( ObjectMeshHolder, RenderObjectCombinator<RenderDefaultUiObject, RenderMeshObject> )
 
 }

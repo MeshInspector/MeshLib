@@ -6,7 +6,6 @@
 #include <MRMesh/MRViewportId.h>
 
 #include <boost/signals2/signal.hpp>
-#include <chrono>
 #include <cstdint>
 #include <filesystem>
 
@@ -249,10 +248,10 @@ public:
     MRVIEWER_API void preciseFitDataViewport( MR::ViewportMask vpList = MR::ViewportMask::all() );
     MRVIEWER_API void preciseFitDataViewport( MR::ViewportMask vpList, const FitDataParams& param );
 
-    size_t getTotalFrames() const { return frameCounter_.totalFrameCounter; }
-    size_t getSwappedFrames() const { return frameCounter_.swappedFrameCounter; }
-    size_t getFPS() const { return frameCounter_.fps; }
-    double getPrevFrameDrawTimeMillisec() const { return frameCounter_.drawTimeMilliSec.count(); }
+    MRVIEWER_API size_t getTotalFrames() const;
+    MRVIEWER_API size_t getSwappedFrames() const;
+    MRVIEWER_API size_t getFPS() const;
+    MRVIEWER_API double getPrevFrameDrawTimeMillisec() const;
 
     // Returns memory amount used by shared GL memory buffer
     MRVIEWER_API size_t getStaticGLBufferSize() const;
@@ -605,21 +604,7 @@ private:
     std::unique_ptr<MouseController> mouseController_;
 
     std::unique_ptr<RecentFilesStore> recentFilesStore_;
-
-    mutable struct FrameCounter
-    {
-        size_t totalFrameCounter{ 0 };
-        size_t swappedFrameCounter{ 0 };
-        size_t startFrameNum{ 0 };
-        size_t fps{ 0 };
-        std::chrono::duration<double> drawTimeMilliSec{ 0 };
-        void startDraw();
-        void endDraw( bool swapped );
-        void reset();
-    private:
-        long long startFPSTime_{ 0 };
-        std::chrono::time_point<std::chrono::high_resolution_clock> startDrawTime_;
-    } frameCounter_;
+    std::unique_ptr<FrameCounter> frameCounter_;
 
     mutable struct EventsCounter
     {

@@ -10,7 +10,7 @@
 #include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
-#include "MRMeshViewer.h"
+#include "MRViewer.h"
 #include "MRGladGlfw.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRViewer/MRRenderDefaultUiObject.h"
@@ -419,6 +419,6 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
     return buffer;
 }
 
-MR_REGISTER_RENDER_OBJECT_IMPL( ObjectPointsHolder, RenderDefaultUiObject<RenderPointsObject> )
+MR_REGISTER_RENDER_OBJECT_IMPL( ObjectPointsHolder, RenderObjectCombinator<RenderDefaultUiObject, RenderPointsObject> )
 
 }

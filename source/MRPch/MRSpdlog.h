@@ -32,11 +32,11 @@ class __attribute__((visibility("default"))) ansicolor_stdout_sink;
 
 template<typename ConsoleMutex>
 class __attribute__((visibility("default"))) ansicolor_stderr_sink;
-#endif
 
 } //namespace sinks
 
 } //namespace spdlog
+#endif
 
 #include "MRFmt.h"
 

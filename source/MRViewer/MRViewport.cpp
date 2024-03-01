@@ -99,7 +99,14 @@ ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& rende
     return pick_render_object( renderVector, getViewerInstance().glPickRadius );
 }
 
-ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector, uint16_t pickRadius ) const
+ObjAndPick Viewport::pick_render_object( bool exactPickFirst ) const
+{
+    VisualObjectTreeDataVector renderVector;
+    getPickerDataVector( SceneRoot::get(), id, renderVector );
+    return pick_render_object( renderVector, getViewerInstance().glPickRadius, exactPickFirst );
+}
+
+ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector, uint16_t pickRadius, bool exactPickFirst /* = true */ ) const
 {
     auto& viewer = getViewerInstance();
     const auto& mousePos = viewer.mouseController().getMousePos();
@@ -123,7 +130,7 @@ ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& rende
         auto res = multiPickObjects( renderVector, pixels );
         if ( res.empty() )
             return {};
-        if ( bool( res.front().first ) )
+        if ( ( exactPickFirst ) && ( bool( res.front().first ) ) )
             return res.front();
         int minIndex = int( res.size() );
         float minZ = FLT_MAX;

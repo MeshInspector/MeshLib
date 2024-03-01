@@ -32,6 +32,10 @@ jobs:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
 
+    env:
+      UPLOAD_TEST_ARTIFACTS: ${{ contains(github.event.pull_request.labels.*.name, 'upload-test-artifacts') }}
+      INTERNAL_BUILD: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -63,7 +67,7 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 
       - name: Configure AWS Credentials
-        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
+        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
@@ -71,12 +75,16 @@ jobs:
 
       - name: Copy autotest data from S3 Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
-        run: aws s3 cp s3://data-autotest/test_data_29-dec-23 ./test_data --recursive
+        run: aws s3 cp s3://data-autotest/test_data_29-dec-23 ./test_data --recursive --no-sign-request
 
       - name: Python Regression Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
         working-directory: ./build/Release/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
+
+      - name: Copy test artifacts to S3
+        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}
+        run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/macos/${{matrix.os}}' --recursive
 
       - name: Create Pkg
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
@@ -86,8 +94,8 @@ jobs:
 
       - name: Upload Macos Distribution
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: Distributives
+          name: Distributives_macos-${{matrix.os}}
           path: meshlib_${{matrix.os}}.pkg
           retention-days: 1

@@ -414,19 +414,20 @@ Expected<MR::PointCloud, std::string> fromObj( std::istream& in, ProgressCallbac
     return cloud;
 }
 
-Expected<MR::PointCloud, std::string> fromAsc( const std::filesystem::path& file, ProgressCallback callback )
+Expected<MR::PointCloud, std::string> fromAsc( const std::filesystem::path& file, VertColors* colors, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromAsc( in, callback ), file );
+    return addFileNameInError( fromAsc( in, colors, callback ), file );
 }
 
-Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCallback callback )
+Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, VertColors* colors, ProgressCallback callback )
 {
     PointCloud cloud;
     bool allNormalsValid = true;
+    bool allColorsValid = true;
 
     const auto posStart = in.tellg();
     in.seekg( 0, std::ios_base::end );
@@ -458,7 +459,21 @@ Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCallbac
         {
             is >> x >> y >> z;
             if ( is )
+            {
                 cloud.normals.emplace_back( x, y, z );
+                if ( colors && allColorsValid )
+                {
+                    float r, g, b;
+                    is >> r >> g >> b;
+                    if ( is )
+                        colors->emplace_back( (int)r, (int)g, (int)b );
+                    else
+                    {
+                        *colors = {};
+                        allColorsValid = false;
+                    }
+                }
+            }
             else
             {
                 cloud.normals = {};
@@ -590,7 +605,7 @@ Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem:
     else if ( ext == ".obj" )
         res = MR::PointsLoad::fromObj( file, callback );
     else if ( ext == ".asc" )
-        res = MR::PointsLoad::fromAsc( file, callback );
+        res = MR::PointsLoad::fromAsc( file, colors, callback );
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
     else if ( ext == ".e57" )
         res = MR::PointsLoad::fromE57( file, colors, outXf, callback );
@@ -629,7 +644,7 @@ Expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, cons
     else if ( ext == ".obj" )
         res = MR::PointsLoad::fromObj( in, callback );
     else if ( ext == ".asc" )
-        res = MR::PointsLoad::fromAsc( in, callback );
+        res = MR::PointsLoad::fromAsc( in, colors, callback );
 #if !defined( MRMESH_NO_LAS )
     else if ( ext == ".las" || ext == ".laz" )
         res = MR::PointsLoad::fromLas( in, colors, outXf, callback );

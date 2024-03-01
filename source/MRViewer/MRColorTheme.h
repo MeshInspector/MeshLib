@@ -92,7 +92,7 @@ public:
         ToolbarHovered,
         ToolbarClicked,
 
-        ToolbarCustomizeBg,
+        ModalBackground,
 
         Text,
         TextEnabled,
@@ -150,6 +150,11 @@ public:
     // Returns directory where user's custom themes are stored
     MRVIEWER_API static std::filesystem::path getUserThemesDirectory();
 
+    // Find available custom themes
+    MRVIEWER_API static void updateUserThemesList();
+    // Return list of found custom themes
+    MRVIEWER_API static std::vector<std::string> foundUserThemes();
+
     // Reset ImGui style sizes and colors, and apply menu scaling to it
     MRVIEWER_API static void resetImGuiStyle();
 private:
@@ -165,6 +170,8 @@ private:
 
     Type type_{ Type::Default };
     std::string themeName_;
+
+    std::vector<std::string> foundUserThemes_;
 };
 
 }

@@ -6,7 +6,6 @@
 #include <MRMesh/MRViewportId.h>
 
 #include <boost/signals2/signal.hpp>
-#include <chrono>
 #include <cstdint>
 #include <filesystem>
 
@@ -53,7 +52,7 @@ public:
     struct LaunchParams
     {
         bool fullscreen{ false }; // if true starts fullscreen
-        int width{ 0 }; 
+        int width{ 0 };
         int height{ 0 };
         enum WindowMode
         {
@@ -90,7 +89,7 @@ public:
     MRVIEWER_API void launchEventLoop();
     // Terminate window
     MRVIEWER_API void launchShut();
-    
+
     bool isLaunched() const { return isLaunched_; }
 
     // provides non const access to viewer
@@ -249,10 +248,10 @@ public:
     MRVIEWER_API void preciseFitDataViewport( MR::ViewportMask vpList = MR::ViewportMask::all() );
     MRVIEWER_API void preciseFitDataViewport( MR::ViewportMask vpList, const FitDataParams& param );
 
-    size_t getTotalFrames() const { return frameCounter_.totalFrameCounter; }
-    size_t getSwappedFrames() const { return frameCounter_.swappedFrameCounter; }
-    size_t getFPS() const { return frameCounter_.fps; }
-    double getPrevFrameDrawTimeMillisec() const { return frameCounter_.drawTimeMilliSec.count(); }
+    MRVIEWER_API size_t getTotalFrames() const;
+    MRVIEWER_API size_t getSwappedFrames() const;
+    MRVIEWER_API size_t getFPS() const;
+    MRVIEWER_API double getPrevFrameDrawTimeMillisec() const;
 
     // Returns memory amount used by shared GL memory buffer
     MRVIEWER_API size_t getStaticGLBufferSize() const;
@@ -338,7 +337,7 @@ public:
     // note that it does not clear framebuffer
     MRVIEWER_API void bindSceneTexture( bool bind );
 
-    // Sets manager of viewer settings which loads user personal settings on beginning of app 
+    // Sets manager of viewer settings which loads user personal settings on beginning of app
     // and saves it in app's ending
     MRVIEWER_API void setViewportSettingsManager( std::unique_ptr<IViewerSettingsManager> mng );
     MRVIEWER_API const std::unique_ptr<IViewerSettingsManager>& getViewportSettingsManager() const { return settingsMng_; }
@@ -380,7 +379,7 @@ public:
     MRVIEWER_API bool globalHistoryRedo();
     // Returns global history store
     const std::shared_ptr<HistoryStore>& getGlobalHistoryStore() const { return globalHistoryStore_; }
-    // Return spacemouse handler 
+    // Return spacemouse handler
     const std::shared_ptr<SpaceMouseHandler>& getSpaceMouseHandler() const { return spaceMouseHandler_; }
 
     // This method is called after successful scene saving to update scene root, window title and undo
@@ -446,7 +445,7 @@ public:
     float scrollForce{ 1.0f };
     // opengl-based pick window radius in pixels
     uint16_t glPickRadius{ 0 };
-    
+
     std::unique_ptr<ObjectMesh> basisAxes;
     std::unique_ptr<ObjectMesh> globalBasisAxes;
     std::unique_ptr<ObjectMesh> rotationSphere;
@@ -584,6 +583,8 @@ private:
     // returns true if was swapped
     bool draw_( bool force );
 
+    void drawUiRenderObjects_();
+
     // the minimum number of frames to be rendered even if the scene is unchanged
     int forceRedrawFrames_{ 0 };
     // Should be `<= forceRedrawFrames_`. The next N frames will not be shown on screen.
@@ -603,21 +604,7 @@ private:
     std::unique_ptr<MouseController> mouseController_;
 
     std::unique_ptr<RecentFilesStore> recentFilesStore_;
-
-    mutable struct FrameCounter
-    {
-        size_t totalFrameCounter{ 0 };
-        size_t swappedFrameCounter{ 0 };
-        size_t startFrameNum{ 0 };
-        size_t fps{ 0 };
-        std::chrono::duration<double> drawTimeMilliSec{ 0 };
-        void startDraw();
-        void endDraw( bool swapped );
-        void reset();
-    private:
-        long long startFPSTime_{ 0 };
-        std::chrono::time_point<std::chrono::high_resolution_clock> startDrawTime_;
-    } frameCounter_;
+    std::unique_ptr<FrameCounter> frameCounter_;
 
     mutable struct EventsCounter
     {

@@ -6,7 +6,7 @@
 
 namespace MR
 {
-class RenderPointsObject : public IRenderObject
+class RenderPointsObject : public virtual IRenderObject
 {
 public:
     RenderPointsObject( const VisualObject& visObj );

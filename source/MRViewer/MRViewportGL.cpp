@@ -4,7 +4,7 @@
 #include "MRMesh/MRMatrix4.h"
 #include "MRGLMacro.h"
 #include "MRGLStaticHolder.h"
-#include "MRMeshViewer.h"
+#include "MRViewer.h"
 #include "MRGladGlfw.h"
 
 namespace MR

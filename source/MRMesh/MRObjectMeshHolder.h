@@ -7,24 +7,21 @@
 namespace MR
 {
 
-struct MeshVisualizePropertyType : VisualizeMaskType
+enum class MRMESH_CLASS MeshVisualizePropertyType
 {
-    enum : unsigned
-    {
-        Faces = VisualizeMaskType::VisualizePropsCount,
-        Texture,
-        Edges,
-        SelectedFaces,
-        SelectedEdges,
-        EnableShading,
-        FlatShading,
-        OnlyOddFragments,
-        BordersHighlight,
-        PolygonOffsetFromCamera, // recommended for drawing edges on top of mesh
-
-        MeshVisualizePropsCount,
-    };
+    Faces,
+    Texture,
+    Edges,
+    SelectedFaces,
+    SelectedEdges,
+    EnableShading,
+    FlatShading,
+    OnlyOddFragments,
+    BordersHighlight,
+    PolygonOffsetFromCamera, // recommended for drawing edges on top of mesh
+    _count [[maybe_unused]],
 };
+template <> struct IsVisualizeMaskEnum<MeshVisualizePropertyType> : std::true_type {};
 
 /// an object that stores a mesh
 /// \ingroup ModelHolderGroup
@@ -87,14 +84,14 @@ public:
 
     /// sets flat (true) or smooth (false) shading
     void setFlatShading( bool on )
-    { return setVisualizeProperty( on, unsigned( MeshVisualizePropertyType::FlatShading ), ViewportMask::all() ); }
+    { return setVisualizeProperty( on, MeshVisualizePropertyType::FlatShading, ViewportMask::all() ); }
     bool flatShading() const
-    { return getVisualizeProperty( unsigned( MeshVisualizePropertyType::FlatShading ), ViewportMask::any() ); }
+    { return getVisualizeProperty( MeshVisualizePropertyType::FlatShading, ViewportMask::any() ); }
 
-    /// get all visualize properties masks as array
-    MRMESH_API virtual AllVisualizeProperties getAllVisualizeProperties() const override;
+    /// get all visualize properties masks
+    MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
     /// returns mask of viewports where given property is set
-    MRMESH_API virtual const ViewportMask& getVisualizePropertyMask( unsigned type ) const override;
+    MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
 
     const FaceColors& getFacesColorMap() const { return facesColorMap_; }
     virtual void setFacesColorMap( FaceColors facesColorMap )
@@ -136,7 +133,7 @@ public:
     const VertUVCoords& getAncillaryUVCoords() const { return ancillaryUVCoordinates_; }
     virtual void setAncillaryUVCoords( VertUVCoords uvCoordinates ) { ancillaryUVCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
     void updateAncillaryUVCoords( VertUVCoords& updated ) { std::swap( ancillaryUVCoordinates_, updated ); dirty_ |= DIRTY_UV; }
-    
+
     bool hasAncillaryTexture() const { return !ancillaryUVCoordinates_.empty() && !ancillaryTexture_.pixels.empty(); }
     MRMESH_API void clearAncillaryTexture();
 
@@ -242,6 +239,9 @@ protected:
 
     MRMESH_API VoidOrErrStr deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
 
+    /// set all visualize properties masks
+    MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;
+
     MRMESH_API virtual Box3f computeBoundingBox_() const override;
 
     MRMESH_API virtual void setupRenderObject_() const override;
@@ -255,7 +255,7 @@ protected:
     ViewportMask polygonOffset_;
     ViewportMask flatShading_; ///< toggle per-face or per-vertex properties
 
-    // really it shoud be one enum Shading {None, Flat, Smooth, Crease} 
+    // really it shoud be one enum Shading {None, Flat, Smooth, Crease}
     // but for back capability it is easier to add global flag
     ViewportMask shadingEnabled_ = ViewportMask::all();
 
@@ -286,4 +286,3 @@ private:
 };
 
 } // namespace MR
-

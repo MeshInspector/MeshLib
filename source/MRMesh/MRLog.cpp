@@ -134,28 +134,6 @@ std::filesystem::path Logger::getLogFileName() const
             return r->filename();
     }
 
-#ifdef __APPLE__
-    /*
-     * FIXME: dynamic_cast may not work with shared libraries on macOS
-     */
-    for ( const auto& ptr : logger_->sinks() )
-    {
-        assert( ptr );
-        auto& sink = *ptr;
-        const std::string typeName = typeid( sink ).name();
-#define RTTI_CAST( TYPE ) \
-        if ( typeName == typeid( TYPE ).name() ) \
-            return reinterpret_cast<TYPE*>( &sink )->filename();
-        RTTI_CAST( spdlog::sinks::rotating_file_sink_mt )
-        RTTI_CAST( spdlog::sinks::rotating_file_sink_st )
-        RTTI_CAST( spdlog::sinks::daily_file_sink_mt )
-        RTTI_CAST( spdlog::sinks::daily_file_sink_st )
-        RTTI_CAST( spdlog::sinks::basic_file_sink_mt )
-        RTTI_CAST( spdlog::sinks::basic_file_sink_st )
-#undef RTTI_CAST
-    }
-#endif
-
     return {};
 }
 

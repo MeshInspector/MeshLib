@@ -322,6 +322,15 @@
     <ClCompile Include="MRSurfaceContoursWidget.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRRenderFeatureObjects.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRenderNameObject.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFrameCounter.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -405,15 +414,6 @@
     </ClInclude>
     <ClInclude Include="MRViewportGL.h">
       <Filter>Render</Filter>
-    </ClInclude>
-    <ClInclude Include="MRMeshViewer.h">
-      <Filter>Viewer</Filter>
-    </ClInclude>
-    <ClInclude Include="MRMeshViewerPlugin.h">
-      <Filter>Viewer</Filter>
-    </ClInclude>
-    <ClInclude Include="MRMeshViewport.h">
-      <Filter>Viewer</Filter>
     </ClInclude>
     <ClInclude Include="MRPythonAppendCommand.h">
       <Filter>Python</Filter>
@@ -628,6 +628,18 @@
     </ClInclude>
     <ClInclude Include="MRImGuiVectorOperators.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderDefaultUiObject.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderFeatureObjects.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderNameObject.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFrameCounter.h">
+      <Filter>Viewer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

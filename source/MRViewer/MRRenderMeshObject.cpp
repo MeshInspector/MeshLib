@@ -8,12 +8,13 @@
 #include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
-#include "MRMeshViewer.h"
+#include "MRViewer.h"
 #include "MRGladGlfw.h"
 #include "MRPch/MRTBB.h"
 #include "MRMesh/MRRegionBoundary.h"
 #include "MRMesh/MRMatrix4.h"
 #include "MRMesh/MRPlane3.h"
+#include "MRViewer/MRRenderDefaultUiObject.h"
 
 namespace MR
 {
@@ -853,6 +854,6 @@ RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
     return buffer;
 }
 
-MR_REGISTER_RENDER_OBJECT_IMPL( ObjectMeshHolder, RenderMeshObject )
+MR_REGISTER_RENDER_OBJECT_IMPL( ObjectMeshHolder, RenderDefaultUiObject<RenderMeshObject> )
 
 }

@@ -150,7 +150,13 @@ public:
     //     auto [obj,pick] = pick_render_object( objects );
     // pick objects from input
     MRVIEWER_API ObjAndPick pick_render_object( const std::vector<VisualObject*>& objects ) const;
-    MRVIEWER_API ObjAndPick pick_render_object( const std::vector<VisualObject*>& objects, uint16_t pickRadius ) const;
+    // This function allows to pick point in scene by GL with a given peak radius.
+    // usually, from several objects that fall into the peak, the closest one along the ray is selected.However
+    // if exactPickFirst = true, then the object in which the pick exactly fell( for example, a point in point cloud ) 
+    // will be returned as the result, even if there are others within the radius, including closer objects.
+    MRVIEWER_API ObjAndPick pick_render_object( const std::vector<VisualObject*>& objects, uint16_t pickRadius, bool exactPickFirst = true ) const;
+    // This function allows to pick point in scene by GL with default pick radius, but with specified exactPickFirst parameter (see description upper).
+    MRVIEWER_API ObjAndPick pick_render_object( bool exactPickFirst ) const;
     // This function allows to pick point in scene by GL
     // comfortable usage:
     //     auto [obj,pick] = pick_render_object( objects );

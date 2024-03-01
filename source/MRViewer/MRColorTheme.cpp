@@ -10,6 +10,7 @@
 #include "MRCommandLoop.h"
 #include "MRViewer.h"
 #include "MRViewport.h"
+#include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRSystem.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
@@ -335,7 +336,7 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
         "ToolbarHovered",
         "ToolbarClicked",
 
-        "ToolbarCustomizeBg",
+        "ModalBackground",
 
         "Text",
         "TextEnabled",
@@ -425,7 +426,7 @@ void ColorTheme::resetImGuiStyle()
     Vector4f frameBg = Vector4f( getRibbonColor( RibbonColorsType::FrameBackground ) );
     Vector4f headerBg = Vector4f( getRibbonColor( RibbonColorsType::CollapseHeaderBackground ) );
     Vector4f textSelBg = Vector4f( getRibbonColor( RibbonColorsType::TextSelectedBg ) );
-    Vector4f popupBg = Vector4f( getRibbonColor( RibbonColorsType::TopPanelBackground ) );
+    Vector4f popupBg = Vector4f( getRibbonColor( RibbonColorsType::ModalBackground ) );
     Vector4f tabBg = Vector4f( getRibbonColor( RibbonColorsType::DialogTab ) );
     Vector4f tabBgActive = Vector4f( getRibbonColor( RibbonColorsType::DialogTabActive ) );
     Vector4f tabBgHovered = Vector4f( getRibbonColor( RibbonColorsType::DialogTabActiveHovered ) );
@@ -460,6 +461,38 @@ void ColorTheme::resetImGuiStyle()
         ImGui::GetStyle().ScaleAllSizes( scaling );
         style.ScrollbarSize = 4.0f * scaling + 6.0f; // 6 - is scroll background area, independent of scaling
     }
+}
+
+void ColorTheme::updateUserThemesList()
+{
+    auto& instance = ColorTheme::instance_();
+    instance.foundUserThemes_.clear();
+
+    auto userThemesDir = getUserThemesDirectory();
+    std::error_code ec;
+    if ( !std::filesystem::is_directory( userThemesDir, ec ) )
+        return;
+
+    for ( auto entry : Directory{ userThemesDir, ec } )
+    {
+        if ( !entry.is_regular_file( ec ) )
+            continue;
+
+        auto ext = entry.path().extension().u8string();
+        for ( auto& c : ext )
+            c = (char)tolower( c );
+
+        if ( ext != u8".json" )
+            continue;
+
+        instance.foundUserThemes_.emplace_back( utf8string( entry.path().stem() ) );
+    }
+}
+
+std::vector<std::string> ColorTheme::foundUserThemes()
+{
+    const auto& instance = ColorTheme::instance_();
+    return instance.foundUserThemes_;
 }
 
 }

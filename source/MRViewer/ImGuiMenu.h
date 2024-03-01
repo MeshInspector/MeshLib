@@ -7,15 +7,12 @@
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 
-////////////////////////////////////////////////////////////////////////////////
 #include "MRMesh/MRFlagOperators.h"
-#include "MRMeshViewer.h"
-#include "MRMeshViewerPlugin.h"
+#include "MRViewerPlugin.h"
 #include "MRViewerEventsListener.h"
 #include "MRStatePlugin.h"
 #include "MRNotificationType.h"
 #include <unordered_map>
-////////////////////////////////////////////////////////////////////////////////
 
 // Forward declarations
 struct ImGuiContext;
@@ -174,6 +171,8 @@ protected:
   AffineXf3f editedFeatureObjectOldXf_;
 
 public:
+  MRVIEWER_API static const std::shared_ptr<ImGuiMenu>& instance();
+
   MRVIEWER_API virtual void init(MR::Viewer *_viewer) override;
 
   // inits glfw and glsl backend
@@ -262,7 +261,7 @@ public:
   // override this to have custom UI in "Scene" window (under opened(expanded) object line)
   MRVIEWER_API virtual void draw_custom_tree_object_properties( Object& obj );
 
-  bool make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, unsigned type, MR::ViewportMask viewportid, bool invert = false );
+  bool make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, AnyVisualizeMaskEnum type, MR::ViewportMask viewportid, bool invert = false );
   template<typename ObjectT>
   void make_color_selector( std::vector<std::shared_ptr<ObjectT>> selectedVisualObjs, const char* label,
                             std::function<Vector4f( const ObjectT* )> getter,
@@ -317,13 +316,16 @@ public:
   // returns true if enabled using of saved positions of plugin windows in the config file, false otherwise
   bool isSavedDialogPositionsEnabled() const { return savedDialogPositionEnabled_; }
 
+  // This class helps the viewer to `renderUi()` from `IRenderObject`s.
+  MRVIEWER_API virtual UiRenderManager& getUiRenderManager();
+
 protected:
     MRVIEWER_API virtual void drawModalMessage_();
 
     bool capturedMouse_{ false };
     // Mouse IO
-    MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
-    MRVIEWER_API virtual bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;
+    MRVIEWER_API virtual bool onMouseDown_( MouseButton button, int modifier ) override;
+    MRVIEWER_API virtual bool onMouseUp_( MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseMove_( int mouse_x, int mouse_y ) override;
     MRVIEWER_API virtual bool onMouseScroll_( float delta_y ) override;
     MRVIEWER_API virtual void cursorEntrance_( bool entered ) override;
@@ -398,6 +400,26 @@ protected:
     MRVIEWER_API float getSceneInfoItemWidth_( int itemCount  = 1 );
     // getting the mask of the list of selected objects
     MRVIEWER_API SelectedTypesMask calcSelectedTypesMask( const std::vector<std::shared_ptr<Object>>& selectedObjs );
+
+    class UiRenderManagerImpl : public UiRenderManager
+    {
+    public:
+        MRVIEWER_API void preRenderViewport( ViewportId viewport ) override;
+        MRVIEWER_API void postRenderViewport( ViewportId viewport ) override;
+        MRVIEWER_API BasicUiRenderTask::BackwardPassParams beginBackwardPass() override;
+        MRVIEWER_API void finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params ) override;
+        MRVIEWER_API bool ownsMouseHover() const override;
+
+    private:
+        // `finishBackwardPass()` sets this to true when some object's UI is hovered.
+        // We then read it in `onMouseDown_()` and return true to eat that event.
+        // We intentionally don't block other events with this, especially not scrolling events, as it's
+        //   very annoying when the zoom breaks because you randomly hovered something.
+        // It also would be unwise to block `onMouseUp_()`, as you could make some plugin stuck assuming that the mouse is held.
+        bool mouseIsBlocked_ = false;
+    };
+    // This class helps the viewer to `renderUi()` from `IRenderObject`s.
+    std::unique_ptr<UiRenderManager> uiRenderManager_;
 };
 
 

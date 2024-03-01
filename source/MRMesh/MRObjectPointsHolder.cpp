@@ -66,7 +66,10 @@ void ObjectPointsHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
     VisualObject::setDirtyFlags( mask, invalidateCaches );
 
     if ( mask & DIRTY_FACE )
+    {
         numValidPoints_.reset();
+        setRenderDiscretization( chooseRenderDiscretization_() );
+    }
 
     if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
     {
@@ -107,20 +110,32 @@ void ObjectPointsHolder::setSelectedVerticesColor( const Color& color, ViewportI
 
 AllVisualizeProperties ObjectPointsHolder::getAllVisualizeProperties() const
 {
-    AllVisualizeProperties res;
-    res.resize( PointsVisualizePropertyType::PointsVisualizePropsCount );
-    for ( int i = 0; i < res.size(); ++i )
-        res[i] = getVisualizePropertyMask( unsigned( i ) );
-    return res;
+    AllVisualizeProperties ret = VisualObject::getAllVisualizeProperties();
+    getAllVisualizePropertiesForEnum<PointsVisualizePropertyType>( ret );
+    return ret;
 }
 
-const ViewportMask& ObjectPointsHolder::getVisualizePropertyMask( unsigned type ) const
+void ObjectPointsHolder::setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos )
 {
-    switch ( type )
+    VisualObject::setAllVisualizeProperties_( properties, pos );
+    setAllVisualizePropertiesForEnum<PointsVisualizePropertyType>( properties, pos );
+}
+
+const ViewportMask &ObjectPointsHolder::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
+{
+    if ( auto value = type.tryGet<PointsVisualizePropertyType>() )
     {
-    case PointsVisualizePropertyType::SelectedVertices:
-        return showSelectedVertices_;
-    default:
+        switch ( *value )
+        {
+        case PointsVisualizePropertyType::SelectedVertices:
+            return showSelectedVertices_;
+        case PointsVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
+        }
+        assert( false && "Invalid enum." );
+        return visibilityMask_;
+    }
+    else
+    {
         return VisualObject::getVisualizePropertyMask( type );
     }
 }
@@ -246,8 +261,7 @@ VoidOrErrStr ObjectPointsHolder::deserializeModel_( const std::filesystem::path&
         setColoringType( ColoringType::VertsColorMap );
 
     points_ = std::make_shared<PointCloud>( std::move( res.value() ) );
-    if ( int pointCount = int( points_->points.size() ); pointCount > 2'000'000 )
-        setRenderDiscretization( pointCount / 1'000'000 );
+    setRenderDiscretization( chooseRenderDiscretization_() );
     return {};
 }
 
@@ -259,6 +273,8 @@ void ObjectPointsHolder::serializeFields_( Json::Value& root ) const
     serializeToJson( selectedPoints_, root["SelectionVertBitSet"] );
     if ( points_ )
         serializeToJson( points_->validPoints, root["ValidVertBitSet"] );
+
+    root["PointSize"] = pointSize_;
 }
 
 void ObjectPointsHolder::deserializeFields_( const Json::Value& root )
@@ -275,6 +291,9 @@ void ObjectPointsHolder::deserializeFields_( const Json::Value& root )
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
         setDefaultSceneProperties_();
+
+    if ( const auto& pointSizeJson = root["PointSize"]; pointSizeJson.isDouble() )
+        pointSize_ = float( pointSizeJson.asDouble() );
 }
 
 void ObjectPointsHolder::setupRenderObject_() const
@@ -303,6 +322,24 @@ void ObjectPointsHolder::setSelectedVerticesColorsForAllViewports( ViewportPrope
 void ObjectPointsHolder::setDefaultSceneProperties_()
 {
     setDefaultColors_();
+}
+
+int ObjectPointsHolder::chooseRenderDiscretization_()
+{
+    return std::max( 1, int( numValidPoints() ) / maxRenderingPoints_ );
+}
+
+int ObjectPointsHolder::getMaxAutoRenderingPoints() const
+{
+    return maxRenderingPoints_;
+}
+
+void ObjectPointsHolder::setMaxAutoRenderingPoints( int val )
+{
+    if ( maxRenderingPoints_ == val )
+        return;
+    maxRenderingPoints_ = val;
+    setRenderDiscretization( chooseRenderDiscretization_() );
 }
 
 }

@@ -1200,6 +1200,21 @@
     <ClInclude Include="MRPointCloudDivideWithPlane.h">
       <Filter>Source Files\PointCloud</Filter>
     </ClInclude>
+    <ClInclude Include="MRPolylineTrimWithPlane.h">
+      <Filter>Source Files\Polyline</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDefaultFeatureObjectParams.h">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDistanceVolumeParams.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPointsToDistanceVolume.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPointsToMeshFusion.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1989,8 +2004,23 @@
     <ClCompile Include="MRPointsComponents.cpp">
       <Filter>Source Files\Components</Filter>
     </ClCompile>
+    <ClCompile Include="MRPointOnObject.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
     <ClCompile Include="MRPointCloudDivideWithPlane.cpp">
       <Filter>Source Files\PointCloud</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPolylineTrimWithPlane.cpp">
+      <Filter>Source Files\Polyline</Filter>
+    </ClCompile>
+    <ClCompile Include="MRDefaultFeatureObjectParams.cpp">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointsToDistanceVolume.cpp">
+      <Filter>Source Files\Voxels</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointsToMeshFusion.cpp">
+      <Filter>Source Files\Voxels</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

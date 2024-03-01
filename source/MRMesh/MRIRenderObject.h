@@ -2,7 +2,9 @@
 #include "MRMesh/MRFlagOperators.h"
 #include "MRMeshFwd.h"
 #include "MRViewportId.h"
+#include "MRVector2.h"
 #include "MRVector4.h"
+#include "MRAffineXf3.h"
 #include <functional>
 #include <typeindex>
 #include <memory>
@@ -44,6 +46,64 @@ struct ModelRenderParams : BaseRenderParams
     bool alphaSort{ false };     // if this flag is true shader for alpha sorting is used, unused for picker
 };
 
+/// `IRenderObject::renderUi()` can emit zero or more or more of those tasks. They are sorted by depth every frame.
+struct BasicUiRenderTask
+{
+    virtual ~BasicUiRenderTask() = default;
+
+    BasicUiRenderTask() = default;
+    BasicUiRenderTask( const BasicUiRenderTask& ) = delete;
+    BasicUiRenderTask& operator=( const BasicUiRenderTask& ) = delete;
+
+    /// The tasks are sorted by this depth, descending (larger depth = further away).
+    float renderTaskDepth = 0;
+
+    struct BackwardPassParams
+    {
+        /// If this is false, you can claim mouse hover for your object. Then set it to true.
+        mutable bool mouseHoverConsumed = false;
+    };
+
+    /// This is an optional early pass, where you can claim exclusive control over the mouse.
+    /// This pass is executed in reverse draw order.
+    virtual void earlyBackwardPass( const BackwardPassParams& params ) { (void)params; }
+
+    /// This is the main rendering pass.
+    virtual void renderPass() = 0;
+};
+
+struct UiRenderParams : BaseRenderParams
+{
+    /// Multiply all your hardcoded sizes by this amount.
+    float scale = 1;
+
+    using UiTaskList = std::vector<std::shared_ptr<BasicUiRenderTask>>;
+
+    // Those are Z-sorted and then executed.
+    UiTaskList* tasks = nullptr;
+};
+
+struct UiRenderManager
+{
+    virtual ~UiRenderManager() = default;
+
+    // This is called before doing `IRenderObject::renderUi()` on even object in a viewport. Each viewport is rendered separately.
+    virtual void preRenderViewport( ViewportId viewport ) { (void)viewport; }
+    // This is called after doing `IRenderObject::renderUi()` on even object in a viewport. Each viewport is rendered separately.
+    virtual void postRenderViewport( ViewportId viewport ) { (void)viewport; }
+
+    // Returns the parameters for the `IRenderObject::earlyBackwardPass()`.
+    // This will be called exactly once per viewport, each time the UI in it is rendered.
+    virtual BasicUiRenderTask::BackwardPassParams beginBackwardPass() { return {}; }
+    // After the backward pass is performed, the parameters should be passed back into this function.
+    virtual void finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params ) { (void)params; }
+
+    // This should return true when the mouse hover is owned by one of the rendered objects.
+    // It's expected that this will be equal to `params.mouseHoverConsumed` from the last `finishBackwardPass()`,
+    // but you can also add your own arbitrary conditions.
+    virtual bool ownsMouseHover() const { return false; }
+};
+
 class IRenderObject
 {
 public:
@@ -60,6 +120,32 @@ public:
     virtual size_t glBytes() const = 0;
     /// binds all data for this render object, not to bind ever again (until object becomes dirty)
     virtual void forceBindAll() {}
+
+    /// Render the UI. This is repeated for each viewport.
+    /// Here you can either render immediately, or insert a task into `params.tasks`, which get Z-sorted.
+    /// * `params` will remain alive as long as the tasks are used.
+    /// * You'll have at most one living task at a time, so you can write a non-owning pointer to an internal task.
+    virtual void renderUi( const UiRenderParams& params ) { (void)params; }
+};
+// Those dummy definitions remove undefined references in `RenderObjectCombinator` when it calls non-overridden pure virtual methods.
+// We could check in `RenderObjectCombinator` if they're overridden or not, but it's easier to just define them.
+inline size_t IRenderObject::heapBytes() const { return 0; }
+inline size_t IRenderObject::glBytes() const { return 0; }
+
+// Combines several different `IRenderObject`s into one in a meaningful way.
+template <typename ...Bases>
+requires ( ( std::derived_from<Bases, IRenderObject> && !std::same_as<Bases, IRenderObject> ) && ... )
+class RenderObjectCombinator : public Bases...
+{
+public:
+    RenderObjectCombinator( const VisualObject& object )
+        : Bases( object )...
+    {}
+
+    size_t heapBytes() const override { return ( std::size_t{} + ... + Bases::heapBytes() ); }
+    size_t glBytes() const override { return ( std::size_t{} + ... + Bases::glBytes() ); }
+    void forceBindAll() override { ( Bases::forceBindAll(), ... ); }
+    void renderUi( const UiRenderParams& params ) override { ( Bases::renderUi( params ), ... ); }
 };
 
 MRMESH_API std::unique_ptr<IRenderObject> createRenderObject( const VisualObject& visObj, const std::type_index& type );
@@ -67,7 +153,7 @@ MRMESH_API std::unique_ptr<IRenderObject> createRenderObject( const VisualObject
 template<typename ObjectType>
 std::unique_ptr<IRenderObject> createRenderObject( const VisualObject& visObj )
 {
-    static_assert( std::is_base_of_v<VisualObject, ObjectType>, "MR::VisualObject is not base of ObjectType" );
+    static_assert( std::is_base_of_v<VisualObject, std::remove_reference_t<ObjectType>>, "MR::VisualObject is not base of ObjectType" );
     return createRenderObject( visObj, typeid( ObjectType ) );
 }
 

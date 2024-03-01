@@ -2,6 +2,7 @@
 #include "MRMatrix3.h"
 #include "MRMakeSphereMesh.h"
 #include "MRMesh.h"
+#include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
 #include "MRMatrix3Decompose.h"
@@ -14,7 +15,7 @@
 #elif defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif 
+#endif
 
 #include <Eigen/Dense>
 
@@ -23,7 +24,7 @@
 #elif defined(__clang__)
 #elif defined(__GNUC__)
 #pragma GCC diagnostic pop
-#endif 
+#endif
 
 namespace
 {
@@ -74,12 +75,13 @@ const std::vector<FeatureObjectSharedProperty>& SphereObject::getAllSharedProper
 
 SphereObject::SphereObject()
 {
+    setDefaultFeatureObjectParams( *this );
     constructMesh_();
 }
 
 SphereObject::SphereObject( const std::vector<Vector3f>& pointsToApprox )
+    : SphereObject()
 {
-    constructMesh_();
     // find best radius and center
     Eigen::Matrix<double, 4, 4> accumA_;
     Eigen::Matrix<double, 4, 1> accumB_;
@@ -131,6 +133,12 @@ void SphereObject::serializeFields_( Json::Value& root ) const
 {
     ObjectMeshHolder::serializeFields_( root );
     root["Type"].append( SphereObject::TypeName() );
+}
+
+void SphereObject::setupRenderObject_() const
+{
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype(*this)>( *this );
 }
 
 void SphereObject::constructMesh_()

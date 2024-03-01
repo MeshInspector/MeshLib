@@ -1,4 +1,5 @@
 #include "MRViewer.h"
+#include "MRMesh/MRFinally.h"
 #include "MRViewerEventQueue.h"
 #include "MRSceneTextureGL.h"
 #include "MRAlphaSortGL.h"
@@ -23,6 +24,7 @@
 #include "MRRecentFilesStore.h"
 #include "MRPointInAllSpaces.h"
 #include "MRViewport.h"
+#include "MRFrameCounter.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -933,7 +935,8 @@ Viewer::Viewer() :
     selected_viewport_index( 0 ),
     eventQueue_( std::make_unique<ViewerEventQueue>() ),
     mouseController_( std::make_unique<MouseController>() ),
-    recentFilesStore_( std::make_unique<RecentFilesStore>() )
+    recentFilesStore_( std::make_unique<RecentFilesStore>() ),
+    frameCounter_( std::make_unique<FrameCounter>() )
 {
     window = nullptr;
 
@@ -1435,7 +1438,7 @@ bool Viewer::draw_( bool force )
         return false;
     }
 
-    frameCounter_.startDraw();
+    frameCounter_->startDraw();
 
     glPrimitivesCounter_.reset();
 
@@ -1454,9 +1457,56 @@ bool Viewer::draw_( bool force )
     }
     if ( window && swapped )
         glfwSwapBuffers( window );
-    frameCounter_.endDraw( swapped );
+    frameCounter_->endDraw( swapped );
     isInDraw_ = false;
     return ( window && swapped );
+}
+
+void Viewer::drawUiRenderObjects_()
+{
+    // Currently, a part of the contract of `IRenderObject::renderUi()` is that at most rendering task is in flight at any given time.
+    // That's why each viewport is being drawn separately.
+
+    UiRenderManager& uiRenderManager = getMenuPlugin()->getUiRenderManager();
+
+    for ( Viewport& viewport : getViewerInstance().viewport_list )
+    {
+        UiRenderParams renderParams{ viewport.getBaseRenderParams() };
+        renderParams.scale = menuPlugin_->menu_scaling();
+
+        uiRenderManager.preRenderViewport( viewport.id );
+        MR_FINALLY{ uiRenderManager.postRenderViewport( viewport.id ); };
+
+        UiRenderParams::UiTaskList tasks;
+        tasks.reserve( 50 );
+        renderParams.tasks = &tasks;
+
+        auto lambda = [&]( auto& lambda, Object& object ) -> void
+        {
+            if ( !object.isVisible( viewport.id ) )
+                return;
+
+            if ( auto visual = dynamic_cast<VisualObject*>( &object ) )
+                visual->renderUi( renderParams );
+
+            for ( const auto& child : object.children() )
+                lambda( lambda, *child );
+        };
+        lambda( lambda, SceneRoot::get() );
+
+        std::sort( tasks.begin(), tasks.end(), []( const auto& a, const auto& b ){ return a->renderTaskDepth > b->renderTaskDepth; } );
+
+        auto backwardPassParams = uiRenderManager.beginBackwardPass();
+        for ( auto it = tasks.end(); it != tasks.begin(); )
+        {
+            --it;
+            ( *it )->earlyBackwardPass( backwardPassParams );
+        }
+        uiRenderManager.finishBackwardPass( backwardPassParams );
+
+        for ( const auto& task : tasks )
+            task->renderPass();
+    }
 }
 
 void Viewer::drawFull( bool dirtyScene )
@@ -1494,7 +1544,10 @@ void Viewer::drawFull( bool dirtyScene )
         sceneTexture_->draw(); // always draw scene texture
     }
     if ( menuPlugin_ )
+    {
+        drawUiRenderObjects_();
         menuPlugin_->finishFrame();
+    }
 }
 
 void Viewer::drawScene()
@@ -1965,6 +2018,26 @@ void Viewer::preciseFitDataViewport( MR::ViewportMask vpList )
     return preciseFitDataViewport( vpList, {} );
 }
 
+size_t Viewer::getTotalFrames() const
+{
+    return frameCounter_->totalFrameCounter;
+}
+
+size_t Viewer::getSwappedFrames() const
+{
+    return frameCounter_->swappedFrameCounter;
+}
+
+size_t Viewer::getFPS() const
+{
+    return frameCounter_->fps;
+}
+
+double Viewer::getPrevFrameDrawTimeMillisec() const
+{
+    return frameCounter_->drawTimeMilliSec.count();
+}
+
 void Viewer::incrementForceRedrawFrames( int i /*= 1 */, bool swapOnLastOnly /*= false */)
 {
     if ( isInDraw_ )
@@ -2278,38 +2351,6 @@ void Viewer::setMenuPlugin( std::shared_ptr<ImGuiMenu> menu )
 size_t Viewer::getStaticGLBufferSize() const
 {
     return GLStaticHolder::getStaticGLBuffer().heapBytes();
-}
-
-void Viewer::FrameCounter::startDraw()
-{
-    startDrawTime_ = std::chrono::high_resolution_clock::now();
-}
-
-void Viewer::FrameCounter::endDraw( bool swapped )
-{
-    ++totalFrameCounter;
-    if ( swapped )
-    {
-        ++swappedFrameCounter;
-        const auto nowTP = std::chrono::high_resolution_clock::now();
-        const auto nowSec = std::chrono::time_point_cast<std::chrono::seconds>( nowTP ).time_since_epoch().count();
-        drawTimeMilliSec =  ( nowTP - startDrawTime_ ) * 1000;
-        if ( nowSec > startFPSTime_ )
-        {
-            startFPSTime_ = nowSec;
-            fps = swappedFrameCounter - startFrameNum;
-            startFrameNum = swappedFrameCounter;
-        }
-    }
-}
-
-void Viewer::FrameCounter::reset()
-{
-    totalFrameCounter = 0;
-    swappedFrameCounter = 0;
-    startFPSTime_ = 0;
-    fps = 0;
-    startFrameNum = 0;
 }
 
 void Viewer::EventsCounter::reset()

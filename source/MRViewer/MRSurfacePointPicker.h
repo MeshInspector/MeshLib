@@ -2,11 +2,15 @@
 
 #include "MRViewer.h"
 #include "MRViewerEventsListener.h"
+
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRMeshTriPoint.h"
 #include <MRMesh/MRColor.h>
+#include "MRMesh/MRPointOnObject.h"
+
 #include <functional>
+#include <optional>
 
 namespace MR
 {
@@ -29,7 +33,7 @@ public:
     struct Parameters
     {
         enum class PointSizeType {
-            Metrical , // point size in mm 
+            Metrical, // point size in mm 
             Pixel   // point size in pixels 
         };
         // type of point positioning, look at PositionType comments for more info
@@ -47,11 +51,15 @@ public:
         // Typically, the widget does not respond to actions with a modifier. 
         // If the parameter is set, then custom modifiers located in this GLFW bitmask will be ignored and the widget will work with them as usual.
         int customModifiers; // GLFW modifier bitmask
+        // pick_render_object parameters. Allow to use object in whick pick exactly fell, inshead of closer object in pick radius.
+        bool pickInBackFaceObject = true;
     };
 
     // creates control sphere in start pos
     // returns updated pos if it was moved according to PositionType
-    MRVIEWER_API const MeshTriPoint& create( const std::shared_ptr<ObjectMeshHolder>& surface, const MeshTriPoint& startPos );
+    MRVIEWER_API const PickedPoint& create( const std::shared_ptr<VisualObject>& surface, const PointOnObject& startPos );
+    MRVIEWER_API const PickedPoint& create( const std::shared_ptr<VisualObject>& surface, const PickedPoint& startPos );
+
     // resets whole widget
     MRVIEWER_API void reset();
     // returns object of control sphere
@@ -82,32 +90,49 @@ public:
     MRVIEWER_API void setHovered( bool on );
 
     // returns stored position of this widget
-    const MeshTriPoint& getCurrentPosition() const
+    const PickedPoint& getCurrentPosition() const
     {
         return currentPos_;
     }
-    MRVIEWER_API void updateCurrentPosition( const MeshTriPoint& pos );
+
+    // return current position transformed to Vector3f 
+    MRVIEWER_API Vector3f toVector3f() const;
+
+    // returns stored position in MeshTriPointFormat if it is possible
+    std::optional<MeshTriPoint> getCurrentPositionMeshTriPoint() const
+    {
+        if ( const MeshTriPoint* triPoint = std::get_if<MeshTriPoint>( &currentPos_ ) )
+            return *triPoint;
+        else
+            return std::nullopt;
+    }
+
+    MRVIEWER_API void updateCurrentPosition( const PointOnObject& pos );
+    MRVIEWER_API void updateCurrentPosition( const PickedPoint& pos );
 
     // this callback is called when modification starts if it is set
-    void setStartMoveCallback( std::function<void( const MeshTriPoint& )> startMove )
+    void setStartMoveCallback( std::function<void( const PickedPoint& )> startMove )
     {
         startMove_ = startMove;
     }
     // this callback is called on modification if it is set
-    void setOnMoveCallback( std::function<void( const MeshTriPoint& )> onMove )
+    void setOnMoveCallback( std::function<void( const PickedPoint& )> onMove )
     {
         onMove_ = onMove;
     }
     // this callback is called when modification ends if it is set
-    void setEndMoveCallback( std::function<void( const MeshTriPoint& )> endMove )
+    void setEndMoveCallback( std::function<void( const PickedPoint& )> endMove )
     {
         endMove_ = endMove;
     }
 
-    std::shared_ptr<ObjectMeshHolder> getBaseSurface()
+    std::shared_ptr<VisualObject>& getBaseSurface()
     {
-        return baseSurface_;
+        return baseObject_;
     }
+
+    // Checks whether the current peak is a peak in the invisible (reverse) side of the mesh or cloud point.
+    [[nodiscard]] static bool isPickIntoBackFace( const std::shared_ptr<MR::VisualObject>& obj, const MR::PointOnObject& pick, const Vector3f& cameraEye );
 
 private:
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
@@ -115,6 +140,9 @@ private:
     MRVIEWER_API virtual bool onMouseMove_( int mouse_x, int mouse_y ) override;
 
     void updatePositionAndRadius_();
+    void updatePositionAndRadiusMesh_( MeshTriPoint mtp );
+    void updatePositionAndRadiusPoints_( const VertId& v );
+    void updatePositionAndRadiusLines_( const EdgePoint& ep );
 
     Parameters params_;
 
@@ -123,18 +151,20 @@ private:
     bool isHovered_{ false };
     MRVIEWER_API void preDraw_() override;
 
-    MeshTriPoint currentPos_;
+    PickedPoint currentPos_;
 
     std::shared_ptr<SphereObject> pickSphere_;
-    std::shared_ptr<ObjectMeshHolder> baseSurface_;
+    std::shared_ptr<VisualObject> baseObject_;
 
-    std::function<void( const MeshTriPoint& )> startMove_;
-    std::function<void( const MeshTriPoint& )> onMove_;
-    std::function<void( const MeshTriPoint& )> endMove_;
+    std::function<void( const PickedPoint& )> startMove_;
+    std::function<void( const PickedPoint& )> onMove_;
+    std::function<void( const PickedPoint& )> endMove_;
 
     // Depending on the type of selected size, sets the point size
     void setPointRadius_();
 
 };
+
+
 
 }

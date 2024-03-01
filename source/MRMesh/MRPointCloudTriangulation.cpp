@@ -48,14 +48,13 @@ PointCloudTriangulator::PointCloudTriangulator( const PointCloud& pointCloud, co
 std::optional<Mesh> PointCloudTriangulator::triangulate( ProgressCallback progressCb )
 {
     MR_TIMER
-    assert( ( params_.avgNumNeighbours <= 0 && params_.radius > 0 )
-         || ( params_.avgNumNeighbours > 0 && params_.radius <= 0 ) );
-
-    float radius = params_.radius > 0 ? params_.radius : findAvgPointsRadius( pointCloud_, params_.avgNumNeighbours );
+    assert( ( params_.numNeighbours <= 0 && params_.radius > 0 )
+         || ( params_.numNeighbours > 0 && params_.radius <= 0 ) );
 
     auto optLocalTriangulations = TriangulationHelpers::buildUnitedLocalTriangulations( pointCloud_,
         {
-            .radius = radius,
+            .radius = params_.radius,
+            .numNeis = params_.numNeighbours,
             .critAngle = params_.critAngle,
             .trustedNormals = pointCloud_.hasNormals() ? &pointCloud_.normals : nullptr
         }, subprogress( progressCb, 0.0f, pointCloud_.hasNormals() ? 0.4f : 0.3f ) );
@@ -143,32 +142,6 @@ std::optional<Mesh> triangulatePointCloud( const PointCloud& pointCloud, const T
     MR_TIMER
     PointCloudTriangulator triangulator( pointCloud, params );
     return triangulator.triangulate( progressCb );
-}
-
-std::optional<VertBitSet> findBoundaryPoints( const PointCloud& pointCloud, float radius, float boundaryAngle,
-    ProgressCallback cb )
-{
-    MR_TIMER;
-    bool hasNormals = pointCloud.validPoints.find_last() < pointCloud.normals.size();
-    std::optional<VertCoords> optNormals;
-    if ( !hasNormals )
-        optNormals = makeUnorientedNormals( pointCloud, radius, subprogress( cb, 0.0f, 0.5f ) );
-    if ( !hasNormals && !optNormals )
-        return {};
-    const VertCoords& normals = hasNormals ? pointCloud.normals : *optNormals;
-
-    VertBitSet borderPoints( pointCloud.validPoints.size() );
-    tbb::enumerable_thread_specific<TriangulationHelpers::TriangulatedFanData> tls;
-    auto keepGoing = BitSetParallelFor( pointCloud.validPoints, [&] ( VertId v )
-    {
-        auto& fanData = tls.local();
-        if ( isBoundaryPoint( pointCloud, normals, v, radius, boundaryAngle, fanData ) )
-            borderPoints.set( v );
-    }, subprogress( cb, hasNormals ? 0.0f : 0.5f, 1.0f ) );
-        
-    if ( !keepGoing )
-        return {};
-    return borderPoints;
 }
 
 } //namespace MR

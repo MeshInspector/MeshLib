@@ -96,9 +96,10 @@ jobs:
           submodules: recursive
 
       - name: Download Windows Binaries Archive
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: WindowsArchive
+          pattern: WindowsArchive*
+          merge-multiple: true
 
       - name: Extract Windows Binaries
         run: |
@@ -112,9 +113,9 @@ jobs:
         run: py -3.10 scripts\zip_distribution.py MeshLibDist.zip
 
       - name: Upload Windows Distribution
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: Distributives
+          name: DistributivesWin
           path: MeshLibDist.zip
           retention-days: 1
 
@@ -138,9 +139,10 @@ jobs:
           submodules: recursive
 
       - name: Download All Developer Distributives
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: Distributives
+          pattern: Distributives*
+          merge-multiple: true
 
       - name: Rename Distributives
         run: |
@@ -181,42 +183,43 @@ jobs:
     steps:
         # all Windows
       - name: Delete Windows Debug Install Archive artifact
-        uses: geekyeggo/delete-artifact@v2
+        uses: geekyeggo/delete-artifact@v4
         with:
-          name: WindowsArchive
+          name: WindowsArchive*
           failOnError: false
 
       # Distributives
       - name: Delete Distribution
-        uses: geekyeggo/delete-artifact@v2
+        uses: geekyeggo/delete-artifact@v4
         with:
-          name: Distributives
+          name: Distributives*
           failOnError: false
 
       - name: Delete Wheelhouse
-        uses: geekyeggo/delete-artifact@v2
+        uses: geekyeggo/delete-artifact@v4
         with:
-          name: Wheelhouse
+          name: Wheelhouse*
           failOnError: false
 
       # generate timing logs archive
       - name: Download Timing Logs Archive
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: Timing_Logs
+          pattern: Timing_Logs*
+          merge-multiple: true
 
       - name: Generate Timing Logs Archive
         run: tar -cvzf time_log.tar.gz ./*.csv
 
       - name: Upload Timing Logs Archive
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: time_log
           path: time_log.tar.gz
           retention-days: 1
 
       - name: Delete Timing Logs Source
-        uses: geekyeggo/delete-artifact@v2
+        uses: geekyeggo/delete-artifact@v4
         with:
-          name: Timing_Logs
+          name: Timing_Logs*
           failOnError: false

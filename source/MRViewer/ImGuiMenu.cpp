@@ -7,7 +7,7 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 ////////////////////////////////////////////////////////////////////////////////
 #include "ImGuiMenu.h"
-#include "MRMeshViewer.h"
+#include "MRViewer.h"
 #include "MRRecentFilesStore.h"
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
@@ -93,6 +93,11 @@
 
 namespace MR
 {
+
+const std::shared_ptr<ImGuiMenu>& ImGuiMenu::instance()
+{
+    return getViewerInstance().getMenuPlugin();
+}
 
 namespace
 {
@@ -270,8 +275,8 @@ const ImVec4 undefined = ImVec4( 0.5f, 0.5f, 0.5f, 0.5f );
 
 // at least one of selected is true - first,
 // all selected are true - second
-std::pair<bool, bool> getRealValue( const std::vector<std::shared_ptr<MR::VisualObject>>& selected,
-                                    unsigned type, MR::ViewportMask viewportId, bool inverseInput = false )
+static std::pair<bool, bool> getRealValue( const std::vector<std::shared_ptr<MR::VisualObject>>& selected,
+                                    AnyVisualizeMaskEnum type, MR::ViewportMask viewportId, bool inverseInput = false )
 {
     bool atLeastOneTrue = false;
     bool allTrue = true;
@@ -455,7 +460,7 @@ bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
 {
     ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
     capturedMouse_ = ImGui::GetIO().WantCaptureMouse;
-    return ImGui::GetIO().WantCaptureMouse;
+    return ImGui::GetIO().WantCaptureMouse || uiRenderManager_->ownsMouseHover();
 }
 
 bool ImGuiMenu::onMouseUp_( Viewer::MouseButton button, int modifier )
@@ -634,14 +639,6 @@ MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
                     labels[i].text,
                     obj.getLabelsColor(),
                     clip );
-        if ( obj.getVisualizeProperty( VisualizeMaskType::Name, viewport.id ) )
-            draw_text(
-                viewport,
-                xf( obj.getBoundingBox().center() ),
-                Vector3f( 0.0f, 0.0f, 0.0f ),
-                obj.name(),
-                 obj.getLabelsColor(),
-                clip );
     }
 MR_SUPPRESS_WARNING_POP
 }
@@ -836,6 +833,13 @@ void ImGuiMenu::draw_helpers()
     ImGui::PopStyleVar( 3 );
 
     drawModalMessage_();
+}
+
+UiRenderManager& ImGuiMenu::getUiRenderManager()
+{
+    if ( !uiRenderManager_ )
+        uiRenderManager_ = std::make_unique<UiRenderManagerImpl>();
+    return *uiRenderManager_;
 }
 
 void ImGuiMenu::drawModalMessage_()
@@ -1672,7 +1676,7 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
 
     if ( allIsObjPoints )
     {
-        make_points_discretization( selectedObjs, "Point Sampling", [&] ( const ObjectPointsHolder* data )
+        make_points_discretization( selectedObjs, "Visual Sampling", [&] ( const ObjectPointsHolder* data )
         {
             return data->getRenderDiscretization();
         }, [&] ( ObjectPointsHolder* data, const int val )
@@ -2154,7 +2158,7 @@ bool ImGuiMenu::drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags fla
 void ImGuiMenu::draw_custom_tree_object_properties( Object& )
 {}
 
-bool ImGuiMenu::make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, unsigned type, MR::ViewportMask viewportid, bool invert /*= false*/ )
+bool ImGuiMenu::make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, AnyVisualizeMaskEnum type, MR::ViewportMask viewportid, bool invert /*= false*/ )
 {
     auto realRes = getRealValue( selectedVisualObjs, type, viewportid, invert );
     bool checked = realRes.first;
@@ -3185,6 +3189,40 @@ StateBasePlugin* ImGuiMenu::PluginsCache::findEnabled() const
 const std::vector<StateBasePlugin*>& ImGuiMenu::PluginsCache::getTabPlugins( StatePluginTabs tab ) const
 {
     return sortedCustomPlufins_[int( tab )];
+}
+
+void ImGuiMenu::UiRenderManagerImpl::preRenderViewport( ViewportId viewport )
+{
+    const auto& v = getViewerInstance().viewport( viewport );
+    auto rect = v.getViewportRect();
+
+    ImVec2 cornerA( rect.min.x, ImGui::GetIO().DisplaySize.y - rect.max.y );
+    ImVec2 cornerB( rect.max.x, ImGui::GetIO().DisplaySize.y - rect.min.y );
+
+    ImGui::GetBackgroundDrawList()->PushClipRect( cornerA, cornerB );
+    ImGui::GetForegroundDrawList()->PushClipRect( cornerA, cornerB );
+}
+
+void ImGuiMenu::UiRenderManagerImpl::postRenderViewport( ViewportId viewport )
+{
+    (void)viewport;
+    ImGui::GetBackgroundDrawList()->PopClipRect();
+    ImGui::GetForegroundDrawList()->PopClipRect();
+}
+
+BasicUiRenderTask::BackwardPassParams ImGuiMenu::UiRenderManagerImpl::beginBackwardPass()
+{
+    return { .mouseHoverConsumed = ImGui::GetIO().WantCaptureMouse };
+}
+
+void ImGuiMenu::UiRenderManagerImpl::finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params )
+{
+    mouseIsBlocked_ = params.mouseHoverConsumed;
+}
+
+bool ImGuiMenu::UiRenderManagerImpl::ownsMouseHover() const
+{
+    return mouseIsBlocked_;
 }
 
 void showModal( const std::string& msg, NotificationType type )

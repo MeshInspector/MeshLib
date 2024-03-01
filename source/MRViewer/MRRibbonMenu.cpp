@@ -208,6 +208,11 @@ bool RibbonMenu::isTopPannelPinned() const
     return collapseState_ == CollapseState::Pinned;
 }
 
+void RibbonMenu::setQuickAccessListVersion( int version )
+{
+    toolbar_.setItemsListVersion( version );
+}
+
 void RibbonMenu::readQuickAccessList( const Json::Value& root )
 {
     toolbar_.readItemsList( root );

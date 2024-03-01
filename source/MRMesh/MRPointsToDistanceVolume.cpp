@@ -2,8 +2,10 @@
 #include "MRSimpleVolume.h"
 #include "MRVolumeIndexer.h"
 #include "MRParallelFor.h"
+#include "MRBitSetParallelFor.h"
 #include "MRPointCloud.h"
 #include "MRPointsInBall.h"
+#include "MRColor.h"
 #include "MRTimer.h"
 #include <limits>
 
@@ -46,6 +48,38 @@ Expected<SimpleVolume> pointsToDistanceVolume( const PointCloud & cloud, const P
 
     res.max =  params.sigma * std::exp( -0.5f );
     res.min = -res.max;
+    return res;
+}
+
+Expected<VertColors> calcAvgColors( const PointCloud & cloud, const VertColors & colors,
+    const VertCoords & tgtPoints, const VertBitSet & tgtVerts, float sigma, const ProgressCallback & cb )
+{
+    MR_TIMER
+    assert( sigma > 0 );
+    assert( cloud.hasNormals() );
+
+    VertColors res;
+    res.resizeNoInit( tgtPoints.size() );
+
+    const auto inv2SgSq = -0.5f / sqr( sigma );
+    if ( !BitSetParallelFor( tgtVerts, [&]( VertId tv )
+    {
+        const auto pos = tgtPoints[tv];
+
+        Vector4f sumColors;
+        float sumWeight = 0;
+        findPointsInBall( cloud, pos, 3 * sigma, [&]( VertId v, const Vector3f& p )
+        {
+            const auto distSq = ( pos - p ).lengthSq();
+            const auto w = std::exp( distSq * inv2SgSq );
+            sumWeight += w;
+            sumColors += Vector4f( colors[v] ) * w;
+        } );
+        if ( sumWeight > 0 )
+            res[tv] = Color( sumColors / sumWeight );
+    }, cb ) )
+        return unexpectedOperationCanceled();
+
     return res;
 }
 

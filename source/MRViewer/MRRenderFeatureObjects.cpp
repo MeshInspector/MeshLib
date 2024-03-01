@@ -87,7 +87,7 @@ static void addSubfeatures( const VisualObject& sourceObject, ObjectLines* outpu
                 float angle = i * 2 * PI_F / numCircleSegments;
                 points[i].x = cosf( angle );
                 points[i].y = sinf( angle );
-                points[i] = subObject->xf()( points[i] );
+                points[i] = circle->xf()( points[i] );
             }
             outputLines->varPolyline()->addFromPoints( points.data(), numCircleSegments, true );
             return;

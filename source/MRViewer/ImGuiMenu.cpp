@@ -1214,20 +1214,33 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
     }
     if ( isOpen )
     {
+        auto scaling = menu_scaling();
         draw_custom_tree_object_properties( object );
         bool infoOpen = false;
         auto lines = object.getInfoLines();
+        auto smallFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Small );
         if ( hasRealChildren && !lines.empty() )
         {
             auto infoId = std::string( "Info: ##" ) + uniqueStr;
+            ImGui::Indent();
+            if ( smallFont )
+                ImGui::PushFont( smallFont );
+            auto framePadding = ImGui::GetStyle().FramePadding;
+            framePadding.y = 4 * scaling;
+            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
             infoOpen = drawCollapsingHeader_( infoId.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed );
+            ImGui::PopStyleVar();
+            if ( smallFont )
+                ImGui::PopFont();
+            ImGui::Unindent();
         }
 
         if ( infoOpen || !hasRealChildren )
         {
+            if ( smallFont )
+                ImGui::PushFont( smallFont );
             auto itemSpacing = ImGui::GetStyle().ItemSpacing;
             auto framePadding = ImGui::GetStyle().FramePadding;
-            auto scaling = menu_scaling();
             framePadding.y = 2.0f * scaling;
             itemSpacing.y = 2.0f * scaling;
             ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( 0, 0, 0, 0 ) );
@@ -1235,6 +1248,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
             ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
             ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, cItemInfoIndent * scaling );
+            ImGui::Indent();
             ImGui::Indent();
 
             for ( const auto& str : lines )
@@ -1244,8 +1258,11 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
             }
 
             ImGui::Unindent();
+            ImGui::Unindent();
             ImGui::PopStyleVar( 4 );
             ImGui::PopStyleColor();
+            if ( smallFont )
+                ImGui::PopFont();
         }
 
         if ( hasRealChildren )

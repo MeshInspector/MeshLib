@@ -6,8 +6,7 @@
 namespace MR
 {
 
-MR::Mesh makeCylinder(float radius, float length,
-    int resolution)
+Mesh makeCylinder( float radius, float length, int resolution )
 {
     std::vector<Vector3f> points(2 * resolution + 2);
     auto step = 2.0f * PI_F / float(resolution);
@@ -39,7 +38,69 @@ MR::Mesh makeCylinder(float radius, float length,
     return Mesh::fromTriangles( std::move( points ), t );
 }
 
-MR::Mesh makeCylinderAdvanced( float radius0, float radius1, float start_angle,
+Mesh makeOpenCylinder( float radius, float z1, float z2, int numCircleSegments )
+{
+    std::vector<Vector3f> points( 2 * numCircleSegments );
+
+    for ( bool side : { false, true } )
+    {
+        float z = side ? z2 : z1;
+
+        for ( int i = 0; i < numCircleSegments; ++i )
+        {
+            float angle = i * 2 * PI_F / numCircleSegments;
+            int index = i + numCircleSegments * side;
+            points[index].x = radius * std::cos( angle );
+            points[index].y = radius * std::sin( angle );
+            points[index].z = z;
+        }
+    }
+
+    Triangulation t;
+    t.reserve( 2 * numCircleSegments );
+    for ( int i = 0; i < numCircleSegments; ++i )
+    {
+        VertId a( i );
+        VertId b( ( i + 1 ) % numCircleSegments );
+        VertId c( i + numCircleSegments );
+        VertId d( ( i + 1 ) % numCircleSegments + numCircleSegments );
+
+        t.push_back( { a, b, c } );
+        t.push_back( { b, d, c } );
+    }
+
+    return Mesh::fromTriangles( std::move( points ), t );
+}
+
+Mesh makeOpenCone( float radius, float zApex, float zBase, int numCircleSegments )
+{
+    std::vector<Vector3f> points( numCircleSegments + 1 );
+
+    for ( int i = 0; i < numCircleSegments; ++i )
+    {
+        float angle = i * 2 * PI_F / numCircleSegments;
+        points[i].x = radius * std::cos( angle );
+        points[i].y = radius * std::sin( angle );
+        points[i].z = zBase;
+    }
+    points[numCircleSegments] = Vector3f( 0, 0, zApex );
+
+    Triangulation t;
+    t.reserve( 2 * numCircleSegments );
+    for ( int i = 0; i < numCircleSegments; ++i )
+    {
+        VertId a( i );
+        VertId b( ( i + 1 ) % numCircleSegments );
+        VertId c( numCircleSegments );
+        if ( zBase > zApex )
+            std::swap( a, b );
+        t.push_back( { a, b, c } );
+    }
+
+    return Mesh::fromTriangles( std::move( points ), t );
+}
+
+Mesh makeCylinderAdvanced( float radius0, float radius1, float start_angle,
                                float arc_size, float length, int resolution )
 {
     int cap0 = 0, cap1 = 0;
@@ -131,7 +192,7 @@ MR::Mesh makeCylinderAdvanced( float radius0, float radius1, float start_angle,
     return Mesh::fromTriangles( std::move(points), t );
 }
 
-MR::Mesh makeCone( float radius0, float length, int resolution )
+Mesh makeCone( float radius0, float length, int resolution )
 {
     return makeCylinderAdvanced( radius0, 0.f, 0.f, 2.0f * PI_F, length, resolution );
 }

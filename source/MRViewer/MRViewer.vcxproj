@@ -201,6 +201,7 @@
     <ClInclude Include="MRRenderDefaultUiObject.h" />
     <ClInclude Include="MRRenderFeatureObjects.h" />
     <ClInclude Include="MRRenderNameObject.h" />
+    <ClInclude Include="MRRenderWrapObject.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

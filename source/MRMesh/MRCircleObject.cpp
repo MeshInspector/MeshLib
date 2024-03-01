@@ -28,11 +28,6 @@
 #endif
 
 
-namespace
-{
-constexpr int cDetailLevel = 128;
-}
-
 namespace MR
 {
 
@@ -91,7 +86,6 @@ const std::vector<FeatureObjectSharedProperty>& CircleObject::getAllSharedProper
 CircleObject::CircleObject()
 {
     setDefaultFeatureObjectParams( *this );
-    constructPolyline_();
 }
 
 CircleObject::CircleObject( const std::vector<Vector3f>& pointsToApprox )
@@ -142,18 +136,12 @@ CircleObject::CircleObject( const std::vector<Vector3f>& pointsToApprox )
 
 std::shared_ptr<Object> CircleObject::shallowClone() const
 {
-    auto res = std::make_shared<CircleObject>( ProtectedStruct{}, *this );
-    if ( polyline_ )
-        res->polyline_ = polyline_;
-    return res;
+    return std::make_shared<CircleObject>( ProtectedStruct{}, *this );
 }
 
 std::shared_ptr<Object> CircleObject::clone() const
 {
-    auto res = std::make_shared<CircleObject>( ProtectedStruct{}, *this );
-    if ( polyline_ )
-        res->polyline_ = std::make_shared<Polyline3>( *polyline_ );
-    return res;
+    return std::make_shared<CircleObject>( ProtectedStruct{}, *this );
 }
 
 void CircleObject::swapBase_( Object& other )
@@ -172,23 +160,8 @@ void CircleObject::setupRenderObject_() const
 
 void CircleObject::serializeFields_( Json::Value& root ) const
 {
-    ObjectLinesHolder::serializeFields_( root );
+    VisualObject::serializeFields_( root );
     root["Type"].append( CircleObject::TypeName() );
-}
-
-void CircleObject::constructPolyline_()
-{
-    polyline_ = std::make_shared<Polyline3>();
-
-    std::vector<Vector3f> points( cDetailLevel );
-    for ( int i = 0; i < cDetailLevel; ++i )
-    {
-        points[i].x = cosf( i / 32.f * PI_F );
-        points[i].y = sinf( i / 32.f * PI_F );
-    }
-    polyline_->addFromPoints( points.data(), cDetailLevel, true );
-
-    setDirtyFlags( DIRTY_ALL );
 }
 
 }

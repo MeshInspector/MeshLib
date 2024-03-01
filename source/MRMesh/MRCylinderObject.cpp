@@ -20,41 +20,14 @@ namespace MR
 
 namespace
 {
-constexpr int cDetailLevel = 2048;
-constexpr float cBaseRadius = 1.0f;
-constexpr float cBaseLength = 1.0f;
 
-constexpr float epsilonForCylinderTopBottomDetection = 0.01f;
 constexpr int phiResolution = 180;
-constexpr int thetaiResolution = 180;
+constexpr int thetaResolution = 180;
 
 
 Matrix3f getRotationMatrix( const Vector3f& normal )
 {
     return Matrix3f::rotation( Vector3f::plusZ(), normal );
-}
-
-
-std::shared_ptr<Mesh> makeFeatureCylinder( int resolution = cDetailLevel, float  startAngle = 0.0f, float  archSize = 2.0f * PI_F )
-{
-    auto mesh = std::make_shared<Mesh>( makeCylinderAdvanced( cBaseRadius, cBaseRadius, startAngle, archSize, cBaseLength, resolution ) );
-    AffineXf3f shift;
-    shift.b = Vector3f( 0.0f, 0.0f, -cBaseLength / 2.0f );
-    mesh->transform( shift );
-
-    // remove cylinder top and bottom;
-    Vector3f zDirection = Vector3f::plusZ();
-    FaceBitSet facesForDelete;
-    auto normals = computePerFaceNormals( *mesh );
-
-    for ( auto f : mesh->topology.getValidFaces() )
-    {
-        if ( cross( normals[f], zDirection ).lengthSq() < epsilonForCylinderTopBottomDetection )
-            facesForDelete.autoResizeSet( f, true );
-    }
-    mesh->topology.deleteFaces( facesForDelete );
-
-    return mesh;
 }
 
 } // namespace
@@ -124,7 +97,6 @@ void CylinderObject::setCenter( const Vector3f& center )
 CylinderObject::CylinderObject()
 {
     setDefaultFeatureObjectParams( *this );
-    constructMesh_();
 }
 
 CylinderObject::CylinderObject( const std::vector<Vector3f>& pointsToApprox )
@@ -133,7 +105,7 @@ CylinderObject::CylinderObject( const std::vector<Vector3f>& pointsToApprox )
     // calculate cylinder parameters.
     Cylinder3<float> result;
     auto fit = Cylinder3Approximation<float>();
-    auto approxResult = fit.solveGeneral( pointsToApprox, result, phiResolution, thetaiResolution );
+    auto approxResult = fit.solveGeneral( pointsToApprox, result, phiResolution, thetaResolution );
     if ( approxResult < 0 )
     {
         spdlog::warn( "CylinderObject :: unable to creater feature object cylinder." );
@@ -149,18 +121,12 @@ CylinderObject::CylinderObject( const std::vector<Vector3f>& pointsToApprox )
 
 std::shared_ptr<Object> CylinderObject::shallowClone() const
 {
-    auto res = std::make_shared<CylinderObject>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = mesh_;
-    return res;
+    return std::make_shared<CylinderObject>( ProtectedStruct{}, *this );
 }
 
 std::shared_ptr<Object> CylinderObject::clone() const
 {
-    auto res = std::make_shared<CylinderObject>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = std::make_shared<Mesh>( *mesh_ );
-    return res;
+    return std::make_shared<CylinderObject>( ProtectedStruct{}, *this );
 }
 
 void CylinderObject::swapBase_( Object& other )
@@ -173,7 +139,7 @@ void CylinderObject::swapBase_( Object& other )
 
 void CylinderObject::serializeFields_( Json::Value& root ) const
 {
-    ObjectMeshHolder::serializeFields_( root );
+    VisualObject::serializeFields_( root );
     root["Type"].append( CylinderObject::TypeName() );
 }
 
@@ -181,15 +147,6 @@ void CylinderObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
         renderObj_ = createRenderObject<decltype(*this)>( *this );
-}
-
-void CylinderObject::constructMesh_()
-{
-    mesh_ = makeFeatureCylinder();
-    setFlatShading( false );
-    selectFaces( {} );
-    selectEdges( {} );
-    setDirtyFlags( DIRTY_ALL );
 }
 
 const std::vector<FeatureObjectSharedProperty>& CylinderObject::getAllSharedProperties() const
@@ -237,7 +194,7 @@ TEST( MRMesh, CylinderApproximation )
 
     Cylinder3<float> result;
     auto fit = Cylinder3Approximation<float>();
-    auto approximationRMS = fit.solveGeneral( points, result, phiResolution, thetaiResolution, true );
+    auto approximationRMS = fit.solveGeneral( points, result, phiResolution, thetaResolution, true );
     std::cout << "multi thread center: " << result.center() << " direction:" << result.direction() << " length:" << result.length << " radius:" << result.radius << " error:" << approximationRMS << std::endl;
 
     EXPECT_LE( approximationRMS, 0.1f );
@@ -251,7 +208,7 @@ TEST( MRMesh, CylinderApproximation )
     ///////////////////////////////////////
 
     Cylinder3<float> resultST;
-    auto approximationRMS_ST = fit.solveGeneral( points, resultST, phiResolution, thetaiResolution, false );
+    auto approximationRMS_ST = fit.solveGeneral( points, resultST, phiResolution, thetaResolution, false );
     std::cout << "single thread center: " << result.center() << " direction:" << result.direction() << " length:" << result.length << " radius:" << result.radius << " error:" << approximationRMS << std::endl;
 
     EXPECT_NEAR( approximationRMS, approximationRMS_ST, 0.01f );

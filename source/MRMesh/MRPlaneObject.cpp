@@ -80,19 +80,19 @@ void PlaneObject::setSizeY( float size )
 }
 
 
-float PlaneObject::getSize( void ) const
+float PlaneObject::getSize() const
 {
     return  ( getSizeX() + getSizeY() ) / 2.0f;
 }
 
-float PlaneObject::getSizeX( void ) const
+float PlaneObject::getSizeX() const
 {
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
     return  s.x.x * basePlaneObjectHalfEdgeLength_ * 2.0f;
 }
 
-float PlaneObject::getSizeY( void ) const
+float PlaneObject::getSizeY() const
 {
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
@@ -133,7 +133,7 @@ void PlaneObject::orientateFollowMainAxis_()
 
     planeVectorInXY = planeVectorInXY.normalized();
 
-    // TODO. For XY plane we need this loop, deu to problems in first rotation. 
+    // TODO. For XY plane we need this loop, due to problems in first rotation. 
     for ( auto i = 0; i < 10; ++i )
     {
         // calculate current feature oX-axis direction. 

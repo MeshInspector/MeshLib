@@ -1,5 +1,6 @@
 #pragma once
 
+#include "exports.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRVector3.h" //const Contours3f& contours = {}
 #include <memory>
@@ -22,22 +23,22 @@ struct AncillaryLines
     explicit AncillaryLines( Object& parent, const Contours3f& contours = {} ) { make( parent, contours ); }
 
     /// Make not-pickable ancillary object, link it to parent object, and set line geometry
-    MRMESH_API void make( Object& parent, const Contours3f& contours = {} );
+    MRVIEWER_API void make( Object& parent, const Contours3f& contours = {} );
 
     /// detach owned object from parent, stops owning it
-    MRMESH_API void reset();
+    MRVIEWER_API void reset();
 
     /// detach owned object from parent, stops owning it
     ~AncillaryLines() { reset(); }
 
     /// Set line geometry
-    MRMESH_API void setContours( const Contours3f& contours );
+    MRVIEWER_API void setContours( const Contours3f& contours );
 
     /// Reset line geometry
-    MRMESH_API void resetContours();
+    MRVIEWER_API void resetContours();
 
     /// Set depth test
-    MRMESH_API void setDepthTest( bool depthTest );
+    MRVIEWER_API void setDepthTest( bool depthTest );
 };
 
 } // namespace MR

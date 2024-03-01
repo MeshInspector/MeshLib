@@ -1,6 +1,7 @@
 #pragma once
 #ifndef MRMESH_NO_LABEL
 
+#include "exports.h"
 #include "MRMesh/MRMeshFwd.h"
 #include <memory>
 
@@ -26,29 +27,29 @@ struct AncillaryLabel
         { make( parent, text, depthTest ); }
 
     /// Make not-pickable ancillary object, link it to parent object, and set label text
-    MRMESH_API void make( Object& parent, const PositionedText& text, bool depthTest = false );
+    MRVIEWER_API void make( Object& parent, const PositionedText& text, bool depthTest = false );
 
     /// Make not-pickable ancillary object without parent object, and set label text
-    static MRMESH_API std::shared_ptr<ObjectLabel> makeDetached(
+    static MRVIEWER_API std::shared_ptr<ObjectLabel> makeDetached(
         const PositionedText& text, bool depthTest = false );
 
     /// detach owned object from parent, stops owning it
-    MRMESH_API void reset();
+    MRVIEWER_API void reset();
 
     /// detach owned object from parent, stops owning it
     ~AncillaryLabel() { reset(); }
 
     /// Set label text
-    MRMESH_API void setText( const PositionedText& text );
+    MRVIEWER_API void setText( const PositionedText& text );
 
     /// Reset label text
-    MRMESH_API void resetText();
+    MRVIEWER_API void resetText();
 
     /// Set depth test
-    MRMESH_API void setDepthTest( bool depthTest );
+    MRVIEWER_API void setDepthTest( bool depthTest );
 
     /// Set text position
-    MRMESH_API void setPosition( const Vector3f& pos );
+    MRVIEWER_API void setPosition( const Vector3f& pos );
 };
 
 } //namespace MR

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "exports.h"
 #include "MRMesh/MRMeshFwd.h"
 #include <memory>
 
@@ -21,28 +22,28 @@ struct AncillaryPoints
     explicit AncillaryPoints( Object& parent ) { make( parent ); }
 
     /// Make not-pickable object, link it to parent object
-    MRMESH_API void make( Object& parent );
+    MRVIEWER_API void make( Object& parent );
 
     /// detach owned object from parent, stops owning it
-    MRMESH_API void reset();
+    MRVIEWER_API void reset();
 
     /// detach owned object from parent, stops owning it
     ~AncillaryPoints() { reset(); }
 
     /// add ancillary point
-    MRMESH_API void addPoint( const Vector3f& point );
+    MRVIEWER_API void addPoint( const Vector3f& point );
 
     /// add ancillary point with color
-    MRMESH_API void addPoint( const Vector3f& point, const Color& color );
+    MRVIEWER_API void addPoint( const Vector3f& point, const Color& color );
 
     /// add vector of ancillary points
-    MRMESH_API void addPoints( const std::vector<Vector3f>& points );
+    MRVIEWER_API void addPoints( const std::vector<Vector3f>& points );
 
     /// add vector of ancillary points with colors
-    MRMESH_API void addPoints( const std::vector<Vector3f>& points, const std::vector<Vector4f>& colors );
+    MRVIEWER_API void addPoints( const std::vector<Vector3f>& points, const std::vector<Vector4f>& colors );
 
     /// Set depth test
-    MRMESH_API void setDepthTest( bool depthTest );
+    MRVIEWER_API void setDepthTest( bool depthTest );
 };
 
 } //namespace MR

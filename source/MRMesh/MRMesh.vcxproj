@@ -13,10 +13,6 @@
   <ItemGroup>
     <ClInclude Include="MRAligningTransform.h" />
     <ClInclude Include="MRAlphaShape.h" />
-    <ClInclude Include="MRAncillaryLabels.h" />
-    <ClInclude Include="MRAncillaryLines.h" />
-    <ClInclude Include="MRAncillaryMesh.h" />
-    <ClInclude Include="MRAncillaryPoints.h" />
     <ClInclude Include="MRChangeValue.h" />
     <ClInclude Include="MRCone3.h" />
     <ClInclude Include="MRConeApproximator.h" />
@@ -395,10 +391,6 @@
     <ClCompile Include="MRAggregateFlow.cpp" />
     <ClCompile Include="MRAlignTextToMesh.cpp" />
     <ClCompile Include="MRAlphaShape.cpp" />
-    <ClCompile Include="MRAncillaryLabels.cpp" />
-    <ClCompile Include="MRAncillaryLines.cpp" />
-    <ClCompile Include="MRAncillaryMesh.cpp" />
-    <ClCompile Include="MRAncillaryPoints.cpp" />
     <ClCompile Include="MRArrow.cpp" />
     <ClCompile Include="MRBasinVolume.cpp" />
     <ClCompile Include="MRBestFitQuadric.cpp" />

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "exports.h"
 #include "MRMesh/MRMeshFwd.h"
 #include <memory>
 
@@ -21,10 +22,10 @@ struct AncillaryMesh
     explicit AncillaryMesh( Object& parent ) { make( parent ); }
 
     /// Make not-pickable object, link it to parent object
-    MRMESH_API void make( Object& parent );
+    MRVIEWER_API void make( Object& parent );
 
     /// detach owned object from parent, stops owning it
-    MRMESH_API void reset();
+    MRVIEWER_API void reset();
 
     /// detach owned object from parent, stops owning it
     ~AncillaryMesh() { reset(); }

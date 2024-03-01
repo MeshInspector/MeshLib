@@ -23,11 +23,14 @@ namespace MR
         return res;
     }
 
-    UndirectedEdgeBitSet fillPolylineLeft( const Polyline3& polyline, const EdgeBitSet& orgEdges, std::vector<std::pair<VertId, VertId>>& cutSegments )
+    UndirectedEdgeBitSet fillPolylineLeft( const Polyline3& polyline, const EdgeBitSet& orgEdges, std::vector<std::pair<VertId, VertId>>* cutSegments )
     {
         const size_t numEdges = polyline.topology.lastNotLoneEdge().undirected() + 1;
         UndirectedEdgeBitSet res( numEdges );
         UndirectedEdgeBitSet visited( numEdges );
+
+        if ( cutSegments )
+            cutSegments->reserve( orgEdges.count() / 2 );
 
         for ( auto e : orgEdges )
         {
@@ -48,8 +51,8 @@ namespace MR
                 }              
                 e0 = polyline.topology.next( e0.sym() );
             }
-
-            cutSegments.push_back( { polyline.topology.org( e ), polyline.topology.org( e0.sym() ) } );
+            if ( cutSegments )
+                cutSegments->push_back( { polyline.topology.org( e ), polyline.topology.org( e0.sym() ) } );
         }
         return res;
     }
@@ -72,8 +75,7 @@ namespace MR
         }
 
         std::vector<std::pair<VertId, VertId>> cutSegments;
-        const auto posEdges = fillPolylineLeft( polyline, newEdges, cutSegments );
-
+        const auto posEdges = fillPolylineLeft( polyline, newEdges, fillAfterCut ? &cutSegments : nullptr );
         Polyline3 res;
         VertMap vMap;
         res.addPartByMask( polyline, posEdges, &vMap );

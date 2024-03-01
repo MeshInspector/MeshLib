@@ -23,11 +23,14 @@ namespace MR
         return res;
     }
 
-    UndirectedEdgeBitSet fillPolylineLeft( const Polyline3& polyline, const EdgeBitSet& orgEdges )
+    UndirectedEdgeBitSet fillPolylineLeft( const Polyline3& polyline, const EdgeBitSet& orgEdges, std::vector<std::pair<VertId, VertId>>* cutSegments )
     {
         const size_t numEdges = polyline.topology.lastNotLoneEdge().undirected() + 1;
         UndirectedEdgeBitSet res( numEdges );
         UndirectedEdgeBitSet visited( numEdges );
+
+        if ( cutSegments )
+            cutSegments->reserve( orgEdges.count() / 2 );
 
         for ( auto e : orgEdges )
         {
@@ -48,11 +51,13 @@ namespace MR
                 }              
                 e0 = polyline.topology.next( e0.sym() );
             }
+            if ( cutSegments )
+                cutSegments->push_back( { polyline.topology.org( e ), polyline.topology.org( e0.sym() ) } );
         }
         return res;
     }
 
-    void dividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, Polyline3* otherPart, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
+    void dividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, Polyline3* otherPart, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback, bool fillAfterCut )
     {
         if ( polyline.points.empty() )
             return;
@@ -69,9 +74,16 @@ namespace MR
             return;
         }
 
-        const auto posEdges = fillPolylineLeft( polyline, newEdges );
+        std::vector<std::pair<VertId, VertId>> cutSegments;
+        const auto posEdges = fillPolylineLeft( polyline, newEdges, fillAfterCut ? &cutSegments : nullptr );
         Polyline3 res;
-        res.addPartByMask( polyline, posEdges );
+        VertMap vMap;
+        res.addPartByMask( polyline, posEdges, &vMap );
+
+        if ( fillAfterCut )
+            for ( const auto& segment : cutSegments )
+                res.topology.makeEdge( vMap[segment.second], vMap[segment.first] );
+                
 
         if ( otherPart )
         {
@@ -83,7 +95,11 @@ namespace MR
                     otherPartEdges.set( ue );
             }
 
-            otherPart->addPartByMask( polyline, otherPartEdges );
+            vMap.clear();
+            otherPart->addPartByMask( polyline, otherPartEdges, &vMap );
+            if ( fillAfterCut )
+                for ( const auto& segment : cutSegments )
+                    otherPart->topology.makeEdge( vMap[segment.first], vMap[segment.second] );
         }
         polyline = res;
     }

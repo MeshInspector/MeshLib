@@ -16,7 +16,10 @@ template<typename Mutex>
 class __attribute__((visibility("default"))) basic_file_sink;
 
 template<typename Mutex>
-class __attribute__((visibility("default"))) ansicolor_sink;
+class __attribute__((visibility("default"))) ansicolor_stdout_sink;
+
+template<typename Mutex>
+class __attribute__((visibility("default"))) ansicolor_stderr_sink;
 #endif
 
 } //namespace sinks

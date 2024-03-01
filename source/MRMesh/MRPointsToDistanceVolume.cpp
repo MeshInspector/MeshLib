@@ -13,8 +13,7 @@ namespace MR
 Expected<SimpleVolume> pointsToDistanceVolume( const PointCloud & cloud, const PointsToDistanceVolumeParams& params )
 {
     MR_TIMER
-    assert( params.truncationRadius > 0 );
-    assert( params.influenceRadius >= params.truncationRadius );
+    assert( params.sigma > 0 );
     assert( params.minInfluencePoints >= 1 );
     assert( cloud.hasNormals() );
 
@@ -24,6 +23,7 @@ Expected<SimpleVolume> pointsToDistanceVolume( const PointCloud & cloud, const P
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size(), std::numeric_limits<float>::quiet_NaN() );
 
+    const auto inv2SgSq = -0.5f / sqr( params.sigma );
     if ( !ParallelFor( size_t( 0 ), indexer.size(), [&]( size_t i )
     {
         auto coord = Vector3f( indexer.toPos( VoxelId( i ) ) ) + Vector3f::diagonal( 0.5f );
@@ -31,11 +31,11 @@ Expected<SimpleVolume> pointsToDistanceVolume( const PointCloud & cloud, const P
 
         float sumDist = 0;
         int num = 0;
-        findPointsInBall( cloud, voxelCenter, params.influenceRadius, [&]( VertId v, const Vector3f& p )
+        findPointsInBall( cloud, voxelCenter, 3 * params.sigma, [&]( VertId v, const Vector3f& p )
         {
-            auto tsdf = std::clamp( dot( cloud.normals[v], voxelCenter - p ),
-                -params.truncationRadius, params.truncationRadius );
-            sumDist += tsdf;
+            const auto distSq = ( voxelCenter - p ).lengthSq();
+            const auto w = std::exp( distSq * inv2SgSq );
+            sumDist += dot( cloud.normals[v], voxelCenter - p ) * w;
             ++num;
         } );
 
@@ -44,8 +44,8 @@ Expected<SimpleVolume> pointsToDistanceVolume( const PointCloud & cloud, const P
     }, params.cb ) )
         return unexpectedOperationCanceled();
 
-    res.min = -params.truncationRadius;
-    res.max =  params.truncationRadius;
+    res.max =  params.sigma * std::exp( -0.5f );
+    res.min = -res.max;
     return res;
 }
 

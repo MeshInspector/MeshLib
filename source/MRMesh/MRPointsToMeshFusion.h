@@ -19,6 +19,12 @@ struct PointsToMeshParameters
     /// The user is responsible for setting some positive value here
     float voxelSize = 0;
 
+    /// optional input: colors of input points
+    const VertColors * ptColors = nullptr;
+
+    /// optional output: averaged colors of mesh vertices
+    VertColors * vColors = nullptr;
+
     /// Progress callback
     ProgressCallback progress;
 };

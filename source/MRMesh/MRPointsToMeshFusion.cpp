@@ -4,6 +4,7 @@
 #include "MRMesh.h"
 #include "MRMarchingCubes.h"
 #include "MRBox.h"
+#include "MRColor.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -26,12 +27,24 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     MarchingCubesParams vmParams;
     vmParams.origin = p2vParams.origin;
     vmParams.iso = 0;
-    vmParams.cb = subprogress( params.progress, 0.5f, 1.0f );
+    vmParams.cb = subprogress( params.progress, 0.5f, ( params.ptColors && params.vColors ) ? 0.9f : 1.0f );
     vmParams.lessInside = true;
 
-    return
+    auto res =
         pointsToDistanceVolume( cloud, p2vParams )
         .and_then( [vmParams] ( auto&& volume ) { return marchingCubes( volume, vmParams ); } );
+
+    if ( res && params.ptColors && params.vColors )
+    {
+        auto optColors = calcAvgColors( cloud, *params.ptColors, res->points, res->topology.getValidVerts(),
+            params.sigma, subprogress( params.progress, 0.9f, 1.0f ) );
+        if ( optColors )
+            *params.vColors = std::move( optColors.value() );
+        else
+            res = unexpected( std::move( optColors.error() ) );
+    }
+
+    return res;
 }
 
 } //namespace MR

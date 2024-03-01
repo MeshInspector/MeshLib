@@ -14,6 +14,9 @@ class __attribute__((visibility("default"))) daily_file_sink;
 
 template<typename Mutex>
 class __attribute__((visibility("default"))) basic_file_sink;
+
+template<typename Mutex>
+class __attribute__((visibility("default"))) ansicolor_sink;
 #endif
 
 } //namespace sinks

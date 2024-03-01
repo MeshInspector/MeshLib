@@ -14,7 +14,7 @@ Expected<SimpleVolume> pointsToDistanceVolume( const PointCloud & cloud, const P
 {
     MR_TIMER
     assert( params.sigma > 0 );
-    assert( params.minInfluencePoints >= 1 );
+    assert( params.minWeight > 0 );
     assert( cloud.hasNormals() );
 
     SimpleVolume res;

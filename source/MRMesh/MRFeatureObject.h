@@ -79,7 +79,12 @@ public:
     MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
     MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
 
+    MRMESH_API void serializeFields_( Json::Value& root ) const override;
+    MRMESH_API void deserializeFields_( const Json::Value& root ) override;
+
 protected:
+    FeatureObject() = default;
+
     MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;
 
     ViewportMask subfeatureVisibility_ = ViewportMask::all();

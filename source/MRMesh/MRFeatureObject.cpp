@@ -1,5 +1,7 @@
 #include "MRFeatureObject.h"
 
+#include "json/value.h"
+
 namespace MR
 {
 
@@ -28,6 +30,22 @@ const ViewportMask& FeatureObject::getVisualizePropertyMask( AnyVisualizeMaskEnu
     {
         return VisualObject::getVisualizePropertyMask( type );
     }
+}
+
+void FeatureObject::serializeFields_( Json::Value& root ) const
+{
+    VisualObject::serializeFields_( root );
+
+    // append base type
+    root["Type"].append( VisualObject::TypeName() );
+
+    root["SubfeatureVisibility"] = subfeatureVisibility_.value();
+}
+
+void FeatureObject::deserializeFields_( const Json::Value& root )
+{
+    if ( const auto& subfeatureVisibilityJson = root["SubfeatureVisibility"]; subfeatureVisibilityJson.isUInt() )
+        subfeatureVisibility_ = ViewportMask( subfeatureVisibilityJson.asUInt() );
 }
 
 void FeatureObject::setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos )

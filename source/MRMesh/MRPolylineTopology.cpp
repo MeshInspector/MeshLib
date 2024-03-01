@@ -461,6 +461,7 @@ void PolylineTopology::addPartByMask( const PolylineTopology& from, const Undire
     {
         auto e = EdgeId( ue );
         auto ne = emap[fromEdges[e].next];
+        // If next edge is not presented in mask then it's value in emap is invalid. In that case we should skip it
         if ( ne.valid() )
             edges_[emap[e]].next = ne;
 

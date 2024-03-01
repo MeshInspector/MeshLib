@@ -8,55 +8,10 @@
 #include "MRViewer/MRGladGlfw.h"
 #include <unordered_map>
 #include "MRViewer/MRPickHoleBorderElement.h"
-
+#include "MRViewer/MRAncillaryLines.h"
 
 namespace MR
 {
-
-
-
-/// Helper class to manage ancillary visual lines used by plugins
-struct AncillaryLines
-{
-    std::shared_ptr<ObjectLines> obj;
-
-    AncillaryLines() = default;
-
-    /// since this uniquely owns an ancillary object, we provide only move operations, not copy
-    AncillaryLines( AncillaryLines&& b ) noexcept : obj{ std::move( b.obj ) }
-    {}
-    AncillaryLines& operator =( AncillaryLines&& b )
-    {
-        reset(); obj = std::move( b.obj ); return *this;
-    }
-
-    /// Make not-pickable ancillary object, link it to parent object, and set line geometry
-    explicit AncillaryLines( Object& parent, const Contours3f& contours = {} )
-    {
-        make( parent, contours );
-    }
-
-    /// Make not-pickable ancillary object, link it to parent object, and set line geometry
-    void make( Object& parent, const Contours3f& contours = {} );
-
-    /// detach owned object from parent, stops owning it
-    void reset();
-
-    /// detach owned object from parent, stops owning it
-    ~AncillaryLines()
-    {
-        reset();
-    }
-
-    /// Set line geometry
-    void setContours( const Contours3f& contours );
-
-    /// Reset line geometry
-    void resetContours();
-
-    /// Set depth test
-    void setDepthTest( bool depthTest );
-};
 
 
 class MRVIEWER_CLASS BoundarySelectionWidget : public MultiListener<
@@ -105,7 +60,24 @@ public:
     // select one of the holes. Return succsess.
     bool selectHole( std::shared_ptr<MR::ObjectMeshHolder> object, int index );
 
+    std::pair< std::shared_ptr<MR::ObjectMeshHolder>, EdgeId > getSelectHole()
+    {
+        EdgeId hole = holes_[selectedHoleObject_][selectedHoleIndex_];
+        return std::make_pair( selectedHoleObject_, hole );
+    }
 
+    std::vector<MR::Vector3f> getPointsForSelectedHole()
+    {
+        std::vector<MR::Vector3f> result; 
+        EdgeId hole = holes_[selectedHoleObject_][selectedHoleIndex_];
+        auto& mesh = *selectedHoleObject_->mesh();
+        for ( auto e : leftRing( mesh.topology, hole ) )
+        {
+            auto v= mesh.topology.org( e );
+            result.push_back( mesh.points[v]);
+        }
+        return result;
+    }
 
     // configuration params
     BoundarySelectionWidgetParams params;

@@ -2,6 +2,7 @@
 #include "MRMeshFwd.h"
 #include "MRUnionFind.h"
 #include "MRExpected.h"
+#include <limits.h>
 
 namespace MR
 {

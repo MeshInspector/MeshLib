@@ -228,6 +228,8 @@ std::vector<std::filesystem::path> windowsDialog( const FileDialogParameters& pa
 #elif defined( __APPLE__ )
 std::vector<std::filesystem::path> nfdDialog( const FileDialogParameters& params = {} )
 {
+    NFD::Guard guard;
+
     const auto currentDir = getCurrentFolder( params );
 
     std::vector<std::filesystem::path> results;
@@ -621,22 +623,6 @@ void saveFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
     EM_ASM( download_file_dialog_popup( UTF8ToString( $0 ), UTF8ToString( $1 ) ), params.fileName.c_str(), accumFilter.c_str() );
 #pragma clang diagnostic pop
-#endif
-}
-
-bool initFileDialog()
-{
-#ifdef __APPLE__
-    return ( NFD_OKAY == NFD::Init() );
-#else
-    return true;
-#endif
-}
-
-void shutdownFileDialog()
-{
-#ifdef __APPLE__
-    NFD::Quit();
 #endif
 }
 

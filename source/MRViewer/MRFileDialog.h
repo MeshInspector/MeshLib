@@ -48,10 +48,4 @@ MRVIEWER_API std::filesystem::path saveFileDialog( const FileParameters& params 
 // callback is called inside this function in desktop build and deferred in emscripten build
 MRVIEWER_API void saveFileDialogAsync( std::function<void( const std::filesystem::path& )> callback, const FileParameters& params = {} );
 
-// ...
-MRVIEWER_API bool initFileDialog();
-
-// ...
-MRVIEWER_API void shutdownFileDialog();
-
 }

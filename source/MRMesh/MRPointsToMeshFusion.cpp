@@ -21,7 +21,7 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     p2vParams.voxelSize = Vector3f::diagonal( params.voxelSize );
     p2vParams.dimensions = Vector3i( ( box.max + expansion - p2vParams.origin ) / params.voxelSize ) + Vector3i::diagonal( 1 );
     p2vParams.sigma = params.sigma;
-    p2vParams.minInfluencePoints = params.minInfluencePoints;
+    p2vParams.minWeight = params.minWeight;
 
     MarchingCubesParams vmParams;
     vmParams.origin = p2vParams.origin;

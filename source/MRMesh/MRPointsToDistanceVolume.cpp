@@ -30,17 +30,17 @@ Expected<SimpleVolume> pointsToDistanceVolume( const PointCloud & cloud, const P
         auto voxelCenter = params.origin + mult( params.voxelSize, coord );
 
         float sumDist = 0;
-        int num = 0;
+        float sumWeight = 0;
         findPointsInBall( cloud, voxelCenter, 3 * params.sigma, [&]( VertId v, const Vector3f& p )
         {
             const auto distSq = ( voxelCenter - p ).lengthSq();
             const auto w = std::exp( distSq * inv2SgSq );
+            sumWeight += w;
             sumDist += dot( cloud.normals[v], voxelCenter - p ) * w;
-            ++num;
         } );
 
-        if ( num >= params.minInfluencePoints )
-            res.data[i] = sumDist / num;
+        if ( sumWeight >= params.minWeight )
+            res.data[i] = sumDist / sumWeight;
     }, params.cb ) )
         return unexpectedOperationCanceled();
 

@@ -8,7 +8,7 @@ namespace MR
 {
 
 /// Helper class to manage ancillary visual points used by plugins
-struct AncillaryPoints
+struct MRVIEWER_CLASS AncillaryPoints
 {
     std::shared_ptr<ObjectPoints> obj;
 

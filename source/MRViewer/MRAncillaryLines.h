@@ -9,7 +9,7 @@ namespace MR
 {
 
 /// Helper class to manage ancillary visual lines used by plugins
-struct AncillaryLines
+struct MRVIEWER_CLASS AncillaryLines
 {
     std::shared_ptr<ObjectLines> obj;
 

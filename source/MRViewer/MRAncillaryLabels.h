@@ -12,7 +12,7 @@ class ObjectLabel;
 struct PositionedText;
 
 /// Helper class to manage ancillary labels used by plugins
-struct AncillaryLabel
+struct MRVIEWER_CLASS AncillaryLabel
 {
     std::shared_ptr<ObjectLabel> obj;
 

@@ -8,7 +8,7 @@ namespace MR
 {
 
 /// Helper class to manage ancillary visual mesh used by plugins
-struct AncillaryMesh
+struct MRVIEWER_CLASS AncillaryMesh
 {
     std::shared_ptr<ObjectMesh> obj;
 

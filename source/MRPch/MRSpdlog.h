@@ -9,9 +9,9 @@ namespace spdlog
 namespace details
 {
 
-class __attribute__((visibility("default"))) console_mutex;
+struct __attribute__((visibility("default"))) console_mutex;
 
-class __attribute__((visibility("default"))) console_nullmutex;
+struct __attribute__((visibility("default"))) console_nullmutex;
 
 } // namespace details
 

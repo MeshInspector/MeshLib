@@ -389,6 +389,6 @@ const Vector2f& GetAvailableLineWidthRange()
     return availableWidth;
 }
 
-MR_REGISTER_RENDER_OBJECT_IMPL( ObjectLinesHolder, RenderDefaultUiObject<RenderLinesObject> )
+MR_REGISTER_RENDER_OBJECT_IMPL( ObjectLinesHolder, RenderObjectCombinator<RenderDefaultUiObject, RenderLinesObject> )
 
 }

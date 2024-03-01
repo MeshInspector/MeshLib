@@ -70,13 +70,13 @@ public:
     }
 };
 
-class RenderPointFeatureObject : public RenderDefaultUiObject<RenderFeaturePointsComponent<true>>
+class RenderPointFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeaturePointsComponent<true>>
 {
 public:
     MRVIEWER_API RenderPointFeatureObject( const VisualObject& object );
 };
 
-class RenderLineFeatureObject : public RenderDefaultUiObject<RenderFeatureLinesComponent<true>>
+class RenderLineFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureLinesComponent<true>>
 {
 public:
     MRVIEWER_API RenderLineFeatureObject( const VisualObject& object );
@@ -85,25 +85,25 @@ public:
 // No `class RenderPlaneFeatureObject` for now, because planes look ok with default parameters.
 // If you add it, don't forget to add `setupRenderObject_()` to `PlaneObject`, like other features do.
 
-class RenderCircleFeatureObject : public RenderDefaultUiObject<RenderFeatureLinesComponent<true>>
+class RenderCircleFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureLinesComponent<true>>
 {
 public:
     MRVIEWER_API RenderCircleFeatureObject( const VisualObject& object );
 };
 
-class RenderSphereFeatureObject : public RenderDefaultUiObject<RenderFeatureMeshComponent<true>>
+class RenderSphereFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>>
 {
 public:
     MRVIEWER_API RenderSphereFeatureObject( const VisualObject& object );
 };
 
-class RenderCylinderFeatureObject : public RenderDefaultUiObject<RenderFeatureMeshComponent<true>>
+class RenderCylinderFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>>
 {
 public:
     MRVIEWER_API RenderCylinderFeatureObject( const VisualObject& object );
 };
 
-class RenderConeFeatureObject : public RenderDefaultUiObject<RenderFeatureMeshComponent<true>>
+class RenderConeFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>>
 {
 public:
     MRVIEWER_API RenderConeFeatureObject( const VisualObject& object );

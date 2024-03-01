@@ -419,6 +419,6 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
     return buffer;
 }
 
-MR_REGISTER_RENDER_OBJECT_IMPL( ObjectPointsHolder, RenderDefaultUiObject<RenderPointsObject> )
+MR_REGISTER_RENDER_OBJECT_IMPL( ObjectPointsHolder, RenderObjectCombinator<RenderDefaultUiObject, RenderPointsObject> )
 
 }

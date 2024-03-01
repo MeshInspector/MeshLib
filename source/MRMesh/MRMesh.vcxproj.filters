@@ -112,6 +112,9 @@
     <Filter Include="Source Files\WaterFlow">
       <UniqueIdentifier>{3bf8efb6-7251-4ef8-890d-0e5c5940c8b8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\HelpClasses">
+      <UniqueIdentifier>{946c219f-3460-496d-b0ce-342abd534ee1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRMeshFwd.h">
@@ -1215,6 +1218,18 @@
     <ClInclude Include="MRPointsToMeshFusion.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
+    <ClInclude Include="MRAncillaryLabels.h">
+      <Filter>Source Files\HelpClasses</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAncillaryLines.h">
+      <Filter>Source Files\HelpClasses</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAncillaryMesh.h">
+      <Filter>Source Files\HelpClasses</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAncillaryPoints.h">
+      <Filter>Source Files\HelpClasses</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2021,6 +2036,18 @@
     </ClCompile>
     <ClCompile Include="MRPointsToMeshFusion.cpp">
       <Filter>Source Files\Voxels</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAncillaryLabels.cpp">
+      <Filter>Source Files\HelpClasses</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAncillaryLines.cpp">
+      <Filter>Source Files\HelpClasses</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAncillaryMesh.cpp">
+      <Filter>Source Files\HelpClasses</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAncillaryPoints.cpp">
+      <Filter>Source Files\HelpClasses</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

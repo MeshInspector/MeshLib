@@ -648,6 +648,7 @@
     <ClCompile Include="MRAngleMeasurementObject.cpp" />
     <ClCompile Include="MRDefaultMeasurementObjects.cpp" />
     <ClCompile Include="MRDefaultFeatureObjectParams.cpp" />
+    <ClCompile Include="MRFeatureObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\laz-perf\laz-perf.vcxproj">

@@ -2022,6 +2022,9 @@
     <ClCompile Include="MRPointsToMeshFusion.cpp">
       <Filter>Source Files\Voxels</Filter>
     </ClCompile>
+    <ClCompile Include="MRFeatureObject.cpp">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

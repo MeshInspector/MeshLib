@@ -129,6 +129,8 @@ public:
 };
 // Those dummy definitions remove undefined references in `RenderObjectCombinator` when it calls non-overridden pure virtual methods.
 // We could check in `RenderObjectCombinator` if they're overridden or not, but it's easier to just define them.
+inline void IRenderObject::render( const ModelRenderParams& ) {}
+inline void IRenderObject::renderPicker( const ModelRenderParams&, unsigned ) {}
 inline size_t IRenderObject::heapBytes() const { return 0; }
 inline size_t IRenderObject::glBytes() const { return 0; }
 
@@ -142,6 +144,8 @@ public:
         : Bases( object )...
     {}
 
+    void render( const ModelRenderParams& params ) override { ( Bases::render( params ), ... ); }
+    void renderPicker( const ModelRenderParams& params, unsigned geomId ) override { ( Bases::renderPicker( params, geomId ), ... ); }
     size_t heapBytes() const override { return ( std::size_t{} + ... + Bases::heapBytes() ); }
     size_t glBytes() const override { return ( std::size_t{} + ... + Bases::glBytes() ); }
     void forceBindAll() override { ( Bases::forceBindAll(), ... ); }

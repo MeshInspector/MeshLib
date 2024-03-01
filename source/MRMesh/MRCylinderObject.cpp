@@ -139,7 +139,7 @@ void CylinderObject::swapBase_( Object& other )
 
 void CylinderObject::serializeFields_( Json::Value& root ) const
 {
-    VisualObject::serializeFields_( root );
+    FeatureObject::serializeFields_( root );
     root["Type"].append( CylinderObject::TypeName() );
 }
 

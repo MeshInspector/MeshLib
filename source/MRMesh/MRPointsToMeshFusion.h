@@ -8,14 +8,12 @@ namespace MR
 
 struct PointsToMeshParameters
 {
-    /// distance of influence of a point, beyond that radius the influence is zero
-    float influenceRadius = 0;
+    /// it the distance of highest influence of a point;
+    /// the maximal influence distance is 3*sigma; beyond that distance the influence is strictly zero
+    float sigma = 1;
 
-    /// signed distance is truncated (reaches its maximum or minimum) at this distance
-    float truncationRadius = 0;
-
-    /// minimum number of points located within influenceRadius for a voxel to get a value
-    int minInfluencePoints = 1;
+    /// minimum sum of influence weights from surrounding points for a triangle to appear, meaning that there shall be at least this number of points in close proximity
+    float minWeight = 1;
 
     /// Size of voxel in grid conversions;
     /// The user is responsible for setting some positive value here

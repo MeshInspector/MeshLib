@@ -204,6 +204,56 @@ VoidOrErrStr parseSingleNumber( const std::string_view& str, T& num )
     return {};
 }
 
+template <typename T>
+VoidOrErrStr parseAscCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* n, Color* c )
+{
+    using namespace boost::spirit::x3;
+
+    int vi = 0;
+    auto coord = [&] ( auto& ctx ) { v[vi++] = _attr( ctx ); };
+    int ni = 0;
+    auto normal = [&] ( auto& ctx ) { if ( n ) ( *n )[ni++] = _attr( ctx ); };
+    int ci = 0;
+    auto color = [&] ( auto& ctx ) { if ( c ) ( *c )[ci++] = _attr( ctx ); };
+
+    bool r;
+    if ( c != nullptr )
+    {
+        r = phrase_parse(
+            str.begin(),
+            str.end(),
+            ( floatT[coord] >> floatT[coord] >> floatT[coord] >> -( floatT[normal] >> floatT[normal] >> floatT[normal] >> -( floatT[color] >> floatT[color] >> floatT[color] ) ) ),
+            ascii::space
+        );
+    }
+    else if ( n != nullptr )
+    {
+        r = phrase_parse(
+            str.begin(),
+            str.end(),
+            ( floatT[coord] >> floatT[coord] >> floatT[coord] >> -( floatT[normal] >> floatT[normal] >> floatT[normal] ) ),
+            ascii::space
+        );
+    }
+    else
+    {
+        r = phrase_parse(
+            str.begin(),
+            str.end(),
+            ( floatT[coord] >> floatT[coord] >> floatT[coord] ),
+            ascii::space
+        );
+    }
+    if ( !r )
+        return unexpected( "Failed to parse coord" );
+
+    // explicitly set alpha value if color is present
+    if ( c != nullptr && ci == 3 )
+        c->a = 255;
+
+    return {};
+}
+
 template VoidOrErrStr parseSingleNumber<float>( const std::string_view& str, float& num );
 template VoidOrErrStr parseSingleNumber<int>( const std::string_view& str, int& num );
 
@@ -215,5 +265,8 @@ template VoidOrErrStr parseTextCoordinate<double>( const std::string_view& str, 
 
 template VoidOrErrStr parseObjCoordinate<float>( const std::string_view& str, Vector3f& v, Vector3f* c );
 template VoidOrErrStr parseObjCoordinate<double>( const std::string_view& str, Vector3d& v, Vector3d* c );
+
+template VoidOrErrStr parseAscCoordinate<float>( const std::string_view& str, Vector3f& v, Vector3f* n, Color* c );
+template VoidOrErrStr parseAscCoordinate<double>( const std::string_view& str, Vector3d& v, Vector3d* n, Color* c );
 
 }

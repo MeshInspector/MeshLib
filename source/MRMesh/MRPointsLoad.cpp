@@ -460,9 +460,7 @@ Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, VertColors* col
         {
             hasNormals = true;
 #ifdef NDEBUG
-            cloud.normals.reserve( lineCount );
-            for ( auto j = 0; j < lineCount; ++j )
-                cloud.normals.emplace_back( noInit );
+            cloud.normals.resizeNoInit( lineCount );
 #else
             cloud.normals.resize( lineCount, cInvalidNormal );
 #endif
@@ -471,9 +469,7 @@ Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, VertColors* col
         {
             hasColors = true;
 #ifdef NDEBUG
-            colors->reserve( lineCount );
-            for ( auto j = 0; j < lineCount; ++j )
-                colors->emplace_back( noInit );
+            colors->resizeNoInit( lineCount );
 #else
             colors->resize( lineCount, cInvalidColor );
 #endif

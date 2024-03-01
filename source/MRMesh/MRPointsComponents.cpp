@@ -19,7 +19,7 @@ namespace PointCloudComponents
 static std::pair<Vert2RegionMap, int> getUniqueRootIds( const VertMap& allRoots, const VertBitSet& region )
 {
     MR_TIMER
-        Vert2RegionMap uniqueRootsMap( allRoots.size() );
+    Vert2RegionMap uniqueRootsMap( allRoots.size() );
     int k = 0;
     for ( auto v : region )
     {
@@ -34,11 +34,11 @@ static std::pair<Vert2RegionMap, int> getUniqueRootIds( const VertMap& allRoots,
     return { std::move( uniqueRootsMap ), k };
 }
 
-Expected<VertBitSet> getLargestComponentsUnion( const PointCloud& pointCloud, float maxDist, int minSize, ProgressCallback pc /*= {}*/ )
+Expected<VertBitSet> getLargeComponentsUnion( const PointCloud& pointCloud, float maxDist, int minSize, ProgressCallback pc /*= {}*/ )
 {
     MR_TIMER
 
-        assert( maxDist > 0.f );
+    assert( maxDist > 0.f );
     assert( minSize > 1 );
     const auto& validPoints = pointCloud.validPoints;
     ProgressCallback subPc = subprogress( pc, 0.f, 0.9f );
@@ -74,11 +74,11 @@ Expected<VertBitSet> getLargestComponentsUnion( const PointCloud& pointCloud, fl
     return result;
 }
 
-Expected<std::vector<VertBitSet>> getLargestComponents( const PointCloud& pointCloud, float maxDist, int minSize, ProgressCallback pc /*= {} */ )
+Expected<std::vector<VertBitSet>> getLargeComponents( const PointCloud& pointCloud, float maxDist, int minSize, ProgressCallback pc /*= {} */ )
 {
     MR_TIMER
 
-        assert( maxDist > 0.f );
+    assert( maxDist > 0.f );
     assert( minSize > 1 );
     const auto& validPoints = pointCloud.validPoints;
     ProgressCallback subPc = subprogress( pc, 0.f, 0.9f );
@@ -124,11 +124,13 @@ Expected<std::vector<VertBitSet>> getLargestComponents( const PointCloud& pointC
     return result;
 }
 
-Expected<std::pair<std::vector<VertBitSet>, int>>  getAllComponents( const PointCloud& pointCloud, float maxDist, int maxComponentCount /*= 0*/, ProgressCallback pc /*= {} */ )
+Expected<std::pair<std::vector<VertBitSet>, int>>  getAllComponents( const PointCloud& pointCloud, float maxDist,
+    int maxComponentCount /*= INT_MAX*/, ProgressCallback pc /*= {} */ )
 {
     MR_TIMER
 
-        assert( maxDist > 0.f );
+    assert( maxDist > 0.f );
+    assert( maxComponentCount > 1 );
     const auto& validPoints = pointCloud.validPoints;
     ProgressCallback subPc = subprogress( pc, 0.f, 0.9f );
     auto unionStructsRes = getUnionFindStructureVerts( pointCloud, maxDist, nullptr, subPc );
@@ -140,9 +142,9 @@ Expected<std::pair<std::vector<VertBitSet>, int>>  getAllComponents( const Point
     subPc = subprogress( pc, 0.9f, 0.95f );
     auto [uniqueRootsMap, componentsCount] = getUniqueRootIds( allRoots, validPoints );
     if ( !componentsCount )
-        return unexpected( std::string( "Error: no components found." ) );
+        return unexpected( std::string( "No components found." ) );
 
-    const int componentsInGroup = ( componentsCount + maxComponentCount - 1 ) / maxComponentCount;
+    const int componentsInGroup = maxComponentCount == INT_MAX ? 1 : ( componentsCount + maxComponentCount - 1 ) / maxComponentCount;
     if ( componentsInGroup != 1 )
         for ( RegionId& id : uniqueRootsMap )
             id = RegionId( id / componentsInGroup );
@@ -170,7 +172,7 @@ Expected<UnionFind<VertId>> getUnionFindStructureVerts( const PointCloud& pointC
 {
     MR_TIMER
 
-        const VertBitSet& vertsRegion = region ? *region : pointCloud.validPoints;
+    const VertBitSet& vertsRegion = region ? *region : pointCloud.validPoints;
 
     if ( !vertsRegion.any() )
         return unexpected( std::string( "Chosen region empty" ) );

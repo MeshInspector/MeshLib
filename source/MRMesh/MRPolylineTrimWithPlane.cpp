@@ -49,9 +49,6 @@ namespace MR
                 e0 = polyline.topology.next( e0.sym() );
             }
 
-            const bool test1 = orgEdges.test( e );
-            const bool test2 = orgEdges.test( e0.sym() );
-            assert( test1 && test2 );
             cutSegments.push_back( { polyline.topology.org( e ), polyline.topology.org( e0.sym() ) } );
         }
         return res;

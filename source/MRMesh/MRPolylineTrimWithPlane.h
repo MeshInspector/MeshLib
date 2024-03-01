@@ -16,6 +16,7 @@ MRMESH_API EdgeBitSet subdividePolylineWithPlane( Polyline3& polyline, const Pla
 /// \param plane Input plane to cut polyline with
 /// \param otherPart Optional return, polyline composed from edges on the negative side of the plane
 /// \param onEdgeSplitCallback is invoked each time when an edge is split. Receives edge ID before split, edge ID after split, and weight of the origin vertex
+/// \param fillAfterCut if true, the ends of resulting polyline will be united with new edges
 MRMESH_API void dividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, Polyline3* otherPart = nullptr, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback = nullptr, bool fillAfterCut = false );
 
 /// This function cuts polyline with a plane

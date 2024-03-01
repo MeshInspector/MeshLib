@@ -200,6 +200,12 @@ void Toolbar::drawCustomize()
 void Toolbar::readItemsList( const Json::Value& root )
 {
     RibbonSchemaLoader::readMenuItemsList( root, itemsList_ );
+    for ( auto it = itemsListMigrations_.upper_bound( itemsListVersion_ ); it != itemsListMigrations_.end(); ++it )
+    {
+        const auto& [migrationVersion, migrationRule] = *it;
+        migrationRule( itemsList_ );
+        itemsListVersion_ = migrationVersion;
+    }
 }
 
 void Toolbar::resetItemsList()

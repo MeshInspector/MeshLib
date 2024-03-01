@@ -7,6 +7,7 @@
 #include "MRMesh/MRHistoryStore.h"
 #include "MRViewer/MRGladGlfw.h"
 #include <unordered_map>
+#include "MRViewer/MRPickHoleBorderElement.h"
 
 
 namespace MR
@@ -110,6 +111,8 @@ public:
     BoundarySelectionWidgetParams params;
 private:
 
+    float lineWidth_ = 3.0f;
+
     float mouseAccuracy_{ 5.5f };
 
     bool isSelectorActive_ = false;
@@ -120,7 +123,7 @@ private:
     MRVIEWER_API bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
 
-    AncillaryLines createAncillaryLines_( const std::shared_ptr<const ObjectMeshHolder> obj, MR::EdgeId hole );
+    AncillaryLines createAncillaryLines_( std::shared_ptr<ObjectMeshHolder>& obj, MR::EdgeId hole );
 
 
     // For given object and hole ( edge representation ), return a polyline around the hole boundary. 
@@ -147,7 +150,7 @@ private:
     BoundarySelectionWidgetChecker isObjectValidToPick_;
 
     // selected hole
-    std::shared_ptr<MR::ObjectMeshHolder> selectedHoleObject_; 
+    std::shared_ptr<MR::ObjectMeshHolder> selectedHoleObject_;
     int selectedHoleIndex_;
 
     // hovered hole 

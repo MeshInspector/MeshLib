@@ -3,6 +3,8 @@
 #include "MRViewport.h"
 #include "MRViewerInstance.h"
 
+#include "MRViewer/MRMouseController.h"
+
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRObjectMeshHolder.h"
 #include "MRMesh/MRObjectLines.h"
@@ -121,7 +123,7 @@ bool BoundarySelectionWidget::actionByPick_( ActionType actionType )
 
 }
 
-bool BoundarySelectionWidget::onMouseDown_( Viewer::MouseButton button, int modifier )
+bool BoundarySelectionWidget::onMouseDown_( Viewer::MouseButton button, int /*modifier*/)
 {
     if ( !isSelectorActive_ )
         return false;
@@ -176,33 +178,29 @@ bool BoundarySelectionWidget::onMouseMove_( int, int )
     actionByPick_( ActionType::SelectHole );
 }
 
-AncillaryLines BoundarySelectionWidget::createAncillaryLines_( const std::shared_ptr <const ObjectMeshHolder> obj , MR::EdgeId hole)
+AncillaryLines BoundarySelectionWidget::createAncillaryLines_( std::shared_ptr <ObjectMeshHolder>& rootObj, MR::EdgeId hole )
 {
     AncillaryLines al;
-    al.make( *obj_ );
-    auto& obj = ignoredHoles_[holeId].obj;
-    obj->setPolyline( getHoleBorder_( hole.edgePoint.e ) );
-    obj->setName( "HoleBorder" );
-    obj->setFrontColor( Color::purple(), false );
-    obj->setLineWidth( ( float )lineWidth_ );
+    al.make( *rootObj );
+    auto& object = al.obj;
+    object->setPolyline( getHoleBorder_( rootObj, hole ) );
+    object->setName( "HoleBorder" );
+    object->setFrontColor( Color::purple(), false );
+    object->setLineWidth( lineWidth_ );
 }
 
 void BoundarySelectionWidget::calculateHoles_()
 {
-    auto objects = getAllObjectsInTree<const ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Any );
-    for (auto& object : objects  )
-    if ( isObjectValidToPick_( object ) )
-    {
-        auto holes = object->mesh()->topology.findHoleRepresentiveEdges();
-        auto& polylines = holeLines_[object];
-        polylines.reserve( holes.size() );
-        for ( auto hole : holes )
-            polylines.push_back( createAncillaryLines_( object , hole) );
-            
-
-
-    }
-
+    auto objects = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Any );
+    for ( auto& object : objects )
+        if ( isObjectValidToPick_( object ) )
+        {
+            auto holes = object->mesh()->topology.findHoleRepresentiveEdges();
+            auto& polylines = holeLines_[object];
+            polylines.reserve( holes.size() );
+            for ( auto hole : holes )
+                polylines.push_back( createAncillaryLines_( object, hole ) );
+        }
 }
 
 void BoundarySelectionWidget::create(

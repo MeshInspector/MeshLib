@@ -12,6 +12,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGuiHelpers.cpp" />
+    <ClCompile Include="MRAncillaryLabels.cpp" />
+    <ClCompile Include="MRAncillaryLines.cpp" />
+    <ClCompile Include="MRAncillaryMesh.cpp" />
+    <ClCompile Include="MRAncillaryPoints.cpp" />
     <ClCompile Include="MRAppendHistory.cpp" />
     <ClCompile Include="MRAlphaSortGL.cpp" />
     <ClCompile Include="ImGuiMenu.cpp" />
@@ -99,6 +103,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
+    <ClInclude Include="MRAncillaryLabels.h" />
+    <ClInclude Include="MRAncillaryLines.h" />
+    <ClInclude Include="MRAncillaryMesh.h" />
+    <ClInclude Include="MRAncillaryPoints.h" />
     <ClInclude Include="MRAppendHistory.h" />
     <ClInclude Include="exports.h" />
     <ClInclude Include="ImGuiHelpers.h" />

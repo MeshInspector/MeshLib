@@ -85,8 +85,8 @@ jobs:
         if: ${{ matrix.os == 'fedora:37' }}
         run: |
           dnf --refresh -y upgrade
-          dnf -y install xorg-x11-server-Xvfb mesa-dri-drivers mesa-libGL-devel libXi-devel python3 python3-pip
-          dnf -y install ./*.rpm
+          dnf -y --setopt=install_weak_deps=False install xorg-x11-server-Xvfb mesa-dri-drivers mesa-libGL-devel libXi-devel python3 python3-pip
+          dnf -y --setopt=install_weak_deps=False install ./*.rpm
           python3 -m pip install --upgrade -r ./requirements/python.txt
 
       - name: Install supported compiler

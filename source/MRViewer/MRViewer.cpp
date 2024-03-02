@@ -557,8 +557,10 @@ int Viewer::launchInit_( const LaunchParams& params )
     glfwSetErrorCallback( glfw_error_callback );
     // TODO: Wayland support
 #ifdef __linux__
+#if GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
     if ( glfwPlatformSupported( GLFW_PLATFORM_X11 ) )
         glfwInitHint( GLFW_PLATFORM, GLFW_PLATFORM_X11 );
+#endif
 #endif
     if ( !glfwInit() )
     {

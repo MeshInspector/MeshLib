@@ -30,6 +30,8 @@ public:
 
     MRMESH_API virtual bool hasVisualRepresentation() const override;
 
+    [[nodiscard]] virtual bool hasModel() const override { return bool( points_ ); }
+
     const std::shared_ptr<const PointCloud>& pointCloud() const
     { return reinterpret_cast< const std::shared_ptr<const PointCloud>& >( points_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
 

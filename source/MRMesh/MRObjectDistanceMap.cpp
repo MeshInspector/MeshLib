@@ -106,11 +106,6 @@ void ObjectDistanceMap::setDistanceMap( const std::shared_ptr<DistanceMap>& dmap
     construct_();
 }
 
-const std::shared_ptr<MR::DistanceMap>& ObjectDistanceMap::getDistanceMap() const
-{
-    return dmap_;
-}
-
 const DistanceMapToWorld& ObjectDistanceMap::getToWorldParameters() const
 {
     return toWorldParams_;

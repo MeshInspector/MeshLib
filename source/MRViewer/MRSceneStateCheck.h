@@ -25,37 +25,6 @@ public:
     virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const { return {}; }
 };
 
-// special namespace not to have signature conflicts
-namespace ModelCheck
-{
-inline bool model( const Object& )
-{
-    return true;
-}
-inline bool model( const ObjectMesh& obj )
-{
-    return bool( obj.mesh() );
-}
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-inline bool model( const ObjectVoxels& obj )
-{
-    return bool( obj.grid() );
-}
-#endif
-inline bool model( const ObjectPoints& obj )
-{
-    return bool( obj.pointCloud() );
-}
-inline bool model( const ObjectLines& obj )
-{
-    return bool( obj.polyline() );
-}
-inline bool model( const ObjectDistanceMap& obj )
-{
-    return bool( obj.getDistanceMap() );
-}
-} //namespace ModelCheck
-
 // special struct for disabling visual representation check
 struct NoVisualRepresentationCheck {};
 
@@ -72,7 +41,7 @@ std::string sceneSelectedExactly( const std::vector<std::shared_ptr<const Object
         if ( !tObj )
             return std::string( "Selected object(s) must have type: " ) + ObjectT::TypeName();
 
-        if ( !ModelCheck::model( *tObj ) )
+        if ( !tObj->hasModel() )
             return "Selected object(s) must have valid model";
 
         if constexpr ( visualRepresentationCheck )
@@ -95,7 +64,7 @@ std::string sceneSelectedAtLeast( const std::vector<std::shared_ptr<const Object
         auto tObj = obj->asType<ObjectT>();
         if ( !tObj )
             continue;
-        if ( !ModelCheck::model( *tObj ) )
+        if ( !tObj->hasModel() )
             continue;
         if constexpr ( visualRepresentationCheck )
             if ( !tObj->hasVisualRepresentation() )

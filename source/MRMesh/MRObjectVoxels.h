@@ -31,9 +31,12 @@ public:
 
     /// Return VdbVolume
     const VdbVolume& vdbVolume() const { return vdbVolume_; };
+
     /// Returns Float grid which contains voxels data, see more on openvdb::FloatGrid
-    const FloatGrid& grid() const
-    { return vdbVolume_.data; }
+    const FloatGrid& grid() const { return vdbVolume_.data; }
+
+    [[nodiscard]] virtual bool hasModel() const override { return bool( vdbVolume_.data ); }
+
     /// Returns dimensions of voxel objects
     const Vector3i& dimensions() const
     { return vdbVolume_.dims; }

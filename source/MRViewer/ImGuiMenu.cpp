@@ -1343,7 +1343,7 @@ float ImGuiMenu::drawSelectionInformation_()
 #endif
     }
 
-    if ( selectionWorldBox_.valid() )
+    if ( selectionBbox_.valid() && selectionWorldBox_.valid() )
     {
         bsize = selectionBbox_.size();
         bsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", bsize.x, bsize.y, bsize.z );

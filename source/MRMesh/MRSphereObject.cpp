@@ -1,6 +1,5 @@
 #include "MRSphereObject.h"
 #include "MRMatrix3.h"
-#include "MRMakeSphereMesh.h"
 #include "MRMesh.h"
 #include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRObjectFactory.h"
@@ -26,11 +25,6 @@
 #pragma GCC diagnostic pop
 #endif
 
-namespace
-{
-constexpr int cDetailLevel = 2048;
-constexpr float cBaseRadius = 1.0f;
-}
 
 namespace MR
 {
@@ -76,7 +70,6 @@ const std::vector<FeatureObjectSharedProperty>& SphereObject::getAllSharedProper
 SphereObject::SphereObject()
 {
     setDefaultFeatureObjectParams( *this );
-    constructMesh_();
 }
 
 SphereObject::SphereObject( const std::vector<Vector3f>& pointsToApprox )
@@ -107,18 +100,12 @@ SphereObject::SphereObject( const std::vector<Vector3f>& pointsToApprox )
 
 std::shared_ptr<Object> SphereObject::shallowClone() const
 {
-    auto res = std::make_shared<SphereObject>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = mesh_;
-    return res;
+    return std::make_shared<SphereObject>( ProtectedStruct{}, *this );
 }
 
 std::shared_ptr<Object> SphereObject::clone() const
 {
-    auto res = std::make_shared<SphereObject>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = std::make_shared<Mesh>( *mesh_ );
-    return res;
+    return std::make_shared<SphereObject>( ProtectedStruct{}, *this );
 }
 
 void SphereObject::swapBase_( Object& other )
@@ -131,7 +118,7 @@ void SphereObject::swapBase_( Object& other )
 
 void SphereObject::serializeFields_( Json::Value& root ) const
 {
-    ObjectMeshHolder::serializeFields_( root );
+    VisualObject::serializeFields_( root );
     root["Type"].append( SphereObject::TypeName() );
 }
 
@@ -139,15 +126,6 @@ void SphereObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
         renderObj_ = createRenderObject<decltype(*this)>( *this );
-}
-
-void SphereObject::constructMesh_()
-{
-    mesh_ = std::make_shared<Mesh>( makeSphere( { cBaseRadius,cDetailLevel } ) );
-    setFlatShading( false );
-    selectFaces( {} );
-    selectEdges( {} );
-    setDirtyFlags( DIRTY_ALL );
 }
 
 }

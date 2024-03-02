@@ -71,7 +71,6 @@ Vector3f LineObject::getPointB() const
 LineObject::LineObject()
 {
     setDefaultFeatureObjectParams( *this );
-    constructPolyline_();
 }
 
 LineObject::LineObject( const std::vector<Vector3f>& pointsToApprox )
@@ -99,18 +98,12 @@ LineObject::LineObject( const std::vector<Vector3f>& pointsToApprox )
 
 std::shared_ptr<Object> LineObject::shallowClone() const
 {
-    auto res = std::make_shared<LineObject>( ProtectedStruct{}, *this );
-    if ( polyline_ )
-        res->polyline_ = polyline_;
-    return res;
+    return std::make_shared<LineObject>( ProtectedStruct{}, *this );
 }
 
 std::shared_ptr<Object> LineObject::clone() const
 {
-    auto res = std::make_shared<LineObject>( ProtectedStruct{}, *this );
-    if ( polyline_ )
-        res->polyline_ = std::make_shared<Polyline3>( *polyline_ );
-    return res;
+    return std::make_shared<LineObject>( ProtectedStruct{}, *this );
 }
 
 void LineObject::swapBase_( Object& other )
@@ -123,7 +116,7 @@ void LineObject::swapBase_( Object& other )
 
 void LineObject::serializeFields_( Json::Value& root ) const
 {
-    ObjectLinesHolder::serializeFields_( root );
+    VisualObject::serializeFields_( root );
     root["Type"].append( LineObject::TypeName() );
 }
 
@@ -131,18 +124,6 @@ void LineObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
         renderObj_ = createRenderObject<decltype(*this)>( *this );
-}
-
-void LineObject::constructPolyline_()
-{
-    // create object Polyline
-    Polyline3 lineObj;
-    const std::vector<Vector3f> points = { Vector3f::minusX(), Vector3f::plusX() };
-    lineObj.addFromPoints( points.data(), baseLineObjectLength_ );
-
-    polyline_ = std::make_shared<Polyline3>( lineObj );
-
-    setDirtyFlags( DIRTY_ALL );
 }
 
 const std::vector<FeatureObjectSharedProperty>& LineObject::getAllSharedProperties() const

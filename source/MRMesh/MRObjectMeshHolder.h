@@ -41,6 +41,8 @@ public:
     /// mesh object can be seen if the mesh has at least one edge
     MRMESH_API virtual bool hasVisualRepresentation() const override;
 
+    [[nodiscard]] virtual bool hasModel() const override { return bool( mesh_ ); }
+
     const std::shared_ptr< const Mesh >& mesh() const
     { return reinterpret_cast< const std::shared_ptr<const Mesh>& >( mesh_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
 

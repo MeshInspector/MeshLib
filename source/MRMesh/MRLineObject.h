@@ -1,14 +1,14 @@
 #pragma once
 #include "MRMeshFwd.h"
-#include "MRObjectLinesHolder.h"
 #include "MRFeatureObject.h"
+#include "MRVisualObject.h"
 
 namespace MR
 {
 
 /// Object to show plane feature
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS LineObject : public ObjectLinesHolder, public FeatureObject
+class MRMESH_CLASS LineObject : public VisualObject, public FeatureObject
 {
 public:
     /// Creates simple plane object
@@ -69,9 +69,6 @@ protected:
         { return {}; }
 
     MRMESH_API void setupRenderObject_() const override;
-
-private:
-    void constructPolyline_();
 };
 
 }

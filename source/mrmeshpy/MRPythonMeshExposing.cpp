@@ -23,6 +23,7 @@
 #include "MRMesh/MRPartMapping.h"
 #include "MRMesh/MRBuffer.h"
 #include "MRMesh/MRMeshExtrude.h"
+#include "MRMesh/MRMeshBoundary.h"
 #include <pybind11/functional.h>
 
 using namespace MR;
@@ -627,3 +628,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
 } )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaceFace, FaceFace )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBoundary, [] ( pybind11::module_& m )
+{
+    m.def( "straightenBoundary", &straightenBoundary,
+    pybind11::arg( "mesh" ), pybind11::arg( "bdEdge" ), pybind11::arg("minNeiNormalsDot"), pybind11::arg("maxTriAspectRatio"), pybind11::arg("newFaces") = nullptr,
+    "Adds triangles along the boundary to straighten it.\n"
+    "New triangle is added only if:\n"
+        "1) aspect ratio of the new triangle is at most maxTriAspectRatio\n"
+        "2) dot product of its normal with neighbor triangles is at least minNeiNormalsDot." );
+} )

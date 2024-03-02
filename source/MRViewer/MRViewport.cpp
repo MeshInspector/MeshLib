@@ -19,6 +19,7 @@
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRSceneRoot.h"
+#include "MRMesh/MRPointCloud.h"
 #include "MRPch/MRSuppressWarning.h"
 #include "MRPch/MRTBB.h"
 

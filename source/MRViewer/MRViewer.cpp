@@ -566,6 +566,11 @@ int Viewer::launchInit_( const LaunchParams& params )
     glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint( GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE );
 #endif
+    glfwWindowHint( GLFW_SCALE_FRAMEBUFFER, GLFW_TRUE );
+    if ( glfwGetPlatform() == GLFW_PLATFORM_WAYLAND )
+    {
+        glfwWindowHintString( GLFW_WAYLAND_APP_ID, "MeshViewer" );
+    }
     if ( !settingsMng_ )
         glfwWindowHint( GLFW_SAMPLES, 8 );
     else
@@ -651,6 +656,12 @@ int Viewer::launchInit_( const LaunchParams& params )
         glfwGetWindowSize( window, &winWidth, &winHeight );
         pixelRatio = float( width ) / float( winWidth );
 #endif
+        if ( glfwGetPlatform() == GLFW_PLATFORM_WAYLAND )
+        {
+            int winWidth, winHeight;
+            glfwGetWindowSize( window, &winWidth, &winHeight );
+            pixelRatio = float( width ) / float( winWidth );
+        }
 
         float xscale{ 1.0f }, yscale{ 1.0f };
 #ifndef __EMSCRIPTEN__
@@ -1673,6 +1684,12 @@ void Viewer::postSetPosition( int xPos, int yPos )
     glfwGetWindowSize( window, &winWidth, &winHeight );
     pixelRatio = float( framebufferSize.x ) / float( winWidth );
 #endif
+    if ( glfwGetPlatform() == GLFW_PLATFORM_WAYLAND )
+    {
+        int winWidth, winHeight;
+        glfwGetWindowSize( window, &winWidth, &winHeight );
+        pixelRatio = float( framebufferSize.x ) / float( winWidth );
+    }
 }
 
 void Viewer::postSetMaximized( bool maximized )

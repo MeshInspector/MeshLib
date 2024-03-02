@@ -55,6 +55,7 @@
 #include "MRMesh/MRObjectLabel.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRObjectVoxels.h"
 #include "MRPch/MRWasm.h"
 
 #ifndef __EMSCRIPTEN__

@@ -1,20 +1,12 @@
 #pragma once
 #include "exports.h"
-#include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRObject.h"
-#include "MRMesh/MRObjectPoints.h"
-#include "MRMesh/MRObjectVoxels.h"
-#include "MRMesh/MRObjectMesh.h"
-#include "MRMesh/MRObjectLines.h"
-#include "MRMesh/MRObjectDistanceMap.h"
 #include <memory>
 #include <vector>
 #include <string>
 
 namespace MR
 {
-
-class Object;
 
 // Interface for checking scene state, to determine availability, also can return string with requirements 
 class ISceneStateCheck

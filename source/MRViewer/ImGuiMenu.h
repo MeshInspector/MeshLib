@@ -13,6 +13,7 @@
 #include "MRStatePlugin.h"
 #include "MRNotificationType.h"
 #include <unordered_map>
+#include "MRMesh/MRIRenderObject.h" //only for BasicUiRenderTask::BackwardPassParams
 
 // Forward declarations
 struct ImGuiContext;
@@ -23,6 +24,7 @@ namespace MR
 
 class ShortcutManager;
 class MeshModifier;
+struct UiRenderManager;
 
 enum class SelectedTypesMask
 {

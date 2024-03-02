@@ -1111,7 +1111,7 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
         for ( auto& [_, set] : hmaps[range.begin()] )
         {
             for ( int i = int( NeighborDir::X ); i < int( NeighborDir::Count ); ++i )
-                if ( set[i].vid.valid() )
+                if ( set[i].vid < result.points.size() ) // vid can be valid but beyond the range if no triangle references it (NaNs in nearby voxels)
                     result.points[set[i].vid] = set[i].position;
         }
     } );

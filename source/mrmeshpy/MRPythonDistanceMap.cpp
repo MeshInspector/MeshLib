@@ -1,6 +1,6 @@
 #include "MRMesh/MRPython.h"
 #include "MRMesh/MRDistanceMap.h"
-
+#include <MRMesh/MRMesh.h>
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
 #pragma warning(push)

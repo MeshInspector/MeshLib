@@ -8,6 +8,7 @@
 #include "MRHeapBytes.h"
 #include "MRImage.h"
 #include "MRExpected.h"
+#include <cfloat>
 #include <filesystem>
 #include <vector>
 

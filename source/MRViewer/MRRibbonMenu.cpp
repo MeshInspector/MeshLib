@@ -36,6 +36,7 @@
 #include <MRMesh/MRObjectLines.h>
 #include <MRMesh/MRObjectDistanceMap.h>
 #include <MRMesh/MRPointCloud.h>
+#include <MRMesh/MRMesh.h>
 #include <MRPch/MRJson.h>
 #include <MRPch/MRSpdlog.h>
 #include <MRPch/MRWasm.h>

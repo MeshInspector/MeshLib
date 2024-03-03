@@ -1,6 +1,6 @@
 #pragma once
 #include "exports.h"
-#include "MRMesh/MRObject.h"
+#include "MRMesh/MRMeshFwd.h"
 #include <memory>
 #include <vector>
 #include <string>
@@ -29,7 +29,7 @@ std::string sceneSelectedExactly( const std::vector<std::shared_ptr<const Object
         return "Exactly " + std::to_string( n ) + " " + ObjectT::TypeName() + "(s) must be selected";
     for ( const auto& obj : objs )
     {
-        auto tObj = obj->asType<ObjectT>();
+        auto tObj = dynamic_cast<const ObjectT*>( obj.get() );
         if ( !tObj )
             return std::string( "Selected object(s) must have type: " ) + ObjectT::TypeName();
 
@@ -53,7 +53,7 @@ std::string sceneSelectedAtLeast( const std::vector<std::shared_ptr<const Object
     unsigned i = 0;
     for ( const auto& obj : objs )
     {
-        auto tObj = obj->asType<ObjectT>();
+        auto tObj = dynamic_cast<const ObjectT*>( obj.get() );
         if ( !tObj )
             continue;
         if ( !tObj->hasModel() )

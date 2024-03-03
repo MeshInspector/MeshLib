@@ -10,6 +10,7 @@
 #include "MRIOFilters.h"
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
+#include <filesystem>
 
 namespace Json
 {

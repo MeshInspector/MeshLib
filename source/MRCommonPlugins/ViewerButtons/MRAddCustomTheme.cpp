@@ -19,6 +19,7 @@
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRViewerSettingsPlugin.h"
 #include "MRViewer/MRUIStyle.h"
+#include <fstream>
 
 namespace MR
 {

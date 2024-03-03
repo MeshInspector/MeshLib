@@ -7,6 +7,7 @@
 #include "MRSerializer.h"
 #include "MRZip.h"
 #include "MRDirectory.h"
+#include <map>
 
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
 #include <tinyxml2.h>

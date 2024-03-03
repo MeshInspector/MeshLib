@@ -14,6 +14,7 @@
 #include "MRNotificationType.h"
 #include <unordered_map>
 #include "MRMesh/MRIRenderObject.h" //only for BasicUiRenderTask::BackwardPassParams
+#include "MRMesh/MRBox.h"
 
 // Forward declarations
 struct ImGuiContext;

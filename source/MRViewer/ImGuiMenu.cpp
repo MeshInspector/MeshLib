@@ -75,7 +75,7 @@
 #include "MRMesh/MRMatrix3Decompose.h"
 #include "MRMesh/MRFeatureObject.h"
 #include "MRMesh/MRFinally.h"
-
+#include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRSceneSettings.h"
 #include "imgui_internal.h"

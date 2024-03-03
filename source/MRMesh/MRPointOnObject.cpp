@@ -5,7 +5,7 @@
 #include "MRPointCloud.h"
 #include "MRMeshTriPoint.h"
 #include "MREdgePoint.h"
-
+#include "MRPolyline.h"
 #include "MRMesh.h"
 
 namespace MR

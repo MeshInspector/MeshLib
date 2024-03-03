@@ -15,6 +15,7 @@
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
 #include "MRVoxelsSave.h"
+#include "MRMesh.h"
 
 namespace
 {

@@ -1,5 +1,6 @@
 #include "MRObjectTransformWidget.h"
 #include "MRMouseController.h"
+#include "MRViewport.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRBox.h"
@@ -9,12 +10,12 @@
 #include "MRMesh/MRArrow.h"
 #include "MRMesh/MRTorus.h"
 #include "MRMesh/MRSceneRoot.h"
-#include "MRViewport.h"
-#include "MRPch/MRTBB.h"
 #include "MRMesh/MRIntersection.h"
 #include "MRMesh/MR2to3.h"
 #include "MRMesh/MRMatrix3Decompose.h"
+#include "MRMesh/MRPolyline.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRPch/MRTBB.h"
 
 namespace
 {

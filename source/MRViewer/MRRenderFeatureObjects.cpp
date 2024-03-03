@@ -4,7 +4,6 @@
 #include "MRMesh/MRConeObject.h"
 #include "MRMesh/MRCylinder.h"
 #include "MRMesh/MRCylinderObject.h"
-#include "MRMesh/MRCylinderObject.h"
 #include "MRMesh/MRLineObject.h"
 #include "MRMesh/MRMakeSphereMesh.h"
 #include "MRMesh/MRMeshNormals.h"
@@ -12,6 +11,7 @@
 #include "MRMesh/MRPointObject.h"
 #include "MRMesh/MRSphereObject.h"
 #include "MRMesh/MRPointCloud.h"
+#include "MRMesh/MRPolyline.h"
 
 namespace MR
 {

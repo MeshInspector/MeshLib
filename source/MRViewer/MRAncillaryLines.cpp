@@ -2,6 +2,7 @@
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRSceneRoot.h"
+#include "MRMesh/MRPolyline.h"
 
 namespace MR
 {

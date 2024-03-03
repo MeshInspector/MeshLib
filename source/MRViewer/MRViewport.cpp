@@ -20,6 +20,7 @@
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRPointCloud.h"
+#include "MRMesh/MRPolyline.h"
 #include "MRPch/MRSuppressWarning.h"
 #include "MRPch/MRTBB.h"
 

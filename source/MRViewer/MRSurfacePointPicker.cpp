@@ -11,6 +11,7 @@
 #include "MRMesh/MRMeshTriPoint.h"
 #include "MRMesh/MREdgePoint.h"
 #include "MRMesh/MRPointOnObject.h"
+#include "MRMesh/MRPointCloud.h"
 
 #include <variant>
 

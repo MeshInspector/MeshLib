@@ -13,6 +13,7 @@
 #include "MRMesh/MRLine3.h"
 #include "MRMesh/MRRegionBoundary.h"
 #include "MRMesh/MRSceneRoot.h"
+#include "MRMesh/MRPointCloud.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR

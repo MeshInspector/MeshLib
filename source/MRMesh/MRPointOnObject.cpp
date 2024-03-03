@@ -2,7 +2,7 @@
 #include "MRObjectMeshHolder.h"
 #include "MRObjectPointsHolder.h"
 #include "MRObjectLinesHolder.h"
-
+#include "MRPointCloud.h"
 #include "MRMeshTriPoint.h"
 #include "MREdgePoint.h"
 

@@ -1,6 +1,5 @@
 #pragma once
 #include "MRVisualObject.h"
-#include "MRPointCloud.h"
 #include "MRXfBasedCache.h"
 
 namespace MR

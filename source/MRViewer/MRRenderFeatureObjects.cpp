@@ -11,6 +11,7 @@
 #include "MRMesh/MRPlaneObject.h"
 #include "MRMesh/MRPointObject.h"
 #include "MRMesh/MRSphereObject.h"
+#include "MRMesh/MRPointCloud.h"
 
 namespace MR
 {

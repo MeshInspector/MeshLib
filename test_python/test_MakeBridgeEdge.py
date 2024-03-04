@@ -13,7 +13,8 @@ def test_makeBridgeEdge():
 
     t = torus.topology
     edges_num_before = t.edgeSize()
+    edges = torus.topology.findHoleRepresentiveEdges()
 
-    mrmesh.makeBridgeEdge(t, mrmesh.EdgeId(10), mrmesh.EdgeId(60))
+    mrmesh.makeBridgeEdge(t, edges[0], edges[1])
 
     assert t.edgeSize() - edges_num_before == 2, "Function should add some edges"

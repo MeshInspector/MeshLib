@@ -14,6 +14,8 @@ def test_makeBridgeEdge():
     t = torus.topology
     faces_num_before = t.numValidFaces()
 
-    mrmesh.makeBridge(t, mrmesh.EdgeId(10), mrmesh.EdgeId(60))
+    edges = torus.topology.findHoleRepresentiveEdges()
+
+    mrmesh.makeBridge(t, edges[0], edges[1])
 
     assert t.numValidFaces() - faces_num_before == 2, "Function should add some faces"

@@ -62,16 +62,6 @@ void forEachSubfeature( const Features::Primitives::Variant& feature, const Subf
                             {
                                 return cone.baseCircle( negativeCap );
                             } } );
-
-                            /* Center of base circle - not needed due to being indirect.
-                            func( { .name =
-                                backwardRadius == 0 ? "Center of base circle" : fmt::format( "Center of base circle ({})", negativeCap ? "negative side" : "positive side" ).c_str(),
-                                OfferedSubfeatureFlags::indirect,
-                                [&]
-                                {
-                                    return cone.basePoint( negativeCap );
-                                }
-                            ); */
                         }
                     }
                 }

@@ -1,14 +1,15 @@
 #pragma once
-#include "MRMeshFwd.h"
-#include "MRObjectPointsHolder.h"
+
 #include "MRFeatureObject.h"
+#include "MRMeshFwd.h"
+#include "MRVisualObject.h"
 
 namespace MR
 {
 
 /// Object to show point feature
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS PointObject : public ObjectPointsHolder, public FeatureObject
+class MRMESH_CLASS PointObject : public VisualObject, public FeatureObject
 {
 public:
     /// Creates simple point object with zero position
@@ -52,9 +53,6 @@ protected:
         { return {}; }
 
     MRMESH_API void setupRenderObject_() const override;
-
-private:
-    void constructPointCloud_();
 };
 
 }

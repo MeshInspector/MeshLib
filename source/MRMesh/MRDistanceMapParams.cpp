@@ -1,4 +1,5 @@
 #include "MRDistanceMapParams.h"
+#include "MRMesh.h"
 
 namespace MR
 {

@@ -31,11 +31,11 @@ public:
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
     virtual std::string getClassName() const override { return "Distance Map"; }
 
-    /// setters
     MRMESH_API void setDistanceMap( const std::shared_ptr<DistanceMap>& dmap, const DistanceMapToWorld& toWorldParams );
     
-    /// getters
-    MRMESH_API const std::shared_ptr<DistanceMap>& getDistanceMap() const;
+    [[nodiscard]] const std::shared_ptr<DistanceMap>& getDistanceMap() const { return dmap_; }
+
+    [[nodiscard]] virtual bool hasModel() const override { return bool( dmap_ ); }
 
     MRMESH_API const DistanceMapToWorld& getToWorldParameters() const;
 

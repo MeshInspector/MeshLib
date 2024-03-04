@@ -12,7 +12,6 @@ MR_ADD_CLASS_FACTORY( PointObject )
 PointObject::PointObject()
 {
     setDefaultFeatureObjectParams( *this );
-    constructPointCloud_();
 }
 
 PointObject::PointObject( const std::vector<Vector3f>& pointsToApprox )
@@ -26,18 +25,12 @@ PointObject::PointObject( const std::vector<Vector3f>& pointsToApprox )
 
 std::shared_ptr<MR::Object> PointObject::clone() const
 {
-    auto res = std::make_shared<PointObject>( ProtectedStruct{}, *this );
-    if ( points_ )
-        res->points_ = std::make_shared<PointCloud>( *points_ );
-    return res;
+    return std::make_shared<PointObject>( ProtectedStruct{}, *this );
 }
 
 std::shared_ptr<MR::Object> PointObject::shallowClone() const
 {
-    auto res = std::make_shared<PointObject>( ProtectedStruct{}, *this );
-    if ( points_ )
-        res->points_ = points_;
-    return res;
+    return std::make_shared<PointObject>( ProtectedStruct{}, *this );
 }
 
 Vector3f PointObject::getPoint() const
@@ -68,7 +61,7 @@ void PointObject::swapBase_( Object& other )
 
 void PointObject::serializeFields_( Json::Value& root ) const
 {
-    ObjectPointsHolder::serializeFields_( root );
+    VisualObject::serializeFields_( root );
     root["Type"].append( PointObject::TypeName() );
 }
 
@@ -76,15 +69,6 @@ void PointObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
         renderObj_ = createRenderObject<decltype(*this)>( *this );
-}
-
-void PointObject::constructPointCloud_()
-{
-    points_ = std::make_shared<PointCloud>();
-    points_->points.push_back( Vector3f() );
-    points_->validPoints.resize( 1, true );
-
-    setDirtyFlags( DIRTY_ALL );
 }
 
 }

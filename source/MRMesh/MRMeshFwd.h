@@ -311,6 +311,7 @@ using UndirectedEdgeMap = Vector<UndirectedEdgeId, UndirectedEdgeId>;
 using WholeEdgeMap = Vector<EdgeId, UndirectedEdgeId>;
 using UndirectedEdge2RegionMap = Vector<RegionId, UndirectedEdgeId>;
 using Face2RegionMap = Vector<RegionId, FaceId>;
+using Vert2RegionMap = Vector<RegionId, VertId>;
 
 using VertCoords = Vector<Vector3f, VertId>;
 using VertNormals = Vector<Vector3f, VertId>;
@@ -428,6 +429,7 @@ class CylinderObject;
 class ConeObject;
 
 struct Image;
+class AnyVisualizeMaskEnum;
 
 template <typename T>
 struct VoxelsVolume;

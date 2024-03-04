@@ -1,14 +1,15 @@
 #pragma once
-#include "MRMeshFwd.h"
-#include "MRObjectMeshHolder.h"
+
 #include "MRFeatureObject.h"
+#include "MRMeshFwd.h"
+#include "MRVisualObject.h"
 
 namespace MR
 {
 
 /// Object to show sphere feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS SphereObject : public ObjectMeshHolder, public FeatureObject
+class MRMESH_CLASS SphereObject : public VisualObject, public FeatureObject
 {
 public:
     /// Creates simple sphere object with center in zero and radius - 1
@@ -55,9 +56,6 @@ protected:
         { return {}; }
 
     MRMESH_API void setupRenderObject_() const override;
-
-private:
-    void constructMesh_();
 };
 
 }

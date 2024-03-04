@@ -1,3 +1,4 @@
+#include "MRMesh/MRFeatureObject.h"
 #include "MRViewport.h"
 #include "MRViewer.h"
 #include <MRMesh/MRMesh.h>
@@ -12,6 +13,8 @@
 #include "MRMesh/MRLine3.h"
 #include "MRMesh/MRRegionBoundary.h"
 #include "MRMesh/MRSceneRoot.h"
+#include "MRMesh/MRPointCloud.h"
+#include "MRMesh/MRPolyline.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -491,9 +494,9 @@ void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV )> g
 class LimitCalc
 {
 public:
-    LimitCalc( const VertCoords & points, const VertBitSet & vregion, const std::function<bool(Vector3f&)> func ) 
+    LimitCalc( const VertCoords & points, const VertBitSet & vregion, const std::function<bool(Vector3f&)> func )
         : points_( points ), vregion_( vregion ), func_(func) { }
-    LimitCalc( LimitCalc& x, tbb::split ) 
+    LimitCalc( LimitCalc& x, tbb::split )
         : points_( x.points_ ), vregion_( x.vregion_ ), func_(x.func_) { }
     void join(const LimitCalc& y) { box_.include(y.box_); }
 
@@ -565,8 +568,8 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
                     maxCoord.y = int( bool( i & 2 ) );
                     maxCoord.z = int( bool( i & 4 ) );
                     Vector3i minCoord = Vector3i::diagonal( 1 ) - maxCoord;
-                    tempVertCoords[VertId( i )] = 
-                        mult( Vector3f( minCoord ), voxBox.min ) + 
+                    tempVertCoords[VertId( i )] =
+                        mult( Vector3f( minCoord ), voxBox.min ) +
                         mult( Vector3f( maxCoord ), voxBox.max );
                 }
                 lastValidVert = 7_v;
@@ -575,7 +578,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
                 coords = &tempVertCoords;
                 selectedVerts = &tempSelected;
             }
-            else 
+            else
 #endif
                 if ( objMesh )
             {
@@ -608,6 +611,10 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
             {
                 // do nothing
             }
+            else if ( obj->asType<FeatureObject>() )
+            {
+                // Do nothing? Not ideal.
+            }
             else
             {
                 assert( false );
@@ -619,7 +626,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
                 selectedVerts = nullptr;
                 if ( objMesh )
                 {
-                    myVerts = getIncidentVerts( objMesh->mesh()->topology, objMesh->getSelectedEdges() ) | 
+                    myVerts = getIncidentVerts( objMesh->mesh()->topology, objMesh->getSelectedEdges() ) |
                         getIncidentVerts( objMesh->mesh()->topology, objMesh->getSelectedFaces() );
                     if ( !myVerts.any() )
                         continue;
@@ -631,7 +638,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
             std::function<bool( Vector3f& )> func;
             if( space == Space::CameraOrthographic || space == Space::World )
             {
-                func = [&]( Vector3f& p ) 
+                func = [&]( Vector3f& p )
                 {
                     p = xf( p );
                     return true;
@@ -639,7 +646,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
             }
             else
             {
-                func = [&]( Vector3f& p ) 
+                func = [&]( Vector3f& p )
                 {
                     auto v = xf( p );
                     if ( v.z == 0 )
@@ -736,7 +743,7 @@ void Viewport::setCameraTrackballAngle( const Quaternionf& rot )
 {
     if ( params_.cameraTrackballAngle == rot )
         return;
-    params_.cameraTrackballAngle = rot; 
+    params_.cameraTrackballAngle = rot;
     needRedraw_ = true;
 }
 
@@ -744,7 +751,7 @@ void Viewport::setCameraTranslation( const Vector3f& translation )
 {
     if ( params_.cameraTranslation == translation )
         return;
-    params_.cameraTranslation = translation; 
+    params_.cameraTranslation = translation;
 
     needRedraw_ = true;
 }
@@ -779,7 +786,7 @@ void Viewport::cameraLookAlong( const Vector3f& newDir, const Vector3f& up )
 {
     assert( std::abs( dot( newDir.normalized(), up.normalized() ) ) < 1e-6f );
 
-    Vector3f lookDir = cameraCenter - cameraEye; 
+    Vector3f lookDir = cameraCenter - cameraEye;
     auto rotLook = Matrix3f::rotation( newDir, lookDir );
 
     auto upVec = rotLook.inverse() * cameraUp;
@@ -806,8 +813,8 @@ void Viewport::cameraRotateAround( const Line3f& axis, float angle )
     // find shift in camera space
     AffineXf3f worldToCameraXf = getViewXf_();
     Vector3f shift = pivot - worldToCameraXf( axis.p );
-    
-    // convert and set shift from camera space to world 
+
+    // convert and set shift from camera space to world
     params_.cameraTranslation += worldToCameraXf.inverse().A * ( shift );
 
     needRedraw_ = true;

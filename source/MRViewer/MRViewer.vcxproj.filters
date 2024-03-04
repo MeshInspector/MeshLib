@@ -331,6 +331,18 @@
     <ClCompile Include="MRFrameCounter.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
+    <ClCompile Include="MRAncillaryLabels.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAncillaryLines.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAncillaryMesh.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAncillaryPoints.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -638,8 +650,23 @@
     <ClInclude Include="MRRenderNameObject.h">
       <Filter>Render\Implementations</Filter>
     </ClInclude>
+    <ClInclude Include="MRRenderWrapObject.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
     <ClInclude Include="MRFrameCounter.h">
       <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAncillaryLabels.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAncillaryLines.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAncillaryMesh.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAncillaryPoints.h">
+      <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -536,7 +536,7 @@ void ViewerSettingsPlugin::drawBackgroundButton_( bool allViewports )
     if ( UI::colorEdit4( "Background Color", backgroundColor,
         ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel ) )
         backgroundColor_ = backgroundColor;
-    else if ( !ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) )
+    else if ( ImGui::IsWindowFocused() || !ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) )
         backgroundColor_.w = -1.0f;
     if ( allViewports )
         for ( ViewportId vid : viewer->getPresentViewports() )

@@ -33,23 +33,6 @@ static std::pair<UndirectedEdge2RegionMap, int> getUniqueRootIds( const Undirect
     return { std::move( uniqueRootsMap ), k };
 }
 
-//std::pair<std::vector<int>, int> getUniqueRoots( const UndirectedEdgeMap& allRoots, const UndirectedEdgeBitSet& region )
-//{
-//    constexpr int InvalidRoot = -1;
-//    std::vector<int> uniqueRootsMap( allRoots.size(), InvalidRoot );
-//    int k = 0;
-//    for ( auto e : region )
-//    {
-//        auto& uniqIndex = uniqueRootsMap[allRoots[e]];
-//        if ( uniqIndex == InvalidRoot )
-//        {
-//            uniqIndex = k;
-//            ++k;
-//        }
-//    }
-//    return { std::move( uniqueRootsMap ), k };
-//}
-
 }
 
 namespace MR
@@ -128,33 +111,6 @@ std::pair<std::vector<UndirectedEdgeBitSet>, int> getAllComponents( const Polyli
     for ( auto ue : undirectedEdges( topology ) )
         res[uniqueRootsMap[ue]].set( ue );
     return { res, componentsInGroup };
-
-
-
-    //constexpr int InvalidRoot = -1;
-    //std::vector<int> uniqueRootsMap( allRoots.size(), InvalidRoot );
-    //int k = 0;
-    //int curRoot;
-    //for ( auto u : undirectedEdges( topology ) )
-    //{
-    //    curRoot = allRoots[u];
-    //    auto& uniqIndex = uniqueRootsMap[curRoot];
-    //    if ( uniqIndex == InvalidRoot )
-    //    {
-    //        uniqIndex = k;
-    //        ++k;
-    //    }
-    //}
-
-
-    //std::vector<UndirectedEdgeBitSet> res( k, UndirectedEdgeBitSet( allRoots.size() ) );
-    //for ( auto u : undirectedEdges( topology ) )
-    //{
-    //    curRoot = allRoots[u];
-    //    res[uniqueRootsMap[curRoot]].set( u );
-    //}
-    //return { res, k };
-
 }
 
 UnionFind<MR::UndirectedEdgeId> getUnionFindStructure( const PolylineTopology& topology )

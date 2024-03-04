@@ -30,6 +30,13 @@
 #include <MRMesh/MRChangeSceneAction.h>
 #include <MRMesh/MRChangeObjectFields.h>
 #include <MRMesh/MRSceneRoot.h>
+#include <MRMesh/MRObjectVoxels.h>
+#include <MRMesh/MRObjectPoints.h>
+#include <MRMesh/MRObjectMesh.h>
+#include <MRMesh/MRObjectLines.h>
+#include <MRMesh/MRObjectDistanceMap.h>
+#include <MRMesh/MRPointCloud.h>
+#include <MRMesh/MRMesh.h>
 #include <MRPch/MRJson.h>
 #include <MRPch/MRSpdlog.h>
 #include <MRPch/MRWasm.h>

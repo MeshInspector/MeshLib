@@ -1,6 +1,6 @@
 #pragma once
 #include "exports.h"
-#include "MRMesh/MRObject.h"
+#include "MRMesh/MRMeshFwd.h"
 #include <memory>
 #include <vector>
 

@@ -1,11 +1,23 @@
 #pragma once
 
-namespace spdlog {
-namespace sinks {
-
 // we need to make default visibility of sinks for dynamic_cast
 // to be able to find objects from other shared libraries (particularity on Apple)
 #ifndef _WIN32
+namespace spdlog
+{
+
+namespace details
+{
+
+struct __attribute__((visibility("default"))) console_mutex;
+
+struct __attribute__((visibility("default"))) console_nullmutex;
+
+} // namespace details
+
+namespace sinks
+{
+
 template<typename Mutex>
 class __attribute__((visibility("default"))) rotating_file_sink;
 
@@ -14,10 +26,17 @@ class __attribute__((visibility("default"))) daily_file_sink;
 
 template<typename Mutex>
 class __attribute__((visibility("default"))) basic_file_sink;
-#endif
+
+template<typename ConsoleMutex>
+class __attribute__((visibility("default"))) ansicolor_stdout_sink;
+
+template<typename ConsoleMutex>
+class __attribute__((visibility("default"))) ansicolor_stderr_sink;
 
 } //namespace sinks
+
 } //namespace spdlog
+#endif
 
 #include "MRFmt.h"
 

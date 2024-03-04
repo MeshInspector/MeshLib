@@ -1,20 +1,12 @@
 #pragma once
 #include "exports.h"
-#include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRObject.h"
-#include "MRMesh/MRObjectPoints.h"
-#include "MRMesh/MRObjectVoxels.h"
-#include "MRMesh/MRObjectMesh.h"
-#include "MRMesh/MRObjectLines.h"
-#include "MRMesh/MRObjectDistanceMap.h"
 #include <memory>
 #include <vector>
 #include <string>
 
 namespace MR
 {
-
-class Object;
 
 // Interface for checking scene state, to determine availability, also can return string with requirements 
 class ISceneStateCheck
@@ -24,37 +16,6 @@ public:
     // return empty string if all requirements are satisfied, otherwise return first unsatisfied requirement
     virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const { return {}; }
 };
-
-// special namespace not to have signature conflicts
-namespace ModelCheck
-{
-inline bool model( const Object& )
-{
-    return true;
-}
-inline bool model( const ObjectMesh& obj )
-{
-    return bool( obj.mesh() );
-}
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-inline bool model( const ObjectVoxels& obj )
-{
-    return bool( obj.grid() );
-}
-#endif
-inline bool model( const ObjectPoints& obj )
-{
-    return bool( obj.pointCloud() );
-}
-inline bool model( const ObjectLines& obj )
-{
-    return bool( obj.polyline() );
-}
-inline bool model( const ObjectDistanceMap& obj )
-{
-    return bool( obj.getDistanceMap() );
-}
-} //namespace ModelCheck
 
 // special struct for disabling visual representation check
 struct NoVisualRepresentationCheck {};
@@ -68,11 +29,11 @@ std::string sceneSelectedExactly( const std::vector<std::shared_ptr<const Object
         return "Exactly " + std::to_string( n ) + " " + ObjectT::TypeName() + "(s) must be selected";
     for ( const auto& obj : objs )
     {
-        auto tObj = obj->asType<ObjectT>();
+        auto tObj = dynamic_cast<const ObjectT*>( obj.get() );
         if ( !tObj )
             return std::string( "Selected object(s) must have type: " ) + ObjectT::TypeName();
 
-        if ( !ModelCheck::model( *tObj ) )
+        if ( !tObj->hasModel() )
             return "Selected object(s) must have valid model";
 
         if constexpr ( visualRepresentationCheck )
@@ -92,10 +53,10 @@ std::string sceneSelectedAtLeast( const std::vector<std::shared_ptr<const Object
     unsigned i = 0;
     for ( const auto& obj : objs )
     {
-        auto tObj = obj->asType<ObjectT>();
+        auto tObj = dynamic_cast<const ObjectT*>( obj.get() );
         if ( !tObj )
             continue;
-        if ( !ModelCheck::model( *tObj ) )
+        if ( !tObj->hasModel() )
             continue;
         if constexpr ( visualRepresentationCheck )
             if ( !tObj->hasVisualRepresentation() )

@@ -62,10 +62,13 @@ enum FaceIncidence
 [[nodiscard]] MRMESH_API size_t getNumComponents( const MeshPart& meshPart,
     FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {} );
 
-
 /// gets all connected components of mesh part
-[[nodiscard]] MRMESH_API std::vector<FaceBitSet> getAllComponents( const MeshPart& meshPart,
-    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {} );
+/// \detail if components  number more than the maxComponentCount, they will be combined into groups of the same size 
+/// \note be careful, if mesh is large enough and has many components, the memory overflow will occur
+/// \param maxComponentCount should be more then 1
+/// \return pair components bitsets vector and number components in one group if components number more than maxComponentCount
+[[nodiscard]] MRMESH_API std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPart,
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate& isCompBd = {}, int maxComponentCount = INT_MAX );
 
 /// gets all connected components of mesh part as
 /// 1. the mapping: FaceId -> Component ID in [0, 1, 2, ...)

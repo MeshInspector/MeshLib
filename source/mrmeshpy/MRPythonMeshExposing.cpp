@@ -364,7 +364,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshComponents, [] ( pybind11::module_& m )
         "gets all connected components of mesh part" );
 
     m.def( "getAllComponents", []( const MeshPart& meshPart, MeshComponents::FaceIncidence incidence )
-        { return MeshComponents::getAllComponents( meshPart, incidence ); },
+        { return MeshComponents::getAllComponents( meshPart, incidence ).first; },
         pybind11::arg( "meshPart" ),
         pybind11::arg_v( "incidence", MeshComponents::FaceIncidence::PerEdge, "FaceIncidence.PerEdge" ),
         "gets all connected components of mesh part" );

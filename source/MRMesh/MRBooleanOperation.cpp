@@ -79,7 +79,7 @@ bool preparePart( const Mesh& origin, std::vector<EdgePath>& cutPaths, Mesh& out
     WholeEdgeMap* eMapPtr = maps ? &maps->old2newEdges : &map;
     VertMap* vMapPtr = maps ? &maps->old2newVerts : nullptr;
 
-    auto comps = MeshComponents::getAllComponents( origin );
+    auto comps = MeshComponents::getAllComponents( origin ).first;
     leftPart = preparePart( origin, comps, leftPart, otherMesh, needInsidePart, originIsA, rigidB2A, mergeAllNonInter );
 
     outMesh.addPartByMask( origin, leftPart, needFlip, {}, {},
@@ -148,9 +148,9 @@ Mesh doTrivialBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut, BooleanOperati
     FaceBitSet aPartFbs, bPartFbs;
     std::vector<FaceBitSet> aComponents, bComponents;
     if ( operation != BooleanOperation::InsideB && operation != BooleanOperation::OutsideB )
-        aComponents = MeshComponents::getAllComponents( meshACut );
+        aComponents = MeshComponents::getAllComponents( meshACut ).first;
     if ( operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA )
-        bComponents = MeshComponents::getAllComponents( meshBCut );
+        bComponents = MeshComponents::getAllComponents( meshBCut ).first;
 
     if ( operation == BooleanOperation::OutsideA || operation == BooleanOperation::Union || operation == BooleanOperation::DifferenceAB )
         aPartFbs = preparePart( meshACut, aComponents, {}, meshBCut, false, true, rigidB2A, mergeAllNonIntersectingComponents );

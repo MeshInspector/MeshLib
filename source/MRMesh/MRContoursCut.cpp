@@ -1990,7 +1990,7 @@ std::vector<MR::EdgePath> cutMeshWithPlane( MR::Mesh& mesh, const MR::Plane3f& p
     auto cutEdges = cutMesh( mesh, contours, params );
     
     FaceBitSet goodFaces = fillContourLeft( mesh.topology, cutEdges.resultCut );
-    auto components = MeshComponents::getAllComponents( mesh, MeshComponents::FaceIncidence::PerVertex );
+    auto components = MeshComponents::getAllComponents( mesh, MeshComponents::FaceIncidence::PerVertex ).first;
     for ( const auto& comp : components )
     {
         if ( ( comp & goodFaces ).any() )

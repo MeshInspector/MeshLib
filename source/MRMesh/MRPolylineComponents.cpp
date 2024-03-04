@@ -12,24 +12,43 @@ namespace
 
 using namespace MR;
 
-std::pair<std::vector<int>, int> getUniqueRoots( const UndirectedEdgeMap& allRoots, const UndirectedEdgeBitSet& region )
+/// returns
+/// 1. the mapping: FaceId -> Root ID in [0, 1, 2, ...)
+/// 2. the total number of roots
+static std::pair<UndirectedEdge2RegionMap, int> getUniqueRootIds( const UndirectedEdgeMap& allRoots, const UndirectedEdgeBitSet& region )
 {
-    constexpr int InvalidRoot = -1;
-    std::vector<int> uniqueRootsMap( allRoots.size(), InvalidRoot );
+    MR_TIMER
+    UndirectedEdge2RegionMap uniqueRootsMap( allRoots.size() );
     int k = 0;
-    int curRoot;
-    for ( auto e : region )
+    for ( auto ue : region )
     {
-        curRoot = allRoots[e];
-        auto& uniqIndex = uniqueRootsMap[curRoot];
-        if ( uniqIndex == InvalidRoot )
+        auto& uniqIndex = uniqueRootsMap[allRoots[ue]];
+        if ( uniqIndex < 0 )
         {
-            uniqIndex = k;
+            uniqIndex = RegionId( k );
             ++k;
         }
+        uniqueRootsMap[ue] = uniqIndex;
     }
     return { std::move( uniqueRootsMap ), k };
 }
+
+//std::pair<std::vector<int>, int> getUniqueRoots( const UndirectedEdgeMap& allRoots, const UndirectedEdgeBitSet& region )
+//{
+//    constexpr int InvalidRoot = -1;
+//    std::vector<int> uniqueRootsMap( allRoots.size(), InvalidRoot );
+//    int k = 0;
+//    for ( auto e : region )
+//    {
+//        auto& uniqIndex = uniqueRootsMap[allRoots[e]];
+//        if ( uniqIndex == InvalidRoot )
+//        {
+//            uniqIndex = k;
+//            ++k;
+//        }
+//    }
+//    return { std::move( uniqueRootsMap ), k };
+//}
 
 }
 
@@ -78,33 +97,63 @@ UndirectedEdgeBitSet getComponent( const PolylineTopology& topology, UndirectedE
     return res;
 }
 
-std::vector<UndirectedEdgeBitSet> getAllComponents( const PolylineTopology& topology )
+std::pair<std::vector<UndirectedEdgeBitSet>, int> getAllComponents( const PolylineTopology& topology, int maxComponentCount /*= INT_MAX*/ )
 {
     MR_TIMER;
     auto unionFindStruct = getUnionFindStructure( topology );
-
     const auto& allRoots = unionFindStruct.roots();
-    constexpr int InvalidRoot = -1;
-    std::vector<int> uniqueRootsMap( allRoots.size(), InvalidRoot );
-    int k = 0;
-    int curRoot;
-    for ( auto u : undirectedEdges( topology ) )
+    UndirectedEdgeBitSet region( topology.lastNotLoneEdge() + 1 );
+    for ( auto e : undirectedEdges( topology ) )
+        region.set( e );
+    auto [uniqueRootsMap, componentsCount] = getUniqueRootIds( allRoots, region );
+    if ( !componentsCount )
+        return { {}, 0 };
+    const int componentsInGroup = maxComponentCount == INT_MAX ? 1 : ( componentsCount + maxComponentCount - 1 ) / maxComponentCount;
+    if ( componentsInGroup != 1 )
+        for ( RegionId& id : uniqueRootsMap )
+            id = RegionId( id / componentsInGroup );
+    componentsCount = ( componentsCount + componentsInGroup - 1 ) / componentsInGroup;
+    std::vector<UndirectedEdgeBitSet> res( componentsCount );
+    // this block is needed to limit allocations for not packed meshes
+    std::vector<int> resSizes( componentsCount, 0 );
+    for ( auto ue : undirectedEdges( topology ) )
     {
-        curRoot = allRoots[u];
-        auto& uniqIndex = uniqueRootsMap[curRoot];
-        if ( uniqIndex == InvalidRoot )
-        {
-            uniqIndex = k;
-            ++k;
-        }
+        int index = uniqueRootsMap[ue];
+        if ( ue > resSizes[index] )
+            resSizes[index] = ue;
     }
-    std::vector<UndirectedEdgeBitSet> res( k, UndirectedEdgeBitSet( allRoots.size() ) );
-    for ( auto u : undirectedEdges( topology ) )
-    {
-        curRoot = allRoots[u];
-        res[uniqueRootsMap[curRoot]].set( u );
-    }
-    return res;
+    for ( int i = 0; i < componentsCount; ++i )
+        res[i].resize( resSizes[i] + 1 );
+    // end of allocation block
+    for ( auto ue : undirectedEdges( topology ) )
+        res[uniqueRootsMap[ue]].set( ue );
+    return { res, componentsInGroup };
+
+
+
+    //constexpr int InvalidRoot = -1;
+    //std::vector<int> uniqueRootsMap( allRoots.size(), InvalidRoot );
+    //int k = 0;
+    //int curRoot;
+    //for ( auto u : undirectedEdges( topology ) )
+    //{
+    //    curRoot = allRoots[u];
+    //    auto& uniqIndex = uniqueRootsMap[curRoot];
+    //    if ( uniqIndex == InvalidRoot )
+    //    {
+    //        uniqIndex = k;
+    //        ++k;
+    //    }
+    //}
+
+
+    //std::vector<UndirectedEdgeBitSet> res( k, UndirectedEdgeBitSet( allRoots.size() ) );
+    //for ( auto u : undirectedEdges( topology ) )
+    //{
+    //    curRoot = allRoots[u];
+    //    res[uniqueRootsMap[curRoot]].set( u );
+    //}
+    //return { res, k };
 
 }
 
@@ -140,14 +189,14 @@ UndirectedEdgeBitSet getLargestComponent( const Polyline<V>& polyline )
         region.set( e );
 
     const auto& allRoots = unionFindStruct.roots();
-    auto [uniqueRootsMap, k] = getUniqueRoots( allRoots, region );
+    auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, region );
 
     auto maxLength = std::numeric_limits<float>::lowest();
     int maxI = 0;
     std::vector<float> lengths( k, 0.f );
     for ( auto e : region )
     {
-        auto index = uniqueRootsMap[allRoots[e]];
+        auto index = uniqueRootsMap[e];
         auto& length = lengths[index];
         length += polyline.edgeLength( EdgeId( e ) );
         if ( length > maxLength )
@@ -160,7 +209,7 @@ UndirectedEdgeBitSet getLargestComponent( const Polyline<V>& polyline )
     UndirectedEdgeBitSet maxLengthComponent( topology.lastNotLoneEdge() + 1 );
     for ( auto e : region )
     {
-        auto index = uniqueRootsMap[allRoots[e]];
+        auto index = uniqueRootsMap[e];
         if ( index != maxI )
             continue;
         maxLengthComponent.set( e );

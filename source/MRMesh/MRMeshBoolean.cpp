@@ -470,7 +470,7 @@ Expected<BooleanResultPoints, std::string> getBooleanPoints( const Mesh& meshA, 
         // reset outer
         result.meshAVerts -= ( needInsidePartA ? destVertsA : orgVertsA );
 
-        const auto aComponents = MeshComponents::getAllComponents(meshA);
+        const auto aComponents = MeshComponents::getAllComponents(meshA).first;
 
         for ( const auto& aComponent : aComponents )
         {
@@ -498,7 +498,7 @@ Expected<BooleanResultPoints, std::string> getBooleanPoints( const Mesh& meshA, 
         // reset outer
         result.meshBVerts -= ( needInsidePartB ? destVertsB : orgVertsB );
 
-        const auto bComponents = MeshComponents::getAllComponents(meshB);
+        const auto bComponents = MeshComponents::getAllComponents(meshB).first;
         std::unique_ptr<AffineXf3f> rigidA2B;
         if ( rigidB2A )
             rigidA2B = std::make_unique<AffineXf3f>( rigidB2A->inverse() );

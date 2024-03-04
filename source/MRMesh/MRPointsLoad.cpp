@@ -439,7 +439,7 @@ Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, VertColors* col
     cloud.validPoints.resize( lineCount, false );
 
     // detect normals and colors
-    constexpr Vector3f cInvalidNormal( 0.f, 0.f, 0.f );
+    constexpr Vector3d cInvalidNormal( 0.f, 0.f, 0.f );
     constexpr Color cInvalidColor( 0, 0, 0, 0 );
     auto hasNormals = false;
     auto hasColors = false;
@@ -449,7 +449,7 @@ Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, VertColors* col
         if ( line.empty() || line.starts_with( '#' ) )
             continue;
 
-        Vector3f point;
+        Vector3d point;
         auto normal = cInvalidNormal;
         auto color = cInvalidColor;
         auto result = parseAscCoordinate( line, point, &normal, &color );
@@ -459,20 +459,12 @@ Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, VertColors* col
         if ( normal != cInvalidNormal )
         {
             hasNormals = true;
-#ifdef NDEBUG
             cloud.normals.resizeNoInit( lineCount );
-#else
-            cloud.normals.resize( lineCount, cInvalidNormal );
-#endif
         }
         if ( colors && color != cInvalidColor )
         {
             hasColors = true;
-#ifdef NDEBUG
             colors->resizeNoInit( lineCount );
-#else
-            colors->resize( lineCount, cInvalidColor );
-#endif
         }
 
         break;
@@ -484,16 +476,27 @@ Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, VertColors* col
         if ( line.empty() || line.starts_with( '#' ) )
             return;
 
-        auto* normal = hasNormals ? &cloud.normals[v] : nullptr;
-        auto* color = hasColors ? &( *colors )[v] : nullptr;
-        auto result = parseAscCoordinate( line, cloud.points[v], normal, color );
+        Vector3d point( noInit );
+#ifndef NDEBUG
+        Vector3d normal( noInit );
+        Color color( noInit );
+#else
+        auto normal = cInvalidNormal;
+        auto color = cInvalidColor;
+#endif
+        auto result = parseAscCoordinate( line, point, hasNormals ? &normal : nullptr, hasColors ? &color : nullptr );
         if ( !result )
             return;
 
-        assert( !hasNormals || *normal != cInvalidNormal );
-        assert( !hasColors || *color != cInvalidColor );
+        assert( !hasNormals || normal != cInvalidNormal );
+        assert( !hasColors || color != cInvalidColor );
 
+        cloud.points[v] = Vector3f( point );
         cloud.validPoints.set( v, true );
+        if ( hasNormals )
+            cloud.normals[v] = Vector3f( normal );
+        if ( hasColors )
+            ( *colors )[v] = color;
     }, callback );
 
     return cloud;

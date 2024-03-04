@@ -251,16 +251,16 @@ bool Object::addChild( std::shared_ptr<Object> child, bool recognizedChild )
     child->parent_ = this;
     if ( recognizedChild )
     {
+        child->propagateWorldXfChangedSignal_();
         children_.push_back( std::move( child ) );
     }
     else
     {
         // remove invalid children before adding new one
         std::erase_if( bastards_, [](const auto & b) { return !b.lock(); } );
+        child->propagateWorldXfChangedSignal_();
         bastards_.push_back( std::move( child ) );
     }
-
-    child->propagateWorldXfChangedSignal_();
 
     needRedraw_ = true;
     return true;
@@ -301,10 +301,9 @@ bool Object::addChildBefore( std::shared_ptr<Object> newChild, const std::shared
         oldParent->removeChild( newChild );
 
     newChild->parent_ = this;
+    newChild->propagateWorldXfChangedSignal_();
     children_.insert( it1, std::move( newChild ) );
     needRedraw_ = true;
-
-    newChild->propagateWorldXfChangedSignal_();
 
     return true;
 }

@@ -15,7 +15,8 @@
 namespace MR
 {
 
-
+// A widget that allows you to find, highlight and select boundaries (holes) in the mesh.
+// To provide feedback during creation, it is necessary to specify a callback that will be called if a specific hole is selected.
 class MRVIEWER_CLASS BoundarySelectionWidget : public MultiListener<
     MouseDownListener,
     MouseMoveListener>
@@ -47,7 +48,7 @@ public:
     MRVIEWER_API void enable( bool isEnaled );
 
     // create a widget and connect it. 
-    // To create a widget, you need to provide 1 callbacks and one function that determines whether this object can be used to place points.
+    // To create a widget, you need to provide 1 callbacks and one function that determines whether this object can be used to detect and select boundaries ( holes ).
     // All callback takes a shared pointer to an MR::ObjectMeshHolder as an argument.
     // onBoundarySelected: This callback is invoked when a boundary is selected.
     // isObjectValidToPick : Must returh true or false. This callback is used to determine whether an object is valid for picking.

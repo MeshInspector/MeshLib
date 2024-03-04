@@ -47,6 +47,14 @@
 							"Name": "Save object"
 						}
 					]
+				},
+				{
+					"Name": "Settings",
+					"List": [
+						{
+							"Name": "Viewer settings"
+						}
+					]
 				}
 			]
 		},
@@ -65,9 +73,6 @@
 						},
 						{
 							"Name": "Add custom theme"
-						},
-						{
-							"Name": "Viewer settings"
 						}
 					]
 				},

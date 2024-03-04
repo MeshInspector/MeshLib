@@ -120,7 +120,9 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
     const float width = ImGui::GetTextLineHeight();
     const float textWidth = ImGui::CalcTextSize( label ).x;
 
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
     auto res = ImGui::CollapsingHeader( label, flags );
+    ImGui::PopStyleVar();
     for ( int i = 0; i < issueCount; ++i )
     {
         drawList->AddCircleFilled( { pos.x + textWidth + 3.0f * width + i * width, pos.y + height / 2.0f }, height / 3.0f, Color( 0.886f, 0.267f, 0.267f, 1.0f ).getUInt32() );

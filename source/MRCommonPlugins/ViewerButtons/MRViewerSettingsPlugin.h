@@ -28,6 +28,8 @@ public:
 
     ViewerSettingsPlugin();
 
+    virtual const std::string& uiName() const override;
+
     virtual void drawDialog( float menuScaling, ImGuiContext* ctx ) override;
 
     virtual bool blocking() const override { return false; }

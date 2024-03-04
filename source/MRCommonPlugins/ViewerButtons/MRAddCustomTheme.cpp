@@ -9,12 +9,17 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRDirectory.h"
+#include "MRMesh/MRObjectVoxels.h"
+#include "MRMesh/MRObjectPoints.h"
+#include "MRMesh/MRObjectLines.h"
+#include "MRMesh/MRObjectDistanceMap.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRSuppressWarning.h"
 #include "MRViewer/MRRibbonButtonDrawer.h"
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRViewerSettingsPlugin.h"
 #include "MRViewer/MRUIStyle.h"
+#include <fstream>
 
 namespace MR
 {

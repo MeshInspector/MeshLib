@@ -1,6 +1,5 @@
 #pragma once
 #include "MRVisualObject.h"
-#include "MRPointCloud.h"
 #include "MRXfBasedCache.h"
 
 namespace MR
@@ -29,6 +28,8 @@ public:
     MRMESH_API virtual void applyScale( float scaleFactor ) override;
 
     MRMESH_API virtual bool hasVisualRepresentation() const override;
+
+    [[nodiscard]] virtual bool hasModel() const override { return bool( points_ ); }
 
     const std::shared_ptr<const PointCloud>& pointCloud() const
     { return reinterpret_cast< const std::shared_ptr<const PointCloud>& >( points_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
@@ -83,6 +84,7 @@ public:
             return;
         renderDiscretization_ = val;
         needRedraw_ = true;
+        renderDiscretizationChangedSignal();
     }
 
     /// returns rendering discretization, each N-th point will be displayed on screen
@@ -112,6 +114,9 @@ public:
     /// signal about points selection changing, triggered in selectPoints
     using SelectionChangedSignal = Signal<void()>;
     SelectionChangedSignal pointsSelectionChangedSignal;
+
+    /// signal about render discretization changing, triggered in setRenderDiscretization
+    Signal<void()> renderDiscretizationChangedSignal;
 
 protected:
     VertBitSet selectedPoints_;

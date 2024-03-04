@@ -75,7 +75,7 @@
 #include "MRMesh/MRMatrix3Decompose.h"
 #include "MRMesh/MRFeatureObject.h"
 #include "MRMesh/MRFinally.h"
-
+#include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRSceneSettings.h"
 #include "imgui_internal.h"
@@ -1344,7 +1344,7 @@ float ImGuiMenu::drawSelectionInformation_()
 #endif
     }
 
-    if ( selectionWorldBox_.valid() )
+    if ( selectionBbox_.valid() && selectionWorldBox_.valid() )
     {
         bsize = selectionBbox_.size();
         bsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", bsize.x, bsize.y, bsize.z );

@@ -17,13 +17,6 @@ ENDIF() # MR_EMSCRIPTEN
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
-IF(NOT MR_EMSCRIPTEN)
-pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
-if(GTKMM_FOUND)
-  target_include_directories( ${PROJECT_NAME} PUBLIC ${GTKMM_INCLUDE_DIRS})
-endif()
-ENDIF() # NOT MR_EMSCRIPTEN
-
 file(GLOB JSONS "*.json")
 IF(MR_EMSCRIPTEN)
 	file(COPY ${JSONS} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
@@ -40,14 +33,16 @@ IF(MR_EMSCRIPTEN)
 			glfw
 			)
 ELSE() # MR_EMSCRIPTEN
-IF(APPLE)
-	add_definitions("-x objective-c++")
-	find_library(APPKIT_LIBRARY AppKit)
-	IF(NOT APPKIT_LIBRARY)
-		message(FATAL_ERROR "AppKit not found")
-	ENDIF()
-    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
-	target_link_libraries(${PROJECT_NAME} PRIVATE
+	IF(APPLE)
+		# TODO: CMAKE_PREFIX_PATH for thirdparty
+		#find_package(nfd REQUIRED)
+		find_library(APPKIT_LIBRARY AppKit REQUIRED)
+
+		add_definitions("-x objective-c++")
+		target_compile_definitions(${PROJECT_NAME} PRIVATE
+			_GNU_SOURCE
+		)
+		target_link_libraries(${PROJECT_NAME} PRIVATE
 			MRMesh
 			GTest::gtest
 			fmt
@@ -56,18 +51,18 @@ IF(APPLE)
 			spdlog
 			jsoncpp
 			cpr
-			sigc-3.0
-			glib-2.0
-			glibmm-2.4
 			imgui
 			glad
 			glfw
-			gtkmm-3.0
+			#nfd::nfd
+			nfd
 			hidapi
 			${APPKIT_LIBRARY}
-			)
-ELSE() # NOT APPLE
-	target_link_libraries(${PROJECT_NAME} PRIVATE
+		)
+	ELSE() # NOT APPLE
+		pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
+
+		target_link_libraries(${PROJECT_NAME} PRIVATE
 			MRMesh
 			gtest
 			dl
@@ -85,8 +80,11 @@ ELSE() # NOT APPLE
 			fmt
 			openvdb
 			tbb
-			)
-ENDIF() # APPLE
+		)
+		target_include_directories(${PROJECT_NAME} PRIVATE
+			${GTKMM_INCLUDE_DIRS}
+		)
+	ENDIF() # APPLE
 ENDIF() # MR_EMSCRIPTEN
 
 file(GLOB JSONS "*.json")

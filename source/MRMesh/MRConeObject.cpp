@@ -19,15 +19,7 @@ namespace MR
 
 namespace
 {
-constexpr int cDetailLevel = 64;
-constexpr float thicknessArrow = 0.01f;
-constexpr float cBaseRadius = 1.0f;
 constexpr float cBaseHeight = 1.0f;
-
-constexpr Vector3f base = Vector3f::plusZ();
-constexpr Vector3f apex = { 0,0,0 };
-
-
 
 float getNormalizedRadiusByAngle( float angle )
 {
@@ -42,15 +34,6 @@ float getAngleByNormalizedRadius( float fRadius )
 Matrix3f getRotationMatrix( const Vector3f& normal )
 {
     return Matrix3f::rotation( Vector3f::plusZ(), normal );
-}
-
-
-std::shared_ptr<Mesh> makeFeatureCone( int resolution = cDetailLevel )
-{
-
-    auto mesh = std::make_shared<Mesh>( makeArrow( base, apex, thicknessArrow, cBaseRadius, cBaseHeight, resolution ) );
-
-    return mesh;
 }
 
 }
@@ -132,7 +115,6 @@ void ConeObject::setBaseRadius( float radius )
 ConeObject::ConeObject()
 {
     setDefaultFeatureObjectParams( *this );
-    constructMesh_();
 }
 
 ConeObject::ConeObject( const std::vector<Vector3f>& pointsToApprox )
@@ -152,18 +134,12 @@ ConeObject::ConeObject( const std::vector<Vector3f>& pointsToApprox )
 
 std::shared_ptr<Object> ConeObject::shallowClone() const
 {
-    auto res = std::make_shared<ConeObject>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = mesh_;
-    return res;
+    return std::make_shared<ConeObject>( ProtectedStruct{}, *this );
 }
 
 std::shared_ptr<Object> ConeObject::clone() const
 {
-    auto res = std::make_shared<ConeObject>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = std::make_shared<Mesh>( *mesh_ );
-    return res;
+    return std::make_shared<ConeObject>( ProtectedStruct{}, *this );
 }
 
 void ConeObject::swapBase_( Object& other )
@@ -176,7 +152,7 @@ void ConeObject::swapBase_( Object& other )
 
 void ConeObject::serializeFields_( Json::Value& root ) const
 {
-    ObjectMeshHolder::serializeFields_( root );
+    VisualObject::serializeFields_( root );
     root["Type"].append( ConeObject::TypeName() );
 }
 
@@ -184,15 +160,6 @@ void ConeObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
         renderObj_ = createRenderObject<decltype(*this)>( *this );
-}
-
-void ConeObject::constructMesh_()
-{
-    mesh_ = makeFeatureCone();
-    setFlatShading( true );
-    selectFaces( {} );
-    selectEdges( {} );
-    setDirtyFlags( DIRTY_ALL );
 }
 
 const std::vector<FeatureObjectSharedProperty>& ConeObject::getAllSharedProperties() const

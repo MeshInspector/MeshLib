@@ -176,12 +176,12 @@ public:
     MRMESH_API virtual void setFrontColor( const Color& color, bool selected, ViewportId viewportId = {} );
 
     /// returns color of object when it is selected/not-selected (depending on argument) in all viewports
-    MRMESH_API const ViewportProperty<Color>& getFrontColorsForAllViewports( bool selected = true ) const;
+    MRMESH_API virtual const ViewportProperty<Color>& getFrontColorsForAllViewports( bool selected = true ) const;
     /// sets color of object when it is selected/not-selected (depending on argument) in all viewports
     MRMESH_API virtual void setFrontColorsForAllViewports( ViewportProperty<Color> val, bool selected = true );
 
     /// returns backward color of object in all viewports
-    MRMESH_API const ViewportProperty<Color>& getBackColorsForAllViewports() const;
+    MRMESH_API virtual const ViewportProperty<Color>& getBackColorsForAllViewports() const;
     /// sets backward color of object in all viewports
     MRMESH_API virtual void setBackColorsForAllViewports( ViewportProperty<Color> val );
 
@@ -196,7 +196,7 @@ public:
     MRMESH_API virtual void setGlobalAlpha( uint8_t alpha, ViewportId viewportId = {} );
 
     /// returns global transparency alpha of object in all viewports
-    MRMESH_API const ViewportProperty<uint8_t>& getGlobalAlphaForAllViewports() const;
+    MRMESH_API virtual const ViewportProperty<uint8_t>& getGlobalAlphaForAllViewports() const;
     /// sets global transparency alpha of object in all viewports
     MRMESH_API virtual void setGlobalAlphaForAllViewports( ViewportProperty<uint8_t> val );
 

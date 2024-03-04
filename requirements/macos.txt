@@ -5,7 +5,6 @@ cpr
 fmt
 gdcm
 glfw
-gtkmm3
 hidapi
 ilmbase
 jpeg-turbo

@@ -15,6 +15,7 @@
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRPolyline2Intersect.h"
 #include "MRMesh/MRPolylineProject.h"
+#include "MRMesh/MRPointCloud.h"
 
 namespace MR
 {

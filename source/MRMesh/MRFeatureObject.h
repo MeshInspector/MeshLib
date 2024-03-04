@@ -1,21 +1,25 @@
 #pragma once
 #include "MRMeshFwd.h"
+
+#include "MRVector3.h"
+
+#include <cassert>
 #include <variant>
 
 namespace MR
 {
 
-using FeaturesPropertyTypesVariant = std::variant<float, Vector3f >;
+using FeaturesPropertyTypesVariant = std::variant<float, Vector3f>;
 
-struct  FeatureObject;
+struct FeatureObject;
 
 // FeatureObjectSharedProperty struct is designed to represent a shared property of a feature object, enabling the use of generalized getter and setter methods for property manipulation.
 // propertyName: A string representing the name of the property.
 // getter : A std::function encapsulating a method with no parameters that returns a FeaturesPropertyTypesVariant.This allows for a generic way to retrieve the value of the property.
 // setter : A std::function encapsulating a method that takes a FeaturesPropertyTypesVariant as a parameter and returns void.This function sets the value of the property.
 // The templated constructor of this struct takes the property name, pointers to the getter and setter member functions, and a pointer to the object( obj ).
-// The constructor initializes the propertyName and uses lambdas to adapt the member function pointers into std::function objects that conform to the expected 
-// getter and setter signatures.The getter lambda invokes the getter method on the object, and the setter lambda ensures the correct variant type is passed before 
+// The constructor initializes the propertyName and uses lambdas to adapt the member function pointers into std::function objects that conform to the expected
+// getter and setter signatures.The getter lambda invokes the getter method on the object, and the setter lambda ensures the correct variant type is passed before
 // invoking the setter method.
 struct FeatureObjectSharedProperty
 {
@@ -31,11 +35,11 @@ struct FeatureObjectSharedProperty
         SetterFunc m_setter
     ) : propertyName( std::move( name ) ),
         getter
-        ( 
+        (
             [m_getter] ( const FeatureObject* objectToInvoke ) -> FeaturesPropertyTypesVariant
             {
                 return std::invoke( m_getter, dynamic_cast< const C* > ( objectToInvoke ) );
-            } 
+            }
         )
     {
         if constexpr ( ( std::is_same_v<SetterFunc, void ( C::* )( const T& )> )

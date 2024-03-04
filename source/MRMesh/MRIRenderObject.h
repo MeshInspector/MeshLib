@@ -171,7 +171,7 @@ public:
     MRMESH_API RegisterRenderObjectConstructor( const std::type_index& type, IRenderObjectConstructorLambda lambda );
 };
 
-#define MR_REGISTER_RENDER_OBJECT_IMPL(objectType,rendObjectType)\
-    static MR::RegisterRenderObjectConstructor __objectRegistrator##objectType{typeid(objectType),makeRenderObjectConstructor<rendObjectType>()};
+#define MR_REGISTER_RENDER_OBJECT_IMPL(objectType, .../*rendObjectType*/)\
+    static MR::RegisterRenderObjectConstructor __objectRegistrator##objectType{typeid(objectType),makeRenderObjectConstructor<__VA_ARGS__>()};
 
 }

@@ -160,7 +160,7 @@ void CircleObject::setupRenderObject_() const
 
 void CircleObject::serializeFields_( Json::Value& root ) const
 {
-    VisualObject::serializeFields_( root );
+    FeatureObject::serializeFields_( root );
     root["Type"].append( CircleObject::TypeName() );
 }
 

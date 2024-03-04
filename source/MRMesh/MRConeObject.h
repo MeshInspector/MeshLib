@@ -9,7 +9,7 @@ namespace MR
 
 /// Object to show Cone feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS ConeObject : public VisualObject, public FeatureObject
+class MRMESH_CLASS ConeObject : public FeatureObject
 {
 public:
     /// Creates simple Cone object with center in zero and radius - 1

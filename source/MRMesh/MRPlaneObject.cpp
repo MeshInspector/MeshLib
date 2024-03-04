@@ -114,7 +114,6 @@ const std::vector<FeatureObjectSharedProperty>& PlaneObject::getAllSharedPropert
 PlaneObject::PlaneObject()
 {
     setDefaultFeatureObjectParams( *this );
-    constructMesh_();
 }
 
 
@@ -124,7 +123,7 @@ void PlaneObject::orientateFollowMainAxis_()
     auto planeVectorInXY = cross( axis, getNormal() );
 
     // if plane approx. parallel to XY plane, orentate it using XZ plane
-    constexpr float parallelVectorsSinusAngleLimit = 9e-2f; // ~5 degree 
+    constexpr float parallelVectorsSinusAngleLimit = 9e-2f; // ~5 degree
     if ( planeVectorInXY.length() < parallelVectorsSinusAngleLimit )
     {
         axis = Vector3f::plusY();
@@ -133,16 +132,16 @@ void PlaneObject::orientateFollowMainAxis_()
 
     planeVectorInXY = planeVectorInXY.normalized();
 
-    // TODO. For XY plane we need this loop, deu to problems in first rotation. 
+    // TODO. For XY plane we need this loop, deu to problems in first rotation.
     for ( auto i = 0; i < 10; ++i )
     {
-        // calculate current feature oX-axis direction. 
+        // calculate current feature oX-axis direction.
         Matrix3f r, s;
         decomposeMatrix3( xf().A, r, s );
         auto featureDirectionX = ( r * MR::Vector3f::plusX() ).normalized();
 
-        // both featureDirectionX and planeVectorInXY must be perpendicular to plane normal. 
-        // calculate an angle to rotate around plane normal (oZ-axis) for move feature oX axis into plane, which paralell to globe XY plane. 
+        // both featureDirectionX and planeVectorInXY must be perpendicular to plane normal.
+        // calculate an angle to rotate around plane normal (oZ-axis) for move feature oX axis into plane, which paralell to globe XY plane.
         auto angle = std::atan2( cross( featureDirectionX, planeVectorInXY ).length(), dot( featureDirectionX, planeVectorInXY ) );
         auto A = Matrix3f::rotation( MR::Vector3f::plusZ(), angle );
 
@@ -223,18 +222,12 @@ PlaneObject::PlaneObject( const std::vector<Vector3f>& pointsToApprox )
 
 std::shared_ptr<Object> PlaneObject::shallowClone() const
 {
-    auto res = std::make_shared<PlaneObject>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = mesh_;
-    return res;
+    return std::make_shared<PlaneObject>( ProtectedStruct{}, *this );
 }
 
 std::shared_ptr<Object> PlaneObject::clone() const
 {
-    auto res = std::make_shared<PlaneObject>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = std::make_shared<Mesh>( *mesh_ );
-    return res;
+    return std::make_shared<PlaneObject>( ProtectedStruct{}, *this );
 }
 
 void PlaneObject::swapBase_( Object& other )
@@ -247,32 +240,14 @@ void PlaneObject::swapBase_( Object& other )
 
 void PlaneObject::serializeFields_( Json::Value& root ) const
 {
-    ObjectMeshHolder::serializeFields_( root );
+    FeatureObject::serializeFields_( root );
     root["Type"].append( PlaneObject::TypeName() );
 }
 
-void PlaneObject::constructMesh_()
+void PlaneObject::setupRenderObject_() const
 {
-    Triangulation t{
-        { 0_v, 1_v, 2_v },
-        { 2_v, 1_v, 3_v }
-    };
-
-    // create object Mesh cube
-    Mesh meshObj;
-    meshObj.topology = MeshBuilder::fromTriangles( t );
-    meshObj.points.emplace_back( -basePlaneObjectHalfEdgeLength_, -basePlaneObjectHalfEdgeLength_, 0 ); // VertId{0}
-    meshObj.points.emplace_back( basePlaneObjectHalfEdgeLength_, -basePlaneObjectHalfEdgeLength_, 0 ); // VertId{1}
-    meshObj.points.emplace_back( -basePlaneObjectHalfEdgeLength_, basePlaneObjectHalfEdgeLength_, 0 ); // VertId{2}
-    meshObj.points.emplace_back( basePlaneObjectHalfEdgeLength_, basePlaneObjectHalfEdgeLength_, 0 ); // VertId{3}
-
-    mesh_ = std::make_shared<Mesh>( meshObj );
-
-    setFlatShading( false );
-    selectFaces( {} );
-    selectEdges( {} );
-
-    setDirtyFlags( DIRTY_ALL );
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype(*this)>( *this );
 }
 
 }

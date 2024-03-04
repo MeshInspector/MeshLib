@@ -152,7 +152,7 @@ void ConeObject::swapBase_( Object& other )
 
 void ConeObject::serializeFields_( Json::Value& root ) const
 {
-    VisualObject::serializeFields_( root );
+    FeatureObject::serializeFields_( root );
     root["Type"].append( ConeObject::TypeName() );
 }
 

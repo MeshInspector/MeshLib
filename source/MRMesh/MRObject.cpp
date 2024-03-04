@@ -130,11 +130,11 @@ void Object::applyScale( float )
 
 ViewportMask Object::globalVisibilityMask() const
 {
-    auto res = visibilityMask_;
+    auto res = visibilityMask();
     auto parent = this->parent();
     while ( !res.empty() && parent )
     {
-        res &= parent->visibilityMask_;
+        res &= parent->visibilityMask();
         parent = parent->parent();
     }
     return res;
@@ -422,7 +422,7 @@ Expected<std::future<VoidOrErrStr>> Object::serializeModel_( const std::filesyst
 void Object::serializeFields_( Json::Value& root ) const
 {
     root["Name"] = name_;
-    root["Visibility"] = visibilityMask_.value();
+    root["Visibility"] = visibilityMask().value();
     root["Selected"] = selected_;
     root["Locked"] = locked_;
     root["ParentLocked"] = parentLocked_;

@@ -1,13 +1,14 @@
 #pragma once
+
 #include "MRMeshFwd.h"
-#include "MRObjectMeshHolder.h"
 #include "MRFeatureObject.h"
+
 namespace MR
 {
 
 /// Object to show plane feature
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS PlaneObject : public ObjectMeshHolder, public FeatureObject
+class MRMESH_CLASS PlaneObject : public FeatureObject
 {
 public:
     /// Creates simple plane object
@@ -64,8 +65,9 @@ protected:
     virtual VoidOrErrStr deserializeModel_( const std::filesystem::path&, ProgressCallback ) override
         { return {}; }
 
+    MRMESH_API void setupRenderObject_() const override;
+
 private:
-    void constructMesh_();
     void orientateFollowMainAxis_();
     void setupPlaneSize2DByOriginalPoints_( const std::vector<Vector3f>& pointsToApprox );
 };

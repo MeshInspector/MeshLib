@@ -300,6 +300,7 @@ const ViewportMask& VisualObject::getVisualizePropertyMask( AnyVisualizeMaskEnum
         switch ( *value )
         {
         case VisualizeMaskType::Visibility:
+            (void)visibilityMask(); // Call this for the side effects, in case it's overridden. Can't return it directly, as it returns by value.
             return visibilityMask_;
         case VisualizeMaskType::InvertedNormals:
             return invertNormals_;

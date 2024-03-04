@@ -2,8 +2,10 @@
 
 #include "MRViewport.h"
 #include "MRViewerInstance.h"
+#include "MRPickHoleBorderElement.h"
 
 #include "MRViewer/MRMouseController.h"
+#include "MRViewer/MRAncillaryLines.h"
 
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRObjectMeshHolder.h"
@@ -11,24 +13,34 @@
 
 #include <MRMesh/MRRingIterator.h>
 #include "MRMesh/MRPolyline.h"
-#include "MRPickHoleBorderElement.h"
 #include <MRMesh/MRObjectsAccess.h>
-
 #include <MRMesh/MRSceneRoot.h>
 
 
 namespace MR
 {
 
-
 void BoundarySelectionWidget::enable( bool isEnaled )
 {
     isSelectorActive_ = isEnaled;
     if ( !isSelectorActive_ )
+    {
         holes_.clear();
+        holeLines_.clear();
+        selectedHoleObject_ = nullptr;
+        selectedHoleIndex_ = -1;
+        hoveredHoleIndex_ = -1;
+        hoveredHoleObject_ = nullptr;
+    }
+    else
+    {
+        calculateHoles_();
+        selectedHoleObject_ = nullptr;
+        selectedHoleIndex_ = -1;
+        hoveredHoleIndex_ = -1;
+        hoveredHoleObject_ = nullptr;
+    }
 }
-
-
 
 std::shared_ptr<MR::Polyline3> BoundarySelectionWidget::getHoleBorder_( const std::shared_ptr<ObjectMeshHolder> obj, EdgeId initEdge )
 {
@@ -50,9 +62,10 @@ std::shared_ptr<MR::Polyline3> BoundarySelectionWidget::getHoleBorder_( const st
 
 std::pair  <std::shared_ptr<MR::ObjectMeshHolder>, HoleEdgePoint> BoundarySelectionWidget::getHoverdHole_()
 {
+    const auto& mousePos = getViewerInstance().mouseController().getMousePos();
     for ( auto& [obj, holes] : holes_ )
     {
-        const auto hole = findClosestToMouseHoleEdge( getViewerInstance().mouseController().getMousePos(), obj, holes, mouseAccuracy_ );
+        const auto hole = findClosestToMouseHoleEdge( mousePos, obj, holes, mouseAccuracy_ );
         const int holeId = int( hole.holeIdx );
         if ( holeId != -1 )
             return std::make_pair( obj, hole );
@@ -62,10 +75,11 @@ std::pair  <std::shared_ptr<MR::ObjectMeshHolder>, HoleEdgePoint> BoundarySelect
 
 bool BoundarySelectionWidget::updateHole_( std::shared_ptr<MR::ObjectMeshHolder> object, int index, MR::Color color, float lineWidth )
 {
-    if ( object != nullptr )
+    if ( ( object != nullptr ) || ( index < 0 ) )
     {
         auto& objectPolylines = holeLines_[object];
         if ( objectPolylines.size() > index )
+
         {
             auto& polyline = objectPolylines[index].obj;
             polyline->setFrontColor( color, false );
@@ -83,26 +97,74 @@ bool  BoundarySelectionWidget::isSelectedAndHoveredTheSame_()
 
 bool BoundarySelectionWidget::selectHole( std::shared_ptr<MR::ObjectMeshHolder> object, int index )
 {
-    auto lineWidth = isSelectedAndHoveredTheSame_() ? std::max( params.hoveredLineWidth, params.ordinaryLineWidth ) : params.ordinaryLineWidth;
-    updateHole_( selectedHoleObject_, selectedHoleIndex_, params.ordinaryColor, lineWidth );
+    updateHole_( selectedHoleObject_, selectedHoleIndex_, params.ordinaryColor, params.ordinaryLineWidth );
 
     selectedHoleObject_ = object;
     selectedHoleIndex_ = index;
 
-    lineWidth = isSelectedAndHoveredTheSame_() ? std::max( params.hoveredLineWidth, params.selectedLineWidth ) : params.selectedLineWidth;
-    return updateHole_( selectedHoleObject_, selectedHoleIndex_, params.selectedColor, lineWidth );
+    auto lineWidth = isSelectedAndHoveredTheSame_() ? std::max( params.hoveredLineWidth, params.selectedLineWidth ) : params.selectedLineWidth;
+    auto retult = updateHole_( selectedHoleObject_, selectedHoleIndex_, params.selectedColor, lineWidth );
+    onBoundarySelected_( object );
+    return retult;
 }
 
 bool BoundarySelectionWidget::hoverHole_( std::shared_ptr<MR::ObjectMeshHolder> object, int index )
 {
-    auto lineWidth = isSelectedAndHoveredTheSame_() ? params.selectedLineWidth : params.ordinaryLineWidth;
-    updateHole_( hoveredHoleObject_, hoveredHoleIndex_, params.ordinaryColor, lineWidth );
+    if ( ( hoveredHoleObject_ == object ) && ( index == hoveredHoleIndex_ ) )
+        return false;
+
+    float  lineWidth;
+    MR::Color lineColor;
+
+    if ( isSelectedAndHoveredTheSame_() )
+    {
+        lineWidth = params.selectedLineWidth;
+        lineColor = params.selectedColor;
+    }
+    else
+    {
+        lineColor = params.ordinaryColor;
+        lineWidth = params.ordinaryLineWidth;
+    }
+    updateHole_( hoveredHoleObject_, hoveredHoleIndex_, lineColor, lineWidth );
 
     hoveredHoleObject_ = object;
     hoveredHoleIndex_ = index;
 
-    lineWidth = isSelectedAndHoveredTheSame_() ? std::max( params.hoveredLineWidth, params.selectedLineWidth ) : params.hoveredLineWidth;
-    return updateHole_( selectedHoleObject_, selectedHoleIndex_, params.selectedColor, lineWidth );
+    if ( isSelectedAndHoveredTheSame_() )
+    {
+        lineWidth = std::max( params.hoveredLineWidth, params.selectedLineWidth );
+        lineColor = params.selectedColor;
+    }
+    else
+    {
+        lineWidth = params.hoveredLineWidth;
+        lineColor = params.hoveredColor;
+    }
+    return updateHole_( hoveredHoleObject_, hoveredHoleIndex_, lineColor, lineWidth );
+}
+
+std::pair< std::shared_ptr<MR::ObjectMeshHolder>, EdgeId > BoundarySelectionWidget::getSelectHole() const
+{
+    EdgeId hole = holes_.at( selectedHoleObject_ )[selectedHoleIndex_];
+    return std::make_pair( selectedHoleObject_, hole );
+}
+
+std::vector<MR::Vector3f> BoundarySelectionWidget::getPointsForSelectedHole() const
+{
+    if ( holes_.count( selectedHoleObject_ ) == 0 )
+        return {};
+
+    std::vector<MR::Vector3f> result;
+    EdgeId hole = holes_.at( selectedHoleObject_ )[selectedHoleIndex_];
+    auto& mesh = *selectedHoleObject_->mesh();
+    for ( auto e : leftRing( mesh.topology, hole ) )
+    {
+        auto v = mesh.topology.org( e );
+        result.push_back( mesh.points[v] );
+    }
+
+    return result;
 }
 
 bool BoundarySelectionWidget::actionByPick_( ActionType actionType )
@@ -111,19 +173,21 @@ bool BoundarySelectionWidget::actionByPick_( ActionType actionType )
     const auto& [obj, hole] = getHoverdHole_();
     const int holeId = int( hole.holeIdx );
 
-    if ( holeId == -1 )
-        return false;
 
-    auto objectHoles = holeLines_[obj];
 
     if ( actionType == ActionType::SelectHole )
+    {
         return selectHole( obj, holeId );
+    }
     else
+    {
         return hoverHole_( obj, holeId );
+    }
+
 
 }
 
-bool BoundarySelectionWidget::onMouseDown_( Viewer::MouseButton button, int /*modifier*/)
+bool BoundarySelectionWidget::onMouseDown_( Viewer::MouseButton button, int /*modifier*/ )
 {
     if ( !isSelectorActive_ )
         return false;
@@ -133,40 +197,6 @@ bool BoundarySelectionWidget::onMouseDown_( Viewer::MouseButton button, int /*mo
 
     actionByPick_( ActionType::SelectHole );
 
-
-    /*
-    if ( modifier == GLFW_MOD_CONTROL )
-    {
-        const auto& [obj, hole] = getHoverdHole_();
-        const int holeId = int( hole.holeIdx );
-
-        if ( holeId == -1 )
-            return false;
-
-        auto ignoredHoles_ = holeLines_[obj];
-
-        if ( ignoredHoles_[holeId].obj )
-            ignoredHoles_[holeId].reset();
-        else
-        {
-            ignoredHoles_[holeId].make( *obj_ );
-            auto& obj = ignoredHoles_[holeId].obj;
-            obj->setPolyline( getHoleBorder_( hole.edgePoint.e ) );
-            obj->setName( "HoleBorder" );
-            obj->setFrontColor( Color::purple(), false );
-            obj->setLineWidth( ( float )lineWidth_ );
-        }
-    }
-    else
-    {
-        auto e = findClosestToMouseHoleEdge( viewer->mouseController().getMousePos(), obj_, holes_, mouseAccuracy_ ).edgePoint.e;
-        auto res = fillOnlyOneHole_( e );
-        holes_ = obj_->mesh()->topology.findHoleRepresentiveEdges();
-        ignoredHoles_ = std::vector<AncillaryLines>( holes_.size() );
-        return res;
-    }
-
-    */
     return true;
 }
 
@@ -175,7 +205,7 @@ bool BoundarySelectionWidget::onMouseMove_( int, int )
     if ( !isSelectorActive_ )
         return false;
 
-    actionByPick_( ActionType::SelectHole );
+    return actionByPick_( ActionType::HoverHole );
 }
 
 AncillaryLines BoundarySelectionWidget::createAncillaryLines_( std::shared_ptr <ObjectMeshHolder>& rootObj, MR::EdgeId hole )
@@ -185,8 +215,9 @@ AncillaryLines BoundarySelectionWidget::createAncillaryLines_( std::shared_ptr <
     auto& object = al.obj;
     object->setPolyline( getHoleBorder_( rootObj, hole ) );
     object->setName( "HoleBorder" );
-    object->setFrontColor( Color::purple(), false );
-    object->setLineWidth( lineWidth_ );
+    object->setFrontColor( params.ordinaryColor, false );
+    object->setLineWidth( params.ordinaryLineWidth );
+    return al;
 }
 
 void BoundarySelectionWidget::calculateHoles_()
@@ -195,8 +226,10 @@ void BoundarySelectionWidget::calculateHoles_()
     for ( auto& object : objects )
         if ( isObjectValidToPick_( object ) )
         {
-            auto holes = object->mesh()->topology.findHoleRepresentiveEdges();
+            auto& holes = holes_[object];
             auto& polylines = holeLines_[object];
+
+            holes = object->mesh()->topology.findHoleRepresentiveEdges();
             polylines.reserve( holes.size() );
             for ( auto hole : holes )
                 polylines.push_back( createAncillaryLines_( object, hole ) );
@@ -210,8 +243,6 @@ void BoundarySelectionWidget::create(
 {
     onBoundarySelected_ = std::move( onBoundarySelected );
     isObjectValidToPick_ = std::move( isObjectValidToPick );
-
-    calculateHoles_();
 
     // 10 group to imitate plugins behavior
     connect( &getViewerInstance(), 10, boost::signals2::at_front );

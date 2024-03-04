@@ -60,32 +60,17 @@ public:
     MRVIEWER_API void reset();
 
     // select one of the holes. Return succsess.
-    bool selectHole( std::shared_ptr<MR::ObjectMeshHolder> object, int index );
+    MRVIEWER_API bool selectHole( std::shared_ptr<MR::ObjectMeshHolder> object, int index );
 
-    std::pair< std::shared_ptr<MR::ObjectMeshHolder>, EdgeId > getSelectHole() const
-    {
-        EdgeId hole = holes_.at( selectedHoleObject_ )[selectedHoleIndex_];
-        return std::make_pair( selectedHoleObject_, hole );
-    }
+    // returns pair of selected hole ( in Edge representations) and objects on which particular hole is present
+    MRVIEWER_API std::pair< std::shared_ptr<MR::ObjectMeshHolder>, EdgeId > getSelectHole() const;
 
-    std::vector<MR::Vector3f> getPointsForSelectedHole() const
-    {
-        std::vector<MR::Vector3f> result;
-        EdgeId hole = holes_.at(selectedHoleObject_)[selectedHoleIndex_];
-        auto& mesh = *selectedHoleObject_->mesh();
-        for ( auto e : leftRing( mesh.topology, hole ) )
-        {
-            auto v = mesh.topology.org( e );
-            result.push_back( mesh.points[v] );
-        }
-        return result;
-    }
+    // collect and return vector of points ( verts coord ) for all edges in selected mesh boundary
+    MRVIEWER_API std::vector<MR::Vector3f> getPointsForSelectedHole() const;
 
     // configuration params
     BoundarySelectionWidgetParams params;
 private:
-
-    float lineWidth_ = 3.0f;
 
     float mouseAccuracy_{ 5.5f };
 
@@ -97,8 +82,8 @@ private:
     MRVIEWER_API bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
 
+    // create an ancillaryLines object (polyline) for given mesh hole, for visually preview it 
     AncillaryLines createAncillaryLines_( std::shared_ptr<ObjectMeshHolder>& obj, MR::EdgeId hole );
-
 
     // For given object and hole ( edge representation ), return a polyline around the hole boundary. 
     std::shared_ptr<MR::Polyline3> getHoleBorder_( const std::shared_ptr<ObjectMeshHolder> obj, EdgeId initEdge );
@@ -116,6 +101,7 @@ private:
         HoverHole
     };
 
+    // pick processor, for both mouseDown and MouseMove events.
     bool actionByPick_( ActionType actionType );
 
 
@@ -131,10 +117,13 @@ private:
     std::shared_ptr<MR::ObjectMeshHolder> hoveredHoleObject_;
     int hoveredHoleIndex_;
 
+    // return is selected hole hovered at this time or not. 
     bool isSelectedAndHoveredTheSame_();
 
+    // hover particular hole/
     bool hoverHole_( std::shared_ptr<MR::ObjectMeshHolder> object, int index );
 
+    // calculate and store all holes on meshes whick allowed by isObjectValidToPick_ callback
     void calculateHoles_();
 
 };

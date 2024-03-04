@@ -5,7 +5,7 @@ def test_makeBridgeEdge():
     torus = mrmesh.makeTorus(2, 1, 10, 10, None)
 
     faceBitSetToDelete = mrmesh.FaceBitSet()
-    faceBitSetToDelete.resize(5, False)
+    faceBitSetToDelete.resize(12, False)
     faceBitSetToDelete.set(mrmesh.FaceId(1), True)
     faceBitSetToDelete.set(mrmesh.FaceId(11), True)
 

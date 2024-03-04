@@ -24,6 +24,8 @@ struct SubfeatureInfo
 using SubfeatureFunc = std::function<void( const SubfeatureInfo& info )>;
 
 // Decomposes a feature to its subfeatures, by calling `func()` on each subfeature.
+// This only returns the direct subfeatures. You can call this recursively to obtain all features,
+//   but beware of duplicates (there's no easy way to filter them).
 MRMESH_API void forEachSubfeature( const Features::Primitives::Variant& feature, const SubfeatureFunc& func );
 
 }

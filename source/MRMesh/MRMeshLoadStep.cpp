@@ -10,13 +10,19 @@
 #include "MRMeshLoadSettings.h"
 
 #include "MRPch/MRSpdlog.h"
+#include "MRPch/MRSuppressWarning.h"
 
-#pragma warning( push )
-#pragma warning( disable: 5054 )
-#pragma warning( disable: 5220 )
+MR_SUPPRESS_WARNING_PUSH
+MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
+#if !defined( __GNUC__ ) || defined( __clang__ ) || __GNUC__ >= 11
+MR_SUPPRESS_WARNING( "-Wdeprecated-enum-enum-conversion", 5054 )
+#endif
+#ifdef _MSC_VER
+#pragma warning( disable: 5220 ) // a non-static data member with a volatile qualified type no longer implies that compiler generated copy/move constructors and copy/move assignment operators are not trivial
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
 #pragma warning( disable: 5267 ) // definition of implicit copy constructor is deprecated because it has a user-provided destructor
 #endif
+// FIXME: include dir with vcpkg
 #include <opencascade/BRep_Tool.hxx>
 #include <opencascade/BRepMesh_IncrementalMesh.hxx>
 #include <opencascade/Message.hxx>
@@ -29,7 +35,21 @@
 #include <opencascade/StepData_StepWriter.hxx>
 #include <opencascade/TopExp_Explorer.hxx>
 #include <opencascade/TopoDS.hxx>
-#pragma warning( pop )
+#else
+#include <BRep_Tool.hxx>
+#include <BRepMesh_IncrementalMesh.hxx>
+#include <Message.hxx>
+#include <Message_Printer.hxx>
+#include <Message_PrinterOStream.hxx>
+#include <STEPControl_Reader.hxx>
+#include <Standard_Version.hxx>
+#include <StepData_Protocol.hxx>
+#include <StepData_StepModel.hxx>
+#include <StepData_StepWriter.hxx>
+#include <TopExp_Explorer.hxx>
+#include <TopoDS.hxx>
+#endif
+MR_SUPPRESS_WARNING_POP
 
 namespace
 {

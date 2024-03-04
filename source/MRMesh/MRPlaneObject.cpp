@@ -65,7 +65,7 @@ void PlaneObject::setSizeX( float size )
     auto currentXf = xf();
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
-    currentXf.A = r * Matrix3f::scale( size, s.y.y, 1.0f );
+    currentXf.A = r * Matrix3f::scale( size, s.y.y, ( s.y.y + size ) / 2.0f );
     setXf( currentXf );
 }
 
@@ -75,7 +75,7 @@ void PlaneObject::setSizeY( float size )
     auto currentXf = xf();
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
-    currentXf.A = r * Matrix3f::scale( s.x.x, size, 1.0f );
+    currentXf.A = r * Matrix3f::scale( s.x.x, size, (s.x.x + size) / 2.0f );
     setXf( currentXf );
 }
 

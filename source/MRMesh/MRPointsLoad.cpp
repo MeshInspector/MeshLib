@@ -445,7 +445,7 @@ Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, VertColors* col
     auto hasColors = false;
     for ( auto i = 0; i < lineCount; ++i )
     {
-        const std::string_view line( buf->data() + newlines[i + 0], buf->data() + newlines[i + 1] );
+        const std::string_view line( buf->data() + newlines[i], newlines[i + 1] - newlines[i + 0] );
         if ( line.empty() || line.starts_with( '#' ) )
             continue;
 
@@ -472,7 +472,7 @@ Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, VertColors* col
 
     BitSetParallelForAll( cloud.validPoints, [&] ( VertId v )
     {
-        const std::string_view line( buf->data() + newlines[v + 0], buf->data() + newlines[v + 1] );
+        const std::string_view line( buf->data() + newlines[v], newlines[v + 1] - newlines[v + 0] );
         if ( line.empty() || line.starts_with( '#' ) )
             return;
 

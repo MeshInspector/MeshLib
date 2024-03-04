@@ -9,6 +9,8 @@
 #include <unordered_map>
 #include "MRViewer/MRPickHoleBorderElement.h"
 #include "MRViewer/MRAncillaryLines.h"
+#include "MRMesh/MRRingIterator.h"
+#include "MRMesh/MRMesh.h"
 
 namespace MR
 {
@@ -60,21 +62,21 @@ public:
     // select one of the holes. Return succsess.
     bool selectHole( std::shared_ptr<MR::ObjectMeshHolder> object, int index );
 
-    std::pair< std::shared_ptr<MR::ObjectMeshHolder>, EdgeId > getSelectHole()
+    std::pair< std::shared_ptr<MR::ObjectMeshHolder>, EdgeId > getSelectHole() const
     {
-        EdgeId hole = holes_[selectedHoleObject_][selectedHoleIndex_];
+        EdgeId hole = holes_.at( selectedHoleObject_ )[selectedHoleIndex_];
         return std::make_pair( selectedHoleObject_, hole );
     }
 
-    std::vector<MR::Vector3f> getPointsForSelectedHole()
+    std::vector<MR::Vector3f> getPointsForSelectedHole() const
     {
-        std::vector<MR::Vector3f> result; 
-        EdgeId hole = holes_[selectedHoleObject_][selectedHoleIndex_];
+        std::vector<MR::Vector3f> result;
+        EdgeId hole = holes_.at(selectedHoleObject_)[selectedHoleIndex_];
         auto& mesh = *selectedHoleObject_->mesh();
         for ( auto e : leftRing( mesh.topology, hole ) )
         {
-            auto v= mesh.topology.org( e );
-            result.push_back( mesh.points[v]);
+            auto v = mesh.topology.org( e );
+            result.push_back( mesh.points[v] );
         }
         return result;
     }

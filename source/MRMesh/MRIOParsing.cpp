@@ -214,7 +214,7 @@ VoidOrErrStr parseAscCoordinate( const std::string_view& str, Vector3<T>& v, Vec
     int ni = 0;
     auto normal = [&] ( auto& ctx ) { if ( n ) ( *n )[ni++] = _attr( ctx ); };
     int ci = 0;
-    auto color = [&] ( auto& ctx ) { if ( c ) ( *c )[ci++] = _attr( ctx ); };
+    auto color = [&] ( auto& ctx ) { if ( c ) ( *c )[ci++] = uint8_t( _attr( ctx ) ); };
 
     bool r;
     if ( c != nullptr )

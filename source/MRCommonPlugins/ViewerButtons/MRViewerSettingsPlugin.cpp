@@ -20,6 +20,7 @@
 #include "MRMesh/MRSceneSettings.h"
 #include "MRMesh/MRDirectory.h"
 #include <MRMesh/MRSceneRoot.h>
+#include "MRMesh/MRObjectMesh.h"
 
 namespace
 {

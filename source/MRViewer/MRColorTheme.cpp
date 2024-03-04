@@ -213,7 +213,8 @@ void ColorTheme::apply()
             if ( !obj )
                 return;
             const Color& color = SceneColors::get( SceneColors::Type::Labels );
-MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
+MR_SUPPRESS_WARNING_PUSH
+MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
             obj->setLabelsColor( color );
 MR_SUPPRESS_WARNING_POP
             auto labels = getAllObjectsInTree<ObjectLabel>( obj.get(), ObjectSelectivityType::Any );

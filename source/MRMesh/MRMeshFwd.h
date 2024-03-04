@@ -428,6 +428,7 @@ class CylinderObject;
 class ConeObject;
 
 struct Image;
+class AnyVisualizeMaskEnum;
 
 template <typename T>
 struct VoxelsVolume;

@@ -5,6 +5,7 @@
 #include "MRDistanceMapSave.h"
 #include "MRDistanceMapLoad.h"
 #include "MRSceneColors.h"
+#include "MRMesh.h"
 #include "MRHeapBytes.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"

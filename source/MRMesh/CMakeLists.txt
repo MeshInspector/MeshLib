@@ -39,6 +39,7 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
 set(MRMESH_OPTIONAL_DEPENDENCIES "")
+set(MRMESH_OPTIONAL_LIBRARY_DIRS "")
 set(MRMESH_OPTIONAL_INCLUDE_DIRS "")
 
 IF(NOT MRMESH_NO_OPENCTM)
@@ -129,7 +130,13 @@ IF(NOT MR_EMSCRIPTEN)
 				ApplicationFramework
 				DataExchange
 		)
-		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES TKMesh TKSTEP)
+		set(OpenCASCADE_REQUIRED_LIBRARIES TKernel TKBRep TKMath TKMesh TKDESTEP TKSTEP TKXSBase)
+		foreach(LIBRARY_NAME ${OpenCASCADE_LIBRARIES})
+			if(${LIBRARY_NAME} IN_LIST OpenCASCADE_REQUIRED_LIBRARIES)
+				list(APPEND MRMESH_OPTIONAL_DEPENDENCIES ${LIBRARY_NAME})
+			endif()
+		endforeach()
+		list(APPEND MRMESH_OPTIONAL_LIBRARY_DIRS ${OpenCASCADE_LIBRARY_DIR})
 		list(APPEND MRMESH_OPTIONAL_INCLUDE_DIRS ${OpenCASCADE_INCLUDE_DIR})
 	ENDIF()
 
@@ -184,8 +191,11 @@ IF(APPLE OR MR_EMSCRIPTEN)
 	IF (APPLE)
 		find_library(COCOA_LIBRARY Cocoa ONLY)
 		target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
-		target_include_directories(${PROJECT_NAME} PRIVATE
+		target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
 			${MRMESH_OPTIONAL_INCLUDE_DIRS}
+		)
+		target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
+			${MRMESH_OPTIONAL_LIBRARY_DIRS}
 		)
 		target_link_libraries(${PROJECT_NAME} PRIVATE
 			spdlog
@@ -198,8 +208,11 @@ IF(APPLE OR MR_EMSCRIPTEN)
 			${COCOA_LIBRARY}
 		)
 	ELSE()
-		target_include_directories(${PROJECT_NAME} PRIVATE
+		target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
 			${MRMESH_OPTIONAL_INCLUDE_DIRS}
+		)
+		target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
+			${MRMESH_OPTIONAL_LIBRARY_DIRS}
 		)
 		target_link_libraries(${PROJECT_NAME} PRIVATE
 			mbedtls
@@ -214,8 +227,11 @@ IF(APPLE OR MR_EMSCRIPTEN)
 	ENDIF()
 ELSE()
 	find_package(tl-expected REQUIRED)
-	target_include_directories(${PROJECT_NAME} PRIVATE
+	target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
 		${MRMESH_OPTIONAL_INCLUDE_DIRS}
+	)
+	target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
+		${MRMESH_OPTIONAL_LIBRARY_DIRS}
 	)
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		tl::expected

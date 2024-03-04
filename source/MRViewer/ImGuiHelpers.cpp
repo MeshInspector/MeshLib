@@ -17,6 +17,7 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRConfig.h"
+#include "MRMesh/MRObjectMesh.h"
 #include "MRUIStyle.h"
 
 namespace ImGui

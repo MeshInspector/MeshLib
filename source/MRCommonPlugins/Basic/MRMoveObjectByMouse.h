@@ -1,6 +1,7 @@
 #pragma once
 #include "MRViewer/MRStatePlugin.h"
 #include "MRMesh/MRPlane3.h"
+#include "MRMesh/MRAffineXf3.h"
 #include "imgui.h"
 
 namespace MR

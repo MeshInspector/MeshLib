@@ -1,6 +1,7 @@
 #include "MRAncillaryPoints.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRSceneColors.h"
+#include "MRMesh/MRPointCloud.h"
 
 namespace MR
 {

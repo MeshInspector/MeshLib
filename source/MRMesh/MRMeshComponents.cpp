@@ -10,7 +10,7 @@
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
 #include <parallel_hashmap/phmap.h>
-#include <limits.h>
+#include <climits>
 
 namespace MR
 {
@@ -299,13 +299,13 @@ std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPa
     // end of allocation block
     for ( auto f : region )
         res[uniqueRootsMap[f]].set( f );
-    return { res, componentsInGroup };
+    return std::move( std::pair<std::vector<FaceBitSet>, int>{ res, componentsInGroup } );
 }
 
 std::vector<MR::FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidence incidence /*= FaceIncidence::PerEdge*/,
     const UndirectedEdgePredicate& isCompBd /*= {} */ )
 {
-    return std::move( getAllComponents( meshPart, INT_MAX, incidence, isCompBd ).first );
+    return getAllComponents( meshPart, INT_MAX, incidence, isCompBd ).first;
 }
 
 static void getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgePredicate& isCompBd, UnionFind<FaceId>& res )

@@ -6,7 +6,7 @@
 #include "MRVector2.h"
 #include "MRVector3.h"
 #include "MRPch/MRTBB.h"
-#include <limits.h>
+#include <climits>
 
 namespace
 {
@@ -111,12 +111,12 @@ std::pair<std::vector<UndirectedEdgeBitSet>, int> getAllComponents( const Polyli
     // end of allocation block
     for ( auto ue : undirectedEdges( topology ) )
         res[uniqueRootsMap[ue]].set( ue );
-    return { res, componentsInGroup };
+    return std::move( std::pair<std::vector<UndirectedEdgeBitSet>, int>{ res, componentsInGroup } );
 }
 
 std::vector<MR::UndirectedEdgeBitSet> getAllComponents( const PolylineTopology& topology )
 {
-    return std::move( getAllComponents( topology, INT_MAX ).first );
+    return getAllComponents( topology, INT_MAX ).first;
 }
 
 UnionFind<MR::UndirectedEdgeId> getUnionFindStructure( const PolylineTopology& topology )

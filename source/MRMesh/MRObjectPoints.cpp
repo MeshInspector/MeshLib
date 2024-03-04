@@ -50,6 +50,13 @@ std::vector<std::string> ObjectPoints::getInfoLines() const
         if( points_->points.size() < points_->points.capacity() )
             res.back() += " / " + std::to_string( points_->points.capacity() ) + " capacity";
 
+        if ( !vertsColorMap_.empty() )
+        {
+            res.push_back( "colors: " + std::to_string( vertsColorMap_.size() ) );
+            if ( vertsColorMap_.size() < vertsColorMap_.capacity() )
+                res.back() += " / " + std::to_string( vertsColorMap_.capacity() ) + " capacity";
+        }
+
         boundingBoxToInfoLines_( res );
     }
     else

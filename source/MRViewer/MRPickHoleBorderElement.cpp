@@ -52,7 +52,7 @@ float findPixelDistSq( const Vector3f& q, const LineSegm3f& segm, Vector3f& proj
     return Vector2f( q.x - projPoint.x, q.y - projPoint.y ).lengthSq();
 }
 
-HoleEdgePoint findClosestToMouseHoleEdge( const Vector2i& mousePos, const std::shared_ptr<ObjectMesh>& objMesh,
+HoleEdgePoint findClosestToMouseHoleEdge( const Vector2i& mousePos, const std::shared_ptr<ObjectMeshHolder>& objMesh,
                                           const std::vector<EdgeId>& holeRepresentativeEdges,
                                           float accuracy /*= 5.5f*/, bool attractToVert /*= false*/, float cornerAccuracy /*= 10.5f*/ )
 {

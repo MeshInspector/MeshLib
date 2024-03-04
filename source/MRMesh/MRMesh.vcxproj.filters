@@ -1167,6 +1167,9 @@
     <ClInclude Include="MRFeatures.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRSubfeatures.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
     <ClInclude Include="MRPointsLoadE57.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
@@ -1983,6 +1986,9 @@
     <ClCompile Include="MRFeatures.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
+    <ClCompile Include="MRSubfeatures.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
     <ClCompile Include="MRLocalTriangulations.cpp">
       <Filter>Source Files\Triangulation</Filter>
     </ClCompile>
@@ -2021,6 +2027,9 @@
     </ClCompile>
     <ClCompile Include="MRPointsToMeshFusion.cpp">
       <Filter>Source Files\Voxels</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFeatureObject.cpp">
+      <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -5,12 +5,12 @@
 #include "MRVector3.h"
 #include "MRVector4.h"
 #include "MRMatrix2.h"
-#include "MRObject.h"
 #include "MRColor.h"
 #include "MRPlane3.h"
 #include "MRIOFilters.h"
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
+#include <filesystem>
 
 namespace Json
 {

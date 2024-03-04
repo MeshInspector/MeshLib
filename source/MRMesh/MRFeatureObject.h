@@ -1,4 +1,5 @@
 #pragma once
+#include "MRMesh/MRVisualObject.h"
 #include "MRMeshFwd.h"
 
 #include "MRVector3.h"
@@ -11,7 +12,7 @@ namespace MR
 
 using FeaturesPropertyTypesVariant = std::variant<float, Vector3f>;
 
-struct FeatureObject;
+class FeatureObject;
 
 // FeatureObjectSharedProperty struct is designed to represent a shared property of a feature object, enabling the use of generalized getter and setter methods for property manipulation.
 // propertyName: A string representing the name of the property.
@@ -61,20 +62,32 @@ struct FeatureObjectSharedProperty
     }
 };
 
+enum class MRMESH_CLASS FeatureVisualizePropertyType
+{
+    Subfeatures,
+    _count [[maybe_unused]],
+};
+template <> struct IsVisualizeMaskEnum<FeatureVisualizePropertyType> : std::true_type {};
+
 /// An interface class which allows feature objects to share setters and getters on their main properties, for convenient presentation in the UI
-struct  FeatureObject
+class MRMESH_CLASS FeatureObject : public VisualObject
 {
 public:
-    FeatureObject() noexcept = default;
-    FeatureObject( const FeatureObject& ) noexcept = default;
-    FeatureObject( FeatureObject&& ) noexcept = default;
-    FeatureObject& operator = ( FeatureObject&& ) noexcept = default;
-    FeatureObject& operator = ( const FeatureObject& ) noexcept = default;
-
-    virtual ~FeatureObject() = default;
-
     /// Create and generate list of bounded getters and setters for the main properties of feature object, together with prop. name for display and edit into UI.
     virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const = 0;
+
+    MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
+    MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
+
+    MRMESH_API void serializeFields_( Json::Value& root ) const override;
+    MRMESH_API void deserializeFields_( const Json::Value& root ) override;
+
+protected:
+    FeatureObject() = default;
+
+    MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;
+
+    ViewportMask subfeatureVisibility_ = ViewportMask::all();
 };
 
 }

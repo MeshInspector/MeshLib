@@ -5,9 +5,7 @@
 #include "MRAffineXf3.h"
 #include "MRVector2.h"
 #include "MRBox.h"
-#include "MRMesh.h"
 #include "MRMeshPart.h"
-#include "MRVector2.h"
 
 namespace MR
 {

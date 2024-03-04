@@ -238,7 +238,9 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const;
 
-    /// signal about xf changing, triggered in setXf, setWorldXf, addChildBefore and addChild,  it is called for children too
+    /// signal about xf changing
+    /// triggered in setXf and setWorldXf, it is called for children too
+    /// triggered in addChild and addChildBefore, it is called only for children object
     using XfChangedSignal = Signal<void() >;
     XfChangedSignal worldXfChangedSignal;
 protected:

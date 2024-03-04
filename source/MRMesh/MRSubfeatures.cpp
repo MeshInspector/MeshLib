@@ -2,42 +2,40 @@
 
 #include "MRPch/MRFmt.h"
 
-namespace MR
+namespace MR::Features
 {
 
-void extractSubfeatures( const Features::Primitives::Variant& feature, const OfferSubfeatureFunc& offerSubFeature )
+void forEachSubfeature( const Features::Primitives::Variant& feature, const SubfeatureFunc& func )
 {
-    std::string featureKindString = std::visit( []( const auto& p ) { return Features::name( p ); }, feature );
-
     std::visit( overloaded{
         [&]( const Features::Primitives::Sphere& sphere )
         {
             if ( sphere.radius > 0 )
-                offerSubFeature( "Center point", {}, [&]{ auto ret = sphere; ret.radius = 0; return ret; } );
+                func( { .name = "Center point", .isInfinite = false, .create = [&]{ auto ret = sphere; ret.radius = 0; return ret; } } );
         },
         [&]( const Features::Primitives::ConeSegment& cone )
         {
             // Center point.
-            offerSubFeature( "Center point", {}, [&] { return cone.centerPoint(); } );
+            func( { .name = "Center point", .isInfinite = false, .create = [&] { return cone.centerPoint(); } } );
 
             // Central axis.
             if ( cone.positiveSideRadius > 0 || cone.negativeSideRadius > 0 )
             {
                 bool infinite = cone.isCircle();
 
-                offerSubFeature( "Axis", OfferedSubfeatureFlags::visualizationIsIntrusive * infinite, [&]
+                func( { .name = "Axis", .isInfinite = infinite, .create = [&]
                 {
                     auto ret = cone.axis();
                     if ( infinite )
                         ret = ret.extendToInfinity();
                     return ret;
-                } );
+                } } );
             }
 
             if ( cone.isCircle() )
             {
                 // Plane.
-                offerSubFeature( "Plane", OfferedSubfeatureFlags::visualizationIsIntrusive, [&]{ return cone.basePlane( false ); } );
+                func( { .name = "Plane", .isInfinite = true, .create = [&]{ return cone.basePlane( false ); } } );
             }
             else
             {
@@ -53,26 +51,27 @@ void extractSubfeatures( const Features::Primitives::Variant& feature, const Off
                     {
                         if ( forwardRadius == 0 )
                         {
-                            offerSubFeature( backwardRadius == 0 ? fmt::format( "End point ({})", negativeCap ? "negative side" : "positive side" ).c_str() : "Apex", {}, [&]
+                            func( { .name = backwardRadius == 0 ? fmt::format( "End point ({})", negativeCap ? "negative side" : "positive side" ).c_str() : "Apex", .isInfinite = false, .create = [&]
                             {
                                 return cone.basePoint( negativeCap );
-                            } );
+                            } } );
                         }
                         else
                         {
-                            offerSubFeature( backwardRadius == 0 ? "Base circle" : fmt::format( "Base circle ({})", negativeCap ? "negative side" : "positive side" ).c_str(), {}, [&]
+                            func( { .name = backwardRadius == 0 ? "Base circle" : fmt::format( "Base circle ({})", negativeCap ? "negative side" : "positive side" ).c_str(), .isInfinite = false, .create = [&]
                             {
                                 return cone.baseCircle( negativeCap );
-                            } );
+                            } } );
 
-                            offerSubFeature(
+                            /* Center of base circle - not needed due to being indirect.
+                            func( { .name =
                                 backwardRadius == 0 ? "Center of base circle" : fmt::format( "Center of base circle ({})", negativeCap ? "negative side" : "positive side" ).c_str(),
                                 OfferedSubfeatureFlags::indirect,
                                 [&]
                                 {
                                     return cone.basePoint( negativeCap );
                                 }
-                            );
+                            ); */
                         }
                     }
                 }
@@ -83,31 +82,21 @@ void extractSubfeatures( const Features::Primitives::Variant& feature, const Off
             {
                 bool hasPositiveRadius = cone.positiveSideRadius > 0 || cone.negativeSideRadius > 0;
 
-                OfferedSubfeatureFlags extensionFlags = OfferedSubfeatureFlags::visualizationIsIntrusive * hasPositiveRadius;
-
                 if ( std::isfinite( cone.positiveLength ) && std::isfinite( cone.negativeLength ) )
                 {
-                    offerSubFeature( hasPositiveRadius ? "Infinite cylinder" : "Infinite line", extensionFlags, [&] { return cone.extendToInfinity(); } );
+                    func( { .name = hasPositiveRadius ? "Infinite cylinder" : "Infinite line", .isInfinite = true, .create = [&] { return cone.extendToInfinity(); } } );
                 }
-                #if 0 // One-way extensions.
-                if ( std::isfinite( cone.positiveLength ) )
-                {
-                    offerSubFeature( fmt::format( "{} extended to pos. infinity", featureKindString ), extensionFlags, [&] { return cone.extendToInfinity( false ); } );
-                }
-                if ( std::isfinite( cone.negativeLength ) )
-                {
-                    offerSubFeature( fmt::format( "{} extended to neg. infinity", featureKindString ), extensionFlags, [&] { return cone.extendToInfinity( true ); } );
-                }
-                #endif
+
+                // We could have one-way extensions here, but they seem unnecessary.
             }
 
             // Untruncate to a full cone.
             if ( cone.positiveSideRadius != cone.negativeSideRadius && cone.positiveSideRadius > 0 && cone.negativeSideRadius > 0 )
-                offerSubFeature( "Untruncated cone", OfferedSubfeatureFlags::visualizationIsIntrusive, [&]{ return cone.untruncateCone(); } );
+                func( { .name = "Untruncated cone", .isInfinite = false, .create = [&]{ return cone.untruncateCone(); } } );
         },
         [&]( const Features::Primitives::Plane& plane )
         {
-            offerSubFeature( "Center point", {}, [&]{ return Features::toPrimitive( plane.center ); } );
+            func( { .name = "Center point", .isInfinite = false, .create = [&]{ return Features::toPrimitive( plane.center ); } } );
         },
     }, feature );
 }

@@ -33,10 +33,40 @@ const ObjectParams& getObjectParams()
     return ret;
 }
 
-Color getContrastColor()
+// This is similar to `Features::forEachSubfeature`, but slightly adjusted to be suitable for visualization.
+static void forEachVisualSubfeature( const Features::Primitives::Variant& feature, std::function<void( const Features::Primitives::Variant& subfeature )> func )
 {
-    bool isDark = ColorTheme::getPreset() == ColorTheme::Preset::Dark;
-    return isDark ? Color( 255, 255, 255, 255 ) : Color( 0, 0, 0, 255 );
+    Features::forEachSubfeature( feature, [&]( const Features::SubfeatureInfo& params )
+    {
+        if ( !params.isInfinite )
+            func( params.create() );
+    } );
+
+    std::visit( overloaded{
+        [&]( const Features::Primitives::Sphere& sphere )
+        {
+            (void)sphere;
+        },
+        [&]( const Features::Primitives::ConeSegment& cone )
+        {
+            if ( !cone.isCircle() )
+            {
+                // Cap centers.
+                for ( bool negativeCap : { false, true } )
+                {
+                    if ( std::isfinite( negativeCap ? cone.negativeLength : cone.positiveLength ) &&
+                        ( negativeCap ? cone.negativeSideRadius : cone.positiveSideRadius ) > 0 )
+                    {
+                        func( cone.basePoint( negativeCap ) );
+                    }
+                }
+            }
+        },
+        [&]( const Features::Primitives::Plane& plane )
+        {
+            (void)plane;
+        },
+    }, feature );
 }
 
 // Extracts subfeatures from `sourceObject` and writes them out `outputPoints` and `outputLines`.
@@ -50,15 +80,8 @@ static void addSubfeatures( const VisualObject& sourceObject, ObjectLines* outpu
     if ( !parentFeature )
         return;
 
-    extractSubfeatures( *parentFeature, [&]( std::string_view name, OfferedSubfeatureFlags flags, const CreateSubfeatureFunc& create ) -> void
+    forEachVisualSubfeature( *parentFeature, [&]( const Features::Primitives::Variant& subFeature ) -> void
     {
-        (void)name;
-
-        if ( bool( flags & OfferedSubfeatureFlags::visualizationIsIntrusive ) )
-            return; // Reject intrusive subfeatures.
-
-        Features::Primitives::Variant subFeature = create();
-
         // It's a bit jank to utilize `primitiveToObject()` just to switch over the subfeature types, but it's very convenient.
 
         constexpr float infiniteExtent = 10; // Whatever, we shouldn't receive any infinite features anyway.
@@ -189,6 +212,8 @@ RenderPlaneFeatureObject::RenderPlaneFeatureObject( const VisualObject& object )
         };
         getLines().varPolyline()->addFromPoints( normalPoints.data(), normalPoints.size(), true );
     }
+
+    nameUiScreenOffset = Vector2f( 0, 0.1f );
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( SphereObject, RenderSphereFeatureObject )

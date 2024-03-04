@@ -44,6 +44,8 @@ void FeatureObject::serializeFields_( Json::Value& root ) const
 
 void FeatureObject::deserializeFields_( const Json::Value& root )
 {
+    VisualObject::deserializeFields_( root );
+
     if ( const auto& subfeatureVisibilityJson = root["SubfeatureVisibility"]; subfeatureVisibilityJson.isUInt() )
         subfeatureVisibility_ = ViewportMask( subfeatureVisibilityJson.asUInt() );
 }

@@ -13,12 +13,9 @@ void setDefaultFeatureObjectParams( VisualObject& object )
     object.setFrontColor( Color( 193, 40, 107, 255 ), true );
     object.setBackColor( Color( 176, 124, 91, 255 ) );
 
-    if ( auto point = dynamic_cast<ObjectPointsHolder*>( &object ) )
-        point->setPointSize( 10 );
-    else if ( auto line = dynamic_cast<ObjectLinesHolder*>( &object ) )
-        line->setLineWidth( 3 );
-    else
-        object.setGlobalAlpha( 128 );
+    // This one is a bit weird. Feature rendering overrides alpha anyway,
+    // but we need the object itself to have non-100% alpha for the rendering to be done correctly.
+    object.setGlobalAlpha( 128 );
 }
 
 }

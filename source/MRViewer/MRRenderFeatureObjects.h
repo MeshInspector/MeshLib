@@ -24,19 +24,42 @@ struct ObjectParams
 };
 [[nodiscard]] MRVIEWER_API const ObjectParams& getObjectParams();
 
-// Returns a nice constrasting color for the current color theme (white for dark theme, black for the light theme).
-[[nodiscard]] MRVIEWER_API Color getContrastColor();
-
-// Inherits from a datamodel object, and gives it some properties suitable for rendering secondary parts of features.
-// Such a constrating color, automatic visibility based on parent's `FeatureVisualizePropertyType::Subfeatures`.
-template <typename Base>
-class WrapSecondaryObject : public Base, public RenderWrapObject::BasicWrapperTarget
+// Wraps a datamodel object to override some of its visual properties.
+// This is used for stub datamodel objects that we store inside of renderobjects to provide them with models (aka visualization data: meshes, etc).
+// The base template handles `IsPrimary == true`. We have a specialization below for `false`.
+template <bool IsPrimary, typename BaseObjectType>
+class WrappedModelSubobject : public BaseObjectType, public RenderWrapObject::BasicWrapperTarget
 {
+public:
+    bool isSelected() const override
+    {
+        return target_->isSelected();
+    }
+
     const ViewportProperty<Color>& getFrontColorsForAllViewports( bool selected = true ) const override
     {
-        const_cast<WrapSecondaryObject&>( *this ).setFrontColor( getContrastColor(), selected );
-        const_cast<WrapSecondaryObject&>( *this ).setVisibilityMask( target_->getVisualizePropertyMask( FeatureVisualizePropertyType::Subfeatures ) );
-        return Base::getFrontColorsForAllViewports( selected );
+        return target_->getFrontColorsForAllViewports( selected );
+    }
+
+    const ViewportProperty<Color>& getBackColorsForAllViewports() const override
+    {
+        return target_->getBackColorsForAllViewports();
+    }
+};
+
+template <typename BaseObjectType>
+class WrappedModelSubobject<false, BaseObjectType> : public BaseObjectType, public RenderWrapObject::BasicWrapperTarget
+{
+public:
+    ViewportMask visibilityMask() const override
+    {
+        if ( auto p = this->parent() )
+        {
+            if ( auto f = dynamic_cast<const FeatureObject*>( p ) )
+                const_cast<WrappedModelSubobject &>( *this ).setVisibilityMask( f->getVisualizePropertyMask( FeatureVisualizePropertyType::Subfeatures ) );
+        }
+
+        return this->visibilityMask_;
     }
 };
 
@@ -45,7 +68,7 @@ class WrapSecondaryObject : public Base, public RenderWrapObject::BasicWrapperTa
 // `RenderObjectType` is the underlying render object, e.g. `RenderMeshObject`.
 // If `IsPrimary` is true, the visual properties are copied from the target datamodel object.
 template <bool IsPrimary, typename ObjectType, typename RenderObjectType>
-using RenderFeatureComponent = RenderWrapObject::Wrapper<std::conditional_t<IsPrimary, RenderWrapObject::CopyVisualProperties<ObjectType>, WrapSecondaryObject<ObjectType>>, RenderObjectType>;
+using RenderFeatureComponent = RenderWrapObject::Wrapper<WrappedModelSubobject<IsPrimary, ObjectType>, RenderObjectType>;
 
 // This renderobject draws custom points.
 // If `IsPrimary` is true, the visual properties are copied from the target datamodel object.

@@ -10,6 +10,7 @@
 #include "MRMesh/MRLine3.h"
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRIntersection.h"
+#include "MRMesh/MRVisualObject.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer/ImGuiHelpers.h"
 

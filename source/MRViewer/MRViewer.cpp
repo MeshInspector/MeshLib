@@ -55,6 +55,7 @@
 #include "MRMesh/MRObjectLabel.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRObjectVoxels.h"
 #include "MRPch/MRWasm.h"
 
 #ifndef __EMSCRIPTEN__
@@ -555,6 +556,13 @@ int Viewer::launchInit_( const LaunchParams& params )
     CommandLoop::setMainThreadId( std::this_thread::get_id() );
     spdlog::info( "Log file: {}", utf8string( Logger::instance().getLogFileName() ) );
     glfwSetErrorCallback( glfw_error_callback );
+    // TODO: Wayland support
+#ifdef __linux__
+#if GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
+    if ( glfwPlatformSupported( GLFW_PLATFORM_X11 ) )
+        glfwInitHint( GLFW_PLATFORM, GLFW_PLATFORM_X11 );
+#endif
+#endif
     if ( !glfwInit() )
     {
         spdlog::error( "glfwInit failed" );

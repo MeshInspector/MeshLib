@@ -75,7 +75,7 @@
 #include "MRMesh/MRMatrix3Decompose.h"
 #include "MRMesh/MRFeatureObject.h"
 #include "MRMesh/MRFinally.h"
-
+#include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRSceneSettings.h"
 #include "imgui_internal.h"
@@ -621,7 +621,8 @@ void ImGuiMenu::draw_labels_window()
 
 void ImGuiMenu::draw_labels( const VisualObject& obj )
 {
-MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
+MR_SUPPRESS_WARNING_PUSH
+MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
     const auto& labels = obj.getLabels();
 
     for ( const auto& viewport : viewer->viewport_list )
@@ -1869,12 +1870,14 @@ bool ImGuiMenu::drawDrawOptionsColors_( const std::vector<std::shared_ptr<Visual
     } );
     make_color_selector<VisualObject>( selectedVisualObjs, "Labels color", [&] ( const VisualObject* data )
     {
-MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
+MR_SUPPRESS_WARNING_PUSH
+MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
         return Vector4f( data->getLabelsColor( selectedViewport_ ) );
 MR_SUPPRESS_WARNING_POP
     }, [&] ( VisualObject* data, const Vector4f& color )
     {
-MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
+MR_SUPPRESS_WARNING_PUSH
+MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
         data->setLabelsColor( Color( color ), selectedViewport_ );
 MR_SUPPRESS_WARNING_POP
     } );

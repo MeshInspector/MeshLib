@@ -1,6 +1,5 @@
 #pragma once
 #include "MRVisualObject.h"
-#include "MRPolyline.h"
 #include "MRXfBasedCache.h"
 
 namespace MR
@@ -29,6 +28,8 @@ public:
     MRMESH_API virtual void applyScale( float scaleFactor ) override;
 
     MRMESH_API virtual bool hasVisualRepresentation() const override;
+
+    [[nodiscard]] virtual bool hasModel() const override { return bool( polyline_ ); }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;

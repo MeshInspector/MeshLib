@@ -7,6 +7,7 @@
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MR2to3.h"
 #include "MRMesh/MRSceneRoot.h"
+#include "MRMesh/MRVisualObject.h"
 #include <GLFW/glfw3.h>
 
 namespace MR

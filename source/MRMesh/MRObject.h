@@ -228,8 +228,12 @@ public:
     /// returns bounding box of this object and all children visible in given (or default) viewport in world coordinates
     MRMESH_API Box3f getWorldTreeBox( ViewportId = {} ) const;
 
-    /// is object has any visual representation (visible points, triangles, edges, etc.), no considering child objects
+    /// does the object have any visual representation (visible points, triangles, edges, etc.), no considering child objects
     [[nodiscard]] virtual bool hasVisualRepresentation() const { return false; }
+
+    /// does the object have any model available (but possibly empty), 
+    /// e.g. ObjectMesh has valid mesh() or ObjectPoints has valid pointCloud()
+    [[nodiscard]] virtual bool hasModel() const { return false; }
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const;

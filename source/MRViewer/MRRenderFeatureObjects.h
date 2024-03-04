@@ -61,6 +61,12 @@ public:
 
         return this->visibilityMask_;
     }
+
+    const ViewportProperty<Color>& getFrontColorsForAllViewports( bool selected = true ) const override
+    {
+        const_cast<WrappedModelSubobject&>( *this ).setFrontColor( Color( 255, 64, 192, 255 ), selected );
+        return BaseObjectType::getFrontColorsForAllViewports( selected );
+    }
 };
 
 // A common base class for sub-renderobjects that are combined into the proper features.

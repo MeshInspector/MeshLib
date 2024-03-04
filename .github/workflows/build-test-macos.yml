@@ -25,7 +25,7 @@ jobs:
             cxx-compiler: /usr/bin/clang++
             c-compiler: /usr/bin/clang
           - os: x64
-            runner: macos-latest
+            runner: macos-14
           - os: arm
             runner: macos-arm-build
     permissions:
@@ -42,6 +42,14 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Install thirdparty libs
+        run: brew install tmux htop
+        
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          detached: true
+      
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh
 

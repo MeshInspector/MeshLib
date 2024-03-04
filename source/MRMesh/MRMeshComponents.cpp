@@ -10,6 +10,7 @@
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
 #include <parallel_hashmap/phmap.h>
+#include <limits.h>
 
 namespace MR
 {
@@ -271,8 +272,8 @@ size_t getNumComponents( const MeshPart& meshPart, FaceIncidence incidence, cons
     return res;
 }
 
-std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd, 
-    int maxComponentCount /*= INT_MAX*/ )
+std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPart, int maxComponentCount,
+    FaceIncidence incidence /*= FaceIncidence::PerEdge*/, const UndirectedEdgePredicate& isCompBd /*= {}*/ )
 {
     MR_TIMER
     const FaceBitSet& region = meshPart.mesh.topology.getFaceIds( meshPart.region );
@@ -299,6 +300,12 @@ std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPa
     for ( auto f : region )
         res[uniqueRootsMap[f]].set( f );
     return { res, componentsInGroup };
+}
+
+std::vector<MR::FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidence incidence /*= FaceIncidence::PerEdge*/,
+    const UndirectedEdgePredicate& isCompBd /*= {} */ )
+{
+    return std::move( getAllComponents( meshPart, INT_MAX, incidence, isCompBd ).first );
 }
 
 static void getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgePredicate& isCompBd, UnionFind<FaceId>& res )

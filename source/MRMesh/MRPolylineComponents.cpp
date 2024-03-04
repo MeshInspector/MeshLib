@@ -6,6 +6,7 @@
 #include "MRVector2.h"
 #include "MRVector3.h"
 #include "MRPch/MRTBB.h"
+#include <limits.h>
 
 namespace
 {
@@ -80,7 +81,7 @@ UndirectedEdgeBitSet getComponent( const PolylineTopology& topology, UndirectedE
     return res;
 }
 
-std::pair<std::vector<UndirectedEdgeBitSet>, int> getAllComponents( const PolylineTopology& topology, int maxComponentCount /*= INT_MAX*/ )
+std::pair<std::vector<UndirectedEdgeBitSet>, int> getAllComponents( const PolylineTopology& topology, int maxComponentCount )
 {
     MR_TIMER;
     auto unionFindStruct = getUnionFindStructure( topology );
@@ -111,6 +112,11 @@ std::pair<std::vector<UndirectedEdgeBitSet>, int> getAllComponents( const Polyli
     for ( auto ue : undirectedEdges( topology ) )
         res[uniqueRootsMap[ue]].set( ue );
     return { res, componentsInGroup };
+}
+
+std::vector<MR::UndirectedEdgeBitSet> getAllComponents( const PolylineTopology& topology )
+{
+    return std::move( getAllComponents( topology, INT_MAX ).first );
 }
 
 UnionFind<MR::UndirectedEdgeId> getUnionFindStructure( const PolylineTopology& topology )

@@ -123,7 +123,7 @@ Expected<std::vector<FaceBitSet>> findOverhangs( const Mesh& mesh, const FindOve
     }
 
     // filter out face regions with too small overhang distance
-    auto regions = MeshComponents::getAllComponents( { mesh, &faces }, MeshComponents::PerVertex ).first;
+    auto regions = MeshComponents::getAllComponents( { mesh, &faces }, MeshComponents::PerVertex );
 
     if ( !reportProgress( settings.progressCb, 0.3f ) )
         return unexpectedOperationCanceled();

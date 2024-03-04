@@ -1177,7 +1177,7 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
 
     res.modifiedRegion = smoothSelection( res.modifiedMesh, res.modifiedRegion, params.millRadius, params.millRadius );
 
-    const auto components = MeshComponents::getAllComponents( MeshPart{ res.modifiedMesh, &res.modifiedRegion } ).first;
+    const auto components = MeshComponents::getAllComponents( MeshPart{ res.modifiedMesh, &res.modifiedRegion } );
     const size_t componentCount = components.size();
     std::vector<SurfacePath> startSurfacePaths;
 

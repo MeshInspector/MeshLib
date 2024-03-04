@@ -80,7 +80,7 @@ std::vector<FaceBitSet> separateClosedContour( const Mesh& mesh, const std::vect
 
     FaceBitSet facesForSeparation = MeshComponents::getComponents( mesh, contourFaces ) - contourFaces;
 
-    return MeshComponents::getAllComponents( { mesh,&facesForSeparation } ).first;
+    return MeshComponents::getAllComponents( { mesh,&facesForSeparation } );
 }
 
 } //namespace MR

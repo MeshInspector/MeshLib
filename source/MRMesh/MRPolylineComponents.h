@@ -16,13 +16,17 @@ namespace PolylineComponents
 /// \ingroup ComponentsGroup
 MRMESH_API UndirectedEdgeBitSet getComponent( const PolylineTopology& topology, UndirectedEdgeId id );
 
+
+/// gets all connected components of polyline topology
+/// \ingroup ComponentsGroup
+/// \note be careful, if mesh is large enough and has many components, the memory overflow will occur
+MRMESH_API std::vector<UndirectedEdgeBitSet> getAllComponents( const PolylineTopology& topology );
 /// gets all connected components of polyline topology
 /// \ingroup ComponentsGroup
 /// \detail if components  number more than the maxComponentCount, they will be combined into groups of the same size 
-/// \note be careful, if mesh is large enough and has many components, the memory overflow will occur
 /// \param maxComponentCount should be more then 1
 /// \return pair components bitsets vector and number components in one group if components number more than maxComponentCount
-MRMESH_API std::pair<std::vector<UndirectedEdgeBitSet>, int> getAllComponents( const PolylineTopology& topology, int maxComponentCount = INT_MAX );
+MRMESH_API std::pair<std::vector<UndirectedEdgeBitSet>, int> getAllComponents( const PolylineTopology& topology, int maxComponentCount );
 
 /// gets union-find structure for given polyline
 /// \ingroup ComponentsGroup

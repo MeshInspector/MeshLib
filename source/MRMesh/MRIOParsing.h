@@ -20,6 +20,8 @@ template<typename T>
 VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* c = nullptr );
 template<typename T>
 VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Color& c );
+template<typename T>
+VoidOrErrStr parseAscCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* n = nullptr, Color* c = nullptr );
 
 template<typename T>
 VoidOrErrStr parseSingleNumber( const std::string_view& str, T& num );

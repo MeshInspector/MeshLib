@@ -10,6 +10,7 @@
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
 #include <parallel_hashmap/phmap.h>
+#include <climits>
 
 namespace MR
 {
@@ -271,32 +272,40 @@ size_t getNumComponents( const MeshPart& meshPart, FaceIncidence incidence, cons
     return res;
 }
 
-std::vector<FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
+std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPart, int maxComponentCount,
+    FaceIncidence incidence /*= FaceIncidence::PerEdge*/, const UndirectedEdgePredicate& isCompBd /*= {}*/ )
 {
     MR_TIMER
-    auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
-    const auto& mesh = meshPart.mesh;
-    const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
-
-    const auto& allRoots = unionFindStruct.roots();
-    auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, region );
-    std::vector<FaceBitSet> res( k );
+    const FaceBitSet& region = meshPart.mesh.topology.getFaceIds( meshPart.region );
+    auto [uniqueRootsMap, componentsCount] = getAllComponentsMap( meshPart, incidence, isCompBd );
+    if ( !componentsCount )
+        return { {}, 0 };
+    const int componentsInGroup = maxComponentCount == INT_MAX ? 1 : ( componentsCount + maxComponentCount - 1 ) / maxComponentCount;
+    if ( componentsInGroup != 1 )
+        for ( RegionId& id : uniqueRootsMap )
+            id = RegionId( id / componentsInGroup );
+    componentsCount = ( componentsCount + componentsInGroup - 1 ) / componentsInGroup;
+    std::vector<FaceBitSet> res( componentsCount );
     // this block is needed to limit allocations for not packed meshes
-    std::vector<int> resSizes( k, 0 );
+    std::vector<int> resSizes( componentsCount, 0 );
     for ( auto f : region )
     {
         int index = uniqueRootsMap[f];
         if ( f > resSizes[index] )
             resSizes[index] = f;
     }
-    for ( int i = 0; i < k; ++i )
+    for ( int i = 0; i < componentsCount; ++i )
         res[i].resize( resSizes[i] + 1 );
     // end of allocation block
     for ( auto f : region )
-    {
         res[uniqueRootsMap[f]].set( f );
-    }
-    return res;
+    return { std::move( res ), componentsInGroup };
+}
+
+std::vector<MR::FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidence incidence /*= FaceIncidence::PerEdge*/,
+    const UndirectedEdgePredicate& isCompBd /*= {} */ )
+{
+    return getAllComponents( meshPart, INT_MAX, incidence, isCompBd ).first;
 }
 
 static void getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgePredicate& isCompBd, UnionFind<FaceId>& res )

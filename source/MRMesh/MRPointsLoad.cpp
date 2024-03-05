@@ -10,6 +10,8 @@
 #include "MRParallelFor.h"
 #include "MRComputeBoundingBox.h"
 #include "MRPointsLoadE57.h"
+#include "MRBitSetParallelFor.h"
+
 #include <fstream>
 
 #ifndef MRMESH_NO_OPENCTM
@@ -425,71 +427,78 @@ Expected<MR::PointCloud, std::string> fromAsc( const std::filesystem::path& file
 
 Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, VertColors* colors, ProgressCallback callback )
 {
+    auto buf = readCharBuffer( in );
+    if ( !buf )
+        return unexpected( std::move( buf.error() ) );
+
+    const auto newlines = splitByLines( buf->data(), buf->size() );
+    const auto lineCount = newlines.size() - 1;
+
     PointCloud cloud;
-    bool allNormalsValid = true;
-    bool allColorsValid = true;
+    cloud.points.resize( lineCount );
+    cloud.validPoints.resize( lineCount, false );
 
-    const auto posStart = in.tellg();
-    in.seekg( 0, std::ios_base::end );
-    const auto posEnd = in.tellg();
-    in.seekg( posStart );
-    const float streamSize = float( posEnd - posStart );
-
-    for( int i = 0; in; ++i )
+    // detect normals and colors
+    constexpr Vector3d cInvalidNormal( 0.f, 0.f, 0.f );
+    constexpr Color cInvalidColor( 0, 0, 0, 0 );
+    auto hasNormals = false;
+    auto hasColors = false;
+    for ( auto i = 0; i < lineCount; ++i )
     {
-        std::string str;
-        std::getline( in, str );
-        if ( str.empty() && in.eof() )
-            break;
-        if ( !in )
-            return unexpected( std::string( "ASC-stream read error" ) );
-        if ( str.empty() )
+        const std::string_view line( buf->data() + newlines[i], newlines[i + 1] - newlines[i + 0] );
+        if ( line.empty() || line.starts_with( '#' ) )
             continue;
-        if ( str[0] == '#' )
-            continue; //comment line
 
-        std::istringstream is( str );
-        float x, y, z;
-        is >> x >> y >> z;
-        if ( !is )
-            return unexpected( std::string( "ASC-format parse error" ) );
-        cloud.points.emplace_back( x, y, z );
+        Vector3d point;
+        auto normal = cInvalidNormal;
+        auto color = cInvalidColor;
+        auto result = parseAscCoordinate( line, point, &normal, &color );
+        if ( !result )
+            return unexpected( std::move( result.error() ) );
 
-        if ( allNormalsValid )
+        if ( normal != cInvalidNormal )
         {
-            is >> x >> y >> z;
-            if ( is )
-            {
-                cloud.normals.emplace_back( x, y, z );
-                if ( colors && allColorsValid )
-                {
-                    float r, g, b;
-                    is >> r >> g >> b;
-                    if ( is )
-                        colors->emplace_back( (int)r, (int)g, (int)b );
-                    else
-                    {
-                        *colors = {};
-                        allColorsValid = false;
-                    }
-                }
-            }
-            else
-            {
-                cloud.normals = {};
-                allNormalsValid = false;
-            }
+            hasNormals = true;
+            cloud.normals.resizeNoInit( lineCount );
+        }
+        if ( colors && color != cInvalidColor )
+        {
+            hasColors = true;
+            colors->resizeNoInit( lineCount );
         }
 
-        if ( callback && !( i & 0x3FF ) )
-        {
-            const float progress = float( in.tellg() - posStart ) / streamSize;
-            if ( !callback( progress ) )
-                return unexpected( std::string( "Loading canceled" ) );
-        }
+        break;
     }
 
-    cloud.validPoints.resize( cloud.points.size(), true );
+    BitSetParallelForAll( cloud.validPoints, [&] ( VertId v )
+    {
+        const std::string_view line( buf->data() + newlines[v], newlines[v + 1] - newlines[v + 0] );
+        if ( line.empty() || line.starts_with( '#' ) )
+            return;
+
+        Vector3d point( noInit );
+#ifndef NDEBUG
+        Vector3d normal( noInit );
+        Color color( noInit );
+#else
+        auto normal = cInvalidNormal;
+        auto color = cInvalidColor;
+#endif
+        auto result = parseAscCoordinate( line, point, hasNormals ? &normal : nullptr, hasColors ? &color : nullptr );
+        if ( !result )
+            return;
+
+        assert( !hasNormals || normal != cInvalidNormal );
+        assert( !hasColors || color != cInvalidColor );
+
+        cloud.points[v] = Vector3f( point );
+        cloud.validPoints.set( v, true );
+        if ( hasNormals )
+            cloud.normals[v] = Vector3f( normal );
+        if ( hasColors )
+            ( *colors )[v] = color;
+    }, callback );
+
     return cloud;
 }
 

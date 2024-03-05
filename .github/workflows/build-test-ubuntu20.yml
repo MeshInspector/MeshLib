@@ -16,10 +16,9 @@ on:
 jobs:
   ubuntu20-build-test:
     timeout-minutes: 40
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, x64, docker-ready, build]
     container:
       image: meshlib/meshlib-ubuntu:${{inputs.docker_image_tag}}
-      options: --user root
     strategy:
       matrix:
         config: [Debug, Release]

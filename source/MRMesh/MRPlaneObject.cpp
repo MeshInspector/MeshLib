@@ -258,7 +258,27 @@ void PlaneObject::serializeFields_( Json::Value& root ) const
 void PlaneObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
+        { 0_v, 1_v, 2_v },
+        { 2_v, 1_v, 3_v }
+    };
+
+    // create object Mesh cube
+    Mesh meshObj;
+    meshObj.topology = MeshBuilder::fromTriangles( t );
+    meshObj.points.emplace_back( -basePlaneObjectHalfEdgeLength_, -basePlaneObjectHalfEdgeLength_, 0 ); // VertId{0}
+    meshObj.points.emplace_back( basePlaneObjectHalfEdgeLength_, -basePlaneObjectHalfEdgeLength_, 0 ); // VertId{1}
+    meshObj.points.emplace_back( -basePlaneObjectHalfEdgeLength_, basePlaneObjectHalfEdgeLength_, 0 ); // VertId{2}
+    meshObj.points.emplace_back( basePlaneObjectHalfEdgeLength_, basePlaneObjectHalfEdgeLength_, 0 ); // VertId{3}
+
+    mesh_ = std::make_shared<Mesh>( meshObj );
+
+    setFlatShading( false );
+    selectFaces( {} );
+    selectEdges( {} );
+
+    setDirtyFlags( DIRTY_ALL );
         renderObj_ = createRenderObject<decltype( *this )>( *this );
+        renderObj_ = createRenderObject<decltype(*this)>( *this );
 }
 
 }

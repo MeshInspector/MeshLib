@@ -1359,7 +1359,7 @@ float ImGuiMenu::drawSelectionInformation_()
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, smallItemSpacingY } );
     MR_FINALLY{ ImGui::PopStyleVar(); };
 
-    auto drawPrimitivesInfo = [this] ( std::string title, size_t value, size_t selected = 0 )
+    auto drawPrimitivesInfo = [this]( std::string title, size_t value, size_t selected = 0, std::optional<ImVec4> textColorForSelected = {} )
     {
         if ( value )
         {
@@ -1373,7 +1373,7 @@ float ImGuiMenu::drawSelectionInformation_()
             valueStr += std::to_string( value );
             labelStr += title;
 
-            UI::inputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x * menu_scaling() );
+            UI::inputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x * menu_scaling(), selected ? textColorForSelected : std::optional<ImVec4>{} );
         }
     };
 
@@ -1447,9 +1447,10 @@ float ImGuiMenu::drawSelectionInformation_()
         ImGui::Spacing();
         ImGui::Spacing();
 
-        drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces );
+        const ImVec4 textColorForSelected = { 1.0f, 0.0f, 0.0f, 0.5f };
+        drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces, textColorForSelected );
         drawPrimitivesInfo( "Vertices", totalVerts );
-        drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints );
+        drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints, textColorForSelected );
     }
 
     bool firstField = true;

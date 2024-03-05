@@ -20,10 +20,10 @@ namespace MR
 namespace
 {
 
-float deloneFlipProfit( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d )
+float deloneFlipProfitSq( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d )
 {
-    auto metricAC = std::max( circumcircleDiameter( a, c, d ), circumcircleDiameter( c, a, b ) );
-    auto metricBD = std::max( circumcircleDiameter( b, d, a ), circumcircleDiameter( d, b, c ) );
+    auto metricAC = std::max( circumcircleDiameterSq( a, c, d ), circumcircleDiameterSq( c, a, b ) );
+    auto metricBD = std::max( circumcircleDiameterSq( b, d, a ), circumcircleDiameterSq( d, b, c ) );
     return metricAC - metricBD;
 }
 
@@ -148,6 +148,7 @@ public:
     void updateBorder( float angle );
 private:
     Plane3f plane_;
+    float normalizerSq_{ 0.0f };
 
     VertId centerVert_;
     TriangulatedFanData& fanData_;
@@ -203,7 +204,7 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
         return res;
     }
     float planeDist = std::abs( plane_.distance( c ) );
-    auto deloneProf = deloneFlipProfit( a, b, c, d ) / normVal;
+    auto deloneProf = deloneFlipProfitSq( a, b, c, d ) / normalizerSq_;
     auto angleProf = trisAngleProfit( a, b, c, d, critAngle );
     // ( deloneProf > 0.0f || angleProf > 0.0f )  strict condition to have more faces options if flip is not profitable
 
@@ -232,7 +233,7 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
     if ( angleProf > 0.0f )
         res.weight += angleProf;
 
-    res.weight += planeDist / normVal;
+    res.weight += planeDist / normVal; // sin angle with plane
 
     if ( trustedNormals_ )
     {
@@ -369,7 +370,22 @@ void FanOptimizer::init_()
     plane_ = Plane3f::fromDirAndPt( centerNorm, centerProj );
 
     Vector3f firstProj = plane_.project( points_[fanData_.neighbors.front()] );
-    Vector3f baseVec = ( firstProj - centerProj ).normalized();
+    Vector3f baseVec = ( firstProj - centerProj );
+    normalizerSq_ = baseVec.lengthSq();
+    if ( normalizerSq_ > 0.0f )
+        baseVec = baseVec / std::sqrt( normalizerSq_ );
+    else
+    {
+        baseVec = Vector3f();
+        for ( int i = 1; i < fanData_.neighbors.size() && normalizerSq_ <= 0.0f; ++i )
+        {
+            auto proj = plane_.project( points_[fanData_.neighbors[i]] );
+            normalizerSq_ = ( proj - centerProj ).lengthSq();
+        }
+        if ( normalizerSq_ <= 0.0f )
+            normalizerSq_ = 1.0f; // all neighbors have same coordinate as center point
+    }
+    
 
     // fill angles
     fanData_.cacheAngleOrder.resize( fanData_.neighbors.size() );

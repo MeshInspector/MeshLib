@@ -17,14 +17,18 @@ public:
 
     enum class TabType
     {
-        Settings,
-        Viewport,
-        View,
+        Quick,
+        Application,
         Control,
-        Count
+        Viewport,
+        Features,
+        Count,
+        Settings = Application // TODO: remove it
     };
 
     ViewerSettingsPlugin();
+
+    virtual const std::string& uiName() const override;
 
     virtual void drawDialog( float menuScaling, ImGuiContext* ctx ) override;
 
@@ -51,16 +55,24 @@ private:
     virtual bool onDisable_() override;
 
     void drawTab_( TabType tab, float menuWidth, float menuScaling );
-    void drawSettingsTab_( float menuWidth, float menuScaling );
-    void drawViewportTab_( float menuWidth, float menuScaling );
-    void drawViewTab_( float menuWidth, float menuScaling );
-    void drawControlTab_( float menuWidth, float menuScaling );
 
+    void drawQuickTab_( float menuWidth, float menuScaling );
+    void drawApplicationTab_( float menuWidth, float menuScaling );
+    void drawControlTab_( float menuWidth, float menuScaling );
+    void drawViewportTab_( float menuWidth, float menuScaling );
+
+    void drawThemeSelector_( float menuWidth, float menuScaling );
+    void drawShadingModeCombo_( bool inGroup, float menuScaling );
+    void drawProjectionModeSelector_( float menuScaling );
+    void drawUpDirectionSelector_();
+    void drawBackgroundButton_( bool allViewports );
+    void drawRenderOptions_( float menuScaling );
+    void drawShadowsOptions_( float menuWidth, float menuScaling );
     void drawMouseSceneControlsSettings_( float menuWidth, float menuScaling );
     void drawSpaceMouseSettings_( float menuWidth, float menuScaling );
-    void drawTouchpadSettings_();
+    void drawTouchpadSettings_( float menuScaling );
 
-    void drawCustomSettinds_( TabType tabType, float scaling );
+    void drawCustomSettings_( TabType tabType, float menuScaling );
 
     int curSamples_{ 0 };
     int storedSamples_{ 0 };
@@ -85,7 +97,7 @@ private:
 
     TouchpadParameters touchpadParameters_;
 
-    TabType activeTab_ = TabType::Settings;
+    TabType activeTab_ = TabType::Quick;
 
     std::array<std::vector<std::shared_ptr<ExternalSettings>>, size_t(TabType::Count)> comboSettings_;
 };

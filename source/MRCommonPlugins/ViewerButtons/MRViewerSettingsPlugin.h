@@ -68,11 +68,11 @@ private:
     void drawBackgroundButton_( bool allViewports );
     void drawRenderOptions_( float menuScaling );
     void drawShadowsOptions_( float menuWidth, float menuScaling );
-    void drawMouseSceneControlsSettings_( bool defaultOpen, float menuWidth, float menuScaling );
+    void drawMouseSceneControlsSettings_( float menuWidth, float menuScaling );
     void drawSpaceMouseSettings_( float menuWidth, float menuScaling );
-    void drawTouchpadSettings_();
+    void drawTouchpadSettings_( float menuScaling );
 
-    void drawCustomSettings_( TabType tabType, float scaling );
+    void drawCustomSettings_( TabType tabType, float menuScaling );
 
     int curSamples_{ 0 };
     int storedSamples_{ 0 };

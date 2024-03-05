@@ -197,33 +197,32 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
     const auto& c = points_[fanData_.neighbors[res.id]];
     const auto& d = points_[fanData_.neighbors[res.prevId]];
 
-    float normVal = ( c - a ).length();
-    if ( normVal == 0.0f )
-    {
-        res.weight = std::numeric_limits<float>::max();
-        return res;
-    }
-    float planeDist = std::abs( plane_.distance( c ) );
-    auto deloneProf = deloneFlipProfitSq( a, b, c, d ) / normalizerSq_;
-    auto angleProf = trisAngleProfit( a, b, c, d, critAngle );
-    // ( deloneProf > 0.0f || angleProf > 0.0f )  strict condition to have more faces options if flip is not profitable
-
     auto acLengthSq = ( a - c ).lengthSq();
     if ( ( acLengthSq > ( b - a ).lengthSq() && triangleAspectRatio( a, b, c ) > CriticalAspectRatio ) ||
         ( acLengthSq > ( d - a ).lengthSq() && triangleAspectRatio( a, c, d ) > CriticalAspectRatio ) )
     {
+        // very thin (boundary) triangle => remove AC with maximal weight
         res.weight = FLT_MAX;
         return res;
     }
-    // whether abc acd is allowed to be flipped to abd dbc
-    bool flipPossibility = false;
-    if ( trustedNormals_ && ( dot( (*trustedNormals_)[centerVert_], (*trustedNormals_)[fanData_.neighbors[res.id]] ) < 0.0f ) )
-        flipPossibility = true;
-    else
-        flipPossibility = isUnfoldQuadrangleConvex( a, b, c, d );
 
-    if ( !( flipPossibility && ( deloneProf > 0.0f || angleProf > 0.0f ) ) )
+    // whether abc acd is allowed to be flipped to abd dbc
+    const bool flipPossibility = trustedNormals_ ?
+        dot( (*trustedNormals_)[centerVert_], (*trustedNormals_)[fanData_.neighbors[res.id]] ) < 0.0f :
+        isUnfoldQuadrangleConvex( a, b, c, d );
+
+    if ( !flipPossibility )
     {
+        // removal of AC is prohibited
+        res.stable = true;
+        return res;
+    }
+
+    auto deloneProf = deloneFlipProfitSq( a, b, c, d ) / normalizerSq_;
+    auto angleProf = trisAngleProfit( a, b, c, d, critAngle );
+    if ( deloneProf <= 0.0f && angleProf <= 0.0f )
+    {
+        // removal of AC is prohibited
         res.stable = true;
         return res;
     }
@@ -233,6 +232,15 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
     if ( angleProf > 0.0f )
         res.weight += angleProf;
 
+    float normVal = ( c - a ).length();
+    if ( normVal == 0.0f )
+    {
+        // a neighbor point coincides with this one => remove it with maximal weight
+        assert( false ); // all such points must be deleted before
+        res.weight = FLT_MAX;
+        return res;
+    }
+    float planeDist = std::abs( plane_.distance( c ) );
     res.weight += planeDist / normVal; // sin angle with plane
 
     if ( trustedNormals_ )
@@ -294,8 +302,12 @@ void FanOptimizer::optimize( int steps, float critAng, float boundaryAngle )
         queue.pop();
 
     for ( int i = 0; i < fanData_.neighbors.size(); ++i )
-        if ( auto x = calcQueueElement_( i, critAng ); !x.stable )
+    {
+        if ( points_[fanData_.neighbors[i]] == points_[centerVert_] )
+            fanData_.neighbors[i] = {}; // remove points coinciding with center one
+        else if ( auto x = calcQueueElement_( i, critAng ); !x.stable )
             queue.emplace( std::move( x ) );
+    }
 
     // optimize fan
     int allRemoves = 0;

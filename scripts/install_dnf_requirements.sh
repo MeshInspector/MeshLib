@@ -37,9 +37,9 @@ fi
 
 if [ $MR_STATE != "DOCKER_BUILD" ]; then
  sudo -s printf "Root access acquired!\n" && \
- sudo dnf update && sudo dnf install ${MISSED_PACKAGES}
+ sudo dnf update && sudo dnf --setopt=install_weak_deps=False install ${MISSED_PACKAGES}
 else
- sudo dnf -y update && sudo dnf -y  install ${MISSED_PACKAGES}
+ sudo dnf -y update && sudo dnf -y --setopt=install_weak_deps=False install ${MISSED_PACKAGES}
 fi
 
 # check and upgrade python3.11 pip

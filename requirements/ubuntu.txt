@@ -1,8 +1,5 @@
 build-essential
-clang-11
 cmake
-g++-10
-gcc-10
 libblosc-dev
 libboost-all-dev
 libexpected-dev
@@ -17,7 +14,7 @@ libhpdf-dev
 libilmbase-dev
 libjsoncpp-dev
 libocct-data-exchange-dev
-libpython3.8-dev
+libpython3-dev
 libspdlog-dev
 libssl-dev
 libtbb-dev
@@ -29,4 +26,3 @@ libzip-dev
 libzstd-dev
 occt-misc
 pkg-config
-python3.8

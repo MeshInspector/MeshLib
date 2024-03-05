@@ -7,75 +7,59 @@
 ALL_REQUIRED_PACKAGES_INSTALLED=true
 MISSED_PACKAGES=""
 function checkPackage {
- PKG_OK=$(dpkg-query -W --showformat='${Status}\n' ${1} | grep "install ok installed")
- if [ "" = "$PKG_OK" ]; then
-  ALL_REQUIRED_PACKAGES_INSTALLED=false
-  MISSED_PACKAGES="${MISSED_PACKAGES} ${1}"
- fi
+  PKG_OK=$(dpkg-query -W --showformat='${Status}\n' ${1} | grep "install ok installed")
+  if [ "" = "$PKG_OK" ]; then
+    ALL_REQUIRED_PACKAGES_INSTALLED=false
+    MISSED_PACKAGES="${MISSED_PACKAGES} ${1}"
+  fi
 }
 
-BASEDIR=$(dirname "$0")
-requirements_file="$BASEDIR"/../requirements/ubuntu.txt
-. /etc/lsb-release
-if [ "$DISTRIB_ID" == "Ubuntu" ] && [ "$DISTRIB_RELEASE" == "22.04" ]; then
-  requirements_file="$BASEDIR"/../requirements/ubuntu22.txt
-fi
+BASEDIR=$(dirname $(realpath "$0"))
+REQUIREMENTS_FILE="$BASEDIR"/../requirements/ubuntu.txt
 
-for req in `cat $requirements_file`
-do
+for req in `cat $REQUIREMENTS_FILE`; do
   checkPackage "${req}"
 done
 
 if $ALL_REQUIRED_PACKAGES_INSTALLED; then
- printf "\rAll required packages are already installed!                    \n"
- exit 0
+  echo "All required packages are already installed!"
+  exit 0
 fi
 
-printf "\rSome required package(s) are not installed!                     \n"
-printf "${MISSED_PACKAGES}\n"
+echo "Some required packages are not installed!"
+echo "${MISSED_PACKAGES}"
 
 if [ "$EUID" -ne 0 ]; then
- printf "Root access required!\n"
- RUN_AS_ROOT="NO"
+  echo "Root access required!"
+  RUN_AS_ROOT="NO"
 fi
 
 if [ $MR_STATE != "DOCKER_BUILD" ]; then
- sudo -s printf "Root access acquired!\n" && \
- sudo apt update && sudo apt install ${MISSED_PACKAGES}
+  sudo apt-get update && \
+  sudo apt-get install ${MISSED_PACKAGES}
 else
- sudo apt-get -y update && sudo apt-get -y  install ${MISSED_PACKAGES}
+  sudo apt-get -y update && \
+  sudo apt-get -y install ${MISSED_PACKAGES}
 fi
 
-. /etc/lsb-release
-if [ "$DISTRIB_ID" == "Ubuntu" ] && [ "$DISTRIB_RELEASE" == "22.04" ]; then
-  python3.10 -m ensurepip --upgrade
-  python3.10 -m pip install --upgrade pip
+# check and upgrade python3 pip
+python3 -m ensurepip --upgrade
+python3 -m pip install --upgrade pip
 
-  # install requirements for python libs
-  python3.10 -m pip install -r requirements/python.txt
-else
-  # check and upgrade python3 pip
-  python3.8 -m ensurepip --upgrade
-  python3.8 -m pip install --upgrade pip
+# install requirements for python libs
+python3 -m pip install -r requirements/python.txt
 
-  # install requirements for python libs
-  python3.8 -m pip install -r requirements/python.txt
-fi
 # fix boost signal2 C++20 error in default version 1.71.0 from `apt`
 # NOTE: 1.75+ version already has this fix
 # https://github.com/boostorg/signals2/commit/15fcf213563718d2378b6b83a1614680a4fa8cec
-FILENAME=/usr/include/boost/signals2/detail/auto_buffer.hpp
-cat $FILENAME | tr '\n' '\r' | \
-sed -e 's/\r        typedef typename Allocator::pointer              allocator_pointer;\r/\
-#ifdef BOOST_NO_CXX11_ALLOCATOR\
-        typedef typename Allocator::pointer allocator_pointer;\
-#else\
-        typedef typename std::allocator_traits<Allocator>::pointer allocator_pointer;\
-#endif\
-/g' | tr '\r' '\n' | sudo tee $FILENAME
+if ! grep -q BOOST_NO_CXX11_ALLOCATOR /usr/include/boost/signals2/detail/auto_buffer.hpp ; then
+  BOOST_PATCH_FILE="$BASEDIR/patches/boost_fix_using_signals2_with_gcc_10_and_std_gnu_20.patch"
+  sudo patch --forward --directory=/usr/ --strip=1 --input="$BOOST_PATCH_FILE"
+fi
 
+# invalidate sudo credentials
 if [ "${RUN_AS_ROOT}" = "NO" ]; then
- sudo -k
+  sudo -k
 fi
 
 exit 0

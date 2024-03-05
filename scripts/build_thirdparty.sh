@@ -17,9 +17,9 @@ if [[ $OSTYPE == 'darwin'* ]]; then
 elif [[ $OSTYPE == 'linux'* ]]; then
   source /etc/os-release
   echo "Host system: ${NAME} ${DISTRIB_RELEASE}"
-  if [ "${NAME}" == "Ubuntu" ]; then
+  if [[ "${ID}" == "ubuntu" ]] || [[ "${ID_LIKE}" == *"ubuntu"* ]]; then
     INSTALL_REQUIREMENTS="install_apt_requirements.sh"
-  elif [ "${NAME}" == "Fedora Linux" ]; then
+  elif [[ "${ID}" == "fedora" ]] || [[ "${ID_LIKE}" == *"fedora"* ]]; then
     INSTALL_REQUIREMENTS="install_dnf_requirements.sh"
   fi
 else
@@ -27,25 +27,25 @@ else
 fi
 
 MR_EMSCRIPTEN_SINGLETHREAD=0
-if [ "${NAME}" == "Ubuntu" ] && [ "${MR_STATE}" != "DOCKER_BUILD" ]; then
- if [ ! -n "$MR_EMSCRIPTEN" ]; then
-  read -t 5 -p "Build with emscripten? Press (y) in 5 seconds to build (y/s/N) (s - singlethreaded)" -rsn 1
-  echo;
-  if [[ $REPLY =~ ^[Yy]$ ]]; then
-   MR_EMSCRIPTEN="ON"
-  else
-   if [[ $REPLY =~ ^[Ss]$ ]]; then
-     MR_EMSCRIPTEN="ON"
-     MR_EMSCRIPTEN_SINGLETHREAD=1
-   else
-     MR_EMSCRIPTEN="OFF"
-   fi
-  fi
- fi  
+if [[ $OSTYPE == "linux"* ]] && [ "${MR_STATE}" != "DOCKER_BUILD" ]; then
+  if [ ! -n "$MR_EMSCRIPTEN" ]; then
+    read -t 5 -p "Build with emscripten? Press (y) in 5 seconds to build (y/s/N) (s - singlethreaded)" -rsn 1
+    echo;
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+      MR_EMSCRIPTEN="ON"
+    else
+      if [[ $REPLY =~ ^[Ss]$ ]]; then
+        MR_EMSCRIPTEN="ON"
+        MR_EMSCRIPTEN_SINGLETHREAD=1
+      else
+        MR_EMSCRIPTEN="OFF"
+      fi
+    fi
+  fi  
 else
- if [ ! -n "$MR_EMSCRIPTEN" ]; then
-  MR_EMSCRIPTEN="OFF"
- fi
+  if [ ! -n "$MR_EMSCRIPTEN" ]; then
+    MR_EMSCRIPTEN="OFF"
+  fi
 fi
 echo "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}"
 

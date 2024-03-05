@@ -564,8 +564,6 @@ private:
     Viewer();
     ~Viewer();
 
-    void initConnect_();
-
     // Init window
     int launchInit_( const LaunchParams& params );
     // Return true if OpenGL loaded successfully

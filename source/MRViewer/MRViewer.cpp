@@ -1806,21 +1806,6 @@ void Viewer::initBasisAxesObject_()
     basisAxes->setFacesColorMap( colorMap );
     basisAxes->setColoringType( ColoringType::FacesColorMap );
 
-    auto updateLabelColors = [] ( const std::unique_ptr<ObjectMesh>& obj )
-    {
-        if ( !obj )
-            return;
-
-        const Color& color = SceneColors::get( SceneColors::Type::Labels );
-
-        auto labels = getAllObjectsInTree<ObjectLabel>( obj.get(), ObjectSelectivityType::Any );
-        for ( const auto& label : labels )
-        {
-            label->setFrontColor( color, true );
-            label->setFrontColor( color, false );
-        }
-    };
-
     ColorTheme::instance().colorThemeChangedSignal.connect( [this] ()
     {
         if ( !basisAxes )

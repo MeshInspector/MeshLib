@@ -299,7 +299,7 @@ std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPa
     // end of allocation block
     for ( auto f : region )
         res[uniqueRootsMap[f]].set( f );
-    return std::move( std::pair<std::vector<FaceBitSet>, int>{ res, componentsInGroup } );
+    return { std::move( res ), componentsInGroup };
 }
 
 std::vector<MR::FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidence incidence /*= FaceIncidence::PerEdge*/,

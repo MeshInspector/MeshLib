@@ -111,7 +111,7 @@ std::pair<std::vector<UndirectedEdgeBitSet>, int> getAllComponents( const Polyli
     // end of allocation block
     for ( auto ue : undirectedEdges( topology ) )
         res[uniqueRootsMap[ue]].set( ue );
-    return std::move( std::pair<std::vector<UndirectedEdgeBitSet>, int>{ res, componentsInGroup } );
+    return { std::move( res ), componentsInGroup };
 }
 
 std::vector<MR::UndirectedEdgeBitSet> getAllComponents( const PolylineTopology& topology )

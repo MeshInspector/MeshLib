@@ -25,7 +25,7 @@
 #include "MRPointInAllSpaces.h"
 #include "MRViewport.h"
 #include "MRFrameCounter.h"
-#include <MRViewer/MRColorTheme.h>
+#include "MRColorTheme.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>

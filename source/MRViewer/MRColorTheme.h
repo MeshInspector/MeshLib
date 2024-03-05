@@ -16,7 +16,7 @@ namespace MR
 class ColorTheme
 {
 public:
-    static ColorTheme& instance();
+    MRVIEWER_API static ColorTheme& instance();
 
     enum class Preset
     {

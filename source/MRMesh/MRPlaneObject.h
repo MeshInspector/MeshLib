@@ -37,6 +37,9 @@ public:
     MRMESH_API Vector3f getCenter() const;
     /// updates xf to fit given normal
     MRMESH_API void setNormal( const Vector3f& normal );
+    /// calculates normalyzed directions of X,Y axis of the plane and normal as Z 
+    MRMESH_API std::array<Vector3f,3> getLocalBasis() const;
+
     /// updates xf to fit given center
     MRMESH_API void setCenter( const Vector3f& center );
     /// updates xf to scale size

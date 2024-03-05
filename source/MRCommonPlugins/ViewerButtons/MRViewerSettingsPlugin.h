@@ -63,7 +63,7 @@ private:
 
     void drawThemeSelector_( float menuWidth, float menuScaling );
     void drawShadingModeCombo_( bool inGroup, float menuScaling );
-    void drawProjectionModeSelector_( bool inGroup, float menuScaling );
+    void drawProjectionModeSelector_( float menuScaling );
     void drawUpDirectionSelector_();
     void drawBackgroundButton_( bool allViewports );
     void drawRenderOptions_( float menuScaling );

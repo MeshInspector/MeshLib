@@ -212,7 +212,7 @@ void ViewerSettingsPlugin::drawQuickTab_( float menuWidth, float menuScaling )
     UI::separator( menuScaling, "General" );
 
     drawThemeSelector_( menuWidth, menuScaling );
-    drawProjectionModeSelector_( false, menuScaling );
+    drawProjectionModeSelector_( menuScaling );
     drawShadingModeCombo_( false, menuScaling );
     drawBackgroundButton_( true );
 
@@ -354,6 +354,8 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
 
     ImGui::PopItemWidth();
 
+    drawProjectionModeSelector_( menuScaling );
+
     drawBackgroundButton_( false );
 
     if ( viewer->isDeveloperFeaturesEnabled() &&
@@ -384,7 +386,6 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
     UI::separator( menuScaling, "Defaults" );
 
     drawShadingModeCombo_( true, menuScaling );
-    drawProjectionModeSelector_( true, menuScaling );
     drawUpDirectionSelector_();
 
     UI::separator( menuScaling, "Render" );
@@ -529,7 +530,7 @@ void ViewerSettingsPlugin::drawShadingModeCombo_( bool inGroup, float menuScalin
 {
     static std::vector<std::string> shadingModes = { "Auto Detect", "Smooth", "Flat" };
     SceneSettings::ShadingMode shadingMode = SceneSettings::getDefaultShadingMode();
-    ImGui::SetNextItemWidth( 120.0f * menuScaling );
+    ImGui::SetNextItemWidth( 140.0f * menuScaling );
     UI::combo( inGroup ? "Shading Mode" : "Default Shading Mode", ( int* )&shadingMode, shadingModes);
     UI::setTooltipIfHovered( "Shading mode for mesh objects imported from files\n"
         "Detection depends on source format and mesh shape\n"
@@ -538,15 +539,13 @@ void ViewerSettingsPlugin::drawShadingModeCombo_( bool inGroup, float menuScalin
         SceneSettings::setDefaultShadingMode( shadingMode );
 }
 
-void ViewerSettingsPlugin::drawProjectionModeSelector_( bool inGroup, float menuScaling )
+void ViewerSettingsPlugin::drawProjectionModeSelector_( float menuScaling )
 {
-    // TODO
-    if ( !viewer->isDeveloperFeaturesEnabled() || !RibbonSchemaHolder::schema().experimentalFeatures )
-        return;
-    ImGui::SetNextItemWidth( 120.0f * menuScaling );
-    static std::vector<std::string> projectionModes = { "Orthogonal", "Perspective" };
-    static int projectionMode = 0;
-    UI::combo( inGroup ? "Projection Mode" : "Default Projection Mode", ( int* )&projectionMode, projectionModes);
+    ImGui::SetNextItemWidth( 140.0f * menuScaling );
+    static std::vector<std::string> projectionModes = { "Orthographic", "Perspective" };
+    int projectionMode = viewer->viewport().getParameters().orthographic ? 0 : 1;
+    if ( UI::combo( "Projection Mode", &projectionMode, projectionModes) )
+        viewer->viewport().setOrthographic( projectionMode == 0 );
 }
 
 void ViewerSettingsPlugin::drawUpDirectionSelector_()

@@ -2377,6 +2377,8 @@ void RibbonMenu::drawTopPanelOpened_()
 
 void RibbonMenu::fixViewportsSize_( int width, int height )
 {
+    if ( width == 0 || height == 0 )
+        return;
     auto viewportsBounds = viewer->getViewportsBounds();
     auto minMaxDiff = viewportsBounds.max - viewportsBounds.min;
 

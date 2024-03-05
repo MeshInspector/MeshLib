@@ -81,12 +81,10 @@ const std::string& ViewerSettingsPlugin::uiName() const
 
 void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 {
-    auto menuWidth = 380.0f * menuScaling;
+    auto menuWidth = 500.0f * menuScaling;
 
-    ImVec2 windowSize( menuWidth, menuHeight );
-    auto origin = ImVec2( ( viewerRef.framebufferSize.x - windowSize.x ) / 2.f, ( viewerRef.framebufferSize.y - windowSize.y ) / 2.f );
-
-    if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
+    ImVec2 position{ ( viewer->framebufferSize.x - menuWidth ) / 2, viewer->framebufferSize.y / 6.0f };
+    if ( !ImGuiBeginWindow_( { .width = menuWidth, .position = &position, .menuScaling = menuScaling } ) )
         return;
 
     if ( UI::beginTabBar( "##MainTabs" ) )

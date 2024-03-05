@@ -1285,6 +1285,7 @@ float ImGuiMenu::drawSelectionInformation_()
     size_t totalFaces = 0;
     size_t totalSelectedFaces = 0;
     size_t totalVerts = 0;
+    std::optional<float> totalVolume;
 #ifndef __EMSCRIPTEN__
     // Voxels info
     Vector3i dimensions;
@@ -1319,6 +1320,13 @@ float ImGuiMenu::drawSelectionInformation_()
                 totalFaces += mesh->topology.numValidFaces();
                 totalSelectedFaces += mObj->numSelectedFaces();
                 totalVerts += mesh->topology.numValidVerts();
+                if ( mObj->isMeshClosed() )
+                {
+                    if ( totalVolume )
+                        *totalVolume += float( mObj->volume() );
+                    else
+                        totalVolume = float( mObj->volume() );                        
+                }
             }
         }
         else if ( auto lObj = obj->asType<ObjectLines>() )
@@ -1451,6 +1459,9 @@ float ImGuiMenu::drawSelectionInformation_()
         drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces, textColorForSelected );
         drawPrimitivesInfo( "Vertices", totalVerts );
         drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints, textColorForSelected );
+        
+        if ( totalVolume )
+            UI::inputTextCenteredReadOnly( "Volume", fmt::format( runtimeFmt( "{:.3f}" ), *totalVolume ), getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x * menu_scaling() );
     }
 
     bool firstField = true;

@@ -44,9 +44,15 @@ EMSCRIPTEN_KEEPALIVE int emsChangeColorTheme( int theme )
 namespace MR
 {
 
+ColorTheme& ColorTheme::instance()
+{
+    static ColorTheme instance;
+    return instance;
+}
+
 void ColorTheme::setupFromJson( const Json::Value& root, Type type )
 {
-    auto& instance = ColorTheme::instance_();
+    auto& instance = ColorTheme::instance();
 
     bool valid = true, defined = true;
 
@@ -156,7 +162,7 @@ void ColorTheme::serializeCurrentToFile( const std::filesystem::path& path )
 void ColorTheme::serializeCurrentToJson( Json::Value& root )
 {
     assert( ImGui::GetCurrentContext() );
-    auto& instance = ColorTheme::instance_();
+    auto& instance = ColorTheme::instance();
 
     if ( instance.sceneColors_.size() < SceneColors::Count )
         instance.sceneColors_.resize( SceneColors::Count );
@@ -187,7 +193,7 @@ void ColorTheme::apply()
     spdlog::info( "Apply color theme." );
     assert( ColorTheme::isInitialized() );
 
-    const auto& instance = ColorTheme::instance_();
+    const auto& instance = ColorTheme::instance();
 
     for ( int i = 0; i < SceneColors::Count; ++i )
         SceneColors::set( SceneColors::Type( i ), instance.sceneColors_[i] );
@@ -207,48 +213,30 @@ void ColorTheme::apply()
             params.borderColor = getViewportColor( ViewportColorsType::Borders );
             vp.setParameters( params );
         }
-
-        auto updateLabelColors = [] ( const std::unique_ptr<ObjectMesh>& obj )
-        {
-            if ( !obj )
-                return;
-            const Color& color = SceneColors::get( SceneColors::Type::Labels );
-MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
-            obj->setLabelsColor( color );
-MR_SUPPRESS_WARNING_POP
-            auto labels = getAllObjectsInTree<ObjectLabel>( obj.get(), ObjectSelectivityType::Any );
-            for ( auto label : labels )
-            {
-                label->setFrontColor( color, true );
-                label->setFrontColor( color, false );
-            }
-        };
-        updateLabelColors( viewer.globalBasisAxes );
-        updateLabelColors( viewer.basisAxes );
+        instance.colorThemeChangedSignal();
     } );
 }
 
 bool ColorTheme::isInitialized()
 {
-    return !ColorTheme::instance_().sceneColors_.empty();
+    return !ColorTheme::instance().sceneColors_.empty();
 }
 
 void ColorTheme::setRibbonColor( const Color& color, RibbonColorsType type )
 {
-    auto& instance = ColorTheme::instance_();
+    auto& instance = ColorTheme::instance();
     instance.newUIColors_[int( type )] = color;
 }
 
 const Color& ColorTheme::getRibbonColor( RibbonColorsType type )
 {
-    const auto& instance = ColorTheme::instance_();
+    const auto& instance = ColorTheme::instance();
     return instance.newUIColors_[int( type )];
 }
 
 ColorTheme::Preset ColorTheme::getPreset()
 {
-    return instance_().themePreset_;
+    return instance().themePreset_;
 }
 
 const char* ColorTheme::getPresetName( Preset type )
@@ -263,12 +251,12 @@ const char* ColorTheme::getPresetName( Preset type )
 
 ColorTheme::Type ColorTheme::getThemeType()
 {
-    return instance_().type_;
+    return instance().type_;
 }
 
 const std::string& ColorTheme::getThemeName()
 {
-    return instance_().themeName_;
+    return instance().themeName_;
 }
 
 void ColorTheme::setupByTypeName( Type type, const std::string& name )
@@ -284,28 +272,22 @@ void ColorTheme::setupByTypeName( Type type, const std::string& name )
 void ColorTheme::setupDefaultDark()
 {
     spdlog::info( "Setup dark color theme." );
-    instance_().themeName_ = getPresetName( Preset::Dark );
+    instance().themeName_ = getPresetName( Preset::Dark );
     setupFromFile( MR::GetResourcesDirectory() / "MRDarkTheme.json", Type::Default );
 }
 
 void ColorTheme::setupDefaultLight()
 {
     spdlog::info( "Setup light color theme." );
-    instance_().themeName_ = getPresetName( Preset::Light );
+    instance().themeName_ = getPresetName( Preset::Light );
     setupFromFile( MR::GetResourcesDirectory() / "MRLightTheme.json", Type::Default );
 }
 
 void ColorTheme::setupUserTheme( const std::string& themeName )
 {
     spdlog::info( "Setup user color theme: {}", themeName );
-    instance_().themeName_ = themeName;
+    instance().themeName_ = themeName;
     setupFromFile( getUserThemesDirectory() / ( asU8String( themeName ) + u8".json" ), Type::User );
-}
-
-ColorTheme& ColorTheme::instance_()
-{
-    static ColorTheme instance;
-    return instance;
 }
 
 const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
@@ -376,13 +358,13 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
 
 void ColorTheme::setViewportColor( const Color& color, ViewportColorsType type )
 {
-    auto& instance = ColorTheme::instance_();
+    auto& instance = ColorTheme::instance();
     instance.viewportColors_[int( type )] = color;
 }
 
 const Color& ColorTheme::getViewportColor( ViewportColorsType type )
 {
-    const auto& instance = ColorTheme::instance_();
+    const auto& instance = ColorTheme::instance();
     return instance.viewportColors_[int( type )];
 }
 
@@ -405,7 +387,7 @@ std::filesystem::path ColorTheme::getUserThemesDirectory()
 
 void ColorTheme::resetImGuiStyle()
 {
-    const auto& instance = ColorTheme::instance_();
+    const auto& instance = ColorTheme::instance();
 
     auto& style = ImGui::GetStyle();
     style = ImGuiStyle();
@@ -466,7 +448,7 @@ void ColorTheme::resetImGuiStyle()
 
 void ColorTheme::updateUserThemesList()
 {
-    auto& instance = ColorTheme::instance_();
+    auto& instance = ColorTheme::instance();
     instance.foundUserThemes_.clear();
 
     auto userThemesDir = getUserThemesDirectory();
@@ -492,7 +474,7 @@ void ColorTheme::updateUserThemesList()
 
 std::vector<std::string> ColorTheme::foundUserThemes()
 {
-    const auto& instance = ColorTheme::instance_();
+    const auto& instance = ColorTheme::instance();
     return instance.foundUserThemes_;
 }
 

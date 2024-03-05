@@ -25,6 +25,7 @@
 #include "MRPointInAllSpaces.h"
 #include "MRViewport.h"
 #include "MRFrameCounter.h"
+#include "MRColorTheme.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -55,6 +56,7 @@
 #include "MRMesh/MRObjectLabel.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRPch/MRWasm.h"
 
@@ -1754,6 +1756,21 @@ void Viewer::initGlobalBasisAxesObject_()
     globalBasisAxes->setVisible( false );
     globalBasisAxes->setVertsColorMap( std::move( vertsColors ) );
     globalBasisAxes->setColoringType( ColoringType::VertsColorMap );
+
+    ColorTheme::instance().colorThemeChangedSignal.connect( [this] ()
+    {
+        if ( !globalBasisAxes )
+            return;
+
+        const Color& color = SceneColors::get( SceneColors::Type::Labels );
+
+        auto labels = getAllObjectsInTree<ObjectLabel>( globalBasisAxes.get(), ObjectSelectivityType::Any );
+        for ( const auto& label : labels )
+        {
+            label->setFrontColor( color, true );
+            label->setFrontColor( color, false );
+        }
+    } );
 }
 
 void Viewer::initBasisAxesObject_()
@@ -1788,6 +1805,21 @@ void Viewer::initBasisAxesObject_()
     basisAxes->setVisualizeProperty( defaultLabelsBasisAxes, VisualizeMaskType::Labels, ViewportMask::all() );
     basisAxes->setFacesColorMap( colorMap );
     basisAxes->setColoringType( ColoringType::FacesColorMap );
+
+    ColorTheme::instance().colorThemeChangedSignal.connect( [this] ()
+    {
+        if ( !basisAxes )
+            return;
+
+        const Color& color = SceneColors::get( SceneColors::Type::Labels );
+
+        auto labels = getAllObjectsInTree<ObjectLabel>( basisAxes.get(), ObjectSelectivityType::Any );
+        for ( const auto& label : labels )
+        {
+            label->setFrontColor( color, true );
+            label->setFrontColor( color, false );
+        }
+    } );
 }
 
 void Viewer::initClippingPlaneObject_()

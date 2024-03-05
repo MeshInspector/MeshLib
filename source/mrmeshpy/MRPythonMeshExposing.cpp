@@ -483,7 +483,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
        pybind11::arg( "mesh" ), pybind11::arg_v( "params", StitchHolesParams(), "StitchHolesParams()" ),
        "this version finds holes in the mesh by itself and returns false if they are not found" );
 
-    m.def( "makeBridgeEdge", ( EdgeId ( * )( MeshTopology&, EdgeId, EdgeId ) )& makeBridgeEdge,
+    m.def( "makeBridgeEdge", & makeBridgeEdge,
         pybind11::arg( "topology" ), pybind11::arg( "a" ), pybind11::arg( "b" ),
         "creates a new bridge edge between origins of two boundary edges a and b (both having no valid left face);\n"
         "Returns invalid id if bridge cannot be created because otherwise multiple edges appear \n"
@@ -491,7 +491,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
         "\ta - first EdgeId\n"
         "\tb - second EdgeId\n" );
 
-    m.def( "makeBridge", ( bool ( * )( MeshTopology&, EdgeId, EdgeId, FaceBitSet * ) )& makeBridge,
+    m.def( "makeBridge", & makeBridge,
         pybind11::arg( "topology" ), pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg_v( "outNewFaces", nullptr, "nullptr"),
         "creates a bridge between two boundary edges a and b (both having no valid left face);\n"
         "bridge consists of two triangles in general or of one triangle if a and b are neighboring edges on the boundary;\n"

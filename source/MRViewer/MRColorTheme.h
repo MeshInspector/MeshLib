@@ -1,6 +1,7 @@
 #pragma once
 #include "exports.h"
 #include "MRMesh/MRColor.h"
+#include "MRMesh/MRSignal.h"
 #include "MRPch/MRJson.h"
 #include <filesystem>
 #include <vector>
@@ -15,6 +16,8 @@ namespace MR
 class ColorTheme
 {
 public:
+    static ColorTheme& instance();
+
     enum class Preset
     {
         Dark,
@@ -157,11 +160,15 @@ public:
 
     // Reset ImGui style sizes and colors, and apply menu scaling to it
     MRVIEWER_API static void resetImGuiStyle();
+
+    /// signal about mesh changing, triggered in setDirtyFlag
+    using ColorThemeChangedSignal = Signal<void()>;
+    ColorThemeChangedSignal colorThemeChangedSignal;
+
 private:
     ColorTheme() = default;
     ~ColorTheme() = default;
 
-    static ColorTheme& instance_();
 
     std::vector<Color> sceneColors_;
     Preset themePreset_ = Preset::Dark;

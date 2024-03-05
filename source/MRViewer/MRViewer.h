@@ -564,6 +564,8 @@ private:
     Viewer();
     ~Viewer();
 
+    void initConnect_();
+
     // Init window
     int launchInit_( const LaunchParams& params );
     // Return true if OpenGL loaded successfully
@@ -671,6 +673,8 @@ private:
     std::shared_ptr<SpaceMouseHandler> spaceMouseHandler_;
 
     friend MRVIEWER_API Viewer& getViewerInstance();
+
+    std::vector<boost::signals2::scoped_connection> connections_;
 };
 
 // starts default viewer with given params and setup

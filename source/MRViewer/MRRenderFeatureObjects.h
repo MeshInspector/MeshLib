@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMesh/MRFeatureObject.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
@@ -10,23 +11,70 @@
 #include "MRViewer/MRRenderPointsObject.h"
 #include "MRViewer/MRRenderWrapObject.h"
 
-namespace MR
+namespace MR::RenderFeatures
 {
 
-struct RenderFeatureObjectParams
+struct ObjectParams
 {
-    float pointSize = 3;
-    float lineWidth = 1;
-    std::uint8_t meshAlpha = 128;
+    float pointSize = 0;
+    float pointSizeSub = 0; // For subfeatures.
+    float lineWidth = 0;
+    float lineWidthSub = 0; // For subfeatures.
+    std::uint8_t meshAlpha = 0;
 };
-[[nodiscard]] MRVIEWER_API const RenderFeatureObjectParams& getRenderFeatureObjectParams();
+[[nodiscard]] MRVIEWER_API const ObjectParams& getObjectParams();
+
+// Wraps a datamodel object to override some of its visual properties.
+// This is used for stub datamodel objects that we store inside of renderobjects to provide them with models (aka visualization data: meshes, etc).
+// The base template handles `IsPrimary == true`. We have a specialization below for `false`.
+template <bool IsPrimary, typename BaseObjectType>
+class WrappedModelSubobject : public BaseObjectType, public RenderWrapObject::BasicWrapperTarget
+{
+public:
+    bool isSelected() const override
+    {
+        return target_->isSelected();
+    }
+
+    const ViewportProperty<Color>& getFrontColorsForAllViewports( bool selected = true ) const override
+    {
+        return target_->getFrontColorsForAllViewports( selected );
+    }
+
+    const ViewportProperty<Color>& getBackColorsForAllViewports() const override
+    {
+        return target_->getBackColorsForAllViewports();
+    }
+};
+
+template <typename BaseObjectType>
+class WrappedModelSubobject<false, BaseObjectType> : public BaseObjectType, public RenderWrapObject::BasicWrapperTarget
+{
+public:
+    ViewportMask visibilityMask() const override
+    {
+        if ( auto p = this->parent() )
+        {
+            if ( auto f = dynamic_cast<const FeatureObject*>( p ) )
+                const_cast<WrappedModelSubobject &>( *this ).setVisibilityMask( f->getVisualizePropertyMask( FeatureVisualizePropertyType::Subfeatures ) );
+        }
+
+        return this->visibilityMask_;
+    }
+
+    const ViewportProperty<Color>& getFrontColorsForAllViewports( bool selected = true ) const override
+    {
+        const_cast<WrappedModelSubobject&>( *this ).setFrontColor( Color( 255, 64, 192, 255 ), selected );
+        return BaseObjectType::getFrontColorsForAllViewports( selected );
+    }
+};
 
 // A common base class for sub-renderobjects that are combined into the proper features.
 // `ObjectType` is the underlying datamodel object that stores the mesh, e.g. `ObjectMesh`.
 // `RenderObjectType` is the underlying render object, e.g. `RenderMeshObject`.
 // If `IsPrimary` is true, the visual properties are copied from the target datamodel object.
 template <bool IsPrimary, typename ObjectType, typename RenderObjectType>
-using RenderFeatureComponent = RenderWrapObject::Wrapper<std::conditional_t<IsPrimary, RenderWrapObject::CopyVisualProperties<ObjectType>, ObjectType>, RenderObjectType>;
+using RenderFeatureComponent = RenderWrapObject::Wrapper<WrappedModelSubobject<IsPrimary, ObjectType>, RenderObjectType>;
 
 // This renderobject draws custom points.
 // If `IsPrimary` is true, the visual properties are copied from the target datamodel object.
@@ -38,8 +86,10 @@ public:
     RenderFeaturePointsComponent( const VisualObject& object )
         : Base( object )
     {
-        Base::subobject.setPointSize( getRenderFeatureObjectParams().pointSize );
+        Base::subobject.setPointSize( IsPrimary ? getObjectParams().pointSize : getObjectParams().pointSizeSub );
     }
+
+    auto& getPoints() { return Base::subobject; }
 };
 
 // This renderobject draws custom lines.
@@ -52,8 +102,10 @@ public:
     RenderFeatureLinesComponent( const VisualObject& object )
         : Base( object )
     {
-        Base::subobject.setLineWidth( getRenderFeatureObjectParams().lineWidth );
+        Base::subobject.setLineWidth( IsPrimary ? getObjectParams().lineWidth : getObjectParams().lineWidthSub );
     }
+
+    auto& getLines() { return Base::subobject; }
 };
 
 // This renderobject draws a custom mesh.
@@ -66,8 +118,10 @@ public:
     RenderFeatureMeshComponent( const VisualObject& object )
         : Base( object )
     {
-        Base::subobject.setGlobalAlpha( getRenderFeatureObjectParams().meshAlpha );
+        Base::subobject.setGlobalAlpha( getObjectParams().meshAlpha );
     }
+
+    auto& getMesh() { return Base::subobject; }
 };
 
 class RenderPointFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeaturePointsComponent<true>>
@@ -82,28 +136,31 @@ public:
     MRVIEWER_API RenderLineFeatureObject( const VisualObject& object );
 };
 
-// No `class RenderPlaneFeatureObject` for now, because planes look ok with default parameters.
-// If you add it, don't forget to add `setupRenderObject_()` to `PlaneObject`, like other features do.
-
-class RenderCircleFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureLinesComponent<true>>
+class RenderCircleFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureLinesComponent<true>, RenderFeaturePointsComponent<false>>
 {
 public:
     MRVIEWER_API RenderCircleFeatureObject( const VisualObject& object );
 };
 
-class RenderSphereFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>>
+class RenderPlaneFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>, RenderFeatureLinesComponent<false>, RenderFeaturePointsComponent<false>>
+{
+public:
+    MRVIEWER_API RenderPlaneFeatureObject( const VisualObject& object );
+};
+
+class RenderSphereFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>, RenderFeaturePointsComponent<false>>
 {
 public:
     MRVIEWER_API RenderSphereFeatureObject( const VisualObject& object );
 };
 
-class RenderCylinderFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>>
+class RenderCylinderFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>, RenderFeatureLinesComponent<false>, RenderFeaturePointsComponent<false>>
 {
 public:
     MRVIEWER_API RenderCylinderFeatureObject( const VisualObject& object );
 };
 
-class RenderConeFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>>
+class RenderConeFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>, RenderFeatureLinesComponent<false>, RenderFeaturePointsComponent<false>>
 {
 public:
     MRVIEWER_API RenderConeFeatureObject( const VisualObject& object );

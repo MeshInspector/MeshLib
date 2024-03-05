@@ -148,6 +148,7 @@ public:
     void updateBorder( float angle );
 private:
     Plane3f plane_;
+    float normalizer_{ 0.0f };
 
     VertId centerVert_;
     TriangulatedFanData& fanData_;
@@ -203,7 +204,7 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
         return res;
     }
     float planeDist = std::abs( plane_.distance( c ) );
-    auto deloneProf = deloneFlipProfit( a, b, c, d ) / normVal;
+    auto deloneProf = deloneFlipProfit( a, b, c, d ) / normalizer_;
     auto angleProf = trisAngleProfit( a, b, c, d, critAngle );
     // ( deloneProf > 0.0f || angleProf > 0.0f )  strict condition to have more faces options if flip is not profitable
 
@@ -232,7 +233,7 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
     if ( angleProf > 0.0f )
         res.weight += angleProf;
 
-    res.weight += planeDist / normVal;
+    res.weight += planeDist / normVal; // sin angle with plane
 
     if ( trustedNormals_ )
     {
@@ -369,7 +370,22 @@ void FanOptimizer::init_()
     plane_ = Plane3f::fromDirAndPt( centerNorm, centerProj );
 
     Vector3f firstProj = plane_.project( points_[fanData_.neighbors.front()] );
-    Vector3f baseVec = ( firstProj - centerProj ).normalized();
+    Vector3f baseVec = ( firstProj - centerProj );
+    normalizer_ = baseVec.length();
+    if ( normalizer_ > 0.0f )
+        baseVec = baseVec / normalizer_;
+    else
+    {
+        baseVec = Vector3f();
+        for ( int i = 1; i < fanData_.neighbors.size() && normalizer_ <= 0.0f; ++i )
+        {
+            auto proj = plane_.project( points_[fanData_.neighbors[i]] );
+            normalizer_ = ( proj - centerProj ).length();
+        }
+        if ( normalizer_ <= 0.0f )
+            normalizer_ = 1.0f; // all neighbors have same coordinate as center point
+    }
+    
 
     // fill angles
     fanData_.cacheAngleOrder.resize( fanData_.neighbors.size() );

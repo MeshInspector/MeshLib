@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 // Generates operators for a enum (at namespace scope).
 #define MR_MAKE_FLAG_OPERATORS( T ) MR_MAKE_FLAG_OPERATORS_CUSTOM( static, T )
 

@@ -149,28 +149,28 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
         return ( s.x.x + s.y.y + s.z.z ) / 3;
     };
 
+    AffineXf3f parentXf;
+    if ( object.parent() )
+        parentXf = object.parent()->worldXf(); // Otherwise an identity xf is used, which is fine.
+
     if ( auto point = dynamic_cast<const PointObject*>( &object ) )
     {
-        return toPrimitive( point->parent()->worldXf()( point->getPoint() ) );
+        return toPrimitive( parentXf( point->getPoint() ) );
     }
     else if ( auto line = dynamic_cast<const LineObject*>( &object ) )
     {
-        auto parentXf = line->parent()->worldXf();
         return toPrimitive( LineSegm3f( parentXf( line->getPointA() ), parentXf( line->getPointB() ) ) );
     }
     else if ( auto plane = dynamic_cast<const PlaneObject*>( &object ) )
     {
-        auto parentXf = plane->parent()->worldXf();
         return Primitives::Plane{ .center = parentXf( plane->getCenter() ), .normal = ( parentXf.A * plane->getNormal() ).normalized() };
     }
     else if ( auto sphere = dynamic_cast<const SphereObject*>( &object ) )
     {
-        auto parentXf = sphere->parent()->worldXf();
         return toPrimitive( Sphere( parentXf( sphere->getCenter() ), sphere->getRadius() * getUniformScale( parentXf.A ) ) );
     }
     else if ( auto circle = dynamic_cast<const CircleObject*>( &object ) )
     {
-        auto parentXf = circle->parent()->worldXf();
         float radius = circle->getRadius() * getUniformScale( parentXf.A );
         return Primitives::ConeSegment{
             .center = parentXf( circle->getCenter() ),
@@ -182,7 +182,6 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
     }
     else if ( auto cyl = dynamic_cast<const CylinderObject*>( &object ) )
     {
-        auto parentXf = cyl->parent()->worldXf();
         float scale = getUniformScale( parentXf.A );
         float radius = cyl->getRadius() * scale;
         float halfLen = cyl->getLength() / 2 * scale;
@@ -198,7 +197,6 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
     }
     else if ( auto cone = dynamic_cast<const ConeObject*>( &object ) )
     {
-        auto parentXf = cone->parent()->worldXf();
         Primitives::ConeSegment ret{
             .center = parentXf( cone->getCenter() ),
             .dir = parentXf.A * cone->getDirection(),

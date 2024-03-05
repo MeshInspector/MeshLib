@@ -44,31 +44,4 @@ public:
     Wrapper& operator=( const Wrapper& ) = delete;
 };
 
-// This can act as the first parameter for `Wrapper` to copy most common visual properties into this subobject from the owner object.
-template <typename ObjectType>
-class CopyVisualProperties : public ObjectType, public BasicWrapperTarget
-{
-public:
-    bool isSelected() const override
-    {
-        return target_->isSelected();
-    }
-
-    const ViewportProperty<Color>& getFrontColorsForAllViewports( bool selected = true ) const override
-    {
-        return target_->getFrontColorsForAllViewports( selected );
-    }
-
-    const ViewportProperty<Color>& getBackColorsForAllViewports() const override
-    {
-        return target_->getBackColorsForAllViewports();
-    }
-
-    const ViewportProperty<uint8_t>& getGlobalAlphaForAllViewports() const override
-    {
-        return target_->getGlobalAlphaForAllViewports();
-    }
-};
-
-
 } // namespace MR::RenderWrapObject

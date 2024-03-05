@@ -116,7 +116,7 @@ void LineObject::swapBase_( Object& other )
 
 void LineObject::serializeFields_( Json::Value& root ) const
 {
-    VisualObject::serializeFields_( root );
+    FeatureObject::serializeFields_( root );
     root["Type"].append( LineObject::TypeName() );
 }
 

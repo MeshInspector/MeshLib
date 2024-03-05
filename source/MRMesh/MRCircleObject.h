@@ -10,7 +10,7 @@ namespace MR
 
 /// Object to show sphere feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS CircleObject : public VisualObject, public FeatureObject
+class MRMESH_CLASS CircleObject : public FeatureObject
 {
 public:
     /// Creates simple sphere object with center in zero and radius - 1

@@ -9,7 +9,7 @@ namespace MR
 
 /// Object to show point feature
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS PointObject : public VisualObject, public FeatureObject
+class MRMESH_CLASS PointObject : public FeatureObject
 {
 public:
     /// Creates simple point object with zero position

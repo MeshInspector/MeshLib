@@ -5,6 +5,7 @@
 #include "MRGTest.h"
 
 constexpr int MAX_RETRIES = 10;
+constexpr std::chrono::seconds COOLDOWN_PERIOD { 10 };
 
 TEST( MRMesh, CPRTestGet )
 {
@@ -25,6 +26,7 @@ TEST( MRMesh, CPRTestGet )
         {
             EXPECT_EQ( code, 200 );
         }
+        std::this_thread::sleep_for( COOLDOWN_PERIOD );
     }
 }
 
@@ -50,6 +52,7 @@ TEST( MRMesh, CPRTestPost )
         {
             EXPECT_EQ( code, 200 );
         }
+        std::this_thread::sleep_for( COOLDOWN_PERIOD );
     }
 }
 #endif

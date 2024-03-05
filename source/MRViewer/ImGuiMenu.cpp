@@ -1320,10 +1320,13 @@ float ImGuiMenu::drawSelectionInformation_()
                 totalFaces += mesh->topology.numValidFaces();
                 totalSelectedFaces += mObj->numSelectedFaces();
                 totalVerts += mesh->topology.numValidVerts();
-                if ( !totalVolume )
-                    totalVolume = 0.0f;
-
-                *totalVolume += float( mesh->volume() );
+                if ( mObj->isMeshClosed() )
+                {
+                    if ( totalVolume )
+                        *totalVolume += float( mObj->volume() );
+                    else
+                        totalVolume = float( mObj->volume() );                        
+                }
             }
         }
         else if ( auto lObj = obj->asType<ObjectLines>() )

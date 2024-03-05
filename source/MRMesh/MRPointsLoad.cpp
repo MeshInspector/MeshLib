@@ -427,12 +427,20 @@ Expected<MR::PointCloud, std::string> fromAsc( const std::filesystem::path& file
 
 Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, VertColors* colors, ProgressCallback callback )
 {
+    MR_TIMER
+
     auto buf = readCharBuffer( in );
     if ( !buf )
         return unexpected( std::move( buf.error() ) );
 
+    if ( !reportProgress( callback, 0.50f ) )
+        return unexpectedOperationCanceled();
+
     const auto newlines = splitByLines( buf->data(), buf->size() );
     const auto lineCount = newlines.size() - 1;
+
+    if ( !reportProgress( callback, 0.60f ) )
+        return unexpectedOperationCanceled();
 
     PointCloud cloud;
     cloud.points.resize( lineCount );
@@ -497,7 +505,7 @@ Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, VertColors* col
             cloud.normals[v] = Vector3f( normal );
         if ( hasColors )
             ( *colors )[v] = color;
-    }, callback );
+    }, subprogress( callback, 0.60f, 1.00f ) );
 
     return cloud;
 }

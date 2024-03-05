@@ -25,7 +25,7 @@
 #include "MRPointInAllSpaces.h"
 #include "MRViewport.h"
 #include "MRFrameCounter.h"
-#include <MRViewer/MRCOLORTHEME.H>
+#include <MRViewer/MRColorTheme.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -954,31 +954,6 @@ Viewer::Viewer() :
     viewport_list.emplace_back();
     viewport_list.front().id = ViewportId{ 1 };
     presentViewportsMask_ |= viewport_list.front().id;
-    initConnect_();
-}
-
-void Viewer::initConnect_()
-{
-    auto updateLabelColors = [] ( const std::unique_ptr<ObjectMesh>& obj )
-    {
-        if ( !obj )
-            return;
-
-        const Color& color = SceneColors::get( SceneColors::Type::Labels );
-
-        auto labels = getAllObjectsInTree<ObjectLabel>( obj.get(), ObjectSelectivityType::Any );
-        for ( auto label : labels )
-        {
-            label->setFrontColor( color, true );
-            label->setFrontColor( color, false );
-        }
-    };
-
-    connections_.emplace_back( ColorTheme::instance().colorThemeChangedSignal.connect([this, updateLabelColors] ()
-    {
-        updateLabelColors( globalBasisAxes );
-        updateLabelColors( basisAxes );
-    } ) );
 }
 
 Viewer::~Viewer()
@@ -1781,6 +1756,21 @@ void Viewer::initGlobalBasisAxesObject_()
     globalBasisAxes->setVisible( false );
     globalBasisAxes->setVertsColorMap( std::move( vertsColors ) );
     globalBasisAxes->setColoringType( ColoringType::VertsColorMap );
+
+    ColorTheme::instance().colorThemeChangedSignal.connect( [this] ()
+    {
+        if ( !globalBasisAxes )
+            return;
+
+        const Color& color = SceneColors::get( SceneColors::Type::Labels );
+
+        auto labels = getAllObjectsInTree<ObjectLabel>( globalBasisAxes.get(), ObjectSelectivityType::Any );
+        for ( const auto& label : labels )
+        {
+            label->setFrontColor( color, true );
+            label->setFrontColor( color, false );
+        }
+    } );
 }
 
 void Viewer::initBasisAxesObject_()
@@ -1815,6 +1805,36 @@ void Viewer::initBasisAxesObject_()
     basisAxes->setVisualizeProperty( defaultLabelsBasisAxes, VisualizeMaskType::Labels, ViewportMask::all() );
     basisAxes->setFacesColorMap( colorMap );
     basisAxes->setColoringType( ColoringType::FacesColorMap );
+
+    auto updateLabelColors = [] ( const std::unique_ptr<ObjectMesh>& obj )
+    {
+        if ( !obj )
+            return;
+
+        const Color& color = SceneColors::get( SceneColors::Type::Labels );
+
+        auto labels = getAllObjectsInTree<ObjectLabel>( obj.get(), ObjectSelectivityType::Any );
+        for ( const auto& label : labels )
+        {
+            label->setFrontColor( color, true );
+            label->setFrontColor( color, false );
+        }
+    };
+
+    ColorTheme::instance().colorThemeChangedSignal.connect( [this] ()
+    {
+        if ( !basisAxes )
+            return;
+
+        const Color& color = SceneColors::get( SceneColors::Type::Labels );
+
+        auto labels = getAllObjectsInTree<ObjectLabel>( basisAxes.get(), ObjectSelectivityType::Any );
+        for ( const auto& label : labels )
+        {
+            label->setFrontColor( color, true );
+            label->setFrontColor( color, false );
+        }
+    } );
 }
 
 void Viewer::initClippingPlaneObject_()

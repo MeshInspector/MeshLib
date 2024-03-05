@@ -161,7 +161,7 @@ public:
     // Reset ImGui style sizes and colors, and apply menu scaling to it
     MRVIEWER_API static void resetImGuiStyle();
 
-    /// signal about mesh changing, triggered in setDirtyFlag
+    /// signal about Color Theme changing, triggered in apply
     using ColorThemeChangedSignal = Signal<void()>;
     ColorThemeChangedSignal colorThemeChangedSignal;
 

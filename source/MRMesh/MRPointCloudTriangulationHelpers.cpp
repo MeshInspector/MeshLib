@@ -207,9 +207,11 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
     }
 
     // whether abc acd is allowed to be flipped to abd dbc
-    const bool flipPossibility = trustedNormals_ ?
-        dot( (*trustedNormals_)[centerVert_], (*trustedNormals_)[fanData_.neighbors[res.id]] ) < 0.0f :
-        isUnfoldQuadrangleConvex( a, b, c, d );
+    bool flipPossibility = false;
+    if ( trustedNormals_ && ( dot( (*trustedNormals_)[centerVert_], (*trustedNormals_)[fanData_.neighbors[res.id]] ) < 0.0f ) )
+        flipPossibility = true;
+    else
+        flipPossibility = isUnfoldQuadrangleConvex( a, b, c, d );
 
     if ( !flipPossibility )
     {

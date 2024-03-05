@@ -443,7 +443,7 @@ Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, VertColors* col
         return unexpectedOperationCanceled();
 
     PointCloud cloud;
-    cloud.points.resize( lineCount );
+    cloud.points.resizeNoInit( lineCount );
     cloud.validPoints.resize( lineCount, false );
 
     // detect normals and colors

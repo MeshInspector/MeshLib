@@ -27,6 +27,17 @@ Vector3f PlaneObject::getNormal() const
     return ( r * Vector3f::plusZ() ).normalized();
 }
 
+std::array<Vector3f, 3> PlaneObject::getLocalBasis() const
+{
+    std::array<Vector3f, 3> result;
+    Matrix3f r, s;
+    decomposeMatrix3( xf().A, r, s );
+    result[0] = ( r * Vector3f::plusX() ).normalized();
+    result[1] = ( r * Vector3f::plusY() ).normalized();
+    result[2] = ( r * Vector3f::plusZ() ).normalized();
+    return result;
+}
+
 Vector3f PlaneObject::getCenter() const
 {
     return xf().b;
@@ -75,7 +86,7 @@ void PlaneObject::setSizeY( float size )
     auto currentXf = xf();
     Matrix3f r, s;
     decomposeMatrix3( xf().A, r, s );
-    currentXf.A = r * Matrix3f::scale( s.x.x, size, (s.x.x + size) / 2.0f ); // z-scale need for correct plane normal display. 
+    currentXf.A = r * Matrix3f::scale( s.x.x, size, ( s.x.x + size ) / 2.0f ); // z-scale need for correct plane normal display. 
     setXf( currentXf );
 }
 
@@ -247,7 +258,7 @@ void PlaneObject::serializeFields_( Json::Value& root ) const
 void PlaneObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
-        renderObj_ = createRenderObject<decltype(*this)>( *this );
+        renderObj_ = createRenderObject<decltype( *this )>( *this );
 }
 
 }

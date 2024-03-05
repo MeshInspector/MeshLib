@@ -197,7 +197,7 @@ RibbonSceneRemoveSelected::RibbonSceneRemoveSelected() :
 
 std::string RibbonSceneRemoveSelected::isAvailable( const std::vector<std::shared_ptr<const Object>>& objs ) const
 {
-    auto res = SceneStateAtLeastCheck<1, Object>::isAvailable( objs );
+    auto res = SceneStateAtLeastCheck<1, Object, NoVisualRepresentationCheck>::isAvailable( objs );
     auto allowRemoval = getViewerInstance().getMenuPluginAs<RibbonMenu>()->checkPossibilityObjectRemoval();
     if ( !allowRemoval )
     {

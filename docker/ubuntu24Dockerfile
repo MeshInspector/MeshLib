@@ -59,8 +59,6 @@ RUN echo "/usr/local/nvidia/lib" >> /etc/ld.so.conf.d/nvidia.conf \
 ENV PATH /usr/local/nvidia/bin:/usr/local/cuda/bin:${PATH}
 ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64
 
-COPY NGC-DL-CONTAINER-LICENSE /
-
 # nvidia-container-runtime
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
@@ -101,11 +99,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Keep apt from auto upgrading the cublas and nccl packages. See https://gitlab.com/nvidia/container-images/cuda/-/issues/88
 RUN apt-mark hold ${NV_LIBCUBLAS_PACKAGE_NAME} ${NV_LIBNCCL_PACKAGE_NAME}
 
-# Add entrypoint items
-COPY entrypoint.d/ /opt/nvidia/entrypoint.d/
-COPY nvidia_entrypoint.sh /opt/nvidia/
 ENV NVIDIA_PRODUCT_NAME="CUDA"
-ENTRYPOINT ["/opt/nvidia/nvidia_entrypoint.sh"]
 
 # -------------------- #
 # nvidea-devel

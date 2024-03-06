@@ -539,6 +539,9 @@ public:
     using PostFocusSignal = boost::signals2::signal<void( bool )>;
     PostFocusSignal postFocusSignal;
 
+    using CommandLineSignal = boost::signals2::signal<bool( const LaunchParams& params ), SignalStopHandler>;
+    CommandLineSignal parseCommandLineSignal;
+
     /// emplace event at the end of the queue
     /// replace last skipable with new skipable
     MRVIEWER_API void emplaceEvent( std::string name, ViewerEventCallback cb, bool skipable = false );
@@ -574,8 +577,8 @@ private:
     void initPlugins_();
     // Shut all plugins at the end
     void shutdownPlugins_();
-    // Search for python script to run or file to open on init
-    void parseCommandLine_( int argc, char** argv );
+    // Emit parseCommandLineSignal and opens files if none of slots took the signal
+    void parseCommandLine_( const LaunchParams& params );
 #ifdef __EMSCRIPTEN__
     void mainLoopFunc_();
     static void emsMainInfiniteLoop();

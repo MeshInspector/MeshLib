@@ -489,7 +489,7 @@ int Viewer::launch( const LaunchParams& params )
     if ( params.windowMode == LaunchParams::HideInit && window )
         glfwShowWindow( window );
 
-    parseCommandLine_( params.argc, params.argv );
+    parseCommandLine_( params );
 
     CommandLoop::setState( CommandLoop::StartPosition::AfterWindowAppear );
 
@@ -869,30 +869,16 @@ void Viewer::shutdownPlugins_()
         menuPlugin_->shutdown();
 }
 
-void Viewer::parseCommandLine_( [[maybe_unused]] int argc, [[maybe_unused]] char** argv )
+void Viewer::parseCommandLine_( [[maybe_unused]] const LaunchParams& params )
 {
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_PYTHON)
+#if !defined( __EMSCRIPTEN__ )
+    if ( parseCommandLineSignal( params ) )
+        return;
+
     std::vector<std::filesystem::path> supportedFiles;
-    for ( int i = 1; i < argc; ++i )
+    for ( int i = 1; i < params.argc; ++i )
     {
-        const auto argAsPath = pathFromUtf8( argv[i] );
-        if( EmbeddedPython::isPythonScript( argAsPath ) )
-        {
-            EmbeddedPython::init();
-            // Draw twice to show all menus on screen
-            {
-                draw( true );
-                draw( true );
-            }
-            EmbeddedPython::setupArgv( argc - i, &argv[i] );
-            EmbeddedPython::runScript( argAsPath );
-            // Draw to update after executing script
-            {
-                draw( true );
-            }
-            EmbeddedPython::finalize();
-            break;
-        }
+        const auto argAsPath = pathFromUtf8( params.argv[i] );
         if ( isSupportedFormat( argAsPath ) )
             supportedFiles.push_back( argAsPath );
     }
@@ -1476,7 +1462,8 @@ void Viewer::drawUiRenderObjects_()
 {
     // Currently, a part of the contract of `IRenderObject::renderUi()` is that at most rendering task is in flight at any given time.
     // That's why each viewport is being drawn separately.
-
+    if ( !window )
+        return;
     UiRenderManager& uiRenderManager = getMenuPlugin()->getUiRenderManager();
 
     for ( Viewport& viewport : getViewerInstance().viewport_list )

@@ -170,27 +170,38 @@ const std::vector<FeatureObjectSharedProperty>& ConeObject::getAllSharedProperti
 
 FeatureObjectProjectPointResult ConeObject::projectPoint( const Vector3f& point, ViewportId id /*= {}*/ ) const
 {
+    // Get direction, center, and angle of the cone from the specified viewport
     const Vector3f& n = getDirection( id );
     const Vector3f& center = getCenter( id );
     const float coneAngle = getAngle( id );
 
-    auto X = point - center;
+    // Calculate vector X as the difference between the point and the center of the cone
+    Vector3f X = point - center;
 
-    auto angleX = angle( n, X );
+    // Calculate the angle between vectors n (cone main axis)  and X (center normalyzed source point)
+    float angleX = angle( n, X );
 
+    // This means the projection will fall on the apex of the cone.
     if ( coneAngle + PI_F / 2.0 > angleX )
-        return { center , -n };
+        return { center, -n };
 
-    auto K = n * MR::dot( X, n );
-    auto XK = ( X - K );
+    // Project vector X onto the cone main axis
+    Vector3f K = n * MR::dot( X, n );
+    Vector3f XK = ( X - K );
 
-    auto D = K + XK.normalized() * K.length() * sin( coneAngle );
-    auto normD = D.normalized();
+    // We find the point of intersection of the vector XK with the surface of the cone 
+    // and find a guide ventor along the surface of the cone to the projection point
+    Vector3f D = K + XK.normalized() * ( K.length() * sin( coneAngle ) ) ;
+    Vector3f normD = D.normalized();
 
-    auto projection = normD * dot( normD, X );
-    auto normal = ( X - projection ).normalized();
+    // Calculate the projected point on the conical surface
+    Vector3f projection = normD * dot( normD, X );
 
-    return { projection + center , normal };
+    // Calculate the normal at the projected point
+    Vector3f normal = ( X - projection ).normalized();
+
+    // Return the projection point and the normal
+    return { projection + center, normal };
 }
 
 //////////////////

@@ -57,6 +57,11 @@ void FeatureObject::deserializeFields_( const Json::Value& root )
     decomposeMatrix3( xf().A, r_.get(), s_.get() );
 }
 
+std::optional<Vector3f> FeatureObject::getNormal( const Vector3f& point ) const
+{
+    return projectPoint( point ).normal;
+}
+
 void FeatureObject::setXf( const AffineXf3f& xf, ViewportId id )
 {
 

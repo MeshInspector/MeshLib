@@ -1573,7 +1573,7 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
                     editedFeatureObjectOldXf_ = object->xf();
                 }
 
-                prop.setter( arg, &featureObject );
+                prop.setter( arg, &featureObject, viewer->viewport().id );
             }
 
             if ( ImGui::IsItemDeactivatedAfterEdit() && editedFeatureObject_.lock() == object )
@@ -1587,7 +1587,7 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
 
             if ( ImGui::IsItemActive() )
                 anyActive = true;
-        }, prop.getter( &featureObject ) );
+        }, prop.getter( &featureObject, viewer->viewport().id ) );
 
         index++;
     }

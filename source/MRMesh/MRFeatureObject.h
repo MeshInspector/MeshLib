@@ -91,10 +91,7 @@ public:
     // Since a point on an abstract feature is difficult to uniquely parameterize, 
     // the projection function simultaneously returns the normal to the surface at the projection point.
     [[nodiscard]] virtual FeatureObjectProjectPointResult projectPoint( const Vector3f& point, ViewportId id = {} ) const = 0;
-    [[nodiscard]] FeatureObjectProjectPointResult getNormal( const Vector3f& point ) const
-    {
-        return projectPoint( point );
-    }
+    [[nodiscard]] std::optional<Vector3f> getNormal( const Vector3f& point ) const;
 
     MRMESH_API virtual void setXf( const AffineXf3f& xf, ViewportId id = {} ) override;
     MRMESH_API virtual void resetXf( ViewportId id = {} ) override;
@@ -107,9 +104,10 @@ protected:
 
     ViewportMask subfeatureVisibility_ = ViewportMask::all();
 
-
-    ViewportProperty<Matrix3f> r_;
-    ViewportProperty<Matrix3f> s_;
+    // Decomposition of the transformation matrix xf.A into a rotation and scaling matrix.Updated automatically in the setXf() method
+    // This cache need for fast calculation of feature properties w/o expensive  transformation matrix QR decomposition.
+    ViewportProperty<Matrix3f> r_; // rotation
+    ViewportProperty<Matrix3f> s_; // scale
 };
 
 }

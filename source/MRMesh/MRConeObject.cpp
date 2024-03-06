@@ -190,7 +190,7 @@ FeatureObjectProjectPointResult ConeObject::projectPoint( const Vector3f& point,
 
     // We find the point of intersection of the vector XK with the surface of the cone 
     // and find a guide ventor along the surface of the cone to the projection point
-    Vector3f D = K + XK.normalized() * ( K.length() * sin( coneAngle ) ) ;
+    Vector3f D = K + XK.normalized() * ( K.length() * std::sin( coneAngle ) ) ;
     Vector3f normD = D.normalized();
 
     // Calculate the projected point on the conical surface

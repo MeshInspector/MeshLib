@@ -29,26 +29,20 @@ jobs:
         os: [fedora37, fedora39]
         config: [Debug, Release]
         compiler: [Clang]
-        full_config_build: ${{ fromJSON(inputs.full_config_build) }}
-        include:
-          - os: fedora37
-            cxx-compiler: /usr/bin/clang++-15
-          - os: fedora39
-            cxx-compiler: /usr/bin/clang++-17
-            MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF"
-          - os: fedora39
-            config: 'Debug'
-            compiler: GCC
-            cxx-compiler: /usr/bin/g++
-            MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF"
-          - os: fedora39
-            config: 'Release'
-            compiler: GCC
-            cxx-compiler: /usr/bin/g++
-            MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF -DBUILD_TESTING=OFF"
+        MR_CMAKE_OPTIONS: [ "", "-DMESHLIB_BUILD_MRCUDA=OFF"]
+        full_config_build: ${{fromJSON(inputs.full_config_build)}}
         exclude:
           - full_config_build: false
             os: fedora39
+          - os: fedora39
+            MR_CMAKE_OPTIONS: ""
+          - os: fedora37
+            MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF -DBUILD_TESTING=OFF"
+          - os: fedora37
+            MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF -DBUILD_TESTING=OFF"
+        include:
+          - compiler: Clang
+            cxx-compiler: /usr/bin/clang++
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout

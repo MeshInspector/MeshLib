@@ -28,15 +28,10 @@ jobs:
       matrix:
         os: [fedora37, fedora39]
         config: [Debug, Release]
-        MR_CMAKE_OPTIONS: [ "", "-DMESHLIB_BUILD_MRCUDA=OFF"]
         full_config_build: ${{fromJSON(inputs.full_config_build)}}
         exclude:
           - full_config_build: false
             os: fedora39
-          - os: fedora39
-            MR_CMAKE_OPTIONS: ""
-          - os: fedora37
-            MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF"
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -71,7 +66,7 @@ jobs:
           CMAKE_CXX_COMPILER: "/usr/bin/clang++"
           MR_VERSION: ${{ inputs.app_version }}
           MR_USE_CPP_23: "ON"
-          MR_CMAKE_OPTIONS: ${{ matrix.MR_CMAKE_OPTIONS }}
+          MR_CMAKE_OPTIONS: ${{ (matrix.os == 'fedora39') && '-DMESHLIB_BUILD_MRCUDA=OFF' || '' }}
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.compiler}}"

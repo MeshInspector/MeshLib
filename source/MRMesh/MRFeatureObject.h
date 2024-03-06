@@ -70,6 +70,7 @@ struct FeatureObjectProjectPointResult {
 enum class MRMESH_CLASS FeatureVisualizePropertyType
 {
     Subfeatures,
+    DetailsOnNameTag, // If true, show additional details on the name tag, such as point coordinates. Not all features use this.
     _count [[maybe_unused]],
 };
 template <> struct IsVisualizeMaskEnum<FeatureVisualizePropertyType> : std::true_type {};
@@ -103,6 +104,7 @@ protected:
     MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;
 
     ViewportMask subfeatureVisibility_ = ViewportMask::all();
+    ViewportMask detailsOnNameTag_ = ViewportMask::all();
 
     // Decomposition of the transformation matrix xf.A into a rotation and scaling matrix.Updated automatically in the setXf() method
     // This cache need for fast calculation of feature properties w/o expensive  transformation matrix QR decomposition.

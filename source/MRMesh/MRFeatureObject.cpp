@@ -22,6 +22,8 @@ const ViewportMask& FeatureObject::getVisualizePropertyMask( AnyVisualizeMaskEnu
         {
             case FeatureVisualizePropertyType::Subfeatures:
                 return subfeatureVisibility_;
+            case FeatureVisualizePropertyType::DetailsOnNameTag:
+                return detailsOnNameTag_;
             case FeatureVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
         }
         assert( false && "Invalid enum." );
@@ -41,9 +43,7 @@ void FeatureObject::serializeFields_( Json::Value& root ) const
     root["Type"].append( VisualObject::TypeName() );
 
     root["SubfeatureVisibility"] = subfeatureVisibility_.value();
-
-
-
+    root["DetailsOnNameTag"] = detailsOnNameTag_.value();
 }
 
 void FeatureObject::deserializeFields_( const Json::Value& root )
@@ -52,6 +52,9 @@ void FeatureObject::deserializeFields_( const Json::Value& root )
 
     if ( const auto& subfeatureVisibilityJson = root["SubfeatureVisibility"]; subfeatureVisibilityJson.isUInt() )
         subfeatureVisibility_ = ViewportMask( subfeatureVisibilityJson.asUInt() );
+
+    if ( const auto& detailsOnNameTagJson = root["DetailsOnNameTag"]; detailsOnNameTagJson.isUInt() )
+        detailsOnNameTag_ = ViewportMask( detailsOnNameTagJson.asUInt() );
 
     // only default xf value serialyze now.
     decomposeMatrix3( xf().A, r_.get(), s_.get() );

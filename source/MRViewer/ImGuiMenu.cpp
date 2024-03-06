@@ -296,6 +296,7 @@ void ImGuiMenu::addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const
 {
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesCyrillic() );
     builder.AddChar( 0x2116 ); // NUMERO SIGN (shift+3 on cyrillic keyboards)
+    builder.AddChar( 0x0394 ); // GREEK CAPITAL LETTER DELTA
 #ifndef __EMSCRIPTEN__
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesChineseSimplifiedCommon() );
 #endif
@@ -1325,7 +1326,7 @@ float ImGuiMenu::drawSelectionInformation_()
                     if ( totalVolume )
                         *totalVolume += float( mObj->volume() );
                     else
-                        totalVolume = float( mObj->volume() );                        
+                        totalVolume = float( mObj->volume() );
                 }
             }
         }
@@ -1459,7 +1460,7 @@ float ImGuiMenu::drawSelectionInformation_()
         drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces, textColorForSelected );
         drawPrimitivesInfo( "Vertices", totalVerts );
         drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints, textColorForSelected );
-        
+
         if ( totalVolume )
             UI::inputTextCenteredReadOnly( "Volume", fmt::format( runtimeFmt( "{:.3f}" ), *totalVolume ), getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x * menu_scaling() );
     }

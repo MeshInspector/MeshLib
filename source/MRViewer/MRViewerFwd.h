@@ -37,6 +37,7 @@ class ViewerPlugin;
 class ViewerSettingsManager;
 class ViewerSetup;
 class Viewer;
+struct LaunchParams;
 class ViewerEventQueue;
 class Viewport;
 class RibbonMenu;

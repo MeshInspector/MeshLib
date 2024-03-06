@@ -41,6 +41,38 @@ namespace MR
 
 class SpaceMouseHandler;
 
+// This struct contains rules for viewer launch
+struct LaunchParams
+{
+    bool fullscreen{ false }; // if true starts fullscreen
+    int width{ 0 };
+    int height{ 0 };
+    enum WindowMode
+    {
+        Show, // Show window immediately
+        HideInit, // Show window after init
+        Hide, // Don't show window
+        TryHidden, // Launches in "Hide" mode if OpenGL is present and "NoWindow" if it is not
+        NoWindow // Don't initialize GL window (don't call GL functions)(force `isAnimating`)
+    } windowMode{ HideInit };
+    bool enableTransparentBackground{ false };
+    bool preferOpenGL3{ false };
+    bool render3dSceneInTexture{ true }; // If not set renders scene each frame
+    bool developerFeatures{ false }; // If set shows some developer features useful for debugging
+    std::string name{ "MRViewer" }; // Window name
+    bool startEventLoop{ true }; // If false - does not start event loop
+    bool close{ true }; // If !startEventLoop close immediately after start, otherwise close on window close, make sure you call `launchShut` manually if this flag is false
+    bool console{ false }; // If true - shows developers console
+    int argc{ 0 }; // Pass argc
+    char** argv{ nullptr }; // Pass argv
+
+    bool showMRVersionInTitle{ false }; // if true - print version info in window title
+    bool isAnimating{ false }; // if true - calls render without system events
+    int animationMaxFps{ 30 }; // max fps if animating
+
+    std::shared_ptr<SplashWindow> splashWindow; // if present will show this window while initializing plugins (after menu initialization)
+};
+
 // GLFW-based mesh viewer
 class MRVIEWER_CLASS Viewer
 {
@@ -48,37 +80,7 @@ public:
     using MouseButton = MR::MouseButton;
     using MouseMode = MR::MouseMode;
 
-    // This struct contains rules for viewer launch
-    struct LaunchParams
-    {
-        bool fullscreen{ false }; // if true starts fullscreen
-        int width{ 0 };
-        int height{ 0 };
-        enum WindowMode
-        {
-            Show, // Show window immediately
-            HideInit, // Show window after init
-            Hide, // Don't show window
-            TryHidden, // Launches in "Hide" mode if OpenGL is present and "NoWindow" if it is not
-            NoWindow // Don't initialize GL window (don't call GL functions)(force `isAnimating`)
-        } windowMode{ HideInit };
-        bool enableTransparentBackground{ false };
-        bool preferOpenGL3{ false };
-        bool render3dSceneInTexture{ true }; // If not set renders scene each frame
-        bool developerFeatures{ false }; // If set shows some developer features useful for debugging
-        std::string name{"MRViewer"}; // Window name
-        bool startEventLoop{ true }; // If false - does not start event loop
-        bool close{ true }; // If !startEventLoop close immediately after start, otherwise close on window close, make sure you call `launchShut` manually if this flag is false
-        bool console{ false }; // If true - shows developers console
-        int argc{ 0 }; // Pass argc
-        char** argv{ nullptr }; // Pass argv
-
-        bool showMRVersionInTitle{ false }; // if true - print version info in window title
-        bool isAnimating{ false }; // if true - calls render without system events
-        int animationMaxFps{ 30 }; // max fps if animating
-
-        std::shared_ptr<SplashWindow> splashWindow; // if present will show this window while initializing plugins (after menu initialization)
-    };
+    using LaunchParams = MR::LaunchParams;
 
     // Accumulate launch params from cmd args
     MRVIEWER_API static void parseLaunchParams( LaunchParams& params );
@@ -91,6 +93,9 @@ public:
     MRVIEWER_API void launchShut();
 
     bool isLaunched() const { return isLaunched_; }
+
+    // get full parameters with witch viewer was launched
+    const LaunchParams& getLaunchParams() const { return launchParams_; }
 
     // provides non const access to viewer
     static Viewer* instance() { return &getViewerInstance(); }
@@ -445,6 +450,8 @@ public:
     float scrollForce{ 1.0f };
     // opengl-based pick window radius in pixels
     uint16_t glPickRadius{ 0 };
+    // command arguments, each parsed arg should be erased from here not to affect other parsers
+    std::vector<std::string> commandArgs;
 
     std::unique_ptr<ObjectMesh> basisAxes;
     std::unique_ptr<ObjectMesh> globalBasisAxes;
@@ -539,9 +546,6 @@ public:
     using PostFocusSignal = boost::signals2::signal<void( bool )>;
     PostFocusSignal postFocusSignal;
 
-    using CommandLineSignal = boost::signals2::signal<bool( const LaunchParams& params ), SignalStopHandler>;
-    CommandLineSignal parseCommandLineSignal;
-
     /// emplace event at the end of the queue
     /// replace last skipable with new skipable
     MRVIEWER_API void emplaceEvent( std::string name, ViewerEventCallback cb, bool skipable = false );
@@ -577,8 +581,6 @@ private:
     void initPlugins_();
     // Shut all plugins at the end
     void shutdownPlugins_();
-    // Emit parseCommandLineSignal and opens files if none of slots took the signal
-    void parseCommandLine_( const LaunchParams& params );
 #ifdef __EMSCRIPTEN__
     void mainLoopFunc_();
     static void emsMainInfiniteLoop();
@@ -663,6 +665,8 @@ private:
 
     bool isInDraw_{ false };
     bool dirtyScene_{ false };
+
+    LaunchParams launchParams_;
 
     ViewportId getFirstAvailableViewportId_() const;
     ViewportMask presentViewportsMask_;

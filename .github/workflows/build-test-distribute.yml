@@ -10,6 +10,8 @@ on:
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * *'  # Run every day at 6 AM UTC
 
 #UPLOAD_ARTIFACTS condition: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
@@ -66,6 +68,7 @@ jobs:
     with:
       docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
       app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
+      full_config_build: ${{ github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     secrets: inherit
 

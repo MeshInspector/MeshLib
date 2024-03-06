@@ -220,7 +220,7 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
         return res;
     }
 
-    auto deloneProf = deloneFlipProfitSq( a, b, c, d ) / normalizerSq_;
+    auto deloneProf = deloneFlipProfitSq( a, b, c, d );
     auto angleProf = trisAngleProfit( a, b, c, d, critAngle );
     if ( deloneProf <= 0.0f && angleProf <= 0.0f )
     {
@@ -230,7 +230,7 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
     }
 
     if ( deloneProf > 0.0f )
-        res.weight += deloneProf;
+        res.weight += 20 * deloneProf / normalizerSq_;
     if ( angleProf > 0.0f )
         res.weight += angleProf;
 

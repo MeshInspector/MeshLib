@@ -1904,6 +1904,9 @@ void Viewer::makeTitleFromSceneRootPath()
     if ( globalHistoryStore_ && globalHistoryStore_->isSceneModified() )
         sceneFileName += "*";
 
+    if ( !window )
+        return;
+
     if ( sceneFileName.empty() )
         glfwSetWindowTitle( window, defaultWindowTitle.c_str() );
     else

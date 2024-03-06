@@ -401,9 +401,15 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
             )
             reserved = true;
         else if ( flag == "-width" )
+        {
             nextW = true;
+            reserved = true;
+        }
         else if ( flag == "-height" )
+        {
             nextH = true;
+            reserved = true;
+        }
 
         if ( reserved )
             indicesToRemove.push_back( i );

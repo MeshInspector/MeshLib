@@ -112,7 +112,8 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
         filters_ = filters_ | VoxelsLoad::Filters;
 #endif
 #endif
-    } );
+        parseLaunchParams_();
+    }, CommandLoop::StartPosition::AfterPluginInit );
 }
 
 OpenFilesMenuItem::~OpenFilesMenuItem()
@@ -183,6 +184,28 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
 
     viewerRef.loadFiles( paths );
     return true;
+}
+
+void OpenFilesMenuItem::parseLaunchParams_()
+{
+    std::vector<std::filesystem::path> supportedFiles;
+    std::vector<int> processedArgs;
+    auto& viewer = getViewerInstance();
+    for ( int i = 0; i < viewer.commandArgs.size(); ++i )
+    {
+        const auto argAsPath = pathFromUtf8( viewer.commandArgs[i] );
+        if ( viewer.isSupportedFormat( argAsPath ) )
+        {
+            supportedFiles.push_back( argAsPath );
+            processedArgs.push_back( i );
+        }
+    }
+    if ( !supportedFiles.empty() )
+    {
+        for ( int i = int( processedArgs.size() ) - 1; i >= 0; --i )
+            viewer.commandArgs.erase( viewer.commandArgs.begin() + processedArgs[i] );
+        viewer.loadFiles( supportedFiles );
+    }
 }
 
 void OpenFilesMenuItem::setupListUpdate_()

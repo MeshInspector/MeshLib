@@ -27,6 +27,7 @@ public:
     virtual const DropItemsList& dropItems() const override;
 private:
     virtual bool dragDrop_( const std::vector<std::filesystem::path>& paths ) override;
+    void parseLaunchParams_();
     void setupListUpdate_();
     bool checkPaths_( const std::vector<std::filesystem::path>& paths );
 

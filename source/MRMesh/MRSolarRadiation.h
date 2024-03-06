@@ -23,16 +23,18 @@ struct SkyPatch
 /// the radiation is 0.0f if all rays do not reach the sky because they are intercepted by the terrain;
 /// \param outSkyRays - optional output bitset where for every valid sample #i its rays are stored at indices [i*numPatches; (i+1)*numPatches),
 ///                     0s for occluded rays (hitting the terrain) and 1s for the ones which don't hit anything and reach the sky
+/// \param outIntersections - optional output vector of MeshIntersectionResult for every valid sample point
 [[nodiscard]] MRMESH_API VertScalars computeSkyViewFactor( const Mesh & terrain,
     const VertCoords & samples, const VertBitSet & validSamples,
     const std::vector<SkyPatch> & skyPatches,
-    BitSet * outSkyRays = nullptr );
+    BitSet * outSkyRays = nullptr, std::vector<MeshIntersectionResult>* outIntersections = nullptr );
 
 /// In each valid sample point tests the rays from that point in the sky;
 /// \return bitset where for every valid sample #i its rays are stored at indices [i*numPatches; (i+1)*numPatches),
 ///         0s for occluded rays (hitting the terrain) and 1s for the ones which don't hit anything and reach the sky
+/// \param outIntersections - optional output vector of MeshIntersectionResult for every valid sample point
 [[nodiscard]] MRMESH_API BitSet findSkyRays( const Mesh & terrain,
     const VertCoords & samples, const VertBitSet & validSamples,
-    const std::vector<SkyPatch> & skyPatches );
+    const std::vector<SkyPatch> & skyPatches, std::vector<MeshIntersectionResult>* outIntersections = nullptr );
 
 } //namespace MR

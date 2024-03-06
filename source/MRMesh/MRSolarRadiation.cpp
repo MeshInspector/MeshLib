@@ -49,7 +49,7 @@ std::vector<Vector3f> sampleHalfSphere()
 }
 
 VertScalars computeSkyViewFactor( const Mesh & terrain, const VertCoords & samples, const VertBitSet & validSamples,
-    const std::vector<SkyPatch> & skyPatches, BitSet * outSkyRays )
+    const std::vector<SkyPatch> & skyPatches, BitSet * outSkyRays, std::vector<MeshIntersectionResult>* outIntersections )
 {
     MR_TIMER
     VertScalars res( samples.size(), 0.0f );
@@ -61,7 +61,7 @@ VertScalars computeSkyViewFactor( const Mesh & terrain, const VertCoords & sampl
 
     if ( outSkyRays )
     {
-        *outSkyRays = findSkyRays( terrain, samples, validSamples, skyPatches );
+        *outSkyRays = findSkyRays( terrain, samples, validSamples, skyPatches, outIntersections );
         BitSetParallelFor( validSamples, [&]( VertId sampleVertId )
         {
             float totalRadiation = 0;
@@ -82,6 +82,10 @@ VertScalars computeSkyViewFactor( const Mesh & terrain, const VertCoords & sampl
     for ( const auto & sp : skyPatches )
         precs.emplace_back( sp.dir );
 
+    const size_t numRays = samples.size() * skyPatches.size();
+    if ( outIntersections )
+        outIntersections->resize( numRays );
+
     BitSetParallelFor( validSamples, [&]( VertId sampleVertId )
     {
         const auto samplePt = samples[sampleVertId];
@@ -89,8 +93,11 @@ VertScalars computeSkyViewFactor( const Mesh & terrain, const VertCoords & sampl
         float totalRadiation = 0;
         for ( int i = 0; i < skyPatches.size(); ++i )
         {
-            if ( !rayMeshIntersect( terrain, Line3f( samplePt, skyPatches[i].dir ), 0, FLT_MAX, &precs[i], false ) )
+            const auto intersectionRes = rayMeshIntersect( terrain, Line3f( samplePt, skyPatches[i].dir ), 0, FLT_MAX, &precs[i], false );
+            if ( !intersectionRes )
                 totalRadiation += skyPatches[i].radiation;
+            else if ( outIntersections )
+                (*outIntersections)[ size_t( sampleVertId ) * skyPatches.size() + i ] = *intersectionRes;
         }
         res[sampleVertId] = rMaxRadiation * totalRadiation;
     } );
@@ -100,7 +107,7 @@ VertScalars computeSkyViewFactor( const Mesh & terrain, const VertCoords & sampl
 
 BitSet findSkyRays( const Mesh & terrain,
     const VertCoords & samples, const VertBitSet & validSamples,
-    const std::vector<SkyPatch> & skyPatches )
+    const std::vector<SkyPatch> & skyPatches, std::vector<MeshIntersectionResult>* outIntersections )
 {
     MR_TIMER
 
@@ -109,7 +116,11 @@ BitSet findSkyRays( const Mesh & terrain,
     for ( const auto & sp : skyPatches )
         precs.emplace_back( sp.dir );
 
-    BitSet res( samples.size() * skyPatches.size() );
+    const size_t numRays = samples.size() * skyPatches.size();
+    BitSet res( numRays );
+    if ( outIntersections )
+        outIntersections->resize( numRays );
+
     BitSetParallelForAll( res, [&]( size_t ray )
     {
         const auto div = std::div( std::int64_t( ray ), std::int64_t( skyPatches.size() ) );
@@ -117,8 +128,11 @@ BitSet findSkyRays( const Mesh & terrain,
         if ( !validSamples.test( sample ) )
             return;
         const auto patch = div.rem;
-        if ( !rayMeshIntersect( terrain, Line3f( samples[sample], skyPatches[patch].dir ), 0, FLT_MAX, &precs[patch], false ) )
+        const auto intersectionRes = rayMeshIntersect( terrain, Line3f( samples[sample], skyPatches[patch].dir ), 0, FLT_MAX, &precs[patch], false );
+        if ( !intersectionRes )            
             res.set( ray );
+        else if ( outIntersections )
+            (*outIntersections)[ray] =  *intersectionRes;
     } );
 
     return res;

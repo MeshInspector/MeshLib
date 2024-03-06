@@ -32,8 +32,8 @@ __global__ void rayKernel( const Node3* nodes, const float3* meshPoints, const F
         if ( testBit( validSamples, sample ) )
         {
             const size_t patch = index % precCount;
-
-            if ( rayMeshIntersect( nodes, meshPoints, faces, samples[sample], 0, FLT_MAX, precs[patch] ) < 0 )
+            const auto intersectRes = rayMeshIntersect( nodes, meshPoints, faces, samples[sample], 0, FLT_MAX, precs[patch] );
+            if ( intersectRes.distanceAlongLine > 0 )
             {
                 block |= currentBit;         
             }
@@ -61,7 +61,8 @@ __global__ void radiationKernel( const Node3* nodes, const float3* meshPoints, c
     float totalRadiation = 0;
     for ( int i = 0; i < precCount; ++i )
     {
-        if ( rayMeshIntersect( nodes, meshPoints, faces, samplePt, 0, FLT_MAX, precs[i] ) < 0 )
+        const auto intersectRes = rayMeshIntersect( nodes, meshPoints, faces, samplePt, 0, FLT_MAX, precs[i] );
+        if ( intersectRes.distanceAlongLine < 0 )
             totalRadiation += skyPatches[i].radiation;
     }
 
@@ -91,7 +92,7 @@ __global__ void radiationKernel( const Node3* nodes, const float3* meshPoints, c
     res[sampleVertId] = rMaxRadiation * totalRadiation;
 }
 
-cudaError_t findSkyRaysKernel( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, const float3* samples, const uint64_t* validSamples, const IntersectionPrecomputes* precs, uint64_t* res, const size_t resBlockCount, const size_t sampleCount, const size_t precCount )
+cudaError_t findSkyRaysKernel( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, const float3* samples, const uint64_t* validSamples, const IntersectionPrecomputes* precs, uint64_t* res, const size_t resBlockCount, const size_t sampleCount, const size_t precCount, MeshIntersectionResult* outIntersections )
 {
     constexpr int maxThreadsPerBlock = 640;
     int numBlocks = ( int( resBlockCount ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
@@ -102,7 +103,7 @@ cudaError_t findSkyRaysKernel( const Node3* nodes, const float3* meshPoints, con
     return cudaSuccess;
 }
 
-cudaError_t computeSkyViewFactorKernel( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, const float3* samples, const uint64_t* validSamples, const SkyPatch* skyPatches, const IntersectionPrecomputes* precs, const float rMaxRadiation, float* res, const size_t sampleCount, const size_t precCount )
+cudaError_t computeSkyViewFactorKernel( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, const float3* samples, const uint64_t* validSamples, const SkyPatch* skyPatches, const IntersectionPrecomputes* precs, const float rMaxRadiation, float* res, const size_t sampleCount, const size_t precCount, MeshIntersectionResult* outIntersections )
 {
     constexpr int maxThreadsPerBlock = 640;
     int numBlocks = (int( sampleCount ) + maxThreadsPerBlock - 1) / maxThreadsPerBlock;
@@ -114,7 +115,7 @@ cudaError_t computeSkyViewFactorKernel( const Node3* nodes, const float3* meshPo
     return cudaSuccess;
 }
 
-cudaError_t computeSkyViewFactorKernel( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, const float3* samples, const uint64_t* validSamples, const SkyPatch* skyPatches, const IntersectionPrecomputes* precs, const float rMaxRadiation, float* res, const size_t sampleCount, const size_t precCount, uint64_t* outSkyRays )
+cudaError_t computeSkyViewFactorKernel( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, const float3* samples, const uint64_t* validSamples, const SkyPatch* skyPatches, const IntersectionPrecomputes* precs, const float rMaxRadiation, float* res, const size_t sampleCount, const size_t precCount, uint64_t* outSkyRays, MeshIntersectionResult* outIntersections )
 {
     constexpr int maxThreadsPerBlock = 640;
     int numBlocks = ( int( sampleCount ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;

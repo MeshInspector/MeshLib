@@ -28,6 +28,7 @@ jobs:
       matrix:
         os: ['fedora37', 'fedora39']
         config: ['Debug', 'Release']
+        compiler: ['Clang']
         full_config_build:
           - ${{fromJSON(inputs.full_config_build)}}
         exclude:

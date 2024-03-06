@@ -130,7 +130,7 @@ FeatureObjectProjectPointResult LineObject::projectPoint( const Vector3f& point,
     auto K = direction * dot( X, direction );
 
     return { K + center , std::nullopt };
-};
+}
 
 const std::vector<FeatureObjectSharedProperty>& LineObject::getAllSharedProperties() const
 {

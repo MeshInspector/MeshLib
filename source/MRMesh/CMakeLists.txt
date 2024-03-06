@@ -242,6 +242,7 @@ ELSE()
 		dl
 		jsoncpp
 		tbb
+		blosc
 		${MRMESH_OPTIONAL_DEPENDENCIES}
 	)
 ENDIF()

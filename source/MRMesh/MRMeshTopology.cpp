@@ -14,6 +14,9 @@
 #include <atomic>
 #include <initializer_list>
 
+#include <blosc.h>
+#include "MRPch/MRSpdlog.h"
+
 namespace MR
 {
 
@@ -2041,20 +2044,59 @@ void MeshTopology::packMinMem( const PackMapping & map )
 
 void MeshTopology::write( std::ostream & s ) const
 {
+    auto compressTest = [] ( const void * data, size_t size, size_t typeSize )
+    {
+        size_t threadCount = tbb::global_control::parameter( tbb::global_control::max_allowed_parallelism );
+        if ( threadCount == 0 )
+            threadCount = std::thread::hardware_concurrency();
+        if ( threadCount == 0 )
+            threadCount = 1;
+
+        auto shuffleName = [] ( int shuffle )
+        {
+            switch ( shuffle )
+            {
+                case BLOSC_NOSHUFFLE:
+                    return "no shuffle";
+                case BLOSC_SHUFFLE:
+                    return "byte shuffle";
+                case BLOSC_BITSHUFFLE:
+                    return "bit shuffle";
+            }
+            MR_UNREACHABLE
+        };
+
+        Buffer<char> compressed( size + BLOSC_MAX_OVERHEAD );
+        constexpr int cBloscCompressionLevel = 5;
+        for ( auto shuffle : { BLOSC_NOSHUFFLE, BLOSC_SHUFFLE, BLOSC_BITSHUFFLE } )
+        {
+            auto res = blosc_compress_ctx( cBloscCompressionLevel, shuffle, typeSize, size, data, compressed.data(), compressed.size(), BLOSC_ZSTD_COMPNAME, 0, threadCount );
+            assert( res >= 0 );
+            if ( res > 0 )
+                spdlog::info( "{}: {} ratio, {} bytes", shuffleName( shuffle ), (float)res / (float)size, res );
+        }
+    };
+
     // write edges
     auto numEdges = (std::uint32_t)edges_.size();
     s.write( (const char*)&numEdges, 4 );
     s.write( (const char*)edges_.data(), edges_.size() * sizeof(HalfEdgeRecord) );
+    spdlog::info( "edge topology" );
+    compressTest( edges_.data(), edges_.size() * sizeof( HalfEdgeRecord ), sizeof( size_t ) );
 
     // write verts
     auto numVerts = (std::uint32_t)edgePerVertex_.size();
     s.write( (const char*)&numVerts, 4 );
     s.write( (const char*)edgePerVertex_.data(), edgePerVertex_.size() * sizeof(EdgeId) );
+    spdlog::info( "vertex topology" );
+    compressTest( edgePerVertex_.data(), edgePerVertex_.size() * sizeof( EdgeId ), sizeof( size_t ) );
 
     // write faces
     auto numFaces = (std::uint32_t)edgePerFace_.size();
     s.write( (const char*)&numFaces, 4 );
     s.write( (const char*)edgePerFace_.data(), edgePerFace_.size() * sizeof(EdgeId) );
+    spdlog::info( "face topology" );
+    compressTest( edgePerFace_.data(), edgePerFace_.size() * sizeof( EdgeId ), sizeof( size_t ) );
 }
 
 VoidOrErrStr MeshTopology::read( std::istream & s, ProgressCallback callback )

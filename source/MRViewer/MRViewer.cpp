@@ -1732,9 +1732,11 @@ void Viewer::initGlobalBasisAxesObject_()
     globalBasisAxes = std::make_unique<ObjectMesh>();
     globalBasisAxes->setName( "World Global Basis" );
     std::vector<Color> vertsColors;
+    auto translate = AffineXf3f::translation(Vector3f( 0.0f, 0.0f, 0.9f ));
     for ( int i = 0; i < 3; ++i )
     {
-        auto basis = makeCylinder( 0.01f );
+        auto basis = makeCylinder( 0.01f, 0.9f );
+        auto cone = makeCone( 0.04f, 0.1f );
         AffineXf3f rotTramsform;
         if ( i != 2 )
         {
@@ -1743,19 +1745,24 @@ void Viewer::initGlobalBasisAxesObject_()
             );
         }
         basis.transform( rotTramsform );
+        cone.transform( rotTramsform * translate );
         mesh.addPart( basis );
+        mesh.addPart( cone );
         std::vector<Color> colors( basis.points.size(), Color( PlusAxis[i] ) );
+        std::vector<Color> colorsCone( cone.points.size(), Color( PlusAxis[i] ) );
         vertsColors.insert( vertsColors.end(), colors.begin(), colors.end() );
+        vertsColors.insert( vertsColors.end(), colorsCone.begin(), colorsCone.end() );
     }
     addLabel( *globalBasisAxes, "X", 1.1f * Vector3f::plusX() );
     addLabel( *globalBasisAxes, "Y", 1.1f * Vector3f::plusY() );
     addLabel( *globalBasisAxes, "Z", 1.1f * Vector3f::plusZ() );
-    globalBasisAxes->setVisualizeProperty( defaultLabelsGlobalBasisAxes, VisualizeMaskType::Labels, ViewportMask::all() );
+
     globalBasisAxes->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
     globalBasisAxes->setAncillary( true );
     globalBasisAxes->setVisible( false );
     globalBasisAxes->setVertsColorMap( std::move( vertsColors ) );
     globalBasisAxes->setColoringType( ColoringType::VertsColorMap );
+    globalBasisAxes->setFlatShading( true );
 
     ColorTheme::instance().colorThemeChangedSignal.connect( [this] ()
     {
@@ -1802,7 +1809,6 @@ void Viewer::initBasisAxesObject_()
     addLabel( *basisAxes, "Y", labelPos * Vector3f::plusY() );
     addLabel( *basisAxes, "Z", labelPos * Vector3f::plusZ() );
 
-    basisAxes->setVisualizeProperty( defaultLabelsBasisAxes, VisualizeMaskType::Labels, ViewportMask::all() );
     basisAxes->setFacesColorMap( colorMap );
     basisAxes->setColoringType( ColoringType::FacesColorMap );
 

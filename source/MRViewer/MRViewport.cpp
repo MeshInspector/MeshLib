@@ -567,6 +567,11 @@ void Viewport::draw_global_basis() const
         return;
 
     draw( *Viewer::constInstance()->globalBasisAxes, params_.globalBasisAxesXf() );
+    for ( const auto& child : getViewerInstance().globalBasisAxes->children() )
+    {
+        if ( auto visualChild = child->asType<VisualObject>() )
+            draw( *visualChild, params_.globalBasisAxesXf() );
+    }
 }
 
 bool Viewport::Parameters::operator==( const Viewport::Parameters& other ) const

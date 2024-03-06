@@ -433,9 +433,6 @@ public:
     Vector2i windowOldPos;
     bool windowMaximized{ false };
 
-    // Stores basis axes meshes
-    bool defaultLabelsBasisAxes{ false };
-    bool defaultLabelsGlobalBasisAxes{ false };
     // if true - calls render without system events
     bool isAnimating{ false };
     // max fps if animating

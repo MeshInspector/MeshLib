@@ -134,6 +134,22 @@ RenderPointFeatureObject::RenderPointFeatureObject( const VisualObject& object )
     nameUiScreenOffset = Vector2f( 0, 0.1f );
 }
 
+std::string RenderPointFeatureObject::getObjectNameString( const VisualObject& object, ViewportId viewportId ) const
+{
+    if ( object.getVisualizeProperty( FeatureVisualizePropertyType::DetailsOnNameTag, viewportId ) )
+    {
+        Vector3f point = object.xf().b;
+        if ( object.parent() )
+            point = object.parent()->worldXf()( point );
+        constexpr int precision = 2;
+        return fmt::format( "{}\n{:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), point.x, precision, point.y, precision, point.z, precision );
+    }
+    else
+    {
+        return RenderObjectCombinator::getObjectNameString( object, viewportId );
+    }
+}
+
 MR_REGISTER_RENDER_OBJECT_IMPL( LineObject, RenderLineFeatureObject )
 RenderLineFeatureObject::RenderLineFeatureObject( const VisualObject& object )
     : RenderObjectCombinator( object )
@@ -148,6 +164,24 @@ RenderLineFeatureObject::RenderLineFeatureObject( const VisualObject& object )
 
     nameUiLocalOffset = Vector3f( 0.01f, 0, 0 );
     nameUiRotateLocalOffset90Degrees = true;
+}
+
+std::string RenderLineFeatureObject::getObjectNameString( const VisualObject& object, ViewportId viewportId ) const
+{
+    if ( object.getVisualizeProperty( FeatureVisualizePropertyType::DetailsOnNameTag, viewportId ) )
+    {
+        Vector3f delta = object.xf().A.col( 0 ) * 2.f;
+        if ( object.parent() )
+            delta = object.parent()->worldXf().A * delta;
+        constexpr int precision = 2;
+
+        // U+0394 GREEK CAPITAL LETTER DELTA
+        return fmt::format( "{}\n\xCE\x94 {:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), delta.x, precision, delta.y, precision, delta.z, precision );
+    }
+    else
+    {
+        return RenderObjectCombinator::getObjectNameString( object, viewportId );
+    }
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( CircleObject, RenderCircleFeatureObject )
@@ -214,6 +248,23 @@ RenderPlaneFeatureObject::RenderPlaneFeatureObject( const VisualObject& object )
     }
 
     nameUiScreenOffset = Vector2f( 0, 0.1f );
+}
+
+std::string RenderPlaneFeatureObject::getObjectNameString( const VisualObject& object, ViewportId viewportId ) const
+{
+    if ( object.getVisualizeProperty( FeatureVisualizePropertyType::DetailsOnNameTag, viewportId ) )
+    {
+        Vector3f normal = object.xf().A.col( 2 ).normalized();
+        if ( object.parent() )
+            normal = object.parent()->worldXf().A * normal;
+        constexpr int precision = 2;
+
+        return fmt::format( "{}\nN {:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), normal.x, precision, normal.y, precision, normal.z, precision );
+    }
+    else
+    {
+        return RenderObjectCombinator::getObjectNameString( object, viewportId );
+    }
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( SphereObject, RenderSphereFeatureObject )

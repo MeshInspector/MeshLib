@@ -2,6 +2,7 @@
 
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRSceneRoot.h"
+#include "MRMesh/MRString.h"
 #include "MRMesh/MRVisualObject.h"
 #include "MRViewer/MRColorTheme.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
@@ -119,7 +120,15 @@ void RenderNameObject::Task::renderPass()
     drawList.AddRectFilled( textPos - paddingA, textPos + textSize + paddingB, isHovered && !isActive ? colorHovered : colorMain, rounding );
 
     // The text.
-    drawList.AddText( textPos, colorText, text.c_str() );
+    // Split to segments to center each line individually.
+    float textY = textPos.y;
+    split( text, "\n", [&]( std::string_view segment )
+    {
+        ImVec2 pos( std::round( textPos.x + ( textSize.x - ImGui::CalcTextSize( segment.data(), segment.data() + segment.size() ).x ) / 2 ), textY );
+        drawList.AddText( pos, colorText, segment.data(), segment.data() + segment.size() );
+        textY += ImGui::GetTextLineHeight();
+        return false;
+    } );
 
     // Reset the variables.
     isHovered = false;
@@ -153,7 +162,7 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
     Vector3f worldPoint2 = xf( localPoint + nameUiLocalOffset );
     ImVec2 point3Offset = ImVec2( nameUiScreenOffset ) * params.scale;
 
-    task_.text = task_.object->name();
+    task_.text = getObjectNameString( *task_.object, params.viewportId );
     task_.textSize = ImGui::CalcTextSize( task_.text.c_str() );
 
     Viewport& viewportRef = getViewerInstance().viewport( params.viewportId );
@@ -255,6 +264,12 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
 
     // A non-owning pointer to our task_.
     params.tasks->push_back( { std::shared_ptr<void>{}, &task_ } );
+}
+
+std::string RenderNameObject::getObjectNameString( const VisualObject& object, ViewportId viewportId ) const
+{
+    (void)viewportId;
+    return object.name();
 }
 
 }

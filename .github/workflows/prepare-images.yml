@@ -100,6 +100,7 @@ jobs:
           {\"include\":[ \
           {\"dockerfile\":\"ubuntu20Dockerfile\",   \"image\":\"ubuntu\",         \"os\":\"ubuntu-latest\"}, \
           {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22\",       \"os\":\"ubuntu-latest\"}, \
+          {\"dockerfile\":\"ubuntu24Dockerfile\",   \"image\":\"ubuntu24-amd64\", \"os\":\"ubuntu-latest\"}, \
           {\"dockerfile\":\"ubuntu20Dockerfile\",   \"image\":\"ubuntu-arm64\",   \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
           {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22-arm64\", \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
           {\"dockerfile\":\"fedora37Dockerfile\",   \"image\":\"fedora37\",       \"os\":\"ubuntu-latest\"}, \

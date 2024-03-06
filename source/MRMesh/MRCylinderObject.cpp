@@ -6,7 +6,6 @@
 #include "MRMesh.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
-#include "MRMatrix3Decompose.h"
 #include "MRCylinderApproximator.h"
 #include "MRMeshFwd.h"
 #include "MRLine.h"

@@ -12,7 +12,6 @@
 
 #include <iostream>
 #include "MRArrow.h"
-#include "MRMatrix3Decompose.h"
 
 namespace MR
 {

@@ -1,7 +1,7 @@
 #include "MRFeatureObject.h"
+#include "MRMatrix3Decompose.h"
 
 #include "json/value.h"
-#include "MRMatrix3Decompose.h"
 
 namespace MR
 {
@@ -67,7 +67,8 @@ std::optional<Vector3f> FeatureObject::getNormal( const Vector3f& point ) const
 
 void FeatureObject::setXf( const AffineXf3f& xf, ViewportId id )
 {
-
+    if ( VisualObject::xf( id ) == xf )
+        return;
     decomposeMatrix3( xf.A, r_[id], s_[id] );
     VisualObject::setXf( xf, id );
 }

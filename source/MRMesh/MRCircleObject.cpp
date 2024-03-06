@@ -6,7 +6,6 @@
 #include "MRPch/MRJson.h"
 #include "MRConstants.h"
 #include "MRBestFit.h"
-#include "MRMatrix3Decompose.h"
 
 #ifdef _MSC_VER
 #pragma warning(push)

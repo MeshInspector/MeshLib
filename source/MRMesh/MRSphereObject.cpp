@@ -4,7 +4,6 @@
 #include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
-#include "MRMatrix3Decompose.h"
 
 #ifdef _MSC_VER
 #pragma warning(push)

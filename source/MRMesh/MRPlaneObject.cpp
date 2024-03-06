@@ -7,7 +7,6 @@
 #include "MRPch/MRJson.h"
 #include "MRMatrix3.h"
 #include "MRVector3.h"
-#include "MRMatrix3Decompose.h"
 
 namespace MR
 {
@@ -163,8 +162,7 @@ void PlaneObject::orientateFollowMainAxis_( ViewportId id /*= {}*/ )
 
 void PlaneObject::setupPlaneSize2DByOriginalPoints_( const std::vector<Vector3f>& pointsToApprox )
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
+    Matrix3f r = r_.get();
 
     MR::Vector3f min( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), 1.0f );
     MR::Vector3f max( -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -1.0f );

@@ -66,6 +66,7 @@ jobs:
     with:
       docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
       app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
+      full_config_build: false
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     secrets: inherit
 

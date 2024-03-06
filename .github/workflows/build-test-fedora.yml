@@ -29,7 +29,7 @@ jobs:
         os: ['fedora37', 'fedora39']
         config: ['Debug', 'Release']
         full_config_build:
-          - ${{fromJSON(inputs.full_config_build) == 'true'}}
+          - ${{fromJSON(inputs.full_config_build)}}
         exclude:
           - full_config_build: false
             os: fedora39

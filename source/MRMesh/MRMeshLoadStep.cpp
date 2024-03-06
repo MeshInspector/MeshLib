@@ -14,7 +14,7 @@
 
 MR_SUPPRESS_WARNING_PUSH
 MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
-MR_SUPPRESS_WARNING( "-Wpedantic", 9999 )
+MR_SUPPRESS_WARNING( "-Wpedantic", 4996 )
 #if !defined( __GNUC__ ) || defined( __clang__ ) || __GNUC__ >= 11
 MR_SUPPRESS_WARNING( "-Wdeprecated-enum-enum-conversion", 5054 )
 #endif
@@ -24,38 +24,43 @@ MR_SUPPRESS_WARNING( "-Wdeprecated-enum-enum-conversion", 5054 )
 #pragma warning( disable: 5267 ) // definition of implicit copy constructor is deprecated because it has a user-provided destructor
 #endif
 // FIXME: include dir with vcpkg
-#include <opencascade/BRep_Tool.hxx>
 #include <opencascade/BRepMesh_IncrementalMesh.hxx>
+#include <opencascade/BRep_Tool.hxx>
 #include <opencascade/Message.hxx>
 #include <opencascade/Message_Printer.hxx>
 #include <opencascade/Message_PrinterOStream.hxx>
-#include <opencascade/STEPControl_Reader.hxx>
 #include <opencascade/Standard_Version.hxx>
+#include <opencascade/STEPCAFControl_Reader.hxx>
+#include <opencascade/STEPControl_Reader.hxx>
 #include <opencascade/StepData_Protocol.hxx>
 #include <opencascade/StepData_StepModel.hxx>
 #include <opencascade/StepData_StepWriter.hxx>
+#include <opencascade/TDataStd_Name.hxx>
+#include <opencascade/TDF_ChildIterator.hxx>
+#include <opencascade/TDocStd_Document.hxx>
 #include <opencascade/TopExp_Explorer.hxx>
 #include <opencascade/TopoDS.hxx>
+#include <opencascade/XCAFDoc_DocumentTool.hxx>
+#include <opencascade/XCAFDoc_ShapeTool.hxx>
 #else
-#include <BRep_Tool.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
+#include <BRep_Tool.hxx>
 #include <Message.hxx>
 #include <Message_Printer.hxx>
 #include <Message_PrinterOStream.hxx>
-#include <STEPControl_Reader.hxx>
 #include <Standard_Version.hxx>
+#include <STEPCAFControl_Reader.hxx>
+#include <STEPControl_Reader.hxx>
 #include <StepData_Protocol.hxx>
 #include <StepData_StepModel.hxx>
 #include <StepData_StepWriter.hxx>
-#include <TopExp_Explorer.hxx>
-#include <TopoDS.hxx>
-#include <STEPCAFControl_Reader.hxx>
-#include <TDocStd_Document.hxx>
-#include <XCAFDoc_DocumentTool.hxx>
-#include <XCAFDoc_ShapeTool.hxx>
 #include <TDataStd_Name.hxx>
 #include <TDF_ChildIterator.hxx>
-
+#include <TDocStd_Document.hxx>
+#include <TopExp_Explorer.hxx>
+#include <TopoDS.hxx>
+#include <XCAFDoc_DocumentTool.hxx>
+#include <XCAFDoc_ShapeTool.hxx>
 #endif
 MR_SUPPRESS_WARNING_POP
 

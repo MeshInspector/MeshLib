@@ -9,6 +9,10 @@ on:
       app_version:
         required: true
         type: string
+      full_config_build:
+        default: false
+        required: false
+        type: boolean
       UPLOAD_ARTIFACTS:
         required: true
         type: boolean
@@ -23,6 +27,12 @@ jobs:
       matrix:
         config: [Debug, Release]
         compiler: [Clang 11, GCC 10]
+        full_config_build:
+          - ${{fromJSON(inputs.full_config_build)}}
+        exclude:
+          - full_config_build: false
+            config: Debug
+            compiler: Clang 11
         include:
           - compiler: Clang 11
             cxx-compiler: /usr/bin/clang++-11

@@ -3,6 +3,10 @@ name: Build and test Windows
 on:
   workflow_call:
     inputs:
+      full_config_build:
+        default: false
+        required: false
+        type: boolean
       UPLOAD_ARTIFACTS:
         required: true
         type: boolean
@@ -18,6 +22,12 @@ jobs:
       matrix:
         config: [ "Debug", "Release" ]
         runner: [ windows-2022, windows-2019 ]
+        full_config_build:
+          - ${{fromJSON(inputs.full_config_build)}}
+        exclude:
+          - full_config_build: false
+            runner: windows-2022
+            config: "Debug"
         include:
           - runner: windows-2022
             vc-path: 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise'

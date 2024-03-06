@@ -14,6 +14,7 @@
 
 MR_SUPPRESS_WARNING_PUSH
 MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
+MR_SUPPRESS_WARNING( "-Wpedantic", 9999 )
 #if !defined( __GNUC__ ) || defined( __clang__ ) || __GNUC__ >= 11
 MR_SUPPRESS_WARNING( "-Wdeprecated-enum-enum-conversion", 5054 )
 #endif
@@ -48,6 +49,13 @@ MR_SUPPRESS_WARNING( "-Wdeprecated-enum-enum-conversion", 5054 )
 #include <StepData_StepWriter.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
+#include <STEPCAFControl_Reader.hxx>
+#include <TDocStd_Document.hxx>
+#include <XCAFDoc_DocumentTool.hxx>
+#include <XCAFDoc_ShapeTool.hxx>
+#include <TDataStd_Name.hxx>
+#include <TDF_ChildIterator.hxx>
+
 #endif
 MR_SUPPRESS_WARNING_POP
 
@@ -139,7 +147,7 @@ struct FeatureData
     }
 };
 
-std::vector<Triangle3f> loadSolid( const TopoDS_Shape& solid )
+std::vector<Triangle3f> loadShape( const TopoDS_Shape& shape, bool resetXf = false )
 {
     MR_TIMER
 
@@ -154,8 +162,10 @@ std::vector<Triangle3f> loadSolid( const TopoDS_Shape& solid )
     parameters.Relative = false;
     parameters.InParallel = true;
 
-    BRepMesh_IncrementalMesh incMesh( solid, parameters );
-    const auto& meshShape = incMesh.Shape();
+    BRepMesh_IncrementalMesh incMesh( shape, parameters );
+    auto meshShape = incMesh.Shape();
+    if ( resetXf )
+        meshShape.Location( TopLoc_Location(), false );
 
     std::deque<FeatureData> features;
     size_t totalVertexCount = 0, totalFaceCount = 0;
@@ -364,7 +374,7 @@ Expected<std::shared_ptr<Object>, std::string> stepModelToScene( STEPControl_Rea
     }
     else if ( solids.size() == 1 )
     {
-        const auto triples = loadSolid( solids.front() );
+        const auto triples = loadShape( solids.front() );
         auto mesh = Mesh::fromPointTriples( triples, true );
 
         auto rootObject = std::make_shared<ObjectMesh>();
@@ -383,7 +393,7 @@ Expected<std::shared_ptr<Object>, std::string> stepModelToScene( STEPControl_Rea
             std::vector<std::vector<Triangle3f>> triples( solids.size() );
             for ( auto i = 0; i < solids.size(); ++i )
             {
-                triples[i] = loadSolid( solids[i] );
+                triples[i] = loadShape( solids[i] );
                 taskGroup.run( [i, &triples, &children]
                 {
                     auto mesh = Mesh::fromPointTriples( triples[i], true );
@@ -409,17 +419,52 @@ Expected<std::shared_ptr<Object>, std::string> stepModelToScene( STEPControl_Rea
     }
 }
 
+std::string readName( const TDF_Label& label )
+{
+    if ( label.IsNull() )
+        return {};
+
+    Handle( TDataStd_Name ) name;
+    if ( label.FindAttribute( TDataStd_Name::GetID(), name ) != Standard_True )
+        return {};
+
+    const auto& str = name->Get();
+    std::string result( str.LengthOfCString(), '\0' );
+    auto* resultCStr = result.data();
+    str.ToUTF8CString( resultCStr );
+
+    return result;
+}
+
+Vector3d toVector( const gp_XYZ& xyz )
+{
+    return { xyz.X(), xyz.Y(), xyz.Z() };
+}
+
+AffineXf3d toXf( const gp_Trsf& transformation )
+{
+    AffineXf3d xf;
+    const auto xfA = transformation.VectorialPart();
+    xf.A = Matrix3d::fromColumns(
+        toVector( xfA.Column( 1 ) ),
+        toVector( xfA.Column( 2 ) ),
+        toVector( xfA.Column( 3 ) )
+    );
+    xf.b = toVector( transformation.TranslationPart() );
+    return xf;
+}
+
 std::mutex cOpenCascadeMutex = {};
 #if !STEP_READSTREAM_SUPPORTED
 std::mutex cOpenCascadeTempFileMutex = {};
 #endif
 
-}
+} // namespace
 
-#if STEP_READSTREAM_SUPPORTED
 namespace MR::MeshLoad
 {
 
+#if STEP_READSTREAM_SUPPORTED
 Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::filesystem::path& path, const MeshLoadSettings& settings )
 {
     std::ifstream in( path, std::ifstream::binary );
@@ -459,12 +504,7 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& 
     const auto cb2 = subprogress( settings.callback, 0.90f, 1.00f );
     return stepModelToScene( reader, settings, cb2 );
 }
-
-} // namespace MR::MeshLoad
 #else
-namespace MR::MeshLoad
-{
-
 Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& in, const MeshLoadSettings& settings )
 {
     std::unique_lock lock( cOpenCascadeTempFileMutex );
@@ -494,7 +534,171 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::fil
     const auto cb2 = subprogress( settings.callback, 0.90f, 1.00f );
     return stepModelToScene( reader, settings, cb2 );
 }
+#endif
+
+Expected<std::shared_ptr<Object>> fromSceneStepFile2( const std::filesystem::path& path, const MeshLoadSettings& settings )
+{
+    MR_TIMER
+
+    std::unique_lock lock( cOpenCascadeMutex );
+
+    STEPCAFControl_Reader reader;
+    reader.SetColorMode( true );
+    reader.SetNameMode( true );
+    if ( reader.ReadFile( path.c_str() ) != IFSelect_RetDone )
+        return unexpected( "Failed to read STEP model" );
+
+    reportProgress( settings.callback, 0.25f );
+
+    Handle( TDocStd_Document ) document = new TDocStd_Document( "MDTV-CAF" );
+    if ( reader.Transfer( document ) != Standard_True )
+        return unexpected( "Failed to read STEP model" );
+
+    auto shapeTool = XCAFDoc_DocumentTool::ShapeTool( document->Main() );
+    auto colorTool = XCAFDoc_DocumentTool::ColorTool( document->Main() );
+
+    reportProgress( settings.callback, 0.85f );
+
+    auto root = std::make_shared<Object>();
+    root->select( true );
+
+    std::stack<std::shared_ptr<Object>> objStack;
+    objStack.push( root );
+
+    struct TriangulationTask
+    {
+        TopoDS_Shape shape;
+        std::shared_ptr<ObjectMesh> mesh;
+        std::vector<Triangle3f> triples;
+        Mesh part;
+
+        TriangulationTask( TopoDS_Shape shape, std::shared_ptr<ObjectMesh> mesh )
+            : shape( shape )
+            , mesh( mesh )
+        {}
+    };
+    std::vector<TriangulationTask> triangulationTasks;
+
+    std::function<void ( const TDF_Label& label )> readShape;
+    readShape = [&] ( const TDF_Label& label )
+    {
+        const auto shape = shapeTool->GetShape( label );
+        const auto name = readName( label );
+
+        const auto& location = shape.Location();
+        const auto xf = AffineXf3f( toXf( location.Transformation() ) );
+
+# if 0
+        std::ostringstream oss;
+        if ( shapeTool->IsShape( label ) )
+            oss << " shape";
+        if ( shapeTool->IsSimpleShape( label ) )
+            oss << " simple-shape";
+        if ( shapeTool->IsReference( label ) )
+            oss << " reference";
+        if ( shapeTool->IsAssembly( label ) )
+            oss << " assembly";
+        if ( shapeTool->IsComponent( label ) )
+            oss << " component";
+        if ( shapeTool->IsCompound( label ) )
+            oss << " compound";
+        //if ( shapeTool->IsSubShape( label ) )
+        //    oss << " subshape";
+        if ( !shapeTool->IsSubShape( label ) )
+            spdlog::info( "{}{}:{}", std::string( 2 * objStack.size(), ' ' ), name, oss.str() );
+# endif
+
+        if ( shapeTool->IsAssembly( label ) )
+        {
+            auto obj = std::make_shared<Object>();
+            obj->setName( name );
+            obj->setXf( xf );
+            obj->select( true );
+            objStack.top()->addChild( obj );
+
+            objStack.push( obj );
+            for ( TDF_ChildIterator it( label ); it.More(); it.Next() )
+                readShape( it.Value() );
+            objStack.pop();
+        }
+        else if ( shapeTool->IsReference( label ) )
+        {
+            auto objMesh = std::make_shared<ObjectMesh>();
+            objMesh->setName( name );
+            objMesh->setMesh( std::make_shared<Mesh>() );
+            objMesh->setXf( xf );
+            objMesh->select( true );
+            objStack.top()->addChild( objMesh );
+
+            triangulationTasks.emplace_back( shape, objMesh );
+
+            objStack.push( objMesh );
+            TDF_Label ref;
+            [[maybe_unused]] auto res = shapeTool->GetReferredShape( label, ref );
+            assert( res );
+            for ( TDF_ChildIterator it( ref ); it.More(); it.Next() )
+                readShape( it.Value() );
+            objStack.pop();
+        }
+        else
+        {
+            if ( shapeTool->IsSubShape( label ) )
+            {
+                auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( objStack.top() );
+                assert( objMesh );
+                assert( objMesh->mesh() );
+                triangulationTasks.emplace_back( shape, objMesh );
+            }
+            else
+            {
+                auto objMesh = std::make_shared<ObjectMesh>();
+                objMesh->setName( name );
+                objMesh->setMesh( std::make_shared<Mesh>() );
+                objMesh->setXf( xf );
+                objMesh->select( true );
+                objStack.top()->addChild( objMesh );
+
+                triangulationTasks.emplace_back( shape, objMesh );
+            }
+        }
+    };
+
+    TDF_LabelSequence labels;
+    shapeTool->GetFreeShapes( labels );
+    for ( auto i = 1; i <= labels.Length(); ++i )
+        readShape( labels.Value( i ) );
+
+    assert( objStack.size() == 1 );
+    assert( objStack.top() == root );
+
+    tbb::task_arena taskArena;
+    taskArena.execute( [&]
+    {
+        tbb::task_group taskGroup;
+        for ( auto i = 0; i < triangulationTasks.size(); ++i )
+        {
+            auto& task = triangulationTasks[i];
+            task.triples = loadShape( task.shape, true );
+            taskGroup.run( [i, &triangulationTasks]
+            {
+                auto& task = triangulationTasks[i];
+                task.part = Mesh::fromPointTriples( task.triples, true );
+                task.triples.clear();
+            } );
+        }
+        taskGroup.wait();
+    } );
+
+    reportProgress( settings.callback, 0.95f );
+
+    for ( auto& task : triangulationTasks )
+    {
+        task.mesh->varMesh()->addPart( task.part );
+        task.part = Mesh();
+    }
+
+    return root;
+}
 
 } // namespace MR::MeshLoad
-#endif
 #endif

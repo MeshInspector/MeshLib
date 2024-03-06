@@ -15,5 +15,8 @@ namespace MR::MeshLoad
 MRMESH_API Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::filesystem::path& path, const MeshLoadSettings& settings = {} );
 MRMESH_API Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& in, const MeshLoadSettings& settings = {} );
 
+/// ...
+MRMESH_API Expected<std::shared_ptr<Object>> fromSceneStepFile2( const std::filesystem::path& path, const MeshLoadSettings& settings = {} );
+
 } // namespace MR::MeshLoad
 #endif

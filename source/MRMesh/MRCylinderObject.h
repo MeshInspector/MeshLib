@@ -60,6 +60,22 @@ public:
 
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 
+    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point ) const override
+    {
+        // first, calculate the vector from the center of the cylinder to the projected point
+        auto center = getCenter();
+        auto direction = getDirection();
+        auto radius = getRadius();
+
+        auto X = point - center;
+
+        float projectionLength = dot( X, direction );
+        Vector3f K = direction * projectionLength;
+        Vector3f normal = ( X - K ).normalized();
+        Vector3f projection = K + normal * radius;
+
+        return FeatureObjectProjectPointResult{ projection + center, normal };
+    };
 
 protected:
     CylinderObject( const CylinderObject& other ) = default;

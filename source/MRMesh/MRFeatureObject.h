@@ -38,9 +38,9 @@ struct FeatureObjectSharedProperty
         getter
         (
             [m_getter] ( const FeatureObject* objectToInvoke ) -> FeaturesPropertyTypesVariant
-            {
-                return std::invoke( m_getter, dynamic_cast< const C* > ( objectToInvoke ) );
-            }
+    {
+        return std::invoke( m_getter, dynamic_cast< const C* > ( objectToInvoke ) );
+    }
         )
     {
         if constexpr ( ( std::is_same_v<SetterFunc, void ( C::* )( const T& )> )
@@ -81,6 +81,18 @@ public:
 
     MRMESH_API void serializeFields_( Json::Value& root ) const override;
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
+
+    struct FeatureObjectProjectPointResult {
+        Vector3f point;
+        Vector3f normal;
+    };
+    // Since a point on an abstract feature is difficult to uniquely parameterize, 
+    // the projection function simultaneously returns the normal to the surface at the projection point.
+    [[nodiscard]] virtual FeatureObjectProjectPointResult projectPoint( const Vector3f& point ) const = 0;
+    [[nodiscard]] FeatureObjectProjectPointResult getNormal( const Vector3f& point ) const
+    {
+        return projectPoint( point );
+    }
 
 protected:
     FeatureObject() = default;

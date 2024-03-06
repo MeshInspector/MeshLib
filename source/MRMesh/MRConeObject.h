@@ -42,13 +42,13 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     /// calculates cone angle from xf. It is an angle betweeh main axis and side.
-    MRMESH_API float getAngle() const;
+    [[nodiscard]] MRMESH_API float getAngle() const;
     /// calculates center from xf. Center is the apex of the cone.
-    MRMESH_API Vector3f getCenter() const;
+    [[nodiscard]] MRMESH_API Vector3f getCenter() const;
     /// calculates cone height from xf
-    MRMESH_API float getHeight() const;
+    [[nodiscard]] MRMESH_API float getHeight() const;
     /// calculates main axis direction from xf
-    MRMESH_API Vector3f getDirection() const;
+    [[nodiscard]] MRMESH_API Vector3f getDirection() const;
     /// updates xf to fit given center.  Center is the apex of the cone.
     MRMESH_API void setCenter( const Vector3f& center );
     /// updates xf to fit main axis
@@ -58,12 +58,36 @@ public:
     /// updates xf to fit given cone angle.  It is an angle betweeh main axis and side
     MRMESH_API void setAngle( float angle );
     /// Computes the base base radius from the xf.
-    MRMESH_API float getBaseRadius() const;
+    [[nodiscard]] MRMESH_API float getBaseRadius() const;
     /// Updates the xf for the new base radius.
     MRMESH_API void setBaseRadius( float radius );
 
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 
+    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point ) const override
+    {
+        const Vector3f n = getDirection();
+        const Vector3f center = getCenter();
+        const float coneAngle = getAngle();
+
+        auto X = point - center;
+
+        auto angleX = angle( n, X );
+
+        if ( coneAngle + PI_F / 2.0 > angleX )
+            return { center , -n };
+
+        auto K = n * MR::dot( X, n );
+        auto XK = ( X - K );
+
+        auto D = K + XK.normalized() * K.length() * sin( coneAngle );
+        auto normD = D.normalized();
+
+        auto projection = normD * dot( normD, X );
+        auto normal = ( X - projection ).normalized();
+
+        return { projection + center , normal };
+    };
 
 protected:
     ConeObject( const ConeObject& other ) = default;

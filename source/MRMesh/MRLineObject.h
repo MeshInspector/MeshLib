@@ -52,6 +52,17 @@ public:
     [[deprecated("This confusingly sets half-length. Use `setLength(halfLen * 2)` instead.")]]
     void setSize( float halfLen ) { setLength( halfLen * 2 ); }
 
+    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point ) const override
+    {
+        const Vector3f center = getCenter();
+        const Vector3f direction = getDirection();
+
+        auto X = point - center;
+        auto K = direction * dot( X, direction );
+
+        return { K + center , {} };
+    };
+
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 
 protected:

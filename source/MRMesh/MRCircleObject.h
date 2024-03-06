@@ -2,6 +2,7 @@
 #include "MRMeshFwd.h"
 #include "MRFeatureObject.h"
 #include "MRVisualObject.h"
+#include "MRPlane3.h"
 
 namespace MR
 {
@@ -21,24 +22,33 @@ public:
     CircleObject( CircleObject&& ) noexcept = default;
     CircleObject& operator = ( CircleObject&& ) noexcept = default;
 
-    constexpr static const char* TypeName() noexcept { return "CircleObject"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* TypeName() noexcept
+    {
+        return "CircleObject";
+    }
+    virtual const char* typeName() const override
+    {
+        return TypeName();
+    }
 
     /// \note this ctor is public only for std::make_shared used inside clone()
     CircleObject( ProtectedStruct, const CircleObject& obj ) : CircleObject( obj )
     {}
 
-    virtual std::string getClassName() const override { return "Circle"; }
+    virtual std::string getClassName() const override
+    {
+        return "Circle";
+    }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     /// calculates radius from xf
-    MRMESH_API float getRadius() const;
+    [[nodiscard]] MRMESH_API float getRadius() const;
     /// calculates center from xf
-    MRMESH_API Vector3f getCenter() const;
+    [[nodiscard]] MRMESH_API Vector3f getCenter() const;
     /// calculates normal from xf
-    MRMESH_API Vector3f getNormal() const;
+    [[nodiscard]] MRMESH_API Vector3f getNormal() const;
     /// updates xf to fit given radius
     MRMESH_API void setRadius( float radius );
     /// updates xf to fit given center
@@ -46,7 +56,21 @@ public:
     /// updates xf to fit given normal
     MRMESH_API void setNormal( const Vector3f& normal );
 
-    MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
+    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point ) const override
+    {
+        const Vector3f center = getCenter();
+        const float radius = getRadius();
+        auto normal = getNormal();
+
+        Plane3f plane( normal, dot( normal, center ) );
+        auto K = plane.project( point );
+        auto n = ( K - center ).normalized();
+        auto projection = center + n * radius;
+
+        return { projection, normal };
+    };
+
+    [[nodiscard]] MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 
 protected:
     CircleObject( const CircleObject& other ) = default;
@@ -57,10 +81,14 @@ protected:
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 
     virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& ) const override
-        { return {}; }
+    {
+        return {};
+    }
 
     virtual VoidOrErrStr deserializeModel_( const std::filesystem::path&, ProgressCallback ) override
-        { return {}; }
+    {
+        return {};
+    }
 
     MRMESH_API void setupRenderObject_() const override;
 };

@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRFeatureObject.h"
+#include "MRPlane3.h"
 
 namespace MR
 {
@@ -32,9 +33,9 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     /// calculates normal from xf
-    MRMESH_API Vector3f getNormal() const;
+    [[nodiscard]] MRMESH_API Vector3f getNormal() const;
     /// calculates center from xf
-    MRMESH_API Vector3f getCenter() const;
+    [[nodiscard]] MRMESH_API Vector3f getCenter() const;
     /// updates xf to fit given normal
     MRMESH_API void setNormal( const Vector3f& normal );
     /// updates xf to fit given center
@@ -42,13 +43,24 @@ public:
     /// updates xf to scale size
     MRMESH_API void setSize( float size );
     /// calculates plane size from xf
-    MRMESH_API float getSize() const;
+    [[nodiscard]] MRMESH_API float getSize() const;
 
-    MRMESH_API float getSizeX() const;
-    MRMESH_API float getSizeY() const;
+    [[nodiscard]] MRMESH_API float getSizeX() const;
+    [[nodiscard]] MRMESH_API float getSizeY() const;
 
     MRMESH_API void setSizeX( float size );
     MRMESH_API void setSizeY( float size );
+
+    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point ) const override
+    {
+        const Vector3f center = getCenter();
+        auto normal = getNormal();
+
+        Plane3f plane( normal, dot( normal, center ) );
+        auto projection = plane.project( point );
+
+        return { projection, normal };
+    };
 
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 protected:

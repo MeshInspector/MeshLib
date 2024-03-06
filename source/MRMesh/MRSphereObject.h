@@ -41,6 +41,19 @@ public:
     MRMESH_API void setCenter( const Vector3f& center );
 
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
+
+    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point ) const override
+    {
+        const Vector3f center = getCenter();
+        const float radius = getRadius();
+
+        auto X = point - center;
+        auto normal = X.normalized();
+
+        auto projection = center + normal * radius;
+        return { projection, normal };
+    };
+
 protected:
     SphereObject( const SphereObject& other ) = default;
 

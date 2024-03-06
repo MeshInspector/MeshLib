@@ -28,7 +28,8 @@ jobs:
       matrix:
         os: ['fedora37', 'fedora39']
         config: ['Debug', 'Release']
-        full_config_build: ${{fromJSON(inputs.full_config_build) == 'true'}}
+        full_config_build:
+          - ${{fromJSON(inputs.full_config_build) == 'true'}}
         exclude:
           - full_config_build: false
             os: fedora39

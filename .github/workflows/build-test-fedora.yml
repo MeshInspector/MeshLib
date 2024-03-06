@@ -28,7 +28,6 @@ jobs:
       matrix:
         os: [fedora37, fedora39]
         config: [Debug, Release]
-        compiler: [Clang]
         MR_CMAKE_OPTIONS: [ "", "-DMESHLIB_BUILD_MRCUDA=OFF"]
         full_config_build: ${{fromJSON(inputs.full_config_build)}}
         exclude:
@@ -40,9 +39,6 @@ jobs:
             MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF -DBUILD_TESTING=OFF"
           - os: fedora37
             MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF -DBUILD_TESTING=OFF"
-        include:
-          - compiler: Clang
-            cxx-compiler: /usr/bin/clang++
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -74,7 +70,7 @@ jobs:
         env:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
-          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          CMAKE_CXX_COMPILER: "/usr/bin/clang++"
           MR_VERSION: ${{ inputs.app_version }}
           MR_USE_CPP_23: "ON"
           MR_CMAKE_OPTIONS: ${{ matrix.MR_CMAKE_OPTIONS }}

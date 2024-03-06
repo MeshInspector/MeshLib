@@ -75,7 +75,7 @@ float ConeObject::getAngle( ViewportId id /*= {}*/ ) const
 
 void ConeObject::setAngle( float angle, ViewportId id /*= {}*/ )
 {
-    setBaseRadius( getNormalizedRadiusByAngle( angle ) * getHeight() );
+    setBaseRadius( getNormalizedRadiusByAngle( angle ) * getHeight( id ) );
 }
 
 void ConeObject::setDirection( const Vector3f& normal, ViewportId id /*= {}*/ )
@@ -95,7 +95,7 @@ void ConeObject::setCenter( const Vector3f& center, ViewportId id /*= {}*/ )
 
 float ConeObject::getBaseRadius( ViewportId id /*= {}*/ ) const
 {
-    return s_.get().x.x;
+    return s_.get( id ).x.x;
 }
 
 void ConeObject::setBaseRadius( float radius, ViewportId id /*= {}*/ )

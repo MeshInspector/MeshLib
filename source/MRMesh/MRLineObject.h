@@ -52,7 +52,7 @@ public:
     [[deprecated( "This confusingly sets half-length. Use `setLength(halfLen * 2)` instead." )]]
     void setSize( float halfLen, ViewportId id = {} )
     {
-        setLength( halfLen * 2 );
+        setLength( halfLen * 2 , id );
     }
 
     [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point, ViewportId id = {} ) const override;

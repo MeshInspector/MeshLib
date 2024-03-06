@@ -42,52 +42,29 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     /// calculates cone angle from xf. It is an angle betweeh main axis and side.
-    [[nodiscard]] MRMESH_API float getAngle() const;
+    [[nodiscard]] MRMESH_API float getAngle( ViewportId id = {} ) const;
     /// calculates center from xf. Center is the apex of the cone.
-    [[nodiscard]] MRMESH_API Vector3f getCenter() const;
+    [[nodiscard]] MRMESH_API Vector3f getCenter( ViewportId id = {} ) const;
     /// calculates cone height from xf
-    [[nodiscard]] MRMESH_API float getHeight() const;
+    [[nodiscard]] MRMESH_API float getHeight( ViewportId id = {} ) const;
     /// calculates main axis direction from xf
-    [[nodiscard]] MRMESH_API Vector3f getDirection() const;
+    [[nodiscard]] MRMESH_API Vector3f getDirection( ViewportId id = {} ) const;
     /// updates xf to fit given center.  Center is the apex of the cone.
-    MRMESH_API void setCenter( const Vector3f& center );
+    MRMESH_API void setCenter( const Vector3f& center, ViewportId id = {} );
     /// updates xf to fit main axis
-    MRMESH_API void setDirection( const Vector3f& normal );
+    MRMESH_API void setDirection( const Vector3f& normal, ViewportId id = {} );
     /// updates xf to fit cone height
-    MRMESH_API void setHeight( float height );
+    MRMESH_API void setHeight( float height, ViewportId id = {} );
     /// updates xf to fit given cone angle.  It is an angle betweeh main axis and side
-    MRMESH_API void setAngle( float angle );
+    MRMESH_API void setAngle( float angle, ViewportId id = {} );
     /// Computes the base base radius from the xf.
-    [[nodiscard]] MRMESH_API float getBaseRadius() const;
+    [[nodiscard]] MRMESH_API float getBaseRadius( ViewportId id = {} ) const;
     /// Updates the xf for the new base radius.
-    MRMESH_API void setBaseRadius( float radius );
+    MRMESH_API void setBaseRadius( float radius, ViewportId id = {} );
 
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 
-    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point ) const override
-    {
-        const Vector3f n = getDirection();
-        const Vector3f center = getCenter();
-        const float coneAngle = getAngle();
-
-        auto X = point - center;
-
-        auto angleX = angle( n, X );
-
-        if ( coneAngle + PI_F / 2.0 > angleX )
-            return { center , -n };
-
-        auto K = n * MR::dot( X, n );
-        auto XK = ( X - K );
-
-        auto D = K + XK.normalized() * K.length() * sin( coneAngle );
-        auto normD = D.normalized();
-
-        auto projection = normD * dot( normD, X );
-        auto normal = ( X - projection ).normalized();
-
-        return { projection + center , normal };
-    };
+    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point, ViewportId id = {} ) const override;
 
 protected:
     ConeObject( const ConeObject& other ) = default;
@@ -111,7 +88,7 @@ protected:
 
 private:
     // Featue Radius fully controll by cone angle, but its need for speedup internal calculation (not use tan / atan from each estimation).
-    float getNormalizedRadius_() const;
+    float getNormalizedRadius_( ViewportId id = {} ) const;
 };
 
 }

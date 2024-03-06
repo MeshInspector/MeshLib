@@ -32,36 +32,30 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     /// calculates direction from xf
-    MRMESH_API Vector3f getDirection() const;
+    MRMESH_API Vector3f getDirection( ViewportId id = {} ) const;
     /// calculates center from xf
-    MRMESH_API Vector3f getCenter() const;
+    MRMESH_API Vector3f getCenter( ViewportId id = {} ) const;
     /// updates xf to fit given normal
-    MRMESH_API void setDirection( const Vector3f& normal );
+    MRMESH_API void setDirection( const Vector3f& normal, ViewportId id = {} );
     /// updates xf to fit given center
-    MRMESH_API void setCenter( const Vector3f& center );
+    MRMESH_API void setCenter( const Vector3f& center, ViewportId id = {} );
     /// updates xf to scale size
-    MRMESH_API void setLength( float size );
+    MRMESH_API void setLength( float size, ViewportId id = {} );
     /// calculates line size from xf
-    [[nodiscard]] MRMESH_API float getLength() const;
+    [[nodiscard]] MRMESH_API float getLength( ViewportId id = {} ) const;
 
     /// Returns the starting point, aka `center - dir * len/2`.
-    [[nodiscard]] MRMESH_API Vector3f getPointA() const;
+    [[nodiscard]] MRMESH_API Vector3f getPointA( ViewportId id = {} ) const;
     /// Returns the finishing point, aka `center + dir * len/2`.
-    [[nodiscard]] MRMESH_API Vector3f getPointB() const;
+    [[nodiscard]] MRMESH_API Vector3f getPointB( ViewportId id = {} ) const;
 
-    [[deprecated("This confusingly sets half-length. Use `setLength(halfLen * 2)` instead.")]]
-    void setSize( float halfLen ) { setLength( halfLen * 2 ); }
-
-    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point ) const override
+    [[deprecated( "This confusingly sets half-length. Use `setLength(halfLen * 2)` instead." )]]
+    void setSize( float halfLen, ViewportId id = {} )
     {
-        const Vector3f center = getCenter();
-        const Vector3f direction = getDirection();
+        setLength( halfLen * 2 );
+    }
 
-        auto X = point - center;
-        auto K = direction * dot( X, direction );
-
-        return { K + center , std::nullopt };
-    };
+    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point, ViewportId id = {} ) const override;
 
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 

@@ -2,7 +2,6 @@
 
 #include "MRMeshFwd.h"
 #include "MRFeatureObject.h"
-#include "MRPlane3.h"
 
 namespace MR
 {
@@ -33,34 +32,25 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     /// calculates normal from xf
-    [[nodiscard]] MRMESH_API Vector3f getNormal() const;
+    [[nodiscard]] MRMESH_API Vector3f getNormal( ViewportId id = {} ) const;
     /// calculates center from xf
-    [[nodiscard]] MRMESH_API Vector3f getCenter() const;
+    [[nodiscard]] MRMESH_API Vector3f getCenter( ViewportId id = {} ) const;
     /// updates xf to fit given normal
-    MRMESH_API void setNormal( const Vector3f& normal );
+    MRMESH_API void setNormal( const Vector3f& normal, ViewportId id = {} );
     /// updates xf to fit given center
-    MRMESH_API void setCenter( const Vector3f& center );
+    MRMESH_API void setCenter( const Vector3f& center, ViewportId id = {} );
     /// updates xf to scale size
-    MRMESH_API void setSize( float size );
+    MRMESH_API void setSize( float size, ViewportId id = {} );
     /// calculates plane size from xf
-    [[nodiscard]] MRMESH_API float getSize() const;
+    [[nodiscard]] MRMESH_API float getSize( ViewportId id = {} ) const;
 
-    [[nodiscard]] MRMESH_API float getSizeX() const;
-    [[nodiscard]] MRMESH_API float getSizeY() const;
+    [[nodiscard]] MRMESH_API float getSizeX( ViewportId id = {} ) const;
+    [[nodiscard]] MRMESH_API float getSizeY( ViewportId id = {} ) const;
 
-    MRMESH_API void setSizeX( float size );
-    MRMESH_API void setSizeY( float size );
+    MRMESH_API void setSizeX( float size, ViewportId id = {} );
+    MRMESH_API void setSizeY( float size, ViewportId id = {} );
 
-    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point ) const override
-    {
-        const Vector3f center = getCenter();
-        auto normal = getNormal();
-
-        Plane3f plane( normal, dot( normal, center ) );
-        auto projection = plane.project( point );
-
-        return { projection, normal };
-    };
+    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point, ViewportId id = {} ) const override;
 
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 protected:
@@ -80,7 +70,7 @@ protected:
     MRMESH_API void setupRenderObject_() const override;
 
 private:
-    void orientateFollowMainAxis_();
+    void orientateFollowMainAxis_( ViewportId id = {} );
     void setupPlaneSize2DByOriginalPoints_( const std::vector<Vector3f>& pointsToApprox );
 };
 

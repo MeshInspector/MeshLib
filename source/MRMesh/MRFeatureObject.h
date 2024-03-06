@@ -87,13 +87,18 @@ public:
     MRMESH_API void serializeFields_( Json::Value& root ) const override;
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
+
     // Since a point on an abstract feature is difficult to uniquely parameterize, 
     // the projection function simultaneously returns the normal to the surface at the projection point.
-    [[nodiscard]] virtual FeatureObjectProjectPointResult projectPoint( const Vector3f& point ) const = 0;
+    [[nodiscard]] virtual FeatureObjectProjectPointResult projectPoint( const Vector3f& point, ViewportId id = {} ) const = 0;
     [[nodiscard]] FeatureObjectProjectPointResult getNormal( const Vector3f& point ) const
     {
         return projectPoint( point );
     }
+
+    MRMESH_API virtual void setXf( const AffineXf3f& xf, ViewportId id = {} ) override;
+    MRMESH_API virtual void resetXf( ViewportId id = {} ) override;
+
 
 protected:
     FeatureObject() = default;
@@ -101,6 +106,10 @@ protected:
     MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;
 
     ViewportMask subfeatureVisibility_ = ViewportMask::all();
+
+
+    ViewportProperty<Matrix3f> r_;
+    ViewportProperty<Matrix3f> s_;
 };
 
 }

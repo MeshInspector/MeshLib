@@ -33,16 +33,13 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     /// calculates point from xf
-    [[nodiscard]] MRMESH_API Vector3f getPoint() const;
+    [[nodiscard]] MRMESH_API Vector3f getPoint( ViewportId id = {} ) const;
     /// updates xf to fit given point
-    MRMESH_API void setPoint( const Vector3f& point );
+    MRMESH_API void setPoint( const Vector3f& point, ViewportId id = {} );
 
     MRMESH_API virtual  std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 
-    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& /*point*/ ) const override
-    {
-        return { getPoint() , std::nullopt };
-    };
+    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& /*point*/, ViewportId id = {} ) const override;
 
 protected:
     PointObject( const PointObject& other ) = default;

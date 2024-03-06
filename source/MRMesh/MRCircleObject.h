@@ -44,31 +44,19 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     /// calculates radius from xf
-    [[nodiscard]] MRMESH_API float getRadius() const;
+    [[nodiscard]] MRMESH_API float getRadius( ViewportId id = {} ) const;
     /// calculates center from xf
-    [[nodiscard]] MRMESH_API Vector3f getCenter() const;
+    [[nodiscard]] MRMESH_API  Vector3f getCenter( ViewportId id = {} ) const;
     /// calculates normal from xf
-    [[nodiscard]] MRMESH_API Vector3f getNormal() const;
+    [[nodiscard]] MRMESH_API Vector3f getNormal( ViewportId id = {} ) const;
     /// updates xf to fit given radius
-    MRMESH_API void setRadius( float radius );
+    MRMESH_API void setRadius( float radius, ViewportId id = {} );
     /// updates xf to fit given center
-    MRMESH_API void setCenter( const Vector3f& center );
+    MRMESH_API void setCenter( const Vector3f& center, ViewportId id = {} );
     /// updates xf to fit given normal
-    MRMESH_API void setNormal( const Vector3f& normal );
+    MRMESH_API void setNormal( const Vector3f& normal, ViewportId id = {} );
 
-    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point ) const override
-    {
-        const Vector3f center = getCenter();
-        const float radius = getRadius();
-        auto normal = getNormal();
-
-        Plane3f plane( normal, dot( normal, center ) );
-        auto K = plane.project( point );
-        auto n = ( K - center ).normalized();
-        auto projection = center + n * radius;
-
-        return { projection, std::nullopt };
-    };
+    [[nodiscard]] MRMESH_API FeatureObjectProjectPointResult projectPoint( const Vector3f& point, ViewportId id = {} ) const override;
 
     [[nodiscard]] MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 

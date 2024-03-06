@@ -40,76 +40,71 @@ Matrix3f getRotationMatrix( const Vector3f& normal )
 
 MR_ADD_CLASS_FACTORY( ConeObject )
 
-Vector3f ConeObject::getDirection() const
+Vector3f ConeObject::getDirection( ViewportId id /*= {}*/ ) const
 {
-    return ( xf().A * Vector3f::plusZ() ).normalized();
+    return ( xf( id ).A * Vector3f::plusZ() ).normalized();
 }
 
-Vector3f ConeObject::getCenter() const
+Vector3f ConeObject::getCenter( ViewportId id /*= {}*/ ) const
 {
-    return xf().b;
+    return xf( id ).b;
 }
 
-float ConeObject::getHeight() const
+float ConeObject::getHeight( ViewportId id /*= {}*/ ) const
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    return s.z.z;
+    return s_.get( id ).z.z;
 }
-void ConeObject::setHeight( float height )
+void ConeObject::setHeight( float height, ViewportId id /*= {}*/ )
 {
-    auto direction = getDirection();
-    auto currentXf = xf();
-    auto radius = getNormalizedRadius_();
+    auto direction = getDirection( id );
+    auto currentXf = xf( id );
+    auto radius = getNormalizedRadius_( id );
     currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius * height, radius * height, height );
-    setXf( currentXf );
+    setXf( currentXf, id );
 }
 
 
-float ConeObject::getNormalizedRadius_( void ) const
+float ConeObject::getNormalizedRadius_( ViewportId id /*= {}*/ ) const
 {
-    return getBaseRadius() / getHeight();
+    return getBaseRadius( id ) / getHeight( id );
 }
-float ConeObject::getAngle() const
+float ConeObject::getAngle( ViewportId id /*= {}*/ ) const
 {
-    return getAngleByNormalizedRadius( getNormalizedRadius_() );
+    return getAngleByNormalizedRadius( getNormalizedRadius_( id ) );
 }
 
-void ConeObject::setAngle( float angle )
+void ConeObject::setAngle( float angle, ViewportId id /*= {}*/ )
 {
     setBaseRadius( getNormalizedRadiusByAngle( angle ) * getHeight() );
 }
 
-void ConeObject::setDirection( const Vector3f& normal )
+void ConeObject::setDirection( const Vector3f& normal, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    currentXf.A = getRotationMatrix( normal ) * s;
-    setXf( currentXf );
+    auto currentXf = xf( id );
+
+    currentXf.A = getRotationMatrix( normal ) * s_.get( id );
+    setXf( currentXf, id );
 }
 
-void ConeObject::setCenter( const Vector3f& center )
+void ConeObject::setCenter( const Vector3f& center, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
+    auto currentXf = xf( id );
     currentXf.b = center;
-    setXf( currentXf );
+    setXf( currentXf, id );
 }
 
-float ConeObject::getBaseRadius() const
+float ConeObject::getBaseRadius( ViewportId id /*= {}*/ ) const
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    return s.x.x;
+    return s_.get().x.x;
 }
 
-void ConeObject::setBaseRadius( float radius )
+void ConeObject::setBaseRadius( float radius, ViewportId id /*= {}*/ )
 {
-    auto direction = getDirection();
-    auto currentXf = xf();
-    auto length = getHeight();
+    auto direction = getDirection( id );
+    auto currentXf = xf( id );
+    auto length = getHeight( id );
     currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, length );
-    setXf( currentXf );
+    setXf( currentXf, id );
 }
 
 ConeObject::ConeObject()
@@ -159,7 +154,7 @@ void ConeObject::serializeFields_( Json::Value& root ) const
 void ConeObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
-        renderObj_ = createRenderObject<decltype(*this)>( *this );
+        renderObj_ = createRenderObject<decltype( *this )>( *this );
 }
 
 const std::vector<FeatureObjectSharedProperty>& ConeObject::getAllSharedProperties() const
@@ -171,6 +166,31 @@ const std::vector<FeatureObjectSharedProperty>& ConeObject::getAllSharedProperti
        {"Main axis", &ConeObject::getDirection, &ConeObject::setDirection},
     };
     return ret;
+}
+
+FeatureObjectProjectPointResult ConeObject::projectPoint( const Vector3f& point, ViewportId id /*= {}*/ ) const
+{
+    const Vector3f& n = getDirection( id );
+    const Vector3f& center = getCenter( id );
+    const float coneAngle = getAngle( id );
+
+    auto X = point - center;
+
+    auto angleX = angle( n, X );
+
+    if ( coneAngle + PI_F / 2.0 > angleX )
+        return { center , -n };
+
+    auto K = n * MR::dot( X, n );
+    auto XK = ( X - K );
+
+    auto D = K + XK.normalized() * K.length() * sin( coneAngle );
+    auto normD = D.normalized();
+
+    auto projection = normD * dot( normD, X );
+    auto normal = ( X - projection ).normalized();
+
+    return { projection + center , normal };
 }
 
 //////////////////

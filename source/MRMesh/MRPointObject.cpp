@@ -33,14 +33,14 @@ std::shared_ptr<MR::Object> PointObject::shallowClone() const
     return std::make_shared<PointObject>( ProtectedStruct{}, *this );
 }
 
-Vector3f PointObject::getPoint() const
+Vector3f PointObject::getPoint( ViewportId id /*= {}*/ ) const
 {
-    return xf().b;
+    return xf( id ).b;
 }
 
-void PointObject::setPoint( const Vector3f& point )
+void PointObject::setPoint( const Vector3f& point, ViewportId id /*= {}*/ )
 {
-    setXf( AffineXf3f::translation( point ) );
+    setXf( AffineXf3f::translation( point ), id );
 }
 
 std::vector<FeatureObjectSharedProperty>& PointObject::getAllSharedProperties() const
@@ -49,6 +49,11 @@ std::vector<FeatureObjectSharedProperty>& PointObject::getAllSharedProperties() 
        {"Point", &PointObject::getPoint, &PointObject::setPoint}
     };
     return ret;
+}
+
+FeatureObjectProjectPointResult PointObject::projectPoint( const Vector3f& /*point*/, ViewportId id /*= {}*/ ) const
+{
+    return { getPoint( id ) , std::nullopt };
 }
 
 void PointObject::swapBase_( Object& other )
@@ -68,7 +73,7 @@ void PointObject::serializeFields_( Json::Value& root ) const
 void PointObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
-        renderObj_ = createRenderObject<decltype(*this)>( *this );
+        renderObj_ = createRenderObject<decltype( *this )>( *this );
 }
 
 }

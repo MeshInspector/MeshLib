@@ -17,54 +17,50 @@ size_t baseLineObjectLength_ = 2;
 
 MR_ADD_CLASS_FACTORY( LineObject )
 
-Vector3f LineObject::getDirection() const
+Vector3f LineObject::getDirection( ViewportId id /*= {}*/ ) const
 {
-    return ( xf().A * Vector3f::plusX() ).normalized();
+    return ( xf( id ).A * Vector3f::plusX() ).normalized();
 }
 
-Vector3f LineObject::getCenter() const
+Vector3f LineObject::getCenter( ViewportId id /*= {}*/ ) const
 {
-    return xf().b;
+    return xf( id ).b;
 }
 
-void LineObject::setDirection( const Vector3f& normal )
+void LineObject::setDirection( const Vector3f& normal, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    currentXf.A = Matrix3f::rotation( Vector3f::plusX(), normal ) * s;
+    auto currentXf = xf( id );
+    currentXf.A = Matrix3f::rotation( Vector3f::plusX(), normal ) * s_.get( id );
     setXf( currentXf );
 }
 
-void LineObject::setCenter( const Vector3f& center )
+void LineObject::setCenter( const Vector3f& center, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
+    auto currentXf = xf( id );
     currentXf.b = center;
-    setXf( currentXf );
+    setXf( currentXf, id );
 }
 
-void LineObject::setLength( float size )
+void LineObject::setLength( float size, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
+    auto currentXf = xf( id );
     currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( Vector3f::diagonal( size / baseLineObjectLength_ ) );
-    setXf( currentXf );
+    setXf( currentXf, id );
 }
 
-float LineObject::getLength() const
+float LineObject::getLength( ViewportId id /*= {}*/ ) const
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    return s.x.x * baseLineObjectLength_;
+    return s_.get( id ).x.x * baseLineObjectLength_;
 }
 
-Vector3f LineObject::getPointA() const
+Vector3f LineObject::getPointA( ViewportId id /*= {}*/ ) const
 {
-    return getCenter() - getDirection() * ( getLength() / 2 );
+    return getCenter( id ) - getDirection( id ) * ( getLength( id ) / 2 );
 }
 
-Vector3f LineObject::getPointB() const
+Vector3f LineObject::getPointB( ViewportId id /*= {}*/ ) const
 {
-    return getCenter() + getDirection() * ( getLength() / 2 );
+    return getCenter( id ) + getDirection( id ) * ( getLength( id ) / 2 );
 }
 
 
@@ -123,8 +119,19 @@ void LineObject::serializeFields_( Json::Value& root ) const
 void LineObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
-        renderObj_ = createRenderObject<decltype(*this)>( *this );
+        renderObj_ = createRenderObject<decltype( *this )>( *this );
 }
+
+FeatureObjectProjectPointResult LineObject::projectPoint( const Vector3f& point, ViewportId id /*= {}*/ ) const
+{
+    const Vector3f& center = getCenter( id );
+    const Vector3f& direction = getDirection( id );
+
+    auto X = point - center;
+    auto K = direction * dot( X, direction );
+
+    return { K + center , std::nullopt };
+};
 
 const std::vector<FeatureObjectSharedProperty>& LineObject::getAllSharedProperties() const
 {

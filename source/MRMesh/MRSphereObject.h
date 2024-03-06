@@ -32,27 +32,17 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     /// calculates radius from xf
-    MRMESH_API float getRadius() const;
+    MRMESH_API float getRadius( ViewportId id = {} ) const;
     /// calculates center from xf
-    MRMESH_API Vector3f getCenter() const;
+    MRMESH_API Vector3f getCenter( ViewportId id = {} ) const;
     /// updates xf to fit given radius
-    MRMESH_API void setRadius( float radius );
+    MRMESH_API void setRadius( float radius, ViewportId id = {} );
     /// updates xf to fit given center
-    MRMESH_API void setCenter( const Vector3f& center );
+    MRMESH_API void setCenter( const Vector3f& center, ViewportId id = {} );
 
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 
-    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point ) const override
-    {
-        const Vector3f center = getCenter();
-        const float radius = getRadius();
-
-        auto X = point - center;
-        auto normal = X.normalized();
-
-        auto projection = center + normal * radius;
-        return { projection, normal };
-    };
+    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point, ViewportId id = {} ) const override;
 
 protected:
     SphereObject( const SphereObject& other ) = default;

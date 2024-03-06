@@ -230,20 +230,7 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
     }
 
     if ( deloneProf > 0.0f )
-        res.weight += 20 * deloneProf / normalizerSq_;
-    if ( angleProf > 0.0f )
-        res.weight += angleProf;
-
-    float normVal = ( c - a ).length();
-    if ( normVal == 0.0f )
-    {
-        // a neighbor point coincides with this one => remove it with maximal weight
-        assert( false ); // all such points must be deleted before
-        res.weight = FLT_MAX;
-        return res;
-    }
-    float planeDist = std::abs( plane_.distance( c ) );
-    res.weight += planeDist / normVal; // sin angle with plane
+        res.weight += deloneProf;
 
     if ( trustedNormals_ )
     {

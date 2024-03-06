@@ -9,6 +9,10 @@ on:
       app_version:
         required: true
         type: string
+      full_config_build:
+        default: false
+        required: false
+        type: boolean
       UPLOAD_ARTIFACTS:
         required: true
         type: boolean
@@ -25,6 +29,7 @@ jobs:
         os: [fedora37, fedora39]
         config: [Debug, Release]
         compiler: [Clang]
+        full_config_build: ${{ fromJSON(inputs.full_config_build) }}
         include:
           - os: fedora37
             cxx-compiler: /usr/bin/clang++-15
@@ -41,6 +46,9 @@ jobs:
             compiler: GCC
             cxx-compiler: /usr/bin/g++
             MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF -DBUILD_TESTING=OFF"
+        exclude:
+          - full_config_build: false
+            os: fedora39
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout

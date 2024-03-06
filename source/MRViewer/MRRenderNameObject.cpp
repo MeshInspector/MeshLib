@@ -162,7 +162,7 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
     Vector3f worldPoint2 = xf( localPoint + nameUiLocalOffset );
     ImVec2 point3Offset = ImVec2( nameUiScreenOffset ) * params.scale;
 
-    task_.text = getObjectNameString( *task_.object );
+    task_.text = getObjectNameString( *task_.object, params.viewportId );
     task_.textSize = ImGui::CalcTextSize( task_.text.c_str() );
 
     Viewport& viewportRef = getViewerInstance().viewport( params.viewportId );
@@ -266,8 +266,9 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
     params.tasks->push_back( { std::shared_ptr<void>{}, &task_ } );
 }
 
-std::string RenderNameObject::getObjectNameString( const VisualObject& object ) const
+std::string RenderNameObject::getObjectNameString( const VisualObject& object, ViewportId viewportId ) const
 {
+    (void)viewportId;
     return object.name();
 }
 

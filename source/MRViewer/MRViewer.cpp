@@ -364,6 +364,54 @@ void loadMRViewerDll()
 {
 }
 
+void filterReservedCmdArgs( std::vector<std::string>& args )
+{
+    bool nextW{ false };
+    bool nextH{ false };
+    std::vector<int> indicesToRemove;
+    indicesToRemove.push_back( 0 );
+    for ( int i = 1; i < args.size(); ++i )
+    {
+        bool reserved = false;
+        const auto& flag = args[i];
+        if ( nextW )
+        {
+            nextW = false;
+            reserved = true;
+        }
+        else if ( nextH )
+        {
+            nextH = false;
+            reserved = true;
+        }
+        else if ( 
+            flag == "-noWindow" || 
+            flag == "-fullscreen" || 
+            flag == "-noClose" || 
+            flag == "-noEventLoop" || 
+            flag == "-hidden" || 
+            flag == "-tryHidden" ||
+            flag == "-transparentBgOn" || 
+            flag == "-transparentBgOff" || 
+            flag == "-noSplash" ||
+            flag == "-console" ||
+            flag == "-openGL3" ||
+            flag == "-noRenderInTexture" || 
+            flag == "-develop"
+            )
+            reserved = true;
+        else if ( flag == "-width" )
+            nextW = true;
+        else if ( flag == "-height" )
+            nextH = true;
+
+        if ( reserved )
+            indicesToRemove.push_back( i );
+    }
+    for ( int i = int( indicesToRemove.size() ) - 1; i >= 0; --i )
+        args.erase( args.begin() + indicesToRemove[i] );
+}
+
 void Viewer::parseLaunchParams( LaunchParams& params )
 {
     bool nextW{ false };
@@ -472,9 +520,15 @@ int Viewer::launch( const LaunchParams& params )
     }
 
     // log start line
+    commandArgs.resize( params.argc );
     for ( int i = 0; i < params.argc; ++i )
-        spdlog::info( "argv[{}]: {}", i, params.argv[i] );
+    {
+        commandArgs[i] = std::string( params.argv[i] );
+        spdlog::info( "argv[{}]: {}", i, commandArgs[i] );
+    }
+    filterReservedCmdArgs( commandArgs );
 
+    launchParams_ = params;
     isAnimating = params.isAnimating;
     animationMaxFps = params.animationMaxFps;
     enableDeveloperFeatures_ = params.developerFeatures;
@@ -488,8 +542,6 @@ int Viewer::launch( const LaunchParams& params )
 
     if ( params.windowMode == LaunchParams::HideInit && window )
         glfwShowWindow( window );
-
-    parseCommandLine_( params );
 
     CommandLoop::setState( CommandLoop::StartPosition::AfterWindowAppear );
 
@@ -867,23 +919,6 @@ void Viewer::shutdownPlugins_()
     }
     if ( menuPlugin_ )
         menuPlugin_->shutdown();
-}
-
-void Viewer::parseCommandLine_( [[maybe_unused]] const LaunchParams& params )
-{
-#if !defined( __EMSCRIPTEN__ )
-    if ( parseCommandLineSignal( params ) )
-        return;
-
-    std::vector<std::filesystem::path> supportedFiles;
-    for ( int i = 1; i < params.argc; ++i )
-    {
-        const auto argAsPath = pathFromUtf8( params.argv[i] );
-        if ( isSupportedFormat( argAsPath ) )
-            supportedFiles.push_back( argAsPath );
-    }
-    loadFiles( supportedFiles );
-#endif
 }
 
 void Viewer::postEmptyEvent()

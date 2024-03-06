@@ -7,8 +7,13 @@
 #include "MRBitSetParallelFor.h"
 #include "MRPch/MRFmt.h"
 
+#include <blosc.h>
+#include "MRBuffer.h"
+#include "MRPch/MRSpdlog.h"
+
 #ifndef MRMESH_NO_OPENCTM
 #include "OpenCTM/openctm.h"
+
 #endif
 
 namespace MR
@@ -49,6 +54,42 @@ VoidOrErrStr toMrmesh( const Mesh & mesh, std::ostream & out, const SaveSettings
 
     VertCoords buf;
     const auto & xfVerts = transformPoints( mesh.points, mesh.topology.getValidVerts(), settings.xf, buf );
+
+    auto compressTest = [] ( const void * data, size_t size, size_t typeSize )
+    {
+        size_t threadCount = tbb::global_control::parameter( tbb::global_control::max_allowed_parallelism );
+        if ( threadCount == 0 )
+            threadCount = std::thread::hardware_concurrency();
+        if ( threadCount == 0 )
+            threadCount = 1;
+
+        auto shuffleName = [] ( int shuffle )
+        {
+            switch ( shuffle )
+            {
+                case BLOSC_NOSHUFFLE:
+                    return "no shuffle";
+                case BLOSC_SHUFFLE:
+                    return "byte shuffle";
+                case BLOSC_BITSHUFFLE:
+                    return "bit shuffle";
+            }
+            MR_UNREACHABLE
+        };
+
+        Buffer<char> compressed( size + BLOSC_MAX_OVERHEAD );
+        constexpr int cBloscCompressionLevel = 5;
+        for ( auto shuffle : { BLOSC_NOSHUFFLE, BLOSC_SHUFFLE, BLOSC_BITSHUFFLE } )
+        {
+            auto res = blosc_compress_ctx( cBloscCompressionLevel, shuffle, typeSize, size, data, compressed.data(), compressed.size(), BLOSC_ZSTD_COMPNAME, 0, threadCount );
+            assert( res >= 0 );
+            if ( res > 0 )
+                spdlog::info( "{}: {} ratio, {} bytes", shuffleName( shuffle ), (float)res / (float)size, res );
+        }
+    };
+    spdlog::info( "vertex data" );
+    compressTest( xfVerts.data(), numPoints * sizeof( Vector3f ), sizeof( Vector3f::ValueType ) );
+
     if ( !writeByBlocks( out, ( const char* )xfVerts.data(), numPoints * sizeof( Vector3f ), settings.progress ) )
         return unexpected( std::string( "Saving canceled" ) );
 

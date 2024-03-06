@@ -36,9 +36,7 @@ jobs:
           - os: fedora39
             MR_CMAKE_OPTIONS: ""
           - os: fedora37
-            MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF -DBUILD_TESTING=OFF"
-          - os: fedora37
-            MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF -DBUILD_TESTING=OFF"
+            MR_CMAKE_OPTIONS: "-DMESHLIB_BUILD_MRCUDA=OFF"
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout

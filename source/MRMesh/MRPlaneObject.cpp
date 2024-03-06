@@ -7,7 +7,6 @@
 #include "MRPch/MRJson.h"
 #include "MRMatrix3.h"
 #include "MRVector3.h"
-#include "MRMatrix3Decompose.h"
 
 namespace MR
 {
@@ -20,83 +19,84 @@ constexpr float basePlaneObjectHalfEdgeLength_ = 1.0f;
 
 MR_ADD_CLASS_FACTORY( PlaneObject )
 
-Vector3f PlaneObject::getNormal() const
+Vector3f PlaneObject::getNormal( ViewportId id /*= {}*/ ) const
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    return ( r * Vector3f::plusZ() ).normalized();
+    return ( r_.get( id ) * Vector3f::plusZ() ).normalized();
 }
 
-Vector3f PlaneObject::getCenter() const
+Vector3f PlaneObject::getCenter( ViewportId id /*= {}*/ ) const
 {
-    return xf().b;
+    return xf( id ).b;
 }
 
-void PlaneObject::setNormal( const Vector3f& normal )
+void PlaneObject::setNormal( const Vector3f& normal, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    currentXf.A = Matrix3f::rotation( Vector3f::plusZ(), normal ) * s;
-    setXf( currentXf );
-    orientateFollowMainAxis_();
+    auto currentXf = xf( id );
+    currentXf.A = Matrix3f::rotation( Vector3f::plusZ(), normal ) * s_.get( id );
+    setXf( currentXf, id );
+    orientateFollowMainAxis_( id );
 
 }
 
-void PlaneObject::setCenter( const Vector3f& center )
+void PlaneObject::setCenter( const Vector3f& center, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
+    auto currentXf = xf( id );
     currentXf.b = center;
-    setXf( currentXf );
+    setXf( currentXf, id );
 }
 
-void PlaneObject::setSize( float size )
+void PlaneObject::setSize( float size, ViewportId id /*= {}*/ )
 {
-    auto xSize = getSizeX();
-    auto ySize = getSizeY();
+    auto xSize = getSizeX( id );
+    auto ySize = getSizeY( id );
 
-    setSizeX( 2.0f * size / ( 1.0f + ySize / xSize ) );
-    setSizeY( 2.0f * size / ( 1.0f + xSize / ySize ) );
+    setSizeX( 2.0f * size / ( 1.0f + ySize / xSize ), id );
+    setSizeY( 2.0f * size / ( 1.0f + xSize / ySize ), id );
 }
 
-void PlaneObject::setSizeX( float size )
-{
-    size = size / basePlaneObjectHalfEdgeLength_ / 2.0f; // normalization for base figure dimentions
-    auto currentXf = xf();
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    currentXf.A = r * Matrix3f::scale( size, s.y.y, ( s.y.y + size ) / 2.0f ); // z-scale need for correct plane normal display. 
-    setXf( currentXf );
-}
-
-void PlaneObject::setSizeY( float size )
+void PlaneObject::setSizeX( float size, ViewportId id /*= {}*/ )
 {
     size = size / basePlaneObjectHalfEdgeLength_ / 2.0f; // normalization for base figure dimentions
-    auto currentXf = xf();
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    currentXf.A = r * Matrix3f::scale( s.x.x, size, (s.x.x + size) / 2.0f ); // z-scale need for correct plane normal display. 
-    setXf( currentXf );
+    auto currentXf = xf( id );
+    const auto& s = s_.get( id );
+    currentXf.A = r_.get( id ) * Matrix3f::scale( size, s.y.y, ( s.y.y + size ) / 2.0f ); // z-scale need for correct plane normal display. 
+    setXf( currentXf, id );
+}
+
+void PlaneObject::setSizeY( float size, ViewportId id /*= {}*/ )
+{
+    size = size / basePlaneObjectHalfEdgeLength_ / 2.0f; // normalization for base figure dimentions
+    auto currentXf = xf( id );
+    Matrix3f r = r_.get( id ), s = s_.get( id );
+    currentXf.A = r * Matrix3f::scale( s.x.x, size, ( s.x.x + size ) / 2.0f ); // z-scale need for correct plane normal display. 
+    setXf( currentXf, id );
+}
+
+FeatureObjectProjectPointResult PlaneObject::projectPoint( const Vector3f& point, ViewportId id /*= {}*/ ) const
+{
+    const Vector3f& center = getCenter( id );
+    const Vector3f& normal = getNormal( id );
+
+    Plane3f plane( normal, dot( normal, center ) );
+    auto projection = plane.project( point );
+
+    return { projection, normal };
 }
 
 
-float PlaneObject::getSize( void ) const
+float PlaneObject::getSize( ViewportId id /*= {}*/ ) const
 {
-    return  ( getSizeX() + getSizeY() ) / 2.0f;
+    return  ( getSizeX( id ) + getSizeY( id ) ) / 2.0f;
 }
 
-float PlaneObject::getSizeX( void ) const
+float PlaneObject::getSizeX( ViewportId id /*= {}*/ ) const
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    return  s.x.x * basePlaneObjectHalfEdgeLength_ * 2.0f;
+    return  s_.get( id ).x.x * basePlaneObjectHalfEdgeLength_ * 2.0f;
 }
 
-float PlaneObject::getSizeY( void ) const
+float PlaneObject::getSizeY( ViewportId id /*= {}*/ ) const
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    return  s.y.y * basePlaneObjectHalfEdgeLength_ * 2.0f;
+    return  s_.get( id ).y.y * basePlaneObjectHalfEdgeLength_ * 2.0f;
 }
 
 const std::vector<FeatureObjectSharedProperty>& PlaneObject::getAllSharedProperties() const
@@ -117,17 +117,18 @@ PlaneObject::PlaneObject()
 }
 
 
-void PlaneObject::orientateFollowMainAxis_()
+void PlaneObject::orientateFollowMainAxis_( ViewportId id /*= {}*/ )
 {
     auto axis = Vector3f::plusZ();
-    auto planeVectorInXY = cross( axis, getNormal() );
+    auto n = getNormal( id );
+    auto planeVectorInXY = cross( axis, n );
 
     // if plane approx. parallel to XY plane, orentate it using XZ plane
     constexpr float parallelVectorsSinusAngleLimit = 9e-2f; // ~5 degree
     if ( planeVectorInXY.length() < parallelVectorsSinusAngleLimit )
     {
         axis = Vector3f::plusY();
-        planeVectorInXY = cross( axis, getNormal() );
+        planeVectorInXY = cross( axis, n );
     }
 
     planeVectorInXY = planeVectorInXY.normalized();
@@ -136,8 +137,7 @@ void PlaneObject::orientateFollowMainAxis_()
     for ( auto i = 0; i < 10; ++i )
     {
         // calculate current feature oX-axis direction.
-        Matrix3f r, s;
-        decomposeMatrix3( xf().A, r, s );
+        const Matrix3f& r = r_.get( id ), s = s_.get( id );
         auto featureDirectionX = ( r * MR::Vector3f::plusX() ).normalized();
 
         // both featureDirectionX and planeVectorInXY must be perpendicular to plane normal.
@@ -146,12 +146,11 @@ void PlaneObject::orientateFollowMainAxis_()
         auto A = Matrix3f::rotation( MR::Vector3f::plusZ(), angle );
 
         // create new xf matrix
-        auto currXf = xf();
+        auto currXf = xf( id );
         currXf.A = r * A * s;
-        setXf( currXf );
+        setXf( currXf, id );
 
         // checking result
-        decomposeMatrix3( xf().A, r, s );
         auto newFeatureDirectionX = ( r * MR::Vector3f::plusX() ).normalized();
 
         if ( MR::dot( newFeatureDirectionX, planeVectorInXY ) > 0.99f )
@@ -163,8 +162,7 @@ void PlaneObject::orientateFollowMainAxis_()
 
 void PlaneObject::setupPlaneSize2DByOriginalPoints_( const std::vector<Vector3f>& pointsToApprox )
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
+    Matrix3f r = r_.get();
 
     MR::Vector3f min( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), 1.0f );
     MR::Vector3f max( -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -1.0f );
@@ -247,7 +245,7 @@ void PlaneObject::serializeFields_( Json::Value& root ) const
 void PlaneObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
-        renderObj_ = createRenderObject<decltype(*this)>( *this );
+        renderObj_ = createRenderObject<decltype( *this )>( *this );
 }
 
 }

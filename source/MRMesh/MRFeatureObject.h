@@ -26,32 +26,32 @@ struct FeatureObjectSharedProperty
 {
     std::string propertyName;
     // due to getAllSharedProperties in FeatureObject returns static vector, we need externaly setup object to invoke setter ad getter.
-    std::function<FeaturesPropertyTypesVariant( const FeatureObject* objectToInvoke )> getter;
-    std::function<void( const FeaturesPropertyTypesVariant&, FeatureObject* objectToInvoke )> setter;
+    std::function<FeaturesPropertyTypesVariant( const FeatureObject* objectToInvoke, ViewportId id )> getter;
+    std::function<void( const FeaturesPropertyTypesVariant&, FeatureObject* objectToInvoke, ViewportId id )> setter;
 
     template <typename T, typename C, typename SetterFunc>
     FeatureObjectSharedProperty(
         std::string name,
-        T( C::* m_getter )( ) const,
+        T( C::* m_getter )( ViewportId ) const,
         SetterFunc m_setter
     ) : propertyName( std::move( name ) ),
         getter
         (
-            [m_getter] ( const FeatureObject* objectToInvoke ) -> FeaturesPropertyTypesVariant
-            {
-                return std::invoke( m_getter, dynamic_cast< const C* > ( objectToInvoke ) );
-            }
+       [m_getter] ( const FeatureObject* objectToInvoke, ViewportId id ) -> FeaturesPropertyTypesVariant
+    {
+        return std::invoke( m_getter, dynamic_cast< const C* >( objectToInvoke ), id );
+    }
         )
     {
-        if constexpr ( ( std::is_same_v<SetterFunc, void ( C::* )( const T& )> )
-            || ( std::is_same_v<SetterFunc, void ( C::* )( T )> ) )
+        if constexpr ( ( std::is_same_v<SetterFunc, void ( C::* )( const T&, ViewportId )> )
+            || ( std::is_same_v<SetterFunc, void ( C::* )( T, ViewportId )> ) )
         {
-            setter = [m_setter] ( const FeaturesPropertyTypesVariant& v, FeatureObject* objectToInvoke )
+            setter = [m_setter] ( const FeaturesPropertyTypesVariant& v, FeatureObject* objectToInvoke, ViewportId id )
             {
                 assert( std::holds_alternative<T>( v ) );
                 if ( std::holds_alternative<T>( v ) )
                 {
-                    std::invoke( m_setter, dynamic_cast< C* > ( objectToInvoke ), std::get<T>( v ) );
+                    std::invoke( m_setter, dynamic_cast< C* > ( objectToInvoke ), std::get<T>( v ), id );
                 }
             };
         }
@@ -60,6 +60,11 @@ struct FeatureObjectSharedProperty
             static_assert( dependent_false<T>, "Setter function signature unsupported" );
         }
     }
+};
+
+struct FeatureObjectProjectPointResult {
+    Vector3f point;
+    std::optional<Vector3f> normal;
 };
 
 enum class MRMESH_CLASS FeatureVisualizePropertyType
@@ -83,6 +88,16 @@ public:
     MRMESH_API void serializeFields_( Json::Value& root ) const override;
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
+
+    // Since a point on an abstract feature is difficult to uniquely parameterize, 
+    // the projection function simultaneously returns the normal to the surface at the projection point.
+    [[nodiscard]] virtual FeatureObjectProjectPointResult projectPoint( const Vector3f& point, ViewportId id = {} ) const = 0;
+    [[nodiscard]] std::optional<Vector3f> getNormal( const Vector3f& point ) const;
+
+    MRMESH_API virtual void setXf( const AffineXf3f& xf, ViewportId id = {} ) override;
+    MRMESH_API virtual void resetXf( ViewportId id = {} ) override;
+
+
 protected:
     FeatureObject() = default;
 
@@ -90,6 +105,11 @@ protected:
 
     ViewportMask subfeatureVisibility_ = ViewportMask::all();
     ViewportMask detailsOnNameTag_ = ViewportMask::all();
+
+    // Decomposition of the transformation matrix xf.A into a rotation and scaling matrix.Updated automatically in the setXf() method
+    // This cache need for fast calculation of feature properties w/o expensive  transformation matrix QR decomposition.
+    ViewportProperty<Matrix3f> r_; // rotation
+    ViewportProperty<Matrix3f> s_; // scale
 };
 
 }

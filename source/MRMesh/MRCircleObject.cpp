@@ -6,7 +6,6 @@
 #include "MRPch/MRJson.h"
 #include "MRConstants.h"
 #include "MRBestFit.h"
-#include "MRMatrix3Decompose.h"
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -33,44 +32,55 @@ namespace MR
 
 MR_ADD_CLASS_FACTORY( CircleObject )
 
-float CircleObject::getRadius() const
+float CircleObject::getRadius( ViewportId id /*= {}*/ ) const
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    return s.x.x;
+    return s_.get( id ).x.x;
 }
 
-Vector3f CircleObject::getCenter() const
+Vector3f CircleObject::getCenter( ViewportId id /*= {}*/ ) const
 {
-    return xf().b;
+    return xf( id ).b;
 }
 
-Vector3f CircleObject::getNormal() const
+Vector3f CircleObject::getNormal( ViewportId id /*= {}*/ ) const
 {
-    return ( xf().A * Vector3f::plusZ() ).normalized();
+    return ( xf( id ).A * Vector3f::plusZ() ).normalized();
 }
 
-void CircleObject::setRadius( float radius )
+void CircleObject::setRadius( float radius, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
+    auto currentXf = xf( id );
     currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( radius );
-    setXf( currentXf );
+    setXf( currentXf, id );
 }
 
-void CircleObject::setCenter( const Vector3f& center )
+void CircleObject::setCenter( const Vector3f& center, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
+    auto currentXf = xf( id );
     currentXf.b = center;
-    setXf( currentXf );
+    setXf( currentXf, id );
 }
 
-void CircleObject::setNormal( const Vector3f& normal )
+void CircleObject::setNormal( const Vector3f& normal, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    currentXf.A = Matrix3f::rotation( Vector3f::plusZ(), normal ) * s;
-    setXf( currentXf );
+    auto currentXf = xf( id );
+
+    currentXf.A = Matrix3f::rotation( Vector3f::plusZ(), normal ) * s_.get( id );
+    setXf( currentXf, id );
+}
+
+FeatureObjectProjectPointResult CircleObject::projectPoint( const Vector3f& point, ViewportId id /*= {}*/ ) const
+{
+    const Vector3f& center = getCenter( id );
+    const float radius = getRadius( id );
+    const auto& normal = getNormal( id );
+
+    Plane3f plane( normal, dot( normal, center ) );
+    auto K = plane.project( point );
+    auto n = ( K - center ).normalized();
+    auto projection = center + n * radius;
+
+    return { projection, std::nullopt };
 }
 
 const std::vector<FeatureObjectSharedProperty>& CircleObject::getAllSharedProperties() const
@@ -155,7 +165,7 @@ void CircleObject::swapBase_( Object& other )
 void CircleObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
-        renderObj_ = createRenderObject<decltype(*this)>( *this );
+        renderObj_ = createRenderObject<decltype( *this )>( *this );
 }
 
 void CircleObject::serializeFields_( Json::Value& root ) const

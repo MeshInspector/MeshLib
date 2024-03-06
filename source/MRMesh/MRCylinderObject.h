@@ -42,24 +42,25 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     /// calculates radius from xf
-    MRMESH_API float getRadius() const;
+    MRMESH_API float getRadius( ViewportId id = {} ) const;
     /// calculates center from xf
-    MRMESH_API Vector3f getCenter() const;
+    MRMESH_API Vector3f getCenter( ViewportId id = {} ) const;
     /// updates xf to fit given radius
-    MRMESH_API void setRadius( float radius );
+    MRMESH_API void setRadius( float radius, ViewportId id = {} );
     /// updates xf to fit given center
-    MRMESH_API void setCenter( const Vector3f& center );
+    MRMESH_API void setCenter( const Vector3f& center, ViewportId id = {} );
     /// calculates main axis direction from xf
-    MRMESH_API Vector3f getDirection() const;
+    MRMESH_API Vector3f getDirection( ViewportId id = {} ) const;
     /// updates xf to fit main axis
-    MRMESH_API void setDirection( const Vector3f& normal );
+    MRMESH_API void setDirection( const Vector3f& normal, ViewportId id = {} );
     /// calculates cylinder length from xf
-    MRMESH_API float getLength() const;
+    MRMESH_API float getLength( ViewportId id = {} ) const;
     /// updates xf to fit cylinder length
-    MRMESH_API void setLength( float length );
+    MRMESH_API void setLength( float length, ViewportId id = {} );
 
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 
+    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point, ViewportId id = {} ) const override;
 
 protected:
     CylinderObject( const CylinderObject& other ) = default;

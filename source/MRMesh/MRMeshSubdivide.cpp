@@ -33,8 +33,8 @@ inline bool operator < ( const EdgeLength & a, const EdgeLength & b )
 
 int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
 {
-    MR_TIMER;
-
+    MR_TIMER
+    assert( settings.target != &mesh );
     const float maxEdgeLenSq = sqr( settings.maxEdgeLen );
 
     // region is changed during subdivision,
@@ -132,6 +132,9 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         // in smooth mode remember all new inner vertices to reposition them at the end
         if ( settings.smoothMode && mesh.topology.left( e ) && mesh.topology.right( e ) )
             newVerts.autoResizeSet( newVertId );
+
+        if ( settings.target )
+            mesh.points[newVertId] = findProjection( mesh.points[newVertId], *settings.target ).proj.point;
 
         if ( settings.newVerts )
             settings.newVerts->autoResizeSet( newVertId );

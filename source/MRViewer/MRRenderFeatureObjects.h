@@ -128,12 +128,16 @@ class RenderPointFeatureObject : public RenderObjectCombinator<RenderDefaultUiOb
 {
 public:
     MRVIEWER_API RenderPointFeatureObject( const VisualObject& object );
+
+    MRVIEWER_API std::string getObjectNameString( const VisualObject& object ) const override;
 };
 
 class RenderLineFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureLinesComponent<true>>
 {
 public:
     MRVIEWER_API RenderLineFeatureObject( const VisualObject& object );
+
+    MRVIEWER_API std::string getObjectNameString( const VisualObject& object ) const override;
 };
 
 class RenderCircleFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureLinesComponent<true>, RenderFeaturePointsComponent<false>>
@@ -146,6 +150,8 @@ class RenderPlaneFeatureObject : public RenderObjectCombinator<RenderDefaultUiOb
 {
 public:
     MRVIEWER_API RenderPlaneFeatureObject( const VisualObject& object );
+
+    MRVIEWER_API std::string getObjectNameString( const VisualObject& object ) const override;
 };
 
 class RenderSphereFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>, RenderFeaturePointsComponent<false>>

@@ -41,7 +41,7 @@ public:
 
     [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& /*point*/ ) const override
     {
-        return { getPoint() , {} };
+        return { getPoint() , std::nullopt };
     };
 
 protected:

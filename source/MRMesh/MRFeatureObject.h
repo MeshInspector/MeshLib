@@ -62,6 +62,11 @@ struct FeatureObjectSharedProperty
     }
 };
 
+struct FeatureObjectProjectPointResult {
+    Vector3f point;
+    std::optional<Vector3f> normal;
+};
+
 enum class MRMESH_CLASS FeatureVisualizePropertyType
 {
     Subfeatures,
@@ -82,10 +87,6 @@ public:
     MRMESH_API void serializeFields_( Json::Value& root ) const override;
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
-    struct FeatureObjectProjectPointResult {
-        Vector3f point;
-        Vector3f normal;
-    };
     // Since a point on an abstract feature is difficult to uniquely parameterize, 
     // the projection function simultaneously returns the normal to the surface at the projection point.
     [[nodiscard]] virtual FeatureObjectProjectPointResult projectPoint( const Vector3f& point ) const = 0;

@@ -60,7 +60,7 @@ public:
         auto X = point - center;
         auto K = direction * dot( X, direction );
 
-        return { K + center , {} };
+        return { K + center , std::nullopt };
     };
 
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;

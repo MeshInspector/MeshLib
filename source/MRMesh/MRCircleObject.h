@@ -67,7 +67,7 @@ public:
         auto n = ( K - center ).normalized();
         auto projection = center + n * radius;
 
-        return { projection, normal };
+        return { projection, std::nullopt };
     };
 
     [[nodiscard]] MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;

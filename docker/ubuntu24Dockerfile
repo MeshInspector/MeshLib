@@ -68,8 +68,6 @@ ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 # -------------------- #
 # nvidea-runtime
 
-ARG IMAGE_NAME
-FROM nvidea-devel as nvidea-runtime
 
 ENV NV_CUDA_LIB_VERSION 12.3.2-1
 
@@ -112,8 +110,6 @@ ENTRYPOINT ["/opt/nvidia/nvidia_entrypoint.sh"]
 # -------------------- #
 # nvidea-devel
 
-ARG IMAGE_NAME
-FROM nvidia-runtime as nvidia-devel
 
 ENV NV_CUDA_LIB_VERSION "12.3.2-1"
 
@@ -160,7 +156,6 @@ ENV LIBRARY_PATH /usr/local/cuda/lib64/stubs
 
 # ------------------------------------------------------------------------ #
 
-FROM nvidia-devel AS production
 
 RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
 WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"

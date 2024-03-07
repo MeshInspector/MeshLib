@@ -169,6 +169,20 @@
 					]
 				}
 			]
+		},
+		{
+			"Name": "Test",
+			"Priority": 3,
+			"Groups": [
+				{
+					"Name": "Old",
+					"List": [
+						{
+							"Name": "Camera"
+						}
+					]
+				}
+			]
 		}
 	],
 	"Quick Access": [

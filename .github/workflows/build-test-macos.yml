@@ -88,7 +88,7 @@ jobs:
 
       - name: Copy autotest data from S3 Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
-        run: aws s3 sync ${{inputs.autotest_data_s3_url}} ./test_data --delete --no-sign-request
+        run: aws s3 sync ${{inputs.autotest_data_s3_url}} ./test_data --delete --no-sign-request --size-only
 
       - name: Python Regression Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}

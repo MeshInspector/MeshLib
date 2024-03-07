@@ -250,8 +250,13 @@ __device__ inline TriIntersectResult rayTriangleIntersect(const float* oriA, con
 __device__ inline MeshIntersectionResult rayMeshIntersect( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, const float3& rayOrigin, float rayStart, float rayEnd, const IntersectionPrecomputes& prec )
 {
     const Box3& box = nodes[0].box;
-    if ( !rayBoxIntersect( box, rayOrigin, rayStart, rayEnd, prec ) )
-        return {};
+    MeshIntersectionResult res;
+    res.distanceAlongLine = -FLT_MAX;
+
+    float start = rayStart;
+    float end = rayEnd;
+    if ( !rayBoxIntersect( box, rayOrigin, start, end, prec ) )
+        return res;
 
     struct SubTask
     {
@@ -341,7 +346,6 @@ __device__ inline MeshIntersectionResult rayMeshIntersect( const Node3* nodes, c
             }
         }
     }
-    MeshIntersectionResult res;
     if ( faceId < 0 )
         return res;
 

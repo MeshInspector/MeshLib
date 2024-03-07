@@ -13,22 +13,21 @@ AllVisualizeProperties FeatureObject::getAllVisualizeProperties() const
     return ret;
 }
 
-const ViewportMask& FeatureObject::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
+const ViewportMask* FeatureObject::getVisualizePropertyMaskOpt( AnyVisualizeMaskEnum type ) const
 {
     if ( auto value = type.tryGet<FeatureVisualizePropertyType>() )
     {
         switch ( *value )
         {
             case FeatureVisualizePropertyType::Subfeatures:
-                return subfeatureVisibility_;
+                return &subfeatureVisibility_;
             case FeatureVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
         }
-        assert( false && "Invalid enum." );
-        return visibilityMask_;
+        return nullptr;
     }
     else
     {
-        return VisualObject::getVisualizePropertyMask( type );
+        return VisualObject::getVisualizePropertyMaskOpt( type );
     }
 }
 

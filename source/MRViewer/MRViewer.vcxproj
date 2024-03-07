@@ -101,6 +101,7 @@
     <ClCompile Include="MRImGuiMeasurementIndicators.cpp" />
     <ClCompile Include="MRRenderFeatureObjects.cpp" />
     <ClCompile Include="MRRenderNameObject.cpp" />
+    <ClCompile Include="MRRenderMeasurementsObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -212,6 +213,7 @@
     <ClInclude Include="MRRenderFeatureObjects.h" />
     <ClInclude Include="MRRenderNameObject.h" />
     <ClInclude Include="MRRenderWrapObject.h" />
+    <ClInclude Include="MRRenderMeasurementsObject.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

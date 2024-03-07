@@ -164,4 +164,14 @@ void CircleObject::serializeFields_( Json::Value& root ) const
     root["Type"].append( CircleObject::TypeName() );
 }
 
+MeasurementPropertyParameters<RadiusVisualizePropertyType> CircleObject::getMeasurementParametersFor_( RadiusVisualizePropertyType index ) const
+{
+    (void)index; // Only one measurement.
+    return {
+        .vis = {
+            .drawAsDiameter = true,
+        },
+    };
+}
+
 }

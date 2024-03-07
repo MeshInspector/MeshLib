@@ -50,8 +50,7 @@ template <typename T>
 concept AnyVisualizeMaskEnumType =
     IsVisualizeMaskEnum<T>::value &&
     std::is_same_v<std::underlying_type_t<T>, int> &&
-    std::is_same_v<T, std::remove_cvref_t<T>> &&
-    requires{ T::_count > T{}; };
+    std::is_same_v<T, std::remove_cvref_t<T>>;
 
 // Stores a `VisualizeMaskType` or any other enum that extends it (i.e. which specializes `IsVisualizeMaskEnum`).
 // To extract the value, do this:
@@ -146,7 +145,13 @@ public:
     /// returns true if the property is set at least in one viewport specified by the mask
     MRMESH_API bool getVisualizeProperty( AnyVisualizeMaskEnum type, ViewportMask viewportMask ) const;
     /// returns mask of viewports where given property is set
-    MRMESH_API virtual const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const;
+    const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
+    {
+        const ViewportMask* ret = getVisualizePropertyMaskOpt( type );
+        assert( ret && "Invalid enum." );
+        return *ret;
+    }
+    MRMESH_API virtual const ViewportMask* getVisualizePropertyMaskOpt( AnyVisualizeMaskEnum type ) const;
     /// toggle visual property in all viewports specified by the mask
     MRMESH_API void toggleVisualizeProperty( AnyVisualizeMaskEnum type, ViewportMask viewportMask );
 

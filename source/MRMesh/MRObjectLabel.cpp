@@ -265,28 +265,27 @@ void ObjectLabel::setAllVisualizeProperties_( const AllVisualizeProperties& prop
     setAllVisualizePropertiesForEnum<LabelVisualizePropertyType>( properties, pos );
 }
 
-const ViewportMask &ObjectLabel::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
+const ViewportMask *ObjectLabel::getVisualizePropertyMaskOpt( AnyVisualizeMaskEnum type ) const
 {
     if ( auto value = type.tryGet<LabelVisualizePropertyType>() )
     {
         switch ( *value )
         {
         case LabelVisualizePropertyType::SourcePoint:
-            return sourcePoint_;
+            return &sourcePoint_;
         case LabelVisualizePropertyType::Background:
-            return background_;
+            return &background_;
         case LabelVisualizePropertyType::Contour:
-            return contour_;
+            return &contour_;
         case LabelVisualizePropertyType::LeaderLine:
-            return leaderLine_;
+            return &leaderLine_;
         case LabelVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
         }
-        assert( false && "Invalid enum." );
-        return visibilityMask_;
+        return nullptr;
     }
     else
     {
-        return VisualObject::getVisualizePropertyMask( type );
+        return VisualObject::getVisualizePropertyMaskOpt( type );
     }
 }
 

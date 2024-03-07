@@ -121,22 +121,21 @@ void ObjectPointsHolder::setAllVisualizeProperties_( const AllVisualizePropertie
     setAllVisualizePropertiesForEnum<PointsVisualizePropertyType>( properties, pos );
 }
 
-const ViewportMask &ObjectPointsHolder::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
+const ViewportMask *ObjectPointsHolder::getVisualizePropertyMaskOpt( AnyVisualizeMaskEnum type ) const
 {
     if ( auto value = type.tryGet<PointsVisualizePropertyType>() )
     {
         switch ( *value )
         {
         case PointsVisualizePropertyType::SelectedVertices:
-            return showSelectedVertices_;
+            return &showSelectedVertices_;
         case PointsVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
         }
-        assert( false && "Invalid enum." );
-        return visibilityMask_;
+        return nullptr;
     }
     else
     {
-        return VisualObject::getVisualizePropertyMask( type );
+        return VisualObject::getVisualizePropertyMaskOpt( type );
     }
 }
 

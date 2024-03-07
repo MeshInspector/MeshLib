@@ -7,6 +7,7 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 ////////////////////////////////////////////////////////////////////////////////
 #include "ImGuiMenu.h"
+#include "MRMesh/MRObjectWithMeasurements.h"
 #include "MRViewer.h"
 #include "MRRecentFilesStore.h"
 #include <backends/imgui_impl_glfw.h>
@@ -1814,6 +1815,60 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Labels", VisualizeMaskType::Labels, viewportid );
     if ( viewer->isDeveloperFeaturesEnabled() )
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Clipping", VisualizeMaskType::ClippedByPlane, viewportid );
+
+    { // Measurement checkboxes.
+        bool fail = false;
+
+        // How many measurements of each kind each of our objects has.
+        // If different objects have different count of a measurement, that number is set to -1.
+        std::optional<std::size_t> radiusCount;
+        std::optional<std::size_t> angleCount;
+        std::optional<std::size_t> lengthCount;
+
+        for ( const auto& object : selectedVisualObjs )
+        {
+            auto* in = dynamic_cast<IObjectWithMeasurements *>( object.get() );
+            if ( !in )
+            {
+                // If at least one object doesn't have measurements, we don't draw anything.
+                fail = true;
+                break;
+            }
+
+            // Counts how many measurements of type `T` this object has.
+            // If `var` is null, sets it to that number. Otherwise, if `var` is different from that number, sets it to -1.
+            auto updateCount = [&]<MeasurementPropertyEnum T>( std::optional<std::size_t>& var )
+            {
+                std::size_t n = 0;
+                while ( object->getVisualizePropertyMaskOpt( T( n ) ) )
+                    n++;
+
+                if ( !var )
+                    var = n;
+                else if ( *var != n )
+                    var = std::size_t( -1 );
+            };
+            updateCount.operator()<RadiusVisualizePropertyType>( radiusCount );
+            updateCount.operator()<AngleVisualizePropertyType>( angleCount );
+            updateCount.operator()<LengthVisualizePropertyType>( lengthCount );
+        }
+
+        if ( !fail )
+        {
+            auto drawMeasurement = [&]<MeasurementPropertyEnum T>( std::optional<std::size_t> count, const char* name )
+            {
+                if ( !count || *count == std::size_t( -1 ) )
+                    return;
+
+                for ( std::size_t i = 0; i < *count; i++ )
+                    someChanges |= make_visualize_checkbox( selectedVisualObjs, i == 0 ? name : fmt::format( "{} {}", name, i + 1 ).c_str(), T( i ), viewportid );
+            };
+
+            drawMeasurement.operator()<RadiusVisualizePropertyType>( radiusCount, "Radius" );
+            drawMeasurement.operator()<AngleVisualizePropertyType>( angleCount, "Angle" );
+            drawMeasurement.operator()<LengthVisualizePropertyType>( lengthCount, "Length" );
+        }
+    }
 
     return someChanges;
 }

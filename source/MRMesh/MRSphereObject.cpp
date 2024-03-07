@@ -128,4 +128,15 @@ void SphereObject::setupRenderObject_() const
         renderObj_ = createRenderObject<decltype(*this)>( *this );
 }
 
+MeasurementPropertyParameters<RadiusVisualizePropertyType> SphereObject::getMeasurementParametersFor_( RadiusVisualizePropertyType index ) const
+{
+    (void)index; // Only one measurement.
+    return {
+        .vis = {
+            .drawAsDiameter = true,
+            .isSpherical = true,
+        },
+    };
+}
+
 }

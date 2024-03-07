@@ -229,40 +229,39 @@ void ObjectMeshHolder::setAllVisualizeProperties_( const AllVisualizeProperties&
     setAllVisualizePropertiesForEnum<MeshVisualizePropertyType>( properties, pos );
 }
 
-const ViewportMask &ObjectMeshHolder::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
+const ViewportMask *ObjectMeshHolder::getVisualizePropertyMaskOpt( AnyVisualizeMaskEnum type ) const
 {
     if ( auto value = type.tryGet<MeshVisualizePropertyType>() )
     {
         switch ( *value )
         {
             case MeshVisualizePropertyType::Faces:
-                return showFaces_;
+                return &showFaces_;
             case MeshVisualizePropertyType::Texture:
-                return showTexture_;
+                return &showTexture_;
             case MeshVisualizePropertyType::Edges:
-                return showEdges_;
+                return &showEdges_;
             case MeshVisualizePropertyType::FlatShading:
-                return flatShading_;
+                return &flatShading_;
             case MeshVisualizePropertyType::EnableShading:
-                return shadingEnabled_;
+                return &shadingEnabled_;
             case MeshVisualizePropertyType::OnlyOddFragments:
-                return onlyOddFragments_;
+                return &onlyOddFragments_;
             case MeshVisualizePropertyType::BordersHighlight:
-                return showBordersHighlight_;
+                return &showBordersHighlight_;
             case MeshVisualizePropertyType::SelectedEdges:
-                return showSelectedEdges_;
+                return &showSelectedEdges_;
             case MeshVisualizePropertyType::SelectedFaces:
-                return showSelectedFaces_;
+                return &showSelectedFaces_;
             case MeshVisualizePropertyType::PolygonOffsetFromCamera:
-                return polygonOffset_;
+                return &polygonOffset_;
             case MeshVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
         }
-        assert( false && "Invalid enum." );
-        return visibilityMask_;
+        return nullptr;
     }
     else
     {
-        return VisualObject::getVisualizePropertyMask( type );
+        return VisualObject::getVisualizePropertyMaskOpt( type );
     }
 }
 

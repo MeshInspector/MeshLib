@@ -139,7 +139,7 @@ public:
     /// get all visualize properties masks
     MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
     /// returns mask of viewports where given property is set
-    MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
+    MRMESH_API const ViewportMask* getVisualizePropertyMaskOpt( AnyVisualizeMaskEnum type ) const override;
 
     /// Loads font, and converts the symbols of text into mesh;
     /// since this operation is time consuming, one can call this method in parallel for several ObjectLabels before rendering

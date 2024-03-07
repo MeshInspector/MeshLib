@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRFeatureObject.h"
+#include "MRMesh/MRObjectWithMeasurements.h"
 #include "MRMeshFwd.h"
 #include "MRVisualObject.h"
 
@@ -9,7 +10,7 @@ namespace MR
 
 /// Object to show Cylinder feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS CylinderObject : public FeatureObject
+class MRMESH_CLASS CylinderObject : public ObjectWithMeasurements<FeatureObject, RadiusVisualizePropertyType(1), LengthVisualizePropertyType(1)>
 {
 public:
     /// Creates simple Cylinder object with center in zero and radius - 1
@@ -80,6 +81,9 @@ protected:
     }
 
     MRMESH_API void setupRenderObject_() const override;
+
+    MeasurementPropertyParameters<RadiusVisualizePropertyType> getMeasurementParametersFor_( RadiusVisualizePropertyType index ) const override;
+    MeasurementPropertyParameters<LengthVisualizePropertyType> getMeasurementParametersFor_( LengthVisualizePropertyType index ) const override;
 };
 
 }

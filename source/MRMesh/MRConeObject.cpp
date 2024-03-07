@@ -173,6 +173,42 @@ const std::vector<FeatureObjectSharedProperty>& ConeObject::getAllSharedProperti
     return ret;
 }
 
+MeasurementPropertyParameters<RadiusVisualizePropertyType> ConeObject::getMeasurementParametersFor_( RadiusVisualizePropertyType index ) const
+{
+    (void)index; // Only one measurement.
+    return {
+        .center = Vector3f( 0, 0, 1 ),
+        .vis = {
+            .drawAsDiameter = true,
+        },
+    };
+}
+
+MeasurementPropertyParameters<AngleVisualizePropertyType> ConeObject::getMeasurementParametersFor_( AngleVisualizePropertyType index ) const
+{
+    (void)index; // Only one measurement.
+    return {
+        .rays = {
+            Vector3f( 0.5f, 0, 0.5f ),
+            Vector3f( -0.5f, 0, 0.5f ),
+        },
+        .vis = {
+            .isConical = true,
+        },
+    };
+}
+
+MeasurementPropertyParameters<LengthVisualizePropertyType> ConeObject::getMeasurementParametersFor_( LengthVisualizePropertyType index ) const
+{
+    (void)index; // Only one measurement.
+    return {
+        .points = {
+            Vector3f{},
+            Vector3f( 0, 0, 1 ),
+        },
+    };
+}
+
 //////////////////
 ///// TESTS //////
 //////////////////

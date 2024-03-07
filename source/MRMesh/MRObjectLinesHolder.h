@@ -56,7 +56,7 @@ public:
     /// get all visualize properties masks
     MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
     /// returns mask of viewports where given property is set
-    MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
+    MRMESH_API const ViewportMask* getVisualizePropertyMaskOpt( AnyVisualizeMaskEnum type ) const override;
 
     /// returns cached bounding box of this point object in world coordinates;
     /// if you need bounding box in local coordinates please call getBoundingBox()

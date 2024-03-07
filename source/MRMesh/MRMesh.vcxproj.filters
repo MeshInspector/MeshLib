@@ -1191,9 +1191,6 @@
     <ClInclude Include="MRAngleMeasurementObject.h">
       <Filter>Source Files\DataModel\Measurements</Filter>
     </ClInclude>
-    <ClInclude Include="MRDefaultMeasurementObjects.h">
-      <Filter>Source Files\DataModel\Measurements</Filter>
-    </ClInclude>
     <ClInclude Include="MRUnorientedTriangle.h">
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
@@ -2002,9 +1999,6 @@
       <Filter>Source Files\DataModel\Measurements</Filter>
     </ClCompile>
     <ClCompile Include="MRAngleMeasurementObject.cpp">
-      <Filter>Source Files\DataModel\Measurements</Filter>
-    </ClCompile>
-    <ClCompile Include="MRDefaultMeasurementObjects.cpp">
       <Filter>Source Files\DataModel\Measurements</Filter>
     </ClCompile>
     <ClCompile Include="MRPointsComponents.cpp">

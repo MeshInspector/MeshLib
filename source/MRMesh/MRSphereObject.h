@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRFeatureObject.h"
+#include "MRMesh/MRObjectWithMeasurements.h"
 #include "MRMeshFwd.h"
 #include "MRVisualObject.h"
 
@@ -9,7 +10,7 @@ namespace MR
 
 /// Object to show sphere feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS SphereObject : public FeatureObject
+class MRMESH_CLASS SphereObject : public ObjectWithMeasurements<FeatureObject, RadiusVisualizePropertyType(1)>
 {
 public:
     /// Creates simple sphere object with center in zero and radius - 1
@@ -56,6 +57,8 @@ protected:
         { return {}; }
 
     MRMESH_API void setupRenderObject_() const override;
+
+    MRMESH_API MeasurementPropertyParameters<RadiusVisualizePropertyType> getMeasurementParametersFor_( RadiusVisualizePropertyType index ) const override;
 };
 
 }

@@ -140,24 +140,23 @@ void ObjectLinesHolder::setAllVisualizeProperties_( const AllVisualizeProperties
     setAllVisualizePropertiesForEnum<LinesVisualizePropertyType>( properties, pos );
 }
 
-const ViewportMask& ObjectLinesHolder::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
+const ViewportMask* ObjectLinesHolder::getVisualizePropertyMaskOpt( AnyVisualizeMaskEnum type ) const
 {
     if ( auto value = type.tryGet<LinesVisualizePropertyType>() )
     {
         switch ( *value )
         {
         case LinesVisualizePropertyType::Points:
-            return showPoints_;
+            return &showPoints_;
         case LinesVisualizePropertyType::Smooth:
-            return smoothConnections_;
+            return &smoothConnections_;
         case LinesVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
         }
-        assert( false && "Invalid enum." );
-        return visibilityMask_;
+        return nullptr;
     }
     else
     {
-        return VisualObject::getVisualizePropertyMask( type );
+        return VisualObject::getVisualizePropertyMaskOpt( type );
     }
 }
 

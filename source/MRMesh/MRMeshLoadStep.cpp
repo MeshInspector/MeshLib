@@ -171,7 +171,7 @@ std::vector<Triangle3f> loadShape( const TopoDS_Shape& shape, bool resetXf = fal
     BRepMesh_IncrementalMesh incMesh( shape, parameters );
     auto meshShape = incMesh.Shape();
     if ( resetXf )
-        meshShape.Location( TopLoc_Location(), false );
+        meshShape.Location( TopLoc_Location() );
 
     std::deque<FeatureData> features;
     size_t totalVertexCount = 0, totalFaceCount = 0;

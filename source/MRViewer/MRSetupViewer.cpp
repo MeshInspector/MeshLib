@@ -43,7 +43,6 @@ void ViewerSetup::setupConfiguration( Viewer* viewer ) const
     assert( viewer );
 
     viewer->glPickRadius = 3;
-    viewer->defaultLabelsBasisAxes = true;
     viewer->enableGlobalHistory( true );
 
     viewer->mouseController().setMouseControl( { MouseButton::Right,0 }, MouseMode::Translation );

@@ -18,7 +18,7 @@ def test_stitch(tmp_path, input, metric):
     #  Load input meshes
     input_folder = Path(test_files_path) / "algorithms" / "stitch" / input
     case_name = f"{input}_{metric}"
-    mesh = mlib.loadMesh(input_folder / "input.mrmesh")
+    mesh = mlib.loadMesh(input_folder / "input.ctm")
 
     # Find holes
     edges = mesh.topology.findHoleRepresentiveEdges()
@@ -29,8 +29,8 @@ def test_stitch(tmp_path, input, metric):
     mlib.buildCylinderBetweenTwoHoles(mesh, edges[0], edges[1], params)
 
     # === Verification
-    mlib.saveMesh(mesh, tmp_path / f"{case_name}.mrmesh")  # used to store
-    ref_mesh_path = input_folder / f"{case_name}.mrmesh"
+    mlib.saveMesh(mesh, tmp_path / f"{case_name}.ctm")  # used to store
+    ref_mesh_path = input_folder / f"{case_name}.ctm"
     ref_mesh = mlib.loadMesh(ref_mesh_path)
 
     with check:

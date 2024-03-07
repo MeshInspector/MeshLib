@@ -138,6 +138,25 @@ MessageHandler messageHandler;
 #pragma message( "Log redirecting is currently unsupported for OpenCASCADE versions prior to 7.4" )
 #endif
 
+class ProgressIndicator final : public Message_ProgressIndicator
+{
+public:
+    explicit ProgressIndicator( ProgressCallback callback )
+        : callback_( std::move( callback ) )
+    {}
+
+    Standard_Boolean UserBreak() override { return interrupted_; }
+
+    void Show( const Message_ProgressScope&, const Standard_Boolean ) override
+    {
+        interrupted_ = !reportProgress( callback_, (float)GetPosition() );
+    }
+
+private:
+    ProgressCallback callback_;
+    bool interrupted_{ false };
+};
+
 struct FeatureData
 {
     Handle( Poly_Triangulation ) triangulation;
@@ -552,15 +571,25 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile2( const std::filesystem::pat
     reader.SetColorMode( true );
     reader.SetNameMode( true );
 
-    const TCollection_AsciiString pathStr( path.c_str() );
-    if ( reader.ReadFile( pathStr.ToCString() ) != IFSelect_RetDone )
-        return unexpected( "Failed to read STEP model" );
+    {
+        MR_NAMED_TIMER( "read file" )
+
+        const TCollection_AsciiString pathStr( path.c_str() );
+        if ( reader.ReadFile( pathStr.ToCString() ) != IFSelect_RetDone )
+            return unexpected( "Failed to read STEP model" );
+    }
 
     reportProgress( settings.callback, 0.25f );
 
     Handle( TDocStd_Document ) document = new TDocStd_Document( "MDTV-CAF" );
-    if ( reader.Transfer( document ) != Standard_True )
-        return unexpected( "Failed to read STEP model" );
+    {
+        MR_NAMED_TIMER( "transfer data" )
+
+        ProgressIndicator progress( subprogress( settings.callback, 0.25f, 0.85f ) );
+
+        if ( reader.Transfer( document, progress.Start() ) != Standard_True )
+            return unexpected( "Failed to read STEP model" );
+    }
 
     auto shapeTool = XCAFDoc_DocumentTool::ShapeTool( document->Main() );
     auto colorTool = XCAFDoc_DocumentTool::ColorTool( document->Main() );

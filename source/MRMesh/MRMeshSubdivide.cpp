@@ -106,15 +106,16 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
     int splitsDone = 0;
     int lastProgressSplitsDone = 0;
     VertBitSet newVerts;
-    const float whileProgress = settings.smoothMode ? 0.5f : 0.75f;
+    ProgressCallback notSmoothProgress = subprogress( settings.progressCallback, 0.25f, settings.smoothMode ? 0.75f : 1.0f );
+    ProgressCallback whileProgress  =  subprogress( notSmoothProgress, 0.0f, settings.projectOnOriginalMesh ? 0.75f : 1.0f );
     while ( splitsDone < settings.maxEdgeSplits && !queue.empty() )
     {
         if ( settings.maxTriAspectRatio >= 1 && numAboveMax <= 0 )
             break;
         if ( settings.progressCallback && splitsDone >= 1000 + lastProgressSplitsDone ) 
         {
-            if ( !settings.progressCallback( 0.25f + whileProgress * splitsDone / settings.maxEdgeSplits ) )
-                return splitsDone;
+            if ( !whileProgress( float( splitsDone ) / settings.maxEdgeSplits ) )
+                return 0;
             lastProgressSplitsDone = splitsDone;
         }
 
@@ -132,11 +133,8 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         const auto newVertId = mesh.topology.org( e );
 
         // in smooth mode remember all new inner vertices to reposition them at the end
-        if ( settings.smoothMode && mesh.topology.left( e ) && mesh.topology.right( e ) )
+        if ( ( settings.smoothMode || settings.projectOnOriginalMesh ) && mesh.topology.left( e ) && mesh.topology.right( e ) )
             newVerts.autoResizeSet( newVertId );
-
-        if ( settings.projectOnOriginalMesh )
-            mesh.points[newVertId] = findProjection( mesh.points[newVertId], original ).proj.point;
 
         if ( settings.newVerts )
             settings.newVerts->autoResizeSet( newVertId );
@@ -181,6 +179,15 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         for ( auto ei : orgRing( mesh.topology, e ) )
             if ( auto x = getQueueElem( ei ) )
                 queue.push( std::move( x ) );
+    }
+
+    if ( settings.projectOnOriginalMesh )
+    {
+        if ( !BitSetParallelFor( newVerts, [&]( VertId v )
+        {
+            mesh.points[v] = findProjection( mesh.points[v], original ).proj.point;
+        }, subprogress( notSmoothProgress, 0.75f, 1.0f ) ) )
+            return 0;
     }
 
     if ( settings.smoothMode )

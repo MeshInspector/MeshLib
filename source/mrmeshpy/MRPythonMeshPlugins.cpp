@@ -326,7 +326,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
         def_readwrite( "minSharpDihedralAngle", &SubdivideSettings::minSharpDihedralAngle,
             "In case of activated smoothMode, the smoothness is locally deactivated at the edges having dihedral angle at least this value" ).
         def_readwrite( "projectOnOriginalMesh", &SubdivideSettings::projectOnOriginalMesh,
-            "If true, then every new vertex will be projected on the original mesh" );
+            "If true, then every new vertex will be projected on the original mesh (before smoothing)" );
 
     m.def( "subdivideMesh", &MR::subdivideMesh,
         pybind11::arg( "mesh" ), pybind11::arg_v( "settings", MR::SubdivideSettings(), "SubdivideSettings()" ),

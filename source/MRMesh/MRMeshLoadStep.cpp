@@ -19,6 +19,7 @@ MR_SUPPRESS_WARNING( "-Wpedantic", 4996 )
 MR_SUPPRESS_WARNING( "-Wdeprecated-enum-enum-conversion", 5054 )
 #endif
 #ifdef _MSC_VER
+#pragma warning( disable: 4266 ) // no override available for virtual member function from base '...'; function is hidden
 #pragma warning( disable: 5220 ) // a non-static data member with a volatile qualified type no longer implies that compiler generated copy/move constructors and copy/move assignment operators are not trivial
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
 #pragma warning( disable: 5267 ) // definition of implicit copy constructor is deprecated because it has a user-provided destructor
@@ -550,7 +551,9 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile2( const std::filesystem::pat
     STEPCAFControl_Reader reader;
     reader.SetColorMode( true );
     reader.SetNameMode( true );
-    if ( reader.ReadFile( path.c_str() ) != IFSelect_RetDone )
+
+    const TCollection_AsciiString pathStr( path.c_str() );
+    if ( reader.ReadFile( pathStr.ToCString() ) != IFSelect_RetDone )
         return unexpected( "Failed to read STEP model" );
 
     reportProgress( settings.callback, 0.25f );

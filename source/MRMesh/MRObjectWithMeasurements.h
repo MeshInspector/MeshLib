@@ -169,14 +169,20 @@ protected:
             assert( false && "This object doesn't hold this measurement type." );
     }
 
-    // Must override this in the derived class!
-    #ifdef __clang__
+    #if defined( __clang__ )
     #pragma clang diagnostic push
     #pragma clang diagnostic ignored "-Woverloaded-virtual"
+    #elif defined( _MSC_VER )
+    #pragma warning(push)
+    #pragma warning(disable:5054)  //operator '&': deprecated between enumerations of different types
     #endif
+    // Must override this in the derived class!
+    // Compilers are unhappy (warn) that I stack several of those functions with different signatures, though this is completely legal C++.
     virtual MeasurementPropertyParameters<KindType> getMeasurementParametersFor_( KindType index ) const = 0;
-    #ifdef __clang__
+    #if defined( __clang__ )
     #pragma clang diagnostic pop
+    #elif defined( _MSC_VER )
+    #pragma warning(pop)
     #endif
 
     // Constructor sets this to all ones by default.

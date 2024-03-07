@@ -137,6 +137,7 @@ jobs:
         working-directory: source\x64\${{ matrix.config }}
         run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_python'
 
+      # cache managment: https://github.com/MeshInspector/MeshLib/actions/caches
       - name: Cache autotest data from S3 Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
         id: cache-autotest

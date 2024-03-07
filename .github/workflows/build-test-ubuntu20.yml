@@ -107,6 +107,7 @@ jobs:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
           aws-region: us-east-1
 
+      # cache managment: https://github.com/MeshInspector/MeshLib/actions/caches
       - name: Cache autotest data from S3 Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
         id: cache-autotest

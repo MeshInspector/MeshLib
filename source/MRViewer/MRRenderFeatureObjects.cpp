@@ -21,6 +21,9 @@ namespace MR::RenderFeatures
 static constexpr int numCircleSegments = 128;
 static constexpr int sphereDetailLevel = 2048;
 
+// Separator between object name and extra information.
+static constexpr std::string_view nameExtrasSeparator = "   |   ";
+
 const ObjectParams& getObjectParams()
 {
     static const ObjectParams ret{
@@ -142,7 +145,7 @@ std::string RenderPointFeatureObject::getObjectNameString( const VisualObject& o
         if ( object.parent() )
             point = object.parent()->worldXf()( point );
         constexpr int precision = 2;
-        return fmt::format( "{}\n{:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), point.x, precision, point.y, precision, point.z, precision );
+        return fmt::format( "{}{}{:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), nameExtrasSeparator, point.x, precision, point.y, precision, point.z, precision );
     }
     else
     {
@@ -176,7 +179,7 @@ std::string RenderLineFeatureObject::getObjectNameString( const VisualObject& ob
         constexpr int precision = 2;
 
         // U+0394 GREEK CAPITAL LETTER DELTA
-        return fmt::format( "{}\n\xCE\x94 {:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), delta.x, precision, delta.y, precision, delta.z, precision );
+        return fmt::format( "{}{}\xCE\x94 {:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), nameExtrasSeparator, delta.x, precision, delta.y, precision, delta.z, precision );
     }
     else
     {
@@ -259,7 +262,7 @@ std::string RenderPlaneFeatureObject::getObjectNameString( const VisualObject& o
             normal = object.parent()->worldXf().A * normal;
         constexpr int precision = 2;
 
-        return fmt::format( "{}\nN {:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), normal.x, precision, normal.y, precision, normal.z, precision );
+        return fmt::format( "{}{}N {:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), nameExtrasSeparator, normal.x, precision, normal.y, precision, normal.z, precision );
     }
     else
     {

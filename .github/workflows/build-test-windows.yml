@@ -144,11 +144,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ./test_data
-          key: ${{input.autotest_data_s3_url}}
+          key: ${{inputs.autotest_data_s3_url}}
 
       - name: Copy autotest data from S3 Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
-        run: aws s3 cp ${{input.autotest_data_s3_url}} .\test_data --recursive --no-sign-request
+        run: aws s3 cp ${{inputs.autotest_data_s3_url}} .\test_data --recursive --no-sign-request
 
       - name: Python Regression Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}

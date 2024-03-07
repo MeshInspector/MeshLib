@@ -173,13 +173,13 @@ std::string RenderLineFeatureObject::getObjectNameString( const VisualObject& ob
 {
     if ( object.getVisualizeProperty( FeatureVisualizePropertyType::DetailsOnNameTag, viewportId ) )
     {
-        Vector3f delta = object.xf().A.col( 0 ) * 2.f;
+        Vector3f dir = object.xf().A.col( 0 );
         if ( object.parent() )
-            delta = object.parent()->worldXf().A * delta;
+            dir = object.parent()->worldXf().A * dir;
+        dir = dir.normalized();
         constexpr int precision = 2;
 
-        // U+0394 GREEK CAPITAL LETTER DELTA
-        return fmt::format( "{}{}\xCE\x94 {:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), nameExtrasSeparator, delta.x, precision, delta.y, precision, delta.z, precision );
+        return fmt::format( "{}{}dir {:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), nameExtrasSeparator, dir.x, precision, dir.y, precision, dir.z, precision );
     }
     else
     {

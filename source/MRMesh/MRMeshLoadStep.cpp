@@ -157,6 +157,296 @@ private:
     bool interrupted_{ false };
 };
 
+Vector3d toVector( const gp_XYZ& xyz )
+{
+    return { xyz.X(), xyz.Y(), xyz.Z() };
+}
+
+AffineXf3d toXf( const gp_Trsf& transformation )
+{
+    AffineXf3d xf;
+    const auto xfA = transformation.VectorialPart();
+    xf.A = Matrix3d::fromColumns(
+        toVector( xfA.Column( 1 ) ),
+        toVector( xfA.Column( 2 ) ),
+        toVector( xfA.Column( 3 ) )
+    );
+    xf.b = toVector( transformation.TranslationPart() );
+    return xf;
+}
+
+struct StepLoader
+{
+public:
+    [[nodiscard]] std::shared_ptr<Object> rootObject() const
+    {
+        return rootObj_;
+    }
+
+    void init( const Handle( TDocStd_Document )& document )
+    {
+        shapeTool_ = XCAFDoc_DocumentTool::ShapeTool( document->Main() );
+        colorTool_ = XCAFDoc_DocumentTool::ColorTool( document->Main() );
+    }
+
+    /// load object structure without actual geometry data
+    void loadStructure()
+    {
+        MR_TIMER
+
+        rootObj_ = std::make_shared<Object>();
+        rootObj_->select( true );
+        objStack_.push( rootObj_ );
+
+        TDF_LabelSequence labels;
+        shapeTool_->GetFreeShapes( labels );
+        for ( TDF_LabelSequence::Iterator it( labels ); it.More(); it.Next() )
+            readLabel_( it.Value() );
+
+        assert( objStack_.size() == 1 );
+        assert( objStack_.top() == rootObj_ );
+    }
+
+    /// load and triangulate meshes
+    void loadMeshes()
+    {
+        MR_TIMER
+
+        tbb::task_arena taskArena;
+        taskArena.execute( [&]
+        {
+            tbb::task_group taskGroup;
+            for ( auto& ctx : meshTriangulationContexts_ )
+            {
+                ctx.shape = triangulateShape_( ctx.shape );
+                // reset transformation as it already is loaded
+                ctx.shape.Location( TopLoc_Location() );
+                ctx.triples = loadShape_( ctx.shape );
+
+                taskGroup.run( [&ctx]
+                {
+                    ctx.part = Mesh::fromPointTriples( ctx.triples, true );
+                    ctx.triples.clear();
+                } );
+            }
+            taskGroup.wait();
+        } );
+
+        for ( auto& ctx : meshTriangulationContexts_ )
+        {
+            auto& mesh = *ctx.mesh->varMesh();
+            mesh.addPart( ctx.part );
+            ctx.part = Mesh();
+        }
+    }
+
+private:
+    void readLabel_( const TDF_Label& label )
+    {
+        assert( !shapeTool_.IsNull() );
+
+        const auto shape = shapeTool_->GetShape( label );
+        const auto name = readName_( label );
+
+        const auto& location = shape.Location();
+        const auto xf = AffineXf3f( toXf( location.Transformation() ) );
+
+        if ( shapeTool_->IsAssembly( label ) )
+        {
+            auto obj = std::make_shared<Object>();
+            obj->setName( name );
+            obj->setXf( xf );
+            obj->select( true );
+            objStack_.top()->addChild( obj );
+
+            iterateLabel_( label, obj );
+        }
+        else if ( shapeTool_->IsSubShape( label ) )
+        {
+            auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( objStack_.top() );
+            assert( objMesh );
+            assert( objMesh->mesh() );
+
+            meshTriangulationContexts_.emplace_back( shape, objMesh );
+        }
+        else
+        {
+            auto objMesh = std::make_shared<ObjectMesh>();
+            objMesh->setName( name );
+            objMesh->setMesh( std::make_shared<Mesh>() );
+            objMesh->setXf( xf );
+            objMesh->select( true );
+            objStack_.top()->addChild( objMesh );
+
+            meshTriangulationContexts_.emplace_back( shape, objMesh );
+
+            if ( shapeTool_->IsReference( label ) )
+            {
+                TDF_Label ref;
+                [[maybe_unused]] const auto isRef = shapeTool_->GetReferredShape( label, ref );
+                assert( isRef );
+
+                iterateLabel_( ref, objMesh );
+            }
+        }
+    }
+
+    void iterateLabel_( const TDF_Label& label, const std::shared_ptr<Object>& obj )
+    {
+        objStack_.push( obj );
+        for ( TDF_ChildIterator it( label ); it.More(); it.Next() )
+            readLabel_( it.Value() );
+        objStack_.pop();
+    }
+
+private:
+    static std::string readName_( const TDF_Label& label )
+    {
+        assert( !label.IsNull() );
+
+        Handle( TDataStd_Name ) name;
+        if ( label.FindAttribute( TDataStd_Name::GetID(), name ) != Standard_True )
+            return {};
+
+        const auto& str = name->Get();
+        std::string result( str.LengthOfCString(), '\0' );
+        auto* resultCStr = result.data();
+        str.ToUTF8CString( resultCStr );
+
+        return result;
+    }
+
+    static TopoDS_Shape triangulateShape_( const TopoDS_Shape& shape )
+    {
+        MR_TIMER
+
+#if MODERN_BREPMESH_SUPPORTED
+        IMeshTools_Parameters parameters;
+#else
+        BRepMesh_FastDiscret::Parameters parameters;
+#endif
+        parameters.Angle = 0.1;
+        parameters.Deflection = 0.5;
+        parameters.Relative = false;
+        parameters.InParallel = true;
+
+        BRepMesh_IncrementalMesh incMesh( shape, parameters );
+        return incMesh.Shape();
+    }
+
+    static std::vector<Triangle3f> loadShape_( const TopoDS_Shape& shape )
+    {
+        MR_TIMER
+
+        struct FeatureData
+        {
+            TopAbs_Orientation orientation;
+            Handle( Poly_Triangulation ) triangulation;
+            TopLoc_Location location;
+
+            explicit FeatureData( const TopoDS_Shape& face )
+                : orientation( face.Orientation() )
+            {
+                triangulation = BRep_Tool::Triangulation( TopoDS::Face( face ), location );
+            }
+        };
+
+        std::deque<FeatureData> features;
+        for ( auto faceExp = TopExp_Explorer( shape, TopAbs_FACE ); faceExp.More(); faceExp.Next() )
+            features.emplace_back( faceExp.Current() );
+
+        size_t totalVertexCount = 0, totalFaceCount = 0;
+        for ( const auto& feature : features )
+        {
+            if ( feature.triangulation.IsNull() )
+                continue;
+
+            totalVertexCount += feature.triangulation->NbNodes();
+            totalFaceCount += feature.triangulation->NbTriangles();
+        }
+
+        std::vector<Vector3f> points;
+        points.reserve( totalVertexCount );
+
+        std::vector<Triangle3f> triples;
+        triples.reserve( totalFaceCount );
+
+        std::vector<FaceBitSet> parts;
+        parts.reserve( features.size() );
+
+        for ( const auto& feature : features )
+        {
+            if ( feature.triangulation.IsNull() )
+                continue;
+
+            // vertices
+            const auto vertexCount = feature.triangulation->NbNodes();
+            const auto vertexOffset = points.size();
+
+            const auto& xf = feature.location.Transformation();
+            for ( auto i = 1; i <= vertexCount; ++i )
+            {
+                auto point = feature.triangulation->Node( i );
+                point.Transform( xf );
+                points.emplace_back( point.X(), point.Y(), point.Z() );
+            }
+
+            // faces
+            const auto faceCount = feature.triangulation->NbTriangles();
+            const auto faceOffset = triples.size();
+
+            const auto reversed = ( feature.orientation == TopAbs_REVERSED );
+            for ( auto i = 1; i <= faceCount; ++i )
+            {
+                const auto& tri = feature.triangulation->Triangle( i );
+
+                std::array<int, 3> vs { -1, -1, -1 };
+                tri.Get( vs[0], vs[1], vs[2] );
+                if ( reversed )
+                    std::swap( vs[1], vs[2] );
+                for ( auto& v : vs )
+                    v += (int)vertexOffset - 1;
+
+                triples.emplace_back( Triangle3f {
+                    points[vs[0]],
+                    points[vs[1]],
+                    points[vs[2]],
+                } );
+            }
+
+            // parts
+            // TODO: return mesh features
+            FaceBitSet region;
+            region.resize( triples.size(), false );
+            region.set( FaceId( faceOffset ), faceCount, true );
+            parts.emplace_back( std::move( region ) );
+        }
+
+        return triples;
+    }
+
+private:
+    Handle( XCAFDoc_ShapeTool ) shapeTool_;
+    Handle( XCAFDoc_ColorTool ) colorTool_;
+
+    std::shared_ptr<Object> rootObj_;
+    std::stack<std::shared_ptr<Object>> objStack_;
+
+    struct MeshTriangulationContext
+    {
+        TopoDS_Shape shape;
+        std::shared_ptr<ObjectMesh> mesh;
+        std::vector<Triangle3f> triples;
+        Mesh part;
+
+        MeshTriangulationContext( TopoDS_Shape shape, std::shared_ptr<ObjectMesh> mesh )
+            : shape( std::move( shape ) )
+            , mesh( std::move( mesh ) )
+        {}
+    };
+    std::deque<MeshTriangulationContext> meshTriangulationContexts_;
+};
+
 struct FeatureData
 {
     Handle( Poly_Triangulation ) triangulation;
@@ -172,7 +462,7 @@ struct FeatureData
     }
 };
 
-std::vector<Triangle3f> loadShape( const TopoDS_Shape& shape, bool resetXf = false )
+std::vector<Triangle3f> loadShape( const TopoDS_Shape& shape )
 {
     MR_TIMER
 
@@ -188,9 +478,7 @@ std::vector<Triangle3f> loadShape( const TopoDS_Shape& shape, bool resetXf = fal
     parameters.InParallel = true;
 
     BRepMesh_IncrementalMesh incMesh( shape, parameters );
-    auto meshShape = incMesh.Shape();
-    if ( resetXf )
-        meshShape.Location( TopLoc_Location() );
+    const auto& meshShape = incMesh.Shape();
 
     std::deque<FeatureData> features;
     size_t totalVertexCount = 0, totalFaceCount = 0;
@@ -444,41 +732,6 @@ Expected<std::shared_ptr<Object>, std::string> stepModelToScene( STEPControl_Rea
     }
 }
 
-std::string readName( const TDF_Label& label )
-{
-    if ( label.IsNull() )
-        return {};
-
-    Handle( TDataStd_Name ) name;
-    if ( label.FindAttribute( TDataStd_Name::GetID(), name ) != Standard_True )
-        return {};
-
-    const auto& str = name->Get();
-    std::string result( str.LengthOfCString(), '\0' );
-    auto* resultCStr = result.data();
-    str.ToUTF8CString( resultCStr );
-
-    return result;
-}
-
-Vector3d toVector( const gp_XYZ& xyz )
-{
-    return { xyz.X(), xyz.Y(), xyz.Z() };
-}
-
-AffineXf3d toXf( const gp_Trsf& transformation )
-{
-    AffineXf3d xf;
-    const auto xfA = transformation.VectorialPart();
-    xf.A = Matrix3d::fromColumns(
-        toVector( xfA.Column( 1 ) ),
-        toVector( xfA.Column( 2 ) ),
-        toVector( xfA.Column( 3 ) )
-    );
-    xf.b = toVector( transformation.TranslationPart() );
-    return xf;
-}
-
 std::mutex cOpenCascadeMutex = {};
 #if !STEP_READSTREAM_SUPPORTED
 std::mutex cOpenCascadeTempFileMutex = {};
@@ -591,150 +844,14 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile2( const std::filesystem::pat
             return unexpected( "Failed to read STEP model" );
     }
 
-    auto shapeTool = XCAFDoc_DocumentTool::ShapeTool( document->Main() );
-    auto colorTool = XCAFDoc_DocumentTool::ColorTool( document->Main() );
-
     reportProgress( settings.callback, 0.85f );
 
-    auto root = std::make_shared<Object>();
-    root->select( true );
+    StepLoader loader;
+    loader.init( document );
+    loader.loadStructure();
+    loader.loadMeshes();
 
-    std::stack<std::shared_ptr<Object>> objStack;
-    objStack.push( root );
-
-    struct TriangulationTask
-    {
-        TopoDS_Shape shape;
-        std::shared_ptr<ObjectMesh> mesh;
-        std::vector<Triangle3f> triples;
-        Mesh part;
-
-        TriangulationTask( TopoDS_Shape shape, std::shared_ptr<ObjectMesh> mesh )
-            : shape( shape )
-            , mesh( mesh )
-        {}
-    };
-    std::vector<TriangulationTask> triangulationTasks;
-
-    std::function<void ( const TDF_Label& label )> readShape;
-    readShape = [&] ( const TDF_Label& label )
-    {
-        const auto shape = shapeTool->GetShape( label );
-        const auto name = readName( label );
-
-        const auto& location = shape.Location();
-        const auto xf = AffineXf3f( toXf( location.Transformation() ) );
-
-# if 0
-        std::ostringstream oss;
-        if ( shapeTool->IsShape( label ) )
-            oss << " shape";
-        if ( shapeTool->IsSimpleShape( label ) )
-            oss << " simple-shape";
-        if ( shapeTool->IsReference( label ) )
-            oss << " reference";
-        if ( shapeTool->IsAssembly( label ) )
-            oss << " assembly";
-        if ( shapeTool->IsComponent( label ) )
-            oss << " component";
-        if ( shapeTool->IsCompound( label ) )
-            oss << " compound";
-        //if ( shapeTool->IsSubShape( label ) )
-        //    oss << " subshape";
-        if ( !shapeTool->IsSubShape( label ) )
-            spdlog::info( "{}{}:{}", std::string( 2 * objStack.size(), ' ' ), name, oss.str() );
-# endif
-
-        if ( shapeTool->IsAssembly( label ) )
-        {
-            auto obj = std::make_shared<Object>();
-            obj->setName( name );
-            obj->setXf( xf );
-            obj->select( true );
-            objStack.top()->addChild( obj );
-
-            objStack.push( obj );
-            for ( TDF_ChildIterator it( label ); it.More(); it.Next() )
-                readShape( it.Value() );
-            objStack.pop();
-        }
-        else if ( shapeTool->IsReference( label ) )
-        {
-            auto objMesh = std::make_shared<ObjectMesh>();
-            objMesh->setName( name );
-            objMesh->setMesh( std::make_shared<Mesh>() );
-            objMesh->setXf( xf );
-            objMesh->select( true );
-            objStack.top()->addChild( objMesh );
-
-            triangulationTasks.emplace_back( shape, objMesh );
-
-            objStack.push( objMesh );
-            TDF_Label ref;
-            [[maybe_unused]] auto res = shapeTool->GetReferredShape( label, ref );
-            assert( res );
-            for ( TDF_ChildIterator it( ref ); it.More(); it.Next() )
-                readShape( it.Value() );
-            objStack.pop();
-        }
-        else
-        {
-            if ( shapeTool->IsSubShape( label ) )
-            {
-                auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( objStack.top() );
-                assert( objMesh );
-                assert( objMesh->mesh() );
-                triangulationTasks.emplace_back( shape, objMesh );
-            }
-            else
-            {
-                auto objMesh = std::make_shared<ObjectMesh>();
-                objMesh->setName( name );
-                objMesh->setMesh( std::make_shared<Mesh>() );
-                objMesh->setXf( xf );
-                objMesh->select( true );
-                objStack.top()->addChild( objMesh );
-
-                triangulationTasks.emplace_back( shape, objMesh );
-            }
-        }
-    };
-
-    TDF_LabelSequence labels;
-    shapeTool->GetFreeShapes( labels );
-    for ( auto i = 1; i <= labels.Length(); ++i )
-        readShape( labels.Value( i ) );
-
-    assert( objStack.size() == 1 );
-    assert( objStack.top() == root );
-
-    tbb::task_arena taskArena;
-    taskArena.execute( [&]
-    {
-        tbb::task_group taskGroup;
-        for ( auto i = 0; i < triangulationTasks.size(); ++i )
-        {
-            auto& task = triangulationTasks[i];
-            task.triples = loadShape( task.shape, true );
-            taskGroup.run( [i, &triangulationTasks]
-            {
-                auto& task = triangulationTasks[i];
-                task.part = Mesh::fromPointTriples( task.triples, true );
-                task.triples.clear();
-            } );
-        }
-        taskGroup.wait();
-    } );
-
-    reportProgress( settings.callback, 0.95f );
-
-    for ( auto& task : triangulationTasks )
-    {
-        task.mesh->varMesh()->addPart( task.part );
-        task.part = Mesh();
-    }
-
-    return root;
+    return loader.rootObject();
 }
 
 } // namespace MR::MeshLoad

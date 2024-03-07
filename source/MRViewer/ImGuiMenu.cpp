@@ -297,6 +297,7 @@ void ImGuiMenu::addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const
 {
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesCyrillic() );
     builder.AddChar( 0x2116 ); // NUMERO SIGN (shift+3 on cyrillic keyboards)
+    builder.AddChar( 0x0394 ); // GREEK CAPITAL LETTER DELTA
 #ifndef __EMSCRIPTEN__
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesChineseSimplifiedCommon() );
 #endif
@@ -1286,6 +1287,7 @@ float ImGuiMenu::drawSelectionInformation_()
     size_t totalFaces = 0;
     size_t totalSelectedFaces = 0;
     size_t totalVerts = 0;
+    std::optional<float> totalVolume;
 #ifndef __EMSCRIPTEN__
     // Voxels info
     Vector3i dimensions;
@@ -1320,6 +1322,13 @@ float ImGuiMenu::drawSelectionInformation_()
                 totalFaces += mesh->topology.numValidFaces();
                 totalSelectedFaces += mObj->numSelectedFaces();
                 totalVerts += mesh->topology.numValidVerts();
+                if ( mObj->isMeshClosed() )
+                {
+                    if ( totalVolume )
+                        *totalVolume += float( mObj->volume() );
+                    else
+                        totalVolume = float( mObj->volume() );
+                }
             }
         }
         else if ( auto lObj = obj->asType<ObjectLines>() )
@@ -1452,6 +1461,9 @@ float ImGuiMenu::drawSelectionInformation_()
         drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces, textColorForSelected );
         drawPrimitivesInfo( "Vertices", totalVerts );
         drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints, textColorForSelected );
+
+        if ( totalVolume )
+            UI::inputTextCenteredReadOnly( "Volume", fmt::format( runtimeFmt( "{:.3f}" ), *totalVolume ), getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x * menu_scaling() );
     }
 
     bool firstField = true;
@@ -1563,7 +1575,7 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
                     editedFeatureObjectOldXf_ = object->xf();
                 }
 
-                prop.setter( arg, &featureObject );
+                prop.setter( arg, &featureObject, viewer->viewport().id );
             }
 
             if ( ImGui::IsItemDeactivatedAfterEdit() && editedFeatureObject_.lock() == object )
@@ -1577,7 +1589,7 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
 
             if ( ImGui::IsItemActive() )
                 anyActive = true;
-        }, prop.getter( &featureObject ) );
+        }, prop.getter( &featureObject, viewer->viewport().id ) );
 
         index++;
     }

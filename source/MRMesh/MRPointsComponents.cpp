@@ -205,7 +205,7 @@ Expected<UnionFind<VertId>> getUnionFindStructureVerts( const PointCloud& pointC
                 }
             } );
         }, subPc );
-        if ( !reportProgress( subPc, 0.7f ) )
+        if ( !reportProgress( subPc, 1.f ) )
             return unexpectedOperationCanceled();
         subPc = subprogress( pc, 0.7f, 1.f );
     }

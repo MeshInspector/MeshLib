@@ -25,6 +25,7 @@
 #include "MRPointInAllSpaces.h"
 #include "MRViewport.h"
 #include "MRFrameCounter.h"
+#include "MRColorTheme.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -55,6 +56,7 @@
 #include "MRMesh/MRObjectLabel.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRPch/MRWasm.h"
 
@@ -362,6 +364,60 @@ void loadMRViewerDll()
 {
 }
 
+void filterReservedCmdArgs( std::vector<std::string>& args )
+{
+    bool nextW{ false };
+    bool nextH{ false };
+    std::vector<int> indicesToRemove;
+    indicesToRemove.push_back( 0 );
+    for ( int i = 1; i < args.size(); ++i )
+    {
+        bool reserved = false;
+        const auto& flag = args[i];
+        if ( nextW )
+        {
+            nextW = false;
+            reserved = true;
+        }
+        else if ( nextH )
+        {
+            nextH = false;
+            reserved = true;
+        }
+        else if ( 
+            flag == "-noWindow" || 
+            flag == "-fullscreen" || 
+            flag == "-noClose" || 
+            flag == "-noEventLoop" || 
+            flag == "-hidden" || 
+            flag == "-tryHidden" ||
+            flag == "-transparentBgOn" || 
+            flag == "-transparentBgOff" || 
+            flag == "-noSplash" ||
+            flag == "-console" ||
+            flag == "-openGL3" ||
+            flag == "-noRenderInTexture" || 
+            flag == "-develop"
+            )
+            reserved = true;
+        else if ( flag == "-width" )
+        {
+            nextW = true;
+            reserved = true;
+        }
+        else if ( flag == "-height" )
+        {
+            nextH = true;
+            reserved = true;
+        }
+
+        if ( reserved )
+            indicesToRemove.push_back( i );
+    }
+    for ( int i = int( indicesToRemove.size() ) - 1; i >= 0; --i )
+        args.erase( args.begin() + indicesToRemove[i] );
+}
+
 void Viewer::parseLaunchParams( LaunchParams& params )
 {
     bool nextW{ false };
@@ -470,9 +526,15 @@ int Viewer::launch( const LaunchParams& params )
     }
 
     // log start line
+    commandArgs.resize( params.argc );
     for ( int i = 0; i < params.argc; ++i )
-        spdlog::info( "argv[{}]: {}", i, params.argv[i] );
+    {
+        commandArgs[i] = std::string( params.argv[i] );
+        spdlog::info( "argv[{}]: {}", i, commandArgs[i] );
+    }
+    filterReservedCmdArgs( commandArgs );
 
+    launchParams_ = params;
     isAnimating = params.isAnimating;
     animationMaxFps = params.animationMaxFps;
     enableDeveloperFeatures_ = params.developerFeatures;
@@ -486,8 +548,6 @@ int Viewer::launch( const LaunchParams& params )
 
     if ( params.windowMode == LaunchParams::HideInit && window )
         glfwShowWindow( window );
-
-    parseCommandLine_( params.argc, params.argv );
 
     CommandLoop::setState( CommandLoop::StartPosition::AfterWindowAppear );
 
@@ -865,37 +925,6 @@ void Viewer::shutdownPlugins_()
     }
     if ( menuPlugin_ )
         menuPlugin_->shutdown();
-}
-
-void Viewer::parseCommandLine_( [[maybe_unused]] int argc, [[maybe_unused]] char** argv )
-{
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_PYTHON)
-    std::vector<std::filesystem::path> supportedFiles;
-    for ( int i = 1; i < argc; ++i )
-    {
-        const auto argAsPath = pathFromUtf8( argv[i] );
-        if( EmbeddedPython::isPythonScript( argAsPath ) )
-        {
-            EmbeddedPython::init();
-            // Draw twice to show all menus on screen
-            {
-                draw( true );
-                draw( true );
-            }
-            EmbeddedPython::setupArgv( argc - i, &argv[i] );
-            EmbeddedPython::runScript( argAsPath );
-            // Draw to update after executing script
-            {
-                draw( true );
-            }
-            EmbeddedPython::finalize();
-            break;
-        }
-        if ( isSupportedFormat( argAsPath ) )
-            supportedFiles.push_back( argAsPath );
-    }
-    loadFiles( supportedFiles );
-#endif
 }
 
 void Viewer::postEmptyEvent()
@@ -1474,7 +1503,8 @@ void Viewer::drawUiRenderObjects_()
 {
     // Currently, a part of the contract of `IRenderObject::renderUi()` is that at most rendering task is in flight at any given time.
     // That's why each viewport is being drawn separately.
-
+    if ( !window )
+        return;
     UiRenderManager& uiRenderManager = getMenuPlugin()->getUiRenderManager();
 
     for ( Viewport& viewport : getViewerInstance().viewport_list )
@@ -1730,9 +1760,11 @@ void Viewer::initGlobalBasisAxesObject_()
     globalBasisAxes = std::make_unique<ObjectMesh>();
     globalBasisAxes->setName( "World Global Basis" );
     std::vector<Color> vertsColors;
+    auto translate = AffineXf3f::translation(Vector3f( 0.0f, 0.0f, 0.9f ));
     for ( int i = 0; i < 3; ++i )
     {
-        auto basis = makeCylinder( 0.01f );
+        auto basis = makeCylinder( 0.01f, 0.9f );
+        auto cone = makeCone( 0.04f, 0.1f );
         AffineXf3f rotTramsform;
         if ( i != 2 )
         {
@@ -1741,19 +1773,39 @@ void Viewer::initGlobalBasisAxesObject_()
             );
         }
         basis.transform( rotTramsform );
+        cone.transform( rotTramsform * translate );
         mesh.addPart( basis );
+        mesh.addPart( cone );
         std::vector<Color> colors( basis.points.size(), Color( PlusAxis[i] ) );
+        std::vector<Color> colorsCone( cone.points.size(), Color( PlusAxis[i] ) );
         vertsColors.insert( vertsColors.end(), colors.begin(), colors.end() );
+        vertsColors.insert( vertsColors.end(), colorsCone.begin(), colorsCone.end() );
     }
     addLabel( *globalBasisAxes, "X", 1.1f * Vector3f::plusX() );
     addLabel( *globalBasisAxes, "Y", 1.1f * Vector3f::plusY() );
     addLabel( *globalBasisAxes, "Z", 1.1f * Vector3f::plusZ() );
-    globalBasisAxes->setVisualizeProperty( defaultLabelsGlobalBasisAxes, VisualizeMaskType::Labels, ViewportMask::all() );
+
     globalBasisAxes->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
     globalBasisAxes->setAncillary( true );
     globalBasisAxes->setVisible( false );
     globalBasisAxes->setVertsColorMap( std::move( vertsColors ) );
     globalBasisAxes->setColoringType( ColoringType::VertsColorMap );
+    globalBasisAxes->setFlatShading( true );
+
+    ColorTheme::instance().colorThemeChangedSignal.connect( [this] ()
+    {
+        if ( !globalBasisAxes )
+            return;
+
+        const Color& color = SceneColors::get( SceneColors::Type::Labels );
+
+        auto labels = getAllObjectsInTree<ObjectLabel>( globalBasisAxes.get(), ObjectSelectivityType::Any );
+        for ( const auto& label : labels )
+        {
+            label->setFrontColor( color, true );
+            label->setFrontColor( color, false );
+        }
+    } );
 }
 
 void Viewer::initBasisAxesObject_()
@@ -1785,9 +1837,23 @@ void Viewer::initBasisAxesObject_()
     addLabel( *basisAxes, "Y", labelPos * Vector3f::plusY() );
     addLabel( *basisAxes, "Z", labelPos * Vector3f::plusZ() );
 
-    basisAxes->setVisualizeProperty( defaultLabelsBasisAxes, VisualizeMaskType::Labels, ViewportMask::all() );
     basisAxes->setFacesColorMap( colorMap );
     basisAxes->setColoringType( ColoringType::FacesColorMap );
+
+    ColorTheme::instance().colorThemeChangedSignal.connect( [this] ()
+    {
+        if ( !basisAxes )
+            return;
+
+        const Color& color = SceneColors::get( SceneColors::Type::Labels );
+
+        auto labels = getAllObjectsInTree<ObjectLabel>( basisAxes.get(), ObjectSelectivityType::Any );
+        for ( const auto& label : labels )
+        {
+            label->setFrontColor( color, true );
+            label->setFrontColor( color, false );
+        }
+    } );
 }
 
 void Viewer::initClippingPlaneObject_()
@@ -1843,6 +1909,9 @@ void Viewer::makeTitleFromSceneRootPath()
     auto sceneFileName = utf8string( SceneRoot::getScenePath().filename() );
     if ( globalHistoryStore_ && globalHistoryStore_->isSceneModified() )
         sceneFileName += "*";
+
+    if ( !window )
+        return;
 
     if ( sceneFileName.empty() )
         glfwSetWindowTitle( window, defaultWindowTitle.c_str() );

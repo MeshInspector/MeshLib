@@ -4,7 +4,6 @@
 #include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
-#include "MRMatrix3Decompose.h"
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -31,30 +30,28 @@ namespace MR
 
 MR_ADD_CLASS_FACTORY( SphereObject )
 
-float SphereObject::getRadius() const
+float SphereObject::getRadius( ViewportId id /*= {}*/ ) const
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    return s.x.x;
+    return s_.get( id ).x.x;
 }
 
-Vector3f SphereObject::getCenter() const
+Vector3f SphereObject::getCenter( ViewportId id /*= {}*/ ) const
 {
-    return xf().b;
+    return xf( id ).b;
 }
 
-void SphereObject::setRadius( float radius )
+void SphereObject::setRadius( float radius, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
+    auto currentXf = xf( id );
     currentXf.A = Matrix3f::scale( radius );
-    setXf( currentXf );
+    setXf( currentXf, id );
 }
 
-void SphereObject::setCenter( const Vector3f& center )
+void SphereObject::setCenter( const Vector3f& center, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
+    auto currentXf = xf( id );
     currentXf.b = center;
-    setXf( currentXf );
+    setXf( currentXf, id );
 }
 
 
@@ -65,6 +62,18 @@ const std::vector<FeatureObjectSharedProperty>& SphereObject::getAllSharedProper
        {"Center", &SphereObject::getCenter, &SphereObject::setCenter}
     };
     return ret;
+}
+
+FeatureObjectProjectPointResult SphereObject::projectPoint( const Vector3f& point, ViewportId id /*= {}*/ ) const
+{
+    const Vector3f& center = getCenter( id );
+    const float radius = getRadius( id );
+
+    auto X = point - center;
+    auto normal = X.normalized();
+
+    auto projection = center + normal * radius;
+    return { projection, normal };
 }
 
 SphereObject::SphereObject()
@@ -125,7 +134,7 @@ void SphereObject::serializeFields_( Json::Value& root ) const
 void SphereObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
-        renderObj_ = createRenderObject<decltype(*this)>( *this );
+        renderObj_ = createRenderObject<decltype( *this )>( *this );
 }
 
 MeasurementPropertyParameters<RadiusVisualizePropertyType> SphereObject::getMeasurementParametersFor_( RadiusVisualizePropertyType index ) const

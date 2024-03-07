@@ -531,6 +531,9 @@ VoidOrErrStr serializeObjectTreeToGltf( const Object& root, const std::filesyste
 
     for ( size_t childIndex = 0; childIndex < root.children().size(); ++ childIndex )
     {
+        if ( root.children()[childIndex]->isAncillary() )
+            continue;
+
         objectStack.push( root.children()[childIndex] );
         size_t lastIndex = model.nodes.size();
         indexStack.push( lastIndex );
@@ -651,6 +654,9 @@ VoidOrErrStr serializeObjectTreeToGltf( const Object& root, const std::filesyste
 
             for ( auto child : curObj->children() )
             {
+                if ( child->isAncillary() )
+                    continue;
+
                 objectStack.push( child );
                 indexStack.push( ++lastIndex );
                 curNode.children.push_back( int( indexStack.top() ) );

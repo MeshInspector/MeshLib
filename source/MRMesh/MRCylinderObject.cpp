@@ -6,7 +6,6 @@
 #include "MRMesh.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
-#include "MRMatrix3Decompose.h"
 #include "MRCylinderApproximator.h"
 #include "MRMeshFwd.h"
 #include "MRLine.h"
@@ -34,64 +33,56 @@ Matrix3f getRotationMatrix( const Vector3f& normal )
 
 MR_ADD_CLASS_FACTORY( CylinderObject )
 
-float CylinderObject::getLength() const
+float CylinderObject::getLength( ViewportId id /*= {}*/ ) const
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    return s.z.z;
+    return s_.get( id ).z.z;
 }
 
-void CylinderObject::setLength( float length )
+void CylinderObject::setLength( float length, ViewportId id /*= {}*/ )
 {
-    auto direction = getDirection();
-    auto currentXf = xf();
-    auto radius = getRadius();
+    auto direction = getDirection( id );
+    auto currentXf = xf( id );
+    auto radius = getRadius( id );
     currentXf.A = ( getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, length ) );
-    setXf( currentXf );
+    setXf( currentXf, id );
 }
 
-float CylinderObject::getRadius() const
+float CylinderObject::getRadius( ViewportId id /*= {}*/ ) const
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
     // it is bad idea to use statement like this ( x + y ) / 2.0f; it increases instability. radius is changing during length update.
-    return  s.x.x;
+    return  s_.get( id ).x.x;
 }
 
-void CylinderObject::setRadius( float radius )
+void CylinderObject::setRadius( float radius, ViewportId id /*= {}*/ )
 {
-    auto direction = getDirection();
-    auto currentXf = xf();
-    currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, getLength() );
-    setXf( currentXf );
+    auto direction = getDirection( id );
+    auto currentXf = xf( id );
+    currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, getLength( id ) );
+    setXf( currentXf, id );
 }
 
-Vector3f CylinderObject::getDirection() const
+Vector3f CylinderObject::getDirection( ViewportId id /*= {}*/ ) const
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    return ( r * Vector3f::plusZ() ).normalized();
+    return ( r_.get( id ) * Vector3f::plusZ() ).normalized();
 }
 
-Vector3f CylinderObject::getCenter() const
+Vector3f CylinderObject::getCenter( ViewportId id /*= {}*/ ) const
 {
-    return xf().b;
+    return xf( id ).b;
 }
 
-void CylinderObject::setDirection( const Vector3f& normal )
+void CylinderObject::setDirection( const Vector3f& normal, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
-    Matrix3f r, s;
-    decomposeMatrix3( currentXf.A, r, s );
-    currentXf.A = getRotationMatrix( normal ) * s;
-    setXf( currentXf );
+    auto currentXf = xf( id );
+    currentXf.A = getRotationMatrix( normal ) * s_.get( id );
+    setXf( currentXf, id );
 }
 
-void CylinderObject::setCenter( const Vector3f& center )
+void CylinderObject::setCenter( const Vector3f& center, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
+    auto currentXf = xf( id );
     currentXf.b = center;
-    setXf( currentXf );
+    setXf( currentXf, id );
 }
 
 CylinderObject::CylinderObject()
@@ -146,7 +137,7 @@ void CylinderObject::serializeFields_( Json::Value& root ) const
 void CylinderObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
-        renderObj_ = createRenderObject<decltype(*this)>( *this );
+        renderObj_ = createRenderObject<decltype( *this )>( *this );
 }
 
 MeasurementPropertyParameters<RadiusVisualizePropertyType> CylinderObject::getMeasurementParametersFor_( RadiusVisualizePropertyType index ) const
@@ -181,6 +172,22 @@ const std::vector<FeatureObjectSharedProperty>& CylinderObject::getAllSharedProp
     return ret;
 }
 
+FeatureObjectProjectPointResult CylinderObject::projectPoint( const Vector3f& point, ViewportId id /*= {}*/ ) const
+{
+    // first, calculate the vector from the center of the cylinder to the projected point
+    const auto& center = getCenter( id );
+    const auto& direction = getDirection( id );
+    auto radius = getRadius( id );
+
+    auto X = point - center;
+
+    float projectionLength = dot( X, direction );
+    Vector3f K = direction * projectionLength;
+    Vector3f normal = ( X - K ).normalized();
+    Vector3f projection = K + normal * radius;
+
+    return FeatureObjectProjectPointResult{ projection + center, normal };
+}
 
 TEST( MRMesh, CylinderApproximation )
 {

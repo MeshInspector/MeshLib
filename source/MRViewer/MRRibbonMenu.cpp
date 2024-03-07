@@ -1401,8 +1401,8 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
                     if ( viewerSettingsIt->second.item && !viewerSettingsIt->second.item->isActive() )
                         viewerSettingsIt->second.item->action();
                 },
-                .buttonName = "Open Viewer Settings",
-                .text = "Unable to activate this tool because another blocking tool is already active.\nIt can be changed in Viewer Settings.",
+                .buttonName = "Open Settings",
+                .text = "Unable to activate this tool because another blocking tool is already active.\nIt can be changed in the Settings.",
                 .type = NotificationType::Info } );
         }
         else
@@ -1422,8 +1422,8 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
                     if ( viewerSettingsIt->second.item && !viewerSettingsIt->second.item->isActive() )
                         viewerSettingsIt->second.item->action();
                 },
-                .buttonName = "Open Viewer Settings",
-                .text = "That tool was closed due to other tool start.\nIt can be changed in Viewer Settings.",
+                .buttonName = "Open Settings",
+                .text = "That tool was closed due to other tool start.\nIt can be changed in the Settings.",
                 .type = NotificationType::Info } );
             }
         }
@@ -2377,6 +2377,8 @@ void RibbonMenu::drawTopPanelOpened_()
 
 void RibbonMenu::fixViewportsSize_( int width, int height )
 {
+    if ( width == 0 || height == 0 )
+        return;
     auto viewportsBounds = viewer->getViewportsBounds();
     auto minMaxDiff = viewportsBounds.max - viewportsBounds.min;
 

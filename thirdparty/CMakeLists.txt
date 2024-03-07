@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project (MeshLib_thirdparty CXX)
+project(MeshLib_thirdparty CXX)
 
 # all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -12,9 +12,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}")
 set(MESHLIB_THIRDPARTY_INCLUDE_DIR "include")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-sign-compare -Wno-unknown-pragmas -Wno-unused-variable \
-       -Wno-unused-function -Wno-unused-variable -Wno-comment -Wno-parentheses -Wno-int-in-bool-context -Wno-strict-aliasing \
-       -Wno-macro-redefined -Wno-return-type -Wno-unused-variable -Wno-deprecated-declarations -Wno-unused-command-line-argument -Wno-deprecated-pragma")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
+  -Wall -Wno-sign-compare -Wno-unknown-pragmas -Wno-unused-variable \
+  -Wno-unused-function -Wno-unused-variable -Wno-comment -Wno-parentheses -Wno-int-in-bool-context -Wno-strict-aliasing \
+  -Wno-macro-redefined -Wno-return-type -Wno-unused-variable -Wno-deprecated-declarations -Wno-unused-command-line-argument -Wno-deprecated-pragma")
 
 IF(MR_EMSCRIPTEN AND NOT MR_EMSCRIPTEN_SINGLETHREAD)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
@@ -30,7 +31,7 @@ include_directories("../thirdparty/parallel-hashmap/")
 add_compile_definitions(IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
 add_compile_definitions(IMGUI_ENABLE_FREETYPE)
 add_library(imgui SHARED ${IMGUI_SOURCES} ${IMGUI_HEADERS})
-IF ( MR_EMSCRIPTEN )
+IF(MR_EMSCRIPTEN)
   add_compile_definitions(IMGUI_IMPL_OPENGL_ES3)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1")
 ELSE()
@@ -48,54 +49,41 @@ ELSE()
 ENDIF()
 
 IF(APPLE OR MR_EMSCRIPTEN)
-    add_subdirectory(./expected ./expected)
+  add_subdirectory(./expected ./expected)
 ELSE()
- # get os name and version
- file(STRINGS /etc/os-release distro REGEX "^NAME=")
- string(REGEX REPLACE "NAME=\"(.*)\"" "\\1" distro "${distro}")
+  # TODO: correct OpenVDB module search
+  list(APPEND CMAKE_MODULE_PATH
+    "/usr/lib/cmake/OpenVDB/"
+    "/usr/lib/x86_64-linux-gnu/cmake/OpenVDB/"
+    "/usr/lib/aarch64-linux-gnu/cmake/OpenVDB/"
+    "/usr/lib64/cmake/OpenVDB/"
+  )
+  find_package(OpenVDB 9 COMPONENTS openvdb)
+  IF(NOT OpenVDB_FOUND)
+    set(OPENVDB_ENABLE_UNINSTALL OFF)
+    set(OPENVDB_ENABLE_INSTALL OFF)
+    set(OPENVDB_CORE_SHARED "ON")
+    set(OPENVDB_CORE_STATIC "OFF")
+    set(OPENVDB_BUILD_BINARIES OFF)
+    set(OPENVDB_BUILD_VDB_PRINT OFF)
+    set(USE_EXPLICIT_INSTANTIATION OFF)
 
- # check version (major)
- file(STRINGS /etc/os-release version_id REGEX "^VERSION_ID=")
- string(REGEX REPLACE "VERSION_ID=\"(.*)\"" "\\1" version_id "${version_id}")
- IF( NOT ${version_id} STREQUAL "" )
-   string(FIND ${version_id} "." dot-pos)
-   string(SUBSTRING ${version_id} 0 ${dot-pos} version_id)
- ENDIF()
- message("using ${distro} ${version_id}")
-
- IF( ${distro} STREQUAL "Ubuntu")
- SET(MR_OPENVDB TRUE)
-  IF( ${version_id} STREQUAL "20")
-   SET(MR_OPENVDB_OLD TRUE)
-  ENDIF() # Ubuntu 20
- ENDIF() # Ubuntu
-
- IF( ${distro} STREQUAL "Fedora Linux")
-  SET(MR_FEDORA TRUE)
- ENDIF() # Fedora
-
- IF(MR_OPENVDB)
-  set(OPENVDB_ENABLE_UNINSTALL OFF)
-  set(OPENVDB_ENABLE_INSTALL OFF)
-  set(OPENVDB_CORE_SHARED "ON")
-  set(OPENVDB_CORE_STATIC "OFF")
-  set(OPENVDB_BUILD_BINARIES OFF)
-  set(OPENVDB_BUILD_VDB_PRINT OFF)
-  set(USE_EXPLICIT_INSTANTIATION OFF)
-
-  IF(MR_OPENVDB_OLD)
-   add_subdirectory(./openvdb/v9/openvdb)
-  ELSE()
-   add_subdirectory(./openvdb/v10/openvdb)
+    # Ubuntu 20.04 compatibility
+    find_package(Boost REQUIRED)
+    find_package(TBB REQUIRED)
+    IF(Boost_VERSION VERSION_LESS 1.73 OR TBB_VERSION VERSION_LESS 2020.2)
+      add_subdirectory(./openvdb/v9/openvdb)
+    ELSE()
+      add_subdirectory(./openvdb/v10/openvdb)
+    ENDIF()
   ENDIF()
- ENDIF()
 
- set(CPR_ENABLE_UNINSTALL "OFF")
- set(CPR_ENABLE_INSTALL "OFF")
- set(CPR_USE_SYSTEM_GTEST "ON")
- set(CPR_BUILD_TESTS "OFF")
- set(CPR_BUILD_TESTS_SSL "OFF")
- add_subdirectory(./cpr)
+  set(CPR_ENABLE_UNINSTALL "OFF")
+  set(CPR_ENABLE_INSTALL "OFF")
+  set(CPR_USE_SYSTEM_GTEST "ON")
+  set(CPR_BUILD_TESTS "OFF")
+  set(CPR_BUILD_TESTS_SSL "OFF")
+  add_subdirectory(./cpr)
 ENDIF()
 
 add_subdirectory(./OpenCTM ./OpenCTM)

@@ -1,4 +1,5 @@
 #include "MRFeatureObject.h"
+#include "MRMatrix3Decompose.h"
 
 #include "json/value.h"
 
@@ -21,6 +22,8 @@ const ViewportMask* FeatureObject::getVisualizePropertyMaskOpt( AnyVisualizeMask
         {
             case FeatureVisualizePropertyType::Subfeatures:
                 return &subfeatureVisibility_;
+            case FeatureVisualizePropertyType::DetailsOnNameTag:
+                return &detailsOnNameTag_;
             case FeatureVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
         }
         return nullptr;
@@ -39,6 +42,7 @@ void FeatureObject::serializeFields_( Json::Value& root ) const
     root["Type"].append( VisualObject::TypeName() );
 
     root["SubfeatureVisibility"] = subfeatureVisibility_.value();
+    root["DetailsOnNameTag"] = detailsOnNameTag_.value();
 }
 
 void FeatureObject::deserializeFields_( const Json::Value& root )
@@ -47,6 +51,34 @@ void FeatureObject::deserializeFields_( const Json::Value& root )
 
     if ( const auto& subfeatureVisibilityJson = root["SubfeatureVisibility"]; subfeatureVisibilityJson.isUInt() )
         subfeatureVisibility_ = ViewportMask( subfeatureVisibilityJson.asUInt() );
+
+    if ( const auto& detailsOnNameTagJson = root["DetailsOnNameTag"]; detailsOnNameTagJson.isUInt() )
+        detailsOnNameTag_ = ViewportMask( detailsOnNameTagJson.asUInt() );
+
+    // only default xf value serialyze now.
+    decomposeMatrix3( xf().A, r_.get(), s_.get() );
+}
+
+std::optional<Vector3f> FeatureObject::getNormal( const Vector3f& point ) const
+{
+    return projectPoint( point ).normal;
+}
+
+void FeatureObject::setXf( const AffineXf3f& xf, ViewportId id )
+{
+    if ( VisualObject::xf( id ) == xf )
+        return;
+    decomposeMatrix3( xf.A, r_[id], s_[id] );
+    VisualObject::setXf( xf, id );
+}
+
+void FeatureObject::resetXf( ViewportId id )
+{
+
+    r_.reset( id );
+    s_.reset( id );
+
+    VisualObject::resetXf( id );
 }
 
 void FeatureObject::setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos )

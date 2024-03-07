@@ -981,6 +981,38 @@ Viewer::Viewer() :
     viewport_list.emplace_back();
     viewport_list.front().id = ViewportId{ 1 };
     presentViewportsMask_ |= viewport_list.front().id;
+
+    resetSettingsFunction = [] ( Viewer* viewer )
+    {
+        viewer->glPickRadius = 0;
+        viewer->scrollForce = 1.0f;
+        viewer->setSpaceMouseParameters( SpaceMouseParameters{} );
+        viewer->setTouchpadParameters( TouchpadParameters{} );
+        viewer->enableAlphaSort( true );
+
+        for ( ViewportId id : viewer->getPresentViewports() )
+        {
+            Viewport& viewport = viewer->viewport( id );
+            // Reset selected parameters
+            Viewport::Parameters defaultParams;
+            Viewport::Parameters params = viewport.getParameters();
+            params.cameraZoom = defaultParams.cameraZoom;
+            params.cameraViewAngle = defaultParams.cameraViewAngle;
+            params.cameraDnear = defaultParams.cameraDnear;
+            params.cameraDfar = defaultParams.cameraDfar;
+            params.depthTest = defaultParams.depthTest;
+            params.orthographic = defaultParams.orthographic;
+            params.borderColor = defaultParams.borderColor;
+            params.clippingPlane = defaultParams.clippingPlane;
+            params.rotationMode = defaultParams.rotationMode;
+            viewport.setParameters( params );
+            // Reset other properties
+            viewer->viewport().showAxes( true );
+            viewer->viewport().showGlobalBasis( false );
+            viewer->viewport().showRotationCenter( true );
+            viewer->viewport().showClippingPlane( false );
+        }
+    };
 }
 
 Viewer::~Viewer()
@@ -1879,8 +1911,6 @@ void Viewer::initRotationCenterObject_()
 
 void Viewer::initSpaceMouseHandler_()
 {
-
-
     #if defined(__EMSCRIPTEN__)
         spaceMouseHandler_ = std::make_unique<SpaceMouseHandler>();
     #else

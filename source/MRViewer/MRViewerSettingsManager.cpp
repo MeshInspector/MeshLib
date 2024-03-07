@@ -45,6 +45,18 @@ const std::string cAutoClosePlugins = "autoClosePlugins";
 const std::string cShowExperimentalFeatures = "showExperimentalFeatures";
 }
 
+namespace Defaults
+{
+const bool orthographic = true;
+const bool saveDialogPositions = false;
+const bool topPanelPinned = true;
+const bool autoClosePlugins = true;
+const bool showSelectedObjects = false;
+const bool deselectNewHiddenObjects = false;
+const bool closeContextOnChange = false;
+const bool showExperimentalFeatures = false;
+}
+
 namespace MR
 {
 
@@ -70,6 +82,46 @@ void ViewerSettingsManager::saveInt( const std::string& name, int value )
     Config::instance().setJsonValue( name, val );
 }
 
+void ViewerSettingsManager::resetSettings( Viewer& viewer )
+{
+    auto& cfg = Config::instance();
+
+    viewer.resetSettingsFunction( &viewer );
+
+    for ( ViewportId id : viewer.getPresentViewports() )
+    {
+        auto& viewport = viewer.viewport( id );
+        auto params = viewport.getParameters();
+        params.orthographic = Defaults::orthographic;
+        viewport.setParameters( params );
+    }
+
+    if ( auto menu = viewer.getMenuPlugin() )
+        menu->enableSavedDialogPositions( Defaults::saveDialogPositions );
+
+    if ( auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>() )
+    {
+        ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, Defaults::topPanelPinned ) );
+        ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
+        ribbonMenu->resetQuickAccessList();
+        ribbonMenu->setShowNewSelectedObjects( Defaults::showSelectedObjects );
+        ribbonMenu->setDeselectNewHiddenObjects( Defaults::deselectNewHiddenObjects );
+        ribbonMenu->setCloseContextOnChange( Defaults::closeContextOnChange );
+        RibbonSchemaHolder::schema().experimentalFeatures = Defaults::showExperimentalFeatures;
+    }
+
+#if !defined(__EMSCRIPTEN__)
+    ColorTheme::setupByTypeName( ColorTheme::Type::Default, ColorTheme::getPresetName( ColorTheme::Preset::Default ) );
+#else
+    ColorTheme::setupByTypeName( ColorTheme::Type::Default, ColorTheme::getPresetName( ColorTheme::getPreset() ) );
+#endif
+    ColorTheme::apply();
+
+    // lastExtentions_.clear();
+
+    SceneSettings::reset();
+}
+
 void ViewerSettingsManager::loadSettings( Viewer& viewer )
 {
     auto& viewport = viewer.viewport();
@@ -81,13 +133,13 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     viewer.glPickRadius = uint16_t( loadInt( cGLPickRadiusParamKey, viewer.glPickRadius ) );
 
     if ( auto menu = viewer.getMenuPlugin() )
-        menu->enableSavedDialogPositions( bool( loadInt( cEnableSavedDialogPositions, 0 ) ) );
+        menu->enableSavedDialogPositions( bool( loadInt( cEnableSavedDialogPositions, Defaults::saveDialogPositions ) ) );
 
     auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>();
     if ( ribbonMenu )
     {
-        ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, true ) );
-        ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, true ) );
+        ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, Defaults::topPanelPinned ) );
+        ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
     }
 
     if ( cfg.hasJsonValue( cSceneControlParamKey ) )
@@ -217,13 +269,13 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         } );
 
         if ( cfg.hasBool( cShowSelectedObjects ) )
-            ribbonMenu->setShowNewSelectedObjects( cfg.getBool( cShowSelectedObjects ) );
+            ribbonMenu->setShowNewSelectedObjects( cfg.getBool( cShowSelectedObjects, Defaults::showSelectedObjects ) );
         if ( cfg.hasBool( cDeselectNewHiddenObjects ) )
-            ribbonMenu->setDeselectNewHiddenObjects( cfg.getBool( cDeselectNewHiddenObjects ) );
+            ribbonMenu->setDeselectNewHiddenObjects( cfg.getBool( cDeselectNewHiddenObjects, Defaults::deselectNewHiddenObjects ) );
         if ( cfg.hasBool( cCloseContextOnChange ) )
-            ribbonMenu->setCloseContextOnChange( cfg.getBool( cCloseContextOnChange ) );
+            ribbonMenu->setCloseContextOnChange( cfg.getBool( cCloseContextOnChange, Defaults::closeContextOnChange ) );
 
-        RibbonSchemaHolder::schema().experimentalFeatures = cfg.getBool( cShowExperimentalFeatures, false );
+        RibbonSchemaHolder::schema().experimentalFeatures = cfg.getBool( cShowExperimentalFeatures, Defaults::showExperimentalFeatures );
     }
 
     ColorTheme::setupByTypeName( colorThemeType, colorThemeName );

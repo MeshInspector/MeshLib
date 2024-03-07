@@ -12,6 +12,8 @@ class SceneSettings
 {
 public:
 
+    MRMESH_API static void reset();
+
     enum class BoolType
     {
         /// on deserialization replace object properties with default values from SceneSettings and SceneColors
@@ -66,6 +68,7 @@ public:
 private:
     MRMESH_API SceneSettings();
     ~SceneSettings() = default;
+    SceneSettings& operator=( const SceneSettings& other ) = default;
 
     static SceneSettings& instance_();
 

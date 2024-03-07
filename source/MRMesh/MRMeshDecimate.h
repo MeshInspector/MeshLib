@@ -210,6 +210,9 @@ struct RemeshSettings
     UndirectedEdgeBitSet* notFlippable = nullptr;
     ///  whether to pack mesh at the end
     bool packMesh = false;
+    /// if true, then every new vertex after subdivision will be projected on the original mesh (before smoothing);
+    /// this does not affect the vertices moved on other stages of the processing
+    bool projectOnOriginalMesh = false;
     /// this function is called each time edge (e) is split into (e1->e), but before the ring is made Delone
     std::function<void(EdgeId e1, EdgeId e)> onEdgeSplit;
     /// if valid (e1) is given then dest(e) = dest(e1) and their origins are in different ends of collapsing edge, e1 shall take the place of e

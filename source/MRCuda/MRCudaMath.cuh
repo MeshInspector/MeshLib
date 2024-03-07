@@ -86,7 +86,7 @@ struct MeshIntersectionResult
 {
     PointOnFace proj;
     MeshTriPoint tp;
-    float distanceAlongLine = 0;
+    float distanceAlongLine = -FLT_MAX;
 };
 
 struct TriIntersectResult
@@ -95,7 +95,7 @@ struct TriIntersectResult
     float a;
     float b;
     // distance from ray origin to p in dir length units
-    float t = 0;
+    float t = -FLT_MAX;
 };
 
 // GPU analog of CPU AffineXf3f

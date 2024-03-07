@@ -7,6 +7,10 @@ on:
         default: false
         required: false
         type: boolean
+      autotest_data_s3_url:
+        default: "s3://data-autotest/test_data_2023-mar-07"
+        required: true
+        type: string
       UPLOAD_ARTIFACTS:
         required: true
         type: boolean
@@ -133,9 +137,17 @@ jobs:
         working-directory: source\x64\${{ matrix.config }}
         run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_python'
 
+      - name: Cache autotest data from S3 Tests
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
+        id: cache-autotest
+        uses: actions/cache@v4
+        with:
+          path: ./test_data
+          key: ${{input.autotest_data_s3_url}}
+
       - name: Copy autotest data from S3 Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
-        run: aws s3 cp s3://data-autotest/test_data_2023-mar-07 .\test_data --recursive --no-sign-request
+        run: aws s3 cp ${{input.autotest_data_s3_url}} .\test_data --recursive --no-sign-request
 
       - name: Python Regression Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}

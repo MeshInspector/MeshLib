@@ -157,7 +157,42 @@ public:
         }
         else
         {
-            cone = computeInitialCone_( points );
+            MR::Vector3<T> center, U;
+            compureCenterAndNormal_(points, center, U );
+
+
+
+
+            /*
+            *             
+            
+            constexpr int phiResolution_ = 60;
+            constexpr int thetaResolution_ = 60; 
+            for ( size_t j = 1; j <= phiResolution_; ++j )
+            {
+                T phi = phiStep * j; //  [0 .. pi/2]
+                T cosPhi = std::cos( phi );
+                T sinPhi = std::sin( phi );
+                for ( size_t i = 0; i < thetaResolution_; ++i )
+                {
+                    T theta = theraStep * i; //  [0 .. 2*pi)
+                    T cosTheta = std::cos( theta );
+                    T sinTheta = std::sin( theta );
+                    Eigen::Vector<T, 3> currU{ cosTheta * sinPhi, sinTheta * sinPhi, cosPhi };
+                    Eigen::Vector<T, 3> currPC{};
+                    T rsqr;
+                    T error = G( currW, currPC, rsqr );
+                    if ( error < minError )
+                    {
+                        minError = error;
+                        resultedRootSquare = rsqr;
+                        W = currW;
+                        PC = currPC;
+                    }
+                }
+            }
+            */
+            cone = computeInitialCone_( points, center, U );
         }
 
         Eigen::VectorX<T> fittedParams( 6 );
@@ -191,16 +226,11 @@ private:
         }
         return length;
     }
-    // Calculates the initial parameters of the cone, which will later be used for minimization.
-    Cone3<T> computeInitialCone_( const std::vector<MR::Vector3<T>>& points )
-    {
-        Cone3<T> result;
-        MR::Vector3<T>& coneApex = result.apex();
-        MR::Vector3<T>& U = result.direction();  // coneAxis
-        T& coneAngle = result.angle;
 
+    void compureCenterAndNormal_( const std::vector<MR::Vector3<T>>& points, MR::Vector3<T>& center, MR::Vector3<T>& U )
+    {
         // Compute the average of the sample points.
-        MR::Vector3<T> center{ 0, 0, 0 };  // C in pdf 
+        center = Vector3f();  // C in pdf 
         for ( auto i = 0; i < points.size(); ++i )
         {
             center += points[i];
@@ -208,13 +238,25 @@ private:
         center = center / static_cast< T >( points.size() );
 
         // The cone axis is estimated from ZZTZ (see the https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf, formula 120).
-        U = { 0, 0, 0 };  // U in pdf 
+        U = Vector3f();  // U in pdf 
         for ( auto i = 0; i < points.size(); ++i )
         {
             Vector3<T> Z = points[i] - center;
             U += Z * MR::dot( Z, Z );
         }
         U = U.normalized();
+    }
+
+    // Calculates the initial parameters of the cone, which will later be used for minimization.
+    Cone3<T> computeInitialCone_( const std::vector<MR::Vector3<T>>& points, const MR::Vector3<T>& center,  const MR::Vector3<T> axis )
+    {
+        Cone3<T> result;
+        MR::Vector3<T>& coneApex = result.apex();
+        result.direction() = axis;
+        MR::Vector3<T>& U = result.direction();  // coneAxis
+        T& coneAngle = result.angle;
+
+      
 
         // C is center, U is coneAxis, X is points
         // Compute the signed heights of the points along the cone axis relative to C.

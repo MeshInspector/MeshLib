@@ -80,9 +80,6 @@
 					"Name": "Camera",
 					"List": [
 						{
-							"Name": "Camera"
-						},
-						{
 							"Name": "Front View"
 						},
 						{
@@ -183,9 +180,6 @@
 		},
 		{
 			"Name": "Move object"
-		},
-		{
-			"Name": "Camera"
 		},
 		{
 			"Name": "Viewer settings"

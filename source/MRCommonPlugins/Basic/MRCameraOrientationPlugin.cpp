@@ -9,7 +9,7 @@ namespace MR
 {
 
 CameraOrientation::CameraOrientation():
-    StatePlugin( "Camera", StatePluginTabs::Basic )
+    StatePlugin( "Camera", StatePluginTabs::Test )
 {
 
 }

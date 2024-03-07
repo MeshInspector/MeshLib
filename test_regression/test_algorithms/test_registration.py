@@ -10,19 +10,19 @@ import pytest
 
 
 @pytest.mark.parametrize("input_case", [
-    {"case_name": "RigidScale", "input_mesh": "fox_geometrik_moved_rotated_scaled.mrmesh", "method": "RigidScale"},
-    {"case_name": "AnyRigidXf", "input_mesh": "fox_geometrik_moved_rotated.mrmesh", "method": "AnyRigidXf"},
-    {"case_name": "AnyRigidXf_rot-only", "input_mesh": "fox_geometrik_rotated.mrmesh", "method": "AnyRigidXf"},
-    {"case_name": "TranslationOnly ", "input_mesh": "fox_geometrik_moved.mrmesh", "method": "TranslationOnly"},
-    {"case_name": "OrthogonalAxis", "input_mesh": "fox_geometrik_rotated.mrmesh", "method": "OrthogonalAxis"},
-    {"case_name": "FixedAxis", "input_mesh": "fox_geometrik_rotated.mrmesh", "method": "FixedAxis"},
+    {"case_name": "RigidScale", "input_mesh": "fox_geometrik_moved_rotated_scaled.ctm", "method": "RigidScale"},
+    {"case_name": "AnyRigidXf", "input_mesh": "fox_geometrik_moved_rotated.ctm", "method": "AnyRigidXf"},
+    {"case_name": "AnyRigidXf_rot-only", "input_mesh": "fox_geometrik_rotated.ctm", "method": "AnyRigidXf"},
+    {"case_name": "TranslationOnly ", "input_mesh": "fox_geometrik_moved.ctm", "method": "TranslationOnly"},
+    {"case_name": "OrthogonalAxis", "input_mesh": "fox_geometrik_rotated.ctm", "method": "OrthogonalAxis"},
+    {"case_name": "FixedAxis", "input_mesh": "fox_geometrik_rotated.ctm", "method": "FixedAxis"},
     ]
 )
 def test_ICP(tmp_path, input_case):
     input_folder = Path(test_files_path) / "algorithms" / "icp"
     case_name = input_case["case_name"]
     mesh_floating = mlib.loadMesh(input_folder / input_case["input_mesh"])
-    mesh_fixed = mlib.loadMesh(input_folder / "fox_geometrik.mrmesh")
+    mesh_fixed = mlib.loadMesh(input_folder / "fox_geometrik.ctm")
 
     # Prepare ICP parameters
     diagonal = mesh_fixed.getBoundingBox().diagonal()
@@ -47,7 +47,7 @@ def test_ICP(tmp_path, input_case):
     print(icp.getLastICPInfo())
 
     # Verification
-    mlib.saveMesh(mesh_floating, tmp_path / f"{case_name}.mrmesh")
+    mlib.saveMesh(mesh_floating, tmp_path / f"{case_name}.ctm")
     with check:
         compare_meshes_similarity(mesh_fixed, mesh_floating, rhsdr_thresh=0.1, vol_thresh=0.1, area_thresh=0.1,
                                   verts_thresh=0)

@@ -54,8 +54,8 @@ def test_subdivide(tmp_path, subdivide_params):
     mlpy.subdivideMesh(mesh, settings)
 
     # === Verification
-    mlpy.saveMesh(mesh, tmp_path / f"{case_name}.mrmesh")  # used to store
-    ref_mesh_path = input_folder / f"{case_name}.mrmesh"
+    mlpy.saveMesh(mesh, tmp_path / f"{case_name}.ctm")  # used to store
+    ref_mesh_path = input_folder / f"{case_name}.ctm"
     ref_mesh = mlpy.loadMesh(ref_mesh_path)
     #  check meshes similarity (for extra details on fail)
     with check:

@@ -34,8 +34,10 @@ inline bool operator < ( const EdgeLength & a, const EdgeLength & b )
 int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
 {
     MR_TIMER
-    assert( settings.target != &mesh );
     const float maxEdgeLenSq = sqr( settings.maxEdgeLen );
+    Mesh original;
+    if ( settings.projectOnOriginalMesh )
+        original = mesh;
 
     // region is changed during subdivision,
     // so if it has invalid faces (they can become valid later) some collisions can occur
@@ -133,8 +135,8 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         if ( settings.smoothMode && mesh.topology.left( e ) && mesh.topology.right( e ) )
             newVerts.autoResizeSet( newVertId );
 
-        if ( settings.target )
-            mesh.points[newVertId] = findProjection( mesh.points[newVertId], *settings.target ).proj.point;
+        if ( settings.projectOnOriginalMesh )
+            mesh.points[newVertId] = findProjection( mesh.points[newVertId], original ).proj.point;
 
         if ( settings.newVerts )
             settings.newVerts->autoResizeSet( newVertId );

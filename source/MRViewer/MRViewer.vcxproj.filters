@@ -674,6 +674,9 @@
     <ClInclude Include="MRAncillaryPoints.h">
       <Filter>Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="MRISceneStateCheck.h">
+      <Filter>StatePlugins</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

@@ -1,5 +1,5 @@
 #pragma once
-#include "MRSceneStateCheck.h"
+#include "MRISceneStateCheck.h"
 #include "MRViewerEventsListener.h"
 #include <string>
 #include <memory>

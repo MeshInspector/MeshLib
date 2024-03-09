@@ -121,6 +121,7 @@
     <ClInclude Include="MRCudaAccessor.h" />
     <ClInclude Include="MRDirectionWidget.h" />
     <ClInclude Include="MRFitData.h" />
+    <ClInclude Include="MRISceneStateCheck.h" />
     <ClInclude Include="MRMeshBoundarySelectionWidget.h" />
     <ClInclude Include="MRFrameCounter.h" />
     <ClInclude Include="MRNotificationType.h" />

@@ -1,5 +1,5 @@
 #include "MRAppendHistory.h"
-#include "MRMesh/MRHistoryStore.h"
+#include "MRHistoryStore.h"
 #include "MRMesh/MRCombinedHistoryAction.h"
 
 namespace MR

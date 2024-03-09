@@ -450,7 +450,6 @@ using VdbVolume = VoxelsVolume<FloatGrid>;
 #endif
 
 class HistoryAction;
-class MRMESH_CLASS HistoryStore;
 class ChangeObjectAction;
 class MRMESH_CLASS ChangeSceneAction;
 class ChangeMeshFaceSelectionAction;

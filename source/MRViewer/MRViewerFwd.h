@@ -55,6 +55,8 @@ template<typename ...Connectables>
 class StateListenerPlugin;
 using StatePlugin = StateListenerPlugin<>;
 
+class MRVIEWER_CLASS HistoryStore;
+
 using ViewerEventCallback = std::function<void()>;
 
 // this is needed as far as MAKE_SLOT cannot be used with movable classes

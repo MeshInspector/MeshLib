@@ -1,6 +1,6 @@
 #include "MRSceneControlMenuItems.h"
 #include "MRViewer/MRViewer.h"
-#include "MRMesh/MRHistoryStore.h"
+#include "MRViewer/MRHistoryStore.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRViewer/MRSwapRootAction.h"
 #include "MRViewer/MRRibbonMenu.h"

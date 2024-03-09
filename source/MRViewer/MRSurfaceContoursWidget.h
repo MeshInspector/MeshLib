@@ -5,7 +5,7 @@
 #include "MRMesh/MRMeshFwd.h"
 #include "MRSurfacePointPicker.h"
 #include "MRMesh/MRObjectMeshHolder.h"
-#include "MRMesh/MRHistoryStore.h"
+#include "MRHistoryStore.h"
 #include "MRViewer/MRGladGlfw.h"
 #include <unordered_map>
 

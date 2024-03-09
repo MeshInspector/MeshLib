@@ -4,7 +4,7 @@
 #include "MRViewerEventsListener.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRObjectMeshHolder.h"
-#include "MRMesh/MRHistoryStore.h"
+#include "MRHistoryStore.h"
 #include "MRViewer/MRGladGlfw.h"
 #include <unordered_map>
 #include "MRViewer/MRPickHoleBorderElement.h"

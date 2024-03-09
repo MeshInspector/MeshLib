@@ -346,6 +346,9 @@
     <ClCompile Include="MRAncillaryPoints.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRHistoryStore.cpp">
+      <Filter>History</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -676,6 +679,9 @@
     </ClInclude>
     <ClInclude Include="MRISceneStateCheck.h">
       <Filter>StatePlugins</Filter>
+    </ClInclude>
+    <ClInclude Include="MRHistoryStore.h">
+      <Filter>History</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

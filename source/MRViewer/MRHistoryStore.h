@@ -15,9 +15,11 @@ namespace MR
 class HistoryStore
 {
 public:
+    /// returns the instance (if any) of HistoryStore from the viewer
+    MRVIEWER_API static const std::shared_ptr<HistoryStore>& getViewerInstance();
 
-    HistoryStore() = default;
     MRVIEWER_API virtual ~HistoryStore();
+
     /// Adds action in history stack (clears available redo actions)
     /// adds actions to scope block if scope mode is active (do not affect main stack)
     MRVIEWER_API virtual void appendAction( const std::shared_ptr<HistoryAction>& action );

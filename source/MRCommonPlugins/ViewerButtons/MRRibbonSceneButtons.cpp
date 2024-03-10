@@ -3,6 +3,7 @@
 #include "MRMesh/MRSceneRoot.h"
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRAppendHistory.h"
+#include "MRViewer/MRViewer.h"
 #include "MRMesh/MRChangeSceneObjectsOrder.h"
 #include "MRMesh/MRChangeSceneAction.h"
 

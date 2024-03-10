@@ -142,6 +142,10 @@ enum FaceIncidence
 [[nodiscard]] MRMESH_API UnionFind<VertId> getUnionFindStructureVertsSeparatedByPaths( const Mesh& mesh, const std::vector<SurfacePath>& paths,
     VertBitSet* outPathVerts = nullptr );
 
+/// gets union-find structure for all undirected edges in \param mesh
+/// \param allPointToRoots if true, then every element in the structure will point directly to the root of its respective component
+[[nodiscard]] MRMESH_API UnionFind<UndirectedEdgeId> getUnionFindStructureUndirectedEdges( const Mesh& mesh, bool allPointToRoots = false );
+
 // \}
 
 } // namespace MeshComponents

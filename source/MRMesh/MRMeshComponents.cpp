@@ -802,6 +802,71 @@ TEST(MRMesh, getAllComponentsEdges)
     ASSERT_EQ( comp[0].count(), 5 );
 }
 
+UnionFind<UndirectedEdgeId> getUnionFindStructureUndirectedEdges( const Mesh& mesh, bool allPointToRoots )
+{
+    MR_TIMER
+
+    UnionFind<UndirectedEdgeId> res( mesh.topology.undirectedEdgeSize() );
+    const auto numThreads = int( tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) );
+
+    UndirectedEdgeBitSet lastPass( mesh.topology.undirectedEdgeSize(), numThreads <= 1 );
+    if ( numThreads > 1 )
+    {
+        BitSetParallelForAllRanged( lastPass, [&] ( UndirectedEdgeId ue, UndirectedEdgeId, UndirectedEdgeId ueEnd )
+        {
+            const EdgeId e = ue;
+            const UndirectedEdgeId ues[4] = 
+            {
+                mesh.topology.prev( e ),
+                mesh.topology.next( e ),
+                mesh.topology.prev( e.sym() ),
+                mesh.topology.next( e.sym() )
+            };
+            for ( int i = 0; i < 4; ++i )
+            {
+                const auto uei = ues[i];
+                if ( ue < uei )
+                {
+                    if ( uei >= ueEnd )
+                        lastPass.set( ue ); // remember the edge to unite later in a sequential region
+                    else
+                        res.unite( ue, uei ); // our region
+                }
+            }
+        } );
+    }
+
+    for ( auto ue : lastPass )
+    {
+        const EdgeId e = ue;
+        const UndirectedEdgeId ues[4] = 
+        {
+            mesh.topology.prev( e ),
+            mesh.topology.next( e ),
+            mesh.topology.prev( e.sym() ),
+            mesh.topology.next( e.sym() )
+        };
+        for ( int i = 0; i < 4; ++i )
+        {
+            const auto uei = ues[i];
+            if ( ue < uei )
+                res.unite( ue, uei );
+        }
+    }
+
+    if ( allPointToRoots )
+    {
+        tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( res.size() ) ),
+            [&] ( const tbb::blocked_range<UndirectedEdgeId>& range )
+        {
+            for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
+                res.findUpdateRange( ue, range.begin(), range.end() );
+        } );
+    }
+
+    return res;
+}
+
 } // namespace MeshComponents
 
 } // namespace MR

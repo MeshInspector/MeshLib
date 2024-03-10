@@ -18,7 +18,7 @@ struct Signal : boost::signals2::signal<T>
     Signal( Signal&& ) noexcept = default;
     Signal& operator =( const Signal& ) noexcept { return *this; }
     Signal& operator =( Signal&& ) noexcept = default;
-    Signal& operator =( boost::signals2::signal<T>&& b ) noexcept { *static_cast<std::unique_ptr<T>*>(this) = std::move( b ); return *this; }
+    Signal& operator =( boost::signals2::signal<T>&& b ) noexcept { *static_cast<boost::signals2::signal<T>*>(this) = std::move( b ); return *this; }
 };
 
 } //namespace MR

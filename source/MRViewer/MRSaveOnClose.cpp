@@ -1,5 +1,5 @@
 #include "MRSaveOnClose.h"
-#include "MRMenu.h"
+#include "ImGuiMenu.h"
 #include "MRFileDialog.h"
 #include "MRProgressBar.h"
 #include "MRRibbonButtonDrawer.h"

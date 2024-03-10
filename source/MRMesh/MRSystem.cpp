@@ -53,16 +53,6 @@
 namespace MR
 {
 
-#if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
-// If true, the resources should be loaded from the executable directory, rather than from the system directories.
-[[nodiscard]] static bool resourcesAreNearExe()
-{
-    auto opt = std::getenv("MR_LOCAL_RESOURCES");
-    return opt && std::string_view(opt) == "1";
-}
-#endif
-
-
 void SetCurrentThreadName( const char * name )
 {
 #ifdef _MSC_VER
@@ -149,8 +139,6 @@ std::filesystem::path GetResourcesDirectory()
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
-    if ( resourcesAreNearExe() )
-        return exePath;
     #ifdef __APPLE__
         #ifdef MR_FRAMEWORK
     return "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/Resources/";
@@ -158,7 +146,7 @@ std::filesystem::path GetResourcesDirectory()
     return "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/Resources/";
         #endif
     #else
-    return "/usr/local/etc/" + std::string( MR_PROJECT_NAME ) + "/";
+    return exePath / ".." / "share" / std::string( MR_PROJECT_NAME );
     #endif
 #endif
 }
@@ -169,12 +157,10 @@ std::filesystem::path GetFontsDirectory()
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
-    if ( resourcesAreNearExe() )
-        return exePath;
     #ifdef __APPLE__
     return GetResourcesDirectory() / "fonts/";
     #else
-    return "/usr/local/share/fonts/";
+    return exePath / ".." / "share" / "fonts";
     #endif
 #endif
 }
@@ -185,8 +171,6 @@ std::filesystem::path GetLibsDirectory()
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
-    if ( resourcesAreNearExe() )
-        return exePath;
     #ifdef __APPLE__
         #ifdef MR_FRAMEWORK
     return "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/lib/";
@@ -194,7 +178,7 @@ std::filesystem::path GetLibsDirectory()
     return "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/libs/";
         #endif
     #else
-    return "/usr/local/lib/" + std::string( MR_PROJECT_NAME ) + "/";
+    return exePath / ".." / "lib" / std::string( MR_PROJECT_NAME );
     #endif
 #endif
 }

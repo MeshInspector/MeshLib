@@ -199,54 +199,53 @@ public:
             bestCones.resize( phiResolution_ );
 
 
-            //tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), phiResolution_ + 1 ),
-            //       [&] ( const tbb::blocked_range<size_t>& range )
-            //{
-            //    for ( size_t j = range.begin(); j < range.end(); ++j )
-            //    {
-
-            for ( size_t j = 0; j <= phiResolution_; ++j )
+            tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), phiResolution_ + 1 ),
+                   [&] ( const tbb::blocked_range<size_t>& range )
             {
-                T phi = phiStep * j; //  [0 .. pi/2]
-                T cosPhi = std::cos( phi );
-                T sinPhi = std::sin( phi );
-                for ( size_t i = 0; i < thetaResolution_; ++i )
+                for ( size_t j = range.begin(); j < range.end(); ++j )
                 {
-                    T theta = theraStep * i; //  [0 .. 2*pi)
-                    T cosTheta = std::cos( theta );
-                    T sinTheta = std::sin( theta );
-                    Vector3<T> currU( cosTheta * sinPhi, sinTheta * sinPhi, cosPhi );
-
-                    auto tmpCone = computeInitialCone_( points, center, currU );
-
-                    Eigen::VectorX<T> fittedParams( 6 );
-                    coneToFitParams_( tmpCone, fittedParams );
-
-                    Eigen::LevenbergMarquardt<ConeFittingFunctor<T>, T> lm_i( coneFittingFunctor );
-                    lm_i.parameters.maxfev = 40;
-
-                    [[maybe_unused]] Eigen::LevenbergMarquardtSpace::Status result = lm_i.minimize( fittedParams );
-
-                    // Looks like a bug in Eigen. Eigen::LevenbergMarquardtSpace::Status have error codes only. Not return value for Success minimization. 
-                    // So just log status 
-
-                    fitParamsToCone_( fittedParams, tmpCone );
-
-                    T const one_v = static_cast< T >( 1 );
-                    auto cosAngle = std::clamp( one_v / tmpCone.direction().length(), static_cast< T >( 0 ), one_v );
-                    tmpCone.angle = std::acos( cosAngle );
-                    tmpCone.direction() = tmpCone.direction().normalized();
-
-                    T error = getApproximationRMS_( points, tmpCone );
-
-                    if ( error < bestCones[j].minError )
+                    //for ( size_t j = 0; j <= phiResolution_; ++j )
+                    //{
+                    T phi = phiStep * j; //  [0 .. pi/2]
+                    T cosPhi = std::cos( phi );
+                    T sinPhi = std::sin( phi );
+                    for ( size_t i = 0; i < thetaResolution_; ++i )
                     {
-                        bestCones[j].minError = error;
-                        bestCones[j].bestCone = tmpCone;
+                        T theta = theraStep * i; //  [0 .. 2*pi)
+                        T cosTheta = std::cos( theta );
+                        T sinTheta = std::sin( theta );
+                        Vector3<T> currU( cosTheta * sinPhi, sinTheta * sinPhi, cosPhi );
+
+                        auto tmpCone = computeInitialCone_( points, center, currU );
+
+                        Eigen::VectorX<T> fittedParams( 6 );
+                        coneToFitParams_( tmpCone, fittedParams );
+
+                        Eigen::LevenbergMarquardt<ConeFittingFunctor<T>, T> lm_i( coneFittingFunctor );
+                        lm_i.parameters.maxfev = 40;
+
+                        [[maybe_unused]] Eigen::LevenbergMarquardtSpace::Status result = lm_i.minimize( fittedParams );
+
+                        // Looks like a bug in Eigen. Eigen::LevenbergMarquardtSpace::Status have error codes only. Not return value for Success minimization. 
+                        // So just log status 
+
+                        fitParamsToCone_( fittedParams, tmpCone );
+
+                        T const one_v = static_cast< T >( 1 );
+                        auto cosAngle = std::clamp( one_v / tmpCone.direction().length(), static_cast< T >( 0 ), one_v );
+                        tmpCone.angle = std::acos( cosAngle );
+                        tmpCone.direction() = tmpCone.direction().normalized();
+
+                        T error = getApproximationRMS_( points, tmpCone );
+
+                        if ( error < bestCones[j].minError )
+                        {
+                            bestCones[j].minError = error;
+                            bestCones[j].bestCone = tmpCone;
+                        }
                     }
                 }
-            }
-            //} );
+            } );
 
             auto best = std::min_element( bestCones.begin(), bestCones.end(), [] ( const BestCone& a, const BestCone& b )
             {

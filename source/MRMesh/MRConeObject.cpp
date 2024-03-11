@@ -287,7 +287,6 @@ TEST( MRMesh, ConeApproximation )
     EXPECT_LE( ( resultCone.apex() - coneApex ).length(), 0.1f );
     EXPECT_GT( dot( direction, resultCone.direction() ), 0.9f );
 
-
     //////////////////////////
     // Use cone params test //
     //////////////////////////

@@ -245,15 +245,16 @@ private:
         ConeFittingFunctor<T> coneFittingFunctor;
         coneFittingFunctor.setPoints( points );
 
+        constexpr T pi2 = static_cast< T >( PI2 );
         T const theraStep = static_cast< T >( 2 * PI ) / params_.hemisphereSearchPhiResolution;
-        T const phiStep = static_cast< T >( PI2 ) / params_.hemisphereSearchPhiResolution;
+        T const phiStep = pi2 / params_.hemisphereSearchPhiResolution;
 
         struct BestCone {
             Cone3<T> bestCone;
             T minError = std::numeric_limits<T> ::max();
         };
         std::vector<BestCone> bestCones;
-        bestCones.resize( params_.hemisphereSearchPhiResolution );
+        bestCones.resize( params_.hemisphereSearchPhiResolution + 1 );
 
         tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), params_.hemisphereSearchPhiResolution + 1 ),
                [&] ( const tbb::blocked_range<size_t>& range )

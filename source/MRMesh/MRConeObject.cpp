@@ -260,7 +260,10 @@ TEST( MRMesh, ConeApproximation )
     approxiamtorParams.coneFitterType = ConeFitterType::ApproximationPCM;
 
     auto error = fit.solve( points, resultCone, approxiamtorParams );
-    std::cout << "Cone apex: " << resultCone.center() << " direction:" << resultCone.direction() << " heigh:" << resultCone.height << " angle:" << resultCone.angle * 180.0f / PI_F << " (degree)" << " error:" << error << std::endl;
+
+    //for debug in case of test fail.
+    //std::cout << "Cone apex: " << resultCone.center() << " direction:" << resultCone.direction() << " heigh:"
+    //  << resultCone.height << " angle:" << resultCone.angle * 180.0f / PI_F << " (degree)" << " error:" << error << std::endl;
 
     EXPECT_NEAR( resultCone.angle, coneAngle, 0.1f );
     EXPECT_NEAR( resultCone.height, coneHeight, 0.1f );
@@ -274,7 +277,10 @@ TEST( MRMesh, ConeApproximation )
     approxiamtorParams.coneFitterType = ConeFitterType::HemisphereSearchFit;
 
     error = fit.solve( points, resultCone, approxiamtorParams );
-    std::cout << "Cone apex (Hem): " << resultCone.center() << " direction:" << resultCone.direction() << " heigh:" << resultCone.height << " angle:" << resultCone.angle * 180.0f / PI_F << " (degree)" << " error:" << error << std::endl;
+
+    //for debug in case of test fail.
+    //std::cout << "Cone apex (Hem): " << resultCone.center() << " direction:" << resultCone.direction() << " heigh:" 
+    // << resultCone.height << " angle:" << resultCone.angle * 180.0f / PI_F << " (degree)" << " error:" << error << std::endl;
 
     EXPECT_NEAR( resultCone.angle, coneAngle, 0.1f );
     EXPECT_NEAR( resultCone.height, coneHeight, 0.1f );
@@ -291,7 +297,10 @@ TEST( MRMesh, ConeApproximation )
     noicedCone.direction() = ( direction + noiceVector ).normalized();
     approxiamtorParams.coneFitterType = ConeFitterType::SpecificAxisFit;
     error = fit.solve( points, noicedCone, approxiamtorParams );
-    std::cout << "Noiced cone apex: " << noicedCone.center() << " direction:" << noicedCone.direction() << " heigh:" << noicedCone.height << " angle:" << noicedCone.angle * 180.0f / PI_F << " (degree)" << " error:" << error << std::endl;
+
+    //for debug in case of test fail.
+    //std::cout << "Noiced cone apex: " << noicedCone.center() << " direction:" << noicedCone.direction() << " heigh:"
+    //  << noicedCone.height << " angle:" << noicedCone.angle * 180.0f / PI_F << " (degree)" << " error:" << error << std::endl;
 
     EXPECT_NEAR( noicedCone.angle, coneAngle, 0.1f );
     EXPECT_NEAR( noicedCone.height, coneHeight, 0.1f );

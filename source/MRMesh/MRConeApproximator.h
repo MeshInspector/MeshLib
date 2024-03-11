@@ -2,6 +2,7 @@
 #include "MRCone3.h"
 #include "MRToFromEigen.h"
 #include "MRConstants.h"
+#include "MRPch/MRTBB.h"
 #include <algorithm>
 
 #ifdef _MSC_VER
@@ -329,19 +330,20 @@ private:
 
     T getApproximationRMS_( const std::vector<MR::Vector3<T>>& points, const Cone3<T>& cone )
     {
+        if ( points.size() == 0 )
+            return std::numeric_limits<T>::max();
+
         T error = 0;
         for ( auto p : points )
-        {
             error = error + ( cone.projectPoint( p ) - p ).lengthSq();
-        }
+
         return error / points.size();
     }
 
     MR::Vector3<T> computeCenter_( const std::vector<MR::Vector3<T>>& points )
     {
         // Compute the average of the sample points.
-        MR::Vector3<T> center;
-        center = Vector3f();  // C in pdf 
+        MR::Vector3<T> center;  // C in pdf  
         for ( auto i = 0; i < points.size(); ++i )
         {
             center += points[i];
@@ -367,7 +369,7 @@ private:
 
 
     // Calculates the initial parameters of the cone, which will later be used for minimization.
-    Cone3<T> computeInitialCone_( const std::vector<MR::Vector3<T>>& points, const MR::Vector3<T>& center, const MR::Vector3<T> axis )
+    Cone3<T> computeInitialCone_( const std::vector<MR::Vector3<T>>& points, const MR::Vector3<T>& center, const MR::Vector3<T>& axis )
     {
         Cone3<T> result;
         MR::Vector3<T>& coneApex = result.apex();

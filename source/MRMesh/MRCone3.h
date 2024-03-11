@@ -66,10 +66,7 @@ public:
         auto X = point - center;
 
         // Calculate the angle between vectors n (cone main axis)  and X (center normalyzed source point)
-        // std::atan2( cross( a, b ).length(), dot( a, b ) );
-        // T angleX = MR::angle( n, X );
         T angleX = std::atan2( cross( n, X ).length(), dot( n, X ) );
-
 
         // This means the projection will fall on the apex of the cone.
         if ( coneAngle + PI_F / 2.0 < angleX )
